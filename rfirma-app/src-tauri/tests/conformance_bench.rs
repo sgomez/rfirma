@@ -306,15 +306,20 @@ impl PublishedClient {
         }
     }
 
-    /// Siguiente evento emitido por el cliente publicado.
+    /// Siguiente evento emitido por el cliente publicado, saltandose las observaciones de la suite.
     fn next_event(&self) -> Event {
-        match self.events.recv_timeout(PATIENCE) {
-            Ok(event) => event,
-            Err(RecvTimeoutError::Timeout) => {
-                panic!("el cliente publicado no dijo nada en {PATIENCE:?}")
-            }
-            Err(RecvTimeoutError::Disconnected) => {
-                panic!("el conductor murio sin dar un veredicto")
+        loop {
+            let event = match self.events.recv_timeout(PATIENCE) {
+                Ok(event) => event,
+                Err(RecvTimeoutError::Timeout) => {
+                    panic!("el cliente publicado no dijo nada en {PATIENCE:?}")
+                }
+                Err(RecvTimeoutError::Disconnected) => {
+                    panic!("el conductor murio sin dar un veredicto")
+                }
+            };
+            if event.name() != "condition" {
+                return event;
             }
         }
     }

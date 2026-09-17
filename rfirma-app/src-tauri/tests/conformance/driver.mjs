@@ -1,5 +1,6 @@
 // Conductor del banco de conformidad con autoscript.js.
 
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { createServer } from "node:http";
 import { request as httpsRequest } from "node:https";
@@ -24,6 +25,9 @@ const THE_SERVICE_BIND_FAILURE_PORTS = (
   .split(",")
   .map(Number);
 const here = dirname(fileURLToPath(import.meta.url));
+
+/** La transformación XPath que declara el guion de transformaciones a medida y busca en la firma. */
+const THE_DECLARED_TRANSFORM = "http://www.w3.org/TR/1999/REC-xpath-19991116";
 
 /** Sustituye `literal` por `replacement`, o revienta si el fuente ya no lo trae. */
 function replacingOrFailing(source, literal, replacement) {
@@ -565,9 +569,40 @@ function theInvoice() {
   return readFileSync(join(here, "../../../../testdata/reference/invoice.xml"));
 }
 
-/** El PDF que la prueba Rust deja en disco para que lo firme `format=PAdES`. */
+/** El PDF que firma `format=PAdES`: el que deje la prueba Rust en disco, o uno de una página. */
 function thePdfOfTheTest() {
-  return readFileSync(process.env.RFIRMA_BENCH_PDF);
+  return process.env.RFIRMA_BENCH_PDF ? readFileSync(process.env.RFIRMA_BENCH_PDF) : aOnePagePdf();
+}
+
+/** Un PDF 1.4 de una página, armado aquí para que el carril PAdES no dependa de la prueba Rust. */
+function aOnePagePdf() {
+  const content = "BT /F1 24 Tf 72 750 Td (rfirma: suite de conformidad) Tj ET\n";
+  const objects = [
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] " +
+      "/Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>",
+    `<< /Length ${content.length} >>\nstream\n${content}endstream`,
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+  ];
+  let pdf = "%PDF-1.4\n";
+  const offsets = [];
+  objects.forEach((body, index) => {
+    offsets.push(pdf.length);
+    pdf += `${index + 1} 0 obj\n${body}\nendobj\n`;
+  });
+  const xrefAt = pdf.length;
+  pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+  for (const offset of offsets) {
+    pdf += `${String(offset).padStart(10, "0")} 00000 n \n`;
+  }
+  pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefAt}\n%%EOF\n`;
+  return Buffer.from(pdf, "latin1");
+}
+
+/** Una firma congelada del banco de referencia, la que reciben las multifirmas. */
+function theReferenceSignature(name) {
+  return readFileSync(join(here, "../../../../testdata/reference", name));
 }
 
 /** El binario del lote local: nunca es un PDF, así que declararlo `PAdES` lo vuelve ilegible. */
@@ -674,8 +709,50 @@ function theRelayRefusedScript() {
 }
 
 /** Un `sign()` sobre `content`, con el formato y `extraParams` del guion. */
-function theSignScript(format, extraParams, content) {
+function theSignScript(format, extraParams, content, measuring) {
+  theSignScriptWith("SHA256withRSA", format, extraParams, content, measuring);
+}
+
+/** Un `sign()` con el algoritmo del guion. */
+function theSignScriptWith(algorithm, format, extraParams, content, measuring) {
   AutoScript.sign(
+    content.toString("base64"),
+    algorithm,
+    format,
+    extraParams,
+    (signature, certificate) => answering(measuring, String(signature), String(certificate)),
+    (type, message) => settle({ event: "error", type: String(type), message: String(message) }),
+  );
+}
+
+/** Un `cosign()` sobre `content`, con el formato y `extraParams` del guion. */
+function theCosignScript(format, extraParams, content, measuring) {
+  AutoScript.cosign(
+    content.toString("base64"),
+    "SHA256withRSA",
+    format,
+    extraParams,
+    (signature, certificate) => answering(measuring, String(signature), String(certificate)),
+    (type, message) => settle({ event: "error", type: String(type), message: String(message) }),
+  );
+}
+
+/**
+ * Un `counterSign()` sobre `content`. La fachada del cliente publicado nombra la contrafirma con
+ * dos grafías según la versión, y sin ninguna de las dos no hay trámite que conducir.
+ */
+function theCountersignScript(format, extraParams, content) {
+  const countersigning = AutoScript.counterSign ?? AutoScript.countersign;
+  if (!countersigning) {
+    settle({
+      event: "error",
+      type: "unsupported",
+      message: "la fachada del cliente publicado no exporta la contrafirma",
+    });
+    return;
+  }
+  countersigning.call(
+    AutoScript,
     content.toString("base64"),
     "SHA256withRSA",
     format,
@@ -686,17 +763,62 @@ function theSignScript(format, extraParams, content) {
   );
 }
 
-/** Un `cosign()` sobre `content`, con el formato y `extraParams` del guion. */
-function theCosignScript(format, extraParams, content) {
-  AutoScript.cosign(
-    content.toString("base64"),
-    "SHA256withRSA",
-    format,
-    extraParams,
-    (signature, certificate) =>
-      settle({ event: "success", result: String(signature), certificate: String(certificate) }),
-    (type, message) => settle({ event: "error", type: String(type), message: String(message) }),
-  );
+/** Los bytes de una respuesta en Base64, venga en el alfabeto estándar o en el URL-safe. */
+function bytesOf(base64) {
+  return Buffer.from(String(base64).replace(/-/g, "+").replace(/_/g, "/"), "base64");
+}
+
+function aCondition(id, held, observation) {
+  return { id, verdict: held ? "compliant" : "discrepant", observation };
+}
+
+/** La respuesta trae el certificado y la firma por separado, cada uno con su contenido. */
+function theCertificateAndTheSignatureApart(signature, certificate) {
+  const apart = signature.length > 0 && certificate.length > 0 && signature !== certificate;
+  return [
+    aCondition(
+      "the_signature_response_carries_the_certificate_and_the_signature_apart",
+      apart,
+      apart
+        ? "el certificado y la firma llegaron separados"
+        : "la respuesta no trajo los dos componentes por separado",
+    ),
+  ];
+}
+
+/** Un contenedor ASiC-S es un ZIP: sus dos primeros bytes son la marca `PK`. */
+function theAsicContainer(signature) {
+  const bytes = bytesOf(signature);
+  const zipped = bytes.length > 2 && bytes[0] === 0x50 && bytes[1] === 0x4b;
+  return [
+    aCondition(
+      "an_asic_s_container_packages_the_signature_next_to_the_data",
+      zipped,
+      zipped ? "el contenedor empieza por la marca PK" : "lo que volvió no es un contenedor ZIP",
+    ),
+  ];
+}
+
+/** La transformación declarada aparece como `<ds:Transform>` en el XAdES que vuelve. */
+function theDeclaredTransform(signature) {
+  const applied = bytesOf(signature).toString("utf8").includes(THE_DECLARED_TRANSFORM);
+  return [
+    aCondition(
+      "xades_applies_the_transforms_the_request_declares",
+      applied,
+      applied
+        ? "la firma declara la transformación pedida"
+        : "la firma volvió sin la transformación pedida",
+    ),
+  ];
+}
+
+/** Emite lo que `measuring` saque de la respuesta y cierra el trámite con ella. */
+function answering(measuring, signature, certificate) {
+  for (const condition of measuring ? measuring(signature, certificate) : []) {
+    emit({ event: "condition", ...condition });
+  }
+  settle({ event: "success", result: signature, certificate });
 }
 
 /** Un `signAndSaveToFile()` sin identificador de operación: el verbo (`cop`) no viaja. */
@@ -1159,23 +1281,66 @@ if (script.startsWith("protocol-")) {
   } else if (script === "sticky") {
     theStickyScript();
   } else if (script === "signcades") {
-    theSignScript("CAdES", "mode=explicit", theChallenge());
+    theSignScript("CAdES", "mode=explicit", theChallenge(), theCertificateAndTheSignatureApart);
   } else if (script === "signgzip") {
     theSignScript("CAdES", "mode=explicit", gzipSync(theChallenge()));
   } else if (script === "signcadesasics") {
-    theSignScript("CAdES-ASiC-S", "", theChallenge());
+    theSignScript("CAdES-ASiC-S", "", theChallenge(), theAsicContainer);
   } else if (script === "signauto") {
     theSignScript("auto", "", theChallenge());
   } else if (script === "signxades") {
     theSignScript("XAdES", "", theXmlDocument());
   } else if (script === "signxadesauto") {
     theSignScript("auto", "", theXmlDocument());
+  } else if (script === "signxadesenveloping") {
+    theSignScript("XAdES Enveloping", "", theXmlDocument());
+  } else if (script === "signxadeswithatransform") {
+    theSignScript(
+      "XAdES Enveloping",
+      `xmlTransforms=1\nxmlTransform0Type=${THE_DECLARED_TRANSFORM}\nxmlTransform0Body=/*`,
+      theXmlDocument(),
+      theDeclaredTransform,
+    );
   } else if (script === "signpades") {
     theSignScript("PAdES", "", thePdfOfTheTest());
   } else if (script === "signpadeschecking") {
     theSignScript("PAdES", "checkSignatures=true", thePdfOfTheTest());
+  } else if (script === "signpadesvisible") {
+    theSignScript("PAdES", "visibleSignature=want", thePdfOfTheTest());
   } else if (script === "signfacturae") {
     theSignScript("FacturaE", "", theInvoice());
+  } else if (script === "signfacturaewitharole") {
+    theSignScript(
+      "FacturaE",
+      "signerClaimedRoles=emisor\nsignatureProductionCity=Madrid",
+      theInvoice(),
+    );
+  } else if (script === "signfacturaewithaforbiddenparam") {
+    theSignScript("FacturaE", "tsaURL=http://tsa.example/tsa", theInvoice());
+  } else if (script === "signcadeswithadigestonlyalgorithm") {
+    theSignScriptWith("SHA256", "CAdES", "mode=explicit", theChallenge());
+  } else if (script === "signcadeswithanunsupportedalgorithm") {
+    theSignScriptWith("MD5withRSA", "CAdES", "mode=explicit", theChallenge());
+  } else if (script === "signcadeswithaprecalculatedhash") {
+    theSignScript(
+      "CAdES",
+      "precalculatedHashAlgorithm=SHA-256",
+      createHash("sha256").update(theChallenge()).digest(),
+    );
+  } else if (script === "signwithanunknownformat") {
+    theSignScript("NoSuchFormat", "", theChallenge());
+  } else if (script === "signwithoutaformat") {
+    theSignScript(null, "", theChallenge());
+  } else if (script === "cosigncades") {
+    theCosignScript("CAdES", "", theReferenceSignature("cades-implicit.p7s"));
+  } else if (script === "cosignauto") {
+    theCosignScript("auto", "", theReferenceSignature("cades-implicit.p7s"));
+  } else if (script === "cosignautowithoutasignature") {
+    theCosignScript("auto", "", theXmlDocument());
+  } else if (script === "cosignpadeschecking") {
+    theCosignScript("PAdES", "checkSignatures=true", thePdfOfTheTest());
+  } else if (script === "countersigncades") {
+    theCountersignScript("CAdES", "target=tree", theReferenceSignature("cades-implicit.p7s"));
   } else if (script === "cosignfacturae") {
     theCosignScript("FacturaE", "", theInvoice());
   } else if (script === "save") {

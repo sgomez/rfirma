@@ -18,8 +18,10 @@ use crate::dossier::{CheckState, Dossier, Verdict};
 use crate::errand::ErrandOutcome;
 use crate::verdicts::{
     chapter_tag, the_closing_of, the_verdict_for_a_bind_failure,
-    the_verdict_for_a_private_key_check, the_verdict_for_a_save_confirmation,
-    the_verdict_for_a_timestamp, the_verdict_of, verdict_badge, CheckOutcome, GRAY, PENDING_BADGE,
+    the_verdict_for_a_pinned_certificate, the_verdict_for_a_private_key_check,
+    the_verdict_for_a_save_confirmation, the_verdict_for_a_timestamp,
+    the_verdict_for_a_visible_signature_area, the_verdict_of, verdict_badge, CheckOutcome, GRAY,
+    PENDING_BADGE,
 };
 use crate::Probe;
 
@@ -27,10 +29,12 @@ use crate::Probe;
 /// exige que ninguno sobre ni falte.
 pub(crate) const THE_HARNESSES: &[&str] = &[
     "occupied_service_ports",
+    "pinned_certificate",
     "private_key_check",
     "save_confirmation",
     "supported_websocket_versions",
     "timestamp_in_the_signature",
+    "visible_signature_area",
 ];
 
 /// El OID PKCS#9 `id-aa-signatureTimeStampToken` (1.2.840.113549.1.9.16.2.14), con su etiqueta y
@@ -214,6 +218,12 @@ impl Probe {
             }
             Some("private_key_check") => {
                 the_verdict_for_a_private_key_check(outcome, answer.unwrap_or_default())
+            }
+            Some("pinned_certificate") => {
+                the_verdict_for_a_pinned_certificate(outcome, answer.unwrap_or_default())
+            }
+            Some("visible_signature_area") => {
+                the_verdict_for_a_visible_signature_area(outcome, answer.unwrap_or_default())
             }
             Some("timestamp_in_the_signature") => the_verdict_for_a_timestamp(
                 outcome,
