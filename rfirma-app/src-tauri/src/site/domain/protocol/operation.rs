@@ -432,15 +432,14 @@ impl SignAndSaveRequest {
         self.starting_folder.as_deref()
     }
 
-    /// El nombre propuesto al diálogo de guardado (`AOPDFSigner.getSignedName`, 1.9.2): el
-    /// `filename` de la sede si vino; si no, el nombre base del fichero elegido más `.pdf`; y
-    /// solo sin ninguno de los dos, `Firma.pdf`.
+    /// El nombre propuesto al diálogo de guardado: el de la sede, o el del fichero con la extensión de su formato.
     pub fn proposed_name(&self) -> String {
         self.filename.clone().unwrap_or_else(|| {
+            let ext = self.format().extension();
             self.chosen_name
                 .as_deref()
-                .map(|name| format!("{}.pdf", base_name(name)))
-                .unwrap_or_else(|| format!("{DEFAULT_SIGNED_NAME}.pdf"))
+                .map(|name| format!("{}.{ext}", base_name(name)))
+                .unwrap_or_else(|| format!("{DEFAULT_SIGNED_NAME}.{ext}"))
         })
     }
 

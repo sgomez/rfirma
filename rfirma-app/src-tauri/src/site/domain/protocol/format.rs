@@ -73,6 +73,16 @@ impl RequestedFormat {
             .find(|(name, _)| *name == asked)
             .map(|(_, format)| *format)
     }
+
+    /// La extensión de fichero que corresponde a una firma en este formato.
+    pub fn extension(&self) -> &'static str {
+        match self {
+            Self::Pades => "pdf",
+            Self::Cades | Self::Cms => "csig",
+            Self::CadesAsicS | Self::Xades(XadesEnvelope::AsicS) => "asics",
+            Self::Xades(_) | Self::FacturaE => "xsig",
+        }
+    }
 }
 
 /// El formato efectivo de `format=auto`, leído de la cabecera del documento.

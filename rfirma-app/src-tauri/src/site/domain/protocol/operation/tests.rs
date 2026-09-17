@@ -319,6 +319,68 @@ fn the_proposed_name_without_a_filename_falls_back_to_the_chosen_document() {
 }
 
 #[test]
+fn the_proposed_name_without_a_filename_infers_the_extension_from_the_format() {
+    for (format, expected) in [
+        ("PAdES", "Firma.pdf"),
+        ("CAdES", "Firma.csig"),
+        ("XAdES", "Firma.xsig"),
+        ("CAdES-ASiC-S", "Firma.asics"),
+        ("XAdES-ASiC-S", "Firma.asics"),
+    ] {
+        let url = an_operation(&format!(
+            "op={SIGN_AND_SAVE}&cop={SIGN}&idsession=8jAkPZfRw2mQxN4TbYuL&format={format}&\
+             algorithm=SHA256withRSA&dat={}",
+            dat(b"documento")
+        ));
+        let SiteOperation::SignAndSave(request) = read_operation(&url).expect("se atiende") else {
+            panic!("es un firmar y guardar");
+        };
+        assert_eq!(request.proposed_name(), expected, "con format={format}");
+    }
+}
+
+#[test]
+fn the_proposed_name_respects_the_filename_of_the_site_without_altering_it() {
+    for (format, filename) in [
+        ("PAdES", "contrato.pdf"),
+        ("CAdES", "datos.bin"),
+        ("XAdES", "factura.xml"),
+        ("CAdES-ASiC-S", "archivo_sin_extension"),
+    ] {
+        let url = an_operation(&format!(
+            "op={SIGN_AND_SAVE}&cop={SIGN}&idsession=8jAkPZfRw2mQxN4TbYuL&format={format}&\
+             algorithm=SHA256withRSA&dat={}&filename={filename}",
+            dat(b"documento")
+        ));
+        let SiteOperation::SignAndSave(request) = read_operation(&url).expect("se atiende") else {
+            panic!("es un firmar y guardar");
+        };
+        assert_eq!(request.proposed_name(), filename, "con format={format}");
+    }
+}
+
+#[test]
+fn the_proposed_name_without_a_filename_falls_back_to_the_chosen_document_with_format_extension() {
+    for (format, expected) in [
+        ("PAdES", "contrato.pdf"),
+        ("CAdES", "contrato.csig"),
+        ("XAdES", "contrato.xsig"),
+        ("CAdES-ASiC-S", "contrato.asics"),
+    ] {
+        let url = an_operation(&format!(
+            "op={SIGN_AND_SAVE}&cop={SIGN}&idsession=8jAkPZfRw2mQxN4TbYuL&format={format}&\
+             algorithm=SHA256withRSA"
+        ));
+        let SiteOperation::SignAndSave(request) = read_operation(&url).expect("se atiende") else {
+            panic!("es un firmar y guardar");
+        };
+        let with_chosen =
+            request.with_chosen_document(b"contenido".to_vec(), Some("contrato.docx".to_owned()));
+        assert_eq!(with_chosen.proposed_name(), expected, "con format={format}");
+    }
+}
+
+#[test]
 fn the_proposed_name_of_the_site_wins_over_the_chosen_document() {
     let SiteOperation::SignAndSave(request) =
         read_operation(&a_sign_and_save(SIGN, "&filename=contrato.pdf")).expect("se atiende")
