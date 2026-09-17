@@ -21,6 +21,14 @@ use openssl::x509::{X509Name, X509NameRef, X509};
 pub(crate) struct NoToken;
 
 impl Token for NoToken {
+    fn accepts_the_secret(
+        &self,
+        _reference: &crate::identity::domain::certificate::CertificateRef,
+        _secret: &crate::identity::domain::protected_secret::ProtectedSecret,
+    ) -> Result<(), crate::identity::domain::error::TokenError> {
+        Ok(())
+    }
+
     fn list(&self, _store: &Store) -> Result<Vec<TokenCertificate>, TokenError> {
         Ok(Vec::new())
     }

@@ -1,0 +1,303 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap");
+
+:root, [data-theme="light"] {
+  --rf-bg:#ffffff; --rf-surface:#fafbfc; --rf-text:#000000; --rf-text-muted:#64748b;
+  --rf-primary:#64748b; --rf-on-primary:#ffffff; --rf-primary-hover:#475569;
+  --rf-accent:#94a3b8; --rf-border-subtle:#e5e5e5; --rf-border-strong:#64748b;
+  --rf-focus-ring:#64748b; --rf-scrim:rgba(0,0,0,.6);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --rf-bg:#18181b; --rf-surface:#15171a; --rf-text:#ffffff; --rf-text-muted:#94a3b8;
+    --rf-primary:#94a3b8; --rf-on-primary:#18181b; --rf-primary-hover:#b6c0cd;
+    --rf-accent:#64748b; --rf-border-subtle:rgba(229,229,229,.12);
+    --rf-border-strong:rgba(229,229,229,.45); --rf-focus-ring:#94a3b8;
+  }
+}
+[data-theme="dark"] {
+  --rf-bg:#18181b; --rf-surface:#15171a; --rf-text:#ffffff; --rf-text-muted:#94a3b8;
+  --rf-primary:#94a3b8; --rf-on-primary:#18181b; --rf-primary-hover:#b6c0cd;
+  --rf-accent:#64748b; --rf-border-subtle:rgba(229,229,229,.12);
+  --rf-border-strong:rgba(229,229,229,.45); --rf-focus-ring:#94a3b8;
+}
+:root {
+  --rf-space-xs:8px; --rf-space-sm:16px; --rf-space-md:24px;
+  --rf-space-lg:48px; --rf-space-xl:80px; --rf-space-2xl:144px;
+  --rf-radius-sm:4px; --rf-radius-md:6px; --rf-radius-lg:8px;
+  --rf-radius-xl:16px; --rf-radius-pill:9999px;
+  --rf-shadow-card:rgba(0,0,0,0) 0px 0px 0px 0px, rgba(0,0,0,0) 0px 0px 0px 0px, rgba(0,0,0,.1) 0px 0px 1px 0px, rgba(0,0,0,.03) 0px 2px 6px 0px;
+  --rf-shadow-elevated:rgba(0,0,0,0) 0px 0px 0px 0px, rgba(0,0,0,0) 0px 0px 0px 0px, rgba(0,0,0,.1) 0px 20px 25px -5px, rgba(0,0,0,.1) 0px 8px 10px -6px;
+  --rf-duration-fast:150ms; --rf-duration-base:300ms;
+  --rf-easing:cubic-bezier(.4,0,.2,1);
+  --rf-font-body:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+* { box-sizing:border-box; }
+html,body { margin:0; height:100%; }
+a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
+:where([data-theme]) { background:var(--rf-bg); }
+.rf-root {
+  background:var(--rf-bg); color:var(--rf-text);
+  font-family:var(--rf-font-body); height:100%;
+  -webkit-font-smoothing:antialiased;
+}
+.rf-root :focus-visible { outline:2px solid var(--rf-focus-ring); outline-offset:2px; }
+.rf-display{font-size:96px;line-height:1;font-weight:700;letter-spacing:-2.4px;margin:0}
+.rf-heading{font-size:48px;line-height:1.15;font-weight:700;margin:0}
+.rf-title{font-size:20px;line-height:1.3;font-weight:700;margin:0}
+.rf-body{font-size:12px;line-height:1;font-weight:400;margin:0}
+.rf-prose{font-size:14px;line-height:1.6;font-weight:400;margin:0}
+.rf-text-muted{color:var(--rf-text-muted)}
+.rf-text-primary{color:var(--rf-primary)}
+.rf-stack{display:flex;flex-direction:column}
+.rf-row{display:flex;flex-direction:row;align-items:center}
+.rf-gap-xs{gap:var(--rf-space-xs)} .rf-gap-sm{gap:var(--rf-space-sm)}
+.rf-gap-md{gap:var(--rf-space-md)} .rf-gap-lg{gap:var(--rf-space-lg)}
+.rf-section{padding:var(--rf-space-md)}
+.rf-divider{border:0;border-top:1px solid var(--rf-border-subtle);margin:0;width:100%}
+.rf-surface{background:var(--rf-surface)}
+.rf-card{display:flex;flex-direction:column;gap:var(--rf-space-xs);
+  padding:var(--rf-space-md);background:var(--rf-surface);
+  border:1px solid var(--rf-border-subtle);border-radius:var(--rf-radius-md)}
+.rf-card--elevated{box-shadow:var(--rf-shadow-elevated)}
+.rf-card--interactive{cursor:pointer;transition:border-color var(--rf-duration-fast) var(--rf-easing)}
+.rf-card--interactive:hover{border-color:var(--rf-border-strong)}
+.rf-btn{display:inline-flex;align-items:center;justify-content:center;gap:var(--rf-space-xs);
+  min-height:44px;padding:0 var(--rf-space-sm);border-radius:var(--rf-radius-md);
+  font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;
+  border:1px solid transparent;background:transparent;color:var(--rf-text);
+  transition:background-color var(--rf-duration-fast) var(--rf-easing),
+             border-color var(--rf-duration-fast) var(--rf-easing),
+             color var(--rf-duration-fast) var(--rf-easing)}
+.rf-btn--primary{background:var(--rf-primary);color:var(--rf-on-primary)}
+.rf-btn--primary:hover{background:var(--rf-primary-hover)}
+.rf-btn--secondary{border-color:var(--rf-border-strong);color:var(--rf-text)}
+.rf-btn--secondary:hover{border-color:var(--rf-primary-hover);color:var(--rf-primary-hover)}
+.rf-btn--ghost{color:var(--rf-text-muted)}
+.rf-btn--ghost:hover{color:var(--rf-text)}
+.rf-btn[disabled]{opacity:.45;cursor:not-allowed}
+.rf-field{display:flex;flex-direction:column;gap:var(--rf-space-xs)}
+.rf-label{font-size:12px;line-height:1;font-weight:600;color:var(--rf-text-muted)}
+.rf-input{min-height:44px;padding:0 var(--rf-space-sm);font-family:inherit;font-size:14px;
+  color:var(--rf-text);background:var(--rf-bg);
+  border:1px solid var(--rf-border-strong);border-radius:var(--rf-radius-md)}
+.rf-hint{font-size:12px;line-height:1.4;color:var(--rf-text-muted)}
+.rf-field--error .rf-input{border-width:2px}
+.rf-field--error .rf-hint{font-weight:700;color:var(--rf-text)}
+.rf-badge{display:inline-flex;align-items:center;padding:4px var(--rf-space-xs);
+  border-radius:var(--rf-radius-pill);border:1px solid var(--rf-border-subtle);
+  font-size:12px;line-height:1;font-weight:600;color:var(--rf-text-muted)}
+.rf-badge--primary{background:var(--rf-primary);color:var(--rf-on-primary);border-color:transparent}
+.rf-scrim{position:absolute;inset:0;background:var(--rf-scrim);
+  display:flex;align-items:center;justify-content:center}
+.rf-dialog{display:flex;flex-direction:column;gap:var(--rf-space-md);
+  padding:var(--rf-space-md);background:var(--rf-bg);
+  border:1px solid var(--rf-border-subtle);border-radius:var(--rf-radius-xl);
+  box-shadow:var(--rf-shadow-elevated);width:420px}
+</style>
+</helmet>
+<div class="rf-root" data-theme="{{tema}}" style="width:1180px;height:700px;display:flex;flex-direction:column;position:relative;overflow:hidden">
+
+<header class="rf-row" style="height:56px;flex:none;padding:0 var(--rf-space-sm) 0 var(--rf-space-md);
+  gap:var(--rf-space-sm);border-bottom:1px solid var(--rf-border-subtle);
+  background:var(--rf-surface);position:relative;z-index:5">
+  <span class="rf-title" style="font-size:15px;letter-spacing:.4px">rFirma</span>
+  <div style="flex:1"></div>
+  <span style="width:40px;height:40px;flex:none;display:flex;align-items:center;justify-content:center;
+    border-radius:var(--rf-radius-md);color:var(--rf-text-muted)">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></span>
+</header>
+
+<div style="flex:1;min-height:0;overflow:auto">
+<div class="rf-stack" style="width:640px;margin:0 auto;padding:var(--rf-space-lg) 0 var(--rf-space-md) 0;gap:var(--rf-space-md)">
+
+  <div class="rf-row rf-gap-xs" style="flex:none">
+    <span style="width:22px;height:4px;border-radius:var(--rf-radius-pill);background:{{colorPunto1}}"></span>
+    <span style="width:22px;height:4px;border-radius:var(--rf-radius-pill);background:{{colorPunto2}}"></span>
+    <span class="rf-body rf-text-muted" style="margin-left:var(--rf-space-xs)">{{indicador}}</span>
+  </div>
+
+  <sc-if value="{{esBienvenida}}" hint-placeholder-val="{{false}}">
+    <div class="rf-stack" style="gap:var(--rf-space-md)">
+
+      <div class="rf-stack" style="gap:12px">
+        <p class="rf-heading" style="font-size:28px;line-height:1.2">Configurar rFirma</p>
+        <!-- i18n: «rFirma es una aplicación compatible con AutoFirma %{version}. Para
+             poder usarla con sedes electrónicas necesitamos configurar tu equipo.»
+             El «1.9.2» dibujado ocupa el sitio del parámetro %{version}. -->
+        <p class="rf-prose">rFirma es una aplicación compatible con AutoFirma 1.9.2. Para poder usarla con sedes electrónicas necesitamos configurar tu equipo.</p>
+      </div>
+
+      <!-- i18n: clave «independence», ya traducida; se recicla literal. -->
+      <div class="rf-card">
+        <p class="rf-title" style="font-size:16px">Proyecto independiente</p>
+        <p class="rf-prose">rFirma no está relacionada con AutoFirma ni con la Administración General del Estado, que publican el cliente oficial, ni cuenta con su respaldo. Si necesitas la aplicación oficial, descárgala de su web.</p>
+      </div>
+
+    </div>
+  </sc-if>
+
+  <sc-if value="{{esAcciones}}" hint-placeholder-val="{{true}}">
+    <div class="rf-stack" style="gap:var(--rf-space-md)">
+
+      <div class="rf-card" style="gap:12px">
+        <p class="rf-title" style="font-size:17px">El certificado de rFirma</p>
+        <p class="rf-prose">Cuando firmas en una sede electrónica, tu navegador tiene que conectarse a rFirma. Para que esa conexión sea segura necesitamos instalar un certificado propio.</p>
+
+        <sc-if value="{{caPendiente}}" hint-placeholder-val="{{true}}">
+          <div class="rf-row rf-gap-xs" style="min-height:44px">
+            <button class="rf-btn rf-btn--primary" style="min-height:36px">Instalar</button>
+            <button class="rf-btn rf-btn--secondary" style="min-height:36px">Ahora no</button>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{caNoPendiente}}" hint-placeholder-val="{{false}}">
+          <div class="rf-row rf-gap-xs" role="status" style="align-items:flex-start;min-height:44px">
+            <span style="display:flex;flex:none;margin-top:3px;color:var(--rf-text)">
+              <sc-if value="{{caInstalando}}" hint-placeholder-val="{{false}}">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="9" opacity=".25"/><path d="M21 12a9 9 0 0 0-9-9"/></svg>
+              </sc-if>
+              <sc-if value="{{caHecha}}" hint-placeholder-val="{{false}}">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12.5 11 15.5 16.5 9"/></svg>
+              </sc-if>
+              <sc-if value="{{caFallada}}" hint-placeholder-val="{{false}}">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 2.5 20h19z"/><path d="M12 10v4M12 17v.5"/></svg>
+              </sc-if>
+            </span>
+            <div class="rf-stack" style="gap:6px;flex:1;min-width:0">
+              <p class="rf-prose" style="font-weight:600">{{caTitular}}</p>
+              <sc-if value="{{caHecha}}" hint-placeholder-val="{{false}}">
+                <p class="rf-hint">Si tienes alguno abierto, reinícialo para que lo reconozca.</p>
+              </sc-if>
+              <sc-if value="{{caFallada}}" hint-placeholder-val="{{false}}">
+                <ul class="rf-stack" style="gap:4px;margin:0;padding:0;list-style:none">
+                  <li class="rf-row rf-gap-xs rf-hint"><span style="width:12px;flex:none;text-align:center">✓</span>Firefox</li>
+                  <li class="rf-row rf-gap-xs rf-hint"><span style="width:12px;flex:none;text-align:center">✓</span>Chrome</li>
+                  <li class="rf-row rf-gap-xs rf-hint"><span style="width:12px;flex:none;text-align:center">✗</span>Almacén de certificados del sistema</li>
+                </ul>
+              </sc-if>
+            </div>
+            <sc-if value="{{caFallada}}" hint-placeholder-val="{{false}}">
+              <button class="rf-btn rf-btn--secondary" style="flex:none;min-height:36px">Reintentar</button>
+            </sc-if>
+          </div>
+        </sc-if>
+      </div>
+
+      <div class="rf-card" style="gap:12px">
+        <p class="rf-title" style="font-size:17px">Usar rFirma por defecto</p>
+        <p class="rf-prose">Ahora mismo las sedes electrónicas abren AutoFirma.</p>
+
+        <sc-if value="{{urlPendiente}}" hint-placeholder-val="{{true}}">
+          <div class="rf-row rf-gap-xs" style="min-height:44px">
+            <button class="rf-btn rf-btn--primary" style="min-height:36px">Que abran rFirma</button>
+            <button class="rf-btn rf-btn--secondary" style="min-height:36px">Ahora no</button>
+          </div>
+        </sc-if>
+        <sc-if value="{{urlHecho}}" hint-placeholder-val="{{false}}">
+          <div class="rf-row rf-gap-xs" role="status" style="min-height:44px">
+            <span style="display:flex;flex:none;color:var(--rf-text)">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12.5 11 15.5 16.5 9"/></svg></span>
+            <p class="rf-prose" style="font-weight:600">Ahora abren rFirma.</p>
+          </div>
+        </sc-if>
+      </div>
+
+    </div>
+  </sc-if>
+
+</div>
+</div>
+
+<div class="rf-row rf-gap-sm" style="flex:none;padding:12px var(--rf-space-md);
+  border-top:1px solid var(--rf-border-subtle);background:var(--rf-surface)">
+  <div style="flex:1"></div>
+  <sc-if value="{{hayAtras}}" hint-placeholder-val="{{true}}">
+    <button class="rf-btn rf-btn--secondary" style="flex:none;min-height:36px">Atrás</button>
+  </sc-if>
+  <button class="rf-btn rf-btn--primary" style="flex:none;min-height:36px;outline:2px solid var(--rf-focus-ring);outline-offset:2px">{{textoPrimario}}</button>
+</div>
+
+</div>
+</x-dc>
+<script data-dc-script data-props='{"tema":{"editor":"enum","options":["light","dark"],"default":"light","section":"Tema"},"momento":{"editor":"enum","options":["1 · bienvenida","2 · acciones · sin hacer nada","2 · certificado · instalando","2 · certificado · instalado","2 · certificado · ha fallado","2 · acciones · todo hecho"],"default":"2 · acciones · sin hacer nada","section":"Estado del paso"},"$preview":{"width":1180,"height":700}}'>
+class Component extends DCLogic {
+  renderVals() {
+    // El asistente del primer arranque (#658, mapa #652). Sustituye al dialogo
+    // «trust/TrustNotice.tsx» y absorbe el disparo inicial de
+    // «desktop/UrlHandlerBanner.tsx». INFORMA Y ADEMAS HACE: instala el
+    // certificado propio y pone a rFirma por defecto aqui mismo.
+    //
+    // DOS PANTALLAS: bienvenida y, detras, las dos acciones juntas. El rechazo
+    // es POR ACCION, con un «Ahora no» al lado de cada boton: no hay salida al
+    // pie ni primario desactivado.
+    //
+    // «Estado del paso» NO es una palanca: es donde esta el recorrido, y
+    // ademas trae el paso hecho y el paso fallado, que son estados de esta
+    // pantalla.
+    //
+    // «afirma://» NO SE NOMBRA EN LA INTERFAZ. Sigue siendo el mecanismo por
+    // debajo, pero la pantalla habla de que programa abren las sedes.
+    //
+    // EL FALLO NUNCA ATRAPA: un paso que ha fallado deja seguir, y la
+    // reparacion vive en «Estado de rFirma» (#655).
+    //
+    // NO HAY PANTALLA DE «REINICIA EL NAVEGADOR». Medido en el #653: la
+    // escritura del certificado nunca falla ni se pierde con el navegador
+    // abierto. El resultado es una linea con role="status", y el aviso de
+    // reiniciar acompaña siempre al exito.
+    const tema = this.props.tema ?? "light";
+    const m = this.props.momento ?? "2 · acciones · sin hacer nada";
+
+    const esBienvenida = m.startsWith("1");
+    const esAcciones = !esBienvenida;
+
+    const todoHecho = m === "2 · acciones · todo hecho";
+    const caEstado =
+      m === "2 · certificado · instalando" ? "instalando" :
+      m === "2 · certificado · instalado" ? "hecha" :
+      m === "2 · certificado · ha fallado" ? "fallada" :
+      todoHecho ? "hecha" : "pendiente";
+    const urlHecho = todoHecho;
+
+    const pasoIndicado = esBienvenida ? 1 : 2;
+    const activo = "var(--rf-primary)";
+    const inactivo = "var(--rf-border-subtle)";
+
+    const caTitular =
+      caEstado === "instalando" ? "Instalando…" :
+      caEstado === "hecha" ? "Instalado en tus navegadores." :
+      "No se ha podido instalar en todas partes.";
+
+    return {
+      tema: tema,
+      esBienvenida: esBienvenida,
+      esAcciones: esAcciones,
+      indicador: "Paso " + pasoIndicado + " de 2",
+      colorPunto1: activo,
+      colorPunto2: pasoIndicado >= 2 ? activo : inactivo,
+      caPendiente: caEstado === "pendiente",
+      caNoPendiente: caEstado !== "pendiente",
+      caInstalando: caEstado === "instalando",
+      caHecha: caEstado === "hecha",
+      caFallada: caEstado === "fallada",
+      caTitular: caTitular,
+      urlHecho: urlHecho,
+      urlPendiente: !urlHecho,
+      hayAtras: esAcciones,
+      textoPrimario: esBienvenida ? "Continuar" : "Terminar"
+    };
+  }
+}
+</script>
+</body>
+</html>

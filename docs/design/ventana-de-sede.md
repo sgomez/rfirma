@@ -18,8 +18,13 @@ declarada a la regla de «una ficha por pantalla» de
 
 - **Firmar desde una sede electrónica** (v0.5) — de principio a fin: es el único
   caso de uso que abre esta ventana.
-- **Identificarse ante una sede** (`selectcert`) — el mismo recorrido sin el
-  momento de firma: se elige certificado, se envía la identidad y se acaba.
+- **Ceder los datos de identidad a una sede** (`selectcert`) — el mismo recorrido
+  sin el momento de firma: se elige certificado, se envían sus datos y se acaba.
+  **No es identificarse**: la operación devuelve el certificado público X.509 y
+  nada más —no hay reto, ni firma, ni ninguna prueba de que la clave privada sea
+  tuya—, así que la ventana nombra lo que ocurre, una cesión de datos personales,
+  y no promete una identificación
+  ([#730](https://github.com/sgomez/rfirma/issues/730)).
 
 No la usa el recorrido de firma local: ahí la interfaz es
 [`ventana-principal.md`](ventana-principal.md) y su
@@ -133,14 +138,17 @@ El corazón del ticket: la pantalla que hoy no existe.
 
 - **Origen**: `sede.ejemplo.gob.es pide tu firma de un documento PDF.` (o `de
   un reto de autenticación`, `de un documento XML`, `de una factura
-  electrónica`, según el formato de la petición; o `pide que te
-  identifiques.` para `selectcert`). Nombrar el origen a secas **atribuye sin
+  electrónica`, según el formato de la petición; o `pide tus datos de
+  identidad.` para `selectcert`). Nombrar el origen a secas **atribuye sin
   afirmar**, que es lo que pedía el
   [#312](https://github.com/sgomez/rfirma/issues/312); decir el formato es lo
   que pedía el [#531](https://github.com/sgomez/rfirma/issues/531) — nadie
   firma a ciegas un reto de autenticación pensando que es un documento. El
   lote no lo dice, porque el momento no trae formato: sigue diciendo «lote de
-  N».
+  N». Cuando la petición no dice de dónde viene, la etiqueta «Origen sin
+  identificar» lo dice con la misma frase sin sujeto: «La petición pide una
+  firma y no indica de qué página viene», o «pide tus datos de identidad» en
+  `selectcert`.
 - **Documento**: sólo lo que el PDF dice de sí mismo —título de sus metadatos si
   lo trae, páginas, tamaño, y si ya viene firmado, con el aviso de **cofirma**—.
   **No hay nombre de fichero ni ruta**, porque el protocolo no los trae: el
@@ -163,10 +171,11 @@ El corazón del ticket: la pantalla que hoy no existe.
   reinventarlo — mismas clases, mismo relleno de fila, misma agrupación
   `Disponibles` / `No utilizables` y el mismo alto máximo de lista de **232 px**.
   Ver [«Los desplegables flotan»](design-system.md) para por qué esa lista no se
-  recorta aunque se salga de los 420 px de la ventana.
+  recorta aunque se salga de los 420 px de la ventana. La etiqueta que lo
+  encabeza dice «Firmarás con», y «Enviarás los datos de» en `selectcert`.
 - **Qué se envía**, en una línea: «Se enviarán tu **nombre**, tu **DNI**, el
   **emisor** del certificado y su **número de serie**».
-- **Acción principal**: `Firmar`, o `Identificarse` cuando la operación es
+- **Acción principal**: `Firmar`, o `Enviar mis datos` cuando la operación es
   `selectcert`. `Cancelar` en `--ghost`.
 
 Cinco situaciones dibujadas: un certificado; varios **acotados por la sede** —con
@@ -308,7 +317,7 @@ cancela— se borró por explicar lo evidente.
 | Esperando el canal | `SedeEspera` · `momento = esperando` | ninguna; `Cancelar` en `--ghost` |
 | El canal no se abre (Chrome / Firefox) | `SedeEspera` · `no-va-chrome`, `no-va-firefox` | `Instalar…` (la CA local) |
 | Consentimiento de firma | `SedeConsentimiento` · `forma = confirmacion` | `Firmar` |
-| Consentimiento de identidad | `SedeConsentimiento` · `situacion = entregar identidad` | `Identificarse` |
+| Consentimiento de cesión de datos | `SedeConsentimiento` · `situacion = entregar identidad` | `Enviar mis datos` |
 | Hay que confirmar | sin artboard | `Continuar` |
 | Firmando | `SedeFirmando` · `firmando · se puede cancelar` | ninguna; `Cancelar` en `--ghost` |
 | Devolviendo a la sede | `SedeFirmando` · `devolviendo a la sede` | ninguna; el pie queda vacío |
@@ -347,8 +356,28 @@ copia legible sin cuenta está en
 [`docs/design/artboards/`](artboards/README.md), y las anotaciones de esa página
 guardan cada medida.
 
+**Quien avisa de que el canal no se abre es esta ventana, no el escritorio**
+([#661](https://github.com/sgomez/rfirma/issues/661)). `SedeEspera` ya distingue
+«esperando» de «ya no va a abrirse» y ofrece `Instalar…` con la receta del
+navegador que toque: el aviso llega en el momento que duele y con la reparación
+al lado. Por eso rFirma de escritorio no estrena ninguna franja de diagnóstico
+para lo mismo, y el diseño de esta pantalla no cambia.
+
+**La rama de identidad, reescrita el 16/09/2026**
+([#730](https://github.com/sgomez/rfirma/issues/730)). `selectcert` devuelve el
+certificado público y nada más, así que «Identificarse» y «Te identificarás con»
+nombraban un acto que no ocurre, y lo hacían justo delante de quien está
+decidiendo si consentir. Las cuatro cadenas de la rama pasan a nombrar la cesión
+de datos —«pide tus datos de identidad», «Enviarás los datos de», «Enviar mis
+datos»—; la línea de **qué se envía** se queda literal, porque ya era exacta. La
+rama de firma no cambia.
+
 **Lo que se descartó, y por qué:**
 
+- **Añadir una frase que desmienta la identificación** («esto no es una firma» y
+  parecidas). Decir lo que se hace basta; negar lo que no se hace es la
+  verborrea que la regla de redacción de
+  [design-system.md](design-system.md) ya echó de esta ventana.
 - **Reutilizar el selector de certificados tal cual** (palanca `forma`, opción
   «hoy · selector de certificado»). Es lo que hace AutoFirma y se dibujó para
   poder compararlo: no dice **quién** pide, ni **qué** se firma, ni que haya una

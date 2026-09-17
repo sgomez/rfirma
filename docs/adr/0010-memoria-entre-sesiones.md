@@ -210,3 +210,37 @@ Cuesta acoplar la ficha 3 a la 2 —sin fila de recientes no hay dónde guardar 
 posición—, y se acepta: es el mismo sitio donde ya viven los metadatos de ese
 documento, y desaparece con él cuando se olvida o se vacía la lista, sin ninguna
 regla de caducidad nueva.
+
+## Enmienda: quién escribe la memoria
+
+La instancia única que `lib.rs` registra citando este ADR es del **proceso de
+escritorio** y solo de él (ADR-0024). Toda mutación, en los dos roles, relee
+el fichero y toca un solo campo, y el fichero de estado se lee del disco en
+cada acceso. El proceso de sede solo muta el último certificado usado; todo lo
+demás lo escribe el escritorio.
+
+## Enmienda: el certificado recordado no le responde a una sede por sí solo
+
+La memoria del último certificado que describe este ADR es del escritorio.
+Una sede no la lee ni la escribe, y de ella no sale nunca una respuesta
+automática. Tres reglas:
+
+1. **`selectcert` con `sticky=true` preselecciona, no contesta.** La fila
+   recordada llega marcada a la ventana, igual que ya ocurre al firmar con
+   `already_chosen`. Sin ventana no hay certificado.
+2. **El recuerdo que gobierna `sticky` pertenece a la sesión de sede que lo
+   fijó**, y muere con ella. Lo que persiste en `state.json` entre sesiones
+   sigue existiendo, pero solo para preseleccionar en el panel de firma.
+3. **`resetsticky` borra el recuerdo de su propia sesión**, nunca la memoria
+   del usuario.
+
+Lo anterior era copiar al original, y era defensible **mientras la retención
+muriera con el proceso**: allí el certificado fijado vive en un estático de JVM
+que se lleva por delante el cierre del canal de la sede que lo fijó. Aquí no
+muere: se guarda en disco, bajo un interruptor encendido por defecto, y sin
+clave de sede ni de sesión. La misma regla produce entonces otro efecto —
+cualquier sede que pida `selectcert` con `sticky=true` obtiene el certificado
+entero, nombre y NIF incluidos, sin que se abra nada— y dos sedes distintas
+reciben el mismo, que es una huella para correlacionar a quien firma. No es
+fuga de clave: la clave no sale del token (ADR-0001). Es entrega de datos
+personales sin que nadie los conceda, y por eso cambia la regla.

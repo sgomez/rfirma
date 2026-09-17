@@ -12,7 +12,7 @@
 # proposito: cualquier cambio suyo mueve `Cargo.lock` o `pnpm-lock.yaml`, y con
 # ello hay que regenerar a mano `packaging/flatpak/cargo-sources.json` y
 # `sources.lock` (el generador no corre en este entorno). Una PR automatica que
-# nace roja en `check-flatpak-sources` no ayuda a nadie.
+# nace roja en `check-repo` no ayuda a nadie.
 version: 2
 updates:
   - package-ecosystem: github-actions

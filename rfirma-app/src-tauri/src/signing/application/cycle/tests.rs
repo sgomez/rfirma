@@ -149,6 +149,14 @@ struct ATokenThatCounts {
 }
 
 impl Signer for ATokenThatCounts {
+    fn accepts_the_secret(
+        &self,
+        _reference: &crate::identity::domain::certificate::CertificateRef,
+        _secret: &crate::identity::domain::protected_secret::ProtectedSecret,
+    ) -> Result<(), crate::identity::domain::error::TokenError> {
+        Ok(())
+    }
+
     fn secret_of(&self, _reference: &CertificateRef) -> Result<StoreSecret, TokenError> {
         self.secrets.set(self.secrets.get() + 1);
         Ok(StoreSecret::NotNeeded)
@@ -398,6 +406,14 @@ fn prompter_supplies_secret_when_store_requires_typed_on_screen() {
     }
 
     impl Signer for TokenAskingPin {
+        fn accepts_the_secret(
+            &self,
+            _reference: &crate::identity::domain::certificate::CertificateRef,
+            _secret: &crate::identity::domain::protected_secret::ProtectedSecret,
+        ) -> Result<(), crate::identity::domain::error::TokenError> {
+            Ok(())
+        }
+
         fn secret_of(&self, _reference: &CertificateRef) -> Result<StoreSecret, TokenError> {
             Ok(StoreSecret::TypedOnScreen)
         }
@@ -469,6 +485,14 @@ fn the_secret_of_a_store_that_is_a_file_is_asked_for_as_a_password() {
 
     struct TokenAskingForTheStorePassword;
     impl Signer for TokenAskingForTheStorePassword {
+        fn accepts_the_secret(
+            &self,
+            _reference: &crate::identity::domain::certificate::CertificateRef,
+            _secret: &crate::identity::domain::protected_secret::ProtectedSecret,
+        ) -> Result<(), crate::identity::domain::error::TokenError> {
+            Ok(())
+        }
+
         fn secret_of(&self, _reference: &CertificateRef) -> Result<StoreSecret, TokenError> {
             Ok(StoreSecret::TypedOnScreen)
         }
@@ -529,6 +553,14 @@ fn prompter_cancellation_aborts_signing_cycle() {
 
     struct TokenAskingPin;
     impl Signer for TokenAskingPin {
+        fn accepts_the_secret(
+            &self,
+            _reference: &crate::identity::domain::certificate::CertificateRef,
+            _secret: &crate::identity::domain::protected_secret::ProtectedSecret,
+        ) -> Result<(), crate::identity::domain::error::TokenError> {
+            Ok(())
+        }
+
         fn secret_of(&self, _reference: &CertificateRef) -> Result<StoreSecret, TokenError> {
             Ok(StoreSecret::TypedOnScreen)
         }

@@ -204,6 +204,14 @@ impl StoresWith {
 }
 
 impl Token for StoresWith {
+    fn accepts_the_secret(
+        &self,
+        _reference: &crate::identity::domain::certificate::CertificateRef,
+        _secret: &crate::identity::domain::protected_secret::ProtectedSecret,
+    ) -> Result<(), crate::identity::domain::error::TokenError> {
+        Ok(())
+    }
+
     fn list(&self, store: &Store) -> Result<Vec<TokenCertificate>, TokenError> {
         Ok(self.only(store, &self.signable))
     }

@@ -138,7 +138,7 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.5"/></svg></span>
           <div class="rf-stack" style="gap:3px;flex:1;min-width:0">
             <p class="rf-title" style="font-size:14px;line-height:1.3">Origen sin identificar</p>
-            <p class="rf-hint">La petición pide una firma y no indica de qué página viene.</p>
+            <p class="rf-hint">{{avisoSinOrigen}}</p>
           </div>
         </div>
       </sc-if>
@@ -380,7 +380,10 @@ class Component extends DCLogic {
       // exactamente la carencia que la opcion «hoy» pone delante.
       hayOrigen: esConfirmacion && !esSinTitulo,
       sinOrigen: esConfirmacion && esSinTitulo,
-      peticion: esIdentidad ? " pide que te identifiques." : " pide tu firma.",
+      avisoSinOrigen: esIdentidad
+        ? "La petición pide tus datos de identidad y no indica de qué página viene."
+        : "La petición pide una firma y no indica de qué página viene.",
+      peticion: esIdentidad ? " pide tus datos de identidad." : " pide tu firma.",
 
       hayDoc: esConfirmacion && hayDocumento,
       tituloDoc: tituloDoc,
@@ -396,7 +399,7 @@ class Component extends DCLogic {
       // distinguirse en nada: eran la misma pantalla y se han fundido en una.
       haySelector: true,
       hayEtiquetaCert: esConfirmacion,
-      etiquetaCert: esIdentidad ? "Te identificarás con" : "Firmarás con",
+      etiquetaCert: esIdentidad ? "Enviarás los datos de" : "Firmarás con",
       abierto: abierto,
       filas: filas,
       elegido: Boolean(elegido),
@@ -413,7 +416,7 @@ class Component extends DCLogic {
 
       hayCancelar: true,
       botonPrincipal: esSelector ? "Aceptar"
-        : esIdentidad ? "Identificarse"
+        : esIdentidad ? "Enviar mis datos"
         : "Firmar"
     };
   }

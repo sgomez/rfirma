@@ -46,27 +46,34 @@ mapa con sus trampas. Las cuatro que hay que conocer antes de tocar nada:
 ## 🚦 Qué ejecutar y cuándo
 
 La puerta del repositorio es `just check`, y **no es tuya: es del CI**, que la
-reparte en tres runners simultáneos y por eso paga el carril más lento. En un
-portátil se pagan los tres sumados, y repetirla tras cada arreglo es el gasto
-más grande de una ronda de entrega. La escalera es esta y no tiene más
-peldaños:
+reparte en tres runners simultáneos y por eso paga solo el carril más lento.
+No hay puerta local que la adelante: correrla en un portátil paga los tres
+carriles sumados para anticipar un rojo que el CI da solo y en paralelo. La
+escalera es esta y no tiene más peldaños:
 
 | Cuándo | Qué |
 | --- | --- |
 | En cada rojo → verde | Solo la prueba que estás tocando: `cargo test <filtro>`, `pnpm exec vitest run <fichero> --reporter=dot` |
-| Antes de commitear | `just fmt` y **`just check-changed`**, una vez y no por arreglo: deduce de lo que cambia respecto a `origin/main` qué carriles hacen falta |
+| Antes de commitear | `just fmt`. Nada más: el formato ya lo comprueba lefthook en el pre-push |
+| Al abrir la PR | Push, y el CI ejecuta `just check` repartida en tres runners: el veredicto es suyo, no se corre `just check` en local |
+| Si el CI sale en rojo | Vuelve al primer peldaño con la prueba o el fichero que falló. Si el rojo local es `IO failure on output stream` o `No space left on device`, es el disco: `just clean-coverage` |
 | Al revisar una PR | Nada, si el CI está verde para ese head sha: la suite ya respondió y volver a correrla no añade veredicto (`docs/agents/code-host.md`) |
-| `just check` entero | Solo si tocas el `justfile` o `.github/` — y entonces `check-changed` ya dispara las tres cadenas sin que tengas que decidirlo |
+| `just check` entero en local | Nunca, ni siquiera al tocar el `justfile` o `.github/`: eso lo comprueba el CI igual |
+
+`just --list` agrupa las recetas: el grupo `checklist` (la escalera) es esta
+tabla, `ci` lo que llaman los workflows por nombre, `dev` y `release` lo que se
+usa a mano.
 
 Tres avisos que ahorran una ronda:
 
-* **`just check-rust` no es un bucle de realimentación, es la puerta CRAP.**
+* **`just check-rust`, `just coverage` y `just crap` no son un
+  bucle de realimentación: las tres arrastran el árbol instrumentado.**
   `cargo llvm-cov` compila un árbol instrumentado **aparte** del de `cargo
-  test` y de `clippy`, así que iterar con él paga dos compilaciones completas
+  test` y de `clippy`, así que iterar con ellas paga dos compilaciones completas
   para responder a lo que `cargo test <filtro>` responde en segundos.
 * **Un `cargo test` suelto necesita `rfirma-app/dist` y el token**, que es lo
   que le añaden las recetas: desde un árbol limpio el arranque sigue siendo
-  `pnpm install` → `just po-import` → `just build-ts` → `just token`.
+  `pnpm install` → `just po-import` → `just build-ts` → `just certs install`.
 * **La salida de una suite verde es contexto tirado.** Filtra por nombre y usa
   el reportero más callado de cada cadena; en rojo, vuelve a correr solo el
   fichero o el nombre que falló, nunca la suite.
@@ -93,6 +100,7 @@ hace falta además del fichero que vas a tocar:
 * `rfirma-app/src-tauri/src/AGENTS.md` — mapa del backend Rust.
 * `rfirma-app/src/AGENTS.md` — mapa de la interfaz.
 * `rfirma-native-bridge/AGENTS.md` — mapa del puente Java.
+* `scripts/AGENTS.md` — mapa de los arneses que llama el `justfile`.
 * `docs/AGENTS.md` — índice de ADR, research, fichas de diseño y contratos de proceso.
 
 **Una fila de un mapa dice qué es el fichero, y se para ahí.** Una frase, la que

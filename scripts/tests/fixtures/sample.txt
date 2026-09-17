@@ -1,0 +1,1 @@
+Fixture para comprobar que una extension no soportada falla.

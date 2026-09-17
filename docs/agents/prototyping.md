@@ -105,7 +105,7 @@ siguiendo la variante que se esté evaluando.
   colores a mano**.
 - El bundle **no se edita en el repositorio**: se cambia en el proyecto de
   sistema de diseño, se reexporta entero sobre `bundle/` y se resella con
-  `just seal-ds-bundle`. Un retoque a mano sale en rojo en `just lint`.
+  `just seal-ds-bundle`. Un retoque a mano sale en rojo en `just check-repo`.
 - El proyecto lleva ya adjunto el sistema de diseño compilado en
   `_ds/rfirma-design-system-ca5219d0-609a-4ce1-957f-e1d1d38e0c8c/` (tokens,
   `styles.css`, fuentes). Los artboards consumen esos tokens. Su `<helmet>` es
@@ -178,7 +178,41 @@ puede desaparecer de aquí — el enlace al canvas ya vive en las fichas.
 
 | Caso de uso | Canvas | Estado | Fichas |
 | ----------- | ------ | ------ | ------ |
-| _(ninguno en vuelo)_ | | | |
+
+No hay ningún prototipo en vuelo.
+
+El caso de uso **la retirada desde dentro**
+([#660](https://github.com/sgomez/rfirma/issues/660), mapa
+[#652](https://github.com/sgomez/rfirma/issues/652)) se validó el **17/09/2026**
+y salió de esta tabla. Deja **un artboard nuevo**, `RetirarCertificado`, en la
+página «Estado de rFirma», que es `PanelEstado` con el velo de la retirada
+encima; no hubo página de trabajo ni artboard de usar y tirar que fundir. De
+rebote toca `PanelEstado`, donde la señal pasa a llamarse «Firma en sedes» y el
+botón del certificado alterna entre instalar y retirar. Sus fichas son
+[`retirar-certificado.md`](../design/retirar-certificado.md) —nueva— y
+[`panel-de-estado.md`](../design/panel-de-estado.md), y las dos enlazan el canvas
+desde su sección «Decisiones».
+
+El caso de uso **el panel de estado y el menú de la cabecera**
+([#659](https://github.com/sgomez/rfirma/issues/659), mapa
+[#652](https://github.com/sgomez/rfirma/issues/652)) se validó el **17/09/2026**
+y salió de esta tabla. Deja **un artboard nuevo**, `PanelEstado`, en una página
+propia —«Estado de rFirma»—, con dos palancas independientes: el momento del
+panel y la aplicación de firma. Los tres artboards de trabajo que hubo se
+fundieron en él al validar y se borraron del proyecto y del repositorio. De
+rebote toca `EstadoVacio`, cuyo menú pasa a cuatro entradas con divisor, aviso y
+foco por teclado. Sus fichas son
+[`panel-de-estado.md`](../design/panel-de-estado.md) —nueva— y
+[`cabecera.md`](../design/cabecera.md), y las dos enlazan el canvas desde su
+sección «Decisiones»; `design-system.md` estrena de paso el vocabulario de
+veredictos, que es transversal.
+
+El caso de uso **el asistente del primer arranque** ([#658](https://github.com/sgomez/rfirma/issues/658),
+mapa [#652](https://github.com/sgomez/rfirma/issues/652)) se validó el **17/09/2026**
+y salió de esta tabla: es **una pantalla nueva con un artboard nuevo**,
+`PrimerArranque`, que vive en la página «Recorrido de firma» como cualquier otra
+y tiene ficha propia, [`primer-arranque.md`](../design/primer-arranque.md), con
+el enlace al canvas en su sección «Decisiones». No tocó ninguna otra ficha.
 
 El caso de uso **Preferencias como visor de pestañas**
 ([#657](https://github.com/sgomez/rfirma/issues/657)) se validó el **10/09/2026**

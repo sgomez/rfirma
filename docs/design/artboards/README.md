@@ -8,7 +8,7 @@ terminar ese issue—. Se ha usado para decidir en la v0.2, la v0.3 y la 0.3.1, 
 importó a un repositorio público. Se ha usado también en la v0.4. **No preguntes si hay que
 borrarlo: no, hasta la v1.0.**
 
-Son los diecinueve artboards del canvas de Claude Design «Autofirma de escritorio
+Son los veintidós artboards del canvas de Claude Design «Autofirma de escritorio
 en Rust», bajados literalmente, más el `canvas.json` que los ordena y los titula.
 Tres de ellos —`Main`, `EstadoExito` y `PreferenciasPantalla`— se rehicieron el
 02/09/2026 con las decisiones de v0.2 del
@@ -20,9 +20,17 @@ ver «Lo que cambió en v0.3». Los cambios de la v0.4 —el
 no crean ninguno; ver «Lo que cambió en v0.4». La v0.5 —el
 [#317](https://github.com/sgomez/rfirma/issues/317)— es la primera que **crea
 artboards nuevos** desde la v0.3: cinco, en una página propia, más dos de la
-ventana principal tocados de rebote; ver «Lo que cambió en v0.5». Después de la
-v0.5, `PreferenciasPantalla` se rehizo con el
-[#657](https://github.com/sgomez/rfirma/issues/657); ver «Lo que cambió en
+ventana principal tocados de rebote; ver «Lo que cambió en v0.5».
+Después de la v0.5, el asistente del primer arranque —el
+[#658](https://github.com/sgomez/rfirma/issues/658)— añade `PrimerArranque`, el
+vigésimo, en la página «Recorrido de firma»; ver «Lo que cambió después de la
+v0.5 — el asistente del primer arranque». Y el panel de estado —el
+[#659](https://github.com/sgomez/rfirma/issues/659)— añade `PanelEstado`, el
+vigesimoprimero, en una página propia, «Estado de rFirma», y rehace el menú de
+`EstadoVacio`; ver «Lo que cambió después de la v0.5 — el panel de estado y el
+menú de la cabecera».
+`PreferenciasPantalla` se rehízo con el [#657](https://github.com/sgomez/rfirma/issues/657) y se podó con el
+[#661](https://github.com/sgomez/rfirma/issues/661); ver «Lo que cambió en
 Preferencias».
 Están aquí para que la transcripción a JSX se pueda hacer y revisar **sin
 cuenta de Claude**, y porque el repositorio es público y su interfaz no puede
@@ -35,13 +43,13 @@ Cuando llegue la v1.0 habrá que decidir de nuevo si sigue haciendo falta.
 
 ## Qué es cada fichero
 
-`canvas.json` numera los estados y los reparte en **tres** páginas. El orden de
+`canvas.json` numera los estados y los reparte en **cuatro** páginas. El orden de
 la página «Recorrido de firma» es el de la ficha `ventana-principal.md`; la
 página «Ventana de sede · v0.5» va aparte porque es otra ventana:
 
 | # | Artboard | Estado |
 | - | -------- | ------ |
-| 1 | `EstadoVacio` | Vacío, con el menú de la cabecera **dibujado abierto** |
+| 1 | `EstadoVacio` | Vacío, con el menú de la cabecera **dibujado abierto**: sus cuatro entradas, el divisor, el aviso y el foco por teclado |
 | 2 | `EstadoDocumentoCargado` | Documento cargado, sin certificado |
 | 2b | `EstadoElegirCertificado` | Eligiendo entre varios certificados |
 | 3 | `EstadoCargandoCertificados` | Buscando certificados, y el diálogo de secreto del almacén cuando la sesión se abre **antes** de listar |
@@ -56,10 +64,13 @@ página «Ventana de sede · v0.5» va aparte porque es otra ventana:
 | — | `PreferenciasPantalla` | Preferencias, a pantalla completa, como visor de pestañas en vertical: el índice permanente y un solo panel a la derecha |
 | — | `EstadoAcercaDe` | Diálogo de «acerca de», con el «cómo actualizar» de la v0.4 |
 | S1 | `SedeEspera` | Ventana de sede: esperando el canal, y las dos recetas de reparación cuando no se abre |
-| S2 | `SedeConsentimiento` | Ventana de sede: el consentimiento — quién pide, qué se firma y con qué certificado |
+| S2 | `SedeConsentimiento` | Ventana de sede: el consentimiento — quién pide, qué se firma (o qué datos se ceden) y con qué certificado |
 | S3 | `SedeFirmando` | Ventana de sede: firmando y devolviendo la firma a la sede |
 | S4 | `SedeDesenlace` | Ventana de sede: firmado, cancelado o petición rechazada |
 | S5 | `SedeSinCertificado` | Ventana de sede: sin ningún certificado, o con todos excluidos por la sede |
+| — | `PrimerArranque` | El asistente del primer arranque: la bienvenida con el deslinde, y las dos acciones —instalar el certificado propio y poner a rFirma por defecto— |
+| E1 | `PanelEstado` | El panel de estado: la tabla de las cuatro señales de la instalación, con sus cinco veredictos, sus reparaciones y el botón del certificado que alterna entre instalar y retirar |
+| E2 | `RetirarCertificado` | El panel de estado con el velo de la retirada encima: pregunta, avance almacén a almacén y desenlace, con y sin fallo |
 
 Los cinco de `Sede*` viven en la página **«Ventana de sede · v0.5»** y su ficha
 es [`ventana-de-sede.md`](../ventana-de-sede.md), **una sola para los cinco**:
@@ -67,6 +78,11 @@ es una ventana con una secuencia, no cinco pantallas
 ([#332](https://github.com/sgomez/rfirma/issues/332)). Miden 720 × 600 px, no
 1180 × 700: la ventana es de 520 × 420 y se dibuja centrada sobre un lienzo que
 representa el escritorio, para que se vea su tamaño real.
+
+`PrimerArranque` vive también en la página «Recorrido de firma», pero **no es
+un paso del recorrido**: es la pantalla del primer arranque, la misma ventana de
+1180 × 700 antes de que haya documento. Su ficha es
+[`primer-arranque.md`](../primer-arranque.md).
 
 No se ha importado `firmar-fichero-local.dc.html`: `canvas.json` lo aparta en
 la página «Otros» y lo marca como ajeno al recorrido.
@@ -447,12 +463,175 @@ que **no** se recorta: la distinción entre «no tienes ninguno» y «la sede ex
 los tuyos», la instrucción accionable del pie de `SedeEspera`, y la regla dura de
 no enumerar jamás lo que la sede descartó.
 
+## Lo que cambió después de la v0.5 — la rama de identidad de `SedeConsentimiento`
+
+Decidido en el [#730](https://github.com/sgomez/rfirma/issues/730) y dibujado el
+16/09/2026. **Ningún artboard nuevo y ninguna página de trabajo**: es una tanda
+de redacción sobre `SedeConsentimiento`, en su misma página «Ventana de sede ·
+v0.5».
+
+**La rama de identidad dejaba de prometer una identificación que no ocurre.**
+`selectcert` devuelve el certificado público X.509 y nada más: no hay reto, ni
+firma, ni prueba de posesión de la clave privada. «Identificarse» y «Te
+identificarás con» nombraban un acto que no pasa, y lo hacían justo delante de
+quien está decidiendo si consentir. Se reescriben **cuatro cadenas y ninguna
+más**: el título con origen pasa a «*sede* pide tus datos de identidad», el de
+sin origen a «La petición pide tus datos de identidad y no indica de qué página
+viene», la etiqueta del certificado de «Te identificarás con» a «Enviarás los
+datos de», y el botón de «Identificarse» a «Enviar mis datos». La línea de qué se
+envía se queda **literal**, porque ya era exacta, y la rama de firma no cambia en
+ningún punto. **No se añade ninguna frase que desmienta la identificación**
+(«esto no es una firma» y parecidas): decir lo que se hace basta, y negar lo que
+no se hace es la verborrea que la v0.5 ya echó de aquí.
+
+**El texto de «sin origen» pasa a ser un dato** (`avisoSinOrigen`) en vez de
+estar escrito en la plantilla, porque la aplicación tiene dos claves —una por
+rama— y en el artboard sólo había una frase. La palanca `situacion` no lo hace
+visible: «entregar identidad · selectcert» y «PDF sin título · sin origen» son
+opciones excluyentes de la misma palanca, y abrir una quinta costaba más de lo
+que aclara.
+
+**Medido**: el botón crece sólo en horizontal. El pie mide 472 px útiles y
+«Cancelar» más «Enviar mis datos», con su hueco de 8 px, no pasan de 270. En
+vertical la rama de identidad es de las más holgadas del artboard, porque no
+pinta título, ni metadatos, ni cofirma: los 2,5 px de margen medidos en la v0.5
+son de la rama de firma.
+
+## Lo que cambió después de la v0.5 — el asistente del primer arranque
+
+Decidido en el [#658](https://github.com/sgomez/rfirma/issues/658) —mapa
+[#652](https://github.com/sgomez/rfirma/issues/652), «La instalación se explica
+sola»— y validado el 17/09/2026. **Un artboard nuevo, `PrimerArranque`, y nada
+más tocado**: ni una pantalla existente cambia. Nació en una página de trabajo
+—`trabajo-primer-arranque`— que ha desaparecido al validar; el artboard se queda,
+ya sin prefijo, en «Recorrido de firma», y su anotación se ha mudado con él.
+
+**Sustituye al diálogo `trust/TrustNotice.tsx` y absorbe el disparo inicial de
+`desktop/UrlHandlerBanner.tsx`.** La diferencia de fondo es que este informa y
+**además hace**: instala el certificado propio y pone a rFirma por defecto ahí
+mismo, en dos pantallas —bienvenida con el deslinde, y las dos acciones juntas—.
+
+**El rechazo es por acción**, con un «Ahora no» al lado de cada botón: no hay
+salida al pie ni primario desactivado. **`afirma://` no se nombra en ninguna
+parte de la interfaz**: la pantalla habla de qué programa abren las sedes.
+
+**Medido**: la estructura de una sola página con los tres bloques apilados sumaba
+unos 770 px contra los 644 px del hueco, así que se desplazaba, y por eso se
+descartó junto con la de tres pantallas encadenadas.
+
+El selector `momento` **no es una palanca de alternativas**: es el recorrido —las
+dos pantallas— más el paso instalando, el paso hecho y el paso fallado, que son
+estados de esta pantalla. Lo que se decidió, medida a medida, está en la
+anotación de la página y en la ficha
+[`primer-arranque.md`](../primer-arranque.md), que es la referencia normativa.
+
+## Lo que cambió después de la v0.5 — el panel de estado y el menú de la cabecera
+
+Decidido en el [#659](https://github.com/sgomez/rfirma/issues/659) —mapa
+[#652](https://github.com/sgomez/rfirma/issues/652), «La instalación se explica
+sola»; inventario de señales en el
+[#655](https://github.com/sgomez/rfirma/issues/655) y menú en el
+[#656](https://github.com/sgomez/rfirma/issues/656)— y validado el 17/09/2026.
+**Un artboard nuevo, `PanelEstado`, en una página propia —«Estado de rFirma»—, y
+`EstadoVacio` tocado de rebote.** Los tres artboards de trabajo que hubo
+—`PanelEstadoCorrecto`, `PanelEstadoComprobando` y `PanelEstadoReparando`— se
+fundieron en `PanelEstado` como opciones de su palanca «Momento del panel» y han
+desaparecido del proyecto y del repositorio.
+
+**El panel no es un diálogo**: es la ventana de 1180 × 700 con la cabecera del
+ADR-0007 intacta y el pie **hermano** de la zona que se desplaza, de modo que
+cumple el 2.4.11 por construcción y no por z-index.
+
+**Forma: tabla** —`Señal · Valor · Veredicto · Acción`, 190 / flexible / 130 /
+160 px—, y **sin franja de resumen arriba**: cada fila ya trae su veredicto,
+incluso mientras se actualiza. La lista y las tarjetas se descartaron.
+
+**Cuatro señales y no cinco.** «Canal de distribución» se cayó: una casilla que
+siempre dice «Correcto» y no puede ponerse en rojo no es una señal. El canal
+sobrevive como lo que `[Actualizar]` hace por dentro, y por eso **no hay variante
+de `.deb` ni de `.rpm`**: sería idéntica píxel a píxel.
+
+**Redacción telegráfica**, etiqueta y valor: `0.4.1 → 0.5.0`, `2 de 3
+almacenes`, `Ninguno`, `Sin configurar`. La única prosa de la pantalla es la
+pista `Firefox lo pregunta la primera vez.`, debajo de su fila y fuera de la
+celda. **`afirma://` no se nombra.**
+
+**La fila de la aplicación de firma lleva desplegable, no un botón que alterna**,
+porque elegir programa es una elección declarada y no una reparación disfrazada;
+y el desplegable **sólo aparece si hay dónde elegir**. Sus cinco casos caben en
+la palanca «Aplicación de firma» —que hoy se llama «Firma en sedes», y el
+porqué está en el apartado de la retirada—, que es **independiente** de «Momento
+del panel»: sin resumen global no hay nada que se pueda contradecir. La fila **no
+cambia de alto** en ninguno de los cinco.
+
+**Los cinco veredictos están todos a la vista en el artboard** y se distinguen
+por silueta, palabra y peso, **nunca por color**. «No aplica» y «Comprobando»
+están igual de apagados y los separa la silueta.
+
+En `EstadoVacio`, el menú pasa de dos entradas a **cuatro en dos grupos con un
+divisor**, con la columna de 14 px reservada en las cuatro para el icono de
+enlace externo o el triángulo del aviso —**el mismo `path`** que «Atención» en
+el panel—, y con dos palancas nuevas: el aviso y el foco por teclado. El `<svg>`
+del enlace externo sale del canvas, como salieron las tres rayas: no hay
+biblioteca de iconos.
+
+Lo que se decidió, medida a medida, está en la anotación de la página y en las
+dos fichas normativas, [`panel-de-estado.md`](../panel-de-estado.md) y
+[`cabecera.md`](../cabecera.md).
+
+## Lo que cambió después de la v0.5 — la retirada del certificado desde el panel
+
+Decidido en el [#660](https://github.com/sgomez/rfirma/issues/660) —mapa
+[#652](https://github.com/sgomez/rfirma/issues/652), «La instalación se explica
+sola»— y validado el 17/09/2026. **Un artboard nuevo, `RetirarCertificado`, en la
+misma página «Estado de rFirma», y `PanelEstado` tocado.** No hubo página de
+trabajo ni artboard de usar y tirar: los dos son definitivos.
+
+**`RetirarCertificado` es `PanelEstado` con el velo encima**, y así está escrito:
+su fichero es una copia del otro más el velo, con la tabla pintada por la misma
+función. Detrás del velo no hay una reconstrucción parecida del panel, sino el
+panel.
+
+**El velo empieza a los 56 px y no tapa la cabecera.** El porqué es un modelo, no
+un parecido: la cabecera es permanente y el cuerpo es lo que cambia, así que
+«Estado de rFirma» y «Preferencias» son **vistas del cuerpo** y un modal nacido
+dentro del cuerpo no puede tapar lo que no es suyo. La consecuencia es que la
+cabecera sigue alcanzable durante la retirada, incluso mientras trabaja: el
+diálogo es una comodidad y la verdad está en la tabla.
+
+**Cuatro tiempos en una palanca** —pregunta, trabajando, resultado y resultado con
+fallo—, porque son momentos de la misma pantalla-estado. El panel de detrás cambia
+con ellos, con las reglas del propio panel: `Retirando…` en la celda de acción,
+mismo sitio y mismo patrón que `Instalando…`, y `Volver a comprobar` apagado
+mientras dura.
+
+**El velo no estrena nada**: `.rf-scrim` y `.rf-dialog` son los de apagar
+«Recordar mi actividad» en Preferencias, el ✓ y el ✗ son los de `ver almacenes`,
+el arco es el de «Comprobando» y el triángulo el de «Atención».
+
+En `PanelEstado`, la señal `Aplicación de firma` pasa a llamarse **`Firma en
+sedes`**: con las dos filas acopladas, el nombre viejo se leía como «sin
+certificado esto no firma», y arrastrar un PDF a la ventana no toca la CA.
+El botón del certificado **alterna** `Instalar` y `Retirar…` según el veredicto,
+nunca los dos a la vez; si firma AutoFirma el certificado pasa a **`No aplica`
+conservando su valor y con `Retirar…` si queda algo puesto**, rompiendo a
+propósito la regla de que «No aplica» no lleva acción. La regla del desplegable se
+afina a **«hay dónde elegir cuando queda algún candidato distinto del valor
+actual»**, y estrena la palanca «Desplegable de Firma en sedes», que está para
+poder ver que `rFirma` no aparece cuando su certificado no está en ningún almacén.
+
+Lo que se decidió, medida a medida, está en las anotaciones de la página y en las
+dos fichas normativas, [`panel-de-estado.md`](../panel-de-estado.md) y
+[`retirar-certificado.md`](../retirar-certificado.md).
+
 ## Lo que cambió en Preferencias
 
 Decidido en el [#657](https://github.com/sgomez/rfirma/issues/657) y dibujado el
-10/09/2026. **Un solo artboard tocado, `PreferenciasPantalla`, y ninguna página
-de trabajo**: la pantalla ya existía, así que la exploración se hizo con una
-palanca dentro de ella. Los diecinueve conservan el mismo `<helmet>`.
+10/09/2026, y podado en el
+[#661](https://github.com/sgomez/rfirma/issues/661) el 17/09/2026. **Un solo
+artboard tocado, `PreferenciasPantalla`, y ninguna página de trabajo**: la
+pantalla ya existía, así que las dos tandas se hicieron con una palanca dentro
+de ella. Los demás conservan el mismo `<helmet>`.
 
 **Preferencias deja de ser una columna con las secciones apiladas y pasa a ser
 un visor de pestañas en vertical.** El índice de la izquierda era el remedio al

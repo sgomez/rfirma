@@ -5,7 +5,7 @@ use std::sync::Arc;
 use crate::site::domain::channel::{ChannelDuty, ChannelError, ChannelLocation, OpenChannel};
 use crate::site::domain::protocol::{
     location_for_a_refusal, AfirmaUrl, CipherKey, LaunchRequest, NegotiatedCredential, Refusal,
-    RefusalSituation, SafCode, WireAnswer, THIRD_PROTOCOL_VERSION,
+    RefusalSituation, RelayChannelInfo, RelayRequest, SafCode, WireAnswer, THIRD_PROTOCOL_VERSION,
 };
 
 use super::errand::{Errand, LiveErrand, NegotiatedCodec};
@@ -81,6 +81,8 @@ pub enum Attendance {
         channel: OpenChannel,
         /// Respuesta de rechazo a enviar.
         answer: WireAnswer,
+        /// El rechazo sin traducir, para la ventana oculta que lo sostiene.
+        refusal: Refusal,
     },
     /// Rechazo notificado a través de la ventana por falta de canal.
     RefusingInTheWindow(Refusal),
@@ -105,10 +107,10 @@ pub fn attend_launch(
             let duty = ChannelDuty::Serve(negotiated.credential.clone());
             match transport(&negotiated.location, duty) {
                 Ok(mut channel) => {
+                    let arrival = channel.arrival_mode();
                     // Se retira antes de begin(): dispatch() exige un códec ya registrado.
                     let delivery = channel.take_delivery();
-                    let errand =
-                        Errand::of(negotiated.credential, channel.port(), negotiated.codec);
+                    let errand = Errand::of(negotiated.credential, arrival, negotiated.codec);
                     if live.begin(errand.clone()) {
                         if let Some(delivery) = delivery {
                             delivery.now();
@@ -127,11 +129,49 @@ pub fn attend_launch(
                         transport,
                     )
                 }
-                Err(error) => Attendance::ChannelNotOpened(error),
+                Err(error) => refuse_after_resolution_failure(&url, error, transport),
             }
         }
         Err(refusal) => refuse(&url, refusal, transport),
     }
+}
+
+/// Convierte un fallo de resolución del servidor intermedio en un rechazo por el canal, igual que
+/// un rechazo de negociación: si el fallo ya conocía su destino, se sube; si no, se queda en la
+/// ventana.
+fn refuse_after_resolution_failure(
+    url: &AfirmaUrl,
+    error: ChannelError,
+    transport: ChannelTransport<'_>,
+) -> Attendance {
+    let destination = error
+        .destination()
+        .map(|(store_servlet, id)| (store_servlet.to_owned(), id.to_owned()));
+    let refusal = error.refusal().cloned();
+
+    match (destination, refusal) {
+        (Some((store_servlet, id)), Some(refusal)) => refuse_at(
+            relay_destination_location(url, store_servlet, id),
+            refusal,
+            transport,
+        ),
+        _ => Attendance::ChannelNotOpened(error),
+    }
+}
+
+/// La ubicación de servidor intermedio de un destino de subida ya resuelto, sin nada más que
+/// recuperar.
+fn relay_destination_location(
+    url: &AfirmaUrl,
+    store_servlet: String,
+    id: String,
+) -> ChannelLocation {
+    ChannelLocation::Relay(RelayChannelInfo {
+        operation: url.clone(),
+        request: RelayRequest::Inline { store_servlet, id },
+        key: None,
+        active_wait: false,
+    })
 }
 
 fn refuse(url: &AfirmaUrl, refusal: Refusal, transport: ChannelTransport<'_>) -> Attendance {
@@ -139,10 +179,19 @@ fn refuse(url: &AfirmaUrl, refusal: Refusal, transport: ChannelTransport<'_>) ->
         return Attendance::RefusingInTheWindow(refusal);
     };
 
+    refuse_at(location, refusal, transport)
+}
+
+fn refuse_at(
+    location: ChannelLocation,
+    refusal: Refusal,
+    transport: ChannelTransport<'_>,
+) -> Attendance {
     match transport(&location, ChannelDuty::Refuse(refusal.answer())) {
         Ok(channel) => Attendance::RefusingOverTheChannel {
             channel,
             answer: refusal.answer(),
+            refusal,
         },
         Err(_) => Attendance::RefusingInTheWindow(refusal),
     }

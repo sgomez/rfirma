@@ -110,7 +110,8 @@ fn every_criterion_the_original_understands_crosses_untouched() {
 }
 
 #[test]
-fn the_four_unmeasured_criteria_are_still_in_the_measured_catalogue() {
+fn unmeasured_criteria_contains_only_dnie_and_is_in_the_catalogue() {
+    assert_eq!(UNMEASURED_CRITERIA, &["dnie:"]);
     for criterion in UNMEASURED_CRITERIA {
         assert!(
             ACCEPTED_CRITERIA.contains(criterion),

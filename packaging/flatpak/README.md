@@ -58,7 +58,7 @@ construidos, así que van primero:
 export GRAALVM_HOME=~/.sdkman/candidates/java/25.3.4+1.r25-graalce
 just native
 just build-ts
-just token       # el paso 4 firma con el token de la grada B
+just certs install       # el paso 4 firma con el token de la grada B
 packaging/flatpak/verifica.sh
 ```
 
@@ -79,7 +79,7 @@ distribuyen, no los del árbol de construcción. Eso es lo que faltaba: la
 verificación del [#22](https://github.com/sgomez/rfirma/issues/22) se corrió
 contra la imagen de **seis** ficheros, y la rúbrica de imagen es justo el caso
 cuyo comportamiento depende de qué `.so` haya al lado. Necesita el token de la
-grada B (`just token`) y `poppler-utils`.
+grada B (`just certs install`) y `poppler-utils`.
 
 Ese paso se ejecuta en el anfitrión apuntando a la librería del bundle, y no
 dentro del sandbox, por tres razones medidas: dentro **no hay token** (el
@@ -124,10 +124,10 @@ just flatpak-sources   # cuando cambie Cargo.lock o pnpm-lock.yaml
 ```
 
 Esa receta regenera los dos JSON **y** reescribe `sources.lock` con el `sha256`
-de cada fichero de bloqueo. El CI no los regenera: ejecuta
-`just check-flatpak-sources` (dentro de `just lint`, y por tanto de `just
-check`), que compara esos `sha256` y falla nombrando el fichero que se ha
-movido. Un fichero generado dentro del CI es un fichero que nadie ha mirado
+de cada fichero de bloqueo. El CI no los regenera: `just check-repo` ejecuta
+`packaging/flatpak/check-sources.sh`, que compara esos `sha256` y falla
+nombrando el fichero que se ha movido. Un fichero generado dentro del CI es un
+fichero que nadie ha mirado
 ([ID-07](https://github.com/sgomez/rfirma/issues/46)).
 
 ### Cuando `just flatpak-sources` no corre

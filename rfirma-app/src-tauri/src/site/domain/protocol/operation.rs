@@ -6,8 +6,9 @@ use base64::Engine as _;
 use super::algorithm::AskedAlgorithm;
 use super::codes::{Parameter, SafCode};
 use super::data_source::{download_url, DataSource};
+use super::detection::{detect_signature, DetectedSignature};
 use super::filters::{site_filter, SiteFilter};
-use super::format::{format_of, RequestedFormat};
+use super::format::{format_of, RequestedFormat, XadesEnvelope};
 use super::key_store::refuse_a_key_store_rfirma_does_not_open;
 use super::parameters::{
     check_local_access_is_not_requested, check_minimum_client_version,
@@ -431,15 +432,14 @@ impl SignAndSaveRequest {
         self.starting_folder.as_deref()
     }
 
-    /// El nombre propuesto al diálogo de guardado (`AOPDFSigner.getSignedName`, 1.9.2): el
-    /// `filename` de la sede si vino; si no, el nombre base del fichero elegido más `.pdf`; y
-    /// solo sin ninguno de los dos, `Firma.pdf`.
+    /// El nombre propuesto al diálogo de guardado: el de la sede, o el del fichero con la extensión de su formato.
     pub fn proposed_name(&self) -> String {
         self.filename.clone().unwrap_or_else(|| {
+            let ext = self.format().extension();
             self.chosen_name
                 .as_deref()
-                .map(|name| format!("{}.pdf", base_name(name)))
-                .unwrap_or_else(|| format!("{DEFAULT_SIGNED_NAME}.pdf"))
+                .map(|name| format!("{}.{ext}", base_name(name)))
+                .unwrap_or_else(|| format!("{DEFAULT_SIGNED_NAME}.{ext}"))
         })
     }
 
@@ -689,7 +689,10 @@ fn sign_request(
         None => read_document(url, data)?,
     };
 
-    let format = requested.unwrap_or_else(|| format_of(&document));
+    let format = match requested {
+        Some(format) => format,
+        None => resolve_auto_format(&document, round)?,
+    };
     refuse_a_multisignature_of_an_invoice(round, format)?;
     refuse_a_countersignature_outside_cades_and_xades(round, format)?;
     Ok(SiteOperation::Sign(SignRequest {
@@ -720,6 +723,23 @@ fn counter_round(declared: &[(String, String)]) -> Result<SignatureRound, Refusa
                 ),
             )
         })
+}
+
+/// Resuelve el formato efectivo con `format=auto`, exigiendo firma previa si la ronda es multifirma.
+fn resolve_auto_format(document: &[u8], round: SignatureRound) -> Result<RequestedFormat, Refusal> {
+    if matches!(round, SignatureRound::First) {
+        return Ok(format_of(document));
+    }
+    match detect_signature(document) {
+        Some(DetectedSignature::Pdf) => Ok(RequestedFormat::Pades),
+        Some(DetectedSignature::Invoice) => Ok(RequestedFormat::FacturaE),
+        Some(DetectedSignature::Xml) => Ok(RequestedFormat::Xades(XadesEnvelope::Enveloping)),
+        Some(DetectedSignature::Cms) => Ok(RequestedFormat::Cades),
+        None => Err(Refusal::new(
+            SafCode::UnknownSigner,
+            "el formato de firma no se ha podido determinar a partir de los datos aportados",
+        )),
+    }
 }
 
 /// Una factura ni se cofirma ni se contrafirma: `AOFacturaESigner` lanza una
@@ -837,6 +857,14 @@ fn sign_and_save_request(url: &AfirmaUrl, data: &dyn DataSource) -> Result<SiteO
         Some(document) => Some(document),
         None => optional_document(url, data)?,
     };
+
+    if requested.is_none() {
+        if let Some(doc) = &document {
+            let format = resolve_auto_format(doc, round)?;
+            refuse_a_multisignature_of_an_invoice(round, format)?;
+            refuse_a_countersignature_outside_cades_and_xades(round, format)?;
+        }
+    }
 
     Ok(SiteOperation::SignAndSave(SignAndSaveRequest {
         round,

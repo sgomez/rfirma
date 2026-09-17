@@ -53,9 +53,9 @@ just dev         # levanta la aplicacion contra esa libreria
 `just tools` comprueba las herramientas y falla nombrando la que falte. `just
 check` es lo mismo que ejecuta el CI.
 
-`just dev` y `just build` **no** construyen la librería nativa: si falta, fallan
-diciendo que ejecutes `just native`. Es deliberado — `native-image` tarda minutos
-y no debe dispararse por sorpresa al tocar una línea de la interfaz.
+`just dev` **no** construye la librería nativa: si falta, falla diciendo que
+ejecutes `just native`. Es deliberado — `native-image` tarda minutos y no debe
+dispararse por sorpresa al tocar una línea de la interfaz.
 
 `just native` produce **un solo fichero**, `librfirma_crypto.so`, y el manifiesto
 instala ese fichero por su nombre. Los cinco auxiliares de AWT que `native-image`

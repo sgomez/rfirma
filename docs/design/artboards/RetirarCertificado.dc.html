@@ -1,0 +1,493 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap");
+
+:root, [data-theme="light"] {
+  --rf-bg:#ffffff; --rf-surface:#fafbfc; --rf-text:#000000; --rf-text-muted:#64748b;
+  --rf-primary:#64748b; --rf-on-primary:#ffffff; --rf-primary-hover:#475569;
+  --rf-accent:#94a3b8; --rf-border-subtle:#e5e5e5; --rf-border-strong:#64748b;
+  --rf-focus-ring:#64748b; --rf-scrim:rgba(0,0,0,.6);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --rf-bg:#18181b; --rf-surface:#15171a; --rf-text:#ffffff; --rf-text-muted:#94a3b8;
+    --rf-primary:#94a3b8; --rf-on-primary:#18181b; --rf-primary-hover:#b6c0cd;
+    --rf-accent:#64748b; --rf-border-subtle:rgba(229,229,229,.12);
+    --rf-border-strong:rgba(229,229,229,.45); --rf-focus-ring:#94a3b8;
+  }
+}
+[data-theme="dark"] {
+  --rf-bg:#18181b; --rf-surface:#15171a; --rf-text:#ffffff; --rf-text-muted:#94a3b8;
+  --rf-primary:#94a3b8; --rf-on-primary:#18181b; --rf-primary-hover:#b6c0cd;
+  --rf-accent:#64748b; --rf-border-subtle:rgba(229,229,229,.12);
+  --rf-border-strong:rgba(229,229,229,.45); --rf-focus-ring:#94a3b8;
+}
+:root {
+  --rf-space-xs:8px; --rf-space-sm:16px; --rf-space-md:24px;
+  --rf-space-lg:48px; --rf-space-xl:80px; --rf-space-2xl:144px;
+  --rf-radius-sm:4px; --rf-radius-md:6px; --rf-radius-lg:8px;
+  --rf-radius-xl:16px; --rf-radius-pill:9999px;
+  --rf-shadow-card:rgba(0,0,0,0) 0px 0px 0px 0px, rgba(0,0,0,0) 0px 0px 0px 0px, rgba(0,0,0,.1) 0px 0px 1px 0px, rgba(0,0,0,.03) 0px 2px 6px 0px;
+  --rf-shadow-elevated:rgba(0,0,0,0) 0px 0px 0px 0px, rgba(0,0,0,0) 0px 0px 0px 0px, rgba(0,0,0,.1) 0px 20px 25px -5px, rgba(0,0,0,.1) 0px 8px 10px -6px;
+  --rf-duration-fast:150ms; --rf-duration-base:300ms;
+  --rf-easing:cubic-bezier(.4,0,.2,1);
+  --rf-font-body:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+* { box-sizing:border-box; }
+html,body { margin:0; height:100%; }
+a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
+:where([data-theme]) { background:var(--rf-bg); }
+.rf-root {
+  background:var(--rf-bg); color:var(--rf-text);
+  font-family:var(--rf-font-body); height:100%;
+  -webkit-font-smoothing:antialiased;
+}
+.rf-root :focus-visible { outline:2px solid var(--rf-focus-ring); outline-offset:2px; }
+.rf-display{font-size:96px;line-height:1;font-weight:700;letter-spacing:-2.4px;margin:0}
+.rf-heading{font-size:48px;line-height:1.15;font-weight:700;margin:0}
+.rf-title{font-size:20px;line-height:1.3;font-weight:700;margin:0}
+.rf-body{font-size:12px;line-height:1;font-weight:400;margin:0}
+.rf-prose{font-size:14px;line-height:1.6;font-weight:400;margin:0}
+.rf-text-muted{color:var(--rf-text-muted)}
+.rf-text-primary{color:var(--rf-primary)}
+.rf-stack{display:flex;flex-direction:column}
+.rf-row{display:flex;flex-direction:row;align-items:center}
+.rf-gap-xs{gap:var(--rf-space-xs)} .rf-gap-sm{gap:var(--rf-space-sm)}
+.rf-gap-md{gap:var(--rf-space-md)} .rf-gap-lg{gap:var(--rf-space-lg)}
+.rf-section{padding:var(--rf-space-md)}
+.rf-divider{border:0;border-top:1px solid var(--rf-border-subtle);margin:0;width:100%}
+.rf-surface{background:var(--rf-surface)}
+.rf-card{display:flex;flex-direction:column;gap:var(--rf-space-xs);
+  padding:var(--rf-space-md);background:var(--rf-surface);
+  border:1px solid var(--rf-border-subtle);border-radius:var(--rf-radius-md)}
+.rf-card--elevated{box-shadow:var(--rf-shadow-elevated)}
+.rf-card--interactive{cursor:pointer;transition:border-color var(--rf-duration-fast) var(--rf-easing)}
+.rf-card--interactive:hover{border-color:var(--rf-border-strong)}
+.rf-btn{display:inline-flex;align-items:center;justify-content:center;gap:var(--rf-space-xs);
+  min-height:44px;padding:0 var(--rf-space-sm);border-radius:var(--rf-radius-md);
+  font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;
+  border:1px solid transparent;background:transparent;color:var(--rf-text);
+  transition:background-color var(--rf-duration-fast) var(--rf-easing),
+             border-color var(--rf-duration-fast) var(--rf-easing),
+             color var(--rf-duration-fast) var(--rf-easing)}
+.rf-btn--primary{background:var(--rf-primary);color:var(--rf-on-primary)}
+.rf-btn--primary:hover{background:var(--rf-primary-hover)}
+.rf-btn--secondary{border-color:var(--rf-border-strong);color:var(--rf-text)}
+.rf-btn--secondary:hover{border-color:var(--rf-primary-hover);color:var(--rf-primary-hover)}
+.rf-btn--ghost{color:var(--rf-text-muted)}
+.rf-btn--ghost:hover{color:var(--rf-text)}
+.rf-btn[disabled]{opacity:.45;cursor:not-allowed}
+.rf-field{display:flex;flex-direction:column;gap:var(--rf-space-xs)}
+.rf-label{font-size:12px;line-height:1;font-weight:600;color:var(--rf-text-muted)}
+.rf-input{min-height:44px;padding:0 var(--rf-space-sm);font-family:inherit;font-size:14px;
+  color:var(--rf-text);background:var(--rf-bg);
+  border:1px solid var(--rf-border-strong);border-radius:var(--rf-radius-md)}
+.rf-hint{font-size:12px;line-height:1.4;color:var(--rf-text-muted)}
+.rf-field--error .rf-input{border-width:2px}
+.rf-field--error .rf-hint{font-weight:700;color:var(--rf-text)}
+.rf-badge{display:inline-flex;align-items:center;padding:4px var(--rf-space-xs);
+  border-radius:var(--rf-radius-pill);border:1px solid var(--rf-border-subtle);
+  font-size:12px;line-height:1;font-weight:600;color:var(--rf-text-muted)}
+.rf-badge--primary{background:var(--rf-primary);color:var(--rf-on-primary);border-color:transparent}
+.rf-scrim{position:absolute;inset:0;background:var(--rf-scrim);
+  display:flex;align-items:center;justify-content:center}
+.rf-dialog{display:flex;flex-direction:column;gap:var(--rf-space-md);
+  padding:var(--rf-space-md);background:var(--rf-bg);
+  border:1px solid var(--rf-border-subtle);border-radius:var(--rf-radius-xl);
+  box-shadow:var(--rf-shadow-elevated);width:420px}
+</style>
+</helmet>
+<div class="rf-root" data-theme="{{tema}}" style="width:1180px;height:700px;display:flex;flex-direction:column;position:relative;overflow:hidden">
+
+<header class="rf-row" style="height:56px;flex:none;padding:0 var(--rf-space-sm) 0 var(--rf-space-md);
+  gap:var(--rf-space-sm);border-bottom:1px solid var(--rf-border-subtle);
+  background:var(--rf-surface);position:relative;z-index:5">
+  <span class="rf-title" style="font-size:15px;letter-spacing:.4px">rFirma</span>
+  <div style="flex:1"></div>
+  <span class="rf-badge">Sin firmar</span>
+  <span style="width:40px;height:40px;flex:none;display:flex;align-items:center;justify-content:center;
+    border-radius:var(--rf-radius-md);color:var(--rf-text)">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></span>
+</header>
+
+<div style="position:absolute;left:0;right:0;top:56px;bottom:0;background:var(--rf-bg);display:flex;flex-direction:column">
+
+  <div class="rf-row rf-gap-sm" style="flex:none;padding:var(--rf-space-sm) var(--rf-space-md)">
+    <p class="rf-title" style="font-size:17px;flex:1;min-width:0">Estado de rFirma</p>
+    <button class="rf-btn rf-btn--secondary" disabled="{{remedirApagado}}"
+      style="flex:none;min-height:32px;padding:0 var(--rf-space-xs);font-size:12px">Volver a comprobar</button>
+  </div>
+
+  <div style="flex:1;min-height:0;overflow:auto;padding:0 var(--rf-space-md) var(--rf-space-sm)">
+    <div class="rf-row rf-gap-sm" style="padding-bottom:8px;border-bottom:1px solid var(--rf-border-strong)">
+      <p class="rf-label" style="width:190px;flex:none;letter-spacing:.6px;text-transform:uppercase">Señal</p>
+      <p class="rf-label" style="flex:1;min-width:0;letter-spacing:.6px;text-transform:uppercase">Valor</p>
+      <p class="rf-label" style="width:130px;flex:none;letter-spacing:.6px;text-transform:uppercase">Veredicto</p>
+      <p class="rf-label" style="width:160px;flex:none;letter-spacing:.6px;text-transform:uppercase">Acción</p>
+    </div>
+
+    <sc-for list="{{ filas }}" as="fila" hint-placeholder-count="4">
+      <div class="rf-stack" style="gap:6px;padding:10px 0;border-bottom:1px solid var(--rf-border-subtle)">
+
+        <div class="rf-row rf-gap-sm" style="align-items:center;min-height:36px">
+          <p class="rf-prose" style="width:190px;flex:none;font-weight:600">{{fila.etiqueta}}</p>
+
+          <div style="flex:1;min-width:0;height:36px;display:flex;align-items:center">
+            <sc-if value="{{fila.hayDesplegable}}" hint-placeholder-val="{{true}}">
+              <div style="position:relative;min-width:220px;flex:none">
+                <span class="rf-row rf-gap-xs" style="min-width:220px;height:36px;padding:0 var(--rf-space-xs);
+                  border:1px solid var(--rf-border-strong);border-radius:var(--rf-radius-md);background:var(--rf-bg)">
+                  <span class="rf-prose" style="flex:1;min-width:0">{{fila.valor}}</span>
+                  <span style="display:flex;flex:none;color:var(--rf-text-muted);transform:rotate({{fila.giroLista}}deg)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
+                </span>
+                <sc-if value="{{fila.listaAbierta}}" hint-placeholder-val="{{false}}">
+                  <ul class="rf-stack" style="position:absolute;left:0;top:40px;z-index:4;min-width:220px;margin:0;padding:4px;
+                    list-style:none;background:var(--rf-bg);border:1px solid var(--rf-border-strong);
+                    border-radius:var(--rf-radius-md);box-shadow:var(--rf-shadow-elevated)">
+                    <sc-if value="{{fila.o1Hay}}" hint-placeholder-val="{{true}}">
+                      <li class="rf-row rf-gap-xs" style="height:32px;padding:0 var(--rf-space-xs)">
+                        <span class="rf-body" style="width:12px;flex:none;text-align:center;font-weight:700">{{fila.o1Marca}}</span>
+                        <span class="rf-prose" style="flex:1;min-width:0">{{fila.o1Nombre}}</span>
+                      </li>
+                    </sc-if>
+                    <sc-if value="{{fila.o2Hay}}" hint-placeholder-val="{{false}}">
+                      <li class="rf-row rf-gap-xs" style="height:32px;padding:0 var(--rf-space-xs)">
+                        <span class="rf-body" style="width:12px;flex:none;text-align:center;font-weight:700">{{fila.o2Marca}}</span>
+                        <span class="rf-prose" style="flex:1;min-width:0">{{fila.o2Nombre}}</span>
+                      </li>
+                    </sc-if>
+                  </ul>
+                </sc-if>
+              </div>
+            </sc-if>
+            <sc-if value="{{fila.valorPelado}}" hint-placeholder-val="{{false}}">
+              <p class="rf-prose">{{fila.valor}}</p>
+            </sc-if>
+          </div>
+
+          <div class="rf-row rf-gap-xs" style="width:130px;flex:none;align-items:center">
+            <span style="display:flex;flex:none;color:{{fila.colorIcono}}">
+              <sc-if value="{{fila.ok}}" hint-placeholder-val="{{true}}">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12.5 11 15.5 16.5 9"/></svg>
+              </sc-if>
+              <sc-if value="{{fila.atencion}}" hint-placeholder-val="{{false}}">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 2.5 20h19z"/><path d="M12 10v4M12 17v.5"/></svg>
+              </sc-if>
+              <sc-if value="{{fila.mal}}" hint-placeholder-val="{{false}}">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg>
+              </sc-if>
+              <sc-if value="{{fila.na}}" hint-placeholder-val="{{false}}">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9" stroke-dasharray="3 3"/><path d="M8.5 12h7"/></svg>
+              </sc-if>
+              <sc-if value="{{fila.midiendo}}" hint-placeholder-val="{{false}}">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="9" opacity=".25"/><path d="M21 12a9 9 0 0 0-9-9"/></svg>
+              </sc-if>
+            </span>
+            <span class="rf-body" style="{{fila.pesoVeredicto}}">{{fila.veredicto}}</span>
+          </div>
+
+          <div style="width:160px;flex:none;display:flex;align-items:center;min-height:32px">
+            <sc-if value="{{fila.hayAccion}}" hint-placeholder-val="{{true}}">
+              <button class="rf-btn rf-btn--secondary" style="min-height:32px;padding:0 var(--rf-space-xs);font-size:12px">{{fila.accion}}</button>
+            </sc-if>
+            <sc-if value="{{fila.ocupada}}" hint-placeholder-val="{{false}}">
+              <span class="rf-row rf-gap-xs" role="status">
+                <span style="display:flex;flex:none;color:var(--rf-text-muted)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="9" opacity=".25"/><path d="M21 12a9 9 0 0 0-9-9"/></svg></span>
+                <span class="rf-body rf-text-muted">{{fila.textoOcupada}}</span>
+              </span>
+            </sc-if>
+          </div>
+        </div>
+
+        <sc-if value="{{fila.reservaPista}}" hint-placeholder-val="{{false}}">
+          <p class="rf-hint" style="padding-left:206px;min-height:19px">{{fila.pista}}</p>
+        </sc-if>
+
+        <sc-if value="{{fila.hayDetalle}}" hint-placeholder-val="{{false}}">
+          <div class="rf-stack" style="gap:6px;padding-left:206px">
+            <button class="rf-btn rf-btn--ghost" style="align-self:flex-start;min-height:24px;padding:0 6px 0 0;font-size:12px">
+              <span style="display:flex;transform:rotate({{fila.giroChevron}}deg)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
+              ver almacenes
+            </button>
+            <sc-if value="{{fila.detalleAbierto}}" hint-placeholder-val="{{true}}">
+              <ul class="rf-stack" style="gap:4px;margin:0 0 4px;padding:0;list-style:none">
+                <sc-if value="{{fila.p1Hay}}" hint-placeholder-val="{{true}}">
+                  <li class="rf-row rf-gap-xs">
+                    <span class="rf-body" style="width:12px;flex:none;text-align:center;font-weight:700">{{fila.p1Marca}}</span>
+                    <span class="rf-body" style="width:230px;flex:none">{{fila.p1Nombre}}</span>
+                    <span class="rf-body rf-text-muted" style="flex:1;min-width:0">{{fila.p1Nota}}</span>
+                  </li>
+                </sc-if>
+                <sc-if value="{{fila.p2Hay}}" hint-placeholder-val="{{true}}">
+                  <li class="rf-row rf-gap-xs">
+                    <span class="rf-body" style="width:12px;flex:none;text-align:center;font-weight:700">{{fila.p2Marca}}</span>
+                    <span class="rf-body" style="width:230px;flex:none">{{fila.p2Nombre}}</span>
+                    <span class="rf-body rf-text-muted" style="flex:1;min-width:0">{{fila.p2Nota}}</span>
+                  </li>
+                </sc-if>
+                <sc-if value="{{fila.p3Hay}}" hint-placeholder-val="{{true}}">
+                  <li class="rf-row rf-gap-xs">
+                    <span class="rf-body" style="width:12px;flex:none;text-align:center;font-weight:700">{{fila.p3Marca}}</span>
+                    <span class="rf-body" style="width:230px;flex:none">{{fila.p3Nombre}}</span>
+                    <span class="rf-body rf-text-muted" style="flex:1;min-width:0">{{fila.p3Nota}}</span>
+                  </li>
+                </sc-if>
+              </ul>
+            </sc-if>
+          </div>
+        </sc-if>
+
+      </div>
+    </sc-for>
+  </div>
+
+  <div class="rf-row rf-gap-sm" style="flex:none;padding:12px var(--rf-space-md);
+    border-top:1px solid var(--rf-border-subtle);background:var(--rf-surface)">
+    <div style="flex:1"></div>
+    <button class="rf-btn rf-btn--secondary" style="flex:none;min-height:36px">Cerrar</button>
+  </div>
+
+</div>
+<div class="rf-scrim" style="top:56px">
+  <div class="rf-dialog" role="dialog" aria-modal="true">
+
+    <div class="rf-stack rf-gap-xs">
+      <p class="rf-title" style="font-size:16px">{{titulo}}</p>
+
+      <sc-if value="{{esPregunta}}" hint-placeholder-val="{{true}}">
+        <p class="rf-prose">Se va a quitar de este equipo:</p>
+        <ul class="rf-stack" style="gap:4px;margin:0;padding-left:var(--rf-space-sm)">
+          <li class="rf-prose">El certificado de rFirma, de los navegadores donde esté</li>
+          <li class="rf-prose">Que las sedes abran rFirma</li>
+        </ul>
+        <p class="rf-hint">Se puede volver a instalar desde este panel.</p>
+      </sc-if>
+
+      <sc-if value="{{hayLista}}" hint-placeholder-val="{{false}}">
+        <ul class="rf-stack" style="gap:4px;margin:0 0 4px;padding:0;list-style:none">
+          <sc-for list="{{ pasos }}" as="p" hint-placeholder-count="4">
+            <li class="rf-row rf-gap-xs">
+              <span class="rf-body" style="width:12px;flex:none;text-align:center;font-weight:700">{{p.marca}}</span>
+              <span class="rf-body" style="width:190px;flex:none;{{p.pesoNombre}}">{{p.nombre}}</span>
+              <span class="rf-row rf-gap-xs" style="flex:1;min-width:0">
+                <sc-if value="{{p.hayArco}}" hint-placeholder-val="{{false}}">
+                  <span style="display:flex;flex:none;color:var(--rf-text-muted)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="9" opacity=".25"/><path d="M21 12a9 9 0 0 0-9-9"/></svg></span>
+                </sc-if>
+                <span class="rf-body rf-text-muted" style="flex:1;min-width:0">{{p.nota}}</span>
+              </span>
+            </li>
+          </sc-for>
+        </ul>
+      </sc-if>
+
+      <sc-if value="{{hayAviso}}" hint-placeholder-val="{{false}}">
+        <div class="rf-row rf-gap-xs" style="align-items:flex-start">
+          <span style="display:flex;flex:none;color:var(--rf-text)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 2.5 20h19z"/><path d="M12 10v4M12 17v.5"/></svg></span>
+          <p class="rf-hint" style="flex:1;min-width:0">Los navegadores abiertos siguen confiando hasta que los reinicies.</p>
+        </div>
+      </sc-if>
+    </div>
+
+    <div class="rf-row rf-gap-xs" style="justify-content:flex-end">
+      <sc-if value="{{hayCancelar}}" hint-placeholder-val="{{true}}">
+        <button class="rf-btn rf-btn--ghost">Cancelar</button>
+      </sc-if>
+      <sc-if value="{{hayCerrar}}" hint-placeholder-val="{{false}}">
+        <button class="rf-btn rf-btn--ghost" disabled="{{cerrarApagado}}">Cerrar</button>
+      </sc-if>
+      <sc-if value="{{hayRetirar}}" hint-placeholder-val="{{true}}">
+        <button class="rf-btn rf-btn--primary">Retirar</button>
+      </sc-if>
+      <sc-if value="{{hayReintentar}}" hint-placeholder-val="{{false}}">
+        <button class="rf-btn rf-btn--primary">Reintentar</button>
+      </sc-if>
+    </div>
+
+  </div>
+</div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"tema":{"editor":"enum","options":["light","dark"],"default":"light","section":"Tema"},"paso":{"editor":"enum","options":["pregunta","trabajando","resultado","resultado con fallo"],"default":"pregunta","section":"Paso de la retirada"},"$preview":{"width":1180,"height":700}}'>
+class Component extends DCLogic {
+  senal(o) {
+    const v = o.veredicto;
+    const ok = v === "Correcto";
+    const atencion = v === "Atención";
+    const mal = v === "Incorrecto";
+    const na = v === "No aplica";
+    const midiendo = v === "Comprobando";
+    const fuerte = atencion || mal;
+    const perfiles = o.perfiles || [];
+    const abierto = o.detalleAbierto === true;
+    const ocupada = o.ocupada === true;
+    const f = {
+      etiqueta: o.etiqueta,
+      valor: o.valor,
+      hayDesplegable: o.desplegable === true,
+      valorPelado: o.desplegable !== true,
+      veredicto: v,
+      ok: ok, atencion: atencion, mal: mal, na: na, midiendo: midiendo,
+      colorIcono: (na || midiendo) ? "var(--rf-text-muted)" : "var(--rf-text)",
+      pesoVeredicto: fuerte ? "font-weight:700" : "color:var(--rf-text-muted)",
+      hayAccion: (o.accion || "") !== "" && !ocupada,
+      accion: o.accion || "",
+      ocupada: ocupada,
+      textoOcupada: o.textoOcupada || "",
+      reservaPista: o.reservaPista === true,
+      pista: o.pista || "",
+      hayDetalle: perfiles.length > 0,
+      detalleAbierto: abierto,
+      giroChevron: abierto ? 90 : 0,
+      listaAbierta: o.listaAbierta === true,
+      giroLista: o.listaAbierta === true ? 180 : 0
+    };
+    const opciones = o.opciones || [];
+    for (let i = 0; i < 2; i++) {
+      const c = opciones[i];
+      f["o" + (i + 1) + "Hay"] = c !== undefined;
+      f["o" + (i + 1) + "Marca"] = c ? (c.marca || "") : "";
+      f["o" + (i + 1) + "Nombre"] = c ? c.nombre : "";
+    }
+    for (let i = 0; i < 3; i++) {
+      const p = perfiles[i];
+      f["p" + (i + 1) + "Hay"] = p !== undefined;
+      f["p" + (i + 1) + "Marca"] = p ? (p.marca || "") : "";
+      f["p" + (i + 1) + "Nombre"] = p ? p.nombre : "";
+      f["p" + (i + 1) + "Nota"] = p ? (p.nota || "") : "";
+    }
+    return f;
+  }
+
+  almacenesDeLaCA(marcas) {
+    const fallo = ["El perfil está en uso", "No se pudo escribir", "No se pudo abrir la base de datos"];
+    const nombre = ["Firefox", "Chrome y Chromium", "Almacén del sistema"];
+    return marcas.map((marca, i) => ({
+      marca: marca, nombre: nombre[i], nota: marca === "✗" ? fallo[i] : ""
+    }));
+  }
+
+  tusAlmacenes() {
+    return [
+      { nombre: "Firefox", nota: "2 certificados" },
+      { nombre: "Almacén del sistema", nota: "1 certificado" },
+      { nombre: "Tarjeta", nota: "1 certificado" }
+    ];
+  }
+
+  pasoDeLaRetirada(nombre, marca, nota, arco, pendiente) {
+    return {
+      nombre: nombre,
+      marca: marca,
+      hayArco: arco === true,
+      nota: nota,
+      pesoNombre: pendiente === true ? "color:var(--rf-text-muted)" : ""
+    };
+  }
+
+  renderVals() {
+    // LA RETIRADA DEL CERTIFICADO (#660; panel del #659, mapa #652). Esto ES
+    // EL PANEL DE ESTADO —misma tabla, mismas columnas, mismo pie— con el velo
+    // de apagar «Recordar mi actividad» encima. Se dispara desde el panel y no
+    // desde Preferencias: deshace lo que el primer arranque escribio, y lo
+    // escrito es justo lo que la fila del certificado informa.
+    //
+    // SE LLEVA LAS DOS UNICAS COSAS QUE rFIRMA ESCRIBE FUERA DE SU TERRITORIO:
+    // las dos CA locales de cada perfil de navegador, y el registro que hace
+    // que las sedes abran rFirma. Lo que vive en sus propias carpetas NO se
+    // toca, y por eso no se nombra: nombrarlo abriria la duda.
+    //
+    // «afirma://» NO SE NOMBRA: se habla de QUE PROGRAMA ABREN LAS SEDES.
+    const tema = this.props.tema || "light";
+    const p = this.props.paso || "pregunta";
+
+    const esPregunta = p === "pregunta";
+    const trabajando = p === "trabajando";
+    const fallo = p === "resultado con fallo";
+    const hecho = p === "resultado" || fallo;
+
+    const marcas = esPregunta || trabajando
+      ? ["✓", "✓", "✓"]
+      : (fallo ? ["✗", "✓", "✗"] : ["✗", "✗", "✗"]);
+
+    let pasos = [];
+    if (trabajando) {
+      pasos = [
+        this.pasoDeLaRetirada("Firefox", "✓", "", false, false),
+        this.pasoDeLaRetirada("Chrome y Chromium", "", "Retirando…", true, false),
+        this.pasoDeLaRetirada("Almacén del sistema", "", "En espera", false, true),
+        this.pasoDeLaRetirada("Firma en sedes", "", "En espera", false, true)
+      ];
+    } else if (fallo) {
+      pasos = [
+        this.pasoDeLaRetirada("Firefox", "✓", "", false, false),
+        this.pasoDeLaRetirada("Chrome y Chromium", "✗", "El perfil está en uso", false, false),
+        this.pasoDeLaRetirada("Almacén del sistema", "✓", "", false, false),
+        this.pasoDeLaRetirada("Firma en sedes", "✓", "Sin configurar", false, false)
+      ];
+    } else if (hecho) {
+      pasos = [
+        this.pasoDeLaRetirada("Firefox", "✓", "", false, false),
+        this.pasoDeLaRetirada("Chrome y Chromium", "✓", "", false, false),
+        this.pasoDeLaRetirada("Almacén del sistema", "✓", "", false, false),
+        this.pasoDeLaRetirada("Firma en sedes", "✓", "Sin configurar", false, false)
+      ];
+    }
+
+    // EL BOTON DEL DESENLACE ES «Cerrar», Y CIERRA EL DIALOGO: LA APLICACION
+    // SIGUE ABIERTA. Mientras se retira no hay salida, y eso lo dice el
+    // «Cerrar» apagado, no una frase.
+    const titulo = esPregunta
+      ? "Retirar el certificado de rFirma"
+      : (trabajando ? "Retirando…" : (fallo ? "Retirado a medias" : "Certificado retirado"));
+
+    // LA TABLA DE DETRAS ES LA DEL PANEL, con sus mismas reglas: antes de
+    // retirar, rFirma firma en sedes y el certificado esta en los tres; al
+    // terminar, «Sin configurar» y los almacenes que hayan quedado.
+    const puestos = marcas.filter((x) => x === "✓").length;
+    const firmaEnSedes = hecho
+      ? { etiqueta: "Firma en sedes", valor: "Sin configurar", veredicto: "Atención",
+          accion: "Usar rFirma", reservaPista: true, pista: "Firefox lo pregunta la primera vez." }
+      : { etiqueta: "Firma en sedes", valor: "rFirma", veredicto: "Correcto",
+          reservaPista: true, pista: "Firefox lo pregunta la primera vez." };
+    const certificado = trabajando
+      ? { etiqueta: "Certificado de rFirma", valor: "3 de 3 almacenes", veredicto: "Correcto",
+          ocupada: true, textoOcupada: "Retirando…", perfiles: this.almacenesDeLaCA(marcas) }
+      : { etiqueta: "Certificado de rFirma", valor: puestos + " de 3 almacenes",
+          veredicto: puestos === 3 ? "Correcto" : (puestos === 0 ? "Incorrecto" : "Atención"),
+          accion: puestos === 3 ? "Retirar…" : "Instalar",
+          perfiles: this.almacenesDeLaCA(marcas), detalleAbierto: fallo };
+
+    return {
+      tema: tema,
+      remedirApagado: trabajando,
+      filas: [
+        { etiqueta: "Versión", valor: "0.4.1", veredicto: "Correcto" },
+        firmaEnSedes,
+        certificado,
+        { etiqueta: "Tus certificados", valor: "3 almacenes", veredicto: "Correcto",
+          perfiles: this.tusAlmacenes() }
+      ].map((s) => this.senal(s)),
+      titulo: titulo,
+      esPregunta: esPregunta,
+      hayLista: trabajando || hecho,
+      pasos: pasos,
+      hayAviso: hecho,
+      hayCancelar: esPregunta,
+      hayRetirar: esPregunta,
+      hayCerrar: trabajando || hecho,
+      cerrarApagado: trabajando,
+      hayReintentar: fallo
+    };
+  }
+}
+</script>
+</body>
+</html>

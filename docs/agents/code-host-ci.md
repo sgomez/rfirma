@@ -124,12 +124,14 @@ dispatch, or a PR labelled `native`), download that artifact, upload it to
 VALIDe. If the maximal case validates, the other three are subsets of it.
 
 **The fast lane does not build the native library, deliberately.** It no longer
-needs `RFIRMA_SKIP_NATIVE=1` for that — `check-rust` does not go through `just
-build`, so there is no guard to skip. The guard itself still stands where
+needs `RFIRMA_SKIP_NATIVE=1` for that — `check-rust` does not go through
+`check-native`, so there is no guard to skip. The guard itself still stands
+where
 [ADR-0013](../adr/0013-estructura-del-repositorio-y-cadena-de-compilacion.md)
-put it: locally `just build` and `just dev` **fail naming `just native`**
-rather than chaining a three-minute `native-image` run onto every compile, and
-`RFIRMA_SKIP_NATIVE=1` is how you say you know what you are doing. Do not copy
+put it: locally `just dev`, `just bundle` and `just flatpak` **fail naming
+`just native`** rather than chaining a three-minute `native-image` run onto
+every compile, and `RFIRMA_SKIP_NATIVE=1` is how you say you know what you are
+doing. Do not copy
 that variable into a local shell profile.
 
 **So the reviewer still installs and runs everything itself** — a green check
@@ -211,24 +213,25 @@ it locally adds no verdict — that is the `review-pr` rule, and this section
 does not override it. What follows is for setting a machine up, and for the
 builder's one pre-commit run.
 
-One entry point, `just`:
+One entry point, `just`, at 1.27 or newer — the justfile uses `[group]` and
+`[private]`, which Ubuntu's apt package predates; install it from
+<https://github.com/casey/just#installation> instead:
 
 ```bash
-apt-get install -y just maven libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev \
+apt-get install -y maven libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev \
                    libayatana-appindicator3-dev libsoup-3.0-dev libxdo-dev
 cargo binstall cargo-llvm-cov cargo-crap
 just autoscript   # el accesorio del banco de conformidad; ver abajo
-just check-changed
+just fmt
 ```
 
-**`just check-changed`, not `just check`**, and the difference is where they
-run rather than how strict they are: CI splits the three chains across three
-runners that start at once, so it pays the slowest one, while a laptop pays
-all three added up. `check-changed` derives the lanes from what the branch
-touches against `origin/main` and runs only those; a change that touches only
-the `justfile` or `.github/` still fires all three, because those are the
-files that can break any of them. The full `just check` is what CI runs, and
-the ladder of what to run when lives in `AGENTS.md`.
+**There is no local stand-in for `just check`.** CI splits the three chains
+across three runners that start at once, so it pays only the slowest one,
+while a laptop would pay all three added up to anticipate a red build the CI
+already gives for free. Locally the only steps are formatting (`just fmt`,
+also gated by the lefthook pre-push hook) and the specific test being worked
+on; the full `just check` is what CI runs, and the ladder of what to run when
+lives in `AGENTS.md`.
 
 `just tools` names whatever is still missing, and `just --list` shows the rest.
 The fast lane's three jobs are `just check-java`, `just check-repo check-ts`
@@ -244,9 +247,9 @@ CI pass differ. Run it once and they mean the same thing again. In CI the bench
 never skips: the test checks the `CI` variable and fails instead (ADR-0014).
 
 `just check` **no longer needs the native library at all**: `check-rust`
-dropped the `build` chain, so `RFIRMA_SKIP_NATIVE` is not needed to run it and
-CI no longer sets it. The variable still exists for `just build` and `just
-dev`, which do check for the library (ADR-0013).
+does not go through `check-native`, so `RFIRMA_SKIP_NATIVE` is not needed to
+run it and CI no longer sets it. The variable still exists for `just dev`,
+`just bundle` and `just flatpak`, which do check for the library (ADR-0013).
 
 It also no longer **deletes** it. `lint-java` used to run `mvn -B clean
 compile`, and that `clean` took `rfirma-native-bridge/target/` with it —

@@ -90,3 +90,28 @@ fn an_invoice_under_auto_is_signed_as_facturae_and_not_as_plain_xades() {
 
     assert_eq!(format_of(invoice), RequestedFormat::FacturaE);
 }
+
+#[test]
+fn each_format_maps_to_its_signed_file_extension() {
+    assert_eq!(RequestedFormat::Pades.extension(), "pdf");
+    assert_eq!(RequestedFormat::Cades.extension(), "csig");
+    assert_eq!(RequestedFormat::Cms.extension(), "csig");
+    assert_eq!(RequestedFormat::CadesAsicS.extension(), "asics");
+    assert_eq!(
+        RequestedFormat::Xades(XadesEnvelope::Enveloping).extension(),
+        "xsig"
+    );
+    assert_eq!(
+        RequestedFormat::Xades(XadesEnvelope::Detached).extension(),
+        "xsig"
+    );
+    assert_eq!(
+        RequestedFormat::Xades(XadesEnvelope::Enveloped).extension(),
+        "xsig"
+    );
+    assert_eq!(
+        RequestedFormat::Xades(XadesEnvelope::AsicS).extension(),
+        "asics"
+    );
+    assert_eq!(RequestedFormat::FacturaE.extension(), "xsig");
+}

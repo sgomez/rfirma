@@ -5,12 +5,13 @@ pub mod repair;
 
 use std::path::PathBuf;
 
-use crate::site::domain::trust::Moment as TrustMoment;
+use crate::site::domain::channel::{ArrivalMode, Delivery};
+use crate::site::domain::trust::{blocks_the_site, Moment as TrustMoment};
 use crate::site::ports::{LocalCaSlots, TrustStores};
 
 use crate::site::domain::protocol::Refusal;
 
-use super::errand::{Errand, LiveErrand, Moment, NoChannel};
+use super::errand::{Acknowledgement, Errand, LiveErrand, Moment, NoChannel};
 use super::site::{self, Attendance, ChannelTransport, CodecTable};
 use super::trust;
 
@@ -28,6 +29,9 @@ pub trait SiteWindow: Send + Sync + 'static {
     fn open(&self, content: SiteWindowContent<'_>);
     /// Muestra y da foco a la ventana.
     fn show(&self);
+    /// Notifica que el trámite ha terminado, con el acuse de que la respuesta ya salió por el
+    /// canal; cierra la ventana solo si sigue oculta.
+    fn errand_ended(&self, delivered: Acknowledgement);
 }
 
 impl<T: SiteWindow + ?Sized> SiteWindow for Arc<T> {
@@ -36,6 +40,9 @@ impl<T: SiteWindow + ?Sized> SiteWindow for Arc<T> {
     }
     fn show(&self) {
         (**self).show();
+    }
+    fn errand_ended(&self, delivered: Acknowledgement) {
+        (**self).errand_ended(delivered);
     }
 }
 
@@ -127,17 +134,18 @@ pub fn attend_startup_with_threshold(
     live: &LiveErrand,
     threshold: Duration,
 ) -> Startup {
-    let (said, local_ca) = refresh_the_local_ca(trust);
-
     let Some(url) = site_launch else {
+        let (said, _local_ca) = refresh_the_local_ca(trust);
         return Startup {
             said,
             opening: Opening::TheMainWindow,
         };
     };
 
+    let local_ca = local_ca_reach_for_the_site(trust.store);
+
     Startup {
-        said,
+        said: Vec::new(),
         opening: Opening::TheSiteErrand(attend_site_launch_with_threshold(
             url, codecs, transport, window, live, local_ca, threshold,
         )),
@@ -174,27 +182,31 @@ pub fn attend_site_launch_with_threshold(
     local_ca: LocalCaReach,
     threshold: Duration,
 ) -> Attendance {
-    let attendance = site::attend_launch(url, codecs, transport, live);
+    let mut attendance = site::attend_launch(url, codecs, transport, live);
 
-    match &attendance {
-        Attendance::Serving { errand, .. } => match local_ca {
-            LocalCaReach::Nowhere => {
-                open(
-                    live,
-                    &*window,
-                    SiteWindowContent::ADeadEnd(DeadEnd::NoLocalCa),
-                );
-                window.show();
-            }
-            LocalCaReach::NotAnObstacle => {
-                open(live, &*window, SiteWindowContent::TheErrand(errand));
-                if errand.opens_channel() {
-                    live.arm_backing_timeout(Arc::clone(&window), threshold);
-                } else {
+    match &mut attendance {
+        Attendance::Serving { errand, .. } => {
+            live.keep_the_window(Arc::clone(&window));
+            match local_ca {
+                LocalCaReach::Nowhere => {
+                    open(
+                        live,
+                        &*window,
+                        SiteWindowContent::ADeadEnd(DeadEnd::NoLocalCa),
+                    );
                     window.show();
                 }
+                LocalCaReach::NotAnObstacle => {
+                    open(live, &*window, SiteWindowContent::TheErrand(&*errand));
+                    match errand.arrival() {
+                        ArrivalMode::Awaited => {
+                            live.arm_backing_timeout(Arc::clone(&window), threshold);
+                        }
+                        ArrivalMode::Immediate => window.show(),
+                    }
+                }
             }
-        },
+        }
         Attendance::ChannelNotOpened(error) => {
             if live.current().is_none() {
                 let dead_end = match error.refusal() {
@@ -215,10 +227,42 @@ pub fn attend_site_launch_with_threshold(
                 window.show();
             }
         }
-        Attendance::RefusingOverTheChannel { .. } => {}
+        Attendance::RefusingOverTheChannel {
+            channel, refusal, ..
+        } => {
+            let no_errand_in_flight = live.current().is_none();
+            if no_errand_in_flight {
+                open(
+                    live,
+                    &*window,
+                    SiteWindowContent::ADeadEnd(DeadEnd::RefusedWithoutChannel(refusal.clone())),
+                );
+            }
+            match channel.arrival_mode() {
+                ArrivalMode::Awaited => {
+                    if no_errand_in_flight {
+                        live.arm_channel_refusal_wait(Arc::clone(&window), threshold);
+                    }
+                }
+                ArrivalMode::Immediate => {
+                    let handed_out = channel.take_delivery().is_none_or(Delivery::now);
+                    if no_errand_in_flight {
+                        end_or_show_the_refusal(&*window, handed_out);
+                    }
+                }
+            }
+        }
     }
 
     attendance
+}
+
+fn end_or_show_the_refusal(window: &dyn SiteWindow, handed_out: bool) {
+    if handed_out {
+        window.errand_ended(Acknowledgement::immediate());
+    } else {
+        window.show();
+    }
 }
 
 fn open(live: &LiveErrand, window: &dyn SiteWindow, content: SiteWindowContent<'_>) {
@@ -246,6 +290,21 @@ impl SiteWindowContent<'_> {
                 Moment::RefusedWithoutChannel(refusal.clone())
             }
         }
+    }
+}
+
+/// Lee la CA local que sirve sin tocar ranuras ni almacenes: un trámite de sede no las refresca (ADR-0005).
+fn local_ca_reach_for_the_site(store: &dyn LocalCaSlots) -> LocalCaReach {
+    let days_left = store
+        .serving()
+        .ok()
+        .flatten()
+        .and_then(|ca| ca.days_left().ok());
+
+    if blocks_the_site(days_left) {
+        LocalCaReach::Nowhere
+    } else {
+        LocalCaReach::NotAnObstacle
     }
 }
 

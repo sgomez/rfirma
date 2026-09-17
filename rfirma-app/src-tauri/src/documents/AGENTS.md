@@ -11,8 +11,9 @@ relativas a `src/documents/`; para situarte en un fichero, `just outline <ruta>`
 |---|---|
 | `mod.rs` | La raíz, `DocumentsRoot`, y la fachada que usan los vecinos: `chosen_folder`, `opened_document`, `is_remembered`, `open_unrecorded`, `deliver`, `note_signed`, `told_as_dropped`. |
 | `domain/mod.rs`, `application/mod.rs`, `adapters/mod.rs` | Solo `pub mod`: el reparto de cada capa. |
-| `ports.rs` | Los dos puertos: `DocumentsMemory` y `DocumentFiles`, el disco donde viven los documentos. |
+| `ports.rs` | Los puertos: `DocumentsMemory`, `DocumentFiles` y `PortalDialogs`, el portal de diálogos del sistema. Pruebas en `ports/tests.rs`. |
 | `adapters/files.rs` | `RealFiles`: el `DocumentFiles` de verdad, `std::fs` y nada más. |
+| `adapters/dialogs.rs` | `RealPortalDialogs`: el `PortalDialogs` de verdad sobre `tauri_plugin_dialog`. Pruebas en `adapters/dialogs/tests.rs`. |
 | `application/tests.rs` | El andamio de grada A del contexto: `InMemoryFiles`, un disco de mentira con carpetas, ficheros, atajos y los que se niegan a abrirse. Solo en pruebas. |
 | `adapters/rubric/mod.rs` | El reparto. |
 | `adapters/rubric/normalize.rs` | La normalización de la rúbrica. Pruebas en `adapters/rubric/normalize/tests.rs`. |

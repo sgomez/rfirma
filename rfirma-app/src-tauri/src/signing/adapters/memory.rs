@@ -99,9 +99,7 @@ impl Memory {
 
     /// Guarda el registro de comprobación de versión sin depender de interruptores de actividad.
     pub fn remember_version_check(&self, check: VersionCheck) -> Result<(), MemoryError> {
-        let mut state = self.state.load()?.into_value();
-        state.version_check = Some(check);
-        self.state.save(&state)
+        self.state.update(|state| state.version_check = Some(check))
     }
 
     fn erase_activity_but_keep_the_exempt(&self) -> Result<(), MemoryError> {
@@ -127,8 +125,19 @@ impl Memory {
             .unwrap_or_default()
     }
 
-    fn remember_state_as_configured(&self, state: &State) -> Result<(), MemoryError> {
-        self.remember_state(&self.configuration(), state)
+    /// Relee el estado, aplica `touch` y guarda, respetando los dos interruptores (ADR-0010).
+    fn touch_state(&self, touch: impl FnOnce(&mut State)) -> Result<(), MemoryError> {
+        let configuration = self.configuration();
+        if !configuration.remember_activity {
+            return Ok(());
+        }
+        self.state.update(|state| {
+            touch(state);
+            if !configuration.remember_visible_signature {
+                state.visible_signature = None;
+                state.recents.forget_placements();
+            }
+        })
     }
 }
 
@@ -142,9 +151,7 @@ impl crate::documents::ports::DocumentsMemory for Memory {
     }
 
     fn remember_last_open_folder(&self, folder: &Path) -> Result<(), MemoryError> {
-        let mut state = self.state()?.into_value();
-        state.last_open_folder = Some(folder.to_path_buf());
-        self.remember_state_as_configured(&state)
+        self.touch_state(|state| state.last_open_folder = Some(folder.to_path_buf()))
     }
 
     fn recents(&self) -> Recents<Spot> {
@@ -163,12 +170,12 @@ impl crate::documents::ports::DocumentsMemory for Memory {
         recents: &Recents<Spot>,
         size: Option<BoxSize>,
     ) -> Result<(), MemoryError> {
-        let mut state = self.loaded_state();
-        state.recents = recents.clone();
-        if let Some(size) = size {
-            state.visible_signature.get_or_insert_default().size = size;
-        }
-        self.remember_state_as_configured(&state)
+        self.touch_state(|state| {
+            state.recents = recents.clone();
+            if let Some(size) = size {
+                state.visible_signature.get_or_insert_default().size = size;
+            }
+        })
     }
 }
 
@@ -178,15 +185,11 @@ impl crate::identity::ports::CertificateMemory for Memory {
     }
 
     fn remember_the_certificate(&self, reference: &CertificateRef) -> Result<(), MemoryError> {
-        let mut state = self.state()?.into_value();
-        state.certificate = Some(reference.clone());
-        self.remember_state_as_configured(&state)
+        self.touch_state(|state| state.certificate = Some(reference.clone()))
     }
 
     fn forget_the_certificate(&self) -> Result<(), MemoryError> {
-        let mut state = self.state()?.into_value();
-        state.certificate = None;
-        self.remember_state_as_configured(&state)
+        self.touch_state(|state| state.certificate = None)
     }
 }
 

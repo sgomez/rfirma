@@ -25,3 +25,8 @@ frontera entre "nuestro código" y "el suyo" dejaría de estar clara.
   `bootstrap.sh`), no un defecto que haya que "arreglar" copiando código.
 - Un agente que encuentre a faltar una clase Java debe añadir la dependencia al
   `pom.xml`, nunca traerse el fuente.
+- `bootstrap.sh` clona **solo la etiqueta** `v1.9.2`, sin reserva a una rama
+  por defecto: una reserva a `master` instalaba jarras etiquetadas con esa
+  versión pero construidas desde código sin publicar, así que si el tag no se
+  puede clonar el script se para en vez de compilar otra cosa con el mismo
+  nombre.

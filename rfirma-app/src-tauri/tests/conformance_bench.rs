@@ -13,9 +13,14 @@ use base64::engine::general_purpose::STANDARD;
 use base64::Engine as _;
 
 use rfirma_lib::desktop::adapters::paths::Paths;
+use rfirma_lib::documents::ports::{DialogClues, PortalDialogs};
 use rfirma_lib::identity::domain::store::Store;
 use rfirma_lib::signing::adapters::isolate::Isolate;
+use rfirma_lib::signing::adapters::tauri::signed_with_the_secret;
 use rfirma_lib::signing::application::session::sign_on_token;
+use rfirma_lib::signing::ports::{
+    ProtectedSecret, SecretPromptError, SecretPromptRequest, SecretPrompter,
+};
 use rfirma_lib::site::adapters::channel::{bind_first_free, serve, SiteOperations};
 use rfirma_lib::site::adapters::data_download::HttpDataSource;
 use rfirma_lib::site::adapters::desk::Neighbours;
@@ -28,7 +33,7 @@ use rfirma_lib::site::domain::channel::{ChannelDuty, ChannelLocation, OpenChanne
 use rfirma_lib::site::domain::local_ca::LocalCa;
 use rfirma_lib::site::domain::protocol::{
     drawn_ports, read_operation, AfirmaUrl, LaunchRequest, NegotiatedCredential, SafCode,
-    SiteOperation, WireAnswer, PROTOCOL_VERSION, THE_PORT_OF_THE_THIRD_PROTOCOL,
+    SiteOperation, WireAnswer, PROTOCOL_VERSION,
 };
 use rfirma_lib::site::domain::relay_error::{RelayError, Situation as RelaySituation};
 use rfirma_lib::site::ports::{Inbox, ReplyHandle as ErrandReply, Servlets};
@@ -48,6 +53,10 @@ const THE_SINGLE_SELECTION: &str = "selectcert";
 
 /// El guion de tres selecciones con el certificado fijado y soltado.
 const THE_STICKY_SELECTIONS: &str = "sticky";
+
+/// El guion de servidor intermedio que cofirma una factura: rFirma lo rechaza solo, sin
+/// consentimiento, y el destino solo se conoce tras leer el XML de parámetros.
+const THE_RELAY_REFUSED_OPERATION: &str = "relayrefused";
 
 /// El guion del lote remoto: dos documentos firmados con `signBatchJSON`.
 const THE_REMOTE_BATCH: &str = "batch";
@@ -94,6 +103,18 @@ const THE_SIGN_FACTURAE: &str = "signfacturae";
 /// El guion de `cosign` con `format=FacturaE` sobre la misma factura.
 const THE_COSIGN_FACTURAE: &str = "cosignfacturae";
 
+/// El guion de `saveDataToFile` sobre el reto de referencia.
+const THE_SAVE: &str = "save";
+
+/// El guion de `getFileNameContentBase64` para cargar un único fichero.
+const THE_LOAD: &str = "load";
+
+/// El guion de `getMultiFileNameContentBase64` para cargar varios ficheros.
+const THE_MULTI_LOAD: &str = "multiload";
+
+/// El guion de `signAndSaveToFile` sobre el reto binario con formato CAdES.
+const THE_SIGN_AND_SAVE: &str = "signandsave";
+
 /// El certificado de pruebas de la FNMT vigente del token `rfirma-test`.
 const THE_TEST_CERTIFICATE: &str = "FNMT-ACTIVO-99999999R";
 
@@ -103,8 +124,8 @@ const THE_TOKEN_SECRET: &str = "1234";
 /// Intentos de atar la ubicación del canal antes de darla por ocupada.
 const PORT_ATTEMPTS: usize = 60;
 
-/// Los casos que se turnan: el puerto fijo del protocolo 3 es el mismo en todos, y la confianza de
-/// la CA local con la que sirven los servlets es del proceso entero.
+/// Los casos que se turnan: la confianza de la CA local con la que sirven los servlets del lote es
+/// del proceso entero.
 static ONE_AT_A_TIME: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 
 /// Modo en el que se fuerza al `autoscript.js` publicado a hablar, porque nunca manda `v=3` por
@@ -191,6 +212,7 @@ impl Event {
 struct PublishedClient {
     child: Child,
     events: Receiver<Event>,
+    third_port: Option<u16>,
 }
 
 impl PublishedClient {
@@ -207,7 +229,7 @@ impl PublishedClient {
     /// Arranca el conductor con uno de los guiones del banco, y con el material con el que sus
     /// servlets sirven TLS.
     fn running_the_script(material: &ChannelMaterial, mode: BenchMode, script: &str) -> Self {
-        Self::spawn(material, mode, script, &[])
+        Self::spawn(material, mode, script, &[], a_free_port())
     }
 
     /// Arranca el conductor con uno de los guiones que necesitan el PDF que la prueba deja en
@@ -223,6 +245,7 @@ impl PublishedClient {
             mode,
             script,
             &[("RFIRMA_BENCH_PDF", pdf_path.as_os_str())],
+            a_free_port(),
         )
     }
 
@@ -231,6 +254,7 @@ impl PublishedClient {
         mode: BenchMode,
         script: &str,
         extra_env: &[(&str, &std::ffi::OsStr)],
+        third_port: u16,
     ) -> Self {
         let mut command = Command::new("node");
         command
@@ -240,6 +264,7 @@ impl PublishedClient {
             .env("RFIRMA_BENCH_TIMEOUT_MS", PATIENCE.as_millis().to_string())
             .env("RFIRMA_BENCH_MODE", mode.as_env_value())
             .env("RFIRMA_BENCH_SCRIPT", script)
+            .env("RFIRMA_BENCH_PORT", third_port.to_string())
             .env(
                 "RFIRMA_BENCH_SERVLET_CERT",
                 material.certificate_pem_file.path(),
@@ -264,7 +289,21 @@ impl PublishedClient {
             }
         });
 
-        Self { child, events }
+        let third_port = matches!(mode, BenchMode::Third).then_some(third_port);
+        Self {
+            child,
+            events,
+            third_port,
+        }
+    }
+
+    /// Dónde abrir el canal: en v3 el puerto que se le dio al conductor, en el resto lo que dijo
+    /// la invocación.
+    fn the_channel_location(&self, launch: &LaunchRequest) -> ChannelLocation {
+        match self.third_port {
+            Some(port) => ChannelLocation::Fixed(port),
+            None => launch.location().clone(),
+        }
     }
 
     /// Siguiente evento emitido por el cliente publicado.
@@ -329,6 +368,14 @@ impl ChannelMaterial {
             certificate,
         }
     }
+}
+
+/// Un puerto de loopback libre ahora mismo, para que cada caso v3 escuche en el suyo.
+fn a_free_port() -> u16 {
+    TcpListener::bind("127.0.0.1:0")
+        .and_then(|listener| listener.local_addr())
+        .expect("deberia haber un puerto de loopback libre")
+        .port()
 }
 
 /// Un fichero temporal con `bytes` ya en disco, con el `suffix` indicado.
@@ -574,12 +621,11 @@ async fn an_unsupported_version_reaches_the_error_callback_of_the_published_clie
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn the_third_protocol_forces_the_published_client_onto_the_fixed_port() {
+async fn the_third_protocol_connects_to_the_port_rfirma_was_told_to_open() {
     if !the_bench_can_be_mounted() {
         return;
     }
 
-    let _turn = ONE_AT_A_TIME.lock().await;
     let material = ChannelMaterial::fresh();
     let client = PublishedClient::running_as(&material, BenchMode::Third);
     let url = client.the_launch_url();
@@ -588,11 +634,6 @@ async fn the_third_protocol_forces_the_published_client_onto_the_fixed_port() {
         AfirmaUrl::parse(&url).expect("la invocacion del cliente publicado deberia leerse");
     let launch = LaunchRequest::from_url(&parsed).expect("la version 3 se habla aqui, sin puertos");
 
-    assert_eq!(
-        launch.location(),
-        &ChannelLocation::Fixed(THE_PORT_OF_THE_THIRD_PROTOCOL),
-        "el modo v3 fuerza el fuente para que no mande 'ports' y hable la version 3"
-    );
     let NegotiatedCredential::Required(credential) = launch.credential() else {
         panic!("el cliente publicado, aunque hable la version 3, sigue mandando idsession");
     };
@@ -603,16 +644,16 @@ async fn the_third_protocol_forces_the_published_client_onto_the_fixed_port() {
     );
 
     let channel = the_channel_at(
-        launch.location(),
+        &client.the_channel_location(&launch),
         &material,
         ChannelDuty::Serve(launch.credential().clone()),
         no_operations(),
     )
     .await;
     assert_eq!(
-        channel.port(),
-        THE_PORT_OF_THE_THIRD_PROTOCOL,
-        "el canal se abre en el puerto fijo, no en uno sorteado"
+        Some(channel.port()),
+        client.third_port,
+        "el canal se abre en el puerto que se le dio al cliente publicado"
     );
 }
 
@@ -622,7 +663,6 @@ async fn the_first_message_reveals_the_window_before_the_operation() {
         return;
     }
 
-    let _turn = ONE_AT_A_TIME.lock().await;
     let material = ChannelMaterial::fresh();
     let client = PublishedClient::running_against(&material);
     let url = client.the_launch_url();
@@ -650,7 +690,7 @@ async fn the_first_message_reveals_the_window_before_the_operation() {
     );
 
     let channel = the_channel_at(
-        launch.location(),
+        &client.the_channel_location(&launch),
         &material,
         ChannelDuty::Serve(launch.credential().clone()),
         inbox,
@@ -675,7 +715,6 @@ async fn the_first_message_over_the_third_protocol_reveals_the_window_before_the
         return;
     }
 
-    let _turn = ONE_AT_A_TIME.lock().await;
     let material = ChannelMaterial::fresh();
     let client = PublishedClient::running_as(&material, BenchMode::Third);
     let url = client.the_launch_url();
@@ -703,7 +742,7 @@ async fn the_first_message_over_the_third_protocol_reveals_the_window_before_the
     );
 
     let channel = the_channel_at(
-        launch.location(),
+        &client.the_channel_location(&launch),
         &material,
         ChannelDuty::Serve(launch.credential().clone()),
         inbox,
@@ -770,7 +809,7 @@ fn the_test_module() -> PathBuf {
     assert!(
         module.is_file(),
         "falta el modulo PKCS#11 en {}. La grada C necesita SoftHSM:\n  \
-         sudo apt install -y softhsm2 opensc\n  just token",
+         sudo apt install -y softhsm2 opensc\n  just certs install",
         module.display()
     );
     module
@@ -781,7 +820,83 @@ fn the_test_module() -> PathBuf {
 fn a_running_rfirma(home: &std::path::Path) -> Roots {
     let mut roots = rfirma_lib::roots(Paths::under(home));
     roots.identity.stores = vec![Store::module(the_test_module())];
+    roots.signing.prompter = Arc::new(MistypesTheTokenSecretOnce);
     roots
+}
+
+/// Doble de pruebas para PortalDialogs configurable programáticamente.
+#[derive(Clone, Default)]
+struct TestPortalDialogs {
+    single_file: Arc<Mutex<Option<PathBuf>>>,
+    multi_files: Arc<Mutex<Vec<PathBuf>>>,
+    save_destination: Arc<Mutex<Option<PathBuf>>>,
+}
+
+impl TestPortalDialogs {
+    fn picking_file(path: impl Into<PathBuf>) -> Self {
+        Self {
+            single_file: Arc::new(Mutex::new(Some(path.into()))),
+            ..Default::default()
+        }
+    }
+
+    fn cancelling_pick() -> Self {
+        Self {
+            single_file: Arc::new(Mutex::new(None)),
+            multi_files: Arc::new(Mutex::new(Vec::new())),
+            ..Default::default()
+        }
+    }
+
+    fn picking_files(paths: impl IntoIterator<Item = impl Into<PathBuf>>) -> Self {
+        Self {
+            multi_files: Arc::new(Mutex::new(paths.into_iter().map(Into::into).collect())),
+            ..Default::default()
+        }
+    }
+
+    fn saving_to(path: impl Into<PathBuf>) -> Self {
+        Self {
+            save_destination: Arc::new(Mutex::new(Some(path.into()))),
+            ..Default::default()
+        }
+    }
+
+    fn cancelling_save() -> Self {
+        Self {
+            save_destination: Arc::new(Mutex::new(None)),
+            ..Default::default()
+        }
+    }
+}
+
+impl PortalDialogs for TestPortalDialogs {
+    fn pick_file(&self, _clues: &DialogClues) -> Result<Option<PathBuf>, String> {
+        Ok(self.single_file.lock().unwrap().clone())
+    }
+
+    fn pick_files(&self, _clues: &DialogClues) -> Result<Vec<PathBuf>, String> {
+        Ok(self.multi_files.lock().unwrap().clone())
+    }
+
+    fn save_file(&self, _clues: &DialogClues) -> Result<Option<PathBuf>, String> {
+        Ok(self.save_destination.lock().unwrap().clone())
+    }
+}
+
+/// El diálogo del PIN: la primera vez se equivoca y, al avisarle, teclea el del token de pruebas.
+struct MistypesTheTokenSecretOnce;
+
+impl SecretPrompter for MistypesTheTokenSecretOnce {
+    fn prompt_secret(
+        &self,
+        request: &SecretPromptRequest,
+    ) -> Result<ProtectedSecret, SecretPromptError> {
+        match request.incorrect_secret {
+            false => Ok(ProtectedSecret::from_str("0000")),
+            true => Ok(ProtectedSecret::from_str(THE_TOKEN_SECRET)),
+        }
+    }
 }
 
 /// La mesa del trámite montada sobre las raíces de un rFirma en marcha.
@@ -823,7 +938,7 @@ fn the_errand_of(roots: &Arc<Roots>, consents: &Arc<AtomicUsize>) -> SiteOperati
             .iter()
             .find(|row| row.label == THE_TEST_CERTIFICATE && row.status.is_usable())
             .unwrap_or_else(|| {
-                panic!("el token de pruebas no ofrecio {THE_TEST_CERTIFICATE}: monta `just token`")
+                panic!("el token de pruebas no ofrecio {THE_TEST_CERTIFICATE}: monta `just certs install`")
             });
         errand::consent(&desk, &chosen.id, live).expect("el consentimiento deberia entregarse");
     })
@@ -851,7 +966,7 @@ async fn the_errand_channel(
     let launch = LaunchRequest::from_url(&parsed).expect("la invocacion deberia atenderse");
 
     let channel = the_channel_at(
-        launch.location(),
+        &client.the_channel_location(&launch),
         material,
         ChannelDuty::Serve(launch.credential().clone()),
         operations,
@@ -860,7 +975,7 @@ async fn the_errand_channel(
     assert!(
         roots.site.errand.begin(Errand::of(
             launch.credential().clone(),
-            channel.port(),
+            channel.arrival_mode(),
             the_codec_of(roots, &launch),
         )),
         "la invocacion anterior deberia haber cerrado su tramite"
@@ -902,7 +1017,6 @@ async fn the_sticky_selections_of(mode: BenchMode) {
         return;
     }
 
-    let _turn = ONE_AT_A_TIME.lock().await;
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
     let roots = Arc::new(tokio::task::block_in_place(|| {
         a_running_rfirma(home.path())
@@ -1004,7 +1118,7 @@ fn the_batch_errand_of(roots: &Arc<Roots>, signer: &Arc<Mutex<Option<Vec<u8>>>>)
             .iter()
             .find(|row| row.label == THE_TEST_CERTIFICATE && row.status.is_usable())
             .unwrap_or_else(|| {
-                panic!("el token de pruebas no ofrecio {THE_TEST_CERTIFICATE}: monta `just token`")
+                panic!("el token de pruebas no ofrecio {THE_TEST_CERTIFICATE}: monta `just certs install`")
             });
         let signing_certificate = roots
             .identity
@@ -1017,7 +1131,7 @@ fn the_batch_errand_of(roots: &Arc<Roots>, signer: &Arc<Mutex<Option<Vec<u8>>>>)
 
         errand::consent(&desk, &chosen.id, live).expect("el lote deberia quedar consentido");
         tokio::task::block_in_place(|| {
-            errand::finish_the_batch(&desk, THE_TOKEN_SECRET, live)
+            signed_with_the_secret(&desk, live, "")
                 .expect("el lote deberia cerrarse con el secreto del token")
         });
     })
@@ -1053,7 +1167,7 @@ fn the_local_batch_errand_of(
             .iter()
             .find(|row| row.label == THE_TEST_CERTIFICATE && row.status.is_usable())
             .unwrap_or_else(|| {
-                panic!("el token de pruebas no ofrecio {THE_TEST_CERTIFICATE}: monta `just token`")
+                panic!("el token de pruebas no ofrecio {THE_TEST_CERTIFICATE}: monta `just certs install`")
             });
         let signing_certificate = roots
             .identity
@@ -1066,7 +1180,7 @@ fn the_local_batch_errand_of(
 
         errand::consent(&desk, &chosen.id, live).expect("el lote local deberia quedar consentido");
         tokio::task::block_in_place(|| {
-            errand::finish_the_local_batch(&desk, THE_TOKEN_SECRET, live)
+            signed_with_the_secret(&desk, live, "")
                 .expect("el lote local deberia cerrarse con el secreto del token")
         });
     })
@@ -1305,7 +1419,7 @@ fn the_down_presigner_batch_errand_of(roots: &Arc<Roots>) -> SiteOperations {
             .iter()
             .find(|row| row.label == THE_TEST_CERTIFICATE && row.status.is_usable())
             .unwrap_or_else(|| {
-                panic!("el token de pruebas no ofrecio {THE_TEST_CERTIFICATE}: monta `just token`")
+                panic!("el token de pruebas no ofrecio {THE_TEST_CERTIFICATE}: monta `just certs install`")
             });
 
         errand::consent(&desk, &chosen.id, live).expect("el lote deberia quedar consentido");
@@ -1384,7 +1498,6 @@ async fn the_local_batch_of(mode: BenchMode) {
         return;
     }
 
-    let _turn = ONE_AT_A_TIME.lock().await;
     let material = ChannelMaterial::fresh();
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
     let roots = Arc::new(tokio::task::block_in_place(|| {
@@ -1497,7 +1610,6 @@ async fn the_local_batch_with_an_illegible_item_of(mode: BenchMode) {
         return;
     }
 
-    let _turn = ONE_AT_A_TIME.lock().await;
     let material = ChannelMaterial::fresh();
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
     let roots = Arc::new(tokio::task::block_in_place(|| {
@@ -1590,7 +1702,7 @@ fn the_sign_errand_of(roots: &Arc<Roots>, signer: &Arc<Mutex<Option<Vec<u8>>>>) 
             .iter()
             .find(|row| row.label == THE_TEST_CERTIFICATE && row.status.is_usable())
             .unwrap_or_else(|| {
-                panic!("el token de pruebas no ofrecio {THE_TEST_CERTIFICATE}: monta `just token`")
+                panic!("el token de pruebas no ofrecio {THE_TEST_CERTIFICATE}: monta `just certs install`")
             });
         let signing_certificate = roots
             .identity
@@ -1611,6 +1723,177 @@ fn the_sign_errand_of(roots: &Arc<Roots>, signer: &Arc<Mutex<Option<Vec<u8>>>>) 
             .expect("la firma en el token deberia completarse");
             errand::finish(&desk, live).expect("la postfirma deberia completarse");
         });
+    })
+}
+
+/// El trámite atendiendo `saveDataToFile`: abre el diálogo del portal y escribe en disco o cancela.
+fn the_save_errand_of(roots: &Arc<Roots>) -> SiteOperations {
+    let roots = Arc::clone(roots);
+
+    SiteOperations::for_operations(move |url, reply: ErrandReply| {
+        let desk = the_desk_of(&roots);
+        let live = &roots.site.errand;
+
+        let answering = ErrandReply::of(move |text| reply.answer(text));
+        let Some(ErrandStep::Saving(consent)) = errand::attend(&desk, url, answering, live) else {
+            return;
+        };
+
+        let clues = DialogClues {
+            title: consent.title.clone(),
+            filename: consent.filename.clone(),
+            extensions: consent.extensions.clone(),
+            description: consent.description.clone(),
+            starting_folder: consent.starting_folder.as_ref().map(PathBuf::from),
+        };
+        let chosen = roots
+            .site
+            .portal
+            .save_file(&clues)
+            .expect("el diálogo del portal para guardar no falla");
+        match chosen {
+            Some(path) => {
+                errand::saved(
+                    desk.scratch.as_ref(),
+                    &path,
+                    &consent.data,
+                    consent.signer_der.as_deref(),
+                    live,
+                );
+            }
+            None => {
+                errand::decline(live);
+            }
+        }
+    })
+}
+
+/// El trámite atendiendo `load` o `multiload`: abre el selector del portal y entrega o cancela.
+fn the_load_errand_of(roots: &Arc<Roots>) -> SiteOperations {
+    let roots = Arc::clone(roots);
+
+    SiteOperations::for_operations(move |url, reply: ErrandReply| {
+        let desk = the_desk_of(&roots);
+        let live = &roots.site.errand;
+
+        let answering = ErrandReply::of(move |text| reply.answer(text));
+        let Some(ErrandStep::Loading(consent)) = errand::attend(&desk, url, answering, live) else {
+            return;
+        };
+
+        let clues = DialogClues {
+            title: consent.title.clone(),
+            filename: consent.filename.clone(),
+            extensions: consent.extensions.clone(),
+            description: consent.description.clone(),
+            starting_folder: consent.starting_folder.as_ref().map(PathBuf::from),
+        };
+        let chosen = if consent.multiple {
+            roots
+                .site
+                .portal
+                .pick_files(&clues)
+                .expect("el diálogo del portal para cargar no falla")
+        } else {
+            roots
+                .site
+                .portal
+                .pick_file(&clues)
+                .expect("el diálogo del portal para cargar no falla")
+                .into_iter()
+                .collect()
+        };
+        if chosen.is_empty() {
+            errand::decline(live);
+        } else {
+            let named: Vec<(String, PathBuf)> = chosen
+                .into_iter()
+                .map(|path| {
+                    let name = path
+                        .file_name()
+                        .map(|name| name.to_string_lossy().into_owned())
+                        .unwrap_or_else(|| path.to_string_lossy().into_owned());
+                    (name, path)
+                })
+                .collect();
+            errand::document_chosen(&desk, &named, live);
+        }
+    })
+}
+
+/// El trámite atendiendo `signandsave`: consiente, firma en el token, y guarda en el portal.
+fn the_sign_and_save_errand_of(
+    roots: &Arc<Roots>,
+    signer: &Arc<Mutex<Option<Vec<u8>>>>,
+) -> SiteOperations {
+    let roots = Arc::clone(roots);
+    let signer = Arc::clone(signer);
+
+    SiteOperations::for_operations(move |url, reply: ErrandReply| {
+        let desk = the_desk_of(&roots);
+        let live = &roots.site.errand;
+
+        let answering = ErrandReply::of(move |text| reply.answer(text));
+        let Some(ErrandStep::AskingToSign(consent)) = errand::attend(&desk, url, answering, live)
+        else {
+            return;
+        };
+
+        let chosen = consent
+            .certificates
+            .iter()
+            .find(|row| row.label == THE_TEST_CERTIFICATE && row.status.is_usable())
+            .unwrap_or_else(|| panic!("el token de pruebas no ofreció {THE_TEST_CERTIFICATE}"));
+        let signing_certificate = roots
+            .identity
+            .chosen(&chosen.id)
+            .expect("el certificado consentido debería seguir en el token");
+        *signer
+            .lock()
+            .expect("nadie envenena el apunte del firmante") =
+            Some(signing_certificate.der().to_vec());
+
+        errand::consent(&desk, &chosen.id, live).expect("la prefirma debería consentirse");
+        let saving_step = tokio::task::block_in_place(|| {
+            sign_on_token(
+                &roots.identity.signer(),
+                &roots.signing.session,
+                THE_TOKEN_SECRET,
+            )
+            .expect("la firma en el token debería completarse");
+            errand::finish(&desk, live).expect("la postfirma debería completarse")
+        });
+
+        let Some(ErrandStep::Saving(saving_consent)) = saving_step else {
+            panic!("signandsave tenía que desembocar en ErrandStep::Saving");
+        };
+
+        let clues = DialogClues {
+            title: saving_consent.title.clone(),
+            filename: saving_consent.filename.clone(),
+            extensions: saving_consent.extensions.clone(),
+            description: saving_consent.description.clone(),
+            starting_folder: saving_consent.starting_folder.as_ref().map(PathBuf::from),
+        };
+        let chosen = roots
+            .site
+            .portal
+            .save_file(&clues)
+            .expect("el diálogo del portal para guardar no falla");
+        match chosen {
+            Some(path) => {
+                errand::saved(
+                    desk.scratch.as_ref(),
+                    &path,
+                    &saving_consent.data,
+                    saving_consent.signer_der.as_deref(),
+                    live,
+                );
+            }
+            None => {
+                errand::decline(live);
+            }
+        }
     })
 }
 
@@ -1646,22 +1929,23 @@ fn verified_by_openssl(cms: &[u8], content: &Path) {
     );
 }
 
-/// Comprueba `path` con el oráculo de la grada C (`just validate-signature`, #526).
+/// Comprueba `path` con el oráculo de la grada C (`rfirma-native-bridge/testbench/validate.sh`, #526).
 fn validated_by_the_reference_tool_at(path: &Path) {
-    let output = Command::new("just")
-        .arg("validate-signature")
+    let script = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../rfirma-native-bridge/testbench/validate.sh");
+    let output = Command::new(&script)
         .arg(path)
         .output()
-        .expect("falta just para el banco de conformidad");
+        .unwrap_or_else(|error| panic!("no se ha podido ejecutar {}: {error}", script.display()));
     assert!(
         output.status.success(),
-        "just validate-signature ha fallado:\n{}{}",
+        "validate.sh ha fallado:\n{}{}",
         String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr)
     );
 }
 
-/// Comprueba el CMS con el oráculo de la grada C (`just validate-signature`, #526).
+/// Comprueba el CMS con el oráculo de la grada C (`rfirma-native-bridge/testbench/validate.sh`, #526).
 fn validated_by_the_reference_tool(cms: &[u8]) {
     let cms_file = a_der_file(cms);
     validated_by_the_reference_tool_at(cms_file.path());
@@ -1711,7 +1995,6 @@ async fn the_sign_of(mode: BenchMode, script: &str) {
         return;
     }
 
-    let _turn = ONE_AT_A_TIME.lock().await;
     let material = ChannelMaterial::fresh();
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
     let roots = Arc::new(tokio::task::block_in_place(|| {
@@ -1777,6 +2060,22 @@ async fn the_published_client_signs_a_binary_challenge_with_cades_explicit_also_
     the_sign_of(BenchMode::Third, THE_SIGN_CADES_EXPLICIT).await;
 }
 
+/// Dos trámites de sede a la vez en el mismo proceso, cada uno con su propia terna de `ports=`
+/// (ID-06): no hay techo de trámites simultáneos ni estado global que los estorbe. No toma
+/// `ONE_AT_A_TIME`, porque eso solo lo necesitan los casos de lote con servlets.
+#[tokio::test(flavor = "multi_thread", worker_threads = 8)]
+#[ignore = "grada C: necesita la libreria nativa (RFIRMA_LIB_DIR) y el token de pruebas"]
+async fn two_published_clients_sign_at_once_in_the_same_process() {
+    if !the_bench_can_be_mounted() {
+        return;
+    }
+
+    tokio::join!(
+        the_sign_of(BenchMode::Fourth, THE_SIGN_CADES_EXPLICIT),
+        the_sign_of(BenchMode::Fourth, THE_SIGN_CADES_EXPLICIT),
+    );
+}
+
 /// Un `sign()` del cliente publicado con `format=CAdES-ASiC-S`: lo que vuelve no es un CMS sino
 /// el contenedor ZIP, con la firma CAdES dentro, y el oráculo de la grada C lo valida.
 async fn the_asic_s_sign_of(mode: BenchMode, script: &str) {
@@ -1784,7 +2083,6 @@ async fn the_asic_s_sign_of(mode: BenchMode, script: &str) {
         return;
     }
 
-    let _turn = ONE_AT_A_TIME.lock().await;
     let material = ChannelMaterial::fresh();
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
     let roots = Arc::new(tokio::task::block_in_place(|| {
@@ -1851,7 +2149,6 @@ async fn the_xades_sign_of(mode: BenchMode, script: &str) {
         return;
     }
 
-    let _turn = ONE_AT_A_TIME.lock().await;
     let material = ChannelMaterial::fresh();
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
     let roots = Arc::new(tokio::task::block_in_place(|| {
@@ -1941,7 +2238,6 @@ async fn cosigning_an_invoice_with_facturae_is_refused() {
         return;
     }
 
-    let _turn = ONE_AT_A_TIME.lock().await;
     let material = ChannelMaterial::fresh();
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
     let roots = Arc::new(tokio::task::block_in_place(|| {
@@ -2062,7 +2358,6 @@ async fn the_published_client_is_refused_a_document_whose_previous_signature_doe
         return;
     }
 
-    let _turn = ONE_AT_A_TIME.lock().await;
     let pdf = a_temp_file(".pdf", &a_one_page_pdf());
     let signed = the_pdf_signed_by_the_bench(pdf.path()).await;
 
@@ -2184,7 +2479,6 @@ fn the_published_client_forced_to_the_relay_launches_without_stservlet_and_rfirm
     let relay = Relay::new(
         Arc::clone(&servlets) as Arc<dyn Servlets + Send + Sync>,
         inbox,
-        Arc::new(|| {}),
         Arc::new(|_| {}),
     );
 
@@ -2218,4 +2512,374 @@ fn the_published_client_forced_to_the_relay_launches_without_stservlet_and_rfirm
         Some("la-respuesta-del-tramite"),
         "la respuesta sube con el 'id' que venia dentro del XML de parametros"
     );
+}
+
+/// El cliente publicado forzado a servidor intermedio cofirma una factura, que rFirma rechaza
+/// solo, sin pedir consentimiento; el destino solo se conoce tras leer el XML de parámetros, y el
+/// servlet de guardado falso recibe el `SAF_NN` de ese rechazo.
+#[test]
+fn the_published_client_forced_to_the_relay_uploads_the_saf_of_a_refused_operation() {
+    use rfirma_lib::site::adapters::codec::V4Codec;
+    use rfirma_lib::site::adapters::codec_relay::RelayCodec;
+    use rfirma_lib::site::adapters::codec_v1::V1Codec;
+    use rfirma_lib::site::adapters::codec_v3::V3Codec;
+    use rfirma_lib::site::application::errand::LiveErrand;
+    use rfirma_lib::site::application::site::{attend_launch, Attendance, CodecTable};
+    use rfirma_lib::site::domain::protocol::Refusal;
+
+    if !the_bench_can_be_mounted() {
+        return;
+    }
+
+    let material = ChannelMaterial::fresh();
+    let client = PublishedClient::running_the_script(
+        &material,
+        BenchMode::Relay,
+        THE_RELAY_REFUSED_OPERATION,
+    );
+    let servlets = Arc::new(BenchServlets::default());
+
+    let launch = the_relay_launch_of(&client, &servlets);
+    assert!(
+        launch.contains("fileid=") && launch.contains("rtservlet="),
+        "el preproceso de URL larga lanza con 'fileid' y 'rtservlet': {launch}"
+    );
+    assert!(
+        !launch.contains("stservlet=") && !launch.contains("&id="),
+        "el destino solo esta dentro del XML de parametros: {launch}"
+    );
+
+    let stored_at: Arc<Mutex<Option<String>>> = Arc::new(Mutex::new(None));
+    let inbox_stored_at = Arc::clone(&stored_at);
+    let inbox = Inbox::for_operations(move |url, reply: ErrandReply| {
+        *inbox_stored_at.lock().expect("el candado") =
+            Some(url.parameter("id").expect("el xml trae 'id'").to_owned());
+        let refusal = read_operation(&url, &HttpDataSource)
+            .err()
+            .unwrap_or_else(|| Refusal::params("el guion esperaba un rechazo del protocolo"));
+        reply.answer(refusal.answer().on_the_wire());
+    });
+    let relay = Relay::new(
+        Arc::clone(&servlets) as Arc<dyn Servlets + Send + Sync>,
+        inbox,
+        Arc::new(|_| {}),
+    );
+
+    let codecs = CodecTable {
+        v4: Arc::new(V4Codec),
+        v3: Arc::new(V3Codec),
+        v1: Arc::new(V1Codec),
+        relay: Arc::new(|key| Arc::new(RelayCodec::new(key)) as NegotiatedCodec),
+    };
+
+    let attendance = attend_launch(
+        &launch,
+        &codecs,
+        &|location, duty| relay.open(location, duty),
+        &LiveErrand::default(),
+    );
+
+    assert!(
+        matches!(attendance, Attendance::Serving { .. }),
+        "el destino ya se conocia en el xml de parametros: deberia servir para contestar por el: \
+         {attendance:?}"
+    );
+
+    let stored_at = stored_at
+        .lock()
+        .expect("el candado")
+        .clone()
+        .expect("la operacion deberia haberse leido y rechazado");
+    assert_eq!(
+        servlets.get(&stored_at),
+        Some(WireAnswer::refused(SafCode::UnsupportedOperation).on_the_wire()),
+        "el servlet de guardado deberia recibir el SAF_NN del rechazo con el 'id' del xml"
+    );
+}
+
+/// Guarda datos en disco con `saveDataToFile` y verifica la respuesta `SAVE_OK` y el fichero escrito.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "grada C: necesita la libreria nativa (RFIRMA_LIB_DIR) y el token de pruebas"]
+async fn the_published_client_saves_data_to_file() {
+    if !the_bench_can_be_mounted() {
+        return;
+    }
+    let material = ChannelMaterial::fresh();
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let target_dir = tempfile::tempdir().expect("directorio de guardado");
+    let save_path = target_dir.path().join("saved_challenge.bin");
+
+    let mut roots = tokio::task::block_in_place(|| a_running_rfirma(home.path()));
+    let portal = Arc::new(TestPortalDialogs::saving_to(&save_path));
+    roots.documents.portal = portal.clone();
+    roots.site.portal = portal;
+    let roots = Arc::new(roots);
+
+    let client = PublishedClient::running_the_script(&material, BenchMode::Fourth, THE_SAVE);
+    let channel = the_errand_channel(&client, &material, &roots, the_save_errand_of(&roots)).await;
+
+    let verdict = client.next_event();
+    assert_eq!(
+        verdict.name(),
+        "success",
+        "saveDataToFile tenía que acabar en el successCallback, y acabó en {}: {}",
+        verdict.name(),
+        verdict.field("message")
+    );
+    assert_eq!(
+        verdict.field("data"),
+        "SAVE_OK",
+        "el successCallback recibe SAVE_OK"
+    );
+    assert_eq!(
+        std::fs::read(&save_path).expect("el fichero guardado debe existir"),
+        std::fs::read(the_challenge_path()).expect("el reto debe leerse"),
+        "el fichero guardado en disco coincide con los datos enviados"
+    );
+    channel.close();
+}
+
+/// Cancela el diálogo de guardado en `saveDataToFile` y verifica la excepción de cancelación.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "grada C: necesita la libreria nativa (RFIRMA_LIB_DIR) y el token de pruebas"]
+async fn the_published_client_cancels_saving_data_to_file() {
+    if !the_bench_can_be_mounted() {
+        return;
+    }
+    let material = ChannelMaterial::fresh();
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+
+    let mut roots = tokio::task::block_in_place(|| a_running_rfirma(home.path()));
+    let portal = Arc::new(TestPortalDialogs::cancelling_save());
+    roots.documents.portal = portal.clone();
+    roots.site.portal = portal;
+    let roots = Arc::new(roots);
+
+    let client = PublishedClient::running_the_script(&material, BenchMode::Fourth, THE_SAVE);
+    let channel = the_errand_channel(&client, &material, &roots, the_save_errand_of(&roots)).await;
+
+    let verdict = client.next_event();
+    assert_eq!(
+        verdict.name(),
+        "error",
+        "la cancelación de saveDataToFile tenía que acabar en el errorCallback"
+    );
+    assert_eq!(
+        verdict.field("type"),
+        "es.gob.afirma.core.AOCancelledOperationException",
+        "el errorCallback recibe la excepción de cancelación"
+    );
+    channel.close();
+}
+
+/// Carga un único fichero con `getFileNameContentBase64` y verifica nombre y contenido en base64.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "grada C: necesita la libreria nativa (RFIRMA_LIB_DIR) y el token de pruebas"]
+async fn the_published_client_loads_single_file() {
+    if !the_bench_can_be_mounted() {
+        return;
+    }
+    let material = ChannelMaterial::fresh();
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let load_dir = tempfile::tempdir().expect("directorio de carga");
+    let file_path = load_dir.path().join("documento.bin");
+    let content = b"contenido de prueba para carga simple";
+    std::fs::write(&file_path, content).expect("debe escribirse el fichero");
+
+    let mut roots = tokio::task::block_in_place(|| a_running_rfirma(home.path()));
+    let portal = Arc::new(TestPortalDialogs::picking_file(&file_path));
+    roots.documents.portal = portal.clone();
+    roots.site.portal = portal;
+    let roots = Arc::new(roots);
+
+    let client = PublishedClient::running_the_script(&material, BenchMode::Fourth, THE_LOAD);
+    let channel = the_errand_channel(&client, &material, &roots, the_load_errand_of(&roots)).await;
+
+    let verdict = client.next_event();
+    assert_eq!(
+        verdict.name(),
+        "success",
+        "getFileNameContentBase64 tenía que acabar en el successCallback, y acabó en {}: {}",
+        verdict.name(),
+        verdict.field("message")
+    );
+    assert_eq!(verdict.field("filename"), "documento.bin");
+    assert_eq!(verdict.field("data"), STANDARD.encode(content));
+    channel.close();
+}
+
+/// Cancela el diálogo de carga en `getFileNameContentBase64` y verifica la excepción de cancelación.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "grada C: necesita la libreria nativa (RFIRMA_LIB_DIR) y el token de pruebas"]
+async fn the_published_client_cancels_loading_file() {
+    if !the_bench_can_be_mounted() {
+        return;
+    }
+    let material = ChannelMaterial::fresh();
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+
+    let mut roots = tokio::task::block_in_place(|| a_running_rfirma(home.path()));
+    let portal = Arc::new(TestPortalDialogs::cancelling_pick());
+    roots.documents.portal = portal.clone();
+    roots.site.portal = portal;
+    let roots = Arc::new(roots);
+
+    let client = PublishedClient::running_the_script(&material, BenchMode::Fourth, THE_LOAD);
+    let channel = the_errand_channel(&client, &material, &roots, the_load_errand_of(&roots)).await;
+
+    let verdict = client.next_event();
+    assert_eq!(
+        verdict.name(),
+        "error",
+        "la cancelación de getFileNameContentBase64 tenía que acabar en el errorCallback"
+    );
+    assert_eq!(
+        verdict.field("type"),
+        "es.gob.afirma.core.AOCancelledOperationException"
+    );
+    channel.close();
+}
+
+/// Carga múltiples ficheros con `getMultiFileNameContentBase64` y verifica nombres y contenidos.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "grada C: necesita la libreria nativa (RFIRMA_LIB_DIR) y el token de pruebas"]
+async fn the_published_client_loads_multiple_files() {
+    if !the_bench_can_be_mounted() {
+        return;
+    }
+    let material = ChannelMaterial::fresh();
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let load_dir = tempfile::tempdir().expect("directorio de carga");
+    let file1 = load_dir.path().join("doc1.bin");
+    let file2 = load_dir.path().join("doc2.bin");
+    let content1 = b"primer fichero";
+    let content2 = b"segundo fichero";
+    std::fs::write(&file1, content1).expect("debe escribirse doc1");
+    std::fs::write(&file2, content2).expect("debe escribirse doc2");
+
+    let mut roots = tokio::task::block_in_place(|| a_running_rfirma(home.path()));
+    let portal = Arc::new(TestPortalDialogs::picking_files([&file1, &file2]));
+    roots.documents.portal = portal.clone();
+    roots.site.portal = portal;
+    let roots = Arc::new(roots);
+
+    let client = PublishedClient::running_the_script(&material, BenchMode::Fourth, THE_MULTI_LOAD);
+    let channel = the_errand_channel(&client, &material, &roots, the_load_errand_of(&roots)).await;
+
+    let verdict = client.next_event();
+    assert_eq!(
+        verdict.name(),
+        "success",
+        "getMultiFileNameContentBase64 tenía que acabar en el successCallback, y acabó en {}: {}",
+        verdict.name(),
+        verdict.field("message")
+    );
+    assert_eq!(verdict.field("filenames"), "doc1.bin|doc2.bin");
+    assert_eq!(
+        verdict.field("data"),
+        format!(
+            "{}|{}",
+            STANDARD.encode(content1),
+            STANDARD.encode(content2)
+        )
+    );
+    channel.close();
+}
+
+/// Cancela el diálogo de carga múltiple en `getMultiFileNameContentBase64` y verifica la excepción de cancelación.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "grada C: necesita la libreria nativa (RFIRMA_LIB_DIR) y el token de pruebas"]
+async fn the_published_client_cancels_loading_multiple_files() {
+    if !the_bench_can_be_mounted() {
+        return;
+    }
+    let material = ChannelMaterial::fresh();
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+
+    let mut roots = tokio::task::block_in_place(|| a_running_rfirma(home.path()));
+    let portal = Arc::new(TestPortalDialogs::cancelling_pick());
+    roots.documents.portal = portal.clone();
+    roots.site.portal = portal;
+    let roots = Arc::new(roots);
+
+    let client = PublishedClient::running_the_script(&material, BenchMode::Fourth, THE_MULTI_LOAD);
+    let channel = the_errand_channel(&client, &material, &roots, the_load_errand_of(&roots)).await;
+
+    let verdict = client.next_event();
+    assert_eq!(
+        verdict.name(),
+        "error",
+        "la cancelación de getMultiFileNameContentBase64 tenía que acabar en el errorCallback"
+    );
+    assert_eq!(
+        verdict.field("type"),
+        "es.gob.afirma.core.AOCancelledOperationException"
+    );
+    channel.close();
+}
+
+/// Firma y guarda en disco con `signAndSaveToFile` verificando la firma guardada y los datos devueltos.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "grada C: necesita la libreria nativa (RFIRMA_LIB_DIR) y el token de pruebas"]
+async fn the_published_client_signs_and_saves_to_file() {
+    if !the_bench_can_be_mounted() {
+        return;
+    }
+    let material = ChannelMaterial::fresh();
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let target_dir = tempfile::tempdir().expect("directorio de guardado");
+    let save_path = target_dir.path().join("challenge-signed.csig");
+
+    let mut roots = tokio::task::block_in_place(|| a_running_rfirma(home.path()));
+    let portal = Arc::new(TestPortalDialogs::saving_to(&save_path));
+    roots.documents.portal = portal.clone();
+    roots.site.portal = portal;
+    let roots = Arc::new(roots);
+
+    let signer = Arc::new(Mutex::new(None));
+    let client =
+        PublishedClient::running_the_script(&material, BenchMode::Fourth, THE_SIGN_AND_SAVE);
+    let channel = the_errand_channel(
+        &client,
+        &material,
+        &roots,
+        the_sign_and_save_errand_of(&roots, &signer),
+    )
+    .await;
+
+    let verdict = client.next_event();
+    assert_eq!(
+        verdict.name(),
+        "success",
+        "signAndSaveToFile tenía que acabar en el successCallback, y acabó en {}: {}",
+        verdict.name(),
+        verdict.field("message")
+    );
+
+    let cms = STANDARD
+        .decode(verdict.field("result"))
+        .expect("el CMS de signandsave llega en base64");
+    verified_by_openssl(&cms, &the_challenge_path());
+    validated_by_the_reference_tool(&cms);
+
+    assert_eq!(
+        verdict.field("certificate"),
+        STANDARD.encode(
+            signer
+                .lock()
+                .expect("nadie envenena el apunte del firmante")
+                .as_ref()
+                .expect("el tramite tenia que haber consentido con un certificado")
+        ),
+        "el successCallback recibe tambien el DER del firmante"
+    );
+
+    let saved_bytes =
+        std::fs::read(&save_path).expect("el fichero firmado debe haberse guardado en disco");
+    assert_eq!(
+        saved_bytes, cms,
+        "el contenido guardado en disco coincide con la firma devuelta"
+    );
+
+    channel.close();
 }

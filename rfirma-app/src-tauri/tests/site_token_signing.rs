@@ -33,7 +33,7 @@ fn module() -> PathBuf {
     assert!(
         module.is_file(),
         "falta el modulo PKCS#11 en {}. Las pruebas de grada B necesitan SoftHSM:\n  \
-         sudo apt install -y softhsm2 opensc\n  just token",
+         sudo apt install -y softhsm2 opensc\n  just certs install",
         module.display()
     );
     module
@@ -44,7 +44,9 @@ fn certificate() -> TokenCertificate {
     found
         .into_iter()
         .find(|certificate| certificate.reference().label() == ACTIVE)
-        .unwrap_or_else(|| panic!("falta {ACTIVE} en el token {TOKEN}. Montalo con:\n  just token"))
+        .unwrap_or_else(|| {
+            panic!("falta {ACTIVE} en el token {TOKEN}. Montalo con:\n  just certs install")
+        })
 }
 
 fn public_key(certificate: &TokenCertificate) -> RsaPublicKey {

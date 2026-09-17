@@ -14,6 +14,7 @@ use rfirma_lib::identity::domain::certificate::{
     CertificateRef, CertificateStatus, TokenCertificate,
 };
 use rfirma_lib::identity::domain::error::{Situation, TokenError};
+use rfirma_lib::identity::domain::protected_secret::ProtectedSecret;
 use rfirma_lib::identity::domain::store::StoreClass;
 use rsa::pkcs1v15::{Signature, VerifyingKey};
 use rsa::pkcs8::DecodePublicKey;
@@ -45,7 +46,7 @@ fn module() -> PathBuf {
     assert!(
         module.is_file(),
         "falta el modulo PKCS#11 en {}. Las pruebas de grada B necesitan SoftHSM:\n  \
-         sudo apt install -y softhsm2 opensc\n  just token",
+         sudo apt install -y softhsm2 opensc\n  just certs install",
         module.display()
     );
     module
@@ -55,7 +56,7 @@ fn certificates() -> Vec<TokenCertificate> {
     let found = pkcs11::list_certificates(module()).expect("no se ha podido listar el token");
     assert!(
         !found.is_empty(),
-        "el token {TOKEN} esta vacio o no existe. Montalo con:\n  just token"
+        "el token {TOKEN} esta vacio o no existe. Montalo con:\n  just certs install"
     );
     found
 }
@@ -65,7 +66,7 @@ fn certificate_labelled(label: &str) -> TokenCertificate {
         .into_iter()
         .find(|certificate| certificate.reference().label() == label)
         .unwrap_or_else(|| {
-            panic!("el token {TOKEN} no tiene ningun certificado {label}. Montalo con: just token")
+            panic!("el token {TOKEN} no tiene ningun certificado {label}. Montalo con: just certs install")
         })
 }
 
@@ -81,7 +82,7 @@ fn certificate_with_cka_id(cka_id: u8) -> TokenCertificate {
         .unwrap_or_else(|| {
             panic!(
                 "el token {TOKEN} no tiene ningun certificado con CKA_ID {cka_id:02x}. \
-                 Montalo con: just token"
+                 Montalo con: just certs install"
             )
         })
 }
@@ -616,6 +617,26 @@ fn a_wrong_pin_is_a_situation_and_carries_its_raw_ckr_apart() {
     assert_eq!(error.situation(), Situation::IncorrectPin);
     assert_eq!(error.ckr(), Some("CKR_PIN_INCORRECT"));
     assert!(error.detail().contains("CKR_PIN_INCORRECT"));
+}
+
+#[test]
+fn the_token_accepts_its_pin_without_signing_anything() {
+    let secret = ProtectedSecret::from_str(PIN);
+
+    assert_eq!(
+        pkcs11::accepts_the_secret(&reference(ACTIVE), &secret),
+        Ok(())
+    );
+}
+
+#[test]
+fn a_wrong_pin_is_refused_by_the_token_as_an_incorrect_pin() {
+    let secret = ProtectedSecret::from_str("0000");
+
+    let error = pkcs11::accepts_the_secret(&reference(ACTIVE), &secret)
+        .expect_err("el token no acepta un PIN que no es el suyo");
+
+    assert_eq!(error.situation(), Situation::IncorrectPin);
 }
 
 #[test]

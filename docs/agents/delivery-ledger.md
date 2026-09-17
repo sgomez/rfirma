@@ -73,6 +73,20 @@ CI, en `code-host-ci.md`; ninguno de los dos se repite aquí.
   modelo — es una instrucción que falta en el prompt del constructor o en los
   docs de agentes: cualquier ticket que toque conformance/native_cycle debe
   añadir la etiqueta `native` a su propia PR.
+- **`cargo clippy` sobre los crates tocados no corre en el ciclo de
+  construcción de sonnet, y el CI lo atrapa tarde.** En el #674 (spec #671),
+  el segundo ciclo de arreglo fue por un lint `suspicious_open_options` que el
+  constructor nunca vio porque no corrió clippy en local antes de publicar. El
+  constructor debe correr `cargo clippy` sobre los crates que toca antes de
+  publicar la PR, no dejar que lo atrape el CI.
+- **La puerta CRAP (Cadena Rust) es otra que un constructor sonnet pasa por
+  alto sin correrla.** En el #704 (spec #703), la primera revisión salió
+  CLEAN pero el CI se puso en rojo en esa puerta; un ciclo de extracción de
+  método la puso verde. Misma causa estructural que el clippy de más arriba:
+  ninguna receta del ciclo de construcción la corre por defecto (`just crap`
+  es cara, ver «Qué ejecutar y cuándo»), así que el constructor debe
+  comprobarla —o al menos el riesgo de complejidad ciclomática del método que
+  toca— antes de publicar, no dejar que la atrape el CI.
 
 ## Run log
 
@@ -141,3 +155,17 @@ en `.scratch/archive/`.
 2026-09-09 spec=#588 sub=#595 model=opus effort=medium pr=#633 verdict=CLEAN cycles=1 mergefix=0 wave=5 outcome=merged
 2026-09-09 spec=#588 sub=#596 model=opus effort=medium pr=#635 verdict=CLEAN cycles=1 mergefix=0 wave=5 outcome=escalated
 2026-09-09 spec=#637 sub=#637 model=default effort=medium pr=#638 verdict=CLEAN cycles=0 mergefix=0 wave=— outcome=merged
+2026-09-11 spec=#671 sub=#673 model=sonnet effort=medium pr=#691 verdict=CLEAN cycles=0 mergefix=0 wave=1 outcome=merged
+2026-09-11 spec=#671 sub=#672 model=sonnet effort=medium pr=#692 verdict=CLEAN cycles=0 mergefix=0 wave=1 outcome=merged
+2026-09-11 spec=#671 sub=#675 model=sonnet effort=medium pr=#693 verdict=CLEAN cycles=0 mergefix=0 wave=1 outcome=merged
+2026-09-11 spec=#671 sub=#674 model=sonnet effort=medium pr=#694 verdict=CLEAN cycles=2 mergefix=0 wave=2 outcome=merged
+2026-09-11 spec=#671 sub=#685 model=sonnet effort=medium pr=#696 verdict=CLEAN cycles=0 mergefix=0 wave=3 outcome=merged
+2026-09-11 spec=#671 sub=#683 model=sonnet effort=medium pr=#695 verdict=CLEAN cycles=1 mergefix=0 wave=2 outcome=merged
+2026-09-11 spec=#671 sub=#684 model=sonnet effort=medium pr=#697 verdict=CLEAN cycles=1 mergefix=0 wave=3 outcome=merged
+2026-09-11 spec=#671 sub=#676 model=sonnet effort=medium pr=#698 verdict=CLEAN cycles=0 mergefix=0 wave=4 outcome=merged
+2026-09-11 spec=#703 sub=#704 model=sonnet effort=medium pr=#706 verdict=CLEAN cycles=1 mergefix=0 wave=— outcome=merged
+2026-09-11 spec=#703 sub=#705 model=sonnet effort=medium pr=#707 verdict=CLEAN cycles=1 mergefix=0 wave=— outcome=merged
+2026-09-16 spec=#730 sub=#730 model=sonnet effort=medium pr=#736 verdict=CLEAN cycles=0 mergefix=0 wave=— outcome=merged
+2026-09-17 spec=#742 sub=#742 model=inherit effort=medium pr=#743 verdict=CLEAN cycles=0 mergefix=0 wave=— outcome=merged
+2026-09-17 spec=#484 sub=#746 model=inherit effort=medium pr=#748 verdict=CLEAN cycles=1 mergefix=0 wave=— outcome=merged
+2026-09-17 spec=#484 sub=#747 model=inherit effort=medium pr=#749 verdict=CLEAN cycles=0 mergefix=0 wave=— outcome=merged

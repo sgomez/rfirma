@@ -27,6 +27,15 @@
 //!   y su `PreProcessorFactory` no tiene preprocesador trifásico para él
 //!   (1.9.2); atenderlo exigiría la clave dentro de Java, que prohíbe el
 //!   ADR-0001, así que `format=XMLDSig*` sale con `SAF_06`.
+//! - **Un rechazo de arranque sin destino conocido no se sube**. El original
+//!   siempre intenta subir al servidor intermedio si la invocación lo pide;
+//!   aquí, si al fallar no se sabe todavía dónde subir la respuesta (una URL
+//!   inválida, o un XML de parámetros que no se pudo descargar), el rechazo
+//!   se queda en la ventana en vez de forzar una descarga solo para saberlo.
+//! - **El algoritmo de lote se valida en el parser**. El original no
+//!   comprueba el `algorithm` de `<signbatch>` ni del JSON de lote y lo
+//!   pasa tal cual a la JCA; aquí un nombre no reconocido sale de
+//!   inmediato con `SAF_03` nombrando `algorithm` antes de pedir credenciales.
 
 pub mod algorithm;
 pub mod cipher;
@@ -74,7 +83,8 @@ pub use operation::{
 };
 pub use parameters::{
     check_local_access_is_not_requested, check_minimum_client_version,
-    check_minimum_protocol_version, check_servlet_url, checked_identifier,
+    check_minimum_protocol_version, check_protocol_version_bounds,
+    check_protocol_version_meets_minimum, check_servlet_url, checked_identifier,
     minimum_protocol_version, sticky_certificate, StickyCertificate,
 };
 pub use refusal::{Refusal, RefusalSituation};

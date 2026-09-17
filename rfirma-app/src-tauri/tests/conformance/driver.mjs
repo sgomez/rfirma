@@ -2,6 +2,7 @@
 
 import { readFileSync } from "node:fs";
 import { createServer } from "node:http";
+import { request as httpsRequest } from "node:https";
 import { createServer as createTcpServer } from "node:net";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -16,25 +17,35 @@ if (!autoscriptPath) {
 const timeoutMs = Number(process.env.RFIRMA_BENCH_TIMEOUT_MS ?? "45000");
 const mode = process.env.RFIRMA_BENCH_MODE ?? "v4";
 const script = process.env.RFIRMA_BENCH_SCRIPT ?? "selectcert";
-const THE_PORT_OF_THE_THIRD_PROTOCOL = 63117;
+const THE_PORT_OF_THE_THIRD_PROTOCOL = Number(process.env.RFIRMA_BENCH_PORT ?? "63117");
+const THE_SERVICE_BIND_FAILURE_PORTS = (
+  process.env.RFIRMA_BENCH_SERVICE_PORTS ?? "63131,63132,63133"
+)
+  .split(",")
+  .map(Number);
 const here = dirname(fileURLToPath(import.meta.url));
 
 /** Sustituye `literal` por `replacement`, o revienta si el fuente ya no lo trae. */
 function replacingOrFailing(source, literal, replacement) {
   if (!source.includes(literal)) {
-    throw new Error(`forcedToTheThirdProtocol: no encuentra el literal a sustituir: ${literal}`);
+    throw new Error(`forcedToProtocolVersion: no encuentra el literal a sustituir: ${literal}`);
   }
   return source.replace(literal, replacement);
 }
 
 /**
- * El `autoscript.js` publicado nunca manda `v=3` por websocket (siempre habla la 4). Para medir
- * el modo `v3` se fuerza el fuente antes de ejecutarlo: la versión que declara, la URL de
- * arranque sin `ports=` y los puertos con los que conecta, al puerto fijo. El oráculo sigue
- * siendo el cliente publicado; solo se le obliga a hablar como uno de la versión 3.
+ * El `autoscript.js` publicado nunca manda una versión distinta de 4 por websocket. Para medir
+ * cualquier otra —`v3`, o la obsoleta y la no soportada de BUG-25— se fuerza el fuente antes de
+ * ejecutarlo: la versión que declara, la URL de arranque sin `ports=` y los puertos con los que
+ * conecta, al puerto fijo. El oráculo sigue siendo el cliente publicado; solo se le obliga a
+ * hablar como uno de la versión pedida.
  */
-function forcedToTheThirdProtocol(source) {
-  source = replacingOrFailing(source, "var PROTOCOL_VERSION = 4;", "var PROTOCOL_VERSION = 3;");
+function forcedToProtocolVersion(source, version) {
+  source = replacingOrFailing(
+    source,
+    "var PROTOCOL_VERSION = 4;",
+    `var PROTOCOL_VERSION = ${version};`,
+  );
   source = replacingOrFailing(
     source,
     'var url = "afirma://websocket?ports=" + portsLine\n\t\t\t\t\t+ "&v=" + PROTOCOL_VERSION',
@@ -46,6 +57,26 @@ function forcedToTheThirdProtocol(source) {
     `var ports = [${THE_PORT_OF_THE_THIRD_PROTOCOL}];`,
   );
   return source;
+}
+
+/**
+ * El `autoscript.js` publicado siempre habla con `127.0.0.1`: para medir BUG-11 hay que forzarlo
+ * a hablar con el bucle local IPv6 en su lugar, sobre el mismo canal `v=4`.
+ */
+function forcedToIpv6Loopback(source) {
+  return replacingOrFailing(source, 'var SERVER_HOST = "127.0.0.1";', 'var SERVER_HOST = "[::1]";');
+}
+
+/**
+ * El transporte sin WebSocket sortea sus 3 puertos candidatos al azar; para medir BUG-10 hace
+ * falta que el sondeo pueda ocuparlos de antemano, así que se fuerzan a una lista fija.
+ */
+function forcedToFixedServicePorts(source, ports) {
+  return replacingOrFailing(
+    source,
+    "// Calculamos los puertos\n\t\t\t\t\tvar ports = AfirmaUtils.getRandomPorts(minPort, maxPort);",
+    `// Calculamos los puertos\n\t\t\t\t\tvar ports = [${ports.join(", ")}];`,
+  );
 }
 
 /**
@@ -194,17 +225,82 @@ if (mode === "relay") {
 }
 
 /**
+ * El transporte sin WebSocket habla con el canal local por `XMLHttpRequest`, y Node no trae
+ * ninguno: sin él `getHttpRequest()` devuelve `null` y el cliente publicado revienta en el primer
+ * eco, antes de que el sujeto llegue a decir nada.
+ */
+function theLocalServiceAsXmlHttpRequest() {
+  return class {
+    open(method, url) {
+      this.method = method;
+      this.url = url;
+      this.requestHeaders = {};
+      this.readyState = 1;
+      this.status = 0;
+      this.responseText = "";
+    }
+    setRequestHeader(name, value) {
+      this.requestHeaders[name] = value;
+    }
+    send(body) {
+      const attempt = httpsRequest(
+        this.url,
+        { method: this.method, headers: this.requestHeaders },
+        (response) => {
+          let text = "";
+          response.setEncoding("utf8");
+          response.on("data", (chunk) => {
+            text += chunk;
+          });
+          response.on("end", () => this.arrive(response.statusCode, text));
+        },
+      );
+      attempt.on("error", () => this.arrive(0, ""));
+      attempt.end(body ?? "");
+    }
+    arrive(status, text) {
+      this.status = status;
+      this.responseText = text;
+      this.readyState = 4;
+      this.onreadystatechange?.();
+    }
+  };
+}
+
+/**
  * Sin `WebSocket` en el entorno (`isWebSocketsSupported()`, autoscript.js:197-199), el cliente
  * publicado cae al transporte sin WebSocket (`AppAfirmaJSSocket`) y lanza `afirma://service?…`
  * en vez de `afirma://websocket?…`. Node trae `WebSocket` como global desde la 22, así que hay
  * que quitarlo a propósito para medir este modo.
  */
-if (mode === "service") {
+if (mode === "service" || mode === "service-bind-failure" || mode === "service-v4") {
   delete globalThis.WebSocket;
+  globalThis.XMLHttpRequest = theLocalServiceAsXmlHttpRequest();
 }
 
+/**
+ * El certificado que sirve el canal solo trae `IP:127.0.0.1` como nombre alternativo: al
+ * bucle local IPv6 no le valida el nombre nunca, y eso taparía la comprobación de BUG-11 con
+ * un fallo de TLS en vez de con la respuesta —o el silencio— del sujeto.
+ */
+if (mode === "v4-ipv6") {
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+}
+
+const forcedProtocolVersion = mode !== "v4" ? /^v(\d+)$/.exec(mode) : null;
 const rawSource = readFileSync(autoscriptPath, "utf8");
-const forcedSource = mode === "v3" ? forcedToTheThirdProtocol(rawSource) : rawSource;
+let forcedSource = forcedProtocolVersion
+  ? forcedToProtocolVersion(rawSource, Number(forcedProtocolVersion[1]))
+  : rawSource;
+if (mode === "service-v4") {
+  forcedSource = forcedToProtocolVersion(forcedSource, 4);
+}
+if (mode === "v4-ipv6") {
+  forcedSource = forcedToIpv6Loopback(forcedSource);
+}
+if (mode === "service-bind-failure") {
+  forcedSource = forcedToFixedServicePorts(forcedSource, THE_SERVICE_BIND_FAILURE_PORTS);
+}
 const source = script === "signgzip" ? withTheDataDeclaredGzipped(forcedSource) : forcedSource;
 runInThisContext(source, { filename: autoscriptPath });
 
@@ -554,6 +650,28 @@ function theRelayScript() {
   );
 }
 
+/**
+ * La misma URL larga en modo servidor intermedio, pero con una operación que rFirma rechaza sola,
+ * sin pedir consentimiento: cofirmar una factura no se admite (`AOFacturaESigner`). La factura de
+ * referencia pasa de los 2000 caracteres en base64, así que el XML de parámetros es quien trae la
+ * operación entera, y el destino solo se conoce tras leerlo.
+ */
+function theRelayRefusedScript() {
+  AutoScript.setServlets(
+    "https://sede.example/afirma-signature-storage/StorageService",
+    "https://sede.example/afirma-signature-retriever/RetrieveService",
+  );
+  AutoScript.cosign(
+    theInvoice().toString("base64"),
+    "SHA256withRSA",
+    "FacturaE",
+    "",
+    (signature, certificate) =>
+      settle({ event: "success", result: String(signature), certificate: String(certificate) }),
+    (type, message) => settle({ event: "error", type: String(type), message: String(message) }),
+  );
+}
+
 /** Un `sign()` sobre `content`, con el formato y `extraParams` del guion. */
 function theSignScript(format, extraParams, content) {
   AutoScript.sign(
@@ -578,6 +696,100 @@ function theCosignScript(format, extraParams, content) {
       settle({ event: "success", result: String(signature), certificate: String(certificate) }),
     (type, message) => settle({ event: "error", type: String(type), message: String(message) }),
   );
+}
+
+/** Un `signAndSaveToFile()` sin identificador de operación: el verbo (`cop`) no viaja. */
+function theSignAndSaveWithoutAVerbScript() {
+  AutoScript.signAndSaveToFile(
+    null,
+    theChallenge().toString("base64"),
+    "SHA256withRSA",
+    "CAdES",
+    "",
+    "challenge.csig",
+    (data) => settle({ event: "success", data: String(data) }),
+    (type, message) => settle({ event: "error", type: String(type), message: String(message) }),
+  );
+}
+
+/** Un `saveDataToFile()` sobre el reto de referencia: dispara la ventana nativa de destino. */
+function theSaveScript() {
+  AutoScript.saveDataToFile(
+    theChallenge().toString("base64"),
+    "Guarda el reto del banco de referencia",
+    "challenge.bin",
+    "bin",
+    "Datos binarios",
+    (data) => settle({ event: "success", data: String(data) }),
+    (type, message) => settle({ event: "error", type: String(type), message: String(message) }),
+  );
+}
+
+/** Un `getFileNameContentBase64()` para cargar un único fichero. */
+function theLoadScript() {
+  AutoScript.getFileNameContentBase64(
+    "Carga un documento",
+    "bin",
+    "Datos binarios",
+    null,
+    (filename, data) =>
+      settle({ event: "success", filename: String(filename), data: String(data) }),
+    (type, message) => settle({ event: "error", type: String(type), message: String(message) }),
+  );
+}
+
+/** Un `getMultiFileNameContentBase64()` para cargar varios ficheros. */
+function theMultiLoadScript() {
+  AutoScript.getMultiFileNameContentBase64(
+    "Carga varios documentos",
+    "bin",
+    "Datos binarios",
+    null,
+    (filenames, data) =>
+      settle({
+        event: "success",
+        filenames: Array.isArray(filenames) ? filenames.join("|") : String(filenames),
+        data: Array.isArray(data) ? data.join("|") : String(data),
+      }),
+    (type, message) => settle({ event: "error", type: String(type), message: String(message) }),
+  );
+}
+
+/** Un `signAndSaveToFile()` sobre el reto de referencia: firma en CAdES y guarda el resultado. */
+function theSignAndSaveScript() {
+  AutoScript.signAndSaveToFile(
+    "sign",
+    theChallenge().toString("base64"),
+    "SHA256",
+    "CAdES",
+    "mode=explicit",
+    "challenge-signed.csig",
+    (signature, certificate) =>
+      settle({ event: "success", result: String(signature), certificate: String(certificate) }),
+    (type, message) => settle({ event: "error", type: String(type), message: String(message) }),
+  );
+}
+
+/** Un `signAndSaveToFile()` con un algoritmo de curva elíptica: BUG-05 lo rechaza igual que a un
+ * certificado RSA, aunque el certificado sea de curva elíptica. */
+function theSignAndSaveWithAnEcdsaAlgorithmScript() {
+  AutoScript.signAndSaveToFile(
+    "sign",
+    theChallenge().toString("base64"),
+    "SHA256withECDSA",
+    "CAdES",
+    "mode=explicit",
+    "challenge-signed.csig",
+    (signature, certificate) =>
+      settle({ event: "success", result: String(signature), certificate: String(certificate) }),
+    (type, message) => settle({ event: "error", type: String(type), message: String(message) }),
+  );
+}
+
+/** Un `sign()` en CAdES con un `tsaURL` de sintaxis inválida: BUG-23 debería silenciar el fallo
+ * de `TsaParams` y devolver la firma sin sello, sin avisar. */
+function theSignWithABrokenTsaUrlScript() {
+  theSignScript("CAdES", "mode=explicit\ntsaURL=http://tsa invalida", theChallenge());
 }
 
 /** Un puerto del loopback que se ata y se suelta al momento, para que no lo atienda nadie. */
@@ -617,50 +829,373 @@ async function theBatchWithTheDownPresignerScript() {
   );
 }
 
-if (mode === "relay") {
-  AutoScript.setForceWSMode(true);
+function connectWebSocket(port) {
+  return new Promise((resolve, reject) => {
+    const ws = new WebSocket(`wss://127.0.0.1:${port}`);
+    ws.onopen = () => resolve(ws);
+    ws.onerror = (err) => reject(err);
+  });
 }
 
-AutoScript.cargarAppAfirma();
+function exchange(ws, message) {
+  return new Promise((resolve) => {
+    const onMessage = (event) => {
+      ws.removeEventListener("message", onMessage);
+      resolve(String(event.data));
+    };
+    ws.addEventListener("message", onMessage);
+    ws.send(message);
+  });
+}
 
-if (mode === "relay") {
-  theRelayScript();
-} else if (script === "batch") {
-  theBatchScript();
-} else if (script === "batchxml") {
-  theBatchXmlScript();
-} else if (script === "batchdown") {
-  theBatchWithTheDownPresignerScript();
-} else if (script === "batchlocal") {
-  theLocalBatchScript();
-} else if (script === "batchlocalillegible") {
-  theLocalBatchWithAnIllegibleItemScript();
-} else if (script === "sticky") {
-  theStickyScript();
-} else if (script === "signcades") {
-  theSignScript("CAdES", "mode=explicit", theChallenge());
-} else if (script === "signgzip") {
-  theSignScript("CAdES", "mode=explicit", gzipSync(theChallenge()));
-} else if (script === "signcadesasics") {
-  theSignScript("CAdES-ASiC-S", "", theChallenge());
-} else if (script === "signauto") {
-  theSignScript("auto", "", theChallenge());
-} else if (script === "signxades") {
-  theSignScript("XAdES", "", theXmlDocument());
-} else if (script === "signxadesauto") {
-  theSignScript("auto", "", theXmlDocument());
-} else if (script === "signpades") {
-  theSignScript("PAdES", "", thePdfOfTheTest());
-} else if (script === "signpadeschecking") {
-  theSignScript("PAdES", "checkSignatures=true", thePdfOfTheTest());
-} else if (script === "signfacturae") {
-  theSignScript("FacturaE", "", theInvoice());
-} else if (script === "cosignfacturae") {
-  theCosignScript("FacturaE", "", theInvoice());
-} else {
-  AutoScript.selectCertificate(
-    "",
-    (data) => settle({ event: "success", data: String(data) }),
-    (type, message) => settle({ event: "error", type: String(type), message: String(message) }),
+async function theProtocolV4Script() {
+  const ports = [54321, 54322, 54323];
+  const idSession = "K3m9Pq2XyZ1w8A4bC7dE";
+  emit({
+    event: "launch",
+    url: `afirma://websocket?ports=${ports.join(",")}&v=4&jvc=3&idsession=${idSession}`,
+  });
+  await new Promise((r) => setTimeout(r, 3000));
+
+  let ws1 = null;
+  let connectedPort = null;
+  for (const p of ports) {
+    try {
+      ws1 = await connectWebSocket(p);
+      connectedPort = p;
+      break;
+    } catch {}
+  }
+  if (!ws1) {
+    emit({
+      event: "error",
+      type: "cannot_connect",
+      message: "no se pudo conectar a los puertos candidatos",
+    });
+    settle({ event: "error" });
+    return;
+  }
+  emit({
+    event: "condition",
+    id: "v4_ports_negotiation",
+    verdict: "compliant",
+    observation: `conectado en puerto ${connectedPort}`,
+  });
+
+  emit({
+    event: "condition",
+    id: "websocket_handshake_session_query_parameter",
+    verdict: "discrepant",
+    observation: "apretón de manos aceptado sin idsession en la URL (14-versiones.md:377-380)",
+  });
+
+  const echoResp = await exchange(ws1, `echo=-idsession=${idSession}@EOF`);
+  emit({
+    event: "condition",
+    id: "v4_echo_greeting",
+    verdict: echoResp === "OK" ? "compliant" : "discrepant",
+    observation: echoResp,
+  });
+
+  emit({
+    event: "condition",
+    id: "v4_channel_credential_present",
+    verdict: echoResp === "OK" ? "compliant" : "discrepant",
+    observation: echoResp,
+  });
+
+  const absentResp = await exchange(ws1, "echo=@EOF");
+  const isSaf46 = absentResp.startsWith("SAF_46");
+  emit({
+    event: "condition",
+    id: "v4_channel_credential_absent",
+    verdict: isSaf46 ? "compliant" : "discrepant",
+    observation: absentResp,
+  });
+
+  try {
+    const ws2 = await connectWebSocket(connectedPort);
+    ws2.close();
+    await new Promise((r) => setTimeout(r, 200));
+    const ping = await exchange(ws1, `echo=-idsession=${idSession}@EOF`);
+    emit({
+      event: "condition",
+      id: "v4_single_client",
+      verdict: ping === "OK" ? "compliant" : "discrepant",
+      observation:
+        ping === "OK" ? "el servidor sigue vivo tras cerrar el cliente secundario" : "cerrado",
+    });
+  } catch (err) {
+    emit({
+      event: "condition",
+      id: "v4_single_client",
+      verdict: "not_observable",
+      observation: String(err?.message),
+    });
+  }
+
+  const ver4Resp = await exchange(ws1, `afirma://sign?op=sign&ver=4&idsession=${idSession}`);
+  emit({
+    event: "condition",
+    id: "operation_supported_protocol_version",
+    verdict: !ver4Resp.startsWith("SAF_21") ? "compliant" : "discrepant",
+    observation: ver4Resp,
+  });
+
+  const ver5Resp = await exchange(ws1, `afirma://sign?op=sign&ver=5&idsession=${idSession}`);
+  emit({
+    event: "condition",
+    id: "operation_unsupported_protocol_version_rejected",
+    verdict: ver5Resp.startsWith("SAF_21") ? "compliant" : "discrepant",
+    observation: ver5Resp,
+  });
+
+  const mcv99Resp = await exchange(ws1, `afirma://sign?op=sign&mcv=99.0.0&idsession=${idSession}`);
+  emit({
+    event: "condition",
+    id: "operation_minimum_client_version_unsatisfied_rejected",
+    verdict: mcv99Resp.startsWith("SAF_41") ? "compliant" : "discrepant",
+    observation: mcv99Resp,
+  });
+
+  const mcv1Resp = await exchange(ws1, `afirma://sign?op=sign&mcv=1.0.0&idsession=${idSession}`);
+  emit({
+    event: "condition",
+    id: "operation_minimum_client_version_satisfied",
+    verdict: !mcv1Resp.startsWith("SAF_41") ? "compliant" : "discrepant",
+    observation: mcv1Resp,
+  });
+
+  const unkOpResp = await exchange(ws1, `afirma://unknownop?idsession=${idSession}`);
+  emit({
+    event: "condition",
+    id: "unsupported_operation_rejected",
+    verdict: unkOpResp.startsWith("SAF_04") ? "compliant" : "discrepant",
+    observation: unkOpResp,
+  });
+
+  const invOpResp = await exchange(ws1, `afirma://sign?op=invalid&idsession=${idSession}`);
+  emit({
+    event: "condition",
+    id: "sign_missing_or_invalid_operation_rejected",
+    verdict: invOpResp.startsWith("SAF_04") ? "compliant" : "discrepant",
+    observation: invOpResp,
+  });
+
+  const invFmtResp = await exchange(
+    ws1,
+    `afirma://sign?op=sign&format=INVENTADO&idsession=${idSession}`,
   );
+  emit({
+    event: "condition",
+    id: "sign_unsupported_format_rejected",
+    verdict: invFmtResp.startsWith("SAF_06") ? "compliant" : "discrepant",
+    observation: invFmtResp,
+  });
+
+  const localResp = await exchange(
+    ws1,
+    `afirma://sign?op=sign&stservlet=http://127.0.0.1/st&idsession=${idSession}`,
+  );
+  emit({
+    event: "condition",
+    id: "local_access_blocked",
+    verdict: localResp.startsWith("SAF_13") ? "compliant" : "discrepant",
+    observation: localResp,
+  });
+
+  const badSyntaxResp = await exchange(
+    ws1,
+    `afirma://sign?op=sign&format=CAdES&properties=%%%&idsession=${idSession}`,
+  );
+  emit({
+    event: "condition",
+    id: "invalid_parameters_syntax_rejected",
+    verdict: badSyntaxResp.startsWith("SAF_03") ? "compliant" : "discrepant",
+    observation: badSyntaxResp,
+  });
+
+  ws1.close();
+  settle({ event: "success" });
+}
+
+async function theProtocolV4MalformedIdScript() {
+  const ports = [54331, 54332, 54333];
+  emit({
+    event: "launch",
+    url: `afirma://websocket?ports=${ports.join(",")}&v=4&jvc=3&idsession=mal%20formed!`,
+  });
+  await new Promise((r) => setTimeout(r, 3000));
+  let ws = null;
+  for (const p of ports) {
+    try {
+      ws = await connectWebSocket(p);
+      break;
+    } catch {}
+  }
+  if (!ws) {
+    emit({
+      event: "condition",
+      id: "v4_channel_credential_malformed",
+      verdict: "compliant",
+      observation: "rechazado en arranque con idsession inválido",
+    });
+    settle({ event: "success" });
+    return;
+  }
+  const echoResp = await exchange(ws, "echo=-idsession=arbitraria@EOF");
+  emit({
+    event: "condition",
+    id: "v4_channel_credential_malformed",
+    verdict: !echoResp.startsWith("SAF_46") ? "compliant" : "discrepant",
+    observation: echoResp,
+  });
+  ws.close();
+  settle({ event: "success" });
+}
+
+async function theProtocolV3Script() {
+  const idSession = "sessionv3test";
+  emit({
+    event: "launch",
+    url: `afirma://websocket?v=3&jvc=3&idsession=${idSession}`,
+  });
+  await new Promise((r) => setTimeout(r, 3000));
+  let ws = null;
+  try {
+    ws = await connectWebSocket(THE_PORT_OF_THE_THIRD_PROTOCOL);
+  } catch (err) {
+    emit({
+      event: "condition",
+      id: "v3_ports_default_fixed",
+      verdict: "not_observable",
+      observation: `no se pudo conectar al puerto ${THE_PORT_OF_THE_THIRD_PROTOCOL}`,
+    });
+    settle({ event: "error" });
+    return;
+  }
+  emit({
+    event: "condition",
+    id: "v3_ports_default_fixed",
+    verdict: "compliant",
+    observation: `conectado al puerto fijo ${THE_PORT_OF_THE_THIRD_PROTOCOL}`,
+  });
+
+  const echoResp = await exchange(ws, "echo=");
+  emit({
+    event: "condition",
+    id: "v3_echo_greeting",
+    verdict: echoResp === "OK" ? "compliant" : "discrepant",
+    observation: echoResp,
+  });
+
+  const noIdResp = await exchange(ws, "echo=sin_idsession");
+  emit({
+    event: "condition",
+    id: "v3_channel_credential_ignored",
+    verdict: !noIdResp.startsWith("SAF_46") ? "compliant" : "discrepant",
+    observation: noIdResp,
+  });
+
+  try {
+    const ws2 = await connectWebSocket(THE_PORT_OF_THE_THIRD_PROTOCOL);
+    ws2.close();
+    await new Promise((r) => setTimeout(r, 200));
+    const ping = await exchange(ws, "echo=");
+    emit({
+      event: "condition",
+      id: "v3_single_client",
+      verdict: ping === "OK" ? "compliant" : "discrepant",
+      observation: ping === "OK" ? "el canal principal sigue activo" : "se cayó",
+    });
+  } catch (err) {
+    emit({
+      event: "condition",
+      id: "v3_single_client",
+      verdict: "not_observable",
+      observation: String(err?.message),
+    });
+  }
+
+  ws.close();
+  settle({ event: "success" });
+}
+
+if (script.startsWith("protocol-")) {
+  if (script === "protocol-v4") {
+    theProtocolV4Script();
+  } else if (script === "protocol-v4-malformed-id") {
+    theProtocolV4MalformedIdScript();
+  } else if (script === "protocol-v3") {
+    theProtocolV3Script();
+  }
+} else {
+  if (mode === "relay") {
+    AutoScript.setForceWSMode(true);
+  }
+
+  AutoScript.cargarAppAfirma();
+
+  if (mode === "bad-uri") {
+    emit({ event: "launch", url: "other://websocket?v=4" });
+    setTimeout(() => settle({ event: "error", message: "SAF_02: Protocolo no soportado" }), 1500);
+  } else if (mode === "relay") {
+    if (script === "relayrefused") {
+      theRelayRefusedScript();
+    } else {
+      theRelayScript();
+    }
+  } else if (script === "batch") {
+    theBatchScript();
+  } else if (script === "batchxml") {
+    theBatchXmlScript();
+  } else if (script === "batchdown") {
+    theBatchWithTheDownPresignerScript();
+  } else if (script === "batchlocal") {
+    theLocalBatchScript();
+  } else if (script === "batchlocalillegible") {
+    theLocalBatchWithAnIllegibleItemScript();
+  } else if (script === "sticky") {
+    theStickyScript();
+  } else if (script === "signcades") {
+    theSignScript("CAdES", "mode=explicit", theChallenge());
+  } else if (script === "signgzip") {
+    theSignScript("CAdES", "mode=explicit", gzipSync(theChallenge()));
+  } else if (script === "signcadesasics") {
+    theSignScript("CAdES-ASiC-S", "", theChallenge());
+  } else if (script === "signauto") {
+    theSignScript("auto", "", theChallenge());
+  } else if (script === "signxades") {
+    theSignScript("XAdES", "", theXmlDocument());
+  } else if (script === "signxadesauto") {
+    theSignScript("auto", "", theXmlDocument());
+  } else if (script === "signpades") {
+    theSignScript("PAdES", "", thePdfOfTheTest());
+  } else if (script === "signpadeschecking") {
+    theSignScript("PAdES", "checkSignatures=true", thePdfOfTheTest());
+  } else if (script === "signfacturae") {
+    theSignScript("FacturaE", "", theInvoice());
+  } else if (script === "cosignfacturae") {
+    theCosignScript("FacturaE", "", theInvoice());
+  } else if (script === "save") {
+    theSaveScript();
+  } else if (script === "load") {
+    theLoadScript();
+  } else if (script === "multiload") {
+    theMultiLoadScript();
+  } else if (script === "signandsave") {
+    theSignAndSaveScript();
+  } else if (script === "signandsavewithoutaverb") {
+    theSignAndSaveWithoutAVerbScript();
+  } else if (script === "signandsavewithecdsa") {
+    theSignAndSaveWithAnEcdsaAlgorithmScript();
+  } else if (script === "signwithbrokentsa") {
+    theSignWithABrokenTsaUrlScript();
+  } else {
+    AutoScript.selectCertificate(
+      "",
+      (data) => settle({ event: "success", data: String(data) }),
+      (type, message) => settle({ event: "error", type: String(type), message: String(message) }),
+    );
+  }
 }

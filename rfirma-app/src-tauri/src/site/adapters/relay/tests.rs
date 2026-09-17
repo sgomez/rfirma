@@ -4,6 +4,7 @@ use base64::Engine as _;
 
 use super::*;
 use crate::site::application::tests::{read_operation, InMemoryServlets};
+use crate::site::domain::channel::ArrivalMode;
 use crate::site::domain::protocol::{
     encrypt, AfirmaUrl, CipherKey, NegotiatedCredential, RelayRequest, SafCode, SiteOperation,
 };
@@ -12,6 +13,7 @@ use crate::site::domain::relay_error::Situation as RelaySituation;
 const KEY: &str = "12345678";
 const RETRIEVE_SERVLET: &str = "https://relay.example/retrieve";
 const STORE_SERVLET: &str = "https://relay.example/store";
+const NO_WAIT: std::time::Duration = std::time::Duration::from_millis(0);
 
 fn a_key() -> CipherKey {
     CipherKey::from_url_parameter(KEY)
@@ -67,10 +69,9 @@ impl Servlets for OrderedSpy {
     }
 }
 
-/// Lo que el buzón y los dos avisos del transporte recibieron.
+/// Lo que el buzón y el aviso de fallo del transporte recibieron.
 struct Spy {
     delivered: Arc<Mutex<Option<(AfirmaUrl, ReplyHandle)>>>,
-    exits: Arc<Mutex<u32>>,
     failures: Arc<Mutex<Vec<Refusal>>>,
 }
 
@@ -83,10 +84,6 @@ impl Spy {
             .expect("la operacion deberia haberse entregado")
     }
 
-    fn exits(&self) -> u32 {
-        *self.exits.lock().expect("el candado")
-    }
-
     fn failures(&self) -> Vec<Refusal> {
         self.failures.lock().expect("el candado").clone()
     }
@@ -94,17 +91,12 @@ impl Spy {
 
 fn a_relay(servlets: Arc<OrderedSpy>) -> (Relay, Spy) {
     let delivered = Arc::new(Mutex::new(None));
-    let exits = Arc::new(Mutex::new(0u32));
     let failures = Arc::new(Mutex::new(Vec::new()));
 
     let inbox_delivered = Arc::clone(&delivered);
     let inbox = Inbox::for_operations(move |url, reply| {
         *inbox_delivered.lock().expect("el candado") = Some((url, reply));
     });
-
-    let exit_count = Arc::clone(&exits);
-    let exit: Arc<dyn Fn() + Send + Sync> =
-        Arc::new(move || *exit_count.lock().expect("el candado") += 1);
 
     let failure_log = Arc::clone(&failures);
     let on_upload_failure: Arc<dyn Fn(Refusal) + Send + Sync> =
@@ -113,14 +105,12 @@ fn a_relay(servlets: Arc<OrderedSpy>) -> (Relay, Spy) {
     let relay = Relay::new(
         servlets as Arc<dyn Servlets + Send + Sync>,
         inbox,
-        exit,
         on_upload_failure,
     );
     (
         relay,
         Spy {
             delivered,
-            exits,
             failures,
         },
     )
@@ -245,7 +235,7 @@ fn wait_is_called_before_get_when_the_site_asks_for_it() {
 }
 
 #[test]
-fn a_successful_upload_closes_the_process_and_reports_no_failure() {
+fn a_successful_upload_reports_no_failure_and_acknowledges_immediately() {
     let servlets = Arc::new(OrderedSpy::default());
     let (relay, spy) = a_relay(Arc::clone(&servlets));
     let info = ChannelLocation::Relay(RelayChannelInfo {
@@ -260,18 +250,21 @@ fn a_successful_upload_closes_the_process_and_reports_no_failure() {
 
     opened_and_delivered(&relay, &info);
     let (_operation, reply) = spy.take_reply();
-    reply.answer("la-respuesta-cifrada".to_owned());
+    let acknowledgement = reply.answer("la-respuesta-cifrada".to_owned());
 
     assert_eq!(
         servlets.body.retrieve(STORE_SERVLET, "tx-3"),
         Ok("la-respuesta-cifrada".to_owned())
     );
-    assert_eq!(spy.exits(), 1);
     assert!(spy.failures().is_empty());
+    assert!(
+        acknowledgement.wait(NO_WAIT),
+        "la subida sincrona ya ha terminado: el acuse se cumple al momento"
+    );
 }
 
 #[test]
-fn a_rejected_upload_notifies_without_closing_the_process() {
+fn a_rejected_upload_notifies_without_acknowledging() {
     let servlets = Arc::new(OrderedSpy::that_rejects_the_upload());
     let (relay, spy) = a_relay(Arc::clone(&servlets));
     let info = ChannelLocation::Relay(RelayChannelInfo {
@@ -286,12 +279,15 @@ fn a_rejected_upload_notifies_without_closing_the_process() {
 
     opened_and_delivered(&relay, &info);
     let (_operation, reply) = spy.take_reply();
-    reply.answer("la-respuesta-cifrada".to_owned());
+    let acknowledgement = reply.answer("la-respuesta-cifrada".to_owned());
 
-    assert_eq!(spy.exits(), 0);
     let failures = spy.failures();
     assert_eq!(failures.len(), 1);
     assert_eq!(failures[0].code(), SafCode::SendingResult);
+    assert!(
+        !acknowledgement.wait(NO_WAIT),
+        "una subida rechazada no entrega la respuesta: el acuse no se cumple"
+    );
 }
 
 #[test]
@@ -309,6 +305,11 @@ fn an_unreachable_servlet_refuses_with_saf_16_without_delivering_anything() {
 
     let refusal = error.refusal().expect("trae su propio rechazo clasificado");
     assert_eq!(refusal.code(), SafCode::RecoveringData);
+    assert_eq!(
+        error.destination(),
+        Some((STORE_SERVLET, "tx-1")),
+        "el destino ya venia en la url: el fallo al descargar el documento lo lleva consigo"
+    );
     assert!(spy.delivered.lock().expect("el candado").is_none());
 }
 
@@ -329,22 +330,57 @@ fn undecipherable_content_refuses_with_saf_15() {
 
     let refusal = error.refusal().expect("trae su propio rechazo clasificado");
     assert_eq!(refusal.code(), SafCode::DecryptingData);
+    assert_eq!(error.destination(), Some((STORE_SERVLET, "tx-1")));
 }
 
 #[test]
-fn a_refuse_duty_uploads_the_given_answer_without_waiting_resolving_or_delivering() {
+fn a_refuse_duty_leaves_the_upload_as_a_pending_delivery_instead_of_running_it_inside_open() {
     let servlets = Arc::new(OrderedSpy::default());
     let (relay, spy) = a_relay(Arc::clone(&servlets));
     let info = ChannelLocation::Relay(a_fileid_info(RETRIEVE_SERVLET, Some(a_key()), true));
     let answer = Refusal::new(SafCode::CannotOpenSocket, "ya hay un tramite vivo").answer();
 
-    relay
+    let mut channel = relay
         .open(&info, ChannelDuty::Refuse(answer))
-        .expect("sube el rechazo");
+        .expect("abre con la entrega pendiente, sin subir todavia");
 
+    assert_eq!(channel.arrival_mode(), ArrivalMode::Immediate);
+    assert!(
+        servlets.log().is_empty(),
+        "abrir el canal no sube nada: la entrega queda pendiente de que la dispare quien atiende"
+    );
+
+    let handed_out = channel
+        .take_delivery()
+        .expect("una llegada inmediata siempre trae entrega")
+        .now();
+
+    assert!(handed_out, "el servlet acepto la subida");
     assert_eq!(servlets.log(), vec!["put"]);
     assert!(spy.delivered.lock().expect("el candado").is_none());
-    assert_eq!(spy.exits(), 1);
+    assert!(spy.failures().is_empty());
+}
+
+#[test]
+fn a_refuse_duty_delivery_that_fails_to_upload_notifies_the_failure() {
+    let servlets = Arc::new(OrderedSpy::that_rejects_the_upload());
+    let (relay, spy) = a_relay(Arc::clone(&servlets));
+    let info = ChannelLocation::Relay(a_fileid_info(RETRIEVE_SERVLET, Some(a_key()), false));
+    let answer = Refusal::new(SafCode::CannotOpenSocket, "ya hay un tramite vivo").answer();
+
+    let mut channel = relay
+        .open(&info, ChannelDuty::Refuse(answer))
+        .expect("abre con la entrega pendiente");
+
+    let handed_out = channel
+        .take_delivery()
+        .expect("una llegada inmediata siempre trae entrega")
+        .now();
+
+    assert!(!handed_out, "el servlet rechazo la subida");
+    let failures = spy.failures();
+    assert_eq!(failures.len(), 1);
+    assert_eq!(failures[0].code(), SafCode::SendingResult);
 }
 
 #[test]
@@ -690,5 +726,172 @@ fn a_refuse_duty_without_a_store_target_does_not_open_the_channel() {
 
     assert_eq!(error.situation(), Situation::Relay);
     assert!(servlets.log().is_empty());
-    assert_eq!(spy.exits(), 0);
+    assert!(spy.failures().is_empty());
+}
+
+#[tokio::test(start_paused = true)]
+async fn when_active_wait_is_requested_it_pulses_wait_periodically() {
+    let key = a_key();
+    let servlets = Arc::new(OrderedSpy::default());
+    servlets
+        .store(STORE_SERVLET, "fileid-1", &encrypt(b"contenido", &key))
+        .expect("guarda");
+    servlets.log.lock().expect("el candado").clear();
+
+    let (relay, _spy) = a_relay(Arc::clone(&servlets));
+    let info = ChannelLocation::Relay(a_fileid_info(RETRIEVE_SERVLET, Some(key), true));
+
+    let _channel = opened_and_delivered(&relay, &info);
+    tokio::task::yield_now().await;
+
+    assert_eq!(servlets.log(), vec!["wait", "get"]);
+
+    tokio::time::advance(Duration::from_secs(10)).await;
+    tokio::task::yield_now().await;
+    assert_eq!(servlets.log(), vec!["wait", "get", "wait"]);
+
+    tokio::time::advance(Duration::from_secs(10)).await;
+    tokio::task::yield_now().await;
+    assert_eq!(servlets.log(), vec!["wait", "get", "wait", "wait"]);
+}
+
+#[tokio::test(start_paused = true)]
+async fn when_reply_answers_the_active_wait_heartbeat_stops_before_upload() {
+    let key = a_key();
+    let servlets = Arc::new(OrderedSpy::default());
+    servlets
+        .store(STORE_SERVLET, "fileid-1", &encrypt(b"contenido", &key))
+        .expect("guarda");
+    servlets.log.lock().expect("el candado").clear();
+
+    let (relay, spy) = a_relay(Arc::clone(&servlets));
+    let info = ChannelLocation::Relay(a_fileid_info(RETRIEVE_SERVLET, Some(key), true));
+
+    let _channel = opened_and_delivered(&relay, &info);
+    let (_url, reply) = spy.take_reply();
+    tokio::task::yield_now().await;
+
+    tokio::time::advance(Duration::from_secs(10)).await;
+    tokio::task::yield_now().await;
+    assert_eq!(servlets.log(), vec!["wait", "get", "wait"]);
+
+    reply.answer("resultado_final".into());
+    assert_eq!(servlets.log(), vec!["wait", "get", "wait", "put"]);
+
+    tokio::time::advance(Duration::from_secs(30)).await;
+    tokio::task::yield_now().await;
+    assert_eq!(servlets.log(), vec!["wait", "get", "wait", "put"]);
+}
+
+#[tokio::test(start_paused = true)]
+async fn when_channel_is_closed_the_active_wait_heartbeat_stops() {
+    let key = a_key();
+    let servlets = Arc::new(OrderedSpy::default());
+    servlets
+        .store(STORE_SERVLET, "fileid-1", &encrypt(b"contenido", &key))
+        .expect("guarda");
+    servlets.log.lock().expect("el candado").clear();
+
+    let (relay, _spy) = a_relay(Arc::clone(&servlets));
+    let info = ChannelLocation::Relay(a_fileid_info(RETRIEVE_SERVLET, Some(key), true));
+
+    let channel = opened_and_delivered(&relay, &info);
+    tokio::task::yield_now().await;
+
+    tokio::time::advance(Duration::from_secs(10)).await;
+    tokio::task::yield_now().await;
+    assert_eq!(servlets.log(), vec!["wait", "get", "wait"]);
+
+    channel.close();
+
+    tokio::time::advance(Duration::from_secs(30)).await;
+    tokio::task::yield_now().await;
+    assert_eq!(servlets.log(), vec!["wait", "get", "wait"]);
+}
+
+#[tokio::test(start_paused = true)]
+async fn when_active_wait_is_false_no_wait_is_sent_and_no_heartbeat_runs() {
+    let key = a_key();
+    let servlets = Arc::new(OrderedSpy::default());
+    servlets
+        .store(STORE_SERVLET, "fileid-1", &encrypt(b"contenido", &key))
+        .expect("guarda");
+    servlets.log.lock().expect("el candado").clear();
+
+    let (relay, _spy) = a_relay(Arc::clone(&servlets));
+    let info = ChannelLocation::Relay(a_fileid_info(RETRIEVE_SERVLET, Some(key), false));
+
+    let _channel = opened_and_delivered(&relay, &info);
+    tokio::task::yield_now().await;
+    assert_eq!(servlets.log(), vec!["get"]);
+
+    tokio::time::advance(Duration::from_secs(30)).await;
+    tokio::task::yield_now().await;
+    assert_eq!(servlets.log(), vec!["get"]);
+}
+
+#[tokio::test(start_paused = true)]
+async fn parameters_variant_with_active_wait_pulses_periodically() {
+    let key = a_key();
+    let servlets = Arc::new(OrderedSpy::default());
+    servlets
+        .store(
+            STORE_SERVLET,
+            "fileid-params-aw",
+            &encrypt(
+                &a_parameters_xml(&[
+                    ("op", "sign"),
+                    ("aw", "true"),
+                    ("stservlet", STORE_SERVLET),
+                    ("id", "txpulse"),
+                ]),
+                &key,
+            ),
+        )
+        .expect("guarda");
+    servlets.log.lock().expect("el candado").clear();
+
+    let (relay, _spy) = a_relay(Arc::clone(&servlets));
+    let info = ChannelLocation::Relay(a_parameters_info("fileid-params-aw", Some(key)));
+
+    let _channel = opened_and_delivered(&relay, &info);
+    tokio::task::yield_now().await;
+    assert_eq!(servlets.log(), vec!["get", "wait"]);
+
+    tokio::time::advance(Duration::from_secs(10)).await;
+    tokio::task::yield_now().await;
+    assert_eq!(servlets.log(), vec!["get", "wait", "wait"]);
+}
+
+#[tokio::test(start_paused = true)]
+async fn when_handles_are_dropped_without_answering_the_heartbeat_stops() {
+    let key = a_key();
+    let servlets = Arc::new(OrderedSpy::default());
+    servlets
+        .store(STORE_SERVLET, "fileid-1", &encrypt(b"contenido", &key))
+        .expect("guarda");
+    servlets.log.lock().expect("el candado").clear();
+
+    let (relay, spy) = a_relay(Arc::clone(&servlets));
+    let info = ChannelLocation::Relay(a_fileid_info(RETRIEVE_SERVLET, Some(key), true));
+
+    let channel = opened_and_delivered(&relay, &info);
+    let (_url, reply) = spy.take_reply();
+    tokio::task::yield_now().await;
+
+    tokio::time::advance(Duration::from_secs(10)).await;
+    tokio::task::yield_now().await;
+    assert_eq!(servlets.log(), vec!["wait", "get", "wait"]);
+
+    drop(channel);
+    drop(reply);
+    tokio::task::yield_now().await;
+
+    tokio::time::advance(Duration::from_secs(30)).await;
+    tokio::task::yield_now().await;
+    assert_eq!(
+        servlets.log(),
+        vec!["wait", "get", "wait"],
+        "el latido debe detenerse si los asideros se descartan sin responder"
+    );
 }

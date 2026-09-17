@@ -77,6 +77,19 @@ fn the_local_ca_cannot_vouch_for_a_site_outside_the_loopback() {
 }
 
 #[test]
+fn the_name_constraints_are_marked_critical() {
+    let ca = LocalCa::generate().expect("deberia generarse");
+
+    let text = String::from_utf8(ca.certificate().to_text().expect("deberia imprimirse"))
+        .expect("deberia ser UTF-8");
+
+    assert!(
+        text.contains("X509v3 Name Constraints: critical"),
+        "un verificador que no entienda la restriccion tiene que rechazar la cadena, no ignorarla:\n{text}"
+    );
+}
+
+#[test]
 fn the_local_server_certificate_is_not_an_authority() {
     let ca = LocalCa::generate().expect("deberia generarse");
     let server = LocalServerCertificate::issued_by(&ca).expect("deberia emitirse");

@@ -1,0 +1,25 @@
+# El apt de Ubuntu trae un `just` anterior a la 1.27, que es la primera con
+# `[group]`; el justfile ya usa `[group]` y `[private]`. En vez de esquivar
+# esas funciones en el justfile, el runner fija la version moderna aqui, en un
+# solo sitio que llaman todos los jobs que necesitan `just`.
+name: Instala just
+description: Descarga el binario oficial de just, fijado por version y sha256.
+
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        JUST_VERSION: "1.45.0"
+        JUST_SHA256: "dc3f958aaf8c6506dd90426e9b03f86dd15e74a6467ee0e54929f750af3d9e49"
+      run: |
+        set -euo pipefail
+        archivo="just-${JUST_VERSION}-x86_64-unknown-linux-musl.tar.gz"
+        directorio="$(mktemp -d)"
+        curl -fsSL -o "$directorio/$archivo" \
+          "https://github.com/casey/just/releases/download/${JUST_VERSION}/${archivo}"
+        echo "${JUST_SHA256}  $directorio/$archivo" | sha256sum -c -
+        tar -xzf "$directorio/$archivo" -C "$directorio" just
+        sudo install -m 755 "$directorio/just" /usr/local/bin/just
+        rm -rf "$directorio"
+        just --version

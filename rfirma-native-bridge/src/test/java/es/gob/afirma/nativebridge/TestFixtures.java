@@ -36,6 +36,8 @@ final class TestFixtures {
     private static final Path REVOKED_P12 = Path.of("..", "testdata", "fnmt", "revoked-rsa.p12");
     /** El caducado del kit. Su contrasena NO es la de los otros dos (ver testdata/fnmt/README.md). */
     private static final Path EXPIRED_P12 = Path.of("..", "testdata", "fnmt", "expired-rsa.p12");
+    /** Certificado con seudonimo de empleado publico del kit (notAfter 2027-02-05). */
+    private static final Path PSEUDONYM_P12 = Path.of("..", "testdata", "fnmt", "pseudonym-rsa.p12");
     private static final char[] PASSWORD = "1234".toCharArray();
     private static final char[] EXPIRED_PASSWORD = "G5cp,fYC9gje".toCharArray();
 
@@ -113,6 +115,12 @@ final class TestFixtures {
      */
     static X509Certificate expiredCertificate() throws Exception {
         final KeyStore ks = keyStore(EXPIRED_P12, EXPIRED_PASSWORD);
+        return certificateChain(ks)[0];
+    }
+
+    /** El certificado con seudonimo de empleado publico del kit, suelto. */
+    static X509Certificate pseudonymCertificate() throws Exception {
+        final KeyStore ks = keyStore(PSEUDONYM_P12);
         return certificateChain(ks)[0];
     }
 

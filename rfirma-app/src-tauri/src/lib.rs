@@ -13,6 +13,7 @@ mod compile_fail;
 
 use std::sync::{Arc, Mutex};
 
+use desktop::application::invocation::{Invocation, Role};
 use desktop::DesktopRoot;
 use documents::DocumentsRoot;
 use identity::IdentityRoot;
@@ -39,12 +40,20 @@ pub struct Roots {
     pub desktop: DesktopRoot,
     pub signing: SigningRoot,
     pub site: SiteRoot,
+    pub dialogs: Arc<documents::adapters::dialogs::RealPortalDialogs>,
 }
 
-/// Compone las cinco raíces de producción sobre las rutas de esta máquina.
+/// Compone las cinco raíces de producción sobre las rutas de esta máquina, con la invocación
+/// que traía el escritorio.
 pub fn roots(paths: desktop::adapters::paths::Paths) -> Roots {
+    composed_roots(paths, Some(desktop::adapters::process::this_invocation()))
+}
+
+/// Compone las cinco raíces, con la invocación pendiente del escritorio o vacía en rol de sede.
+fn composed_roots(paths: desktop::adapters::paths::Paths, invocation: Option<Invocation>) -> Roots {
     let memory = Arc::new(signing::adapters::memory::Memory::at(&paths));
     let ca_store = site::adapters::tls::LocalCaStore::of(&paths);
+    let dialogs = Arc::new(documents::adapters::dialogs::RealPortalDialogs::default());
     let identity = IdentityRoot {
         token: Box::new(identity::adapters::pkcs11::RealToken),
         stores: identity::adapters::pkcs11::stores::from_environment(),
@@ -59,11 +68,13 @@ pub fn roots(paths: desktop::adapters::paths::Paths) -> Roots {
         opened: documents::application::documents::OpenedDocuments::new(),
         memory: memory.clone(),
         files: Arc::new(documents::adapters::files::RealFiles),
+        portal: dialogs.clone(),
     };
     let desktop = DesktopRoot {
-        pending_invocation: desktop::application::invocation::PendingInvocation::of(
-            desktop::adapters::process::this_invocation(),
-        ),
+        pending_invocation: match invocation {
+            Some(invocation) => desktop::application::invocation::PendingInvocation::of(invocation),
+            None => desktop::application::invocation::PendingInvocation::default(),
+        },
         memory: memory.clone(),
         paths,
     };
@@ -97,6 +108,7 @@ pub fn roots(paths: desktop::adapters::paths::Paths) -> Roots {
         scratch_dir: std::env::temp_dir(),
         scratch: Arc::new(site::adapters::scratch::RealScratch),
         batch: Arc::new(site::adapters::batch_services::RelayBatchServices::default()),
+        portal: dialogs.clone(),
     };
     Roots {
         identity,
@@ -104,13 +116,13 @@ pub fn roots(paths: desktop::adapters::paths::Paths) -> Roots {
         desktop,
         signing,
         site,
+        dialogs,
     }
 }
 
-/// Punto de entrada compartido por el binario y por las pruebas.
+/// Punto de entrada compartido por el binario y por las pruebas: decide el rol de proceso
+/// (ADR-0024) y monta la raíz de composición que le corresponde.
 pub fn run() {
-    use tauri::{Emitter, Manager};
-
     if desktop::application::invocation::help_was_asked_for(
         desktop::adapters::process::these_arguments(),
     ) {
@@ -120,78 +132,35 @@ pub fn run() {
 
     desktop::adapters::process::make_the_command_line_readable();
 
+    let invocation = desktop::adapters::process::this_invocation();
+    let discarded = Role::said(&invocation);
     let paths = desktop::adapters::paths::Paths::from_environment()
         .expect("debería saberse cuál es el HOME");
+
+    match desktop::application::invocation::role_of(invocation) {
+        Role::Desktop(invocation) => run_desktop(paths, invocation),
+        Role::Site(url) => run_site(paths, url, discarded),
+    }
+}
+
+/// Añade a un `Builder` lo que los dos roles gestionan por igual: las cinco raíces, los
+/// complementos comunes, las órdenes de Tauri y el evento de arrastre (ADR-0024).
+fn with_the_five_roots(
+    builder: tauri::Builder<tauri::Wry>,
+    roots: Roots,
+) -> tauri::Builder<tauri::Wry> {
+    use tauri::{Emitter, Manager};
+
     let Roots {
         identity,
         documents,
         desktop,
         signing,
         site,
-    } = roots(paths);
-    let invocation = desktop::adapters::process::this_invocation();
+        dialogs: _,
+    } = roots;
 
-    tauri::Builder::default()
-        // Instancia única (ADR-0010).
-        .plugin(tauri_plugin_single_instance::init(
-            move |app, command_line, folder| {
-                use tauri::Manager as _;
-                let invocation = desktop::application::invocation::Invocation {
-                    command_line,
-                    folder: std::path::PathBuf::from(folder),
-                };
-                let substitution = desktop::application::invocation::second_invocation(
-                    &invocation,
-                    app.state::<SigningRoot>().is_live(),
-                );
-                match substitution {
-                    desktop::application::invocation::SecondInvocation::ReplacesWhatWasThere(
-                        paths,
-                    ) => {
-                        let Some(window) = app.get_webview_window("main") else {
-                            return;
-                        };
-                        let _ = window.set_focus();
-                        let Some(told) = app.state::<DocumentsRoot>().what_was_dropped(&paths)
-                        else {
-                            return;
-                        };
-                        let _ = window.emit(
-                            DOCUMENT_DROPPED,
-                            documents::adapters::views::DroppedDocumentView::from(told),
-                        );
-                    }
-                    desktop::application::invocation::SecondInvocation::OpensItsOwnWindow(url) => {
-                        site::adapters::trace::note_the_launch(&url);
-                        let handle = app.clone();
-                        let site = app.state::<SiteRoot>();
-                        let transport = the_transport(&site.ca_store, &handle);
-                        let window =
-                            Arc::new(site::adapters::window::TauriSiteWindow::new(handle.clone()));
-                        let attendance = site::application::startup::attend_site_launch(
-                            &url,
-                            &site.codecs,
-                            &transport,
-                            window,
-                            &site.errand,
-                            // A mitad de un trámite no se toca la CA local (ADR-0005).
-                            site::application::startup::LocalCaReach::NotAnObstacle,
-                        );
-                        say(site::application::startup::hold_the_channel(
-                            &site.held_channel,
-                            attendance,
-                        ));
-                    }
-                    desktop::application::invocation::SecondInvocation::NothingHappens => {
-                        if let Some(window) = app.get_webview_window("main") {
-                            let _ = window.set_focus();
-                        } else {
-                            open_the_main_window(app);
-                        }
-                    }
-                }
-            },
-        ))
+    builder
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .manage(identity)
@@ -255,17 +224,107 @@ pub fn run() {
             site::adapters::tauri::install_local_ca,
             site::adapters::tauri::read_site_errand,
         ])
+}
+
+/// Barre las carpetas de paso abandonadas y crea la de este proceso, con el prefijo del rol
+/// dado (ADR-0024).
+fn own_scratch(role: &str) -> site::adapters::scratch::ProcessFolder {
+    let temp = std::env::temp_dir();
+    site::adapters::scratch::sweep(&temp, &["site", "desktop"]);
+    site::adapters::scratch::own_folder(&temp, role)
+        .expect("debería poder crearse la carpeta de paso del proceso")
+}
+
+/// Borra la carpeta de paso de este proceso al salir del bucle de eventos; un `Drop` no es
+/// fiable porque Tauri puede salir sin soltarlo.
+fn erase_the_scratch_folder_on_exit(app: &tauri::AppHandle, event: tauri::RunEvent) {
+    use tauri::Manager;
+
+    if let tauri::RunEvent::Exit = event {
+        let folder = app.state::<site::adapters::scratch::ProcessFolder>();
+        let _ = std::fs::remove_dir_all(folder.path());
+    }
+}
+
+/// Rol escritorio: instancia única (ADR-0010) y ventana principal. No construye transporte.
+fn run_desktop(paths: desktop::adapters::paths::Paths, invocation: Invocation) {
+    let scratch = own_scratch("desktop");
+    let mut roots = composed_roots(paths, Some(invocation));
+    roots.site.scratch_dir = scratch.path().to_path_buf();
+
+    let builder = tauri::Builder::default().plugin(tauri_plugin_single_instance::init(
+        move |app, command_line, folder| {
+            use tauri::{Emitter, Manager as _};
+            let invocation = Invocation {
+                command_line,
+                folder: std::path::PathBuf::from(folder),
+            };
+            let substitution = desktop::application::invocation::second_invocation(
+                &invocation,
+                app.state::<SigningRoot>().is_live(),
+            );
+            match substitution {
+                desktop::application::invocation::SecondInvocation::ReplacesWhatWasThere(paths) => {
+                    let Some(window) = app.get_webview_window("main") else {
+                        return;
+                    };
+                    let _ = window.set_focus();
+                    let Some(told) = app.state::<DocumentsRoot>().what_was_dropped(&paths) else {
+                        return;
+                    };
+                    let _ = window.emit(
+                        DOCUMENT_DROPPED,
+                        documents::adapters::views::DroppedDocumentView::from(told),
+                    );
+                }
+                desktop::application::invocation::SecondInvocation::NothingHappens => {
+                    if let Some(window) = app.get_webview_window("main") {
+                        let _ = window.set_focus();
+                    } else {
+                        open_the_main_window(app);
+                    }
+                }
+            }
+        },
+    ));
+
+    let dialogs = roots.dialogs.clone();
+    with_the_five_roots(builder, roots)
+        .manage(scratch)
         .setup(move |app| {
+            dialogs.attach(app.handle().clone());
+            open_the_main_window(app.handle());
+            Ok(())
+        })
+        .build(tauri::generate_context!())
+        .expect("error arrancando la ventana de rfirma")
+        .run(erase_the_scratch_folder_on_exit);
+}
+
+/// Rol sede: sin instancia única. Atiende el trámite y sostiene el único transporte del
+/// proceso; `Opening::TheMainWindow` no puede darse con una URL de sede.
+fn run_site(paths: desktop::adapters::paths::Paths, url: String, said_by_the_role: Vec<String>) {
+    use tauri::Manager;
+
+    let scratch = own_scratch("site");
+    let mut roots = composed_roots(paths, None);
+    roots.site.scratch_dir = scratch.path().to_path_buf();
+    let dialogs = roots.dialogs.clone();
+
+    with_the_five_roots(tauri::Builder::default(), roots)
+        .manage(scratch)
+        .setup(move |app| {
+            dialogs.attach(app.handle().clone());
+            say(said_by_the_role);
+
             let handle = app.handle().clone();
             let site = app.state::<SiteRoot>();
             let transport = the_transport(&site.ca_store, &handle);
             let window = Arc::new(site::adapters::window::TauriSiteWindow::new(handle.clone()));
-            let launch = invocation.site_launch();
-            if let Some(url) = launch {
-                site::adapters::trace::note_the_launch(url);
-            }
+            site::adapters::trace::note_the_launch(&url);
+
             let startup = site::application::startup::attend_startup(
-                launch,
+                Some(&url),
                 site::application::startup::TrustAtStartup {
                     store: site.trust.store.as_ref(),
                     profiles: &site.trust.profiles,
@@ -279,22 +338,20 @@ pub fn run() {
 
             say(startup.said);
 
-            match startup.opening {
-                site::application::startup::Opening::TheMainWindow => {
-                    open_the_main_window(&handle);
-                }
-                site::application::startup::Opening::TheSiteErrand(attendance) => {
-                    say(site::application::startup::hold_the_channel(
-                        &site.held_channel,
-                        attendance,
-                    ));
-                }
-            }
+            let site::application::startup::Opening::TheSiteErrand(attendance) = startup.opening
+            else {
+                unreachable!("una URL de sede siempre atiende el trámite")
+            };
+            say(site::application::startup::hold_the_channel(
+                &site.held_channel,
+                attendance,
+            ));
 
             Ok(())
         })
-        .run(tauri::generate_context!())
-        .expect("error arrancando la ventana de rfirma");
+        .build(tauri::generate_context!())
+        .expect("error arrancando la sede de rfirma")
+        .run(erase_the_scratch_folder_on_exit);
 }
 
 /// Abre la ventana principal de la aplicación.
@@ -361,10 +418,6 @@ fn the_transport(
     let relay = site::adapters::relay::Relay::new(
         Arc::new(site::adapters::servlets::RelayServlets::default()),
         inbox,
-        {
-            let handle = app.clone();
-            Arc::new(move || handle.exit(0))
-        },
         {
             let handle = app.clone();
             Arc::new(move |refusal| {

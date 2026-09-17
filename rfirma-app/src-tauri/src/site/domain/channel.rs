@@ -46,6 +46,7 @@ pub struct ChannelError {
     situation: Situation,
     detail: String,
     refusal: Option<Refusal>,
+    destination: Option<(String, String)>,
 }
 
 impl ChannelError {
@@ -55,6 +56,7 @@ impl ChannelError {
             situation,
             detail: detail.into(),
             refusal: None,
+            destination: None,
         }
     }
 
@@ -64,6 +66,21 @@ impl ChannelError {
             situation: Situation::Relay,
             detail: refusal.detail().to_owned(),
             refusal: Some(refusal),
+            destination: None,
+        }
+    }
+
+    /// Un fallo del servidor intermedio cuyo destino de subida ya se conocía al fallar.
+    pub fn refused_at(
+        refusal: Refusal,
+        store_servlet: impl Into<String>,
+        id: impl Into<String>,
+    ) -> Self {
+        Self {
+            situation: Situation::Relay,
+            detail: refusal.detail().to_owned(),
+            refusal: Some(refusal),
+            destination: Some((store_servlet.into(), id.into())),
         }
     }
 
@@ -81,6 +98,13 @@ impl ChannelError {
     pub fn refusal(&self) -> Option<&Refusal> {
         self.refusal.as_ref()
     }
+
+    /// El destino de subida ya conocido cuando este fallo ocurrió (servidor intermedio).
+    pub fn destination(&self) -> Option<(&str, &str)> {
+        self.destination
+            .as_ref()
+            .map(|(store_servlet, id)| (store_servlet.as_str(), id.as_str()))
+    }
 }
 
 impl fmt::Display for ChannelError {
@@ -91,20 +115,39 @@ impl fmt::Display for ChannelError {
 
 impl std::error::Error for ChannelError {}
 
-/// Canal abierto con su puerto de escucha, asa de cierre y, si la trae, la entrega ya resuelta.
+/// Llegada de la operación con la que se abrió el canal: esperada por un mensaje futuro, o
+/// inmediata con su entrega ya resuelta.
+pub enum Arrival {
+    /// El canal espera a que llegue un mensaje futuro.
+    Awaited,
+    /// La operación ya llegó resuelta al abrir el canal (servidor intermedio); una llegada
+    /// inmediata sin entrega no se puede construir.
+    Immediate(Delivery),
+}
+
+/// El modo de una `Arrival`, sin la entrega que solo trae la inmediata.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ArrivalMode {
+    /// El canal espera a que llegue un mensaje futuro.
+    Awaited,
+    /// La operación ya llegó resuelta al abrir el canal.
+    Immediate,
+}
+
+/// Canal abierto con su puerto de escucha, asa de cierre y su llegada.
 pub struct OpenChannel {
     port: u16,
     shutdown: Shutdown,
-    delivery: Option<Delivery>,
+    arrival: Arrival,
 }
 
 impl OpenChannel {
-    /// Crea un canal abierto con su puerto y asa de cierre, sin entrega pendiente.
+    /// Crea un canal abierto con su puerto y asa de cierre, con llegada esperada.
     pub fn new(port: u16, shutdown: Shutdown) -> Self {
         Self {
             port,
             shutdown,
-            delivery: None,
+            arrival: Arrival::Awaited,
         }
     }
 
@@ -115,7 +158,7 @@ impl OpenChannel {
         Self {
             port,
             shutdown,
-            delivery: Some(delivery),
+            arrival: Arrival::Immediate(delivery),
         }
     }
 
@@ -124,9 +167,20 @@ impl OpenChannel {
         self.port
     }
 
+    /// El modo de la llegada, sin retirar la entrega que pueda traer.
+    pub fn arrival_mode(&self) -> ArrivalMode {
+        match &self.arrival {
+            Arrival::Awaited => ArrivalMode::Awaited,
+            Arrival::Immediate(_) => ArrivalMode::Immediate,
+        }
+    }
+
     /// Retira la entrega pendiente, si la trae, para que quien la retira decida cuándo dispararla.
     pub fn take_delivery(&mut self) -> Option<Delivery> {
-        self.delivery.take()
+        match std::mem::replace(&mut self.arrival, Arrival::Awaited) {
+            Arrival::Awaited => None,
+            Arrival::Immediate(delivery) => Some(delivery),
+        }
     }
 
     /// Cierra el canal y deja de escuchar conexiones.
@@ -158,18 +212,26 @@ impl Shutdown {
     }
 }
 
-/// Entrega diferida de una operación ya resuelta al abrir el canal.
-pub struct Delivery(Box<dyn FnOnce() + Send>);
+/// Entrega diferida de una operación o rechazo ya resuelto al abrir el canal.
+pub struct Delivery(Box<dyn FnOnce() -> bool + Send>);
 
 impl Delivery {
-    /// Construye una entrega a partir de una clausura.
+    /// Construye una entrega que no puede fallar a partir de una clausura.
     pub fn of(delivering: impl FnOnce() + Send + 'static) -> Self {
+        Self::fallible(move || {
+            delivering();
+            true
+        })
+    }
+
+    /// Construye una entrega cuya clausura dice si lo entregado salió.
+    pub fn fallible(delivering: impl FnOnce() -> bool + Send + 'static) -> Self {
         Self(Box::new(delivering))
     }
 
-    /// Dispara la entrega.
-    pub fn now(self) {
-        (self.0)();
+    /// Dispara la entrega; `true` si lo entregado salió.
+    pub fn now(self) -> bool {
+        (self.0)()
     }
 }
 

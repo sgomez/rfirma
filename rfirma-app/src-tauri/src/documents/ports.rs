@@ -58,3 +58,72 @@ pub trait DocumentFiles {
     /// Los ficheros dentro de la carpeta, ordenados; vacío si no es una carpeta legible.
     fn files_within(&self, folder: &Path) -> Vec<PathBuf>;
 }
+
+/// Pistas para los diálogos de selección y guardado del portal.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct DialogClues {
+    /// Título de la ventana de diálogo.
+    pub title: Option<String>,
+    /// Nombre de fichero sugerido o propuesto.
+    pub filename: Option<String>,
+    /// Extensiones admitidas por el filtro (ej. "pdf", "p12").
+    pub extensions: Vec<String>,
+    /// Descripción del filtro de extensiones (ej. "Documento PDF").
+    pub description: Option<String>,
+    /// Directorio inicial sugerido para abrir el diálogo.
+    pub starting_folder: Option<PathBuf>,
+}
+
+impl DialogClues {
+    /// Pistas vacías por omisión.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Añade el título del diálogo.
+    pub fn with_title(mut self, title: impl Into<String>) -> Self {
+        self.title = Some(title.into());
+        self
+    }
+
+    /// Añade el nombre de fichero propuesto.
+    pub fn with_filename(mut self, name: impl Into<String>) -> Self {
+        self.filename = Some(name.into());
+        self
+    }
+
+    /// Añade un filtro de extensiones con su descripción.
+    pub fn with_filter(
+        mut self,
+        description: impl Into<String>,
+        extensions: &[impl AsRef<str>],
+    ) -> Self {
+        self.description = Some(description.into());
+        self.extensions = extensions
+            .iter()
+            .map(|ext| ext.as_ref().to_owned())
+            .collect();
+        self
+    }
+
+    /// Añade el directorio inicial.
+    pub fn with_starting_folder(mut self, folder: impl Into<PathBuf>) -> Self {
+        self.starting_folder = Some(folder.into());
+        self
+    }
+}
+
+/// Puerto de interacción con los diálogos del sistema a través del portal.
+pub trait PortalDialogs: Send + Sync {
+    /// Abre el diálogo para seleccionar un único fichero.
+    fn pick_file(&self, clues: &DialogClues) -> Result<Option<PathBuf>, String>;
+
+    /// Abre el diálogo para seleccionar uno o varios ficheros.
+    fn pick_files(&self, clues: &DialogClues) -> Result<Vec<PathBuf>, String>;
+
+    /// Abre el diálogo para guardar un fichero con las pistas dadas.
+    fn save_file(&self, clues: &DialogClues) -> Result<Option<PathBuf>, String>;
+}
+
+#[cfg(test)]
+mod tests;

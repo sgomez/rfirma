@@ -22,7 +22,7 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `adapters/codec_relay.rs` | El códec del servidor intermedio, el que cifra la respuesta con la clave negociada. Pruebas en `adapters/codec_relay/tests.rs`. |
 | `adapters/data_download.rs` | El cliente HTTP que baja el `dat` que la sede manda como URL. Pruebas en `adapters/data_download/tests.rs`. |
 | `adapters/desk.rs` | `Neighbours`: lo que el trámite pide a los contextos vecinos, servido sobre sus tres raíces, y la composición del algoritmo de la sede con la clave del certificado. Pruebas en `adapters/desk/tests.rs`. |
-| `adapters/scratch.rs` | La carpeta de paso donde cae el documento de la sede mientras dura el trámite, y las rutas que elige la persona al guardar o cargar (ADR-0011). |
+| `adapters/scratch.rs` | La carpeta de paso donde cae el documento de la sede mientras dura el trámite, y las rutas que elige la persona al guardar o cargar (ADR-0011); también nombra, cierra con `flock` y barre la carpeta de paso propia del proceso. Pruebas en `adapters/scratch/tests.rs`. |
 | `adapters/service/mod.rs` | El transporte de producción de `service`: TLS crudo sobre el *loopback*, sin WebSocket. Pruebas en `adapters/service/tests.rs`. |
 | `adapters/batch_services.rs` | El cliente de los dos servlets del lote remoto, sobre `reqwest::blocking`. Pruebas en `adapters/batch_services/tests.rs`. |
 | `adapters/servlets.rs` | El cliente del servidor intermedio de producción, sobre `reqwest::blocking`. Pruebas en `adapters/servlets/tests.rs`. |
@@ -32,11 +32,11 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `adapters/tls/mod.rs` | El reparto de las dos piezas del material TLS; reexporta `LocalCa`. |
 | `adapters/tls/server.rs` | El certificado del servidor local, en memoria. Pruebas en `adapters/tls/server/tests.rs`. |
 | `adapters/tls/store.rs` | Las dos ranuras de la CA local en disco, detrás del puerto `LocalCaSlots`. Pruebas en `adapters/tls/store/tests.rs`. |
-| `adapters/relay.rs` | El transporte del servidor intermedio: sin canal que sostener, la operación se resuelve al abrir, con lo que trajo la invocación o con lo que se recupera del `rtservlet`. Pruebas en `adapters/relay/tests.rs`. |
+| `adapters/relay.rs` | El transporte del servidor intermedio: sin canal que sostener, la operación se resuelve al abrir, con lo que trajo la invocación o con lo que se recupera del `rtservlet`; un rechazo deja la subida como entrega pendiente. Pruebas en `adapters/relay/tests.rs`. |
 | `adapters/trace.rs` | La traza por `stderr` de las URL `afirma://` que llegan, viva solo en compilación de desarrollo. Sin pruebas propias. |
 | `adapters/transport.rs` | El transporte de producción del `wss` sobre el *loopback*. |
 | `adapters/views.rs` | Los tipos que cruzan a la ventana de sede y su única conversión. Pruebas en `adapters/views/tests.rs`. |
-| `adapters/window.rs` | El adaptador de la ventana de sede: la crea y le publica lo que va pasando. Sin decisión dentro. |
+| `adapters/window.rs` | El adaptador de la ventana de sede: la crea, le publica lo que va pasando, cancela el trámite si el gestor de ventanas la cierra con uno vivo y, al terminar el trámite, decide si la cierra según siga oculta. |
 | `application/batch.rs` | El lote remoto ya consentido: prefirma, `PK1` con el token y postfirma. No decide el consentimiento. Pruebas en `application/batch/tests.rs`. |
 | `application/errand/desk.rs` | La mesa del trámite (`ErrandDesk`) y los consentimientos que se deciden sobre ella. |
 | `application/errand/mod.rs` | Los verbos, y el reparto. **Léelo antes que sus hermanos**: es lo único que una orden llama. Pruebas en `application/errand/tests.rs`. |
@@ -84,7 +84,7 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `domain/protocol/visible.rs` | **El recuadro que pide la sede**, que no comparte conversión con el camino local. Pruebas en `domain/protocol/visible/tests.rs`. |
 | `domain/tls_error.rs`, `domain/trust_error.rs`, `domain/relay_error.rs` | Las situaciones (ADR-0009) del material del canal, de la confianza y del servidor intermedio. Pruebas en `domain/tls_error/tests.rs`, `domain/trust_error/tests.rs` y `domain/relay_error/tests.rs`. |
 | `domain/signing.rs` | Lo que vuelve de la firma que pidió la sede: la firma en memoria, o el rechazo ya traducido por quien firmó. |
-| `domain/trust.rs` | El reparto, y las tres reglas **puras** de la confianza. Aquí vive el puerto `TrustStores`. Léelo antes que sus hermanos. Pruebas en `domain/trust/tests.rs`. |
+| `domain/trust.rs` | El reparto, y las cuatro reglas **puras** de la confianza. Aquí vive el puerto `TrustStores`. Léelo antes que sus hermanos. Pruebas en `domain/trust/tests.rs`. |
 | `ports.rs` | **Los doce puertos**: los propios del contexto (`BatchServices` incluido), los dos motores que presta el puente y lo que el trámite pide a los vecinos. Pruebas en `ports/tests.rs`. |
 
 ## Al tocar lo que sale hacia la sede

@@ -9,6 +9,7 @@ use std::time::Duration;
 use crate::identity::domain::certificate::TokenCertificate;
 use crate::signing::domain::bridge::{Format, SignatureOperation};
 use crate::site::domain::batch::LocalBatch;
+use crate::site::domain::channel::ArrivalMode;
 use crate::site::domain::protocol::{
     AfirmaUrl, AskedAlgorithm, BatchRequest, NegotiatedCredential, SiteFilter,
 };
@@ -17,17 +18,27 @@ use super::outcome::{
     ConfirmationConsent, LoadingConsent, Moment, ProtocolCodec, SavingConsent, SavingHints,
     SiteOutcome,
 };
-use crate::site::ports::{ReplyHandle, Scratch};
+use crate::site::ports::{Acknowledgement, ReplyHandle, Scratch};
 
 struct RevelationInner {
     revealed: bool,
     cancelled: bool,
 }
 
+/// Qué hacer con la ventana cuando la espera de respaldo se cumple, por revelación o por plazo.
+#[derive(Clone, Copy)]
+enum RevelationAction {
+    /// Revela la ventana del trámite que sigue esperando al navegador.
+    Show,
+    /// Cierra la ventana oculta que sostenía un rechazo retenido por el canal.
+    EndTheErrand,
+}
+
 #[derive(Clone)]
 struct RevelationHandle {
     state: Arc<(Mutex<RevelationInner>, Condvar)>,
     window: Arc<dyn SiteWindow>,
+    action: RevelationAction,
 }
 
 /// Códec negociado, compartido entre el trámite y quien lo apuntó.
@@ -49,13 +60,15 @@ pub struct LiveErrand {
     consent: Mutex<Option<PendingConsent>>,
     moment: Arc<Mutex<Option<Moment>>>,
     revelation: Mutex<Option<RevelationHandle>>,
+    window: Mutex<Option<Arc<dyn SiteWindow>>>,
+    delivered: Mutex<Option<Acknowledgement>>,
 }
 
 /// Datos identificativos y de conexión de un trámite en curso.
 #[derive(Clone)]
 pub struct Errand {
     credential: NegotiatedCredential,
-    port: u16,
+    arrival: ArrivalMode,
     codec: NegotiatedCodec,
 }
 
@@ -63,17 +76,21 @@ impl std::fmt::Debug for Errand {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Errand")
             .field("credential", &self.credential)
-            .field("port", &self.port)
+            .field("arrival", &self.arrival)
             .finish_non_exhaustive()
     }
 }
 
 impl Errand {
-    /// Construye un trámite con la credencial, puerto y códec indicados.
-    pub fn of(credential: NegotiatedCredential, port: u16, codec: NegotiatedCodec) -> Self {
+    /// Construye un trámite con la credencial, llegada y códec indicados.
+    pub fn of(
+        credential: NegotiatedCredential,
+        arrival: ArrivalMode,
+        codec: NegotiatedCodec,
+    ) -> Self {
         Self {
             credential,
-            port,
+            arrival,
             codec,
         }
     }
@@ -83,19 +100,14 @@ impl Errand {
         &self.credential
     }
 
-    /// Puerto en el que quedó escuchando el servidor.
-    pub fn port(&self) -> u16 {
-        self.port
+    /// Modo de llegada con el que se abrió el canal del trámite.
+    pub fn arrival(&self) -> ArrivalMode {
+        self.arrival
     }
 
     /// Códec negociado para este trámite.
     pub fn codec(&self) -> &NegotiatedCodec {
         &self.codec
-    }
-
-    /// Indica si el trámite mantiene un canal abierto esperando conexiones.
-    pub fn opens_channel(&self) -> bool {
-        self.port > 0
     }
 }
 
@@ -188,13 +200,19 @@ impl LiveErrand {
         *crate::lock(&self.reply) = Some(reply);
     }
 
+    /// Registra la ventana que hay que avisar cuando este trámite termine.
+    pub fn keep_the_window(&self, window: Arc<dyn SiteWindow>) {
+        *crate::lock(&self.window) = Some(window);
+    }
+
     /// Envía la respuesta codificada a la sede a través del asa.
     pub(super) fn answer_the_site(&self, outcome: &SiteOutcome) {
         let Some(reply) = crate::lock(&self.reply).take() else {
             return;
         };
         if let Some(codec) = self.codec() {
-            reply.answer(codec.encode(outcome));
+            let acknowledgement = reply.answer(codec.encode(outcome));
+            *crate::lock(&self.delivered) = Some(acknowledgement);
         }
     }
 
@@ -213,7 +231,14 @@ impl LiveErrand {
         crate::lock(&self.errand).clone()
     }
 
-    /// Finaliza el trámite y limpia sus recursos asociados.
+    /// Espera hasta el tope al acuse de entrega ya registrado por `answer_the_site`, si lo hay.
+    pub(super) fn wait_for_delivery(&self, timeout: Duration) {
+        if let Some(delivered) = crate::lock(&self.delivered).take() {
+            delivered.wait(timeout);
+        }
+    }
+
+    /// Finaliza el trámite y limpia sus recursos asociados; si había una ventana, se le avisa.
     pub fn end(&self) {
         self.cancel_backing_timeout();
         *crate::lock(&self.errand) = None;
@@ -223,6 +248,13 @@ impl LiveErrand {
         }
         *crate::lock(&self.asked) = None;
         self.forget_the_consent();
+
+        if let Some(window) = crate::lock(&self.window).take() {
+            let delivered = crate::lock(&self.delivered)
+                .take()
+                .unwrap_or_else(Acknowledgement::immediate);
+            window.errand_ended(delivered);
+        }
     }
 
     /// Ruta al fichero temporal para pruebas.
@@ -269,6 +301,15 @@ impl LiveErrand {
         )
     }
 
+    /// El certificado consentido del lote, remoto o local, que espera el secreto.
+    pub fn the_batch_certificate(&self) -> Option<TokenCertificate> {
+        match &*crate::lock(&self.consent) {
+            Some(PendingConsent::Batch(pending)) => pending.chosen.clone(),
+            Some(PendingConsent::LocalBatch(pending)) => pending.chosen.clone(),
+            _ => None,
+        }
+    }
+
     /// Lote pendiente, si el trámite está atendiendo uno.
     pub(super) fn the_batch_pending(&self) -> Option<PendingBatch> {
         match &*crate::lock(&self.consent) {
@@ -280,14 +321,6 @@ impl LiveErrand {
     /// Registra el lote local pendiente de consentimiento o de firma.
     pub(super) fn remember_the_local_batch(&self, pending: PendingLocalBatch) {
         *crate::lock(&self.consent) = Some(PendingConsent::LocalBatch(pending));
-    }
-
-    /// Si el trámite tiene un lote local consentido esperando el secreto.
-    pub fn a_local_batch_is_pending(&self) -> bool {
-        matches!(
-            &*crate::lock(&self.consent),
-            Some(PendingConsent::LocalBatch(pending)) if pending.chosen.is_some()
-        )
     }
 
     /// Lote local pendiente, si el trámite está atendiendo uno.
@@ -347,6 +380,21 @@ impl LiveErrand {
 
     /// Arma el temporizador de respaldo para revelar la ventana si el navegador no llega.
     pub fn arm_backing_timeout(&self, window: Arc<dyn SiteWindow>, threshold: Duration) {
+        self.arm_expiring_wait(window, threshold, RevelationAction::Show);
+    }
+
+    /// Arma la espera de que se sirva un rechazo retenido por el canal, cerrando la ventana
+    /// oculta que lo sostiene al cumplirse o al vencer el plazo.
+    pub fn arm_channel_refusal_wait(&self, window: Arc<dyn SiteWindow>, threshold: Duration) {
+        self.arm_expiring_wait(window, threshold, RevelationAction::EndTheErrand);
+    }
+
+    fn arm_expiring_wait(
+        &self,
+        window: Arc<dyn SiteWindow>,
+        threshold: Duration,
+        action: RevelationAction,
+    ) {
         self.cancel_backing_timeout();
         let state = Arc::new((
             Mutex::new(RevelationInner {
@@ -358,6 +406,7 @@ impl LiveErrand {
         let handle = RevelationHandle {
             state: Arc::clone(&state),
             window: Arc::clone(&window),
+            action,
         };
         *crate::lock(&self.revelation) = Some(handle);
 
@@ -378,8 +427,15 @@ impl LiveErrand {
             if !inner.cancelled && !inner.revealed {
                 inner.revealed = true;
                 drop(inner);
-                *timer_moment.lock().unwrap() = Some(Moment::Unreachable);
-                timer_window.show();
+                match action {
+                    RevelationAction::Show => {
+                        *timer_moment.lock().unwrap() = Some(Moment::Unreachable);
+                        timer_window.show();
+                    }
+                    RevelationAction::EndTheErrand => {
+                        timer_window.errand_ended(Acknowledgement::immediate());
+                    }
+                }
             }
         });
     }
@@ -394,7 +450,8 @@ impl LiveErrand {
         }
     }
 
-    /// Notifica que el navegador ha llegado al canal, revelando la ventana si estaba oculta.
+    /// Notifica que el navegador ha llegado al canal, revelando la ventana o cerrándola,
+    /// según lo que se armó.
     pub fn browser_arrived(&self) {
         let handle = crate::lock(&self.revelation).as_ref().cloned();
         if let Some(handle) = handle {
@@ -404,7 +461,12 @@ impl LiveErrand {
                 inner.revealed = true;
                 cvar.notify_all();
                 drop(inner);
-                handle.window.show();
+                match handle.action {
+                    RevelationAction::Show => handle.window.show(),
+                    RevelationAction::EndTheErrand => {
+                        handle.window.errand_ended(Acknowledgement::immediate());
+                    }
+                }
             }
         }
     }

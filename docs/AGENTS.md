@@ -32,6 +32,7 @@ Busca en este índice, y si aun así necesitas el fichero, entra con
 | 0021 | La versión mínima que exige la operación (`ver`) se comprueba siempre |
 | 0022 | El almacén que nombra la sede: cuál se obedece y cuál sale con `SAF_07` |
 | 0023 | El catálogo de algoritmos es el del original, SHA-1 incluido |
+| 0024 | Un proceso por trámite de sede, y el escritorio aparte |
 
 ## `research/` — mediciones (por qué algo es como es)
 
@@ -41,7 +42,7 @@ ficheros más grandes del repositorio (hasta 32 KB).
 `ancla-y-paginas-en-el-puente` · `arrastre-bajo-el-sandbox` ·
 `ca-en-los-almacenes-de-confianza` · `campos-de-firma-vacios` ·
 `contrato-protocolo-afirma` · `coordenadas-recuadro-pades` ·
-`exclusion-afirma-ui-utils` · `firma-visible-trifasica` ·
+`exclusion-afirma-ui-utils` · `filtros-sede-unmeasured` · `firma-visible-trifasica` ·
 `flathub-libreria-nativa` · `flatpak-canal-unico` · `glibc-libreria-nativa` ·
 `graalvm-libawt-shared` · `i18next-y-el-po` · `native-image-postfirma` ·
 `native-image-postfirma-ce25` · `native-image-shared-pades` ·
@@ -53,6 +54,8 @@ ficheros más grandes del repositorio (hasta 32 KB).
 `timeout-lote-remoto` · `token-flags-login` · `token-pkcs11-pruebas`
 
 ## Sueltos en `docs/`
+
+`afirma/1.9.2/` — Manual de referencia del protocolo `afirma://` de AutoFirma 1.9.2 (16 capítulos y el anexo A1 con el catálogo de bugs del original).
 
 `mapa-protocolo.md` — El mapa del protocolo de AutoFirma generado a tag fijado del original y cruzado con el trámite de sede de rFirma, con el esqueleto de auditoría.
 
@@ -68,7 +71,12 @@ eso está en `research/contrato-protocolo-afirma.md`.
 `visor-de-documento` · `panel-de-firma` · `preferencias` · `dialogo-pin` ·
 `dialogo-progreso-firma` · `dialogo-paginas-sin-sello` · `acerca-de` ·
 `ventana-de-sede` (la ventana que abre una sede por `afirma://`, entera: espera,
-consentimiento, firma, desenlace y sin certificado utilizable) · `design-system`
+consentimiento, firma, desenlace y sin certificado utilizable) ·
+`primer-arranque` (el asistente que configura el equipo la primera vez) ·
+`panel-de-estado` (la tabla de señales de la instalación, con sus reparaciones) ·
+`retirar-certificado` (el velo que confirma y ejecuta la retirada del
+certificado de rFirma de los almacenes) ·
+`design-system`
 
 Al implementar una pantalla, **la ficha de esa pantalla es la fuente**, no el
 sistema de diseño entero (14 KB).

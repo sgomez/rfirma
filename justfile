@@ -1,76 +1,26 @@
-# Punto de entrada del proyecto.
+# Punto de entrada del proyecto: `just` es el unico orquestador (ADR-0013).
 #
-# Es la interfaz que encuentra quien llega al repositorio sin contexto: una
-# persona nueva, o el agente revisor, que segun docs/agents/code-host.md
-# siempre instala y ejecuta las comprobaciones el mismo. `just` lista las
-# recetas disponibles.
-#
-# La rejilla la fija el ADR-0013; QUE se ejecuta dentro de `lint` y `test`, y
-# en que carril cae cada cosa, lo fija el ADR-0014.
-#
-# EL REPOSITORIO ES POLIGLOTA Y LA RAIZ NO PERTENECE A NINGUNA CADENA (ID-01):
-#
-#   rfirma-native-bridge/   Maven -> GraalVM CE 25 -> librfirma_crypto.so
-#   rfirma-app/src-tauri/   Cargo
-#   rfirma-app/             pnpm (React 19 + Vite + TypeScript)
-#   packaging/flatpak/      manifiesto y verificacion
-#
-# `just` es el UNICO orquestador. build.rs no invoca a Maven ni a
-# native-image jamas: un `cargo build` que dispare por sorpresa 1 m 22 s de
-# native-image arruina el bucle de realimentacion que protegio el issue #11.
-#
-# Requisitos: just, maven, git, pnpm, cargo y un GraalVM CE 25 para `native`,
-# mas las librerias -dev del WebView (ver `system_libs` mas abajo) y softhsm2 +
-# opensc para el token de la grada B (ver la receta `token`).
-#   apt-get install -y just maven softhsm2 opensc
-#
-# `just tools` los comprueba TODOS y falla nombrando lo que falte, con la orden
-# de apt lista para copiar. Ejecutalo antes que nada si algo no compila.
-#
-# HAY UNA PUERTA LOCAL DE FORMATO ANTES DEL PUSH, en lefthook.yml, que instala
-# `just deps` sin que nadie tenga que acordarse (ADR-0014). Solo comprueba
-# formato, se mide en segundos, y cuando bloquea nombra la receta `fmt-*` que lo
-# arregla. Se salta con `git push --no-verify`, y saltarsela solo adelanta el
-# mismo fallo al CI, que es quien manda.
+# Los requisitos los comprueba `just tools`; la puerta que manda es
+# `just check`, que ejecuta el CI (ADR-0014).
 
-# GraalVM CE 25: lo fijo el issue #6. La linea 21 aborta dentro del JNI_OnLoad
-# de libawt.so con cualquier firma visible, asi que no sirve para construir.
-# El pom sigue compilando a release 21: cambia el JDK que construye, no el
-# lenguaje de destino.
+# GraalVM CE 25 (ADR-0004): la 21 aborta native-image; el pom compila a
+# release 21 aparte.
 default_graalvm := "$HOME/.sdkman/candidates/java/25.3.4+1.r25-graalce"
 
 bridge := justfile_directory() / "rfirma-native-bridge"
 app := justfile_directory() / "rfirma-app"
 tauri := app / "src-tauri"
 
-# Ruta canonica de la libreria nativa (ADR-0013). `native` la produce aqui y el
-# manifiesto flatpak la instala desde aqui. NO es target/native ni
-# target/ce25-noui: esos eran los dos rivales que el ADR resolvio.
+# Ruta canonica de la libreria nativa (ADR-0013).
 native_lib := bridge / "target/lib/rfirma/librfirma_crypto.so"
 
-# cargo-crap tiene un solo mantenedor y cuatro meses de vida (ADR-0014), asi
-# que la version va FIJADA: una publicacion suya no puede poner en rojo un PR
-# que no la ha tocado. Si se abandona, la puerta se quita borrando la receta
-# `crap` de `test` y esta linea.
+# Version fijada: un cargo-crap con un solo mantenedor no debe poder poner en
+# rojo un PR que no lo ha tocado (ADR-0014).
 crap_version := "0.4.3"
 
-# UN SOLO target/ PARA TODOS LOS WORKTREES DE AGENTES, y el del checkout
-# principal intacto.
-#
-# Cada agente constructor trabaja en un worktree propio, asi que sin esto cada
-# uno recompila el arbol de dependencias de Tauri desde cero: medidos entre 6,8
-# y 13 GB por worktree, y 73 s de reloj antes de que la primera prueba diga
-# nada. Compartiendolo, el primero paga la compilacion entera una vez y los
-# demas entran en 11 s.
-#
-# EL PRINCIPAL SE QUEDA FUERA A PROPOSITO: cargo toma un cerrojo sobre el
-# target/ mientras compila, asi que meterlo dentro haria que un `cargo` a mano
-# esperase a que terminara el agente de turno. Los agentes si se serializan
-# entre si, y eso no cuesta nada con `execution: sequential`
-# (docs/agents/developer-defaults.md).
-#
-# Descartado sccache, y medido: entre dos target/ distintos acierta el 0 % de
-# las veces, porque su clave depende de las rutas de los --extern (ADR-0014).
+# target/ compartido entre worktrees de agentes; el checkout principal se
+# queda fuera porque cargo toma un cerrojo sobre el arbol mientras compila
+# (ADR-0014).
 worktree_target := ```
     own=$(git rev-parse --git-dir 2>/dev/null || true)
     common=$(git rev-parse --git-common-dir 2>/dev/null || true)
@@ -79,273 +29,94 @@ worktree_target := ```
     fi
 ```
 
-export CARGO_TARGET_DIR := if worktree_target == "" { tauri / "target" } else { worktree_target }
+cargo_target := if worktree_target == "" { tauri / "target" } else { worktree_target }
 
-# La misma razon que crap_version: sin ruff.toml ni pyproject.toml en el
-# repositorio, el conjunto de reglas que aplica `ruff check` es el que traiga
-# la version instalada, y una `ruff` nueva puede poner `lint-python` en rojo
-# sin que nadie haya tocado una linea de Python. Clavada aqui e igual en
-# .github/workflows/ci.yml.
+# El arbol instrumentado de `cargo llvm-cov` va aparte del normal (ADR-0014).
+export CARGO_TARGET_DIR := if env("CARGO_LLVM_COV", "") == "" { cargo_target } else { cargo_target / "llvm-cov-target" }
+
+coverage_out := cargo_target / "coverage" / file_name(justfile_directory())
+
+# Version fijada: sin ruff.toml, el conjunto de reglas depende de la version
+# instalada. Igual en .github/workflows/ci.yml.
 ruff_version := "0.16.6"
 
-# El modulo FFI, oculto para la puerta CRAP del carril rapido. cargo-crap
-# puntua con `--missing pessimistic`, o sea que una funcion SIN datos de
-# cobertura vale 0 %, y la cobertura del carril rapido no incluye la grada C.
-# Sin esta exclusion los peores CRAP del repositorio serian justo el codigo que
-# SI esta probado, solo que en el otro carril. El carril lento mide este
-# modulo de forma dirigida con `just crap-ffi`.
+# Modulo FFI oculto de la puerta CRAP del carril rapido (ADR-0014); el carril
+# lento lo mide con `just crap-ffi`.
 ffi_allow := "src/signing/adapters/ffi.rs"
 
-# El accesorio del banco de conformidad, FIJADO POR ETIQUETA Y POR SHA256. La
-# 1.9.2 no publica autoscript.js en npm ni en ningun artefacto: el unico origen
-# es el arbol del tag. Estas dos lineas son el pin, y estan tambien en el paso
-# "Banco de conformidad" de .github/workflows/ci.yml.
+# Accesorio del banco de conformidad, fijado por etiqueta y sha256: la 1.9.2
+# no publica autoscript.js en ningun artefacto. Pin repetido en ci.yml.
 autoscript_url := "https://raw.githubusercontent.com/ctt-gob-es/clienteafirma/v1.9.2/afirma-ui-miniapplet-deploy/src/main/webapp/js/autoscript.js"
 autoscript_sha256 := "567998128f1cd8017c304a8c187f6912a0c56b0feebb02fffa2aa33732e40439"
 
-# Las librerias de sistema que necesita el WebView de Tauri, como pares
-# "<modulo de pkg-config>:<paquete apt>". NO son dependencias de cargo: son
-# paquetes -dev del sistema, y sin ellas `cargo build` muere dentro del
-# build script de webkit2gtk-sys con un error de pkg-config que no menciona
-# ningun paquete instalable.
-#
-# ESTA ES LA LISTA CANONICA: .github/workflows/ci.yml instala exactamente
-# estos paquetes en sus dos carriles. Si tocas una, tocas las tres.
+# Donde deja el instalador .deb de AutoFirma 1.9.x su raiz de confianza, por
+# orden de preferencia; la primera es DER y el sondeo acepta las dos formas.
+autofirma_roots := "/usr/lib/Autofirma/Autofirma_ROOT.cer /etc/ssl/certs/Autofirma_ROOT.pem /usr/share/ca-certificates/Autofirma/Autofirma_ROOT.crt"
+
+# Librerias -dev del WebView que necesita Tauri; lista canonica que instala
+# tambien .github/workflows/ci.yml.
 system_libs := "webkit2gtk-4.1:libwebkit2gtk-4.1-dev javascriptcoregtk-4.1:libjavascriptcoregtk-4.1-dev libsoup-3.0:libsoup-3.0-dev"
 
 # Lista las recetas.
 default:
-    @just --list --unsorted
+    @just --list
 
 # ---------------------------------------------------------------------------
 # Contrato
 # ---------------------------------------------------------------------------
 
-# `check` ES UN CONTRATO (ID-03): la puerta entera del repositorio, lo que
-# ejecuta el agente revisor, y lo que en conjunto ejecuta el CI. Crece por
-# dentro; su nombre y su papel no cambian.
-#
-# YA NO ES `tools lint build test`, SINO UN CARRIL POR CADENA. La forma vieja
-# encadenaba las tres cadenas en una sola cola, y eso en el CI es una pared:
-# repartidos en un job cada uno, los carriles corren en paralelo y la espera
-# pasa a ser la cadena mas lenta en vez de la suma de las tres. `lint`, `build`
-# y `test` siguen existiendo como atajos locales; el CI ya no los usa.
-#
-# Lo que ejecutan el CI (un job por carril) y el agente revisor (los cuatro).
+# La puerta del repositorio: un carril por cadena, en paralelo en el CI.
+[group('checklist')]
 check: tools check-repo check-java check-ts check-rust
 
-# Lo que no pertenece a ninguna cadena (ID-01): cinco comprobaciones que tardan
-# milisegundos y detectan un descuadre que ninguna compilacion ve. Viajan con
-# el carril de TypeScript por ser el mas barato, no por parentesco.
-check-repo: check-flatpak-sources check-ds-bundle check-version check-actions check-publish lint-python
-
-# UNA SOLA INVOCACION DE MAVEN, y ahi esta casi toda la ganancia de esta
-# cadena: `mvn -B verify` compila con -Xlint:all (que es todo el linting que
-# tiene esta cadena), ejecuta las pruebas y empaqueta. Antes eran tres JVM
-# —`clean compile`, `package -DskipTests` y `test`— recompilando lo mismo.
-check-java: test-java
-
-check-ts: check-po lint-ts lint-i18n build-ts test-ts check-landing
-
-# SIN `cargo build --release`: ese binario no lo ejecuta nadie en el carril
-# rapido —el bundle lo produce el flatpak— y era un arbol de dependencias
-# entero, aparte del de depuracion y del instrumentado. Lo compila el carril
-# lento, que es donde se empaqueta.
-#
-# Y SIN `cargo test` suelto: `crap` arrastra `coverage`, y `cargo llvm-cov` YA
-# ejecuta la suite. Tenerlos los dos era correr las mismas pruebas dos veces en
-# dos arboles distintos. El peaje aceptado es que aqui las pruebas corren solo
-# instrumentadas; sin instrumentar las ejecuta `test-native` en cada empujon a
-# main.
-check-rust: lint-rust crap check-contract
-
-# LA PUERTA QUE SE CORRE EN LOCAL, y `check` entero la que corre el CI. La
-# diferencia no es de rigor sino de sitio: el CI reparte las tres cadenas en
-# tres runners que arrancan a la vez, asi que le cuesta la mas lenta; en un
-# portatil cuestan la suma, y un cambio que solo toca `rfirma-app/src/` paga
-# ademas Maven y un arbol instrumentado de cargo que no miran una linea suya.
-#
-# EL CARRIL SE DEDUCE DE LO QUE CAMBIA respecto a origin/main, contando lo
-# committeado, lo del indice, lo del arbol y lo sin seguir. `check-repo` corre
-# siempre porque son cuatro segundos, y lo que no se sabe leer —el justfile,
-# los workflows, bootstrap.sh— dispara las tres cadenas: son justo los ficheros
-# que pueden romper cualquiera de ellas.
-#
-# La puerta antes de commitear: solo los carriles que toca el cambio.
-check-changed:
+# Lo que no pertenece a ninguna cadena: comprobaciones rapidas que ninguna compilacion ve.
+[group('ci')]
+check-repo: check-version
     #!/usr/bin/env bash
     set -euo pipefail
-    base=$(git merge-base origin/main HEAD 2>/dev/null || git rev-parse HEAD)
-    changed=$({ git diff --name-only "$base"; git ls-files -o --exclude-standard; } | sort -u)
-    if [ -z "$changed" ]; then
-        echo "check-changed: nada que comprobar respecto a origin/main"
-        exit 0
-    fi
-    lanes="check-repo"
-    touched() { printf '%s\n' "$changed" | grep -qE "$1"; }
-    if touched '^(justfile|\.github/|bootstrap\.sh)'; then
-        lanes="$lanes check-java check-ts check-rust"
-    else
-        touched '^rfirma-native-bridge/' && lanes="$lanes check-java" || true
-        touched '^rfirma-app/(src/|po/|package\.json|pnpm-lock|tsconfig|vite|biome)' \
-            && lanes="$lanes check-ts" || true
-        # La landing tiene su propio proyecto y su propio lockfile: tocarla no
-        # obliga a compilar la aplicacion entera, solo a construirla a ella.
-        touched '^packaging/repo/(site/|Dockerfile|Caddyfile)' \
-            && lanes="$lanes check-landing" || true
-        # docs/adr y los AGENTS.md entran por Rust y no por despiste: sus
-        # guardas —adr_citations_resolve y agents_map_is_complete— son pruebas
-        # de la grada A, y viven en el carril de Rust aunque el fichero que las
-        # rompe sea prosa.
-        touched '^rfirma-app/src-tauri/|^docs/adr/|AGENTS\.md$' \
-            && lanes="$lanes check-rust" || true
-    fi
-    lanes=$(printf '%s\n' $lanes | awk '!seen[$0]++' | tr '\n' ' ')
-    echo "check-changed: $lanes"
-    exec {{ just_executable() }} $lanes
+    {{ justfile_directory() }}/packaging/flatpak/check-sources.sh
+    {{ justfile_directory() }}/rfirma-app/src/design-system/check-bundle.sh
+    {{ justfile_directory() }}/.github/check-workflows.sh
+    {{ justfile_directory() }}/packaging/repo/build-tree.test.sh
+    {{ justfile_directory() }}/packaging/repo/publish-tree.test.sh
+    ruff check {{ justfile_directory() }}/packaging {{ justfile_directory() }}/scripts
+    {{ justfile_directory() }}/scripts/tests/outline_test.sh
 
-# El bucle corto de quien quiera pasar el linting entero antes de commitear. No
-# es la puerta de pre-push de lefthook.yml, que es otra cosa y mucho mas corta
-# (ADR-0014): esa corre sola, solo mira el formato y se mide en segundos.
-#
-# Solo lint, sin build ni test.
-quick: lint
+# Una sola invocacion de Maven: compila con -Xlint:all, prueba y empaqueta.
+[group('ci')]
+check-java: test-java
+
+[group('ci')]
+check-ts: check-po lint-ts lint-i18n build-ts test-ts check-landing
+
+# lint-rust + crap + check-contract, sin `cargo build --release` ni `cargo test` sueltos.
+[group('ci')]
+check-rust: lint-rust crap check-contract
 
 # ---------------------------------------------------------------------------
 # Herramientas y dependencias
 # ---------------------------------------------------------------------------
 
 # Comprueba que estan las herramientas, y falla nombrando la que falte.
+[group('dev')]
 tools:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    failures=0
-    for t in mvn git java pnpm cargo; do
-        command -v "$t" >/dev/null || { echo "falta: $t"; failures=1; }
-    done
-    # Un cargo instalado pero fuera del PATH es el falso negativo mas caro de
-    # esta receta: "falta: cargo" manda a reinstalar rustup a quien solo tiene
-    # que cargar el env. rustup lo deja en ~/.cargo/env, que ~/.profile carga
-    # y zsh NO lee en shells interactivas.
-    if ! command -v cargo >/dev/null && [ -x "$HOME/.cargo/bin/cargo" ]; then
-        echo "  cargo esta en ~/.cargo/bin pero no en el PATH:"
-        echo "    anade '. \"$HOME/.cargo/env\"' a tu ~/.zshrc (o ~/.bashrc)"
-    fi
-    # gettext es DEPENDENCIA REQUERIDA desde v0.3 (ID-128): las cadenas viven
-    # en rfirma-app/po/ y msgmerge es la bisagra entre la plantilla y los cinco
-    # .po. El importador NO lo necesita —es Node puro— asi que un clon limpio
-    # compila sin esto; lo necesita quien DESARROLLA y lo necesita el CI.
-    gettext_apt=""
-    for t in msgfmt msgmerge msgcmp msgattrib; do
-        command -v "$t" >/dev/null || { echo "falta: $t"; gettext_apt="gettext"; failures=1; }
-    done
-    if [ -n "$gettext_apt" ]; then
-        echo
-        echo "Instalalo con:"
-        echo "  sudo apt install -y $gettext_apt"
-        echo
-    fi
-    # El token de la grada B (ADR-0014). No es opcional: sus pruebas corren en
-    # el carril rapido, asi que sin estas tres ordenes `test-rust` falla.
-    softhsm_apt=""
-    command -v softhsm2-util >/dev/null || { echo "falta: softhsm2-util"; softhsm_apt="$softhsm_apt softhsm2"; failures=1; }
-    command -v pkcs11-tool  >/dev/null || { echo "falta: pkcs11-tool";  softhsm_apt="$softhsm_apt opensc";   failures=1; }
-    command -v openssl      >/dev/null || { echo "falta: openssl";      softhsm_apt="$softhsm_apt openssl";  failures=1; }
-    # El almacen NSS es la otra mitad de la grada B (#99): certutil y pk12util
-    # montan el perfil desechable de cada prueba, y libsoftokn3.so es el modulo
-    # que lo abre. El perfil real de Firefox de nadie interviene.
-    command -v certutil     >/dev/null || { echo "falta: certutil";     softhsm_apt="$softhsm_apt libnss3-tools"; failures=1; }
-    command -v pk12util     >/dev/null || { echo "falta: pk12util";     softhsm_apt="$softhsm_apt libnss3-tools"; failures=1; }
-    if [ -n "$softhsm_apt" ]; then
-        echo
-        echo "Instalalos con:"
-        echo "  sudo apt install -y$softhsm_apt"
-        echo "y monta el token con: just token"
-        echo
-    fi
-    # ruff es la puerta del unico Python del repositorio (ID-164) y va dentro de
-    # `check-repo`, asi que sin el la cadena de TypeScript falla entera. No esta
-    # en apt: se instala desde PyPI. La version va clavada, igual que
-    # CRAP_VERSION mas abajo: sin ruff.toml ni pyproject.toml en el repositorio,
-    # el conjunto de reglas por defecto es el que traiga la version instalada,
-    # y una version distinta a la del CI (ver .github/workflows/ci.yml) puede
-    # poner esta puerta en rojo sin que nadie haya tocado una linea de Python.
-    if ! command -v ruff >/dev/null; then
-        echo "falta: ruff"
-        echo "  Instalalo con: pipx install ruff=={{ ruff_version }}  (o: uv tool install ruff=={{ ruff_version }})"
-        failures=1
-    fi
-    # Las librerias de sistema del WebView. pkg-config es quien decide, porque
-    # es quien consulta el build script que falla: el paquete de runtime puede
-    # estar instalado y faltar solo el -dev, que es el que trae el .pc.
-    if command -v pkg-config >/dev/null; then
-        missing_apt=""
-        for pair in {{ system_libs }}; do
-            module="${pair%%:*}"
-            package="${pair#*:}"
-            pkg-config --exists "$module" || {
-                echo "falta la libreria de sistema: $module"
-                missing_apt="$missing_apt $package"
-                failures=1
-            }
-        done
-        if [ -n "$missing_apt" ]; then
-            echo
-            echo "Instalalas con:"
-            echo "  sudo apt install -y$missing_apt"
-            echo
-        fi
-    else
-        echo "falta: pkg-config"
-        failures=1
-    fi
-    # Opcionales: no rompen `check`, pero si la receta que los usa.
-    graal="${GRAALVM_HOME:-{{ default_graalvm }}}"
-    if [ ! -x "$graal/bin/native-image" ]; then
-        echo "aviso: falta native-image en $graal"
-        echo "  (solo hace falta para 'just native'; instala GraalVM CE 25)"
-    fi
-    command -v flatpak-builder >/dev/null || \
-        echo "aviso: falta flatpak-builder (solo hace falta para 'just flatpak')"
-    cargo llvm-cov --version >/dev/null 2>&1 || \
-        echo "aviso: falta cargo-llvm-cov (cargo binstall cargo-llvm-cov)"
-    cargo crap --version >/dev/null 2>&1 || \
-        echo "aviso: falta cargo-crap (cargo binstall cargo-crap@{{ crap_version }})"
-    [ "$failures" = 0 ] || exit 1
-    echo "herramientas: correcto"
+    RUFF_VERSION="{{ ruff_version }}" CRAP_VERSION="{{ crap_version }}" \
+        DEFAULT_GRAALVM="{{ default_graalvm }}" SYSTEM_LIBS="{{ system_libs }}" \
+        {{ justfile_directory() }}/scripts/tools.sh
 
-# No estan en Maven Central: hay que compilarlas desde el repositorio oficial.
-# La etiqueta v1.9.1 es inmutable, asi que esto se ejecuta una vez y la cache
-# acierta siempre despues.
-#
-# bootstrap.sh NO CRECE (ID-04): resuelve ~/.m2 y nada mas. Instalar GraalVM,
-# flatpak-builder o el token de pruebas son cosas con sudo o SDKMAN que un
-# script no debe hacer a espaldas de nadie; quien las comprueba es `tools`.
-#
-# Instala las dependencias de AutoFirma en ~/.m2 si no estan.
+# Instala las dependencias de AutoFirma en ~/.m2 si no estan (ADR-0002).
+[private]
 bootstrap:
-    ./bootstrap.sh
+    {{ justfile_directory() }}/scripts/bootstrap.sh
 
-# El `prepare` de package.json instala de paso la puerta de pre-push
-# (lefthook.yml). No hay una receta que la instale aparte a proposito: una
-# puerta que hay que acordarse de encender no la tiene nadie encendida.
-#
 # Instala las dependencias de node de rfirma-app.
+[private]
 deps:
     cd {{ app }} && pnpm install --frozen-lockfile
 
-# EL CIRCUITO DE CADENAS (ADR-0009 enmendado, ID-121):
-#
-#   po/messages.pot --msgmerge--> po/{es,ca,eu,gl,en}.po --po-import--> src/i18n/locales/*.ts
-#      versionado                       versionados                  generados, NO versionados
-#
-# `po` es el bucle de quien toca una cadena: se escribe en el .pot, se fusiona
-# y se regenera. El peaje esta aceptado a conciencia (ID-128).
-#
-# --all genera TAMBIEN los idiomas incompletos, rellenando con castellano, para
-# que quien traduce vea su trabajo antes del 100 %. Nunca en el CI.
-#
+# --all rellena tambien los idiomas incompletos, con castellano; nunca en el CI.
 # Fusiona el .pot con los cinco .po y regenera los catalogos.
+[group('dev')]
 po *args: deps
     #!/usr/bin/env bash
     set -euo pipefail
@@ -358,19 +129,13 @@ po *args: deps
     pnpm exec i18next-cli types -q
 
 # Genera src/i18n/locales/*.ts desde los .po. Node puro: sin gettext.
+[private]
 po-import: deps
     cd {{ app }} && node tools/po-import.mjs
     cd {{ app }} && pnpm exec i18next-cli types -q
 
-# LOS .po CUADRAN CON EL .pot Y ESTAN BIEN FORMADOS (ID-128). Un idioma
-# incompleto NO es un fallo: es lo normal mientras se traduce, y lo unico que
-# ocurre es que no se genera su .ts. Lo que si falla es un .po roto o con
-# claves que la plantilla no tiene.
-#
-# --use-untranslated y --use-fuzzy en msgcmp: sin ellos, msgcmp trata cada
-# cadena sin traducir como error fatal y un idioma al 0 % pondria el CI rojo.
-#
 # Comprueba los cinco .po contra la plantilla.
+[private]
 check-po:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -383,63 +148,19 @@ check-po:
     done
     echo "los .po cuadran con messages.pot"
 
-# LO QUE EL .pot NO PUEDE VER ES EL CODIGO (ID-127). i18next-cli entra como
-# vigilante y nunca como dueno del catalogo: mira src/ y contesta a las dos
-# preguntas que la cadena .pot -> .po -> .ts deja sin cubrir.
-#
-#   extract --ci     una t() cuya clave no esta en el catalogo -> sale con 1
-#   status --unused  una clave del catalogo que ya no usa nadie -> sale con 1
-#
-# Ambas leen la INSTANTANEA de node_modules/.cache/i18next-cli/, que escribe
-# po-import: `extract` reescribe el fichero que mira, y sobre los catalogos de
-# verdad se llevaria por delante el `: Catalog` que comprueba las claves.
-#
-# i18next-cli sobre el codigo.
+# i18next-cli sobre el codigo: una clave sin catalogo o un catalogo sin uso.
+[private]
 lint-i18n: po-import
     cd {{ app }} && pnpm exec i18next-cli extract --ci
     cd {{ app }} && pnpm exec i18next-cli status --unused
 
-# El token de la GRADA B (ADR-0014). Es idempotente y tarda segundos, asi que
-# `test-rust` lo llama siempre: la grada B corre en el carril rapido por
-# definicion, y una prueba que se salta en silencio porque falta el token no es
-# una prueba.
-#
-# Provisiona los tokens SoftHSM `rfirma-test` y `rfirma-test-ecc` desde
-# testdata/fnmt/.
-token:
-    ./testdata/softhsm/provision-token.sh
+# Instala o quita los certificados de pruebas en SoftHSM: `just certs install|uninstall`.
+[group('dev')]
+certs action:
+    ./testdata/softhsm/certs.sh {{ action }}
 
-# El banco de referencia CAdES/XAdES/FacturaE (ver testdata/reference/README.md):
-# lo que produce el original 1.9.2 con sus firmadores monofasicos, para que
-# cada ticket de formato compare su salida y la valide. Determinista salvo la
-# fecha de firma.
-#
-# Regenera testdata/reference/.
-reference-signatures:
-    ./rfirma-native-bridge/testbench/make-reference-signatures.sh
-
-# El oraculo de la grada C para CAdES/XAdES/FacturaE: SignValiderFactory del
-# original, consumido igual desde Maven local.
-#
-# Valida <file> con el validador del original. Imprime VALID o INVALID.
-validate-signature file:
-    ./rfirma-native-bridge/testbench/validate.sh {{ file }}
-
-# El accesorio del BANCO DE CONFORMIDAD (TD-55): el `autoscript.js` que sirve
-# una sede de verdad, corriendo bajo Node contra nuestro canal en
-# tests/conformance_bench.rs.
-#
-# NO SE COPIA AL REPOSITORIO: es codigo ajeno (EUPL-1.1/GPL-2.0) que no
-# distribuimos. Se descarga A ETIQUETA FIJADA —el tag v1.9.2, no `master`, que
-# va 219 commits por delante y sin publicar (ID-313)— y con el sha256
-# comprobado, asi que lo que corre es un fichero identificado, no lo que
-# hubiera hoy en una rama.
-#
-# ES UNA DESCARGA DE PREPARACION, NO UNA PRUEBA DE RED (ID-312): pasa una vez,
-# queda cacheada y a partir de ahi el banco es grada B. La grada D es que el
-# SUJETO de la prueba sea un tercero vivo, y aqui el sujeto es nuestro canal.
-#
-# Idempotente: si el fichero ya esta y su sha cuadra, no toca la red.
+# Descarga (a etiqueta y sha fijados) el autoscript.js del banco de conformidad.
+[group('ci')]
 autoscript:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -463,450 +184,67 @@ autoscript:
     echo "autoscript.js v1.9.2 descargado en testdata/conformance/"
 
 # Genera el mapa del protocolo de AutoFirma a tag fijado y lo cruza con el de rFirma.
-# Un mapa sin diferencias significa «no han cambiado los nombres», nunca «somos compatibles».
+[group('dev')]
 protocol-map *args:
     python3 {{ justfile_directory() }}/scripts/protocol-map.py {{ args }}
-
-# Comprueba que el mapa del protocolo esta al dia con el tag v1.9.2 fijado.
-# Un mapa sin diferencias significa «no han cambiado los nombres», nunca «somos compatibles».
-check-protocol-map:
-    python3 {{ justfile_directory() }}/scripts/protocol-map.py --check
-
 
 # ---------------------------------------------------------------------------
 # Navegacion
 # ---------------------------------------------------------------------------
 
-# Imprime el ESQUELETO de un fichero en vez de su contenido: cada elemento
-# publico, cada prueba y cada atributo que decide algo, con su numero de linea
-# y la PRIMERA linea de su documentacion. Nada mas.
-#
-# PARA QUE SIRVE: `crossing/guards.rs` son 14 KB, y leerlo entero cuesta ~4 k
-# tokens que un agente arrastra en su contexto durante el resto de la sesion,
-# reenviados en cada peticion. Su esqueleto son 2 KB y dice lo mismo para
-# situarse. Medido: en la construccion del issue #126, tres `cat` de ficheros
-# que el mapa ya marcaba como grandes se llevaron el 20 % de toda la fase de
-# exploracion.
-#
-# COMO SE USA, en dos pasos:
-#
-#   just outline rfirma-app/src-tauri/src/crossing/guards.rs   # el esqueleto
-#   sed -n '244,270p' rfirma-app/src-tauri/src/crossing/guards.rs  # el tramo
-#
-# El primer paso te da el numero de linea del elemento que buscas; el segundo
-# abre solo ese tramo. NO sustituye a leer el codigo que vas a EDITAR: te lleva
-# hasta el, para que abras diez lineas en vez de cuatrocientas.
-#
-# Es una heuristica de texto plano, no un analizador sintactico: algo con
-# macros raras se le escapara. No importa, porque el paso siguiente es leer el
-# tramo de verdad.
-#
 # Esqueleto de un fichero .rs, .ts o .tsx (ruta relativa a la raiz).
+[group('checklist')]
 outline path:
-    #!/usr/bin/env bash
-    # Sin `set -e`: la salida es corta a proposito, pero si alguien la pasa por
-    # `head` el SIGPIPE mataria a awk y la receta fallaria con un 141 que no
-    # significa nada.
-    set -u
-    file="{{ path }}"
-    [ -f "$file" ] || file="{{ justfile_directory() }}/{{ path }}"
-    if [ ! -f "$file" ]; then
-        echo "outline: no existe {{ path }}" >&2
-        exit 1
-    fi
-    case "$file" in
-        *.rs)        lang=rust ;;
-        *.ts|*.tsx)  lang=ts ;;
-        *)
-            echo "outline: solo .rs, .ts y .tsx. Para el resto, grep -n" >&2
-            exit 1 ;;
-    esac
-    awk -v lang="$lang" '
-    # Una linea de esqueleto: sin la sangria, sin la llave suelta del final.
-    function emit(n, s) {
-        sub(/^[ \t]+/, "", s)
-        sub(/[ \t]+$/, "", s)
-        sub(/[ \t]+\{[ \t]*$/, " {", s)
-        if (length(s) > 160) s = substr(s, 1, 157) "..."
-        printf "%5d  %s\n", n, s
-    }
-    # La documentacion se acumula hasta el final de la PRIMERA FRASE y se
-    # imprime entera: cortarla por donde cayo el salto de linea entrega media
-    # frase, que cuesta lo mismo y no dice nada.
-    function adddoc(n, marker, text) {
-        if (docbuf == "") { docbuf = marker " " text; docline = n; docdone = 0; return }
-        if (docdone) return
-        if (text == "") { docdone = 1; return }
-        docbuf = docbuf " " text
-    }
-    function flushdoc(   t) {
-        if (docbuf == "") return
-        t = docbuf
-        if (match(t, /\.[ ]/)) t = substr(t, 1, RSTART)
-        emit(docline, t)
-        docbuf = ""; docdone = 0
-    }
-    { if (docbuf != "" && length(docbuf) > 200) docdone = 1 }
+    {{ justfile_directory() }}/scripts/outline.sh {{ path }}
 
-    lang == "rust" && /^[ \t]*(\/\/\/|\/\/!)/ {
-        line = $0; sub(/^[ \t]*/, "", line)
-        text = line; sub(/^(\/\/\/|\/\/!)[ \t]?/, "", text)
-        adddoc(FNR, substr(line, 1, 3), text)
-        next
-    }
-    lang == "rust" && /^[ \t]*(pub |impl |fn |mod |const |static |type |struct |enum |macro_rules!)/ {
-        flushdoc(); emit(FNR, $0); next
-    }
-    lang == "rust" && /^[ \t]*#\[(test|tauri::command|derive|cfg\(test\))/ {
-        flushdoc(); emit(FNR, $0); next
-    }
-    lang == "rust" { flushdoc(); next }
-
-    lang == "ts" && /^[ \t]*\/\*\*/ {
-        # Un bloque de UNA linea (`/** ... */`) se cierra aqui mismo: si se
-        # entrara en modo bloque nunca se saldria y el codigo de debajo pasaria
-        # por documentacion.
-        if (/\*\//) {
-            line = $0
-            sub(/^[ \t]*\/\*\*[ \t]*/, "", line)
-            sub(/[ \t]*\*\/.*$/, "", line)
-            adddoc(FNR, "//", line)
-            next
-        }
-        inblock = 1; next
-    }
-    lang == "ts" && inblock {
-        if (/\*\//) { inblock = 0; next }
-        line = $0; sub(/^[ \t]*\*[ \t]?/, "", line); sub(/[ \t]+$/, "", line)
-        adddoc(FNR, "//", line)
-        next
-    }
-    lang == "ts" && /^(export |function |class |interface |type |const |async |declare )/ {
-        flushdoc(); emit(FNR, $0); next
-    }
-    lang == "ts" && /^[ \t]*(it|test|describe)\(/ { flushdoc(); emit(FNR, $0); next }
-    lang == "ts" && /^[ \t]+const [A-Za-z_$]+ = (async )?(\(|useCallback|function)/ {
-        flushdoc(); emit(FNR, $0); next
-    }
-    lang == "ts" && /^[ \t]*$/ { flushdoc(); next }
-    END { flushdoc() }
-    ' "$file"
-    wc -lc < "$file" | awk -v name="{{ path }}" '{
-        printf "\n-- %s: %d lineas, %d caracteres (~%.1fk tokens si lo lees entero).\n", \
-            name, $1, $2, $2 / 3500
-        if ($1 < 120)
-            printf "   Es corto: leelo entero si vas a tocarlo. --\n"
-        else {
-            printf "   Abre los tramos que necesites, TODOS EN UNA SOLA LLAMADA:\n"
-            printf "     sed -n %cA,Bp;C,Dp%c %s\n", 39, 39, name
-            printf "   Un turno por tramo sale mas caro que leer el fichero entero. --\n"
-        }
-    }'
-    # Los dos caminos de error de arriba ya han salido con 1. Aqui solo queda el
-    # 141 de un SIGPIPE si alguien encadena un `head`, y eso no es un fallo.
-    exit 0
-
-
-# Imprime EL CONTRATO ENTRE LOS DOS LADOS: las ordenes que la ventana puede
-# pedirle al backend y los tipos que cruzan la frontera, con los nombres de
-# campo que ve TypeScript.
-#
-# PARA QUE SIRVE: para saber esto mismo hay que leer hoy el `adapters/tauri.rs`
-# y el `adapters/views.rs` de cada uno de los cinco contextos. El contrato es
-# MAS correcto que las fuentes: de los cinco parametros de `begin_signing`,
-# cuatro son estado que Tauri inyecta y NO cruzan; aqui no aparecen. Quien va a
-# tocar la interfaz empieza por aqui y no abre ningun `adapters/` jamas.
-#
-# SE GENERA DE LAS FUENTES, y por eso no puede quedarse obsoleto. Un contrato
-# escrito a mano se desincroniza en el primer PR que anade una orden, y uno
-# desincronizado es PEOR que ninguno: el agente se lo cree, escribe el
-# adaptador contra una firma que no existe y lo descubre al compilar, cuando ya
-# ha gastado el contexto.
-#
-# Las dos reglas que lo hacen fiel, y que son verificables:
-#
-#   - La ORDEN se invoca por su nombre de Rust tal cual —`invoke(
-#     "list_certificates")`, ver `src/tauri.ts`—, asi que va sin tocar.
-#   - Los CAMPOS los renombra serde a camelCase (`rename_all` en cada
-#     `crossing!`), asi que se renombran: `holder_name` sale `holderName`, que
-#     es lo que el adaptador escribe de verdad.
-#
-# Los tipos salen del registro de `crossing.rs`, que el enlazador completa con
-# cada `crossing!`: un tipo nuevo aparece aqui por declararse, sin lista que
-# mantener, y uno que derive `Serialize` a mano no es un `WindowCrossing` y no
-# cruza.
-#
-# Las FUENTES de las ordenes se descubren por ruta, igual que en la guarda de
-# `crossing/guards.rs`: en el `adapters/` de cualquier contexto bajo `src/`, los
-# `tauri*.rs`, `views*.rs` y `orders*.rs` (RD-02): el adaptador de Tauri y nada
-# mas. Sin lista de ficheros. `src` se puede apuntar a otro arbol para probar la
-# receta.
-#
 # Lo que la ventana puede pedirle al backend, generado de las fuentes.
+[group('dev')]
 contract src=(tauri / "src"):
     cd {{ tauri }} && cargo run -q --example contract -- "{{ src }}"
 
-# EL CONTRATO VENTANA-BACKEND NO CAMBIA (RD-11 del #408): `tests/contract.snapshot`
-# es el oraculo de la ventana. Si esta receta se pone roja, un tipo de cruce o
-# una orden ha cambiado de forma, y eso se discute en el issue, no se acomoda
-# aqui. Vive en `check-rust` porque el contrato se genera desde el crate.
-#
 # Comprueba que `just contract` sigue siendo el de la instantanea.
+[private]
 check-contract: build-ts
     #!/usr/bin/env bash
     set -eu
     snapshot={{ tauri }}/tests/contract.snapshot
     if ! diff -u "$snapshot" <(just contract); then
-        echo "el contrato ventana-backend ha cambiado; ver RD-11 del #408" >&2
+        echo "el contrato ventana-backend ha cambiado" >&2
         exit 1
     fi
     echo "check-contract: el contrato es el de la instantanea"
 
-# ---------------------------------------------------------------------------
-# Medicion
-# ---------------------------------------------------------------------------
-
-# Cuanto cuesta cada tipo de agente en este repositorio, leyendo las
-# transcripciones de ~/.claude/projects (las de los arboles de trabajo
-# incluidas).
-#
-# POR QUE ESTE NUMERO Y NO EL DE TOKENS A SECAS: casi todo lo que entra en una
-# peticion es relectura de cache, que se factura a una decima parte. Sumar
-# tokens de entrada a pelo multiplica por diez el coste real y hace que
-# cualquier comparacion mienta. La columna es la entrada efectiva:
-#
-#     cache_read x 0,1  +  cache_creation x 1,25
-#
-# COMO SE LEE: el coste crece con el CUADRADO de la longitud de la sesion,
-# porque lo leido se queda en el contexto y se reenvia en cada peticion
-# posterior. Por eso la columna de peticiones importa tanto como la de coste:
-# un agente que baja de 150 a 75 peticiones no cuesta la mitad, cuesta la
-# cuarta parte. Y por eso una lectura grande temprana es cara aunque el fichero
-# sea pequeno.
-#
-# LAS COLUMNAS DE TURNO miden otra cosa, y hay que mirarlas aparte: cuanto
-# contexto tiene el agente en su peticion numero 10 y numero 20, y cuanto le
-# crece por turno entre la 5 y la 20. Ahi es donde se ve si una mejora de
-# lectura funciona, porque el efectivo total lo tapa: bajar la pendiente un
-# 15 % no salva a un ticket que dura el triple de turnos.
-#
-# El argumento opcional es una marca de tiempo ISO. Sin zona horaria se
-# entiende como HORA LOCAL y se traduce a UTC, que es como estan fechadas las
-# transcripciones; con `Z` o con desfase explicito se respeta lo que pongas.
-# Con el argumento salen las dos filas, el total historico y lo arrancado
-# desde el corte, mas el cambio entre ambas: el antes y el despues de una
-# vez.
-#
-#     just agent-cost                    # todo lo que hay
-#     just agent-cost 2026-09-02T12:15   # ademas, solo desde ese corte
-#
-# Coste por tipo de agente, de las transcripciones de este repositorio.
-agent-cost since="":
-    #!/usr/bin/env python3
-    import datetime, glob, json, os, sys
-
-    project = "{{ justfile_directory() }}"
-
-    # Las transcripciones van fechadas en UTC. Un corte escrito a mano se
-    # escribe en la hora del reloj de quien lo escribe, asi que sin zona se
-    # entiende local: comparar las dos a pelo deja fuera dos horas de agentes
-    # sin avisar de nada.
-    def to_utc(raw):
-        if not raw:
-            return ""
-        try:
-            stamp = datetime.datetime.fromisoformat(raw.replace("Z", "+00:00"))
-        except ValueError:
-            return raw
-        if stamp.tzinfo is None:
-            stamp = stamp.astimezone()
-        return stamp.astimezone(datetime.timezone.utc).isoformat().replace("+00:00", "")
-
-    since = to_utc("{{ since }}")
-
-    # Un arbol de trabajo tiene su propio directorio de proyecto, con el mismo
-    # prefijo y un sufijo: el comodin del final los recoge todos.
-    slug = "-" + project.strip("/").replace("/", "-")
-    pattern = os.path.expanduser("~/.claude/projects") + "/" + slug + "*/**/subagents/*.meta.json"
-
-    runs = []
-    for meta_path in glob.glob(pattern, recursive=True):
-        try:
-            kind = json.load(open(meta_path)).get("agentType", "?")
-        except Exception:
-            continue
-        transcript = meta_path.replace(".meta.json", ".jsonl")
-        if not os.path.exists(transcript):
-            continue
-
-        # Una peticion aparece varias veces en la transcripcion, una por trozo
-        # emitido, y todas cargan el mismo uso: se cuentan por su identificador
-        # o se cuenta de mas. El diccionario ademas las guarda en orden, que es
-        # lo que permite preguntar por la peticion numero 10.
-        requests, first = dict(), None
-        for line in open(transcript, errors="replace"):
-            try:
-                entry = json.loads(line)
-            except Exception:
-                continue
-            if first is None and entry.get("timestamp"):
-                first = entry["timestamp"]
-            usage = (entry.get("message") or dict()).get("usage")
-            if not usage:
-                continue
-            ident = entry.get("requestId") or (entry.get("message") or dict()).get("id")
-            requests[ident] = (
-                usage.get("cache_read_input_tokens", 0),
-                usage.get("cache_creation_input_tokens", 0),
-                usage.get("input_tokens", 0),
-            )
-        if requests:
-            runs.append((kind, first or "", list(requests.values())))
-
-    if not runs:
-        print("sin transcripciones de agentes en " + project)
-        sys.exit(0)
-
-    def turn(usages, n):
-        """Contexto completo que entro en la peticion numero n, si llego a haberla."""
-        if len(usages) < n:
-            return None
-        read, created, fresh = usages[n - 1]
-        return read + created + fresh
-
-    def summarize(kind, cutoff):
-        """Las cinco cifras de un tipo de agente: un None donde no haya de donde sacarlas."""
-        chosen = [u for k, f, u in runs if k == kind and (not cutoff or f >= cutoff)]
-        if not chosen:
-            return None
-
-        def average(values):
-            values = [v for v in values if v is not None]
-            return sum(values) / len(values) if values else None
-
-        return (
-            len(chosen),
-            average([len(u) for u in chosen]),
-            average([sum(r for r, _, _ in u) * 0.1 + sum(c for _, c, _ in u) * 1.25 for u in chosen]),
-            average([turn(u, 10) for u in chosen]),
-            average([turn(u, 20) for u in chosen]),
-            average([(turn(u, 20) - turn(u, 5)) / 15 for u in chosen if turn(u, 20) is not None]),
-        )
-
-    HEAD = "%-32s %5s %11s %13s %8s %8s %10s"
-
-    def thousands(value, digits=0):
-        if value is None:
-            return "-"
-        if digits:
-            return format(round(value / 1000, 1), ",.1f") + "k"
-        return format(round(value / 1000), ",d") + "k"
-
-    def emit(label, row):
-        print("%-32s %5d %11.0f %13s %8s %8s %10s" % (
-            label, row[0], row[1], format(round(row[2]), ",d"),
-            thousands(row[3]), thousands(row[4]), thousands(row[5], 1)))
-
-    def change(before, after):
-        """El cambio en tanto por ciento, o un guion si a una de las dos le falta la cifra."""
-        if before is None or after is None or not before:
-            return "-"
-        percent = (after - before) / before * 100
-        return "%+.0f%%" % percent if abs(percent) >= 1 else "="
-
-    print(HEAD % ("agente", "n", "peticiones", "efectivo", "turno10", "turno20", "pendiente"))
-    print(HEAD % ("", "", "por agente", "por agente", "", "", "por turno"))
-
-    kinds = {k for k, _, _ in runs}
-    for kind in sorted(kinds, key=lambda k: -summarize(k, "")[2]):
-        whole = summarize(kind, "")
-        if not since:
-            emit(kind, whole)
-            continue
-        recent = summarize(kind, since)
-        print(kind)
-        emit("  todo", whole)
-        if recent is None:
-            print("  ninguno desde el corte")
-            continue
-        emit("  desde el corte", recent)
-        print(HEAD % ("  cambio", "", change(whole[1], recent[1]), change(whole[2], recent[2]),
-                      change(whole[3], recent[3]), change(whole[4], recent[4]),
-                      change(whole[5], recent[5])))
-
-    print()
-    print("entrada efectiva = cache_read x 0,1 + cache_creation x 1,25")
-    print("turnoN = contexto entero que entro en la peticion N; pendiente = lo que crece entre la 5 y la 20")
-    if since:
-        print("corte en " + since + " UTC; el total incluye lo de despues, asi que el cambio va contra la media entera")
-
-# ---------------------------------------------------------------------------
-
-# Las tres cadenas, y falla si falla cualquiera.
-#
-# `check-repo` va PRIMERA a proposito: sus tres comprobaciones no necesitan ni
-# bootstrap ni deps, tardan milisegundos, y lo que detectan —un fichero de
-# bloqueo tocado sin regenerar las fuentes vendorizadas, un token del sistema de
-# diseno editado a mano, una version que dice tres cosas distintas— no lo
-# encuentra ninguna de las otras.
-#
-# ATAJO LOCAL, NO LO QUE CORRE EL CI: la puerta son los carriles `check-*` de
-# arriba. Esta receta existe para pasar todo el linting de una vez sin compilar
-# ni probar nada.
-lint: check-repo check-po lint-java lint-ts lint-i18n lint-rust
-
-# -Xlint:all, como decidio el issue #11.
-#
-# SIN `clean`, y no es un descuido: `clean` se llevaba por delante
-# target/lib/rfirma/librfirma_crypto.so, o sea que `just check` borraba la
-# libreria nativa a mitad de ejecucion y `just test-native` fallaba despues
-# senalando un fichero que existia al empezar. El aviso vivia en
-# docs/agents/code-host-ci.md; ahora no hace falta. No se pierde ninguna
-# puerta: -Xlint:all avisa pero no es -Werror, asi que esta receta comprueba
-# que compila, y de eso maven se entera igual sin borrar nada.
+# Compila el puente Java con -Xlint:all; sin `clean`, que borraria la libreria nativa a mitad de `just check`.
+[private]
 lint-java: bootstrap
     cd {{ bridge }} && mvn -B compile
 
-# Biome, no eslint + prettier (ADR-0014): un binario que formatea y lintea en
-# milisegundos, y aqui el ecosistema de plugins de eslint no cobra porque no
-# hay router, ni tabla de datos, ni biblioteca de componentes.
-#
 # Biome sobre rfirma-app.
+[private]
 lint-ts: po-import
     cd {{ app }} && pnpm exec biome ci .
 
-# LAS RECETAS QUE ESCRIBEN, no las que comprueban: son las que nombra la puerta
-# de pre-push (lefthook.yml) cuando bloquea, asi que su nombre es parte del
-# mensaje de error y no cambia sin cambiarlo alli.
-#
 # Formatea las tres cadenas escribiendo.
+[group('checklist')]
 fmt: fmt-rust fmt-ts fmt-python
 
-# SIN build-ts, al contrario que lint-rust: rustfmt parsea, no compila, y esa
-# dependencia convertiria en minutos una receta de tres decimas.
-#
 # rustfmt sobre rfirma-app/src-tauri.
+[private]
 fmt-rust:
     cd {{ tauri }} && cargo fmt --all
 
-# SIN po-import, al contrario que lint-ts: biome.json excluye src/i18n/locales,
-# que es lo unico que po-import genera, asi que aqui no pinta nada.
-#
 # Formateador de biome sobre rfirma-app.
+[private]
 fmt-ts:
     cd {{ app }} && pnpm exec biome format --write .
 
-# NO es lo que comprueba el CI, que corre `ruff check`: son dos cosas distintas,
-# y `ruff format` solo lo vigila la puerta local.
-#
 # `ruff format` sobre packaging y scripts.
+[private]
 fmt-python:
     ruff format {{ justfile_directory() }}/packaging {{ justfile_directory() }}/scripts
 
-# Depende de build-ts porque tauri-build lee frontendDist (../dist) ya en
-# build.rs: sin el, clippy se cae antes de mirar una sola linea de Rust.
-#
 # clippy y rustfmt sobre rfirma-app/src-tauri.
+[private]
 lint-rust: build-ts
     cd {{ tauri }} && cargo fmt --all -- --check
     cd {{ tauri }} && cargo clippy --all-targets --all-features -- -D warnings
@@ -915,170 +253,88 @@ lint-rust: build-ts
 # Build
 # ---------------------------------------------------------------------------
 
-# `tsc -b` va DENTRO de build, no en una receta aparte (ID-03): un build que
-# compila TypeScript sin comprobar tipos miente sobre lo que ha comprobado.
-#
-# Compila las tres cadenas, binario de release incluido. ATAJO LOCAL Y PASO DE
-# EMPAQUETADO, no parte del carril rapido: `check-rust` no construye el
-# release (ver alli el motivo).
-build: check-native build-java build-ts build-rust
-
 # Compila el puente Java.
+[private]
 build-java: bootstrap
     cd {{ bridge }} && mvn -B package -DskipTests
 
 # tsc -b y vite build.
+[group('ci')]
 build-ts: po-import
     cd {{ app }} && pnpm exec tsc -b
     cd {{ app }} && pnpm exec vite build
 
-# Sin `tauri build`: esta receta es el atajo de compilacion y el paso que
-# alimenta al flatpak, cuyo manifiesto instala el binario el mismo. Quien
-# empaqueta el .deb y el .rpm es la receta `bundle`, y esa si pasa por el
-# bundler. `vite build` tiene que haber corrido antes, porque tauri-build lee
-# frontendDist.
-#
-# --features custom-protocol NO ES OPCIONAL, y es justo lo que se pierde al no
-# usar `cargo tauri build`, que la pasa el solo. Sin ella el `dev` de Tauri
-# queda encendido y el binario apunta la ventana a devUrl en vez de servir el
-# frontal empotrado. Ver el bloque [features] de src-tauri/Cargo.toml.
-#
 # Compila el binario de la aplicacion.
+[group('ci')]
 build-rust: build-ts
     cd {{ tauri }} && cargo build --release --features custom-protocol
 
-# La libreria nativa NO SE ENCADENA (ADR-0013): `dev` y `build` comprueban que
-# esta y, si falta, fallan nombrando `just native`. Encadenarla metaria 1 m 22 s
-# de native-image en cada compilacion.
-#
-# RFIRMA_SKIP_NATIVE=1 salta la comprobacion. Existe por el carril rapido del CI,
-# que corre `just check` sin construir la imagen nativa a proposito (son tres
-# minutos que el carril lento ya paga). Ponerla a mano en local es decir "se lo
-# que hago y no voy a ejecutar nada".
-#
-# Falla nombrando `just native` si la libreria nativa no esta.
+# Falla nombrando `just native` si la libreria nativa no esta; RFIRMA_SKIP_NATIVE=1 la salta (ADR-0013).
+[private]
 check-native:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    if [ "${RFIRMA_SKIP_NATIVE:-0}" = "1" ]; then
-        echo "check-native: omitida (RFIRMA_SKIP_NATIVE=1)"
-        exit 0
-    fi
-    if [ ! -f "{{ native_lib }}" ]; then
-        echo "falta la libreria nativa:" >&2
-        echo "  {{ native_lib }}" >&2
-        echo >&2
-        echo "Ejecuta 'just native' (tarda unos tres minutos y necesita" >&2
-        echo "GraalVM CE 25). No se construye sola a proposito: ver ADR-0013." >&2
-        exit 1
-    fi
+    {{ justfile_directory() }}/scripts/check-native.sh {{ native_lib }}
 
 # ---------------------------------------------------------------------------
 # Test
 # ---------------------------------------------------------------------------
 
-# Las tres cadenas mas la puerta CRAP. Las gradas las fija el ADR-0014: A (nada)
-# y B (SoftHSM) corren aqui; C (la libreria nativa) se marca #[ignore] y solo la
-# ejecuta el carril lento, pero AQUI SE COMPILA.
-#
-# Ejecuta las pruebas de las tres cadenas y la puerta CRAP. ATAJO LOCAL: el
-# carril rapido no corre `test-rust`, porque `crap` ya ejecuta la suite
-# instrumentada. Aqui si esta, que sin instrumentar es cuatro veces mas rapida
-# y es el bucle corto de quien desarrolla.
-test: test-java test-ts test-rust crap
-
-# Las de grada A del puente. Las de grada C llevan @Tag("gradaC") y el pom las
-# excluye por omision, porque necesitan poppler (`pdfsig`) y el carril rapido no
-# lo instala. Se COMPILAN igual —`mvn test` compila todas—, que es la mitad de la
-# TD-02 que le toca a esta cadena.
-#
-# `verify` Y NO `test`: recorre compile (con -Xlint:all), test y package en una
-# sola JVM, asi que es a la vez el lint, el build y las pruebas de esta cadena.
-# Por eso `check-java` es solo esto y por eso NO depende de `build-java`:
-# encadenarlo seria arrancar maven dos veces para empaquetar dos veces.
-#
-# Pruebas del puente Java.
+# Pruebas del puente Java (`verify`: compila, prueba y empaqueta en una JVM).
+[private]
 test-java: bootstrap
     cd {{ bridge }} && mvn -B verify
 
 # vitest.
+[private]
 test-ts: po-import
     cd {{ app }} && pnpm exec vitest run --reporter=dot
 
 # cargo test, mas la compilacion de las pruebas de grada C.
-test-rust: token build-ts
+[private]
+test-rust: (certs "install") build-ts
     cd {{ tauri }} && cargo test --all-features
-    # El punto ciego de #[ignore] es que una prueba de grada C que deja de
-    # compilar contra la FFI se salta EN SILENCIO. Esto lo cierra: el carril
-    # rapido las compila aunque no las ejecute (TD-02).
     cd {{ tauri }} && cargo test --all-features --no-run
 
-# RFIRMA_LIB_DIR por lo mismo que en `dev`: el binario de una prueba vive en
-# src-tauri/target/debug/deps/, asi que la ruta relativa al ejecutable que usa
-# el cargador (../lib/rfirma) resolveria a src-tauri/target/debug/lib/rfirma y
-# no a donde `native` acaba de instalar la libreria.
 # Las de grada C, que el carril lento ejecuta con --ignored.
-test-native: token check-native build-ts
+[group('ci')]
+test-native: (certs "install") check-native build-ts
     cd {{ tauri }} && RFIRMA_LIB_DIR="$(dirname "{{ native_lib }}")" cargo test --all-features -- --ignored
-    # Las de grada C del puente Java: el ciclo trifasico entero validado con
-    # `pdfsig` de poppler, que es la puerta automatica de validez del ADR-0014.
-    # -DexcludedGroups= y -Dgroups=gradaC ejecutan unicamente la grada C sin repetir unitarios.
     cd {{ bridge }} && mvn -B test -DexcludedGroups= -Dgroups=gradaC
 
 # ---------------------------------------------------------------------------
 # CRAP: solo en Rust (ADR-0014)
 # ---------------------------------------------------------------------------
-#
-# En Java no entra —lo unico en Maven Central es un plugin de Hudson de 2010 y
-# el puente es codigo que reenvia— y en TypeScript tampoco: la complejidad
-# ciclomatica de un componente React es JSX condicional, que no es lo que la
-# metrica mide. El codigo de riesgo de este proyecto esta todo en Rust.
-#
-# Umbral ABSOLUTO en 30 (el de Savoia), sin --baseline ni --fail-regression: el
-# trinquete exige versionar un JSON que cambia en casi cada PR, y su unica
-# ventaja —amnistiar deuda existente— no aplica cuando no hay deuda.
 
-# EJECUTA LA SUITE, no solo la mide: `cargo llvm-cov` corre `cargo test` por
-# dentro y propaga su codigo de salida. Por eso el carril rapido no necesita
-# ademas un `cargo test`, y por eso tampoco hace falta el `--no-run` de las de
-# grada C: llvm-cov compila todos los objetivos de prueba (TD-02).
-#
-# Genera lcov.info con cargo llvm-cov.
-coverage: token build-ts
-    cd {{ tauri }} && cargo llvm-cov --all-features --lcov --output-path lcov.info
+# Genera el lcov de toda la suite con cargo llvm-cov.
+[private]
+coverage: (certs "install") build-ts
+    mkdir -p "{{ coverage_out }}/coverage"
+    cd {{ tauri }} && cargo llvm-cov --all-features --lcov --output-path "{{ coverage_out }}/coverage/lcov.info"
 
 # La puerta del carril rapido, con el modulo FFI oculto.
+[private]
 crap: coverage
-    cd {{ tauri }} && cargo crap --lcov lcov.info --threshold 30 --fail-above \
+    cd {{ tauri }} && cargo crap --lcov "{{ coverage_out }}/coverage/lcov.info" --threshold 30 --fail-above \
         --allow '{{ ffi_allow }}'
 
-# Puerta CRAP del modulo FFI contra la libreria nativa (ADR-0014).
 # Corre unicamente el ciclo nativo (grada C) y mide el adaptador FFI.
-crap-ffi: token check-native build-ts
-    cd {{ tauri }} && RFIRMA_LIB_DIR="$(dirname "{{ native_lib }}")" cargo llvm-cov --test native_cycle --all-features --lcov --output-path lcov.info \
+[group('ci')]
+crap-ffi: (certs "install") check-native build-ts
+    mkdir -p "{{ coverage_out }}/crap-ffi"
+    cd {{ tauri }} && RFIRMA_LIB_DIR="$(dirname "{{ native_lib }}")" cargo llvm-cov --test native_cycle --all-features --lcov --output-path "{{ coverage_out }}/crap-ffi/lcov.info" \
         -- --ignored
-    cd {{ tauri }} && cargo crap --path '{{ ffi_allow }}' --lcov lcov.info --threshold 30 --fail-above
+    cd {{ tauri }} && cargo crap --path '{{ ffi_allow }}' --lcov "{{ coverage_out }}/crap-ffi/lcov.info" --threshold 30 --fail-above
+
+# Borra el arbol instrumentado, los informes y los volcados; deja la compilacion normal.
+[group('checklist')]
+clean-coverage:
+    {{ justfile_directory() }}/scripts/clean-coverage.sh {{ cargo_target }} {{ tauri }}
 
 # ---------------------------------------------------------------------------
 # Imagen nativa, empaquetado y desarrollo
 # ---------------------------------------------------------------------------
 
-# Tarda minutos y consume mucha memoria; por eso el workflow no la construye
-# en cada PR (ver .github/workflows/ci.yml).
-#
-# AQUI NO HAY BANDERAS SUELTAS, y es a proposito (ID-06): el nombre de la
-# libreria, --no-fallback y los .afm de iText viven VERSIONADOS en
-# rfirma-native-bridge/src/main/resources/META-INF/native-image/, que
-# native-image recoge del classpath el solo. Asi la imagen se construye igual
-# desde un clon limpio que desde aqui. Si vuelve a hacer falta una bandera, va a
-# ese fichero, no a esta linea.
-#
-# Produce la ruta CANONICA del ADR-0013, y solo librfirma_crypto.so: si algun dia
-# el directorio de construccion vuelve a tener los auxiliares de AWT, un
-# `install *.so` reintroduciria libawt.so — y con el, el aborto del proceso ante
-# un JPEG con perfil ICC que midio el #36.
-#
-# Construye la libreria nativa compartida con GraalVM CE 25.
+# Construye la libreria nativa compartida con GraalVM CE 25 (ADR-0013).
+[group('ci')]
 native: build-java
     #!/usr/bin/env bash
     set -euo pipefail
@@ -1088,14 +344,9 @@ native: build-java
     mkdir -p "$build_dir" && cd "$build_dir"
     "$graal/bin/native-image" --shared \
         -cp "{{ bridge }}/target/rfirma-native-bridge-0.1.0.jar:$(cat {{ bridge }}/target/cp.txt)"
-    # El directorio de DISTRIBUCION se vacia antes de copiar. No es limpieza
-    # cosmetica: sin esto hereda lo que dejase una version anterior de esta
-    # receta —las que instalaban los seis .so— y el directorio que el manifiesto
-    # empaqueta acabaria con libawt.so dentro sin que nadie lo tocara.
     rm -rf "$dest"
     mkdir -p "$dest"
     install -m644 "$build_dir/librfirma_crypto.so" "$dest/librfirma_crypto.so"
-    # Y se comprueba, porque la invariante es "UNO", no "el que acabo de copiar".
     sobran="$(ls -1 "$dest" | grep -v '^librfirma_crypto\.so$' || true)"
     if [ -n "$sobran" ]; then
         echo "sobra algo en $dest:" >&2
@@ -1104,55 +355,13 @@ native: build-java
     fi
     ls -la "$dest"
 
-# El suelo de glibc del ADR-0004/ADR-0015: `librfirma_crypto.so` promete
-# GLIBC_2.34 y no mas alto, medido en docs/research/glibc-libreria-nativa.md.
-# La promesa la sostiene ESTA PUERTA, no un contenedor `ubuntu:22.04` (ID-149):
-# adoptar un contenedor de construccion congelaria toda la cadena solo para
-# fijar un numero que `objdump` ya puede leer sobre el resultado.
-#
-# El mismo fichero cruza los tres canales (ADR-0004), asi que basta con medir
-# UNA VEZ la libreria recien construida; no hace falta repetirlo por formato.
-#
-# Comprueba el suelo de glibc de la libreria nativa.
+# Comprueba el suelo de glibc de la libreria nativa (docs/research/glibc-libreria-nativa.md).
+[group('ci')]
 check-glibc lib=native_lib:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    suelo="2.34"
-    lib="{{ lib }}"
-    if [ ! -f "$lib" ]; then
-        echo "no existe $lib; ejecuta 'just native'" >&2
-        exit 1
-    fi
-    maximo="$(objdump -T "$lib" | grep -oE 'GLIBC_[0-9]+\.[0-9]+(\.[0-9]+)?' \
-        | sed 's/^GLIBC_//' | sort -V | tail -1 || true)"
-    if [ -z "$maximo" ]; then
-        echo "objdump no encontro ningun simbolo GLIBC_* en $lib" >&2
-        exit 1
-    fi
-    echo "GLIBC_* maximo en $lib: $maximo (suelo prometido: $suelo)"
-    mayor="$(printf '%s\n%s\n' "$suelo" "$maximo" | sort -V | tail -1)"
-    if [ "$mayor" != "$suelo" ]; then
-        echo "SUBE el suelo de glibc: $maximo > $suelo" >&2
-        echo "revisa docs/research/glibc-libreria-nativa.md; si el suelo ha" >&2
-        echo "subido de verdad, sube el pin de esta receta a la vez" >&2
-        exit 1
-    fi
-    echo "OK  dentro del suelo prometido"
+    {{ justfile_directory() }}/scripts/check-glibc.sh {{ lib }}
 
-# El manifiesto lee la ruta canonica que produce `native` y el frontend ya
-# construido de rfirma-app/dist, porque tauri-build lee `frontendDist` dentro de
-# su propio build.rs. Por eso esta receta encadena tambien `build-ts`.
-#
-# EL ENTREGABLE DEL v0.1 ES EL FICHERO .flatpak (ID-42), no la instalacion: se
-# construye contra un repositorio ostree local y de ahi sale el bundle de un
-# solo fichero, que se instala con `flatpak install`. No se publica en ningun
-# sitio —ni Releases, ni repositorio remoto, ni GPG—: eso es el ADR-0015 y
-# queda fuera de este hito.
-#
-# El runtime NO va dentro del bundle: se consume del remoto de Flathub, que es
-# por tanto requisito de instalacion. Ver el README.
-#
 # Construye el flatpak, el unico canal soportado (ADR-0015).
+[group('ci')]
 flatpak: check-native build-ts
     #!/usr/bin/env bash
     set -euo pipefail
@@ -1164,34 +373,18 @@ flatpak: check-native build-ts
     echo "bundle: $PWD/me.sgomez.rfirma.flatpak ($(du -h me.sgomez.rfirma.flatpak | cut -f1))"
     echo "  flatpak install --user me.sgomez.rfirma.flatpak"
 
-# Los otros dos canales del ADR-0004, los que NO son el flatpak: el bundler de
-# Tauri produce el .deb y el .rpm de una sola pasada, con `bundle.active: true`
-# y `targets: ["deb", "rpm"]` en tauri.conf.json.
-#
-# `tauri build` y NO `cargo build --release`: la bandera --features
-# custom-protocol la pasa el solo (ver el comentario de `build-rust`, donde no
-# usarla es justo lo que obliga a escribirla a mano), y es el unico que sabe
-# empaquetar. Comprueba `check-native` (ADR-0013) porque la libreria entra en los
-# dos paquetes por `bundle.linux.<formato>.files` desde la ruta canonica, y
-# `build-ts` porque tauri-build lee frontendDist.
-#
-# LA REGLA DE LAS CANDIDATAS NO SE REIMPLEMENTA AQUI (ID-154): se consulta
-# packaging/native-packages-allowed.sh con la version de tauri.conf.json, que es
-# la fuente (ID-150). Una `-rc.N` no tiene representacion valida en el campo
-# Version de un RPM, asi que ahi esta receta no construye nada y lo dice.
-#
-# La puerta del contenido (ADR-0012, ID-144) es la MISMA que la del flatpak:
-# packaging/verifica-contenido.sh sobre el paquete construido, uno por formato.
-#
-# Construye el .deb y el .rpm con el bundler de Tauri (ADR-0004).
-bundle: check-native build-ts
+# Construye el .deb y el .rpm con el bundler de Tauri (ADR-0004); quick="true" salta el candado de version.
+[group('ci')]
+bundle quick="false": check-native build-ts
     #!/usr/bin/env bash
     set -euo pipefail
     cd "{{ justfile_directory() }}"
-    version="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["version"])' rfirma-app/src-tauri/tauri.conf.json)"
-    if ! packaging/native-packages-allowed.sh "$version"; then
-        echo "bundle: no hay nada que construir para $version" >&2
-        exit 1
+    if [ "{{ quick }}" != "true" ]; then
+        version="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["version"])' rfirma-app/src-tauri/tauri.conf.json)"
+        if ! packaging/native-packages-allowed.sh "$version"; then
+            echo "bundle: no hay nada que construir para $version" >&2
+            exit 1
+        fi
     fi
     (cd "{{ app }}" && pnpm exec tauri build)
     salida="rfirma-app/src-tauri/target/release/bundle"
@@ -1205,112 +398,13 @@ bundle: check-native build-ts
         echo "$formato: $PWD/$paquete ($(du -h "$paquete" | cut -f1))"
     done
 
-# A mano, cuando cambie un fichero de bloqueo: el flatpak se construye SIN red
-# (ADR-0013) y el CI comprueba que estos ficheros estan al dia en vez de
-# regenerarlos, porque un fichero generado dentro del CI es un fichero que
-# nadie ha mirado.
-#
 # Regenera cargo-sources.json y node-sources.json.
+[group('release')]
 flatpak-sources:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    cd "{{ justfile_directory() }}/packaging/flatpak"
-    # Los dos generadores viven fuera de este repositorio: son de
-    # flatpak/flatpak-builder-tools. No se versionan aqui ni los instala
-    # bootstrap.sh (ID-04); se traen a mano la primera vez.
-    if [ ! -f flatpak-cargo-generator.py ]; then
-        echo "falta packaging/flatpak/flatpak-cargo-generator.py" >&2
-        echo "  https://github.com/flatpak/flatpak-builder-tools/tree/master/cargo" >&2
-        exit 1
-    fi
-    command -v flatpak-node-generator >/dev/null || {
-        echo "falta flatpak-node-generator" >&2
-        echo "  https://github.com/flatpak/flatpak-builder-tools/tree/master/node" >&2
-        exit 1
-    }
-    python3 flatpak-cargo-generator.py \
-        ../../rfirma-app/src-tauri/Cargo.lock -o cargo-sources.json
-    flatpak-node-generator pnpm ../../rfirma-app/pnpm-lock.yaml -o node-sources.json
-    # El sello que lee `check-flatpak-sources`: el sha256 de cada fichero de
-    # bloqueo TAL Y COMO estaba al generar los JSON de arriba. Se escribe en el
-    # formato de sha256sum para que comprobarlo sea `sha256sum -c` y no un
-    # analizador nuestro. Las rutas van relativas a la raiz del repositorio,
-    # que es desde donde comprueba el script.
-    cd "{{ justfile_directory() }}"
-    sha256sum rfirma-app/src-tauri/Cargo.lock rfirma-app/pnpm-lock.yaml \
-        > packaging/flatpak/sources.lock
-    echo
-    echo "regeneradas. Versiona cargo-sources.json, node-sources.json y sources.lock."
-
-# La comprobacion de ID-07, sin regenerar nada. Va dentro de `lint` (y por
-# tanto de `check`) en vez de ser un paso suelto del workflow, porque
-# docs/agents/code-host.md promete que el CI ejecuta `just check` y nada mas.
-#
-# Comprueba que las fuentes vendorizadas del flatpak estan al dia.
-check-flatpak-sources:
-    {{ justfile_directory() }}/packaging/flatpak/check-sources.sh
-
-# La comprobacion de ID-56, hermana de la de arriba y por los mismos motivos:
-# el bundle del sistema de diseno es normativo y despues del corte no hay
-# origen que consultar, asi que lo unico que puede protegerlo es un sello.
-#
-# Comprueba que el bundle del sistema de diseno no se ha tocado a mano.
-check-ds-bundle:
-    {{ justfile_directory() }}/rfirma-app/src/design-system/check-bundle.sh
-
-# La puerta del ID-170, tercera hermana de `check-repo` y por los mismos
-# motivos: una accion fijada por etiqueta es codigo de un tercero que puede
-# cambiar bajo los pies del runner, y la convencion de fijarlas por SHA se
-# rompe sola —quien anada un paso copiara el `uses: foo/bar@v1` del README de
-# esa accion—.
-#
-# Comprueba que las acciones de los workflows estan fijadas por SHA.
-check-actions:
-    {{ justfile_directory() }}/.github/check-workflows.sh
-
-# El mecanismo de publicacion (ID-172, ID-174), y la unica parte de la tuberia
-# de entrega que NO se puede ensayar con una etiqueta `-rc.N`: el ensayo se
-# detiene justo antes de tocar el anfitrion, asi que si esto no se prueba aqui
-# no se prueba en ningun sitio. La pata remota no se simula: levanta el mismo
-# `rrsync` del `authorized_keys` del VPS detras de un `ssh` de mentira, asi que
-# una opcion de rsync que la orden forzada no admita se ve aqui y no el dia de
-# la entrega. Sin `rrsync` instalado esa pata avisa y se salta.
-#
-# La otra mitad, la del arbol, hace lo mismo con los tres repositorios: importa
-# bundles de flatpak en un ostree vacio DOS VECES y comprueba que sale el mismo
-# commit, que es el ID-173 entero —reconstruir no obliga a nadie a
-# redescargar—. Necesita ostree, flatpak, dpkg-dev, apt-utils, createrepo-c y
-# rpm; si falta alguna, avisa y se salta esa pata, y el CI las instala para que
-# ahi no se salte nunca. Las firmas no se prueban: las claves de rFirma las
-# crea una persona (`packaging/setup-signing-key.sh`) y eso se ensaya con una
-# etiqueta `-rc.N`.
-#
-# Comprueba que la publicacion sube el arbol, intercambia el enlace y poda.
-# LA LANDING ES UN PROYECTO APARTE, con su `package.json`, su lockfile y sus
-# dependencias: `pnpm install` de la raiz no la instala y `build-ts` no la
-# construye. Aqui se instala en frio, se corren sus pruebas —las que exigen los
-# cinco diccionarios al 100 %— y se construye, que es lo que de verdad dice si
-# la pagina sigue saliendo en los cinco idiomas.
-#
-# La miniatura de Open Graph se versiona ya rasterizada porque el Dockerfile que
-# construye la landing no lleva navegador ni tipografias: generarla en cada
-# compilacion pediria las dos cosas para una imagen que cambia una vez al ano.
-#
-# Rasteriza packaging/repo/site/public/og.png desde su plantilla.
-og-image:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    site="{{ justfile_directory() }}/packaging/repo/site"
-    work="$(mktemp -d)"
-    trap 'rm -rf "$work"' EXIT
-    cp "$site/tools/og.html" "$work/"
-    cp {{ justfile_directory() }}/rfirma-app/src/design-system/bundle/fonts/inter-latin.woff2 "$work/"
-    google-chrome --headless --disable-gpu --hide-scrollbars --allow-file-access-from-files \
-        --force-device-scale-factor=1 --window-size=1200,630 \
-        --screenshot="$work/og.png" "file://$work/og.html"
-    cp "$work/og.png" "$site/public/og.png"
+    {{ justfile_directory() }}/scripts/flatpak-sources.sh
 
 # Instala, prueba y construye la landing de rfirma.sgomez.me.
+[private]
 check-landing:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -1319,52 +413,17 @@ check-landing:
     pnpm exec vitest run --reporter=dot
     pnpm exec astro build
 
-check-publish:
-    {{ justfile_directory() }}/packaging/repo/build-tree.test.sh
-    {{ justfile_directory() }}/packaging/repo/publish-tree.test.sh
-
-# El candado del ID-150 y sus vecinos, hermano de las otras dos de `check-repo`
-# y por los mismos motivos: cuesta milisegundos, no necesita ni bootstrap ni
-# deps, y lo que detecta —una version que dice tres cosas distintas, un enlace
-# de descarga que envejece, un lanzador que pone `rfirma` donde va prosa— no lo
-# ve ninguna compilacion.
-#
-# La FUENTE de la version es rfirma-app/src-tauri/tauri.conf.json y solo ahi se
-# cambia; pom.xml queda FUERA del candado a proposito (ID-150). La regla de las
-# candidatas vive en packaging/native-packages-allowed.sh, y quien empaquete la
-# CONSULTA en vez de reimplementarla (ID-154).
-#
 # Comprueba el candado de la version y el nombre del producto.
+[group('ci')]
 check-version:
     {{ justfile_directory() }}/packaging/check-version.py
 
-# El ID-164 y el TD-45. Python es tecnologia nueva aqui y solo vive en
-# `packaging/`: el candado de la version y la extension de Nautilus. Esa
-# extension corre DENTRO del proceso de Nautilus, asi que un error de sintaxis
-# no rompe rFirma, rompe el gestor de ficheros de quien la tenga instalada.
-#
-# `ruff check` es lo UNICO que la vigila (TD-45): no hay ninguna prueba que
-# instale el paquete y compruebe que Nautilus la carga, porque eso seria
-# comprobar una distribucion, no este repositorio.
-#
-# Lintea el Python del repositorio.
-lint-python:
-    ruff check {{ justfile_directory() }}/packaging {{ justfile_directory() }}/scripts
-
-# A mano, cuando el bundle se reexporte desde el proyecto de sistema de diseno.
-# No lo ejecuta el CI: un sello regenerado dentro del CI sella lo que nadie ha
-# mirado, que es exactamente lo que se quiere impedir.
-#
 # Resella el bundle del sistema de diseno.
+[group('release')]
 seal-ds-bundle:
     #!/usr/bin/env bash
     set -euo pipefail
     cd "{{ justfile_directory() }}"
-    # Rutas relativas a la raiz, que es desde donde comprueba el script, y
-    # orden estable (LC_ALL=C) para que dos resellados de lo mismo den el mismo
-    # fichero y el diff solo ensene lo que de verdad ha cambiado.
-    # `_ds_needs_recompile` queda fuera, igual que en .gitignore: es un marcador
-    # de estado de design-sync-cli y no parte del sistema de diseno.
     find rfirma-app/src/design-system/bundle -type f ! -name _ds_needs_recompile \
         | LC_ALL=C sort \
         | xargs sha256sum \
@@ -1372,194 +431,162 @@ seal-ds-bundle:
     echo
     echo "resellado. Versiona rfirma-app/src/design-system/bundle.lock."
 
-# Abre la ventana con recarga en caliente. Lo que le pases va a la
-# aplicacion, no a cargo: `just dev documento.pdf`, `just dev --help`. El
-# doble `--` es de `tauri dev`, que separa los argumentos del runner de los de
-# la aplicacion (`tauri dev -- [runnerArgs] -- [appArgs]`).
-#
 # Abre la ventana con recarga en caliente; los argumentos van a la aplicacion.
+[group('dev')]
 dev *args: check-native po-import
     cd {{ app }} && RFIRMA_LIB_DIR="$(dirname "{{ native_lib }}")" pnpm exec tauri dev -- -- {{ args }}
 
-# Registra el binario de DESARROLLO como manejador de afirma:// en la sesion
-# del usuario, para no tener que construir e instalar el .deb en cada cambio.
-# Escribe ~/.local/share/applications/rfirma-dev.desktop y lo pone por
-# omision para el esquema. Se deshace con `just dev-handler-off`.
-#
-# COMO SE USA: en una terminal, `just dev`; en otra (una sola vez),
-# `just dev-handler`. Al pulsar el enlace de la sede, el escritorio arranca
-# target/debug/rfirma con la URL, y la instancia unica se la entrega a la
-# ventana que ya tienes abierta con recarga en caliente.
-#
-# SIN `just dev` DELANTE NO SIRVE: el binario de debug carga la interfaz de
-# http://localhost:1420 (build.devUrl), no de dist/, asi que arrancado solo
-# ensena una ventana en blanco.
-#
-# Firefox guarda su propia eleccion aparte de la del escritorio: si ya dijo
-# que abre afirma:// con AutoFirma, hay que quitarlo en sus Ajustes ->
-# Aplicaciones.
-#
-# Registra el binario de desarrollo como manejador de afirma://.
-dev-handler:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    binario="{{ tauri }}/target/debug/rfirma"
-    destino="$HOME/.local/share/applications"
-    fichero="$destino/rfirma-dev.desktop"
-    mkdir -p "$destino"
-    # Quien atendia el esquema antes se guarda, para que dev-handler-off
-    # pueda devolverselo: en un equipo con AutoFirma al lado es SU lanzador,
-    # y dejarlo sin manejador seria romper lo que ya funcionaba.
-    previo="$destino/.rfirma-dev-handler-previo"
-    if [ ! -f "$previo" ]; then
-        xdg-mime query default x-scheme-handler/afirma > "$previo" || true
-    fi
-    {
-        echo "[Desktop Entry]"
-        echo "Type=Application"
-        echo "Name=rFirma (desarrollo)"
-        echo "Comment=NO INSTALADO: apunta al arbol de desarrollo. just dev-handler-off lo quita."
-        echo "Exec=env RFIRMA_LIB_DIR=$(dirname "{{ native_lib }}") $binario %u"
-        echo "Terminal=false"
-        echo "NoDisplay=true"
-        echo "Categories=Utility;"
-        echo "MimeType=x-scheme-handler/afirma;"
-    } > "$fichero"
-    command -v update-desktop-database >/dev/null && update-desktop-database "$destino" || true
-    xdg-mime default rfirma-dev.desktop x-scheme-handler/afirma
-    echo
-    echo "manejador de afirma://: $(xdg-mime query default x-scheme-handler/afirma)"
-    echo "  -> $fichero"
-    if [ ! -x "$binario" ]; then
-        echo
-        echo "AVISO: todavia no existe $binario." >&2
-        echo "Arranca 'just dev' antes de pulsar el enlace de la sede." >&2
-    fi
+# Registra (`on`) o quita (`off`) el manejador de desarrollo de afirma://.
+[group('dev')]
+dev-handler mode="on":
+    {{ justfile_directory() }}/scripts/dev-handler.sh {{ mode }}
 
-# Deshace lo anterior: borra el .desktop de desarrollo y dice quien queda
-# atendiendo el esquema.
-#
-# Quita el manejador de desarrollo de afirma://.
-dev-handler-off:
+# La version del sujeto es la unica coordenada que nadie puede deducir: si falta al abrir una
+# tanda nueva y hay alguien delante, se pregunta por teclado. --os y --store se toman solos
+# (`uname` y el almacen aislado); --transport vale «websocket», el unico de esta fase.
+# Sondea el cliente publicado contra un binario instalado, aislado del almacen del titular y con
+# la raiz que sirve cada sujeto: `just probe [orden] [--subject <ruta>] [--trust-root <ruta>]`.
+# `orden` es `list`, `run <caso>` o `run-pending` (por omision); ver `cargo run --example probe -- --help`.
+[group('dev')]
+probe *args: autoscript build-ts
     #!/usr/bin/env bash
     set -euo pipefail
-    destino="$HOME/.local/share/applications"
-    previo="$destino/.rfirma-dev-handler-previo"
-    rm -f "$destino/rfirma-dev.desktop"
-    command -v update-desktop-database >/dev/null && update-desktop-database "$destino" || true
-    # Se le devuelve el esquema a quien lo tenia, si lo tenia alguien.
-    if [ -s "$previo" ] && [ "$(cat "$previo")" != "rfirma-dev.desktop" ]; then
-        xdg-mime default "$(cat "$previo")" x-scheme-handler/afirma || true
-    fi
-    rm -f "$previo"
-    echo "manejador de afirma://: $(xdg-mime query default x-scheme-handler/afirma || echo 'ninguno')"
-
-# El .deb y el .rpm REUTILIZANDO la libreria nativa que ya esta construida.
-# Es `bundle` sin `native` delante: mismo resultado mientras no hayas tocado
-# el puente Java, y sin los tres minutos de native-image ni el ciclo de maven.
-# Si has tocado rfirma-native-bridge/, esta receta NO se entera: usa `bundle`.
-#
-# El .deb y el .rpm sin reconstruir la libreria nativa.
-bundle-quick: check-native build-ts
-    #!/usr/bin/env bash
-    set -euo pipefail
-    cd "{{ justfile_directory() }}"
-    (cd "{{ app }}" && pnpm exec tauri build)
-    salida="rfirma-app/src-tauri/target/release/bundle"
-    for formato in deb rpm; do
-        paquete="$(find "$salida/$formato" -maxdepth 1 -type f -name "*.$formato" | sort | tail -1)"
-        packaging/verifica-contenido.sh "$paquete"
-        echo "$formato: $PWD/$paquete ($(du -h "$paquete" | cut -f1))"
+    read -r -a given_args <<< "{{ args }}"
+    subject=""
+    trust_root=""
+    remaining_args=()
+    i=0
+    while [ "$i" -lt "${#given_args[@]}" ]; do
+        token="${given_args[$i]}"
+        case "$token" in
+            --subject)
+                i=$((i + 1))
+                subject="${given_args[$i]:-}"
+                ;;
+            --trust-root)
+                i=$((i + 1))
+                trust_root="${given_args[$i]:-}"
+                ;;
+            *)
+                remaining_args+=("$token")
+                ;;
+        esac
+        i=$((i + 1))
     done
+    if [ -z "$subject" ]; then
+        subject="$(command -v autofirma || true)"
+        if [ -z "$subject" ]; then
+            echo "No hay sujeto que sondear: no encuentro 'autofirma' en el PATH." >&2
+            echo "Dalo a mano: just probe --subject <ruta-del-binario>" >&2
+            exit 1
+        fi
+    fi
+    if [ ! -x "$subject" ]; then
+        echo "El sujeto $subject no existe o no es ejecutable." >&2
+        echo "Dalo a mano: just probe --subject <ruta-del-binario>" >&2
+        exit 1
+    fi
+    if [ -n "$trust_root" ] && [ ! -f "$trust_root" ]; then
+        echo "La raiz de confianza $trust_root no existe." >&2
+        echo "Dala a mano (PEM o DER): just probe --subject '$subject' --trust-root <ruta-del-certificado>" >&2
+        exit 1
+    fi
+    isolated="$({{ justfile_directory() }}/scripts/isolated-store.sh "$subject")"
+    kind="$(printf '%s\n' "$isolated" | sed -n 1p)"
+    launcher="$(printf '%s\n' "$isolated" | sed -n 2p)"
+    served_root="$(printf '%s\n' "$isolated" | sed -n 3p)"
+    pkcs11_module="$(printf '%s\n' "$isolated" | sed -n 4p)"
+    if [ -z "$trust_root" ]; then
+        case "$kind" in
+            rfirma)
+                trust_root="$served_root"
+                ;;
+            autofirma)
+                for candidate in {{ autofirma_roots }}; do
+                    if [ -f "$candidate" ]; then
+                        trust_root="$candidate"
+                        break
+                    fi
+                done
+                if [ -z "$trust_root" ]; then
+                    echo "No hay raiz de confianza con la que hablarle a $subject: no esta en ninguna de" >&2
+                    for candidate in {{ autofirma_roots }}; do
+                        echo "  $candidate" >&2
+                    done
+                    echo "Dala a mano (PEM o DER): just probe --subject '$subject' --trust-root <ruta-del-certificado>" >&2
+                    exit 1
+                fi
+                ;;
+            *)
+                echo "No reconozco a $subject, asi que no se con que raiz sirve el canal." >&2
+                echo "Dala a mano (PEM o DER): just probe --subject '$subject' --trust-root <ruta-del-certificado>" >&2
+                exit 1
+                ;;
+        esac
+    fi
+    echo "sondeo: sujeto $subject, raiz $trust_root"
+    cd "{{ tauri }}"
+    dossier_args=()
+    coordinate_args=()
+    command_args=()
+    has_dossier=false
+    has_command=false
+    has_os=false
+    has_store=false
+    for token in "${remaining_args[@]}"; do
+        case "$token" in
+            --dossier) has_dossier=true ;;
+            list | run | run-pending) has_command=true ;;
+            --os) has_os=true ;;
+            --store) has_store=true ;;
+        esac
+    done
+    if [ "$has_dossier" = false ]; then
+        mkdir -p "{{ justfile_directory() }}/.scratch"
+        dossier_args=(--dossier "{{ justfile_directory() }}/.scratch/probe-dossier.json")
+    fi
+    if [ "$has_os" = false ]; then
+        coordinate_args+=(--os "$(uname -s)" --os-version "$(uname -r)")
+    fi
+    if [ "$has_store" = false ]; then
+        coordinate_args+=(--store "softhsm2:$pkcs11_module")
+    fi
+    if [ "$has_command" = false ]; then
+        command_args=(run-pending)
+    fi
+    cargo run --example probe -- --subject "$launcher" --trust-root "$trust_root" \
+        "${dossier_args[@]}" "${coordinate_args[@]}" "${remaining_args[@]}" "${command_args[@]}"
 
-# Borra lo construido.
+# Borra lo construido y los volcados de cobertura sueltos en el arbol de fuentes.
+[group('dev')]
 clean:
-    cd {{ bridge }} && mvn -B clean
-    cd {{ tauri }} && cargo clean
-    rm -rf {{ app }}/dist
+    #!/usr/bin/env bash
+    set -eu
+    cd "{{ bridge }}" && mvn -B clean
+    if [ -z "{{ worktree_target }}" ]; then
+        cd "{{ tauri }}" && cargo clean
+    else
+        rm -rf "{{ coverage_out }}"
+        echo "worktree: el arbol compartido {{ cargo_target }} se queda"
+    fi
+    rm -f "{{ tauri }}"/*.profraw
+    rm -rf "{{ app }}/dist"
 
-# ID-153: los fragmentos de changelog.d/ (uno por issue, README.md aparte) se
-# reunen aqui, no antes, porque escribir cada uno en su propio fichero es lo
-# que evita el conflicto de fusion de un `## [Unreleased]` compartido. A mano,
-# al publicar una version: sustituye la seccion "## [<version>] - sin
-# publicar" si existe (el caso de la v0.4.0), o inserta una seccion nueva
-# delante de la primera si la version ya tenia una fechada, y borra los
-# fragmentos incorporados.
-#
 # Reune los fragmentos de changelog.d/ en la seccion de <version> de CHANGELOG.md.
+[group('release')]
+[private]
 changelog-release version:
-    #!/usr/bin/env python3
-    import datetime, glob, os, re, sys
+    {{ justfile_directory() }}/scripts/changelog-release.sh {{ version }}
 
-    os.chdir("{{ justfile_directory() }}")
-    version = "{{ version }}"
+# Sube la version en los sitios del candado de check-version.py (ID-150).
+[group('release')]
+[private]
+bump-version version:
+    {{ justfile_directory() }}/scripts/bump-version.sh {{ version }}
 
-    def numero_issue(p):
-        nombre = os.path.splitext(os.path.basename(p))[0]
-        try:
-            return int(nombre)
-        except ValueError:
-            sys.exit(
-                f"{p}: el nombre debe ser el numero de issue (ej. 252.md), "
-                f"segun changelog.d/README.md."
-            )
-
-    fragments = sorted(
-        (p for p in glob.glob("changelog.d/*.md") if os.path.basename(p) != "README.md"),
-        key=numero_issue,
-    )
-    if not fragments:
-        sys.exit("changelog.d/ no tiene fragmentos que reunir.")
-
-    # Orden canonico de Keep a Changelog. Cada fragmento agrupa sus lineas
-    # bajo uno o varios encabezados "### <categoria>"; aqui se acumulan por
-    # categoria (conservando el orden por numero de issue dentro de cada una)
-    # para que la seccion publicada no repita encabezados sueltos.
-    categorias_canonicas = [
-        "Added", "Changed", "Deprecated", "Removed", "Fixed", "Security",
-    ]
-    lineas_por_categoria = {c: [] for c in categorias_canonicas}
-    encabezado = re.compile(r"^### (\w+)\s*$", re.MULTILINE)
-
-    for f in fragments:
-        contenido = open(f, encoding="utf-8").read().strip()
-        coincidencias = list(encabezado.finditer(contenido))
-        if not coincidencias:
-            sys.exit(f"{f}: no tiene ningun encabezado '### <categoria>'.")
-        for i, m in enumerate(coincidencias):
-            categoria = m.group(1)
-            if categoria not in lineas_por_categoria:
-                sys.exit(f"{f}: categoria desconocida '### {categoria}'.")
-            inicio = m.end()
-            fin = coincidencias[i + 1].start() if i + 1 < len(coincidencias) else len(contenido)
-            lineas_por_categoria[categoria].append(contenido[inicio:fin].strip())
-
-    body = "\n\n".join(
-        f"### {categoria}\n{chr(10).join(lineas_por_categoria[categoria])}"
-        for categoria in categorias_canonicas
-        if lineas_por_categoria[categoria]
-    )
-    today = datetime.date.today().isoformat()
-
-    changelog = open("CHANGELOG.md", encoding="utf-8").read()
-    placeholder = re.compile(
-        r"^## \[" + re.escape(version) + r"\] - sin publicar$", re.MULTILINE
-    )
-    if placeholder.search(changelog):
-        seccion = f"## [{version}] - {today}\n\n{body}"
-        changelog = placeholder.sub(lambda _m: seccion, changelog, count=1)
-    else:
-        first_heading = re.search(r"^## \[", changelog, re.MULTILINE)
-        section = f"## [{version}] - {today}\n\n{body}\n\n"
-        if first_heading:
-            pos = first_heading.start()
-            changelog = changelog[:pos] + section + changelog[pos:]
-        else:
-            changelog = changelog.rstrip("\n") + "\n\n" + section
-
-    open("CHANGELOG.md", "w", encoding="utf-8").write(changelog)
-
-    for f in fragments:
-        os.remove(f)
-
-    print(f"CHANGELOG.md: version {version} publicada con {len(fragments)} fragmento(s).")
+# Encadena changelog-release y bump-version; el tag y el push quedan a mano.
+[group('release')]
+release version: (changelog-release version) (bump-version version)
+    @echo
+    @echo "Revisa el diff, comitea y publica cuando quieras:"
+    @echo "  git tag v{{ version }} && git push origin v{{ version }}"

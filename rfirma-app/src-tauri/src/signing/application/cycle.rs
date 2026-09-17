@@ -214,28 +214,18 @@ impl OpenCycle {
                     .map_err(CycleError::Token)
             }
             StoreSecret::TypedOnScreen => {
-                let mut request = SecretPromptRequest {
+                let request = SecretPromptRequest {
                     secret: SecretName::of(self.certificate.store().class()),
                     holder: self.holder.clone(),
                     language,
                     incorrect_secret: false,
                 };
-
-                loop {
-                    let secret = prompter.prompt_secret(&request)?;
-
-                    let outcome = self.presigned.signed_one_by_one(|pre| {
-                        signer.sign_with_secret(&self.certificate, &secret, self.algorithm, pre)
-                    });
-
-                    match outcome {
-                        Ok(signatures) => return Ok(signatures),
-                        Err(token_err) if token_err.situation() == Situation::IncorrectPin => {
-                            request.incorrect_secret = true;
-                        }
-                        Err(other) => return Err(CycleError::Token(other)),
-                    }
-                }
+                let (_, signatures) = prompted_until_accepted(prompter, request, |secret| {
+                    self.presigned.signed_one_by_one(|pre| {
+                        signer.sign_with_secret(&self.certificate, secret, self.algorithm, pre)
+                    })
+                })?;
+                Ok(signatures)
             }
         }
     }
@@ -283,6 +273,24 @@ impl std::fmt::Debug for OpenCycle {
             .field("blocks_to_be_signed", &self.presigned.blocks().len())
             .field("cosigning", &self.already_signed_before)
             .finish_non_exhaustive()
+    }
+}
+
+/// Pide el secreto hasta que `attempt` lo acepta; solo un PIN incorrecto vuelve a preguntar.
+pub fn prompted_until_accepted<T>(
+    prompter: &dyn SecretPrompter,
+    mut request: SecretPromptRequest,
+    mut attempt: impl FnMut(&ProtectedSecret) -> Result<T, TokenError>,
+) -> Result<(ProtectedSecret, T), CycleError> {
+    loop {
+        let secret = prompter.prompt_secret(&request)?;
+        match attempt(&secret) {
+            Ok(done) => return Ok((secret, done)),
+            Err(error) if error.situation() == Situation::IncorrectPin => {
+                request.incorrect_secret = true;
+            }
+            Err(other) => return Err(CycleError::Token(other)),
+        }
     }
 }
 

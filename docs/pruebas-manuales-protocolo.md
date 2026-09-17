@@ -87,7 +87,7 @@ de una sede y comprobar tres cosas seguidas:
 3. el trámite **termina**: la sede da la firma por buena, y cancelando en vez de firmar recibe
    `CANCEL`.
 
-Al acabar, `just dev-handler-off` le devuelve el esquema a quien lo tuviera.
+Al acabar, `just dev-handler off` le devuelve el esquema a quien lo tuviera.
 
 *Por qué no cabe en una grada* (TD-79): las dos mitades son del escritorio y no del código. Qué
 aplicación arranca al pulsar el enlace lo decide el registro `x-scheme-handler` —lo mismo que la

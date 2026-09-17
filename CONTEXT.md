@@ -183,6 +183,23 @@ Sitio web de la Administración que origina la petición de firma y recibe el
 documento firmado.
 _Avoid_: portal, cliente web, tercero
 
+**Trámite de sede**:
+Lo que rFirma atiende desde que llega una URL `afirma://` hasta que la sede
+tiene su respuesta: la negociación de arranque, el consentimiento de la
+persona, la firma y la entrega. Uno por **proceso de sede**.
+_Avoid_: errand en prosa, sesión, operación (que es cada verbo del protocolo)
+
+**Rol del proceso**:
+Lo que un proceso de rFirma es desde que arranca, decidido por su línea de
+órdenes y sin cambiar después. El **proceso de escritorio** es la aplicación
+que abre la persona, único en el equipo, con la ventana principal y la
+colocación de la firma; el **proceso de sede** es el que arranca una URL
+`afirma://`, uno por invocación, con su ventana de sede y sin ventana
+principal, y termina con su trámite. Dos procesos de sede conviven, cada uno
+en el puerto que sorteó su navegador; ninguno se une al de escritorio ni lo
+cierra.
+_Avoid_: modo, instancia, app de navegador, dos aplicaciones
+
 **Canal**:
 La conexión `wss://` que la sede abre contra el servidor local, y lo que hace
 falta para sostenerla: escuchar en el *loopback*, el saludo TLS y comprobar de
@@ -206,6 +223,15 @@ antes de nada, el `idsession` en cada mensaje, la espera y el sondeo del
 resultado, y un solo trámite vivo a la vez.
 _Avoid_: sesión de protocolo, diálogo, intercambio
 
+**Llegada**:
+Cuándo queda resuelto lo que se intercambia con la sede, sea la operación o un
+rechazo, y lo dice el transporte al abrirse, no la URL: **esperada** si la sede
+se conectará a un canal que queda escuchando para dar o recoger lo que toque
+(`wss`, `service`), e **inmediata** si al abrir ya está resuelto, sea la
+operación que se descarga o el rechazo que se sube (servidor intermedio). De
+ella depende si la ventana de sede espera o actúa ya.
+_Avoid_: modo de canal, canal sin puerto, puerto cero
+
 **Cliente de canal**:
 El cliente propio, escrito en Rust, con el que se prueba el canal: saluda por
 `wss://`, manda el eco y comprueba los **caminos de rechazo que un cliente
@@ -222,6 +248,16 @@ aquél cubre lo que el real no puede provocar, y éste cubre lo que el real hace
 No se copia al repositorio: se descarga a etiqueta fijada, con `sha256` y caché
 (`just autoscript`), y vive en `tests/conformance_bench.rs`.
 _Avoid_: tests de integración, e2e, banco de pruebas
+
+**Sondeo**:
+La comprobación de una ficha del anexo A1 o de una divergencia observable entre sujetos contra
+un binario real de AutoFirma o rFirma, con el **banco de conformidad** como instrumento: emite
+un veredicto de tres valores —confirmado, refutado, no observable— con las coordenadas de la tanda.
+Los veredictos de las divergencias sin ficha de A1 se registran en el **expediente** de la tanda
+(`dossier.json`) y en sus transcripciones, sin abrir fichas en el anexo A1. Vive en
+`cargo run --example probe` (`just probe`) y queda fuera de las gradas del ADR-0014: no es puerta
+de CI ni puerta manual de release, es investigación.
+_Avoid_: banco de pruebas, sondeo de conformidad, cliente de sondeo
 
 **Códec del protocolo**:
 La traducción entre el texto que viaja por el canal y las estructuras con las

@@ -4,6 +4,7 @@ use serde::Deserialize;
 #[derive(Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 struct Remembered {
     answer: u32,
+    question: String,
 }
 
 fn a_file(directory: &Path) -> JsonFile<Remembered> {
@@ -26,12 +27,18 @@ fn what_is_saved_comes_back_and_carries_the_format_version() {
     let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
     let file = a_file(directory.path());
 
-    file.save(&Remembered { answer: 42 })
-        .expect("deberia escribirse");
+    file.save(&Remembered {
+        answer: 42,
+        ..Default::default()
+    })
+    .expect("deberia escribirse");
 
     assert_eq!(
         file.load().expect("deberia leerse").into_value(),
-        Remembered { answer: 42 }
+        Remembered {
+            answer: 42,
+            ..Default::default()
+        }
     );
     let written: Value =
         serde_json::from_slice(&fs::read(file.path()).expect("deberia leerse el fichero"))
@@ -134,21 +141,30 @@ fn a_support_without_a_version_is_set_aside_too() {
 fn a_failed_write_leaves_the_previous_content_intact_and_no_temporary_behind() {
     let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
     let file = a_file(directory.path());
-    file.save(&Remembered { answer: 1 })
-        .expect("deberia escribirse");
+    file.save(&Remembered {
+        answer: 1,
+        ..Default::default()
+    })
+    .expect("deberia escribirse");
     let taken = directory.path().join("rfirma/otro.json");
     fs::create_dir(&taken).expect("deberia crearse el directorio");
     let blocked: JsonFile<Remembered> = JsonFile::at(&taken);
 
     let error = blocked
-        .save(&Remembered { answer: 2 })
+        .save(&Remembered {
+            answer: 2,
+            ..Default::default()
+        })
         .expect_err("deberia fallar al escribir");
 
     assert_eq!(error.situation(), Situation::Unwritable);
     assert!(!directory.path().join("rfirma/otro.json.tmp").exists());
     assert_eq!(
         file.load().expect("deberia leerse").into_value(),
-        Remembered { answer: 1 }
+        Remembered {
+            answer: 1,
+            ..Default::default()
+        }
     );
 }
 
@@ -170,12 +186,70 @@ fn a_support_that_exists_but_cannot_be_read_is_a_failure_and_not_the_defaults() 
 fn erasing_removes_the_support_and_does_not_mind_it_being_gone_already() {
     let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
     let file = a_file(directory.path());
-    file.save(&Remembered { answer: 3 })
-        .expect("deberia escribirse");
+    file.save(&Remembered {
+        answer: 3,
+        ..Default::default()
+    })
+    .expect("deberia escribirse");
 
     file.erase().expect("deberia borrarse");
 
     assert!(!file.path().exists());
     file.erase()
         .expect("borrar lo que ya no esta no es un fallo");
+}
+
+#[test]
+fn updating_rereads_and_keeps_what_touch_does_not_change() {
+    let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let file = a_file(directory.path());
+    file.save(&Remembered {
+        answer: 42,
+        question: "la vida, el universo y todo lo demas".to_owned(),
+    })
+    .expect("deberia escribirse");
+
+    file.update(|remembered| remembered.answer = 43)
+        .expect("deberia actualizarse");
+
+    assert_eq!(
+        file.load().expect("deberia leerse").into_value(),
+        Remembered {
+            answer: 43,
+            question: "la vida, el universo y todo lo demas".to_owned(),
+        }
+    );
+}
+
+#[test]
+fn two_writers_that_touch_different_fields_do_not_erase_each_other_however_they_interleave() {
+    let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
+
+    for reverse_order in [false, true] {
+        let file = JsonFile::<Remembered>::at(
+            directory
+                .path()
+                .join(format!("rfirma/interleaved-{reverse_order}.json")),
+        );
+        let touch_answer = || file.update(|remembered| remembered.answer = 7);
+        let touch_question =
+            || file.update(|remembered| remembered.question = "pregunta".to_owned());
+
+        if reverse_order {
+            touch_question().expect("deberia actualizarse");
+            touch_answer().expect("deberia actualizarse");
+        } else {
+            touch_answer().expect("deberia actualizarse");
+            touch_question().expect("deberia actualizarse");
+        }
+
+        assert_eq!(
+            file.load().expect("deberia leerse").into_value(),
+            Remembered {
+                answer: 7,
+                question: "pregunta".to_owned(),
+            },
+            "orden invertido: {reverse_order}"
+        );
+    }
 }

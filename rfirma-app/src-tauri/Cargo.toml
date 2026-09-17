@@ -1,6 +1,6 @@
 [package]
 name = "rfirma"
-version = "0.9.0"
+version = "0.9.1"
 edition = "2021"
 rust-version = "1.88"
 description = "rfirma: firma y cofirma de PDFs en PAdES con firma visible."
@@ -130,7 +130,7 @@ tokio-tungstenite = { version = "0.30", default-features = false, features = [
 # corre sobre `tauri::async_runtime` y en pruebas sobre `#[tokio::test]`. Ya
 # estaba en el arbol como dependencia transitiva de tauri; aqui solo se hace
 # directa.
-tokio = { version = "1", features = ["net", "rt", "sync", "io-util", "macros"] }
+tokio = { version = "1", features = ["net", "rt", "sync", "io-util", "macros", "time"] }
 # El saludo TLS del servidor local, sobre el OpenSSL del sistema que ya usa
 # `reqwest`. Ya estaban las dos en el arbol; aqui solo se hacen directas.
 native-tls = "0.2"
@@ -161,7 +161,7 @@ ecb = "0.2.1"
 [dev-dependencies]
 # El cliente de canal y las pruebas del servidor abren sockets de verdad
 # (grada B): hace falta un runtime con hilos y el `#[tokio::test]`.
-tokio = { version = "1", features = ["rt-multi-thread", "macros", "time"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "time", "test-util"] }
 # El cliente de canal habla `wss://` de verdad: aqui si se usa la pila de TLS
 # de cliente del crate, que es la unica que trae.
 tokio-tungstenite = { version = "0.30", features = ["native-tls"] }
@@ -177,6 +177,12 @@ rsa = "0.9"
 # DigestInfo de PKCS#1 v1.5. Sin ella `rsa` no acepta Sha256 como digest con
 # prefijo, que es justo lo que el ID-16 exige contrastar.
 sha2 = { version = "0.10", features = ["oid"] }
+
+# El sondeo lleva sus propias pruebas unitarias y `cargo test` no las corre en un ejemplo si no
+# se le pide.
+[[example]]
+name = "probe"
+test = true
 
 [profile.release]
 strip = true

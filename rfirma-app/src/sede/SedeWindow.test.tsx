@@ -419,15 +419,18 @@ describe("SedeWindow", () => {
       expect(calls.consent).toHaveBeenCalledWith("handle-1");
     });
 
-    it("says «Identificarse», not «Firmar», for selectcert", () => {
+    it("says «Enviar mis datos», not «Firmar», for selectcert, and does not claim identification", () => {
       const { port } = scriptedErrand(consenting({ document: null, signing: null }), {
         operation: "selectcert",
       });
       renderWithCatalog(<SedeWindow errands={port} />);
 
-      expect(screen.getByRole("button", { name: "Identificarse" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Enviar mis datos" })).toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "Firmar" })).not.toBeInTheDocument();
-      expect(screen.getByText("sede.ejemplo.gob.es pide que te identifiques.")).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Identificarse" })).not.toBeInTheDocument();
+      expect(
+        screen.getByText("sede.ejemplo.gob.es pide tus datos de identidad."),
+      ).toBeInTheDocument();
     });
 
     it("spells out what selectcert sends", () => {

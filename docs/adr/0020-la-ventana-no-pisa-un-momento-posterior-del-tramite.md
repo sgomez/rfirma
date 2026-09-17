@@ -35,9 +35,9 @@ el desenlace (`Attendance`) antes de interactuar con el puerto de ventana:
    y tiene canal donde responder, el rechazo viaja por el cable y **no debe
    abrir ventana** alguna. Abrir la ventana antes de evaluar la invocación
    obligaría a abrir y destruir ventanas fantasma ante rechazos comunes.
-2. **Segundo trámite concurrente:** Si ya existe un trámite activo en el
-   proceso, la segunda invocación se rechaza sin alterar ni abrir una segunda
-   ventana.
+2. **Segundo trámite en el mismo proceso:** cada invocación `afirma://`
+   arranca su propio proceso (ADR-0024), así que dentro de uno solo hay un
+   trámite; si aun así llegara otro, se rechaza sin abrir una segunda ventana.
 3. **Separación de capas:** `site::attend_launch` pertenece a la capa de
    aplicación pura de trámites y no conoce el puerto de ventana (`SiteWindow`),
    que se gestiona en `startup`. Mover la apertura dentro o antes requeriría

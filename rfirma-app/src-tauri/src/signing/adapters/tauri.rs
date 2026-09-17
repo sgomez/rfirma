@@ -12,7 +12,7 @@ use crate::crossing::Failure;
 use crate::documents::adapters::views::SignedDocumentView;
 use crate::identity::adapters::views::SecretView;
 use crate::identity::domain::certificate::TokenCertificate;
-use crate::signing::application::session::DocumentToSign;
+use crate::signing::application::session::{self, DocumentToSign};
 use crate::signing::domain::config::SigningChoice;
 
 /// Prefirma: cruza la frontera y deja el ciclo abierto.
@@ -38,32 +38,34 @@ pub fn begin_signing(
 
 /// Firma en el token con la clave privada (ADR-0001).
 #[tauri::command(async)]
-pub fn sign_with_pin(
-    pin: String,
-    app_handle: tauri::AppHandle,
-    identity: State<'_, IdentityRoot>,
-    signing: State<'_, SigningRoot>,
-) -> Result<(), Failure> {
-    if !pin.is_empty() {
-        if let Some(batch) = crate::site::the_pending_batch_signed(&app_handle, &pin) {
-            return batch;
-        }
-        return Ok(crate::signing::application::session::sign_on_token(
-            &identity.signer(),
-            &signing.session,
-            &pin,
-        )?);
-    }
+pub fn sign_with_pin(pin: String, app_handle: tauri::AppHandle) -> Result<(), Failure> {
+    crate::site::adapters::window::with_the_desk(&app_handle, |desk, live| {
+        signed_with_the_secret(desk, live, &pin)
+    })
+}
 
+/// La única puerta del PIN: cierra el lote consentido o firma el ciclo abierto.
+pub fn signed_with_the_secret(
+    desk: &crate::site::SiteDesk<'_>,
+    live: &crate::site::LiveErrand,
+    pin: &str,
+) -> Result<(), Failure> {
+    let signer = desk.neighbours.identity.signer();
+    let signing = desk.neighbours.signing;
+    let prompter = signing.prompter.as_ref();
     let language = signing.configuration().language;
-    Ok(
-        crate::signing::application::session::sign_on_token_with_prompter(
-            &identity.signer(),
+
+    let Some(certificate) = live.the_batch_certificate() else {
+        return Ok(session::signed_on_the_token(
+            &signer,
             &signing.session,
-            signing.prompter.as_ref(),
+            prompter,
             language,
-        )?,
-    )
+            pin,
+        )?);
+    };
+    let secret = session::secret_for_the_batch(&signer, &certificate, prompter, language, pin)?;
+    crate::site::the_pending_batch_signed(desk, live, &secret)
 }
 
 /// Postfirma: comprueba el sello, ensambla el PDF y lo deja caer.
