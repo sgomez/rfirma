@@ -249,6 +249,16 @@ No se copia al repositorio: se descarga a etiqueta fijada, con `sha256` y caché
 (`just autoscript`), y vive en `tests/conformance_bench.rs`.
 _Avoid_: tests de integración, e2e, banco de pruebas
 
+**Sondeo**:
+La comprobación de una ficha del anexo A1 contra un binario real de AutoFirma, con el
+**banco de conformidad** como instrumento: emite un veredicto de tres valores —confirmado,
+refutado, no observable— con las coordenadas de la tanda, y lo deja junto a la ficha que
+resuelve. No es el **banco de conformidad**, que mide si rfirma habla el protocolo, ni el
+**cliente de canal**, que prueba el canal propio: el sondeo mide **AutoFirma**, no rfirma.
+Vive en `cargo run --example probe` (`just probe`) y queda fuera de las gradas del ADR-0014: no
+es puerta de CI ni puerta manual de release, es investigación.
+_Avoid_: banco de pruebas, sondeo de conformidad, cliente de sondeo
+
 **Códec del protocolo**:
 La traducción entre el texto que viaja por el canal y las estructuras con las
 que se razona dentro: la URL de operación, la respuesta con sus campos

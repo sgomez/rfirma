@@ -1,6 +1,7 @@
 //! Sondeo: el cliente publicado bajo Node corre un guion del banco contra el binario declarado
 //! y transcribe lo que viajó, sin mirar el interior del sujeto.
 
+mod annex;
 mod dossier;
 mod transcript;
 
@@ -9,7 +10,7 @@ use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::time::Duration;
 
-use dossier::{CaseState, Dossier, HeaderCoordinates};
+use dossier::{CaseState, Dossier, HeaderCoordinates, Verdict};
 use transcript::Transcript;
 
 const USAGE: &str = "\
@@ -47,8 +48,16 @@ const THE_FULL_ERRAND: &str = "signcades";
 /// El modo que el cliente publicado habla de por sí: puertos sorteados y `v=4`.
 const THE_FOURTH_PROTOCOL: &str = "v4";
 
+/// El caso que mide BUG-25: si el canal rechaza igual una versión obsoleta que una no
+/// soportada, en vez de distinguirlas.
+const THE_PROTOCOL_FRESHNESS_CASE: &str = "obsolete_and_unsupported_protocol_share_error_code";
+
+/// La ficha del anexo A1 que `THE_PROTOCOL_FRESHNESS_CASE` resuelve.
+const BUG_25_HEADING: &str =
+    "### BUG-25: Colapso de la distinción entre protocolo obsoleto y protocolo no soportado en el arranque de canales locales";
+
 /// Los nombres de los casos que el sondeo sabe ejecutar.
-const KNOWN_CASES: &[&str] = &["saludo", "tramite"];
+const KNOWN_CASES: &[&str] = &["saludo", "tramite", THE_PROTOCOL_FRESHNESS_CASE];
 
 struct Probe {
     subject: PathBuf,
@@ -191,12 +200,6 @@ impl Probe {
             eprintln!("\nun fallo de condición no es un veredicto: no se ha llegado a medir nada.");
             std::process::exit(3);
         }
-        // Listar no emite veredicto, así que no exige coordenadas: si el expediente aún no
-        // existe, no hay nada que listar.
-        if matches!(self.command, CaseCommand::List) && !self.dossier.exists() {
-            println!("no hay expediente todavía en {}", self.dossier.display());
-            return;
-        }
         let header_coordinates = if self.dossier.exists() {
             None
         } else {
@@ -243,49 +246,96 @@ impl Probe {
             );
             std::process::exit(2);
         }
-        if !relaunch && dossier.state_of(case) == Some(CaseState::Resolved) {
+        if !relaunch && matches!(dossier.state_of(case), Some(CaseState::Resolved(_))) {
             println!("el caso «{case}» ya está resuelto; usa --relaunch para repetirlo");
             return;
         }
-        self.run_case(case);
-        dossier.resolve(case).unwrap_or_else(|complaint| {
+        let verdict = self.run_case(case);
+        dossier.resolve(case, verdict).unwrap_or_else(|complaint| {
             eprintln!("{complaint}");
             std::process::exit(1);
         });
+        self.record_verdict_in_annex_if_any(case, verdict);
     }
 
     fn run_pending(&self, dossier: &mut Dossier) {
         for case in KNOWN_CASES {
-            if dossier.state_of(case) == Some(CaseState::Resolved) {
+            if matches!(dossier.state_of(case), Some(CaseState::Resolved(_))) {
                 continue;
             }
-            self.run_case(case);
-            dossier.resolve(case).unwrap_or_else(|complaint| {
+            let verdict = self.run_case(case);
+            dossier.resolve(case, verdict).unwrap_or_else(|complaint| {
                 eprintln!("{complaint}");
                 std::process::exit(1);
             });
+            self.record_verdict_in_annex_if_any(case, verdict);
         }
     }
 
-    fn run_case(&self, case: &str) {
+    fn run_case(&self, case: &str) -> Verdict {
         match case {
-            "saludo" => self.run_errand(case, THE_SINGLE_SELECTION),
-            "tramite" => self.run_errand(case, THE_FULL_ERRAND),
+            "saludo" => {
+                self.run_errand(case, THE_SINGLE_SELECTION, THE_FOURTH_PROTOCOL);
+                Verdict::Confirmed
+            }
+            "tramite" => {
+                self.run_errand(case, THE_FULL_ERRAND, THE_FOURTH_PROTOCOL);
+                Verdict::Confirmed
+            }
+            THE_PROTOCOL_FRESHNESS_CASE => self.run_protocol_freshness_case(),
             other => unreachable!("caso sin arnés: {other}"),
         }
     }
 
-    /// Corre `script` de punta a punta contra el sujeto declarado, transcribiendo cada evento
-    /// del cliente publicado a medida que llega.
-    fn run_errand(&self, case: &str, script: &str) {
-        let trust_root = the_trust_root_as_pem(&self.trust_root);
-        let mut driver = the_published_client_running(trust_root.path(), self.patience, script);
-        let events = driver.stdout.take().expect("el conductor escribe eventos");
-        let mut transcript = Transcript::open(&self.dossier, case).unwrap_or_else(|complaint| {
+    /// El código SAF que el sujeto emite al rechazar una versión obsoleta y una no soportada:
+    /// si coincide, BUG-25 sigue vigente; si distingue, está corregido.
+    fn run_protocol_freshness_case(&self) -> Verdict {
+        let obsolete = self.run_errand(
+            &format!("{THE_PROTOCOL_FRESHNESS_CASE}-obsolete"),
+            THE_SINGLE_SELECTION,
+            "v1",
+        );
+        let unsupported = self.run_errand(
+            &format!("{THE_PROTOCOL_FRESHNESS_CASE}-unsupported"),
+            THE_SINGLE_SELECTION,
+            "v99",
+        );
+        match (obsolete, unsupported) {
+            (Some(a), Some(b)) if a == b => Verdict::Confirmed,
+            (Some(_), Some(_)) => Verdict::Refuted,
+            _ => Verdict::NotObservable,
+        }
+    }
+
+    fn record_verdict_in_annex_if_any(&self, case: &str, verdict: Verdict) {
+        if case != THE_PROTOCOL_FRESHNESS_CASE {
+            return;
+        }
+        let line = format!(
+            "* **Veredicto del sondeo ({}):** {}, con `{THE_PROTOCOL_FRESHNESS_CASE}`.",
+            dossier::today(),
+            verdict_label(verdict)
+        );
+        annex::record_verdict(&the_a1_annex(), BUG_25_HEADING, &line).unwrap_or_else(|complaint| {
             eprintln!("{complaint}");
             std::process::exit(1);
         });
+    }
+
+    /// Corre `script` en `mode` contra el sujeto declarado, transcribiendo cada evento del
+    /// cliente publicado a medida que llega, y devuelve el `type` del evento de error, si hubo.
+    fn run_errand(&self, transcript_name: &str, script: &str, mode: &str) -> Option<String> {
+        let trust_root = the_trust_root_as_pem(&self.trust_root);
+        let mut driver =
+            the_published_client_running(trust_root.path(), self.patience, script, mode);
+        let events = driver.stdout.take().expect("el conductor escribe eventos");
+        let mut transcript =
+            Transcript::open(&self.dossier, transcript_name).unwrap_or_else(|complaint| {
+                eprintln!("{complaint}");
+                std::process::exit(1);
+            });
         let mut subject = None;
+        let mut error_type = None;
         for event in BufReader::new(events).lines().map_while(Result::ok) {
             println!("{event}");
             let _ = std::io::stdout().flush();
@@ -297,12 +347,25 @@ impl Probe {
                 eprintln!("sondeo: invoco {} con {url}", self.subject.display());
                 subject = Some(the_subject_invoked_with(&self.subject, &url));
             }
+            if let Some(kind) = the_error_type_in(&event) {
+                error_type = Some(kind);
+            }
         }
         let _ = driver.wait();
         if let Some(mut subject) = subject {
             let _ = subject.kill();
             let _ = subject.wait();
         }
+        error_type
+    }
+}
+
+/// La etiqueta en castellano de un veredicto, la que ve quien lee el listado y el anexo.
+fn verdict_label(verdict: Verdict) -> &'static str {
+    match verdict {
+        Verdict::Confirmed => "confirmado",
+        Verdict::Refuted => "refutado",
+        Verdict::NotObservable => "no observable",
     }
 }
 
@@ -320,7 +383,7 @@ fn list(dossier: &Dossier) {
     for (case, record) in dossier.cases() {
         let state = match record.state {
             CaseState::Pending => "pendiente",
-            CaseState::Resolved => "resuelto",
+            CaseState::Resolved(verdict) => verdict_label(verdict),
         };
         let date = record.date.as_deref().unwrap_or("-");
         println!("{case}\t{state}\t{date}");
@@ -383,7 +446,12 @@ fn the_driver() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/conformance/driver.mjs")
 }
 
-fn the_published_client_running(trust_root: &Path, patience: Duration, script: &str) -> Child {
+fn the_published_client_running(
+    trust_root: &Path,
+    patience: Duration,
+    script: &str,
+    mode: &str,
+) -> Child {
     let published_client = the_published_client();
     assert!(
         published_client.exists(),
@@ -395,7 +463,7 @@ fn the_published_client_running(trust_root: &Path, patience: Duration, script: &
         .env("RFIRMA_AUTOSCRIPT", published_client)
         .env("NODE_EXTRA_CA_CERTS", trust_root)
         .env("RFIRMA_BENCH_TIMEOUT_MS", patience.as_millis().to_string())
-        .env("RFIRMA_BENCH_MODE", THE_FOURTH_PROTOCOL)
+        .env("RFIRMA_BENCH_MODE", mode)
         .env("RFIRMA_BENCH_SCRIPT", script)
         .stdout(Stdio::piped())
         .spawn()
@@ -433,4 +501,18 @@ fn the_launch_url_in(event: &str) -> Option<String> {
     let needle = "\"url\":\"";
     let from = event.find(needle)? + needle.len();
     Some(event[from..].split('"').next()?.to_owned())
+}
+
+fn the_error_type_in(event: &str) -> Option<String> {
+    if !event.contains("\"event\":\"error\"") {
+        return None;
+    }
+    let needle = "\"type\":\"";
+    let from = event.find(needle)? + needle.len();
+    Some(event[from..].split('"').next()?.to_owned())
+}
+
+/// Dónde vive el anexo que los casos del sondeo van resolviendo.
+fn the_a1_annex() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../docs/afirma/1.9.2/A1-bugs-autofirma.md")
 }
