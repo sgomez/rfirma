@@ -312,6 +312,7 @@ dirigido al defecto.
 
 ### BUG-18: Incoherencia de respuesta en `save` por WebSocket (`"OK"` frente a `"SAVE_OK"`) provoca procesamiento erróneo como firma en `autoscript.js`
 
+* **Veredicto del sondeo (2026-09-17):** confirmado, con `save_over_websocket_asks_for_a_destination`.
 * **Estado en `master`:** **Corregido.** El cliente acepta ya ambas respuestas: `autoscript.js:2803`, `if (data == "OK" || data == "SAVE_OK")`. El backend sigue emitiendo `"OK"` por WebSocket, pero ya no se interpreta como firma.
 * **Código fuente:** `afirma-simple` · `es.gob.afirma.standalone.protocol.ProtocolInvocationLauncherSave.java:135`, `CommandProcessorThread.java:291-295`, `AfirmaWebSocketServer.java:113`, `AfirmaWebSocketServerV4.java:91`; `afirma-ui-miniapplet-deploy` · `autoscript.js:3423-3428, 3480-3500`.
 * **Origen de auditoría:** Anteriormente AUD-52 ([10-operaciones-save-load.md](10-operaciones-save-load.md)).
@@ -473,6 +474,7 @@ dirigido al defecto.
 
 ### BUG-25: Colapso de la distinción entre protocolo obsoleto y protocolo no soportado en el arranque de canales locales
 
+* **Veredicto del sondeo (2026-09-17):** confirmado, con `obsolete_and_unsupported_protocol_share_error_code`.
 * **Estado en `master`:** **Sigue presente.** La distinción se ha perdido por construcción: `UnsupportedProtocolException.java:31` fija un código único en el constructor y `isNewVersionNeeded()` sigue sin consumidor.
 * **Código fuente:** `afirma-simple` · `es.gob.afirma.standalone.protocol.ProtocolInvocationLauncher.java:283-285` (socket) y `:240-244` (WebSocket); `UnsupportedProtocolException.java:33-47`; `ServiceInvocationManager.java:42-45, 212-220`; `AfirmaWebSocketServerManager.java:27-36, 100-107`; `ProtocolInvocationLauncherErrorManager.java:45, 53, 102, 110`.
 * **Origen de auditoría:** Anteriormente AUD-84 ([01-vision-general.md](01-vision-general.md), [14-versiones.md](14-versiones.md), [15-errores.md](15-errores.md)).
