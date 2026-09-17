@@ -43,6 +43,40 @@ impl CaseRecord {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ProtocolVerdict {
+    Compliant,
+    Discrepant,
+    NotObservable,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ProtocolState {
+    Pending,
+    Resolved(ProtocolVerdict),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProtocolRecord {
+    pub chapter: String,
+    pub citation: String,
+    pub statement: String,
+    pub state: ProtocolState,
+    pub date: Option<String>,
+    #[serde(default)]
+    pub observation: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct ProtocolConditionDefinition {
+    pub id: &'static str,
+    pub chapter: &'static str,
+    pub citation: &'static str,
+    pub statement: &'static str,
+}
+
 /// Las coordenadas de una tanda, tomadas una sola vez al abrir un expediente nuevo.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Header {
@@ -68,6 +102,8 @@ struct Contents {
     subject: String,
     header: Header,
     cases: BTreeMap<String, CaseRecord>,
+    #[serde(default)]
+    protocol: BTreeMap<String, ProtocolRecord>,
 }
 
 /// El expediente de una tanda: un JSON en la ruta que se le indique, ligado a un único sujeto.
@@ -77,7 +113,7 @@ pub struct Dossier {
 }
 
 impl Dossier {
-    /// Abre el expediente en `path` para `subject`, creándolo con `known_cases` si no existe.
+    /// Abre el expediente en `path` para `subject`, creándolo con `known_cases` y `known_conditions` si no existe.
     ///
     /// Rechaza un expediente que otro sujeto generó, en vez de mezclar sus veredictos. Un
     /// expediente nuevo exige `coordinates`: sin ellas no hay tanda que abrir.
@@ -85,6 +121,7 @@ impl Dossier {
         path: &Path,
         subject: &str,
         known_cases: &[&str],
+        known_conditions: &[ProtocolConditionDefinition],
         coordinates: Option<HeaderCoordinates>,
     ) -> Result<Self, String> {
         let mut contents = if path.exists() {
@@ -110,6 +147,7 @@ impl Dossier {
                     date: today(),
                 },
                 cases: BTreeMap::new(),
+                protocol: BTreeMap::new(),
             }
         };
         if contents.subject != subject {
@@ -124,6 +162,19 @@ impl Dossier {
                 .cases
                 .entry((*case).to_owned())
                 .or_insert_with(CaseRecord::pending);
+        }
+        for condition in known_conditions {
+            contents
+                .protocol
+                .entry(condition.id.to_owned())
+                .or_insert_with(|| ProtocolRecord {
+                    chapter: condition.chapter.to_owned(),
+                    citation: condition.citation.to_owned(),
+                    statement: condition.statement.to_owned(),
+                    state: ProtocolState::Pending,
+                    date: None,
+                    observation: None,
+                });
         }
         let dossier = Self {
             path: path.to_owned(),
@@ -148,6 +199,17 @@ impl Dossier {
         self.contents.cases.get(case).map(|record| record.state)
     }
 
+    pub fn protocol_conditions(&self) -> impl Iterator<Item = (&str, &ProtocolRecord)> {
+        self.contents
+            .protocol
+            .iter()
+            .map(|(id, record)| (id.as_str(), record))
+    }
+
+    pub fn protocol_state_of(&self, id: &str) -> Option<ProtocolState> {
+        self.contents.protocol.get(id).map(|record| record.state)
+    }
+
     /// Marca `case` con `verdict` hoy, junto a `observation` si la hubo, y lo deja escrito antes
     /// de devolver el control.
     pub fn resolve(
@@ -164,6 +226,22 @@ impl Dossier {
                 observation,
             },
         );
+        self.save()
+    }
+
+    /// Marca `id` con `verdict` hoy, junto a `observation` si la hubo, y lo deja escrito antes
+    /// de devolver el control.
+    pub fn resolve_protocol(
+        &mut self,
+        id: &str,
+        verdict: ProtocolVerdict,
+        observation: Option<String>,
+    ) -> Result<(), String> {
+        if let Some(record) = self.contents.protocol.get_mut(id) {
+            record.state = ProtocolState::Resolved(verdict);
+            record.date = Some(today());
+            record.observation = observation;
+        }
         self.save()
     }
 
@@ -220,7 +298,7 @@ mod tests {
             store: "softhsm2".to_owned(),
         };
         let mut dossier =
-            Dossier::open(&path, "autofirma", &["saludo"], Some(coordinates)).unwrap();
+            Dossier::open(&path, "autofirma", &["saludo"], &[], Some(coordinates)).unwrap();
 
         assert_eq!(dossier.state_of("saludo"), Some(CaseState::Pending));
 
@@ -243,10 +321,10 @@ mod tests {
             store: "softhsm2".to_owned(),
         };
         let mut dossier =
-            Dossier::open(&path, "autofirma", &["saludo"], Some(coordinates)).unwrap();
+            Dossier::open(&path, "autofirma", &["saludo"], &[], Some(coordinates)).unwrap();
         dossier.resolve("saludo", Verdict::Confirmed, None).unwrap();
 
-        let reopened = Dossier::open(&path, "autofirma", &["saludo"], None).unwrap();
+        let reopened = Dossier::open(&path, "autofirma", &["saludo"], &[], None).unwrap();
 
         assert_eq!(
             reopened.state_of("saludo"),
@@ -268,6 +346,7 @@ mod tests {
             &path,
             "autofirma",
             &["saludo", "tramite"],
+            &[],
             Some(coordinates),
         )
         .unwrap();
@@ -288,7 +367,7 @@ mod tests {
             store: "softhsm2".to_owned(),
         };
         let mut dossier =
-            Dossier::open(&path, "autofirma", &["saludo"], Some(coordinates)).unwrap();
+            Dossier::open(&path, "autofirma", &["saludo"], &[], Some(coordinates)).unwrap();
         dossier
             .resolve(
                 "saludo",
@@ -297,7 +376,7 @@ mod tests {
             )
             .unwrap();
 
-        let reopened = Dossier::open(&path, "autofirma", &["saludo"], None).unwrap();
+        let reopened = Dossier::open(&path, "autofirma", &["saludo"], &[], None).unwrap();
 
         let (_, record) = reopened
             .cases()
@@ -306,6 +385,110 @@ mod tests {
         assert_eq!(
             record.observation.as_deref(),
             Some("se pidió elegir certificado")
+        );
+    }
+
+    #[test]
+    fn resolves_a_protocol_condition_with_a_three_valued_verdict() {
+        let path = tempfile::NamedTempFile::new().unwrap().path().to_owned();
+        let coordinates = HeaderCoordinates {
+            os: "linux".to_owned(),
+            os_version: "6.0".to_owned(),
+            subject_version: "1.9.2".to_owned(),
+            transport: "websocket".to_owned(),
+            store: "softhsm2".to_owned(),
+        };
+        let condition = ProtocolConditionDefinition {
+            id: "v4_echo_greeting",
+            chapter: "05",
+            citation: "AfirmaWebSocketServerV4.java:81-83",
+            statement: "La petición de eco recibe OK",
+        };
+        let mut dossier =
+            Dossier::open(&path, "autofirma", &[], &[condition], Some(coordinates)).unwrap();
+
+        assert_eq!(
+            dossier.protocol_state_of("v4_echo_greeting"),
+            Some(ProtocolState::Pending)
+        );
+
+        dossier
+            .resolve_protocol(
+                "v4_echo_greeting",
+                ProtocolVerdict::Compliant,
+                Some("OK".to_owned()),
+            )
+            .unwrap();
+
+        assert_eq!(
+            dossier.protocol_state_of("v4_echo_greeting"),
+            Some(ProtocolState::Resolved(ProtocolVerdict::Compliant))
+        );
+    }
+
+    #[test]
+    fn a_resolved_protocol_verdict_survives_a_reopen() {
+        let path = tempfile::NamedTempFile::new().unwrap().path().to_owned();
+        let coordinates = HeaderCoordinates {
+            os: "linux".to_owned(),
+            os_version: "6.0".to_owned(),
+            subject_version: "1.9.2".to_owned(),
+            transport: "websocket".to_owned(),
+            store: "softhsm2".to_owned(),
+        };
+        let condition = ProtocolConditionDefinition {
+            id: "v4_echo_greeting",
+            chapter: "05",
+            citation: "AfirmaWebSocketServerV4.java:81-83",
+            statement: "La petición de eco recibe OK",
+        };
+        let mut dossier =
+            Dossier::open(&path, "autofirma", &[], &[condition], Some(coordinates)).unwrap();
+        dossier
+            .resolve_protocol(
+                "v4_echo_greeting",
+                ProtocolVerdict::Discrepant,
+                Some("error".to_owned()),
+            )
+            .unwrap();
+
+        let reopened = Dossier::open(&path, "autofirma", &[], &[condition], None).unwrap();
+
+        assert_eq!(
+            reopened.protocol_state_of("v4_echo_greeting"),
+            Some(ProtocolState::Resolved(ProtocolVerdict::Discrepant))
+        );
+        let (_, record) = reopened
+            .protocol_conditions()
+            .find(|(id, _)| *id == "v4_echo_greeting")
+            .unwrap();
+        assert_eq!(record.observation.as_deref(), Some("error"));
+        assert_eq!(record.chapter, "05");
+        assert_eq!(record.citation, "AfirmaWebSocketServerV4.java:81-83");
+    }
+
+    #[test]
+    fn a_protocol_condition_not_yet_run_stays_pending() {
+        let path = tempfile::NamedTempFile::new().unwrap().path().to_owned();
+        let coordinates = HeaderCoordinates {
+            os: "linux".to_owned(),
+            os_version: "6.0".to_owned(),
+            subject_version: "1.9.2".to_owned(),
+            transport: "websocket".to_owned(),
+            store: "softhsm2".to_owned(),
+        };
+        let condition = ProtocolConditionDefinition {
+            id: "v4_echo_greeting",
+            chapter: "05",
+            citation: "AfirmaWebSocketServerV4.java:81-83",
+            statement: "La petición de eco recibe OK",
+        };
+        let dossier =
+            Dossier::open(&path, "autofirma", &[], &[condition], Some(coordinates)).unwrap();
+
+        assert_eq!(
+            dossier.protocol_state_of("v4_echo_greeting"),
+            Some(ProtocolState::Pending)
         );
     }
 }

@@ -6,6 +6,7 @@ use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::time::Duration;
 
+use crate::dossier::ProtocolVerdict;
 use crate::transcript::Transcript;
 use crate::Probe;
 
@@ -15,6 +16,13 @@ pub(crate) const THE_DRIVER_CRASH: &str = "uncaught";
 /// Lo que se anota cuando al conductor se le acaba la paciencia sin que nadie responda.
 pub(crate) const THE_EXHAUSTED_PATIENCE: &str = "timeout";
 
+#[derive(Debug, Clone)]
+pub(crate) struct ProtocolConditionResult {
+    pub(crate) id: String,
+    pub(crate) verdict: ProtocolVerdict,
+    pub(crate) observation: Option<String>,
+}
+
 /// Lo que se pudo medir de un trámite: si el sujeto llegó a arrancar, el código SAF que emitió,
 /// la clase con la que el cliente publicado lo envolvió, y la firma que devolvió si hubo éxito.
 pub(crate) struct ErrandOutcome {
@@ -22,6 +30,7 @@ pub(crate) struct ErrandOutcome {
     pub(crate) error_type: Option<String>,
     pub(crate) error_code: Option<String>,
     pub(crate) signature: Option<String>,
+    pub(crate) protocol_conditions: Vec<ProtocolConditionResult>,
 }
 
 impl Probe {
@@ -46,6 +55,7 @@ impl Probe {
         let mut error_type = None;
         let mut error_code = None;
         let mut signature = None;
+        let mut protocol_conditions = Vec::new();
         for event in BufReader::new(events).lines().map_while(Result::ok) {
             println!("{event}");
             let _ = std::io::stdout().flush();
@@ -66,6 +76,9 @@ impl Probe {
             if let Some(result) = the_signature_in(&event) {
                 signature = Some(result);
             }
+            if let Some(condition) = the_protocol_condition_in(&event) {
+                protocol_conditions.push(condition);
+            }
             if event.contains("\"event\":\"timeout\"") {
                 error_type = Some(THE_EXHAUSTED_PATIENCE.to_owned());
             }
@@ -81,6 +94,7 @@ impl Probe {
             error_type,
             error_code,
             signature,
+            protocol_conditions,
         }
     }
 }
@@ -193,6 +207,29 @@ fn the_saf_code_in(event: &str) -> Option<String> {
     code.starts_with("SAF_").then_some(code)
 }
 
+fn the_protocol_condition_in(event: &str) -> Option<ProtocolConditionResult> {
+    if !event.contains("\"event\":\"condition\"") {
+        return None;
+    }
+    let value: serde_json::Value = serde_json::from_str(event).ok()?;
+    let id = value.get("id")?.as_str()?.to_owned();
+    let verdict_str = value.get("verdict")?.as_str()?;
+    let verdict = match verdict_str {
+        "compliant" => ProtocolVerdict::Compliant,
+        "discrepant" => ProtocolVerdict::Discrepant,
+        _ => ProtocolVerdict::NotObservable,
+    };
+    let observation = value
+        .get("observation")
+        .and_then(|v| v.as_str())
+        .map(str::to_owned);
+    Some(ProtocolConditionResult {
+        id,
+        verdict,
+        observation,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -243,5 +280,20 @@ mod tests {
             ),
             None
         );
+    }
+
+    #[test]
+    fn reads_a_protocol_condition_event() {
+        let event = r#"{"event":"condition","id":"v4_echo_greeting","verdict":"compliant","observation":"OK"}"#;
+        let condition = the_protocol_condition_in(event).expect("debería leer la condición");
+        assert_eq!(condition.id, "v4_echo_greeting");
+        assert_eq!(condition.verdict, ProtocolVerdict::Compliant);
+        assert_eq!(condition.observation.as_deref(), Some("OK"));
+    }
+
+    #[test]
+    fn ignores_an_event_without_protocol_condition() {
+        let event = r#"{"event":"launch","url":"afirma://websocket"}"#;
+        assert!(the_protocol_condition_in(event).is_none());
     }
 }
