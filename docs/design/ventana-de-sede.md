@@ -356,6 +356,13 @@ copia legible sin cuenta está en
 [`docs/design/artboards/`](artboards/README.md), y las anotaciones de esa página
 guardan cada medida.
 
+**Quien avisa de que el canal no se abre es esta ventana, no el escritorio**
+([#661](https://github.com/sgomez/rfirma/issues/661)). `SedeEspera` ya distingue
+«esperando» de «ya no va a abrirse» y ofrece `Instalar…` con la receta del
+navegador que toque: el aviso llega en el momento que duele y con la reparación
+al lado. Por eso rFirma de escritorio no estrena ninguna franja de diagnóstico
+para lo mismo, y el diseño de esta pantalla no cambia.
+
 **La rama de identidad, reescrita el 16/09/2026**
 ([#730](https://github.com/sgomez/rfirma/issues/730)). `selectcert` devuelve el
 certificado público y nada más, así que «Identificarse» y «Te identificarás con»

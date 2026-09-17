@@ -94,8 +94,39 @@ cómo se ancla esto en macOS.
 
 ### El aviso
 
-Cuando **no está todo en orden**, «Estado de rFirma» lleva el triángulo a la
-derecha. Dice «entra a mirar», y nada más:
+Cuando hay algo que **rFirma puede y debe arreglar**, «Estado de rFirma» lleva
+el triángulo a la derecha. Dice «entra a mirar», y nada más.
+
+**Lo encienden dos cosas, y solo dos**
+([#661](https://github.com/sgomez/rfirma/issues/661)):
+
+- **El certificado de rFirma ausente o a medias** —`0 de 3 almacenes` o
+  `2 de 3`—, que es una instalación sin terminar.
+- **`Sin configurar`** en `Firma en sedes`: nadie atiende los enlaces de las
+  sedes, así que una firma que empiece en una no va a llegar a ninguna parte.
+
+**No lo enciende nada más.** En concreto:
+
+- **Que las sedes abran AutoFirma no es una avería, es una elección legítima.**
+  La fila del [panel](panel-de-estado.md) sigue diciendo «Atención» cuando entras
+  a mirar —hay algo que se puede cambiar—, pero no sale a buscarte por ello.
+- **«No aplica» no llama a nadie**: ni el certificado apagado porque firma
+  AutoFirma, ni `No se puede consultar` dentro del flatpak. No saber quién firma,
+  o saber que el certificado no hace falta, no es tener algo que reparar.
+- **`Tus certificados: Ninguno` tampoco.** Instalar un certificado propio es
+  cosa de la FNMT o de quien lo emita, no de rFirma; el panel dice `Cómo
+  instalar` y ahí se acaba lo que puede hacer.
+- **Una versión nueva tampoco.** Eso lo dice la franja de la
+  [ventana principal](ventana-principal.md), con su interruptor
+  `Avisarme cuando haya una versión nueva`, y no hay ningún otro aviso del
+  escritorio: el triángulo no es un segundo canal para lo mismo.
+
+**El veredicto de la fila y el disparo del triángulo dejan de ser la misma
+regla**: la fila **informa** de lo que hay, el triángulo **llama** para que
+vengas. Por eso hay «Atención» que no lo encienden: que haya un gesto disponible
+no es lo mismo que haga falta darlo.
+
+La marca es sobria a propósito:
 
 - **Sin número ni contador.** Contar aquí obligaría a mantener dos fuentes de
   verdad sobre lo mismo, y la verdad está en la tabla del
@@ -119,8 +150,11 @@ color, no color solo.
 - **Documento firmado**: insignia `Firmado` en `--rf-primary`.
 - **Menú abierto**: el botón se rellena con `--rf-primary`; el menú flota con
   `--rf-shadow-elevated` anclado a la derecha.
-- **Menú con aviso**: «Estado de rFirma» con el triángulo. Es independiente de
-  todo lo demás: el documento puede estar firmado y la instalación coja.
+- **Menú con aviso**: «Estado de rFirma» con el triángulo, y solo por lo que
+  rFirma puede arreglar —certificado ausente o a medias, o nadie atendiendo los
+  enlaces de las sedes—. Es independiente de todo lo demás: el documento puede
+  estar firmado y la instalación coja, y al revés, el panel puede tener una fila
+  en «Atención» sin que el menú diga nada.
 
 El menú **arranca cerrado**. El artboard «1 · Vacío · menú abierto» lo dibuja
 desplegado para enseñar sus cuatro entradas, pero eso es una posibilidad y no el
