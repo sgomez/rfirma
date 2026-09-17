@@ -262,6 +262,15 @@ tanda (`dossier.json`) y en sus transcripciones; el anexo A1 es su diccionario d
 índice. Vive en `cargo run --example conformance` (`just conformance`).
 _Avoid_: sondeo, banco de conformidad, cliente de canal
 
+**Línea base**:
+Lo que cada entrada del catálogo declara que se espera de cada **perfil** de sujeto —`autofirma` o
+`rfirma`, el tercer dato del sujeto junto al binario y su raíz de confianza—, con la **causa** que
+lo explica: una ficha `BUG-NN` del anexo A1 o un ADR. Una expectativa sin causa es una expectativa
+de conformidad. El informe cruza lo observado con lo esperado y clasifica cada entrada en
+**coincide**, **SORPRESA** —dos medidas distintas— o **sin medida** —se esperaba una medida y salió
+NO OBSERVABLE—. Una tanda sin sorpresas ni pendientes sale con código cero: ese es el verde.
+_Avoid_: expectativa por defecto, baseline, regresión
+
 **Códec del protocolo**:
 La traducción entre el texto que viaja por el canal y las estructuras con las
 que se razona dentro: la URL de operación, la respuesta con sus campos

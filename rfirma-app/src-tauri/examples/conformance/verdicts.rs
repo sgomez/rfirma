@@ -1,6 +1,10 @@
 //! La traducción de lo observado en cada comprobación a su veredicto, y el listado que las
 //! muestra.
 
+use crate::baseline::{
+    contrast_of, the_exit_code_of, the_expectation_of, the_surprises_of, verdict_name,
+    BaselineTally, Contrast, Expectation,
+};
 use crate::catalogue::Check;
 use crate::dossier::{CheckRecord, CheckState, Dossier, Verdict};
 use crate::errand::{ErrandOutcome, THE_DRIVER_CRASH, THE_EXHAUSTED_PATIENCE};
@@ -55,6 +59,8 @@ const PREFIX_FECHA: &str = "  Fecha:        ";
 const PREFIX_OBSERVACION: &str = "  Observación:  ";
 const PREFIX_ENUNCIADO: &str = "  Enunciado:    ";
 const PREFIX_CITA: &str = "  Cita:         ";
+const PREFIX_ESPERADO: &str = "  Esperado:     ";
+const PREFIX_NOTA: &str = "  Nota:         ";
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct Summary {
@@ -80,10 +86,10 @@ impl Summary {
         summary
     }
 
-    pub(crate) fn line(&self) -> String {
+    pub(crate) fn conformance_line(&self) -> String {
         format!(
-            "{} total, {} conformes, {} no conformes, {} no observables, {} pendientes",
-            self.total, self.compliant, self.noncompliant, self.not_observable, self.pending
+            "{} conformes · {} no conformes · {} no observables · {} pendientes",
+            self.compliant, self.noncompliant, self.not_observable, self.pending
         )
     }
 }
@@ -110,7 +116,39 @@ pub(crate) fn chapter_tag(chapter: &str) -> String {
     }
 }
 
-pub(crate) fn format_check_card(id: &str, record: &CheckRecord, use_color: bool) -> String {
+pub(crate) fn contrast_color(contrast: Contrast) -> &'static str {
+    match contrast {
+        Contrast::Matches => GREEN,
+        Contrast::Surprise => RED,
+        Contrast::Unmeasured => YELLOW,
+    }
+}
+
+/// La línea de la línea base: qué se esperaba, por qué, y cómo cayó lo observado frente a ello.
+fn the_expected_line(record: &CheckRecord, expectation: &Expectation, use_color: bool) -> String {
+    let mut line = verdict_name(expectation.verdict).to_owned();
+    if let Some(cause) = &expectation.cause {
+        line.push_str(&format!(" ({cause})"));
+    }
+    if let CheckState::Resolved(observed) = record.state {
+        let contrast = contrast_of(observed, expectation.verdict);
+        let label = contrast.label();
+        let shown = if use_color {
+            format!("{}{label}{RESET}", contrast_color(contrast))
+        } else {
+            label.to_owned()
+        };
+        line.push_str(&format!(" — {shown}"));
+    }
+    line
+}
+
+pub(crate) fn format_check_card(
+    id: &str,
+    record: &CheckRecord,
+    expectation: Option<&Expectation>,
+    use_color: bool,
+) -> String {
     let (badge_text, color) = match record.state {
         CheckState::Resolved(verdict) => verdict_badge(verdict),
         CheckState::Pending => (PENDING_BADGE, GRAY),
@@ -130,6 +168,15 @@ pub(crate) fn format_check_card(id: &str, record: &CheckRecord, use_color: bool)
     push_field(&mut lines, PREFIX_CITA, &record.citation);
     if let Some(ref observation) = record.observation {
         push_field(&mut lines, PREFIX_OBSERVACION, observation);
+    }
+    if let Some(expectation) = expectation {
+        lines.push(format!(
+            "{PREFIX_ESPERADO}{}",
+            the_expected_line(record, expectation, use_color)
+        ));
+        if let Some(note) = &expectation.note {
+            push_field(&mut lines, PREFIX_NOTA, note);
+        }
     }
 
     lines.join("\n")
@@ -154,22 +201,35 @@ pub(crate) fn format_list(
         .filter(|check| suite.is_none_or(|wanted| check.suite == wanted))
         .filter_map(|check| dossier.checks().find(|(id, _)| *id == check.id))
         .collect();
+    let profile = dossier.profile();
     let summary = Summary::of(shown.iter().map(|(_, record)| *record));
+    let tally = BaselineTally::of(
+        shown
+            .iter()
+            .map(|(id, record)| (*record, the_expectation_of(catalogue, id, profile))),
+    );
 
     let mut out = format!(
-        "tanda del {}: {} {}, sujeto {}, transporte {}, almacén {}\n\n",
+        "tanda del {}: {} {}, sujeto {} ({}), transporte {}, almacén {}\n\n",
         header.date,
         header.os,
         header.os_version,
         header.subject_version,
+        profile.name(),
         header.transport,
         header.store
     );
     if let Some(wanted) = suite {
-        out.push_str(&format!("Conjunto {wanted}: {}\n", summary.line()));
-    } else {
-        out.push_str(&format!("Comprobaciones: {}\n", summary.line()));
+        out.push_str(&format!(
+            "Conjunto {wanted}: {} comprobaciones\n",
+            summary.total
+        ));
     }
+    out.push_str(&format!(
+        "Conformidad del sujeto:  {}\n",
+        summary.conformance_line()
+    ));
+    out.push_str(&format!("Frente a la línea base:  {}\n", tally.line()));
 
     let mut current_suite = None;
     for (id, record) in shown {
@@ -177,11 +237,57 @@ pub(crate) fn format_list(
             out.push_str(&format!("\n── {} ──\n\n", record.suite));
             current_suite = Some(record.suite.as_str());
         }
-        out.push_str(&format_check_card(id, record, use_color));
+        out.push_str(&format_check_card(
+            id,
+            record,
+            the_expectation_of(catalogue, id, profile),
+            use_color,
+        ));
         out.push_str("\n\n");
     }
 
     out
+}
+
+/// El cierre de una tanda: las dos filas del resumen, las sorpresas nombradas una a una y el
+/// código de salida en el que se traducen.
+pub(crate) fn the_closing_of(
+    dossier: &Dossier,
+    catalogue: &[Check],
+    suite: Option<&str>,
+) -> (String, i32) {
+    let profile = dossier.profile();
+    let shown: Vec<(&str, &CheckRecord)> = catalogue
+        .iter()
+        .filter(|check| suite.is_none_or(|wanted| check.suite == wanted))
+        .filter_map(|check| dossier.checks().find(|(id, _)| *id == check.id))
+        .collect();
+    let summary = Summary::of(shown.iter().map(|(_, record)| *record));
+    let tally = BaselineTally::of(
+        shown
+            .iter()
+            .map(|(id, record)| (*record, the_expectation_of(catalogue, id, profile))),
+    );
+    let surprises = the_surprises_of(
+        shown
+            .iter()
+            .map(|(id, record)| (*id, *record, the_expectation_of(catalogue, id, profile))),
+    );
+
+    let mut out = format!(
+        "\nConformidad del sujeto:  {}\nFrente a la línea base:  {}\n",
+        summary.conformance_line(),
+        tally.line()
+    );
+    if surprises.is_empty() {
+        out.push_str("\nSin sorpresas frente a la línea base.\n");
+    } else {
+        out.push_str("\nSorpresas frente a la línea base:\n");
+        for surprise in &surprises {
+            out.push_str(&format!("  {surprise}\n"));
+        }
+    }
+    (out, the_exit_code_of(&tally))
 }
 
 pub(crate) fn list(dossier: &Dossier, catalogue: &[Check], suite: Option<&str>) {
@@ -395,6 +501,7 @@ pub(crate) fn the_verdict_for_a_bind_failure(outcome: &ErrandOutcome) -> CheckOu
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::baseline::Profile;
     use crate::catalogue::the_catalogue_in;
     use crate::dossier::HeaderCoordinates;
 
@@ -664,15 +771,27 @@ mod tests {
         let dossier = a_dossier_with_four_checks();
         let summary = Summary::of(dossier.checks().map(|(_, record)| record));
         assert_eq!(
-            summary.line(),
-            "4 total, 1 conformes, 1 no conformes, 1 no observables, 1 pendientes"
+            summary.conformance_line(),
+            "1 conformes · 1 no conformes · 1 no observables · 1 pendientes"
         );
     }
 
-    fn a_dossier_with_four_checks() -> Dossier {
-        let path = tempfile::NamedTempFile::new().unwrap().path().to_owned();
-        let catalogue = the_catalogue_in(
-            r#"
+    #[test]
+    fn the_closing_names_each_surprise_and_breaks_the_exit_code() {
+        let dossier = a_dossier_with_four_checks();
+        let catalogue = the_catalogue_in(FOUR_CHECKS).unwrap();
+
+        let (closing, code) = the_closing_of(&dossier, &catalogue, None);
+
+        assert!(closing.contains("Conformidad del sujeto:  1 conformes"));
+        assert!(closing.contains(
+            "Frente a la línea base:  1 coinciden · 1 SORPRESA · 1 sin medida · 1 pendientes"
+        ));
+        assert!(closing.contains("a_two: se esperaba CONFORME y salió NO CONFORME"));
+        assert_eq!(code, 1);
+    }
+
+    const FOUR_CHECKS: &str = r#"
 [[check]]
 id = "a_one"
 suite = "errores"
@@ -680,6 +799,9 @@ chapter = "15"
 citation = "ProtocolInvocationLauncher.java:741"
 statement = "Uno."
 drive = { mode = "v4", script = "selectcert" }
+
+[check.expect.autofirma]
+verdict = "conforme"
 
 [[check]]
 id = "a_two"
@@ -689,6 +811,9 @@ citation = "ProtocolInvocationLauncher.java:741"
 statement = "Dos."
 drive = { mode = "v4", script = "selectcert" }
 
+[check.expect.autofirma]
+verdict = "conforme"
+
 [[check]]
 id = "a_three"
 suite = "versiones"
@@ -697,6 +822,9 @@ citation = "ProtocolVersion.java:60-62"
 statement = "Tres."
 drive = { mode = "v4", script = "selectcert" }
 
+[check.expect.autofirma]
+verdict = "conforme"
+
 [[check]]
 id = "a_four"
 suite = "versiones"
@@ -704,9 +832,14 @@ chapter = "14"
 citation = "ProtocolVersion.java:60-62"
 statement = "Cuatro."
 drive = { mode = "v4", script = "selectcert" }
-"#,
-        )
-        .unwrap();
+
+[check.expect.autofirma]
+verdict = "conforme"
+"#;
+
+    fn a_dossier_with_four_checks() -> Dossier {
+        let path = tempfile::NamedTempFile::new().unwrap().path().to_owned();
+        let catalogue = the_catalogue_in(FOUR_CHECKS).unwrap();
         let coordinates = HeaderCoordinates {
             os: "Linux".to_owned(),
             os_version: "6.0".to_owned(),
@@ -714,7 +847,14 @@ drive = { mode = "v4", script = "selectcert" }
             transport: "websocket".to_owned(),
             store: "softhsm2".to_owned(),
         };
-        let mut dossier = Dossier::open(&path, "autofirma", &catalogue, Some(coordinates)).unwrap();
+        let mut dossier = Dossier::open(
+            &path,
+            "autofirma",
+            Profile::Autofirma,
+            &catalogue,
+            Some(coordinates),
+        )
+        .unwrap();
         dossier
             .resolve("a_one", Verdict::Compliant, Some("SAF_03".to_owned()))
             .unwrap();
@@ -739,10 +879,20 @@ drive = { mode = "v4", script = "selectcert" }
             date: Some("2026-09-17".to_owned()),
             observation: Some("SAF_03".to_owned()),
         };
-        let formatted = format_check_card("invalid_parameters_syntax_rejected", &record, false);
+        let expectation = Expectation {
+            verdict: Verdict::Noncompliant,
+            cause: Some("BUG-15".to_owned()),
+            note: Some("Revienta antes de validar.".to_owned()),
+        };
+        let formatted = format_check_card(
+            "invalid_parameters_syntax_rejected",
+            &record,
+            Some(&expectation),
+            false,
+        );
         assert_eq!(
             formatted,
-            "[CONFORME]      [Cap. 15] invalid_parameters_syntax_rejected\n  Fecha:        2026-09-17\n  Enunciado:    Parámetros de entrada con sintaxis inválida se rechazan con SAF_03.\n  Cita:         ProtocolInvocationLauncher.java:741\n  Observación:  SAF_03"
+            "[CONFORME]      [Cap. 15] invalid_parameters_syntax_rejected\n  Fecha:        2026-09-17\n  Enunciado:    Parámetros de entrada con sintaxis inválida se rechazan con SAF_03.\n  Cita:         ProtocolInvocationLauncher.java:741\n  Observación:  SAF_03\n  Esperado:     NO CONFORME (BUG-15) — SORPRESA\n  Nota:         Revienta antes de validar."
         );
     }
 
@@ -760,6 +910,11 @@ drive = { mode = "v4", script = "selectcert" }
         let formatted = format_check_card(
             "selectcert_only_offers_certificates_with_a_private_key",
             &record,
+            Some(&Expectation {
+                verdict: Verdict::Compliant,
+                cause: None,
+                note: None,
+            }),
             false,
         );
         assert!(formatted.starts_with(
@@ -767,6 +922,8 @@ drive = { mode = "v4", script = "selectcert" }
         ));
         assert!(!formatted.contains("Fecha"));
         assert!(!formatted.contains("Observación"));
+        assert!(formatted.ends_with("  Esperado:     CONFORME"));
+        assert!(!formatted.contains("coincide"));
     }
 
     #[test]
@@ -774,7 +931,7 @@ drive = { mode = "v4", script = "selectcert" }
         let dossier = a_dossier_with_four_checks();
         let rendered: String = dossier
             .checks()
-            .map(|(id, record)| format_check_card(id, record, true))
+            .map(|(id, record)| format_check_card(id, record, None, true))
             .collect();
         assert!(!rendered.contains("CONFIRMADO"));
         assert!(!rendered.contains("REFUTADO"));
@@ -791,8 +948,9 @@ drive = { mode = "v4", script = "selectcert" }
         let catalogue = crate::catalogue::read_the_catalogue().unwrap();
         let output = format_list(&dossier, &catalogue, None, false);
         assert!(output.contains("tanda del "));
-        assert!(output.contains("sujeto 1.9.2, transporte websocket, almacén softhsm2"));
-        assert_eq!(output.matches("Comprobaciones:").count(), 1);
+        assert!(output.contains("sujeto 1.9.2 (autofirma), transporte websocket, almacén softhsm2"));
+        assert_eq!(output.matches("Conformidad del sujeto:").count(), 1);
+        assert_eq!(output.matches("Frente a la línea base:").count(), 1);
     }
 
     #[test]
@@ -806,11 +964,18 @@ drive = { mode = "v4", script = "selectcert" }
             transport: "websocket".to_owned(),
             store: "softhsm2".to_owned(),
         };
-        let dossier = Dossier::open(&path, "autofirma", &catalogue, Some(coordinates)).unwrap();
+        let dossier = Dossier::open(
+            &path,
+            "autofirma",
+            Profile::Autofirma,
+            &catalogue,
+            Some(coordinates),
+        )
+        .unwrap();
 
         let output = format_list(&dossier, &catalogue, Some("transporte.websocket"), false);
 
-        assert!(output.contains("Conjunto transporte.websocket: 11 total"));
+        assert!(output.contains("Conjunto transporte.websocket: 11 comprobaciones"));
         assert!(output.contains("v4_echo_greeting"));
         assert!(!output.contains("invalid_parameters_syntax_rejected"));
     }

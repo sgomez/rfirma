@@ -16,6 +16,12 @@ respuesta trae el certificado elegido.
 drive = { mode = "v4", script = "selectcert" }
 warning = "Va a aparecer el diálogo de selección de certificado: elige uno para que la comprobación llegue a medir algo."
 
+[check.expect.autofirma]
+verdict = "conforme"
+
+[check.expect.rfirma]
+verdict = "conforme"
+
 [[check]]
 id = "the_published_client_completes_a_cades_signature"
 suite = "saludo"
@@ -27,6 +33,12 @@ y la firma.
 """
 drive = { mode = "v4", script = "signcades" }
 warning = "Van a aparecer el diálogo de certificado y el del PIN del token."
+
+[check.expect.autofirma]
+verdict = "conforme"
+
+[check.expect.rfirma]
+verdict = "conforme"
 
 [[check]]
 id = "the_service_channel_completes_a_certificate_selection"
@@ -40,6 +52,12 @@ esta comprobación ninguna de las suyas es de fiar.
 drive = { mode = "service", script = "selectcert" }
 warning = "Va a aparecer el diálogo de selección de certificado: elige uno para que la comprobación llegue a medir algo."
 
+[check.expect.autofirma]
+verdict = "conforme"
+
+[check.expect.rfirma]
+verdict = "conforme"
+
 [[check]]
 id = "v4_ports_negotiation"
 suite = "transporte.websocket"
@@ -51,6 +69,12 @@ el primer puerto libre de la lista.
 """
 drive = { mode = "v4", script = "protocol-v4" }
 
+[check.expect.autofirma]
+verdict = "conforme"
+
+[check.expect.rfirma]
+verdict = "conforme"
+
 [[check]]
 id = "v4_echo_greeting"
 suite = "transporte.websocket"
@@ -60,6 +84,12 @@ statement = """
 La petición de eco echo=-idsession=<idSession>@EOF recibe la respuesta de texto OK.
 """
 drive = { mode = "v4", script = "protocol-v4" }
+
+[check.expect.autofirma]
+verdict = "conforme"
+
+[check.expect.rfirma]
+verdict = "conforme"
 
 [[check]]
 id = "v4_channel_credential_present"
@@ -72,6 +102,12 @@ aceptado para su procesamiento.
 """
 drive = { mode = "v4", script = "protocol-v4" }
 
+[check.expect.autofirma]
+verdict = "conforme"
+
+[check.expect.rfirma]
+verdict = "conforme"
+
 [[check]]
 id = "v4_channel_credential_absent"
 suite = "transporte.websocket"
@@ -82,6 +118,12 @@ Si el mensaje no incluye el identificador de sesión o este difiere del negociad
 servidor responde con SAF_46.
 """
 drive = { mode = "v4", script = "protocol-v4" }
+
+[check.expect.autofirma]
+verdict = "conforme"
+
+[check.expect.rfirma]
+verdict = "conforme"
 
 [[check]]
 id = "v4_channel_credential_malformed"
@@ -94,6 +136,12 @@ rechaza los mensajes con SAF_46.
 """
 drive = { mode = "v4", script = "protocol-v4-malformed-id" }
 
+[check.expect.autofirma]
+verdict = "conforme"
+
+[check.expect.rfirma]
+verdict = "conforme"
+
 [[check]]
 id = "v4_single_client"
 suite = "transporte.websocket"
@@ -104,6 +152,12 @@ La primera conexión se fija en wsClient; el cierre de conexiones secundarias no
 aplicación, que sólo termina cuando se cierra el cliente principal.
 """
 drive = { mode = "v4", script = "protocol-v4" }
+
+[check.expect.autofirma]
+verdict = "conforme"
+
+[check.expect.rfirma]
+verdict = "conforme"
 
 [[check]]
 id = "v3_ports_default_fixed"
@@ -116,6 +170,12 @@ En versión 3, la ausencia de ports en la URL de arranque asigna por defecto el 
 """
 drive = { mode = "v3", script = "protocol-v3" }
 
+[check.expect.autofirma]
+verdict = "conforme"
+
+[check.expect.rfirma]
+verdict = "conforme"
+
 [[check]]
 id = "v3_echo_greeting"
 suite = "transporte.websocket"
@@ -126,6 +186,12 @@ En versión 3, cualquier mensaje que empiece por echo= responde inmediatamente O
 identificador de sesión.
 """
 drive = { mode = "v3", script = "protocol-v3" }
+
+[check.expect.autofirma]
+verdict = "conforme"
+
+[check.expect.rfirma]
+verdict = "conforme"
 
 [[check]]
 id = "v3_channel_credential_ignored"
@@ -138,6 +204,12 @@ SAF_46.
 """
 drive = { mode = "v3", script = "protocol-v3" }
 
+[check.expect.autofirma]
+verdict = "conforme"
+
+[check.expect.rfirma]
+verdict = "conforme"
+
 [[check]]
 id = "v3_single_client"
 suite = "transporte.websocket"
@@ -148,6 +220,12 @@ En versión 3, el cierre de una conexión secundaria no termina la aplicación; 
 sigue activo.
 """
 drive = { mode = "v3", script = "protocol-v3" }
+
+[check.expect.autofirma]
+verdict = "conforme"
+
+[check.expect.rfirma]
+verdict = "conforme"
 
 [[check]]
 id = "the_v4_channel_answers_saf_47_to_an_origin_that_is_not_127_0_0_1"
@@ -160,7 +238,14 @@ SAF_47 a cualquier otra, el bucle local IPv6 incluido.
 """
 drive = { mode = "v4-ipv6", script = "selectcert" }
 expects_saf = "SAF_47"
+
+[check.expect.autofirma]
+verdict = "conforme"
 cause = "BUG-11"
+note = "Lo cumple por comparar la dirección textualmente, que es lo que la ficha describe."
+
+[check.expect.rfirma]
+verdict = "conforme"
 
 [[check]]
 id = "the_service_channel_reports_a_bind_failure_instead_of_claiming_success"
@@ -174,7 +259,14 @@ no un silencio indistinguible de que la aplicación no esté instalada.
 drive = { mode = "service-bind-failure", script = "selectcert" }
 harness = "occupied_service_ports"
 needs = ["puertos:63131,63132,63133"]
+
+[check.expect.autofirma]
+verdict = "no-conforme"
 cause = "BUG-10"
+note = "El fallo al ligar los puertos llega a la sede como si la aplicación no estuviera instalada."
+
+[check.expect.rfirma]
+verdict = "conforme"
 
 [[check]]
 id = "operation_supported_protocol_version"
@@ -187,6 +279,12 @@ Las operaciones aceptan versiones de protocolo menores o iguales a 4
 """
 drive = { mode = "v4", script = "protocol-v4" }
 
+[check.expect.autofirma]
+verdict = "conforme"
+
+[check.expect.rfirma]
+verdict = "conforme"
+
 [[check]]
 id = "operation_unsupported_protocol_version_rejected"
 suite = "versiones"
@@ -196,6 +294,12 @@ statement = """
 Una versión de protocolo solicitada superior a 4 (p. ej. ver=5) es rechazada con el código SAF_21.
 """
 drive = { mode = "v4", script = "protocol-v4" }
+
+[check.expect.autofirma]
+verdict = "conforme"
+
+[check.expect.rfirma]
+verdict = "conforme"
 
 [[check]]
 id = "operation_minimum_client_version_satisfied"
@@ -208,6 +312,12 @@ operación continúa sin error de versión.
 """
 drive = { mode = "v4", script = "protocol-v4" }
 
+[check.expect.autofirma]
+verdict = "conforme"
+
+[check.expect.rfirma]
+verdict = "conforme"
+
 [[check]]
 id = "operation_minimum_client_version_unsatisfied_rejected"
 suite = "versiones"
@@ -219,6 +329,12 @@ rechazada con SAF_41.
 """
 drive = { mode = "v4", script = "protocol-v4" }
 
+[check.expect.autofirma]
+verdict = "conforme"
+
+[check.expect.rfirma]
+verdict = "conforme"
+
 [[check]]
 id = "websocket_handshake_session_query_parameter"
 suite = "versiones"
@@ -229,6 +345,12 @@ En versión 4 se exige idsession en la query string del handshake HTTP de WebSoc
 (ws.getResourceDescriptor()) y la conexión que no lo traiga se rechaza con el código de cierre 1008.
 """
 drive = { mode = "v4", script = "protocol-v4" }
+
+[check.expect.autofirma]
+verdict = "conforme"
+
+[check.expect.rfirma]
+verdict = "conforme"
 
 [[check]]
 id = "websocket_channel_supported_versions_accepted"
@@ -242,6 +364,12 @@ llegan a abrir canal.
 drive = { mode = "v3", script = "protocol-v3" }
 harness = "supported_websocket_versions"
 
+[check.expect.autofirma]
+verdict = "conforme"
+
+[check.expect.rfirma]
+verdict = "conforme"
+
 [[check]]
 id = "service_channel_version_range"
 suite = "versiones"
@@ -253,6 +381,12 @@ con SAF_21.
 """
 drive = { mode = "service-v4", script = "selectcert" }
 expects_saf = "SAF_21"
+
+[check.expect.autofirma]
+verdict = "conforme"
+
+[check.expect.rfirma]
+verdict = "conforme"
 
 [[check]]
 id = "websocket_rejects_a_protocol_version_it_does_not_support"
@@ -267,7 +401,14 @@ drive = { mode = "v1", script = "selectcert" }
 expects_saf = "SAF_21"
 needs = ["espera:60"]
 warning = "El cliente publicado agota sus reintentos antes de rendirse: la comprobación tarda alrededor de un minuto."
+
+[check.expect.autofirma]
+verdict = "no-observable"
 cause = "BUG-25"
+note = "El cliente publicado agota sus reintentos y se rinde con ApplicationNotFoundException sin que ningún código llegue al cable."
+
+[check.expect.rfirma]
+verdict = "conforme"
 
 [[check]]
 id = "save_answers_a_confirmation_the_published_client_recognises"
@@ -283,7 +424,14 @@ harness = "save_confirmation"
 needs = ["persona"]
 question = "¿se pidió elegir dónde guardar el fichero? [s/n]"
 warning = "Va a aparecer la ventana nativa para elegir dónde guardar el fichero."
+
+[check.expect.autofirma]
+verdict = "no-conforme"
 cause = "BUG-18"
+note = "Responde OK por WebSocket, que el cliente publicado procesa como una firma."
+
+[check.expect.rfirma]
+verdict = "conforme"
 
 [[check]]
 id = "signandsave_accepts_an_elliptic_curve_algorithm"
@@ -296,7 +444,14 @@ El catálogo de algoritmos incluye los de curva elíptica, y signandsave los ace
 drive = { mode = "v4", script = "signandsavewithecdsa" }
 needs = ["almacén:rfirma-test-ecc"]
 warning = "Van a aparecer el diálogo de certificado y el del PIN: elige el certificado de curva elíptica (token rfirma-test-ecc, PIN 1234)."
+
+[check.expect.autofirma]
+verdict = "no-conforme"
 cause = "BUG-05"
+note = "El catálogo de algoritmos que signandsave admite deja fuera los de curva elíptica."
+
+[check.expect.rfirma]
+verdict = "conforme"
 
 [[check]]
 id = "a_signature_that_requests_a_timestamp_carries_it_or_reports_the_failure"
@@ -310,7 +465,14 @@ operación lo reporta en vez de devolver una firma sin sello.
 drive = { mode = "v4", script = "signwithbrokentsa" }
 harness = "timestamp_in_the_signature"
 warning = "Van a aparecer el diálogo de certificado y el del PIN del token."
+
+[check.expect.autofirma]
+verdict = "no-conforme"
 cause = "BUG-23"
+note = "La firma vuelve sin el sello pedido y la operación no reporta que no se pudo sellar."
+
+[check.expect.rfirma]
+verdict = "conforme"
 
 [[check]]
 id = "selectcert_only_offers_certificates_with_a_private_key"
@@ -327,6 +489,14 @@ needs = ["persona"]
 question = "¿se pidió el PIN del token/certificado? [s/n]"
 warning = "Van a aparecer el diálogo de selección de certificado y, si el sujeto exige clave privada, el del PIN."
 
+[check.expect.autofirma]
+verdict = "conforme"
+
+[check.expect.rfirma]
+verdict = "no-conforme"
+cause = "ADR-0025"
+note = "rFirma no abre sesión en el token para una operación que no firma, así que ni filtra por clave privada ni pide el PIN."
+
 [[check]]
 id = "unsupported_protocol_uri_rejected"
 suite = "errores"
@@ -338,6 +508,12 @@ Una URI que no empieza estrictamente por afirma:// se rechaza con SAF_02.
 drive = { mode = "bad-uri", script = "selectcert" }
 expects_saf = "SAF_02"
 
+[check.expect.autofirma]
+verdict = "conforme"
+
+[check.expect.rfirma]
+verdict = "conforme"
+
 [[check]]
 id = "unsupported_operation_rejected"
 suite = "errores"
@@ -347,6 +523,12 @@ statement = """
 Una operación no soportada (host desconocido como unknownop) se rechaza con SAF_04.
 """
 drive = { mode = "v4", script = "protocol-v4" }
+
+[check.expect.autofirma]
+verdict = "conforme"
+
+[check.expect.rfirma]
+verdict = "conforme"
 
 [[check]]
 id = "sign_missing_or_invalid_operation_rejected"
@@ -358,6 +540,12 @@ En afirma://sign?, si el parámetro op falta o no es reconocido, se rechaza con 
 """
 drive = { mode = "v4", script = "protocol-v4" }
 
+[check.expect.autofirma]
+verdict = "conforme"
+
+[check.expect.rfirma]
+verdict = "conforme"
+
 [[check]]
 id = "sign_unsupported_format_rejected"
 suite = "errores"
@@ -367,6 +555,12 @@ statement = """
 Si el formato de firma especificado en format no está soportado, se rechaza con SAF_06.
 """
 drive = { mode = "v4", script = "protocol-v4" }
+
+[check.expect.autofirma]
+verdict = "conforme"
+
+[check.expect.rfirma]
+verdict = "conforme"
 
 [[check]]
 id = "local_access_blocked"
@@ -378,6 +572,12 @@ Si stservlet o rtservlet apuntan a direcciones locales prohibidas, se rechaza co
 """
 drive = { mode = "v4", script = "protocol-v4" }
 
+[check.expect.autofirma]
+verdict = "conforme"
+
+[check.expect.rfirma]
+verdict = "conforme"
+
 [[check]]
 id = "invalid_parameters_syntax_rejected"
 suite = "errores"
@@ -387,6 +587,12 @@ statement = """
 Parámetros de entrada con sintaxis inválida se rechazan con SAF_03.
 """
 drive = { mode = "v4", script = "protocol-v4" }
+
+[check.expect.autofirma]
+verdict = "conforme"
+
+[check.expect.rfirma]
+verdict = "conforme"
 
 [[check]]
 id = "signandsave_rejects_a_request_without_a_verb_with_saf_04"
@@ -400,4 +606,11 @@ rechaza un verbo ausente o no reconocido.
 drive = { mode = "v4", script = "signandsavewithoutaverb" }
 expects_saf = "SAF_04"
 warning = "Van a aparecer el diálogo de certificado y el del PIN antes de que llegue el rechazo."
+
+[check.expect.autofirma]
+verdict = "no-conforme"
 cause = "BUG-15"
+note = "Sin validar cop, signandsave revienta con NullPointerException y reporta SAF_09."
+
+[check.expect.rfirma]
+verdict = "conforme"

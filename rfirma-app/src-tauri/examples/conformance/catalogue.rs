@@ -1,10 +1,13 @@
 //! El catálogo declarativo de la suite de conformidad, leído de `catalogue.toml`: los metadatos de
 //! cada exigencia, no su cuerpo ejecutable.
 
+use std::collections::BTreeMap;
 use std::path::PathBuf;
 use std::time::Duration;
 
 use serde::Deserialize;
+
+use crate::baseline::Expectation;
 
 /// El vocabulario cerrado de `suite`; los conjuntos que falten los abren sus propios tickets.
 pub(crate) const THE_SUITES: &[&str] = &[
@@ -51,10 +54,9 @@ pub(crate) struct Check {
     pub question: Option<String>,
     #[serde(default)]
     pub unmeasurable: Option<String>,
-    /// La ficha de A1 que explica por qué un sujeto puede apartarse; la lee la guarda de grada A.
-    #[allow(dead_code)]
+    /// La línea base: qué se espera de cada perfil de sujeto, por el nombre del perfil.
     #[serde(default)]
-    pub cause: Option<String>,
+    pub expect: BTreeMap<String, Expectation>,
 }
 
 #[derive(Debug, Deserialize)]

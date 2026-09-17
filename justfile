@@ -447,6 +447,9 @@ dev-handler mode="on":
 # Mide el cliente publicado contra un binario instalado, aislado del almacen del titular y con
 # la raiz que sirve cada sujeto: `just conformance [orden] [--subject <ruta>] [--trust-root <ruta>]`.
 # `orden` es `list`, `run <id>` o `run-pending` (por omision), y las dos ultimas admiten `--suite <conjunto>`.
+# `diff <expediente-a> <expediente-b>` compara dos tandas y no sondea nada, asi que no pide sujeto.
+# El perfil del sujeto (`--profile autofirma|rfirma`) selecciona la linea base; si falta, se toma
+# el que reconozca el almacen aislado.
 [group('dev')]
 conformance *args: autoscript build-ts
     #!/usr/bin/env bash
@@ -473,6 +476,11 @@ conformance *args: autoscript build-ts
         esac
         i=$((i + 1))
     done
+    if [ "${remaining_args[0]:-}" = "diff" ]; then
+        cargo run --manifest-path "{{ tauri }}/Cargo.toml" --example conformance -- \
+            "${remaining_args[@]}"
+        exit 0
+    fi
     if [ -z "$subject" ]; then
         subject="$(command -v autofirma || true)"
         if [ -z "$subject" ]; then
@@ -533,14 +541,28 @@ conformance *args: autoscript build-ts
     has_command=false
     has_os=false
     has_store=false
+    has_profile=false
     for token in "${remaining_args[@]}"; do
         case "$token" in
             --dossier) has_dossier=true ;;
             list | run | run-pending) has_command=true ;;
             --os) has_os=true ;;
             --store) has_store=true ;;
+            --profile) has_profile=true ;;
         esac
     done
+    if [ "$has_profile" = false ]; then
+        case "$kind" in
+            rfirma | autofirma)
+                coordinate_args+=(--profile "$kind")
+                ;;
+            *)
+                echo "No reconozco el perfil de $subject, y es lo que selecciona la linea base." >&2
+                echo "Dalo a mano: just conformance --profile <autofirma|rfirma>" >&2
+                exit 1
+                ;;
+        esac
+    fi
     if [ "$has_dossier" = false ]; then
         mkdir -p "{{ justfile_directory() }}/.scratch"
         dossier_args=(--dossier "{{ justfile_directory() }}/.scratch/conformance-dossier.json")

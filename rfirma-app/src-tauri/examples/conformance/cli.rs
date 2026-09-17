@@ -5,6 +5,7 @@ use std::io::{IsTerminal, Write};
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
+use crate::baseline::{Profile, THE_PROFILES};
 use crate::catalogue::{Check, THE_SUITES};
 use crate::dossier::HeaderCoordinates;
 use crate::errand::the_published_client;
@@ -17,6 +18,7 @@ uso: cargo run --example conformance -- --subject <binario> --trust-root <certif
   --subject          el binario que recibe la URL de arranque, como haría el escritorio al
                       resolver el esquema afirma://
   --trust-root       la raíz de confianza con la que ese binario sirve el canal, en PEM o en DER
+  --profile          el perfil del sujeto, que selecciona la línea base: autofirma o rfirma
   --dossier          dónde vive el expediente de la tanda; se crea si no existe
   --patience-ms      cuánto espera el conductor antes de darse por vencido (por omisión, 60000)
   --plain            fuerza el modo lineal limpio sin secuencias ANSI ni sobreescritura
@@ -34,7 +36,9 @@ uso: cargo run --example conformance -- --subject <binario> --trust-root <certif
   list                lista las comprobaciones del expediente con su estado y su fecha
   run <id>            ejecuta una comprobación por su identificador; si ya está resuelta, no
                       repite salvo --relaunch
-  run-pending         ejecuta, por orden del catálogo, las que sigan pendientes
+  run-pending         ejecuta, por orden del catálogo, las que sigan pendientes; sale con cero si
+                      no hay sorpresas ni pendientes
+  diff <a> <b>        compara lo observado en dos expedientes y destaca dónde difieren
 
   --suite <conjunto>  acota `list` y `run-pending` a un conjunto del catálogo
 ";
@@ -158,6 +162,7 @@ impl Probe {
     pub(crate) fn from_the_command_line() -> Result<Self, String> {
         let mut subject = None;
         let mut trust_root = None;
+        let mut profile = None;
         let mut dossier = None;
         let mut patience = DEFAULT_PATIENCE;
         let mut coordinates = PartialCoordinates::default();
@@ -175,6 +180,15 @@ impl Probe {
                 "--subject" => subject = Some(PathBuf::from(value_of(&flag, &mut arguments)?)),
                 "--trust-root" => {
                     trust_root = Some(PathBuf::from(value_of(&flag, &mut arguments)?));
+                }
+                "--profile" => {
+                    let name = value_of(&flag, &mut arguments)?;
+                    profile = Some(Profile::named(&name).ok_or_else(|| {
+                        format!(
+                            "no conozco el perfil «{name}»; los que hay son: {}",
+                            THE_PROFILES.join(", ")
+                        )
+                    })?);
                 }
                 "--dossier" => dossier = Some(PathBuf::from(value_of(&flag, &mut arguments)?)),
                 "--patience-ms" => {
@@ -237,6 +251,12 @@ impl Probe {
         Ok(Self {
             subject: subject.ok_or_else(|| "falta --subject".to_owned())?,
             trust_root: trust_root.ok_or_else(|| "falta --trust-root".to_owned())?,
+            profile: profile.ok_or_else(|| {
+                format!(
+                    "falta --profile: el perfil del sujeto ({}) es lo que selecciona la línea base",
+                    THE_PROFILES.join(" o ")
+                )
+            })?,
             dossier: dossier.ok_or_else(|| "falta --dossier".to_owned())?,
             patience,
             command,
@@ -259,6 +279,26 @@ impl Probe {
                 std::process::exit(3);
             })
     }
+}
+
+/// La comparación de dos expedientes, si es lo que pide la línea de órdenes: no sondea nada, así
+/// que no exige ni sujeto ni raíz de confianza.
+pub(crate) fn the_comparison_asked_for() -> Option<Result<String, String>> {
+    let arguments: Vec<String> = std::env::args().skip(1).collect();
+    the_dossiers_to_compare(&arguments).map(|pair| {
+        pair.and_then(|(a, b)| crate::comparison::compare(Path::new(&a), Path::new(&b)))
+    })
+}
+
+pub(crate) fn the_dossiers_to_compare(
+    arguments: &[String],
+) -> Option<Result<(String, String), String>> {
+    let at = arguments.iter().position(|argument| argument == "diff")?;
+    let rest = &arguments[at + 1..];
+    Some(match rest {
+        [a, b] => Ok((a.clone(), b.clone())),
+        _ => Err("«diff» quiere dos expedientes: diff <expediente-a> <expediente-b>".to_owned()),
+    })
 }
 
 /// Antes de intentar nada: comprueba que hay con qué sondear. Un fallo aquí no es un veredicto,
