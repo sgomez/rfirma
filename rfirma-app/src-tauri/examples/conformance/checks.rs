@@ -160,7 +160,9 @@ impl Probe {
         let declared = &dossier.header().store;
         let has_it = declared == wanted || declared.contains("softhsm");
         (!has_it).then(|| {
-            format!("la tanda declara el almacén «{declared}»; esta comprobación exige «{wanted}»")
+            format!(
+                "la tanda declara el almacén «{declared}»; esta comprobación exige «{wanted}» o softhsm2"
+            )
         })
     }
 

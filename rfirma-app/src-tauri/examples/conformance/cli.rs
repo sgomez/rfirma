@@ -107,6 +107,16 @@ fn read_the_trailing_flags(
     Ok(())
 }
 
+/// El flag que la orden no usa, denunciado en vez de tragado en silencio.
+fn no_flag_the_command_ignores(command: &str, ignored: &[(&str, bool)]) -> Result<(), String> {
+    for (flag, given) in ignored {
+        if *given {
+            return Err(format!("«{command}» no acepta {flag}"));
+        }
+    }
+    Ok(())
+}
+
 /// El conjunto que la orden acota, si está en el vocabulario y si alguna entrada lo declara.
 pub(crate) fn the_suite_asked_for(command: &Command, catalogue: &[Check]) -> Result<(), String> {
     let asked = match command {
@@ -190,6 +200,7 @@ impl Probe {
                         &mut suite,
                         &mut relaunch,
                     )?;
+                    no_flag_the_command_ignores("list", &[("--relaunch", relaunch)])?;
                     break Command::List {
                         suite: suite.take(),
                     };
@@ -202,6 +213,7 @@ impl Probe {
                         &mut suite,
                         &mut relaunch,
                     )?;
+                    no_flag_the_command_ignores("run-pending", &[("--relaunch", relaunch)])?;
                     break Command::RunPending {
                         suite: suite.take(),
                     };
@@ -215,6 +227,7 @@ impl Probe {
                         &mut suite,
                         &mut relaunch,
                     )?;
+                    no_flag_the_command_ignores("run", &[("--suite", suite.is_some())])?;
                     break Command::Run { check, relaunch };
                 }
                 other => return Err(format!("argumento desconocido: {other}")),
