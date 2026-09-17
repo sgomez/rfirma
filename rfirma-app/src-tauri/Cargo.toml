@@ -178,5 +178,11 @@ rsa = "0.9"
 # prefijo, que es justo lo que el ID-16 exige contrastar.
 sha2 = { version = "0.10", features = ["oid"] }
 
+# El sondeo lleva sus propias pruebas unitarias y `cargo test` no las corre en un ejemplo si no
+# se le pide.
+[[example]]
+name = "probe"
+test = true
+
 [profile.release]
 strip = true
