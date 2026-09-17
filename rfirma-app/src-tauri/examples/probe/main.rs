@@ -1,13 +1,16 @@
 //! Sondeo: el cliente publicado bajo Node corre un guion del banco contra el binario declarado
 //! y transcribe lo que viajó, sin mirar el interior del sujeto.
 
-mod annex;
 mod dossier;
 mod transcript;
 
 use std::io::{BufRead, BufReader, IsTerminal, Write};
+use std::net::TcpListener;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
+use std::thread::{sleep, spawn, JoinHandle};
 use std::time::Duration;
 
 use dossier::{CaseState, Dossier, HeaderCoordinates, Verdict};
@@ -52,10 +55,6 @@ const THE_FOURTH_PROTOCOL: &str = "v4";
 /// soportada, en vez de distinguirlas.
 const THE_PROTOCOL_FRESHNESS_CASE: &str = "obsolete_and_unsupported_protocol_share_error_code";
 
-/// La ficha del anexo A1 que `THE_PROTOCOL_FRESHNESS_CASE` resuelve.
-const BUG_25_HEADING: &str =
-    "### BUG-25: Colapso de la distinción entre protocolo obsoleto y protocolo no soportado en el arranque de canales locales";
-
 /// El guion de `save`, el que dispara la ventana nativa de destino: necesita a una persona
 /// delante para completarse, así que no cabe entre los casos automáticos.
 const THE_SAVE_SCRIPT: &str = "save";
@@ -63,8 +62,53 @@ const THE_SAVE_SCRIPT: &str = "save";
 /// El caso interactivo que mide BUG-18: si el guardado por WebSocket pide de verdad un destino.
 const THE_SAVE_DESTINATION_CASE: &str = "save_over_websocket_asks_for_a_destination";
 
-/// La ficha del anexo A1 que `THE_SAVE_DESTINATION_CASE` resuelve.
-const BUG_18_HEADING: &str = "### BUG-18: Incoherencia de respuesta en `save` por WebSocket (`\"OK\"` frente a `\"SAVE_OK\"`) provoca procesamiento erróneo como firma en `autoscript.js`";
+/// El modo del conductor que hace hablar al cliente publicado con el bucle local IPv6.
+const THE_IPV6_LOOPBACK_MODE: &str = "v4-ipv6";
+
+/// El caso que mide BUG-11: si el canal de la versión 4 sigue rechazando el bucle local IPv6.
+const THE_IPV6_LOOPBACK_CASE: &str = "ipv6_loopback_is_rejected_on_the_v4_channel";
+
+/// El código con el que el canal de la versión 4 rechaza una procedencia que no es exactamente
+/// `127.0.0.1`.
+const SAF_47_EXTERNAL_REQUEST: &str = "SAF_47";
+
+/// El modo del conductor que fuerza el transporte `service` a hablar por una lista fija de
+/// puertos, la misma que el caso ocupa de antemano.
+const THE_SOCKET_BIND_FAILURE_MODE: &str = "service-bind-failure";
+
+/// El caso que mide BUG-10: si un fallo al ligar el socket sigue siendo indistinguible, para el
+/// cliente publicado, de que la aplicación no está instalada.
+const THE_SOCKET_BIND_FAILURE_CASE: &str =
+    "an_occupied_socket_makes_the_client_report_the_app_as_missing";
+
+/// El error con el que el cliente publicado se rinde tras agotar los reintentos de conexión: el
+/// mismo que arroja cuando la aplicación no está instalada.
+const APPLICATION_NOT_FOUND_EXCEPTION: &str =
+    "es.gob.afirma.standalone.ApplicationNotFoundException";
+
+/// El `type` con el que el conductor avisa de que reventó él, no el sujeto.
+const THE_DRIVER_CRASH: &str = "uncaught";
+
+/// Lo que se anota cuando al conductor se le acaba la paciencia sin que nadie responda.
+const THE_EXHAUSTED_PATIENCE: &str = "timeout";
+
+/// Cada cuánto mira el ocupante si le han dicho que suelte el puerto.
+const THE_OCCUPIER_HEARTBEAT: Duration = Duration::from_millis(50);
+
+/// Los puertos fijos que fuerza `THE_SOCKET_BIND_FAILURE_MODE`, y que el caso ocupa antes de
+/// invocar al sujeto para que no le quede ninguno libre.
+const THE_SOCKET_BIND_FAILURE_PORTS: [u16; 3] = [63131, 63132, 63133];
+
+/// El código con el que `signandsave` debería rechazar la falta del verbo (`cop`), si validara
+/// su presencia como hace `sign`.
+const THE_SIGN_AND_SAVE_SCRIPT: &str = "signandsavewithoutaverb";
+
+/// El caso que mide BUG-15: qué código de error llega de verdad al cliente publicado cuando
+/// `signandsave` no recibe verbo.
+const THE_VERB_VALIDATION_CASE: &str = "signandsave_without_a_verb_reports_its_real_error_code";
+
+/// El código engañoso con el que BUG-15 documenta que se reporta la falta de verbo.
+const SAF_09_MISLEADING_ERROR: &str = "SAF_09";
 
 /// Los nombres de los casos que el sondeo sabe ejecutar.
 const KNOWN_CASES: &[&str] = &[
@@ -72,6 +116,9 @@ const KNOWN_CASES: &[&str] = &[
     "tramite",
     THE_PROTOCOL_FRESHNESS_CASE,
     THE_SAVE_DESTINATION_CASE,
+    THE_IPV6_LOOPBACK_CASE,
+    THE_SOCKET_BIND_FAILURE_CASE,
+    THE_VERB_VALIDATION_CASE,
 ];
 
 struct Probe {
@@ -172,10 +219,12 @@ impl CaseOutcome {
     }
 }
 
-/// Lo que se pudo medir de un trámite: si el sujeto llegó a arrancar y, si acabó en error, cuál.
+/// Lo que se pudo medir de un trámite: si el sujeto llegó a arrancar, el código SAF que emitió
+/// y la clase con la que el cliente publicado lo envolvió.
 struct ErrandOutcome {
     launched: bool,
     error_type: Option<String>,
+    error_code: Option<String>,
 }
 
 fn main() {
@@ -321,7 +370,6 @@ impl Probe {
                         eprintln!("{complaint}");
                         std::process::exit(1);
                     });
-                self.record_verdict_in_annex_if_any(case, verdict);
             }
             CaseOutcome::StillPending => {
                 println!("el caso «{case}» sigue pendiente: no hubo respuesta");
@@ -341,6 +389,9 @@ impl Probe {
             }
             THE_PROTOCOL_FRESHNESS_CASE => self.run_protocol_freshness_case(),
             THE_SAVE_DESTINATION_CASE => self.run_save_destination_case(),
+            THE_IPV6_LOOPBACK_CASE => self.run_ipv6_loopback_case(),
+            THE_SOCKET_BIND_FAILURE_CASE => self.run_socket_bind_failure_case(),
+            THE_VERB_VALIDATION_CASE => self.run_verb_validation_case(),
             other => unreachable!("caso sin arnés: {other}"),
         }
     }
@@ -354,20 +405,27 @@ impl Probe {
                 THE_SINGLE_SELECTION,
                 "v1",
             )
-            .error_type;
+            .error_code;
         let unsupported = self
             .run_errand(
                 &format!("{THE_PROTOCOL_FRESHNESS_CASE}-unsupported"),
                 THE_SINGLE_SELECTION,
                 "v99",
             )
-            .error_type;
-        let verdict = match (obsolete, unsupported) {
-            (Some(a), Some(b)) if a == b => Verdict::Confirmed,
-            (Some(_), Some(_)) => Verdict::Refuted,
-            _ => Verdict::NotObservable,
-        };
-        CaseOutcome::resolved(verdict)
+            .error_code;
+        match (obsolete, unsupported) {
+            (Some(obsolete), Some(unsupported)) if obsolete == unsupported => {
+                CaseOutcome::Resolved {
+                    verdict: Verdict::Confirmed,
+                    observation: Some(obsolete),
+                }
+            }
+            (Some(obsolete), Some(unsupported)) => CaseOutcome::Resolved {
+                verdict: Verdict::Refuted,
+                observation: Some(format!("{obsolete} frente a {unsupported}")),
+            },
+            _ => CaseOutcome::resolved(Verdict::NotObservable),
+        }
     }
 
     /// El caso que estrena las preguntas a la persona: `save` por WebSocket dispara la ventana
@@ -401,26 +459,55 @@ impl Probe {
         }
     }
 
-    fn record_verdict_in_annex_if_any(&self, case: &str, verdict: Verdict) {
-        let heading = match case {
-            THE_PROTOCOL_FRESHNESS_CASE => BUG_25_HEADING,
-            THE_SAVE_DESTINATION_CASE => BUG_18_HEADING,
-            _ => return,
-        };
-        let line = format!(
-            "* **Veredicto del sondeo ({}):** {}, con `{case}`.",
-            dossier::today(),
-            verdict_label(verdict)
+    /// El código SAF con el que el canal de la versión 4 responde a una conexión por el bucle
+    /// local IPv6: si es `SAF_47`, BUG-11 sigue vigente; si el trámite tira para adelante, está
+    /// corregido.
+    fn run_ipv6_loopback_case(&self) -> CaseOutcome {
+        let outcome = self.run_errand(
+            THE_IPV6_LOOPBACK_CASE,
+            THE_SINGLE_SELECTION,
+            THE_IPV6_LOOPBACK_MODE,
         );
-        annex::record_verdict(&the_a1_annex(), heading, &line).unwrap_or_else(|complaint| {
-            eprintln!("{complaint}");
-            std::process::exit(1);
-        });
+        the_verdict_for_saf_code(outcome, SAF_47_EXTERNAL_REQUEST)
+    }
+
+    /// Ocupa de antemano los puertos que fuerza `THE_SOCKET_BIND_FAILURE_MODE`, para que
+    /// `tryPorts` no encuentre ninguno libre, y mide si el cliente publicado acaba reportando la
+    /// aplicación como no instalada en vez de un fallo de arranque.
+    fn run_socket_bind_failure_case(&self) -> CaseOutcome {
+        let _occupied_ports = OccupiedPorts::at(&THE_SOCKET_BIND_FAILURE_PORTS);
+        let outcome = self.run_errand(
+            THE_SOCKET_BIND_FAILURE_CASE,
+            THE_SINGLE_SELECTION,
+            THE_SOCKET_BIND_FAILURE_MODE,
+        );
+        if !outcome.launched {
+            return CaseOutcome::resolved(Verdict::NotObservable);
+        }
+        let verdict = match outcome.error_type.as_deref() {
+            Some(APPLICATION_NOT_FOUND_EXCEPTION) => Verdict::Confirmed,
+            Some(THE_DRIVER_CRASH | THE_EXHAUSTED_PATIENCE) | None => Verdict::NotObservable,
+            Some(_) => Verdict::Refuted,
+        };
+        CaseOutcome::Resolved {
+            verdict,
+            observation: outcome.error_code.or(outcome.error_type),
+        }
+    }
+
+    /// El código con el que `signandsave` responde de verdad cuando no recibe verbo: si es el
+    /// `SAF_09` engañoso que documenta BUG-15, sigue vigente.
+    fn run_verb_validation_case(&self) -> CaseOutcome {
+        let outcome = self.run_errand(
+            THE_VERB_VALIDATION_CASE,
+            THE_SIGN_AND_SAVE_SCRIPT,
+            THE_FOURTH_PROTOCOL,
+        );
+        the_verdict_for_saf_code(outcome, SAF_09_MISLEADING_ERROR)
     }
 
     /// Corre `script` en `mode` contra el sujeto declarado, transcribiendo cada evento del
-    /// cliente publicado a medida que llega, y devuelve si el sujeto llegó a arrancar y el
-    /// `type` del evento de error, si hubo.
+    /// cliente publicado a medida que llega, y devuelve lo que se pudo medir del trámite.
     fn run_errand(&self, transcript_name: &str, script: &str, mode: &str) -> ErrandOutcome {
         let trust_root = the_trust_root_as_pem(&self.trust_root);
         let mut driver =
@@ -433,6 +520,7 @@ impl Probe {
             });
         let mut subject = None;
         let mut error_type = None;
+        let mut error_code = None;
         for event in BufReader::new(events).lines().map_while(Result::ok) {
             println!("{event}");
             let _ = std::io::stdout().flush();
@@ -447,6 +535,12 @@ impl Probe {
             if let Some(kind) = the_error_type_in(&event) {
                 error_type = Some(kind);
             }
+            if let Some(code) = the_saf_code_in(&event) {
+                error_code = Some(code);
+            }
+            if event.contains("\"event\":\"timeout\"") {
+                error_type = Some(THE_EXHAUSTED_PATIENCE.to_owned());
+            }
         }
         let launched = subject.is_some();
         let _ = driver.wait();
@@ -457,11 +551,12 @@ impl Probe {
         ErrandOutcome {
             launched,
             error_type,
+            error_code,
         }
     }
 }
 
-/// La etiqueta en castellano de un veredicto, la que ve quien lee el listado y el anexo.
+/// La etiqueta en castellano de un veredicto, la que ve quien lee el listado.
 fn verdict_label(verdict: Verdict) -> &'static str {
     match verdict {
         Verdict::Confirmed => "confirmado",
@@ -605,6 +700,71 @@ fn the_launch_url_in(event: &str) -> Option<String> {
     Some(event[from..].split('"').next()?.to_owned())
 }
 
+/// Los puertos que el caso del socket ocupa para que el sujeto no pueda ligarlos, cerrando cada
+/// conexión que les llegue: un ocupante mudo colgaría al cliente publicado en el primer eco, y
+/// entonces no se rinde nunca y no hay nada que medir.
+struct OccupiedPorts {
+    release: Arc<AtomicBool>,
+    occupiers: Vec<JoinHandle<()>>,
+}
+
+impl OccupiedPorts {
+    fn at(ports: &[u16]) -> Self {
+        let release = Arc::new(AtomicBool::new(false));
+        let occupiers = ports
+            .iter()
+            .map(|port| {
+                let listener = TcpListener::bind(("0.0.0.0", *port))
+                    .unwrap_or_else(|error| panic!("no pude ocupar el puerto {port}: {error}"));
+                listener
+                    .set_nonblocking(true)
+                    .expect("el ocupante debería poder no bloquearse");
+                let release = Arc::clone(&release);
+                spawn(move || {
+                    while !release.load(Ordering::Relaxed) {
+                        match listener.accept() {
+                            Ok(_) => continue,
+                            Err(_) => sleep(THE_OCCUPIER_HEARTBEAT),
+                        }
+                    }
+                })
+            })
+            .collect();
+        Self { release, occupiers }
+    }
+}
+
+impl Drop for OccupiedPorts {
+    fn drop(&mut self) {
+        self.release.store(true, Ordering::Relaxed);
+        for occupier in self.occupiers.drain(..) {
+            let _ = occupier.join();
+        }
+    }
+}
+
+/// El veredicto de una ficha que se juega a un código SAF concreto: sin código en el cable no
+/// hay nada que afirmar, y el caso sale no observable en vez de refutado.
+fn the_verdict_for_saf_code(outcome: ErrandOutcome, expected: &str) -> CaseOutcome {
+    if !outcome.launched {
+        return CaseOutcome::resolved(Verdict::NotObservable);
+    }
+    match outcome.error_code {
+        Some(code) => CaseOutcome::Resolved {
+            verdict: if code == expected {
+                Verdict::Confirmed
+            } else {
+                Verdict::Refuted
+            },
+            observation: Some(code),
+        },
+        None => CaseOutcome::Resolved {
+            verdict: Verdict::NotObservable,
+            observation: outcome.error_type,
+        },
+    }
+}
+
 fn the_error_type_in(event: &str) -> Option<String> {
     if !event.contains("\"event\":\"error\"") {
         return None;
@@ -614,7 +774,100 @@ fn the_error_type_in(event: &str) -> Option<String> {
     Some(event[from..].split('"').next()?.to_owned())
 }
 
-/// Dónde vive el anexo que los casos del sondeo van resolviendo.
-fn the_a1_annex() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../docs/afirma/1.9.2/A1-bugs-autofirma.md")
+fn the_error_message_in(event: &str) -> Option<String> {
+    if !event.contains("\"event\":\"error\"") {
+        return None;
+    }
+    let needle = "\"message\":\"";
+    let from = event.find(needle)? + needle.len();
+    Some(event[from..].split('"').next()?.to_owned())
+}
+
+/// El código SAF del error, que viaja en el `message`: el `type` solo trae la clase que lo
+/// envolvió.
+fn the_saf_code_in(event: &str) -> Option<String> {
+    let message = the_error_message_in(event)?;
+    let code: String = message
+        .chars()
+        .take_while(|letter| {
+            letter.is_ascii_uppercase() || letter.is_ascii_digit() || *letter == '_'
+        })
+        .collect();
+    code.starts_with("SAF_").then_some(code)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn reads_the_saf_code_from_the_message() {
+        assert_eq!(
+            the_saf_code_in(
+                r#"{"event":"error","message":"SAF_47: Peticion al socket desde IP externa","type":"java.lang.Exception"}"#
+            )
+            .as_deref(),
+            Some("SAF_47")
+        );
+    }
+
+    #[test]
+    fn ignores_a_message_without_a_saf_code() {
+        assert_eq!(
+            the_saf_code_in(
+                r#"{"event":"error","message":"Cannot read properties of null","type":"uncaught"}"#
+            ),
+            None
+        );
+    }
+
+    #[test]
+    fn ignores_an_event_that_is_not_an_error() {
+        assert_eq!(
+            the_saf_code_in(r#"{"event":"launch","url":"afirma://websocket?v=4"}"#),
+            None
+        );
+    }
+
+    #[test]
+    fn a_missing_saf_code_is_not_observable_rather_than_refuted() {
+        let outcome = ErrandOutcome {
+            launched: true,
+            error_type: Some(THE_DRIVER_CRASH.to_owned()),
+            error_code: None,
+        };
+        let CaseOutcome::Resolved { verdict, .. } = the_verdict_for_saf_code(outcome, "SAF_47")
+        else {
+            panic!("el caso debería resolverse");
+        };
+        assert_eq!(verdict, Verdict::NotObservable);
+    }
+
+    #[test]
+    fn the_expected_saf_code_confirms_the_case() {
+        let outcome = ErrandOutcome {
+            launched: true,
+            error_type: Some("java.lang.Exception".to_owned()),
+            error_code: Some("SAF_47".to_owned()),
+        };
+        let CaseOutcome::Resolved { verdict, .. } = the_verdict_for_saf_code(outcome, "SAF_47")
+        else {
+            panic!("el caso debería resolverse");
+        };
+        assert_eq!(verdict, Verdict::Confirmed);
+    }
+
+    #[test]
+    fn another_saf_code_refutes_the_case() {
+        let outcome = ErrandOutcome {
+            launched: true,
+            error_type: Some("java.lang.Exception".to_owned()),
+            error_code: Some("SAF_03".to_owned()),
+        };
+        let CaseOutcome::Resolved { verdict, .. } = the_verdict_for_saf_code(outcome, "SAF_47")
+        else {
+            panic!("el caso debería resolverse");
+        };
+        assert_eq!(verdict, Verdict::Refuted);
+    }
 }
