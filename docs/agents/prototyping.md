@@ -178,7 +178,7 @@ puede desaparecer de aquí — el enlace al canvas ya vive en las fichas.
 
 | Caso de uso | Canvas | Estado | Fichas |
 | ----------- | ------ | ------ | ------ |
-| _(ninguno en vuelo)_ | | | |
+| El panel de estado y el menú de la cabecera ([#659](https://github.com/sgomez/rfirma/issues/659), mapa [#652](https://github.com/sgomez/rfirma/issues/652)) | [Autofirma de escritorio en Rust](https://claude.ai/design/p/c0ddbfa7-0982-498f-8f8c-8e2f8f0c6132), página «Estado de rFirma» (`PanelEstado`) y `EstadoVacio` | en revisión (tanda 1 aplicada) | pendientes: `panel-de-estado.md` y `cabecera.md` |
 
 El caso de uso **el asistente del primer arranque** ([#658](https://github.com/sgomez/rfirma/issues/658),
 mapa [#652](https://github.com/sgomez/rfirma/issues/652)) se validó el **17/09/2026**
