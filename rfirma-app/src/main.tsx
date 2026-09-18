@@ -28,6 +28,7 @@ import {
   tauriSigningBackend,
   tauriStampComposer,
   tauriUrlHandlers,
+  tauriStatusPort,
   tauriVersionCheck,
 } from "./tauri";
 import { TrustNotice } from "./trust/TrustNotice";
@@ -106,6 +107,7 @@ createRoot(root).render(
         versions={tauriVersionCheck()}
         urlHandlers={tauriUrlHandlers()}
         externalDestinations={tauriExternalDestinationOpener()}
+        status={tauriStatusPort()}
       />
     </LanguageProvider>
   </StrictMode>,

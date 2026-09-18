@@ -9,6 +9,22 @@ fn discussions_identifier_resolves_to_discussions_url() {
 }
 
 #[test]
+fn releases_identifier_resolves_to_releases_url() {
+    assert_eq!(
+        resolve_destination(RELEASES),
+        Some("https://github.com/sgomez/rfirma/releases")
+    );
+}
+
+#[test]
+fn repository_identifier_resolves_to_repository_url() {
+    assert_eq!(
+        resolve_destination(REPOSITORY),
+        Some("https://rfirma.sgomez.me/")
+    );
+}
+
+#[test]
 fn unknown_identifier_is_rejected() {
     assert_eq!(resolve_destination("unknown"), None);
     assert_eq!(resolve_destination("issues"), None);

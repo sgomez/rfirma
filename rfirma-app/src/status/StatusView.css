@@ -21,11 +21,140 @@
   margin: 0;
 }
 
+.status-view__recheck {
+  flex: none;
+  min-height: 32px;
+  padding: 0 var(--rf-space-xs);
+  font-size: 12px;
+}
+
 .status-view__body {
   flex: 1;
   min-height: 0;
   overflow: auto;
   padding: 0 var(--rf-space-md) var(--rf-space-sm);
+}
+
+.status-view__table-header {
+  display: flex;
+  align-items: center;
+  gap: var(--rf-space-sm);
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--rf-border-strong);
+}
+
+.status-view__col-signal {
+  width: 190px;
+  flex: none;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.status-view__col-value {
+  flex: 1;
+  min-width: 0;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.status-view__col-verdict {
+  width: 130px;
+  flex: none;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.status-view__col-action {
+  width: 160px;
+  flex: none;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.status-view__row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--rf-border-subtle);
+}
+
+.status-view__row-main {
+  display: flex;
+  align-items: center;
+  gap: var(--rf-space-sm);
+  min-height: 36px;
+}
+
+.status-view__cell-signal {
+  width: 190px;
+  flex: none;
+  font-weight: 600;
+  margin: 0;
+}
+
+.status-view__cell-value {
+  flex: 1;
+  min-width: 0;
+  height: 36px;
+  display: flex;
+  align-items: center;
+}
+
+.status-view__cell-value-text {
+  margin: 0;
+}
+
+.status-view__cell-verdict {
+  width: 130px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--rf-space-xs);
+}
+
+.status-view__verdict-icon {
+  display: flex;
+  flex: none;
+}
+
+.status-view__verdict-icon--muted {
+  color: var(--rf-text-muted);
+}
+
+.status-view__verdict-icon--default {
+  color: var(--rf-text);
+}
+
+.status-view__verdict-text {
+  margin: 0;
+}
+
+.status-view__verdict-text--strong {
+  font-weight: 700;
+  color: var(--rf-text);
+}
+
+.status-view__verdict-text--muted {
+  color: var(--rf-text-muted);
+}
+
+.status-view__cell-action {
+  width: 160px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  min-height: 32px;
+}
+
+.status-view__action-btn {
+  min-height: 32px;
+  padding: 0 var(--rf-space-xs);
+  font-size: 12px;
 }
 
 .status-view__footer {

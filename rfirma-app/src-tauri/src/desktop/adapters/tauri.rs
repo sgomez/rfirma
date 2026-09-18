@@ -6,7 +6,7 @@ use crate::desktop::DesktopRoot;
 use crate::documents::DocumentsRoot;
 
 use super::registry::DesktopRegistry;
-use super::views::{NewVersionView, UrlHandlersView};
+use super::views::{NewVersionView, SignalRowView, UrlHandlersView};
 use crate::crossing::Failure;
 use crate::desktop::domain::error::{DesktopError, Situation};
 use crate::documents::adapters::views::DroppedDocumentView;
@@ -75,4 +75,19 @@ pub fn open_external_destination(
             .map_err(|error| error.to_string())
     })
     .map_err(|error| Failure::new("unknownDestination", error.to_string()))
+}
+
+/// Consulta el estado de las señales de la instalación para el panel de estado.
+#[tauri::command(async)]
+pub fn read_status(desktop: State<'_, DesktopRoot>, recheck: bool) -> Vec<SignalRowView> {
+    let channel = crate::desktop::adapters::channel::Channel::detected();
+    vec![crate::desktop::application::status::check_version_signal(
+        crate::desktop::application::version::Version::running(),
+        desktop.memory.as_ref(),
+        &crate::desktop::adapters::releases::latest_release,
+        channel,
+        recheck,
+        std::time::SystemTime::now(),
+    )
+    .into()]
 }

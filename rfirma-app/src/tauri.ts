@@ -672,3 +672,12 @@ export function tauriSiteErrands(): SiteErrandPort {
     },
   });
 }
+
+import type { SignalRow, StatusPort } from "./status/status";
+
+export function tauriStatusPort(): StatusPort {
+  return {
+    readStatus: () => invoke<SignalRow[]>("read_status", { recheck: false }),
+    recheck: () => invoke<SignalRow[]>("read_status", { recheck: true }),
+  };
+}

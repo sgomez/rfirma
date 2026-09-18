@@ -3,4 +3,5 @@
 pub mod destination;
 pub mod handlers;
 pub mod invocation;
+pub mod status;
 pub mod version;

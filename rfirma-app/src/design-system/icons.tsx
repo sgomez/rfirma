@@ -283,3 +283,23 @@ export function ExternalLinkIcon({ size = 14 }: IconProps) {
     </svg>
   );
 }
+
+/** El icono de «No aplica» del panel de estado: círculo discontinuo con una raya. */
+export function NotApplicableIcon({ size = 16 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...PEN} strokeWidth={1.6} aria-hidden="true" focusable="false">
+      <circle cx="12" cy="12" r="9" strokeDasharray="3 3" />
+      <path d="M8.5 12h7" />
+    </svg>
+  );
+}
+
+/** El icono de «Comprobando» del panel de estado: arco de tres cuartos. */
+export function CheckingIcon({ size = 16 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...PEN} strokeWidth={1.6} aria-hidden="true" focusable="false">
+      <circle cx="12" cy="12" r="9" opacity="0.25" />
+      <path d="M21 12a9 9 0 0 0-9-9" />
+    </svg>
+  );
+}

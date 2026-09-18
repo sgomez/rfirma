@@ -818,6 +818,42 @@ msgstr "Sign anyway"
 msgid "status.title"
 msgstr "rFirma Status"
 
+msgid "status.recheck"
+msgstr "Check again"
+
+msgid "status.columns.signal"
+msgstr "Signal"
+
+msgid "status.columns.value"
+msgstr "Value"
+
+msgid "status.columns.verdict"
+msgstr "Verdict"
+
+msgid "status.columns.action"
+msgstr "Action"
+
+msgid "status.signals.version"
+msgstr "Version"
+
+msgid "status.verdicts.correct"
+msgstr "Correct"
+
+msgid "status.verdicts.attention"
+msgstr "Attention"
+
+msgid "status.verdicts.incorrect"
+msgstr "Incorrect"
+
+msgid "status.verdicts.notApplicable"
+msgstr "Not applicable"
+
+msgid "status.verdicts.checking"
+msgstr "Checking"
+
+msgid "status.actions.update"
+msgstr "Update"
+
 msgid "preferences.title"
 msgstr "Preferences"
 

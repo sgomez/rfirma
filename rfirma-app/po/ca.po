@@ -829,6 +829,42 @@ msgstr "Signar de totes maneres"
 msgid "status.title"
 msgstr "Estat de rFirma"
 
+msgid "status.recheck"
+msgstr "Tornar a comprovar"
+
+msgid "status.columns.signal"
+msgstr "Senyal"
+
+msgid "status.columns.value"
+msgstr "Valor"
+
+msgid "status.columns.verdict"
+msgstr "Veredicte"
+
+msgid "status.columns.action"
+msgstr "Acció"
+
+msgid "status.signals.version"
+msgstr "Versió"
+
+msgid "status.verdicts.correct"
+msgstr "Correcte"
+
+msgid "status.verdicts.attention"
+msgstr "Atenció"
+
+msgid "status.verdicts.incorrect"
+msgstr "Incorrecte"
+
+msgid "status.verdicts.notApplicable"
+msgstr "No aplica"
+
+msgid "status.verdicts.checking"
+msgstr "Comprovant"
+
+msgid "status.actions.update"
+msgstr "Actualitzar"
+
 msgid "preferences.title"
 msgstr "Preferències"
 
