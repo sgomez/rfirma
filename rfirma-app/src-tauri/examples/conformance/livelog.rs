@@ -7,7 +7,7 @@ use std::path::Path;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use crate::verdicts::{GRAY, GREEN, RESET, YELLOW};
+use crate::listing::{GRAY, GREEN, RESET, YELLOW};
 
 /// El ancho de la región viva; no se consulta el terminal para no sumar una dependencia nueva.
 pub(crate) const DEFAULT_LOG_WIDTH: usize = 74;

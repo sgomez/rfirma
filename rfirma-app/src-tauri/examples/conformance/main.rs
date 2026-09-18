@@ -8,6 +8,7 @@ mod cli;
 mod comparison;
 mod dossier;
 mod errand;
+mod listing;
 mod livelog;
 mod monitor;
 mod transcript;
@@ -91,7 +92,7 @@ impl Probe {
             std::process::exit(1);
         });
         match &self.command {
-            Command::List { suite } => verdicts::list(&dossier, &catalogue, suite.as_deref()),
+            Command::List { suite } => listing::list(&dossier, &catalogue, suite.as_deref()),
             Command::Run { check, relaunch } => {
                 self.run_one(&mut dossier, &catalogue, check, *relaunch);
             }

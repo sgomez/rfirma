@@ -251,8 +251,8 @@ hace. No se copia al repositorio: se descarga a etiqueta fijada, con `sha256` y 
 _Avoid_: tests de integración, e2e, banco de pruebas, suite de conformidad, cliente de canal
 
 **Suite de conformidad**:
-El catálogo de exigencias del protocolo —un `catalogue.toml` declarativo, una entrada por
-exigencia— y el arnés que las mide contra el **sujeto** que se le declare —AutoFirma o rFirma, un
+El catálogo de exigencias del protocolo —declarativo, repartido en `catalogue/` por conjunto, una
+entrada por exigencia— y el arnés que las mide contra el **sujeto** que se le declare —AutoFirma o rFirma, un
 binario instalado—, con el **cliente publicado** como instrumento: emite un veredicto único
 —CONFORME, NO CONFORME, NO OBSERVABLE, y PENDIENTE mientras no se haya corrido— con las
 coordenadas de la tanda. El enunciado de cada entrada dice qué exige el protocolo, nunca qué hace

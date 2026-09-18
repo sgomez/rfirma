@@ -16,15 +16,15 @@ use crate::baseline::{contrast_of, verdict_name, Contrast, Profile};
 use crate::catalogue::{Check, Drive};
 use crate::dossier::{CheckState, Dossier, Verdict};
 use crate::errand::ErrandOutcome;
+use crate::listing::{chapter_tag, the_closing_of, verdict_badge, GRAY, PENDING_BADGE};
 use crate::verdicts::{
-    chapter_tag, the_closing_of, the_verdict_for_a_bind_failure,
-    the_verdict_for_a_cancelled_dialogue, the_verdict_for_a_pinned_certificate,
-    the_verdict_for_a_private_key_check, the_verdict_for_a_proposed_save_name,
-    the_verdict_for_a_requested_input_document, the_verdict_for_a_save_confirmation,
-    the_verdict_for_a_saved_signature, the_verdict_for_a_timestamp,
-    the_verdict_for_a_visible_signature_area, the_verdict_for_an_automatic_selection,
-    the_verdict_for_an_interactive_load, the_verdict_for_an_overwrite_confirmation, the_verdict_of,
-    verdict_badge, CheckOutcome, GRAY, PENDING_BADGE,
+    the_verdict_for_a_bind_failure, the_verdict_for_a_cancelled_dialogue,
+    the_verdict_for_a_pinned_certificate, the_verdict_for_a_private_key_check,
+    the_verdict_for_a_proposed_save_name, the_verdict_for_a_requested_input_document,
+    the_verdict_for_a_save_confirmation, the_verdict_for_a_saved_signature,
+    the_verdict_for_a_timestamp, the_verdict_for_a_visible_signature_area,
+    the_verdict_for_an_automatic_selection, the_verdict_for_an_interactive_load,
+    the_verdict_for_an_overwrite_confirmation, the_verdict_of, CheckOutcome,
 };
 use crate::Probe;
 
@@ -67,7 +67,7 @@ impl Probe {
         let Some(check) = catalogue.iter().find(|check| check.id == id) else {
             eprintln!(
                 "no conozco la comprobación «{id}»; están en {}",
-                crate::catalogue::the_catalogue_file().display()
+                crate::catalogue::the_catalogue_dir().display()
             );
             std::process::exit(2);
         };

@@ -8,8 +8,8 @@ use std::time::{Duration, Instant};
 
 use crate::catalogue::Check;
 use crate::dossier::Header;
+use crate::listing::{chapter_tag, format_badge};
 use crate::livelog::{compose_log_region, LiveLogSink, LogFilter, DEFAULT_LOG_WIDTH};
-use crate::verdicts::{chapter_tag, format_badge};
 
 pub(crate) struct ProgressMonitor {
     #[allow(dead_code)]
