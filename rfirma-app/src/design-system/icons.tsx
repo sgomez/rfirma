@@ -272,3 +272,14 @@ export function CopyIcon({ size = 14 }: IconProps) {
     </svg>
   );
 }
+
+/** El icono de enlace externo de «Comentarios y ayuda». */
+export function ExternalLinkIcon({ size = 14 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...PEN} strokeWidth={1.8} aria-hidden="true" focusable="false">
+      <path d="M14 4h6v6" />
+      <path d="M20 4 11 13" />
+      <path d="M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4" />
+    </svg>
+  );
+}

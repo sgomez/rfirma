@@ -101,6 +101,7 @@ rojo.
 | `errors/ErrorNotice.tsx` | El aviso. |
 | **`design-system/`** | `design-system/icons.tsx`, copiados en línea de los artboards. |
 | **`desktop/`** | El escritorio de la persona, en el lado de la interfaz: quién atiende `afirma://`. |
+| `desktop/externalDestination.ts` | El puerto que abre destinos web externos en el navegador, y su doble. Sin React. |
 | `desktop/urlHandlers.ts` | El puerto que pregunta y elige quién atiende los enlaces, su doble, y las dos reglas puras que lo acompañan. Sin React. |
 | `desktop/UrlHandlerBanner.tsx` | El banner del arranque, con sus tres respuestas. Ocupa el mismo hueco que la franja de notificación y le cede el sitio. |
 | **`sede/`** | **La ventana que abre una sede** por `afirma://`: una ventana con una secuencia de momentos, no una pantalla por momento. Ficha: `docs/design/ventana-de-sede.md`. |

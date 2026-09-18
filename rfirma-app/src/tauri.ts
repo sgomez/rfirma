@@ -29,6 +29,7 @@
 
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import type { ExternalDestinationOpener } from "./desktop/externalDestination";
 import type { UrlHandlerChoice, UrlHandlers } from "./desktop/urlHandlers";
 import type { Badge, DocumentInHand } from "./documents/document";
 import type { DocumentDrops, Drop } from "./documents/drops";
@@ -535,6 +536,12 @@ export function tauriUrlHandlers(): UrlHandlerChoice {
 export function tauriDestinations(): DestinationSource {
   return {
     previewFor: (documentId) => invoke<Destination>("preview_destination", { id: documentId }),
+  };
+}
+
+export function tauriExternalDestinationOpener(): ExternalDestinationOpener {
+  return {
+    open: (destination) => invoke<void>("open_external_destination", { target: destination }),
   };
 }
 

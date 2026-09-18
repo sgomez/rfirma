@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { MenuIcon } from "../design-system/icons";
+import { ExternalLinkIcon, MenuIcon } from "../design-system/icons";
 import type { Badge } from "../documents/document";
 import "./Header.css";
 import type { MenuAnchor } from "./menuAnchor";
@@ -12,9 +12,10 @@ interface HeaderProps {
    * fila de la bandeja y no el documento que se está firmando.
    */
   status: Badge | null;
-  /** Dónde va el menú de dos entradas. Ver [`MenuAnchor`]. */
+  /** Dónde va el menú. Ver [`MenuAnchor`]. */
   menuAnchor: MenuAnchor;
   onOpenPreferences: () => void;
+  onOpenHelp: () => void;
   onOpenAbout: () => void;
 }
 
@@ -35,7 +36,13 @@ interface HeaderProps {
  * aplicación que abre con un menú encima del documento no es lo que el canvas
  * pide.
  */
-export function Header({ status, menuAnchor, onOpenPreferences, onOpenAbout }: HeaderProps) {
+export function Header({
+  status,
+  menuAnchor,
+  onOpenPreferences,
+  onOpenHelp,
+  onOpenAbout,
+}: HeaderProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const menuId = useId();
@@ -98,7 +105,19 @@ export function Header({ status, menuAnchor, onOpenPreferences, onOpenAbout }: H
                   className="rf-btn header__entry"
                   onClick={choose(onOpenPreferences)}
                 >
-                  {t("header.preferences")}
+                  <span className="header__entryLabel">{t("header.preferences")}</span>
+                  <span className="header__entryIcon" aria-hidden="true" />
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="rf-btn header__entry"
+                  onClick={choose(onOpenHelp)}
+                >
+                  <span className="header__entryLabel">{t("header.help")}</span>
+                  <span className="header__entryIcon" aria-hidden="true">
+                    <ExternalLinkIcon />
+                  </span>
                 </button>
                 <button
                   type="button"
@@ -106,7 +125,8 @@ export function Header({ status, menuAnchor, onOpenPreferences, onOpenAbout }: H
                   className="rf-btn header__entry"
                   onClick={choose(onOpenAbout)}
                 >
-                  {t("header.about")}
+                  <span className="header__entryLabel">{t("header.about")}</span>
+                  <span className="header__entryIcon" aria-hidden="true" />
                 </button>
               </div>
             )}

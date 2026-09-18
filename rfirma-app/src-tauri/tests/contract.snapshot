@@ -5,6 +5,7 @@ ORDENES DE TAURI                          (<contexto>/adapters/tauri*.rs)
   async check_for_new_version() -> Option<NewVersionView>
   async url_handlers() -> UrlHandlersView
   async choose_url_handler(handler: String) -> Result<(), Failure>
+  async open_external_destination(target: String) -> Result<(), Failure>
   async open_document() -> Result<Option<OpenedDocumentView>, Failure>
   async read_document(id: String) -> Result<tauri::ipc::Response, Failure>
   async list_recents() -> Vec<RecentDocumentView>

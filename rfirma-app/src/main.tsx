@@ -18,6 +18,7 @@ import {
   tauriDestinations,
   tauriDocumentDrops,
   tauriDocumentPicker,
+  tauriExternalDestinationOpener,
   tauriLanguagePreference,
   tauriPdfSource,
   tauriPreferences,
@@ -104,6 +105,7 @@ createRoot(root).render(
         opener={tauriSignedDocumentOpener()}
         versions={tauriVersionCheck()}
         urlHandlers={tauriUrlHandlers()}
+        externalDestinations={tauriExternalDestinationOpener()}
       />
     </LanguageProvider>
   </StrictMode>,

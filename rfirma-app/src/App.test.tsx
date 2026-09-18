@@ -3,6 +3,11 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { App } from "./App";
 import {
+  type ExternalDestinationOpener,
+  inMemoryExternalDestinationOpener,
+  unavailableExternalDestinationOpener,
+} from "./desktop/externalDestination";
+import {
   inMemoryUrlHandlers,
   type UrlHandlerChoice,
   type UrlHandlers,
@@ -179,6 +184,7 @@ function renderApp(
   drops: FakeDocumentDrops = inMemoryDocumentDrops(invoked),
   versions: VersionCheck = inMemoryVersionCheck(),
   urlHandlers: UrlHandlerChoice = inMemoryUrlHandlers(handlersThatAreOurs()),
+  externalDestinations: ExternalDestinationOpener = unavailableExternalDestinationOpener(),
 ) {
   const preferences = inMemoryPreferences(
     {
@@ -210,6 +216,7 @@ function renderApp(
       versions={versions}
       urlHandlers={urlHandlers}
       menuAnchor="header"
+      externalDestinations={externalDestinations}
     />,
   );
   return { recents, preferences, drops };
@@ -715,6 +722,31 @@ describe("App", () => {
     await user.click(screen.getByRole("menuitem", { name: "Acerca de rFirma" }));
 
     expect(screen.getByText(/Proyecto independiente/)).toBeInTheDocument();
+  });
+
+  it("opens Comments and help from the menu", async () => {
+    const user = userEvent.setup();
+    const destinations = inMemoryExternalDestinationOpener();
+    renderApp(
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      destinations,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Menú" }));
+    await user.click(screen.getByRole("menuitem", { name: "Comentarios y ayuda" }));
+
+    expect(destinations.opened).toEqual(["discussions"]);
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
   });
 
   it("empties the tray when Remember my activity is turned off", async () => {

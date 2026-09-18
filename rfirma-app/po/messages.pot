@@ -332,6 +332,9 @@ msgstr ""
 msgid "header.preferences"
 msgstr ""
 
+msgid "header.help"
+msgstr ""
+
 msgid "header.about"
 msgstr ""
 

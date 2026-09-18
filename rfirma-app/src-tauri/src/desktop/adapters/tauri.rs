@@ -59,3 +59,20 @@ pub fn choose_url_handler(handler: String) -> Result<(), Failure> {
         &handler,
     )?)
 }
+
+/// Abre un destino externo por identificador en el navegador del sistema (ADR-0011).
+#[tauri::command(async)]
+pub fn open_external_destination(
+    app_handle: tauri::AppHandle,
+    target: String,
+) -> Result<(), Failure> {
+    use tauri_plugin_opener::OpenerExt;
+
+    crate::desktop::application::destination::open_destination(&target, |url| {
+        app_handle
+            .opener()
+            .open_url(url, None::<&str>)
+            .map_err(|error| error.to_string())
+    })
+    .map_err(|error| Failure::new("unknownDestination", error.to_string()))
+}
