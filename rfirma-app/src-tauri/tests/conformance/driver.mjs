@@ -5,7 +5,9 @@ import { readFileSync } from "node:fs";
 import { createServer } from "node:http";
 import { request as httpsRequest } from "node:https";
 import { createServer as createTcpServer } from "node:net";
+import { networkInterfaces } from "node:os";
 import { dirname, join } from "node:path";
+import { connect as connectTls } from "node:tls";
 import { fileURLToPath } from "node:url";
 import { runInThisContext } from "node:vm";
 import { gzipSync } from "node:zlib";
@@ -1756,9 +1758,371 @@ async function theProtocolV3Script() {
   settle({ event: "success" });
 }
 
+/** Lo que se espera a que el canal del socket conteste una orden antes de darla por perdida. */
+const THE_SERVICE_ORDER_PATIENCE_MS = 10000;
+
+/** Lo que se espera a que el sujeto ligue su socket después de invocarlo. */
+const THE_SERVICE_START_PATIENCE_MS = 30000;
+
+/** Una operación que el canal atiende sin pedir certificado: el formato inexistente da SAF_06. */
+const AN_OPERATION_REFUSED_BY_ITS_FORMAT =
+  "afirma://sign?op=sign&format=NoSuchFormat&algorithm=SHA256withRSA&dat=SG9sYQ";
+
+/** Otra que tampoco pide certificado y se rechaza por otro motivo: un fichero local en `dat`. */
+const AN_OPERATION_REFUSED_BY_ITS_LOCAL_FILE =
+  "afirma://sign?op=sign&format=NoSuchFormat&algorithm=SHA256withRSA&dat=file:/etc/hostname";
+
+/** El Base64 URL-safe con relleno con el que viaja una URL dentro de `cmd=` y de `fragment=`. */
+function asServiceBase64(text) {
+  return Buffer.from(text, "utf8").toString("base64").replace(/\+/g, "-").replace(/\//g, "_");
+}
+
+/** La orden envuelta como la manda el cliente publicado: un `POST` a `/afirma`. */
+function asServicePost(port, body) {
+  return (
+    `POST /afirma HTTP/1.1\r\nHost: 127.0.0.1:${port}\r\n` +
+    "Content-Type: application/x-www-form-urlencoded\r\n" +
+    `Content-Length: ${Buffer.byteLength(body)}\r\n\r\n${body}`
+  );
+}
+
+function anEcho(idSession) {
+  return idSession ? `echo=-idsession=${idSession}@EOF` : "echo=-@EOF";
+}
+
+/** La respuesta cruda del canal: su línea de estado y su cuerpo ya descodificado. */
+function aServiceAnswer(raw) {
+  const text = raw.toString("utf8");
+  const blankLine = /\r?\n\r?\n/.exec(text);
+  const body = blankLine ? text.slice(blankLine.index + blankLine[0].length).trim() : "";
+  return { status: text.split("\n", 1)[0].trim(), text: bytesOf(body).toString("utf8") };
+}
+
+/**
+ * Una conversación por una conexión TLS nueva: escribe cada trozo de `pieces` con `pauseMs` entre
+ * ellos y recoge lo que conteste el sujeto hasta que cierre, o lo que haya a la paciencia.
+ */
+function talkingToTheService({ host = "127.0.0.1", port, pieces, pauseMs = 0, trusted = true }) {
+  return new Promise((resolve) => {
+    const chunks = [];
+    let written = 0;
+    let answeredEarly = false;
+    let over = false;
+    const socket = connectTls({ host, port, rejectUnauthorized: trusted });
+    const finish = (failure) => {
+      if (over) return;
+      over = true;
+      clearTimeout(patience);
+      socket.destroy();
+      const raw = Buffer.concat(chunks);
+      const answer = raw.length > 0 ? aServiceAnswer(raw) : { status: null, text: null };
+      resolve({ ...answer, failure, answeredEarly });
+    };
+    const patience = setTimeout(() => finish("silencio"), THE_SERVICE_ORDER_PATIENCE_MS);
+    socket.on("secureConnect", async () => {
+      for (const piece of pieces) {
+        if (written > 0) await new Promise((resume) => setTimeout(resume, pauseMs));
+        if (over) return;
+        socket.write(piece);
+        written += 1;
+      }
+    });
+    socket.on("data", (chunk) => {
+      if (written < pieces.length) answeredEarly = true;
+      chunks.push(chunk);
+    });
+    socket.on("end", () => finish(null));
+    socket.on("close", () => finish(null));
+    socket.on("error", (error) => finish(error.code ?? String(error.message)));
+  });
+}
+
+function aServiceOrder(port, body) {
+  return talkingToTheService({ port, pieces: [asServicePost(port, body)] });
+}
+
+/** El primer candidato que atiende el eco, en el orden ofrecido, o `null` si ninguno en plazo. */
+async function theServiceChannelOpening(ports, idSession) {
+  const deadline = Date.now() + THE_SERVICE_START_PATIENCE_MS;
+  while (Date.now() < deadline) {
+    for (const port of ports) {
+      const answer = await aServiceOrder(port, anEcho(idSession));
+      if (answer.text !== null) return { port, answer };
+    }
+    await new Promise((resume) => setTimeout(resume, 500));
+  }
+  return null;
+}
+
+/** Un puerto ocupado que cuelga cada conexión que le llega: uno mudo colgaría al cliente. */
+function anOccupiedPortThatHangsUp(port) {
+  return new Promise((resolve, reject) => {
+    const server = createTcpServer((socket) => socket.destroy());
+    server.once("error", reject);
+    server.listen(port, "0.0.0.0", () => resolve(server));
+  });
+}
+
+function aHostAddressOutsideTheLoopback() {
+  return (
+    Object.values(networkInterfaces())
+      .flat()
+      .find((address) => address?.family === "IPv4" && !address.internal)?.address ?? null
+  );
+}
+
+function aMeasuredConditionEvent(id, held, observation) {
+  if (held === null) return { event: "condition", id, verdict: "not_observable", observation };
+  return aConditionEvent(id, held, observation);
+}
+
+/** Las partes que anunció `announced`, pedidas una a una con `send=` y unidas. */
+async function theServiceResult(order, idSession, announced) {
+  const parts = Number.parseInt(announced.text ?? "", 10);
+  if (!(parts >= 1)) return { parts: null, result: null };
+  let result = "";
+  for (let part = 1; part <= parts; part++) {
+    const sent = await order(`send=@${part}@${parts}idsession=${idSession}@EOF`);
+    result += sent.text ?? "";
+  }
+  return { parts, result };
+}
+
+async function theServiceOperation(order, idSession, uri) {
+  const announced = await order(`cmd=${asServiceBase64(uri)}idsession=${idSession}@EOF`);
+  return { announced, ...(await theServiceResult(order, idSession, announced)) };
+}
+
+/**
+ * El carril del socket local medido por el canal crudo, con el primer candidato ocupado por un
+ * obstáculo que cuelga: la elección de puerto, el eco y su reseteo, `cmd=`, `fragment=`, `firm=`
+ * y `send=`, la lectura hasta `@EOF`, el `ver` de dentro de una orden, el `HTTP 200` de toda
+ * respuesta y el origen fuera del bucle local.
+ */
+async function theServiceProtocolScript() {
+  const ports = [54351, 54352, 54353];
+  const idSession = "Sv3c4Ch9Lm2Np7Qr5Tw1";
+  const obstacle = await anOccupiedPortThatHangsUp(ports[0]).catch(() => null);
+  emit({
+    event: "launch",
+    url: `afirma://service?ports=${ports.join(",")}&v=3&jvc=3&idsession=${idSession}`,
+  });
+  const opened = await theServiceChannelOpening(ports, idSession);
+  obstacle?.close();
+  if (!opened) {
+    settle({
+      event: "error",
+      type: "cannot_connect",
+      message: "ningún puerto candidato contestó al eco",
+    });
+    return;
+  }
+  const { port } = opened;
+  const statusLines = [opened.answer.status];
+  const order = async (body) => {
+    const answer = await aServiceOrder(port, body);
+    if (answer.status !== null) statusLines.push(answer.status);
+    return answer;
+  };
+
+  emit(
+    aMeasuredConditionEvent(
+      "the_service_channel_binds_the_first_free_candidate_port",
+      obstacle ? port === ports[1] : null,
+      obstacle
+        ? `con ${ports[0]} ocupado, abrió en ${port}`
+        : `no se pudo ocupar ${ports[0]} para medirlo`,
+    ),
+  );
+  emit(
+    aConditionEvent("the_service_echo_answers_ok", opened.answer.text === "OK", opened.answer.text),
+  );
+  emit(
+    aConditionEvent(
+      "the_service_channel_accepts_protocol_version_3",
+      opened.answer.text === "OK",
+      `v=3: ${opened.answer.text}`,
+    ),
+  );
+
+  const post = asServicePost(port, anEcho(idSession));
+  const eof = post.length - "@EOF".length;
+  const streamed = await talkingToTheService({
+    port,
+    pieces: [post.slice(0, eof - 6), post.slice(eof - 6, eof + 2), post.slice(eof + 2)],
+    pauseMs: 1000,
+  });
+  if (streamed.status !== null) statusLines.push(streamed.status);
+  emit(
+    aConditionEvent(
+      "the_service_channel_reads_until_the_eof_mark_however_it_arrives",
+      !streamed.answeredEarly && streamed.text === "OK",
+      streamed.answeredEarly
+        ? "contestó antes de que llegara @EOF"
+        : (streamed.text ?? streamed.failure),
+    ),
+  );
+
+  const first = await theServiceOperation(
+    order,
+    idSession,
+    `${AN_OPERATION_REFUSED_BY_ITS_FORMAT}&ver=5`,
+  );
+  emit(
+    aConditionEvent(
+      "the_service_cmd_order_answers_the_number_of_parts",
+      first.parts !== null,
+      first.announced.text ?? first.announced.failure,
+    ),
+  );
+  emit(
+    aMeasuredConditionEvent(
+      "the_service_send_order_delivers_the_result",
+      first.parts === null ? null : first.result.startsWith("SAF_"),
+      first.result ?? "sin partes que pedir",
+    ),
+  );
+  emit(
+    aMeasuredConditionEvent(
+      "a_ver_inside_an_order_leaves_the_negotiated_version_alone",
+      first.parts === null ? null : !first.result.startsWith("SAF_21"),
+      first.result ?? "sin partes que pedir",
+    ),
+  );
+
+  await order(anEcho(idSession));
+  const second = await theServiceOperation(
+    order,
+    idSession,
+    AN_OPERATION_REFUSED_BY_ITS_LOCAL_FILE,
+  );
+  emit(
+    aMeasuredConditionEvent(
+      "an_echo_with_a_dash_discards_the_pending_result",
+      first.parts === null || second.parts === null ? null : second.result !== first.result,
+      `antes: ${first.result ?? "-"}; después: ${second.result ?? "-"}`,
+    ),
+  );
+
+  await order(anEcho(idSession));
+  const half = Math.ceil(AN_OPERATION_REFUSED_BY_ITS_FORMAT.length / 2);
+  const firstFragment = await order(
+    `fragment=@1@2@${asServiceBase64(AN_OPERATION_REFUSED_BY_ITS_FORMAT.slice(0, half))}` +
+      `idsession=${idSession}@EOF`,
+  );
+  const lastFragment = await order(
+    `fragment=@2@2@${asServiceBase64(AN_OPERATION_REFUSED_BY_ITS_FORMAT.slice(half))}` +
+      `idsession=${idSession}@EOF`,
+  );
+  emit(
+    aConditionEvent(
+      "a_fragment_before_the_last_answers_more_data_need",
+      firstFragment.text === "MORE_DATA_NEED",
+      firstFragment.text ?? firstFragment.failure,
+    ),
+  );
+  emit(
+    aConditionEvent(
+      "the_last_fragment_answers_ok",
+      lastFragment.text === "OK",
+      lastFragment.text ?? lastFragment.failure,
+    ),
+  );
+  const fired = await order(`firm=idsession=${idSession}@EOF`);
+  const reassembled = await theServiceResult(order, idSession, fired);
+  emit(
+    aConditionEvent(
+      "the_firm_order_runs_the_reassembled_request",
+      reassembled.result?.startsWith("SAF_06") ?? false,
+      reassembled.result ?? fired.text ?? fired.failure,
+    ),
+  );
+
+  await order("echo=-idsession=OtraSesionAjena00000@EOF");
+  await order(`nada=idsession=${idSession}@EOF`);
+  const otherStatuses = statusLines.filter((line) => line !== "HTTP/1.1 200 OK");
+  emit(
+    aConditionEvent(
+      "every_service_answer_is_http_200_whatever_it_carries",
+      otherStatuses.length === 0,
+      otherStatuses.length === 0
+        ? `${statusLines.length} respuestas, todas HTTP/1.1 200 OK`
+        : `también: ${[...new Set(otherStatuses)].join(", ")}`,
+    ),
+  );
+
+  const outside = aHostAddressOutsideTheLoopback();
+  if (outside === null) {
+    emit(
+      aMeasuredConditionEvent(
+        "the_service_channel_serves_only_the_loopback",
+        null,
+        "el equipo no tiene ninguna dirección fuera del bucle local",
+      ),
+    );
+  } else {
+    const fromOutside = await talkingToTheService({
+      host: outside,
+      port,
+      pieces: [asServicePost(port, anEcho(idSession))],
+      trusted: false,
+    });
+    emit(
+      aConditionEvent(
+        "the_service_channel_serves_only_the_loopback",
+        fromOutside.text !== "OK",
+        `desde fuera del bucle local: ${fromOutside.text ?? fromOutside.failure ?? "cerró sin contestar"}`,
+      ),
+    );
+  }
+
+  settle({ event: "success" });
+}
+
+/** Las invocaciones del carril que solo se miden abriendo el canal, cada una en su tanda. */
+const THE_SERVICE_LAUNCH_VARIANTS = {
+  "protocol-service-v1": {
+    ports: [54361, 54362, 54363],
+    launch: (ports, idSession) =>
+      `afirma://service?ports=${ports.map((port) => -port).join(",")}&v=1&jvc=3` +
+      `&idsession=${idSession}`,
+    conditions: [
+      "the_service_channel_accepts_protocol_version_1",
+      "negative_candidate_ports_are_read_by_their_absolute_value",
+    ],
+  },
+  "protocol-service-v2": {
+    ports: [54371, 54372, 54373],
+    launch: (ports, idSession) =>
+      `afirma://service/?ports=${ports.join(",")}&v=2&jvc=3&idsession=${idSession}`,
+    conditions: [
+      "the_service_channel_accepts_protocol_version_2",
+      "the_service_launch_accepts_a_slash_before_its_query",
+    ],
+  },
+};
+
+async function theServiceLaunchVariantScript({ ports, launch, conditions }) {
+  const idSession = "Vr2Sl4Ng6Pt8Xz0Ab3Cd";
+  const url = launch(ports, idSession);
+  emit({ event: "launch", url });
+  const opened = await theServiceChannelOpening(ports, idSession);
+  const observation = opened
+    ? `${url}: el eco contestó ${opened.answer.text} en ${opened.port}`
+    : `${url}: ningún puerto candidato contestó al eco`;
+  for (const id of conditions) {
+    emit(aConditionEvent(id, opened?.answer.text === "OK", observation));
+  }
+  settle({ event: "success" });
+}
+
 if (script.startsWith("protocol-")) {
   if (script === "protocol-v4") {
     theProtocolV4Script();
+  } else if (script === "protocol-service") {
+    theServiceProtocolScript();
+  } else if (Object.hasOwn(THE_SERVICE_LAUNCH_VARIANTS, script)) {
+    theServiceLaunchVariantScript(THE_SERVICE_LAUNCH_VARIANTS[script]);
   } else if (script === "protocol-v4-parameters") {
     theProtocolV4ParametersScript();
   } else if (script === "protocol-v4-malformed-id") {
