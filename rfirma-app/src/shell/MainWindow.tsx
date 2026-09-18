@@ -8,9 +8,10 @@ import type { MenuAnchor } from "./menuAnchor";
 interface MainWindowProps {
   /** La insignia del documento abierto, o `null` si no hay ninguno. */
   status: Badge | null;
-  /** Dónde va el menú de dos entradas. Ver [`MenuAnchor`]. */
+  /** Dónde va el menú. Ver [`MenuAnchor`]. */
   menuAnchor: MenuAnchor;
   onOpenPreferences: () => void;
+  onOpenHelp?: () => void;
   onOpenAbout: () => void;
   /**
    * La franja de notificación, o `null` —lo normal— cuando no hay nada que
@@ -56,6 +57,7 @@ export function MainWindow({
   status,
   menuAnchor,
   onOpenPreferences,
+  onOpenHelp = () => {},
   onOpenAbout,
   notification = null,
   tray,
@@ -75,6 +77,7 @@ export function MainWindow({
         status={status}
         menuAnchor={menuAnchor}
         onOpenPreferences={onOpenPreferences}
+        onOpenHelp={onOpenHelp}
         onOpenAbout={onOpenAbout}
       />
       {notification}

@@ -44,6 +44,7 @@ import type { SiteErrandPort } from "./sede/errand";
 import { type SiteErrandView, siteErrands } from "./sede/siteErrands";
 import type { Certificate, CertificateStore } from "./signing/certificate";
 import type { Destination, DestinationSource, SignedDocumentOpener } from "./signing/destination";
+import type { ExternalDestinationOpener } from "./desktop/externalDestination";
 import type { SignedDocument, SigningBackend, StageResult } from "./signing/flow";
 import type { Rubric, RubricPicker, RubricSituation } from "./signing/rubric";
 import type { StoreSecret } from "./signing/secret";
@@ -548,6 +549,12 @@ export function tauriDestinations(): DestinationSource {
  * Rust por lo mismo que el del diálogo (ID-63, ID-85), y debajo es el portal
  * `OpenURI`.
  */
+export function tauriExternalDestinationOpener(): ExternalDestinationOpener {
+  return {
+    open: (destination) => invoke<void>("open_external_destination", { target: destination }),
+  };
+}
+
 export function tauriSignedDocumentOpener(): SignedDocumentOpener {
   return {
     openDocument: () => invoke<void>("open_signed_document"),

@@ -54,7 +54,8 @@ población que el mecanismo quiere reducir.
 > **Proyecto independiente.** rFirma no está relacionada con AutoFirma ni con
 > la Administración General del Estado, que publican el cliente oficial, ni
 > cuenta con su respaldo. Si necesitas la aplicación oficial, descárgala de su
-> web.
+> web. Los problemas con rFirma se comunican en su propio repositorio, no a
+> quienes publican el cliente oficial.
 
 Va **como párrafo, sin icono ni recuadro**. Es un hecho sobre el proyecto, no
 una advertencia sobre un riesgo del usuario, y enmarcarlo como alarma le daría

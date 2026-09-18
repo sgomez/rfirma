@@ -391,6 +391,9 @@ msgstr "Menua"
 msgid "header.preferences"
 msgstr "Hobespenak…"
 
+msgid "header.help"
+msgstr "Iruzkinak eta laguntza"
+
 msgid "header.about"
 msgstr "rFirmari buruz"
 
@@ -967,7 +970,8 @@ msgstr ""
 "Proiektu independentea. rFirmak ez du zerikusirik AutoFirmarekin, ez eta "
 "bezero ofiziala argitaratzen duen Estatuko Administrazio Orokorrarekin ere, "
 "eta ez du haien babesik. Aplikazio ofiziala behar baduzu, deskargatu ezazu "
-"haien webgunetik."
+"haien webgunetik. rFirmarekin izandako arazoak bere biltegian jakinarazten "
+"dira, ez bezero ofiziala argitaratzen dutenei."
 
 #. No se traduce: es una URL.
 msgid "about.repository"

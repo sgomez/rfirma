@@ -10,7 +10,13 @@ const noop = () => {};
 describe("Header", () => {
   it("shows no status badge while no document is open", () => {
     renderWithCatalog(
-      <Header status={null} menuAnchor="header" onOpenPreferences={noop} onOpenAbout={noop} />,
+      <Header
+        status={null}
+        menuAnchor="header"
+        onOpenPreferences={noop}
+        onOpenHelp={noop}
+        onOpenAbout={noop}
+      />,
     );
 
     expect(screen.queryByText("Sin firmar")).not.toBeInTheDocument();
@@ -19,7 +25,13 @@ describe("Header", () => {
 
   it("shows the cached badge of the open document", () => {
     renderWithCatalog(
-      <Header status="Unsigned" menuAnchor="header" onOpenPreferences={noop} onOpenAbout={noop} />,
+      <Header
+        status="Unsigned"
+        menuAnchor="header"
+        onOpenPreferences={noop}
+        onOpenHelp={noop}
+        onOpenAbout={noop}
+      />,
     );
 
     expect(screen.getByText("Sin firmar")).toBeInTheDocument();
@@ -29,7 +41,13 @@ describe("Header", () => {
   // de texto que había antes ni un icono de fuente.
   it("draws the menu button with an inline svg icon", () => {
     renderWithCatalog(
-      <Header status={null} menuAnchor="header" onOpenPreferences={noop} onOpenAbout={noop} />,
+      <Header
+        status={null}
+        menuAnchor="header"
+        onOpenPreferences={noop}
+        onOpenHelp={noop}
+        onOpenAbout={noop}
+      />,
     );
 
     const button = screen.getByRole("button", { name: "Men\u00fa" });
@@ -41,7 +59,13 @@ describe("Header", () => {
   // posibilidad y no un estado inicial: arranca cerrado.
   it("starts with the menu closed", () => {
     renderWithCatalog(
-      <Header status={null} menuAnchor="header" onOpenPreferences={noop} onOpenAbout={noop} />,
+      <Header
+        status={null}
+        menuAnchor="header"
+        onOpenPreferences={noop}
+        onOpenHelp={noop}
+        onOpenAbout={noop}
+      />,
     );
 
     expect(screen.queryByRole("menu")).not.toBeInTheDocument();
@@ -53,24 +77,87 @@ describe("Header", () => {
 
   it("has no menu bar, only the menu button", () => {
     renderWithCatalog(
-      <Header status={null} menuAnchor="header" onOpenPreferences={noop} onOpenAbout={noop} />,
+      <Header
+        status={null}
+        menuAnchor="header"
+        onOpenPreferences={noop}
+        onOpenHelp={noop}
+        onOpenAbout={noop}
+      />,
     );
 
     expect(screen.queryByRole("menubar")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Menú" })).toBeInTheDocument();
   });
 
-  it("opens a menu of exactly two entries", async () => {
+  it("opens a menu of three entries", async () => {
     const user = userEvent.setup();
     renderWithCatalog(
-      <Header status={null} menuAnchor="header" onOpenPreferences={noop} onOpenAbout={noop} />,
+      <Header
+        status={null}
+        menuAnchor="header"
+        onOpenPreferences={noop}
+        onOpenHelp={noop}
+        onOpenAbout={noop}
+      />,
     );
 
     await user.click(screen.getByRole("button", { name: "Menú" }));
 
-    expect(screen.getAllByRole("menuitem")).toHaveLength(2);
+    expect(screen.getAllByRole("menuitem")).toHaveLength(3);
     expect(screen.getByRole("menuitem", { name: "Preferencias…" })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: /Comentarios y ayuda/ })).toBeInTheDocument();
     expect(screen.getByRole("menuitem", { name: "Acerca de rFirma" })).toBeInTheDocument();
+  });
+
+  it("opens the help destination from the menu and closes the menu", async () => {
+    const user = userEvent.setup();
+    const openHelp = vi.fn();
+    renderWithCatalog(
+      <Header
+        status={null}
+        menuAnchor="header"
+        onOpenPreferences={noop}
+        onOpenHelp={openHelp}
+        onOpenAbout={noop}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Menú" }));
+    await user.click(screen.getByRole("menuitem", { name: /Comentarios y ayuda/ }));
+
+    expect(openHelp).toHaveBeenCalledOnce();
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+  });
+
+  it("reserves the 14px icon column on all entries and shows the external icon on help", async () => {
+    const user = userEvent.setup();
+    renderWithCatalog(
+      <Header
+        status={null}
+        menuAnchor="header"
+        onOpenPreferences={noop}
+        onOpenHelp={noop}
+        onOpenAbout={noop}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Menú" }));
+
+    const items = screen.getAllByRole("menuitem");
+    expect(items).toHaveLength(3);
+    for (const item of items) {
+      expect(item.querySelector(".header__entryIcon")).not.toBeNull();
+    }
+
+    const helpItem = screen.getByRole("menuitem", { name: /Comentarios y ayuda/ });
+    expect(helpItem.querySelector(".header__entryIcon svg")).not.toBeNull();
+
+    const prefItem = screen.getByRole("menuitem", { name: "Preferencias…" });
+    expect(prefItem.querySelector(".header__entryIcon svg")).toBeNull();
+
+    const aboutItem = screen.getByRole("menuitem", { name: "Acerca de rFirma" });
+    expect(aboutItem.querySelector(".header__entryIcon svg")).toBeNull();
   });
 
   it("opens the preferences dialog from the menu and closes the menu", async () => {
@@ -81,6 +168,7 @@ describe("Header", () => {
         status={null}
         menuAnchor="header"
         onOpenPreferences={openPreferences}
+        onOpenHelp={noop}
         onOpenAbout={noop}
       />,
     );
@@ -96,7 +184,13 @@ describe("Header", () => {
     const user = userEvent.setup();
     const openAbout = vi.fn();
     renderWithCatalog(
-      <Header status={null} menuAnchor="header" onOpenPreferences={noop} onOpenAbout={openAbout} />,
+      <Header
+        status={null}
+        menuAnchor="header"
+        onOpenPreferences={noop}
+        onOpenHelp={noop}
+        onOpenAbout={openAbout}
+      />,
     );
 
     await user.click(screen.getByRole("button", { name: "Menú" }));
@@ -108,7 +202,13 @@ describe("Header", () => {
   it("closes the open menu with Escape", async () => {
     const user = userEvent.setup();
     renderWithCatalog(
-      <Header status={null} menuAnchor="header" onOpenPreferences={noop} onOpenAbout={noop} />,
+      <Header
+        status={null}
+        menuAnchor="header"
+        onOpenPreferences={noop}
+        onOpenHelp={noop}
+        onOpenAbout={noop}
+      />,
     );
 
     await user.click(screen.getByRole("button", { name: "Menú" }));
@@ -124,7 +224,13 @@ describe("Header", () => {
   it("keeps the menu button sized by header__button whether the menu is open or closed", async () => {
     const user = userEvent.setup();
     renderWithCatalog(
-      <Header status={null} menuAnchor="header" onOpenPreferences={noop} onOpenAbout={noop} />,
+      <Header
+        status={null}
+        menuAnchor="header"
+        onOpenPreferences={noop}
+        onOpenHelp={noop}
+        onOpenAbout={noop}
+      />,
     );
     const button = screen.getByRole("button", { name: "Menú" });
 
@@ -139,7 +245,13 @@ describe("Header", () => {
 
   it("hides the menu button where the two entries live in the native menu", () => {
     renderWithCatalog(
-      <Header status={null} menuAnchor="native" onOpenPreferences={noop} onOpenAbout={noop} />,
+      <Header
+        status={null}
+        menuAnchor="native"
+        onOpenPreferences={noop}
+        onOpenHelp={noop}
+        onOpenAbout={noop}
+      />,
     );
 
     expect(screen.queryByRole("button", { name: "Menú" })).not.toBeInTheDocument();

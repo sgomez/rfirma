@@ -377,6 +377,9 @@ msgstr "Menu"
 msgid "header.preferences"
 msgstr "Preferences…"
 
+msgid "header.help"
+msgstr "Feedback and help"
+
 msgid "header.about"
 msgstr "About rFirma"
 
@@ -947,7 +950,9 @@ msgid "about.independence"
 msgstr ""
 "Independent project. rFirma isn't related to AutoFirma or to the Spanish "
 "Administration, who publish the official client, nor is it endorsed by them. "
-"If you need the official application, download it from their website."
+"If you need the official application, download it from their website. Issues "
+"with rFirma are reported in its own repository, not to the publishers of "
+"the official client."
 
 #. No se traduce: es una URL.
 msgid "about.repository"

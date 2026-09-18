@@ -18,11 +18,13 @@ máquina. Ni firma ni documentos. Rutas relativas a `src/desktop/`.
 | `adapters/paths.rs` | Las rutas de la memoria entre sesiones y las de la CA local. Único sitio que conoce el sistema operativo (ADR-0010) y el único que crea un fichero `0600` de nacimiento. Pruebas en `adapters/paths/tests.rs`. |
 | `adapters/registry.rs` | `DesktopRegistry`: el adaptador de `HandlerRegistry` sobre `channel.rs` y `choice.rs`. |
 | `adapters/releases.rs` | El único sitio que abre una conexión: le pregunta a GitHub por la última publicación. Pruebas en `adapters/releases/tests.rs`. |
-| `adapters/tauri.rs` | Las cuatro órdenes del escritorio: invocación —lo que trae lo cuenta `DocumentsRoot`—, versión publicada y manejadores de `afirma://`. |
+| `adapters/tauri.rs` | Las cinco órdenes del escritorio: invocación, versión publicada, manejadores de `afirma://` y destino externo. |
 | `adapters/views.rs` | Lo que cruza a la ventana: manejadores de `afirma://` y versión nueva, desde `domain/handlers.rs`. Sin pruebas propias. |
+| `application/destination.rs` | Abrir un destino externo conocido en el navegador. Pruebas en `application/destination/tests.rs`. |
 | `application/handlers.rs` | Quién atiende `afirma://`, del escritorio a Preferencias y de vuelta. Devuelve dominio, nunca una vista. Pruebas en `application/handlers/tests.rs`. |
 | `application/invocation.rs` | La invocación desde fuera, `rfirma documento.pdf`: qué trae, qué hace la segunda —solo del escritorio (ADR-0024)— y el rol de proceso que decide `role_of`. Pruebas en `application/invocation/tests.rs`. |
 | `application/version.rs` | Si hay una versión nueva publicada, con su caché de 24 h. Pruebas en `application/version/tests.rs`. |
+| `domain/destination.rs` | Destino externo reconocido por la aplicación y su dirección web. Pruebas en `domain/destination/tests.rs`. |
 | `domain/error.rs` | Las situaciones de elegir manejador (ADR-0009). Pruebas en `domain/error/tests.rs`. |
 | `domain/handlers.rs` | Quién atiende `afirma://` tal como lo decide el caso de uso, y el nombre de nuestro `.desktop`. Sin pruebas propias. |
 | `domain/version_check.rs` | La última comprobación de versión, tal como se recuerda entre sesiones. |

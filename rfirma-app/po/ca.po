@@ -391,6 +391,9 @@ msgstr "Menú"
 msgid "header.preferences"
 msgstr "Preferències…"
 
+msgid "header.help"
+msgstr "Comentaris i ajuda"
+
 msgid "header.about"
 msgstr "Quant a rFirma"
 
@@ -960,7 +963,8 @@ msgstr ""
 "Projecte independent. rFirma no està relacionada amb AutoFirma ni amb "
 "l'Administració General de l'Estat, que publiquen el client oficial, ni "
 "compta amb el seu suport. Si necessites l'aplicació oficial, descarrega-la "
-"del seu web."
+"del seu web. Els problemes amb rFirma es comuniquen al seu propi repositori, "
+"no a qui publica el client oficial."
 
 #. No se traduce: es una URL.
 msgid "about.repository"

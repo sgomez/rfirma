@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AboutDialog } from "./about/AboutDialog";
 import { UrlHandlerBanner } from "./desktop/UrlHandlerBanner";
+import type { ExternalDestinationOpener } from "./desktop/externalDestination";
+import { unavailableExternalDestinationOpener } from "./desktop/externalDestination";
 import {
   theBannerHasSomethingToAsk,
   type UrlHandlerChoice,
@@ -95,8 +97,10 @@ interface AppProps {
   versions: VersionCheck;
   /** Quién atiende los enlaces `afirma://`. Ver [`UrlHandlerChoice`]. */
   urlHandlers: UrlHandlerChoice;
-  /** Dónde va el menú de dos entradas. Por omisión, lo que diga la plataforma. */
+  /** Dónde va el menú. Por omisión, lo que diga la plataforma. */
   menuAnchor?: MenuAnchor;
+  /** Quien abre destinos externos fuera de la aplicación. Ver [`ExternalDestinationOpener`]. */
+  externalDestinations?: ExternalDestinationOpener;
 }
 
 /**
@@ -124,6 +128,7 @@ export function App({
   versions,
   urlHandlers,
   menuAnchor,
+  externalDestinations = unavailableExternalDestinationOpener(),
 }: AppProps) {
   const [dialog, setDialog] = useState<OpenDialog>(null);
   // El aviso de versión: lo que contestó el puerto y si ya se descartó. Se
@@ -949,6 +954,7 @@ export function App({
         status={documents.active?.badge ?? null}
         menuAnchor={menuAnchor ?? menuAnchorFor(navigator.userAgent)}
         onOpenPreferences={() => setDialog("preferences")}
+        onOpenHelp={() => void externalDestinations.open("discussions")}
         onOpenAbout={() => setDialog("about")}
         notification={
           // El primer —y hoy único— inquilino de la franja. La acción no

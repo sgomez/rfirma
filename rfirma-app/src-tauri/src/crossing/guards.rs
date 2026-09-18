@@ -512,7 +512,7 @@ fn the_list_of_commands_is_closed_and_this_is_how_long_it_is() {
         .map(|(_, source)| production_half(source).matches("#[tauri::command").count())
         .sum();
 
-    assert_eq!(orders, 40, "la lista de ordenes es cerrada a proposito");
+    assert_eq!(orders, 41, "la lista de ordenes es cerrada a proposito");
 }
 
 /// Extrae las declaraciones de órdenes Tauri del código fuente.
@@ -549,6 +549,10 @@ fn every_command_that_touches_the_portal_runs_off_the_main_thread() {
         ),
         ("documents/adapters/tauri.rs", "pub fn open_signed_folder("),
         ("desktop/adapters/tauri.rs", "pub fn check_for_new_version("),
+        (
+            "desktop/adapters/tauri.rs",
+            "pub fn open_external_destination(",
+        ),
     ] {
         let source = production_half(source_of(file));
         let declaration = source
