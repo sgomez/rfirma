@@ -1611,6 +1611,84 @@ async function theProtocolV4MalformedIdScript() {
   settle({ event: "success" });
 }
 
+/**
+ * Los parámetros comunes, medidos por el canal crudo. Cada petición cae en un formato que no
+ * existe: el SAF_06 dice que pasó el control que se mide, y nada llega a pedir un certificado.
+ */
+const THE_PARAMETER_CASES = [
+  ["a_local_file_in_dat_is_refused_with_saf_03", "dat=file:/etc/hostname", "SAF_03"],
+  [
+    "a_retrieve_servlet_outside_http_is_refused_with_saf_03",
+    "fileid=abc123&rtservlet=ftp://sede.example/rt",
+    "SAF_03",
+  ],
+  [
+    "a_retrieve_servlet_on_a_local_host_is_refused_with_saf_13",
+    "fileid=abc123&rtservlet=http://localhost/rt",
+    "SAF_13",
+  ],
+  [
+    "a_retrieve_servlet_carrying_its_own_parameters_is_refused_with_saf_03",
+    `fileid=abc123&rtservlet=${encodeURIComponent("https://sede.example/rt?op=get")}`,
+    "SAF_03",
+  ],
+  ["a_protocol_version_below_the_supported_one_is_accepted", "dat=SG9sYQ&ver=-10", "SAF_06"],
+  ["a_malformed_minimum_client_version_is_refused_with_saf_03", "dat=SG9sYQ&mcv=uno.dos", "SAF_03"],
+  [
+    "an_identifier_longer_than_twenty_characters_is_refused_with_saf_03",
+    `dat=SG9sYQ&id=${"a".repeat(21)}`,
+    "SAF_03",
+  ],
+  ["an_identifier_of_twenty_characters_is_accepted", `dat=SG9sYQ&id=${"a".repeat(20)}`, "SAF_06"],
+  ["fileid_stands_in_for_a_missing_identifier", `dat=SG9sYQ&fileid=${"a".repeat(21)}`, "SAF_03"],
+  [
+    "malformed_properties_do_not_bring_the_request_down",
+    "dat=SG9sYQ&properties=esto-no-es-base64!",
+    "SAF_06",
+  ],
+  ["a_ksb64_that_is_not_base64_is_ignored", "dat=SG9sYQ&ksb64=esto-no-es-base64!", "SAF_06"],
+];
+
+async function theProtocolV4ParametersScript() {
+  const ports = [54341, 54342, 54343];
+  const idSession = "Pq7Rs2Tu9Vw4Xy1Za6Bc";
+  emit({
+    event: "launch",
+    url: `afirma://websocket?ports=${ports.join(",")}&v=4&jvc=3&idsession=${idSession}`,
+  });
+  await new Promise((r) => setTimeout(r, 3000));
+
+  let ws = null;
+  for (const p of ports) {
+    try {
+      ws = await connectWebSocket(p);
+      break;
+    } catch {}
+  }
+  if (!ws) {
+    emit({
+      event: "error",
+      type: "cannot_connect",
+      message: "no se pudo conectar a los puertos candidatos",
+    });
+    settle({ event: "error" });
+    return;
+  }
+  await exchange(ws, `echo=-idsession=${idSession}@EOF`);
+
+  for (const [id, parameters, expected] of THE_PARAMETER_CASES) {
+    const answer = await exchange(
+      ws,
+      `afirma://sign?op=sign&format=NoSuchFormat&algorithm=SHA256withRSA&${parameters}` +
+        `&idsession=${idSession}`,
+    );
+    emit(aConditionEvent(id, answer.startsWith(expected), answer));
+  }
+
+  ws.close();
+  settle({ event: "success" });
+}
+
 async function theProtocolV3Script() {
   const idSession = "sessionv3test";
   emit({
@@ -1681,6 +1759,8 @@ async function theProtocolV3Script() {
 if (script.startsWith("protocol-")) {
   if (script === "protocol-v4") {
     theProtocolV4Script();
+  } else if (script === "protocol-v4-parameters") {
+    theProtocolV4ParametersScript();
   } else if (script === "protocol-v4-malformed-id") {
     theProtocolV4MalformedIdScript();
   } else if (script === "protocol-v3") {
@@ -1762,6 +1842,8 @@ if (script.startsWith("protocol-")) {
     );
   } else if (script === "signpades") {
     theSignScript("PAdES", "", thePdfOfTheTest());
+  } else if (script === "signpadesoveranonpdf") {
+    theSignScript("PAdES", "", theChallenge());
   } else if (script === "signpadeschecking") {
     theSignScript("PAdES", "checkSignatures=true", thePdfOfTheTest());
   } else if (script === "signpadesvisible") {

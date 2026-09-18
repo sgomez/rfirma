@@ -42,7 +42,7 @@ const THE_PROFILES: [&str; 2] = ["autofirma", "rfirma"];
 
 const THE_VERDICTS: [&str; 3] = ["conforme", "no-conforme", "no-observable"];
 
-const THE_SUITES: [&str; 9] = [
+const THE_SUITES: [&str; 10] = [
     "saludo",
     "transporte.websocket",
     "transporte.service",
@@ -52,6 +52,7 @@ const THE_SUITES: [&str; 9] = [
     "operaciones.disco",
     "operaciones.lote",
     "errores",
+    "parametros",
 ];
 
 fn repository_root() -> PathBuf {
@@ -80,6 +81,10 @@ fn catalogue_files() -> Vec<PathBuf> {
 
 fn checks_path() -> PathBuf {
     repository_root().join("rfirma-app/src-tauri/examples/conformance/checks.rs")
+}
+
+fn errors_chapter_path() -> PathBuf {
+    repository_root().join("docs/afirma/1.9.2/15-errores.md")
 }
 
 fn annex_path() -> PathBuf {
@@ -179,6 +184,38 @@ fn cards_cited_in(text: &str) -> BTreeSet<String> {
         rest = after;
     }
     cited
+}
+
+/// Los códigos de la tabla sinóptica del capítulo 15, por las filas que abren con uno.
+fn saf_codes_in_the_table(chapter: &str) -> BTreeSet<String> {
+    chapter
+        .lines()
+        .filter_map(|line| line.strip_prefix("| `SAF_"))
+        .filter_map(|rest| {
+            let digits: String = rest.chars().take_while(char::is_ascii_digit).collect();
+            (digits.len() == 2).then(|| format!("SAF_{digits}"))
+        })
+        .collect()
+}
+
+/// Los códigos `SAF_NN` que nombra un texto, por donde quiera que los nombre.
+fn saf_codes_named_in(text: &str) -> BTreeSet<String> {
+    text.match_indices("SAF_")
+        .filter_map(|(at, _)| {
+            let digits: String = text[at + 4..]
+                .chars()
+                .take_while(char::is_ascii_digit)
+                .collect();
+            (digits.len() == 2).then(|| format!("SAF_{digits}"))
+        })
+        .collect()
+}
+
+fn codes_of_the_table_without_an_entry(
+    table: &BTreeSet<String>,
+    named: &BTreeSet<String>,
+) -> Vec<String> {
+    table.difference(named).cloned().collect()
 }
 
 /// Los nombres de arnés que el código sabe correr, leídos de su lista como texto.
@@ -539,6 +576,40 @@ fn every_a1_card_is_decided_and_no_check_cites_one_that_does_not_exist() {
         unmotivated_cards(&cards).is_empty(),
         "hay fichas de A1 marcadas como no observables sin motivo:\n  {}",
         unmotivated_cards(&cards).join("\n  ")
+    );
+}
+
+#[test]
+fn every_code_of_the_error_table_is_closed_against_the_catalogue() {
+    let table = saf_codes_in_the_table(&read(&errors_chapter_path()));
+    let named: BTreeSet<String> = catalogue_files()
+        .iter()
+        .flat_map(|path| saf_codes_named_in(&read(path)))
+        .collect();
+
+    assert_eq!(
+        table.len(),
+        53,
+        "la tabla del capitulo 15 deberia tener los 53 codigos"
+    );
+    assert!(
+        codes_of_the_table_without_an_entry(&table, &named).is_empty(),
+        "hay codigos de la tabla del capitulo 15 sin entrada, sin familia y sin declararse no \
+         medibles:\n  {}",
+        codes_of_the_table_without_an_entry(&table, &named).join("\n  ")
+    );
+}
+
+#[test]
+fn a_code_of_the_table_the_catalogue_never_names_is_caught_and_named() {
+    let table = saf_codes_in_the_table(
+        "| `SAF_00` | `ERROR_CANNOT_READ_DATA` |\n| `SAF_07` | `ERROR_CANNOT_FIND_KEYSTORE` |\n",
+    );
+    let named = saf_codes_named_in("expects_saf = \"SAF_00\"\nstatement = \"SAF_070 no cuenta.\"");
+
+    assert_eq!(
+        codes_of_the_table_without_an_entry(&table, &named),
+        vec!["SAF_07"]
     );
 }
 

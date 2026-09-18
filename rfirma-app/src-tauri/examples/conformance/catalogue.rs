@@ -20,6 +20,7 @@ pub(crate) const THE_SUITES: &[&str] = &[
     "operaciones.firma",
     "operaciones.disco",
     "operaciones.lote",
+    "parametros",
 ];
 
 /// Lo que necesita una comprobación además del sujeto, tal y como se declara en `needs`.
@@ -242,7 +243,7 @@ statement = "Algo se rechaza con SAF_03."
     #[test]
     fn the_catalogue_of_the_repository_reads() {
         let checks = read_the_catalogue().unwrap();
-        assert_eq!(checks.len(), 109);
+        assert_eq!(checks.len(), 141);
     }
 
     #[test]

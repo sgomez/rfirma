@@ -120,3 +120,296 @@ note = "Sin validar cop, signandsave revienta con NullPointerException y reporta
 [check.expect.rfirma]
 verdict = "conforme"
 
+[[check]]
+id = "a_saf_code_reaches_the_published_client_intact_over_the_websocket"
+suite = "errores"
+chapter = "15"
+citation = "ProtocolInvocationLauncher.java:700-714; AfirmaWebSocketServerV4.java:91-92; autoscript.js:2310-2340"
+statement = """
+Un rechazo numerado viaja por el WebSocket en texto plano y llega al cliente publicado con el prefijo
+SAF_nn intacto al principio del mensaje, que es lo único por lo que el cliente lo reconoce como
+error.
+"""
+drive = { mode = "v4", script = "signwithanunknownformat" }
+expects_saf = "SAF_06"
+
+[check.expect.autofirma]
+verdict = "conforme"
+
+[check.expect.rfirma]
+verdict = "conforme"
+
+[[check]]
+id = "a_saf_code_reaches_the_published_client_intact_over_the_service_channel"
+suite = "errores"
+chapter = "15"
+citation = "CommandProcessorThread.java:333-348, 493-512; autoscript.js:3355-3385"
+statement = """
+Por el socket local el mismo rechazo viaja en Base64 dentro de una respuesta HTTP 200, y el cliente
+publicado lo recibe descodificado con el prefijo SAF_nn intacto.
+"""
+drive = { mode = "service", script = "signwithanunknownformat" }
+expects_saf = "SAF_06"
+
+[check.expect.autofirma]
+verdict = "conforme"
+
+[check.expect.rfirma]
+verdict = "conforme"
+
+[[check]]
+id = "a_saf_code_travels_to_the_intermediate_server_only_once_the_operation_began"
+suite = "errores"
+chapter = "15"
+citation = "ProtocolInvocationLauncher.java:601-604, 710-713, 870-889"
+statement = """
+Por servidor intermedio el rechazo se sube a stservlet con el prefijo SAF_nn intacto. Los que se
+detectan antes de empezar la operación —SAF_01, SAF_02, SAF_03, SAF_04, SAF_13, SAF_14, SAF_15 y
+SAF_16— no llegan a subirse, y la sede los percibe como una aplicación que no está instalada
+(BUG-26).
+"""
+unmeasurable = "La tanda no monta el StorageService al que el sujeto subiría el mensaje: el transporte por servidor intermedio queda para más adelante."
+
+[check.expect.autofirma]
+verdict = "no-observable"
+
+[check.expect.rfirma]
+verdict = "no-observable"
+
+[[check]]
+id = "the_intermediate_server_failures_answer_their_own_codes"
+suite = "errores"
+chapter = "15"
+citation = "ProtocolInvocationLauncher.java:313-320, 883; ProtocolInvocationLauncherSign.java:198-202"
+statement = """
+Los fallos propios del servidor intermedio tienen su código: SAF_16 si no se recuperan los datos de
+rtservlet, SAF_15 si no se descifran con key, SAF_12 si no se cifra el resultado y SAF_11 si no se
+puede subir.
+"""
+unmeasurable = "La tanda no monta ni el RetrieveService ni el StorageService con los que fallaría el sujeto: el transporte por servidor intermedio queda para más adelante."
+
+[check.expect.autofirma]
+verdict = "no-observable"
+
+[check.expect.rfirma]
+verdict = "no-observable"
+
+[[check]]
+id = "a_signature_cancelled_by_the_person_answers_cancel_without_a_code"
+suite = "errores"
+chapter = "15"
+citation = "ProtocolInvocationLauncherSign.java:615-617, 848-850; ProtocolInvocationLauncher.java:700-702; autoscript.js:2330"
+statement = """
+Cancelar un diálogo en mitad de una firma responde el literal no numerado CANCEL, sin prefijo SAF_,
+y el cliente publicado lo entrega a la sede como AOCancelledOperationException.
+"""
+drive = { mode = "v4", script = "signcades" }
+harness = "cancelled_dialogue"
+needs = ["persona"]
+question = "¿se canceló la selección de certificado? [s/n]"
+warning = "Va a aparecer el diálogo de selección de certificado de una firma: cancélalo en vez de elegir."
+
+[check.expect.autofirma]
+verdict = "conforme"
+
+[check.expect.rfirma]
+verdict = "conforme"
+
+[[check]]
+id = "an_exhausted_memory_answers_memory_error_over_the_service_channel"
+suite = "errores"
+chapter = "15"
+citation = "CommandProcessorThread.java:142-145, 481-487; autoscript.js:2312, 3131"
+statement = """
+Una falta de memoria en el socket local responde el literal no numerado MEMORY_ERROR, que el cliente
+publicado entrega como es.gob.afirma.core.OutOfMemoryError.
+"""
+unmeasurable = "Provocarla exige agotar el montón del sujeto con un documento mayor que él, y la tanda no fija ni conoce ese montón: el mismo documento revienta a un sujeto y pasa por otro."
+
+[check.expect.autofirma]
+verdict = "no-observable"
+
+[check.expect.rfirma]
+verdict = "no-observable"
+
+[[check]]
+id = "null_is_a_safeguard_of_the_published_client_and_not_an_answer"
+suite = "errores"
+chapter = "15"
+citation = "autoscript.js:2324, 3372, 3417, 3518"
+statement = """
+El literal NULL no lo emite el original: es una salvaguarda del cliente publicado, que lo entrega
+como java.lang.Exception con el mensaje «Error desconocido».
+"""
+unmeasurable = "El original nunca lo emite, y la suite sólo mide lo que el sujeto contesta."
+
+[check.expect.autofirma]
+verdict = "no-observable"
+
+[check.expect.rfirma]
+verdict = "no-observable"
+
+[[check]]
+id = "a_save_over_the_service_channel_answers_save_ok_and_not_a_signature"
+suite = "errores"
+chapter = "15"
+citation = "CommandProcessorThread.java:290-305; autoscript.js:3423-3428"
+statement = """
+Por el socket local, un guardado con éxito responde SAVE_OK, que el cliente publicado reconoce como
+confirmación y no confunde con una firma. La misma confirmación por WebSocket la mide el conjunto
+de operaciones.
+"""
+drive = { mode = "service", script = "save" }
+harness = "save_confirmation"
+needs = ["persona"]
+question = "¿se pidió elegir dónde guardar el fichero? [s/n]"
+warning = "Va a aparecer la ventana nativa para elegir dónde guardar el fichero."
+
+[check.expect.autofirma]
+verdict = "conforme"
+
+[check.expect.rfirma]
+verdict = "conforme"
+
+[[check]]
+id = "a_document_unfit_for_its_format_is_rejected_with_the_code_of_its_family"
+suite = "errores"
+chapter = "15"
+citation = "ProtocolInvocationLauncherSign.java:741-800; PdfUtil.java:185"
+statement = """
+Un documento que no sirve para la firma pedida se rechaza con el código de su familia, no con el
+SAF_09 genérico: un PAdES sobre algo que no es un PDF sale con SAF_28. La familia comparte el mismo
+punto de traducción: SAF_00 si los datos no se leen, SAF_23 si la política no casa, SAF_29 para un
+XAdES Enveloped sobre algo que no es XML, SAF_30 para unos datos de otro tipo, SAF_31 si lo que se
+multifirma no es una firma, SAF_32 para una factura ya firmada, SAF_38 para una que no lo es,
+SAF_40 si el documento del servidor no se recupera y SAF_44 para una firma sin sus datos.
+"""
+drive = { mode = "v4", script = "signpadesoveranonpdf" }
+expects_saf = "SAF_28"
+warning = "Van a aparecer el diálogo de certificado y el del PIN antes de que llegue el rechazo."
+
+[check.expect.autofirma]
+verdict = "conforme"
+
+[check.expect.rfirma]
+verdict = "conforme"
+
+[[check]]
+id = "the_key_store_failures_answer_their_own_codes"
+suite = "errores"
+chapter = "15"
+citation = "ProtocolInvocationLauncherSign.java:545, 584, 621, 626, 638, 650-656"
+statement = """
+Los fallos del almacén tienen su código: SAF_08 si no se abre, SAF_19 si no tiene ningún certificado
+válido, SAF_18 si el certificado no se descodifica, SAF_51 si el tipo de su clave no se admite y
+SAF_52 si está bloqueado.
+"""
+unmeasurable = "Cada uno exige un almacén roto, vacío, bloqueado o con una clave de un tipo que no se admite, y la tanda sólo monta los tokens sanos de SoftHSM: bloquear uno a propósito deja sin almacén al resto de la tanda."
+
+[check.expect.autofirma]
+verdict = "no-observable"
+
+[check.expect.rfirma]
+verdict = "no-observable"
+
+[[check]]
+id = "the_disk_failures_answer_their_own_codes"
+suite = "errores"
+chapter = "15"
+citation = "ProtocolInvocationLauncherSave.java:102; ProtocolInvocationLauncherSignAndSave.java:563; ProtocolInvocationLauncherLoad.java:143"
+statement = """
+Un fallo de escritura al guardar sale con SAF_05, y uno de lectura al cargar, con SAF_25.
+"""
+unmeasurable = "Los dos fallan después de que la persona elija el fichero, y hacerlos fallar exige un disco que rechace la escritura o la lectura del fichero ya elegido, que la tanda no simula."
+
+[check.expect.autofirma]
+verdict = "no-observable"
+
+[check.expect.rfirma]
+verdict = "no-observable"
+
+[[check]]
+id = "the_batch_failures_answer_their_own_codes"
+suite = "errores"
+chapter = "15"
+citation = "ProtocolInvocationLauncherBatch.java:367-387; LocalBatchSigner.java:231-241"
+statement = """
+El lote tiene sus propios códigos además de SAF_26: SAF_20 cuando falla la orquestación del lote
+local, SAF_27 cuando el servicio de lotes informa de un error, y SAF_33, SAF_34 y SAF_35 para un PDF
+con contraseña, con firmas no registradas o certificado.
+"""
+unmeasurable = "Los PDF que los disparan —protegido, con firmas no registradas, certificado— no están en el banco de referencia, y el conductor no simula un servicio de lotes que conteste un error lógico en su formato."
+
+[check.expect.autofirma]
+verdict = "no-observable"
+
+[check.expect.rfirma]
+verdict = "no-observable"
+
+[[check]]
+id = "the_codes_the_original_never_emits"
+suite = "errores"
+chapter = "15"
+citation = "ProtocolInvocationLauncherErrorManager.java:38, 41, 53, 55, 67, 68, 79, 80; ParameterNeedsUpdatedVersionException.java:18"
+statement = """
+Hay códigos del catálogo que el original no emite nunca: SAF_07, SAF_10, SAF_22, SAF_24, SAF_36,
+SAF_37, SAF_48 y SAF_49 no los referencia ninguna instrucción ejecutable, y SAF_14 sólo lo recogen
+bloques catch de una excepción que nadie lanza.
+"""
+unmeasurable = "El original nunca los emite: no hay petición que los haga llegar al cable."
+
+[check.expect.autofirma]
+verdict = "no-observable"
+
+[check.expect.rfirma]
+verdict = "no-observable"
+
+[[check]]
+id = "a_null_uri_is_rejected_with_saf_01"
+suite = "errores"
+chapter = "15"
+citation = "ProtocolInvocationLauncher.java:166-171"
+statement = """
+Una invocación sin URI se rechaza con SAF_01.
+"""
+unmeasurable = "El cliente publicado construye siempre una URI completa: ningún guion suyo la envía nula, y la suite sólo mide lo que él sabe pedir."
+
+[check.expect.autofirma]
+verdict = "no-observable"
+
+[check.expect.rfirma]
+verdict = "no-observable"
+
+[[check]]
+id = "a_websocket_that_cannot_bind_its_ports_shows_saf_45"
+suite = "errores"
+chapter = "15"
+citation = "ProtocolInvocationLauncher.java:246-251"
+statement = """
+Si el canal WebSocket no puede ligar ninguno de sus puertos, el sujeto muestra SAF_45 y cierra el
+proceso.
+"""
+unmeasurable = "SAF_45 se muestra en un diálogo y el proceso se cierra sin canal abierto: no hay cable por el que llegue, y la sede sólo ve que el cliente publicado agota sus reintentos."
+
+[check.expect.autofirma]
+verdict = "no-observable"
+
+[check.expect.rfirma]
+verdict = "no-observable"
+
+[[check]]
+id = "a_failing_postprocessing_answers_saf_42"
+suite = "errores"
+chapter = "15"
+citation = "ProtocolInvocationLauncherSign.java:203-207"
+statement = """
+Un fallo al postprocesar la firma, que en el original sólo provoca un plugin, se rechaza con SAF_42.
+"""
+unmeasurable = "Exige instalar en el sujeto un plugin que falle al postprocesar, y la tanda corre contra una instalación sin plugins."
+
+[check.expect.autofirma]
+verdict = "no-observable"
+
+[check.expect.rfirma]
+verdict = "no-observable"
+
