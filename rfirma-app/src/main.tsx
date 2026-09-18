@@ -27,8 +27,8 @@ import {
   tauriSignedDocumentOpener,
   tauriSigningBackend,
   tauriStampComposer,
-  tauriUrlHandlers,
   tauriStatusPort,
+  tauriUrlHandlers,
   tauriVersionCheck,
 } from "./tauri";
 import { TrustNotice } from "./trust/TrustNotice";

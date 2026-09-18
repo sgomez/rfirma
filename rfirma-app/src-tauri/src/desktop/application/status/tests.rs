@@ -1,7 +1,7 @@
 use std::time::{Duration, SystemTime};
 
 use super::*;
-use crate::desktop::adapters::channel::Channel;
+use crate::desktop::domain::channel::Channel;
 use crate::desktop::domain::status::{ActionKind, Signal, Verdict};
 use crate::desktop::domain::version_check::VersionCheck;
 use crate::signing::application::tests::a_memory;

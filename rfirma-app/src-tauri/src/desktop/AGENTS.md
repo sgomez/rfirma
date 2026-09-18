@@ -25,6 +25,7 @@ máquina. Ni firma ni documentos. Rutas relativas a `src/desktop/`.
 | `application/invocation.rs` | La invocación desde fuera, `rfirma documento.pdf`: qué trae, qué hace la segunda —solo del escritorio (ADR-0024)— y el rol de proceso que decide `role_of`. Pruebas en `application/invocation/tests.rs`. |
 | `application/status.rs` | Evaluación y medición de las señales del panel de estado. Pruebas en `application/status/tests.rs`. |
 | `application/version.rs` | Si hay una versión nueva publicada, con su caché de 24 h. Pruebas en `application/version/tests.rs`. |
+| `domain/channel.rs` | El canal de distribución en el que corre el proceso (ADR-0015). Sin pruebas propias. |
 | `domain/destination.rs` | Destino externo reconocido por la aplicación y su dirección web. Pruebas en `domain/destination/tests.rs`. |
 | `domain/error.rs` | Las situaciones de elegir manejador (ADR-0009). Pruebas en `domain/error/tests.rs`. |
 | `domain/handlers.rs` | Quién atiende `afirma://` tal como lo decide el caso de uso, y el nombre de nuestro `.desktop`. Sin pruebas propias. |

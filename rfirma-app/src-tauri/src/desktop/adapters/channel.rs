@@ -5,14 +5,7 @@ use std::path::Path;
 /// Fichero testigo que indica ejecución dentro de un contenedor flatpak.
 const SANDBOX_MARKER: &str = "/.flatpak-info";
 
-/// Canal de distribución en el que corre el proceso (ADR-0015).
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Channel {
-    /// Instalación nativa sin aislamiento (.deb o .rpm).
-    Native,
-    /// Instalación en contenedor flatpak.
-    Flatpak,
-}
+pub use crate::desktop::domain::channel::Channel;
 
 impl Channel {
     /// Detecta el canal examinando la presencia del testigo de sandbox.

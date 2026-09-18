@@ -2,8 +2,8 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { renderWithCatalog } from "../testing/render";
-import { memoryStatus, type SignalRow, type StatusPort } from "./status";
 import { StatusView } from "./StatusView";
+import { memoryStatus, type SignalRow, type StatusPort } from "./status";
 
 describe("StatusView", () => {
   it("renders the title and close button", () => {

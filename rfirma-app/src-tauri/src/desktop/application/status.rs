@@ -2,13 +2,13 @@
 
 use std::time::SystemTime;
 
-use crate::desktop::adapters::channel::Channel;
 use crate::desktop::application::version::{ask_and_remember, fresh_answer, ReleaseFeed, Version};
+use crate::desktop::domain::channel::Channel;
 use crate::desktop::domain::destination::{RELEASES, REPOSITORY};
 use crate::desktop::domain::status::{ActionKind, Signal, SignalRow, StatusAction, Verdict};
 use crate::desktop::ports::VersionMemory;
 
-/// Destino de actualización que corresponde al canal de distribución .
+/// Destino de actualización que corresponde al canal de distribución.
 pub fn update_destination_for(channel: Channel) -> &'static str {
     match channel {
         Channel::Flatpak => REPOSITORY,
