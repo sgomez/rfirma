@@ -58,6 +58,9 @@ pub(crate) struct Check {
     pub question: Option<String>,
     #[serde(default)]
     pub unmeasurable: Option<String>,
+    /// Si es el saludo de su conjunto: lo abre y, si no se cumple, el resto no se corre.
+    #[serde(default)]
+    pub greeting: bool,
     /// La línea base: qué se espera de cada perfil de sujeto, por el nombre del perfil.
     #[serde(default)]
     pub expect: BTreeMap<String, Expectation>,
@@ -177,6 +180,7 @@ drive = { mode = "v4-ipv6", script = "selectcert" }
 expects_saf = "SAF_47"
 needs = ["persona", "almacén:rfirma-test-ecc", "puertos:63131, 63132", "espera:90"]
 question = "¿se pidió el PIN? [s/n]"
+greeting = true
 "#;
 
     #[test]
@@ -187,6 +191,7 @@ question = "¿se pidió el PIN? [s/n]"
         assert_eq!(check.suite, "transporte.websocket");
         assert_eq!(check.chapter, "05");
         assert_eq!(check.expects_saf.as_deref(), Some("SAF_47"));
+        assert!(check.greeting);
         assert_eq!(
             check.drive.as_ref().unwrap(),
             &Drive {
@@ -243,7 +248,7 @@ statement = "Algo se rechaza con SAF_03."
     #[test]
     fn the_catalogue_of_the_repository_reads() {
         let checks = read_the_catalogue().unwrap();
-        assert_eq!(checks.len(), 141);
+        assert_eq!(checks.len(), 160);
     }
 
     #[test]

@@ -105,24 +105,6 @@ verdict = "conforme"
 verdict = "conforme"
 
 [[check]]
-id = "service_channel_version_range"
-suite = "versiones"
-chapter = "14"
-citation = "ServiceInvocationManager.java:42-45, 212-220; ProtocolInvocationLauncher.java:281-288"
-statement = """
-El canal socket HTTP (afirma://service) sólo admite las versiones 1, 2 y 3; la versión 4 se rechaza
-con SAF_21.
-"""
-drive = { mode = "service-v4", script = "selectcert" }
-expects_saf = "SAF_21"
-
-[check.expect.autofirma]
-verdict = "conforme"
-
-[check.expect.rfirma]
-verdict = "conforme"
-
-[[check]]
 id = "websocket_rejects_a_protocol_version_it_does_not_support"
 suite = "versiones"
 chapter = "14"
@@ -143,4 +125,3 @@ note = "El cliente publicado agota sus reintentos y se rinde con ApplicationNotF
 
 [check.expect.rfirma]
 verdict = "conforme"
-

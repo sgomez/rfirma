@@ -1,7 +1,7 @@
 //! El cuerpo ejecutable de la suite de conformidad: cómo se conduce cada entrada del catálogo
 //! contra el sujeto y cómo se resuelve su veredicto.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::io::IsTerminal;
 use std::net::TcpListener;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -104,17 +104,44 @@ impl Probe {
         let total = pending.len();
         let mut done = 0;
         let mut already_run: BTreeSet<&str> = BTreeSet::new();
+        let mut failed_greetings =
+            the_greetings_already_failed(catalogue, |id| dossier.state_of(id));
         for (index, check) in pending.iter().enumerate() {
             if already_run.contains(check.id.as_str()) {
                 continue;
             }
-            let group = the_group_of(check, &pending[index..]);
+            if let Some(greeting) = failed_greetings.get(check.suite.as_str()) {
+                already_run.insert(check.id.as_str());
+                self.skip_behind_a_failed_greeting(check, greeting, &mut done, total);
+                continue;
+            }
+            let group: Vec<&Check> = the_group_of(check, &pending[index..])
+                .into_iter()
+                .filter(|member| !failed_greetings.contains_key(member.suite.as_str()))
+                .collect();
             for member in &group {
                 already_run.insert(member.id.as_str());
             }
             self.run_group(dossier, &group, &mut done, total);
+            if a_failed_greeting(check, dossier.state_of(&check.id)) {
+                failed_greetings.insert(check.suite.as_str(), check.id.as_str());
+            }
         }
         self.close_the_run(dossier, catalogue, suite);
+    }
+
+    fn skip_behind_a_failed_greeting(
+        &self,
+        check: &Check,
+        greeting: &str,
+        done: &mut usize,
+        total: usize,
+    ) {
+        *done += 1;
+        self.monitor.announce_check(check);
+        self.monitor
+            .start_progress("Comprobación", *done, total, &check.id);
+        self.leave_pending(check, &the_reason_behind_a_failed_greeting(greeting));
     }
 
     /// El cierre de la tanda: las dos filas del resumen, las sorpresas nombradas y el código de
@@ -406,11 +433,38 @@ fn the_group_of<'a>(head: &'a Check, rest: &[&'a Check]) -> Vec<&'a Check> {
 
 fn shares_an_errand(check: &Check) -> bool {
     check.drive.is_some()
+        && !check.greeting
         && check.harness.is_none()
         && check.question.is_none()
         && check.unmeasurable.is_none()
         && !check.needs_a_person()
         && check.required_store().is_none()
+}
+
+/// Si la comprobación es el saludo de su conjunto y no se cumplió: ni resuelto de otro color ni
+/// pendiente deja medir el resto.
+fn a_failed_greeting(check: &Check, state: Option<CheckState>) -> bool {
+    check.greeting && state != Some(CheckState::Resolved(Verdict::Compliant))
+}
+
+/// Los conjuntos cuyo saludo quedó resuelto sin cumplirse en una tanda anterior, con el saludo que
+/// los detiene.
+fn the_greetings_already_failed(
+    catalogue: &[Check],
+    state_of: impl Fn(&str) -> Option<CheckState>,
+) -> BTreeMap<&str, &str> {
+    catalogue
+        .iter()
+        .filter(|check| {
+            let state = state_of(&check.id);
+            matches!(state, Some(CheckState::Resolved(_))) && a_failed_greeting(check, state)
+        })
+        .map(|check| (check.suite.as_str(), check.id.as_str()))
+        .collect()
+}
+
+fn the_reason_behind_a_failed_greeting(greeting: &str) -> String {
+    format!("no se corre: el saludo de su conjunto, «{greeting}», no se cumplió")
 }
 
 fn the_warnings_of(group: &[&Check]) -> Vec<String> {
@@ -668,6 +722,91 @@ drive = { mode = "v4", script = "protocol-v4" }
         let pending: Vec<&Check> = catalogue.iter().collect();
 
         assert_eq!(the_group_of(pending[0], &pending).len(), 1);
+    }
+
+    const A_SUITE_WITH_A_GREETING: &str = r#"
+[[check]]
+id = "the_greeting"
+suite = "transporte.service"
+chapter = "04"
+citation = "A.java:1"
+statement = "Saludo."
+drive = { mode = "service", script = "selectcert" }
+greeting = true
+
+[[check]]
+id = "a_driven_alike"
+suite = "transporte.service"
+chapter = "04"
+citation = "A.java:2"
+statement = "Otra."
+drive = { mode = "service", script = "selectcert" }
+
+[[check]]
+id = "a_greeting_elsewhere"
+suite = "saludo"
+chapter = "09"
+citation = "A.java:3"
+statement = "Tres."
+drive = { mode = "v4", script = "selectcert" }
+greeting = true
+"#;
+
+    #[test]
+    fn a_greeting_runs_alone_even_beside_checks_driven_alike() {
+        let catalogue = the_catalogue_in(A_SUITE_WITH_A_GREETING).unwrap();
+        let pending: Vec<&Check> = catalogue.iter().collect();
+
+        assert_eq!(the_group_of(pending[0], &pending).len(), 1);
+    }
+
+    #[test]
+    fn a_greeting_fails_unless_it_was_resolved_compliant() {
+        let catalogue = the_catalogue_in(A_SUITE_WITH_A_GREETING).unwrap();
+        let greeting = &catalogue[0];
+
+        assert!(!a_failed_greeting(
+            greeting,
+            Some(CheckState::Resolved(Verdict::Compliant))
+        ));
+        assert!(a_failed_greeting(
+            greeting,
+            Some(CheckState::Resolved(Verdict::NotObservable))
+        ));
+        assert!(a_failed_greeting(greeting, Some(CheckState::Pending)));
+        assert!(!a_failed_greeting(
+            &catalogue[1],
+            Some(CheckState::Resolved(Verdict::Noncompliant))
+        ));
+    }
+
+    #[test]
+    fn a_greeting_that_failed_before_stops_its_suite_and_no_other() {
+        let catalogue = the_catalogue_in(A_SUITE_WITH_A_GREETING).unwrap();
+
+        let failed = the_greetings_already_failed(&catalogue, |id| match id {
+            "a_greeting_elsewhere" => Some(CheckState::Resolved(Verdict::Compliant)),
+            _ => Some(CheckState::Resolved(Verdict::Noncompliant)),
+        });
+
+        assert_eq!(
+            failed.into_iter().collect::<Vec<_>>(),
+            [("transporte.service", "the_greeting")]
+        );
+    }
+
+    #[test]
+    fn a_greeting_still_pending_stops_nothing_before_it_runs() {
+        let catalogue = the_catalogue_in(A_SUITE_WITH_A_GREETING).unwrap();
+
+        let failed = the_greetings_already_failed(&catalogue, |_| Some(CheckState::Pending));
+
+        assert!(failed.is_empty());
+    }
+
+    #[test]
+    fn the_reason_behind_a_failed_greeting_names_the_greeting() {
+        assert!(the_reason_behind_a_failed_greeting("the_greeting").contains("«the_greeting»"));
     }
 
     #[test]

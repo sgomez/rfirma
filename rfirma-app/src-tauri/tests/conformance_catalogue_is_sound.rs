@@ -19,6 +19,7 @@ struct Entry {
     question: Option<String>,
     warning: Option<String>,
     unmeasurable: Option<String>,
+    greeting: bool,
     cited_cards: BTreeSet<String>,
     expectations: Vec<Expectation>,
 }
@@ -144,6 +145,10 @@ fn entry_of(value: &toml::Value) -> Entry {
         question: optional("question"),
         warning: optional("warning"),
         unmeasurable: optional("unmeasurable"),
+        greeting: value
+            .get("greeting")
+            .and_then(toml::Value::as_bool)
+            .unwrap_or_default(),
         cited_cards: cards_cited_in(&value.to_string()),
         expectations: expectations_of(value),
     }
@@ -323,6 +328,22 @@ fn entries_whose_chapter_has_no_file(
         .iter()
         .filter(|entry| !chapters.contains(&entry.chapter))
         .map(|entry| format!("{}: {}", entry.id, entry.chapter))
+        .collect()
+}
+
+/// Los saludos que no son la primera entrada de su conjunto, o que no se conducen de verdad.
+fn greetings_that_do_not_open_their_suite(entries: &[Entry]) -> Vec<String> {
+    let mut opened = BTreeSet::new();
+    entries
+        .iter()
+        .filter_map(|entry| {
+            let first_of_its_suite = opened.insert(entry.suite.clone());
+            match entry.greeting {
+                true if !first_of_its_suite => Some(format!("{}: no abre su conjunto", entry.id)),
+                true if !entry.driven => Some(format!("{}: saludo sin conducir", entry.id)),
+                _ => None,
+            }
+        })
         .collect()
 }
 
@@ -749,6 +770,56 @@ fn a_suite_outside_the_vocabulary_and_a_chapter_without_a_file_are_caught_and_na
     assert_eq!(
         entries_whose_chapter_has_no_file(&entries, &chapters),
         vec!["a_one: 99"]
+    );
+}
+
+#[test]
+fn every_greeting_opens_its_suite_and_the_socket_suite_opens_with_one() {
+    let entries = the_catalogue();
+
+    assert!(
+        greetings_that_do_not_open_their_suite(&entries).is_empty(),
+        "hay saludos que no abren su conjunto:\n  {}",
+        greetings_that_do_not_open_their_suite(&entries).join("\n  ")
+    );
+    assert!(
+        entries
+            .iter()
+            .find(|entry| entry.suite == "transporte.service")
+            .is_some_and(|entry| entry.greeting),
+        "el conjunto transporte.service deberia abrir con la comprobacion de saludo de su carril"
+    );
+}
+
+#[test]
+fn a_greeting_behind_another_check_or_without_a_drive_is_caught_and_named() {
+    let entries = entries_in(
+        r#"
+[[check]]
+id = "a_one"
+suite = "transporte.service"
+drive = { mode = "service", script = "selectcert" }
+
+[[check]]
+id = "a_late_greeting"
+suite = "transporte.service"
+drive = { mode = "service", script = "selectcert" }
+greeting = true
+
+[[check]]
+id = "an_undriven_greeting"
+suite = "errores"
+unmeasurable = "Nada que conducir."
+greeting = true
+"#,
+    );
+
+    assert_eq!(
+        greetings_that_do_not_open_their_suite(&entries),
+        vec![
+            "a_late_greeting: no abre su conjunto",
+            "an_undriven_greeting: saludo sin conducir"
+        ]
     );
 }
 

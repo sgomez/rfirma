@@ -37,22 +37,3 @@ verdict = "conforme"
 
 [check.expect.rfirma]
 verdict = "conforme"
-
-[[check]]
-id = "the_service_channel_completes_a_certificate_selection"
-suite = "saludo"
-chapter = "04"
-citation = "ServiceInvocationManager.java:103-169; CommandProcessorThread.java:520-620"
-statement = """
-El carril del socket local completa una selección de certificado igual que el canal WebSocket: sin
-esta comprobación ninguna de las suyas es de fiar.
-"""
-drive = { mode = "service", script = "selectcert" }
-warning = "Va a aparecer el diálogo de selección de certificado: elige uno para que la comprobación llegue a medir algo."
-
-[check.expect.autofirma]
-verdict = "conforme"
-
-[check.expect.rfirma]
-verdict = "conforme"
-
