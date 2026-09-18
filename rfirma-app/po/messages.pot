@@ -751,6 +751,42 @@ msgstr ""
 msgid "status.title"
 msgstr ""
 
+msgid "status.recheck"
+msgstr ""
+
+msgid "status.columns.signal"
+msgstr ""
+
+msgid "status.columns.value"
+msgstr ""
+
+msgid "status.columns.verdict"
+msgstr ""
+
+msgid "status.columns.action"
+msgstr ""
+
+msgid "status.signals.version"
+msgstr ""
+
+msgid "status.verdicts.correct"
+msgstr ""
+
+msgid "status.verdicts.attention"
+msgstr ""
+
+msgid "status.verdicts.incorrect"
+msgstr ""
+
+msgid "status.verdicts.notApplicable"
+msgstr ""
+
+msgid "status.verdicts.checking"
+msgstr ""
+
+msgid "status.actions.update"
+msgstr ""
+
 msgid "preferences.title"
 msgstr ""
 

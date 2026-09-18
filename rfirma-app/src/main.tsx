@@ -27,6 +27,7 @@ import {
   tauriSignedDocumentOpener,
   tauriSigningBackend,
   tauriStampComposer,
+  tauriStatusPort,
   tauriUrlHandlers,
   tauriVersionCheck,
 } from "./tauri";
@@ -106,6 +107,7 @@ createRoot(root).render(
         versions={tauriVersionCheck()}
         urlHandlers={tauriUrlHandlers()}
         externalDestinations={tauriExternalDestinationOpener()}
+        status={tauriStatusPort()}
       />
     </LanguageProvider>
   </StrictMode>,

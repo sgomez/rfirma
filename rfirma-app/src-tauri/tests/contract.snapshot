@@ -6,6 +6,7 @@ ORDENES DE TAURI                          (<contexto>/adapters/tauri*.rs)
   async url_handlers() -> UrlHandlersView
   async choose_url_handler(handler: String) -> Result<(), Failure>
   async open_external_destination(target: String) -> Result<(), Failure>
+  async read_status(recheck: bool) -> Vec<SignalRowView>
   async open_document() -> Result<Option<OpenedDocumentView>, Failure>
   async read_document(id: String) -> Result<tauri::ipc::Response, Failure>
   async list_recents() -> Vec<RecentDocumentView>
@@ -63,6 +64,16 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
 
   pub struct NewVersionView
       version: String
+
+  pub struct SignalRowView
+      signal: Signal
+      value: String
+      verdict: Verdict
+      action: Option<StatusActionView>
+
+  pub struct StatusActionView
+      kind: ActionKind
+      target: String
 
   pub struct RubricView
       base64: String
@@ -231,6 +242,11 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
 
   PRESTADOS DE OTROS MODULOS
 
+  pub enum ActionKind   [desktop/domain/status.rs]
+      Repair
+      Choice
+      Link
+
   pub enum Badge   [documents/domain/recents.rs]
       Signed
       Unsigned
@@ -239,9 +255,22 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
       All
       Only(BTreeSet<u32>)
 
+  pub enum Signal   [desktop/domain/status.rs]
+      Version
+      SiteSignature
+      LocalCaCertificate
+      UserCertificates
+
   pub enum Theme   [signing/application/configuration_memory.rs]
       System
       Light
       Dark
+
+  pub enum Verdict   [desktop/domain/status.rs]
+      Correct
+      Attention
+      Incorrect
+      NotApplicable
+      Checking
 
 -- generado de las fuentes en cada ejecucion: no puede quedarse obsoleto --

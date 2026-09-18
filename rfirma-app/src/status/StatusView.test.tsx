@@ -1,8 +1,9 @@
-import { screen } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { renderWithCatalog } from "../testing/render";
 import { StatusView } from "./StatusView";
+import { memoryStatus, type SignalRow, type StatusPort } from "./status";
 
 describe("StatusView", () => {
   it("renders the title and close button", () => {
@@ -53,5 +54,146 @@ describe("StatusView", () => {
     expect(footer).not.toBeNull();
     expect(body?.nextElementSibling).toBe(footer);
     expect(footer?.parentElement).toBe(body?.parentElement);
+  });
+
+  it("renders the status table columns: Señal, Valor, Veredicto, Acción", () => {
+    renderWithCatalog(<StatusView onClose={() => {}} />);
+
+    expect(screen.getByText("Señal")).toBeInTheDocument();
+    expect(screen.getByText("Valor")).toBeInTheDocument();
+    expect(screen.getByText("Veredicto")).toBeInTheDocument();
+    expect(screen.getByText("Acción")).toBeInTheDocument();
+  });
+
+  it("renders a row with role status showing Correcto when up to date", async () => {
+    const rows: SignalRow[] = [
+      {
+        signal: "version",
+        value: "0.4.1",
+        verdict: "correct",
+        action: null,
+      },
+    ];
+    renderWithCatalog(<StatusView statusPort={memoryStatus(rows)} onClose={() => {}} />);
+
+    const row = await screen.findByRole("status");
+    expect(within(row).getByText("Versión")).toBeInTheDocument();
+    expect(within(row).getByText("0.4.1")).toBeInTheDocument();
+    expect(within(row).getByText("Correcto")).toBeInTheDocument();
+    expect(within(row).queryByRole("button")).not.toBeInTheDocument();
+  });
+
+  it("renders Atención and an update link action when an update is available", async () => {
+    const rows: SignalRow[] = [
+      {
+        signal: "version",
+        value: "0.4.1 → 0.5.0",
+        verdict: "attention",
+        action: {
+          kind: "link",
+          target: "releases",
+        },
+      },
+    ];
+    renderWithCatalog(<StatusView statusPort={memoryStatus(rows)} onClose={() => {}} />);
+
+    const row = await screen.findByRole("status");
+    expect(within(row).getByText("Versión")).toBeInTheDocument();
+    expect(within(row).getByText("0.4.1 → 0.5.0")).toBeInTheDocument();
+    expect(within(row).getByText("Atención")).toBeInTheDocument();
+    expect(within(row).getByRole("button", { name: "Actualizar" })).toBeInTheDocument();
+  });
+
+  it("transitions through Comprobando and remeasures after clicking an action", async () => {
+    const user = userEvent.setup();
+    const open = vi.fn();
+    let resolveRecheck!: (rows: SignalRow[]) => void;
+    const recheckPromise = new Promise<SignalRow[]>((resolve) => {
+      resolveRecheck = resolve;
+    });
+
+    const statusPort: StatusPort = {
+      readStatus: vi.fn().mockResolvedValue([
+        {
+          signal: "version",
+          value: "0.4.1 → 0.5.0",
+          verdict: "attention",
+          action: {
+            kind: "link",
+            target: "releases",
+          },
+        },
+      ]),
+      recheck: vi.fn().mockReturnValue(recheckPromise),
+    };
+
+    renderWithCatalog(
+      <StatusView statusPort={statusPort} externalDestinations={{ open }} onClose={() => {}} />,
+    );
+
+    const row = await screen.findByRole("status");
+    const updateButton = within(row).getByRole("button", { name: "Actualizar" });
+    await user.click(updateButton);
+
+    expect(open).toHaveBeenCalledWith("releases");
+    expect(within(row).getByText("Comprobando")).toBeInTheDocument();
+    expect(within(row).queryByRole("button", { name: "Actualizar" })).not.toBeInTheDocument();
+
+    resolveRecheck([
+      {
+        signal: "version",
+        value: "0.5.0",
+        verdict: "correct",
+        action: null,
+      },
+    ]);
+
+    await waitFor(() => {
+      expect(within(row).getByText("Correcto")).toBeInTheDocument();
+    });
+    expect(within(row).getByText("0.5.0")).toBeInTheDocument();
+  });
+
+  it("transitions row through Comprobando and updates on Volver a comprobar", async () => {
+    const user = userEvent.setup();
+    let resolveRecheck!: (rows: SignalRow[]) => void;
+    const recheckPromise = new Promise<SignalRow[]>((resolve) => {
+      resolveRecheck = resolve;
+    });
+
+    const statusPort: StatusPort = {
+      readStatus: vi.fn().mockResolvedValue([
+        {
+          signal: "version",
+          value: "0.4.1",
+          verdict: "checking",
+          action: null,
+        },
+      ]),
+      recheck: vi.fn().mockReturnValue(recheckPromise),
+    };
+
+    renderWithCatalog(<StatusView statusPort={statusPort} onClose={() => {}} />);
+
+    const row = await screen.findByRole("status");
+    expect(within(row).getByText("Comprobando")).toBeInTheDocument();
+
+    const recheckBtn = screen.getByRole("button", { name: "Volver a comprobar" });
+    await user.click(recheckBtn);
+
+    expect(within(row).getByText("Comprobando")).toBeInTheDocument();
+
+    resolveRecheck([
+      {
+        signal: "version",
+        value: "0.4.1",
+        verdict: "correct",
+        action: null,
+      },
+    ]);
+
+    await waitFor(() => {
+      expect(within(row).getByText("Correcto")).toBeInTheDocument();
+    });
   });
 });

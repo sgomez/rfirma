@@ -83,6 +83,7 @@ rojo.
 | `viewer/useBoxDrag.ts` | **Arrastrar** el recuadro que ya existe, y redimensionarlo por sus cuatro tiradores. |
 | `viewer/useBoxTrace.ts` | **Trazar** el recuadro sobre la hoja: el gesto que lo hace nacer. Hermano del anterior, no un modo suyo. |
 | **`status/`** | El estado de la instalación. |
+| `status/status.ts` | El puerto de consulta y medición de estado, con su doble en memoria. Sin React. |
 | `status/StatusView.tsx` | La vista del cuerpo con el estado de rFirma. |
 | **`preferences/`** | Los ajustes. |
 | `preferences/preferences.ts` | Lo que la aplicación recuerda. |

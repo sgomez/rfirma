@@ -67,3 +67,83 @@ crossing! {
         pub version: String,
     }
 }
+
+use crate::desktop::domain::status::{ActionKind, Signal, SignalRow, StatusAction, Verdict};
+
+crossing! {
+    /// Fila de estado de una señal para la ventana.
+    #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+    #[serde(rename_all = "camelCase")]
+    pub struct SignalRowView {
+        /// Señal evaluada.
+        pub signal: Signal,
+        /// Valor en texto plano para la celda.
+        pub value: String,
+        /// Veredicto calculado en Rust.
+        pub verdict: Verdict,
+        /// Acción disponible si la hay.
+        pub action: Option<StatusActionView>,
+    }
+}
+
+impl From<SignalRow> for SignalRowView {
+    fn from(row: SignalRow) -> Self {
+        Self {
+            signal: row.signal,
+            value: row.value,
+            verdict: row.verdict,
+            action: row.action.map(StatusActionView::from),
+        }
+    }
+}
+
+crossing! {
+    /// Acción declarada que acompaña al veredicto de una señal.
+    #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+    #[serde(rename_all = "camelCase")]
+    pub struct StatusActionView {
+        /// Tipo declarado de acción.
+        pub kind: ActionKind,
+        /// Destino o identificador de la acción.
+        pub target: String,
+    }
+}
+
+impl From<StatusAction> for StatusActionView {
+    fn from(action: StatusAction) -> Self {
+        Self {
+            kind: action.kind,
+            target: action.target,
+        }
+    }
+}
+
+crossing! {
+    lent from "desktop/domain/status.rs":
+    pub enum Signal {
+        Version,
+        SiteSignature,
+        LocalCaCertificate,
+        UserCertificates,
+    }
+}
+
+crossing! {
+    lent from "desktop/domain/status.rs":
+    pub enum Verdict {
+        Correct,
+        Attention,
+        Incorrect,
+        NotApplicable,
+        Checking,
+    }
+}
+
+crossing! {
+    lent from "desktop/domain/status.rs":
+    pub enum ActionKind {
+        Repair,
+        Choice,
+        Link,
+    }
+}

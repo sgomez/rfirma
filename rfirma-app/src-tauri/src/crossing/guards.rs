@@ -110,7 +110,7 @@ fn types_named_by(signature: &str) -> Vec<&str> {
 }
 
 /// Tipos de salida que no contienen información procedente de un documento.
-const OUTPUTS_WITH_NO_DOCUMENT_BEHIND: [&str; 18] = [
+const OUTPUTS_WITH_NO_DOCUMENT_BEHIND: [&str; 20] = [
     "StatusView",
     "CertificateView",
     "PlacementView",
@@ -129,6 +129,8 @@ const OUTPUTS_WITH_NO_DOCUMENT_BEHIND: [&str; 18] = [
     "SiteOutcomeView",
     "RefusalSituationView",
     "NoCertificateView",
+    "SignalRowView",
+    "StatusActionView",
 ];
 
 /// Ruta de prueba simulando un enlace concedido por el portal.
@@ -512,7 +514,7 @@ fn the_list_of_commands_is_closed_and_this_is_how_long_it_is() {
         .map(|(_, source)| production_half(source).matches("#[tauri::command").count())
         .sum();
 
-    assert_eq!(orders, 41, "la lista de ordenes es cerrada a proposito");
+    assert_eq!(orders, 42, "la lista de ordenes es cerrada a proposito");
 }
 
 /// Extrae las declaraciones de órdenes Tauri del código fuente.

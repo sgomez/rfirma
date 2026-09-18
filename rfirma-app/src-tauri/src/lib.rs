@@ -209,6 +209,7 @@ fn with_the_five_roots(
             desktop::adapters::tauri::url_handlers,
             desktop::adapters::tauri::choose_url_handler,
             desktop::adapters::tauri::open_external_destination,
+            desktop::adapters::tauri::read_status,
             signing::adapters::tauri::unregistered_signatures,
             identity::adapters::tauri::install_certificate,
             identity::adapters::tauri::remove_certificate,

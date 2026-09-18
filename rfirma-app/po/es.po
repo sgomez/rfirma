@@ -833,6 +833,42 @@ msgstr "Firmar de todos modos"
 msgid "status.title"
 msgstr "Estado de rFirma"
 
+msgid "status.recheck"
+msgstr "Volver a comprobar"
+
+msgid "status.columns.signal"
+msgstr "Señal"
+
+msgid "status.columns.value"
+msgstr "Valor"
+
+msgid "status.columns.verdict"
+msgstr "Veredicto"
+
+msgid "status.columns.action"
+msgstr "Acción"
+
+msgid "status.signals.version"
+msgstr "Versión"
+
+msgid "status.verdicts.correct"
+msgstr "Correcto"
+
+msgid "status.verdicts.attention"
+msgstr "Atención"
+
+msgid "status.verdicts.incorrect"
+msgstr "Incorrecto"
+
+msgid "status.verdicts.notApplicable"
+msgstr "No aplica"
+
+msgid "status.verdicts.checking"
+msgstr "Comprobando"
+
+msgid "status.actions.update"
+msgstr "Actualizar"
+
 msgid "preferences.title"
 msgstr "Preferencias"
 

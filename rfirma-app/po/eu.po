@@ -837,6 +837,42 @@ msgstr "Sinatu hala ere"
 msgid "status.title"
 msgstr "rFirmaren egoera"
 
+msgid "status.recheck"
+msgstr "Berriro egiaztatu"
+
+msgid "status.columns.signal"
+msgstr "Seinalea"
+
+msgid "status.columns.value"
+msgstr "Balioa"
+
+msgid "status.columns.verdict"
+msgstr "Epaia"
+
+msgid "status.columns.action"
+msgstr "Ekintza"
+
+msgid "status.signals.version"
+msgstr "Bertsioa"
+
+msgid "status.verdicts.correct"
+msgstr "Zuzena"
+
+msgid "status.verdicts.attention"
+msgstr "Kontuz"
+
+msgid "status.verdicts.incorrect"
+msgstr "Okerra"
+
+msgid "status.verdicts.notApplicable"
+msgstr "Ez da aplikagarria"
+
+msgid "status.verdicts.checking"
+msgstr "Egiaztatzen"
+
+msgid "status.actions.update"
+msgstr "Eguneratu"
+
 msgid "preferences.title"
 msgstr "Hobespenak"
 

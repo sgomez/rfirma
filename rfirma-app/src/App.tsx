@@ -37,6 +37,7 @@ import { acknowledgementFor, useSigning } from "./signing/useSigning";
 import { useStampPreview } from "./signing/useStampPreview";
 import { DEFAULT_VISIBLE_SIGNATURE, type VisibleSignature } from "./signing/visibleSignature";
 import { StatusView } from "./status/StatusView";
+import { memoryStatus, type StatusPort } from "./status/status";
 import type { NewVersion, VersionCheck } from "./updates/newVersion";
 import { DocumentViewer } from "./viewer/DocumentViewer";
 import type { PdfDocument } from "./viewer/pdf";
@@ -103,6 +104,8 @@ interface AppProps {
   menuAnchor?: MenuAnchor;
   /** Quien abre destinos externos fuera de la aplicación. Ver [`ExternalDestinationOpener`]. */
   externalDestinations?: ExternalDestinationOpener;
+  /** Quien lee y reevalúa las señales del panel de estado. Ver [`StatusPort`]. */
+  status?: StatusPort;
 }
 
 /**
@@ -131,6 +134,7 @@ export function App({
   urlHandlers,
   menuAnchor,
   externalDestinations = unavailableExternalDestinationOpener(),
+  status = memoryStatus(),
 }: AppProps) {
   const [dialog, setDialog] = useState<OpenDialog>(null);
   const [view, setView] = useState<ActiveView>(null);
@@ -960,7 +964,15 @@ export function App({
         onOpenPreferences={() => setDialog("preferences")}
         onOpenHelp={() => void externalDestinations.open("discussions")}
         onOpenAbout={() => setDialog("about")}
-        view={view === "status" ? <StatusView onClose={() => setView(null)} /> : null}
+        view={
+          view === "status" ? (
+            <StatusView
+              statusPort={status}
+              externalDestinations={externalDestinations}
+              onClose={() => setView(null)}
+            />
+          ) : null
+        }
         notification={
           // El primer —y hoy único— inquilino de la franja. La acción no
           // descarga nada: lleva a *Acerca de*, que es donde están las órdenes
