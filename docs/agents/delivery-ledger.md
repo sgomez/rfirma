@@ -169,3 +169,6 @@ en `.scratch/archive/`.
 2026-09-17 spec=#742 sub=#742 model=inherit effort=medium pr=#743 verdict=CLEAN cycles=0 mergefix=0 wave=— outcome=merged
 2026-09-17 spec=#484 sub=#746 model=inherit effort=medium pr=#748 verdict=CLEAN cycles=1 mergefix=0 wave=— outcome=merged
 2026-09-17 spec=#484 sub=#747 model=inherit effort=medium pr=#749 verdict=CLEAN cycles=0 mergefix=0 wave=— outcome=merged
+2026-09-18 spec=#786 sub=#787 model=inherit effort=medium pr=#811 verdict=CLEAN cycles=1 mergefix=0 wave=— outcome=merged
+2026-09-18 spec=#786 sub=#788 model=inherit effort=medium pr=#812 verdict=CLEAN cycles=0 mergefix=0 wave=— outcome=merged
+2026-09-18 spec=#786 sub=#789 model=inherit effort=medium pr=#814 verdict=CLEAN cycles=0 mergefix=0 wave=— outcome=merged
