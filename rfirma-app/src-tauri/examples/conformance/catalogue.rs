@@ -16,9 +16,9 @@ pub(crate) const THE_SUITES: &[&str] = &[
     "transporte.service",
     "versiones",
     "operaciones",
+    "errores",
     "operaciones.firma",
     "operaciones.disco",
-    "errores",
 ];
 
 /// Lo que necesita una comprobación además del sujeto, tal y como se declara en `needs`.
@@ -242,6 +242,18 @@ statement = "Algo se rechaza con SAF_03."
     fn the_catalogue_of_the_repository_reads() {
         let checks = read_the_catalogue().unwrap();
         assert_eq!(checks.len(), 81);
+    }
+
+    #[test]
+    fn the_catalogue_orders_its_blocks_like_the_suites_vocabulary() {
+        let checks = read_the_catalogue().unwrap();
+        let mut blocks: Vec<&str> = Vec::new();
+        for check in &checks {
+            if blocks.last() != Some(&check.suite.as_str()) {
+                blocks.push(&check.suite);
+            }
+        }
+        assert_eq!(blocks, THE_SUITES);
     }
 
     #[test]
