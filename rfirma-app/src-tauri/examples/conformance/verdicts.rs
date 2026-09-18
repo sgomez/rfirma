@@ -449,9 +449,7 @@ pub(crate) fn the_verdict_for_a_bind_failure(outcome: &ErrandOutcome) -> CheckOu
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::baseline::Profile;
     use crate::catalogue::the_catalogue_in;
-    use crate::dossier::CheckState;
 
     fn a_check_expecting(saf: Option<&str>) -> Check {
         let expects = saf
