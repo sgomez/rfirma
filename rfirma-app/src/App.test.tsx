@@ -3,15 +3,15 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { App } from "./App";
 import {
-  inMemoryUrlHandlers,
-  type UrlHandlerChoice,
-  type UrlHandlers,
-} from "./desktop/urlHandlers";
-import {
   type ExternalDestinationOpener,
   inMemoryExternalDestinationOpener,
   unavailableExternalDestinationOpener,
 } from "./desktop/externalDestination";
+import {
+  inMemoryUrlHandlers,
+  type UrlHandlerChoice,
+  type UrlHandlers,
+} from "./desktop/urlHandlers";
 import type { DocumentInHand } from "./documents/document";
 import type { Drop, FakeDocumentDrops } from "./documents/drops";
 import { inMemoryDocumentDrops } from "./documents/drops";

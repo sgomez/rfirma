@@ -1,4 +1,4 @@
-//! Caso de uso: apertura de un destino externo en el navegador (ID-369).
+//! Caso de uso: apertura de un destino externo en el navegador.
 
 use crate::desktop::domain::destination::resolve_destination;
 

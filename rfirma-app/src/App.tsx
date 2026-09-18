@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AboutDialog } from "./about/AboutDialog";
-import { UrlHandlerBanner } from "./desktop/UrlHandlerBanner";
 import type { ExternalDestinationOpener } from "./desktop/externalDestination";
 import { unavailableExternalDestinationOpener } from "./desktop/externalDestination";
+import { UrlHandlerBanner } from "./desktop/UrlHandlerBanner";
 import {
   theBannerHasSomethingToAsk,
   type UrlHandlerChoice,
