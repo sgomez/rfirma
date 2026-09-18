@@ -42,7 +42,7 @@ const THE_PROFILES: [&str; 2] = ["autofirma", "rfirma"];
 
 const THE_VERDICTS: [&str; 3] = ["conforme", "no-conforme", "no-observable"];
 
-const THE_SUITES: [&str; 8] = [
+const THE_SUITES: [&str; 9] = [
     "saludo",
     "transporte.websocket",
     "transporte.service",
@@ -50,6 +50,7 @@ const THE_SUITES: [&str; 8] = [
     "operaciones",
     "operaciones.firma",
     "operaciones.disco",
+    "operaciones.lote",
     "errores",
 ];
 

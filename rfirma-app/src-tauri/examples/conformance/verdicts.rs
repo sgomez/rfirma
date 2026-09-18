@@ -212,6 +212,45 @@ pub(crate) fn the_verdict_for_a_visible_signature_area(
     )
 }
 
+/// El veredicto del lote local sin ventanas: quien está delante dice que ningún documento le pidió
+/// nada, y el cable trae el lote firmado.
+pub(crate) fn the_verdict_for_a_headless_batch(
+    outcome: &ErrandOutcome,
+    answer: &str,
+) -> CheckOutcome {
+    if !outcome.launched {
+        return CheckOutcome::of(
+            Verdict::NotObservable,
+            "el sujeto no llegó a arrancar en esta tanda",
+        );
+    }
+    if let Some(THE_DRIVER_CRASH | THE_EXHAUSTED_PATIENCE) = outcome.error_type.as_deref() {
+        return CheckOutcome::Resolved {
+            verdict: Verdict::NotObservable,
+            observation: outcome.error_type.clone(),
+        };
+    }
+    if answer.is_empty() {
+        return CheckOutcome::StillPending;
+    }
+    if answered_yes(answer) {
+        return CheckOutcome::of(
+            Verdict::Noncompliant,
+            "un documento del lote local pidió marcar el área de la firma visible",
+        );
+    }
+    if outcome.signature.is_some() {
+        return CheckOutcome::of(
+            Verdict::Compliant,
+            "el lote local firmó sin que ningún documento pidiera nada",
+        );
+    }
+    CheckOutcome::Resolved {
+        verdict: Verdict::NotObservable,
+        observation: outcome.error_type.clone(),
+    }
+}
+
 /// El veredicto del guardado de una firma: quien está delante dice si se pidió destino, y el cable
 /// dice si la firma volvió a la sede después de guardarla.
 pub(crate) fn the_verdict_for_a_saved_signature(
@@ -969,6 +1008,54 @@ mod tests {
         assert_eq!(
             observation.as_deref(),
             Some("la firma salió sin pedir el área que el protocolo exige marcar")
+        );
+    }
+
+    #[test]
+    fn a_batch_item_signed_without_asking_anything_is_compliant() {
+        let signed = ErrandOutcome {
+            signature: Some("eyJzaWducyI6W119".to_owned()),
+            ..an_outcome()
+        };
+        assert_eq!(
+            the_verdict(the_verdict_for_a_headless_batch(&signed, "n")),
+            Verdict::Compliant
+        );
+    }
+
+    #[test]
+    fn a_batch_item_that_asked_for_the_visible_area_is_noncompliant() {
+        let signed = ErrandOutcome {
+            signature: Some("eyJzaWducyI6W119".to_owned()),
+            ..an_outcome()
+        };
+        let CheckOutcome::Resolved {
+            verdict,
+            observation,
+        } = the_verdict_for_a_headless_batch(&signed, "s")
+        else {
+            panic!("la comprobación debería resolverse");
+        };
+        assert_eq!(verdict, Verdict::Noncompliant);
+        assert_eq!(
+            observation.as_deref(),
+            Some("un documento del lote local pidió marcar el área de la firma visible")
+        );
+    }
+
+    #[test]
+    fn a_headless_batch_nobody_answered_stays_pending() {
+        assert!(matches!(
+            the_verdict_for_a_headless_batch(&an_outcome(), ""),
+            CheckOutcome::StillPending
+        ));
+    }
+
+    #[test]
+    fn a_headless_batch_that_never_came_back_is_not_observable() {
+        assert_eq!(
+            the_verdict(the_verdict_for_a_headless_batch(&an_outcome(), "n")),
+            Verdict::NotObservable
         );
     }
 

@@ -19,12 +19,13 @@ use crate::errand::ErrandOutcome;
 use crate::listing::{chapter_tag, the_closing_of, verdict_badge, GRAY, PENDING_BADGE};
 use crate::verdicts::{
     the_verdict_for_a_bind_failure, the_verdict_for_a_cancelled_dialogue,
-    the_verdict_for_a_pinned_certificate, the_verdict_for_a_private_key_check,
-    the_verdict_for_a_proposed_save_name, the_verdict_for_a_requested_input_document,
-    the_verdict_for_a_save_confirmation, the_verdict_for_a_saved_signature,
-    the_verdict_for_a_timestamp, the_verdict_for_a_visible_signature_area,
-    the_verdict_for_an_automatic_selection, the_verdict_for_an_interactive_load,
-    the_verdict_for_an_overwrite_confirmation, the_verdict_of, CheckOutcome,
+    the_verdict_for_a_headless_batch, the_verdict_for_a_pinned_certificate,
+    the_verdict_for_a_private_key_check, the_verdict_for_a_proposed_save_name,
+    the_verdict_for_a_requested_input_document, the_verdict_for_a_save_confirmation,
+    the_verdict_for_a_saved_signature, the_verdict_for_a_timestamp,
+    the_verdict_for_a_visible_signature_area, the_verdict_for_an_automatic_selection,
+    the_verdict_for_an_interactive_load, the_verdict_for_an_overwrite_confirmation, the_verdict_of,
+    CheckOutcome,
 };
 use crate::Probe;
 
@@ -33,6 +34,7 @@ use crate::Probe;
 pub(crate) const THE_HARNESSES: &[&str] = &[
     "automatic_certificate_selection",
     "cancelled_dialogue",
+    "headless_batch_item",
     "interactive_file_load",
     "occupied_service_ports",
     "overwrite_confirmation",
@@ -253,6 +255,9 @@ impl Probe {
             Some("pinned_certificate") => {
                 the_verdict_for_a_pinned_certificate(outcome, answer.unwrap_or_default())
             }
+            Some("headless_batch_item") => {
+                the_verdict_for_a_headless_batch(outcome, answer.unwrap_or_default())
+            }
             Some("visible_signature_area") => {
                 the_verdict_for_a_visible_signature_area(outcome, answer.unwrap_or_default())
             }
@@ -423,13 +428,13 @@ fn the_warnings_of(group: &[&Check]) -> Vec<String> {
         .collect()
 }
 
-/// Cuánto va a tardar una comprobación que espera a que el cliente publicado agote sus reintentos,
-/// y por qué; `None` si no declara `espera:<segundos>`.
+/// Cuánto va a tardar una comprobación que tarda por diseño; `None` si no declara
+/// `espera:<segundos>`.
 fn the_wait_announcement_of(check: &Check) -> Option<String> {
     check.declared_patience().map(|patience| {
         format!(
-            "Esta comprobación tarda por diseño: hasta {}s, mientras el cliente publicado agota sus \
-             reintentos.",
+            "Esta comprobación tarda por diseño: hasta {}s. El silencio mientras tanto no es un \
+             cuelgue.",
             patience.as_secs()
         )
     })
