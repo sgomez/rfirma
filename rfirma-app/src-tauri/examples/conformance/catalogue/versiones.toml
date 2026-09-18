@@ -1,0 +1,146 @@
+# Entradas del catálogo de la suite de conformidad para el conjunto «versiones».
+# Repartido por `catalogue.rs`; la forma de cada entrada la vigila la guarda
+# `conformance_catalogue_is_sound.rs`.
+
+[[check]]
+id = "operation_supported_protocol_version"
+suite = "versiones"
+chapter = "14"
+citation = "ProtocolVersion.java:60-62; ProtocolInvocationLauncher.java:62, 907-915"
+statement = """
+Las operaciones aceptan versiones de protocolo menores o iguales a 4
+(MAX_PROTOCOL_VERSION_SUPPORTED).
+"""
+drive = { mode = "v4", script = "protocol-v4" }
+
+[check.expect.autofirma]
+verdict = "conforme"
+
+[check.expect.rfirma]
+verdict = "conforme"
+
+[[check]]
+id = "operation_unsupported_protocol_version_rejected"
+suite = "versiones"
+chapter = "14"
+citation = "ProtocolVersion.java:60-62; ProtocolInvocationLauncherSign.java:133-140"
+statement = """
+Una versión de protocolo solicitada superior a 4 (p. ej. ver=5) es rechazada con el código SAF_21.
+"""
+drive = { mode = "v4", script = "protocol-v4" }
+
+[check.expect.autofirma]
+verdict = "conforme"
+
+[check.expect.rfirma]
+verdict = "conforme"
+
+[[check]]
+id = "operation_minimum_client_version_satisfied"
+suite = "versiones"
+chapter = "14"
+citation = "Version.java:120-169; ProtocolInvocationLauncherSign.java:143-150"
+statement = """
+Si mcv solicita una versión igual o inferior a la versión del aplicativo (p. ej. mcv=1.0.0), la
+operación continúa sin error de versión.
+"""
+drive = { mode = "v4", script = "protocol-v4" }
+
+[check.expect.autofirma]
+verdict = "conforme"
+
+[check.expect.rfirma]
+verdict = "conforme"
+
+[[check]]
+id = "operation_minimum_client_version_unsatisfied_rejected"
+suite = "versiones"
+chapter = "14"
+citation = "Version.java:120-169; ProtocolInvocationLauncherSign.java:143-150; ProtocolInvocationLauncherErrorManager.java:72"
+statement = """
+Si mcv solicita una versión superior a la de la aplicación (p. ej. mcv=99.0.0), la operación es
+rechazada con SAF_41.
+"""
+drive = { mode = "v4", script = "protocol-v4" }
+
+[check.expect.autofirma]
+verdict = "conforme"
+
+[check.expect.rfirma]
+verdict = "conforme"
+
+[[check]]
+id = "websocket_handshake_session_query_parameter"
+suite = "versiones"
+chapter = "14"
+citation = "AfirmaWebSocketServerV4.java:49-74"
+statement = """
+En versión 4 se exige idsession en la query string del handshake HTTP de WebSocket
+(ws.getResourceDescriptor()) y la conexión que no lo traiga se rechaza con el código de cierre 1008.
+"""
+drive = { mode = "v4", script = "protocol-v4" }
+
+[check.expect.autofirma]
+verdict = "conforme"
+
+[check.expect.rfirma]
+verdict = "conforme"
+
+[[check]]
+id = "websocket_channel_supported_versions_accepted"
+suite = "versiones"
+chapter = "14"
+citation = "AfirmaWebSocketServerManager.java:36, 100-107"
+statement = """
+El canal WebSocket admite las versiones de protocolo 3 y 4 (SUPPORTED_PROTOCOL_VERSIONS): las dos
+llegan a abrir canal.
+"""
+drive = { mode = "v3", script = "protocol-v3" }
+harness = "supported_websocket_versions"
+
+[check.expect.autofirma]
+verdict = "conforme"
+
+[check.expect.rfirma]
+verdict = "conforme"
+
+[[check]]
+id = "service_channel_version_range"
+suite = "versiones"
+chapter = "14"
+citation = "ServiceInvocationManager.java:42-45, 212-220; ProtocolInvocationLauncher.java:281-288"
+statement = """
+El canal socket HTTP (afirma://service) sólo admite las versiones 1, 2 y 3; la versión 4 se rechaza
+con SAF_21.
+"""
+drive = { mode = "service-v4", script = "selectcert" }
+expects_saf = "SAF_21"
+
+[check.expect.autofirma]
+verdict = "conforme"
+
+[check.expect.rfirma]
+verdict = "conforme"
+
+[[check]]
+id = "websocket_rejects_a_protocol_version_it_does_not_support"
+suite = "versiones"
+chapter = "14"
+citation = "AfirmaWebSocketServerManager.java:36, 100-107; ProtocolInvocationLauncher.java:240-245"
+statement = """
+El canal WebSocket sólo admite las versiones de protocolo 3 y 4. Una URL de arranque que pida otra
+—v=1, obsoleta; v=99, no soportada— se rechaza con SAF_21, y el código llega al cliente.
+"""
+drive = { mode = "v1", script = "selectcert" }
+expects_saf = "SAF_21"
+needs = ["espera:60"]
+warning = "El cliente publicado agota sus reintentos antes de rendirse: la comprobación tarda alrededor de un minuto."
+
+[check.expect.autofirma]
+verdict = "no-observable"
+cause = "BUG-25"
+note = "El cliente publicado agota sus reintentos y se rinde con ApplicationNotFoundException sin que ningún código llegue al cable."
+
+[check.expect.rfirma]
+verdict = "conforme"
+

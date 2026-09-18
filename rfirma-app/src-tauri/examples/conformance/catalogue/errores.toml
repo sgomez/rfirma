@@ -1,0 +1,122 @@
+# Entradas del catálogo de la suite de conformidad para el conjunto «errores».
+# Repartido por `catalogue.rs`; la forma de cada entrada la vigila la guarda
+# `conformance_catalogue_is_sound.rs`.
+
+[[check]]
+id = "unsupported_protocol_uri_rejected"
+suite = "errores"
+chapter = "15"
+citation = "ProtocolInvocationLauncher.java:172-178"
+statement = """
+Una URI que no empieza estrictamente por afirma:// se rechaza con SAF_02.
+"""
+drive = { mode = "bad-uri", script = "selectcert" }
+expects_saf = "SAF_02"
+
+[check.expect.autofirma]
+verdict = "conforme"
+
+[check.expect.rfirma]
+verdict = "conforme"
+
+[[check]]
+id = "unsupported_operation_rejected"
+suite = "errores"
+chapter = "15"
+citation = "ProtocolInvocationLauncher.java:837-843"
+statement = """
+Una operación no soportada (host desconocido como unknownop) se rechaza con SAF_04.
+"""
+drive = { mode = "v4", script = "protocol-v4" }
+
+[check.expect.autofirma]
+verdict = "conforme"
+
+[check.expect.rfirma]
+verdict = "conforme"
+
+[[check]]
+id = "sign_missing_or_invalid_operation_rejected"
+suite = "errores"
+chapter = "15"
+citation = "ProtocolInvocationLauncherSign.java:733"
+statement = """
+En afirma://sign?, si el parámetro op falta o no es reconocido, se rechaza con SAF_04.
+"""
+drive = { mode = "v4", script = "protocol-v4" }
+
+[check.expect.autofirma]
+verdict = "conforme"
+
+[check.expect.rfirma]
+verdict = "conforme"
+
+[[check]]
+id = "sign_unsupported_format_rejected"
+suite = "errores"
+chapter = "15"
+citation = "ProtocolInvocationLauncherSign.java:269"
+statement = """
+Si el formato de firma especificado en format no está soportado, se rechaza con SAF_06.
+"""
+drive = { mode = "v4", script = "protocol-v4" }
+
+[check.expect.autofirma]
+verdict = "conforme"
+
+[check.expect.rfirma]
+verdict = "conforme"
+
+[[check]]
+id = "local_access_blocked"
+suite = "errores"
+chapter = "15"
+citation = "UrlParameters.java:279-281; ProtocolInvocationLauncher.java:735"
+statement = """
+Si stservlet o rtservlet apuntan a direcciones locales prohibidas, se rechaza con SAF_13.
+"""
+drive = { mode = "v4", script = "protocol-v4" }
+
+[check.expect.autofirma]
+verdict = "conforme"
+
+[check.expect.rfirma]
+verdict = "conforme"
+
+[[check]]
+id = "invalid_parameters_syntax_rejected"
+suite = "errores"
+chapter = "15"
+citation = "ProtocolInvocationLauncher.java:741"
+statement = """
+Parámetros de entrada con sintaxis inválida se rechazan con SAF_03.
+"""
+drive = { mode = "v4", script = "protocol-v4" }
+
+[check.expect.autofirma]
+verdict = "conforme"
+
+[check.expect.rfirma]
+verdict = "conforme"
+
+[[check]]
+id = "signandsave_rejects_a_request_without_a_verb_with_saf_04"
+suite = "errores"
+chapter = "07"
+citation = "UrlParametersToSignAndSave.java:29, 237; ProtocolInvocationLauncherSignAndSave.java:155, 728"
+statement = """
+Una invocación de signandsave sin cop se rechaza con SAF_04, el mismo código con el que sign
+rechaza un verbo ausente o no reconocido.
+"""
+drive = { mode = "v4", script = "signandsavewithoutaverb" }
+expects_saf = "SAF_04"
+warning = "Van a aparecer el diálogo de certificado y el del PIN antes de que llegue el rechazo."
+
+[check.expect.autofirma]
+verdict = "no-conforme"
+cause = "BUG-15"
+note = "Sin validar cop, signandsave revienta con NullPointerException y reporta SAF_09."
+
+[check.expect.rfirma]
+verdict = "conforme"
+

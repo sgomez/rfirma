@@ -1,5 +1,5 @@
-//! El catálogo declarativo de la suite de conformidad, leído de `catalogue.toml`: los metadatos de
-//! cada exigencia, no su cuerpo ejecutable.
+//! El catálogo declarativo de la suite de conformidad, leído de `catalogue/`, un fichero por
+//! conjunto: los metadatos de cada exigencia, no su cuerpo ejecutable.
 
 use std::collections::BTreeMap;
 use std::path::PathBuf;
@@ -98,17 +98,45 @@ impl Check {
     }
 }
 
-/// Dónde vive el catálogo: un fichero del árbol, no un literal empotrado, porque es lo que se lee
-/// y se revisa.
-pub(crate) fn the_catalogue_file() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("examples/conformance/catalogue.toml")
+/// Dónde vive el catálogo: un directorio con un fichero por conjunto, no un literal empotrado,
+/// porque es lo que se lee y se revisa.
+pub(crate) fn the_catalogue_dir() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("examples/conformance/catalogue")
+}
+
+/// El fichero del conjunto dado, con el mismo nombre que `THE_SUITES` salvo que sus puntos se
+/// vuelven guiones.
+fn the_suite_file(suite: &str) -> PathBuf {
+    the_catalogue_dir().join(format!("{}.toml", suite.replace('.', "-")))
 }
 
 pub(crate) fn read_the_catalogue() -> Result<Vec<Check>, String> {
-    let path = the_catalogue_file();
-    let raw = std::fs::read_to_string(&path)
-        .map_err(|error| format!("{} no se pudo leer: {error}", path.display()))?;
-    the_catalogue_in(&raw).map_err(|complaint| format!("{}: {complaint}", path.display()))
+    let mut checks = Vec::new();
+    for suite in THE_SUITES {
+        let path = the_suite_file(suite);
+        let raw = std::fs::read_to_string(&path)
+            .map_err(|error| format!("{} no se pudo leer: {error}", path.display()))?;
+        let entries = the_catalogue_in(&raw)
+            .map_err(|complaint| format!("{}: {complaint}", path.display()))?;
+        checks.extend(entries);
+    }
+    reject_repeated_ids(&checks)?;
+    Ok(checks)
+}
+
+/// Un `id` que aparece en más de un fichero del catálogo repartido es un error: cada exigencia
+/// vive en un solo conjunto.
+fn reject_repeated_ids(checks: &[Check]) -> Result<(), String> {
+    let mut seen = std::collections::BTreeSet::new();
+    for check in checks {
+        if !seen.insert(check.id.as_str()) {
+            return Err(format!(
+                "id repetido entre ficheros del catálogo: {}",
+                check.id
+            ));
+        }
+    }
+    Ok(())
 }
 
 pub(crate) fn the_catalogue_in(raw: &str) -> Result<Vec<Check>, String> {
@@ -214,5 +242,21 @@ statement = "Algo se rechaza con SAF_03."
     fn the_catalogue_of_the_repository_reads() {
         let checks = read_the_catalogue().unwrap();
         assert_eq!(checks.len(), 81);
+    }
+
+    #[test]
+    fn an_id_repeated_between_two_files_is_rejected() {
+        let entry_in = |suite: &str| {
+            format!(
+                "[[check]]\nid = \"a_one\"\nsuite = \"{suite}\"\nchapter = \"01\"\n\
+                 citation = \"A.java:1\"\nstatement = \"Algo.\"\n"
+            )
+        };
+        let one = the_catalogue_in(&entry_in("saludo")).unwrap();
+        let other = the_catalogue_in(&entry_in("errores")).unwrap();
+        let mixed: Vec<Check> = one.into_iter().chain(other).collect();
+
+        let error = reject_repeated_ids(&mixed).unwrap_err();
+        assert!(error.contains("a_one"));
     }
 }

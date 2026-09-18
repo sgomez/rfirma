@@ -6,7 +6,7 @@ use std::path::Path;
 
 use crate::baseline::verdict_name;
 use crate::dossier::{CheckState, Dossier};
-use crate::verdicts::{chapter_tag, PENDING_BADGE, RED, RESET};
+use crate::listing::{chapter_tag, PENDING_BADGE, RED, RESET};
 
 pub(crate) fn compare(a: &Path, b: &Path) -> Result<String, String> {
     let left = Dossier::read(a)?;

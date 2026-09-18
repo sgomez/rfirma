@@ -1,0 +1,25 @@
+# Entradas del catálogo de la suite de conformidad para el conjunto «transporte.service».
+# Repartido por `catalogue.rs`; la forma de cada entrada la vigila la guarda
+# `conformance_catalogue_is_sound.rs`.
+
+[[check]]
+id = "the_service_channel_reports_a_bind_failure_instead_of_claiming_success"
+suite = "transporte.service"
+chapter = "04"
+citation = "ServiceInvocationManager.java:136-143, 148-168; ProtocolInvocationLauncher.java:281-288"
+statement = """
+Si el canal no puede ligar ninguno de los puertos ofrecidos, la sede recibe un error que lo dice, y
+no un silencio indistinguible de que la aplicación no esté instalada.
+"""
+drive = { mode = "service-bind-failure", script = "selectcert" }
+harness = "occupied_service_ports"
+needs = ["puertos:63131,63132,63133"]
+
+[check.expect.autofirma]
+verdict = "no-conforme"
+cause = "BUG-10"
+note = "El fallo al ligar los puertos llega a la sede como si la aplicación no estuviera instalada."
+
+[check.expect.rfirma]
+verdict = "conforme"
+

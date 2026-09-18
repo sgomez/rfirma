@@ -61,8 +61,20 @@ fn repository_root() -> PathBuf {
         .to_path_buf()
 }
 
-fn catalogue_path() -> PathBuf {
-    repository_root().join("rfirma-app/src-tauri/examples/conformance/catalogue.toml")
+fn catalogue_dir() -> PathBuf {
+    repository_root().join("rfirma-app/src-tauri/examples/conformance/catalogue")
+}
+
+/// Los ficheros del catálogo repartido, uno por conjunto, en un orden estable e independiente del
+/// sistema de ficheros.
+fn catalogue_files() -> Vec<PathBuf> {
+    let mut files: Vec<PathBuf> = std::fs::read_dir(catalogue_dir())
+        .unwrap_or_else(|error| panic!("no se pudo leer {}: {error}", catalogue_dir().display()))
+        .filter_map(|entry| entry.ok().map(|entry| entry.path()))
+        .filter(|path| path.extension().and_then(|ext| ext.to_str()) == Some("toml"))
+        .collect();
+    files.sort();
+    files
 }
 
 fn checks_path() -> PathBuf {
@@ -421,7 +433,10 @@ fn adrs_in(folder: &Path) -> BTreeSet<String> {
 }
 
 fn the_catalogue() -> Vec<Entry> {
-    entries_in(&read(&catalogue_path()))
+    catalogue_files()
+        .iter()
+        .flat_map(|path| entries_in(&read(path)))
+        .collect()
 }
 
 #[test]
