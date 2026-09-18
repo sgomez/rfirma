@@ -14,6 +14,7 @@ interface HeaderProps {
   status: Badge | null;
   /** Dónde va el menú. Ver [`MenuAnchor`]. */
   menuAnchor: MenuAnchor;
+  onOpenStatus: () => void;
   onOpenPreferences: () => void;
   onOpenHelp: () => void;
   onOpenAbout: () => void;
@@ -39,6 +40,7 @@ interface HeaderProps {
 export function Header({
   status,
   menuAnchor,
+  onOpenStatus,
   onOpenPreferences,
   onOpenHelp,
   onOpenAbout,
@@ -58,7 +60,10 @@ export function Header({
       if (!container.current?.contains(event.target as Node)) close();
     };
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") close();
+      if (event.key === "Escape") {
+        event.preventDefault();
+        close();
+      }
     };
     document.addEventListener("pointerdown", onPointerDown);
     document.addEventListener("keydown", onKeyDown);
@@ -99,6 +104,16 @@ export function Header({
             </button>
             {open && (
               <div className="header__popup rf-card rf-card--elevated" id={menuId} role="menu">
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="rf-btn header__entry"
+                  onClick={choose(onOpenStatus)}
+                >
+                  <span className="header__entryLabel">{t("header.status")}</span>
+                  <span className="header__entryIcon" aria-hidden="true" />
+                </button>
+                <hr className="rf-divider header__divider" />
                 <button
                   type="button"
                   role="menuitem"

@@ -13,6 +13,7 @@ describe("Header", () => {
       <Header
         status={null}
         menuAnchor="header"
+        onOpenStatus={noop}
         onOpenPreferences={noop}
         onOpenHelp={noop}
         onOpenAbout={noop}
@@ -28,6 +29,7 @@ describe("Header", () => {
       <Header
         status="Unsigned"
         menuAnchor="header"
+        onOpenStatus={noop}
         onOpenPreferences={noop}
         onOpenHelp={noop}
         onOpenAbout={noop}
@@ -44,6 +46,7 @@ describe("Header", () => {
       <Header
         status={null}
         menuAnchor="header"
+        onOpenStatus={noop}
         onOpenPreferences={noop}
         onOpenHelp={noop}
         onOpenAbout={noop}
@@ -62,6 +65,7 @@ describe("Header", () => {
       <Header
         status={null}
         menuAnchor="header"
+        onOpenStatus={noop}
         onOpenPreferences={noop}
         onOpenHelp={noop}
         onOpenAbout={noop}
@@ -80,6 +84,7 @@ describe("Header", () => {
       <Header
         status={null}
         menuAnchor="header"
+        onOpenStatus={noop}
         onOpenPreferences={noop}
         onOpenHelp={noop}
         onOpenAbout={noop}
@@ -90,12 +95,13 @@ describe("Header", () => {
     expect(screen.getByRole("button", { name: "Menú" })).toBeInTheDocument();
   });
 
-  it("opens a menu of three entries", async () => {
+  it("opens a menu of four entries in two groups with a divider", async () => {
     const user = userEvent.setup();
     renderWithCatalog(
       <Header
         status={null}
         menuAnchor="header"
+        onOpenStatus={noop}
         onOpenPreferences={noop}
         onOpenHelp={noop}
         onOpenAbout={noop}
@@ -104,10 +110,34 @@ describe("Header", () => {
 
     await user.click(screen.getByRole("button", { name: "Menú" }));
 
-    expect(screen.getAllByRole("menuitem")).toHaveLength(3);
-    expect(screen.getByRole("menuitem", { name: "Preferencias…" })).toBeInTheDocument();
-    expect(screen.getByRole("menuitem", { name: /Comentarios y ayuda/ })).toBeInTheDocument();
-    expect(screen.getByRole("menuitem", { name: "Acerca de rFirma" })).toBeInTheDocument();
+    const items = screen.getAllByRole("menuitem");
+    expect(items).toHaveLength(4);
+    expect(items[0]).toHaveTextContent("Estado de rFirma");
+    expect(items[1]).toHaveTextContent("Preferencias…");
+    expect(items[2]).toHaveTextContent("Comentarios y ayuda");
+    expect(items[3]).toHaveTextContent("Acerca de rFirma");
+    expect(screen.getByRole("separator")).toBeInTheDocument();
+  });
+
+  it("opens the status view from the menu and closes the menu", async () => {
+    const user = userEvent.setup();
+    const openStatus = vi.fn();
+    renderWithCatalog(
+      <Header
+        status={null}
+        menuAnchor="header"
+        onOpenStatus={openStatus}
+        onOpenPreferences={noop}
+        onOpenHelp={noop}
+        onOpenAbout={noop}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Menú" }));
+    await user.click(screen.getByRole("menuitem", { name: "Estado de rFirma" }));
+
+    expect(openStatus).toHaveBeenCalledOnce();
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
   });
 
   it("opens the help destination from the menu and closes the menu", async () => {
@@ -117,6 +147,7 @@ describe("Header", () => {
       <Header
         status={null}
         menuAnchor="header"
+        onOpenStatus={noop}
         onOpenPreferences={noop}
         onOpenHelp={openHelp}
         onOpenAbout={noop}
@@ -136,6 +167,7 @@ describe("Header", () => {
       <Header
         status={null}
         menuAnchor="header"
+        onOpenStatus={noop}
         onOpenPreferences={noop}
         onOpenHelp={noop}
         onOpenAbout={noop}
@@ -145,10 +177,13 @@ describe("Header", () => {
     await user.click(screen.getByRole("button", { name: "Menú" }));
 
     const items = screen.getAllByRole("menuitem");
-    expect(items).toHaveLength(3);
+    expect(items).toHaveLength(4);
     for (const item of items) {
       expect(item.querySelector(".header__entryIcon")).not.toBeNull();
     }
+
+    const statusItem = screen.getByRole("menuitem", { name: "Estado de rFirma" });
+    expect(statusItem.querySelector(".header__entryIcon svg")).toBeNull();
 
     const helpItem = screen.getByRole("menuitem", { name: /Comentarios y ayuda/ });
     expect(helpItem.querySelector(".header__entryIcon svg")).not.toBeNull();
@@ -167,6 +202,7 @@ describe("Header", () => {
       <Header
         status={null}
         menuAnchor="header"
+        onOpenStatus={noop}
         onOpenPreferences={openPreferences}
         onOpenHelp={noop}
         onOpenAbout={noop}
@@ -187,6 +223,7 @@ describe("Header", () => {
       <Header
         status={null}
         menuAnchor="header"
+        onOpenStatus={noop}
         onOpenPreferences={noop}
         onOpenHelp={noop}
         onOpenAbout={openAbout}
@@ -205,6 +242,7 @@ describe("Header", () => {
       <Header
         status={null}
         menuAnchor="header"
+        onOpenStatus={noop}
         onOpenPreferences={noop}
         onOpenHelp={noop}
         onOpenAbout={noop}
@@ -227,6 +265,7 @@ describe("Header", () => {
       <Header
         status={null}
         menuAnchor="header"
+        onOpenStatus={noop}
         onOpenPreferences={noop}
         onOpenHelp={noop}
         onOpenAbout={noop}
@@ -248,6 +287,7 @@ describe("Header", () => {
       <Header
         status={null}
         menuAnchor="native"
+        onOpenStatus={noop}
         onOpenPreferences={noop}
         onOpenHelp={noop}
         onOpenAbout={noop}

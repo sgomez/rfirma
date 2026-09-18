@@ -332,6 +332,9 @@ msgstr ""
 msgid "header.menu"
 msgstr ""
 
+msgid "header.status"
+msgstr ""
+
 msgid "header.preferences"
 msgstr ""
 
@@ -743,6 +746,9 @@ msgid "unregisteredSignatures.body"
 msgstr ""
 
 msgid "unregisteredSignatures.confirm"
+msgstr ""
+
+msgid "status.title"
 msgstr ""
 
 msgid "preferences.title"

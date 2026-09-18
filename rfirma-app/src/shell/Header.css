@@ -101,3 +101,8 @@
   height: 14px;
   color: var(--rf-text-muted);
 }
+
+.header__divider {
+  margin: 4px 0;
+  width: 100%;
+}

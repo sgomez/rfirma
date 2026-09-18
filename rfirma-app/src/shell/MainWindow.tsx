@@ -10,6 +10,7 @@ interface MainWindowProps {
   status: Badge | null;
   /** Dónde va el menú. Ver [`MenuAnchor`]. */
   menuAnchor: MenuAnchor;
+  onOpenStatus?: () => void;
   onOpenPreferences: () => void;
   onOpenHelp?: () => void;
   onOpenAbout: () => void;
@@ -20,6 +21,8 @@ interface MainWindowProps {
    * composición. Ver [`NotificationStrip`].
    */
   notification?: ReactNode;
+  /** La vista del cuerpo que sustituye a las tres regiones, o `null` si no hay ninguna. */
+  view?: ReactNode;
   /** El contenido de la bandeja, que es quien sabe de documentos. */
   tray: ReactNode;
   /** El contenido del visor, que es quien sabe de páginas y de recuadros. */
@@ -56,10 +59,12 @@ interface MainWindowProps {
 export function MainWindow({
   status,
   menuAnchor,
+  onOpenStatus = () => {},
   onOpenPreferences,
   onOpenHelp = () => {},
   onOpenAbout,
   notification = null,
+  view = null,
   tray,
   viewer,
   panel,
@@ -76,26 +81,33 @@ export function MainWindow({
       <Header
         status={status}
         menuAnchor={menuAnchor}
+        onOpenStatus={onOpenStatus}
         onOpenPreferences={onOpenPreferences}
         onOpenHelp={onOpenHelp}
         onOpenAbout={onOpenAbout}
       />
       {notification}
-      <div
-        className={hasPanel ? "main-window__body" : "main-window__body main-window__body--no-panel"}
-      >
-        <section className="main-window__tray" aria-label={t("window.tray")}>
-          {tray}
-        </section>
-        <section className="main-window__viewer" aria-label={t("window.viewer")}>
-          {viewer}
-        </section>
-        {hasPanel && (
-          <section className="main-window__panel" aria-label={t("window.panel")}>
-            {panel}
+      {view !== null && view !== undefined ? (
+        view
+      ) : (
+        <div
+          className={
+            hasPanel ? "main-window__body" : "main-window__body main-window__body--no-panel"
+          }
+        >
+          <section className="main-window__tray" aria-label={t("window.tray")}>
+            {tray}
           </section>
-        )}
-      </div>
+          <section className="main-window__viewer" aria-label={t("window.viewer")}>
+            {viewer}
+          </section>
+          {hasPanel && (
+            <section className="main-window__panel" aria-label={t("window.panel")}>
+              {panel}
+            </section>
+          )}
+        </div>
+      )}
     </div>
   );
 }
