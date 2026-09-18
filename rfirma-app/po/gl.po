@@ -380,6 +380,9 @@ msgstr "Non volver preguntar"
 msgid "header.menu"
 msgstr "Menú"
 
+msgid "header.status"
+msgstr "Estado de rFirma"
+
 msgid "header.preferences"
 msgstr "Preferencias…"
 
@@ -813,6 +816,9 @@ msgstr ""
 msgid "unregisteredSignatures.confirm"
 msgstr "Asinar de todos os xeitos"
 
+msgid "status.title"
+msgstr "Estado de rFirma"
+
 msgid "preferences.title"
 msgstr "Preferencias"
 
@@ -1079,7 +1085,8 @@ msgid "sede.consent.unknownOriginSignatureOf"
 msgstr "A petición pide asinar {{what}} e non indica de que páxina vén."
 
 msgid "sede.consent.unknownOriginIdentity"
-msgstr "A petición pide os teus datos de identidade e non indica de que páxina vén."
+msgstr ""
+"A petición pide os teus datos de identidade e non indica de que páxina vén."
 
 #. El PDF no trae título en sus metadatos, y el nombre de fichero no viaja
 #. nunca en la petición.

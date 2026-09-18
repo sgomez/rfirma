@@ -157,4 +157,25 @@ describe("MainWindow", () => {
     expect(strip).toHaveTextContent("hay algo que contar");
     expect(body).toHaveClass("main-window__body");
   });
+
+  it("mounts a body view under the header instead of the three regions", () => {
+    renderWithCatalog(
+      <MainWindow
+        status={null}
+        menuAnchor="header"
+        onOpenPreferences={noop}
+        onOpenAbout={noop}
+        view={<div data-testid="body-view">vista de estado</div>}
+        tray={<p>tray</p>}
+        viewer={<p>viewer</p>}
+        panel={<p>panel</p>}
+      />,
+    );
+
+    expect(screen.getByRole("banner")).toBeInTheDocument();
+    expect(screen.getByTestId("body-view")).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Bandeja de documentos" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Visor del documento" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Panel de firma" })).not.toBeInTheDocument();
+  });
 });

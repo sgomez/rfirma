@@ -714,6 +714,54 @@ describe("App", () => {
     ).toBeInTheDocument();
   });
 
+  it("opens Estado de rFirma from the menu, and Cerrar closes it", async () => {
+    const user = userEvent.setup();
+    renderApp();
+
+    await user.click(screen.getByRole("button", { name: "Menú" }));
+    await user.click(screen.getByRole("menuitem", { name: "Estado de rFirma" }));
+
+    expect(screen.getByRole("heading", { name: "Estado de rFirma" })).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Bandeja de documentos" })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Cerrar" }));
+
+    expect(screen.queryByRole("heading", { name: "Estado de rFirma" })).not.toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Bandeja de documentos" })).toBeInTheDocument();
+  });
+
+  it("closes Estado de rFirma with Escape", async () => {
+    const user = userEvent.setup();
+    renderApp();
+
+    await user.click(screen.getByRole("button", { name: "Menú" }));
+    await user.click(screen.getByRole("menuitem", { name: "Estado de rFirma" }));
+
+    expect(screen.getByRole("heading", { name: "Estado de rFirma" })).toBeInTheDocument();
+
+    await user.keyboard("{Escape}");
+
+    expect(screen.queryByRole("heading", { name: "Estado de rFirma" })).not.toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Bandeja de documentos" })).toBeInTheDocument();
+  });
+
+  it("keeps the header and menu reachable while Estado de rFirma is open", async () => {
+    const user = userEvent.setup();
+    renderApp();
+
+    await user.click(screen.getByRole("button", { name: "Menú" }));
+    await user.click(screen.getByRole("menuitem", { name: "Estado de rFirma" }));
+
+    expect(screen.getByRole("heading", { name: "Estado de rFirma" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Menú" }));
+    expect(screen.getByRole("menu")).toBeInTheDocument();
+
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Estado de rFirma" })).toBeInTheDocument();
+  });
+
   it("opens About from the menu", async () => {
     const user = userEvent.setup();
     renderApp();

@@ -36,6 +36,7 @@ import { pagesWithoutSeal } from "./signing/unsealedPages";
 import { acknowledgementFor, useSigning } from "./signing/useSigning";
 import { useStampPreview } from "./signing/useStampPreview";
 import { DEFAULT_VISIBLE_SIGNATURE, type VisibleSignature } from "./signing/visibleSignature";
+import { StatusView } from "./status/StatusView";
 import type { NewVersion, VersionCheck } from "./updates/newVersion";
 import { DocumentViewer } from "./viewer/DocumentViewer";
 import type { PdfDocument } from "./viewer/pdf";
@@ -57,6 +58,7 @@ import {
 import type { DocumentFailure, PdfSource } from "./viewer/source";
 
 type OpenDialog = "preferences" | "about" | null;
+type ActiveView = "status" | null;
 
 /**
  * Un aviso del arrastre, atado al documento del que habla.
@@ -131,6 +133,7 @@ export function App({
   externalDestinations = unavailableExternalDestinationOpener(),
 }: AppProps) {
   const [dialog, setDialog] = useState<OpenDialog>(null);
+  const [view, setView] = useState<ActiveView>(null);
   // El aviso de versión: lo que contestó el puerto y si ya se descartó. Se
   // descarta **para esta sesión** y no se anota en disco: quien decide cada
   // cuánto se vuelve a preguntar es el backend (una vez cada 24 h), y una
@@ -953,9 +956,11 @@ export function App({
       <MainWindow
         status={documents.active?.badge ?? null}
         menuAnchor={menuAnchor ?? menuAnchorFor(navigator.userAgent)}
+        onOpenStatus={() => setView("status")}
         onOpenPreferences={() => setDialog("preferences")}
         onOpenHelp={() => void externalDestinations.open("discussions")}
         onOpenAbout={() => setDialog("about")}
+        view={view === "status" ? <StatusView onClose={() => setView(null)} /> : null}
         notification={
           // El primer —y hoy único— inquilino de la franja. La acción no
           // descarga nada: lleva a *Acerca de*, que es donde están las órdenes

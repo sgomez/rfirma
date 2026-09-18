@@ -391,6 +391,9 @@ msgstr "Ez galdetu berriro"
 msgid "header.menu"
 msgstr "Menua"
 
+msgid "header.status"
+msgstr "rFirmaren egoera"
+
 msgid "header.preferences"
 msgstr "Hobespenak…"
 
@@ -830,6 +833,9 @@ msgstr ""
 
 msgid "unregisteredSignatures.confirm"
 msgstr "Sinatu hala ere"
+
+msgid "status.title"
+msgstr "rFirmaren egoera"
 
 msgid "preferences.title"
 msgstr "Hobespenak"

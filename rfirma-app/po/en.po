@@ -377,6 +377,9 @@ msgstr "Don't ask again"
 msgid "header.menu"
 msgstr "Menu"
 
+msgid "header.status"
+msgstr "rFirma Status"
+
 msgid "header.preferences"
 msgstr "Preferences…"
 
@@ -812,6 +815,9 @@ msgstr ""
 msgid "unregisteredSignatures.confirm"
 msgstr "Sign anyway"
 
+msgid "status.title"
+msgstr "rFirma Status"
+
 msgid "preferences.title"
 msgstr "Preferences"
 
@@ -954,8 +960,8 @@ msgstr ""
 "Independent project. rFirma isn't related to AutoFirma or to the Spanish "
 "Administration, who publish the official client, nor is it endorsed by them. "
 "If you need the official application, download it from their website. Issues "
-"with rFirma are reported in its own repository, not to the publishers of "
-"the official client."
+"with rFirma are reported in its own repository, not to the publishers of the "
+"official client."
 
 #. No se traduce: es una URL.
 msgid "about.repository"
@@ -1082,8 +1088,8 @@ msgstr ""
 
 msgid "sede.consent.unknownOriginIdentity"
 msgstr ""
-"The request asks for your identity data and doesn't say which page it "
-"comes from."
+"The request asks for your identity data and doesn't say which page it comes "
+"from."
 
 #. El PDF no trae título en sus metadatos, y el nombre de fichero no viaja
 #. nunca en la petición.

@@ -44,7 +44,7 @@ rojo.
 | `shell/MainWindow.tsx` | El marco, con el hueco de la franja entre la cabecera y las regiones. |
 | `shell/NotificationStrip.tsx` | La franja de notificación: el patrón, no el aviso concreto. |
 | `shell/Header.tsx` | La cabecera única, sin barra de menús. |
-| `shell/menuAnchor.ts` | Dónde se ancla el menú de dos entradas. |
+| `shell/menuAnchor.ts` | Dónde se ancla el menú de la aplicación. |
 | **`documents/`** | La bandeja. |
 | `documents/document.ts` | El vocabulario del documento: el que se tiene delante y sus insignias. No es la fila. |
 | `documents/useDocuments.ts` | El estado de la bandeja. |
@@ -82,6 +82,8 @@ rojo.
 | `viewer/signatureBox.ts` | El recuadro: dónde se guarda, cómo se redimensiona y cómo se traza. |
 | `viewer/useBoxDrag.ts` | **Arrastrar** el recuadro que ya existe, y redimensionarlo por sus cuatro tiradores. |
 | `viewer/useBoxTrace.ts` | **Trazar** el recuadro sobre la hoja: el gesto que lo hace nacer. Hermano del anterior, no un modo suyo. |
+| **`status/`** | El estado de la instalación. |
+| `status/StatusView.tsx` | La vista del cuerpo con el estado de rFirma. |
 | **`preferences/`** | Los ajustes. |
 | `preferences/preferences.ts` | Lo que la aplicación recuerda. |
 | `preferences/PreferencesDialog.tsx` | La pantalla completa de ajustes, con su índice de **cinco** secciones. |
