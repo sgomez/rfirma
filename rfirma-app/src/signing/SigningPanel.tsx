@@ -119,6 +119,7 @@ interface SigningPanelProps {
   /** Mientras la firma corre, el botón no acepta un segundo empujón. */
   signing: boolean;
   failure: SigningFailure | null;
+  onOpenHelp?: () => void;
 }
 
 /**
@@ -161,6 +162,7 @@ export function SigningPanel({
   onSign,
   signing,
   failure,
+  onOpenHelp,
 }: SigningPanelProps) {
   const { t, i18n } = useTranslation();
   const reasonId = useId();
@@ -307,6 +309,7 @@ export function SigningPanel({
             onChoose={onChooseCertificate}
             onRetry={onRetryCertificates}
             onChooseModule={onChooseModule}
+            onOpenHelp={onOpenHelp}
           />
         </section>
 
@@ -514,6 +517,7 @@ export function SigningPanel({
                   <ErrorNotice
                     situation={rubricFailure.situation}
                     technicalDetail={rubricFailure.detail}
+                    onOpenHelp={onOpenHelp}
                   />
                 )}
               </div>
@@ -524,7 +528,11 @@ export function SigningPanel({
 
       <footer className="panel__footer">
         {failure ? (
-          <ErrorNotice situation={failure.situation} technicalDetail={failure.detail} />
+          <ErrorNotice
+            situation={failure.situation}
+            technicalDetail={failure.detail}
+            onOpenHelp={onOpenHelp}
+          />
         ) : (
           <div className="panel__destination">
             {/* El rótulo es una promesa, así que **desaparece** cuando no se
@@ -638,11 +646,13 @@ function CertificateBlock({
   onChoose,
   onRetry,
   onChooseModule,
+  onOpenHelp,
 }: {
   state: CertificateState;
   onChoose: (certificate: Certificate) => void;
   onRetry: () => void;
   onChooseModule: () => void;
+  onOpenHelp?: () => void;
 }) {
   const { t, i18n } = useTranslation();
 
@@ -688,7 +698,11 @@ function CertificateBlock({
           <span className="rf-title">{t("panel.certificate.failed.title")}</span>
         </div>
         <p className="rf-prose rf-text-muted">{t("panel.certificate.failed.body")}</p>
-        <ErrorNotice situation={state.failure.situation} technicalDetail={state.failure.detail} />
+        <ErrorNotice
+          situation={state.failure.situation}
+          technicalDetail={state.failure.detail}
+          onOpenHelp={onOpenHelp}
+        />
         <div className="rf-row rf-gap-xs panel__no-certificates-actions">
           <button type="button" className="rf-btn rf-btn--secondary panel__retry" onClick={onRetry}>
             {t("panel.certificate.retry")}

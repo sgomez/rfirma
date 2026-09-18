@@ -51,3 +51,15 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+
+.error-notice__actions {
+  margin-top: var(--rf-space-xs);
+  align-items: center;
+}
+
+.error-notice__help {
+  align-self: flex-start;
+  padding-left: 0;
+  min-height: 30px;
+  font-size: 12px;
+}

@@ -7,7 +7,12 @@ import { createRoot } from "react-dom/client";
 import { createI18n } from "../i18n/i18n";
 import { LanguageProvider } from "../i18n/LanguageProvider";
 import { applyTheme } from "../preferences/theme";
-import { tauriLanguagePreference, tauriPreferences, tauriSiteErrands } from "../tauri";
+import {
+  tauriExternalDestinationOpener,
+  tauriLanguagePreference,
+  tauriPreferences,
+  tauriSiteErrands,
+} from "../tauri";
 import { SedeWindow } from "./SedeWindow";
 
 /**
@@ -57,7 +62,7 @@ const errands = tauriSiteErrands();
 createRoot(root).render(
   <StrictMode>
     <LanguageProvider i18n={i18n} preference={preference}>
-      <SedeWindow errands={errands} />
+      <SedeWindow errands={errands} externalDestinations={tauriExternalDestinationOpener()} />
     </LanguageProvider>
   </StrictMode>,
 );

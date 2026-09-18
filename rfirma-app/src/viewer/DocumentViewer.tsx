@@ -136,6 +136,7 @@ interface DocumentViewerProps {
    * mudo y parecía que la pulsación no había hecho nada.
    */
   failure?: DocumentFailure | null;
+  onOpenHelp?: () => void;
   /**
    * Se puede colocar la firma visible ahora mismo: el interruptor está
    * encendido **y** hay un certificado utilizable (ID-108).
@@ -222,6 +223,7 @@ export function DocumentViewer({
   placementRequest = null,
   canPlace = true,
   failure = null,
+  onOpenHelp,
   stamped = null,
   stampFrozen = false,
   onGesture,
@@ -689,7 +691,13 @@ export function DocumentViewer({
   if (!pdf) {
     return (
       <div className="viewer viewer--empty">
-        {failure && <ErrorNotice situation={failure.situation} technicalDetail={failure.detail} />}
+        {failure && (
+          <ErrorNotice
+            situation={failure.situation}
+            technicalDetail={failure.detail}
+            onOpenHelp={onOpenHelp}
+          />
+        )}
         <button type="button" className="viewer__drop-zone" onClick={onOpen}>
           <span className="viewer__drop-icon">
             <UploadIcon />
@@ -709,7 +717,11 @@ export function DocumentViewer({
         // página»: `.viewer` es una rejilla de una sola fila y meter aquí un
         // hijo en flujo le robaría altura al documento.
         <div className="viewer__failure">
-          <ErrorNotice situation={failure.situation} technicalDetail={failure.detail} />
+          <ErrorNotice
+            situation={failure.situation}
+            technicalDetail={failure.detail}
+            onOpenHelp={onOpenHelp}
+          />
         </div>
       )}
       <div className="viewer__scroll" ref={setSurface}>

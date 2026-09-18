@@ -1,6 +1,8 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { describe, expect, it } from "vitest";
+import { inMemoryExternalDestinationOpener } from "../desktop/externalDestination";
 import { createI18n } from "../i18n/i18n";
 import { LanguageProvider } from "../i18n/LanguageProvider";
 import type { LanguageTag } from "../i18n/languages";
@@ -74,5 +76,48 @@ describe("el aviso de error", () => {
     expect(details).not.toBeNull();
     expect(details?.open).toBe(false);
     expect(details).toHaveTextContent("Detalle técnico");
+  });
+  it.each(["bridgeFailed", "sealMismatch", "unknown"] as const)(
+    "enseña el enlace a Comentarios y ayuda en la situación %s",
+    (situation) => {
+      renderIn("es", <ErrorNotice situation={situation} technicalDetail={RAW_DETAIL} />);
+
+      expect(screen.getByRole("button", { name: /Comentarios y ayuda/ })).toBeInTheDocument();
+    },
+  );
+
+  it.each([
+    "incorrectPin",
+    "tokenAbsent",
+    "certificateExpired",
+    "moduleNotFound",
+    "keyNotRsa",
+  ] as const)("no enseña el enlace a Comentarios y ayuda en la situación ajena %s", (situation) => {
+    renderIn("es", <ErrorNotice situation={situation} technicalDetail={RAW_DETAIL} />);
+
+    expect(screen.queryByRole("button", { name: /Comentarios y ayuda/ })).not.toBeInTheDocument();
+  });
+
+  it("abre el destino discussions al pulsar el enlace de ayuda", async () => {
+    const user = userEvent.setup();
+    const externalDestinations = inMemoryExternalDestinationOpener();
+    renderIn(
+      "es",
+      <ErrorNotice
+        situation="unknown"
+        technicalDetail={RAW_DETAIL}
+        externalDestinations={externalDestinations}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /Comentarios y ayuda/ }));
+
+    expect(externalDestinations.opened).toEqual(["discussions"]);
+  });
+
+  it("traduce el enlace de ayuda al idioma de la ventana", () => {
+    renderIn("en", <ErrorNotice situation="unknown" technicalDetail={RAW_DETAIL} />);
+
+    expect(screen.getByRole("button", { name: /Feedback and help/ })).toBeInTheDocument();
   });
 });

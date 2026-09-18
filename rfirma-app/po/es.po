@@ -55,6 +55,9 @@ msgstr "English"
 msgid "errors.technicalDetail"
 msgstr "Detalle técnico"
 
+msgid "errors.help"
+msgstr "Comentarios y ayuda"
+
 msgid "errors.situations.unknown.title"
 msgstr "No se ha podido completar la operación"
 

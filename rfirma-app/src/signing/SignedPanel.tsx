@@ -41,6 +41,7 @@ interface SignedPanelProps {
    * único camino que tiene hasta el fichero fallaría en silencio.
    */
   failure?: NamedFailure | null;
+  onOpenHelp?: () => void;
 }
 
 /**
@@ -72,6 +73,7 @@ export function SignedPanel({
   onOpenFolder,
   onSignAgain,
   failure = null,
+  onOpenHelp,
 }: SignedPanelProps) {
   const { t, i18n } = useTranslation();
 
@@ -109,7 +111,13 @@ export function SignedPanel({
           </div>
         </section>
 
-        {failure && <ErrorNotice situation={failure.situation} technicalDetail={failure.detail} />}
+        {failure && (
+          <ErrorNotice
+            situation={failure.situation}
+            technicalDetail={failure.detail}
+            onOpenHelp={onOpenHelp}
+          />
+        )}
       </div>
 
       <footer className="panel__footer">
