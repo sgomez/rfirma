@@ -391,6 +391,9 @@ function theFrozen(fixture) {
   return readFileSync(join(here, fixture), "utf8").trim();
 }
 
+/** Lo que llegó a recibir cada servlet del lote, para medirlo al cerrar el trámite. */
+const whatTheServletsReceived = { presign: null, postsign: null };
+
 /** Lo que ambos servlets exigen del original: el lote en `json` y la cadena en `certs`. */
 function missingBatchFields(query) {
   if (!query.get("json")) return "json";
@@ -410,10 +413,12 @@ function thePresigner(query) {
   }
 
   const lote = JSON.parse(decodedFromBase64(query.get("json")));
+  const certs = query.get("certs").split(";").length;
+  whatTheServletsReceived.presign = { signs: lote.singlesigns.length, certs };
   emit({
     event: "presign",
     signs: String(lote.singlesigns.length),
-    certs: String(query.get("certs").split(";").length),
+    certs: String(certs),
     algorithm: String(lote.algorithm),
   });
   return { status: 200, body: theFrozen("batch-presign-response.json") };
@@ -438,35 +443,166 @@ function thePostsigner(query) {
     return { status: 400, body: "falta 'PK1' en alguna firma del 'tridata'" };
   }
 
+  const withPre = signs.filter((sign) => !!sign.params.PRE).length;
+  whatTheServletsReceived.postsign = {
+    lote: JSON.parse(decodedFromBase64(query.get("json"))),
+    ids: signs.map((sign) => sign.id),
+    withPre,
+  };
   emit({
     event: "postsign",
     signs: String(signs.length),
-    pre: String(signs.filter((sign) => !!sign.params.PRE).length),
+    pre: String(withPre),
   });
   return { status: 200, body: theFrozen("batch-postsign-result.json") };
 }
 
-/** Un lote de dos documentos firmado con `signBatchJSON` contra los dos servlets del banco. */
-async function theBatchScript() {
-  const presigner = await servletServing(thePresigner);
+/** El presigner que sólo prefirma «uno» y devuelve «dos» como error de prefirma. */
+function thePartialPresigner(query) {
+  const answer = thePresigner(query);
+  if (answer.status !== 200) return answer;
+
+  const partial = JSON.parse(answer.body);
+  partial.td.signinfo = partial.td.signinfo.filter((sign) => sign.id === "uno");
+  partial.results = [{ id: "dos", result: "ERROR_PRE", description: "no se pudo prefirmar" }];
+  return { status: 200, body: JSON.stringify(partial) };
+}
+
+/** El presigner que no prefirma nada: sin `td`, sólo el error de cada documento. */
+function theFailingPresigner(query) {
+  const answer = thePresigner(query);
+  if (answer.status !== 200) return answer;
+
+  const results = ["uno", "dos"].map((id) => ({
+    id,
+    result: "ERROR_PRE",
+    description: "no se pudo prefirmar",
+  }));
+  return { status: 200, body: JSON.stringify({ results }) };
+}
+
+/**
+ * Los dos callbacks de un lote: al éxito emite lo que `measuring` saque del resultado y del
+ * certificado, y los dos cierran el trámite.
+ */
+function theBatchCallbacks(measuring) {
+  return [
+    (result, certificate) => {
+      for (const condition of measuring ? measuring(result, String(certificate)) : []) {
+        emit({ event: "condition", ...condition });
+      }
+      settle({
+        event: "success",
+        result: Buffer.from(JSON.stringify(result), "utf8").toString("base64"),
+        certificate: String(certificate),
+      });
+    },
+    (type, message) => settle({ event: "error", type: String(type), message: String(message) }),
+  ];
+}
+
+/** El certificado de la respuesta es un DER suelto: su primer byte abre una `SEQUENCE`. */
+function isADerCertificate(certificate) {
+  const der = bytesOf(certificate);
+  return der.length > 0 && der[0] === 0x30;
+}
+
+/** Lo que el lote remoto JSON deja medir al cerrarse: los dos servlets, `PK1`, el resultado y `needcert`. */
+function theRemoteBatchConditions(result, certificate) {
+  const { presign, postsign } = whatTheServletsReceived;
+  const throughBoth = presign !== null && postsign !== null;
+  const withTheChain = presign !== null && presign.signs === 2 && presign.certs > 0;
+  const signedWithPk1 = postsign !== null && postsign.ids.length === 2 && postsign.withPre === 1;
+  const asItCame =
+    JSON.stringify(result) === JSON.stringify(JSON.parse(theFrozen("batch-postsign-result.json")));
+  const withTheCertificate = isADerCertificate(certificate);
+  return [
+    aCondition(
+      "a_remote_batch_is_signed_through_the_presigner_and_the_postsigner",
+      throughBoth,
+      throughBoth ? "el lote pasó por los dos servlets" : "el lote no llegó a los dos servlets",
+    ),
+    aCondition(
+      "the_presigner_receives_the_json_batch_and_the_signing_chain",
+      withTheChain,
+      withTheChain
+        ? "el presigner recibió los dos documentos y la cadena del firmante"
+        : "el presigner no recibió el lote entero con su cadena",
+    ),
+    aCondition(
+      "the_postsigner_receives_every_item_signed_with_pk1",
+      signedWithPk1,
+      signedWithPk1
+        ? "las dos firmas llegaron con PK1 y sólo la que lo pedía conservó su PRE"
+        : "el tridata del postsigner no trae las dos firmas con PK1 y el PRE que piden",
+    ),
+    aCondition(
+      "the_site_receives_the_postsigner_result_as_it_came",
+      asItCame,
+      asItCame
+        ? "la sede recibió el resultado del postsigner tal cual"
+        : "la sede recibió un resultado distinto del que devolvió el postsigner",
+    ),
+    aCondition(
+      "the_batch_answer_carries_the_signing_certificate_with_needcert",
+      withTheCertificate,
+      withTheCertificate
+        ? "la respuesta trae el certificado del firmante en DER"
+        : "la respuesta no trae el certificado del firmante",
+    ),
+  ];
+}
+
+/** El postsigner recibe el lote con «dos» marcado como error de prefirma, y sólo «uno» en el `tridata`. */
+function thePartialBatchConditions() {
+  const { postsign } = whatTheServletsReceived;
+  const failed = postsign?.lote.singlesigns.find((sign) => sign.id === "dos");
+  const marked =
+    postsign !== null &&
+    failed?.result === "ERROR_PRE" &&
+    postsign.ids.length === 1 &&
+    postsign.ids[0] === "uno";
+  return [
+    aCondition(
+      "a_partial_presign_failure_reaches_the_postsigner_marked_in_the_batch",
+      marked,
+      marked
+        ? "el postsigner recibió «dos» marcado como ERROR_PRE y sólo «uno» firmado"
+        : "el postsigner no recibió el lote marcado con el error de prefirma",
+    ),
+  ];
+}
+
+/** Sin nada prefirmado, el lote no llega al postsigner y la sede recibe los errores de prefirma. */
+function theFailedBatchConditions(result) {
+  const signs = result?.signs ?? [];
+  const answered =
+    whatTheServletsReceived.postsign === null &&
+    signs.length === 2 &&
+    signs.every((sign) => sign.result === "ERROR_PRE");
+  return [
+    aCondition(
+      "a_presign_that_fails_every_item_answers_its_errors_without_postsigning",
+      answered,
+      answered
+        ? "la sede recibió los dos errores de prefirma sin pasar por el postsigner"
+        : "el lote fallido no se respondió con sus errores de prefirma sin postsigner",
+    ),
+  ];
+}
+
+/**
+ * Un lote de dos documentos firmado con `signBatchJSON` contra los dos servlets del banco, con el
+ * presigner que se le dé.
+ */
+async function theBatchScript(presigning = thePresigner, measuring = theRemoteBatchConditions) {
+  const presigner = await servletServing(presigning);
   const postsigner = await servletServing(thePostsigner);
 
   AutoScript.createBatch("SHA256", "CAdES", "sign");
   AutoScript.addDocumentToBatch("uno", Buffer.from("primer documento").toString("base64"));
   AutoScript.addDocumentToBatch("dos", Buffer.from("segundo documento").toString("base64"));
-  AutoScript.signBatchProcess(
-    true,
-    presigner,
-    postsigner,
-    null,
-    (result, certificate) =>
-      settle({
-        event: "success",
-        result: Buffer.from(JSON.stringify(result), "utf8").toString("base64"),
-        certificate: String(certificate),
-      }),
-    (type, message) => settle({ event: "error", type: String(type), message: String(message) }),
-  );
+  AutoScript.signBatchProcess(true, presigner, postsigner, null, ...theBatchCallbacks(measuring));
 }
 
 /** Lo que exige el XML heredado del original: el lote en `xml` y la cadena en `certs`. */
@@ -490,6 +626,10 @@ function theXmlPresigner(query) {
   const lote = decodedFromBase64(query.get("xml"));
   const signs = lote.match(/<singlesign\b/g) ?? [];
   const algorithm = /\balgorithm="([^"]+)"/.exec(lote)?.[1];
+  whatTheServletsReceived.presign = {
+    signs: signs.length,
+    certs: query.get("certs").split(";").length,
+  };
   emit({
     event: "presign",
     signs: String(signs.length),
@@ -519,6 +659,7 @@ function theXmlPostsigner(query) {
   }
 
   const withPre = tridata.match(/<param n="PRE">/g) ?? [];
+  whatTheServletsReceived.postsign = { lote: null, ids: [], withPre: withPre.length };
   emit({
     event: "postsign",
     signs: String(signs.length),
@@ -542,16 +683,46 @@ async function theBatchXmlScript() {
     presigner,
     postsigner,
     null,
-    (result, certificate) =>
+    (result, certificate) => {
+      for (const condition of theXmlBatchConditions(String(result))) {
+        emit({ event: "condition", ...condition });
+      }
       settle({
         // El `signBatch` heredado nunca decodifica `result`: el original hace pasar el
         // resultado por `AfirmaUtils.parseJSONData`, que revienta con XML y lo deja en base64.
         event: "success",
         result: String(result),
         certificate: String(certificate),
-      }),
+      });
+    },
     (type, message) => settle({ event: "error", type: String(type), message: String(message) }),
   );
+}
+
+/** El lote XML pasó por los dos servlets, y la sede recibió el `<signs>` del postsigner tal cual. */
+function theXmlBatchConditions(result) {
+  const { presign, postsign } = whatTheServletsReceived;
+  const throughBoth = presign !== null && postsign !== null;
+  const compact = (text) => text.replace(/\s+/g, "");
+  const asItCame =
+    compact(bytesOf(result).toString("utf8")) ===
+    compact(theFrozen("batch-xml-postsign-result.xml"));
+  return [
+    aCondition(
+      "a_remote_xml_batch_is_signed_through_the_presigner_and_the_postsigner",
+      throughBoth,
+      throughBoth
+        ? "el lote XML pasó por los dos servlets"
+        : "el lote XML no llegó a los dos servlets",
+    ),
+    aCondition(
+      "the_xml_batch_answer_is_the_signs_document_of_the_postsigner",
+      asItCame,
+      asItCame
+        ? "la sede recibió el <signs> del postsigner tal cual"
+        : "la sede recibió algo distinto del <signs> que devolvió el postsigner",
+    ),
+  ];
 }
 
 /** El reto de 64 bytes del banco de referencia, el mismo que firman los CAdES. */
@@ -610,54 +781,248 @@ function theLocalBatchBinary() {
   return Buffer.from("contenido binario del lote local, sin PDF ni XML dentro", "utf8");
 }
 
+/** Un documento del lote local: su id, su contenido en Base64 y, si los declara, su formato y sus `extraParams`. */
+function anItem(id, content, format, extraParams) {
+  return [id, content.toString("base64"), format, extraParams];
+}
+
+const thePdfItem = (format = "PAdES") => anItem("pdf", thePdfOfTheTest(), format);
+const theBinaryItem = (format) => anItem("bin", theLocalBatchBinary(), format);
+const theXmlItem = (format = "XAdES") => anItem("xml", theXmlDocument(), format);
+
+/** Un lote local de `setLocalBatchProcess(true)` sobre `items`, sin presigner ni postsigner. */
+function aLocalBatch({ format = "CAdES", suboperation = "sign", stopOnError, items, callbacks }) {
+  AutoScript.setLocalBatchProcess(true);
+  AutoScript.createBatch("SHA256", format, suboperation, null);
+  for (const [id, content, itemFormat, extraParams] of items) {
+    AutoScript.addDocumentToBatch(id, content, itemFormat, undefined, extraParams);
+  }
+  AutoScript.signBatchProcess(stopOnError, null, null, null, ...callbacks);
+}
+
+function theLocalItems(result) {
+  return new Map((result?.signs ?? []).map((sign) => [sign.id, sign]));
+}
+
+/** Si el elemento salió firmado y su firma es de la clase dada: un PDF, un CMS o un XML. */
+function signedAs(item, kind) {
+  if (item?.result !== "DONE_AND_SAVED" || !item.signature) return false;
+  const bytes = bytesOf(item.signature);
+  if (kind === "pdf") return bytes.subarray(0, 5).toString("latin1") === "%PDF-";
+  if (kind === "cms") return bytes.length > 0 && bytes[0] === 0x30;
+  return bytes.toString("utf8").trimStart().startsWith("<");
+}
+
+function eachInItsFormat(items) {
+  return (
+    signedAs(items.get("pdf"), "pdf") &&
+    signedAs(items.get("bin"), "cms") &&
+    signedAs(items.get("xml"), "xml")
+  );
+}
+
+/** El lote local firmó los tres documentos, cada uno con su firma y en el formato que le toca. */
+function theLocalBatchConditions(result) {
+  const items = theLocalItems(result);
+  const everySigned = ["pdf", "bin", "xml"].every(
+    (id) => items.get(id)?.result === "DONE_AND_SAVED" && !!items.get(id)?.signature,
+  );
+  const inTheirFormats = eachInItsFormat(items);
+  return [
+    aCondition(
+      "a_local_batch_answers_every_signed_item_with_its_signature",
+      everySigned,
+      everySigned
+        ? "los tres documentos volvieron DONE_AND_SAVED con su firma"
+        : "algún documento no volvió firmado con su firma",
+    ),
+    aCondition(
+      "a_local_batch_signs_each_item_in_the_format_it_declares_or_inherits",
+      inTheirFormats,
+      inTheirFormats
+        ? "el PDF volvió en PAdES, el binario en CAdES y el XML en XAdES"
+        : "algún documento no volvió firmado en el formato que declaraba o heredaba",
+    ),
+  ];
+}
+
 /**
  * El lote local de `setLocalBatchProcess(true)`: un PDF (`PAdES`), un binario que hereda
  * `CAdES` del lote y un XML (`XAdES`), sin presigner ni postsigner.
  */
-async function theLocalBatchScript() {
-  AutoScript.setLocalBatchProcess(true);
-  AutoScript.createBatch("SHA256", "CAdES", "sign", null);
-  AutoScript.addDocumentToBatch("pdf", thePdfOfTheTest().toString("base64"), "PAdES");
-  AutoScript.addDocumentToBatch("bin", theLocalBatchBinary().toString("base64"));
-  AutoScript.addDocumentToBatch("xml", theXmlDocument().toString("base64"), "XAdES");
-  AutoScript.signBatchProcess(
-    false,
-    null,
-    null,
-    null,
-    (result, certificate) =>
-      settle({
-        event: "success",
-        result: Buffer.from(JSON.stringify(result), "utf8").toString("base64"),
-        certificate: String(certificate),
-      }),
-    (type, message) => settle({ event: "error", type: String(type), message: String(message) }),
-  );
+function theLocalBatchScript() {
+  aLocalBatch({
+    stopOnError: false,
+    items: [thePdfItem(), theBinaryItem(), theXmlItem()],
+    callbacks: theBatchCallbacks(theLocalBatchConditions),
+  });
 }
 
 /**
  * El mismo lote local, con el binario declarado `format=PAdES` —ilegible, al no ser un PDF— y
  * `stoponerror=true`.
  */
-async function theLocalBatchWithAnIllegibleItemScript() {
+function theLocalBatchWithAnIllegibleItemScript() {
+  aLocalBatch({
+    stopOnError: true,
+    items: [thePdfItem(), theBinaryItem("PAdES"), theXmlItem()],
+    callbacks: theBatchCallbacks((result) => {
+      const items = theLocalItems(result);
+      const rolledBack =
+        items.get("pdf")?.result === "SKIPPED" &&
+        !items.get("pdf")?.signature &&
+        items.get("bin")?.result === "ERROR_PRE" &&
+        items.get("xml")?.result === "SKIPPED";
+      return [
+        aCondition(
+          "a_local_batch_that_stops_on_error_rolls_back_what_it_had_signed",
+          rolledBack,
+          rolledBack
+            ? "el PDF firmado se deshizo, el binario falló y el XML se saltó"
+            : "el lote no deshizo lo firmado ni saltó lo que quedaba",
+        ),
+      ];
+    }),
+  });
+}
+
+/** El mismo lote con el binario ilegible y `stoponerror=false`: el fallo no para a los demás. */
+function theLocalBatchContinuingPastAnIllegibleItemScript() {
+  aLocalBatch({
+    stopOnError: false,
+    items: [thePdfItem(), theBinaryItem("PAdES"), theXmlItem()],
+    callbacks: theBatchCallbacks((result) => {
+      const items = theLocalItems(result);
+      const carriedOn =
+        signedAs(items.get("pdf"), "pdf") &&
+        items.get("bin")?.result === "ERROR_PRE" &&
+        signedAs(items.get("xml"), "xml");
+      return [
+        aCondition(
+          "a_local_batch_that_does_not_stop_on_error_signs_the_rest",
+          carriedOn,
+          carriedOn
+            ? "el binario falló y el PDF y el XML salieron firmados"
+            : "el fallo del binario arrastró a los demás documentos",
+        ),
+      ];
+    }),
+  });
+}
+
+/** El lote local con `format=auto`: ningún documento declara el suyo. */
+function theLocalBatchInFormatAutoScript() {
+  aLocalBatch({
+    format: "auto",
+    stopOnError: false,
+    items: [thePdfItem(null), theBinaryItem(), theXmlItem(null)],
+    callbacks: theBatchCallbacks((result) => {
+      const resolved = eachInItsFormat(theLocalItems(result));
+      return [
+        aCondition(
+          "a_local_batch_resolves_format_auto_from_each_document",
+          resolved,
+          resolved
+            ? "el PDF salió en PAdES, el binario en CAdES y el XML en XAdES"
+            : "format=auto no se resolvió por el contenido de cada documento",
+        ),
+      ];
+    }),
+  });
+}
+
+/** El lote local de una sola firma de referencia con la suboperación dada. */
+function theLocalBatchOfASignatureScript(suboperation, id) {
+  aLocalBatch({
+    suboperation,
+    stopOnError: false,
+    items: [anItem("firma", theReferenceSignature("cades-implicit.p7s"))],
+    callbacks: theBatchCallbacks((result) => {
+      const done = signedAs(theLocalItems(result).get("firma"), "cms");
+      return [
+        aCondition(
+          id,
+          done,
+          done
+            ? `la firma de referencia volvió DONE_AND_SAVED con ${suboperation}`
+            : `el lote no hizo ${suboperation} sobre la firma de referencia`,
+        ),
+      ];
+    }),
+  });
+}
+
+/** El lote local de un PDF que pide `visibleSignature=want`, que el lote tiene que ignorar. */
+function theLocalBatchAskingForAVisibleSignatureScript() {
+  aLocalBatch({
+    stopOnError: false,
+    items: [anItem("pdf", thePdfOfTheTest(), "PAdES", "visibleSignature=want")],
+    callbacks: theBatchCallbacks(),
+  });
+}
+
+/** El OID `ecdsa-with-SHA256` (1.2.840.10045.4.3.2) con su etiqueta y su longitud DER. */
+const ECDSA_WITH_SHA256 = Buffer.from([0x06, 0x08, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x04, 0x03, 0x02]);
+
+/** El lote local de un binario con `SHA256` a secas: el algoritmo lo completa la clave elegida. */
+function theLocalBatchWithAnEllipticKeyScript() {
+  aLocalBatch({
+    stopOnError: false,
+    items: [theBinaryItem()],
+    callbacks: theBatchCallbacks((result) => {
+      const item = theLocalItems(result).get("bin");
+      const composed = signedAs(item, "cms") && bytesOf(item.signature).includes(ECDSA_WITH_SHA256);
+      return [
+        aCondition(
+          "a_local_batch_composes_the_algorithm_with_the_key_of_the_certificate",
+          composed,
+          composed
+            ? "el binario volvió firmado con ecdsa-with-SHA256"
+            : "la firma del binario no es ecdsa-with-SHA256",
+        ),
+      ];
+    }),
+  });
+}
+
+/**
+ * El lote local con una URL por `datareference`, servida aquí para saber si alguien la pide: la
+ * exigencia se cumple si el lote no la descarga y el documento no sale firmado.
+ */
+async function theLocalBatchWithAUrlScript() {
+  let fetched = false;
+  const url = await servletServing(() => {
+    fetched = true;
+    return { status: 200, body: "%PDF-1.4" };
+  });
+  const theCondition = (held, observation) =>
+    aCondition(
+      "a_local_batch_does_not_accept_a_url_as_datareference",
+      held && !fetched,
+      fetched ? "el sujeto descargó la URL de datareference" : observation,
+    );
+
+  const [succeeded, failed] = theBatchCallbacks((result) => {
+    const signed = theLocalItems(result).get("url")?.result === "DONE_AND_SAVED";
+    return [
+      theCondition(
+        !signed,
+        signed ? "el documento de la URL salió firmado" : "el documento de la URL no salió firmado",
+      ),
+    ];
+  });
   AutoScript.setLocalBatchProcess(true);
-  AutoScript.createBatch("SHA256", "CAdES", "sign", null);
-  AutoScript.addDocumentToBatch("pdf", thePdfOfTheTest().toString("base64"), "PAdES");
-  AutoScript.addDocumentToBatch("bin", theLocalBatchBinary().toString("base64"), "PAdES");
-  AutoScript.addDocumentToBatch("xml", theXmlDocument().toString("base64"), "XAdES");
-  AutoScript.signBatchProcess(
-    true,
-    null,
-    null,
-    null,
-    (result, certificate) =>
-      settle({
-        event: "success",
-        result: Buffer.from(JSON.stringify(result), "utf8").toString("base64"),
-        certificate: String(certificate),
-      }),
-    (type, message) => settle({ event: "error", type: String(type), message: String(message) }),
-  );
+  AutoScript.createBatch("SHA256", "PAdES", "sign", null);
+  AutoScript.addDocumentToBatch("url", url);
+  AutoScript.signBatchProcess(false, null, null, null, succeeded, (type, message) => {
+    if (String(message).includes("SAF_")) {
+      emit({
+        event: "condition",
+        ...theCondition(true, "el lote se rechazó sin descargar la URL"),
+      });
+    }
+    failed(type, message);
+  });
 }
 
 /**
@@ -1001,29 +1366,24 @@ function anUnattendedPort() {
 }
 
 /**
- * Un lote sin presigner escuchando: el `errorCallback` del cliente publicado tiene que recibir
- * `SAF_26` (`ERROR_CONTACT_BATCH_SERVICE`).
+ * Un lote remoto contra el servlet que devuelva `servletAt` sobre un puerto que nadie atiende: si
+ * el sujeto llega a contactarlo, falla al momento en vez de colgarse.
  */
-async function theBatchWithTheDownPresignerScript() {
-  const downPort = await anUnattendedPort();
-  const presigner = `http://127.0.0.2:${downPort}/batch`;
+async function theBatchAgainstAnUnattendedServletScript(servletAt) {
+  const servlet = servletAt(await anUnattendedPort());
 
   AutoScript.createBatch("SHA256", "CAdES", "sign");
   AutoScript.addDocumentToBatch("uno", Buffer.from("primer documento").toString("base64"));
   AutoScript.addDocumentToBatch("dos", Buffer.from("segundo documento").toString("base64"));
-  AutoScript.signBatchProcess(
-    true,
-    presigner,
-    presigner,
-    null,
-    (result, certificate) =>
-      settle({
-        event: "success",
-        result: Buffer.from(JSON.stringify(result), "utf8").toString("base64"),
-        certificate: String(certificate),
-      }),
-    (type, message) => settle({ event: "error", type: String(type), message: String(message) }),
-  );
+  AutoScript.signBatchProcess(true, servlet, servlet, null, ...theBatchCallbacks());
+}
+
+/**
+ * Un lote sin presigner escuchando: el `errorCallback` del cliente publicado tiene que recibir
+ * `SAF_26` (`ERROR_CONTACT_BATCH_SERVICE`).
+ */
+function theBatchWithTheDownPresignerScript() {
+  return theBatchAgainstAnUnattendedServletScript((port) => `http://127.0.0.2:${port}/batch`);
 }
 
 function connectWebSocket(port) {
@@ -1348,6 +1708,31 @@ if (script.startsWith("protocol-")) {
     theBatchXmlScript();
   } else if (script === "batchdown") {
     theBatchWithTheDownPresignerScript();
+  } else if (script === "batchpartial") {
+    theBatchScript(thePartialPresigner, thePartialBatchConditions);
+  } else if (script === "batchallfailed") {
+    theBatchScript(theFailingPresigner, theFailedBatchConditions);
+  } else if (script === "batchloopbackservlet") {
+    theBatchAgainstAnUnattendedServletScript((port) => `http://127.0.0.1:${port}/batch`);
+  } else if (script === "batchservletwithparameters") {
+    theBatchAgainstAnUnattendedServletScript((port) => `http://127.0.0.2:${port}/batch?op=pre`);
+  } else if (script === "batchlocalcontinuing") {
+    theLocalBatchContinuingPastAnIllegibleItemScript();
+  } else if (script === "batchlocalauto") {
+    theLocalBatchInFormatAutoScript();
+  } else if (script === "batchlocalcosign") {
+    theLocalBatchOfASignatureScript("cosign", "a_local_batch_admits_cosign_as_a_suboperation");
+  } else if (script === "batchlocalcountersign") {
+    theLocalBatchOfASignatureScript(
+      "countersign",
+      "a_local_batch_admits_countersign_as_a_suboperation",
+    );
+  } else if (script === "batchlocalvisible") {
+    theLocalBatchAskingForAVisibleSignatureScript();
+  } else if (script === "batchlocalecdsa") {
+    theLocalBatchWithAnEllipticKeyScript();
+  } else if (script === "batchlocalurl") {
+    theLocalBatchWithAUrlScript();
   } else if (script === "batchlocal") {
     theLocalBatchScript();
   } else if (script === "batchlocalillegible") {
