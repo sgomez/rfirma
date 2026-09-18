@@ -87,6 +87,13 @@ CI, en `code-host-ci.md`; ninguno de los dos se repite aquí.
   es cara, ver «Qué ejecutar y cuándo»), así que el constructor debe
   comprobarla —o al menos el riesgo de complejidad ciclomática del método que
   toca— antes de publicar, no dejar que la atrape el CI.
+- **En este run el nivel lo eligió la persona, no el triaje: los tickets de
+  conjunto de conformidad #773–#775 (un conjunto por capítulo del protocolo,
+  sobre el catálogo de #767/#768/#809) fueron a opus y los tres volvieron
+  CLEAN con 0 ciclos de arreglo.** Conjuntos anteriores del mismo patrón:
+  #771 en opus se llevó 2 ciclos, #772 en opus 1 ciclo; los tickets sonnet
+  del mismo spec (#766, #809) se llevaron 2-3 ciclos. Señal: los tickets
+  «Suite de conformidad: conjunto <x>» son trabajo de opus.
 
 ## Run log
 
@@ -172,3 +179,29 @@ en `.scratch/archive/`.
 2026-09-18 spec=#786 sub=#787 model=inherit effort=medium pr=#811 verdict=CLEAN cycles=1 mergefix=0 wave=— outcome=merged
 2026-09-18 spec=#786 sub=#788 model=inherit effort=medium pr=#812 verdict=CLEAN cycles=0 mergefix=0 wave=— outcome=merged
 2026-09-18 spec=#786 sub=#789 model=inherit effort=medium pr=#814 verdict=CLEAN cycles=0 mergefix=0 wave=— outcome=merged
+2026-09-16 spec=#716 sub=#718 model=opus effort=medium pr=#728 verdict=— cycles=0 mergefix=0 wave=— outcome=ready-to-merge
+2026-09-16 spec=#716 sub=#719 model=sonnet effort=medium pr=#732 verdict=— cycles=0 mergefix=0 wave=— outcome=ready-to-merge
+2026-09-16 spec=#716 sub=#720 model=sonnet effort=medium pr=#734 verdict=— cycles=0 mergefix=0 wave=— outcome=ready-to-merge
+2026-09-16 spec=#716 sub=#721 model=sonnet effort=medium pr=#737 verdict=— cycles=0 mergefix=0 wave=— outcome=ready-to-merge
+2026-09-16 spec=#716 sub=#721 model=sonnet effort=medium pr=#737 verdict=— cycles=1 mergefix=0 wave=— outcome=merged
+2026-09-17 spec=#716 sub=#722 model=sonnet effort=medium pr=#741 verdict=— cycles=0 mergefix=0 wave=— outcome=ready-to-merge
+2026-09-17 spec=#716 sub=#723 model=sonnet effort=medium pr=#744 verdict=— cycles=0 mergefix=0 wave=— outcome=ready-to-merge
+2026-09-17 spec=#716 sub=#724 model=sonnet effort=medium pr=#745 verdict=— cycles=0 mergefix=0 wave=— outcome=built-awaiting-human-review
+2026-09-17 spec=#716 sub=#725 model=sonnet effort=medium pr=#750 verdict=— cycles=0 mergefix=0 wave=— outcome=ready-for-human-review
+2026-09-17 spec=#716 sub=#726 model=sonnet effort=medium pr=#751 verdict=— cycles=0 mergefix=0 wave=— outcome=ready-for-human-review
+2026-09-17 spec=#716 sub=#739 outcome=ready-to-merge pr=#753
+2026-09-17 spec=#716 sub=#757 event=ready-to-merge pr=758 outcome=ready-for-review
+2026-09-17 spec=#716 sub=#760 event=delivered outcome=ready-to-merge pr=761 model=inherit
+2026-09-17 spec=#716 sub=#766 model=sonnet effort=medium pr=#777 verdict=CLEAN cycles=3 mergefix=0 wave=— outcome=merged
+2026-09-17 spec=#716 sub=#767 model=opus effort=medium pr=#778 verdict=CLEAN cycles=1 mergefix=0 wave=— outcome=merged
+2026-09-17 spec=#716 sub=#768 model=opus effort=medium pr=#779 verdict=CLEAN cycles=0 mergefix=0 wave=— outcome=merged
+2026-09-17 spec=#716 sub=#769 model=sonnet effort=medium pr=#780 verdict=CLEAN cycles=1 mergefix=0 wave=— outcome=merged
+2026-09-17 spec=#716 sub=#770 model=sonnet effort=medium pr=#781 verdict=CLEAN cycles=1 mergefix=0 wave=— outcome=merged
+2026-09-17 spec=#716 sub=#776 model=sonnet effort=medium pr=none verdict=— cycles=0 mergefix=0 wave=— outcome=escalated
+2026-09-17 spec=#716 sub=#771 model=opus effort=medium pr=#782 verdict=CLEAN cycles=2 mergefix=0 wave=— outcome=merged
+2026-09-17 spec=#716 sub=#772 model=opus effort=medium pr=#808 verdict=CLEAN cycles=1 mergefix=0 wave=— outcome=merged
+2026-09-18 spec=#716 sub=#776 model=sonnet effort=medium pr=none verdict=— cycles=0 mergefix=0 wave=— outcome=escalated
+2026-09-18 spec=#716 sub=#809 model=sonnet effort=medium pr=#810 verdict=CLEAN cycles=2 mergefix=0 wave=— outcome=merged
+2026-09-18 spec=#716 sub=#773 model=opus effort=medium pr=#813 verdict=CLEAN cycles=0 mergefix=0 wave=— outcome=merged
+2026-09-18 spec=#716 sub=#774 model=opus effort=medium pr=#815 verdict=CLEAN cycles=0 mergefix=0 wave=— outcome=merged
+2026-09-18 spec=#716 sub=#775 model=opus effort=medium pr=#816 verdict=CLEAN cycles=0 mergefix=0 wave=— outcome=merged
