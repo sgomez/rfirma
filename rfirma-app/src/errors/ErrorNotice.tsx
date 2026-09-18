@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
-import { AlertIcon } from "../design-system/icons";
+import { AlertIcon, ExternalLinkIcon } from "../design-system/icons";
+import type { ExternalDestinationOpener } from "../desktop/externalDestination";
 import type { Catalog } from "../i18n/catalog";
 import "./ErrorNotice.css";
 
@@ -25,6 +26,22 @@ function isOneLine(situation: ErrorSituation): situation is OneLineSituation {
   return (ONE_LINE as readonly string[]).includes(situation);
 }
 
+/**
+ * Las situaciones de error de rFirma que llevan enlace a «Comentarios y ayuda».
+ *
+ * Es una lista cerrada (ID-371): los fallos propios de rFirma o donde no sabe
+ * qué ha pasado. Los fallos del entorno (PIN incorrecto, tarjeta ausente,
+ * certificado caducado, etc.) no llevan enlace para no mandar a la persona al
+ * sitio equivocado.
+ */
+export const ERROR_SITUATIONS_WITH_HELP = ["bridgeFailed", "sealMismatch", "unknown"] as const;
+
+export type ErrorSituationWithHelp = (typeof ERROR_SITUATIONS_WITH_HELP)[number];
+
+export function hasHelpLink(situation: ErrorSituation): boolean {
+  return (ERROR_SITUATIONS_WITH_HELP as readonly string[]).includes(situation);
+}
+
 interface ErrorNoticeProps {
   /** Nuestra situación, que sí está traducida. */
   situation: ErrorSituation;
@@ -38,6 +55,8 @@ interface ErrorNoticeProps {
    * de esta pantalla.
    */
   technicalDetail?: string;
+  onOpenHelp?: () => void;
+  externalDestinations?: ExternalDestinationOpener;
 }
 
 /**
@@ -55,8 +74,18 @@ interface ErrorNoticeProps {
  * `CKR_*` crudo debajo del mensaje ocupa el pie entero y solo lo necesita quien
  * va a escribir un informe de fallo.
  */
-export function ErrorNotice({ situation, technicalDetail }: ErrorNoticeProps) {
+export function ErrorNotice({
+  situation,
+  technicalDetail,
+  onOpenHelp,
+  externalDestinations,
+}: ErrorNoticeProps) {
   const { t } = useTranslation();
+
+  const openHelp = () => {
+    onOpenHelp?.();
+    void externalDestinations?.open("discussions");
+  };
 
   return (
     <div className="error-notice" role="alert">
@@ -73,6 +102,18 @@ export function ErrorNotice({ situation, technicalDetail }: ErrorNoticeProps) {
             <summary className="rf-body rf-text-muted">{t("errors.technicalDetail")}</summary>
             <pre className="error-notice__raw">{technicalDetail}</pre>
           </details>
+          {hasHelpLink(situation) && (
+            <div className="rf-row rf-gap-xs error-notice__actions">
+              <button
+                type="button"
+                className="rf-btn rf-btn--ghost error-notice__help"
+                onClick={openHelp}
+              >
+                <ExternalLinkIcon size={14} />
+                {t("errors.help")}
+              </button>
+            </div>
+          )}
         </>
       )}
     </div>

@@ -306,3 +306,8 @@
   margin-top: 1px;
   color: var(--rf-text-muted);
 }
+
+.sede-outcome__help {
+  flex: none;
+  white-space: nowrap;
+}

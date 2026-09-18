@@ -55,6 +55,9 @@ msgstr "English"
 msgid "errors.technicalDetail"
 msgstr "Xehetasun teknikoa"
 
+msgid "errors.help"
+msgstr "Iruzkinak eta laguntza"
+
 msgid "errors.situations.unknown.title"
 msgstr "Ezin izan da eragiketa osatu"
 

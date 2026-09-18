@@ -38,12 +38,13 @@ export function SedeBody({
  * pasa una función anónima nueva en cada pintada, y con ella en la lista la
  * cuenta se reiniciaría sin parar y la ventana no se cerraría jamás.
  */
-export function useOutcomeClock(onClose: () => void) {
+export function useOutcomeClock(onClose: () => void, enabled = true) {
   const latest = useRef(onClose);
   latest.current = onClose;
 
   useEffect(() => {
+    if (!enabled) return;
     const timer = setTimeout(() => latest.current(), OUTCOME_CLOSE_MS);
     return () => clearTimeout(timer);
-  }, []);
+  }, [enabled]);
 }

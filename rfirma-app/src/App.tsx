@@ -1014,6 +1014,7 @@ export function App({
             failure={pdfFailure ?? (dropNotice?.about === activeId ? dropNotice.failure : null)}
             stamp={stamp.state}
             onComposeStamp={stamp.compose}
+            onOpenHelp={() => void externalDestinations.open("discussions")}
           />
         }
         panel={
@@ -1039,6 +1040,7 @@ export function App({
               onOpenFolder={() => openSigned(() => opener.openFolder())}
               onSignAgain={signAgain}
               failure={openFailure}
+              onOpenHelp={() => void externalDestinations.open("discussions")}
             />
           ) : pdf && documents.active ? (
             <SigningPanel
@@ -1075,6 +1077,7 @@ export function App({
               onChangeDestination={() => setDialog("preferences")}
               onSign={() => void sign()}
               signing={signing.state.kind === "running"}
+              onOpenHelp={() => void externalDestinations.open("discussions")}
               failure={
                 signing.state.kind === "failed"
                   ? {

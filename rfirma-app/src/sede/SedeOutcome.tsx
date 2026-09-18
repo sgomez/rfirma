@@ -5,8 +5,10 @@ import {
   CheckCircleIcon,
   CopyIcon,
   CrossCircleIcon,
+  ExternalLinkIcon,
   FileIcon,
 } from "../design-system/icons";
+import type { ExternalDestinationOpener } from "../desktop/externalDestination";
 import { formatSize } from "../signing/SigningPanel";
 import {
   OUTCOME_CLOSE_MS,
@@ -20,6 +22,8 @@ interface SedeOutcomeProps {
   origin: string | null;
   outcome: SiteOutcome;
   onClose: () => void;
+  onOpenHelp?: () => void;
+  externalDestinations?: ExternalDestinationOpener;
 }
 
 /**
@@ -36,18 +40,32 @@ interface SedeOutcomeProps {
  * tiempo a leer, y el caso que lo decide es el rechazo, donde irse sola
  * reproduciría el síntoma que el aviso venía a evitar (ID-274).
  */
-export function SedeOutcome({ origin, outcome, onClose }: SedeOutcomeProps) {
+export function SedeOutcome({
+  origin,
+  outcome,
+  onClose,
+  onOpenHelp,
+  externalDestinations,
+}: SedeOutcomeProps) {
   const { t } = useTranslation();
-  useOutcomeClock(onClose);
+  const carriesHelp = outcome.kind === "refused" && outcome.situation === "unknown";
+  useOutcomeClock(onClose, !carriesHelp);
+
+  const openHelp = () => {
+    onOpenHelp?.();
+    void externalDestinations?.open("discussions");
+  };
 
   return (
     <SedeBody
       steadyFooter
       footer={
         <>
-          <p className="rf-hint sede-outcome__auto-close">
-            {t("sede.outcome.autoClose", { seconds: OUTCOME_CLOSE_MS / 1000 })}
-          </p>
+          {!carriesHelp && (
+            <p className="rf-hint sede-outcome__auto-close">
+              {t("sede.outcome.autoClose", { seconds: OUTCOME_CLOSE_MS / 1000 })}
+            </p>
+          )}
           <div className="sede-window__spacer" />
           <button type="button" className="rf-btn rf-btn--primary" onClick={onClose}>
             {t("actions.close")}
@@ -125,6 +143,16 @@ export function SedeOutcome({ origin, outcome, onClose }: SedeOutcomeProps) {
                 <CopyIcon size={14} />
                 {t("actions.copy")}
               </button>
+              {outcome.situation === "unknown" && (
+                <button
+                  type="button"
+                  className="rf-btn rf-btn--ghost sede-outcome__help"
+                  onClick={openHelp}
+                >
+                  <ExternalLinkIcon size={14} />
+                  {t("errors.help")}
+                </button>
+              )}
             </div>
           </>
         )}

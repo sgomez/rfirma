@@ -1,6 +1,7 @@
 import { act, fireEvent, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { inMemoryExternalDestinationOpener } from "../desktop/externalDestination";
 import type { Certificate } from "../signing/certificate";
 import { renderWithCatalog } from "../testing/render";
 import type { Errand, ErrandStage, SiteDocument, SiteErrandPort } from "./errand";
@@ -756,6 +757,73 @@ describe("SedeWindow", () => {
       ).toBeInTheDocument();
       expect(screen.getByText("signaturePages=append")).toBeInTheDocument();
       expect(screen.queryByText(/el fallo es de/i)).not.toBeInTheDocument();
+    });
+
+    it("shows the help link on unknown refusal and opens discussions outside", async () => {
+      const destinations = inMemoryExternalDestinationOpener();
+      const { port } = scriptedErrand({
+        kind: "outcome",
+        outcome: {
+          kind: "refused",
+          situation: "unknown",
+          detail: "error inesperado del transporte",
+        },
+      });
+      renderWithCatalog(<SedeWindow errands={port} externalDestinations={destinations} />);
+
+      const helpButton = screen.getByRole("button", { name: /Comentarios y ayuda/ });
+      expect(helpButton).toBeInTheDocument();
+
+      fireEvent.click(helpButton);
+      expect(destinations.opened).toEqual(["discussions"]);
+    });
+
+    it("does not show the help link on known refusals", () => {
+      const { port } = scriptedErrand({
+        kind: "outcome",
+        outcome: {
+          kind: "refused",
+          situation: "appendedSignaturePage",
+          detail: "signaturePages=append",
+        },
+      });
+      renderWithCatalog(<SedeWindow errands={port} />);
+
+      expect(screen.queryByRole("button", { name: /Comentarios y ayuda/ })).not.toBeInTheDocument();
+    });
+
+    it("does not close by itself on unknown refusal", async () => {
+      const { port, calls } = scriptedErrand({
+        kind: "outcome",
+        outcome: {
+          kind: "refused",
+          situation: "unknown",
+          detail: "error desconocido",
+        },
+      });
+      renderWithCatalog(<SedeWindow errands={port} />);
+
+      await elapse(OUTCOME_CLOSE_MS * 2);
+      expect(calls.close).not.toHaveBeenCalled();
+      expect(screen.queryByText(/se cerrará en/i)).not.toBeInTheDocument();
+    });
+
+    it("closes by itself after fifteen seconds on known refusals, and not before", async () => {
+      const { port, calls } = scriptedErrand({
+        kind: "outcome",
+        outcome: {
+          kind: "refused",
+          situation: "appendedSignaturePage",
+          detail: "signaturePages=append",
+        },
+      });
+      renderWithCatalog(<SedeWindow errands={port} />);
+
+      await elapse(OUTCOME_CLOSE_MS - 1_000);
+      expect(calls.close).not.toHaveBeenCalled();
+
+      await elapse(1_000);
+      expect(calls.close).toHaveBeenCalledOnce();
     });
 
     it("closes by itself after fifteen seconds, and not before", async () => {

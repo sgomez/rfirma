@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import type { ExternalDestinationOpener } from "../desktop/externalDestination";
 import type { Errand, SiteErrandPort } from "./errand";
 import { SedeConfirm } from "./SedeConfirm";
 import { SedeConsent } from "./SedeConsent";
@@ -12,6 +13,8 @@ import "./SedeWindow.css";
 
 interface SedeWindowProps {
   errands: SiteErrandPort;
+  externalDestinations?: ExternalDestinationOpener;
+  onOpenHelp?: () => void;
 }
 
 /**
@@ -33,13 +36,20 @@ interface SedeWindowProps {
  * de «no ha llegado» lo decide el backend con su reloj de respaldo y lo publica
  * como un momento más.
  */
-export function SedeWindow({ errands }: SedeWindowProps) {
+export function SedeWindow({ errands, externalDestinations, onOpenHelp }: SedeWindowProps) {
   const [errand, setErrand] = useState<Errand | null>(null);
 
   useEffect(() => errands.watch(setErrand), [errands]);
 
   if (errand === null) return null;
-  return <SedeDialog errand={errand} errands={errands} />;
+  return (
+    <SedeDialog
+      errand={errand}
+      errands={errands}
+      externalDestinations={externalDestinations}
+      onOpenHelp={onOpenHelp}
+    />
+  );
 }
 
 /**
@@ -48,7 +58,17 @@ export function SedeWindow({ errands }: SedeWindowProps) {
  * `SedeWindow`, un `useEffect` con `errand` en las dependencias volvería a
  * contar los 15 segundos con cada latido del puerto.
  */
-function SedeDialog({ errand, errands }: { errand: Errand; errands: SiteErrandPort }) {
+function SedeDialog({
+  errand,
+  errands,
+  externalDestinations,
+  onOpenHelp,
+}: {
+  errand: Errand;
+  errands: SiteErrandPort;
+  externalDestinations?: ExternalDestinationOpener;
+  onOpenHelp?: () => void;
+}) {
   const { t } = useTranslation();
   const stage = errand.stage;
 
@@ -107,7 +127,13 @@ function SedeDialog({ errand, errands }: { errand: Errand; errands: SiteErrandPo
             nombra el fichero (ADR-0011). */}
         {(stage.kind === "saving" || stage.kind === "loading") && <SedeTransfer transfer={stage} />}
         {stage.kind === "outcome" && (
-          <SedeOutcome origin={errand.origin} outcome={stage.outcome} onClose={close} />
+          <SedeOutcome
+            origin={errand.origin}
+            outcome={stage.outcome}
+            onClose={close}
+            onOpenHelp={onOpenHelp}
+            externalDestinations={externalDestinations}
+          />
         )}
         {stage.kind === "noCertificate" && (
           <SedeNoCertificate
