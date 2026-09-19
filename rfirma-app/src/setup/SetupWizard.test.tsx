@@ -248,7 +248,61 @@ describe("SetupWizard", () => {
     ).toBeInTheDocument();
   });
 
-  it("marks setupWizardSeen on Terminar regardless of what the two cards did", async () => {
+  it("marks setupWizardSeen on Terminar after both cards succeed", async () => {
+    const user = userEvent.setup();
+    const onFinish = vi.fn();
+    const chosenCertificate: SignalRow = {
+      ...certificateNotInstalled,
+      verdict: "correct",
+      action: null,
+    };
+    const chosenHandler: SignalRow = { ...handlerNotOurs, verdict: "correct", action: null };
+    renderWithCatalog(
+      <SetupWizard
+        seen={false}
+        statusPort={memoryStatus(
+          [aVersionRow, certificateNotInstalled, handlerNotOurs],
+          undefined,
+          chosenCertificate,
+          [chosenCertificate, chosenHandler],
+        )}
+        onFinish={onFinish}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "Continuar" }));
+    await user.click(screen.getByRole("button", { name: "Instalar" }));
+    await waitFor(() => {
+      expect(screen.getByText("Instalado en tus navegadores.")).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole("button", { name: "Terminar" }));
+
+    expect(onFinish).toHaveBeenCalledOnce();
+  });
+
+  it("marks setupWizardSeen on Terminar with the certificate install failed", async () => {
+    const user = userEvent.setup();
+    const onFinish = vi.fn();
+    const failedRow: SignalRow = {
+      ...certificateNotInstalled,
+      verdict: "incorrect",
+      detail: [{ brand: "firefox", trusted: false }],
+    };
+    const base = memoryStatus([aVersionRow, certificateNotInstalled, handlerNotOurs]);
+    const port = { ...base, installLocalCaCertificate: async () => failedRow };
+    renderWithCatalog(<SetupWizard seen={false} statusPort={port} onFinish={onFinish} />);
+    await user.click(screen.getByRole("button", { name: "Continuar" }));
+    await user.click(screen.getByRole("button", { name: "Instalar" }));
+    await waitFor(() => {
+      expect(screen.getByText("No se ha podido instalar en todas partes.")).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole("button", { name: "Terminar" }));
+
+    expect(onFinish).toHaveBeenCalledOnce();
+  });
+
+  it("marks setupWizardSeen on Terminar after declining both actions", async () => {
     const user = userEvent.setup();
     const onFinish = vi.fn();
     renderWithCatalog(
@@ -259,6 +313,9 @@ describe("SetupWizard", () => {
       />,
     );
     await user.click(screen.getByRole("button", { name: "Continuar" }));
+    for (const button of screen.getAllByRole("button", { name: "Ahora no" })) {
+      await user.click(button);
+    }
 
     await user.click(screen.getByRole("button", { name: "Terminar" }));
 
