@@ -1,4 +1,4 @@
-//! Diálogo nativo GTK que enseña un fallo de arranque; capa fina, sin pruebas (TD-94).
+//! Diálogo nativo GTK que enseña un fallo de arranque; capa fina, sin pruebas.
 
 use crate::startup_failure::{StartupFailure, REPOSITORY_ADDRESS};
 
@@ -40,7 +40,7 @@ fn show_gtk_dialog(failure: &StartupFailure) {
 }
 
 /// Enseña el fallo de arranque en un diálogo nativo, escribe su detalle en `stderr` y sale del
-/// proceso con código distinto de cero (ID-381).
+/// proceso con código distinto de cero.
 pub fn report_and_exit(failure: &StartupFailure) -> ! {
     eprintln!("rfirma: {failure}");
     show_gtk_dialog(failure);
