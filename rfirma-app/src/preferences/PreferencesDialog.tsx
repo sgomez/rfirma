@@ -37,7 +37,7 @@ const FOCUSABLE = 'button, [href], input, select, textarea, [tabindex]:not([tabi
 function trapFocus(screen: HTMLElement | null, event: KeyboardEvent<HTMLDivElement>) {
   if (screen === null) return;
   const focusable = [...screen.querySelectorAll<HTMLElement>(FOCUSABLE)].filter(
-    (element) => !element.hasAttribute("disabled"),
+    (element) => !element.hasAttribute("disabled") && element.tabIndex !== -1,
   );
   const first = focusable.at(0);
   const last = focusable.at(-1);
@@ -372,11 +372,7 @@ export function PreferencesDialog({
   const general = (
     <>
       {heading("general", `${titleId}-heading-general`)}
-      <div
-        className="preferences__group"
-        role="group"
-        aria-labelledby={`${titleId}-heading-privacy`}
-      >
+      <fieldset className="preferences__group" aria-labelledby={`${titleId}-heading-privacy`}>
         {groupHeading("privacy", `${titleId}-heading-privacy`)}
         <Switch
           checked={preferences.rememberActivity}
@@ -403,7 +399,7 @@ export function PreferencesDialog({
             void change("general", () => onChange({ ...preferences, notifyNewVersion: checked }))
           }
         />
-      </div>
+      </fieldset>
       {saveNotice("general")}
     </>
   );
@@ -584,6 +580,7 @@ export function PreferencesDialog({
         role="tabpanel"
         id={`${titleId}-panel`}
         aria-labelledby={tabId(current)}
+        // biome-ignore lint/a11y/noNoninteractiveTabindex: el patrón ARIA de pestañas exige que el tabpanel se pueda enfocar con teclado tras elegir una pestaña.
         tabIndex={0}
         ref={panel}
       >

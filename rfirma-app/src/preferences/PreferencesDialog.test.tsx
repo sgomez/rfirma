@@ -1,6 +1,6 @@
 import { screen, within } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import type { UserEvent } from "@testing-library/user-event";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import type { Certificate } from "../signing/certificate";
 import { renderWithCatalog } from "../testing/render";
@@ -410,6 +410,25 @@ describe("PreferencesDialog", () => {
       "aria-selected",
       "true",
     );
+  });
+
+  /**
+   * Con una sección activa que no es General, el único botón de pestaña
+   * alcanzable con teclado es el de esa sección — las demás llevan
+   * `tabIndex={-1}`. El atrapafoco debe reconocerlo como el primer elemento
+   * enfocable y dar la vuelta hacia el último, no dejar que el foco se
+   * escape del diálogo.
+   */
+  it("keeps Shift+Tab inside the dialog when the active tab is not General", async () => {
+    const user = userEvent.setup();
+    renderDialog();
+
+    await openTab(user, "Certificados");
+    screen.getByRole("tab", { name: "Certificados" }).focus();
+    await user.keyboard("{Shift>}{Tab}{/Shift}");
+
+    const dialog = screen.getByRole("dialog");
+    expect(dialog.contains(document.activeElement)).toBe(true);
   });
 
   /**

@@ -101,7 +101,10 @@
   display: flex;
   flex-direction: column;
   gap: var(--rf-space-sm);
+  margin: 0;
   margin-top: calc(var(--rf-space-md) + var(--rf-space-xs) - var(--rf-space-sm));
+  padding: 0;
+  border: 0;
 }
 
 /* El título de página: versalitas, apagado, con su `.rf-divider` pegado
