@@ -173,3 +173,39 @@ fn recheck_version_signal_queries_feed_and_updates_memory() {
     let cached = memory.last_version_check().expect("guardada en memoria");
     assert_eq!(cached.announced, "0.5.0");
 }
+
+#[test]
+fn no_stores_with_certificates_requires_attention_and_offers_how_to_install() {
+    let row = evaluate_user_certificates_signal(0);
+
+    assert_eq!(row.signal, Signal::UserCertificates);
+    assert_eq!(row.value, "0");
+    assert_eq!(row.verdict, Verdict::Attention);
+    assert_eq!(
+        row.action,
+        Some(StatusAction {
+            kind: ActionKind::Link,
+            target: "certificateIssuance".into(),
+        })
+    );
+}
+
+#[test]
+fn one_store_with_certificates_is_correct_without_action() {
+    let row = evaluate_user_certificates_signal(1);
+
+    assert_eq!(row.signal, Signal::UserCertificates);
+    assert_eq!(row.value, "1");
+    assert_eq!(row.verdict, Verdict::Correct);
+    assert_eq!(row.action, None);
+}
+
+#[test]
+fn several_stores_with_certificates_are_correct_without_action() {
+    let row = evaluate_user_certificates_signal(3);
+
+    assert_eq!(row.signal, Signal::UserCertificates);
+    assert_eq!(row.value, "3");
+    assert_eq!(row.verdict, Verdict::Correct);
+    assert_eq!(row.action, None);
+}

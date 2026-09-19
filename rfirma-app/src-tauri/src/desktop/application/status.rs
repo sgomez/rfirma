@@ -4,7 +4,7 @@ use std::time::SystemTime;
 
 use crate::desktop::application::version::{ask_and_remember, fresh_answer, ReleaseFeed, Version};
 use crate::desktop::domain::channel::Channel;
-use crate::desktop::domain::destination::{RELEASES, REPOSITORY};
+use crate::desktop::domain::destination::{CERTIFICATE_ISSUANCE, RELEASES, REPOSITORY};
 use crate::desktop::domain::status::{ActionKind, Signal, SignalRow, StatusAction, Verdict};
 use crate::desktop::ports::VersionMemory;
 
@@ -68,6 +68,28 @@ pub fn check_version_signal(
         match fresh_answer(memory, now) {
             Some(cached) => evaluate_version_signal(running, Some(cached), false, channel),
             None => evaluate_version_signal(running, None, true, channel),
+        }
+    }
+}
+
+/// Evalúa el estado de la señal de certificados propios a partir de los almacenes con certificados.
+pub fn evaluate_user_certificates_signal(stores_with_certificates: usize) -> SignalRow {
+    if stores_with_certificates == 0 {
+        SignalRow {
+            signal: Signal::UserCertificates,
+            value: "0".to_string(),
+            verdict: Verdict::Attention,
+            action: Some(StatusAction {
+                kind: ActionKind::Link,
+                target: CERTIFICATE_ISSUANCE.to_string(),
+            }),
+        }
+    } else {
+        SignalRow {
+            signal: Signal::UserCertificates,
+            value: stores_with_certificates.to_string(),
+            verdict: Verdict::Correct,
+            action: None,
         }
     }
 }

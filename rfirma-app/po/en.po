@@ -836,6 +836,9 @@ msgstr "Action"
 msgid "status.signals.version"
 msgstr "Version"
 
+msgid "status.signals.userCertificates"
+msgstr "Your certificates"
+
 msgid "status.verdicts.correct"
 msgstr "Correct"
 
@@ -853,6 +856,19 @@ msgstr "Checking"
 
 msgid "status.actions.update"
 msgstr "Update"
+
+msgid "status.actions.howToInstall"
+msgstr "How to install"
+
+msgid "status.values.userCertificates.none"
+msgstr "None"
+
+#. Cuántos almacenes de la persona tienen al menos un certificado propio.
+msgid "status.values.userCertificates.stores"
+msgid_plural "status.values.userCertificates.stores"
+msgstr[0] "1 store"
+msgstr[1] "{{count}} stores"
+msgstr[2] "{{count}} stores"
 
 msgid "preferences.title"
 msgstr "Preferences"

@@ -52,6 +52,11 @@ impl IdentityRoot {
         )
     }
 
+    /// Cuántos almacenes propios tienen al menos un certificado firmable.
+    pub fn stores_with_certificates(&self) -> usize {
+        application::certificates::stores_with_certificates(self.token.as_ref(), &self.all_stores())
+    }
+
     /// Las filas con su asa acuñada y el recordado marcado.
     pub fn rows_of(&self, found: Vec<TokenCertificate>) -> Vec<ListedCertificate> {
         application::certificates::rows_of(

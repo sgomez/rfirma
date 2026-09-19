@@ -1,7 +1,7 @@
 use super::ListedCertificates;
 use super::{
     certificate_behind, certificates_with_their_chains, listed_rows, remember_the_certificate,
-    usable_certificate,
+    stores_with_certificates, usable_certificate,
 };
 use crate::identity::application::tests::{
     a_certificate, a_certificate_with_id, listed_from, NoToken, TestAuthority,
@@ -354,4 +354,25 @@ fn a_store_that_cannot_be_opened_leaves_the_signer_alone_instead_of_stopping_the
         .expect("el listado sigue aunque no se puedan mirar las autoridades");
 
     assert_eq!(found[0].chain(), vec![signer.der()]);
+}
+
+#[test]
+fn with_no_stores_configured_nothing_has_certificates() {
+    assert_eq!(stores_with_certificates(&NoToken, &[]), 0);
+}
+
+#[test]
+fn a_store_without_certificates_does_not_count() {
+    let stores = [Store::module(CARD)];
+
+    assert_eq!(stores_with_certificates(&NoToken, &stores), 0);
+}
+
+#[test]
+fn only_stores_holding_a_certificate_are_counted() {
+    let signable = vec![a_certificate_in(CARD, "FIRMA", &[])];
+    let token = StoresWith::holding(signable.clone(), signable);
+    let stores = [Store::module(CARD), Store::module(INSTALLED)];
+
+    assert_eq!(stores_with_certificates(&token, &stores), 1);
 }

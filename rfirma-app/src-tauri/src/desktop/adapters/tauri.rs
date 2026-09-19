@@ -4,6 +4,7 @@ use tauri::State;
 
 use crate::desktop::DesktopRoot;
 use crate::documents::DocumentsRoot;
+use crate::identity::IdentityRoot;
 
 use super::registry::DesktopRegistry;
 use super::views::{NewVersionView, SignalRowView, UrlHandlersView};
@@ -79,15 +80,25 @@ pub fn open_external_destination(
 
 /// Consulta el estado de las señales de la instalación para el panel de estado.
 #[tauri::command(async)]
-pub fn read_status(desktop: State<'_, DesktopRoot>, recheck: bool) -> Vec<SignalRowView> {
+pub fn read_status(
+    desktop: State<'_, DesktopRoot>,
+    identity: State<'_, IdentityRoot>,
+    recheck: bool,
+) -> Vec<SignalRowView> {
     let channel = crate::desktop::adapters::channel::Channel::detected();
-    vec![crate::desktop::application::status::check_version_signal(
-        crate::desktop::application::version::Version::running(),
-        desktop.memory.as_ref(),
-        &crate::desktop::adapters::releases::latest_release,
-        channel,
-        recheck,
-        std::time::SystemTime::now(),
-    )
-    .into()]
+    vec![
+        crate::desktop::application::status::check_version_signal(
+            crate::desktop::application::version::Version::running(),
+            desktop.memory.as_ref(),
+            &crate::desktop::adapters::releases::latest_release,
+            channel,
+            recheck,
+            std::time::SystemTime::now(),
+        )
+        .into(),
+        crate::desktop::application::status::evaluate_user_certificates_signal(
+            identity.stores_with_certificates(),
+        )
+        .into(),
+    ]
 }
