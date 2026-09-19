@@ -164,6 +164,10 @@ pub fn read_status(
     recheck: bool,
 ) -> Vec<SignalRowView> {
     let channel = crate::desktop::adapters::channel::Channel::detected();
+    let list =
+        crate::desktop::adapters::choice::mimeapps_list_from_environment().unwrap_or_default();
+    let handlers =
+        crate::desktop::application::handlers::who_handles(&DesktopRegistry::of(channel, list));
     vec![
         crate::desktop::application::status::check_version_signal(
             crate::desktop::application::version::Version::running(),
@@ -174,6 +178,7 @@ pub fn read_status(
             std::time::SystemTime::now(),
         )
         .into(),
+        crate::desktop::application::status::evaluate_site_signature_signal(handlers).into(),
         local_ca_certificate_signal(&site, recheck).into(),
         crate::desktop::application::status::evaluate_user_certificates_signal(
             identity.stores_with_certificates(),

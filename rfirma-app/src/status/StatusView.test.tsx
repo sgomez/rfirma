@@ -108,6 +108,64 @@ describe("StatusView", () => {
     expect(within(row).getByRole("button", { name: "Actualizar" })).toBeInTheDocument();
   });
 
+  it("renders rFirma and Correcto when rFirma signs at sites", async () => {
+    const rows: SignalRow[] = [
+      {
+        signal: "siteSignature",
+        value: "rFirma",
+        verdict: "correct",
+        action: null,
+        detail: null,
+        restartFirefoxNotice: false,
+      },
+    ];
+    renderWithCatalog(<StatusView statusPort={memoryStatus(rows)} onClose={() => {}} />);
+
+    const row = await screen.findByRole("status");
+    expect(within(row).getByText("Firma en sedes")).toBeInTheDocument();
+    expect(within(row).getByText("rFirma")).toBeInTheDocument();
+    expect(within(row).getByText("Correcto")).toBeInTheDocument();
+    expect(within(row).queryByRole("button")).not.toBeInTheDocument();
+  });
+
+  it("renders Sin configurar and Atención when no program is configured", async () => {
+    const rows: SignalRow[] = [
+      {
+        signal: "siteSignature",
+        value: "",
+        verdict: "attention",
+        action: null,
+        detail: null,
+        restartFirefoxNotice: false,
+      },
+    ];
+    renderWithCatalog(<StatusView statusPort={memoryStatus(rows)} onClose={() => {}} />);
+
+    const row = await screen.findByRole("status");
+    expect(within(row).getByText("Sin configurar")).toBeInTheDocument();
+    expect(within(row).getByText("Atención")).toBeInTheDocument();
+    expect(within(row).queryByRole("button")).not.toBeInTheDocument();
+  });
+
+  it("renders No se puede consultar and No aplica without action inside the sandbox", async () => {
+    const rows: SignalRow[] = [
+      {
+        signal: "siteSignature",
+        value: "",
+        verdict: "notApplicable",
+        action: null,
+        detail: null,
+        restartFirefoxNotice: false,
+      },
+    ];
+    renderWithCatalog(<StatusView statusPort={memoryStatus(rows)} onClose={() => {}} />);
+
+    const row = await screen.findByRole("status");
+    expect(within(row).getByText("No se puede consultar")).toBeInTheDocument();
+    expect(within(row).getByText("No aplica")).toBeInTheDocument();
+    expect(within(row).queryByRole("button")).not.toBeInTheDocument();
+  });
+
   it("renders Ninguno and Cómo instalar when no certificate stores are detected", async () => {
     const rows: SignalRow[] = [
       {

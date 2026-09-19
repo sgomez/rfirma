@@ -851,6 +851,9 @@ msgstr "Acción"
 msgid "status.signals.version"
 msgstr "Versión"
 
+msgid "status.signals.siteSignature"
+msgstr "Firma en sedes"
+
 msgid "status.signals.userCertificates"
 msgstr "Tus certificados"
 
@@ -880,6 +883,12 @@ msgstr "Cómo instalar"
 
 msgid "status.actions.install"
 msgstr "Instalar"
+
+msgid "status.values.siteSignature.notConfigured"
+msgstr "Sin configurar"
+
+msgid "status.values.siteSignature.unavailable"
+msgstr "No se puede consultar"
 
 msgid "status.values.userCertificates.none"
 msgstr "Ninguno"

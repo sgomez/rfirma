@@ -5,10 +5,14 @@ use std::time::SystemTime;
 use crate::desktop::application::version::{ask_and_remember, fresh_answer, ReleaseFeed, Version};
 use crate::desktop::domain::channel::Channel;
 use crate::desktop::domain::destination::{CERTIFICATE_ISSUANCE, RELEASES, REPOSITORY};
+use crate::desktop::domain::handlers::UrlHandlers;
 use crate::desktop::domain::status::{
     ActionKind, Signal, SignalRow, StatusAction, StoreDetail, Verdict,
 };
 use crate::desktop::ports::VersionMemory;
+
+/// Nombre visible de rFirma como candidata a firmar en sedes.
+const OUR_NAME: &str = "rFirma";
 
 /// Destino de actualización que corresponde al canal de distribución.
 pub fn update_destination_for(channel: Channel) -> &'static str {
@@ -77,6 +81,58 @@ pub fn check_version_signal(
             Some(cached) => evaluate_version_signal(running, Some(cached), false, channel),
             None => evaluate_version_signal(running, None, true, channel),
         }
+    }
+}
+
+/// Evalúa el estado de la señal de qué programa abre las sedes, con las candidatas instaladas.
+pub fn evaluate_site_signature_signal(handlers: UrlHandlers) -> SignalRow {
+    if !handlers.available {
+        return SignalRow {
+            signal: Signal::SiteSignature,
+            value: String::new(),
+            verdict: Verdict::NotApplicable,
+            action: None,
+            detail: None,
+            restart_firefox_notice: false,
+        };
+    }
+
+    let Some(current) = &handlers.current else {
+        return SignalRow {
+            signal: Signal::SiteSignature,
+            value: String::new(),
+            verdict: Verdict::Attention,
+            action: None,
+            detail: None,
+            restart_firefox_notice: false,
+        };
+    };
+
+    if *current == handlers.ours {
+        return SignalRow {
+            signal: Signal::SiteSignature,
+            value: OUR_NAME.to_string(),
+            verdict: Verdict::Correct,
+            action: None,
+            detail: None,
+            restart_firefox_notice: false,
+        };
+    }
+
+    let name = handlers
+        .handlers
+        .iter()
+        .find(|handler| handler.id == *current)
+        .map(|handler| handler.name.clone())
+        .unwrap_or_else(|| current.clone());
+
+    SignalRow {
+        signal: Signal::SiteSignature,
+        value: name,
+        verdict: Verdict::Attention,
+        action: None,
+        detail: None,
+        restart_firefox_notice: false,
     }
 }
 

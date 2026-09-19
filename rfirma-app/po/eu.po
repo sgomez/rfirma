@@ -855,6 +855,9 @@ msgstr "Ekintza"
 msgid "status.signals.version"
 msgstr "Bertsioa"
 
+msgid "status.signals.siteSignature"
+msgstr "Egoitzetako sinadura"
+
 msgid "status.signals.userCertificates"
 msgstr "Zure ziurtagiriak"
 
@@ -884,6 +887,12 @@ msgstr "Nola instalatu"
 
 msgid "status.actions.install"
 msgstr "Instalatu"
+
+msgid "status.values.siteSignature.notConfigured"
+msgstr "Konfiguratu gabe"
+
+msgid "status.values.siteSignature.unavailable"
+msgstr "Ezin da kontsultatu"
 
 msgid "status.values.userCertificates.none"
 msgstr "Bat ere ez"
