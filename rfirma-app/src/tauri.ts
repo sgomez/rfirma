@@ -649,7 +649,7 @@ export function tauriSiteErrands(): SiteErrandPort {
   });
 }
 
-import type { SignalRow, StatusPort } from "./status/status";
+import type { SignalRow, StatusPort, WithdrawalReport } from "./status/status";
 
 export function tauriStatusPort(): StatusPort {
   return {
@@ -658,5 +658,6 @@ export function tauriStatusPort(): StatusPort {
     installLocalCaCertificate: () => invoke<SignalRow>("install_local_ca_certificate"),
     chooseSiteSignatureHandler: (handlerId) =>
       invoke<SignalRow[]>("choose_site_signature_handler", { handler: handlerId }),
+    withdrawRfirma: () => invoke<WithdrawalReport>("withdraw_rfirma"),
   };
 }

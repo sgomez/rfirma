@@ -863,6 +863,9 @@ msgstr "Install"
 msgid "status.actions.useRfirma"
 msgstr "Use rFirma"
 
+msgid "status.actions.withdraw"
+msgstr "Withdraw…"
+
 msgid "status.values.siteSignature.notConfigured"
 msgstr "Not configured"
 
@@ -906,6 +909,42 @@ msgstr "System store"
 
 msgid "status.notices.restartFirefox"
 msgstr "Restart Firefox for this to take effect."
+
+msgid "status.withdrawal.title.question"
+msgstr "Withdraw the rFirma certificate"
+
+msgid "status.withdrawal.title.working"
+msgstr "Withdrawing…"
+
+msgid "status.withdrawal.title.done"
+msgstr "Certificate withdrawn"
+
+msgid "status.withdrawal.title.partial"
+msgstr "Partially withdrawn"
+
+msgid "status.withdrawal.body.certificate"
+msgstr "The rFirma certificate, from the browsers where it is"
+
+msgid "status.withdrawal.body.handler"
+msgstr "That sites open rFirma"
+
+msgid "status.withdrawal.hint"
+msgstr "It can be installed again from this panel."
+
+msgid "status.withdrawal.confirm"
+msgstr "Withdraw"
+
+msgid "status.withdrawal.waiting"
+msgstr "Waiting"
+
+msgid "status.withdrawal.outcome.withdrawn"
+msgstr "Withdrawn"
+
+msgid "status.withdrawal.retry"
+msgstr "Retry"
+
+msgid "status.withdrawal.restartBrowserNotice"
+msgstr "Restart the browser so it stops trusting the withdrawn certificate."
 
 msgid "preferences.title"
 msgstr "Preferences"

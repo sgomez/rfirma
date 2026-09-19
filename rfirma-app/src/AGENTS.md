@@ -85,6 +85,7 @@ rojo.
 | **`status/`** | El estado de la instalación. |
 | `status/status.ts` | El puerto de consulta y medición de estado, con su doble en memoria. Sin React. |
 | `status/StatusView.tsx` | La vista del cuerpo con el estado de rFirma. |
+| `status/WithdrawCertificateDialog.tsx` | El velo que confirma, ejecuta y cuenta la retirada del certificado de rFirma (docs/design/retirar-certificado.md). |
 | **`preferences/`** | Los ajustes. |
 | `preferences/preferences.ts` | Lo que la aplicación recuerda. |
 | `preferences/PreferencesView.tsx` | La vista del cuerpo con los ajustes, con su índice de **cuatro** secciones. |

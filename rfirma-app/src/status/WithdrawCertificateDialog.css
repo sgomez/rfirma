@@ -1,0 +1,23 @@
+/*
+ * El velo de la retirada (docs/design/retirar-certificado.md): no tapa la
+ * cabecera, así que su velo empieza a los 56 px en vez de cubrir la ventana
+ * entera como `.rf-scrim`.
+ */
+
+.withdraw-certificate-dialog__scrim {
+  top: 56px;
+}
+
+.withdraw-certificate-dialog {
+  width: 420px;
+}
+
+.withdraw-certificate-dialog__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.withdraw-certificate-dialog__actions {
+  justify-content: flex-end;
+}

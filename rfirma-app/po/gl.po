@@ -864,6 +864,9 @@ msgstr "Instalar"
 msgid "status.actions.useRfirma"
 msgstr "Usar rFirma"
 
+msgid "status.actions.withdraw"
+msgstr "Retirar…"
+
 msgid "status.values.siteSignature.notConfigured"
 msgstr "Sen configurar"
 
@@ -907,6 +910,42 @@ msgstr "Almacén do sistema"
 
 msgid "status.notices.restartFirefox"
 msgstr "Reinicia Firefox para que xurda efecto."
+
+msgid "status.withdrawal.title.question"
+msgstr "Retirar o certificado de rFirma"
+
+msgid "status.withdrawal.title.working"
+msgstr "Retirando…"
+
+msgid "status.withdrawal.title.done"
+msgstr "Certificado retirado"
+
+msgid "status.withdrawal.title.partial"
+msgstr "Retirado a medias"
+
+msgid "status.withdrawal.body.certificate"
+msgstr "O certificado de rFirma, dos navegadores onde estea"
+
+msgid "status.withdrawal.body.handler"
+msgstr "Que as sedes abran rFirma"
+
+msgid "status.withdrawal.hint"
+msgstr "Pódese volver instalar desde este panel."
+
+msgid "status.withdrawal.confirm"
+msgstr "Retirar"
+
+msgid "status.withdrawal.waiting"
+msgstr "Agardando"
+
+msgid "status.withdrawal.outcome.withdrawn"
+msgstr "Retirado"
+
+msgid "status.withdrawal.retry"
+msgstr "Tentar de novo"
+
+msgid "status.withdrawal.restartBrowserNotice"
+msgstr "Reinicia o navegador para que deixe de confiar no certificado retirado."
 
 msgid "preferences.title"
 msgstr "Preferencias"
