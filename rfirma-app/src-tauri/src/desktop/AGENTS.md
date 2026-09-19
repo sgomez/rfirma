@@ -15,6 +15,7 @@ máquina. Ni firma ni documentos. Rutas relativas a `src/desktop/`.
 | `adapters/channel.rs` | El canal de distribución (`/.flatpak-info`) y quién dice el escritorio que atiende `afirma://`. Léelo antes que sus hermanos. Pruebas en `adapters/channel/tests.rs`. |
 | `adapters/choice.rs` | Elegir manejador y leer al elegido, en el `mimeapps.list` del `$HOME` y con todo lo demás intacto. Firefox guarda la suya aparte. Pruebas en `adapters/choice/tests.rs`. |
 | `adapters/failures.rs` | La única traducción de las situaciones del escritorio a lo que ve la ventana (ADR-0009); ninguna llega a la sede. Pruebas en `adapters/failures/tests.rs`. |
+| `adapters/firefox_lock.rs` | Si Firefox tiene abierto un perfil, por el bloqueo POSIX de `.parentlock`. Pruebas en `adapters/firefox_lock/tests.rs`. |
 | `adapters/paths.rs` | Las rutas de la memoria entre sesiones y las de la CA local. Único sitio que conoce el sistema operativo (ADR-0010) y el único que crea un fichero `0600` de nacimiento. Pruebas en `adapters/paths/tests.rs`. |
 | `adapters/registry.rs` | `DesktopRegistry`: el adaptador de `HandlerRegistry` sobre `channel.rs` y `choice.rs`. |
 | `adapters/releases.rs` | El único sitio que abre una conexión: le pregunta a GitHub por la última publicación. Pruebas en `adapters/releases/tests.rs`. |

@@ -874,6 +874,9 @@ msgstr "Actualitzar"
 msgid "status.actions.howToInstall"
 msgstr "Com instal·lar-lo"
 
+msgid "status.actions.install"
+msgstr "Instal·lar"
+
 msgid "status.values.userCertificates.none"
 msgstr "Cap"
 
@@ -908,6 +911,9 @@ msgstr "Chrome i Chromium"
 
 msgid "status.storeBrands.nssdb"
 msgstr "Magatzem del sistema"
+
+msgid "status.notices.restartFirefox"
+msgstr "Reinicia el Firefox perquè tingui efecte."
 
 msgid "preferences.title"
 msgstr "Preferències"

@@ -102,9 +102,19 @@ export function StatusView({
       }
       setRows((current) =>
         current.map((r) =>
-          r.signal === row.signal ? { ...r, verdict: "checking", action: null, detail: null } : r,
+          r.signal === row.signal
+            ? { ...r, verdict: "checking", action: null, detail: null, restartFirefoxNotice: false }
+            : r,
         ),
       );
+      if (row.action.kind === "repair") {
+        statusPort.installLocalCaCertificate().then((updatedRow) => {
+          setRows((current) =>
+            current.map((r) => (r.signal === updatedRow.signal ? updatedRow : r)),
+          );
+        });
+        return;
+      }
       statusPort.recheck().then((updatedRows) => {
         setRows(updatedRows);
       });
@@ -216,6 +226,12 @@ export function StatusView({
                 )}
               </div>
             )}
+
+            {row.restartFirefoxNotice && (
+              <p className="rf-body status-view__restart-notice">
+                {t("status.notices.restartFirefox")}
+              </p>
+            )}
           </div>
         ))}
       </div>
@@ -240,8 +256,9 @@ function actionLabel(t: TFunction, row: SignalRow): string {
       return t("status.actions.update");
     case "userCertificates":
       return t("status.actions.howToInstall");
-    case "siteSignature":
     case "localCaCertificate":
+      return t("status.actions.install");
+    case "siteSignature":
       return "";
   }
 }

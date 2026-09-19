@@ -101,12 +101,16 @@ La inversión es el enunciado; leerla como un descuido es lo único que hay que 
 
 **En el primer arranque de rfirma**, no en la primera invocación desde una sede. La opción
 atractiva era la segunda, porque ahí hay un motivo concreto que enseñar, y se cae por
-medición: **Chrome nunca relee su `nssdb` en caliente** (no hay `FilePathWatcher` sobre esos
-ficheros; sólo notifica cuando el propio Chrome modifica la base), y **Firefox envenena su
-caché de confianza** si ya falló contra ese certificado (`CertVerifier::mTrustCache`; bug
-1156713 **WONTFIX**). Instalar en mitad del trámite significaría pararlo para pedir que
-reinicie el navegador y vuelva a empezar. En el primer arranque, reiniciar el navegador no
-le cuesta nada a nadie.
+medición: **NSS sí relee la base en caliente** —tanto Chrome como Firefox ven la CA nueva
+en cuanto se escribe, para un sitio que todavía no han verificado contra ella—, y **lo que
+no se invalida es lo ya resuelto en memoria**. Firefox envenena su caché de confianza si ya
+falló contra ese certificado (`CertVerifier::mTrustCache`; bug 1156713 **WONTFIX**), y da
+igual el navegador: **retirar la CA con el navegador abierto no le quita la confianza**
+—ni siquiera a un origen nunca visitado, porque el certificado de la CA ya quedó resuelto en
+memoria—, así que la retirada no se ve hasta que se reinicia
+(`docs/research/ca-nss-navegador-abierto.md`). Instalar en mitad del trámite significaría
+pararlo para pedir que reinicie el navegador y vuelva a empezar. En el primer arranque,
+reiniciar el navegador no le cuesta nada a nadie.
 
 Se narra mientras se hace, se avisa después de que reinicie el navegador, y **queda visible
 y retirable en Preferencias con su fecha de caducidad a la vista**. **No hay diálogo de
@@ -146,10 +150,10 @@ correctamente las preferencias» y el comentario se reescribió un año después
    reparación en el camino excepcional. Cómo se detecta, cuándo se renueva y qué hace cada
    arranque, en § *El solape, de arranque en arranque*.
 
-4. **No se repara en caliente.** «Reparar y continuar» no existe —Chrome no relee el `nssdb`,
-   Firefox envenena su caché tras haber fallado—: sólo existe **reparar y volver a empezar**, y
-   se dice así, sin fingir lo otro. Lo que eso implica a mitad de un trámite, en § *A mitad de
-   un trámite no se toca la CA*.
+4. **No se repara en caliente.** «Reparar y continuar» no existe —Firefox envenena su caché
+   tras haber fallado, y ningún navegador deja de confiar al retirar hasta que se reinicia—:
+   sólo existe **reparar y volver a empezar**, y se dice así, sin fingir lo otro. Lo que eso
+   implica a mitad de un trámite, en § *A mitad de un trámite no se toca la CA*.
 
 5. **Retirada explícita desde Preferencias**, siempre disponible. Con el solape puede haber **dos
    CA locales vivas a la vez**, y la retirada **tiene que llevarse las dos**.
@@ -245,11 +249,11 @@ sin certificados al listado. Los que se quedan sin ella se cuentan al final, con
 
 Con un trámite de una sede en marcha **no se abre ningún almacén, no se instala, no se repara
 y no se avisa**, sea cual sea la etapa de la CA local, **incluso caducada**. Instalarla ahí
-obligaría a parar el trámite para pedir que se reinicie el navegador y volver a empezar, por
-los dos hechos medidos en § *Cuándo, y qué se le dice a la persona*: Chrome no relee su
-`nssdb` y Firefox envenena su caché tras haber fallado. Es lo único que separa instalar de no
-tocar nada, y no es un detalle de registro: la CA se refresca **antes de atender nada**, en
-el arranque, y ahí termina.
+obligaría a parar el trámite para pedir que se reinicie el navegador y volver a empezar: si el
+trámite llegó a fallar por la CA, es porque Firefox ya la verificó y falló contra ella, y esa
+caché envenenada (§ *Cuándo, y qué se le dice a la persona*) no se cura instalando en caliente.
+Es lo único que separa instalar de no tocar nada, y no es un detalle de registro: la CA se
+refresca **antes de atender nada**, en el arranque, y ahí termina.
 
 **Lo que no se ha medido no se afirma.** Si a mitad de un trámite no se ha abierto ni un
 perfil, la respuesta a «¿ha llegado la CA a algún almacén?» no es «no está»: es que nadie lo
@@ -353,8 +357,9 @@ loopback», que son remedios opuestos— es de la v0.5.
   veces que haga falta.
 - **Apodos distintos para las dos CA del solape.** Es justo lo que NSS rechaza: el apodo va
   con el sujeto.
-- **Instalar o reparar a mitad de un trámite**, aunque solo sea con la CA caducada. Ni Chrome
-  ni Firefox lo recogerían sin reiniciar, así que solo serviría para parar el trámite. La única
+- **Instalar o reparar a mitad de un trámite**, aunque solo sea con la CA caducada. Si el
+  trámite ha fallado es porque Firefox ya verificó y envenenó su caché contra esa CA, y
+  reinstalarla sin reiniciar no lo arregla; solo serviría para parar el trámite. La única
   reparación durante un trámite es la que la persona pide con el botón delante, y es «volver a
   empezar», no «continuar».
 - **Decir «la CA no está en ningún almacén» a mitad de un trámite.** No se ha abierto ningún

@@ -26,6 +26,7 @@ export interface SignalRow {
   verdict: Verdict;
   action: StatusAction | null;
   detail: StoreDetail[] | null;
+  restartFirefoxNotice: boolean;
 }
 
 export interface StatusPort {
@@ -33,6 +34,8 @@ export interface StatusPort {
   readStatus(): Promise<SignalRow[]>;
   /** Vuelve a comprobar el estado remidiendo contra los orígenes. */
   recheck(): Promise<SignalRow[]>;
+  /** Instala el certificado de rFirma donde falte y vuelve a medir su señal. */
+  installLocalCaCertificate(): Promise<SignalRow>;
 }
 
 /** Doble en memoria para pruebas de la interfaz. */
@@ -44,9 +47,11 @@ export function memoryStatus(
       verdict: "correct",
       action: null,
       detail: null,
+      restartFirefoxNotice: false,
     },
   ],
   recheckRows?: SignalRow[],
+  installedRow?: SignalRow,
 ): StatusPort {
   let rows = [...initialRows];
   return {
@@ -56,6 +61,18 @@ export function memoryStatus(
         rows = [...recheckRows];
       }
       return rows;
+    },
+    installLocalCaCertificate: async () => {
+      const installed = installedRow ?? {
+        signal: "localCaCertificate",
+        value: "",
+        verdict: "checking",
+        action: null,
+        detail: null,
+        restartFirefoxNotice: false,
+      };
+      rows = rows.map((row) => (row.signal === installed.signal ? installed : row));
+      return installed;
     },
   };
 }

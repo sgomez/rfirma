@@ -87,6 +87,8 @@ crossing! {
         pub action: Option<StatusActionView>,
         /// Detalle por almacén, para señales que lo despliegan.
         pub detail: Option<Vec<StoreDetailView>>,
+        /// Aviso de reiniciar Firefox, tras instalar con el navegador vivo (ADR-0005).
+        pub restart_firefox_notice: bool,
     }
 }
 
@@ -100,6 +102,7 @@ impl From<SignalRow> for SignalRowView {
             detail: row
                 .detail
                 .map(|detail| detail.into_iter().map(StoreDetailView::from).collect()),
+            restart_firefox_notice: row.restart_firefox_notice,
         }
     }
 }

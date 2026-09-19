@@ -73,6 +73,7 @@ describe("StatusView", () => {
         verdict: "correct",
         action: null,
         detail: null,
+        restartFirefoxNotice: false,
       },
     ];
     renderWithCatalog(<StatusView statusPort={memoryStatus(rows)} onClose={() => {}} />);
@@ -95,6 +96,7 @@ describe("StatusView", () => {
           target: "releases",
         },
         detail: null,
+        restartFirefoxNotice: false,
       },
     ];
     renderWithCatalog(<StatusView statusPort={memoryStatus(rows)} onClose={() => {}} />);
@@ -117,6 +119,7 @@ describe("StatusView", () => {
           target: "certificateIssuance",
         },
         detail: null,
+        restartFirefoxNotice: false,
       },
     ];
     renderWithCatalog(<StatusView statusPort={memoryStatus(rows)} onClose={() => {}} />);
@@ -136,6 +139,7 @@ describe("StatusView", () => {
         verdict: "correct",
         action: null,
         detail: null,
+        restartFirefoxNotice: false,
       },
     ];
     renderWithCatalog(<StatusView statusPort={memoryStatus(rows)} onClose={() => {}} />);
@@ -155,6 +159,7 @@ describe("StatusView", () => {
         verdict: "checking",
         action: null,
         detail: null,
+        restartFirefoxNotice: false,
       },
     ];
     renderWithCatalog(<StatusView statusPort={memoryStatus(rows)} onClose={() => {}} />);
@@ -165,17 +170,21 @@ describe("StatusView", () => {
     expect(within(row).queryByRole("button")).not.toBeInTheDocument();
   });
 
-  it("renders Incorrecto with a store detail list when the certificate is nowhere trusted", async () => {
+  it("renders Incorrecto with Instalar and a store detail list when the certificate is nowhere trusted", async () => {
     const rows: SignalRow[] = [
       {
         signal: "localCaCertificate",
         value: "0/2",
         verdict: "incorrect",
-        action: null,
+        action: {
+          kind: "repair",
+          target: "installLocalCaCertificate",
+        },
         detail: [
           { brand: "firefox", trusted: false },
           { brand: "chrome", trusted: false },
         ],
+        restartFirefoxNotice: false,
       },
     ];
     const user = userEvent.setup();
@@ -185,6 +194,7 @@ describe("StatusView", () => {
     expect(within(row).getByText("Certificado de rFirma")).toBeInTheDocument();
     expect(within(row).getByText("0 de 2 almacenes")).toBeInTheDocument();
     expect(within(row).getByText("Incorrecto")).toBeInTheDocument();
+    expect(within(row).getByRole("button", { name: "Instalar" })).toBeInTheDocument();
     expect(within(row).queryByRole("button", { name: /almacenes/ })).toBeInTheDocument();
 
     const toggle = within(row).getByRole("button", { name: "Ver almacenes" });
@@ -209,6 +219,7 @@ describe("StatusView", () => {
           { brand: "firefox", trusted: true },
           { brand: "chrome", trusted: true },
         ],
+        restartFirefoxNotice: false,
       },
     ];
     const user = userEvent.setup();
@@ -217,6 +228,7 @@ describe("StatusView", () => {
     const row = await screen.findByRole("status");
     expect(within(row).getByText("2 de 2 almacenes")).toBeInTheDocument();
     expect(within(row).getByText("Correcto")).toBeInTheDocument();
+    expect(within(row).queryByRole("button", { name: "Instalar" })).not.toBeInTheDocument();
 
     await user.click(within(row).getByRole("button", { name: "Ver almacenes" }));
 
@@ -241,9 +253,11 @@ describe("StatusView", () => {
             target: "certificateIssuance",
           },
           detail: null,
+          restartFirefoxNotice: false,
         },
       ]),
       recheck: vi.fn().mockReturnValue(recheckPromise),
+      installLocalCaCertificate: vi.fn(),
     };
 
     renderWithCatalog(<StatusView statusPort={statusPort} onClose={() => {}} />);
@@ -262,6 +276,7 @@ describe("StatusView", () => {
         verdict: "correct",
         action: null,
         detail: null,
+        restartFirefoxNotice: false,
       },
     ]);
 
@@ -290,9 +305,11 @@ describe("StatusView", () => {
             target: "releases",
           },
           detail: null,
+          restartFirefoxNotice: false,
         },
       ]),
       recheck: vi.fn().mockReturnValue(recheckPromise),
+      installLocalCaCertificate: vi.fn(),
     };
 
     renderWithCatalog(
@@ -314,6 +331,7 @@ describe("StatusView", () => {
         verdict: "correct",
         action: null,
         detail: null,
+        restartFirefoxNotice: false,
       },
     ]);
 
@@ -338,9 +356,11 @@ describe("StatusView", () => {
           verdict: "checking",
           action: null,
           detail: null,
+          restartFirefoxNotice: false,
         },
       ]),
       recheck: vi.fn().mockReturnValue(recheckPromise),
+      installLocalCaCertificate: vi.fn(),
     };
 
     renderWithCatalog(<StatusView statusPort={statusPort} onClose={() => {}} />);
@@ -360,11 +380,78 @@ describe("StatusView", () => {
         verdict: "correct",
         action: null,
         detail: null,
+        restartFirefoxNotice: false,
       },
     ]);
 
     await waitFor(() => {
       expect(within(row).getByText("Correcto")).toBeInTheDocument();
     });
+  });
+
+  it("installs the local CA certificate and shows the restart notice when Firefox was alive", async () => {
+    const user = userEvent.setup();
+    let resolveInstall!: (row: SignalRow) => void;
+    const installPromise = new Promise<SignalRow>((resolve) => {
+      resolveInstall = resolve;
+    });
+
+    const statusPort: StatusPort = {
+      readStatus: vi.fn().mockResolvedValue([
+        {
+          signal: "localCaCertificate",
+          value: "0/2",
+          verdict: "incorrect",
+          action: {
+            kind: "repair",
+            target: "installLocalCaCertificate",
+          },
+          detail: null,
+          restartFirefoxNotice: false,
+        },
+      ]),
+      recheck: vi.fn(),
+      installLocalCaCertificate: vi.fn().mockReturnValue(installPromise),
+    };
+
+    renderWithCatalog(<StatusView statusPort={statusPort} onClose={() => {}} />);
+
+    const row = await screen.findByRole("status");
+    await user.click(within(row).getByRole("button", { name: "Instalar" }));
+
+    expect(within(row).getByText("Comprobando")).toBeInTheDocument();
+    expect(statusPort.installLocalCaCertificate).toHaveBeenCalledOnce();
+
+    resolveInstall({
+      signal: "localCaCertificate",
+      value: "2/2",
+      verdict: "correct",
+      action: null,
+      detail: null,
+      restartFirefoxNotice: true,
+    });
+
+    await waitFor(() => {
+      expect(within(row).getByText("Correcto")).toBeInTheDocument();
+    });
+    expect(within(row).getByText("Reinicia Firefox para que surta efecto.")).toBeInTheDocument();
+  });
+
+  it("does not show the restart notice when Firefox was not alive", async () => {
+    const rows: SignalRow[] = [
+      {
+        signal: "localCaCertificate",
+        value: "2/2",
+        verdict: "correct",
+        action: null,
+        detail: null,
+        restartFirefoxNotice: false,
+      },
+    ];
+    renderWithCatalog(<StatusView statusPort={memoryStatus(rows)} onClose={() => {}} />);
+
+    const row = await screen.findByRole("status");
+    expect(within(row).getByText("Correcto")).toBeInTheDocument();
+    expect(screen.queryByText("Reinicia Firefox para que surta efecto.")).not.toBeInTheDocument();
   });
 });

@@ -219,6 +219,7 @@ fn checking_local_ca_certificate_signal_has_no_value_nor_detail() {
     assert_eq!(row.verdict, Verdict::Checking);
     assert_eq!(row.action, None);
     assert_eq!(row.detail, None);
+    assert!(!row.restart_firefox_notice);
 }
 
 fn a_store(brand: StoreBrand, trusted: bool) -> StoreDetail {
@@ -226,45 +227,57 @@ fn a_store(brand: StoreBrand, trusted: bool) -> StoreDetail {
 }
 
 #[test]
-fn no_store_trusted_is_incorrect() {
+fn no_store_trusted_is_incorrect_and_offers_to_install() {
     let detail = vec![
         a_store(StoreBrand::Firefox, false),
         a_store(StoreBrand::Chrome, false),
         a_store(StoreBrand::Nssdb, false),
     ];
 
-    let row = evaluate_local_ca_certificate_signal(detail.clone());
+    let row = evaluate_local_ca_certificate_signal(detail.clone(), false);
 
     assert_eq!(row.signal, Signal::LocalCaCertificate);
     assert_eq!(row.value, "0/3");
     assert_eq!(row.verdict, Verdict::Incorrect);
-    assert_eq!(row.action, None);
+    assert_eq!(
+        row.action,
+        Some(StatusAction {
+            kind: ActionKind::Repair,
+            target: INSTALL_LOCAL_CA_CERTIFICATE.into(),
+        })
+    );
     assert_eq!(row.detail, Some(detail));
 }
 
 #[test]
-fn some_stores_trusted_is_attention() {
+fn some_stores_trusted_is_attention_and_offers_to_install() {
     let detail = vec![
         a_store(StoreBrand::Firefox, true),
         a_store(StoreBrand::Chrome, false),
         a_store(StoreBrand::Nssdb, false),
     ];
 
-    let row = evaluate_local_ca_certificate_signal(detail);
+    let row = evaluate_local_ca_certificate_signal(detail, false);
 
     assert_eq!(row.value, "1/3");
     assert_eq!(row.verdict, Verdict::Attention);
-    assert_eq!(row.action, None);
+    assert_eq!(
+        row.action,
+        Some(StatusAction {
+            kind: ActionKind::Repair,
+            target: INSTALL_LOCAL_CA_CERTIFICATE.into(),
+        })
+    );
 }
 
 #[test]
-fn every_store_trusted_is_correct() {
+fn every_store_trusted_is_correct_without_action() {
     let detail = vec![
         a_store(StoreBrand::Firefox, true),
         a_store(StoreBrand::Chrome, true),
     ];
 
-    let row = evaluate_local_ca_certificate_signal(detail);
+    let row = evaluate_local_ca_certificate_signal(detail, false);
 
     assert_eq!(row.value, "2/2");
     assert_eq!(row.verdict, Verdict::Correct);
@@ -273,8 +286,46 @@ fn every_store_trusted_is_correct() {
 
 #[test]
 fn no_store_detected_at_all_is_incorrect() {
-    let row = evaluate_local_ca_certificate_signal(Vec::new());
+    let row = evaluate_local_ca_certificate_signal(Vec::new(), false);
 
     assert_eq!(row.value, "0/0");
     assert_eq!(row.verdict, Verdict::Incorrect);
+}
+
+#[test]
+fn restart_firefox_notice_carries_through_when_asked() {
+    let detail = vec![a_store(StoreBrand::Firefox, true)];
+
+    let with_firefox_alive = evaluate_local_ca_certificate_signal(detail.clone(), true);
+    let without_firefox_alive = evaluate_local_ca_certificate_signal(detail, false);
+
+    assert!(with_firefox_alive.restart_firefox_notice);
+    assert!(!without_firefox_alive.restart_firefox_notice);
+}
+
+#[test]
+fn firefox_restart_notice_when_its_own_profile_starts_trusting_while_alive() {
+    assert!(firefox_restart_notice(true, &[false], &[true]));
+}
+
+#[test]
+fn no_firefox_restart_notice_when_firefox_was_not_running() {
+    assert!(!firefox_restart_notice(false, &[false], &[true]));
+}
+
+#[test]
+fn no_firefox_restart_notice_when_firefox_profile_was_already_trusted() {
+    // Escenario del hallazgo: Firefox ya de confianza, solo otro almacén (p. ej. Chrome) recibe
+    // la instalación mientras Firefox está abierto — no debe avisar de reiniciar Firefox.
+    assert!(!firefox_restart_notice(true, &[true], &[true]));
+}
+
+#[test]
+fn no_firefox_restart_notice_when_nothing_changed() {
+    assert!(!firefox_restart_notice(true, &[false], &[false]));
+}
+
+#[test]
+fn firefox_restart_notice_with_several_profiles_needs_only_one_to_flip() {
+    assert!(firefox_restart_notice(true, &[true, false], &[true, true]));
 }

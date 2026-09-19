@@ -32,6 +32,7 @@ pub fn evaluate_version_signal(
             verdict: Verdict::Checking,
             action: None,
             detail: None,
+            restart_firefox_notice: false,
         };
     }
 
@@ -45,6 +46,7 @@ pub fn evaluate_version_signal(
                 target: update_destination_for(channel).to_string(),
             }),
             detail: None,
+            restart_firefox_notice: false,
         }
     } else {
         SignalRow {
@@ -53,6 +55,7 @@ pub fn evaluate_version_signal(
             verdict: Verdict::Correct,
             action: None,
             detail: None,
+            restart_firefox_notice: false,
         }
     }
 }
@@ -89,6 +92,7 @@ pub fn evaluate_user_certificates_signal(stores_with_certificates: usize) -> Sig
                 target: CERTIFICATE_ISSUANCE.to_string(),
             }),
             detail: None,
+            restart_firefox_notice: false,
         }
     } else {
         SignalRow {
@@ -97,6 +101,7 @@ pub fn evaluate_user_certificates_signal(stores_with_certificates: usize) -> Sig
             verdict: Verdict::Correct,
             action: None,
             detail: None,
+            restart_firefox_notice: false,
         }
     }
 }
@@ -109,11 +114,19 @@ pub fn checking_local_ca_certificate_signal() -> SignalRow {
         verdict: Verdict::Checking,
         action: None,
         detail: None,
+        restart_firefox_notice: false,
     }
 }
 
-/// Evalúa el estado de la señal del certificado de rFirma a partir del detalle por almacén.
-pub fn evaluate_local_ca_certificate_signal(detail: Vec<StoreDetail>) -> SignalRow {
+/// Identificador de la reparación de la señal del certificado de rFirma, con `Instalar`.
+pub const INSTALL_LOCAL_CA_CERTIFICATE: &str = "installLocalCaCertificate";
+
+/// Evalúa el estado de la señal del certificado de rFirma a partir del detalle por almacén y de
+/// si Firefox estaba vivo cuando se instaló.
+pub fn evaluate_local_ca_certificate_signal(
+    detail: Vec<StoreDetail>,
+    restart_firefox_notice: bool,
+) -> SignalRow {
     let total = detail.len();
     let trusted = detail.iter().filter(|store| store.trusted).count();
     let verdict = if trusted == total && total > 0 {
@@ -123,14 +136,33 @@ pub fn evaluate_local_ca_certificate_signal(detail: Vec<StoreDetail>) -> SignalR
     } else {
         Verdict::Attention
     };
+    let action = (verdict != Verdict::Correct).then(|| StatusAction {
+        kind: ActionKind::Repair,
+        target: INSTALL_LOCAL_CA_CERTIFICATE.to_string(),
+    });
 
     SignalRow {
         signal: Signal::LocalCaCertificate,
         value: format!("{trusted}/{total}"),
         verdict,
-        action: None,
+        action,
         detail: Some(detail),
+        restart_firefox_notice,
     }
+}
+
+/// Si conviene avisar de reiniciar Firefox: alguno de sus perfiles pasó de no confiar a confiar
+/// en la CA local mientras Firefox seguía abierto.
+pub fn firefox_restart_notice(
+    firefox_was_running: bool,
+    trusted_before: &[bool],
+    trusted_after: &[bool],
+) -> bool {
+    firefox_was_running
+        && trusted_after
+            .iter()
+            .zip(trusted_before)
+            .any(|(after, before)| *after && !*before)
 }
 
 #[cfg(test)]
