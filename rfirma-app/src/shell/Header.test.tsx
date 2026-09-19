@@ -233,6 +233,7 @@ describe("Header", () => {
     const statusItem = screen.getByRole("menuitem", { name: /Estado de rFirma/ });
     expect(statusItem.querySelector(".header__entryIcon svg")).not.toBeNull();
     expect(screen.getByRole("img", { name: "Requiere atención" })).toBeInTheDocument();
+    expect(statusItem.querySelector(".header__entryIcon--attention")).not.toBeNull();
   });
 
   it("opens the preferences dialog from the menu and closes the menu", async () => {

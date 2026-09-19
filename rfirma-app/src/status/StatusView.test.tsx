@@ -562,7 +562,9 @@ describe("StatusView", () => {
 
     await screen.findByRole("status");
 
-    expect(onRowsChange).toHaveBeenCalledWith(rows);
+    await waitFor(() => {
+      expect(onRowsChange).toHaveBeenCalledWith(rows);
+    });
   });
 
   it("notifies onRowsChange again once Volver a comprobar remeasures", async () => {

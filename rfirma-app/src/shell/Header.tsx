@@ -118,7 +118,14 @@ export function Header({
                   onClick={choose(onOpenStatus)}
                 >
                   <span className="header__entryLabel">{t("header.status")}</span>
-                  <span className="header__entryIcon" aria-hidden={!hasAttention}>
+                  <span
+                    className={
+                      hasAttention
+                        ? "header__entryIcon header__entryIcon--attention"
+                        : "header__entryIcon"
+                    }
+                    aria-hidden={!hasAttention}
+                  >
                     {hasAttention && (
                       <span role="img" aria-label={t("header.statusAttention")}>
                         <AlertIcon size={14} />
