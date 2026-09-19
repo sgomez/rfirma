@@ -182,9 +182,12 @@ Validado en el canvas [Autofirma de escritorio en Rust](https://claude.ai/design
 **Las cuatro entradas del menú** —decididas en el
 [#656](https://github.com/sgomez/rfirma/issues/656) y dibujadas el 17/09/2026 en
 el [#659](https://github.com/sgomez/rfirma/issues/659)— se dibujaron aquí y no
-en la ficha de [Preferencias](preferencias.md) por una razón material: con
-Preferencias abierto, que es un diálogo a pantalla completa, la cabecera no se
-ve.
+en la ficha de [Preferencias](preferencias.md) ni en la del
+[panel de estado](panel-de-estado.md) por una razón material: el menú es de la
+cabecera, y la cabecera es la misma esté delante una vista del cuerpo o
+ninguna. Con Preferencias o Estado de rFirma abiertos la cabecera se queda
+intacta arriba, así que el menú que la abre se ve y se usa igual, y
+documentarlo dos veces más sería repetir la misma fila.
 
 **«Estado de rFirma», y no «Estado» a secas.** En esta misma franja vive la
 insignia del documento, así que «Estado» se leería como estado del documento.

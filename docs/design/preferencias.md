@@ -12,8 +12,10 @@ Los ajustes de la aplicación. Se abre desde el menú de la
 **Un visor de pestañas en vertical**, y **no un diálogo**: es una **vista del
 cuerpo** de la ventana, que sustituye lo que hubiera bajo la
 [cabecera](cabecera.md) y ocupa todo ese hueco. La cabecera se queda **intacta,
-con su estado de documento**, porque nada se pinta encima de ella; y mientras la
-vista está delante el foco no se escapa a los controles de la ventana.
+con su estado de documento y su menú alcanzable**, porque nada se pinta encima
+de ella: con Preferencias delante el menú de la cabecera se abre y funciona
+igual, por clic o por teclado, y desde ahí se llega a *Estado de rFirma* sin
+pasar por cerrar Preferencias antes.
 
 Tres regiones, de izquierda a derecha y de arriba abajo:
 

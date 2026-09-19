@@ -9,7 +9,7 @@ import type { DocumentPicker } from "./documents/picker";
 import type { RecentsStore } from "./documents/recents";
 import { useDocuments } from "./documents/useDocuments";
 import { classify, type NamedFailure } from "./errors/classify";
-import { PreferencesDialog } from "./preferences/PreferencesDialog";
+import { PreferencesView } from "./preferences/PreferencesView";
 import type { Preferences, PreferencesStore } from "./preferences/preferences";
 import { applyTheme } from "./preferences/theme";
 import { MainWindow } from "./shell/MainWindow";
@@ -52,8 +52,8 @@ import {
 } from "./viewer/signatureBox";
 import type { DocumentFailure, PdfSource } from "./viewer/source";
 
-type OpenDialog = "preferences" | "about" | null;
-type ActiveView = "status" | null;
+type OpenDialog = "about" | null;
+type ActiveView = "status" | "preferences" | null;
 
 /**
  * Un aviso del arrastre, atado al documento del que habla.
@@ -918,7 +918,7 @@ export function App({
         menuAnchor={menuAnchor ?? menuAnchorFor(navigator.userAgent)}
         hasAttention={hasAttention}
         onOpenStatus={() => setView("status")}
-        onOpenPreferences={() => setDialog("preferences")}
+        onOpenPreferences={() => setView("preferences")}
         onOpenHelp={() => void externalDestinations.open("discussions")}
         onOpenAbout={() => setDialog("about")}
         view={
@@ -928,6 +928,17 @@ export function App({
               externalDestinations={externalDestinations}
               onClose={() => setView(null)}
               onRowsChange={setStatusRows}
+            />
+          ) : view === "preferences" && settings !== null ? (
+            <PreferencesView
+              preferences={settings}
+              onChooseDestination={chooseDestination}
+              onChange={changeSettings}
+              onForgetActivity={forgetActivity}
+              installedCertificates={installed}
+              onInstallCertificate={installCertificate}
+              onRemoveCertificate={removeCertificate}
+              onClose={() => setView(null)}
             />
           ) : null
         }
@@ -1038,7 +1049,7 @@ export function App({
                   writable: true,
                 }
               }
-              onChangeDestination={() => setDialog("preferences")}
+              onChangeDestination={() => setView("preferences")}
               onSign={() => void sign()}
               signing={signing.state.kind === "running"}
               onOpenHelp={() => void externalDestinations.open("discussions")}
@@ -1054,18 +1065,6 @@ export function App({
           ) : null
         }
       />
-      {dialog === "preferences" && settings !== null && (
-        <PreferencesDialog
-          preferences={settings}
-          onChooseDestination={chooseDestination}
-          onChange={changeSettings}
-          onForgetActivity={forgetActivity}
-          installedCertificates={installed}
-          onInstallCertificate={installCertificate}
-          onRemoveCertificate={removeCertificate}
-          onClose={() => setDialog(null)}
-        />
-      )}
       {dialog === "about" && (
         <AboutDialog
           version={__APP_VERSION__}

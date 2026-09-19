@@ -14,7 +14,7 @@ import { ErrorNotice } from "../errors/ErrorNotice";
 import { useLanguage } from "../i18n/LanguageProvider";
 import { LANGUAGES } from "../i18n/languages";
 import type { Certificate } from "../signing/certificate";
-import "./PreferencesDialog.css";
+import "./PreferencesView.css";
 import type { Preferences } from "./preferences";
 import { Select } from "./Select";
 import { Switch } from "./Switch";
@@ -25,18 +25,19 @@ const SECTIONS = ["general", "signing", "certificates", "appearance"] as const;
 
 type Section = (typeof SECTIONS)[number];
 
-/** Lo que puede recibir el foco dentro de la pantalla. */
+/** Lo que puede recibir el foco dentro de un modal. */
 const FOCUSABLE = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
 
 /**
- * El tabulador da la vuelta dentro del diálogo en vez de salirse a la cabecera
- * que queda detrás. Es lo que distingue un diálogo modal de una región más de
- * la ventana, y `aria-modal` lo promete al lector de pantalla pero no lo
- * cumple por sí solo: el foco del teclado lo mueve el navegador.
+ * El tabulador da la vuelta dentro del modal en vez de salirse a la pantalla
+ * que queda detrás. Solo se aplica a los dos modales que se ponen delante
+ * —confirmar el borrado, la contraseña del `.p12`—: la pantalla en sí ya no
+ * atrapa el foco, así que el menú de la cabecera sigue alcanzable con el
+ * teclado mientras Preferencias está delante.
  */
-function trapFocus(screen: HTMLElement | null, event: KeyboardEvent<HTMLDivElement>) {
-  if (screen === null) return;
-  const focusable = [...screen.querySelectorAll<HTMLElement>(FOCUSABLE)].filter(
+function trapFocus(modal: HTMLElement | null, event: KeyboardEvent<HTMLDivElement>) {
+  if (modal === null) return;
+  const focusable = [...modal.querySelectorAll<HTMLElement>(FOCUSABLE)].filter(
     (element) => !element.hasAttribute("disabled") && element.tabIndex !== -1,
   );
   const first = focusable.at(0);
@@ -51,6 +52,11 @@ function trapFocus(screen: HTMLElement | null, event: KeyboardEvent<HTMLDivEleme
   }
 }
 
+/** El tabulador da la vuelta dentro del modal al que está enganchado. */
+function trapTabWithinCurrentTarget(event: KeyboardEvent<HTMLDivElement>) {
+  if (event.key === "Tab") trapFocus(event.currentTarget, event);
+}
+
 /** Un ajuste que el disco no aceptó, y en qué sección se pulsó (ID-70). */
 interface SaveFailure {
   section: Section;
@@ -58,7 +64,7 @@ interface SaveFailure {
   detail: string;
 }
 
-interface PreferencesDialogProps {
+interface PreferencesViewProps {
   preferences: Preferences;
   /**
    * Abre el **selector de directorio** del sistema y guarda lo que conceda.
@@ -91,15 +97,18 @@ interface PreferencesDialogProps {
 }
 
 /**
- * Los ajustes de la aplicación: un diálogo **a pantalla completa** por debajo
- * de la cabecera, que se queda intacta detrás con su estado de documento
- * (ID-68).
+ * Los ajustes de la aplicación: una **vista del cuerpo**, como
+ * [`StatusView`](../status/StatusView.tsx), que sustituye la bandeja, el
+ * visor y el panel bajo la cabecera, que se queda intacta detrás con su
+ * estado de documento (ID-352).
  *
- * Es un diálogo y no una ruta de un router: con guardado automático y `Cerrar`
- * como única salida no hay ningún estado al que navegar ni nada que confirmar,
- * así que `Escape` sigue valiendo y `Cmd+,` sigue prometiendo lo que abre. Lo
- * único que cambia respecto al modal de 480 px es el tamaño: con cinco ajustes
- * ya iba justo y lo que viene no cabe.
+ * No es un diálogo ni una ruta de un router: con guardado automático y
+ * `Cerrar` como única salida no hay ningún estado al que navegar ni nada que
+ * confirmar, así que `Escape` sigue valiendo y `Cmd+,` sigue prometiendo lo
+ * que abre. **El foco no se atrapa aquí dentro**: el menú de la cabecera se
+ * abre y funciona con Preferencias delante, tanto por clic como por
+ * teclado — a diferencia de los dos modales que se ponen encima de esta
+ * pantalla, que sí lo atrapan.
  *
  * **Los cambios se aplican al hacerlos**: no hay «Guardar» ni «Cancelar», solo
  * «Cerrar», y va en un **pie fijo** porque en una pantalla que se desplaza un
@@ -139,7 +148,7 @@ interface PreferencesDialogProps {
  * sistema, que devuelve exactamente ese último segmento en los cuatro canales
  * (ID-65, ADR-0011).
  */
-export function PreferencesDialog({
+export function PreferencesView({
   preferences,
   onChooseDestination,
   onChange,
@@ -148,7 +157,7 @@ export function PreferencesDialog({
   onInstallCertificate,
   onRemoveCertificate,
   onClose,
-}: PreferencesDialogProps) {
+}: PreferencesViewProps) {
   const { t, i18n } = useTranslation();
   const { language, setLanguage } = useLanguage();
   const [confirmingPurge, setConfirmingPurge] = useState(false);
@@ -158,18 +167,33 @@ export function PreferencesDialog({
   const [certificateFailure, setCertificateFailure] = useState<NamedFailure | null>(null);
   const [current, setCurrent] = useState<Section>("general");
   const titleId = useId();
-  const screen = useRef<HTMLDivElement>(null);
   const confirm = useRef<HTMLDivElement>(null);
   const password = useRef<HTMLDivElement>(null);
   const panel = useRef<HTMLDivElement>(null);
   const tabs = useRef(new Map<Section, HTMLElement | null>());
 
-  // El foco entra en la pantalla al abrirla, que es lo que la hace un diálogo
-  // y no una región más de la ventana: sin esto el teclado seguiría donde
-  // estaba —en el menú de la cabecera— y `Escape` cerraría lo que hay detrás.
+  // `Escape` cierra Preferencias desde cualquier sitio, tenga el foco donde lo
+  // tenga: como `StatusView`, no depende de que el foco esté dentro de la
+  // pantalla. Un `Escape` que ya haya cerrado el menú de la cabecera llega
+  // aquí con `defaultPrevented`, así que cerrar el menú no cierra además
+  // Preferencias.
   useEffect(() => {
-    screen.current?.focus();
-  }, []);
+    const onWindowKeyDown = (event: globalThis.KeyboardEvent) => {
+      if (event.key !== "Escape" || event.defaultPrevented) return;
+      event.preventDefault();
+      if (askingPassword) {
+        setAskingPassword(false);
+        return;
+      }
+      if (confirmingPurge) {
+        setConfirmingPurge(false);
+        return;
+      }
+      onClose();
+    };
+    window.addEventListener("keydown", onWindowKeyDown);
+    return () => window.removeEventListener("keydown", onWindowKeyDown);
+  }, [askingPassword, confirmingPurge, onClose]);
 
   // La confirmación es a su vez un diálogo modal, así que cuando se pone
   // delante el foco entra en ella y el tabulador deja de pasear por los
@@ -259,37 +283,6 @@ export function PreferencesDialog({
     } catch (thrown) {
       setCertificateFailure(classify(thrown));
     }
-  };
-
-  /** El modal que está delante de la pantalla, si hay alguno. */
-  const frontmost = () => {
-    if (confirmingPurge) return confirm.current;
-    if (askingPassword) return password.current;
-    return screen.current;
-  };
-
-  /**
-   * `Escape` cierra la pantalla, y cierra antes el modal que esté delante. Un
-   * `Escape` que ya haya consumido un desplegable llega aquí con
-   * `defaultPrevented`, así que abrir una lista y cerrarla no cierra además
-   * los ajustes.
-   */
-  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key === "Tab") {
-      trapFocus(frontmost(), event);
-      return;
-    }
-    if (event.key !== "Escape" || event.defaultPrevented) return;
-    event.preventDefault();
-    if (confirmingPurge) {
-      setConfirmingPurge(false);
-      return;
-    }
-    if (askingPassword) {
-      setAskingPassword(false);
-      return;
-    }
-    onClose();
   };
 
   /** Enseña la sección elegida y le pasa el foco: por clic o por flecha, es la misma. */
@@ -533,15 +526,7 @@ export function PreferencesDialog({
   const panels: Record<Section, ReactNode> = { general, signing, certificates, appearance };
 
   return (
-    <div
-      className="preferences"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby={titleId}
-      tabIndex={-1}
-      ref={screen}
-      onKeyDown={onKeyDown}
-    >
+    <section className="preferences" aria-labelledby={titleId}>
       <nav className="preferences__index" aria-label={t("preferences.sections.label")}>
         <p className="rf-title" id={titleId}>
           {t("preferences.title")}
@@ -615,6 +600,7 @@ export function PreferencesDialog({
             tabIndex={-1}
             ref={confirm}
             aria-labelledby={`${titleId}-confirm`}
+            onKeyDown={trapTabWithinCurrentTarget}
           >
             <p className="rf-prose" id={`${titleId}-confirm`}>
               {t("preferences.rememberActivity.confirm.body")}
@@ -634,7 +620,7 @@ export function PreferencesDialog({
           </div>
         </div>
       )}
-    </div>
+    </section>
   );
 }
 
@@ -683,6 +669,7 @@ function PasswordPrompt({ ref, labelledBy, onSubmit, onCancel }: PasswordPromptP
       tabIndex={-1}
       ref={ref}
       aria-labelledby={labelledBy}
+      onKeyDown={trapTabWithinCurrentTarget}
     >
       <p className="rf-title" id={labelledBy}>
         {t("pin.titlePassword")}
