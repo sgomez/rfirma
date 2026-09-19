@@ -362,18 +362,6 @@ msgstr "There is a new version of rFirma: {{version}}"
 msgid "notifications.newVersion.action"
 msgstr "How to update"
 
-msgid "urlHandler.banner.message"
-msgstr "Do you want rFirma to open site links?"
-
-msgid "urlHandler.banner.accept"
-msgstr "Yes"
-
-msgid "urlHandler.banner.later"
-msgstr "Not now"
-
-msgid "urlHandler.banner.never"
-msgstr "Don't ask again"
-
 msgid "header.menu"
 msgstr "Menu"
 
@@ -936,26 +924,6 @@ msgstr "Privacy"
 
 msgid "preferences.sections.appearance"
 msgstr "Appearance"
-
-msgid "preferences.sections.sites"
-msgstr "Sites"
-
-msgid "preferences.urlHandler.label"
-msgstr "Who opens site links"
-
-msgid "preferences.urlHandler.unchosen"
-msgstr "Whatever the desktop decides"
-
-#. Ayuda del desplegable: Firefox impone su propia eleccion (ID-241).
-msgid "preferences.urlHandler.firefoxKeepsItsOwn"
-msgstr "Firefox uses the choice kept in its own preferences."
-
-#. Frase fija del flatpak, donde no hay portal que permita elegir (ID-240).
-msgid "preferences.urlHandler.inTheSandbox"
-msgstr "This build can't change it: choose it in your desktop settings."
-
-msgid "preferences.askAboutUrlHandler.label"
-msgstr "Ask me at startup"
 
 msgid "preferences.rememberVisibleSignature.label"
 msgstr "Remember the last visible signature setup"

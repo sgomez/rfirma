@@ -30,7 +30,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import type { ExternalDestinationOpener } from "./desktop/externalDestination";
-import type { UrlHandlerChoice, UrlHandlers } from "./desktop/urlHandlers";
 import type { Badge, DocumentInHand } from "./documents/document";
 import type { DocumentDrops, Drop } from "./documents/drops";
 import type { DocumentPicker } from "./documents/picker";
@@ -447,12 +446,6 @@ interface ConfigurationView {
    * aviso se monta y se escribe una vez, al pulsar «Entendido».
    */
   trustNoticeSeen: boolean;
-  /**
-   * Si al arrancar se pregunta quién atiende los enlaces `afirma://`
-   * (ID-239). Viaja en los dos sentidos: el banner lo apaga y Preferencias lo
-   * vuelve a encender.
-   */
-  askAboutUrlHandler: boolean;
 }
 
 function readConfiguration(): Promise<ConfigurationView> {
@@ -491,7 +484,6 @@ export function tauriPreferences(): PreferencesStore {
         rememberActivity: configuration.rememberActivity,
         notifyNewVersion: configuration.notifyNewVersion,
         trustNoticeSeen: configuration.trustNoticeSeen,
-        askAboutUrlHandler: configuration.askAboutUrlHandler,
       };
     },
     save: async (preferences) => {
@@ -503,26 +495,10 @@ export function tauriPreferences(): PreferencesStore {
         rememberActivity: preferences.rememberActivity,
         notifyNewVersion: preferences.notifyNewVersion,
         trustNoticeSeen: preferences.trustNoticeSeen,
-        askAboutUrlHandler: preferences.askAboutUrlHandler,
       });
     },
     forgetActivity: () => invoke<void>("forget_activity"),
     chooseFolder: () => invoke<string | null>("choose_destination"),
-  };
-}
-
-/**
- * Quién atiende los enlaces `afirma://`: `url_handlers` y `choose_url_handler`.
- *
- * Los dos son órdenes y no un evento: la ventana pregunta al arrancar, para el
- * banner y para Preferencias, y escribe cuando la persona elige. Lo que hay
- * debajo —el canal, GIO y el `mimeapps.list` del `$HOME`— no cruza: lo que
- * cruza es lo que se puede saber y lo que se puede elegir (ID-238, ID-240).
- */
-export function tauriUrlHandlers(): UrlHandlerChoice {
-  return {
-    who: () => invoke<UrlHandlers>("url_handlers"),
-    choose: (handler) => invoke<void>("choose_url_handler", { handler }),
   };
 }
 

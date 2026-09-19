@@ -62,8 +62,6 @@ crossing! {
         pub offers_the_original_folder: bool,
         /// Si se ha mostrado ya el aviso de confianza inicial.
         pub trust_notice_seen: bool,
-        /// Si se debe consultar por el manejador de enlaces del protocolo.
-        pub ask_about_url_handler: bool,
     }
 }
 
@@ -78,7 +76,6 @@ impl From<Preferences> for ConfigurationView {
             theme: preferences.theme,
             offers_the_original_folder: preferences.offers_the_original_folder,
             trust_notice_seen: preferences.trust_notice_seen,
-            ask_about_url_handler: preferences.ask_about_url_handler,
         }
     }
 }
@@ -94,7 +91,6 @@ impl From<ConfigurationView> for Preferences {
             theme: view.theme,
             offers_the_original_folder: view.offers_the_original_folder,
             trust_notice_seen: view.trust_notice_seen,
-            ask_about_url_handler: view.ask_about_url_handler,
         }
     }
 }

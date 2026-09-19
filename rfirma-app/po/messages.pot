@@ -317,18 +317,6 @@ msgstr ""
 msgid "notifications.newVersion.action"
 msgstr ""
 
-msgid "urlHandler.banner.message"
-msgstr ""
-
-msgid "urlHandler.banner.accept"
-msgstr ""
-
-msgid "urlHandler.banner.later"
-msgstr ""
-
-msgid "urlHandler.banner.never"
-msgstr ""
-
 msgid "header.menu"
 msgstr ""
 
@@ -868,26 +856,6 @@ msgid "preferences.sections.privacy"
 msgstr ""
 
 msgid "preferences.sections.appearance"
-msgstr ""
-
-msgid "preferences.sections.sites"
-msgstr ""
-
-msgid "preferences.urlHandler.label"
-msgstr ""
-
-msgid "preferences.urlHandler.unchosen"
-msgstr ""
-
-#. Ayuda del desplegable: Firefox impone su propia eleccion (ID-241).
-msgid "preferences.urlHandler.firefoxKeepsItsOwn"
-msgstr ""
-
-#. Frase fija del flatpak, donde no hay portal que permita elegir (ID-240).
-msgid "preferences.urlHandler.inTheSandbox"
-msgstr ""
-
-msgid "preferences.askAboutUrlHandler.label"
 msgstr ""
 
 msgid "preferences.rememberVisibleSignature.label"

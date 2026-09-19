@@ -376,18 +376,6 @@ msgstr "rFirmaren bertsio berri bat dago: {{version}}"
 msgid "notifications.newVersion.action"
 msgstr "Nola eguneratu"
 
-msgid "urlHandler.banner.message"
-msgstr "Nahi duzu rFirmak egoitzen estekak artatzea?"
-
-msgid "urlHandler.banner.accept"
-msgstr "Bai"
-
-msgid "urlHandler.banner.later"
-msgstr "Orain ez"
-
-msgid "urlHandler.banner.never"
-msgstr "Ez galdetu berriro"
-
 msgid "header.menu"
 msgstr "Menua"
 
@@ -955,26 +943,6 @@ msgstr "Pribatutasuna"
 
 msgid "preferences.sections.appearance"
 msgstr "Itxura"
-
-msgid "preferences.sections.sites"
-msgstr "Egoitzak"
-
-msgid "preferences.urlHandler.label"
-msgstr "Nork artatzen dituen egoitzen estekak"
-
-msgid "preferences.urlHandler.unchosen"
-msgstr "Mahaigainak erabakitzen duena"
-
-#. Ayuda del desplegable: Firefox impone su propia eleccion (ID-241).
-msgid "preferences.urlHandler.firefoxKeepsItsOwn"
-msgstr "Firefoxek bere hobespenetan gordetzen duen aukera erabiltzen du."
-
-#. Frase fija del flatpak, donde no hay portal que permita elegir (ID-240).
-msgid "preferences.urlHandler.inTheSandbox"
-msgstr "Bertsio honek ezin du aldatu: mahaigainaren ezarpenetan aukeratzen da."
-
-msgid "preferences.askAboutUrlHandler.label"
-msgstr "Galdetu abiaraztean"
 
 msgid "preferences.rememberVisibleSignature.label"
 msgstr "Gogoratu sinadura ikusgaiaren azken konfigurazioa"

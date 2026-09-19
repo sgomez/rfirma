@@ -365,18 +365,6 @@ msgstr "Hai unha versión nova de rFirma: {{version}}"
 msgid "notifications.newVersion.action"
 msgstr "Como actualizar"
 
-msgid "urlHandler.banner.message"
-msgstr "Queres que rFirma atenda as ligazóns das sedes?"
-
-msgid "urlHandler.banner.accept"
-msgstr "Si"
-
-msgid "urlHandler.banner.later"
-msgstr "Agora non"
-
-msgid "urlHandler.banner.never"
-msgstr "Non volver preguntar"
-
 msgid "header.menu"
 msgstr "Menú"
 
@@ -937,26 +925,6 @@ msgstr "Privacidade"
 
 msgid "preferences.sections.appearance"
 msgstr "Aparencia"
-
-msgid "preferences.sections.sites"
-msgstr "Sedes"
-
-msgid "preferences.urlHandler.label"
-msgstr "Quen atende as ligazóns das sedes"
-
-msgid "preferences.urlHandler.unchosen"
-msgstr "O que decida o escritorio"
-
-#. Ayuda del desplegable: Firefox impone su propia eleccion (ID-241).
-msgid "preferences.urlHandler.firefoxKeepsItsOwn"
-msgstr "Firefox usa a escolla que garda nas súas propias preferencias."
-
-#. Frase fija del flatpak, donde no hay portal que permita elegir (ID-240).
-msgid "preferences.urlHandler.inTheSandbox"
-msgstr "Esta versión non pode cambialo: escóllese nos axustes do escritorio."
-
-msgid "preferences.askAboutUrlHandler.label"
-msgstr "Preguntarme ao arrancar"
 
 msgid "preferences.rememberVisibleSignature.label"
 msgstr "Lembrar a última configuración de sinatura visible"
