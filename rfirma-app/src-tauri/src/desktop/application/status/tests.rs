@@ -2,6 +2,7 @@ use std::time::{Duration, SystemTime};
 
 use super::*;
 use crate::desktop::domain::channel::Channel;
+use crate::desktop::domain::handlers::{UrlHandler, OUR_DESKTOP_FILE};
 use crate::desktop::domain::status::{ActionKind, Signal, StoreBrand, Verdict};
 use crate::desktop::domain::version_check::VersionCheck;
 use crate::signing::application::tests::a_memory;
@@ -328,4 +329,91 @@ fn no_firefox_restart_notice_when_nothing_changed() {
 #[test]
 fn firefox_restart_notice_with_several_profiles_needs_only_one_to_flip() {
     assert!(firefox_restart_notice(true, &[true, false], &[true, true]));
+}
+
+fn a_url_handlers(
+    available: bool,
+    handlers: Vec<UrlHandler>,
+    current: Option<&str>,
+) -> UrlHandlers {
+    UrlHandlers {
+        available,
+        handlers,
+        current: current.map(str::to_owned),
+        ours: OUR_DESKTOP_FILE.to_owned(),
+    }
+}
+
+fn a_handler(id: &str, name: &str) -> UrlHandler {
+    UrlHandler {
+        id: id.to_owned(),
+        name: name.to_owned(),
+    }
+}
+
+#[test]
+fn site_signature_is_not_applicable_when_the_sandbox_hides_the_registry() {
+    let row = evaluate_site_signature_signal(a_url_handlers(false, Vec::new(), None));
+
+    assert_eq!(row.signal, Signal::SiteSignature);
+    assert_eq!(row.value, "");
+    assert_eq!(row.verdict, Verdict::NotApplicable);
+    assert_eq!(row.action, None);
+}
+
+#[test]
+fn site_signature_needs_attention_when_nothing_is_configured() {
+    let row = evaluate_site_signature_signal(a_url_handlers(
+        true,
+        vec![a_handler("autofirma.desktop", "AutoFirma")],
+        None,
+    ));
+
+    assert_eq!(row.signal, Signal::SiteSignature);
+    assert_eq!(row.value, "");
+    assert_eq!(row.verdict, Verdict::Attention);
+    assert_eq!(row.action, None);
+}
+
+#[test]
+fn site_signature_is_correct_when_rfirma_is_the_current_handler() {
+    let row = evaluate_site_signature_signal(a_url_handlers(
+        true,
+        vec![
+            a_handler(OUR_DESKTOP_FILE, "rFirma"),
+            a_handler("autofirma.desktop", "AutoFirma"),
+        ],
+        Some(OUR_DESKTOP_FILE),
+    ));
+
+    assert_eq!(row.signal, Signal::SiteSignature);
+    assert_eq!(row.value, "rFirma");
+    assert_eq!(row.verdict, Verdict::Correct);
+    assert_eq!(row.action, None);
+}
+
+#[test]
+fn site_signature_needs_attention_when_another_program_is_the_current_handler() {
+    let row = evaluate_site_signature_signal(a_url_handlers(
+        true,
+        vec![
+            a_handler(OUR_DESKTOP_FILE, "rFirma"),
+            a_handler("autofirma.desktop", "AutoFirma"),
+        ],
+        Some("autofirma.desktop"),
+    ));
+
+    assert_eq!(row.signal, Signal::SiteSignature);
+    assert_eq!(row.value, "AutoFirma");
+    assert_eq!(row.verdict, Verdict::Attention);
+    assert_eq!(row.action, None);
+}
+
+#[test]
+fn site_signature_falls_back_to_the_id_when_the_current_handler_is_unlisted() {
+    let row =
+        evaluate_site_signature_signal(a_url_handlers(true, Vec::new(), Some("unknown.desktop")));
+
+    assert_eq!(row.value, "unknown.desktop");
+    assert_eq!(row.verdict, Verdict::Attention);
 }

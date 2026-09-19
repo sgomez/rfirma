@@ -847,6 +847,9 @@ msgstr "Acció"
 msgid "status.signals.version"
 msgstr "Versió"
 
+msgid "status.signals.siteSignature"
+msgstr "Signatura a les seus"
+
 msgid "status.signals.userCertificates"
 msgstr "Els teus certificats"
 
@@ -876,6 +879,12 @@ msgstr "Com instal·lar-lo"
 
 msgid "status.actions.install"
 msgstr "Instal·lar"
+
+msgid "status.values.siteSignature.notConfigured"
+msgstr "Sense configurar"
+
+msgid "status.values.siteSignature.unavailable"
+msgstr "No es pot consultar"
 
 msgid "status.values.userCertificates.none"
 msgstr "Cap"

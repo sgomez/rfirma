@@ -769,6 +769,9 @@ msgstr ""
 msgid "status.signals.version"
 msgstr ""
 
+msgid "status.signals.siteSignature"
+msgstr ""
+
 msgid "status.signals.userCertificates"
 msgstr ""
 
@@ -797,6 +800,12 @@ msgid "status.actions.howToInstall"
 msgstr ""
 
 msgid "status.actions.install"
+msgstr ""
+
+msgid "status.values.siteSignature.notConfigured"
+msgstr ""
+
+msgid "status.values.siteSignature.unavailable"
 msgstr ""
 
 msgid "status.values.userCertificates.none"

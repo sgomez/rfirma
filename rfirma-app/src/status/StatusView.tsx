@@ -272,14 +272,17 @@ function signalLabel(t: TFunction, signal: Signal): string {
     case "localCaCertificate":
       return t("status.signals.localCaCertificate");
     case "siteSignature":
-      return "";
+      return t("status.signals.siteSignature");
   }
 }
 
 function valueLabel(t: TFunction, row: SignalRow): string {
   switch (row.signal) {
     case "version":
+      return row.value;
     case "siteSignature":
+      if (row.verdict === "notApplicable") return t("status.values.siteSignature.unavailable");
+      if (row.value === "") return t("status.values.siteSignature.notConfigured");
       return row.value;
     case "localCaCertificate": {
       if (row.value === "") return "";
