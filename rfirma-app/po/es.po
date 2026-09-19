@@ -1102,29 +1102,64 @@ msgstr "rFirma: EUPL-1.2."
 msgid "about.licenses.afirma"
 msgstr "Bibliotecas de Cliente @firma: GPL-2.0+ / EUPL-1.1."
 
-msgid "trust.notice.title"
-msgstr "Cuando una sede te pida la firma"
+msgid "setup.welcome.title"
+msgstr "Configurar rFirma"
 
-msgid "trust.notice.localCa"
+msgid "setup.welcome.body"
 msgstr ""
-"rFirma ha instalado en tu ordenador una entidad de confianza local. Es lo "
-"que hace falta para que el navegador acepte la conexión con rFirma cuando "
-"una sede electrónica te pida firmar."
+"rFirma es una aplicación compatible con AutoFirma {{version}}. Para poder "
+"usarla con sedes electrónicas necesitamos configurar tu equipo."
 
-msgid "trust.notice.localNetwork"
+msgid "setup.step"
+msgstr "Paso {{current}} de {{total}}"
+
+msgid "setup.actions.continue"
+msgstr "Continuar"
+
+msgid "setup.actions.back"
+msgstr "Atrás"
+
+msgid "setup.actions.finish"
+msgstr "Terminar"
+
+msgid "setup.actions.notNow"
+msgstr "Ahora no"
+
+msgid "setup.actions.useRfirma"
+msgstr "Que abran rFirma"
+
+msgid "setup.certificate.title"
+msgstr "El certificado de rFirma"
+
+msgid "setup.certificate.body"
 msgstr ""
-"La primera vez, el navegador te pedirá permiso para acceder a la red local. "
-"Lo pide en nombre de la sede, no de rFirma, así que puede que no lo "
-"reconozcas. Permítelo cuando aparezca: con un solo permiso basta, aunque la "
-"sede pruebe hasta tres conexiones."
+"Cuando firmas en una sede electrónica, tu navegador tiene que conectarse a "
+"rFirma. Para que esa conexión sea segura necesitamos instalar un "
+"certificado propio."
 
-msgid "trust.notice.cannotTellIfDenied"
-msgstr ""
-"Si lo deniegas, rFirma no podrá saberlo ni decírtelo: ese aviso ocurre por "
-"completo dentro del navegador."
+msgid "setup.certificate.installing"
+msgstr "Instalando…"
 
-msgid "trust.notice.acknowledge"
-msgstr "Entendido"
+msgid "setup.certificate.installedTitle"
+msgstr "Instalado en tus navegadores."
+
+msgid "setup.certificate.installedRestartNotice"
+msgstr "Si tienes alguno abierto, reinícialo para que lo reconozca."
+
+msgid "setup.certificate.failedTitle"
+msgstr "No se ha podido instalar en todas partes."
+
+msgid "setup.handler.title"
+msgstr "Usar rFirma por defecto"
+
+msgid "setup.handler.body"
+msgstr "Ahora mismo las sedes electrónicas abren AutoFirma."
+
+msgid "setup.handler.bodyNoAutofirma"
+msgstr "Ahora mismo las sedes electrónicas no tienen ningún programa asignado."
+
+msgid "setup.handler.done"
+msgstr "Ahora abren rFirma."
 
 msgid "sede.waiting.title"
 msgstr "Conectando con la sede"

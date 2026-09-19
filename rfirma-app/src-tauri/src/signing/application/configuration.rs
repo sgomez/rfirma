@@ -21,8 +21,8 @@ pub struct Preferences {
     pub theme: Theme,
     /// Si la plataforma permite guardar junto al original.
     pub offers_the_original_folder: bool,
-    /// Si se ha mostrado ya el aviso de confianza inicial.
-    pub trust_notice_seen: bool,
+    /// Si el asistente del primer arranque ya se ha visto.
+    pub setup_wizard_seen: bool,
 }
 
 /// Resuelve el idioma soportado a partir de su código o devuelve castellano por omisión.
@@ -51,7 +51,7 @@ pub fn shown(configuration: &Configuration, documents_folder: &std::path::Path) 
         theme: configuration.theme,
         offers_the_original_folder:
             crate::documents::domain::document::the_original_folder_can_be_offered(),
-        trust_notice_seen: configuration.trust_notice_seen,
+        setup_wizard_seen: configuration.setup_wizard_seen,
     }
 }
 
@@ -79,7 +79,7 @@ pub fn merged(live: &Configuration, chosen: &Preferences) -> Configuration {
         remember_activity: chosen.remember_activity,
         notify_new_version: chosen.notify_new_version,
         theme: chosen.theme,
-        trust_notice_seen: chosen.trust_notice_seen,
+        setup_wizard_seen: chosen.setup_wizard_seen,
     }
 }
 

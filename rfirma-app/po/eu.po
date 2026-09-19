@@ -963,7 +963,9 @@ msgid "status.withdrawal.retry"
 msgstr "Berriz saiatu"
 
 msgid "status.withdrawal.restartBrowserNotice"
-msgstr "Berrabiarazi nabigatzailea kendutako ziurtagiria fidagarritzat izateari utz diezaion."
+msgstr ""
+"Berrabiarazi nabigatzailea kendutako ziurtagiria fidagarritzat izateari utz "
+"diezaion."
 
 msgid "preferences.title"
 msgstr "Hobespenak"
@@ -1106,29 +1108,64 @@ msgstr "rFirma: EUPL-1.2."
 msgid "about.licenses.afirma"
 msgstr "Cliente @firma liburutegiak: GPL-2.0+ / EUPL-1.1."
 
-msgid "trust.notice.title"
-msgstr "Egoitza batek sinadura eskatzen dizunean"
+msgid "setup.welcome.title"
+msgstr "Konfiguratu rFirma"
 
-msgid "trust.notice.localCa"
+msgid "setup.welcome.body"
 msgstr ""
-"rFirmak konfiantzazko tokiko erakunde bat instalatu du zure ordenagailuan. "
-"Hori behar da nabigatzaileak rFirmarekiko konexioa onar dezan, egoitza "
-"elektroniko batek sinatzeko eskatzen dizunean."
+"rFirma AutoFirma {{version}} bertsioarekin bateragarria den aplikazioa da. "
+"Egoitza elektronikoekin erabiltzeko zure ekipoa konfiguratu behar dugu."
 
-msgid "trust.notice.localNetwork"
+msgid "setup.step"
+msgstr "Urratsa {{current}}/{{total}}"
+
+msgid "setup.actions.continue"
+msgstr "Jarraitu"
+
+msgid "setup.actions.back"
+msgstr "Atzera"
+
+msgid "setup.actions.finish"
+msgstr "Amaitu"
+
+msgid "setup.actions.notNow"
+msgstr "Orain ez"
+
+msgid "setup.actions.useRfirma"
+msgstr "Ireki dezala rFirmak"
+
+msgid "setup.certificate.title"
+msgstr "rFirmaren ziurtagiria"
+
+msgid "setup.certificate.body"
 msgstr ""
-"Lehen aldian, nabigatzaileak tokiko sarera sartzeko baimena eskatuko dizu. "
-"Egoitzaren izenean eskatzen du, ez rFirmaren izenean; beraz, baliteke ez "
-"ezagutzea. Eman baimena agertzen denean: baimen bakarra nahikoa da, egoitzak "
-"hiru konexiotaraino probatzen baditu ere."
+"Egoitza elektroniko batean sinatzean, zure nabigatzaileak rFirmarekin "
+"konektatu behar du. Konexio hori segurua izan dadin, ziurtagiri propio bat "
+"instalatu behar dugu."
 
-msgid "trust.notice.cannotTellIfDenied"
-msgstr ""
-"Ukatzen baduzu, rFirmak ezin izango du jakin, ez eta esan ere: abisu hori "
-"osorik nabigatzailearen barruan gertatzen da."
+msgid "setup.certificate.installing"
+msgstr "Instalatzen…"
 
-msgid "trust.notice.acknowledge"
-msgstr "Ulertuta"
+msgid "setup.certificate.installedTitle"
+msgstr "Zure nabigatzaileetan instalatuta."
+
+msgid "setup.certificate.installedRestartNotice"
+msgstr "Irekita baduzu bat, berrabiarazi ezazu ezagut dezan."
+
+msgid "setup.certificate.failedTitle"
+msgstr "Ezin izan da nonahi instalatu."
+
+msgid "setup.handler.title"
+msgstr "Erabili rFirma lehenetsi gisa"
+
+msgid "setup.handler.body"
+msgstr "Orain, egoitza elektronikoek AutoFirma irekitzen dute."
+
+msgid "setup.handler.bodyNoAutofirma"
+msgstr "Orain, egoitza elektronikoek ez dute programarik esleituta."
+
+msgid "setup.handler.done"
+msgstr "Orain rFirma irekitzen dute."
 
 msgid "sede.waiting.title"
 msgstr "Egoitzarekin konektatzen"
@@ -1522,6 +1559,30 @@ msgstr[2] ""
 
 msgid "sede.noCertificate.excludedBody"
 msgstr "Egoitzatik jarraitu beharko duzu."
+
+#~ msgid "trust.notice.title"
+#~ msgstr "Egoitza batek sinadura eskatzen dizunean"
+
+#~ msgid "trust.notice.localCa"
+#~ msgstr ""
+#~ "rFirmak konfiantzazko tokiko erakunde bat instalatu du zure "
+#~ "ordenagailuan. Hori behar da nabigatzaileak rFirmarekiko konexioa onar "
+#~ "dezan, egoitza elektroniko batek sinatzeko eskatzen dizunean."
+
+#~ msgid "trust.notice.localNetwork"
+#~ msgstr ""
+#~ "Lehen aldian, nabigatzaileak tokiko sarera sartzeko baimena eskatuko "
+#~ "dizu. Egoitzaren izenean eskatzen du, ez rFirmaren izenean; beraz, "
+#~ "baliteke ez ezagutzea. Eman baimena agertzen denean: baimen bakarra "
+#~ "nahikoa da, egoitzak hiru konexiotaraino probatzen baditu ere."
+
+#~ msgid "trust.notice.cannotTellIfDenied"
+#~ msgstr ""
+#~ "Ukatzen baduzu, rFirmak ezin izango du jakin, ez eta esan ere: abisu hori "
+#~ "osorik nabigatzailearen barruan gertatzen da."
+
+#~ msgid "trust.notice.acknowledge"
+#~ msgstr "Ulertuta"
 
 #~ msgid "pin.title"
 #~ msgstr "Sartu PINa"

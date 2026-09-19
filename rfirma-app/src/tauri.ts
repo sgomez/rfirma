@@ -441,11 +441,11 @@ interface ConfigurationView {
    */
   offersTheOriginalFolder: boolean;
   /**
-   * Si el aviso del primer arranque (CA local y permiso de red local, #365)
-   * ya se ha descartado. Viaja en los dos sentidos: se lee para decidir si el
-   * aviso se monta y se escribe una vez, al pulsar «Entendido».
+   * Si el asistente del primer arranque ya se ha visto. Viaja en los dos
+   * sentidos: se lee para decidir si el asistente se monta y se escribe una
+   * vez, al pulsar «Terminar».
    */
-  trustNoticeSeen: boolean;
+  setupWizardSeen: boolean;
 }
 
 function readConfiguration(): Promise<ConfigurationView> {
@@ -483,7 +483,7 @@ export function tauriPreferences(): PreferencesStore {
         rememberVisibleSignature: configuration.rememberVisibleSignature,
         rememberActivity: configuration.rememberActivity,
         notifyNewVersion: configuration.notifyNewVersion,
-        trustNoticeSeen: configuration.trustNoticeSeen,
+        setupWizardSeen: configuration.setupWizardSeen,
       };
     },
     save: async (preferences) => {
@@ -494,7 +494,7 @@ export function tauriPreferences(): PreferencesStore {
         rememberVisibleSignature: preferences.rememberVisibleSignature,
         rememberActivity: preferences.rememberActivity,
         notifyNewVersion: preferences.notifyNewVersion,
-        trustNoticeSeen: preferences.trustNoticeSeen,
+        setupWizardSeen: preferences.setupWizardSeen,
       });
     },
     forgetActivity: () => invoke<void>("forget_activity"),

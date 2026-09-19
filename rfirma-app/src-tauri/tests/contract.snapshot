@@ -190,7 +190,7 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
       notifyNewVersion: bool
       theme: Theme
       offersTheOriginalFolder: bool
-      trustNoticeSeen: bool
+      setupWizardSeen: bool
 
   pub struct SiteErrandView
       origin: Option<String>

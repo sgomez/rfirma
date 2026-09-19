@@ -219,6 +219,21 @@ el fichero y toca un solo campo, y el fichero de estado se lee del disco en
 cada acceso. El proceso de sede solo muta el último certificado usado; todo lo
 demás lo escribe el escritorio.
 
+## Enmienda: `setupWizardSeen` sustituye a `trustNoticeSeen`
+
+El grupo de configuración guardaba si el aviso de confianza del primer
+arranque ya se había descartado. Ese aviso desaparece entero
+([#786](https://github.com/sgomez/rfirma/issues/786)) y lo sustituye el
+asistente del primer arranque (docs/design/primer-arranque.md), así que la
+memoria cambia de nombre y de sentido: `setupWizardSeen` se marca al pulsar
+«Terminar», pase lo que pase con las dos acciones que ofrece el asistente.
+
+**No hay migración de la clave vieja.** El campo `trust_notice_seen` de un
+fichero de disco anterior se ignora al leer —`#[serde(default)]` completa
+`setup_wizard_seen` a `false`, que es lo correcto: quien ya había descartado el
+aviso ve el asistente una vez tras actualizar—. No se escribe código para
+trasladar el valor de una clave a la otra.
+
 ## Enmienda: el certificado recordado no le responde a una sede por sí solo
 
 La memoria del último certificado que describe este ADR es del escritorio.
