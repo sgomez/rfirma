@@ -1,0 +1,16 @@
+/*
+ * La pantalla de fallo ocupa toda la ventana: reemplaza al árbol que lanzó,
+ * no se posa encima de él.
+ */
+.render-error-boundary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100dvh;
+  padding: var(--rf-space-lg);
+}
+
+.render-error-boundary > .error-notice {
+  max-width: 420px;
+  width: 100%;
+}

@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { inMemoryExternalDestinationOpener } from "../desktop/externalDestination";
 import { createI18n } from "../i18n/i18n";
 import { LanguageProvider } from "../i18n/LanguageProvider";
@@ -77,7 +77,7 @@ describe("el aviso de error", () => {
     expect(details?.open).toBe(false);
     expect(details).toHaveTextContent("Detalle técnico");
   });
-  it.each(["bridgeFailed", "sealMismatch", "unknown"] as const)(
+  it.each(["bridgeFailed", "sealMismatch", "unknown", "renderFailed"] as const)(
     "enseña el enlace a Comentarios y ayuda en la situación %s",
     (situation) => {
       renderIn("es", <ErrorNotice situation={situation} technicalDetail={RAW_DETAIL} />);
@@ -119,5 +119,24 @@ describe("el aviso de error", () => {
     renderIn("en", <ErrorNotice situation="unknown" technicalDetail={RAW_DETAIL} />);
 
     expect(screen.getByRole("button", { name: /Feedback and help/ })).toBeInTheDocument();
+  });
+
+  it("no enseña el botón de recargar si nadie lo pide", () => {
+    renderIn("es", <ErrorNotice situation="unknown" technicalDetail={RAW_DETAIL} />);
+
+    expect(screen.queryByRole("button", { name: /Recargar/ })).not.toBeInTheDocument();
+  });
+
+  it("recarga al pulsar el botón, cuando se pide", async () => {
+    const user = userEvent.setup();
+    const onReload = vi.fn();
+    renderIn(
+      "es",
+      <ErrorNotice situation="unknown" technicalDetail={RAW_DETAIL} onReload={onReload} />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /Recargar/ }));
+
+    expect(onReload).toHaveBeenCalledOnce();
   });
 });

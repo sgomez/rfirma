@@ -58,6 +58,9 @@ msgstr "Technical detail"
 msgid "errors.help"
 msgstr "Feedback and help"
 
+msgid "errors.reload"
+msgstr "Reload the window"
+
 msgid "errors.situations.unknown.title"
 msgstr "We couldn't complete the operation"
 
@@ -285,6 +288,14 @@ msgid "errors.situations.bridgeFailed.body"
 msgstr ""
 "The component that assembles the signed PDF failed. Try again and, if it "
 "keeps happening, attach the technical detail to the bug report."
+
+msgid "errors.situations.renderFailed.title"
+msgstr "This screen stopped working"
+
+msgid "errors.situations.renderFailed.body"
+msgstr ""
+"Reload the window to continue. If it keeps happening, attach the technical "
+"detail to the bug report."
 
 msgid "errors.situations.folderMissing.title"
 msgstr "The destination folder is gone"

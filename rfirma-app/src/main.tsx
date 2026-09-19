@@ -11,6 +11,7 @@ import "./app.css";
 import { StrictMode, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { App, type AppHandle } from "./App";
+import { RenderErrorBoundary } from "./errors/RenderErrorBoundary";
 import { createI18n } from "./i18n/i18n";
 import { LanguageProvider } from "./i18n/LanguageProvider";
 import { SetupWizard } from "./setup/SetupWizard";
@@ -79,11 +80,14 @@ const recents = tauriRecents();
 const preferences = tauriPreferences();
 const initialPreferences = await preferences.read();
 const statusPort = tauriStatusPort();
+// Fuera del árbol, como `errands` en `sede/main.tsx`: lo usa también el
+// `RenderErrorBoundary` que envuelve a `RootView`, y crear uno nuevo en cada
+// pintada de `RootView` lo habría dejado sin compartir.
+const externalDestinations = tauriExternalDestinationOpener();
 
 function RootView() {
   const [setupWizardSeen, setSetupWizardSeen] = useState(initialPreferences.setupWizardSeen);
   const appHandle = useRef<AppHandle | null>(null);
-  const externalDestinations = tauriExternalDestinationOpener();
 
   const finishWizard = () => {
     void preferences.save({ ...initialPreferences, setupWizardSeen: true });
@@ -133,7 +137,9 @@ function RootView() {
 createRoot(root).render(
   <StrictMode>
     <LanguageProvider i18n={i18n} preference={preference}>
-      <RootView />
+      <RenderErrorBoundary externalDestinations={externalDestinations}>
+        <RootView />
+      </RenderErrorBoundary>
     </LanguageProvider>
   </StrictMode>,
 );

@@ -4,6 +4,7 @@ import "../design-system/index.css";
 import "../app.css";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
+import { RenderErrorBoundary } from "../errors/RenderErrorBoundary";
 import { createI18n } from "../i18n/i18n";
 import { LanguageProvider } from "../i18n/LanguageProvider";
 import { applyTheme } from "../preferences/theme";
@@ -56,13 +57,17 @@ applyTheme(settings.theme);
 const i18n = createI18n(language);
 
 // Fuera del árbol: `SedeWindow` se resuscribe cuando el puerto cambia de
-// identidad, y uno nuevo en cada pintada lo suscribiría en bucle.
+// identidad, y uno nuevo en cada pintada lo suscribiría en bucle. Lo mismo
+// vale para `externalDestinations`, que aquí también usa el `RenderErrorBoundary`.
 const errands = tauriSiteErrands();
+const externalDestinations = tauriExternalDestinationOpener();
 
 createRoot(root).render(
   <StrictMode>
     <LanguageProvider i18n={i18n} preference={preference}>
-      <SedeWindow errands={errands} externalDestinations={tauriExternalDestinationOpener()} />
+      <RenderErrorBoundary externalDestinations={externalDestinations}>
+        <SedeWindow errands={errands} externalDestinations={externalDestinations} />
+      </RenderErrorBoundary>
     </LanguageProvider>
   </StrictMode>,
 );

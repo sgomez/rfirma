@@ -58,6 +58,9 @@ msgstr ""
 msgid "errors.help"
 msgstr ""
 
+msgid "errors.reload"
+msgstr ""
+
 msgid "errors.situations.unknown.title"
 msgstr ""
 
@@ -253,6 +256,12 @@ msgid "errors.situations.bridgeFailed.title"
 msgstr ""
 
 msgid "errors.situations.bridgeFailed.body"
+msgstr ""
+
+msgid "errors.situations.renderFailed.title"
+msgstr ""
+
+msgid "errors.situations.renderFailed.body"
 msgstr ""
 
 msgid "errors.situations.folderMissing.title"

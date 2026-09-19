@@ -2,6 +2,7 @@ import { act, fireEvent, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { inMemoryExternalDestinationOpener } from "../desktop/externalDestination";
+import { RenderErrorBoundary } from "../errors/RenderErrorBoundary";
 import type { Certificate } from "../signing/certificate";
 import { renderWithCatalog } from "../testing/render";
 import type { Errand, ErrandStage, SiteDocument, SiteErrandPort } from "./errand";
@@ -905,6 +906,45 @@ describe("SedeWindow", () => {
       await user.click(screen.getByRole("button", { name: "Volver a buscar" }));
 
       expect(calls.lookAgain).toHaveBeenCalledOnce();
+    });
+  });
+
+  describe("when a child throws", () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+      // React registra el fallo en la consola además de pasarlo al boundary.
+      vi.spyOn(console, "error").mockImplementation(() => {});
+    });
+    afterEach(() => {
+      vi.useRealTimers();
+      vi.restoreAllMocks();
+    });
+
+    it("shows the failure screen instead of closing itself", async () => {
+      // `SedeConsent` da por hecho que `certificates` existe desde su primera
+      // línea: es el hijo más sencillo de hacer lanzar sin tocar su código.
+      const { port, calls } = scriptedErrand({
+        kind: "consent",
+        document: null,
+        signs: null,
+        signing: "pdf",
+        items: null,
+        certificates: undefined as unknown as Certificate[],
+        narrowed: false,
+      });
+      renderWithCatalog(
+        <RenderErrorBoundary>
+          <SedeWindow errands={port} />
+        </RenderErrorBoundary>,
+      );
+
+      expect(screen.getByRole("alert")).toBeInTheDocument();
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+      await elapse(OUTCOME_CLOSE_MS * 2);
+
+      expect(calls.close).not.toHaveBeenCalled();
+      expect(screen.getByRole("alert")).toBeInTheDocument();
     });
   });
 

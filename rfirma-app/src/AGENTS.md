@@ -103,6 +103,7 @@ rojo.
 | **`errors/`** | Los fallos que ve el usuario. |
 | `errors/classify.ts` | El fallo como situación, no como mensaje. |
 | `errors/ErrorNotice.tsx` | El aviso. |
+| `errors/RenderErrorBoundary.tsx` | El *error boundary* de cada ventana: si un hijo lanza al pintarse, esto es lo que se ve en su lugar. |
 | **`design-system/`** | `design-system/icons.tsx`, copiados en línea de los artboards. |
 | **`desktop/`** | El escritorio de la persona, en el lado de la interfaz. |
 | `desktop/externalDestination.ts` | El puerto que abre destinos web externos en el navegador, y su doble. Sin React. |
