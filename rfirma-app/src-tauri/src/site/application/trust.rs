@@ -192,6 +192,48 @@ fn settle(
     })
 }
 
+/// Si la CA local vigente es de confianza en un perfil, medido sin escribir (ADR-0005).
+pub struct ProfileTrust {
+    /// Perfil NSS medido.
+    pub profile: PathBuf,
+    /// Si la CA local vigente tiene los bits de confianza TLS en ese perfil.
+    pub trusted: bool,
+}
+
+/// Mide, sin escribir, si la CA local vigente es de confianza en cada perfil (ID-346).
+pub fn measure_local_ca_trust(
+    store: &dyn LocalCaSlots,
+    profiles: &[PathBuf],
+    stores: &dyn TrustStores,
+) -> Result<Vec<ProfileTrust>, TlsError> {
+    let Some(serving) = store.serving()? else {
+        return Ok(profiles
+            .iter()
+            .map(|profile| ProfileTrust {
+                profile: profile.clone(),
+                trusted: false,
+            })
+            .collect());
+    };
+    let der = serving.certificate().to_der().map_err(|error| {
+        TlsError::new(
+            TlsSituation::MaterialDamaged,
+            format!("el certificado de la CA local no sale en DER: {error}"),
+        )
+    })?;
+    Ok(profiles
+        .iter()
+        .map(|profile| ProfileTrust {
+            profile: profile.clone(),
+            trusted: stores
+                .trust_of(profile, &der)
+                .ok()
+                .flatten()
+                .is_some_and(is_trusted_ssl_ca),
+        })
+        .collect())
+}
+
 fn settle_one(stores: &dyn TrustStores, profile: &Path, der: &[u8]) -> Result<bool, TrustError> {
     if stores
         .trust_of(profile, der)?

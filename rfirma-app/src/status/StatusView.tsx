@@ -7,6 +7,8 @@ import {
   AlertIcon,
   CheckCircleIcon,
   CheckingIcon,
+  ChevronDownIcon,
+  ChevronRightIcon,
   CrossCircleIcon,
   NotApplicableIcon,
 } from "../design-system/icons";
@@ -15,7 +17,14 @@ import type {
   ExternalDestinationOpener,
 } from "../desktop/externalDestination";
 import { unavailableExternalDestinationOpener } from "../desktop/externalDestination";
-import { memoryStatus, type Signal, type SignalRow, type StatusPort, type Verdict } from "./status";
+import {
+  memoryStatus,
+  type Signal,
+  type SignalRow,
+  type StatusPort,
+  type StoreBrand,
+  type Verdict,
+} from "./status";
 
 interface StatusViewProps {
   onClose: () => void;
@@ -31,6 +40,19 @@ export function StatusView({
   const { t } = useTranslation();
   const [rows, setRows] = useState<SignalRow[]>([]);
   const [isRechecking, setIsRechecking] = useState(false);
+  const [expandedDetail, setExpandedDetail] = useState<Set<Signal>>(new Set());
+
+  const toggleDetail = useCallback((signal: Signal) => {
+    setExpandedDetail((current) => {
+      const next = new Set(current);
+      if (next.has(signal)) {
+        next.delete(signal);
+      } else {
+        next.add(signal);
+      }
+      return next;
+    });
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -63,6 +85,7 @@ export function StatusView({
         ...row,
         verdict: "checking",
         action: null,
+        detail: null,
       })),
     );
     statusPort.recheck().then((updatedRows) => {
@@ -79,7 +102,7 @@ export function StatusView({
       }
       setRows((current) =>
         current.map((r) =>
-          r.signal === row.signal ? { ...r, verdict: "checking", action: null } : r,
+          r.signal === row.signal ? { ...r, verdict: "checking", action: null, detail: null } : r,
         ),
       );
       statusPort.recheck().then((updatedRows) => {
@@ -153,6 +176,46 @@ export function StatusView({
                 )}
               </div>
             </div>
+
+            {row.detail && (
+              <div className="status-view__detail">
+                <button
+                  type="button"
+                  className="rf-btn rf-btn--ghost status-view__detail-toggle"
+                  aria-expanded={expandedDetail.has(row.signal)}
+                  aria-controls={`status-view__detail-${row.signal}`}
+                  onClick={() => toggleDetail(row.signal)}
+                >
+                  {expandedDetail.has(row.signal) ? (
+                    <ChevronDownIcon size={14} />
+                  ) : (
+                    <ChevronRightIcon size={14} />
+                  )}
+                  {t("status.detail.toggle")}
+                </button>
+
+                {expandedDetail.has(row.signal) && (
+                  <ul id={`status-view__detail-${row.signal}`} className="status-view__detail-list">
+                    {row.detail.map((store, index) => (
+                      // biome-ignore lint/suspicious/noArrayIndexKey: la vista no trae la ruta del almacén, solo su marca, y el orden no cambia entre pintadas.
+                      <li key={`${store.brand}-${index}`} className="status-view__detail-item">
+                        {store.trusted ? (
+                          <CheckCircleIcon size={14} />
+                        ) : (
+                          <CrossCircleIcon size={14} />
+                        )}
+                        <span className="rf-prose">{storeBrandLabel(t, store.brand)}</span>
+                        <span className="rf-body status-view__detail-note">
+                          {store.trusted
+                            ? t("status.detail.trusted")
+                            : t("status.detail.untrusted")}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
           </div>
         ))}
       </div>
@@ -189,8 +252,9 @@ function signalLabel(t: TFunction, signal: Signal): string {
       return t("status.signals.version");
     case "userCertificates":
       return t("status.signals.userCertificates");
-    case "siteSignature":
     case "localCaCertificate":
+      return t("status.signals.localCaCertificate");
+    case "siteSignature":
       return "";
   }
 }
@@ -199,14 +263,29 @@ function valueLabel(t: TFunction, row: SignalRow): string {
   switch (row.signal) {
     case "version":
     case "siteSignature":
-    case "localCaCertificate":
       return row.value;
+    case "localCaCertificate": {
+      if (row.value === "") return "";
+      const [trusted, total] = row.value.split("/").map(Number);
+      return t("status.values.localCaCertificate", { count: total, trusted });
+    }
     case "userCertificates": {
       const count = Number(row.value);
       return count === 0
         ? t("status.values.userCertificates.none")
         : t("status.values.userCertificates.stores", { count });
     }
+  }
+}
+
+function storeBrandLabel(t: TFunction, brand: StoreBrand): string {
+  switch (brand) {
+    case "firefox":
+      return t("status.storeBrands.firefox");
+    case "chrome":
+      return t("status.storeBrands.chrome");
+    case "nssdb":
+      return t("status.storeBrands.nssdb");
   }
 }
 

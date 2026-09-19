@@ -68,7 +68,9 @@ crossing! {
     }
 }
 
-use crate::desktop::domain::status::{ActionKind, Signal, SignalRow, StatusAction, Verdict};
+use crate::desktop::domain::status::{
+    ActionKind, Signal, SignalRow, StatusAction, StoreBrand, StoreDetail, Verdict,
+};
 
 crossing! {
     /// Fila de estado de una señal para la ventana.
@@ -83,6 +85,8 @@ crossing! {
         pub verdict: Verdict,
         /// Acción disponible si la hay.
         pub action: Option<StatusActionView>,
+        /// Detalle por almacén, para señales que lo despliegan.
+        pub detail: Option<Vec<StoreDetailView>>,
     }
 }
 
@@ -93,7 +97,40 @@ impl From<SignalRow> for SignalRowView {
             value: row.value,
             verdict: row.verdict,
             action: row.action.map(StatusActionView::from),
+            detail: row
+                .detail
+                .map(|detail| detail.into_iter().map(StoreDetailView::from).collect()),
         }
+    }
+}
+
+crossing! {
+    /// Un almacén, con su marca y si la señal es de confianza en él.
+    #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+    #[serde(rename_all = "camelCase")]
+    pub struct StoreDetailView {
+        /// Marca del almacén.
+        pub brand: StoreBrand,
+        /// Si la señal es de confianza en este almacén.
+        pub trusted: bool,
+    }
+}
+
+impl From<StoreDetail> for StoreDetailView {
+    fn from(detail: StoreDetail) -> Self {
+        Self {
+            brand: detail.brand,
+            trusted: detail.trusted,
+        }
+    }
+}
+
+crossing! {
+    lent from "desktop/domain/status.rs":
+    pub enum StoreBrand {
+        Firefox,
+        Chrome,
+        Nssdb,
     }
 }
 

@@ -5,7 +5,9 @@ use std::time::SystemTime;
 use crate::desktop::application::version::{ask_and_remember, fresh_answer, ReleaseFeed, Version};
 use crate::desktop::domain::channel::Channel;
 use crate::desktop::domain::destination::{CERTIFICATE_ISSUANCE, RELEASES, REPOSITORY};
-use crate::desktop::domain::status::{ActionKind, Signal, SignalRow, StatusAction, Verdict};
+use crate::desktop::domain::status::{
+    ActionKind, Signal, SignalRow, StatusAction, StoreDetail, Verdict,
+};
 use crate::desktop::ports::VersionMemory;
 
 /// Destino de actualización que corresponde al canal de distribución.
@@ -29,6 +31,7 @@ pub fn evaluate_version_signal(
             value: running.to_string(),
             verdict: Verdict::Checking,
             action: None,
+            detail: None,
         };
     }
 
@@ -41,6 +44,7 @@ pub fn evaluate_version_signal(
                 kind: ActionKind::Link,
                 target: update_destination_for(channel).to_string(),
             }),
+            detail: None,
         }
     } else {
         SignalRow {
@@ -48,6 +52,7 @@ pub fn evaluate_version_signal(
             value: running.to_string(),
             verdict: Verdict::Correct,
             action: None,
+            detail: None,
         }
     }
 }
@@ -83,6 +88,7 @@ pub fn evaluate_user_certificates_signal(stores_with_certificates: usize) -> Sig
                 kind: ActionKind::Link,
                 target: CERTIFICATE_ISSUANCE.to_string(),
             }),
+            detail: None,
         }
     } else {
         SignalRow {
@@ -90,7 +96,40 @@ pub fn evaluate_user_certificates_signal(stores_with_certificates: usize) -> Sig
             value: stores_with_certificates.to_string(),
             verdict: Verdict::Correct,
             action: None,
+            detail: None,
         }
+    }
+}
+
+/// Fila de la señal del certificado de rFirma mientras se mide fuera del hilo de la interfaz.
+pub fn checking_local_ca_certificate_signal() -> SignalRow {
+    SignalRow {
+        signal: Signal::LocalCaCertificate,
+        value: String::new(),
+        verdict: Verdict::Checking,
+        action: None,
+        detail: None,
+    }
+}
+
+/// Evalúa el estado de la señal del certificado de rFirma a partir del detalle por almacén.
+pub fn evaluate_local_ca_certificate_signal(detail: Vec<StoreDetail>) -> SignalRow {
+    let total = detail.len();
+    let trusted = detail.iter().filter(|store| store.trusted).count();
+    let verdict = if trusted == total && total > 0 {
+        Verdict::Correct
+    } else if trusted == 0 {
+        Verdict::Incorrect
+    } else {
+        Verdict::Attention
+    };
+
+    SignalRow {
+        signal: Signal::LocalCaCertificate,
+        value: format!("{trusted}/{total}"),
+        verdict,
+        action: None,
+        detail: Some(detail),
     }
 }
 

@@ -850,6 +850,9 @@ msgstr "Versió"
 msgid "status.signals.userCertificates"
 msgstr "Els teus certificats"
 
+msgid "status.signals.localCaCertificate"
+msgstr "Certificat de rFirma"
+
 msgid "status.verdicts.correct"
 msgstr "Correcte"
 
@@ -880,6 +883,31 @@ msgid_plural "status.values.userCertificates.stores"
 msgstr[0] "1 magatzem"
 msgstr[1] "{{count}} magatzems"
 msgstr[2] "{{count}} magatzems"
+
+#. Cuántos almacenes de confianza tienen ya el certificado de rFirma, de cuántos detectados.
+msgid "status.values.localCaCertificate"
+msgid_plural "status.values.localCaCertificate"
+msgstr[0] "{{trusted}} d'1 magatzem"
+msgstr[1] "{{trusted}} de {{count}} magatzems"
+msgstr[2] "{{trusted}} de {{count}} magatzems"
+
+msgid "status.detail.toggle"
+msgstr "Veure magatzems"
+
+msgid "status.detail.trusted"
+msgstr "De confiança"
+
+msgid "status.detail.untrusted"
+msgstr "No de confiança"
+
+msgid "status.storeBrands.firefox"
+msgstr "Firefox"
+
+msgid "status.storeBrands.chrome"
+msgstr "Chrome i Chromium"
+
+msgid "status.storeBrands.nssdb"
+msgstr "Magatzem del sistema"
 
 msgid "preferences.title"
 msgstr "Preferències"

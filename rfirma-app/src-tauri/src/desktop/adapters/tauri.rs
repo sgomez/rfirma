@@ -5,12 +5,15 @@ use tauri::State;
 use crate::desktop::DesktopRoot;
 use crate::documents::DocumentsRoot;
 use crate::identity::IdentityRoot;
+use crate::site::SiteRoot;
 
 use super::registry::DesktopRegistry;
 use super::views::{NewVersionView, SignalRowView, UrlHandlersView};
 use crate::crossing::Failure;
 use crate::desktop::domain::error::{DesktopError, Situation};
+use crate::desktop::domain::status::{StoreBrand, StoreDetail};
 use crate::documents::adapters::views::DroppedDocumentView;
+use crate::identity::domain::store::{Store, StoreClass};
 
 /// Documento con el que se invocó la aplicación si lo hubo.
 #[tauri::command]
@@ -78,11 +81,41 @@ pub fn open_external_destination(
     .map_err(|error| Failure::new("unknownDestination", error.to_string()))
 }
 
+/// Marca del almacén NSS de un perfil, para el detalle de la señal del certificado de rFirma.
+fn brand_of(profile: &std::path::Path) -> StoreBrand {
+    match Store::nss(std::path::PathBuf::new(), profile).class() {
+        StoreClass::Firefox => StoreBrand::Firefox,
+        StoreClass::Chrome => StoreBrand::Chrome,
+        StoreClass::Nssdb | StoreClass::Card | StoreClass::Installed => StoreBrand::Nssdb,
+    }
+}
+
+/// Mide la señal del certificado de rFirma, o la deja en «Comprobando» si no se pide remedir.
+fn local_ca_certificate_signal(
+    site: &SiteRoot,
+    recheck: bool,
+) -> crate::desktop::domain::status::SignalRow {
+    if !recheck {
+        return crate::desktop::application::status::checking_local_ca_certificate_signal();
+    }
+    let detail = site
+        .measure_local_ca_trust()
+        .unwrap_or_default()
+        .into_iter()
+        .map(|reading| StoreDetail {
+            brand: brand_of(&reading.profile),
+            trusted: reading.trusted,
+        })
+        .collect();
+    crate::desktop::application::status::evaluate_local_ca_certificate_signal(detail)
+}
+
 /// Consulta el estado de las señales de la instalación para el panel de estado.
 #[tauri::command(async)]
 pub fn read_status(
     desktop: State<'_, DesktopRoot>,
     identity: State<'_, IdentityRoot>,
+    site: State<'_, SiteRoot>,
     recheck: bool,
 ) -> Vec<SignalRowView> {
     let channel = crate::desktop::adapters::channel::Channel::detected();
@@ -96,6 +129,7 @@ pub fn read_status(
             std::time::SystemTime::now(),
         )
         .into(),
+        local_ca_certificate_signal(&site, recheck).into(),
         crate::desktop::application::status::evaluate_user_certificates_signal(
             identity.stores_with_certificates(),
         )

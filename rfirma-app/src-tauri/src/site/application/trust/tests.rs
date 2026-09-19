@@ -353,3 +353,57 @@ fn one_missed_profile_among_others_only_reports_the_miss() {
     assert!(lines[0].contains("reinicia el navegador"));
     assert!(lines[1].contains("1 almacén(es) NSS"));
 }
+
+#[test]
+fn measuring_does_not_write_and_reports_untrusted_when_nowhere_installed() {
+    let ca = LocalCa::generate().expect("deberia generarse");
+    let store = InMemoryCaSlots::unwritable_serving(ca);
+    let profiles = profiles();
+    let stores = Doubled::with_profiles(&[&profiles[0], &profiles[1]]);
+
+    let readings = measure_local_ca_trust(&store, &profiles, &stores).expect("deberia medirse");
+
+    assert!(readings.iter().all(|reading| !reading.trusted));
+    assert!(stores.inside(&profiles[0]).is_empty());
+    assert!(stores.inside(&profiles[1]).is_empty());
+}
+
+#[test]
+fn measuring_reports_trusted_only_where_the_certificate_is_already_installed() {
+    let ca = LocalCa::generate().expect("deberia generarse");
+    let der = der_of(&ca);
+    let store = InMemoryCaSlots::unwritable_serving(ca);
+    let profiles = profiles();
+    let stores = Doubled::with_profiles(&[&profiles[0], &profiles[1]]);
+    stores
+        .install(&profiles[0], &der, COMMON_NAME)
+        .expect("el doble deja instalar en la preparacion");
+
+    let readings = measure_local_ca_trust(&store, &profiles, &stores).expect("deberia medirse");
+
+    assert!(
+        readings
+            .iter()
+            .find(|reading| reading.profile == profiles[0])
+            .expect("perfil presente")
+            .trusted
+    );
+    assert!(
+        !readings
+            .iter()
+            .find(|reading| reading.profile == profiles[1])
+            .expect("perfil presente")
+            .trusted
+    );
+}
+
+#[test]
+fn measuring_without_a_serving_ca_reports_every_profile_untrusted() {
+    let store = a_store();
+    let profiles = profiles();
+    let stores = Doubled::with_profiles(&[&profiles[0], &profiles[1]]);
+
+    let readings = measure_local_ca_trust(&store, &profiles, &stores).expect("deberia medirse");
+
+    assert!(readings.iter().all(|reading| !reading.trusted));
+}

@@ -840,6 +840,9 @@ msgstr "Versión"
 msgid "status.signals.userCertificates"
 msgstr "Os teus certificados"
 
+msgid "status.signals.localCaCertificate"
+msgstr "Certificado de rFirma"
+
 msgid "status.verdicts.correct"
 msgstr "Correcto"
 
@@ -870,6 +873,31 @@ msgid_plural "status.values.userCertificates.stores"
 msgstr[0] "1 almacén"
 msgstr[1] "{{count}} almacéns"
 msgstr[2] "{{count}} almacéns"
+
+#. Cuántos almacenes de confianza tienen ya el certificado de rFirma, de cuántos detectados.
+msgid "status.values.localCaCertificate"
+msgid_plural "status.values.localCaCertificate"
+msgstr[0] "{{trusted}} de 1 almacén"
+msgstr[1] "{{trusted}} de {{count}} almacéns"
+msgstr[2] "{{trusted}} de {{count}} almacéns"
+
+msgid "status.detail.toggle"
+msgstr "Ver almacéns"
+
+msgid "status.detail.trusted"
+msgstr "De confianza"
+
+msgid "status.detail.untrusted"
+msgstr "Non de confianza"
+
+msgid "status.storeBrands.firefox"
+msgstr "Firefox"
+
+msgid "status.storeBrands.chrome"
+msgstr "Chrome e Chromium"
+
+msgid "status.storeBrands.nssdb"
+msgstr "Almacén do sistema"
 
 msgid "preferences.title"
 msgstr "Preferencias"

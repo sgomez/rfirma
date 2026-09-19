@@ -8,6 +8,13 @@ export type Verdict = "correct" | "attention" | "incorrect" | "notApplicable" | 
 
 export type ActionKind = "repair" | "choice" | "link";
 
+export type StoreBrand = "firefox" | "chrome" | "nssdb";
+
+export interface StoreDetail {
+  brand: StoreBrand;
+  trusted: boolean;
+}
+
 export interface StatusAction {
   kind: ActionKind;
   target: string;
@@ -18,6 +25,7 @@ export interface SignalRow {
   value: string;
   verdict: Verdict;
   action: StatusAction | null;
+  detail: StoreDetail[] | null;
 }
 
 export interface StatusPort {
@@ -35,6 +43,7 @@ export function memoryStatus(
       value: "0.4.1",
       verdict: "correct",
       action: null,
+      detail: null,
     },
   ],
   recheckRows?: SignalRow[],
