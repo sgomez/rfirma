@@ -102,6 +102,10 @@
   color: var(--rf-text-muted);
 }
 
+.header__entryIcon--attention {
+  color: var(--rf-text);
+}
+
 .header__divider {
   margin: 4px 0;
   width: 100%;

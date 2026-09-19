@@ -31,17 +31,30 @@ interface StatusViewProps {
   onClose: () => void;
   statusPort?: StatusPort;
   externalDestinations?: ExternalDestinationOpener;
+  /**
+   * Se llama con las filas de cada remedición propia —al abrirse, tras una
+   * acción, con «Volver a comprobar»—, para quien más allá del panel también
+   * necesite saberlas (el triángulo del menú, ID-353).
+   */
+  onRowsChange?: (rows: SignalRow[]) => void;
 }
 
 export function StatusView({
   onClose,
   statusPort = memoryStatus(),
   externalDestinations = unavailableExternalDestinationOpener(),
+  onRowsChange,
 }: StatusViewProps) {
   const { t } = useTranslation();
   const [rows, setRows] = useState<SignalRow[]>([]);
   const [isRechecking, setIsRechecking] = useState(false);
   const [expandedDetail, setExpandedDetail] = useState<Set<Signal>>(new Set());
+
+  // Cada remedición propia —al abrirse, tras una acción, con «Volver a
+  // comprobar»— cambia `rows`, y eso es lo que se reenvía hacia fuera.
+  useEffect(() => {
+    onRowsChange?.(rows);
+  }, [rows, onRowsChange]);
 
   const toggleDetail = useCallback((signal: Signal) => {
     setExpandedDetail((current) => {

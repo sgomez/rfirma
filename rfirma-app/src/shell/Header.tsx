@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ExternalLinkIcon, MenuIcon } from "../design-system/icons";
+import { AlertIcon, ExternalLinkIcon, MenuIcon } from "../design-system/icons";
 import type { Badge } from "../documents/document";
 import "./Header.css";
 import type { MenuAnchor } from "./menuAnchor";
@@ -14,6 +14,12 @@ interface HeaderProps {
   status: Badge | null;
   /** Dónde va el menú. Ver [`MenuAnchor`]. */
   menuAnchor: MenuAnchor;
+  /**
+   * Si «Estado de rFirma» lleva el triángulo de aviso: certificado de rFirma
+   * ausente o a medias, o nadie atendiendo las sedes
+   * (docs/design/cabecera.md, sección «El aviso»).
+   */
+  hasAttention?: boolean;
   onOpenStatus: () => void;
   onOpenPreferences: () => void;
   onOpenHelp: () => void;
@@ -40,6 +46,7 @@ interface HeaderProps {
 export function Header({
   status,
   menuAnchor,
+  hasAttention = false,
   onOpenStatus,
   onOpenPreferences,
   onOpenHelp,
@@ -111,7 +118,20 @@ export function Header({
                   onClick={choose(onOpenStatus)}
                 >
                   <span className="header__entryLabel">{t("header.status")}</span>
-                  <span className="header__entryIcon" aria-hidden="true" />
+                  <span
+                    className={
+                      hasAttention
+                        ? "header__entryIcon header__entryIcon--attention"
+                        : "header__entryIcon"
+                    }
+                    aria-hidden={!hasAttention}
+                  >
+                    {hasAttention && (
+                      <span role="img" aria-label={t("header.statusAttention")}>
+                        <AlertIcon size={14} />
+                      </span>
+                    )}
+                  </span>
                 </button>
                 <hr className="rf-divider header__divider" />
                 <button

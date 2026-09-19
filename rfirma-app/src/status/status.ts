@@ -51,6 +51,25 @@ export interface StatusPort {
   chooseSiteSignatureHandler(handlerId: string): Promise<SignalRow[]>;
 }
 
+/**
+ * Si el triángulo de aviso del botón de menú debe encenderse: regla propia,
+ * no «alguna fila en Atención» (docs/design/cabecera.md, sección «El aviso»).
+ * Solo enciende el certificado de rFirma ausente o a medias, y `Sin
+ * configurar` en Firma en sedes; que las sedes abran otro programa es una
+ * elección legítima, no una avería.
+ */
+export function hasMenuAttention(rows: SignalRow[]): boolean {
+  return rows.some((row) => {
+    if (row.signal === "localCaCertificate") {
+      return row.verdict === "attention" || row.verdict === "incorrect";
+    }
+    if (row.signal === "siteSignature") {
+      return row.verdict === "attention" && row.value === "";
+    }
+    return false;
+  });
+}
+
 /** Doble en memoria para pruebas de la interfaz. */
 export function memoryStatus(
   initialRows: SignalRow[] = [
