@@ -796,6 +796,9 @@ msgstr ""
 msgid "status.actions.useRfirma"
 msgstr ""
 
+msgid "status.actions.withdraw"
+msgstr ""
+
 msgid "status.values.siteSignature.notConfigured"
 msgstr ""
 
@@ -838,6 +841,42 @@ msgid "status.storeBrands.nssdb"
 msgstr ""
 
 msgid "status.notices.restartFirefox"
+msgstr ""
+
+msgid "status.withdrawal.title.question"
+msgstr ""
+
+msgid "status.withdrawal.title.working"
+msgstr ""
+
+msgid "status.withdrawal.title.done"
+msgstr ""
+
+msgid "status.withdrawal.title.partial"
+msgstr ""
+
+msgid "status.withdrawal.body.certificate"
+msgstr ""
+
+msgid "status.withdrawal.body.handler"
+msgstr ""
+
+msgid "status.withdrawal.hint"
+msgstr ""
+
+msgid "status.withdrawal.confirm"
+msgstr ""
+
+msgid "status.withdrawal.waiting"
+msgstr ""
+
+msgid "status.withdrawal.outcome.withdrawn"
+msgstr ""
+
+msgid "status.withdrawal.retry"
+msgstr ""
+
+msgid "status.withdrawal.restartBrowserNotice"
 msgstr ""
 
 msgid "preferences.title"

@@ -874,6 +874,9 @@ msgstr "Instal·lar"
 msgid "status.actions.useRfirma"
 msgstr "Usar rFirma"
 
+msgid "status.actions.withdraw"
+msgstr "Retira…"
+
 msgid "status.values.siteSignature.notConfigured"
 msgstr "Sense configurar"
 
@@ -917,6 +920,42 @@ msgstr "Magatzem del sistema"
 
 msgid "status.notices.restartFirefox"
 msgstr "Reinicia el Firefox perquè tingui efecte."
+
+msgid "status.withdrawal.title.question"
+msgstr "Retira el certificat de rFirma"
+
+msgid "status.withdrawal.title.working"
+msgstr "Retirant…"
+
+msgid "status.withdrawal.title.done"
+msgstr "Certificat retirat"
+
+msgid "status.withdrawal.title.partial"
+msgstr "Retirat a mitges"
+
+msgid "status.withdrawal.body.certificate"
+msgstr "El certificat de rFirma, dels navegadors on sigui"
+
+msgid "status.withdrawal.body.handler"
+msgstr "Que les seus obrin rFirma"
+
+msgid "status.withdrawal.hint"
+msgstr "Es pot tornar a instal·lar des d'aquest panell."
+
+msgid "status.withdrawal.confirm"
+msgstr "Retira"
+
+msgid "status.withdrawal.waiting"
+msgstr "En espera"
+
+msgid "status.withdrawal.outcome.withdrawn"
+msgstr "Retirat"
+
+msgid "status.withdrawal.retry"
+msgstr "Torna-ho a provar"
+
+msgid "status.withdrawal.restartBrowserNotice"
+msgstr "Reinicia el navegador perquè deixi de confiar en el certificat retirat."
 
 msgid "preferences.title"
 msgstr "Preferències"

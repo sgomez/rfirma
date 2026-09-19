@@ -26,6 +26,7 @@ import {
   type StoreBrand,
   type Verdict,
 } from "./status";
+import { WithdrawCertificateDialog } from "./WithdrawCertificateDialog";
 
 interface StatusViewProps {
   onClose: () => void;
@@ -49,6 +50,7 @@ export function StatusView({
   const [rows, setRows] = useState<SignalRow[]>([]);
   const [isRechecking, setIsRechecking] = useState(false);
   const [expandedDetail, setExpandedDetail] = useState<Set<Signal>>(new Set());
+  const [isWithdrawing, setIsWithdrawing] = useState(false);
 
   // Cada remedición propia —al abrirse, tras una acción, con «Volver a
   // comprobar»— cambia `rows`, y eso es lo que se reenvía hacia fuera.
@@ -80,9 +82,11 @@ export function StatusView({
     };
   }, [statusPort]);
 
+  // El velo de la retirada atiende su propio Escape (WithdrawCertificateDialog);
+  // mientras está delante, uno que le llegue aquí no debe cerrar además el panel.
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !event.defaultPrevented) {
+      if (event.key === "Escape" && !event.defaultPrevented && !isWithdrawing) {
         onClose();
       }
     };
@@ -90,7 +94,7 @@ export function StatusView({
     return () => {
       window.removeEventListener("keydown", onKeyDown);
     };
-  }, [onClose]);
+  }, [onClose, isWithdrawing]);
 
   const handleRecheck = useCallback(() => {
     setIsRechecking(true);
@@ -173,6 +177,15 @@ export function StatusView({
     [externalDestinations, statusPort, handleChooseSiteSignatureHandler],
   );
 
+  // Al cerrar el velo de la retirada, el panel vuelve a medir: la verdad
+  // sigue viviendo en la tabla, no en el diálogo.
+  const handleWithdrawalDialogClose = useCallback(() => {
+    setIsWithdrawing(false);
+    handleRecheck();
+  }, [handleRecheck]);
+
+  const localCaCertificateRow = rows.find((row) => row.signal === "localCaCertificate");
+
   return (
     <section className="status-view" aria-label={t("status.title")}>
       <div className="status-view__header">
@@ -239,14 +252,24 @@ export function StatusView({
               </div>
 
               <div className="status-view__cell-action">
-                {row.action && (
+                {row.signal === "localCaCertificate" && row.verdict === "correct" ? (
                   <button
                     type="button"
                     className="rf-btn rf-btn--secondary status-view__action-btn"
-                    onClick={() => handleAction(row)}
+                    onClick={() => setIsWithdrawing(true)}
                   >
-                    {actionLabel(t, row)}
+                    {t("status.actions.withdraw")}
                   </button>
+                ) : (
+                  row.action && (
+                    <button
+                      type="button"
+                      className="rf-btn rf-btn--secondary status-view__action-btn"
+                      onClick={() => handleAction(row)}
+                    >
+                      {actionLabel(t, row)}
+                    </button>
+                  )
                 )}
               </div>
             </div>
@@ -309,6 +332,14 @@ export function StatusView({
           {t("actions.close")}
         </button>
       </div>
+
+      {isWithdrawing && (
+        <WithdrawCertificateDialog
+          stores={localCaCertificateRow?.detail ?? []}
+          onWithdraw={statusPort.withdrawRfirma}
+          onClose={handleWithdrawalDialogClose}
+        />
+      )}
     </section>
   );
 }

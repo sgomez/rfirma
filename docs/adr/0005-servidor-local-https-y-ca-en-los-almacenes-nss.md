@@ -113,10 +113,11 @@ pararlo para pedir que reinicie el navegador y vuelva a empezar. En el primer ar
 reiniciar el navegador no le cuesta nada a nadie.
 
 Se narra mientras se hace, se avisa después de que reinicie el navegador, y **queda visible
-y retirable en Preferencias con su fecha de caducidad a la vista**. **No hay diálogo de
-permiso previo**: el navegador ya interrumpe ese flujo con un permiso real e ineludible —el
-de Local Network Access, abajo—, así que el nuestro dejaría de ser el guardián y pasaría a
-ser ruido delante del guardián.
+y retirable en el panel de estado**, en la fila que informa del certificado (§ *La retirada,
+decidida antes que la instalación*, punto 5). **No hay diálogo de permiso previo**: el
+navegador ya interrumpe ese flujo con un permiso real e ineludible —el de Local Network
+Access, abajo—, así que el nuestro dejaría de ser el guardián y pasaría a ser ruido delante
+del guardián.
 
 **rfirma no mata el navegador de nadie.** AutoFirma lo hace desde su `preinst` y su `prerm`
 (`pkill firefox`, como `root`, sin aviso), y el
@@ -155,8 +156,10 @@ correctamente las preferencias» y el comentario se reescribió un año después
    sólo existe **reparar y volver a empezar**, y se dice así, sin fingir lo otro. Lo que eso
    implica a mitad de un trámite, en § *A mitad de un trámite no se toca la CA*.
 
-5. **Retirada explícita desde Preferencias**, siempre disponible. Con el solape puede haber **dos
-   CA locales vivas a la vez**, y la retirada **tiene que llevarse las dos**.
+5. **Retirada explícita desde el panel de estado**, siempre disponible: cuelga de la señal
+   `Certificado de rFirma`, no de Preferencias, donde estaba prevista al principio. Con el
+   solape puede haber **dos CA locales vivas a la vez**, y la retirada **tiene que llevarse
+   las dos**.
 
 6. **Borrado por huella del certificado, nunca por *nickname*.** Es literalmente el fallo
    medido en el #225: hay CA huérfanas de AutoFirma marcadas `CT,C,C` y válidas hasta 2033
@@ -235,7 +238,7 @@ caduca.
 **Instalar solo añade.** En el registro no hay ninguna llamada que borre, y esa ausencia *es*
 el solape: instalar la siguiente deja la vigente donde estaba. El #326 midió que dos
 certificados de confianza con el mismo sujeto conviven en Firefox y en Chrome, en cualquier
-orden. La retirada, cuando se escriba desde Preferencias, va aparte y por huella (§ *La
+orden. La retirada, disparada desde el panel de estado, va aparte y por huella (§ *La
 retirada*, punto 6).
 
 **Las dos CA locales llevan el mismo apodo**, a propósito: en NSS el apodo va con el

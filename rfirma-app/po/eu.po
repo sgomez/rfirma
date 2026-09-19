@@ -882,6 +882,9 @@ msgstr "Instalatu"
 msgid "status.actions.useRfirma"
 msgstr "Erabili rFirma"
 
+msgid "status.actions.withdraw"
+msgstr "Kendu…"
+
 msgid "status.values.siteSignature.notConfigured"
 msgstr "Konfiguratu gabe"
 
@@ -925,6 +928,42 @@ msgstr "Sistemaren biltegia"
 
 msgid "status.notices.restartFirefox"
 msgstr "Berrabiarazi Firefox eragina izan dezan."
+
+msgid "status.withdrawal.title.question"
+msgstr "rFirma-ren ziurtagiria kendu"
+
+msgid "status.withdrawal.title.working"
+msgstr "Kentzen…"
+
+msgid "status.withdrawal.title.done"
+msgstr "Ziurtagiria kenduta"
+
+msgid "status.withdrawal.title.partial"
+msgstr "Erdizka kenduta"
+
+msgid "status.withdrawal.body.certificate"
+msgstr "rFirma-ren ziurtagiria, dagoen nabigatzaileetatik"
+
+msgid "status.withdrawal.body.handler"
+msgstr "Egoitzek rFirma irekitzea"
+
+msgid "status.withdrawal.hint"
+msgstr "Panel honetatik berriro instala daiteke."
+
+msgid "status.withdrawal.confirm"
+msgstr "Kendu"
+
+msgid "status.withdrawal.waiting"
+msgstr "Zain"
+
+msgid "status.withdrawal.outcome.withdrawn"
+msgstr "Kenduta"
+
+msgid "status.withdrawal.retry"
+msgstr "Berriz saiatu"
+
+msgid "status.withdrawal.restartBrowserNotice"
+msgstr "Berrabiarazi nabigatzailea kendutako ziurtagiria fidagarritzat izateari utz diezaion."
 
 msgid "preferences.title"
 msgstr "Hobespenak"

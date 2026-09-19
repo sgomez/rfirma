@@ -37,6 +37,24 @@ export interface SignalRow {
   restartFirefoxNotice: boolean;
 }
 
+/** Qué pasó al retirar algo propio de rFirma de un sitio del sistema. */
+export type WithdrawalOutcome =
+  | { kind: "withdrawn" }
+  | { kind: "wasNotThere" }
+  | { kind: "failed"; reason: string };
+
+/** Un almacén NSS con el resultado de retirar de él la CA local de rFirma. */
+export interface StoreWithdrawal {
+  brand: StoreBrand;
+  outcome: WithdrawalOutcome;
+}
+
+/** Resultado de retirar rFirma: el manejador de sedes y la CA local de cada almacén. */
+export interface WithdrawalReport {
+  handler: WithdrawalOutcome;
+  stores: StoreWithdrawal[];
+}
+
 export interface StatusPort {
   /** Lee el estado actual de las señales de la instalación. */
   readStatus(): Promise<SignalRow[]>;
@@ -49,6 +67,11 @@ export interface StatusPort {
    * (ID-366). Devuelve las dos filas que la elección vuelve a medir.
    */
   chooseSiteSignatureHandler(handlerId: string): Promise<SignalRow[]>;
+  /**
+   * Retira lo que rFirma dejó fuera de sus carpetas: el manejador de sedes y
+   * la CA local de cada almacén NSS (ADR-0005).
+   */
+  withdrawRfirma(): Promise<WithdrawalReport>;
 }
 
 /**
@@ -86,6 +109,7 @@ export function memoryStatus(
   recheckRows?: SignalRow[],
   installedRow?: SignalRow,
   chosenRows?: SignalRow[],
+  withdrawalReport?: WithdrawalReport,
 ): StatusPort {
   let rows = [...initialRows];
   return {
@@ -114,5 +138,6 @@ export function memoryStatus(
       rows = rows.map((row) => chosen.find((updated) => updated.signal === row.signal) ?? row);
       return chosen;
     },
+    withdrawRfirma: async () => withdrawalReport ?? { handler: { kind: "withdrawn" }, stores: [] },
   };
 }
