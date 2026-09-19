@@ -5,7 +5,9 @@ use std::path::PathBuf;
 use crate::desktop::adapters::channel::{
     registered_handlers_for_scheme, Channel, RegisteredHandlers,
 };
-use crate::desktop::adapters::choice::{choose_handler_for_scheme, current_default_for_scheme};
+use crate::desktop::adapters::choice::{
+    choose_handler_for_scheme, current_default_for_scheme, remove_handler_for_scheme,
+};
 use crate::desktop::domain::error::DesktopError;
 use crate::desktop::domain::handlers::UrlHandler;
 use crate::desktop::ports::HandlerRegistry;
@@ -46,5 +48,9 @@ impl HandlerRegistry for DesktopRegistry {
     fn choose_for(&self, scheme: &str, handler: &str) -> Result<(), DesktopError> {
         choose_handler_for_scheme(self.channel, &self.list, scheme, handler)?;
         Ok(())
+    }
+
+    fn remove_for(&self, scheme: &str) -> Result<(), DesktopError> {
+        remove_handler_for_scheme(self.channel, &self.list, scheme)
     }
 }

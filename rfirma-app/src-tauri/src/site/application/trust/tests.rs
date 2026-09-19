@@ -425,3 +425,107 @@ fn measuring_without_a_serving_ca_reports_every_profile_untrusted() {
 
     assert!(readings.iter().all(|reading| !reading.trusted));
 }
+
+#[test]
+fn withdrawing_with_no_local_ca_touches_nothing() {
+    let store = a_store();
+    let profiles = profiles();
+    let stores = Doubled::with_profiles(&[&profiles[0], &profiles[1]]);
+
+    let outcome = withdraw_everywhere(&store, &profiles, &stores).expect("deberia retirarse");
+
+    assert!(outcome.results.is_empty());
+}
+
+#[test]
+fn withdrawing_removes_the_serving_ca_where_it_was_installed() {
+    let ca = LocalCa::generate().expect("deberia generarse");
+    let der = der_of(&ca);
+    let store = a_store();
+    store.write_serving(&ca).expect("deberia guardarse");
+    let profiles = profiles();
+    let stores = Doubled::with_profiles(&[&profiles[0], &profiles[1]]);
+    stores
+        .install(&profiles[0], &der, COMMON_NAME)
+        .expect("el doble deja instalar en la preparacion");
+
+    let outcome = withdraw_everywhere(&store, &profiles, &stores).expect("deberia retirarse");
+
+    assert_eq!(
+        outcome.results,
+        vec![
+            (profiles[0].clone(), StoreWithdrawal::Withdrawn),
+            (profiles[1].clone(), StoreWithdrawal::WasNotThere),
+        ]
+    );
+    assert!(stores.inside(&profiles[0]).is_empty());
+}
+
+#[test]
+fn withdrawing_also_searches_the_overlap_ca_by_fingerprint() {
+    let serving = LocalCa::generate().expect("deberia generarse");
+    let next = LocalCa::generate().expect("deberia generarse");
+    let store = a_store();
+    store.write_serving(&serving).expect("deberia guardarse");
+    store.write_next(&next).expect("deberia guardarse");
+    let profiles = profiles();
+    let stores = Doubled::with_profiles(&[&profiles[0]]);
+    stores
+        .install(&profiles[0], &der_of(&next), COMMON_NAME)
+        .expect("el doble deja instalar en la preparacion");
+
+    let outcome =
+        withdraw_everywhere(&store, &[profiles[0].clone()], &stores).expect("deberia retirarse");
+
+    assert_eq!(
+        outcome.results,
+        vec![(profiles[0].clone(), StoreWithdrawal::Withdrawn)]
+    );
+    assert!(stores.inside(&profiles[0]).is_empty());
+}
+
+#[test]
+fn withdrawing_everywhere_without_failures_empties_both_slots() {
+    let ca = LocalCa::generate().expect("deberia generarse");
+    let store = a_store();
+    store.write_serving(&ca).expect("deberia guardarse");
+    let profiles = profiles();
+    let stores = Doubled::with_profiles(&[&profiles[0], &profiles[1]]);
+
+    withdraw_everywhere(&store, &profiles, &stores).expect("deberia retirarse");
+
+    assert!(store.serving().expect("deberia leerse").is_none());
+    assert!(store.next().expect("deberia leerse").is_none());
+}
+
+#[test]
+fn a_failing_store_leaves_the_pem_slots_untouched_for_a_retry() {
+    let ca = LocalCa::generate().expect("deberia generarse");
+    let store = a_store();
+    store.write_serving(&ca).expect("deberia guardarse");
+    let profiles = profiles();
+    let stores = Doubled::with_profiles(&[&profiles[0], &profiles[1]]).refusing(&profiles[1]);
+
+    let outcome = withdraw_everywhere(&store, &profiles, &stores).expect("deberia retirarse");
+
+    assert!(matches!(outcome.results[1].1, StoreWithdrawal::Failed(_)));
+    assert!(store.serving().expect("deberia leerse").is_some());
+}
+
+#[test]
+fn retrying_only_the_failed_profile_finishes_the_job() {
+    let ca = LocalCa::generate().expect("deberia generarse");
+    let der = der_of(&ca);
+    let store = a_store();
+    store.write_serving(&ca).expect("deberia guardarse");
+    let profiles = profiles();
+    let stores = Doubled::with_profiles(&[&profiles[0], &profiles[1]]);
+    stores
+        .install(&profiles[1], &der, COMMON_NAME)
+        .expect("el doble deja instalar en la preparacion");
+
+    withdraw_everywhere(&store, &[profiles[1].clone()], &stores).expect("deberia retirarse");
+
+    assert!(stores.inside(&profiles[1]).is_empty());
+    assert!(store.serving().expect("deberia leerse").is_none());
+}

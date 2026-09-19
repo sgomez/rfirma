@@ -15,6 +15,9 @@ pub trait HandlerRegistry {
 
     /// Deja ese manejador como elegido para el esquema.
     fn choose_for(&self, scheme: &str, handler: &str) -> Result<(), DesktopError>;
+
+    /// Quita la clave del esquema, sin escribir ningún otro manejador en su lugar.
+    fn remove_for(&self, scheme: &str) -> Result<(), DesktopError>;
 }
 
 /// La última comprobación de versión, recordada entre sesiones y exenta de los interruptores (ADR-0010).

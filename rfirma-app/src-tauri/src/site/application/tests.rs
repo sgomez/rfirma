@@ -85,6 +85,12 @@ impl LocalCaSlots for InMemoryCaSlots {
         *crate::lock(&self.next) = None;
         Ok(())
     }
+
+    fn forget_serving(&self) -> Result<(), TlsError> {
+        self.writing()?;
+        *crate::lock(&self.serving) = None;
+        Ok(())
+    }
 }
 
 /// Los servlets del servidor intermedio en memoria: lo guardado por identificador, y las esperas pedidas.

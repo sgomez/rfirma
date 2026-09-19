@@ -16,7 +16,7 @@ use application::errand::ErrandDesk;
 pub use application::errand::LiveErrand;
 use application::site::CodecTable;
 use application::startup::{HeldChannel, LocalCaTrust};
-use application::trust::{ProfileTrust, TrustOutcome};
+use application::trust::{ProfileTrust, TrustOutcome, WithdrawOutcome};
 use domain::tls_error::TlsError;
 use domain::trust::Moment;
 
@@ -61,6 +61,15 @@ impl SiteRoot {
             &self.trust.profiles,
             self.trust.stores.as_ref(),
             Moment::Startup,
+        )
+    }
+
+    /// Retira la CA local de todos los almacenes NSS, y sus ranuras si ninguno ha fallado.
+    pub fn withdraw_local_ca_trust(&self) -> Result<WithdrawOutcome, TlsError> {
+        application::trust::withdraw_everywhere(
+            self.trust.store.as_ref(),
+            &self.trust.profiles,
+            self.trust.stores.as_ref(),
         )
     }
 }

@@ -150,6 +150,11 @@ impl LocalCaStore {
     pub fn forget_next(&self) -> Result<(), TlsError> {
         self.next.empty()
     }
+
+    /// Elimina la CA local vigente.
+    pub fn forget_serving(&self) -> Result<(), TlsError> {
+        self.serving.empty()
+    }
 }
 
 impl LocalCaSlots for LocalCaStore {
@@ -175,6 +180,10 @@ impl LocalCaSlots for LocalCaStore {
 
     fn forget_next(&self) -> Result<(), TlsError> {
         LocalCaStore::forget_next(self)
+    }
+
+    fn forget_serving(&self) -> Result<(), TlsError> {
+        LocalCaStore::forget_serving(self)
     }
 }
 

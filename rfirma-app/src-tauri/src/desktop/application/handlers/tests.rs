@@ -2,6 +2,7 @@ use super::*;
 use crate::desktop::adapters::channel::Channel;
 use crate::desktop::adapters::registry::DesktopRegistry;
 use crate::desktop::domain::error::Situation;
+use crate::desktop::domain::withdrawal::Withdrawal;
 use std::path::Path;
 
 fn a_registry(channel: Channel, list: &Path) -> DesktopRegistry {
@@ -58,4 +59,39 @@ fn choosing_inside_the_sandbox_fails_with_its_own_situation() {
 
     assert_eq!(failure.situation(), Situation::NotAvailableInsideTheSandbox);
     assert!(!failure.detail().is_empty());
+}
+
+#[test]
+fn withdrawing_our_own_choice_deletes_the_key_and_says_so() {
+    let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let list = directory.path().join("mimeapps.list");
+    chosen(&a_registry(Channel::Native, &list), OUR_DESKTOP_FILE).expect("deberia escribirse");
+
+    let outcome = withdrawn(&a_registry(Channel::Native, &list));
+
+    assert_eq!(outcome, Withdrawal::Withdrawn);
+    assert_eq!(
+        who_handles(&a_registry(Channel::Native, &list)).current,
+        None
+    );
+}
+
+#[test]
+fn withdrawing_when_nobody_had_chosen_us_says_there_was_nothing() {
+    let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let list = directory.path().join("mimeapps.list");
+
+    let outcome = withdrawn(&a_registry(Channel::Native, &list));
+
+    assert_eq!(outcome, Withdrawal::WasNotThere);
+}
+
+#[test]
+fn withdrawing_inside_the_sandbox_fails_with_its_own_situation() {
+    let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let list = directory.path().join("mimeapps.list");
+
+    let outcome = withdrawn(&a_registry(Channel::Flatpak, &list));
+
+    assert!(matches!(outcome, Withdrawal::Failed(_)));
 }

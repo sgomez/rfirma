@@ -6,3 +6,4 @@ pub mod error;
 pub mod handlers;
 pub mod status;
 pub mod version_check;
+pub mod withdrawal;
