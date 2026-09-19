@@ -20,16 +20,16 @@ pub fn profiles_to_retry(
 ) -> Vec<PathBuf> {
     profiles
         .iter()
-        .filter(|(_, brand)| {
+        .enumerate()
+        .filter(|(index, _)| {
             previous.is_none_or(|report| {
                 report
                     .stores
-                    .iter()
-                    .find(|store| store.brand == *brand)
+                    .get(*index)
                     .is_none_or(|store| store.outcome.failed())
             })
         })
-        .map(|(profile, _)| profile.clone())
+        .map(|(_, (profile, _))| profile.clone())
         .collect()
 }
 
@@ -43,10 +43,11 @@ pub fn merged_report(
 ) -> WithdrawalReport {
     let stores = profiles
         .iter()
-        .map(|(profile, brand)| {
+        .enumerate()
+        .map(|(index, (profile, brand))| {
             let outcome = retried.remove(profile).unwrap_or_else(|| {
                 previous
-                    .and_then(|report| report.stores.iter().find(|store| store.brand == *brand))
+                    .and_then(|report| report.stores.get(index))
                     .map(|store| store.outcome.clone())
                     .unwrap_or(Withdrawal::WasNotThere)
             });

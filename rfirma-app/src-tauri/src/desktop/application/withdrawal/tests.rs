@@ -58,6 +58,53 @@ fn retrying_only_touches_the_stores_that_failed() {
 }
 
 #[test]
+fn same_brand_profiles_are_correlated_by_position_not_by_brand() {
+    let working = (PathBuf::from("/profiles/nssdb-working"), StoreBrand::Nssdb);
+    let failing = (PathBuf::from("/profiles/nssdb-failing"), StoreBrand::Nssdb);
+    let previous = a_report(
+        Withdrawal::Withdrawn,
+        vec![
+            StoreWithdrawal {
+                brand: StoreBrand::Nssdb,
+                outcome: Withdrawal::Withdrawn,
+            },
+            StoreWithdrawal {
+                brand: StoreBrand::Nssdb,
+                outcome: Withdrawal::Failed("perfil en uso".to_owned()),
+            },
+        ],
+    );
+
+    let retry = profiles_to_retry(&[working.clone(), failing.clone()], Some(&previous));
+    assert_eq!(retry, vec![failing.0.clone()]);
+
+    let retried = HashMap::from([(failing.0.clone(), Withdrawal::Withdrawn)]);
+    let report = merged_report(
+        Withdrawal::Withdrawn,
+        &[working.clone(), failing.clone()],
+        retried,
+        Some(&previous),
+    );
+
+    assert_eq!(
+        report,
+        a_report(
+            Withdrawal::Withdrawn,
+            vec![
+                StoreWithdrawal {
+                    brand: StoreBrand::Nssdb,
+                    outcome: Withdrawal::Withdrawn,
+                },
+                StoreWithdrawal {
+                    brand: StoreBrand::Nssdb,
+                    outcome: Withdrawal::Withdrawn,
+                },
+            ]
+        )
+    );
+}
+
+#[test]
 fn merging_keeps_what_was_not_retried_and_replaces_what_was() {
     let firefox = a_profile(StoreBrand::Firefox);
     let chrome = a_profile(StoreBrand::Chrome);
