@@ -7,6 +7,7 @@ ORDENES DE TAURI                          (<contexto>/adapters/tauri*.rs)
   async choose_url_handler(handler: String) -> Result<(), Failure>
   async open_external_destination(target: String) -> Result<(), Failure>
   async install_local_ca_certificate() -> SignalRowView
+  async choose_site_signature_handler(handler: String) -> Result<Vec<SignalRowView>, Failure>
   async read_status(recheck: bool) -> Vec<SignalRowView>
   async open_document() -> Result<Option<OpenedDocumentView>, Failure>
   async read_document(id: String) -> Result<tauri::ipc::Response, Failure>
@@ -72,7 +73,13 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
       verdict: Verdict
       action: Option<StatusActionView>
       detail: Option<Vec<StoreDetailView>>
+      candidates: Option<Vec<SiteSignatureCandidateView>>
       restartFirefoxNotice: bool
+
+  pub struct SiteSignatureCandidateView
+      id: String
+      name: String
+      selected: bool
 
   pub struct StoreDetailView
       brand: StoreBrand

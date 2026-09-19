@@ -68,8 +68,22 @@ pub struct SignalRow {
     pub action: Option<StatusAction>,
     /// Detalle por almacén, para señales que lo despliegan.
     pub detail: Option<Vec<StoreDetail>>,
+    /// Candidatas entre las que elegir, para la señal `Firma en sedes`.
+    pub candidates: Option<Vec<SiteSignatureCandidate>>,
     /// Aviso de reiniciar Firefox, tras instalar con el navegador vivo (ADR-0005).
     pub restart_firefox_notice: bool,
+}
+
+/// Candidata a firmar en sedes, para el desplegable de la señal `Firma en sedes`.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SiteSignatureCandidate {
+    /// Identificador del manejador en el escritorio.
+    pub id: String,
+    /// Nombre visible, tal y como lo dio el escritorio.
+    pub name: String,
+    /// Si es la candidata elegida hoy.
+    pub selected: bool,
 }
 
 /// Familia de almacén de un perfil NSS, para el detalle desplegable de una señal.

@@ -359,10 +359,11 @@ fn site_signature_is_not_applicable_when_the_sandbox_hides_the_registry() {
     assert_eq!(row.value, "");
     assert_eq!(row.verdict, Verdict::NotApplicable);
     assert_eq!(row.action, None);
+    assert_eq!(row.candidates, None);
 }
 
 #[test]
-fn site_signature_needs_attention_when_nothing_is_configured() {
+fn site_signature_offers_to_use_rfirma_when_nothing_is_configured() {
     let row = evaluate_site_signature_signal(a_url_handlers(
         true,
         vec![a_handler("autofirma.desktop", "AutoFirma")],
@@ -372,11 +373,17 @@ fn site_signature_needs_attention_when_nothing_is_configured() {
     assert_eq!(row.signal, Signal::SiteSignature);
     assert_eq!(row.value, "");
     assert_eq!(row.verdict, Verdict::Attention);
-    assert_eq!(row.action, None);
+    assert_eq!(
+        row.action,
+        Some(StatusAction {
+            kind: ActionKind::Choice,
+            target: OUR_DESKTOP_FILE.to_string(),
+        })
+    );
 }
 
 #[test]
-fn site_signature_is_correct_when_rfirma_is_the_current_handler() {
+fn site_signature_is_correct_and_offers_no_action_when_rfirma_is_the_current_handler() {
     let row = evaluate_site_signature_signal(a_url_handlers(
         true,
         vec![
@@ -393,7 +400,7 @@ fn site_signature_is_correct_when_rfirma_is_the_current_handler() {
 }
 
 #[test]
-fn site_signature_needs_attention_when_another_program_is_the_current_handler() {
+fn site_signature_needs_attention_and_offers_to_use_rfirma_when_another_program_is_current() {
     let row = evaluate_site_signature_signal(a_url_handlers(
         true,
         vec![
@@ -406,7 +413,13 @@ fn site_signature_needs_attention_when_another_program_is_the_current_handler() 
     assert_eq!(row.signal, Signal::SiteSignature);
     assert_eq!(row.value, "AutoFirma");
     assert_eq!(row.verdict, Verdict::Attention);
-    assert_eq!(row.action, None);
+    assert_eq!(
+        row.action,
+        Some(StatusAction {
+            kind: ActionKind::Choice,
+            target: OUR_DESKTOP_FILE.to_string(),
+        })
+    );
 }
 
 #[test]
@@ -416,4 +429,43 @@ fn site_signature_falls_back_to_the_id_when_the_current_handler_is_unlisted() {
 
     assert_eq!(row.value, "unknown.desktop");
     assert_eq!(row.verdict, Verdict::Attention);
+}
+
+#[test]
+fn site_signature_has_no_candidates_with_a_single_registered_handler() {
+    let row = evaluate_site_signature_signal(a_url_handlers(
+        true,
+        vec![a_handler(OUR_DESKTOP_FILE, "rFirma")],
+        Some(OUR_DESKTOP_FILE),
+    ));
+
+    assert_eq!(row.candidates, None);
+}
+
+#[test]
+fn site_signature_lists_every_registered_handler_as_a_candidate_marking_the_current_one() {
+    let row = evaluate_site_signature_signal(a_url_handlers(
+        true,
+        vec![
+            a_handler(OUR_DESKTOP_FILE, "rFirma"),
+            a_handler("autofirma.desktop", "AutoFirma"),
+        ],
+        Some("autofirma.desktop"),
+    ));
+
+    assert_eq!(
+        row.candidates,
+        Some(vec![
+            SiteSignatureCandidate {
+                id: OUR_DESKTOP_FILE.to_string(),
+                name: "rFirma".to_string(),
+                selected: false,
+            },
+            SiteSignatureCandidate {
+                id: "autofirma.desktop".to_string(),
+                name: "AutoFirma".to_string(),
+                selected: true,
+            },
+        ])
+    );
 }

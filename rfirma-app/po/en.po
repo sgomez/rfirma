@@ -869,6 +869,9 @@ msgstr "How to install"
 msgid "status.actions.install"
 msgstr "Install"
 
+msgid "status.actions.useRfirma"
+msgstr "Use rFirma"
+
 msgid "status.values.siteSignature.notConfigured"
 msgstr "Not configured"
 

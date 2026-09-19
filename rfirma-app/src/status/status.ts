@@ -20,12 +20,20 @@ export interface StatusAction {
   target: string;
 }
 
+/** Candidata a firmar en sedes, para el desplegable de la señal `Firma en sedes`. */
+export interface SiteSignatureCandidate {
+  id: string;
+  name: string;
+  selected: boolean;
+}
+
 export interface SignalRow {
   signal: Signal;
   value: string;
   verdict: Verdict;
   action: StatusAction | null;
   detail: StoreDetail[] | null;
+  candidates: SiteSignatureCandidate[] | null;
   restartFirefoxNotice: boolean;
 }
 
@@ -36,6 +44,11 @@ export interface StatusPort {
   recheck(): Promise<SignalRow[]>;
   /** Instala el certificado de rFirma donde falte y vuelve a medir su señal. */
   installLocalCaCertificate(): Promise<SignalRow>;
+  /**
+   * Elige quién abre las sedes; si es rFirma, instala también su certificado
+   * (ID-366). Devuelve las dos filas que la elección vuelve a medir.
+   */
+  chooseSiteSignatureHandler(handlerId: string): Promise<SignalRow[]>;
 }
 
 /** Doble en memoria para pruebas de la interfaz. */
@@ -47,11 +60,13 @@ export function memoryStatus(
       verdict: "correct",
       action: null,
       detail: null,
+      candidates: null,
       restartFirefoxNotice: false,
     },
   ],
   recheckRows?: SignalRow[],
   installedRow?: SignalRow,
+  chosenRows?: SignalRow[],
 ): StatusPort {
   let rows = [...initialRows];
   return {
@@ -69,10 +84,16 @@ export function memoryStatus(
         verdict: "checking",
         action: null,
         detail: null,
+        candidates: null,
         restartFirefoxNotice: false,
       };
       rows = rows.map((row) => (row.signal === installed.signal ? installed : row));
       return installed;
+    },
+    chooseSiteSignatureHandler: async () => {
+      const chosen = chosenRows ?? [];
+      rows = rows.map((row) => chosen.find((updated) => updated.signal === row.signal) ?? row);
+      return chosen;
     },
   };
 }

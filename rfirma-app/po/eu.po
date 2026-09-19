@@ -888,6 +888,9 @@ msgstr "Nola instalatu"
 msgid "status.actions.install"
 msgstr "Instalatu"
 
+msgid "status.actions.useRfirma"
+msgstr "Erabili rFirma"
+
 msgid "status.values.siteSignature.notConfigured"
 msgstr "Konfiguratu gabe"
 
