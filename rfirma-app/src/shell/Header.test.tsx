@@ -195,6 +195,46 @@ describe("Header", () => {
     expect(aboutItem.querySelector(".header__entryIcon svg")).toBeNull();
   });
 
+  it("shows no attention triangle by default", async () => {
+    const user = userEvent.setup();
+    renderWithCatalog(
+      <Header
+        status={null}
+        menuAnchor="header"
+        onOpenStatus={noop}
+        onOpenPreferences={noop}
+        onOpenHelp={noop}
+        onOpenAbout={noop}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Menú" }));
+
+    const statusItem = screen.getByRole("menuitem", { name: "Estado de rFirma" });
+    expect(statusItem.querySelector(".header__entryIcon svg")).toBeNull();
+  });
+
+  it("shows the attention triangle on Estado de rFirma when something needs fixing", async () => {
+    const user = userEvent.setup();
+    renderWithCatalog(
+      <Header
+        status={null}
+        menuAnchor="header"
+        hasAttention
+        onOpenStatus={noop}
+        onOpenPreferences={noop}
+        onOpenHelp={noop}
+        onOpenAbout={noop}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Menú" }));
+
+    const statusItem = screen.getByRole("menuitem", { name: /Estado de rFirma/ });
+    expect(statusItem.querySelector(".header__entryIcon svg")).not.toBeNull();
+    expect(screen.getByRole("img", { name: "Requiere atención" })).toBeInTheDocument();
+  });
+
   it("opens the preferences dialog from the menu and closes the menu", async () => {
     const user = userEvent.setup();
     const openPreferences = vi.fn();

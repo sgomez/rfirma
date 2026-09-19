@@ -394,6 +394,9 @@ msgstr "Menua"
 msgid "header.status"
 msgstr "rFirmaren egoera"
 
+msgid "header.statusAttention"
+msgstr "Arreta behar du"
+
 msgid "header.preferences"
 msgstr "Hobespenak…"
 

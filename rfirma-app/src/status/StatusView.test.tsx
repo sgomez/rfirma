@@ -543,6 +543,60 @@ describe("StatusView", () => {
     expect(within(row).getByText("1 almacén")).toBeInTheDocument();
   });
 
+  it("notifies onRowsChange with the rows read at startup", async () => {
+    const rows: SignalRow[] = [
+      {
+        signal: "version",
+        value: "0.4.1",
+        verdict: "correct",
+        action: null,
+        detail: null,
+        candidates: null,
+        restartFirefoxNotice: false,
+      },
+    ];
+    const onRowsChange = vi.fn();
+    renderWithCatalog(
+      <StatusView statusPort={memoryStatus(rows)} onClose={() => {}} onRowsChange={onRowsChange} />,
+    );
+
+    await screen.findByRole("status");
+
+    expect(onRowsChange).toHaveBeenCalledWith(rows);
+  });
+
+  it("notifies onRowsChange again once Volver a comprobar remeasures", async () => {
+    const user = userEvent.setup();
+    const initialRow: SignalRow = {
+      signal: "version",
+      value: "0.4.1",
+      verdict: "correct",
+      action: null,
+      detail: null,
+      candidates: null,
+      restartFirefoxNotice: false,
+    };
+    const initialRows: SignalRow[] = [initialRow];
+    const recheckedRows: SignalRow[] = [{ ...initialRow, verdict: "attention", value: "0.5.0" }];
+    const onRowsChange = vi.fn();
+    renderWithCatalog(
+      <StatusView
+        statusPort={memoryStatus(initialRows, recheckedRows)}
+        onClose={() => {}}
+        onRowsChange={onRowsChange}
+      />,
+    );
+
+    await screen.findByRole("status");
+    onRowsChange.mockClear();
+
+    await user.click(screen.getByRole("button", { name: "Volver a comprobar" }));
+
+    await waitFor(() => {
+      expect(onRowsChange).toHaveBeenCalledWith(recheckedRows);
+    });
+  });
+
   it("transitions through Comprobando and remeasures after clicking an action", async () => {
     const user = userEvent.setup();
     const open = vi.fn();

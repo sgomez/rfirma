@@ -37,7 +37,7 @@ import { acknowledgementFor, useSigning } from "./signing/useSigning";
 import { useStampPreview } from "./signing/useStampPreview";
 import { DEFAULT_VISIBLE_SIGNATURE, type VisibleSignature } from "./signing/visibleSignature";
 import { StatusView } from "./status/StatusView";
-import { memoryStatus, type StatusPort } from "./status/status";
+import { hasMenuAttention, memoryStatus, type SignalRow, type StatusPort } from "./status/status";
 import type { NewVersion, VersionCheck } from "./updates/newVersion";
 import { DocumentViewer } from "./viewer/DocumentViewer";
 import type { PdfDocument } from "./viewer/pdf";
@@ -144,6 +144,18 @@ export function App({
   // segunda memoria aquí sería una regla más que no manda nadie.
   const [newVersion, setNewVersion] = useState<NewVersion | null>(null);
   const [versionDismissed, setVersionDismissed] = useState(false);
+  // Las filas del panel de estado, para el triángulo del menú (ID-353): se
+  // miden aquí al arrancar, y `StatusView` reenvía cada remedición suya
+  // propia —al abrirse, tras una acción, con «Volver a comprobar»— sin que
+  // esta ventana dispare ninguna por su cuenta.
+  const [statusRows, setStatusRows] = useState<SignalRow[]>([]);
+  const hasAttention = useMemo(() => hasMenuAttention(statusRows), [statusRows]);
+  // El puerto **por omisión** de `status` es un objeto nuevo en cada pintada
+  // (`= memoryStatus()`), así que el efecto de más abajo lo lee de una `ref` y
+  // no de la lista de dependencias: si `status` fuera su dependencia, cada
+  // remedición cambiaría de identidad y volvería a disparar la lectura del
+  // arranque sin parar.
+  const statusAtStartup = useRef(status);
   // Quién atiende los enlaces `afirma://`, preguntado una vez al arrancar, y
   // si el banner se ha descartado **para esta sesión** —«Ahora no»—. Lo que
   // sobrevive al cierre es lo otro, «No volver a preguntar», que es un ajuste
@@ -312,6 +324,21 @@ export function App({
       current = false;
     };
   }, [versions]);
+
+  // El triángulo del menú se mide **una vez, al arrancar**, para no obligar a
+  // abrir el panel antes de saber si hay algo que arreglar (ID-347).
+  useEffect(() => {
+    let current = true;
+    statusAtStartup.current.readStatus().then((rows) => {
+      if (current) setStatusRows(rows);
+    });
+    return () => {
+      current = false;
+    };
+    // biome-ignore lint/correctness/useExhaustiveDependencies: se lee de la
+    // `ref` a propósito para no volver a arrancar con cada pintada (ver más
+    // arriba).
+  }, []);
 
   // Quién atiende `afirma://` se pregunta **una vez, al arrancar**, por lo
   // mismo que la versión: es lo que decide si sale el banner, y el banner es
@@ -960,6 +987,7 @@ export function App({
       <MainWindow
         status={documents.active?.badge ?? null}
         menuAnchor={menuAnchor ?? menuAnchorFor(navigator.userAgent)}
+        hasAttention={hasAttention}
         onOpenStatus={() => setView("status")}
         onOpenPreferences={() => setDialog("preferences")}
         onOpenHelp={() => void externalDestinations.open("discussions")}
@@ -970,6 +998,7 @@ export function App({
               statusPort={status}
               externalDestinations={externalDestinations}
               onClose={() => setView(null)}
+              onRowsChange={setStatusRows}
             />
           ) : null
         }

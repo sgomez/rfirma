@@ -335,6 +335,9 @@ msgstr ""
 msgid "header.status"
 msgstr ""
 
+msgid "header.statusAttention"
+msgstr ""
+
 msgid "header.preferences"
 msgstr ""
 

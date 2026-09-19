@@ -380,6 +380,9 @@ msgstr "Menu"
 msgid "header.status"
 msgstr "rFirma Status"
 
+msgid "header.statusAttention"
+msgstr "Needs attention"
+
 msgid "header.preferences"
 msgstr "Preferences…"
 

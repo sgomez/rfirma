@@ -10,6 +10,8 @@ interface MainWindowProps {
   status: Badge | null;
   /** Dónde va el menú. Ver [`MenuAnchor`]. */
   menuAnchor: MenuAnchor;
+  /** Si «Estado de rFirma» lleva el triángulo de aviso. Ver [`Header`]. */
+  hasAttention?: boolean;
   onOpenStatus?: () => void;
   onOpenPreferences: () => void;
   onOpenHelp?: () => void;
@@ -59,6 +61,7 @@ interface MainWindowProps {
 export function MainWindow({
   status,
   menuAnchor,
+  hasAttention = false,
   onOpenStatus = () => {},
   onOpenPreferences,
   onOpenHelp = () => {},
@@ -81,6 +84,7 @@ export function MainWindow({
       <Header
         status={status}
         menuAnchor={menuAnchor}
+        hasAttention={hasAttention}
         onOpenStatus={onOpenStatus}
         onOpenPreferences={onOpenPreferences}
         onOpenHelp={onOpenHelp}

@@ -25,6 +25,7 @@ import { inMemoryDestination, unavailableOpener } from "./signing/destination";
 import { type SigningBackend, type SigningOrder, unavailableSigningBackend } from "./signing/flow";
 import { emptyRubricPicker, type RubricPicker } from "./signing/rubric";
 import { unavailableStampComposer } from "./signing/stampPreview";
+import { memoryStatus, type SignalRow, type StatusPort } from "./status/status";
 import { renderWithCatalog } from "./testing/render";
 import { inMemoryVersionCheck, type VersionCheck } from "./updates/newVersion";
 
@@ -185,6 +186,7 @@ function renderApp(
   versions: VersionCheck = inMemoryVersionCheck(),
   urlHandlers: UrlHandlerChoice = inMemoryUrlHandlers(handlersThatAreOurs()),
   externalDestinations: ExternalDestinationOpener = unavailableExternalDestinationOpener(),
+  status?: StatusPort,
 ) {
   const preferences = inMemoryPreferences(
     {
@@ -217,6 +219,7 @@ function renderApp(
       urlHandlers={urlHandlers}
       menuAnchor="header"
       externalDestinations={externalDestinations}
+      status={status}
     />,
   );
   return { recents, preferences, drops };
@@ -1800,5 +1803,83 @@ describe("App, invocada con un documento", () => {
       await screen.findByRole("region", { name: "Bandeja de documentos" });
       expect(screen.queryByRole("status")).not.toBeInTheDocument();
     });
+  });
+});
+
+// ID-353/ID-347: el triángulo del menú se mide al arrancar y con cada
+// remedición del panel, con su propia regla de disparo.
+describe("App, el triángulo de aviso del menú", () => {
+  function rowsWithSitesUnconfigured(): SignalRow[] {
+    return [
+      {
+        signal: "siteSignature",
+        value: "",
+        verdict: "attention",
+        action: null,
+        detail: null,
+        candidates: null,
+        restartFirefoxNotice: false,
+      },
+    ];
+  }
+
+  function rowsWithSitesOpeningAutoFirma(): SignalRow[] {
+    return [
+      {
+        signal: "siteSignature",
+        value: "AutoFirma",
+        verdict: "attention",
+        action: null,
+        detail: null,
+        candidates: null,
+        restartFirefoxNotice: false,
+      },
+    ];
+  }
+
+  it("lights up at startup when Firma en sedes is Sin configurar", async () => {
+    const user = userEvent.setup();
+    renderApp(
+      inMemoryRecents(),
+      [],
+      unavailablePdfSource(),
+      {},
+      emptyCertificateStore(),
+      emptyRubricPicker(),
+      unavailableSigningBackend(),
+      null,
+      inMemoryDocumentDrops(null),
+      inMemoryVersionCheck(),
+      inMemoryUrlHandlers(handlersThatAreOurs()),
+      unavailableExternalDestinationOpener(),
+      memoryStatus(rowsWithSitesUnconfigured()),
+    );
+
+    await user.click(await screen.findByRole("button", { name: "Menú" }));
+
+    expect(screen.getByRole("img", { name: "Requiere atención" })).toBeInTheDocument();
+  });
+
+  it("stays off when the sites open AutoFirma, the trap a naive implementation breaks", async () => {
+    const user = userEvent.setup();
+    renderApp(
+      inMemoryRecents(),
+      [],
+      unavailablePdfSource(),
+      {},
+      emptyCertificateStore(),
+      emptyRubricPicker(),
+      unavailableSigningBackend(),
+      null,
+      inMemoryDocumentDrops(null),
+      inMemoryVersionCheck(),
+      inMemoryUrlHandlers(handlersThatAreOurs()),
+      unavailableExternalDestinationOpener(),
+      memoryStatus(rowsWithSitesOpeningAutoFirma()),
+    );
+
+    await user.click(await screen.findByRole("button", { name: "Menú" }));
+
+    expect(screen.queryByRole("img", { name: "Requiere atención" })).not.toBeInTheDocument();
   });
 });

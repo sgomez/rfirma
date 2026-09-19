@@ -394,6 +394,9 @@ msgstr "Menú"
 msgid "header.status"
 msgstr "Estat de rFirma"
 
+msgid "header.statusAttention"
+msgstr "Requereix atenció"
+
 msgid "header.preferences"
 msgstr "Preferències…"
 

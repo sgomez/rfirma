@@ -1,4 +1,5 @@
 import { screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { renderWithCatalog } from "../testing/render";
 import { MainWindow } from "./MainWindow";
@@ -25,6 +26,27 @@ describe("MainWindow", () => {
     expect(screen.getByRole("region", { name: "Bandeja de documentos" })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Visor del documento" })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Panel de firma" })).toBeInTheDocument();
+  });
+
+  it("passes hasAttention through to the header menu", async () => {
+    const user = userEvent.setup();
+    renderWithCatalog(
+      <MainWindow
+        status={null}
+        menuAnchor="header"
+        hasAttention
+        onOpenPreferences={noop}
+        onOpenAbout={noop}
+        tray={null}
+        viewer={null}
+        panel={null}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Menú" }));
+
+    expect(screen.getByRole("menuitem", { name: /Estado de rFirma/ })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Requiere atención" })).toBeInTheDocument();
   });
 
   // ID-51: sin documento el panel **no se monta**. La ventana pasa a dos
