@@ -53,7 +53,7 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `application/startup/channel.rs` | El canal abierto y sostenido, y quién lo sostiene o por qué no lo hay. Pruebas en `application/startup/channel/tests.rs`. |
 | `application/startup/mod.rs` | El arranque: si se enseña la ventana principal o se atiende un trámite de sede, y con qué momento se abre la de sede. Pruebas en `application/startup/tests.rs`. |
 | `application/startup/repair.rs` | La reparación de la CA local desde la ventana de sede. Pruebas en `application/startup/repair/tests.rs`. |
-| `application/trust.rs` | Cuándo se instala la CA local en los almacenes y cómo se solapa con la siguiente. Pruebas en `application/trust/tests.rs`. |
+| `application/trust.rs` | Cuándo se instala la CA local en los almacenes, cómo se solapa con la siguiente y cómo se retira de todos ellos. Pruebas en `application/trust/tests.rs`. |
 | `domain/batch/mod.rs` | El reparto del lote, y `BatchFormat`: si el lote viaja en el XML heredado o en JSON. |
 | `domain/batch/local.rs` | El lote local leído del JSON de la sede, con lo que cada firma hereda del lote. **No** es el lote remoto. Pruebas en `domain/batch/local/tests.rs`. |
 | `domain/batch/json.rs` | Un JSON de solo lectura y escritura con el orden del documento, para el lote remoto. Pruebas en `domain/batch/json/tests.rs`. |

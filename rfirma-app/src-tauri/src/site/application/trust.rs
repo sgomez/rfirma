@@ -234,6 +234,100 @@ pub fn measure_local_ca_trust(
         .collect())
 }
 
+/// Qué pasó al retirar la CA local de un almacén NSS.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum StoreWithdrawal {
+    /// La CA local estaba y se ha retirado.
+    Withdrawn,
+    /// La CA local no estaba en este almacén.
+    WasNotThere,
+    /// No se ha podido retirar.
+    Failed(TrustError),
+}
+
+impl StoreWithdrawal {
+    /// Si la CA local estaba en este almacén y se ha retirado.
+    pub fn withdrawn(&self) -> bool {
+        matches!(self, Self::Withdrawn)
+    }
+
+    /// El motivo, ya traducido a texto, por el que no se ha podido retirar.
+    pub fn failure(&self) -> Option<String> {
+        match self {
+            Self::Failed(error) => Some(error.to_string()),
+            Self::Withdrawn | Self::WasNotThere => None,
+        }
+    }
+}
+
+/// Resultado de retirar la CA local de cada almacén NSS.
+#[derive(Debug)]
+pub struct WithdrawOutcome {
+    /// Resultado por perfil.
+    pub results: Vec<(PathBuf, StoreWithdrawal)>,
+}
+
+/// Retira la CA local —vigente y la del solape— de los almacenes NSS indicados, por huella
+/// (ID-364, ID-365). Las ranuras solo se vacían después, y solo si ningún almacén ha fallado.
+pub fn withdraw_everywhere(
+    store: &dyn LocalCaSlots,
+    profiles: &[PathBuf],
+    stores: &dyn TrustStores,
+) -> Result<WithdrawOutcome, TlsError> {
+    let ders = [store.serving()?, store.next()?]
+        .into_iter()
+        .flatten()
+        .map(|ca| {
+            ca.certificate().to_der().map_err(|error| {
+                TlsError::new(
+                    TlsSituation::MaterialDamaged,
+                    format!("el certificado de la CA local no sale en DER: {error}"),
+                )
+            })
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+
+    if ders.is_empty() {
+        return Ok(WithdrawOutcome {
+            results: Vec::new(),
+        });
+    }
+
+    let results: Vec<(PathBuf, StoreWithdrawal)> = profiles
+        .iter()
+        .map(|profile| (profile.clone(), withdraw_one(stores, profile, &ders)))
+        .collect();
+
+    if !results
+        .iter()
+        .any(|(_, outcome)| matches!(outcome, StoreWithdrawal::Failed(_)))
+    {
+        store.forget_next()?;
+        store.forget_serving()?;
+    }
+
+    Ok(WithdrawOutcome { results })
+}
+
+fn withdraw_one(stores: &dyn TrustStores, profile: &Path, ders: &[Vec<u8>]) -> StoreWithdrawal {
+    let mut was_there = false;
+    for der in ders {
+        match stores.trust_of(profile, der) {
+            Ok(Some(_)) => was_there = true,
+            Ok(None) => {}
+            Err(error) => return StoreWithdrawal::Failed(error),
+        }
+        if let Err(error) = stores.withdraw(profile, der) {
+            return StoreWithdrawal::Failed(error);
+        }
+    }
+    if was_there {
+        StoreWithdrawal::Withdrawn
+    } else {
+        StoreWithdrawal::WasNotThere
+    }
+}
+
 fn settle_one(stores: &dyn TrustStores, profile: &Path, der: &[u8]) -> Result<bool, TrustError> {
     if stores
         .trust_of(profile, der)?

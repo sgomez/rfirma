@@ -254,6 +254,9 @@ pub trait LocalCaSlots {
 
     /// Vacía la ranura de la siguiente.
     fn forget_next(&self) -> Result<(), TlsError>;
+
+    /// Vacía la ranura de la que sirve.
+    fn forget_serving(&self) -> Result<(), TlsError>;
 }
 
 /// El motor de filtros que presta el puente: qué certificados cumplen la expresión de la sede.

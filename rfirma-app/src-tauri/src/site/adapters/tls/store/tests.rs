@@ -122,3 +122,28 @@ fn a_takeover_without_a_next_local_ca_is_not_a_failure() {
     assert!(store.promote_next().expect("no es un fallo").is_none());
     assert!(store.forget_next().is_ok(), "tirar lo que no hay tampoco");
 }
+
+#[test]
+fn forgetting_the_serving_ca_empties_its_slot_without_touching_the_next_one() {
+    let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let store = store_in(directory.path());
+    store
+        .write(&LocalCa::generate().expect("deberia generarse"))
+        .expect("deberia guardarse");
+    let next = LocalCa::generate().expect("deberia generarse");
+    store.write_next(&next).expect("deberia guardarse");
+
+    store.forget_serving().expect("deberia vaciarse");
+
+    assert!(store.read().unwrap().is_none());
+    assert_eq!(
+        store
+            .read_next()
+            .unwrap()
+            .unwrap()
+            .certificate()
+            .to_pem()
+            .unwrap(),
+        next.certificate().to_pem().unwrap()
+    );
+}

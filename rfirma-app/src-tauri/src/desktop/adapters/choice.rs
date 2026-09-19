@@ -91,6 +91,37 @@ pub fn choose_handler_for_scheme(
     })
 }
 
+/// Retira la clave del esquema de mimeapps.list, sin escribir ningún otro manejador en su lugar.
+pub fn remove_handler_for_scheme(
+    channel: Channel,
+    list: &Path,
+    scheme: &str,
+) -> Result<(), DesktopError> {
+    if channel == Channel::Flatpak {
+        return Err(DesktopError::new(
+            Situation::NotAvailableInsideTheSandbox,
+            format!("{} no es el del anfitrión", list.display()),
+        ));
+    }
+    let current = match fs::read_to_string(list) {
+        Ok(current) => current,
+        Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(()),
+        Err(error) => {
+            return Err(DesktopError::new(
+                Situation::TheListIsNotReadable,
+                format!("{}: {error}", list.display()),
+            ))
+        }
+    };
+    let updated = without_default(&current, &content_type_for(scheme));
+    write_atomically(list, updated.as_bytes()).map_err(|error| {
+        DesktopError::new(
+            Situation::TheListIsNotWritable,
+            format!("{}: {error}", list.display()),
+        )
+    })
+}
+
 /// Consulta el manejador predeterminado configurado actualmente para un esquema.
 pub fn current_default_for_scheme(channel: Channel, list: &Path, scheme: &str) -> Option<String> {
     if channel == Channel::Flatpak {
@@ -159,6 +190,31 @@ fn with_explicit_default(content: &str, content_type: &str, handler: &str) -> St
         }
         lines.push(DEFAULT_APPLICATIONS.to_owned());
         lines.push(entry);
+    }
+    let mut updated = lines.join("\n");
+    updated.push('\n');
+    updated
+}
+
+/// Quita la línea de la clave dentro de [Default Applications], dejando todo lo demás igual.
+fn without_default(content: &str, content_type: &str) -> String {
+    let mut lines: Vec<String> = Vec::new();
+    let mut inside_the_group = false;
+
+    for line in content.lines() {
+        if line.trim_start().starts_with('[') {
+            inside_the_group = line.trim() == DEFAULT_APPLICATIONS;
+            lines.push(line.to_owned());
+            continue;
+        }
+        if inside_the_group && key_of(line) == Some(content_type) {
+            continue;
+        }
+        lines.push(line.to_owned());
+    }
+
+    if lines.is_empty() {
+        return String::new();
     }
     let mut updated = lines.join("\n");
     updated.push('\n');

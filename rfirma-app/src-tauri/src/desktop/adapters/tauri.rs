@@ -8,10 +8,11 @@ use crate::identity::IdentityRoot;
 use crate::site::SiteRoot;
 
 use super::registry::DesktopRegistry;
-use super::views::{NewVersionView, SignalRowView};
+use super::views::{NewVersionView, SignalRowView, StoreWithdrawalView, WithdrawalReportView};
 use crate::crossing::Failure;
 use crate::desktop::domain::error::{DesktopError, Situation};
 use crate::desktop::domain::status::{StoreBrand, StoreDetail};
+use crate::desktop::domain::withdrawal::StoreWithdrawal;
 use crate::documents::adapters::views::DroppedDocumentView;
 use crate::identity::domain::store::{Store, StoreClass};
 
@@ -195,4 +196,45 @@ pub fn read_status(
         )
         .into(),
     ]
+}
+
+/// Retira lo que rFirma dejó fuera de sus carpetas: el manejador de sedes y la CA local de cada
+/// almacén NSS (ID-364).
+#[tauri::command(async)]
+pub fn withdraw_rfirma(site: State<'_, SiteRoot>) -> WithdrawalReportView {
+    let channel = crate::desktop::adapters::channel::Channel::detected();
+    let list =
+        crate::desktop::adapters::choice::mimeapps_list_from_environment().unwrap_or_default();
+    let registry = DesktopRegistry::of(channel, list);
+    let handler = crate::desktop::application::handlers::withdrawn(&registry);
+
+    let stores = site
+        .withdraw_local_ca_trust()
+        .map(|outcome| {
+            outcome
+                .results
+                .into_iter()
+                .map(|(profile, outcome)| {
+                    let outcome = match outcome.failure() {
+                        Some(reason) => {
+                            crate::desktop::domain::withdrawal::Withdrawal::Failed(reason)
+                        }
+                        None if outcome.withdrawn() => {
+                            crate::desktop::domain::withdrawal::Withdrawal::Withdrawn
+                        }
+                        None => crate::desktop::domain::withdrawal::Withdrawal::WasNotThere,
+                    };
+                    StoreWithdrawalView::from(StoreWithdrawal {
+                        brand: brand_of(&profile),
+                        outcome,
+                    })
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+
+    WithdrawalReportView {
+        handler: handler.into(),
+        stores,
+    }
 }

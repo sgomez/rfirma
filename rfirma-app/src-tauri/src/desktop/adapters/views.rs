@@ -166,3 +166,59 @@ crossing! {
         Link,
     }
 }
+
+use crate::desktop::domain::withdrawal::{StoreWithdrawal, Withdrawal};
+
+crossing! {
+    /// Qué pasó al retirar algo propio de rFirma de un sitio del sistema.
+    #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+    #[serde(tag = "kind", rename_all = "camelCase")]
+    pub enum WithdrawalView {
+        Withdrawn,
+        WasNotThere,
+        Failed(String),
+    }
+}
+
+impl From<Withdrawal> for WithdrawalView {
+    fn from(withdrawal: Withdrawal) -> Self {
+        match withdrawal {
+            Withdrawal::Withdrawn => Self::Withdrawn,
+            Withdrawal::WasNotThere => Self::WasNotThere,
+            Withdrawal::Failed(reason) => Self::Failed(reason),
+        }
+    }
+}
+
+crossing! {
+    /// Un almacén NSS con el resultado de retirar de él la CA local de rFirma.
+    #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+    #[serde(rename_all = "camelCase")]
+    pub struct StoreWithdrawalView {
+        /// Marca del almacén.
+        pub brand: StoreBrand,
+        /// Resultado de la retirada en este almacén.
+        pub outcome: WithdrawalView,
+    }
+}
+
+impl From<StoreWithdrawal> for StoreWithdrawalView {
+    fn from(store: StoreWithdrawal) -> Self {
+        Self {
+            brand: store.brand,
+            outcome: store.outcome.into(),
+        }
+    }
+}
+
+crossing! {
+    /// Resultado de retirar rFirma: el manejador de sedes y la CA local de cada almacén.
+    #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+    #[serde(rename_all = "camelCase")]
+    pub struct WithdrawalReportView {
+        /// Resultado de quitar rFirma como manejador de `afirma://`.
+        pub handler: WithdrawalView,
+        /// Resultado por almacén de retirar la CA local.
+        pub stores: Vec<StoreWithdrawalView>,
+    }
+}

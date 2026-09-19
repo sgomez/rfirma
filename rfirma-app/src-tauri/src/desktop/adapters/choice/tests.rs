@@ -205,6 +205,68 @@ fn the_first_entry_of_the_list_is_the_one_that_answers() {
 }
 
 #[test]
+fn removing_the_handler_deletes_the_key_instead_of_writing_another_one() {
+    let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let list = directory.path().join("mimeapps.list");
+    choose_handler_for_scheme(Channel::Native, &list, "afirma", "rfirma.desktop")
+        .expect("deberia escribirse");
+
+    remove_handler_for_scheme(Channel::Native, &list, "afirma").expect("deberia retirarse");
+
+    assert_eq!(
+        current_default_for_scheme(Channel::Native, &list, "afirma"),
+        None
+    );
+    assert!(!fs::read_to_string(&list)
+        .expect("deberia leerse")
+        .contains("autofirma"));
+}
+
+#[test]
+fn removing_a_handler_that_was_never_chosen_is_not_a_failure() {
+    let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let list = directory.path().join("mimeapps.list");
+
+    remove_handler_for_scheme(Channel::Native, &list, "afirma").expect("deberia retirarse");
+
+    assert_eq!(
+        current_default_for_scheme(Channel::Native, &list, "afirma"),
+        None
+    );
+}
+
+#[test]
+fn removing_the_handler_leaves_everything_else_in_the_list_untouched() {
+    let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let list = directory.path().join("mimeapps.list");
+    std::fs::write(
+        &list,
+        "[Default Applications]\n\
+         x-scheme-handler/afirma=rfirma.desktop;\n\
+         application/pdf=evince.desktop\n",
+    )
+    .expect("deberia escribirse");
+
+    remove_handler_for_scheme(Channel::Native, &list, "afirma").expect("deberia retirarse");
+
+    assert_eq!(
+        fs::read_to_string(&list).expect("deberia leerse"),
+        "[Default Applications]\napplication/pdf=evince.desktop\n"
+    );
+}
+
+#[test]
+fn removing_the_handler_inside_the_sandbox_fails_with_its_own_situation() {
+    let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let list = directory.path().join("mimeapps.list");
+
+    let refused = remove_handler_for_scheme(Channel::Flatpak, &list, "afirma")
+        .expect_err("no deberia retirarse dentro del sandbox");
+
+    assert_eq!(refused.situation(), Situation::NotAvailableInsideTheSandbox);
+}
+
+#[test]
 fn inside_the_sandbox_nothing_is_read_either() {
     let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
     let list = directory.path().join("mimeapps.list");
