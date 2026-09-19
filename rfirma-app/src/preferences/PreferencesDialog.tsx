@@ -20,8 +20,8 @@ import { Select } from "./Select";
 import { Switch } from "./Switch";
 import { THEMES } from "./theme";
 
-/** Las cuatro secciones del índice, en el orden en que se apilan (ID-69). */
-const SECTIONS = ["signing", "certificates", "privacy", "appearance"] as const;
+/** Las cuatro secciones del índice, en el orden en que se apilan. */
+const SECTIONS = ["general", "signing", "certificates", "appearance"] as const;
 
 type Section = (typeof SECTIONS)[number];
 
@@ -116,6 +116,12 @@ interface PreferencesDialogProps {
  * botón. No hay un aviso común arriba: con tres secciones obligaría a leer el
  * texto para saber qué se rompió.
  *
+ * **El índice es el patrón ARIA de pestañas** (`tablist` / `tab` / `tabpanel`):
+ * solo el panel activo está en pantalla, con su propio scroll, y se entra
+ * siempre en *General*. Las flechas arriba/abajo mueven la selección;
+ * `Escape` cierra Preferencias entera por encima de todo, tanto si el foco
+ * está en una pestaña como en cualquier otro control.
+ *
  * El idioma sale de `LanguageProvider` y no de estos ajustes porque ya vivía
  * ahí, y solo se ofrecen los catálogos **completos**: caer al castellano a
  * mitad de pantalla no es una degradación aceptable (ADR-0009). Su guardado
@@ -150,12 +156,13 @@ export function PreferencesDialog({
   const [forgetFailure, setForgetFailure] = useState<string | null>(null);
   const [askingPassword, setAskingPassword] = useState(false);
   const [certificateFailure, setCertificateFailure] = useState<NamedFailure | null>(null);
-  const [current, setCurrent] = useState<Section>("signing");
+  const [current, setCurrent] = useState<Section>("general");
   const titleId = useId();
   const screen = useRef<HTMLDivElement>(null);
   const confirm = useRef<HTMLDivElement>(null);
   const password = useRef<HTMLDivElement>(null);
-  const sections = useRef(new Map<Section, HTMLElement | null>());
+  const panel = useRef<HTMLDivElement>(null);
+  const tabs = useRef(new Map<Section, HTMLElement | null>());
 
   // El foco entra en la pantalla al abrirla, que es lo que la hace un diálogo
   // y no una región más de la ventana: sin esto el teclado seguiría donde
@@ -197,7 +204,7 @@ export function PreferencesDialog({
       setConfirmingPurge(true);
       return;
     }
-    void change("privacy", () => onChange({ ...preferences, rememberActivity: true }));
+    void change("general", () => onChange({ ...preferences, rememberActivity: true }));
   };
 
   /** Vaciar la lista sin apagar el interruptor: «hoy no, mañana sí». */
@@ -223,7 +230,7 @@ export function PreferencesDialog({
    */
   const purge = async () => {
     setConfirmingPurge(false);
-    await change("privacy", () => onChange({ ...preferences, rememberActivity: false }));
+    await change("general", () => onChange({ ...preferences, rememberActivity: false }));
     await forget();
   };
 
@@ -285,12 +292,35 @@ export function PreferencesDialog({
     onClose();
   };
 
+  /** Enseña la sección elegida y le pasa el foco: por clic o por flecha, es la misma. */
   const show = (section: Section) => {
     setCurrent(section);
-    // `scrollIntoView` no existe en jsdom; en la ventana de verdad es lo que
-    // lleva la columna a la sección elegida.
-    sections.current.get(section)?.scrollIntoView?.({ block: "start" });
+    // El panel vuelve a empezar por arriba: cambiar de sección no hereda el
+    // desplazamiento en el que se había quedado la anterior, que ya no está
+    // en pantalla.
+    panel.current?.scrollTo?.({ top: 0 });
+    tabs.current.get(section)?.focus();
   };
+
+  /**
+   * Arriba/abajo mueven la pestaña activa, con vuelta al llegar a un extremo.
+   * El índice es vertical, así que no son las flechas izquierda/derecha del
+   * patrón horizontal.
+   */
+  const onTabsKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+    event.preventDefault();
+    const from = SECTIONS.indexOf(current);
+    const step = event.key === "ArrowDown" ? 1 : -1;
+    // El índice cae siempre dentro de `SECTIONS`: el módulo lo envuelve.
+    show(SECTIONS[(from + step + SECTIONS.length) % SECTIONS.length] as Section);
+  };
+
+  const registerTab = (section: Section) => (element: HTMLElement | null) => {
+    tabs.current.set(section, element);
+  };
+
+  const tabId = (section: Section) => `${titleId}-tab-${section}`;
 
   /** El aviso de guardado de una sección, o nada si el fallo fue en otra. */
   const saveNotice = (section: Section) =>
@@ -298,16 +328,24 @@ export function PreferencesDialog({
       <ErrorNotice situation="settingNotSaved" technicalDetail={saveFailure.detail} />
     ) : null;
 
-  const heading = (section: Section, action?: ReactNode) => (
+  /** El título de página que abre cada panel: versalitas, con su divisoria debajo. */
+  const heading = (label: Section, headingId: string, action?: ReactNode) => (
     <>
       <div className="rf-row preferences__heading-row">
-        <p className="rf-title preferences__heading" id={`${titleId}-${section}`}>
-          {t(`preferences.sections.${section}`)}
+        <p className="rf-label preferences__heading" id={headingId}>
+          {t(`preferences.sections.${label}`)}
         </p>
         {action}
       </div>
       <hr className="rf-divider" />
     </>
+  );
+
+  /** El encabezado de un grupo dentro de un panel: sin divisoria, en caja baja. */
+  const groupHeading = (label: "privacy", headingId: string) => (
+    <p className="rf-title preferences__group-heading" id={headingId}>
+      {t(`preferences.sections.${label}`)}
+    </p>
   );
 
   /**
@@ -331,9 +369,172 @@ export function PreferencesDialog({
       .filter((piece) => piece !== null && piece !== "")
       .join(" · ");
 
-  const register = (section: Section) => (element: HTMLElement | null) => {
-    sections.current.set(section, element);
-  };
+  const general = (
+    <>
+      {heading("general", `${titleId}-heading-general`)}
+      <div
+        className="preferences__group"
+        role="group"
+        aria-labelledby={`${titleId}-heading-privacy`}
+      >
+        {groupHeading("privacy", `${titleId}-heading-privacy`)}
+        <Switch
+          checked={preferences.rememberActivity}
+          label={t("preferences.rememberActivity.label")}
+          hint={t("preferences.rememberActivity.hint")}
+          wide
+          onChange={rememberActivity}
+        />
+        <button
+          type="button"
+          className="rf-btn rf-btn--secondary preferences__clear"
+          onClick={() => void forget()}
+        >
+          {t("preferences.rememberActivity.clear")}
+        </button>
+        {forgetFailure !== null && (
+          <ErrorNotice situation="activityNotForgotten" technicalDetail={forgetFailure} />
+        )}
+        <Switch
+          checked={preferences.notifyNewVersion}
+          label={t("preferences.notifyNewVersion.label")}
+          wide
+          onChange={(checked) =>
+            void change("general", () => onChange({ ...preferences, notifyNewVersion: checked }))
+          }
+        />
+      </div>
+      {saveNotice("general")}
+    </>
+  );
+
+  const signing = (
+    <>
+      {heading("signing", `${titleId}-heading-signing`)}
+      <Switch
+        checked={preferences.rememberVisibleSignature}
+        label={t("preferences.rememberVisibleSignature.label")}
+        hint={t("preferences.rememberVisibleSignature.hint")}
+        wide
+        onChange={(checked) =>
+          void change("signing", () =>
+            onChange({ ...preferences, rememberVisibleSignature: checked }),
+          )
+        }
+      />
+      <div className="preferences__destination">
+        <p className="rf-label" id={`${titleId}-destination`}>
+          {t("preferences.destination.label")}
+        </p>
+        {preferences.offersOriginalFolder && (
+          <p className="rf-prose preferences__destination-note">
+            {t("preferences.destination.nextToOriginal")}
+          </p>
+        )}
+        <div className="rf-row rf-gap-sm preferences__destination-row">
+          {preferences.offersOriginalFolder && (
+            <span className="rf-prose preferences__destination-mode-label">
+              {t("preferences.destination.inThisFolder")}
+            </span>
+          )}
+          <p className="rf-prose preferences__destination-folder">{preferences.destination}</p>
+          <button
+            type="button"
+            className="rf-btn rf-btn--secondary"
+            onClick={() => void change("signing", onChooseDestination)}
+          >
+            {t("preferences.destination.change")}
+          </button>
+        </div>
+      </div>
+      {saveNotice("signing")}
+    </>
+  );
+
+  const certificates = (
+    <>
+      {heading(
+        "certificates",
+        `${titleId}-heading-certificates`,
+        <button
+          type="button"
+          className="rf-btn rf-btn--secondary preferences__add-certificate"
+          onClick={() => {
+            setCertificateFailure(null);
+            setAskingPassword(true);
+          }}
+        >
+          {t("preferences.certificates.add")}
+        </button>,
+      )}
+      {certificateFailure !== null && (
+        <ErrorNotice
+          situation={certificateFailure.situation}
+          technicalDetail={
+            certificateFailure.situation === "keyNotRsa" ? undefined : certificateFailure.detail
+          }
+        />
+      )}
+      {installedCertificates.length === 0 ? (
+        <p className="rf-prose preferences__certificates-empty">
+          {t("preferences.certificates.empty")}
+        </p>
+      ) : (
+        <ul className="preferences__certificates">
+          {installedCertificates.map((certificate) => (
+            <li className="rf-row preferences__certificate" key={certificate.id}>
+              <span className="preferences__certificate-text">
+                <span className="rf-title preferences__certificate-holder">
+                  {certificate.holderName}
+                  {certificate.status.kind === "expired" && (
+                    <span className="rf-badge">{t("preferences.certificates.expired")}</span>
+                  )}
+                </span>
+                <span className="rf-body rf-text-muted">{certificateLine(certificate)}</span>
+              </span>
+              <button
+                type="button"
+                className="rf-btn rf-btn--ghost preferences__remove-certificate"
+                aria-label={t("preferences.certificates.remove", {
+                  holder: certificate.holderName,
+                })}
+                onClick={() => void remove(certificate)}
+              >
+                {t("actions.remove")}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </>
+  );
+
+  const appearance = (
+    <>
+      {heading("appearance", `${titleId}-heading-appearance`)}
+      <Select
+        label={t("preferences.theme.label")}
+        value={preferences.theme}
+        options={THEMES.map((theme) => ({
+          value: theme,
+          label: t(`preferences.theme.${theme}`),
+        }))}
+        onChange={(theme) => void change("appearance", () => onChange({ ...preferences, theme }))}
+      />
+      <Select
+        label={t("preferences.language.label")}
+        value={language}
+        options={LANGUAGES.map((tag) => ({
+          value: tag,
+          label: t(`languages.${tag}`),
+        }))}
+        onChange={(chosen) => void change("appearance", () => setLanguage(chosen))}
+      />
+      {saveNotice("appearance")}
+    </>
+  );
+
+  const panels: Record<Section, ReactNode> = { general, signing, certificates, appearance };
 
   return (
     <div
@@ -349,197 +550,45 @@ export function PreferencesDialog({
         <p className="rf-title" id={titleId}>
           {t("preferences.title")}
         </p>
-        {SECTIONS.map((section) => (
-          <button
-            key={section}
-            type="button"
-            className={
-              section === current
-                ? "rf-btn preferences__section preferences__section--current"
-                : "rf-btn preferences__section rf-text-muted"
-            }
-            aria-current={section === current || undefined}
-            onClick={() => show(section)}
-          >
-            {t(`preferences.sections.${section}`)}
-          </button>
-        ))}
+        <div
+          className="preferences__tablist"
+          role="tablist"
+          aria-orientation="vertical"
+          onKeyDown={onTabsKeyDown}
+        >
+          {SECTIONS.map((section) => (
+            <button
+              key={section}
+              type="button"
+              id={tabId(section)}
+              role="tab"
+              ref={registerTab(section)}
+              className={
+                section === current
+                  ? "rf-btn preferences__section preferences__section--current"
+                  : "rf-btn preferences__section rf-text-muted"
+              }
+              aria-selected={section === current}
+              aria-controls={`${titleId}-panel`}
+              tabIndex={section === current ? 0 : -1}
+              onClick={() => show(section)}
+            >
+              {t(`preferences.sections.${section}`)}
+            </button>
+          ))}
+        </div>
       </nav>
 
-      <div className="preferences__content">
+      <div
+        className="preferences__content"
+        role="tabpanel"
+        id={`${titleId}-panel`}
+        aria-labelledby={tabId(current)}
+        tabIndex={0}
+        ref={panel}
+      >
         <div className="preferences__column">
-          <section
-            className="preferences__section-body"
-            aria-labelledby={`${titleId}-signing`}
-            ref={register("signing")}
-          >
-            {heading("signing")}
-            <Switch
-              checked={preferences.rememberVisibleSignature}
-              label={t("preferences.rememberVisibleSignature.label")}
-              hint={t("preferences.rememberVisibleSignature.hint")}
-              wide
-              onChange={(checked) =>
-                void change("signing", () =>
-                  onChange({ ...preferences, rememberVisibleSignature: checked }),
-                )
-              }
-            />
-            <div className="preferences__destination">
-              <p className="rf-label" id={`${titleId}-destination`}>
-                {t("preferences.destination.label")}
-              </p>
-              {preferences.offersOriginalFolder && (
-                <p className="rf-prose preferences__destination-note">
-                  {t("preferences.destination.nextToOriginal")}
-                </p>
-              )}
-              <div className="rf-row rf-gap-sm preferences__destination-row">
-                {preferences.offersOriginalFolder && (
-                  <span className="rf-prose preferences__destination-mode-label">
-                    {t("preferences.destination.inThisFolder")}
-                  </span>
-                )}
-                <p className="rf-prose preferences__destination-folder">
-                  {preferences.destination}
-                </p>
-                <button
-                  type="button"
-                  className="rf-btn rf-btn--secondary"
-                  onClick={() => void change("signing", onChooseDestination)}
-                >
-                  {t("preferences.destination.change")}
-                </button>
-              </div>
-            </div>
-            {saveNotice("signing")}
-          </section>
-
-          <section
-            className="preferences__section-body"
-            aria-labelledby={`${titleId}-certificates`}
-            ref={register("certificates")}
-          >
-            {heading(
-              "certificates",
-              <button
-                type="button"
-                className="rf-btn rf-btn--secondary preferences__add-certificate"
-                onClick={() => {
-                  setCertificateFailure(null);
-                  setAskingPassword(true);
-                }}
-              >
-                {t("preferences.certificates.add")}
-              </button>,
-            )}
-            {certificateFailure !== null && (
-              <ErrorNotice
-                situation={certificateFailure.situation}
-                technicalDetail={
-                  certificateFailure.situation === "keyNotRsa"
-                    ? undefined
-                    : certificateFailure.detail
-                }
-              />
-            )}
-            {installedCertificates.length === 0 ? (
-              <p className="rf-prose preferences__certificates-empty">
-                {t("preferences.certificates.empty")}
-              </p>
-            ) : (
-              <ul className="preferences__certificates">
-                {installedCertificates.map((certificate) => (
-                  <li className="rf-row preferences__certificate" key={certificate.id}>
-                    <span className="preferences__certificate-text">
-                      <span className="rf-title preferences__certificate-holder">
-                        {certificate.holderName}
-                        {certificate.status.kind === "expired" && (
-                          <span className="rf-badge">{t("preferences.certificates.expired")}</span>
-                        )}
-                      </span>
-                      <span className="rf-body rf-text-muted">{certificateLine(certificate)}</span>
-                    </span>
-                    <button
-                      type="button"
-                      className="rf-btn rf-btn--ghost preferences__remove-certificate"
-                      aria-label={t("preferences.certificates.remove", {
-                        holder: certificate.holderName,
-                      })}
-                      onClick={() => void remove(certificate)}
-                    >
-                      {t("actions.remove")}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-
-          <section
-            className="preferences__section-body"
-            aria-labelledby={`${titleId}-privacy`}
-            ref={register("privacy")}
-          >
-            {heading("privacy")}
-            <Switch
-              checked={preferences.rememberActivity}
-              label={t("preferences.rememberActivity.label")}
-              hint={t("preferences.rememberActivity.hint")}
-              wide
-              onChange={rememberActivity}
-            />
-            <button
-              type="button"
-              className="rf-btn rf-btn--secondary preferences__clear"
-              onClick={() => void forget()}
-            >
-              {t("preferences.rememberActivity.clear")}
-            </button>
-            {forgetFailure !== null && (
-              <ErrorNotice situation="activityNotForgotten" technicalDetail={forgetFailure} />
-            )}
-            <Switch
-              checked={preferences.notifyNewVersion}
-              label={t("preferences.notifyNewVersion.label")}
-              wide
-              onChange={(checked) =>
-                void change("privacy", () =>
-                  onChange({ ...preferences, notifyNewVersion: checked }),
-                )
-              }
-            />
-            {saveNotice("privacy")}
-          </section>
-
-          <section
-            className="preferences__section-body"
-            aria-labelledby={`${titleId}-appearance`}
-            ref={register("appearance")}
-          >
-            {heading("appearance")}
-            <Select
-              label={t("preferences.theme.label")}
-              value={preferences.theme}
-              options={THEMES.map((theme) => ({
-                value: theme,
-                label: t(`preferences.theme.${theme}`),
-              }))}
-              onChange={(theme) =>
-                void change("appearance", () => onChange({ ...preferences, theme }))
-              }
-            />
-            <Select
-              label={t("preferences.language.label")}
-              value={language}
-              options={LANGUAGES.map((tag) => ({
-                value: tag,
-                label: t(`languages.${tag}`),
-              }))}
-              onChange={(chosen) => void change("appearance", () => setLanguage(chosen))}
-            />
-            {saveNotice("appearance")}
-          </section>
+          <div className="preferences__section-body">{panels[current]}</div>
         </div>
       </div>
 

@@ -48,6 +48,12 @@
   padding: 0 var(--rf-space-xs);
 }
 
+.preferences__tablist {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 /* Cada fila del índice: 36 px de alto, `--rf-radius-md` y relleno lateral
    corto. La activa lleva fondo y borde; las demás, ni uno ni otro. */
 .preferences__section {
@@ -87,12 +93,32 @@
   gap: var(--rf-space-sm);
 }
 
-/* El rótulo de la sección y su `.rf-divider` van pegados: son una sola cosa. */
+/* El grupo de *Privacidad* dentro de *General*: el mismo aire interno que un
+   panel entre su encabezado y su primer control, con un respiro algo mayor
+   por encima —no estrena token, compone `--rf-space-md` y `--rf-space-xs`—
+   porque es el primero bajo el título de página. */
+.preferences__group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rf-space-sm);
+  margin-top: calc(var(--rf-space-md) + var(--rf-space-xs) - var(--rf-space-sm));
+}
+
+/* El título de página: versalitas, apagado, con su `.rf-divider` pegado
+   debajo. Es `.rf-label`, no `.rf-title`: el encabezado de un grupo interno
+   —«Privacidad»— es el que lleva el estilo de título. */
 .preferences__heading {
   margin: 0;
   text-transform: uppercase;
   letter-spacing: 0.6px;
   color: var(--rf-text-muted);
+}
+
+/* El encabezado de un grupo interno, como «Privacidad» dentro de *General*:
+   mismo `.rf-title`, a 14 px y sin divisoria, para no confundirlo con el
+   título de página que abre el panel. */
+.preferences__group-heading {
+  font-size: 14px;
 }
 
 .preferences__section-body > .rf-divider {

@@ -846,6 +846,9 @@ msgstr ""
 msgid "preferences.sections.label"
 msgstr ""
 
+msgid "preferences.sections.general"
+msgstr ""
+
 msgid "preferences.sections.signing"
 msgstr ""
 

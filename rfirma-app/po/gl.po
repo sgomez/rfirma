@@ -914,6 +914,9 @@ msgstr "Preferencias"
 msgid "preferences.sections.label"
 msgstr "Seccións"
 
+msgid "preferences.sections.general"
+msgstr "Xeral"
+
 msgid "preferences.sections.signing"
 msgstr "Sinatura"
 
