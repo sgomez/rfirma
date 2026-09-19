@@ -1,7 +1,7 @@
 import type { TFunction } from "i18next";
-import { useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { CheckCircleIcon, CrossCircleIcon } from "../design-system/icons";
+import { AlertIcon, CheckCircleIcon, CheckingIcon } from "../design-system/icons";
 import { Header } from "../shell/Header";
 import { type MenuAnchor, menuAnchorFor } from "../shell/menuAnchor";
 import "./SetupWizard.css";
@@ -145,20 +145,24 @@ export function SetupWizard({
       />
 
       <div className="setup-wizard__body">
-        <div className="setup-wizard__column rf-stack rf-gap-sm">
-          <div className="setup-wizard__progress" aria-hidden="true">
+        <div className="setup-wizard__column rf-stack rf-gap-md">
+          <div className="rf-row rf-gap-xs">
             <span
-              className={`setup-wizard__progress-bar ${step >= 1 ? "setup-wizard__progress-bar--active" : ""}`}
+              aria-hidden="true"
+              className="setup-wizard__progress-bar setup-wizard__progress-bar--active"
             />
             <span
+              aria-hidden="true"
               className={`setup-wizard__progress-bar ${step >= 2 ? "setup-wizard__progress-bar--active" : ""}`}
             />
+            <span className="rf-body rf-text-muted setup-wizard__step">
+              {t("setup.step", { current: step, total: 2 })}
+            </span>
           </div>
-          <p className="rf-hint">{t("setup.step", { current: step, total: 2 })}</p>
 
           {step === 1 && <WelcomeScreen t={t} />}
           {step === 2 && (
-            <div className="rf-stack rf-gap-sm">
+            <div className="rf-stack rf-gap-md">
               <CertificateCard
                 t={t}
                 status={certificate}
@@ -177,7 +181,7 @@ export function SetupWizard({
         </div>
       </div>
 
-      <div className="setup-wizard__footer rf-row">
+      <div className="setup-wizard__footer rf-row rf-gap-sm">
         {step === 2 && (
           <button type="button" className="rf-btn rf-btn--secondary" onClick={() => setStep(1)}>
             {t("setup.actions.back")}
@@ -205,17 +209,39 @@ export function SetupWizard({
 function WelcomeScreen({ t }: { t: TFunction }) {
   const independence = t("about.independence");
   const separator = independence.indexOf(". ");
-  const independenceTitle = separator === -1 ? independence : independence.slice(0, separator + 1);
+  const independenceTitle = separator === -1 ? independence : independence.slice(0, separator);
   const independenceBody = separator === -1 ? "" : independence.slice(separator + 2);
 
   return (
-    <div className="rf-stack rf-gap-sm">
-      <p className="rf-title">{t("setup.welcome.title")}</p>
-      <p className="rf-prose">{t("setup.welcome.body", { version: AUTOFIRMA_VERSION })}</p>
-      <div className="rf-card setup-wizard__card">
-        <p className="rf-heading">{independenceTitle}</p>
+    <div className="rf-stack rf-gap-md">
+      <div className="rf-stack setup-wizard__intro">
+        <p className="rf-title setup-wizard__title">{t("setup.welcome.title")}</p>
+        <p className="rf-prose">{t("setup.welcome.body", { version: AUTOFIRMA_VERSION })}</p>
+      </div>
+      <div className="rf-card">
+        <p className="rf-title setup-wizard__notice-title">{independenceTitle}</p>
         {independenceBody && <p className="rf-prose">{independenceBody}</p>}
       </div>
+    </div>
+  );
+}
+
+interface OutcomeProps {
+  icon: ReactNode;
+  title: string;
+  children?: ReactNode;
+  action?: ReactNode;
+}
+
+function Outcome({ icon, title, children, action }: OutcomeProps) {
+  return (
+    <div className="rf-row rf-gap-xs setup-wizard__outcome">
+      <span className="setup-wizard__outcome-icon">{icon}</span>
+      <div className="rf-stack setup-wizard__outcome-text">
+        <p className="rf-prose setup-wizard__outcome-title">{title}</p>
+        {children}
+      </div>
+      {action}
     </div>
   );
 }
@@ -230,38 +256,11 @@ interface CertificateCardProps {
 function CertificateCard({ t, status, onInstall, onDecline }: CertificateCardProps) {
   return (
     <div className="rf-card setup-wizard__card">
-      <p className="rf-heading">{t("setup.certificate.title")}</p>
+      <p className="rf-title setup-wizard__card-title">{t("setup.certificate.title")}</p>
       <p className="rf-prose">{t("setup.certificate.body")}</p>
 
-      <div role="status" className="setup-wizard__card-result">
-        {status.kind === "working" && (
-          <p className="rf-body">{t("setup.certificate.installing")}</p>
-        )}
-        {status.kind === "done" && (
-          <>
-            <p className="rf-body">{t("setup.certificate.installedTitle")}</p>
-            {status.restartNotice && (
-              <p className="rf-hint">{t("setup.certificate.installedRestartNotice")}</p>
-            )}
-          </>
-        )}
-        {status.kind === "failed" && (
-          <>
-            <p className="rf-body">{t("setup.certificate.failedTitle")}</p>
-            <ul className="rf-stack rf-gap-xs setup-wizard__detail-list">
-              {status.detail.map((store) => (
-                <li key={store.brand} className="rf-row rf-gap-xs">
-                  {store.trusted ? <CheckCircleIcon size={14} /> : <CrossCircleIcon size={14} />}
-                  <span className="rf-prose">{storeBrandLabel(t, store.brand)}</span>
-                </li>
-              ))}
-            </ul>
-          </>
-        )}
-      </div>
-
       {status.kind === "idle" && (
-        <div className="rf-row setup-wizard__card-actions">
+        <div className="rf-row rf-gap-xs setup-wizard__actions">
           <button type="button" className="rf-btn rf-btn--primary" onClick={onInstall}>
             {t("status.actions.install")}
           </button>
@@ -270,13 +269,42 @@ function CertificateCard({ t, status, onInstall, onDecline }: CertificateCardPro
           </button>
         </div>
       )}
-      {status.kind === "failed" && (
-        <div className="rf-row setup-wizard__card-actions">
-          <button type="button" className="rf-btn rf-btn--secondary" onClick={onInstall}>
-            {t("status.withdrawal.retry")}
-          </button>
-        </div>
-      )}
+
+      <div role="status">
+        {status.kind === "working" && (
+          <Outcome icon={<CheckingIcon size={18} />} title={t("setup.certificate.installing")} />
+        )}
+        {status.kind === "done" && (
+          <Outcome
+            icon={<CheckCircleIcon size={18} />}
+            title={t("setup.certificate.installedTitle")}
+          >
+            {status.restartNotice && (
+              <p className="rf-hint">{t("setup.certificate.installedRestartNotice")}</p>
+            )}
+          </Outcome>
+        )}
+        {status.kind === "failed" && (
+          <Outcome
+            icon={<AlertIcon size={18} />}
+            title={t("setup.certificate.failedTitle")}
+            action={
+              <button type="button" className="rf-btn rf-btn--secondary" onClick={onInstall}>
+                {t("status.withdrawal.retry")}
+              </button>
+            }
+          >
+            <ul className="rf-stack setup-wizard__stores">
+              {status.detail.map((store) => (
+                <li key={store.brand} className="rf-row rf-gap-xs rf-hint">
+                  <span className="setup-wizard__store-mark">{store.trusted ? "✓" : "✗"}</span>
+                  {storeBrandLabel(t, store.brand)}
+                </li>
+              ))}
+            </ul>
+          </Outcome>
+        )}
+      </div>
     </div>
   );
 }
@@ -292,17 +320,13 @@ interface HandlerCardProps {
 function HandlerCard({ t, status, autoFirmaAppears, onUse, onDecline }: HandlerCardProps) {
   return (
     <div className="rf-card setup-wizard__card">
-      <p className="rf-heading">{t("setup.handler.title")}</p>
+      <p className="rf-title setup-wizard__card-title">{t("setup.handler.title")}</p>
       <p className="rf-prose">
         {t(autoFirmaAppears ? "setup.handler.body" : "setup.handler.bodyNoAutofirma")}
       </p>
 
-      <div role="status" className="setup-wizard__card-result">
-        {status.kind === "done" && <p className="rf-body">{t("setup.handler.done")}</p>}
-      </div>
-
       {status.kind === "idle" && (
-        <div className="rf-row setup-wizard__card-actions">
+        <div className="rf-row rf-gap-xs setup-wizard__actions">
           <button
             type="button"
             className="rf-btn rf-btn--primary"
@@ -315,6 +339,12 @@ function HandlerCard({ t, status, autoFirmaAppears, onUse, onDecline }: HandlerC
           </button>
         </div>
       )}
+
+      <div role="status">
+        {status.kind === "done" && (
+          <Outcome icon={<CheckCircleIcon size={18} />} title={t("setup.handler.done")} />
+        )}
+      </div>
     </div>
   );
 }

@@ -58,7 +58,7 @@ describe("SetupWizard", () => {
 
     expect(screen.getByText("Configurar rFirma")).toBeInTheDocument();
     expect(screen.getByText(/aplicación compatible con AutoFirma 1\.9\.2/)).toBeInTheDocument();
-    expect(screen.getByText("Proyecto independiente.")).toBeInTheDocument();
+    expect(screen.getByText("Proyecto independiente")).toBeInTheDocument();
     expect(screen.getByText("Paso 1 de 2")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Continuar" }));
