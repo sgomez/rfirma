@@ -69,6 +69,24 @@ impl TrustStores for Doubled {
             .any(|(der, _)| der == certificate_der)
             .then_some(TRUSTED_SSL_CA))
     }
+
+    fn withdraw(&self, profile: &Path, certificate_der: &[u8]) -> Result<(), TrustError> {
+        if self.refuse.contains(&profile.to_path_buf()) {
+            return Err(TrustError::new(
+                Situation::StoreUnreachable,
+                "el doble no deja escribir en este perfil",
+            ));
+        }
+        if let Some(registered) = self
+            .contents
+            .lock()
+            .expect("el doble no envenena su cerrojo")
+            .get_mut(profile)
+        {
+            registered.retain(|(der, _)| der != certificate_der);
+        }
+        Ok(())
+    }
 }
 
 fn a_store() -> InMemoryCaSlots {

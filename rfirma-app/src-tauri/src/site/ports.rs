@@ -194,6 +194,9 @@ pub trait TrustStores {
 
     /// Obtiene los bits de confianza TLS configurados para el certificado en el almacén.
     fn trust_of(&self, profile: &Path, certificate_der: &[u8]) -> Result<Option<u32>, TrustError>;
+
+    /// Retira el certificado del almacén de perfil indicado, localizándolo por huella.
+    fn withdraw(&self, profile: &Path, certificate_der: &[u8]) -> Result<(), TrustError>;
 }
 
 /// Puerto de salida hacia los servlets del servidor intermedio: recuperar, almacenar y esperar.

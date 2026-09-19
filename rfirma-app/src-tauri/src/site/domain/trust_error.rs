@@ -11,6 +11,8 @@ pub enum Situation {
     StoreUnreachable,
     /// No se pudieron registrar los bits de confianza en el almacén.
     TrustNotWritten,
+    /// No se pudo retirar el certificado del almacén.
+    TrustNotWithdrawn,
 }
 
 /// Error al interactuar con almacenes NSS con situación clasificada y detalle técnico.
