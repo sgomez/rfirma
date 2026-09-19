@@ -25,6 +25,16 @@ fn repository_identifier_resolves_to_repository_url() {
 }
 
 #[test]
+fn certificate_issuance_identifier_resolves_to_the_fnmt_url() {
+    assert_eq!(
+        resolve_destination(CERTIFICATE_ISSUANCE),
+        Some(
+            "https://www.sede.fnmt.gob.es/certificados/persona-fisica/obtener-certificado-software"
+        )
+    );
+}
+
+#[test]
 fn unknown_identifier_is_rejected() {
     assert_eq!(resolve_destination("unknown"), None);
     assert_eq!(resolve_destination("issues"), None);

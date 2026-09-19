@@ -63,6 +63,14 @@ pub fn certificates_with_their_chains(
         .collect())
 }
 
+/// Cuántos almacenes tienen al menos un certificado firmable propio.
+pub fn stores_with_certificates(token: &dyn Token, stores: &[Store]) -> usize {
+    stores
+        .iter()
+        .filter(|store| matches!(token.list(store), Ok(certificates) if !certificates.is_empty()))
+        .count()
+}
+
 /// Filas de un listado con asas acuñadas y estado de selección.
 pub fn rows_of(
     found: Vec<TokenCertificate>,

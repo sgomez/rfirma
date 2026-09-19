@@ -117,7 +117,7 @@ export function StatusView({
               <p className="rf-prose status-view__cell-signal">{signalLabel(t, row.signal)}</p>
 
               <div className="status-view__cell-value">
-                <p className="rf-prose status-view__cell-value-text">{row.value}</p>
+                <p className="rf-prose status-view__cell-value-text">{valueLabel(t, row)}</p>
               </div>
 
               <div className="status-view__cell-verdict">
@@ -175,9 +175,10 @@ function actionLabel(t: TFunction, row: SignalRow): string {
   switch (row.signal) {
     case "version":
       return t("status.actions.update");
+    case "userCertificates":
+      return t("status.actions.howToInstall");
     case "siteSignature":
     case "localCaCertificate":
-    case "userCertificates":
       return "";
   }
 }
@@ -186,10 +187,26 @@ function signalLabel(t: TFunction, signal: Signal): string {
   switch (signal) {
     case "version":
       return t("status.signals.version");
+    case "userCertificates":
+      return t("status.signals.userCertificates");
     case "siteSignature":
     case "localCaCertificate":
-    case "userCertificates":
       return "";
+  }
+}
+
+function valueLabel(t: TFunction, row: SignalRow): string {
+  switch (row.signal) {
+    case "version":
+    case "siteSignature":
+    case "localCaCertificate":
+      return row.value;
+    case "userCertificates": {
+      const count = Number(row.value);
+      return count === 0
+        ? t("status.values.userCertificates.none")
+        : t("status.values.userCertificates.stores", { count });
+    }
   }
 }
 

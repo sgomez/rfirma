@@ -855,6 +855,9 @@ msgstr "Ekintza"
 msgid "status.signals.version"
 msgstr "Bertsioa"
 
+msgid "status.signals.userCertificates"
+msgstr "Zure ziurtagiriak"
+
 msgid "status.verdicts.correct"
 msgstr "Zuzena"
 
@@ -872,6 +875,19 @@ msgstr "Egiaztatzen"
 
 msgid "status.actions.update"
 msgstr "Eguneratu"
+
+msgid "status.actions.howToInstall"
+msgstr "Nola instalatu"
+
+msgid "status.values.userCertificates.none"
+msgstr "Bat ere ez"
+
+#. Cuántos almacenes de la persona tienen al menos un certificado propio.
+msgid "status.values.userCertificates.stores"
+msgid_plural "status.values.userCertificates.stores"
+msgstr[0] "Biltegi bat"
+msgstr[1] "{{count}} biltegi"
+msgstr[2] "{{count}} biltegi"
 
 msgid "preferences.title"
 msgstr "Hobespenak"

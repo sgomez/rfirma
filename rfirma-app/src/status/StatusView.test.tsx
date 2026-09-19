@@ -104,6 +104,91 @@ describe("StatusView", () => {
     expect(within(row).getByRole("button", { name: "Actualizar" })).toBeInTheDocument();
   });
 
+  it("renders Ninguno and Cómo instalar when no certificate stores are detected", async () => {
+    const rows: SignalRow[] = [
+      {
+        signal: "userCertificates",
+        value: "0",
+        verdict: "attention",
+        action: {
+          kind: "link",
+          target: "certificateIssuance",
+        },
+      },
+    ];
+    renderWithCatalog(<StatusView statusPort={memoryStatus(rows)} onClose={() => {}} />);
+
+    const row = await screen.findByRole("status");
+    expect(within(row).getByText("Tus certificados")).toBeInTheDocument();
+    expect(within(row).getByText("Ninguno")).toBeInTheDocument();
+    expect(within(row).getByText("Atención")).toBeInTheDocument();
+    expect(within(row).getByRole("button", { name: "Cómo instalar" })).toBeInTheDocument();
+  });
+
+  it("renders the store count and Correcto without action when certificates are detected", async () => {
+    const rows: SignalRow[] = [
+      {
+        signal: "userCertificates",
+        value: "3",
+        verdict: "correct",
+        action: null,
+      },
+    ];
+    renderWithCatalog(<StatusView statusPort={memoryStatus(rows)} onClose={() => {}} />);
+
+    const row = await screen.findByRole("status");
+    expect(within(row).getByText("Tus certificados")).toBeInTheDocument();
+    expect(within(row).getByText("3 almacenes")).toBeInTheDocument();
+    expect(within(row).getByText("Correcto")).toBeInTheDocument();
+    expect(within(row).queryByRole("button")).not.toBeInTheDocument();
+  });
+
+  it("remeasures the certificate stores row on Volver a comprobar", async () => {
+    const user = userEvent.setup();
+    let resolveRecheck!: (rows: SignalRow[]) => void;
+    const recheckPromise = new Promise<SignalRow[]>((resolve) => {
+      resolveRecheck = resolve;
+    });
+
+    const statusPort: StatusPort = {
+      readStatus: vi.fn().mockResolvedValue([
+        {
+          signal: "userCertificates",
+          value: "0",
+          verdict: "attention",
+          action: {
+            kind: "link",
+            target: "certificateIssuance",
+          },
+        },
+      ]),
+      recheck: vi.fn().mockReturnValue(recheckPromise),
+    };
+
+    renderWithCatalog(<StatusView statusPort={statusPort} onClose={() => {}} />);
+
+    const row = await screen.findByRole("status");
+    expect(within(row).getByText("Ninguno")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Volver a comprobar" }));
+
+    expect(within(row).getByText("Comprobando")).toBeInTheDocument();
+
+    resolveRecheck([
+      {
+        signal: "userCertificates",
+        value: "1",
+        verdict: "correct",
+        action: null,
+      },
+    ]);
+
+    await waitFor(() => {
+      expect(within(row).getByText("Correcto")).toBeInTheDocument();
+    });
+    expect(within(row).getByText("1 almacén")).toBeInTheDocument();
+  });
+
   it("transitions through Comprobando and remeasures after clicking an action", async () => {
     const user = userEvent.setup();
     const open = vi.fn();
