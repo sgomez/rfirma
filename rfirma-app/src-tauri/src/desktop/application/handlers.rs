@@ -31,7 +31,7 @@ pub fn chosen(registry: &dyn HandlerRegistry, handler: &str) -> Result<(), Deskt
     registry.choose_for(SCHEME, handler)
 }
 
-/// Retira rFirma como manejador de afirma://, sin registrar ningún otro en su lugar (ID-364).
+/// Retira rFirma como manejador de afirma://, sin registrar ningún otro en su lugar.
 pub fn withdrawn(registry: &dyn HandlerRegistry) -> Withdrawal {
     let was_ours = registry.current_default_for(SCHEME).as_deref() == Some(OUR_DESKTOP_FILE);
     match registry.remove_for(SCHEME) {

@@ -199,7 +199,7 @@ pub fn read_status(
 }
 
 /// Retira lo que rFirma dejó fuera de sus carpetas: el manejador de sedes y la CA local de cada
-/// almacén NSS (ID-364).
+/// almacén NSS.
 #[tauri::command(async)]
 pub fn withdraw_rfirma(site: State<'_, SiteRoot>) -> WithdrawalReportView {
     let channel = crate::desktop::adapters::channel::Channel::detected();

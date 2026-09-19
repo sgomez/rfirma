@@ -267,8 +267,8 @@ pub struct WithdrawOutcome {
     pub results: Vec<(PathBuf, StoreWithdrawal)>,
 }
 
-/// Retira la CA local —vigente y la del solape— de los almacenes NSS indicados, por huella
-/// (ID-364, ID-365). Las ranuras solo se vacían después, y solo si ningún almacén ha fallado.
+/// Retira la CA local —vigente y la del solape— de los almacenes NSS indicados, por huella.
+/// Las ranuras solo se vacían después, y solo si ningún almacén ha fallado.
 pub fn withdraw_everywhere(
     store: &dyn LocalCaSlots,
     profiles: &[PathBuf],
