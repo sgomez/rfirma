@@ -146,12 +146,13 @@ pub fn install_local_ca_certificate(site: State<'_, SiteRoot>) -> SignalRowView 
     let firefox_was_running = firefox_is_running(&site);
     let firefox_trusted_before = firefox_local_ca_trust(&site);
     let _ = site.install_local_ca_trust();
-    let firefox_just_installed = firefox_was_running
-        && firefox_local_ca_trust(&site)
-            .into_iter()
-            .zip(firefox_trusted_before)
-            .any(|(after, before)| after && !before);
-    measured_local_ca_certificate_signal(&site, firefox_just_installed).into()
+    let firefox_trusted_after = firefox_local_ca_trust(&site);
+    let restart_firefox_notice = crate::desktop::application::status::firefox_restart_notice(
+        firefox_was_running,
+        &firefox_trusted_before,
+        &firefox_trusted_after,
+    );
+    measured_local_ca_certificate_signal(&site, restart_firefox_notice).into()
 }
 
 /// Consulta el estado de las señales de la instalación para el panel de estado.
