@@ -130,14 +130,28 @@ fn firefox_is_running(site: &SiteRoot) -> bool {
         .any(|profile| crate::desktop::adapters::firefox_lock::firefox_is_running(profile))
 }
 
+/// Si la CA local vigente es de confianza en cada perfil Firefox detectado.
+fn firefox_local_ca_trust(site: &SiteRoot) -> Vec<bool> {
+    site.measure_local_ca_trust()
+        .unwrap_or_default()
+        .into_iter()
+        .filter(|reading| brand_of(&reading.profile) == StoreBrand::Firefox)
+        .map(|reading| reading.trusted)
+        .collect()
+}
+
 /// Instala el certificado de rFirma donde falte y vuelve a medir la señal.
 #[tauri::command(async)]
 pub fn install_local_ca_certificate(site: State<'_, SiteRoot>) -> SignalRowView {
     let firefox_was_running = firefox_is_running(&site);
-    let installed_something = site
-        .install_local_ca_trust()
-        .is_ok_and(|outcome| outcome.notice.is_pending());
-    measured_local_ca_certificate_signal(&site, firefox_was_running && installed_something).into()
+    let firefox_trusted_before = firefox_local_ca_trust(&site);
+    let _ = site.install_local_ca_trust();
+    let firefox_just_installed = firefox_was_running
+        && firefox_local_ca_trust(&site)
+            .into_iter()
+            .zip(firefox_trusted_before)
+            .any(|(after, before)| after && !before);
+    measured_local_ca_certificate_signal(&site, firefox_just_installed).into()
 }
 
 /// Consulta el estado de las señales de la instalación para el panel de estado.
