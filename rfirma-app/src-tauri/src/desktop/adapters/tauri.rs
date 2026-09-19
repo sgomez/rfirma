@@ -98,6 +98,14 @@ fn local_ca_certificate_signal(
     if !recheck {
         return crate::desktop::application::status::checking_local_ca_certificate_signal();
     }
+    measured_local_ca_certificate_signal(site, false)
+}
+
+/// Mide la señal del certificado de rFirma, con el aviso de reiniciar Firefox si se pide.
+fn measured_local_ca_certificate_signal(
+    site: &SiteRoot,
+    restart_firefox_notice: bool,
+) -> crate::desktop::domain::status::SignalRow {
     let detail = site
         .measure_local_ca_trust()
         .unwrap_or_default()
@@ -107,7 +115,29 @@ fn local_ca_certificate_signal(
             trusted: reading.trusted,
         })
         .collect();
-    crate::desktop::application::status::evaluate_local_ca_certificate_signal(detail)
+    crate::desktop::application::status::evaluate_local_ca_certificate_signal(
+        detail,
+        restart_firefox_notice,
+    )
+}
+
+/// Si Firefox tiene abierto alguno de los perfiles detectados.
+fn firefox_is_running(site: &SiteRoot) -> bool {
+    site.trust
+        .profiles
+        .iter()
+        .filter(|profile| brand_of(profile) == StoreBrand::Firefox)
+        .any(|profile| crate::desktop::adapters::firefox_lock::firefox_is_running(profile))
+}
+
+/// Instala el certificado de rFirma donde falte y vuelve a medir la señal.
+#[tauri::command(async)]
+pub fn install_local_ca_certificate(site: State<'_, SiteRoot>) -> SignalRowView {
+    let firefox_was_running = firefox_is_running(&site);
+    let installed_something = site
+        .install_local_ca_trust()
+        .is_ok_and(|outcome| outcome.notice.is_pending());
+    measured_local_ca_certificate_signal(&site, firefox_was_running && installed_something).into()
 }
 
 /// Consulta el estado de las señales de la instalación para el panel de estado.

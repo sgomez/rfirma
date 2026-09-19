@@ -68,6 +68,8 @@ pub struct SignalRow {
     pub action: Option<StatusAction>,
     /// Detalle por almacén, para señales que lo despliegan.
     pub detail: Option<Vec<StoreDetail>>,
+    /// Aviso de reiniciar Firefox, tras instalar con el navegador vivo (ADR-0005).
+    pub restart_firefox_notice: bool,
 }
 
 /// Familia de almacén de un perfil NSS, para el detalle desplegable de una señal.

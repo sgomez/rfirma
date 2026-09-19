@@ -190,6 +190,12 @@
   color: var(--rf-text-muted);
 }
 
+.status-view__restart-notice {
+  padding-left: 206px;
+  color: var(--rf-text-muted);
+  font-size: 12px;
+}
+
 .status-view__footer {
   flex: none;
   display: flex;

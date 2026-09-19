@@ -796,6 +796,9 @@ msgstr ""
 msgid "status.actions.howToInstall"
 msgstr ""
 
+msgid "status.actions.install"
+msgstr ""
+
 msgid "status.values.userCertificates.none"
 msgstr ""
 
@@ -829,6 +832,9 @@ msgid "status.storeBrands.chrome"
 msgstr ""
 
 msgid "status.storeBrands.nssdb"
+msgstr ""
+
+msgid "status.notices.restartFirefox"
 msgstr ""
 
 msgid "preferences.title"

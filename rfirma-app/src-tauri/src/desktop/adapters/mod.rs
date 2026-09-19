@@ -3,6 +3,7 @@
 pub mod channel;
 pub mod choice;
 pub mod failures;
+pub mod firefox_lock;
 pub mod paths;
 pub mod process;
 pub mod registry;

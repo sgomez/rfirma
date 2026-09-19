@@ -882,6 +882,9 @@ msgstr "Eguneratu"
 msgid "status.actions.howToInstall"
 msgstr "Nola instalatu"
 
+msgid "status.actions.install"
+msgstr "Instalatu"
+
 msgid "status.values.userCertificates.none"
 msgstr "Bat ere ez"
 
@@ -916,6 +919,9 @@ msgstr "Chrome eta Chromium"
 
 msgid "status.storeBrands.nssdb"
 msgstr "Sistemaren biltegia"
+
+msgid "status.notices.restartFirefox"
+msgstr "Berrabiarazi Firefox eragina izan dezan."
 
 msgid "preferences.title"
 msgstr "Hobespenak"

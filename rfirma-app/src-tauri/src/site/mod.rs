@@ -16,8 +16,9 @@ use application::errand::ErrandDesk;
 pub use application::errand::LiveErrand;
 use application::site::CodecTable;
 use application::startup::{HeldChannel, LocalCaTrust};
-use application::trust::ProfileTrust;
+use application::trust::{ProfileTrust, TrustOutcome};
 use domain::tls_error::TlsError;
+use domain::trust::Moment;
 
 /// La raíz de `site`: el trámite vivo, el canal sostenido, la confianza de la CA local y la tabla
 /// de códecs.
@@ -49,6 +50,17 @@ impl SiteRoot {
             self.trust.store.as_ref(),
             &self.trust.profiles,
             self.trust.stores.as_ref(),
+        )
+    }
+
+    /// Instala o repara la CA local a petición del panel de estado, con el caso de uso del
+    /// arranque.
+    pub fn install_local_ca_trust(&self) -> Result<TrustOutcome, TlsError> {
+        application::trust::refresh_local_ca_trust(
+            self.trust.store.as_ref(),
+            &self.trust.profiles,
+            self.trust.stores.as_ref(),
+            Moment::Startup,
         )
     }
 }

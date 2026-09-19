@@ -878,6 +878,9 @@ msgstr "Actualizar"
 msgid "status.actions.howToInstall"
 msgstr "Cómo instalar"
 
+msgid "status.actions.install"
+msgstr "Instalar"
+
 msgid "status.values.userCertificates.none"
 msgstr "Ninguno"
 
@@ -912,6 +915,9 @@ msgstr "Chrome y Chromium"
 
 msgid "status.storeBrands.nssdb"
 msgstr "Almacén del sistema"
+
+msgid "status.notices.restartFirefox"
+msgstr "Reinicia Firefox para que surta efecto."
 
 msgid "preferences.title"
 msgstr "Preferencias"

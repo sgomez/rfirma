@@ -863,6 +863,9 @@ msgstr "Update"
 msgid "status.actions.howToInstall"
 msgstr "How to install"
 
+msgid "status.actions.install"
+msgstr "Install"
+
 msgid "status.values.userCertificates.none"
 msgstr "None"
 
@@ -897,6 +900,9 @@ msgstr "Chrome and Chromium"
 
 msgid "status.storeBrands.nssdb"
 msgstr "System store"
+
+msgid "status.notices.restartFirefox"
+msgstr "Restart Firefox for this to take effect."
 
 msgid "preferences.title"
 msgstr "Preferences"

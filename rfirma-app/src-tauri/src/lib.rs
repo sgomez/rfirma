@@ -210,6 +210,7 @@ fn with_the_five_roots(
             desktop::adapters::tauri::choose_url_handler,
             desktop::adapters::tauri::open_external_destination,
             desktop::adapters::tauri::read_status,
+            desktop::adapters::tauri::install_local_ca_certificate,
             signing::adapters::tauri::unregistered_signatures,
             identity::adapters::tauri::install_certificate,
             identity::adapters::tauri::remove_certificate,
