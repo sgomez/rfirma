@@ -86,6 +86,12 @@ fn install(profile: &Path, ca: &LocalCa) {
         .expect("la CA local deberia entrar en el perfil");
 }
 
+fn withdraw(profile: &Path, ca: &LocalCa) {
+    stores()
+        .withdraw(profile, &der_of(ca))
+        .expect("la retirada no deberia fallar");
+}
+
 #[test]
 fn the_local_ca_ends_up_trusted_and_certutil_reads_the_bits() {
     let profile = a_disposable_profile();
@@ -166,6 +172,73 @@ fn the_bits_come_back_and_a_ca_that_is_not_there_is_not_a_failure() {
         stores()
             .trust_of(profile.path(), &der_of(&stranger))
             .expect("no estar no es un fallo"),
+        None
+    );
+}
+
+#[test]
+fn withdrawing_both_local_cas_after_an_overlap_leaves_the_store_trusting_neither() {
+    let profile = a_disposable_profile();
+    let current = LocalCa::generate().expect("deberia fabricarse la vigente");
+    let next = LocalCa::generate().expect("deberia fabricarse la siguiente");
+
+    install(profile.path(), &current);
+    install(profile.path(), &next);
+    withdraw(profile.path(), &current);
+    withdraw(profile.path(), &next);
+
+    assert_eq!(
+        trusted_rows(profile.path()),
+        0,
+        "listado:\n{}",
+        certutil_listing(profile.path())
+    );
+    assert_eq!(
+        stores()
+            .trust_of(profile.path(), &der_of(&current))
+            .expect("deberian leerse los bits"),
+        None
+    );
+    assert_eq!(
+        stores()
+            .trust_of(profile.path(), &der_of(&next))
+            .expect("deberian leerse los bits"),
+        None
+    );
+}
+
+#[test]
+fn withdrawing_a_local_ca_that_is_not_there_is_not_a_failure() {
+    let profile = a_disposable_profile();
+    let stranger = LocalCa::generate().expect("deberia fabricarse");
+
+    withdraw(profile.path(), &stranger);
+}
+
+#[test]
+fn withdrawing_one_local_ca_leaves_the_other_certificates_trusted() {
+    let profile = a_disposable_profile();
+    let current = LocalCa::generate().expect("deberia fabricarse la vigente");
+    let next = LocalCa::generate().expect("deberia fabricarse la siguiente");
+
+    install(profile.path(), &current);
+    install(profile.path(), &next);
+    withdraw(profile.path(), &current);
+
+    assert_eq!(
+        trusted_rows(profile.path()),
+        1,
+        "listado:\n{}",
+        certutil_listing(profile.path())
+    );
+    assert!(stores()
+        .trust_of(profile.path(), &der_of(&next))
+        .expect("deberian leerse los bits")
+        .is_some_and(is_trusted_ssl_ca));
+    assert_eq!(
+        stores()
+            .trust_of(profile.path(), &der_of(&current))
+            .expect("deberian leerse los bits"),
         None
     );
 }

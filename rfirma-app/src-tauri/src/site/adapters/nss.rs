@@ -79,6 +79,7 @@ type ImportCert = extern "C" fn(*mut c_void, *mut c_void, c_ulong, *const c_char
 type ChangeCertTrust = extern "C" fn(*mut c_void, *mut c_void, *mut CertTrust) -> c_int;
 type GetCertTrust = extern "C" fn(*const c_void, *mut CertTrust) -> c_int;
 type DestroyCertificate = extern "C" fn(*mut c_void);
+type DeletePermCertificate = extern "C" fn(*mut c_void) -> c_int;
 
 struct Api {
     no_db_init: NoDbInit,
@@ -94,6 +95,7 @@ struct Api {
     change_cert_trust: ChangeCertTrust,
     get_cert_trust: GetCertTrust,
     destroy_certificate: DestroyCertificate,
+    delete_perm_certificate: DeletePermCertificate,
 }
 
 impl Api {
@@ -112,6 +114,7 @@ impl Api {
             change_cert_trust: symbol(nss, b"CERT_ChangeCertTrust\0")?,
             get_cert_trust: symbol(nss, b"CERT_GetCertTrust\0")?,
             destroy_certificate: symbol(nss, b"CERT_DestroyCertificate\0")?,
+            delete_perm_certificate: symbol(nss, b"SEC_DeletePermCertificate\0")?,
         })
     }
 }
@@ -258,6 +261,30 @@ impl<H: NssHost> TrustStores for NssTrustStores<H> {
                 return Err(failed(Situation::TrustNotWritten, "CERT_GetCertTrust"));
             }
             Ok(Some(trust.ssl))
+        })
+    }
+
+    fn withdraw(&self, profile: &Path, certificate_der: &[u8]) -> Result<(), TrustError> {
+        let mut der = certificate_der.to_vec();
+
+        self.within(profile, |api, _slot| {
+            let handle = (api.default_cert_db)();
+            let mut item = der_item(&mut der);
+
+            let certificate = (api.find_cert_by_der_cert)(handle, &mut item);
+            if certificate.is_null() {
+                return Ok(());
+            }
+
+            let deleted = (api.delete_perm_certificate)(certificate);
+            (api.destroy_certificate)(certificate);
+            if deleted != SEC_SUCCESS {
+                return Err(failed(
+                    Situation::TrustNotWithdrawn,
+                    "SEC_DeletePermCertificate",
+                ));
+            }
+            Ok(())
         })
     }
 }

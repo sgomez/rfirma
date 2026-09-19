@@ -123,6 +123,15 @@ impl TrustStores for World {
             .any(|(where_, der)| where_ == profile && der == certificate_der);
         Ok(installed.then_some(TRUSTED))
     }
+
+    fn withdraw(&self, profile: &Path, certificate_der: &[u8]) -> Result<(), TrustError> {
+        self.note("retirada");
+        self.trusted
+            .lock()
+            .expect("el doble no envenena su cerrojo")
+            .retain(|(where_, der)| !(where_ == profile && der == certificate_der));
+        Ok(())
+    }
 }
 
 fn a_store() -> InMemoryCaSlots {
