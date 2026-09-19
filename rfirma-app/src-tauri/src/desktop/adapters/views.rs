@@ -1,6 +1,6 @@
 //! Los tipos del escritorio que cruzan a la ventana principal (ADR-0011).
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::crossing::crossing;
 
@@ -167,11 +167,11 @@ crossing! {
     }
 }
 
-use crate::desktop::domain::withdrawal::{StoreWithdrawal, Withdrawal};
+use crate::desktop::domain::withdrawal::{StoreWithdrawal, Withdrawal, WithdrawalReport};
 
 crossing! {
     /// Qué pasó al retirar algo propio de rFirma de un sitio del sistema.
-    #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+    #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
     #[serde(tag = "kind", rename_all = "camelCase")]
     pub enum WithdrawalView {
         Withdrawn,
@@ -190,9 +190,19 @@ impl From<Withdrawal> for WithdrawalView {
     }
 }
 
+impl From<WithdrawalView> for Withdrawal {
+    fn from(view: WithdrawalView) -> Self {
+        match view {
+            WithdrawalView::Withdrawn => Self::Withdrawn,
+            WithdrawalView::WasNotThere => Self::WasNotThere,
+            WithdrawalView::Failed(reason) => Self::Failed(reason),
+        }
+    }
+}
+
 crossing! {
     /// Un almacén NSS con el resultado de retirar de él la CA local de rFirma.
-    #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+    #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
     #[serde(rename_all = "camelCase")]
     pub struct StoreWithdrawalView {
         /// Marca del almacén.
@@ -211,14 +221,41 @@ impl From<StoreWithdrawal> for StoreWithdrawalView {
     }
 }
 
+impl From<StoreWithdrawalView> for StoreWithdrawal {
+    fn from(view: StoreWithdrawalView) -> Self {
+        Self {
+            brand: view.brand,
+            outcome: view.outcome.into(),
+        }
+    }
+}
+
 crossing! {
     /// Resultado de retirar rFirma: el manejador de sedes y la CA local de cada almacén.
-    #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+    #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
     #[serde(rename_all = "camelCase")]
     pub struct WithdrawalReportView {
         /// Resultado de quitar rFirma como manejador de `afirma://`.
         pub handler: WithdrawalView,
         /// Resultado por almacén de retirar la CA local.
         pub stores: Vec<StoreWithdrawalView>,
+    }
+}
+
+impl From<WithdrawalReport> for WithdrawalReportView {
+    fn from(report: WithdrawalReport) -> Self {
+        Self {
+            handler: report.handler.into(),
+            stores: report.stores.into_iter().map(Into::into).collect(),
+        }
+    }
+}
+
+impl From<WithdrawalReportView> for WithdrawalReport {
+    fn from(view: WithdrawalReportView) -> Self {
+        Self {
+            handler: view.handler.into(),
+            stores: view.stores.into_iter().map(Into::into).collect(),
+        }
     }
 }

@@ -7,7 +7,7 @@ ORDENES DE TAURI                          (<contexto>/adapters/tauri*.rs)
   async install_local_ca_certificate() -> SignalRowView
   async choose_site_signature_handler(handler: String) -> Result<Vec<SignalRowView>, Failure>
   async read_status(recheck: bool) -> Vec<SignalRowView>
-  async withdraw_rfirma() -> WithdrawalReportView
+  async withdraw_rfirma(previous: Option<WithdrawalReportView>) -> WithdrawalReportView
   async open_document() -> Result<Option<OpenedDocumentView>, Failure>
   async read_document(id: String) -> Result<tauri::ipc::Response, Failure>
   async list_recents() -> Vec<RecentDocumentView>

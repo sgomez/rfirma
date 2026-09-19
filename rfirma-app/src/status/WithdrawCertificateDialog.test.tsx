@@ -113,7 +113,33 @@ describe("WithdrawCertificateDialog", () => {
     expect(screen.getByRole("button", { name: "Reintentar" })).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Reintentar" }));
+
     expect(onWithdraw).toHaveBeenCalledTimes(2);
+    expect(onWithdraw).toHaveBeenNthCalledWith(1, null);
+    expect(onWithdraw).toHaveBeenNthCalledWith(2, partialReport);
+  });
+
+  it("moves to the full outcome once a retry fixes what had failed", async () => {
+    const user = userEvent.setup();
+    const partialReport: WithdrawalReport = {
+      handler: { kind: "withdrawn" },
+      stores: [
+        { brand: "firefox", outcome: { kind: "withdrawn" } },
+        { brand: "chrome", outcome: { kind: "failed", reason: "perfil en uso" } },
+      ],
+    };
+    const onWithdraw = vi
+      .fn()
+      .mockResolvedValueOnce(partialReport)
+      .mockResolvedValueOnce(SUCCESSFUL_REPORT);
+    renderDialog({ onWithdraw });
+
+    await user.click(screen.getByRole("button", { name: "Retirar" }));
+    await screen.findByRole("alertdialog", { name: "Retirado a medias" });
+    await user.click(screen.getByRole("button", { name: "Reintentar" }));
+
+    await screen.findByRole("alertdialog", { name: "Certificado retirado" });
+    expect(screen.queryByRole("button", { name: "Reintentar" })).not.toBeInTheDocument();
   });
 
   it("ignores Escape while working, but closes on Escape from the question", async () => {

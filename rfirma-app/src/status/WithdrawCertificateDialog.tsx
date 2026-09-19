@@ -9,8 +9,12 @@ import type { StoreBrand, StoreDetail, WithdrawalOutcome, WithdrawalReport } fro
 interface WithdrawCertificateDialogProps {
   /** Los almacenes donde está hoy el certificado, tal como los cuenta la fila. */
   stores: StoreDetail[];
-  /** Ejecuta la retirada de verdad: el manejador de sedes y la CA de cada almacén. */
-  onWithdraw: () => Promise<WithdrawalReport>;
+  /**
+   * Ejecuta la retirada de verdad: el manejador de sedes y la CA de cada
+   * almacén. Con el resultado del intento anterior, solo repite lo que
+   * falló.
+   */
+  onWithdraw: (previous: WithdrawalReport | null) => Promise<WithdrawalReport>;
   /** Cierra el velo, con o sin retirada hecha; quien nos monta vuelve a medir. */
   onClose: () => void;
 }
@@ -48,8 +52,8 @@ function trapTabWithinCurrentTarget(event: KeyboardEvent<HTMLDivElement>) {
  * `.rf-scrim`, así que la cabecera sigue alcanzable mientras trabaja.
  *
  * Cubre el camino en el que todo se retira; «Retirado a medias» solo aparece
- * si `onWithdraw` devuelve algún fallo, y `Reintentar` repite la retirada
- * entera porque lo ya retirado vuelve como «no estaba».
+ * si `onWithdraw` devuelve algún fallo, y `Reintentar` solo vuelve a tocar lo
+ * que falló, con el informe anterior como referencia.
  */
 export function WithdrawCertificateDialog({
   stores,
@@ -78,7 +82,7 @@ export function WithdrawCertificateDialog({
 
   const withdraw = () => {
     setMoment("working");
-    void onWithdraw().then((result) => {
+    void onWithdraw(report).then((result) => {
       setReport(result);
       setMoment("result");
     });

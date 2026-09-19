@@ -658,6 +658,6 @@ export function tauriStatusPort(): StatusPort {
     installLocalCaCertificate: () => invoke<SignalRow>("install_local_ca_certificate"),
     chooseSiteSignatureHandler: (handlerId) =>
       invoke<SignalRow[]>("choose_site_signature_handler", { handler: handlerId }),
-    withdrawRfirma: () => invoke<WithdrawalReport>("withdraw_rfirma"),
+    withdrawRfirma: (previous) => invoke<WithdrawalReport>("withdraw_rfirma", { previous }),
   };
 }
