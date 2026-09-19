@@ -60,6 +60,8 @@ export default defineConfig({
     // probamos y `--unused` la sigue reportando.
     preservePatterns: [
       "errors.situations.*",
+      // Del diálogo nativo GTK de arranque: no hay ventana donde `t()` las lea.
+      "errors.startup.*",
       "languages.*",
       "panel.certificate.stores.*",
       "actions.chooseCertificate",

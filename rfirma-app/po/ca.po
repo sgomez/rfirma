@@ -367,6 +367,18 @@ msgstr ""
 "Els documents recents i el certificat continuen desats. Torna-ho a intentar "
 "i, si continua passant, adjunta el detall tècnic a l'informe de l'error."
 
+#. Se enseña en un diálogo nativo antes de que exista ventana; no la lee i18next.
+msgid "errors.startup.homeUnknown"
+msgstr "rFirma no sap quina és la teva carpeta personal i no pot arrencar."
+
+#. Se enseña en un diálogo nativo antes de que exista ventana; no la lee i18next.
+msgid "errors.startup.scratchFolderUnusable"
+msgstr "rFirma no ha pogut crear la carpeta de pas que necessita i no pot arrencar."
+
+#. Se enseña en un diálogo nativo antes de que exista ventana; no la lee i18next.
+msgid "errors.startup.windowUnavailable"
+msgstr "rFirma no ha pogut obrir la finestra i no pot arrencar."
+
 #. Nombre accesible de la región para lectores de pantalla, no un título visible.
 msgid "window.tray"
 msgstr "Safata de documents"

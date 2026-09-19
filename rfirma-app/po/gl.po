@@ -356,6 +356,18 @@ msgstr ""
 "Os documentos recentes e o certificado seguen gardados. Téntao de novo e, se "
 "segue a ocorrer, achega o detalle técnico ao informe do fallo."
 
+#. Se enseña en un diálogo nativo antes de que exista ventana; no la lee i18next.
+msgid "errors.startup.homeUnknown"
+msgstr "rFirma non sabe cal é o teu cartafol persoal e non pode arrincar."
+
+#. Se enseña en un diálogo nativo antes de que exista ventana; no la lee i18next.
+msgid "errors.startup.scratchFolderUnusable"
+msgstr "rFirma non puido crear o cartafol de paso que necesita e non pode arrincar."
+
+#. Se enseña en un diálogo nativo antes de que exista ventana; no la lee i18next.
+msgid "errors.startup.windowUnavailable"
+msgstr "rFirma non puido abrir a xanela e non pode arrincar."
+
 #. Nombre accesible de la región para lectores de pantalla, no un título visible.
 msgid "window.tray"
 msgstr "Bandexa de documentos"

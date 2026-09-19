@@ -306,6 +306,18 @@ msgstr ""
 msgid "errors.situations.activityNotForgotten.body"
 msgstr ""
 
+#. Se enseña en un diálogo nativo antes de que exista ventana; no la lee i18next.
+msgid "errors.startup.homeUnknown"
+msgstr ""
+
+#. Se enseña en un diálogo nativo antes de que exista ventana; no la lee i18next.
+msgid "errors.startup.scratchFolderUnusable"
+msgstr ""
+
+#. Se enseña en un diálogo nativo antes de que exista ventana; no la lee i18next.
+msgid "errors.startup.windowUnavailable"
+msgstr ""
+
 #. Nombre accesible de la región para lectores de pantalla, no un título visible.
 msgid "window.tray"
 msgstr ""

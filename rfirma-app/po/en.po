@@ -353,6 +353,18 @@ msgstr ""
 "Your recent documents and your certificate are still saved. Try again and, "
 "if it keeps happening, attach the technical detail to the bug report."
 
+#. Se enseña en un diálogo nativo antes de que exista ventana; no la lee i18next.
+msgid "errors.startup.homeUnknown"
+msgstr "rFirma doesn't know your home folder and can't start."
+
+#. Se enseña en un diálogo nativo antes de que exista ventana; no la lee i18next.
+msgid "errors.startup.scratchFolderUnusable"
+msgstr "rFirma couldn't create the scratch folder it needs and can't start."
+
+#. Se enseña en un diálogo nativo antes de que exista ventana; no la lee i18next.
+msgid "errors.startup.windowUnavailable"
+msgstr "rFirma couldn't open its window and can't start."
+
 #. Nombre accesible de la región para lectores de pantalla, no un título visible.
 msgid "window.tray"
 msgstr "Document tray"

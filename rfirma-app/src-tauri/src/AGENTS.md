@@ -33,6 +33,8 @@ adaptadores, su estado de proceso, sus puertos y la fachada que usan los vecinos
 | `crossing/failure.rs` | `Failure`, lo que cruza cuando algo salió mal (ADR-0009); cada contexto traduce lo suyo en su `adapters/failures.rs`. Pruebas en `crossing/failure/tests.rs`. |
 | `crossing/guards.rs` | Las guardas que ven todas las órdenes a la vez, entre ellas la de rutas del ADR-0011. Solo en pruebas. |
 | `memory_error.rs` | `MemoryError` y su `Situation` (ADR-0009): la memoria entre sesiones es una sola (ADR-0010) y no es de ningún contexto. Pruebas en `memory_error/tests.rs`. |
+| `startup_failure.rs` | `StartupFailure` y su `Situation`: los fallos de arranque de los dos roles, antes de que exista ventana; no es de ningún contexto. Pruebas en `startup_failure/tests.rs`. |
+| `startup_dialog.rs` | El diálogo nativo GTK que enseña un `StartupFailure` y sale del proceso. Capa fina, sin pruebas propias. |
 | `compile_fail.rs` | Lo que no debe compilar: un doctest `compile_fail` por invariante que sostiene el sistema de tipos, y uno positivo por la misma ruta. |
 
 `tests/agents_map_is_complete.rs` exige que todo `.rs` versionado bajo `src/`
