@@ -36,8 +36,6 @@ pub struct Configuration {
     pub theme: Theme,
     /// Indica si el aviso inicial sobre la CA local ya se descartó.
     pub trust_notice_seen: bool,
-    /// Indica si se debe consultar el manejador del protocolo al arrancar.
-    pub ask_about_url_handler: bool,
 }
 
 impl Default for Configuration {
@@ -50,7 +48,6 @@ impl Default for Configuration {
             notify_new_version: true,
             theme: Theme::System,
             trust_notice_seen: false,
-            ask_about_url_handler: true,
         }
     }
 }

@@ -23,8 +23,6 @@ pub struct Preferences {
     pub offers_the_original_folder: bool,
     /// Si se ha mostrado ya el aviso de confianza inicial.
     pub trust_notice_seen: bool,
-    /// Si se debe consultar por el manejador de enlaces del protocolo.
-    pub ask_about_url_handler: bool,
 }
 
 /// Resuelve el idioma soportado a partir de su código o devuelve castellano por omisión.
@@ -54,7 +52,6 @@ pub fn shown(configuration: &Configuration, documents_folder: &std::path::Path) 
         offers_the_original_folder:
             crate::documents::domain::document::the_original_folder_can_be_offered(),
         trust_notice_seen: configuration.trust_notice_seen,
-        ask_about_url_handler: configuration.ask_about_url_handler,
     }
 }
 
@@ -83,7 +80,6 @@ pub fn merged(live: &Configuration, chosen: &Preferences) -> Configuration {
         notify_new_version: chosen.notify_new_version,
         theme: chosen.theme,
         trust_notice_seen: chosen.trust_notice_seen,
-        ask_about_url_handler: chosen.ask_about_url_handler,
     }
 }
 

@@ -3,8 +3,6 @@ ORDENES DE TAURI                          (<contexto>/adapters/tauri*.rs)
 
         read_invocation() -> Option<DroppedDocumentView>
   async check_for_new_version() -> Option<NewVersionView>
-  async url_handlers() -> UrlHandlersView
-  async choose_url_handler(handler: String) -> Result<(), Failure>
   async open_external_destination(target: String) -> Result<(), Failure>
   async install_local_ca_certificate() -> SignalRowView
   async choose_site_signature_handler(handler: String) -> Result<Vec<SignalRowView>, Failure>
@@ -53,16 +51,6 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
       situation: String
       detail: String
       attemptsLeft: Option<u32>
-
-  pub struct UrlHandlersView
-      available: bool
-      handlers: Vec<UrlHandlerView>
-      current: Option<String>
-      ours: String
-
-  pub struct UrlHandlerView
-      id: String
-      name: String
 
   pub struct NewVersionView
       version: String
@@ -189,7 +177,6 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
       theme: Theme
       offersTheOriginalFolder: bool
       trustNoticeSeen: bool
-      askAboutUrlHandler: bool
 
   pub struct SiteErrandView
       origin: Option<String>

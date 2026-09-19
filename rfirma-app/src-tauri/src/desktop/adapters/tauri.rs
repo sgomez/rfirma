@@ -8,7 +8,7 @@ use crate::identity::IdentityRoot;
 use crate::site::SiteRoot;
 
 use super::registry::DesktopRegistry;
-use super::views::{NewVersionView, SignalRowView, UrlHandlersView};
+use super::views::{NewVersionView, SignalRowView};
 use crate::crossing::Failure;
 use crate::desktop::domain::error::{DesktopError, Situation};
 use crate::desktop::domain::status::{StoreBrand, StoreDetail};
@@ -41,27 +41,6 @@ pub fn check_for_new_version(desktop: State<'_, DesktopRoot>) -> Option<NewVersi
     Some(NewVersionView {
         version: announced.to_string(),
     })
-}
-
-/// Manejadores registrados para el esquema afirma:// en el escritorio (ADR-0015).
-#[tauri::command(async)]
-pub fn url_handlers() -> UrlHandlersView {
-    let channel = crate::desktop::adapters::channel::Channel::detected();
-    let list =
-        crate::desktop::adapters::choice::mimeapps_list_from_environment().unwrap_or_default();
-    crate::desktop::application::handlers::who_handles(&DesktopRegistry::of(channel, list)).into()
-}
-
-/// Establece el manejador preferido para el esquema afirma:// (ADR-0015).
-#[tauri::command(async)]
-pub fn choose_url_handler(handler: String) -> Result<(), Failure> {
-    let channel = crate::desktop::adapters::channel::Channel::detected();
-    let list = crate::desktop::adapters::choice::mimeapps_list_from_environment()
-        .map_err(|error| DesktopError::new(Situation::TheListIsNotWritable, error.to_string()))?;
-    Ok(crate::desktop::application::handlers::chosen(
-        &DesktopRegistry::of(channel, list),
-        &handler,
-    )?)
 }
 
 /// Abre un destino externo por identificador en el navegador del sistema (ADR-0011).

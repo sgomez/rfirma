@@ -14,11 +14,6 @@ fn notify_new_version_starts_on() {
 }
 
 #[test]
-fn the_url_handler_is_asked_about_by_default() {
-    assert!(Configuration::default().ask_about_url_handler);
-}
-
-#[test]
 fn the_trust_notice_has_not_been_seen_by_default() {
     assert!(!Configuration::default().trust_notice_seen);
 }
@@ -73,7 +68,6 @@ fn the_configuration_holds_no_path_to_the_rubric_the_user_chose() {
     assert_eq!(
         fields,
         vec![
-            "ask_about_url_handler",
             "destination",
             "language",
             "notify_new_version",

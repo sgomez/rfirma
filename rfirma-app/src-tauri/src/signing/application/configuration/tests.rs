@@ -28,7 +28,6 @@ fn what_was_chosen_lands_on_the_disk_and_on_the_live_copy() {
         theme: Theme::Dark,
         offers_the_original_folder: false,
         trust_notice_seen: false,
-        ask_about_url_handler: true,
     };
 
     memory
@@ -124,7 +123,6 @@ fn writing_the_configuration_never_moves_the_destination_folder() {
         theme: Theme::Dark,
         offers_the_original_folder: false,
         trust_notice_seen: false,
-        ask_about_url_handler: true,
     };
 
     let next = merged(&live, &chosen);
@@ -136,18 +134,6 @@ fn writing_the_configuration_never_moves_the_destination_folder() {
     assert_eq!(next.language, Language::English);
     assert!(!next.remember_visible_signature);
     assert_eq!(next.theme, Theme::Dark);
-}
-
-#[test]
-fn not_asking_about_the_url_handler_again_travels_back_from_the_window() {
-    let live = Configuration::default();
-    let chosen = Preferences {
-        ask_about_url_handler: false,
-        ..shown(&live, std::path::Path::new("/home/quien/Documentos"))
-    };
-
-    assert!(live.ask_about_url_handler);
-    assert!(!merged(&live, &chosen).ask_about_url_handler);
 }
 
 #[test]
