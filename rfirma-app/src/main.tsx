@@ -8,9 +8,9 @@ import "./design-system/index.css";
 // modelo de caja, el margen del documento y la colocación del velo. Va detrás
 // del bundle porque son ajustes sobre él (ver `app.css`).
 import "./app.css";
-import { StrictMode, useState } from "react";
+import { StrictMode, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { App } from "./App";
+import { App, type AppHandle } from "./App";
 import { createI18n } from "./i18n/i18n";
 import { LanguageProvider } from "./i18n/LanguageProvider";
 import { SetupWizard } from "./setup/SetupWizard";
@@ -82,16 +82,30 @@ const statusPort = tauriStatusPort();
 
 function RootView() {
   const [setupWizardSeen, setSetupWizardSeen] = useState(initialPreferences.setupWizardSeen);
+  const appHandle = useRef<AppHandle | null>(null);
+  const externalDestinations = tauriExternalDestinationOpener();
+
+  const finishWizard = () => {
+    void preferences.save({ ...initialPreferences, setupWizardSeen: true });
+    setSetupWizardSeen(true);
+  };
 
   return (
     <>
       <SetupWizard
         seen={setupWizardSeen}
         statusPort={statusPort}
-        onFinish={() => {
-          void preferences.save({ ...initialPreferences, setupWizardSeen: true });
-          setSetupWizardSeen(true);
+        onFinish={finishWizard}
+        onOpenStatus={() => {
+          finishWizard();
+          appHandle.current?.openStatus();
         }}
+        onOpenPreferences={() => {
+          finishWizard();
+          appHandle.current?.openPreferences();
+        }}
+        onOpenHelp={() => void externalDestinations.open("discussions")}
+        onOpenAbout={() => appHandle.current?.openAbout()}
       />
       <App
         recents={recents}
@@ -106,8 +120,11 @@ function RootView() {
         signer={tauriSigningBackend()}
         opener={tauriSignedDocumentOpener()}
         versions={tauriVersionCheck()}
-        externalDestinations={tauriExternalDestinationOpener()}
+        externalDestinations={externalDestinations}
         status={statusPort}
+        onReady={(handle) => {
+          appHandle.current = handle;
+        }}
       />
     </>
   );

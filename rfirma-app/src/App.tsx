@@ -98,6 +98,20 @@ interface AppProps {
   externalDestinations?: ExternalDestinationOpener;
   /** Quien lee y reevalúa las señales del panel de estado. Ver [`StatusPort`]. */
   status?: StatusPort;
+  /**
+   * Se llama una vez montada, con un asa hacia sus propias vistas. Solo lo usa
+   * `main.tsx`, para que el menú del asistente del primer arranque
+   * (`setup/SetupWizard.tsx`) pueda abrir Estado, Preferencias y Acerca de en
+   * esta misma instancia en vez de duplicarlas.
+   */
+  onReady?: (handle: AppHandle) => void;
+}
+
+/** El asa que `onReady` entrega: lo único de `App` que se abre desde fuera. */
+export interface AppHandle {
+  openStatus: () => void;
+  openPreferences: () => void;
+  openAbout: () => void;
 }
 
 /**
@@ -126,9 +140,18 @@ export function App({
   menuAnchor,
   externalDestinations = unavailableExternalDestinationOpener(),
   status = memoryStatus(),
+  onReady,
 }: AppProps) {
   const [dialog, setDialog] = useState<OpenDialog>(null);
   const [view, setView] = useState<ActiveView>(null);
+
+  useEffect(() => {
+    onReady?.({
+      openStatus: () => setView("status"),
+      openPreferences: () => setView("preferences"),
+      openAbout: () => setDialog("about"),
+    });
+  }, [onReady]);
   // El aviso de versión: lo que contestó el puerto y si ya se descartó. Se
   // descarta **para esta sesión** y no se anota en disco: quien decide cada
   // cuánto se vuelve a preguntar es el backend (una vez cada 24 h), y una

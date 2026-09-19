@@ -264,4 +264,37 @@ describe("SetupWizard", () => {
 
     expect(onFinish).toHaveBeenCalledOnce();
   });
+
+  // La cabecera es la del ADR-0007, con su menú completo (docs/design/primer-arranque.md).
+  it("carries the app name and the ADR-0007 menu, reusing the shared Header", async () => {
+    const user = userEvent.setup();
+    const onOpenStatus = vi.fn();
+    const onOpenPreferences = vi.fn();
+    const onOpenHelp = vi.fn();
+    const onOpenAbout = vi.fn();
+    renderWithCatalog(
+      <SetupWizard
+        seen={false}
+        onFinish={() => {}}
+        onOpenStatus={onOpenStatus}
+        onOpenPreferences={onOpenPreferences}
+        onOpenHelp={onOpenHelp}
+        onOpenAbout={onOpenAbout}
+      />,
+    );
+
+    expect(screen.getByText("rFirma")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Menú" }));
+    expect(screen.getByRole("menuitem", { name: "Estado de rFirma" })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Preferencias…" })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: /Comentarios y ayuda/ })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("menuitem", { name: "Acerca de rFirma" }));
+
+    expect(onOpenAbout).toHaveBeenCalledOnce();
+    expect(onOpenStatus).not.toHaveBeenCalled();
+    expect(onOpenPreferences).not.toHaveBeenCalled();
+    expect(onOpenHelp).not.toHaveBeenCalled();
+  });
 });

@@ -15,13 +15,6 @@
   background: var(--rf-surface);
 }
 
-.setup-wizard__header {
-  flex: none;
-  height: 56px;
-  padding: 0 var(--rf-space-md);
-  border-bottom: 1px solid var(--rf-border-subtle);
-}
-
 .setup-wizard__body {
   flex: 1;
   min-height: 0;

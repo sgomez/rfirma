@@ -2,6 +2,8 @@ import type { TFunction } from "i18next";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { CheckCircleIcon, CrossCircleIcon } from "../design-system/icons";
+import { Header } from "../shell/Header";
+import { type MenuAnchor, menuAnchorFor } from "../shell/menuAnchor";
 import "./SetupWizard.css";
 import { memoryStatus, type StatusPort, type StoreBrand, type StoreDetail } from "../status/status";
 
@@ -14,6 +16,13 @@ interface SetupWizardProps {
   statusPort?: StatusPort;
   /** Se llama una vez, al pulsar «Terminar», pase lo que pase con las dos acciones. */
   onFinish: () => void;
+  /** Dónde va el menú de la cabecera. Ver [`MenuAnchor`]. */
+  menuAnchor?: MenuAnchor;
+  /** Las cuatro entradas del menú de la cabecera (ADR-0007), iguales a las de la ventana principal. */
+  onOpenStatus?: () => void;
+  onOpenPreferences?: () => void;
+  onOpenHelp?: () => void;
+  onOpenAbout?: () => void;
 }
 
 type CertificateStatus =
@@ -40,7 +49,16 @@ type HandlerStatus =
  * un camino de escritura propio. El estado de las dos tarjetas no se guarda
  * entre sesiones, se mide al montar.
  */
-export function SetupWizard({ seen, statusPort = memoryStatus(), onFinish }: SetupWizardProps) {
+export function SetupWizard({
+  seen,
+  statusPort = memoryStatus(),
+  onFinish,
+  menuAnchor,
+  onOpenStatus = () => {},
+  onOpenPreferences = () => {},
+  onOpenHelp = () => {},
+  onOpenAbout = () => {},
+}: SetupWizardProps) {
   const { t } = useTranslation();
   const [step, setStep] = useState<1 | 2>(1);
   const [certificate, setCertificate] = useState<CertificateStatus>({ kind: "idle" });
@@ -117,9 +135,14 @@ export function SetupWizard({ seen, statusPort = memoryStatus(), onFinish }: Set
 
   return (
     <div className="setup-wizard">
-      <header className="setup-wizard__header rf-row">
-        <p className="rf-title">rFirma</p>
-      </header>
+      <Header
+        status={null}
+        menuAnchor={menuAnchor ?? menuAnchorFor(navigator.userAgent)}
+        onOpenStatus={onOpenStatus}
+        onOpenPreferences={onOpenPreferences}
+        onOpenHelp={onOpenHelp}
+        onOpenAbout={onOpenAbout}
+      />
 
       <div className="setup-wizard__body">
         <div className="setup-wizard__column rf-stack rf-gap-sm">
