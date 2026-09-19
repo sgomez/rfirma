@@ -72,6 +72,7 @@ describe("StatusView", () => {
         value: "0.4.1",
         verdict: "correct",
         action: null,
+        detail: null,
       },
     ];
     renderWithCatalog(<StatusView statusPort={memoryStatus(rows)} onClose={() => {}} />);
@@ -93,6 +94,7 @@ describe("StatusView", () => {
           kind: "link",
           target: "releases",
         },
+        detail: null,
       },
     ];
     renderWithCatalog(<StatusView statusPort={memoryStatus(rows)} onClose={() => {}} />);
@@ -114,6 +116,7 @@ describe("StatusView", () => {
           kind: "link",
           target: "certificateIssuance",
         },
+        detail: null,
       },
     ];
     renderWithCatalog(<StatusView statusPort={memoryStatus(rows)} onClose={() => {}} />);
@@ -132,6 +135,7 @@ describe("StatusView", () => {
         value: "3",
         verdict: "correct",
         action: null,
+        detail: null,
       },
     ];
     renderWithCatalog(<StatusView statusPort={memoryStatus(rows)} onClose={() => {}} />);
@@ -141,6 +145,82 @@ describe("StatusView", () => {
     expect(within(row).getByText("3 almacenes")).toBeInTheDocument();
     expect(within(row).getByText("Correcto")).toBeInTheDocument();
     expect(within(row).queryByRole("button")).not.toBeInTheDocument();
+  });
+
+  it("renders the local CA certificate signal born in Comprobando with no action", async () => {
+    const rows: SignalRow[] = [
+      {
+        signal: "localCaCertificate",
+        value: "",
+        verdict: "checking",
+        action: null,
+        detail: null,
+      },
+    ];
+    renderWithCatalog(<StatusView statusPort={memoryStatus(rows)} onClose={() => {}} />);
+
+    const row = await screen.findByRole("status");
+    expect(within(row).getByText("Certificado de rFirma")).toBeInTheDocument();
+    expect(within(row).getByText("Comprobando")).toBeInTheDocument();
+    expect(within(row).queryByRole("button")).not.toBeInTheDocument();
+  });
+
+  it("renders Incorrecto with a store detail list when the certificate is nowhere trusted", async () => {
+    const rows: SignalRow[] = [
+      {
+        signal: "localCaCertificate",
+        value: "0/2",
+        verdict: "incorrect",
+        action: null,
+        detail: [
+          { brand: "firefox", trusted: false },
+          { brand: "chrome", trusted: false },
+        ],
+      },
+    ];
+    const user = userEvent.setup();
+    renderWithCatalog(<StatusView statusPort={memoryStatus(rows)} onClose={() => {}} />);
+
+    const row = await screen.findByRole("status");
+    expect(within(row).getByText("Certificado de rFirma")).toBeInTheDocument();
+    expect(within(row).getByText("0 de 2 almacenes")).toBeInTheDocument();
+    expect(within(row).getByText("Incorrecto")).toBeInTheDocument();
+    expect(within(row).queryByRole("button", { name: /almacenes/ })).toBeInTheDocument();
+
+    const toggle = within(row).getByRole("button", { name: "Ver almacenes" });
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(within(row).queryByText("Firefox")).not.toBeInTheDocument();
+
+    await user.click(toggle);
+
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(within(row).getByText("Firefox")).toBeInTheDocument();
+    expect(within(row).getByText("Chrome y Chromium")).toBeInTheDocument();
+  });
+
+  it("renders Correcto with a trusted detail list when the certificate is in every store", async () => {
+    const rows: SignalRow[] = [
+      {
+        signal: "localCaCertificate",
+        value: "2/2",
+        verdict: "correct",
+        action: null,
+        detail: [
+          { brand: "firefox", trusted: true },
+          { brand: "chrome", trusted: true },
+        ],
+      },
+    ];
+    const user = userEvent.setup();
+    renderWithCatalog(<StatusView statusPort={memoryStatus(rows)} onClose={() => {}} />);
+
+    const row = await screen.findByRole("status");
+    expect(within(row).getByText("2 de 2 almacenes")).toBeInTheDocument();
+    expect(within(row).getByText("Correcto")).toBeInTheDocument();
+
+    await user.click(within(row).getByRole("button", { name: "Ver almacenes" }));
+
+    expect(within(row).getAllByText("De confianza")).toHaveLength(2);
   });
 
   it("remeasures the certificate stores row on Volver a comprobar", async () => {
@@ -160,6 +240,7 @@ describe("StatusView", () => {
             kind: "link",
             target: "certificateIssuance",
           },
+          detail: null,
         },
       ]),
       recheck: vi.fn().mockReturnValue(recheckPromise),
@@ -180,6 +261,7 @@ describe("StatusView", () => {
         value: "1",
         verdict: "correct",
         action: null,
+        detail: null,
       },
     ]);
 
@@ -207,6 +289,7 @@ describe("StatusView", () => {
             kind: "link",
             target: "releases",
           },
+          detail: null,
         },
       ]),
       recheck: vi.fn().mockReturnValue(recheckPromise),
@@ -230,6 +313,7 @@ describe("StatusView", () => {
         value: "0.5.0",
         verdict: "correct",
         action: null,
+        detail: null,
       },
     ]);
 
@@ -253,6 +337,7 @@ describe("StatusView", () => {
           value: "0.4.1",
           verdict: "checking",
           action: null,
+          detail: null,
         },
       ]),
       recheck: vi.fn().mockReturnValue(recheckPromise),
@@ -274,6 +359,7 @@ describe("StatusView", () => {
         value: "0.4.1",
         verdict: "correct",
         action: null,
+        detail: null,
       },
     ]);
 

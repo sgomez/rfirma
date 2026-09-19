@@ -70,6 +70,11 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
       value: String
       verdict: Verdict
       action: Option<StatusActionView>
+      detail: Option<Vec<StoreDetailView>>
+
+  pub struct StoreDetailView
+      brand: StoreBrand
+      trusted: bool
 
   pub struct StatusActionView
       kind: ActionKind
@@ -260,6 +265,11 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
       SiteSignature
       LocalCaCertificate
       UserCertificates
+
+  pub enum StoreBrand   [desktop/domain/status.rs]
+      Firefox
+      Chrome
+      Nssdb
 
   pub enum Theme   [signing/application/configuration_memory.rs]
       System

@@ -772,6 +772,9 @@ msgstr ""
 msgid "status.signals.userCertificates"
 msgstr ""
 
+msgid "status.signals.localCaCertificate"
+msgstr ""
+
 msgid "status.verdicts.correct"
 msgstr ""
 
@@ -802,6 +805,31 @@ msgid_plural "status.values.userCertificates.stores"
 msgstr[0] ""
 msgstr[1] ""
 msgstr[2] ""
+
+#. Cuántos almacenes de confianza tienen ya el certificado de rFirma, de cuántos detectados.
+msgid "status.values.localCaCertificate"
+msgid_plural "status.values.localCaCertificate"
+msgstr[0] ""
+msgstr[1] ""
+msgstr[2] ""
+
+msgid "status.detail.toggle"
+msgstr ""
+
+msgid "status.detail.trusted"
+msgstr ""
+
+msgid "status.detail.untrusted"
+msgstr ""
+
+msgid "status.storeBrands.firefox"
+msgstr ""
+
+msgid "status.storeBrands.chrome"
+msgstr ""
+
+msgid "status.storeBrands.nssdb"
+msgstr ""
 
 msgid "preferences.title"
 msgstr ""

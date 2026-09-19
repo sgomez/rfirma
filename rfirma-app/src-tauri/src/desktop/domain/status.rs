@@ -66,4 +66,28 @@ pub struct SignalRow {
     pub verdict: Verdict,
     /// Acción disponible si la hay.
     pub action: Option<StatusAction>,
+    /// Detalle por almacén, para señales que lo despliegan.
+    pub detail: Option<Vec<StoreDetail>>,
+}
+
+/// Familia de almacén de un perfil NSS, para el detalle desplegable de una señal.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum StoreBrand {
+    /// Perfil de usuario de Firefox o derivados.
+    Firefox,
+    /// Almacén NSS compartido de la familia Chrome/Chromium.
+    Chrome,
+    /// Base de datos NSS genérica del sistema.
+    Nssdb,
+}
+
+/// Un almacén, con su marca y si la señal es de confianza en él.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StoreDetail {
+    /// Marca del almacén.
+    pub brand: StoreBrand,
+    /// Si la señal es de confianza en este almacén.
+    pub trusted: bool,
 }

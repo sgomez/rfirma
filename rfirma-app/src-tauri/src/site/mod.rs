@@ -16,6 +16,8 @@ use application::errand::ErrandDesk;
 pub use application::errand::LiveErrand;
 use application::site::CodecTable;
 use application::startup::{HeldChannel, LocalCaTrust};
+use application::trust::ProfileTrust;
+use domain::tls_error::TlsError;
 
 /// La raíz de `site`: el trámite vivo, el canal sostenido, la confianza de la CA local y la tabla
 /// de códecs.
@@ -38,6 +40,17 @@ pub struct SiteRoot {
     pub batch: Arc<dyn ports::BatchServices + Send + Sync>,
     /// Diálogos del sistema operativo a través del portal.
     pub portal: Arc<dyn crate::documents::ports::PortalDialogs + Send + Sync>,
+}
+
+impl SiteRoot {
+    /// Mide, sin escribir, en qué perfiles NSS es de confianza la CA local vigente (ID-346).
+    pub fn measure_local_ca_trust(&self) -> Result<Vec<ProfileTrust>, TlsError> {
+        application::trust::measure_local_ca_trust(
+            self.trust.store.as_ref(),
+            &self.trust.profiles,
+            self.trust.stores.as_ref(),
+        )
+    }
 }
 
 /// La mesa del trámite sobre las raíces de producción.

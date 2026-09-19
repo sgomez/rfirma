@@ -858,6 +858,9 @@ msgstr "Bertsioa"
 msgid "status.signals.userCertificates"
 msgstr "Zure ziurtagiriak"
 
+msgid "status.signals.localCaCertificate"
+msgstr "rFirma-ren ziurtagiria"
+
 msgid "status.verdicts.correct"
 msgstr "Zuzena"
 
@@ -888,6 +891,31 @@ msgid_plural "status.values.userCertificates.stores"
 msgstr[0] "Biltegi bat"
 msgstr[1] "{{count}} biltegi"
 msgstr[2] "{{count}} biltegi"
+
+#. Cuántos almacenes de confianza tienen ya el certificado de rFirma, de cuántos detectados.
+msgid "status.values.localCaCertificate"
+msgid_plural "status.values.localCaCertificate"
+msgstr[0] "{{trusted}}/1 biltegi"
+msgstr[1] "{{trusted}}/{{count}} biltegi"
+msgstr[2] "{{trusted}}/{{count}} biltegi"
+
+msgid "status.detail.toggle"
+msgstr "Ikusi biltegiak"
+
+msgid "status.detail.trusted"
+msgstr "Fidagarria"
+
+msgid "status.detail.untrusted"
+msgstr "Ez da fidagarria"
+
+msgid "status.storeBrands.firefox"
+msgstr "Firefox"
+
+msgid "status.storeBrands.chrome"
+msgstr "Chrome eta Chromium"
+
+msgid "status.storeBrands.nssdb"
+msgstr "Sistemaren biltegia"
 
 msgid "preferences.title"
 msgstr "Hobespenak"

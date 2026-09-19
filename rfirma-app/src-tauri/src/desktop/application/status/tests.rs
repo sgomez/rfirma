@@ -2,7 +2,7 @@ use std::time::{Duration, SystemTime};
 
 use super::*;
 use crate::desktop::domain::channel::Channel;
-use crate::desktop::domain::status::{ActionKind, Signal, Verdict};
+use crate::desktop::domain::status::{ActionKind, Signal, StoreBrand, Verdict};
 use crate::desktop::domain::version_check::VersionCheck;
 use crate::signing::application::tests::a_memory;
 
@@ -208,4 +208,73 @@ fn several_stores_with_certificates_are_correct_without_action() {
     assert_eq!(row.value, "3");
     assert_eq!(row.verdict, Verdict::Correct);
     assert_eq!(row.action, None);
+}
+
+#[test]
+fn checking_local_ca_certificate_signal_has_no_value_nor_detail() {
+    let row = checking_local_ca_certificate_signal();
+
+    assert_eq!(row.signal, Signal::LocalCaCertificate);
+    assert_eq!(row.value, "");
+    assert_eq!(row.verdict, Verdict::Checking);
+    assert_eq!(row.action, None);
+    assert_eq!(row.detail, None);
+}
+
+fn a_store(brand: StoreBrand, trusted: bool) -> StoreDetail {
+    StoreDetail { brand, trusted }
+}
+
+#[test]
+fn no_store_trusted_is_incorrect() {
+    let detail = vec![
+        a_store(StoreBrand::Firefox, false),
+        a_store(StoreBrand::Chrome, false),
+        a_store(StoreBrand::Nssdb, false),
+    ];
+
+    let row = evaluate_local_ca_certificate_signal(detail.clone());
+
+    assert_eq!(row.signal, Signal::LocalCaCertificate);
+    assert_eq!(row.value, "0/3");
+    assert_eq!(row.verdict, Verdict::Incorrect);
+    assert_eq!(row.action, None);
+    assert_eq!(row.detail, Some(detail));
+}
+
+#[test]
+fn some_stores_trusted_is_attention() {
+    let detail = vec![
+        a_store(StoreBrand::Firefox, true),
+        a_store(StoreBrand::Chrome, false),
+        a_store(StoreBrand::Nssdb, false),
+    ];
+
+    let row = evaluate_local_ca_certificate_signal(detail);
+
+    assert_eq!(row.value, "1/3");
+    assert_eq!(row.verdict, Verdict::Attention);
+    assert_eq!(row.action, None);
+}
+
+#[test]
+fn every_store_trusted_is_correct() {
+    let detail = vec![
+        a_store(StoreBrand::Firefox, true),
+        a_store(StoreBrand::Chrome, true),
+    ];
+
+    let row = evaluate_local_ca_certificate_signal(detail);
+
+    assert_eq!(row.value, "2/2");
+    assert_eq!(row.verdict, Verdict::Correct);
+    assert_eq!(row.action, None);
+}
+
+#[test]
+fn no_store_detected_at_all_is_incorrect() {
+    let row = evaluate_local_ca_certificate_signal(Vec::new());
+
+    assert_eq!(row.value, "0/0");
+    assert_eq!(row.verdict, Verdict::Incorrect);
 }
