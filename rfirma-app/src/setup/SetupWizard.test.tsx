@@ -270,10 +270,11 @@ describe("SetupWizard", () => {
       />,
     );
     await user.click(screen.getByRole("button", { name: "Continuar" }));
-    await user.click(screen.getByRole("button", { name: "Instalar" }));
+    await user.click(screen.getByRole("button", { name: "Que abran rFirma" }));
     await waitFor(() => {
-      expect(screen.getByText("Instalado en tus navegadores.")).toBeInTheDocument();
+      expect(screen.getByText("Ahora abren rFirma.")).toBeInTheDocument();
     });
+    expect(screen.getByText("Instalado en tus navegadores.")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Terminar" }));
 
