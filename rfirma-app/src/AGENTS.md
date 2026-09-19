@@ -87,7 +87,7 @@ rojo.
 | `status/StatusView.tsx` | La vista del cuerpo con el estado de rFirma. |
 | **`preferences/`** | Los ajustes. |
 | `preferences/preferences.ts` | Lo que la aplicación recuerda. |
-| `preferences/PreferencesDialog.tsx` | La pantalla completa de ajustes, con su índice de **cinco** secciones. |
+| `preferences/PreferencesView.tsx` | La vista del cuerpo con los ajustes, con su índice de **cuatro** secciones. |
 | `preferences/Switch.tsx` | El interruptor. |
 | `preferences/Select.tsx` | El desplegable. |
 | `preferences/theme.ts` | El tema de la ventana. |

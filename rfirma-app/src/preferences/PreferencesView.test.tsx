@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import type { Certificate } from "../signing/certificate";
 import { renderWithCatalog } from "../testing/render";
-import { PreferencesDialog } from "./PreferencesDialog";
+import { PreferencesView } from "./PreferencesView";
 import type { Preferences } from "./preferences";
 
 const defaults: Preferences = {
@@ -39,9 +39,9 @@ function anInstalledCertificate(overrides: Partial<Certificate> = {}): Certifica
   };
 }
 
-function renderDialog(props: Partial<Parameters<typeof PreferencesDialog>[0]> = {}) {
+function renderView(props: Partial<Parameters<typeof PreferencesView>[0]> = {}) {
   return renderWithCatalog(
-    <PreferencesDialog
+    <PreferencesView
       preferences={defaults}
       onChooseDestination={noop}
       onChange={noop}
@@ -60,12 +60,12 @@ async function openTab(user: UserEvent, name: string) {
   await user.click(screen.getByRole("tab", { name }));
 }
 
-// Grada A: los ajustes son datos, y el diálogo no habla con nadie.
-describe("PreferencesDialog", () => {
+// Grada A: los ajustes son datos, y la vista no habla con nadie.
+describe("PreferencesView", () => {
   it("applies a change as it is made, with no Save and no Cancel", async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
-    renderDialog({ onChange });
+    renderView({ onChange });
     await openTab(user, "Firma");
 
     await user.click(
@@ -87,7 +87,7 @@ describe("PreferencesDialog", () => {
    */
   it("asks for the wider spacing the Preferences artboard draws", async () => {
     const user = userEvent.setup();
-    renderDialog();
+    renderView();
 
     expect(
       screen.getByRole("switch", { name: /Recordar mi actividad/ }).closest(".switch"),
@@ -103,7 +103,7 @@ describe("PreferencesDialog", () => {
 
   it("shows the destination folder by its name and never by its path", async () => {
     const user = userEvent.setup();
-    renderDialog({ preferences: { ...defaults, destination: "Documentos" } });
+    renderView({ preferences: { ...defaults, destination: "Documentos" } });
     await openTab(user, "Firma");
 
     expect(screen.getByText("Dónde se guarda el documento firmado")).toBeInTheDocument();
@@ -116,7 +116,7 @@ describe("PreferencesDialog", () => {
     // (ID-65). Lo que hay es un botón que abre el selector del sistema.
     const user = userEvent.setup();
     const onChooseDestination = vi.fn(async () => {});
-    renderDialog({ onChooseDestination });
+    renderView({ onChooseDestination });
     await openTab(user, "Firma");
 
     expect(
@@ -129,7 +129,7 @@ describe("PreferencesDialog", () => {
 
   it("shows in the section the failure to choose a folder", async () => {
     const user = userEvent.setup();
-    renderDialog({
+    renderView({
       onChooseDestination: () => Promise.reject(new Error("no se pudo guardar")),
     });
     await openTab(user, "Firma");
@@ -144,7 +144,7 @@ describe("PreferencesDialog", () => {
   // ajuste se queda en la carpeta con su «Cambiar carpeta…», como antes.
   it("offers Junto al documento original only when the environment allows it", async () => {
     const user = userEvent.setup();
-    renderDialog({ preferences: { ...defaults, offersOriginalFolder: false } });
+    renderView({ preferences: { ...defaults, offersOriginalFolder: false } });
     await openTab(user, "Firma");
 
     expect(screen.queryByText("Junto al documento original")).not.toBeInTheDocument();
@@ -157,7 +157,7 @@ describe("PreferencesDialog", () => {
   // ellas.
   it("shows the two destination states as text, never as a choice", async () => {
     const user = userEvent.setup();
-    renderDialog({ preferences: { ...defaults, offersOriginalFolder: true } });
+    renderView({ preferences: { ...defaults, offersOriginalFolder: true } });
     await openTab(user, "Firma");
 
     expect(screen.queryByRole("radiogroup")).not.toBeInTheDocument();
@@ -169,7 +169,7 @@ describe("PreferencesDialog", () => {
 
   it("offers every language whose catalog is complete", async () => {
     const user = userEvent.setup();
-    renderDialog();
+    renderView();
     await openTab(user, "Apariencia");
 
     const language = screen.getByRole("combobox", { name: "Idioma" });
@@ -182,7 +182,7 @@ describe("PreferencesDialog", () => {
 
   it("changes the language in place", async () => {
     const user = userEvent.setup();
-    renderDialog();
+    renderView();
     await openTab(user, "Apariencia");
 
     await user.click(screen.getByRole("combobox", { name: "Idioma" }));
@@ -199,7 +199,7 @@ describe("PreferencesDialog", () => {
   it("offers the three themes and applies the chosen one straight away", async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
-    renderDialog({ onChange });
+    renderView({ onChange });
     await openTab(user, "Apariencia");
 
     const theme = screen.getByRole("combobox", { name: "Tema" });
@@ -220,7 +220,7 @@ describe("PreferencesDialog", () => {
     const user = userEvent.setup();
     const onForgetActivity = vi.fn();
     const onChange = vi.fn();
-    renderDialog({ onForgetActivity, onChange });
+    renderView({ onForgetActivity, onChange });
 
     await user.click(screen.getByRole("button", { name: "Vaciar la lista" }));
 
@@ -232,7 +232,7 @@ describe("PreferencesDialog", () => {
     const user = userEvent.setup();
     const onForgetActivity = vi.fn();
     const onChange = vi.fn();
-    renderDialog({ onForgetActivity, onChange });
+    renderView({ onForgetActivity, onChange });
 
     await user.click(screen.getByRole("switch", { name: /Recordar mi actividad/ }));
 
@@ -245,7 +245,7 @@ describe("PreferencesDialog", () => {
     const user = userEvent.setup();
     const onForgetActivity = vi.fn();
     const onChange = vi.fn();
-    renderDialog({ onForgetActivity, onChange });
+    renderView({ onForgetActivity, onChange });
 
     await user.click(screen.getByRole("switch", { name: /Recordar mi actividad/ }));
     await user.click(screen.getByRole("button", { name: "Borrar y apagar" }));
@@ -258,7 +258,7 @@ describe("PreferencesDialog", () => {
     const user = userEvent.setup();
     const onForgetActivity = vi.fn();
     const onChange = vi.fn();
-    renderDialog({ onForgetActivity, onChange });
+    renderView({ onForgetActivity, onChange });
 
     await user.click(screen.getByRole("switch", { name: /Recordar mi actividad/ }));
     await user.click(screen.getByRole("button", { name: "Cancelar" }));
@@ -270,7 +270,7 @@ describe("PreferencesDialog", () => {
   it("turns Remember my activity back on without asking", async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
-    renderDialog({ preferences: { ...defaults, rememberActivity: false }, onChange });
+    renderView({ preferences: { ...defaults, rememberActivity: false }, onChange });
 
     await user.click(screen.getByRole("switch", { name: /Recordar mi actividad/ }));
 
@@ -285,7 +285,7 @@ describe("PreferencesDialog", () => {
   it("turns Avisarme cuando haya una versión nueva off without asking", async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
-    renderDialog({ onChange });
+    renderView({ onChange });
 
     await user.click(
       screen.getByRole("switch", { name: "Avisarme cuando haya una versión nueva" }),
@@ -297,26 +297,35 @@ describe("PreferencesDialog", () => {
   it("closes on Cerrar", async () => {
     const user = userEvent.setup();
     const onClose = vi.fn();
-    renderDialog({ onClose });
+    renderView({ onClose });
 
     await user.click(screen.getByRole("button", { name: "Cerrar" }));
 
     expect(onClose).toHaveBeenCalledOnce();
   });
   /**
-   * La pantalla completa sigue siendo un diálogo (ID-68): `Escape` la cierra y
-   * el foco entra en ella al abrirse, que es lo que la distingue de una región
-   * más de la ventana.
+   * `Escape` cierra Preferencias sin depender de dónde esté el foco (ID-352):
+   * a diferencia del diálogo que era, esta vista no se lo roba al abrirse.
    */
-  it("closes on Escape, like the dialog it still is", async () => {
+  it("closes on Escape, wherever the focus is", async () => {
     const user = userEvent.setup();
     const onClose = vi.fn();
-    renderDialog({ onClose });
+    renderView({ onClose });
 
-    expect(screen.getByRole("dialog", { name: "Preferencias" })).toHaveFocus();
     await user.keyboard("{Escape}");
 
     expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  it("does not call onClose when Escape was default-prevented", () => {
+    const onClose = vi.fn();
+    renderView({ onClose });
+
+    const event = new KeyboardEvent("keydown", { key: "Escape", cancelable: true });
+    event.preventDefault();
+    window.dispatchEvent(event);
+
+    expect(onClose).not.toHaveBeenCalled();
   });
 
   /**
@@ -326,7 +335,7 @@ describe("PreferencesDialog", () => {
    */
   it("lays the settings out in sections with a permanent index to the left", async () => {
     const user = userEvent.setup();
-    renderDialog();
+    renderView();
 
     const index = screen.getByRole("navigation", { name: "Secciones" });
     expect(
@@ -363,7 +372,7 @@ describe("PreferencesDialog", () => {
   /** Solo el panel activo está en pantalla: no hay dos a la vez. */
   it("shows only the active panel, never two at once", async () => {
     const user = userEvent.setup();
-    renderDialog();
+    renderView();
 
     expect(screen.getAllByRole("tabpanel")).toHaveLength(1);
     expect(screen.queryByRole("switch", { name: /Recordar la última/ })).not.toBeInTheDocument();
@@ -376,7 +385,7 @@ describe("PreferencesDialog", () => {
 
   it("marks the chosen tab and leaves General chosen at the start", async () => {
     const user = userEvent.setup();
-    renderDialog();
+    renderView();
 
     expect(screen.getByRole("tab", { name: "General" })).toHaveAttribute("aria-selected", "true");
 
@@ -395,7 +404,7 @@ describe("PreferencesDialog", () => {
    */
   it("moves the selection with the arrow keys, wrapping at the ends", async () => {
     const user = userEvent.setup();
-    renderDialog();
+    renderView();
 
     screen.getByRole("tab", { name: "General" }).focus();
     await user.keyboard("{ArrowDown}");
@@ -413,22 +422,20 @@ describe("PreferencesDialog", () => {
   });
 
   /**
-   * Con una sección activa que no es General, el único botón de pestaña
-   * alcanzable con teclado es el de esa sección — las demás llevan
-   * `tabIndex={-1}`. El atrapafoco debe reconocerlo como el primer elemento
-   * enfocable y dar la vuelta hacia el último, no dejar que el foco se
-   * escape del diálogo.
+   * La pantalla ya no atrapa el foco (ID-352): a diferencia de los dos
+   * modales que se ponen delante —confirmar el borrado, la contraseña del
+   * `.p12`—, Shift+Tab desde la primera pestaña sale de la vista en vez de
+   * dar la vuelta, que es lo que deja alcanzable el menú de la cabecera.
    */
-  it("keeps Shift+Tab inside the dialog when the active tab is not General", async () => {
+  it("lets Shift+Tab leave the screen instead of trapping it, unlike the two modals", async () => {
     const user = userEvent.setup();
-    renderDialog();
+    renderView();
 
-    await openTab(user, "Certificados");
-    screen.getByRole("tab", { name: "Certificados" }).focus();
+    screen.getByRole("tab", { name: "General" }).focus();
     await user.keyboard("{Shift>}{Tab}{/Shift}");
 
-    const dialog = screen.getByRole("dialog");
-    expect(dialog.contains(document.activeElement)).toBe(true);
+    const index = screen.getByRole("navigation", { name: "Secciones" });
+    expect(index.contains(document.activeElement)).toBe(false);
   });
 
   /**
@@ -438,7 +445,7 @@ describe("PreferencesDialog", () => {
   it("closes Preferences with Escape even while a tab has focus", async () => {
     const user = userEvent.setup();
     const onClose = vi.fn();
-    renderDialog({ onClose });
+    renderView({ onClose });
 
     screen.getByRole("tab", { name: "General" }).focus();
     await user.keyboard("{Escape}");
@@ -448,7 +455,7 @@ describe("PreferencesDialog", () => {
 
   /** Fijo: un botón de cierre que se va con el desplazamiento no está (ID-69). */
   it("keeps Cerrar in a footer outside the column that scrolls", () => {
-    const { container } = renderDialog();
+    const { container } = renderView();
 
     const close = screen.getByRole("button", { name: "Cerrar" });
     expect(close.closest(".preferences__footer")).not.toBeNull();
@@ -465,7 +472,7 @@ describe("PreferencesDialog", () => {
     const onChange = vi.fn(async () => {
       throw new Error("no se deja escribir");
     });
-    renderDialog({ onChange });
+    renderView({ onChange });
     await openTab(user, "Apariencia");
 
     await user.click(screen.getByRole("combobox", { name: "Tema" }));
@@ -482,7 +489,7 @@ describe("PreferencesDialog", () => {
     const onChange = vi.fn(async () => {
       throw new Error("EACCES: permission denied");
     });
-    renderDialog({ onChange });
+    renderView({ onChange });
     await openTab(user, "Firma");
 
     await user.click(
@@ -498,7 +505,7 @@ describe("PreferencesDialog", () => {
     const onForgetActivity = vi.fn(async () => {
       throw new Error("no se deja borrar");
     });
-    renderDialog({ onForgetActivity });
+    renderView({ onForgetActivity });
 
     await user.click(screen.getByRole("button", { name: "Vaciar la lista" }));
 
@@ -510,7 +517,7 @@ describe("PreferencesDialog", () => {
 
   it("says nothing when the setting is saved", async () => {
     const user = userEvent.setup();
-    renderDialog();
+    renderView();
     await openTab(user, "Firma");
 
     await user.click(screen.getByRole("switch", { name: /Recordar la última configuración/ }));
@@ -521,7 +528,7 @@ describe("PreferencesDialog", () => {
   /** El interruptor no se mueve hasta que se confirma (ID-71). */
   it("leaves the switch on while the purge is being confirmed", async () => {
     const user = userEvent.setup();
-    renderDialog();
+    renderView();
 
     const remember = screen.getByRole("switch", { name: /Recordar mi actividad/ });
     await user.click(remember);
@@ -534,7 +541,7 @@ describe("PreferencesDialog", () => {
   /** La confirmación es a su vez modal: el teclado no se sale de ella (ID-71). */
   it("keeps the keyboard inside the confirmation while it is in front", async () => {
     const user = userEvent.setup();
-    renderDialog();
+    renderView();
 
     await user.click(screen.getByRole("switch", { name: /Recordar mi actividad/ }));
 
@@ -556,7 +563,7 @@ describe("PreferencesDialog", () => {
     const user = userEvent.setup();
     const onClose = vi.fn();
     const onChange = vi.fn();
-    renderDialog({ onClose, onChange });
+    renderView({ onClose, onChange });
 
     await user.click(screen.getByRole("switch", { name: /Recordar mi actividad/ }));
     await user.keyboard("{Escape}");
@@ -573,7 +580,7 @@ describe("PreferencesDialog", () => {
   describe("certificates in a file", () => {
     it("lists an installed certificate by its holder and never by its file", async () => {
       const user = userEvent.setup();
-      renderDialog({ installedCertificates: [anInstalledCertificate()] });
+      renderView({ installedCertificates: [anInstalledCertificate()] });
       await openTab(user, "Certificados");
 
       const certificates = screen.getByRole("tabpanel", { name: "Certificados" });
@@ -586,7 +593,7 @@ describe("PreferencesDialog", () => {
 
     it("offers the two gestures and nothing else", async () => {
       const user = userEvent.setup();
-      renderDialog({ installedCertificates: [anInstalledCertificate()] });
+      renderView({ installedCertificates: [anInstalledCertificate()] });
       await openTab(user, "Certificados");
 
       const certificates = screen.getByRole("tabpanel", { name: "Certificados" });
@@ -602,7 +609,7 @@ describe("PreferencesDialog", () => {
 
     it("says nothing is installed yet, without instructions inside the box", async () => {
       const user = userEvent.setup();
-      renderDialog({ installedCertificates: [] });
+      renderView({ installedCertificates: [] });
       await openTab(user, "Certificados");
 
       const certificates = screen.getByRole("tabpanel", { name: "Certificados" });
@@ -614,7 +621,7 @@ describe("PreferencesDialog", () => {
     /** Un caducado se queda: que desaparezca no le explica nada a quien lo instaló. */
     it("keeps an expired certificate in the list, with its badge", async () => {
       const user = userEvent.setup();
-      renderDialog({
+      renderView({
         installedCertificates: [
           anInstalledCertificate({ status: { kind: "expired", notAfter: IN_2020 } }),
         ],
@@ -629,7 +636,7 @@ describe("PreferencesDialog", () => {
     it("asks for the password of the file and installs with it", async () => {
       const user = userEvent.setup();
       const onInstallCertificate = vi.fn(async () => true);
-      renderDialog({ onInstallCertificate });
+      renderView({ onInstallCertificate });
       await openTab(user, "Certificados");
 
       await user.click(screen.getByRole("button", { name: "Añadir…" }));
@@ -643,7 +650,7 @@ describe("PreferencesDialog", () => {
       const user = userEvent.setup();
       const onClose = vi.fn();
       const onInstallCertificate = vi.fn(async () => true);
-      renderDialog({ onClose, onInstallCertificate });
+      renderView({ onClose, onInstallCertificate });
       await openTab(user, "Certificados");
 
       await user.click(screen.getByRole("button", { name: "Añadir…" }));
@@ -663,7 +670,7 @@ describe("PreferencesDialog", () => {
       const onInstallCertificate = vi.fn(async () => {
         throw { situation: "keyNotRsa", detail: "FIRMA: la clave no es RSA" };
       });
-      renderDialog({ onInstallCertificate });
+      renderView({ onInstallCertificate });
       await openTab(user, "Certificados");
 
       await user.click(screen.getByRole("button", { name: "Añadir…" }));
@@ -681,7 +688,7 @@ describe("PreferencesDialog", () => {
     /** Cerrar el selector sin elegir nada no es un fallo: no se cuenta nada. */
     it("says nothing when the file picker was closed without choosing anything", async () => {
       const user = userEvent.setup();
-      renderDialog({ onInstallCertificate: async () => false });
+      renderView({ onInstallCertificate: async () => false });
       await openTab(user, "Certificados");
 
       await user.click(screen.getByRole("button", { name: "Añadir…" }));
@@ -693,7 +700,7 @@ describe("PreferencesDialog", () => {
     it("removes an installed certificate by its handle", async () => {
       const user = userEvent.setup();
       const onRemoveCertificate = vi.fn(async () => {});
-      renderDialog({
+      renderView({
         installedCertificates: [anInstalledCertificate({ id: "2a01" })],
         onRemoveCertificate,
       });
@@ -708,7 +715,7 @@ describe("PreferencesDialog", () => {
 
     it("shows in the section that the certificate could not be removed", async () => {
       const user = userEvent.setup();
-      renderDialog({
+      renderView({
         installedCertificates: [anInstalledCertificate()],
         onRemoveCertificate: async () => {
           throw { situation: "certificateNotFound", detail: "ya no esta" };

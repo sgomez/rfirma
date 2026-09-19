@@ -615,7 +615,7 @@ describe("App", () => {
     expect(within(tray).getAllByText("factura.pdf")).toHaveLength(1);
   });
 
-  it("opens Preferences from the menu, over the window and without unmounting it", async () => {
+  it("opens Preferences from the menu, replacing the tray and the viewer", async () => {
     const user = userEvent.setup();
     renderApp(inMemoryRecents([row("a.pdf")]));
     await screen.findByText("a.pdf");
@@ -623,9 +623,63 @@ describe("App", () => {
     await user.click(screen.getByRole("button", { name: "Menú" }));
     await user.click(screen.getByRole("menuitem", { name: "Preferencias…" }));
 
-    expect(await screen.findByRole("dialog", { name: "Preferencias" })).toBeInTheDocument();
+    expect(await screen.findByRole("region", { name: "Preferencias" })).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Bandeja de documentos" })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Cerrar" }));
+
+    expect(screen.queryByRole("region", { name: "Preferencias" })).not.toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Bandeja de documentos" })).toBeInTheDocument();
-    expect(screen.getByText("a.pdf")).toBeInTheDocument();
+  });
+
+  it("closes Preferences with Escape", async () => {
+    const user = userEvent.setup();
+    renderApp();
+
+    await user.click(screen.getByRole("button", { name: "Menú" }));
+    await user.click(screen.getByRole("menuitem", { name: "Preferencias…" }));
+
+    expect(screen.getByRole("region", { name: "Preferencias" })).toBeInTheDocument();
+
+    await user.keyboard("{Escape}");
+
+    expect(screen.queryByRole("region", { name: "Preferencias" })).not.toBeInTheDocument();
+  });
+
+  it("keeps the header and menu reachable while Preferences is open", async () => {
+    const user = userEvent.setup();
+    renderApp();
+
+    await user.click(screen.getByRole("button", { name: "Menú" }));
+    await user.click(screen.getByRole("menuitem", { name: "Preferencias…" }));
+
+    expect(screen.getByRole("region", { name: "Preferencias" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Menú" }));
+    expect(screen.getByRole("menu")).toBeInTheDocument();
+
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Preferencias" })).toBeInTheDocument();
+  });
+
+  it("goes from Preferences to Estado de rFirma through the menu, and back", async () => {
+    const user = userEvent.setup();
+    renderApp();
+
+    await user.click(screen.getByRole("button", { name: "Menú" }));
+    await user.click(screen.getByRole("menuitem", { name: "Preferencias…" }));
+    expect(screen.getByRole("region", { name: "Preferencias" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Menú" }));
+    await user.click(screen.getByRole("menuitem", { name: "Estado de rFirma" }));
+    expect(screen.queryByRole("region", { name: "Preferencias" })).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Estado de rFirma" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Menú" }));
+    await user.click(screen.getByRole("menuitem", { name: "Preferencias…" }));
+    expect(screen.queryByRole("heading", { name: "Estado de rFirma" })).not.toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Preferencias" })).toBeInTheDocument();
   });
 
   /**
@@ -787,6 +841,7 @@ describe("App", () => {
     await user.click(screen.getByRole("menuitem", { name: "Preferencias…" }));
     await user.click(await screen.findByRole("switch", { name: /Recordar mi actividad/ }));
     await user.click(screen.getByRole("button", { name: "Borrar y apagar" }));
+    await user.click(screen.getByRole("button", { name: "Cerrar" }));
 
     await waitFor(() => expect(screen.queryByText("a.pdf")).not.toBeInTheDocument());
     expect(
