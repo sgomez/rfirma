@@ -363,6 +363,18 @@ msgstr ""
 "intentarlo y, si sigue ocurriendo, adjunta el detalle técnico al informe del "
 "fallo."
 
+#. Se enseña en un diálogo nativo antes de que exista ventana; no la lee i18next.
+msgid "errors.startup.homeUnknown"
+msgstr "rFirma no sabe cuál es tu carpeta personal y no puede arrancar."
+
+#. Se enseña en un diálogo nativo antes de que exista ventana; no la lee i18next.
+msgid "errors.startup.scratchFolderUnusable"
+msgstr "rFirma no ha podido crear la carpeta de paso que necesita y no puede arrancar."
+
+#. Se enseña en un diálogo nativo antes de que exista ventana; no la lee i18next.
+msgid "errors.startup.windowUnavailable"
+msgstr "rFirma no ha podido abrir la ventana y no puede arrancar."
+
 #. Nombre accesible de la región para lectores de pantalla, no un título visible.
 msgid "window.tray"
 msgstr "Bandeja de documentos"

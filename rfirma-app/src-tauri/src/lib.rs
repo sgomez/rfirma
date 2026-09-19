@@ -7,6 +7,8 @@ pub mod identity;
 pub mod memory_error;
 pub mod signing;
 pub mod site;
+pub mod startup_dialog;
+pub mod startup_failure;
 
 #[cfg(doctest)]
 mod compile_fail;
@@ -134,8 +136,12 @@ pub fn run() {
 
     let invocation = desktop::adapters::process::this_invocation();
     let discarded = Role::said(&invocation);
-    let paths = desktop::adapters::paths::Paths::from_environment()
-        .expect("debería saberse cuál es el HOME");
+    let paths = desktop::adapters::paths::Paths::from_environment().unwrap_or_else(|error| {
+        startup_dialog::report_and_exit(&startup_failure::StartupFailure::new(
+            startup_failure::Situation::HomeUnknown,
+            error.to_string(),
+        ))
+    });
 
     match desktop::application::invocation::role_of(invocation) {
         Role::Desktop(invocation) => run_desktop(paths, invocation),
@@ -234,8 +240,12 @@ fn with_the_five_roots(
 fn own_scratch(role: &str) -> site::adapters::scratch::ProcessFolder {
     let temp = std::env::temp_dir();
     site::adapters::scratch::sweep(&temp, &["site", "desktop"]);
-    site::adapters::scratch::own_folder(&temp, role)
-        .expect("debería poder crearse la carpeta de paso del proceso")
+    site::adapters::scratch::own_folder(&temp, role).unwrap_or_else(|error| {
+        startup_dialog::report_and_exit(&startup_failure::StartupFailure::new(
+            startup_failure::Situation::ScratchFolderUnusable,
+            error.to_string(),
+        ))
+    })
 }
 
 /// Borra la carpeta de paso de este proceso al salir del bucle de eventos; un `Drop` no es
@@ -300,7 +310,12 @@ fn run_desktop(paths: desktop::adapters::paths::Paths, invocation: Invocation) {
             Ok(())
         })
         .build(tauri::generate_context!())
-        .expect("error arrancando la ventana de rfirma")
+        .unwrap_or_else(|error| {
+            startup_dialog::report_and_exit(&startup_failure::StartupFailure::new(
+                startup_failure::Situation::WindowUnavailable,
+                error.to_string(),
+            ))
+        })
         .run(erase_the_scratch_folder_on_exit);
 }
 
@@ -353,7 +368,12 @@ fn run_site(paths: desktop::adapters::paths::Paths, url: String, said_by_the_rol
             Ok(())
         })
         .build(tauri::generate_context!())
-        .expect("error arrancando la sede de rfirma")
+        .unwrap_or_else(|error| {
+            startup_dialog::report_and_exit(&startup_failure::StartupFailure::new(
+                startup_failure::Situation::WindowUnavailable,
+                error.to_string(),
+            ))
+        })
         .run(erase_the_scratch_folder_on_exit);
 }
 

@@ -367,6 +367,18 @@ msgstr ""
 "eta, gertatzen jarraitzen badu, erantsi xehetasun teknikoa akatsaren "
 "txostenari."
 
+#. Se enseña en un diálogo nativo antes de que exista ventana; no la lee i18next.
+msgid "errors.startup.homeUnknown"
+msgstr "rFirma-k ez daki zein den zure karpeta pertsonala eta ezin da abiatu."
+
+#. Se enseña en un diálogo nativo antes de que exista ventana; no la lee i18next.
+msgid "errors.startup.scratchFolderUnusable"
+msgstr "rFirma-k ez du behar duen igarotze-karpeta sortu ahal izan eta ezin da abiatu."
+
+#. Se enseña en un diálogo nativo antes de que exista ventana; no la lee i18next.
+msgid "errors.startup.windowUnavailable"
+msgstr "rFirma-k ezin izan du leihoa ireki eta ezin da abiatu."
+
 #. Nombre accesible de la región para lectores de pantalla, no un título visible.
 msgid "window.tray"
 msgstr "Dokumentuen erretilua"
