@@ -73,6 +73,7 @@ describe("StatusView", () => {
         verdict: "correct",
         action: null,
         detail: null,
+        candidates: null,
         restartFirefoxNotice: false,
       },
     ];
@@ -96,6 +97,7 @@ describe("StatusView", () => {
           target: "releases",
         },
         detail: null,
+        candidates: null,
         restartFirefoxNotice: false,
       },
     ];
@@ -116,6 +118,7 @@ describe("StatusView", () => {
         verdict: "correct",
         action: null,
         detail: null,
+        candidates: null,
         restartFirefoxNotice: false,
       },
     ];
@@ -136,6 +139,7 @@ describe("StatusView", () => {
         verdict: "attention",
         action: null,
         detail: null,
+        candidates: null,
         restartFirefoxNotice: false,
       },
     ];
@@ -155,6 +159,7 @@ describe("StatusView", () => {
         verdict: "notApplicable",
         action: null,
         detail: null,
+        candidates: null,
         restartFirefoxNotice: false,
       },
     ];
@@ -164,6 +169,192 @@ describe("StatusView", () => {
     expect(within(row).getByText("No se puede consultar")).toBeInTheDocument();
     expect(within(row).getByText("No aplica")).toBeInTheDocument();
     expect(within(row).queryByRole("button")).not.toBeInTheDocument();
+  });
+
+  it("renders plain text with no dropdown when there is only one candidate", async () => {
+    const rows: SignalRow[] = [
+      {
+        signal: "siteSignature",
+        value: "rFirma",
+        verdict: "correct",
+        action: null,
+        detail: null,
+        candidates: null,
+        restartFirefoxNotice: false,
+      },
+    ];
+    renderWithCatalog(<StatusView statusPort={memoryStatus(rows)} onClose={() => {}} />);
+
+    const row = await screen.findByRole("status");
+    expect(within(row).getByText("rFirma")).toBeInTheDocument();
+    expect(within(row).queryByRole("combobox")).not.toBeInTheDocument();
+  });
+
+  it("renders a dropdown with the current candidate selected when there are two or more", async () => {
+    const rows: SignalRow[] = [
+      {
+        signal: "siteSignature",
+        value: "AutoFirma",
+        verdict: "attention",
+        action: {
+          kind: "choice",
+          target: "rfirma.desktop",
+        },
+        detail: null,
+        candidates: [
+          { id: "rfirma.desktop", name: "rFirma", selected: false },
+          { id: "autofirma.desktop", name: "AutoFirma", selected: true },
+        ],
+        restartFirefoxNotice: false,
+      },
+    ];
+    renderWithCatalog(<StatusView statusPort={memoryStatus(rows)} onClose={() => {}} />);
+
+    const row = await screen.findByRole("status");
+    const dropdown = within(row).getByRole("combobox");
+    expect(dropdown).toHaveTextContent("AutoFirma");
+    expect(within(row).getByRole("button", { name: "Usar rFirma" })).toBeInTheDocument();
+  });
+
+  it("chooses rFirma from Usar rFirma and remeasures both signals through Comprobando", async () => {
+    const user = userEvent.setup();
+    let resolveChoose!: (rows: SignalRow[]) => void;
+    const choosePromise = new Promise<SignalRow[]>((resolve) => {
+      resolveChoose = resolve;
+    });
+    const chooseSiteSignatureHandler = vi.fn().mockReturnValue(choosePromise);
+
+    const statusPort: StatusPort = {
+      readStatus: vi.fn().mockResolvedValue([
+        {
+          signal: "siteSignature",
+          value: "AutoFirma",
+          verdict: "attention",
+          action: {
+            kind: "choice",
+            target: "rfirma.desktop",
+          },
+          detail: null,
+          candidates: null,
+          restartFirefoxNotice: false,
+        },
+        {
+          signal: "localCaCertificate",
+          value: "0/2",
+          verdict: "incorrect",
+          action: {
+            kind: "repair",
+            target: "installLocalCaCertificate",
+          },
+          detail: null,
+          candidates: null,
+          restartFirefoxNotice: false,
+        },
+      ]),
+      recheck: vi.fn(),
+      installLocalCaCertificate: vi.fn(),
+      chooseSiteSignatureHandler,
+    };
+
+    renderWithCatalog(<StatusView statusPort={statusPort} onClose={() => {}} />);
+
+    const rows = await screen.findAllByRole("status");
+    const siteRow = rows[0];
+    const certRow = rows[1];
+    if (!siteRow || !certRow) throw new Error("deberian existir las dos filas");
+
+    await user.click(within(siteRow).getByRole("button", { name: "Usar rFirma" }));
+
+    expect(chooseSiteSignatureHandler).toHaveBeenCalledWith("rfirma.desktop");
+    expect(within(siteRow).getByText("Comprobando")).toBeInTheDocument();
+    expect(within(certRow).getByText("Comprobando")).toBeInTheDocument();
+
+    resolveChoose([
+      {
+        signal: "siteSignature",
+        value: "rFirma",
+        verdict: "correct",
+        action: null,
+        detail: null,
+        candidates: null,
+        restartFirefoxNotice: false,
+      },
+      {
+        signal: "localCaCertificate",
+        value: "2/2",
+        verdict: "correct",
+        action: null,
+        detail: null,
+        candidates: null,
+        restartFirefoxNotice: false,
+      },
+    ]);
+
+    await waitFor(() => {
+      expect(within(siteRow).getByText("Correcto")).toBeInTheDocument();
+    });
+    expect(within(certRow).getByText("Correcto")).toBeInTheDocument();
+  });
+
+  it("chooses AutoFirma from the dropdown without touching the certificate", async () => {
+    const user = userEvent.setup();
+    const chooseSiteSignatureHandler = vi.fn().mockResolvedValue([
+      {
+        signal: "siteSignature",
+        value: "AutoFirma",
+        verdict: "attention",
+        action: {
+          kind: "choice",
+          target: "rfirma.desktop",
+        },
+        detail: null,
+        candidates: [
+          { id: "rfirma.desktop", name: "rFirma", selected: false },
+          { id: "autofirma.desktop", name: "AutoFirma", selected: true },
+        ],
+        restartFirefoxNotice: false,
+      },
+      {
+        signal: "localCaCertificate",
+        value: "2/2",
+        verdict: "correct",
+        action: null,
+        detail: null,
+        candidates: null,
+        restartFirefoxNotice: false,
+      },
+    ]);
+
+    const statusPort: StatusPort = {
+      readStatus: vi.fn().mockResolvedValue([
+        {
+          signal: "siteSignature",
+          value: "rFirma",
+          verdict: "correct",
+          action: null,
+          detail: null,
+          candidates: [
+            { id: "rfirma.desktop", name: "rFirma", selected: true },
+            { id: "autofirma.desktop", name: "AutoFirma", selected: false },
+          ],
+          restartFirefoxNotice: false,
+        },
+      ]),
+      recheck: vi.fn(),
+      installLocalCaCertificate: vi.fn(),
+      chooseSiteSignatureHandler,
+    };
+
+    renderWithCatalog(<StatusView statusPort={statusPort} onClose={() => {}} />);
+
+    const row = await screen.findByRole("status");
+    await user.click(within(row).getByRole("combobox"));
+    await user.click(within(row).getByRole("option", { name: "AutoFirma" }));
+
+    expect(chooseSiteSignatureHandler).toHaveBeenCalledWith("autofirma.desktop");
+    await waitFor(() => {
+      expect(within(row).getByText("AutoFirma")).toBeInTheDocument();
+    });
   });
 
   it("renders Ninguno and Cómo instalar when no certificate stores are detected", async () => {
@@ -177,6 +368,7 @@ describe("StatusView", () => {
           target: "certificateIssuance",
         },
         detail: null,
+        candidates: null,
         restartFirefoxNotice: false,
       },
     ];
@@ -197,6 +389,7 @@ describe("StatusView", () => {
         verdict: "correct",
         action: null,
         detail: null,
+        candidates: null,
         restartFirefoxNotice: false,
       },
     ];
@@ -217,6 +410,7 @@ describe("StatusView", () => {
         verdict: "checking",
         action: null,
         detail: null,
+        candidates: null,
         restartFirefoxNotice: false,
       },
     ];
@@ -242,6 +436,7 @@ describe("StatusView", () => {
           { brand: "firefox", trusted: false },
           { brand: "chrome", trusted: false },
         ],
+        candidates: null,
         restartFirefoxNotice: false,
       },
     ];
@@ -277,6 +472,7 @@ describe("StatusView", () => {
           { brand: "firefox", trusted: true },
           { brand: "chrome", trusted: true },
         ],
+        candidates: null,
         restartFirefoxNotice: false,
       },
     ];
@@ -311,11 +507,13 @@ describe("StatusView", () => {
             target: "certificateIssuance",
           },
           detail: null,
+          candidates: null,
           restartFirefoxNotice: false,
         },
       ]),
       recheck: vi.fn().mockReturnValue(recheckPromise),
       installLocalCaCertificate: vi.fn(),
+      chooseSiteSignatureHandler: vi.fn(),
     };
 
     renderWithCatalog(<StatusView statusPort={statusPort} onClose={() => {}} />);
@@ -334,6 +532,7 @@ describe("StatusView", () => {
         verdict: "correct",
         action: null,
         detail: null,
+        candidates: null,
         restartFirefoxNotice: false,
       },
     ]);
@@ -363,11 +562,13 @@ describe("StatusView", () => {
             target: "releases",
           },
           detail: null,
+          candidates: null,
           restartFirefoxNotice: false,
         },
       ]),
       recheck: vi.fn().mockReturnValue(recheckPromise),
       installLocalCaCertificate: vi.fn(),
+      chooseSiteSignatureHandler: vi.fn(),
     };
 
     renderWithCatalog(
@@ -389,6 +590,7 @@ describe("StatusView", () => {
         verdict: "correct",
         action: null,
         detail: null,
+        candidates: null,
         restartFirefoxNotice: false,
       },
     ]);
@@ -414,11 +616,13 @@ describe("StatusView", () => {
           verdict: "checking",
           action: null,
           detail: null,
+          candidates: null,
           restartFirefoxNotice: false,
         },
       ]),
       recheck: vi.fn().mockReturnValue(recheckPromise),
       installLocalCaCertificate: vi.fn(),
+      chooseSiteSignatureHandler: vi.fn(),
     };
 
     renderWithCatalog(<StatusView statusPort={statusPort} onClose={() => {}} />);
@@ -438,6 +642,7 @@ describe("StatusView", () => {
         verdict: "correct",
         action: null,
         detail: null,
+        candidates: null,
         restartFirefoxNotice: false,
       },
     ]);
@@ -465,11 +670,13 @@ describe("StatusView", () => {
             target: "installLocalCaCertificate",
           },
           detail: null,
+          candidates: null,
           restartFirefoxNotice: false,
         },
       ]),
       recheck: vi.fn(),
       installLocalCaCertificate: vi.fn().mockReturnValue(installPromise),
+      chooseSiteSignatureHandler: vi.fn(),
     };
 
     renderWithCatalog(<StatusView statusPort={statusPort} onClose={() => {}} />);
@@ -486,6 +693,7 @@ describe("StatusView", () => {
       verdict: "correct",
       action: null,
       detail: null,
+      candidates: null,
       restartFirefoxNotice: true,
     });
 
@@ -503,6 +711,7 @@ describe("StatusView", () => {
         verdict: "correct",
         action: null,
         detail: null,
+        candidates: null,
         restartFirefoxNotice: false,
       },
     ];

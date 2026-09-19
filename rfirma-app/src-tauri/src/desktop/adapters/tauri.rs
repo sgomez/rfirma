@@ -155,6 +155,37 @@ pub fn install_local_ca_certificate(site: State<'_, SiteRoot>) -> SignalRowView 
     measured_local_ca_certificate_signal(&site, restart_firefox_notice).into()
 }
 
+/// Elige quién abre las sedes; si es rFirma, instala también su certificado (ADR-0009).
+#[tauri::command(async)]
+pub fn choose_site_signature_handler(
+    handler: String,
+    site: State<'_, SiteRoot>,
+) -> Result<Vec<SignalRowView>, Failure> {
+    let channel = crate::desktop::adapters::channel::Channel::detected();
+    let list = crate::desktop::adapters::choice::mimeapps_list_from_environment()
+        .map_err(|error| DesktopError::new(Situation::TheListIsNotWritable, error.to_string()))?;
+    let registry = DesktopRegistry::of(channel, list);
+    crate::desktop::application::handlers::chosen(&registry, &handler)?;
+
+    let firefox_was_running = firefox_is_running(&site);
+    let firefox_trusted_before = firefox_local_ca_trust(&site);
+    if handler == crate::desktop::domain::handlers::OUR_DESKTOP_FILE {
+        let _ = site.install_local_ca_trust();
+    }
+    let firefox_trusted_after = firefox_local_ca_trust(&site);
+    let restart_firefox_notice = crate::desktop::application::status::firefox_restart_notice(
+        firefox_was_running,
+        &firefox_trusted_before,
+        &firefox_trusted_after,
+    );
+
+    let handlers = crate::desktop::application::handlers::who_handles(&registry);
+    Ok(vec![
+        crate::desktop::application::status::evaluate_site_signature_signal(handlers).into(),
+        measured_local_ca_certificate_signal(&site, restart_firefox_notice).into(),
+    ])
+}
+
 /// Consulta el estado de las señales de la instalación para el panel de estado.
 #[tauri::command(async)]
 pub fn read_status(

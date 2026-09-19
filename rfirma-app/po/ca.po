@@ -880,6 +880,9 @@ msgstr "Com instal·lar-lo"
 msgid "status.actions.install"
 msgstr "Instal·lar"
 
+msgid "status.actions.useRfirma"
+msgstr "Usar rFirma"
+
 msgid "status.values.siteSignature.notConfigured"
 msgstr "Sense configurar"
 

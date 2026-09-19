@@ -17,6 +17,7 @@ import type {
   ExternalDestinationOpener,
 } from "../desktop/externalDestination";
 import { unavailableExternalDestinationOpener } from "../desktop/externalDestination";
+import { Select } from "../preferences/Select";
 import {
   memoryStatus,
   type Signal,
@@ -86,6 +87,7 @@ export function StatusView({
         verdict: "checking",
         action: null,
         detail: null,
+        candidates: null,
       })),
     );
     statusPort.recheck().then((updatedRows) => {
@@ -94,16 +96,52 @@ export function StatusView({
     });
   }, [statusPort]);
 
+  const handleChooseSiteSignatureHandler = useCallback(
+    (handlerId: string) => {
+      setRows((current) =>
+        current.map((r) =>
+          r.signal === "siteSignature" || r.signal === "localCaCertificate"
+            ? {
+                ...r,
+                verdict: "checking",
+                action: null,
+                detail: null,
+                candidates: null,
+                restartFirefoxNotice: false,
+              }
+            : r,
+        ),
+      );
+      statusPort.chooseSiteSignatureHandler(handlerId).then((updatedRows) => {
+        setRows((current) =>
+          current.map((r) => updatedRows.find((updated) => updated.signal === r.signal) ?? r),
+        );
+      });
+    },
+    [statusPort],
+  );
+
   const handleAction = useCallback(
     (row: SignalRow) => {
       if (!row.action) return;
       if (row.action.kind === "link") {
         void externalDestinations.open(row.action.target as ExternalDestination);
       }
+      if (row.action.kind === "choice") {
+        handleChooseSiteSignatureHandler(row.action.target);
+        return;
+      }
       setRows((current) =>
         current.map((r) =>
           r.signal === row.signal
-            ? { ...r, verdict: "checking", action: null, detail: null, restartFirefoxNotice: false }
+            ? {
+                ...r,
+                verdict: "checking",
+                action: null,
+                detail: null,
+                candidates: null,
+                restartFirefoxNotice: false,
+              }
             : r,
         ),
       );
@@ -119,7 +157,7 @@ export function StatusView({
         setRows(updatedRows);
       });
     },
-    [externalDestinations, statusPort],
+    [externalDestinations, statusPort, handleChooseSiteSignatureHandler],
   );
 
   return (
@@ -150,7 +188,20 @@ export function StatusView({
               <p className="rf-prose status-view__cell-signal">{signalLabel(t, row.signal)}</p>
 
               <div className="status-view__cell-value">
-                <p className="rf-prose status-view__cell-value-text">{valueLabel(t, row)}</p>
+                {row.candidates && row.candidates.length >= 2 ? (
+                  <Select
+                    label={signalLabel(t, row.signal)}
+                    hideLabel
+                    value={row.candidates.find((candidate) => candidate.selected)?.id ?? ""}
+                    options={row.candidates.map((candidate) => ({
+                      value: candidate.id,
+                      label: candidate.name,
+                    }))}
+                    onChange={handleChooseSiteSignatureHandler}
+                  />
+                ) : (
+                  <p className="rf-prose status-view__cell-value-text">{valueLabel(t, row)}</p>
+                )}
               </div>
 
               <div className="status-view__cell-verdict">
@@ -259,7 +310,7 @@ function actionLabel(t: TFunction, row: SignalRow): string {
     case "localCaCertificate":
       return t("status.actions.install");
     case "siteSignature":
-      return "";
+      return t("status.actions.useRfirma");
   }
 }
 

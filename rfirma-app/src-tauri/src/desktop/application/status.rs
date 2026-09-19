@@ -7,7 +7,7 @@ use crate::desktop::domain::channel::Channel;
 use crate::desktop::domain::destination::{CERTIFICATE_ISSUANCE, RELEASES, REPOSITORY};
 use crate::desktop::domain::handlers::UrlHandlers;
 use crate::desktop::domain::status::{
-    ActionKind, Signal, SignalRow, StatusAction, StoreDetail, Verdict,
+    ActionKind, Signal, SignalRow, SiteSignatureCandidate, StatusAction, StoreDetail, Verdict,
 };
 use crate::desktop::ports::VersionMemory;
 
@@ -36,6 +36,7 @@ pub fn evaluate_version_signal(
             verdict: Verdict::Checking,
             action: None,
             detail: None,
+            candidates: None,
             restart_firefox_notice: false,
         };
     }
@@ -50,6 +51,7 @@ pub fn evaluate_version_signal(
                 target: update_destination_for(channel).to_string(),
             }),
             detail: None,
+            candidates: None,
             restart_firefox_notice: false,
         }
     } else {
@@ -59,6 +61,7 @@ pub fn evaluate_version_signal(
             verdict: Verdict::Correct,
             action: None,
             detail: None,
+            candidates: None,
             restart_firefox_notice: false,
         }
     }
@@ -84,6 +87,34 @@ pub fn check_version_signal(
     }
 }
 
+/// Candidatas a firmar en sedes: solo hay dónde elegir con dos o más registradas.
+fn site_signature_candidates(handlers: &UrlHandlers) -> Option<Vec<SiteSignatureCandidate>> {
+    if handlers.handlers.len() < 2 {
+        return None;
+    }
+    Some(
+        handlers
+            .handlers
+            .iter()
+            .map(|handler| SiteSignatureCandidate {
+                id: handler.id.clone(),
+                name: handler.name.clone(),
+                selected: handlers.current.as_deref() == Some(handler.id.as_str()),
+            })
+            .collect(),
+    )
+}
+
+/// `Usar rFirma`: solo donde de verdad hay algo que arreglar, que es cuando rFirma no es quien
+/// firma en sedes hoy.
+fn site_signature_action(handlers: &UrlHandlers) -> Option<StatusAction> {
+    let is_ours = handlers.current.as_deref() == Some(handlers.ours.as_str());
+    (!is_ours).then(|| StatusAction {
+        kind: ActionKind::Choice,
+        target: handlers.ours.clone(),
+    })
+}
+
 /// Evalúa el estado de la señal de qué programa abre las sedes, con las candidatas instaladas.
 pub fn evaluate_site_signature_signal(handlers: UrlHandlers) -> SignalRow {
     if !handlers.available {
@@ -93,17 +124,22 @@ pub fn evaluate_site_signature_signal(handlers: UrlHandlers) -> SignalRow {
             verdict: Verdict::NotApplicable,
             action: None,
             detail: None,
+            candidates: None,
             restart_firefox_notice: false,
         };
     }
+
+    let candidates = site_signature_candidates(&handlers);
+    let action = site_signature_action(&handlers);
 
     let Some(current) = &handlers.current else {
         return SignalRow {
             signal: Signal::SiteSignature,
             value: String::new(),
             verdict: Verdict::Attention,
-            action: None,
+            action,
             detail: None,
+            candidates,
             restart_firefox_notice: false,
         };
     };
@@ -115,6 +151,7 @@ pub fn evaluate_site_signature_signal(handlers: UrlHandlers) -> SignalRow {
             verdict: Verdict::Correct,
             action: None,
             detail: None,
+            candidates,
             restart_firefox_notice: false,
         };
     }
@@ -130,8 +167,9 @@ pub fn evaluate_site_signature_signal(handlers: UrlHandlers) -> SignalRow {
         signal: Signal::SiteSignature,
         value: name,
         verdict: Verdict::Attention,
-        action: None,
+        action,
         detail: None,
+        candidates,
         restart_firefox_notice: false,
     }
 }
@@ -148,6 +186,7 @@ pub fn evaluate_user_certificates_signal(stores_with_certificates: usize) -> Sig
                 target: CERTIFICATE_ISSUANCE.to_string(),
             }),
             detail: None,
+            candidates: None,
             restart_firefox_notice: false,
         }
     } else {
@@ -157,6 +196,7 @@ pub fn evaluate_user_certificates_signal(stores_with_certificates: usize) -> Sig
             verdict: Verdict::Correct,
             action: None,
             detail: None,
+            candidates: None,
             restart_firefox_notice: false,
         }
     }
@@ -170,6 +210,7 @@ pub fn checking_local_ca_certificate_signal() -> SignalRow {
         verdict: Verdict::Checking,
         action: None,
         detail: None,
+        candidates: None,
         restart_firefox_notice: false,
     }
 }
@@ -203,6 +244,7 @@ pub fn evaluate_local_ca_certificate_signal(
         verdict,
         action,
         detail: Some(detail),
+        candidates: None,
         restart_firefox_notice,
     }
 }

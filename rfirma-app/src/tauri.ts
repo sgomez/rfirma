@@ -680,5 +680,7 @@ export function tauriStatusPort(): StatusPort {
     readStatus: () => invoke<SignalRow[]>("read_status", { recheck: false }),
     recheck: () => invoke<SignalRow[]>("read_status", { recheck: true }),
     installLocalCaCertificate: () => invoke<SignalRow>("install_local_ca_certificate"),
+    chooseSiteSignatureHandler: (handlerId) =>
+      invoke<SignalRow[]>("choose_site_signature_handler", { handler: handlerId }),
   };
 }

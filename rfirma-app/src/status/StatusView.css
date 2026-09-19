@@ -109,6 +109,11 @@
   margin: 0;
 }
 
+.status-view__cell-value .select {
+  min-width: 220px;
+  max-width: 220px;
+}
+
 .status-view__cell-verdict {
   width: 130px;
   flex: none;

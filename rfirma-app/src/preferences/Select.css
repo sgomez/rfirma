@@ -10,6 +10,20 @@
   position: relative;
 }
 
+/* El rótulo sigue siendo el nombre accesible; lo que se oculta es la vista,
+   no el control, para un desplegable que ya vive junto a su etiqueta. */
+.rf-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .select__control {
   display: flex;
   align-items: center;

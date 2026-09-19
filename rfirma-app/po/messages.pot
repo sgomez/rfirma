@@ -802,6 +802,9 @@ msgstr ""
 msgid "status.actions.install"
 msgstr ""
 
+msgid "status.actions.useRfirma"
+msgstr ""
+
 msgid "status.values.siteSignature.notConfigured"
 msgstr ""
 

@@ -9,8 +9,10 @@ export interface Option<T extends string> {
 }
 
 interface SelectProps<T extends string> {
-  /** El rótulo visible, que además es el nombre accesible del control. */
+  /** El rótulo, siempre el nombre accesible del control; visible salvo con `hideLabel`. */
   label: string;
+  /** Oculta el rótulo a la vista, para un control que ya vive junto a su etiqueta (una celda de tabla). */
+  hideLabel?: boolean;
   value: T;
   options: readonly Option<T>[];
   onChange: (value: T) => void;
@@ -32,7 +34,13 @@ interface SelectProps<T extends string> {
  * fuera y foco de vuelta al cierre. Un `<div>` con un `onClick` no es un
  * desplegable, es un dibujo de uno.
  */
-export function Select<T extends string>({ label, value, options, onChange }: SelectProps<T>) {
+export function Select<T extends string>({
+  label,
+  hideLabel = false,
+  value,
+  options,
+  onChange,
+}: SelectProps<T>) {
   const [open, setOpen] = useState(false);
   // Dónde está el cursor del teclado mientras la lista está abierta. No es la
   // selección: moverse por la lista no elige nada hasta que se pulsa Intro.
@@ -121,7 +129,7 @@ export function Select<T extends string>({ label, value, options, onChange }: Se
 
   return (
     <div className="rf-field select" ref={container}>
-      <span className="rf-label" id={labelId}>
+      <span className={hideLabel ? "rf-label rf-visually-hidden" : "rf-label"} id={labelId}>
         {label}
       </span>
       <button

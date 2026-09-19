@@ -69,7 +69,8 @@ crossing! {
 }
 
 use crate::desktop::domain::status::{
-    ActionKind, Signal, SignalRow, StatusAction, StoreBrand, StoreDetail, Verdict,
+    ActionKind, Signal, SignalRow, SiteSignatureCandidate, StatusAction, StoreBrand, StoreDetail,
+    Verdict,
 };
 
 crossing! {
@@ -87,6 +88,8 @@ crossing! {
         pub action: Option<StatusActionView>,
         /// Detalle por almacén, para señales que lo despliegan.
         pub detail: Option<Vec<StoreDetailView>>,
+        /// Candidatas entre las que elegir, para la señal `Firma en sedes`.
+        pub candidates: Option<Vec<SiteSignatureCandidateView>>,
         /// Aviso de reiniciar Firefox, tras instalar con el navegador vivo (ADR-0005).
         pub restart_firefox_notice: bool,
     }
@@ -102,7 +105,37 @@ impl From<SignalRow> for SignalRowView {
             detail: row
                 .detail
                 .map(|detail| detail.into_iter().map(StoreDetailView::from).collect()),
+            candidates: row.candidates.map(|candidates| {
+                candidates
+                    .into_iter()
+                    .map(SiteSignatureCandidateView::from)
+                    .collect()
+            }),
             restart_firefox_notice: row.restart_firefox_notice,
+        }
+    }
+}
+
+crossing! {
+    /// Candidata a firmar en sedes, para el desplegable de la señal `Firma en sedes`.
+    #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+    #[serde(rename_all = "camelCase")]
+    pub struct SiteSignatureCandidateView {
+        /// Identificador del manejador en el escritorio.
+        pub id: String,
+        /// Nombre visible, tal y como lo dio el escritorio.
+        pub name: String,
+        /// Si es la candidata elegida hoy.
+        pub selected: bool,
+    }
+}
+
+impl From<SiteSignatureCandidate> for SiteSignatureCandidateView {
+    fn from(candidate: SiteSignatureCandidate) -> Self {
+        Self {
+            id: candidate.id,
+            name: candidate.name,
+            selected: candidate.selected,
         }
     }
 }
