@@ -58,6 +58,9 @@ msgstr "Xehetasun teknikoa"
 msgid "errors.help"
 msgstr "Iruzkinak eta laguntza"
 
+msgid "errors.reload"
+msgstr "Birkargatu leihoa"
+
 msgid "errors.situations.unknown.title"
 msgstr "Ezin izan da eragiketa osatu"
 
@@ -297,6 +300,14 @@ msgid "errors.situations.bridgeFailed.body"
 msgstr ""
 "Sinatutako PDFa osatzen duen osagaiak huts egin du. Saiatu berriro eta, "
 "gertatzen jarraitzen badu, erantsi xehetasun teknikoa akatsaren txostenari."
+
+msgid "errors.situations.renderFailed.title"
+msgstr "Pantaila honek funtzionatzeari utzi dio"
+
+msgid "errors.situations.renderFailed.body"
+msgstr ""
+"Birkargatu leihoa jarraitzeko. Gertatzen jarraitzen badu, erantsi "
+"xehetasun teknikoa akatsaren txostenari."
 
 msgid "errors.situations.folderMissing.title"
 msgstr "Helburuko karpeta jada ez dago"

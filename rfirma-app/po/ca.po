@@ -58,6 +58,9 @@ msgstr "Detall tècnic"
 msgid "errors.help"
 msgstr "Comentaris i ajuda"
 
+msgid "errors.reload"
+msgstr "Recarrega la finestra"
+
 msgid "errors.situations.unknown.title"
 msgstr "No s'ha pogut completar l'operació"
 
@@ -298,6 +301,14 @@ msgid "errors.situations.bridgeFailed.body"
 msgstr ""
 "Ha fallat el component que munta el PDF signat. Torna-ho a intentar i, si "
 "continua passant, adjunta el detall tècnic a l'informe de l'error."
+
+msgid "errors.situations.renderFailed.title"
+msgstr "Aquesta pantalla ha deixat de funcionar"
+
+msgid "errors.situations.renderFailed.body"
+msgstr ""
+"Recarrega la finestra per continuar. Si continua passant, adjunta el "
+"detall tècnic a l'informe de l'error."
 
 msgid "errors.situations.folderMissing.title"
 msgstr "La carpeta de destinació ja no hi és"

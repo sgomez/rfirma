@@ -58,6 +58,9 @@ msgstr "Detalle técnico"
 msgid "errors.help"
 msgstr "Comentarios e axuda"
 
+msgid "errors.reload"
+msgstr "Recargar a fiestra"
+
 msgid "errors.situations.unknown.title"
 msgstr "Non se puido completar a operación"
 
@@ -288,6 +291,14 @@ msgid "errors.situations.bridgeFailed.body"
 msgstr ""
 "Fallou o compoñente que arma o PDF asinado. Téntao de novo e, se segue a "
 "ocorrer, achega o detalle técnico ao informe do fallo."
+
+msgid "errors.situations.renderFailed.title"
+msgstr "Esta pantalla deixou de funcionar"
+
+msgid "errors.situations.renderFailed.body"
+msgstr ""
+"Recarga a fiestra para continuar. Se segue a ocorrer, achega o detalle "
+"técnico ao informe do fallo."
 
 msgid "errors.situations.folderMissing.title"
 msgstr "O cartafol de destino xa non está"

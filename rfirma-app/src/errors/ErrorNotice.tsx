@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { AlertIcon, ExternalLinkIcon } from "../design-system/icons";
 import type { ExternalDestinationOpener } from "../desktop/externalDestination";
@@ -34,7 +35,12 @@ function isOneLine(situation: ErrorSituation): situation is OneLineSituation {
  * certificado caducado, etc.) no llevan enlace para no mandar a la persona al
  * sitio equivocado.
  */
-export const ERROR_SITUATIONS_WITH_HELP = ["bridgeFailed", "sealMismatch", "unknown"] as const;
+export const ERROR_SITUATIONS_WITH_HELP = [
+  "bridgeFailed",
+  "sealMismatch",
+  "unknown",
+  "renderFailed",
+] as const;
 
 export type ErrorSituationWithHelp = (typeof ERROR_SITUATIONS_WITH_HELP)[number];
 
@@ -57,6 +63,10 @@ interface ErrorNoticeProps {
   technicalDetail?: string;
   onOpenHelp?: () => void;
   externalDestinations?: ExternalDestinationOpener;
+  /** Con este botón, el aviso ya no es solo informativo: además recarga la ventana. */
+  onReload?: () => void;
+  /** El error boundary de cada ventana quiere el foco encima al aparecer; nadie más lo pide. */
+  focusOnMount?: boolean;
 }
 
 /**
@@ -79,8 +89,15 @@ export function ErrorNotice({
   technicalDetail,
   onOpenHelp,
   externalDestinations,
+  onReload,
+  focusOnMount,
 }: ErrorNoticeProps) {
   const { t } = useTranslation();
+  const notice = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (focusOnMount) notice.current?.focus();
+  }, [focusOnMount]);
 
   const openHelp = () => {
     onOpenHelp?.();
@@ -88,7 +105,7 @@ export function ErrorNotice({
   };
 
   return (
-    <div className="error-notice" role="alert">
+    <div className="error-notice" role="alert" ref={notice} tabIndex={-1}>
       <p className="error-notice__title">
         <AlertIcon />
         <span className="rf-title">{t(`errors.situations.${situation}.title`)}</span>
@@ -102,16 +119,23 @@ export function ErrorNotice({
             <summary className="rf-body rf-text-muted">{t("errors.technicalDetail")}</summary>
             <pre className="error-notice__raw">{technicalDetail}</pre>
           </details>
-          {hasHelpLink(situation) && (
+          {(hasHelpLink(situation) || onReload) && (
             <div className="rf-row rf-gap-xs error-notice__actions">
-              <button
-                type="button"
-                className="rf-btn rf-btn--ghost error-notice__help"
-                onClick={openHelp}
-              >
-                <ExternalLinkIcon size={14} />
-                {t("errors.help")}
-              </button>
+              {hasHelpLink(situation) && (
+                <button
+                  type="button"
+                  className="rf-btn rf-btn--ghost error-notice__help"
+                  onClick={openHelp}
+                >
+                  <ExternalLinkIcon size={14} />
+                  {t("errors.help")}
+                </button>
+              )}
+              {onReload && (
+                <button type="button" className="rf-btn rf-btn--primary" onClick={onReload}>
+                  {t("errors.reload")}
+                </button>
+              )}
             </div>
           )}
         </>
