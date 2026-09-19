@@ -1087,29 +1087,64 @@ msgstr "rFirma: EUPL-1.2."
 msgid "about.licenses.afirma"
 msgstr "Cliente @firma libraries: GPL-2.0+ / EUPL-1.1."
 
-msgid "trust.notice.title"
-msgstr "When a government site asks you to sign"
+msgid "setup.welcome.title"
+msgstr "Set up rFirma"
 
-msgid "trust.notice.localCa"
+msgid "setup.welcome.body"
 msgstr ""
-"rFirma has installed a local certificate authority on your computer. That's "
-"what lets the browser accept the connection to rFirma when a government site "
-"asks you to sign."
+"rFirma is an application compatible with AutoFirma {{version}}. To use it "
+"with government sites we need to set up your computer."
 
-msgid "trust.notice.localNetwork"
+msgid "setup.step"
+msgstr "Step {{current}} of {{total}}"
+
+msgid "setup.actions.continue"
+msgstr "Continue"
+
+msgid "setup.actions.back"
+msgstr "Back"
+
+msgid "setup.actions.finish"
+msgstr "Finish"
+
+msgid "setup.actions.notNow"
+msgstr "Not now"
+
+msgid "setup.actions.useRfirma"
+msgstr "Have rFirma open them"
+
+msgid "setup.certificate.title"
+msgstr "The rFirma certificate"
+
+msgid "setup.certificate.body"
 msgstr ""
-"The first time, the browser will ask you to allow local network access. It "
-"asks on behalf of the site, not of rFirma, so you may not recognize it. "
-"Allow it when it appears: one grant is enough, even if the site tries up to "
-"three connections."
+"When you sign at a government site, your browser has to connect to rFirma. "
+"For that connection to be secure we need to install a certificate of its "
+"own."
 
-msgid "trust.notice.cannotTellIfDenied"
-msgstr ""
-"If you deny it, rFirma can't tell and can't say so: that prompt happens "
-"entirely inside the browser."
+msgid "setup.certificate.installing"
+msgstr "Installing…"
 
-msgid "trust.notice.acknowledge"
-msgstr "Got it"
+msgid "setup.certificate.installedTitle"
+msgstr "Installed in your browsers."
+
+msgid "setup.certificate.installedRestartNotice"
+msgstr "If you have one open, restart it so it recognises it."
+
+msgid "setup.certificate.failedTitle"
+msgstr "It couldn't be installed everywhere."
+
+msgid "setup.handler.title"
+msgstr "Use rFirma by default"
+
+msgid "setup.handler.body"
+msgstr "Right now, government sites open AutoFirma."
+
+msgid "setup.handler.bodyNoAutofirma"
+msgstr "Right now, government sites have no program assigned."
+
+msgid "setup.handler.done"
+msgstr "They now open rFirma."
 
 msgid "sede.waiting.title"
 msgstr "Connecting to the site"
@@ -1484,6 +1519,30 @@ msgstr[2] "{{origin}} accepts none of your {{count}} certificates"
 
 msgid "sede.noCertificate.excludedBody"
 msgstr "You'll have to carry on from the site."
+
+#~ msgid "trust.notice.title"
+#~ msgstr "When a government site asks you to sign"
+
+#~ msgid "trust.notice.localCa"
+#~ msgstr ""
+#~ "rFirma has installed a local certificate authority on your computer. "
+#~ "That's what lets the browser accept the connection to rFirma when a "
+#~ "government site asks you to sign."
+
+#~ msgid "trust.notice.localNetwork"
+#~ msgstr ""
+#~ "The first time, the browser will ask you to allow local network access. "
+#~ "It asks on behalf of the site, not of rFirma, so you may not recognize "
+#~ "it. Allow it when it appears: one grant is enough, even if the site tries "
+#~ "up to three connections."
+
+#~ msgid "trust.notice.cannotTellIfDenied"
+#~ msgstr ""
+#~ "If you deny it, rFirma can't tell and can't say so: that prompt happens "
+#~ "entirely inside the browser."
+
+#~ msgid "trust.notice.acknowledge"
+#~ msgstr "Got it"
 
 #~ msgid "pin.title"
 #~ msgstr "Enter the PIN"

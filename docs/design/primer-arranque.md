@@ -37,10 +37,22 @@ paso pone por delante el deslinde: rFirma no es la aplicación oficial.
 
 **Es la ventana principal de 1180 × 700 px, no un diálogo sobre ella.** El
 primer arranque no tiene documento que tapar, y un modal con la aplicación
-muerta detrás miente sobre lo que hay debajo. Lleva la cabecera única del
-[ADR-0007](../adr/0007-cabecera-unica-sin-barra-de-menus.md) —56 px, el nombre y
-el menú— y nada más de la ventana principal: no hay panel lateral, ni recientes,
-ni pie de destino, porque todavía no hay nada que enseñar ahí.
+muerta detrás miente sobre lo que hay debajo. Lleva la cabecera del
+[ADR-0007](../adr/0007-cabecera-unica-sin-barra-de-menus.md) —56 px, el
+nombre— y nada más de la ventana principal: no hay panel lateral, ni
+recientes, ni pie de destino, porque todavía no hay nada que enseñar ahí.
+
+**La cabecera no lleva el menú.** Las cuatro entradas del ADR-0007 abren
+pantallas que dependen de estado que el primer arranque todavía no tiene
+—*Estado* remide señales que las dos tarjetas de este mismo asistente están
+fijando, *Preferencias* administra certificados y destino de guardado que no
+existen hasta terminar el asistente—, así que ofrecerlas aquí es abrir un
+atajo hacia una pantalla a medio construir, no un acceso legítimo. *Ayuda* y
+*Acerca de* no tienen ese problema, pero partir el menú en dos —un botón con
+solo dos de las cuatro entradas— es una cabecera distinta a la del ADR-0007 y
+no la reduce, la reinterpreta. Cerrar la ventana sigue siempre disponible, y
+el asistente no dura más que un minuto: quien necesite Ayuda antes de
+terminarlo la tiene en la ventana principal en cuanto pulsa «Terminar».
 
 Tres regiones:
 

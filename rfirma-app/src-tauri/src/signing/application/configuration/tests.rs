@@ -27,7 +27,7 @@ fn what_was_chosen_lands_on_the_disk_and_on_the_live_copy() {
         notify_new_version: true,
         theme: Theme::Dark,
         offers_the_original_folder: false,
-        trust_notice_seen: false,
+        setup_wizard_seen: false,
     };
 
     memory
@@ -122,7 +122,7 @@ fn writing_the_configuration_never_moves_the_destination_folder() {
         notify_new_version: true,
         theme: Theme::Dark,
         offers_the_original_folder: false,
-        trust_notice_seen: false,
+        setup_wizard_seen: false,
     };
 
     let next = merged(&live, &chosen);

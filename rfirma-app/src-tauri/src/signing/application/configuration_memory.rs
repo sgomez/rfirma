@@ -34,8 +34,8 @@ pub struct Configuration {
     pub notify_new_version: bool,
     /// El tema de la ventana.
     pub theme: Theme,
-    /// Indica si el aviso inicial sobre la CA local ya se descartó.
-    pub trust_notice_seen: bool,
+    /// Indica si el asistente del primer arranque ya se ha visto.
+    pub setup_wizard_seen: bool,
 }
 
 impl Default for Configuration {
@@ -47,7 +47,7 @@ impl Default for Configuration {
             remember_activity: true,
             notify_new_version: true,
             theme: Theme::System,
-            trust_notice_seen: false,
+            setup_wizard_seen: false,
         }
     }
 }
