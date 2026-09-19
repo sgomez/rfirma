@@ -14,8 +14,19 @@ fn notify_new_version_starts_on() {
 }
 
 #[test]
-fn the_trust_notice_has_not_been_seen_by_default() {
-    assert!(!Configuration::default().trust_notice_seen);
+fn the_setup_wizard_has_not_been_seen_by_default() {
+    assert!(!Configuration::default().setup_wizard_seen);
+}
+
+#[test]
+fn a_configuration_still_carrying_the_retired_trust_notice_field_reads_without_error() {
+    let configuration: Configuration =
+        serde_json::from_str(r#"{"trust_notice_seen": true}"#).expect("deberia leerse");
+
+    assert!(
+        !configuration.setup_wizard_seen,
+        "no hay migracion: el campo retirado no se traslada al nuevo"
+    );
 }
 
 #[test]
@@ -73,8 +84,8 @@ fn the_configuration_holds_no_path_to_the_rubric_the_user_chose() {
             "notify_new_version",
             "remember_activity",
             "remember_visible_signature",
+            "setup_wizard_seen",
             "theme",
-            "trust_notice_seen",
         ],
         "la rubrica es una copia en el almacen, nunca un campo con la ruta del original"
     );

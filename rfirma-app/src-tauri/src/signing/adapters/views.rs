@@ -60,8 +60,8 @@ crossing! {
         /// Si la plataforma permite guardar junto al original.
         #[serde(default)]
         pub offers_the_original_folder: bool,
-        /// Si se ha mostrado ya el aviso de confianza inicial.
-        pub trust_notice_seen: bool,
+        /// Si el asistente del primer arranque ya se ha visto.
+        pub setup_wizard_seen: bool,
     }
 }
 
@@ -75,7 +75,7 @@ impl From<Preferences> for ConfigurationView {
             notify_new_version: preferences.notify_new_version,
             theme: preferences.theme,
             offers_the_original_folder: preferences.offers_the_original_folder,
-            trust_notice_seen: preferences.trust_notice_seen,
+            setup_wizard_seen: preferences.setup_wizard_seen,
         }
     }
 }
@@ -90,7 +90,7 @@ impl From<ConfigurationView> for Preferences {
             notify_new_version: view.notify_new_version,
             theme: view.theme,
             offers_the_original_folder: view.offers_the_original_folder,
-            trust_notice_seen: view.trust_notice_seen,
+            setup_wizard_seen: view.setup_wizard_seen,
         }
     }
 }

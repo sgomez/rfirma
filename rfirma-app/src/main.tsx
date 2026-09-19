@@ -8,11 +8,12 @@ import "./design-system/index.css";
 // modelo de caja, el margen del documento y la colocación del velo. Va detrás
 // del bundle porque son ajustes sobre él (ver `app.css`).
 import "./app.css";
-import { StrictMode } from "react";
+import { StrictMode, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
 import { createI18n } from "./i18n/i18n";
 import { LanguageProvider } from "./i18n/LanguageProvider";
+import { SetupWizard } from "./setup/SetupWizard";
 import {
   tauriCertificateStore,
   tauriDestinations,
@@ -30,7 +31,6 @@ import {
   tauriStatusPort,
   tauriVersionCheck,
 } from "./tauri";
-import { TrustNotice } from "./trust/TrustNotice";
 
 const root = document.getElementById("root");
 if (!root) {
@@ -55,11 +55,14 @@ if (!root) {
 // La sustitución ocurre solo en este fichero: ni la ventana ni sus pruebas
 // conocen a Tauri.
 //
-// `TrustNotice` (#365) no es un puerto: no habla con Tauri, así que no hay
-// nada que doblar ni que cablear aquí más que montarlo. Lo que sí cruza a
-// Tauri es si ya se descartó: `trustNoticeSeen` viaja en la misma
-// configuración que el resto de ajustes, y se lee aquí, antes de pintar,
-// para que el aviso no llegue a montarse en el segundo arranque en adelante.
+// `SetupWizard` no es un puerto propio: usa los mismos casos de uso que el
+// panel de estado (`tauriStatusPort`), así que no hay nada que doblar aquí
+// más que montarlo. Lo que sí cruza a Tauri es si ya se ha visto:
+// `setupWizardSeen` viaja en la misma configuración que el resto de ajustes,
+// y se lee aquí, antes de pintar, para que el asistente no llegue a montarse
+// en el segundo arranque en adelante. `RootView` es el único trozo de estado
+// de React de este fichero, y existe solo para que «Terminar» pueda quitar el
+// asistente de encima de `App` sin recargar la ventana.
 //
 // `SedeWindow` (#362) **no se monta aquí** desde el #395: tiene su propio punto
 // de entrada, `sede.html` y `sede/main.tsx` (ID-335), y su ventana la crea
@@ -75,17 +78,19 @@ const recents = tauriRecents();
 
 const preferences = tauriPreferences();
 const initialPreferences = await preferences.read();
+const statusPort = tauriStatusPort();
 
-createRoot(root).render(
-  <StrictMode>
-    <LanguageProvider i18n={i18n} preference={preference}>
-      {/* Sin condición salvo el descarte ya persistido: se explica antes de
-          que el navegador pregunte, no como reacción a un fallo (ID-231,
-          #365), y solo en el primer arranque. */}
-      <TrustNotice
-        seen={initialPreferences.trustNoticeSeen}
-        onAcknowledge={() => {
-          void preferences.save({ ...initialPreferences, trustNoticeSeen: true });
+function RootView() {
+  const [setupWizardSeen, setSetupWizardSeen] = useState(initialPreferences.setupWizardSeen);
+
+  return (
+    <>
+      <SetupWizard
+        seen={setupWizardSeen}
+        statusPort={statusPort}
+        onFinish={() => {
+          void preferences.save({ ...initialPreferences, setupWizardSeen: true });
+          setSetupWizardSeen(true);
         }}
       />
       <App
@@ -102,8 +107,16 @@ createRoot(root).render(
         opener={tauriSignedDocumentOpener()}
         versions={tauriVersionCheck()}
         externalDestinations={tauriExternalDestinationOpener()}
-        status={tauriStatusPort()}
+        status={statusPort}
       />
+    </>
+  );
+}
+
+createRoot(root).render(
+  <StrictMode>
+    <LanguageProvider i18n={i18n} preference={preference}>
+      <RootView />
     </LanguageProvider>
   </StrictMode>,
 );

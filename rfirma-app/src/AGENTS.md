@@ -121,8 +121,8 @@ rojo.
 | `sede/SedeNoCertificate.tsx` | 5 · Sin certificado utilizable, y sus dos salidas distintas. |
 | **`updates/`** | `updates/newVersion.ts`: el puerto que pregunta si hay versión nueva, y su doble. Sin React. |
 | **`about/`** | `about/AboutDialog.tsx`. |
-| **`trust/`** | El aviso del primer arranque: la CA local y el permiso de red local, explicados juntos. No es un puerto, no habla con Tauri. |
-| `trust/TrustNotice.tsx` | El diálogo del primer arranque, montado en `main.tsx` mientras `Preferences.trustNoticeSeen` siga en `false`. |
+| **`setup/`** | El asistente del primer arranque (docs/design/primer-arranque.md). Usa los casos de uso del panel de estado, no tiene los suyos propios. |
+| `setup/SetupWizard.tsx` | Las dos pantallas, montadas en `main.tsx` mientras `Preferences.setupWizardSeen` siga en `false`. Sustituye al antiguo `trust/TrustNotice.tsx`. |
 | **Andamiaje** | `test-setup.ts`, `testing/render.tsx`, `vite-env.d.ts`. No son la aplicación. |
 
 ## El circuito de cadenas (ADR-0009 enmendado)

@@ -47,12 +47,11 @@ export interface Preferences {
    */
   notifyNewVersion: boolean;
   /**
-   * Si el aviso del primer arranque (CA local y permiso de red local, #365)
-   * ya se ha descartado. No es un ajuste de Preferencias: no hay fila que lo
-   * muestre, solo se lee al arrancar y se escribe una vez, al pulsar
-   * «Entendido».
+   * Si el asistente del primer arranque ya se ha visto. No es un ajuste de
+   * Preferencias: no hay fila que lo muestre, solo se lee al arrancar y se
+   * escribe una vez, al pulsar «Terminar» —con o sin las dos acciones hechas.
    */
-  trustNoticeSeen: boolean;
+  setupWizardSeen: boolean;
 }
 
 /**

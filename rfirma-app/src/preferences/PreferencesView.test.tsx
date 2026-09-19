@@ -14,7 +14,7 @@ const defaults: Preferences = {
   rememberVisibleSignature: true,
   rememberActivity: true,
   notifyNewVersion: true,
-  trustNoticeSeen: false,
+  setupWizardSeen: false,
 };
 
 const noop = async () => {};

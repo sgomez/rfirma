@@ -1011,19 +1011,58 @@ msgstr ""
 msgid "about.licenses.afirma"
 msgstr ""
 
-msgid "trust.notice.title"
+msgid "setup.welcome.title"
 msgstr ""
 
-msgid "trust.notice.localCa"
+msgid "setup.welcome.body"
 msgstr ""
 
-msgid "trust.notice.localNetwork"
+msgid "setup.step"
 msgstr ""
 
-msgid "trust.notice.cannotTellIfDenied"
+msgid "setup.actions.continue"
 msgstr ""
 
-msgid "trust.notice.acknowledge"
+msgid "setup.actions.back"
+msgstr ""
+
+msgid "setup.actions.finish"
+msgstr ""
+
+msgid "setup.actions.notNow"
+msgstr ""
+
+msgid "setup.actions.useRfirma"
+msgstr ""
+
+msgid "setup.certificate.title"
+msgstr ""
+
+msgid "setup.certificate.body"
+msgstr ""
+
+msgid "setup.certificate.installing"
+msgstr ""
+
+msgid "setup.certificate.installedTitle"
+msgstr ""
+
+msgid "setup.certificate.installedRestartNotice"
+msgstr ""
+
+msgid "setup.certificate.failedTitle"
+msgstr ""
+
+msgid "setup.handler.title"
+msgstr ""
+
+msgid "setup.handler.body"
+msgstr ""
+
+msgid "setup.handler.bodyNoAutofirma"
+msgstr ""
+
+msgid "setup.handler.done"
 msgstr ""
 
 

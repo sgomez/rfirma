@@ -955,7 +955,8 @@ msgid "status.withdrawal.retry"
 msgstr "Torna-ho a provar"
 
 msgid "status.withdrawal.restartBrowserNotice"
-msgstr "Reinicia el navegador perquè deixi de confiar en el certificat retirat."
+msgstr ""
+"Reinicia el navegador perquè deixi de confiar en el certificat retirat."
 
 msgid "preferences.title"
 msgstr "Preferències"
@@ -1099,29 +1100,64 @@ msgstr "rFirma: EUPL-1.2."
 msgid "about.licenses.afirma"
 msgstr "Biblioteques de Client @firma: GPL-2.0+ / EUPL-1.1."
 
-msgid "trust.notice.title"
-msgstr "Quan una seu et demani la signatura"
+msgid "setup.welcome.title"
+msgstr "Configurar rFirma"
 
-msgid "trust.notice.localCa"
+msgid "setup.welcome.body"
 msgstr ""
-"rFirma ha instal·lat al teu ordinador una entitat de confiança local. És el "
-"que cal perquè el navegador accepti la connexió amb rFirma quan una seu "
-"electrònica et demani signar."
+"rFirma és una aplicació compatible amb AutoFirma {{version}}. Per poder-la "
+"fer servir amb seus electròniques necessitem configurar el teu equip."
 
-msgid "trust.notice.localNetwork"
+msgid "setup.step"
+msgstr "Pas {{current}} de {{total}}"
+
+msgid "setup.actions.continue"
+msgstr "Continuar"
+
+msgid "setup.actions.back"
+msgstr "Enrere"
+
+msgid "setup.actions.finish"
+msgstr "Acabar"
+
+msgid "setup.actions.notNow"
+msgstr "Ara no"
+
+msgid "setup.actions.useRfirma"
+msgstr "Que obrin rFirma"
+
+msgid "setup.certificate.title"
+msgstr "El certificat de rFirma"
+
+msgid "setup.certificate.body"
 msgstr ""
-"La primera vegada, el navegador et demanarà permís per accedir a la xarxa "
-"local. Ho demana en nom de la seu, no de rFirma, així que pot ser que no ho "
-"reconeguis. Permet-ho quan aparegui: amb un sol permís n'hi ha prou, encara "
-"que la seu provi fins a tres connexions."
+"Quan signes en una seu electrònica, el teu navegador s'ha de connectar amb "
+"rFirma. Perquè aquesta connexió sigui segura necessitem instal·lar un "
+"certificat propi."
 
-msgid "trust.notice.cannotTellIfDenied"
-msgstr ""
-"Si ho denegues, rFirma no ho podrà saber ni dir-t'ho: aquest avís passa del "
-"tot dins del navegador."
+msgid "setup.certificate.installing"
+msgstr "Instal·lant…"
 
-msgid "trust.notice.acknowledge"
-msgstr "Entesos"
+msgid "setup.certificate.installedTitle"
+msgstr "Instal·lat als teus navegadors."
+
+msgid "setup.certificate.installedRestartNotice"
+msgstr "Si en tens algun obert, reinicia'l perquè el reconegui."
+
+msgid "setup.certificate.failedTitle"
+msgstr "No s'ha pogut instal·lar a tot arreu."
+
+msgid "setup.handler.title"
+msgstr "Usar rFirma per defecte"
+
+msgid "setup.handler.body"
+msgstr "Ara mateix les seus electròniques obren AutoFirma."
+
+msgid "setup.handler.bodyNoAutofirma"
+msgstr "Ara mateix les seus electròniques no tenen cap programa assignat."
+
+msgid "setup.handler.done"
+msgstr "Ara obren rFirma."
 
 msgid "sede.waiting.title"
 msgstr "Connectant amb la seu"
@@ -1499,6 +1535,30 @@ msgstr[2] "{{origin}} no accepta cap dels teus {{count}} certificats"
 
 msgid "sede.noCertificate.excludedBody"
 msgstr "Hauràs de continuar des de la seu."
+
+#~ msgid "trust.notice.title"
+#~ msgstr "Quan una seu et demani la signatura"
+
+#~ msgid "trust.notice.localCa"
+#~ msgstr ""
+#~ "rFirma ha instal·lat al teu ordinador una entitat de confiança local. És "
+#~ "el que cal perquè el navegador accepti la connexió amb rFirma quan una "
+#~ "seu electrònica et demani signar."
+
+#~ msgid "trust.notice.localNetwork"
+#~ msgstr ""
+#~ "La primera vegada, el navegador et demanarà permís per accedir a la xarxa "
+#~ "local. Ho demana en nom de la seu, no de rFirma, així que pot ser que no "
+#~ "ho reconeguis. Permet-ho quan aparegui: amb un sol permís n'hi ha prou, "
+#~ "encara que la seu provi fins a tres connexions."
+
+#~ msgid "trust.notice.cannotTellIfDenied"
+#~ msgstr ""
+#~ "Si ho denegues, rFirma no ho podrà saber ni dir-t'ho: aquest avís passa "
+#~ "del tot dins del navegador."
+
+#~ msgid "trust.notice.acknowledge"
+#~ msgstr "Entesos"
 
 #~ msgid "pin.title"
 #~ msgstr "Introdueix el PIN"

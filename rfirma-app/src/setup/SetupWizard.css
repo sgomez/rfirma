@@ -1,0 +1,78 @@
+/*
+ * El asistente del primer arranque (docs/design/primer-arranque.md): la
+ * ventana principal, no un diálogo — tres regiones apiladas, con la columna
+ * de lectura centrada a 640 px.
+ */
+
+.setup-wizard {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--rf-surface);
+}
+
+.setup-wizard__header {
+  flex: none;
+  height: 56px;
+  padding: 0 var(--rf-space-md);
+  border-bottom: 1px solid var(--rf-border-subtle);
+}
+
+.setup-wizard__body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  justify-content: center;
+  padding: var(--rf-space-lg) var(--rf-space-md);
+}
+
+.setup-wizard__column {
+  width: 640px;
+  max-width: 100%;
+}
+
+.setup-wizard__progress {
+  display: flex;
+  gap: var(--rf-space-xs);
+}
+
+.setup-wizard__progress-bar {
+  width: 22px;
+  height: 4px;
+  border-radius: var(--rf-radius-pill);
+  background: var(--rf-border-subtle);
+}
+
+.setup-wizard__progress-bar--active {
+  background: var(--rf-primary);
+}
+
+.setup-wizard__card {
+  padding: var(--rf-space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--rf-space-sm);
+}
+
+.setup-wizard__card-actions {
+  justify-content: flex-start;
+}
+
+.setup-wizard__detail-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.setup-wizard__footer {
+  flex: none;
+  justify-content: flex-end;
+  gap: var(--rf-space-sm);
+  padding: var(--rf-space-sm) var(--rf-space-md);
+  border-top: 1px solid var(--rf-border-subtle);
+}
