@@ -13,6 +13,13 @@ pub enum Withdrawal {
     Failed(String),
 }
 
+impl Withdrawal {
+    /// Si este resultado es un fallo, y por tanto candidato a reintentar.
+    pub fn failed(&self) -> bool {
+        matches!(self, Self::Failed(_))
+    }
+}
+
 /// Un almacén NSS con el resultado de retirar de él la CA local de rFirma.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct StoreWithdrawal {
@@ -20,4 +27,13 @@ pub struct StoreWithdrawal {
     pub brand: StoreBrand,
     /// Resultado de la retirada en este almacén.
     pub outcome: Withdrawal,
+}
+
+/// Resultado de retirar rFirma: el manejador de sedes y la CA local de cada almacén.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct WithdrawalReport {
+    /// Resultado de quitar rFirma como manejador de `afirma://`.
+    pub handler: Withdrawal,
+    /// Resultado por almacén de retirar la CA local.
+    pub stores: Vec<StoreWithdrawal>,
 }

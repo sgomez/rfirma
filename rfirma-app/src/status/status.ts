@@ -69,9 +69,10 @@ export interface StatusPort {
   chooseSiteSignatureHandler(handlerId: string): Promise<SignalRow[]>;
   /**
    * Retira lo que rFirma dejó fuera de sus carpetas: el manejador de sedes y
-   * la CA local de cada almacén NSS (ADR-0005).
+   * la CA local de cada almacén NSS (ADR-0005). Con `previous`, `Reintentar`
+   * solo vuelve a tocar lo que en él falló.
    */
-  withdrawRfirma(): Promise<WithdrawalReport>;
+  withdrawRfirma(previous: WithdrawalReport | null): Promise<WithdrawalReport>;
 }
 
 /**

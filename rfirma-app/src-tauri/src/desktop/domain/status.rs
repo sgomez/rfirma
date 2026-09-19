@@ -1,6 +1,6 @@
 //! Señales, veredictos y acciones del panel de estado.
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 /// Las cuatro señales del panel de estado.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize)]
@@ -87,7 +87,7 @@ pub struct SiteSignatureCandidate {
 }
 
 /// Familia de almacén de un perfil NSS, para el detalle desplegable de una señal.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum StoreBrand {
     /// Perfil de usuario de Firefox o derivados.

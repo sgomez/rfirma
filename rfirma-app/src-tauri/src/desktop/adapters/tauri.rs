@@ -8,11 +8,10 @@ use crate::identity::IdentityRoot;
 use crate::site::SiteRoot;
 
 use super::registry::DesktopRegistry;
-use super::views::{NewVersionView, SignalRowView, StoreWithdrawalView, WithdrawalReportView};
+use super::views::{NewVersionView, SignalRowView, WithdrawalReportView};
 use crate::crossing::Failure;
 use crate::desktop::domain::error::{DesktopError, Situation};
 use crate::desktop::domain::status::{StoreBrand, StoreDetail};
-use crate::desktop::domain::withdrawal::StoreWithdrawal;
 use crate::documents::adapters::views::DroppedDocumentView;
 use crate::identity::domain::store::{Store, StoreClass};
 
@@ -199,42 +198,56 @@ pub fn read_status(
 }
 
 /// Retira lo que rFirma dejó fuera de sus carpetas: el manejador de sedes y la CA local de cada
-/// almacén NSS.
+/// almacén NSS. Con `previous`, `Reintentar` solo vuelve a tocar lo que en él falló.
 #[tauri::command(async)]
-pub fn withdraw_rfirma(site: State<'_, SiteRoot>) -> WithdrawalReportView {
+pub fn withdraw_rfirma(
+    previous: Option<WithdrawalReportView>,
+    site: State<'_, SiteRoot>,
+) -> WithdrawalReportView {
+    use crate::desktop::application::withdrawal::{
+        handler_needs_retry, merged_report, profiles_to_retry,
+    };
+    use crate::desktop::domain::withdrawal::{Withdrawal, WithdrawalReport};
+
     let channel = crate::desktop::adapters::channel::Channel::detected();
     let list =
         crate::desktop::adapters::choice::mimeapps_list_from_environment().unwrap_or_default();
     let registry = DesktopRegistry::of(channel, list);
-    let handler = crate::desktop::application::handlers::withdrawn(&registry);
+    let previous = previous.map(WithdrawalReport::from);
 
-    let stores = site
-        .withdraw_local_ca_trust()
+    let profiles: Vec<(std::path::PathBuf, StoreBrand)> = site
+        .nss_profiles()
+        .iter()
+        .map(|profile| (profile.clone(), brand_of(profile)))
+        .collect();
+
+    let handler = if handler_needs_retry(previous.as_ref()) {
+        crate::desktop::application::handlers::withdrawn(&registry)
+    } else {
+        previous
+            .as_ref()
+            .map(|report| report.handler.clone())
+            .unwrap_or(Withdrawal::WasNotThere)
+    };
+
+    let retry = profiles_to_retry(&profiles, previous.as_ref());
+    let retried = site
+        .withdraw_local_ca_trust(&retry)
         .map(|outcome| {
             outcome
                 .results
                 .into_iter()
                 .map(|(profile, outcome)| {
                     let outcome = match outcome.failure() {
-                        Some(reason) => {
-                            crate::desktop::domain::withdrawal::Withdrawal::Failed(reason)
-                        }
-                        None if outcome.withdrawn() => {
-                            crate::desktop::domain::withdrawal::Withdrawal::Withdrawn
-                        }
-                        None => crate::desktop::domain::withdrawal::Withdrawal::WasNotThere,
+                        Some(reason) => Withdrawal::Failed(reason),
+                        None if outcome.withdrawn() => Withdrawal::Withdrawn,
+                        None => Withdrawal::WasNotThere,
                     };
-                    StoreWithdrawalView::from(StoreWithdrawal {
-                        brand: brand_of(&profile),
-                        outcome,
-                    })
+                    (profile, outcome)
                 })
                 .collect()
         })
         .unwrap_or_default();
 
-    WithdrawalReportView {
-        handler: handler.into(),
-        stores,
-    }
+    merged_report(handler, &profiles, retried, previous.as_ref()).into()
 }

@@ -64,13 +64,21 @@ impl SiteRoot {
         )
     }
 
-    /// Retira la CA local de todos los almacenes NSS, y sus ranuras si ninguno ha fallado.
-    pub fn withdraw_local_ca_trust(&self) -> Result<WithdrawOutcome, TlsError> {
+    /// Retira la CA local de los almacenes NSS indicados, y sus ranuras si ninguno ha fallado.
+    pub fn withdraw_local_ca_trust(
+        &self,
+        profiles: &[PathBuf],
+    ) -> Result<WithdrawOutcome, TlsError> {
         application::trust::withdraw_everywhere(
             self.trust.store.as_ref(),
-            &self.trust.profiles,
+            profiles,
             self.trust.stores.as_ref(),
         )
+    }
+
+    /// Los perfiles NSS de navegadores detectados en esta máquina.
+    pub fn nss_profiles(&self) -> &[PathBuf] {
+        &self.trust.profiles
     }
 }
 
