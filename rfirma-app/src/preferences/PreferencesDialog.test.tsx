@@ -1,4 +1,5 @@
 import { screen, within } from "@testing-library/react";
+import type { UserEvent } from "@testing-library/user-event";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import type { Certificate } from "../signing/certificate";
@@ -54,12 +55,18 @@ function renderDialog(props: Partial<Parameters<typeof PreferencesDialog>[0]> = 
   );
 }
 
+/** Pasa al panel de la pestaña dada, por su nombre en el índice. */
+async function openTab(user: UserEvent, name: string) {
+  await user.click(screen.getByRole("tab", { name }));
+}
+
 // Grada A: los ajustes son datos, y el diálogo no habla con nadie.
 describe("PreferencesDialog", () => {
   it("applies a change as it is made, with no Save and no Cancel", async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
     renderDialog({ onChange });
+    await openTab(user, "Firma");
 
     await user.click(
       screen.getByRole("switch", { name: /Recordar la última configuración de firma visible/ }),
@@ -76,22 +83,28 @@ describe("PreferencesDialog", () => {
    * (`Main.dc.html:306`) y `rf-gap-sm` (16 px) en el diálogo
    * (`PreferenciasPantalla`). Un solo valor no puede ser los dos, y arreglar
    * uno rompía el otro: la pantalla pide el suyo, y por eso se comprueba que
-   * lo pida.
+   * lo pida, en las dos pestañas donde aparece.
    */
-  it("asks for the wider spacing the Preferences artboard draws", () => {
+  it("asks for the wider spacing the Preferences artboard draws", async () => {
+    const user = userEvent.setup();
     renderDialog();
 
-    for (const name of [
-      /Recordar la última configuración de firma visible/,
-      /Recordar mi actividad/,
-    ]) {
-      const control = screen.getByRole("switch", { name });
-      expect(control.closest(".switch")).toHaveClass("switch--wide");
-    }
+    expect(
+      screen.getByRole("switch", { name: /Recordar mi actividad/ }).closest(".switch"),
+    ).toHaveClass("switch--wide");
+
+    await openTab(user, "Firma");
+    expect(
+      screen
+        .getByRole("switch", { name: /Recordar la última configuración de firma visible/ })
+        .closest(".switch"),
+    ).toHaveClass("switch--wide");
   });
 
-  it("shows the destination folder by its name and never by its path", () => {
+  it("shows the destination folder by its name and never by its path", async () => {
+    const user = userEvent.setup();
     renderDialog({ preferences: { ...defaults, destination: "Documentos" } });
+    await openTab(user, "Firma");
 
     expect(screen.getByText("Dónde se guarda el documento firmado")).toBeInTheDocument();
     expect(screen.getByText("Documentos")).toBeInTheDocument();
@@ -104,6 +117,7 @@ describe("PreferencesDialog", () => {
     const user = userEvent.setup();
     const onChooseDestination = vi.fn(async () => {});
     renderDialog({ onChooseDestination });
+    await openTab(user, "Firma");
 
     expect(
       screen.queryByRole("combobox", { name: "Dónde se guarda el documento firmado" }),
@@ -118,6 +132,7 @@ describe("PreferencesDialog", () => {
     renderDialog({
       onChooseDestination: () => Promise.reject(new Error("no se pudo guardar")),
     });
+    await openTab(user, "Firma");
 
     await user.click(screen.getByRole("button", { name: "Cambiar carpeta…" }));
 
@@ -127,8 +142,10 @@ describe("PreferencesDialog", () => {
   // «Junto al documento original» solo cuando el entorno sabe devolver la ruta
   // real del documento (ID-184): donde no la sabe, la opción no aparece y el
   // ajuste se queda en la carpeta con su «Cambiar carpeta…», como antes.
-  it("offers Junto al documento original only when the environment allows it", () => {
+  it("offers Junto al documento original only when the environment allows it", async () => {
+    const user = userEvent.setup();
     renderDialog({ preferences: { ...defaults, offersOriginalFolder: false } });
+    await openTab(user, "Firma");
 
     expect(screen.queryByText("Junto al documento original")).not.toBeInTheDocument();
     expect(screen.queryByText("En esta carpeta")).not.toBeInTheDocument();
@@ -138,8 +155,10 @@ describe("PreferencesDialog", () => {
   // El destino lo decide el documento, no la persona (ADR-0011): las dos
   // frases son un estado que se enseña, no un control que finge elegir entre
   // ellas.
-  it("shows the two destination states as text, never as a choice", () => {
+  it("shows the two destination states as text, never as a choice", async () => {
+    const user = userEvent.setup();
     renderDialog({ preferences: { ...defaults, offersOriginalFolder: true } });
+    await openTab(user, "Firma");
 
     expect(screen.queryByRole("radiogroup")).not.toBeInTheDocument();
     expect(screen.queryByRole("radio")).not.toBeInTheDocument();
@@ -151,6 +170,7 @@ describe("PreferencesDialog", () => {
   it("offers every language whose catalog is complete", async () => {
     const user = userEvent.setup();
     renderDialog();
+    await openTab(user, "Apariencia");
 
     const language = screen.getByRole("combobox", { name: "Idioma" });
     expect(language).toHaveTextContent("Español");
@@ -163,6 +183,7 @@ describe("PreferencesDialog", () => {
   it("changes the language in place", async () => {
     const user = userEvent.setup();
     renderDialog();
+    await openTab(user, "Apariencia");
 
     await user.click(screen.getByRole("combobox", { name: "Idioma" }));
     await user.click(screen.getByRole("option", { name: "English" }));
@@ -179,6 +200,7 @@ describe("PreferencesDialog", () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
     renderDialog({ onChange });
+    await openTab(user, "Apariencia");
 
     const theme = screen.getByRole("combobox", { name: "Tema" });
     expect(theme).toHaveTextContent("El del sistema");
@@ -297,26 +319,24 @@ describe("PreferencesDialog", () => {
     expect(onClose).toHaveBeenCalledOnce();
   });
 
-  /** Los ajustes, repartidos en las secciones del ID-69. */
-  it("lays the settings out in sections with an index to the left", () => {
+  /**
+   * El índice es el patrón ARIA de pestañas: solo el panel activo está en
+   * pantalla, y se entra siempre en *General*, con *Privacidad* dentro como
+   * grupo con su propio encabezado.
+   */
+  it("lays the settings out in sections with a permanent index to the left", async () => {
+    const user = userEvent.setup();
     renderDialog();
 
     const index = screen.getByRole("navigation", { name: "Secciones" });
     expect(
       within(index)
-        .getAllByRole("button")
-        .map((row) => row.textContent),
-    ).toEqual(["Firma", "Certificados", "Privacidad", "Apariencia"]);
+        .getAllByRole("tab")
+        .map((tab) => tab.textContent),
+    ).toEqual(["General", "Firma", "Certificados", "Apariencia"]);
 
-    const signing = screen.getByRole("region", { name: "Firma" });
-    expect(
-      within(signing).getByRole("switch", {
-        name: /Recordar la última configuración de firma visible/,
-      }),
-    ).toBeInTheDocument();
-    expect(within(signing).getByRole("button", { name: "Cambiar carpeta…" })).toBeInTheDocument();
-
-    const privacy = screen.getByRole("region", { name: "Privacidad" });
+    const general = screen.getByRole("tabpanel", { name: "General" });
+    const privacy = within(general).getByRole("group", { name: "Privacidad" });
     expect(
       within(privacy).getByRole("switch", { name: /Recordar mi actividad/ }),
     ).toBeInTheDocument();
@@ -325,30 +345,105 @@ describe("PreferencesDialog", () => {
       within(privacy).getByRole("switch", { name: /Avisarme cuando haya una versión nueva/ }),
     ).toBeInTheDocument();
 
-    const appearance = screen.getByRole("region", { name: "Apariencia" });
+    await openTab(user, "Firma");
+    const signing = screen.getByRole("tabpanel", { name: "Firma" });
+    expect(
+      within(signing).getByRole("switch", {
+        name: /Recordar la última configuración de firma visible/,
+      }),
+    ).toBeInTheDocument();
+    expect(within(signing).getByRole("button", { name: "Cambiar carpeta…" })).toBeInTheDocument();
+
+    await openTab(user, "Apariencia");
+    const appearance = screen.getByRole("tabpanel", { name: "Apariencia" });
     expect(within(appearance).getByRole("combobox", { name: "Tema" })).toBeInTheDocument();
     expect(within(appearance).getByRole("combobox", { name: "Idioma" })).toBeInTheDocument();
   });
 
-  it("marks the chosen section in the index and leaves the first one chosen", async () => {
+  /** Solo el panel activo está en pantalla: no hay dos a la vez. */
+  it("shows only the active panel, never two at once", async () => {
     const user = userEvent.setup();
     renderDialog();
 
-    const index = screen.getByRole("navigation", { name: "Secciones" });
-    expect(within(index).getByRole("button", { name: "Firma" })).toHaveAttribute(
-      "aria-current",
+    expect(screen.getAllByRole("tabpanel")).toHaveLength(1);
+    expect(screen.queryByRole("switch", { name: /Recordar la última/ })).not.toBeInTheDocument();
+
+    await openTab(user, "Firma");
+
+    expect(screen.getAllByRole("tabpanel")).toHaveLength(1);
+    expect(screen.queryByRole("switch", { name: /Recordar mi actividad/ })).not.toBeInTheDocument();
+  });
+
+  it("marks the chosen tab and leaves General chosen at the start", async () => {
+    const user = userEvent.setup();
+    renderDialog();
+
+    expect(screen.getByRole("tab", { name: "General" })).toHaveAttribute("aria-selected", "true");
+
+    await openTab(user, "Apariencia");
+
+    expect(screen.getByRole("tab", { name: "Apariencia" })).toHaveAttribute(
+      "aria-selected",
       "true",
     );
+    expect(screen.getByRole("tab", { name: "General" })).toHaveAttribute("aria-selected", "false");
+  });
 
-    await user.click(within(index).getByRole("button", { name: "Apariencia" }));
+  /**
+   * El patrón ARIA de pestañas verticales: las flechas arriba/abajo mueven la
+   * selección, con vuelta al llegar a un extremo (TD-90).
+   */
+  it("moves the selection with the arrow keys, wrapping at the ends", async () => {
+    const user = userEvent.setup();
+    renderDialog();
 
-    expect(within(index).getByRole("button", { name: "Apariencia" })).toHaveAttribute(
-      "aria-current",
+    screen.getByRole("tab", { name: "General" }).focus();
+    await user.keyboard("{ArrowDown}");
+    expect(screen.getByRole("tab", { name: "Firma" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tab", { name: "Firma" })).toHaveFocus();
+
+    await user.keyboard("{ArrowUp}");
+    expect(screen.getByRole("tab", { name: "General" })).toHaveAttribute("aria-selected", "true");
+
+    await user.keyboard("{ArrowUp}");
+    expect(screen.getByRole("tab", { name: "Apariencia" })).toHaveAttribute(
+      "aria-selected",
       "true",
     );
-    expect(within(index).getByRole("button", { name: "Firma" })).not.toHaveAttribute(
-      "aria-current",
-    );
+  });
+
+  /**
+   * Con una sección activa que no es General, el único botón de pestaña
+   * alcanzable con teclado es el de esa sección — las demás llevan
+   * `tabIndex={-1}`. El atrapafoco debe reconocerlo como el primer elemento
+   * enfocable y dar la vuelta hacia el último, no dejar que el foco se
+   * escape del diálogo.
+   */
+  it("keeps Shift+Tab inside the dialog when the active tab is not General", async () => {
+    const user = userEvent.setup();
+    renderDialog();
+
+    await openTab(user, "Certificados");
+    screen.getByRole("tab", { name: "Certificados" }).focus();
+    await user.keyboard("{Shift>}{Tab}{/Shift}");
+
+    const dialog = screen.getByRole("dialog");
+    expect(dialog.contains(document.activeElement)).toBe(true);
+  });
+
+  /**
+   * `Escape` sigue cerrando Preferencias entera por encima de todo, tanto si
+   * el foco está en una pestaña como en cualquier otro control.
+   */
+  it("closes Preferences with Escape even while a tab has focus", async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    renderDialog({ onClose });
+
+    screen.getByRole("tab", { name: "General" }).focus();
+    await user.keyboard("{Escape}");
+
+    expect(onClose).toHaveBeenCalledOnce();
   });
 
   /** Fijo: un botón de cierre que se va con el desplazamiento no está (ID-69). */
@@ -371,6 +466,7 @@ describe("PreferencesDialog", () => {
       throw new Error("no se deja escribir");
     });
     renderDialog({ onChange });
+    await openTab(user, "Apariencia");
 
     await user.click(screen.getByRole("combobox", { name: "Tema" }));
     await user.click(screen.getByRole("option", { name: "Oscuro" }));
@@ -378,8 +474,7 @@ describe("PreferencesDialog", () => {
     const notice = await screen.findByRole("alert");
     expect(notice).toHaveTextContent("No hemos podido guardar el ajuste");
     expect(notice).toHaveTextContent("Hemos vuelto al valor anterior");
-    expect(screen.getByRole("region", { name: "Apariencia" })).toContainElement(notice);
-    expect(screen.getByRole("region", { name: "Firma" })).not.toContainElement(notice);
+    expect(screen.getByRole("tabpanel", { name: "Apariencia" })).toContainElement(notice);
   });
 
   it("keeps the technical detail of the rejection in the notice", async () => {
@@ -388,6 +483,7 @@ describe("PreferencesDialog", () => {
       throw new Error("EACCES: permission denied");
     });
     renderDialog({ onChange });
+    await openTab(user, "Firma");
 
     await user.click(
       screen.getByRole("switch", { name: /Recordar la última configuración de firma visible/ }),
@@ -409,12 +505,13 @@ describe("PreferencesDialog", () => {
     const notice = await screen.findByRole("alert");
     expect(notice).toHaveTextContent("No hemos podido vaciar la lista");
     expect(notice).toHaveTextContent("siguen guardados");
-    expect(screen.getByRole("region", { name: "Privacidad" })).toContainElement(notice);
+    expect(screen.getByRole("group", { name: "Privacidad" })).toContainElement(notice);
   });
 
   it("says nothing when the setting is saved", async () => {
     const user = userEvent.setup();
     renderDialog();
+    await openTab(user, "Firma");
 
     await user.click(screen.getByRole("switch", { name: /Recordar la última configuración/ }));
 
@@ -474,10 +571,12 @@ describe("PreferencesDialog", () => {
    * gestos, y ni una casilla por almacén ni un diálogo anidado (ID-198).
    */
   describe("certificates in a file", () => {
-    it("lists an installed certificate by its holder and never by its file", () => {
+    it("lists an installed certificate by its holder and never by its file", async () => {
+      const user = userEvent.setup();
       renderDialog({ installedCertificates: [anInstalledCertificate()] });
+      await openTab(user, "Certificados");
 
-      const certificates = screen.getByRole("region", { name: "Certificados" });
+      const certificates = screen.getByRole("tabpanel", { name: "Certificados" });
       expect(within(certificates).getByText("Ada Lovelace Byron")).toBeInTheDocument();
       expect(
         within(certificates).getByText(/IDCES-00000000T · Emitido por FNMT-RCM · caduca el /),
@@ -485,10 +584,12 @@ describe("PreferencesDialog", () => {
       expect(certificates.textContent).not.toMatch(/[/\\]/);
     });
 
-    it("offers the two gestures and nothing else", () => {
+    it("offers the two gestures and nothing else", async () => {
+      const user = userEvent.setup();
       renderDialog({ installedCertificates: [anInstalledCertificate()] });
+      await openTab(user, "Certificados");
 
-      const certificates = screen.getByRole("region", { name: "Certificados" });
+      const certificates = screen.getByRole("tabpanel", { name: "Certificados" });
       expect(within(certificates).getByRole("button", { name: "Añadir…" })).toBeInTheDocument();
       expect(
         within(certificates).getByRole("button", {
@@ -499,24 +600,28 @@ describe("PreferencesDialog", () => {
       expect(within(certificates).queryAllByRole("switch")).toHaveLength(0);
     });
 
-    it("says nothing is installed yet, without instructions inside the box", () => {
+    it("says nothing is installed yet, without instructions inside the box", async () => {
+      const user = userEvent.setup();
       renderDialog({ installedCertificates: [] });
+      await openTab(user, "Certificados");
 
-      const certificates = screen.getByRole("region", { name: "Certificados" });
+      const certificates = screen.getByRole("tabpanel", { name: "Certificados" });
       expect(
         within(certificates).getByText("Todavía no has instalado ninguno"),
       ).toBeInTheDocument();
     });
 
     /** Un caducado se queda: que desaparezca no le explica nada a quien lo instaló. */
-    it("keeps an expired certificate in the list, with its badge", () => {
+    it("keeps an expired certificate in the list, with its badge", async () => {
+      const user = userEvent.setup();
       renderDialog({
         installedCertificates: [
           anInstalledCertificate({ status: { kind: "expired", notAfter: IN_2020 } }),
         ],
       });
+      await openTab(user, "Certificados");
 
-      const certificates = screen.getByRole("region", { name: "Certificados" });
+      const certificates = screen.getByRole("tabpanel", { name: "Certificados" });
       expect(within(certificates).getByText("Ada Lovelace Byron")).toBeInTheDocument();
       expect(within(certificates).getByText("Caducado")).toBeInTheDocument();
     });
@@ -525,6 +630,7 @@ describe("PreferencesDialog", () => {
       const user = userEvent.setup();
       const onInstallCertificate = vi.fn(async () => true);
       renderDialog({ onInstallCertificate });
+      await openTab(user, "Certificados");
 
       await user.click(screen.getByRole("button", { name: "Añadir…" }));
       await user.type(screen.getByLabelText("Contraseña"), "hunter2");
@@ -538,6 +644,7 @@ describe("PreferencesDialog", () => {
       const onClose = vi.fn();
       const onInstallCertificate = vi.fn(async () => true);
       renderDialog({ onClose, onInstallCertificate });
+      await openTab(user, "Certificados");
 
       await user.click(screen.getByRole("button", { name: "Añadir…" }));
       await user.keyboard("{Escape}");
@@ -557,6 +664,7 @@ describe("PreferencesDialog", () => {
         throw { situation: "keyNotRsa", detail: "FIRMA: la clave no es RSA" };
       });
       renderDialog({ onInstallCertificate });
+      await openTab(user, "Certificados");
 
       await user.click(screen.getByRole("button", { name: "Añadir…" }));
       await user.click(screen.getByRole("button", { name: "Continuar" }));
@@ -565,7 +673,7 @@ describe("PreferencesDialog", () => {
       expect(notice).toHaveTextContent("Ese certificado no es compatible con rFirma");
       expect(notice.textContent).not.toMatch(/RSA|elíptica|curva/);
       expect(within(notice).queryByText("Detalle técnico")).not.toBeInTheDocument();
-      expect(screen.getByRole("region", { name: "Certificados" })).toHaveTextContent(
+      expect(screen.getByRole("tabpanel", { name: "Certificados" })).toHaveTextContent(
         "Todavía no has instalado ninguno",
       );
     });
@@ -574,6 +682,7 @@ describe("PreferencesDialog", () => {
     it("says nothing when the file picker was closed without choosing anything", async () => {
       const user = userEvent.setup();
       renderDialog({ onInstallCertificate: async () => false });
+      await openTab(user, "Certificados");
 
       await user.click(screen.getByRole("button", { name: "Añadir…" }));
       await user.click(screen.getByRole("button", { name: "Continuar" }));
@@ -588,6 +697,7 @@ describe("PreferencesDialog", () => {
         installedCertificates: [anInstalledCertificate({ id: "2a01" })],
         onRemoveCertificate,
       });
+      await openTab(user, "Certificados");
 
       await user.click(
         screen.getByRole("button", { name: "Quitar el certificado de Ada Lovelace Byron" }),
@@ -604,12 +714,13 @@ describe("PreferencesDialog", () => {
           throw { situation: "certificateNotFound", detail: "ya no esta" };
         },
       });
+      await openTab(user, "Certificados");
 
       await user.click(
         screen.getByRole("button", { name: "Quitar el certificado de Ada Lovelace Byron" }),
       );
 
-      const certificates = screen.getByRole("region", { name: "Certificados" });
+      const certificates = screen.getByRole("tabpanel", { name: "Certificados" });
       expect(await within(certificates).findByRole("alert")).toBeInTheDocument();
     });
   });

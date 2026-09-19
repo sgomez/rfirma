@@ -924,6 +924,9 @@ msgstr "Preferències"
 msgid "preferences.sections.label"
 msgstr "Seccions"
 
+msgid "preferences.sections.general"
+msgstr "General"
+
 msgid "preferences.sections.signing"
 msgstr "Signatura"
 

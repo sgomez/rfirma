@@ -928,6 +928,9 @@ msgstr "Preferencias"
 msgid "preferences.sections.label"
 msgstr "Secciones"
 
+msgid "preferences.sections.general"
+msgstr "General"
+
 msgid "preferences.sections.signing"
 msgstr "Firma"
 

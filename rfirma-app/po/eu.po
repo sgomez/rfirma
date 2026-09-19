@@ -932,6 +932,9 @@ msgstr "Hobespenak"
 msgid "preferences.sections.label"
 msgstr "Atalak"
 
+msgid "preferences.sections.general"
+msgstr "Orokorra"
+
 msgid "preferences.sections.signing"
 msgstr "Sinadura"
 

@@ -326,6 +326,7 @@ describe("App", () => {
 
     await user.click(screen.getByRole("button", { name: "Menú" }));
     await user.click(screen.getByRole("menuitem", { name: "Preferencias…" }));
+    await user.click(await screen.findByRole("tab", { name: "Firma" }));
     const remember = await screen.findByRole("switch", {
       name: /Recordar la última configuración de firma visible/,
     });
@@ -337,7 +338,7 @@ describe("App", () => {
     expect(remember).toHaveAttribute("aria-checked", "true");
     const notice = await screen.findByRole("alert");
     expect(notice).toHaveTextContent("No hemos podido guardar el ajuste");
-    expect(screen.getByRole("region", { name: "Firma" })).toContainElement(notice);
+    expect(screen.getByRole("tabpanel", { name: "Firma" })).toContainElement(notice);
     expect(screen.getByText("no se deja escribir")).toBeInTheDocument();
   });
 
@@ -651,7 +652,8 @@ describe("App", () => {
 
     await user.click(screen.getByRole("button", { name: "Menú" }));
     await user.click(screen.getByRole("menuitem", { name: "Preferencias…" }));
-    const certificates = await screen.findByRole("region", { name: "Certificados" });
+    await user.click(await screen.findByRole("tab", { name: "Certificados" }));
+    const certificates = screen.getByRole("tabpanel", { name: "Certificados" });
     expect(certificates).toHaveTextContent("Todavía no has instalado ninguno");
 
     await user.click(within(certificates).getByRole("button", { name: "Añadir…" }));
@@ -679,7 +681,8 @@ describe("App", () => {
 
     await user.click(screen.getByRole("button", { name: "Menú" }));
     await user.click(screen.getByRole("menuitem", { name: "Preferencias…" }));
-    const certificates = await screen.findByRole("region", { name: "Certificados" });
+    await user.click(await screen.findByRole("tab", { name: "Certificados" }));
+    const certificates = screen.getByRole("tabpanel", { name: "Certificados" });
     await within(certificates).findByText("Ada Lovelace Byron");
 
     await user.click(
@@ -840,7 +843,7 @@ describe("App", () => {
 
     const notice = await screen.findByRole("alert");
     expect(notice).toHaveTextContent("No hemos podido vaciar la lista");
-    expect(screen.getByRole("region", { name: "Privacidad" })).toContainElement(notice);
+    expect(screen.getByRole("group", { name: "Privacidad" })).toContainElement(notice);
     expect(screen.queryByText("a.pdf")).not.toBeInTheDocument();
   });
 
