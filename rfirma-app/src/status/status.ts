@@ -60,6 +60,8 @@ export interface StatusPort {
   readStatus(): Promise<SignalRow[]>;
   /** Vuelve a comprobar el estado remidiendo contra los orígenes. */
   recheck(): Promise<SignalRow[]>;
+  /** Mide la señal del certificado de rFirma, que `readStatus` deja en «Comprobando». */
+  measureLocalCaCertificate(): Promise<SignalRow>;
   /** Instala el certificado de rFirma donde falte y vuelve a medir su señal. */
   installLocalCaCertificate(): Promise<SignalRow>;
   /**
@@ -73,6 +75,21 @@ export interface StatusPort {
    * solo vuelve a tocar lo que en él falló.
    */
   withdrawRfirma(previous: WithdrawalReport | null): Promise<WithdrawalReport>;
+}
+
+/** Mide la señal del certificado de rFirma si `readStatus` la dejó en «Comprobando». */
+export async function withLocalCaCertificateMeasured(
+  rows: SignalRow[],
+  port: StatusPort,
+): Promise<SignalRow[]> {
+  const measuring = rows.some(
+    (row) => row.signal === "localCaCertificate" && row.verdict === "checking",
+  );
+  if (!measuring) {
+    return rows;
+  }
+  const measured = await port.measureLocalCaCertificate();
+  return rows.map((row) => (row.signal === measured.signal ? measured : row));
 }
 
 /**
@@ -111,6 +128,7 @@ export function memoryStatus(
   installedRow?: SignalRow,
   chosenRows?: SignalRow[],
   withdrawalReport?: WithdrawalReport,
+  measuredRow?: SignalRow,
 ): StatusPort {
   let rows = [...initialRows];
   return {
@@ -121,16 +139,13 @@ export function memoryStatus(
       }
       return rows;
     },
+    measureLocalCaCertificate: async () => {
+      const measured = measuredRow ?? checkingLocalCaCertificate();
+      rows = rows.map((row) => (row.signal === measured.signal ? measured : row));
+      return measured;
+    },
     installLocalCaCertificate: async () => {
-      const installed = installedRow ?? {
-        signal: "localCaCertificate",
-        value: "",
-        verdict: "checking",
-        action: null,
-        detail: null,
-        candidates: null,
-        restartFirefoxNotice: false,
-      };
+      const installed = installedRow ?? checkingLocalCaCertificate();
       rows = rows.map((row) => (row.signal === installed.signal ? installed : row));
       return installed;
     },
@@ -140,5 +155,17 @@ export function memoryStatus(
       return chosen;
     },
     withdrawRfirma: async () => withdrawalReport ?? { handler: { kind: "withdrawn" }, stores: [] },
+  };
+}
+
+function checkingLocalCaCertificate(): SignalRow {
+  return {
+    signal: "localCaCertificate",
+    value: "",
+    verdict: "checking",
+    action: null,
+    detail: null,
+    candidates: null,
+    restartFirefoxNotice: false,
   };
 }

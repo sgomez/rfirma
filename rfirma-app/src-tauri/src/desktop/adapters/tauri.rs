@@ -119,6 +119,12 @@ fn firefox_local_ca_trust(site: &SiteRoot) -> Vec<bool> {
         .collect()
 }
 
+/// Mide la señal del certificado de rFirma, que nace en «Comprobando» al leer el estado.
+#[tauri::command(async)]
+pub fn measure_local_ca_certificate(site: State<'_, SiteRoot>) -> SignalRowView {
+    measured_local_ca_certificate_signal(&site, false).into()
+}
+
 /// Instala el certificado de rFirma donde falte y vuelve a medir la señal.
 #[tauri::command(async)]
 pub fn install_local_ca_certificate(site: State<'_, SiteRoot>) -> SignalRowView {

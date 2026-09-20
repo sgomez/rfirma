@@ -4,6 +4,7 @@ ORDENES DE TAURI                          (<contexto>/adapters/tauri*.rs)
         read_invocation() -> Option<DroppedDocumentView>
   async check_for_new_version() -> Option<NewVersionView>
   async open_external_destination(target: String) -> Result<(), Failure>
+  async measure_local_ca_certificate() -> SignalRowView
   async install_local_ca_certificate() -> SignalRowView
   async choose_site_signature_handler(handler: String) -> Result<Vec<SignalRowView>, Failure>
   async read_status(recheck: bool) -> Vec<SignalRowView>

@@ -5,6 +5,16 @@ import { renderWithCatalog } from "../testing/render";
 import { StatusView } from "./StatusView";
 import { memoryStatus, type SignalRow, type StatusPort } from "./status";
 
+const stillChecking: SignalRow = {
+  signal: "localCaCertificate",
+  value: "",
+  verdict: "checking",
+  action: null,
+  detail: null,
+  candidates: null,
+  restartFirefoxNotice: false,
+};
+
 describe("StatusView", () => {
   it("renders the title and close button", () => {
     renderWithCatalog(<StatusView onClose={() => {}} />);
@@ -252,6 +262,7 @@ describe("StatusView", () => {
         },
       ]),
       recheck: vi.fn(),
+      measureLocalCaCertificate: vi.fn().mockResolvedValue(stillChecking),
       installLocalCaCertificate: vi.fn(),
       chooseSiteSignatureHandler,
       withdrawRfirma: vi.fn(),
@@ -342,6 +353,7 @@ describe("StatusView", () => {
         },
       ]),
       recheck: vi.fn(),
+      measureLocalCaCertificate: vi.fn().mockResolvedValue(stillChecking),
       installLocalCaCertificate: vi.fn(),
       chooseSiteSignatureHandler,
       withdrawRfirma: vi.fn(),
@@ -422,6 +434,39 @@ describe("StatusView", () => {
     expect(within(row).getByText("Certificado de rFirma")).toBeInTheDocument();
     expect(within(row).getByText("Comprobando")).toBeInTheDocument();
     expect(within(row).queryByRole("button")).not.toBeInTheDocument();
+  });
+
+  it("measures the local CA certificate signal on opening, without Volver a comprobar", async () => {
+    const born: SignalRow = {
+      signal: "localCaCertificate",
+      value: "",
+      verdict: "checking",
+      action: null,
+      detail: null,
+      candidates: null,
+      restartFirefoxNotice: false,
+    };
+    const measured: SignalRow = {
+      signal: "localCaCertificate",
+      value: "3/3",
+      verdict: "correct",
+      action: null,
+      detail: null,
+      candidates: null,
+      restartFirefoxNotice: false,
+    };
+    renderWithCatalog(
+      <StatusView
+        statusPort={memoryStatus([born], undefined, undefined, undefined, undefined, measured)}
+        onClose={() => {}}
+      />,
+    );
+
+    const row = await screen.findByRole("status");
+    await waitFor(() => {
+      expect(within(row).getByText("3 de 3 almacenes")).toBeInTheDocument();
+    });
+    expect(within(row).queryByText("Comprobando")).not.toBeInTheDocument();
   });
 
   it("renders Incorrecto with Instalar and a store detail list when the certificate is nowhere trusted", async () => {
@@ -514,6 +559,7 @@ describe("StatusView", () => {
         },
       ]),
       recheck: vi.fn().mockReturnValue(recheckPromise),
+      measureLocalCaCertificate: vi.fn().mockResolvedValue(stillChecking),
       installLocalCaCertificate: vi.fn(),
       chooseSiteSignatureHandler: vi.fn(),
       withdrawRfirma: vi.fn(),
@@ -626,6 +672,7 @@ describe("StatusView", () => {
         },
       ]),
       recheck: vi.fn().mockReturnValue(recheckPromise),
+      measureLocalCaCertificate: vi.fn().mockResolvedValue(stillChecking),
       installLocalCaCertificate: vi.fn(),
       chooseSiteSignatureHandler: vi.fn(),
       withdrawRfirma: vi.fn(),
@@ -681,6 +728,7 @@ describe("StatusView", () => {
         },
       ]),
       recheck: vi.fn().mockReturnValue(recheckPromise),
+      measureLocalCaCertificate: vi.fn().mockResolvedValue(stillChecking),
       installLocalCaCertificate: vi.fn(),
       chooseSiteSignatureHandler: vi.fn(),
       withdrawRfirma: vi.fn(),
@@ -736,6 +784,7 @@ describe("StatusView", () => {
         },
       ]),
       recheck: vi.fn(),
+      measureLocalCaCertificate: vi.fn().mockResolvedValue(stillChecking),
       installLocalCaCertificate: vi.fn().mockReturnValue(installPromise),
       chooseSiteSignatureHandler: vi.fn(),
       withdrawRfirma: vi.fn(),
@@ -864,6 +913,7 @@ describe("StatusView", () => {
     const statusPort: StatusPort = {
       readStatus: vi.fn().mockResolvedValue(initialRows),
       recheck: vi.fn().mockResolvedValue(afterWithdrawal),
+      measureLocalCaCertificate: vi.fn().mockResolvedValue(stillChecking),
       installLocalCaCertificate: vi.fn(),
       chooseSiteSignatureHandler: vi.fn(),
       withdrawRfirma: vi.fn().mockResolvedValue({

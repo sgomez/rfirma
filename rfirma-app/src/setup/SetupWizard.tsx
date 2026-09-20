@@ -5,7 +5,13 @@ import { AlertIcon, CheckCircleIcon, CheckingIcon } from "../design-system/icons
 import { Header } from "../shell/Header";
 import { type MenuAnchor, menuAnchorFor } from "../shell/menuAnchor";
 import "./SetupWizard.css";
-import { memoryStatus, type StatusPort, type StoreBrand, type StoreDetail } from "../status/status";
+import {
+  memoryStatus,
+  type StatusPort,
+  type StoreBrand,
+  type StoreDetail,
+  withLocalCaCertificateMeasured,
+} from "../status/status";
 
 /** La versión de AutoFirma con la que rFirma se anuncia compatible (docs/afirma/1.9.2/). */
 const AUTOFIRMA_VERSION = "1.9.2";
@@ -74,29 +80,32 @@ export function SetupWizard({
   useEffect(() => {
     if (seen) return;
     let cancelled = false;
-    statusPort.readStatus().then((rows) => {
-      if (cancelled) return;
-      const certificateRow = rows.find((row) => row.signal === "localCaCertificate");
-      if (certificateRow) {
-        setCertificate(
-          certificateRow.verdict === "correct"
-            ? { kind: "done", restartNotice: certificateRow.restartFirefoxNotice }
-            : { kind: "idle" },
-        );
-      }
-      const handlerRow = rows.find((row) => row.signal === "siteSignature");
-      if (handlerRow) {
-        setAutoFirmaAppears(
-          handlerRow.candidates === null ||
-            handlerRow.candidates.some((candidate) => candidate.name === "AutoFirma"),
-        );
-        setHandler(
-          handlerRow.action?.kind === "choice"
-            ? { kind: "idle", target: handlerRow.action.target }
-            : { kind: "done" },
-        );
-      }
-    });
+    statusPort
+      .readStatus()
+      .then((rows) => withLocalCaCertificateMeasured(rows, statusPort))
+      .then((rows) => {
+        if (cancelled) return;
+        const certificateRow = rows.find((row) => row.signal === "localCaCertificate");
+        if (certificateRow) {
+          setCertificate(
+            certificateRow.verdict === "correct"
+              ? { kind: "done", restartNotice: certificateRow.restartFirefoxNotice }
+              : { kind: "idle" },
+          );
+        }
+        const handlerRow = rows.find((row) => row.signal === "siteSignature");
+        if (handlerRow) {
+          setAutoFirmaAppears(
+            handlerRow.candidates === null ||
+              handlerRow.candidates.some((candidate) => candidate.name === "AutoFirma"),
+          );
+          setHandler(
+            handlerRow.action?.kind === "choice"
+              ? { kind: "idle", target: handlerRow.action.target }
+              : { kind: "done" },
+          );
+        }
+      });
     return () => {
       cancelled = true;
     };

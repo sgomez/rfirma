@@ -25,6 +25,7 @@ import {
   type StatusPort,
   type StoreBrand,
   type Verdict,
+  withLocalCaCertificateMeasured,
 } from "./status";
 import { WithdrawCertificateDialog } from "./WithdrawCertificateDialog";
 
@@ -72,11 +73,19 @@ export function StatusView({
 
   useEffect(() => {
     let cancelled = false;
-    statusPort.readStatus().then((initialRows) => {
-      if (!cancelled) {
-        setRows(initialRows);
-      }
-    });
+    statusPort
+      .readStatus()
+      .then((initialRows) => {
+        if (!cancelled) {
+          setRows(initialRows);
+        }
+        return withLocalCaCertificateMeasured(initialRows, statusPort);
+      })
+      .then((measuredRows) => {
+        if (!cancelled) {
+          setRows(measuredRows);
+        }
+      });
     return () => {
       cancelled = true;
     };
