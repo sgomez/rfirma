@@ -70,7 +70,7 @@ La cabecera de la tabla va en `.rf-label` en versalitas con `letter-spacing:
 
 Bajo la fila, y **sangrado a 206 px** —los 190 de la columna «Señal» más los 16
 de separación—, cuelga lo que la fila necesite: la pista de una línea, o el
-desplegable `ver almacenes` con su lista.
+desplegable `Ver navegadores` con su lista.
 
 ### Geometría
 
@@ -84,7 +84,7 @@ desplegable `ver almacenes` con su lista.
   36 px, que es el tamaño normal.
 - El desplegable de valor mide 220 px de ancho mínimo y 36 px de alto, con
   `--rf-border-strong` y el galón de 16 px a la derecha.
-- `ver almacenes` es un botón fantasma con un galón de 14 px que gira 90° al
+- `Ver navegadores` es un botón fantasma con un galón de 14 px que gira 90° al
   abrirse. La lista va debajo, con la marca en una columna de 12 px, el nombre
   del almacén en 230 px y la nota en `--rf-text-muted`.
 - Pie: 12 px de relleno vertical, `--rf-space-md` lateral.
@@ -95,8 +95,8 @@ desplegable `ver almacenes` con su lista.
 | ----- | ----- | ------ |
 | Versión | `0.4.1` · `0.4.1 → 0.5.0` | `Actualizar` |
 | Firma en sedes | `AutoFirma` · `rFirma` · `Sin configurar` · `No se puede consultar` | `Usar rFirma`, y un desplegable cuando hay dónde elegir |
-| Certificado de rFirma | `2 de 3 almacenes` | `Instalar` o `Retirar…` según el veredicto, y `ver almacenes` |
-| Tus certificados | `Ninguno` · `3 almacenes` | `Cómo instalar`, y `ver almacenes` |
+| Certificado de rFirma | `2 de 3 navegadores` | `Instalar` o `Retirar…` según el veredicto, y `Ver navegadores` |
+| Tus certificados | `Ninguno` · `3 navegadores` | `Cómo instalar`, y `Ver navegadores` |
 
 **La redacción es telegráfica: etiqueta y valor, ni una frase dentro de una
 celda.** Un panel de estado se mira, no se lee: `0.4.1 → 0.5.0` dice lo mismo
@@ -110,10 +110,21 @@ Su hueco se reserva siempre, así que ponerla o quitarla no mueve la tabla.
 confundirse.** Son dos cosas distintas que antes decían las dos «almacenes»: el
 primero es el certificado propio que rFirma instala para que el navegador se fíe
 de ella —el que instala el [primer arranque](primer-arranque.md)—; el segundo
-son los tuyos, con los que firmas. Las dos llevan `ver almacenes`, y la lista
-cuenta cosas distintas: dónde ha entrado la CA —Firefox, Chrome y Chromium,
-Almacén del sistema, con ✓ o ✗ y el motivo del fallo al lado— frente a cuántos
-certificados hay en cada almacén tuyo.
+son los tuyos, con los que firmas. Las dos llevan `Ver navegadores`, y la lista
+cuenta cosas distintas: dónde ha entrado la CA —Firefox, Chrome y Chromium, Otros
+navegadores, con ✓ o ✗ y el motivo del fallo al lado— frente a cuántos
+certificados tuyos hay en cada navegador.
+
+**Se cuentan `navegadores`, no «almacenes».** «Almacén de certificados» es el
+nombre técnico del sitio, y a quien no lo conoce no le dice dónde mirar: los tres
+que rFirma encuentra son bases NSS de un navegador —el perfil de Firefox, la de
+la familia Chromium y las demás que aparezcan—, así que la palabra que nombra el
+sitio en el idioma de quien lee es `navegador`. El diálogo de
+[retirar el certificado](retirar-certificado.md) ya hablaba de «los navegadores
+donde esté»; ahora la tabla dice lo mismo. Por eso la tercera marca de la lista
+es `Otros navegadores` y no `Almacén del sistema`: en Linux no hay un almacén de
+certificados personales del sistema, y lo que cae ahí son perfiles NSS de otros
+navegadores —Chromium de Snap, rutas XDG— que ni Firefox ni Chrome reclaman.
 
 **La segunda fila se llama `Firma en sedes`, no `Aplicación de firma`.** Con las
 dos filas acopladas, el nombre viejo se leía como «sin el certificado de rFirma
@@ -198,7 +209,7 @@ falte algún almacén, `Retirar…` cuando está en los tres. En la columna de a
 cabe una sola acción, y ofrecer retirar lo que aún no está entero es ofrecer dos
 cosas para el mismo hueco. Los tres puntos dicen que abre un diálogo, como en el
 resto de la interfaz: el de
-[retirar el certificado](retirar-certificado.md). `ver almacenes` se queda debajo
+[retirar el certificado](retirar-certificado.md). `Ver navegadores` se queda debajo
 con lo puesto y lo que falta, que es lo que hace falta para decidir entre una
 cosa y la otra.
 
@@ -221,7 +232,7 @@ el velo que confirma el gesto, antes de hacer las dos escrituras.
 
 **Si firma AutoFirma, el certificado pasa a «No aplica» conservando su valor.**
 La CA local existe para que el navegador se fíe de rFirma; si las sedes abren
-AutoFirma, no hace falta. La fila sigue diciendo `2 de 3 almacenes`: apagar el
+AutoFirma, no hace falta. La fila sigue diciendo `2 de 3 navegadores`: apagar el
 veredicto no es borrar el dato, y ese dato es justo el que decide si queda algo
 que retirar.
 
@@ -229,7 +240,7 @@ que retirar.
 lleva, porque esa regla era una casualidad de los casos que había y no una ley:
 «No aplica» quiere decir que no hace falta, no que no haya nada que hacer, y es
 justo cuando el certificado ha dejado de hacer falta cuando tiene sentido
-quitarlo de en medio. Con `0 de 3 almacenes` se queda sin botón, que ahí sí no
+quitarlo de en medio. Con `0 de 3 navegadores` se queda sin botón, que ahí sí no
 queda nada que hacer.
 
 **`Sin configurar` y `No se puede consultar` no disparan «No aplica».** Sin nada
@@ -251,10 +262,10 @@ se pueda contradecir entre ellas.
 | Momento | Qué se ve |
 | ------- | --------- |
 | algo que reparar | La CA a medias y ningún certificado propio: dos «Atención» con su botón |
-| todo correcto | Las cuatro en «Correcto», con los almacenes propios desplegados |
+| todo correcto | Las cuatro en «Correcto», con los navegadores propios desplegados |
 | a medio medir | Versión y certificado en «Comprobando», con el valor en `—` |
 | reparando | La CA con `Instalando…` en su celda de acción, y `Volver a comprobar` apagado |
-| la reparación falla | La CA en «Incorrecto», `0 de 3 almacenes`, con el motivo por almacén |
+| la reparación falla | La CA en «Incorrecto», `0 de 3 navegadores`, con el motivo por navegador |
 
 **Firma en sedes**, los cinco casos de la tabla de arriba.
 

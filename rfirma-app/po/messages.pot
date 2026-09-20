@@ -829,14 +829,14 @@ msgstr ""
 msgid "status.values.userCertificates.none"
 msgstr ""
 
-#. Cuántos almacenes de la persona tienen al menos un certificado propio.
+#. En cuántos navegadores tiene la persona al menos un certificado propio.
 msgid "status.values.userCertificates.stores"
 msgid_plural "status.values.userCertificates.stores"
 msgstr[0] ""
 msgstr[1] ""
 msgstr[2] ""
 
-#. Cuántos almacenes de confianza tienen ya el certificado de rFirma, de cuántos detectados.
+#. En cuántos navegadores está ya el certificado de rFirma, de cuántos detectados.
 msgid "status.values.localCaCertificate"
 msgid_plural "status.values.localCaCertificate"
 msgstr[0] ""

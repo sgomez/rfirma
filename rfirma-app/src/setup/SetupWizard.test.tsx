@@ -163,7 +163,7 @@ describe("SetupWizard", () => {
       expect(screen.getByText("No se ha podido instalar en todas partes.")).toBeInTheDocument();
     });
     expect(screen.getByText("Firefox")).toBeInTheDocument();
-    expect(screen.getByText("Almacén del sistema")).toBeInTheDocument();
+    expect(screen.getByText("Otros navegadores")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Reintentar" }));
 

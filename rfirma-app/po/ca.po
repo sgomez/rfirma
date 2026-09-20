@@ -909,22 +909,22 @@ msgstr "No es pot consultar"
 msgid "status.values.userCertificates.none"
 msgstr "Cap"
 
-#. Cuántos almacenes de la persona tienen al menos un certificado propio.
+#. En cuántos navegadores tiene la persona al menos un certificado propio.
 msgid "status.values.userCertificates.stores"
 msgid_plural "status.values.userCertificates.stores"
-msgstr[0] "1 magatzem"
-msgstr[1] "{{count}} magatzems"
-msgstr[2] "{{count}} magatzems"
+msgstr[0] "1 navegador"
+msgstr[1] "{{count}} navegadors"
+msgstr[2] "{{count}} navegadors"
 
-#. Cuántos almacenes de confianza tienen ya el certificado de rFirma, de cuántos detectados.
+#. En cuántos navegadores está ya el certificado de rFirma, de cuántos detectados.
 msgid "status.values.localCaCertificate"
 msgid_plural "status.values.localCaCertificate"
-msgstr[0] "{{trusted}} d'1 magatzem"
-msgstr[1] "{{trusted}} de {{count}} magatzems"
-msgstr[2] "{{trusted}} de {{count}} magatzems"
+msgstr[0] "{{trusted}} d'1 navegador"
+msgstr[1] "{{trusted}} de {{count}} navegadors"
+msgstr[2] "{{trusted}} de {{count}} navegadors"
 
 msgid "status.detail.toggle"
-msgstr "Veure magatzems"
+msgstr "Veure navegadors"
 
 msgid "status.detail.trusted"
 msgstr "De confiança"
@@ -939,7 +939,7 @@ msgid "status.storeBrands.chrome"
 msgstr "Chrome i Chromium"
 
 msgid "status.storeBrands.nssdb"
-msgstr "Magatzem del sistema"
+msgstr "Altres navegadors"
 
 msgid "status.notices.restartFirefox"
 msgstr "Reinicia el Firefox perquè tingui efecte."

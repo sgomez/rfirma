@@ -411,7 +411,7 @@ describe("StatusView", () => {
 
     const row = await screen.findByRole("status");
     expect(within(row).getByText("Tus certificados")).toBeInTheDocument();
-    expect(within(row).getByText("3 almacenes")).toBeInTheDocument();
+    expect(within(row).getByText("3 navegadores")).toBeInTheDocument();
     expect(within(row).getByText("Correcto")).toBeInTheDocument();
     expect(within(row).queryByRole("button")).not.toBeInTheDocument();
   });
@@ -464,7 +464,7 @@ describe("StatusView", () => {
 
     const row = await screen.findByRole("status");
     await waitFor(() => {
-      expect(within(row).getByText("3 de 3 almacenes")).toBeInTheDocument();
+      expect(within(row).getByText("3 de 3 navegadores")).toBeInTheDocument();
     });
     expect(within(row).queryByText("Comprobando")).not.toBeInTheDocument();
   });
@@ -492,12 +492,12 @@ describe("StatusView", () => {
 
     const row = await screen.findByRole("status");
     expect(within(row).getByText("Certificado de rFirma")).toBeInTheDocument();
-    expect(within(row).getByText("0 de 2 almacenes")).toBeInTheDocument();
+    expect(within(row).getByText("0 de 2 navegadores")).toBeInTheDocument();
     expect(within(row).getByText("Incorrecto")).toBeInTheDocument();
     expect(within(row).getByRole("button", { name: "Instalar" })).toBeInTheDocument();
-    expect(within(row).queryByRole("button", { name: /almacenes/ })).toBeInTheDocument();
+    expect(within(row).queryByRole("button", { name: /navegadores/ })).toBeInTheDocument();
 
-    const toggle = within(row).getByRole("button", { name: "Ver almacenes" });
+    const toggle = within(row).getByRole("button", { name: "Ver navegadores" });
     expect(toggle).toHaveAttribute("aria-expanded", "false");
     expect(within(row).queryByText("Firefox")).not.toBeInTheDocument();
 
@@ -527,11 +527,11 @@ describe("StatusView", () => {
     renderWithCatalog(<StatusView statusPort={memoryStatus(rows)} onClose={() => {}} />);
 
     const row = await screen.findByRole("status");
-    expect(within(row).getByText("2 de 2 almacenes")).toBeInTheDocument();
+    expect(within(row).getByText("2 de 2 navegadores")).toBeInTheDocument();
     expect(within(row).getByText("Correcto")).toBeInTheDocument();
     expect(within(row).queryByRole("button", { name: "Instalar" })).not.toBeInTheDocument();
 
-    await user.click(within(row).getByRole("button", { name: "Ver almacenes" }));
+    await user.click(within(row).getByRole("button", { name: "Ver navegadores" }));
 
     expect(within(row).getAllByText("De confianza")).toHaveLength(2);
   });
@@ -589,7 +589,7 @@ describe("StatusView", () => {
     await waitFor(() => {
       expect(within(row).getByText("Correcto")).toBeInTheDocument();
     });
-    expect(within(row).getByText("1 almacén")).toBeInTheDocument();
+    expect(within(row).getByText("1 navegador")).toBeInTheDocument();
   });
 
   it("notifies onRowsChange with the rows read at startup", async () => {
@@ -943,7 +943,7 @@ describe("StatusView", () => {
       expect(statusPort.recheck).toHaveBeenCalledOnce();
     });
     expect(await screen.findByText("Sin configurar")).toBeInTheDocument();
-    expect(screen.getByText("0 de 2 almacenes")).toBeInTheDocument();
+    expect(screen.getByText("0 de 2 navegadores")).toBeInTheDocument();
   });
 
   it("does not close the panel on Escape while the withdrawal dialog is open", async () => {

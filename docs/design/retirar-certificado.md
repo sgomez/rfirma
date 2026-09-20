@@ -1,7 +1,7 @@
 # Retirar el certificado
 
 El velo que confirma, ejecuta y cuenta la retirada del certificado de rFirma de
-los almacenes de los navegadores. Lo abre el botón `Retirar…` de la fila
+los navegadores donde esté. Lo abre el botón `Retirar…` de la fila
 `Certificado de rFirma` del [panel de estado](panel-de-estado.md), que es la
 señal que informa de lo que se va a deshacer.
 
@@ -108,8 +108,8 @@ nada que contar, no que la aplicación esté bloqueada. La cabecera sigue ahí.
 
 ### El desenlace: la misma lista que cuando falla una instalación
 
-Marca, nombre del almacén y el motivo al lado del ✗ — literalmente el desplegable
-`ver almacenes` del panel, que sólo estrecha el nombre de 230 a 190 px porque
+Marca, nombre del navegador y el motivo al lado del ✗ — literalmente el desplegable
+`Ver navegadores` del panel, que sólo estrecha el nombre de 230 a 190 px porque
 dentro de 420 px el motivo no cabría al lado. Dos formatos para la misma cuenta
 serían dos vocabularios. La cuarta línea es `Firma en sedes`, que es como se llama
 esa señal en el panel: así el desenlace se lee contra la tabla que hay detrás.
@@ -139,10 +139,10 @@ propio panel y sin inventar ninguna:
 
 | Tiempo | Firma en sedes | Certificado de rFirma |
 | ------ | -------------- | --------------------- |
-| Pregunta | `rFirma`, Correcto | `3 de 3 almacenes`, Correcto, `Retirar…` |
-| Trabajando | `rFirma`, Correcto | `3 de 3 almacenes`, con `Retirando…` en la celda de acción y `Volver a comprobar` apagado |
-| Resultado | `Sin configurar`, Atención, `Usar rFirma` | `0 de 3 almacenes`, Incorrecto, `Instalar` |
-| Resultado con fallo | `Sin configurar`, Atención, `Usar rFirma` | `1 de 3 almacenes`, Atención, `Instalar`, con el detalle abierto |
+| Pregunta | `rFirma`, Correcto | `3 de 3 navegadores`, Correcto, `Retirar…` |
+| Trabajando | `rFirma`, Correcto | `3 de 3 navegadores`, con `Retirando…` en la celda de acción y `Volver a comprobar` apagado |
+| Resultado | `Sin configurar`, Atención, `Usar rFirma` | `0 de 3 navegadores`, Incorrecto, `Instalar` |
+| Resultado con fallo | `Sin configurar`, Atención, `Usar rFirma` | `1 de 3 navegadores`, Atención, `Instalar`, con el detalle abierto |
 
 `Retirando…` ocupa **el mismo sitio y sigue el mismo patrón** que `Instalando…`:
 la celda de acción, con el arco. El velo deja ver lo que la retirada está
@@ -152,7 +152,7 @@ cambiando.
 
 No estrena nada. `.rf-scrim` y `.rf-dialog` son los del diálogo que confirma
 apagar `Recordar mi actividad` en [Preferencias](preferencias.md), con su ancho
-de 420 px sin tocar; el ✓ y el ✗ son los caracteres que ya usa `ver almacenes`;
+de 420 px sin tocar; el ✓ y el ✗ son los caracteres que ya usa `Ver navegadores`;
 el arco es el `path` de «Comprobando» y el triángulo, el de «Atención».
 
 Clases: `.rf-scrim`, `.rf-dialog`, `.rf-row`, `.rf-stack`, `.rf-gap-xs`,

@@ -898,22 +898,22 @@ msgstr "Cannot check"
 msgid "status.values.userCertificates.none"
 msgstr "None"
 
-#. Cuántos almacenes de la persona tienen al menos un certificado propio.
+#. En cuántos navegadores tiene la persona al menos un certificado propio.
 msgid "status.values.userCertificates.stores"
 msgid_plural "status.values.userCertificates.stores"
-msgstr[0] "1 store"
-msgstr[1] "{{count}} stores"
-msgstr[2] "{{count}} stores"
+msgstr[0] "1 browser"
+msgstr[1] "{{count}} browsers"
+msgstr[2] "{{count}} browsers"
 
-#. Cuántos almacenes de confianza tienen ya el certificado de rFirma, de cuántos detectados.
+#. En cuántos navegadores está ya el certificado de rFirma, de cuántos detectados.
 msgid "status.values.localCaCertificate"
 msgid_plural "status.values.localCaCertificate"
-msgstr[0] "{{trusted}} of 1 store"
-msgstr[1] "{{trusted}} of {{count}} stores"
-msgstr[2] "{{trusted}} of {{count}} stores"
+msgstr[0] "{{trusted}} of 1 browser"
+msgstr[1] "{{trusted}} of {{count}} browsers"
+msgstr[2] "{{trusted}} of {{count}} browsers"
 
 msgid "status.detail.toggle"
-msgstr "View stores"
+msgstr "View browsers"
 
 msgid "status.detail.trusted"
 msgstr "Trusted"
@@ -928,7 +928,7 @@ msgid "status.storeBrands.chrome"
 msgstr "Chrome and Chromium"
 
 msgid "status.storeBrands.nssdb"
-msgstr "System store"
+msgstr "Other browsers"
 
 msgid "status.notices.restartFirefox"
 msgstr "Restart Firefox for this to take effect."
