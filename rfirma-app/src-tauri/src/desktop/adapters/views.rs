@@ -15,8 +15,8 @@ crossing! {
 }
 
 use crate::desktop::domain::status::{
-    ActionKind, Signal, SignalRow, SiteSignatureCandidate, StatusAction, StoreBrand, StoreDetail,
-    Verdict,
+    ActionKind, Signal, SignalDetail, SignalRow, SiteSignatureCandidate, StatusAction, StoreBrand,
+    StoreCertificates, StoreDetail, Verdict,
 };
 
 crossing! {
@@ -32,8 +32,8 @@ crossing! {
         pub verdict: Verdict,
         /// Acción disponible si la hay.
         pub action: Option<StatusActionView>,
-        /// Detalle por almacén, para señales que lo despliegan.
-        pub detail: Option<Vec<StoreDetailView>>,
+        /// Detalle desplegable, para las señales que lo tienen.
+        pub detail: Option<SignalDetailView>,
         /// Candidatas entre las que elegir, para la señal `Firma en sedes`.
         pub candidates: Option<Vec<SiteSignatureCandidateView>>,
         /// Aviso de reiniciar Firefox, tras instalar con el navegador vivo (ADR-0005).
@@ -48,9 +48,7 @@ impl From<SignalRow> for SignalRowView {
             value: row.value,
             verdict: row.verdict,
             action: row.action.map(StatusActionView::from),
-            detail: row
-                .detail
-                .map(|detail| detail.into_iter().map(StoreDetailView::from).collect()),
+            detail: row.detail.map(SignalDetailView::from),
             candidates: row.candidates.map(|candidates| {
                 candidates
                     .into_iter()
@@ -108,11 +106,60 @@ impl From<StoreDetail> for StoreDetailView {
 }
 
 crossing! {
+    /// Un sitio y cuántos certificados firmables propios tiene.
+    #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+    #[serde(rename_all = "camelCase")]
+    pub struct StoreCertificatesView {
+        /// Marca del sitio.
+        pub brand: StoreBrand,
+        /// Cuántos certificados firmables hay en él.
+        pub certificates: usize,
+    }
+}
+
+impl From<StoreCertificates> for StoreCertificatesView {
+    fn from(store: StoreCertificates) -> Self {
+        Self {
+            brand: store.brand,
+            certificates: store.certificates,
+        }
+    }
+}
+
+crossing! {
+    /// Lo que cuelga de una señal: dónde se confía en la CA, o cuántos certificados hay en cada sitio.
+    #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+    #[serde(tag = "kind", rename_all = "camelCase")]
+    pub enum SignalDetailView {
+        Trust { stores: Vec<StoreDetailView> },
+        Certificates { stores: Vec<StoreCertificatesView> },
+    }
+}
+
+impl From<SignalDetail> for SignalDetailView {
+    fn from(detail: SignalDetail) -> Self {
+        match detail {
+            SignalDetail::Trust { stores } => Self::Trust {
+                stores: stores.into_iter().map(StoreDetailView::from).collect(),
+            },
+            SignalDetail::Certificates { stores } => Self::Certificates {
+                stores: stores
+                    .into_iter()
+                    .map(StoreCertificatesView::from)
+                    .collect(),
+            },
+        }
+    }
+}
+
+crossing! {
     lent from "desktop/domain/status.rs":
     pub enum StoreBrand {
         Firefox,
         Chrome,
         Nssdb,
+        Card,
+        Installed,
     }
 }
 

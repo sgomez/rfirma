@@ -59,7 +59,7 @@ Cuatro columnas fijas, una fila por señal:
 
 | Columna | Ancho | Qué lleva |
 | ------- | ----- | --------- |
-| Señal | 190 px | El nombre, en `.rf-prose` a peso 600 |
+| Señal | 260 px | El nombre, en `.rf-prose` a peso 600 |
 | Valor | flexible | El dato: texto pelado o desplegable |
 | Veredicto | 130 px | Icono de 16 px más la palabra |
 | Acción | 160 px | Un botón secundario, o lo que la reparación esté haciendo |
@@ -68,7 +68,7 @@ La cabecera de la tabla va en `.rf-label` en versalitas con `letter-spacing:
 .6px` y se separa del cuerpo con `--rf-border-strong`; las filas entre sí, con
 `--rf-border-subtle`.
 
-Bajo la fila, y **sangrado a 206 px** —los 190 de la columna «Señal» más los 16
+Bajo la fila, y **sangrado a 276 px** —los 260 de la columna «Señal» más los 16
 de separación—, cuelga lo que la fila necesite: la pista de una línea, o el
 desplegable con su lista.
 
@@ -97,7 +97,7 @@ desplegable con su lista.
 | Versión | `0.4.1` · `0.4.1 → 0.5.0` | `Actualizar` |
 | Firma en sedes | `AutoFirma` · `rFirma` · `Sin configurar` · `No se puede consultar` | `Usar rFirma`, y un desplegable cuando hay dónde elegir |
 | Certificado de rFirma | `2 de 3 navegadores` | `Instalar` o `Retirar…` según el veredicto, y `Ver navegadores` |
-| Tus certificados | `Ninguno` · `4 certificados` | `Cómo instalar`, y `Ver dónde` |
+| Certificados de firma electrónica | `Ninguno` · `4 certificados` | `Cómo instalar`, y `Ver dónde` |
 
 **La redacción es telegráfica: etiqueta y valor, ni una frase dentro de una
 celda.** Un panel de estado se mira, no se lee: `0.4.1 → 0.5.0` dice lo mismo
@@ -107,8 +107,8 @@ que «hay una versión nueva disponible, la 0.5.0» y se ve sin leerlo.
 primera vez.`, debajo de la fila de la firma en sedes y **fuera** de su celda.
 Su hueco se reserva siempre, así que ponerla o quitarla no mueve la tabla.
 
-**`Certificado de rFirma` y `Tus certificados` se llaman así para no
-confundirse.** Son dos cosas distintas que antes decían las dos «almacenes»: el
+**`Certificado de rFirma` y `Certificados de firma electrónica` se llaman así
+para no confundirse.** Son dos cosas distintas que antes decían las dos «almacenes»: el
 primero es el certificado propio que rFirma instala para que el navegador se fíe
 de ella —el que instala el [primer arranque](primer-arranque.md)—; el segundo
 son los tuyos, con los que firmas. Las dos cuelgan una lista, y **no es la misma
@@ -212,20 +212,26 @@ así que la casilla se apaga con «No aplica» y se queda sin botón, sin desple
 y sin la pista de Firefox, que ahí no diría nada. **La fila no desaparece**: una
 fila que a veces está obliga a reaprender la pantalla cada vez que se abre.
 
-### La fila de `Tus certificados`: dónde y cuántos
+### La fila de `Certificados de firma electrónica`: dónde y cuántos
 
-**El valor cuenta certificados, no sitios.** La fila se llama `Tus
-certificados`, y la pregunta que trae a mirarla es si hay con qué firmar:
-`4 certificados` la contesta de un vistazo. Antes contaba los sitios —`3
-almacenes`—, que es el dato de segundo orden: útil para ir a buscarlos, no para
-saber si están.
+**El valor cuenta certificados, no sitios.** La pregunta que trae a mirar esta
+fila es si hay con qué firmar: `4 certificados` la contesta de un vistazo. Antes
+contaba los sitios —`3 almacenes`—, que es el dato de segundo orden: útil para ir
+a buscarlos, no para saber si están. **Y lleva el sustantivo, no solo la cifra**:
+un `4` suelto obliga a subir al nombre de la fila para saber de qué son cuatro, y
+la celda tiene sitio de sobra para decirlo.
 
-**Y el sitio, en la lista, con su recuento.** Una línea por sitio, el nombre a la
-izquierda y `2 certificados` en `--rf-text-muted` a la derecha, en la misma
+**Y el sitio, en la lista, con su cuenta.** Una línea por sitio, el nombre a la
+izquierda y la cifra en `--rf-text-muted` a la derecha —ahí sí pelada, porque la
+lista cuelga de la celda que acaba de decir `certificados`—, en la misma
 geometría que la lista de la CA pero **sin la columna de la marca**: ✓ y ✗ dicen
 si algo salió bien, y aquí no se ha intentado nada. El desplegable se llama
 `Ver dónde`, no `Ver navegadores`, porque esta lista no es solo de navegadores:
 en un sitio cabe una tarjeta.
+
+**Dos perfiles del mismo navegador son una línea.** La lista es de sitios como los
+nombra quien mira —`Firefox`—, no de perfiles NSS: quien tiene dos perfiles de
+Firefox no quiere leer dos veces `Firefox`, y el total de arriba ya suma los dos.
 
 **Por eso esta fila no cuenta navegadores y la de la CA sí.** Una CA solo puede
 entrar en un perfil NSS, que es siempre el de un navegador; los certificados
@@ -298,7 +304,7 @@ se pueda contradecir entre ellas.
 | Momento | Qué se ve |
 | ------- | --------- |
 | algo que reparar | La CA a medias y ningún certificado propio: dos «Atención» con su botón |
-| todo correcto | Las cuatro en «Correcto», con la lista de `Tus certificados` desplegada |
+| todo correcto | Las cuatro en «Correcto», con la lista de los certificados propios desplegada |
 | a medio medir | Versión y certificado en «Comprobando», con el valor en `—` |
 | reparando | La CA con `Instalando…` en su celda de acción, y `Volver a comprobar` apagado |
 | la reparación falla | La CA en «Incorrecto», `0 de 3 navegadores`, con el motivo por navegador |

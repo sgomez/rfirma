@@ -7,9 +7,10 @@ import { type MenuAnchor, menuAnchorFor } from "../shell/menuAnchor";
 import "./SetupWizard.css";
 import {
   memoryStatus,
+  type SignalRow,
   type StatusPort,
-  type StoreBrand,
   type StoreDetail,
+  storeBrandLabel,
   withLocalCaCertificateMeasured,
 } from "../status/status";
 
@@ -119,7 +120,7 @@ export function SetupWizard({
       setCertificate(
         row.verdict === "correct"
           ? { kind: "done", restartNotice: row.restartFirefoxNotice }
-          : { kind: "failed", detail: row.detail ?? [] },
+          : { kind: "failed", detail: trustedStoresOf(row) },
       );
     });
   };
@@ -136,7 +137,7 @@ export function SetupWizard({
         setCertificate(
           certificateRow.verdict === "correct"
             ? { kind: "done", restartNotice: certificateRow.restartFirefoxNotice }
-            : { kind: "failed", detail: certificateRow.detail ?? [] },
+            : { kind: "failed", detail: trustedStoresOf(certificateRow) },
         );
       }
     });
@@ -358,13 +359,6 @@ function HandlerCard({ t, status, autoFirmaAppears, onUse, onDecline }: HandlerC
   );
 }
 
-function storeBrandLabel(t: TFunction, brand: StoreBrand): string {
-  switch (brand) {
-    case "firefox":
-      return t("status.storeBrands.firefox");
-    case "chrome":
-      return t("status.storeBrands.chrome");
-    case "nssdb":
-      return t("status.storeBrands.nssdb");
-  }
+function trustedStoresOf(row: SignalRow): StoreDetail[] {
+  return row.detail?.kind === "trust" ? row.detail.stores : [];
 }

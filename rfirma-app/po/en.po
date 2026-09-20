@@ -854,7 +854,7 @@ msgid "status.signals.siteSignature"
 msgstr "Signing at sites"
 
 msgid "status.signals.userCertificates"
-msgstr "Your certificates"
+msgstr "Electronic signature certificates"
 
 msgid "status.signals.localCaCertificate"
 msgstr "rFirma certificate"
@@ -898,12 +898,12 @@ msgstr "Cannot check"
 msgid "status.values.userCertificates.none"
 msgstr "None"
 
-#. En cuántos sitios —navegador, tarjeta o fichero instalado— tiene la persona al menos un certificado propio.
-msgid "status.values.userCertificates.stores"
-msgid_plural "status.values.userCertificates.stores"
-msgstr[0] "1 place"
-msgstr[1] "{{count}} places"
-msgstr[2] "{{count}} places"
+#. Cuántos certificados de firma electrónica propios hay en total.
+msgid "status.values.userCertificates.count"
+msgid_plural "status.values.userCertificates.count"
+msgstr[0] "1 certificate"
+msgstr[1] "{{count}} certificates"
+msgstr[2] "{{count}} certificates"
 
 #. En cuántos navegadores está ya el certificado de rFirma, de cuántos detectados.
 msgid "status.values.localCaCertificate"
@@ -914,6 +914,10 @@ msgstr[2] "{{trusted}} of {{count}} browsers"
 
 msgid "status.detail.toggle"
 msgstr "View browsers"
+
+#. El desplegable de la señal de los certificados propios: en qué sitio hay cuántos.
+msgid "status.detail.where"
+msgstr "View where"
 
 msgid "status.detail.installed"
 msgstr "Installed"
@@ -929,6 +933,12 @@ msgstr "Chrome and Chromium"
 
 msgid "status.storeBrands.nssdb"
 msgstr "Other browsers"
+
+msgid "status.storeBrands.card"
+msgstr "Card"
+
+msgid "status.storeBrands.installed"
+msgstr "Installed file"
 
 msgid "status.notices.restartFirefox"
 msgstr "Restart Firefox for this to take effect."

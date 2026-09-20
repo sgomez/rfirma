@@ -7,7 +7,8 @@ use crate::desktop::domain::channel::Channel;
 use crate::desktop::domain::destination::{CERTIFICATE_ISSUANCE, RELEASES, REPOSITORY};
 use crate::desktop::domain::handlers::UrlHandlers;
 use crate::desktop::domain::status::{
-    ActionKind, Signal, SignalRow, SiteSignatureCandidate, StatusAction, StoreDetail, Verdict,
+    ActionKind, Signal, SignalDetail, SignalRow, SiteSignatureCandidate, StatusAction,
+    StoreCertificates, StoreDetail, Verdict,
 };
 use crate::desktop::ports::VersionMemory;
 
@@ -174,31 +175,26 @@ pub fn evaluate_site_signature_signal(handlers: UrlHandlers) -> SignalRow {
     }
 }
 
-/// Evalúa el estado de la señal de certificados propios a partir de los almacenes con certificados.
-pub fn evaluate_user_certificates_signal(stores_with_certificates: usize) -> SignalRow {
-    if stores_with_certificates == 0 {
-        SignalRow {
-            signal: Signal::UserCertificates,
-            value: "0".to_string(),
-            verdict: Verdict::Attention,
-            action: Some(StatusAction {
-                kind: ActionKind::Link,
-                target: CERTIFICATE_ISSUANCE.to_string(),
-            }),
-            detail: None,
-            candidates: None,
-            restart_firefox_notice: false,
-        }
-    } else {
-        SignalRow {
-            signal: Signal::UserCertificates,
-            value: stores_with_certificates.to_string(),
-            verdict: Verdict::Correct,
-            action: None,
-            detail: None,
-            candidates: None,
-            restart_firefox_notice: false,
-        }
+/// Evalúa la señal de los certificados propios: cuántos hay en total y en qué sitio está cada cuántos.
+pub fn evaluate_user_certificates_signal(stores: Vec<StoreCertificates>) -> SignalRow {
+    let found: usize = stores.iter().map(|store| store.certificates).sum();
+    let action = (found == 0).then(|| StatusAction {
+        kind: ActionKind::Link,
+        target: CERTIFICATE_ISSUANCE.to_string(),
+    });
+
+    SignalRow {
+        signal: Signal::UserCertificates,
+        value: found.to_string(),
+        verdict: if found == 0 {
+            Verdict::Attention
+        } else {
+            Verdict::Correct
+        },
+        action,
+        detail: (found > 0).then_some(SignalDetail::Certificates { stores }),
+        candidates: None,
+        restart_firefox_notice: false,
     }
 }
 
@@ -243,7 +239,7 @@ pub fn evaluate_local_ca_certificate_signal(
         value: format!("{trusted}/{total}"),
         verdict,
         action,
-        detail: Some(detail),
+        detail: Some(SignalDetail::Trust { stores: detail }),
         candidates: None,
         restart_firefox_notice,
     }

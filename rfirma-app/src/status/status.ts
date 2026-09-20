@@ -2,18 +2,47 @@
  * Puerto de consulta y medición de señales del panel de estado.
  */
 
+import type { TFunction } from "i18next";
+
 export type Signal = "version" | "siteSignature" | "localCaCertificate" | "userCertificates";
 
 export type Verdict = "correct" | "attention" | "incorrect" | "notApplicable" | "checking";
 
 export type ActionKind = "repair" | "choice" | "link";
 
-export type StoreBrand = "firefox" | "chrome" | "nssdb";
+export type StoreBrand = "firefox" | "chrome" | "nssdb" | "card" | "installed";
 
 export interface StoreDetail {
   brand: StoreBrand;
   trusted: boolean;
 }
+
+/** El nombre del sitio en pantalla: uno solo, y lo comparten la tabla, el asistente y la retirada. */
+export function storeBrandLabel(t: TFunction, brand: StoreBrand): string {
+  switch (brand) {
+    case "firefox":
+      return t("status.storeBrands.firefox");
+    case "chrome":
+      return t("status.storeBrands.chrome");
+    case "nssdb":
+      return t("status.storeBrands.nssdb");
+    case "card":
+      return t("status.storeBrands.card");
+    case "installed":
+      return t("status.storeBrands.installed");
+  }
+}
+
+/** Un sitio y cuántos certificados firmables propios tiene. */
+export interface StoreCertificates {
+  brand: StoreBrand;
+  certificates: number;
+}
+
+/** Lo que cuelga de una señal: dónde se confía en la CA, o cuántos certificados hay en cada sitio. */
+export type SignalDetail =
+  | { kind: "trust"; stores: StoreDetail[] }
+  | { kind: "certificates"; stores: StoreCertificates[] };
 
 export interface StatusAction {
   kind: ActionKind;
@@ -32,7 +61,7 @@ export interface SignalRow {
   value: string;
   verdict: Verdict;
   action: StatusAction | null;
-  detail: StoreDetail[] | null;
+  detail: SignalDetail | null;
   candidates: SiteSignatureCandidate[] | null;
   restartFirefoxNotice: boolean;
 }

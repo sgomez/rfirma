@@ -134,10 +134,13 @@ describe("SetupWizard", () => {
     const failedRow: SignalRow = {
       ...certificateNotInstalled,
       verdict: "incorrect",
-      detail: [
-        { brand: "firefox", trusted: true },
-        { brand: "nssdb", trusted: false },
-      ],
+      detail: {
+        kind: "trust",
+        stores: [
+          { brand: "firefox", trusted: true },
+          { brand: "nssdb", trusted: false },
+        ],
+      },
     };
     const installedRow: SignalRow = {
       ...certificateNotInstalled,
@@ -287,7 +290,7 @@ describe("SetupWizard", () => {
     const failedRow: SignalRow = {
       ...certificateNotInstalled,
       verdict: "incorrect",
-      detail: [{ brand: "firefox", trusted: false }],
+      detail: { kind: "trust", stores: [{ brand: "firefox", trusted: false }] },
     };
     const base = memoryStatus([aVersionRow, certificateNotInstalled, handlerNotOurs]);
     const port = { ...base, installLocalCaCertificate: async () => failedRow };

@@ -44,7 +44,7 @@
 }
 
 .status-view__col-signal {
-  width: 190px;
+  width: 260px;
   flex: none;
   letter-spacing: 0.6px;
   text-transform: uppercase;
@@ -91,7 +91,7 @@
 }
 
 .status-view__cell-signal {
-  width: 190px;
+  width: 260px;
   flex: none;
   font-weight: 600;
   margin: 0;
@@ -158,7 +158,7 @@
 }
 
 .status-view__detail {
-  padding-left: 206px;
+  padding-left: 276px;
 }
 
 .status-view__detail-toggle {
@@ -186,12 +186,17 @@
   gap: var(--rf-space-xs);
 }
 
+.status-view__detail-place {
+  width: 230px;
+  flex: none;
+}
+
 .status-view__detail-note {
   color: var(--rf-text-muted);
 }
 
 .status-view__restart-notice {
-  padding-left: 206px;
+  padding-left: 276px;
   color: var(--rf-text-muted);
   font-size: 12px;
 }

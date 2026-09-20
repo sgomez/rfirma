@@ -62,7 +62,7 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
       value: String
       verdict: Verdict
       action: Option<StatusActionView>
-      detail: Option<Vec<StoreDetailView>>
+      detail: Option<SignalDetailView>
       candidates: Option<Vec<SiteSignatureCandidateView>>
       restartFirefoxNotice: bool
 
@@ -74,6 +74,14 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
   pub struct StoreDetailView
       brand: StoreBrand
       trusted: bool
+
+  pub struct StoreCertificatesView
+      brand: StoreBrand
+      certificates: usize
+
+  pub enum SignalDetailView   (serde: etiqueta "kind")
+      Trust { stores: Vec<StoreDetailView> }
+      Certificates { stores: Vec<StoreCertificatesView> }
 
   pub struct StatusActionView
       kind: ActionKind
@@ -281,6 +289,8 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
       Firefox
       Chrome
       Nssdb
+      Card
+      Installed
 
   pub enum Theme   [signing/application/configuration_memory.rs]
       System

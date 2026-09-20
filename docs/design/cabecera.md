@@ -113,7 +113,7 @@ el triángulo a la derecha. Dice «entra a mirar», y nada más.
 - **«No aplica» no llama a nadie**: ni el certificado apagado porque firma
   AutoFirma, ni `No se puede consultar` dentro del flatpak. No saber quién firma,
   o saber que el certificado no hace falta, no es tener algo que reparar.
-- **`Tus certificados: Ninguno` tampoco.** Instalar un certificado propio es
+- **`Certificados de firma electrónica: Ninguno` tampoco.** Instalar un certificado propio es
   cosa de la FNMT o de quien lo emita, no de rFirma; el panel dice `Cómo
   instalar` y ahí se acaba lo que puede hacer.
 - **Una versión nueva tampoco.** Eso lo dice la franja de la

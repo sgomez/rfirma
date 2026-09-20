@@ -829,9 +829,9 @@ msgstr ""
 msgid "status.values.userCertificates.none"
 msgstr ""
 
-#. En cuántos sitios —navegador, tarjeta o fichero instalado— tiene la persona al menos un certificado propio.
-msgid "status.values.userCertificates.stores"
-msgid_plural "status.values.userCertificates.stores"
+#. Cuántos certificados de firma electrónica propios hay en total.
+msgid "status.values.userCertificates.count"
+msgid_plural "status.values.userCertificates.count"
 msgstr[0] ""
 msgstr[1] ""
 msgstr[2] ""
@@ -844,6 +844,10 @@ msgstr[1] ""
 msgstr[2] ""
 
 msgid "status.detail.toggle"
+msgstr ""
+
+#. El desplegable de la señal de los certificados propios: en qué sitio hay cuántos.
+msgid "status.detail.where"
 msgstr ""
 
 #. Que el certificado de rFirma está puesto en ese navegador.
@@ -861,6 +865,12 @@ msgid "status.storeBrands.chrome"
 msgstr ""
 
 msgid "status.storeBrands.nssdb"
+msgstr ""
+
+msgid "status.storeBrands.card"
+msgstr ""
+
+msgid "status.storeBrands.installed"
 msgstr ""
 
 msgid "status.notices.restartFirefox"

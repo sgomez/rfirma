@@ -8,7 +8,7 @@ use crate::identity::domain::certificate::{CertificateRef, ListedCertificate, To
 use crate::identity::domain::chain::issuers_of;
 use crate::identity::domain::error::{Situation, TokenError};
 use crate::identity::domain::holder::{common_name_of, holder_of};
-use crate::identity::domain::store::Store;
+use crate::identity::domain::store::{Store, StoreClass};
 use crate::identity::ports::{CertificateMemory, InstalledFolder, Token};
 use crate::memory_error::{MemoryError, Situation as StoreSituation};
 
@@ -63,12 +63,27 @@ pub fn certificates_with_their_chains(
         .collect())
 }
 
-/// Cuántos almacenes tienen al menos un certificado firmable propio.
-pub fn stores_with_certificates(token: &dyn Token, stores: &[Store]) -> usize {
-    stores
-        .iter()
-        .filter(|store| matches!(token.list(store), Ok(certificates) if !certificates.is_empty()))
-        .count()
+/// Cuántos certificados firmables propios tiene cada clase de almacén que tenga alguno.
+pub fn certificates_by_class(
+    token: &dyn Token,
+    stores: &[Store],
+    installed_dir: &Path,
+) -> Vec<(StoreClass, usize)> {
+    let mut counted: Vec<(StoreClass, usize)> = Vec::new();
+    for store in stores {
+        let found = token
+            .list(store)
+            .map_or(0, |certificates| certificates.len());
+        if found == 0 {
+            continue;
+        }
+        let class = store.class_under(installed_dir);
+        match counted.iter_mut().find(|(seen, _)| *seen == class) {
+            Some((_, certificates)) => *certificates += found,
+            None => counted.push((class, found)),
+        }
+    }
+    counted
 }
 
 /// Filas de un listado con asas acuñadas y estado de selección.

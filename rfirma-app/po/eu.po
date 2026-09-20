@@ -873,7 +873,7 @@ msgid "status.signals.siteSignature"
 msgstr "Egoitzetako sinadura"
 
 msgid "status.signals.userCertificates"
-msgstr "Zure ziurtagiriak"
+msgstr "Sinadura elektronikoko ziurtagiriak"
 
 msgid "status.signals.localCaCertificate"
 msgstr "rFirma-ren ziurtagiria"
@@ -917,12 +917,12 @@ msgstr "Ezin da kontsultatu"
 msgid "status.values.userCertificates.none"
 msgstr "Bat ere ez"
 
-#. En cuántos sitios —navegador, tarjeta o fichero instalado— tiene la persona al menos un certificado propio.
-msgid "status.values.userCertificates.stores"
-msgid_plural "status.values.userCertificates.stores"
-msgstr[0] "Leku bat"
-msgstr[1] "{{count}} leku"
-msgstr[2] "{{count}} leku"
+#. Cuántos certificados de firma electrónica propios hay en total.
+msgid "status.values.userCertificates.count"
+msgid_plural "status.values.userCertificates.count"
+msgstr[0] "Ziurtagiri bat"
+msgstr[1] "{{count}} ziurtagiri"
+msgstr[2] "{{count}} ziurtagiri"
 
 #. En cuántos navegadores está ya el certificado de rFirma, de cuántos detectados.
 msgid "status.values.localCaCertificate"
@@ -933,6 +933,10 @@ msgstr[2] "{{trusted}}/{{count}} nabigatzaile"
 
 msgid "status.detail.toggle"
 msgstr "Ikusi nabigatzaileak"
+
+#. El desplegable de la señal de los certificados propios: en qué sitio hay cuántos.
+msgid "status.detail.where"
+msgstr "Ikusi non"
 
 msgid "status.detail.installed"
 msgstr "Instalatuta"
@@ -948,6 +952,12 @@ msgstr "Chrome eta Chromium"
 
 msgid "status.storeBrands.nssdb"
 msgstr "Beste nabigatzaileak"
+
+msgid "status.storeBrands.card"
+msgstr "Txartela"
+
+msgid "status.storeBrands.installed"
+msgstr "Instalatutako fitxategia"
 
 msgid "status.notices.restartFirefox"
 msgstr "Berrabiarazi Firefox eragina izan dezan."
