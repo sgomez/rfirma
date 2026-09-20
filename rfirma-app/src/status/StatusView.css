@@ -122,17 +122,17 @@
   gap: var(--rf-space-xs);
 }
 
-.status-view__verdict-icon {
-  display: flex;
-  flex: none;
+.status-view__cell-verdict--strong {
+  color: var(--rf-text);
 }
 
-.status-view__verdict-icon--muted {
+.status-view__cell-verdict--muted {
   color: var(--rf-text-muted);
 }
 
-.status-view__verdict-icon--default {
-  color: var(--rf-text);
+.status-view__verdict-icon {
+  display: flex;
+  flex: none;
 }
 
 .status-view__verdict-text {
@@ -141,11 +141,6 @@
 
 .status-view__verdict-text--strong {
   font-weight: 700;
-  color: var(--rf-text);
-}
-
-.status-view__verdict-text--muted {
-  color: var(--rf-text-muted);
 }
 
 .status-view__cell-action {

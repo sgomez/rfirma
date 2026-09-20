@@ -239,21 +239,17 @@ export function StatusView({
                 )}
               </div>
 
-              <div className="status-view__cell-verdict">
-                <span
-                  className={`status-view__verdict-icon ${
-                    row.verdict === "notApplicable" || row.verdict === "checking"
-                      ? "status-view__verdict-icon--muted"
-                      : "status-view__verdict-icon--default"
-                  }`}
-                >
-                  {renderVerdictIcon(row.verdict)}
-                </span>
+              <div
+                className={`status-view__cell-verdict ${
+                  demandsAttention(row.verdict)
+                    ? "status-view__cell-verdict--strong"
+                    : "status-view__cell-verdict--muted"
+                }`}
+              >
+                <span className="status-view__verdict-icon">{renderVerdictIcon(row.verdict)}</span>
                 <span
                   className={`rf-body status-view__verdict-text ${
-                    row.verdict === "attention" || row.verdict === "incorrect"
-                      ? "status-view__verdict-text--strong"
-                      : "status-view__verdict-text--muted"
+                    demandsAttention(row.verdict) ? "status-view__verdict-text--strong" : ""
                   }`}
                 >
                   {verdictLabel(t, row.verdict)}
@@ -411,6 +407,10 @@ function storeBrandLabel(t: TFunction, brand: StoreBrand): string {
     case "nssdb":
       return t("status.storeBrands.nssdb");
   }
+}
+
+function demandsAttention(verdict: Verdict): boolean {
+  return verdict === "attention" || verdict === "incorrect";
 }
 
 function verdictLabel(t: TFunction, verdict: Verdict): string {

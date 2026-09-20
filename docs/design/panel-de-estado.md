@@ -304,9 +304,13 @@ Tokens: `--rf-bg`, `--rf-surface`, `--rf-text`, `--rf-text-muted`,
 cabecera de la tabla y el del desplegable son `--rf-border-strong` porque son
 contorno de control y separador fuerte, no decoración.
 
-Los cinco iconos de veredicto y el galón son `<svg>` **en línea**, sobre lienzo
-`0 0 24 24`, trazo de 1,6 en `currentColor` con extremos redondeados, como las
-tres rayas del menú. No hay biblioteca de iconos.
+El galón es un `<svg>` **en línea** de contorno, sobre lienzo `0 0 24 24`, como
+las tres rayas del menú. Los cinco iconos de veredicto también van en línea,
+pero **macizos**: un contorno de 16 px tiene arcos de un píxel que el
+antialiasing convierte en gris, y el icono se ve deslavazado junto al resto de
+la pantalla. No hay biblioteca de iconos: los trazados se copian de Heroicons
+(ver [sistema de diseño](design-system.md)). El icono de la columna
+«Veredicto» toma **el mismo color que su palabra**.
 
 La tabla no es un componente del sistema de diseño: se maqueta con `.rf-row` y
 anchos fijos.
