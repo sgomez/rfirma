@@ -100,7 +100,7 @@ el triángulo a la derecha. Dice «entra a mirar», y nada más.
 **Lo encienden dos cosas, y solo dos**
 ([#661](https://github.com/sgomez/rfirma/issues/661)):
 
-- **El certificado de rFirma ausente o a medias** —`0 de 3 almacenes` o
+- **El certificado de rFirma ausente o a medias** —`0 de 3 navegadores` o
   `2 de 3`—, que es una instalación sin terminar.
 - **`Sin configurar`** en `Firma en sedes`: nadie atiende los enlaces de las
   sedes, así que una firma que empiece en una no va a llegar a ninguna parte.

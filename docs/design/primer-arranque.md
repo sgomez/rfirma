@@ -104,7 +104,7 @@ Resultados, en el mismo nodo:
 - Bien: **Instalado en tus navegadores.** más, siempre, la línea *Si tienes
   alguno abierto, reinícialo para que lo reconozca.*
 - Mal: **No se ha podido instalar en todas partes.** más la lista con marca por
-  destino —✓ Firefox, ✓ Chrome, ✗ Almacén de certificados del sistema— y el
+  destino —✓ Firefox, ✓ Chrome y Chromium, ✗ Otros navegadores— y el
   botón `Reintentar` en secundario.
 
 ### Pantalla 2 · Usar rFirma por defecto
