@@ -411,7 +411,7 @@ describe("StatusView", () => {
 
     const row = await screen.findByRole("status");
     expect(within(row).getByText("Tus certificados")).toBeInTheDocument();
-    expect(within(row).getByText("3 navegadores")).toBeInTheDocument();
+    expect(within(row).getByText("3 sitios")).toBeInTheDocument();
     expect(within(row).getByText("Correcto")).toBeInTheDocument();
     expect(within(row).queryByRole("button")).not.toBeInTheDocument();
   });
@@ -589,7 +589,7 @@ describe("StatusView", () => {
     await waitFor(() => {
       expect(within(row).getByText("Correcto")).toBeInTheDocument();
     });
-    expect(within(row).getByText("1 navegador")).toBeInTheDocument();
+    expect(within(row).getByText("1 sitio")).toBeInTheDocument();
   });
 
   it("notifies onRowsChange with the rows read at startup", async () => {

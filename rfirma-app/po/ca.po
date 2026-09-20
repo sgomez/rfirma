@@ -909,12 +909,12 @@ msgstr "No es pot consultar"
 msgid "status.values.userCertificates.none"
 msgstr "Cap"
 
-#. En cuántos navegadores tiene la persona al menos un certificado propio.
+#. En cuántos sitios —navegador, tarjeta o fichero instalado— tiene la persona al menos un certificado propio.
 msgid "status.values.userCertificates.stores"
 msgid_plural "status.values.userCertificates.stores"
-msgstr[0] "1 navegador"
-msgstr[1] "{{count}} navegadors"
-msgstr[2] "{{count}} navegadors"
+msgstr[0] "1 lloc"
+msgstr[1] "{{count}} llocs"
+msgstr[2] "{{count}} llocs"
 
 #. En cuántos navegadores está ya el certificado de rFirma, de cuántos detectados.
 msgid "status.values.localCaCertificate"

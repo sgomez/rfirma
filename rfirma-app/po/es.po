@@ -913,12 +913,12 @@ msgstr "No se puede consultar"
 msgid "status.values.userCertificates.none"
 msgstr "Ninguno"
 
-#. En cuántos navegadores tiene la persona al menos un certificado propio.
+#. En cuántos sitios —navegador, tarjeta o fichero instalado— tiene la persona al menos un certificado propio.
 msgid "status.values.userCertificates.stores"
 msgid_plural "status.values.userCertificates.stores"
-msgstr[0] "1 navegador"
-msgstr[1] "{{count}} navegadores"
-msgstr[2] "{{count}} navegadores"
+msgstr[0] "1 sitio"
+msgstr[1] "{{count}} sitios"
+msgstr[2] "{{count}} sitios"
 
 #. En cuántos navegadores está ya el certificado de rFirma, de cuántos detectados.
 msgid "status.values.localCaCertificate"

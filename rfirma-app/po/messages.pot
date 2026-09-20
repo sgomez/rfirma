@@ -829,7 +829,7 @@ msgstr ""
 msgid "status.values.userCertificates.none"
 msgstr ""
 
-#. En cuántos navegadores tiene la persona al menos un certificado propio.
+#. En cuántos sitios —navegador, tarjeta o fichero instalado— tiene la persona al menos un certificado propio.
 msgid "status.values.userCertificates.stores"
 msgid_plural "status.values.userCertificates.stores"
 msgstr[0] ""

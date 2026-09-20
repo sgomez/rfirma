@@ -917,12 +917,12 @@ msgstr "Ezin da kontsultatu"
 msgid "status.values.userCertificates.none"
 msgstr "Bat ere ez"
 
-#. En cuántos navegadores tiene la persona al menos un certificado propio.
+#. En cuántos sitios —navegador, tarjeta o fichero instalado— tiene la persona al menos un certificado propio.
 msgid "status.values.userCertificates.stores"
 msgid_plural "status.values.userCertificates.stores"
-msgstr[0] "Nabigatzaile bat"
-msgstr[1] "{{count}} nabigatzaile"
-msgstr[2] "{{count}} nabigatzaile"
+msgstr[0] "Leku bat"
+msgstr[1] "{{count}} leku"
+msgstr[2] "{{count}} leku"
 
 #. En cuántos navegadores está ya el certificado de rFirma, de cuántos detectados.
 msgid "status.values.localCaCertificate"

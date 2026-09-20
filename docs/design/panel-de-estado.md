@@ -70,7 +70,7 @@ La cabecera de la tabla va en `.rf-label` en versalitas con `letter-spacing:
 
 Bajo la fila, y **sangrado a 206 px** —los 190 de la columna «Señal» más los 16
 de separación—, cuelga lo que la fila necesite: la pista de una línea, o el
-desplegable `Ver navegadores` con su lista.
+desplegable con su lista.
 
 ### Geometría
 
@@ -84,9 +84,10 @@ desplegable `Ver navegadores` con su lista.
   36 px, que es el tamaño normal.
 - El desplegable de valor mide 220 px de ancho mínimo y 36 px de alto, con
   `--rf-border-strong` y el galón de 16 px a la derecha.
-- `Ver navegadores` es un botón fantasma con un galón de 14 px que gira 90° al
-  abrirse. La lista va debajo, con la marca en una columna de 12 px, el nombre
-  del almacén en 230 px y la nota en `--rf-text-muted`.
+- Los dos desplegables —`Ver navegadores` en la CA, `Ver dónde` en los tuyos— son
+  botones fantasma con un galón de 14 px que gira 90° al abrirse. La lista va
+  debajo, con la marca en una columna de 12 px, el nombre del sitio en 230 px y la
+  nota en `--rf-text-muted`; la de los tuyos se salta la columna de la marca.
 - Pie: 12 px de relleno vertical, `--rf-space-md` lateral.
 
 ## Las cuatro señales
@@ -96,7 +97,7 @@ desplegable `Ver navegadores` con su lista.
 | Versión | `0.4.1` · `0.4.1 → 0.5.0` | `Actualizar` |
 | Firma en sedes | `AutoFirma` · `rFirma` · `Sin configurar` · `No se puede consultar` | `Usar rFirma`, y un desplegable cuando hay dónde elegir |
 | Certificado de rFirma | `2 de 3 navegadores` | `Instalar` o `Retirar…` según el veredicto, y `Ver navegadores` |
-| Tus certificados | `Ninguno` · `3 navegadores` | `Cómo instalar`, y `Ver navegadores` |
+| Tus certificados | `Ninguno` · `4 certificados` | `Cómo instalar`, y `Ver dónde` |
 
 **La redacción es telegráfica: etiqueta y valor, ni una frase dentro de una
 celda.** Un panel de estado se mira, no se lee: `0.4.1 → 0.5.0` dice lo mismo
@@ -110,10 +111,10 @@ Su hueco se reserva siempre, así que ponerla o quitarla no mueve la tabla.
 confundirse.** Son dos cosas distintas que antes decían las dos «almacenes»: el
 primero es el certificado propio que rFirma instala para que el navegador se fíe
 de ella —el que instala el [primer arranque](primer-arranque.md)—; el segundo
-son los tuyos, con los que firmas. Las dos llevan `Ver navegadores`, y la lista
-cuenta cosas distintas: dónde ha entrado la CA —Firefox, Chrome y Chromium, Otros
-navegadores, con ✓ o ✗ y el motivo del fallo al lado— frente a cuántos
-certificados tuyos hay en cada navegador.
+son los tuyos, con los que firmas. Las dos cuelgan una lista, y **no es la misma
+lista**: la de la CA dice a qué navegadores ha entrado, con ✓ o ✗ y el motivo del
+fallo al lado; la tuya dice dónde tienes certificados y cuántos en cada sitio, y
+ahí no hay nada que pueda fallar, así que no lleva marca.
 
 **La lista dice `Instalado` o `No instalado`, no «De confianza».** Lo que se
 mide por debajo es la confianza: si la CA de rFirma está marcada como raíz
@@ -124,7 +125,7 @@ existe para disipar. La pregunta que trae aquí a quien lee es más simple: ¿es
 puesto o no está puesto? `Instalado` la contesta, y es lo que el botón
 `Instalar` de al lado promete cambiar.
 
-**Se cuentan `navegadores`, no «almacenes».** «Almacén de certificados» es el
+**La CA se cuenta en `navegadores`, no en «almacenes».** «Almacén de certificados» es el
 nombre técnico del sitio, y a quien no lo conoce no le dice dónde mirar: los tres
 que rFirma encuentra son bases NSS de un navegador —el perfil de Firefox, la de
 la familia Chromium y las demás que aparezcan—, así que la palabra que nombra el
@@ -179,7 +180,7 @@ Cinco casos, y la fila **no cambia de alto en ninguno**:
 
 | Caso | Valor | Veredicto | Qué ofrece |
 | ---- | ----- | --------- | ---------- |
-| AutoFirma es la aplicación | `AutoFirma` | Atención | `Usar rFirma`, y desplegable si el certificado está en algún almacén |
+| AutoFirma es la aplicación | `AutoFirma` | Atención | `Usar rFirma`, y desplegable si el certificado está en algún navegador |
 | rFirma, con AutoFirma instalado | `rFirma` | Correcto | Desplegable |
 | rFirma, sin AutoFirma | `rFirma` | Correcto | Texto pelado |
 | Sin configurar | `Sin configurar` | Atención | Desplegable y `Usar rFirma` |
@@ -211,10 +212,36 @@ así que la casilla se apaga con «No aplica» y se queda sin botón, sin desple
 y sin la pista de Firefox, que ahí no diría nada. **La fila no desaparece**: una
 fila que a veces está obliga a reaprender la pantalla cada vez que se abre.
 
+### La fila de `Tus certificados`: dónde y cuántos
+
+**El valor cuenta certificados, no sitios.** La fila se llama `Tus
+certificados`, y la pregunta que trae a mirarla es si hay con qué firmar:
+`4 certificados` la contesta de un vistazo. Antes contaba los sitios —`3
+almacenes`—, que es el dato de segundo orden: útil para ir a buscarlos, no para
+saber si están.
+
+**Y el sitio, en la lista, con su recuento.** Una línea por sitio, el nombre a la
+izquierda y `2 certificados` en `--rf-text-muted` a la derecha, en la misma
+geometría que la lista de la CA pero **sin la columna de la marca**: ✓ y ✗ dicen
+si algo salió bien, y aquí no se ha intentado nada. El desplegable se llama
+`Ver dónde`, no `Ver navegadores`, porque esta lista no es solo de navegadores:
+en un sitio cabe una tarjeta.
+
+**Por eso esta fila no cuenta navegadores y la de la CA sí.** Una CA solo puede
+entrar en un perfil NSS, que es siempre el de un navegador; los certificados
+propios salen además de una tarjeta o de un fichero que se instaló. Las marcas
+que puede traer la lista son `Firefox`, `Chrome y Chromium`, `Otros navegadores`,
+`Tarjeta` y `Fichero instalado`.
+
+**Con `Ninguno` no hay desplegable.** No es que la lista esté vacía: es que no
+hay lista, y un desplegable que se abre para no decir nada es un gesto que
+castiga a quien lo prueba. La acción de esa fila es `Cómo instalar`, que es lo
+único que queda por hacer.
+
 ### La fila del certificado: `Instalar` o `Retirar…`
 
 El botón lo fija el veredicto, y **nunca están los dos**: `Instalar` mientras
-falte algún almacén, `Retirar…` cuando está en los tres. En la columna de acción
+falte algún navegador, `Retirar…` cuando está en los tres. En la columna de acción
 cabe una sola acción, y ofrecer retirar lo que aún no está entero es ofrecer dos
 cosas para el mismo hueco. Los tres puntos dicen que abre un diálogo, como en el
 resto de la interfaz: el de
@@ -231,7 +258,7 @@ rFirma sigue siendo quien firma en sedes y la fila dice «Incorrecto» con
 `Instalar`. De ahí sale todo lo demás.
 
 **El desplegable no ofrece `rFirma` si el certificado no está en ningún
-almacén.** Un desplegable que ofrece lo imposible convierte una elección en un
+navegador.** Un desplegable que ofrece lo imposible convierte una elección en un
 error diferido.
 
 **`Usar rFirma` instala también el certificado, y no cambia de rótulo.** El botón
@@ -271,7 +298,7 @@ se pueda contradecir entre ellas.
 | Momento | Qué se ve |
 | ------- | --------- |
 | algo que reparar | La CA a medias y ningún certificado propio: dos «Atención» con su botón |
-| todo correcto | Las cuatro en «Correcto», con los navegadores propios desplegados |
+| todo correcto | Las cuatro en «Correcto», con la lista de `Tus certificados` desplegada |
 | a medio medir | Versión y certificado en «Comprobando», con el valor en `—` |
 | reparando | La CA con `Instalando…` en su celda de acción, y `Volver a comprobar` apagado |
 | la reparación falla | La CA en «Incorrecto», `0 de 3 navegadores`, con el motivo por navegador |
