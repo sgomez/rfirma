@@ -930,11 +930,11 @@ msgstr[2] "{{trusted}} de {{count}} navegadores"
 msgid "status.detail.toggle"
 msgstr "Ver navegadores"
 
-msgid "status.detail.trusted"
-msgstr "De confianza"
+msgid "status.detail.installed"
+msgstr "Instalado"
 
-msgid "status.detail.untrusted"
-msgstr "No de confianza"
+msgid "status.detail.notInstalled"
+msgstr "No instalado"
 
 msgid "status.storeBrands.firefox"
 msgstr "Firefox"

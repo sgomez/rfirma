@@ -934,11 +934,11 @@ msgstr[2] "{{trusted}}/{{count}} nabigatzaile"
 msgid "status.detail.toggle"
 msgstr "Ikusi nabigatzaileak"
 
-msgid "status.detail.trusted"
-msgstr "Fidagarria"
+msgid "status.detail.installed"
+msgstr "Instalatuta"
 
-msgid "status.detail.untrusted"
-msgstr "Ez da fidagarria"
+msgid "status.detail.notInstalled"
+msgstr "Ez dago instalatuta"
 
 msgid "status.storeBrands.firefox"
 msgstr "Firefox"

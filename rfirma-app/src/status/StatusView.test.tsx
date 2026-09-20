@@ -533,7 +533,7 @@ describe("StatusView", () => {
 
     await user.click(within(row).getByRole("button", { name: "Ver navegadores" }));
 
-    expect(within(row).getAllByText("De confianza")).toHaveLength(2);
+    expect(within(row).getAllByText("Instalado")).toHaveLength(2);
   });
 
   it("remeasures the certificate stores row on Volver a comprobar", async () => {

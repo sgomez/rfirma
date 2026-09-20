@@ -309,8 +309,8 @@ export function StatusView({
                         <span className="rf-prose">{storeBrandLabel(t, store.brand)}</span>
                         <span className="rf-body status-view__detail-note">
                           {store.trusted
-                            ? t("status.detail.trusted")
-                            : t("status.detail.untrusted")}
+                            ? t("status.detail.installed")
+                            : t("status.detail.notInstalled")}
                         </span>
                       </li>
                     ))}

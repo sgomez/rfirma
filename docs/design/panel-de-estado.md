@@ -115,6 +115,15 @@ cuenta cosas distintas: dónde ha entrado la CA —Firefox, Chrome y Chromium, O
 navegadores, con ✓ o ✗ y el motivo del fallo al lado— frente a cuántos
 certificados tuyos hay en cada navegador.
 
+**La lista dice `Instalado` o `No instalado`, no «De confianza».** Lo que se
+mide por debajo es la confianza: si la CA de rFirma está marcada como raíz
+fiable en esa base NSS. Pero escrito en la pantalla, «No de confianza» junto al
+nombre de un navegador se lee como una acusación —que ese navegador, o el
+certificado, no son fiables— y siembra justo la desconfianza que el panel
+existe para disipar. La pregunta que trae aquí a quien lee es más simple: ¿está
+puesto o no está puesto? `Instalado` la contesta, y es lo que el botón
+`Instalar` de al lado promete cambiar.
+
 **Se cuentan `navegadores`, no «almacenes».** «Almacén de certificados» es el
 nombre técnico del sitio, y a quien no lo conoce no le dice dónde mirar: los tres
 que rFirma encuentra son bases NSS de un navegador —el perfil de Firefox, la de

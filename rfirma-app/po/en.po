@@ -915,11 +915,11 @@ msgstr[2] "{{trusted}} of {{count}} browsers"
 msgid "status.detail.toggle"
 msgstr "View browsers"
 
-msgid "status.detail.trusted"
-msgstr "Trusted"
+msgid "status.detail.installed"
+msgstr "Installed"
 
-msgid "status.detail.untrusted"
-msgstr "Not trusted"
+msgid "status.detail.notInstalled"
+msgstr "Not installed"
 
 msgid "status.storeBrands.firefox"
 msgstr "Firefox"

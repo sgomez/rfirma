@@ -846,10 +846,12 @@ msgstr[2] ""
 msgid "status.detail.toggle"
 msgstr ""
 
-msgid "status.detail.trusted"
+#. Que el certificado de rFirma está puesto en ese navegador.
+msgid "status.detail.installed"
 msgstr ""
 
-msgid "status.detail.untrusted"
+#. Que el certificado de rFirma no está en ese navegador.
+msgid "status.detail.notInstalled"
 msgstr ""
 
 msgid "status.storeBrands.firefox"
