@@ -59,7 +59,7 @@ Cuatro columnas fijas, una fila por señal:
 
 | Columna | Ancho | Qué lleva |
 | ------- | ----- | --------- |
-| Señal | 190 px | El nombre, en `.rf-prose` a peso 600 |
+| Señal | 260 px | El nombre, en `.rf-prose` a peso 600 |
 | Valor | flexible | El dato: texto pelado o desplegable |
 | Veredicto | 130 px | Icono de 16 px más la palabra |
 | Acción | 160 px | Un botón secundario, o lo que la reparación esté haciendo |
@@ -68,9 +68,9 @@ La cabecera de la tabla va en `.rf-label` en versalitas con `letter-spacing:
 .6px` y se separa del cuerpo con `--rf-border-strong`; las filas entre sí, con
 `--rf-border-subtle`.
 
-Bajo la fila, y **sangrado a 206 px** —los 190 de la columna «Señal» más los 16
+Bajo la fila, y **sangrado a 276 px** —los 260 de la columna «Señal» más los 16
 de separación—, cuelga lo que la fila necesite: la pista de una línea, o el
-desplegable `ver almacenes` con su lista.
+desplegable con su lista.
 
 ### Geometría
 
@@ -84,9 +84,10 @@ desplegable `ver almacenes` con su lista.
   36 px, que es el tamaño normal.
 - El desplegable de valor mide 220 px de ancho mínimo y 36 px de alto, con
   `--rf-border-strong` y el galón de 16 px a la derecha.
-- `ver almacenes` es un botón fantasma con un galón de 14 px que gira 90° al
-  abrirse. La lista va debajo, con la marca en una columna de 12 px, el nombre
-  del almacén en 230 px y la nota en `--rf-text-muted`.
+- Los dos desplegables —`Ver navegadores` en la CA, `Ver dónde` en los tuyos— son
+  botones fantasma con un galón de 14 px que gira 90° al abrirse. La lista va
+  debajo, con la marca en una columna de 12 px, el nombre del sitio en 230 px y la
+  nota en `--rf-text-muted`; la de los tuyos se salta la columna de la marca.
 - Pie: 12 px de relleno vertical, `--rf-space-md` lateral.
 
 ## Las cuatro señales
@@ -95,8 +96,8 @@ desplegable `ver almacenes` con su lista.
 | ----- | ----- | ------ |
 | Versión | `0.4.1` · `0.4.1 → 0.5.0` | `Actualizar` |
 | Firma en sedes | `AutoFirma` · `rFirma` · `Sin configurar` · `No se puede consultar` | `Usar rFirma`, y un desplegable cuando hay dónde elegir |
-| Certificado de rFirma | `2 de 3 almacenes` | `Instalar` o `Retirar…` según el veredicto, y `ver almacenes` |
-| Tus certificados | `Ninguno` · `3 almacenes` | `Cómo instalar`, y `ver almacenes` |
+| Certificado de rFirma | `2 de 3 navegadores` | `Instalar` o `Retirar…` según el veredicto, y `Ver navegadores` |
+| Certificados de firma electrónica | `Ninguno` · `4 certificados` | `Cómo instalar`, y `Ver dónde` |
 
 **La redacción es telegráfica: etiqueta y valor, ni una frase dentro de una
 celda.** Un panel de estado se mira, no se lee: `0.4.1 → 0.5.0` dice lo mismo
@@ -106,14 +107,34 @@ que «hay una versión nueva disponible, la 0.5.0» y se ve sin leerlo.
 primera vez.`, debajo de la fila de la firma en sedes y **fuera** de su celda.
 Su hueco se reserva siempre, así que ponerla o quitarla no mueve la tabla.
 
-**`Certificado de rFirma` y `Tus certificados` se llaman así para no
-confundirse.** Son dos cosas distintas que antes decían las dos «almacenes»: el
+**`Certificado de rFirma` y `Certificados de firma electrónica` se llaman así
+para no confundirse.** Son dos cosas distintas que antes decían las dos «almacenes»: el
 primero es el certificado propio que rFirma instala para que el navegador se fíe
 de ella —el que instala el [primer arranque](primer-arranque.md)—; el segundo
-son los tuyos, con los que firmas. Las dos llevan `ver almacenes`, y la lista
-cuenta cosas distintas: dónde ha entrado la CA —Firefox, Chrome y Chromium,
-Almacén del sistema, con ✓ o ✗ y el motivo del fallo al lado— frente a cuántos
-certificados hay en cada almacén tuyo.
+son los tuyos, con los que firmas. Las dos cuelgan una lista, y **no es la misma
+lista**: la de la CA dice a qué navegadores ha entrado, con ✓ o ✗ y el motivo del
+fallo al lado; la tuya dice dónde tienes certificados y cuántos en cada sitio, y
+ahí no hay nada que pueda fallar, así que no lleva marca.
+
+**La lista dice `Instalado` o `No instalado`, no «De confianza».** Lo que se
+mide por debajo es la confianza: si la CA de rFirma está marcada como raíz
+fiable en esa base NSS. Pero escrito en la pantalla, «No de confianza» junto al
+nombre de un navegador se lee como una acusación —que ese navegador, o el
+certificado, no son fiables— y siembra justo la desconfianza que el panel
+existe para disipar. La pregunta que trae aquí a quien lee es más simple: ¿está
+puesto o no está puesto? `Instalado` la contesta, y es lo que el botón
+`Instalar` de al lado promete cambiar.
+
+**La CA se cuenta en `navegadores`, no en «almacenes».** «Almacén de certificados» es el
+nombre técnico del sitio, y a quien no lo conoce no le dice dónde mirar: los tres
+que rFirma encuentra son bases NSS de un navegador —el perfil de Firefox, la de
+la familia Chromium y las demás que aparezcan—, así que la palabra que nombra el
+sitio en el idioma de quien lee es `navegador`. El diálogo de
+[retirar el certificado](retirar-certificado.md) ya hablaba de «los navegadores
+donde esté»; ahora la tabla dice lo mismo. Por eso la tercera marca de la lista
+es `Otros navegadores` y no `Almacén del sistema`: en Linux no hay un almacén de
+certificados personales del sistema, y lo que cae ahí son perfiles NSS de otros
+navegadores —Chromium de Snap, rutas XDG— que ni Firefox ni Chrome reclaman.
 
 **La segunda fila se llama `Firma en sedes`, no `Aplicación de firma`.** Con las
 dos filas acopladas, el nombre viejo se leía como «sin el certificado de rFirma
@@ -159,7 +180,7 @@ Cinco casos, y la fila **no cambia de alto en ninguno**:
 
 | Caso | Valor | Veredicto | Qué ofrece |
 | ---- | ----- | --------- | ---------- |
-| AutoFirma es la aplicación | `AutoFirma` | Atención | `Usar rFirma`, y desplegable si el certificado está en algún almacén |
+| AutoFirma es la aplicación | `AutoFirma` | Atención | `Usar rFirma`, y desplegable si el certificado está en algún navegador |
 | rFirma, con AutoFirma instalado | `rFirma` | Correcto | Desplegable |
 | rFirma, sin AutoFirma | `rFirma` | Correcto | Texto pelado |
 | Sin configurar | `Sin configurar` | Atención | Desplegable y `Usar rFirma` |
@@ -191,14 +212,46 @@ así que la casilla se apaga con «No aplica» y se queda sin botón, sin desple
 y sin la pista de Firefox, que ahí no diría nada. **La fila no desaparece**: una
 fila que a veces está obliga a reaprender la pantalla cada vez que se abre.
 
+### La fila de `Certificados de firma electrónica`: dónde y cuántos
+
+**El valor cuenta certificados, no sitios.** La pregunta que trae a mirar esta
+fila es si hay con qué firmar: `4 certificados` la contesta de un vistazo. Antes
+contaba los sitios —`3 almacenes`—, que es el dato de segundo orden: útil para ir
+a buscarlos, no para saber si están. **Y lleva el sustantivo, no solo la cifra**:
+un `4` suelto obliga a subir al nombre de la fila para saber de qué son cuatro, y
+la celda tiene sitio de sobra para decirlo.
+
+**Y el sitio, en la lista, con su cuenta.** Una línea por sitio, el nombre a la
+izquierda y la cifra en `--rf-text-muted` a la derecha —ahí sí pelada, porque la
+lista cuelga de la celda que acaba de decir `certificados`—, en la misma
+geometría que la lista de la CA pero **sin la columna de la marca**: ✓ y ✗ dicen
+si algo salió bien, y aquí no se ha intentado nada. El desplegable se llama
+`Ver dónde`, no `Ver navegadores`, porque esta lista no es solo de navegadores:
+en un sitio cabe una tarjeta.
+
+**Dos perfiles del mismo navegador son una línea.** La lista es de sitios como los
+nombra quien mira —`Firefox`—, no de perfiles NSS: quien tiene dos perfiles de
+Firefox no quiere leer dos veces `Firefox`, y el total de arriba ya suma los dos.
+
+**Por eso esta fila no cuenta navegadores y la de la CA sí.** Una CA solo puede
+entrar en un perfil NSS, que es siempre el de un navegador; los certificados
+propios salen además de una tarjeta o de un fichero que se instaló. Las marcas
+que puede traer la lista son `Firefox`, `Chrome y Chromium`, `Otros navegadores`,
+`Tarjeta` y `Fichero instalado`.
+
+**Con `Ninguno` no hay desplegable.** No es que la lista esté vacía: es que no
+hay lista, y un desplegable que se abre para no decir nada es un gesto que
+castiga a quien lo prueba. La acción de esa fila es `Cómo instalar`, que es lo
+único que queda por hacer.
+
 ### La fila del certificado: `Instalar` o `Retirar…`
 
 El botón lo fija el veredicto, y **nunca están los dos**: `Instalar` mientras
-falte algún almacén, `Retirar…` cuando está en los tres. En la columna de acción
+falte algún navegador, `Retirar…` cuando está en los tres. En la columna de acción
 cabe una sola acción, y ofrecer retirar lo que aún no está entero es ofrecer dos
 cosas para el mismo hueco. Los tres puntos dicen que abre un diálogo, como en el
 resto de la interfaz: el de
-[retirar el certificado](retirar-certificado.md). `ver almacenes` se queda debajo
+[retirar el certificado](retirar-certificado.md). `Ver navegadores` se queda debajo
 con lo puesto y lo que falta, que es lo que hace falta para decidir entre una
 cosa y la otra.
 
@@ -211,7 +264,7 @@ rFirma sigue siendo quien firma en sedes y la fila dice «Incorrecto» con
 `Instalar`. De ahí sale todo lo demás.
 
 **El desplegable no ofrece `rFirma` si el certificado no está en ningún
-almacén.** Un desplegable que ofrece lo imposible convierte una elección en un
+navegador.** Un desplegable que ofrece lo imposible convierte una elección en un
 error diferido.
 
 **`Usar rFirma` instala también el certificado, y no cambia de rótulo.** El botón
@@ -221,7 +274,7 @@ el velo que confirma el gesto, antes de hacer las dos escrituras.
 
 **Si firma AutoFirma, el certificado pasa a «No aplica» conservando su valor.**
 La CA local existe para que el navegador se fíe de rFirma; si las sedes abren
-AutoFirma, no hace falta. La fila sigue diciendo `2 de 3 almacenes`: apagar el
+AutoFirma, no hace falta. La fila sigue diciendo `2 de 3 navegadores`: apagar el
 veredicto no es borrar el dato, y ese dato es justo el que decide si queda algo
 que retirar.
 
@@ -229,7 +282,7 @@ que retirar.
 lleva, porque esa regla era una casualidad de los casos que había y no una ley:
 «No aplica» quiere decir que no hace falta, no que no haya nada que hacer, y es
 justo cuando el certificado ha dejado de hacer falta cuando tiene sentido
-quitarlo de en medio. Con `0 de 3 almacenes` se queda sin botón, que ahí sí no
+quitarlo de en medio. Con `0 de 3 navegadores` se queda sin botón, que ahí sí no
 queda nada que hacer.
 
 **`Sin configurar` y `No se puede consultar` no disparan «No aplica».** Sin nada
@@ -251,10 +304,10 @@ se pueda contradecir entre ellas.
 | Momento | Qué se ve |
 | ------- | --------- |
 | algo que reparar | La CA a medias y ningún certificado propio: dos «Atención» con su botón |
-| todo correcto | Las cuatro en «Correcto», con los almacenes propios desplegados |
+| todo correcto | Las cuatro en «Correcto», con la lista de los certificados propios desplegada |
 | a medio medir | Versión y certificado en «Comprobando», con el valor en `—` |
 | reparando | La CA con `Instalando…` en su celda de acción, y `Volver a comprobar` apagado |
-| la reparación falla | La CA en «Incorrecto», `0 de 3 almacenes`, con el motivo por almacén |
+| la reparación falla | La CA en «Incorrecto», `0 de 3 navegadores`, con el motivo por navegador |
 
 **Firma en sedes**, los cinco casos de la tabla de arriba.
 
@@ -304,9 +357,13 @@ Tokens: `--rf-bg`, `--rf-surface`, `--rf-text`, `--rf-text-muted`,
 cabecera de la tabla y el del desplegable son `--rf-border-strong` porque son
 contorno de control y separador fuerte, no decoración.
 
-Los cinco iconos de veredicto y el galón son `<svg>` **en línea**, sobre lienzo
-`0 0 24 24`, trazo de 1,6 en `currentColor` con extremos redondeados, como las
-tres rayas del menú. No hay biblioteca de iconos.
+El galón es un `<svg>` **en línea** de contorno, sobre lienzo `0 0 24 24`, como
+las tres rayas del menú. Los cinco iconos de veredicto también van en línea,
+pero **macizos**: un contorno de 16 px tiene arcos de un píxel que el
+antialiasing convierte en gris, y el icono se ve deslavazado junto al resto de
+la pantalla. No hay biblioteca de iconos: los trazados se copian de Heroicons
+(ver [sistema de diseño](design-system.md)). El icono de la columna
+«Veredicto» toma **el mismo color que su palabra**.
 
 La tabla no es un componente del sistema de diseño: se maqueta con `.rf-row` y
 anchos fijos.

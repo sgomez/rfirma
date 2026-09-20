@@ -58,7 +58,7 @@ describe("SetupWizard", () => {
 
     expect(screen.getByText("Configurar rFirma")).toBeInTheDocument();
     expect(screen.getByText(/aplicación compatible con AutoFirma 1\.9\.2/)).toBeInTheDocument();
-    expect(screen.getByText("Proyecto independiente.")).toBeInTheDocument();
+    expect(screen.getByText("Proyecto independiente")).toBeInTheDocument();
     expect(screen.getByText("Paso 1 de 2")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Continuar" }));
@@ -134,10 +134,13 @@ describe("SetupWizard", () => {
     const failedRow: SignalRow = {
       ...certificateNotInstalled,
       verdict: "incorrect",
-      detail: [
-        { brand: "firefox", trusted: true },
-        { brand: "nssdb", trusted: false },
-      ],
+      detail: {
+        kind: "trust",
+        stores: [
+          { brand: "firefox", trusted: true },
+          { brand: "nssdb", trusted: false },
+        ],
+      },
     };
     const installedRow: SignalRow = {
       ...certificateNotInstalled,
@@ -163,7 +166,7 @@ describe("SetupWizard", () => {
       expect(screen.getByText("No se ha podido instalar en todas partes.")).toBeInTheDocument();
     });
     expect(screen.getByText("Firefox")).toBeInTheDocument();
-    expect(screen.getByText("Almacén del sistema")).toBeInTheDocument();
+    expect(screen.getByText("Otros navegadores")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Reintentar" }));
 
@@ -287,7 +290,7 @@ describe("SetupWizard", () => {
     const failedRow: SignalRow = {
       ...certificateNotInstalled,
       verdict: "incorrect",
-      detail: [{ brand: "firefox", trusted: false }],
+      detail: { kind: "trust", stores: [{ brand: "firefox", trusted: false }] },
     };
     const base = memoryStatus([aVersionRow, certificateNotInstalled, handlerNotOurs]);
     const port = { ...base, installLocalCaCertificate: async () => failedRow };

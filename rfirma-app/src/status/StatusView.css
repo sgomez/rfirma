@@ -44,7 +44,7 @@
 }
 
 .status-view__col-signal {
-  width: 190px;
+  width: 260px;
   flex: none;
   letter-spacing: 0.6px;
   text-transform: uppercase;
@@ -91,7 +91,7 @@
 }
 
 .status-view__cell-signal {
-  width: 190px;
+  width: 260px;
   flex: none;
   font-weight: 600;
   margin: 0;
@@ -122,17 +122,17 @@
   gap: var(--rf-space-xs);
 }
 
-.status-view__verdict-icon {
-  display: flex;
-  flex: none;
+.status-view__cell-verdict--strong {
+  color: var(--rf-text);
 }
 
-.status-view__verdict-icon--muted {
+.status-view__cell-verdict--muted {
   color: var(--rf-text-muted);
 }
 
-.status-view__verdict-icon--default {
-  color: var(--rf-text);
+.status-view__verdict-icon {
+  display: flex;
+  flex: none;
 }
 
 .status-view__verdict-text {
@@ -141,11 +141,6 @@
 
 .status-view__verdict-text--strong {
   font-weight: 700;
-  color: var(--rf-text);
-}
-
-.status-view__verdict-text--muted {
-  color: var(--rf-text-muted);
 }
 
 .status-view__cell-action {
@@ -163,7 +158,7 @@
 }
 
 .status-view__detail {
-  padding-left: 206px;
+  padding-left: 276px;
 }
 
 .status-view__detail-toggle {
@@ -191,12 +186,17 @@
   gap: var(--rf-space-xs);
 }
 
+.status-view__detail-place {
+  width: 230px;
+  flex: none;
+}
+
 .status-view__detail-note {
   color: var(--rf-text-muted);
 }
 
 .status-view__restart-notice {
-  padding-left: 206px;
+  padding-left: 276px;
   color: var(--rf-text-muted);
   font-size: 12px;
 }

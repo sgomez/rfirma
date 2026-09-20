@@ -214,6 +214,7 @@ fn with_the_five_roots(
             desktop::adapters::tauri::check_for_new_version,
             desktop::adapters::tauri::open_external_destination,
             desktop::adapters::tauri::read_status,
+            desktop::adapters::tauri::measure_local_ca_certificate,
             desktop::adapters::tauri::install_local_ca_certificate,
             desktop::adapters::tauri::choose_site_signature_handler,
             desktop::adapters::tauri::withdraw_rfirma,

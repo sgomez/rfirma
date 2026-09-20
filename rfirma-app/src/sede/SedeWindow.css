@@ -258,18 +258,38 @@
 }
 
 .sede-outcome__detail {
-  align-items: center;
-  gap: var(--rf-space-xs);
+  flex: none;
   padding: 8px var(--rf-space-sm);
   border: 1px solid var(--rf-border-subtle);
   border-radius: var(--rf-radius-md);
   background: var(--rf-surface);
 }
 
+.sede-outcome__detail-head {
+  align-items: center;
+}
+
+/* Los márgenes negativos sacan de la fila los 44 px del botón del sistema, que
+   hundirían `Detalle` bajo un hueco que el texto de abajo no tiene. */
+.sede-outcome__copy {
+  flex: none;
+  min-height: 28px;
+  margin: -4px -4px -4px auto;
+  padding: 0 var(--rf-space-xs);
+  font-size: 12px;
+  gap: 4px;
+  white-space: nowrap;
+}
+
 .sede-outcome__detail-text {
-  flex: 1;
-  min-width: 0;
+  max-height: 5.5em;
+  overflow-y: auto;
   overflow-wrap: anywhere;
+}
+
+.sede-outcome__report {
+  flex: none;
+  align-items: center;
 }
 
 .sede-outcome__auto-close {

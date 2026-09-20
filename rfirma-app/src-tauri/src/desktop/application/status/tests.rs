@@ -3,7 +3,9 @@ use std::time::{Duration, SystemTime};
 use super::*;
 use crate::desktop::domain::channel::Channel;
 use crate::desktop::domain::handlers::{UrlHandler, OUR_DESKTOP_FILE};
-use crate::desktop::domain::status::{ActionKind, Signal, StoreBrand, Verdict};
+use crate::desktop::domain::status::{
+    ActionKind, Signal, SignalDetail, StoreBrand, StoreCertificates, Verdict,
+};
 use crate::desktop::domain::version_check::VersionCheck;
 use crate::signing::application::tests::a_memory;
 
@@ -176,8 +178,8 @@ fn recheck_version_signal_queries_feed_and_updates_memory() {
 }
 
 #[test]
-fn no_stores_with_certificates_requires_attention_and_offers_how_to_install() {
-    let row = evaluate_user_certificates_signal(0);
+fn no_certificates_found_requires_attention_and_offers_how_to_install() {
+    let row = evaluate_user_certificates_signal(vec![]);
 
     assert_eq!(row.signal, Signal::UserCertificates);
     assert_eq!(row.value, "0");
@@ -189,26 +191,36 @@ fn no_stores_with_certificates_requires_attention_and_offers_how_to_install() {
             target: "certificateIssuance".into(),
         })
     );
+    assert_eq!(row.detail, None);
 }
 
 #[test]
-fn one_store_with_certificates_is_correct_without_action() {
-    let row = evaluate_user_certificates_signal(1);
+fn one_certificate_found_is_correct_without_action() {
+    let stores = vec![a_place(StoreBrand::Card, 1)];
+
+    let row = evaluate_user_certificates_signal(stores.clone());
 
     assert_eq!(row.signal, Signal::UserCertificates);
     assert_eq!(row.value, "1");
     assert_eq!(row.verdict, Verdict::Correct);
     assert_eq!(row.action, None);
+    assert_eq!(row.detail, Some(SignalDetail::Certificates { stores }));
 }
 
 #[test]
-fn several_stores_with_certificates_are_correct_without_action() {
-    let row = evaluate_user_certificates_signal(3);
+fn the_value_adds_up_what_every_place_holds() {
+    let stores = vec![
+        a_place(StoreBrand::Firefox, 2),
+        a_place(StoreBrand::Card, 1),
+        a_place(StoreBrand::Installed, 1),
+    ];
 
-    assert_eq!(row.signal, Signal::UserCertificates);
-    assert_eq!(row.value, "3");
+    let row = evaluate_user_certificates_signal(stores.clone());
+
+    assert_eq!(row.value, "4");
     assert_eq!(row.verdict, Verdict::Correct);
     assert_eq!(row.action, None);
+    assert_eq!(row.detail, Some(SignalDetail::Certificates { stores }));
 }
 
 #[test]
@@ -225,6 +237,13 @@ fn checking_local_ca_certificate_signal_has_no_value_nor_detail() {
 
 fn a_store(brand: StoreBrand, trusted: bool) -> StoreDetail {
     StoreDetail { brand, trusted }
+}
+
+fn a_place(brand: StoreBrand, certificates: usize) -> StoreCertificates {
+    StoreCertificates {
+        brand,
+        certificates,
+    }
 }
 
 #[test]
@@ -247,7 +266,7 @@ fn no_store_trusted_is_incorrect_and_offers_to_install() {
             target: INSTALL_LOCAL_CA_CERTIFICATE.into(),
         })
     );
-    assert_eq!(row.detail, Some(detail));
+    assert_eq!(row.detail, Some(SignalDetail::Trust { stores: detail }));
 }
 
 #[test]

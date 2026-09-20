@@ -64,11 +64,7 @@ describe("AboutDialog", () => {
     expect(onClose).toHaveBeenCalledOnce();
   });
 
-  /**
-   * Cómo actualizar (ID-181): no hay botón de descarga, y la URL solo
-   * aparece dentro de una orden copiable.
-   */
-  describe("how to update", () => {
+  describe("version status", () => {
     it("shows there is a new version, with its number", () => {
       const newVersion: NewVersion = { version: "0.4.1" };
       renderAbout({ newVersion });
@@ -82,44 +78,12 @@ describe("AboutDialog", () => {
       expect(screen.getByText("Estás en la última versión")).toBeInTheDocument();
     });
 
-    it("shows the enrolment command for the channel selected, Flatpak by default", () => {
-      renderAbout();
+    it("does not tell how to install what is already installed", () => {
+      renderAbout({ newVersion: { version: "0.4.1" } });
 
-      expect(screen.getByText(/flatpak install/)).toBeInTheDocument();
+      expect(screen.queryByText(/flatpak install/)).not.toBeInTheDocument();
       expect(screen.queryByText(/sudo apt install rfirma/)).not.toBeInTheDocument();
-    });
-
-    it("switches the command shown when another channel tab is chosen", async () => {
-      const user = userEvent.setup();
-      renderAbout();
-
-      await user.click(screen.getByRole("tab", { name: "Debian y Ubuntu" }));
-
-      expect(screen.getByText(/sudo apt install rfirma/)).toBeInTheDocument();
-
-      await user.click(screen.getByRole("tab", { name: "Fedora y openSUSE" }));
-
-      expect(screen.getByText(/sudo dnf install rfirma/)).toBeInTheDocument();
-    });
-
-    it("never offers a download button, only copyable commands", () => {
-      renderAbout();
-
-      expect(screen.queryByRole("button", { name: /descargar/i })).not.toBeInTheDocument();
-    });
-
-    it("copies the command of the channel shown to the clipboard", async () => {
-      // `userEvent.setup()` sustituye `navigator.clipboard` por su propio
-      // doble en cuanto se llama: el espía tiene que engancharse **después**,
-      // sobre ese doble, o la sustitución se lo lleva por delante.
-      const user = userEvent.setup();
-      const writeText = vi.spyOn(navigator.clipboard, "writeText").mockResolvedValue(undefined);
-      renderAbout();
-
-      await user.click(screen.getByRole("tab", { name: "Fedora y openSUSE" }));
-      await user.click(screen.getByRole("button", { name: "Copiar" }));
-
-      expect(writeText).toHaveBeenCalledWith(expect.stringContaining("sudo dnf install rfirma"));
+      expect(screen.queryByRole("button", { name: "Copiar" })).not.toBeInTheDocument();
     });
   });
 });

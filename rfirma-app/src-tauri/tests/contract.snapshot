@@ -4,6 +4,7 @@ ORDENES DE TAURI                          (<contexto>/adapters/tauri*.rs)
         read_invocation() -> Option<DroppedDocumentView>
   async check_for_new_version() -> Option<NewVersionView>
   async open_external_destination(target: String) -> Result<(), Failure>
+  async measure_local_ca_certificate() -> SignalRowView
   async install_local_ca_certificate() -> SignalRowView
   async choose_site_signature_handler(handler: String) -> Result<Vec<SignalRowView>, Failure>
   async read_status(recheck: bool) -> Vec<SignalRowView>
@@ -61,7 +62,7 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
       value: String
       verdict: Verdict
       action: Option<StatusActionView>
-      detail: Option<Vec<StoreDetailView>>
+      detail: Option<SignalDetailView>
       candidates: Option<Vec<SiteSignatureCandidateView>>
       restartFirefoxNotice: bool
 
@@ -73,6 +74,14 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
   pub struct StoreDetailView
       brand: StoreBrand
       trusted: bool
+
+  pub struct StoreCertificatesView
+      brand: StoreBrand
+      certificates: usize
+
+  pub enum SignalDetailView   (serde: etiqueta "kind")
+      Trust { stores: Vec<StoreDetailView> }
+      Certificates { stores: Vec<StoreCertificatesView> }
 
   pub struct StatusActionView
       kind: ActionKind
@@ -280,6 +289,8 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
       Firefox
       Chrome
       Nssdb
+      Card
+      Installed
 
   pub enum Theme   [signing/application/configuration_memory.rs]
       System

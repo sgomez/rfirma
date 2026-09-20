@@ -31,7 +31,13 @@ import { acknowledgementFor, useSigning } from "./signing/useSigning";
 import { useStampPreview } from "./signing/useStampPreview";
 import { DEFAULT_VISIBLE_SIGNATURE, type VisibleSignature } from "./signing/visibleSignature";
 import { StatusView } from "./status/StatusView";
-import { hasMenuAttention, memoryStatus, type SignalRow, type StatusPort } from "./status/status";
+import {
+  hasMenuAttention,
+  memoryStatus,
+  type SignalRow,
+  type StatusPort,
+  withLocalCaCertificateMeasured,
+} from "./status/status";
 import type { NewVersion, VersionCheck } from "./updates/newVersion";
 import { DocumentViewer } from "./viewer/DocumentViewer";
 import type { PdfDocument } from "./viewer/pdf";
@@ -337,9 +343,13 @@ export function App({
   // abrir el panel antes de saber si hay algo que arreglar (ID-347).
   useEffect(() => {
     let current = true;
-    statusAtStartup.current.readStatus().then((rows) => {
-      if (current) setStatusRows(rows);
-    });
+    const port = statusAtStartup.current;
+    port
+      .readStatus()
+      .then((rows) => withLocalCaCertificateMeasured(rows, port))
+      .then((rows) => {
+        if (current) setStatusRows(rows);
+      });
     return () => {
       current = false;
     };

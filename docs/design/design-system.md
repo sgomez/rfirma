@@ -204,8 +204,17 @@ reimplementar ni relajar:
 [panel de estado](panel-de-estado.md) y el aviso del menú de la
 [cabecera](cabecera.md)— se dice con **silueta de icono, palabra y peso**, y son
 cinco: *Correcto*, *Atención*, *Incorrecto*, *No aplica* y *Comprobando*. Los
-iconos son `<svg>` en línea de 14 o 16 px sobre lienzo `0 0 24 24`, en
-`currentColor`. Lo que reclama atención va en `--rf-text` a peso 700; lo demás,
+iconos son `<svg>` en línea **macizos** en `currentColor` —de contorno se
+deshacen en grises a 16 px, y macizos no—, y sus cinco trazados **no se
+transcriben del artboard**: se copian de [Heroicons](https://heroicons.com)
+2.2.0, licencia MIT (© Tailwind Labs), en la variante que corresponda a su
+tamaño: «Micro» (lienzo `0 0 16 16`) hasta 16 px, «Mini» (lienzo `0 0 20 20`)
+por encima. Se copia el trazado, no el paquete: el ID-53 sigue en pie. El resto
+de iconos de la interfaz sí son de contorno sobre lienzo `0 0 24 24`.
+
+**Icono y palabra van siempre del mismo color**, el que dicte el veredicto: un
+icono en `--rf-text` junto a su palabra en `--rf-text-muted` se lee como si
+fueran dos cosas distintas. Lo que reclama atención va en `--rf-text` a peso 700; lo demás,
 en `--rf-text-muted` y peso normal, de modo que «No aplica» y «Comprobando» se
 distinguen entre sí por la silueta y no por una media tinta. Un mismo estado se
 dibuja **con el mismo `path` en todas las pantallas**: el triángulo de

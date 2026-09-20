@@ -362,7 +362,8 @@ msgstr "rFirma non sabe cal é o teu cartafol persoal e non pode arrincar."
 
 #. Se enseña en un diálogo nativo antes de que exista ventana; no la lee i18next.
 msgid "errors.startup.scratchFolderUnusable"
-msgstr "rFirma non puido crear o cartafol de paso que necesita e non pode arrincar."
+msgstr ""
+"rFirma non puido crear o cartafol de paso que necesita e non pode arrincar."
 
 #. Se enseña en un diálogo nativo antes de que exista ventana; no la lee i18next.
 msgid "errors.startup.windowUnavailable"
@@ -855,7 +856,7 @@ msgid "status.signals.siteSignature"
 msgstr "Sinatura nas sedes"
 
 msgid "status.signals.userCertificates"
-msgstr "Os teus certificados"
+msgstr "Certificados de sinatura electrónica"
 
 msgid "status.signals.localCaCertificate"
 msgstr "Certificado de rFirma"
@@ -899,28 +900,34 @@ msgstr "Non se pode consultar"
 msgid "status.values.userCertificates.none"
 msgstr "Ningún"
 
-#. Cuántos almacenes de la persona tienen al menos un certificado propio.
-msgid "status.values.userCertificates.stores"
-msgid_plural "status.values.userCertificates.stores"
-msgstr[0] "1 almacén"
-msgstr[1] "{{count}} almacéns"
-msgstr[2] "{{count}} almacéns"
+#. Cuántos certificados de firma electrónica propios hay en total.
+msgid "status.values.userCertificates.count"
+msgid_plural "status.values.userCertificates.count"
+msgstr[0] "1 certificado"
+msgstr[1] "{{count}} certificados"
+msgstr[2] "{{count}} certificados"
 
-#. Cuántos almacenes de confianza tienen ya el certificado de rFirma, de cuántos detectados.
+#. En cuántos navegadores está ya el certificado de rFirma, de cuántos detectados.
 msgid "status.values.localCaCertificate"
 msgid_plural "status.values.localCaCertificate"
-msgstr[0] "{{trusted}} de 1 almacén"
-msgstr[1] "{{trusted}} de {{count}} almacéns"
-msgstr[2] "{{trusted}} de {{count}} almacéns"
+msgstr[0] "{{trusted}} de 1 navegador"
+msgstr[1] "{{trusted}} de {{count}} navegadores"
+msgstr[2] "{{trusted}} de {{count}} navegadores"
 
 msgid "status.detail.toggle"
-msgstr "Ver almacéns"
+msgstr "Ver navegadores"
 
-msgid "status.detail.trusted"
-msgstr "De confianza"
+#. El desplegable de la señal de los certificados propios: en qué sitio hay cuántos.
+msgid "status.detail.where"
+msgstr "Ver onde"
 
-msgid "status.detail.untrusted"
-msgstr "Non de confianza"
+#. Que el certificado de rFirma está puesto en ese navegador.
+msgid "status.detail.installed"
+msgstr "Instalado"
+
+#. Que el certificado de rFirma no está en ese navegador.
+msgid "status.detail.notInstalled"
+msgstr "Non instalado"
 
 msgid "status.storeBrands.firefox"
 msgstr "Firefox"
@@ -929,7 +936,13 @@ msgid "status.storeBrands.chrome"
 msgstr "Chrome e Chromium"
 
 msgid "status.storeBrands.nssdb"
-msgstr "Almacén do sistema"
+msgstr "Outros navegadores"
+
+msgid "status.storeBrands.card"
+msgstr "Tarxeta"
+
+msgid "status.storeBrands.installed"
+msgstr "Ficheiro instalado"
 
 msgid "status.notices.restartFirefox"
 msgstr "Reinicia Firefox para que xurda efecto."
@@ -1080,15 +1093,6 @@ msgstr "Hai unha versión nova: {{version}}"
 
 msgid "about.update.upToDate"
 msgstr "Estás na última versión"
-
-msgid "about.update.channel.flatpak"
-msgstr "Flatpak"
-
-msgid "about.update.channel.deb"
-msgstr "Debian e Ubuntu"
-
-msgid "about.update.channel.rpm"
-msgstr "Fedora e openSUSE"
 
 msgid "about.independence"
 msgstr ""
@@ -1450,6 +1454,9 @@ msgstr "Para quen mantén a sede:"
 
 msgid "sede.outcome.detail"
 msgstr "Detalle"
+
+msgid "sede.outcome.reportHint"
+msgstr "Parécheche un fallo de rFirma?"
 
 msgid "sede.outcome.autoClose"
 msgstr "Pecharase soa dentro de {{seconds}} s."

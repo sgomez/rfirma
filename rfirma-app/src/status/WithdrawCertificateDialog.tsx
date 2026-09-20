@@ -1,10 +1,15 @@
-import type { TFunction } from "i18next";
 import type { ReactNode } from "react";
 import { type KeyboardEvent, useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { CheckCircleIcon, CheckingIcon, CrossCircleIcon } from "../design-system/icons";
 import "./WithdrawCertificateDialog.css";
-import type { StoreBrand, StoreDetail, WithdrawalOutcome, WithdrawalReport } from "./status";
+import {
+  type StoreBrand,
+  type StoreDetail,
+  storeBrandLabel,
+  type WithdrawalOutcome,
+  type WithdrawalReport,
+} from "./status";
 
 interface WithdrawCertificateDialogProps {
   /** Los almacenes donde está hoy el certificado, tal como los cuenta la fila. */
@@ -221,15 +226,4 @@ function StoreLine({ brand, icon, children }: StoreLineProps) {
       <span className="rf-body rf-text-muted">{children}</span>
     </li>
   );
-}
-
-function storeBrandLabel(t: TFunction, brand: StoreBrand): string {
-  switch (brand) {
-    case "firefox":
-      return t("status.storeBrands.firefox");
-    case "chrome":
-      return t("status.storeBrands.chrome");
-    case "nssdb":
-      return t("status.storeBrands.nssdb");
-  }
 }

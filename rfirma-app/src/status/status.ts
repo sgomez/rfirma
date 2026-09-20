@@ -2,18 +2,47 @@
  * Puerto de consulta y medición de señales del panel de estado.
  */
 
+import type { TFunction } from "i18next";
+
 export type Signal = "version" | "siteSignature" | "localCaCertificate" | "userCertificates";
 
 export type Verdict = "correct" | "attention" | "incorrect" | "notApplicable" | "checking";
 
 export type ActionKind = "repair" | "choice" | "link";
 
-export type StoreBrand = "firefox" | "chrome" | "nssdb";
+export type StoreBrand = "firefox" | "chrome" | "nssdb" | "card" | "installed";
 
 export interface StoreDetail {
   brand: StoreBrand;
   trusted: boolean;
 }
+
+/** El nombre del sitio en pantalla: uno solo, y lo comparten la tabla, el asistente y la retirada. */
+export function storeBrandLabel(t: TFunction, brand: StoreBrand): string {
+  switch (brand) {
+    case "firefox":
+      return t("status.storeBrands.firefox");
+    case "chrome":
+      return t("status.storeBrands.chrome");
+    case "nssdb":
+      return t("status.storeBrands.nssdb");
+    case "card":
+      return t("status.storeBrands.card");
+    case "installed":
+      return t("status.storeBrands.installed");
+  }
+}
+
+/** Un sitio y cuántos certificados firmables propios tiene. */
+export interface StoreCertificates {
+  brand: StoreBrand;
+  certificates: number;
+}
+
+/** Lo que cuelga de una señal: dónde se confía en la CA, o cuántos certificados hay en cada sitio. */
+export type SignalDetail =
+  | { kind: "trust"; stores: StoreDetail[] }
+  | { kind: "certificates"; stores: StoreCertificates[] };
 
 export interface StatusAction {
   kind: ActionKind;
@@ -32,7 +61,7 @@ export interface SignalRow {
   value: string;
   verdict: Verdict;
   action: StatusAction | null;
-  detail: StoreDetail[] | null;
+  detail: SignalDetail | null;
   candidates: SiteSignatureCandidate[] | null;
   restartFirefoxNotice: boolean;
 }
@@ -60,6 +89,8 @@ export interface StatusPort {
   readStatus(): Promise<SignalRow[]>;
   /** Vuelve a comprobar el estado remidiendo contra los orígenes. */
   recheck(): Promise<SignalRow[]>;
+  /** Mide la señal del certificado de rFirma, que `readStatus` deja en «Comprobando». */
+  measureLocalCaCertificate(): Promise<SignalRow>;
   /** Instala el certificado de rFirma donde falte y vuelve a medir su señal. */
   installLocalCaCertificate(): Promise<SignalRow>;
   /**
@@ -73,6 +104,21 @@ export interface StatusPort {
    * solo vuelve a tocar lo que en él falló.
    */
   withdrawRfirma(previous: WithdrawalReport | null): Promise<WithdrawalReport>;
+}
+
+/** Mide la señal del certificado de rFirma si `readStatus` la dejó en «Comprobando». */
+export async function withLocalCaCertificateMeasured(
+  rows: SignalRow[],
+  port: StatusPort,
+): Promise<SignalRow[]> {
+  const measuring = rows.some(
+    (row) => row.signal === "localCaCertificate" && row.verdict === "checking",
+  );
+  if (!measuring) {
+    return rows;
+  }
+  const measured = await port.measureLocalCaCertificate();
+  return rows.map((row) => (row.signal === measured.signal ? measured : row));
 }
 
 /**
@@ -111,6 +157,7 @@ export function memoryStatus(
   installedRow?: SignalRow,
   chosenRows?: SignalRow[],
   withdrawalReport?: WithdrawalReport,
+  measuredRow?: SignalRow,
 ): StatusPort {
   let rows = [...initialRows];
   return {
@@ -121,16 +168,13 @@ export function memoryStatus(
       }
       return rows;
     },
+    measureLocalCaCertificate: async () => {
+      const measured = measuredRow ?? checkingLocalCaCertificate();
+      rows = rows.map((row) => (row.signal === measured.signal ? measured : row));
+      return measured;
+    },
     installLocalCaCertificate: async () => {
-      const installed = installedRow ?? {
-        signal: "localCaCertificate",
-        value: "",
-        verdict: "checking",
-        action: null,
-        detail: null,
-        candidates: null,
-        restartFirefoxNotice: false,
-      };
+      const installed = installedRow ?? checkingLocalCaCertificate();
       rows = rows.map((row) => (row.signal === installed.signal ? installed : row));
       return installed;
     },
@@ -140,5 +184,17 @@ export function memoryStatus(
       return chosen;
     },
     withdrawRfirma: async () => withdrawalReport ?? { handler: { kind: "withdrawn" }, stores: [] },
+  };
+}
+
+function checkingLocalCaCertificate(): SignalRow {
+  return {
+    signal: "localCaCertificate",
+    value: "",
+    verdict: "checking",
+    action: null,
+    detail: null,
+    candidates: null,
+    restartFirefoxNotice: false,
   };
 }

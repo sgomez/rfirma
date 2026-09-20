@@ -12,7 +12,7 @@ use application::certificates::ListedCertificates;
 use domain::algorithm::SignatureAlgorithm;
 use domain::certificate::{CertificateRef, ListedCertificate, TokenCertificate};
 use domain::error::TokenError;
-use domain::store::Store;
+use domain::store::{Store, StoreClass};
 use ports::{CertificateMemory, Token};
 
 /// La raíz de `identity`: el token, los almacenes, el listado vivo y el certificado recordado.
@@ -52,9 +52,13 @@ impl IdentityRoot {
         )
     }
 
-    /// Cuántos almacenes propios tienen al menos un certificado firmable.
-    pub fn stores_with_certificates(&self) -> usize {
-        application::certificates::stores_with_certificates(self.token.as_ref(), &self.all_stores())
+    /// Cuántos certificados firmables propios tiene cada clase de almacén que tenga alguno.
+    pub fn certificates_by_class(&self) -> Vec<(StoreClass, usize)> {
+        application::certificates::certificates_by_class(
+            self.token.as_ref(),
+            &self.all_stores(),
+            &self.installed_certificates,
+        )
     }
 
     /// Las filas con su asa acuñada y el recordado marcado.

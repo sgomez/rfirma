@@ -21,10 +21,12 @@ import { Select } from "../preferences/Select";
 import {
   memoryStatus,
   type Signal,
+  type SignalDetail,
   type SignalRow,
   type StatusPort,
-  type StoreBrand,
+  storeBrandLabel,
   type Verdict,
+  withLocalCaCertificateMeasured,
 } from "./status";
 import { WithdrawCertificateDialog } from "./WithdrawCertificateDialog";
 
@@ -72,11 +74,19 @@ export function StatusView({
 
   useEffect(() => {
     let cancelled = false;
-    statusPort.readStatus().then((initialRows) => {
-      if (!cancelled) {
-        setRows(initialRows);
-      }
-    });
+    statusPort
+      .readStatus()
+      .then((initialRows) => {
+        if (!cancelled) {
+          setRows(initialRows);
+        }
+        return withLocalCaCertificateMeasured(initialRows, statusPort);
+      })
+      .then((measuredRows) => {
+        if (!cancelled) {
+          setRows(measuredRows);
+        }
+      });
     return () => {
       cancelled = true;
     };
@@ -185,6 +195,8 @@ export function StatusView({
   }, [handleRecheck]);
 
   const localCaCertificateRow = rows.find((row) => row.signal === "localCaCertificate");
+  const trustedStores =
+    localCaCertificateRow?.detail?.kind === "trust" ? localCaCertificateRow.detail.stores : [];
 
   return (
     <section className="status-view" aria-label={t("status.title")}>
@@ -230,21 +242,17 @@ export function StatusView({
                 )}
               </div>
 
-              <div className="status-view__cell-verdict">
-                <span
-                  className={`status-view__verdict-icon ${
-                    row.verdict === "notApplicable" || row.verdict === "checking"
-                      ? "status-view__verdict-icon--muted"
-                      : "status-view__verdict-icon--default"
-                  }`}
-                >
-                  {renderVerdictIcon(row.verdict)}
-                </span>
+              <div
+                className={`status-view__cell-verdict ${
+                  demandsAttention(row.verdict)
+                    ? "status-view__cell-verdict--strong"
+                    : "status-view__cell-verdict--muted"
+                }`}
+              >
+                <span className="status-view__verdict-icon">{renderVerdictIcon(row.verdict)}</span>
                 <span
                   className={`rf-body status-view__verdict-text ${
-                    row.verdict === "attention" || row.verdict === "incorrect"
-                      ? "status-view__verdict-text--strong"
-                      : "status-view__verdict-text--muted"
+                    demandsAttention(row.verdict) ? "status-view__verdict-text--strong" : ""
                   }`}
                 >
                   {verdictLabel(t, row.verdict)}
@@ -288,27 +296,38 @@ export function StatusView({
                   ) : (
                     <ChevronRightIcon size={14} />
                   )}
-                  {t("status.detail.toggle")}
+                  {detailToggleLabel(t, row.detail)}
                 </button>
 
                 {expandedDetail.has(row.signal) && (
                   <ul id={`status-view__detail-${row.signal}`} className="status-view__detail-list">
-                    {row.detail.map((store, index) => (
-                      // biome-ignore lint/suspicious/noArrayIndexKey: la vista no trae la ruta del almacén, solo su marca, y el orden no cambia entre pintadas.
-                      <li key={`${store.brand}-${index}`} className="status-view__detail-item">
-                        {store.trusted ? (
-                          <CheckCircleIcon size={14} />
-                        ) : (
-                          <CrossCircleIcon size={14} />
-                        )}
-                        <span className="rf-prose">{storeBrandLabel(t, store.brand)}</span>
-                        <span className="rf-body status-view__detail-note">
-                          {store.trusted
-                            ? t("status.detail.trusted")
-                            : t("status.detail.untrusted")}
-                        </span>
-                      </li>
-                    ))}
+                    {row.detail.kind === "trust"
+                      ? row.detail.stores.map((store, index) => (
+                          // biome-ignore lint/suspicious/noArrayIndexKey: la vista no trae la ruta del almacén, solo su marca, y el orden no cambia entre pintadas.
+                          <li key={`${store.brand}-${index}`} className="status-view__detail-item">
+                            {store.trusted ? (
+                              <CheckCircleIcon size={14} />
+                            ) : (
+                              <CrossCircleIcon size={14} />
+                            )}
+                            <span className="rf-prose">{storeBrandLabel(t, store.brand)}</span>
+                            <span className="rf-body status-view__detail-note">
+                              {store.trusted
+                                ? t("status.detail.installed")
+                                : t("status.detail.notInstalled")}
+                            </span>
+                          </li>
+                        ))
+                      : row.detail.stores.map((store) => (
+                          <li key={store.brand} className="status-view__detail-item">
+                            <span className="rf-prose status-view__detail-place">
+                              {storeBrandLabel(t, store.brand)}
+                            </span>
+                            <span className="rf-body status-view__detail-note">
+                              {store.certificates}
+                            </span>
+                          </li>
+                        ))}
                   </ul>
                 )}
               </div>
@@ -335,7 +354,7 @@ export function StatusView({
 
       {isWithdrawing && (
         <WithdrawCertificateDialog
-          stores={localCaCertificateRow?.detail ?? []}
+          stores={trustedStores}
           onWithdraw={statusPort.withdrawRfirma}
           onClose={handleWithdrawalDialogClose}
         />
@@ -388,20 +407,17 @@ function valueLabel(t: TFunction, row: SignalRow): string {
       const count = Number(row.value);
       return count === 0
         ? t("status.values.userCertificates.none")
-        : t("status.values.userCertificates.stores", { count });
+        : t("status.values.userCertificates.count", { count });
     }
   }
 }
 
-function storeBrandLabel(t: TFunction, brand: StoreBrand): string {
-  switch (brand) {
-    case "firefox":
-      return t("status.storeBrands.firefox");
-    case "chrome":
-      return t("status.storeBrands.chrome");
-    case "nssdb":
-      return t("status.storeBrands.nssdb");
-  }
+function detailToggleLabel(t: TFunction, detail: SignalDetail): string {
+  return detail.kind === "trust" ? t("status.detail.toggle") : t("status.detail.where");
+}
+
+function demandsAttention(verdict: Verdict): boolean {
+  return verdict === "attention" || verdict === "incorrect";
 }
 
 function verdictLabel(t: TFunction, verdict: Verdict): string {

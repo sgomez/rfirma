@@ -12,31 +12,26 @@
   flex-direction: column;
   height: 100dvh;
   overflow: hidden;
-  background: var(--rf-surface);
+  background: var(--rf-bg);
 }
 
 .setup-wizard__body {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  display: flex;
-  justify-content: center;
-  padding: var(--rf-space-lg) var(--rf-space-md);
+  padding: var(--rf-space-lg) var(--rf-space-md) var(--rf-space-md);
 }
 
 .setup-wizard__column {
   width: 640px;
   max-width: 100%;
-}
-
-.setup-wizard__progress {
-  display: flex;
-  gap: var(--rf-space-xs);
+  margin: 0 auto;
 }
 
 .setup-wizard__progress-bar {
   width: 22px;
   height: 4px;
+  flex: none;
   border-radius: var(--rf-radius-pill);
   background: var(--rf-border-subtle);
 }
@@ -45,27 +40,78 @@
   background: var(--rf-primary);
 }
 
+.setup-wizard__step {
+  margin-left: var(--rf-space-xs);
+}
+
+.setup-wizard__intro {
+  gap: 12px;
+}
+
+.setup-wizard__title {
+  font-size: 28px;
+  line-height: 1.2;
+}
+
+.setup-wizard__notice-title {
+  font-size: 16px;
+}
+
 .setup-wizard__card {
-  padding: var(--rf-space-md);
+  gap: 12px;
+}
+
+.setup-wizard__card-title {
+  font-size: 17px;
+}
+
+.setup-wizard__actions {
+  min-height: 44px;
+}
+
+.setup-wizard .rf-btn {
+  flex: none;
+  min-height: 36px;
+}
+
+.setup-wizard__outcome {
+  align-items: flex-start;
+  min-height: 44px;
+}
+
+.setup-wizard__outcome-icon {
   display: flex;
-  flex-direction: column;
-  gap: var(--rf-space-sm);
+  flex: none;
+  margin-top: 3px;
 }
 
-.setup-wizard__card-actions {
-  justify-content: flex-start;
+.setup-wizard__outcome-text {
+  flex: 1;
+  min-width: 0;
+  gap: 6px;
 }
 
-.setup-wizard__detail-list {
+.setup-wizard__outcome-title {
+  font-weight: 600;
+}
+
+.setup-wizard__stores {
+  gap: 4px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
+.setup-wizard__store-mark {
+  width: 12px;
+  flex: none;
+  text-align: center;
+}
+
 .setup-wizard__footer {
   flex: none;
   justify-content: flex-end;
-  gap: var(--rf-space-sm);
-  padding: var(--rf-space-sm) var(--rf-space-md);
+  padding: 12px var(--rf-space-md);
   border-top: 1px solid var(--rf-border-subtle);
+  background: var(--rf-surface);
 }

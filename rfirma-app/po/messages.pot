@@ -829,14 +829,14 @@ msgstr ""
 msgid "status.values.userCertificates.none"
 msgstr ""
 
-#. Cuántos almacenes de la persona tienen al menos un certificado propio.
-msgid "status.values.userCertificates.stores"
-msgid_plural "status.values.userCertificates.stores"
+#. Cuántos certificados de firma electrónica propios hay en total.
+msgid "status.values.userCertificates.count"
+msgid_plural "status.values.userCertificates.count"
 msgstr[0] ""
 msgstr[1] ""
 msgstr[2] ""
 
-#. Cuántos almacenes de confianza tienen ya el certificado de rFirma, de cuántos detectados.
+#. En cuántos navegadores está ya el certificado de rFirma, de cuántos detectados.
 msgid "status.values.localCaCertificate"
 msgid_plural "status.values.localCaCertificate"
 msgstr[0] ""
@@ -846,10 +846,16 @@ msgstr[2] ""
 msgid "status.detail.toggle"
 msgstr ""
 
-msgid "status.detail.trusted"
+#. El desplegable de la señal de los certificados propios: en qué sitio hay cuántos.
+msgid "status.detail.where"
 msgstr ""
 
-msgid "status.detail.untrusted"
+#. Que el certificado de rFirma está puesto en ese navegador.
+msgid "status.detail.installed"
+msgstr ""
+
+#. Que el certificado de rFirma no está en ese navegador.
+msgid "status.detail.notInstalled"
 msgstr ""
 
 msgid "status.storeBrands.firefox"
@@ -859,6 +865,12 @@ msgid "status.storeBrands.chrome"
 msgstr ""
 
 msgid "status.storeBrands.nssdb"
+msgstr ""
+
+msgid "status.storeBrands.card"
+msgstr ""
+
+msgid "status.storeBrands.installed"
 msgstr ""
 
 msgid "status.notices.restartFirefox"
@@ -1005,15 +1017,6 @@ msgid "about.update.newVersion"
 msgstr ""
 
 msgid "about.update.upToDate"
-msgstr ""
-
-msgid "about.update.channel.flatpak"
-msgstr ""
-
-msgid "about.update.channel.deb"
-msgstr ""
-
-msgid "about.update.channel.rpm"
 msgstr ""
 
 msgid "about.independence"
@@ -1349,6 +1352,9 @@ msgid "sede.outcome.refusedNote"
 msgstr ""
 
 msgid "sede.outcome.detail"
+msgstr ""
+
+msgid "sede.outcome.reportHint"
 msgstr ""
 
 msgid "sede.outcome.autoClose"

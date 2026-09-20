@@ -271,6 +271,12 @@ equipo a petición de una web**, y un rFirma que aparece y desaparece en silenci
 es indistinguible de uno roto. Lo único accionable es el detalle copiable, para
 llevárselo a quien mantiene la sede.
 
+**La caja del detalle es de la sede, y solo de la sede**: dentro van la etiqueta
+`Detalle` con el botón de copiar a su derecha y, debajo, el texto a ancho
+completo. El enlace a `Comentarios y ayuda` —que solo aparece cuando ni siquiera
+se sabe qué se rechazó— va **fuera** de la caja, en su propia línea: eso no se le
+lleva a la sede, se reporta a rFirma.
+
 **La ventana se cierra sola a los 15 segundos**, no a los 5: con 5 no da tiempo a
 leer, y que hiciera falta más tiempo era la prueba de que sobraba texto. El
 botón dice `Cerrar` —«Cerrar ahora» sobraba— y es el único `--primary` de la

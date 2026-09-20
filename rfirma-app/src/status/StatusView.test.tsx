@@ -5,6 +5,16 @@ import { renderWithCatalog } from "../testing/render";
 import { StatusView } from "./StatusView";
 import { memoryStatus, type SignalRow, type StatusPort } from "./status";
 
+const stillChecking: SignalRow = {
+  signal: "localCaCertificate",
+  value: "",
+  verdict: "checking",
+  action: null,
+  detail: null,
+  candidates: null,
+  restartFirefoxNotice: false,
+};
+
 describe("StatusView", () => {
   it("renders the title and close button", () => {
     renderWithCatalog(<StatusView onClose={() => {}} />);
@@ -252,6 +262,7 @@ describe("StatusView", () => {
         },
       ]),
       recheck: vi.fn(),
+      measureLocalCaCertificate: vi.fn().mockResolvedValue(stillChecking),
       installLocalCaCertificate: vi.fn(),
       chooseSiteSignatureHandler,
       withdrawRfirma: vi.fn(),
@@ -342,6 +353,7 @@ describe("StatusView", () => {
         },
       ]),
       recheck: vi.fn(),
+      measureLocalCaCertificate: vi.fn().mockResolvedValue(stillChecking),
       installLocalCaCertificate: vi.fn(),
       chooseSiteSignatureHandler,
       withdrawRfirma: vi.fn(),
@@ -359,7 +371,7 @@ describe("StatusView", () => {
     });
   });
 
-  it("renders Ninguno and Cómo instalar when no certificate stores are detected", async () => {
+  it("renders Ninguno and Cómo instalar when no certificate is found", async () => {
     const rows: SignalRow[] = [
       {
         signal: "userCertificates",
@@ -377,13 +389,13 @@ describe("StatusView", () => {
     renderWithCatalog(<StatusView statusPort={memoryStatus(rows)} onClose={() => {}} />);
 
     const row = await screen.findByRole("status");
-    expect(within(row).getByText("Tus certificados")).toBeInTheDocument();
+    expect(within(row).getByText("Certificados de firma electrónica")).toBeInTheDocument();
     expect(within(row).getByText("Ninguno")).toBeInTheDocument();
     expect(within(row).getByText("Atención")).toBeInTheDocument();
     expect(within(row).getByRole("button", { name: "Cómo instalar" })).toBeInTheDocument();
   });
 
-  it("renders the store count and Correcto without action when certificates are detected", async () => {
+  it("renders how many certificates were found, and Correcto without action", async () => {
     const rows: SignalRow[] = [
       {
         signal: "userCertificates",
@@ -398,10 +410,67 @@ describe("StatusView", () => {
     renderWithCatalog(<StatusView statusPort={memoryStatus(rows)} onClose={() => {}} />);
 
     const row = await screen.findByRole("status");
-    expect(within(row).getByText("Tus certificados")).toBeInTheDocument();
-    expect(within(row).getByText("3 almacenes")).toBeInTheDocument();
+    expect(within(row).getByText("Certificados de firma electrónica")).toBeInTheDocument();
+    expect(within(row).getByText("3 certificados")).toBeInTheDocument();
     expect(within(row).getByText("Correcto")).toBeInTheDocument();
     expect(within(row).queryByRole("button")).not.toBeInTheDocument();
+  });
+
+  it("lists each place with its own count behind Ver dónde", async () => {
+    const rows: SignalRow[] = [
+      {
+        signal: "userCertificates",
+        value: "4",
+        verdict: "correct",
+        action: null,
+        detail: {
+          kind: "certificates",
+          stores: [
+            { brand: "firefox", certificates: 2 },
+            { brand: "card", certificates: 1 },
+            { brand: "installed", certificates: 1 },
+          ],
+        },
+        candidates: null,
+        restartFirefoxNotice: false,
+      },
+    ];
+    const user = userEvent.setup();
+    renderWithCatalog(<StatusView statusPort={memoryStatus(rows)} onClose={() => {}} />);
+
+    const row = await screen.findByRole("status");
+    expect(within(row).getByText("4 certificados")).toBeInTheDocument();
+
+    await user.click(within(row).getByRole("button", { name: "Ver dónde" }));
+
+    const places = within(row).getAllByRole("listitem");
+    expect(places.map((place) => place.textContent)).toEqual([
+      "Firefox2",
+      "Tarjeta1",
+      "Fichero instalado1",
+    ]);
+  });
+
+  it("marks nothing in the list of places: nothing was attempted there", async () => {
+    const rows: SignalRow[] = [
+      {
+        signal: "userCertificates",
+        value: "2",
+        verdict: "correct",
+        action: null,
+        detail: { kind: "certificates", stores: [{ brand: "firefox", certificates: 2 }] },
+        candidates: null,
+        restartFirefoxNotice: false,
+      },
+    ];
+    const user = userEvent.setup();
+    renderWithCatalog(<StatusView statusPort={memoryStatus(rows)} onClose={() => {}} />);
+
+    const row = await screen.findByRole("status");
+    await user.click(within(row).getByRole("button", { name: "Ver dónde" }));
+
+    expect(within(row).queryByText("Instalado")).not.toBeInTheDocument();
+    expect(within(row).queryByText("No instalado")).not.toBeInTheDocument();
   });
 
   it("renders the local CA certificate signal born in Comprobando with no action", async () => {
@@ -424,6 +493,39 @@ describe("StatusView", () => {
     expect(within(row).queryByRole("button")).not.toBeInTheDocument();
   });
 
+  it("measures the local CA certificate signal on opening, without Volver a comprobar", async () => {
+    const born: SignalRow = {
+      signal: "localCaCertificate",
+      value: "",
+      verdict: "checking",
+      action: null,
+      detail: null,
+      candidates: null,
+      restartFirefoxNotice: false,
+    };
+    const measured: SignalRow = {
+      signal: "localCaCertificate",
+      value: "3/3",
+      verdict: "correct",
+      action: null,
+      detail: null,
+      candidates: null,
+      restartFirefoxNotice: false,
+    };
+    renderWithCatalog(
+      <StatusView
+        statusPort={memoryStatus([born], undefined, undefined, undefined, undefined, measured)}
+        onClose={() => {}}
+      />,
+    );
+
+    const row = await screen.findByRole("status");
+    await waitFor(() => {
+      expect(within(row).getByText("3 de 3 navegadores")).toBeInTheDocument();
+    });
+    expect(within(row).queryByText("Comprobando")).not.toBeInTheDocument();
+  });
+
   it("renders Incorrecto with Instalar and a store detail list when the certificate is nowhere trusted", async () => {
     const rows: SignalRow[] = [
       {
@@ -434,10 +536,13 @@ describe("StatusView", () => {
           kind: "repair",
           target: "installLocalCaCertificate",
         },
-        detail: [
-          { brand: "firefox", trusted: false },
-          { brand: "chrome", trusted: false },
-        ],
+        detail: {
+          kind: "trust",
+          stores: [
+            { brand: "firefox", trusted: false },
+            { brand: "chrome", trusted: false },
+          ],
+        },
         candidates: null,
         restartFirefoxNotice: false,
       },
@@ -447,12 +552,12 @@ describe("StatusView", () => {
 
     const row = await screen.findByRole("status");
     expect(within(row).getByText("Certificado de rFirma")).toBeInTheDocument();
-    expect(within(row).getByText("0 de 2 almacenes")).toBeInTheDocument();
+    expect(within(row).getByText("0 de 2 navegadores")).toBeInTheDocument();
     expect(within(row).getByText("Incorrecto")).toBeInTheDocument();
     expect(within(row).getByRole("button", { name: "Instalar" })).toBeInTheDocument();
-    expect(within(row).queryByRole("button", { name: /almacenes/ })).toBeInTheDocument();
+    expect(within(row).queryByRole("button", { name: /navegadores/ })).toBeInTheDocument();
 
-    const toggle = within(row).getByRole("button", { name: "Ver almacenes" });
+    const toggle = within(row).getByRole("button", { name: "Ver navegadores" });
     expect(toggle).toHaveAttribute("aria-expanded", "false");
     expect(within(row).queryByText("Firefox")).not.toBeInTheDocument();
 
@@ -470,10 +575,13 @@ describe("StatusView", () => {
         value: "2/2",
         verdict: "correct",
         action: null,
-        detail: [
-          { brand: "firefox", trusted: true },
-          { brand: "chrome", trusted: true },
-        ],
+        detail: {
+          kind: "trust",
+          stores: [
+            { brand: "firefox", trusted: true },
+            { brand: "chrome", trusted: true },
+          ],
+        },
         candidates: null,
         restartFirefoxNotice: false,
       },
@@ -482,13 +590,13 @@ describe("StatusView", () => {
     renderWithCatalog(<StatusView statusPort={memoryStatus(rows)} onClose={() => {}} />);
 
     const row = await screen.findByRole("status");
-    expect(within(row).getByText("2 de 2 almacenes")).toBeInTheDocument();
+    expect(within(row).getByText("2 de 2 navegadores")).toBeInTheDocument();
     expect(within(row).getByText("Correcto")).toBeInTheDocument();
     expect(within(row).queryByRole("button", { name: "Instalar" })).not.toBeInTheDocument();
 
-    await user.click(within(row).getByRole("button", { name: "Ver almacenes" }));
+    await user.click(within(row).getByRole("button", { name: "Ver navegadores" }));
 
-    expect(within(row).getAllByText("De confianza")).toHaveLength(2);
+    expect(within(row).getAllByText("Instalado")).toHaveLength(2);
   });
 
   it("remeasures the certificate stores row on Volver a comprobar", async () => {
@@ -514,6 +622,7 @@ describe("StatusView", () => {
         },
       ]),
       recheck: vi.fn().mockReturnValue(recheckPromise),
+      measureLocalCaCertificate: vi.fn().mockResolvedValue(stillChecking),
       installLocalCaCertificate: vi.fn(),
       chooseSiteSignatureHandler: vi.fn(),
       withdrawRfirma: vi.fn(),
@@ -543,7 +652,7 @@ describe("StatusView", () => {
     await waitFor(() => {
       expect(within(row).getByText("Correcto")).toBeInTheDocument();
     });
-    expect(within(row).getByText("1 almacén")).toBeInTheDocument();
+    expect(within(row).getByText("1 certificado")).toBeInTheDocument();
   });
 
   it("notifies onRowsChange with the rows read at startup", async () => {
@@ -626,6 +735,7 @@ describe("StatusView", () => {
         },
       ]),
       recheck: vi.fn().mockReturnValue(recheckPromise),
+      measureLocalCaCertificate: vi.fn().mockResolvedValue(stillChecking),
       installLocalCaCertificate: vi.fn(),
       chooseSiteSignatureHandler: vi.fn(),
       withdrawRfirma: vi.fn(),
@@ -681,6 +791,7 @@ describe("StatusView", () => {
         },
       ]),
       recheck: vi.fn().mockReturnValue(recheckPromise),
+      measureLocalCaCertificate: vi.fn().mockResolvedValue(stillChecking),
       installLocalCaCertificate: vi.fn(),
       chooseSiteSignatureHandler: vi.fn(),
       withdrawRfirma: vi.fn(),
@@ -736,6 +847,7 @@ describe("StatusView", () => {
         },
       ]),
       recheck: vi.fn(),
+      measureLocalCaCertificate: vi.fn().mockResolvedValue(stillChecking),
       installLocalCaCertificate: vi.fn().mockReturnValue(installPromise),
       chooseSiteSignatureHandler: vi.fn(),
       withdrawRfirma: vi.fn(),
@@ -792,10 +904,13 @@ describe("StatusView", () => {
         value: "2/2",
         verdict: "correct",
         action: null,
-        detail: [
-          { brand: "firefox", trusted: true },
-          { brand: "chrome", trusted: true },
-        ],
+        detail: {
+          kind: "trust",
+          stores: [
+            { brand: "firefox", trusted: true },
+            { brand: "chrome", trusted: true },
+          ],
+        },
         candidates: null,
         restartFirefoxNotice: false,
       },
@@ -824,10 +939,13 @@ describe("StatusView", () => {
         value: "2/2",
         verdict: "correct",
         action: null,
-        detail: [
-          { brand: "firefox", trusted: true },
-          { brand: "chrome", trusted: true },
-        ],
+        detail: {
+          kind: "trust",
+          stores: [
+            { brand: "firefox", trusted: true },
+            { brand: "chrome", trusted: true },
+          ],
+        },
         candidates: null,
         restartFirefoxNotice: false,
       },
@@ -853,10 +971,13 @@ describe("StatusView", () => {
           kind: "repair",
           target: "installLocalCaCertificate",
         },
-        detail: [
-          { brand: "firefox", trusted: false },
-          { brand: "chrome", trusted: false },
-        ],
+        detail: {
+          kind: "trust",
+          stores: [
+            { brand: "firefox", trusted: false },
+            { brand: "chrome", trusted: false },
+          ],
+        },
         candidates: null,
         restartFirefoxNotice: false,
       },
@@ -864,6 +985,7 @@ describe("StatusView", () => {
     const statusPort: StatusPort = {
       readStatus: vi.fn().mockResolvedValue(initialRows),
       recheck: vi.fn().mockResolvedValue(afterWithdrawal),
+      measureLocalCaCertificate: vi.fn().mockResolvedValue(stillChecking),
       installLocalCaCertificate: vi.fn(),
       chooseSiteSignatureHandler: vi.fn(),
       withdrawRfirma: vi.fn().mockResolvedValue({
@@ -893,7 +1015,7 @@ describe("StatusView", () => {
       expect(statusPort.recheck).toHaveBeenCalledOnce();
     });
     expect(await screen.findByText("Sin configurar")).toBeInTheDocument();
-    expect(screen.getByText("0 de 2 almacenes")).toBeInTheDocument();
+    expect(screen.getByText("0 de 2 navegadores")).toBeInTheDocument();
   });
 
   it("does not close the panel on Escape while the withdrawal dialog is open", async () => {
@@ -904,7 +1026,7 @@ describe("StatusView", () => {
         value: "2/2",
         verdict: "correct",
         action: null,
-        detail: [{ brand: "firefox", trusted: true }],
+        detail: { kind: "trust", stores: [{ brand: "firefox", trusted: true }] },
         candidates: null,
         restartFirefoxNotice: false,
       },

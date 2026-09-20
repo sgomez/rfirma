@@ -854,7 +854,7 @@ msgid "status.signals.siteSignature"
 msgstr "Signing at sites"
 
 msgid "status.signals.userCertificates"
-msgstr "Your certificates"
+msgstr "Electronic signature certificates"
 
 msgid "status.signals.localCaCertificate"
 msgstr "rFirma certificate"
@@ -898,28 +898,34 @@ msgstr "Cannot check"
 msgid "status.values.userCertificates.none"
 msgstr "None"
 
-#. Cuántos almacenes de la persona tienen al menos un certificado propio.
-msgid "status.values.userCertificates.stores"
-msgid_plural "status.values.userCertificates.stores"
-msgstr[0] "1 store"
-msgstr[1] "{{count}} stores"
-msgstr[2] "{{count}} stores"
+#. Cuántos certificados de firma electrónica propios hay en total.
+msgid "status.values.userCertificates.count"
+msgid_plural "status.values.userCertificates.count"
+msgstr[0] "1 certificate"
+msgstr[1] "{{count}} certificates"
+msgstr[2] "{{count}} certificates"
 
-#. Cuántos almacenes de confianza tienen ya el certificado de rFirma, de cuántos detectados.
+#. En cuántos navegadores está ya el certificado de rFirma, de cuántos detectados.
 msgid "status.values.localCaCertificate"
 msgid_plural "status.values.localCaCertificate"
-msgstr[0] "{{trusted}} of 1 store"
-msgstr[1] "{{trusted}} of {{count}} stores"
-msgstr[2] "{{trusted}} of {{count}} stores"
+msgstr[0] "{{trusted}} of 1 browser"
+msgstr[1] "{{trusted}} of {{count}} browsers"
+msgstr[2] "{{trusted}} of {{count}} browsers"
 
 msgid "status.detail.toggle"
-msgstr "View stores"
+msgstr "View browsers"
 
-msgid "status.detail.trusted"
-msgstr "Trusted"
+#. El desplegable de la señal de los certificados propios: en qué sitio hay cuántos.
+msgid "status.detail.where"
+msgstr "View where"
 
-msgid "status.detail.untrusted"
-msgstr "Not trusted"
+#. Que el certificado de rFirma está puesto en ese navegador.
+msgid "status.detail.installed"
+msgstr "Installed"
+
+#. Que el certificado de rFirma no está en ese navegador.
+msgid "status.detail.notInstalled"
+msgstr "Not installed"
 
 msgid "status.storeBrands.firefox"
 msgstr "Firefox"
@@ -928,7 +934,13 @@ msgid "status.storeBrands.chrome"
 msgstr "Chrome and Chromium"
 
 msgid "status.storeBrands.nssdb"
-msgstr "System store"
+msgstr "Other browsers"
+
+msgid "status.storeBrands.card"
+msgstr "Card"
+
+msgid "status.storeBrands.installed"
+msgstr "Installed file"
 
 msgid "status.notices.restartFirefox"
 msgstr "Restart Firefox for this to take effect."
@@ -1080,15 +1092,6 @@ msgstr "There's a new version: {{version}}"
 msgid "about.update.upToDate"
 msgstr "You're on the latest version"
 
-msgid "about.update.channel.flatpak"
-msgstr "Flatpak"
-
-msgid "about.update.channel.deb"
-msgstr "Debian and Ubuntu"
-
-msgid "about.update.channel.rpm"
-msgstr "Fedora and openSUSE"
-
 msgid "about.independence"
 msgstr ""
 "Independent project. rFirma isn't related to AutoFirma or to the Spanish "
@@ -1142,8 +1145,7 @@ msgstr "The rFirma certificate"
 msgid "setup.certificate.body"
 msgstr ""
 "When you sign at a government site, your browser has to connect to rFirma. "
-"For that connection to be secure we need to install a certificate of its "
-"own."
+"For that connection to be secure we need to install a certificate of its own."
 
 msgid "setup.certificate.installing"
 msgstr "Installing…"
@@ -1450,6 +1452,9 @@ msgstr "For whoever maintains the site:"
 
 msgid "sede.outcome.detail"
 msgstr "Detail"
+
+msgid "sede.outcome.reportHint"
+msgstr "Does this look like an rFirma bug?"
 
 msgid "sede.outcome.autoClose"
 msgstr "It'll close by itself in {{seconds}} s."

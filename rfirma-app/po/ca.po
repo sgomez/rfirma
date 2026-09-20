@@ -307,8 +307,8 @@ msgstr "Aquesta pantalla ha deixat de funcionar"
 
 msgid "errors.situations.renderFailed.body"
 msgstr ""
-"Recarrega la finestra per continuar. Si continua passant, adjunta el "
-"detall tècnic a l'informe de l'error."
+"Recarrega la finestra per continuar. Si continua passant, adjunta el detall "
+"tècnic a l'informe de l'error."
 
 msgid "errors.situations.folderMissing.title"
 msgstr "La carpeta de destinació ja no hi és"
@@ -373,7 +373,8 @@ msgstr "rFirma no sap quina és la teva carpeta personal i no pot arrencar."
 
 #. Se enseña en un diálogo nativo antes de que exista ventana; no la lee i18next.
 msgid "errors.startup.scratchFolderUnusable"
-msgstr "rFirma no ha pogut crear la carpeta de pas que necessita i no pot arrencar."
+msgstr ""
+"rFirma no ha pogut crear la carpeta de pas que necessita i no pot arrencar."
 
 #. Se enseña en un diálogo nativo antes de que exista ventana; no la lee i18next.
 msgid "errors.startup.windowUnavailable"
@@ -865,7 +866,7 @@ msgid "status.signals.siteSignature"
 msgstr "Signatura a les seus"
 
 msgid "status.signals.userCertificates"
-msgstr "Els teus certificats"
+msgstr "Certificats de signatura electrònica"
 
 msgid "status.signals.localCaCertificate"
 msgstr "Certificat de rFirma"
@@ -909,28 +910,34 @@ msgstr "No es pot consultar"
 msgid "status.values.userCertificates.none"
 msgstr "Cap"
 
-#. Cuántos almacenes de la persona tienen al menos un certificado propio.
-msgid "status.values.userCertificates.stores"
-msgid_plural "status.values.userCertificates.stores"
-msgstr[0] "1 magatzem"
-msgstr[1] "{{count}} magatzems"
-msgstr[2] "{{count}} magatzems"
+#. Cuántos certificados de firma electrónica propios hay en total.
+msgid "status.values.userCertificates.count"
+msgid_plural "status.values.userCertificates.count"
+msgstr[0] "1 certificat"
+msgstr[1] "{{count}} certificats"
+msgstr[2] "{{count}} certificats"
 
-#. Cuántos almacenes de confianza tienen ya el certificado de rFirma, de cuántos detectados.
+#. En cuántos navegadores está ya el certificado de rFirma, de cuántos detectados.
 msgid "status.values.localCaCertificate"
 msgid_plural "status.values.localCaCertificate"
-msgstr[0] "{{trusted}} d'1 magatzem"
-msgstr[1] "{{trusted}} de {{count}} magatzems"
-msgstr[2] "{{trusted}} de {{count}} magatzems"
+msgstr[0] "{{trusted}} d'1 navegador"
+msgstr[1] "{{trusted}} de {{count}} navegadors"
+msgstr[2] "{{trusted}} de {{count}} navegadors"
 
 msgid "status.detail.toggle"
-msgstr "Veure magatzems"
+msgstr "Veure navegadors"
 
-msgid "status.detail.trusted"
-msgstr "De confiança"
+#. El desplegable de la señal de los certificados propios: en qué sitio hay cuántos.
+msgid "status.detail.where"
+msgstr "Veure on"
 
-msgid "status.detail.untrusted"
-msgstr "No de confiança"
+#. Que el certificado de rFirma está puesto en ese navegador.
+msgid "status.detail.installed"
+msgstr "Instal·lat"
+
+#. Que el certificado de rFirma no está en ese navegador.
+msgid "status.detail.notInstalled"
+msgstr "No instal·lat"
 
 msgid "status.storeBrands.firefox"
 msgstr "Firefox"
@@ -939,7 +946,13 @@ msgid "status.storeBrands.chrome"
 msgstr "Chrome i Chromium"
 
 msgid "status.storeBrands.nssdb"
-msgstr "Magatzem del sistema"
+msgstr "Altres navegadors"
+
+msgid "status.storeBrands.card"
+msgstr "Targeta"
+
+msgid "status.storeBrands.installed"
+msgstr "Fitxer instal·lat"
 
 msgid "status.notices.restartFirefox"
 msgstr "Reinicia el Firefox perquè tingui efecte."
@@ -1092,15 +1105,6 @@ msgstr "Hi ha una versió nova: {{version}}"
 
 msgid "about.update.upToDate"
 msgstr "Tens l'última versió"
-
-msgid "about.update.channel.flatpak"
-msgstr "Flatpak"
-
-msgid "about.update.channel.deb"
-msgstr "Debian i Ubuntu"
-
-msgid "about.update.channel.rpm"
-msgstr "Fedora i openSUSE"
 
 msgid "about.independence"
 msgstr ""
@@ -1462,6 +1466,9 @@ msgstr "Per a qui manté la seu:"
 
 msgid "sede.outcome.detail"
 msgstr "Detall"
+
+msgid "sede.outcome.reportHint"
+msgstr "Et sembla un error de rFirma?"
 
 msgid "sede.outcome.autoClose"
 msgstr "Es tancarà sola d'aquí a {{seconds}} s."

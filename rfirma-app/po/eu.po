@@ -306,8 +306,8 @@ msgstr "Pantaila honek funtzionatzeari utzi dio"
 
 msgid "errors.situations.renderFailed.body"
 msgstr ""
-"Birkargatu leihoa jarraitzeko. Gertatzen jarraitzen badu, erantsi "
-"xehetasun teknikoa akatsaren txostenari."
+"Birkargatu leihoa jarraitzeko. Gertatzen jarraitzen badu, erantsi xehetasun "
+"teknikoa akatsaren txostenari."
 
 msgid "errors.situations.folderMissing.title"
 msgstr "Helburuko karpeta jada ez dago"
@@ -373,7 +373,9 @@ msgstr "rFirma-k ez daki zein den zure karpeta pertsonala eta ezin da abiatu."
 
 #. Se enseña en un diálogo nativo antes de que exista ventana; no la lee i18next.
 msgid "errors.startup.scratchFolderUnusable"
-msgstr "rFirma-k ez du behar duen igarotze-karpeta sortu ahal izan eta ezin da abiatu."
+msgstr ""
+"rFirma-k ez du behar duen igarotze-karpeta sortu ahal izan eta ezin da "
+"abiatu."
 
 #. Se enseña en un diálogo nativo antes de que exista ventana; no la lee i18next.
 msgid "errors.startup.windowUnavailable"
@@ -873,7 +875,7 @@ msgid "status.signals.siteSignature"
 msgstr "Egoitzetako sinadura"
 
 msgid "status.signals.userCertificates"
-msgstr "Zure ziurtagiriak"
+msgstr "Sinadura elektronikoko ziurtagiriak"
 
 msgid "status.signals.localCaCertificate"
 msgstr "rFirma-ren ziurtagiria"
@@ -917,28 +919,34 @@ msgstr "Ezin da kontsultatu"
 msgid "status.values.userCertificates.none"
 msgstr "Bat ere ez"
 
-#. Cuántos almacenes de la persona tienen al menos un certificado propio.
-msgid "status.values.userCertificates.stores"
-msgid_plural "status.values.userCertificates.stores"
-msgstr[0] "Biltegi bat"
-msgstr[1] "{{count}} biltegi"
-msgstr[2] "{{count}} biltegi"
+#. Cuántos certificados de firma electrónica propios hay en total.
+msgid "status.values.userCertificates.count"
+msgid_plural "status.values.userCertificates.count"
+msgstr[0] "Ziurtagiri bat"
+msgstr[1] "{{count}} ziurtagiri"
+msgstr[2] "{{count}} ziurtagiri"
 
-#. Cuántos almacenes de confianza tienen ya el certificado de rFirma, de cuántos detectados.
+#. En cuántos navegadores está ya el certificado de rFirma, de cuántos detectados.
 msgid "status.values.localCaCertificate"
 msgid_plural "status.values.localCaCertificate"
-msgstr[0] "{{trusted}}/1 biltegi"
-msgstr[1] "{{trusted}}/{{count}} biltegi"
-msgstr[2] "{{trusted}}/{{count}} biltegi"
+msgstr[0] "{{trusted}}/1 nabigatzaile"
+msgstr[1] "{{trusted}}/{{count}} nabigatzaile"
+msgstr[2] "{{trusted}}/{{count}} nabigatzaile"
 
 msgid "status.detail.toggle"
-msgstr "Ikusi biltegiak"
+msgstr "Ikusi nabigatzaileak"
 
-msgid "status.detail.trusted"
-msgstr "Fidagarria"
+#. El desplegable de la señal de los certificados propios: en qué sitio hay cuántos.
+msgid "status.detail.where"
+msgstr "Ikusi non"
 
-msgid "status.detail.untrusted"
-msgstr "Ez da fidagarria"
+#. Que el certificado de rFirma está puesto en ese navegador.
+msgid "status.detail.installed"
+msgstr "Instalatuta"
+
+#. Que el certificado de rFirma no está en ese navegador.
+msgid "status.detail.notInstalled"
+msgstr "Ez dago instalatuta"
 
 msgid "status.storeBrands.firefox"
 msgstr "Firefox"
@@ -947,7 +955,13 @@ msgid "status.storeBrands.chrome"
 msgstr "Chrome eta Chromium"
 
 msgid "status.storeBrands.nssdb"
-msgstr "Sistemaren biltegia"
+msgstr "Beste nabigatzaileak"
+
+msgid "status.storeBrands.card"
+msgstr "Txartela"
+
+msgid "status.storeBrands.installed"
+msgstr "Instalatutako fitxategia"
 
 msgid "status.notices.restartFirefox"
 msgstr "Berrabiarazi Firefox eragina izan dezan."
@@ -1100,15 +1114,6 @@ msgstr "Bertsio berri bat dago: {{version}}"
 
 msgid "about.update.upToDate"
 msgstr "Azken bertsioan zaude"
-
-msgid "about.update.channel.flatpak"
-msgstr "Flatpak"
-
-msgid "about.update.channel.deb"
-msgstr "Debian eta Ubuntu"
-
-msgid "about.update.channel.rpm"
-msgstr "Fedora eta openSUSE"
 
 msgid "about.independence"
 msgstr ""
@@ -1480,6 +1485,9 @@ msgstr "Egoitza mantentzen duenarentzat:"
 
 msgid "sede.outcome.detail"
 msgstr "Xehetasuna"
+
+msgid "sede.outcome.reportHint"
+msgstr "rFirmaren akatsa dela uste duzu?"
 
 msgid "sede.outcome.autoClose"
 msgstr "Bere kabuz itxiko da {{seconds}} s barru."

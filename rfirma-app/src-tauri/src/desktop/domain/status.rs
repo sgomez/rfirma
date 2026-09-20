@@ -66,8 +66,8 @@ pub struct SignalRow {
     pub verdict: Verdict,
     /// Acción disponible si la hay.
     pub action: Option<StatusAction>,
-    /// Detalle por almacén, para señales que lo despliegan.
-    pub detail: Option<Vec<StoreDetail>>,
+    /// Detalle desplegable, para las señales que lo tienen.
+    pub detail: Option<SignalDetail>,
     /// Candidatas entre las que elegir, para la señal `Firma en sedes`.
     pub candidates: Option<Vec<SiteSignatureCandidate>>,
     /// Aviso de reiniciar Firefox, tras instalar con el navegador vivo (ADR-0005).
@@ -86,7 +86,7 @@ pub struct SiteSignatureCandidate {
     pub selected: bool,
 }
 
-/// Familia de almacén de un perfil NSS, para el detalle desplegable de una señal.
+/// Sitio donde puede haber un certificado, para el detalle desplegable de una señal.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum StoreBrand {
@@ -96,6 +96,10 @@ pub enum StoreBrand {
     Chrome,
     /// Base de datos NSS genérica del sistema.
     Nssdb,
+    /// Tarjeta o token físico.
+    Card,
+    /// Fichero PKCS#12 que se instaló en rFirma.
+    Installed,
 }
 
 /// Un almacén, con su marca y si la señal es de confianza en él.
@@ -106,4 +110,30 @@ pub struct StoreDetail {
     pub brand: StoreBrand,
     /// Si la señal es de confianza en este almacén.
     pub trusted: bool,
+}
+
+/// Un sitio y cuántos certificados firmables propios tiene.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StoreCertificates {
+    /// Marca del sitio.
+    pub brand: StoreBrand,
+    /// Cuántos certificados firmables hay en él.
+    pub certificates: usize,
+}
+
+/// Lo que cuelga de una señal: dónde se confía en la CA, o cuántos certificados hay en cada sitio.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(tag = "kind", rename_all = "camelCase")]
+pub enum SignalDetail {
+    /// Almacén a almacén, si la CA de rFirma está en él.
+    Trust {
+        /// Los almacenes medidos.
+        stores: Vec<StoreDetail>,
+    },
+    /// Sitio a sitio, cuántos certificados propios tiene.
+    Certificates {
+        /// Los sitios con al menos un certificado.
+        stores: Vec<StoreCertificates>,
+    },
 }

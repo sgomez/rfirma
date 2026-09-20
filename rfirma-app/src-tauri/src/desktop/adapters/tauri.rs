@@ -11,7 +11,7 @@ use super::registry::DesktopRegistry;
 use super::views::{NewVersionView, SignalRowView, WithdrawalReportView};
 use crate::crossing::Failure;
 use crate::desktop::domain::error::{DesktopError, Situation};
-use crate::desktop::domain::status::{StoreBrand, StoreDetail};
+use crate::desktop::domain::status::{StoreBrand, StoreCertificates, StoreDetail};
 use crate::documents::adapters::views::DroppedDocumentView;
 use crate::identity::domain::store::{Store, StoreClass};
 
@@ -69,6 +69,17 @@ fn brand_of(profile: &std::path::Path) -> StoreBrand {
     }
 }
 
+/// Marca del sitio donde hay certificados propios, que puede ser una tarjeta o un `.p12`.
+fn brand_of_class(class: StoreClass) -> StoreBrand {
+    match class {
+        StoreClass::Firefox => StoreBrand::Firefox,
+        StoreClass::Chrome => StoreBrand::Chrome,
+        StoreClass::Nssdb => StoreBrand::Nssdb,
+        StoreClass::Card => StoreBrand::Card,
+        StoreClass::Installed => StoreBrand::Installed,
+    }
+}
+
 /// Mide la señal del certificado de rFirma, o la deja en «Comprobando» si no se pide remedir.
 fn local_ca_certificate_signal(
     site: &SiteRoot,
@@ -117,6 +128,12 @@ fn firefox_local_ca_trust(site: &SiteRoot) -> Vec<bool> {
         .filter(|reading| brand_of(&reading.profile) == StoreBrand::Firefox)
         .map(|reading| reading.trusted)
         .collect()
+}
+
+/// Mide la señal del certificado de rFirma, que nace en «Comprobando» al leer el estado.
+#[tauri::command(async)]
+pub fn measure_local_ca_certificate(site: State<'_, SiteRoot>) -> SignalRowView {
+    measured_local_ca_certificate_signal(&site, false).into()
 }
 
 /// Instala el certificado de rFirma donde falte y vuelve a medir la señal.
@@ -191,7 +208,14 @@ pub fn read_status(
         crate::desktop::application::status::evaluate_site_signature_signal(handlers).into(),
         local_ca_certificate_signal(&site, recheck).into(),
         crate::desktop::application::status::evaluate_user_certificates_signal(
-            identity.stores_with_certificates(),
+            identity
+                .certificates_by_class()
+                .into_iter()
+                .map(|(class, certificates)| StoreCertificates {
+                    brand: brand_of_class(class),
+                    certificates,
+                })
+                .collect(),
         )
         .into(),
     ]
@@ -251,3 +275,6 @@ pub fn withdraw_rfirma(
 
     merged_report(handler, &profiles, retried, previous.as_ref()).into()
 }
+
+#[cfg(test)]
+mod tests;

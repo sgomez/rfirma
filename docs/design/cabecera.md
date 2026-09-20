@@ -100,7 +100,7 @@ el triángulo a la derecha. Dice «entra a mirar», y nada más.
 **Lo encienden dos cosas, y solo dos**
 ([#661](https://github.com/sgomez/rfirma/issues/661)):
 
-- **El certificado de rFirma ausente o a medias** —`0 de 3 almacenes` o
+- **El certificado de rFirma ausente o a medias** —`0 de 3 navegadores` o
   `2 de 3`—, que es una instalación sin terminar.
 - **`Sin configurar`** en `Firma en sedes`: nadie atiende los enlaces de las
   sedes, así que una firma que empiece en una no va a llegar a ninguna parte.
@@ -113,7 +113,7 @@ el triángulo a la derecha. Dice «entra a mirar», y nada más.
 - **«No aplica» no llama a nadie**: ni el certificado apagado porque firma
   AutoFirma, ni `No se puede consultar` dentro del flatpak. No saber quién firma,
   o saber que el certificado no hace falta, no es tener algo que reparar.
-- **`Tus certificados: Ninguno` tampoco.** Instalar un certificado propio es
+- **`Certificados de firma electrónica: Ninguno` tampoco.** Instalar un certificado propio es
   cosa de la FNMT o de quien lo emita, no de rFirma; el panel dice `Cómo
   instalar` y ahí se acaba lo que puede hacer.
 - **Una versión nueva tampoco.** Eso lo dice la franja de la

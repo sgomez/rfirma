@@ -1,7 +1,9 @@
+use std::path::Path;
+
 use super::ListedCertificates;
 use super::{
-    certificate_behind, certificates_with_their_chains, listed_rows, remember_the_certificate,
-    stores_with_certificates, usable_certificate,
+    certificate_behind, certificates_by_class, certificates_with_their_chains, listed_rows,
+    remember_the_certificate, usable_certificate,
 };
 use crate::identity::application::tests::{
     a_certificate, a_certificate_with_id, listed_from, NoToken, TestAuthority,
@@ -10,7 +12,7 @@ use crate::identity::domain::algorithm::SignatureAlgorithm;
 use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
 use crate::identity::domain::error::{Situation, TokenError};
 use crate::identity::domain::secret::StoreSecret;
-use crate::identity::domain::store::Store;
+use crate::identity::domain::store::{Store, StoreClass};
 use crate::identity::ports::CertificateMemory as _;
 use crate::identity::ports::Token;
 use crate::signing::application::configuration_memory::Configuration;
@@ -168,6 +170,8 @@ fn a_first_run_has_no_remembered_certificate() {
 const CARD: &str = "/usr/lib/softhsm/libsofthsm2.so";
 /// El módulo del almacén NSS donde aterriza un `.p12` instalado.
 const INSTALLED: &str = "/usr/lib/libsoftokn3.so";
+/// El módulo NSS con el que se abre el perfil de un navegador.
+const SOFTOKEN: &str = "/usr/lib/libsoftokn3.so";
 
 /// Un token cuyos almacenes tienen lo que se le diga, firmable o no.
 struct StoresWith {
@@ -257,6 +261,13 @@ impl Token for StoresWith {
             "este token no importa nada",
         ))
     }
+}
+
+fn a_certificate_of(store: &Store, label: &str) -> TokenCertificate {
+    TokenCertificate::new(
+        CertificateRef::new(store.clone(), "rfirma-test", label, vec![0x01]),
+        Vec::new(),
+    )
 }
 
 fn a_certificate_in(module: &str, label: &str, der: &[u8]) -> TokenCertificate {
@@ -357,22 +368,59 @@ fn a_store_that_cannot_be_opened_leaves_the_signer_alone_instead_of_stopping_the
 }
 
 #[test]
-fn with_no_stores_configured_nothing_has_certificates() {
-    assert_eq!(stores_with_certificates(&NoToken, &[]), 0);
+fn with_no_stores_configured_nothing_is_found() {
+    assert_eq!(
+        certificates_by_class(&NoToken, &[], Path::new(INSTALLED)),
+        vec![]
+    );
 }
 
 #[test]
-fn a_store_without_certificates_does_not_count() {
+fn a_store_without_certificates_adds_nothing() {
     let stores = [Store::module(CARD)];
 
-    assert_eq!(stores_with_certificates(&NoToken, &stores), 0);
+    assert_eq!(
+        certificates_by_class(&NoToken, &stores, Path::new(INSTALLED)),
+        vec![]
+    );
 }
 
 #[test]
-fn only_stores_holding_a_certificate_are_counted() {
-    let signable = vec![a_certificate_in(CARD, "FIRMA", &[])];
+fn each_class_of_store_brings_its_own_count() {
+    let firefox = Store::nss(
+        SOFTOKEN,
+        Path::new("/casa/ada/.mozilla/firefox/ada.default"),
+    );
+    let signable = vec![
+        a_certificate_in(CARD, "FIRMA", &[]),
+        a_certificate_in(CARD, "AUTENTICACION", &[]),
+        a_certificate_of(&firefox, "FIRMA"),
+    ];
     let token = StoresWith::holding(signable.clone(), signable);
-    let stores = [Store::module(CARD), Store::module(INSTALLED)];
+    let stores = [Store::module(CARD), firefox];
 
-    assert_eq!(stores_with_certificates(&token, &stores), 1);
+    assert_eq!(
+        certificates_by_class(&token, &stores, Path::new(INSTALLED)),
+        vec![(StoreClass::Card, 2), (StoreClass::Firefox, 1)]
+    );
+}
+
+#[test]
+fn two_profiles_of_the_same_class_are_one_line() {
+    let one = Store::nss(
+        SOFTOKEN,
+        Path::new("/casa/ada/.mozilla/firefox/ada.default"),
+    );
+    let another = Store::nss(SOFTOKEN, Path::new("/casa/ada/.mozilla/firefox/ada.work"));
+    let signable = vec![
+        a_certificate_of(&one, "FIRMA"),
+        a_certificate_of(&another, "FIRMA"),
+    ];
+    let token = StoresWith::holding(signable.clone(), signable);
+    let stores = [one, another];
+
+    assert_eq!(
+        certificates_by_class(&token, &stores, Path::new(INSTALLED)),
+        vec![(StoreClass::Firefox, 2)]
+    );
 }
