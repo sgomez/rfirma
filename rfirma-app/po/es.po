@@ -1110,15 +1110,6 @@ msgstr "Hay una versión nueva: {{version}}"
 msgid "about.update.upToDate"
 msgstr "Estás en la última versión"
 
-msgid "about.update.channel.flatpak"
-msgstr "Flatpak"
-
-msgid "about.update.channel.deb"
-msgstr "Debian y Ubuntu"
-
-msgid "about.update.channel.rpm"
-msgstr "Fedora y openSUSE"
-
 msgid "about.independence"
 msgstr ""
 "Proyecto independiente. rFirma no está relacionada con AutoFirma ni con la "

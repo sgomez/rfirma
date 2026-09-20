@@ -1115,15 +1115,6 @@ msgstr "Bertsio berri bat dago: {{version}}"
 msgid "about.update.upToDate"
 msgstr "Azken bertsioan zaude"
 
-msgid "about.update.channel.flatpak"
-msgstr "Flatpak"
-
-msgid "about.update.channel.deb"
-msgstr "Debian eta Ubuntu"
-
-msgid "about.update.channel.rpm"
-msgstr "Fedora eta openSUSE"
-
 msgid "about.independence"
 msgstr ""
 "Proiektu independentea. rFirmak ez du zerikusirik AutoFirmarekin, ez eta "

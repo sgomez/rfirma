@@ -1019,15 +1019,6 @@ msgstr ""
 msgid "about.update.upToDate"
 msgstr ""
 
-msgid "about.update.channel.flatpak"
-msgstr ""
-
-msgid "about.update.channel.deb"
-msgstr ""
-
-msgid "about.update.channel.rpm"
-msgstr ""
-
 msgid "about.independence"
 msgstr ""
 

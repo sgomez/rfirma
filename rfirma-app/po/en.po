@@ -1092,15 +1092,6 @@ msgstr "There's a new version: {{version}}"
 msgid "about.update.upToDate"
 msgstr "You're on the latest version"
 
-msgid "about.update.channel.flatpak"
-msgstr "Flatpak"
-
-msgid "about.update.channel.deb"
-msgstr "Debian and Ubuntu"
-
-msgid "about.update.channel.rpm"
-msgstr "Fedora and openSUSE"
-
 msgid "about.independence"
 msgstr ""
 "Independent project. rFirma isn't related to AutoFirma or to the Spanish "
