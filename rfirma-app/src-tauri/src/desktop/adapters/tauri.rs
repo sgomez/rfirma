@@ -275,3 +275,6 @@ pub fn withdraw_rfirma(
 
     merged_report(handler, &profiles, retried, previous.as_ref()).into()
 }
+
+#[cfg(test)]
+mod tests;
