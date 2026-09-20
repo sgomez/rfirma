@@ -369,7 +369,9 @@ msgstr "rFirma no sabe cuál es tu carpeta personal y no puede arrancar."
 
 #. Se enseña en un diálogo nativo antes de que exista ventana; no la lee i18next.
 msgid "errors.startup.scratchFolderUnusable"
-msgstr "rFirma no ha podido crear la carpeta de paso que necesita y no puede arrancar."
+msgstr ""
+"rFirma no ha podido crear la carpeta de paso que necesita y no puede "
+"arrancar."
 
 #. Se enseña en un diálogo nativo antes de que exista ventana; no la lee i18next.
 msgid "errors.startup.windowUnavailable"
@@ -934,9 +936,11 @@ msgstr "Ver navegadores"
 msgid "status.detail.where"
 msgstr "Ver dónde"
 
+#. Que el certificado de rFirma está puesto en ese navegador.
 msgid "status.detail.installed"
 msgstr "Instalado"
 
+#. Que el certificado de rFirma no está en ese navegador.
 msgid "status.detail.notInstalled"
 msgstr "No instalado"
 
@@ -992,7 +996,8 @@ msgid "status.withdrawal.retry"
 msgstr "Reintentar"
 
 msgid "status.withdrawal.restartBrowserNotice"
-msgstr "Reinicia el navegador para que deje de confiar en el certificado retirado."
+msgstr ""
+"Reinicia el navegador para que deje de confiar en el certificado retirado."
 
 msgid "preferences.title"
 msgstr "Preferencias"
@@ -1167,8 +1172,8 @@ msgstr "El certificado de rFirma"
 msgid "setup.certificate.body"
 msgstr ""
 "Cuando firmas en una sede electrónica, tu navegador tiene que conectarse a "
-"rFirma. Para que esa conexión sea segura necesitamos instalar un "
-"certificado propio."
+"rFirma. Para que esa conexión sea segura necesitamos instalar un certificado "
+"propio."
 
 msgid "setup.certificate.installing"
 msgstr "Instalando…"
@@ -1474,6 +1479,9 @@ msgstr "Para quien mantiene la sede:"
 
 msgid "sede.outcome.detail"
 msgstr "Detalle"
+
+msgid "sede.outcome.reportHint"
+msgstr "¿Te parece un fallo de rFirma?"
 
 msgid "sede.outcome.autoClose"
 msgstr "Se cerrará sola dentro de {{seconds}} s."

@@ -132,18 +132,23 @@ export function SedeOutcome({
               <RefusalSentence situation={outcome.situation} origin={origin} />
             </p>
             <p className="rf-hint">{t("sede.outcome.refusedNote")}</p>
-            <div className="rf-row rf-gap-xs sede-outcome__detail">
-              <span className="rf-label">{t("sede.outcome.detail")}</span>
+            <div className="rf-stack rf-gap-xs sede-outcome__detail">
+              <div className="rf-row rf-gap-xs sede-outcome__detail-head">
+                <span className="rf-label">{t("sede.outcome.detail")}</span>
+                <button
+                  type="button"
+                  className="rf-btn rf-btn--ghost sede-outcome__copy"
+                  onClick={() => void navigator.clipboard.writeText(outcome.detail)}
+                >
+                  <CopyIcon size={14} />
+                  {t("actions.copy")}
+                </button>
+              </div>
               <code className="rf-body sede-outcome__detail-text">{outcome.detail}</code>
-              <button
-                type="button"
-                className="rf-btn rf-btn--ghost"
-                onClick={() => void navigator.clipboard.writeText(outcome.detail)}
-              >
-                <CopyIcon size={14} />
-                {t("actions.copy")}
-              </button>
-              {outcome.situation === "unknown" && (
+            </div>
+            {outcome.situation === "unknown" && (
+              <div className="rf-row rf-gap-xs sede-outcome__report">
+                <p className="rf-hint">{t("sede.outcome.reportHint")}</p>
                 <button
                   type="button"
                   className="rf-btn rf-btn--ghost sede-outcome__help"
@@ -152,8 +157,8 @@ export function SedeOutcome({
                   <ExternalLinkIcon size={14} />
                   {t("errors.help")}
                 </button>
-              )}
-            </div>
+              </div>
+            )}
           </>
         )}
       </div>

@@ -362,7 +362,8 @@ msgstr "rFirma non sabe cal é o teu cartafol persoal e non pode arrincar."
 
 #. Se enseña en un diálogo nativo antes de que exista ventana; no la lee i18next.
 msgid "errors.startup.scratchFolderUnusable"
-msgstr "rFirma non puido crear o cartafol de paso que necesita e non pode arrincar."
+msgstr ""
+"rFirma non puido crear o cartafol de paso que necesita e non pode arrincar."
 
 #. Se enseña en un diálogo nativo antes de que exista ventana; no la lee i18next.
 msgid "errors.startup.windowUnavailable"
@@ -920,9 +921,11 @@ msgstr "Ver navegadores"
 msgid "status.detail.where"
 msgstr "Ver onde"
 
+#. Que el certificado de rFirma está puesto en ese navegador.
 msgid "status.detail.installed"
 msgstr "Instalado"
 
+#. Que el certificado de rFirma no está en ese navegador.
 msgid "status.detail.notInstalled"
 msgstr "Non instalado"
 
@@ -1460,6 +1463,9 @@ msgstr "Para quen mantén a sede:"
 
 msgid "sede.outcome.detail"
 msgstr "Detalle"
+
+msgid "sede.outcome.reportHint"
+msgstr "Parécheche un fallo de rFirma?"
 
 msgid "sede.outcome.autoClose"
 msgstr "Pecharase soa dentro de {{seconds}} s."

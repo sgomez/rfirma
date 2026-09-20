@@ -1363,6 +1363,9 @@ msgstr ""
 msgid "sede.outcome.detail"
 msgstr ""
 
+msgid "sede.outcome.reportHint"
+msgstr ""
+
 msgid "sede.outcome.autoClose"
 msgstr ""
 

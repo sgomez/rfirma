@@ -307,8 +307,8 @@ msgstr "Aquesta pantalla ha deixat de funcionar"
 
 msgid "errors.situations.renderFailed.body"
 msgstr ""
-"Recarrega la finestra per continuar. Si continua passant, adjunta el "
-"detall tècnic a l'informe de l'error."
+"Recarrega la finestra per continuar. Si continua passant, adjunta el detall "
+"tècnic a l'informe de l'error."
 
 msgid "errors.situations.folderMissing.title"
 msgstr "La carpeta de destinació ja no hi és"
@@ -373,7 +373,8 @@ msgstr "rFirma no sap quina és la teva carpeta personal i no pot arrencar."
 
 #. Se enseña en un diálogo nativo antes de que exista ventana; no la lee i18next.
 msgid "errors.startup.scratchFolderUnusable"
-msgstr "rFirma no ha pogut crear la carpeta de pas que necessita i no pot arrencar."
+msgstr ""
+"rFirma no ha pogut crear la carpeta de pas que necessita i no pot arrencar."
 
 #. Se enseña en un diálogo nativo antes de que exista ventana; no la lee i18next.
 msgid "errors.startup.windowUnavailable"
@@ -930,9 +931,11 @@ msgstr "Veure navegadors"
 msgid "status.detail.where"
 msgstr "Veure on"
 
+#. Que el certificado de rFirma está puesto en ese navegador.
 msgid "status.detail.installed"
 msgstr "Instal·lat"
 
+#. Que el certificado de rFirma no está en ese navegador.
 msgid "status.detail.notInstalled"
 msgstr "No instal·lat"
 
@@ -1472,6 +1475,9 @@ msgstr "Per a qui manté la seu:"
 
 msgid "sede.outcome.detail"
 msgstr "Detall"
+
+msgid "sede.outcome.reportHint"
+msgstr "Et sembla un error de rFirma?"
 
 msgid "sede.outcome.autoClose"
 msgstr "Es tancarà sola d'aquí a {{seconds}} s."
