@@ -293,15 +293,16 @@ impl Console {
     pub(crate) fn stop(&self, abort: bool) {
         let mut session = self.shared.lock();
         session.queue.clear();
-        if abort && !session.running.is_empty() {
-            session.aborting = true;
-            if let Some(pid) = session.driver {
-                kill(pid);
-            }
-            if let Some(question) = session.question.take() {
-                let _ = question.reply.send(None);
-            }
+        if abort {
+            cut_the_running_check(&mut session);
         }
+        self.shared.publish(&session);
+    }
+
+    /// Corta la comprobación en curso, la deja pendiente y sigue con la cola.
+    pub(crate) fn skip(&self) {
+        let mut session = self.shared.lock();
+        cut_the_running_check(&mut session);
         self.shared.publish(&session);
     }
 
@@ -668,6 +669,19 @@ fn is_a_report_name(name: &str) -> bool {
 
 fn event_frame(kind: &str, payload: &serde_json::Value) -> String {
     format!("event: {kind}\ndata: {payload}\n\n")
+}
+
+fn cut_the_running_check(session: &mut Session) {
+    if session.running.is_empty() {
+        return;
+    }
+    session.aborting = true;
+    if let Some(pid) = session.driver {
+        kill(pid);
+    }
+    if let Some(question) = session.question.take() {
+        let _ = question.reply.send(None);
+    }
 }
 
 fn kill(pid: u32) {

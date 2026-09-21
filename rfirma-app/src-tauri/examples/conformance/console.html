@@ -80,8 +80,9 @@
     <span class="grow"></span>
     <span id="question-banner"></span>
     <button type="button" id="run-pending">▶ pendientes</button>
-    <button type="button" id="stop" title="vacía la cola; la que corre termina">■ parar</button>
-    <button type="button" id="abort" title="vacía la cola y corta la que corre">✕ abortar</button>
+    <button type="button" id="stop" title="vacía la cola; la comprobación en curso termina">■ parar</button>
+    <button type="button" id="skip" title="corta la comprobación en curso, la deja pendiente y sigue con la cola">⏭ saltar</button>
+    <button type="button" id="abort" title="vacía la cola y corta la comprobación en curso">✕ abortar</button>
     <button type="button" id="toggle-compare">Comparar informes</button>
   </div>
 </header>
@@ -299,6 +300,7 @@ function renderSummary() {
   const idle = !state.running && state.queued.length === 0;
   $("run-pending").disabled = !state.report;
   $("stop").disabled = idle;
+  $("skip").disabled = !state.running;
   $("abort").disabled = !state.running;
 }
 
@@ -359,8 +361,12 @@ function renderCard() {
   card.replaceChildren(
     el("div", { class: "row" },
       el("h2", { class: "mono grow" }, check.id),
-      follow ? el("span", { class: "dim" }, "siguiendo a la que corre")
-        : el("button", { onclick: () => { follow = true; if (runningHead) select(runningHead, false); else renderCard(); } }, "seguir a la que corre"),
+      el("label", { class: "dim", title: "al empezar cada comprobación, muestra su ficha y su registro" },
+        el("input", { type: "checkbox", checked: follow, onchange: (event) => {
+          follow = event.target.checked;
+          if (follow && runningHead) select(runningHead, false);
+        } }),
+        " ir a la comprobación en curso"),
       el("button", { onclick: () => showTranscript(check.id) }, "ver tramas"),
     ),
     el("div", { class: "dim" }, `${check.suite} · cap. ${check.chapter}`, " · ", duration ? ["⏱ ", duration] : "sin duración"),
@@ -518,6 +524,7 @@ $("new-report-form").addEventListener("submit", async (event) => {
 });
 $("run-pending").addEventListener("click", () => post("/api/run", "pending").catch(report("No se pudo encolar")));
 $("stop").addEventListener("click", () => post("/api/stop", { abort: false }).catch(report("No se pudo parar")));
+$("skip").addEventListener("click", () => post("/api/skip", {}).catch(report("No se pudo saltar")));
 $("abort").addEventListener("click", () => post("/api/stop", { abort: true }).catch(report("No se pudo abortar")));
 $("toggle-compare").addEventListener("click", () => {
   document.body.classList.toggle("comparing");

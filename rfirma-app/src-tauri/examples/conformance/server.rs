@@ -269,6 +269,10 @@ fn attend(mut stream: TcpStream, gate: &Gate, console: &Console) {
             &mut stream,
             body_of::<StopOrder>(&request).map(|order| console.stop(order.abort)),
         ),
+        ("POST", "/api/skip") => {
+            console.skip();
+            answer(&mut stream, Ok::<(), String>(()));
+        }
         ("POST", "/api/answer") => answer(
             &mut stream,
             body_of::<Answer>(&request).and_then(|given| console.answer(given.answer)),

@@ -106,7 +106,7 @@ impl Probe {
         if self.witness.aborted() {
             return group
                 .iter()
-                .map(|check| Settlement::pending(check, "se abortó mientras corría"))
+                .map(|check| Settlement::pending(check, "se interrumpió mientras se ejecutaba"))
                 .collect();
         }
 
