@@ -1134,6 +1134,9 @@ msgstr "Finish"
 msgid "setup.actions.notNow"
 msgstr "Not now"
 
+msgid "setup.actions.skip"
+msgstr "Skip setup"
+
 msgid "setup.actions.useRfirma"
 msgstr "Have rFirma open them"
 

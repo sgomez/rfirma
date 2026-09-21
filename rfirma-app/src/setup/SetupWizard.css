@@ -115,3 +115,7 @@
   border-top: 1px solid var(--rf-border-subtle);
   background: var(--rf-surface);
 }
+
+.setup-wizard__skip {
+  margin-right: auto;
+}

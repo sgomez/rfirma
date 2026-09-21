@@ -1157,6 +1157,9 @@ msgstr "Amaitu"
 msgid "setup.actions.notNow"
 msgstr "Orain ez"
 
+msgid "setup.actions.skip"
+msgstr "Saltatu konfigurazioa"
+
 msgid "setup.actions.useRfirma"
 msgstr "Ireki dezala rFirmak"
 

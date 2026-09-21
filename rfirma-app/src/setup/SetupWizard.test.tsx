@@ -103,6 +103,21 @@ describe("SetupWizard", () => {
     expect(screen.getByText("The rFirma certificate")).toBeInTheDocument();
   });
 
+  it("can be skipped from the welcome screen without touching the computer", async () => {
+    const user = userEvent.setup();
+    const onFinish = vi.fn();
+    const port = memoryStatus([aVersionRow, certificateNotInstalled, handlerNotOurs]);
+    const install = vi.spyOn(port, "installLocalCaCertificate");
+    const choose = vi.spyOn(port, "chooseSiteSignatureHandler");
+    renderWithCatalog(<SetupWizard seen={false} statusPort={port} onFinish={onFinish} />);
+
+    await user.click(screen.getByRole("button", { name: "Omitir configuración" }));
+
+    expect(onFinish).toHaveBeenCalledOnce();
+    expect(install).not.toHaveBeenCalled();
+    expect(choose).not.toHaveBeenCalled();
+  });
+
   it("installs the certificate through the same use case as the status panel", async () => {
     const user = userEvent.setup();
     const installedRow: SignalRow = {

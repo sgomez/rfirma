@@ -1148,6 +1148,9 @@ msgstr "Acabar"
 msgid "setup.actions.notNow"
 msgstr "Ara no"
 
+msgid "setup.actions.skip"
+msgstr "Ometre la configuració"
+
 msgid "setup.actions.useRfirma"
 msgstr "Que obrin rFirma"
 

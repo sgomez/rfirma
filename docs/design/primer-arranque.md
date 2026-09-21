@@ -56,15 +56,16 @@ Tres regiones:
 
 | # | Qué lleva | Pie |
 | - | --------- | --- |
-| 1 | Bienvenida: titular, qué es rFirma, el deslinde de independencia y el idioma | `Continuar` |
+| 1 | Bienvenida: titular, qué es rFirma, el deslinde de independencia y el idioma | `Omitir configuración` a la izquierda · `Continuar` |
 | 2 | Las dos acciones, una tarjeta cada una | `Atrás` · `Terminar` |
 
-**El rechazo es por acción.** Cada tarjeta de la segunda pantalla lleva su
-«Ahora no» en secundario al lado del botón. No hay salida al pie del recorrido
-ni primario desactivado con una línea que diga qué falta: quien no quiere una de
-las dos cosas la declina y sigue, y el pie sólo navega. Cerrar la ventana sigue
-siendo posible siempre, pero eso no es una opción de interfaz: es el gestor de
-ventanas.
+**El rechazo es por acción, y el recorrido entero se puede omitir.** Cada
+tarjeta de la segunda pantalla lleva su «Ahora no» en secundario al lado del
+botón, y no hay primario desactivado con una línea que diga qué falta. Además,
+la bienvenida lleva `Omitir configuración`, fantasma y a la izquierda del pie:
+rFirma firma documentos sin sedes, y a quien sólo quiere eso no se le hace
+recorrer una configuración que no necesita. Omitir cuenta como haber visto el
+asistente; las dos acciones siguen en el panel de estado.
 
 ## Los textos
 
@@ -94,7 +95,7 @@ Y, en otra tarjeta con la forma de las de la pantalla 2:
 >
 > [ Español ▾ ]
 
-Pie: `Continuar`.
+Pie: `Omitir configuración` · `Continuar`.
 
 ### Pantalla 2 · El certificado de rFirma
 
