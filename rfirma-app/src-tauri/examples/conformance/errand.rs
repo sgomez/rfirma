@@ -3,8 +3,8 @@
 
 use std::collections::VecDeque;
 use std::io::{BufRead, BufReader, Write};
-use std::path::{Path, PathBuf};
 use std::os::unix::process::CommandExt;
+use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::sync::{Arc, Mutex};
 use std::thread::{spawn, JoinHandle};
