@@ -200,7 +200,7 @@ export function SetupWizard({
         {step === 1 && (
           <button
             type="button"
-            className="rf-btn rf-btn--ghost setup-wizard__skip"
+            className="rf-btn rf-btn--ghost"
             onClick={onFinish}
           >
             {t("setup.actions.skip")}
