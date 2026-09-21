@@ -11,7 +11,7 @@ statement = """
 Las operaciones aceptan versiones de protocolo menores o iguales a 4
 (MAX_PROTOCOL_VERSION_SUPPORTED).
 """
-drive = { mode = "v4", script = "protocol-v4" }
+drive = { mode = "v4", script = "protocol-v4-operations" }
 
 [check.expect.autofirma]
 verdict = "conforme"
@@ -20,14 +20,15 @@ verdict = "conforme"
 verdict = "conforme"
 
 [[check]]
-id = "operation_unsupported_protocol_version_rejected"
+id = "websocket_operation_protocol_version_ignored"
 suite = "versiones"
 chapter = "14"
-citation = "ProtocolVersion.java:60-62; ProtocolInvocationLauncherSign.java:133-140"
+citation = "AfirmaWebSocketServerV4.java:91; ProtocolInvocationLauncher.java:189, 653-655"
 statement = """
-Una versión de protocolo solicitada superior a 4 (p. ej. ver=5) es rechazada con el código SAF_21.
+Por el canal WebSocket la versión de protocolo de la operación la fija el canal: un ver=5 en la
+petición se ignora, no se rechaza con SAF_21, y la operación sigue hasta su siguiente comprobación.
 """
-drive = { mode = "v4", script = "protocol-v4" }
+drive = { mode = "v4", script = "protocol-v4-operations" }
 
 [check.expect.autofirma]
 verdict = "conforme"
@@ -44,7 +45,7 @@ statement = """
 Si mcv solicita una versión igual o inferior a la versión del aplicativo (p. ej. mcv=1.0.0), la
 operación continúa sin error de versión.
 """
-drive = { mode = "v4", script = "protocol-v4" }
+drive = { mode = "v4", script = "protocol-v4-operations" }
 
 [check.expect.autofirma]
 verdict = "conforme"
@@ -61,7 +62,7 @@ statement = """
 Si mcv solicita una versión superior a la de la aplicación (p. ej. mcv=99.0.0), la operación es
 rechazada con SAF_41.
 """
-drive = { mode = "v4", script = "protocol-v4" }
+drive = { mode = "v4", script = "protocol-v4-operations" }
 
 [check.expect.autofirma]
 verdict = "conforme"
@@ -70,13 +71,13 @@ verdict = "conforme"
 verdict = "conforme"
 
 [[check]]
-id = "websocket_handshake_session_query_parameter"
+id = "websocket_handshake_without_session_accepted"
 suite = "versiones"
 chapter = "14"
-citation = "AfirmaWebSocketServerV4.java:49-74"
+citation = "AfirmaWebSocketServerV4.java:56-78"
 statement = """
-En versión 4 se exige idsession en la query string del handshake HTTP de WebSocket
-(ws.getResourceDescriptor()) y la conexión que no lo traiga se rechaza con el código de cierre 1008.
+En versión 4 el apretón de manos WebSocket no exige idsession en la query string: la conexión sin
+él se acepta y la credencial se comprueba en cada mensaje.
 """
 drive = { mode = "v4", script = "protocol-v4" }
 

@@ -663,8 +663,11 @@ for (final SingleSignOperation singleConfig : batchConfig.getSigns()) {
   - `SIGN`: Invoca `signer.sign(...)`.
   - `COSIGN`: Invoca `signer.cosign(...)`.
   - `COUNTERSIGN`: Invoca `signer.countersign(...)`. La diana de contrafirma se extrae
-    de la propiedad `target` de `extraparams` (`CounterSignTarget.TREE` si el valor es
-    `tree`, o `CounterSignTarget.LEAFS` por defecto; `LocalBatchSigner.java:165-166`).
+    de la propiedad `target` de `extraparams` con `CounterSignTarget.getTarget`
+    (`CounterSignTarget.TREE` si el valor es `tree`, `CounterSignTarget.LEAFS` en otro
+    caso; `LocalBatchSigner.java:165-166`). Si falta, `getTarget` lanza
+    `IllegalArgumentException` y el documento vuelve como `ERROR_PRE`
+    ([BUG-30](A1-bugs-autofirma.md#bug-30-la-contrafirma-en-un-lote-local-sin-target-falla-con-el-objetivo-de-la-contrafirma-no-puede-ser-nulo)).
 
 #### Gestión del retroceso ante errores (`stoponerror`):
 
@@ -790,7 +793,7 @@ el mensaje que visualiza el usuario en la interfaz gráfica modal y la causa exa
 | `SAF_10` | `ERROR_SIGN_WITHOUT_DATA` | Se ha intentado realizar una firma sin datos | El documento individual a firmar contiene un array de bytes vacío. | `LocalBatchSigner.java:221` |
 | `SAF_11` | `ERROR_SENDING_RESULT` | Error enviando los datos al servidor | Fallo de conexión de red al subir el resultado a `stservlet`. | `ProtocolInvocationLauncherBatch.java:210` |
 | `SAF_12` | `ERROR_ENCRIPTING_DATA` | Error al cifrar los datos | Fallo durante el cifrado simétrico DES con `key` del resultado o del certificado. | `ProtocolInvocationLauncherBatch.java:177` |
-| `SAF_13` | `ERROR_LOCAL_ACCESS_BLOCKED` | Acceso a recurso local denegado | La URL de `stservlet` o pre/postsigner apunta a una dirección IP de bucle invertido o red local privada sin permiso. | `UrlParameters.java:286-315` |
+| `SAF_13` | `ERROR_LOCAL_ACCESS_BLOCKED` | Acceso a recurso local denegado | La URL de `stservlet` apunta a una dirección IP de bucle invertido o red local privada sin permiso. Un pre/postsigner local en el lote da `SAF_03` ([BUG-28](A1-bugs-autofirma.md#bug-28-un-servlet-del-lote-en-el-loopback-se-rechaza-con-saf_03-en-lugar-de-saf_13)). | `UrlParameters.java:286-315` |
 | `SAF_14` | `ERROR_UNSUPPORTED_OPERATION` | Operación no soportada | La suboperación de un documento en lote local no es `sign`, `cosign` ni `countersign`. | `LocalBatchSigner.java:175` |
 | `SAF_15` | `ERROR_DECRYPTING_DATA` | Error al descifrar los datos obtenidos | Fallo al descifrar con `key` el sobre de parámetros descargado de `rtservlet`. | `ProtocolInvocationLauncher.java:318-322` |
 | `SAF_16` | `ERROR_RECOVERING_DATA` | No se pudieron recuperar los datos del servidor | Fallo HTTP o longitud anómala al descargar el sobre de parámetros desde `rtservlet`. | `ProtocolInvocationLauncher.java:311-316` |
@@ -800,7 +803,7 @@ el mensaje que visualiza el usuario en la interfaz gráfica modal y la causa exa
 | `SAF_20` | `ERROR_LOCAL_BATCH_SIGN` | Error en el proceso del lote de firmas | Excepción general no controlada durante el proceso de firma de lote local (`localBatchProcess=true`). | `ProtocolInvocationLauncherBatch.java:386` |
 | `SAF_21` | `ERROR_UNSUPPORTED_PROCEDURE` | Procedimiento no soportado | La versión de protocolo solicitada en la llamada supera `MAX_PROTOCOL_VERSION_SUPPORTED`. | `ProtocolInvocationLauncherBatch.java:81` |
 | `SAF_26` | `ERROR_CONTACT_BATCH_SERVICE` | Error al contactar con el servicio de firma de lotes | El servidor de prefirma o postfirma de lotes responde con un error HTTP en el rango 4xx (distinto de 400). | `ProtocolInvocationLauncherBatch.java:367` |
-| `SAF_27` | `ERROR_BATCH_SIGNATURE` | Error durante la firma del lote | El servidor de pre/postfirma devuelve un error HTTP 5xx, una respuesta ininteligible o lanza `AOException` durante el lote remoto. | `ProtocolInvocationLauncherBatch.java:371, 380, 387` |
+| `SAF_27` | `ERROR_BATCH_SIGNATURE` | Error durante la firma del lote | El servidor de pre/postfirma devuelve un error HTTP 5xx, una respuesta ininteligible, no acepta la conexión ([BUG-29](A1-bugs-autofirma.md#bug-29-un-servicio-de-lotes-inalcanzable-se-reporta-como-saf_27-el-servicio-informó-de-un-error-en-lugar-de-saf_26)) o lanza `AOException` durante el lote remoto. | `ProtocolInvocationLauncherBatch.java:371, 380, 387` |
 | `SAF_28` | `ERROR_INVALID_PDF` | El documento proporcionado no es un PDF válido | Documento corrupto o no PDF en firma PAdES local. | `LocalBatchSigner.java:196` |
 | `SAF_29` | `ERROR_INVALID_XML` | El documento proporcionado no es un XML válido | Documento con sintaxis XML errónea en firma XAdES local. | `LocalBatchSigner.java:201` |
 | `SAF_30` | `ERROR_INVALID_DATA` | Los datos proporcionados no son válidos | Error de estructura de fichero en firma local (`AOFormatFileException`). | `LocalBatchSigner.java:206` |

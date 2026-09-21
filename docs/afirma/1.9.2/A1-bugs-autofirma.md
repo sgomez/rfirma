@@ -264,7 +264,7 @@ dirigido al defecto.
 
 ### BUG-15: Ausencia de validación de `cop` en `signandsave` provoca `NullPointerException` y reporte engañoso con `SAF_09`
 
-* **Comprobación del catálogo:** `signandsave_rejects_a_request_without_a_verb_with_saf_04`.
+* **Comprobación del catálogo:** `signandsave_rejects_a_request_without_a_verb_with_saf_04`; en `sign`, `sign_missing_or_invalid_operation_rejected`.
 * **Estado en `master`:** **Sigue presente.** `UrlParametersToSignAndSave.java:238-239` sigue asignando `cop` sin comprobar presencia ni pertenencia al conjunto de operaciones.
 * **Código fuente:** `afirma-core` · `es.gob.afirma.core.misc.protocol.UrlParametersToSignAndSave.java:237-238`; `afirma-simple-plugins` · `es.gob.afirma.standalone.plugins.SignOperation.java:67-78`; `afirma-simple` · `es.gob.afirma.standalone.protocol.ProtocolInvocationLauncherSignAndSave.java:155, 297, 728, 882-887`.
 * **Origen de auditoría:** Anteriormente AUD-37 ([07-operacion-signandsave.md](07-operacion-signandsave.md)).
@@ -281,6 +281,7 @@ dirigido al defecto.
   4. La sede electrónica recibe una notificación que atribuye el fallo a un error interno del proceso criptográfico del certificado en lugar de a un error sintáctico de parámetros (`SAF_03`), habiendo sometido previamente a la persona usuaria a una interacción innecesaria con el diálogo de certificados y PIN.
   *(Nota: Si `data == null` y el firmador implementa `OptionalDataInterface`, el `NullPointerException` se detona anticipadamente en la línea 297 en `signOperation.getCryptoOperation().toString()`, escapando de `sign` y `processSign` y siendo absorbido por el capturador genérico de `ProtocolInvocationLauncher.java:748`, el cual devuelve `SAF_03`).*
 * **Causa raíz:** Falta de comprobación de presencia y obligatoriedad del parámetro `cop` en `UrlParametersToSignAndSave.setSignAndSaveParameters`, que debería arrojar `ParameterException` en caso de valor nulo o no reconocido.
+* **También en `sign`:** `UrlParametersToSign.java:245-246` asigna `op` sin validarlo y `ProtocolInvocationLauncherSign.java:158` lo convierte en `null` con el mismo `Operation.getOperation`. La petición sigue hasta el formato (`SAF_06` si no existe) y, con uno válido, pide certificado y PIN antes de que el `switch` de la línea 700 lance el `NullPointerException` que la línea 857 reporta como `SAF_09`.
 
 ---
 
@@ -554,3 +555,62 @@ dirigido al defecto.
   4. El diagnóstico que llega a la sede es por tanto **el contrario del real**: AutoFirma se instaló, arrancó, leyó la URI y rechazó la petición por un error concreto y accionable (un parámetro mal formado, una versión insuficiente, un `fileid` caducado), pero la traza que queda en el registro de la sede acusa a la instalación de la aplicación.
   5. El efecto no se manifiesta en los transportes locales: en socket y WebSocket el valor de retorno de `launch()` **sí** es la respuesta que se entrega al cliente, de modo que los mismos ocho códigos llegan íntegros a la sede.
 * **Causa raíz:** La subida al servidor intermedio se implementa como una instrucción puntual dentro de cada bloque de operación en lugar de como el punto único de salida de `launch()`. Los bloques `catch` anteriores a la operación se escribieron siguiendo la forma del canal local —mostrar el error y devolverlo— sin replicar en cada uno de ellos la llamada a `sendDataToServer` que exige el canal remoto. La asimetría es exacta y de signo opuesto a la de [BUG-08](#bug-08-invocación-incondicional-de-senddatatoserver-en-socketoperationexception-provoca-nullpointerexception-en-conexiones-por-socket), donde el mismo envío se ejecuta sin comprobar que el transporte sea el remoto.
+
+---
+
+### BUG-27: Una multifirma con `format=auto` sobre datos que no son una firma revienta con `NullPointerException` y se reporta como `SAF_03` en lugar de `SAF_17`
+
+* **Comprobación del catálogo:** `format_auto_over_data_that_is_no_signature_is_rejected_with_saf_17`.
+* **Estado en `master`:** **Sigue presente.** `ProtocolInvocationLauncherUtil.java:208-209` sigue pasando a `getSignFormat` el firmador sin comprobarlo, y `AOSignerFactory.java:198` sigue sin aceptar `null`.
+* **Código fuente:** `afirma-simple` · `es.gob.afirma.standalone.protocol.ProtocolInvocationLauncherUtil.java:169-176`, `ProtocolInvocationLauncherSign.java:382-388`, `ProtocolInvocationLauncherSignAndSave.java:374-380`, `LocalBatchSigner.java:121-127`, `ProtocolInvocationLauncher.java:744-748`; `afirma-core` · `es.gob.afirma.core.signers.AOSignerFactory.java:197-198`.
+* **Descripción:** Con `format=auto` y una operación `cosign` o `countersign`, `identifyFormatFromData` busca el firmador que reconozca los datos como firma y pide su nombre de formato:
+  ```java
+  final AOSigner signer = AOSignerFactory.getSigner(data);
+  format = AOSignerFactory.getSignFormat(signer);
+  ```
+  Si ningún firmador reconoce los datos, `getSigner` devuelve `null`, y `getSignFormat` ejecuta `signer.getClass()` sobre esa referencia nula. El `try` que envuelve las dos llamadas solo captura `IOException`, así que el `NullPointerException` sale de `identifyFormatFromData` sin que la función llegue a devolver `null`.
+* **Comportamiento y consecuencia:**
+  1. La guarda `if (format == null)` que lanza `SocketOperationException(ERROR_UNKNOWN_SIGNER)` en `ProtocolInvocationLauncherSign.java:383-388` no llega a evaluarse: en este camino `SAF_17` es código muerto.
+  2. La excepción sale de `processSign` y la recoge el `catch (final Exception e)` genérico de `ProtocolInvocationLauncher.java:744`, que registra «Error en los parametros de firma», muestra el diálogo de error y devuelve `SAF_03` (*«Error en los parámetros de entrada»*).
+  3. La sede recibe un error que acusa a los parámetros de la petición, que eran correctos, en lugar de al contenido, que no es una firma.
+  *(Observado en `sign` por WebSocket v4. `signandsave` y el lote local pasan por la misma función con la misma guarda muerta, pero no se han medido.)*
+* **Causa raíz:** `identifyFormatFromData` no comprueba el resultado de `getSigner(data)` antes de usarlo, y `getSignFormat` no tolera un firmador nulo pese a que su documentación promete devolver `null` para uno no reconocido.
+
+---
+
+### BUG-28: Un servlet del lote en el loopback se rechaza con `SAF_03` en lugar de `SAF_13`
+
+* **Comprobación del catálogo:** `a_batch_servlet_on_the_local_loopback_is_refused_with_saf_13`.
+* **Estado en `master`:** **Corregido por cambio de arquitectura.** La excepción lleva ahora su propio código: `UrlParametersForBatch.java:273, 287` la lanza con `ErrorCode.Request.LOCAL_POSTSIGN_BATCH_URL` (`600416`) o `LOCAL_PRESIGN_BATCH_URL` (`600414`), y el `catch (ParameterException)` del lote responde con `e.getErrorCode()` (`ProtocolInvocationLauncher.java:416-419`). Con el protocolo 4.1 o superior la sede recibe ese código nuevo; con uno anterior, `ProtocolInvocationLauncherErrorManager.java:214-215` lo traduce a `SAF_13`.
+* **Código fuente:** `afirma-simple` · `es.gob.afirma.standalone.protocol.ProtocolInvocationLauncher.java:356-367`, frente a `:510, 622, 732, 817`; `afirma-core` · `es.gob.afirma.core.misc.protocol.UrlParametersForBatch.java:238-259`, `ParameterLocalAccessRequestedException.java:14`.
+* **Descripción:** `UrlParametersForBatch` rechaza un `batchpresignerurl` o `batchpostsignerurl` que apunta a `localhost` o a `127.0.0.1` con `ParameterLocalAccessRequestedException`, que extiende `ParameterException`. Las ramas `sign`, `signandsave`, `save` y `load` tienen un `catch` propio para esa excepción, colocado antes del de `ParameterException`, que emite `SAF_13`. La rama `batch` no lo tiene: la excepción cae en el `catch (ParameterException)` de `:356`, que emite `ERROR_PARAMS`.
+* **Comportamiento y consecuencia:**
+  1. La sede recibe `SAF_03` (*«Error en los parámetros de entrada»*) en lugar de `SAF_13`, y no puede distinguir un servlet local bloqueado de una petición mal formada.
+  2. El registro sí nombra la causa real («El host de la URL proporcionada para el Servlet es local»), pero no llega al cable.
+* **Causa raíz:** El `catch` de `ParameterLocalAccessRequestedException` se replicó en cuatro de las cinco ramas de operación, y en la de `batch` no.
+
+---
+
+### BUG-29: Un servicio de lotes inalcanzable se reporta como `SAF_27` («el servicio informó de un error») en lugar de `SAF_26`
+
+* **Comprobación del catálogo:** `a_batch_whose_presigner_does_not_answer_fails_with_saf_26`.
+* **Estado en `master`:** **Corregido solo con el protocolo 4.1 o superior.** `BatchSigner.java` clasifica ya el fallo en el cliente de lotes: una `IOException` sin respuesta lanza `AOException` con `BatchErrorCode.Communication.JSON_BATCH_PRESIGN_CONNECTION_ERROR` (`401500`, `:648-654`), o sus homólogos del postfirmador y del lote XML (`401600`, `401700`, `401800`). El `catch (AOException)` de `ProtocolInvocationLauncherBatch.java:361` conserva el código. Con el protocolo 4.1 o superior la sede recibe ese código, que sí nombra la conexión fallida. Con uno anterior, que es el que pide el cliente publicado de la 1.9.2, `OLD_ERRORS_ASSOCIATION` no tiene entrada para ninguno de los cuatro, y `getErrorMessage` cae en `ERROR_UNKNOWN`: la sede recibe `SAF_53` en lugar de `SAF_26` (`ProtocolInvocationLauncherErrorManager.java:94, 238-243, 339-342`). La misma tabla solo traduce a `SAF_26` los errores de comunicación del prefirmador, no los del postfirmador.
+* **Código fuente:** `afirma-simple` · `es.gob.afirma.standalone.protocol.ProtocolInvocationLauncherBatch.java:360-389`.
+* **Descripción:** El único camino a `ERROR_CONTACT_BATCH_SERVICE` (`SAF_26`) es un `HttpError` con un código 4xx distinto de 400 (`:366-369`). Si el prefirmador o el postfirmador no aceptan la conexión, `UrlHttpManagerImpl` lanza `java.net.ConnectException`, que no es un `HttpError`: cae en el `catch (Exception)` genérico de `:383`, que emite `ERROR_BATCH_SIGNATURE` (`SAF_27`).
+* **Comportamiento y consecuencia:**
+  1. La sede recibe *«El servicio informó de un error durante la firma del lote»* cuando el servicio no llegó a responder.
+  2. Una sede que reintenta ante `SAF_26` y descarta el lote ante `SAF_27` toma la decisión contraria a la que corresponde.
+* **Causa raíz:** La clasificación de los fallos del servicio mira solo el código HTTP de una respuesta, y la ausencia de respuesta no tiene rama propia.
+
+---
+
+### BUG-30: La contrafirma en un lote local sin `target` falla con «El objetivo de la contrafirma no puede ser nulo»
+
+* **Comprobación del catálogo:** `a_local_batch_admits_countersign_as_a_suboperation`.
+* **Estado en `master`:** **Sigue presente.** `LocalBatchSigner.java:166` sigue pasando la propiedad `target` a `CounterSignTarget.getTarget` sin comprobarla, `CounterSignTarget.java:43-48` sigue sin aceptar `null`, y la asimetría se mantiene: `ProtocolInvocationLauncherSign.java:778` y `ProtocolInvocationLauncherSignAndSave.java:776` siguen resolviendo la ausencia como `LEAFS`.
+* **Código fuente:** `afirma-simple` · `es.gob.afirma.standalone.protocol.LocalBatchSigner.java:161-172, 183-186`, frente a `ProtocolInvocationLauncherSign.java:723-724`; `afirma-core` · `es.gob.afirma.core.signers.CounterSignTarget.java:43-48`.
+* **Descripción:** Para elegir el ámbito de la contrafirma, el lote local llama a `CounterSignTarget.getTarget(extraParams.getProperty("target"))`, y `getTarget` lanza `IllegalArgumentException` si recibe `null`. La operación `sign` resuelve el mismo parámetro con `"tree".equalsIgnoreCase(...)`, que da `LEAFS` cuando falta ([06-operaciones-firma.md](06-operaciones-firma.md), § 2.6).
+* **Comportamiento y consecuencia:**
+  1. Un documento del lote local con `countersign` y sin `target` en sus `extraparams` vuelve como `ERROR_PRE` con la descripción «El objetivo de la contrafirma no puede ser nulo», en lugar de contrafirmar las hojas.
+  2. La misma petición en una contrafirma individual sí contrafirma las hojas: el valor por defecto depende de si el documento viaja o no en un lote.
+* **Causa raíz:** El lote local usa el validador estricto de la API Java donde la capa de protocolo usa en el resto de sitios una comparación que tolera la ausencia.

@@ -374,12 +374,10 @@ AutoFirma cuando lo desactualizado es el trámite web (ver
   el parámetro `ports` en la URI, recurre al puerto fijo por defecto `63117`
   (`ProtocolInvocationLauncher.java:87, 233-236`).
 * **Versión 4:** Instancia `AfirmaWebSocketServerV4` (`AfirmaWebSocketServerManager.java:71`).
-  Exige que el cliente WebSocket incluya el parámetro `idsession` en la query string
-  del handshake HTTP de WebSocket (`ws.getResourceDescriptor()`, `AfirmaWebSocketServerV4.java:49-74`).
-  Si el `idsession` no coincide con el negociado en la URI de lanzamiento, rechaza la
-  conexión con código de cierre WebSocket `1008` (Violación de política,
-  `AfirmaWebSocketServerV4.java:70`). Permite que múltiples pestañas del navegador
-  se conecten simultáneamente siempre que compartan el mismo `idsession`.
+  El apretón de manos no mira la query string: una conexión sin `idsession` se acepta.
+  La credencial se comprueba en cada mensaje, en `onMessage`: si el `idsession` del
+  mensaje no coincide con el negociado en la URI de lanzamiento, responde `SAF_46` y
+  descarta la petición sin cerrar la conexión (`AfirmaWebSocketServerV4.java:70-77`).
 
 ### 3.2 Canal Socket local HTTP (`afirma://service`)
 

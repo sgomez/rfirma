@@ -19,6 +19,7 @@
   code, pre, .mono { font-family: ui-monospace, "JetBrains Mono", monospace; font-size: 12px; }
   header { padding: 8px 12px; border-bottom: 1px solid var(--line); background: var(--panel); display: grid; gap: 6px; }
   .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  [hidden] { display: none !important; }
   .grow { flex: 1; }
   .dim { color: var(--dim); }
   .complaint { color: var(--bad); }
@@ -51,7 +52,7 @@
   dialog::backdrop { background: rgba(0,0,0,.55); }
   dialog form { display: grid; grid-template-columns: 10em 1fr; gap: 6px 10px; align-items: center; }
   #transcript-text { max-height: 70vh; overflow: auto; white-space: pre-wrap; word-break: break-all; }
-  #question-dialog .prompt { font-size: 15px; margin: 6px 0 14px; }
+  #question-dialog .prompt { font-size: 15px; margin: 6px 0 14px; white-space: pre-wrap; max-width: 60ch; }
   #compare-view { display: none; padding: 10px 14px; overflow: auto; height: calc(100vh - 110px); }
   body.comparing main { display: none; } body.comparing #compare-view { display: block; }
   table { border-collapse: collapse; width: 100%; }
@@ -80,8 +81,9 @@
     <span class="grow"></span>
     <span id="question-banner"></span>
     <button type="button" id="run-pending">▶ pendientes</button>
-    <button type="button" id="stop" title="vacía la cola; la que corre termina">■ parar</button>
-    <button type="button" id="abort" title="vacía la cola y corta la que corre">✕ abortar</button>
+    <button type="button" id="stop" title="vacía la cola; la comprobación en curso termina">■ parar</button>
+    <button type="button" id="skip" title="corta la comprobación en curso, la deja pendiente y sigue con la cola">⏭ saltar</button>
+    <button type="button" id="abort" title="vacía la cola y corta la comprobación en curso">✕ abortar</button>
     <button type="button" id="toggle-compare">Comparar informes</button>
   </div>
 </header>
@@ -129,13 +131,19 @@
 </dialog>
 
 <dialog id="question-dialog">
+  <strong id="question-title"></strong>
   <div class="dim" id="question-check"></div>
   <div class="prompt" id="question-prompt"></div>
-  <div class="row">
+  <div class="row" id="question-verdict">
     <button type="button" data-answer="s">Sí</button>
     <button type="button" data-answer="n">No</button>
     <span class="grow"></span>
     <button type="button" data-answer="">Descartar (queda pendiente)</button>
+  </div>
+  <div class="row" id="question-briefing">
+    <button type="button" data-answer="s">Empezar</button>
+    <span class="grow"></span>
+    <button type="button" data-answer="">Saltar (queda pendiente)</button>
   </div>
 </dialog>
 
@@ -299,6 +307,7 @@ function renderSummary() {
   const idle = !state.running && state.queued.length === 0;
   $("run-pending").disabled = !state.report;
   $("stop").disabled = idle;
+  $("skip").disabled = !state.running;
   $("abort").disabled = !state.running;
 }
 
@@ -359,8 +368,12 @@ function renderCard() {
   card.replaceChildren(
     el("div", { class: "row" },
       el("h2", { class: "mono grow" }, check.id),
-      follow ? el("span", { class: "dim" }, "siguiendo a la que corre")
-        : el("button", { onclick: () => { follow = true; if (runningHead) select(runningHead, false); else renderCard(); } }, "seguir a la que corre"),
+      el("label", { class: "dim", title: "al empezar cada comprobación, muestra su ficha y su registro" },
+        el("input", { type: "checkbox", checked: follow, onchange: (event) => {
+          follow = event.target.checked;
+          if (follow && runningHead) select(runningHead, false);
+        } }),
+        " ir a la comprobación en curso"),
       el("button", { onclick: () => showTranscript(check.id) }, "ver tramas"),
     ),
     el("div", { class: "dim" }, `${check.suite} · cap. ${check.chapter}`, " · ", duration ? ["⏱ ", duration] : "sin duración"),
@@ -397,9 +410,13 @@ function renderQuestion() {
     if (dialog.open) dialog.close();
     return;
   }
-  const { check, prompt } = state.question;
-  banner.append(el("span", { class: "question-banner", onclick: () => { dismissedQuestion = null; renderQuestion(); } }, `¿? ${check}`));
-  if (dismissedQuestion === check) return;
+  const { check, prompt, kind } = state.question;
+  const briefing = kind === "briefing";
+  $("question-title").textContent = briefing ? "Antes de empezar" : "Resultado de la prueba";
+  $("question-verdict").hidden = briefing;
+  $("question-briefing").hidden = !briefing;
+  banner.append(el("span", { class: "question-banner", onclick: () => { dismissedQuestion = null; renderQuestion(); } }, `${briefing ? "▶" : "¿?"} ${check}`));
+  if (dismissedQuestion === `${kind}:${check}`) return;
   $("question-check").textContent = check;
   $("question-prompt").textContent = prompt.replace(/\s*\[s\/n\]\s*$/, "");
   if (!dialog.open) dialog.showModal();
@@ -413,7 +430,7 @@ for (const button of document.querySelectorAll("#question-dialog button")) {
   });
 }
 $("question-dialog").addEventListener("cancel", () => {
-  dismissedQuestion = state?.question ? state.question.check : null;
+  dismissedQuestion = state?.question ? `${state.question.kind}:${state.question.check}` : null;
 });
 
 function provenanceOf(line) {
@@ -518,6 +535,7 @@ $("new-report-form").addEventListener("submit", async (event) => {
 });
 $("run-pending").addEventListener("click", () => post("/api/run", "pending").catch(report("No se pudo encolar")));
 $("stop").addEventListener("click", () => post("/api/stop", { abort: false }).catch(report("No se pudo parar")));
+$("skip").addEventListener("click", () => post("/api/skip", {}).catch(report("No se pudo saltar")));
 $("abort").addEventListener("click", () => post("/api/stop", { abort: true }).catch(report("No se pudo abortar")));
 $("toggle-compare").addEventListener("click", () => {
   document.body.classList.toggle("comparing");

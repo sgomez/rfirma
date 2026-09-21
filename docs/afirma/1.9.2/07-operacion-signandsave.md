@@ -293,8 +293,10 @@ seguridad y preparación que la operación `sign`:
    canal de respuesta web las firmas secundarias y sus metadatos.
 3. **Identificación de formato `AUTO`:**
    Si `format` es `"AUTO"`, se invoca `ProtocolInvocationLauncherUtil.identifyFormatFromData(data, cryptoOperation)`
-   (`374`). Si no es posible identificar un firmador compatible, se aborta con
-   `SAF_17` (`ERROR_UNKNOWN_SIGNER`).
+   (`374`). Si no es posible identificar un firmador compatible, debería abortarse con
+   `SAF_17` (`ERROR_UNKNOWN_SIGNER`); en la 1.9.2, `identifyFormatFromData` revienta antes
+   y la petición acaba en `SAF_03`
+   ([BUG-27](A1-bugs-autofirma.md#bug-27-una-multifirma-con-formatauto-sobre-datos-que-no-son-una-firma-revienta-con-nullpointerexception-y-se-reporta-como-saf_03-en-lugar-de-saf_17)).
 4. **Firma XAdES explícita obsoleta:**
    Si la operación es `SIGN`, el formato es XAdES y `extraParams` contiene `mode=explicit`
    (`386-398`), se calcula el hash SHA-1 de los datos, se sustituyen los datos por dicho hash

@@ -75,7 +75,7 @@ drive = { mode = "v4", script = "signandsavewithoutdata" }
 harness = "requested_input_document"
 needs = ["persona"]
 question = "¿se pidió elegir el documento a firmar? [s/n]"
-warning = "Se va a pedir primero el documento a firmar, y después vendrán el diálogo de certificado, el del PIN y la petición de dónde guardar: elige un fichero cualquiera y completa el resto."
+warning = "Se va a pedir primero el documento a firmar, y después vendrán el diálogo de certificado, el del PIN y la petición de dónde guardar: elige el documento preparado y completa el resto."
 
 [check.expect.autofirma]
 verdict = "conforme"
@@ -245,7 +245,7 @@ drive = { mode = "v4", script = "save" }
 harness = "overwrite_confirmation"
 needs = ["persona"]
 question = "¿se pidió confirmación al elegir un fichero que ya existía? [s/n]"
-warning = "Se va a pedir dónde guardar: elige a propósito un fichero que ya exista y acepta la confirmación que venga después."
+warning = "Se va a pedir dónde guardar: acepta el nombre propuesto, challenge.bin, que ya existe porque se ha preparado, y acepta la confirmación que venga después."
 
 [check.expect.autofirma]
 verdict = "conforme"
@@ -283,7 +283,7 @@ drive = { mode = "v4", script = "load" }
 harness = "interactive_file_load"
 needs = ["persona"]
 question = "¿se pidió elegir el fichero a cargar? [s/n]"
-warning = "Se va a pedir qué fichero cargar: elige uno cualquiera para que la comprobación llegue a medir algo."
+warning = "Se va a pedir qué fichero cargar: elige uno de los preparados para que la comprobación llegue a medir algo."
 
 [check.expect.autofirma]
 verdict = "conforme"
@@ -304,7 +304,7 @@ drive = { mode = "v4", script = "multiload" }
 harness = "interactive_file_load"
 needs = ["persona"]
 question = "¿se pudieron elegir varios ficheros a la vez? [s/n]"
-warning = "Se va a pedir qué ficheros cargar: elige dos para que la comprobación llegue a medir la selección múltiple."
+warning = "Se va a pedir qué ficheros cargar: elige a la vez los dos preparados para que la comprobación llegue a medir la selección múltiple."
 
 [check.expect.autofirma]
 verdict = "conforme"

@@ -96,8 +96,21 @@ impl Probe {
             self.witness.harness(&format!("no se corre: {why}"));
             return vec![Settlement::pending(head, why)];
         }
-        for warning in the_warnings_of(group) {
-            self.witness.harness(&warning);
+        if head.needs_a_person() {
+            let fixtures = match self.prepare_the_fixtures_of(head) {
+                Ok(fixtures) => fixtures,
+                Err(why) => return vec![Settlement::pending(head, why)],
+            };
+            if !self
+                .witness
+                .brief(&head.id, &the_briefing_of(group, fixtures.as_deref()))
+            {
+                return vec![Settlement::pending(head, "se saltó antes de empezar")];
+            }
+        } else {
+            for warning in the_warnings_of(group) {
+                self.witness.harness(&warning);
+            }
         }
 
         let start = Instant::now();
@@ -106,7 +119,7 @@ impl Probe {
         if self.witness.aborted() {
             return group
                 .iter()
-                .map(|check| Settlement::pending(check, "se abortó mientras corría"))
+                .map(|check| Settlement::pending(check, "se interrumpió mientras se ejecutaba"))
                 .collect();
         }
 
@@ -151,6 +164,37 @@ impl Probe {
             }
             CheckOutcome::StillPending => Settlement::pending(check, "no hubo respuesta"),
         }
+    }
+
+    /// Escribe, en el perfil aislado donde el sujeto abre sus diálogos, los ficheros que necesita
+    /// la comprobación, tras borrar los que dejó cualquier otra; `None` si no necesita ninguno.
+    fn prepare_the_fixtures_of(&self, check: &Check) -> Result<Option<String>, String> {
+        let directory = the_isolated_home_of(&self.subject);
+        for (name, _) in THE_HARNESSES
+            .iter()
+            .flat_map(|harness| the_fixtures_for(Some(harness)))
+        {
+            let _ = std::fs::remove_file(directory.join(name));
+        }
+        let fixtures = the_fixtures_for(check.harness.as_deref());
+        if fixtures.is_empty() {
+            return Ok(None);
+        }
+        let unprepared = |error: std::io::Error| {
+            format!(
+                "no se pudieron preparar los ficheros en {}: {error}",
+                directory.display()
+            )
+        };
+        for (name, content) in fixtures {
+            std::fs::write(directory.join(name), content).map_err(unprepared)?;
+        }
+        let names: Vec<&str> = fixtures.iter().map(|(name, _)| *name).collect();
+        Ok(Some(format!(
+            "Ficheros preparados en la carpeta donde se abre el diálogo ({}): {}.",
+            directory.display(),
+            names.join(", ")
+        )))
     }
 
     /// Conduce el trámite de la comprobación, con el arnés que declare si necesita más que
@@ -385,6 +429,39 @@ fn the_warnings_of(group: &[&Check]) -> Vec<String> {
         .collect()
 }
 
+/// Lo que se cuenta a la persona antes de conducir el trámite: los avisos, dónde están los
+/// ficheros preparados y la pregunta que vendrá al terminar.
+fn the_briefing_of(group: &[&Check], fixtures: Option<&str>) -> String {
+    let mut briefing = the_warnings_of(group);
+    if let Some(fixtures) = fixtures {
+        briefing.push(fixtures.to_owned());
+    }
+    if let Some(question) = &group[0].question {
+        let question = question.trim_end_matches("[s/n]").trim_end();
+        briefing.push(format!("Al terminar se te preguntará: {question}"));
+    }
+    briefing.join("\n\n")
+}
+
+/// El perfil aislado, que es el HOME con el que el envoltorio lanza al sujeto y donde abre sus
+/// diálogos.
+fn the_isolated_home_of(launcher: &std::path::Path) -> &std::path::Path {
+    launcher.parent().unwrap_or(launcher)
+}
+
+/// Los ficheros que la persona tiene que encontrar ya hechos para poder completar el trámite.
+fn the_fixtures_for(harness: Option<&str>) -> &'static [(&'static str, &'static str)] {
+    match harness {
+        Some("overwrite_confirmation") => &[("challenge.bin", "Este fichero se sobrescribe.\n")],
+        Some("interactive_file_load") => &[
+            ("primero.bin", "Primer fichero de carga.\n"),
+            ("segundo.bin", "Segundo fichero de carga.\n"),
+        ],
+        Some("requested_input_document") => &[("documento.txt", "Documento para firmar.\n")],
+        _ => &[],
+    }
+}
+
 /// Cuánto va a tardar una comprobación que tarda por diseño; `None` si no declara
 /// `espera:<segundos>`.
 fn the_wait_announcement_of(check: &Check) -> Option<String> {
@@ -502,6 +579,82 @@ mod tests {
         assert!(!the_signature_carries_a_timestamp(
             "no es base64 ni de lejos: %%%"
         ));
+    }
+
+    #[test]
+    fn the_briefing_names_the_warning_the_fixtures_and_the_question_to_come() {
+        let catalogue = the_catalogue_in(
+            r#"
+[[check]]
+id = "a_save"
+suite = "operaciones.disco"
+chapter = "10"
+citation = "A.java:1"
+statement = "Uno."
+drive = { mode = "v4", script = "save" }
+harness = "overwrite_confirmation"
+needs = ["persona"]
+question = "¿se pidió confirmación? [s/n]"
+warning = "Se va a pedir dónde guardar."
+"#,
+        )
+        .unwrap();
+        let group: Vec<&Check> = catalogue.iter().collect();
+
+        let briefing = the_briefing_of(
+            &group,
+            Some("Ficheros preparados en /tmp/x: ya-existe.txt."),
+        );
+
+        assert_eq!(
+            briefing,
+            "Se va a pedir dónde guardar.\n\nFicheros preparados en /tmp/x: ya-existe.txt.\n\n\
+             Al terminar se te preguntará: ¿se pidió confirmación?"
+        );
+    }
+
+    #[test]
+    fn the_fixtures_live_in_the_isolated_home_the_subject_opens_its_dialogues_in() {
+        assert_eq!(
+            the_isolated_home_of(std::path::Path::new(
+                "/home/x/.cache/rfirma/probe-profile/launch-subject"
+            )),
+            std::path::Path::new("/home/x/.cache/rfirma/probe-profile")
+        );
+    }
+
+    #[test]
+    fn the_checks_that_ask_for_files_find_them_prepared() {
+        let catalogue = read_the_catalogue().unwrap();
+        let prepared = |id: &str| {
+            the_fixtures_for(
+                catalogue
+                    .iter()
+                    .find(|check| check.id == id)
+                    .unwrap()
+                    .harness
+                    .as_deref(),
+            )
+            .len()
+        };
+
+        assert_eq!(
+            prepared("save_confirms_before_writing_over_a_file_that_already_exists"),
+            1
+        );
+        assert_eq!(
+            prepared("load_answers_the_name_of_the_chosen_file_next_to_its_content"),
+            2
+        );
+        assert_eq!(prepared("multiload_answers_every_chosen_file_apart"), 2);
+        assert_eq!(
+            prepared("signandsave_asks_for_the_document_when_the_request_brings_no_data"),
+            1
+        );
+        assert_eq!(
+            prepared("signandsave_saves_the_signature_and_returns_it_to_the_site"),
+            0
+        );
     }
 
     #[test]

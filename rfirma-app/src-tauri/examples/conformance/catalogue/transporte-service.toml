@@ -316,14 +316,13 @@ statement = """
 El canal socket HTTP (afirma://service) sólo admite las versiones 1, 2 y 3; la versión 4 se rechaza
 con SAF_21.
 """
-drive = { mode = "service-v4", script = "selectcert" }
-expects_saf = "SAF_21"
+unmeasurable = "SAF_21 se muestra en un diálogo y no se abre canal: no hay cable por el que llegue, y la sede sólo ve que el cliente publicado agota sus reintentos."
 
 [check.expect.autofirma]
-verdict = "conforme"
+verdict = "no-observable"
 
 [check.expect.rfirma]
-verdict = "conforme"
+verdict = "no-observable"
 
 [[check]]
 id = "a_ver_inside_an_order_leaves_the_negotiated_version_alone"

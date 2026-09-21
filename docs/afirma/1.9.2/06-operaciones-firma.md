@@ -233,13 +233,16 @@ Existe una asimetría técnica fundamental en la resolución automática según 
   Una vez hallado el primer firmador cuya llamada a `isSign(data)` devuelve `true`, se
   recupera su nombre mediante `AOSignerFactory.getSignFormat(signer)`. Si ninguno lo
   reconoce (por ejemplo, si se introducen datos binarios o XML planos que no son firmas),
-  `getSigner` devuelve `null` y la operación se aborta de inmediato con el error fatal
-  `SAF_17` (`ERROR_UNKNOWN_SIGNER`).
+  `getSigner` devuelve `null`, y la operación debería abortarse con el error fatal
+  `SAF_17` (`ERROR_UNKNOWN_SIGNER`). En la 1.9.2 no ocurre así: `getSignFormat` revienta
+  con ese `null` y la petición acaba en `SAF_03`
+  ([BUG-27](A1-bugs-autofirma.md#bug-27-una-multifirma-con-formatauto-sobre-datos-que-no-son-una-firma-revienta-con-nullpointerexception-y-se-reporta-como-saf_03-en-lugar-de-saf_17)).
 
   **Consecuencias de compatibilidad:**
   - Un documento plano sin firma previa remitido con `format=auto` a `sign` se aceptará
     y firmará (como XAdES si es XML o CAdES si es binario/texto), mientras que el mismo
-    fichero enviado a `cosign` o `countersign` fallará con `SAF_17`.
+    fichero enviado a `cosign` o `countersign` debería fallar con `SAF_17` (en la 1.9.2,
+    `SAF_03` por el BUG-27).
   - Dado que `CAdES` precede a `CMS` en la matriz de búsqueda y las firmas CAdES derivan
     de CMS/PKCS#7, una firma CMS estándar será identificada y clasificada como `CAdES`.
   - Los contenedores ASiC (`.asics`), clasificados como `CAdES` en `sign` (al no ser PDF

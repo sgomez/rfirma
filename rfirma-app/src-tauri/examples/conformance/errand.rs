@@ -3,6 +3,7 @@
 
 use std::collections::VecDeque;
 use std::io::{BufRead, BufReader, Write};
+use std::os::unix::process::CommandExt;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::sync::{Arc, Mutex};
@@ -173,6 +174,7 @@ impl SubjectProcess {
     pub(crate) fn spawn(subject: &Path, url: &str, log_sink: LiveLogSink, start: Instant) -> Self {
         let mut child = Command::new(subject)
             .arg(url)
+            .process_group(0)
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .spawn()
@@ -204,7 +206,11 @@ impl SubjectProcess {
         self.recent_lines.lock().unwrap().iter().cloned().collect()
     }
 
+    /// Mata al sujeto con todo su grupo: el lanzador deja vivo el `java` que hereda las tuberías.
     pub(crate) fn terminate(&mut self) {
+        let _ = Command::new("kill")
+            .args(["-KILL", "--", &format!("-{}", self.child.id())])
+            .status();
         let _ = self.child.kill();
         let _ = self.child.wait();
         for handle in self.drain_handles.drain(..) {

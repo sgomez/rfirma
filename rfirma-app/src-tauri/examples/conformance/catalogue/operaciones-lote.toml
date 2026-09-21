@@ -103,7 +103,9 @@ drive = { mode = "v4", script = "batchloopbackservlet" }
 expects_saf = "SAF_13"
 
 [check.expect.autofirma]
-verdict = "conforme"
+verdict = "no-conforme"
+cause = "BUG-28"
+note = "La rama batch no captura ParameterLocalAccessRequestedException aparte y el catch de ParameterException la reporta como SAF_03."
 
 [check.expect.rfirma]
 verdict = "conforme"
@@ -321,7 +323,9 @@ drive = { mode = "v4", script = "batchlocalcountersign" }
 warning = "Van a aparecer el diálogo de certificado y el del PIN del token."
 
 [check.expect.autofirma]
-verdict = "conforme"
+verdict = "no-conforme"
+cause = "BUG-30"
+note = "Sin target en los extraparams, CounterSignTarget.getTarget lanza IllegalArgumentException y el documento vuelve como ERROR_PRE."
 
 [check.expect.rfirma]
 verdict = "conforme"
@@ -505,7 +509,9 @@ expects_saf = "SAF_26"
 warning = "Va a aparecer el diálogo de certificado y, si el sujeto lo pide, el del PIN del token: el prefirmador del lote no está escuchando a propósito."
 
 [check.expect.autofirma]
-verdict = "conforme"
+verdict = "no-conforme"
+cause = "BUG-29"
+note = "La ConnectException no es un HttpError y el catch genérico la reporta como SAF_27."
 
 [check.expect.rfirma]
 verdict = "conforme"

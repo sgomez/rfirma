@@ -94,6 +94,7 @@ struct Queued {
 struct Question {
     check: String,
     prompt: String,
+    kind: &'static str,
     reply: Sender<Option<String>>,
 }
 
@@ -293,15 +294,16 @@ impl Console {
     pub(crate) fn stop(&self, abort: bool) {
         let mut session = self.shared.lock();
         session.queue.clear();
-        if abort && !session.running.is_empty() {
-            session.aborting = true;
-            if let Some(pid) = session.driver {
-                kill(pid);
-            }
-            if let Some(question) = session.question.take() {
-                let _ = question.reply.send(None);
-            }
+        if abort {
+            cut_the_running_check(&mut session);
         }
+        self.shared.publish(&session);
+    }
+
+    /// Corta la comprobación en curso, la deja pendiente y sigue con la cola.
+    pub(crate) fn skip(&self) {
+        let mut session = self.shared.lock();
+        cut_the_running_check(&mut session);
         self.shared.publish(&session);
     }
 
@@ -378,10 +380,13 @@ impl Shared {
                 .iter()
                 .map(|queued| queued.id.as_str())
                 .collect(),
-            question: session
-                .question
-                .as_ref()
-                .map(|question| (question.check.as_str(), question.prompt.as_str())),
+            question: session.question.as_ref().map(|question| {
+                (
+                    question.check.as_str(),
+                    question.prompt.as_str(),
+                    question.kind,
+                )
+            }),
             reasons: Some(&session.reasons),
             resolving_subject: session.resolving_subject,
         };
@@ -440,6 +445,17 @@ impl Witness {
 
     /// Pregunta a la persona y espera; `None` si la descarta o se aborta la tanda.
     pub(crate) fn ask(&self, check: &str, prompt: &str) -> Option<String> {
+        self.put_to_the_person(check, prompt, "verdict")
+    }
+
+    /// Cuenta a la persona lo que va a pasar y espera a que dé paso; `false` si lo salta o se
+    /// aborta la tanda.
+    pub(crate) fn brief(&self, check: &str, briefing: &str) -> bool {
+        self.put_to_the_person(check, briefing, "briefing")
+            .is_some()
+    }
+
+    fn put_to_the_person(&self, check: &str, prompt: &str, kind: &'static str) -> Option<String> {
         let (reply, answer) = channel();
         {
             let mut session = self.shared.lock();
@@ -449,11 +465,17 @@ impl Witness {
             session.question = Some(Question {
                 check: check.to_owned(),
                 prompt: prompt.to_owned(),
+                kind,
                 reply,
             });
             self.shared.publish(&session);
         }
-        self.harness(&format!("pregunta: {prompt}"));
+        let label = if kind == "briefing" {
+            "aviso"
+        } else {
+            "pregunta"
+        };
+        self.harness(&format!("{label}: {prompt}"));
         let answer = answer.recv().ok().flatten();
         self.harness(&format!(
             "respuesta: {}",
@@ -668,6 +690,19 @@ fn is_a_report_name(name: &str) -> bool {
 
 fn event_frame(kind: &str, payload: &serde_json::Value) -> String {
     format!("event: {kind}\ndata: {payload}\n\n")
+}
+
+fn cut_the_running_check(session: &mut Session) {
+    if session.running.is_empty() {
+        return;
+    }
+    session.aborting = true;
+    if let Some(pid) = session.driver {
+        kill(pid);
+    }
+    if let Some(question) = session.question.take() {
+        let _ = question.reply.send(None);
+    }
 }
 
 fn kill(pid: u32) {

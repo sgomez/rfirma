@@ -431,6 +431,8 @@ A continuación se detalla la totalidad de los 53 códigos de error definidos en
   `stservlet` o `rtservlet` apuntan a direcciones locales prohibidas
   (`localhost`, `127.0.0.1`, `::1`)
   (`UrlParameters.java:279-281`, `ProtocolInvocationLauncher.java:512, 624, 734, 819`).
+  La rama `batch` no lo emite: un pre/postsigner local acaba en `SAF_03`
+  ([BUG-28](A1-bugs-autofirma.md#bug-28-un-servlet-del-lote-en-el-loopback-se-rechaza-con-saf_03-en-lugar-de-saf_13)).
 * **`SAF_14` (`ERROR_OBSOLETE_APP`)**: Disparado por la excepción
   `ParameterNeedsUpdatedVersionException` cuando la petición incluye parámetros que
   exigen una versión superior de AutoFirma (`ProtocolInvocationLauncher.java:506, 618, 728, 813`).
@@ -526,9 +528,12 @@ A continuación se detalla la totalidad de los 53 códigos de error definidos en
   en el proveedor criptográfico o la tarjeta (`ProtocolInvocationLauncherSign.java:854, 859`,
   `ProtocolInvocationLauncherSignAndSave.java:877, 882`, `LocalBatchSigner.java:256, 261`).
 * **`SAF_17` (`ERROR_UNKNOWN_SIGNER`)**: Los datos sobre los que se solicitó una cofirma
-  o contrafirma no contienen una firma electrónica reconocida (`AOInvalidSignatureException`
-  al identificar el firmador previo) (`ProtocolInvocationLauncherSign.java:386`,
-  `ProtocolInvocationLauncherSignAndSave.java:378`, `LocalBatchSigner.java:125`).
+  o contrafirma no contienen una firma electrónica reconocida: con `format=auto`, `identifyFormatFromData`
+  no devuelve formato para la firma previa (`ProtocolInvocationLauncherSign.java:386`,
+  `ProtocolInvocationLauncherSignAndSave.java:378`, `LocalBatchSigner.java:125`). En la
+  1.9.2 esas guardas no se alcanzan: el firmador nulo revienta antes con
+  `NullPointerException` y la petición acaba en `SAF_03`
+  ([BUG-27](A1-bugs-autofirma.md#bug-27-una-multifirma-con-formatauto-sobre-datos-que-no-son-una-firma-revienta-con-nullpointerexception-y-se-reporta-como-saf_03-en-lugar-de-saf_17)).
 * **`SAF_23` (`ERROR_INVALID_POLICY`)**: Parámetros de política de firma inválidos o
   incompatibles con el formato seleccionado (`AOInvalidPolicyException`)
   (`ProtocolInvocationLauncherSign.java:494`, `ProtocolInvocationLauncherSignAndSave.java:486`).
@@ -608,9 +613,11 @@ A continuación se detalla la totalidad de los 53 códigos de error definidos en
 * **`SAF_25` (`ERROR_CANNOT_LOAD_DATA`)**: Error al leer los datos de los ficheros
   seleccionados en el diálogo de carga (`IOException`)
   (`ProtocolInvocationLauncherLoad.java:143`).
-* **`SAF_26` (`ERROR_CONTACT_BATCH_SERVICE`)**: Error de conexión HTTP con el servicio
-  remoto de prelote o postlote (`batchpresignerurl` / `batchpostsignerurl`)
-  (`ProtocolInvocationLauncherBatch.java:367`).
+* **`SAF_26` (`ERROR_CONTACT_BATCH_SERVICE`)**: El servicio remoto de prelote o
+  postlote (`batchpresignerurl` / `batchpostsignerurl`) responde con un error HTTP 4xx
+  distinto de 400 (`ProtocolInvocationLauncherBatch.java:367`). Si no acepta la
+  conexión, la 1.9.2 emite `SAF_27`
+  ([BUG-29](A1-bugs-autofirma.md#bug-29-un-servicio-de-lotes-inalcanzable-se-reporta-como-saf_27-el-servicio-informó-de-un-error-en-lugar-de-saf_26)).
 * **`SAF_27` (`ERROR_BATCH_SIGNATURE`)**: El servidor remoto de lotes devolvió un error
   lógico explícito en la respuesta del proceso de lote
   (`ProtocolInvocationLauncherBatch.java:371, 380, 387`).
