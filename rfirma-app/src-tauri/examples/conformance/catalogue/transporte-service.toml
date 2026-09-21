@@ -25,19 +25,22 @@ verdict = "conforme"
 id = "the_service_channel_reports_a_bind_failure_instead_of_claiming_success"
 suite = "transporte.service"
 chapter = "04"
-citation = "ServiceInvocationManager.java:136-143, 148-168; ProtocolInvocationLauncher.java:281-288"
+citation = "ServiceInvocationManager.java:136-143, 148-168; ProtocolInvocationLauncher.java:281-291"
 statement = """
-Si el canal no puede ligar ninguno de los puertos ofrecidos, la sede recibe un error que lo dice, y
-no un silencio indistinguible de que la aplicación no esté instalada.
+Si el canal no puede ligar ninguno de los puertos ofrecidos, la aplicación se lo dice a la persona
+usuaria en vez de terminar en silencio. La sede no puede enterarse por ningún cliente: sin puerto
+ligado no hay cable de vuelta, y el cliente publicado acaba en «la aplicación no está instalada».
 """
 drive = { mode = "service-bind-failure", script = "selectcert" }
 harness = "occupied_service_ports"
-needs = ["puertos:63131,63132,63133"]
+needs = ["persona", "puertos:63131,63132,63133"]
+question = "¿avisó la aplicación de que no pudo abrir el canal con la página? [s/n]"
+warning = "La suite ocupa los tres puertos del canal: el sujeto no podrá abrirlo, y la página tardará unos 30 segundos en rendirse."
 
 [check.expect.autofirma]
 verdict = "no-conforme"
 cause = "BUG-10"
-note = "El fallo al ligar los puertos llega a la sede como si la aplicación no estuviera instalada."
+note = "El fallo al ligar se registra en el log y el lanzador devuelve OK: nadie avisa a la persona."
 
 [check.expect.rfirma]
 verdict = "conforme"
