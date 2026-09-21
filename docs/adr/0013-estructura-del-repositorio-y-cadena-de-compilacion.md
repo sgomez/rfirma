@@ -238,9 +238,10 @@ bounded context, con su glosario propio (`CONTEXT-MAP.md`).
   página se genera desde Rust, para que no haya dos copias de él.
 - **Su receta sigue en el `justfile` raíz**: `just conformance`. No tiene orquestador propio.
 - **Queda fuera del CI** y de `check`: se ejecuta en local, cuando alguien lo decide (ADR-0014).
-- **El conductor de Node es común**: `driver.mjs` vive en `testdata/conformance/`, junto al
-  `autoscript.js` fijado, porque lo usan la suite y el banco de conformidad de la app, que sí
-  corre en el CI.
+- **El conductor de Node es común**: `driver.mjs` y las respuestas congeladas que sirve viven en
+  `testdata/site-driver/`, fuera de los dos crates, porque los usan la suite y el banco de
+  conformidad de la app, que sí corre en el CI. No van a `testdata/conformance/`: ese directorio
+  está ignorado, porque es la caché del `autoscript.js` descargado.
 - **Sin workspace de Cargo**: los dos crates no comparten código, y un workspace ataría el
   `Cargo.lock` de una herramienta local al de la aplicación que se publica.
 
