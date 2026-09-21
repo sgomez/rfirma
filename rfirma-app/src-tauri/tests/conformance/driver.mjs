@@ -1407,45 +1407,49 @@ function exchange(ws, message) {
   });
 }
 
-async function theProtocolV4Script() {
-  const ports = [54321, 54322, 54323];
-  const idSession = "K3m9Pq2XyZ1w8A4bC7dE";
+/** Lo que se espera a cada respuesta de una operación: AutoFirma la retiene tras un diálogo modal. */
+const THE_OPERATION_ANSWER_DEADLINE_MS = 10000;
+
+/** Un `exchange` que se rinde a los `deadlineMs` y resuelve `null` si nadie ha contestado. */
+function exchangeWithin(ws, message, deadlineMs) {
+  return Promise.race([
+    exchange(ws, message),
+    new Promise((resolve) => setTimeout(() => resolve(null), deadlineMs)),
+  ]);
+}
+
+/** Lanza el sujeto en v4 y abre el canal en el primer puerto candidato que conteste. */
+async function theProtocolV4ChannelOpening(ports, idSession) {
   emit({
     event: "launch",
     url: `afirma://websocket?ports=${ports.join(",")}&v=4&jvc=3&idsession=${idSession}`,
   });
   await new Promise((r) => setTimeout(r, 3000));
 
-  let ws1 = null;
-  let connectedPort = null;
-  for (const p of ports) {
+  for (const port of ports) {
     try {
-      ws1 = await connectWebSocket(p);
-      connectedPort = p;
-      break;
+      return { ws: await connectWebSocket(port), port };
     } catch {}
   }
-  if (!ws1) {
-    emit({
-      event: "error",
-      type: "cannot_connect",
-      message: "no se pudo conectar a los puertos candidatos",
-    });
-    settle({ event: "error" });
-    return;
-  }
+  emit({
+    event: "error",
+    type: "cannot_connect",
+    message: "no se pudo conectar a los puertos candidatos",
+  });
+  settle({ event: "error" });
+  return null;
+}
+
+async function theProtocolV4Script() {
+  const idSession = "K3m9Pq2XyZ1w8A4bC7dE";
+  const channel = await theProtocolV4ChannelOpening([54321, 54322, 54323], idSession);
+  if (!channel) return;
+  const { ws: ws1, port: connectedPort } = channel;
   emit({
     event: "condition",
     id: "v4_ports_negotiation",
     verdict: "compliant",
     observation: `conectado en puerto ${connectedPort}`,
-  });
-
-  emit({
-    event: "condition",
-    id: "websocket_handshake_session_query_parameter",
-    verdict: "discrepant",
-    observation: "apretón de manos aceptado sin idsession en la URL (14-versiones.md:377-380)",
   });
 
   const echoResp = await exchange(ws1, `echo=-idsession=${idSession}@EOF`);
@@ -1455,6 +1459,14 @@ async function theProtocolV4Script() {
     verdict: echoResp === "OK" ? "compliant" : "discrepant",
     observation: echoResp,
   });
+
+  emit(
+    aConditionEvent(
+      "websocket_handshake_without_session_accepted",
+      echoResp === "OK",
+      `canal abierto en wss://127.0.0.1:${connectedPort} sin idsession; el eco contestó ${echoResp}`,
+    ),
+  );
 
   emit({
     event: "condition",
@@ -1493,88 +1505,93 @@ async function theProtocolV4Script() {
     });
   }
 
-  const ver4Resp = await exchange(ws1, `afirma://sign?op=sign&ver=4&idsession=${idSession}`);
-  emit({
-    event: "condition",
-    id: "operation_supported_protocol_version",
-    verdict: !ver4Resp.startsWith("SAF_21") ? "compliant" : "discrepant",
-    observation: ver4Resp,
-  });
-
-  const ver5Resp = await exchange(ws1, `afirma://sign?op=sign&ver=5&idsession=${idSession}`);
-  emit({
-    event: "condition",
-    id: "operation_unsupported_protocol_version_rejected",
-    verdict: ver5Resp.startsWith("SAF_21") ? "compliant" : "discrepant",
-    observation: ver5Resp,
-  });
-
-  const mcv99Resp = await exchange(ws1, `afirma://sign?op=sign&mcv=99.0.0&idsession=${idSession}`);
-  emit({
-    event: "condition",
-    id: "operation_minimum_client_version_unsatisfied_rejected",
-    verdict: mcv99Resp.startsWith("SAF_41") ? "compliant" : "discrepant",
-    observation: mcv99Resp,
-  });
-
-  const mcv1Resp = await exchange(ws1, `afirma://sign?op=sign&mcv=1.0.0&idsession=${idSession}`);
-  emit({
-    event: "condition",
-    id: "operation_minimum_client_version_satisfied",
-    verdict: !mcv1Resp.startsWith("SAF_41") ? "compliant" : "discrepant",
-    observation: mcv1Resp,
-  });
-
-  const unkOpResp = await exchange(ws1, `afirma://unknownop?idsession=${idSession}`);
-  emit({
-    event: "condition",
-    id: "unsupported_operation_rejected",
-    verdict: unkOpResp.startsWith("SAF_04") ? "compliant" : "discrepant",
-    observation: unkOpResp,
-  });
-
-  const invOpResp = await exchange(ws1, `afirma://sign?op=invalid&idsession=${idSession}`);
-  emit({
-    event: "condition",
-    id: "sign_missing_or_invalid_operation_rejected",
-    verdict: invOpResp.startsWith("SAF_04") ? "compliant" : "discrepant",
-    observation: invOpResp,
-  });
-
-  const invFmtResp = await exchange(
-    ws1,
-    `afirma://sign?op=sign&format=INVENTADO&idsession=${idSession}`,
-  );
-  emit({
-    event: "condition",
-    id: "sign_unsupported_format_rejected",
-    verdict: invFmtResp.startsWith("SAF_06") ? "compliant" : "discrepant",
-    observation: invFmtResp,
-  });
-
-  const localResp = await exchange(
-    ws1,
-    `afirma://sign?op=sign&stservlet=http://127.0.0.1/st&idsession=${idSession}`,
-  );
-  emit({
-    event: "condition",
-    id: "local_access_blocked",
-    verdict: localResp.startsWith("SAF_13") ? "compliant" : "discrepant",
-    observation: localResp,
-  });
-
-  const badSyntaxResp = await exchange(
-    ws1,
-    `afirma://sign?op=sign&format=CAdES&properties=%%%&idsession=${idSession}`,
-  );
-  emit({
-    event: "condition",
-    id: "invalid_parameters_syntax_rejected",
-    verdict: badSyntaxResp.startsWith("SAF_03") ? "compliant" : "discrepant",
-    observation: badSyntaxResp,
-  });
-
   ws1.close();
+  settle({ event: "success" });
+}
+
+/**
+ * Una firma que pasa el análisis de parámetros y se para en el formato inventado (`SAF_06`), ya
+ * pasadas las comprobaciones de versión: nunca llega a pedir certificado.
+ */
+function aSignOrderStoppingAtTheFormat(idSession, { op = "sign", probed } = {}) {
+  const data = Buffer.from("rfirma").toString("base64");
+  const extra = probed ? `&${probed}` : "";
+  return `afirma://sign?op=${op}&format=INVENTADO&algorithm=SHA256&dat=${data}${extra}&idsession=${idSession}`;
+}
+
+/** Las operaciones que se mandan por el canal v4 y lo que tiene que cumplir cada respuesta. */
+const THE_V4_OPERATION_PROBES = [
+  {
+    id: "operation_supported_protocol_version",
+    order: (idSession) => aSignOrderStoppingAtTheFormat(idSession, { probed: "ver=4" }),
+    holds: (answer) => !answer.startsWith("SAF_21"),
+  },
+  {
+    id: "websocket_operation_protocol_version_ignored",
+    order: (idSession) => aSignOrderStoppingAtTheFormat(idSession, { probed: "ver=5" }),
+    holds: (answer) => answer.startsWith("SAF_06"),
+  },
+  {
+    id: "operation_minimum_client_version_unsatisfied_rejected",
+    order: (idSession) => aSignOrderStoppingAtTheFormat(idSession, { probed: "mcv=99.0.0" }),
+    holds: (answer) => answer.startsWith("SAF_41"),
+  },
+  {
+    id: "operation_minimum_client_version_satisfied",
+    order: (idSession) => aSignOrderStoppingAtTheFormat(idSession, { probed: "mcv=1.0.0" }),
+    holds: (answer) => !answer.startsWith("SAF_41"),
+  },
+  {
+    id: "unsupported_operation_rejected",
+    order: (idSession) => `afirma://unknownop?idsession=${idSession}`,
+    holds: (answer) => answer.startsWith("SAF_04"),
+  },
+  {
+    id: "sign_missing_or_invalid_operation_rejected",
+    order: (idSession) => aSignOrderStoppingAtTheFormat(idSession, { op: "invalid" }),
+    holds: (answer) => answer.startsWith("SAF_04"),
+  },
+  {
+    id: "sign_unsupported_format_rejected",
+    order: (idSession) => aSignOrderStoppingAtTheFormat(idSession),
+    holds: (answer) => answer.startsWith("SAF_06"),
+  },
+  {
+    id: "local_access_blocked",
+    order: (idSession) =>
+      `afirma://sign?op=sign&stservlet=http://127.0.0.1/st&idsession=${idSession}`,
+    holds: (answer) => answer.startsWith("SAF_13"),
+  },
+  {
+    id: "invalid_parameters_syntax_rejected",
+    order: (idSession) =>
+      `afirma://sign?op=sign&format=CAdES&properties=%%%&idsession=${idSession}`,
+    holds: (answer) => answer.startsWith("SAF_03"),
+  },
+];
+
+async function theProtocolV4OperationsScript() {
+  const idSession = "Op4Rt6Yu8Io0Pa2Sd4Fg";
+  const channel = await theProtocolV4ChannelOpening([54381, 54382, 54383], idSession);
+  if (!channel) return;
+  let silentAt = null;
+  for (const { id, order, holds } of THE_V4_OPERATION_PROBES) {
+    const answer = silentAt
+      ? null
+      : await exchangeWithin(channel.ws, order(idSession), THE_OPERATION_ANSWER_DEADLINE_MS);
+    if (answer === null) {
+      silentAt ??= id;
+      emit({
+        event: "condition",
+        id,
+        verdict: "not_observable",
+        observation: `el sujeto dejó de contestar en ${silentAt}: ¿lo retiene un diálogo modal?`,
+      });
+      continue;
+    }
+    emit(aConditionEvent(id, holds(answer), answer));
+  }
+  channel.ws.close();
   settle({ event: "success" });
 }
 
@@ -2119,6 +2136,8 @@ async function theServiceLaunchVariantScript({ ports, launch, conditions }) {
 if (script.startsWith("protocol-")) {
   if (script === "protocol-v4") {
     theProtocolV4Script();
+  } else if (script === "protocol-v4-operations") {
+    theProtocolV4OperationsScript();
   } else if (script === "protocol-service") {
     theServiceProtocolScript();
   } else if (Object.hasOwn(THE_SERVICE_LAUNCH_VARIANTS, script)) {

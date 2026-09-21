@@ -27,7 +27,7 @@ citation = "ProtocolInvocationLauncher.java:837-843"
 statement = """
 Una operación no soportada (host desconocido como unknownop) se rechaza con SAF_04.
 """
-drive = { mode = "v4", script = "protocol-v4" }
+drive = { mode = "v4", script = "protocol-v4-operations" }
 
 [check.expect.autofirma]
 verdict = "conforme"
@@ -43,7 +43,7 @@ citation = "ProtocolInvocationLauncherSign.java:733"
 statement = """
 En afirma://sign?, si el parámetro op falta o no es reconocido, se rechaza con SAF_04.
 """
-drive = { mode = "v4", script = "protocol-v4" }
+drive = { mode = "v4", script = "protocol-v4-operations" }
 
 [check.expect.autofirma]
 verdict = "conforme"
@@ -59,7 +59,7 @@ citation = "ProtocolInvocationLauncherSign.java:269"
 statement = """
 Si el formato de firma especificado en format no está soportado, se rechaza con SAF_06.
 """
-drive = { mode = "v4", script = "protocol-v4" }
+drive = { mode = "v4", script = "protocol-v4-operations" }
 
 [check.expect.autofirma]
 verdict = "conforme"
@@ -75,7 +75,7 @@ citation = "UrlParameters.java:279-281; ProtocolInvocationLauncher.java:735"
 statement = """
 Si stservlet o rtservlet apuntan a direcciones locales prohibidas, se rechaza con SAF_13.
 """
-drive = { mode = "v4", script = "protocol-v4" }
+drive = { mode = "v4", script = "protocol-v4-operations" }
 
 [check.expect.autofirma]
 verdict = "conforme"
@@ -91,7 +91,7 @@ citation = "ProtocolInvocationLauncher.java:741"
 statement = """
 Parámetros de entrada con sintaxis inválida se rechazan con SAF_03.
 """
-drive = { mode = "v4", script = "protocol-v4" }
+drive = { mode = "v4", script = "protocol-v4-operations" }
 
 [check.expect.autofirma]
 verdict = "conforme"
