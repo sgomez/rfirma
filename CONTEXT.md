@@ -255,8 +255,11 @@ El catálogo de exigencias del protocolo —declarativo, repartido en `catalogue
 entrada por exigencia— y el arnés que las mide contra el **sujeto** que se le declare —AutoFirma o rFirma, un
 binario instalado—, con el **cliente publicado** como instrumento: emite un veredicto único
 —CONFORME, NO CONFORME, NO OBSERVABLE, y PENDIENTE mientras no se haya corrido— con las
-coordenadas de la tanda. El enunciado de cada entrada dice qué exige el protocolo, nunca qué hace
-mal un cliente. Produce un informe, no una puerta: queda fuera de las gradas del ADR-0014, no
+coordenadas de la tanda. **El protocolo es lo que responde AutoFirma**: el enunciado de cada
+entrada dice qué responde AutoFirma, y un sujeto que responda otra cosa es NO CONFORME, aunque un
+ADR de rFirma haya decidido desviarse. La única excepción es que AutoFirma se contradiga a sí
+mismo y responda lo que no debe: eso es un bug suyo, el enunciado recoge la respuesta que sí debe
+dar y AutoFirma sale NO CONFORME. Produce un informe, no una puerta: queda fuera de las gradas del ADR-0014, no
 bloquea ningún PR ni ninguna etiqueta. Los veredictos se registran en el **expediente** de la
 tanda (`reports/conformance/<nombre>/dossier.json`) y en sus transcripciones; el anexo A1 es su
 diccionario de causas, no su índice. Vive en `cargo run --example conformance`, y `just conformance`

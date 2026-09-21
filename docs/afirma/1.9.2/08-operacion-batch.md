@@ -179,7 +179,7 @@ public static UrlParametersForBatch getParametersToBatch(final Map<String, Strin
 | `ksb64` | String (Base64) | No | `null` | Nombre del almacén codificado en Base64 (prioritario sobre `keystore`). | `UrlParameters.java:66`, `UrlParameters.java:220-224` |
 | `sticky` | Booleano (`true`/`false`) | No | `false` | Si es `true`, almacena la clave privada seleccionada en memoria estática de la JVM para reutilizarla en subsiguientes firmas. | `UrlParametersForBatch.java:34, 306-311` |
 | `resetsticky` | Booleano (`true`/`false`) | No | `false` | Si es `true`, invalida cualquier clave privada previamente fijada en memoria estática forzando nueva selección. | `UrlParametersForBatch.java:38, 314-319` |
-| `ver` | String | No | `"0"` | Versión mínima del protocolo soportada por el llamante (`ProtocolVersion`). | `UrlParametersForBatch.java:31, 214-219` |
+| `ver` | String | No | `"0"` | Versión de protocolo de la operación (`ProtocolVersion`); solo se lee sin canal abierto. Ver [14 §2.3](14-versiones.md). | `UrlParametersForBatch.java:31, 214-219` |
 | `mcv` | String | No | `null` | Versión mínima de la aplicación AutoFirma requerida (ej. `"1.9.2"`). Si la versión local es inferior, aborta con `SAF_41`. | `UrlParameters.java:73`, `ProtocolInvocationLauncherBatch.java:90-101` |
 | `aw` | Booleano (`true`/`false`) | No | `false` | Solicita espera activa (*active waiting*) sobre `stservlet` mientras se procesa la firma. | `UrlParameters.java:70, 88`, `ProtocolInvocationLauncher.java:337-339` |
 | `appname` | String | No | `null` | Nombre de la aplicación o dominio web que origina la invocación. | `UrlParametersForBatch.java:80, 221-223` |

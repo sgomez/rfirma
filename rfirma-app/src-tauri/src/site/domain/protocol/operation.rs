@@ -11,8 +11,7 @@ use super::filters::{site_filter, SiteFilter};
 use super::format::{format_of, RequestedFormat, XadesEnvelope};
 use super::key_store::refuse_a_key_store_rfirma_does_not_open;
 use super::parameters::{
-    check_local_access_is_not_requested, check_minimum_client_version,
-    check_minimum_protocol_version, check_servlet_url, minimum_protocol_version,
+    check_local_access_is_not_requested, check_minimum_client_version, check_servlet_url,
     sticky_certificate, StickyCertificate,
 };
 use super::refusal::{Refusal, RefusalSituation};
@@ -606,7 +605,6 @@ impl BatchRequest {
 /// Lee la operación que llegó por el canal, o por qué se rechaza.
 pub fn read_operation(url: &AfirmaUrl, data: &dyn DataSource) -> Result<SiteOperation, Refusal> {
     check_minimum_client_version(url.parameter("mcv"))?;
-    check_minimum_protocol_version(minimum_protocol_version(url))?;
     if let Some(data) = url.parameter("dat") {
         check_local_access_is_not_requested(data)?;
     }

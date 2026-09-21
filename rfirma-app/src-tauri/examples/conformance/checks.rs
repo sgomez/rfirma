@@ -279,7 +279,9 @@ impl Probe {
                     .as_deref()
                     .is_some_and(the_signature_carries_a_timestamp),
             ),
-            Some("occupied_service_ports") => the_verdict_for_a_bind_failure(outcome),
+            Some("occupied_service_ports") => {
+                the_verdict_for_a_bind_failure(outcome, answer.unwrap_or_default())
+            }
             Some("supported_websocket_versions") => {
                 self.the_verdict_for_both_channel_versions(outcome)
             }

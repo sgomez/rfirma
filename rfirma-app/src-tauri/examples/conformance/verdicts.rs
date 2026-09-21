@@ -460,28 +460,37 @@ fn the_verdict_for_a_dialogue(
     }
 }
 
-/// El veredicto del fallo al ligar el socket: el error que la sede recibe distingue el arranque
-/// fallido de la aplicación ausente, o no lo distingue.
-pub(crate) fn the_verdict_for_a_bind_failure(outcome: &ErrandOutcome) -> CheckOutcome {
+/// El veredicto del fallo al ligar el socket: la sede no puede enterarse, así que quien está delante
+/// dice si la aplicación se lo contó.
+pub(crate) fn the_verdict_for_a_bind_failure(
+    outcome: &ErrandOutcome,
+    answer: &str,
+) -> CheckOutcome {
     if !outcome.launched {
         return CheckOutcome::of(
             Verdict::NotObservable,
             "el sujeto no llegó a arrancar en esta tanda",
         );
     }
-    match outcome.error_type.as_deref() {
-        Some(APPLICATION_NOT_FOUND_EXCEPTION) => CheckOutcome::of(
-            Verdict::Noncompliant,
-            "el fallo al ligar llegó como «la aplicación no está instalada»",
-        ),
-        Some(THE_DRIVER_CRASH | THE_EXHAUSTED_PATIENCE) | None => CheckOutcome::Resolved {
+    if outcome.error_type.as_deref() != Some(APPLICATION_NOT_FOUND_EXCEPTION) {
+        return CheckOutcome::Resolved {
             verdict: Verdict::NotObservable,
             observation: outcome.error_code.clone().or(outcome.error_type.clone()),
-        },
-        Some(other) => CheckOutcome::of(
+        };
+    }
+    if answer.is_empty() {
+        return CheckOutcome::StillPending;
+    }
+    if answered_yes(answer) {
+        CheckOutcome::of(
             Verdict::Compliant,
-            format!("el fallo al ligar llegó nombrado: {other}"),
-        ),
+            "se avisó a quien está delante de que el canal no se pudo abrir",
+        )
+    } else {
+        CheckOutcome::of(
+            Verdict::Noncompliant,
+            "el fallo al ligar terminó en silencio: no se avisó a quien está delante",
+        )
     }
 }
 
@@ -919,23 +928,45 @@ mod tests {
     }
 
     #[test]
-    fn a_bind_failure_reported_as_a_missing_application_is_noncompliant() {
-        let missing = ErrandOutcome {
+    fn a_bind_failure_the_person_was_told_about_is_compliant() {
+        let silent_for_the_site = ErrandOutcome {
             error_type: Some(APPLICATION_NOT_FOUND_EXCEPTION.to_owned()),
             ..an_outcome()
         };
+
         assert_eq!(
-            the_verdict(the_verdict_for_a_bind_failure(&missing)),
+            the_verdict(the_verdict_for_a_bind_failure(&silent_for_the_site, "s")),
+            Verdict::Compliant
+        );
+        assert_eq!(
+            the_verdict(the_verdict_for_a_bind_failure(&silent_for_the_site, "n")),
             Verdict::Noncompliant
         );
+    }
 
-        let named = ErrandOutcome {
-            error_type: Some("java.io.IOException".to_owned()),
+    #[test]
+    fn a_bind_failure_nobody_answered_stays_pending() {
+        let silent_for_the_site = ErrandOutcome {
+            error_type: Some(APPLICATION_NOT_FOUND_EXCEPTION.to_owned()),
             ..an_outcome()
         };
+
+        assert!(matches!(
+            the_verdict_for_a_bind_failure(&silent_for_the_site, ""),
+            CheckOutcome::StillPending
+        ));
+    }
+
+    #[test]
+    fn a_channel_that_opened_after_all_measures_no_bind_failure() {
+        let answered = ErrandOutcome {
+            error_code: Some("SAF_06".to_owned()),
+            ..an_outcome()
+        };
+
         assert_eq!(
-            the_verdict(the_verdict_for_a_bind_failure(&named)),
-            Verdict::Compliant
+            the_verdict(the_verdict_for_a_bind_failure(&answered, "s")),
+            Verdict::NotObservable
         );
     }
 

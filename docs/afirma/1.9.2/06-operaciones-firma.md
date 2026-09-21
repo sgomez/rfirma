@@ -140,7 +140,7 @@ lista cerrada de parámetros reconocidos por el analizador para esta operación:
 | `ksb64` | No | Base64 | `UrlParameters:66` | Nombre del almacén de claves codificado en Base64. |
 | `sticky` | No | Booleano | `UrlParametersToSign:42` | `true` para fijar el certificado en memoria para siguientes llamadas. |
 | `resetsticky` | No | Booleano | `UrlParametersToSign:46` | `true` para ignorar y descartar un certificado fijado previamente. |
-| `ver` | No | Entero | `UrlParametersToSign:38` | Versión mínima requerida del protocolo (por defecto `0`). |
+| `ver` | No | Entero | `UrlParametersToSign:38` | Versión de protocolo de la operación; solo se lee sin canal abierto (por defecto `0`). Ver [14 §2.3](14-versiones.md). |
 | `mcv` | No | Versión (X.Y.Z) | `UrlParameters:73` | Versión mínima requerida de la aplicación AutoFirma. |
 | `aw` | No | Booleano | `UrlParameters:70` | `true` para activar el hilo de espera activa hacia `stservlet`. |
 | `appname` | No | Texto | `UrlParameters:76` | Nombre o dominio web de la aplicación que invoca AutoFirma. |

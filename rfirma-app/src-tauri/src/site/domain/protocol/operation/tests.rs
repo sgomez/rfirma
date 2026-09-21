@@ -2184,20 +2184,16 @@ mod url_shape_guards {
 }
 
 #[test]
-fn an_operation_that_demands_a_protocol_version_not_spoken_here_is_refused_before_anything_else() {
+fn an_operation_leaves_the_protocol_version_it_declares_to_the_channel() {
     for verb in ["selectcert", "sign", "signandsave", "save", "load", "batch"] {
-        let refusal = read_operation(&an_operation(&format!("op={verb}&ver=5")))
-            .expect_err("la sede exige la version 5 del protocolo");
+        let outcome = read_operation(&an_operation(&format!("op={verb}&ver=5")));
 
-        assert_eq!(
-            refusal.code(),
-            SafCode::UnsupportedProcedure,
-            "con op={verb}"
-        );
-        assert_eq!(
-            refusal.answer().on_the_wire(),
-            "SAF_21: Este tramite no es compatible con la version instalada",
-            "con op={verb}"
+        assert!(
+            outcome.as_ref().map_or_else(
+                |refusal| refusal.code() != SafCode::UnsupportedProcedure,
+                |_| true
+            ),
+            "con op={verb}: {outcome:?}"
         );
     }
 }
