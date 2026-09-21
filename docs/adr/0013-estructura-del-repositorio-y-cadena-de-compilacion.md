@@ -8,6 +8,7 @@ cada pieza lleva la suya dentro.
 ```
 rfirma-native-bridge/   Maven -> GraalVM CE 25 -> librfirma_crypto.so (ADR-0004)
 rfirma-app/             Tauri: src-tauri/ (Rust) + src/ (React)
+rfirma-conformance/     la suite de conformidad: su crate y su consola web, fuera del CI
 packaging/flatpak/      manifiesto, generadores de fuentes y verificación
 packaging/repo/         la imagen nginx y la landing de rfirma.sgomez.me (ADR-0015)
 packaging/verifica-contenido.sh   la invariante del ADR-0012 sobre cualquier artefacto
@@ -224,6 +225,30 @@ implementaciones de la misma frontera FFI**, y esa frontera es justo donde este 
 lleva tres hallazgos de fallo silencioso. Se borra en el mismo sub-issue que aporte el
 FFI real, y el manifiesto pasa a empaquetar `rfirma-app`. `verifica.sh` sobrevive.
 
+## La suite de conformidad es un proyecto aparte
+
+La suite de conformidad vive en `rfirma-conformance/`, un crate propio junto a `rfirma-app` y
+`rfirma-native-bridge`, y no dentro de la aplicación. Mide un binario instalado, AutoFirma o
+rFirma, y no usa nada de `rfirma_lib`: dentro del crate de la app compilaba el árbol de Tauri sin
+usarlo y le daba a uno de los dos clientes que mide un sitio que su diseño le niega. Es otro
+bounded context, con su glosario propio (`CONTEXT-MAP.md`).
+
+- **Su consola web es React con Vite**, con su propia cadena dentro del crate, en castellano y sin
+  capa de i18n: es una herramienta interna de un solo idioma. El contrato entre el servidor y la
+  página se genera desde Rust, para que no haya dos copias de él.
+- **Su receta sigue en el `justfile` raíz**: `just conformance`. No tiene orquestador propio.
+- **Queda fuera del CI** y de `check`: se ejecuta en local, cuando alguien lo decide (ADR-0014).
+- **El conductor de Node es común**: `driver.mjs` vive en `testdata/conformance/`, junto al
+  `autoscript.js` fijado, porque lo usan la suite y el banco de conformidad de la app, que sí
+  corre en el CI.
+- **Sin workspace de Cargo**: los dos crates no comparten código, y un workspace ataría el
+  `Cargo.lock` de una herramienta local al de la aplicación que se publica.
+
+Se descartaron dos opciones. La primera, dejar la suite como *example* del crate de la app: así
+empezó, y es la que arrastra Tauri, sus pruebas y sus dependencias de desarrollo. La segunda, una
+página HTML servida tal cual sin paso de compilación: sin tipos ni pruebas, el contrato con el
+servidor quedaba implícito en dos lenguajes.
+
 ## Consequences
 
 - El `README.md`, `AGENTS.md`, `design-system.md` y `docs/agents/prototyping.md` decían
@@ -232,5 +257,5 @@ FFI real, y el manifiesto pasa a empaquetar `rfirma-app`. `verifica.sh` sobreviv
 - `rfirma_development_spec.md` era borrador a auditar y **ya no existe**: lo borró el
   [#10](https://github.com/sgomez/rfirma/issues/10) al publicar el spec ejecutable
   [#46](https://github.com/sgomez/rfirma/issues/46), no este ADR.
-- No hay workspace de Cargo en la raíz: hoy habría un solo miembro real. Se revisa si
-  aparece un segundo crate.
+- No hay workspace de Cargo en la raíz, ni siquiera con `rfirma-conformance` de segundo crate:
+  la razón está en su sección.

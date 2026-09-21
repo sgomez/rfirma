@@ -2,8 +2,9 @@
 
 Aplicación nativa de firma electrónica que sustituye la interfaz de **AutoFirma**
 para ciudadanos y empresas que firman ante la Administración española. Este
-documento es el glosario del dominio: define **qué es** cada término, no cómo
-está implementado (eso vive en `docs/adr/`).
+documento es el glosario del dominio de la aplicación: define **qué es** cada
+término, no cómo está implementado (eso vive en `docs/adr/`). La suite de
+conformidad tiene el suyo; los dos están en `CONTEXT-MAP.md`.
 
 ## Language
 
@@ -251,30 +252,10 @@ hace. No se copia al repositorio: se descarga a etiqueta fijada, con `sha256` y 
 _Avoid_: tests de integración, e2e, banco de pruebas, suite de conformidad, cliente de canal
 
 **Suite de conformidad**:
-El catálogo de exigencias del protocolo —declarativo, repartido en `catalogue/` por conjunto, una
-entrada por exigencia— y el arnés que las mide contra el **sujeto** que se le declare —AutoFirma o rFirma, un
-binario instalado—, con el **cliente publicado** como instrumento: emite un veredicto único
-—CONFORME, NO CONFORME, NO OBSERVABLE, y PENDIENTE mientras no se haya corrido— con las
-coordenadas de la tanda. **El protocolo es lo que responde AutoFirma**: el enunciado de cada
-entrada dice qué responde AutoFirma, y un sujeto que responda otra cosa es NO CONFORME, aunque un
-ADR de rFirma haya decidido desviarse. La única excepción es que AutoFirma se contradiga a sí
-mismo y responda lo que no debe: eso es un bug suyo, el enunciado recoge la respuesta que sí debe
-dar y AutoFirma sale NO CONFORME. Produce un informe, no una puerta: queda fuera de las gradas del ADR-0014, no
-bloquea ningún PR ni ninguna etiqueta. Los veredictos se registran en el **expediente** de la
-tanda (`reports/conformance/<nombre>/dossier.json`) y en sus transcripciones; el anexo A1 es su
-diccionario de causas, no su índice. Vive en `cargo run --example conformance`, y `just conformance`
-levanta la consola web local desde la que se elige el sujeto y el informe y se lanzan y siguen las
-comprobaciones: no tiene otra cara.
-_Avoid_: sondeo, banco de conformidad, cliente de canal
-
-**Línea base**:
-Lo que cada entrada del catálogo declara que se espera de cada **perfil** de sujeto —`autofirma` o
-`rfirma`, el tercer dato del sujeto junto al binario y su raíz de confianza—, con la **causa** que
-lo explica: una ficha `BUG-NN` del anexo A1 o un ADR. Una expectativa sin causa es una expectativa
-de conformidad. El informe cruza lo observado con lo esperado y clasifica cada entrada en
-**coincide**, **SORPRESA** —dos medidas distintas— o **sin medida** —se esperaba una medida y salió
-NO OBSERVABLE—. Una tanda sin sorpresas ni pendientes es el verde.
-_Avoid_: expectativa por defecto, baseline, regresión
+La herramienta local que mide si una aplicación —AutoFirma o rFirma— cumple el protocolo. Es otro
+bounded context, con su propio glosario (`CONTEXT-MAP.md`); en este sólo se nombra para no
+confundirla con el banco de conformidad ni con el cliente de canal.
+_Avoid_: banco de conformidad, cliente de canal
 
 **Códec del protocolo**:
 La traducción entre el texto que viaja por el canal y las estructuras con las

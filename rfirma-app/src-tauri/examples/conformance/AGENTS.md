@@ -6,6 +6,7 @@ y no es una grada ni una puerta (ADR-0014). Su única cara es la consola web que
 
 | Fichero | Qué es |
 |---|---|
+| `CONTEXT.md` | El glosario de la suite, un bounded context aparte del de la aplicación. |
 | `main.rs` | El arranque: lee el catálogo, levanta el servidor, imprime la URL con el token y la abre. |
 | `server.rs` | El servidor HTTP local y su guarda (token, `Host`, `Origin`); traduce rutas a la sesión, no decide nada de la tanda. |
 | `console.html` | La página, servida tal cual por `server.rs`: sin paso de compilación y fuera del bundle de la app. |

@@ -18,8 +18,8 @@ PIN.**
   quien sólo se identifica no ha tecleado su PIN por el camino.
 - Frente al cliente publicado, rFirma sale **no conforme** en la exigencia
   `selectcert_only_offers_certificates_with_a_private_key` de la suite de
-  conformidad, y su línea base lo declara así citando este ADR: es una
-  desviación deliberada, no una sorpresa.
+  conformidad. La suite no sabe qué cliente mide, así que no lo explica: es
+  una desviación deliberada, y su porqué es este ADR.
 
 ## Considered Options
 

@@ -119,10 +119,10 @@ es estado de la lista, y ahí lo lee quien la ejecuta.
 
 ### La suite de conformidad no es una grada ni una puerta
 
-La **suite de conformidad** (`just conformance`, glosario en `CONTEXT.md`) existe para medir las
-fichas del anexo A1 contra un binario real de AutoFirma, y queda fuera de las cuatro gradas y de
-las dos puertas manuales de arriba: no bloquea ningún PR ni ninguna etiqueta, se lanza cuando
-alguien lo decide.
+La **suite de conformidad** (`just conformance`, glosario en `CONTEXT-MAP.md`) mide si un cliente
+instalado, AutoFirma o rFirma, cumple el protocolo, y queda fuera de las cuatro gradas, de las dos
+puertas manuales de arriba y del CI: ni ella ni sus pruebas bloquean ningún PR ni ninguna
+etiqueta, y se lanza en local cuando alguien lo decide.
 
 ## La prueba del ciclo completo tiene dueño
 

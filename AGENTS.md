@@ -160,7 +160,7 @@ Vocabulario canónico por defecto: `needs-triage`, `needs-info`, `ready-for-agen
 
 ### Domain docs
 
-Single-context: `CONTEXT.md` + `docs/adr/` en la raíz. Ver `docs/agents/domain.md`.
+Multi-context: `CONTEXT-MAP.md` en la raíz apunta a los dos glosarios —la aplicación en `CONTEXT.md` y la suite de conformidad en el suyo—; las decisiones, en `docs/adr/`, y las que solo afecten a la suite, en un `docs/adr/` junto a su glosario cuando las haya. Ver `docs/agents/domain.md`.
 
 **Un ADR es la ley vigente, escrita una sola vez, no un acta con fecha.** Cuando una decisión cambia, **se reescribe o se enmienda el ADR que dejó de ser cierto** —ajustando su nombre de fichero si el título deja de describirla—; **nunca** se añade uno nuevo que lo contradiga ni se marca el viejo como `Superseded`. Quien lee no es una persona, es un modelo, y dos ficheros que se contradicen sobre lo mismo gastan contexto y siembran dudas. El histórico ya lo guardan GitHub, los issues y las PR. Lo que sí se conserva dentro del ADR reescrito es **por qué se descartó la opción anterior**, en `Considered Options`.
 
