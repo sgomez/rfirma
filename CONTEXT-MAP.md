@@ -8,7 +8,7 @@ en la suite, **cliente** es la aplicación a prueba y el `autoscript.js` es part
 | Contexto | Glosario | Qué es |
 |---|---|---|
 | Aplicación rFirma | `CONTEXT.md` | La aplicación de firma, su protocolo con la sede y sus pruebas, incluidos el banco de conformidad y el cliente de canal. |
-| Suite de conformidad | `rfirma-app/src-tauri/examples/conformance/CONTEXT.md` | La herramienta local que mide si una aplicación, AutoFirma o rFirma, cumple el protocolo `afirma://`. |
+| Suite de conformidad | `rfirma-conformance/CONTEXT.md` | La herramienta local que mide si una aplicación, AutoFirma o rFirma, cumple el protocolo `afirma://`. |
 
 Las decisiones de la aplicación y del repositorio viven en `docs/adr/`; las que solo afecten a la
 suite, cuando las haya, irán a un `docs/adr/` junto a su glosario.

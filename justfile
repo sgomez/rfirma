@@ -10,6 +10,7 @@ default_graalvm := "$HOME/.sdkman/candidates/java/25.3.4+1.r25-graalce"
 bridge := justfile_directory() / "rfirma-native-bridge"
 app := justfile_directory() / "rfirma-app"
 tauri := app / "src-tauri"
+conformance_suite := justfile_directory() / "rfirma-conformance"
 
 # Ruta canonica de la libreria nativa (ADR-0013).
 native_lib := bridge / "target/lib/rfirma/librfirma_crypto.so"
@@ -224,10 +225,11 @@ lint-ts: po-import
 [group('checklist')]
 fmt: fmt-rust fmt-ts fmt-python
 
-# rustfmt sobre rfirma-app/src-tauri.
+# rustfmt sobre rfirma-app/src-tauri y rfirma-conformance.
 [private]
 fmt-rust:
     cd {{ tauri }} && cargo fmt --all
+    cd {{ conformance_suite }} && cargo fmt --all
 
 # Formateador de biome sobre rfirma-app.
 [private]
@@ -437,12 +439,12 @@ dev *args: check-native po-import
 dev-handler mode="on":
     {{ justfile_directory() }}/scripts/dev-handler.sh {{ mode }}
 
-# Levanta la consola web de la suite de conformidad, imprime su URL con el token y la abre en el
-# navegador. Sujeto, informe y comprobaciones se eligen en la pagina; cada informe vive en
-# reports/conformance/<nombre>/, con sus transcripciones dentro.
+# Levanta la consola web de la suite de conformidad de rfirma-conformance/, imprime su URL con el
+# token y la abre en el navegador. Cliente, informe y comprobaciones se eligen en la pagina; cada
+# informe vive en reports/conformance/<nombre>/, con sus transcripciones dentro.
 [group('dev')]
-conformance: autoscript build-ts
-    cd {{ tauri }} && cargo run -q --example conformance
+conformance: autoscript
+    cd {{ conformance_suite }} && cargo run -q
 
 # Borra lo construido y los volcados de cobertura sueltos en el arbol de fuentes.
 [group('dev')]

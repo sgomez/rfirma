@@ -160,7 +160,7 @@ fn the_published_client() -> PathBuf {
 
 /// El conductor de Node que le monta el navegador mínimo alrededor.
 fn the_driver() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/conformance/driver.mjs")
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../testdata/site-driver/driver.mjs")
 }
 
 /// Comprueba disponibilidad de Node y del script de autoscript.js.
@@ -1084,7 +1084,7 @@ async fn sticky_spares_the_second_selection_also_over_the_third_protocol() {
 /// la pone el formateador del repositorio y el cliente publicado lo reserializa compacto.
 fn the_frozen(fixture: &str) -> String {
     let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("tests/conformance")
+        .join("../../testdata/site-driver")
         .join(fixture);
     let text = std::fs::read_to_string(&path)
         .unwrap_or_else(|error| panic!("falta la fixture {}: {error}", path.display()));

@@ -3368,7 +3368,6 @@ dependencies = [
  "tokio",
  "tokio-native-tls",
  "tokio-tungstenite",
- "toml 1.1.4+spec-1.1.0",
  "x509-cert",
  "zeroize",
 ]

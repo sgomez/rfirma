@@ -101,7 +101,7 @@ hace falta además del fichero que vas a tocar:
 * `rfirma-app/src/AGENTS.md` — mapa de la interfaz.
 * `rfirma-native-bridge/AGENTS.md` — mapa del puente Java.
 * `scripts/AGENTS.md` — mapa de los arneses que llama el `justfile`.
-* `rfirma-app/src-tauri/examples/conformance/AGENTS.md` — mapa de la suite de conformidad y su consola web.
+* `rfirma-conformance/AGENTS.md` — mapa de la suite de conformidad y su consola web.
 * `docs/AGENTS.md` — índice de ADR, research, fichas de diseño y contratos de proceso.
 
 **Una fila de un mapa dice qué es el fichero, y se para ahí.** Una frase, la que
