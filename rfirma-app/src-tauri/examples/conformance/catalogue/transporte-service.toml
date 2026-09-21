@@ -15,12 +15,6 @@ drive = { mode = "service", script = "selectcert" }
 greeting = true
 warning = "Va a aparecer el diálogo de selección de certificado: elige uno para que la comprobación llegue a medir algo."
 
-[check.expect.autofirma]
-verdict = "conforme"
-
-[check.expect.rfirma]
-verdict = "conforme"
-
 [[check]]
 id = "the_service_channel_reports_a_bind_failure_instead_of_claiming_success"
 suite = "transporte.service"
@@ -37,14 +31,6 @@ needs = ["persona", "puertos:63131,63132,63133"]
 question = "¿avisó la aplicación de que no pudo abrir el canal con la página? [s/n]"
 warning = "La suite ocupa los tres puertos del canal: el sujeto no podrá abrirlo, y la página tardará unos 30 segundos en rendirse."
 
-[check.expect.autofirma]
-verdict = "no-conforme"
-cause = "BUG-10"
-note = "El fallo al ligar se registra en el log y el lanzador devuelve OK: nadie avisa a la persona."
-
-[check.expect.rfirma]
-verdict = "conforme"
-
 [[check]]
 id = "the_service_launch_accepts_a_slash_before_its_query"
 suite = "transporte.service"
@@ -55,12 +41,6 @@ La invocación afirma://service/? con barra ante la consulta abre el canal igual
 afirma://service?.
 """
 drive = { mode = "service", script = "protocol-service-v2" }
-
-[check.expect.autofirma]
-verdict = "conforme"
-
-[check.expect.rfirma]
-verdict = "conforme"
 
 [[check]]
 id = "negative_candidate_ports_are_read_by_their_absolute_value"
@@ -73,12 +53,6 @@ Un puerto candidato con signo negativo en ports se toma por su valor absoluto: e
 """
 drive = { mode = "service", script = "protocol-service-v1" }
 
-[check.expect.autofirma]
-verdict = "conforme"
-
-[check.expect.rfirma]
-verdict = "conforme"
-
 [[check]]
 id = "the_service_channel_binds_the_first_free_candidate_port"
 suite = "transporte.service"
@@ -89,12 +63,6 @@ Los puertos candidatos se prueban en el orden en que llegan en ports y el canal 
 primero que está libre.
 """
 drive = { mode = "service", script = "protocol-service" }
-
-[check.expect.autofirma]
-verdict = "conforme"
-
-[check.expect.rfirma]
-verdict = "conforme"
 
 [[check]]
 id = "the_service_channel_serves_only_the_loopback"
@@ -107,12 +75,6 @@ del equipo no le contesta la orden.
 """
 drive = { mode = "service", script = "protocol-service" }
 
-[check.expect.autofirma]
-verdict = "conforme"
-
-[check.expect.rfirma]
-verdict = "conforme"
-
 [[check]]
 id = "the_service_channel_reads_until_the_eof_mark_however_it_arrives"
 suite = "transporte.service"
@@ -124,12 +86,6 @@ partido entre dos, y no contesta antes de haberlo leído.
 """
 drive = { mode = "service", script = "protocol-service" }
 
-[check.expect.autofirma]
-verdict = "conforme"
-
-[check.expect.rfirma]
-verdict = "conforme"
-
 [[check]]
 id = "the_service_echo_answers_ok"
 suite = "transporte.service"
@@ -139,12 +95,6 @@ statement = """
 La orden echo= con el identificador de sesión negociado recibe OK.
 """
 drive = { mode = "service", script = "protocol-service" }
-
-[check.expect.autofirma]
-verdict = "conforme"
-
-[check.expect.rfirma]
-verdict = "conforme"
 
 [[check]]
 id = "an_echo_with_a_dash_discards_the_pending_result"
@@ -157,12 +107,6 @@ en vez de volver a anunciar las partes de la anterior.
 """
 drive = { mode = "service", script = "protocol-service" }
 
-[check.expect.autofirma]
-verdict = "conforme"
-
-[check.expect.rfirma]
-verdict = "conforme"
-
 [[check]]
 id = "the_service_cmd_order_answers_the_number_of_parts"
 suite = "transporte.service"
@@ -174,12 +118,6 @@ queda troceado.
 """
 drive = { mode = "service", script = "protocol-service" }
 
-[check.expect.autofirma]
-verdict = "conforme"
-
-[check.expect.rfirma]
-verdict = "conforme"
-
 [[check]]
 id = "the_service_send_order_delivers_the_result"
 suite = "transporte.service"
@@ -189,12 +127,6 @@ statement = """
 La orden send=@parte@total entrega cada parte anunciada, y unidas son el resultado de la operación.
 """
 drive = { mode = "service", script = "protocol-service" }
-
-[check.expect.autofirma]
-verdict = "conforme"
-
-[check.expect.rfirma]
-verdict = "conforme"
 
 [[check]]
 id = "a_fragment_before_the_last_answers_more_data_need"
@@ -206,12 +138,6 @@ Un fragment= que no es el último de su petición recibe MORE_DATA_NEED.
 """
 drive = { mode = "service", script = "protocol-service" }
 
-[check.expect.autofirma]
-verdict = "conforme"
-
-[check.expect.rfirma]
-verdict = "conforme"
-
 [[check]]
 id = "the_last_fragment_answers_ok"
 suite = "transporte.service"
@@ -221,12 +147,6 @@ statement = """
 El último fragment= de una petición recibe OK.
 """
 drive = { mode = "service", script = "protocol-service" }
-
-[check.expect.autofirma]
-verdict = "conforme"
-
-[check.expect.rfirma]
-verdict = "conforme"
 
 [[check]]
 id = "the_firm_order_runs_the_reassembled_request"
@@ -239,12 +159,6 @@ resultado, que send= entrega.
 """
 drive = { mode = "service", script = "protocol-service" }
 
-[check.expect.autofirma]
-verdict = "conforme"
-
-[check.expect.rfirma]
-verdict = "conforme"
-
 [[check]]
 id = "every_service_answer_is_http_200_whatever_it_carries"
 suite = "transporte.service"
@@ -256,12 +170,6 @@ viaja en el cuerpo, nunca en el código de estado.
 """
 drive = { mode = "service", script = "protocol-service" }
 
-[check.expect.autofirma]
-verdict = "conforme"
-
-[check.expect.rfirma]
-verdict = "conforme"
-
 [[check]]
 id = "the_service_channel_accepts_protocol_version_1"
 suite = "transporte.service"
@@ -271,12 +179,6 @@ statement = """
 El canal del socket se abre cuando la invocación declara v=1.
 """
 drive = { mode = "service", script = "protocol-service-v1" }
-
-[check.expect.autofirma]
-verdict = "conforme"
-
-[check.expect.rfirma]
-verdict = "conforme"
 
 [[check]]
 id = "the_service_channel_accepts_protocol_version_2"
@@ -288,12 +190,6 @@ El canal del socket se abre cuando la invocación declara v=2.
 """
 drive = { mode = "service", script = "protocol-service-v2" }
 
-[check.expect.autofirma]
-verdict = "conforme"
-
-[check.expect.rfirma]
-verdict = "conforme"
-
 [[check]]
 id = "the_service_channel_accepts_protocol_version_3"
 suite = "transporte.service"
@@ -303,12 +199,6 @@ statement = """
 El canal del socket se abre cuando la invocación declara v=3.
 """
 drive = { mode = "service", script = "protocol-service" }
-
-[check.expect.autofirma]
-verdict = "conforme"
-
-[check.expect.rfirma]
-verdict = "conforme"
 
 [[check]]
 id = "service_channel_version_range"
@@ -321,12 +211,6 @@ con SAF_21.
 """
 unmeasurable = "SAF_21 se muestra en un diálogo y no se abre canal: no hay cable por el que llegue, y la sede sólo ve que el cliente publicado agota sus reintentos."
 
-[check.expect.autofirma]
-verdict = "no-observable"
-
-[check.expect.rfirma]
-verdict = "no-observable"
-
 [[check]]
 id = "a_ver_inside_an_order_leaves_the_negotiated_version_alone"
 suite = "transporte.service"
@@ -338,12 +222,6 @@ por cmd= no la cambia, y ver=5 no se rechaza con SAF_21.
 """
 drive = { mode = "service", script = "protocol-service" }
 
-[check.expect.autofirma]
-verdict = "conforme"
-
-[check.expect.rfirma]
-verdict = "conforme"
-
 [[check]]
 id = "the_service_channel_closes_after_ninety_seconds_of_inactivity"
 suite = "transporte.service"
@@ -353,12 +231,6 @@ statement = """
 El canal se cierra tras 90 segundos sin órdenes, y una orden inválida no reinicia la cuenta.
 """
 unmeasurable = "El temporizador de inactividad vive dentro del sujeto: la suite no instrumenta su máquina virtual ni lee su estado, y el cierre no deja en el cable nada que lo distinga de un sujeto caído."
-
-[check.expect.autofirma]
-verdict = "no-observable"
-
-[check.expect.rfirma]
-verdict = "no-observable"
 
 [[check]]
 id = "concurrent_service_orders_do_not_share_their_state"
@@ -370,9 +242,3 @@ Dos conversaciones simultáneas con el canal no se mezclan los fragmentos ni las
 (BUG-09).
 """
 unmeasurable = "La concurrencia entre sesiones depende del estado interno del sujeto y de un entrelazado no determinista: la suite no la puede provocar ni leer desde el cable sin instrumentar la máquina virtual."
-
-[check.expect.autofirma]
-verdict = "no-observable"
-
-[check.expect.rfirma]
-verdict = "no-observable"

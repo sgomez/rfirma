@@ -13,12 +13,6 @@ se firme un fichero local.
 """
 drive = { mode = "v4", script = "protocol-v4-parameters" }
 
-[check.expect.autofirma]
-verdict = "conforme"
-
-[check.expect.rfirma]
-verdict = "conforme"
-
 [[check]]
 id = "gzipped_data_is_decompressed_before_signing"
 suite = "parametros"
@@ -31,12 +25,6 @@ descomprimidos en vez de rechazar la petición.
 drive = { mode = "v4", script = "signgzip" }
 warning = "Van a aparecer el diálogo de certificado y el del PIN del token."
 
-[check.expect.autofirma]
-verdict = "conforme"
-
-[check.expect.rfirma]
-verdict = "conforme"
-
 [[check]]
 id = "a_retrieve_servlet_outside_http_is_refused_with_saf_03"
 suite = "parametros"
@@ -47,12 +35,6 @@ rtservlet sólo admite los esquemas http y https: un ftp:// se rechaza con SAF_0
 nada.
 """
 drive = { mode = "v4", script = "protocol-v4-parameters" }
-
-[check.expect.autofirma]
-verdict = "conforme"
-
-[check.expect.rfirma]
-verdict = "conforme"
 
 [[check]]
 id = "a_retrieve_servlet_on_a_local_host_is_refused_with_saf_13"
@@ -65,12 +47,6 @@ local está bloqueado.
 """
 drive = { mode = "v4", script = "protocol-v4-parameters" }
 
-[check.expect.autofirma]
-verdict = "conforme"
-
-[check.expect.rfirma]
-verdict = "conforme"
-
 [[check]]
 id = "a_retrieve_servlet_carrying_its_own_parameters_is_refused_with_saf_03"
 suite = "parametros"
@@ -80,12 +56,6 @@ statement = """
 La URL de rtservlet no puede traer parámetros propios: una con ? o = se rechaza con SAF_03.
 """
 drive = { mode = "v4", script = "protocol-v4-parameters" }
-
-[check.expect.autofirma]
-verdict = "conforme"
-
-[check.expect.rfirma]
-verdict = "conforme"
 
 [[check]]
 id = "the_storage_servlet_is_validated_like_the_retrieve_servlet"
@@ -97,12 +67,6 @@ stservlet se valida con las mismas reglas que rtservlet —esquema http o https,
 parámetros propios— cuando la operación viaja por servidor intermedio.
 """
 unmeasurable = "El original sólo lo valida cuando la operación viaja por servidor intermedio: por WebSocket ni lo lee, y la tanda no monta el StorageService al que se subiría el rechazo."
-
-[check.expect.autofirma]
-verdict = "no-observable"
-
-[check.expect.rfirma]
-verdict = "no-observable"
 
 [[check]]
 id = "a_protocol_version_below_the_supported_one_is_accepted"
@@ -116,12 +80,6 @@ de versiones.
 """
 drive = { mode = "v4", script = "protocol-v4-parameters" }
 
-[check.expect.autofirma]
-verdict = "conforme"
-
-[check.expect.rfirma]
-verdict = "conforme"
-
 [[check]]
 id = "a_malformed_minimum_client_version_is_refused_with_saf_03"
 suite = "parametros"
@@ -133,12 +91,6 @@ con su SAF_41, las mide el conjunto de versiones.
 """
 drive = { mode = "v4", script = "protocol-v4-parameters" }
 
-[check.expect.autofirma]
-verdict = "conforme"
-
-[check.expect.rfirma]
-verdict = "conforme"
-
 [[check]]
 id = "an_identifier_longer_than_twenty_characters_is_refused_with_saf_03"
 suite = "parametros"
@@ -148,12 +100,6 @@ statement = """
 El id de la operación tiene como mucho veinte caracteres: uno de veintiuno se rechaza con SAF_03.
 """
 drive = { mode = "v4", script = "protocol-v4-parameters" }
-
-[check.expect.autofirma]
-verdict = "conforme"
-
-[check.expect.rfirma]
-verdict = "conforme"
 
 [[check]]
 id = "an_identifier_of_twenty_characters_is_accepted"
@@ -166,12 +112,6 @@ siguiente.
 """
 drive = { mode = "v4", script = "protocol-v4-parameters" }
 
-[check.expect.autofirma]
-verdict = "conforme"
-
-[check.expect.rfirma]
-verdict = "conforme"
-
 [[check]]
 id = "fileid_stands_in_for_a_missing_identifier"
 suite = "parametros"
@@ -182,12 +122,6 @@ Sin id, fileid hace de identificador de la operación y pasa sus mismos controle
 veinte caracteres se rechaza con SAF_03.
 """
 drive = { mode = "v4", script = "protocol-v4-parameters" }
-
-[check.expect.autofirma]
-verdict = "conforme"
-
-[check.expect.rfirma]
-verdict = "conforme"
 
 [[check]]
 id = "malformed_properties_do_not_bring_the_request_down"
@@ -200,12 +134,6 @@ hasta el control siguiente sin parámetros adicionales.
 """
 drive = { mode = "v4", script = "protocol-v4-parameters" }
 
-[check.expect.autofirma]
-verdict = "conforme"
-
-[check.expect.rfirma]
-verdict = "conforme"
-
 [[check]]
 id = "a_ksb64_that_is_not_base64_is_ignored"
 suite = "parametros"
@@ -217,12 +145,6 @@ petición.
 """
 drive = { mode = "v4", script = "protocol-v4-parameters" }
 
-[check.expect.autofirma]
-verdict = "conforme"
-
-[check.expect.rfirma]
-verdict = "conforme"
-
 [[check]]
 id = "keystore_takes_precedence_over_ksb64"
 suite = "parametros"
@@ -232,12 +154,6 @@ statement = """
 Si la petición trae keystore y ksb64, el almacén que se abre es el de keystore.
 """
 unmeasurable = "El almacén que se abre sólo se ve en la ventana de selección de certificado, y la tanda monta un único almacén PKCS#11: nombren lo que nombren los dos parámetros, la persona acaba ante el mismo."
-
-[check.expect.autofirma]
-verdict = "no-observable"
-
-[check.expect.rfirma]
-verdict = "no-observable"
 
 [[check]]
 id = "appname_changes_nothing_that_can_be_seen"
@@ -250,12 +166,6 @@ diálogo.
 """
 unmeasurable = "Ningún consumidor lee appname: no deja rastro ni en el cable ni en el trámite, y no hay nada que medir."
 
-[check.expect.autofirma]
-verdict = "no-observable"
-
-[check.expect.rfirma]
-verdict = "no-observable"
-
 [[check]]
 id = "jvc_only_warns_below_one"
 suite = "parametros"
@@ -266,9 +176,3 @@ jvc sólo avisa de un cliente web antiguo cuando vale menos de 1, y el aviso es 
 detiene la operación.
 """
 unmeasurable = "El aviso sólo salta con valores que ningún cliente real envía —el publicado manda siempre jvc=3—, y es un diálogo local que no llega al cable."
-
-[check.expect.autofirma]
-verdict = "no-observable"
-
-[check.expect.rfirma]
-verdict = "no-observable"

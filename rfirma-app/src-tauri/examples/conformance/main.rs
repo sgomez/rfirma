@@ -13,12 +13,11 @@ mod server;
 mod snapshot;
 mod subject;
 mod transcript;
+mod validation;
 mod verdicts;
 
 use std::path::PathBuf;
 use std::time::Duration;
-
-use baseline::Profile;
 
 const USAGE: &str = "\
 uso: just conformance
@@ -30,12 +29,11 @@ sujeto, el informe y las comprobaciones se eligen en la página; no hay órdenes
 /// Cuánto espera el conductor a que alguien responda si la comprobación no declara otra cosa.
 const THE_PATIENCE: Duration = Duration::from_millis(60_000);
 
-/// Lo que necesita una tanda para medir: el sujeto aislado, la raíz con la que sirve, su perfil y
-/// el informe donde se transcribe.
+/// Lo que necesita una tanda para medir: el sujeto aislado, la raíz con la que sirve y el informe
+/// donde se transcribe.
 struct Probe {
     subject: PathBuf,
     trust_root: PathBuf,
-    profile: Profile,
     report: PathBuf,
     patience: Duration,
     witness: console::Witness,

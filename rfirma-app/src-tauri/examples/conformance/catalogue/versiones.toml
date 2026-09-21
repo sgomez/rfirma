@@ -13,12 +13,6 @@ Las operaciones aceptan versiones de protocolo menores o iguales a 4
 """
 drive = { mode = "v4", script = "protocol-v4-operations" }
 
-[check.expect.autofirma]
-verdict = "conforme"
-
-[check.expect.rfirma]
-verdict = "conforme"
-
 [[check]]
 id = "websocket_operation_protocol_version_ignored"
 suite = "versiones"
@@ -29,12 +23,6 @@ Por el canal WebSocket la versión de protocolo de la operación la fija el cana
 petición se ignora, no se rechaza con SAF_21, y la operación sigue hasta su siguiente comprobación.
 """
 drive = { mode = "v4", script = "protocol-v4-operations" }
-
-[check.expect.autofirma]
-verdict = "conforme"
-
-[check.expect.rfirma]
-verdict = "conforme"
 
 [[check]]
 id = "operation_minimum_client_version_satisfied"
@@ -47,12 +35,6 @@ operación continúa sin error de versión.
 """
 drive = { mode = "v4", script = "protocol-v4-operations" }
 
-[check.expect.autofirma]
-verdict = "conforme"
-
-[check.expect.rfirma]
-verdict = "conforme"
-
 [[check]]
 id = "operation_minimum_client_version_unsatisfied_rejected"
 suite = "versiones"
@@ -64,12 +46,6 @@ rechazada con SAF_41.
 """
 drive = { mode = "v4", script = "protocol-v4-operations" }
 
-[check.expect.autofirma]
-verdict = "conforme"
-
-[check.expect.rfirma]
-verdict = "conforme"
-
 [[check]]
 id = "websocket_handshake_without_session_accepted"
 suite = "versiones"
@@ -80,12 +56,6 @@ En versión 4 el apretón de manos WebSocket no exige idsession en la query stri
 él se acepta y la credencial se comprueba en cada mensaje.
 """
 drive = { mode = "v4", script = "protocol-v4" }
-
-[check.expect.autofirma]
-verdict = "conforme"
-
-[check.expect.rfirma]
-verdict = "conforme"
 
 [[check]]
 id = "websocket_channel_supported_versions_accepted"
@@ -99,12 +69,6 @@ llegan a abrir canal.
 drive = { mode = "v3", script = "protocol-v3" }
 harness = "supported_websocket_versions"
 
-[check.expect.autofirma]
-verdict = "conforme"
-
-[check.expect.rfirma]
-verdict = "conforme"
-
 [[check]]
 id = "websocket_rejects_a_protocol_version_it_does_not_support"
 suite = "versiones"
@@ -114,15 +78,4 @@ statement = """
 El canal WebSocket sólo admite las versiones de protocolo 3 y 4. Una URL de arranque que pida otra
 —v=1, obsoleta; v=99, no soportada— se rechaza con SAF_21, y el código llega al cliente.
 """
-drive = { mode = "v1", script = "selectcert" }
-expects_saf = "SAF_21"
-needs = ["espera:60"]
-warning = "El cliente publicado agota sus reintentos antes de rendirse: la comprobación tarda alrededor de un minuto."
-
-[check.expect.autofirma]
-verdict = "no-observable"
-cause = "BUG-25"
-note = "El cliente publicado agota sus reintentos y se rinde con ApplicationNotFoundException sin que ningún código llegue al cable."
-
-[check.expect.rfirma]
-verdict = "conforme"
+unmeasurable = "BUG-25: el cliente publicado de la sede se rinde antes de enviar nada al cable."

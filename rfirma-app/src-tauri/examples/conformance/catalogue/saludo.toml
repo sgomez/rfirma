@@ -14,12 +14,6 @@ respuesta trae el certificado elegido.
 drive = { mode = "v4", script = "selectcert" }
 warning = "Va a aparecer el diálogo de selección de certificado: elige uno para que la comprobación llegue a medir algo."
 
-[check.expect.autofirma]
-verdict = "conforme"
-
-[check.expect.rfirma]
-verdict = "conforme"
-
 [[check]]
 id = "the_published_client_completes_a_cades_signature"
 suite = "saludo"
@@ -31,9 +25,3 @@ y la firma.
 """
 drive = { mode = "v4", script = "signcades" }
 warning = "Van a aparecer el diálogo de certificado y el del PIN del token."
-
-[check.expect.autofirma]
-verdict = "conforme"
-
-[check.expect.rfirma]
-verdict = "conforme"

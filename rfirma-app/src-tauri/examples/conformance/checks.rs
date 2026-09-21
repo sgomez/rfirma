@@ -11,7 +11,7 @@ use std::time::{Duration, Instant};
 use base64::engine::general_purpose::STANDARD;
 use base64::Engine as _;
 
-use crate::baseline::{contrast_of, verdict_name, Contrast, Profile};
+use crate::baseline::verdict_name;
 use crate::catalogue::{Check, Drive};
 use crate::dossier::{CheckState, Verdict};
 use crate::errand::ErrandOutcome;
@@ -149,11 +149,10 @@ impl Probe {
                 verdict,
                 observation,
             } => {
-                let said = the_note_of(check, verdict, observation.as_deref(), self.profile)
-                    .map_or_else(
-                        || verdict_name(verdict).to_owned(),
-                        |note| format!("{} — {note}", verdict_name(verdict)),
-                    );
+                let said = observation.as_deref().map_or_else(
+                    || verdict_name(verdict).to_owned(),
+                    |observation| format!("{} — {observation}", verdict_name(verdict)),
+                );
                 self.witness.harness(&format!("{}: {said}", check.id));
                 Settlement::Resolved {
                     id: check.id.clone(),
@@ -319,32 +318,6 @@ impl Probe {
 /// Lo que la comprobación necesita y la tanda no trae; `None` si no le falta nada.
 fn the_unmet_precondition_of(check: &Check, declared_store: &str) -> Option<String> {
     the_unmet_need_of(check, declared_store).or_else(|| the_occupied_port_complaint(check))
-}
-
-/// Lo que se dice de la comprobación recién resuelta: su observación y, si lo observado no es lo que
-/// la línea base declara, la sorpresa dicha en el momento.
-fn the_note_of(
-    check: &Check,
-    verdict: Verdict,
-    observation: Option<&str>,
-    profile: Profile,
-) -> Option<String> {
-    let Some(expectation) = check.expect.get(profile.name()) else {
-        return observation.map(str::to_owned);
-    };
-    let contrast = contrast_of(verdict, expectation.verdict);
-    if contrast == Contrast::Matches {
-        return observation.map(str::to_owned);
-    }
-    let contrast_said = format!(
-        "{}: se esperaba {}",
-        contrast.label(),
-        verdict_name(expectation.verdict)
-    );
-    Some(match observation {
-        Some(observation) => format!("{observation} — {contrast_said}"),
-        None => contrast_said,
-    })
 }
 
 /// Si el canal llegó a abrirse: el conductor lo dice midiendo alguna condición, y no decir nada no

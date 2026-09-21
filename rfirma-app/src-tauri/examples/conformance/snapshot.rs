@@ -1,14 +1,12 @@
-//! El estado que la consola web recibe de un vistazo —qué corre, qué espera, veredictos y
-//! resumen— calculado de un informe y un catálogo, sin tocar al sujeto.
+//! El estado que la consola web recibe de un vistazo —qué corre, qué espera, resultados y
+//! resumen— calculado de un informe y un catálogo, sin tocar al cliente.
 
 use std::collections::BTreeMap;
 use std::time::Duration;
 
 use serde::Serialize;
 
-use crate::baseline::{
-    contrast_of, the_expectation_of, the_surprises_of, verdict_name, BaselineTally,
-};
+use crate::baseline::verdict_name;
 use crate::catalogue::Check;
 use crate::comparison::PENDING_NAME;
 use crate::dossier::{CheckRecord, CheckState, Dossier, Header, Verdict};
@@ -56,19 +54,8 @@ struct ReportView<'a> {
     profile: &'static str,
     header: &'a Header,
     summary: Summary,
-    baseline: BaselineView,
-    green: bool,
-    surprises: Vec<String>,
     resolved: usize,
     total: usize,
-}
-
-#[derive(Debug, Serialize)]
-struct BaselineView {
-    matching: usize,
-    surprises: usize,
-    unmeasured: usize,
-    pending: usize,
 }
 
 #[derive(Debug, Serialize)]
@@ -98,21 +85,12 @@ struct CheckView<'a> {
     citation: &'a str,
     warning: Option<&'a str>,
     question: Option<&'a str>,
-    expectation: Option<ExpectationView<'a>>,
     state: &'static str,
     observation: Option<&'a str>,
     date: Option<&'a str>,
     duration_ms: Option<u64>,
-    contrast: Option<&'static str>,
     activity: Option<&'static str>,
     why_pending: Option<&'a str>,
-}
-
-#[derive(Debug, Serialize)]
-struct ExpectationView<'a> {
-    verdict: &'static str,
-    cause: Option<&'a str>,
-    note: Option<&'a str>,
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -149,11 +127,9 @@ pub(crate) fn snapshot_of<'a>(
     reports: &'a [ReportEntry],
     activity: &'a Activity<'a>,
 ) -> Snapshot<'a> {
-    let profile = report.map(|(_, dossier)| dossier.profile());
     let mut suites: Vec<SuiteView> = Vec::new();
     for check in catalogue {
         let record = report.and_then(|(_, dossier)| dossier.record_of(&check.id));
-        let expectation = profile.and_then(|profile| check.expect.get(profile.name()));
         let view = CheckView {
             id: &check.id,
             chapter: &check.chapter,
@@ -161,11 +137,6 @@ pub(crate) fn snapshot_of<'a>(
             citation: &check.citation,
             warning: check.warning.as_deref(),
             question: check.question.as_deref(),
-            expectation: expectation.map(|expectation| ExpectationView {
-                verdict: verdict_name(expectation.verdict),
-                cause: expectation.cause.as_deref(),
-                note: expectation.note.as_deref(),
-            }),
             state: match record.map(|record| record.state) {
                 Some(CheckState::Resolved(verdict)) => verdict_name(verdict),
                 _ => PENDING_NAME,
@@ -173,12 +144,6 @@ pub(crate) fn snapshot_of<'a>(
             observation: record.and_then(|record| record.observation.as_deref()),
             date: record.and_then(|record| record.date.as_deref()),
             duration_ms: record.and_then(|record| record.duration_ms),
-            contrast: match (record.map(|record| record.state), expectation) {
-                (Some(CheckState::Resolved(observed)), Some(expectation)) => {
-                    Some(contrast_of(observed, expectation.verdict).label())
-                }
-                _ => None,
-            },
             activity: the_activity_of(&check.id, activity),
             why_pending: activity
                 .reasons
@@ -227,40 +192,17 @@ fn the_activity_of(id: &str, activity: &Activity) -> Option<&'static str> {
 }
 
 fn the_report_view<'a>(catalogue: &[Check], name: &'a str, dossier: &'a Dossier) -> ReportView<'a> {
-    let profile = dossier.profile();
-    let shown: Vec<(&str, &CheckRecord)> = catalogue
-        .iter()
-        .filter_map(|check| {
-            dossier
-                .record_of(&check.id)
-                .map(|record| (check.id.as_str(), record))
-        })
-        .collect();
-    let summary = Summary::of(shown.iter().map(|(_, record)| *record));
-    let tally = BaselineTally::of(
-        shown
+    let summary = Summary::of(
+        catalogue
             .iter()
-            .map(|(id, record)| (*record, the_expectation_of(catalogue, id, profile))),
-    );
-    let surprises = the_surprises_of(
-        shown
-            .iter()
-            .map(|(id, record)| (*id, *record, the_expectation_of(catalogue, id, profile))),
+            .filter_map(|check| dossier.record_of(&check.id)),
     );
     ReportView {
         name,
         subject: dossier.subject(),
-        profile: profile.name(),
+        profile: dossier.profile().name(),
         header: dossier.header(),
         summary,
-        baseline: BaselineView {
-            matching: tally.matching,
-            surprises: tally.surprises,
-            unmeasured: tally.unmeasured,
-            pending: tally.pending,
-        },
-        green: tally.is_green(),
-        surprises,
         resolved: summary.total - summary.pending,
         total: summary.total,
     }
@@ -283,7 +225,6 @@ chapter = "14"
 citation = "A.java:1"
 statement = "Saluda."
 drive = { mode = "v4", script = "protocol-v4" }
-expect.autofirma = { verdict = "conforme" }
 
 [[check]]
 id = "a_signature"
@@ -293,7 +234,6 @@ citation = "B.java:2"
 statement = "Firma."
 drive = { mode = "v4", script = "sign" }
 question = "¿se pidió el PIN? [s/n]"
-expect.autofirma = { verdict = "conforme" }
 
 [[check]]
 id = "a_save"
@@ -302,23 +242,22 @@ chapter = "16"
 citation = "C.java:3"
 statement = "Guarda."
 drive = { mode = "v4", script = "save" }
-expect.autofirma = { verdict = "no-conforme", cause = "BUG-01" }
 "#;
 
     fn a_report(catalogue: &[Check]) -> (tempfile::TempDir, Dossier) {
         let dir = tempfile::tempdir().unwrap();
-        let mut dossier = Dossier::open(
+        let mut dossier = Dossier::create(
             &dir.path().join("dossier.json"),
             "/usr/bin/autofirma",
             Profile::Autofirma,
             catalogue,
-            Some(HeaderCoordinates {
+            HeaderCoordinates {
                 os: "Linux".to_owned(),
                 os_version: "6.0".to_owned(),
                 subject_version: "1.9.2".to_owned(),
                 transport: "websocket".to_owned(),
                 store: "softhsm2:/m.so".to_owned(),
-            }),
+            },
         )
         .unwrap();
         dossier
@@ -355,7 +294,7 @@ expect.autofirma = { verdict = "no-conforme", cause = "BUG-01" }
     }
 
     #[test]
-    fn the_summary_counts_what_was_observed_and_how_it_fell_against_the_baseline() {
+    fn the_summary_counts_what_was_observed() {
         let catalogue = the_catalogue_in(THREE_CHECKS).unwrap();
         let (_dir, dossier) = a_report(&catalogue);
         let activity = Activity::default();
@@ -374,21 +313,12 @@ expect.autofirma = { verdict = "no-conforme", cause = "BUG-01" }
             json["report"]["summary"],
             json!({"total": 3, "compliant": 2, "noncompliant": 0, "not_observable": 0, "pending": 1})
         );
-        assert_eq!(
-            json["report"]["baseline"],
-            json!({"matching": 1, "surprises": 1, "unmeasured": 0, "pending": 1})
-        );
-        assert_eq!(json["report"]["green"], false);
-        assert_eq!(
-            json["report"]["surprises"],
-            json!(["a_save: se esperaba NO CONFORME y salió CONFORME"])
-        );
         assert_eq!(json["report"]["resolved"], 2);
         assert_eq!(json["report"]["total"], 3);
     }
 
     #[test]
-    fn a_resolved_check_carries_its_verdict_its_expectation_and_the_contrast() {
+    fn a_resolved_check_carries_its_result_and_nothing_about_the_client() {
         let catalogue = the_catalogue_in(THREE_CHECKS).unwrap();
         let (_dir, dossier) = a_report(&catalogue);
         let activity = Activity::default();
@@ -406,13 +336,9 @@ expect.autofirma = { verdict = "no-conforme", cause = "BUG-01" }
         assert_eq!(save["state"], "CONFORME");
         assert_eq!(save["observation"], "guardó");
         assert_eq!(save["duration_ms"], 1_500);
-        assert_eq!(
-            save["expectation"],
-            json!({"verdict": "NO CONFORME", "cause": "BUG-01", "note": null})
-        );
-        assert_eq!(save["contrast"], "SORPRESA");
+        assert_eq!(save.get("expectation"), None);
+        assert_eq!(save.get("contrast"), None);
         assert_eq!(the_check(&json, "a_signature")["state"], "PENDIENTE");
-        assert_eq!(the_check(&json, "a_signature")["contrast"], Value::Null);
     }
 
     #[test]

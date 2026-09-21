@@ -13,12 +13,6 @@ el primer puerto libre de la lista.
 """
 drive = { mode = "v4", script = "protocol-v4" }
 
-[check.expect.autofirma]
-verdict = "conforme"
-
-[check.expect.rfirma]
-verdict = "conforme"
-
 [[check]]
 id = "v4_echo_greeting"
 suite = "transporte.websocket"
@@ -28,12 +22,6 @@ statement = """
 La petición de eco echo=-idsession=<idSession>@EOF recibe la respuesta de texto OK.
 """
 drive = { mode = "v4", script = "protocol-v4" }
-
-[check.expect.autofirma]
-verdict = "conforme"
-
-[check.expect.rfirma]
-verdict = "conforme"
 
 [[check]]
 id = "v4_channel_credential_present"
@@ -46,12 +34,6 @@ aceptado para su procesamiento.
 """
 drive = { mode = "v4", script = "protocol-v4" }
 
-[check.expect.autofirma]
-verdict = "conforme"
-
-[check.expect.rfirma]
-verdict = "conforme"
-
 [[check]]
 id = "v4_channel_credential_absent"
 suite = "transporte.websocket"
@@ -62,12 +44,6 @@ Si el mensaje no incluye el identificador de sesión o este difiere del negociad
 servidor responde con SAF_46.
 """
 drive = { mode = "v4", script = "protocol-v4" }
-
-[check.expect.autofirma]
-verdict = "conforme"
-
-[check.expect.rfirma]
-verdict = "conforme"
 
 [[check]]
 id = "v4_channel_credential_malformed"
@@ -80,12 +56,6 @@ rechaza los mensajes con SAF_46.
 """
 drive = { mode = "v4", script = "protocol-v4-malformed-id" }
 
-[check.expect.autofirma]
-verdict = "conforme"
-
-[check.expect.rfirma]
-verdict = "conforme"
-
 [[check]]
 id = "v4_single_client"
 suite = "transporte.websocket"
@@ -96,12 +66,6 @@ La primera conexión se fija en wsClient; el cierre de conexiones secundarias no
 aplicación, que sólo termina cuando se cierra el cliente principal.
 """
 drive = { mode = "v4", script = "protocol-v4" }
-
-[check.expect.autofirma]
-verdict = "conforme"
-
-[check.expect.rfirma]
-verdict = "conforme"
 
 [[check]]
 id = "v3_ports_default_fixed"
@@ -114,12 +78,6 @@ En versión 3, la ausencia de ports en la URL de arranque asigna por defecto el 
 """
 drive = { mode = "v3", script = "protocol-v3" }
 
-[check.expect.autofirma]
-verdict = "conforme"
-
-[check.expect.rfirma]
-verdict = "conforme"
-
 [[check]]
 id = "v3_echo_greeting"
 suite = "transporte.websocket"
@@ -130,12 +88,6 @@ En versión 3, cualquier mensaje que empiece por echo= responde inmediatamente O
 identificador de sesión.
 """
 drive = { mode = "v3", script = "protocol-v3" }
-
-[check.expect.autofirma]
-verdict = "conforme"
-
-[check.expect.rfirma]
-verdict = "conforme"
 
 [[check]]
 id = "v3_channel_credential_ignored"
@@ -148,12 +100,6 @@ SAF_46.
 """
 drive = { mode = "v3", script = "protocol-v3" }
 
-[check.expect.autofirma]
-verdict = "conforme"
-
-[check.expect.rfirma]
-verdict = "conforme"
-
 [[check]]
 id = "v3_single_client"
 suite = "transporte.websocket"
@@ -164,12 +110,6 @@ En versión 3, el cierre de una conexión secundaria no termina la aplicación; 
 sigue activo.
 """
 drive = { mode = "v3", script = "protocol-v3" }
-
-[check.expect.autofirma]
-verdict = "conforme"
-
-[check.expect.rfirma]
-verdict = "conforme"
 
 [[check]]
 id = "the_v4_channel_answers_saf_47_to_an_origin_that_is_not_127_0_0_1"
@@ -182,14 +122,3 @@ SAF_47 a cualquier otra, el bucle local IPv6 incluido.
 """
 drive = { mode = "v4-ipv6", script = "selectcert" }
 expects_saf = "SAF_47"
-
-[check.expect.autofirma]
-verdict = "conforme"
-cause = "BUG-11"
-note = "Lo cumple por comparar la dirección textualmente, que es lo que la ficha describe."
-
-[check.expect.rfirma]
-verdict = "no-observable"
-cause = "ADR-0005"
-note = "rFirma no escucha en ::1, así que nadie contesta a quien conecta por el bucle local IPv6."
-

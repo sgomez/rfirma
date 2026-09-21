@@ -1,5 +1,5 @@
-//! La comparación de dos expedientes: qué observó cada sujeto en cada comprobación, sin pasar por
-//! la línea base.
+//! La comparación de dos expedientes: qué observó cada cliente en cada comprobación, sin juzgar
+//! a ninguno.
 
 use std::collections::BTreeSet;
 
@@ -114,18 +114,18 @@ drive = { mode = "v4", script = "selectcert" }
 "#,
         )
         .unwrap();
-        let mut dossier = Dossier::open(
+        let mut dossier = Dossier::create(
             &path,
             profile.name(),
             profile,
             &catalogue,
-            Some(HeaderCoordinates {
+            HeaderCoordinates {
                 os: "linux".to_owned(),
                 os_version: "6.0".to_owned(),
                 subject_version: "1.9.2".to_owned(),
                 transport: "websocket".to_owned(),
                 store: "softhsm2".to_owned(),
-            }),
+            },
         )
         .unwrap();
         dossier

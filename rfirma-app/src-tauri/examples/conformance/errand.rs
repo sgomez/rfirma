@@ -412,7 +412,7 @@ mod tests {
         assert!(the_protocol_condition_in(event).is_none());
     }
     #[test]
-    fn drain_stream_delivers_lines_as_the_subject_and_preserves_recents() {
+    fn drain_stream_delivers_lines_as_the_client_and_preserves_recents() {
         let delivered = Arc::new(Mutex::new(Vec::new()));
         let into = Arc::clone(&delivered);
         let log_sink = LiveLogSink::new(move |line| into.lock().unwrap().push(line));
@@ -426,7 +426,7 @@ mod tests {
 
         let delivered = delivered.lock().unwrap();
         assert_eq!(delivered.len(), 3);
-        assert!(delivered[0].ends_with("sujeto    linea 1"));
+        assert!(delivered[0].ends_with("cliente linea 1"));
     }
     #[test]
     fn outcome_carries_recent_subject_lines() {

@@ -88,7 +88,8 @@ struct Contents {
 /// El nombre del expediente dentro del directorio de su informe.
 pub const THE_DOSSIER_FILE: &str = "dossier.json";
 
-/// El expediente de una tanda: un JSON en la ruta que se le indique, ligado a un único sujeto.
+/// El expediente de una tanda: un JSON en la ruta que se le indique, que solo continúa el cliente
+/// con que se creó.
 #[derive(Debug)]
 pub struct Dossier {
     path: PathBuf,
@@ -96,27 +97,17 @@ pub struct Dossier {
 }
 
 impl Dossier {
-    /// Abre el expediente en `path` para `subject`, creándolo con `catalogue` si no existe.
-    ///
-    /// Rechaza un expediente que otro sujeto o perfil generó en vez de mezclar veredictos. Un
-    /// expediente nuevo exige `coordinates`.
-    pub fn open(
+    /// Crea el expediente de una tanda nueva en `path`, con `catalogue` entero pendiente.
+    pub fn create(
         path: &Path,
         subject: &str,
         profile: Profile,
         catalogue: &[Check],
-        coordinates: Option<HeaderCoordinates>,
+        coordinates: HeaderCoordinates,
     ) -> Result<Self, String> {
-        let mut contents = if path.exists() {
-            let raw = fs::read_to_string(path)
-                .map_err(|error| format!("{} no se pudo leer: {error}", path.display()))?;
-            serde_json::from_str(&raw).map_err(|error| {
-                format!("{} no es un expediente válido: {error}", path.display())
-            })?
-        } else {
-            let coordinates = coordinates
-                .ok_or_else(|| "faltan las coordenadas de la tanda del informe nuevo".to_owned())?;
-            Contents {
+        let mut dossier = Self {
+            path: path.to_owned(),
+            contents: Contents {
                 subject: subject.to_owned(),
                 profile,
                 header: Header {
@@ -128,35 +119,53 @@ impl Dossier {
                     date: today(),
                 },
                 checks: BTreeMap::new(),
-            }
+            },
         };
-        if contents.subject != subject {
-            return Err(format!(
-                "el expediente {} es de {}, no de {subject}",
-                path.display(),
-                contents.subject
-            ));
-        }
-        if contents.profile != profile {
-            return Err(format!(
-                "el expediente {} se abrió con el perfil {}, y esta tanda trae {}",
-                path.display(),
-                contents.profile.name(),
-                profile.name()
-            ));
-        }
+        dossier.cover(catalogue);
+        dossier.save()?;
+        Ok(dossier)
+    }
+
+    /// Abre un expediente ya escrito, con cualquier cliente, y da por pendiente lo que `catalogue`
+    /// tenga y él no; no escribe nada.
+    pub fn open(path: &Path, catalogue: &[Check]) -> Result<Self, String> {
+        let mut dossier = Self::read(path)?;
+        dossier.cover(catalogue);
+        Ok(dossier)
+    }
+
+    fn cover(&mut self, catalogue: &[Check]) {
         for check in catalogue {
-            contents
+            self.contents
                 .checks
                 .entry(check.id.clone())
                 .or_insert_with(|| CheckRecord::pending(check));
         }
-        let dossier = Self {
-            path: path.to_owned(),
-            contents,
-        };
-        dossier.save()?;
-        Ok(dossier)
+    }
+
+    /// Por qué el cliente `subject` de perfil `profile` no puede añadir resultados a este
+    /// expediente; `None` si es el mismo con que se creó.
+    pub fn refuses_to_continue_with(&self, subject: &str, profile: Profile) -> Option<String> {
+        let mut mismatches = Vec::new();
+        if self.contents.profile != profile {
+            mismatches.push(format!(
+                "se creó con el perfil {} y el cliente activo es {}",
+                self.contents.profile.name(),
+                profile.name()
+            ));
+        }
+        if self.contents.subject != subject {
+            mismatches.push(format!(
+                "se creó con {} y el cliente activo es {subject}",
+                self.contents.subject
+            ));
+        }
+        (!mismatches.is_empty()).then(|| {
+            format!(
+                "el informe {}: se puede ver, pero no continuar",
+                mismatches.join(", y ")
+            )
+        })
     }
 
     pub fn subject(&self) -> &str {
@@ -289,12 +298,12 @@ mod tests {
     fn resolves_a_check_with_the_single_verdict() {
         let path = tempfile::NamedTempFile::new().unwrap().path().to_owned();
         let catalogue = a_catalogue_of(&["v4_echo_greeting"]);
-        let mut dossier = Dossier::open(
+        let mut dossier = Dossier::create(
             &path,
             "autofirma",
             Profile::Autofirma,
             &catalogue,
-            Some(some_coordinates()),
+            some_coordinates(),
         )
         .unwrap();
 
@@ -322,12 +331,12 @@ mod tests {
     fn a_resolved_verdict_its_observation_and_its_duration_survive_a_reopen() {
         let path = tempfile::NamedTempFile::new().unwrap().path().to_owned();
         let catalogue = a_catalogue_of(&["v4_echo_greeting"]);
-        let mut dossier = Dossier::open(
+        let mut dossier = Dossier::create(
             &path,
             "autofirma",
             Profile::Autofirma,
             &catalogue,
-            Some(some_coordinates()),
+            some_coordinates(),
         )
         .unwrap();
         dossier
@@ -339,8 +348,7 @@ mod tests {
             )
             .unwrap();
 
-        let reopened =
-            Dossier::open(&path, "autofirma", Profile::Autofirma, &catalogue, None).unwrap();
+        let reopened = Dossier::open(&path, &catalogue).unwrap();
 
         assert_eq!(
             reopened.state_of("v4_echo_greeting"),
@@ -360,12 +368,12 @@ mod tests {
     fn a_check_not_yet_run_stays_pending_instead_of_being_omitted() {
         let path = tempfile::NamedTempFile::new().unwrap().path().to_owned();
         let catalogue = a_catalogue_of(&["v4_echo_greeting", "v3_echo_greeting"]);
-        let dossier = Dossier::open(
+        let dossier = Dossier::create(
             &path,
             "autofirma",
             Profile::Autofirma,
             &catalogue,
-            Some(some_coordinates()),
+            some_coordinates(),
         )
         .unwrap();
 
@@ -378,54 +386,76 @@ mod tests {
     }
 
     #[test]
-    fn a_dossier_of_another_subject_is_refused() {
+    fn a_dossier_of_another_client_opens_to_be_seen_but_refuses_to_continue() {
         let path = tempfile::NamedTempFile::new().unwrap().path().to_owned();
         let catalogue = a_catalogue_of(&["v4_echo_greeting"]);
-        Dossier::open(
+        Dossier::create(
             &path,
-            "autofirma",
+            "/usr/bin/autofirma",
             Profile::Autofirma,
             &catalogue,
-            Some(some_coordinates()),
+            some_coordinates(),
         )
         .unwrap();
 
-        let complaint =
-            Dossier::open(&path, "rfirma", Profile::Rfirma, &catalogue, None).unwrap_err();
+        let seen = Dossier::open(&path, &catalogue).unwrap();
+        let complaint = seen
+            .refuses_to_continue_with("/usr/bin/rfirma", Profile::Rfirma)
+            .unwrap();
 
-        assert!(complaint.contains("es de autofirma, no de rfirma"));
+        assert!(complaint.contains("perfil autofirma y el cliente activo es rfirma"));
+        assert!(complaint.contains("/usr/bin/autofirma y el cliente activo es /usr/bin/rfirma"));
     }
 
     #[test]
-    fn a_dossier_opened_with_another_profile_is_refused_naming_both() {
+    fn the_client_that_created_a_dossier_continues_it() {
         let path = tempfile::NamedTempFile::new().unwrap().path().to_owned();
         let catalogue = a_catalogue_of(&["v4_echo_greeting"]);
-        Dossier::open(
+        let dossier = Dossier::create(
             &path,
             "un-binario",
-            Profile::Autofirma,
+            Profile::Rfirma,
             &catalogue,
-            Some(some_coordinates()),
+            some_coordinates(),
         )
         .unwrap();
 
-        let complaint =
-            Dossier::open(&path, "un-binario", Profile::Rfirma, &catalogue, None).unwrap_err();
+        assert_eq!(
+            dossier.refuses_to_continue_with("un-binario", Profile::Rfirma),
+            None
+        );
+    }
 
-        assert!(complaint.contains("perfil autofirma"));
-        assert!(complaint.contains("trae rfirma"));
+    #[test]
+    fn opening_a_dossier_to_see_it_writes_nothing() {
+        let path = tempfile::NamedTempFile::new().unwrap().path().to_owned();
+        Dossier::create(
+            &path,
+            "un-binario",
+            Profile::Rfirma,
+            &a_catalogue_of(&["v4_echo_greeting"]),
+            some_coordinates(),
+        )
+        .unwrap();
+        let written = std::fs::read_to_string(&path).unwrap();
+
+        let seen =
+            Dossier::open(&path, &a_catalogue_of(&["v4_echo_greeting", "a_new_one"])).unwrap();
+
+        assert_eq!(seen.state_of("a_new_one"), Some(CheckState::Pending));
+        assert_eq!(std::fs::read_to_string(&path).unwrap(), written);
     }
 
     #[test]
     fn the_profile_of_a_dossier_survives_a_reopen() {
         let path = tempfile::NamedTempFile::new().unwrap().path().to_owned();
         let catalogue = a_catalogue_of(&["v4_echo_greeting"]);
-        Dossier::open(
+        Dossier::create(
             &path,
             "un-binario",
             Profile::Rfirma,
             &catalogue,
-            Some(some_coordinates()),
+            some_coordinates(),
         )
         .unwrap();
 

@@ -22,6 +22,7 @@ use crate::livelog::{CheckLog, LiveLogSink, Provenance};
 use crate::snapshot::{snapshot_of, Activity, ReportEntry};
 use crate::subject::{resolve, the_deduced_coordinates, DeducedCoordinates, Subject};
 use crate::transcript::{log_path_of, transcript_path_of};
+use crate::validation::{read_the_reference, the_reference_dir, validate, Validation};
 use crate::Probe;
 
 /// Lo que se pide correr desde la página.
@@ -159,20 +160,11 @@ impl Console {
         session.resolving_subject = false;
         match resolved {
             Ok(subject) => {
-                let stays = session.report.as_ref().is_some_and(|report| {
-                    report.dossier.profile() == subject.profile
-                        && report.dossier.subject() == subject.binary.display().to_string()
-                });
-                if !stays {
-                    session.report = None;
-                    session.reasons.clear();
-                }
                 session.subject = Some(subject);
                 session.subject_complaints.clear();
             }
             Err(complaints) => {
                 session.subject = None;
-                session.report = None;
                 session.subject_complaints = complaints;
             }
         }
@@ -187,9 +179,6 @@ impl Console {
     }
 
     pub(crate) fn create_report(&self, new: NewReport) -> Result<(), String> {
-        if self.shared.lock().subject.is_none() {
-            return Err(NO_SUBJECT.to_owned());
-        }
         let dir = self.shared.the_report_dir(&new.name)?;
         if dir.exists() {
             return Err(format!("ya hay un informe llamado «{}»", new.name));
@@ -206,12 +195,25 @@ impl Console {
             transport: new.transport,
             store: new.store,
         };
+        let mut session = self.shared.lock();
+        if session.busy() {
+            return Err(NO_SWITCHING_REPORTS.to_owned());
+        }
+        let subject = session.subject.as_ref().ok_or(NO_SUBJECT)?;
         std::fs::create_dir_all(&dir)
             .map_err(|error| format!("{} no se pudo crear: {error}", dir.display()))?;
-        self.open_report_at(new.name, dir.clone(), Some(coordinates))
-            .inspect_err(|_| {
-                let _ = std::fs::remove_dir_all(&dir);
-            })
+        let dossier = Dossier::create(
+            &dir.join(THE_DOSSIER_FILE),
+            &subject.binary.display().to_string(),
+            subject.profile,
+            &self.shared.catalogue,
+            coordinates,
+        )
+        .inspect_err(|_| {
+            let _ = std::fs::remove_dir_all(&dir);
+        })?;
+        self.shared.install(&mut session, new.name, dir, dossier);
+        Ok(())
     }
 
     pub(crate) fn open_report(&self, name: String) -> Result<(), String> {
@@ -219,30 +221,12 @@ impl Console {
         if !dir.join(THE_DOSSIER_FILE).is_file() {
             return Err(format!("no hay informe llamado «{name}»"));
         }
-        self.open_report_at(name, dir, None)
-    }
-
-    fn open_report_at(
-        &self,
-        name: String,
-        dir: PathBuf,
-        coordinates: Option<HeaderCoordinates>,
-    ) -> Result<(), String> {
         let mut session = self.shared.lock();
         if session.busy() {
-            return Err("no se cambia de informe con una tanda en marcha".to_owned());
+            return Err(NO_SWITCHING_REPORTS.to_owned());
         }
-        let subject = session.subject.as_ref().ok_or(NO_SUBJECT)?;
-        let dossier = Dossier::open(
-            &dir.join(THE_DOSSIER_FILE),
-            &subject.binary.display().to_string(),
-            subject.profile,
-            &self.shared.catalogue,
-            coordinates,
-        )?;
-        session.report = Some(OpenReport { name, dir, dossier });
-        session.reasons.clear();
-        self.shared.publish(&session);
+        let dossier = Dossier::open(&dir.join(THE_DOSSIER_FILE), &self.shared.catalogue)?;
+        self.shared.install(&mut session, name, dir, dossier);
         Ok(())
     }
 
@@ -252,6 +236,13 @@ impl Console {
             .report
             .as_ref()
             .ok_or("elige o crea un informe antes de correr nada")?;
+        let subject = session.subject.as_ref().ok_or(NO_SUBJECT)?;
+        if let Some(complaint) = report
+            .dossier
+            .refuses_to_continue_with(&subject.binary.display().to_string(), subject.profile)
+        {
+            return Err(complaint);
+        }
         let (wanted, in_batch): (Vec<&Check>, bool) = match &request {
             Request::Check(id) => (
                 vec![self
@@ -345,9 +336,19 @@ impl Console {
             |name: &str| Dossier::read(&self.shared.the_report_dir(name)?.join(THE_DOSSIER_FILE));
         Ok(compare(&read(a)?, &read(b)?))
     }
+
+    pub(crate) fn validate(&self, report: &str, reference: &str) -> Result<Validation, String> {
+        let dossier = Dossier::open(
+            &self.shared.the_report_dir(report)?.join(THE_DOSSIER_FILE),
+            &self.shared.catalogue,
+        )?;
+        let reference = read_the_reference(&the_reference_dir(), reference)?;
+        Ok(validate(&dossier, &self.shared.catalogue, &reference))
+    }
 }
 
 const NO_SUBJECT: &str = "elige un sujeto primero";
+const NO_SWITCHING_REPORTS: &str = "no se cambia de informe con una tanda en marcha";
 
 impl Shared {
     fn lock(&self) -> MutexGuard<'_, Session> {
@@ -365,6 +366,12 @@ impl Shared {
                  empezar por punto"
             ))
         }
+    }
+
+    fn install(&self, session: &mut Session, name: String, dir: PathBuf, dossier: Dossier) {
+        session.report = Some(OpenReport { name, dir, dossier });
+        session.reasons.clear();
+        self.publish(session);
     }
 
     fn state_of(&self, session: &Session) -> serde_json::Value {
@@ -590,7 +597,6 @@ fn take_the_next_group(
         let probe = Probe {
             subject: subject.launcher,
             trust_root: subject.trust_root,
-            profile: subject.profile,
             report: dir.clone(),
             patience: shared.patience,
             witness: Witness {
