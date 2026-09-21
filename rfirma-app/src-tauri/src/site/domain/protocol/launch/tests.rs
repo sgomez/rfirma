@@ -47,10 +47,14 @@ fn the_third_protocol_opens_on_the_fixed_port_without_ports() {
         request.location(),
         &ChannelLocation::Fixed(THE_PORT_OF_THE_THIRD_PROTOCOL)
     );
-    assert_eq!(
-        request.credential(),
-        &NegotiatedCredential::Required(ChannelCredential::parse("abc").expect("vale"))
-    );
+}
+
+#[test]
+fn the_third_protocol_ignores_the_credential_the_site_sent() {
+    let request = LaunchRequest::parse("afirma://websocket?v=3&idsession=abc")
+        .expect("el protocolo 3 admite idsession");
+
+    assert_eq!(request.credential(), &NegotiatedCredential::Absent);
 }
 
 #[test]

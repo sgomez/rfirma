@@ -200,20 +200,17 @@ async fn a_client_that_does_not_trust_the_local_ca_is_turned_away_at_the_handsha
 }
 
 #[tokio::test]
-async fn an_echo_with_another_credential_is_refused_and_the_channel_closes() {
+async fn an_echo_with_another_credential_is_refused_and_the_channel_keeps_answering() {
     let canal = AChannel::serving_the_echo().await;
-    let mut intruder = canal.a_client().await;
+    let mut client = canal.a_client().await;
 
-    let answer = intruder.echo("otraPaginaDelEquipo0").await;
+    let answer = client.echo("otraPaginaDelEquipo0").await;
 
     assert_eq!(
         answer,
         Some("SAF_46: Id de sesion invalido; el parametro que falla es 'idsession'".to_owned())
     );
-    assert!(
-        !intruder.is_still_open().await,
-        "el canal se cierra detras del rechazo"
-    );
+    assert_eq!(client.echo(CREDENTIAL).await, Some("OK".to_owned()));
 }
 
 #[tokio::test]

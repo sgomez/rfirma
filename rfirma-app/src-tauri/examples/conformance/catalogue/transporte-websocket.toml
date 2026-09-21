@@ -189,5 +189,7 @@ cause = "BUG-11"
 note = "Lo cumple por comparar la dirección textualmente, que es lo que la ficha describe."
 
 [check.expect.rfirma]
-verdict = "conforme"
+verdict = "no-observable"
+cause = "ADR-0005"
+note = "rFirma no escucha en ::1, así que nadie contesta a quien conecta por el bucle local IPv6."
 

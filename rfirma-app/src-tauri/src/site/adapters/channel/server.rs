@@ -133,6 +133,9 @@ async fn attend(
                 operations.arrived();
                 socket.send(Message::text(reply)).await?;
             }
+            Answer::Refuse(reply) => {
+                socket.send(Message::text(reply)).await?;
+            }
             Answer::ReplyAndClose(reply) => {
                 let sent = socket.send(Message::text(reply)).await;
                 if sent.is_ok() && matches!(duty, ChannelDuty::Refuse(_)) {
