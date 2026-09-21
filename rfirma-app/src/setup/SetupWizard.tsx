@@ -262,6 +262,7 @@ function LanguageCard({ t }: { t: TFunction }) {
       <Select
         label={t("preferences.language.label")}
         hideLabel
+        opens="up"
         value={language}
         options={LANGUAGES.map((tag) => ({ value: tag, label: t(`languages.${tag}`) }))}
         onChange={(chosen) => void choose(chosen)}

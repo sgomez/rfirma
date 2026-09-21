@@ -16,6 +16,8 @@ interface SelectProps<T extends string> {
   value: T;
   options: readonly Option<T>[];
   onChange: (value: T) => void;
+  /** Hacia dónde se despliega la lista: arriba cuando debajo no queda sitio. */
+  opens?: "down" | "up";
 }
 
 /**
@@ -40,6 +42,7 @@ export function Select<T extends string>({
   value,
   options,
   onChange,
+  opens = "down",
 }: SelectProps<T>) {
   const [open, setOpen] = useState(false);
   // Dónde está el cursor del teclado mientras la lista está abierta. No es la
@@ -154,7 +157,7 @@ export function Select<T extends string>({
       </button>
       {open && (
         <div
-          className="select__list rf-card rf-card--elevated"
+          className={`select__list rf-card rf-card--elevated${opens === "up" ? " select__list--up" : ""}`}
           ref={list}
           id={listId}
           role="listbox"

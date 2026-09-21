@@ -1107,12 +1107,7 @@ msgid "about.update.upToDate"
 msgstr "Tens l'última versió"
 
 msgid "about.independence"
-msgstr ""
-"Projecte independent. rFirma no està relacionada amb AutoFirma ni amb "
-"l'Administració General de l'Estat, que publiquen el client oficial, ni "
-"compta amb el seu suport. Si necessites l'aplicació oficial, descarrega-la "
-"del seu web. Els problemes amb rFirma es comuniquen al seu propi repositori, "
-"no a qui publica el client oficial."
+msgstr "Projecte independent. rFirma no està relacionada amb AutoFirma ni amb l'Administració General de l'Estat, que publiquen el client oficial, ni compta amb el seu suport. Si necessites l'aplicació oficial, descarrega-la del seu web. Si detectes algun problema amb rFirma, comunica'l al nostre repositori i no a l'equip d'AutoFirma."
 
 #. No se traduce: es una URL.
 msgid "about.repository"

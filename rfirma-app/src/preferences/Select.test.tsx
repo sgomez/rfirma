@@ -104,4 +104,13 @@ describe("Select", () => {
     expect(screen.getByRole("option", { name: "Oscuro" })).toHaveAttribute("aria-selected", "true");
     expect(screen.getByRole("option", { name: "Claro" })).toHaveAttribute("aria-selected", "false");
   });
+
+  it("opens its list upwards when there is no room below", async () => {
+    const user = userEvent.setup();
+    render(<Select label="Tema" value="system" options={options} onChange={vi.fn()} opens="up" />);
+
+    await user.click(screen.getByRole("combobox", { name: "Tema" }));
+
+    expect(screen.getByRole("listbox")).toHaveClass("select__list--up");
+  });
 });
