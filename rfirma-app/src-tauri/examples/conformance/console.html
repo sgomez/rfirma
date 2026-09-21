@@ -57,8 +57,8 @@
   td, th { padding: 3px 8px; border-bottom: 1px solid var(--line); text-align: left; }
   .question-banner { background: #3a2f4f; padding: 4px 8px; border-radius: 4px; cursor: pointer; }
   a { color: var(--info); }
-  body[data-mode="report"] .session-only, body[data-mode="compare"] .session-only { display: none !important; }
-  body[data-mode="compare"] .report-only { display: none !important; }
+  body[data-mode="report"] .session-only, body[data-mode="compare"] .session-only { display: none; }
+  body[data-mode="compare"] .report-only { display: none; }
   body[data-mode="compare"] main { display: none; } body[data-mode="compare"] #compare-view { display: block; }
   tr.suite-row th { background: var(--panel); }
   #validation h3 { margin: 10px 0 4px; font-size: 13px; }
@@ -82,7 +82,7 @@
     <button type="button" id="new-report" class="session-only">+ nuevo</button>
     <span class="sep session-only"></span>
     <span id="summary" class="mono report-only"></span>
-    <a id="open-elsewhere" class="report-only" target="_blank" rel="noopener" hidden>Abrir en otra ventana</a>
+    <a id="open-elsewhere" href="/" class="report-only" target="_blank" rel="noopener" hidden>Abrir en otra ventana</a>
     <button type="button" id="validate" class="report-only" hidden>Validar contra referencia…</button>
     <span class="grow"></span>
     <span id="connection" class="complaint"></span>
@@ -91,7 +91,7 @@
     <button type="button" id="stop" class="session-only" title="vacía la cola; la comprobación en curso termina">■ parar</button>
     <button type="button" id="skip" class="session-only" title="corta la comprobación en curso, la deja pendiente y sigue con la cola">⏭ saltar</button>
     <button type="button" id="abort" class="session-only" title="vacía la cola y corta la comprobación en curso">✕ abortar</button>
-    <a id="compare-link" class="session-only" target="_blank" rel="noopener">Comparar informes</a>
+    <a id="compare-link" href="/comparar" class="session-only" target="_blank" rel="noopener">Comparar informes</a>
   </div>
 </header>
 <main>
@@ -242,7 +242,7 @@ function report(action) {
 }
 
 function isLive() {
-  if (!state || !state.report) return false;
+  if (!state?.report) return false;
   return mode === "session" || state.report_name === shownReport;
 }
 
