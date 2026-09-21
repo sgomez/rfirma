@@ -281,7 +281,7 @@ function theLocalServiceAsXmlHttpRequest() {
  * en vez de `afirma://websocket?…`. Node trae `WebSocket` como global desde la 22, así que hay
  * que quitarlo a propósito para medir este modo.
  */
-if (mode === "service" || mode === "service-bind-failure" || mode === "service-v4") {
+if (mode === "service" || mode === "service-bind-failure") {
   delete globalThis.WebSocket;
   globalThis.XMLHttpRequest = theLocalServiceAsXmlHttpRequest();
 }
@@ -300,9 +300,6 @@ const rawSource = readFileSync(autoscriptPath, "utf8");
 let forcedSource = forcedProtocolVersion
   ? forcedToProtocolVersion(rawSource, Number(forcedProtocolVersion[1]))
   : rawSource;
-if (mode === "service-v4") {
-  forcedSource = forcedToProtocolVersion(forcedSource, 4);
-}
 if (mode === "v4-ipv6") {
   forcedSource = forcedToIpv6Loopback(forcedSource);
 }
@@ -1967,7 +1964,7 @@ async function theServiceProtocolScript() {
   const eof = post.length - "@EOF".length;
   const streamed = await talkingToTheService({
     port,
-    pieces: [post.slice(0, eof - 6), post.slice(eof - 6, eof + 2), post.slice(eof + 2)],
+    pieces: [post.slice(0, eof + 2), post.slice(eof + 2)],
     pauseMs: 1000,
   });
   if (streamed.status !== null) statusLines.push(streamed.status);
