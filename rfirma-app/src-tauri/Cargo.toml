@@ -157,6 +157,8 @@ inventory = "0.3"
 des = "0.9.0"
 cipher = "0.5.2"
 ecb = "0.2.1"
+# Sin idioma guardado, la interfaz sale en el del sistema (ADR-0010).
+sys-locale = "0.3"
 
 [dev-dependencies]
 # El cliente de canal y las pruebas del servidor abren sockets de verdad

@@ -14,7 +14,7 @@ use crate::memory_error::MemoryError;
 use crate::signing::adapters::state::State;
 use crate::signing::adapters::store::{JsonFile, Loaded};
 use crate::signing::application::configuration_memory::Configuration;
-use crate::signing::domain::{BoxSize, Spot};
+use crate::signing::domain::{BoxSize, Language, Spot};
 
 /// Las dos memorias y sus dos soportes (ADR-0010).
 #[derive(Debug)]
@@ -25,13 +25,22 @@ pub struct Memory {
 }
 
 impl Memory {
-    /// La memoria que vive en las rutas dadas.
+    /// La memoria que vive en las rutas dadas, en el idioma del sistema mientras no se elija otro.
     pub fn at(paths: &Paths) -> Self {
+        Self::at_with_system_language(paths, Language::first_of(sys_locale::get_locales()))
+    }
+
+    /// La memoria que vive en las rutas dadas, con `system` como idioma mientras no se elija otro.
+    pub fn at_with_system_language(paths: &Paths, system: Language) -> Self {
         let configuration = JsonFile::at(paths.config_file());
+        let unchosen = || Configuration {
+            language: system,
+            ..Configuration::default()
+        };
         let live = configuration
-            .load()
+            .load_or_else(unchosen)
             .map(Loaded::into_value)
-            .unwrap_or_default();
+            .unwrap_or_else(|_| unchosen());
         Self {
             configuration,
             state: JsonFile::at(paths.state_file()),

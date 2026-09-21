@@ -112,11 +112,18 @@ impl<T> JsonFile<T> {
 impl<T: DeserializeOwned + Default> JsonFile<T> {
     /// Carga el valor guardado o devuelve el valor por omisión si no existe o fue descartado.
     pub fn load(&self) -> Result<Loaded<T>, MemoryError> {
+        self.load_or_else(T::default)
+    }
+}
+
+impl<T: DeserializeOwned> JsonFile<T> {
+    /// Carga el valor guardado o devuelve el de `fallback` si no existe o fue descartado.
+    pub fn load_or_else(&self, fallback: impl FnOnce() -> T) -> Result<Loaded<T>, MemoryError> {
         let bytes = match fs::read(&self.path) {
             Ok(bytes) => bytes,
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
                 return Ok(Loaded {
-                    value: T::default(),
+                    value: fallback(),
                     recovery: None,
                 })
             }
@@ -135,7 +142,7 @@ impl<T: DeserializeOwned + Default> JsonFile<T> {
                 recovery: None,
             }),
             Err(damage) => Ok(Loaded {
-                value: T::default(),
+                value: fallback(),
                 recovery: Some(self.set_aside(damage)),
             }),
         }

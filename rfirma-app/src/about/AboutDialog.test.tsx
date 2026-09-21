@@ -22,7 +22,7 @@ describe("AboutDialog", () => {
     expect(notice).toHaveTextContent(/no está relacionada con AutoFirma/);
     expect(notice).toHaveTextContent(/ni cuenta con su respaldo/);
     expect(notice).toHaveTextContent(
-      "Los problemas con rFirma se comunican en su propio repositorio, no a quienes publican el cliente oficial.",
+      "Si detectas algún problema con rFirma, comunícalo en nuestro repositorio y no al equipo de AutoFirma.",
     );
   });
 

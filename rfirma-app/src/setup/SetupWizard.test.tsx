@@ -68,6 +68,56 @@ describe("SetupWizard", () => {
     expect(screen.getByText("Paso 2 de 2")).toBeInTheDocument();
   });
 
+  it("welcomes in the language it starts with", () => {
+    renderWithCatalog(<SetupWizard seen={false} onFinish={() => {}} />, "gl");
+
+    expect(
+      screen.getByText(/rFirma é unha aplicación compatible con AutoFirma 1\.9\.2/),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Paso 1 de 2")).toBeInTheDocument();
+  });
+
+  it("offers the language on the welcome screen and translates the whole wizard in place", async () => {
+    const user = userEvent.setup();
+    renderWithCatalog(
+      <SetupWizard
+        seen={false}
+        statusPort={memoryStatus([aVersionRow, certificateNotInstalled, handlerNotOurs])}
+        onFinish={() => {}}
+      />,
+    );
+
+    const language = screen.getByRole("combobox", { name: "Idioma" });
+    expect(language).toHaveTextContent("Español");
+    await user.click(language);
+    await user.click(screen.getByRole("option", { name: "English" }));
+
+    expect(screen.getByText("Set up rFirma")).toBeInTheDocument();
+    expect(
+      screen.getByText(/rFirma is an application compatible with AutoFirma 1\.9\.2/),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Step 1 of 2")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+
+    expect(screen.getByText("The rFirma certificate")).toBeInTheDocument();
+  });
+
+  it("can be skipped from the welcome screen without touching the computer", async () => {
+    const user = userEvent.setup();
+    const onFinish = vi.fn();
+    const port = memoryStatus([aVersionRow, certificateNotInstalled, handlerNotOurs]);
+    const install = vi.spyOn(port, "installLocalCaCertificate");
+    const choose = vi.spyOn(port, "chooseSiteSignatureHandler");
+    renderWithCatalog(<SetupWizard seen={false} statusPort={port} onFinish={onFinish} />);
+
+    await user.click(screen.getByRole("button", { name: "Omitir configuración" }));
+
+    expect(onFinish).toHaveBeenCalledOnce();
+    expect(install).not.toHaveBeenCalled();
+    expect(choose).not.toHaveBeenCalled();
+  });
+
   it("installs the certificate through the same use case as the status panel", async () => {
     const user = userEvent.setup();
     const installedRow: SignalRow = {

@@ -6,17 +6,25 @@ cd "$root/packaging/flatpak"
 # Los dos generadores viven fuera de este repositorio: son de
 # flatpak/flatpak-builder-tools. No se versionan aqui ni los instala
 # bootstrap.sh; se traen a mano la primera vez.
+tools="https://github.com/flatpak/flatpak-builder-tools"
+command -v uv >/dev/null || {
+    echo "falta uv: https://docs.astral.sh/uv/" >&2
+    exit 1
+}
 if [ ! -f flatpak-cargo-generator.py ]; then
-    echo "falta packaging/flatpak/flatpak-cargo-generator.py" >&2
-    echo "  https://github.com/flatpak/flatpak-builder-tools/tree/master/cargo" >&2
+    echo "falta packaging/flatpak/flatpak-cargo-generator.py. Traelo con:" >&2
+    echo "  curl -fsSL -o packaging/flatpak/flatpak-cargo-generator.py \\" >&2
+    echo "    https://raw.githubusercontent.com/flatpak/flatpak-builder-tools/master/cargo/flatpak-cargo-generator.py" >&2
     exit 1
 fi
 command -v flatpak-node-generator >/dev/null || {
-    echo "falta flatpak-node-generator" >&2
-    echo "  https://github.com/flatpak/flatpak-builder-tools/tree/master/node" >&2
+    echo "falta flatpak-node-generator. Instalalo con:" >&2
+    echo "  uv tool install \"git+$tools.git#subdirectory=node\"" >&2
     exit 1
 }
-python3 flatpak-cargo-generator.py \
+# `uv run --script` y no `python3`: el generador declara aiohttp y tomlkit en su
+# cabecera, y el Python del sistema no los trae.
+uv run --quiet --script flatpak-cargo-generator.py \
     ../../rfirma-app/src-tauri/Cargo.lock -o cargo-sources.json
 flatpak-node-generator pnpm ../../rfirma-app/pnpm-lock.yaml -o node-sources.json
 # El sello que lee `packaging/flatpak/check-sources.sh`: el sha256 de cada fichero de

@@ -1116,12 +1116,7 @@ msgid "about.update.upToDate"
 msgstr "Azken bertsioan zaude"
 
 msgid "about.independence"
-msgstr ""
-"Proiektu independentea. rFirmak ez du zerikusirik AutoFirmarekin, ez eta "
-"bezero ofiziala argitaratzen duen Estatuko Administrazio Orokorrarekin ere, "
-"eta ez du haien babesik. Aplikazio ofiziala behar baduzu, deskargatu ezazu "
-"haien webgunetik. rFirmarekin izandako arazoak bere biltegian jakinarazten "
-"dira, ez bezero ofiziala argitaratzen dutenei."
+msgstr "Proiektu independentea. rFirmak ez du zerikusirik AutoFirmarekin, ez eta bezero ofiziala argitaratzen duen Estatuko Administrazio Orokorrarekin ere, eta ez du haien babesik. Aplikazio ofiziala behar baduzu, deskargatu ezazu haien webgunetik. rFirmarekin arazoren bat aurkitzen baduzu, jakinarazi gure biltegian, eta ez AutoFirmaren taldeari."
 
 #. No se traduce: es una URL.
 msgid "about.repository"
@@ -1144,6 +1139,9 @@ msgstr ""
 "rFirma AutoFirma {{version}} bertsioarekin bateragarria den aplikazioa da. "
 "Egoitza elektronikoekin erabiltzeko zure ekipoa konfiguratu behar dugu."
 
+msgid "setup.language.body"
+msgstr "Aukeratu rFirmaren hizkuntza. Geroago alda dezakezu Hobespenak atalean."
+
 msgid "setup.step"
 msgstr "Urratsa {{current}}/{{total}}"
 
@@ -1158,6 +1156,9 @@ msgstr "Amaitu"
 
 msgid "setup.actions.notNow"
 msgstr "Orain ez"
+
+msgid "setup.actions.skip"
+msgstr "Saltatu konfigurazioa"
 
 msgid "setup.actions.useRfirma"
 msgstr "Ireki dezala rFirmak"

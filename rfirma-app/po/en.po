@@ -1093,12 +1093,7 @@ msgid "about.update.upToDate"
 msgstr "You're on the latest version"
 
 msgid "about.independence"
-msgstr ""
-"Independent project. rFirma isn't related to AutoFirma or to the Spanish "
-"Administration, who publish the official client, nor is it endorsed by them. "
-"If you need the official application, download it from their website. Issues "
-"with rFirma are reported in its own repository, not to the publishers of the "
-"official client."
+msgstr "Independent project. rFirma isn't related to AutoFirma or to the Spanish Administration, who publish the official client, nor is it endorsed by them. If you need the official application, download it from their website. If you find a problem with rFirma, report it in our repository, not to the AutoFirma team."
 
 #. No se traduce: es una URL.
 msgid "about.repository"
@@ -1121,6 +1116,9 @@ msgstr ""
 "rFirma is an application compatible with AutoFirma {{version}}. To use it "
 "with government sites we need to set up your computer."
 
+msgid "setup.language.body"
+msgstr "Choose the language for rFirma. You can change it later in Preferences."
+
 msgid "setup.step"
 msgstr "Step {{current}} of {{total}}"
 
@@ -1135,6 +1133,9 @@ msgstr "Finish"
 
 msgid "setup.actions.notNow"
 msgstr "Not now"
+
+msgid "setup.actions.skip"
+msgstr "Skip setup"
 
 msgid "setup.actions.useRfirma"
 msgstr "Have rFirma open them"

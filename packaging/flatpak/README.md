@@ -116,8 +116,19 @@ con `--offline`.
 
 Los dos generadores son de
 [flatpak-builder-tools](https://github.com/flatpak/flatpak-builder-tools) y **no
-se versionan aquí** (ID-04): se traen a mano la primera vez.
-`just flatpak-sources` falla nombrando el que falte.
+se versionan aquí** (ID-04): se traen a mano la primera vez, y hace falta
+[uv](https://docs.astral.sh/uv/), que resuelve las dependencias del de cargo.
+`just flatpak-sources` falla nombrando el que falte y el comando que lo trae:
+
+```bash
+curl -fsSL -o packaging/flatpak/flatpak-cargo-generator.py \
+  https://raw.githubusercontent.com/flatpak/flatpak-builder-tools/master/cargo/flatpak-cargo-generator.py
+uv tool install "git+https://github.com/flatpak/flatpak-builder-tools.git#subdirectory=node"
+```
+
+Un generador más nuevo puede reescribir `node-sources.json` sin que cambie
+`pnpm-lock.yaml`: trae su propio `populate_pnpm_store.py`. Ese cambio se
+versiona en una PR suya, después de construir el flatpak con él.
 
 ```bash
 just flatpak-sources   # cuando cambie Cargo.lock o pnpm-lock.yaml

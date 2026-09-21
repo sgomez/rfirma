@@ -56,6 +56,11 @@
   background: var(--rf-bg);
 }
 
+.select__list--up {
+  top: auto;
+  bottom: calc(100% + 4px);
+}
+
 /* Misma geometría que las entradas del menú de la cabecera: es el mismo gesto
    —una lista corta que se despliega y se elige— y no hay razón para que se
    vean distintas. */

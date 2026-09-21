@@ -77,9 +77,10 @@ pierde el trabajo.
   Si no parsea o la versión es desconocida, se renombra a `.bak` y se arranca con
   los valores por omisión, avisando una vez. Una preferencia corrupta no puede
   impedir firmar.
-- **El idioma sale del locale del sistema** cotejado contra los seis admitidos,
-  con español como recurso. Sin diálogo de bienvenida que pregunte lo que la
-  aplicación ya sabe.
+- **El idioma sale del locale del sistema** mientras no haya configuración
+  guardada: el primero de los locales preferidos que sea uno de los cinco
+  admitidos, con español como recurso. La bienvenida del asistente lo enseña ya
+  resuelto y deja cambiarlo; no pregunta lo que la aplicación ya sabe.
 
 ## Las rutas son la implementación en Linux de tres nombres
 
