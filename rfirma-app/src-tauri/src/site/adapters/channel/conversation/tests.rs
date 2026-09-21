@@ -29,12 +29,12 @@ fn the_echo_of_the_published_client_is_answered_with_ok_and_the_channel_stays_op
 }
 
 #[test]
-fn an_echo_with_another_credential_gets_the_invalid_session_code() {
+fn an_echo_with_another_credential_gets_the_invalid_session_code_and_the_channel_stays_open() {
     let answer = answer(&serving(), true, &echo_with("otraPaginaDelEquipo0"));
 
     assert_eq!(
         answer,
-        Answer::ReplyAndClose(
+        Answer::Refuse(
             "SAF_46: Id de sesion invalido; el parametro que falla es 'idsession'".to_owned()
         )
     );
@@ -121,8 +121,8 @@ fn none_of_the_three_guards_lets_an_operation_through() {
 
     for answer in guarded {
         assert!(
-            matches!(answer, Answer::ReplyAndClose(_)),
-            "la guardia contesta en el acto y cierra: {answer:?}"
+            !matches!(answer, Answer::Pending(_)),
+            "la guardia contesta en el acto: {answer:?}"
         );
         assert!(written(&answer).starts_with("SAF_"));
     }

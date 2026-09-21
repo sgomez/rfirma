@@ -331,7 +331,7 @@ async fn handle_operation(
             inbox.arrived();
             (http_response(&text), None)
         }
-        Answer::ReplyAndClose(text) => (http_response(&text), None),
+        Answer::ReplyAndClose(text) | Answer::Refuse(text) => (http_response(&text), None),
         Answer::Pending(url) => {
             inbox.arrived();
             match the_response_already_computed(state) {

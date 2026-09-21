@@ -16,6 +16,8 @@ pub enum Answer {
     Reply(String),
     /// Escribe la respuesta y cierra la conexión.
     ReplyAndClose(String),
+    /// Rechaza el mensaje y continúa escuchando, sin contar como llegada del navegador.
+    Refuse(String),
     /// La operación se acepta y queda pendiente de resolución.
     Pending(AfirmaUrl),
 }
@@ -24,7 +26,7 @@ impl Answer {
     /// Texto de la respuesta, si corresponde enviar alguno.
     pub fn text(&self) -> Option<&str> {
         match self {
-            Self::Reply(text) | Self::ReplyAndClose(text) => Some(text),
+            Self::Reply(text) | Self::ReplyAndClose(text) | Self::Refuse(text) => Some(text),
             Self::Pending(_) => None,
         }
     }
@@ -46,7 +48,7 @@ pub fn answer(duty: &ChannelDuty, from_loopback: bool, message: &str) -> Answer 
     let message = ChannelMessage::read(message);
     if let NegotiatedCredential::Required(credential) = credential {
         if message.credential() != Some(credential.as_str()) {
-            return Answer::ReplyAndClose(
+            return Answer::Refuse(
                 WireAnswer::refused_because_of(SafCode::InvalidSessionId, Parameter::IdSession)
                     .on_the_wire(),
             );
