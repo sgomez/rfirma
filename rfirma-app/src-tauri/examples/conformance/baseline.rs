@@ -14,8 +14,6 @@ pub(crate) enum Profile {
     Rfirma,
 }
 
-pub(crate) const THE_PROFILES: &[&str] = &["autofirma", "rfirma"];
-
 impl Profile {
     pub(crate) fn named(name: &str) -> Option<Self> {
         match name {
@@ -129,17 +127,10 @@ impl BaselineTally {
         tally
     }
 
-    pub(crate) fn line(&self) -> String {
-        format!(
-            "{} coinciden · {} SORPRESA · {} sin medida · {} pendientes",
-            self.matching, self.surprises, self.unmeasured, self.pending
-        )
+    /// El verde de una tanda: ni sorpresas ni pendientes.
+    pub(crate) fn is_green(&self) -> bool {
+        self.surprises == 0 && self.pending == 0
     }
-}
-
-/// El verde de una tanda: cero si y sólo si no hay sorpresas ni pendientes.
-pub(crate) fn the_exit_code_of(tally: &BaselineTally) -> i32 {
-    i32::from(tally.surprises > 0 || tally.pending > 0)
 }
 
 /// Las sorpresas de la tanda, una frase por cada una, para cerrar el informe nombrándolas.
@@ -194,6 +185,7 @@ mod tests {
             state,
             date: None,
             observation: None,
+            duration_ms: None,
         }
     }
 
@@ -238,32 +230,28 @@ mod tests {
     }
 
     #[test]
-    fn a_run_without_surprises_or_pending_checks_exits_with_zero() {
+    fn a_run_without_surprises_or_pending_checks_is_green() {
         let tally = BaselineTally {
             matching: 33,
             surprises: 0,
             unmeasured: 1,
             pending: 0,
         };
-        assert_eq!(the_exit_code_of(&tally), 0);
+        assert!(tally.is_green());
     }
 
     #[test]
-    fn a_surprise_and_a_pending_check_both_break_the_exit_code() {
-        assert_eq!(
-            the_exit_code_of(&BaselineTally {
-                surprises: 1,
-                ..BaselineTally::default()
-            }),
-            1
-        );
-        assert_eq!(
-            the_exit_code_of(&BaselineTally {
-                pending: 1,
-                ..BaselineTally::default()
-            }),
-            1
-        );
+    fn a_surprise_and_a_pending_check_both_break_the_green() {
+        assert!(!BaselineTally {
+            surprises: 1,
+            ..BaselineTally::default()
+        }
+        .is_green());
+        assert!(!BaselineTally {
+            pending: 1,
+            ..BaselineTally::default()
+        }
+        .is_green());
     }
 
     #[test]
@@ -285,8 +273,13 @@ mod tests {
         );
 
         assert_eq!(
-            tally.line(),
-            "1 coinciden · 1 SORPRESA · 1 sin medida · 1 pendientes"
+            tally,
+            BaselineTally {
+                matching: 1,
+                surprises: 1,
+                unmeasured: 1,
+                pending: 1,
+            }
         );
     }
 

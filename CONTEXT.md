@@ -258,8 +258,10 @@ binario instalado—, con el **cliente publicado** como instrumento: emite un ve
 coordenadas de la tanda. El enunciado de cada entrada dice qué exige el protocolo, nunca qué hace
 mal un cliente. Produce un informe, no una puerta: queda fuera de las gradas del ADR-0014, no
 bloquea ningún PR ni ninguna etiqueta. Los veredictos se registran en el **expediente** de la
-tanda (`dossier.json`) y en sus transcripciones; el anexo A1 es su diccionario de causas, no su
-índice. Vive en `cargo run --example conformance` (`just conformance`).
+tanda (`reports/conformance/<nombre>/dossier.json`) y en sus transcripciones; el anexo A1 es su
+diccionario de causas, no su índice. Vive en `cargo run --example conformance`, y `just conformance`
+levanta la consola web local desde la que se elige el sujeto y el informe y se lanzan y siguen las
+comprobaciones: no tiene otra cara.
 _Avoid_: sondeo, banco de conformidad, cliente de canal
 
 **Línea base**:
@@ -268,7 +270,7 @@ Lo que cada entrada del catálogo declara que se espera de cada **perfil** de su
 lo explica: una ficha `BUG-NN` del anexo A1 o un ADR. Una expectativa sin causa es una expectativa
 de conformidad. El informe cruza lo observado con lo esperado y clasifica cada entrada en
 **coincide**, **SORPRESA** —dos medidas distintas— o **sin medida** —se esperaba una medida y salió
-NO OBSERVABLE—. Una tanda sin sorpresas ni pendientes sale con código cero: ese es el verde.
+NO OBSERVABLE—. Una tanda sin sorpresas ni pendientes es el verde.
 _Avoid_: expectativa por defecto, baseline, regresión
 
 **Códec del protocolo**:

@@ -4,7 +4,7 @@
 use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::time::SystemTime;
+use std::time::{Duration, SystemTime};
 
 use serde::{Deserialize, Serialize};
 
@@ -38,6 +38,8 @@ pub struct CheckRecord {
     pub date: Option<String>,
     #[serde(default)]
     pub observation: Option<String>,
+    #[serde(default)]
+    pub duration_ms: Option<u64>,
 }
 
 impl CheckRecord {
@@ -50,6 +52,7 @@ impl CheckRecord {
             state: CheckState::Pending,
             date: None,
             observation: None,
+            duration_ms: None,
         }
     }
 }
@@ -82,6 +85,9 @@ struct Contents {
     checks: BTreeMap<String, CheckRecord>,
 }
 
+/// El nombre del expediente dentro del directorio de su informe.
+pub const THE_DOSSIER_FILE: &str = "dossier.json";
+
 /// El expediente de una tanda: un JSON en la ruta que se le indique, ligado a un único sujeto.
 #[derive(Debug)]
 pub struct Dossier {
@@ -92,8 +98,8 @@ pub struct Dossier {
 impl Dossier {
     /// Abre el expediente en `path` para `subject`, creándolo con `catalogue` si no existe.
     ///
-    /// Rechaza un expediente que otro sujeto generó, y uno de la forma anterior, en vez de mezclar
-    /// veredictos o reinterpretarlos en silencio. Un expediente nuevo exige `coordinates`.
+    /// Rechaza un expediente que otro sujeto o perfil generó en vez de mezclar veredictos. Un
+    /// expediente nuevo exige `coordinates`.
     pub fn open(
         path: &Path,
         subject: &str,
@@ -104,18 +110,12 @@ impl Dossier {
         let mut contents = if path.exists() {
             let raw = fs::read_to_string(path)
                 .map_err(|error| format!("{} no se pudo leer: {error}", path.display()))?;
-            if let Some(complaint) = the_complaint_of_an_older_form(path, &raw) {
-                return Err(complaint);
-            }
             serde_json::from_str(&raw).map_err(|error| {
                 format!("{} no es un expediente válido: {error}", path.display())
             })?
         } else {
-            let coordinates = coordinates.ok_or_else(|| {
-                "faltan las coordenadas de la tanda: --os, --os-version, --subject-version y \
-                 --store son obligatorias al abrir un expediente nuevo"
-                    .to_owned()
-            })?;
+            let coordinates = coordinates
+                .ok_or_else(|| "faltan las coordenadas de la tanda del informe nuevo".to_owned())?;
             Contents {
                 subject: subject.to_owned(),
                 profile,
@@ -195,18 +195,24 @@ impl Dossier {
         self.contents.checks.get(id).map(|record| record.state)
     }
 
-    /// Marca `id` con `verdict` hoy, junto a `observation` si la hubo, y lo deja escrito antes de
-    /// devolver el control.
+    pub fn record_of(&self, id: &str) -> Option<&CheckRecord> {
+        self.contents.checks.get(id)
+    }
+
+    /// Marca `id` con `verdict` hoy, junto a `observation` si la hubo y lo que tardó, y lo deja
+    /// escrito antes de devolver el control.
     pub fn resolve(
         &mut self,
         id: &str,
         verdict: Verdict,
         observation: Option<String>,
+        duration: Duration,
     ) -> Result<(), String> {
         if let Some(record) = self.contents.checks.get_mut(id) {
             record.state = CheckState::Resolved(verdict);
             record.date = Some(today());
             record.observation = observation;
+            record.duration_ms = Some(u64::try_from(duration.as_millis()).unwrap_or(u64::MAX));
         }
         self.save()
     }
@@ -217,21 +223,6 @@ impl Dossier {
         fs::write(&self.path, json)
             .map_err(|error| format!("{} no se pudo escribir: {error}", self.path.display()))
     }
-}
-
-/// Un expediente con casos y condiciones es de la forma anterior, la de las dos escalas: no se
-/// reinterpreta, se nombra y se pide uno nuevo.
-fn the_complaint_of_an_older_form(path: &Path, raw: &str) -> Option<String> {
-    let contents: serde_json::Value = serde_json::from_str(raw).ok()?;
-    let object = contents.as_object()?;
-    (object.contains_key("cases") || object.contains_key("protocol")).then(|| {
-        format!(
-            "{} es un expediente de la forma anterior, con casos de divergencia y condiciones de \
-             protocolo. Sus veredictos no se reinterpretan: abre uno nuevo con --dossier <otra \
-             ruta>, o aparta ese fichero.",
-            path.display()
-        )
-    })
 }
 
 /// La fecha de hoy, `AAAA-MM-DD`: la misma que usa el expediente para fechar un veredicto.
@@ -313,7 +304,12 @@ mod tests {
         );
 
         dossier
-            .resolve("v4_echo_greeting", Verdict::Noncompliant, None)
+            .resolve(
+                "v4_echo_greeting",
+                Verdict::Noncompliant,
+                None,
+                Duration::ZERO,
+            )
             .unwrap();
 
         assert_eq!(
@@ -323,7 +319,7 @@ mod tests {
     }
 
     #[test]
-    fn a_resolved_verdict_and_its_observation_survive_a_reopen() {
+    fn a_resolved_verdict_its_observation_and_its_duration_survive_a_reopen() {
         let path = tempfile::NamedTempFile::new().unwrap().path().to_owned();
         let catalogue = a_catalogue_of(&["v4_echo_greeting"]);
         let mut dossier = Dossier::open(
@@ -339,6 +335,7 @@ mod tests {
                 "v4_echo_greeting",
                 Verdict::Compliant,
                 Some("OK".to_owned()),
+                Duration::from_millis(1_250),
             )
             .unwrap();
 
@@ -354,6 +351,7 @@ mod tests {
             .find(|(id, _)| *id == "v4_echo_greeting")
             .unwrap();
         assert_eq!(record.observation.as_deref(), Some("OK"));
+        assert_eq!(record.duration_ms, Some(1_250));
         assert_eq!(record.chapter, "15");
         assert_eq!(record.suite, "errores");
     }
@@ -377,30 +375,6 @@ mod tests {
             dossier.state_of("v3_echo_greeting"),
             Some(CheckState::Pending)
         );
-    }
-
-    #[test]
-    fn a_dossier_of_the_older_form_is_refused_by_name_instead_of_reinterpreted() {
-        let file = tempfile::NamedTempFile::new().unwrap();
-        std::fs::write(
-            file.path(),
-            r#"{"subject":"autofirma","header":{},"cases":{},"protocol":{}}"#,
-        )
-        .unwrap();
-        let catalogue = a_catalogue_of(&["v4_echo_greeting"]);
-
-        let complaint = Dossier::open(
-            file.path(),
-            "autofirma",
-            Profile::Autofirma,
-            &catalogue,
-            None,
-        )
-        .unwrap_err();
-
-        assert!(complaint.contains(&file.path().display().to_string()));
-        assert!(complaint.contains("forma anterior"));
-        assert!(complaint.contains("abre uno nuevo"));
     }
 
     #[test]

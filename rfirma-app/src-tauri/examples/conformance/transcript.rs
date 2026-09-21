@@ -14,12 +14,12 @@ pub struct Transcript {
 }
 
 impl Transcript {
-    /// Abre la transcripción de `case` junto al expediente `dossier`.
-    pub fn open(dossier: &Path, case: &str) -> Result<Self, String> {
-        let directory = transcripts_directory_of(dossier);
+    /// Abre la transcripción de `case` en el informe `report`.
+    pub fn open(report: &Path, case: &str) -> Result<Self, String> {
+        let path = transcript_path_of(report, case);
+        let directory = transcripts_directory_of(report);
         std::fs::create_dir_all(&directory)
             .map_err(|error| format!("{} no se pudo crear: {error}", directory.display()))?;
-        let path = directory.join(format!("{case}.jsonl"));
         let file = File::create(&path)
             .map_err(|error| format!("{} no se pudo crear: {error}", path.display()))?;
         Ok(Self {
@@ -36,16 +36,18 @@ impl Transcript {
     }
 }
 
-fn transcripts_directory_of(dossier: &Path) -> PathBuf {
-    let mut directory = dossier.as_os_str().to_owned();
-    directory.push(".transcripts");
-    PathBuf::from(directory)
+fn transcripts_directory_of(report: &Path) -> PathBuf {
+    report.join("transcripts")
 }
 
-/// El registro de `case`, junto a su transcripción: un fichero por comprobación, nombrado por su
-/// identificador.
-pub(crate) fn log_path_of(dossier: &Path, case: &str) -> PathBuf {
-    transcripts_directory_of(dossier).join(format!("{case}.log"))
+/// Las tramas que viajaron en `case`, una por línea.
+pub(crate) fn transcript_path_of(report: &Path, case: &str) -> PathBuf {
+    transcripts_directory_of(report).join(format!("{case}.jsonl"))
+}
+
+/// El registro de `case`, junto a su transcripción: un fichero por comprobación.
+pub(crate) fn log_path_of(report: &Path, case: &str) -> PathBuf {
+    transcripts_directory_of(report).join(format!("{case}.log"))
 }
 
 /// `raw_event` con cada campo en base64 vuelto a su texto, o anotado como binario si no lo es.

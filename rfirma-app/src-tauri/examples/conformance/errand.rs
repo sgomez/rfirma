@@ -10,8 +10,8 @@ use std::thread::{spawn, JoinHandle};
 use std::time::{Duration, Instant};
 
 use crate::dossier::Verdict;
-use crate::livelog::{CheckLog, LiveLogSink, Provenance};
-use crate::transcript::{legible, log_path_of, Transcript};
+use crate::livelog::{LiveLogSink, Provenance};
+use crate::transcript::{legible, Transcript};
 use crate::Probe;
 
 /// El `type` con el que el conductor avisa de que reventó él, no el sujeto.
@@ -50,22 +50,19 @@ impl Probe {
         mode: &str,
         patience: Duration,
     ) -> ErrandOutcome {
-        let start = self.monitor.item_started_at();
-        let log_sink = self.monitor.log_sink();
-        let case_log = CheckLog::open(&log_path_of(&self.dossier, transcript_name)).unwrap_or_else(
-            |complaint| {
-                eprintln!("{complaint}");
-                std::process::exit(1);
-            },
-        );
+        let start = self.witness.started_at();
+        let log_sink = self.witness.log_sink();
+        let mut transcript = match Transcript::open(&self.report, transcript_name) {
+            Ok(transcript) => Some(transcript),
+            Err(complaint) => {
+                self.witness.harness(&complaint);
+                None
+            }
+        };
         let trust_root = the_trust_root_as_pem(&self.trust_root);
         let mut driver = the_published_client_running(trust_root.path(), patience, script, mode);
+        self.witness.driver_spawned(driver.id());
         let events = driver.stdout.take().expect("el conductor escribe eventos");
-        let mut transcript =
-            Transcript::open(&self.dossier, transcript_name).unwrap_or_else(|complaint| {
-                eprintln!("{complaint}");
-                std::process::exit(1);
-            });
         let mut subject: Option<SubjectProcess> = None;
         let mut error_type = None;
         let mut error_code = None;
@@ -73,26 +70,20 @@ impl Probe {
         let mut data = None;
         let mut protocol_conditions = Vec::new();
         for event in BufReader::new(events).lines().map_while(Result::ok) {
-            if self.verbose {
-                println!("{event}");
-                let _ = std::io::stdout().flush();
+            if let Some(Err(complaint)) = transcript.as_mut().map(|t| t.record(&event)) {
+                self.witness.harness(&complaint);
+                transcript = None;
             }
-            transcript.record(&event).unwrap_or_else(|complaint| {
-                eprintln!("{complaint}");
-                std::process::exit(1);
-            });
-            let elapsed = start.elapsed();
-            let readable_event = legible(&event);
-            case_log.record(elapsed, Provenance::Driver, &readable_event);
-            log_sink.push(Provenance::Driver, elapsed, readable_event);
+            log_sink.push(Provenance::Driver, start.elapsed(), &legible(&event));
             if let Some(url) = the_launch_url_in(&event) {
-                if self.verbose {
-                    eprintln!("sondeo: invoco {} con {url}", self.subject.display());
-                }
-                subject = Some(the_subject_invoked_with(
+                log_sink.push(
+                    Provenance::Harness,
+                    start.elapsed(),
+                    &format!("invoco {} con {url}", self.subject.display()),
+                );
+                subject = Some(SubjectProcess::spawn(
                     &self.subject,
                     &url,
-                    case_log.clone(),
                     log_sink.clone(),
                     start,
                 ));
@@ -118,6 +109,7 @@ impl Probe {
         }
         let launched = subject.is_some();
         let _ = driver.wait();
+        self.witness.driver_finished();
         let recent_subject_lines = if let Some(mut subject_proc) = subject {
             let recents = subject_proc.recent_lines();
             subject_proc.terminate();
@@ -178,13 +170,7 @@ pub(crate) struct SubjectProcess {
 }
 
 impl SubjectProcess {
-    pub(crate) fn spawn(
-        subject: &Path,
-        url: &str,
-        case_log: CheckLog,
-        log_sink: LiveLogSink,
-        start: Instant,
-    ) -> Self {
+    pub(crate) fn spawn(subject: &Path, url: &str, log_sink: LiveLogSink, start: Instant) -> Self {
         let mut child = Command::new(subject)
             .arg(url)
             .stdout(Stdio::piped())
@@ -196,21 +182,15 @@ impl SubjectProcess {
         let mut drain_handles = Vec::new();
 
         if let Some(stdout) = child.stdout.take() {
-            let log = case_log.clone();
             let sink = log_sink.clone();
             let recents = Arc::clone(&recent_lines);
-            drain_handles.push(spawn(move || {
-                drain_stream(stdout, log, sink, start, recents)
-            }));
+            drain_handles.push(spawn(move || drain_stream(stdout, sink, start, recents)));
         }
 
         if let Some(stderr) = child.stderr.take() {
-            let log = case_log.clone();
             let sink = log_sink.clone();
             let recents = Arc::clone(&recent_lines);
-            drain_handles.push(spawn(move || {
-                drain_stream(stderr, log, sink, start, recents)
-            }));
+            drain_handles.push(spawn(move || drain_stream(stderr, sink, start, recents)));
         }
 
         Self {
@@ -235,16 +215,13 @@ impl SubjectProcess {
 
 fn drain_stream(
     stream: impl std::io::Read,
-    case_log: CheckLog,
     log_sink: LiveLogSink,
     start: Instant,
     recents: Arc<Mutex<VecDeque<String>>>,
 ) {
     let reader = BufReader::new(stream);
     for line in reader.lines().map_while(Result::ok) {
-        let elapsed = start.elapsed();
-        case_log.record(elapsed, Provenance::Subject, &line);
-        log_sink.push(Provenance::Subject, elapsed, line.clone());
+        log_sink.push(Provenance::Subject, start.elapsed(), &line);
         if let Ok(mut recents_lock) = recents.lock() {
             if recents_lock.len() >= 50 {
                 recents_lock.pop_front();
@@ -252,16 +229,6 @@ fn drain_stream(
             recents_lock.push_back(line);
         }
     }
-}
-
-fn the_subject_invoked_with(
-    subject: &Path,
-    url: &str,
-    case_log: CheckLog,
-    log_sink: LiveLogSink,
-    start: Instant,
-) -> SubjectProcess {
-    SubjectProcess::spawn(subject, url, case_log, log_sink, start)
 }
 
 /// `NODE_EXTRA_CA_CERTS` solo lee PEM, y la raíz que instala AutoFirma en el escritorio es DER.
@@ -439,27 +406,21 @@ mod tests {
         assert!(the_protocol_condition_in(event).is_none());
     }
     #[test]
-    fn drain_stream_pipes_lines_to_log_and_preserves_recents() {
-        let dir = tempfile::tempdir().unwrap();
-        let case_log = CheckLog::open(&dir.path().join("a_check.log")).unwrap();
-        let log_sink = LiveLogSink::new(crate::livelog::LogFilter::All, 8);
+    fn drain_stream_delivers_lines_as_the_subject_and_preserves_recents() {
+        let delivered = Arc::new(Mutex::new(Vec::new()));
+        let into = Arc::clone(&delivered);
+        let log_sink = LiveLogSink::new(move |line| into.lock().unwrap().push(line));
         let recents = Arc::new(Mutex::new(VecDeque::new()));
         let input = std::io::Cursor::new(b"linea 1\nlinea 2\nlinea 3\n");
 
-        drain_stream(
-            input,
-            case_log,
-            log_sink.clone(),
-            Instant::now(),
-            Arc::clone(&recents),
-        );
+        drain_stream(input, log_sink, Instant::now(), Arc::clone(&recents));
 
         let stored: Vec<String> = recents.lock().unwrap().iter().cloned().collect();
         assert_eq!(stored, vec!["linea 1", "linea 2", "linea 3"]);
 
-        let snapshot = log_sink.snapshot();
-        assert_eq!(snapshot.len(), 3);
-        assert_eq!(snapshot[0].text, "linea 1");
+        let delivered = delivered.lock().unwrap();
+        assert_eq!(delivered.len(), 3);
+        assert!(delivered[0].ends_with("sujeto    linea 1"));
     }
     #[test]
     fn outcome_carries_recent_subject_lines() {

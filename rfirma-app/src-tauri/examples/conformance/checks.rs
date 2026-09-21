@@ -2,7 +2,6 @@
 //! contra el sujeto y cómo se resuelve su veredicto.
 
 use std::collections::{BTreeMap, BTreeSet};
-use std::io::IsTerminal;
 use std::net::TcpListener;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -14,9 +13,8 @@ use base64::Engine as _;
 
 use crate::baseline::{contrast_of, verdict_name, Contrast, Profile};
 use crate::catalogue::{Check, Drive};
-use crate::dossier::{CheckState, Dossier, Verdict};
+use crate::dossier::{CheckState, Verdict};
 use crate::errand::ErrandOutcome;
-use crate::listing::{chapter_tag, the_closing_of, verdict_badge, GRAY, PENDING_BADGE};
 use crate::verdicts::{
     the_verdict_for_a_bind_failure, the_verdict_for_a_cancelled_dialogue,
     the_verdict_for_a_headless_batch, the_verdict_for_a_pinned_certificate,
@@ -58,159 +56,101 @@ const THE_TIMESTAMP_TOKEN_OID: [u8; 13] = [
 /// Cada cuánto mira el ocupante si le han dicho que suelte el puerto.
 const THE_OCCUPIER_HEARTBEAT: Duration = Duration::from_millis(50);
 
+/// Cómo quedó una entrada al terminar su grupo: resuelta, o pendiente con su motivo.
+#[derive(Debug)]
+pub(crate) enum Settlement {
+    Resolved {
+        id: String,
+        verdict: Verdict,
+        observation: Option<String>,
+        duration: Duration,
+    },
+    Pending {
+        id: String,
+        why: String,
+    },
+}
+
+impl Settlement {
+    fn pending(check: &Check, why: impl Into<String>) -> Self {
+        Self::Pending {
+            id: check.id.clone(),
+            why: why.into(),
+        }
+    }
+}
+
 impl Probe {
-    pub(crate) fn run_one(
-        &self,
-        dossier: &mut Dossier,
-        catalogue: &[Check],
-        id: &str,
-        relaunch: bool,
-    ) {
-        let Some(check) = catalogue.iter().find(|check| check.id == id) else {
-            eprintln!(
-                "no conozco la comprobación «{id}»; están en {}",
-                crate::catalogue::the_catalogue_dir().display()
-            );
-            std::process::exit(2);
-        };
-        if !relaunch && matches!(dossier.state_of(id), Some(CheckState::Resolved(_))) {
-            println!("la comprobación «{id}» ya está resuelta; usa --relaunch para repetirla");
-            return;
-        }
-        self.monitor
-            .display_header(dossier.subject(), dossier.header());
-        self.run_group(dossier, &[check], &mut 0, 1);
-    }
-
-    pub(crate) fn run_pending(
-        &self,
-        dossier: &mut Dossier,
-        catalogue: &[Check],
-        suite: Option<&str>,
-    ) {
-        let pending: Vec<&Check> = catalogue
-            .iter()
-            .filter(|check| suite.is_none_or(|wanted| check.suite == wanted))
-            .filter(|check| !matches!(dossier.state_of(&check.id), Some(CheckState::Resolved(_))))
-            .collect();
-        if pending.is_empty() {
-            println!("{}", no_pending_checks_message(catalogue.len(), suite));
-            self.close_the_run(dossier, catalogue, suite);
-            return;
-        }
-
-        self.monitor
-            .display_header(dossier.subject(), dossier.header());
-        let total = pending.len();
-        let mut done = 0;
-        let mut already_run: BTreeSet<&str> = BTreeSet::new();
-        let mut failed_greetings =
-            the_greetings_already_failed(catalogue, |id| dossier.state_of(id));
-        for (index, check) in pending.iter().enumerate() {
-            if already_run.contains(check.id.as_str()) {
-                continue;
-            }
-            if let Some(greeting) = failed_greetings.get(check.suite.as_str()) {
-                already_run.insert(check.id.as_str());
-                self.skip_behind_a_failed_greeting(check, greeting, &mut done, total);
-                continue;
-            }
-            let group: Vec<&Check> = the_group_of(check, &pending[index..])
-                .into_iter()
-                .filter(|member| !failed_greetings.contains_key(member.suite.as_str()))
-                .collect();
-            for member in &group {
-                already_run.insert(member.id.as_str());
-            }
-            self.run_group(dossier, &group, &mut done, total);
-            if a_failed_greeting(check, dossier.state_of(&check.id)) {
-                failed_greetings.insert(check.suite.as_str(), check.id.as_str());
-            }
-        }
-        self.close_the_run(dossier, catalogue, suite);
-    }
-
-    fn skip_behind_a_failed_greeting(
-        &self,
-        check: &Check,
-        greeting: &str,
-        done: &mut usize,
-        total: usize,
-    ) {
-        *done += 1;
-        self.monitor.announce_check(check);
-        self.monitor
-            .start_progress("Comprobación", *done, total, &check.id);
-        self.leave_pending(check, &the_reason_behind_a_failed_greeting(greeting));
-    }
-
-    /// El cierre de la tanda: las dos filas del resumen, las sorpresas nombradas y el código de
-    /// salida que las traduce.
-    fn close_the_run(&self, dossier: &Dossier, catalogue: &[Check], suite: Option<&str>) {
-        let (closing, code) = the_closing_of(dossier, catalogue, suite);
-        print!("{closing}");
-        if code != 0 {
-            std::process::exit(code);
-        }
-    }
-
-    /// Corre un grupo de comprobaciones que comparten trámite: el conductor arranca una sola vez y
-    /// cada entrada lee de lo que viajó lo suyo.
-    fn run_group(&self, dossier: &mut Dossier, group: &[&Check], done: &mut usize, total: usize) {
+    /// Corre un grupo de comprobaciones que comparten trámite —el conductor arranca una sola vez y
+    /// cada entrada lee de lo que viajó lo suyo— y dice cómo quedó cada una, sin escribir nada.
+    pub(crate) fn run_group(&self, group: &[&Check], declared_store: &str) -> Vec<Settlement> {
         let head = group[0];
-        *done += 1;
-        self.monitor.announce_check(head);
-        self.monitor
-            .start_progress("Comprobación", *done, total, &head.id);
-
         if let Some(motive) = &head.unmeasurable {
-            self.resolve(
-                dossier,
+            return vec![self.settle(
                 head,
                 CheckOutcome::of(Verdict::NotObservable, motive.clone()),
                 Duration::ZERO,
-            );
-            return;
+            )];
         }
-        if let Some(why) = self.the_unmet_precondition_of(head, dossier) {
-            self.leave_pending(head, &why);
-            return;
+        if let Some(why) = the_unmet_precondition_of(head, declared_store) {
+            self.witness.harness(&format!("no se corre: {why}"));
+            return vec![Settlement::pending(head, why)];
         }
         for warning in the_warnings_of(group) {
-            println!("{warning}");
+            self.witness.harness(&warning);
         }
 
         let start = Instant::now();
         let outcome = self.measure(head);
         let duration = start.elapsed();
+        if self.witness.aborted() {
+            return group
+                .iter()
+                .map(|check| Settlement::pending(check, "se abortó mientras corría"))
+                .collect();
+        }
 
-        let answer = head
-            .question
-            .as_deref()
-            .map(|question| self.monitor.ask(question));
-        self.resolve(
-            dossier,
+        let answer = match head.question.as_deref() {
+            None => None,
+            Some(question) => match self.witness.ask(&head.id, question) {
+                Some(answer) => Some(answer),
+                None => return vec![Settlement::pending(head, "se descartó la pregunta")],
+            },
+        };
+        let mut settled = vec![self.settle(
             head,
             self.the_verdict_for(head, &outcome, answer.as_deref()),
             duration,
+        )];
+        settled.extend(
+            group[1..]
+                .iter()
+                .map(|member| self.settle(member, the_verdict_of(member, &outcome), duration)),
         );
-        for member in &group[1..] {
-            *done += 1;
-            self.monitor.announce_check(member);
-            self.monitor
-                .start_progress("Comprobación", *done, total, &member.id);
-            self.resolve(dossier, member, the_verdict_of(member, &outcome), duration);
-        }
+        settled
     }
 
-    /// Lo que la comprobación necesita y la tanda no trae; `None` si no le falta nada.
-    fn the_unmet_precondition_of(&self, check: &Check, dossier: &Dossier) -> Option<String> {
-        the_unmet_need_of(
-            check,
-            &dossier.header().store,
-            std::io::stdin().is_terminal(),
-        )
-        .or_else(|| the_occupied_port_complaint(check))
+    fn settle(&self, check: &Check, outcome: CheckOutcome, duration: Duration) -> Settlement {
+        match outcome {
+            CheckOutcome::Resolved {
+                verdict,
+                observation,
+            } => {
+                let said = the_note_of(check, verdict, observation.as_deref(), self.profile)
+                    .map_or_else(
+                        || verdict_name(verdict).to_owned(),
+                        |note| format!("{} — {note}", verdict_name(verdict)),
+                    );
+                self.witness.harness(&format!("{}: {said}", check.id));
+                Settlement::Resolved {
+                    id: check.id.clone(),
+                    verdict,
+                    observation,
+                    duration,
+                }
+            }
+            CheckOutcome::StillPending => Settlement::pending(check, "no hubo respuesta"),
+        }
     }
 
     /// Conduce el trámite de la comprobación, con el arnés que declare si necesita más que
@@ -328,52 +268,15 @@ impl Probe {
             ),
         }
     }
-
-    fn leave_pending(&self, check: &Check, why: &str) {
-        self.monitor.finish_item(
-            PENDING_BADGE,
-            GRAY,
-            &format!("{} {}", chapter_tag(&check.chapter), check.id),
-            Duration::ZERO,
-            Some(why),
-        );
-    }
-
-    fn resolve(
-        &self,
-        dossier: &mut Dossier,
-        check: &Check,
-        outcome: CheckOutcome,
-        duration: Duration,
-    ) {
-        match outcome {
-            CheckOutcome::Resolved {
-                verdict,
-                observation,
-            } => {
-                let (badge, color) = verdict_badge(verdict);
-                let note = the_note_of(check, verdict, observation.as_deref(), self.profile);
-                self.monitor.finish_item(
-                    badge,
-                    color,
-                    &format!("{} {}", chapter_tag(&check.chapter), check.id),
-                    duration,
-                    note.as_deref(),
-                );
-                dossier
-                    .resolve(&check.id, verdict, observation)
-                    .unwrap_or_else(|complaint| {
-                        eprintln!("{complaint}");
-                        std::process::exit(1);
-                    });
-            }
-            CheckOutcome::StillPending => self.leave_pending(check, "no hubo respuesta"),
-        }
-    }
 }
 
-/// Lo que se dice al pie de la comprobación recién resuelta: su observación y, si lo observado no
-/// es lo que la línea base declara, la sorpresa dicha en el momento.
+/// Lo que la comprobación necesita y la tanda no trae; `None` si no le falta nada.
+fn the_unmet_precondition_of(check: &Check, declared_store: &str) -> Option<String> {
+    the_unmet_need_of(check, declared_store).or_else(|| the_occupied_port_complaint(check))
+}
+
+/// Lo que se dice de la comprobación recién resuelta: su observación y, si lo observado no es lo que
+/// la línea base declara, la sorpresa dicha en el momento.
 fn the_note_of(
     check: &Check,
     verdict: Verdict,
@@ -417,7 +320,7 @@ fn the_channel_opened(outcome: &ErrandOutcome) -> Option<bool> {
 
 /// Las comprobaciones que comparten trámite con `head` y pueden resolverse de la misma tanda: las
 /// que se conducen igual y no piden ni arnés, ni persona, ni un almacén concreto.
-fn the_group_of<'a>(head: &'a Check, rest: &[&'a Check]) -> Vec<&'a Check> {
+pub(crate) fn the_group_of<'a>(head: &'a Check, rest: &[&'a Check]) -> Vec<&'a Check> {
     let mut group = vec![head];
     if !shares_an_errand(head) {
         return group;
@@ -449,7 +352,7 @@ fn a_failed_greeting(check: &Check, state: Option<CheckState>) -> bool {
 
 /// Los conjuntos cuyo saludo quedó resuelto sin cumplirse en una tanda anterior, con el saludo que
 /// los detiene.
-fn the_greetings_already_failed(
+pub(crate) fn the_greetings_already_failed(
     catalogue: &[Check],
     state_of: impl Fn(&str) -> Option<CheckState>,
 ) -> BTreeMap<&str, &str> {
@@ -463,7 +366,7 @@ fn the_greetings_already_failed(
         .collect()
 }
 
-fn the_reason_behind_a_failed_greeting(greeting: &str) -> String {
+pub(crate) fn the_reason_behind_a_failed_greeting(greeting: &str) -> String {
     format!("no se corre: el saludo de su conjunto, «{greeting}», no se cumplió")
 }
 
@@ -494,20 +397,15 @@ fn the_wait_announcement_of(check: &Check) -> Option<String> {
     })
 }
 
-/// Lo que le falta a la comprobación de lo que declara `needs`, con el mensaje que dice qué falta y
-/// cómo relanzarla; `None` si la persona y el almacén que pide están.
-fn the_unmet_need_of(check: &Check, declared_store: &str, terminal: bool) -> Option<String> {
-    if check.needs_a_person() && !terminal {
-        return Some("no hay nadie delante para contestar".to_owned());
-    }
+/// El almacén que la comprobación declara en `needs` y la tanda no trae, con el mensaje que dice
+/// cómo correrla; `None` si lo trae o no pide ninguno.
+fn the_unmet_need_of(check: &Check, declared_store: &str) -> Option<String> {
     let wanted = check.required_store()?;
     let has_it = declared_store == wanted || declared_store.contains("softhsm");
     (!has_it).then(|| {
         format!(
-            "la tanda declara el almacén «{declared_store}»; esta comprobación exige «{wanted}»: \
-             relánzala en un expediente nuevo con `just conformance --dossier <expediente-nuevo> \
-             --store {wanted} run {}`",
-            check.id
+            "el informe declara el almacén «{declared_store}»; esta comprobación exige \
+             «{wanted}»: córrela en un informe nuevo creado con el almacén «{wanted}»"
         )
     })
 }
@@ -524,36 +422,6 @@ fn the_occupied_port_complaint(check: &Check) -> Option<String> {
 
 fn port_is_occupied(port: u16) -> bool {
     TcpListener::bind(("0.0.0.0", port)).is_err()
-}
-
-/// El motivo por el que una comprobación sigue pendiente al cierre de la tanda: la misma
-/// precondición incumplida si sigue sin cumplirse, o que no hubo respuesta la última vez.
-pub(crate) fn the_reason_it_is_still_pending(
-    check: &Check,
-    declared_store: &str,
-    terminal: bool,
-) -> String {
-    the_unmet_need_of(check, declared_store, terminal)
-        .or_else(|| the_occupied_port_complaint(check))
-        .unwrap_or_else(|| {
-            format!(
-                "no hubo respuesta la última vez: relánzala con `just conformance run {} --relaunch`",
-                check.id
-            )
-        })
-}
-
-pub(crate) fn no_pending_checks_message(total: usize, suite: Option<&str>) -> String {
-    let scope = suite
-        .map(|wanted| format!("del conjunto {wanted}"))
-        .unwrap_or_else(|| "del catálogo".to_owned());
-    format!(
-        "No quedan comprobaciones pendientes {scope} en el expediente ({total} en el catálogo).\n\n\
-         Opciones para continuar:\n  \
-         - Listar el expediente:        list\n  \
-         - Listar un conjunto:          list --suite <conjunto>\n  \
-         - Relanzar una comprobación:   run <id> --relaunch"
-    )
 }
 
 /// Si la firma en Base64 lleva el sello de tiempo estampado de verdad: busca el OID del atributo
@@ -634,21 +502,6 @@ mod tests {
         assert!(!the_signature_carries_a_timestamp(
             "no es base64 ni de lejos: %%%"
         ));
-    }
-
-    #[test]
-    fn the_message_of_a_complete_run_lists_what_to_do_next() {
-        let message = no_pending_checks_message(34, None);
-        assert!(message.contains("34 en el catálogo"));
-        assert!(message.contains("list --suite <conjunto>"));
-        assert!(message.contains("run <id> --relaunch"));
-        assert!(!message.contains("protocol"));
-    }
-
-    #[test]
-    fn the_message_of_a_complete_suite_names_the_suite() {
-        let message = no_pending_checks_message(34, Some("versiones"));
-        assert!(message.contains("del conjunto versiones"));
     }
 
     #[test]
@@ -873,44 +726,23 @@ needs = [{needs}]
     }
 
     #[test]
-    fn a_check_that_needs_a_person_without_a_terminal_is_left_pending() {
-        let check = a_check_that_needs(r#""persona""#);
-        assert_eq!(
-            the_unmet_need_of(&check, "cualquier-almacen", false).as_deref(),
-            Some("no hay nadie delante para contestar")
-        );
-    }
-
-    #[test]
-    fn a_check_that_needs_a_person_with_a_terminal_needs_nothing_more() {
-        let check = a_check_that_needs(r#""persona""#);
-        assert_eq!(the_unmet_need_of(&check, "cualquier-almacen", true), None);
-    }
-
-    #[test]
-    fn a_store_mismatch_names_the_missing_store_and_the_relaunch_order() {
+    fn a_store_mismatch_names_the_missing_store_and_where_to_run_it() {
         let check = a_check_that_needs(r#""almacén:rfirma-test-ecc""#);
-        let reason = the_unmet_need_of(&check, "rfirma-test", true).unwrap();
-        assert!(reason.contains("rfirma-test-ecc"));
-        assert!(reason.contains("rfirma-test"));
-        assert!(reason.contains(
-            "just conformance --dossier <expediente-nuevo> --store rfirma-test-ecc run a_check"
-        ));
+        let reason = the_unmet_need_of(&check, "rfirma-test").unwrap();
+        assert!(reason.contains("«rfirma-test»"));
+        assert!(reason.contains("informe nuevo creado con el almacén «rfirma-test-ecc»"));
     }
 
     #[test]
     fn softhsm_satisfies_any_declared_store() {
         let check = a_check_that_needs(r#""almacén:rfirma-test-ecc""#);
-        assert_eq!(
-            the_unmet_need_of(&check, "softhsm2-token-generico", true),
-            None
-        );
+        assert_eq!(the_unmet_need_of(&check, "softhsm2-token-generico"), None);
     }
 
     #[test]
     fn a_check_without_a_declared_store_needs_nothing_from_it() {
         let check = a_check_that_needs(r#""espera:5""#);
-        assert_eq!(the_unmet_need_of(&check, "cualquier-almacen", true), None);
+        assert_eq!(the_unmet_need_of(&check, "cualquier-almacen"), None);
     }
 
     #[test]
@@ -937,19 +769,5 @@ needs = [{needs}]
     fn a_check_without_declared_patience_announces_nothing() {
         let check = a_check_that_needs(r#""persona""#);
         assert_eq!(the_wait_announcement_of(&check), None);
-    }
-
-    #[test]
-    fn the_reason_still_pending_falls_back_to_relaunch_when_nothing_is_unmet() {
-        let check = a_check_that_needs(r#""persona""#);
-        let reason = the_reason_it_is_still_pending(&check, "cualquier-almacen", true);
-        assert!(reason.contains("just conformance run a_check --relaunch"));
-    }
-
-    #[test]
-    fn the_reason_still_pending_prefers_the_unmet_need() {
-        let check = a_check_that_needs(r#""persona""#);
-        let reason = the_reason_it_is_still_pending(&check, "cualquier-almacen", false);
-        assert_eq!(reason, "no hay nadie delante para contestar");
     }
 }

@@ -2,60 +2,80 @@
 //! la línea base.
 
 use std::collections::BTreeSet;
-use std::path::Path;
+
+use serde::Serialize;
 
 use crate::baseline::verdict_name;
 use crate::dossier::{CheckState, Dossier};
-use crate::listing::{chapter_tag, PENDING_BADGE, RED, RESET};
 
-pub(crate) fn compare(a: &Path, b: &Path) -> Result<String, String> {
-    let left = Dossier::read(a)?;
-    let right = Dossier::read(b)?;
-    Ok(format_comparison(&left, &right, false))
+pub(crate) const PENDING_NAME: &str = "PENDIENTE";
+
+#[derive(Debug, Serialize)]
+pub(crate) struct Comparison {
+    a: Side,
+    b: Side,
+    rows: Vec<Row>,
+    differing: usize,
 }
 
-pub(crate) fn format_comparison(left: &Dossier, right: &Dossier, use_color: bool) -> String {
-    let mut out = format!(
-        "A: {} ({}, versión {})\nB: {} ({}, versión {})\n",
-        left.subject(),
-        left.profile().name(),
-        left.header().subject_version,
-        right.subject(),
-        right.profile().name(),
-        right.header().subject_version
-    );
+#[derive(Debug, Serialize)]
+struct Side {
+    subject: String,
+    profile: &'static str,
+    subject_version: String,
+}
 
+#[derive(Debug, PartialEq, Eq, Serialize)]
+struct Row {
+    id: String,
+    chapter: Option<String>,
+    a: &'static str,
+    b: &'static str,
+    differ: bool,
+}
+
+pub(crate) fn compare(left: &Dossier, right: &Dossier) -> Comparison {
     let ids: BTreeSet<&str> = left
         .checks()
         .map(|(id, _)| id)
         .chain(right.checks().map(|(id, _)| id))
         .collect();
-    let mut differing = 0;
-    for id in ids {
-        let (observed_left, chapter) = observation_of(left, id);
-        let (observed_right, other_chapter) = observation_of(right, id);
-        let differ = observed_left != observed_right;
-        differing += usize::from(differ);
-        let tail = match (differ, use_color) {
-            (false, _) => String::new(),
-            (true, false) => " ← difieren".to_owned(),
-            (true, true) => format!("{RED} ← difieren{RESET}"),
-        };
-        out.push_str(&format!(
-            "\n{} {id}\n  A: {observed_left}\n  B: {observed_right}{tail}\n",
-            chapter_tag(chapter.unwrap_or(other_chapter.unwrap_or("--")))
-        ));
+    let rows: Vec<Row> = ids
+        .into_iter()
+        .map(|id| {
+            let (a, chapter) = observation_of(left, id);
+            let (b, other_chapter) = observation_of(right, id);
+            Row {
+                id: id.to_owned(),
+                chapter: chapter.or(other_chapter).map(str::to_owned),
+                a,
+                b,
+                differ: a != b,
+            }
+        })
+        .collect();
+    Comparison {
+        a: side_of(left),
+        b: side_of(right),
+        differing: rows.iter().filter(|row| row.differ).count(),
+        rows,
     }
-    out.push_str(&format!("\n{differing} comprobaciones difieren.\n"));
-    out
+}
+
+fn side_of(dossier: &Dossier) -> Side {
+    Side {
+        subject: dossier.subject().to_owned(),
+        profile: dossier.profile().name(),
+        subject_version: dossier.header().subject_version.clone(),
+    }
 }
 
 fn observation_of<'a>(dossier: &'a Dossier, id: &str) -> (&'static str, Option<&'a str>) {
-    match dossier.checks().find(|(each, _)| *each == id) {
+    match dossier.record_of(id) {
         None => ("ausente", None),
-        Some((_, record)) => (
+        Some(record) => (
             match record.state {
-                CheckState::Pending => PENDING_BADGE,
+                CheckState::Pending => PENDING_NAME,
                 CheckState::Resolved(verdict) => verdict_name(verdict),
             },
             Some(record.chapter.as_str()),
@@ -65,6 +85,8 @@ fn observation_of<'a>(dossier: &'a Dossier, id: &str) -> (&'static str, Option<&
 
 #[cfg(test)]
 mod tests {
+    use std::time::Duration;
+
     use super::*;
     use crate::baseline::Profile;
     use crate::catalogue::the_catalogue_in;
@@ -106,8 +128,12 @@ drive = { mode = "v4", script = "selectcert" }
             }),
         )
         .unwrap();
-        dossier.resolve("a_one", verdict, None).unwrap();
-        dossier.resolve("a_two", Verdict::Compliant, None).unwrap();
+        dossier
+            .resolve("a_one", verdict, None, Duration::ZERO)
+            .unwrap();
+        dossier
+            .resolve("a_two", Verdict::Compliant, None, Duration::ZERO)
+            .unwrap();
         dossier
     }
 
@@ -116,11 +142,29 @@ drive = { mode = "v4", script = "selectcert" }
         let left = a_dossier(Profile::Autofirma, Verdict::Noncompliant);
         let right = a_dossier(Profile::Rfirma, Verdict::Compliant);
 
-        let output = format_comparison(&left, &right, false);
+        let comparison = compare(&left, &right);
 
-        assert!(output.contains("A: autofirma (autofirma, versión 1.9.2)"));
-        assert!(output.contains("[Cap. 15] a_one\n  A: NO CONFORME\n  B: CONFORME ← difieren"));
-        assert!(output.contains("[Cap. 15] a_two\n  A: CONFORME\n  B: CONFORME\n"));
-        assert!(output.contains("1 comprobaciones difieren."));
+        assert_eq!(comparison.a.profile, "autofirma");
+        assert_eq!(comparison.b.subject_version, "1.9.2");
+        assert_eq!(
+            comparison.rows,
+            [
+                Row {
+                    id: "a_one".to_owned(),
+                    chapter: Some("15".to_owned()),
+                    a: "NO CONFORME",
+                    b: "CONFORME",
+                    differ: true,
+                },
+                Row {
+                    id: "a_two".to_owned(),
+                    chapter: Some("15".to_owned()),
+                    a: "CONFORME",
+                    b: "CONFORME",
+                    differ: false,
+                },
+            ]
+        );
+        assert_eq!(comparison.differing, 1);
     }
 }
