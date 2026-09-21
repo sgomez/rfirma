@@ -152,7 +152,7 @@ heredera de `UrlParameters`
 | `exts` | Lista separada por comas | No | Extensiones sugeridas para el filtrado de ficheros en el diálogo (p. ej. `pdf,txt`). | `UrlParametersToSave.java:30,221-233` |
 | `desc` | Cadena de texto | No | Descripción legible del tipo de fichero asociado al filtro de extensiones (p. ej. `Documentos PDF`). | `UrlParametersToSave.java:24,242-258` |
 | `gzip` | Booleano (`true`/`false`) | No | Indica si los datos contenidos en `dat` fueron comprimidos con GZIP antes de codificarse en Base64. | `UrlParameters.java:40,311` |
-| `ver` | Entero (`0`–`4`) | No | Versión mínima de protocolo requerida por la invocación. Por defecto: `"0"`. | `UrlParametersToSave.java:36,170-175` |
+| `ver` | Entero (`0`–`4`) | No | Versión de protocolo de la operación; solo se lee sin canal abierto (servidor intermedio). Por defecto: `"0"`. Ver [14 §2.3](14-versiones.md). | `UrlParametersToSave.java:36,170-175` |
 | `v` | Entero (`1`–`4`) | No | Versión de protocolo declarada en la URL (extraída por `ProtocolInvocationLauncher.getVersion`). | `ProtocolInvocationLauncher.java:923-939` |
 | `mcv` | Cadena versionada (p. ej. `1.9.2`) | No | Versión mínima de la aplicación AutoFirma requerida. Si la versión actual es menor, falla con `SAF_41`. | `UrlParameters.java:73,260-262`, `ProtocolInvocationLauncherSave.java:62-73` |
 | `aw` | Booleano (`true`/`false`) | No | Habilita la espera activa (*active waiting*) en el servidor intermedio mientras se guarda el fichero. | `UrlParameters.java:70,257-258`, `ProtocolInvocationLauncher.java:483-485` |
@@ -416,7 +416,7 @@ A diferencia de `save`, `load` nunca procesa ni requiere datos binarios de entra
 | `exts` | Lista separada por comas | No | Extensiones de fichero permitidas en el selector (p. ej. `pdf,xml,xsig`). | `UrlParametersToLoad.java:27,179-184` |
 | `desc` | Cadena de texto | No | Descripción textual del tipo de fichero que acompaña a las extensiones en el desplegable de filtros. | `UrlParametersToLoad.java:30,186-191` |
 | `filePath` | Ruta de fichero o directorio | No | Ruta local inicial sugerida donde se abrirá el diálogo selector de ficheros. | `UrlParametersToLoad.java:33,193-199` |
-| `ver` | Entero (`0`–`4`) | No | Versión mínima de protocolo requerida por la invocación. Por defecto: `"0"`. | `UrlParametersToLoad.java:18,155-161` |
+| `ver` | Entero (`0`–`4`) | No | Versión de protocolo de la operación; solo se lee sin canal abierto (servidor intermedio). Por defecto: `"0"`. Ver [14 §2.3](14-versiones.md). | `UrlParametersToLoad.java:18,155-161` |
 | `v` | Entero (`1`–`4`) | No | Versión de protocolo declarada en la URL (extraída por `ProtocolInvocationLauncher.getVersion`). | `ProtocolInvocationLauncher.java:923-939` |
 | `mcv` | Cadena versionada (p. ej. `1.9.2`) | No | Versión mínima de la aplicación AutoFirma requerida. Si la versión instalada es inferior, falla con `SAF_41`. | `UrlParametersToLoad.java:153`, `UrlParameters.java:260-262`, `ProtocolInvocationLauncherLoad.java:73-84` |
 

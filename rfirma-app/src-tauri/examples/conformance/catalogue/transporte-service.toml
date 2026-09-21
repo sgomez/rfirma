@@ -339,9 +339,7 @@ drive = { mode = "service", script = "protocol-service" }
 verdict = "conforme"
 
 [check.expect.rfirma]
-verdict = "no-conforme"
-cause = "ADR-0021"
-note = "rFirma comprueba ver en toda operación, venga por el transporte que venga, y rechaza ver=5 con SAF_21."
+verdict = "conforme"
 
 [[check]]
 id = "the_service_channel_closes_after_ninety_seconds_of_inactivity"

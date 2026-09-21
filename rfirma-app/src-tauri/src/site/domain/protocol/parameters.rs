@@ -153,7 +153,7 @@ pub fn check_minimum_client_version(requested: Option<&str>) -> Result<(), Refus
     Ok(())
 }
 
-/// La versión mínima de protocolo que la operación exige en `ver`.
+/// La versión de protocolo que la operación declara en `ver`.
 pub fn minimum_protocol_version(url: &AfirmaUrl) -> i64 {
     url.parameter(MINIMUM_PROTOCOL_VERSION)
         .map_or(VERSION_WHEN_ABSENT, |declared| {
@@ -180,7 +180,7 @@ pub fn check_protocol_version_bounds(required: i64) -> Result<(), Refusal> {
     .because(RefusalSituation::UnsupportedProtocolVersion))
 }
 
-/// Comprueba la versión mínima de protocolo que exige la operación.
+/// Comprueba la versión de protocolo que declara una operación sin canal abierto.
 pub fn check_minimum_protocol_version(required: i64) -> Result<(), Refusal> {
     check_protocol_version_bounds(required)
 }

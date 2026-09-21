@@ -74,12 +74,13 @@ no numérico, registra una advertencia en log y devuelve `false` (`51-56`).
 > La condición no impone cota inferior; solo rechaza valores estrictamente
 > superiores a 4 (`protocolVersion > 4`).
 
-La ausencia de cota inferior no es un descuido funcional, sino la consecuencia
-directa de la semántica de `ver`: el parámetro declara la **versión mínima de
-protocolo que la operación exige de la aplicación**, no el modo de protocolo bajo
-el que debe ejecutarse. La comprobación se limita, por tanto, a verificar que la
-aplicación llega a ese mínimo, y un mínimo negativo queda satisfecho de forma
-trivial. Una invocación con `ver=-10` es aceptada sin error, sin advertencia y sin
+La ausencia de cota inferior es consecuencia de cómo se compara: `support()` solo
+pregunta si la aplicación llega a la versión declarada, y una versión negativa
+queda satisfecha de forma trivial. El getter que la lee se llama
+`getMinimumProtocolVersion`, pero el valor no funciona como una exigencia aparte:
+pasa a ser la **versión de protocolo de la operación**, el mismo papel que `v`
+cumple en un canal (§2.3, régimen A). Para que un trámite exija una versión mínima
+de la aplicación, el protocolo usa otro parámetro, `mcv` (§2.5). Una invocación con `ver=-10` es aceptada sin error, sin advertencia y sin
 registro en log: `parseProtocolVersion("-10")` devuelve `-10`
 (`ProtocolInvocationLauncher.java:907-915`), `MAX_PROTOCOL_VERSION_SUPPORTED.support(-10)`
 devuelve `true` y el valor llega intacto a la operación.
@@ -115,7 +116,7 @@ tipo de invocación.
 
 | Parámetro | Ámbito | Tipo | Valor por defecto | Función |
 |---|---|---|---|---|
-| `ver` | Query string de operaciones directas y elementos XML/JSON | Entero | `"0"` | Declara la versión mínima del protocolo requerida por la operación. |
+| `ver` | Query string de operaciones directas y elementos XML/JSON | Entero | `"0"` | Versión del protocolo de la operación cuando no hay canal (servidor intermedio). Por un canal abierto se ignora y manda `v`. |
 | `v` | Query string de apertura de socket y WebSocket (`afirma://service`, `afirma://websocket`) | Entero | `1` | Declara la versión del protocolo del canal de transporte local. |
 | `mcv` | Query string común de operaciones y payload XML/JSON | Cadena (p. ej. `"1.8.0"`) | `null` (no exigido) | Exige una versión mínima de la aplicación AutoFirma (*Minimum Client Version*). |
 | `jvc` | Query string de arranque de socket, WebSocket y URL de comprobación | Entero | `1` | Código de versión del JavaScript cliente (*JavaScript Version Code*). |
@@ -233,7 +234,10 @@ La versión de protocolo se toma del parámetro `ver` de la operación analizada
 > En la comunicación por socket o WebSocket, el parámetro `ver` incluido dentro de la
 > URI del comando (`cmd=afirma://sign?...&ver=X`) es **completamente ignorado**.
 > La versión de ejecución de la operación queda irremediablemente ligada al parámetro `v`
-> transmitido en el apretón de manos inicial del canal.
+> transmitido en el apretón de manos inicial del canal. El cliente publicado es coherente
+> con ello: solo incluye `ver` en las operaciones del servidor intermedio
+> (`autoscript.js:3715, 3785`), y por los canales declara la versión con `v` en la
+> apertura (`autoscript.js:1747, 2154, 2621, 2931`).
 
 ### 2.4 Parámetro `jvc` (JavaScript Version Code)
 
