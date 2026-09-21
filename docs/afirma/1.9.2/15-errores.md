@@ -528,7 +528,10 @@ A continuación se detalla la totalidad de los 53 códigos de error definidos en
 * **`SAF_17` (`ERROR_UNKNOWN_SIGNER`)**: Los datos sobre los que se solicitó una cofirma
   o contrafirma no contienen una firma electrónica reconocida (`AOInvalidSignatureException`
   al identificar el firmador previo) (`ProtocolInvocationLauncherSign.java:386`,
-  `ProtocolInvocationLauncherSignAndSave.java:378`, `LocalBatchSigner.java:125`).
+  `ProtocolInvocationLauncherSignAndSave.java:378`, `LocalBatchSigner.java:125`). En la
+  1.9.2 esas guardas no se alcanzan: el firmador nulo revienta antes con
+  `NullPointerException` y la petición acaba en `SAF_03`
+  ([BUG-27](A1-bugs-autofirma.md#bug-27-una-multifirma-con-formatauto-sobre-datos-que-no-son-una-firma-revienta-con-nullpointerexception-y-se-reporta-como-saf_03-en-lugar-de-saf_17)).
 * **`SAF_23` (`ERROR_INVALID_POLICY`)**: Parámetros de política de firma inválidos o
   incompatibles con el formato seleccionado (`AOInvalidPolicyException`)
   (`ProtocolInvocationLauncherSign.java:494`, `ProtocolInvocationLauncherSignAndSave.java:486`).

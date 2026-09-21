@@ -176,7 +176,9 @@ drive = { mode = "v4", script = "cosignautowithoutasignature" }
 expects_saf = "SAF_17"
 
 [check.expect.autofirma]
-verdict = "conforme"
+verdict = "no-conforme"
+cause = "BUG-27"
+note = "El firmador nulo revienta con NullPointerException antes de la guarda de SAF_17 y el catch genérico lo reporta como SAF_03."
 
 [check.expect.rfirma]
 verdict = "conforme"

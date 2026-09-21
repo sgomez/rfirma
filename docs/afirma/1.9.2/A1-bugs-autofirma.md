@@ -555,3 +555,24 @@ dirigido al defecto.
   4. El diagnóstico que llega a la sede es por tanto **el contrario del real**: AutoFirma se instaló, arrancó, leyó la URI y rechazó la petición por un error concreto y accionable (un parámetro mal formado, una versión insuficiente, un `fileid` caducado), pero la traza que queda en el registro de la sede acusa a la instalación de la aplicación.
   5. El efecto no se manifiesta en los transportes locales: en socket y WebSocket el valor de retorno de `launch()` **sí** es la respuesta que se entrega al cliente, de modo que los mismos ocho códigos llegan íntegros a la sede.
 * **Causa raíz:** La subida al servidor intermedio se implementa como una instrucción puntual dentro de cada bloque de operación en lugar de como el punto único de salida de `launch()`. Los bloques `catch` anteriores a la operación se escribieron siguiendo la forma del canal local —mostrar el error y devolverlo— sin replicar en cada uno de ellos la llamada a `sendDataToServer` que exige el canal remoto. La asimetría es exacta y de signo opuesto a la de [BUG-08](#bug-08-invocación-incondicional-de-senddatatoserver-en-socketoperationexception-provoca-nullpointerexception-en-conexiones-por-socket), donde el mismo envío se ejecuta sin comprobar que el transporte sea el remoto.
+
+---
+
+### BUG-27: Una multifirma con `format=auto` sobre datos que no son una firma revienta con `NullPointerException` y se reporta como `SAF_03` en lugar de `SAF_17`
+
+* **Comprobación del catálogo:** `format_auto_over_data_that_is_no_signature_is_rejected_with_saf_17`.
+* **Estado en `master`:** **Sigue presente.** `ProtocolInvocationLauncherUtil.java:208-209` sigue pasando a `getSignFormat` el firmador sin comprobarlo, y `AOSignerFactory.java:198` sigue sin aceptar `null`.
+* **Código fuente:** `afirma-simple` · `es.gob.afirma.standalone.protocol.ProtocolInvocationLauncherUtil.java:169-176`, `ProtocolInvocationLauncherSign.java:382-388`, `ProtocolInvocationLauncherSignAndSave.java:374-380`, `LocalBatchSigner.java:121-127`, `ProtocolInvocationLauncher.java:744-748`; `afirma-core` · `es.gob.afirma.core.signers.AOSignerFactory.java:197-198`.
+* **Descripción:** Con `format=auto` y una operación `cosign` o `countersign`, `identifyFormatFromData` busca el firmador que reconozca los datos como firma y pide su nombre de formato:
+  ```java
+  final AOSigner signer = AOSignerFactory.getSigner(data);
+  format = AOSignerFactory.getSignFormat(signer);
+  ```
+  Si ningún firmador reconoce los datos, `getSigner` devuelve `null`, y `getSignFormat` ejecuta `signer.getClass()` sobre esa referencia nula. El `try` que envuelve las dos llamadas solo captura `IOException`, así que el `NullPointerException` sale de `identifyFormatFromData` sin que la función llegue a devolver `null`.
+* **Comportamiento y consecuencia:**
+  1. La guarda `if (format == null)` que lanza `SocketOperationException(ERROR_UNKNOWN_SIGNER)` en `ProtocolInvocationLauncherSign.java:383-388` no llega a evaluarse: en este camino `SAF_17` es código muerto.
+  2. La excepción sale de `processSign` y la recoge el `catch (final Exception e)` genérico de `ProtocolInvocationLauncher.java:744`, que registra «Error en los parametros de firma», muestra el diálogo de error y devuelve `SAF_03` (*«Error en los parámetros de entrada»*).
+  3. La sede recibe un error que acusa a los parámetros de la petición, que eran correctos, en lugar de al contenido, que no es una firma.
+  *(Observado en `sign` por WebSocket v4. `signandsave` y el lote local pasan por la misma función con la misma guarda muerta, pero no se han medido.)*
+* **Causa raíz:** `identifyFormatFromData` no comprueba el resultado de `getSigner(data)` antes de usarlo, y `getSignFormat` no tolera un firmador nulo pese a que su documentación promete devolver `null` para uno no reconocido.
+
