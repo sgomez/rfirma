@@ -576,3 +576,41 @@ dirigido al defecto.
   *(Observado en `sign` por WebSocket v4. `signandsave` y el lote local pasan por la misma función con la misma guarda muerta, pero no se han medido.)*
 * **Causa raíz:** `identifyFormatFromData` no comprueba el resultado de `getSigner(data)` antes de usarlo, y `getSignFormat` no tolera un firmador nulo pese a que su documentación promete devolver `null` para uno no reconocido.
 
+---
+
+### BUG-28: Un servlet del lote en el loopback se rechaza con `SAF_03` en lugar de `SAF_13`
+
+* **Comprobación del catálogo:** `a_batch_servlet_on_the_local_loopback_is_refused_with_saf_13`.
+* **Estado en `master`:** **Corregido por cambio de arquitectura.** La excepción lleva ahora su propio código: `UrlParametersForBatch.java:273, 287` la lanza con `ErrorCode.Request.LOCAL_POSTSIGN_BATCH_URL` (`600416`) o `LOCAL_PRESIGN_BATCH_URL` (`600414`), y el `catch (ParameterException)` del lote responde con `e.getErrorCode()` (`ProtocolInvocationLauncher.java:416-419`). Con el protocolo 4.1 o superior la sede recibe ese código nuevo; con uno anterior, `ProtocolInvocationLauncherErrorManager.java:214-215` lo traduce a `SAF_13`.
+* **Código fuente:** `afirma-simple` · `es.gob.afirma.standalone.protocol.ProtocolInvocationLauncher.java:356-367`, frente a `:510, 622, 732, 817`; `afirma-core` · `es.gob.afirma.core.misc.protocol.UrlParametersForBatch.java:238-259`, `ParameterLocalAccessRequestedException.java:14`.
+* **Descripción:** `UrlParametersForBatch` rechaza un `batchpresignerurl` o `batchpostsignerurl` que apunta a `localhost` o a `127.0.0.1` con `ParameterLocalAccessRequestedException`, que extiende `ParameterException`. Las ramas `sign`, `signandsave`, `save` y `load` tienen un `catch` propio para esa excepción, colocado antes del de `ParameterException`, que emite `SAF_13`. La rama `batch` no lo tiene: la excepción cae en el `catch (ParameterException)` de `:356`, que emite `ERROR_PARAMS`.
+* **Comportamiento y consecuencia:**
+  1. La sede recibe `SAF_03` (*«Error en los parámetros de entrada»*) en lugar de `SAF_13`, y no puede distinguir un servlet local bloqueado de una petición mal formada.
+  2. El registro sí nombra la causa real («El host de la URL proporcionada para el Servlet es local»), pero no llega al cable.
+* **Causa raíz:** El `catch` de `ParameterLocalAccessRequestedException` se replicó en cuatro de las cinco ramas de operación, y en la de `batch` no.
+
+---
+
+### BUG-29: Un servicio de lotes inalcanzable se reporta como `SAF_27` («el servicio informó de un error») en lugar de `SAF_26`
+
+* **Comprobación del catálogo:** `a_batch_whose_presigner_does_not_answer_fails_with_saf_26`.
+* **Estado en `master`:** **Corregido solo con el protocolo 4.1 o superior.** `BatchSigner.java` clasifica ya el fallo en el cliente de lotes: una `IOException` sin respuesta lanza `AOException` con `BatchErrorCode.Communication.JSON_BATCH_PRESIGN_CONNECTION_ERROR` (`401500`, `:648-654`), o sus homólogos del postfirmador y del lote XML (`401600`, `401700`, `401800`). El `catch (AOException)` de `ProtocolInvocationLauncherBatch.java:361` conserva el código. Con el protocolo 4.1 o superior la sede recibe ese código, que sí nombra la conexión fallida. Con uno anterior, que es el que pide el cliente publicado de la 1.9.2, `OLD_ERRORS_ASSOCIATION` no tiene entrada para ninguno de los cuatro, y `getErrorMessage` cae en `ERROR_UNKNOWN`: la sede recibe `SAF_53` en lugar de `SAF_26` (`ProtocolInvocationLauncherErrorManager.java:94, 238-243, 339-342`). La misma tabla solo traduce a `SAF_26` los errores de comunicación del prefirmador, no los del postfirmador.
+* **Código fuente:** `afirma-simple` · `es.gob.afirma.standalone.protocol.ProtocolInvocationLauncherBatch.java:360-389`.
+* **Descripción:** El único camino a `ERROR_CONTACT_BATCH_SERVICE` (`SAF_26`) es un `HttpError` con un código 4xx distinto de 400 (`:366-369`). Si el prefirmador o el postfirmador no aceptan la conexión, `UrlHttpManagerImpl` lanza `java.net.ConnectException`, que no es un `HttpError`: cae en el `catch (Exception)` genérico de `:383`, que emite `ERROR_BATCH_SIGNATURE` (`SAF_27`).
+* **Comportamiento y consecuencia:**
+  1. La sede recibe *«El servicio informó de un error durante la firma del lote»* cuando el servicio no llegó a responder.
+  2. Una sede que reintenta ante `SAF_26` y descarta el lote ante `SAF_27` toma la decisión contraria a la que corresponde.
+* **Causa raíz:** La clasificación de los fallos del servicio mira solo el código HTTP de una respuesta, y la ausencia de respuesta no tiene rama propia.
+
+---
+
+### BUG-30: La contrafirma en un lote local sin `target` falla con «El objetivo de la contrafirma no puede ser nulo»
+
+* **Comprobación del catálogo:** `a_local_batch_admits_countersign_as_a_suboperation`.
+* **Estado en `master`:** **Sigue presente.** `LocalBatchSigner.java:166` sigue pasando la propiedad `target` a `CounterSignTarget.getTarget` sin comprobarla, `CounterSignTarget.java:43-48` sigue sin aceptar `null`, y la asimetría se mantiene: `ProtocolInvocationLauncherSign.java:778` y `ProtocolInvocationLauncherSignAndSave.java:776` siguen resolviendo la ausencia como `LEAFS`.
+* **Código fuente:** `afirma-simple` · `es.gob.afirma.standalone.protocol.LocalBatchSigner.java:161-172, 183-186`, frente a `ProtocolInvocationLauncherSign.java:723-724`; `afirma-core` · `es.gob.afirma.core.signers.CounterSignTarget.java:43-48`.
+* **Descripción:** Para elegir el ámbito de la contrafirma, el lote local llama a `CounterSignTarget.getTarget(extraParams.getProperty("target"))`, y `getTarget` lanza `IllegalArgumentException` si recibe `null`. La operación `sign` resuelve el mismo parámetro con `"tree".equalsIgnoreCase(...)`, que da `LEAFS` cuando falta ([06-operaciones-firma.md](06-operaciones-firma.md), § 2.6).
+* **Comportamiento y consecuencia:**
+  1. Un documento del lote local con `countersign` y sin `target` en sus `extraparams` vuelve como `ERROR_PRE` con la descripción «El objetivo de la contrafirma no puede ser nulo», en lugar de contrafirmar las hojas.
+  2. La misma petición en una contrafirma individual sí contrafirma las hojas: el valor por defecto depende de si el documento viaja o no en un lote.
+* **Causa raíz:** El lote local usa el validador estricto de la API Java donde la capa de protocolo usa en el resto de sitios una comparación que tolera la ausencia.
