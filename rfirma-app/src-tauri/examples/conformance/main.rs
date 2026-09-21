@@ -9,6 +9,7 @@ mod console;
 mod dossier;
 mod errand;
 mod livelog;
+mod report_view;
 mod server;
 mod snapshot;
 mod subject;
@@ -23,7 +24,7 @@ const USAGE: &str = "\
 uso: just conformance
 
 Levanta la consola web de la suite, imprime su URL con el token y la abre en el navegador. El
-sujeto, el informe y las comprobaciones se eligen en la página; no hay órdenes ni banderas.
+cliente, el informe y las comprobaciones se eligen en la página; no hay órdenes ni banderas.
 ";
 
 /// Cuánto espera el conductor a que alguien responda si la comprobación no declara otra cosa.

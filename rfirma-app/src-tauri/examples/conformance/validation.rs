@@ -5,9 +5,8 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
-use crate::baseline::{the_verdict_named, verdict_name};
+use crate::baseline::{the_verdict_named, verdict_name, PENDING_NAME};
 use crate::catalogue::Check;
-use crate::comparison::PENDING_NAME;
 use crate::dossier::{CheckState, Dossier, Verdict};
 
 /// Un resultado distinto del esperado en un cliente conocido, con la ficha que lo explica.
@@ -83,19 +82,35 @@ pub(crate) fn the_reference_dir() -> PathBuf {
 
 /// Lee la referencia `name` de `dir`, que solo puede ser uno de sus ficheros y nunca una ruta.
 pub(crate) fn read_the_reference(dir: &Path, name: &str) -> Result<Reference, String> {
-    let path = std::fs::read_dir(dir)
-        .map_err(|error| format!("{} no se pudo leer: {error}", dir.display()))?
-        .filter_map(Result::ok)
-        .map(|entry| entry.path())
-        .find(|path| {
-            path.extension()
-                .is_some_and(|extension| extension == "toml")
-                && path.file_stem().is_some_and(|stem| stem == name)
-        })
+    let path = the_reference_files_in(dir)?
+        .into_iter()
+        .find(|path| path.file_stem().is_some_and(|stem| stem == name))
         .ok_or_else(|| format!("no hay referencia llamada «{name}»"))?;
     let raw = std::fs::read_to_string(&path)
         .map_err(|error| format!("{} no se pudo leer: {error}", path.display()))?;
     toml::from_str(&raw).map_err(|error| format!("{}: {error}", path.display()))
+}
+
+/// Los nombres de las referencias de `dir`, en orden alfabético.
+pub(crate) fn the_references_in(dir: &Path) -> Result<Vec<String>, String> {
+    let mut names: Vec<String> = the_reference_files_in(dir)?
+        .iter()
+        .filter_map(|path| path.file_stem()?.to_str().map(str::to_owned))
+        .collect();
+    names.sort();
+    Ok(names)
+}
+
+fn the_reference_files_in(dir: &Path) -> Result<Vec<PathBuf>, String> {
+    Ok(std::fs::read_dir(dir)
+        .map_err(|error| format!("{} no se pudo leer: {error}", dir.display()))?
+        .filter_map(Result::ok)
+        .map(|entry| entry.path())
+        .filter(|path| {
+            path.extension()
+                .is_some_and(|extension| extension == "toml")
+        })
+        .collect())
 }
 
 #[cfg(test)]
@@ -255,6 +270,14 @@ note = "Guarda mal."
             read_the_reference(&the_reference_dir(), "../catalogue/saludo").unwrap_err();
 
         assert!(complaint.contains("no hay referencia llamada"));
+    }
+
+    #[test]
+    fn the_references_are_listed_by_name() {
+        let names = the_references_in(&the_reference_dir()).unwrap();
+
+        assert!(names.contains(&"autofirma-1.9.2".to_owned()));
+        assert!(names.iter().all(|name| !name.ends_with(".toml")));
     }
 
     #[test]

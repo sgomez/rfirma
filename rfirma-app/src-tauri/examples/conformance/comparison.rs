@@ -1,14 +1,11 @@
-//! La comparación de dos expedientes: qué observó cada cliente en cada comprobación, sin juzgar
-//! a ninguno.
-
-use std::collections::BTreeSet;
+//! La comparación de dos informes: qué resultado dio cada uno en cada comprobación del catálogo,
+//! en su orden y con su conjunto, sin juzgar a ningún cliente.
 
 use serde::Serialize;
 
-use crate::baseline::verdict_name;
-use crate::dossier::{CheckState, Dossier};
-
-pub(crate) const PENDING_NAME: &str = "PENDIENTE";
+use crate::catalogue::Check;
+use crate::dossier::Dossier;
+use crate::report_view::result_name;
 
 #[derive(Debug, Serialize)]
 pub(crate) struct Comparison {
@@ -28,26 +25,25 @@ struct Side {
 #[derive(Debug, PartialEq, Eq, Serialize)]
 struct Row {
     id: String,
-    chapter: Option<String>,
+    suite: String,
+    chapter: String,
+    citation: String,
     a: &'static str,
     b: &'static str,
     differ: bool,
 }
 
-pub(crate) fn compare(left: &Dossier, right: &Dossier) -> Comparison {
-    let ids: BTreeSet<&str> = left
-        .checks()
-        .map(|(id, _)| id)
-        .chain(right.checks().map(|(id, _)| id))
-        .collect();
-    let rows: Vec<Row> = ids
-        .into_iter()
-        .map(|id| {
-            let (a, chapter) = observation_of(left, id);
-            let (b, other_chapter) = observation_of(right, id);
+pub(crate) fn compare(left: &Dossier, right: &Dossier, catalogue: &[Check]) -> Comparison {
+    let rows: Vec<Row> = catalogue
+        .iter()
+        .map(|check| {
+            let a = result_name(left.state_of(&check.id));
+            let b = result_name(right.state_of(&check.id));
             Row {
-                id: id.to_owned(),
-                chapter: chapter.or(other_chapter).map(str::to_owned),
+                id: check.id.clone(),
+                suite: check.suite.clone(),
+                chapter: check.chapter.clone(),
+                citation: check.citation.clone(),
                 a,
                 b,
                 differ: a != b,
@@ -70,19 +66,6 @@ fn side_of(dossier: &Dossier) -> Side {
     }
 }
 
-fn observation_of<'a>(dossier: &'a Dossier, id: &str) -> (&'static str, Option<&'a str>) {
-    match dossier.record_of(id) {
-        None => ("ausente", None),
-        Some(record) => (
-            match record.state {
-                CheckState::Pending => PENDING_NAME,
-                CheckState::Resolved(verdict) => verdict_name(verdict),
-            },
-            Some(record.chapter.as_str()),
-        ),
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use std::time::Duration;
@@ -92,12 +75,9 @@ mod tests {
     use crate::catalogue::the_catalogue_in;
     use crate::dossier::{HeaderCoordinates, Verdict};
 
-    fn a_dossier(profile: Profile, verdict: Verdict) -> Dossier {
-        let path = tempfile::NamedTempFile::new().unwrap().path().to_owned();
-        let catalogue = the_catalogue_in(
-            r#"
+    const THREE_CHECKS: &str = r#"
 [[check]]
-id = "a_one"
+id = "z_one"
 suite = "errores"
 chapter = "15"
 citation = "ProtocolInvocationLauncher.java:741"
@@ -111,14 +91,23 @@ chapter = "15"
 citation = "ProtocolInvocationLauncher.java:741"
 statement = "Dos."
 drive = { mode = "v4", script = "selectcert" }
-"#,
-        )
-        .unwrap();
+
+[[check]]
+id = "m_three"
+suite = "operaciones"
+chapter = "16"
+citation = "SignOperation.java:12"
+statement = "Tres."
+drive = { mode = "v4", script = "sign" }
+"#;
+
+    fn a_dossier(profile: Profile, catalogue: &[Check], verdict: Verdict) -> Dossier {
+        let path = tempfile::NamedTempFile::new().unwrap().path().to_owned();
         let mut dossier = Dossier::create(
             &path,
             profile.name(),
             profile,
-            &catalogue,
+            catalogue,
             HeaderCoordinates {
                 os: "linux".to_owned(),
                 os_version: "6.0".to_owned(),
@@ -129,7 +118,7 @@ drive = { mode = "v4", script = "selectcert" }
         )
         .unwrap();
         dossier
-            .resolve("a_one", verdict, None, Duration::ZERO)
+            .resolve("z_one", verdict, None, Duration::ZERO)
             .unwrap();
         dossier
             .resolve("a_two", Verdict::Compliant, None, Duration::ZERO)
@@ -137,34 +126,62 @@ drive = { mode = "v4", script = "selectcert" }
         dossier
     }
 
-    #[test]
-    fn the_comparison_shows_what_each_subject_observed_and_marks_the_difference() {
-        let left = a_dossier(Profile::Autofirma, Verdict::Noncompliant);
-        let right = a_dossier(Profile::Rfirma, Verdict::Compliant);
+    fn a_row(
+        id: &str,
+        suite: &str,
+        a: &'static str,
+        b: &'static str,
+    ) -> (String, String, &'static str, &'static str, bool) {
+        (id.to_owned(), suite.to_owned(), a, b, a != b)
+    }
 
-        let comparison = compare(&left, &right);
+    #[test]
+    fn the_rows_follow_the_catalogue_each_with_its_suite_and_mark_the_difference() {
+        let catalogue = the_catalogue_in(THREE_CHECKS).unwrap();
+        let left = a_dossier(Profile::Autofirma, &catalogue, Verdict::Noncompliant);
+        let right = a_dossier(Profile::Rfirma, &catalogue, Verdict::Compliant);
+
+        let comparison = compare(&left, &right, &catalogue);
 
         assert_eq!(comparison.a.profile, "autofirma");
         assert_eq!(comparison.b.subject_version, "1.9.2");
+        let rows: Vec<_> = comparison
+            .rows
+            .iter()
+            .map(|row| (row.id.clone(), row.suite.clone(), row.a, row.b, row.differ))
+            .collect();
         assert_eq!(
-            comparison.rows,
+            rows,
             [
-                Row {
-                    id: "a_one".to_owned(),
-                    chapter: Some("15".to_owned()),
-                    a: "NO CONFORME",
-                    b: "CONFORME",
-                    differ: true,
-                },
-                Row {
-                    id: "a_two".to_owned(),
-                    chapter: Some("15".to_owned()),
-                    a: "CONFORME",
-                    b: "CONFORME",
-                    differ: false,
-                },
+                a_row("z_one", "errores", "NO CONFORME", "CONFORME"),
+                a_row("a_two", "errores", "CONFORME", "CONFORME"),
+                a_row("m_three", "operaciones", "PENDIENTE", "PENDIENTE"),
             ]
         );
+        assert_eq!(
+            comparison.rows[0].citation,
+            "ProtocolInvocationLauncher.java:741"
+        );
         assert_eq!(comparison.differing, 1);
+    }
+
+    #[test]
+    fn a_check_missing_from_one_report_counts_as_pending() {
+        let catalogue = the_catalogue_in(THREE_CHECKS).unwrap();
+        let left = a_dossier(Profile::Autofirma, &catalogue[..2], Verdict::Compliant);
+        let mut right = a_dossier(Profile::Rfirma, &catalogue, Verdict::Compliant);
+        right
+            .resolve("m_three", Verdict::Compliant, None, Duration::ZERO)
+            .unwrap();
+
+        let comparison = compare(&left, &right, &catalogue);
+
+        let missing = comparison
+            .rows
+            .iter()
+            .find(|row| row.id == "m_three")
+            .unwrap();
+        assert_eq!((missing.a, missing.b), ("PENDIENTE", "CONFORME"));
+        assert!(missing.differ);
     }
 }

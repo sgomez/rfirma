@@ -53,43 +53,51 @@
   #transcript-text { max-height: 70vh; overflow: auto; white-space: pre-wrap; word-break: break-all; }
   #question-dialog .prompt { font-size: 15px; margin: 6px 0 14px; white-space: pre-wrap; max-width: 60ch; }
   #compare-view { display: none; padding: 10px 14px; overflow: auto; height: calc(100vh - 110px); }
-  body.comparing main { display: none; } body.comparing #compare-view { display: block; }
   table { border-collapse: collapse; width: 100%; }
   td, th { padding: 3px 8px; border-bottom: 1px solid var(--line); text-align: left; }
-  tr.differ td { background: #3a2226; }
   .question-banner { background: #3a2f4f; padding: 4px 8px; border-radius: 4px; cursor: pointer; }
+  a { color: var(--info); }
+  body[data-mode="report"] .session-only, body[data-mode="compare"] .session-only { display: none !important; }
+  body[data-mode="compare"] .report-only { display: none !important; }
+  body[data-mode="compare"] main { display: none; } body[data-mode="compare"] #compare-view { display: block; }
+  tr.suite-row th { background: var(--panel); }
+  #validation h3 { margin: 10px 0 4px; font-size: 13px; }
+  #validation ul { margin: 0; padding-left: 18px; }
 </style>
 </head>
 <body>
 <header>
-  <div class="row">
-    <strong>Sujeto</strong>
+  <div class="row session-only">
+    <strong>Cliente</strong>
     <select id="profile"><option value="autofirma">autofirma</option><option value="rfirma">rfirma</option></select>
     <input id="binary" class="grow mono" placeholder="binario (vacío: se busca en el PATH)">
-    <input id="trust-root" class="grow mono" placeholder="raíz de confianza (vacío: la que resuelva el sujeto)">
+    <input id="trust-root" class="grow mono" placeholder="raíz de confianza (vacío: la que resuelva el cliente)">
     <button type="button" id="resolve">Resolver</button>
     <span id="subject-status" class="dim"></span>
   </div>
   <div class="row">
-    <strong>Informe</strong>
-    <select id="reports"></select>
-    <button type="button" id="open-report">Abrir</button>
-    <button type="button" id="new-report">+ nuevo</button>
-    <span class="sep"></span>
-    <span id="summary" class="mono"></span>
+    <strong class="report-only">Informe</strong>
+    <select id="reports" class="session-only"></select>
+    <button type="button" id="open-report" class="session-only">Abrir</button>
+    <button type="button" id="new-report" class="session-only">+ nuevo</button>
+    <span class="sep session-only"></span>
+    <span id="summary" class="mono report-only"></span>
+    <a id="open-elsewhere" class="report-only" target="_blank" rel="noopener" hidden>Abrir en otra ventana</a>
+    <button type="button" id="validate" class="report-only" hidden>Validar contra referencia…</button>
     <span class="grow"></span>
-    <span id="question-banner"></span>
-    <button type="button" id="run-pending">▶ pendientes</button>
-    <button type="button" id="stop" title="vacía la cola; la comprobación en curso termina">■ parar</button>
-    <button type="button" id="skip" title="corta la comprobación en curso, la deja pendiente y sigue con la cola">⏭ saltar</button>
-    <button type="button" id="abort" title="vacía la cola y corta la comprobación en curso">✕ abortar</button>
-    <button type="button" id="toggle-compare">Comparar informes</button>
+    <span id="connection" class="complaint"></span>
+    <span id="question-banner" class="session-only"></span>
+    <button type="button" id="run-pending" class="session-only">▶ pendientes</button>
+    <button type="button" id="stop" class="session-only" title="vacía la cola; la comprobación en curso termina">■ parar</button>
+    <button type="button" id="skip" class="session-only" title="corta la comprobación en curso, la deja pendiente y sigue con la cola">⏭ saltar</button>
+    <button type="button" id="abort" class="session-only" title="vacía la cola y corta la comprobación en curso">✕ abortar</button>
+    <a id="compare-link" class="session-only" target="_blank" rel="noopener">Comparar informes</a>
   </div>
 </header>
 <main>
   <nav id="catalogue"></nav>
   <section id="right">
-    <article id="card"><p class="dim">Elige un sujeto y un informe; después, una comprobación.</p></article>
+    <article id="card"><p class="dim" id="card-hint"></p></article>
     <section id="log">
       <div class="bar">
         <strong>Registro</strong>
@@ -109,7 +117,6 @@
     A <select id="compare-a"></select>
     B <select id="compare-b"></select>
     <button type="button" id="compare">Comparar</button>
-    <label><input type="checkbox" id="only-differing"> solo las que difieren</label>
   </div>
   <div id="comparison"></div>
 </section>
@@ -118,7 +125,7 @@
   <form method="dialog" id="new-report-form">
     <strong style="grid-column: 1 / -1">Informe nuevo</strong>
     <label for="nr-name">Nombre</label><input id="nr-name" name="name" required pattern="[A-Za-z0-9_\-][A-Za-z0-9._\-]*">
-    <label for="nr-version">Versión del sujeto</label><input id="nr-version" name="subject_version" required placeholder="nadie puede deducirla">
+    <label for="nr-version">Versión del cliente</label><input id="nr-version" name="subject_version" required placeholder="nadie puede deducirla">
     <label for="nr-os">Sistema</label><input id="nr-os" name="os" required>
     <label for="nr-os-version">Versión del sistema</label><input id="nr-os-version" name="os_version" required>
     <label for="nr-store">Almacén</label><input id="nr-store" name="store" required class="mono">
@@ -146,6 +153,17 @@
   </div>
 </dialog>
 
+<dialog id="validate-dialog">
+  <div class="row">
+    <strong>Validar contra referencia</strong>
+    <select id="references"></select>
+    <button type="button" id="run-validation">Validar</button>
+    <span class="grow"></span>
+    <button type="button" id="close-validation">Cerrar</button>
+  </div>
+  <div id="validation"></div>
+</dialog>
+
 <dialog id="transcript-dialog">
   <div class="row"><strong id="transcript-title"></strong><span class="grow"></span><button type="button" id="close-transcript">Cerrar</button></div>
   <pre id="transcript-text"></pre>
@@ -155,7 +173,18 @@
 "use strict";
 const token = new URLSearchParams(location.search).get("token");
 const $ = (id) => document.getElementById(id);
+const REPORT_PREFIX = "/informe/";
+const shownReport = location.pathname.startsWith(REPORT_PREFIX)
+  ? decodeURIComponent(location.pathname.slice(REPORT_PREFIX.length)) : null;
+const mode = shownReport ? "report" : location.pathname === "/comparar" ? "compare" : "session";
+document.body.dataset.mode = mode;
+document.title = mode === "report" ? `Informe ${shownReport} · Suite de conformidad`
+  : mode === "compare" ? "Comparar informes · Suite de conformidad" : "Suite de conformidad";
+$("card-hint").textContent = mode === "report"
+  ? "Elige una comprobación." : "Elige un cliente y un informe; después, una comprobación.";
 let state = null;
+let fetchedView = null;
+let wasLive = false;
 let selected = null;
 let follow = true;
 let runningHead = null;
@@ -199,7 +228,7 @@ function el(tag, attributes = {}, ...children) {
     else if (key.startsWith("on")) node.addEventListener(key.slice(2), value);
     else if (value !== null && value !== undefined && value !== false) node.setAttribute(key, value);
   }
-  for (const child of children.flat()) {
+  for (const child of children.flat(Infinity)) {
     if (child !== null && child !== undefined) node.append(child);
   }
   return node;
@@ -212,13 +241,56 @@ function report(action) {
   return (error) => alert(`${action}: ${error.message}`);
 }
 
+function isLive() {
+  if (!state || !state.report) return false;
+  return mode === "session" || state.report_name === shownReport;
+}
+
+function viewName() {
+  return mode === "report" ? shownReport : state?.report_name ?? null;
+}
+
+function theView() {
+  return isLive() ? state.report : mode === "report" ? fetchedView : null;
+}
+
+function activityOf(id) {
+  if (!isLive()) return null;
+  if (state.question?.check === id) return "asking";
+  if (state.running?.ids.includes(id)) return "running";
+  if (state.queued.includes(id)) return "queued";
+  return null;
+}
+
+function whyPending(id) {
+  return isLive() ? state.why_pending[id] ?? null : null;
+}
+
 function allChecks() {
-  return state ? state.suites.flatMap((suite) => suite.checks.map((check) => ({ ...check, suite: suite.name }))) : [];
+  const view = theView();
+  return view ? view.suites.flatMap((suite) => suite.checks.map((check) => ({ ...check, suite: suite.name }))) : [];
+}
+
+async function fetchTheShownReport() {
+  try {
+    fetchedView = await getJson("/api/report-view", { report: shownReport });
+    $("connection").textContent = "";
+  } catch (error) {
+    fetchedView = null;
+    $("connection").textContent = error.message;
+  }
+  if (state) render();
 }
 
 function onState(next) {
   state = next;
-  const head = state.running ? state.running.ids[0] : null;
+  $("connection").textContent = "";
+  if (mode === "report") {
+    const live = isLive();
+    if (wasLive && !live) fetchTheShownReport();
+    wasLive = live;
+  }
+  const head = isLive() && state.running ? state.running.ids[0] : null;
   if (state.running) runStartedAt = performance.now() - state.running.elapsed_ms;
   if (head && head !== runningHead) {
     const before = selected;
@@ -231,37 +303,39 @@ function onState(next) {
 }
 
 function render() {
-  renderSubject();
+  if (mode === "session") {
+    renderClient();
+    renderQuestion();
+  }
   renderReports();
   renderSummary();
   renderCatalogue();
   renderCard();
-  renderQuestion();
 }
 
-function renderSubject() {
+function renderClient() {
   const status = $("subject-status");
   status.replaceChildren();
   if (state.resolving_subject) {
     status.append("resolviendo… (monta el almacén aislado)");
   } else if (state.subject) {
-    const subject = state.subject;
+    const client = state.subject;
     status.append(
-      el("span", { class: "tag" }, subject.profile), " ",
-      el("code", {}, subject.binary), " · raíz ", el("code", {}, subject.trust_root),
-      " · ", el("code", {}, subject.store),
+      el("span", { class: "tag" }, client.profile), " ",
+      el("code", {}, client.binary), " · raíz ", el("code", {}, client.trust_root),
+      " · ", el("code", {}, client.store),
     );
   } else if (state.subject_complaints.length) {
     status.append(el("span", { class: "complaint" }, state.subject_complaints.join(" · ")));
   } else {
-    status.append("sin sujeto");
+    status.append("sin cliente");
   }
   const busy = !!state.running || state.queued.length > 0 || state.resolving_subject;
   $("resolve").disabled = busy;
 }
 
 function renderReports() {
-  for (const [id, withEmpty] of [["reports", false], ["compare-a", false], ["compare-b", false]]) {
+  for (const id of ["reports", "compare-a", "compare-b"]) {
     const select = $(id);
     const previous = select.value;
     select.replaceChildren(...state.reports.map((entry) => {
@@ -271,9 +345,8 @@ function renderReports() {
         : `${entry.name} — ${entry.profile} ${entry.subject_version} (${entry.date})`;
       return el("option", { value: entry.name, disabled: mismatch || !!entry.complaint }, label);
     }));
-    if (withEmpty) select.prepend(el("option", { value: "" }, "—"));
     if ([...select.options].some((option) => option.value === previous)) select.value = previous;
-    else if (id === "reports" && state.report) select.value = state.report.name;
+    else if (id === "reports" && state.report_name) select.value = state.report_name;
   }
   const busy = !!state.running || state.queued.length > 0;
   $("open-report").disabled = !state.subject || busy;
@@ -283,19 +356,26 @@ function renderReports() {
 function renderSummary() {
   const summary = $("summary");
   summary.replaceChildren();
-  if (!state.report) {
-    summary.append(el("span", { class: "dim" }, "sin informe abierto"));
+  const view = theView();
+  const name = viewName();
+  if (!view) {
+    summary.append(el("span", { class: "dim" }, mode === "report" ? `${shownReport}: sin leer` : "sin informe abierto"));
   } else {
-    const r = state.report;
+    const s = view.summary;
     summary.append(
-      el("strong", {}, r.name), ` · ${r.profile} ${r.header.subject_version} · `,
-      el("span", { class: "s-CONFORME" }, `${r.summary.compliant}✓ `),
-      el("span", { class: "s-NO-CONFORME" }, `${r.summary.noncompliant}✗ `),
-      el("span", { class: "s-NO-OBSERVABLE" }, `${r.summary.not_observable}? `),
-      el("span", { class: "s-PENDIENTE" }, `${r.summary.pending}· `),
-      ` │ ${r.resolved}/${r.total}`,
+      el("strong", {}, name), ` · ${view.profile} ${view.header.subject_version} · `,
+      el("span", { class: "s-CONFORME" }, `${s.compliant}✓ `),
+      el("span", { class: "s-NO-CONFORME" }, `${s.noncompliant}✗ `),
+      el("span", { class: "s-NO-OBSERVABLE" }, `${s.not_observable}? `),
+      el("span", { class: "s-PENDIENTE" }, `${s.pending}· `),
+      ` │ ${s.total - s.pending}/${s.total}`,
     );
   }
+  const elsewhere = $("open-elsewhere");
+  elsewhere.hidden = !view;
+  if (name) elsewhere.href = `${REPORT_PREFIX}${encodeURIComponent(name)}?${new URLSearchParams({ token })}`;
+  $("validate").hidden = !view;
+  $("compare-link").href = `/comparar?${new URLSearchParams({ token })}`;
   const idle = !state.running && state.queued.length === 0;
   $("run-pending").disabled = !state.report;
   $("stop").disabled = idle;
@@ -306,28 +386,31 @@ function renderSummary() {
 function renderCatalogue() {
   const nav = $("catalogue");
   const scroll = nav.scrollTop;
-  nav.replaceChildren(...state.suites.map((suite) => {
+  const view = theView();
+  const controls = mode === "session";
+  nav.replaceChildren(...(view ? view.suites : []).map((suite) => {
     const isFolded = folded.has(suite.name);
-    const counts = {};
-    for (const check of suite.checks) counts[check.state] = (counts[check.state] || 0) + 1;
+    const s = suite.summary;
+    const counts = [[s.compliant, "CONFORME"], [s.noncompliant, "NO CONFORME"], [s.not_observable, "NO OBSERVABLE"], [s.pending, "PENDIENTE"]]
+      .filter(([n]) => n > 0).map(([n, name]) => `${n}${BADGES[name]}`).join(" ");
     const title = el("div", { class: "title", onclick: () => { isFolded ? folded.delete(suite.name) : folded.add(suite.name); renderCatalogue(); } },
       el("span", {}, isFolded ? "▸" : "▾"),
       el("span", { class: "name" }, suite.name),
-      el("span", { class: "dim small" }, Object.entries(counts).map(([name, n]) => `${n}${BADGES[name]}`).join(" ")),
-      el("button", { class: "small", disabled: !state.report, title: "corre todo el conjunto",
-        onclick: (event) => { event.stopPropagation(); post("/api/run", { suite: suite.name }).catch(report("No se pudo encolar")); } }, "▶ grupo"),
+      el("span", { class: "dim small" }, counts),
+      controls ? el("button", { class: "small", title: "corre todo el conjunto",
+        onclick: (event) => { event.stopPropagation(); post("/api/run", { suite: suite.name }).catch(report("No se pudo encolar")); } }, "▶ conjunto") : null,
     );
     const checks = isFolded ? [] : suite.checks.map((check) => {
-      const activity = check.activity;
+      const activity = activityOf(check.id);
       const badge = activity === "running" ? "●" : activity === "asking" ? "¿" : activity === "queued" ? "◌" : BADGES[check.state];
       const badgeClass = activity ? `a-${activity}` : `s-${cssName(check.state)}`;
       return el("div", { class: `check ${check.id === selected ? "selected" : ""}`, onclick: () => select(check.id, true) },
         el("span", { class: `badge ${badgeClass}` }, badge),
         el("span", { class: `id mono ${activity === "queued" ? "a-queued" : ""}`, title: check.id }, check.id),
         activity === "queued" ? el("span", { class: "dim small" }, "en cola") : null,
-        el("button", { class: "small", disabled: !state.report || activity === "running" || activity === "queued",
+        controls ? el("button", { class: "small", disabled: activity === "running" || activity === "queued",
           title: check.state === "PENDIENTE" ? "correr" : "repetir",
-          onclick: (event) => { event.stopPropagation(); post("/api/run", { check: check.id }).catch(report("No se pudo encolar")); } }, "▶"),
+          onclick: (event) => { event.stopPropagation(); post("/api/run", { check: check.id }).catch(report("No se pudo encolar")); } }, "▶") : null,
       );
     });
     return el("div", { class: "suite" }, title, ...checks);
@@ -347,7 +430,8 @@ function renderCard() {
   const card = $("card");
   const check = allChecks().find((each) => each.id === selected);
   if (!check) return;
-  const running = state.running?.ids.includes(check.id);
+  const activity = activityOf(check.id);
+  const running = activity === "running" || activity === "asking";
   const field = (label, value) => value ? [el("dt", {}, label), el("dd", {}, value)] : [];
   const duration = running
     ? el("span", { id: "stopwatch", class: "a-running" }, "")
@@ -365,15 +449,15 @@ function renderCard() {
     ),
     el("div", { class: "dim" }, `${check.suite} · cap. ${check.chapter}`, " · ", duration ? ["⏱ ", duration] : "sin duración"),
     el("dl", {},
-      field("Enunciado", check.statement),
-      field("Cita", el("code", {}, check.citation)),
-      field("Aviso", check.warning),
-      field("Pregunta", check.question),
+      field("Qué se exige", check.statement),
+      field("Fuente", el("code", {}, check.citation)),
+      field("Antes de empezar", check.warning),
+      field("Te preguntaremos", check.question),
+      field("Qué pasó", check.observation),
       field("Resultado", el("span", { class: `s-${cssName(check.state)}` },
-        running ? (check.activity === "asking" ? "esperando tu respuesta" : "corriendo") : check.state)),
-      field("Observación", check.observation),
+        running ? (activity === "asking" ? "esperando tu respuesta" : "corriendo") : check.state)),
       field("Fecha", check.date),
-      field("Pendiente porque", check.why_pending),
+      field("Pendiente porque", whyPending(check.id)),
     ),
   );
   tickStopwatch();
@@ -436,13 +520,17 @@ function renderLog() {
   if (atBottom) pre.scrollTop = pre.scrollHeight;
 }
 
+function inTheShownReport(params) {
+  return mode === "report" ? { ...params, report: shownReport } : params;
+}
+
 async function loadLog() {
   const wanted = selected;
   logLines = [];
   renderLog();
-  if (!state?.report || !wanted) return;
+  if (!theView() || !wanted) return;
   try {
-    const text = await getText("/api/log", { check: wanted });
+    const text = await getText("/api/log", inTheShownReport({ check: wanted }));
     if (wanted === selected) {
       logLines = text.split("\n").filter(Boolean).concat(logLines);
       renderLog();
@@ -454,7 +542,7 @@ async function loadLog() {
 }
 
 function onLog({ check, line }) {
-  if (!state?.running) return;
+  if (!isLive() || !state.running) return;
   const ids = state.running.ids;
   if (check !== ids[0] || !ids.includes(selected)) return;
   if (pausedLines) pausedLines.push(line);
@@ -477,7 +565,7 @@ $("pause-log").addEventListener("click", () => {
 async function showTranscript(check) {
   $("transcript-title").textContent = `Tramas de ${check}`;
   try {
-    const text = await getText("/api/transcript", { check });
+    const text = await getText("/api/transcript", inTheShownReport({ check }));
     $("transcript-text").textContent = text || "(sin tramas: la comprobación no ha llegado a correr en este informe)";
   } catch (error) {
     $("transcript-text").textContent = error.message;
@@ -486,9 +574,56 @@ async function showTranscript(check) {
 }
 $("close-transcript").addEventListener("click", () => $("transcript-dialog").close());
 
+$("validate").addEventListener("click", async () => {
+  $("validation").replaceChildren();
+  try {
+    const names = await getJson("/api/references");
+    $("references").replaceChildren(...names.map((name) => el("option", { value: name }, name)));
+  } catch (error) {
+    $("validation").append(el("p", { class: "complaint" }, error.message));
+  }
+  $("validate-dialog").showModal();
+});
+$("run-validation").addEventListener("click", async () => {
+  const target = $("validation");
+  target.replaceChildren(el("p", { class: "dim" }, "validando…"));
+  try {
+    const validation = await getJson("/api/validate", { report: viewName(), reference: $("references").value });
+    renderValidation(validation);
+  } catch (error) {
+    target.replaceChildren(el("p", { class: "complaint" }, error.message));
+  }
+});
+$("close-validation").addEventListener("click", () => $("validate-dialog").close());
+
+function renderValidation(validation) {
+  const target = $("validation");
+  if (validation.result === "validated") {
+    target.replaceChildren(el("p", { class: "s-CONFORME" }, el("strong", {}, "Validado")));
+    return;
+  }
+  const bySuite = new Map((theView()?.suites ?? []).map((suite) => [suite.name, suite.checks.map((check) => check.id)]));
+  const groups = [...bySuite].map(([suite, ids]) => [suite, validation.discrepancies.filter((d) => ids.includes(d.id))])
+    .filter(([, discrepancies]) => discrepancies.length > 0);
+  target.replaceChildren(
+    el("p", { class: "complaint" }, el("strong", {}, `${validation.discrepancies.length} discrepancias`),
+      ": fallos de la suite o de la referencia, no del cliente."),
+    ...groups.map(([suite, discrepancies]) => el("section", {},
+      el("h3", {}, suite),
+      el("ul", {}, discrepancies.map((d) => el("li", {},
+        el("span", { class: "mono" }, d.id), " · se esperaba ",
+        el("span", { class: `s-${cssName(d.expected)}` }, d.expected), " y dio ",
+        el("span", { class: `s-${cssName(d.observed)}` }, d.observed),
+        d.cause ? ` · ${d.cause}` : null,
+        d.note ? el("div", { class: "dim" }, d.note) : null,
+      ))),
+    )),
+  );
+}
+
 $("resolve").addEventListener("click", () => {
   post("/api/subject", { profile: $("profile").value, binary: $("binary").value.trim(), trust_root: $("trust-root").value.trim() })
-    .catch(report("No se pudo resolver el sujeto"));
+    .catch(report("No se pudo resolver el cliente"));
 });
 $("open-report").addEventListener("click", () => {
   if ($("reports").value) post("/api/report", { name: $("reports").value }).then(loadLog).catch(report("No se pudo abrir el informe"));
@@ -524,43 +659,58 @@ $("run-pending").addEventListener("click", () => post("/api/run", "pending").cat
 $("stop").addEventListener("click", () => post("/api/stop", { abort: false }).catch(report("No se pudo parar")));
 $("skip").addEventListener("click", () => post("/api/skip", {}).catch(report("No se pudo saltar")));
 $("abort").addEventListener("click", () => post("/api/stop", { abort: true }).catch(report("No se pudo abortar")));
-$("toggle-compare").addEventListener("click", () => {
-  document.body.classList.toggle("comparing");
-  $("toggle-compare").textContent = document.body.classList.contains("comparing") ? "Volver a la tanda" : "Comparar informes";
-});
 
-let comparison = null;
-function renderComparison() {
-  const target = $("comparison");
-  if (!comparison) return target.replaceChildren();
-  const only = $("only-differing").checked;
+function renderComparison(comparison) {
   const side = (s) => `${s.subject} (${s.profile}, versión ${s.subject_version})`;
-  target.replaceChildren(
+  const differing = comparison.rows.filter((row) => row.differ);
+  const suites = [...new Set(differing.map((row) => row.suite))];
+  $("comparison").replaceChildren(
     el("p", {}, `A: ${side(comparison.a)}`, el("br"), `B: ${side(comparison.b)}`, el("br"),
-      el("strong", {}, `${comparison.differing} comprobaciones difieren`)),
-    el("table", {},
-      el("tr", {}, el("th", {}, "Cap."), el("th", {}, "Comprobación"), el("th", {}, "A"), el("th", {}, "B")),
-      comparison.rows.filter((row) => !only || row.differ).map((row) =>
-        el("tr", { class: row.differ ? "differ" : "" },
-          el("td", {}, row.chapter || "—"), el("td", { class: "mono" }, row.id),
-          el("td", { class: `s-${cssName(row.a)}` }, row.a), el("td", { class: `s-${cssName(row.b)}` }, row.b))),
-    ),
+      el("strong", {}, differing.length
+        ? `${comparison.differing} comprobaciones difieren`
+        : "Los dos informes dan el mismo resultado en todas las comprobaciones")),
+    differing.length ? el("table", {},
+      el("tr", {}, el("th", {}, "Comprobación"), el("th", {}, "A"), el("th", {}, "B"), el("th", {}, "Fuente")),
+      suites.map((suite) => [
+        el("tr", { class: "suite-row" }, el("th", { colspan: 4 }, suite)),
+        differing.filter((row) => row.suite === suite).map((row) =>
+          el("tr", {},
+            el("td", { class: "mono" }, row.id),
+            el("td", { class: `s-${cssName(row.a)}` }, row.a), el("td", { class: `s-${cssName(row.b)}` }, row.b),
+            el("td", {}, el("code", {}, row.citation)))),
+      ]),
+    ) : null,
   );
 }
-$("compare").addEventListener("click", async () => {
+
+async function compareTheChosenReports() {
+  const a = $("compare-a").value;
+  const b = $("compare-b").value;
+  history.replaceState(null, "", `/comparar?${new URLSearchParams({ a, b, token })}`);
   try {
-    comparison = await getJson("/api/compare", { a: $("compare-a").value, b: $("compare-b").value });
-    renderComparison();
+    renderComparison(await getJson("/api/compare", { a, b }));
   } catch (error) {
     report("No se pudo comparar")(error);
   }
-});
-$("only-differing").addEventListener("change", renderComparison);
+}
+$("compare").addEventListener("click", compareTheChosenReports);
 
 const events = new EventSource(api("/api/events"));
 events.addEventListener("state", (event) => onState(JSON.parse(event.data)));
 events.addEventListener("log", (event) => onLog(JSON.parse(event.data)));
-events.addEventListener("error", () => { $("subject-status").textContent = "se perdió la conexión con el arnés; reintentando…"; });
+events.addEventListener("error", () => { $("connection").textContent = "se perdió la conexión con la suite; reintentando…"; });
+if (mode === "compare") {
+  const wanted = new URLSearchParams(location.search);
+  const chooseOnce = () => {
+    events.removeEventListener("state", chooseOnce);
+    if (!wanted.get("a") || !wanted.get("b")) return;
+    $("compare-a").value = wanted.get("a");
+    $("compare-b").value = wanted.get("b");
+    compareTheChosenReports();
+  };
+  events.addEventListener("state", chooseOnce);
+}
+if (mode === "report") fetchTheShownReport();
 </script>
 </body>
 </html>

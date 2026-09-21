@@ -64,7 +64,7 @@ pub(crate) fn resolve(
     };
     if !is_executable(&binary) {
         return Err(vec![format!(
-            "el sujeto {} no existe o no se puede ejecutar",
+            "el cliente {} no existe o no se puede ejecutar",
             binary.display()
         )]);
     }
