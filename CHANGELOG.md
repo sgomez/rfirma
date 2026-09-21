@@ -9,6 +9,75 @@ Este fichero no se edita a mano: cada issue entrega su nota en
 fragmentos presentes bajo la sección de la versión, en el momento de
 publicarla. Ver `changelog.d/README.md`.
 
+## [0.10.0] - 2026-09-21
+
+### Added
+- «Comentarios y ayuda» en el menú abre el foro del proyecto, y los fallos
+  propios de rFirma y los rechazos desconocidos de una sede enlazan con él
+  (#787, #788).
+- «Estado de rFirma» en el menú: una vista que dice de un vistazo si rFirma
+  está lista para firmar, con una fila por señal —versión, tus certificados,
+  el certificado de rFirma en cada almacén de los navegadores y qué programa
+  abre las sedes— y la cabecera siempre a mano (#789, #790, #791, #792, #794).
+- Desde el panel de estado se instala el certificado de rFirma cuando falta o
+  está a medias, y la fila avisa de reiniciar Firefox si está abierto (#793).
+- Desde el panel de estado se elige qué programa abre las sedes cuando hay
+  más de uno instalado; elegir rFirma instala también su certificado, sin el
+  que no puede firmar en sedes (#795).
+- El botón del menú lleva un triángulo de atención cuando hay algo que rFirma
+  puede y debe arreglar: el certificado ausente o a medias, o ningún programa
+  atendiendo las sedes (#796).
+- «Retirar…» en el panel de estado deshace lo que rFirma instaló fuera de sus
+  carpetas: su certificado en cada almacén de los navegadores y su registro
+  como programa que abre las sedes. Si algún almacén falla, lo dice uno a uno
+  con su motivo y «Reintentar» repite solo lo que falló (#801, #802, #803).
+- La primera vez que se abre, rFirma se presenta con un asistente de dos
+  pantallas: una bienvenida que explica qué es, y otra con las dos acciones
+  que necesita para firmar en sedes —instalar su certificado en los
+  navegadores y que las sedes lo abran—, cada una con su «Ahora no». Arranca en
+  el idioma del sistema, deja cambiarlo desde la propia bienvenida y se puede
+  omitir; al terminar no vuelve a salir (#804).
+
+### Changed
+- Cada trámite de sede corre en su propio proceso, aparte de la ventana de
+  escritorio: dos trámites simultáneos ya no se pisan, cada proceso tiene su
+  carpeta de paso y la limpia al salir, y las preferencias se releen de disco
+  en cada cambio (#671, #672, #673, #674).
+- Preferencias pasa a ser una vista de la ventana, con un índice permanente a
+  la izquierda —General, Firma, Certificados, Apariencia— y solo la sección
+  activa a la derecha, en vez de una columna larga con scroll (#798, #799).
+
+### Removed
+- La franja que preguntaba si rFirma debía abrir las sedes, y el grupo
+  «Sedes» de Preferencias: eso se elige ahora en el panel de estado (#797).
+- El aviso de confianza del primer arranque, al que sustituye el asistente
+  (#804).
+
+### Fixed
+- Cerrar la ventana de sede con la X cancela el trámite ante la sede, en vez
+  de dejarla esperando (#676).
+- Los lotes de firma de una sede vuelven a firmarse desde la ventana con el
+  PIN del diálogo nativo, roto desde la v0.9.1, y un PIN equivocado se vuelve
+  a pedir (#700).
+- Compatibilidad con las sedes que usan servidor intermedio: rFirma avisa cada
+  diez segundos de que sigue esperando a la persona, y la sede ya no cancela
+  el trámite a los treinta (#713). Los rechazos al arrancar se suben al
+  servlet de guardado, como hacía AutoFirma, y si la subida falla se enseñan
+  en la ventana (#705).
+- Paridad con AutoFirma 1.9.2 en el protocolo de sede: se aceptan las URIs
+  `afirma://` con barra final en el verbo (#711), una versión de protocolo
+  demasiado nueva responde `SAF_21` (#712), una multifirma con `format=auto`
+  sobre datos sin firmar se rechaza con `SAF_17` (#714), y el nombre propuesto
+  en `signandsave` lleva la extensión del formato de firma (#715).
+- La ventana que atiende una petición de certificado de una sede deja de
+  presentarse como una identificación: la sede solo recibe el certificado
+  elegido, y los textos lo dicen así en los cinco idiomas (#730).
+- Un fallo al pintar la interfaz enseña una pantalla que lo explica, con el
+  detalle copiable y un botón para recargar, en vez de dejar la ventana en
+  blanco; en la ventana de sede, esa pantalla no se cierra sola (#806).
+- Si rFirma no puede arrancar, lo dice en un diálogo nativo con el motivo y el
+  detalle, en vez de cerrarse sin enseñar nada (#807).
+
 ## [0.9.1] - 2026-09-11
 
 ### Changed
