@@ -231,10 +231,11 @@ fmt-rust:
     cd {{ tauri }} && cargo fmt --all
     cd {{ conformance_suite }} && cargo fmt --all
 
-# Formateador de biome sobre rfirma-app.
+# Formateador de biome sobre rfirma-app y, si esta instalada, la consola de la suite.
 [private]
 fmt-ts:
     cd {{ app }} && pnpm exec biome format --write .
+    if [ -x {{ conformance_suite }}/console/node_modules/.bin/biome ]; then cd {{ conformance_suite }}/console && pnpm exec biome format --write .; fi
 
 # `ruff format` sobre packaging y scripts.
 [private]
@@ -443,8 +444,15 @@ dev-handler mode="on":
 # token y la abre en el navegador. Cliente, informe y comprobaciones se eligen en la pagina; cada
 # informe vive en reports/conformance/<nombre>/, con sus transcripciones dentro.
 [group('dev')]
-conformance: autoscript
+conformance: autoscript conformance-console
     cd {{ conformance_suite }} && cargo run -q
+
+# Compila la consola web de la suite en rfirma-conformance/console/dist, que el servidor lee al
+# arrancar: regenera antes los tipos del contrato que ts-rs deriva de Rust.
+[group('dev')]
+conformance-console:
+    cd {{ conformance_suite }} && cargo test -q export_bindings > /dev/null
+    cd {{ conformance_suite }}/console && pnpm install --frozen-lockfile && pnpm build
 
 # Borra lo construido y los volcados de cobertura sueltos en el arbol de fuentes.
 [group('dev')]
@@ -459,7 +467,7 @@ clean:
         echo "worktree: el arbol compartido {{ cargo_target }} se queda"
     fi
     rm -f "{{ tauri }}"/*.profraw
-    rm -rf "{{ app }}/dist"
+    rm -rf "{{ app }}/dist" "{{ conformance_suite }}/console/dist"
 
 # Reune los fragmentos de changelog.d/ en la seccion de <version> de CHANGELOG.md.
 [group('release')]
