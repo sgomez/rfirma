@@ -371,11 +371,22 @@ function theServletMaterial() {
   return { cert: readFileSync(certificate), key: readFileSync(key) };
 }
 
+/** Los parámetros de la query y los del cuerpo del POST, donde `UrlHttpManagerImpl` los manda. */
+async function theServletParameters(request) {
+  const parameters = new URL(request.url, "http://127.0.0.2").searchParams;
+  const chunks = [];
+  for await (const chunk of request) chunks.push(chunk);
+  for (const [name, value] of new URLSearchParams(Buffer.concat(chunks).toString("utf8"))) {
+    parameters.append(name, value);
+  }
+  return parameters;
+}
+
 /** Un servlet del lote sirviendo HTTP en un puerto libre del loopback, y su URL absoluta. */
 function servletServing(answering) {
   return new Promise((resolve) => {
-    const server = createServer((request, response) => {
-      const { status, body } = answering(new URL(request.url, "http://127.0.0.2").searchParams);
+    const server = createServer(async (request, response) => {
+      const { status, body } = answering(await theServletParameters(request));
       response.writeHead(status, { "content-type": "application/json" });
       response.end(body);
     });
