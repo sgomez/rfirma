@@ -526,8 +526,8 @@ A continuación se detalla la totalidad de los 53 códigos de error definidos en
   en el proveedor criptográfico o la tarjeta (`ProtocolInvocationLauncherSign.java:854, 859`,
   `ProtocolInvocationLauncherSignAndSave.java:877, 882`, `LocalBatchSigner.java:256, 261`).
 * **`SAF_17` (`ERROR_UNKNOWN_SIGNER`)**: Los datos sobre los que se solicitó una cofirma
-  o contrafirma no contienen una firma electrónica reconocida (`AOInvalidSignatureException`
-  al identificar el firmador previo) (`ProtocolInvocationLauncherSign.java:386`,
+  o contrafirma no contienen una firma electrónica reconocida: con `format=auto`, `identifyFormatFromData`
+  no devuelve formato para la firma previa (`ProtocolInvocationLauncherSign.java:386`,
   `ProtocolInvocationLauncherSignAndSave.java:378`, `LocalBatchSigner.java:125`). En la
   1.9.2 esas guardas no se alcanzan: el firmador nulo revienta antes con
   `NullPointerException` y la petición acaba en `SAF_03`
