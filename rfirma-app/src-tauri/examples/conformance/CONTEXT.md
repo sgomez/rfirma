@@ -66,9 +66,10 @@ _Avoid_: conductor, sujeto, arnés
 ### Validación de la suite
 
 **Referencia**:
-Lo que se sabe que AutoFirma 1.9.2 hace mal: las comprobaciones en que sale NO CONFORME, cada una
-con su causa, una ficha `BUG-NN` del anexo A1. Es un dato de una versión concreta de AutoFirma, no
-de las comprobaciones, y vive aparte del catálogo. Solo la usa la **validación**.
+Lo que se sabe de cómo responde AutoFirma 1.9.2 por sus bugs: las comprobaciones cuyo resultado
+explica una ficha `BUG-NN` del anexo A1, casi siempre porque sale NO CONFORME, cada una con su
+resultado y su causa. Es un dato de una versión concreta de AutoFirma, no de las comprobaciones, y
+vive aparte del catálogo. Solo la usa la **validación**.
 _Avoid_: línea base, baseline, expectativa por perfil
 
 **Validación**:
