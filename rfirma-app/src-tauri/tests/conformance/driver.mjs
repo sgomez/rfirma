@@ -252,7 +252,8 @@ function theLocalServiceAsXmlHttpRequest() {
     send(body) {
       const attempt = httpsRequest(
         this.url,
-        { method: this.method, headers: this.requestHeaders },
+        // El canal del original cierra las líneas con `\n` a secas, que el navegador tolera y Node no.
+        { method: this.method, headers: this.requestHeaders, insecureHTTPParser: true },
         (response) => {
           let text = "";
           response.setEncoding("utf8");
@@ -1565,7 +1566,7 @@ const THE_V4_OPERATION_PROBES = [
   {
     id: "invalid_parameters_syntax_rejected",
     order: (idSession) =>
-      `afirma://sign?op=sign&format=CAdES&properties=%%%&idsession=${idSession}`,
+      `afirma://sign?op=sign&id=rfirma-1&format=CAdES&algorithm=SHA256&idsession=${idSession}`,
     holds: (answer) => answer.startsWith("SAF_03"),
   },
 ];

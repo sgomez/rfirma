@@ -91,7 +91,7 @@ verdict = "conforme"
 id = "invalid_parameters_syntax_rejected"
 suite = "errores"
 chapter = "15"
-citation = "ProtocolInvocationLauncher.java:741"
+citation = "UrlParametersToSign.java:222-227; ProtocolInvocationLauncher.java:741"
 statement = """
 Parámetros de entrada con sintaxis inválida se rechazan con SAF_03.
 """
