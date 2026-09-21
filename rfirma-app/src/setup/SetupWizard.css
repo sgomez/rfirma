@@ -19,7 +19,7 @@
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: var(--rf-space-lg) var(--rf-space-md) var(--rf-space-md);
+  padding: var(--rf-space-sm) var(--rf-space-md) var(--rf-space-md);
 }
 
 .setup-wizard__column {
