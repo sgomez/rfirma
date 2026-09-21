@@ -6,7 +6,7 @@ use std::path::Path;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-/// Quién habló: el conductor de Node, el binario declarado o el propio arnés.
+/// Quién habló: la sede que conduce el cliente publicado, el cliente a prueba o la propia suite.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Provenance {
     Driver,
@@ -16,9 +16,9 @@ pub(crate) enum Provenance {
 
 pub(crate) fn provenance_tag(provenance: Provenance) -> &'static str {
     match provenance {
-        Provenance::Driver => "conductor",
-        Provenance::Subject => "sujeto",
-        Provenance::Harness => "arnés",
+        Provenance::Driver => "sede",
+        Provenance::Subject => "cliente",
+        Provenance::Harness => "suite",
     }
 }
 
@@ -34,7 +34,7 @@ pub(crate) fn format_elapsed_clock(elapsed: Duration) -> String {
 /// La línea tal y como sale, con el mismo formato en vivo y en el fichero.
 pub(crate) fn format_log_line(elapsed: Duration, provenance: Provenance, text: &str) -> String {
     format!(
-        "{} {:<9} {text}",
+        "{} {:<7} {text}",
         format_elapsed_clock(elapsed),
         provenance_tag(provenance)
     )
@@ -68,7 +68,7 @@ impl CheckLog {
     }
 }
 
-/// El extremo por el que el conductor, el sujeto y el arnés entregan sus líneas, desde sus hilos.
+/// El extremo por el que la sede, el cliente y la suite entregan sus líneas, desde sus hilos.
 #[derive(Clone)]
 pub(crate) struct LiveLogSink {
     deliver: Arc<dyn Fn(String) + Send + Sync>,
@@ -104,10 +104,10 @@ mod tests {
     }
 
     #[test]
-    fn provenance_tag_names_driver_subject_and_harness() {
-        assert_eq!(provenance_tag(Provenance::Driver), "conductor");
-        assert_eq!(provenance_tag(Provenance::Subject), "sujeto");
-        assert_eq!(provenance_tag(Provenance::Harness), "arnés");
+    fn provenance_tag_names_site_client_and_suite() {
+        assert_eq!(provenance_tag(Provenance::Driver), "sede");
+        assert_eq!(provenance_tag(Provenance::Subject), "cliente");
+        assert_eq!(provenance_tag(Provenance::Harness), "suite");
     }
 
     #[test]
@@ -118,7 +118,7 @@ mod tests {
 
         sink.push(Provenance::Harness, Duration::from_millis(310), "aviso");
 
-        assert_eq!(*delivered.lock().unwrap(), ["00:00.31 arnés     aviso"]);
+        assert_eq!(*delivered.lock().unwrap(), ["00:00.31 suite   aviso"]);
     }
 
     #[test]
@@ -132,6 +132,6 @@ mod tests {
             "launch",
         ));
         let written = std::fs::read_to_string(&path).unwrap();
-        assert_eq!(written, "00:00.31 conductor launch\n");
+        assert_eq!(written, "00:00.31 sede    launch\n");
     }
 }

@@ -235,6 +235,13 @@ fn attend(mut stream: TcpStream, gate: &Gate, console: &Console) {
                 request.parameter("b").unwrap_or_default(),
             ),
         ),
+        ("GET", "/api/validate") => answer(
+            &mut stream,
+            console.validate(
+                request.parameter("report").unwrap_or_default(),
+                request.parameter("reference").unwrap_or_default(),
+            ),
+        ),
         ("POST", "/api/subject") => answer(
             &mut stream,
             body_of::<SubjectChoice>(&request).and_then(|choice| {

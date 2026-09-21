@@ -37,7 +37,6 @@
   .s-CONFORME { color: var(--ok); } .s-NO-CONFORME { color: var(--bad); }
   .s-NO-OBSERVABLE { color: var(--warn); } .s-PENDIENTE { color: var(--dim); }
   .a-running { color: var(--info); } .a-queued { color: var(--dim); font-style: italic; } .a-asking { color: var(--accent); }
-  .c-SORPRESA { color: var(--bad); } .c-coincide { color: var(--ok); } .c-sin-medida { color: var(--warn); }
   .small { font-size: 11px; padding: 0 6px; }
   #right { display: grid; grid-template-rows: auto 1fr; min-height: 0; }
   #card { padding: 10px 14px; border-bottom: 1px solid var(--line); overflow: auto; max-height: 48vh; }
@@ -47,7 +46,7 @@
   #log { display: grid; grid-template-rows: auto 1fr; min-height: 0; }
   #log .bar { display: flex; gap: 10px; align-items: center; padding: 4px 12px; border-bottom: 1px solid var(--line); background: var(--panel); }
   #log pre { margin: 0; padding: 6px 12px; overflow: auto; white-space: pre-wrap; word-break: break-all; }
-  .p-conductor { color: var(--ok); } .p-sujeto { color: var(--warn); } .p-arnés { color: var(--info); }
+  .p-sede { color: var(--ok); } .p-cliente { color: var(--warn); } .p-suite { color: var(--info); }
   dialog { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 6px; max-width: 90vw; }
   dialog::backdrop { background: rgba(0,0,0,.55); }
   dialog form { display: grid; grid-template-columns: 10em 1fr; gap: 6px 10px; align-items: center; }
@@ -94,9 +93,9 @@
     <section id="log">
       <div class="bar">
         <strong>Registro</strong>
-        <label><input type="checkbox" data-provenance="conductor" checked> conductor</label>
-        <label><input type="checkbox" data-provenance="sujeto" checked> sujeto</label>
-        <label><input type="checkbox" data-provenance="arnés" checked> arnés</label>
+        <label><input type="checkbox" data-provenance="sede" checked> sede</label>
+        <label><input type="checkbox" data-provenance="cliente" checked> cliente</label>
+        <label><input type="checkbox" data-provenance="suite" checked> suite</label>
         <span class="grow"></span>
         <button type="button" id="pause-log">⏸ pausar</button>
       </div>
@@ -290,18 +289,11 @@ function renderSummary() {
     const r = state.report;
     summary.append(
       el("strong", {}, r.name), ` · ${r.profile} ${r.header.subject_version} · `,
-      "Sujeto ",
       el("span", { class: "s-CONFORME" }, `${r.summary.compliant}✓ `),
       el("span", { class: "s-NO-CONFORME" }, `${r.summary.noncompliant}✗ `),
       el("span", { class: "s-NO-OBSERVABLE" }, `${r.summary.not_observable}? `),
       el("span", { class: "s-PENDIENTE" }, `${r.summary.pending}· `),
-      " │ Base ",
-      el("span", { class: "c-coincide" }, `${r.baseline.matching}= `),
-      el("span", { class: "c-SORPRESA", title: r.surprises.join("\n") }, `${r.baseline.surprises}! `),
-      el("span", { class: "c-sin-medida" }, `${r.baseline.unmeasured}? `),
-      el("span", { class: "s-PENDIENTE" }, `${r.baseline.pending}· `),
-      ` │ ${r.resolved}/${r.total} `,
-      ...(r.green ? [el("span", { class: "c-coincide" }, "verde")] : []),
+      ` │ ${r.resolved}/${r.total}`,
     );
   }
   const idle = !state.running && state.queued.length === 0;
@@ -332,7 +324,6 @@ function renderCatalogue() {
       return el("div", { class: `check ${check.id === selected ? "selected" : ""}`, onclick: () => select(check.id, true) },
         el("span", { class: `badge ${badgeClass}` }, badge),
         el("span", { class: `id mono ${activity === "queued" ? "a-queued" : ""}`, title: check.id }, check.id),
-        check.contrast === "SORPRESA" ? el("span", { class: "c-SORPRESA", title: "sorpresa frente a la línea base" }, "!") : null,
         activity === "queued" ? el("span", { class: "dim small" }, "en cola") : null,
         el("button", { class: "small", disabled: !state.report || activity === "running" || activity === "queued",
           title: check.state === "PENDIENTE" ? "correr" : "repetir",
@@ -358,10 +349,6 @@ function renderCard() {
   if (!check) return;
   const running = state.running?.ids.includes(check.id);
   const field = (label, value) => value ? [el("dt", {}, label), el("dd", {}, value)] : [];
-  const expectation = check.expectation
-    ? [check.expectation.verdict, check.expectation.cause ? ` (${check.expectation.cause})` : "",
-       check.expectation.note ? ` — ${check.expectation.note}` : ""].join("")
-    : "la línea base no dice nada para este perfil";
   const duration = running
     ? el("span", { id: "stopwatch", class: "a-running" }, "")
     : check.duration_ms !== null && check.duration_ms !== undefined ? `${(check.duration_ms / 1000).toFixed(1)} s` : null;
@@ -380,13 +367,11 @@ function renderCard() {
     el("dl", {},
       field("Enunciado", check.statement),
       field("Cita", el("code", {}, check.citation)),
-      field("Esperado", expectation),
       field("Aviso", check.warning),
       field("Pregunta", check.question),
-      field("Veredicto", el("span", { class: `s-${cssName(check.state)}` },
+      field("Resultado", el("span", { class: `s-${cssName(check.state)}` },
         running ? (check.activity === "asking" ? "esperando tu respuesta" : "corriendo") : check.state)),
       field("Observación", check.observation),
-      field("Frente a la base", check.contrast ? el("span", { class: `c-${cssName(check.contrast)}` }, check.contrast) : null),
       field("Fecha", check.date),
       field("Pendiente porque", check.why_pending),
     ),
@@ -433,9 +418,11 @@ $("question-dialog").addEventListener("cancel", () => {
   dismissedQuestion = state?.question ? `${state.question.kind}:${state.question.check}` : null;
 });
 
+const FORMER_PROVENANCES = { conductor: "sede", sujeto: "cliente", "arnés": "suite" };
+
 function provenanceOf(line) {
   const match = /^\d\d:\d\d\.\d\d (\S+)/.exec(line);
-  return match ? match[1] : "";
+  return match ? FORMER_PROVENANCES[match[1]] ?? match[1] : "";
 }
 
 function renderLog() {

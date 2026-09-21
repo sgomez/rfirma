@@ -1,13 +1,10 @@
 //! El catálogo declarativo de la suite de conformidad, leído de `catalogue/`, un fichero por
 //! conjunto: los metadatos de cada exigencia, no su cuerpo ejecutable.
 
-use std::collections::BTreeMap;
 use std::path::PathBuf;
 use std::time::Duration;
 
 use serde::Deserialize;
-
-use crate::baseline::Expectation;
 
 /// El vocabulario cerrado de `suite`; los conjuntos que falten los abren sus propios tickets.
 pub(crate) const THE_SUITES: &[&str] = &[
@@ -61,9 +58,6 @@ pub(crate) struct Check {
     /// Si es el saludo de su conjunto: lo abre y, si no se cumple, el resto no se corre.
     #[serde(default)]
     pub greeting: bool,
-    /// La línea base: qué se espera de cada perfil de sujeto, por el nombre del perfil.
-    #[serde(default)]
-    pub expect: BTreeMap<String, Expectation>,
 }
 
 #[derive(Debug, Deserialize)]
