@@ -1,6 +1,7 @@
 //! El resultado de una comprobación, sus nombres en pantalla y PENDIENTE; no decide cuál toca.
 
 use serde::{Deserialize, Deserializer, Serialize};
+use ts_rs::TS;
 
 /// El resultado de una comprobación, que nunca pinta de verde a un cliente que se apartó del
 /// protocolo.
@@ -17,6 +18,21 @@ pub enum Outcome {
 pub enum CheckState {
     Pending,
     Resolved(Outcome),
+}
+
+/// Los cuatro nombres en pantalla de un resultado, tal y como viajan a la consola.
+#[derive(TS)]
+#[ts(export)]
+#[allow(dead_code)]
+pub(crate) enum ResultName {
+    #[ts(rename = "CONFORME")]
+    Compliant,
+    #[ts(rename = "NO CONFORME")]
+    Noncompliant,
+    #[ts(rename = "NO OBSERVABLE")]
+    NotObservable,
+    #[ts(rename = "PENDIENTE")]
+    Pending,
 }
 
 pub(crate) const PENDING_NAME: &str = "PENDIENTE";

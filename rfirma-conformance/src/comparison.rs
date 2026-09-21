@@ -2,12 +2,15 @@
 //! en su orden y con su conjunto, sin juzgar a ningún cliente.
 
 use serde::Serialize;
+use ts_rs::TS;
 
 use crate::catalogue::Check;
-use crate::outcome::result_name;
+use crate::client::ClientKind;
+use crate::outcome::{result_name, ResultName};
 use crate::report::Report;
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, TS)]
+#[ts(export)]
 pub(crate) struct Comparison {
     a: Side,
     b: Side,
@@ -15,20 +18,25 @@ pub(crate) struct Comparison {
     differing: usize,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, TS)]
+#[ts(export)]
 struct Side {
     client: String,
+    #[ts(as = "ClientKind")]
     kind: &'static str,
     client_version: String,
 }
 
-#[derive(Debug, PartialEq, Eq, Serialize)]
+#[derive(Debug, PartialEq, Eq, Serialize, TS)]
+#[ts(export)]
 struct Row {
     id: String,
     set: String,
     chapter: String,
     citation: String,
+    #[ts(as = "ResultName")]
     a: &'static str,
+    #[ts(as = "ResultName")]
     b: &'static str,
     differ: bool,
 }

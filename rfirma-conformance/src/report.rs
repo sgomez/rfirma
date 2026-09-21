@@ -43,7 +43,8 @@ impl CheckRecord {
 }
 
 /// Las coordenadas de un informe, tomadas una sola vez al crearlo.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ts_rs::TS)]
+#[ts(export)]
 pub struct Header {
     pub os: String,
     pub os_version: String,

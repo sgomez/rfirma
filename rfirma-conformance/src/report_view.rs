@@ -2,29 +2,35 @@
 //! resultado de cada comprobación—, igual lo esté corriendo la sesión o no; no sabe de la sesión.
 
 use serde::Serialize;
+use ts_rs::TS;
 
 use crate::catalogue::Check;
-use crate::outcome::result_name;
+use crate::client::ClientKind;
+use crate::outcome::{result_name, ResultName};
 use crate::outcome::{CheckState, Outcome};
 use crate::report::{CheckRecord, Header, Report};
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, TS)]
+#[ts(export)]
 pub(crate) struct ReportView<'a> {
     client: &'a str,
+    #[ts(as = "ClientKind")]
     kind: &'static str,
     header: &'a Header,
     summary: Summary,
     sets: Vec<SetView<'a>>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, TS)]
+#[ts(export)]
 struct SetView<'a> {
     name: &'a str,
     summary: Summary,
     checks: Vec<CheckView<'a>>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, TS)]
+#[ts(export)]
 struct CheckView<'a> {
     id: &'a str,
     chapter: &'a str,
@@ -32,13 +38,16 @@ struct CheckView<'a> {
     citation: &'a str,
     warning: Option<&'a str>,
     question: Option<&'a str>,
+    #[ts(as = "ResultName")]
     state: &'static str,
     observation: Option<&'a str>,
     date: Option<&'a str>,
+    #[ts(type = "number | null")]
     duration_ms: Option<u64>,
 }
 
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, TS)]
+#[ts(export)]
 pub(crate) struct Summary {
     pub total: usize,
     pub compliant: usize,

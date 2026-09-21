@@ -9,7 +9,8 @@ use std::sync::{Arc, Condvar, Mutex, MutexGuard};
 use std::thread::spawn;
 use std::time::{Duration, Instant};
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 
 use crate::catalogue::Check;
 use crate::checks::{
@@ -29,17 +30,40 @@ use crate::validation::{
 };
 use crate::Probe;
 
-/// Lo que se pide correr desde la página.
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "snake_case")]
+/// Lo que se pide correr: una comprobación, un conjunto entero o sus pendientes, o todo lo pendiente.
+#[derive(Debug, Deserialize, TS)]
+#[serde(untagged)]
+#[ts(export)]
 pub(crate) enum Request {
-    Check(String),
-    Set(String),
+    Check {
+        check: String,
+    },
+    Set {
+        set: String,
+        #[ts(optional)]
+        pending: Option<bool>,
+    },
+    Pending(AllPending),
+}
+
+#[derive(Debug, Deserialize, TS)]
+#[serde(rename_all = "snake_case")]
+#[ts(export)]
+pub(crate) enum AllPending {
     Pending,
 }
 
+/// Una línea del registro en vivo y la comprobación que la dio.
+#[derive(Debug, Serialize, TS)]
+#[ts(export)]
+pub(crate) struct LiveLine {
+    check: Option<String>,
+    line: String,
+}
+
 /// Las coordenadas con las que se crea un informe, tal y como llegan de la página.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, TS)]
+#[ts(export)]
 pub(crate) struct NewReport {
     name: String,
     client_version: String,
@@ -247,8 +271,10 @@ impl Console {
         {
             return Err(complaint);
         }
+        let is_pending =
+            |check: &&Check| open.report.state_of(&check.id) == Some(CheckState::Pending);
         let (wanted, in_batch): (Vec<&Check>, bool) = match &request {
-            Request::Check(id) => (
+            Request::Check { check: id } => (
                 vec![self
                     .shared
                     .catalogue
@@ -257,20 +283,17 @@ impl Console {
                     .ok_or_else(|| format!("no conozco la comprobación «{id}»"))?],
                 false,
             ),
-            Request::Set(set) => (
+            Request::Set { set, pending } => (
                 self.shared
                     .catalogue
                     .iter()
                     .filter(|check| &check.set == set)
+                    .filter(|check| !pending.unwrap_or(false) || is_pending(check))
                     .collect(),
                 true,
             ),
-            Request::Pending => (
-                self.shared
-                    .catalogue
-                    .iter()
-                    .filter(|check| open.report.state_of(&check.id) == Some(CheckState::Pending))
-                    .collect(),
+            Request::Pending(AllPending::Pending) => (
+                self.shared.catalogue.iter().filter(is_pending).collect(),
                 true,
             ),
         };
@@ -285,13 +308,11 @@ impl Console {
         Ok(())
     }
 
-    /// Vacía la cola; con `abort`, además corta la comprobación en curso y la deja pendiente.
-    pub(crate) fn stop(&self, abort: bool) {
+    /// Vacía la cola y corta la comprobación en curso, que queda pendiente.
+    pub(crate) fn stop(&self) {
         let mut session = self.shared.lock();
         session.queue.clear();
-        if abort {
-            cut_the_running_check(&mut session);
-        }
+        cut_the_running_check(&mut session);
         self.shared.publish(&session);
     }
 
@@ -475,7 +496,11 @@ impl Witness {
             if let Some(log) = &log {
                 log.write(&line);
             }
-            let payload = serde_json::json!({ "check": check, "line": line });
+            let payload = serde_json::to_value(LiveLine {
+                check: check.clone(),
+                line,
+            })
+            .expect("la línea se serializa");
             shared.broadcast(&event_frame("log", &payload));
         })
     }

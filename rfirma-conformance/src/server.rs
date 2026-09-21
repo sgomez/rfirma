@@ -3,13 +3,14 @@
 
 use std::io::{BufRead, BufReader, Read, Write};
 use std::net::{TcpListener, TcpStream};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::mpsc::RecvTimeoutError;
 use std::thread::spawn;
 use std::time::Duration;
 
 use serde::Deserialize;
 use serde_json::json;
+use ts_rs::TS;
 
 use crate::client::ClientKind;
 use crate::console::{Console, NewReport, Request};
@@ -18,7 +19,9 @@ use crate::console::{Console, NewReport, Request};
 /// sortea los del canal, y lejos del 63117 del protocolo de la versión 3.
 pub(crate) const THE_CONSOLE_PORTS: std::ops::RangeInclusive<u16> = 47_117..=47_126;
 
-const THE_PAGE: &str = include_str!("console.html");
+const THE_CONSOLE_BUILD: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/console/dist");
+const THE_PAGE_POLICY: &str = "default-src 'self'; img-src 'self' data:; base-uri 'none'; \
+                               form-action 'none'; frame-ancestors 'none'";
 const THE_LARGEST_BODY: usize = 64 * 1024;
 const THE_HEARTBEAT: Duration = Duration::from_secs(15);
 
@@ -26,6 +29,11 @@ const THE_HEARTBEAT: Duration = Duration::from_secs(15);
 pub(crate) struct Gate {
     token: String,
     port: u16,
+}
+
+/// La consola compilada por `just conformance-console`, que se lee del disco en cada petición.
+pub(crate) struct Build {
+    dir: PathBuf,
 }
 
 #[derive(Debug, Default)]
@@ -41,11 +49,77 @@ pub(crate) struct HttpRequest {
 pub(crate) struct Server {
     listener: TcpListener,
     gate: std::sync::Arc<Gate>,
+    build: std::sync::Arc<Build>,
+}
+
+impl Build {
+    /// La consola compilada en `dir`, o qué receta la compila si no está.
+    pub(crate) fn at(dir: &Path) -> Result<Self, String> {
+        if dir.join("index.html").is_file() {
+            Ok(Self {
+                dir: dir.to_owned(),
+            })
+        } else {
+            Err(format!(
+                "falta la consola compilada en {}: ejecuta `just conformance-console`",
+                dir.display()
+            ))
+        }
+    }
+
+    fn page(&self, token: &str) -> Result<String, String> {
+        std::fs::read_to_string(self.dir.join("index.html"))
+            .map(|page| the_page_with_its_token(&page, token))
+            .map_err(|error| format!("la página de la consola no se pudo leer: {error}"))
+    }
+
+    fn asset(&self, name: &str) -> Option<Vec<u8>> {
+        is_an_asset_name(name)
+            .then(|| std::fs::read(self.dir.join("assets").join(name)).ok())
+            .flatten()
+    }
+}
+
+/// La página con el token en cada recurso suyo, que sin él la guarda no serviría.
+fn the_page_with_its_token(page: &str, token: &str) -> String {
+    let mut marked = String::with_capacity(page.len());
+    let mut rest = page;
+    while let Some(at) = rest.find("\"/assets/") {
+        let (before, asset) = rest.split_at(at + 1);
+        let end = asset.find('"').unwrap_or(asset.len());
+        marked.push_str(before);
+        marked.push_str(&asset[..end]);
+        marked.push_str("?token=");
+        marked.push_str(token);
+        rest = &asset[end..];
+    }
+    marked.push_str(rest);
+    marked
+}
+
+/// Un fichero de `assets/`, y nunca una ruta que salga de él.
+fn is_an_asset_name(name: &str) -> bool {
+    !name.is_empty()
+        && !name.starts_with('.')
+        && name
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '-' | '_'))
+}
+
+fn content_type_of(name: &str) -> &'static str {
+    match name.rsplit('.').next() {
+        Some("js") => "text/javascript; charset=utf-8",
+        Some("css") => "text/css; charset=utf-8",
+        Some("svg") => "image/svg+xml",
+        Some("woff2") => "font/woff2",
+        _ => "application/octet-stream",
+    }
 }
 
 impl Server {
-    /// Escucha en el primer puerto libre de [`THE_CONSOLE_PORTS`], con un token nuevo.
+    /// Escucha en el primer puerto libre, con un token nuevo, si la consola está compilada.
     pub(crate) fn bind() -> Result<Self, String> {
+        let build = Build::at(Path::new(THE_CONSOLE_BUILD))?;
         let listener = THE_CONSOLE_PORTS
             .clone()
             .find_map(|port| TcpListener::bind(("127.0.0.1", port)).ok())
@@ -66,6 +140,7 @@ impl Server {
                 token: a_fresh_token()?,
                 port,
             }),
+            build: std::sync::Arc::new(build),
         })
     }
 
@@ -80,7 +155,8 @@ impl Server {
         for stream in self.listener.incoming().filter_map(Result::ok) {
             let console = console.clone();
             let gate = std::sync::Arc::clone(&self.gate);
-            spawn(move || attend(stream, &gate, &console));
+            let build = std::sync::Arc::clone(&self.build);
+            spawn(move || attend(stream, &gate, &build, &console));
         }
     }
 }
@@ -208,7 +284,7 @@ fn percent_decoded(text: &str) -> String {
     String::from_utf8_lossy(&decoded).into_owned()
 }
 
-fn attend(mut stream: TcpStream, gate: &Gate, console: &Console) {
+fn attend(mut stream: TcpStream, gate: &Gate, build: &Build, console: &Console) {
     let request = match HttpRequest::read(&mut stream) {
         Ok(request) => request,
         Err(complaint) => return respond(&mut stream, 400, &json!({ "error": complaint })),
@@ -217,8 +293,16 @@ fn attend(mut stream: TcpStream, gate: &Gate, console: &Console) {
         return respond(&mut stream, 403, &json!({ "error": complaint }));
     }
     match (request.method.as_str(), request.path.as_str()) {
-        ("GET", path) if is_a_page(path) => {
-            respond_with(&mut stream, 200, "text/html; charset=utf-8", THE_PAGE);
+        ("GET", path) if is_a_page(path) => match build.page(&gate.token) {
+            Ok(page) => respond_with_page(&mut stream, &page),
+            Err(complaint) => respond(&mut stream, 500, &json!({ "error": complaint })),
+        },
+        ("GET", path) if path.starts_with("/assets/") => {
+            let name = &path["/assets/".len()..];
+            match build.asset(name) {
+                Some(bytes) => respond_with_bytes(&mut stream, 200, content_type_of(name), &bytes),
+                None => respond(&mut stream, 404, &json!({ "error": "no hay tal recurso" })),
+            }
         }
         ("GET", "/api/events") => stream_events(stream, console),
         ("GET", "/api/defaults") => answer(&mut stream, console.the_deduced_coordinates()),
@@ -285,10 +369,10 @@ fn attend(mut stream: TcpStream, gate: &Gate, console: &Console) {
             &mut stream,
             body_of::<Request>(&request).and_then(|wanted| console.enqueue(wanted)),
         ),
-        ("POST", "/api/stop") => answer(
-            &mut stream,
-            body_of::<StopOrder>(&request).map(|order| console.stop(order.abort)),
-        ),
+        ("POST", "/api/stop") => {
+            console.stop();
+            answer(&mut stream, Ok::<(), String>(()));
+        }
         ("POST", "/api/skip") => {
             console.skip();
             answer(&mut stream, Ok::<(), String>(()));
@@ -309,24 +393,22 @@ fn is_a_page(path: &str) -> bool {
             .is_some_and(|name| !name.is_empty() && !name.contains('/'))
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, TS)]
+#[ts(export)]
 struct ClientChoice {
     kind: String,
     binary: Option<String>,
     trust_root: Option<String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, TS)]
+#[ts(export)]
 struct ReportChoice {
     name: String,
 }
 
-#[derive(Deserialize)]
-struct StopOrder {
-    abort: bool,
-}
-
-#[derive(Deserialize)]
+#[derive(Deserialize, TS)]
+#[ts(export)]
 struct Answer {
     answer: Option<String>,
 }
@@ -355,13 +437,29 @@ fn respond(stream: &mut TcpStream, status: u16, body: &serde_json::Value) {
 }
 
 fn respond_with(stream: &mut TcpStream, status: u16, content_type: &str, body: &str) {
+    respond_with_bytes(stream, status, content_type, body.as_bytes());
+}
+
+fn respond_with_page(stream: &mut TcpStream, page: &str) {
     let _ = write!(
         stream,
+        "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: {}\r\n\
+         Content-Security-Policy: {THE_PAGE_POLICY}\r\nX-Content-Type-Options: nosniff\r\n\
+         Referrer-Policy: no-referrer\r\nCache-Control: no-store\r\nConnection: close\r\n\r\n{page}",
+        page.len()
+    );
+}
+
+fn respond_with_bytes(stream: &mut TcpStream, status: u16, content_type: &str, body: &[u8]) {
+    let head = format!(
         "HTTP/1.1 {status} {}\r\nContent-Type: {content_type}\r\nContent-Length: {}\r\n\
-         Cache-Control: no-store\r\nConnection: close\r\n\r\n{body}",
+         X-Content-Type-Options: nosniff\r\nCache-Control: no-store\r\nConnection: close\r\n\r\n",
         reason_of(status),
         body.len()
     );
+    let _ = stream
+        .write_all(head.as_bytes())
+        .and_then(|()| stream.write_all(body));
 }
 
 fn reason_of(status: u16) -> &'static str {
@@ -370,6 +468,7 @@ fn reason_of(status: u16) -> &'static str {
         400 => "Bad Request",
         403 => "Forbidden",
         404 => "Not Found",
+        500 => "Internal Server Error",
         _ => "Conflict",
     }
 }
@@ -519,6 +618,36 @@ mod tests {
         for path in ["/informe/", "/informe/a/b", "/informe", "/api/report-view"] {
             assert!(!is_a_page(path), "{path}");
         }
+    }
+
+    #[test]
+    fn the_page_hands_its_token_to_each_of_its_assets() {
+        let page = r#"<script type="module" src="/assets/index-a1.js"></script><link href="/assets/index-b2.css">"#;
+
+        assert_eq!(
+            the_page_with_its_token(page, "t0k"),
+            r#"<script type="module" src="/assets/index-a1.js?token=t0k"></script><link href="/assets/index-b2.css?token=t0k">"#
+        );
+    }
+
+    #[test]
+    fn an_asset_is_one_file_of_the_assets_dir_and_never_a_way_out() {
+        assert!(is_an_asset_name("index-a1.js"));
+        for name in ["", "../index.html", ".hidden", "a/b.js", "%2e%2e"] {
+            assert!(!is_an_asset_name(name), "{name}");
+        }
+    }
+
+    #[test]
+    fn a_console_that_was_never_built_names_the_recipe_that_builds_it() {
+        let empty = tempfile::tempdir().unwrap();
+
+        let complaint = Build::at(empty.path()).err().unwrap();
+
+        assert!(
+            complaint.contains("just conformance-console"),
+            "{complaint}"
+        );
     }
 
     #[test]

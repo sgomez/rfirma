@@ -5,9 +5,10 @@ use std::collections::BTreeMap;
 use std::time::Duration;
 
 use serde::Serialize;
+use ts_rs::TS;
 
 use crate::catalogue::Check;
-use crate::client::Client;
+use crate::client::{Client, ClientKind};
 use crate::outcome::CheckState;
 use crate::report::Report;
 use crate::report_view::{report_view, ReportView};
@@ -26,9 +27,11 @@ pub(crate) struct Activity<'a> {
 }
 
 /// Un informe del directorio de informes, tal y como se ofrece para elegirlo o compararlo.
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, TS)]
+#[ts(export)]
 pub(crate) struct ReportEntry {
     pub(crate) name: String,
+    #[ts(as = "Option<ClientKind>")]
     pub(crate) kind: Option<&'static str>,
     pub(crate) client: Option<String>,
     pub(crate) client_version: Option<String>,
@@ -36,7 +39,8 @@ pub(crate) struct ReportEntry {
     pub(crate) complaint: Option<String>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, TS)]
+#[ts(export)]
 pub(crate) struct Snapshot<'a> {
     client: Option<&'a Client>,
     client_complaints: &'a [String],
@@ -50,16 +54,20 @@ pub(crate) struct Snapshot<'a> {
     why_pending: BTreeMap<&'a str, &'a str>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, TS)]
+#[ts(export)]
 struct RunningView<'a> {
     ids: &'a [String],
+    #[ts(type = "number")]
     elapsed_ms: u128,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, TS)]
+#[ts(export)]
 struct QuestionView<'a> {
     check: &'a str,
     prompt: &'a str,
+    #[ts(type = "\"outcome\" | \"briefing\"")]
     kind: &'static str,
 }
 
