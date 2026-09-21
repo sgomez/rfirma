@@ -20,7 +20,7 @@ pub(crate) struct Activity<'a> {
     pub(crate) running: &'a [String],
     pub(crate) running_for: Duration,
     pub(crate) queued: Vec<&'a str>,
-    pub(crate) question: Option<(&'a str, &'a str)>,
+    pub(crate) question: Option<(&'a str, &'a str, &'static str)>,
     pub(crate) reasons: Option<&'a BTreeMap<String, String>>,
     pub(crate) resolving_subject: bool,
 }
@@ -81,6 +81,7 @@ struct RunningView<'a> {
 struct QuestionView<'a> {
     check: &'a str,
     prompt: &'a str,
+    kind: &'static str,
 }
 
 #[derive(Debug, Serialize)]
@@ -204,15 +205,17 @@ pub(crate) fn snapshot_of<'a>(
             elapsed_ms: activity.running_for.as_millis(),
         }),
         queued: &activity.queued,
-        question: activity
-            .question
-            .map(|(check, prompt)| QuestionView { check, prompt }),
+        question: activity.question.map(|(check, prompt, kind)| QuestionView {
+            check,
+            prompt,
+            kind,
+        }),
         suites,
     }
 }
 
 fn the_activity_of(id: &str, activity: &Activity) -> Option<&'static str> {
-    if activity.question.is_some_and(|(check, _)| check == id) {
+    if activity.question.is_some_and(|(check, _, _)| check == id) {
         Some("asking")
     } else if activity.running.iter().any(|running| running == id) {
         Some("running")
@@ -421,7 +424,7 @@ expect.autofirma = { verdict = "no-conforme", cause = "BUG-01" }
             running: &running,
             running_for: Duration::from_millis(12_000),
             queued: vec!["a_save"],
-            question: Some(("a_signature", "¿se pidió el PIN? [s/n]")),
+            question: Some(("a_signature", "¿se pidió el PIN? [s/n]", "verdict")),
             ..Activity::default()
         };
 
@@ -441,7 +444,7 @@ expect.autofirma = { verdict = "no-conforme", cause = "BUG-01" }
         assert_eq!(json["queued"], json!(["a_save"]));
         assert_eq!(
             json["question"],
-            json!({"check": "a_signature", "prompt": "¿se pidió el PIN? [s/n]"})
+            json!({"check": "a_signature", "prompt": "¿se pidió el PIN? [s/n]", "kind": "verdict"})
         );
         assert_eq!(the_check(&json, "a_signature")["activity"], "asking");
         assert_eq!(the_check(&json, "a_save")["activity"], "queued");

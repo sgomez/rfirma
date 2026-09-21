@@ -19,6 +19,7 @@
   code, pre, .mono { font-family: ui-monospace, "JetBrains Mono", monospace; font-size: 12px; }
   header { padding: 8px 12px; border-bottom: 1px solid var(--line); background: var(--panel); display: grid; gap: 6px; }
   .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  [hidden] { display: none !important; }
   .grow { flex: 1; }
   .dim { color: var(--dim); }
   .complaint { color: var(--bad); }
@@ -51,7 +52,7 @@
   dialog::backdrop { background: rgba(0,0,0,.55); }
   dialog form { display: grid; grid-template-columns: 10em 1fr; gap: 6px 10px; align-items: center; }
   #transcript-text { max-height: 70vh; overflow: auto; white-space: pre-wrap; word-break: break-all; }
-  #question-dialog .prompt { font-size: 15px; margin: 6px 0 14px; }
+  #question-dialog .prompt { font-size: 15px; margin: 6px 0 14px; white-space: pre-wrap; max-width: 60ch; }
   #compare-view { display: none; padding: 10px 14px; overflow: auto; height: calc(100vh - 110px); }
   body.comparing main { display: none; } body.comparing #compare-view { display: block; }
   table { border-collapse: collapse; width: 100%; }
@@ -130,13 +131,19 @@
 </dialog>
 
 <dialog id="question-dialog">
+  <strong id="question-title"></strong>
   <div class="dim" id="question-check"></div>
   <div class="prompt" id="question-prompt"></div>
-  <div class="row">
+  <div class="row" id="question-verdict">
     <button type="button" data-answer="s">Sí</button>
     <button type="button" data-answer="n">No</button>
     <span class="grow"></span>
     <button type="button" data-answer="">Descartar (queda pendiente)</button>
+  </div>
+  <div class="row" id="question-briefing">
+    <button type="button" data-answer="s">Empezar</button>
+    <span class="grow"></span>
+    <button type="button" data-answer="">Saltar (queda pendiente)</button>
   </div>
 </dialog>
 
@@ -403,9 +410,13 @@ function renderQuestion() {
     if (dialog.open) dialog.close();
     return;
   }
-  const { check, prompt } = state.question;
-  banner.append(el("span", { class: "question-banner", onclick: () => { dismissedQuestion = null; renderQuestion(); } }, `¿? ${check}`));
-  if (dismissedQuestion === check) return;
+  const { check, prompt, kind } = state.question;
+  const briefing = kind === "briefing";
+  $("question-title").textContent = briefing ? "Antes de empezar" : "Resultado de la prueba";
+  $("question-verdict").hidden = briefing;
+  $("question-briefing").hidden = !briefing;
+  banner.append(el("span", { class: "question-banner", onclick: () => { dismissedQuestion = null; renderQuestion(); } }, `${briefing ? "▶" : "¿?"} ${check}`));
+  if (dismissedQuestion === `${kind}:${check}`) return;
   $("question-check").textContent = check;
   $("question-prompt").textContent = prompt.replace(/\s*\[s\/n\]\s*$/, "");
   if (!dialog.open) dialog.showModal();
@@ -419,7 +430,7 @@ for (const button of document.querySelectorAll("#question-dialog button")) {
   });
 }
 $("question-dialog").addEventListener("cancel", () => {
-  dismissedQuestion = state?.question ? state.question.check : null;
+  dismissedQuestion = state?.question ? `${state.question.kind}:${state.question.check}` : null;
 });
 
 function provenanceOf(line) {
