@@ -39,14 +39,16 @@ verdict = "conforme"
 id = "sign_missing_or_invalid_operation_rejected"
 suite = "errores"
 chapter = "15"
-citation = "ProtocolInvocationLauncherSign.java:733"
+citation = "SingleSignOperation.java:68-79; ProtocolInvocationLauncherSign.java:158, 700, 857-860"
 statement = """
 En afirma://sign?, si el parámetro op falta o no es reconocido, se rechaza con SAF_04.
 """
 drive = { mode = "v4", script = "protocol-v4-operations" }
 
 [check.expect.autofirma]
-verdict = "conforme"
+verdict = "no-conforme"
+cause = "BUG-15"
+note = "sign tampoco valida op: sigue hasta el formato (SAF_06) y, con uno válido, pide certificado y acaba en SAF_09."
 
 [check.expect.rfirma]
 verdict = "conforme"
@@ -71,11 +73,13 @@ verdict = "conforme"
 id = "local_access_blocked"
 suite = "errores"
 chapter = "15"
-citation = "UrlParameters.java:279-281; ProtocolInvocationLauncher.java:735"
+citation = "UrlParameters.java:279-289, 369-372; ProtocolInvocationLauncher.java:732-737"
 statement = """
-Si stservlet o rtservlet apuntan a direcciones locales prohibidas, se rechaza con SAF_13.
+Si rtservlet apunta a localhost o 127.0.0.1, se rechaza con SAF_13. Por socket o WebSocket el
+stservlet no se valida.
 """
 drive = { mode = "v4", script = "protocol-v4-operations" }
+warning = "AutoFirma muestra el error SAF_13 en un diálogo: ciérralo para que llegue la respuesta."
 
 [check.expect.autofirma]
 verdict = "conforme"
@@ -105,8 +109,7 @@ suite = "errores"
 chapter = "07"
 citation = "UrlParametersToSignAndSave.java:29, 237; ProtocolInvocationLauncherSignAndSave.java:155, 728"
 statement = """
-Una invocación de signandsave sin cop se rechaza con SAF_04, el mismo código con el que sign
-rechaza un verbo ausente o no reconocido.
+Una invocación de signandsave sin cop se rechaza con SAF_04.
 """
 drive = { mode = "v4", script = "signandsavewithoutaverb" }
 expects_saf = "SAF_04"

@@ -264,7 +264,7 @@ dirigido al defecto.
 
 ### BUG-15: Ausencia de validación de `cop` en `signandsave` provoca `NullPointerException` y reporte engañoso con `SAF_09`
 
-* **Comprobación del catálogo:** `signandsave_rejects_a_request_without_a_verb_with_saf_04`.
+* **Comprobación del catálogo:** `signandsave_rejects_a_request_without_a_verb_with_saf_04`; en `sign`, `sign_missing_or_invalid_operation_rejected`.
 * **Estado en `master`:** **Sigue presente.** `UrlParametersToSignAndSave.java:238-239` sigue asignando `cop` sin comprobar presencia ni pertenencia al conjunto de operaciones.
 * **Código fuente:** `afirma-core` · `es.gob.afirma.core.misc.protocol.UrlParametersToSignAndSave.java:237-238`; `afirma-simple-plugins` · `es.gob.afirma.standalone.plugins.SignOperation.java:67-78`; `afirma-simple` · `es.gob.afirma.standalone.protocol.ProtocolInvocationLauncherSignAndSave.java:155, 297, 728, 882-887`.
 * **Origen de auditoría:** Anteriormente AUD-37 ([07-operacion-signandsave.md](07-operacion-signandsave.md)).
@@ -281,6 +281,7 @@ dirigido al defecto.
   4. La sede electrónica recibe una notificación que atribuye el fallo a un error interno del proceso criptográfico del certificado en lugar de a un error sintáctico de parámetros (`SAF_03`), habiendo sometido previamente a la persona usuaria a una interacción innecesaria con el diálogo de certificados y PIN.
   *(Nota: Si `data == null` y el firmador implementa `OptionalDataInterface`, el `NullPointerException` se detona anticipadamente en la línea 297 en `signOperation.getCryptoOperation().toString()`, escapando de `sign` y `processSign` y siendo absorbido por el capturador genérico de `ProtocolInvocationLauncher.java:748`, el cual devuelve `SAF_03`).*
 * **Causa raíz:** Falta de comprobación de presencia y obligatoriedad del parámetro `cop` en `UrlParametersToSignAndSave.setSignAndSaveParameters`, que debería arrojar `ParameterException` en caso de valor nulo o no reconocido.
+* **También en `sign`:** `UrlParametersToSign.java:245-246` asigna `op` sin validarlo y `ProtocolInvocationLauncherSign.java:158` lo convierte en `null` con el mismo `Operation.getOperation`. La petición sigue hasta el formato (`SAF_06` si no existe) y, con uno válido, pide certificado y PIN antes de que el `switch` de la línea 700 lance el `NullPointerException` que la línea 857 reporta como `SAF_09`.
 
 ---
 

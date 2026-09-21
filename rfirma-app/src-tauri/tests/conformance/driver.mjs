@@ -1559,7 +1559,7 @@ const THE_V4_OPERATION_PROBES = [
   {
     id: "local_access_blocked",
     order: (idSession) =>
-      `afirma://sign?op=sign&stservlet=http://127.0.0.1/st&idsession=${idSession}`,
+      `afirma://sign?op=sign&fileid=rfirma&rtservlet=http://127.0.0.1/rt&idsession=${idSession}`,
     holds: (answer) => answer.startsWith("SAF_13"),
   },
   {
