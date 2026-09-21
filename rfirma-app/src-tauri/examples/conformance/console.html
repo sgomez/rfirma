@@ -67,22 +67,22 @@
     <select id="profile"><option value="autofirma">autofirma</option><option value="rfirma">rfirma</option></select>
     <input id="binary" class="grow mono" placeholder="binario (vacío: se busca en el PATH)">
     <input id="trust-root" class="grow mono" placeholder="raíz de confianza (vacío: la que resuelva el sujeto)">
-    <button id="resolve">Resolver</button>
+    <button type="button" id="resolve">Resolver</button>
     <span id="subject-status" class="dim"></span>
   </div>
   <div class="row">
     <strong>Informe</strong>
     <select id="reports"></select>
-    <button id="open-report">Abrir</button>
-    <button id="new-report">+ nuevo</button>
+    <button type="button" id="open-report">Abrir</button>
+    <button type="button" id="new-report">+ nuevo</button>
     <span class="sep"></span>
     <span id="summary" class="mono"></span>
     <span class="grow"></span>
     <span id="question-banner"></span>
-    <button id="run-pending">▶ pendientes</button>
-    <button id="stop" title="vacía la cola; la que corre termina">■ parar</button>
-    <button id="abort" title="vacía la cola y corta la que corre">✕ abortar</button>
-    <button id="toggle-compare">Comparar informes</button>
+    <button type="button" id="run-pending">▶ pendientes</button>
+    <button type="button" id="stop" title="vacía la cola; la que corre termina">■ parar</button>
+    <button type="button" id="abort" title="vacía la cola y corta la que corre">✕ abortar</button>
+    <button type="button" id="toggle-compare">Comparar informes</button>
   </div>
 </header>
 <main>
@@ -96,7 +96,7 @@
         <label><input type="checkbox" data-provenance="sujeto" checked> sujeto</label>
         <label><input type="checkbox" data-provenance="arnés" checked> arnés</label>
         <span class="grow"></span>
-        <button id="pause-log">⏸ pausar</button>
+        <button type="button" id="pause-log">⏸ pausar</button>
       </div>
       <pre id="log-lines"></pre>
     </section>
@@ -107,7 +107,7 @@
     <strong>Comparar</strong>
     A <select id="compare-a"></select>
     B <select id="compare-b"></select>
-    <button id="compare">Comparar</button>
+    <button type="button" id="compare">Comparar</button>
     <label><input type="checkbox" id="only-differing"> solo las que difieren</label>
   </div>
   <div id="comparison"></div>
@@ -124,7 +124,7 @@
     <label for="nr-transport">Transporte</label><input id="nr-transport" name="transport" required>
     <span class="complaint" id="nr-complaint" style="grid-column: 1 / -1"></span>
     <span></span>
-    <div class="row"><button value="create">Crear</button><button value="cancel" formnovalidate>Cancelar</button></div>
+    <div class="row"><button type="submit" value="create">Crear</button><button type="submit" value="cancel" formnovalidate>Cancelar</button></div>
   </form>
 </dialog>
 
@@ -132,15 +132,15 @@
   <div class="dim" id="question-check"></div>
   <div class="prompt" id="question-prompt"></div>
   <div class="row">
-    <button data-answer="s">Sí</button>
-    <button data-answer="n">No</button>
+    <button type="button" data-answer="s">Sí</button>
+    <button type="button" data-answer="n">No</button>
     <span class="grow"></span>
-    <button data-answer="">Descartar (queda pendiente)</button>
+    <button type="button" data-answer="">Descartar (queda pendiente)</button>
   </div>
 </dialog>
 
 <dialog id="transcript-dialog">
-  <div class="row"><strong id="transcript-title"></strong><span class="grow"></span><button id="close-transcript">Cerrar</button></div>
+  <div class="row"><strong id="transcript-title"></strong><span class="grow"></span><button type="button" id="close-transcript">Cerrar</button></div>
   <pre id="transcript-text"></pre>
 </dialog>
 
@@ -307,7 +307,8 @@ function renderCatalogue() {
   const scroll = nav.scrollTop;
   nav.replaceChildren(...state.suites.map((suite) => {
     const isFolded = folded.has(suite.name);
-    const counts = suite.checks.reduce((acc, check) => (acc[check.state] = (acc[check.state] || 0) + 1, acc), {});
+    const counts = {};
+    for (const check of suite.checks) counts[check.state] = (counts[check.state] || 0) + 1;
     const title = el("div", { class: "title", onclick: () => { isFolded ? folded.delete(suite.name) : folded.add(suite.name); renderCatalogue(); } },
       el("span", {}, isFolded ? "▸" : "▾"),
       el("span", { class: "name" }, suite.name),
@@ -346,7 +347,7 @@ function renderCard() {
   const card = $("card");
   const check = allChecks().find((each) => each.id === selected);
   if (!check) return;
-  const running = state.running && state.running.ids.includes(check.id);
+  const running = state.running?.ids.includes(check.id);
   const field = (label, value) => value ? [el("dt", {}, label), el("dd", {}, value)] : [];
   const expectation = check.expectation
     ? [check.expectation.verdict, check.expectation.cause ? ` (${check.expectation.cause})` : "",
@@ -412,7 +413,7 @@ for (const button of document.querySelectorAll("#question-dialog button")) {
   });
 }
 $("question-dialog").addEventListener("cancel", () => {
-  dismissedQuestion = state && state.question ? state.question.check : null;
+  dismissedQuestion = state?.question ? state.question.check : null;
 });
 
 function provenanceOf(line) {
@@ -435,7 +436,7 @@ async function loadLog() {
   const wanted = selected;
   logLines = [];
   renderLog();
-  if (!state || !state.report || !wanted) return;
+  if (!state?.report || !wanted) return;
   try {
     const text = await getText("/api/log", { check: wanted });
     if (wanted === selected) {
@@ -449,7 +450,7 @@ async function loadLog() {
 }
 
 function onLog({ check, line }) {
-  if (!state || !state.running) return;
+  if (!state?.running) return;
   const ids = state.running.ids;
   if (check !== ids[0] || !ids.includes(selected)) return;
   if (pausedLines) pausedLines.push(line);
