@@ -32,3 +32,41 @@ fn is_persisted_by_the_very_tag_it_reports() {
         );
     }
 }
+
+#[test]
+fn recognises_the_language_of_a_posix_locale() {
+    assert_eq!(Language::of_locale("ca_ES.UTF-8"), Some(Language::Catalan));
+    assert_eq!(Language::of_locale("gl_ES@euro"), Some(Language::Galician));
+    assert_eq!(Language::of_locale("eu"), Some(Language::Basque));
+}
+
+#[test]
+fn recognises_the_language_of_a_bcp47_tag() {
+    assert_eq!(Language::of_locale("en-GB"), Some(Language::English));
+    assert_eq!(Language::of_locale("ES-es"), Some(Language::Spanish));
+    assert_eq!(
+        Language::of_locale("ca-ES-valencia"),
+        Some(Language::Catalan)
+    );
+}
+
+#[test]
+fn does_not_recognise_an_unsupported_or_neutral_locale() {
+    assert_eq!(Language::of_locale("fr_FR.UTF-8"), None);
+    assert_eq!(Language::of_locale("C.UTF-8"), None);
+    assert_eq!(Language::of_locale(""), None);
+}
+
+#[test]
+fn takes_the_first_supported_language_among_the_preferred_ones() {
+    assert_eq!(
+        Language::first_of(["fr-FR", "gl-ES", "en-US"]),
+        Language::Galician
+    );
+}
+
+#[test]
+fn falls_back_to_spanish_when_no_preferred_language_is_supported() {
+    assert_eq!(Language::first_of(["fr-FR", "de-DE"]), Language::Spanish);
+    assert_eq!(Language::first_of(Vec::<String>::new()), Language::Spanish);
+}

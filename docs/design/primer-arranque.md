@@ -56,7 +56,7 @@ Tres regiones:
 
 | # | Qué lleva | Pie |
 | - | --------- | --- |
-| 1 | Bienvenida: titular, qué es rFirma y el deslinde de independencia | `Continuar` |
+| 1 | Bienvenida: titular, qué es rFirma, el deslinde de independencia y el idioma | `Continuar` |
 | 2 | Las dos acciones, una tarjeta cada una | `Atrás` · `Terminar` |
 
 **El rechazo es por acción.** Cada tarjeta de la segunda pantalla lleva su
@@ -85,6 +85,14 @@ Y, en tarjeta:
 > rFirma no está relacionada con AutoFirma ni con la Administración General del
 > Estado, que publican el cliente oficial, ni cuenta con su respaldo. Si
 > necesitas la aplicación oficial, descárgala de su web.
+
+Y, en otra tarjeta con la forma de las de la pantalla 2:
+
+> **Idioma**
+>
+> Elige el idioma de rFirma. Puedes cambiarlo más adelante en Preferencias.
+>
+> [ Español ▾ ]
 
 Pie: `Continuar`.
 
@@ -181,6 +189,13 @@ traducida —`gl` incluida—. No se redacta una variante: es **la misma cadena*
 enseña [«Acerca de»](acerca-de.md). Al transcribir, la tarjeta separa el
 «Proyecto independiente» de cabeza como título y el resto como cuerpo; la cadena
 no se parte ni se reescribe por eso.
+
+**El idioma se elige en la primera pantalla** porque es la única que se lee
+entera antes de decidir nada: quien no entiende el idioma del sistema no puede
+llegar hasta Preferencias para cambiarlo. El desplegable arranca en el idioma
+resuelto ([ADR-0010](../adr/0010-memoria-entre-sesiones.md)), es el mismo
+`Select` de Preferencias con su rótulo, y el cambio repinta el asistente al
+momento.
 
 **La versión de AutoFirma va como parámetro** (`%{version}`), no escrita en la
 frase: si no, cada actualización del original obligaría a rehacer la traducción

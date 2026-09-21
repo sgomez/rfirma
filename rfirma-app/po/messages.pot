@@ -1041,6 +1041,9 @@ msgstr ""
 msgid "setup.welcome.body"
 msgstr ""
 
+msgid "setup.language.body"
+msgstr ""
+
 msgid "setup.step"
 msgstr ""
 

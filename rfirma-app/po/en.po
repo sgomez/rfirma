@@ -1121,6 +1121,9 @@ msgstr ""
 "rFirma is an application compatible with AutoFirma {{version}}. To use it "
 "with government sites we need to set up your computer."
 
+msgid "setup.language.body"
+msgstr "Choose the language for rFirma. You can change it later in Preferences."
+
 msgid "setup.step"
 msgstr "Step {{current}} of {{total}}"
 

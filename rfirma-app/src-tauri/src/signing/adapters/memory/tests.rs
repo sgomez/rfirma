@@ -396,3 +396,42 @@ fn a_first_run_remembers_nothing_and_complains_about_nothing() {
     assert!(state.recovery().is_none());
     assert!(state.into_value().is_empty());
 }
+
+#[test]
+fn a_first_run_speaks_the_language_of_the_system() {
+    let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let paths = Paths::under(directory.path());
+
+    let memory = Memory::at_with_system_language(&paths, Language::Galician);
+
+    assert_eq!(memory.configuration().language, Language::Galician);
+}
+
+#[test]
+fn a_corrupt_configuration_falls_back_to_the_language_of_the_system() {
+    let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let paths = Paths::under(directory.path());
+    fs::create_dir_all(paths.config_file().parent().expect("deberia tener padre"))
+        .expect("deberia crearse");
+    fs::write(paths.config_file(), b"{ roto").expect("deberia escribirse");
+
+    let memory = Memory::at_with_system_language(&paths, Language::English);
+
+    assert_eq!(memory.configuration().language, Language::English);
+}
+
+#[test]
+fn a_chosen_language_wins_over_the_language_of_the_system() {
+    let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let paths = Paths::under(directory.path());
+    Memory::at_with_system_language(&paths, Language::English)
+        .remember_configuration(&Configuration {
+            language: Language::Catalan,
+            ..Configuration::default()
+        })
+        .expect("deberia guardarse");
+
+    let memory = Memory::at_with_system_language(&paths, Language::English);
+
+    assert_eq!(memory.configuration().language, Language::Catalan);
+}

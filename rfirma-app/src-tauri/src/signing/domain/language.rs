@@ -42,6 +42,22 @@ impl Language {
             Self::English => "en",
         }
     }
+
+    /// El idioma de un locale POSIX (`ca_ES.UTF-8`) o BCP 47 (`en-GB`), si es uno de los cinco.
+    pub fn of_locale(locale: &str) -> Option<Self> {
+        let primary = locale.split(['_', '-', '.', '@']).next()?;
+        Self::ALL
+            .into_iter()
+            .find(|language| language.tag().eq_ignore_ascii_case(primary))
+    }
+
+    /// El primero de los locales preferidos que sea uno de los cinco, o castellano.
+    pub fn first_of<S: AsRef<str>>(locales: impl IntoIterator<Item = S>) -> Self {
+        locales
+            .into_iter()
+            .find_map(|locale| Self::of_locale(locale.as_ref()))
+            .unwrap_or(Self::Spanish)
+    }
 }
 
 #[cfg(test)]

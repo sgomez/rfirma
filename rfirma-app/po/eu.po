@@ -1144,6 +1144,9 @@ msgstr ""
 "rFirma AutoFirma {{version}} bertsioarekin bateragarria den aplikazioa da. "
 "Egoitza elektronikoekin erabiltzeko zure ekipoa konfiguratu behar dugu."
 
+msgid "setup.language.body"
+msgstr "Aukeratu rFirmaren hizkuntza. Geroago alda dezakezu Hobespenak atalean."
+
 msgid "setup.step"
 msgstr "Urratsa {{current}}/{{total}}"
 

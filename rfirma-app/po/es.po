@@ -1139,6 +1139,9 @@ msgstr ""
 "rFirma es una aplicación compatible con AutoFirma {{version}}. Para poder "
 "usarla con sedes electrónicas necesitamos configurar tu equipo."
 
+msgid "setup.language.body"
+msgstr "Elige el idioma de rFirma. Puedes cambiarlo más adelante en Preferencias."
+
 msgid "setup.step"
 msgstr "Paso {{current}} de {{total}}"
 

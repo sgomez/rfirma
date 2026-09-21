@@ -2,6 +2,11 @@ import type { TFunction } from "i18next";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AlertIcon, CheckCircleIcon, CheckingIcon } from "../design-system/icons";
+import { classify } from "../errors/classify";
+import { ErrorNotice } from "../errors/ErrorNotice";
+import { useLanguage } from "../i18n/LanguageProvider";
+import { LANGUAGES, type LanguageTag } from "../i18n/languages";
+import { Select } from "../preferences/Select";
 import { Header } from "../shell/Header";
 import { type MenuAnchor, menuAnchorFor } from "../shell/menuAnchor";
 import "./SetupWizard.css";
@@ -232,6 +237,38 @@ function WelcomeScreen({ t }: { t: TFunction }) {
         <p className="rf-title setup-wizard__notice-title">{independenceTitle}</p>
         {independenceBody && <p className="rf-prose">{independenceBody}</p>}
       </div>
+      <LanguageCard t={t} />
+    </div>
+  );
+}
+
+function LanguageCard({ t }: { t: TFunction }) {
+  const { language, setLanguage } = useLanguage();
+  const [saveFailure, setSaveFailure] = useState<string | null>(null);
+
+  const choose = async (chosen: LanguageTag) => {
+    setSaveFailure(null);
+    try {
+      await setLanguage(chosen);
+    } catch (thrown) {
+      setSaveFailure(classify(thrown).detail);
+    }
+  };
+
+  return (
+    <div className="rf-card setup-wizard__card">
+      <p className="rf-title setup-wizard__card-title">{t("preferences.language.label")}</p>
+      <p className="rf-prose">{t("setup.language.body")}</p>
+      <Select
+        label={t("preferences.language.label")}
+        hideLabel
+        value={language}
+        options={LANGUAGES.map((tag) => ({ value: tag, label: t(`languages.${tag}`) }))}
+        onChange={(chosen) => void choose(chosen)}
+      />
+      {saveFailure !== null && (
+        <ErrorNotice situation="settingNotSaved" technicalDetail={saveFailure} />
+      )}
     </div>
   );
 }
