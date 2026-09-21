@@ -1,0 +1,65 @@
+[[known]]
+id = "the_v4_channel_answers_saf_47_to_an_origin_that_is_not_127_0_0_1"
+outcome = "conforme"
+cause = "BUG-11"
+note = "Lo cumple por comparar la dirección textualmente, que es lo que la ficha describe."
+
+[[known]]
+id = "the_service_channel_reports_a_bind_failure_instead_of_claiming_success"
+outcome = "no-conforme"
+cause = "BUG-10"
+note = "El fallo al ligar se registra en el log y el lanzador devuelve OK: nadie avisa a la persona."
+
+[[known]]
+id = "save_answers_a_confirmation_the_published_client_recognises"
+outcome = "no-conforme"
+cause = "BUG-18"
+note = "Responde OK por WebSocket, que el cliente publicado procesa como una firma."
+
+[[known]]
+id = "signandsave_accepts_an_elliptic_curve_algorithm"
+outcome = "no-conforme"
+cause = "BUG-05"
+note = "El catálogo de algoritmos que signandsave admite deja fuera los de curva elíptica."
+
+[[known]]
+id = "a_signature_that_requests_a_timestamp_carries_it_or_reports_the_failure"
+outcome = "no-conforme"
+cause = "BUG-23"
+note = "La firma vuelve sin el sello pedido y la operación no reporta que no se pudo sellar."
+
+[[known]]
+id = "sign_missing_or_invalid_operation_rejected"
+outcome = "no-conforme"
+cause = "BUG-15"
+note = "sign tampoco valida op: sigue hasta el formato (SAF_06) y, con uno válido, pide certificado y acaba en SAF_09."
+
+[[known]]
+id = "signandsave_rejects_a_request_without_a_verb_with_saf_04"
+outcome = "no-conforme"
+cause = "BUG-15"
+note = "Sin validar cop, signandsave revienta con NullPointerException y reporta SAF_09."
+
+[[known]]
+id = "format_auto_over_data_that_is_no_signature_is_rejected_with_saf_17"
+outcome = "no-conforme"
+cause = "BUG-27"
+note = "El firmador nulo revienta con NullPointerException antes de la guarda de SAF_17 y el catch genérico lo reporta como SAF_03."
+
+[[known]]
+id = "a_batch_servlet_on_the_local_loopback_is_refused_with_saf_13"
+outcome = "no-conforme"
+cause = "BUG-28"
+note = "La rama batch no captura ParameterLocalAccessRequestedException aparte y el catch de ParameterException la reporta como SAF_03."
+
+[[known]]
+id = "a_local_batch_admits_countersign_as_a_suboperation"
+outcome = "no-conforme"
+cause = "BUG-30"
+note = "Sin target en los extraparams, CounterSignTarget.getTarget lanza IllegalArgumentException y el documento vuelve como ERROR_PRE."
+
+[[known]]
+id = "a_batch_whose_presigner_does_not_answer_fails_with_saf_26"
+outcome = "no-conforme"
+cause = "BUG-29"
+note = "La ConnectException no es un HttpError y el catch genérico la reporta como SAF_27."

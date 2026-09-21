@@ -17,12 +17,6 @@ needs = ["persona"]
 question = "¿se pidió dónde guardar la firma? [s/n]"
 warning = "Van a aparecer el diálogo de certificado, el del PIN del token y la petición de dónde guardar la firma: complétala para que la comprobación llegue a medir algo."
 
-[check.expect.autofirma]
-verdict = "conforme"
-
-[check.expect.rfirma]
-verdict = "conforme"
-
 [[check]]
 id = "signandsave_offers_the_save_name_the_request_proposed"
 suite = "operaciones.disco"
@@ -38,12 +32,6 @@ needs = ["persona"]
 question = "¿el nombre ofrecido para guardar era «challenge-signed.csig»? [s/n]"
 warning = "Van a aparecer el diálogo de certificado y el del PIN; cuando se pida dónde guardar, mira qué nombre viene propuesto antes de completarlo."
 
-[check.expect.autofirma]
-verdict = "conforme"
-
-[check.expect.rfirma]
-verdict = "conforme"
-
 [[check]]
 id = "signandsave_rejects_an_illegal_filename_with_saf_03"
 suite = "operaciones.disco"
@@ -55,12 +43,6 @@ antes de pedir certificado alguno.
 """
 drive = { mode = "v4", script = "signandsavewithanillegalfilename" }
 expects_saf = "SAF_03"
-
-[check.expect.autofirma]
-verdict = "conforme"
-
-[check.expect.rfirma]
-verdict = "conforme"
 
 [[check]]
 id = "signandsave_asks_for_the_document_when_the_request_brings_no_data"
@@ -77,12 +59,6 @@ needs = ["persona"]
 question = "¿se pidió elegir el documento a firmar? [s/n]"
 warning = "Se va a pedir primero el documento a firmar, y después vendrán el diálogo de certificado, el del PIN y la petición de dónde guardar: elige el documento preparado y completa el resto."
 
-[check.expect.autofirma]
-verdict = "conforme"
-
-[check.expect.rfirma]
-verdict = "conforme"
-
 [[check]]
 id = "signandsave_cancelled_at_the_save_dialogue_answers_a_cancellation"
 suite = "operaciones.disco"
@@ -98,12 +74,6 @@ needs = ["persona"]
 question = "¿se canceló al pedirse dónde guardar? [s/n]"
 warning = "Van a aparecer el diálogo de certificado y el del PIN; cuando se pida dónde guardar, cancela en vez de guardar."
 
-[check.expect.autofirma]
-verdict = "conforme"
-
-[check.expect.rfirma]
-verdict = "conforme"
-
 [[check]]
 id = "the_saving_parameters_of_the_request_configure_the_saving_of_the_signature"
 suite = "operaciones.disco"
@@ -114,12 +84,6 @@ Las extensiones, la descripción y el directorio inicial que la petición declar
 filenameSaveDescription y filenameSaveCurrentDir configuran el guardado del resultado.
 """
 unmeasurable = "Los tres sólo cambian el filtro, el rótulo y el directorio de partida del guardado: no viajan por el cable ni cambian ningún evento del cliente publicado, y quien ejecuta la tanda no puede afirmar sobre ellos sin describir la ventana."
-
-[check.expect.autofirma]
-verdict = "no-observable"
-
-[check.expect.rfirma]
-verdict = "no-observable"
 
 [[check]]
 id = "selectcert_answers_the_chosen_certificate_alone"
@@ -132,12 +96,6 @@ URL-safe, sin firma ni campos añadidos.
 """
 drive = { mode = "v4", script = "selectcert" }
 
-[check.expect.autofirma]
-verdict = "conforme"
-
-[check.expect.rfirma]
-verdict = "conforme"
-
 [[check]]
 id = "selectcert_needs_neither_data_nor_format_nor_algorithm"
 suite = "operaciones.disco"
@@ -149,12 +107,6 @@ en la invocación.
 """
 drive = { mode = "v4", script = "selectcert" }
 
-[check.expect.autofirma]
-verdict = "conforme"
-
-[check.expect.rfirma]
-verdict = "conforme"
-
 [[check]]
 id = "selectcert_is_recognised_with_a_trailing_slash"
 suite = "operaciones.disco"
@@ -165,12 +117,6 @@ selectcert se admite tanto sin barra (afirma://selectcert?) como con barra antes
 (afirma://selectcert/?).
 """
 unmeasurable = "El cliente publicado construye siempre la forma sin barra (buildUrl, autoscript.js): ningún guion suyo emite la variante con barra, y la suite sólo mide lo que él sabe pedir."
-
-[check.expect.autofirma]
-verdict = "no-observable"
-
-[check.expect.rfirma]
-verdict = "no-observable"
 
 [[check]]
 id = "selectcert_resolves_the_only_candidate_without_asking"
@@ -187,12 +133,6 @@ needs = ["persona"]
 question = "¿se pidió elegir certificado? [s/n]"
 warning = "La exigencia presupone un único certificado utilizable en el almacén de la tanda: relánzala con `--store` apuntando a uno que sólo tenga ese. Si al ejecutarla aparece la lista con varios candidatos, la premisa no se cumple: cancela y deja la respuesta en blanco para que la comprobación quede pendiente en vez de condenar al sujeto."
 
-[check.expect.autofirma]
-verdict = "conforme"
-
-[check.expect.rfirma]
-verdict = "conforme"
-
 [[check]]
 id = "selectcert_cancelled_by_the_person_answers_a_cancellation"
 suite = "operaciones.disco"
@@ -208,12 +148,6 @@ needs = ["persona"]
 question = "¿se canceló la selección de certificado? [s/n]"
 warning = "Va a aparecer el diálogo de selección de certificado: cancélalo en vez de elegir."
 
-[check.expect.autofirma]
-verdict = "conforme"
-
-[check.expect.rfirma]
-verdict = "conforme"
-
 [[check]]
 id = "save_rejects_an_illegal_filename_with_saf_03"
 suite = "operaciones.disco"
@@ -225,12 +159,6 @@ antes de pedir destino alguno.
 """
 drive = { mode = "v4", script = "savewithanillegalfilename" }
 expects_saf = "SAF_03"
-
-[check.expect.autofirma]
-verdict = "conforme"
-
-[check.expect.rfirma]
-verdict = "conforme"
 
 [[check]]
 id = "save_confirms_before_writing_over_a_file_that_already_exists"
@@ -247,12 +175,6 @@ needs = ["persona"]
 question = "¿se pidió confirmación al elegir un fichero que ya existía? [s/n]"
 warning = "Se va a pedir dónde guardar: acepta el nombre propuesto, challenge.bin, que ya existe porque se ha preparado, y acepta la confirmación que venga después."
 
-[check.expect.autofirma]
-verdict = "conforme"
-
-[check.expect.rfirma]
-verdict = "conforme"
-
 [[check]]
 id = "the_declared_extensions_filter_what_the_saving_offers"
 suite = "operaciones.disco"
@@ -263,12 +185,6 @@ Las extensiones que la petición declara en exts, con la descripción de desc, f
 guardado ofrece.
 """
 unmeasurable = "El filtro de extensiones vive en la ventana de guardado y no deja rastro en el cable: el cliente publicado recibe la misma confirmación se filtre o no, y quien ejecuta la tanda no puede afirmar sobre él sin describir la ventana."
-
-[check.expect.autofirma]
-verdict = "no-observable"
-
-[check.expect.rfirma]
-verdict = "no-observable"
 
 [[check]]
 id = "load_answers_the_name_of_the_chosen_file_next_to_its_content"
@@ -285,12 +201,6 @@ needs = ["persona"]
 question = "¿se pidió elegir el fichero a cargar? [s/n]"
 warning = "Se va a pedir qué fichero cargar: elige uno de los preparados para que la comprobación llegue a medir algo."
 
-[check.expect.autofirma]
-verdict = "conforme"
-
-[check.expect.rfirma]
-verdict = "conforme"
-
 [[check]]
 id = "multiload_answers_every_chosen_file_apart"
 suite = "operaciones.disco"
@@ -305,9 +215,3 @@ harness = "interactive_file_load"
 needs = ["persona"]
 question = "¿se pudieron elegir varios ficheros a la vez? [s/n]"
 warning = "Se va a pedir qué ficheros cargar: elige a la vez los dos preparados para que la comprobación llegue a medir la selección múltiple."
-
-[check.expect.autofirma]
-verdict = "conforme"
-
-[check.expect.rfirma]
-verdict = "conforme"

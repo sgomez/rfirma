@@ -17,14 +17,6 @@ needs = ["persona"]
 question = "¿se pidió elegir dónde guardar el fichero? [s/n]"
 warning = "Va a aparecer la ventana nativa para elegir dónde guardar el fichero."
 
-[check.expect.autofirma]
-verdict = "no-conforme"
-cause = "BUG-18"
-note = "Responde OK por WebSocket, que el cliente publicado procesa como una firma."
-
-[check.expect.rfirma]
-verdict = "conforme"
-
 [[check]]
 id = "signandsave_accepts_an_elliptic_curve_algorithm"
 suite = "operaciones"
@@ -36,14 +28,6 @@ El catálogo de algoritmos incluye los de curva elíptica, y signandsave los ace
 drive = { mode = "v4", script = "signandsavewithecdsa" }
 needs = ["almacén:rfirma-test-ecc"]
 warning = "Van a aparecer el diálogo de certificado y el del PIN: elige el certificado de curva elíptica (token rfirma-test-ecc, PIN 1234)."
-
-[check.expect.autofirma]
-verdict = "no-conforme"
-cause = "BUG-05"
-note = "El catálogo de algoritmos que signandsave admite deja fuera los de curva elíptica."
-
-[check.expect.rfirma]
-verdict = "conforme"
 
 [[check]]
 id = "a_signature_that_requests_a_timestamp_carries_it_or_reports_the_failure"
@@ -57,14 +41,6 @@ operación lo reporta en vez de devolver una firma sin sello.
 drive = { mode = "v4", script = "signwithbrokentsa" }
 harness = "timestamp_in_the_signature"
 warning = "Van a aparecer el diálogo de certificado y el del PIN del token."
-
-[check.expect.autofirma]
-verdict = "no-conforme"
-cause = "BUG-23"
-note = "La firma vuelve sin el sello pedido y la operación no reporta que no se pudo sellar."
-
-[check.expect.rfirma]
-verdict = "conforme"
 
 [[check]]
 id = "selectcert_only_offers_certificates_with_a_private_key"
@@ -80,12 +56,3 @@ harness = "private_key_check"
 needs = ["persona"]
 question = "¿se pidió el PIN del token/certificado? [s/n]"
 warning = "Van a aparecer el diálogo de selección de certificado y, si el sujeto exige clave privada, el del PIN."
-
-[check.expect.autofirma]
-verdict = "conforme"
-
-[check.expect.rfirma]
-verdict = "no-conforme"
-cause = "ADR-0025"
-note = "rFirma no abre sesión en el token para una operación que no firma, así que ni filtra por clave privada ni pide el PIN."
-

@@ -13,12 +13,6 @@ Una URI que no empieza estrictamente por afirma:// se rechaza con SAF_02.
 drive = { mode = "bad-uri", script = "selectcert" }
 expects_saf = "SAF_02"
 
-[check.expect.autofirma]
-verdict = "conforme"
-
-[check.expect.rfirma]
-verdict = "conforme"
-
 [[check]]
 id = "unsupported_operation_rejected"
 suite = "errores"
@@ -28,12 +22,6 @@ statement = """
 Una operación no soportada (host desconocido como unknownop) se rechaza con SAF_04.
 """
 drive = { mode = "v4", script = "protocol-v4-operations" }
-
-[check.expect.autofirma]
-verdict = "conforme"
-
-[check.expect.rfirma]
-verdict = "conforme"
 
 [[check]]
 id = "sign_missing_or_invalid_operation_rejected"
@@ -45,14 +33,6 @@ En afirma://sign?, si el parámetro op falta o no es reconocido, se rechaza con 
 """
 drive = { mode = "v4", script = "protocol-v4-operations" }
 
-[check.expect.autofirma]
-verdict = "no-conforme"
-cause = "BUG-15"
-note = "sign tampoco valida op: sigue hasta el formato (SAF_06) y, con uno válido, pide certificado y acaba en SAF_09."
-
-[check.expect.rfirma]
-verdict = "conforme"
-
 [[check]]
 id = "sign_unsupported_format_rejected"
 suite = "errores"
@@ -62,12 +42,6 @@ statement = """
 Si el formato de firma especificado en format no está soportado, se rechaza con SAF_06.
 """
 drive = { mode = "v4", script = "protocol-v4-operations" }
-
-[check.expect.autofirma]
-verdict = "conforme"
-
-[check.expect.rfirma]
-verdict = "conforme"
 
 [[check]]
 id = "local_access_blocked"
@@ -79,13 +53,7 @@ Si rtservlet apunta a localhost o 127.0.0.1, se rechaza con SAF_13. Por socket o
 stservlet no se valida.
 """
 drive = { mode = "v4", script = "protocol-v4-operations" }
-warning = "AutoFirma muestra el error SAF_13 en un diálogo: ciérralo para que llegue la respuesta."
-
-[check.expect.autofirma]
-verdict = "conforme"
-
-[check.expect.rfirma]
-verdict = "conforme"
+warning = "Si el cliente muestra el error SAF_13 en un diálogo, ciérralo para que llegue la respuesta."
 
 [[check]]
 id = "invalid_parameters_syntax_rejected"
@@ -96,12 +64,6 @@ statement = """
 Parámetros de entrada con sintaxis inválida se rechazan con SAF_03.
 """
 drive = { mode = "v4", script = "protocol-v4-operations" }
-
-[check.expect.autofirma]
-verdict = "conforme"
-
-[check.expect.rfirma]
-verdict = "conforme"
 
 [[check]]
 id = "signandsave_rejects_a_request_without_a_verb_with_saf_04"
@@ -114,14 +76,6 @@ Una invocación de signandsave sin cop se rechaza con SAF_04.
 drive = { mode = "v4", script = "signandsavewithoutaverb" }
 expects_saf = "SAF_04"
 warning = "Van a aparecer el diálogo de certificado y el del PIN antes de que llegue el rechazo."
-
-[check.expect.autofirma]
-verdict = "no-conforme"
-cause = "BUG-15"
-note = "Sin validar cop, signandsave revienta con NullPointerException y reporta SAF_09."
-
-[check.expect.rfirma]
-verdict = "conforme"
 
 [[check]]
 id = "a_saf_code_reaches_the_published_client_intact_over_the_websocket"
@@ -136,12 +90,6 @@ error.
 drive = { mode = "v4", script = "signwithanunknownformat" }
 expects_saf = "SAF_06"
 
-[check.expect.autofirma]
-verdict = "conforme"
-
-[check.expect.rfirma]
-verdict = "conforme"
-
 [[check]]
 id = "a_saf_code_reaches_the_published_client_intact_over_the_service_channel"
 suite = "errores"
@@ -153,12 +101,6 @@ publicado lo recibe descodificado con el prefijo SAF_nn intacto.
 """
 drive = { mode = "service", script = "signwithanunknownformat" }
 expects_saf = "SAF_06"
-
-[check.expect.autofirma]
-verdict = "conforme"
-
-[check.expect.rfirma]
-verdict = "conforme"
 
 [[check]]
 id = "a_saf_code_travels_to_the_intermediate_server_only_once_the_operation_began"
@@ -173,12 +115,6 @@ SAF_16— no llegan a subirse, y la sede los percibe como una aplicación que no
 """
 unmeasurable = "La tanda no monta el StorageService al que el sujeto subiría el mensaje: el transporte por servidor intermedio queda para más adelante."
 
-[check.expect.autofirma]
-verdict = "no-observable"
-
-[check.expect.rfirma]
-verdict = "no-observable"
-
 [[check]]
 id = "the_intermediate_server_failures_answer_their_own_codes"
 suite = "errores"
@@ -190,12 +126,6 @@ rtservlet, SAF_15 si no se descifran con key, SAF_12 si no se cifra el resultado
 puede subir.
 """
 unmeasurable = "La tanda no monta ni el RetrieveService ni el StorageService con los que fallaría el sujeto: el transporte por servidor intermedio queda para más adelante."
-
-[check.expect.autofirma]
-verdict = "no-observable"
-
-[check.expect.rfirma]
-verdict = "no-observable"
 
 [[check]]
 id = "a_signature_cancelled_by_the_person_answers_cancel_without_a_code"
@@ -212,12 +142,6 @@ needs = ["persona"]
 question = "¿se canceló la selección de certificado? [s/n]"
 warning = "Va a aparecer el diálogo de selección de certificado de una firma: cancélalo en vez de elegir."
 
-[check.expect.autofirma]
-verdict = "conforme"
-
-[check.expect.rfirma]
-verdict = "conforme"
-
 [[check]]
 id = "an_exhausted_memory_answers_memory_error_over_the_service_channel"
 suite = "errores"
@@ -229,12 +153,6 @@ publicado entrega como es.gob.afirma.core.OutOfMemoryError.
 """
 unmeasurable = "Provocarla exige agotar el montón del sujeto con un documento mayor que él, y la tanda no fija ni conoce ese montón: el mismo documento revienta a un sujeto y pasa por otro."
 
-[check.expect.autofirma]
-verdict = "no-observable"
-
-[check.expect.rfirma]
-verdict = "no-observable"
-
 [[check]]
 id = "null_is_a_safeguard_of_the_published_client_and_not_an_answer"
 suite = "errores"
@@ -245,12 +163,6 @@ El literal NULL no lo emite el original: es una salvaguarda del cliente publicad
 como java.lang.Exception con el mensaje «Error desconocido».
 """
 unmeasurable = "El original nunca lo emite, y la suite sólo mide lo que el sujeto contesta."
-
-[check.expect.autofirma]
-verdict = "no-observable"
-
-[check.expect.rfirma]
-verdict = "no-observable"
 
 [[check]]
 id = "a_save_over_the_service_channel_answers_save_ok_and_not_a_signature"
@@ -267,12 +179,6 @@ harness = "save_confirmation"
 needs = ["persona"]
 question = "¿se pidió elegir dónde guardar el fichero? [s/n]"
 warning = "Va a aparecer la ventana nativa para elegir dónde guardar el fichero."
-
-[check.expect.autofirma]
-verdict = "conforme"
-
-[check.expect.rfirma]
-verdict = "conforme"
 
 [[check]]
 id = "a_document_unfit_for_its_format_is_rejected_with_the_code_of_its_family"
@@ -291,12 +197,6 @@ drive = { mode = "v4", script = "signpadesoveranonpdf" }
 expects_saf = "SAF_28"
 warning = "Van a aparecer el diálogo de certificado y el del PIN antes de que llegue el rechazo."
 
-[check.expect.autofirma]
-verdict = "conforme"
-
-[check.expect.rfirma]
-verdict = "conforme"
-
 [[check]]
 id = "the_key_store_failures_answer_their_own_codes"
 suite = "errores"
@@ -309,12 +209,6 @@ SAF_52 si está bloqueado.
 """
 unmeasurable = "Cada uno exige un almacén roto, vacío, bloqueado o con una clave de un tipo que no se admite, y la tanda sólo monta los tokens sanos de SoftHSM: bloquear uno a propósito deja sin almacén al resto de la tanda."
 
-[check.expect.autofirma]
-verdict = "no-observable"
-
-[check.expect.rfirma]
-verdict = "no-observable"
-
 [[check]]
 id = "the_disk_failures_answer_their_own_codes"
 suite = "errores"
@@ -324,12 +218,6 @@ statement = """
 Un fallo de escritura al guardar sale con SAF_05, y uno de lectura al cargar, con SAF_25.
 """
 unmeasurable = "Los dos fallan después de que la persona elija el fichero, y hacerlos fallar exige un disco que rechace la escritura o la lectura del fichero ya elegido, que la tanda no simula."
-
-[check.expect.autofirma]
-verdict = "no-observable"
-
-[check.expect.rfirma]
-verdict = "no-observable"
 
 [[check]]
 id = "the_batch_failures_answer_their_own_codes"
@@ -343,12 +231,6 @@ con contraseña, con firmas no registradas o certificado.
 """
 unmeasurable = "Los PDF que los disparan —protegido, con firmas no registradas, certificado— no están en el banco de referencia, y el conductor no simula un servicio de lotes que conteste un error lógico en su formato."
 
-[check.expect.autofirma]
-verdict = "no-observable"
-
-[check.expect.rfirma]
-verdict = "no-observable"
-
 [[check]]
 id = "the_codes_the_original_never_emits"
 suite = "errores"
@@ -361,12 +243,6 @@ bloques catch de una excepción que nadie lanza.
 """
 unmeasurable = "El original nunca los emite: no hay petición que los haga llegar al cable."
 
-[check.expect.autofirma]
-verdict = "no-observable"
-
-[check.expect.rfirma]
-verdict = "no-observable"
-
 [[check]]
 id = "a_null_uri_is_rejected_with_saf_01"
 suite = "errores"
@@ -376,12 +252,6 @@ statement = """
 Una invocación sin URI se rechaza con SAF_01.
 """
 unmeasurable = "El cliente publicado construye siempre una URI completa: ningún guion suyo la envía nula, y la suite sólo mide lo que él sabe pedir."
-
-[check.expect.autofirma]
-verdict = "no-observable"
-
-[check.expect.rfirma]
-verdict = "no-observable"
 
 [[check]]
 id = "a_websocket_that_cannot_bind_its_ports_shows_saf_45"
@@ -394,12 +264,6 @@ proceso.
 """
 unmeasurable = "SAF_45 se muestra en un diálogo y el proceso se cierra sin canal abierto: no hay cable por el que llegue, y la sede sólo ve que el cliente publicado agota sus reintentos."
 
-[check.expect.autofirma]
-verdict = "no-observable"
-
-[check.expect.rfirma]
-verdict = "no-observable"
-
 [[check]]
 id = "a_failing_postprocessing_answers_saf_42"
 suite = "errores"
@@ -409,10 +273,3 @@ statement = """
 Un fallo al postprocesar la firma, que en el original sólo provoca un plugin, se rechaza con SAF_42.
 """
 unmeasurable = "Exige instalar en el sujeto un plugin que falle al postprocesar, y la tanda corre contra una instalación sin plugins."
-
-[check.expect.autofirma]
-verdict = "no-observable"
-
-[check.expect.rfirma]
-verdict = "no-observable"
-
