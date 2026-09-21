@@ -639,13 +639,15 @@ async fn the_third_protocol_connects_to_the_port_rfirma_was_told_to_open() {
         AfirmaUrl::parse(&url).expect("la invocacion del cliente publicado deberia leerse");
     let launch = LaunchRequest::from_url(&parsed).expect("la version 3 se habla aqui, sin puertos");
 
-    let NegotiatedCredential::Required(credential) = launch.credential() else {
-        panic!("el cliente publicado, aunque hable la version 3, sigue mandando idsession");
-    };
     assert_eq!(
-        credential.as_str().len(),
-        20,
-        "la credencial de canal son veinte alfanumericos, igual que en la version 4"
+        parsed.parameter("idsession").map(str::len),
+        Some(20),
+        "el cliente publicado, aunque hable la version 3, sigue mandando idsession"
+    );
+    assert_eq!(
+        launch.credential(),
+        &NegotiatedCredential::Absent,
+        "la version 3 no exige el idsession que manda la sede"
     );
 
     let channel = the_channel_at(
