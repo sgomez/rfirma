@@ -46,10 +46,7 @@ pub(crate) fn the_verdict_of(check: &Check, outcome: &ErrandOutcome) -> CheckOut
         };
     }
     if !outcome.launched {
-        return CheckOutcome::of(
-            Verdict::NotObservable,
-            "el sujeto no llegó a arrancar en esta tanda",
-        );
+        return CheckOutcome::of(Verdict::NotObservable, "el cliente no llegó a arrancar");
     }
     match check.expects_saf.as_deref() {
         Some(expected) if is_driven_over_ipv6(check) => {
@@ -128,10 +125,7 @@ pub(crate) fn the_verdict_for_a_save_confirmation(
     answer: &str,
 ) -> CheckOutcome {
     if !outcome.launched {
-        return CheckOutcome::of(
-            Verdict::NotObservable,
-            "el sujeto no llegó a arrancar en esta tanda",
-        );
+        return CheckOutcome::of(Verdict::NotObservable, "el cliente no llegó a arrancar");
     }
     if answer.is_empty() {
         return CheckOutcome::StillPending;
@@ -181,10 +175,7 @@ pub(crate) fn the_verdict_for_a_private_key_check(
 /// avisó de algo.
 pub(crate) fn the_verdict_for_a_timestamp(outcome: &ErrandOutcome, stamped: bool) -> CheckOutcome {
     if !outcome.launched {
-        return CheckOutcome::of(
-            Verdict::NotObservable,
-            "el sujeto no llegó a arrancar en esta tanda",
-        );
+        return CheckOutcome::of(Verdict::NotObservable, "el cliente no llegó a arrancar");
     }
     if let Some(code) = outcome.error_code.as_deref() {
         return CheckOutcome::of(
@@ -243,10 +234,7 @@ pub(crate) fn the_verdict_for_a_headless_batch(
     answer: &str,
 ) -> CheckOutcome {
     if !outcome.launched {
-        return CheckOutcome::of(
-            Verdict::NotObservable,
-            "el sujeto no llegó a arrancar en esta tanda",
-        );
+        return CheckOutcome::of(Verdict::NotObservable, "el cliente no llegó a arrancar");
     }
     if let Some(THE_DRIVER_CRASH | THE_EXHAUSTED_PATIENCE) = outcome.error_type.as_deref() {
         return CheckOutcome::Resolved {
@@ -348,10 +336,7 @@ pub(crate) fn the_verdict_for_a_cancelled_dialogue(
     answer: &str,
 ) -> CheckOutcome {
     if !outcome.launched {
-        return CheckOutcome::of(
-            Verdict::NotObservable,
-            "el sujeto no llegó a arrancar en esta tanda",
-        );
+        return CheckOutcome::of(Verdict::NotObservable, "el cliente no llegó a arrancar");
     }
     if answer.is_empty() {
         return CheckOutcome::StillPending;
@@ -399,10 +384,7 @@ pub(crate) fn the_verdict_for_an_automatic_selection(
     answer: &str,
 ) -> CheckOutcome {
     if !outcome.launched {
-        return CheckOutcome::of(
-            Verdict::NotObservable,
-            "el sujeto no llegó a arrancar en esta tanda",
-        );
+        return CheckOutcome::of(Verdict::NotObservable, "el cliente no llegó a arrancar");
     }
     if let Some(THE_DRIVER_CRASH | THE_EXHAUSTED_PATIENCE) = outcome.error_type.as_deref() {
         return CheckOutcome::Resolved {
@@ -446,7 +428,7 @@ fn the_answered_dialogue(outcome: &ErrandOutcome, answer: &str, unasked: &str) -
     if !outcome.launched {
         return Answered::Settled(CheckOutcome::of(
             Verdict::NotObservable,
-            "el sujeto no llegó a arrancar en esta tanda",
+            "el cliente no llegó a arrancar",
         ));
     }
     if let Some(THE_DRIVER_CRASH | THE_EXHAUSTED_PATIENCE) = outcome.error_type.as_deref() {
@@ -491,10 +473,7 @@ pub(crate) fn the_verdict_for_a_bind_failure(
     answer: &str,
 ) -> CheckOutcome {
     if !outcome.launched {
-        return CheckOutcome::of(
-            Verdict::NotObservable,
-            "el sujeto no llegó a arrancar en esta tanda",
-        );
+        return CheckOutcome::of(Verdict::NotObservable, "el cliente no llegó a arrancar");
     }
     if outcome.error_type.as_deref() != Some(APPLICATION_NOT_FOUND_EXCEPTION) {
         return CheckOutcome::Resolved {

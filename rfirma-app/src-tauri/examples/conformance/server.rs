@@ -1,5 +1,5 @@
 //! El servidor local de la consola web: escucha en `127.0.0.1`, exige el token de la URL y un
-//! `Host`/`Origin` propios, y traduce cada ruta a la sesión; no decide nada de la tanda.
+//! `Host`/`Origin` propios, y traduce cada ruta a la sesión; no decide nada.
 
 use std::io::{BufRead, BufReader, Read, Write};
 use std::net::{TcpListener, TcpStream};
@@ -217,17 +217,30 @@ fn attend(mut stream: TcpStream, gate: &Gate, console: &Console) {
         return respond(&mut stream, 403, &json!({ "error": complaint }));
     }
     match (request.method.as_str(), request.path.as_str()) {
-        ("GET", "/") => respond_with(&mut stream, 200, "text/html; charset=utf-8", THE_PAGE),
+        ("GET", path) if is_a_page(path) => {
+            respond_with(&mut stream, 200, "text/html; charset=utf-8", THE_PAGE);
+        }
         ("GET", "/api/events") => stream_events(stream, console),
         ("GET", "/api/defaults") => answer(&mut stream, console.the_deduced_coordinates()),
         ("GET", "/api/log") => answer_text(
             &mut stream,
-            console.log_of(request.parameter("check").unwrap_or_default()),
+            console.log_of(
+                request.parameter("report"),
+                request.parameter("check").unwrap_or_default(),
+            ),
         ),
         ("GET", "/api/transcript") => answer_text(
             &mut stream,
-            console.transcript_of(request.parameter("check").unwrap_or_default()),
+            console.transcript_of(
+                request.parameter("report"),
+                request.parameter("check").unwrap_or_default(),
+            ),
         ),
+        ("GET", "/api/report-view") => answer(
+            &mut stream,
+            console.report_view(request.parameter("report").unwrap_or_default()),
+        ),
+        ("GET", "/api/references") => answer(&mut stream, console.references()),
         ("GET", "/api/compare") => answer(
             &mut stream,
             console.compare(
@@ -286,6 +299,14 @@ fn attend(mut stream: TcpStream, gate: &Gate, console: &Console) {
         ),
         _ => respond(&mut stream, 404, &json!({ "error": "no hay tal ruta" })),
     }
+}
+
+/// Las direcciones que sirven la página: la sesión activa, un informe en solo lectura y la comparación.
+fn is_a_page(path: &str) -> bool {
+    matches!(path, "/" | "/comparar")
+        || path
+            .strip_prefix("/informe/")
+            .is_some_and(|name| !name.is_empty() && !name.contains('/'))
 }
 
 #[derive(Deserialize)]
@@ -479,6 +500,25 @@ mod tests {
         assert_eq!(request.host.as_deref(), Some("127.0.0.1:47117"));
         assert_eq!(request.origin.as_deref(), Some("http://127.0.0.1:47117"));
         assert_eq!(request.body, b"\"pending\"");
+    }
+
+    #[test]
+    fn the_session_any_report_and_the_comparison_serve_the_page() {
+        for path in [
+            "/",
+            "/informe/autofirma-1.9.2",
+            "/informe/rfirma",
+            "/comparar",
+        ] {
+            assert!(is_a_page(path), "{path}");
+        }
+    }
+
+    #[test]
+    fn a_report_page_needs_one_name_and_nothing_more() {
+        for path in ["/informe/", "/informe/a/b", "/informe", "/api/report-view"] {
+            assert!(!is_a_page(path), "{path}");
+        }
     }
 
     #[test]

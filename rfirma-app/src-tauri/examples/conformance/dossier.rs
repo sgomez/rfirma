@@ -182,7 +182,7 @@ impl Dossier {
         let raw = fs::read_to_string(path)
             .map_err(|error| format!("{} no se pudo leer: {error}", path.display()))?;
         let contents = serde_json::from_str(&raw)
-            .map_err(|error| format!("{} no es un expediente válido: {error}", path.display()))?;
+            .map_err(|error| format!("{} no es un informe válido: {error}", path.display()))?;
         Ok(Self {
             path: path.to_owned(),
             contents,
@@ -193,6 +193,7 @@ impl Dossier {
         &self.contents.header
     }
 
+    #[cfg(test)]
     pub fn checks(&self) -> impl Iterator<Item = (&str, &CheckRecord)> {
         self.contents
             .checks
@@ -228,7 +229,7 @@ impl Dossier {
 
     fn save(&self) -> Result<(), String> {
         let json = serde_json::to_string_pretty(&self.contents)
-            .map_err(|error| format!("el expediente no se pudo serializar: {error}"))?;
+            .map_err(|error| format!("el informe no se pudo serializar: {error}"))?;
         fs::write(&self.path, json)
             .map_err(|error| format!("{} no se pudo escribir: {error}", self.path.display()))
     }

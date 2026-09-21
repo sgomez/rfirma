@@ -57,3 +57,5 @@ pub(crate) fn verdict_name(verdict: Verdict) -> &'static str {
         Verdict::NotObservable => "NO OBSERVABLE",
     }
 }
+
+pub(crate) const PENDING_NAME: &str = "PENDIENTE";

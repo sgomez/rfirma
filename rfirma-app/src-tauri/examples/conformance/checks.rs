@@ -309,7 +309,7 @@ impl Probe {
             }
             _ => CheckOutcome::of(
                 Verdict::NotObservable,
-                "el sujeto no llegó a hablar por uno de los dos canales",
+                "el cliente no llegó a hablar por uno de los dos canales",
             ),
         }
     }

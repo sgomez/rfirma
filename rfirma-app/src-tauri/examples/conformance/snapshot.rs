@@ -1,26 +1,27 @@
-//! El estado que la consola web recibe de un vistazo —qué corre, qué espera, resultados y
-//! resumen— calculado de un informe y un catálogo, sin tocar al cliente.
+//! El estado de la sesión activa para la página: la vista de su informe más lo que es solo de la
+//! sesión —cliente, cola, comprobación en curso y pregunta—.
 
 use std::collections::BTreeMap;
 use std::time::Duration;
 
 use serde::Serialize;
 
-use crate::baseline::verdict_name;
 use crate::catalogue::Check;
-use crate::comparison::PENDING_NAME;
-use crate::dossier::{CheckRecord, CheckState, Dossier, Header, Verdict};
+use crate::dossier::{CheckState, Dossier};
+use crate::report_view::{report_view, ReportView};
 use crate::subject::Subject;
 
 /// Lo que está pasando ahora en la sesión, más allá de lo que ya quedó escrito en el informe.
 #[derive(Default)]
 pub(crate) struct Activity<'a> {
+    pub(crate) subject: Option<&'a Subject>,
+    pub(crate) subject_complaints: &'a [String],
+    pub(crate) resolving_subject: bool,
     pub(crate) running: &'a [String],
     pub(crate) running_for: Duration,
     pub(crate) queued: Vec<&'a str>,
     pub(crate) question: Option<(&'a str, &'a str, &'static str)>,
     pub(crate) reasons: Option<&'a BTreeMap<String, String>>,
-    pub(crate) resolving_subject: bool,
 }
 
 /// Un informe del directorio de informes, tal y como se ofrece para elegirlo o compararlo.
@@ -39,23 +40,13 @@ pub(crate) struct Snapshot<'a> {
     subject: Option<&'a Subject>,
     subject_complaints: &'a [String],
     resolving_subject: bool,
+    report_name: Option<&'a str>,
     report: Option<ReportView<'a>>,
     reports: &'a [ReportEntry],
     running: Option<RunningView<'a>>,
     queued: &'a [&'a str],
     question: Option<QuestionView<'a>>,
-    suites: Vec<SuiteView<'a>>,
-}
-
-#[derive(Debug, Serialize)]
-struct ReportView<'a> {
-    name: &'a str,
-    subject: &'a str,
-    profile: &'static str,
-    header: &'a Header,
-    summary: Summary,
-    resolved: usize,
-    total: usize,
+    why_pending: BTreeMap<&'a str, &'a str>,
 }
 
 #[derive(Debug, Serialize)]
@@ -71,99 +62,20 @@ struct QuestionView<'a> {
     kind: &'static str,
 }
 
-#[derive(Debug, Serialize)]
-struct SuiteView<'a> {
-    name: &'a str,
-    checks: Vec<CheckView<'a>>,
-}
-
-#[derive(Debug, Serialize)]
-struct CheckView<'a> {
-    id: &'a str,
-    chapter: &'a str,
-    statement: &'a str,
-    citation: &'a str,
-    warning: Option<&'a str>,
-    question: Option<&'a str>,
-    state: &'static str,
-    observation: Option<&'a str>,
-    date: Option<&'a str>,
-    duration_ms: Option<u64>,
-    activity: Option<&'static str>,
-    why_pending: Option<&'a str>,
-}
-
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize)]
-pub(crate) struct Summary {
-    pub total: usize,
-    pub compliant: usize,
-    pub noncompliant: usize,
-    pub not_observable: usize,
-    pub pending: usize,
-}
-
-impl Summary {
-    pub(crate) fn of<'a>(records: impl Iterator<Item = &'a CheckRecord>) -> Self {
-        let mut summary = Self::default();
-        for record in records {
-            summary.total += 1;
-            match record.state {
-                CheckState::Pending => summary.pending += 1,
-                CheckState::Resolved(Verdict::Compliant) => summary.compliant += 1,
-                CheckState::Resolved(Verdict::Noncompliant) => summary.noncompliant += 1,
-                CheckState::Resolved(Verdict::NotObservable) => summary.not_observable += 1,
-            }
-        }
-        summary
-    }
-}
-
-/// El estado entero de la sesión para la página: `report` es el informe abierto con su nombre.
+/// El estado de la sesión, con `report` como el informe abierto y su nombre.
 pub(crate) fn snapshot_of<'a>(
     catalogue: &'a [Check],
-    subject: Option<&'a Subject>,
-    subject_complaints: &'a [String],
     report: Option<(&'a str, &'a Dossier)>,
     reports: &'a [ReportEntry],
     activity: &'a Activity<'a>,
 ) -> Snapshot<'a> {
-    let mut suites: Vec<SuiteView> = Vec::new();
-    for check in catalogue {
-        let record = report.and_then(|(_, dossier)| dossier.record_of(&check.id));
-        let view = CheckView {
-            id: &check.id,
-            chapter: &check.chapter,
-            statement: &check.statement,
-            citation: &check.citation,
-            warning: check.warning.as_deref(),
-            question: check.question.as_deref(),
-            state: match record.map(|record| record.state) {
-                Some(CheckState::Resolved(verdict)) => verdict_name(verdict),
-                _ => PENDING_NAME,
-            },
-            observation: record.and_then(|record| record.observation.as_deref()),
-            date: record.and_then(|record| record.date.as_deref()),
-            duration_ms: record.and_then(|record| record.duration_ms),
-            activity: the_activity_of(&check.id, activity),
-            why_pending: activity
-                .reasons
-                .and_then(|reasons| reasons.get(&check.id))
-                .map(String::as_str)
-                .filter(|_| !matches!(record.map(|r| r.state), Some(CheckState::Resolved(_)))),
-        };
-        match suites.last_mut() {
-            Some(suite) if suite.name == check.suite => suite.checks.push(view),
-            _ => suites.push(SuiteView {
-                name: &check.suite,
-                checks: vec![view],
-            }),
-        }
-    }
+    let dossier = report.map(|(_, dossier)| dossier);
     Snapshot {
-        subject,
-        subject_complaints,
+        subject: activity.subject,
+        subject_complaints: activity.subject_complaints,
         resolving_subject: activity.resolving_subject,
-        report: report.map(|(name, dossier)| the_report_view(catalogue, name, dossier)),
+        report_name: report.map(|(name, _)| name),
+        report: dossier.map(|dossier| report_view(dossier, catalogue)),
         reports,
         running: (!activity.running.is_empty()).then_some(RunningView {
             ids: activity.running,
@@ -175,37 +87,26 @@ pub(crate) fn snapshot_of<'a>(
             prompt,
             kind,
         }),
-        suites,
+        why_pending: the_reasons_still_pending(dossier, activity),
     }
 }
 
-fn the_activity_of(id: &str, activity: &Activity) -> Option<&'static str> {
-    if activity.question.is_some_and(|(check, _, _)| check == id) {
-        Some("asking")
-    } else if activity.running.iter().any(|running| running == id) {
-        Some("running")
-    } else if activity.queued.contains(&id) {
-        Some("queued")
-    } else {
-        None
-    }
-}
-
-fn the_report_view<'a>(catalogue: &[Check], name: &'a str, dossier: &'a Dossier) -> ReportView<'a> {
-    let summary = Summary::of(
-        catalogue
-            .iter()
-            .filter_map(|check| dossier.record_of(&check.id)),
-    );
-    ReportView {
-        name,
-        subject: dossier.subject(),
-        profile: dossier.profile().name(),
-        header: dossier.header(),
-        summary,
-        resolved: summary.total - summary.pending,
-        total: summary.total,
-    }
+fn the_reasons_still_pending<'a>(
+    dossier: Option<&Dossier>,
+    activity: &'a Activity,
+) -> BTreeMap<&'a str, &'a str> {
+    activity
+        .reasons
+        .into_iter()
+        .flatten()
+        .filter(|(id, _)| {
+            !matches!(
+                dossier.and_then(|dossier| dossier.state_of(id)),
+                Some(CheckState::Resolved(_))
+            )
+        })
+        .map(|(id, reason)| (id.as_str(), reason.as_str()))
+        .collect()
 }
 
 #[cfg(test)]
@@ -215,17 +116,9 @@ mod tests {
     use super::*;
     use crate::baseline::Profile;
     use crate::catalogue::the_catalogue_in;
-    use crate::dossier::HeaderCoordinates;
+    use crate::dossier::{HeaderCoordinates, Verdict};
 
-    const THREE_CHECKS: &str = r#"
-[[check]]
-id = "a_greeting"
-suite = "saludo"
-chapter = "14"
-citation = "A.java:1"
-statement = "Saluda."
-drive = { mode = "v4", script = "protocol-v4" }
-
+    const TWO_CHECKS: &str = r#"
 [[check]]
 id = "a_signature"
 suite = "operaciones"
@@ -261,20 +154,7 @@ drive = { mode = "v4", script = "save" }
         )
         .unwrap();
         dossier
-            .resolve(
-                "a_greeting",
-                Verdict::Compliant,
-                None,
-                Duration::from_millis(900),
-            )
-            .unwrap();
-        dossier
-            .resolve(
-                "a_save",
-                Verdict::Compliant,
-                Some("guardó".to_owned()),
-                Duration::from_millis(1_500),
-            )
+            .resolve("a_save", Verdict::Compliant, None, Duration::ZERO)
             .unwrap();
         (dir, dossier)
     }
@@ -283,67 +163,29 @@ drive = { mode = "v4", script = "save" }
         serde_json::to_value(snapshot).unwrap()
     }
 
-    fn the_check<'v>(json: &'v Value, id: &str) -> &'v Value {
-        json["suites"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .flat_map(|suite| suite["checks"].as_array().unwrap())
-            .find(|check| check["id"] == id)
-            .unwrap()
-    }
-
     #[test]
-    fn the_summary_counts_what_was_observed() {
-        let catalogue = the_catalogue_in(THREE_CHECKS).unwrap();
+    fn the_session_carries_the_view_of_its_report_under_its_name() {
+        let catalogue = the_catalogue_in(TWO_CHECKS).unwrap();
         let (_dir, dossier) = a_report(&catalogue);
         let activity = Activity::default();
 
         let json = the_json_of(&snapshot_of(
             &catalogue,
-            None,
-            &[],
-            Some(("tanda", &dossier)),
+            Some(("informe", &dossier)),
             &[],
             &activity,
         ));
 
-        assert_eq!(json["report"]["name"], "tanda");
+        assert_eq!(json["report_name"], "informe");
         assert_eq!(
-            json["report"]["summary"],
-            json!({"total": 3, "compliant": 2, "noncompliant": 0, "not_observable": 0, "pending": 1})
+            json["report"],
+            serde_json::to_value(report_view(&dossier, &catalogue)).unwrap()
         );
-        assert_eq!(json["report"]["resolved"], 2);
-        assert_eq!(json["report"]["total"], 3);
     }
 
     #[test]
-    fn a_resolved_check_carries_its_result_and_nothing_about_the_client() {
-        let catalogue = the_catalogue_in(THREE_CHECKS).unwrap();
-        let (_dir, dossier) = a_report(&catalogue);
-        let activity = Activity::default();
-
-        let json = the_json_of(&snapshot_of(
-            &catalogue,
-            None,
-            &[],
-            Some(("tanda", &dossier)),
-            &[],
-            &activity,
-        ));
-        let save = the_check(&json, "a_save");
-
-        assert_eq!(save["state"], "CONFORME");
-        assert_eq!(save["observation"], "guardó");
-        assert_eq!(save["duration_ms"], 1_500);
-        assert_eq!(save.get("expectation"), None);
-        assert_eq!(save.get("contrast"), None);
-        assert_eq!(the_check(&json, "a_signature")["state"], "PENDIENTE");
-    }
-
-    #[test]
-    fn the_running_check_the_queued_ones_and_the_question_are_marked() {
-        let catalogue = the_catalogue_in(THREE_CHECKS).unwrap();
+    fn the_running_check_the_queue_and_the_question_travel_apart_from_the_report() {
+        let catalogue = the_catalogue_in(TWO_CHECKS).unwrap();
         let (_dir, dossier) = a_report(&catalogue);
         let running = ["a_signature".to_owned()];
         let activity = Activity {
@@ -356,9 +198,7 @@ drive = { mode = "v4", script = "save" }
 
         let json = the_json_of(&snapshot_of(
             &catalogue,
-            None,
-            &[],
-            Some(("tanda", &dossier)),
+            Some(("informe", &dossier)),
             &[],
             &activity,
         ));
@@ -372,32 +212,22 @@ drive = { mode = "v4", script = "save" }
             json["question"],
             json!({"check": "a_signature", "prompt": "¿se pidió el PIN? [s/n]", "kind": "verdict"})
         );
-        assert_eq!(the_check(&json, "a_signature")["activity"], "asking");
-        assert_eq!(the_check(&json, "a_save")["activity"], "queued");
-        assert_eq!(the_check(&json, "a_greeting")["activity"], Value::Null);
     }
 
     #[test]
-    fn the_catalogue_is_grouped_by_suite_in_its_own_order() {
-        let catalogue = the_catalogue_in(THREE_CHECKS).unwrap();
+    fn without_a_report_there_is_no_view() {
+        let catalogue = the_catalogue_in(TWO_CHECKS).unwrap();
         let activity = Activity::default();
 
-        let json = the_json_of(&snapshot_of(&catalogue, None, &[], None, &[], &activity));
+        let json = the_json_of(&snapshot_of(&catalogue, None, &[], &activity));
 
-        let suites: Vec<&str> = json["suites"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .map(|suite| suite["name"].as_str().unwrap())
-            .collect();
-        assert_eq!(suites, ["saludo", "operaciones"]);
         assert_eq!(json["report"], Value::Null);
-        assert_eq!(the_check(&json, "a_save")["state"], "PENDIENTE");
+        assert_eq!(json["report_name"], Value::Null);
     }
 
     #[test]
     fn a_pending_check_says_why_it_did_not_run_and_a_resolved_one_does_not() {
-        let catalogue = the_catalogue_in(THREE_CHECKS).unwrap();
+        let catalogue = the_catalogue_in(TWO_CHECKS).unwrap();
         let (_dir, dossier) = a_report(&catalogue);
         let reasons = BTreeMap::from([
             (
@@ -413,17 +243,14 @@ drive = { mode = "v4", script = "save" }
 
         let json = the_json_of(&snapshot_of(
             &catalogue,
-            None,
-            &[],
-            Some(("tanda", &dossier)),
+            Some(("informe", &dossier)),
             &[],
             &activity,
         ));
 
         assert_eq!(
-            the_check(&json, "a_signature")["why_pending"],
-            "se descartó la pregunta"
+            json["why_pending"],
+            json!({"a_signature": "se descartó la pregunta"})
         );
-        assert_eq!(the_check(&json, "a_save")["why_pending"], Value::Null);
     }
 }

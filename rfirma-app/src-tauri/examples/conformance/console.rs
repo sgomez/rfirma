@@ -19,10 +19,13 @@ use crate::checks::{
 use crate::comparison::{compare, Comparison};
 use crate::dossier::{CheckState, Dossier, HeaderCoordinates, THE_DOSSIER_FILE};
 use crate::livelog::{CheckLog, LiveLogSink, Provenance};
+use crate::report_view::report_view;
 use crate::snapshot::{snapshot_of, Activity, ReportEntry};
 use crate::subject::{resolve, the_deduced_coordinates, DeducedCoordinates, Subject};
 use crate::transcript::{log_path_of, transcript_path_of};
-use crate::validation::{read_the_reference, the_reference_dir, validate, Validation};
+use crate::validation::{
+    read_the_reference, the_reference_dir, the_references_in, validate, Validation,
+};
 use crate::Probe;
 
 /// Lo que se pide correr desde la página.
@@ -150,7 +153,7 @@ impl Console {
         {
             let mut session = self.shared.lock();
             if session.busy() {
-                return Err("no se cambia de sujeto con una tanda en marcha".to_owned());
+                return Err("no se cambia de cliente con un informe corriendo".to_owned());
             }
             session.resolving_subject = true;
             self.shared.publish(&session);
@@ -185,7 +188,7 @@ impl Console {
         }
         if new.subject_version.trim().is_empty() {
             return Err(
-                "falta la versión del sujeto: es la única que nadie puede deducir".to_owned(),
+                "falta la versión del cliente: es la única que nadie puede deducir".to_owned(),
             );
         }
         let coordinates = HeaderCoordinates {
@@ -310,20 +313,34 @@ impl Console {
         Ok(())
     }
 
-    pub(crate) fn log_of(&self, check: &str) -> Result<String, String> {
-        self.read_in_the_report(|dir| log_path_of(dir, check))
+    /// El registro de `check` en el informe `report`, o en el abierto si no se nombra ninguno.
+    pub(crate) fn log_of(&self, report: Option<&str>, check: &str) -> Result<String, String> {
+        self.read_in_the_report(report, |dir| log_path_of(dir, check))
     }
 
-    pub(crate) fn transcript_of(&self, check: &str) -> Result<String, String> {
-        self.read_in_the_report(|dir| transcript_path_of(dir, check))
+    /// Las tramas de `check` en el informe `report`, o en el abierto si no se nombra ninguno.
+    pub(crate) fn transcript_of(
+        &self,
+        report: Option<&str>,
+        check: &str,
+    ) -> Result<String, String> {
+        self.read_in_the_report(report, |dir| transcript_path_of(dir, check))
     }
 
-    fn read_in_the_report(&self, path_in: impl Fn(&Path) -> PathBuf) -> Result<String, String> {
-        let path = {
-            let session = self.shared.lock();
-            let report = session.report.as_ref().ok_or("no hay informe abierto")?;
-            path_in(&report.dir)
+    fn read_in_the_report(
+        &self,
+        report: Option<&str>,
+        path_in: impl Fn(&Path) -> PathBuf,
+    ) -> Result<String, String> {
+        let dir = match report {
+            Some(name) => self.shared.the_report_dir(name)?,
+            None => {
+                let session = self.shared.lock();
+                let report = session.report.as_ref().ok_or("no hay informe abierto")?;
+                report.dir.clone()
+            }
         };
+        let path = path_in(&dir);
         if !path.is_file() {
             return Ok(String::new());
         }
@@ -331,24 +348,42 @@ impl Console {
             .map_err(|error| format!("{} no se pudo leer: {error}", path.display()))
     }
 
+    /// La vista del informe `name`, sea o no el de la sesión, sin escribir nada.
+    pub(crate) fn report_view(&self, name: &str) -> Result<serde_json::Value, String> {
+        let dossier = self.open_to_see(name)?;
+        serde_json::to_value(report_view(&dossier, &self.shared.catalogue))
+            .map_err(|error| format!("el informe «{name}» no se pudo serializar: {error}"))
+    }
+
     pub(crate) fn compare(&self, a: &str, b: &str) -> Result<Comparison, String> {
-        let read =
-            |name: &str| Dossier::read(&self.shared.the_report_dir(name)?.join(THE_DOSSIER_FILE));
-        Ok(compare(&read(a)?, &read(b)?))
+        Ok(compare(
+            &self.open_to_see(a)?,
+            &self.open_to_see(b)?,
+            &self.shared.catalogue,
+        ))
+    }
+
+    fn open_to_see(&self, name: &str) -> Result<Dossier, String> {
+        let path = self.shared.the_report_dir(name)?.join(THE_DOSSIER_FILE);
+        if !path.is_file() {
+            return Err(format!("no hay informe llamado «{name}»"));
+        }
+        Dossier::open(&path, &self.shared.catalogue)
+    }
+
+    pub(crate) fn references(&self) -> Result<Vec<String>, String> {
+        the_references_in(&the_reference_dir())
     }
 
     pub(crate) fn validate(&self, report: &str, reference: &str) -> Result<Validation, String> {
-        let dossier = Dossier::open(
-            &self.shared.the_report_dir(report)?.join(THE_DOSSIER_FILE),
-            &self.shared.catalogue,
-        )?;
+        let dossier = self.open_to_see(report)?;
         let reference = read_the_reference(&the_reference_dir(), reference)?;
         Ok(validate(&dossier, &self.shared.catalogue, &reference))
     }
 }
 
-const NO_SUBJECT: &str = "elige un sujeto primero";
-const NO_SWITCHING_REPORTS: &str = "no se cambia de informe con una tanda en marcha";
+const NO_SUBJECT: &str = "elige un cliente primero";
+const NO_SWITCHING_REPORTS: &str = "no se cambia de informe con otro corriendo";
 
 impl Shared {
     fn lock(&self) -> MutexGuard<'_, Session> {
@@ -377,6 +412,9 @@ impl Shared {
     fn state_of(&self, session: &Session) -> serde_json::Value {
         let reports = reports_in(&self.reports_dir);
         let activity = Activity {
+            subject: session.subject.as_ref(),
+            subject_complaints: &session.subject_complaints,
+            resolving_subject: session.resolving_subject,
             running: &session.running,
             running_for: session
                 .started
@@ -395,12 +433,9 @@ impl Shared {
                 )
             }),
             reasons: Some(&session.reasons),
-            resolving_subject: session.resolving_subject,
         };
         let snapshot = snapshot_of(
             &self.catalogue,
-            session.subject.as_ref(),
-            &session.subject_complaints,
             session
                 .report
                 .as_ref()
@@ -747,7 +782,85 @@ mod tests {
             .complaint
             .as_deref()
             .unwrap()
-            .contains("no es un expediente"));
+            .contains("no es un informe"));
+    }
+
+    fn a_catalogue() -> Vec<Check> {
+        crate::catalogue::the_catalogue_in(
+            r#"
+[[check]]
+id = "a_greeting"
+suite = "saludo"
+chapter = "14"
+citation = "A.java:1"
+statement = "Saluda."
+drive = { mode = "v4", script = "protocol-v4" }
+"#,
+        )
+        .unwrap()
+    }
+
+    fn a_report_in(dir: &Path, name: &str, profile: Profile, catalogue: &[Check]) {
+        std::fs::create_dir(dir.join(name)).unwrap();
+        Dossier::create(
+            &dir.join(name).join(THE_DOSSIER_FILE),
+            &format!("/usr/bin/{}", profile.name()),
+            profile,
+            catalogue,
+            HeaderCoordinates {
+                os: "Linux".to_owned(),
+                os_version: "6.0".to_owned(),
+                subject_version: "1.0".to_owned(),
+                transport: "websocket".to_owned(),
+                store: "softhsm2".to_owned(),
+            },
+        )
+        .unwrap();
+    }
+
+    fn the_shape_of(json: &serde_json::Value) -> serde_json::Value {
+        match json {
+            serde_json::Value::Object(fields) => fields
+                .iter()
+                .map(|(key, value)| (key.clone(), the_shape_of(value)))
+                .collect::<serde_json::Map<_, _>>()
+                .into(),
+            serde_json::Value::Array(items) => items.iter().map(the_shape_of).collect(),
+            _ => serde_json::Value::Null,
+        }
+    }
+
+    #[test]
+    fn any_two_reports_of_different_clients_are_seen_alike_while_the_session_holds_another() {
+        let dir = tempfile::tempdir().unwrap();
+        let catalogue = a_catalogue();
+        a_report_in(dir.path(), "a", Profile::Autofirma, &catalogue);
+        a_report_in(dir.path(), "b", Profile::Rfirma, &catalogue);
+        a_report_in(dir.path(), "c", Profile::Autofirma, &catalogue);
+        let console = Console::new(catalogue, dir.path().to_owned(), Duration::ZERO);
+        console.open_report("c".to_owned()).unwrap();
+
+        let a = console.report_view("a").unwrap();
+        let b = console.report_view("b").unwrap();
+
+        assert_eq!(the_shape_of(&a), the_shape_of(&b));
+        assert_eq!(
+            (&a["profile"], &b["profile"]),
+            (&"autofirma".into(), &"rfirma".into())
+        );
+        let state = console.subscribe().recv().unwrap();
+        assert!(state.contains("\"report_name\":\"c\""));
+    }
+
+    #[test]
+    fn seeing_a_report_that_does_not_exist_says_so() {
+        let dir = tempfile::tempdir().unwrap();
+        let console = Console::new(a_catalogue(), dir.path().to_owned(), Duration::ZERO);
+
+        assert_eq!(
+            console.report_view("nadie").unwrap_err(),
+            "no hay informe llamado «nadie»"
+        );
     }
 
     #[test]
