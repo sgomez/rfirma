@@ -1,0 +1,716 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Suite de conformidad</title>
+<style>
+  :root {
+    --bg: #16181d; --panel: #1e2128; --line: #2e333d; --text: #d8dce4; --dim: #8a92a0;
+    --ok: #4cc38a; --bad: #ef5f5f; --warn: #e5b94e; --info: #6aa8ff; --accent: #b48ef7;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 13px/1.45 system-ui, sans-serif; }
+  button, select, input { font: inherit; color: var(--text); background: #2a2f39; border: 1px solid var(--line);
+    border-radius: 4px; padding: 3px 8px; }
+  button { cursor: pointer; }
+  button:hover:not(:disabled) { border-color: var(--dim); }
+  button:disabled { opacity: .45; cursor: default; }
+  input { min-width: 0; }
+  code, pre, .mono { font-family: ui-monospace, "JetBrains Mono", monospace; font-size: 12px; }
+  header { padding: 8px 12px; border-bottom: 1px solid var(--line); background: var(--panel); display: grid; gap: 6px; }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  [hidden] { display: none !important; }
+  .grow { flex: 1; }
+  .dim { color: var(--dim); }
+  .complaint { color: var(--bad); }
+  .tag { padding: 0 6px; border-radius: 3px; background: #2a2f39; }
+  .sep { width: 1px; align-self: stretch; background: var(--line); }
+  main { display: grid; grid-template-columns: minmax(300px, 28%) 1fr; height: calc(100vh - 110px); }
+  #catalogue { overflow: auto; border-right: 1px solid var(--line); padding: 6px 0; }
+  .suite > .title { display: flex; align-items: center; gap: 6px; padding: 3px 8px; cursor: pointer; font-weight: 600; }
+  .suite > .title .name { flex: 1; }
+  .check { display: flex; align-items: center; gap: 6px; padding: 2px 8px 2px 22px; cursor: pointer; }
+  .check:hover { background: #242832; }
+  .check.selected { background: #2b3040; }
+  .check .id { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .badge { width: 1.4em; text-align: center; font-weight: 700; }
+  .s-CONFORME { color: var(--ok); } .s-NO-CONFORME { color: var(--bad); }
+  .s-NO-OBSERVABLE { color: var(--warn); } .s-PENDIENTE { color: var(--dim); }
+  .a-running { color: var(--info); } .a-queued { color: var(--dim); font-style: italic; } .a-asking { color: var(--accent); }
+  .small { font-size: 11px; padding: 0 6px; }
+  #right { display: grid; grid-template-rows: auto 1fr; min-height: 0; }
+  #card { padding: 10px 14px; border-bottom: 1px solid var(--line); overflow: auto; max-height: 48vh; }
+  #card h2 { margin: 0 0 2px; font-size: 14px; word-break: break-all; }
+  #card dl { display: grid; grid-template-columns: 8em 1fr; gap: 3px 10px; margin: 8px 0 0; }
+  #card dt { color: var(--dim); } #card dd { margin: 0; }
+  #log { display: grid; grid-template-rows: auto 1fr; min-height: 0; }
+  #log .bar { display: flex; gap: 10px; align-items: center; padding: 4px 12px; border-bottom: 1px solid var(--line); background: var(--panel); }
+  #log pre { margin: 0; padding: 6px 12px; overflow: auto; white-space: pre-wrap; word-break: break-all; }
+  .p-sede { color: var(--ok); } .p-cliente { color: var(--warn); } .p-suite { color: var(--info); }
+  dialog { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 6px; max-width: 90vw; }
+  dialog::backdrop { background: rgba(0,0,0,.55); }
+  dialog form { display: grid; grid-template-columns: 10em 1fr; gap: 6px 10px; align-items: center; }
+  #transcript-text { max-height: 70vh; overflow: auto; white-space: pre-wrap; word-break: break-all; }
+  #question-dialog .prompt { font-size: 15px; margin: 6px 0 14px; white-space: pre-wrap; max-width: 60ch; }
+  #compare-view { display: none; padding: 10px 14px; overflow: auto; height: calc(100vh - 110px); }
+  table { border-collapse: collapse; width: 100%; }
+  td, th { padding: 3px 8px; border-bottom: 1px solid var(--line); text-align: left; }
+  .question-banner { background: #3a2f4f; padding: 4px 8px; border-radius: 4px; cursor: pointer; }
+  a { color: var(--info); }
+  body[data-mode="report"] .session-only, body[data-mode="compare"] .session-only { display: none; }
+  body[data-mode="compare"] .report-only { display: none; }
+  body[data-mode="compare"] main { display: none; } body[data-mode="compare"] #compare-view { display: block; }
+  tr.suite-row th { background: var(--panel); }
+  #validation h3 { margin: 10px 0 4px; font-size: 13px; }
+  #validation ul { margin: 0; padding-left: 18px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="row session-only">
+    <strong>Cliente</strong>
+    <select id="client-kind"><option value="autofirma">autofirma</option><option value="rfirma">rfirma</option></select>
+    <input id="binary" class="grow mono" placeholder="binario (vacío: se busca en el PATH)">
+    <input id="trust-root" class="grow mono" placeholder="raíz de confianza (vacío: la que resuelva el cliente)">
+    <button type="button" id="resolve">Resolver</button>
+    <span id="client-status" class="dim"></span>
+  </div>
+  <div class="row">
+    <strong class="report-only">Informe</strong>
+    <select id="reports" class="session-only"></select>
+    <button type="button" id="open-report" class="session-only">Abrir</button>
+    <button type="button" id="new-report" class="session-only">+ nuevo</button>
+    <span class="sep session-only"></span>
+    <span id="summary" class="mono report-only"></span>
+    <a id="open-elsewhere" href="/" class="report-only" target="_blank" rel="noopener" hidden>Abrir en otra ventana</a>
+    <button type="button" id="validate" class="report-only" hidden>Validar contra referencia…</button>
+    <span class="grow"></span>
+    <span id="connection" class="complaint"></span>
+    <span id="question-banner" class="session-only"></span>
+    <button type="button" id="run-pending" class="session-only">▶ pendientes</button>
+    <button type="button" id="stop" class="session-only" title="vacía la cola; la comprobación en curso termina">■ parar</button>
+    <button type="button" id="skip" class="session-only" title="corta la comprobación en curso, la deja pendiente y sigue con la cola">⏭ saltar</button>
+    <button type="button" id="abort" class="session-only" title="vacía la cola y corta la comprobación en curso">✕ abortar</button>
+    <a id="compare-link" href="/comparar" class="session-only" target="_blank" rel="noopener">Comparar informes</a>
+  </div>
+</header>
+<main>
+  <nav id="catalogue"></nav>
+  <section id="right">
+    <article id="card"><p class="dim" id="card-hint"></p></article>
+    <section id="log">
+      <div class="bar">
+        <strong>Registro</strong>
+        <label><input type="checkbox" data-provenance="sede" checked> sede</label>
+        <label><input type="checkbox" data-provenance="cliente" checked> cliente</label>
+        <label><input type="checkbox" data-provenance="suite" checked> suite</label>
+        <span class="grow"></span>
+        <button type="button" id="pause-log">⏸ pausar</button>
+      </div>
+      <pre id="log-lines"></pre>
+    </section>
+  </section>
+</main>
+<section id="compare-view">
+  <div class="row">
+    <strong>Comparar</strong>
+    A <select id="compare-a"></select>
+    B <select id="compare-b"></select>
+    <button type="button" id="compare">Comparar</button>
+  </div>
+  <div id="comparison"></div>
+</section>
+
+<dialog id="new-report-dialog">
+  <form method="dialog" id="new-report-form">
+    <strong style="grid-column: 1 / -1">Informe nuevo</strong>
+    <label for="nr-name">Nombre</label><input id="nr-name" name="name" required pattern="[A-Za-z0-9_\-][A-Za-z0-9._\-]*">
+    <label for="nr-version">Versión del cliente</label><input id="nr-version" name="client_version" required placeholder="nadie puede deducirla">
+    <label for="nr-os">Sistema</label><input id="nr-os" name="os" required>
+    <label for="nr-os-version">Versión del sistema</label><input id="nr-os-version" name="os_version" required>
+    <label for="nr-store">Almacén</label><input id="nr-store" name="store" required class="mono">
+    <label for="nr-transport">Transporte</label><input id="nr-transport" name="transport" required>
+    <span class="complaint" id="nr-complaint" style="grid-column: 1 / -1"></span>
+    <span></span>
+    <div class="row"><button type="submit" value="create">Crear</button><button type="submit" value="cancel" formnovalidate>Cancelar</button></div>
+  </form>
+</dialog>
+
+<dialog id="question-dialog">
+  <strong id="question-title"></strong>
+  <div class="dim" id="question-check"></div>
+  <div class="prompt" id="question-prompt"></div>
+  <div class="row" id="question-outcome">
+    <button type="button" data-answer="s">Sí</button>
+    <button type="button" data-answer="n">No</button>
+    <span class="grow"></span>
+    <button type="button" data-answer="">Descartar (queda pendiente)</button>
+  </div>
+  <div class="row" id="question-briefing">
+    <button type="button" data-answer="s">Empezar</button>
+    <span class="grow"></span>
+    <button type="button" data-answer="">Saltar (queda pendiente)</button>
+  </div>
+</dialog>
+
+<dialog id="validate-dialog">
+  <div class="row">
+    <strong>Validar contra referencia</strong>
+    <select id="references"></select>
+    <button type="button" id="run-validation">Validar</button>
+    <span class="grow"></span>
+    <button type="button" id="close-validation">Cerrar</button>
+  </div>
+  <div id="validation"></div>
+</dialog>
+
+<dialog id="transcript-dialog">
+  <div class="row"><strong id="transcript-title"></strong><span class="grow"></span><button type="button" id="close-transcript">Cerrar</button></div>
+  <pre id="transcript-text"></pre>
+</dialog>
+
+<script>
+"use strict";
+const token = new URLSearchParams(location.search).get("token");
+const $ = (id) => document.getElementById(id);
+const REPORT_PREFIX = "/informe/";
+const shownReport = location.pathname.startsWith(REPORT_PREFIX)
+  ? decodeURIComponent(location.pathname.slice(REPORT_PREFIX.length)) : null;
+const mode = shownReport ? "report" : location.pathname === "/comparar" ? "compare" : "session";
+document.body.dataset.mode = mode;
+document.title = mode === "report" ? `Informe ${shownReport} · Suite de conformidad`
+  : mode === "compare" ? "Comparar informes · Suite de conformidad" : "Suite de conformidad";
+$("card-hint").textContent = mode === "report"
+  ? "Elige una comprobación." : "Elige un cliente y un informe; después, una comprobación.";
+let state = null;
+let fetchedView = null;
+let wasLive = false;
+let selected = null;
+let follow = true;
+let runningHead = null;
+let runStartedAt = 0;
+let logLines = [];
+let pausedLines = null;
+let dismissedQuestion = null;
+const folded = new Set();
+
+function api(path, params = {}) {
+  const query = new URLSearchParams({ ...params, token });
+  return `${path}?${query}`;
+}
+
+async function post(path, body) {
+  const response = await fetch(api(path), {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+  });
+  const payload = await response.json();
+  if (!response.ok) throw new Error(payload.error);
+  return payload.ok;
+}
+
+async function getJson(path, params) {
+  const response = await fetch(api(path, params));
+  const payload = await response.json();
+  if (!response.ok) throw new Error(payload.error);
+  return payload.ok;
+}
+
+async function getText(path, params) {
+  const response = await fetch(api(path, params));
+  if (!response.ok) throw new Error((await response.json()).error);
+  return response.text();
+}
+
+function el(tag, attributes = {}, ...children) {
+  const node = document.createElement(tag);
+  for (const [key, value] of Object.entries(attributes)) {
+    if (key === "class") node.className = value;
+    else if (key.startsWith("on")) node.addEventListener(key.slice(2), value);
+    else if (value !== null && value !== undefined && value !== false) node.setAttribute(key, value);
+  }
+  for (const child of children.flat(Infinity)) {
+    if (child !== null && child !== undefined) node.append(child);
+  }
+  return node;
+}
+
+const BADGES = { "CONFORME": "✓", "NO CONFORME": "✗", "NO OBSERVABLE": "?", "PENDIENTE": "·" };
+const cssName = (text) => text.replaceAll(" ", "-");
+
+function report(action) {
+  return (error) => alert(`${action}: ${error.message}`);
+}
+
+function isLive() {
+  if (!state?.report) return false;
+  return mode === "session" || state.report_name === shownReport;
+}
+
+function viewName() {
+  return mode === "report" ? shownReport : state?.report_name ?? null;
+}
+
+function theView() {
+  return isLive() ? state.report : mode === "report" ? fetchedView : null;
+}
+
+function activityOf(id) {
+  if (!isLive()) return null;
+  if (state.question?.check === id) return "asking";
+  if (state.running?.ids.includes(id)) return "running";
+  if (state.queued.includes(id)) return "queued";
+  return null;
+}
+
+function whyPending(id) {
+  return isLive() ? state.why_pending[id] ?? null : null;
+}
+
+function allChecks() {
+  const view = theView();
+  return view ? view.sets.flatMap((set) => set.checks.map((check) => ({ ...check, set: set.name }))) : [];
+}
+
+async function fetchTheShownReport() {
+  try {
+    fetchedView = await getJson("/api/report-view", { report: shownReport });
+    $("connection").textContent = "";
+  } catch (error) {
+    fetchedView = null;
+    $("connection").textContent = error.message;
+  }
+  if (state) render();
+}
+
+function onState(next) {
+  state = next;
+  $("connection").textContent = "";
+  if (mode === "report") {
+    const live = isLive();
+    if (wasLive && !live) fetchTheShownReport();
+    wasLive = live;
+  }
+  const head = isLive() && state.running ? state.running.ids[0] : null;
+  if (state.running) runStartedAt = performance.now() - state.running.elapsed_ms;
+  if (head && head !== runningHead) {
+    const before = selected;
+    if (follow) select(head, false);
+    if (before === selected && state.running.ids.includes(selected)) loadLog();
+  }
+  runningHead = head;
+  if (!state.question) dismissedQuestion = null;
+  render();
+}
+
+function render() {
+  if (mode === "session") {
+    renderClient();
+    renderQuestion();
+  }
+  renderReports();
+  renderSummary();
+  renderCatalogue();
+  renderCard();
+}
+
+function renderClient() {
+  const status = $("client-status");
+  status.replaceChildren();
+  if (state.resolving_client) {
+    status.append("resolviendo… (monta el almacén aislado)");
+  } else if (state.client) {
+    const client = state.client;
+    status.append(
+      el("span", { class: "tag" }, client.kind), " ",
+      el("code", {}, client.binary), " · raíz ", el("code", {}, client.trust_root),
+      " · ", el("code", {}, client.store),
+    );
+  } else if (state.client_complaints.length) {
+    status.append(el("span", { class: "complaint" }, state.client_complaints.join(" · ")));
+  } else {
+    status.append("sin cliente");
+  }
+  const busy = !!state.running || state.queued.length > 0 || state.resolving_client;
+  $("resolve").disabled = busy;
+}
+
+function renderReports() {
+  for (const id of ["reports", "compare-a", "compare-b"]) {
+    const select = $(id);
+    const previous = select.value;
+    select.replaceChildren(...state.reports.map((entry) => {
+      const mismatch = id === "reports" && state.client && entry.kind !== state.client.kind;
+      const label = entry.complaint
+        ? `${entry.name} — ilegible`
+        : `${entry.name} — ${entry.kind} ${entry.client_version} (${entry.date})`;
+      return el("option", { value: entry.name, disabled: mismatch || !!entry.complaint }, label);
+    }));
+    if ([...select.options].some((option) => option.value === previous)) select.value = previous;
+    else if (id === "reports" && state.report_name) select.value = state.report_name;
+  }
+  const busy = !!state.running || state.queued.length > 0;
+  $("open-report").disabled = !state.client || busy;
+  $("new-report").disabled = !state.client || busy;
+}
+
+function renderSummary() {
+  const summary = $("summary");
+  summary.replaceChildren();
+  const view = theView();
+  const name = viewName();
+  if (!view) {
+    summary.append(el("span", { class: "dim" }, mode === "report" ? `${shownReport}: sin leer` : "sin informe abierto"));
+  } else {
+    const s = view.summary;
+    summary.append(
+      el("strong", {}, name), ` · ${view.kind} ${view.header.client_version} · `,
+      el("span", { class: "s-CONFORME" }, `${s.compliant}✓ `),
+      el("span", { class: "s-NO-CONFORME" }, `${s.noncompliant}✗ `),
+      el("span", { class: "s-NO-OBSERVABLE" }, `${s.not_observable}? `),
+      el("span", { class: "s-PENDIENTE" }, `${s.pending}· `),
+      ` │ ${s.total - s.pending}/${s.total}`,
+    );
+  }
+  const elsewhere = $("open-elsewhere");
+  elsewhere.hidden = !view;
+  if (name) elsewhere.href = `${REPORT_PREFIX}${encodeURIComponent(name)}?${new URLSearchParams({ token })}`;
+  $("validate").hidden = !view;
+  $("compare-link").href = `/comparar?${new URLSearchParams({ token })}`;
+  const idle = !state.running && state.queued.length === 0;
+  $("run-pending").disabled = !state.report;
+  $("stop").disabled = idle;
+  $("skip").disabled = !state.running;
+  $("abort").disabled = !state.running;
+}
+
+function renderCatalogue() {
+  const nav = $("catalogue");
+  const scroll = nav.scrollTop;
+  const view = theView();
+  const controls = mode === "session";
+  nav.replaceChildren(...(view ? view.sets : []).map((suite) => {
+    const isFolded = folded.has(suite.name);
+    const s = suite.summary;
+    const counts = [[s.compliant, "CONFORME"], [s.noncompliant, "NO CONFORME"], [s.not_observable, "NO OBSERVABLE"], [s.pending, "PENDIENTE"]]
+      .filter(([n]) => n > 0).map(([n, name]) => `${n}${BADGES[name]}`).join(" ");
+    const title = el("div", { class: "title", onclick: () => { isFolded ? folded.delete(suite.name) : folded.add(suite.name); renderCatalogue(); } },
+      el("span", {}, isFolded ? "▸" : "▾"),
+      el("span", { class: "name" }, suite.name),
+      el("span", { class: "dim small" }, counts),
+      controls ? el("button", { class: "small", title: "corre todo el conjunto",
+        onclick: (event) => { event.stopPropagation(); post("/api/run", { set: suite.name }).catch(report("No se pudo encolar")); } }, "▶ conjunto") : null,
+    );
+    const checks = isFolded ? [] : suite.checks.map((check) => {
+      const activity = activityOf(check.id);
+      const badge = activity === "running" ? "●" : activity === "asking" ? "¿" : activity === "queued" ? "◌" : BADGES[check.state];
+      const badgeClass = activity ? `a-${activity}` : `s-${cssName(check.state)}`;
+      return el("div", { class: `check ${check.id === selected ? "selected" : ""}`, onclick: () => select(check.id, true) },
+        el("span", { class: `badge ${badgeClass}` }, badge),
+        el("span", { class: `id mono ${activity === "queued" ? "a-queued" : ""}`, title: check.id }, check.id),
+        activity === "queued" ? el("span", { class: "dim small" }, "en cola") : null,
+        controls ? el("button", { class: "small", disabled: activity === "running" || activity === "queued",
+          title: check.state === "PENDIENTE" ? "correr" : "repetir",
+          onclick: (event) => { event.stopPropagation(); post("/api/run", { check: check.id }).catch(report("No se pudo encolar")); } }, "▶") : null,
+      );
+    });
+    return el("div", { class: "suite" }, title, ...checks);
+  }));
+  nav.scrollTop = scroll;
+}
+
+function select(id, byHand) {
+  if (byHand) follow = false;
+  const changed = id !== selected;
+  selected = id;
+  if (changed) loadLog();
+  if (state) { renderCatalogue(); renderCard(); }
+}
+
+function renderCard() {
+  const card = $("card");
+  const check = allChecks().find((each) => each.id === selected);
+  if (!check) return;
+  const activity = activityOf(check.id);
+  const running = activity === "running" || activity === "asking";
+  const field = (label, value) => value ? [el("dt", {}, label), el("dd", {}, value)] : [];
+  const duration = running
+    ? el("span", { id: "stopwatch", class: "a-running" }, "")
+    : check.duration_ms !== null && check.duration_ms !== undefined ? `${(check.duration_ms / 1000).toFixed(1)} s` : null;
+  card.replaceChildren(
+    el("div", { class: "row" },
+      el("h2", { class: "mono grow" }, check.id),
+      el("label", { class: "dim", title: "al empezar cada comprobación, muestra su ficha y su registro" },
+        el("input", { type: "checkbox", checked: follow, onchange: (event) => {
+          follow = event.target.checked;
+          if (follow && runningHead) select(runningHead, false);
+        } }),
+        " ir a la comprobación en curso"),
+      el("button", { onclick: () => showTranscript(check.id) }, "ver tramas"),
+    ),
+    el("div", { class: "dim" }, `${check.set} · cap. ${check.chapter}`, " · ", duration ? ["⏱ ", duration] : "sin duración"),
+    el("dl", {},
+      field("Qué se exige", check.statement),
+      field("Fuente", el("code", {}, check.citation)),
+      field("Antes de empezar", check.warning),
+      field("Te preguntaremos", check.question),
+      field("Qué pasó", check.observation),
+      field("Resultado", el("span", { class: `s-${cssName(check.state)}` },
+        running ? (activity === "asking" ? "esperando tu respuesta" : "corriendo") : check.state)),
+      field("Fecha", check.date),
+      field("Pendiente porque", whyPending(check.id)),
+    ),
+  );
+  tickStopwatch();
+}
+
+function tickStopwatch() {
+  const stopwatch = $("stopwatch");
+  if (!stopwatch) return;
+  const seconds = (performance.now() - runStartedAt) / 1000;
+  stopwatch.textContent = `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${(seconds % 60).toFixed(1).padStart(4, "0")}`;
+}
+setInterval(tickStopwatch, 200);
+
+function renderQuestion() {
+  const dialog = $("question-dialog");
+  const banner = $("question-banner");
+  banner.replaceChildren();
+  if (!state.question) {
+    if (dialog.open) dialog.close();
+    return;
+  }
+  const { check, prompt, kind } = state.question;
+  const briefing = kind === "briefing";
+  $("question-title").textContent = briefing ? "Antes de empezar" : "Resultado de la prueba";
+  $("question-outcome").hidden = briefing;
+  $("question-briefing").hidden = !briefing;
+  banner.append(el("span", { class: "question-banner", onclick: () => { dismissedQuestion = null; renderQuestion(); } }, `${briefing ? "▶" : "¿?"} ${check}`));
+  if (dismissedQuestion === `${kind}:${check}`) return;
+  $("question-check").textContent = check;
+  $("question-prompt").textContent = prompt.replace(/\s*\[s\/n\]\s*$/, "");
+  if (!dialog.open) dialog.showModal();
+}
+
+for (const button of document.querySelectorAll("#question-dialog button")) {
+  button.addEventListener("click", () => {
+    const answer = button.dataset.answer;
+    $("question-dialog").close();
+    post("/api/answer", { answer: answer === "" ? null : answer }).catch(report("No se pudo contestar"));
+  });
+}
+$("question-dialog").addEventListener("cancel", () => {
+  dismissedQuestion = state?.question ? `${state.question.kind}:${state.question.check}` : null;
+});
+
+const FORMER_PROVENANCES = { conductor: "sede", sujeto: "cliente", "arnés": "suite" };
+
+function provenanceOf(line) {
+  const match = /^\d\d:\d\d\.\d\d (\S+)/.exec(line);
+  return match ? FORMER_PROVENANCES[match[1]] ?? match[1] : "";
+}
+
+function renderLog() {
+  const shown = new Set([...document.querySelectorAll("[data-provenance]")]
+    .filter((box) => box.checked).map((box) => box.dataset.provenance));
+  const pre = $("log-lines");
+  const atBottom = pre.scrollHeight - pre.scrollTop - pre.clientHeight < 30;
+  pre.replaceChildren(...logLines
+    .filter((line) => line && shown.has(provenanceOf(line)))
+    .map((line) => el("div", { class: `p-${provenanceOf(line)}` }, line)));
+  if (atBottom) pre.scrollTop = pre.scrollHeight;
+}
+
+function inTheShownReport(params) {
+  return mode === "report" ? { ...params, report: shownReport } : params;
+}
+
+async function loadLog() {
+  const wanted = selected;
+  logLines = [];
+  renderLog();
+  if (!theView() || !wanted) return;
+  try {
+    const text = await getText("/api/log", inTheShownReport({ check: wanted }));
+    if (wanted === selected) {
+      logLines = text.split("\n").filter(Boolean).concat(logLines);
+      renderLog();
+    }
+  } catch (error) {
+    logLines = [`(el registro no se pudo leer: ${error.message})`];
+    renderLog();
+  }
+}
+
+function onLog({ check, line }) {
+  if (!isLive() || !state.running) return;
+  const ids = state.running.ids;
+  if (check !== ids[0] || !ids.includes(selected)) return;
+  if (pausedLines) pausedLines.push(line);
+  else { logLines.push(line); renderLog(); }
+}
+
+for (const box of document.querySelectorAll("[data-provenance]")) box.addEventListener("change", renderLog);
+$("pause-log").addEventListener("click", () => {
+  if (pausedLines) {
+    logLines.push(...pausedLines);
+    pausedLines = null;
+    $("pause-log").textContent = "⏸ pausar";
+    renderLog();
+  } else {
+    pausedLines = [];
+    $("pause-log").textContent = "▶ seguir";
+  }
+});
+
+async function showTranscript(check) {
+  $("transcript-title").textContent = `Tramas de ${check}`;
+  try {
+    const text = await getText("/api/transcript", inTheShownReport({ check }));
+    $("transcript-text").textContent = text || "(sin tramas: la comprobación no ha llegado a correr en este informe)";
+  } catch (error) {
+    $("transcript-text").textContent = error.message;
+  }
+  $("transcript-dialog").showModal();
+}
+$("close-transcript").addEventListener("click", () => $("transcript-dialog").close());
+
+$("validate").addEventListener("click", async () => {
+  $("validation").replaceChildren();
+  try {
+    const names = await getJson("/api/references");
+    $("references").replaceChildren(...names.map((name) => el("option", { value: name }, name)));
+  } catch (error) {
+    $("validation").append(el("p", { class: "complaint" }, error.message));
+  }
+  $("validate-dialog").showModal();
+});
+$("run-validation").addEventListener("click", async () => {
+  const target = $("validation");
+  target.replaceChildren(el("p", { class: "dim" }, "validando…"));
+  try {
+    const validation = await getJson("/api/validate", { report: viewName(), reference: $("references").value });
+    renderValidation(validation);
+  } catch (error) {
+    target.replaceChildren(el("p", { class: "complaint" }, error.message));
+  }
+});
+$("close-validation").addEventListener("click", () => $("validate-dialog").close());
+
+function renderValidation(validation) {
+  const target = $("validation");
+  if (validation.result === "validated") {
+    target.replaceChildren(el("p", { class: "s-CONFORME" }, el("strong", {}, "Validado")));
+    return;
+  }
+  const bySuite = new Map((theView()?.sets ?? []).map((suite) => [suite.name, suite.checks.map((check) => check.id)]));
+  const groups = [...bySuite].map(([suite, ids]) => [suite, validation.discrepancies.filter((d) => ids.includes(d.id))])
+    .filter(([, discrepancies]) => discrepancies.length > 0);
+  target.replaceChildren(
+    el("p", { class: "complaint" }, el("strong", {}, `${validation.discrepancies.length} discrepancias`),
+      ": fallos de la suite o de la referencia, no del cliente."),
+    ...groups.map(([suite, discrepancies]) => el("section", {},
+      el("h3", {}, suite),
+      el("ul", {}, discrepancies.map((d) => el("li", {},
+        el("span", { class: "mono" }, d.id), " · se esperaba ",
+        el("span", { class: `s-${cssName(d.expected)}` }, d.expected), " y dio ",
+        el("span", { class: `s-${cssName(d.observed)}` }, d.observed),
+        d.cause ? ` · ${d.cause}` : null,
+        d.note ? el("div", { class: "dim" }, d.note) : null,
+      ))),
+    )),
+  );
+}
+
+$("resolve").addEventListener("click", () => {
+  post("/api/client", { kind: $("client-kind").value, binary: $("binary").value.trim(), trust_root: $("trust-root").value.trim() })
+    .catch(report("No se pudo resolver el cliente"));
+});
+$("open-report").addEventListener("click", () => {
+  if ($("reports").value) post("/api/report", { name: $("reports").value }).then(loadLog).catch(report("No se pudo abrir el informe"));
+});
+$("new-report").addEventListener("click", async () => {
+  const form = $("new-report-form");
+  form.reset();
+  $("nr-complaint").textContent = "";
+  try {
+    const deduced = await getJson("/api/defaults");
+    $("nr-os").value = deduced.os;
+    $("nr-os-version").value = deduced.os_version;
+    $("nr-store").value = deduced.store;
+    $("nr-transport").value = deduced.transport;
+  } catch (error) {
+    $("nr-complaint").textContent = error.message;
+  }
+  $("new-report-dialog").showModal();
+});
+$("new-report-form").addEventListener("submit", async (event) => {
+  if (event.submitter && event.submitter.value === "cancel") return;
+  event.preventDefault();
+  const body = Object.fromEntries(new FormData(event.target));
+  try {
+    await post("/api/reports", body);
+    $("new-report-dialog").close();
+    loadLog();
+  } catch (error) {
+    $("nr-complaint").textContent = error.message;
+  }
+});
+$("run-pending").addEventListener("click", () => post("/api/run", "pending").catch(report("No se pudo encolar")));
+$("stop").addEventListener("click", () => post("/api/stop", { abort: false }).catch(report("No se pudo parar")));
+$("skip").addEventListener("click", () => post("/api/skip", {}).catch(report("No se pudo saltar")));
+$("abort").addEventListener("click", () => post("/api/stop", { abort: true }).catch(report("No se pudo abortar")));
+
+function renderComparison(comparison) {
+  const side = (s) => `${s.client} (${s.kind}, versión ${s.client_version})`;
+  const differing = comparison.rows.filter((row) => row.differ);
+  const suites = [...new Set(differing.map((row) => row.set))];
+  $("comparison").replaceChildren(
+    el("p", {}, `A: ${side(comparison.a)}`, el("br"), `B: ${side(comparison.b)}`, el("br"),
+      el("strong", {}, differing.length
+        ? `${comparison.differing} comprobaciones difieren`
+        : "Los dos informes dan el mismo resultado en todas las comprobaciones")),
+    differing.length ? el("table", {},
+      el("tr", {}, el("th", {}, "Comprobación"), el("th", {}, "A"), el("th", {}, "B"), el("th", {}, "Fuente")),
+      suites.map((suite) => [
+        el("tr", { class: "suite-row" }, el("th", { colspan: 4 }, suite)),
+        differing.filter((row) => row.set === suite).map((row) =>
+          el("tr", {},
+            el("td", { class: "mono" }, row.id),
+            el("td", { class: `s-${cssName(row.a)}` }, row.a), el("td", { class: `s-${cssName(row.b)}` }, row.b),
+            el("td", {}, el("code", {}, row.citation)))),
+      ]),
+    ) : null,
+  );
+}
+
+async function compareTheChosenReports() {
+  const a = $("compare-a").value;
+  const b = $("compare-b").value;
+  history.replaceState(null, "", `/comparar?${new URLSearchParams({ a, b, token })}`);
+  try {
+    renderComparison(await getJson("/api/compare", { a, b }));
+  } catch (error) {
+    report("No se pudo comparar")(error);
+  }
+}
+$("compare").addEventListener("click", compareTheChosenReports);
+
+const events = new EventSource(api("/api/events"));
+events.addEventListener("state", (event) => onState(JSON.parse(event.data)));
+events.addEventListener("log", (event) => onLog(JSON.parse(event.data)));
+events.addEventListener("error", () => { $("connection").textContent = "se perdió la conexión con la suite; reintentando…"; });
+if (mode === "compare") {
+  const wanted = new URLSearchParams(location.search);
+  const chooseOnce = () => {
+    events.removeEventListener("state", chooseOnce);
+    if (!wanted.get("a") || !wanted.get("b")) return;
+    $("compare-a").value = wanted.get("a");
+    $("compare-b").value = wanted.get("b");
+    compareTheChosenReports();
+  };
+  events.addEventListener("state", chooseOnce);
+}
+if (mode === "report") fetchTheShownReport();
+</script>
+</body>
+</html>
