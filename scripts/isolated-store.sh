@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 #
 # Monta el almacen de usar y tirar de la suite de conformidad para el sujeto que
-# se le indique e imprime cuatro lineas: la clase de sujeto reconocida, el
+# se le indique, de la clase que se le diga o de la que delate su nombre, e
+# imprime cuatro lineas: la clase de sujeto reconocida, el
 # envoltorio que lo lanza contra ese almacen, la raiz de confianza con la que el
 # sujeto va a servir el canal (vacia cuando no depende del perfil) y el modulo
 # PKCS#11 del almacen, para que quien llama pueda declararlo como coordenada de
@@ -37,11 +38,11 @@ warmup_pause=0.5
 
 subject="${1:-}"
 if [ ! -x "$subject" ]; then
-    echo "uso: $0 <ruta-del-binario>" >&2
+    echo "uso: $0 <ruta-del-binario> [autofirma|rfirma]" >&2
     exit 2
 fi
 
-case "$(basename "$subject")" in
+case "${2:-$(basename "$subject")}" in
     autofirma) kind=autofirma ;;
     rfirma) kind=rfirma ;;
     *) kind=desconocido ;;

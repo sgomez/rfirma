@@ -49,10 +49,6 @@ ffi_allow := "src/signing/adapters/ffi.rs"
 autoscript_url := "https://raw.githubusercontent.com/ctt-gob-es/clienteafirma/v1.9.2/afirma-ui-miniapplet-deploy/src/main/webapp/js/autoscript.js"
 autoscript_sha256 := "567998128f1cd8017c304a8c187f6912a0c56b0feebb02fffa2aa33732e40439"
 
-# Donde deja el instalador .deb de AutoFirma 1.9.x su raiz de confianza, por
-# orden de preferencia; la primera es DER y la suite de conformidad acepta las dos formas.
-autofirma_roots := "/usr/lib/Autofirma/Autofirma_ROOT.cer /etc/ssl/certs/Autofirma_ROOT.pem /usr/share/ca-certificates/Autofirma/Autofirma_ROOT.crt"
-
 # Librerias -dev del WebView que necesita Tauri; lista canonica que instala
 # tambien .github/workflows/ci.yml.
 system_libs := "webkit2gtk-4.1:libwebkit2gtk-4.1-dev javascriptcoregtk-4.1:libjavascriptcoregtk-4.1-dev libsoup-3.0:libsoup-3.0-dev"
@@ -441,143 +437,12 @@ dev *args: check-native po-import
 dev-handler mode="on":
     {{ justfile_directory() }}/scripts/dev-handler.sh {{ mode }}
 
-# La version del sujeto es la unica coordenada que nadie puede deducir: si falta al abrir una
-# tanda nueva y hay alguien delante, se pregunta por teclado. --os y --store se toman solos
-# (`uname` y el almacen aislado); --transport vale «websocket», el unico de esta fase.
-# Mide el cliente publicado contra un binario instalado, aislado del almacen del titular y con
-# la raiz que sirve cada sujeto: `just conformance [orden] [--subject <ruta>] [--trust-root <ruta>]`.
-# `orden` es `list`, `run <id>` o `run-pending` (por omision), y las dos ultimas admiten `--suite <conjunto>`.
-# `diff <expediente-a> <expediente-b>` compara dos tandas y no sondea nada, asi que no pide sujeto.
-# El perfil del sujeto (`--profile autofirma|rfirma`) selecciona la linea base; si falta, se toma
-# el que reconozca el almacen aislado.
+# Levanta la consola web de la suite de conformidad, imprime su URL con el token y la abre en el
+# navegador. Sujeto, informe y comprobaciones se eligen en la pagina; cada informe vive en
+# reports/conformance/<nombre>/, con sus transcripciones dentro.
 [group('dev')]
-conformance *args: autoscript build-ts
-    #!/usr/bin/env bash
-    set -euo pipefail
-    read -r -a given_args <<< "{{ args }}"
-    subject=""
-    trust_root=""
-    remaining_args=()
-    i=0
-    while [ "$i" -lt "${#given_args[@]}" ]; do
-        token="${given_args[$i]}"
-        case "$token" in
-            --subject)
-                i=$((i + 1))
-                subject="${given_args[$i]:-}"
-                ;;
-            --trust-root)
-                i=$((i + 1))
-                trust_root="${given_args[$i]:-}"
-                ;;
-            *)
-                remaining_args+=("$token")
-                ;;
-        esac
-        i=$((i + 1))
-    done
-    if [ "${remaining_args[0]:-}" = "diff" ]; then
-        cargo run --manifest-path "{{ tauri }}/Cargo.toml" --example conformance -- \
-            "${remaining_args[@]}"
-        exit 0
-    fi
-    if [ -z "$subject" ]; then
-        subject="$(command -v autofirma || true)"
-        if [ -z "$subject" ]; then
-            echo "No hay sujeto que sondear: no encuentro 'autofirma' en el PATH." >&2
-            echo "Dalo a mano: just conformance --subject <ruta-del-binario>" >&2
-            exit 1
-        fi
-    fi
-    if [ ! -x "$subject" ]; then
-        echo "El sujeto $subject no existe o no es ejecutable." >&2
-        echo "Dalo a mano: just conformance --subject <ruta-del-binario>" >&2
-        exit 1
-    fi
-    if [ -n "$trust_root" ] && [ ! -f "$trust_root" ]; then
-        echo "La raiz de confianza $trust_root no existe." >&2
-        echo "Dala a mano (PEM o DER): just conformance --subject '$subject' --trust-root <ruta-del-certificado>" >&2
-        exit 1
-    fi
-    isolated="$({{ justfile_directory() }}/scripts/isolated-store.sh "$subject")"
-    kind="$(printf '%s\n' "$isolated" | sed -n 1p)"
-    launcher="$(printf '%s\n' "$isolated" | sed -n 2p)"
-    served_root="$(printf '%s\n' "$isolated" | sed -n 3p)"
-    pkcs11_module="$(printf '%s\n' "$isolated" | sed -n 4p)"
-    if [ -z "$trust_root" ]; then
-        case "$kind" in
-            rfirma)
-                trust_root="$served_root"
-                ;;
-            autofirma)
-                for candidate in {{ autofirma_roots }}; do
-                    if [ -f "$candidate" ]; then
-                        trust_root="$candidate"
-                        break
-                    fi
-                done
-                if [ -z "$trust_root" ]; then
-                    echo "No hay raiz de confianza con la que hablarle a $subject: no esta en ninguna de" >&2
-                    for candidate in {{ autofirma_roots }}; do
-                        echo "  $candidate" >&2
-                    done
-                    echo "Dala a mano (PEM o DER): just conformance --subject '$subject' --trust-root <ruta-del-certificado>" >&2
-                    exit 1
-                fi
-                ;;
-            *)
-                echo "No reconozco a $subject, asi que no se con que raiz sirve el canal." >&2
-                echo "Dala a mano (PEM o DER): just conformance --subject '$subject' --trust-root <ruta-del-certificado>" >&2
-                exit 1
-                ;;
-        esac
-    fi
-    echo "sondeo: sujeto $subject, raiz $trust_root"
-    cd "{{ tauri }}"
-    dossier_args=()
-    coordinate_args=()
-    command_args=()
-    has_dossier=false
-    has_command=false
-    has_os=false
-    has_store=false
-    has_profile=false
-    for token in "${remaining_args[@]}"; do
-        case "$token" in
-            --dossier) has_dossier=true ;;
-            list | run | run-pending) has_command=true ;;
-            --os) has_os=true ;;
-            --store) has_store=true ;;
-            --profile) has_profile=true ;;
-        esac
-    done
-    if [ "$has_profile" = false ]; then
-        case "$kind" in
-            rfirma | autofirma)
-                coordinate_args+=(--profile "$kind")
-                ;;
-            *)
-                echo "No reconozco el perfil de $subject, y es lo que selecciona la linea base." >&2
-                echo "Dalo a mano: just conformance --profile <autofirma|rfirma>" >&2
-                exit 1
-                ;;
-        esac
-    fi
-    if [ "$has_dossier" = false ]; then
-        mkdir -p "{{ justfile_directory() }}/.scratch"
-        dossier_args=(--dossier "{{ justfile_directory() }}/.scratch/conformance-dossier.json")
-    fi
-    if [ "$has_os" = false ]; then
-        coordinate_args+=(--os "$(uname -s)" --os-version "$(uname -r)")
-    fi
-    if [ "$has_store" = false ]; then
-        coordinate_args+=(--store "softhsm2:$pkcs11_module")
-    fi
-    if [ "$has_command" = false ]; then
-        command_args=(run-pending)
-    fi
-    cargo run --example conformance -- --subject "$launcher" --trust-root "$trust_root" \
-        "${dossier_args[@]}" "${coordinate_args[@]}" "${remaining_args[@]}" "${command_args[@]}"
+conformance: autoscript build-ts
+    cd {{ tauri }} && cargo run -q --example conformance
 
 # Borra lo construido y los volcados de cobertura sueltos en el arbol de fuentes.
 [group('dev')]

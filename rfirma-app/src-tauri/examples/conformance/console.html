@@ -1,0 +1,561 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Suite de conformidad</title>
+<style>
+  :root {
+    --bg: #16181d; --panel: #1e2128; --line: #2e333d; --text: #d8dce4; --dim: #8a92a0;
+    --ok: #4cc38a; --bad: #ef5f5f; --warn: #e5b94e; --info: #6aa8ff; --accent: #b48ef7;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 13px/1.45 system-ui, sans-serif; }
+  button, select, input { font: inherit; color: var(--text); background: #2a2f39; border: 1px solid var(--line);
+    border-radius: 4px; padding: 3px 8px; }
+  button { cursor: pointer; }
+  button:hover:not(:disabled) { border-color: var(--dim); }
+  button:disabled { opacity: .45; cursor: default; }
+  input { min-width: 0; }
+  code, pre, .mono { font-family: ui-monospace, "JetBrains Mono", monospace; font-size: 12px; }
+  header { padding: 8px 12px; border-bottom: 1px solid var(--line); background: var(--panel); display: grid; gap: 6px; }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .grow { flex: 1; }
+  .dim { color: var(--dim); }
+  .complaint { color: var(--bad); }
+  .tag { padding: 0 6px; border-radius: 3px; background: #2a2f39; }
+  .sep { width: 1px; align-self: stretch; background: var(--line); }
+  main { display: grid; grid-template-columns: minmax(300px, 28%) 1fr; height: calc(100vh - 110px); }
+  #catalogue { overflow: auto; border-right: 1px solid var(--line); padding: 6px 0; }
+  .suite > .title { display: flex; align-items: center; gap: 6px; padding: 3px 8px; cursor: pointer; font-weight: 600; }
+  .suite > .title .name { flex: 1; }
+  .check { display: flex; align-items: center; gap: 6px; padding: 2px 8px 2px 22px; cursor: pointer; }
+  .check:hover { background: #242832; }
+  .check.selected { background: #2b3040; }
+  .check .id { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .badge { width: 1.4em; text-align: center; font-weight: 700; }
+  .s-CONFORME { color: var(--ok); } .s-NO-CONFORME { color: var(--bad); }
+  .s-NO-OBSERVABLE { color: var(--warn); } .s-PENDIENTE { color: var(--dim); }
+  .a-running { color: var(--info); } .a-queued { color: var(--dim); font-style: italic; } .a-asking { color: var(--accent); }
+  .c-SORPRESA { color: var(--bad); } .c-coincide { color: var(--ok); } .c-sin-medida { color: var(--warn); }
+  .small { font-size: 11px; padding: 0 6px; }
+  #right { display: grid; grid-template-rows: auto 1fr; min-height: 0; }
+  #card { padding: 10px 14px; border-bottom: 1px solid var(--line); overflow: auto; max-height: 48vh; }
+  #card h2 { margin: 0 0 2px; font-size: 14px; word-break: break-all; }
+  #card dl { display: grid; grid-template-columns: 8em 1fr; gap: 3px 10px; margin: 8px 0 0; }
+  #card dt { color: var(--dim); } #card dd { margin: 0; }
+  #log { display: grid; grid-template-rows: auto 1fr; min-height: 0; }
+  #log .bar { display: flex; gap: 10px; align-items: center; padding: 4px 12px; border-bottom: 1px solid var(--line); background: var(--panel); }
+  #log pre { margin: 0; padding: 6px 12px; overflow: auto; white-space: pre-wrap; word-break: break-all; }
+  .p-conductor { color: var(--ok); } .p-sujeto { color: var(--warn); } .p-arnés { color: var(--info); }
+  dialog { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 6px; max-width: 90vw; }
+  dialog::backdrop { background: rgba(0,0,0,.55); }
+  dialog form { display: grid; grid-template-columns: 10em 1fr; gap: 6px 10px; align-items: center; }
+  #transcript-text { max-height: 70vh; overflow: auto; white-space: pre-wrap; word-break: break-all; }
+  #question-dialog .prompt { font-size: 15px; margin: 6px 0 14px; }
+  #compare-view { display: none; padding: 10px 14px; overflow: auto; height: calc(100vh - 110px); }
+  body.comparing main { display: none; } body.comparing #compare-view { display: block; }
+  table { border-collapse: collapse; width: 100%; }
+  td, th { padding: 3px 8px; border-bottom: 1px solid var(--line); text-align: left; }
+  tr.differ td { background: #3a2226; }
+  .question-banner { background: #3a2f4f; padding: 4px 8px; border-radius: 4px; cursor: pointer; }
+</style>
+</head>
+<body>
+<header>
+  <div class="row">
+    <strong>Sujeto</strong>
+    <select id="profile"><option value="autofirma">autofirma</option><option value="rfirma">rfirma</option></select>
+    <input id="binary" class="grow mono" placeholder="binario (vacío: se busca en el PATH)">
+    <input id="trust-root" class="grow mono" placeholder="raíz de confianza (vacío: la que resuelva el sujeto)">
+    <button type="button" id="resolve">Resolver</button>
+    <span id="subject-status" class="dim"></span>
+  </div>
+  <div class="row">
+    <strong>Informe</strong>
+    <select id="reports"></select>
+    <button type="button" id="open-report">Abrir</button>
+    <button type="button" id="new-report">+ nuevo</button>
+    <span class="sep"></span>
+    <span id="summary" class="mono"></span>
+    <span class="grow"></span>
+    <span id="question-banner"></span>
+    <button type="button" id="run-pending">▶ pendientes</button>
+    <button type="button" id="stop" title="vacía la cola; la que corre termina">■ parar</button>
+    <button type="button" id="abort" title="vacía la cola y corta la que corre">✕ abortar</button>
+    <button type="button" id="toggle-compare">Comparar informes</button>
+  </div>
+</header>
+<main>
+  <nav id="catalogue"></nav>
+  <section id="right">
+    <article id="card"><p class="dim">Elige un sujeto y un informe; después, una comprobación.</p></article>
+    <section id="log">
+      <div class="bar">
+        <strong>Registro</strong>
+        <label><input type="checkbox" data-provenance="conductor" checked> conductor</label>
+        <label><input type="checkbox" data-provenance="sujeto" checked> sujeto</label>
+        <label><input type="checkbox" data-provenance="arnés" checked> arnés</label>
+        <span class="grow"></span>
+        <button type="button" id="pause-log">⏸ pausar</button>
+      </div>
+      <pre id="log-lines"></pre>
+    </section>
+  </section>
+</main>
+<section id="compare-view">
+  <div class="row">
+    <strong>Comparar</strong>
+    A <select id="compare-a"></select>
+    B <select id="compare-b"></select>
+    <button type="button" id="compare">Comparar</button>
+    <label><input type="checkbox" id="only-differing"> solo las que difieren</label>
+  </div>
+  <div id="comparison"></div>
+</section>
+
+<dialog id="new-report-dialog">
+  <form method="dialog" id="new-report-form">
+    <strong style="grid-column: 1 / -1">Informe nuevo</strong>
+    <label for="nr-name">Nombre</label><input id="nr-name" name="name" required pattern="[A-Za-z0-9_\-][A-Za-z0-9._\-]*">
+    <label for="nr-version">Versión del sujeto</label><input id="nr-version" name="subject_version" required placeholder="nadie puede deducirla">
+    <label for="nr-os">Sistema</label><input id="nr-os" name="os" required>
+    <label for="nr-os-version">Versión del sistema</label><input id="nr-os-version" name="os_version" required>
+    <label for="nr-store">Almacén</label><input id="nr-store" name="store" required class="mono">
+    <label for="nr-transport">Transporte</label><input id="nr-transport" name="transport" required>
+    <span class="complaint" id="nr-complaint" style="grid-column: 1 / -1"></span>
+    <span></span>
+    <div class="row"><button type="submit" value="create">Crear</button><button type="submit" value="cancel" formnovalidate>Cancelar</button></div>
+  </form>
+</dialog>
+
+<dialog id="question-dialog">
+  <div class="dim" id="question-check"></div>
+  <div class="prompt" id="question-prompt"></div>
+  <div class="row">
+    <button type="button" data-answer="s">Sí</button>
+    <button type="button" data-answer="n">No</button>
+    <span class="grow"></span>
+    <button type="button" data-answer="">Descartar (queda pendiente)</button>
+  </div>
+</dialog>
+
+<dialog id="transcript-dialog">
+  <div class="row"><strong id="transcript-title"></strong><span class="grow"></span><button type="button" id="close-transcript">Cerrar</button></div>
+  <pre id="transcript-text"></pre>
+</dialog>
+
+<script>
+"use strict";
+const token = new URLSearchParams(location.search).get("token");
+const $ = (id) => document.getElementById(id);
+let state = null;
+let selected = null;
+let follow = true;
+let runningHead = null;
+let runStartedAt = 0;
+let logLines = [];
+let pausedLines = null;
+let dismissedQuestion = null;
+const folded = new Set();
+
+function api(path, params = {}) {
+  const query = new URLSearchParams({ ...params, token });
+  return `${path}?${query}`;
+}
+
+async function post(path, body) {
+  const response = await fetch(api(path), {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+  });
+  const payload = await response.json();
+  if (!response.ok) throw new Error(payload.error);
+  return payload.ok;
+}
+
+async function getJson(path, params) {
+  const response = await fetch(api(path, params));
+  const payload = await response.json();
+  if (!response.ok) throw new Error(payload.error);
+  return payload.ok;
+}
+
+async function getText(path, params) {
+  const response = await fetch(api(path, params));
+  if (!response.ok) throw new Error((await response.json()).error);
+  return response.text();
+}
+
+function el(tag, attributes = {}, ...children) {
+  const node = document.createElement(tag);
+  for (const [key, value] of Object.entries(attributes)) {
+    if (key === "class") node.className = value;
+    else if (key.startsWith("on")) node.addEventListener(key.slice(2), value);
+    else if (value !== null && value !== undefined && value !== false) node.setAttribute(key, value);
+  }
+  for (const child of children.flat()) {
+    if (child !== null && child !== undefined) node.append(child);
+  }
+  return node;
+}
+
+const BADGES = { "CONFORME": "✓", "NO CONFORME": "✗", "NO OBSERVABLE": "?", "PENDIENTE": "·" };
+const cssName = (text) => text.replaceAll(" ", "-");
+
+function report(action) {
+  return (error) => alert(`${action}: ${error.message}`);
+}
+
+function allChecks() {
+  return state ? state.suites.flatMap((suite) => suite.checks.map((check) => ({ ...check, suite: suite.name }))) : [];
+}
+
+function onState(next) {
+  state = next;
+  const head = state.running ? state.running.ids[0] : null;
+  if (state.running) runStartedAt = performance.now() - state.running.elapsed_ms;
+  if (head && head !== runningHead) {
+    const before = selected;
+    if (follow) select(head, false);
+    if (before === selected && state.running.ids.includes(selected)) loadLog();
+  }
+  runningHead = head;
+  if (!state.question) dismissedQuestion = null;
+  render();
+}
+
+function render() {
+  renderSubject();
+  renderReports();
+  renderSummary();
+  renderCatalogue();
+  renderCard();
+  renderQuestion();
+}
+
+function renderSubject() {
+  const status = $("subject-status");
+  status.replaceChildren();
+  if (state.resolving_subject) {
+    status.append("resolviendo… (monta el almacén aislado)");
+  } else if (state.subject) {
+    const subject = state.subject;
+    status.append(
+      el("span", { class: "tag" }, subject.profile), " ",
+      el("code", {}, subject.binary), " · raíz ", el("code", {}, subject.trust_root),
+      " · ", el("code", {}, subject.store),
+    );
+  } else if (state.subject_complaints.length) {
+    status.append(el("span", { class: "complaint" }, state.subject_complaints.join(" · ")));
+  } else {
+    status.append("sin sujeto");
+  }
+  const busy = !!state.running || state.queued.length > 0 || state.resolving_subject;
+  $("resolve").disabled = busy;
+}
+
+function renderReports() {
+  for (const [id, withEmpty] of [["reports", false], ["compare-a", false], ["compare-b", false]]) {
+    const select = $(id);
+    const previous = select.value;
+    select.replaceChildren(...state.reports.map((entry) => {
+      const mismatch = id === "reports" && state.subject && entry.profile !== state.subject.profile;
+      const label = entry.complaint
+        ? `${entry.name} — ilegible`
+        : `${entry.name} — ${entry.profile} ${entry.subject_version} (${entry.date})`;
+      return el("option", { value: entry.name, disabled: mismatch || !!entry.complaint }, label);
+    }));
+    if (withEmpty) select.prepend(el("option", { value: "" }, "—"));
+    if ([...select.options].some((option) => option.value === previous)) select.value = previous;
+    else if (id === "reports" && state.report) select.value = state.report.name;
+  }
+  const busy = !!state.running || state.queued.length > 0;
+  $("open-report").disabled = !state.subject || busy;
+  $("new-report").disabled = !state.subject || busy;
+}
+
+function renderSummary() {
+  const summary = $("summary");
+  summary.replaceChildren();
+  if (!state.report) {
+    summary.append(el("span", { class: "dim" }, "sin informe abierto"));
+  } else {
+    const r = state.report;
+    summary.append(
+      el("strong", {}, r.name), ` · ${r.profile} ${r.header.subject_version} · `,
+      "Sujeto ",
+      el("span", { class: "s-CONFORME" }, `${r.summary.compliant}✓ `),
+      el("span", { class: "s-NO-CONFORME" }, `${r.summary.noncompliant}✗ `),
+      el("span", { class: "s-NO-OBSERVABLE" }, `${r.summary.not_observable}? `),
+      el("span", { class: "s-PENDIENTE" }, `${r.summary.pending}· `),
+      " │ Base ",
+      el("span", { class: "c-coincide" }, `${r.baseline.matching}= `),
+      el("span", { class: "c-SORPRESA", title: r.surprises.join("\n") }, `${r.baseline.surprises}! `),
+      el("span", { class: "c-sin-medida" }, `${r.baseline.unmeasured}? `),
+      el("span", { class: "s-PENDIENTE" }, `${r.baseline.pending}· `),
+      ` │ ${r.resolved}/${r.total} `,
+      ...(r.green ? [el("span", { class: "c-coincide" }, "verde")] : []),
+    );
+  }
+  const idle = !state.running && state.queued.length === 0;
+  $("run-pending").disabled = !state.report;
+  $("stop").disabled = idle;
+  $("abort").disabled = !state.running;
+}
+
+function renderCatalogue() {
+  const nav = $("catalogue");
+  const scroll = nav.scrollTop;
+  nav.replaceChildren(...state.suites.map((suite) => {
+    const isFolded = folded.has(suite.name);
+    const counts = {};
+    for (const check of suite.checks) counts[check.state] = (counts[check.state] || 0) + 1;
+    const title = el("div", { class: "title", onclick: () => { isFolded ? folded.delete(suite.name) : folded.add(suite.name); renderCatalogue(); } },
+      el("span", {}, isFolded ? "▸" : "▾"),
+      el("span", { class: "name" }, suite.name),
+      el("span", { class: "dim small" }, Object.entries(counts).map(([name, n]) => `${n}${BADGES[name]}`).join(" ")),
+      el("button", { class: "small", disabled: !state.report, title: "corre todo el conjunto",
+        onclick: (event) => { event.stopPropagation(); post("/api/run", { suite: suite.name }).catch(report("No se pudo encolar")); } }, "▶ grupo"),
+    );
+    const checks = isFolded ? [] : suite.checks.map((check) => {
+      const activity = check.activity;
+      const badge = activity === "running" ? "●" : activity === "asking" ? "¿" : activity === "queued" ? "◌" : BADGES[check.state];
+      const badgeClass = activity ? `a-${activity}` : `s-${cssName(check.state)}`;
+      return el("div", { class: `check ${check.id === selected ? "selected" : ""}`, onclick: () => select(check.id, true) },
+        el("span", { class: `badge ${badgeClass}` }, badge),
+        el("span", { class: `id mono ${activity === "queued" ? "a-queued" : ""}`, title: check.id }, check.id),
+        check.contrast === "SORPRESA" ? el("span", { class: "c-SORPRESA", title: "sorpresa frente a la línea base" }, "!") : null,
+        activity === "queued" ? el("span", { class: "dim small" }, "en cola") : null,
+        el("button", { class: "small", disabled: !state.report || activity === "running" || activity === "queued",
+          title: check.state === "PENDIENTE" ? "correr" : "repetir",
+          onclick: (event) => { event.stopPropagation(); post("/api/run", { check: check.id }).catch(report("No se pudo encolar")); } }, "▶"),
+      );
+    });
+    return el("div", { class: "suite" }, title, ...checks);
+  }));
+  nav.scrollTop = scroll;
+}
+
+function select(id, byHand) {
+  if (byHand) follow = false;
+  const changed = id !== selected;
+  selected = id;
+  if (changed) loadLog();
+  if (state) { renderCatalogue(); renderCard(); }
+}
+
+function renderCard() {
+  const card = $("card");
+  const check = allChecks().find((each) => each.id === selected);
+  if (!check) return;
+  const running = state.running?.ids.includes(check.id);
+  const field = (label, value) => value ? [el("dt", {}, label), el("dd", {}, value)] : [];
+  const expectation = check.expectation
+    ? [check.expectation.verdict, check.expectation.cause ? ` (${check.expectation.cause})` : "",
+       check.expectation.note ? ` — ${check.expectation.note}` : ""].join("")
+    : "la línea base no dice nada para este perfil";
+  const duration = running
+    ? el("span", { id: "stopwatch", class: "a-running" }, "")
+    : check.duration_ms !== null && check.duration_ms !== undefined ? `${(check.duration_ms / 1000).toFixed(1)} s` : null;
+  card.replaceChildren(
+    el("div", { class: "row" },
+      el("h2", { class: "mono grow" }, check.id),
+      follow ? el("span", { class: "dim" }, "siguiendo a la que corre")
+        : el("button", { onclick: () => { follow = true; if (runningHead) select(runningHead, false); else renderCard(); } }, "seguir a la que corre"),
+      el("button", { onclick: () => showTranscript(check.id) }, "ver tramas"),
+    ),
+    el("div", { class: "dim" }, `${check.suite} · cap. ${check.chapter}`, " · ", duration ? ["⏱ ", duration] : "sin duración"),
+    el("dl", {},
+      field("Enunciado", check.statement),
+      field("Cita", el("code", {}, check.citation)),
+      field("Esperado", expectation),
+      field("Aviso", check.warning),
+      field("Pregunta", check.question),
+      field("Veredicto", el("span", { class: `s-${cssName(check.state)}` },
+        running ? (check.activity === "asking" ? "esperando tu respuesta" : "corriendo") : check.state)),
+      field("Observación", check.observation),
+      field("Frente a la base", check.contrast ? el("span", { class: `c-${cssName(check.contrast)}` }, check.contrast) : null),
+      field("Fecha", check.date),
+      field("Pendiente porque", check.why_pending),
+    ),
+  );
+  tickStopwatch();
+}
+
+function tickStopwatch() {
+  const stopwatch = $("stopwatch");
+  if (!stopwatch) return;
+  const seconds = (performance.now() - runStartedAt) / 1000;
+  stopwatch.textContent = `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${(seconds % 60).toFixed(1).padStart(4, "0")}`;
+}
+setInterval(tickStopwatch, 200);
+
+function renderQuestion() {
+  const dialog = $("question-dialog");
+  const banner = $("question-banner");
+  banner.replaceChildren();
+  if (!state.question) {
+    if (dialog.open) dialog.close();
+    return;
+  }
+  const { check, prompt } = state.question;
+  banner.append(el("span", { class: "question-banner", onclick: () => { dismissedQuestion = null; renderQuestion(); } }, `¿? ${check}`));
+  if (dismissedQuestion === check) return;
+  $("question-check").textContent = check;
+  $("question-prompt").textContent = prompt.replace(/\s*\[s\/n\]\s*$/, "");
+  if (!dialog.open) dialog.showModal();
+}
+
+for (const button of document.querySelectorAll("#question-dialog button")) {
+  button.addEventListener("click", () => {
+    const answer = button.dataset.answer;
+    $("question-dialog").close();
+    post("/api/answer", { answer: answer === "" ? null : answer }).catch(report("No se pudo contestar"));
+  });
+}
+$("question-dialog").addEventListener("cancel", () => {
+  dismissedQuestion = state?.question ? state.question.check : null;
+});
+
+function provenanceOf(line) {
+  const match = /^\d\d:\d\d\.\d\d (\S+)/.exec(line);
+  return match ? match[1] : "";
+}
+
+function renderLog() {
+  const shown = new Set([...document.querySelectorAll("[data-provenance]")]
+    .filter((box) => box.checked).map((box) => box.dataset.provenance));
+  const pre = $("log-lines");
+  const atBottom = pre.scrollHeight - pre.scrollTop - pre.clientHeight < 30;
+  pre.replaceChildren(...logLines
+    .filter((line) => line && shown.has(provenanceOf(line)))
+    .map((line) => el("div", { class: `p-${provenanceOf(line)}` }, line)));
+  if (atBottom) pre.scrollTop = pre.scrollHeight;
+}
+
+async function loadLog() {
+  const wanted = selected;
+  logLines = [];
+  renderLog();
+  if (!state?.report || !wanted) return;
+  try {
+    const text = await getText("/api/log", { check: wanted });
+    if (wanted === selected) {
+      logLines = text.split("\n").filter(Boolean).concat(logLines);
+      renderLog();
+    }
+  } catch (error) {
+    logLines = [`(el registro no se pudo leer: ${error.message})`];
+    renderLog();
+  }
+}
+
+function onLog({ check, line }) {
+  if (!state?.running) return;
+  const ids = state.running.ids;
+  if (check !== ids[0] || !ids.includes(selected)) return;
+  if (pausedLines) pausedLines.push(line);
+  else { logLines.push(line); renderLog(); }
+}
+
+for (const box of document.querySelectorAll("[data-provenance]")) box.addEventListener("change", renderLog);
+$("pause-log").addEventListener("click", () => {
+  if (pausedLines) {
+    logLines.push(...pausedLines);
+    pausedLines = null;
+    $("pause-log").textContent = "⏸ pausar";
+    renderLog();
+  } else {
+    pausedLines = [];
+    $("pause-log").textContent = "▶ seguir";
+  }
+});
+
+async function showTranscript(check) {
+  $("transcript-title").textContent = `Tramas de ${check}`;
+  try {
+    const text = await getText("/api/transcript", { check });
+    $("transcript-text").textContent = text || "(sin tramas: la comprobación no ha llegado a correr en este informe)";
+  } catch (error) {
+    $("transcript-text").textContent = error.message;
+  }
+  $("transcript-dialog").showModal();
+}
+$("close-transcript").addEventListener("click", () => $("transcript-dialog").close());
+
+$("resolve").addEventListener("click", () => {
+  post("/api/subject", { profile: $("profile").value, binary: $("binary").value.trim(), trust_root: $("trust-root").value.trim() })
+    .catch(report("No se pudo resolver el sujeto"));
+});
+$("open-report").addEventListener("click", () => {
+  if ($("reports").value) post("/api/report", { name: $("reports").value }).then(loadLog).catch(report("No se pudo abrir el informe"));
+});
+$("new-report").addEventListener("click", async () => {
+  const form = $("new-report-form");
+  form.reset();
+  $("nr-complaint").textContent = "";
+  try {
+    const deduced = await getJson("/api/defaults");
+    $("nr-os").value = deduced.os;
+    $("nr-os-version").value = deduced.os_version;
+    $("nr-store").value = deduced.store;
+    $("nr-transport").value = deduced.transport;
+  } catch (error) {
+    $("nr-complaint").textContent = error.message;
+  }
+  $("new-report-dialog").showModal();
+});
+$("new-report-form").addEventListener("submit", async (event) => {
+  if (event.submitter && event.submitter.value === "cancel") return;
+  event.preventDefault();
+  const body = Object.fromEntries(new FormData(event.target));
+  try {
+    await post("/api/reports", body);
+    $("new-report-dialog").close();
+    loadLog();
+  } catch (error) {
+    $("nr-complaint").textContent = error.message;
+  }
+});
+$("run-pending").addEventListener("click", () => post("/api/run", "pending").catch(report("No se pudo encolar")));
+$("stop").addEventListener("click", () => post("/api/stop", { abort: false }).catch(report("No se pudo parar")));
+$("abort").addEventListener("click", () => post("/api/stop", { abort: true }).catch(report("No se pudo abortar")));
+$("toggle-compare").addEventListener("click", () => {
+  document.body.classList.toggle("comparing");
+  $("toggle-compare").textContent = document.body.classList.contains("comparing") ? "Volver a la tanda" : "Comparar informes";
+});
+
+let comparison = null;
+function renderComparison() {
+  const target = $("comparison");
+  if (!comparison) return target.replaceChildren();
+  const only = $("only-differing").checked;
+  const side = (s) => `${s.subject} (${s.profile}, versión ${s.subject_version})`;
+  target.replaceChildren(
+    el("p", {}, `A: ${side(comparison.a)}`, el("br"), `B: ${side(comparison.b)}`, el("br"),
+      el("strong", {}, `${comparison.differing} comprobaciones difieren`)),
+    el("table", {},
+      el("tr", {}, el("th", {}, "Cap."), el("th", {}, "Comprobación"), el("th", {}, "A"), el("th", {}, "B")),
+      comparison.rows.filter((row) => !only || row.differ).map((row) =>
+        el("tr", { class: row.differ ? "differ" : "" },
+          el("td", {}, row.chapter || "—"), el("td", { class: "mono" }, row.id),
+          el("td", { class: `s-${cssName(row.a)}` }, row.a), el("td", { class: `s-${cssName(row.b)}` }, row.b))),
+    ),
+  );
+}
+$("compare").addEventListener("click", async () => {
+  try {
+    comparison = await getJson("/api/compare", { a: $("compare-a").value, b: $("compare-b").value });
+    renderComparison();
+  } catch (error) {
+    report("No se pudo comparar")(error);
+  }
+});
+$("only-differing").addEventListener("change", renderComparison);
+
+const events = new EventSource(api("/api/events"));
+events.addEventListener("state", (event) => onState(JSON.parse(event.data)));
+events.addEventListener("log", (event) => onLog(JSON.parse(event.data)));
+events.addEventListener("error", () => { $("subject-status").textContent = "se perdió la conexión con el arnés; reintentando…"; });
+</script>
+</body>
+</html>
