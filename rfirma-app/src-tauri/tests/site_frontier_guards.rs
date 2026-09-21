@@ -179,7 +179,9 @@ fn everything_that_goes_out_to_the_site() -> Vec<String> {
         for message in messages {
             for from_loopback in [true, false] {
                 match answer(duty, from_loopback, &message) {
-                    Answer::Reply(text) | Answer::ReplyAndClose(text) => lines.push(text),
+                    Answer::Reply(text) | Answer::ReplyAndClose(text) | Answer::Refuse(text) => {
+                        lines.push(text)
+                    }
                     Answer::Pending(_) => {}
                 }
             }
