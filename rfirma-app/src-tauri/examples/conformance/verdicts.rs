@@ -52,9 +52,33 @@ pub(crate) fn the_verdict_of(check: &Check, outcome: &ErrandOutcome) -> CheckOut
         );
     }
     match check.expects_saf.as_deref() {
+        Some(expected) if is_driven_over_ipv6(check) => {
+            the_verdict_for_saf_code_over_ipv6(outcome, expected)
+        }
         Some(expected) => the_verdict_for_saf_code(outcome, expected),
         None => the_verdict_for_a_completed_errand(outcome),
     }
+}
+
+fn is_driven_over_ipv6(check: &Check) -> bool {
+    check
+        .drive
+        .as_ref()
+        .is_some_and(|drive| drive.mode == "v4-ipv6")
+}
+
+/// Por el bucle local IPv6 el silencio también es una respuesta: quien no contesta no devuelve el
+/// código que se le exige.
+fn the_verdict_for_saf_code_over_ipv6(outcome: &ErrandOutcome, expected: &str) -> CheckOutcome {
+    let nobody_answered =
+        outcome.error_code.is_none() && outcome.error_type.as_deref() != Some(THE_DRIVER_CRASH);
+    if nobody_answered {
+        return CheckOutcome::of(
+            Verdict::Noncompliant,
+            format!("nadie respondió por ::1 donde el protocolo exige {expected}"),
+        );
+    }
+    the_verdict_for_saf_code(outcome, expected)
 }
 
 /// El veredicto de una exigencia que se juega a un código SAF concreto: sin código en el cable no
@@ -572,6 +596,32 @@ mod tests {
         };
         assert_eq!(
             the_verdict(the_verdict_of(&a_check_expecting(Some("SAF_47")), &outcome)),
+            Verdict::NotObservable
+        );
+    }
+
+    #[test]
+    fn silence_over_the_ipv6_loopback_is_noncompliant_rather_than_unobservable() {
+        let mut check = a_check_expecting(Some("SAF_47"));
+        check.drive = Some(crate::catalogue::Drive {
+            mode: "v4-ipv6".to_owned(),
+            script: "selectcert".to_owned(),
+        });
+        let silent = ErrandOutcome {
+            error_type: Some("ApplicationNotFoundException".to_owned()),
+            ..an_outcome()
+        };
+        let crashed = ErrandOutcome {
+            error_type: Some(THE_DRIVER_CRASH.to_owned()),
+            ..an_outcome()
+        };
+
+        assert_eq!(
+            the_verdict(the_verdict_of(&check, &silent)),
+            Verdict::Noncompliant
+        );
+        assert_eq!(
+            the_verdict(the_verdict_of(&check, &crashed)),
             Verdict::NotObservable
         );
     }
