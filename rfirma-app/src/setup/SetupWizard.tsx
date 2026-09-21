@@ -198,11 +198,7 @@ export function SetupWizard({
 
       <div className="setup-wizard__footer rf-row rf-gap-sm">
         {step === 1 && (
-          <button
-            type="button"
-            className="rf-btn rf-btn--ghost"
-            onClick={onFinish}
-          >
+          <button type="button" className="rf-btn rf-btn--ghost" onClick={onFinish}>
             {t("setup.actions.skip")}
           </button>
         )}
