@@ -362,6 +362,9 @@ fn location_of(version: i64, ports: Option<&str>) -> Result<ChannelLocation, Ref
 
 fn credential_of(version: i64, idsession: Option<&str>) -> Result<NegotiatedCredential, Refusal> {
     match idsession.filter(|value| !value.is_empty()) {
+        Some(value) if version == THIRD_PROTOCOL_VERSION => {
+            ChannelCredential::parse(value).map(|_| NegotiatedCredential::Absent)
+        }
         Some(value) => ChannelCredential::parse(value).map(NegotiatedCredential::Required),
         None if version == THIRD_PROTOCOL_VERSION => Ok(NegotiatedCredential::Absent),
         None => ChannelCredential::parse("").map(NegotiatedCredential::Required),
