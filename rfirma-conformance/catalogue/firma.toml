@@ -274,10 +274,10 @@ warning = "Va a aparecer el diálogo de certificado."
 id = "a_visible_pades_signature_asks_the_person_to_mark_the_area"
 set = "firma"
 chapter = "12"
-citation = "ProtocolInvocationLauncherSign.java:923-994"
+citation = "ProtocolInvocationLauncherSign.java:503-505, 914-936, 945-953"
 statement = """
-Con visibleSignature=want, la firma exige que la persona marque el área visible antes de firmar, y
-la cancelación de esa selección aborta con SAF_43.
+Con visibleSignature=want, la firma abre el diálogo en el que la persona marca el área visible
+antes de firmar.
 """
 drive = { mode = "v4", script = "signpadesvisible" }
 assistance = "person"
@@ -538,3 +538,257 @@ drive = { mode = "v4", script = "signwithbrokentsa" }
 assistance = "click"
 saf = "SAF_*"
 warning = "Va a aparecer el diálogo de certificado."
+
+[[check]]
+id = "a_wanted_visible_signature_cancelled_answers_saf_43"
+set = "firma"
+chapter = "12"
+citation = "ProtocolInvocationLauncherSign.java:179-182, 503-510, 960-979"
+statement = """
+Con visibleSignature=want y sin el área en la petición, cancelar el diálogo del área aborta la firma
+con SAF_43, no con el CANCEL de una cancelación.
+"""
+drive = { mode = "v4", script = "signpadesvisible" }
+assistance = "person"
+saf = "SAF_43"
+warning = "Va a aparecer el diálogo del área visible sobre el PDF: cancélalo sin marcar nada."
+
+[[check]]
+id = "an_optional_visible_signature_cancelled_signs_without_it"
+set = "firma"
+chapter = "12"
+citation = "ProtocolInvocationLauncherSign.java:914-936, 960-979"
+statement = """
+Con visibleSignature=optional, cancelar el diálogo del área no aborta: el PDF se firma con una firma
+invisible, cuyo campo no ocupa área en la página.
+"""
+drive = { mode = "v4", script = "signpadesoptional" }
+assistance = "person"
+condition = "without-a-visible-signature"
+warning = "Va a aparecer el diálogo del área visible sobre el PDF: cancélalo sin marcar nada, y después elige certificado."
+
+[[check]]
+id = "a_wanted_visible_signature_with_its_area_is_not_aborted_by_cancelling"
+set = "firma"
+chapter = "12"
+citation = "ProtocolInvocationLauncherSign.java:960-979; PdfExtraParams.java"
+statement = """
+Con visibleSignature=want y el área ya en la petición, el diálogo del área aparece igual, pero
+cancelarlo no aborta: la firma sale visible en el área que la petición declaraba.
+"""
+drive = { mode = "v4", script = "signpadeswantedwithanarea" }
+assistance = "person"
+condition = "the-signature-where-the-request-says"
+warning = "Va a aparecer el diálogo del área visible sobre el PDF: cancélalo sin marcar nada, y después elige certificado."
+
+[[check]]
+id = "a_visible_pades_signature_is_placed_where_the_request_says"
+set = "firma"
+chapter = "12"
+citation = "ProtocolInvocationLauncherSign.java:914-936; PdfExtraParams.java"
+statement = """
+Sin visibleSignature, signaturePage y las cuatro signaturePositionOnPage* colocan la firma visible
+sin abrir ningún diálogo, con su campo en el área que la petición declara.
+"""
+drive = { mode = "v4", script = "signpadesplaced" }
+assistance = "click"
+condition = "the-signature-where-the-request-says"
+warning = "Va a aparecer el diálogo de certificado."
+
+[[check]]
+id = "a_none_signature_is_a_bare_pkcs1"
+set = "firma"
+citation = "AOSignerFactory.java; AOPkcs1Signer.java:54"
+statement = """
+El formato NONE firma los datos en PKCS#1 sin envoltorio: lo que vuelve es la firma de la clave del
+certificado sobre los datos, sin CMS alrededor.
+"""
+drive = { mode = "v4", script = "signnone" }
+assistance = "click"
+condition = "a-bare-pkcs1"
+warning = "Va a aparecer el diálogo de certificado."
+
+[[check]]
+id = "a_triphase_signature_goes_through_the_server_url"
+set = "firma"
+citation = "AOCAdESTriPhaseSigner.java:239-356; PreSigner.java:64-85; PostSigner.java:41-82"
+statement = """
+Una firma CAdEStri hace la prefirma y la postfirma contra el serverUrl de properties, firma con la
+clave del certificado la prefirma que le devuelve y entrega a la sede la firma de la postfirma.
+"""
+drive = { mode = "v4", script = "signcadestri" }
+assistance = "click"
+condition = ["through-the-triphase-server", "the-presignature-signed-with-the-key", "the-server-signature-as-it-came"]
+warning = "Va a aparecer el diálogo de certificado."
+
+[[check]]
+id = "a_triphase_cosign_goes_through_the_server_url"
+set = "firma"
+citation = "AOCAdESTriPhaseSigner.java:239-356; PreSigner.java:64-85"
+statement = """
+Una cofirma CAdEStri recorre el mismo camino que la firma, con cop=cosign y la firma previa como
+documento.
+"""
+drive = { mode = "v4", script = "cosigncadestri" }
+assistance = "click"
+condition = ["through-the-triphase-server", "the-presignature-signed-with-the-key", "the-server-signature-as-it-came"]
+warning = "Va a aparecer el diálogo de certificado."
+
+[[check]]
+id = "a_triphase_countersign_goes_through_the_server_url"
+set = "firma"
+citation = "AOCAdESTriPhaseSigner.java:239-356; PreSigner.java:64-85"
+statement = """
+Una contrafirma CAdEStri recorre el mismo camino que la firma, con cop=countersign y la firma previa
+como documento.
+"""
+drive = { mode = "v4", script = "countersigncadestri" }
+assistance = "click"
+condition = ["through-the-triphase-server", "the-presignature-signed-with-the-key", "the-server-signature-as-it-came"]
+warning = "Va a aparecer el diálogo de certificado."
+
+[[check]]
+id = "a_triphase_signature_without_server_url_answers_saf_03"
+set = "firma"
+citation = "AOCAdESTriPhaseSigner.java:239-245; ProtocolInvocationLauncherSign.java:744-748"
+statement = """
+Una firma trifásica sin serverUrl en properties se rechaza con SAF_03, después de elegir el
+certificado.
+"""
+drive = { mode = "v4", script = "signcadestriwithoutserverurl" }
+assistance = "click"
+saf = "SAF_03"
+warning = "Va a aparecer el diálogo de certificado antes de que llegue el rechazo."
+
+[[check]]
+id = "a_cades_signature_without_mode_is_explicit"
+set = "firma"
+chapter = "12"
+citation = "CAdESParameters.java:122-123; AOSignConstants.java:283"
+statement = """
+Una firma CAdES sin mode ni política que lo fije es explícita: vuelve sin los datos dentro.
+"""
+drive = { mode = "v4", script = "signcadeswithoutmode" }
+assistance = "click"
+condition = "the-data-left-out"
+warning = "Va a aparecer el diálogo de certificado."
+
+[[check]]
+id = "a_xades_signature_without_format_is_enveloping"
+set = "firma"
+chapter = "12"
+citation = "XAdESSigner.java:265-266"
+statement = """
+Una firma XAdES sin el parámetro format es enveloping: los datos van dentro de la propia firma.
+"""
+drive = { mode = "v4", script = "signxades" }
+assistance = "click"
+condition = "the-default-envelope"
+warning = "Va a aparecer el diálogo de certificado."
+
+[[check]]
+id = "an_explicit_xades_signs_the_sha1_of_the_data"
+set = "firma"
+chapter = "12"
+citation = "ProtocolInvocationLauncherSign.java:394-406, 886-893"
+statement = """
+Una firma XAdES con mode=explicit y sin useManifest firma el SHA-1 de los datos en su lugar,
+declarado con mimeType=hash/sha1.
+"""
+drive = { mode = "v4", script = "signxadesexplicit" }
+assistance = "click"
+condition = "the-sha1-of-the-data-signed"
+warning = "Va a aparecer el diálogo de certificado."
+
+[[check]]
+id = "the_age_policy_overrides_a_conflicting_xades_envelope"
+set = "firma"
+chapter = "11"
+citation = "ExtraParamsProcessor.java:263-271"
+statement = """
+Con expPolicy=FirmaAGE, un XAdES que pide format=XAdES Enveloping sale Detached: la política solo
+admite Detached o Enveloped y fuerza la primera.
+"""
+drive = { mode = "v4", script = "signxadesagepolicy" }
+assistance = "click"
+condition = "the-envelope-the-policy-demands"
+warning = "Va a aparecer el diálogo de certificado."
+
+[[check]]
+id = "the_age_policy_is_declared_inside_a_xades_signature"
+set = "firma"
+chapter = "11"
+citation = "ExtraParamsProcessor.java:281; AdESPolicyPropertiesManager.java; policy.properties:3-9"
+statement = """
+Con expPolicy=FirmaAGE, la firma XAdES declara el identificador de la política de la AGE y su huella.
+"""
+drive = { mode = "v4", script = "signxadesagepolicy" }
+assistance = "click"
+condition = "the-age-policy-inside"
+warning = "Va a aparecer el diálogo de certificado."
+
+[[check]]
+id = "the_age_policy_is_declared_inside_a_cades_signature"
+set = "firma"
+chapter = "11"
+citation = "ExtraParamsProcessor.java:251; AdESPolicyPropertiesManager.java; policy.properties:3-9"
+statement = """
+Con expPolicy=FirmaAGE, la firma CAdES declara el identificador de la política de la AGE y su huella.
+"""
+drive = { mode = "v4", script = "signcadesagepolicy" }
+assistance = "click"
+condition = "the-age-policy-inside"
+warning = "Va a aparecer el diálogo de certificado."
+
+[[check]]
+id = "the_age_policy_is_declared_inside_a_pades_signature"
+set = "firma"
+chapter = "11"
+citation = "ExtraParamsProcessor.java:296-305; AdESPolicyPropertiesManager.java; policy.properties:3-9"
+statement = """
+Con expPolicy=FirmaAGE, la firma PAdES declara el identificador de la política de la AGE y su huella.
+"""
+drive = { mode = "v4", script = "signpadesagepolicy" }
+assistance = "click"
+condition = "the-age-policy-inside"
+warning = "Va a aparecer el diálogo de certificado."
+
+[[check]]
+id = "a_pades_countersign_is_refused_with_saf_04"
+set = "firma"
+chapter = "12"
+citation = "AOPDFSigner.java:336; ProtocolInvocationLauncherSign.java:838-841"
+statement = """
+PAdES no admite contrafirma: una contrafirma PAdES se rechaza con SAF_04, operación no soportada.
+"""
+drive = { mode = "v4", script = "countersignpades" }
+assistance = "click"
+saf = "SAF_04"
+warning = "Va a aparecer el diálogo de certificado antes de que llegue el rechazo."
+
+[[check]]
+id = "facturae_refuses_cosign_with_saf_04"
+set = "firma"
+chapter = "12"
+citation = "AOFacturaESigner.java:140-156; ProtocolInvocationLauncherSign.java:838-841"
+statement = """
+FacturaE no admite cofirma: una cofirma FacturaE se rechaza con SAF_04, operación no soportada.
+"""
+drive = { mode = "v4", script = "cosignfacturae" }
+assistance = "click"
+saf = "SAF_04"
+warning = "Va a aparecer el diálogo de certificado antes de que llegue el rechazo."
+
+[[check]]
+id = "facturae_refuses_countersign_with_saf_04"
+set = "firma"
+chapter = "12"
+citation = "AOFacturaESigner.java:161-168; ProtocolInvocationLauncherSign.java:838-841"
+statement = """
+FacturaE no admite contrafirma: una contrafirma FacturaE se rechaza con SAF_04, operación no
+soportada.
+"""
+drive = { mode = "v4", script = "countersignfacturae" }
+assistance = "click"
+saf = "SAF_04"
+warning = "Va a aparecer el diálogo de certificado antes de que llegue el rechazo."

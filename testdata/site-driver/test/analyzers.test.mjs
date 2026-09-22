@@ -14,7 +14,8 @@ import {
   thePublicKeyAlgorithmOf,
   theShapeOf,
 } from "../lib/cms.mjs";
-import { isASignedPdf } from "../lib/pades.mjs";
+import { isASignedPdf, isAVisibleArea, theSignatureRectangles } from "../lib/pades.mjs";
+import { isABarePkcs1 } from "../lib/pkcs1.mjs";
 import { isAXadesSignature, signsTheRoleAndThePlace, theXadesEnvelope } from "../lib/xades.mjs";
 import { theZipEntries } from "../lib/zip.mjs";
 
@@ -150,5 +151,49 @@ describe("the signed PDF analyzer", () => {
   it("refuses a PDF without signature and what is not a PDF", () => {
     assert.equal(isASignedPdf(aPdf("1 0 obj\n<< /Type /Catalog >>\nendobj")), false);
     assert.equal(isASignedPdf(aReference("cades-implicit.p7s")), false);
+  });
+});
+
+describe("the signature field reader", () => {
+  const aPdfWith = (field) =>
+    Buffer.from(
+      `%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\n7 0 obj\n${field}\nendobj\n`,
+      "latin1",
+    );
+
+  it("reads the area of a visible signature field", () => {
+    const field =
+      "<</F 132/Type/Annot/Subtype/Widget/Rect[100 100.5 300 200]/FT/Sig/T(Signature1)>>";
+    const [area] = theSignatureRectangles(aPdfWith(field));
+    assert.deepEqual(area, [100, 100.5, 300, 200]);
+    assert.equal(isAVisibleArea(area), true);
+  });
+
+  it("tells an invisible signature by its empty area", () => {
+    const field = "<< /Type /Annot /Subtype /Widget /Rect [0 0 0 0] /FT /Sig >>";
+    const [area] = theSignatureRectangles(aPdfWith(field));
+    assert.equal(isAVisibleArea(area), false);
+  });
+
+  it("ignores rectangles that are no signature field", () => {
+    const link = "<< /Type /Annot /Subtype /Link /Rect [10 10 50 50] >>";
+    assert.deepEqual(theSignatureRectangles(aPdfWith(link)), []);
+  });
+});
+
+describe("the bare PKCS#1 verifier", () => {
+  it("verifies a PKCS#1 signature of the data with the key of the certificate", () => {
+    const signature = aSample("pkcs1-rsa.sig");
+    assert.equal(isABarePkcs1(theChallenge, signature, aSample("pkcs1-rsa.cer")), true);
+  });
+
+  it("refuses other data, a CMS and a certificate that is not DER", () => {
+    const certificate = aSample("pkcs1-rsa.cer");
+    assert.equal(
+      isABarePkcs1(Buffer.from("otros datos"), aSample("pkcs1-rsa.sig"), certificate),
+      false,
+    );
+    assert.equal(isABarePkcs1(theChallenge, aReference("cades-implicit.p7s"), certificate), false);
+    assert.equal(isABarePkcs1(theChallenge, aSample("pkcs1-rsa.sig"), Buffer.from("x")), false);
   });
 });

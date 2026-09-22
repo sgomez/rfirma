@@ -107,3 +107,17 @@ drive = { mode = "v4", script = "signandsavewithoutaverb" }
 assistance = "click"
 saf = "SAF_04"
 warning = "Va a aparecer el diálogo de certificado antes de que llegue el rechazo."
+
+[[check]]
+id = "signandsave_cancelled_at_the_visible_area_answers_saf_43"
+set = "firma-y-guarda"
+citation = "ProtocolInvocationLauncherSignAndSave.java:177-180, 495-502, 985-1004, 1040"
+statement = """
+En signandsave, con visibleSignature=want y sin el área en la petición, cancelar el diálogo del área
+aborta con SAF_43 como en sign; el listener marca la bandera de la clase de sign y la propia nunca
+se activa (BUG-13).
+"""
+drive = { mode = "v4", script = "signandsavepadesvisible" }
+assistance = "person"
+saf = "SAF_43"
+warning = "Va a aparecer el diálogo del área visible sobre el PDF: cancélalo sin marcar nada. Si después aparecen el certificado o dónde guardar, cancélalos también."

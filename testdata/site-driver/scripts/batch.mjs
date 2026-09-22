@@ -18,6 +18,7 @@ import {
   theXmlDocument,
 } from "../lib/fixtures.mjs";
 import { withJsonbatchCapitalised, withoutNeedcertInTheBatch } from "../lib/patches.mjs";
+import { isABarePkcs1 } from "../lib/pkcs1.mjs";
 import { aPublishedScript } from "../lib/script.mjs";
 
 const THROUGH_BOTH_SERVLETS = "through-both-servlets";
@@ -37,6 +38,7 @@ const THE_ALGORITHM_OF_THE_KEY = "the-algorithm-of-the-key";
 const THE_URL_NEITHER_FETCHED_NOR_SIGNED = "the-url-neither-fetched-nor-signed";
 const ONLY_THE_RESULT = "only-the-result";
 const THE_BATCH_READ_AS_XML = "the-batch-read-as-xml";
+const THE_ITEM_A_BARE_PKCS1 = "the-item-a-bare-pkcs1";
 
 /** Los parámetros de la query y los del cuerpo del POST, donde `UrlHttpManagerImpl` los manda. */
 async function theServletParameters(request) {
@@ -50,7 +52,7 @@ async function theServletParameters(request) {
 }
 
 /** Un servlet del lote sirviendo HTTP en un puerto libre del loopback, y su URL absoluta. */
-function servletServing(answering) {
+export function servletServing(answering) {
   return new Promise((resolve) => {
     const server = createServer(async (request, response) => {
       const { status, body } = answering(await theServletParameters(request));
@@ -727,6 +729,31 @@ function theBatchWithTheDownPresignerScript() {
 
 const anUnattendedServletAt = (url) => () => theBatchAgainstAnUnattendedServletScript(url);
 
+/** El lote local en `NONE` sobre el binario: vuelve el PKCS#1 suelto que verifica el certificado. */
+function theLocalBatchInFormatNoneScript() {
+  aLocalBatch({
+    format: "NONE",
+    stopOnError: false,
+    items: [theBinaryItem()],
+    callbacks: theBatchCallbacks((result, certificate) => {
+      const item = theLocalItems(result).get("bin");
+      const bare =
+        item?.result === "DONE_AND_SAVED" &&
+        !!item.signature &&
+        isABarePkcs1(theLocalBatchBinary(), bytesOf(item.signature), bytesOf(certificate));
+      return [
+        aCondition(
+          THE_ITEM_A_BARE_PKCS1,
+          bare,
+          bare
+            ? "el binario volvió con un PKCS#1 suelto que el certificado verifica"
+            : "el binario no volvió con un PKCS#1 suelto de sus datos",
+        ),
+      ];
+    }),
+  });
+}
+
 export const BATCH_SCRIPTS = {
   batch: aPublishedScript(() => theBatchScript(), {
     conditions: [
@@ -793,5 +820,8 @@ export const BATCH_SCRIPTS = {
   }),
   batchlocalurl: aPublishedScript(theLocalBatchWithAUrlScript, {
     conditions: [THE_URL_NEITHER_FETCHED_NOR_SIGNED],
+  }),
+  batchlocalnone: aPublishedScript(theLocalBatchInFormatNoneScript, {
+    conditions: [THE_ITEM_A_BARE_PKCS1],
   }),
 };

@@ -19,11 +19,13 @@ import {
   theReferenceSignature,
   theXmlDocument,
 } from "../lib/fixtures.mjs";
-import { isASignedPdf } from "../lib/pades.mjs";
+import { isASignedPdf, isAVisibleArea, theSignatureRectangles } from "../lib/pades.mjs";
 import { withTheDataDeclaredGzipped } from "../lib/patches.mjs";
+import { isABarePkcs1 } from "../lib/pkcs1.mjs";
 import { aPublishedScript } from "../lib/script.mjs";
 import { isAXadesSignature, signsTheRoleAndThePlace, theXadesEnvelope } from "../lib/xades.mjs";
 import { theZipEntries } from "../lib/zip.mjs";
+import { servletServing } from "./batch.mjs";
 
 /** La transformación XPath que declara el guion de transformaciones a medida y busca en la firma. */
 const THE_DECLARED_TRANSFORM = "http://www.w3.org/TR/1999/REC-xpath-19991116";
@@ -48,6 +50,16 @@ const THE_ENVELOPE_REQUESTED = "the-envelope-requested";
 const THE_ROLE_AND_THE_PLACE_SIGNED = "the-role-and-the-place-signed";
 const THE_SIGNATURE_INSIDE_THE_PDF = "the-signature-inside-the-pdf";
 const THE_DATA_AND_THE_SIGNATURE_INSIDE = "the-data-and-the-signature-inside";
+const A_BARE_PKCS1 = "a-bare-pkcs1";
+const THROUGH_THE_TRIPHASE_SERVER = "through-the-triphase-server";
+const THE_PRESIGNATURE_SIGNED_WITH_THE_KEY = "the-presignature-signed-with-the-key";
+const THE_SERVER_SIGNATURE_AS_IT_CAME = "the-server-signature-as-it-came";
+const WITHOUT_A_VISIBLE_SIGNATURE = "without-a-visible-signature";
+const WHERE_THE_REQUEST_SAYS = "the-signature-where-the-request-says";
+const THE_DEFAULT_ENVELOPE = "the-default-envelope";
+const THE_SHA1_OF_THE_DATA_SIGNED = "the-sha1-of-the-data-signed";
+const THE_ENVELOPE_THE_POLICY_DEMANDS = "the-envelope-the-policy-demands";
+const THE_AGE_POLICY_INSIDE = "the-age-policy-inside";
 
 /** El documento de referencia se llama `documento`, y así se busca dentro de la firma XML. */
 const THE_DOCUMENT_ROOT = "documento";
@@ -235,16 +247,12 @@ function aXadesSignature(signature) {
   ];
 }
 
-const theEnvelope = (expected) => (signature) => {
-  const envelope = theXadesEnvelope(inXml(signature), THE_DOCUMENT_ROOT, THE_EXTERNAL_URI);
-  return [
-    aCondition(
-      THE_ENVELOPE_REQUESTED,
-      envelope === expected,
-      `envoltura leída: ${envelope ?? "ninguna"}`,
-    ),
-  ];
-};
+const theEnvelope =
+  (expected, name = THE_ENVELOPE_REQUESTED) =>
+  (signature) => {
+    const envelope = theXadesEnvelope(inXml(signature), THE_DOCUMENT_ROOT, THE_EXTERNAL_URI);
+    return [aCondition(name, envelope === expected, `envoltura leída: ${envelope ?? "ninguna"}`)];
+  };
 
 function theRoleAndThePlace(signature) {
   const signed = signsTheRoleAndThePlace(inXml(signature), THE_ROLE, THE_CITY);
@@ -336,6 +344,215 @@ const theCadesImplicitSignature = () => theReferenceSignature("cades-implicit.p7
 const theCountersignedCadesSignature = () =>
   theReferenceSignature("cades-implicit.countersign-tree.p7s");
 
+/** La firma NONE es el PKCS#1 de los datos, sin envoltorio, verificable con la clave del certificado. */
+function aBarePkcs1(signature, certificate) {
+  const bare = isABarePkcs1(theChallenge(), bytesOf(signature), bytesOf(certificate));
+  return [
+    aCondition(
+      A_BARE_PKCS1,
+      bare,
+      bare
+        ? `un PKCS#1 de ${bytesOf(signature).length} bytes que la clave del certificado verifica`
+        : "lo que volvió no es un PKCS#1 de los datos con la clave del certificado",
+    ),
+  ];
+}
+
+/** El área que piden los guiones de firma visible colocada: página 1, `[llx, lly, urx, ury]`. */
+const THE_AREA = [100, 100, 300, 200];
+
+const theAreaParams = [
+  "signaturePage=1",
+  `signaturePositionOnPageLowerLeftX=${THE_AREA[0]}`,
+  `signaturePositionOnPageLowerLeftY=${THE_AREA[1]}`,
+  `signaturePositionOnPageUpperRightX=${THE_AREA[2]}`,
+  `signaturePositionOnPageUpperRightY=${THE_AREA[3]}`,
+].join("\n");
+
+const theAreasOf = (signature) => theSignatureRectangles(bytesOf(signature));
+
+const describingTheAreas = (areas) =>
+  areas.length > 0
+    ? `campos de firma con /Rect ${areas.map((area) => `[${area.join(" ")}]`).join(", ")}`
+    : "ningún campo de firma con /Rect";
+
+function withoutAVisibleSignature(signature) {
+  const areas = theAreasOf(signature);
+  const invisible = areas.length > 0 && !areas.some(isAVisibleArea);
+  return [aCondition(WITHOUT_A_VISIBLE_SIGNATURE, invisible, describingTheAreas(areas))];
+}
+
+function whereTheRequestSays(signature) {
+  const areas = theAreasOf(signature);
+  const placed = areas.some((area) => area.every((at, i) => Math.abs(at - THE_AREA[i]) < 1));
+  return [aCondition(WHERE_THE_REQUEST_SAYS, placed, describingTheAreas(areas))];
+}
+
+/** Un XAdES explícito firma el SHA-1 de los datos, declarado como `hash/sha1`. */
+function theSha1OfTheData(signature) {
+  const xml = inXml(signature);
+  const sha1 = createHash("sha1").update(theXmlDocument()).digest("base64");
+  const signed = xml.includes("hash/sha1") && xml.includes(sha1);
+  return [
+    aCondition(
+      THE_SHA1_OF_THE_DATA_SIGNED,
+      signed,
+      signed
+        ? "la firma lleva el SHA-1 de los datos con mimeType hash/sha1"
+        : "la firma no lleva el SHA-1 de los datos declarado como hash/sha1",
+    ),
+  ];
+}
+
+/** La política de la AGE que expande `expPolicy=FirmaAGE`, en `policy.properties` de AutoFirma. */
+const THE_AGE_POLICY_OID = "2.16.724.1.3.1.1.2.1.9";
+const THE_AGE_POLICY_HASH = "G7roucf600+f03r/o0bAOQ6WAs0=";
+const THE_AGE_POLICY_OID_IN_DER = Buffer.from("060a60855401030101020109", "hex");
+
+const theAgePolicy = (held) => [
+  aCondition(
+    THE_AGE_POLICY_INSIDE,
+    held,
+    held
+      ? `la firma declara la política ${THE_AGE_POLICY_OID} con su huella`
+      : `la firma no declara la política ${THE_AGE_POLICY_OID} con su huella`,
+  ),
+];
+
+const theAgePolicyInTheXml = (signature) =>
+  theAgePolicy(
+    inXml(signature).includes(THE_AGE_POLICY_OID) && inXml(signature).includes(THE_AGE_POLICY_HASH),
+  );
+
+const theAgePolicyInTheCms = (signature) =>
+  theAgePolicy(
+    bytesOf(signature).includes(THE_AGE_POLICY_OID_IN_DER) &&
+      bytesOf(signature).includes(Buffer.from(THE_AGE_POLICY_HASH, "base64")),
+  );
+
+/** En un PAdES el CMS va en hexadecimal dentro de `/Contents`. */
+function theAgePolicyInThePdf(signature) {
+  const pdf = bytesOf(signature).toString("latin1").toLowerCase();
+  return theAgePolicy(
+    pdf.includes(THE_AGE_POLICY_OID_IN_DER.toString("hex")) &&
+      pdf.includes(Buffer.from(THE_AGE_POLICY_HASH, "base64").toString("hex")),
+  );
+}
+
+/** El PKCS#1 que el servidor trifásico de la sede pide firmar como prefirma. */
+const THE_PRESIGNATURE = Buffer.from("prefirma que pide el servidor trifasico de la sede");
+
+/** Lo que llegó al servidor trifásico en cada fase, para medirlo al cerrar el trámite. */
+const whatTheTriphaseServerReceived = { pre: null, post: null };
+
+/** El Base64 URL-safe con relleno que lee el `Base64` de AutoFirma. */
+const inUrlSafeBase64 = (bytes) => bytes.toString("base64").replace(/\+/g, "-").replace(/\//g, "_");
+
+const theTriphaseResult = () => theReferenceSignature("cades-implicit.p7s");
+
+function theTriphasePresignature() {
+  const xml =
+    '<xml>\n <firmas format="CAdES">\n  <firma Id="1">\n' +
+    `   <param n="PRE">${THE_PRESIGNATURE.toString("base64")}</param>\n` +
+    "  </firma>\n </firmas>\n</xml>";
+  return inUrlSafeBase64(Buffer.from(xml, "utf8"));
+}
+
+/** El servidor trifásico falso: `op=pre` devuelve la prefirma, `op=post` la firma congelada. */
+function theTriphaseServer(query) {
+  const received = Object.fromEntries(
+    ["op", "cop", "format", "doc", "cert", "session"].map((name) => [name, query.get(name)]),
+  );
+  emit({ event: "triphase", op: String(received.op), cop: String(received.cop) });
+  if (received.op === "pre") {
+    whatTheTriphaseServerReceived.pre = received;
+    return { status: 200, body: theTriphasePresignature() };
+  }
+  if (received.op === "post") {
+    whatTheTriphaseServerReceived.post = received;
+    return { status: 200, body: `OK NEWID=${inUrlSafeBase64(theTriphaseResult())}` };
+  }
+  return { status: 400, body: "ERR-01: operación trifásica desconocida" };
+}
+
+/** El PKCS#1 que la postfirma trae en `session` verifica la prefirma con el certificado de `cert`. */
+function thePresignatureSignedWithTheKey(post) {
+  if (!post?.session || !post.cert) return false;
+  const session = bytesOf(post.session).toString("utf8");
+  const pk1 = /<param n="PK1">([^<]+)<\/param>/.exec(session)?.[1];
+  const certificate = bytesOf(post.cert.split(",")[0]);
+  return !!pk1 && isABarePkcs1(THE_PRESIGNATURE, bytesOf(pk1), certificate);
+}
+
+const theTriphaseConditions = (cop, content) => (signature) => {
+  const { pre, post } = whatTheTriphaseServerReceived;
+  const through =
+    pre?.cop === cop && post?.cop === cop && !!pre.doc && bytesOf(pre.doc).equals(content());
+  const signedWithTheKey = thePresignatureSignedWithTheKey(post);
+  const asItCame = bytesOf(signature).equals(theTriphaseResult());
+  return [
+    aCondition(
+      THROUGH_THE_TRIPHASE_SERVER,
+      through,
+      through
+        ? `la prefirma y la postfirma llegaron al serverUrl con cop=${cop} y los datos en doc`
+        : `el serverUrl no recibió la prefirma y la postfirma con cop=${cop} y los datos`,
+    ),
+    aCondition(
+      THE_PRESIGNATURE_SIGNED_WITH_THE_KEY,
+      signedWithTheKey,
+      signedWithTheKey
+        ? "la postfirma trae el PK1 de la prefirma, verificable con el certificado"
+        : "la postfirma no trae un PK1 de la prefirma que verifique el certificado",
+    ),
+    aCondition(
+      THE_SERVER_SIGNATURE_AS_IT_CAME,
+      asItCame,
+      asItCame
+        ? "la sede recibió la firma que devolvió la postfirma"
+        : "la sede recibió algo distinto de la firma que devolvió la postfirma",
+    ),
+  ];
+};
+
+const THE_TRIPHASE_CONDITIONS = [
+  THROUGH_THE_TRIPHASE_SERVER,
+  THE_PRESIGNATURE_SIGNED_WITH_THE_KEY,
+  THE_SERVER_SIGNATURE_AS_IT_CAME,
+];
+
+const THE_OPERATIONS = {
+  sign: theSignScript,
+  cosign: theCosignScript,
+  countersign: theCountersignScript,
+};
+
+/** Una operación `CAdEStri` cuyo `serverUrl` es el servidor trifásico falso de la sede. */
+const triphasing = (cop, content) => async () => {
+  const serverUrl = await servletServing(theTriphaseServer);
+  THE_OPERATIONS[cop](
+    "CAdEStri",
+    `serverUrl=${serverUrl}`,
+    content(),
+    theTriphaseConditions(cop, content),
+  );
+};
+
+/** Un `signAndSaveToFile()` de un PAdES con `visibleSignature=want`. */
+function theSignAndSaveOfAWantedVisibleSignatureScript() {
+  AutoScript.signAndSaveToFile(
+    "sign",
+    thePdfOfTheTest().toString("base64"),
+    "SHA256withRSA",
+    "PAdES",
+    "visibleSignature=want",
+    "documento-firmado.pdf",
+    (signature, certificate) =>
+      settle({ event: "success", result: String(signature), certificate: String(certificate) }),
+    settlingTheError,
+  );
+}
+
 export const SIGNATURE_SCRIPTS = {
   signcades: aPublishedScript(
     signing(
@@ -356,8 +573,13 @@ export const SIGNATURE_SCRIPTS = {
     { conditions: [THE_DATA_INSIDE] },
   ),
   signcadesagepolicy: aPublishedScript(
-    signing("CAdES", "expPolicy=FirmaAGE", theChallenge, theDataInside(theChallenge)),
-    { conditions: [THE_DATA_INSIDE] },
+    signing(
+      "CAdES",
+      "expPolicy=FirmaAGE",
+      theChallenge,
+      measuringAll(theDataInside(theChallenge), theAgePolicyInTheCms),
+    ),
+    { conditions: [THE_DATA_INSIDE, THE_AGE_POLICY_INSIDE] },
   ),
   signgzip: aPublishedScript(
     signing(
@@ -383,7 +605,10 @@ export const SIGNATURE_SCRIPTS = {
   signauto: aPublishedScript(signing("auto", "", theChallenge, allCades), {
     conditions: [A_CADES_SIGNATURE],
   }),
-  signxades: aPublishedScript(signing("XAdES", "", theXmlDocument), { benchOnly: true }),
+  signxades: aPublishedScript(
+    signing("XAdES", "", theXmlDocument, theEnvelope("enveloping", THE_DEFAULT_ENVELOPE)),
+    { conditions: [THE_DEFAULT_ENVELOPE] },
+  ),
   signxadesauto: aPublishedScript(signing("auto", "", theXmlDocument, aXadesSignature), {
     conditions: [A_XADES_SIGNATURE],
   }),
@@ -479,7 +704,7 @@ export const SIGNATURE_SCRIPTS = {
   cosignpadeschecking: aPublishedScript(
     cosigning("PAdES", "checkSignatures=true", thePdfOfTheTest),
   ),
-  cosignfacturae: aPublishedScript(cosigning("FacturaE", "", theInvoice), { benchOnly: true }),
+  cosignfacturae: aPublishedScript(cosigning("FacturaE", "", theInvoice)),
   countersigncades: aPublishedScript(
     countersigning(
       "tree",
@@ -504,4 +729,57 @@ export const SIGNATURE_SCRIPTS = {
     ),
     { conditions: [ONLY_THE_LEAVES_COUNTERSIGNED] },
   ),
+  signnone: aPublishedScript(signing("NONE", "", theChallenge, aBarePkcs1), {
+    conditions: [A_BARE_PKCS1],
+  }),
+  signcadestri: aPublishedScript(triphasing("sign", theChallenge), {
+    conditions: THE_TRIPHASE_CONDITIONS,
+  }),
+  cosigncadestri: aPublishedScript(triphasing("cosign", theCadesImplicitSignature), {
+    conditions: THE_TRIPHASE_CONDITIONS,
+  }),
+  countersigncadestri: aPublishedScript(triphasing("countersign", theCadesImplicitSignature), {
+    conditions: THE_TRIPHASE_CONDITIONS,
+  }),
+  signcadestriwithoutserverurl: aPublishedScript(signing("CAdEStri", "", theChallenge)),
+  signpadesoptional: aPublishedScript(
+    signing("PAdES", "visibleSignature=optional", thePdfOfTheTest, withoutAVisibleSignature),
+    { conditions: [WITHOUT_A_VISIBLE_SIGNATURE] },
+  ),
+  signpadeswantedwithanarea: aPublishedScript(
+    signing(
+      "PAdES",
+      `visibleSignature=want\n${theAreaParams}`,
+      thePdfOfTheTest,
+      whereTheRequestSays,
+    ),
+    { conditions: [WHERE_THE_REQUEST_SAYS] },
+  ),
+  signpadesplaced: aPublishedScript(
+    signing("PAdES", theAreaParams, thePdfOfTheTest, whereTheRequestSays),
+    { conditions: [WHERE_THE_REQUEST_SAYS] },
+  ),
+  signandsavepadesvisible: aPublishedScript(theSignAndSaveOfAWantedVisibleSignatureScript),
+  signcadeswithoutmode: aPublishedScript(signing("CAdES", "", theChallenge, theDataLeftOut), {
+    conditions: [THE_DATA_LEFT_OUT],
+  }),
+  signxadesexplicit: aPublishedScript(
+    signing("XAdES", "mode=explicit", theXmlDocument, theSha1OfTheData),
+    { conditions: [THE_SHA1_OF_THE_DATA_SIGNED] },
+  ),
+  signxadesagepolicy: aPublishedScript(
+    signing(
+      "XAdES",
+      "format=XAdES Enveloping\nexpPolicy=FirmaAGE",
+      theXmlDocument,
+      measuringAll(theEnvelope("detached", THE_ENVELOPE_THE_POLICY_DEMANDS), theAgePolicyInTheXml),
+    ),
+    { conditions: [THE_ENVELOPE_THE_POLICY_DEMANDS, THE_AGE_POLICY_INSIDE] },
+  ),
+  signpadesagepolicy: aPublishedScript(
+    signing("PAdES", "expPolicy=FirmaAGE", thePdfOfTheTest, theAgePolicyInThePdf),
+    { conditions: [THE_AGE_POLICY_INSIDE] },
+  ),
+  countersignpades: aPublishedScript(() => theCountersignScript("PAdES", "", thePdfOfTheTest())),
+  countersignfacturae: aPublishedScript(() => theCountersignScript("FacturaE", "", theInvoice())),
 };

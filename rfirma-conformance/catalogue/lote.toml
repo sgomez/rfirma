@@ -331,3 +331,16 @@ local, SAF_27 cuando el servicio de lotes informa de un error, y SAF_33, SAF_34 
 con contraseña, con firmas no registradas o certificado.
 """
 unmeasurable = "Los PDF que los disparan —protegido, con firmas no registradas, certificado— no están en el banco de referencia, y la sede no simula un servicio de lotes que conteste un error lógico en su formato."
+
+[[check]]
+id = "a_local_batch_accepts_the_none_format"
+set = "lote"
+citation = "SingleSignConstants.java:81-82, 112-114; JSONBatchManager.java:87-143"
+statement = """
+Un lote local acepta el formato NONE: cada documento vuelve firmado en PKCS#1 sin envoltorio, con la
+clave del certificado elegido.
+"""
+drive = { mode = "v4", script = "batchlocalnone" }
+assistance = "click"
+condition = "the-item-a-bare-pkcs1"
+warning = "Va a aparecer el diálogo de certificado."
