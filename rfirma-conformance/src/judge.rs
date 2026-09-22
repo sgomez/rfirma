@@ -490,7 +490,6 @@ mod tests {
             signature: None,
             data: None,
             protocol_conditions: Vec::new(),
-            recent_client_lines: Vec::new(),
         }
     }
 

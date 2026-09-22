@@ -1,0 +1,2 @@
+{"event":"launch","url":"afirma://websocket?ports=63882,64985,61588&v=4&jvc=3&idsession=c2OHfauB9WwtfK57ltJp"}
+{"event":"error","message":"SAF_03: Error en los parámetros de entrada","type":"java.lang.Exception"}

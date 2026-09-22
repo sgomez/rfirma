@@ -62,32 +62,32 @@ pub(crate) struct Drive {
 /// Una exigencia del protocolo con todo lo que se sabe de ella menos cómo se mide.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub(crate) struct Check {
+pub struct Check {
     pub id: String,
     pub set: String,
     pub chapter: String,
     pub citation: String,
     pub statement: String,
     #[serde(default)]
-    pub drive: Option<Drive>,
+    pub(crate) drive: Option<Drive>,
     #[serde(default, deserialize_with = "a_registered_harness")]
-    pub harness: Option<&'static Harness>,
+    pub(crate) harness: Option<&'static Harness>,
     #[serde(default)]
-    pub saf: Option<Code>,
+    pub(crate) saf: Option<Code>,
     #[serde(default)]
-    pub completes: Option<Contents>,
+    pub(crate) completes: Option<Contents>,
     /// La condición del manifiesto que juzga la comprobación, con el nombre que le da su guion.
     #[serde(default)]
     pub condition: Option<String>,
     #[serde(default)]
     pub no_answer: bool,
     #[serde(default)]
-    pub person: Option<Person>,
+    pub(crate) person: Option<Person>,
     /// Obligatoria en toda comprobación conducida; `None` en las no medibles.
     #[serde(default)]
-    pub assistance: Option<Assistance>,
+    pub(crate) assistance: Option<Assistance>,
     #[serde(default)]
-    pub store: Store,
+    pub(crate) store: Store,
     #[serde(default)]
     pub patience_secs: Option<u64>,
     /// Los puertos que tienen que estar libres antes de conducirla.
@@ -95,7 +95,7 @@ pub(crate) struct Check {
     pub ports: Vec<u16>,
     /// La familia de su guion, que pone el manifiesto al cargar el catálogo.
     #[serde(skip)]
-    pub family: Option<Family>,
+    pub(crate) family: Option<Family>,
     #[serde(default)]
     pub warning: Option<String>,
     #[serde(default)]
@@ -134,6 +134,24 @@ impl Check {
         self.patience_secs.map(Duration::from_secs)
     }
 
+    /// Todo lo que la comprobación dice en prosa y en códigos, sin cómo se conduce: lo que se
+    /// cruza con el manual.
+    pub fn the_declared_text(&self) -> String {
+        [
+            Some(self.statement.clone()),
+            Some(self.citation.clone()),
+            self.saf.as_ref().map(ToString::to_string),
+            self.condition.clone(),
+            self.warning.clone(),
+            self.question.clone(),
+            self.unmeasurable.clone(),
+        ]
+        .into_iter()
+        .flatten()
+        .collect::<Vec<_>>()
+        .join("\n")
+    }
+
     /// Lo que la comprobación espera, tal y como la declara.
     pub(crate) fn expectation(&self) -> Expectation<'_> {
         Expectation {
@@ -169,7 +187,7 @@ fn the_set_file(set: &str) -> PathBuf {
 
 /// El catálogo entero validado contra el manifiesto de la sede, o por qué no arranca la suite:
 /// cada queja nombra la entrada y lo que le falta.
-pub(crate) fn read_the_catalogue() -> Result<Vec<Check>, String> {
+pub fn read_the_catalogue() -> Result<Vec<Check>, String> {
     let manifest = Manifest::of_the_driver()?;
     let mut checks = read_the_catalogue_files()?;
     let complaints = complaints_against(&checks, &manifest);

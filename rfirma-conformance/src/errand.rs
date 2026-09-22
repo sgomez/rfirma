@@ -1,15 +1,16 @@
 //! El trámite y el conductor de la suite de conformidad: arrancar el cliente publicado, leer
 //! sus eventos, invocar al cliente y extraer lo que cada evento trae.
 
-use std::collections::VecDeque;
 use std::io::{BufRead, BufReader, Write};
 use std::os::unix::process::CommandExt;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
-use std::sync::{Arc, Mutex};
 use std::thread::{spawn, JoinHandle};
 use std::time::{Duration, Instant};
 
+use serde::{Deserialize, Serialize};
+
+use crate::catalogue::Check;
 use crate::livelog::{LiveLogSink, Provenance};
 use crate::outcome::Outcome;
 use crate::transcript::{legible, Transcript};
@@ -21,7 +22,7 @@ pub(crate) const THE_DRIVER_CRASH: &str = "uncaught";
 /// Lo que se anota cuando al conductor se le acaba la paciencia sin que nadie responda.
 pub(crate) const THE_EXHAUSTED_PATIENCE: &str = "timeout";
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub(crate) struct ProtocolConditionResult {
     pub(crate) name: String,
     pub(crate) outcome: Outcome,
@@ -30,6 +31,7 @@ pub(crate) struct ProtocolConditionResult {
 
 /// Lo que se pudo medir de un trámite: si el cliente llegó a arrancar, el código SAF que emitió,
 /// la clase con la que el cliente publicado lo envolvió, y la firma o datos que devolvió si hubo éxito.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub(crate) struct ErrandOutcome {
     pub(crate) launched: bool,
     pub(crate) error_type: Option<String>,
@@ -37,12 +39,53 @@ pub(crate) struct ErrandOutcome {
     pub(crate) signature: Option<String>,
     pub(crate) data: Option<String>,
     pub(crate) protocol_conditions: Vec<ProtocolConditionResult>,
-    #[allow(dead_code)]
-    pub(crate) recent_client_lines: Vec<String>,
 }
 
-/// Quien corre los trámites: Node con el cliente publicado, o un falso en las pruebas.
-pub(crate) trait Errands: Send + Sync {
+impl ErrandOutcome {
+    /// Si se le acabó la paciencia al conductor: eso no es una observación que valga guardar.
+    pub(crate) fn exhausted_its_patience(&self) -> bool {
+        self.error_type.as_deref() == Some(THE_EXHAUSTED_PATIENCE)
+    }
+}
+
+/// Lo que determina un trámite sin persona delante: modo, guion, almacén y el arnés si lo hay.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(transparent)]
+pub(crate) struct ErrandKey(String);
+
+impl ErrandKey {
+    /// `None` si no se conduce o si lo que viaja depende de lo que haga la persona en el diálogo.
+    pub(crate) fn of(check: &Check) -> Option<Self> {
+        let drive = check.drive.as_ref()?;
+        if check.needs_a_person() {
+            return None;
+        }
+        let mut key = format!("{}/{}/{}", drive.mode, drive.script, check.store.name());
+        if let Some(harness) = check.harness {
+            key = format!("{key}/{}", harness.name);
+        }
+        Some(Self(key))
+    }
+}
+
+/// Un trámite observado tal y como se guarda en el informe: lo medido, la comprobación cuyas
+/// tramas lo transcriben y lo que tardó.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub(crate) struct ObservedErrand {
+    pub(crate) outcome: ErrandOutcome,
+    pub(crate) transcribed_in: String,
+    pub(crate) duration_ms: u64,
+}
+
+impl ObservedErrand {
+    pub(crate) fn duration(&self) -> Duration {
+        Duration::from_millis(self.duration_ms)
+    }
+}
+
+/// Quien corre los trámites: Node con el cliente publicado, o transcripciones grabadas en las
+/// pruebas.
+pub(crate) trait ErrandRunner: Send + Sync {
     fn run(
         &self,
         probe: &Probe,
@@ -53,9 +96,11 @@ pub(crate) trait Errands: Send + Sync {
     ) -> ErrandOutcome;
 }
 
-pub(crate) struct NodeErrands;
+pub(crate) struct NodeRunner;
 
-impl Errands for NodeErrands {
+impl ErrandRunner for NodeRunner {
+    /// Corre el trámite bajo Node, transcribiendo cada evento del cliente publicado a medida que
+    /// llega; al terminar mata al cliente, respondiera o no.
     fn run(
         &self,
         probe: &Probe,
@@ -64,7 +109,50 @@ impl Errands for NodeErrands {
         mode: &str,
         patience: Duration,
     ) -> ErrandOutcome {
-        probe.run_the_node_errand(transcript_name, script, mode, patience)
+        let witness = &probe.witness;
+        let start = witness.started_at();
+        let log_sink = witness.log_sink();
+        let mut transcript = match Transcript::open(&probe.report, transcript_name) {
+            Ok(transcript) => Some(transcript),
+            Err(complaint) => {
+                witness.harness(&complaint);
+                None
+            }
+        };
+        let trust_root = the_trust_root_as_pem(&probe.trust_root);
+        let mut driver = the_published_client_running(trust_root.path(), patience, script, mode);
+        witness.driver_spawned(driver.id());
+        let events = driver.stdout.take().expect("el conductor escribe eventos");
+        let mut client: Option<ClientProcess> = None;
+        let outcome = observe(
+            BufReader::new(events).lines().map_while(Result::ok),
+            |event| {
+                if let Some(Err(complaint)) = transcript.as_mut().map(|t| t.record(event)) {
+                    witness.harness(&complaint);
+                    transcript = None;
+                }
+                log_sink.push(Provenance::Site, start.elapsed(), &legible(event));
+                if let Some(url) = the_launch_url_in(event) {
+                    log_sink.push(
+                        Provenance::Suite,
+                        start.elapsed(),
+                        &format!("invoco {} con {url}", probe.client.display()),
+                    );
+                    client = Some(ClientProcess::spawn(
+                        &probe.client,
+                        &url,
+                        log_sink.clone(),
+                        start,
+                    ));
+                }
+            },
+        );
+        let _ = driver.wait();
+        witness.driver_finished();
+        if let Some(mut client) = client {
+            client.terminate();
+        }
+        outcome
     }
 }
 
@@ -77,96 +165,40 @@ impl Probe {
         mode: &str,
         patience: Duration,
     ) -> ErrandOutcome {
-        self.errands
+        self.runner
             .run(self, transcript_name, script, mode, patience)
     }
+}
 
-    /// Corre el trámite bajo Node, transcribiendo cada evento del cliente publicado a medida que
-    /// llega; al terminar mata al cliente, respondiera o no.
-    fn run_the_node_errand(
-        &self,
-        transcript_name: &str,
-        script: &str,
-        mode: &str,
-        patience: Duration,
-    ) -> ErrandOutcome {
-        let start = self.witness.started_at();
-        let log_sink = self.witness.log_sink();
-        let mut transcript = match Transcript::open(&self.report, transcript_name) {
-            Ok(transcript) => Some(transcript),
-            Err(complaint) => {
-                self.witness.harness(&complaint);
-                None
-            }
-        };
-        let trust_root = the_trust_root_as_pem(&self.trust_root);
-        let mut driver = the_published_client_running(trust_root.path(), patience, script, mode);
-        self.witness.driver_spawned(driver.id());
-        let events = driver.stdout.take().expect("el conductor escribe eventos");
-        let mut client: Option<ClientProcess> = None;
-        let mut error_type = None;
-        let mut error_code = None;
-        let mut signature = None;
-        let mut data = None;
-        let mut protocol_conditions = Vec::new();
-        for event in BufReader::new(events).lines().map_while(Result::ok) {
-            if let Some(Err(complaint)) = transcript.as_mut().map(|t| t.record(&event)) {
-                self.witness.harness(&complaint);
-                transcript = None;
-            }
-            log_sink.push(Provenance::Site, start.elapsed(), &legible(&event));
-            if let Some(url) = the_launch_url_in(&event) {
-                log_sink.push(
-                    Provenance::Suite,
-                    start.elapsed(),
-                    &format!("invoco {} con {url}", self.client.display()),
-                );
-                client = Some(ClientProcess::spawn(
-                    &self.client,
-                    &url,
-                    log_sink.clone(),
-                    start,
-                ));
-            }
-            if let Some(kind) = the_error_type_in(&event) {
-                error_type = Some(kind);
-            }
-            if let Some(code) = the_saf_code_in(&event) {
-                error_code = Some(code);
-            }
-            if let Some(result) = the_signature_in(&event) {
-                signature = Some(result);
-            }
-            if let Some(result) = the_data_in(&event) {
-                data = Some(result);
-            }
-            if let Some(condition) = the_protocol_condition_in(&event) {
-                protocol_conditions.push(condition);
-            }
-            if event.contains("\"event\":\"timeout\"") {
-                error_type = Some(THE_EXHAUSTED_PATIENCE.to_owned());
-            }
+/// Lo que dicen los eventos de un trámite, pasándole cada uno a `each` según llega.
+pub(crate) fn observe(
+    events: impl IntoIterator<Item = String>,
+    mut each: impl FnMut(&str),
+) -> ErrandOutcome {
+    let mut outcome = ErrandOutcome::default();
+    for event in events {
+        each(&event);
+        outcome.launched |= the_launch_url_in(&event).is_some();
+        if let Some(kind) = the_error_type_in(&event) {
+            outcome.error_type = Some(kind);
         }
-        let launched = client.is_some();
-        let _ = driver.wait();
-        self.witness.driver_finished();
-        let recent_client_lines = if let Some(mut client_proc) = client {
-            let recents = client_proc.recent_lines();
-            client_proc.terminate();
-            recents
-        } else {
-            Vec::new()
-        };
-        ErrandOutcome {
-            launched,
-            error_type,
-            error_code,
-            signature,
-            data,
-            protocol_conditions,
-            recent_client_lines,
+        if let Some(code) = the_saf_code_in(&event) {
+            outcome.error_code = Some(code);
+        }
+        if let Some(result) = the_signature_in(&event) {
+            outcome.signature = Some(result);
+        }
+        if let Some(result) = the_data_in(&event) {
+            outcome.data = Some(result);
+        }
+        if let Some(condition) = the_protocol_condition_in(&event) {
+            outcome.protocol_conditions.push(condition);
+        }
+        if event.contains("\"event\":\"timeout\"") {
+            outcome.error_type = Some(THE_EXHAUSTED_PATIENCE.to_owned());
         }
     }
+    outcome
 }
 
 /// El `autoscript.js` del tag `v1.9.2`, donde lo deja `just autoscript`.
@@ -205,7 +237,6 @@ fn the_published_client_running(
 
 pub(crate) struct ClientProcess {
     child: Child,
-    recent_lines: Arc<Mutex<VecDeque<String>>>,
     drain_handles: Vec<JoinHandle<()>>,
 }
 
@@ -219,30 +250,19 @@ impl ClientProcess {
             .spawn()
             .unwrap_or_else(|error| panic!("{} no arrancó: {error}", client.display()));
 
-        let recent_lines = Arc::new(Mutex::new(VecDeque::with_capacity(64)));
         let mut drain_handles = Vec::new();
-
         if let Some(stdout) = child.stdout.take() {
             let sink = log_sink.clone();
-            let recents = Arc::clone(&recent_lines);
-            drain_handles.push(spawn(move || drain_stream(stdout, sink, start, recents)));
+            drain_handles.push(spawn(move || drain_stream(stdout, sink, start)));
         }
-
         if let Some(stderr) = child.stderr.take() {
             let sink = log_sink.clone();
-            let recents = Arc::clone(&recent_lines);
-            drain_handles.push(spawn(move || drain_stream(stderr, sink, start, recents)));
+            drain_handles.push(spawn(move || drain_stream(stderr, sink, start)));
         }
-
         Self {
             child,
-            recent_lines,
             drain_handles,
         }
-    }
-
-    pub(crate) fn recent_lines(&self) -> Vec<String> {
-        self.recent_lines.lock().unwrap().iter().cloned().collect()
     }
 
     /// Mata al cliente con todo su grupo: el lanzador deja vivo el `java` que hereda las tuberías.
@@ -258,21 +278,9 @@ impl ClientProcess {
     }
 }
 
-fn drain_stream(
-    stream: impl std::io::Read,
-    log_sink: LiveLogSink,
-    start: Instant,
-    recents: Arc<Mutex<VecDeque<String>>>,
-) {
-    let reader = BufReader::new(stream);
-    for line in reader.lines().map_while(Result::ok) {
+fn drain_stream(stream: impl std::io::Read, log_sink: LiveLogSink, start: Instant) {
+    for line in BufReader::new(stream).lines().map_while(Result::ok) {
         log_sink.push(Provenance::Client, start.elapsed(), &line);
-        if let Ok(mut recents_lock) = recents.lock() {
-            if recents_lock.len() >= 50 {
-                recents_lock.pop_front();
-            }
-            recents_lock.push_back(line);
-        }
     }
 }
 
@@ -376,8 +384,79 @@ fn the_protocol_condition_in(event: &str) -> Option<ProtocolConditionResult> {
     })
 }
 
+/// Las tramas grabadas de un trámite de verdad, en `tests/transcripts/`.
+#[cfg(test)]
+pub(crate) fn the_recorded(name: &str) -> Vec<String> {
+    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("tests/transcripts")
+        .join(format!("{name}.jsonl"));
+    std::fs::read_to_string(&path)
+        .unwrap_or_else(|error| panic!("{} no se pudo leer: {error}", path.display()))
+        .lines()
+        .map(str::to_owned)
+        .collect()
+}
+
+#[cfg(test)]
+pub(crate) mod fake {
+    use std::collections::BTreeMap;
+    use std::sync::{Arc, Mutex};
+    use std::time::Duration;
+
+    use super::{observe, ErrandOutcome, ErrandRunner};
+    use crate::transcript::Transcript;
+    use crate::Probe;
+
+    /// Un ejecutor que no lanza nada: devuelve las tramas grabadas de cada guion y apunta cada
+    /// trámite que se le pidió.
+    #[derive(Default)]
+    pub(crate) struct RecordedRunner {
+        recorded: BTreeMap<String, Vec<String>>,
+        runs: Mutex<Vec<String>>,
+    }
+
+    impl RecordedRunner {
+        pub(crate) fn replaying(recorded: &[(&str, Vec<String>)]) -> Arc<Self> {
+            Arc::new(Self {
+                recorded: recorded
+                    .iter()
+                    .map(|(script, events)| ((*script).to_owned(), events.clone()))
+                    .collect(),
+                runs: Mutex::default(),
+            })
+        }
+
+        /// Los trámites corridos, `modo/guion`, en el orden en que se pidieron.
+        pub(crate) fn runs(&self) -> Vec<String> {
+            self.runs.lock().unwrap().clone()
+        }
+    }
+
+    impl ErrandRunner for RecordedRunner {
+        fn run(
+            &self,
+            probe: &Probe,
+            transcript_name: &str,
+            script: &str,
+            mode: &str,
+            _: Duration,
+        ) -> ErrandOutcome {
+            self.runs.lock().unwrap().push(format!("{mode}/{script}"));
+            let mut transcript = Transcript::open(&probe.report, transcript_name).ok();
+            let events = self.recorded.get(script).cloned().unwrap_or_default();
+            observe(events, |event| {
+                if let Some(transcript) = transcript.as_mut() {
+                    let _ = transcript.record(event);
+                }
+            })
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    use std::sync::{Arc, Mutex};
+
     use super::*;
 
     #[test]
@@ -451,33 +530,73 @@ mod tests {
         assert!(the_protocol_condition_in(event).is_none());
     }
     #[test]
-    fn drain_stream_delivers_lines_as_the_client_and_preserves_recents() {
+    fn drain_stream_delivers_lines_as_the_client() {
         let delivered = Arc::new(Mutex::new(Vec::new()));
         let into = Arc::clone(&delivered);
         let log_sink = LiveLogSink::new(move |line| into.lock().unwrap().push(line));
-        let recents = Arc::new(Mutex::new(VecDeque::new()));
         let input = std::io::Cursor::new(b"linea 1\nlinea 2\nlinea 3\n");
 
-        drain_stream(input, log_sink, Instant::now(), Arc::clone(&recents));
-
-        let stored: Vec<String> = recents.lock().unwrap().iter().cloned().collect();
-        assert_eq!(stored, vec!["linea 1", "linea 2", "linea 3"]);
+        drain_stream(input, log_sink, Instant::now());
 
         let delivered = delivered.lock().unwrap();
         assert_eq!(delivered.len(), 3);
         assert!(delivered[0].ends_with("cliente linea 1"));
     }
+
     #[test]
-    fn outcome_carries_recent_client_lines() {
-        let outcome = ErrandOutcome {
-            launched: true,
-            error_type: None,
-            error_code: None,
-            signature: None,
-            data: None,
-            protocol_conditions: Vec::new(),
-            recent_client_lines: vec!["line 1".to_string()],
-        };
-        assert_eq!(outcome.recent_client_lines.len(), 1);
+    fn a_recorded_rejection_is_observed_as_launched_with_its_code() {
+        let outcome = observe(the_recorded("a-rejection-with-saf-03"), |_| {});
+
+        assert!(outcome.launched);
+        assert_eq!(outcome.error_code.as_deref(), Some("SAF_03"));
+        assert_eq!(outcome.error_type.as_deref(), Some("java.lang.Exception"));
+    }
+
+    #[test]
+    fn a_timeout_event_is_observed_as_exhausted_patience() {
+        let outcome = observe([r#"{"event":"timeout"}"#.to_owned()], |_| {});
+
+        assert!(!outcome.launched);
+        assert!(outcome.exhausted_its_patience());
+    }
+
+    #[test]
+    fn each_event_is_handed_over_as_it_arrives() {
+        let mut seen = Vec::new();
+
+        observe(the_recorded("a-rejection-with-saf-03"), |event| {
+            seen.push(event.to_owned());
+        });
+
+        assert_eq!(seen.len(), 2);
+        assert!(seen[0].contains("\"launch\""));
+    }
+
+    fn a_check(extra: &str) -> Check {
+        crate::catalogue::the_catalogue_in(&format!(
+            "[[check]]\nid = \"a\"\nset = \"errores\"\nchapter = \"15\"\ncitation = \"A.java:1\"\n\
+             statement = \"Algo.\"\ndrive = {{ mode = \"v4\", script = \"save\" }}\n{extra}"
+        ))
+        .unwrap()
+        .remove(0)
+    }
+
+    #[test]
+    fn the_key_of_an_errand_is_its_mode_script_store_and_harness() {
+        assert_eq!(
+            ErrandKey::of(&a_check("assistance = \"click\"\nstore = \"ec\"")),
+            Some(ErrandKey("v4/save/ec".to_owned()))
+        );
+        assert_eq!(
+            ErrandKey::of(&a_check(
+                "assistance = \"none\"\nharness = \"occupied_service_ports\""
+            )),
+            Some(ErrandKey("v4/save/rsa/occupied_service_ports".to_owned()))
+        );
+    }
+
+    #[test]
+    fn an_errand_that_depends_on_what_the_person_does_has_no_key() {
+        assert_eq!(ErrandKey::of(&a_check("assistance = \"person\"")), None);
     }
 }

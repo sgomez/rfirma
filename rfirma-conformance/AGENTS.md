@@ -12,6 +12,7 @@ consola. Sus pruebas se corren con `cargo test` dentro de este directorio; las d
 | `docs/adr/` | Las decisiones que solo afectan a la suite, numeradas con las de `docs/adr/` de la raíz. |
 | `catalogue/` | El catálogo, un TOML por conjunto con los metadatos de cada comprobación; no nombra a ningún cliente. |
 | `reference/` | Las referencias, un TOML por cliente y versión con los resultados que una ficha `BUG-NN` explica. |
+| `src/lib.rs` | La raíz del crate: sus módulos y la pasada que mide (`Probe`); lo que usan el binario y las pruebas de `tests/`. |
 | `src/main.rs` | El arranque: lee el catálogo, levanta el servidor, imprime la URL con el token y la abre. |
 | `src/server.rs` | El servidor HTTP local y su guarda (token, `Host`, `Origin`); sirve la consola compilada de `console/dist/` en `/`, `/informe/<nombre>` y `/comparar`, y traduce rutas a la sesión sin decidir nada. |
 | `src/console.rs` | La sesión: cliente e informe elegidos, la cola en tramos, el único hilo que corre las comprobaciones y el testigo de verdad, que pregunta y avisa por la página. |
@@ -21,13 +22,13 @@ consola. Sus pruebas se corren con `cargo test` dentro de este directorio; las d
 | `src/client.rs` | El cliente a prueba y qué cliente es: binario y un perfil aislado por almacén (`rsa`, `ec`, `token`), cada uno con su envoltorio y su raíz de confianza. |
 | `src/catalogue.rs` | La lectura del catálogo y su validación, de forma y contra el manifiesto de la sede, que si falla no deja arrancar. |
 | `src/manifest.rs` | El vocabulario de la sede que publica `driver.mjs --manifest`: modos y guiones con su sede, su familia y sus condiciones. |
-| `src/checks.rs` | El cuerpo ejecutable: cómo se conduce un grupo, la parada entre tramos, la guarda de las comprobaciones sin persona y los saludos por familia, sin escribir el informe. |
+| `src/checks.rs` | El cuerpo ejecutable: cómo se conduce un grupo o se juzga con un trámite ya observado, la parada entre tramos, la guarda de las comprobaciones sin persona y los saludos por familia, sin escribir el informe. |
 | `src/harness.rs` | El registro de arneses que el catálogo liga por nombre: lo que una comprobación monta alrededor del trámite —puertos ocupados, ficheros preparados—; no juzga. |
 | `src/judge.rs` | El juez: lo observado, la expectativa declarada y la respuesta de la persona, a un resultado; con el vocabulario cerrado de expectativas, y sin lanzar trámites. |
 | `src/outcome.rs` | El resultado de una comprobación, sus nombres en pantalla y PENDIENTE. |
 | `src/validation.rs` | La validación de un informe contra una referencia: validado o sus discrepancias, que son fallos de la suite o de la referencia. |
-| `src/errand.rs` | El trámite: el seam de quien lo corre, el `driver.mjs` de `testdata/site-driver/` con el cliente invocado, y lo que se extrae de cada evento. |
-| `src/report.rs` | El informe en disco, `reports/conformance/<nombre>/dossier.json`: lo ve cualquiera, lo continúa solo su cliente. |
+| `src/errand.rs` | El trámite: su clave, lo observado que se guarda, el seam `ErrandRunner` con su adaptador de Node y su falso de tramas grabadas, y lo que se extrae de cada evento. |
+| `src/report.rs` | El informe en disco, `reports/conformance/<nombre>/dossier.json`, con el estado de cada comprobación y los trámites observados por clave: lo ve cualquiera, lo continúa solo su cliente. |
 | `src/transcript.rs` | Las tramas y el registro de cada comprobación, en `transcripts/` dentro del informe. |
 | `src/livelog.rs` | La línea de registro marcada por procedencia (`sede`, `cliente`, `suite`), en fichero y en vivo. |
 | `src/comparison.rs` | La comparación de dos informes, comprobación a comprobación en el orden del catálogo y con su conjunto. |
@@ -35,7 +36,8 @@ consola. Sus pruebas se corren con `cargo test` dentro de este directorio; las d
 | `../testdata/site-driver/manifest.mjs` | El manifiesto: los modos y todos los guiones, cada uno con su sede, su familia, sus modos, sus condiciones y si es solo del banco. |
 | `../testdata/site-driver/lib/` | Lo común a los guiones: eventos y condiciones, modos, parches del `autoscript.js`, navegador mínimo y documentos de referencia. |
 | `../testdata/site-driver/scripts/` | Los guiones, un módulo por familia: certificado, firma, ficheros, lote, intermedio, WebSocket a mano y socket a mano. |
-| `tests/catalogue_matches_the_docs.rs` | El cruce del catálogo y la referencia con `docs/afirma/1.9.2/`: capítulos, tabla SAF y fichas A1. |
+| `tests/catalogue_matches_the_docs.rs` | El cruce del catálogo, leído con el cargador del crate, y la referencia con `docs/afirma/1.9.2/`: capítulos, tabla SAF y fichas A1. |
+| `tests/transcripts/` | Tramas grabadas de trámites de verdad, las que reproduce el ejecutor falso. |
 | `.cargo/config.toml` | Dónde deja ts-rs los tipos del contrato: `console/src/contract/`. |
 | `console/` | La consola web, un proyecto pnpm propio con React y Vite, fuera de `rfirma-app` y del CI; `just conformance-console` la compila en `console/dist/`. |
 | `console/src/contract/` | Los tipos del JSON y del SSE, generados por ts-rs desde Rust y commiteados; no se editan a mano. |

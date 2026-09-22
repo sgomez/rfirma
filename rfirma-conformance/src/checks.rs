@@ -6,7 +6,7 @@ use std::net::TcpListener;
 use std::time::{Duration, Instant};
 
 use crate::catalogue::{Assistance, Check, Drive};
-use crate::errand::{ErrandOutcome, THE_EXHAUSTED_PATIENCE};
+use crate::errand::{ErrandKey, ErrandOutcome, ObservedErrand, THE_DRIVER_CRASH};
 use crate::harness::THE_HARNESSES;
 use crate::judge::{judge, Answer, CheckOutcome};
 use crate::outcome::outcome_name;
@@ -37,41 +37,70 @@ impl Settlement {
     }
 }
 
+/// Lo que deja un grupo: cómo quedó cada entrada y el trámite que se observó, si se lanzó uno
+/// que valga guardar.
+#[derive(Debug)]
+pub(crate) struct Settled {
+    pub(crate) settlements: Vec<Settlement>,
+    pub(crate) observed: Option<ObservedErrand>,
+}
+
+impl From<Vec<Settlement>> for Settled {
+    fn from(settlements: Vec<Settlement>) -> Self {
+        Self {
+            settlements,
+            observed: None,
+        }
+    }
+}
+
 impl Probe {
     /// Corre un grupo de comprobaciones que comparten trámite —el conductor arranca una sola vez y
-    /// cada entrada lee de lo que viajó lo suyo— y dice cómo quedó cada una, sin escribir nada.
+    /// cada entrada lee de lo que viajó lo suyo— y dice cómo quedó cada una, sin escribir nada; si
+    /// el trámite ya estaba observado, lo juzga sin lanzar el cliente.
     pub(crate) fn run_group(
         &self,
         group: &[&Check],
         opening: Option<Assistance>,
-    ) -> Vec<Settlement> {
+        already: Option<&ObservedErrand>,
+    ) -> Settled {
         let head = group[0];
         if let Some(motive) = &head.unmeasurable {
             return vec![self.settle(
                 head,
                 CheckOutcome::of(Outcome::NotObservable, motive.clone()),
                 Duration::ZERO,
-            )];
+            )]
+            .into();
+        }
+        if let Some(observed) = already {
+            self.witness.harness(&format!(
+                "el trámite ya se observó en «{}»: se juzga sin lanzar el cliente",
+                observed.transcribed_in
+            ));
+            return self
+                .judge_the_group(group, &observed.outcome, observed.duration())
+                .into();
         }
         if let Some(tranche) = opening {
             if !self.witness.stand_by(&head.id, tranche) {
-                return all_pending(group, "la cola se paró antes de abrir su tramo");
+                return all_pending(group, "la cola se paró antes de abrir su tramo").into();
             }
         }
         if let Some(why) = the_unmet_precondition_of(head) {
             self.witness.harness(&format!("no se corre: {why}"));
-            return vec![Settlement::pending(head, why)];
+            return vec![Settlement::pending(head, why)].into();
         }
         if head.needs_a_person() {
             let fixtures = match self.prepare_the_fixtures_of(head) {
                 Ok(fixtures) => fixtures,
-                Err(why) => return vec![Settlement::pending(head, why)],
+                Err(why) => return vec![Settlement::pending(head, why)].into(),
             };
             if !self
                 .witness
                 .brief(&head.id, &the_briefing_of(group, fixtures.as_deref()))
             {
-                return vec![Settlement::pending(head, "se saltó antes de empezar")];
+                return vec![Settlement::pending(head, "se saltó antes de empezar")].into();
             }
         } else {
             for warning in the_warnings_of(group) {
@@ -83,17 +112,33 @@ impl Probe {
         let outcome = self.measure(head);
         let duration = start.elapsed();
         if self.witness.aborted() {
-            return all_pending(group, "se interrumpió mientras se ejecutaba");
+            return all_pending(group, "se interrumpió mientras se ejecutaba").into();
         }
-        if head.assistance() == Assistance::None
-            && outcome.error_type.as_deref() == Some(THE_EXHAUSTED_PATIENCE)
-        {
+        if head.assistance() == Assistance::None && outcome.exhausted_its_patience() {
             for check in group {
                 self.witness.suite_failure(&check.id, AN_UNATTENDED_TIMEOUT);
             }
-            return all_pending(group, AN_UNATTENDED_TIMEOUT);
+            return all_pending(group, AN_UNATTENDED_TIMEOUT).into();
         }
+        let observed = worth_keeping(head, &outcome).then(|| ObservedErrand {
+            outcome: outcome.clone(),
+            transcribed_in: head.id.clone(),
+            duration_ms: u64::try_from(duration.as_millis()).unwrap_or(u64::MAX),
+        });
+        Settled {
+            settlements: self.judge_the_group(group, &outcome, duration),
+            observed,
+        }
+    }
 
+    /// Juzga cada entrada del grupo con lo observado; solo la primera pregunta a la persona.
+    fn judge_the_group(
+        &self,
+        group: &[&Check],
+        outcome: &ErrandOutcome,
+        duration: Duration,
+    ) -> Vec<Settlement> {
+        let head = group[0];
         let answer = match head.question.as_deref() {
             None => Answer::Unanswered,
             Some(question) => match self.witness.ask(&head.id, question) {
@@ -112,7 +157,7 @@ impl Probe {
                 };
                 self.settle(
                     check,
-                    judge(&outcome, &check.expectation(), answer),
+                    judge(outcome, &check.expectation(), answer),
                     duration,
                 )
             })
@@ -196,6 +241,14 @@ impl Probe {
 const AN_UNATTENDED_TIMEOUT: &str =
     "fallo de la suite: una comprobación sin persona agotó su espera, y se mató al cliente";
 
+/// Si lo observado vale para juzgar otra vez sin relanzar: tiene clave, terminó y no reventó el
+/// conductor.
+fn worth_keeping(head: &Check, outcome: &ErrandOutcome) -> bool {
+    ErrandKey::of(head).is_some()
+        && !outcome.exhausted_its_patience()
+        && outcome.error_type.as_deref() != Some(THE_DRIVER_CRASH)
+}
+
 fn all_pending(group: &[&Check], why: &str) -> Vec<Settlement> {
     group
         .iter()
@@ -209,19 +262,19 @@ fn the_unmet_precondition_of(check: &Check) -> Option<String> {
 }
 
 /// Las comprobaciones que comparten trámite con `head` y pueden resolverse del mismo trámite: las
-/// que se conducen igual, en el mismo almacén y el mismo tramo, y no piden ni arnés ni persona.
+/// de su misma clave y su mismo tramo, sin pregunta ni respuesta de la persona.
 pub(crate) fn the_group_of<'a>(head: &'a Check, rest: &[&'a Check]) -> Vec<&'a Check> {
     let mut group = vec![head];
     if !shares_an_errand(head) {
         return group;
     }
+    let key = ErrandKey::of(head);
     group.extend(
         rest.iter()
             .skip(1)
             .filter(|check| {
                 shares_an_errand(check)
-                    && check.drive == head.drive
-                    && check.store == head.store
+                    && ErrandKey::of(check) == key
                     && check.assistance() == head.assistance()
             })
             .copied(),
@@ -230,12 +283,11 @@ pub(crate) fn the_group_of<'a>(head: &'a Check, rest: &[&'a Check]) -> Vec<&'a C
 }
 
 fn shares_an_errand(check: &Check) -> bool {
-    check.drive.is_some()
+    ErrandKey::of(check).is_some()
         && !check.greeting
-        && check.harness.is_none()
+        && check.question.is_none()
         && check.person.is_none()
         && check.unmeasurable.is_none()
-        && !check.needs_a_person()
 }
 
 /// Si la comprobación es un saludo y no se cumplió: ni resuelto de otro color ni pendiente deja
@@ -340,11 +392,12 @@ fn port_is_occupied(port: u16) -> bool {
 #[cfg(test)]
 mod tests {
     use std::path::PathBuf;
-    use std::sync::{Arc, Mutex};
+    use std::sync::Arc;
 
     use super::*;
     use crate::catalogue::{read_the_catalogue, the_catalogue_in};
-    use crate::errand::Errands;
+    use crate::errand::fake::RecordedRunner;
+    use crate::errand::{the_recorded, ErrandRunner};
     use crate::manifest::Family;
     use crate::witness::fake::FakeWitness;
     use crate::witness::Witness;
@@ -644,47 +697,23 @@ assistance = "none"
         assert!(the_reason_behind_a_failed_greeting("the_greeting").contains("«the_greeting»"));
     }
 
-    struct FakeErrands {
-        timed_out: bool,
-        runs: Mutex<usize>,
+    fn a_runner(timed_out: bool) -> Arc<RecordedRunner> {
+        let events = if timed_out {
+            vec![r#"{"event":"timeout"}"#.to_owned()]
+        } else {
+            the_recorded("a-rejection-with-saf-03")
+        };
+        RecordedRunner::replaying(&[("signwithoutaformat", events)])
     }
 
-    impl FakeErrands {
-        fn answering(timed_out: bool) -> Arc<Self> {
-            Arc::new(Self {
-                timed_out,
-                runs: Mutex::new(0),
-            })
-        }
-
-        fn runs(&self) -> usize {
-            *self.runs.lock().unwrap()
-        }
-    }
-
-    impl Errands for FakeErrands {
-        fn run(&self, _: &Probe, _: &str, _: &str, _: &str, _: Duration) -> ErrandOutcome {
-            *self.runs.lock().unwrap() += 1;
-            ErrandOutcome {
-                launched: true,
-                error_type: self.timed_out.then(|| THE_EXHAUSTED_PATIENCE.to_owned()),
-                error_code: (!self.timed_out).then(|| "SAF_03".to_owned()),
-                signature: None,
-                data: None,
-                protocol_conditions: Vec::new(),
-                recent_client_lines: Vec::new(),
-            }
-        }
-    }
-
-    fn a_probe(witness: &Arc<FakeWitness>, errands: &Arc<FakeErrands>) -> Probe {
+    fn a_probe(witness: &Arc<FakeWitness>, runner: &Arc<RecordedRunner>) -> Probe {
         Probe {
             client: PathBuf::from("/nowhere/launch-subject"),
             trust_root: PathBuf::from("/nowhere/root.pem"),
-            report: std::env::temp_dir(),
+            report: tempfile::tempdir().unwrap().keep(),
             patience: Duration::from_secs(1),
             witness: Arc::clone(witness) as Arc<dyn Witness>,
-            errands: Arc::clone(errands) as Arc<dyn Errands>,
+            runner: Arc::clone(runner) as Arc<dyn ErrandRunner>,
         }
     }
 
@@ -715,8 +744,9 @@ saf = "SAF_03"
         .unwrap()
     }
 
-    fn resolved(settled: &[Settlement]) -> Vec<(&str, Outcome)> {
+    fn resolved(settled: &Settled) -> Vec<(&str, Outcome)> {
         settled
+            .settlements
             .iter()
             .filter_map(|settlement| match settlement {
                 Settlement::Resolved { id, outcome, .. } => Some((id.as_str(), *outcome)),
@@ -725,8 +755,9 @@ saf = "SAF_03"
             .collect()
     }
 
-    fn pending(settled: &[Settlement]) -> Vec<(&str, &str)> {
+    fn pending(settled: &Settled) -> Vec<(&str, &str)> {
         settled
+            .settlements
             .iter()
             .filter_map(|settlement| match settlement {
                 Settlement::Pending { id, why } => Some((id.as_str(), why.as_str())),
@@ -738,11 +769,11 @@ saf = "SAF_03"
     #[test]
     fn a_group_that_opens_a_tranche_waits_for_the_person_before_driving() {
         let witness = Arc::new(FakeWitness::default());
-        let errands = FakeErrands::answering(false);
+        let runner = a_runner(false);
         let catalogue = a_rejection("click");
         let group: Vec<&Check> = catalogue.iter().collect();
 
-        let settled = a_probe(&witness, &errands).run_group(&group, Some(Assistance::Click));
+        let settled = a_probe(&witness, &runner).run_group(&group, Some(Assistance::Click), None);
 
         assert_eq!(witness.said(), ["stand_by a_rejection clic"]);
         assert_eq!(
@@ -757,14 +788,14 @@ saf = "SAF_03"
     #[test]
     fn a_group_inside_its_tranche_does_not_stop() {
         let witness = Arc::new(FakeWitness::default());
-        let errands = FakeErrands::answering(false);
+        let runner = a_runner(false);
         let catalogue = a_rejection("click");
         let group: Vec<&Check> = catalogue.iter().collect();
 
-        a_probe(&witness, &errands).run_group(&group, None);
+        a_probe(&witness, &runner).run_group(&group, None, None);
 
         assert!(witness.said().is_empty());
-        assert_eq!(errands.runs(), 1);
+        assert_eq!(runner.runs().len(), 1);
     }
 
     #[test]
@@ -773,13 +804,13 @@ saf = "SAF_03"
             refuses_to_stand_by: true,
             ..FakeWitness::default()
         });
-        let errands = FakeErrands::answering(false);
+        let runner = a_runner(false);
         let catalogue = a_rejection("person");
         let group: Vec<&Check> = catalogue.iter().take(1).collect();
 
-        let settled = a_probe(&witness, &errands).run_group(&group, Some(Assistance::Person));
+        let settled = a_probe(&witness, &runner).run_group(&group, Some(Assistance::Person), None);
 
-        assert_eq!(errands.runs(), 0);
+        assert_eq!(runner.runs().len(), 0);
         assert_eq!(
             pending(&settled),
             [("a_rejection", "la cola se paró antes de abrir su tramo")]
@@ -789,11 +820,11 @@ saf = "SAF_03"
     #[test]
     fn an_unattended_check_that_exhausts_its_patience_is_a_failure_of_the_suite() {
         let witness = Arc::new(FakeWitness::default());
-        let errands = FakeErrands::answering(true);
+        let runner = a_runner(true);
         let catalogue = a_rejection("none");
         let group: Vec<&Check> = catalogue.iter().collect();
 
-        let settled = a_probe(&witness, &errands).run_group(&group, None);
+        let settled = a_probe(&witness, &runner).run_group(&group, None, None);
 
         assert_eq!(
             pending(&settled),
@@ -811,11 +842,11 @@ saf = "SAF_03"
     #[test]
     fn a_click_check_that_exhausts_its_patience_is_judged_as_usual() {
         let witness = Arc::new(FakeWitness::default());
-        let errands = FakeErrands::answering(true);
+        let runner = a_runner(true);
         let catalogue = a_rejection("click");
         let group: Vec<&Check> = catalogue.iter().take(1).collect();
 
-        let settled = a_probe(&witness, &errands).run_group(&group, None);
+        let settled = a_probe(&witness, &runner).run_group(&group, None, None);
 
         assert_eq!(
             resolved(&settled),
@@ -904,5 +935,38 @@ drive = {{ mode = "v4", script = "protocol-v4" }}
         let pending = [&one, &in_ec, &unattended];
 
         assert_eq!(the_group_of(&one, &pending).len(), 1);
+    }
+
+    #[test]
+    fn a_group_whose_errand_was_already_observed_is_judged_without_launching_the_client() {
+        let witness = Arc::new(FakeWitness::default());
+        let runner = a_runner(false);
+        let catalogue = a_rejection("click");
+        let group: Vec<&Check> = catalogue.iter().collect();
+        let first = a_probe(&witness, &runner).run_group(&group[..1], None, None);
+        let observed = first.observed.expect("un rechazo terminado se guarda");
+
+        let settled = a_probe(&witness, &runner).run_group(
+            &group[1..],
+            Some(Assistance::Click),
+            Some(&observed),
+        );
+
+        assert_eq!(runner.runs(), ["v4/signwithoutaformat"]);
+        assert_eq!(resolved(&settled), [("its_twin", Outcome::Compliant)]);
+        assert_eq!(settled.observed, None);
+        assert_eq!(witness.said(), Vec::<String>::new());
+    }
+
+    #[test]
+    fn an_errand_that_exhausted_its_patience_is_not_kept_to_be_judged_again() {
+        let witness = Arc::new(FakeWitness::default());
+        let runner = a_runner(true);
+        let catalogue = a_rejection("click");
+        let group: Vec<&Check> = catalogue.iter().take(1).collect();
+
+        let settled = a_probe(&witness, &runner).run_group(&group, None, None);
+
+        assert_eq!(settled.observed, None);
     }
 }

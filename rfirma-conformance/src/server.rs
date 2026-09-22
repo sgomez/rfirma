@@ -46,7 +46,7 @@ pub(crate) struct HttpRequest {
     body: Vec<u8>,
 }
 
-pub(crate) struct Server {
+pub struct Server {
     listener: TcpListener,
     gate: std::sync::Arc<Gate>,
     build: std::sync::Arc<Build>,
@@ -118,7 +118,7 @@ fn content_type_of(name: &str) -> &'static str {
 
 impl Server {
     /// Escucha en el primer puerto libre, con un token nuevo, si la consola está compilada.
-    pub(crate) fn bind() -> Result<Self, String> {
+    pub fn bind() -> Result<Self, String> {
         let build = Build::at(Path::new(THE_CONSOLE_BUILD))?;
         let listener = THE_CONSOLE_PORTS
             .clone()
@@ -144,14 +144,14 @@ impl Server {
         })
     }
 
-    pub(crate) fn url(&self) -> String {
+    pub fn url(&self) -> String {
         format!(
             "http://127.0.0.1:{}/?token={}",
             self.gate.port, self.gate.token
         )
     }
 
-    pub(crate) fn serve(self, console: &Console) {
+    pub fn serve(self, console: &Console) {
         for stream in self.listener.incoming().filter_map(Result::ok) {
             let console = console.clone();
             let gate = std::sync::Arc::clone(&self.gate);

@@ -33,7 +33,9 @@ _Avoid_: conductor, driver, cliente publicado, sonda
 
 **Trámite**:
 Una ejecución de un guion de la sede contra el cliente y lo que se observó en ella. Varias
-comprobaciones pueden juzgar el mismo trámite.
+comprobaciones pueden juzgar el mismo trámite: se guarda en el informe con su **clave** —modo,
+guion, almacén y arnés— y no se relanza. El de una comprobación con persona no tiene clave, porque lo
+que viaja depende de lo que ella haga en el diálogo.
 _Avoid_: errand (en la interfaz), ejecución, corrida
 
 **Familia de trámite**:

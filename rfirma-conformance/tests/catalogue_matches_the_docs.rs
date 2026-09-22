@@ -4,10 +4,13 @@
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 
+use rfirma_conformance::catalogue::read_the_catalogue;
+
 #[derive(Debug, Default)]
 struct Entry {
     id: String,
     chapter: String,
+    declared: String,
     cited_cards: BTreeSet<String>,
 }
 
@@ -57,20 +60,13 @@ fn string_of(value: &toml::Value, key: &str) -> String {
         .to_owned()
 }
 
-fn entries_in(catalogue: &str) -> Vec<Entry> {
-    let parsed: toml::Table = toml::from_str(catalogue)
-        .unwrap_or_else(|error| panic!("el catálogo no es TOML válido: {error}"));
-    parsed
-        .get("check")
-        .and_then(toml::Value::as_array)
-        .expect("el catálogo debería tener entradas [[check]]")
-        .iter()
-        .map(|value| Entry {
-            id: string_of(value, "id"),
-            chapter: string_of(value, "chapter"),
-            cited_cards: cards_cited_in(&value.to_string()),
-        })
-        .collect()
+fn an_entry(id: &str, chapter: &str, declared: &str) -> Entry {
+    Entry {
+        id: id.to_owned(),
+        chapter: chapter.to_owned(),
+        declared: declared.to_owned(),
+        cited_cards: cards_cited_in(declared),
+    }
 }
 
 fn known_in(reference: &str) -> Vec<Known> {
@@ -243,14 +239,11 @@ fn known_results_that_are_wrong(
         .collect()
 }
 
-fn the_catalogue_files() -> Vec<PathBuf> {
-    tomls_in(&crate_dir().join("catalogue"))
-}
-
 fn the_catalogue() -> Vec<Entry> {
-    the_catalogue_files()
+    read_the_catalogue()
+        .unwrap_or_else(|complaint| panic!("{complaint}"))
         .iter()
-        .flat_map(|path| entries_in(&read(path)))
+        .map(|check| an_entry(&check.id, &check.chapter, &check.the_declared_text()))
         .collect()
 }
 
@@ -313,9 +306,9 @@ fn every_a1_card_is_decided_and_no_check_cites_one_that_does_not_exist() {
 #[test]
 fn every_code_of_the_error_table_is_closed_against_the_catalogue() {
     let table = saf_codes_in_the_table(&read(&the_manual().join("15-errores.md")));
-    let named: BTreeSet<String> = the_catalogue_files()
+    let named: BTreeSet<String> = the_catalogue()
         .iter()
-        .flat_map(|path| saf_codes_named_in(&read(path)))
+        .flat_map(|entry| saf_codes_named_in(&entry.declared))
         .collect();
 
     assert_eq!(
@@ -353,7 +346,7 @@ fn every_known_result_of_the_reference_names_a_check_of_the_catalogue_and_a_card
 
 #[test]
 fn a_chapter_without_a_file_is_caught_and_named() {
-    let entries = entries_in("[[check]]\nid = \"a_one\"\nchapter = \"99\"\n");
+    let entries = [an_entry("a_one", "99", "")];
     let chapters: BTreeSet<String> = ["05"].map(str::to_owned).into();
 
     assert_eq!(
@@ -377,7 +370,7 @@ fn a_code_of_the_table_the_catalogue_never_names_is_caught_and_named() {
 
 #[test]
 fn a_known_result_outside_the_catalogue_the_vocabulary_or_the_annex_is_caught_and_named() {
-    let entries = entries_in("[[check]]\nid = \"a_one\"\n");
+    let entries = [an_entry("a_one", "05", "")];
     let known = known_in(
         "[[known]]\nid = \"a_one\"\noutcome = \"no-observable\"\ncause = \"BUG-01\"\nnote = \"x\"\n\n\
          [[known]]\nid = \"a_two\"\noutcome = \"no-conforme\"\ncause = \"ADR-0005\"\nnote = \"y\"\n",
@@ -396,7 +389,7 @@ fn a_known_result_outside_the_catalogue_the_vocabulary_or_the_annex_is_caught_an
 
 #[test]
 fn a_cited_card_that_does_not_exist_and_an_undecided_one_are_both_caught_and_named() {
-    let entries = entries_in("[[check]]\nid = \"a_one\"\ncause = \"BUG-99\"\n");
+    let entries = [an_entry("a_one", "05", "Lo explica BUG-99.")];
     let annex = "### BUG-01: Uno\n* **No observable:** no llega al cable.\n\n### BUG-02: Dos\n";
     let cards = a1_cards_in(annex);
     let existing: BTreeSet<String> = cards.iter().map(|card| card.id.clone()).collect();

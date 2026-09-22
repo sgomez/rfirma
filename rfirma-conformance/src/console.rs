@@ -15,11 +15,11 @@ use ts_rs::TS;
 use crate::catalogue::{Assistance, Check};
 use crate::checks::{
     the_greeting_that_stops, the_greetings_already_failed, the_group_of,
-    the_reason_behind_a_failed_greeting, Settlement,
+    the_reason_behind_a_failed_greeting, Settled, Settlement,
 };
 use crate::client::{resolve, the_deduced_coordinates, Client, ClientKind, DeducedCoordinates};
 use crate::comparison::{compare, Comparison};
-use crate::errand::NodeErrands;
+use crate::errand::{ErrandKey, ErrandRunner, NodeRunner, ObservedErrand};
 use crate::livelog::{CheckLog, LiveLogSink};
 use crate::outcome::CheckState;
 use crate::report::{HeaderCoordinates, Report, THE_REPORT_FILE};
@@ -99,7 +99,7 @@ pub(crate) struct NewReport {
 }
 
 #[derive(Clone)]
-pub(crate) struct Console {
+pub struct Console {
     shared: Arc<Shared>,
 }
 
@@ -110,6 +110,7 @@ struct ConsoleWitness {
 
 struct Shared {
     catalogue: Vec<Check>,
+    runner: Arc<dyn ErrandRunner>,
     reports_dir: PathBuf,
     patience: Duration,
     session: Mutex<Session>,
@@ -164,10 +165,20 @@ impl Session {
 }
 
 impl Console {
-    pub(crate) fn new(catalogue: Vec<Check>, reports_dir: PathBuf, patience: Duration) -> Self {
+    pub fn new(catalogue: Vec<Check>, reports_dir: PathBuf, patience: Duration) -> Self {
+        Self::running_errands_with(catalogue, reports_dir, patience, Arc::new(NodeRunner))
+    }
+
+    fn running_errands_with(
+        catalogue: Vec<Check>,
+        reports_dir: PathBuf,
+        patience: Duration,
+        runner: Arc<dyn ErrandRunner>,
+    ) -> Self {
         Self {
             shared: Arc::new(Shared {
                 catalogue,
+                runner,
                 reports_dir,
                 patience,
                 session: Mutex::new(Session::default()),
@@ -178,7 +189,7 @@ impl Console {
     }
 
     /// Arranca el hilo que corre, de una en una, lo que se vaya encolando.
-    pub(crate) fn start_the_runner(&self) {
+    pub fn start_the_runner(&self) {
         let shared = Arc::clone(&self.shared);
         spawn(move || loop {
             run_the_next_group(&shared);
@@ -619,7 +630,12 @@ impl Witness for ConsoleWitness {
 }
 
 fn run_the_next_group(shared: &Arc<Shared>) {
-    let (group, probe, opening) = {
+    let Next {
+        group,
+        probe,
+        opening,
+        already,
+    } = {
         let mut session = shared.lock();
         loop {
             match take_the_next_group(shared, &mut session) {
@@ -637,24 +653,28 @@ fn run_the_next_group(shared: &Arc<Shared>) {
         .iter()
         .filter_map(|id| shared.catalogue.iter().find(|check| &check.id == id))
         .collect();
-    let settled = catch_unwind(AssertUnwindSafe(|| probe.run_group(&checks, opening)))
-        .unwrap_or_else(|panic| {
-            let why = panic
-                .downcast_ref::<String>()
-                .cloned()
-                .or_else(|| panic.downcast_ref::<&str>().map(|text| (*text).to_owned()))
-                .unwrap_or_default();
-            probe.witness.harness(&format!("el arnés reventó: {why}"));
-            checks
-                .iter()
-                .map(|check| Settlement::Pending {
-                    id: check.id.clone(),
-                    why: format!("el arnés reventó: {why}"),
-                })
-                .collect()
-        });
+    let settled = catch_unwind(AssertUnwindSafe(|| {
+        probe.run_group(&checks, opening, already.as_ref())
+    }))
+    .unwrap_or_else(|panic| {
+        let why = panic
+            .downcast_ref::<String>()
+            .cloned()
+            .or_else(|| panic.downcast_ref::<&str>().map(|text| (*text).to_owned()))
+            .unwrap_or_default();
+        probe.witness.harness(&format!("el arnés reventó: {why}"));
+        checks
+            .iter()
+            .map(|check| Settlement::Pending {
+                id: check.id.clone(),
+                why: format!("el arnés reventó: {why}"),
+            })
+            .collect::<Vec<_>>()
+            .into()
+    });
     let mut session = shared.lock();
-    settle(&mut session, &group, settled, &probe);
+    let key = checks.first().and_then(|head| ErrandKey::of(head));
+    settle(&mut session, &group, key, already, settled, &probe);
     session.running.clear();
     session.started = None;
     session.log = None;
@@ -710,11 +730,17 @@ fn stop_what_failed_greetings_stop(shared: &Shared, session: &mut Session) {
     session.reasons.extend(stopped);
 }
 
-/// Saca de la cola lo siguiente que hay que correr, lo marca en curso y dice si abre tramo.
-fn take_the_next_group(
-    shared: &Arc<Shared>,
-    session: &mut Session,
-) -> Option<(Vec<String>, Probe, Option<Assistance>)> {
+/// Lo siguiente que corre: el grupo, con qué, si abre tramo y el trámite ya observado que lo juzga.
+struct Next {
+    group: Vec<String>,
+    probe: Probe,
+    opening: Option<Assistance>,
+    already: Option<ObservedErrand>,
+}
+
+/// Saca de la cola lo siguiente que hay que correr, lo marca en curso y dice si abre tramo; lo que
+/// se juzga con un trámite ya observado no abre ninguno, porque no lanza el cliente.
+fn take_the_next_group(shared: &Arc<Shared>, session: &mut Session) -> Option<Next> {
     stop_what_failed_greetings_stop(shared, session);
     while let Some(queued) = session.queue.pop_front() {
         let (Some(client), Some(open)) = (&session.client, &session.report) else {
@@ -739,8 +765,14 @@ fn take_the_next_group(
             .map(|check| check.id.clone())
             .collect();
         session.queue.retain(|other| !group.contains(&other.id));
-        let opening = the_opening(session.tranche, head.assistance());
-        session.tranche = Some(head.assistance());
+        let already = ErrandKey::of(head).and_then(|key| open.report.observed(&key).cloned());
+        let opening = if already.is_none() {
+            let opening = the_opening(session.tranche, head.assistance());
+            session.tranche = Some(head.assistance());
+            opening
+        } else {
+            None
+        };
         let profile = client.profile(head.store);
         let probe = Probe {
             client: profile.launcher.clone(),
@@ -750,24 +782,44 @@ fn take_the_next_group(
             witness: Arc::new(ConsoleWitness {
                 shared: Arc::clone(shared),
             }),
-            errands: Arc::new(NodeErrands),
+            runner: Arc::clone(&shared.runner),
         };
-        session.log = CheckLog::open(&log_path_of(&dir, &group[0])).ok();
+        session.log = already
+            .is_none()
+            .then(|| CheckLog::open(&log_path_of(&dir, &group[0])).ok())
+            .flatten();
         session.running = group.clone();
         session.started = Some(Instant::now());
         shared.publish(session);
-        return Some((group, probe, opening));
+        return Some(Next {
+            group,
+            probe,
+            opening,
+            already,
+        });
     }
     None
 }
 
-/// Apunta en el informe lo que dejó el grupo, y copia a cada miembro el registro y las tramas del
-/// trámite que compartieron.
-fn settle(session: &mut Session, group: &[String], settled: Vec<Settlement>, probe: &Probe) {
+/// Apunta en el informe lo que dejó el grupo y el trámite nuevo con su clave, y copia a cada
+/// miembro el registro y las tramas del trámite que compartieron.
+fn settle(
+    session: &mut Session,
+    group: &[String],
+    key: Option<ErrandKey>,
+    already: Option<ObservedErrand>,
+    settled: Settled,
+    probe: &Probe,
+) {
     let Some(open) = session.report.as_mut() else {
         return;
     };
-    for settlement in settled {
+    if let (Some(key), Some(observed)) = (key, settled.observed) {
+        if let Err(complaint) = open.report.observe(key, observed) {
+            probe.witness.harness(&complaint);
+        }
+    }
+    for settlement in settled.settlements {
         match settlement {
             Settlement::Resolved {
                 id,
@@ -785,11 +837,14 @@ fn settle(session: &mut Session, group: &[String], settled: Vec<Settlement>, pro
             }
         }
     }
-    let head = &group[0];
-    for member in &group[1..] {
-        let _ = std::fs::copy(log_path_of(&open.dir, head), log_path_of(&open.dir, member));
+    let source = already.map_or_else(|| group[0].clone(), |observed| observed.transcribed_in);
+    for member in group.iter().filter(|member| **member != source) {
         let _ = std::fs::copy(
-            transcript_path_of(&open.dir, head),
+            log_path_of(&open.dir, &source),
+            log_path_of(&open.dir, member),
+        );
+        let _ = std::fs::copy(
+            transcript_path_of(&open.dir, &source),
             transcript_path_of(&open.dir, member),
         );
     }
@@ -865,6 +920,7 @@ fn kill(pid: u32) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::errand::fake::RecordedRunner;
 
     #[test]
     fn a_report_name_is_one_directory_and_never_a_way_out() {
@@ -1081,5 +1137,189 @@ drive = { mode = "v4", script = "protocol-v4" }
             event_frame("log", &serde_json::json!({"line": "x"})),
             "event: log\ndata: {\"line\":\"x\"}\n\n"
         );
+    }
+
+    const A_BATCH_WITH_THREE_KEYS: &str = r#"
+[[check]]
+id = "a_rejection"
+set = "errores"
+chapter = "15"
+citation = "A.java:1"
+statement = "Se rechaza."
+drive = { mode = "v4", script = "signwithoutaformat" }
+assistance = "none"
+saf = "SAF_03"
+
+[[check]]
+id = "its_twin"
+set = "parametros"
+chapter = "15"
+citation = "A.java:2"
+statement = "También."
+drive = { mode = "v4", script = "signwithoutaformat" }
+assistance = "none"
+saf = "SAF_03"
+
+[[check]]
+id = "the_same_in_ec"
+set = "errores"
+chapter = "15"
+citation = "A.java:3"
+statement = "En curva elíptica."
+drive = { mode = "v4", script = "signwithoutaformat" }
+assistance = "none"
+store = "ec"
+saf = "SAF_03"
+
+[[check]]
+id = "an_echo"
+set = "errores"
+chapter = "05"
+citation = "A.java:4"
+statement = "Un eco."
+drive = { mode = "v4", script = "protocol-v4" }
+assistance = "none"
+no_answer = true
+
+[[check]]
+id = "the_same_with_a_click"
+set = "errores"
+chapter = "15"
+citation = "A.java:5"
+statement = "Lo mismo, en el tramo de clic."
+drive = { mode = "v4", script = "signwithoutaformat" }
+assistance = "click"
+saf = "SAF_03"
+"#;
+
+    fn a_console_replaying(runner: &Arc<RecordedRunner>) -> (Console, tempfile::TempDir) {
+        let dir = tempfile::tempdir().unwrap();
+        let catalogue = crate::catalogue::the_catalogue_in(A_BATCH_WITH_THREE_KEYS).unwrap();
+        a_report_in(dir.path(), "a-report", ClientKind::Rfirma, &catalogue);
+        let console = Console::running_errands_with(
+            catalogue,
+            dir.path().to_owned(),
+            Duration::from_secs(1),
+            Arc::clone(runner) as Arc<dyn ErrandRunner>,
+        );
+        console.shared.lock().client = Some(Client {
+            kind: ClientKind::Rfirma,
+            binary: PathBuf::from("/usr/bin/rfirma"),
+            profiles: crate::client::Store::ALL
+                .into_iter()
+                .map(|store| crate::client::Profile {
+                    store,
+                    launcher: dir.path().join(store.name()).join("launch-subject"),
+                    trust_root: dir.path().join("root.pem"),
+                })
+                .collect(),
+        });
+        console.open_report("a-report".to_owned()).unwrap();
+        (console, dir)
+    }
+
+    fn a_rejecting_runner() -> Arc<RecordedRunner> {
+        RecordedRunner::replaying(&[(
+            "signwithoutaformat",
+            crate::errand::the_recorded("a-rejection-with-saf-03"),
+        )])
+    }
+
+    fn run_the_queue(console: &Console) {
+        while !console.shared.lock().queue.is_empty() {
+            run_the_next_group(&console.shared);
+        }
+    }
+
+    fn the_state_of(console: &Console, id: &str) -> Option<CheckState> {
+        let session = console.shared.lock();
+        session.report.as_ref().unwrap().report.state_of(id)
+    }
+
+    #[test]
+    fn a_batch_launches_the_client_once_per_distinct_errand_key() {
+        let runner = a_rejecting_runner();
+        let (console, _dir) = a_console_replaying(&runner);
+
+        console
+            .enqueue(Request::Tranches {
+                tranches: Tranches::All,
+            })
+            .unwrap();
+        run_the_queue(&console);
+
+        assert_eq!(
+            runner.runs(),
+            [
+                "v4/signwithoutaformat",
+                "v4/signwithoutaformat",
+                "v4/protocol-v4"
+            ]
+        );
+        for id in [
+            "a_rejection",
+            "its_twin",
+            "the_same_in_ec",
+            "the_same_with_a_click",
+        ] {
+            assert_eq!(
+                the_state_of(&console, id),
+                Some(CheckState::Resolved(crate::outcome::Outcome::Compliant)),
+                "{id}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_check_whose_errand_is_already_in_the_report_does_not_launch_the_client() {
+        let runner = a_rejecting_runner();
+        let (console, dir) = a_console_replaying(&runner);
+        console
+            .enqueue(Request::Check {
+                check: "a_rejection".to_owned(),
+            })
+            .unwrap();
+        run_the_queue(&console);
+
+        console
+            .enqueue(Request::Check {
+                check: "the_same_with_a_click".to_owned(),
+            })
+            .unwrap();
+        run_the_queue(&console);
+
+        assert_eq!(runner.runs(), ["v4/signwithoutaformat"]);
+        assert_eq!(
+            the_state_of(&console, "the_same_with_a_click"),
+            Some(CheckState::Resolved(crate::outcome::Outcome::Compliant))
+        );
+        let transcripts = dir.path().join("a-report");
+        assert_eq!(
+            std::fs::read_to_string(transcript_path_of(&transcripts, "the_same_with_a_click"))
+                .unwrap(),
+            std::fs::read_to_string(transcript_path_of(&transcripts, "a_rejection")).unwrap()
+        );
+    }
+
+    #[test]
+    fn the_errand_observed_in_a_session_is_reused_after_reopening_the_report() {
+        let runner = a_rejecting_runner();
+        let (console, _dir) = a_console_replaying(&runner);
+        console
+            .enqueue(Request::Check {
+                check: "a_rejection".to_owned(),
+            })
+            .unwrap();
+        run_the_queue(&console);
+
+        console.open_report("a-report".to_owned()).unwrap();
+        console
+            .enqueue(Request::Check {
+                check: "its_twin".to_owned(),
+            })
+            .unwrap();
+        run_the_queue(&console);
+
+        assert_eq!(runner.runs().len(), 1);
     }
 }
