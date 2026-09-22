@@ -190,6 +190,11 @@ manejadoras (`AOSigner`):
 | `NONE`, `PKCS1`, `PKCS#1` | `es.gob.afirma.core.signers.AOPkcs1Signer` | No |
 | `NONEtri` | `es.gob.afirma.core.signers.AOPkcs1TriPhaseSigner` | No |
 
+`CMS/PKCS#7`, `XMLDSig` (y sus variantes), `ODF` y `OOXML` siguen en la factoría por
+retrocompatibilidad: el manual del integrador declara su uso desaconsejado y sin soporte (MCF,
+§8, pág. 97). `NONE` no está en esa lista: el manual lo documenta como firma PKCS#1 sin formato
+(pág. 98) y lo admite en el `format` del lote.
+
 Si se indica un formato no contemplado en la tabla y que no sea `"auto"`,
 `AOSignerFactory.getSigner(format)` devuelve `null`, lo que genera inmediatamente
 el error `SAF_06` (`ERROR_UNSUPPORTED_FORMAT`)

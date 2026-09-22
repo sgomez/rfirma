@@ -35,6 +35,15 @@ Busca en este índice, y si aun así necesitas el fichero, entra con
 | 0024 | Un proceso por trámite de sede, y el escritorio aparte |
 | 0025 | `selectcert` no abre sesión en el token: sin PIN en una operación que no firma |
 
+Los ADR que solo afectan a la suite de conformidad viven en `rfirma-conformance/docs/adr/` y
+comparten la numeración: el siguiente ADR, esté donde esté, toma el número libre más alto.
+
+| ADR | Sobre qué manda |
+|---|---|
+| 0026 | La exigencia es lo que pretende el código de AutoFirma; el manual solo excluye |
+| 0027 | Dos sedes: la publicada para lo de punta a punta, la escrita a mano para la gramática |
+| 0028 | Un clic por trámite: la suite quita el PIN, pero no esconde la elección del certificado |
+
 ## `research/` — mediciones (por qué algo es como es)
 
 Se consultan **solo si vas a cambiar la decisión que sostienen**. Son los
