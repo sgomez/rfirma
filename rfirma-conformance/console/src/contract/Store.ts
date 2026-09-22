@@ -2,6 +2,6 @@
 
 /**
  * El almacén de un perfil aislado: `rsa` y `ec`, una NSS sin contraseña con un solo certificado;
- * `token`, SoftHSM con PIN.
+ * `token`, SoftHSM con PIN; `several` y `expired`, NSS con varios, para los filtros.
  */
-export type Store = "rsa" | "ec" | "token";
+export type Store = "rsa" | "ec" | "token" | "several" | "expired";
