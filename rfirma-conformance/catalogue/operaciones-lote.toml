@@ -33,6 +33,7 @@ Un lote remoto se firma en tres fases contra los servlets que declara la petici�
 en batchpresignerurl y el postfirmador en batchpostsignerurl.
 """
 drive = { mode = "v4", script = "batch" }
+condition = "through-both-servlets"
 warning = "Van a aparecer el diálogo de certificado y el del PIN del token: la sede hace de prefirmador y de postfirmador del lote."
 
 [[check]]
@@ -93,6 +94,7 @@ La prefirma del lote JSON llega al prefirmador con el lote entero en json y la c
 en certs.
 """
 drive = { mode = "v4", script = "batch" }
+condition = "the-presigner-gets-the-batch-and-the-chain"
 warning = "Van a aparecer el diálogo de certificado y el del PIN del token: la sede hace de prefirmador y de postfirmador del lote."
 
 [[check]]
@@ -105,6 +107,7 @@ Cada firma que el prefirmador devolvió llega al postfirmador en tridata con su 
 su PRE la que lo pidió con NEED_PRE=true.
 """
 drive = { mode = "v4", script = "batch" }
+condition = "the-postsigner-gets-every-item-with-pk1"
 warning = "Van a aparecer el diálogo de certificado y el del PIN del token: la sede hace de prefirmador y de postfirmador del lote."
 
 [[check]]
@@ -117,6 +120,7 @@ Si la prefirma falla sólo para algunos documentos, el lote sigue: esos document
 postfirmador marcados con su error en el lote, y sólo los demás se firman con PK1.
 """
 drive = { mode = "v4", script = "batchpartial" }
+condition = "the-failure-marked-for-the-postsigner"
 warning = "Van a aparecer el diálogo de certificado y el del PIN del token: la sede hace de prefirmador y de postfirmador del lote."
 
 [[check]]
@@ -129,6 +133,7 @@ Si la prefirma no devuelve datos trifásicos sino sólo errores, el lote no lleg
 sede recibe esos errores como resultado.
 """
 drive = { mode = "v4", script = "batchallfailed" }
+condition = "the-errors-without-postsigning"
 warning = "Va a aparecer el diálogo de certificado y, si el cliente lo pide, el del PIN del token: la sede hace de prefirmador del lote."
 
 [[check]]
@@ -141,6 +146,7 @@ El lote en el XML heredado se firma en tres fases como el JSON: el lote en xml y
 van al prefirmador, y las firmas con PK1 en tridata al postfirmador.
 """
 drive = { mode = "v4", script = "batchxml" }
+condition = "through-both-servlets"
 warning = "Van a aparecer el diálogo de certificado y el del PIN del token: la sede hace de prefirmador y de postfirmador del lote."
 
 [[check]]
@@ -153,6 +159,7 @@ La respuesta del lote XML es el documento <signs> con un <signresult> por firma 
 postfirmador, tal cual y sin reinterpretarlo.
 """
 drive = { mode = "v4", script = "batchxml" }
+condition = "the-signs-document-as-it-came"
 warning = "Van a aparecer el diálogo de certificado y el del PIN del token: la sede hace de prefirmador y de postfirmador del lote."
 
 [[check]]
@@ -165,6 +172,7 @@ El resultado del lote local trae un elemento por documento, y cada documento fir
 DONE_AND_SAVED con su firma completa en Base64 en signature.
 """
 drive = { mode = "v4", script = "batchlocal" }
+condition = "every-item-signed"
 needs = ["espera:90"]
 warning = "Van a aparecer el diálogo de certificado y el del PIN del token, y después se firman tres documentos en el equipo."
 
@@ -178,6 +186,7 @@ Cada documento del lote local se firma en el formato que declara, y el que no de
 hereda el del lote.
 """
 drive = { mode = "v4", script = "batchlocal" }
+condition = "each-item-in-its-format"
 needs = ["espera:90"]
 warning = "Van a aparecer el diálogo de certificado y el del PIN del token, y después se firman tres documentos en el equipo."
 
@@ -191,6 +200,7 @@ En el lote local, datareference son los datos del documento en Base64 y nunca un
 URL no se descarga, y el documento no sale firmado.
 """
 drive = { mode = "v4", script = "batchlocalurl" }
+condition = "the-url-neither-fetched-nor-signed"
 warning = "Puede aparecer el diálogo de certificado y el del PIN del token antes de que el lote se rechace."
 
 [[check]]
@@ -203,6 +213,7 @@ La suboperación cosign del lote local cofirma el documento, que ya es una firma
 DONE_AND_SAVED.
 """
 drive = { mode = "v4", script = "batchlocalcosign" }
+condition = "the-suboperation-done"
 warning = "Van a aparecer el diálogo de certificado y el del PIN del token."
 
 [[check]]
@@ -215,6 +226,7 @@ La suboperación countersign del lote local contrafirma el documento, que ya es 
 devuelve como DONE_AND_SAVED.
 """
 drive = { mode = "v4", script = "batchlocalcountersign" }
+condition = "the-suboperation-done"
 warning = "Van a aparecer el diálogo de certificado y el del PIN del token."
 
 [[check]]
@@ -242,6 +254,7 @@ Con format=auto en el lote local, el formato de cada documento se deduce de su c
 para un PDF, XAdES para un XML y CAdES para el resto.
 """
 drive = { mode = "v4", script = "batchlocalauto" }
+condition = "each-item-in-its-format"
 needs = ["espera:90"]
 warning = "Van a aparecer el diálogo de certificado y el del PIN del token, y después se firman tres documentos en el equipo."
 
@@ -255,6 +268,7 @@ Con stoponerror=true, el primer documento que falla queda como ERROR_PRE, los ya
 SKIPPED sin su firma y los que faltaban se saltan.
 """
 drive = { mode = "v4", script = "batchlocalillegible" }
+condition = "the-signed-rolled-back"
 needs = ["espera:90"]
 warning = "Van a aparecer el diálogo de certificado y el del PIN del token; uno de los documentos del lote es ilegible a propósito."
 
@@ -267,6 +281,7 @@ statement = """
 Con stoponerror=false, el documento que falla queda como ERROR_PRE y los demás se firman igual.
 """
 drive = { mode = "v4", script = "batchlocalcontinuing" }
+condition = "the-rest-signed"
 needs = ["espera:90"]
 warning = "Van a aparecer el diálogo de certificado y el del PIN del token; uno de los documentos del lote es ilegible a propósito."
 
@@ -280,6 +295,7 @@ El algoritmo del lote local es el de resumen, y la firma lo completa con el tipo
 certificado elegido: SHA256 con una clave de curva elíptica firma con ECDSA.
 """
 drive = { mode = "v4", script = "batchlocalecdsa" }
+condition = "the-algorithm-of-the-key"
 needs = ["almacén:rfirma-test-ecc"]
 warning = "Van a aparecer el diálogo de certificado y el del PIN: elige el certificado de curva elíptica (token rfirma-test-ecc, PIN 1234)."
 
@@ -293,6 +309,7 @@ Por el canal local, la sede recibe como resultado del lote el que devolvió el p
 cual.
 """
 drive = { mode = "v4", script = "batch" }
+condition = "the-result-as-it-came"
 warning = "Van a aparecer el diálogo de certificado y el del PIN del token: la sede hace de prefirmador y de postfirmador del lote."
 
 [[check]]
@@ -316,6 +333,7 @@ Con needcert=true, la respuesta del lote trae detrás del resultado, separado po
 del firmante en DER.
 """
 drive = { mode = "v4", script = "batch" }
+condition = "the-certificate-in-the-answer"
 warning = "Van a aparecer el diálogo de certificado y el del PIN del token: la sede hace de prefirmador y de postfirmador del lote."
 
 [[check]]

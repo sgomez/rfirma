@@ -23,7 +23,7 @@ pub(crate) const THE_EXHAUSTED_PATIENCE: &str = "timeout";
 
 #[derive(Debug, Clone)]
 pub(crate) struct ProtocolConditionResult {
-    pub(crate) id: String,
+    pub(crate) name: String,
     pub(crate) outcome: Outcome,
     pub(crate) observation: Option<String>,
 }
@@ -136,7 +136,7 @@ pub(crate) fn the_published_client() -> PathBuf {
 }
 
 /// El conductor de Node que le monta el navegador mínimo alrededor.
-fn the_driver() -> PathBuf {
+pub(crate) fn the_driver() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../testdata/site-driver/driver.mjs")
 }
 
@@ -319,7 +319,7 @@ fn the_protocol_condition_in(event: &str) -> Option<ProtocolConditionResult> {
         return None;
     }
     let value: serde_json::Value = serde_json::from_str(event).ok()?;
-    let id = value.get("id")?.as_str()?.to_owned();
+    let name = value.get("name")?.as_str()?.to_owned();
     let outcome_str = value.get("verdict")?.as_str()?;
     let outcome = match outcome_str {
         "compliant" => Outcome::Compliant,
@@ -331,7 +331,7 @@ fn the_protocol_condition_in(event: &str) -> Option<ProtocolConditionResult> {
         .and_then(|v| v.as_str())
         .map(str::to_owned);
     Some(ProtocolConditionResult {
-        id,
+        name,
         outcome,
         observation,
     })
@@ -399,9 +399,9 @@ mod tests {
 
     #[test]
     fn reads_a_protocol_condition_event() {
-        let event = r#"{"event":"condition","id":"v4_echo_greeting","verdict":"compliant","observation":"OK"}"#;
+        let event = r#"{"event":"condition","name":"the-echo-answers-ok","verdict":"compliant","observation":"OK"}"#;
         let condition = the_protocol_condition_in(event).expect("debería leer la condición");
-        assert_eq!(condition.id, "v4_echo_greeting");
+        assert_eq!(condition.name, "the-echo-answers-ok");
         assert_eq!(condition.outcome, Outcome::Compliant);
         assert_eq!(condition.observation.as_deref(), Some("OK"));
     }

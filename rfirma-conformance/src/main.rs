@@ -9,6 +9,7 @@ mod console;
 mod errand;
 mod harness;
 mod livelog;
+mod manifest;
 mod outcome;
 mod report;
 mod report_view;

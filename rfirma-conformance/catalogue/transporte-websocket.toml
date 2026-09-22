@@ -11,6 +11,7 @@ El cliente JavaScript selecciona 3 puertos aleatorios únicos (ports=p1,p2,p3) y
 el primer puerto libre de la lista.
 """
 drive = { mode = "v4", script = "protocol-v4" }
+condition = "a-candidate-port-bound"
 
 [[check]]
 id = "v4_echo_greeting"
@@ -21,6 +22,7 @@ statement = """
 La petición de eco echo=-idsession=<idSession>@EOF recibe la respuesta de texto OK.
 """
 drive = { mode = "v4", script = "protocol-v4" }
+condition = "the-echo-with-its-session-answers-ok"
 
 [[check]]
 id = "v4_channel_credential_present"
@@ -32,6 +34,7 @@ El mensaje que incluye el identificador de sesión coincidente con el negociado 
 aceptado para su procesamiento.
 """
 drive = { mode = "v4", script = "protocol-v4" }
+condition = "the-echo-with-its-session-answers-ok"
 
 [[check]]
 id = "v4_channel_credential_absent"
@@ -43,6 +46,7 @@ Si el mensaje no incluye el identificador de sesión o este difiere del negociad
 servidor responde con SAF_46.
 """
 drive = { mode = "v4", script = "protocol-v4" }
+condition = "the-echo-without-a-session-answers-saf-46"
 
 [[check]]
 id = "v4_channel_credential_malformed"
@@ -54,6 +58,7 @@ Si idsession en la URL de arranque contiene caracteres no alfanuméricos, se anu
 rechaza los mensajes con SAF_46.
 """
 drive = { mode = "v4", script = "protocol-v4-malformed-id" }
+condition = "a-malformed-session-binds-nothing"
 
 [[check]]
 id = "v4_single_client"
@@ -65,6 +70,7 @@ La primera conexión se fija en wsClient; el cierre de conexiones secundarias no
 aplicación, que sólo termina cuando se cierra el cliente principal.
 """
 drive = { mode = "v4", script = "protocol-v4" }
+condition = "a-second-client-leaves-the-channel-alive"
 
 [[check]]
 id = "v3_ports_default_fixed"
@@ -76,6 +82,7 @@ En versión 3, la ausencia de ports en la URL de arranque asigna por defecto el 
 (DEFAULT_WEBSOCKET_PORT).
 """
 drive = { mode = "v3", script = "protocol-v3" }
+condition = "the-fixed-port-bound"
 
 [[check]]
 id = "v3_echo_greeting"
@@ -87,6 +94,7 @@ En versión 3, cualquier mensaje que empiece por echo= responde inmediatamente O
 identificador de sesión.
 """
 drive = { mode = "v3", script = "protocol-v3" }
+condition = "a-bare-echo-answers-ok"
 
 [[check]]
 id = "v3_channel_credential_ignored"
@@ -98,6 +106,7 @@ En versión 3, el servidor no valida el identificador de sesión en los mensajes
 SAF_46.
 """
 drive = { mode = "v3", script = "protocol-v3" }
+condition = "an-echo-without-a-session-is-not-refused"
 
 [[check]]
 id = "v3_single_client"
@@ -109,6 +118,7 @@ En versión 3, el cierre de una conexión secundaria no termina la aplicación; 
 sigue activo.
 """
 drive = { mode = "v3", script = "protocol-v3" }
+condition = "a-second-client-leaves-the-channel-alive"
 
 [[check]]
 id = "the_v4_channel_answers_saf_47_to_an_origin_that_is_not_127_0_0_1"

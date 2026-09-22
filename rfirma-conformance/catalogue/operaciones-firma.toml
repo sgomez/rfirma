@@ -176,6 +176,7 @@ La respuesta de firma entrega el certificado del firmante y la firma como compon
 como un único bloque que la sede tenga que despiezar.
 """
 drive = { mode = "v4", script = "signcades" }
+condition = "certificate-and-signature-apart"
 
 [[check]]
 id = "the_signature_response_adds_extradata_as_a_third_component"
@@ -332,6 +333,7 @@ XAdES aplica la cadena de transformaciones que declaran xmlTransforms y sus clav
 firma que vuelve las declara.
 """
 drive = { mode = "v4", script = "signxadeswithatransform" }
+condition = "the-transform-declared"
 warning = "Van a aparecer el diálogo de certificado y el del PIN del token."
 
 [[check]]
@@ -368,4 +370,5 @@ CAdES-ASiC-S fuerza el modo explícito y devuelve un contenedor ZIP con el docum
 desprendida dentro, no la firma suelta.
 """
 drive = { mode = "v4", script = "signcadesasics" }
+condition = "a-zip-container"
 warning = "Van a aparecer el diálogo de certificado y el del PIN del token."

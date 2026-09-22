@@ -94,6 +94,7 @@ La respuesta de selectcert es el certificado elegido y nada más: uno solo, codi
 URL-safe, sin firma ni campos añadidos.
 """
 drive = { mode = "v4", script = "selectcert" }
+condition = "a-certificate-alone"
 
 [[check]]
 id = "selectcert_needs_neither_data_nor_format_nor_algorithm"
@@ -195,6 +196,7 @@ load pide qué fichero cargar y responde su nombre junto a su contenido, separad
 que el protocolo fija.
 """
 drive = { mode = "v4", script = "load" }
+condition = "the-name-next-to-the-content"
 harness = "interactive_file_load"
 needs = ["persona"]
 question = "¿se pidió elegir el fichero a cargar? [s/n]"
@@ -210,6 +212,7 @@ Con multiload, la carga admite elegir varios ficheros y la respuesta trae cada u
 su contenido, separados por el delimitador que el protocolo fija.
 """
 drive = { mode = "v4", script = "multiload" }
+condition = "every-file-apart"
 harness = "interactive_file_load"
 needs = ["persona"]
 question = "¿se pudieron elegir varios ficheros a la vez? [s/n]"
