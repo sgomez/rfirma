@@ -452,7 +452,7 @@ Para sortear esta limitación en el transporte por servidor intermedio en ordena
 
 ### 5.4 Divergencia de rFirma
 
-rFirma no reutiliza el certificado fijado sin preguntar (ADR-0010). Con `sticky=true`, `selectcert` abre siempre la ventana de consentimiento, y el certificado fijado solo llega preseleccionado; lo mismo en `batch` y en el lote local. El certificado fijado vive en la memoria del proceso de sede que atiende el trámite y muere con él: no se comparte con otro trámite ni se guarda en disco. Si no hay ninguno fijado en esa sesión, la fila preseleccionada es la del último certificado usado en el escritorio. `resetsticky` olvida solo el certificado fijado en la sesión, nunca el último certificado usado del escritorio.
+rFirma no reutiliza el certificado fijado sin preguntar (ADR-0010). Con `sticky=true`, `selectcert` abre siempre la ventana de consentimiento, y el certificado fijado solo llega preseleccionado; lo mismo en `batch` y en el lote local. El certificado fijado vive en la memoria del proceso de sede que atiende el trámite y muere con él: no se comparte con otro trámite ni se guarda en disco. Como rFirma arranca un proceso por invocación `afirma://`, en la práctica la sesión es esa invocación. Si no hay ninguno fijado en esa sesión, la fila preseleccionada es la del último certificado usado en el escritorio. `resetsticky` olvida solo el certificado fijado en la sesión, nunca el último certificado usado del escritorio.
 
 En la matriz de 5.2, la primera fila es la que cambia: rFirma no omite el diálogo. En la suite de conformidad es una desviación deliberada: la comprobación `a_pinned_certificate_is_asked_for_once_and_again_when_released` sale NO CONFORME para rFirma.
 
