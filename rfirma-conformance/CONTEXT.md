@@ -40,6 +40,16 @@ _Avoid_: errand (en la interfaz), ejecución, corrida
 El camino por el que un guion llega al cliente: el eco v4 en crudo, el canal de servicio o una
 operación de punta a punta por la sede publicada. La declara el guion, no la comprobación.
 
+**Condición**:
+Lo que un guion de la sede mide durante el trámite y emite con un nombre propio de ese guion, no
+con el de una comprobación. La comprobación nombra la condición que espera; si no llega, su
+resultado es NO OBSERVABLE.
+
+**Manifiesto**:
+Lo que la sede publica de sí misma: sus modos y sus guiones, cada uno con su sede, su familia de
+trámite y sus condiciones, y lo que solo usa el banco de la aplicación. El catálogo se valida contra
+él al arrancar.
+
 **Saludo**:
 La comprobación que abre una familia de trámite: si falla, no se corre ninguna comprobación de su
 familia, sea del conjunto que sea. La familia de punta a punta tiene dos: uno sin ventana, que abre

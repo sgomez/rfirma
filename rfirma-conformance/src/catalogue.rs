@@ -8,6 +8,7 @@ use std::time::Duration;
 use serde::{Deserialize, Deserializer};
 
 use crate::harness::{the_harness_named, Harness};
+use crate::manifest::{Manifest, Site};
 
 /// El vocabulario cerrado de `set`, en el orden en que se leen sus ficheros.
 pub(crate) const THE_SETS: &[&str] = &[
@@ -50,6 +51,9 @@ pub(crate) struct Check {
     pub harness: Option<&'static Harness>,
     #[serde(default)]
     pub expects_saf: Option<String>,
+    /// La condición del manifiesto que juzga la comprobación, con el nombre que le da su guion.
+    #[serde(default)]
+    pub condition: Option<String>,
     #[serde(default)]
     pub needs: Vec<String>,
     #[serde(default)]
@@ -121,9 +125,23 @@ fn the_set_file(set: &str) -> PathBuf {
     the_catalogue_dir().join(format!("{}.toml", set.replace('.', "-")))
 }
 
-/// El catálogo entero, o por qué no arranca la suite: cada queja nombra la entrada y lo que le
-/// falta.
+/// El catálogo entero validado contra el manifiesto de la sede, o por qué no arranca la suite:
+/// cada queja nombra la entrada y lo que le falta.
 pub(crate) fn read_the_catalogue() -> Result<Vec<Check>, String> {
+    let manifest = Manifest::of_the_driver()?;
+    let checks = read_the_catalogue_files()?;
+    let complaints = complaints_against(&checks, &manifest);
+    if complaints.is_empty() {
+        Ok(checks)
+    } else {
+        Err(format!(
+            "el catálogo no casa con el manifiesto de la sede:\n  {}",
+            complaints.join("\n  ")
+        ))
+    }
+}
+
+fn read_the_catalogue_files() -> Result<Vec<Check>, String> {
     let mut checks = Vec::new();
     for set in THE_SETS {
         let path = the_set_file(set);
@@ -153,8 +171,75 @@ fn complaints_about(checks: &[Check]) -> Vec<String> {
         entries_without_a_body(checks),
         greetings_that_do_not_open_their_set(checks),
         person_entries_without_a_question_or_a_warning(checks),
+        conditions_beside_a_saf(checks),
     ]
     .concat()
+}
+
+fn conditions_beside_a_saf(checks: &[Check]) -> Vec<String> {
+    checks
+        .iter()
+        .filter(|check| check.condition.is_some() && check.expects_saf.is_some())
+        .map(|check| format!("{}: espera a la vez una condición y un SAF", check.id))
+        .collect()
+}
+
+/// Lo que el catálogo cita y el manifiesto no publica: modos, guiones y condiciones.
+fn complaints_against(checks: &[Check], manifest: &Manifest) -> Vec<String> {
+    checks
+        .iter()
+        .flat_map(|check| complaints_about_the_drive_of(check, manifest))
+        .collect()
+}
+
+fn complaints_about_the_drive_of(check: &Check, manifest: &Manifest) -> Vec<String> {
+    let id = &check.id;
+    let Some(drive) = &check.drive else {
+        return check
+            .condition
+            .iter()
+            .map(|condition| format!("{id}: espera la condición «{condition}» sin conducirse"))
+            .collect();
+    };
+    let mut complaints = Vec::new();
+    let mode = manifest.modes.get(&drive.mode);
+    match mode {
+        None => complaints.push(format!("{id}: el modo «{}» no existe", drive.mode)),
+        Some(mode) if mode.bench_only => {
+            complaints.push(format!("{id}: el modo «{}» es solo del banco", drive.mode))
+        }
+        Some(_) => {}
+    }
+    let Some(script) = manifest.scripts.get(&drive.script) else {
+        complaints.push(format!("{id}: el guion «{}» no existe", drive.script));
+        return complaints;
+    };
+    if script.bench_only {
+        complaints.push(format!(
+            "{id}: el guion «{}» es solo del banco",
+            drive.script
+        ));
+    }
+    if mode.is_some() && !script.modes.contains(&drive.mode) {
+        complaints.push(format!(
+            "{id}: el guion «{}» no corre en el modo «{}»",
+            drive.script, drive.mode
+        ));
+    }
+    match &check.condition {
+        Some(condition) if !script.conditions.contains(condition) => complaints.push(format!(
+            "{id}: el guion «{}» no emite la condición «{condition}»",
+            drive.script
+        )),
+        None if script.site == Site::Handwritten && check.harness.is_none() => {
+            complaints.push(format!(
+                "{id}: el guion a mano «{}» solo informa por condiciones y no espera ninguna",
+                drive.script
+            ))
+        }
+        _ => {}
+    }
+    complaints
 }
 
 fn repeated_ids(checks: &[Check]) -> Vec<String> {
@@ -381,6 +466,148 @@ statement = "Algo se rechaza con SAF_03."
     fn the_catalogue_of_the_repository_has_no_complaint() {
         let checks = read_the_catalogue().unwrap();
         assert!(complaints_about(&checks).is_empty());
+    }
+
+    fn the_manifest() -> Manifest {
+        Manifest::of_the_driver().unwrap()
+    }
+
+    fn complaints_against_the_driver(extra: &str) -> Vec<String> {
+        complaints_against(
+            &entries(&an_entry("a_one", "errores", extra)),
+            &the_manifest(),
+        )
+    }
+
+    #[test]
+    fn the_catalogue_of_the_repository_matches_the_manifest_of_the_driver() {
+        let checks = read_the_catalogue_files().unwrap();
+        assert_eq!(
+            complaints_against(&checks, &the_manifest()),
+            Vec::<String>::new()
+        );
+    }
+
+    #[test]
+    fn a_script_outside_the_manifest_is_named() {
+        assert_eq!(
+            complaints_against_the_driver("drive = { mode = \"v4\", script = \"selectcrt\" }"),
+            vec!["a_one: el guion «selectcrt» no existe"]
+        );
+    }
+
+    #[test]
+    fn a_mode_outside_the_manifest_is_named() {
+        assert_eq!(
+            complaints_against_the_driver(
+                "drive = { mode = \"bad-uri\", script = \"selectcert\" }"
+            ),
+            vec!["a_one: el modo «bad-uri» no existe"]
+        );
+    }
+
+    #[test]
+    fn a_condition_its_script_does_not_emit_is_named() {
+        assert_eq!(
+            complaints_against_the_driver(
+                "drive = { mode = \"v4\", script = \"protocol-v4\" }\ncondition = \"the-echo-answers-ok\""
+            ),
+            vec!["a_one: el guion «protocol-v4» no emite la condición «the-echo-answers-ok»"]
+        );
+    }
+
+    #[test]
+    fn a_script_driven_in_a_mode_it_does_not_run_in_is_named() {
+        assert_eq!(
+            complaints_against_the_driver(
+                "drive = { mode = \"service\", script = \"protocol-v4\" }\n\
+                 condition = \"a-candidate-port-bound\""
+            ),
+            vec!["a_one: el guion «protocol-v4» no corre en el modo «service»"]
+        );
+    }
+
+    #[test]
+    fn a_script_or_a_mode_only_for_the_bench_is_named() {
+        assert_eq!(
+            complaints_against_the_driver("drive = { mode = \"relay\", script = \"relay\" }"),
+            vec![
+                "a_one: el modo «relay» es solo del banco",
+                "a_one: el guion «relay» es solo del banco"
+            ]
+        );
+    }
+
+    #[test]
+    fn a_handwritten_script_without_an_expected_condition_is_named() {
+        assert_eq!(
+            complaints_against_the_driver("drive = { mode = \"v4\", script = \"protocol-v4\" }"),
+            vec!["a_one: el guion a mano «protocol-v4» solo informa por condiciones y no espera ninguna"]
+        );
+    }
+
+    #[test]
+    fn a_check_expecting_a_condition_and_a_saf_is_named() {
+        let checks = entries(&an_entry(
+            "a_one",
+            "errores",
+            &format!("{DRIVEN}\ncondition = \"a-certificate-alone\"\nexpects_saf = \"SAF_03\""),
+        ));
+        assert_eq!(
+            complaints_about(&checks),
+            vec!["a_one: espera a la vez una condición y un SAF"]
+        );
+    }
+
+    #[test]
+    fn every_script_the_catalogue_does_not_drive_is_marked_for_the_bench_only() {
+        let checks = read_the_catalogue_files().unwrap();
+        let driven: BTreeSet<&str> = checks
+            .iter()
+            .filter_map(|check| check.drive.as_ref())
+            .map(|drive| drive.script.as_str())
+            .collect();
+        let manifest = the_manifest();
+        let mismarked: Vec<&String> = manifest
+            .scripts
+            .iter()
+            .filter(|(name, script)| script.bench_only == driven.contains(name.as_str()))
+            .map(|(name, _)| name)
+            .collect();
+        assert!(mismarked.is_empty(), "{mismarked:?}");
+    }
+
+    #[test]
+    fn no_id_of_the_catalogue_is_written_in_the_driver() {
+        let driver = crate::errand::the_driver();
+        let sources: String = [driver.parent().unwrap().to_path_buf()]
+            .iter()
+            .flat_map(|dir| javascript_files_under(dir))
+            .map(|path| std::fs::read_to_string(path).unwrap())
+            .collect();
+        let written: Vec<String> = read_the_catalogue_files()
+            .unwrap()
+            .into_iter()
+            .map(|check| check.id)
+            .filter(|id| sources.contains(id.as_str()))
+            .collect();
+        assert!(written.is_empty(), "{written:?}");
+    }
+
+    fn javascript_files_under(dir: &std::path::Path) -> Vec<PathBuf> {
+        std::fs::read_dir(dir)
+            .unwrap()
+            .map(|entry| entry.unwrap().path())
+            .flat_map(|path| {
+                if path.is_dir() {
+                    javascript_files_under(&path)
+                } else if path.extension().is_some_and(|extension| extension == "mjs") {
+                    vec![path]
+                } else {
+                    Vec::new()
+                }
+            })
+            .collect()
     }
 
     #[test]

@@ -2,15 +2,16 @@
 # Lo lee `catalogue.rs`, que valida la forma de cada entrada al arrancar.
 
 [[check]]
-id = "unsupported_protocol_uri_rejected"
+id = "a_foreign_scheme_opens_no_channel"
 set = "errores"
 chapter = "15"
 citation = "ProtocolInvocationLauncher.java:172-178"
 statement = """
-Una URI que no empieza estrictamente por afirma:// se rechaza con SAF_02.
+Una invocación con un esquema ajeno a afirma:// no abre canal: el original la rechaza con SAF_02
+antes de leer nada más de ella.
 """
-drive = { mode = "bad-uri", script = "selectcert" }
-expects_saf = "SAF_02"
+drive = { mode = "v4", script = "protocol-foreign-scheme" }
+condition = "no-channel-opens"
 
 [[check]]
 id = "unsupported_operation_rejected"
@@ -21,6 +22,7 @@ statement = """
 Una operación no soportada (host desconocido como unknownop) se rechaza con SAF_04.
 """
 drive = { mode = "v4", script = "protocol-v4-operations" }
+condition = "unknown-operation-saf-04"
 
 [[check]]
 id = "sign_missing_or_invalid_operation_rejected"
@@ -31,6 +33,7 @@ statement = """
 En afirma://sign?, si el parámetro op falta o no es reconocido, se rechaza con SAF_04.
 """
 drive = { mode = "v4", script = "protocol-v4-operations" }
+condition = "invalid-op-saf-04"
 
 [[check]]
 id = "sign_unsupported_format_rejected"
@@ -41,6 +44,7 @@ statement = """
 Si el formato de firma especificado en format no está soportado, se rechaza con SAF_06.
 """
 drive = { mode = "v4", script = "protocol-v4-operations" }
+condition = "invented-format-saf-06"
 
 [[check]]
 id = "local_access_blocked"
@@ -52,6 +56,7 @@ Si rtservlet apunta a localhost o 127.0.0.1, se rechaza con SAF_13. Por socket o
 stservlet no se valida.
 """
 drive = { mode = "v4", script = "protocol-v4-operations" }
+condition = "local-rtservlet-saf-13"
 warning = "Si el cliente muestra el error SAF_13 en un diálogo, ciérralo para que llegue la respuesta."
 
 [[check]]
@@ -63,6 +68,7 @@ statement = """
 Parámetros de entrada con sintaxis inválida se rechazan con SAF_03.
 """
 drive = { mode = "v4", script = "protocol-v4-operations" }
+condition = "no-data-saf-03"
 
 [[check]]
 id = "signandsave_rejects_a_request_without_a_verb_with_saf_04"

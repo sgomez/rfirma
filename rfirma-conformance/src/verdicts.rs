@@ -32,18 +32,11 @@ impl CheckOutcome {
     }
 }
 
-/// El resultado de una comprobación que sólo necesita que la conduzcan: el código SAF que el
-/// protocolo exige si lo declaró, y si no, que el trámite se completara.
+/// El resultado de una comprobación que sólo necesita que la conduzcan: la condición que espera si
+/// la declaró, el código SAF si lo declaró, y si no, que el trámite se completara.
 pub(crate) fn the_outcome_of(check: &Check, outcome: &ErrandOutcome) -> CheckOutcome {
-    if let Some(condition) = outcome
-        .protocol_conditions
-        .iter()
-        .find(|condition| condition.id == check.id)
-    {
-        return CheckOutcome::Resolved {
-            outcome: condition.outcome,
-            observation: condition.observation.clone(),
-        };
+    if let Some(expected) = check.condition.as_deref() {
+        return the_outcome_for_a_condition(outcome, expected);
     }
     if !outcome.launched {
         return CheckOutcome::of(Outcome::NotObservable, "el cliente no llegó a arrancar");
@@ -55,6 +48,27 @@ pub(crate) fn the_outcome_of(check: &Check, outcome: &ErrandOutcome) -> CheckOut
         Some(expected) => the_outcome_for_saf_code(outcome, expected),
         None => the_outcome_for_a_completed_errand(outcome),
     }
+}
+
+/// Una condición esperada que no llegó no dice nada del cliente: no cae a «se completó».
+fn the_outcome_for_a_condition(outcome: &ErrandOutcome, expected: &str) -> CheckOutcome {
+    if let Some(condition) = outcome
+        .protocol_conditions
+        .iter()
+        .find(|condition| condition.name == expected)
+    {
+        return CheckOutcome::Resolved {
+            outcome: condition.outcome,
+            observation: condition.observation.clone(),
+        };
+    }
+    if !outcome.launched {
+        return CheckOutcome::of(Outcome::NotObservable, "el cliente no llegó a arrancar");
+    }
+    CheckOutcome::of(
+        Outcome::NotObservable,
+        format!("la sede no emitió «{expected}»"),
+    )
 }
 
 fn is_driven_over_ipv6(check: &Check) -> bool {
@@ -506,6 +520,14 @@ mod tests {
         let expects = saf
             .map(|code| format!("expects_saf = \"{code}\"\n"))
             .unwrap_or_default();
+        a_check_declaring(&expects)
+    }
+
+    fn a_check_expecting_the_condition(name: &str) -> Check {
+        a_check_declaring(&format!("condition = \"{name}\"\n"))
+    }
+
+    fn a_check_declaring(expects: &str) -> Check {
         the_catalogue_in(&format!(
             "[[check]]\nid = \"an_id\"\nset = \"errores\"\nchapter = \"15\"\n\
              citation = \"ProtocolInvocationLauncher.java:741\"\n\
@@ -648,10 +670,10 @@ mod tests {
     }
 
     #[test]
-    fn a_condition_the_driver_measured_wins_over_the_default_oracle() {
+    fn the_expected_condition_the_driver_measured_is_the_outcome() {
         let outcome = ErrandOutcome {
             protocol_conditions: vec![crate::errand::ProtocolConditionResult {
-                id: "an_id".to_owned(),
+                name: "the-echo-answers-ok".to_owned(),
                 outcome: Outcome::Noncompliant,
                 observation: Some("el eco no volvió".to_owned()),
             }],
@@ -661,12 +683,55 @@ mod tests {
         let CheckOutcome::Resolved {
             outcome,
             observation,
-        } = the_outcome_of(&a_check_expecting(None), &outcome)
+        } = the_outcome_of(
+            &a_check_expecting_the_condition("the-echo-answers-ok"),
+            &outcome,
+        )
         else {
             panic!("la comprobación debería resolverse");
         };
         assert_eq!(outcome, Outcome::Noncompliant);
         assert_eq!(observation.as_deref(), Some("el eco no volvió"));
+    }
+
+    #[test]
+    fn a_condition_nobody_expects_does_not_judge_the_check() {
+        let outcome = ErrandOutcome {
+            protocol_conditions: vec![crate::errand::ProtocolConditionResult {
+                name: "the-echo-answers-ok".to_owned(),
+                outcome: Outcome::Noncompliant,
+                observation: None,
+            }],
+            data: Some("MIID...".to_owned()),
+            ..an_outcome()
+        };
+        assert_eq!(
+            the_outcome(the_outcome_of(&a_check_expecting(None), &outcome)),
+            Outcome::Compliant
+        );
+    }
+
+    #[test]
+    fn an_expected_condition_the_site_never_emitted_is_not_observable() {
+        let completed = ErrandOutcome {
+            data: Some("MIID...".to_owned()),
+            ..an_outcome()
+        };
+        let CheckOutcome::Resolved {
+            outcome,
+            observation,
+        } = the_outcome_of(
+            &a_check_expecting_the_condition("the-echo-answers-ok"),
+            &completed,
+        )
+        else {
+            panic!("la comprobación debería resolverse");
+        };
+        assert_eq!(outcome, Outcome::NotObservable);
+        assert_eq!(
+            observation.as_deref(),
+            Some("la sede no emitió «the-echo-answers-ok»")
+        );
     }
 
     #[test]
@@ -856,7 +921,7 @@ mod tests {
     fn an_interactive_load_takes_the_condition_the_driver_measured() {
         let loaded = ErrandOutcome {
             protocol_conditions: vec![crate::errand::ProtocolConditionResult {
-                id: "an_id".to_owned(),
+                name: "the-name-next-to-the-content".to_owned(),
                 outcome: Outcome::Noncompliant,
                 observation: Some("la respuesta no trajo el nombre junto al contenido".to_owned()),
             }],
@@ -865,7 +930,7 @@ mod tests {
         };
         assert_eq!(
             the_outcome(the_outcome_for_an_interactive_load(
-                &a_check_expecting(None),
+                &a_check_expecting_the_condition("the-name-next-to-the-content"),
                 &loaded,
                 "s"
             )),
