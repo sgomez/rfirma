@@ -143,6 +143,7 @@ struct OpenReport {
 struct Queued {
     id: String,
     in_batch: bool,
+    rerun: bool,
 }
 
 struct Question {
@@ -335,12 +336,23 @@ impl Console {
                 true,
             ),
         };
-        let ids: Vec<String> = wanted.iter().map(|check| check.id.clone()).collect();
-        for id in ids {
-            if !session.is_queued_or_running(&id) {
-                session.queue.push_back(Queued { id, in_batch });
-            }
+        let fresh: Vec<Queued> = wanted
+            .iter()
+            .filter(|check| !session.is_queued_or_running(&check.id))
+            .map(|check| Queued {
+                id: check.id.clone(),
+                in_batch,
+                rerun: !in_batch && !is_pending(check),
+            })
+            .collect();
+        if fresh.is_empty() {
+            return Err(match &request {
+                Request::Check { check } => format!("«{check}» ya está en la cola o en curso"),
+                _ => "no hay nada pendiente que correr en esa tanda que no esté ya en la cola"
+                    .to_owned(),
+            });
         }
+        session.queue.extend(fresh);
         sort_in_tranches(&mut session.queue, &self.shared.catalogue);
         self.shared.wake.notify_one();
         self.shared.publish(&session);
@@ -758,12 +770,18 @@ fn take_the_next_group(shared: &Arc<Shared>, session: &mut Session) -> Option<Ne
                     .filter_map(|other| shared.catalogue.iter().find(|check| check.id == other.id)),
             )
             .collect();
-        let group: Vec<String> = the_group_of(head, &queued_checks)
-            .into_iter()
-            .map(|check| check.id.clone())
-            .collect();
+        let group: Vec<String> = if queued.rerun {
+            vec![head.id.clone()]
+        } else {
+            the_group_of(head, &queued_checks)
+                .into_iter()
+                .map(|check| check.id.clone())
+                .collect()
+        };
         session.queue.retain(|other| !group.contains(&other.id));
-        let already = ErrandKey::of(head).and_then(|key| open.report.observed(&key).cloned());
+        let already = ErrandKey::of(head)
+            .filter(|_| !queued.rerun)
+            .and_then(|key| open.report.observed(&key).cloned());
         let opening = if already.is_none() {
             let opening = the_opening(session.tranche, head.assistance());
             session.tranche = Some(head.assistance());
@@ -997,6 +1015,7 @@ greeting = true
             .map(|check| Queued {
                 id: check.id.clone(),
                 in_batch: true,
+                rerun: false,
             })
             .collect();
 
@@ -1297,6 +1316,118 @@ saf = "SAF_03"
                 .unwrap(),
             std::fs::read_to_string(transcript_path_of(&transcripts, "a_rejection")).unwrap()
         );
+    }
+
+    #[test]
+    fn rerunning_a_finished_check_launches_the_client_again_and_keeps_the_new_errand() {
+        let runner = a_rejecting_runner();
+        let (console, _dir) = a_console_replaying(&runner);
+        let a_rejection = || Request::Check {
+            check: "a_rejection".to_owned(),
+        };
+        console.enqueue(a_rejection()).unwrap();
+        run_the_queue(&console);
+
+        console.enqueue(a_rejection()).unwrap();
+        run_the_queue(&console);
+
+        assert_eq!(
+            runner.runs(),
+            ["v4/signwithoutaformat", "v4/signwithoutaformat"]
+        );
+        assert_eq!(
+            the_state_of(&console, "a_rejection"),
+            Some(CheckState::Resolved(crate::outcome::Outcome::Compliant))
+        );
+        console
+            .enqueue(Request::Check {
+                check: "its_twin".to_owned(),
+            })
+            .unwrap();
+        run_the_queue(&console);
+        assert_eq!(runner.runs().len(), 2);
+    }
+
+    #[test]
+    fn rerunning_a_check_leaves_the_others_sharing_its_errand_untouched() {
+        let runner = a_rejecting_runner();
+        let (console, _dir) = a_console_replaying(&runner);
+        console
+            .enqueue(Request::Check {
+                check: "a_rejection".to_owned(),
+            })
+            .unwrap();
+        run_the_queue(&console);
+
+        console
+            .enqueue(Request::Check {
+                check: "a_rejection".to_owned(),
+            })
+            .unwrap();
+        run_the_queue(&console);
+
+        assert_eq!(
+            the_state_of(&console, "its_twin"),
+            Some(CheckState::Pending)
+        );
+    }
+
+    #[test]
+    fn a_batch_still_reuses_the_errand_of_a_finished_check() {
+        let runner = a_rejecting_runner();
+        let (console, _dir) = a_console_replaying(&runner);
+        console
+            .enqueue(Request::Check {
+                check: "a_rejection".to_owned(),
+            })
+            .unwrap();
+        run_the_queue(&console);
+
+        console
+            .enqueue(Request::Set {
+                set: "errores".to_owned(),
+                pending: None,
+            })
+            .unwrap();
+        run_the_queue(&console);
+
+        assert_eq!(
+            runner.runs(),
+            [
+                "v4/signwithoutaformat",
+                "v4/signwithoutaformat",
+                "v4/protocol-v4"
+            ]
+        );
+    }
+
+    #[test]
+    fn asking_for_a_check_already_in_the_queue_is_refused() {
+        let runner = a_rejecting_runner();
+        let (console, _dir) = a_console_replaying(&runner);
+        let a_rejection = || Request::Check {
+            check: "a_rejection".to_owned(),
+        };
+        console.enqueue(a_rejection()).unwrap();
+
+        let refused = console.enqueue(a_rejection()).unwrap_err();
+
+        assert!(refused.contains("ya está en la cola"), "{refused}");
+    }
+
+    #[test]
+    fn a_batch_with_nothing_left_to_run_is_refused() {
+        let runner = a_rejecting_runner();
+        let (console, _dir) = a_console_replaying(&runner);
+        let everything = || Request::Tranches {
+            tranches: Tranches::All,
+        };
+        console.enqueue(everything()).unwrap();
+        run_the_queue(&console);
+
+        let refused = console.enqueue(everything()).unwrap_err();
+
+        assert!(refused.contains("nada pendiente"), "{refused}");
     }
 
     #[test]

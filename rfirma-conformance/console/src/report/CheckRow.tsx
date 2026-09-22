@@ -1,7 +1,14 @@
 import { memo, type ReactNode, useEffect, useRef, useState } from "react";
 import type { CheckView } from "../contract/CheckView";
 import { Elapsed } from "../ui/Elapsed";
-import { type Activity, ActivityIcon, PlayIcon, ResultIcon } from "../ui/icons";
+import {
+  type Activity,
+  ActivityIcon,
+  CheckMark,
+  CopyIcon,
+  PlayIcon,
+  ResultIcon,
+} from "../ui/icons";
 import { assistanceName, calendarDate, duration, resultTone } from "../words";
 import type { Controls } from "./SetSection";
 
@@ -40,13 +47,23 @@ export const CheckRow = memo(function CheckRow({
       data-settled={settled || undefined}
     >
       <div className="check-line">
-        <button
-          type="button"
+        {/* biome-ignore lint/a11y/useSemanticElements: un <button> no deja seleccionar el nombre */}
+        <div
+          role="button"
+          tabIndex={0}
           className="check-toggle"
           data-check-row
           aria-expanded={expanded}
           aria-controls={detailId}
-          onClick={() => onToggle(check.id)}
+          onClick={() => {
+            if (!endsATextSelection()) onToggle(check.id);
+          }}
+          onKeyDown={(event) => {
+            if (event.target !== event.currentTarget) return;
+            if (event.key !== "Enter" && event.key !== " ") return;
+            event.preventDefault();
+            onToggle(check.id);
+          }}
         >
           <span className="check-icon">
             {activity ? <ActivityIcon activity={activity} /> : <ResultIcon result={check.state} />}
@@ -56,7 +73,8 @@ export const CheckRow = memo(function CheckRow({
           <span className="check-status">
             <Status check={check} activity={activity} runningSince={runningSince} />
           </span>
-        </button>
+        </div>
+        <CopyId id={check.id} />
         {controls && (
           <button
             type="button"
@@ -82,6 +100,32 @@ export const CheckRow = memo(function CheckRow({
     </li>
   );
 });
+
+function endsATextSelection(): boolean {
+  const selection = window.getSelection();
+  return selection !== null && !selection.isCollapsed && selection.toString() !== "";
+}
+
+function CopyId({ id }: { id: string }) {
+  const [copied, setCopied] = useState(false);
+  useEffect(() => {
+    if (!copied) return;
+    const timer = window.setTimeout(() => setCopied(false), 1200);
+    return () => window.clearTimeout(timer);
+  }, [copied]);
+  return (
+    <button
+      type="button"
+      className="copy-id"
+      data-copied={copied || undefined}
+      onClick={() => void navigator.clipboard.writeText(id).then(() => setCopied(true))}
+      aria-label={`Copiar ${id}`}
+      title={copied ? "Copiado" : "Copiar el nombre"}
+    >
+      {copied ? <CheckMark /> : <CopyIcon />}
+    </button>
+  );
+}
 
 function Status({
   check,
