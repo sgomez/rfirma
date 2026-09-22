@@ -44,8 +44,8 @@ operación de punta a punta por la sede publicada. La declara el guion, no la co
 
 **Condición**:
 Lo que un guion de la sede mide durante el trámite y emite con un nombre propio de ese guion, no
-con el de una comprobación. La comprobación nombra la condición que espera; si no llega, su
-resultado es NO OBSERVABLE.
+con el de una comprobación. La comprobación nombra la condición que espera, o varias que tienen que
+cumplirse todas; si una no llega, su resultado es NO OBSERVABLE, salvo que otra salga NO CONFORME.
 
 **Manifiesto**:
 Lo que la sede publica de sí misma: sus modos y sus guiones, cada uno con su sede, su familia de
@@ -80,7 +80,7 @@ _Avoid_: desatendida (para una comprobación), interactiva, manual
 Lo que una comprobación conducida espera de su trámite, declarado en el catálogo con un vocabulario
 cerrado. Por el cable, una sola de cuatro: un **código** (`SAF_NN`, cualquier SAF, `CANCEL`,
 `SAVE_OK`, `OK` o `MEMORY_ERROR`); que el trámite **se complete**, con lo que tenga que traer lo que
-vuelve (un prefijo, un OID, unos bytes, una longitud); una **condición** de la sede; o que **nadie
+vuelve (un prefijo, un OID, unos bytes, una longitud); una o varias **condiciones** de la sede; o que **nadie
 responda**. Si lo que se mide es un diálogo, la **persona** dice qué vio y qué resultado sostiene su
 sí. Una comprobación nueva con una expectativa conocida no toca código.
 _Avoid_: veredicto esperado, arnés (para cómo se juzga)

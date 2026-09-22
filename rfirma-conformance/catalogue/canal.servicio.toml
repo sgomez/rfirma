@@ -211,10 +211,12 @@ id = "service_channel_version_range"
 set = "canal.servicio"
 citation = "ServiceInvocationManager.java:42-45, 212-220; ProtocolInvocationLauncher.java:281-288"
 statement = """
-El canal socket HTTP (afirma://service) sólo admite las versiones 1, 2 y 3; la versión 4 se rechaza
-con SAF_21.
+El canal socket HTTP (afirma://service) sólo admite las versiones 1, 2 y 3: un arranque con v=4 se
+rechaza antes de ligar puerto alguno y no abre canal.
 """
-unmeasurable = "SAF_21 se muestra en un diálogo y no se abre canal: no hay cable por el que llegue, y la sede sólo ve que el cliente publicado agota sus reintentos."
+drive = { mode = "service", script = "protocol-service-v4" }
+assistance = "none"
+condition = "no-channel-opens"
 
 [[check]]
 id = "a_ver_inside_an_order_leaves_the_negotiated_version_alone"
@@ -233,9 +235,13 @@ id = "the_service_channel_closes_after_ninety_seconds_of_inactivity"
 set = "canal.servicio"
 citation = "ServiceInvocationManager.java:127-134; CommandProcessorThread.java:452-460"
 statement = """
-El canal se cierra tras 90 segundos sin órdenes, y una orden inválida no reinicia la cuenta.
+El canal se cierra 90 segundos después de la última orden válida, y una orden inválida no reinicia
+la cuenta: a los 80 s aún contesta, y a los 100 s ya no.
 """
-unmeasurable = "El temporizador de inactividad vive dentro del cliente: la suite no instrumenta su máquina virtual ni lee su estado, y el cierre no deja en el cable nada que lo distinga de un cliente caído."
+drive = { mode = "service", script = "protocol-service-inactivity" }
+assistance = "none"
+condition = "closed-ninety-seconds-after-the-last-valid-order"
+patience_secs = 150
 
 [[check]]
 id = "concurrent_service_orders_do_not_share_their_state"
@@ -245,7 +251,7 @@ statement = """
 Dos conversaciones simultáneas con el canal no se mezclan los fragmentos ni las partes del resultado
 (BUG-09).
 """
-unmeasurable = "La concurrencia entre sesiones depende del estado interno del cliente y de un entrelazado no determinista: la suite no la puede provocar ni leer desde el cable sin instrumentar la máquina virtual."
+unmeasurable = "El protocolo no lleva identificador de conversación: dos conversaciones de la misma sesión intercaladas son una sola en el cable, y ningún cliente puede separarlas. Lo que BUG-09 describe es una carrera entre hilos que atienden a la vez, y desde el cable no se provoca de forma determinista."
 
 [[check]]
 id = "a_saf_code_reaches_the_published_client_intact_over_the_service_channel"

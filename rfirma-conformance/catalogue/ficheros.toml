@@ -35,7 +35,11 @@ statement = """
 Las extensiones que la petición declara en exts, con la descripción de desc, filtran lo que el
 guardado ofrece.
 """
-unmeasurable = "El filtro de extensiones vive en la ventana de guardado y no deja rastro en el cable: el cliente publicado recibe la misma confirmación se filtre o no, y quien ejecuta la suite no puede afirmar sobre él sin describir la ventana."
+drive = { mode = "v4", script = "save" }
+assistance = "person"
+question = "¿la ventana de guardar filtraba por «Datos binarios» con la extensión .bin? [s/n]"
+person = { yes = "el guardado ofrecía el filtro «Datos binarios» (.bin) de la petición", no = "el guardado no ofrecía el filtro que declaraba la petición", yes_means = "conforme" }
+warning = "Va a aparecer la ventana nativa para elegir dónde guardar el fichero: fíjate en el filtro de tipos que ofrece antes de guardar o cancelar."
 
 [[check]]
 id = "load_answers_the_name_of_the_chosen_file_next_to_its_content"
@@ -85,10 +89,27 @@ person = { yes = "se pidió dónde guardar el fichero", no = "no se pidió dónd
 warning = "Va a aparecer la ventana nativa para elegir dónde guardar el fichero."
 
 [[check]]
-id = "the_disk_failures_answer_their_own_codes"
+id = "a_save_that_cannot_write_answers_saf_05"
 set = "ficheros"
-citation = "ProtocolInvocationLauncherSave.java:102; ProtocolInvocationLauncherSignAndSave.java:563; ProtocolInvocationLauncherLoad.java:143"
+citation = "ProtocolInvocationLauncherSave.java:102"
 statement = """
-Un fallo de escritura al guardar sale con SAF_05, y uno de lectura al cargar, con SAF_25.
+Un fallo de escritura al guardar, sobre un destino que no admite escritura, sale con SAF_05.
 """
-unmeasurable = "Los dos fallan después de que la persona elija el fichero, y hacerlos fallar exige un disco que rechace la escritura o la lectura del fichero ya elegido, que la suite no simula."
+drive = { mode = "v4", script = "save" }
+assistance = "person"
+harness = "a_file_that_cannot_be_written"
+saf = "SAF_05"
+warning = "Se va a pedir dónde guardar: acepta el nombre propuesto, challenge.bin, que ya existe y es de solo lectura; acepta la confirmación que venga después y cierra el aviso de error que pueda aparecer."
+
+[[check]]
+id = "a_load_that_cannot_read_answers_saf_25"
+set = "ficheros"
+citation = "ProtocolInvocationLauncherLoad.java:143"
+statement = """
+Un fallo de lectura al cargar, sobre un fichero que no se deja leer, sale con SAF_25.
+"""
+drive = { mode = "v4", script = "load" }
+assistance = "person"
+harness = "a_file_that_cannot_be_read"
+saf = "SAF_25"
+warning = "Se va a pedir qué fichero cargar: elige ilegible.bin, que se ha preparado sin permiso de lectura, y cierra el aviso de error que pueda aparecer."

@@ -5,12 +5,12 @@ id = "sign_is_dispatched_as_a_first_signature"
 set = "firma"
 citation = "ProtocolInvocationLauncher.java:643-646; SignOperation.java:67-78; ProtocolInvocationLauncherSign.java:158"
 statement = """
-El verbo sign se reconoce como primera firma y la operación se despacha con él, sin que ningún
-otro valor de la petición lo desplace.
+El verbo sign se reconoce como primera firma y la operación se despacha con él: la firma que vuelve
+tiene un solo firmante y ninguna contrafirma.
 """
 drive = { mode = "v4", script = "signcades" }
 assistance = "click"
-completes = {}
+condition = "a-single-signer"
 greeting = true
 warning = "Va a aparecer el diálogo de certificado."
 
@@ -20,11 +20,12 @@ set = "firma"
 citation = "ProtocolInvocationLauncher.java:643-646; SignOperation.java:67-78; ProtocolInvocationLauncherSign.java:710-717"
 statement = """
 El verbo cosign se reconoce como cofirma y cofirma la firma previa que viaja en dat, la única
-ranura de datos que el protocolo tiene para la multifirma.
+ranura de datos que el protocolo tiene para la multifirma: la firma que vuelve lleva el firmante
+previo y el nuevo en paralelo.
 """
 drive = { mode = "v4", script = "cosigncades" }
 assistance = "click"
-completes = {}
+condition = "two-parallel-signers"
 warning = "Va a aparecer el diálogo de certificado."
 
 [[check]]
@@ -32,12 +33,38 @@ id = "countersign_is_dispatched_over_a_previous_signature"
 set = "firma"
 citation = "ProtocolInvocationLauncher.java:643-646; SignOperation.java:67-78; ProtocolInvocationLauncherSign.java:723-724"
 statement = """
-El verbo countersign se reconoce como contrafirma y contrafirma la firma previa; target=tree
-contrafirma el árbol entero y cualquier otro valor se resuelve como las hojas.
+El verbo countersign se reconoce como contrafirma y contrafirma la firma previa: su único firmante
+vuelve con una contrafirma.
 """
 drive = { mode = "v4", script = "countersigncades" }
 assistance = "click"
-completes = {}
+condition = "the-signer-countersigned"
+warning = "Va a aparecer el diálogo de certificado."
+
+[[check]]
+id = "countersign_with_target_tree_countersigns_every_node"
+set = "firma"
+citation = "ProtocolInvocationLauncherSign.java:723-724; CAdESExtraParams.java"
+statement = """
+Con target=tree, la contrafirma alcanza a todos los nodos del árbol de firmantes: sobre un
+firmante ya contrafirmado, contrafirma al firmante y a su contrafirma.
+"""
+drive = { mode = "v4", script = "countersigncadestree" }
+assistance = "click"
+condition = "every-node-countersigned"
+warning = "Va a aparecer el diálogo de certificado."
+
+[[check]]
+id = "countersign_with_another_target_countersigns_only_the_leaves"
+set = "firma"
+citation = "ProtocolInvocationLauncherSign.java:723-724; CAdESExtraParams.java"
+statement = """
+Un target que no es tree se resuelve como las hojas: sobre un firmante ya contrafirmado, sólo la
+contrafirma, que es la hoja, recibe una contrafirma nueva.
+"""
+drive = { mode = "v4", script = "countersigncadesanothertarget" }
+assistance = "click"
+condition = "only-the-leaves-countersigned"
 warning = "Va a aparecer el diálogo de certificado."
 
 [[check]]
@@ -71,11 +98,11 @@ set = "firma"
 citation = "ProtocolInvocationLauncherSign.java:381-390; ProtocolInvocationLauncherUtil.java:150-166"
 statement = """
 Con format=auto, una primera firma sobre datos binarios resuelve el formato analizando el contenido
-y firma, en vez de exigir que la sede lo nombre.
+y firma en CAdES, en vez de exigir que la sede lo nombre.
 """
 drive = { mode = "v4", script = "signauto" }
 assistance = "click"
-completes = {}
+condition = "a-cades-signature"
 warning = "Va a aparecer el diálogo de certificado."
 
 [[check]]
@@ -84,11 +111,11 @@ set = "firma"
 citation = "ProtocolInvocationLauncherUtil.java:153-166; DataAnalizerUtil.java"
 statement = """
 Con format=auto, una primera firma sobre un XML que no es factura se resuelve por el análisis del
-contenido y firma sin pedir formato.
+contenido y firma en XAdES sin pedir formato.
 """
 drive = { mode = "v4", script = "signxadesauto" }
 assistance = "click"
-completes = {}
+condition = "a-xades-signature"
 warning = "Va a aparecer el diálogo de certificado."
 
 [[check]]
@@ -97,11 +124,12 @@ set = "firma"
 citation = "ProtocolInvocationLauncherUtil.java:167-177; AOSignerFactory.java:92-118"
 statement = """
 Con format=auto, una multifirma identifica el formato recorriendo los firmadores con capacidad de
-reconocimiento sobre la firma previa, no analizando el tipo del documento.
+reconocimiento sobre la firma previa, no analizando el tipo del documento: la cofirma de una CAdES
+vuelve con los dos firmantes en paralelo.
 """
 drive = { mode = "v4", script = "cosignauto" }
 assistance = "click"
-completes = {}
+condition = "two-parallel-signers"
 warning = "Va a aparecer el diálogo de certificado."
 
 [[check]]
@@ -122,9 +150,13 @@ set = "firma"
 citation = "AOSignerFactory.java:92-118"
 statement = """
 El orden de la matriz de reconocimiento es parte de la resolución de auto: CAdES precede a
-CMS/PKCS#7, así que una firma CMS se identifica y se multifirma como CAdES.
+CMS/PKCS#7, así que una firma CMS se identifica y se cofirma como CAdES, y el firmante nuevo lleva
+signingCertificate.
 """
-unmeasurable = "El formato con el que se identificó la firma previa sólo se lee abriendo con una biblioteca criptográfica la firma que vuelve, y la suite no lleva ninguna."
+drive = { mode = "v4", script = "cosignautooveracmssignature" }
+assistance = "click"
+condition = "cosigned-as-cades"
+warning = "Va a aparecer el diálogo de certificado."
 
 [[check]]
 id = "the_algorithm_catalogue_accepts_a_digest_without_a_key_type"
@@ -159,7 +191,11 @@ statement = """
 El algoritmo final se recompone con el tipo de clave del certificado elegido: pedir SHA256withRSA y
 elegir un certificado de curva elíptica firma con SHA256withECDSA en vez de fallar.
 """
-unmeasurable = "El algoritmo con el que se firmó sólo se lee abriendo la firma que vuelve con una biblioteca criptográfica, y la suite no lleva ninguna."
+drive = { mode = "v4", script = "signcades" }
+store = "ec"
+assistance = "click"
+condition = "the-algorithm-of-the-key"
+warning = "Va a aparecer el diálogo de certificado, con el almacén de curva elíptica."
 
 [[check]]
 id = "the_signature_response_carries_the_certificate_and_the_signature_apart"
@@ -226,12 +262,12 @@ set = "firma"
 chapter = "12"
 citation = "AOPDFSigner.java:705-754; PdfExtraParams.java"
 statement = """
-PAdES firma el PDF y devuelve el propio documento con la firma incrustada, que es la forma de
-empaquetado que el formato tiene.
+PAdES firma el PDF y devuelve el propio documento con la firma incrustada: un PDF con su
+diccionario de firma, su /ByteRange y su /Contents.
 """
 drive = { mode = "v4", script = "signpades" }
 assistance = "click"
-completes = { starts_with = "%PDF" }
+condition = "the-signature-inside-the-pdf"
 warning = "Va a aparecer el diálogo de certificado."
 
 [[check]]
@@ -250,29 +286,31 @@ person = { yes = "se pidió marcar el área de la firma visible", no = "la firma
 warning = "Va a aparecer el diálogo del área visible sobre el PDF, y después el del certificado."
 
 [[check]]
-id = "a_cades_signature_honours_the_packaging_mode_of_its_request"
+id = "an_explicit_cades_signature_leaves_the_data_out"
 set = "firma"
 chapter = "12"
 citation = "CAdESExtraParams.java; CAdESParameters.java:100-335"
 statement = """
-CAdES acepta mode como parámetro de formato y firma en el modo pedido: implicit empotra los datos
-en el PKCS#7 y explicit deja la firma separada.
+CAdES acepta mode como parámetro de formato: con mode=explicit la firma vuelve separada, sin los
+datos dentro del PKCS#7.
 """
 drive = { mode = "v4", script = "signcades" }
 assistance = "click"
-completes = {}
+condition = "the-data-left-out"
 warning = "Va a aparecer el diálogo de certificado."
 
 [[check]]
-id = "the_packaging_mode_of_the_returned_cades_signature"
+id = "an_implicit_cades_signature_carries_the_data_inside"
 set = "firma"
 chapter = "12"
 citation = "CAdESExtraParams.java; CAdESParameters.java:100-335"
 statement = """
-El modo pedido es el modo con el que la firma vuelve: una CAdES implícita lleva los datos dentro y
-una explícita no.
+Con mode=implicit, CAdES empotra los datos firmados en el PKCS#7 que vuelve.
 """
-unmeasurable = "Distinguir una CAdES implícita de una explícita exige abrir el PKCS#7 que vuelve con una biblioteca criptográfica, y la suite no lleva ninguna."
+drive = { mode = "v4", script = "signcadesimplicit" }
+assistance = "click"
+condition = "the-data-inside"
+warning = "Va a aparecer el diálogo de certificado."
 
 [[check]]
 id = "the_age_policy_packages_a_document_under_one_megabyte_implicitly"
@@ -280,10 +318,13 @@ set = "firma"
 chapter = "11"
 citation = "ExtraParamsHelper.java:230-252"
 statement = """
-Al expandir la política de la AGE sin mode declarado, el umbral de 1 MB decide el empaquetado: por
-debajo fija implicit y por encima explicit, y un mode ya declarado se respeta.
+Al expandir la política de la AGE (expPolicy=FirmaAGE) sin mode declarado, un documento de menos de
+1 MB se empaqueta en modo implícito: la firma vuelve con los datos dentro.
 """
-unmeasurable = "El modo que la expansión fija sólo se lee abriendo la firma que vuelve, y la suite no lleva biblioteca criptográfica que la abra."
+drive = { mode = "v4", script = "signcadesagepolicy" }
+assistance = "click"
+condition = "the-data-inside"
+warning = "Va a aparecer el diálogo de certificado."
 
 [[check]]
 id = "a_precalculated_hash_replaces_the_data_of_a_cades_signature"
@@ -292,25 +333,81 @@ chapter = "12"
 citation = "AOCAdESSigner.java:514-520; CAdESExtraParams.java"
 statement = """
 Con precalculatedHashAlgorithm, lo que viaja en dat es una huella y no el documento: CAdES firma la
-huella e invalida la clave mode.
+huella tal cual, como messageDigest, y no empotra datos.
 """
 drive = { mode = "v4", script = "signcadeswithaprecalculatedhash" }
 assistance = "click"
-completes = {}
+condition = ["the-hash-signed-as-it-came", "the-data-left-out"]
 warning = "Va a aparecer el diálogo de certificado."
 
 [[check]]
-id = "a_xades_signature_honours_the_envelope_of_its_request"
+id = "a_precalculated_hash_overrides_an_implicit_mode"
+set = "firma"
+chapter = "12"
+citation = "AOCAdESSigner.java:514-520; CAdESExtraParams.java"
+statement = """
+Con precalculatedHashAlgorithm se invalida mode: aun pidiendo mode=implicit, la firma de la huella
+vuelve sin datos dentro.
+"""
+drive = { mode = "v4", script = "signcadeswithaprecalculatedhashinimplicitmode" }
+assistance = "click"
+condition = ["the-hash-signed-as-it-came", "the-data-left-out"]
+warning = "Va a aparecer el diálogo de certificado."
+
+[[check]]
+id = "a_xades_enveloping_signature_carries_the_document_inside"
 set = "firma"
 chapter = "12"
 citation = "XAdESExtraParams.java; AOSignerFactory.java:51-81"
 statement = """
-El catálogo de formatos nombra cada envoltura XAdES (Detached, Enveloped, Enveloping, Externally
-Detached) y la firma se produce con la que la petición pide.
+Con format=XAdES Enveloping, la firma envuelve al documento: el documento firmado viaja dentro de
+la propia Signature.
 """
 drive = { mode = "v4", script = "signxadesenveloping" }
 assistance = "click"
-completes = {}
+condition = "the-envelope-requested"
+warning = "Va a aparecer el diálogo de certificado."
+
+[[check]]
+id = "a_xades_enveloped_signature_goes_inside_the_document"
+set = "firma"
+chapter = "12"
+citation = "XAdESExtraParams.java; AOSignerFactory.java:51-81"
+statement = """
+Con format=XAdES Enveloped, la firma va dentro del documento: vuelve el propio XML con la Signature
+como hija de su raíz.
+"""
+drive = { mode = "v4", script = "signxadesenveloped" }
+assistance = "click"
+condition = "the-envelope-requested"
+warning = "Va a aparecer el diálogo de certificado."
+
+[[check]]
+id = "a_xades_detached_signature_references_the_document_beside_it"
+set = "firma"
+chapter = "12"
+citation = "XAdESExtraParams.java; AOSignerFactory.java:51-81"
+statement = """
+Con format=XAdES Detached, la firma y el documento viajan juntos pero separados: la Signature
+referencia al documento, que va a su lado y no dentro de ella.
+"""
+drive = { mode = "v4", script = "signxadesdetached" }
+assistance = "click"
+condition = "the-envelope-requested"
+warning = "Va a aparecer el diálogo de certificado."
+
+[[check]]
+id = "a_xades_externally_detached_signature_references_the_uri_of_the_request"
+set = "firma"
+chapter = "12"
+citation = "XAdESExtraParams.java; AOSignerFactory.java:51-81"
+statement = """
+Con format=XAdES Externally Detached, la firma no lleva el documento: lo referencia por la uri que
+declara la petición.
+"""
+drive = { mode = "v4", script = "signxadesexternallydetached" }
+assistance = "click"
+condition = "the-envelope-requested"
 warning = "Va a aparecer el diálogo de certificado."
 
 [[check]]
@@ -334,11 +431,11 @@ chapter = "12"
 citation = "AOFacturaESigner.java:57-87, 89-93, 224-228"
 statement = """
 FacturaE es un XAdES Enveloped fijo que acepta de su lista blanca los cargos del firmante y el
-lugar de producción.
+lugar de producción, y la firma que vuelve los declara.
 """
 drive = { mode = "v4", script = "signfacturaewitharole" }
 assistance = "click"
-completes = {}
+condition = "the-role-and-the-place-signed"
 warning = "Va a aparecer el diálogo de certificado."
 
 [[check]]
@@ -362,11 +459,11 @@ chapter = "12"
 citation = "AOCAdESASiCSSigner.java:61, 69, 193; CAdESASiCExtraParams.java"
 statement = """
 CAdES-ASiC-S fuerza el modo explícito y devuelve un contenedor ZIP con el documento y la firma
-desprendida dentro, no la firma suelta.
+desprendida dentro, en META-INF/signature.p7s, no la firma suelta.
 """
 drive = { mode = "v4", script = "signcadesasics" }
 assistance = "click"
-condition = "a-zip-container"
+condition = "the-data-and-the-signature-inside"
 warning = "Va a aparecer el diálogo de certificado."
 
 [[check]]

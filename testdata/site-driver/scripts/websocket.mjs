@@ -17,9 +17,14 @@ const AN_ECHO_WITHOUT_A_SESSION_IS_NOT_REFUSED = "an-echo-without-a-session-is-n
 const NO_CHANNEL_OPENS = "no-channel-opens";
 const THE_FIRST_FREE_CANDIDATE_BOUND = "the-first-free-candidate-bound";
 const THE_ECHO_WITH_ANOTHER_SESSION_ANSWERS_SAF_46 = "the-echo-with-another-session-answers-saf-46";
+const AN_UNSUPPORTED_VERSION_OPENS_NO_CHANNEL = "an-unsupported-version-opens-no-channel";
+const THE_CHANNEL_OPENS_DESPITE_THE_WARNING = "the-channel-opens-despite-the-warning";
 
-/** Lo que se espera a que un esquema ajeno abra canal antes de darlo por no abierto. */
-const THE_FOREIGN_SCHEME_PATIENCE_MS = 10000;
+/** Lo que se espera a que un arranque que no debe abrir canal lo abra antes de darlo por no abierto. */
+const THE_UNOPENED_CHANNEL_PATIENCE_MS = 10000;
+
+/** Lo que se espera a que la persona cierre el aviso del cliente antes de que abra el canal. */
+const THE_WARNED_CHANNEL_PATIENCE_MS = 60000;
 
 function connectWebSocket(port) {
   return new Promise((resolve, reject) => {
@@ -204,6 +209,20 @@ const THE_V4_OPERATION_PROBES = [
       `afirma://sign?op=sign&fileid=rfirma&rtservlet=http://127.0.0.1/rt&idsession=${idSession}`,
     holds: (answer) => answer.startsWith("SAF_13"),
   },
+  ...["sign", "cosign", "countersign"].map((verb) => ({
+    condition: `${verb}-with-a-slash-saf-06`,
+    order: (idSession) =>
+      aSignOrderStoppingAtTheFormat(idSession, { op: verb }).replace(
+        "afirma://sign?",
+        `afirma://${verb}/?`,
+      ),
+    holds: (answer) => answer.startsWith("SAF_06"),
+  })),
+  ...["selectcert", "batch"].map((verb) => ({
+    condition: `${verb}-with-a-slash-saf-03`,
+    order: (idSession) => `afirma://${verb}/?fileid=abc123&idsession=${idSession}`,
+    holds: (answer) => answer.startsWith("SAF_03"),
+  })),
   {
     condition: "no-data-saf-03",
     order: (idSession) =>
@@ -377,31 +396,91 @@ async function theProtocolV3Script() {
   settle({ event: "success" });
 }
 
-/** Lanza con un esquema ajeno a `afirma://` y mira si algún puerto candidato llega a abrir canal. */
-async function theForeignSchemeScript() {
-  const ports = [54391, 54392, 54393];
-  emit({
-    event: "launch",
-    url: `other://websocket?ports=${ports.join(",")}&v=4&jvc=3&idsession=Fs5Ch3Me7Ot9Hr1Sc2Hm`,
-  });
-  const deadline = Date.now() + THE_FOREIGN_SCHEME_PATIENCE_MS;
+/** Lanza `url` y mira si alguno de `ports` llega a abrir canal en plazo: se cumple si ninguno. */
+async function theChannelThatMustNotOpen(url, ports, condition) {
+  emit({ event: "launch", url });
+  const opened = await theChannelOpeningWithin(ports, THE_UNOPENED_CHANNEL_PATIENCE_MS);
+  if (opened) opened.ws.close();
+  emit(
+    aConditionEvent(
+      condition,
+      opened === null,
+      opened
+        ? `${url}: abrió canal en ${opened.port}`
+        : `${url}: ningún canal abierto en ${THE_UNOPENED_CHANNEL_PATIENCE_MS / 1000} s`,
+    ),
+  );
+  settle({ event: "success" });
+}
+
+/** El primer candidato que abre canal antes de `patienceMs`, o `null` si ninguno. */
+async function theChannelOpeningWithin(ports, patienceMs) {
+  const deadline = Date.now() + patienceMs;
   while (Date.now() < deadline) {
     for (const port of ports) {
       try {
-        const ws = await connectWebSocket(port);
-        ws.close();
-        emit(aConditionEvent(NO_CHANNEL_OPENS, false, `el esquema ajeno abrió canal en ${port}`));
-        settle({ event: "success" });
-        return;
+        return { ws: await connectWebSocket(port), port };
       } catch {}
     }
     await new Promise((resume) => setTimeout(resume, 500));
   }
+  return null;
+}
+
+function theForeignSchemeScript() {
+  const ports = [54391, 54392, 54393];
+  return theChannelThatMustNotOpen(
+    `other://websocket?ports=${ports.join(",")}&v=4&jvc=3&idsession=Fs5Ch3Me7Ot9Hr1Sc2Hm`,
+    ports,
+    NO_CHANNEL_OPENS,
+  );
+}
+
+/** Un arranque v4 que pide la versión `version` del protocolo, que el canal no admite. */
+function theUnsupportedVersionScript(version, ports) {
+  return () =>
+    theChannelThatMustNotOpen(
+      `afirma://websocket?ports=${ports.join(",")}&v=${version}&jvc=3&idsession=Uv${version}Sp4Rt6Ed8Vr0Sn2`,
+      ports,
+      AN_UNSUPPORTED_VERSION_OPENS_NO_CHANNEL,
+    );
+}
+
+/** Los puertos del arranque que la suite ocupa antes, para que el cliente no pueda ligar ninguno. */
+const THE_OCCUPIED_PORTS = [54451, 54452, 54453];
+
+function theOccupiedPortsScript() {
+  return theChannelThatMustNotOpen(
+    `afirma://websocket?ports=${THE_OCCUPIED_PORTS.join(",")}&v=4&jvc=3&idsession=Oc2Cu4Pi6Ed8Po0Rt1S`,
+    THE_OCCUPIED_PORTS,
+    NO_CHANNEL_OPENS,
+  );
+}
+
+/** Un arranque con `jvc=0`, un cliente web anterior al mínimo: el canal tiene que abrirse igual. */
+async function theOldJavascriptScript() {
+  const idSession = "Jv0Ol2Dc4Li6En8Tt0Ab";
+  const ports = [54471, 54472, 54473];
+  emit({
+    event: "launch",
+    url: `afirma://websocket?ports=${ports.join(",")}&v=4&jvc=0&idsession=${idSession}`,
+  });
+  const opened = await theChannelOpeningWithin(ports, THE_WARNED_CHANNEL_PATIENCE_MS);
+  const echo = opened
+    ? await exchangeWithin(
+        opened.ws,
+        `echo=-idsession=${idSession}@EOF`,
+        THE_OPERATION_ANSWER_DEADLINE_MS,
+      )
+    : null;
+  opened?.ws.close();
   emit(
     aConditionEvent(
-      NO_CHANNEL_OPENS,
-      true,
-      `ningún canal abierto en ${THE_FOREIGN_SCHEME_PATIENCE_MS / 1000} s`,
+      THE_CHANNEL_OPENS_DESPITE_THE_WARNING,
+      echo === "OK",
+      opened
+        ? `canal en ${opened.port}; el eco contestó ${echo ?? "nada"}`
+        : `ningún canal abierto en ${THE_WARNED_CHANNEL_PATIENCE_MS / 1000} s`,
     ),
   );
   settle({ event: "success" });
@@ -424,6 +503,18 @@ export const WEBSOCKET_SCRIPTS = {
     A_MALFORMED_SESSION_BINDS_NOTHING,
   ]),
   "protocol-foreign-scheme": onTheFourthProtocol(theForeignSchemeScript, [NO_CHANNEL_OPENS]),
+  "protocol-v4-version-1": onTheFourthProtocol(
+    theUnsupportedVersionScript(1, [54431, 54432, 54433]),
+    [AN_UNSUPPORTED_VERSION_OPENS_NO_CHANNEL],
+  ),
+  "protocol-v4-version-99": onTheFourthProtocol(
+    theUnsupportedVersionScript(99, [54441, 54442, 54443]),
+    [AN_UNSUPPORTED_VERSION_OPENS_NO_CHANNEL],
+  ),
+  "protocol-v4-occupied-ports": onTheFourthProtocol(theOccupiedPortsScript, [NO_CHANNEL_OPENS]),
+  "protocol-v4-old-javascript": onTheFourthProtocol(theOldJavascriptScript, [
+    THE_CHANNEL_OPENS_DESPITE_THE_WARNING,
+  ]),
   "protocol-v3": aHandwrittenScript(theProtocolV3Script, {
     family: "v4-echo",
     modes: ["v3"],

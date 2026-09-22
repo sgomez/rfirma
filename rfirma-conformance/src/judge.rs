@@ -70,7 +70,7 @@ pub(crate) struct Expectation<'a> {
 pub(crate) enum OnTheWire<'a> {
     Saf(&'a Code),
     Completes(&'a Contents),
-    Condition(&'a str),
+    Conditions(&'a [String]),
     NoAnswer,
 }
 
@@ -290,8 +290,11 @@ impl From<Verdict> for CheckOutcome {
 
 /// Lo que no deja juzgar nada, salvo que la condición esperada llegara igualmente.
 fn the_preamble(observed: &ErrandOutcome, wire: Option<&OnTheWire<'_>>) -> Option<Verdict> {
-    if let Some(OnTheWire::Condition(name)) = wire {
-        if the_condition(observed, name).is_some() {
+    if let Some(OnTheWire::Conditions(names)) = wire {
+        if names
+            .iter()
+            .any(|name| the_condition(observed, name).is_some())
+        {
             return None;
         }
     }
@@ -321,14 +324,35 @@ fn on_the_wire(observed: &ErrandOutcome, wire: &OnTheWire<'_>) -> Verdict {
     match wire {
         OnTheWire::Saf(code) => against_the_code(observed, code),
         OnTheWire::Completes(contents) => completed(observed, contents),
-        OnTheWire::Condition(name) => match the_condition(observed, name) {
+        OnTheWire::Conditions(names) => the_conditions(observed, names),
+        OnTheWire::NoAnswer => unanswered(observed),
+    }
+}
+
+/// Todas las condiciones a la vez: una no conforme pesa más que una sin medir.
+fn the_conditions(observed: &ErrandOutcome, names: &[String]) -> Verdict {
+    let verdicts: Vec<Verdict> = names
+        .iter()
+        .map(|name| match the_condition(observed, name) {
             Some(condition) => Verdict {
                 outcome: condition.outcome,
                 observation: condition.observation.clone(),
             },
             None => Verdict::unobservable(format!("la sede no emitió «{name}»")),
-        },
-        OnTheWire::NoAnswer => unanswered(observed),
+        })
+        .collect();
+    let outcome = [Outcome::Noncompliant, Outcome::NotObservable]
+        .into_iter()
+        .find(|worse| verdicts.iter().any(|verdict| verdict.outcome == *worse))
+        .unwrap_or(Outcome::Compliant);
+    let observations: Vec<String> = verdicts
+        .into_iter()
+        .filter(|verdict| verdict.outcome == outcome)
+        .filter_map(|verdict| verdict.observation)
+        .collect();
+    Verdict {
+        outcome,
+        observation: (!observations.is_empty()).then(|| observations.join("; ")),
     }
 }
 
@@ -530,12 +554,19 @@ mod tests {
     }
 
     fn with_condition(name: &str, outcome: Outcome) -> ErrandOutcome {
+        with_conditions(&[(name, outcome)])
+    }
+
+    fn with_conditions(conditions: &[(&str, Outcome)]) -> ErrandOutcome {
         ErrandOutcome {
-            protocol_conditions: vec![ProtocolConditionResult {
-                name: name.to_owned(),
-                outcome,
-                observation: Some("lo que midió la sede".to_owned()),
-            }],
+            protocol_conditions: conditions
+                .iter()
+                .map(|(name, outcome)| ProtocolConditionResult {
+                    name: (*name).to_owned(),
+                    outcome: *outcome,
+                    observation: Some("lo que midió la sede".to_owned()),
+                })
+                .collect(),
             ..observed()
         }
     }
@@ -826,6 +857,37 @@ mod tests {
                 with_condition("another", C),
                 Silent,
                 Resolved(NO, Some("la sede no emitió «a-certificate-alone»")),
+            ),
+            case(
+                "every condition of a list holding is compliant",
+                "condition = [\"a-certificate-alone\", \"another\"]",
+                with_conditions(&[("a-certificate-alone", C), ("another", C)]),
+                Silent,
+                Resolved(C, Some("lo que midió la sede; lo que midió la sede")),
+            ),
+            case(
+                "one condition of a list failing is noncompliant",
+                "condition = [\"a-certificate-alone\", \"another\"]",
+                with_conditions(&[("a-certificate-alone", C), ("another", NC)]),
+                Silent,
+                Resolved(NC, Some("lo que midió la sede")),
+            ),
+            case(
+                "a condition of a list left unsent is not observable",
+                "condition = [\"a-certificate-alone\", \"another\"]",
+                with_condition("a-certificate-alone", C),
+                Silent,
+                Resolved(NO, Some("la sede no emitió «another»")),
+            ),
+            case(
+                "a failing condition outweighs one left unsent",
+                "condition = [\"a-certificate-alone\", \"another\"]",
+                ErrandOutcome {
+                    error_type: Some(TIMEOUT.to_owned()),
+                    ..with_condition("another", NC)
+                },
+                Silent,
+                Resolved(NC, Some("lo que midió la sede")),
             ),
             case(
                 "an emitted condition is judged even without a launch",

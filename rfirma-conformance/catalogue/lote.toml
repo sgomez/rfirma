@@ -18,10 +18,13 @@ id = "jsonbatch_is_only_read_in_lowercase"
 set = "lote"
 citation = "UrlParametersForBatch.java:44, 330-332; ProtocolInvocationUriParser.java:273-286"
 statement = """
-El parámetro jsonbatch sólo se reconoce escrito en minúsculas: una grafía como jsonBatch deja el
-lote en el XML heredado.
+El parámetro jsonbatch sólo se reconoce escrito en minúsculas: con la grafía jsonBatch el lote se
+lee como el XML heredado y llega al prefirmador en xml, no en json.
 """
-unmeasurable = "El cliente publicado escribe siempre jsonbatch en minúsculas (autoscript.js:2023, 2849, 4080): ningún guion suyo emite otra grafía, y la suite sólo mide lo que él sabe pedir."
+drive = { mode = "v4", script = "batchwithjsonbatchcapitalised" }
+assistance = "click"
+condition = "the-batch-read-as-xml"
+warning = "Va a aparecer el diálogo de certificado: la sede hace de prefirmador del lote, y rechaza la prefirma."
 
 [[check]]
 id = "a_batch_servlet_on_the_local_loopback_is_refused_with_saf_13"
@@ -105,11 +108,16 @@ set = "lote"
 citation = "BatchSigner.java:212-293"
 statement = """
 El lote en el XML heredado se firma en tres fases como el JSON: el lote en xml y la cadena en certs
-van al prefirmador, y las firmas con PK1 en tridata al postfirmador.
+van al prefirmador, las firmas con PK1 en tridata al postfirmador, y la respuesta trae el
+certificado del firmante.
 """
 drive = { mode = "v4", script = "batchxml" }
 assistance = "click"
-condition = "through-both-servlets"
+condition = [
+  "the-presigner-gets-the-batch-and-the-chain",
+  "the-postsigner-gets-every-item-with-pk1",
+  "the-certificate-in-the-answer",
+]
 warning = "Va a aparecer el diálogo de certificado: la sede hace de prefirmador y de postfirmador del lote."
 
 [[check]]
@@ -295,7 +303,10 @@ citation = "UrlParametersForBatch.java:41, 322-327; ProtocolInvocationLauncherBa
 statement = """
 Sin needcert=true, la respuesta del lote es sólo el resultado, sin separador ni certificado.
 """
-unmeasurable = "El cliente publicado pide siempre needcert=true en el lote (autoscript.js:2020, 2841, 4020, 4079): ningún guion suyo lo omite, y la suite sólo mide lo que él sabe pedir."
+drive = { mode = "v4", script = "batchwithoutneedcert" }
+assistance = "click"
+condition = "only-the-result"
+warning = "Va a aparecer el diálogo de certificado: la sede hace de prefirmador y de postfirmador del lote."
 
 [[check]]
 id = "a_batch_whose_presigner_does_not_answer_fails_with_saf_26"

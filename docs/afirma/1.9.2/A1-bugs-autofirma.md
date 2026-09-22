@@ -499,7 +499,7 @@ dirigido al defecto.
 
 ### BUG-25: Colapso de la distinción entre protocolo obsoleto y protocolo no soportado en el arranque de canales locales
 
-* **Veredicto de la suite (2026-09-17):** no conforme, con `websocket_rejects_a_protocol_version_it_does_not_support`.
+* **No observable:** la distinción entre `SAF_21` y `SAF_22` solo se muestra en un diálogo local y el arranque no abre canal por el que llegue; en el cable, `websocket_rejects_a_protocol_version_it_does_not_support` y `websocket_rejects_an_obsolete_protocol_version` miden solo que no se abre canal.
 * **Estado en `master`:** **Sigue presente.** La distinción se ha perdido por construcción: `UnsupportedProtocolException.java:31` fija un código único en el constructor y `isNewVersionNeeded()` sigue sin consumidor.
 * **Código fuente:** `afirma-simple` · `es.gob.afirma.standalone.protocol.ProtocolInvocationLauncher.java:283-285` (socket) y `:240-244` (WebSocket); `UnsupportedProtocolException.java:33-47`; `ServiceInvocationManager.java:42-45, 212-220`; `AfirmaWebSocketServerManager.java:27-36, 100-107`; `ProtocolInvocationLauncherErrorManager.java:45, 53, 102, 110`.
 * **Origen de auditoría:** Anteriormente AUD-84 ([01-vision-general.md](01-vision-general.md), [14-versiones.md](14-versiones.md), [15-errores.md](15-errores.md)).

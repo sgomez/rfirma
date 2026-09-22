@@ -18,6 +18,8 @@ type Measure = fn(&Probe, &Check, &Drive) -> ErrandOutcome;
 pub(crate) struct Harness {
     pub name: &'static str,
     pub fixtures: &'static [(&'static str, &'static str)],
+    /// Los permisos con los que quedan sus ficheros, para provocar un fallo de disco.
+    pub mode: u32,
     measure: Measure,
 }
 
@@ -35,15 +37,31 @@ pub(crate) fn the_harness_named(name: &str) -> Option<&'static Harness> {
 
 const JUST_DRIVE: Measure = |probe, check, drive| probe.drive(check, drive);
 
+const READ_AND_WRITE: u32 = 0o644;
+
 pub(crate) const THE_HARNESSES: &[Harness] = &[
     Harness {
         name: "a_document_to_sign",
         fixtures: &[("documento.txt", "Documento para firmar.\n")],
+        mode: READ_AND_WRITE,
         measure: JUST_DRIVE,
     },
     Harness {
         name: "a_file_to_overwrite",
         fixtures: &[("challenge.bin", "Este fichero se sobrescribe.\n")],
+        mode: READ_AND_WRITE,
+        measure: JUST_DRIVE,
+    },
+    Harness {
+        name: "a_file_that_cannot_be_written",
+        fixtures: &[("challenge.bin", "Este fichero es de solo lectura.\n")],
+        mode: 0o444,
+        measure: JUST_DRIVE,
+    },
+    Harness {
+        name: "a_file_that_cannot_be_read",
+        fixtures: &[("ilegible.bin", "Este fichero no se puede leer.\n")],
+        mode: 0o000,
         measure: JUST_DRIVE,
     },
     Harness {
@@ -52,11 +70,13 @@ pub(crate) const THE_HARNESSES: &[Harness] = &[
             ("primero.bin", "Primer fichero de carga.\n"),
             ("segundo.bin", "Segundo fichero de carga.\n"),
         ],
+        mode: READ_AND_WRITE,
         measure: JUST_DRIVE,
     },
     Harness {
         name: "occupied_service_ports",
         fixtures: &[],
+        mode: READ_AND_WRITE,
         measure: |probe, check, drive| {
             let _occupied = OccupiedPorts::at(&check.ports);
             probe.drive(check, drive)

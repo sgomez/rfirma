@@ -7,6 +7,10 @@ import { aPublishedScript } from "../lib/script.mjs";
 const THE_NAME_NEXT_TO_THE_CONTENT = "the-name-next-to-the-content";
 const EVERY_FILE_APART = "every-file-apart";
 
+const THE_SAVING_EXTENSION = "csig";
+const THE_SAVING_DESCRIPTION = "Firma de la sede";
+const THE_SAVING_DIRECTORY = "/tmp";
+
 /** Un `signAndSaveToFile()` sin identificador de operación: el verbo (`cop`) no viaja. */
 function theSignAndSaveWithoutAVerbScript() {
   AutoScript.signAndSaveToFile(
@@ -119,6 +123,26 @@ function theSignAndSaveScript() {
   );
 }
 
+/** Un `signAndSaveToFile()` que declara las extensiones, la descripción y el directorio del guardado. */
+function theSignAndSaveWithSavingParametersScript() {
+  AutoScript.signAndSaveToFile(
+    "sign",
+    theChallenge().toString("base64"),
+    "SHA256",
+    "CAdES",
+    [
+      "mode=explicit",
+      `filenameSaveExts=${THE_SAVING_EXTENSION}`,
+      `filenameSaveDescription=${THE_SAVING_DESCRIPTION}`,
+      `filenameSaveCurrentDir=${THE_SAVING_DIRECTORY}`,
+    ].join("\n"),
+    "challenge-signed.csig",
+    (signature, certificate) =>
+      settle({ event: "success", result: String(signature), certificate: String(certificate) }),
+    settlingTheError,
+  );
+}
+
 /** Un `signAndSaveToFile()` sin datos: la petición viaja sin `dat` y el documento se pide en disco. */
 function theSignAndSaveWithoutDataScript() {
   AutoScript.signAndSaveToFile(
@@ -174,5 +198,6 @@ export const FILE_SCRIPTS = {
   signandsavewithoutaverb: aPublishedScript(theSignAndSaveWithoutAVerbScript),
   signandsavewithoutdata: aPublishedScript(theSignAndSaveWithoutDataScript),
   signandsavewithanillegalfilename: aPublishedScript(theSignAndSaveWithAnIllegalFilenameScript),
+  signandsavewithsavingparameters: aPublishedScript(theSignAndSaveWithSavingParametersScript),
   signandsavewithecdsa: aPublishedScript(theSignAndSaveWithAnEcdsaAlgorithmScript),
 };

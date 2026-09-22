@@ -3,6 +3,7 @@
 
 use std::collections::BTreeSet;
 use std::net::TcpListener;
+use std::os::unix::fs::PermissionsExt;
 use std::time::{Duration, Instant};
 
 use crate::catalogue::{Assistance, Check, Drive};
@@ -203,8 +204,9 @@ impl Probe {
                 directory.display()
             )
         };
+        let mode = check.harness.map_or(0o644, |harness| harness.mode);
         for (name, content) in fixtures {
-            std::fs::write(directory.join(name), content).map_err(unprepared)?;
+            write_a_fixture(&directory.join(name), content, mode).map_err(unprepared)?;
         }
         let names: Vec<&str> = fixtures.iter().map(|(name, _)| *name).collect();
         Ok(Some(format!(
@@ -374,6 +376,11 @@ fn the_wait_announcement_of(check: &Check) -> Option<String> {
     })
 }
 
+fn write_a_fixture(path: &std::path::Path, content: &str, mode: u32) -> std::io::Result<()> {
+    std::fs::write(path, content)?;
+    std::fs::set_permissions(path, std::fs::Permissions::from_mode(mode))
+}
+
 /// Si alguno de los puertos que la comprobación necesita libres está ocupado por otra cosa; `None`
 /// si no declara `ports` o todos están libres.
 fn the_occupied_port_complaint(check: &Check) -> Option<String> {
@@ -442,6 +449,17 @@ warning = "Se va a pedir dónde guardar."
             )),
             std::path::Path::new("/home/x/.cache/rfirma/probe-profile")
         );
+    }
+
+    #[test]
+    fn a_fixture_is_left_with_the_permissions_of_its_harness() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("ilegible.bin");
+
+        write_a_fixture(&path, "contenido", 0o000).unwrap();
+
+        let mode = std::fs::metadata(&path).unwrap().permissions().mode();
+        assert_eq!(mode & 0o777, 0o000);
     }
 
     #[test]

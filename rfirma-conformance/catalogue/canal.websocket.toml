@@ -5,12 +5,14 @@ id = "v4_ports_negotiation"
 set = "canal.websocket"
 citation = "ProtocolInvocationLauncher.java:233-236, 976-990; AfirmaWebSocketServerManager.java:64-90"
 statement = """
-El cliente JavaScript selecciona 3 puertos aleatorios únicos (ports=p1,p2,p3) y el servidor enlaza
-el primer puerto libre de la lista.
+El canal v4 enlaza el primer puerto libre de la lista de candidatos (ports=p1,p2,p3): con el
+primero ocupado, liga el siguiente.
 """
 drive = { mode = "v4", script = "protocol-v4" }
 assistance = "none"
-condition = "a-candidate-port-bound"
+harness = "occupied_service_ports"
+ports = [54321]
+condition = "the-first-free-candidate-bound"
 
 [[check]]
 id = "v4_echo_greeting"
@@ -34,7 +36,10 @@ servidor responde con SAF_46.
 """
 drive = { mode = "v4", script = "protocol-v4" }
 assistance = "none"
-condition = "the-echo-without-a-session-answers-saf-46"
+condition = [
+  "the-echo-without-a-session-answers-saf-46",
+  "the-echo-with-another-session-answers-saf-46",
+]
 
 [[check]]
 id = "v4_channel_credential_malformed"
@@ -137,17 +142,38 @@ id = "websocket_rejects_a_protocol_version_it_does_not_support"
 set = "canal.websocket"
 citation = "AfirmaWebSocketServerManager.java:36, 100-107; ProtocolInvocationLauncher.java:240-245"
 statement = """
-El canal WebSocket sólo admite las versiones de protocolo 3 y 4. Una URL de arranque que pida otra
-—v=1, obsoleta; v=99, no soportada— se rechaza con SAF_21, y el código llega al cliente.
+El canal WebSocket sólo admite las versiones de protocolo 3 y 4: una URL de arranque que pide una
+posterior, v=99, se rechaza antes de ligar puerto alguno y no abre canal.
 """
-unmeasurable = "BUG-25: el cliente publicado de la sede se rinde antes de enviar nada al cable."
+drive = { mode = "v4", script = "protocol-v4-version-99" }
+assistance = "none"
+condition = "an-unsupported-version-opens-no-channel"
+
+[[check]]
+id = "websocket_rejects_an_obsolete_protocol_version"
+set = "canal.websocket"
+citation = "AfirmaWebSocketServerManager.java:36, 100-107; ProtocolInvocationLauncher.java:240-245"
+statement = """
+Una URL de arranque del canal WebSocket que pide una versión anterior a la 3, v=1, se rechaza antes
+de ligar puerto alguno y no abre canal.
+"""
+drive = { mode = "v4", script = "protocol-v4-version-1" }
+assistance = "none"
+condition = "an-unsupported-version-opens-no-channel"
 
 [[check]]
 id = "a_websocket_that_cannot_bind_its_ports_shows_saf_45"
 set = "canal.websocket"
 citation = "ProtocolInvocationLauncher.java:246-251"
 statement = """
-Si el canal WebSocket no puede ligar ninguno de sus puertos, el cliente muestra SAF_45 y cierra el
-proceso.
+Si el canal WebSocket no puede ligar ninguno de sus puertos, el cliente avisa con SAF_45 en vez de
+quedarse sin canal en silencio.
 """
-unmeasurable = "SAF_45 se muestra en un diálogo y el proceso se cierra sin canal abierto: no hay cable por el que llegue, y la sede sólo ve que el cliente publicado agota sus reintentos."
+drive = { mode = "v4", script = "protocol-v4-occupied-ports" }
+assistance = "person"
+harness = "occupied_service_ports"
+ports = [54451, 54452, 54453]
+condition = "no-channel-opens"
+question = "¿avisó la aplicación de que no pudo abrir el canal con la página (SAF_45)? [s/n]"
+person = { yes = "se avisó de que el canal no se pudo abrir", no = "el fallo al ligar terminó en silencio: no se avisó a quien está delante", yes_means = "conforme" }
+warning = "La suite ocupa los tres puertos del canal: el cliente no podrá abrirlo. Fíjate en si avisa de ello."

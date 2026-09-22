@@ -79,9 +79,9 @@ pub struct Check {
     pub(crate) saf: Option<Code>,
     #[serde(default)]
     pub(crate) completes: Option<Contents>,
-    /// La condición del manifiesto que juzga la comprobación, con el nombre que le da su guion.
-    #[serde(default)]
-    pub condition: Option<String>,
+    /// Las condiciones del manifiesto que juzgan la comprobación, con el nombre que les da su guion.
+    #[serde(default, rename = "condition", deserialize_with = "one_or_many")]
+    pub conditions: Vec<String>,
     #[serde(default)]
     pub no_answer: bool,
     #[serde(default)]
@@ -119,6 +119,19 @@ fn a_registered_harness<'de, D: Deserializer<'de>>(
         .ok_or_else(|| serde::de::Error::custom(format!("el arnés «{name}» no existe")))
 }
 
+fn one_or_many<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Vec<String>, D::Error> {
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum OneOrMany {
+        One(String),
+        Many(Vec<String>),
+    }
+    Ok(match OneOrMany::deserialize(deserializer)? {
+        OneOrMany::One(name) => vec![name],
+        OneOrMany::Many(names) => names,
+    })
+}
+
 #[derive(Debug, Deserialize)]
 struct Catalogue {
     check: Vec<Check>,
@@ -144,7 +157,7 @@ impl Check {
             Some(self.statement.clone()),
             Some(self.citation.clone()),
             self.saf.as_ref().map(ToString::to_string),
-            self.condition.clone(),
+            (!self.conditions.is_empty()).then(|| self.conditions.join("\n")),
             self.warning.clone(),
             self.question.clone(),
             self.unmeasurable.clone(),
@@ -167,7 +180,7 @@ impl Check {
         [
             self.saf.as_ref().map(OnTheWire::Saf),
             self.completes.as_ref().map(OnTheWire::Completes),
-            self.condition.as_deref().map(OnTheWire::Condition),
+            (!self.conditions.is_empty()).then_some(OnTheWire::Conditions(&self.conditions)),
             self.no_answer.then_some(OnTheWire::NoAnswer),
         ]
         .into_iter()
@@ -430,17 +443,24 @@ fn complaints_about_the_drive_of(check: &Check, manifest: &Manifest) -> Vec<Stri
             drive.script, drive.mode
         ));
     }
-    match &check.condition {
-        Some(condition) if !script.conditions.contains(condition) => complaints.push(format!(
-            "{id}: el guion «{}» no emite la condición «{condition}»",
-            drive.script
-        )),
-        None if script.site == Site::Handwritten => complaints.push(format!(
+    if check.conditions.is_empty() && script.site == Site::Handwritten {
+        complaints.push(format!(
             "{id}: el guion a mano «{}» solo informa por condiciones y no espera ninguna",
             drive.script
-        )),
-        _ => {}
+        ));
     }
+    complaints.extend(
+        check
+            .conditions
+            .iter()
+            .filter(|condition| !script.conditions.contains(condition))
+            .map(|condition| {
+                format!(
+                    "{id}: el guion «{}» no emite la condición «{condition}»",
+                    drive.script
+                )
+            }),
+    );
     complaints
 }
 
@@ -834,6 +854,17 @@ statement = "Algo se rechaza con SAF_03."
         assert_eq!(
             complaints_against_the_driver(
                 "drive = { mode = \"v4\", script = \"protocol-v4\" }\ncondition = \"the-echo-answers-ok\""
+            ),
+            vec!["a_one: el guion «protocol-v4» no emite la condición «the-echo-answers-ok»"]
+        );
+    }
+
+    #[test]
+    fn only_the_conditions_of_a_list_its_script_does_not_emit_are_named() {
+        assert_eq!(
+            complaints_against_the_driver(
+                "drive = { mode = \"v4\", script = \"protocol-v4\" }\n\
+                 condition = [\"a-candidate-port-bound\", \"the-echo-answers-ok\"]"
             ),
             vec!["a_one: el guion «protocol-v4» no emite la condición «the-echo-answers-ok»"]
         );

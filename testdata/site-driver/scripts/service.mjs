@@ -19,6 +19,15 @@ const THE_LAST_FRAGMENT_ANSWERS_OK = "the-last-fragment-answers-ok";
 const FIRM_RUNS_THE_REASSEMBLED_REQUEST = "firm-runs-the-reassembled-request";
 const EVERY_ANSWER_IS_HTTP_200 = "every-answer-is-http-200";
 const ONLY_THE_LOOPBACK_SERVED = "only-the-loopback-served";
+const NO_CHANNEL_OPENS = "no-channel-opens";
+const CLOSED_NINETY_SECONDS_AFTER_THE_LAST_VALID_ORDER =
+  "closed-ninety-seconds-after-the-last-valid-order";
+
+/** Cuándo, tras la última orden válida, se manda la inválida: dentro de los 90 s, con el canal aún abierto. */
+const THE_INVALID_ORDER_AT_MS = 80000;
+
+/** Cuándo, tras la última orden válida, se comprueba que el canal ya se cerró. */
+const THE_CLOSURE_CHECKED_AT_MS = 100000;
 
 /** Lo que se espera a que el canal del socket conteste una orden antes de darla por perdida. */
 const THE_SERVICE_ORDER_PATIENCE_MS = 10000;
@@ -334,6 +343,62 @@ async function theServiceLaunchVariantScript({ ports, launch }) {
   settle({ event: "success" });
 }
 
+/** Un arranque que no debe abrir canal: se cumple si ningún candidato contesta al eco en plazo. */
+async function theRefusedLaunchScript({ ports, launch }) {
+  const idSession = "Rf4Sd6Ln8Ch0Xz2Ab4Cd";
+  const url = launch(ports, idSession);
+  emit({ event: "launch", url });
+  const opened = await theServiceChannelOpening(ports, idSession);
+  emit(
+    aConditionEvent(
+      NO_CHANNEL_OPENS,
+      opened === null,
+      opened
+        ? `${url}: el eco contestó ${opened.answer.text} en ${opened.port}`
+        : `${url}: ningún puerto candidato contestó al eco`,
+    ),
+  );
+  settle({ event: "success" });
+}
+
+const aMomentAfter = (start, ms) =>
+  new Promise((resume) => setTimeout(resume, Math.max(0, start + ms - Date.now())));
+
+/** El canal abierto, una orden inválida a los 80 s del último eco y otro eco a los 100 s. */
+async function theInactivityScript() {
+  const idSession = "In4Ac6Tv8Ty0Xz2Ab4Cd";
+  const ports = [54461, 54462, 54463];
+  emit({ event: "launch", url: aServiceLaunch({ ports, version: 3, idSession }) });
+  const opened = await theServiceChannelOpening(ports, idSession);
+  if (!opened) {
+    emit(
+      aMeasuredConditionEvent(
+        CLOSED_NINETY_SECONDS_AFTER_THE_LAST_VALID_ORDER,
+        null,
+        "ningún puerto candidato contestó al eco",
+      ),
+    );
+    settle({ event: "success" });
+    return;
+  }
+  const lastValidOrder = Date.now();
+  await aMomentAfter(lastValidOrder, THE_INVALID_ORDER_AT_MS);
+  const invalid = await aServiceOrder(opened.port, `nada=idsession=${idSession}@EOF`);
+  await aMomentAfter(lastValidOrder, THE_CLOSURE_CHECKED_AT_MS);
+  const late = await aServiceOrder(opened.port, anEcho(idSession));
+  const aliveAtTheInvalid = invalid.text !== null;
+  const closedAfter = late.text === null;
+  emit(
+    aConditionEvent(
+      CLOSED_NINETY_SECONDS_AFTER_THE_LAST_VALID_ORDER,
+      aliveAtTheInvalid && closedAfter,
+      `a los ${THE_INVALID_ORDER_AT_MS / 1000} s la orden inválida contestó ${invalid.text ?? invalid.failure}; ` +
+        `a los ${THE_CLOSURE_CHECKED_AT_MS / 1000} s el eco contestó ${late.text ?? late.failure}`,
+    ),
+  );
+  settle({ event: "success" });
+}
+
 const overTheService = (run, conditions) =>
   aHandwrittenScript(run, { family: "service", modes: ["service"], conditions });
 
@@ -372,6 +437,17 @@ export const SERVICE_SCRIPTS = {
   "protocol-service-negative-ports": aLaunchVariant([54381, 54382, 54383], (ports, idSession) =>
     aServiceLaunch({ ports: ports.map((port) => -port), version: 3, idSession }),
   ),
+  "protocol-service-v4": overTheService(
+    () =>
+      theRefusedLaunchScript({
+        ports: [54421, 54422, 54423],
+        launch: (ports, idSession) => aServiceLaunch({ ports, version: 4, idSession }),
+      }),
+    [NO_CHANNEL_OPENS],
+  ),
+  "protocol-service-inactivity": overTheService(theInactivityScript, [
+    CLOSED_NINETY_SECONDS_AFTER_THE_LAST_VALID_ORDER,
+  ]),
   "protocol-service-slash": aLaunchVariant([54411, 54412, 54413], (ports, idSession) =>
     aServiceLaunch({ ports, version: 3, idSession, slash: true }),
   ),

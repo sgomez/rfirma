@@ -64,7 +64,7 @@ citation = "ProtocolInvocationLauncher.java:166-171"
 statement = """
 Una invocación sin URI se rechaza con SAF_01.
 """
-unmeasurable = "El cliente publicado construye siempre una URI completa: ningún guion suyo la envía nula, y la suite sólo mide lo que él sabe pedir."
+unmeasurable = "Ningún camino de entrada llega al lanzador con la URI nula: el arranque solo lo invoca si el primer argumento empieza por afirma:// (SimpleAfirma.java:957-962), sin argumentos abre la aplicación de escritorio, y los dos canales le pasan siempre una cadena."
 
 [[check]]
 id = "a_local_file_in_dat_is_refused_with_saf_03"
@@ -224,10 +224,16 @@ id = "jvc_only_warns_below_one"
 set = "peticion"
 citation = "ProtocolInvocationLauncher.java:196-214; autoscript.js:27, 4362"
 statement = """
-jvc sólo avisa de un cliente web antiguo cuando vale menos de 1, y el aviso es un diálogo que no
-detiene la operación.
+Con jvc menor que 1, el cliente avisa de un cliente web antiguo en un diálogo que no detiene la
+operación: al cerrarlo, el canal se abre igual.
 """
-unmeasurable = "El aviso sólo salta con valores que ningún cliente real envía —el publicado manda siempre jvc=3—, y es un diálogo local que no llega al cable."
+drive = { mode = "v4", script = "protocol-v4-old-javascript" }
+assistance = "person"
+condition = "the-channel-opens-despite-the-warning"
+patience_secs = 90
+question = "¿avisó el cliente de que la página usa un cliente web antiguo? [s/n]"
+person = { yes = "se avisó del cliente web antiguo", no = "con jvc=0 no se avisó del cliente web antiguo", yes_means = "conforme" }
+warning = "El arranque declara jvc=0: si aparece un aviso de cliente web antiguo, ciérralo para que el canal se abra."
 
 [[check]]
 id = "operation_supported_protocol_version"
@@ -271,10 +277,17 @@ id = "the_three_verbs_are_recognised_with_a_trailing_slash"
 set = "peticion"
 citation = "ProtocolInvocationLauncher.java:643-646"
 statement = """
-Los tres verbos se admiten tanto sin barra (afirma://<op>?) como con barra antes del interrogante
-(afirma://<op>/?).
+Los tres verbos de firma se admiten tanto sin barra (afirma://<op>?) como con barra antes del
+interrogante (afirma://<op>/?): con barra, sign, cosign y countersign llegan igual a la
+comprobación del formato.
 """
-unmeasurable = "El cliente publicado construye siempre la forma sin barra (buildUrl, autoscript.js:2077): ningún guion suyo emite la variante con barra, y la suite sólo mide lo que él sabe pedir."
+drive = { mode = "v4", script = "protocol-v4" }
+assistance = "none"
+condition = [
+  "sign-with-a-slash-saf-06",
+  "cosign-with-a-slash-saf-06",
+  "countersign-with-a-slash-saf-06",
+]
 
 [[check]]
 id = "selectcert_is_recognised_with_a_trailing_slash"
@@ -282,15 +295,20 @@ set = "peticion"
 citation = "ProtocolInvocationLauncher.java:370"
 statement = """
 selectcert se admite tanto sin barra (afirma://selectcert?) como con barra antes del interrogante
-(afirma://selectcert/?).
+(afirma://selectcert/?): con barra, sus parámetros se analizan como los de siempre.
 """
-unmeasurable = "El cliente publicado construye siempre la forma sin barra (buildUrl, autoscript.js): ningún guion suyo emite la variante con barra, y la suite sólo mide lo que él sabe pedir."
+drive = { mode = "v4", script = "protocol-v4" }
+assistance = "none"
+condition = "selectcert-with-a-slash-saf-03"
 
 [[check]]
 id = "batch_is_recognised_with_a_trailing_slash"
 set = "peticion"
 citation = "ProtocolInvocationLauncher.java:293"
 statement = """
-batch se admite también con barra antes del interrogante (afirma://batch/?), igual que sin ella.
+batch se admite también con barra antes del interrogante (afirma://batch/?), igual que sin ella: con
+barra, sus parámetros se analizan como los de siempre.
 """
-unmeasurable = "El cliente publicado construye siempre la forma sin barra (buildUrl, autoscript.js): ningún guion suyo emite la variante con barra, y la suite sólo mide lo que él sabe pedir."
+drive = { mode = "v4", script = "protocol-v4" }
+assistance = "none"
+condition = "batch-with-a-slash-saf-03"

@@ -18,7 +18,7 @@ import {
   theXmlDocument,
 } from "../lib/fixtures.mjs";
 import { withJsonbatchCapitalised, withoutNeedcertInTheBatch } from "../lib/patches.mjs";
-import { aPublishedScript, NOT_YET_DRIVEN } from "../lib/script.mjs";
+import { aPublishedScript } from "../lib/script.mjs";
 
 const THROUGH_BOTH_SERVLETS = "through-both-servlets";
 const THE_PRESIGNER_GETS_THE_CHAIN = "the-presigner-gets-the-batch-and-the-chain";
@@ -35,7 +35,6 @@ const THE_REST_SIGNED = "the-rest-signed";
 const THE_SUBOPERATION_DONE = "the-suboperation-done";
 const THE_ALGORITHM_OF_THE_KEY = "the-algorithm-of-the-key";
 const THE_URL_NEITHER_FETCHED_NOR_SIGNED = "the-url-neither-fetched-nor-signed";
-const NO_SERVLET_REACHED = "no-servlet-reached";
 const ONLY_THE_RESULT = "only-the-result";
 const THE_BATCH_READ_AS_XML = "the-batch-read-as-xml";
 
@@ -650,42 +649,6 @@ async function theLocalBatchWithAUrlScript() {
   });
 }
 
-/** El lote local con los dos servlets escuchando y nombrados en la URL: se cumple si nadie los llama. */
-async function theLocalBatchWithServletsAtHandScript() {
-  let reached = 0;
-  const aServletThatCounts = () =>
-    servletServing(() => {
-      reached++;
-      return { status: 500, body: "el lote local no debería llamar a ningún servlet" };
-    });
-  const presigner = await aServletThatCounts();
-  const postsigner = await aServletThatCounts();
-
-  AutoScript.setLocalBatchProcess(true);
-  AutoScript.createBatch("SHA256", "CAdES", "sign", null);
-  AutoScript.addDocumentToBatch("bin", theLocalBatchBinary().toString("base64"));
-  AutoScript.signBatchProcess(
-    false,
-    presigner,
-    postsigner,
-    null,
-    ...theBatchCallbacks((result) => {
-      const signed = signedAs(theLocalItems(result).get("bin"), "cms");
-      return [
-        aCondition(
-          NO_SERVLET_REACHED,
-          signed && reached === 0,
-          reached > 0
-            ? `el lote local llamó ${reached} veces a los servlets`
-            : signed
-              ? "el binario salió firmado sin llamar a ningún servlet"
-              : "el binario no salió firmado",
-        ),
-      ];
-    }),
-  );
-}
-
 /** Sin `needcert`, el lote vuelve sólo con el resultado: el cliente publicado no ve certificado. */
 function theResultAlone(result, certificate) {
   const alone =
@@ -792,12 +755,10 @@ export const BATCH_SCRIPTS = {
     ],
   }),
   batchwithoutneedcert: aPublishedScript(() => theBatchScript(thePresigner, theResultAlone), {
-    ...NOT_YET_DRIVEN,
     conditions: [ONLY_THE_RESULT],
     patch: withoutNeedcertInTheBatch,
   }),
   batchwithjsonbatchcapitalised: aPublishedScript(theBatchWithJsonbatchCapitalisedScript, {
-    ...NOT_YET_DRIVEN,
     conditions: [THE_BATCH_READ_AS_XML],
     patch: withJsonbatchCapitalised,
   }),
@@ -810,10 +771,6 @@ export const BATCH_SCRIPTS = {
   ),
   batchlocal: aPublishedScript(theLocalBatchScript, {
     conditions: [EVERY_ITEM_SIGNED, EACH_ITEM_IN_ITS_FORMAT],
-  }),
-  batchlocalwithservletsathand: aPublishedScript(theLocalBatchWithServletsAtHandScript, {
-    ...NOT_YET_DRIVEN,
-    conditions: [NO_SERVLET_REACHED],
   }),
   batchlocalillegible: aPublishedScript(theLocalBatchWithAnIllegibleItemScript, {
     conditions: [THE_SIGNED_ROLLED_BACK],

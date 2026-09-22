@@ -21,7 +21,7 @@ import {
 } from "../lib/fixtures.mjs";
 import { isASignedPdf } from "../lib/pades.mjs";
 import { withTheDataDeclaredGzipped } from "../lib/patches.mjs";
-import { aPublishedScript, NOT_YET_DRIVEN } from "../lib/script.mjs";
+import { aPublishedScript } from "../lib/script.mjs";
 import { isAXadesSignature, signsTheRoleAndThePlace, theXadesEnvelope } from "../lib/xades.mjs";
 import { theZipEntries } from "../lib/zip.mjs";
 
@@ -353,11 +353,11 @@ export const SIGNATURE_SCRIPTS = {
   ),
   signcadesimplicit: aPublishedScript(
     signing("CAdES", "mode=implicit", theChallenge, theDataInside(theChallenge)),
-    { ...NOT_YET_DRIVEN, conditions: [THE_DATA_INSIDE] },
+    { conditions: [THE_DATA_INSIDE] },
   ),
   signcadesagepolicy: aPublishedScript(
     signing("CAdES", "expPolicy=FirmaAGE", theChallenge, theDataInside(theChallenge)),
-    { ...NOT_YET_DRIVEN, conditions: [THE_DATA_INSIDE] },
+    { conditions: [THE_DATA_INSIDE] },
   ),
   signgzip: aPublishedScript(
     signing(
@@ -393,11 +393,11 @@ export const SIGNATURE_SCRIPTS = {
   ),
   signxadesenveloped: aPublishedScript(
     signing("XAdES Enveloped", "", theXmlDocument, theEnvelope("enveloped")),
-    { ...NOT_YET_DRIVEN, conditions: [THE_ENVELOPE_REQUESTED] },
+    { conditions: [THE_ENVELOPE_REQUESTED] },
   ),
   signxadesdetached: aPublishedScript(
     signing("XAdES Detached", "", theXmlDocument, theEnvelope("detached")),
-    { ...NOT_YET_DRIVEN, conditions: [THE_ENVELOPE_REQUESTED] },
+    { conditions: [THE_ENVELOPE_REQUESTED] },
   ),
   signxadesexternallydetached: aPublishedScript(
     signing(
@@ -406,7 +406,7 @@ export const SIGNATURE_SCRIPTS = {
       theXmlDocument,
       theEnvelope("externally-detached"),
     ),
-    { ...NOT_YET_DRIVEN, conditions: [THE_ENVELOPE_REQUESTED] },
+    { conditions: [THE_ENVELOPE_REQUESTED] },
   ),
   signxadeswithatransform: aPublishedScript(
     signing(
@@ -458,7 +458,7 @@ export const SIGNATURE_SCRIPTS = {
       theChallengeHash,
       theHashSignedLeavingTheDataOut,
     ),
-    { ...NOT_YET_DRIVEN, conditions: [THE_HASH_SIGNED_AS_IT_CAME, THE_DATA_LEFT_OUT] },
+    { conditions: [THE_HASH_SIGNED_AS_IT_CAME, THE_DATA_LEFT_OUT] },
   ),
   signwithanunknownformat: aPublishedScript(signing("NoSuchFormat", "", theChallenge)),
   signwithoutaformat: aPublishedScript(signing(null, "", theChallenge)),
@@ -473,7 +473,7 @@ export const SIGNATURE_SCRIPTS = {
   ),
   cosignautooveracmssignature: aPublishedScript(
     cosigning("auto", "", theCmsSignatureOfTheSite, cosignedAsCades),
-    { ...NOT_YET_DRIVEN, conditions: [COSIGNED_AS_CADES] },
+    { conditions: [COSIGNED_AS_CADES] },
   ),
   cosignautowithoutasignature: aPublishedScript(cosigning("auto", "", theXmlDocument)),
   cosignpadeschecking: aPublishedScript(
@@ -494,7 +494,7 @@ export const SIGNATURE_SCRIPTS = {
       theCountersignedCadesSignature,
       withTheShape(EVERY_NODE_COUNTERSIGNED, "[[[]][]]"),
     ),
-    { ...NOT_YET_DRIVEN, conditions: [EVERY_NODE_COUNTERSIGNED] },
+    { conditions: [EVERY_NODE_COUNTERSIGNED] },
   ),
   countersigncadesanothertarget: aPublishedScript(
     countersigning(
@@ -502,6 +502,6 @@ export const SIGNATURE_SCRIPTS = {
       theCountersignedCadesSignature,
       withTheShape(ONLY_THE_LEAVES_COUNTERSIGNED, "[[[]]]"),
     ),
-    { ...NOT_YET_DRIVEN, conditions: [ONLY_THE_LEAVES_COUNTERSIGNED] },
+    { conditions: [ONLY_THE_LEAVES_COUNTERSIGNED] },
   ),
 };

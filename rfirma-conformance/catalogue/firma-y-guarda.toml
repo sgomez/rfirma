@@ -77,7 +77,11 @@ statement = """
 Las extensiones, la descripción y el directorio inicial que la petición declara en filenameSaveExts,
 filenameSaveDescription y filenameSaveCurrentDir configuran el guardado del resultado.
 """
-unmeasurable = "Los tres sólo cambian el filtro, el rótulo y el directorio de partida del guardado: no viajan por el cable ni cambian ningún evento del cliente publicado, y quien ejecuta la suite no puede afirmar sobre ellos sin describir la ventana."
+drive = { mode = "v4", script = "signandsavewithsavingparameters" }
+assistance = "person"
+question = "¿la ventana de guardar la firma se abrió en /tmp y filtraba por «Firma de la sede» con la extensión .csig? [s/n]"
+person = { yes = "el guardado se abrió en el directorio y con el filtro que declaraba la petición", no = "el guardado no siguió el directorio o el filtro que declaraba la petición", yes_means = "conforme" }
+warning = "Van a aparecer el diálogo de certificado y la ventana para guardar la firma: fíjate en su carpeta inicial y en su filtro de tipos antes de guardar o cancelar."
 
 [[check]]
 id = "signandsave_accepts_an_elliptic_curve_algorithm"
