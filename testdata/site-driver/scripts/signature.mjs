@@ -48,7 +48,7 @@ const THE_HASH_SIGNED_AS_IT_CAME = "the-hash-signed-as-it-came";
 const THE_UNCOMPRESSED_DATA_SIGNED = "the-uncompressed-data-signed";
 const THE_ALGORITHM_OF_THE_KEY = "the-algorithm-of-the-key";
 const A_CADES_SIGNATURE = "a-cades-signature";
-const COSIGNED_AS_CADES = "cosigned-as-cades";
+const COSIGNED_AS_CMS = "cosigned-as-cms";
 const A_XADES_SIGNATURE = "a-xades-signature";
 const THE_ENVELOPE_REQUESTED = "the-envelope-requested";
 const THE_ROLE_AND_THE_PLACE_SIGNED = "the-role-and-the-place-signed";
@@ -215,12 +215,9 @@ const allCades = onTheCms(
       : "un CMS con algún firmante sin signingCertificate: no es CAdES",
 );
 
-const cosignedAsCades = onTheCms(
-  COSIGNED_AS_CADES,
-  (cms) =>
-    theShapeOf(cms) === "[][]" &&
-    cms.signers.some((signer) => signer.cades) &&
-    cms.signers.some((signer) => !signer.cades),
+const cosignedAsCms = onTheCms(
+  COSIGNED_AS_CMS,
+  (cms) => theShapeOf(cms) === "[][]" && cms.signers.every((signer) => !signer.cades),
   (cms) =>
     `${theShape(cms)}; ${cms.signers.filter((signer) => signer.cades).length} con signingCertificate`,
 );
@@ -772,8 +769,8 @@ export const SIGNATURE_SCRIPTS = {
     { conditions: [TWO_PARALLEL_SIGNERS] },
   ),
   cosignautooveracmssignature: aPublishedScript(
-    cosigning("auto", "", theCmsSignatureOfTheSite, cosignedAsCades),
-    { conditions: [COSIGNED_AS_CADES] },
+    cosigning("auto", "", theCmsSignatureOfTheSite, cosignedAsCms),
+    { conditions: [COSIGNED_AS_CMS] },
   ),
   cosignautowithoutasignature: aPublishedScript(cosigning("auto", "", theXmlDocument)),
   cosignpadeschecking: aPublishedScript(

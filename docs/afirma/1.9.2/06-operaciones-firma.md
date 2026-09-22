@@ -251,8 +251,10 @@ Existe una asimetría técnica fundamental en la resolución automática según 
     y firmará (como XAdES si es XML o CAdES si es binario/texto), mientras que el mismo
     fichero enviado a `cosign` o `countersign` debería fallar con `SAF_17` (en la 1.9.2,
     `SAF_03` por el BUG-27).
-  - Dado que `CAdES` precede a `CMS` en la matriz de búsqueda y las firmas CAdES derivan
-    de CMS/PKCS#7, una firma CMS estándar será identificada y clasificada como `CAdES`.
+  - `CAdES` precede a `CMS` en la matriz de búsqueda, pero su reconocedor exige
+    signingCertificate en cada firmante (`AOCAdESSigner.java:384-391`,
+    `CAdESValidator.java:117-125`): una firma CMS sin él se identifica como `CMS` y se
+    cofirma como `CMS`, sin signingCertificate en el firmante nuevo.
   - Los contenedores ASiC (`.asics`), clasificados como `CAdES` en `sign` (al no ser PDF
     ni XML), serán correctamente identificados como `CAdES-ASiC-S` o `XAdES-ASiC-S` en
     multifirma por sus respectivos reconocedores específicos.

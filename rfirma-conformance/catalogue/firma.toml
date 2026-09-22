@@ -147,17 +147,17 @@ assistance = "none"
 saf = "SAF_17"
 
 [[check]]
-id = "format_auto_identifies_a_cms_signature_as_cades"
+id = "format_auto_cosigns_a_cms_signature_as_cms"
 set = "firma"
-citation = "AOSignerFactory.java:92-118"
+citation = "AOSignerFactory.java:92-118; AOCAdESSigner.java:384-391; CAdESValidator.java:117-125"
 statement = """
-El orden de la matriz de reconocimiento es parte de la resolución de auto: CAdES precede a
-CMS/PKCS#7, así que una firma CMS se identifica y se cofirma como CAdES, y el firmante nuevo lleva
-signingCertificate.
+CAdES precede a CMS/PKCS#7 en la matriz de reconocimiento de auto, pero solo reconoce firmas cuyos
+firmantes llevan todos signingCertificate: una firma CMS sin él se identifica y se cofirma como
+CMS, y el firmante nuevo tampoco lo lleva.
 """
 drive = { mode = "v4", script = "cosignautooveracmssignature" }
 assistance = "click"
-condition = "cosigned-as-cades"
+condition = "cosigned-as-cms"
 warning = "Va a aparecer el diálogo de certificado."
 
 [[check]]
