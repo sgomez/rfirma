@@ -1,10 +1,8 @@
-# Entradas del catálogo de la suite de conformidad para el conjunto «transporte.service».
-# Lo lee `catalogue.rs`, que valida la forma de cada entrada al arrancar.
+# Las comprobaciones del conjunto «canal.servicio»; sus capítulos y su orden los declara `sets.toml`.
 
 [[check]]
 id = "the_service_channel_completes_a_certificate_selection"
-set = "transporte.service"
-chapter = "04"
+set = "canal.servicio"
 citation = "ServiceInvocationManager.java:103-169; CommandProcessorThread.java:520-620"
 statement = """
 El carril del socket local completa una selección de certificado igual que el canal WebSocket: sin
@@ -17,8 +15,7 @@ warning = "Va a aparecer el diálogo de selección de certificado: elige uno par
 
 [[check]]
 id = "the_service_channel_reports_a_bind_failure_instead_of_claiming_success"
-set = "transporte.service"
-chapter = "04"
+set = "canal.servicio"
 citation = "ServiceInvocationManager.java:136-143, 148-168; ProtocolInvocationLauncher.java:281-291"
 statement = """
 Si el canal no puede ligar ninguno de los puertos ofrecidos, la aplicación se lo dice a la persona
@@ -36,34 +33,31 @@ warning = "La suite ocupa los tres puertos del canal: el cliente no podrá abrir
 
 [[check]]
 id = "the_service_launch_accepts_a_slash_before_its_query"
-set = "transporte.service"
-chapter = "04"
+set = "canal.servicio"
 citation = "ProtocolInvocationLauncher.java:264"
 statement = """
 La invocación afirma://service/? con barra ante la consulta abre el canal igual que
 afirma://service?.
 """
-drive = { mode = "service", script = "protocol-service-v2" }
+drive = { mode = "service", script = "protocol-service-slash" }
 assistance = "none"
 condition = "the-echo-answers-ok"
 
 [[check]]
 id = "negative_candidate_ports_are_read_by_their_absolute_value"
-set = "transporte.service"
-chapter = "04"
+set = "canal.servicio"
 citation = "ProtocolInvocationLauncher.java:973-990"
 statement = """
 Un puerto candidato con signo negativo en ports se toma por su valor absoluto: el canal escucha en
 63117 si la invocación trae -63117.
 """
-drive = { mode = "service", script = "protocol-service-v1" }
+drive = { mode = "service", script = "protocol-service-negative-ports" }
 assistance = "none"
 condition = "the-echo-answers-ok"
 
 [[check]]
 id = "the_service_channel_binds_the_first_free_candidate_port"
-set = "transporte.service"
-chapter = "04"
+set = "canal.servicio"
 citation = "ServiceInvocationManager.java:103-113, 176-197"
 statement = """
 Los puertos candidatos se prueban en el orden en que llegan en ports y el canal escucha en el
@@ -75,8 +69,7 @@ condition = "the-first-free-candidate-bound"
 
 [[check]]
 id = "the_service_channel_serves_only_the_loopback"
-set = "transporte.service"
-chapter = "04"
+set = "canal.servicio"
 citation = "CommandProcessorThread.java:92-101, 157-165"
 statement = """
 El canal sólo atiende conexiones que llegan del bucle local: a una que llega desde otra dirección
@@ -88,8 +81,7 @@ condition = "only-the-loopback-served"
 
 [[check]]
 id = "the_service_channel_reads_until_the_eof_mark_however_it_arrives"
-set = "transporte.service"
-chapter = "04"
+set = "canal.servicio"
 citation = "CommandProcessorThread.java:24-45, 520-620"
 statement = """
 El canal lee la orden hasta el delimitador @EOF aunque llegue en varios envíos, con el delimitador
@@ -101,11 +93,10 @@ condition = "read-until-the-eof-mark"
 
 [[check]]
 id = "the_service_echo_answers_ok"
-set = "transporte.service"
-chapter = "04"
+set = "canal.servicio"
 citation = "CommandProcessorThread.java:260-270"
 statement = """
-La orden echo= con el identificador de sesión negociado recibe OK.
+La orden echo= con el identificador de sesión negociado recibe OK en un canal abierto con v=3.
 """
 drive = { mode = "service", script = "protocol-service" }
 assistance = "none"
@@ -114,8 +105,7 @@ condition = "the-echo-answers-ok"
 
 [[check]]
 id = "an_echo_with_a_dash_discards_the_pending_result"
-set = "transporte.service"
-chapter = "04"
+set = "canal.servicio"
 citation = "CommandProcessorThread.java:260-270, 327-361, 433-437"
 statement = """
 El eco con guion (echo=-) descarta el resultado pendiente: el cmd= siguiente ejecuta su operación
@@ -127,8 +117,7 @@ condition = "a-dashed-echo-discards-the-result"
 
 [[check]]
 id = "the_service_cmd_order_answers_the_number_of_parts"
-set = "transporte.service"
-chapter = "04"
+set = "canal.servicio"
 citation = "CommandProcessorThread.java:327-361, 416-428"
 statement = """
 La orden cmd= con una operación entera no devuelve su resultado sino el número de partes en que
@@ -140,8 +129,7 @@ condition = "cmd-announces-the-parts"
 
 [[check]]
 id = "the_service_send_order_delivers_the_result"
-set = "transporte.service"
-chapter = "04"
+set = "canal.servicio"
 citation = "CommandProcessorThread.java:397-411"
 statement = """
 La orden send=@parte@total entrega cada parte anunciada, y unidas son el resultado de la operación.
@@ -152,8 +140,7 @@ condition = "send-delivers-the-result"
 
 [[check]]
 id = "a_fragment_before_the_last_answers_more_data_need"
-set = "transporte.service"
-chapter = "04"
+set = "canal.servicio"
 citation = "CommandProcessorThread.java:367-391"
 statement = """
 Un fragment= que no es el último de su petición recibe MORE_DATA_NEED.
@@ -164,8 +151,7 @@ condition = "an-early-fragment-asks-for-more"
 
 [[check]]
 id = "the_last_fragment_answers_ok"
-set = "transporte.service"
-chapter = "04"
+set = "canal.servicio"
 citation = "CommandProcessorThread.java:367-391"
 statement = """
 El último fragment= de una petición recibe OK.
@@ -176,8 +162,7 @@ condition = "the-last-fragment-answers-ok"
 
 [[check]]
 id = "the_firm_order_runs_the_reassembled_request"
-set = "transporte.service"
-chapter = "04"
+set = "canal.servicio"
 citation = "CommandProcessorThread.java:276-321"
 statement = """
 La orden firm= ejecuta la petición reensamblada de sus fragmentos en orden y anuncia las partes del
@@ -189,8 +174,7 @@ condition = "firm-runs-the-reassembled-request"
 
 [[check]]
 id = "every_service_answer_is_http_200_whatever_it_carries"
-set = "transporte.service"
-chapter = "04"
+set = "canal.servicio"
 citation = "CommandProcessorThread.java:469-475, 493-511"
 statement = """
 Toda respuesta del canal lleva HTTP/1.1 200 OK, también las que traen un error SAF_nn: el resultado
@@ -202,8 +186,7 @@ condition = "every-answer-is-http-200"
 
 [[check]]
 id = "the_service_channel_accepts_protocol_version_1"
-set = "transporte.service"
-chapter = "04"
+set = "canal.servicio"
 citation = "ServiceInvocationManager.java:42-45, 212-220"
 statement = """
 El canal del socket se abre cuando la invocación declara v=1.
@@ -214,8 +197,7 @@ condition = "the-echo-answers-ok"
 
 [[check]]
 id = "the_service_channel_accepts_protocol_version_2"
-set = "transporte.service"
-chapter = "04"
+set = "canal.servicio"
 citation = "ServiceInvocationManager.java:42-45, 212-220"
 statement = """
 El canal del socket se abre cuando la invocación declara v=2.
@@ -225,21 +207,8 @@ assistance = "none"
 condition = "the-echo-answers-ok"
 
 [[check]]
-id = "the_service_channel_accepts_protocol_version_3"
-set = "transporte.service"
-chapter = "04"
-citation = "ServiceInvocationManager.java:42-45, 212-220"
-statement = """
-El canal del socket se abre cuando la invocación declara v=3.
-"""
-drive = { mode = "service", script = "protocol-service" }
-assistance = "none"
-condition = "the-echo-answers-ok"
-
-[[check]]
 id = "service_channel_version_range"
-set = "transporte.service"
-chapter = "04"
+set = "canal.servicio"
 citation = "ServiceInvocationManager.java:42-45, 212-220; ProtocolInvocationLauncher.java:281-288"
 statement = """
 El canal socket HTTP (afirma://service) sólo admite las versiones 1, 2 y 3; la versión 4 se rechaza
@@ -249,8 +218,7 @@ unmeasurable = "SAF_21 se muestra en un diálogo y no se abre canal: no hay cabl
 
 [[check]]
 id = "a_ver_inside_an_order_leaves_the_negotiated_version_alone"
-set = "transporte.service"
-chapter = "04"
+set = "canal.servicio"
 citation = "CommandProcessorThread.java:327-361; ProtocolInvocationLauncher.java:300, 650"
 statement = """
 La versión negociada al abrir el canal rige toda la sesión: un ver dentro de la operación que llega
@@ -262,8 +230,7 @@ condition = "an-inner-ver-is-ignored"
 
 [[check]]
 id = "the_service_channel_closes_after_ninety_seconds_of_inactivity"
-set = "transporte.service"
-chapter = "04"
+set = "canal.servicio"
 citation = "ServiceInvocationManager.java:127-134; CommandProcessorThread.java:452-460"
 statement = """
 El canal se cierra tras 90 segundos sin órdenes, y una orden inválida no reinicia la cuenta.
@@ -272,11 +239,48 @@ unmeasurable = "El temporizador de inactividad vive dentro del cliente: la suite
 
 [[check]]
 id = "concurrent_service_orders_do_not_share_their_state"
-set = "transporte.service"
-chapter = "04"
+set = "canal.servicio"
 citation = "ServiceInvocationManager.java:136-143; CommandProcessorThread.java:67-69"
 statement = """
 Dos conversaciones simultáneas con el canal no se mezclan los fragmentos ni las partes del resultado
 (BUG-09).
 """
 unmeasurable = "La concurrencia entre sesiones depende del estado interno del cliente y de un entrelazado no determinista: la suite no la puede provocar ni leer desde el cable sin instrumentar la máquina virtual."
+
+[[check]]
+id = "a_saf_code_reaches_the_published_client_intact_over_the_service_channel"
+set = "canal.servicio"
+citation = "CommandProcessorThread.java:333-348, 493-512; autoscript.js:3355-3385"
+statement = """
+Por el socket local el mismo rechazo viaja en Base64 dentro de una respuesta HTTP 200, y el cliente
+publicado lo recibe descodificado con el prefijo SAF_nn intacto.
+"""
+drive = { mode = "service", script = "signwithanunknownformat" }
+assistance = "none"
+saf = "SAF_06"
+
+[[check]]
+id = "an_exhausted_memory_answers_memory_error_over_the_service_channel"
+set = "canal.servicio"
+citation = "CommandProcessorThread.java:142-145, 481-487; autoscript.js:2312, 3131"
+statement = """
+Una falta de memoria en el socket local responde el literal no numerado MEMORY_ERROR, que el cliente
+publicado entrega como es.gob.afirma.core.OutOfMemoryError.
+"""
+unmeasurable = "Provocarla exige agotar el montón del cliente con un documento mayor que él, y la suite no fija ni conoce ese montón: el mismo documento revienta a un cliente y pasa por otro."
+
+[[check]]
+id = "a_save_over_the_service_channel_answers_save_ok_and_not_a_signature"
+set = "canal.servicio"
+citation = "CommandProcessorThread.java:290-305; autoscript.js:3423-3428"
+statement = """
+Por el socket local, un guardado con éxito responde SAVE_OK, que el cliente publicado reconoce como
+confirmación y no confunde con una firma. La misma confirmación por WebSocket la mide el conjunto
+de operaciones.
+"""
+drive = { mode = "service", script = "save" }
+assistance = "person"
+saf = "SAVE_OK"
+question = "¿se pidió elegir dónde guardar el fichero? [s/n]"
+person = { yes = "se pidió dónde guardar el fichero", no = "no se pidió dónde guardar el fichero", yes_means = "conforme" }
+warning = "Va a aparecer la ventana nativa para elegir dónde guardar el fichero."

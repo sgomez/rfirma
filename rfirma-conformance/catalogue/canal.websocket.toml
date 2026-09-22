@@ -1,10 +1,8 @@
-# Entradas del catálogo de la suite de conformidad para el conjunto «transporte.websocket».
-# Lo lee `catalogue.rs`, que valida la forma de cada entrada al arrancar.
+# Las comprobaciones del conjunto «canal.websocket»; sus capítulos y su orden los declara `sets.toml`.
 
 [[check]]
 id = "v4_ports_negotiation"
-set = "transporte.websocket"
-chapter = "05"
+set = "canal.websocket"
 citation = "ProtocolInvocationLauncher.java:233-236, 976-990; AfirmaWebSocketServerManager.java:64-90"
 statement = """
 El cliente JavaScript selecciona 3 puertos aleatorios únicos (ports=p1,p2,p3) y el servidor enlaza
@@ -16,8 +14,7 @@ condition = "a-candidate-port-bound"
 
 [[check]]
 id = "v4_echo_greeting"
-set = "transporte.websocket"
-chapter = "05"
+set = "canal.websocket"
 citation = "AfirmaWebSocketServerV4.java:81-83"
 statement = """
 La petición de eco echo=-idsession=<idSession>@EOF recibe la respuesta de texto OK.
@@ -28,22 +25,8 @@ greeting = true
 condition = "the-echo-with-its-session-answers-ok"
 
 [[check]]
-id = "v4_channel_credential_present"
-set = "transporte.websocket"
-chapter = "05"
-citation = "AfirmaWebSocketServerV4.java:72-78"
-statement = """
-El mensaje que incluye el identificador de sesión coincidente con el negociado en el arranque es
-aceptado para su procesamiento.
-"""
-drive = { mode = "v4", script = "protocol-v4" }
-assistance = "none"
-condition = "the-echo-with-its-session-answers-ok"
-
-[[check]]
 id = "v4_channel_credential_absent"
-set = "transporte.websocket"
-chapter = "05"
+set = "canal.websocket"
 citation = "AfirmaWebSocketServerV4.java:72-78; ProtocolInvocationLauncherErrorManager.java:77, 134"
 statement = """
 Si el mensaje no incluye el identificador de sesión o este difiere del negociado en el arranque, el
@@ -55,8 +38,7 @@ condition = "the-echo-without-a-session-answers-saf-46"
 
 [[check]]
 id = "v4_channel_credential_malformed"
-set = "transporte.websocket"
-chapter = "05"
+set = "canal.websocket"
 citation = "ProtocolInvocationLauncher.java:992-1008; AfirmaWebSocketServerV4.java:72-78"
 statement = """
 Si idsession en la URL de arranque contiene caracteres no alfanuméricos, se anula y el servidor no
@@ -68,8 +50,7 @@ condition = "a-malformed-session-binds-nothing"
 
 [[check]]
 id = "v4_single_client"
-set = "transporte.websocket"
-chapter = "05"
+set = "canal.websocket"
 citation = "AfirmaWebSocketServer.java:70, 73-79, 82-91"
 statement = """
 La primera conexión se fija en wsClient; el cierre de conexiones secundarias no finaliza la
@@ -81,8 +62,7 @@ condition = "a-second-client-leaves-the-channel-alive"
 
 [[check]]
 id = "v3_ports_default_fixed"
-set = "transporte.websocket"
-chapter = "05"
+set = "canal.websocket"
 citation = "ProtocolInvocationLauncher.java:87, 233-236; AfirmaWebSocketServer.java:51-56"
 statement = """
 En versión 3, la ausencia de ports en la URL de arranque asigna por defecto el puerto fijo 63117
@@ -94,8 +74,7 @@ condition = "the-fixed-port-bound"
 
 [[check]]
 id = "v3_echo_greeting"
-set = "transporte.websocket"
-chapter = "05"
+set = "canal.websocket"
 citation = "AfirmaWebSocketServer.java:33, 103-105"
 statement = """
 En versión 3, cualquier mensaje que empiece por echo= responde inmediatamente OK sin exigir @EOF ni
@@ -107,8 +86,7 @@ condition = "a-bare-echo-answers-ok"
 
 [[check]]
 id = "v3_channel_credential_ignored"
-set = "transporte.websocket"
-chapter = "05"
+set = "canal.websocket"
 citation = "AfirmaWebSocketServer.java:99-115"
 statement = """
 En versión 3, el servidor no valida el identificador de sesión en los mensajes entrantes y no emite
@@ -120,8 +98,7 @@ condition = "an-echo-without-a-session-is-not-refused"
 
 [[check]]
 id = "v3_single_client"
-set = "transporte.websocket"
-chapter = "05"
+set = "canal.websocket"
 citation = "AfirmaWebSocketServer.java:82-91"
 statement = """
 En versión 3, el cierre de una conexión secundaria no termina la aplicación; el canal principal
@@ -133,8 +110,7 @@ condition = "a-second-client-leaves-the-channel-alive"
 
 [[check]]
 id = "the_v4_channel_answers_saf_47_to_an_origin_that_is_not_127_0_0_1"
-set = "transporte.websocket"
-chapter = "05"
+set = "canal.websocket"
 citation = "AfirmaWebSocketServerV4.java:57-68, 100-102"
 statement = """
 El canal de la versión 4 exige que la dirección de origen sea textualmente 127.0.0.1 y responde
@@ -143,3 +119,35 @@ SAF_47 a cualquier otra, el bucle local IPv6 incluido.
 drive = { mode = "v4-ipv6", script = "selectcert" }
 assistance = "none"
 saf = "SAF_47"
+
+[[check]]
+id = "websocket_operation_protocol_version_ignored"
+set = "canal.websocket"
+citation = "AfirmaWebSocketServerV4.java:91; ProtocolInvocationLauncher.java:189, 653-655"
+statement = """
+Por el canal WebSocket la versión de protocolo de la operación la fija el canal: un ver=5 en la
+petición se ignora, no se rechaza con SAF_21, y la operación sigue hasta su siguiente comprobación.
+"""
+drive = { mode = "v4", script = "protocol-v4" }
+assistance = "none"
+condition = "ver-5-is-ignored"
+
+[[check]]
+id = "websocket_rejects_a_protocol_version_it_does_not_support"
+set = "canal.websocket"
+citation = "AfirmaWebSocketServerManager.java:36, 100-107; ProtocolInvocationLauncher.java:240-245"
+statement = """
+El canal WebSocket sólo admite las versiones de protocolo 3 y 4. Una URL de arranque que pida otra
+—v=1, obsoleta; v=99, no soportada— se rechaza con SAF_21, y el código llega al cliente.
+"""
+unmeasurable = "BUG-25: el cliente publicado de la sede se rinde antes de enviar nada al cable."
+
+[[check]]
+id = "a_websocket_that_cannot_bind_its_ports_shows_saf_45"
+set = "canal.websocket"
+citation = "ProtocolInvocationLauncher.java:246-251"
+statement = """
+Si el canal WebSocket no puede ligar ninguno de sus puertos, el cliente muestra SAF_45 y cierra el
+proceso.
+"""
+unmeasurable = "SAF_45 se muestra en un diálogo y el proceso se cierra sin canal abierto: no hay cable por el que llegue, y la sede sólo ve que el cliente publicado agota sus reintentos."

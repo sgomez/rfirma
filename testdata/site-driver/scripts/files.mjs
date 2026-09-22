@@ -170,6 +170,7 @@ export const FILE_SCRIPTS = {
   load: aPublishedScript(theLoadScript, { conditions: [THE_NAME_NEXT_TO_THE_CONTENT] }),
   multiload: aPublishedScript(theMultiLoadScript, { conditions: [EVERY_FILE_APART] }),
   signandsave: aPublishedScript(theSignAndSaveScript),
+  signandsavecancelled: aPublishedScript(theSignAndSaveScript),
   signandsavewithoutaverb: aPublishedScript(theSignAndSaveWithoutAVerbScript),
   signandsavewithoutdata: aPublishedScript(theSignAndSaveWithoutDataScript),
   signandsavewithanillegalfilename: aPublishedScript(theSignAndSaveWithAnIllegalFilenameScript),

@@ -1,34 +1,8 @@
-# Entradas del catálogo de la suite de conformidad para el conjunto «operaciones.lote».
-# Lo lee `catalogue.rs`, que valida la forma de cada entrada al arrancar.
-
-[[check]]
-id = "batch_is_recognised_without_a_trailing_slash"
-set = "operaciones.lote"
-chapter = "08"
-citation = "ProtocolInvocationLauncher.java:293"
-statement = """
-batch se admite en su forma sin barra antes del interrogante (afirma://batch?) y se atiende como
-lote.
-"""
-drive = { mode = "v4", script = "batch" }
-assistance = "click"
-completes = {}
-warning = "Va a aparecer el diálogo de certificado: la sede hace de prefirmador y de postfirmador del lote."
-
-[[check]]
-id = "batch_is_recognised_with_a_trailing_slash"
-set = "operaciones.lote"
-chapter = "08"
-citation = "ProtocolInvocationLauncher.java:293"
-statement = """
-batch se admite también con barra antes del interrogante (afirma://batch/?), igual que sin ella.
-"""
-unmeasurable = "El cliente publicado construye siempre la forma sin barra (buildUrl, autoscript.js): ningún guion suyo emite la variante con barra, y la suite sólo mide lo que él sabe pedir."
+# Las comprobaciones del conjunto «lote»; sus capítulos y su orden los declara `sets.toml`.
 
 [[check]]
 id = "a_remote_batch_is_signed_through_the_presigner_and_the_postsigner"
-set = "operaciones.lote"
-chapter = "08"
+set = "lote"
 citation = "BatchSigner.java:340-443; ProtocolInvocationLauncherBatch.java:400-422"
 statement = """
 Un lote remoto se firma en tres fases contra los servlets que declara la petición: el prefirmador
@@ -40,24 +14,8 @@ condition = "through-both-servlets"
 warning = "Va a aparecer el diálogo de certificado: la sede hace de prefirmador y de postfirmador del lote."
 
 [[check]]
-id = "a_local_batch_is_signed_without_presigner_or_postsigner"
-set = "operaciones.lote"
-chapter = "08"
-citation = "ProtocolInvocationLauncherBatch.java:400-405; LocalBatchSigner.java:48-84"
-statement = """
-Con jsonbatch=true y localBatchProcess=true el lote se firma entero en el equipo, sin
-batchpresignerurl ni batchpostsignerurl y sin contactar con servlet alguno.
-"""
-drive = { mode = "v4", script = "batchlocal" }
-assistance = "click"
-completes = {}
-patience_secs = 90
-warning = "Va a aparecer el diálogo de certificado, y después se firman tres documentos en el equipo."
-
-[[check]]
 id = "jsonbatch_is_only_read_in_lowercase"
-set = "operaciones.lote"
-chapter = "08"
+set = "lote"
 citation = "UrlParametersForBatch.java:44, 330-332; ProtocolInvocationUriParser.java:273-286"
 statement = """
 El parámetro jsonbatch sólo se reconoce escrito en minúsculas: una grafía como jsonBatch deja el
@@ -67,8 +25,7 @@ unmeasurable = "El cliente publicado escribe siempre jsonbatch en minúsculas (a
 
 [[check]]
 id = "a_batch_servlet_on_the_local_loopback_is_refused_with_saf_13"
-set = "operaciones.lote"
-chapter = "08"
+set = "lote"
 citation = "UrlParameters.java:279-317; UrlParametersForBatch.java:238-259"
 statement = """
 Un batchpresignerurl o batchpostsignerurl que apunta a localhost o a 127.0.0.1 se rechaza con
@@ -80,8 +37,7 @@ saf = "SAF_13"
 
 [[check]]
 id = "a_batch_servlet_url_carrying_its_own_parameters_is_refused_with_saf_03"
-set = "operaciones.lote"
-chapter = "08"
+set = "lote"
 citation = "UrlParameters.java:279-317; UrlParametersForBatch.java:238-259"
 statement = """
 Una URL de servlet del lote que trae parámetros propios (un ? o un =) se rechaza con SAF_03 antes
@@ -93,8 +49,7 @@ saf = "SAF_03"
 
 [[check]]
 id = "the_presigner_receives_the_json_batch_and_the_signing_chain"
-set = "operaciones.lote"
-chapter = "08"
+set = "lote"
 citation = "BatchSigner.java:340-392"
 statement = """
 La prefirma del lote JSON llega al prefirmador con el lote entero en json y la cadena del firmante
@@ -107,8 +62,7 @@ warning = "Va a aparecer el diálogo de certificado: la sede hace de prefirmador
 
 [[check]]
 id = "the_postsigner_receives_every_item_signed_with_pk1"
-set = "operaciones.lote"
-chapter = "08"
+set = "lote"
 citation = "BatchSigner.java:416-443"
 statement = """
 Cada firma que el prefirmador devolvió llega al postfirmador en tridata con su PK1, y sólo conserva
@@ -121,8 +75,7 @@ warning = "Va a aparecer el diálogo de certificado: la sede hace de prefirmador
 
 [[check]]
 id = "a_partial_presign_failure_reaches_the_postsigner_marked_in_the_batch"
-set = "operaciones.lote"
-chapter = "08"
+set = "lote"
 citation = "BatchSigner.java:392-414"
 statement = """
 Si la prefirma falla sólo para algunos documentos, el lote sigue: esos documentos llegan al
@@ -135,8 +88,7 @@ warning = "Va a aparecer el diálogo de certificado: la sede hace de prefirmador
 
 [[check]]
 id = "a_presign_that_fails_every_item_answers_its_errors_without_postsigning"
-set = "operaciones.lote"
-chapter = "08"
+set = "lote"
 citation = "BatchSigner.java:398-406"
 statement = """
 Si la prefirma no devuelve datos trifásicos sino sólo errores, el lote no llega al postfirmador y la
@@ -149,8 +101,7 @@ warning = "Va a aparecer el diálogo de certificado: la sede hace de prefirmador
 
 [[check]]
 id = "a_remote_xml_batch_is_signed_through_the_presigner_and_the_postsigner"
-set = "operaciones.lote"
-chapter = "08"
+set = "lote"
 citation = "BatchSigner.java:212-293"
 statement = """
 El lote en el XML heredado se firma en tres fases como el JSON: el lote en xml y la cadena en certs
@@ -163,8 +114,7 @@ warning = "Va a aparecer el diálogo de certificado: la sede hace de prefirmador
 
 [[check]]
 id = "the_xml_batch_answer_is_the_signs_document_of_the_postsigner"
-set = "operaciones.lote"
-chapter = "08"
+set = "lote"
 citation = "BatchSigner.java:291; SignBatch.java:210-219"
 statement = """
 La respuesta del lote XML es el documento <signs> con un <signresult> por firma que devolvió el
@@ -177,8 +127,7 @@ warning = "Va a aparecer el diálogo de certificado: la sede hace de prefirmador
 
 [[check]]
 id = "a_local_batch_answers_every_signed_item_with_its_signature"
-set = "operaciones.lote"
-chapter = "08"
+set = "lote"
 citation = "JSONBatchManager.java:184-206; LocalBatchSigner.java:48-84"
 statement = """
 El resultado del lote local trae un elemento por documento, y cada documento firmado vuelve como
@@ -192,8 +141,7 @@ warning = "Va a aparecer el diálogo de certificado, y después se firman tres d
 
 [[check]]
 id = "a_local_batch_signs_each_item_in_the_format_it_declares_or_inherits"
-set = "operaciones.lote"
-chapter = "08"
+set = "lote"
 citation = "JSONBatchManager.java:44-161"
 statement = """
 Cada documento del lote local se firma en el formato que declara, y el que no declara ninguno
@@ -207,8 +155,7 @@ warning = "Va a aparecer el diálogo de certificado, y después se firman tres d
 
 [[check]]
 id = "a_local_batch_does_not_accept_a_url_as_datareference"
-set = "operaciones.lote"
-chapter = "08"
+set = "lote"
 citation = "JSONBatchManager.java:68, 126; ProtocolInvocationLauncherBatch.java:386"
 statement = """
 En el lote local, datareference son los datos del documento en Base64 y nunca una referencia: una
@@ -221,8 +168,7 @@ warning = "Puede aparecer el diálogo de certificado antes de que el lote se rec
 
 [[check]]
 id = "a_local_batch_admits_cosign_as_a_suboperation"
-set = "operaciones.lote"
-chapter = "08"
+set = "lote"
 citation = "JSONBatchManager.java:44-161; LocalBatchSigner.java:165-175"
 statement = """
 La suboperación cosign del lote local cofirma el documento, que ya es una firma, y lo devuelve como
@@ -235,8 +181,7 @@ warning = "Va a aparecer el diálogo de certificado."
 
 [[check]]
 id = "a_local_batch_admits_countersign_as_a_suboperation"
-set = "operaciones.lote"
-chapter = "08"
+set = "lote"
 citation = "JSONBatchManager.java:44-161; LocalBatchSigner.java:165-175"
 statement = """
 La suboperación countersign del lote local contrafirma el documento, que ya es una firma, y lo
@@ -249,8 +194,7 @@ warning = "Va a aparecer el diálogo de certificado."
 
 [[check]]
 id = "a_local_batch_forces_headless_on_every_item"
-set = "operaciones.lote"
-chapter = "08"
+set = "lote"
 citation = "LocalBatchSigner.java:137"
 statement = """
 Cada firma del lote local se hace con headless=true: ningún documento abre diálogos propios, ni
@@ -265,8 +209,7 @@ warning = "Va a aparecer el diálogo de certificado; fíjate en si después se p
 
 [[check]]
 id = "a_local_batch_resolves_format_auto_from_each_document"
-set = "operaciones.lote"
-chapter = "08"
+set = "lote"
 citation = "LocalBatchSigner.java:121"
 statement = """
 Con format=auto en el lote local, el formato de cada documento se deduce de su contenido: PAdES
@@ -280,8 +223,7 @@ warning = "Va a aparecer el diálogo de certificado, y después se firman tres d
 
 [[check]]
 id = "a_local_batch_that_stops_on_error_rolls_back_what_it_had_signed"
-set = "operaciones.lote"
-chapter = "08"
+set = "lote"
 citation = "LocalBatchSigner.java:48-84"
 statement = """
 Con stoponerror=true, el primer documento que falla queda como ERROR_PRE, los ya firmados pasan a
@@ -295,8 +237,7 @@ warning = "Va a aparecer el diálogo de certificado; uno de los documentos del l
 
 [[check]]
 id = "a_local_batch_that_does_not_stop_on_error_signs_the_rest"
-set = "operaciones.lote"
-chapter = "08"
+set = "lote"
 citation = "LocalBatchSigner.java:48-84"
 statement = """
 Con stoponerror=false, el documento que falla queda como ERROR_PRE y los demás se firman igual.
@@ -309,8 +250,7 @@ warning = "Va a aparecer el diálogo de certificado; uno de los documentos del l
 
 [[check]]
 id = "a_local_batch_composes_the_algorithm_with_the_key_of_the_certificate"
-set = "operaciones.lote"
-chapter = "08"
+set = "lote"
 citation = "LocalBatchSigner.java:96"
 statement = """
 El algoritmo del lote local es el de resumen, y la firma lo completa con el tipo de clave del
@@ -324,8 +264,7 @@ warning = "Va a aparecer el diálogo de certificado, con el único certificado d
 
 [[check]]
 id = "the_site_receives_the_postsigner_result_as_it_came"
-set = "operaciones.lote"
-chapter = "08"
+set = "lote"
 citation = "ProtocolInvocationLauncherBatch.java:148-226; autoscript.js:4503-4545"
 statement = """
 Por el canal local, la sede recibe como resultado del lote el que devolvió el postfirmador, tal
@@ -337,20 +276,8 @@ condition = "the-result-as-it-came"
 warning = "Va a aparecer el diálogo de certificado: la sede hace de prefirmador y de postfirmador del lote."
 
 [[check]]
-id = "the_batch_result_reaches_the_site_through_the_intermediate_server"
-set = "operaciones.lote"
-chapter = "08"
-citation = "ProtocolInvocationLauncherBatch.java:196-218"
-statement = """
-Invocado por servidor intermedio, el resultado del lote se sube a stservlet con el id de la sesión,
-y un fallo al subirlo es SAF_11.
-"""
-unmeasurable = "Es del transporte por servidor intermedio, que queda para más adelante: la suite no monta el StorageService al que el cliente subiría el resultado."
-
-[[check]]
 id = "the_batch_answer_carries_the_signing_certificate_with_needcert"
-set = "operaciones.lote"
-chapter = "08"
+set = "lote"
 citation = "UrlParametersForBatch.java:41, 322-327; ProtocolInvocationLauncherBatch.java:148-226"
 statement = """
 Con needcert=true, la respuesta del lote trae detrás del resultado, separado por |, el certificado
@@ -363,8 +290,7 @@ warning = "Va a aparecer el diálogo de certificado: la sede hace de prefirmador
 
 [[check]]
 id = "without_needcert_the_batch_answer_carries_only_the_result"
-set = "operaciones.lote"
-chapter = "08"
+set = "lote"
 citation = "UrlParametersForBatch.java:41, 322-327; ProtocolInvocationLauncherBatch.java:148-226"
 statement = """
 Sin needcert=true, la respuesta del lote es sólo el resultado, sin separador ni certificado.
@@ -373,8 +299,7 @@ unmeasurable = "El cliente publicado pide siempre needcert=true en el lote (auto
 
 [[check]]
 id = "a_batch_whose_presigner_does_not_answer_fails_with_saf_26"
-set = "operaciones.lote"
-chapter = "08"
+set = "lote"
 citation = "ProtocolInvocationLauncherBatch.java:362-367"
 statement = """
 Si el prefirmador no responde, el lote termina con SAF_26: la sede sabe que no se pudo contactar
@@ -384,3 +309,14 @@ drive = { mode = "v4", script = "batchdown" }
 assistance = "click"
 saf = "SAF_26"
 warning = "Va a aparecer el diálogo de certificado: el prefirmador del lote no está escuchando a propósito."
+
+[[check]]
+id = "the_batch_failures_answer_their_own_codes"
+set = "lote"
+citation = "ProtocolInvocationLauncherBatch.java:367-387; LocalBatchSigner.java:231-241"
+statement = """
+El lote tiene sus propios códigos además de SAF_26: SAF_20 cuando falla la orquestación del lote
+local, SAF_27 cuando el servicio de lotes informa de un error, y SAF_33, SAF_34 y SAF_35 para un PDF
+con contraseña, con firmas no registradas o certificado.
+"""
+unmeasurable = "Los PDF que los disparan —protegido, con firmas no registradas, certificado— no están en el banco de referencia, y la sede no simula un servicio de lotes que conteste un error lógico en su formato."

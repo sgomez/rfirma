@@ -10,7 +10,7 @@ consola. Sus pruebas se corren con `cargo test` dentro de este directorio; las d
 |---|---|
 | `CONTEXT.md` | El glosario de la suite, un bounded context aparte del de la aplicación. |
 | `docs/adr/` | Las decisiones que solo afectan a la suite, numeradas con las de `docs/adr/` de la raíz. |
-| `catalogue/` | El catálogo, un TOML por conjunto con los metadatos de cada comprobación; no nombra a ningún cliente. |
+| `catalogue/` | El catálogo: sus conjuntos en `sets.toml`, con su orden y sus capítulos, y un TOML por conjunto con los metadatos de cada comprobación; no nombra a ningún cliente. |
 | `reference/` | Las referencias, un TOML por cliente y versión con los resultados que una ficha `BUG-NN` explica. |
 | `src/lib.rs` | La raíz del crate: sus módulos y la pasada que mide (`Probe`); lo que usan el binario y las pruebas de `tests/`. |
 | `src/main.rs` | El arranque: lee el catálogo, levanta el servidor, imprime la URL con el token y la abre. |

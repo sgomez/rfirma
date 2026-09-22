@@ -444,7 +444,7 @@ dirigido al defecto.
 
 ### BUG-23: Silenciamiento de excepciones en la inicialización de TSA provoca degradación silenciosa a firma sin sello de tiempo en XAdES y CAdES
 
-* **Comprobación del catálogo:** `a_signature_that_requests_a_timestamp_carries_it_or_reports_the_failure`.
+* **Comprobación del catálogo:** `a_signature_that_cannot_be_timestamped_reports_the_failure`.
 * **Estado en `master`:** **Sigue presente.** `XAdESTspUtil.java:82-84` y `AOCAdESSigner.java:576-579` conservan el `catch (Exception)` que devuelve la firma sin sello sin registrar nada.
 * **Código fuente:** `afirma-crypto-xades` · `src/main/java/es/gob/afirma/signers/xades/XAdESTspUtil.java:73-81`, `AOXAdESSigner.java:395-400`; `afirma-crypto-cades` · `src/main/java/es/gob/afirma/signers/cades/AOCAdESSigner.java:547-555`; `afirma-crypto-core-pkcs7-tsp` · `src/main/java/es/gob/afirma/signers/tsp/pkcs7/TsaParams.java:111-135`.
 * **Origen de auditoría:** Anteriormente AUD-71 ([12-extraparams-por-formato.md](12-extraparams-por-formato.md)).

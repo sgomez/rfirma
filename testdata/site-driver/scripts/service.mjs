@@ -337,6 +337,17 @@ async function theServiceLaunchVariantScript({ ports, launch }) {
 const overTheService = (run, conditions) =>
   aHandwrittenScript(run, { family: "service", modes: ["service"], conditions });
 
+/** Una invocación del canal que cambia una sola cosa respecto de la de siempre. */
+function aServiceLaunch({ ports, version, idSession, slash = false }) {
+  return (
+    `afirma://service${slash ? "/" : ""}?ports=${ports.join(",")}&v=${version}&jvc=3` +
+    `&idsession=${idSession}`
+  );
+}
+
+const aLaunchVariant = (ports, launch) =>
+  overTheService(() => theServiceLaunchVariantScript({ ports, launch }), [THE_ECHO_ANSWERS_OK]);
+
 export const SERVICE_SCRIPTS = {
   "protocol-service": overTheService(theServiceProtocolScript, [
     THE_ECHO_ANSWERS_OK,
@@ -352,23 +363,16 @@ export const SERVICE_SCRIPTS = {
     EVERY_ANSWER_IS_HTTP_200,
     ONLY_THE_LOOPBACK_SERVED,
   ]),
-  "protocol-service-v1": overTheService(
-    () =>
-      theServiceLaunchVariantScript({
-        ports: [54361, 54362, 54363],
-        launch: (ports, idSession) =>
-          `afirma://service?ports=${ports.map((port) => -port).join(",")}&v=1&jvc=3` +
-          `&idsession=${idSession}`,
-      }),
-    [THE_ECHO_ANSWERS_OK],
+  "protocol-service-v1": aLaunchVariant([54361, 54362, 54363], (ports, idSession) =>
+    aServiceLaunch({ ports, version: 1, idSession }),
   ),
-  "protocol-service-v2": overTheService(
-    () =>
-      theServiceLaunchVariantScript({
-        ports: [54371, 54372, 54373],
-        launch: (ports, idSession) =>
-          `afirma://service/?ports=${ports.join(",")}&v=2&jvc=3&idsession=${idSession}`,
-      }),
-    [THE_ECHO_ANSWERS_OK],
+  "protocol-service-v2": aLaunchVariant([54371, 54372, 54373], (ports, idSession) =>
+    aServiceLaunch({ ports, version: 2, idSession }),
+  ),
+  "protocol-service-negative-ports": aLaunchVariant([54381, 54382, 54383], (ports, idSession) =>
+    aServiceLaunch({ ports: ports.map((port) => -port), version: 3, idSession }),
+  ),
+  "protocol-service-slash": aLaunchVariant([54411, 54412, 54413], (ports, idSession) =>
+    aServiceLaunch({ ports, version: 3, idSession, slash: true }),
   ),
 };

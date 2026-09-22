@@ -104,10 +104,20 @@ fn cards_cited_in(text: &str) -> BTreeSet<String> {
     cited
 }
 
-/// Los códigos de la tabla sinóptica del capítulo 15, por las filas que abren con uno.
+/// Lo que la tabla del capítulo 15 dice de un código que el original nunca emite: se documenta en
+/// el manual y no se le exige a ningún cliente.
+const THE_MARKS_OF_A_CODE_NEVER_EMITTED: [&str; 2] = ["*Huérfano*", "*Sin emisor*"];
+
+/// Los códigos que el original emite de la tabla sinóptica del capítulo 15, por las filas que abren
+/// con uno.
 fn saf_codes_in_the_table(chapter: &str) -> BTreeSet<String> {
     chapter
         .lines()
+        .filter(|line| {
+            !THE_MARKS_OF_A_CODE_NEVER_EMITTED
+                .iter()
+                .any(|mark| line.contains(mark))
+        })
         .filter_map(|line| line.strip_prefix("| `SAF_"))
         .filter_map(|rest| {
             let digits: String = rest.chars().take_while(char::is_ascii_digit).collect();
@@ -313,8 +323,8 @@ fn every_code_of_the_error_table_is_closed_against_the_catalogue() {
 
     assert_eq!(
         table.len(),
-        53,
-        "la tabla del capítulo 15 debería tener los 53 códigos"
+        44,
+        "la tabla del capítulo 15 debería tener 44 códigos que el original emite"
     );
     assert!(
         codes_of_the_table_without_an_entry(&table, &named).is_empty(),
@@ -356,9 +366,10 @@ fn a_chapter_without_a_file_is_caught_and_named() {
 }
 
 #[test]
-fn a_code_of_the_table_the_catalogue_never_names_is_caught_and_named() {
+fn a_code_the_original_emits_and_the_catalogue_never_names_is_caught_and_named() {
     let table = saf_codes_in_the_table(
-        "| `SAF_00` | `ERROR_CANNOT_READ_DATA` |\n| `SAF_07` | `ERROR_CANNOT_FIND_KEYSTORE` |\n",
+        "| `SAF_00` | `ERROR_CANNOT_READ_DATA` |\n| `SAF_07` | `ERROR_CANNOT_FIND_KEYSTORE` |\n\
+         | `SAF_10` | `ERROR_NO_CERTIFICATES_SYSTEM` | *Huérfano* (no referenciado) |\n",
     );
     let named = saf_codes_named_in("saf = \"SAF_00\"\nstatement = \"SAF_070 no cuenta.\"");
 

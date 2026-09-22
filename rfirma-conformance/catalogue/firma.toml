@@ -1,10 +1,8 @@
-# Entradas del catálogo de la suite de conformidad para el conjunto «operaciones.firma».
-# Lo lee `catalogue.rs`, que valida la forma de cada entrada al arrancar.
+# Las comprobaciones del conjunto «firma»; sus capítulos y su orden los declara `sets.toml`.
 
 [[check]]
 id = "sign_is_dispatched_as_a_first_signature"
-set = "operaciones.firma"
-chapter = "06"
+set = "firma"
 citation = "ProtocolInvocationLauncher.java:643-646; SignOperation.java:67-78; ProtocolInvocationLauncherSign.java:158"
 statement = """
 El verbo sign se reconoce como primera firma y la operación se despacha con él, sin que ningún
@@ -13,12 +11,12 @@ otro valor de la petición lo desplace.
 drive = { mode = "v4", script = "signcades" }
 assistance = "click"
 completes = {}
+greeting = true
 warning = "Va a aparecer el diálogo de certificado."
 
 [[check]]
 id = "cosign_is_dispatched_over_a_previous_signature"
-set = "operaciones.firma"
-chapter = "06"
+set = "firma"
 citation = "ProtocolInvocationLauncher.java:643-646; SignOperation.java:67-78; ProtocolInvocationLauncherSign.java:710-717"
 statement = """
 El verbo cosign se reconoce como cofirma y cofirma la firma previa que viaja en dat, la única
@@ -31,8 +29,7 @@ warning = "Va a aparecer el diálogo de certificado."
 
 [[check]]
 id = "countersign_is_dispatched_over_a_previous_signature"
-set = "operaciones.firma"
-chapter = "06"
+set = "firma"
 citation = "ProtocolInvocationLauncher.java:643-646; SignOperation.java:67-78; ProtocolInvocationLauncherSign.java:723-724"
 statement = """
 El verbo countersign se reconoce como contrafirma y contrafirma la firma previa; target=tree
@@ -44,20 +41,8 @@ completes = {}
 warning = "Va a aparecer el diálogo de certificado."
 
 [[check]]
-id = "the_three_verbs_are_recognised_with_a_trailing_slash"
-set = "operaciones.firma"
-chapter = "06"
-citation = "ProtocolInvocationLauncher.java:643-646"
-statement = """
-Los tres verbos se admiten tanto sin barra (afirma://<op>?) como con barra antes del interrogante
-(afirma://<op>/?).
-"""
-unmeasurable = "El cliente publicado construye siempre la forma sin barra (buildUrl, autoscript.js:2077): ningún guion suyo emite la variante con barra, y la suite sólo mide lo que él sabe pedir."
-
-[[check]]
 id = "the_signature_format_is_mandatory"
-set = "operaciones.firma"
-chapter = "06"
+set = "firma"
 citation = "UrlParametersToSign.java:279-281; ProtocolInvocationLauncher.java:741"
 statement = """
 El parámetro format es obligatorio en la invocación directa: una petición de firma que no lo trae
@@ -69,8 +54,7 @@ saf = "SAF_03"
 
 [[check]]
 id = "an_unsupported_format_is_rejected_with_saf_06"
-set = "operaciones.firma"
-chapter = "06"
+set = "firma"
 citation = "AOSignerFactory.java:51-81; ProtocolInvocationLauncherSign.java:266-272"
 statement = """
 Un format que no está en el catálogo de la factoría y no es auto se rechaza con SAF_06 antes de
@@ -78,12 +62,12 @@ pedir certificado alguno.
 """
 drive = { mode = "v4", script = "signwithanunknownformat" }
 assistance = "none"
+greeting = true
 saf = "SAF_06"
 
 [[check]]
 id = "format_auto_resolves_a_binary_first_signature"
-set = "operaciones.firma"
-chapter = "06"
+set = "firma"
 citation = "ProtocolInvocationLauncherSign.java:381-390; ProtocolInvocationLauncherUtil.java:150-166"
 statement = """
 Con format=auto, una primera firma sobre datos binarios resuelve el formato analizando el contenido
@@ -96,8 +80,7 @@ warning = "Va a aparecer el diálogo de certificado."
 
 [[check]]
 id = "format_auto_resolves_an_xml_first_signature"
-set = "operaciones.firma"
-chapter = "06"
+set = "firma"
 citation = "ProtocolInvocationLauncherUtil.java:153-166; DataAnalizerUtil.java"
 statement = """
 Con format=auto, una primera firma sobre un XML que no es factura se resuelve por el análisis del
@@ -110,8 +93,7 @@ warning = "Va a aparecer el diálogo de certificado."
 
 [[check]]
 id = "format_auto_identifies_the_previous_signature_of_a_multisignature"
-set = "operaciones.firma"
-chapter = "06"
+set = "firma"
 citation = "ProtocolInvocationLauncherUtil.java:167-177; AOSignerFactory.java:92-118"
 statement = """
 Con format=auto, una multifirma identifica el formato recorriendo los firmadores con capacidad de
@@ -124,8 +106,7 @@ warning = "Va a aparecer el diálogo de certificado."
 
 [[check]]
 id = "format_auto_over_data_that_is_no_signature_is_rejected_with_saf_17"
-set = "operaciones.firma"
-chapter = "06"
+set = "firma"
 citation = "ProtocolInvocationLauncherUtil.java:167-177; AOSignerFactory.java:92-118"
 statement = """
 Una multifirma con format=auto sobre datos que no son una firma se aborta con SAF_17, en vez de
@@ -137,8 +118,7 @@ saf = "SAF_17"
 
 [[check]]
 id = "format_auto_identifies_a_cms_signature_as_cades"
-set = "operaciones.firma"
-chapter = "06"
+set = "firma"
 citation = "AOSignerFactory.java:92-118"
 statement = """
 El orden de la matriz de reconocimiento es parte de la resolución de auto: CAdES precede a
@@ -148,8 +128,7 @@ unmeasurable = "El formato con el que se identificó la firma previa sólo se le
 
 [[check]]
 id = "the_algorithm_catalogue_accepts_a_digest_without_a_key_type"
-set = "operaciones.firma"
-chapter = "06"
+set = "firma"
 citation = "UrlParametersToSign.java:60-74, 287-293"
 statement = """
 La lista blanca de algoritmos admite tanto los nombres con tipo de clave (SHA256withRSA) como los
@@ -162,8 +141,7 @@ warning = "Va a aparecer el diálogo de certificado."
 
 [[check]]
 id = "an_algorithm_outside_the_catalogue_is_rejected"
-set = "operaciones.firma"
-chapter = "06"
+set = "firma"
 citation = "UrlParametersToSign.java:60-74, 287-293; ProtocolInvocationLauncher.java:741"
 statement = """
 Un algorithm fuera de la lista blanca se rechaza con SAF_03, sin degradarlo en silencio a uno
@@ -175,8 +153,7 @@ saf = "SAF_03"
 
 [[check]]
 id = "the_algorithm_is_recomposed_with_the_key_of_the_certificate"
-set = "operaciones.firma"
-chapter = "06"
+set = "firma"
 citation = "ProtocolInvocationLauncherSign.java:632-640; AOSignConstants.java:365-390"
 statement = """
 El algoritmo final se recompone con el tipo de clave del certificado elegido: pedir SHA256withRSA y
@@ -186,8 +163,7 @@ unmeasurable = "El algoritmo con el que se firmó sólo se lee abriendo la firma
 
 [[check]]
 id = "the_signature_response_carries_the_certificate_and_the_signature_apart"
-set = "operaciones.firma"
-chapter = "06"
+set = "firma"
 citation = "NativeSignDataProcessor.java:23, 54-104"
 statement = """
 La respuesta de firma entrega el certificado del firmante y la firma como componentes separados, no
@@ -200,8 +176,7 @@ warning = "Va a aparecer el diálogo de certificado."
 
 [[check]]
 id = "the_signature_response_adds_extradata_as_a_third_component"
-set = "operaciones.firma"
-chapter = "06"
+set = "firma"
 citation = "NativeSignDataProcessor.java:77, 97, 112-126"
 statement = """
 Cuando la persona eligió el fichero en disco y la versión de protocolo es 3 o mayor, la respuesta
@@ -211,8 +186,7 @@ unmeasurable = "El cliente publicado entrega a su callback sólo la firma y el c
 
 [[check]]
 id = "check_signatures_lets_a_first_signature_through"
-set = "operaciones.firma"
-chapter = "06"
+set = "firma"
 citation = "ProtocolInvocationLauncherSign.java:409-483, 866-871"
 statement = """
 Con checkSignatures=true, una primera firma sobre un documento sin firmas previas continúa: que no
@@ -225,8 +199,7 @@ warning = "Va a aparecer el diálogo de certificado."
 
 [[check]]
 id = "check_signatures_stops_a_multisignature_it_cannot_validate"
-set = "operaciones.firma"
-chapter = "06"
+set = "firma"
 citation = "ProtocolInvocationLauncherSign.java:409-483"
 statement = """
 Con checkSignatures=true, una multifirma sobre un documento cuya validación previa sale KO se
@@ -239,8 +212,7 @@ warning = "Puede aparecer el diálogo de certificado, o uno que pida confirmar l
 
 [[check]]
 id = "a_risky_document_asks_the_person_before_being_signed"
-set = "operaciones.firma"
-chapter = "06"
+set = "firma"
 citation = "ProtocolInvocationLauncherSign.java:789-837, 793-796"
 statement = """
 Los avisos de seguridad del motor se resuelven preguntando a la persona, y sólo el parámetro que
@@ -249,23 +221,8 @@ cada aviso nombra los desbloquea; con headless=true no se pregunta y se termina 
 unmeasurable = "Disparar cada aviso exige un documento hecho a medida —PDF certificado, firmas no registradas, sello a largo plazo—, y el banco de referencia no trae ninguno."
 
 [[check]]
-id = "a_pinned_certificate_is_asked_for_once_and_again_when_released"
-set = "operaciones.firma"
-chapter = "06"
-citation = "ProtocolInvocationLauncherSign.java:518-522, 643, 654"
-statement = """
-Con sticky, el certificado se pide en la primera operación y se reutiliza en las siguientes sin
-volver a preguntarlo; al soltarlo con resetsticky, la siguiente vuelve a pedirlo.
-"""
-drive = { mode = "v4", script = "sticky" }
-assistance = "person"
-question = "¿se pidió el certificado en la primera selección y en la tercera, y no en la segunda? [s/n]"
-person = { yes = "el certificado se pidió en la primera selección y tras soltarlo, y no mientras estuvo fijado", no = "el certificado fijado no se respetó o no se volvió a pedir al soltarlo", yes_means = "conforme" }
-warning = "Van a encadenarse tres selecciones de certificado: fíjate en cuáles te preguntan y cuáles no."
-
-[[check]]
 id = "a_pades_signature_packages_itself_inside_the_pdf"
-set = "operaciones.firma"
+set = "firma"
 chapter = "12"
 citation = "AOPDFSigner.java:705-754; PdfExtraParams.java"
 statement = """
@@ -279,7 +236,7 @@ warning = "Va a aparecer el diálogo de certificado."
 
 [[check]]
 id = "a_visible_pades_signature_asks_the_person_to_mark_the_area"
-set = "operaciones.firma"
+set = "firma"
 chapter = "12"
 citation = "ProtocolInvocationLauncherSign.java:923-994"
 statement = """
@@ -294,7 +251,7 @@ warning = "Va a aparecer el diálogo del área visible sobre el PDF, y después 
 
 [[check]]
 id = "a_cades_signature_honours_the_packaging_mode_of_its_request"
-set = "operaciones.firma"
+set = "firma"
 chapter = "12"
 citation = "CAdESExtraParams.java; CAdESParameters.java:100-335"
 statement = """
@@ -308,7 +265,7 @@ warning = "Va a aparecer el diálogo de certificado."
 
 [[check]]
 id = "the_packaging_mode_of_the_returned_cades_signature"
-set = "operaciones.firma"
+set = "firma"
 chapter = "12"
 citation = "CAdESExtraParams.java; CAdESParameters.java:100-335"
 statement = """
@@ -319,7 +276,7 @@ unmeasurable = "Distinguir una CAdES implícita de una explícita exige abrir el
 
 [[check]]
 id = "the_age_policy_packages_a_document_under_one_megabyte_implicitly"
-set = "operaciones.firma"
+set = "firma"
 chapter = "11"
 citation = "ExtraParamsHelper.java:230-252"
 statement = """
@@ -330,7 +287,7 @@ unmeasurable = "El modo que la expansión fija sólo se lee abriendo la firma qu
 
 [[check]]
 id = "a_precalculated_hash_replaces_the_data_of_a_cades_signature"
-set = "operaciones.firma"
+set = "firma"
 chapter = "12"
 citation = "AOCAdESSigner.java:514-520; CAdESExtraParams.java"
 statement = """
@@ -344,7 +301,7 @@ warning = "Va a aparecer el diálogo de certificado."
 
 [[check]]
 id = "a_xades_signature_honours_the_envelope_of_its_request"
-set = "operaciones.firma"
+set = "firma"
 chapter = "12"
 citation = "XAdESExtraParams.java; AOSignerFactory.java:51-81"
 statement = """
@@ -358,7 +315,7 @@ warning = "Va a aparecer el diálogo de certificado."
 
 [[check]]
 id = "xades_applies_the_transforms_the_request_declares"
-set = "operaciones.firma"
+set = "firma"
 chapter = "12"
 citation = "Utils.java:159-245; XAdESExtraParams.java"
 statement = """
@@ -372,7 +329,7 @@ warning = "Va a aparecer el diálogo de certificado."
 
 [[check]]
 id = "facturae_signs_with_the_roles_and_the_place_of_its_white_list"
-set = "operaciones.firma"
+set = "firma"
 chapter = "12"
 citation = "AOFacturaESigner.java:57-87, 89-93, 224-228"
 statement = """
@@ -386,7 +343,7 @@ warning = "Va a aparecer el diálogo de certificado."
 
 [[check]]
 id = "facturae_drops_a_parameter_outside_its_white_list_instead_of_failing"
-set = "operaciones.firma"
+set = "firma"
 chapter = "12"
 citation = "AOFacturaESigner.java:57-87, 224-228"
 statement = """
@@ -400,7 +357,7 @@ warning = "Va a aparecer el diálogo de certificado."
 
 [[check]]
 id = "an_asic_s_container_packages_the_signature_next_to_the_data"
-set = "operaciones.firma"
+set = "firma"
 chapter = "12"
 citation = "AOCAdESASiCSSigner.java:61, 69, 193; CAdESASiCExtraParams.java"
 statement = """
@@ -410,4 +367,77 @@ desprendida dentro, no la firma suelta.
 drive = { mode = "v4", script = "signcadesasics" }
 assistance = "click"
 condition = "a-zip-container"
+warning = "Va a aparecer el diálogo de certificado."
+
+[[check]]
+id = "sign_unsupported_format_rejected"
+set = "firma"
+citation = "ProtocolInvocationLauncherSign.java:269"
+statement = """
+Si el formato de firma especificado en format no está soportado, se rechaza con SAF_06.
+"""
+drive = { mode = "v4", script = "protocol-v4" }
+assistance = "none"
+condition = "invented-format-saf-06"
+
+[[check]]
+id = "a_signature_cancelled_by_the_person_answers_cancel_without_a_code"
+set = "firma"
+citation = "ProtocolInvocationLauncherSign.java:615-617, 848-850; ProtocolInvocationLauncher.java:700-702; autoscript.js:2330"
+statement = """
+Cancelar un diálogo en mitad de una firma responde el literal no numerado CANCEL, sin prefijo SAF_,
+y el cliente publicado lo entrega a la sede como AOCancelledOperationException.
+"""
+drive = { mode = "v4", script = "signcades" }
+assistance = "person"
+saf = "CANCEL"
+warning = "Va a aparecer el diálogo de selección de certificado de una firma: cancélalo en vez de elegir."
+
+[[check]]
+id = "a_pades_signature_over_data_that_is_no_pdf_is_rejected_with_saf_28"
+set = "firma"
+citation = "ProtocolInvocationLauncherSign.java:741-800; PdfUtil.java:185"
+statement = """
+Un PAdES sobre algo que no es un PDF se rechaza con SAF_28, el código de su familia, y no con el
+SAF_09 genérico.
+"""
+drive = { mode = "v4", script = "signpadesoveranonpdf" }
+assistance = "click"
+saf = "SAF_28"
+warning = "Va a aparecer el diálogo de certificado antes de que llegue el rechazo."
+
+[[check]]
+id = "the_other_data_unfit_for_their_format_answer_the_codes_of_their_family"
+set = "firma"
+citation = "ProtocolInvocationLauncherSign.java:741-800"
+statement = """
+Los demás datos que no sirven para la firma pedida comparten el punto de traducción del SAF_28:
+SAF_00 si los datos no se leen, SAF_23 si la política no casa, SAF_29 para un XAdES Enveloped sobre
+algo que no es XML, SAF_30 para unos datos de otro tipo, SAF_31 si lo que se multifirma no es una
+firma, SAF_32 para una factura ya firmada, SAF_38 para una que no lo es, SAF_40 si el documento del
+servidor no se recupera y SAF_44 para una firma sin sus datos.
+"""
+unmeasurable = "Cada código necesita unos datos a medida que la sede no prepara: de la familia solo se mide el SAF_28."
+
+[[check]]
+id = "a_failing_postprocessing_answers_saf_42"
+set = "firma"
+citation = "ProtocolInvocationLauncherSign.java:203-207"
+statement = """
+Un fallo al postprocesar la firma, que en el original sólo provoca un plugin, se rechaza con SAF_42.
+"""
+unmeasurable = "Exige instalar en el cliente un plugin que falle al postprocesar, y la suite corre contra una instalación sin plugins."
+
+[[check]]
+id = "a_signature_that_cannot_be_timestamped_reports_the_failure"
+set = "firma"
+chapter = "12"
+citation = "AOCAdESSigner.java:543-550, 576-579; XAdESTspUtil.java:82-84"
+statement = """
+Si la petición pide sello de tiempo y no se puede sellar, la operación lo reporta con un código SAF
+en vez de devolver una firma sin sello.
+"""
+drive = { mode = "v4", script = "signwithbrokentsa" }
+assistance = "click"
+saf = "SAF_*"
 warning = "Va a aparecer el diálogo de certificado."

@@ -23,7 +23,7 @@ cause = "BUG-05"
 note = "El catálogo de algoritmos que signandsave admite deja fuera los de curva elíptica."
 
 [[known]]
-id = "a_signature_that_requests_a_timestamp_carries_it_or_reports_the_failure"
+id = "a_signature_that_cannot_be_timestamped_reports_the_failure"
 outcome = "no-conforme"
 cause = "BUG-23"
 note = "La firma vuelve sin el sello pedido y la operación no reporta que no se pudo sellar."

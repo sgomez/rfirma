@@ -1,0 +1,84 @@
+# Las comprobaciones del conjunto «certificado»; sus capítulos y su orden los declara `sets.toml`.
+
+[[check]]
+id = "selectcert_answers_the_chosen_certificate_alone"
+set = "certificado"
+citation = "ProtocolInvocationLauncherSelectCert.java:231-242, 262; autoscript.js:2462-2471"
+statement = """
+La respuesta de selectcert es el certificado elegido y nada más: uno solo, codificado en Base64
+URL-safe, sin firma ni campos añadidos.
+"""
+drive = { mode = "v4", script = "selectcert" }
+assistance = "click"
+condition = "a-certificate-alone"
+warning = "Va a aparecer el diálogo de selección de certificado: elige el único que ofrece."
+
+[[check]]
+id = "selectcert_resolves_the_only_candidate_without_asking"
+set = "certificado"
+citation = "CertFilterManager.java:145-154; AOKeyStoreDialog.java:726-729"
+statement = """
+Con headless=true o con mandatoryCertSelection=false, un único certificado que pase los filtros se
+resuelve sin pedir que se elija.
+"""
+drive = { mode = "v4", script = "selectcertheadless" }
+assistance = "person"
+completes = {}
+question = "¿se pidió elegir certificado? [s/n]"
+person = { yes = "se pidió elegir certificado habiendo un único candidato", no = "el único candidato se resolvió sin pedir que se eligiera", yes_means = "no-conforme" }
+warning = "El almacén rsa de la suite tiene un solo certificado, así que la premisa se cumple: si aun así aparece el diálogo de elegir certificado, elígelo y responde que sí se pidió."
+
+[[check]]
+id = "selectcert_cancelled_by_the_person_answers_a_cancellation"
+set = "certificado"
+citation = "AOKeyStoreDialog.java:741; ProtocolInvocationLauncherSelectCert.java:201-207"
+statement = """
+Cancelar la selección de certificado termina el trámite como cancelación, y la sede la recibe como
+tal en vez de como error.
+"""
+drive = { mode = "v4", script = "selectcert" }
+assistance = "person"
+saf = "CANCEL"
+warning = "Va a aparecer el diálogo de selección de certificado: cancélalo en vez de elegir."
+
+[[check]]
+id = "selectcert_over_a_token_asks_for_its_pin"
+set = "certificado"
+citation = "ProtocolInvocationLauncherSelectCert.java:178, 193; KeyStoreUtilities.java:248"
+statement = """
+selectcert sobre un token que exige autenticación pide el PIN antes de devolver el certificado:
+solo ofrece los que tienen clave privada (checkPrivateKeys=true), y en un token eso obliga a abrir
+sesión.
+"""
+drive = { mode = "v4", script = "selectcert" }
+assistance = "person"
+store = "token"
+question = "¿se pidió el PIN del token/certificado? [s/n]"
+person = { yes = "se pidió el PIN del token", no = "el certificado volvió sin pedir el PIN", yes_means = "conforme" }
+warning = "Van a aparecer el diálogo de selección de certificado y, si el cliente exige clave privada, el del PIN."
+
+[[check]]
+id = "a_pinned_certificate_is_asked_for_once_and_again_when_released"
+set = "certificado"
+citation = "ProtocolInvocationLauncherSign.java:518-522, 643, 654"
+statement = """
+Con sticky, el certificado se pide en la primera operación y se reutiliza en las siguientes sin
+volver a preguntarlo; al soltarlo con resetsticky, la siguiente vuelve a pedirlo.
+"""
+drive = { mode = "v4", script = "sticky" }
+assistance = "person"
+question = "¿se pidió el certificado en la primera selección y en la tercera, y no en la segunda? [s/n]"
+person = { yes = "el certificado se pidió en la primera selección y tras soltarlo, y no mientras estuvo fijado", no = "el certificado fijado no se respetó o no se volvió a pedir al soltarlo", yes_means = "conforme" }
+warning = "Van a encadenarse tres selecciones de certificado: fíjate en cuáles te preguntan y cuáles no."
+
+[[check]]
+id = "the_key_store_failures_answer_their_own_codes"
+set = "certificado"
+chapter = "13"
+citation = "ProtocolInvocationLauncherSign.java:545, 584, 621, 626, 638, 650-656"
+statement = """
+Los fallos del almacén tienen su código: SAF_08 si no se abre, SAF_19 si no tiene ningún certificado
+válido, SAF_18 si el certificado no se descodifica, SAF_51 si el tipo de su clave no se admite y
+SAF_52 si está bloqueado.
+"""
+unmeasurable = "Cada uno exige un almacén roto, vacío, bloqueado o con una clave de un tipo que no se admite, y la suite sólo monta los tokens sanos de SoftHSM: bloquear uno a propósito deja sin almacén al resto de la suite."

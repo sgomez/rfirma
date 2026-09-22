@@ -127,11 +127,6 @@ function aSignOrderStoppingAtTheFormat(idSession, { op = "sign", probed } = {}) 
 /** Las operaciones que se mandan por el canal v4 y lo que tiene que cumplir cada respuesta. */
 const THE_V4_OPERATION_PROBES = [
   {
-    condition: "ver-4-passes",
-    order: (idSession) => aSignOrderStoppingAtTheFormat(idSession, { probed: "ver=4" }),
-    holds: (answer) => !answer.startsWith("SAF_21"),
-  },
-  {
     condition: "ver-5-is-ignored",
     order: (idSession) => aSignOrderStoppingAtTheFormat(idSession, { probed: "ver=5" }),
     holds: (answer) => answer.startsWith("SAF_06"),
@@ -240,7 +235,6 @@ const THE_PARAMETER_CASES = [
     `fileid=abc123&rtservlet=${encodeURIComponent("https://sede.example/rt?op=get")}`,
     "SAF_03",
   ],
-  ["ver-below-passes", "dat=SG9sYQ&ver=-10", "SAF_06"],
   ["mcv-malformed-saf-03", "dat=SG9sYQ&mcv=uno.dos", "SAF_03"],
   ["id-of-21-saf-03", `dat=SG9sYQ&id=${"a".repeat(21)}`, "SAF_03"],
   ["id-of-20-passes", `dat=SG9sYQ&id=${"a".repeat(20)}`, "SAF_06"],
@@ -256,6 +250,18 @@ const THE_PARAMETER_PROBES = THE_PARAMETER_CASES.map(([condition, parameters, ex
     `&idsession=${idSession}`,
   holds: (answer) => answer.startsWith(expected),
 }));
+
+/** Las operaciones por el canal v3, que toma la versión de su `ver`: pasar el control es llegar al formato. */
+const THE_V3_OPERATION_PROBES = [
+  {
+    condition: "ver-4-passes-over-v3",
+    order: (idSession) => aSignOrderStoppingAtTheFormat(idSession, { probed: "ver=4" }),
+  },
+  {
+    condition: "ver-below-passes-over-v3",
+    order: (idSession) => aSignOrderStoppingAtTheFormat(idSession, { probed: "ver=-10" }),
+  },
+];
 
 async function theProtocolV3Script() {
   const idSession = "sessionv3test";
@@ -316,6 +322,15 @@ async function theProtocolV3Script() {
     );
   }
 
+  for (const { condition, order } of THE_V3_OPERATION_PROBES) {
+    const answer = await exchangeWithin(ws, order(idSession), THE_OPERATION_ANSWER_DEADLINE_MS);
+    emit(
+      answer === null
+        ? aMeasuredConditionEvent(condition, null, "el sujeto no contestó a la operación")
+        : aConditionEvent(condition, answer.startsWith("SAF_06"), answer),
+    );
+  }
+
   ws.close();
   settle({ event: "success" });
 }
@@ -373,6 +388,7 @@ export const WEBSOCKET_SCRIPTS = {
       A_BARE_ECHO_ANSWERS_OK,
       AN_ECHO_WITHOUT_A_SESSION_IS_NOT_REFUSED,
       A_SECOND_CLIENT_LEAVES_THE_CHANNEL_ALIVE,
+      ...THE_V3_OPERATION_PROBES.map(({ condition }) => condition),
     ],
   }),
 };

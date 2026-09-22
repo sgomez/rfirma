@@ -1,5 +1,5 @@
-//! El catálogo declarativo de la suite de conformidad, leído de `catalogue/`, un fichero por
-//! conjunto: los metadatos de cada exigencia, no su cuerpo ejecutable.
+//! El catálogo declarativo de la suite de conformidad, leído de `catalogue/`: sus conjuntos y un
+//! fichero por conjunto con los metadatos de cada exigencia, no su cuerpo ejecutable.
 
 use std::collections::BTreeSet;
 use std::path::PathBuf;
@@ -15,19 +15,20 @@ use crate::harness::{the_harness_named, Harness};
 use crate::judge::{Code, Contents, Expectation, OnTheWire, Person};
 use crate::manifest::{Family, Manifest, Site};
 
-/// El vocabulario cerrado de `set`, en el orden en que se leen sus ficheros.
-pub(crate) const THE_SETS: &[&str] = &[
-    "saludo",
-    "transporte.websocket",
-    "transporte.service",
-    "versiones",
-    "operaciones",
-    "errores",
-    "operaciones.firma",
-    "operaciones.disco",
-    "operaciones.lote",
-    "parametros",
-];
+/// Un conjunto declarado en `catalogue/sets.toml`: su nombre y sus capítulos, el primero el de
+/// omisión.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct Set {
+    pub name: String,
+    pub chapters: Vec<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct Sets {
+    set: Vec<Set>,
+}
 
 /// Qué necesita una comprobación de la persona que está delante, en el orden de sus tramos.
 #[derive(
@@ -65,6 +66,8 @@ pub(crate) struct Drive {
 pub struct Check {
     pub id: String,
     pub set: String,
+    /// El de su conjunto si no lo fija; solo lo fija en un conjunto de varios capítulos.
+    #[serde(default)]
     pub chapter: String,
     pub citation: String,
     pub statement: String,
@@ -179,10 +182,100 @@ pub(crate) fn the_catalogue_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("catalogue")
 }
 
-/// El fichero del conjunto dado, con el mismo nombre que `THE_SETS` salvo que sus puntos se
-/// vuelven guiones.
-fn the_set_file(set: &str) -> PathBuf {
-    the_catalogue_dir().join(format!("{}.toml", set.replace('.', "-")))
+const THE_SETS_FILE: &str = "sets.toml";
+
+fn the_set_file(set: &Set) -> PathBuf {
+    the_catalogue_dir().join(format!("{}.toml", set.name))
+}
+
+pub(crate) fn the_declared_sets() -> Result<Vec<Set>, String> {
+    let path = the_catalogue_dir().join(THE_SETS_FILE);
+    let raw = std::fs::read_to_string(&path)
+        .map_err(|error| format!("{} no se pudo leer: {error}", path.display()))?;
+    the_sets_in(&raw).map_err(|complaint| format!("{}: {complaint}", path.display()))
+}
+
+fn the_sets_in(raw: &str) -> Result<Vec<Set>, String> {
+    let sets: Sets =
+        toml::from_str(raw).map_err(|error| format!("no son conjuntos válidos: {error}"))?;
+    let complaints = complaints_about_the_sets(&sets.set);
+    if complaints.is_empty() {
+        Ok(sets.set)
+    } else {
+        Err(complaints.join("; "))
+    }
+}
+
+fn complaints_about_the_sets(sets: &[Set]) -> Vec<String> {
+    let mut seen = BTreeSet::new();
+    sets.iter()
+        .filter_map(|set| {
+            if !seen.insert(set.name.as_str()) {
+                Some(format!("el conjunto «{}» está repetido", set.name))
+            } else if set.chapters.is_empty() {
+                Some(format!("el conjunto «{}» no tiene capítulo", set.name))
+            } else {
+                None
+            }
+        })
+        .collect()
+}
+
+/// Las entradas de un conjunto con su capítulo resuelto, o lo que tienen fuera de su sitio.
+fn the_set_in(set: &Set, raw: &str) -> Result<Vec<Check>, String> {
+    let mut checks = the_catalogue_in(raw)?;
+    let complaints: Vec<String> = checks
+        .iter_mut()
+        .flat_map(|check| complaints_about_the_place_of(check, set))
+        .collect();
+    if complaints.is_empty() {
+        Ok(checks)
+    } else {
+        Err(complaints.join("; "))
+    }
+}
+
+fn complaints_about_the_place_of(check: &mut Check, set: &Set) -> Option<String> {
+    let id = &check.id;
+    if check.set != set.name {
+        return Some(format!(
+            "{id}: dice ser del conjunto «{}» y está en el fichero de «{}»",
+            check.set, set.name
+        ));
+    }
+    if check.chapter.is_empty() {
+        check.chapter = set.chapters[0].clone();
+        None
+    } else if set.chapters.len() < 2 {
+        Some(format!(
+            "{id}: fija su capítulo y su conjunto «{}» solo tiene uno",
+            set.name
+        ))
+    } else if !set.chapters.contains(&check.chapter) {
+        Some(format!(
+            "{id}: el capítulo {} no es de su conjunto «{}»",
+            check.chapter, set.name
+        ))
+    } else {
+        None
+    }
+}
+
+fn files_of_no_set(sets: &[Set]) -> Result<Vec<String>, String> {
+    let dir = the_catalogue_dir();
+    let declared: BTreeSet<String> = sets
+        .iter()
+        .map(|set| format!("{}.toml", set.name))
+        .chain([THE_SETS_FILE.to_owned()])
+        .collect();
+    let mut orphans: Vec<String> = std::fs::read_dir(&dir)
+        .map_err(|error| format!("{} no se pudo leer: {error}", dir.display()))?
+        .filter_map(|entry| entry.ok()?.file_name().into_string().ok())
+        .filter(|name| name.ends_with(".toml") && !declared.contains(name))
+        .map(|name| format!("{name}: no es de ningún conjunto declarado"))
+        .collect();
+    orphans.sort();
+    Ok(orphans)
 }
 
 /// El catálogo entero validado contra el manifiesto de la sede, o por qué no arranca la suite:
@@ -205,12 +298,20 @@ pub fn read_the_catalogue() -> Result<Vec<Check>, String> {
 }
 
 fn read_the_catalogue_files() -> Result<Vec<Check>, String> {
+    let sets = the_declared_sets()?;
+    let orphans = files_of_no_set(&sets)?;
+    if !orphans.is_empty() {
+        return Err(format!(
+            "el catálogo tiene ficheros de más:\n  {}",
+            orphans.join("\n  ")
+        ));
+    }
     let mut checks = Vec::new();
-    for set in THE_SETS {
+    for set in &sets {
         let path = the_set_file(set);
         let raw = std::fs::read_to_string(&path)
             .map_err(|error| format!("{} no se pudo leer: {error}", path.display()))?;
-        let entries = the_catalogue_in(&raw)
+        let entries = the_set_in(set, &raw)
             .map_err(|complaint| format!("{}: {complaint}", path.display()))?;
         checks.extend(entries);
     }
@@ -228,7 +329,6 @@ fn read_the_catalogue_files() -> Result<Vec<Check>, String> {
 fn complaints_about(checks: &[Check]) -> Vec<String> {
     [
         repeated_ids(checks),
-        sets_outside_the_vocabulary(checks),
         empty_fields(checks),
         malformed_unmeasurable_entries(checks),
         entries_without_a_body(checks),
@@ -350,14 +450,6 @@ fn repeated_ids(checks: &[Check]) -> Vec<String> {
         .iter()
         .filter(|check| !seen.insert(check.id.as_str()))
         .map(|check| format!("{}: id repetido", check.id))
-        .collect()
-}
-
-fn sets_outside_the_vocabulary(checks: &[Check]) -> Vec<String> {
-    checks
-        .iter()
-        .filter(|check| !THE_SETS.contains(&check.set.as_str()))
-        .map(|check| format!("{}: el conjunto «{}» no existe", check.id, check.set))
         .collect()
 }
 
@@ -554,13 +646,23 @@ statement = "Algo se rechaza con SAF_03."
     }
 
     #[test]
-    fn the_catalogue_of_the_repository_reads() {
-        let checks = read_the_catalogue().unwrap();
-        assert_eq!(checks.len(), 161);
+    fn every_check_of_the_repository_takes_a_chapter_of_its_declared_set() {
+        let sets = the_declared_sets().unwrap();
+        let misplaced: Vec<String> = read_the_catalogue()
+            .unwrap()
+            .into_iter()
+            .filter(|check| {
+                !sets
+                    .iter()
+                    .any(|set| set.name == check.set && set.chapters.contains(&check.chapter))
+            })
+            .map(|check| check.id)
+            .collect();
+        assert!(misplaced.is_empty(), "{misplaced:?}");
     }
 
     #[test]
-    fn the_catalogue_orders_its_blocks_like_the_sets_vocabulary() {
+    fn the_catalogue_orders_its_blocks_like_its_declared_sets() {
         let checks = read_the_catalogue().unwrap();
         let mut blocks: Vec<&str> = Vec::new();
         for check in &checks {
@@ -568,7 +670,104 @@ statement = "Algo se rechaza con SAF_03."
                 blocks.push(&check.set);
             }
         }
-        assert_eq!(blocks, THE_SETS);
+        let declared: Vec<String> = the_declared_sets()
+            .unwrap()
+            .into_iter()
+            .map(|set| set.name)
+            .filter(|name| blocks.contains(&name.as_str()))
+            .collect();
+        assert_eq!(blocks, declared);
+    }
+
+    fn a_set(name: &str, chapters: &[&str]) -> Set {
+        Set {
+            name: name.to_owned(),
+            chapters: chapters
+                .iter()
+                .map(|chapter| (*chapter).to_owned())
+                .collect(),
+        }
+    }
+
+    fn an_entry_without_a_chapter(id: &str, set: &str, extra: &str) -> String {
+        format!(
+            "[[check]]\nid = \"{id}\"\nset = \"{set}\"\n\
+             citation = \"A.java:1\"\nstatement = \"Algo.\"\n{extra}\n\n"
+        )
+    }
+
+    #[test]
+    fn a_check_without_a_chapter_takes_the_first_of_its_set() {
+        let checks = the_set_in(
+            &a_set("firma", &["06", "11", "12"]),
+            &an_entry_without_a_chapter("a_one", "firma", ""),
+        )
+        .unwrap();
+        assert_eq!(checks[0].chapter, "06");
+    }
+
+    #[test]
+    fn a_check_of_a_set_with_several_chapters_may_fix_one_of_them() {
+        let checks = the_set_in(
+            &a_set("firma", &["06", "11", "12"]),
+            &an_entry_without_a_chapter("a_one", "firma", "chapter = \"12\""),
+        )
+        .unwrap();
+        assert_eq!(checks[0].chapter, "12");
+    }
+
+    #[test]
+    fn a_check_out_of_the_place_of_its_file_is_named() {
+        let complaint = the_set_in(
+            &a_set("firma", &["06", "11", "12"]),
+            &format!(
+                "{}{}{}",
+                an_entry_without_a_chapter("a_one", "lote", ""),
+                an_entry_without_a_chapter("a_two", "firma", "chapter = \"08\""),
+                an_entry_without_a_chapter("a_three", "firma", "chapter = \"06\"")
+            ),
+        )
+        .unwrap_err();
+        assert_eq!(
+            complaint,
+            "a_one: dice ser del conjunto «lote» y está en el fichero de «firma»; \
+             a_two: el capítulo 08 no es de su conjunto «firma»"
+        );
+    }
+
+    #[test]
+    fn a_check_that_fixes_the_chapter_of_a_set_with_only_one_is_named() {
+        let complaint = the_set_in(
+            &a_set("lote", &["08"]),
+            &an_entry_without_a_chapter("a_one", "lote", "chapter = \"08\""),
+        )
+        .unwrap_err();
+        assert_eq!(
+            complaint,
+            "a_one: fija su capítulo y su conjunto «lote» solo tiene uno"
+        );
+    }
+
+    #[test]
+    fn a_repeated_set_or_one_without_a_chapter_is_named() {
+        let complaint = the_sets_in(
+            "[[set]]\nname = \"lote\"\nchapters = [\"08\"]\n\n\
+             [[set]]\nname = \"lote\"\nchapters = [\"08\"]\n\n\
+             [[set]]\nname = \"firma\"\nchapters = []\n",
+        )
+        .unwrap_err();
+        assert_eq!(
+            complaint,
+            "el conjunto «lote» está repetido; el conjunto «firma» no tiene capítulo"
+        );
+    }
+
+    #[test]
+    fn every_file_of_the_catalogue_belongs_to_a_declared_set() {
+        assert_eq!(
+            files_of_no_set(&the_declared_sets().unwrap()).unwrap(),
+            Vec::<String>::new()
+        );
     }
 
     fn entries(raw: &str) -> Vec<Check> {
@@ -822,15 +1021,6 @@ statement = "Algo se rechaza con SAF_03."
         let mixed: Vec<Check> = one.into_iter().chain(other).collect();
 
         assert_eq!(complaints_about(&mixed), vec!["a_one: id repetido"]);
-    }
-
-    #[test]
-    fn a_set_outside_the_vocabulary_is_named() {
-        let checks = entries(&an_entry("a_one", "inventado", DRIVEN));
-        assert_eq!(
-            complaints_about(&checks),
-            vec!["a_one: el conjunto «inventado» no existe"]
-        );
     }
 
     #[test]
