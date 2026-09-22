@@ -22,8 +22,8 @@ consola. Sus pruebas se corren con `cargo test` dentro de este directorio; las d
 | `src/catalogue.rs` | La lectura del catálogo y su validación, de forma y contra el manifiesto de la sede, que si falla no deja arrancar. |
 | `src/manifest.rs` | El vocabulario de la sede que publica `driver.mjs --manifest`: modos y guiones con su sede, su familia y sus condiciones. |
 | `src/checks.rs` | El cuerpo ejecutable: cómo se conduce un grupo, la parada entre tramos, la guarda de las comprobaciones sin persona y los saludos por familia, sin escribir el informe. |
-| `src/harness.rs` | El registro de arneses que el catálogo liga por nombre: cada uno con cómo mide, qué ficheros prepara y cómo juzga. |
-| `src/verdicts.rs` | Las reglas que traducen lo observado a resultado. |
+| `src/harness.rs` | El registro de arneses que el catálogo liga por nombre: lo que una comprobación monta alrededor del trámite —puertos ocupados, ficheros preparados—; no juzga. |
+| `src/judge.rs` | El juez: lo observado, la expectativa declarada y la respuesta de la persona, a un resultado; con el vocabulario cerrado de expectativas, y sin lanzar trámites. |
 | `src/outcome.rs` | El resultado de una comprobación, sus nombres en pantalla y PENDIENTE. |
 | `src/validation.rs` | La validación de un informe contra una referencia: validado o sus discrepancias, que son fallos de la suite o de la referencia. |
 | `src/errand.rs` | El trámite: el seam de quien lo corre, el `driver.mjs` de `testdata/site-driver/` con el cliente invocado, y lo que se extrae de cada evento. |

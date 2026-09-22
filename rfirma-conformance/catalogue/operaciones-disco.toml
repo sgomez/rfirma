@@ -12,8 +12,9 @@ la firma y el certificado a la sede que lo pidió.
 """
 drive = { mode = "v4", script = "signandsave" }
 assistance = "person"
-harness = "signature_saved_to_disk"
+completes = {}
 question = "¿se pidió dónde guardar la firma? [s/n]"
+person = { yes = "se pidió dónde guardar la firma y volvió a la sede", no = "no se pidió dónde guardar la firma", yes_means = "conforme" }
 warning = "Van a aparecer el diálogo de certificado y la petición de dónde guardar la firma: complétala para que la comprobación llegue a medir algo."
 
 [[check]]
@@ -27,8 +28,8 @@ extensión que trae.
 """
 drive = { mode = "v4", script = "signandsave" }
 assistance = "person"
-harness = "proposed_save_name"
 question = "¿el nombre ofrecido para guardar era «challenge-signed.csig»? [s/n]"
+person = { yes = "se ofreció para guardar el nombre que la petición propuso", no = "la firma se guardó con un nombre que la petición no propuso", yes_means = "conforme" }
 warning = "Va a aparecer el diálogo de certificado; cuando se pida dónde guardar, mira qué nombre viene propuesto antes de completarlo."
 
 [[check]]
@@ -42,7 +43,7 @@ antes de pedir certificado alguno.
 """
 drive = { mode = "v4", script = "signandsavewithanillegalfilename" }
 assistance = "none"
-expects_saf = "SAF_03"
+saf = "SAF_03"
 
 [[check]]
 id = "signandsave_asks_for_the_document_when_the_request_brings_no_data"
@@ -55,8 +56,9 @@ rechazarse, y firma el que se le dé.
 """
 drive = { mode = "v4", script = "signandsavewithoutdata" }
 assistance = "person"
-harness = "requested_input_document"
+harness = "a_document_to_sign"
 question = "¿se pidió elegir el documento a firmar? [s/n]"
+person = { yes = "se pidió el documento a firmar antes de firmarlo", no = "la petición sin datos se resolvió sin pedir el documento a firmar", yes_means = "conforme" }
 warning = "Se va a pedir primero el documento a firmar, y después vendrán el diálogo de certificado y la petición de dónde guardar: elige el documento preparado y completa el resto."
 
 [[check]]
@@ -70,8 +72,7 @@ como error ni como firma entregada.
 """
 drive = { mode = "v4", script = "signandsave" }
 assistance = "person"
-harness = "cancelled_dialogue"
-question = "¿se canceló al pedirse dónde guardar? [s/n]"
+saf = "CANCEL"
 warning = "Va a aparecer el diálogo de certificado; cuando se pida dónde guardar, cancela en vez de guardar."
 
 [[check]]
@@ -110,6 +111,7 @@ en la invocación.
 """
 drive = { mode = "v4", script = "selectcert" }
 assistance = "click"
+completes = {}
 warning = "Va a aparecer el diálogo de selección de certificado: elige el único que ofrece."
 
 [[check]]
@@ -134,8 +136,9 @@ resuelve sin pedir que se elija.
 """
 drive = { mode = "v4", script = "selectcertheadless" }
 assistance = "person"
-harness = "automatic_certificate_selection"
+completes = {}
 question = "¿se pidió elegir certificado? [s/n]"
+person = { yes = "se pidió elegir certificado habiendo un único candidato", no = "el único candidato se resolvió sin pedir que se eligiera", yes_means = "no-conforme" }
 warning = "El almacén rsa de la suite tiene un solo certificado, así que la premisa se cumple: si aun así aparece el diálogo de elegir certificado, elígelo y responde que sí se pidió."
 
 [[check]]
@@ -149,8 +152,7 @@ tal en vez de como error.
 """
 drive = { mode = "v4", script = "selectcert" }
 assistance = "person"
-harness = "cancelled_dialogue"
-question = "¿se canceló la selección de certificado? [s/n]"
+saf = "CANCEL"
 warning = "Va a aparecer el diálogo de selección de certificado: cancélalo en vez de elegir."
 
 [[check]]
@@ -164,7 +166,7 @@ antes de pedir destino alguno.
 """
 drive = { mode = "v4", script = "savewithanillegalfilename" }
 assistance = "none"
-expects_saf = "SAF_03"
+saf = "SAF_03"
 
 [[check]]
 id = "save_confirms_before_writing_over_a_file_that_already_exists"
@@ -177,8 +179,9 @@ escribe si se confirma.
 """
 drive = { mode = "v4", script = "save" }
 assistance = "person"
-harness = "overwrite_confirmation"
+harness = "a_file_to_overwrite"
 question = "¿se pidió confirmación al elegir un fichero que ya existía? [s/n]"
+person = { yes = "se pidió confirmación antes de escribir sobre el fichero que ya estaba", no = "se escribió sobre el fichero que ya estaba sin pedir confirmación", yes_means = "conforme" }
 warning = "Se va a pedir dónde guardar: acepta el nombre propuesto, challenge.bin, que ya existe porque se ha preparado, y acepta la confirmación que venga después."
 
 [[check]]
@@ -204,8 +207,9 @@ que el protocolo fija.
 drive = { mode = "v4", script = "load" }
 assistance = "person"
 condition = "the-name-next-to-the-content"
-harness = "interactive_file_load"
+harness = "files_to_load"
 question = "¿se pidió elegir el fichero a cargar? [s/n]"
+person = { yes = "se pidió elegir qué fichero cargar", no = "no se pidió elegir qué fichero cargar", yes_means = "conforme" }
 warning = "Se va a pedir qué fichero cargar: elige uno de los preparados para que la comprobación llegue a medir algo."
 
 [[check]]
@@ -220,6 +224,7 @@ su contenido, separados por el delimitador que el protocolo fija.
 drive = { mode = "v4", script = "multiload" }
 assistance = "person"
 condition = "every-file-apart"
-harness = "interactive_file_load"
+harness = "files_to_load"
 question = "¿se pudieron elegir varios ficheros a la vez? [s/n]"
+person = { yes = "se pudieron elegir varios ficheros a la vez", no = "no se pudieron elegir varios ficheros a la vez", yes_means = "conforme" }
 warning = "Se va a pedir qué ficheros cargar: elige a la vez los dos preparados para que la comprobación llegue a medir la selección múltiple."

@@ -12,8 +12,9 @@ tal, no como una firma.
 """
 drive = { mode = "v4", script = "save" }
 assistance = "person"
-harness = "save_confirmation"
+saf = "SAVE_OK"
 question = "¿se pidió elegir dónde guardar el fichero? [s/n]"
+person = { yes = "se pidió dónde guardar el fichero", no = "no se pidió dónde guardar el fichero", yes_means = "conforme" }
 warning = "Va a aparecer la ventana nativa para elegir dónde guardar el fichero."
 
 [[check]]
@@ -26,6 +27,7 @@ El catálogo de algoritmos incluye los de curva elíptica, y signandsave los ace
 """
 drive = { mode = "v4", script = "signandsavewithecdsa" }
 assistance = "person"
+completes = {}
 store = "ec"
 warning = "Van a aparecer el diálogo de certificado, con el único certificado de curva elíptica del almacén ec, y el de guardar la firma: guárdala donde te proponga."
 
@@ -35,12 +37,12 @@ set = "operaciones"
 chapter = "12"
 citation = "AOCAdESSigner.java:543-550, 576-579; XAdESTspUtil.java:82-84"
 statement = """
-Si la petición pide sello de tiempo, la firma que vuelve lo lleva; si no se pudo sellar, la
-operación lo reporta en vez de devolver una firma sin sello.
+Si la petición pide sello de tiempo y no se puede sellar, la operación lo reporta con un código SAF
+en vez de devolver una firma sin sello.
 """
 drive = { mode = "v4", script = "signwithbrokentsa" }
 assistance = "click"
-harness = "timestamp_in_the_signature"
+saf = "SAF_*"
 warning = "Va a aparecer el diálogo de certificado."
 
 [[check]]
@@ -55,6 +57,6 @@ token que exija autenticación, puede pedir el PIN antes de devolver el certific
 drive = { mode = "v4", script = "selectcert" }
 assistance = "person"
 store = "token"
-harness = "private_key_check"
 question = "¿se pidió el PIN del token/certificado? [s/n]"
+person = { yes = "se pidió el PIN del token", no = "el certificado volvió sin pedir el PIN", yes_means = "conforme" }
 warning = "Van a aparecer el diálogo de selección de certificado y, si el cliente exige clave privada, el del PIN."

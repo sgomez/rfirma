@@ -8,6 +8,7 @@ mod comparison;
 mod console;
 mod errand;
 mod harness;
+mod judge;
 mod livelog;
 mod manifest;
 mod outcome;
@@ -17,7 +18,6 @@ mod server;
 mod snapshot;
 mod transcript;
 mod validation;
-mod verdicts;
 mod witness;
 
 use std::path::PathBuf;

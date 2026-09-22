@@ -12,6 +12,7 @@ lote.
 """
 drive = { mode = "v4", script = "batch" }
 assistance = "click"
+completes = {}
 warning = "Va a aparecer el diálogo de certificado: la sede hace de prefirmador y de postfirmador del lote."
 
 [[check]]
@@ -49,6 +50,7 @@ batchpresignerurl ni batchpostsignerurl y sin contactar con servlet alguno.
 """
 drive = { mode = "v4", script = "batchlocal" }
 assistance = "click"
+completes = {}
 patience_secs = 90
 warning = "Va a aparecer el diálogo de certificado, y después se firman tres documentos en el equipo."
 
@@ -74,7 +76,7 @@ SAF_13 antes de pedir certificado alguno.
 """
 drive = { mode = "v4", script = "batchloopbackservlet" }
 assistance = "none"
-expects_saf = "SAF_13"
+saf = "SAF_13"
 
 [[check]]
 id = "a_batch_servlet_url_carrying_its_own_parameters_is_refused_with_saf_03"
@@ -87,7 +89,7 @@ de pedir certificado alguno.
 """
 drive = { mode = "v4", script = "batchservletwithparameters" }
 assistance = "none"
-expects_saf = "SAF_03"
+saf = "SAF_03"
 
 [[check]]
 id = "the_presigner_receives_the_json_batch_and_the_signing_chain"
@@ -256,8 +258,9 @@ siquiera uno que pida visibleSignature=want.
 """
 drive = { mode = "v4", script = "batchlocalvisible" }
 assistance = "person"
-harness = "headless_batch_item"
+completes = {}
 question = "¿se pidió marcar el área de la firma visible en el PDF? [s/n]"
+person = { yes = "un documento del lote local pidió marcar el área de la firma visible", no = "el lote local firmó sin que ningún documento pidiera nada", yes_means = "no-conforme" }
 warning = "Va a aparecer el diálogo de certificado; fíjate en si después se pide marcar el área de una firma visible."
 
 [[check]]
@@ -379,5 +382,5 @@ con el servicio de lotes.
 """
 drive = { mode = "v4", script = "batchdown" }
 assistance = "click"
-expects_saf = "SAF_26"
+saf = "SAF_26"
 warning = "Va a aparecer el diálogo de certificado: el prefirmador del lote no está escuchando a propósito."

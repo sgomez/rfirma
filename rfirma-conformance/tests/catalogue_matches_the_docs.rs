@@ -367,7 +367,7 @@ fn a_code_of_the_table_the_catalogue_never_names_is_caught_and_named() {
     let table = saf_codes_in_the_table(
         "| `SAF_00` | `ERROR_CANNOT_READ_DATA` |\n| `SAF_07` | `ERROR_CANNOT_FIND_KEYSTORE` |\n",
     );
-    let named = saf_codes_named_in("expects_saf = \"SAF_00\"\nstatement = \"SAF_070 no cuenta.\"");
+    let named = saf_codes_named_in("saf = \"SAF_00\"\nstatement = \"SAF_070 no cuenta.\"");
 
     assert_eq!(
         codes_of_the_table_without_an_entry(&table, &named),

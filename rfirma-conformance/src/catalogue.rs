@@ -12,6 +12,7 @@ use ts_rs::TS;
 
 use crate::client::Store;
 use crate::harness::{the_harness_named, Harness};
+use crate::judge::{Code, Contents, Expectation, OnTheWire, Person};
 use crate::manifest::{Family, Manifest, Site};
 
 /// El vocabulario cerrado de `set`, en el orden en que se leen sus ficheros.
@@ -72,10 +73,16 @@ pub(crate) struct Check {
     #[serde(default, deserialize_with = "a_registered_harness")]
     pub harness: Option<&'static Harness>,
     #[serde(default)]
-    pub expects_saf: Option<String>,
+    pub saf: Option<Code>,
+    #[serde(default)]
+    pub completes: Option<Contents>,
     /// La condición del manifiesto que juzga la comprobación, con el nombre que le da su guion.
     #[serde(default)]
     pub condition: Option<String>,
+    #[serde(default)]
+    pub no_answer: bool,
+    #[serde(default)]
+    pub person: Option<Person>,
     /// Obligatoria en toda comprobación conducida; `None` en las no medibles.
     #[serde(default)]
     pub assistance: Option<Assistance>,
@@ -125,6 +132,26 @@ impl Check {
 
     pub(crate) fn declared_patience(&self) -> Option<Duration> {
         self.patience_secs.map(Duration::from_secs)
+    }
+
+    /// Lo que la comprobación espera, tal y como la declara.
+    pub(crate) fn expectation(&self) -> Expectation<'_> {
+        Expectation {
+            on_the_wire: self.what_it_expects_on_the_wire().into_iter().next(),
+            person: self.person.as_ref(),
+        }
+    }
+
+    fn what_it_expects_on_the_wire(&self) -> Vec<OnTheWire<'_>> {
+        [
+            self.saf.as_ref().map(OnTheWire::Saf),
+            self.completes.as_ref().map(OnTheWire::Completes),
+            self.condition.as_deref().map(OnTheWire::Condition),
+            self.no_answer.then_some(OnTheWire::NoAnswer),
+        ]
+        .into_iter()
+        .flatten()
+        .collect()
     }
 }
 
@@ -191,16 +218,31 @@ fn complaints_about(checks: &[Check]) -> Vec<String> {
         driven_entries_without_an_assistance(checks),
         person_entries_without_a_warning(checks),
         questions_without_a_person(checks),
-        conditions_beside_a_saf(checks),
+        expectations_out_of_shape(checks),
     ]
     .concat()
 }
 
-fn conditions_beside_a_saf(checks: &[Check]) -> Vec<String> {
+fn expectations_out_of_shape(checks: &[Check]) -> Vec<String> {
     checks
         .iter()
-        .filter(|check| check.condition.is_some() && check.expects_saf.is_some())
-        .map(|check| format!("{}: espera a la vez una condición y un SAF", check.id))
+        .filter_map(|check| {
+            let id = &check.id;
+            let on_the_wire = check.what_it_expects_on_the_wire().len();
+            let expects_something = on_the_wire > 0 || check.person.is_some();
+            if check.drive.is_none() {
+                return expects_something.then(|| format!("{id}: espera algo sin conducirse"));
+            }
+            if on_the_wire > 1 {
+                Some(format!("{id}: espera más de una cosa del cable"))
+            } else if !expects_something {
+                Some(format!("{id}: se conduce sin declarar qué espera"))
+            } else if check.person.is_some() != check.question.is_some() {
+                Some(format!("{id}: la persona y su pregunta no van juntas"))
+            } else {
+                None
+            }
+        })
         .collect()
 }
 
@@ -243,11 +285,7 @@ fn greetings_sharing_a_family_and_a_tranche(checks: &[Check], manifest: &Manifes
 fn complaints_about_the_drive_of(check: &Check, manifest: &Manifest) -> Vec<String> {
     let id = &check.id;
     let Some(drive) = &check.drive else {
-        return check
-            .condition
-            .iter()
-            .map(|condition| format!("{id}: espera la condición «{condition}» sin conducirse"))
-            .collect();
+        return Vec::new();
     };
     let mut complaints = Vec::new();
     let mode = manifest.modes.get(&drive.mode);
@@ -279,12 +317,10 @@ fn complaints_about_the_drive_of(check: &Check, manifest: &Manifest) -> Vec<Stri
             "{id}: el guion «{}» no emite la condición «{condition}»",
             drive.script
         )),
-        None if script.site == Site::Handwritten && check.harness.is_none() => {
-            complaints.push(format!(
-                "{id}: el guion a mano «{}» solo informa por condiciones y no espera ninguna",
-                drive.script
-            ))
-        }
+        None if script.site == Site::Handwritten => complaints.push(format!(
+            "{id}: el guion a mano «{}» solo informa por condiciones y no espera ninguna",
+            drive.script
+        )),
         _ => {}
     }
     complaints
@@ -427,7 +463,7 @@ statement = """
 El canal responde SAF_47 a cualquier origen que no sea 127.0.0.1.
 """
 drive = { mode = "v4-ipv6", script = "selectcert" }
-expects_saf = "SAF_47"
+saf = "SAF_47"
 assistance = "person"
 store = "ec"
 ports = [63131, 63132]
@@ -444,7 +480,7 @@ greeting = true
         assert_eq!(check.id, "an_origin_that_is_not_local_is_rejected");
         assert_eq!(check.set, "transporte.websocket");
         assert_eq!(check.chapter, "05");
-        assert_eq!(check.expects_saf.as_deref(), Some("SAF_47"));
+        assert_eq!(check.saf, Code::try_from("SAF_47".to_owned()).ok());
         assert!(check.greeting);
         assert_eq!(
             check.drive.as_ref().unwrap(),
@@ -502,7 +538,7 @@ statement = "Algo se rechaza con SAF_03."
     #[test]
     fn the_catalogue_of_the_repository_reads() {
         let checks = read_the_catalogue().unwrap();
-        assert_eq!(checks.len(), 160);
+        assert_eq!(checks.len(), 161);
     }
 
     #[test]
@@ -529,7 +565,8 @@ statement = "Algo se rechaza con SAF_03."
     }
 
     const DRIVEN: &str =
-        "drive = { mode = \"v4\", script = \"selectcert\" }\nassistance = \"click\"";
+        "drive = { mode = \"v4\", script = \"selectcert\" }\nassistance = \"click\"\n\
+         completes = {}";
 
     #[test]
     fn the_catalogue_of_the_repository_has_no_complaint() {
@@ -616,15 +653,56 @@ statement = "Algo se rechaza con SAF_03."
     }
 
     #[test]
-    fn a_check_expecting_a_condition_and_a_saf_is_named() {
+    fn a_check_expecting_two_things_on_the_wire_is_named() {
         let checks = entries(&an_entry(
             "a_one",
             "errores",
-            &format!("{DRIVEN}\ncondition = \"a-certificate-alone\"\nexpects_saf = \"SAF_03\""),
+            &format!("{DRIVEN}\nsaf = \"SAF_03\""),
         ));
         assert_eq!(
             complaints_about(&checks),
-            vec!["a_one: espera a la vez una condición y un SAF"]
+            vec!["a_one: espera más de una cosa del cable"]
+        );
+    }
+
+    #[test]
+    fn a_driven_check_that_expects_nothing_is_named() {
+        let checks = entries(&an_entry(
+            "a_one",
+            "errores",
+            "drive = { mode = \"v4\", script = \"selectcert\" }\nassistance = \"click\"",
+        ));
+        assert_eq!(
+            complaints_about(&checks),
+            vec!["a_one: se conduce sin declarar qué espera"]
+        );
+    }
+
+    #[test]
+    fn an_undriven_check_that_expects_something_is_named() {
+        let checks = entries(&an_entry(
+            "a_one",
+            "errores",
+            "unmeasurable = \"no llega\"\nsaf = \"SAF_03\"",
+        ));
+        assert_eq!(
+            complaints_about(&checks),
+            vec!["a_one: espera algo sin conducirse"]
+        );
+    }
+
+    #[test]
+    fn a_person_without_a_question_is_named() {
+        let checks = entries(&an_entry(
+            "a_one",
+            "operaciones",
+            "drive = { mode = \"v4\", script = \"selectcert\" }\nassistance = \"person\"\n\
+             warning = \"Aviso.\"\n\
+             person = { yes = \"sí\", no = \"no\", yes_means = \"conforme\" }",
+        ));
+        assert_eq!(
+            complaints_about(&checks),
+            vec!["a_one: la persona y su pregunta no van juntas"]
         );
     }
 
@@ -777,11 +855,11 @@ statement = "Algo se rechaza con SAF_03."
         let checks = entries(&an_entry(
             "a_one",
             "errores",
-            &format!("{DRIVEN}\nharness = \"save_confirmation\""),
+            &format!("{DRIVEN}\nharness = \"files_to_load\""),
         ));
         assert_eq!(
             checks[0].harness.map(|harness| harness.name),
-            Some("save_confirmation")
+            Some("files_to_load")
         );
     }
 
@@ -813,7 +891,7 @@ statement = "Algo se rechaza con SAF_03."
                 "a_person_greeting",
                 "transporte.service",
                 "drive = { mode = \"v4\", script = \"selectcert\" }\nassistance = \"person\"\n\
-                 warning = \"Aviso.\"\ngreeting = true"
+                 warning = \"Aviso.\"\ngreeting = true\ncompletes = {}"
             ),
             an_entry(
                 "an_undriven_greeting",
@@ -835,7 +913,8 @@ statement = "Algo se rechaza con SAF_03."
         let checks = entries(&an_entry(
             "a_one",
             "operaciones",
-            "drive = { mode = \"v4\", script = \"selectcert\" }\nassistance = \"person\"",
+            "drive = { mode = \"v4\", script = \"selectcert\" }\nassistance = \"person\"\n\
+             completes = {}",
         ));
         assert_eq!(
             complaints_about(&checks),
@@ -852,7 +931,10 @@ statement = "Algo se rechaza con SAF_03."
         ));
         assert_eq!(
             complaints_about(&checks),
-            vec!["a_one: pregunta sin asistencia persona"]
+            vec![
+                "a_one: pregunta sin asistencia persona",
+                "a_one: la persona y su pregunta no van juntas"
+            ]
         );
     }
 
@@ -861,7 +943,7 @@ statement = "Algo se rechaza con SAF_03."
         let checks = entries(&an_entry(
             "a_one",
             "operaciones",
-            "drive = { mode = \"v4\", script = \"selectcert\" }",
+            "drive = { mode = \"v4\", script = \"selectcert\" }\ncompletes = {}",
         ));
         assert_eq!(
             complaints_about(&checks),

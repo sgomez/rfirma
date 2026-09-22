@@ -12,6 +12,7 @@ otro valor de la petición lo desplace.
 """
 drive = { mode = "v4", script = "signcades" }
 assistance = "click"
+completes = {}
 warning = "Va a aparecer el diálogo de certificado."
 
 [[check]]
@@ -25,6 +26,7 @@ ranura de datos que el protocolo tiene para la multifirma.
 """
 drive = { mode = "v4", script = "cosigncades" }
 assistance = "click"
+completes = {}
 warning = "Va a aparecer el diálogo de certificado."
 
 [[check]]
@@ -38,6 +40,7 @@ contrafirma el árbol entero y cualquier otro valor se resuelve como las hojas.
 """
 drive = { mode = "v4", script = "countersigncades" }
 assistance = "click"
+completes = {}
 warning = "Va a aparecer el diálogo de certificado."
 
 [[check]]
@@ -62,7 +65,7 @@ se rechaza con SAF_03 en vez de elegir un formato por su cuenta.
 """
 drive = { mode = "v4", script = "signwithoutaformat" }
 assistance = "none"
-expects_saf = "SAF_03"
+saf = "SAF_03"
 
 [[check]]
 id = "an_unsupported_format_is_rejected_with_saf_06"
@@ -75,7 +78,7 @@ pedir certificado alguno.
 """
 drive = { mode = "v4", script = "signwithanunknownformat" }
 assistance = "none"
-expects_saf = "SAF_06"
+saf = "SAF_06"
 
 [[check]]
 id = "format_auto_resolves_a_binary_first_signature"
@@ -88,6 +91,7 @@ y firma, en vez de exigir que la sede lo nombre.
 """
 drive = { mode = "v4", script = "signauto" }
 assistance = "click"
+completes = {}
 warning = "Va a aparecer el diálogo de certificado."
 
 [[check]]
@@ -101,6 +105,7 @@ contenido y firma sin pedir formato.
 """
 drive = { mode = "v4", script = "signxadesauto" }
 assistance = "click"
+completes = {}
 warning = "Va a aparecer el diálogo de certificado."
 
 [[check]]
@@ -114,6 +119,7 @@ reconocimiento sobre la firma previa, no analizando el tipo del documento.
 """
 drive = { mode = "v4", script = "cosignauto" }
 assistance = "click"
+completes = {}
 warning = "Va a aparecer el diálogo de certificado."
 
 [[check]]
@@ -127,7 +133,7 @@ firmarlos como si fuesen una primera firma.
 """
 drive = { mode = "v4", script = "cosignautowithoutasignature" }
 assistance = "none"
-expects_saf = "SAF_17"
+saf = "SAF_17"
 
 [[check]]
 id = "format_auto_identifies_a_cms_signature_as_cades"
@@ -151,6 +157,7 @@ de sólo resumen (SHA256), y la firma con uno de estos últimos se completa.
 """
 drive = { mode = "v4", script = "signcadeswithadigestonlyalgorithm" }
 assistance = "click"
+completes = {}
 warning = "Va a aparecer el diálogo de certificado."
 
 [[check]]
@@ -164,7 +171,7 @@ admitido.
 """
 drive = { mode = "v4", script = "signcadeswithanunsupportedalgorithm" }
 assistance = "none"
-expects_saf = "SAF_03"
+saf = "SAF_03"
 
 [[check]]
 id = "the_algorithm_is_recomposed_with_the_key_of_the_certificate"
@@ -213,6 +220,7 @@ haya firma que validar es lo normal cuando se va a firmar por primera vez.
 """
 drive = { mode = "v4", script = "signpadeschecking" }
 assistance = "click"
+completes = {}
 warning = "Va a aparecer el diálogo de certificado."
 
 [[check]]
@@ -226,7 +234,7 @@ aborta con SAF_39 en vez de firmar encima.
 """
 drive = { mode = "v4", script = "cosignpadeschecking" }
 assistance = "click"
-expects_saf = "SAF_39"
+saf = "SAF_39"
 warning = "Puede aparecer el diálogo de certificado, o uno que pida confirmar la multifirma, antes de que llegue el rechazo: acéptalos."
 
 [[check]]
@@ -251,8 +259,8 @@ volver a preguntarlo; al soltarlo con resetsticky, la siguiente vuelve a pedirlo
 """
 drive = { mode = "v4", script = "sticky" }
 assistance = "person"
-harness = "pinned_certificate"
 question = "¿se pidió el certificado en la primera selección y en la tercera, y no en la segunda? [s/n]"
+person = { yes = "el certificado se pidió en la primera selección y tras soltarlo, y no mientras estuvo fijado", no = "el certificado fijado no se respetó o no se volvió a pedir al soltarlo", yes_means = "conforme" }
 warning = "Van a encadenarse tres selecciones de certificado: fíjate en cuáles te preguntan y cuáles no."
 
 [[check]]
@@ -266,6 +274,7 @@ empaquetado que el formato tiene.
 """
 drive = { mode = "v4", script = "signpades" }
 assistance = "click"
+completes = { starts_with = "%PDF" }
 warning = "Va a aparecer el diálogo de certificado."
 
 [[check]]
@@ -279,8 +288,8 @@ la cancelación de esa selección aborta con SAF_43.
 """
 drive = { mode = "v4", script = "signpadesvisible" }
 assistance = "person"
-harness = "visible_signature_area"
 question = "¿se te pidió marcar el área de la firma visible sobre el PDF? [s/n]"
+person = { yes = "se pidió marcar el área de la firma visible", no = "la firma salió sin pedir el área que el protocolo exige marcar", yes_means = "conforme" }
 warning = "Va a aparecer el diálogo del área visible sobre el PDF, y después el del certificado."
 
 [[check]]
@@ -294,6 +303,7 @@ en el PKCS#7 y explicit deja la firma separada.
 """
 drive = { mode = "v4", script = "signcades" }
 assistance = "click"
+completes = {}
 warning = "Va a aparecer el diálogo de certificado."
 
 [[check]]
@@ -329,6 +339,7 @@ huella e invalida la clave mode.
 """
 drive = { mode = "v4", script = "signcadeswithaprecalculatedhash" }
 assistance = "click"
+completes = {}
 warning = "Va a aparecer el diálogo de certificado."
 
 [[check]]
@@ -342,6 +353,7 @@ Detached) y la firma se produce con la que la petición pide.
 """
 drive = { mode = "v4", script = "signxadesenveloping" }
 assistance = "click"
+completes = {}
 warning = "Va a aparecer el diálogo de certificado."
 
 [[check]]
@@ -369,6 +381,7 @@ lugar de producción.
 """
 drive = { mode = "v4", script = "signfacturaewitharole" }
 assistance = "click"
+completes = {}
 warning = "Va a aparecer el diálogo de certificado."
 
 [[check]]
@@ -382,6 +395,7 @@ en vez de rechazar la petición.
 """
 drive = { mode = "v4", script = "signfacturaewithaforbiddenparam" }
 assistance = "click"
+completes = {}
 warning = "Va a aparecer el diálogo de certificado."
 
 [[check]]

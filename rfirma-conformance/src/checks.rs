@@ -8,9 +8,9 @@ use std::time::{Duration, Instant};
 use crate::catalogue::{Assistance, Check, Drive};
 use crate::errand::{ErrandOutcome, THE_EXHAUSTED_PATIENCE};
 use crate::harness::THE_HARNESSES;
+use crate::judge::{judge, Answer, CheckOutcome};
 use crate::outcome::outcome_name;
 use crate::outcome::{CheckState, Outcome};
-use crate::verdicts::{the_outcome_of, CheckOutcome};
 use crate::Probe;
 
 /// Cómo quedó una entrada al terminar su grupo: resuelta, o pendiente con su motivo.
@@ -95,23 +95,28 @@ impl Probe {
         }
 
         let answer = match head.question.as_deref() {
-            None => None,
+            None => Answer::Unanswered,
             Some(question) => match self.witness.ask(&head.id, question) {
-                Some(answer) => Some(answer),
+                Some(reply) => Answer::read(&reply),
                 None => return vec![Settlement::pending(head, "se descartó la pregunta")],
             },
         };
-        let mut settled = vec![self.settle(
-            head,
-            self.the_outcome_for(head, &outcome, answer.as_deref()),
-            duration,
-        )];
-        settled.extend(
-            group[1..]
-                .iter()
-                .map(|member| self.settle(member, the_outcome_of(member, &outcome), duration)),
-        );
-        settled
+        group
+            .iter()
+            .enumerate()
+            .map(|(index, check)| {
+                let answer = if index == 0 {
+                    answer
+                } else {
+                    Answer::Unanswered
+                };
+                self.settle(
+                    check,
+                    judge(&outcome, &check.expectation(), answer),
+                    duration,
+                )
+            })
+            .collect()
     }
 
     fn settle(&self, check: &Check, outcome: CheckOutcome, duration: Duration) -> Settlement {
@@ -185,20 +190,6 @@ impl Probe {
             check.declared_patience().unwrap_or(self.patience),
         )
     }
-
-    fn the_outcome_for(
-        &self,
-        check: &Check,
-        outcome: &ErrandOutcome,
-        answer: Option<&str>,
-    ) -> CheckOutcome {
-        match check.harness {
-            Some(harness) => {
-                harness.the_outcome_for(self, check, outcome, answer.unwrap_or_default())
-            }
-            None => the_outcome_of(check, outcome),
-        }
-    }
 }
 
 /// El motivo de la guarda: una comprobación sin persona no puede quedarse esperando a nadie.
@@ -242,7 +233,7 @@ fn shares_an_errand(check: &Check) -> bool {
     check.drive.is_some()
         && !check.greeting
         && check.harness.is_none()
-        && check.question.is_none()
+        && check.person.is_none()
         && check.unmeasurable.is_none()
         && !check.needs_a_person()
 }
@@ -369,7 +360,7 @@ chapter = "10"
 citation = "A.java:1"
 statement = "Uno."
 drive = { mode = "v4", script = "save" }
-harness = "overwrite_confirmation"
+harness = "a_file_to_overwrite"
 assistance = "person"
 question = "¿se pidió confirmación? [s/n]"
 warning = "Se va a pedir dónde guardar."
@@ -475,7 +466,7 @@ drive = { mode = "v3", script = "protocol-v3" }
     }
 
     #[test]
-    fn a_check_with_a_harness_or_a_question_runs_alone() {
+    fn a_check_with_a_harness_or_a_person_runs_alone() {
         let catalogue = the_catalogue_in(
             r#"
 [[check]]
@@ -485,9 +476,10 @@ chapter = "10"
 citation = "A.java:1"
 statement = "Uno."
 drive = { mode = "v4", script = "protocol-v4" }
-harness = "save_confirmation"
+harness = "files_to_load"
 assistance = "person"
 question = "¿sí o no? [s/n]"
+person = { yes = "sí", no = "no", yes_means = "conforme" }
 
 [[check]]
 id = "a_two"
@@ -707,7 +699,7 @@ citation = "A.java:1"
 statement = "Se rechaza."
 drive = {{ mode = "v4", script = "signwithoutaformat" }}
 assistance = "{assistance}"
-expects_saf = "SAF_03"
+saf = "SAF_03"
 
 [[check]]
 id = "its_twin"
@@ -717,7 +709,7 @@ citation = "A.java:2"
 statement = "También."
 drive = {{ mode = "v4", script = "signwithoutaformat" }}
 assistance = "{assistance}"
-expects_saf = "SAF_03"
+saf = "SAF_03"
 "#
         ))
         .unwrap()

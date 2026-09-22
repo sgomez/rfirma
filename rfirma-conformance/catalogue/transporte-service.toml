@@ -12,6 +12,7 @@ esta comprobación ninguna de las suyas es de fiar.
 """
 drive = { mode = "service", script = "selectcert" }
 assistance = "click"
+completes = {}
 warning = "Va a aparecer el diálogo de selección de certificado: elige uno para que la comprobación llegue a medir algo."
 
 [[check]]
@@ -27,8 +28,10 @@ ligado no hay cable de vuelta, y el cliente publicado acaba en «la aplicación 
 drive = { mode = "service-bind-failure", script = "selectcert" }
 assistance = "person"
 harness = "occupied_service_ports"
+no_answer = true
 ports = [63131, 63132, 63133]
 question = "¿avisó la aplicación de que no pudo abrir el canal con la página? [s/n]"
+person = { yes = "se avisó de que el canal no se pudo abrir", no = "el fallo al ligar terminó en silencio: no se avisó a quien está delante", yes_means = "conforme" }
 warning = "La suite ocupa los tres puertos del canal: el cliente no podrá abrirlo, y la página tardará unos 30 segundos en rendirse."
 
 [[check]]

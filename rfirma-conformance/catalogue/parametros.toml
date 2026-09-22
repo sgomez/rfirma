@@ -25,6 +25,7 @@ descomprimidos en vez de rechazar la petición.
 """
 drive = { mode = "v4", script = "signgzip" }
 assistance = "click"
+completes = {}
 warning = "Va a aparecer el diálogo de certificado."
 
 [[check]]

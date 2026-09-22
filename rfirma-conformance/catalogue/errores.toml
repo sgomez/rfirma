@@ -86,7 +86,7 @@ Una invocación de signandsave sin cop se rechaza con SAF_04.
 """
 drive = { mode = "v4", script = "signandsavewithoutaverb" }
 assistance = "click"
-expects_saf = "SAF_04"
+saf = "SAF_04"
 warning = "Va a aparecer el diálogo de certificado antes de que llegue el rechazo."
 
 [[check]]
@@ -102,7 +102,7 @@ error.
 drive = { mode = "v4", script = "signwithanunknownformat" }
 assistance = "none"
 greeting = true
-expects_saf = "SAF_06"
+saf = "SAF_06"
 
 [[check]]
 id = "a_saf_code_reaches_the_published_client_intact_over_the_service_channel"
@@ -115,7 +115,7 @@ publicado lo recibe descodificado con el prefijo SAF_nn intacto.
 """
 drive = { mode = "service", script = "signwithanunknownformat" }
 assistance = "none"
-expects_saf = "SAF_06"
+saf = "SAF_06"
 
 [[check]]
 id = "a_saf_code_travels_to_the_intermediate_server_only_once_the_operation_began"
@@ -153,8 +153,7 @@ y el cliente publicado lo entrega a la sede como AOCancelledOperationException.
 """
 drive = { mode = "v4", script = "signcades" }
 assistance = "person"
-harness = "cancelled_dialogue"
-question = "¿se canceló la selección de certificado? [s/n]"
+saf = "CANCEL"
 warning = "Va a aparecer el diálogo de selección de certificado de una firma: cancélalo en vez de elegir."
 
 [[check]]
@@ -191,8 +190,9 @@ de operaciones.
 """
 drive = { mode = "service", script = "save" }
 assistance = "person"
-harness = "save_confirmation"
+saf = "SAVE_OK"
 question = "¿se pidió elegir dónde guardar el fichero? [s/n]"
+person = { yes = "se pidió dónde guardar el fichero", no = "no se pidió dónde guardar el fichero", yes_means = "conforme" }
 warning = "Va a aparecer la ventana nativa para elegir dónde guardar el fichero."
 
 [[check]]
@@ -210,7 +210,7 @@ SAF_40 si el documento del servidor no se recupera y SAF_44 para una firma sin s
 """
 drive = { mode = "v4", script = "signpadesoveranonpdf" }
 assistance = "click"
-expects_saf = "SAF_28"
+saf = "SAF_28"
 warning = "Va a aparecer el diálogo de certificado antes de que llegue el rechazo."
 
 [[check]]

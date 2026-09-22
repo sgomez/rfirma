@@ -12,6 +12,7 @@ respuesta trae el certificado elegido.
 """
 drive = { mode = "v4", script = "selectcert" }
 assistance = "click"
+completes = {}
 warning = "Va a aparecer el diálogo de selección de certificado: elige uno para que la comprobación llegue a medir algo."
 
 [[check]]
@@ -25,5 +26,6 @@ y la firma.
 """
 drive = { mode = "v4", script = "signcades" }
 assistance = "click"
+completes = {}
 greeting = true
 warning = "Va a aparecer el diálogo de certificado."

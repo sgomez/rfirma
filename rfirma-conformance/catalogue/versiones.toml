@@ -67,17 +67,30 @@ assistance = "none"
 condition = "the-echo-with-its-session-answers-ok"
 
 [[check]]
-id = "websocket_channel_supported_versions_accepted"
+id = "the_websocket_channel_accepts_protocol_version_3"
 set = "versiones"
 chapter = "14"
 citation = "AfirmaWebSocketServerManager.java:36, 100-107"
 statement = """
-El canal WebSocket admite las versiones de protocolo 3 y 4 (SUPPORTED_PROTOCOL_VERSIONS): las dos
-llegan a abrir canal.
+El canal WebSocket admite la versión 3 del protocolo (SUPPORTED_PROTOCOL_VERSIONS): una URL de
+arranque con v=3 llega a abrir canal.
 """
 drive = { mode = "v3", script = "protocol-v3" }
 assistance = "none"
-harness = "supported_websocket_versions"
+condition = "a-bare-echo-answers-ok"
+
+[[check]]
+id = "the_websocket_channel_accepts_protocol_version_4"
+set = "versiones"
+chapter = "14"
+citation = "AfirmaWebSocketServerManager.java:36, 100-107"
+statement = """
+El canal WebSocket admite la versión 4 del protocolo (SUPPORTED_PROTOCOL_VERSIONS): una URL de
+arranque con v=4 llega a abrir canal.
+"""
+drive = { mode = "v4", script = "protocol-v4" }
+assistance = "none"
+condition = "the-echo-with-its-session-answers-ok"
 
 [[check]]
 id = "websocket_rejects_a_protocol_version_it_does_not_support"

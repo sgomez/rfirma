@@ -142,4 +142,4 @@ SAF_47 a cualquier otra, el bucle local IPv6 incluido.
 """
 drive = { mode = "v4-ipv6", script = "selectcert" }
 assistance = "none"
-expects_saf = "SAF_47"
+saf = "SAF_47"
