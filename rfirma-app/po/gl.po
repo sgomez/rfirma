@@ -1013,10 +1013,7 @@ msgstr ""
 "A páxina, a posición e o contido do cadro reutilízanse no seguinte documento."
 
 msgid "preferences.consentCountdown.label"
-msgstr "Contar tres segundos antes de asinar nunha sede"
-
-msgid "preferences.consentCountdown.hint"
-msgstr "O botón de asinar comeza desactivado, para que un Intro por descoido non asine."
+msgstr "Protección contra sinaturas por descoido nas sedes"
 
 msgid "preferences.rememberActivity.label"
 msgstr "Lembrar a miña actividade"

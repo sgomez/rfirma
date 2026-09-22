@@ -1011,10 +1011,7 @@ msgstr ""
 "document."
 
 msgid "preferences.consentCountdown.label"
-msgstr "Count three seconds before signing for a site"
-
-msgid "preferences.consentCountdown.hint"
-msgstr "The sign button starts disabled, so a stray Enter doesn't sign."
+msgstr "Protection against accidental signing on sites"
 
 msgid "preferences.rememberActivity.label"
 msgstr "Remember my activity"

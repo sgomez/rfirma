@@ -295,14 +295,14 @@ describe("PreferencesView", () => {
     expect(onChange).toHaveBeenCalledWith({ ...defaults, notifyNewVersion: false });
   });
 
-  it("turns the three-second countdown before signing for a site off without asking", async () => {
+  it("turns the protection against accidental signing on sites off without asking", async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
     renderView({ onChange });
     await openTab(user, "Firma");
 
     await user.click(
-      screen.getByRole("switch", { name: /Contar tres segundos antes de firmar en una sede/ }),
+      screen.getByRole("switch", { name: /Protección contra firmas por descuido en las sedes/ }),
     );
 
     expect(onChange).toHaveBeenCalledWith({ ...defaults, consentCountdown: false });

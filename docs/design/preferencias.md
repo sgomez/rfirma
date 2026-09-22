@@ -205,9 +205,9 @@ Es la entrada, y lleva un solo grupo: **Privacidad**.
    Razonamiento y alternativas descartadas en el
    [ADR-0011](../adr/0011-destino-del-documento-firmado.md).
 
-5. **Contar tres segundos antes de firmar en una sede** (interruptor, activo
-   por omisión), con una línea de ayuda: el botón de firmar empieza
-   desactivado para que un Intro por descuido no firme. Gobierna la ventana de
+5. **Protección contra firmas por descuido en las sedes** (interruptor, activo
+   por omisión), **sin texto de ayuda debajo**. Encendido, `Firmar` nace
+   desactivado con una cuenta atrás de tres segundos. Gobierna la ventana de
    sede y nada más ([ventana-de-sede.md](ventana-de-sede.md)): apagado, `Firmar`
    nace activo y con el foco, y un Intro firma con el certificado preseleccionado.
    Apagarlo no pide confirmación: no borra nada.

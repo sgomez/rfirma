@@ -1029,10 +1029,7 @@ msgstr ""
 "siguiente documento."
 
 msgid "preferences.consentCountdown.label"
-msgstr "Contar tres segundos antes de firmar en una sede"
-
-msgid "preferences.consentCountdown.hint"
-msgstr "El botón de firmar empieza desactivado, para que un Intro por descuido no firme."
+msgstr "Protección contra firmas por descuido en las sedes"
 
 msgid "preferences.rememberActivity.label"
 msgstr "Recordar mi actividad"

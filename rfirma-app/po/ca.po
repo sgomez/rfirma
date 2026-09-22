@@ -1024,10 +1024,7 @@ msgstr ""
 "següent."
 
 msgid "preferences.consentCountdown.label"
-msgstr "Comptar tres segons abans de signar en una seu"
-
-msgid "preferences.consentCountdown.hint"
-msgstr "El botó de signar comença desactivat, perquè un Intro per descuit no signi."
+msgstr "Protecció contra signatures per descuit a les seus"
 
 msgid "preferences.rememberActivity.label"
 msgstr "Recordar la meva activitat"

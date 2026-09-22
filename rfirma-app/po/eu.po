@@ -1034,10 +1034,7 @@ msgstr ""
 "dira."
 
 msgid "preferences.consentCountdown.label"
-msgstr "Hiru segundo zenbatu egoitza batean sinatu aurretik"
-
-msgid "preferences.consentCountdown.hint"
-msgstr "Sinatzeko botoia desgaituta hasten da, nahi gabeko Intro batek sina ez dezan."
+msgstr "Egoitzetan nahi gabeko sinaduren aurkako babesa"
 
 msgid "preferences.rememberActivity.label"
 msgstr "Gogoratu nire jarduera"
