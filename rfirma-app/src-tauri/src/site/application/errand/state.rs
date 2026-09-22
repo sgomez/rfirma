@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use std::sync::{Arc, Condvar, Mutex};
 use std::time::Duration;
 
-use crate::identity::domain::certificate::TokenCertificate;
+use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
 use crate::signing::domain::bridge::{Format, SignatureOperation};
 use crate::site::domain::batch::LocalBatch;
 use crate::site::domain::channel::ArrivalMode;
@@ -62,6 +62,7 @@ pub struct LiveErrand {
     revelation: Mutex<Option<RevelationHandle>>,
     window: Mutex<Option<Arc<dyn SiteWindow>>>,
     delivered: Mutex<Option<Acknowledgement>>,
+    stuck: Mutex<Option<CertificateRef>>,
 }
 
 /// Datos identificativos y de conexión de un trámite en curso.
@@ -263,6 +264,21 @@ impl LiveErrand {
         crate::lock(&self.scratch)
             .as_ref()
             .map(|scratch| scratch.path.clone())
+    }
+
+    /// Fija para `sticky` el certificado elegido, solo en esta sesión de sede.
+    pub(super) fn stick(&self, chosen: &CertificateRef) {
+        *crate::lock(&self.stuck) = Some(chosen.clone());
+    }
+
+    /// El certificado que `sticky` fijó en esta sesión, si lo hay.
+    pub(super) fn the_stuck(&self) -> Option<CertificateRef> {
+        crate::lock(&self.stuck).clone()
+    }
+
+    /// Olvida el certificado fijado en esta sesión.
+    pub(super) fn unstick(&self) {
+        *crate::lock(&self.stuck) = None;
     }
 
     /// Registra el filtro de consentimiento de identidad y si la sede lo pegó.

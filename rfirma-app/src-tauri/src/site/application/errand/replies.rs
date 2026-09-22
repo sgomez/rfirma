@@ -56,7 +56,7 @@ pub fn identity_handed_over<E: FilterEngine>(
     };
 
     if sticky {
-        certificates.remember(chosen.reference());
+        live.stick(chosen.reference());
     }
 
     over(live, SiteOutcome::Certificate(chosen.der().to_vec()))

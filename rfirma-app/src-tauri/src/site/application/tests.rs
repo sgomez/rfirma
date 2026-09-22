@@ -5,7 +5,7 @@ use std::path::Path;
 use std::sync::Mutex;
 
 use crate::identity::application::certificates::ListedCertificates;
-use crate::identity::domain::certificate::{CertificateRef, ListedCertificate, TokenCertificate};
+use crate::identity::domain::certificate::{ListedCertificate, TokenCertificate};
 use crate::identity::domain::error::TokenError;
 use crate::identity::domain::secret::StoreSecret;
 use crate::identity::ports::CertificateMemory;
@@ -351,18 +351,6 @@ impl Certificates for Directory<'_> {
         handle: &str,
     ) -> Result<&'a TokenCertificate, TokenError> {
         crate::identity::application::certificates::usable_certificate(found, handle, self.listed)
-    }
-
-    fn remembered(&self) -> Option<CertificateRef> {
-        self.memory.remembered_certificate()
-    }
-
-    fn remember(&self, chosen: &CertificateRef) {
-        crate::identity::application::certificates::remember_the_certificate(self.memory, chosen);
-    }
-
-    fn forget_the_remembered(&self) {
-        crate::identity::application::certificates::forget_the_certificate(self.memory);
     }
 }
 

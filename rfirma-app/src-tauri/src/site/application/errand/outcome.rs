@@ -177,7 +177,7 @@ pub struct BatchConsent {
     pub signs: usize,
     /// Certificados aceptados por la sede, ya cribados.
     pub certificates: Vec<ListedCertificate>,
-    /// El asa del certificado recordado cuando `sticky` lo resolvió sin preguntar.
+    /// El asa del certificado fijado en la sesión que `sticky` preselecciona.
     pub already_chosen: Option<String>,
 }
 
@@ -203,7 +203,7 @@ pub struct LocalBatchConsent {
     pub items: Vec<LocalBatchItem>,
     /// Certificados aceptados por la sede, ya cribados.
     pub certificates: Vec<ListedCertificate>,
-    /// El asa del certificado recordado cuando `sticky` lo resolvió sin preguntar.
+    /// El asa del certificado fijado en la sesión que `sticky` preselecciona.
     pub already_chosen: Option<String>,
 }
 
@@ -361,7 +361,7 @@ pub enum Moment {
         signs: usize,
         /// Filas ya cribadas en orden de presentación.
         certificates: Vec<ListedCertificate>,
-        /// El asa del certificado que `sticky` ya resolvió, si lo resolvió.
+        /// El asa del certificado que `sticky` preselecciona, si lo hay.
         already_chosen: Option<String>,
     },
     /// Consentimiento del lote local, con el resumen de cada uno de sus elementos.
@@ -370,7 +370,7 @@ pub enum Moment {
         items: Vec<LocalBatchItem>,
         /// Filas ya cribadas en orden de presentación.
         certificates: Vec<ListedCertificate>,
-        /// El asa del certificado que `sticky` ya resolvió, si lo resolvió.
+        /// El asa del certificado que `sticky` preselecciona, si lo hay.
         already_chosen: Option<String>,
     },
     /// Trámite sin certificados disponibles.

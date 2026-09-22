@@ -213,7 +213,7 @@ fn the_chosen_and_its_secret<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
         .map_err(|refusal| refused(live, SiteRefusal::BatchSigningFailed(refusal)))?;
 
     if sticky {
-        desk.neighbours.remember(chosen.reference());
+        live.stick(chosen.reference());
     }
 
     Ok((chosen.clone(), secret))

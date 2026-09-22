@@ -74,7 +74,7 @@ export type SiteStageView =
       /** Cuántas firmas lleva el lote. */
       signs: number;
       certificates: readonly Certificate[];
-      /** El asa que `sticky` ya resolvió: es la fila recordada, la que el desplegable elige sola. */
+      /** El asa que `sticky` preselecciona: la fijada en la sesión de sede, la que el desplegable elige sola. */
       alreadyChosen: string | null;
     }
   | {
@@ -82,7 +82,7 @@ export type SiteStageView =
       /** Los elementos del lote, en el orden en que la sede los declaró. */
       items: readonly LocalBatchItem[];
       certificates: readonly Certificate[];
-      /** El asa que `sticky` ya resolvió: es la fila recordada, la que el desplegable elige sola. */
+      /** El asa que `sticky` preselecciona: la fijada en la sesión de sede, la que el desplegable elige sola. */
       alreadyChosen: string | null;
     }
   | { kind: "saving"; filename: string | null }

@@ -46,8 +46,8 @@ un límite del proceso, no de la sede.
   vive, y cada arranque barre solo las carpetas cuyo cerrojo consigue tomar.
   No se barre por PID: flatpak da a cada instancia su propio espacio de PID.
 - **La memoria entre sesiones (ADR-0010) se escribe releyendo.** Toda
-  mutación, en los dos roles, relee el fichero y toca un solo campo; el
-  proceso de sede solo muta el último certificado usado. El fichero de estado
+  mutación relee el fichero y toca un solo campo; el proceso de sede no muta
+  ninguno, ni siquiera el último certificado usado. El fichero de estado
   se lee del disco en cada acceso; la configuración, que la sede nunca
   escribe, conserva su copia viva.
 - **La CA local (ADR-0005) la refresca el escritorio.** El proceso de sede no

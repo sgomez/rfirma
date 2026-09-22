@@ -371,18 +371,6 @@ impl Certificates for TheNeighbours<'_> {
     ) -> Result<&'a TokenCertificate, TokenError> {
         crate::identity::application::certificates::usable_certificate(found, handle, self.listed)
     }
-
-    fn remembered(&self) -> Option<CertificateRef> {
-        self.memory.remembered_certificate()
-    }
-
-    fn remember(&self, chosen: &CertificateRef) {
-        crate::identity::application::certificates::remember_the_certificate(self.memory, chosen);
-    }
-
-    fn forget_the_remembered(&self) {
-        crate::identity::application::certificates::forget_the_certificate(self.memory);
-    }
 }
 
 impl TokenSigning for TheNeighbours<'_> {
@@ -477,18 +465,6 @@ impl Certificates for ASignerThatSucceeds<'_> {
         handle: &str,
     ) -> Result<&'a TokenCertificate, TokenError> {
         self.neighbours.usable(found, handle)
-    }
-
-    fn remembered(&self) -> Option<CertificateRef> {
-        self.neighbours.remembered()
-    }
-
-    fn remember(&self, chosen: &CertificateRef) {
-        self.neighbours.remember(chosen)
-    }
-
-    fn forget_the_remembered(&self) {
-        self.neighbours.forget_the_remembered()
     }
 }
 
@@ -3525,7 +3501,8 @@ fn a_credential() -> ChannelCredential {
     ChannelCredential::parse(CREDENTIAL).expect("es una credencial buena")
 }
 #[test]
-fn a_sticky_selection_answers_with_the_remembered_certificate_without_asking() {
+fn a_sticky_selection_opens_the_window_with_the_desk_remembered_row_preselected_and_answers_nothing(
+) {
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
     let memory = a_memory(home.path());
     let ours = vec![a_usable_certificate("FIRMA")];
@@ -3547,54 +3524,55 @@ fn a_sticky_selection_answers_with_the_remembered_certificate_without_asking() {
         &live,
     );
 
-    assert!(
-        step.moment().is_none(),
-        "el certificado pegado no abre ningun momento: {step:?}"
-    );
-    let ErrandStep::Answering(reply) = &step else {
-        panic!("la sede recibe el certificado en el acto: {step:?}");
-    };
-    assert_eq!(
-        on_the_wire(reply),
-        base64::engine::general_purpose::URL_SAFE.encode(ours[0].der())
-    );
-    assert_eq!(
-        what_the_site_received(&mut wire),
-        Some(base64::engine::general_purpose::URL_SAFE.encode(ours[0].der()))
-    );
-}
-#[test]
-fn a_sticky_selection_asks_when_the_remembered_one_is_outside_the_filter() {
-    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
-    let memory = a_memory(home.path());
-    let ours = vec![a_usable_certificate("FIRMA"), a_usable_certificate("OTRO")];
-    let (listed, _) = listed_from(&ours);
-    memory
-        .remember_the_certificate(ours[1].reference())
-        .expect("la memoria de pruebas escribe");
-    let live = a_live();
-
-    let engine = AnEngine::answering(&[&[0], &[0]]);
-    let request = requested(&an_operation("&sticky=true"));
-    let neighbours = a_neighbourhood(home.path(), &listed, opened_for_nobody(), &memory);
-    let step = consent_for(&engine, &request, ours.clone(), &neighbours, &live);
-
     let ErrandStep::AskingForConsent {
         certificates: rows,
         sticky,
         ..
     } = step
     else {
-        panic!("el recordado no cruza el filtro: se pregunta");
+        panic!("sin ventana no hay certificado: {step:?}");
     };
-    assert!(sticky, "la sede pego el certificado que se elija");
+    assert!(sticky);
+    assert!(
+        rows[0].remembered,
+        "la fila recordada llega preseleccionada"
+    );
+    assert_eq!(
+        what_the_site_received(&mut wire),
+        None,
+        "la sede no recibe nada hasta que la persona consiente"
+    );
+}
+
+#[test]
+fn a_sticky_selection_sticks_the_chosen_one_to_its_session_and_not_to_the_desk() {
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let memory = a_memory(home.path());
+    let ours = vec![a_usable_certificate("FIRMA"), a_usable_certificate("OTRO")];
+    let (listed, _) = listed_from(&ours);
+    memory
+        .remember_the_certificate(ours[0].reference())
+        .expect("la memoria de pruebas escribe");
+    let live = a_live();
+
+    let engine = AnEngine::answering(&[&[0, 1], &[0], &[0, 1]]);
+    let request = requested(&an_operation("&sticky=true"));
+    let neighbours = a_neighbourhood(home.path(), &listed, opened_for_nobody(), &memory);
+    let ErrandStep::AskingForConsent {
+        certificates: rows,
+        sticky,
+        ..
+    } = consent_for(&engine, &request, ours.clone(), &neighbours, &live)
+    else {
+        panic!("'sticky' pregunta siempre");
+    };
 
     let reply = identity_handed_over(
         &engine,
         request.filter(),
         sticky,
         &ours,
-        &rows[0].id,
+        &rows[1].id,
         &neighbours,
         &live,
     );
@@ -3603,11 +3581,74 @@ fn a_sticky_selection_asks_when_the_remembered_one_is_outside_the_filter() {
         memory
             .remembered_certificate()
             .is_some_and(|one| one.is_the_same_as(ours[0].reference())),
-        "el elegido queda recordado"
+        "la sede no escribe en la memoria del escritorio"
+    );
+
+    let ErrandStep::AskingForConsent {
+        certificates: again,
+        ..
+    } = consent_for(&engine, &request, ours.clone(), &neighbours, &live)
+    else {
+        panic!("'sticky' tampoco contesta con el fijado en la sesion");
+    };
+    let preselected: Vec<bool> = again.iter().map(|row| row.remembered).collect();
+    assert_eq!(
+        preselected,
+        vec![false, true],
+        "el fijado en la sesion manda sobre el recordado del escritorio"
     );
 }
+
 #[test]
-fn resetsticky_forgets_the_remembered_one_and_asks_all_the_same() {
+fn two_site_sessions_do_not_share_the_sticky_certificate() {
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let memory = a_memory(home.path());
+    let ours = vec![a_usable_certificate("FIRMA"), a_usable_certificate("OTRO")];
+    let (listed, _) = listed_from(&ours);
+    let first = a_live();
+    let second = a_live();
+
+    let engine = AnEngine::answering(&[&[0, 1], &[0], &[0, 1]]);
+    let request = requested(&an_operation("&sticky=true"));
+    let neighbours = a_neighbourhood(home.path(), &listed, opened_for_nobody(), &memory);
+    let ErrandStep::AskingForConsent {
+        certificates: rows,
+        sticky,
+        ..
+    } = consent_for(&engine, &request, ours.clone(), &neighbours, &first)
+    else {
+        panic!("'sticky' pregunta siempre");
+    };
+    identity_handed_over(
+        &engine,
+        request.filter(),
+        sticky,
+        &ours,
+        &rows[1].id,
+        &neighbours,
+        &first,
+    );
+    assert!(
+        first.the_stuck().is_some(),
+        "la primera sesion fijo el suyo"
+    );
+
+    let ErrandStep::AskingForConsent {
+        certificates: elsewhere,
+        ..
+    } = consent_for(&engine, &request, ours.clone(), &neighbours, &second)
+    else {
+        panic!("'sticky' pregunta siempre");
+    };
+    assert!(
+        elsewhere.iter().all(|row| !row.remembered),
+        "otra sesion no ve el certificado que fijo la primera"
+    );
+    assert_eq!(second.the_stuck(), None);
+}
+
+#[test]
+fn resetsticky_forgets_the_session_one_and_leaves_the_desk_remembered_certificate_alone() {
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
     let memory = a_memory(home.path());
     let ours = vec![a_usable_certificate("FIRMA")];
@@ -3616,6 +3657,7 @@ fn resetsticky_forgets_the_remembered_one_and_asks_all_the_same() {
         .remember_the_certificate(ours[0].reference())
         .expect("la memoria de pruebas escribe");
     let live = a_live();
+    live.stick(ours[0].reference());
 
     let engine = AnEngine::answering(&[&[0]]);
     let request = requested(&an_operation("&sticky=true&resetsticky=true"));
@@ -3629,14 +3671,21 @@ fn resetsticky_forgets_the_remembered_one_and_asks_all_the_same() {
 
     assert!(
         matches!(step, ErrandStep::AskingForConsent { .. }),
-        "olvidado el recordado, se pregunta: {step:?}"
+        "se pregunta: {step:?}"
     );
     assert_eq!(
-        memory.remembered_certificate(),
+        live.the_stuck(),
         None,
-        "'resetsticky' olvida antes de resolver"
+        "'resetsticky' olvida el de su sesion"
+    );
+    assert!(
+        memory
+            .remembered_certificate()
+            .is_some_and(|one| one.is_the_same_as(ours[0].reference())),
+        "el ultimo certificado usado del escritorio sigue donde estaba"
     );
 }
+
 #[test]
 fn without_sticky_the_remembered_certificate_changes_nothing() {
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
@@ -3677,6 +3726,7 @@ fn without_sticky_the_remembered_certificate_changes_nothing() {
         &live,
     );
     assert!(matches!(reply, SiteOutcome::Certificate(_)));
+    assert_eq!(live.the_stuck(), None, "sin 'sticky' no se fija nada");
 }
 
 const A_JSON_LOTE: &str = "{\"algorithm\":\"SHA256\",\"stoponerror\":false,\"singlesigns\":[{\"id\":\"001\",\"datareference\":\"AAAA\"},{\"id\":\"002\",\"datareference\":\"BBBB\"}]}";
@@ -3845,7 +3895,7 @@ fn a_batch_with_needcert_answers_the_result_and_the_signer() {
 }
 
 #[test]
-fn a_sticky_batch_leaves_the_remembered_certificate_already_chosen_in_the_step() {
+fn a_sticky_batch_does_not_take_the_desk_remembered_certificate_as_already_chosen() {
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
     let memory = a_memory(home.path());
     let ours = vec![a_usable_certificate("FIRMA")];
@@ -3854,6 +3904,38 @@ fn a_sticky_batch_leaves_the_remembered_certificate_already_chosen_in_the_step()
         .remember_the_certificate(ours[0].reference())
         .expect("la memoria de pruebas escribe");
     let live = a_live();
+    let engine = AnEngine::answering(&[&[0]]);
+    let policies = APolicyEngine::answering("");
+    let desk = a_desk_for_the_batch(
+        &engine,
+        &policies,
+        home.path(),
+        &listed,
+        &memory,
+        &ours,
+        Arc::new(InMemoryBatchServices::default()),
+    );
+
+    let url = a_batch("&sticky=true");
+    let step = attend_operation(&desk, &url, decoded(&url), &live);
+    let ErrandStep::AskingToSignTheBatch(asked) = step else {
+        panic!("un lote pega el certificado, no lo contesta");
+    };
+
+    assert_eq!(
+        asked.already_chosen, None,
+        "sin nada fijado en la sesion no hay elegido"
+    );
+}
+
+#[test]
+fn a_sticky_batch_leaves_the_certificate_stuck_in_its_session_already_chosen_in_the_step() {
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let memory = a_memory(home.path());
+    let ours = vec![a_usable_certificate("FIRMA")];
+    let (listed, _) = listed_from(&ours);
+    let live = a_live();
+    live.stick(ours[0].reference());
     let engine = AnEngine::answering(&[&[0]]);
     let policies = APolicyEngine::answering("");
     let desk = a_desk_for_the_batch(
@@ -4297,15 +4379,13 @@ fn the_batch_result(wire: &mut tokio::sync::oneshot::Receiver<String>) -> String
 }
 
 #[test]
-fn a_sticky_local_batch_leaves_the_remembered_certificate_already_chosen_in_the_step() {
+fn a_sticky_local_batch_leaves_the_certificate_stuck_in_its_session_already_chosen_in_the_step() {
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
     let memory = a_memory(home.path());
     let ours = vec![a_usable_certificate("FIRMA")];
     let (listed, _) = listed_from(&ours);
-    memory
-        .remember_the_certificate(ours[0].reference())
-        .expect("la memoria de pruebas escribe");
     let live = a_live();
+    live.stick(ours[0].reference());
     let engine = AnEngine::answering(&[&[0]]);
     let policies = APolicyEngine::answering("");
     let desk = a_desk_for_the_batch(

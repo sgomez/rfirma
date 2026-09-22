@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use super::*;
 use crate::identity::application::tests::a_usable_certificate;
-use crate::identity::domain::certificate::{CertificateRef, ListedCertificate, TokenCertificate};
+use crate::identity::domain::certificate::{ListedCertificate, TokenCertificate};
 use crate::identity::domain::error::TokenError;
 use crate::signing::domain::bridge::BridgeError;
 use crate::site::domain::batch::parse_local_batch;
@@ -33,18 +33,6 @@ impl Certificates for Untouched {
         _handle: &str,
     ) -> Result<&'a TokenCertificate, TokenError> {
         unreachable!("la guarda no llega a buscar el certificado")
-    }
-
-    fn remembered(&self) -> Option<CertificateRef> {
-        unreachable!("la guarda no llega a mirar lo recordado")
-    }
-
-    fn remember(&self, _chosen: &CertificateRef) {
-        unreachable!("la guarda no llega a recordar nada")
-    }
-
-    fn forget_the_remembered(&self) {
-        unreachable!("la guarda no llega a olvidar nada")
     }
 }
 
