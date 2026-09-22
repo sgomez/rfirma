@@ -549,7 +549,7 @@ impl ConsoleWitness {
         }
         let label = match kind {
             "briefing" => "aviso",
-            "tranche" => "tramo",
+            "tranche" => "espera",
             _ => "pregunta",
         };
         self.harness(&format!("{label}: {prompt}"));
@@ -597,12 +597,9 @@ impl Witness for ConsoleWitness {
 
     /// Si la persona no está, la cola se vacía: lo que quedaba sigue pendiente.
     fn stand_by(&self, check: &str, tranche: Assistance) -> bool {
-        let prompt = format!(
-            "Termina un tramo y empieza el de asistencia «{}»: la cola espera a que digas que estás \
-             delante.",
-            tranche.name()
-        );
-        let present = self.put_to_the_person(check, &prompt, "tranche").is_some();
+        let present = self
+            .put_to_the_person(check, the_call_to_the_person(tranche), "tranche")
+            .is_some();
         if !present {
             let mut session = self.shared.lock();
             session.queue.clear();
@@ -694,6 +691,22 @@ fn run_the_next_group(shared: &Arc<Shared>) {
         session.tranche = None;
     }
     shared.publish(&session);
+}
+
+fn the_call_to_the_person(tranche: Assistance) -> &'static str {
+    match tranche {
+        Assistance::None => "Vienen comprobaciones que corren solas. Pulsa «Estoy aquí» para seguir.",
+        Assistance::Click => {
+            "Ya han terminado las comprobaciones que corren solas. Las siguientes abren diálogos \
+             del cliente de firma en los que tendrás que elegir un certificado o pulsar un botón. \
+             Pulsa «Estoy aquí» cuando estés delante del ordenador."
+        }
+        Assistance::Person => {
+            "Ahora vienen comprobaciones en las que tendrás que fijarte en lo que hace el cliente \
+             de firma y contestar qué ha pasado. Pulsa «Estoy aquí» cuando estés delante del \
+             ordenador."
+        }
+    }
 }
 
 /// Ordena la cola en tramos —ninguna, clic, persona— con los saludos delante de cada uno.

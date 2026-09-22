@@ -202,7 +202,7 @@ function CheckDetail({
           <code>{check.citation}</code>
         </Field>
         {check.assistance && (
-          <Field label="Asistencia">
+          <Field label="Qué te pide">
             {assistanceName[check.assistance]} · almacén <code>{check.store}</code>
           </Field>
         )}

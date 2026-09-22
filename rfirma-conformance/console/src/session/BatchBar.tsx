@@ -74,7 +74,11 @@ export function BatchBar({ batch, question }: { batch: Batch; question: Question
         <div className="question" role="alertdialog" aria-labelledby="question-title">
           <div className="question-text">
             <span className="question-kind" id="question-title">
-              {tranche ? "Cambio de tramo" : briefing ? "Antes de empezar" : "Te preguntamos"}
+              {tranche
+                ? "Te necesitamos delante"
+                : briefing
+                  ? "Antes de empezar"
+                  : "Te preguntamos"}
             </span>
             <p className="question-prompt">{question.prompt.replace(/\s*\[s\/n\]\s*$/, "")}</p>
           </div>
@@ -82,7 +86,7 @@ export function BatchBar({ batch, question }: { batch: Batch; question: Question
             {tranche ? (
               <>
                 <button type="button" className="button primary" onClick={() => answer("s")}>
-                  Estoy <kbd>s</kbd>
+                  Estoy aquí <kbd>s</kbd>
                 </button>
                 <button type="button" className="button ghost" onClick={() => answer(null)}>
                   Detener aquí: lo demás queda pendiente <kbd>Esc</kbd>

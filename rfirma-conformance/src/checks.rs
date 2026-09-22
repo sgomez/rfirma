@@ -76,7 +76,7 @@ impl Probe {
         }
         if let Some(observed) = already {
             self.witness.harness(&format!(
-                "el trámite ya se observó en «{}»: se juzga sin lanzar el cliente",
+                "lo que hay que observar ya se vio en «{}»: se juzga sin volver a lanzar el cliente",
                 observed.transcribed_in
             ));
             return self
@@ -85,7 +85,7 @@ impl Probe {
         }
         if let Some(tranche) = opening {
             if !self.witness.stand_by(&head.id, tranche) {
-                return all_pending(group, "la cola se paró antes de abrir su tramo").into();
+                return all_pending(group, "la cola se detuvo antes de llegar a las comprobaciones que te necesitan").into();
             }
         }
         if let Some(why) = the_unmet_precondition_of(head) {
@@ -326,7 +326,7 @@ pub(crate) fn the_greeting_that_stops<'a>(check: &Check, failed: &[&'a Check]) -
 }
 
 pub(crate) fn the_reason_behind_a_failed_greeting(greeting: &str) -> String {
-    format!("no se corre: el saludo de su familia, «{greeting}», no se cumplió")
+    format!("no se ejecuta porque falló «{greeting}», que comprueba lo básico de su familia")
 }
 
 fn the_warnings_of(group: &[&Check]) -> Vec<String> {
@@ -832,7 +832,7 @@ saf = "SAF_03"
         assert_eq!(runner.runs().len(), 0);
         assert_eq!(
             pending(&settled),
-            [("a_rejection", "la cola se paró antes de abrir su tramo")]
+            [("a_rejection", "la cola se detuvo antes de llegar a las comprobaciones que te necesitan")]
         );
     }
 

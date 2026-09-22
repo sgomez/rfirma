@@ -45,8 +45,10 @@ describe("the session", () => {
     if (attended) attended.assistance = "click";
     const { server, user } = renderConsoleAt("/", aSnapshot({ report }));
 
-    await user.click(await screen.findByRole("button", { name: /Solo sin persona \(1\)/ }));
-    await user.click(screen.getByRole("button", { name: /El resto \(1\)/ }));
+    await user.click(
+      await screen.findByRole("button", { name: /Solo las que corren solas \(1\)/ }),
+    );
+    await user.click(screen.getByRole("button", { name: /Las que te necesitan \(1\)/ }));
     await user.click(screen.getByRole("button", { name: /Correr todo \(2\)/ }));
     await user.keyboard("p");
 
@@ -69,7 +71,7 @@ describe("the session", () => {
         }
       },
     );
-    const prompt = "Termina un tramo y empieza el de asistencia «clic».";
+    const prompt = "Las siguientes abren diálogos del cliente de firma.";
     const { server, user } = renderConsoleAt(
       "/",
       aSnapshot({
@@ -80,7 +82,7 @@ describe("the session", () => {
 
     await user.click(await screen.findByRole("button", { name: /Estoy/ }));
 
-    expect(screen.getByText("Cambio de tramo")).toBeInTheDocument();
+    expect(screen.getByText("Te necesitamos delante")).toBeInTheDocument();
     expect(shown).toEqual([prompt]);
     expect(server.posted("/api/answer")).toEqual([{ answer: "s" }]);
   });

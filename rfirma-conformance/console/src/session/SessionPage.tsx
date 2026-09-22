@@ -160,8 +160,8 @@ export function SessionPage() {
 }
 
 const TRANCHE_BUTTONS: [Tranches, string, (assistance: Assistance) => boolean][] = [
-  ["unattended", "Solo sin persona", (assistance) => assistance === "none"],
-  ["attended", "El resto", (assistance) => assistance !== "none"],
+  ["unattended", "Solo las que corren solas", (assistance) => assistance === "none"],
+  ["attended", "Las que te necesitan", (assistance) => assistance !== "none"],
   ["all", "Correr todo", () => true],
 ];
 
