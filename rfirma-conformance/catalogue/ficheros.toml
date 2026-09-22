@@ -9,8 +9,9 @@ Un filename con alguno de los caracteres que el sistema de ficheros no admite se
 antes de pedir destino alguno.
 """
 drive = { mode = "v4", script = "savewithanillegalfilename" }
-assistance = "none"
+assistance = "click"
 saf = "SAF_03"
+warning = "AutoFirma enseña un diálogo de error antes de contestar el rechazo: ciérralo para que llegue la respuesta."
 
 [[check]]
 id = "save_confirms_before_writing_over_a_file_that_already_exists"

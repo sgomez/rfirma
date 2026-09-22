@@ -10,7 +10,7 @@ use serde::{Deserialize, Deserializer};
 use serde::Serialize;
 use ts_rs::TS;
 
-use crate::client::Store;
+use crate::client::{Launch, Store};
 use crate::harness::{the_harness_named, Harness};
 use crate::judge::{Code, Contents, Expectation, OnTheWire, Person};
 use crate::manifest::{Family, Manifest, Site};
@@ -91,6 +91,8 @@ pub struct Check {
     pub(crate) assistance: Option<Assistance>,
     #[serde(default)]
     pub(crate) store: Store,
+    #[serde(default)]
+    pub(crate) launch: Launch,
     #[serde(default)]
     pub patience_secs: Option<u64>,
     /// Los puertos que tienen que estar libres antes de conducirla.
@@ -883,11 +885,23 @@ statement = "Algo se rechaza con SAF_03."
 
     #[test]
     fn a_script_or_a_mode_only_for_the_bench_is_named() {
+        let manifest = Manifest::from_json(
+            r#"{"modes":{"banco":{"bench_only":true}},"scripts":{"guion":{"site":"published",
+            "family":"end-to-end","modes":["banco"],"conditions":[],"bench_only":true}}}"#,
+        )
+        .unwrap();
         assert_eq!(
-            complaints_against_the_driver("drive = { mode = \"relay\", script = \"relay\" }"),
+            complaints_against(
+                &entries(&an_entry(
+                    "a_one",
+                    "errores",
+                    "drive = { mode = \"banco\", script = \"guion\" }"
+                )),
+                &manifest,
+            ),
             vec![
-                "a_one: el modo «relay» es solo del banco",
-                "a_one: el guion «relay» es solo del banco"
+                "a_one: el modo «banco» es solo del banco",
+                "a_one: el guion «guion» es solo del banco"
             ]
         );
     }
@@ -1020,8 +1034,20 @@ statement = "Algo se rechaza con SAF_03."
                 (Family::Service, Assistance::None),
                 (Family::EndToEnd, Assistance::None),
                 (Family::EndToEnd, Assistance::Click),
+                (Family::Intermediate, Assistance::Click),
             ])
         );
+    }
+
+    #[test]
+    fn only_local_access_blocked_launches_headless() {
+        let headless: Vec<String> = read_the_catalogue()
+            .unwrap()
+            .into_iter()
+            .filter(|check| check.launch == Launch::Headless)
+            .map(|check| check.id)
+            .collect();
+        assert_eq!(headless, vec!["local_access_blocked".to_owned()]);
     }
 
     #[test]

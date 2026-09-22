@@ -16,6 +16,11 @@ o el consentimiento de rFirma. La cola los agrupa en su tramo.
   corre sin nadie delante.
 - Las comprobaciones cuyo objeto es el PIN o elegir entre varios certificados corren con el almacén
   `token`.
+- Un rechazo que AutoFirma enseña en un diálogo de error antes de contestar —los de parámetros, y
+  los de guardar, cargar, seleccionar y lote— no llega a la sede hasta que alguien lo cierra: esas
+  comprobaciones van en el tramo `clic`. Solo `local_access_blocked` se lanza con el perfil
+  `headless` (`-Des.gob.afirma.protocolinvocation.HeadLess=true`), que quita esos diálogos sin
+  cambiar lo que envía la sede.
 
 ## Considered Options
 
@@ -29,5 +34,7 @@ o el consentimiento de rFirma. La cola los agrupa en su tramo.
   descartada del todo, pero aplazada: es neutral respecto al cliente, pero depende del foco y del
   tiempo, y un Enter en la ventana equivocada falsea el resultado. Cabe como otro adaptador del
   testigo si los clics agrupados siguen pesando.
+- **Lanzar AutoFirma siempre con `HeadLess=true`.** Descartada: cambia el comportamiento de un
+  solo cliente, y esconde el diálogo que mide `a_parameter_rejection_is_shown_before_it_is_answered`.
 - **El certificado recordado con `sticky`.** Descartada: `sticky` es objeto de sus propias
   comprobaciones, y en rFirma solo preselecciona (ADR-0010).

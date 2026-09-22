@@ -76,8 +76,9 @@ El parámetro format es obligatorio en la invocación directa: una petición de 
 se rechaza con SAF_03 en vez de elegir un formato por su cuenta.
 """
 drive = { mode = "v4", script = "signwithoutaformat" }
-assistance = "none"
+assistance = "click"
 saf = "SAF_03"
+warning = "AutoFirma enseña un diálogo de error antes de contestar el rechazo: ciérralo para que llegue la respuesta."
 
 [[check]]
 id = "an_unsupported_format_is_rejected_with_saf_06"
@@ -180,8 +181,9 @@ Un algorithm fuera de la lista blanca se rechaza con SAF_03, sin degradarlo en s
 admitido.
 """
 drive = { mode = "v4", script = "signcadeswithanunsupportedalgorithm" }
-assistance = "none"
+assistance = "click"
 saf = "SAF_03"
+warning = "AutoFirma enseña un diálogo de error antes de contestar el rechazo: ciérralo para que llegue la respuesta."
 
 [[check]]
 id = "the_algorithm_is_recomposed_with_the_key_of_the_certificate"

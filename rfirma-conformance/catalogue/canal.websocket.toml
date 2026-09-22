@@ -177,3 +177,42 @@ condition = "no-channel-opens"
 question = "¿avisó la aplicación de que no pudo abrir el canal con la página (SAF_45)? [s/n]"
 person = { yes = "se avisó de que el canal no se pudo abrir", no = "el fallo al ligar terminó en silencio: no se avisó a quien está delante", yes_means = "conforme" }
 warning = "La suite ocupa los tres puertos del canal: el cliente no podrá abrirlo. Fíjate en si avisa de ello."
+
+[[check]]
+id = "the_v3_channel_takes_the_version_of_each_operation"
+set = "canal.websocket"
+citation = "AfirmaWebSocketServer.java:41, 113; ProtocolInvocationLauncher.java:653-655; ProtocolInvocationLauncherSign.java:132-140"
+statement = """
+El canal v3 no fija versión: cada operación toma la de su ver, y ver=5 se rechaza con SAF_21.
+"""
+drive = { mode = "v3", script = "protocol-v3" }
+assistance = "none"
+condition = "ver-5-over-v3-saf-21"
+
+[[check]]
+id = "a_second_operation_reuses_the_open_channel"
+set = "canal.websocket"
+citation = "autoscript.js:2094-2131; MCF anexo I.1, pág. 158"
+statement = """
+Una segunda operación de la sede viaja por el WebSocket que abrió la primera, sin volver a invocar
+la aplicación.
+"""
+drive = { mode = "v4", script = "selectcerttwice" }
+assistance = "click"
+condition = "the-second-operation-reuses-the-channel"
+warning = "Va a aparecer dos veces el diálogo de selección de certificado: elige uno cada vez."
+
+[[check]]
+id = "non_ascii_text_travels_in_utf8"
+set = "canal.websocket"
+citation = "ProtocolInvocationLauncherLoad.java:132-134; MCF §7.1, pág. 85"
+statement = """
+El nombre de un fichero cargado que no es ASCII llega a la sede tal cual, codificado en UTF-8.
+"""
+drive = { mode = "v4", script = "loadnonascii" }
+assistance = "person"
+harness = "a_file_with_a_non_ascii_name"
+condition = "the-name-arrives-in-utf8"
+question = "¿se pidió elegir el fichero a cargar? [s/n]"
+person = { yes = "se pidió elegir qué fichero cargar", no = "no se pidió elegir qué fichero cargar", yes_means = "conforme" }
+warning = "Se va a pedir qué fichero cargar: elige «señal-año.bin», el que prepara la suite."

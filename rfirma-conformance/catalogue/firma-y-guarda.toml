@@ -38,8 +38,9 @@ Un filename con alguno de los caracteres que el sistema de ficheros no admite se
 antes de pedir certificado alguno.
 """
 drive = { mode = "v4", script = "signandsavewithanillegalfilename" }
-assistance = "none"
+assistance = "click"
 saf = "SAF_03"
+warning = "AutoFirma enseña un diálogo de error antes de contestar el rechazo: ciérralo para que llegue la respuesta."
 
 [[check]]
 id = "signandsave_asks_for_the_document_when_the_request_brings_no_data"

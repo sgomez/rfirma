@@ -1,10 +1,11 @@
-// Los guiones de la sede a mano por el canal WebSocket: el protocolo escrito en crudo.
+// Los guiones del canal WebSocket: el protocolo escrito en crudo y el canal que reutiliza la sede publicada.
 
 import { createServer } from "node:net";
 
+import { theLaunchesSoFar } from "../lib/browser.mjs";
 import { aConditionEvent, aMeasuredConditionEvent, emit, settle } from "../lib/events.mjs";
 import { theThirdProtocolPort } from "../lib/modes.mjs";
-import { aHandwrittenScript } from "../lib/script.mjs";
+import { aHandwrittenScript, aPublishedScript } from "../lib/script.mjs";
 
 const A_CANDIDATE_PORT_BOUND = "a-candidate-port-bound";
 const THE_ECHO_WITH_ITS_SESSION_ANSWERS_OK = "the-echo-with-its-session-answers-ok";
@@ -25,6 +26,16 @@ const THE_UNOPENED_CHANNEL_PATIENCE_MS = 10000;
 
 /** Lo que se espera a que la persona cierre el aviso del cliente antes de que abra el canal. */
 const THE_WARNED_CHANNEL_PATIENCE_MS = 60000;
+
+/** Lo que se espera a cada rechazo mientras la persona cierra el diálogo de error de AutoFirma. */
+const THE_DIALOGUE_PATIENCE_MS = 120000;
+
+/** Lo que tarda como poco un rechazo retenido por un diálogo que la persona cierra a propósito. */
+const THE_DIALOGUE_MIN_MS = 3000;
+
+const THE_REJECTION_WAITED_FOR_THE_DIALOGUE = "the-rejection-waited-for-the-dialogue";
+const THE_SECOND_OPERATION_REUSES_THE_CHANNEL = "the-second-operation-reuses-the-channel";
+const THE_NAME_ARRIVES_IN_UTF8 = "the-name-arrives-in-utf8";
 
 function connectWebSocket(port) {
   return new Promise((resolve, reject) => {
@@ -159,8 +170,48 @@ async function theProtocolV4Script() {
     );
   }
 
-  await theOrdersOverTheChannel(ws1, idSession);
+  await theOrdersOverTheChannel(ws1, idSession, [
+    ...THE_V4_OPERATION_PROBES,
+    ...THE_PASSING_PARAMETER_PROBES,
+  ]);
   ws1.close();
+  settle({ event: "success" });
+}
+
+/** Un canal v4 abierto solo para mandar `probes`, esperando cada respuesta hasta `deadlineMs`. */
+function theProbesOverTheFourthProtocol(ports, probes, deadlineMs) {
+  return async () => {
+    const idSession = "Rj5Ct7Pr9Ob1Es3Tt5Ab";
+    const channel = await theProtocolV4ChannelOpening(ports, idSession);
+    if (!channel) return;
+    await theOrdersOverTheChannel(channel.ws, idSession, probes, deadlineMs);
+    channel.ws.close();
+    settle({ event: "success" });
+  };
+}
+
+/** Un rechazo de parámetros y cuánto tardó en llegar: AutoFirma lo retiene tras su diálogo. */
+async function theShownRejectionScript() {
+  const idSession = "Sh6Rj8Dl0Gq2Ue4Tt6Ab";
+  const channel = await theProtocolV4ChannelOpening([54401, 54402, 54403], idSession);
+  if (!channel) return;
+  const sentAt = Date.now();
+  const answer = await exchangeWithin(
+    channel.ws,
+    `afirma://sign?op=sign&format=CAdES&algorithm=SHA256withRSA&dat=SG9sYQ&id=rfirma-1&idsession=${idSession}`,
+    THE_DIALOGUE_PATIENCE_MS,
+  );
+  const waitedMs = Date.now() - sentAt;
+  channel.ws.close();
+  emit(
+    aMeasuredConditionEvent(
+      THE_REJECTION_WAITED_FOR_THE_DIALOGUE,
+      answer === null ? null : answer.startsWith("SAF_03") && waitedMs >= THE_DIALOGUE_MIN_MS,
+      answer === null
+        ? `nadie contestó en ${THE_DIALOGUE_PATIENCE_MS / 1000} s`
+        : `${answer} a los ${(waitedMs / 1000).toFixed(1)} s`,
+    ),
+  );
   settle({ event: "success" });
 }
 
@@ -171,7 +222,7 @@ function aSignOrderStoppingAtTheFormat(idSession, { op = "sign", probed } = {}) 
   return `afirma://sign?op=${op}&format=INVENTADO&algorithm=SHA256&dat=${data}${extra}&idsession=${idSession}`;
 }
 
-/** Las operaciones que se mandan por el canal v4 y lo que tiene que cumplir cada respuesta. */
+/** Las operaciones que se mandan por el canal v4 y que se rechazan sin abrir ningún diálogo. */
 const THE_V4_OPERATION_PROBES = [
   {
     condition: "ver-5-is-ignored",
@@ -189,25 +240,9 @@ const THE_V4_OPERATION_PROBES = [
     holds: (answer) => !answer.startsWith("SAF_41"),
   },
   {
-    condition: "unknown-operation-saf-04",
-    order: (idSession) => `afirma://unknownop?idsession=${idSession}`,
-    holds: (answer) => answer.startsWith("SAF_04"),
-  },
-  {
-    condition: "invalid-op-saf-04",
-    order: (idSession) => aSignOrderStoppingAtTheFormat(idSession, { op: "invalid" }),
-    holds: (answer) => answer.startsWith("SAF_04"),
-  },
-  {
     condition: "invented-format-saf-06",
     order: (idSession) => aSignOrderStoppingAtTheFormat(idSession),
     holds: (answer) => answer.startsWith("SAF_06"),
-  },
-  {
-    condition: "local-rtservlet-saf-13",
-    order: (idSession) =>
-      `afirma://sign?op=sign&fileid=rfirma&rtservlet=http://127.0.0.1/rt&idsession=${idSession}`,
-    holds: (answer) => answer.startsWith("SAF_13"),
   },
   ...["sign", "cosign", "countersign"].map((verb) => ({
     condition: `${verb}-with-a-slash-saf-06`,
@@ -218,26 +253,73 @@ const THE_V4_OPERATION_PROBES = [
       ),
     holds: (answer) => answer.startsWith("SAF_06"),
   })),
-  ...["selectcert", "batch"].map((verb) => ({
-    condition: `${verb}-with-a-slash-saf-03`,
-    order: (idSession) => `afirma://${verb}/?fileid=abc123&idsession=${idSession}`,
-    holds: (answer) => answer.startsWith("SAF_03"),
-  })),
-  {
-    condition: "no-data-saf-03",
-    order: (idSession) =>
-      `afirma://sign?op=sign&id=rfirma-1&format=CAdES&algorithm=SHA256&idsession=${idSession}`,
-    holds: (answer) => answer.startsWith("SAF_03"),
-  },
 ];
 
+/** Un rechazo de los parámetros de la petición: en AutoFirma, un diálogo de error antes de contestar. */
+const aParameterRejection = (condition, order, expected) => ({
+  condition,
+  order,
+  holds: (answer) => answer.startsWith(expected),
+});
+
+/** El `rtservlet` en el bucle local, que se rechaza con `SAF_13`. */
+const THE_LOCAL_RTSERVLET_PROBE = aParameterRejection(
+  "local-rtservlet-saf-13",
+  (idSession) =>
+    `afirma://sign?op=sign&fileid=rfirma&rtservlet=http://127.0.0.1/rt&idsession=${idSession}`,
+  "SAF_13",
+);
+
+/** Los rechazos del análisis de la petición; la operación inválida pide antes un certificado. */
+const THE_V4_REJECTION_PROBES = [
+  aParameterRejection(
+    "unknown-operation-saf-04",
+    (idSession) => `afirma://unknownop?idsession=${idSession}`,
+    "SAF_04",
+  ),
+  ...["selectcert", "batch"].map((verb) =>
+    aParameterRejection(
+      `${verb}-with-a-slash-saf-03`,
+      (idSession) => `afirma://${verb}/?fileid=abc123&idsession=${idSession}`,
+      "SAF_03",
+    ),
+  ),
+  aParameterRejection(
+    "no-data-saf-03",
+    (idSession) =>
+      `afirma://sign?op=sign&id=rfirma-1&format=CAdES&algorithm=SHA256&idsession=${idSession}`,
+    "SAF_03",
+  ),
+  aParameterRejection(
+    "a-cipher-key-of-seven-saf-03",
+    (idSession) => aSignOrderStoppingAtTheFormat(idSession, { probed: "key=1234567" }),
+    "SAF_03",
+  ),
+  aParameterRejection(
+    "fileid-without-rtservlet-saf-03",
+    (idSession) =>
+      `afirma://sign?op=sign&format=NoSuchFormat&algorithm=SHA256withRSA&fileid=abc123&idsession=${idSession}`,
+    "SAF_03",
+  ),
+];
+
+/** La operación inválida: AutoFirma pide un certificado antes de contestar. */
+const THE_INVALID_OPERATION_PROBE = aParameterRejection(
+  "invalid-op-saf-04",
+  (idSession) => aSignOrderStoppingAtTheFormat(idSession, { op: "invalid" }),
+  "SAF_04",
+);
+
 /** Manda por el canal abierto cada orden y juzga su respuesta; tras el primer silencio no manda más. */
-async function theOrdersOverTheChannel(ws, idSession) {
+async function theOrdersOverTheChannel(
+  ws,
+  idSession,
+  probes,
+  deadlineMs = THE_OPERATION_ANSWER_DEADLINE_MS,
+) {
   let silentAt = null;
-  for (const { condition, order, holds } of [...THE_V4_OPERATION_PROBES, ...THE_PARAMETER_PROBES]) {
-    const answer = silentAt
-      ? null
-      : await exchangeWithin(ws, order(idSession), THE_OPERATION_ANSWER_DEADLINE_MS);
+  for (const { condition, order, holds } of probes) {
+    const answer = silentAt ? null : await exchangeWithin(ws, order(idSession), deadlineMs);
     if (answer === null) {
       silentAt ??= condition;
       emit(
@@ -304,13 +386,24 @@ const THE_PARAMETER_CASES = [
   ["ksb64-malformed-passes", "dat=SG9sYQ&ksb64=esto-no-es-base64!", "SAF_06"],
 ];
 
-const THE_PARAMETER_PROBES = THE_PARAMETER_CASES.map(([condition, parameters, expected]) => ({
-  condition,
-  order: (idSession) =>
-    `afirma://sign?op=sign&format=NoSuchFormat&algorithm=SHA256withRSA&${parameters}` +
-    `&idsession=${idSession}`,
-  holds: (answer) => answer.startsWith(expected),
-}));
+const THE_PARAMETER_PROBES = THE_PARAMETER_CASES.map(([condition, parameters, expected]) =>
+  aParameterRejection(
+    condition,
+    (idSession) =>
+      `afirma://sign?op=sign&format=NoSuchFormat&algorithm=SHA256withRSA&${parameters}` +
+      `&idsession=${idSession}`,
+    expected,
+  ),
+);
+
+/** Los que pasan el análisis y acaban en el formato inexistente, sin diálogo de por medio. */
+const THE_PASSING_PARAMETER_PROBES = THE_PARAMETER_PROBES.filter(({ condition }) =>
+  condition.endsWith("-passes"),
+);
+
+const THE_REFUSED_PARAMETER_PROBES = THE_PARAMETER_PROBES.filter(
+  ({ condition }) => !condition.endsWith("-passes"),
+);
 
 /** Las operaciones por el canal v3, que toma la versión de su `ver`: pasar el control es llegar al formato. */
 const THE_V3_OPERATION_PROBES = [
@@ -321,6 +414,11 @@ const THE_V3_OPERATION_PROBES = [
   {
     condition: "ver-below-passes-over-v3",
     order: (idSession) => aSignOrderStoppingAtTheFormat(idSession, { probed: "ver=-10" }),
+  },
+  {
+    condition: "ver-5-over-v3-saf-21",
+    order: (idSession) => aSignOrderStoppingAtTheFormat(idSession, { probed: "ver=5" }),
+    expected: "SAF_21",
   },
 ];
 
@@ -383,12 +481,12 @@ async function theProtocolV3Script() {
     );
   }
 
-  for (const { condition, order } of THE_V3_OPERATION_PROBES) {
+  for (const { condition, order, expected = "SAF_06" } of THE_V3_OPERATION_PROBES) {
     const answer = await exchangeWithin(ws, order(idSession), THE_OPERATION_ANSWER_DEADLINE_MS);
     emit(
       answer === null
         ? aMeasuredConditionEvent(condition, null, "el sujeto no contestó a la operación")
-        : aConditionEvent(condition, answer.startsWith("SAF_06"), answer),
+        : aConditionEvent(condition, answer.startsWith(expected), answer),
     );
   }
 
@@ -486,6 +584,67 @@ async function theOldJavascriptScript() {
   settle({ event: "success" });
 }
 
+/** Una selección del cliente publicado resuelta cuando contesta, con lo que contestó. */
+function aPublishedSelection() {
+  return new Promise((resolve) => {
+    AutoScript.selectCertificate(
+      "",
+      (data) => resolve({ data: String(data) }),
+      (type, message) => resolve({ type: String(type), message: String(message) }),
+    );
+  });
+}
+
+/** Dos selecciones seguidas del cliente publicado: la segunda viaja por el canal ya abierto. */
+async function theTwoSelectionsOverOneChannelScript() {
+  const first = await aPublishedSelection();
+  const second = await aPublishedSelection();
+  const launches = theLaunchesSoFar();
+  const both = first.data !== undefined && second.data !== undefined;
+  emit(
+    aConditionEvent(
+      THE_SECOND_OPERATION_REUSES_THE_CHANNEL,
+      both && launches === 1,
+      `${launches} invocaciones para dos selecciones; ` +
+        `primera: ${first.data ? "certificado" : first.message}; segunda: ${second.data ? "certificado" : second.message}`,
+    ),
+  );
+  settle(both ? { event: "success", data: second.data } : { event: "error", ...second });
+}
+
+/** El fichero que prepara el arnés `a_file_with_a_non_ascii_name`, con eñe y sin ASCII puro. */
+const THE_NON_ASCII_FILE_NAME = "señal-año.bin";
+
+/** Una carga del cliente publicado: el nombre del fichero elegido tiene que llegar en UTF-8. */
+function theNonAsciiNameLoadScript() {
+  AutoScript.getFileNameContentBase64(
+    "Carga un documento",
+    "bin",
+    "Datos binarios",
+    null,
+    (filename, data) => {
+      emit(
+        aConditionEvent(
+          THE_NAME_ARRIVES_IN_UTF8,
+          String(filename).normalize("NFC") === THE_NON_ASCII_FILE_NAME,
+          `llegó el nombre «${filename}»`,
+        ),
+      );
+      settle({ event: "success", filename: String(filename), data: String(data) });
+    },
+    (type, message) => settle({ event: "error", type: String(type), message: String(message) }),
+  );
+}
+
+const theConditionsOf = (probes) => probes.map(({ condition }) => condition);
+
+/** Los rechazos de parámetros, con la operación inválida al final porque pide un certificado. */
+const THE_REJECTIONS_IN_ORDER = [
+  ...THE_V4_REJECTION_PROBES,
+  ...THE_REFUSED_PARAMETER_PROBES,
+  THE_INVALID_OPERATION_PROBE,
+];
+
 const onTheFourthProtocol = (run, conditions) =>
   aHandwrittenScript(run, { family: "v4-echo", modes: ["v4"], conditions });
 
@@ -497,8 +656,35 @@ export const WEBSOCKET_SCRIPTS = {
     THE_ECHO_WITH_ITS_SESSION_ANSWERS_OK,
     THE_ECHO_WITHOUT_A_SESSION_ANSWERS_SAF_46,
     A_SECOND_CLIENT_LEAVES_THE_CHANNEL_ALIVE,
-    ...[...THE_V4_OPERATION_PROBES, ...THE_PARAMETER_PROBES].map(({ condition }) => condition),
+    ...theConditionsOf([...THE_V4_OPERATION_PROBES, ...THE_PASSING_PARAMETER_PROBES]),
   ]),
+  "protocol-v4-rejections": onTheFourthProtocol(
+    theProbesOverTheFourthProtocol(
+      [54341, 54342, 54343],
+      THE_REJECTIONS_IN_ORDER,
+      THE_DIALOGUE_PATIENCE_MS,
+    ),
+    theConditionsOf(THE_REJECTIONS_IN_ORDER),
+  ),
+  "protocol-v4-local-access": onTheFourthProtocol(
+    theProbesOverTheFourthProtocol(
+      [54451, 54452, 54453],
+      [THE_LOCAL_RTSERVLET_PROBE],
+      THE_OPERATION_ANSWER_DEADLINE_MS,
+    ),
+    theConditionsOf([THE_LOCAL_RTSERVLET_PROBE]),
+  ),
+  "protocol-v4-shown-rejection": onTheFourthProtocol(theShownRejectionScript, [
+    THE_REJECTION_WAITED_FOR_THE_DIALOGUE,
+  ]),
+  loadnonascii: aPublishedScript(theNonAsciiNameLoadScript, {
+    modes: ["v4", "v3", "service"],
+    conditions: [THE_NAME_ARRIVES_IN_UTF8],
+  }),
+  selectcerttwice: aPublishedScript(theTwoSelectionsOverOneChannelScript, {
+    modes: ["v4", "v3"],
+    conditions: [THE_SECOND_OPERATION_REUSES_THE_CHANNEL],
+  }),
   "protocol-v4-malformed-id": onTheFourthProtocol(theProtocolV4MalformedIdScript, [
     A_MALFORMED_SESSION_BINDS_NOTHING,
   ]),

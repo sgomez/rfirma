@@ -41,7 +41,6 @@ export const MODES = {
     patch: (source) => forcedToFixedServicePorts(source, theServiceBindFailurePorts()),
   },
   relay: {
-    benchOnly: true,
     prepare() {
       globalThis.XMLHttpRequest = theIntermediateServerAsXmlHttpRequest();
     },

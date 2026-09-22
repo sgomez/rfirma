@@ -74,6 +74,12 @@ pub(crate) const THE_HARNESSES: &[Harness] = &[
         measure: JUST_DRIVE,
     },
     Harness {
+        name: "a_file_with_a_non_ascii_name",
+        fixtures: &[("señal-año.bin", "Fichero con un nombre que no es ASCII.\n")],
+        mode: READ_AND_WRITE,
+        measure: JUST_DRIVE,
+    },
+    Harness {
         name: "occupied_service_ports",
         fixtures: &[],
         mode: READ_AND_WRITE,

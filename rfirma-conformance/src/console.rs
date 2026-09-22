@@ -776,6 +776,7 @@ fn take_the_next_group(shared: &Arc<Shared>, session: &mut Session) -> Option<Ne
         let profile = client.profile(head.store);
         let probe = Probe {
             client: profile.launcher.clone(),
+            launch: head.launch,
             trust_root: profile.trust_root.clone(),
             report: dir.clone(),
             patience: shared.patience,

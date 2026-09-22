@@ -12,6 +12,10 @@
 #   tokens vacio. Ningun cliente pide PIN.
 # * token: la NSS vacia con SoftHSM registrado; sus tokens piden el PIN.
 #
+# El envoltorio de AutoFirma suma a JDK_JAVA_OPTIONS lo que traiga
+# RFIRMA_PROBE_JAVA_OPTIONS: la suite lo usa para el perfil de lanzamiento de
+# cada comprobacion.
+#
 # El certificado personal del titular no llega al perfil: AutoFirma recibe
 # HOME y -Duser.home, rFirma HOME y XDG_*. La CA local de rFirma la crea este
 # script dentro del perfil, sin lanzar el cliente; la raiz de AutoFirma es la de
@@ -106,7 +110,7 @@ else
     cat > "$wrapper" <<WRAPPER
 #!/usr/bin/env bash
 export HOME="$profile"
-export JDK_JAVA_OPTIONS="-Duser.home=$profile"
+export JDK_JAVA_OPTIONS="-Duser.home=$profile \${RFIRMA_PROBE_JAVA_OPTIONS:-}"
 export SOFTHSM2_CONF="$softhsm_conf"
 exec "$subject" "\$@"
 WRAPPER

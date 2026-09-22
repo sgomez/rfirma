@@ -22,6 +22,7 @@ pub(crate) enum Family {
     V4Echo,
     Service,
     EndToEnd,
+    Intermediate,
 }
 
 #[derive(Debug, Deserialize)]
@@ -80,7 +81,8 @@ mod tests {
         assert_eq!(selection.family, Family::EndToEnd);
         assert_eq!(manifest.scripts["protocol-v4"].family, Family::V4Echo);
         assert_eq!(manifest.scripts["protocol-service"].family, Family::Service);
-        assert!(manifest.modes["relay"].bench_only);
+        assert_eq!(manifest.scripts["relay"].family, Family::Intermediate);
+        assert!(manifest.scripts["relayrefused"].bench_only);
     }
 
     #[test]
