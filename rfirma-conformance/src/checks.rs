@@ -85,7 +85,11 @@ impl Probe {
         }
         if let Some(tranche) = opening {
             if !self.witness.stand_by(&head.id, tranche) {
-                return all_pending(group, "la cola se detuvo antes de llegar a las comprobaciones que te necesitan").into();
+                return all_pending(
+                    group,
+                    "la cola se detuvo antes de llegar a las comprobaciones que te necesitan",
+                )
+                .into();
             }
         }
         if let Some(why) = the_unmet_precondition_of(head) {
@@ -832,7 +836,10 @@ saf = "SAF_03"
         assert_eq!(runner.runs().len(), 0);
         assert_eq!(
             pending(&settled),
-            [("a_rejection", "la cola se detuvo antes de llegar a las comprobaciones que te necesitan")]
+            [(
+                "a_rejection",
+                "la cola se detuvo antes de llegar a las comprobaciones que te necesitan"
+            )]
         );
     }
 

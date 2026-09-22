@@ -125,7 +125,8 @@ socket**, es decir, servidor intermedio (`ProtocolInvocationLauncher.java:136-13
 La de tres argumentos (`153`) hace lo siguiente antes de despachar:
 
 1. En macOS instala el manejador de «Acerca de…» (`154-164`).
-2. Si `urlString == null` → `SAF_01` (`166-171`); si no empieza por
+2. Si `urlString == null` → `SAF_01` (`166-171`), rama a la que ningún
+   llamante llega (ver `15-errores.md` §4.2); si no empieza por
    `afirma://` **estrictamente con minúsculas** → `SAF_02` (`172-178`). Aunque
    `SimpleAfirma.main` permite detectar la llamada ignorando mayúsculas
    (`args[0].toLowerCase().startsWith("afirma://")`), el despachador `launch`

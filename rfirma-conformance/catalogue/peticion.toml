@@ -65,15 +65,6 @@ condition = "no-data-saf-03"
 warning = "AutoFirma enseña un diálogo de error antes de contestar cada rechazo de parámetros: ciérralos según aparezcan."
 
 [[check]]
-id = "a_null_uri_is_rejected_with_saf_01"
-set = "peticion"
-citation = "ProtocolInvocationLauncher.java:166-171"
-statement = """
-Una invocación sin URI se rechaza con SAF_01.
-"""
-unmeasurable = "Ningún camino de entrada llega al lanzador con la URI nula: el arranque solo lo invoca si el primer argumento empieza por afirma:// (SimpleAfirma.java:957-962), sin argumentos abre la aplicación de escritorio, y los dos canales le pasan siempre una cadena."
-
-[[check]]
 id = "a_local_file_in_dat_is_refused_with_saf_03"
 set = "peticion"
 citation = "UrlParameters.java:298-304; ProtocolInvocationLauncher.java:738-743"

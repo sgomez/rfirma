@@ -410,6 +410,14 @@ A continuación se detalla la totalidad de los 53 códigos de error definidos en
   (`ProtocolInvocationLauncher.java:166-171`), o cuando el objeto de opciones
   parseado resulta ser nulo en `signandsave` (`ProtocolInvocationLauncherSignAndSave.java:123-127`)
   o `selectcert` (`ProtocolInvocationLauncherSelectCert.java:64-73`).
+  **La rama del despachador es código muerto:** ninguno de sus llamantes le
+  pasa `null`. `SimpleAfirma.main` solo lo invoca si `args[0]` empieza por
+  `afirma://` (`SimpleAfirma.java:957-962`); los servidores WebSocket le pasan
+  el `message` recibido, que ya han desreferenciado antes con
+  `message.startsWith(ECHO_REQUEST_PREFIX)` (`AfirmaWebSocketServer.java:103, 113`,
+  `AfirmaWebSocketServerV4.java:81, 91`); y el canal de sockets, el resultado de
+  un `toString()` (`CommandProcessorThread.java:293, 308, 334, 350`). Una
+  petición vacía llega como cadena vacía y la rechaza `SAF_02`, no `SAF_01`.
 * **`SAF_02` (`ERROR_UNSUPPORTED_PROTOCOL`)**: Se arroja cuando la URI no
   comienza estrictamente por el prefijo `afirma://` en minúsculas
   (`ProtocolInvocationLauncher.java:172-178`).
