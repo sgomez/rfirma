@@ -177,6 +177,14 @@ El corazón del ticket: la pantalla que hoy no existe.
   **emisor** del certificado y su **número de serie**».
 - **Acción principal**: `Firmar`, o `Enviar mis datos` cuando la operación es
   `selectcert`. `Cancelar` en `--ghost`.
+- **Se firma con el teclado.** Con el certificado recordado ya elegido en el
+  desplegable, la acción principal se lleva el foco y un Intro consiente sin
+  tocar el ratón. Para que ese Intro no llegue por descuido, la acción nace
+  **desactivada con una cuenta atrás** en su propia etiqueta —`Firmar (3)`,
+  `(2)`, `(1)`— y a los tres segundos se queda en `Firmar`, activa y con el
+  foco; si la persona ya ha llevado el foco a otro sitio, no se lo quita. La
+  cuenta atrás se apaga en Preferencias ([preferencias.md](preferencias.md)),
+  y entonces la acción nace activa y con el foco.
 
 Cinco situaciones dibujadas: un certificado; varios **acotados por la sede** —con
 la nota «*sede* ha limitado los certificados válidos» **debajo** del desplegable,

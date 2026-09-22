@@ -1033,6 +1033,9 @@ msgstr ""
 "Laukiaren orrialdea, kokapena eta edukia hurrengo dokumentuan berrerabiltzen "
 "dira."
 
+msgid "preferences.consentCountdown.label"
+msgstr "Egoitzetan nahi gabeko sinaduren aurkako babesa"
+
 msgid "preferences.rememberActivity.label"
 msgstr "Gogoratu nire jarduera"
 
@@ -1361,6 +1364,10 @@ msgstr "Sinatu"
 
 msgid "sede.consent.identify"
 msgstr "Nire datuak bidali"
+
+#. {{action}} es el texto del botón («Firmar»); {{seconds}}, los segundos que faltan para activarlo.
+msgid "sede.consent.countdown"
+msgstr "{{action}} ({{seconds}})"
 
 msgid "sede.confirm.title"
 msgstr "Sinatu aurretik berretsi behar da"

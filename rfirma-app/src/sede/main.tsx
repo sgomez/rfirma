@@ -66,7 +66,11 @@ createRoot(root).render(
   <StrictMode>
     <LanguageProvider i18n={i18n} preference={preference}>
       <RenderErrorBoundary externalDestinations={externalDestinations}>
-        <SedeWindow errands={errands} externalDestinations={externalDestinations} />
+        <SedeWindow
+          errands={errands}
+          externalDestinations={externalDestinations}
+          consentCountdown={settings.consentCountdown}
+        />
       </RenderErrorBoundary>
     </LanguageProvider>
   </StrictMode>,

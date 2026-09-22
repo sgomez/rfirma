@@ -112,7 +112,7 @@ rojo.
 | `sede/siteErrands.ts` | El adaptador del puerto: convierte lo que empuja el backend en lo que espera la ventana. Sin React y sin Tauri. |
 | `sede/errand.ts` | El vocabulario del trámite y su puerto `SiteErrandPort`, con el doble `noErrand` y los relojes. Sin React. |
 | `sede/SedeWindow.tsx` | El marco de 520 × 420 px y el reparto entre los momentos. |
-| `sede/SedeFrame.tsx` | Cuerpo y pie —56 px clavados en firma y salida— y los dos relojes en forma de `hook`. |
+| `sede/SedeFrame.tsx` | Cuerpo y pie —56 px clavados en firma y salida— y los relojes de la ventana en forma de `hook`. |
 | `sede/SedeWaiting.tsx` | 1 · La espera y las dos recetas de navegador, que **no diagnostican**. |
 | `sede/SedeConsent.tsx` | 2 · La confirmación escrita, con el desplegable de `signing/CertificateSelect.tsx` reutilizado tal cual. |
 | `sede/SedeConfirm.tsx` | 2b · La pregunta que el validador del original obliga a hacer, con las palabras del original y sus dos salidas. |

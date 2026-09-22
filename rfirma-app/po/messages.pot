@@ -939,6 +939,9 @@ msgstr ""
 msgid "preferences.rememberVisibleSignature.hint"
 msgstr ""
 
+msgid "preferences.consentCountdown.label"
+msgstr ""
+
 msgid "preferences.rememberActivity.label"
 msgstr ""
 
@@ -1243,6 +1246,10 @@ msgid "sede.consent.sign"
 msgstr ""
 
 msgid "sede.consent.identify"
+msgstr ""
+
+#. {{action}} es el texto del botón («Firmar»); {{seconds}}, los segundos que faltan para activarlo.
+msgid "sede.consent.countdown"
 msgstr ""
 
 msgid "sede.confirm.title"

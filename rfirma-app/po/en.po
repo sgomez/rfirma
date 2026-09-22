@@ -1010,6 +1010,9 @@ msgstr ""
 "The page, the position and the contents of the box are reused on the next "
 "document."
 
+msgid "preferences.consentCountdown.label"
+msgstr "Protection against accidental signing on sites"
+
 msgid "preferences.rememberActivity.label"
 msgstr "Remember my activity"
 
@@ -1332,6 +1335,10 @@ msgstr "Sign"
 
 msgid "sede.consent.identify"
 msgstr "Send my data"
+
+#. {{action}} es el texto del botón («Firmar»); {{seconds}}, los segundos que faltan para activarlo.
+msgid "sede.consent.countdown"
+msgstr "{{action}} ({{seconds}})"
 
 msgid "sede.confirm.title"
 msgstr "Something to confirm before signing"

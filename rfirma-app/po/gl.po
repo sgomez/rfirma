@@ -1012,6 +1012,9 @@ msgid "preferences.rememberVisibleSignature.hint"
 msgstr ""
 "A páxina, a posición e o contido do cadro reutilízanse no seguinte documento."
 
+msgid "preferences.consentCountdown.label"
+msgstr "Protección contra sinaturas por descoido nas sedes"
+
 msgid "preferences.rememberActivity.label"
 msgstr "Lembrar a miña actividade"
 
@@ -1334,6 +1337,10 @@ msgstr "Asinar"
 
 msgid "sede.consent.identify"
 msgstr "Enviar os meus datos"
+
+#. {{action}} es el texto del botón («Firmar»); {{seconds}}, los segundos que faltan para activarlo.
+msgid "sede.consent.countdown"
+msgstr "{{action}} ({{seconds}})"
 
 msgid "sede.confirm.title"
 msgstr "Hai que confirmar antes de asinar"

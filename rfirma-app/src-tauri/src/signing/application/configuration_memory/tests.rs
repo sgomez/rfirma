@@ -14,6 +14,11 @@ fn notify_new_version_starts_on() {
 }
 
 #[test]
+fn the_consent_countdown_starts_on() {
+    assert!(Configuration::default().consent_countdown);
+}
+
+#[test]
 fn the_setup_wizard_has_not_been_seen_by_default() {
     assert!(!Configuration::default().setup_wizard_seen);
 }
@@ -64,6 +69,7 @@ fn a_configuration_missing_a_field_takes_the_default_for_it() {
     assert_eq!(configuration.language, Language::Galician);
     assert!(configuration.remember_activity);
     assert!(configuration.notify_new_version);
+    assert!(configuration.consent_countdown);
 }
 
 #[test]
@@ -79,6 +85,7 @@ fn the_configuration_holds_no_path_to_the_rubric_the_user_chose() {
     assert_eq!(
         fields,
         vec![
+            "consent_countdown",
             "destination",
             "language",
             "notify_new_version",

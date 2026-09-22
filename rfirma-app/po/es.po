@@ -1028,6 +1028,9 @@ msgstr ""
 "La página, la posición y el contenido del recuadro se reutilizan en el "
 "siguiente documento."
 
+msgid "preferences.consentCountdown.label"
+msgstr "Protección contra firmas por descuido en las sedes"
+
 msgid "preferences.rememberActivity.label"
 msgstr "Recordar mi actividad"
 
@@ -1350,6 +1353,10 @@ msgstr "Firmar"
 
 msgid "sede.consent.identify"
 msgstr "Enviar mis datos"
+
+#. {{action}} es el texto del botón («Firmar»); {{seconds}}, los segundos que faltan para activarlo.
+msgid "sede.consent.countdown"
+msgstr "{{action}} ({{seconds}})"
 
 msgid "sede.confirm.title"
 msgstr "Hay que confirmar antes de firmar"

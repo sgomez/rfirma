@@ -446,6 +446,7 @@ interface ConfigurationView {
    * vez, al pulsar «Terminar».
    */
   setupWizardSeen: boolean;
+  consentCountdown: boolean;
 }
 
 function readConfiguration(): Promise<ConfigurationView> {
@@ -484,6 +485,7 @@ export function tauriPreferences(): PreferencesStore {
         rememberActivity: configuration.rememberActivity,
         notifyNewVersion: configuration.notifyNewVersion,
         setupWizardSeen: configuration.setupWizardSeen,
+        consentCountdown: configuration.consentCountdown,
       };
     },
     save: async (preferences) => {
@@ -495,6 +497,7 @@ export function tauriPreferences(): PreferencesStore {
         rememberActivity: preferences.rememberActivity,
         notifyNewVersion: preferences.notifyNewVersion,
         setupWizardSeen: preferences.setupWizardSeen,
+        consentCountdown: preferences.consentCountdown,
       });
     },
     forgetActivity: () => invoke<void>("forget_activity"),
