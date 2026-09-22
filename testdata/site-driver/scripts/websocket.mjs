@@ -1,5 +1,7 @@
 // Los guiones de la sede a mano por el canal WebSocket: el protocolo escrito en crudo.
 
+import { createServer } from "node:net";
+
 import { aConditionEvent, aMeasuredConditionEvent, emit, settle } from "../lib/events.mjs";
 import { theThirdProtocolPort } from "../lib/modes.mjs";
 import { aHandwrittenScript } from "../lib/script.mjs";
@@ -13,6 +15,8 @@ const THE_FIXED_PORT_BOUND = "the-fixed-port-bound";
 const A_BARE_ECHO_ANSWERS_OK = "a-bare-echo-answers-ok";
 const AN_ECHO_WITHOUT_A_SESSION_IS_NOT_REFUSED = "an-echo-without-a-session-is-not-refused";
 const NO_CHANNEL_OPENS = "no-channel-opens";
+const THE_FIRST_FREE_CANDIDATE_BOUND = "the-first-free-candidate-bound";
+const THE_ECHO_WITH_ANOTHER_SESSION_ANSWERS_SAF_46 = "the-echo-with-another-session-answers-saf-46";
 
 /** Lo que se espera a que un esquema ajeno abra canal antes de darlo por no abierto. */
 const THE_FOREIGN_SCHEME_PATIENCE_MS = 10000;
@@ -47,6 +51,22 @@ function exchangeWithin(ws, message, deadlineMs) {
   ]);
 }
 
+function isFree(port) {
+  return new Promise((resolve) => {
+    const server = createServer();
+    server.once("error", () => resolve(false));
+    server.listen(port, "127.0.0.1", () => server.close(() => resolve(true)));
+  });
+}
+
+/** El primer candidato que nadie ocupa antes del lanzamiento, o `null` si están todos ocupados. */
+async function theFirstFreePort(ports) {
+  for (const port of ports) {
+    if (await isFree(port)) return port;
+  }
+  return null;
+}
+
 /** Lanza el sujeto en v4 y abre el canal en el primer puerto candidato que conteste. */
 async function theProtocolV4ChannelOpening(ports, idSession) {
   emit({
@@ -71,10 +91,19 @@ async function theProtocolV4ChannelOpening(ports, idSession) {
 
 async function theProtocolV4Script() {
   const idSession = "K3m9Pq2XyZ1w8A4bC7dE";
-  const channel = await theProtocolV4ChannelOpening([54321, 54322, 54323], idSession);
+  const candidates = [54321, 54322, 54323];
+  const firstFree = await theFirstFreePort(candidates);
+  const channel = await theProtocolV4ChannelOpening(candidates, idSession);
   if (!channel) return;
   const { ws: ws1, port: connectedPort } = channel;
   emit(aConditionEvent(A_CANDIDATE_PORT_BOUND, true, `conectado en puerto ${connectedPort}`));
+  emit(
+    aConditionEvent(
+      THE_FIRST_FREE_CANDIDATE_BOUND,
+      connectedPort === firstFree,
+      `primer candidato libre ${firstFree}; canal en ${connectedPort}`,
+    ),
+  );
 
   const echoResp = await exchange(ws1, `echo=-idsession=${idSession}@EOF`);
   emit(
@@ -91,6 +120,19 @@ async function theProtocolV4Script() {
       THE_ECHO_WITHOUT_A_SESSION_ANSWERS_SAF_46,
       absentResp.startsWith("SAF_46"),
       absentResp,
+    ),
+  );
+
+  const foreignResp = await exchangeWithin(
+    ws1,
+    "echo=-idsession=Zz8Yy7Xx6Ww5Vv4Uu3Tt@EOF",
+    THE_OPERATION_ANSWER_DEADLINE_MS,
+  );
+  emit(
+    aMeasuredConditionEvent(
+      THE_ECHO_WITH_ANOTHER_SESSION_ANSWERS_SAF_46,
+      foreignResp === null ? null : foreignResp.startsWith("SAF_46"),
+      foreignResp ?? "el eco con otra sesión no tuvo respuesta",
     ),
   );
 
@@ -371,6 +413,8 @@ const onTheFourthProtocol = (run, conditions) =>
 export const WEBSOCKET_SCRIPTS = {
   "protocol-v4": onTheFourthProtocol(theProtocolV4Script, [
     A_CANDIDATE_PORT_BOUND,
+    THE_FIRST_FREE_CANDIDATE_BOUND,
+    THE_ECHO_WITH_ANOTHER_SESSION_ANSWERS_SAF_46,
     THE_ECHO_WITH_ITS_SESSION_ANSWERS_OK,
     THE_ECHO_WITHOUT_A_SESSION_ANSWERS_SAF_46,
     A_SECOND_CLIENT_LEAVES_THE_CHANNEL_ALIVE,
