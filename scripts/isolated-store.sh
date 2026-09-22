@@ -13,8 +13,9 @@
 # * token: la NSS vacia con SoftHSM registrado; sus tokens piden el PIN.
 #
 # El certificado personal del titular no llega al perfil: AutoFirma recibe
-# HOME y -Duser.home, rFirma HOME y XDG_*. rFirma nace su CA local dentro del
-# perfil en un arranque en seco; la raiz de AutoFirma es la de su instalacion.
+# HOME y -Duser.home, rFirma HOME y XDG_*. La CA local de rFirma la crea este
+# script dentro del perfil, sin lanzar el cliente; la raiz de AutoFirma es la de
+# su instalacion.
 #
 # El perfil se rehace entero en cada llamada.
 
@@ -24,8 +25,6 @@ here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 fnmt="$here/../testdata/fnmt"
 module="${RFIRMA_PKCS11_MODULE:-/usr/lib/softhsm/libsofthsm2.so}"
 softhsm_conf="${SOFTHSM2_CONF:-$HOME/.config/softhsm2/softhsm2.conf}"
-warmup_attempts=60
-warmup_pause=0.5
 
 subject="${1:-}"
 store="${3:-rsa}"
@@ -114,24 +113,30 @@ WRAPPER
 fi
 chmod +x "$wrapper"
 
+# La CA local con la forma de la que genera rFirma (ADR-0005): un arranque en
+# seco ya no la crea, y lanzarlo abriria su ventana principal.
+the_local_ca_of_rfirma() {
+    local dir="$profile/.local/share/rfirma"
+    mkdir -p "$dir"
+    chmod 700 "$dir"
+    openssl req -x509 -new -newkey ec -pkeyopt ec_paramgen_curve:prime256v1 -nodes \
+        -keyout "$dir/local-ca.key.pem" -out "$dir/local-ca.crt.pem" -days 900 -sha256 \
+        -subj "/CN=rFirma CA local" \
+        -addext "basicConstraints=critical,CA:TRUE,pathlen:0" \
+        -addext "keyUsage=critical,keyCertSign,cRLSign" \
+        -addext "nameConstraints=critical,permitted;DNS:localhost,permitted;IP:127.0.0.1/255.255.255.255,permitted;IP:::1/ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff" \
+        -addext "subjectKeyIdentifier=hash" 2>/dev/null
+    chmod 600 "$dir/local-ca.key.pem"
+    echo "$dir/local-ca.crt.pem"
+}
+
 trust_root=""
 if [ "$kind" = rfirma ]; then
-    local_ca="$profile/.local/share/rfirma/local-ca.crt.pem"
-    "$wrapper" >/dev/null 2>&1 &
-    warmup=$!
-    for _ in $(seq 1 "$warmup_attempts"); do
-        [ -f "$local_ca" ] && break
-        kill -0 "$warmup" 2>/dev/null || break
-        sleep "$warmup_pause"
-    done
-    kill "$warmup" 2>/dev/null || true
-    wait "$warmup" 2>/dev/null || true
-    if [ ! -f "$local_ca" ]; then
-        echo "el sujeto no ha creado su CA local en $local_ca" >&2
-        echo "  arrancalo a mano con HOME=$profile para ver que le pasa" >&2
+    command -v openssl >/dev/null || {
+        echo "falta: openssl" >&2
         exit 1
-    fi
-    trust_root="$local_ca"
+    }
+    trust_root="$(the_local_ca_of_rfirma)"
 fi
 echo "almacen $store aislado en $profile" >&2
 

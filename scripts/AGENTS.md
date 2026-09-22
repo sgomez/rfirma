@@ -10,7 +10,7 @@ Los arneses que las recetas del `justfile` llaman por nombre, siguiendo el patr�
 | `changelog-release.sh` | Reúne los fragmentos de `changelog.d/` en la sección de una versión de `CHANGELOG.md`. |
 | `bump-version.sh` | Sube la versión en los sitios del candado de `check-version.py`, para `just bump-version`. |
 | `dev-handler.sh` | Registra o quita el binario de desarrollo como manejador de `afirma://`. |
-| `isolated-store.sh` | Monta, para un cliente de la suite de conformidad y un almacén (`rsa`, `ec` o `token`), su perfil de usar y tirar y el envoltorio que lo lanza contra él, y dice con qué raíz sirve el canal. `rsa` y `ec` son una NSS sin contraseña con un solo certificado de `testdata/fnmt/` y SoftHSM oculto; `token` es SoftHSM con PIN. Lo llama la consola web de la suite al resolver el cliente, no una receta. |
+| `isolated-store.sh` | Monta, para un cliente de la suite de conformidad y un almacén (`rsa`, `ec` o `token`), su perfil de usar y tirar con su envoltorio y su raíz de confianza, sin lanzar el cliente. Lo llama la consola web de la suite al resolver el cliente, no una receta. |
 | `check-glibc.sh` | Comprueba el suelo de glibc de la librería nativa. |
 | `flatpak-sources.sh` | Regenera las fuentes vendorizadas del manifiesto flatpak. |
 | `check-native.sh` | Falla nombrando `just native` si la librería nativa no está construida. |
