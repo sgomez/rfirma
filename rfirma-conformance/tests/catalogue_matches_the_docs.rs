@@ -402,8 +402,8 @@ fn every_code_of_the_error_table_is_closed_against_the_catalogue() {
 
     assert_eq!(
         table.len(),
-        39,
-        "la tabla del capítulo 15 debería tener 39 códigos que la sede puede recibir"
+        38,
+        "la tabla del capítulo 15 debería tener 38 códigos que la sede puede recibir"
     );
     assert!(
         codes_of_the_table_without_an_entry(&table, &named).is_empty(),

@@ -319,7 +319,8 @@ En la comunicación mediante WebSocket TLS:
      del mensaje, emite `SAF_46: Id de sesión inválido` y descarta el mensaje
      (`AfirmaWebSocketServerV4.java:73-78`).
 3. **Fallo en apertura de puertos al arrancar**: Si
-   `AfirmaWebSocketServerManager.startService` no puede enlazar ningún puerto,
+   `AfirmaWebSocketServerManager.startService` no puede construir el servidor en
+   ningún puerto (un puerto en uso no llega aquí, BUG-33),
    `launch()` captura `SocketOperationException`, muestra `SAF_45`
    (`ERROR_CANNOT_OPEN_SOCKET`) y fuerza el cierre inmediato del proceso con
    `forceCloseApplication(0)` (`ProtocolInvocationLauncher.java:246-251`).
@@ -358,7 +359,7 @@ A continuación se detalla la totalidad de los 53 códigos de error definidos en
 | `SAF_02` | `ERROR_UNSUPPORTED_PROTOCOL` | `ProtocolLauncher.2` | Protocolo no soportado | Despachador común | `ProtocolInvocationLauncher.java:175` |
 | `SAF_03` | `ERROR_PARAMS` | `ProtocolLauncher.3` | Error en los parámetros de entrada | Común a todas las operaciones y socket | `ProtocolInvocationLauncher.java:274, 359, 432, 519, 631, 741, 826`, `CommandProcessorThread.java:110, 116, 135` |
 | `SAF_04` | `ERROR_UNSUPPORTED_OPERATION` | `ProtocolLauncher.4` | Operación no soportada. Compruebe que dispone de la última versión de Autofirma. | Despachador común, `sign`, `signandsave`, `batch` | `ProtocolInvocationLauncher.java:841`, `ProtocolInvocationLauncherSign.java:733, 840`, `ProtocolInvocationLauncherSignAndSave.java:761, 863` |
-| `SAF_05` | `ERROR_CANNOT_SAVE_DATA` | `ProtocolLauncher.5` | No se ha podido guardar los datos | `save`, `signandsave` | `ProtocolInvocationLauncherSave.java:102`, `ProtocolInvocationLauncherSignAndSave.java:563` |
+| `SAF_05` | `ERROR_CANNOT_SAVE_DATA` | `ProtocolLauncher.5` | No se ha podido guardar los datos | *Sin emisor*: el fallo de escritura se captura en el diálogo, que avisa y vuelve a pedir destino (`JSEUIManager.java:808-824`) | `ProtocolInvocationLauncherSave.java:102`, `ProtocolInvocationLauncherSignAndSave.java:563` |
 | `SAF_06` | `ERROR_UNSUPPORTED_FORMAT` | `ProtocolLauncher.6` | Formato de firma no soportado | `sign`, `signandsave`, `batch` | `ProtocolInvocationLauncherSign.java:269`, `ProtocolInvocationLauncherSignAndSave.java:261`, `LocalBatchSigner.java:113` |
 | `SAF_07` | `ERROR_CANNOT_FIND_KEYSTORE` | `ProtocolLauncher.7` | No se ha podido determinar el almacén de claves a utilizar | *Huérfano* (no referenciado) | `ProtocolInvocationLauncherErrorManager.java:38, 95` |
 | `SAF_08` | `ERROR_CANNOT_ACCESS_KEYSTORE` | `ProtocolLauncher.8` | Error accediendo al almacén de claves y certificados | `sign`, `signandsave`, `batch`, `selectcert` | `ProtocolInvocationLauncherSign.java:584, 626`, `ProtocolInvocationLauncherSignAndSave.java:613, 655`, `ProtocolInvocationLauncherSelectCert.java:158, 219`, `ProtocolInvocationLauncherBatch.java:259, 311` |
@@ -493,9 +494,9 @@ A continuación se detalla la totalidad de los 53 códigos de error definidos en
 * **`SAF_16` (`ERROR_RECOVERING_DATA`)**: Error al realizar la petición HTTP GET contra
   `rtservlet` para recuperar los datos asociados al identificador `fileid`
   (`ProtocolInvocationLauncher.java:313, 390, 466, 556, 667, 774`).
-* **`SAF_45` (`ERROR_CANNOT_OPEN_SOCKET`)**: El servidor WebSocket no pudo enlazar
-  ninguno de los puertos pasados en `ports` ni el puerto por defecto `63117`
-  (`ProtocolInvocationLauncher.java:246-251`).
+* **`SAF_45` (`ERROR_CANNOT_OPEN_SOCKET`)**: El servidor WebSocket no pudo construirse
+  en ninguno de los puertos pasados en `ports` ni en el puerto por defecto `63117`
+  (`ProtocolInvocationLauncher.java:246-251`); un puerto en uso no llega aquí (BUG-33).
 * **`SAF_46` (`ERROR_INVALID_SESSION_ID`)**: En WebSocket v4, el ID de sesión del mensaje
   no coincide con el `idsession` establecido durante el apretón de manos
   (`AfirmaWebSocketServerV4.java:73-78`).
@@ -640,9 +641,11 @@ A continuación se detalla la totalidad de los 53 códigos de error definidos en
 
 ### 4.6 Errores de operaciones de guardado, carga y lotes
 
-* **`SAF_05` (`ERROR_CANNOT_SAVE_DATA`)**: Error al escribir físicamente el fichero
-  firmado o los datos en el disco local (`IOException`)
+* **`SAF_05` (`ERROR_CANNOT_SAVE_DATA`)**: Cualquier excepción no cancelada del guardado
   (`ProtocolInvocationLauncherSave.java:102`, `ProtocolInvocationLauncherSignAndSave.java:563`).
+  Un fallo de escritura no llega: `JSEUIManager.saveDataToFile` lo captura, muestra un
+  error y vuelve a pedir destino (`JSEUIManager.java:808-824`); si la persona cancela,
+  la sede recibe `CANCEL`.
 * **`SAF_20` (`ERROR_LOCAL_BATCH_SIGN`)**: Fallo general en la orquestación del lote local
   monofásico (`ProtocolInvocationLauncherBatch.java:386`).
 * **`SAF_25` (`ERROR_CANNOT_LOAD_DATA`)**: Error al leer los datos de los ficheros

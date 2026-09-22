@@ -166,6 +166,7 @@ condition = "an-unsupported-version-opens-no-channel"
 id = "a_websocket_that_cannot_bind_its_ports_shows_saf_45"
 set = "canal.websocket"
 citation = "ProtocolInvocationLauncher.java:246-251"
+bug = "BUG-33"
 statement = """
 Si el canal WebSocket no puede ligar ninguno de sus puertos, el cliente avisa con SAF_45 en vez de
 quedarse sin canal en silencio.

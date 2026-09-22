@@ -99,3 +99,9 @@ id = "v4_ports_negotiation"
 outcome = "no-conforme"
 cause = "BUG-33"
 note = "El bind del primer candidato falla en el hilo del servidor y el bucle ya no prueba el siguiente."
+
+[[known]]
+id = "a_websocket_that_cannot_bind_its_ports_shows_saf_45"
+outcome = "no-conforme"
+cause = "BUG-33"
+note = "El bind falla en el hilo del servidor, después de dar el puerto por abierto: SAF_45 no llega a mostrarse."

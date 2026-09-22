@@ -151,7 +151,7 @@ forma sin barra (`autoscript.js:2081`, `2878`, `4381`).
 
 | Prefijo(s) aceptado(s) | Línea del `startsWith` | Qué hace |
 |---|---|---|
-| `afirma://websocket?`, `afirma://websocket/?` | `225` | Lee `v` (`getVersion`, por defecto 1) y `ports`/`idsession` (`getChannelInfo`); sin `ports` usa `63117` (`87`, `232-235`); arranca `AfirmaWebSocketServerManager.startService` (`238`). Versión no soportada → `SAF_21` y `halt(0)` (`240-245`); ningún puerto libre → `SAF_45` y `halt(0)` (`246-251`). Devuelve `"OK"` (`260`). |
+| `afirma://websocket?`, `afirma://websocket/?` | `225` | Lee `v` (`getVersion`, por defecto 1) y `ports`/`idsession` (`getChannelInfo`); sin `ports` usa `63117` (`87`, `232-235`); arranca `AfirmaWebSocketServerManager.startService` (`238`). Versión no soportada → `SAF_21` y `halt(0)` (`240-245`); servidor sin construir en ningún puerto → `SAF_45` y `halt(0)` (`246-251`), que un puerto en uso no alcanza (BUG-33). Devuelve `"OK"` (`260`). |
 | `afirma://service?`, `afirma://service/?` | `264` | Igual, pero `ports` es obligatorio: sin él, `SAF_03` (`270-277`). Arranca `ServiceInvocationManager.startService` (`280`); versión no soportada → `SAF_21` (`281-288`). Devuelve `"OK"` (`290`), aunque en la práctica `startService` no retorna (ver §4). |
 | `afirma://batch?`, `afirma://batch/?` | `293` | `ProtocolInvocationLauncherBatch.processBatch` (`345`). |
 | `afirma://selectcert?`, `afirma://selectcert/?` | `370` | `ProtocolInvocationLauncherSelectCert.processSelectCert` (`413-416`). |

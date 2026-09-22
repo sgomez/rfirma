@@ -652,7 +652,7 @@ dirigido al defecto.
 
 ### BUG-33: El canal WebSocket no pasa al siguiente puerto candidato cuando el primero está ocupado
 
-* **Comprobación del catálogo:** `v4_ports_negotiation`.
+* **Comprobaciones del catálogo:** `v4_ports_negotiation`, `a_websocket_that_cannot_bind_its_ports_shows_saf_45`.
 * **Estado en `master`:** **Sigue presente.** `AfirmaWebSocketServerManager.java:91` sigue dando por abierto el puerto en cuanto `instance.start()` vuelve, sin esperar al resultado del `bind`.
 * **Código fuente:** `afirma-simple` · `es.gob.afirma.standalone.protocol.AfirmaWebSocketServerManager.java:63-93`.
 * **Descripción:** El bucle de apertura prueba los puertos de `ports=` en orden y pasa al siguiente solo si la creación o el arranque del servidor lanzan una excepción. `WebSocketServer.start()` solo arranca el hilo del servidor; el `bind` ocurre dentro de ese hilo (`WebSocketServer.run`), y un puerto ocupado llega a `onError` como `BindException` cuando el bucle ya ha terminado con el primer candidato.
