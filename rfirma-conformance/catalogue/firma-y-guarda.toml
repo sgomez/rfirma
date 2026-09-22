@@ -96,7 +96,7 @@ drive = { mode = "v4", script = "signandsavewithecdsa" }
 assistance = "person"
 completes = {}
 store = "ec"
-warning = "Van a aparecer el diálogo de certificado, con el único certificado de curva elíptica del almacén ec, y el de guardar la firma: guárdala donde te proponga."
+warning = "AutoFirma rechaza el algoritmo de curva elíptica antes de pedir certificado y enseña un diálogo de error: ciérralo para que llegue la respuesta. Si en cambio aparecen el diálogo de certificado, con el único certificado de curva elíptica del almacén ec, y el de guardar la firma, guárdala donde te proponga."
 
 [[check]]
 id = "signandsave_rejects_a_request_without_a_verb_with_saf_04"

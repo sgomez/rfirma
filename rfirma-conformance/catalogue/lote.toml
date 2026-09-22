@@ -24,7 +24,7 @@ lee como el XML heredado y llega al prefirmador en xml, no en json.
 drive = { mode = "v4", script = "batchwithjsonbatchcapitalised" }
 assistance = "click"
 condition = "the-batch-read-as-xml"
-warning = "Va a aparecer el diálogo de certificado: la sede hace de prefirmador del lote, y rechaza la prefirma."
+warning = "Va a aparecer el diálogo de certificado: la sede hace de prefirmador del lote y rechaza la prefirma; cierra el aviso de error que aparezca después para que llegue la respuesta."
 
 [[check]]
 id = "a_batch_servlet_on_the_local_loopback_is_refused_with_saf_13"
@@ -324,7 +324,7 @@ con el servicio de lotes.
 drive = { mode = "v4", script = "batchdown" }
 assistance = "click"
 saf = "SAF_26"
-warning = "Va a aparecer el diálogo de certificado: el prefirmador del lote no está escuchando a propósito."
+warning = "Va a aparecer el diálogo de certificado: el prefirmador del lote no está escuchando a propósito; cierra el aviso de error que pueda aparecer."
 
 [[check]]
 id = "a_presigner_answering_400_fails_with_saf_03"
@@ -416,7 +416,7 @@ assistance = "person"
 saf = "SAF_03"
 question = "¿apareció el diálogo de certificado antes de que el lote se rechazara? [s/n]"
 person = { yes = "el lote XML local pidió certificado antes de rechazarse", no = "el lote XML local se rechazó sin pedir certificado", yes_means = "no-conforme" }
-warning = "Puede aparecer el diálogo de certificado: si aparece, elige el certificado y cierra el aviso de error que venga después."
+warning = "Puede aparecer el diálogo de certificado: si aparece, elige el certificado; el rechazo llega después sin más avisos, y si aun así aparece uno de error, ciérralo."
 
 [[check]]
 id = "the_batch_failures_answer_their_own_codes"

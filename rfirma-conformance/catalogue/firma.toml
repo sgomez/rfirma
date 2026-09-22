@@ -281,7 +281,7 @@ aborta con SAF_39 en vez de firmar encima.
 drive = { mode = "v4", script = "cosignpadeschecking" }
 assistance = "click"
 saf = "SAF_39"
-warning = "Puede aparecer el diálogo de certificado, o uno que pida confirmar la multifirma, antes de que llegue el rechazo: acéptalos."
+warning = "AutoFirma rechaza la cofirma antes de pedir certificado y sin enseñar ningún diálogo. Si aparece uno que pida confirmar la multifirma, acéptalo."
 
 [[check]]
 id = "a_risky_document_asks_the_person_before_being_signed"
