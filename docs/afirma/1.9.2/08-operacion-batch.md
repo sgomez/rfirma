@@ -671,6 +671,13 @@ for (final SingleSignOperation singleConfig : batchConfig.getSigns()) {
 
 #### Gestión del retroceso ante errores (`stoponerror`):
 
+**Discrepancia con el MCF.** El manual se contradice: en §6.5.3 (págs. 64-66) el
+fallo de una firma con `stopOnError` va al `errorCallback`, y en el resultado del
+mismo apartado (pág. 68) y en §6.5.5 (pág. 70) vuelve en el JSON de resultados con
+las demás firmas en estados intermedios o `SKIPPED`. El código del lote local hace
+lo segundo: termina con su JSON de resultados, sin error de operación
+(`LocalBatchSigner.java:48-84`).
+
 Si se produce una excepción durante la firma de un documento y `stopOnError` está activo:
 1. Todas las firmas que se habían completado previamente en el bucle **se invalidan**:
    su estado cambia a `"SKIPPED"` y su firma binaria se borra (`singleResult.setSignature(null)`).

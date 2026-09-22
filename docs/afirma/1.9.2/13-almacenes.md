@@ -288,6 +288,12 @@ de la plataforma mediante `AOKeyStore.getDefaultKeyStoreTypeByOs(Platform.getOS(
 | `Platform.OS.SOLARIS` | `AOKeyStore.MOZ_UNI` | Perfil de Mozilla / Firefox |
 | Cualquier otro | `null` | No soportado |
 
+**Discrepancia con el MCF.** El manual dice que, si se usa Firefox, AutoFirma
+accede al almacén del navegador, y en otro caso al del sistema operativo (MCF
+§6.1.5, págs. 32-33). El código no sabe desde qué navegador llega la petición:
+sin almacén recordado (§4.1), sin `useDefaultStoreInBrowserCalls` (§4.2) y sin
+`keystore`/`ksb64` (§4.3), el almacén es el de esta tabla, `SHARED_NSS` en Linux.
+
 ---
 
 ## 5. Resolución de la biblioteca o ruta (`defaultKeyStoreLib`)

@@ -358,7 +358,7 @@ A continuación se detalla la totalidad de los 53 códigos de error definidos en
 | `SAF_11` | `ERROR_SENDING_RESULT` | `ProtocolLauncher.11` | Error en el envio del resultado de la operación. | Servidor intermedio, `save`, `selectcert`, `batch`, socket | `ProtocolInvocationLauncher.java:883`, `CommandProcessorThread.java:139`, `ProtocolInvocationLauncherBatch.java:210`, `ProtocolInvocationLauncherSave.java:124`, `ProtocolInvocationLauncherSelectCert.java:279` |
 | `SAF_12` | `ERROR_ENCRIPTING_DATA` | `ProtocolLauncher.12` | Error en el cifrado de los datos a enviar | `sign`, `signandsave`, `batch`, `selectcert` | `ProtocolInvocationLauncherSign.java:200`, `ProtocolInvocationLauncherSignAndSave.java:198`, `ProtocolInvocationLauncherBatch.java:177`, `ProtocolInvocationLauncherSelectCert.java:251` |
 | `SAF_13` | `ERROR_LOCAL_ACCESS_BLOCKED` | `ProtocolLauncher.13` | Se ha pedido acceso a una dirección local, pero por seguridad se ha bloqueado el acceso | Común (`save`, `signandsave`, `sign`, `load`) | `ProtocolInvocationLauncher.java:513, 625, 735, 820` |
-| `SAF_14` | `ERROR_OBSOLETE_APP` | `ProtocolLauncher.14` | &lt;html&gt;La aplicación está obsoleta y no puede procesarse la petición.&lt;br&gt;Por favor, instale una versión actualizada y reintente el proceso de nuevo.&lt;/html&gt; | Común (`save`, `signandsave`, `sign`, `load`) | `ProtocolInvocationLauncher.java:507, 619, 729, 814` |
+| `SAF_14` | `ERROR_OBSOLETE_APP` | `ProtocolLauncher.14` | &lt;html&gt;La aplicación está obsoleta y no puede procesarse la petición.&lt;br&gt;Por favor, instale una versión actualizada y reintente el proceso de nuevo.&lt;/html&gt; | *Sin emisor*: solo en `catch` de una excepción que nadie lanza (§4.7) | `ProtocolInvocationLauncher.java:507, 619, 729, 814` |
 | `SAF_15` | `ERROR_DECRYPTING_DATA` | `ProtocolLauncher.15` | Error en el descifrado de los datos | Descarga `rtservlet` (todas las operaciones con `fileid`) | `ProtocolInvocationLauncher.java:320, 397, 473, 563, 674, 781` |
 | `SAF_16` | `ERROR_RECOVERING_DATA` | `ProtocolLauncher.16` | Error al recuperar los datos del servidor intermedio | Descarga `rtservlet` (todas las operaciones con `fileid`) | `ProtocolInvocationLauncher.java:314, 391, 467, 557, 668, 775` |
 | `SAF_17` | `ERROR_UNKNOWN_SIGNER` | `ProtocolLauncher.17` | Los datos proporcionados no son una firma electrónica reconocida | `sign`, `signandsave`, `batch` (`cosign`, `countersign`) | `ProtocolInvocationLauncherSign.java:386`, `ProtocolInvocationLauncherSignAndSave.java:378`, `LocalBatchSigner.java:125` |
@@ -421,11 +421,14 @@ A continuación se detalla la totalidad de los 53 códigos de error definidos en
     (`ProtocolInvocationLauncherSign.java:746`, `ProtocolInvocationLauncherSignAndSave.java:774`).
 * **`SAF_04` (`ERROR_UNSUPPORTED_OPERATION`)**: Se emite cuando el host/operación de la
   URI no coincide con ninguno de los prefijos reconocidos
-  (`ProtocolInvocationLauncher.java:837-843`), cuando la suboperación de firma
-  (`op` o `cop`) no es `sign`, `cosign` ni `countersign`
-  (`ProtocolInvocationLauncherSign.java:733`, `ProtocolInvocationLauncherSignAndSave.java:761`),
-  o cuando la biblioteca criptográfica arroja `AOUnsupportedOperationException`
-  (`ProtocolInvocationLauncherSign.java:840`).
+  (`ProtocolInvocationLauncher.java:837-843`), o cuando la biblioteca criptográfica
+  arroja `UnsupportedOperationException` (`ProtocolInvocationLauncherSign.java:838-841`,
+  `ProtocolInvocationLauncherSignAndSave.java:861-864`). Las ramas `default` que lo
+  asignan a una suboperación (`op` o `cop`) desconocida
+  (`ProtocolInvocationLauncherSign.java:733`, `ProtocolInvocationLauncherSignAndSave.java:761`)
+  no se alcanzan: esa suboperación llega como `null`, el `switch` lanza
+  `NullPointerException` y la respuesta es `SAF_09`, tras pedir certificado y PIN
+  ([BUG-15](A1-bugs-autofirma.md#bug-15-ausencia-de-validación-de-cop-en-signandsave-provoca-nullpointerexception-y-reporte-engañoso-con-saf_09)).
 * **`SAF_13` (`ERROR_LOCAL_ACCESS_BLOCKED`)**: Disparado por la excepción
   `ParameterLocalAccessRequestedException` cuando se detecta que los servlets
   `stservlet` o `rtservlet` apuntan a direcciones locales prohibidas
@@ -433,9 +436,9 @@ A continuación se detalla la totalidad de los 53 códigos de error definidos en
   (`UrlParameters.java:279-281`, `ProtocolInvocationLauncher.java:512, 624, 734, 819`).
   La rama `batch` no lo emite: un pre/postsigner local acaba en `SAF_03`
   ([BUG-28](A1-bugs-autofirma.md#bug-28-un-servlet-del-lote-en-el-loopback-se-rechaza-con-saf_03-en-lugar-de-saf_13)).
-* **`SAF_14` (`ERROR_OBSOLETE_APP`)**: Disparado por la excepción
-  `ParameterNeedsUpdatedVersionException` cuando la petición incluye parámetros que
-  exigen una versión superior de AutoFirma (`ProtocolInvocationLauncher.java:506, 618, 728, 813`).
+* **`SAF_14` (`ERROR_OBSOLETE_APP`)**: Reservado para la excepción
+  `ParameterNeedsUpdatedVersionException` (`ProtocolInvocationLauncher.java:504-509,
+  616-621, 726-731, 811-816`), pero en la 1.9.2 no se emite: ver §4.7.
 * **`SAF_21` (`ERROR_UNSUPPORTED_PROCEDURE`)**: Versión de protocolo de comunicación
   no admitida. Ocurre cuando `requestedProtocolVersion` es superior a `VERSION_4`
   (`ProtocolInvocationLauncherSign.java:133-140`, `ProtocolInvocationLauncherSave.java:49-58`, etc.),
@@ -690,6 +693,12 @@ Los dos últimos comparten causa: la incorporación en versiones posteriores del
 mecanismo de configuración en tiempo de ejecución sustituyó el error terminal por
 un diálogo de confirmación, y los códigos previstos para la vía terminal quedaron
 en el diccionario sin emisor.
+
+`SAF_14` (`ERROR_OBSOLETE_APP`) no está en la lista porque sí lo referencian
+instrucciones ejecutables, pero tampoco llega nunca al cable: solo lo emiten los
+cuatro `catch (ParameterNeedsUpdatedVersionException)` del despachador
+(`ProtocolInvocationLauncher.java:504, 616, 726, 811`), y esa excepción no la
+lanza nadie. nadie la instancia: su constructor es de paquete (`ParameterNeedsUpdatedVersionException.java:18`) y no hay ningún `new` en el repositorio.
 
 ---
 

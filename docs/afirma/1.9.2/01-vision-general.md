@@ -186,7 +186,7 @@ ejemplo, `643-752`):
 4. Si `!bySocket && params.isActiveWaiting()` → `requestWait` (`683-685`, §4.3).
 5. Llamar al `process<Op>`. Devolver la cadena resultante; si `!bySocket`,
    antes subirla al `stservlet` con `sendDataToServer` (`719-724`).
-6. Errores de parámetros: `ParameterNeedsUpdatedVersionException` → `SAF_14`,
+6. Errores de parámetros: `ParameterNeedsUpdatedVersionException` → `SAF_14` (nadie la lanza; ver [15](15-errores.md) §4.7),
    `ParameterLocalAccessRequestedException` → `SAF_13`, `ParameterException` →
    `SAF_03`, cualquier otra → `SAF_03` (`726-750`).
 
@@ -438,7 +438,7 @@ código:
 | `UrlParametersForBatch.java` | Parámetros de `batch`; aquí `dat` es la definición del lote (`22`, `263-269`). |
 | `ParameterException.java` | Error de parámetro incorrecto o ausente → `SAF_03` (`13`). |
 | `ParameterLocalAccessRequestedException.java` | Un servlet apuntaba a `localhost`/`127.0.0.1` → `SAF_13` (`14`). |
-| `ParameterNeedsUpdatedVersionException.java` | La petición necesita una versión más nueva de la aplicación → `SAF_14` (`14`). |
+| `ParameterNeedsUpdatedVersionException.java` | La petición necesita una versión más nueva de la aplicación → `SAF_14` (`14`). Su constructor es de paquete y nadie la instancia (`18`). |
 | `ProtocoloMessages.java` | Acceso al *bundle* de mensajes de este paquete (`15`). |
 | `package-info.java` | Documentación del paquete. |
 
