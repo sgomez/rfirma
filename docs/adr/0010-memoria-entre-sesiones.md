@@ -215,10 +215,9 @@ regla de caducidad nueva.
 ## Enmienda: quién escribe la memoria
 
 La instancia única que `lib.rs` registra citando este ADR es del **proceso de
-escritorio** y solo de él (ADR-0024). Toda mutación, en los dos roles, relee
-el fichero y toca un solo campo, y el fichero de estado se lee del disco en
-cada acceso. El proceso de sede solo muta el último certificado usado; todo lo
-demás lo escribe el escritorio.
+escritorio** y solo de él (ADR-0024). Toda mutación relee el fichero y toca
+un solo campo, y el fichero de estado se lee del disco en cada acceso. El
+proceso de sede no muta nada: todo lo escribe el escritorio.
 
 ## Enmienda: `setupWizardSeen` sustituye a `trustNoticeSeen`
 
@@ -238,17 +237,24 @@ trasladar el valor de una clave a la otra.
 ## Enmienda: el certificado recordado no le responde a una sede por sí solo
 
 La memoria del último certificado que describe este ADR es del escritorio.
-Una sede no la lee ni la escribe, y de ella no sale nunca una respuesta
-automática. Tres reglas:
+Una sede nunca la escribe, y la lee solo para marcar una fila en su ventana:
+de ella no sale nunca una respuesta. Tres reglas:
 
 1. **`selectcert` con `sticky=true` preselecciona, no contesta.** La fila
    recordada llega marcada a la ventana, igual que ya ocurre al firmar con
    `already_chosen`. Sin ventana no hay certificado.
 2. **El recuerdo que gobierna `sticky` pertenece a la sesión de sede que lo
-   fijó**, y muere con ella. Lo que persiste en `state.json` entre sesiones
-   sigue existiendo, pero solo para preseleccionar en el panel de firma.
+   fijó**, y muere con ella; con un proceso por invocación (ADR-0024), la
+   sesión es en la práctica esa invocación. Lo que persiste en `state.json`
+   entre sesiones sigue existiendo, pero solo para preseleccionar: en el panel
+   de firma y, cuando la sesión no ha fijado ninguno, en la ventana de sede.
 3. **`resetsticky` borra el recuerdo de su propia sesión**, nunca la memoria
    del usuario.
+
+Se descartó que la sede tampoco leyera la memoria del escritorio: la ventana
+de sede ya preselecciona la fila recordada, y quitarle esa marca obliga a la
+persona a buscar su certificado cada vez sin cambiar lo que recibe la sede,
+que sigue sin recibir nada hasta que consiente.
 
 Lo anterior era copiar al original, y era defensible **mientras la retención
 muriera con el proceso**: allí el certificado fijado vive en un estático de JVM

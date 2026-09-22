@@ -542,23 +542,11 @@ pub fn consent_for<E: FilterEngine>(
     certificates: &dyn Certificates,
     live: &LiveErrand,
 ) -> ErrandStep {
-    let accepted = match what_the_site_accepts(
-        engine,
-        request.filter(),
-        request.sticky(),
-        ours,
-        certificates,
-        live,
-    ) {
-        Ok(accepted) => accepted,
-        Err(step) => return step,
-    };
-
-    if request.sticky().is_sticky() {
-        if let Some(stuck) = the_remembered_one_among(&accepted, certificates) {
-            return answering(live, SiteOutcome::Certificate(stuck));
-        }
-    }
+    let accepted =
+        match what_the_site_accepts(engine, request.filter(), request.sticky(), ours, live) {
+            Ok(accepted) => accepted,
+            Err(step) => return step,
+        };
 
     if request.is_headless() {
         if let Some(only) = the_only_one_among(&accepted) {
@@ -566,16 +554,15 @@ pub fn consent_for<E: FilterEngine>(
         }
     }
 
+    let (rows, _) = rows_preselecting_the_stuck(accepted, request.sticky(), certificates, live);
     ErrandStep::AskingForConsent {
-        certificates: certificates.rows_of(accepted),
+        certificates: rows,
         filter: request.filter().clone(),
         sticky: request.sticky().is_sticky(),
     }
 }
 
-/// Prepara el consentimiento del lote remoto: los mismos certificados cribados que una firma, con
-/// cuántas firmas lleva el lote, y sin preguntar cuando `sticky` ya lo resolvió
-/// (`ProtocolInvocationLauncherBatch`, 1.9.2).
+/// Prepara el consentimiento del lote remoto: los certificados cribados, cuántas firmas lleva, y el preseleccionado.
 pub fn consent_to_the_batch<E: FilterEngine>(
     engine: &E,
     request: BatchRequest,
@@ -583,30 +570,19 @@ pub fn consent_to_the_batch<E: FilterEngine>(
     certificates: &dyn Certificates,
     live: &LiveErrand,
 ) -> ErrandStep {
-    let accepted = match what_the_site_accepts(
-        engine,
-        request.filter(),
-        request.sticky(),
-        ours,
-        certificates,
-        live,
-    ) {
-        Ok(accepted) => accepted,
-        Err(step) => return step,
-    };
+    let accepted =
+        match what_the_site_accepts(engine, request.filter(), request.sticky(), ours, live) {
+            Ok(accepted) => accepted,
+            Err(step) => return step,
+        };
 
-    let rows = certificates.rows_of(accepted);
-    let already_chosen = request
-        .sticky()
-        .is_sticky()
-        .then(|| the_remembered_row_among(&rows))
-        .flatten()
-        .or_else(|| {
-            request
-                .is_headless()
-                .then(|| the_only_row_among(&rows))
-                .flatten()
-        });
+    let (rows, stuck) = rows_preselecting_the_stuck(accepted, request.sticky(), certificates, live);
+    let already_chosen = stuck.or_else(|| {
+        request
+            .is_headless()
+            .then(|| the_only_row_among(&rows))
+            .flatten()
+    });
 
     ErrandStep::AskingToSignTheBatch(Box::new(BatchConsent {
         signs: batch::how_many(&request),
@@ -626,30 +602,19 @@ pub fn consent_to_the_local_batch<E: FilterEngine>(
     live: &LiveErrand,
 ) -> ErrandStep {
     let LocalBatchAsk { request, batch } = ask;
-    let accepted = match what_the_site_accepts(
-        engine,
-        request.filter(),
-        request.sticky(),
-        ours,
-        certificates,
-        live,
-    ) {
-        Ok(accepted) => accepted,
-        Err(step) => return step,
-    };
+    let accepted =
+        match what_the_site_accepts(engine, request.filter(), request.sticky(), ours, live) {
+            Ok(accepted) => accepted,
+            Err(step) => return step,
+        };
 
-    let rows = certificates.rows_of(accepted);
-    let already_chosen = request
-        .sticky()
-        .is_sticky()
-        .then(|| the_remembered_row_among(&rows))
-        .flatten()
-        .or_else(|| {
-            request
-                .is_headless()
-                .then(|| the_only_row_among(&rows))
-                .flatten()
-        });
+    let (rows, stuck) = rows_preselecting_the_stuck(accepted, request.sticky(), certificates, live);
+    let already_chosen = stuck.or_else(|| {
+        request
+            .is_headless()
+            .then(|| the_only_row_among(&rows))
+            .flatten()
+    });
 
     ErrandStep::AskingToSignTheLocalBatch(Box::new(LocalBatchConsent {
         items: batch.signs().iter().map(summary_of).collect(),
@@ -674,11 +639,10 @@ fn what_the_site_accepts<E: FilterEngine>(
     filter: &SiteFilter,
     sticky: StickyCertificate,
     ours: Vec<TokenCertificate>,
-    certificates: &dyn Certificates,
     live: &LiveErrand,
 ) -> Result<Vec<TokenCertificate>, ErrandStep> {
     if sticky.resets() {
-        certificates.forget_the_remembered();
+        live.unstick();
     }
 
     if ours.is_empty() {
@@ -717,21 +681,29 @@ fn the_only_one_among(accepted: &[TokenCertificate]) -> Option<Vec<u8>> {
     usable.next().is_none().then(|| only.der().to_vec())
 }
 
-fn the_remembered_row_among(rows: &[ListedCertificate]) -> Option<String> {
-    rows.iter()
-        .find(|row| row.remembered && row.status.is_usable())
-        .map(|row| row.id.clone())
-}
-
-fn the_remembered_one_among(
-    accepted: &[TokenCertificate],
+/// Las filas de los aceptados, con la fijada en la sesión como única preseleccionada si `sticky` la encuentra, y su asa.
+fn rows_preselecting_the_stuck(
+    accepted: Vec<TokenCertificate>,
+    sticky: StickyCertificate,
     certificates: &dyn Certificates,
-) -> Option<Vec<u8>> {
-    let remembered = certificates.remembered()?;
-    accepted
-        .iter()
-        .find(|certificate| {
-            remembered.is_the_same_as(certificate.reference()) && certificate.status().is_usable()
-        })
-        .map(|certificate| certificate.der().to_vec())
+    live: &LiveErrand,
+) -> (Vec<ListedCertificate>, Option<String>) {
+    let stuck_at = sticky
+        .is_sticky()
+        .then(|| live.the_stuck())
+        .flatten()
+        .and_then(|stuck| {
+            accepted.iter().position(|certificate| {
+                stuck.is_the_same_as(certificate.reference()) && certificate.status().is_usable()
+            })
+        });
+    let mut rows = certificates.rows_of(accepted);
+    let Some(stuck_at) = stuck_at else {
+        return (rows, None);
+    };
+    for (at, row) in rows.iter_mut().enumerate() {
+        row.remembered = at == stuck_at;
+    }
+    let stuck = rows[stuck_at].id.clone();
+    (rows, Some(stuck))
 }
