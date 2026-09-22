@@ -1050,6 +1050,15 @@ Estos campos:
   al modificar `request` y `toSend`, provocando excepciones de concurrencia o
   corrupción cruzada de datos (ver [BUG-09 en A1-bugs-autofirma.md](A1-bugs-autofirma.md#bug-09-estado-estático-sin-sincronización-y-condiciones-de-carrera-en-commandprocessorthread)).
 
+Que el estado sea compartido no es en sí el defecto: lo impone el protocolo. Cada
+orden llega por una conexión TCP nueva y la única marca que llevan todas es el
+`idsession`, común a todo el canal (§4.3); no hay identificador de conversación.
+Un servidor tiene que acumular los fragmentos y las partes del resultado por
+sesión, y dos conversaciones de la misma sesión intercaladas son, en el cable,
+indistinguibles de una sola: ninguna implementación puede separarlas. Lo que sí
+es de la implementación es la falta de sincronización: atender las conexiones en
+orden evitaría la corrupción de las listas, aunque no la mezcla de conversaciones.
+
 ---
 
 ## 9. El cliente JavaScript de referencia (`AppAfirmaJSSocket`)

@@ -245,16 +245,6 @@ condition = "closed-ninety-seconds-after-the-last-valid-order"
 patience_secs = 150
 
 [[check]]
-id = "concurrent_service_orders_do_not_share_their_state"
-set = "canal.servicio"
-citation = "ServiceInvocationManager.java:136-143; CommandProcessorThread.java:67-69"
-statement = """
-Dos conversaciones simultáneas con el canal no se mezclan los fragmentos ni las partes del resultado
-(BUG-09).
-"""
-unmeasurable = "El protocolo no lleva identificador de conversación: dos conversaciones de la misma sesión intercaladas son una sola en el cable, y ningún cliente puede separarlas. Lo que BUG-09 describe es una carrera entre hilos que atienden a la vez, y desde el cable no se provoca de forma determinista."
-
-[[check]]
 id = "a_saf_code_reaches_the_published_client_intact_over_the_service_channel"
 set = "canal.servicio"
 citation = "CommandProcessorThread.java:333-348, 493-512; autoscript.js:3355-3385"
@@ -265,16 +255,6 @@ publicado lo recibe descodificado con el prefijo SAF_nn intacto.
 drive = { mode = "service", script = "signwithanunknownformat" }
 assistance = "none"
 saf = "SAF_06"
-
-[[check]]
-id = "an_exhausted_memory_answers_memory_error_over_the_service_channel"
-set = "canal.servicio"
-citation = "CommandProcessorThread.java:142-145, 481-487; autoscript.js:2312, 3131"
-statement = """
-Una falta de memoria en el socket local responde el literal no numerado MEMORY_ERROR, que el cliente
-publicado entrega como es.gob.afirma.core.OutOfMemoryError.
-"""
-unmeasurable = "Provocarla exige agotar el montón del cliente con un documento mayor que él, y la suite no fija ni conoce ese montón: el mismo documento revienta a un cliente y pasa por otro."
 
 [[check]]
 id = "a_save_over_the_service_channel_answers_save_ok_and_not_a_signature"
