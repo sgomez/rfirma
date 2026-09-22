@@ -114,6 +114,7 @@ export function ReportBody({
             key={set.name}
             set={set}
             checks={checks}
+            kind={view.kind}
             folded={folded.has(set.name)}
             onToggle={toggleSet}
             expanded={expanded}

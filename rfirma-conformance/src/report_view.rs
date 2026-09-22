@@ -6,6 +6,7 @@ use ts_rs::TS;
 
 use crate::catalogue::{Assistance, Check};
 use crate::client::{ClientKind, Store};
+use crate::known_bug::KnownBug;
 use crate::outcome::{result_name, ResultName};
 use crate::outcome::{CheckState, Outcome};
 use crate::report::{CheckRecord, Header, Report};
@@ -40,6 +41,7 @@ struct CheckView<'a> {
     question: Option<&'a str>,
     assistance: Option<Assistance>,
     store: Store,
+    bug: Option<&'a KnownBug>,
     #[ts(as = "ResultName")]
     state: &'static str,
     observation: Option<&'a str>,
@@ -113,6 +115,7 @@ fn check_view<'a>(check: &'a Check, record: Option<&'a CheckRecord>) -> CheckVie
         question: check.question.as_deref(),
         assistance: check.assistance,
         store: check.store,
+        bug: check.bug,
         state: result_name(record.map(|record| record.state)),
         observation: record.and_then(|record| record.observation.as_deref()),
         date: record.and_then(|record| record.date.as_deref()),
@@ -156,6 +159,7 @@ chapter = "16"
 citation = "C.java:3"
 statement = "Guarda."
 drive = { mode = "v4", script = "save" }
+bug = "BUG-18"
 "#;
 
     fn a_report_of(
@@ -278,6 +282,23 @@ drive = { mode = "v4", script = "save" }
         assert_eq!(save.get("expectation"), None);
         assert_eq!(save.get("activity"), None);
         assert_eq!(the_check(&json, "a_signature")["state"], "PENDIENTE");
+    }
+
+    #[test]
+    fn a_check_carries_the_known_bug_of_the_original_with_its_state_in_master() {
+        let catalogue = the_catalogue_in(THREE_CHECKS).unwrap();
+        let (_dir, report) = a_report_of(
+            ClientKind::Rfirma,
+            "/usr/bin/rfirma",
+            &catalogue,
+            Outcome::Compliant,
+        );
+
+        let json = the_json_of(&report_view(&report, &catalogue));
+
+        assert_eq!(the_check(&json, "a_save")["bug"]["id"], "BUG-18");
+        assert_eq!(the_check(&json, "a_save")["bug"]["master"], "fixed");
+        assert_eq!(the_check(&json, "a_greeting")["bug"], Value::Null);
     }
 
     #[test]

@@ -23,12 +23,13 @@ drive = { mode = "v4", script = "protocol-v4-rejections" }
 assistance = "click"
 patience_secs = 600
 condition = "unknown-operation-saf-04"
-warning = "AutoFirma enseña un diálogo de error antes de contestar cada rechazo de parámetros: ciérralos según aparezcan; para la operación inválida pide además un certificado, elígelo."
+warning = "AutoFirma enseña un diálogo de error antes de contestar cada rechazo de parámetros: ciérralos según aparezcan."
 
 [[check]]
 id = "sign_missing_or_invalid_operation_rejected"
 set = "peticion"
 citation = "SignOperation.java:67-78; ProtocolInvocationLauncherSign.java:158, 700, 857-860"
+bug = "BUG-15"
 statement = """
 En afirma://sign?, si el parámetro op falta o no es reconocido, se rechaza con SAF_04.
 """
@@ -36,7 +37,7 @@ drive = { mode = "v4", script = "protocol-v4-rejections" }
 assistance = "click"
 patience_secs = 600
 condition = "invalid-op-saf-04"
-warning = "AutoFirma enseña un diálogo de error antes de contestar cada rechazo de parámetros: ciérralos según aparezcan; para la operación inválida pide además un certificado, elígelo."
+warning = "AutoFirma enseña un diálogo de error antes de contestar cada rechazo de parámetros: ciérralos según aparezcan."
 
 [[check]]
 id = "local_access_blocked"
@@ -61,7 +62,7 @@ drive = { mode = "v4", script = "protocol-v4-rejections" }
 assistance = "click"
 patience_secs = 600
 condition = "no-data-saf-03"
-warning = "AutoFirma enseña un diálogo de error antes de contestar cada rechazo de parámetros: ciérralos según aparezcan; para la operación inválida pide además un certificado, elígelo."
+warning = "AutoFirma enseña un diálogo de error antes de contestar cada rechazo de parámetros: ciérralos según aparezcan."
 
 [[check]]
 id = "a_null_uri_is_rejected_with_saf_01"
@@ -84,7 +85,7 @@ drive = { mode = "v4", script = "protocol-v4-rejections" }
 assistance = "click"
 patience_secs = 600
 condition = "dat-with-a-local-file-saf-03"
-warning = "AutoFirma enseña un diálogo de error antes de contestar cada rechazo de parámetros: ciérralos según aparezcan; para la operación inválida pide además un certificado, elígelo."
+warning = "AutoFirma enseña un diálogo de error antes de contestar cada rechazo de parámetros: ciérralos según aparezcan."
 
 [[check]]
 id = "a_url_in_dat_is_downloaded_and_signed"
@@ -137,7 +138,7 @@ drive = { mode = "v4", script = "protocol-v4-rejections" }
 assistance = "click"
 patience_secs = 600
 condition = "rtservlet-over-ftp-saf-03"
-warning = "AutoFirma enseña un diálogo de error antes de contestar cada rechazo de parámetros: ciérralos según aparezcan; para la operación inválida pide además un certificado, elígelo."
+warning = "AutoFirma enseña un diálogo de error antes de contestar cada rechazo de parámetros: ciérralos según aparezcan."
 
 [[check]]
 id = "a_retrieve_servlet_on_a_local_host_is_refused_with_saf_13"
@@ -151,7 +152,7 @@ drive = { mode = "v4", script = "protocol-v4-rejections" }
 assistance = "click"
 patience_secs = 600
 condition = "rtservlet-on-localhost-saf-13"
-warning = "AutoFirma enseña un diálogo de error antes de contestar cada rechazo de parámetros: ciérralos según aparezcan; para la operación inválida pide además un certificado, elígelo."
+warning = "AutoFirma enseña un diálogo de error antes de contestar cada rechazo de parámetros: ciérralos según aparezcan."
 
 [[check]]
 id = "a_retrieve_servlet_carrying_its_own_parameters_is_refused_with_saf_03"
@@ -164,7 +165,7 @@ drive = { mode = "v4", script = "protocol-v4-rejections" }
 assistance = "click"
 patience_secs = 600
 condition = "rtservlet-with-a-query-saf-03"
-warning = "AutoFirma enseña un diálogo de error antes de contestar cada rechazo de parámetros: ciérralos según aparezcan; para la operación inválida pide además un certificado, elígelo."
+warning = "AutoFirma enseña un diálogo de error antes de contestar cada rechazo de parámetros: ciérralos según aparezcan."
 
 [[check]]
 id = "a_protocol_version_below_the_supported_one_is_accepted"
@@ -191,7 +192,7 @@ drive = { mode = "v4", script = "protocol-v4-rejections" }
 assistance = "click"
 patience_secs = 600
 condition = "mcv-malformed-saf-03"
-warning = "AutoFirma enseña un diálogo de error antes de contestar cada rechazo de parámetros: ciérralos según aparezcan; para la operación inválida pide además un certificado, elígelo."
+warning = "AutoFirma enseña un diálogo de error antes de contestar cada rechazo de parámetros: ciérralos según aparezcan."
 
 [[check]]
 id = "an_identifier_longer_than_twenty_characters_is_refused_with_saf_03"
@@ -204,7 +205,7 @@ drive = { mode = "v4", script = "protocol-v4-rejections" }
 assistance = "click"
 patience_secs = 600
 condition = "id-of-21-saf-03"
-warning = "AutoFirma enseña un diálogo de error antes de contestar cada rechazo de parámetros: ciérralos según aparezcan; para la operación inválida pide además un certificado, elígelo."
+warning = "AutoFirma enseña un diálogo de error antes de contestar cada rechazo de parámetros: ciérralos según aparezcan."
 
 [[check]]
 id = "an_identifier_of_twenty_characters_is_accepted"
@@ -230,7 +231,7 @@ drive = { mode = "v4", script = "protocol-v4-rejections" }
 assistance = "click"
 patience_secs = 600
 condition = "fileid-of-21-saf-03"
-warning = "AutoFirma enseña un diálogo de error antes de contestar cada rechazo de parámetros: ciérralos según aparezcan; para la operación inválida pide además un certificado, elígelo."
+warning = "AutoFirma enseña un diálogo de error antes de contestar cada rechazo de parámetros: ciérralos según aparezcan."
 
 [[check]]
 id = "malformed_properties_do_not_bring_the_request_down"
@@ -354,7 +355,7 @@ drive = { mode = "v4", script = "protocol-v4-rejections" }
 assistance = "click"
 patience_secs = 600
 condition = "selectcert-with-a-slash-saf-03"
-warning = "AutoFirma enseña un diálogo de error antes de contestar cada rechazo de parámetros: ciérralos según aparezcan; para la operación inválida pide además un certificado, elígelo."
+warning = "AutoFirma enseña un diálogo de error antes de contestar cada rechazo de parámetros: ciérralos según aparezcan."
 
 [[check]]
 id = "batch_is_recognised_with_a_trailing_slash"
@@ -368,7 +369,7 @@ drive = { mode = "v4", script = "protocol-v4-rejections" }
 assistance = "click"
 patience_secs = 600
 condition = "batch-with-a-slash-saf-03"
-warning = "AutoFirma enseña un diálogo de error antes de contestar cada rechazo de parámetros: ciérralos según aparezcan; para la operación inválida pide además un certificado, elígelo."
+warning = "AutoFirma enseña un diálogo de error antes de contestar cada rechazo de parámetros: ciérralos según aparezcan."
 
 [[check]]
 id = "a_cipher_key_of_the_wrong_length_answers_saf_03"
@@ -382,7 +383,7 @@ drive = { mode = "v4", script = "protocol-v4-rejections" }
 assistance = "click"
 patience_secs = 600
 condition = "a-cipher-key-of-seven-saf-03"
-warning = "AutoFirma enseña un diálogo de error antes de contestar cada rechazo de parámetros: ciérralos según aparezcan; para la operación inválida pide además un certificado, elígelo."
+warning = "AutoFirma enseña un diálogo de error antes de contestar cada rechazo de parámetros: ciérralos según aparezcan."
 
 [[check]]
 id = "fileid_without_retrieve_servlet_answers_saf_03"
@@ -395,7 +396,7 @@ drive = { mode = "v4", script = "protocol-v4-rejections" }
 assistance = "click"
 patience_secs = 600
 condition = "fileid-without-rtservlet-saf-03"
-warning = "AutoFirma enseña un diálogo de error antes de contestar cada rechazo de parámetros: ciérralos según aparezcan; para la operación inválida pide además un certificado, elígelo."
+warning = "AutoFirma enseña un diálogo de error antes de contestar cada rechazo de parámetros: ciérralos según aparezcan."
 
 [[check]]
 id = "a_parameter_rejection_is_shown_before_it_is_answered"

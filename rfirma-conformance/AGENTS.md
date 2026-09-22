@@ -11,6 +11,7 @@ consola. Sus pruebas se corren con `cargo test` dentro de este directorio; las d
 | `CONTEXT.md` | El glosario de la suite, un bounded context aparte del de la aplicación. |
 | `docs/adr/` | Las decisiones que solo afectan a la suite, numeradas con las de `docs/adr/` de la raíz. |
 | `catalogue/` | El catálogo: sus conjuntos en `sets.toml`, con su orden y sus capítulos, y un TOML por conjunto con los metadatos de cada comprobación; no nombra a ningún cliente. |
+| `bugs/autofirma-1.9.2.toml` | El registro de bugs conocidos: cada ficha `BUG-NN` del anexo A1 con su título y su estado en `master`; qué comprobación incumple cada uno lo declara el catálogo. |
 | `reference/` | Las referencias, un TOML por cliente y versión con los resultados que una ficha `BUG-NN` explica. |
 | `src/lib.rs` | La raíz del crate: sus módulos y la pasada que mide (`Probe`); lo que usan el binario y las pruebas de `tests/`. |
 | `src/main.rs` | El arranque: lee el catálogo, levanta el servidor, imprime la URL con el token y la abre. |
@@ -25,6 +26,7 @@ consola. Sus pruebas se corren con `cargo test` dentro de este directorio; las d
 | `src/checks.rs` | El cuerpo ejecutable: cómo se conduce un grupo o se juzga con un trámite ya observado, la parada entre tramos, la guarda de las comprobaciones sin persona y los saludos por familia, sin escribir el informe. |
 | `src/harness.rs` | El registro de arneses que el catálogo liga por nombre: lo que una comprobación monta alrededor del trámite —puertos ocupados, ficheros preparados—; no juzga. |
 | `src/judge.rs` | El juez: lo observado, la expectativa declarada y la respuesta de la persona, a un resultado; con el vocabulario cerrado de expectativas, y sin lanzar trámites. |
+| `src/known_bug.rs` | La lectura del registro de bugs conocidos, con el que el catálogo resuelve el `bug` de cada comprobación. |
 | `src/outcome.rs` | El resultado de una comprobación, sus nombres en pantalla y PENDIENTE. |
 | `src/validation.rs` | La validación de un informe contra una referencia: validado o sus discrepancias, que son fallos de la suite o de la referencia. |
 | `src/errand.rs` | El trámite: su clave, lo observado que se guarda, el seam `ErrandRunner` con su adaptador de Node y su falso de tramas grabadas, y lo que se extrae de cada evento. |
@@ -38,7 +40,7 @@ consola. Sus pruebas se corren con `cargo test` dentro de este directorio; las d
 | `../testdata/site-driver/test/` | Las pruebas de los analizadores de firma, que se corren con `node --test test/*.test.mjs`, y sus muestras hechas con OpenSSL y `zip`. |
 | `../testdata/site-driver/certificates/` | Los certificados, sin su clave, del kit de la FNMT que montan los almacenes `several` y `expired`: con ellos los guiones reconocen qué certificado volvió. |
 | `../testdata/site-driver/scripts/` | Los guiones, un módulo por familia: certificado, firma, petición, ficheros, lote, servidor intermedio servido por HTTP, canal WebSocket y socket a mano. |
-| `tests/catalogue_matches_the_docs.rs` | El cruce del catálogo, leído con el cargador del crate, y la referencia con `docs/afirma/1.9.2/`: capítulos, tabla SAF y fichas A1. |
+| `tests/catalogue_matches_the_docs.rs` | El cruce del catálogo, leído con el cargador del crate, y la referencia con `docs/afirma/1.9.2/`: capítulos, tabla SAF, fichas A1 y el registro de bugs, y el bug de cada comprobación con la causa de la referencia. |
 | `tests/transcripts/` | Tramas grabadas de trámites de verdad, las que reproduce el ejecutor falso. |
 | `.cargo/config.toml` | Dónde deja ts-rs los tipos del contrato: `console/src/contract/`. |
 | `console/` | La consola web, un proyecto pnpm propio con React y Vite, fuera de `rfirma-app` y del CI; `just conformance-console` la compila en `console/dist/`. |

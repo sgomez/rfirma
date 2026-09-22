@@ -116,7 +116,8 @@ _Avoid_: grupo, suite (para un conjunto)
 El juicio de una comprobación, siempre respecto a lo que exige el protocolo y nunca respecto a lo
 que se sabe del cliente. Es una lista cerrada:
 - **CONFORME**: se comporta como exige el protocolo.
-- **NO CONFORME**: no se comporta así, incluido cuando es AutoFirma quien falla por un bug suyo.
+- **NO CONFORME**: no se comporta así, incluido cuando es AutoFirma quien falla por un bug suyo;
+  entonces la consola lo marca como esperado, pero el resultado no cambia.
 - **NO OBSERVABLE**: no se puede saber, porque la sede no llega a verlo o porque aún no se ha
   averiguado cómo medirlo. Lo que el instrumento no puede ver es NO OBSERVABLE para cualquier
   cliente.
@@ -138,11 +139,19 @@ _Avoid_: conductor, sujeto, arnés
 
 ### Validación de la suite
 
+**Bug conocido**:
+Una ficha `BUG-NN` del anexo A1 por la que AutoFirma 1.9.2 incumple lo que exige una comprobación.
+La comprobación lo declara en el catálogo, y el registro `bugs/autofirma-1.9.2.toml` guarda su
+título y si sigue en `master`, corregido o corregido a medias. La consola lo enseña en cualquier
+informe, también en los de rFirma.
+_Avoid_: fallo esperado (para el bug), causa (fuera de la referencia)
+
 **Referencia**:
 Lo que se sabe de cómo responde AutoFirma 1.9.2 por sus bugs: las comprobaciones cuyo resultado
 explica una ficha `BUG-NN` del anexo A1, casi siempre porque sale NO CONFORME, cada una con su
-resultado y su causa. Es un dato de una versión concreta de AutoFirma, no de las comprobaciones, y
-vive aparte del catálogo. Solo la usa la **validación**.
+resultado y su causa. Si sale NO CONFORME, su causa es el **bug conocido** que declara la
+comprobación; una que sale CONFORME puede tener causa sin declarar bug. Es un dato de una versión
+concreta de AutoFirma y vive aparte del catálogo. Solo la usa la **validación**.
 _Avoid_: línea base, baseline, expectativa por perfil
 
 **Validación**:

@@ -1,0 +1,156 @@
+# Los bugs de AutoFirma 1.9.2 que cataloga el anexo A1 de docs/afirma/1.9.2/, con su estado en master.
+
+[[bug]]
+id = "BUG-01"
+title = "Proceso huérfano indefinido en WebSocket sin conexión inicial"
+master = "fixed"
+
+[[bug]]
+id = "BUG-02"
+title = "Cierre omitido del proceso ante excepciones no capturadas en invocaciones sin WebSocket"
+master = "present"
+
+[[bug]]
+id = "BUG-03"
+title = "Script de terminación en macOS (closeMacService) invoca kill sobre un proceso lanzador extinto"
+master = "present"
+
+[[bug]]
+id = "BUG-04"
+title = "Inoperancia funcional de afirma://load por servidor intermedio y NullPointerException en gestión de errores"
+master = "present"
+
+[[bug]]
+id = "BUG-05"
+title = "Rechazo de algoritmos ECDSA en la operación signandsave"
+master = "present"
+
+[[bug]]
+id = "BUG-06"
+title = "Persistencia de certificado (sticky) en campo estático de JVM"
+master = "present"
+
+[[bug]]
+id = "BUG-07"
+title = "Pérdida de la versión negociada y metadatos extraData en servidor intermedio con URLs largas"
+master = "fixed"
+
+[[bug]]
+id = "BUG-08"
+title = "Invocación incondicional de sendDataToServer en SocketOperationException provoca NullPointerException en conexiones por socket"
+master = "fixed"
+
+[[bug]]
+id = "BUG-09"
+title = "Estado estático sin sincronización y condiciones de carrera en CommandProcessorThread"
+master = "present"
+
+[[bug]]
+id = "BUG-10"
+title = "Silenciamiento de excepciones en ServiceInvocationManager.startService y retorno erróneo de OK tras fallo de inicialización del socket"
+master = "fixed"
+
+[[bug]]
+id = "BUG-11"
+title = "Rechazo del bucle local IPv6 (::1) en el WebSocket versión 4"
+master = "present"
+
+[[bug]]
+id = "BUG-12"
+title = "Opción de configuración «Modo VDI» inoperativa por propiedad de sistema huérfana sin consumidor (websockets.optimizedForVdi)"
+master = "present"
+
+[[bug]]
+id = "BUG-13"
+title = "Fuga de estado y asignación cruzada en showRubricIsCanceled entre operaciones de firma"
+master = "present"
+
+[[bug]]
+id = "BUG-14"
+title = "Omisión de setAnotherParams en signandsave descarta parámetros de configuración para plugins"
+master = "present"
+
+[[bug]]
+id = "BUG-15"
+title = "Ausencia de validación de cop en signandsave provoca NullPointerException y reporte engañoso con SAF_09"
+master = "present"
+
+[[bug]]
+id = "BUG-16"
+title = "Incompatibilidad de localBatchProcess con lotes XML provoca fallo tardío con SAF_03 tras seleccionar certificado y PIN"
+master = "present"
+
+[[bug]]
+id = "BUG-17"
+title = "Corrupción de nombres y fallo de filtrado en save por omisión de división de extensiones múltiples (exts)"
+master = "present"
+
+[[bug]]
+id = "BUG-18"
+title = "Incoherencia de respuesta en save por WebSocket (\"OK\" frente a \"SAVE_OK\") provoca procesamiento erróneo como firma en autoscript.js"
+master = "fixed"
+
+[[bug]]
+id = "BUG-19"
+title = "Discrepancia de nombres de parámetros (extension/description vs exts/desc) en AppAfirmaJSWebService.saveDataToFile ignora los filtros en servidor intermedio"
+master = "present"
+
+[[bug]]
+id = "BUG-20"
+title = "Incompatibilidad entre policy.properties y ExtraParamsProcessor impide el uso del identificador oficial FirmaAGE19"
+master = "present"
+
+[[bug]]
+id = "BUG-21"
+title = "Errata tipográfica en constante CAdESExtraParams.POLICY_IDENTIFIER_HASH_ALGORITHM provoca IllegalArgumentException en firmas CAdES con política"
+master = "fixed"
+
+[[bug]]
+id = "BUG-22"
+title = "Bucle con error por exceso (off-by-one) en el procesamiento de declaraciones de compromiso (commitmentTypeIndications)"
+master = "partial"
+
+[[bug]]
+id = "BUG-23"
+title = "Silenciamiento de excepciones en la inicialización de TSA provoca degradación silenciosa a firma sin sello de tiempo en XAdES y CAdES"
+master = "present"
+
+[[bug]]
+id = "BUG-24"
+title = "Mutación de estado global en el singleton AOKeyStore.PKCS11 invalida la resolución de almacén en ejecuciones concurrentes o persistentes"
+master = "present"
+
+[[bug]]
+id = "BUG-25"
+title = "Colapso de la distinción entre protocolo obsoleto y protocolo no soportado en el arranque de canales locales"
+master = "present"
+
+[[bug]]
+id = "BUG-26"
+title = "Los errores anteriores al inicio de la operación no se suben al servidor intermedio y la sede los percibe como «AutoFirma no instalada»"
+master = "partial"
+
+[[bug]]
+id = "BUG-27"
+title = "Una multifirma con format=auto sobre datos que no son una firma revienta con NullPointerException y se reporta como SAF_03 en lugar de SAF_17"
+master = "present"
+
+[[bug]]
+id = "BUG-28"
+title = "Un servlet del lote en el loopback se rechaza con SAF_03 en lugar de SAF_13"
+master = "fixed"
+
+[[bug]]
+id = "BUG-29"
+title = "Un servicio de lotes inalcanzable se reporta como SAF_27 («el servicio informó de un error») en lugar de SAF_26"
+master = "partial"
+
+[[bug]]
+id = "BUG-30"
+title = "La contrafirma en un lote local sin target falla con «El objetivo de la contrafirma no puede ser nulo»"
+master = "present"
+
+[[bug]]
+id = "BUG-31"
+title = "Un filtro de certificado que no se reconoce desactiva el filtro de caducados y admite todos los certificados"
+master = "present"

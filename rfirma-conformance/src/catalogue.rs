@@ -13,6 +13,7 @@ use ts_rs::TS;
 use crate::client::{Launch, Store};
 use crate::harness::{the_harness_named, Harness};
 use crate::judge::{Code, Contents, Expectation, OnTheWire, Person};
+use crate::known_bug::{the_known_bug, KnownBug};
 use crate::manifest::{Family, Manifest, Site};
 
 /// Un conjunto declarado en `catalogue/sets.toml`: su nombre y sus capítulos, el primero el de
@@ -107,6 +108,9 @@ pub struct Check {
     pub question: Option<String>,
     #[serde(default)]
     pub unmeasurable: Option<String>,
+    /// El bug de AutoFirma 1.9.2 por el que el original incumple lo que se exige.
+    #[serde(default, deserialize_with = "a_known_bug")]
+    pub bug: Option<&'static KnownBug>,
     /// Si es el saludo de su familia y su tramo: si no se cumple, no se corre lo que abre.
     #[serde(default)]
     pub greeting: bool,
@@ -119,6 +123,15 @@ fn a_registered_harness<'de, D: Deserializer<'de>>(
     the_harness_named(&name)
         .map(Some)
         .ok_or_else(|| serde::de::Error::custom(format!("el arnés «{name}» no existe")))
+}
+
+fn a_known_bug<'de, D: Deserializer<'de>>(
+    deserializer: D,
+) -> Result<Option<&'static KnownBug>, D::Error> {
+    let id = String::deserialize(deserializer)?;
+    the_known_bug(&id)
+        .map(Some)
+        .ok_or_else(|| serde::de::Error::custom(format!("{id} no está en el registro de bugs")))
 }
 
 fn one_or_many<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Vec<String>, D::Error> {
@@ -163,6 +176,7 @@ impl Check {
             self.warning.clone(),
             self.question.clone(),
             self.unmeasurable.clone(),
+            self.bug.map(|bug| bug.id.clone()),
         ]
         .into_iter()
         .flatten()
@@ -665,6 +679,28 @@ statement = "Algo se rechaza con SAF_03."
     #[test]
     fn a_malformed_catalogue_complains_instead_of_parsing_half() {
         assert!(the_catalogue_in("[[check]]\nid = ").is_err());
+    }
+
+    #[test]
+    fn a_check_names_the_known_bug_of_the_original_it_fails_by() {
+        let entry = format!("{AN_ENTRY}bug = \"BUG-15\"\n");
+
+        let checks = the_catalogue_in(&entry).unwrap();
+
+        assert_eq!(checks[0].bug.map(|bug| bug.id.as_str()), Some("BUG-15"));
+        assert!(checks[0].the_declared_text().contains("BUG-15"));
+    }
+
+    #[test]
+    fn a_bug_outside_the_registry_is_refused() {
+        let entry = format!("{AN_ENTRY}bug = \"BUG-99\"\n");
+
+        let complaint = the_catalogue_in(&entry).unwrap_err();
+
+        assert!(
+            complaint.contains("BUG-99 no está en el registro de bugs"),
+            "{complaint}"
+        );
     }
 
     #[test]

@@ -266,6 +266,10 @@ kbd {
   --tone: var(--accent);
 }
 
+.check[data-expected] {
+  --tone: var(--text-3);
+}
+
 .icon.result {
   color: var(--tone);
 }
@@ -1481,7 +1485,22 @@ select.input {
   place-items: center;
 }
 
+.check-name {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  min-width: 0;
+}
+
+.tag-bug {
+  flex: none;
+  height: 18px;
+  font-weight: 400;
+  cursor: help;
+}
+
 .check-id {
+  min-width: 0;
   overflow: hidden;
   cursor: text;
   user-select: text;

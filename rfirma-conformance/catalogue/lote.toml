@@ -30,6 +30,7 @@ warning = "Va a aparecer el diálogo de certificado: la sede hace de prefirmador
 id = "a_batch_servlet_on_the_local_loopback_is_refused_with_saf_13"
 set = "lote"
 citation = "UrlParameters.java:279-317; UrlParametersForBatch.java:238-259"
+bug = "BUG-28"
 statement = """
 Un batchpresignerurl o batchpostsignerurl que apunta a localhost o a 127.0.0.1 se rechaza con
 SAF_13 antes de pedir certificado alguno.
@@ -193,6 +194,7 @@ warning = "Va a aparecer el diálogo de certificado."
 id = "a_local_batch_admits_countersign_as_a_suboperation"
 set = "lote"
 citation = "JSONBatchManager.java:44-161; LocalBatchSigner.java:165-175"
+bug = "BUG-30"
 statement = """
 La suboperación countersign del lote local contrafirma el documento, que ya es una firma, y lo
 devuelve como DONE_AND_SAVED.
@@ -314,6 +316,7 @@ warning = "Va a aparecer el diálogo de certificado: la sede hace de prefirmador
 id = "a_batch_whose_presigner_does_not_answer_fails_with_saf_26"
 set = "lote"
 citation = "ProtocolInvocationLauncherBatch.java:362-367"
+bug = "BUG-29"
 statement = """
 Si el prefirmador no responde, el lote termina con SAF_26: la sede sabe que no se pudo contactar
 con el servicio de lotes.
@@ -403,6 +406,7 @@ warning = "Va a aparecer el diálogo de certificado, y después se firman dos do
 id = "a_local_xml_batch_is_refused_before_asking_for_a_certificate"
 set = "lote"
 citation = "UrlParametersForBatch.java:231-260; ProtocolInvocationLauncherBatch.java:341-346, 400-422; BatchSigner.java:224-233"
+bug = "BUG-16"
 statement = """
 localBatchProcess=true sólo vale para el lote JSON: un lote XML que lo pide, sin servlets, se
 rechaza con SAF_03 antes de pedir certificado.

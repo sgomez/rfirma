@@ -295,7 +295,7 @@ const THE_LOCAL_RTSERVLET_PROBE = aParameterRejection(
   "SAF_13",
 );
 
-/** Los rechazos del análisis de la petición; la operación inválida pide antes un certificado. */
+/** Los rechazos del análisis de la petición. */
 const THE_V4_REJECTION_PROBES = [
   aParameterRejection(
     "unknown-operation-saf-04",
@@ -328,7 +328,7 @@ const THE_V4_REJECTION_PROBES = [
   ),
 ];
 
-/** La operación inválida: AutoFirma pide un certificado antes de contestar. */
+/** La operación inválida, con un formato que no existe: AutoFirma no valida `op` y se para en el formato. */
 const THE_INVALID_OPERATION_PROBE = aParameterRejection(
   "invalid-op-saf-04",
   (idSession) => aSignOrderStoppingAtTheFormat(idSession, { op: "invalid" }),

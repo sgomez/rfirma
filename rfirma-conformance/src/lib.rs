@@ -9,6 +9,7 @@ pub mod console;
 mod errand;
 mod harness;
 mod judge;
+pub mod known_bug;
 mod livelog;
 mod manifest;
 mod outcome;

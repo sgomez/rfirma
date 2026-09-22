@@ -1,5 +1,7 @@
 import { memo, type ReactNode, useEffect, useRef, useState } from "react";
 import type { CheckView } from "../contract/CheckView";
+import type { ClientKind } from "../contract/ClientKind";
+import type { KnownBug } from "../contract/KnownBug";
 import { Elapsed } from "../ui/Elapsed";
 import {
   type Activity,
@@ -9,11 +11,19 @@ import {
   PlayIcon,
   ResultIcon,
 } from "../ui/icons";
-import { assistanceName, calendarDate, duration, resultTone } from "../words";
+import {
+  assistanceName,
+  bugLabel,
+  calendarDate,
+  duration,
+  isAnExpectedFailure,
+  resultTone,
+} from "../words";
 import type { Controls } from "./SetSection";
 
 interface CheckRowProps {
   check: CheckView;
+  kind: ClientKind;
   activity: Activity | null;
   whyPending: string | null;
   runningSince: number | null;
@@ -26,6 +36,7 @@ interface CheckRowProps {
 
 export const CheckRow = memo(function CheckRow({
   check,
+  kind,
   activity,
   whyPending,
   runningSince,
@@ -37,11 +48,13 @@ export const CheckRow = memo(function CheckRow({
 }: CheckRowProps) {
   const settled = useJustSettled(check.state);
   const detailId = `detail-${check.id}`;
+  const expected = isAnExpectedFailure(check, kind);
   return (
     <li
       className="check"
       data-check={check.id}
       data-tone={resultTone[check.state]}
+      data-expected={expected || undefined}
       data-activity={activity ?? undefined}
       data-selected={selected || undefined}
       data-settled={settled || undefined}
@@ -68,7 +81,10 @@ export const CheckRow = memo(function CheckRow({
           <span className="check-icon">
             {activity ? <ActivityIcon activity={activity} /> : <ResultIcon result={check.state} />}
           </span>
-          <span className="check-id">{check.id}</span>
+          <span className="check-name">
+            <span className="check-id">{check.id}</span>
+            {check.bug && <BugTag bug={check.bug} />}
+          </span>
           <span className="check-chapter">cap. {check.chapter}</span>
           <span className="check-status">
             <Status check={check} activity={activity} runningSince={runningSince} />
@@ -92,6 +108,7 @@ export const CheckRow = memo(function CheckRow({
         <CheckDetail
           id={detailId}
           check={check}
+          expected={expected}
           activity={activity}
           whyPending={whyPending}
           onTranscript={onTranscript}
@@ -104,6 +121,14 @@ export const CheckRow = memo(function CheckRow({
 function endsATextSelection(): boolean {
   const selection = window.getSelection();
   return selection !== null && !selection.isCollapsed && selection.toString() !== "";
+}
+
+function BugTag({ bug }: { bug: KnownBug }) {
+  return (
+    <span className="tag tag-bug" title={`${bug.id}: ${bug.title}`}>
+      {bugLabel(bug)}
+    </span>
+  );
 }
 
 function CopyId({ id }: { id: string }) {
@@ -149,12 +174,14 @@ function Status({
 function CheckDetail({
   id,
   check,
+  expected,
   activity,
   whyPending,
   onTranscript,
 }: {
   id: string;
   check: CheckView;
+  expected: boolean;
   activity: Activity | null;
   whyPending: string | null;
   onTranscript: (id: string) => void;
@@ -185,12 +212,18 @@ function CheckDetail({
           </Field>
         )}
         {check.question && <Field label="Te preguntaremos">{check.question}</Field>}
+        {check.bug && (
+          <Field label="Bug conocido">
+            {bugLabel(check.bug)} · <code>{check.bug.id}</code> {check.bug.title}
+          </Field>
+        )}
         {check.observation && <Field label="Qué pasó">{check.observation}</Field>}
         <Field label="Resultado">
           <span className={`result-label tone-${resultTone[check.state]}`}>
             <ResultIcon result={check.state} size={12} decorative />
             {shownResult ?? check.state}
           </span>
+          {expected && !shownResult && <span className="muted"> · esperado por el bug</span>}
           {check.date && <span className="muted"> · {calendarDate(check.date)}</span>}
           {check.duration_ms !== null && (
             <span className="muted"> · {duration(check.duration_ms)}</span>

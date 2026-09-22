@@ -17,6 +17,7 @@ warning = "Va a aparecer el diálogo de selección de certificado: elige uno par
 id = "the_service_channel_reports_a_bind_failure_instead_of_claiming_success"
 set = "canal.servicio"
 citation = "ServiceInvocationManager.java:136-143, 148-168; ProtocolInvocationLauncher.java:281-291"
+bug = "BUG-10"
 statement = """
 Si el canal no puede ligar ninguno de los puertos ofrecidos, la aplicación se lo dice a la persona
 usuaria en vez de terminar en silencio. La sede no puede enterarse por ningún cliente: sin puerto

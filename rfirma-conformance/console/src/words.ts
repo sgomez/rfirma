@@ -1,5 +1,8 @@
 import type { Assistance } from "./contract/Assistance";
+import type { CheckView } from "./contract/CheckView";
 import type { ClientKind } from "./contract/ClientKind";
+import type { InMaster } from "./contract/InMaster";
+import type { KnownBug } from "./contract/KnownBug";
 import type { ResultName } from "./contract/ResultName";
 import type { Summary } from "./contract/Summary";
 
@@ -35,6 +38,20 @@ export const assistanceName: Record<Assistance, string> = {
   click: "clic",
   person: "persona",
 };
+
+const inMasterName: Record<InMaster, string> = {
+  present: "sigue en master",
+  fixed: "corregido en master",
+  partial: "corregido a medias en master",
+};
+
+export function bugLabel(bug: KnownBug): string {
+  return `Bug AutoFirma 1.9.2 · ${inMasterName[bug.master]}`;
+}
+
+export function isAnExpectedFailure(check: CheckView, kind: ClientKind): boolean {
+  return kind === "autofirma" && check.bug !== null && check.state === "NO CONFORME";
+}
 
 export function clientName(kind: ClientKind | null | undefined): string {
   if (kind === "autofirma") return "AutoFirma";

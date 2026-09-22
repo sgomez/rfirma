@@ -88,6 +88,7 @@ warning = "Van a aparecer el diálogo de certificado y la ventana para guardar l
 id = "signandsave_accepts_an_elliptic_curve_algorithm"
 set = "firma-y-guarda"
 citation = "UrlParametersToSignAndSave.java:35, 67-77, 280-288; UrlParametersToSign.java:74-77"
+bug = "BUG-05"
 statement = """
 El catálogo de algoritmos incluye los de curva elíptica, y signandsave los acepta igual que sign.
 """
@@ -101,6 +102,7 @@ warning = "Van a aparecer el diálogo de certificado, con el único certificado 
 id = "signandsave_rejects_a_request_without_a_verb_with_saf_04"
 set = "firma-y-guarda"
 citation = "UrlParametersToSignAndSave.java:29, 237; ProtocolInvocationLauncherSignAndSave.java:155, 728"
+bug = "BUG-15"
 statement = """
 Una invocación de signandsave sin cop se rechaza con SAF_04.
 """
@@ -113,10 +115,10 @@ warning = "Va a aparecer el diálogo de certificado antes de que llegue el recha
 id = "signandsave_cancelled_at_the_visible_area_answers_saf_43"
 set = "firma-y-guarda"
 citation = "ProtocolInvocationLauncherSignAndSave.java:177-180, 495-502, 985-1004, 1040"
+bug = "BUG-13"
 statement = """
 En signandsave, con visibleSignature=want y sin el área en la petición, cancelar el diálogo del área
-aborta con SAF_43 como en sign; el listener marca la bandera de la clase de sign y la propia nunca
-se activa (BUG-13).
+aborta con SAF_43 como en sign.
 """
 drive = { mode = "v4", script = "signandsavepadesvisible" }
 assistance = "person"

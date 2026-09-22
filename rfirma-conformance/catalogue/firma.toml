@@ -137,6 +137,7 @@ warning = "Va a aparecer el diálogo de certificado."
 id = "format_auto_over_data_that_is_no_signature_is_rejected_with_saf_17"
 set = "firma"
 citation = "ProtocolInvocationLauncherUtil.java:167-177; AOSignerFactory.java:92-118"
+bug = "BUG-27"
 statement = """
 Una multifirma con format=auto sobre datos que no son una firma se aborta con SAF_17, en vez de
 firmarlos como si fuesen una primera firma.
@@ -566,6 +567,7 @@ id = "a_signature_that_cannot_be_timestamped_reports_the_failure"
 set = "firma"
 chapter = "12"
 citation = "AOCAdESSigner.java:543-550, 576-579; XAdESTspUtil.java:82-84"
+bug = "BUG-23"
 statement = """
 Si la petición pide sello de tiempo y no se puede sellar, la operación lo reporta con un código SAF
 en vez de devolver una firma sin sello.

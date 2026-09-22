@@ -32,7 +32,7 @@ note = "La firma vuelve sin el sello pedido y la operación no reporta que no se
 id = "sign_missing_or_invalid_operation_rejected"
 outcome = "no-conforme"
 cause = "BUG-15"
-note = "sign tampoco valida op: sigue hasta el formato (SAF_06) y, con uno válido, pide certificado y acaba en SAF_09."
+note = "sign tampoco valida op: sigue hasta el formato, y el guion manda uno que no existe, así que responde SAF_06 sin pedir certificado."
 
 [[known]]
 id = "signandsave_rejects_a_request_without_a_verb_with_saf_04"

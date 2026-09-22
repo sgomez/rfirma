@@ -1,4 +1,5 @@
 import type { CheckView } from "../contract/CheckView";
+import type { KnownBug } from "../contract/KnownBug";
 import type { ReportView } from "../contract/ReportView";
 import type { ResultName } from "../contract/ResultName";
 import type { SetView } from "../contract/SetView";
@@ -15,10 +16,25 @@ export function aCheck(id: string, state: ResultName = "PENDIENTE"): CheckView {
     question: null,
     assistance: "none",
     store: "rsa",
+    bug: null,
     state,
     observation: state === "PENDIENTE" ? null : "el trámite se completó",
     date: state === "PENDIENTE" ? null : "2026-09-21",
     duration_ms: state === "PENDIENTE" ? null : 3500,
+  };
+}
+
+export function aKnownBug(master: KnownBug["master"] = "present"): KnownBug {
+  return { id: "BUG-15", title: "Ausencia de validación de cop en signandsave", master };
+}
+
+export function withABug(view: ReportView, id: string, bug: KnownBug): ReportView {
+  return {
+    ...view,
+    sets: view.sets.map((set) => ({
+      ...set,
+      checks: set.checks.map((check) => (check.id === id ? { ...check, bug } : check)),
+    })),
   };
 }
 

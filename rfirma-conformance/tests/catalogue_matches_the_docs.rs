@@ -1,10 +1,11 @@
 //! El catálogo y la referencia se cruzan con la documentación de `docs/afirma/1.9.2/`: capítulos,
-//! tabla SAF del capítulo 15 y fichas del anexo A1.
+//! tabla SAF del capítulo 15, fichas del anexo A1 y su registro de bugs.
 
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 
 use rfirma_conformance::catalogue::read_the_catalogue;
+use rfirma_conformance::known_bug::{the_known_bugs, InMaster};
 
 #[derive(Debug, Default)]
 struct Entry {
@@ -12,6 +13,7 @@ struct Entry {
     chapter: String,
     declared: String,
     cited_cards: BTreeSet<String>,
+    bug: Option<String>,
 }
 
 #[derive(Debug)]
@@ -24,7 +26,9 @@ struct Known {
 #[derive(Debug, PartialEq, Eq)]
 struct A1Card {
     id: String,
+    title: String,
     unobservable: Option<String>,
+    master: Option<String>,
 }
 
 const THE_KNOWN_OUTCOMES: [&str; 2] = ["conforme", "no-conforme"];
@@ -66,6 +70,7 @@ fn an_entry(id: &str, chapter: &str, declared: &str) -> Entry {
         chapter: chapter.to_owned(),
         declared: declared.to_owned(),
         cited_cards: cards_cited_in(declared),
+        bug: None,
     }
 }
 
@@ -158,16 +163,79 @@ fn a1_cards_in(annex: &str) -> Vec<A1Card> {
             if let Some(colon) = rest.find(':') {
                 cards.push(A1Card {
                     id: format!("BUG-{}", rest[..colon].trim()),
+                    title: rest[colon + 1..].replace(['`', '*'], "").trim().to_owned(),
                     unobservable: None,
+                    master: None,
                 });
             }
             continue;
         }
-        if let (Some(card), Some(at)) = (cards.last_mut(), trimmed.find("**No observable:**")) {
-            card.unobservable = Some(trimmed[at + "**No observable:**".len()..].trim().to_owned());
+        let Some(card) = cards.last_mut() else {
+            continue;
+        };
+        if let Some(motive) = what_follows(trimmed, "**No observable:**") {
+            card.unobservable = Some(motive.trim().to_owned());
+        }
+        if let Some(state) = what_follows(trimmed, "**Estado en `master`:** **") {
+            card.master = state.split("**").next().map(str::to_owned);
         }
     }
     cards
+}
+
+fn what_follows<'a>(line: &'a str, mark: &str) -> Option<&'a str> {
+    line.find(mark).map(|at| &line[at + mark.len()..])
+}
+
+/// El estado en `master` que el registro da a lo que la ficha dice en prosa, o `None` si la
+/// prosa no es de ninguno de los tres.
+fn the_state_in_master_of(prose: &str) -> Option<InMaster> {
+    if prose.starts_with("Sigue presente") {
+        Some(InMaster::Present)
+    } else if prose.starts_with("Corregido a medias") || prose.starts_with("Corregido solo") {
+        Some(InMaster::Partial)
+    } else if prose.starts_with("Corregido") {
+        Some(InMaster::Fixed)
+    } else {
+        None
+    }
+}
+
+/// Las fichas del anexo tal y como las tiene que tener el registro: id, título y estado en `master`.
+fn the_registry_the_annex_asks_for(cards: &[A1Card]) -> Vec<(String, String, Option<InMaster>)> {
+    cards
+        .iter()
+        .map(|card| {
+            let master = card.master.as_deref().and_then(the_state_in_master_of);
+            (card.id.clone(), card.title.clone(), master)
+        })
+        .collect()
+}
+
+/// Las comprobaciones en que el catálogo y la referencia no dicen lo mismo del bug por el que el
+/// original falla: un resultado no conforme se explica con el bug que la comprobación declara, y una
+/// comprobación que declara un bug no puede estar prevista como conforme.
+fn bugs_out_of_step(known: &[Known], entries: &[Entry]) -> Vec<String> {
+    entries
+        .iter()
+        .filter_map(|entry| {
+            let known = known.iter().find(|known| known.id == entry.id)?;
+            let declared = entry.bug.as_deref().unwrap_or("ningún bug");
+            if known.outcome == "no-conforme" && entry.bug.as_deref() != Some(&known.cause) {
+                Some(format!(
+                    "{}: la referencia lo explica con {} y el catálogo declara {declared}",
+                    entry.id, known.cause
+                ))
+            } else if known.outcome != "no-conforme" && entry.bug.is_some() {
+                Some(format!(
+                    "{}: declara {declared} y la referencia lo da {}",
+                    entry.id, known.outcome
+                ))
+            } else {
+                None
+            }
+        })
+        .collect()
 }
 
 fn entries_whose_chapter_has_no_file(
@@ -253,7 +321,10 @@ fn the_catalogue() -> Vec<Entry> {
     read_the_catalogue()
         .unwrap_or_else(|complaint| panic!("{complaint}"))
         .iter()
-        .map(|check| an_entry(&check.id, &check.chapter, &check.the_declared_text()))
+        .map(|check| Entry {
+            bug: check.bug.map(|bug| bug.id.clone()),
+            ..an_entry(&check.id, &check.chapter, &check.the_declared_text())
+        })
         .collect()
 }
 
@@ -351,6 +422,79 @@ fn every_known_result_of_the_reference_names_a_check_of_the_catalogue_and_a_card
         known_results_that_are_wrong(&known, &entries, &cards).is_empty(),
         "hay resultados previstos de la referencia que no cuadran:\n  {}",
         known_results_that_are_wrong(&known, &entries, &cards).join("\n  ")
+    );
+}
+
+#[test]
+fn the_registry_of_known_bugs_is_the_a1_annex_with_its_state_in_master() {
+    let registry: Vec<(String, String, Option<InMaster>)> = the_known_bugs()
+        .iter()
+        .map(|bug| (bug.id.clone(), bug.title.clone(), Some(bug.master)))
+        .collect();
+
+    assert_eq!(registry, the_registry_the_annex_asks_for(&the_a1_cards()));
+}
+
+#[test]
+fn every_failure_the_reference_explains_by_a_bug_is_the_bug_its_check_declares() {
+    let entries = the_catalogue();
+    let known: Vec<Known> = the_references()
+        .iter()
+        .flat_map(|raw| known_in(raw))
+        .collect();
+
+    assert!(
+        bugs_out_of_step(&known, &entries).is_empty(),
+        "el catálogo y la referencia no dicen lo mismo del bug:\n  {}",
+        bugs_out_of_step(&known, &entries).join("\n  ")
+    );
+}
+
+#[test]
+fn a_card_gets_its_title_without_markdown_and_its_state_in_master_from_its_prose() {
+    let cards = a1_cards_in(
+        "### BUG-04: Un `load` *roto*\n* **Estado en `master`:** **Corregido a medias.** Algo.\n\n\
+         ### BUG-05: Otro\n* **Estado en `master`:** **Sigue presente.**\n\n\
+         ### BUG-06: Y otro\n* **Estado en `master`:** **Corregido por cambio de arquitectura.**\n\n\
+         ### BUG-07: Sin estado\n",
+    );
+
+    assert_eq!(
+        the_registry_the_annex_asks_for(&cards),
+        [
+            ("BUG-04", "Un load roto", Some(InMaster::Partial)),
+            ("BUG-05", "Otro", Some(InMaster::Present)),
+            ("BUG-06", "Y otro", Some(InMaster::Fixed)),
+            ("BUG-07", "Sin estado", None),
+        ]
+        .map(|(id, title, master)| (id.to_owned(), title.to_owned(), master))
+    );
+}
+
+#[test]
+fn a_bug_the_catalogue_and_the_reference_disagree_on_is_caught_and_named() {
+    let known = known_in(
+        "[[known]]\nid = \"a_one\"\noutcome = \"no-conforme\"\ncause = \"BUG-01\"\nnote = \"x\"\n\n\
+         [[known]]\nid = \"a_two\"\noutcome = \"conforme\"\ncause = \"BUG-02\"\nnote = \"x\"\n\n\
+         [[known]]\nid = \"a_three\"\noutcome = \"no-conforme\"\ncause = \"BUG-03\"\nnote = \"x\"\n",
+    );
+    let declaring = |id: &str, bug: Option<&str>| Entry {
+        bug: bug.map(str::to_owned),
+        ..an_entry(id, "05", "")
+    };
+    let entries = [
+        declaring("a_one", None),
+        declaring("a_two", Some("BUG-02")),
+        declaring("a_three", Some("BUG-03")),
+        declaring("a_four", Some("BUG-04")),
+    ];
+
+    assert_eq!(
+        bugs_out_of_step(&known, &entries),
+        [
+            "a_one: la referencia lo explica con BUG-01 y el catálogo declara ningún bug",
+            "a_two: declara BUG-02 y la referencia lo da conforme",
+        ]
     );
 }
 

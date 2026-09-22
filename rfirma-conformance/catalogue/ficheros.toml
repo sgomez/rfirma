@@ -78,6 +78,7 @@ warning = "Se va a pedir qué ficheros cargar: elige a la vez los dos preparados
 id = "save_answers_a_confirmation_the_published_client_recognises"
 set = "ficheros"
 citation = "CommandProcessorThread.java:290-305; AfirmaWebSocketServer.java:113; JSEUIManager.java:695-838"
+bug = "BUG-18"
 statement = """
 save pide destino y responde una confirmación de guardado que el cliente publicado reconoce como
 tal, no como una firma.

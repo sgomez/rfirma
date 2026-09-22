@@ -177,10 +177,10 @@ store = "several"
 id = "a_filter_of_unknown_kinds_alone_keeps_expired_certificates_hidden"
 set = "certificado"
 citation = "CertFilterManager.java:127-135, 261-268; MultipleCertificateFilter.java:34-41"
+bug = "BUG-31"
 statement = """
 Un filtro hecho solo de condiciones que no se reconocen no filtra nada, y tampoco debe contar como
-filtro de la sede: los certificados caducados se siguen ocultando como si no hubiera filtros
-(BUG-31).
+filtro de la sede: los certificados caducados se siguen ocultando como si no hubiera filtros.
 """
 drive = { mode = "v4", script = "filtersunknownalone" }
 assistance = "none"
