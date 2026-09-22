@@ -23,10 +23,15 @@ const THE_RETRIEVAL_FAILURE_NOT_UPLOADED = "the-retrieval-failure-not-uploaded";
 const A_SAF_AFTER_THE_START_TRAVELS_INTACT = "a-saf-after-the-start-travels-intact";
 const A_SAF_BEFORE_THE_START_IS_NOT_UPLOADED = "a-saf-before-the-start-is-not-uploaded";
 const THE_LOCAL_STORAGE_SERVLET_REFUSED = "the-local-storage-servlet-refused";
+const THE_UNDECIPHERABLE_REQUEST_NOT_UPLOADED = "the-undecipherable-request-not-uploaded";
+const THE_REFUSED_UPLOAD_ATTEMPTED = "the-refused-upload-attempted";
 
 const THE_STORAGE_PATH = "/afirma-signature-storage/StorageService";
 const THE_RETRIEVE_PATH = "/afirma-signature-retriever/RetrieveService";
 const THE_WAIT_MARK = "#WAIT";
+
+/** Lo que el RetrieveService entrega en lugar de la petición: no es Base64 y no descifra con ninguna clave. */
+const AN_UNDECIPHERABLE_REQUEST = "0.QUJDREVG";
 
 /** Lo que tarda como mucho entre dos avisos de espera, con holgura sobre los diez segundos. */
 const THE_WAIT_PERIOD_MS = { from: 8000, to: 13000 };
@@ -48,9 +53,10 @@ function listening(server, host) {
 
 /**
  * El StorageService y el RetrieveService por HTTP en el loopback, con el registro de cada petición;
- * `retrieving` puede contestar un `op=get` en lugar de lo guardado.
+ * `retrieving` puede contestar un `op=get` en lugar de lo guardado y `refusingUploads` contesta cada
+ * `op=put` con un 500.
  */
-async function anIntermediateServer({ retrieving = () => undefined } = {}) {
+async function anIntermediateServer({ retrieving = () => undefined, refusingUploads = false } = {}) {
   const stored = new Map();
   const requests = [];
   const serving = (listener) => async (request, response) => {
@@ -65,6 +71,11 @@ async function anIntermediateServer({ retrieving = () => undefined } = {}) {
     };
     requests.push(entry);
     let answer = "OK";
+    if (entry.op === "put" && refusingUploads) {
+      response.writeHead(500, { "content-type": "text/plain; charset=utf-8" });
+      response.end("err-00:= La sede no guarda nada");
+      return;
+    }
     if (entry.op === "put") {
       stored.set(entry.id, entry.dat);
       emit({ event: "stored", id: String(entry.id), dat: String(entry.dat) });
@@ -238,38 +249,42 @@ function theFileidIn(requests) {
   return requests.find((entry) => entry.op === "put")?.id ?? null;
 }
 
-/** Una firma larga cuyo `fileid` el RetrieveService contesta con un error. */
-async function theRetrievalFailureScript() {
-  const server = await anIntermediateServer({
-    retrieving: (entry, requests) =>
-      entry.id === theFileidIn(requests) ? "err-01:= La sede no entrega la petición" : undefined,
-  });
-  AutoScript.setServlets(server.storage, server.retrieve);
-  const settling = (event) => {
-    const fileid = theFileidIn(server.requests);
-    const asked = server.getsFrom(THE_RETRIEVE_PATH).some((entry) => entry.id === fileid);
-    const uploaded = theUploadedResults(server).filter((entry) => entry.id !== fileid);
-    emit(
-      aMeasuredConditionEvent(
-        THE_RETRIEVAL_FAILURE_NOT_UPLOADED,
-        asked ? uploaded.length === 0 : null,
-        !asked
-          ? "la aplicación no llegó a pedir la petición al RetrieveService"
-          : uploaded.length === 0
-            ? "la aplicación pidió la petición, recibió el error y no subió nada"
-            : `la aplicación subió ${uploaded.map((entry) => entry.dat).join(", ")}`,
-      ),
+/**
+ * Una firma larga cuyo `fileid` el RetrieveService contesta con `answer`: la aplicación lo pide y,
+ * sin la petición, no tiene dónde subir nada.
+ */
+function aSpoiledRetrievalScript(answer, condition) {
+  return async () => {
+    const server = await anIntermediateServer({
+      retrieving: (entry, requests) => (entry.id === theFileidIn(requests) ? answer : undefined),
+    });
+    AutoScript.setServlets(server.storage, server.retrieve);
+    const settling = (event) => {
+      const fileid = theFileidIn(server.requests);
+      const asked = server.getsFrom(THE_RETRIEVE_PATH).some((entry) => entry.id === fileid);
+      const uploaded = theUploadedResults(server).filter((entry) => entry.id !== fileid);
+      emit(
+        aMeasuredConditionEvent(
+          condition,
+          asked ? uploaded.length === 0 : null,
+          !asked
+            ? "la aplicación no llegó a pedir la petición al RetrieveService"
+            : uploaded.length === 0
+              ? `la aplicación pidió la petición, recibió ${answer} y no subió nada`
+              : `la aplicación subió ${uploaded.map((entry) => entry.dat).join(", ")}`,
+        ),
+      );
+      settle(event);
+    };
+    AutoScript.sign(
+      aDocumentTooLongForTheUrl().toString("base64"),
+      "SHA256withRSA",
+      "CAdES",
+      "mode=explicit",
+      (signature) => settling({ event: "success", result: String(signature) }),
+      (type, message) => settling({ event: "error", type: String(type), message: String(message) }),
     );
-    settle(event);
   };
-  AutoScript.sign(
-    aDocumentTooLongForTheUrl().toString("base64"),
-    "SHA256withRSA",
-    "CAdES",
-    "mode=explicit",
-    (signature) => settling({ event: "success", result: String(signature) }),
-    (type, message) => settling({ event: "error", type: String(type), message: String(message) }),
-  );
 }
 
 /** Una firma por servidor intermedio resuelta cuando contesta, o al rendirse la página. */
@@ -337,6 +352,28 @@ async function theLocalStorageScript() {
   );
 }
 
+/** Una firma cuyo StorageService contesta con un 500 a cada subida: la aplicación tiene que intentarla. */
+async function theRefusedUploadScript() {
+  const server = await anIntermediateServer({ refusingUploads: true });
+  AutoScript.setServlets(server.storage, server.retrieve);
+  const signed = await aSignature("rfirma", "SHA256withRSA", "CAdES");
+  const attempts = server.putsTo(THE_STORAGE_PATH).filter((entry) => entry.dat !== THE_WAIT_MARK);
+  emit(
+    aMeasuredConditionEvent(
+      THE_REFUSED_UPLOAD_ATTEMPTED,
+      attempts.length > 0 ? true : null,
+      attempts.length > 0
+        ? `la aplicación intentó subir el resultado ${attempts.length} veces y el StorageService lo rechazó`
+        : `la aplicación no intentó subir nada; la página acabó con ${signed.message ?? "una firma"}`,
+    ),
+  );
+  settle(
+    signed.signature
+      ? { event: "success", result: signed.signature }
+      : { event: "error", ...signed },
+  );
+}
+
 /** El lote remoto de siempre, con la respuesta por servidor intermedio. */
 async function theBatchThroughTheServerScript() {
   const server = await anIntermediateServer();
@@ -359,9 +396,18 @@ export const RELAY_SCRIPTS = {
     WAIT_ANNOUNCED_EVERY_TEN_SECONDS,
   ]),
   relaytwice: throughTheServer(theTwoSelectionsScript, [EACH_OPERATION_LAUNCHED_APART]),
-  relayretrievalfailure: throughTheServer(theRetrievalFailureScript, [
-    THE_RETRIEVAL_FAILURE_NOT_UPLOADED,
-  ]),
+  relayretrievalfailure: throughTheServer(
+    aSpoiledRetrievalScript(
+      "err-01:= La sede no entrega la petición",
+      THE_RETRIEVAL_FAILURE_NOT_UPLOADED,
+    ),
+    [THE_RETRIEVAL_FAILURE_NOT_UPLOADED],
+  ),
+  relayundecipherable: throughTheServer(
+    aSpoiledRetrievalScript(AN_UNDECIPHERABLE_REQUEST, THE_UNDECIPHERABLE_REQUEST_NOT_UPLOADED),
+    [THE_UNDECIPHERABLE_REQUEST_NOT_UPLOADED],
+  ),
+  relayrefusedupload: throughTheServer(theRefusedUploadScript, [THE_REFUSED_UPLOAD_ATTEMPTED]),
   relayrefusals: throughTheServer(theRefusalsScript, [
     A_SAF_AFTER_THE_START_TRAVELS_INTACT,
     A_SAF_BEFORE_THE_START_IS_NOT_UPLOADED,

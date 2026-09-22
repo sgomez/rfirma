@@ -103,15 +103,44 @@ condition = ["a-saf-after-the-start-travels-intact", "a-saf-before-the-start-is-
 warning = "La segunda firma lleva un algoritmo que no se admite: AutoFirma enseña un diálogo de error; ciérralo."
 
 [[check]]
-id = "the_intermediate_server_failures_answer_their_own_codes"
+id = "an_undecipherable_request_answers_saf_15"
 set = "canal.intermedio"
-citation = "ProtocolInvocationLauncher.java:313-320, 883; ProtocolInvocationLauncherSign.java:198-202; ProtocolInvocationLauncherBatch.java:196-218"
+citation = "ProtocolInvocationLauncher.java:659-676; ProtocolInvocationLauncherUtil.java:72-82; CypherDataManager.java:45-60"
 statement = """
-Los fallos propios del servidor intermedio tienen su código: SAF_16 si no se recuperan los datos de
-rtservlet, SAF_15 si no se descifran con key, SAF_12 si no se cifra el resultado y SAF_11 si no se
-puede subir.
+Si lo que rtservlet entrega por el fileid no se descifra con la key, la aplicación termina con SAF_15
+sin subir nada a stservlet: la sede no recibe respuesta.
 """
-unmeasurable = "Ninguno de estos códigos llega a la sede: se detectan antes de empezar la operación o al subir el resultado, y solo los enseña el diálogo de error. SAF_16 lo mide a_retriever_error_answers_saf_16; SAF_12 no se puede provocar desde fuera del cliente."
+drive = { mode = "relay", script = "relayundecipherable" }
+assistance = "person"
+patience_secs = 120
+condition = "the-undecipherable-request-not-uploaded"
+question = "¿mostró la aplicación un error SAF_15? [s/n]"
+person = { yes = "la aplicación mostró SAF_15", no = "la aplicación no mostró SAF_15", yes_means = "conforme" }
+warning = "El servidor intermedio de la suite entrega una petición que no se puede descifrar: si la aplicación muestra un error, fíjate en su código antes de cerrarlo."
+
+[[check]]
+id = "a_refused_upload_answers_saf_11"
+set = "canal.intermedio"
+citation = "ProtocolInvocationLauncher.java:721, 870-885; UrlHttpManagerImpl.java:285-295"
+statement = """
+Si stservlet rechaza la subida del resultado, la aplicación lo avisa con SAF_11.
+"""
+drive = { mode = "relay", script = "relayrefusedupload" }
+assistance = "person"
+patience_secs = 120
+condition = "the-refused-upload-attempted"
+question = "¿mostró la aplicación un error SAF_11? [s/n]"
+person = { yes = "la aplicación mostró SAF_11", no = "la aplicación no mostró SAF_11", yes_means = "conforme" }
+warning = "Va a aparecer el diálogo de certificado para firmar: elige uno. El servidor intermedio de la suite rechaza el resultado: si la aplicación muestra un error, fíjate en su código antes de cerrarlo."
+
+[[check]]
+id = "a_result_that_cannot_be_ciphered_answers_saf_12"
+set = "canal.intermedio"
+citation = "ProtocolInvocationLauncherSign.java:198-202; ProtocolInvocationLauncherBatch.java:177"
+statement = """
+Si el resultado no se puede cifrar con la key, la aplicación termina con SAF_12.
+"""
+unmeasurable = "El cifrado solo falla por un error interno de la aplicación: ninguna key que la sede pueda mandar lo provoca."
 
 [[check]]
 id = "the_storage_servlet_is_validated_like_the_retrieve_servlet"
