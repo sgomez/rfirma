@@ -41,7 +41,6 @@ pub struct Header {
     pub os: String,
     pub os_version: String,
     pub client_version: String,
-    pub transport: String,
     pub date: String,
 }
 
@@ -50,7 +49,6 @@ pub struct HeaderCoordinates {
     pub os: String,
     pub os_version: String,
     pub client_version: String,
-    pub transport: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -92,7 +90,6 @@ impl Report {
                     os: coordinates.os,
                     os_version: coordinates.os_version,
                     client_version: coordinates.client_version,
-                    transport: coordinates.transport,
                     date: today(),
                 },
                 checks: BTreeMap::new(),
@@ -280,7 +277,6 @@ mod tests {
             os: "linux".to_owned(),
             os_version: "6.0".to_owned(),
             client_version: "1.9.2".to_owned(),
-            transport: "websocket".to_owned(),
         }
     }
 
@@ -432,6 +428,27 @@ mod tests {
 
         assert_eq!(seen.state_of("a_new_one"), Some(CheckState::Pending));
         assert_eq!(std::fs::read_to_string(&path).unwrap(), written);
+    }
+
+    #[test]
+    fn a_report_whose_header_still_carries_a_transport_opens() {
+        let path = tempfile::NamedTempFile::new().unwrap().path().to_owned();
+        Report::create(
+            &path,
+            "un-binario",
+            ClientKind::Rfirma,
+            &a_catalogue_of(&["v4_echo_greeting"]),
+            some_coordinates(),
+        )
+        .unwrap();
+        let mut written: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
+        written["header"]["transport"] = "websocket".into();
+        std::fs::write(&path, written.to_string()).unwrap();
+
+        let seen = Report::read(&path).unwrap();
+
+        assert_eq!(seen.header().client_version, "1.9.2");
     }
 
     #[test]

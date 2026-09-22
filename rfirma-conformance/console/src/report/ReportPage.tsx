@@ -74,7 +74,6 @@ export function ReportPage() {
             <Meta label="Sistema">
               {view.header.os} {view.header.os_version}
             </Meta>
-            <Meta label="Transporte">{view.header.transport}</Meta>
             <Meta label="Fecha">{calendarDate(view.header.date)}</Meta>
           </dl>
         </div>

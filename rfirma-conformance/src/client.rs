@@ -109,9 +109,6 @@ const THE_AUTOFIRMA_ROOTS: &[&str] = &[
     "/usr/share/ca-certificates/Autofirma/Autofirma_ROOT.crt",
 ];
 
-/// El transporte que se anota en las coordenadas de un informe.
-pub(crate) const THE_TRANSPORT: &str = "websocket";
-
 #[derive(Debug, Clone, Serialize, TS)]
 #[ts(export)]
 pub(crate) struct Client {
@@ -154,7 +151,6 @@ struct IsolatedStore {
 pub(crate) struct DeducedCoordinates {
     os: String,
     os_version: String,
-    transport: &'static str,
 }
 
 /// Resuelve el cliente de clase `kind`, con el binario y la raíz dados a mano si los hay; cada queja
@@ -227,7 +223,6 @@ pub(crate) fn the_deduced_coordinates() -> DeducedCoordinates {
     DeducedCoordinates {
         os: uname("-s"),
         os_version: uname("-r"),
-        transport: THE_TRANSPORT,
     }
 }
 

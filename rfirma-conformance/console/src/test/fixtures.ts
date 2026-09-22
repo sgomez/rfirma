@@ -53,7 +53,6 @@ export function aReportView(): ReportView {
       os: "Linux",
       os_version: "6.8.0",
       client_version: "1.9.2",
-      transport: "websocket",
       date: "2026-09-21",
     },
     summary: summaryOf(sets.flatMap((set) => set.checks)),

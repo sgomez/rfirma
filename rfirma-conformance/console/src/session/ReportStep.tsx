@@ -141,7 +141,6 @@ const FIELDS: [keyof NewReport, string, string?][] = [
   ["client_version", "Versión del cliente", "nadie puede deducirla"],
   ["os", "Sistema"],
   ["os_version", "Versión del sistema"],
-  ["transport", "Transporte"],
 ];
 
 function NewReportModal({ onClose }: { onClose: () => void }) {
@@ -152,7 +151,6 @@ function NewReportModal({ onClose }: { onClose: () => void }) {
     client_version: "",
     os: "",
     os_version: "",
-    transport: "",
   });
   const [complaint, setComplaint] = useState<string | null>(null);
 

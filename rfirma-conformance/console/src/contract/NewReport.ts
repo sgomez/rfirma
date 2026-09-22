@@ -3,4 +3,4 @@
 /**
  * Las coordenadas con las que se crea un informe, tal y como llegan de la página.
  */
-export type NewReport = { name: string, client_version: string, os: string, os_version: string, transport: string, };
+export type NewReport = { name: string, client_version: string, os: string, os_version: string, };

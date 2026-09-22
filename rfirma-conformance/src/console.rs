@@ -95,7 +95,6 @@ pub(crate) struct NewReport {
     client_version: String,
     os: String,
     os_version: String,
-    transport: String,
 }
 
 #[derive(Clone)]
@@ -256,7 +255,6 @@ impl Console {
             os: new.os,
             os_version: new.os_version,
             client_version: new.client_version,
-            transport: new.transport,
         };
         let mut session = self.shared.lock();
         if session.busy() {
@@ -1081,7 +1079,6 @@ drive = { mode = "v4", script = "protocol-v4" }
                 os: "Linux".to_owned(),
                 os_version: "6.0".to_owned(),
                 client_version: "1.0".to_owned(),
-                transport: "websocket".to_owned(),
             },
         )
         .unwrap();

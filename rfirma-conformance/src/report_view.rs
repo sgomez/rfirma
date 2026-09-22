@@ -174,7 +174,6 @@ drive = { mode = "v4", script = "save" }
                 os: "Linux".to_owned(),
                 os_version: "6.0".to_owned(),
                 client_version: "1.9.2".to_owned(),
-                transport: "websocket".to_owned(),
             },
         )
         .unwrap();
