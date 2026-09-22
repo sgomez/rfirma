@@ -5,7 +5,9 @@ use std::collections::BTreeSet;
 use std::path::PathBuf;
 use std::time::Duration;
 
-use serde::Deserialize;
+use serde::{Deserialize, Deserializer};
+
+use crate::harness::{the_harness_named, Harness};
 
 /// El vocabulario cerrado de `set`, en el orden en que se leen sus ficheros.
 pub(crate) const THE_SETS: &[&str] = &[
@@ -44,8 +46,8 @@ pub(crate) struct Check {
     pub statement: String,
     #[serde(default)]
     pub drive: Option<Drive>,
-    #[serde(default)]
-    pub harness: Option<String>,
+    #[serde(default, deserialize_with = "a_registered_harness")]
+    pub harness: Option<&'static Harness>,
     #[serde(default)]
     pub expects_saf: Option<String>,
     #[serde(default)]
@@ -59,6 +61,15 @@ pub(crate) struct Check {
     /// Si es el saludo de su conjunto: lo abre y, si no se cumple, el resto no se corre.
     #[serde(default)]
     pub greeting: bool,
+}
+
+fn a_registered_harness<'de, D: Deserializer<'de>>(
+    deserializer: D,
+) -> Result<Option<&'static Harness>, D::Error> {
+    let name = String::deserialize(deserializer)?;
+    the_harness_named(&name)
+        .map(Some)
+        .ok_or_else(|| serde::de::Error::custom(format!("el arnés «{name}» no existe")))
 }
 
 #[derive(Debug, Deserialize)]
@@ -139,6 +150,7 @@ fn complaints_about(checks: &[Check]) -> Vec<String> {
         sets_outside_the_vocabulary(checks),
         empty_fields(checks),
         malformed_unmeasurable_entries(checks),
+        entries_without_a_body(checks),
         greetings_that_do_not_open_their_set(checks),
         person_entries_without_a_question_or_a_warning(checks),
     ]
@@ -192,6 +204,14 @@ fn malformed_unmeasurable_entries(checks: &[Check]) -> Vec<String> {
             }
             _ => None,
         })
+        .collect()
+}
+
+fn entries_without_a_body(checks: &[Check]) -> Vec<String> {
+    checks
+        .iter()
+        .filter(|check| check.drive.is_none() && check.unmeasurable.is_none())
+        .map(|check| format!("{}: ni se conduce ni se declara no medible", check.id))
         .collect()
 }
 
@@ -394,11 +414,47 @@ statement = "Algo se rechaza con SAF_03."
     fn an_empty_statement_or_citation_is_named() {
         let checks = entries(
             "[[check]]\nid = \"a_one\"\nset = \"errores\"\nchapter = \"15\"\n\
-             citation = \"\"\nstatement = \"  \"\n",
+             citation = \"\"\nstatement = \"  \"\nunmeasurable = \"no llega\"\n",
         );
         assert_eq!(
             complaints_about(&checks),
             vec!["a_one: «citation» vacío", "a_one: «statement» vacío"]
+        );
+    }
+
+    #[test]
+    fn an_entry_that_is_neither_driven_nor_unmeasurable_is_named() {
+        let checks = entries(&an_entry("a_one", "errores", ""));
+        assert_eq!(
+            complaints_about(&checks),
+            vec!["a_one: ni se conduce ni se declara no medible"]
+        );
+    }
+
+    #[test]
+    fn an_entry_that_names_a_harness_outside_the_registry_is_rejected() {
+        let complaint = the_catalogue_in(&an_entry(
+            "a_one",
+            "errores",
+            &format!("{DRIVEN}\nharness = \"an_absent_one\""),
+        ))
+        .unwrap_err();
+        assert!(
+            complaint.contains("el arnés «an_absent_one» no existe"),
+            "{complaint}"
+        );
+    }
+
+    #[test]
+    fn an_entry_that_names_a_registered_harness_carries_it() {
+        let checks = entries(&an_entry(
+            "a_one",
+            "errores",
+            &format!("{DRIVEN}\nharness = \"save_confirmation\""),
+        ));
+        assert_eq!(
+            checks[0].harness.map(|harness| harness.name),
+            Some("save_confirmation")
         );
     }
 

@@ -19,6 +19,7 @@ consola. Sus pruebas se corren con `cargo test` dentro de este directorio; las d
 | `src/client.rs` | El cliente a prueba y qué cliente es: binario, envoltorio aislado, raíz de confianza y almacén. |
 | `src/catalogue.rs` | La lectura del catálogo y la validación de su forma, que si falla no deja arrancar. |
 | `src/checks.rs` | El cuerpo ejecutable: cómo se conduce cada comprobación y cómo se resuelve su resultado, sin escribir el informe. |
+| `src/harness.rs` | El registro de arneses que el catálogo liga por nombre: cada uno con cómo mide, qué ficheros prepara y cómo juzga. |
 | `src/verdicts.rs` | Las reglas que traducen lo observado a resultado. |
 | `src/outcome.rs` | El resultado de una comprobación, sus nombres en pantalla y PENDIENTE. |
 | `src/validation.rs` | La validación de un informe contra una referencia: validado o sus discrepancias, que son fallos de la suite o de la referencia. |
@@ -28,7 +29,6 @@ consola. Sus pruebas se corren con `cargo test` dentro de este directorio; las d
 | `src/livelog.rs` | La línea de registro marcada por procedencia (`sede`, `cliente`, `suite`), en fichero y en vivo. |
 | `src/comparison.rs` | La comparación de dos informes, comprobación a comprobación en el orden del catálogo y con su conjunto. |
 | `tests/catalogue_matches_the_docs.rs` | El cruce del catálogo y la referencia con `docs/afirma/1.9.2/`: capítulos, tabla SAF y fichas A1. |
-| `tests/catalogue_matches_the_harnesses.rs` | El cruce del catálogo con los arneses de `checks.rs`, leído como texto. |
 | `.cargo/config.toml` | Dónde deja ts-rs los tipos del contrato: `console/src/contract/`. |
 | `console/` | La consola web, un proyecto pnpm propio con React y Vite, fuera de `rfirma-app` y del CI; `just conformance-console` la compila en `console/dist/`. |
 | `console/src/contract/` | Los tipos del JSON y del SSE, generados por ts-rs desde Rust y commiteados; no se editan a mano. |

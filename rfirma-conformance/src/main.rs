@@ -7,6 +7,7 @@ mod client;
 mod comparison;
 mod console;
 mod errand;
+mod harness;
 mod livelog;
 mod outcome;
 mod report;
