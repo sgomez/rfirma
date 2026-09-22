@@ -98,7 +98,7 @@ contenido.
 drive = { mode = "service", script = "signdaturl" }
 assistance = "click"
 condition = "the-url-in-dat-downloaded-and-signed"
-warning = "Va a aparecer el diálogo de certificado: la sede sirve por HTTP el documento cuya URL viaja en dat."
+warning = "Si el cliente descarga la URL que viaja en dat, aparece el diálogo de certificado: elige cualquiera. Si la descarga falla, AutoFirma enseña en su lugar un diálogo de error: ciérralo para que llegue el SAF_03."
 
 [[check]]
 id = "dat_that_is_not_base64_is_signed_literally"

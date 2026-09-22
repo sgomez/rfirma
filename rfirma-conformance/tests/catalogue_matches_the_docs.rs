@@ -212,14 +212,17 @@ fn the_registry_the_annex_asks_for(cards: &[A1Card]) -> Vec<(String, String, Opt
         .collect()
 }
 
-/// Las comprobaciones en que el catálogo y la referencia no dicen lo mismo del bug por el que el
-/// original falla: un resultado no conforme se explica con el bug que la comprobación declara, y una
-/// comprobación que declara un bug no puede estar prevista como conforme.
+/// Las comprobaciones en que el catálogo y la referencia de AutoFirma 1.9.2 no dicen lo mismo del
+/// bug por el que falla: toda comprobación que declara un bug está prevista no conforme por ese bug.
 fn bugs_out_of_step(known: &[Known], entries: &[Entry]) -> Vec<String> {
     entries
         .iter()
         .filter_map(|entry| {
-            let known = known.iter().find(|known| known.id == entry.id)?;
+            let Some(known) = known.iter().find(|known| known.id == entry.id) else {
+                return entry.bug.as_ref().map(|bug| {
+                    format!("{}: declara {bug} y la referencia no la nombra", entry.id)
+                });
+            };
             let declared = entry.bug.as_deref().unwrap_or("ningún bug");
             if known.outcome == "no-conforme" && entry.bug.as_deref() != Some(&known.cause) {
                 Some(format!(
@@ -436,12 +439,11 @@ fn the_registry_of_known_bugs_is_the_a1_annex_with_its_state_in_master() {
 }
 
 #[test]
-fn every_failure_the_reference_explains_by_a_bug_is_the_bug_its_check_declares() {
+fn every_check_that_declares_a_bug_is_expected_to_fail_by_it_in_the_reference() {
     let entries = the_catalogue();
-    let known: Vec<Known> = the_references()
-        .iter()
-        .flat_map(|raw| known_in(raw))
-        .collect();
+    let known = known_in(&read(
+        &crate_dir().join("reference").join("autofirma-1.9.2.toml"),
+    ));
 
     assert!(
         bugs_out_of_step(&known, &entries).is_empty(),
@@ -494,6 +496,7 @@ fn a_bug_the_catalogue_and_the_reference_disagree_on_is_caught_and_named() {
         [
             "a_one: la referencia lo explica con BUG-01 y el catálogo declara ningún bug",
             "a_two: declara BUG-02 y la referencia lo da conforme",
+            "a_four: declara BUG-04 y la referencia no la nombra",
         ]
     );
 }

@@ -354,10 +354,10 @@ condition = "a-send-part-out-of-range-answers-saf-11"
 [[check]]
 id = "a_failed_save_over_the_service_channel_answers_saf_11"
 set = "canal.servicio"
-citation = "CommandProcessorThread.java:137-140, 226-229, 333-347"
+citation = "CommandProcessorThread.java:137-140, 226-229, 333-347; ProtocolInvocationLauncher.java:516-521; UrlParametersToSave.java:141-142"
 statement = """
-Un guardado por cmd= que no termina en OK ni en CANCEL, como uno sin datos, recibe SAF_11 en vez
-del código con el que falló.
+Un guardado por cmd= que no termina en OK ni en CANCEL recibe SAF_11 en vez del código con el que
+falló: uno sin datos falla con SAF_03 y la sede recibe SAF_11.
 """
 drive = { mode = "service", script = "protocol-service-failed-save" }
 assistance = "click"

@@ -35,7 +35,7 @@ function theImplicitContentOf(signature) {
 }
 
 /** Un `sign()` en CAdES implícito, que mide con `measuring` la firma recibida. */
-function aSignOf(dat, measuring) {
+function aSignOf(dat, measuring, failing = settlingTheError) {
   AutoScript.sign(
     dat,
     "SHA256withRSA",
@@ -45,24 +45,40 @@ function aSignOf(dat, measuring) {
       emit(measuring(theImplicitContentOf(String(signature))));
       settle({ event: "success", result: String(signature), certificate: String(certificate) });
     },
-    settlingTheError,
+    failing,
   );
 }
 
+/** Si falla después de descargar la URL, lo que falló no es la descarga y no se mide nada. */
 async function theSignOfAUrlInDatScript() {
   const served = await aDocumentServed(THE_SERVED_DOCUMENT);
-  aSignOf(served.url, (content) => {
-    const signed = content?.equals(THE_SERVED_DOCUMENT) ?? false;
-    return aConditionEvent(
-      THE_URL_IN_DAT_DOWNLOADED_AND_SIGNED,
-      served.requested && signed,
-      !served.requested
-        ? "nadie pidió la URL que viajaba en dat"
-        : signed
-          ? "se descargó la URL de dat y la firma contiene lo que sirvió"
-          : "se descargó la URL de dat, pero la firma no contiene lo que sirvió",
-    );
-  });
+  aSignOf(
+    served.url,
+    (content) => {
+      const signed = content?.equals(THE_SERVED_DOCUMENT) ?? false;
+      return aConditionEvent(
+        THE_URL_IN_DAT_DOWNLOADED_AND_SIGNED,
+        served.requested && signed,
+        !served.requested
+          ? "nadie pidió la URL que viajaba en dat"
+          : signed
+            ? "se descargó la URL de dat y la firma contiene lo que sirvió"
+            : "se descargó la URL de dat, pero la firma no contiene lo que sirvió",
+      );
+    },
+    (type, message) => {
+      if (!served.requested) {
+        emit(
+          aConditionEvent(
+            THE_URL_IN_DAT_DOWNLOADED_AND_SIGNED,
+            false,
+            `nadie pidió la URL que viajaba en dat y el cliente contestó ${type}: ${message}`,
+          ),
+        );
+      }
+      settlingTheError(type, message);
+    },
+  );
 }
 
 function theSignOfALiteralDatScript() {

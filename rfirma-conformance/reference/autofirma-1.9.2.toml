@@ -69,3 +69,15 @@ id = "a_local_xml_batch_is_refused_before_asking_for_a_certificate"
 outcome = "no-conforme"
 cause = "BUG-16"
 note = "Sin jsonbatch, el lote va al firmador XML con las URL nulas: pide certificado y sólo después responde SAF_03."
+
+[[known]]
+id = "a_filter_of_unknown_kinds_alone_keeps_expired_certificates_hidden"
+outcome = "no-conforme"
+cause = "BUG-31"
+note = "El filtro vacío deja pasar también el caducado: con dos certificados, headless ya no elige solo, sale el diálogo de selección y el trámite no vuelve."
+
+[[known]]
+id = "signandsave_cancelled_at_the_visible_area_answers_saf_43"
+outcome = "no-conforme"
+cause = "BUG-13"
+note = "Cancelar el área no aborta: sigue al certificado y a dónde guardar, y contesta CANCEL si se cancela uno de ellos o la firma si se aceptan, nunca SAF_43."
