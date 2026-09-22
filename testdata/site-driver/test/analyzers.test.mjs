@@ -5,6 +5,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
+import { deflateSync } from "node:zlib";
 
 import {
   signsTheData,
@@ -178,6 +179,21 @@ describe("the signature field reader", () => {
   it("ignores rectangles that are no signature field", () => {
     const link = "<< /Type /Annot /Subtype /Link /Rect [10 10 50 50] >>";
     assert.deepEqual(theSignatureRectangles(aPdfWith(link)), []);
+  });
+
+  it("reads a field compressed inside an object stream", () => {
+    const objects = "<</Type/Catalog>><</Type/Annot/Subtype/Widget/Rect[100 100 300 200]/FT/Sig>>";
+    const header = "3 0 4 17 ";
+    const stream = deflateSync(Buffer.from(header + objects, "latin1"));
+    const pdf = Buffer.concat([
+      Buffer.from(
+        `%PDF-1.7\n5 0 obj\n<</Type/ObjStm/N 2/First ${header.length}/Filter/FlateDecode/Length ${stream.length}>>stream\n`,
+        "latin1",
+      ),
+      stream,
+      Buffer.from("\nendstream\nendobj\n%%EOF\n", "latin1"),
+    ]);
+    assert.deepEqual(theSignatureRectangles(pdf), [[100, 100, 300, 200]]);
   });
 });
 

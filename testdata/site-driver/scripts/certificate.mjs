@@ -149,11 +149,12 @@ function unansweredMeansAsked(condition) {
 }
 
 function settlingThe(answer) {
-  settle(
-    answer.error
-      ? { event: "error", type: answer.error.split(": ")[0], message: answer.error }
-      : { event: "success", data: answer.certificate },
-  );
+  if (!answer.error) {
+    settle({ event: "success", data: answer.certificate });
+    return;
+  }
+  const [type] = answer.error.split(": ");
+  settle({ event: "error", type, message: answer.error.slice(type.length + 2) });
 }
 
 /** Una selección desatendida con `properties` que tiene que devolver `expected` del kit. */
