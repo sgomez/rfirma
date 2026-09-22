@@ -17,7 +17,7 @@ consola. Sus pruebas se corren con `cargo test` dentro de este directorio; las d
 | `src/console.rs` | La sesión: cliente e informe elegidos, la cola, el único hilo que corre las comprobaciones y las preguntas a la persona. |
 | `src/report_view.rs` | La vista de un informe, igual lo corra la sesión o no: conjuntos en el orden del catálogo con sus recuentos; no sabe de la sesión. |
 | `src/snapshot.rs` | El estado de la sesión activa que recibe la página: la vista de su informe más cliente, cola, comprobación en curso y pregunta. |
-| `src/client.rs` | El cliente a prueba y qué cliente es: binario, envoltorio aislado, raíz de confianza y almacén. |
+| `src/client.rs` | El cliente a prueba y qué cliente es: binario y un perfil aislado por almacén (`rsa`, `ec`, `token`), cada uno con su envoltorio y su raíz de confianza. |
 | `src/catalogue.rs` | La lectura del catálogo y la validación de su forma, que si falla no deja arrancar. |
 | `src/checks.rs` | El cuerpo ejecutable: cómo se conduce cada comprobación y cómo se resuelve su resultado, sin escribir el informe. |
 | `src/harness.rs` | El registro de arneses que el catálogo liga por nombre: cada uno con cómo mide, qué ficheros prepara y cómo juzga. |
