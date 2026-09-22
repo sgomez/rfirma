@@ -45,11 +45,9 @@ describe("the session", () => {
     if (attended) attended.assistance = "click";
     const { server, user } = renderConsoleAt("/", aSnapshot({ report }));
 
-    await user.click(
-      await screen.findByRole("button", { name: /Solo las que corren solas \(1\)/ }),
-    );
+    await user.click(await screen.findByRole("button", { name: /Solo las automáticas \(1\)/ }));
     await user.click(screen.getByRole("button", { name: /Las que te necesitan \(1\)/ }));
-    await user.click(screen.getByRole("button", { name: /Correr todo \(2\)/ }));
+    await user.click(screen.getByRole("button", { name: /Ejecutar todas \(2\)/ }));
     await user.keyboard("p");
 
     expect(server.posted("/api/run")).toEqual([
@@ -203,6 +201,6 @@ describe("the session", () => {
     );
     await user.click(screen.getByRole("radio", { name: "rFirma" }));
 
-    expect(screen.getByText("cambios sin resolver")).toBeInTheDocument();
+    expect(screen.getByText("cambios sin aplicar")).toBeInTheDocument();
   });
 });

@@ -15,7 +15,7 @@ describe("a report page", () => {
     expect(screen.queryByRole("button", { name: /Pendientes/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Todo" })).not.toBeInTheDocument();
     expect(screen.queryByRole("region", { name: "1. Cliente" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Validar contra referencia…" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Comparar con la referencia…" })).toBeInTheDocument();
   });
 
   it("reads the report from the session while the session runs it", async () => {

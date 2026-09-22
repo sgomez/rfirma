@@ -34,7 +34,7 @@ export function countOf(summary: Summary, result: ResultName): number {
 }
 
 export const assistanceName: Record<Assistance, string> = {
-  none: "nada: corre sola",
+  none: "nada: es automática",
   click: "elegir o pulsar en un diálogo",
   person: "fijarte en lo que pasa y contestar",
 };

@@ -560,7 +560,7 @@ citation = "ProtocolInvocationLauncherSign.java:203-207"
 statement = """
 Un fallo al postprocesar la firma, que en el original sólo provoca un plugin, se rechaza con SAF_42.
 """
-unmeasurable = "Exige instalar en el cliente un plugin que falle al postprocesar, y la suite corre contra una instalación sin plugins."
+unmeasurable = "Exige instalar en el cliente un plugin que falle al postprocesar, y la suite se ejecuta contra una instalación sin plugins."
 
 [[check]]
 id = "a_signature_that_cannot_be_timestamped_reports_the_failure"

@@ -214,7 +214,7 @@ impl Console {
         {
             let mut session = self.shared.lock();
             if session.busy() {
-                return Err("no se cambia de cliente con un informe corriendo".to_owned());
+                return Err("no se cambia de cliente con un informe en marcha".to_owned());
             }
             session.resolving_client = true;
             self.shared.publish(&session);
@@ -297,7 +297,7 @@ impl Console {
         let open = session
             .report
             .as_ref()
-            .ok_or("elige o crea un informe antes de correr nada")?;
+            .ok_or("elige o crea un informe antes de ejecutar nada")?;
         let client = session.client.as_ref().ok_or(NO_CLIENT)?;
         if let Some(complaint) = open
             .report
@@ -348,7 +348,7 @@ impl Console {
         if fresh.is_empty() {
             return Err(match &request {
                 Request::Check { check } => format!("«{check}» ya está en la cola o en curso"),
-                _ => "no hay nada pendiente que correr en esa tanda que no esté ya en la cola"
+                _ => "no hay nada pendiente que ejecutar en esa tanda que no esté ya en la cola"
                     .to_owned(),
             });
         }
@@ -456,7 +456,7 @@ impl Console {
 }
 
 const NO_CLIENT: &str = "elige un cliente primero";
-const NO_SWITCHING_REPORTS: &str = "no se cambia de informe con otro corriendo";
+const NO_SWITCHING_REPORTS: &str = "no se cambia de informe con otro en marcha";
 
 impl Shared {
     fn lock(&self) -> MutexGuard<'_, Session> {
@@ -695,9 +695,9 @@ fn run_the_next_group(shared: &Arc<Shared>) {
 
 fn the_call_to_the_person(tranche: Assistance) -> &'static str {
     match tranche {
-        Assistance::None => "Vienen comprobaciones que corren solas. Pulsa «Estoy aquí» para seguir.",
+        Assistance::None => "Vienen comprobaciones automáticas. Pulsa «Estoy aquí» para seguir.",
         Assistance::Click => {
-            "Ya han terminado las comprobaciones que corren solas. Las siguientes abren diálogos \
+            "Ya han terminado las comprobaciones automáticas. Las siguientes abren diálogos \
              del cliente de firma en los que tendrás que elegir un certificado o pulsar un botón. \
              Pulsa «Estoy aquí» cuando estés delante del ordenador."
         }

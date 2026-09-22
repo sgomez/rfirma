@@ -455,7 +455,7 @@ fn complaints_about_the_drive_of(check: &Check, manifest: &Manifest) -> Vec<Stri
     }
     if mode.is_some() && !script.modes.contains(&drive.mode) {
         complaints.push(format!(
-            "{id}: el guion «{}» no corre en el modo «{}»",
+            "{id}: el guion «{}» no funciona en el modo «{}»",
             drive.script, drive.mode
         ));
     }
@@ -915,7 +915,7 @@ statement = "Algo se rechaza con SAF_03."
                 "drive = { mode = \"service\", script = \"protocol-v4\" }\n\
                  condition = \"a-candidate-port-bound\""
             ),
-            vec!["a_one: el guion «protocol-v4» no corre en el modo «service»"]
+            vec!["a_one: el guion «protocol-v4» no funciona en el modo «service»"]
         );
     }
 

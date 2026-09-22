@@ -26,7 +26,7 @@ function theScriptToRun(scriptName, modeName) {
   if (!script.modes.includes(modeName)) {
     return refusing(
       "mode_not_accepted",
-      `el guion «${scriptName}» no corre en el modo «${modeName}»: ${script.modes.join(", ")}`,
+      `el guion «${scriptName}» no funciona en el modo «${modeName}»: ${script.modes.join(", ")}`,
     );
   }
   return script;

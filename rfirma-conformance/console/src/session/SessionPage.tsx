@@ -120,7 +120,7 @@ export function SessionPage() {
                 })}
                 <span className="divider" aria-hidden="true" />
                 <button type="button" className="button ghost" onClick={() => setValidating(true)}>
-                  Validar contra referencia…
+                  Comparar con la referencia…
                 </button>
               </>
             )
@@ -160,9 +160,9 @@ export function SessionPage() {
 }
 
 const TRANCHE_BUTTONS: [Tranches, string, (assistance: Assistance) => boolean][] = [
-  ["unattended", "Solo las que corren solas", (assistance) => assistance === "none"],
+  ["unattended", "Solo las automáticas", (assistance) => assistance === "none"],
   ["attended", "Las que te necesitan", (assistance) => assistance !== "none"],
-  ["all", "Correr todo", () => true],
+  ["all", "Ejecutar todas", () => true],
 ];
 
 function pendingIn(view: ReportView, takes: (assistance: Assistance) => boolean): number {

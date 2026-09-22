@@ -89,7 +89,7 @@ impl Probe {
             }
         }
         if let Some(why) = the_unmet_precondition_of(head) {
-            self.witness.harness(&format!("no se corre: {why}"));
+            self.witness.harness(&format!("no se ejecuta: {why}"));
             return vec![Settlement::pending(head, why)].into();
         }
         if head.needs_a_person() {

@@ -88,7 +88,7 @@ export function ReportPage() {
           </div>
         </div>
         <button type="button" className="button" onClick={() => setValidating(true)}>
-          Validar contra referencia…
+          Comparar con la referencia…
         </button>
       </header>
       <ReportBody

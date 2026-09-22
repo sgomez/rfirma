@@ -42,17 +42,19 @@ export function ClientStep({ snapshot, busy }: { snapshot: Snapshot; busy: boole
         binary: draft.binary.trim() || null,
         trust_root: draft.trustRoot.trim() || null,
       })
-      .catch(complain("No se pudo resolver el cliente"));
+      .catch(complain("No se pudo preparar el cliente"));
 
   return (
     <Step
       number={1}
       label="Cliente"
       done={client !== null && !unsettled}
-      marked={unsettled ? "cambios sin resolver" : null}
+      marked={unsettled ? "cambios sin aplicar" : null}
       summary={
         snapshot.resolving_client ? (
-          <span className="working">Resolviendo… monta el almacén aislado</span>
+          <span className="working">
+            Preparando el cliente y su almacén de certificados aislado…
+          </span>
         ) : client ? (
           <span className="facts">
             <strong>{clientName(client.kind)}</strong>
