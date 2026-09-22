@@ -3,58 +3,15 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::net::TcpListener;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
-use std::thread::{sleep, spawn, JoinHandle};
 use std::time::{Duration, Instant};
-
-use base64::engine::general_purpose::STANDARD;
-use base64::Engine as _;
 
 use crate::catalogue::{Check, Drive};
 use crate::errand::ErrandOutcome;
+use crate::harness::THE_HARNESSES;
 use crate::outcome::outcome_name;
 use crate::outcome::{CheckState, Outcome};
-use crate::verdicts::{
-    the_outcome_for_a_bind_failure, the_outcome_for_a_cancelled_dialogue,
-    the_outcome_for_a_headless_batch, the_outcome_for_a_pinned_certificate,
-    the_outcome_for_a_private_key_check, the_outcome_for_a_proposed_save_name,
-    the_outcome_for_a_requested_input_document, the_outcome_for_a_save_confirmation,
-    the_outcome_for_a_saved_signature, the_outcome_for_a_timestamp,
-    the_outcome_for_a_visible_signature_area, the_outcome_for_an_automatic_selection,
-    the_outcome_for_an_interactive_load, the_outcome_for_an_overwrite_confirmation, the_outcome_of,
-    CheckOutcome,
-};
+use crate::verdicts::{the_outcome_of, CheckOutcome};
 use crate::Probe;
-
-/// Los arneses que la suite sabe correr; el catálogo los liga por nombre y la guarda de grada A
-/// exige que ninguno sobre ni falte.
-pub(crate) const THE_HARNESSES: &[&str] = &[
-    "automatic_certificate_selection",
-    "cancelled_dialogue",
-    "headless_batch_item",
-    "interactive_file_load",
-    "occupied_service_ports",
-    "overwrite_confirmation",
-    "pinned_certificate",
-    "private_key_check",
-    "proposed_save_name",
-    "requested_input_document",
-    "save_confirmation",
-    "signature_saved_to_disk",
-    "supported_websocket_versions",
-    "timestamp_in_the_signature",
-    "visible_signature_area",
-];
-
-/// El OID PKCS#9 `id-aa-signatureTimeStampToken` (1.2.840.113549.1.9.16.2.14), con su etiqueta y
-/// su longitud DER: si aparece en la firma, el sello de tiempo se estampó de verdad.
-const THE_TIMESTAMP_TOKEN_OID: [u8; 13] = [
-    0x06, 0x0B, 0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x09, 0x10, 0x02, 0x0E,
-];
-
-/// Cada cuánto mira el ocupante si le han dicho que suelte el puerto.
-const THE_OCCUPIER_HEARTBEAT: Duration = Duration::from_millis(50);
 
 /// Cómo quedó una entrada al terminar su grupo: resuelta, o pendiente con su motivo.
 #[derive(Debug)]
@@ -169,13 +126,10 @@ impl Probe {
     /// la comprobación, tras borrar los que dejó cualquier otra; `None` si no necesita ninguno.
     fn prepare_the_fixtures_of(&self, check: &Check) -> Result<Option<String>, String> {
         let directory = the_isolated_home_of(&self.client);
-        for (name, _) in THE_HARNESSES
-            .iter()
-            .flat_map(|harness| the_fixtures_for(Some(harness)))
-        {
+        for (name, _) in THE_HARNESSES.iter().flat_map(|harness| harness.fixtures) {
             let _ = std::fs::remove_file(directory.join(name));
         }
-        let fixtures = the_fixtures_for(check.harness.as_deref());
+        let fixtures = check.harness.map_or(&[][..], |harness| harness.fixtures);
         if fixtures.is_empty() {
             return Ok(None);
         }
@@ -203,23 +157,13 @@ impl Probe {
             .drive
             .as_ref()
             .unwrap_or_else(|| panic!("la comprobación «{}» no dice cómo conducirse", check.id));
-        if let Some(harness) = check.harness.as_deref() {
-            assert!(
-                THE_HARNESSES.contains(&harness),
-                "la comprobación «{}» pide un arnés que no existe: {harness}",
-                check.id
-            );
-        }
-        match check.harness.as_deref() {
-            Some("occupied_service_ports") => {
-                let _occupied = OccupiedPorts::at(&check.required_ports());
-                self.drive(check, drive)
-            }
-            _ => self.drive(check, drive),
+        match check.harness {
+            Some(harness) => harness.measure(self, check, drive),
+            None => self.drive(check, drive),
         }
     }
 
-    fn drive(&self, check: &Check, drive: &Drive) -> ErrandOutcome {
+    pub(crate) fn drive(&self, check: &Check, drive: &Drive) -> ErrandOutcome {
         self.run_errand(
             &check.id,
             &drive.script,
@@ -234,83 +178,11 @@ impl Probe {
         outcome: &ErrandOutcome,
         answer: Option<&str>,
     ) -> CheckOutcome {
-        match check.harness.as_deref() {
-            Some("save_confirmation") => {
-                the_outcome_for_a_save_confirmation(outcome, answer.unwrap_or_default())
+        match check.harness {
+            Some(harness) => {
+                harness.the_outcome_for(self, check, outcome, answer.unwrap_or_default())
             }
-            Some("private_key_check") => {
-                the_outcome_for_a_private_key_check(outcome, answer.unwrap_or_default())
-            }
-            Some("signature_saved_to_disk") => {
-                the_outcome_for_a_saved_signature(outcome, answer.unwrap_or_default())
-            }
-            Some("proposed_save_name") => {
-                the_outcome_for_a_proposed_save_name(outcome, answer.unwrap_or_default())
-            }
-            Some("requested_input_document") => {
-                the_outcome_for_a_requested_input_document(outcome, answer.unwrap_or_default())
-            }
-            Some("overwrite_confirmation") => {
-                the_outcome_for_an_overwrite_confirmation(outcome, answer.unwrap_or_default())
-            }
-            Some("cancelled_dialogue") => {
-                the_outcome_for_a_cancelled_dialogue(outcome, answer.unwrap_or_default())
-            }
-            Some("interactive_file_load") => {
-                the_outcome_for_an_interactive_load(check, outcome, answer.unwrap_or_default())
-            }
-            Some("automatic_certificate_selection") => {
-                the_outcome_for_an_automatic_selection(outcome, answer.unwrap_or_default())
-            }
-            Some("pinned_certificate") => {
-                the_outcome_for_a_pinned_certificate(outcome, answer.unwrap_or_default())
-            }
-            Some("headless_batch_item") => {
-                the_outcome_for_a_headless_batch(outcome, answer.unwrap_or_default())
-            }
-            Some("visible_signature_area") => {
-                the_outcome_for_a_visible_signature_area(outcome, answer.unwrap_or_default())
-            }
-            Some("timestamp_in_the_signature") => the_outcome_for_a_timestamp(
-                outcome,
-                outcome
-                    .signature
-                    .as_deref()
-                    .is_some_and(the_signature_carries_a_timestamp),
-            ),
-            Some("occupied_service_ports") => {
-                the_outcome_for_a_bind_failure(outcome, answer.unwrap_or_default())
-            }
-            Some("supported_websocket_versions") => {
-                self.the_outcome_for_both_channel_versions(outcome)
-            }
-            _ => the_outcome_of(check, outcome),
-        }
-    }
-
-    /// Las dos versiones que el canal WebSocket admite se miden abriendo las dos: la que trae el
-    /// trámite y la de la versión 4, que se conduce aquí mismo.
-    fn the_outcome_for_both_channel_versions(&self, over_v3: &ErrandOutcome) -> CheckOutcome {
-        let over_v4 = self.run_errand(
-            "websocket_channel_supported_versions_accepted-v4",
-            "protocol-v4",
-            "v4",
-            self.patience,
-        );
-        match (the_channel_opened(over_v3), the_channel_opened(&over_v4)) {
-            (Some(true), Some(true)) => {
-                CheckOutcome::of(Outcome::Compliant, "las versiones 3 y 4 abren canal")
-            }
-            (Some(false), _) => {
-                CheckOutcome::of(Outcome::Noncompliant, "la versión 3 no abrió canal")
-            }
-            (_, Some(false)) => {
-                CheckOutcome::of(Outcome::Noncompliant, "la versión 4 no abrió canal")
-            }
-            _ => CheckOutcome::of(
-                Outcome::NotObservable,
-                "el cliente no llegó a hablar por uno de los dos canales",
-            ),
+            None => the_outcome_of(check, outcome),
         }
     }
 }
@@ -318,23 +190,6 @@ impl Probe {
 /// Lo que la comprobación necesita y el informe no trae; `None` si no le falta nada.
 fn the_unmet_precondition_of(check: &Check, declared_store: &str) -> Option<String> {
     the_unmet_need_of(check, declared_store).or_else(|| the_occupied_port_complaint(check))
-}
-
-/// Si el canal llegó a abrirse: el conductor lo dice midiendo alguna condición, y no decir nada no
-/// es lo mismo que decir que no.
-fn the_channel_opened(outcome: &ErrandOutcome) -> Option<bool> {
-    if !outcome.launched {
-        return None;
-    }
-    if outcome.protocol_conditions.is_empty() {
-        return outcome.error_code.is_some().then_some(false);
-    }
-    Some(
-        outcome
-            .protocol_conditions
-            .iter()
-            .any(|condition| condition.outcome == Outcome::Compliant),
-    )
 }
 
 /// Las comprobaciones que comparten trámite con `head` y pueden resolverse del mismo trámite: las
@@ -424,19 +279,6 @@ fn the_isolated_home_of(launcher: &std::path::Path) -> &std::path::Path {
     launcher.parent().unwrap_or(launcher)
 }
 
-/// Los ficheros que la persona tiene que encontrar ya hechos para poder completar el trámite.
-fn the_fixtures_for(harness: Option<&str>) -> &'static [(&'static str, &'static str)] {
-    match harness {
-        Some("overwrite_confirmation") => &[("challenge.bin", "Este fichero se sobrescribe.\n")],
-        Some("interactive_file_load") => &[
-            ("primero.bin", "Primer fichero de carga.\n"),
-            ("segundo.bin", "Segundo fichero de carga.\n"),
-        ],
-        Some("requested_input_document") => &[("documento.txt", "Documento para firmar.\n")],
-        _ => &[],
-    }
-}
-
 /// Cuánto va a tardar una comprobación que tarda por diseño; `None` si no declara
 /// `espera:<segundos>`.
 fn the_wait_announcement_of(check: &Check) -> Option<String> {
@@ -476,85 +318,10 @@ fn port_is_occupied(port: u16) -> bool {
     TcpListener::bind(("0.0.0.0", port)).is_err()
 }
 
-/// Si la firma en Base64 lleva el sello de tiempo estampado de verdad: busca el OID del atributo
-/// no firmado, no basta con que la petición llevara un `tsaURL`.
-fn the_signature_carries_a_timestamp(signature: &str) -> bool {
-    let Ok(bytes) = STANDARD.decode(signature) else {
-        return false;
-    };
-    bytes
-        .windows(THE_TIMESTAMP_TOKEN_OID.len())
-        .any(|window| window == THE_TIMESTAMP_TOKEN_OID)
-}
-
-/// Los puertos que la comprobación del socket ocupa para que el cliente no pueda ligarlos, cerrando
-/// cada conexión que les llegue: un ocupante mudo colgaría al cliente publicado en el primer eco, y
-/// entonces no se rinde nunca y no hay nada que medir.
-struct OccupiedPorts {
-    release: Arc<AtomicBool>,
-    occupiers: Vec<JoinHandle<()>>,
-}
-
-impl OccupiedPorts {
-    fn at(ports: &[u16]) -> Self {
-        let release = Arc::new(AtomicBool::new(false));
-        let occupiers = ports
-            .iter()
-            .map(|port| {
-                let listener = TcpListener::bind(("0.0.0.0", *port))
-                    .unwrap_or_else(|error| panic!("no pude ocupar el puerto {port}: {error}"));
-                listener
-                    .set_nonblocking(true)
-                    .expect("el ocupante debería poder no bloquearse");
-                let release = Arc::clone(&release);
-                spawn(move || {
-                    while !release.load(Ordering::Relaxed) {
-                        match listener.accept() {
-                            Ok(_) => continue,
-                            Err(_) => sleep(THE_OCCUPIER_HEARTBEAT),
-                        }
-                    }
-                })
-            })
-            .collect();
-        Self { release, occupiers }
-    }
-}
-
-impl Drop for OccupiedPorts {
-    fn drop(&mut self) {
-        self.release.store(true, Ordering::Relaxed);
-        for occupier in self.occupiers.drain(..) {
-            let _ = occupier.join();
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::catalogue::{read_the_catalogue, the_catalogue_in};
-
-    #[test]
-    fn a_signature_without_the_timestamp_oid_is_not_stamped() {
-        let signature = STANDARD.encode(b"CMS SignedData sin nada de interes");
-        assert!(!the_signature_carries_a_timestamp(&signature));
-    }
-
-    #[test]
-    fn a_signature_with_the_timestamp_oid_is_stamped() {
-        let mut der = b"prefacio arbitrario".to_vec();
-        der.extend_from_slice(&THE_TIMESTAMP_TOKEN_OID);
-        der.extend_from_slice(b"resto arbitrario");
-        assert!(the_signature_carries_a_timestamp(&STANDARD.encode(der)));
-    }
-
-    #[test]
-    fn a_signature_that_is_not_base64_is_not_stamped() {
-        assert!(!the_signature_carries_a_timestamp(
-            "no es base64 ni de lejos: %%%"
-        ));
-    }
 
     #[test]
     fn the_briefing_names_the_warning_the_fixtures_and_the_question_to_come() {
@@ -602,15 +369,12 @@ warning = "Se va a pedir dónde guardar."
     fn the_checks_that_ask_for_files_find_them_prepared() {
         let catalogue = read_the_catalogue().unwrap();
         let prepared = |id: &str| {
-            the_fixtures_for(
-                catalogue
-                    .iter()
-                    .find(|check| check.id == id)
-                    .unwrap()
-                    .harness
-                    .as_deref(),
-            )
-            .len()
+            catalogue
+                .iter()
+                .find(|check| check.id == id)
+                .unwrap()
+                .harness
+                .map_or(0, |harness| harness.fixtures.len())
         };
 
         assert_eq!(
@@ -788,23 +552,6 @@ greeting = true
     #[test]
     fn the_reason_behind_a_failed_greeting_names_the_greeting() {
         assert!(the_reason_behind_a_failed_greeting("the_greeting").contains("«the_greeting»"));
-    }
-
-    #[test]
-    fn every_harness_the_catalogue_names_is_one_this_file_knows() {
-        let named: BTreeSet<&str> = read_the_catalogue()
-            .unwrap()
-            .iter()
-            .filter_map(|check| check.harness.clone())
-            .map(|harness| {
-                THE_HARNESSES
-                    .iter()
-                    .copied()
-                    .find(|known| *known == harness)
-                    .unwrap_or_else(|| panic!("arnés sin cuerpo: {harness}"))
-            })
-            .collect();
-        assert_eq!(named.len(), THE_HARNESSES.len());
     }
 
     #[test]
