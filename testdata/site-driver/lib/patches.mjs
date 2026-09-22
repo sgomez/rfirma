@@ -52,3 +52,27 @@ export function withTheDataDeclaredGzipped(source) {
       "\t\t\t}\n\t\t\tfunction buildUrlWithoutGzip (paramsObject) {",
   );
 }
+
+/** Quita `needcert=true` de la URL del lote, que el `autoscript.js` publicado siempre pone. */
+export function withoutNeedcertInTheBatch(source) {
+  source = replacingOrFailing(source, 'data.needcert = createKeyValuePair ("needcert", true);', "");
+  return replacingOrFailing(
+    source,
+    'data.needcert = generateDataKeyValue ("needcert",  true);',
+    "",
+  );
+}
+
+/** Escribe `jsonBatch` en la URL del lote, en vez del `jsonbatch` en minúsculas del publicado. */
+export function withJsonbatchCapitalised(source) {
+  source = replacingOrFailing(
+    source,
+    'createKeyValuePair ("jsonbatch", true);',
+    'createKeyValuePair ("jsonBatch", true);',
+  );
+  return replacingOrFailing(
+    source,
+    'generateDataKeyValue ("jsonbatch", true);',
+    'generateDataKeyValue ("jsonBatch", true);',
+  );
+}

@@ -15,3 +15,6 @@ export function aPublishedScript(
 export function aHandwrittenScript(run, { family, modes, conditions = [] }) {
   return { site: "handwritten", family, modes, conditions, benchOnly: false, run };
 }
+
+/** Un guion que el catálogo aún no conduce: hasta que lo haga, el manifiesto lo marca del banco. */
+export const NOT_YET_DRIVEN = { benchOnly: true };

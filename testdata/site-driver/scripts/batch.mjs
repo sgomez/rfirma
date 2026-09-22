@@ -3,14 +3,22 @@
 import { createServer } from "node:http";
 import { createServer as createTcpServer } from "node:net";
 
-import { aCondition, bytesOf, emit, settle, settlingTheError } from "../lib/events.mjs";
+import {
+  aCondition,
+  aMeasuredConditionEvent,
+  bytesOf,
+  emit,
+  settle,
+  settlingTheError,
+} from "../lib/events.mjs";
 import {
   theFrozen,
   thePdfOfTheTest,
   theReferenceSignature,
   theXmlDocument,
 } from "../lib/fixtures.mjs";
-import { aPublishedScript } from "../lib/script.mjs";
+import { withJsonbatchCapitalised, withoutNeedcertInTheBatch } from "../lib/patches.mjs";
+import { aPublishedScript, NOT_YET_DRIVEN } from "../lib/script.mjs";
 
 const THROUGH_BOTH_SERVLETS = "through-both-servlets";
 const THE_PRESIGNER_GETS_THE_CHAIN = "the-presigner-gets-the-batch-and-the-chain";
@@ -27,6 +35,9 @@ const THE_REST_SIGNED = "the-rest-signed";
 const THE_SUBOPERATION_DONE = "the-suboperation-done";
 const THE_ALGORITHM_OF_THE_KEY = "the-algorithm-of-the-key";
 const THE_URL_NEITHER_FETCHED_NOR_SIGNED = "the-url-neither-fetched-nor-signed";
+const NO_SERVLET_REACHED = "no-servlet-reached";
+const ONLY_THE_RESULT = "only-the-result";
+const THE_BATCH_READ_AS_XML = "the-batch-read-as-xml";
 
 /** Los parámetros de la query y los del cuerpo del POST, donde `UrlHttpManagerImpl` los manda. */
 async function theServletParameters(request) {
@@ -305,7 +316,11 @@ function theXmlPostsigner(query) {
   }
 
   const withPre = tridata.match(/<param n="PRE">/g) ?? [];
-  whatTheServletsReceived.postsign = { lote: null, ids: [], withPre: withPre.length };
+  whatTheServletsReceived.postsign = {
+    lote: null,
+    ids: [...tridata.matchAll(/<firma\b[^>]*\bId="([^"]+)"/g)].map((match) => match[1]),
+    withPre: withPre.length,
+  };
   emit({
     event: "postsign",
     signs: String(signs.length),
@@ -330,7 +345,7 @@ async function theBatchXmlScript() {
     postsigner,
     null,
     (result, certificate) => {
-      for (const condition of theXmlBatchConditions(String(result))) {
+      for (const condition of theXmlBatchConditions(String(result), String(certificate))) {
         emit({ event: "condition", ...condition });
       }
       settle({
@@ -345,10 +360,13 @@ async function theBatchXmlScript() {
   );
 }
 
-/** El lote XML pasó por los dos servlets, y la sede recibió el `<signs>` del postsigner tal cual. */
-function theXmlBatchConditions(result) {
+/** El lote XML se mide como el JSON: los dos servlets, la cadena, `PK1`, el resultado y el certificado. */
+function theXmlBatchConditions(result, certificate) {
   const { presign, postsign } = whatTheServletsReceived;
   const throughBoth = presign !== null && postsign !== null;
+  const withTheChain = presign !== null && presign.signs === 2 && presign.certs > 0;
+  const signedWithPk1 = postsign !== null && postsign.ids.length === 2 && postsign.withPre === 1;
+  const withTheCertificate = isADerCertificate(certificate);
   const compact = (text) => text.replace(/\s+/g, "");
   const asItCame =
     compact(bytesOf(result).toString("utf8")) ===
@@ -367,6 +385,27 @@ function theXmlBatchConditions(result) {
       asItCame
         ? "la sede recibió el <signs> del postsigner tal cual"
         : "la sede recibió algo distinto del <signs> que devolvió el postsigner",
+    ),
+    aCondition(
+      THE_PRESIGNER_GETS_THE_CHAIN,
+      withTheChain,
+      withTheChain
+        ? "el presigner recibió los dos documentos en xml y la cadena del firmante"
+        : "el presigner no recibió el lote XML entero con su cadena",
+    ),
+    aCondition(
+      THE_POSTSIGNER_GETS_PK1,
+      signedWithPk1,
+      signedWithPk1
+        ? "las dos firmas llegaron con PK1 y sólo la que lo pedía conservó su PRE"
+        : "el tridata XML no trae las dos firmas con PK1 y el PRE que piden",
+    ),
+    aCondition(
+      THE_CERTIFICATE_IN_THE_ANSWER,
+      withTheCertificate,
+      withTheCertificate
+        ? "la respuesta trae el certificado del firmante en DER"
+        : "la respuesta no trae el certificado del firmante",
     ),
   ];
 }
@@ -611,6 +650,92 @@ async function theLocalBatchWithAUrlScript() {
   });
 }
 
+/** El lote local con los dos servlets escuchando y nombrados en la URL: se cumple si nadie los llama. */
+async function theLocalBatchWithServletsAtHandScript() {
+  let reached = 0;
+  const aServletThatCounts = () =>
+    servletServing(() => {
+      reached++;
+      return { status: 500, body: "el lote local no debería llamar a ningún servlet" };
+    });
+  const presigner = await aServletThatCounts();
+  const postsigner = await aServletThatCounts();
+
+  AutoScript.setLocalBatchProcess(true);
+  AutoScript.createBatch("SHA256", "CAdES", "sign", null);
+  AutoScript.addDocumentToBatch("bin", theLocalBatchBinary().toString("base64"));
+  AutoScript.signBatchProcess(
+    false,
+    presigner,
+    postsigner,
+    null,
+    ...theBatchCallbacks((result) => {
+      const signed = signedAs(theLocalItems(result).get("bin"), "cms");
+      return [
+        aCondition(
+          NO_SERVLET_REACHED,
+          signed && reached === 0,
+          reached > 0
+            ? `el lote local llamó ${reached} veces a los servlets`
+            : signed
+              ? "el binario salió firmado sin llamar a ningún servlet"
+              : "el binario no salió firmado",
+        ),
+      ];
+    }),
+  );
+}
+
+/** Sin `needcert`, el lote vuelve sólo con el resultado: el cliente publicado no ve certificado. */
+function theResultAlone(result, certificate) {
+  const alone =
+    ["null", "undefined", ""].includes(certificate) &&
+    JSON.stringify(result) === JSON.stringify(JSON.parse(theFrozen("batch-postsign-result.json")));
+  return [
+    aCondition(
+      ONLY_THE_RESULT,
+      alone,
+      alone
+        ? "la respuesta del lote trae sólo el resultado del postsigner"
+        : `la respuesta del lote trae certificado (${certificate.slice(0, 16)}…) o un resultado distinto`,
+    ),
+  ];
+}
+
+/** Con `jsonBatch`, el lote se lee como XML heredado: al presigner le llega `xml` y no `json`. */
+async function theBatchWithJsonbatchCapitalisedScript() {
+  let received = null;
+  const presigner = await servletServing((query) => {
+    received = { xml: query.has("xml"), json: query.has("json") };
+    return { status: 400, body: "el lote de esta prueba no se prefirma" };
+  });
+  const theCondition = () =>
+    aMeasuredConditionEvent(
+      THE_BATCH_READ_AS_XML,
+      received === null ? null : received.xml && !received.json,
+      received === null
+        ? "el lote no llegó al presigner"
+        : `el presigner recibió ${received.json ? "json" : received.xml ? "xml" : "ni json ni xml"}`,
+    );
+
+  AutoScript.createBatch("SHA256", "CAdES", "sign");
+  AutoScript.addDocumentToBatch("uno", Buffer.from("primer documento").toString("base64"));
+  AutoScript.signBatchProcess(
+    true,
+    presigner,
+    presigner,
+    null,
+    (result, certificate) => {
+      emit(theCondition());
+      settle({ event: "success", result: String(result), certificate: String(certificate) });
+    },
+    (type, message) => {
+      emit(theCondition());
+      settlingTheError(type, message);
+    },
+  );
+}
+
 /** Un puerto del loopback que se ata y se suelta al momento, para que no lo atienda nadie. */
 function anUnattendedPort() {
   return new Promise((resolve) => {
@@ -658,7 +783,23 @@ export const BATCH_SCRIPTS = {
     { conditions: [THE_ERRORS_WITHOUT_POSTSIGNING] },
   ),
   batchxml: aPublishedScript(theBatchXmlScript, {
-    conditions: [THROUGH_BOTH_SERVLETS, THE_SIGNS_DOCUMENT_AS_IT_CAME],
+    conditions: [
+      THROUGH_BOTH_SERVLETS,
+      THE_SIGNS_DOCUMENT_AS_IT_CAME,
+      THE_PRESIGNER_GETS_THE_CHAIN,
+      THE_POSTSIGNER_GETS_PK1,
+      THE_CERTIFICATE_IN_THE_ANSWER,
+    ],
+  }),
+  batchwithoutneedcert: aPublishedScript(() => theBatchScript(thePresigner, theResultAlone), {
+    ...NOT_YET_DRIVEN,
+    conditions: [ONLY_THE_RESULT],
+    patch: withoutNeedcertInTheBatch,
+  }),
+  batchwithjsonbatchcapitalised: aPublishedScript(theBatchWithJsonbatchCapitalisedScript, {
+    ...NOT_YET_DRIVEN,
+    conditions: [THE_BATCH_READ_AS_XML],
+    patch: withJsonbatchCapitalised,
   }),
   batchdown: aPublishedScript(theBatchWithTheDownPresignerScript),
   batchloopbackservlet: aPublishedScript(
@@ -669,6 +810,10 @@ export const BATCH_SCRIPTS = {
   ),
   batchlocal: aPublishedScript(theLocalBatchScript, {
     conditions: [EVERY_ITEM_SIGNED, EACH_ITEM_IN_ITS_FORMAT],
+  }),
+  batchlocalwithservletsathand: aPublishedScript(theLocalBatchWithServletsAtHandScript, {
+    ...NOT_YET_DRIVEN,
+    conditions: [NO_SERVLET_REACHED],
   }),
   batchlocalillegible: aPublishedScript(theLocalBatchWithAnIllegibleItemScript, {
     conditions: [THE_SIGNED_ROLLED_BACK],

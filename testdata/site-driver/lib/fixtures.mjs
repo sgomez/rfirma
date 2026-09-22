@@ -56,6 +56,11 @@ function aOnePagePdf() {
   return Buffer.from(pdf, "latin1");
 }
 
+/** La firma CMS sin atributos CAdES, hecha con OpenSSL y un certificado propio, junto a la sede. */
+export function theCmsSignatureOfTheSite() {
+  return readFileSync(join(here, "cms-implicit.p7s"));
+}
+
 /** Una firma congelada del banco de referencia, la que reciben las multifirmas. */
 export function theReferenceSignature(name) {
   return readFileSync(join(here, "../reference", name));
