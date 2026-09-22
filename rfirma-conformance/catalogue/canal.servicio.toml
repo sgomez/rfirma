@@ -282,7 +282,7 @@ citation = "CommandProcessorThread.java:290-305; autoscript.js:3423-3428"
 statement = """
 Por el socket local, un guardado con éxito responde SAVE_OK, que el cliente publicado reconoce como
 confirmación y no confunde con una firma. La misma confirmación por WebSocket la mide el conjunto
-de operaciones.
+ficheros.
 """
 drive = { mode = "service", script = "save" }
 assistance = "person"

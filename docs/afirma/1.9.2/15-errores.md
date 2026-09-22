@@ -287,10 +287,14 @@ En la comunicación mediante socket local TCP con TLS:
 4. **Errores del propio canal socket**:
    - Falta de memoria (`OutOfMemoryError`): responde con el literal no numerado
      `MEMORY_ERROR` (`CommandProcessorThread.java:143, 481-487`).
-   - Parámetros del socket inválidos o sesión incorrecta: responde con
+   - Sesión incorrecta, lectura fallida u orden desconocida: responde con
      `SAF_03: Error en los parámetros de entrada` (`110, 116, 135`).
-   - Error de envío / I/O en socket: responde con `SAF_11` (`139`).
-   - Excepción no controlada en el comando: responde con `SAF_09` (`147`).
+   - Cualquier fallo dentro de la orden —un `cmd=` que no es una operación
+     `afirma://`, un `send=` fuera de rango, un `save` fallido o un error de
+     envío—: responde con `SAF_11`, porque `processCommand` lo envuelve en
+     `IOException` (`139`, `226-229`) (capítulo 04, §7.1).
+   - El `SAF_09` del `catch (Exception)` final (`147`) no se alcanza en la
+     práctica.
 5. **Intento de subida al servidor intermedio pese a operar por socket**: En las
    operaciones `batch`, `selectcert`, `save` y `load`, el `catch
    (SocketOperationException e)` invoca `sendDataToServer` sin comprobar

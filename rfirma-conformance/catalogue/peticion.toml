@@ -122,7 +122,7 @@ descomprimidos en vez de rechazar la petición.
 """
 drive = { mode = "v4", script = "signgzip" }
 assistance = "click"
-completes = {}
+condition = "the-uncompressed-data-signed"
 warning = "Va a aparecer el diálogo de certificado."
 
 [[check]]
@@ -185,7 +185,7 @@ set = "peticion"
 citation = "Version.java:21; ProtocolInvocationLauncherSign.java:143-147; ProtocolInvocationLauncher.java:741-745"
 statement = """
 Un mcv que no tiene forma de versión se rechaza con SAF_03. La versión que se alcanza y la que no,
-con su SAF_41, las mide el conjunto de versiones.
+con su SAF_41, las miden otras dos comprobaciones de este conjunto.
 """
 drive = { mode = "v4", script = "protocol-v4-rejections" }
 assistance = "click"
@@ -259,11 +259,18 @@ condition = "ksb64-malformed-passes"
 [[check]]
 id = "keystore_takes_precedence_over_ksb64"
 set = "peticion"
-citation = "UrlParameters.java:382-412"
+citation = "UrlParameters.java:382-412; ProtocolInvocationLauncherSelectCert.java:118-121"
 statement = """
 Si la petición trae keystore y ksb64, el almacén que se abre es el de keystore.
 """
-unmeasurable = "El almacén que se abre sólo se ve en la ventana de selección de certificado, y la suite monta un único almacén PKCS#11: nombren lo que nombren los dos parámetros, la persona acaba ante el mismo."
+drive = { mode = "v4", script = "protocol-v4-keystore-over-ksb64" }
+assistance = "person"
+store = "several"
+patience_secs = 180
+condition = "the-selection-answers-a-certificate"
+question = "¿ofreció la selección los certificados del almacén del sistema, sin pedir el PIN de un token? [s/n]"
+person = { yes = "se abrió el almacén que nombraba keystore", no = "se abrió otro almacén que el que nombraba keystore", yes_means = "conforme" }
+warning = "La sede nombra el almacén del sistema en keystore y el token de SoftHSM en ksb64: fíjate en qué almacén ofrece la selección y no des ningún PIN; elige un certificado o cancela."
 
 [[check]]
 id = "jvc_only_warns_below_one"

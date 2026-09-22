@@ -35,8 +35,9 @@ Un batchpresignerurl o batchpostsignerurl que apunta a localhost o a 127.0.0.1 s
 SAF_13 antes de pedir certificado alguno.
 """
 drive = { mode = "v4", script = "batchloopbackservlet" }
-assistance = "none"
+assistance = "click"
 saf = "SAF_13"
+warning = "AutoFirma enseña un diálogo de error antes de contestar el rechazo: ciérralo para que llegue la respuesta."
 
 [[check]]
 id = "a_batch_servlet_url_carrying_its_own_parameters_is_refused_with_saf_03"
@@ -47,8 +48,9 @@ Una URL de servlet del lote que trae parámetros propios (un ? o un =) se rechaz
 de pedir certificado alguno.
 """
 drive = { mode = "v4", script = "batchservletwithparameters" }
-assistance = "none"
+assistance = "click"
 saf = "SAF_03"
+warning = "AutoFirma enseña un diálogo de error antes de contestar el rechazo: ciérralo para que llegue la respuesta."
 
 [[check]]
 id = "the_presigner_receives_the_json_batch_and_the_signing_chain"

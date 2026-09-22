@@ -36,6 +36,7 @@ const THE_DIALOGUE_MIN_MS = 3000;
 const THE_REJECTION_WAITED_FOR_THE_DIALOGUE = "the-rejection-waited-for-the-dialogue";
 const THE_SECOND_OPERATION_REUSES_THE_CHANNEL = "the-second-operation-reuses-the-channel";
 const THE_NAME_ARRIVES_IN_UTF8 = "the-name-arrives-in-utf8";
+const THE_SELECTION_ANSWERS_A_CERTIFICATE = "the-selection-answers-a-certificate";
 
 function connectWebSocket(port) {
   return new Promise((resolve, reject) => {
@@ -210,6 +211,30 @@ async function theShownRejectionScript() {
       answer === null
         ? `nadie contestó en ${THE_DIALOGUE_PATIENCE_MS / 1000} s`
         : `${answer} a los ${(waitedMs / 1000).toFixed(1)} s`,
+    ),
+  );
+  settle({ event: "success" });
+}
+
+/** Una selección que nombra el almacén del sistema en `keystore` y el token de SoftHSM en `ksb64`. */
+async function theKeyStoreOverKsb64Script() {
+  const idSession = "Ks4Pr6Ec8Db0Ks2Bs4Xy";
+  const channel = await theProtocolV4ChannelOpening([54481, 54482, 54483], idSession);
+  if (!channel) return;
+  const token = Buffer.from("PKCS11:/usr/lib/softhsm/libsofthsm2.so").toString("base64");
+  const answer = await exchangeWithin(
+    channel.ws,
+    `afirma://selectcert?keystore=SHARED_NSS&ksb64=${token}&idsession=${idSession}`,
+    THE_DIALOGUE_PATIENCE_MS,
+  );
+  channel.ws.close();
+  emit(
+    aMeasuredConditionEvent(
+      THE_SELECTION_ANSWERS_A_CERTIFICATE,
+      answer === null ? null : !/^(SAF_|CANCEL)/.test(answer),
+      answer === null
+        ? `nadie contestó en ${THE_DIALOGUE_PATIENCE_MS / 1000} s`
+        : `contestó ${answer.slice(0, 40)}`,
     ),
   );
   settle({ event: "success" });
@@ -676,6 +701,9 @@ export const WEBSOCKET_SCRIPTS = {
   ),
   "protocol-v4-shown-rejection": onTheFourthProtocol(theShownRejectionScript, [
     THE_REJECTION_WAITED_FOR_THE_DIALOGUE,
+  ]),
+  "protocol-v4-keystore-over-ksb64": onTheFourthProtocol(theKeyStoreOverKsb64Script, [
+    THE_SELECTION_ANSWERS_A_CERTIFICATE,
   ]),
   loadnonascii: aPublishedScript(theNonAsciiNameLoadScript, {
     modes: ["v4", "v3", "service"],

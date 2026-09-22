@@ -91,6 +91,9 @@ Dónde encuentra el cliente sus certificados en un trámite. Es una lista cerrad
 - **rsa**: un único certificado RSA de pruebas, sin PIN. Es el de omisión.
 - **ec**: un único certificado de curva elíptica de pruebas, sin PIN.
 - **token**: el token PKCS#11 de pruebas, con su PIN y varios certificados.
+- **several**: varios certificados de pruebas sin PIN, para los filtros, el almacén que nombra la
+  sede y la fijación; el token queda alcanzable por su biblioteca, sin registrar.
+- **expired**: uno vigente y uno caducado, sin PIN, para ver qué oculta la selección.
 Es condición de lanzamiento: la suite prepara un perfil aislado por almacén, igual para cualquier
 cliente.
 _Avoid_: keystore, perfil (para el almacén)

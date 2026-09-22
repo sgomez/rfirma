@@ -896,10 +896,12 @@ bloque `try / catch` exhaustivo (`CommandProcessorThread.java:104-149`):
 
 | Excepción capturada | Origen típico | Código SAF asignado | Mensaje enviado en el log |
 |---|---|---|---|
-| `IllegalArgumentException` | Parámetros nulos o comando desconocido (`219`), `idSession` erróneo en `read` (`108`), error en `save` (`342`), índice de `send` inválido (`406`). | `SAF_03` (`ERROR_PARAMS`) | `"Parametros incorrectos"` (`135`) o `"ID de sesion erroneo"` (`110`). |
-| `IOException` | Fallo de lectura del socket (`114`) o fallo al escribir la respuesta (`137`). | `SAF_11` (`ERROR_SENDING_RESULT`) | `"No se pudieron leer los datos del socket"` (`116`) o `"Envio del resultado a la aplicacion"` (`139`). |
+| `IllegalArgumentException` en `read` | `idSession` erróneo (`108`). | `SAF_03` (`ERROR_PARAMS`) | `"ID de sesion erroneo"` (`110`). |
+| Cualquier otra excepción en `read` | Fallo de lectura del socket (`114`). | `SAF_03` (`ERROR_PARAMS`) | `"No se pudieron leer los datos del socket"` (`116`). |
+| `IllegalArgumentException` en `processCommand` | Orden desconocida: ni `echo=`, `cmd=`, `fragment=`, `firm=` ni `send=` (`247-250`). Se lanza antes del `switch` y no la envuelve nadie. | `SAF_03` (`ERROR_PARAMS`) | `"Parametros incorrectos"` (`135`). |
+| `IOException` | Fallo al escribir la respuesta y, sobre todo, cualquier excepción del `switch` de `processCommand`, que su `catch (Exception)` envuelve en `IOException` (`226-229`): un `cmd=` cuya URI no es una operación `afirma://` (`356-359`), un `send=` fuera de rango (`404-408`) o un `save` que no acaba en `OK` ni en `CANCEL` (`341-345`). Su `IllegalArgumentException` no llega a `run` como tal. | `SAF_11` (`ERROR_SENDING_RESULT`) | `"Envio del resultado a la aplicacion"` (`139`). |
 | `OutOfMemoryError` | Agotamiento del espacio de memoria de la JVM durante el parseo o la firma (`141`). | *(Sin código SAF)* | Envía el literal `"MEMORY_ERROR"` mediante `sendMemoryError` (`143, 481-487`). |
-| `Exception` (cualquier otra) | Errores durante la firma criptográfica o ejecución interna de `launch` (`145`). | `SAF_09` (`ERROR_SIGNATURE_FAILED`) | `"Error al procesar el comando"` (`147`). |
+| `Exception` (cualquier otra) | Ninguno en la práctica: `processCommand` envuelve en `IOException` lo que lanza su `switch`, incluida la ejecución de `launch` (`145`). | `SAF_09` (`ERROR_SIGNATURE_FAILED`) | `"Error al procesar el comando"` (`147`). |
 
 ### 7.2 La anomalía de `sendError`
 

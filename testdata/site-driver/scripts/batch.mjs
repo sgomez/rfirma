@@ -2,7 +2,7 @@
 
 import { createServer } from "node:http";
 import { createServer as createTcpServer } from "node:net";
-
+import { theCmsSignature } from "../lib/cms.mjs";
 import {
   aCondition,
   aMeasuredConditionEvent,
@@ -17,7 +17,6 @@ import {
   theReferenceSignature,
   theXmlDocument,
 } from "../lib/fixtures.mjs";
-import { theCmsSignature } from "../lib/cms.mjs";
 import {
   withJsonbatchCapitalised,
   withLocalBatchProcessOnAnXmlBatch,
