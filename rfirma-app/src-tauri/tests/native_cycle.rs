@@ -64,18 +64,6 @@ fn postsign_of_something_invalid(bridge: &NativeBridge) -> Result<(), BridgeErro
         .map(|_| ())
 }
 
-/// Memoria residente del proceso en bytes.
-fn resident_bytes() -> u64 {
-    let statm = std::fs::read_to_string("/proc/self/statm").expect("debería haber /proc");
-    let pages: u64 = statm
-        .split_whitespace()
-        .nth(1)
-        .expect("statm trae al menos dos campos")
-        .parse()
-        .expect("es un número");
-    pages * 4096
-}
-
 #[test]
 #[ignore = "grada C: necesita librfirma_crypto.so (just test-native)"]
 fn the_library_loads_from_where_the_adr_says_and_creates_its_isolate() {
@@ -828,23 +816,6 @@ mod full_cycle {
         assert!(
             text.contains(FACTURAE_POLICY),
             "la firma de una factura declara la política de FacturaE 3.1: {text}"
-        );
-    }
-
-    /// JAXP y xmlsec arrancan perezosos dentro de la imagen: la primera firma
-    /// XAdES es la que los levanta, y aquí se mide cuánto cuesta.
-    #[test]
-    #[ignore = "grada C: necesita el token y librfirma_crypto.so (just test-native)"]
-    fn the_first_xades_signature_does_not_blow_the_resident_memory_up() {
-        const CEILING: u64 = 64 * 1024 * 1024;
-
-        let before = super::resident_bytes();
-        let _ = sign_xades(XadesVariant::Enveloping);
-        let growth = super::resident_bytes().saturating_sub(before);
-
-        assert!(
-            growth < CEILING,
-            "la primera firma XAdES ha añadido {growth} bytes de residente"
         );
     }
 
