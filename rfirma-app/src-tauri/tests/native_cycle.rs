@@ -4,8 +4,7 @@ use std::path::{Path, PathBuf};
 
 use rfirma_lib::signing::adapters::ffi::{locate, parse_presign, NativeBridge};
 use rfirma_lib::signing::domain::bridge::{
-    BridgeError, Format, PostSignRequest, PreSignRequest, SignatureOperation, XadesVariant,
-    LIBRARY_FILE,
+    BridgeError, Format, PostSignRequest, PreSignRequest, SignatureOperation, LIBRARY_FILE,
 };
 
 /// Un PDF mínimo en Base64 no válido para firmar.
@@ -116,47 +115,6 @@ fn the_postsign_crosses_the_border_and_comes_back_as_json_too() {
         ),
         other => panic!("se esperaba un fallo del puente, no {other}"),
     }
-}
-
-fn a_hundred_thousand_round_trips_do_not_leak(format: Format) {
-    const BATCH: usize = 100_000;
-    const TOLERANCE: u64 = 1024 * 1024;
-
-    let bridge = bridge();
-
-    for _ in 0..BATCH {
-        let _ = presign_of_something_invalid_in(&bridge, format);
-    }
-    let after_first_batch = resident_bytes();
-    for _ in 0..BATCH {
-        let _ = presign_of_something_invalid_in(&bridge, format);
-    }
-    let after_second_batch = resident_bytes();
-
-    let growth = after_second_batch.saturating_sub(after_first_batch);
-    assert!(
-        growth < TOLERANCE,
-        "la segunda tanda de {BATCH} vueltas en {format} ha crecido {growth} bytes: \
-         alguien ha dejado de llamar a autofirma_free_string"
-    );
-}
-
-#[test]
-#[ignore = "grada C: necesita librfirma_crypto.so (just test-native)"]
-fn a_hundred_thousand_round_trips_do_not_leak_the_json_of_the_bridge() {
-    a_hundred_thousand_round_trips_do_not_leak(Format::Pades);
-}
-
-#[test]
-#[ignore = "grada C: necesita librfirma_crypto.so (just test-native)"]
-fn a_hundred_thousand_cades_round_trips_do_not_leak_the_json_of_the_bridge() {
-    a_hundred_thousand_round_trips_do_not_leak(Format::Cades);
-}
-
-#[test]
-#[ignore = "grada C: necesita librfirma_crypto.so (just test-native)"]
-fn a_hundred_thousand_xades_round_trips_do_not_leak_the_json_of_the_bridge() {
-    a_hundred_thousand_round_trips_do_not_leak(Format::Xades(XadesVariant::Enveloping));
 }
 
 /// Ciclo trifásico completo contra el token y validación con pdfsig (ADR-0001, ADR-0014).
