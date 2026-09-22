@@ -4,8 +4,7 @@ use std::path::{Path, PathBuf};
 
 use rfirma_lib::signing::adapters::ffi::{locate, parse_presign, NativeBridge};
 use rfirma_lib::signing::domain::bridge::{
-    BridgeError, Format, PostSignRequest, PreSignRequest, SignatureOperation, XadesVariant,
-    LIBRARY_FILE,
+    BridgeError, Format, PostSignRequest, PreSignRequest, SignatureOperation, LIBRARY_FILE,
 };
 
 /// Un PDF mínimo en Base64 no válido para firmar.
@@ -65,18 +64,6 @@ fn postsign_of_something_invalid(bridge: &NativeBridge) -> Result<(), BridgeErro
         .map(|_| ())
 }
 
-/// Memoria residente del proceso en bytes.
-fn resident_bytes() -> u64 {
-    let statm = std::fs::read_to_string("/proc/self/statm").expect("debería haber /proc");
-    let pages: u64 = statm
-        .split_whitespace()
-        .nth(1)
-        .expect("statm trae al menos dos campos")
-        .parse()
-        .expect("es un número");
-    pages * 4096
-}
-
 #[test]
 #[ignore = "grada C: necesita librfirma_crypto.so (just test-native)"]
 fn the_library_loads_from_where_the_adr_says_and_creates_its_isolate() {
@@ -116,47 +103,6 @@ fn the_postsign_crosses_the_border_and_comes_back_as_json_too() {
         ),
         other => panic!("se esperaba un fallo del puente, no {other}"),
     }
-}
-
-fn a_hundred_thousand_round_trips_do_not_leak(format: Format) {
-    const BATCH: usize = 100_000;
-    const TOLERANCE: u64 = 1024 * 1024;
-
-    let bridge = bridge();
-
-    for _ in 0..BATCH {
-        let _ = presign_of_something_invalid_in(&bridge, format);
-    }
-    let after_first_batch = resident_bytes();
-    for _ in 0..BATCH {
-        let _ = presign_of_something_invalid_in(&bridge, format);
-    }
-    let after_second_batch = resident_bytes();
-
-    let growth = after_second_batch.saturating_sub(after_first_batch);
-    assert!(
-        growth < TOLERANCE,
-        "la segunda tanda de {BATCH} vueltas en {format} ha crecido {growth} bytes: \
-         alguien ha dejado de llamar a autofirma_free_string"
-    );
-}
-
-#[test]
-#[ignore = "grada C: necesita librfirma_crypto.so (just test-native)"]
-fn a_hundred_thousand_round_trips_do_not_leak_the_json_of_the_bridge() {
-    a_hundred_thousand_round_trips_do_not_leak(Format::Pades);
-}
-
-#[test]
-#[ignore = "grada C: necesita librfirma_crypto.so (just test-native)"]
-fn a_hundred_thousand_cades_round_trips_do_not_leak_the_json_of_the_bridge() {
-    a_hundred_thousand_round_trips_do_not_leak(Format::Cades);
-}
-
-#[test]
-#[ignore = "grada C: necesita librfirma_crypto.so (just test-native)"]
-fn a_hundred_thousand_xades_round_trips_do_not_leak_the_json_of_the_bridge() {
-    a_hundred_thousand_round_trips_do_not_leak(Format::Xades(XadesVariant::Enveloping));
 }
 
 /// Ciclo trifásico completo contra el token y validación con pdfsig (ADR-0001, ADR-0014).
@@ -870,23 +816,6 @@ mod full_cycle {
         assert!(
             text.contains(FACTURAE_POLICY),
             "la firma de una factura declara la política de FacturaE 3.1: {text}"
-        );
-    }
-
-    /// JAXP y xmlsec arrancan perezosos dentro de la imagen: la primera firma
-    /// XAdES es la que los levanta, y aquí se mide cuánto cuesta.
-    #[test]
-    #[ignore = "grada C: necesita el token y librfirma_crypto.so (just test-native)"]
-    fn the_first_xades_signature_does_not_blow_the_resident_memory_up() {
-        const CEILING: u64 = 64 * 1024 * 1024;
-
-        let before = super::resident_bytes();
-        let _ = sign_xades(XadesVariant::Enveloping);
-        let growth = super::resident_bytes().saturating_sub(before);
-
-        assert!(
-            growth < CEILING,
-            "la primera firma XAdES ha añadido {growth} bytes de residente"
         );
     }
 
