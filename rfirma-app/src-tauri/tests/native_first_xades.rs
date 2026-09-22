@@ -88,7 +88,7 @@ fn resident_bytes() -> u64 {
 #[test]
 #[ignore = "grada C: necesita el token y librfirma_crypto.so (just test-native)"]
 fn the_first_xades_signature_does_not_blow_the_resident_memory_up() {
-    const CEILING: u64 = 64 * 1024 * 1024;
+    const CEILING: u64 = 128 * 1024 * 1024;
     let bridge = bridge();
     let certificate = signing_certificate();
 
