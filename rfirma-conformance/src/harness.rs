@@ -8,7 +8,9 @@ use std::thread::{sleep, spawn, JoinHandle};
 use std::time::Duration;
 
 use crate::catalogue::{Check, Drive};
-use crate::errand::ErrandOutcome;
+use crate::checks::the_isolated_home_of;
+use crate::errand::{ErrandOutcome, ProtocolConditionResult};
+use crate::outcome::Outcome;
 use crate::Probe;
 
 type Measure = fn(&Probe, &Check, &Drive) -> ErrandOutcome;
@@ -74,6 +76,20 @@ pub(crate) const THE_HARNESSES: &[Harness] = &[
         measure: JUST_DRIVE,
     },
     Harness {
+        name: "the_saved_file_read_back",
+        fixtures: &[],
+        mode: READ_AND_WRITE,
+        measure: |probe, check, drive| {
+            let mut outcome = probe.drive(check, drive);
+            let saved = the_isolated_home_of(&probe.client).join(THE_SAVED_NAME);
+            outcome.protocol_conditions.push(the_saved_bytes_against(
+                std::fs::read(saved).ok().as_deref(),
+                &the_data_the_site_saves(),
+            ));
+            outcome
+        },
+    },
+    Harness {
         name: "occupied_service_ports",
         fixtures: &[],
         mode: READ_AND_WRITE,
@@ -83,6 +99,48 @@ pub(crate) const THE_HARNESSES: &[Harness] = &[
         },
     },
 ];
+
+/// El nombre que propone el guion `savereadback`, que ya borra la preparación de cada comprobación.
+const THE_SAVED_NAME: &str = "challenge.bin";
+
+const THE_DECODED_BYTES_ON_DISK: &str = "the-decoded-bytes-on-disk";
+
+/// Lo que el guion de guardar manda en `dat`, ya decodificado: el reto del banco de referencia.
+fn the_data_the_site_saves() -> Vec<u8> {
+    let challenge = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../testdata/reference/challenge.bin");
+    std::fs::read(&challenge)
+        .unwrap_or_else(|error| panic!("falta {}: {error}", challenge.display()))
+}
+
+fn the_saved_bytes_against(saved: Option<&[u8]>, data: &[u8]) -> ProtocolConditionResult {
+    let (outcome, observation) = match saved {
+        None => (
+            Outcome::NotObservable,
+            format!("no hay {THE_SAVED_NAME} en la carpeta del diálogo: no se guardó ahí"),
+        ),
+        Some(saved) if saved == data => (
+            Outcome::Compliant,
+            format!(
+                "{THE_SAVED_NAME} tiene los {} bytes decodificados de dat",
+                data.len()
+            ),
+        ),
+        Some(saved) => (
+            Outcome::Noncompliant,
+            format!(
+                "{THE_SAVED_NAME} tiene {} bytes que no son los {} decodificados de dat",
+                saved.len(),
+                data.len()
+            ),
+        ),
+    };
+    ProtocolConditionResult {
+        name: THE_DECODED_BYTES_ON_DISK.to_owned(),
+        outcome,
+        observation: Some(observation),
+    }
+}
 
 /// Cada cuánto mira el ocupante si le han dicho que suelte el puerto.
 const THE_OCCUPIER_HEARTBEAT: Duration = Duration::from_millis(50);
@@ -151,6 +209,23 @@ mod tests {
             .filter(|name| !named.contains(name))
             .collect();
         assert!(unnamed.is_empty(), "arneses sin entrada: {unnamed:?}");
+    }
+
+    #[test]
+    fn the_saved_file_is_judged_against_the_decoded_data() {
+        let data = the_data_the_site_saves();
+        let judged = |saved: Option<&[u8]>| the_saved_bytes_against(saved, &data).outcome;
+        assert_eq!(judged(Some(&data)), Outcome::Compliant);
+        assert_eq!(judged(Some(b"otra cosa")), Outcome::Noncompliant);
+        assert_eq!(judged(None), Outcome::NotObservable);
+    }
+
+    #[test]
+    fn the_saved_file_is_one_that_the_preparation_clears() {
+        assert!(THE_HARNESSES
+            .iter()
+            .flat_map(|harness| harness.fixtures)
+            .any(|(name, _)| *name == THE_SAVED_NAME));
     }
 
     #[test]

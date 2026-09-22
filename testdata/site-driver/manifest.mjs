@@ -5,6 +5,7 @@ import { BATCH_SCRIPTS } from "./scripts/batch.mjs";
 import { CERTIFICATE_SCRIPTS } from "./scripts/certificate.mjs";
 import { FILE_SCRIPTS } from "./scripts/files.mjs";
 import { RELAY_SCRIPTS } from "./scripts/relay.mjs";
+import { REQUEST_SCRIPTS } from "./scripts/request.mjs";
 import { SERVICE_SCRIPTS } from "./scripts/service.mjs";
 import { SIGNATURE_SCRIPTS } from "./scripts/signature.mjs";
 import { WEBSOCKET_SCRIPTS } from "./scripts/websocket.mjs";
@@ -19,6 +20,7 @@ export const SCRIPTS = {
   ...RELAY_SCRIPTS,
   ...WEBSOCKET_SCRIPTS,
   ...SERVICE_SCRIPTS,
+  ...REQUEST_SCRIPTS,
 };
 
 /** Lo que `--manifest` publica para que la suite valide su catálogo contra ello. */

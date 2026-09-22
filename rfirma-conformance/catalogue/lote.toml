@@ -322,12 +322,102 @@ saf = "SAF_26"
 warning = "Va a aparecer el diálogo de certificado: el prefirmador del lote no está escuchando a propósito."
 
 [[check]]
+id = "a_presigner_answering_400_fails_with_saf_03"
+set = "lote"
+citation = "ProtocolInvocationLauncherBatch.java:360-378; UrlHttpManagerImpl.java:285-295"
+statement = """
+Si el prefirmador responde con un 400, el lote termina con SAF_03.
+"""
+drive = { mode = "v4", script = "batchpresigner400" }
+assistance = "click"
+saf = "SAF_03"
+warning = "Va a aparecer el diálogo de certificado: el prefirmador del lote responde 400 a propósito; cierra el aviso de error que pueda aparecer."
+
+[[check]]
+id = "a_presigner_answering_404_fails_with_saf_26"
+set = "lote"
+citation = "ProtocolInvocationLauncherBatch.java:360-378; UrlHttpManagerImpl.java:285-295"
+statement = """
+Si el prefirmador responde con un 4xx que no es 400, el lote termina con SAF_26.
+"""
+drive = { mode = "v4", script = "batchpresigner404" }
+assistance = "click"
+saf = "SAF_26"
+warning = "Va a aparecer el diálogo de certificado: el prefirmador del lote responde 404 a propósito; cierra el aviso de error que pueda aparecer."
+
+[[check]]
+id = "a_presigner_answering_500_fails_with_saf_27"
+set = "lote"
+citation = "ProtocolInvocationLauncherBatch.java:360-378; UrlHttpManagerImpl.java:285-295"
+statement = """
+Si el prefirmador responde con un 5xx, el lote termina con SAF_27: el servicio de lotes informó de
+un error.
+"""
+drive = { mode = "v4", script = "batchpresigner500" }
+assistance = "click"
+saf = "SAF_27"
+warning = "Va a aparecer el diálogo de certificado: el prefirmador del lote responde 500 a propósito; cierra el aviso de error que pueda aparecer."
+
+[[check]]
+id = "batch_cancelled_answers_cancel"
+set = "lote"
+citation = "ProtocolInvocationLauncherBatch.java:133-140, 299-302"
+statement = """
+Cancelar el diálogo de certificado de un lote termina el trámite como cancelación, y así llega a la
+sede.
+"""
+drive = { mode = "v4", script = "batchcancelled" }
+assistance = "person"
+saf = "CANCEL"
+warning = "Va a aparecer el diálogo de certificado de un lote: cancélalo en vez de elegir certificado."
+
+[[check]]
+id = "a_malformed_local_batch_fails_with_saf_20"
+set = "lote"
+citation = "JSONBatchManager.java:44-100; ProtocolInvocationLauncherBatch.java:383-389, 400-404"
+statement = """
+Un lote local que no declara format, algorithm, o el id o el datareference de un documento, termina
+con SAF_20, y sólo después de elegir certificado.
+"""
+drive = { mode = "v4", script = "batchlocalwithoutformat" }
+assistance = "click"
+saf = "SAF_20"
+warning = "Va a aparecer el diálogo de certificado: el lote local no declara formato a propósito; cierra el aviso de error que pueda aparecer."
+
+[[check]]
+id = "an_item_extraparams_replace_the_batch_ones"
+set = "lote"
+citation = "JSONBatchManager.java:101-105, 146-155"
+statement = """
+En el lote local, los extraparams de un documento reemplazan a los del lote, sin mezclarse con
+ellos; el documento que no trae los suyos hereda los del lote.
+"""
+drive = { mode = "v4", script = "batchlocalextraparams" }
+assistance = "click"
+condition = "the-item-extraparams-replace-the-batch-ones"
+warning = "Va a aparecer el diálogo de certificado, y después se firman dos documentos en el equipo."
+
+[[check]]
+id = "a_local_xml_batch_is_refused_before_asking_for_a_certificate"
+set = "lote"
+citation = "UrlParametersForBatch.java:231-260; ProtocolInvocationLauncherBatch.java:341-346, 400-422; BatchSigner.java:224-233"
+statement = """
+localBatchProcess=true sólo vale para el lote JSON: un lote XML que lo pide, sin servlets, se
+rechaza con SAF_03 antes de pedir certificado.
+"""
+drive = { mode = "v4", script = "batchlocalxml" }
+assistance = "person"
+saf = "SAF_03"
+question = "¿apareció el diálogo de certificado antes de que el lote se rechazara? [s/n]"
+person = { yes = "el lote XML local pidió certificado antes de rechazarse", no = "el lote XML local se rechazó sin pedir certificado", yes_means = "no-conforme" }
+warning = "Puede aparecer el diálogo de certificado: si aparece, elige el certificado y cierra el aviso de error que venga después."
+
+[[check]]
 id = "the_batch_failures_answer_their_own_codes"
 set = "lote"
-citation = "ProtocolInvocationLauncherBatch.java:367-387; LocalBatchSigner.java:231-241"
+citation = "LocalBatchSigner.java:231-241"
 statement = """
-El lote tiene sus propios códigos además de SAF_26: SAF_20 cuando falla la orquestación del lote
-local, SAF_27 cuando el servicio de lotes informa de un error, y SAF_33, SAF_34 y SAF_35 para un PDF
-con contraseña, con firmas no registradas o certificado.
+El lote tiene sus propios códigos para un PDF que no puede firmar: SAF_33 si está protegido con
+contraseña, SAF_34 si trae firmas no registradas y SAF_35 si está certificado.
 """
-unmeasurable = "Los PDF que los disparan —protegido, con firmas no registradas, certificado— no están en el banco de referencia, y la sede no simula un servicio de lotes que conteste un error lógico en su formato."
+unmeasurable = "Los PDF que los disparan —protegido, con firmas no registradas, certificado— no están en el banco de referencia."

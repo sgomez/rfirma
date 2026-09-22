@@ -79,6 +79,32 @@ assistance = "none"
 condition = "dat-with-a-local-file-saf-03"
 
 [[check]]
+id = "a_url_in_dat_is_downloaded_and_signed"
+set = "peticion"
+citation = "UrlParameters.java:298-319; DataDownloader.java:74-99"
+statement = """
+Un dat que es una URL http:// o https:// se descarga al leer la petición, y lo que se firma es su
+contenido.
+"""
+drive = { mode = "service", script = "signdaturl" }
+assistance = "click"
+condition = "the-url-in-dat-downloaded-and-signed"
+warning = "Va a aparecer el diálogo de certificado: la sede sirve por HTTP el documento cuya URL viaja en dat."
+
+[[check]]
+id = "dat_that_is_not_base64_is_signed_literally"
+set = "peticion"
+citation = "DataDownloader.java:124-139; Base64.java:631-656"
+statement = """
+Un dat que no es Base64, por su alfabeto o por su longitud, se firma tal cual, como los bytes de su
+texto.
+"""
+drive = { mode = "v4", script = "signliteraldat" }
+assistance = "click"
+condition = "the-literal-dat-signed"
+warning = "Va a aparecer el diálogo de certificado."
+
+[[check]]
 id = "gzipped_data_is_decompressed_before_signing"
 set = "peticion"
 citation = "UrlParameters.java:305-315; DataDownloader.java:63-69"
