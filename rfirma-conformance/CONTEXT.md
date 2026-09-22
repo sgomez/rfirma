@@ -39,8 +39,9 @@ que viaja depende de lo que ella haga en el diálogo.
 _Avoid_: errand (en la interfaz), ejecución, corrida
 
 **Familia de trámite**:
-El camino por el que un guion llega al cliente: el eco v4 en crudo, el canal de servicio o una
-operación de punta a punta por la sede publicada. La declara el guion, no la comprobación.
+El camino por el que un guion llega al cliente: el eco v4 en crudo, el canal de servicio, una
+operación de punta a punta por la sede publicada o esa misma operación por servidor intermedio. La
+declara el guion, no la comprobación.
 
 **Condición**:
 Lo que un guion de la sede mide durante el trámite y emite con un nombre propio de ese guion, no
@@ -93,6 +94,12 @@ Dónde encuentra el cliente sus certificados en un trámite. Es una lista cerrad
 Es condición de lanzamiento: la suite prepara un perfil aislado por almacén, igual para cualquier
 cliente.
 _Avoid_: keystore, perfil (para el almacén)
+
+**Perfil de lanzamiento**:
+Las opciones con las que la suite lanza el cliente en una comprobación, que declara el catálogo:
+`plain`, el de omisión, o `headless`, que le quita a AutoFirma sus diálogos de error. Solo lo usa
+`local_access_blocked`; rFirma no lo lee.
+_Avoid_: modo (es de la sede), almacén
 
 **Conjunto**:
 Las comprobaciones que miden decisiones del mismo componente del protocolo: un canal, el

@@ -1,8 +1,16 @@
 // El navegador mínimo en el que corre el `autoscript.js` publicado bajo Node.
 
+import { request as httpRequest } from "node:http";
 import { request as httpsRequest } from "node:https";
 
 import { emit } from "./events.mjs";
+
+let launches = 0;
+
+/** Cuántas veces ha invocado la página a la aplicación hasta ahora. */
+export function theLaunchesSoFar() {
+  return launches;
+}
 
 /** Monta en `globalThis` lo que el cliente publicado espera de una página. */
 export function installTheMinimalBrowser() {
@@ -73,6 +81,7 @@ export function installTheMinimalBrowser() {
       return pageLocation;
     },
     set location(url) {
+      launches += 1;
       emit({ event: "launch", url: String(url) });
     },
   };
@@ -83,37 +92,39 @@ export function installTheMinimalBrowser() {
   globalThis.XMLHttpRequest = undefined;
 }
 
-/** El servidor intermedio como `XMLHttpRequest`: guarda con `op=put` y devuelve con `op=get`. */
+/** La sede publicada de mentira, cuyos servlets atiende el banco en proceso. */
+const THE_SITE_ORIGIN = "https://sede.example/";
+
+/**
+ * El servidor intermedio como `XMLHttpRequest`: el de la sede de mentira guarda con `op=put` y
+ * devuelve con `op=get` en proceso; cualquier otro viaja por HTTP de verdad.
+ */
 export function theIntermediateServerAsXmlHttpRequest() {
   const stored = new Map();
 
-  return class {
-    open(method, url) {
-      this.method = method;
-      this.url = url;
-      this.readyState = 1;
-    }
-    setRequestHeader() {}
+  return class extends theRealXmlHttpRequest() {
     send(body) {
+      if (!String(this.url).startsWith(THE_SITE_ORIGIN)) {
+        super.send(body);
+        return;
+      }
       const query = new URLSearchParams(
         this.method === "POST" ? String(body ?? "") : (String(this.url).split("?")[1] ?? ""),
       );
-      this.status = 200;
-      this.responseText = "OK";
+      let answer = "OK";
       if (query.get("op") === "put") {
         stored.set(query.get("id"), query.get("dat"));
         emit({ event: "stored", id: String(query.get("id")), dat: String(query.get("dat")) });
       } else if (query.get("op") === "get") {
-        this.responseText = stored.get(query.get("id")) ?? "ERR-06: no existe el fichero";
+        answer = stored.get(query.get("id")) ?? "ERR-06: no existe el fichero";
       }
-      this.readyState = 4;
-      setTimeout(() => this.onreadystatechange?.(), 0);
+      setTimeout(() => this.arrive(200, answer), 0);
     }
   };
 }
 
-/** El `XMLHttpRequest` que le falta a Node para que el transporte sin WebSocket llegue al canal. */
-export function theLocalServiceAsXmlHttpRequest() {
+/** El `XMLHttpRequest` que le falta a Node, por HTTP o HTTPS según la URL. */
+function theRealXmlHttpRequest() {
   return class {
     open(method, url) {
       this.method = method;
@@ -127,7 +138,8 @@ export function theLocalServiceAsXmlHttpRequest() {
       this.requestHeaders[name] = value;
     }
     send(body) {
-      const attempt = httpsRequest(
+      const request = String(this.url).startsWith("https:") ? httpsRequest : httpRequest;
+      const attempt = request(
         this.url,
         // El canal del original cierra las líneas con `\n` a secas, que el navegador tolera y Node no.
         { method: this.method, headers: this.requestHeaders, insecureHTTPParser: true },
@@ -150,4 +162,9 @@ export function theLocalServiceAsXmlHttpRequest() {
       this.onreadystatechange?.();
     }
   };
+}
+
+/** El `XMLHttpRequest` con el que el transporte sin WebSocket llega al canal. */
+export function theLocalServiceAsXmlHttpRequest() {
+  return theRealXmlHttpRequest();
 }

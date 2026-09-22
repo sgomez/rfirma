@@ -6,9 +6,15 @@ export const THE_PUBLISHED_SITE_MODES = ["v4", "v3", "v4-ipv6", "service", "serv
 /** Un guion de la sede publicada: una operación de punta a punta por el `autoscript.js`. */
 export function aPublishedScript(
   run,
-  { conditions = [], modes = THE_PUBLISHED_SITE_MODES, benchOnly = false, patch } = {},
+  {
+    conditions = [],
+    modes = THE_PUBLISHED_SITE_MODES,
+    benchOnly = false,
+    patch,
+    family = "end-to-end",
+  } = {},
 ) {
-  return { site: "published", family: "end-to-end", modes, conditions, benchOnly, patch, run };
+  return { site: "published", family, modes, conditions, benchOnly, patch, run };
 }
 
 /** Un guion de la sede a mano: mensajes del protocolo escritos en crudo, sin `autoscript.js`. */

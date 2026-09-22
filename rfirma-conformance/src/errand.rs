@@ -11,6 +11,7 @@ use std::time::{Duration, Instant};
 use serde::{Deserialize, Serialize};
 
 use crate::catalogue::Check;
+use crate::client::{Launch, THE_JAVA_OPTIONS_VARIABLE};
 use crate::livelog::{LiveLogSink, Provenance};
 use crate::outcome::Outcome;
 use crate::transcript::{legible, Transcript};
@@ -63,6 +64,9 @@ impl ErrandKey {
         let mut key = format!("{}/{}/{}", drive.mode, drive.script, check.store.name());
         if let Some(harness) = check.harness {
             key = format!("{key}/{}", harness.name);
+        }
+        if check.launch != Launch::Plain {
+            key = format!("{key}/{}", check.launch.name());
         }
         Some(Self(key))
     }
@@ -123,7 +127,7 @@ impl ErrandRunner for NodeRunner {
         let mut driver = the_published_client_running(trust_root.path(), patience, script, mode);
         witness.driver_spawned(driver.id());
         let events = driver.stdout.take().expect("el conductor escribe eventos");
-        let mut client: Option<ClientProcess> = None;
+        let mut clients: Vec<ClientProcess> = Vec::new();
         let outcome = observe(
             BufReader::new(events).lines().map_while(Result::ok),
             |event| {
@@ -138,8 +142,9 @@ impl ErrandRunner for NodeRunner {
                         start.elapsed(),
                         &format!("invoco {} con {url}", probe.client.display()),
                     );
-                    client = Some(ClientProcess::spawn(
+                    clients.push(ClientProcess::spawn(
                         &probe.client,
+                        probe.launch,
                         &url,
                         log_sink.clone(),
                         start,
@@ -149,7 +154,7 @@ impl ErrandRunner for NodeRunner {
         );
         let _ = driver.wait();
         witness.driver_finished();
-        if let Some(mut client) = client {
+        for mut client in clients {
             client.terminate();
         }
         outcome
@@ -241,9 +246,16 @@ pub(crate) struct ClientProcess {
 }
 
 impl ClientProcess {
-    pub(crate) fn spawn(client: &Path, url: &str, log_sink: LiveLogSink, start: Instant) -> Self {
+    pub(crate) fn spawn(
+        client: &Path,
+        launch: Launch,
+        url: &str,
+        log_sink: LiveLogSink,
+        start: Instant,
+    ) -> Self {
         let mut child = Command::new(client)
             .arg(url)
+            .env(THE_JAVA_OPTIONS_VARIABLE, launch.java_options())
             .process_group(0)
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
@@ -592,6 +604,14 @@ mod tests {
                 "assistance = \"none\"\nharness = \"occupied_service_ports\""
             )),
             Some(ErrandKey("v4/save/rsa/occupied_service_ports".to_owned()))
+        );
+    }
+
+    #[test]
+    fn a_launch_other_than_plain_keeps_its_errand_apart() {
+        assert_eq!(
+            ErrandKey::of(&a_check("assistance = \"none\"\nlaunch = \"headless\"")),
+            Some(ErrandKey("v4/save/rsa/headless".to_owned()))
         );
     }
 

@@ -20,6 +20,12 @@ const FIRM_RUNS_THE_REASSEMBLED_REQUEST = "firm-runs-the-reassembled-request";
 const EVERY_ANSWER_IS_HTTP_200 = "every-answer-is-http-200";
 const ONLY_THE_LOOPBACK_SERVED = "only-the-loopback-served";
 const NO_CHANNEL_OPENS = "no-channel-opens";
+const A_FOREIGN_SESSION_ANSWERS_SAF_03 = "a-foreign-session-answers-saf-03";
+const EVERY_ANSWER_ALLOWS_ANY_ORIGIN = "every-answer-allows-any-origin";
+const AN_UNKNOWN_ORDER_ANSWERS_SAF_03 = "an-unknown-order-answers-saf-03";
+const A_CMD_THAT_IS_NO_OPERATION_ANSWERS_SAF_11 = "a-cmd-that-is-no-operation-answers-saf-11";
+const A_SEND_PART_OUT_OF_RANGE_ANSWERS_SAF_11 = "a-send-part-out-of-range-answers-saf-11";
+const A_FAILED_SAVE_ANSWERS_SAF_11 = "a-failed-save-answers-saf-11";
 const CLOSED_NINETY_SECONDS_AFTER_THE_LAST_VALID_ORDER =
   "closed-ninety-seconds-after-the-last-valid-order";
 
@@ -31,6 +37,9 @@ const THE_CLOSURE_CHECKED_AT_MS = 100000;
 
 /** Lo que se espera a que el canal del socket conteste una orden antes de darla por perdida. */
 const THE_SERVICE_ORDER_PATIENCE_MS = 10000;
+
+/** Lo que se espera a un guardado rechazado mientras la persona cierra el diálogo de error. */
+const THE_DIALOGUE_PATIENCE_MS = 120000;
 
 /** Lo que se espera a que el sujeto ligue su socket después de invocarlo. */
 const THE_SERVICE_START_PATIENCE_MS = 30000;
@@ -61,16 +70,33 @@ function anEcho(idSession) {
   return idSession ? `echo=-idsession=${idSession}@EOF` : "echo=-@EOF";
 }
 
-/** La respuesta cruda del canal: su línea de estado y su cuerpo ya descodificado. */
+/** La respuesta cruda del canal: su línea de estado, sus cabeceras y su cuerpo ya descodificado. */
 function aServiceAnswer(raw) {
   const text = raw.toString("utf8");
   const blankLine = /\r?\n\r?\n/.exec(text);
+  const head = blankLine ? text.slice(0, blankLine.index) : text;
   const body = blankLine ? text.slice(blankLine.index + blankLine[0].length).trim() : "";
-  return { status: text.split("\n", 1)[0].trim(), text: bytesOf(body).toString("utf8") };
+  const [status, ...headerLines] = head.split(/\r?\n/);
+  const headers = Object.fromEntries(
+    headerLines
+      .filter((line) => line.includes(":"))
+      .map((line) => [
+        line.slice(0, line.indexOf(":")).trim().toLowerCase(),
+        line.slice(line.indexOf(":") + 1).trim(),
+      ]),
+  );
+  return { status: status.trim(), headers, text: bytesOf(body).toString("utf8") };
 }
 
 /** Una conversación por TLS: escribe `pieces` con `pauseMs` y recoge la respuesta hasta el cierre. */
-function talkingToTheService({ host = "127.0.0.1", port, pieces, pauseMs = 0, trusted = true }) {
+function talkingToTheService({
+  host = "127.0.0.1",
+  port,
+  pieces,
+  pauseMs = 0,
+  trusted = true,
+  patienceMs = THE_SERVICE_ORDER_PATIENCE_MS,
+}) {
   return new Promise((resolve) => {
     const chunks = [];
     let written = 0;
@@ -83,10 +109,11 @@ function talkingToTheService({ host = "127.0.0.1", port, pieces, pauseMs = 0, tr
       clearTimeout(patience);
       socket.destroy();
       const raw = Buffer.concat(chunks);
-      const answer = raw.length > 0 ? aServiceAnswer(raw) : { status: null, text: null };
+      const answer =
+        raw.length > 0 ? aServiceAnswer(raw) : { status: null, headers: {}, text: null };
       resolve({ ...answer, failure, answeredEarly });
     };
-    const patience = setTimeout(() => finish("silencio"), THE_SERVICE_ORDER_PATIENCE_MS);
+    const patience = setTimeout(() => finish("silencio"), patienceMs);
     socket.on("secureConnect", async () => {
       for (const piece of pieces) {
         if (written > 0) await new Promise((resume) => setTimeout(resume, pauseMs));
@@ -105,8 +132,8 @@ function talkingToTheService({ host = "127.0.0.1", port, pieces, pauseMs = 0, tr
   });
 }
 
-function aServiceOrder(port, body) {
-  return talkingToTheService({ port, pieces: [asServicePost(port, body)] });
+function aServiceOrder(port, body, patienceMs) {
+  return talkingToTheService({ port, pieces: [asServicePost(port, body)], patienceMs });
 }
 
 /** El primer candidato que atiende el eco, en el orden ofrecido, o `null` si ninguno en plazo. */
@@ -177,9 +204,13 @@ async function theServiceProtocolScript() {
   }
   const { port } = opened;
   const statusLines = [opened.answer.status];
+  const origins = [opened.answer.headers["access-control-allow-origin"]];
   const order = async (body) => {
     const answer = await aServiceOrder(port, body);
-    if (answer.status !== null) statusLines.push(answer.status);
+    if (answer.status !== null) {
+      statusLines.push(answer.status);
+      origins.push(answer.headers["access-control-allow-origin"]);
+    }
     return answer;
   };
 
@@ -289,8 +320,28 @@ async function theServiceProtocolScript() {
     ),
   );
 
-  await order("echo=-idsession=OtraSesionAjena00000@EOF");
-  await order(`nada=idsession=${idSession}@EOF`);
+  const foreign = await order("echo=-idsession=OtraSesionAjena00000@EOF");
+  emit(anAnswerCondition(A_FOREIGN_SESSION_ANSWERS_SAF_03, foreign, "SAF_03"));
+  const unknown = await order(`nada=idsession=${idSession}@EOF`);
+  emit(anAnswerCondition(AN_UNKNOWN_ORDER_ANSWERS_SAF_03, unknown, "SAF_03"));
+  const notAnOperation = [];
+  for (const uri of ["afirma://service?ports=54351&v=3", "https://sede.example/tramite"]) {
+    notAnOperation.push(await order(`cmd=${asServiceBase64(uri)}idsession=${idSession}@EOF`));
+  }
+  emit(anAnswersCondition(A_CMD_THAT_IS_NO_OPERATION_ANSWERS_SAF_11, notAnOperation, "SAF_11"));
+  await order(anEcho(idSession));
+  const outOfRange = await order(`send=@3@1idsession=${idSession}@EOF`);
+  emit(anAnswerCondition(A_SEND_PART_OUT_OF_RANGE_ANSWERS_SAF_11, outOfRange, "SAF_11"));
+  const withoutAnyOrigin = origins.filter((origin) => origin !== "*");
+  emit(
+    aConditionEvent(
+      EVERY_ANSWER_ALLOWS_ANY_ORIGIN,
+      withoutAnyOrigin.length === 0,
+      withoutAnyOrigin.length === 0
+        ? `${origins.length} respuestas, todas con Access-Control-Allow-Origin: *`
+        : `${withoutAnyOrigin.length} respuestas sin Access-Control-Allow-Origin: *`,
+    ),
+  );
   const otherStatuses = statusLines.filter((line) => line !== "HTTP/1.1 200 OK");
   emit(
     aConditionEvent(
@@ -327,6 +378,39 @@ async function theServiceProtocolScript() {
     );
   }
 
+  settle({ event: "success" });
+}
+
+function anAnswersCondition(name, answers, expected) {
+  return aConditionEvent(
+    name,
+    answers.every((answer) => answer.text?.startsWith(expected) ?? false),
+    answers.map((answer) => answer.text ?? answer.failure).join("; "),
+  );
+}
+
+function anAnswerCondition(name, answer, expected) {
+  return anAnswersCondition(name, [answer], expected);
+}
+
+/** Un guardado sin datos por `cmd=`: en AutoFirma, un diálogo de error antes de la respuesta. */
+async function theFailedSaveScript() {
+  const idSession = "Fs7Sv9Er1Dl3Gq5Tt7Ab";
+  const ports = [54481, 54482, 54483];
+  emit({ event: "launch", url: aServiceLaunch({ ports, version: 3, idSession }) });
+  const opened = await theServiceChannelOpening(ports, idSession);
+  if (!opened) {
+    emit(aMeasuredConditionEvent(A_FAILED_SAVE_ANSWERS_SAF_11, null, "el canal no se abrió"));
+    settle({ event: "success" });
+    return;
+  }
+  const save = "afirma://save?op=save&filename=rfirma.txt&exts=txt";
+  const answer = await aServiceOrder(
+    opened.port,
+    `cmd=${asServiceBase64(save)}idsession=${idSession}@EOF`,
+    THE_DIALOGUE_PATIENCE_MS,
+  );
+  emit(anAnswerCondition(A_FAILED_SAVE_ANSWERS_SAF_11, answer, "SAF_11"));
   settle({ event: "success" });
 }
 
@@ -427,6 +511,14 @@ export const SERVICE_SCRIPTS = {
     FIRM_RUNS_THE_REASSEMBLED_REQUEST,
     EVERY_ANSWER_IS_HTTP_200,
     ONLY_THE_LOOPBACK_SERVED,
+    A_FOREIGN_SESSION_ANSWERS_SAF_03,
+    AN_UNKNOWN_ORDER_ANSWERS_SAF_03,
+    A_CMD_THAT_IS_NO_OPERATION_ANSWERS_SAF_11,
+    A_SEND_PART_OUT_OF_RANGE_ANSWERS_SAF_11,
+    EVERY_ANSWER_ALLOWS_ANY_ORIGIN,
+  ]),
+  "protocol-service-failed-save": overTheService(theFailedSaveScript, [
+    A_FAILED_SAVE_ANSWERS_SAF_11,
   ]),
   "protocol-service-v1": aLaunchVariant([54361, 54362, 54363], (ports, idSession) =>
     aServiceLaunch({ ports, version: 1, idSession }),

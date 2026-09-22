@@ -290,3 +290,76 @@ saf = "SAVE_OK"
 question = "¿se pidió elegir dónde guardar el fichero? [s/n]"
 person = { yes = "se pidió dónde guardar el fichero", no = "no se pidió dónde guardar el fichero", yes_means = "conforme" }
 warning = "Va a aparecer la ventana nativa para elegir dónde guardar el fichero."
+
+[[check]]
+id = "the_service_channel_answers_saf_03_to_a_foreign_session"
+set = "canal.servicio"
+citation = "CommandProcessorThread.java:106-113, 627-631"
+statement = """
+Una orden que trae un idsession distinto del negociado al abrir el canal recibe SAF_03 y no se
+atiende.
+"""
+drive = { mode = "service", script = "protocol-service" }
+assistance = "none"
+condition = "a-foreign-session-answers-saf-03"
+
+[[check]]
+id = "every_service_answer_allows_any_origin"
+set = "canal.servicio"
+citation = "CommandProcessorThread.java:493-511"
+statement = """
+Toda respuesta del canal lleva la cabecera Access-Control-Allow-Origin: *, también las que traen
+un error SAF_nn.
+"""
+drive = { mode = "service", script = "protocol-service" }
+assistance = "none"
+condition = "every-answer-allows-any-origin"
+
+[[check]]
+id = "an_unknown_order_answers_saf_03"
+set = "canal.servicio"
+citation = "CommandProcessorThread.java:133-136, 188, 228-246"
+statement = """
+Una orden que no es echo=, cmd=, fragment=, firm= ni send= recibe SAF_03.
+"""
+drive = { mode = "service", script = "protocol-service" }
+assistance = "none"
+condition = "an-unknown-order-answers-saf-03"
+
+[[check]]
+id = "a_cmd_that_is_not_an_operation_answers_saf_11"
+set = "canal.servicio"
+citation = "CommandProcessorThread.java:137-140, 226-229, 327-363"
+statement = """
+Un cmd= cuya URI no es una operación afirma:// —porque es otra cosa o porque es afirma://service—
+recibe SAF_11: el rechazo se envuelve como fallo de envío.
+"""
+drive = { mode = "service", script = "protocol-service" }
+assistance = "none"
+condition = "a-cmd-that-is-no-operation-answers-saf-11"
+
+[[check]]
+id = "a_send_part_out_of_range_answers_saf_11"
+set = "canal.servicio"
+citation = "CommandProcessorThread.java:137-140, 226-229, 397-411"
+statement = """
+Un send= que pide una parte fuera de las anunciadas recibe SAF_11: el rechazo se envuelve como
+fallo de envío.
+"""
+drive = { mode = "service", script = "protocol-service" }
+assistance = "none"
+condition = "a-send-part-out-of-range-answers-saf-11"
+
+[[check]]
+id = "a_failed_save_over_the_service_channel_answers_saf_11"
+set = "canal.servicio"
+citation = "CommandProcessorThread.java:137-140, 226-229, 333-347"
+statement = """
+Un guardado por cmd= que no termina en OK ni en CANCEL, como uno sin datos, recibe SAF_11 en vez
+del código con el que falló.
+"""
+drive = { mode = "service", script = "protocol-service-failed-save" }
+assistance = "click"
+patience_secs = 180
+condition = "a-failed-save-answers-saf-11"
+warning = "AutoFirma enseña un diálogo de error antes de contestar el guardado sin datos: ciérralo para que llegue la respuesta."

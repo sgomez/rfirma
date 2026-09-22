@@ -412,3 +412,20 @@ drive = { mode = "v4", script = "stickyselect" }
 assistance = "none"
 condition = "the-pinned-certificate-without-asking"
 store = "several"
+
+[[check]]
+id = "a_wrong_pin_asks_again_for_the_same_certificate"
+set = "certificado"
+citation = "ProtocolInvocationLauncherSign.java:658-674; CertFilterManager.java:101-108"
+statement = """
+Un PIN erróneo al firmar no cancela la operación: vuelve a abrirse el selector con solo el
+certificado elegido, y después se pide de nuevo el PIN.
+"""
+drive = { mode = "v4", script = "signcades" }
+assistance = "person"
+store = "token"
+patience_secs = 180
+completes = {}
+question = "Tras el PIN erróneo, ¿volvió a aparecer el selector con solo el certificado que habías elegido? [s/n]"
+person = { yes = "el selector volvió con solo el certificado elegido", no = "el PIN erróneo no volvió a ofrecer el mismo certificado", yes_means = "conforme" }
+warning = "Elige el certificado RSA del token y teclea un PIN erróneo; cuando vuelva a pedirse, elígelo otra vez y teclea el PIN de verdad."

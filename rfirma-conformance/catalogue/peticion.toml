@@ -19,9 +19,11 @@ citation = "ProtocolInvocationLauncher.java:837-843"
 statement = """
 Una operación no soportada (host desconocido como unknownop) se rechaza con SAF_04.
 """
-drive = { mode = "v4", script = "protocol-v4" }
-assistance = "none"
+drive = { mode = "v4", script = "protocol-v4-rejections" }
+assistance = "click"
+patience_secs = 600
 condition = "unknown-operation-saf-04"
+warning = "AutoFirma enseña un diálogo de error antes de contestar cada rechazo de parámetros: ciérralos según aparezcan; para la operación inválida pide además un certificado, elígelo."
 
 [[check]]
 id = "sign_missing_or_invalid_operation_rejected"
@@ -30,9 +32,11 @@ citation = "SignOperation.java:67-78; ProtocolInvocationLauncherSign.java:158, 7
 statement = """
 En afirma://sign?, si el parámetro op falta o no es reconocido, se rechaza con SAF_04.
 """
-drive = { mode = "v4", script = "protocol-v4" }
-assistance = "none"
+drive = { mode = "v4", script = "protocol-v4-rejections" }
+assistance = "click"
+patience_secs = 600
 condition = "invalid-op-saf-04"
+warning = "AutoFirma enseña un diálogo de error antes de contestar cada rechazo de parámetros: ciérralos según aparezcan; para la operación inválida pide además un certificado, elígelo."
 
 [[check]]
 id = "local_access_blocked"
@@ -41,10 +45,10 @@ citation = "UrlParameters.java:279-289, 369-372; ProtocolInvocationLauncher.java
 statement = """
 Si rtservlet apunta a localhost o 127.0.0.1, se rechaza con SAF_13.
 """
-drive = { mode = "v4", script = "protocol-v4" }
-assistance = "click"
+drive = { mode = "v4", script = "protocol-v4-local-access" }
+assistance = "none"
+launch = "headless"
 condition = "local-rtservlet-saf-13"
-warning = "Si el cliente muestra el error SAF_13 en un diálogo, ciérralo para que llegue la respuesta."
 
 [[check]]
 id = "a_non_alphanumeric_identifier_is_refused_with_saf_03"
@@ -53,9 +57,11 @@ citation = "UrlParametersToSign.java:222-227; ProtocolInvocationLauncher.java:74
 statement = """
 Un id que no es alfanumérico, como rfirma-1, se rechaza con SAF_03: se usa como nombre de fichero.
 """
-drive = { mode = "v4", script = "protocol-v4" }
-assistance = "none"
+drive = { mode = "v4", script = "protocol-v4-rejections" }
+assistance = "click"
+patience_secs = 600
 condition = "no-data-saf-03"
+warning = "AutoFirma enseña un diálogo de error antes de contestar cada rechazo de parámetros: ciérralos según aparezcan; para la operación inválida pide además un certificado, elígelo."
 
 [[check]]
 id = "a_null_uri_is_rejected_with_saf_01"
@@ -74,9 +80,11 @@ statement = """
 Un dat que empieza por file:/ se rechaza antes de leer nada, con SAF_03: la sede no puede pedir que
 se firme un fichero local.
 """
-drive = { mode = "v4", script = "protocol-v4" }
-assistance = "none"
+drive = { mode = "v4", script = "protocol-v4-rejections" }
+assistance = "click"
+patience_secs = 600
 condition = "dat-with-a-local-file-saf-03"
+warning = "AutoFirma enseña un diálogo de error antes de contestar cada rechazo de parámetros: ciérralos según aparezcan; para la operación inválida pide además un certificado, elígelo."
 
 [[check]]
 id = "a_url_in_dat_is_downloaded_and_signed"
@@ -125,9 +133,11 @@ statement = """
 rtservlet sólo admite los esquemas http y https: un ftp:// se rechaza con SAF_03 antes de recuperar
 nada.
 """
-drive = { mode = "v4", script = "protocol-v4" }
-assistance = "none"
+drive = { mode = "v4", script = "protocol-v4-rejections" }
+assistance = "click"
+patience_secs = 600
 condition = "rtservlet-over-ftp-saf-03"
+warning = "AutoFirma enseña un diálogo de error antes de contestar cada rechazo de parámetros: ciérralos según aparezcan; para la operación inválida pide además un certificado, elígelo."
 
 [[check]]
 id = "a_retrieve_servlet_on_a_local_host_is_refused_with_saf_13"
@@ -137,9 +147,11 @@ statement = """
 Un rtservlet cuyo host es localhost o 127.0.0.1 se rechaza con SAF_13: el acceso a una dirección
 local está bloqueado.
 """
-drive = { mode = "v4", script = "protocol-v4" }
-assistance = "none"
+drive = { mode = "v4", script = "protocol-v4-rejections" }
+assistance = "click"
+patience_secs = 600
 condition = "rtservlet-on-localhost-saf-13"
+warning = "AutoFirma enseña un diálogo de error antes de contestar cada rechazo de parámetros: ciérralos según aparezcan; para la operación inválida pide además un certificado, elígelo."
 
 [[check]]
 id = "a_retrieve_servlet_carrying_its_own_parameters_is_refused_with_saf_03"
@@ -148,9 +160,11 @@ citation = "UrlParameters.java:376-378"
 statement = """
 La URL de rtservlet no puede traer parámetros propios: una con ? o = se rechaza con SAF_03.
 """
-drive = { mode = "v4", script = "protocol-v4" }
-assistance = "none"
+drive = { mode = "v4", script = "protocol-v4-rejections" }
+assistance = "click"
+patience_secs = 600
 condition = "rtservlet-with-a-query-saf-03"
+warning = "AutoFirma enseña un diálogo de error antes de contestar cada rechazo de parámetros: ciérralos según aparezcan; para la operación inválida pide además un certificado, elígelo."
 
 [[check]]
 id = "a_protocol_version_below_the_supported_one_is_accepted"
@@ -173,9 +187,11 @@ statement = """
 Un mcv que no tiene forma de versión se rechaza con SAF_03. La versión que se alcanza y la que no,
 con su SAF_41, las mide el conjunto de versiones.
 """
-drive = { mode = "v4", script = "protocol-v4" }
-assistance = "none"
+drive = { mode = "v4", script = "protocol-v4-rejections" }
+assistance = "click"
+patience_secs = 600
 condition = "mcv-malformed-saf-03"
+warning = "AutoFirma enseña un diálogo de error antes de contestar cada rechazo de parámetros: ciérralos según aparezcan; para la operación inválida pide además un certificado, elígelo."
 
 [[check]]
 id = "an_identifier_longer_than_twenty_characters_is_refused_with_saf_03"
@@ -184,9 +200,11 @@ citation = "UrlParameters.java:50; UrlParametersToSign.java:218-221"
 statement = """
 El id de la operación tiene como mucho veinte caracteres: uno de veintiuno se rechaza con SAF_03.
 """
-drive = { mode = "v4", script = "protocol-v4" }
-assistance = "none"
+drive = { mode = "v4", script = "protocol-v4-rejections" }
+assistance = "click"
+patience_secs = 600
 condition = "id-of-21-saf-03"
+warning = "AutoFirma enseña un diálogo de error antes de contestar cada rechazo de parámetros: ciérralos según aparezcan; para la operación inválida pide además un certificado, elígelo."
 
 [[check]]
 id = "an_identifier_of_twenty_characters_is_accepted"
@@ -208,9 +226,11 @@ statement = """
 Sin id, fileid hace de identificador de la operación y pasa sus mismos controles: uno de más de
 veinte caracteres se rechaza con SAF_03.
 """
-drive = { mode = "v4", script = "protocol-v4" }
-assistance = "none"
+drive = { mode = "v4", script = "protocol-v4-rejections" }
+assistance = "click"
+patience_secs = 600
 condition = "fileid-of-21-saf-03"
+warning = "AutoFirma enseña un diálogo de error antes de contestar cada rechazo de parámetros: ciérralos según aparezcan; para la operación inválida pide además un certificado, elígelo."
 
 [[check]]
 id = "malformed_properties_do_not_bring_the_request_down"
@@ -323,9 +343,11 @@ statement = """
 selectcert se admite tanto sin barra (afirma://selectcert?) como con barra antes del interrogante
 (afirma://selectcert/?): con barra, sus parámetros se analizan como los de siempre.
 """
-drive = { mode = "v4", script = "protocol-v4" }
-assistance = "none"
+drive = { mode = "v4", script = "protocol-v4-rejections" }
+assistance = "click"
+patience_secs = 600
 condition = "selectcert-with-a-slash-saf-03"
+warning = "AutoFirma enseña un diálogo de error antes de contestar cada rechazo de parámetros: ciérralos según aparezcan; para la operación inválida pide además un certificado, elígelo."
 
 [[check]]
 id = "batch_is_recognised_with_a_trailing_slash"
@@ -335,6 +357,51 @@ statement = """
 batch se admite también con barra antes del interrogante (afirma://batch/?), igual que sin ella: con
 barra, sus parámetros se analizan como los de siempre.
 """
-drive = { mode = "v4", script = "protocol-v4" }
-assistance = "none"
+drive = { mode = "v4", script = "protocol-v4-rejections" }
+assistance = "click"
+patience_secs = 600
 condition = "batch-with-a-slash-saf-03"
+warning = "AutoFirma enseña un diálogo de error antes de contestar cada rechazo de parámetros: ciérralos según aparezcan; para la operación inválida pide además un certificado, elígelo."
+
+[[check]]
+id = "a_cipher_key_of_the_wrong_length_answers_saf_03"
+set = "peticion"
+citation = "UrlParameters.java:255, 327-345; ProtocolInvocationLauncher.java:738-743"
+statement = """
+Una key que no mide exactamente 8 caracteres se rechaza con SAF_03, llegue la petición por el
+transporte que llegue.
+"""
+drive = { mode = "v4", script = "protocol-v4-rejections" }
+assistance = "click"
+patience_secs = 600
+condition = "a-cipher-key-of-seven-saf-03"
+warning = "AutoFirma enseña un diálogo de error antes de contestar cada rechazo de parámetros: ciérralos según aparezcan; para la operación inválida pide además un certificado, elígelo."
+
+[[check]]
+id = "fileid_without_retrieve_servlet_answers_saf_03"
+set = "peticion"
+citation = "UrlParameters.java:267-278; ProtocolInvocationLauncher.java:738-743"
+statement = """
+Una petición sin dat que trae fileid pero no rtservlet se rechaza con SAF_03.
+"""
+drive = { mode = "v4", script = "protocol-v4-rejections" }
+assistance = "click"
+patience_secs = 600
+condition = "fileid-without-rtservlet-saf-03"
+warning = "AutoFirma enseña un diálogo de error antes de contestar cada rechazo de parámetros: ciérralos según aparezcan; para la operación inválida pide además un certificado, elígelo."
+
+[[check]]
+id = "a_parameter_rejection_is_shown_before_it_is_answered"
+set = "peticion"
+citation = "ProtocolInvocationLauncherErrorManager.java:27-29, 151-165; ProtocolInvocationLauncher.java:738-743"
+statement = """
+Un rechazo de los parámetros de la petición se enseña en un diálogo de error, y la sede no recibe
+el SAF hasta que la persona lo cierra.
+"""
+drive = { mode = "v4", script = "protocol-v4-shown-rejection" }
+assistance = "person"
+patience_secs = 180
+condition = "the-rejection-waited-for-the-dialogue"
+question = "¿apareció un diálogo de error, y la página recibió el SAF_03 al cerrarlo? [s/n]"
+person = { yes = "el rechazo se enseñó en un diálogo y llegó al cerrarlo", no = "el rechazo llegó sin diálogo o antes de cerrarlo", yes_means = "conforme" }
+warning = "La página manda una petición con un id que no es alfanumérico: si aparece un diálogo de error, espera unos cinco segundos antes de cerrarlo."
