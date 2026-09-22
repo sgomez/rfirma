@@ -97,3 +97,12 @@ export function withAReleaseWithoutReset(source) {
       "\t\t\tif (withoutReset) { stickySignatory = sticky; return; }",
   );
 }
+
+/** Fija la clave de cifrado a ocho eñes: ocho caracteres, como exige el cliente, y dieciséis bytes. */
+export function withACipherKeyOfSixteenBytes(source) {
+  return replacingOrFailing(
+    source,
+    "\t\t\tfunction generateCipherKey() {",
+    '\t\t\tfunction generateCipherKey() {\n\t\t\t\treturn "ññññññññ";',
+  );
+}

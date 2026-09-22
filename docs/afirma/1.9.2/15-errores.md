@@ -333,7 +333,12 @@ En la firma de lotes locales monofásicos (`LocalBatchSigner.java:47-91`):
    sea `true` (`LocalBatchSigner.java:55, 66-72`).
 2. El error de cada documento individual se captura como `SocketOperationException`
    y se almacena en un objeto `LocalSingleBatchResult` con resultado `ERROR_SIGN`
-   (`"ERROR"`) y descripción igual a `e.getMessage()` (`LocalBatchSigner.java:74-75, 298-301`).
+   (`"ERROR_PRE"`, `LocalBatchSigner.java:38`) y descripción igual a `e.getMessage()`
+   (`LocalBatchSigner.java:74-75, 298-301`). Ese mensaje es el de la causa
+   (`SocketOperationException.java:26-28`), no el código: los `SAF_33`, `SAF_34` y
+   `SAF_35`, que solo emite este camino, no llegan a la sede ni al log
+   (`LocalBatchSigner.java:64`). La sede recibe `ERROR_PRE` con el texto de la
+   excepción de iText, como «El PDF esta certificado».
 3. El resultado global del lote es un JSON construido por `JSONBatchManager.buildBatchResultJson`
    que reporta el estado individual de cada firma.
 
@@ -366,7 +371,7 @@ A continuación se detalla la totalidad de los 53 códigos de error definidos en
 | `SAF_15` | `ERROR_DECRYPTING_DATA` | `ProtocolLauncher.15` | Error en el descifrado de los datos | Descarga `rtservlet` (todas las operaciones con `fileid`) | `ProtocolInvocationLauncher.java:320, 397, 473, 563, 674, 781` |
 | `SAF_16` | `ERROR_RECOVERING_DATA` | `ProtocolLauncher.16` | Error al recuperar los datos del servidor intermedio | Descarga `rtservlet` (todas las operaciones con `fileid`) | `ProtocolInvocationLauncher.java:314, 391, 467, 557, 668, 775` |
 | `SAF_17` | `ERROR_UNKNOWN_SIGNER` | `ProtocolLauncher.17` | Los datos proporcionados no son una firma electrónica reconocida | `sign`, `signandsave`, `batch` (`cosign`, `countersign`) | `ProtocolInvocationLauncherSign.java:386`, `ProtocolInvocationLauncherSignAndSave.java:378`, `LocalBatchSigner.java:125` |
-| `SAF_18` | `ERROR_DECODING_CERTIFICATE` | `ProtocolLauncher.18` | Error al descodificar el certificado de firma | `sign`, `signandsave`, `batch`, `selectcert` | `ProtocolInvocationLauncherSign.java:545`, `ProtocolInvocationLauncherSignAndSave.java:574`, `ProtocolInvocationLauncherSelectCert.java:236`, `ProtocolInvocationLauncherBatch.java:157, 348` |
+| `SAF_18` | `ERROR_DECODING_CERTIFICATE` | `ProtocolLauncher.18` | Error al descodificar el certificado de firma | *Sin emisor*: `getEncoded()` de un certificado ya cargado (§4.4) | `ProtocolInvocationLauncherSign.java:545`, `ProtocolInvocationLauncherSignAndSave.java:574`, `ProtocolInvocationLauncherSelectCert.java:236`, `ProtocolInvocationLauncherBatch.java:157, 348` |
 | `SAF_19` | `ERROR_NO_CERTIFICATES_KEYSTORE` | `ProtocolLauncher.19` | No hay ningun certificado válido en su almacén. Compruebe las fechas de caducidad e instale un certificado válido. | `sign`, `signandsave`, `batch`, `selectcert` | `ProtocolInvocationLauncherSign.java:621`, `ProtocolInvocationLauncherSignAndSave.java:650`, `ProtocolInvocationLauncherSelectCert.java:210`, `ProtocolInvocationLauncherBatch.java:305` |
 | `SAF_20` | `ERROR_LOCAL_BATCH_SIGN` | `ProtocolLauncher.20` | Error en el procesado del lote de firma. | `batch` local | `ProtocolInvocationLauncherBatch.java:386` |
 | `SAF_21` | `ERROR_UNSUPPORTED_PROCEDURE` | `ProtocolLauncher.21` | La versión de Autofirma instalada no es compatible con este trámite.<br>Actualice a la última versión disponible. | Versión de protocolo > 4, o versiones socket/ws incompatibles | `ProtocolInvocationLauncher.java:242, 284`, `ProtocolInvocationLauncherSign.java:138`, `ProtocolInvocationLauncherBatch.java:81`, `ProtocolInvocationLauncherSelectCert.java:80`, `ProtocolInvocationLauncherSave.java:53`, `ProtocolInvocationLauncherLoad.java:64` |
@@ -381,16 +386,16 @@ A continuación se detalla la totalidad de los 53 códigos de error definidos en
 | `SAF_30` | `ERROR_INVALID_DATA` | `ProtocolLauncher.40` | El formato de los datos a firmar no es adecuado para el tipo de firma seleccionado. | `sign`, `signandsave`, `batch` | `ProtocolInvocationLauncherSign.java:766`, `ProtocolInvocationLauncherSignAndSave.java:794`, `LocalBatchSigner.java:206` |
 | `SAF_31` | `ERROR_NO_SIGN_DATA` | `ProtocolLauncher.41` | Los datos introducidos no se corresponden con un objeto de firma. | `sign`, `signandsave`, `batch` | `ProtocolInvocationLauncherSign.java:786`, `ProtocolInvocationLauncherSignAndSave.java:814`, `LocalBatchSigner.java:226` |
 | `SAF_32` | `ERROR_FACE_ALREADY_SIGNED` | `ProtocolLauncher.42` | La factura ya tiene una firma electrónica y no admite firmas adicionales. | FacturaE en `sign`, `signandsave`, `batch` | `ProtocolInvocationLauncherSign.java:776`, `ProtocolInvocationLauncherSignAndSave.java:804`, `LocalBatchSigner.java:216` |
-| `SAF_33` | `ERROR_PDF_WRONG_PASSWORD` | `ProtocolLauncher.43` | La contraseña proporcionada no es válida para el PDF actual o no se proporcionó ninguna contraseña. | PDF con clave en `batch` | `LocalBatchSigner.java:241` |
-| `SAF_34` | `ERROR_PDF_UNREG_SIGN` | `ProtocolLauncher.44` | El PDF contiene firmas no registradas. | PDF en `batch` | `LocalBatchSigner.java:231` |
-| `SAF_35` | `ERROR_PDF_CERTIFIED` | `ProtocolLauncher.45` | El PDF está certificado. | PDF en `batch` | `LocalBatchSigner.java:236` |
+| `SAF_33` | `ERROR_PDF_WRONG_PASSWORD` | `ProtocolLauncher.43` | La contraseña proporcionada no es válida para el PDF actual o no se proporcionó ninguna contraseña. | *No llega a la sede*: PDF con clave en `batch` (§3.4) | `LocalBatchSigner.java:241` |
+| `SAF_34` | `ERROR_PDF_UNREG_SIGN` | `ProtocolLauncher.44` | El PDF contiene firmas no registradas. | *No llega a la sede*: PDF en `batch` (§3.4) | `LocalBatchSigner.java:231` |
+| `SAF_35` | `ERROR_PDF_CERTIFIED` | `ProtocolLauncher.45` | El PDF está certificado. | *No llega a la sede*: PDF en `batch` (§3.4) | `LocalBatchSigner.java:236` |
 | `SAF_36` | `ERROR_CANNOT_FIND_SSL_KEYSTORE` | `ProtocolLauncher.46` | No se ha podido encontrar el almacén de claves SSL para la comunicación segura. Restaure la instalación de Autofirma para generar uno nuevo. | *Huérfano* (comentado en código) | `ProtocolInvocationLauncher.java:255` |
 | `SAF_37` | `ERROR_CANNOT_ACCESS_SSL_KEYSTORE` | `ProtocolLauncher.47` | No se ha podido acceder al almacén de claves SSL para la comunicación segura. Restaure la instalación de Autofirma para generar uno nuevo. | *Huérfano* (comentado en código) | `ProtocolInvocationLauncher.java:256` |
 | `SAF_38` | `ERROR_INVALID_FACTURAE` | `ProtocolLauncher.48` | El archivo que intenta firmar no es una factura electrónica reconocida. | FacturaE en `sign`, `signandsave`, `batch` | `ProtocolInvocationLauncherSign.java:771`, `ProtocolInvocationLauncherSignAndSave.java:799`, `LocalBatchSigner.java:211` |
 | `SAF_39` | `ERROR_INVALID_SIGNATURE` | `ProtocolLauncher.49` | La firma de entrada no es válida. | Multifirma en `sign`, `signandsave`, `batch` | `ProtocolInvocationLauncherSign.java:479, 845`, `ProtocolInvocationLauncherSignAndSave.java:471, 868`, `LocalBatchSigner.java:251` |
 | `SAF_40` | `ERROR_RECOVER_SERVER_DOCUMENT` | `ProtocolLauncher.50` | Error al recuperar el documento | Firma trifásica en `sign`, `signandsave`, `batch` | `ProtocolInvocationLauncherSign.java:751`, `ProtocolInvocationLauncherSignAndSave.java:779`, `LocalBatchSigner.java:191` |
 | `SAF_41` | `ERROR_MINIMUM_VERSION_NON_SATISTIED` | `ProtocolLauncher.53` | El uso de este trámite web requiere una versión más reciente de Autofirma.<br>Actualice a la última versión disponible. | Parámetro `mcv` en todas las operaciones | `ProtocolInvocationLauncherSign.java:147`, `ProtocolInvocationLauncherSignAndSave.java:144`, `ProtocolInvocationLauncherSelectCert.java:93`, `ProtocolInvocationLauncherSave.java:66`, `ProtocolInvocationLauncherLoad.java:77`, `ProtocolInvocationLauncherBatch.java:94` |
-| `SAF_42` | `ERROR_POSTPROCESSING_DATA` | `ProtocolLauncher.54` | Error al postprocesar una firma, probablemente debido a un plugin que afecte al sistema de firma. | Postproceso de firma en `sign`, `signandsave` | `ProtocolInvocationLauncherSign.java:205`, `ProtocolInvocationLauncherSignAndSave.java:203` |
+| `SAF_42` | `ERROR_POSTPROCESSING_DATA` | `ProtocolLauncher.54` | Error al postprocesar una firma, probablemente debido a un plugin que afecte al sistema de firma. | *Solo con un plugin*: postproceso de firma en `sign`, `signandsave` (§4.5) | `ProtocolInvocationLauncherSign.java:205`, `ProtocolInvocationLauncherSignAndSave.java:203` |
 | `SAF_43` | `ERROR_VISIBLE_SIGNATURE` | `ProtocolLauncher.55` | Error durante la firma visible del PDF. | Firma visible obligatoria en `sign`, `signandsave` | `ProtocolInvocationLauncherSign.java:181`, `ProtocolInvocationLauncherSignAndSave.java:179` |
 | `SAF_44` | `ERROR_SIGN_WITHOUT_DATA` | `ProtocolLauncher.56` | La firma no contiene los datos y no se compatible con la configuración seleccionada | Multifirma detached en `sign`, `signandsave`, `batch` | `ProtocolInvocationLauncherSign.java:781`, `ProtocolInvocationLauncherSignAndSave.java:809`, `LocalBatchSigner.java:221` |
 | `SAF_45` | `ERROR_CANNOT_OPEN_SOCKET` | `ProtocolLauncher.57` | No se pudo abrir un socket para la comunicación con la aplicación | Apertura de servidor WebSocket | `ProtocolInvocationLauncher.java:248` |
@@ -478,6 +483,10 @@ A continuación se detalla la totalidad de los 53 códigos de error definidos en
   `ProtocolInvocationLauncherSignAndSave.java:196-200`,
   `ProtocolInvocationLauncherSelectCert.java:249-256`,
   `ProtocolInvocationLauncherBatch.java:175-182`).
+  La sede lo provoca con una `key` de ocho caracteres que no son ocho bytes, como
+  ocho eñes: `verifyCipherKey` cuenta caracteres (`UrlParameters.java:327-344`) y
+  `DesCipher` recibe sus dieciséis bytes en UTF-8, que la JDK rechaza como clave
+  DES (`DesCipher.java:37`).
 * **`SAF_15` (`ERROR_DECRYPTING_DATA`)**: Error al descifrar los datos descargados desde
   `rtservlet` mediante la clave simétrica proporcionada (`key`)
   (`ProtocolInvocationLauncher.java:319, 396, 472, 562, 673, 780`).
@@ -511,6 +520,9 @@ A continuación se detalla la totalidad de los 53 códigos de error definidos en
   `ProtocolInvocationLauncherSignAndSave.java:574`,
   `ProtocolInvocationLauncherSelectCert.java:236`,
   `ProtocolInvocationLauncherBatch.java:157, 348`).
+  **En la práctica no tiene emisor:** la única llamada que lo produce es
+  `getEncoded()` sobre el certificado que ya firmó, y un certificado que no se
+  codifica falla antes, al cargar el almacén, con `SAF_08`.
 * **`SAF_19` (`ERROR_NO_CERTIFICATES_KEYSTORE`)**: El almacén se abrió con éxito, pero
   no contiene ningún certificado, o ninguno de los disponibles cumple con los filtros
   especificados (`filters`, `filter`) o no es apto para firma
@@ -526,6 +538,10 @@ A continuación se detalla la totalidad de los 53 códigos de error definidos en
   (tarjeta inteligente o token PKCS#11) ha quedado bloqueado por agotar los reintentos
   del PIN (`LockedKeyStoreException`) (`ProtocolInvocationLauncherSign.java:656`,
   `ProtocolInvocationLauncherSignAndSave.java:684`, `ProtocolInvocationLauncherBatch.java:357`).
+  La excepción solo la lanzan los firmadores cuando JMulticard informa de
+  `AuthenticationModeLockedException` (`AOPkcs1Signer.java:117-120`): hace falta una
+  tarjeta DNIe o CERES bloqueada. Un token PKCS#11 bloqueado por SunPKCS11 falla al
+  abrir sesión y da `SAF_08`.
 
 ---
 
@@ -596,6 +612,10 @@ A continuación se detalla la totalidad de los 53 códigos de error definidos en
 * **`SAF_42` (`ERROR_POSTPROCESSING_DATA`)**: Fallo al ejecutar los complementos de
   postprocesado de la firma (`PostSignProcessor` / plugins)
   (`ProtocolInvocationLauncherSign.java:205`, `ProtocolInvocationLauncherSignAndSave.java:203`).
+  **Solo lo alcanza un plugin:** el procesador nativo solo lanza `EncryptingException`,
+  que es `SAF_12` (`NativeSignDataProcessor.java:82-83`); el `catch (Exception)` que da
+  `SAF_42` es para el procesador en línea de un plugin (`ProtocolInvocationLauncherSign.java:223-244`),
+  y una instalación sin plugins no lo emite.
 * **`SAF_43` (`ERROR_VISIBLE_SIGNATURE`)**: Ocurre cuando la firma visible PDF está configurada
   como obligatoria y el usuario cancela la definición del área o falla su estampación
   (`VisibleSignatureMandatoryException`)

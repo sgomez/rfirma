@@ -72,15 +72,28 @@ person = { yes = "el certificado se pidió en la primera selección y tras solta
 warning = "Van a encadenarse tres selecciones de certificado: fíjate en cuáles te preguntan y cuáles no."
 
 [[check]]
-id = "the_key_store_failures_answer_their_own_codes"
+id = "a_key_of_an_unsupported_type_answers_saf_51"
 set = "certificado"
 chapter = "13"
-citation = "ProtocolInvocationLauncherSign.java:545, 584, 626, 638, 650-656"
+citation = "ProtocolInvocationLauncherSign.java:631-640; AOSignConstants.java:365-390"
 statement = """
-Los fallos del almacén tienen su código: SAF_08 si no se abre, SAF_18 si el certificado no se
-descodifica, SAF_51 si el tipo de su clave no se admite y SAF_52 si está bloqueado.
+Un certificado cuya clave no es RSA, DSA ni de curva elíptica, como una Ed25519, no compone un
+algoritmo de firma: la firma se rechaza con SAF_51 después de elegirlo.
 """
-unmeasurable = "Cada uno exige un almacén roto, bloqueado o con una clave de un tipo que no se admite, y la suite sólo monta almacenes sanos: bloquear un token a propósito deja sin almacén al resto de la suite. El almacén sin ningún certificado que pase los filtros lo mide a_filter_that_excludes_every_certificate_answers_saf_19, y el que no es del sistema, a_key_store_foreign_to_the_system_is_rejected_with_saf_08."
+drive = { mode = "v4", script = "signwithanunsupportedkeytype" }
+assistance = "click"
+saf = "SAF_51"
+warning = "La sede pide un almacén PKCS#12 con una clave Ed25519: su contraseña es 1234; elige su único certificado."
+
+[[check]]
+id = "a_locked_card_answers_saf_52"
+set = "certificado"
+chapter = "13"
+citation = "ProtocolInvocationLauncherSign.java:650-656; AOPkcs1Signer.java:117-120"
+statement = """
+Una tarjeta bloqueada por agotar los intentos del PIN se rechaza con SAF_52.
+"""
+unmeasurable = "Solo lo produce JMulticard con una tarjeta DNIe o CERES bloqueada de verdad; un token PKCS#11 bloqueado falla al abrir sesión y responde SAF_08."
 
 [[check]]
 id = "filters_combine_their_conditions_with_and"

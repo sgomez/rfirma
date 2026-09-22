@@ -154,3 +154,13 @@ master = "present"
 id = "BUG-31"
 title = "Un filtro de certificado que no se reconoce desactiva el filtro de caducados y admite todos los certificados"
 master = "present"
+
+[[bug]]
+id = "BUG-32"
+title = "Los formatos XAdES Enveloped y XAdES Detached de primer nivel firman como XAdES Enveloping"
+master = "present"
+
+[[bug]]
+id = "BUG-33"
+title = "El canal WebSocket no pasa al siguiente puerto candidato cuando el primero está ocupado"
+master = "present"

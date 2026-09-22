@@ -12,6 +12,9 @@ import {
   settlingTheError,
 } from "../lib/events.mjs";
 import {
+  aCertifiedPdf,
+  aPasswordProtectedPdf,
+  aPdfWithAnUnregisteredSignature,
   theFrozen,
   thePdfOfTheTest,
   theReferenceSignature,
@@ -36,6 +39,7 @@ const THE_SIGNS_DOCUMENT_AS_IT_CAME = "the-signs-document-as-it-came";
 const EVERY_ITEM_SIGNED = "every-item-signed";
 const EACH_ITEM_IN_ITS_FORMAT = "each-item-in-its-format";
 const THE_SIGNED_ROLLED_BACK = "the-signed-rolled-back";
+const EACH_RISKY_PDF_FAILED_WITH_ITS_REASON = "each-risky-pdf-failed-with-its-reason";
 const THE_REST_SIGNED = "the-rest-signed";
 const THE_SUBOPERATION_DONE = "the-suboperation-done";
 const THE_ALGORITHM_OF_THE_KEY = "the-algorithm-of-the-key";
@@ -527,6 +531,34 @@ function theLocalBatchWithAnIllegibleItemScript() {
   });
 }
 
+/** Un lote local de tres PDF de riesgo: certificado, con una firma no registrada y cifrado. */
+function theLocalBatchOfRiskyPdfsScript() {
+  aLocalBatch({
+    format: "PAdES",
+    stopOnError: false,
+    items: [
+      anItem("certificado", aCertifiedPdf()),
+      anItem("sinregistrar", aPdfWithAnUnregisteredSignature()),
+      anItem("cifrado", aPasswordProtectedPdf()),
+    ],
+    callbacks: theBatchCallbacks((result) => {
+      const items = [...theLocalItems(result).values()];
+      const failed =
+        items.length === 3 &&
+        items.every((item) => item.result === "ERROR_PRE" && !!item.description && !item.signature);
+      return [
+        aCondition(
+          EACH_RISKY_PDF_FAILED_WITH_ITS_REASON,
+          failed,
+          items
+            .map((item) => `${item.id}: ${item.result} (${item.description ?? "sin descripción"})`)
+            .join("; ") || "el lote no devolvió ningún elemento",
+        ),
+      ];
+    }),
+  });
+}
+
 /** El mismo lote con el binario ilegible y `stoponerror=false`: el fallo no para a los demás. */
 function theLocalBatchContinuingPastAnIllegibleItemScript() {
   aLocalBatch({
@@ -887,6 +919,9 @@ export const BATCH_SCRIPTS = {
   }),
   batchlocalillegible: aPublishedScript(theLocalBatchWithAnIllegibleItemScript, {
     conditions: [THE_SIGNED_ROLLED_BACK],
+  }),
+  batchlocalriskypdfs: aPublishedScript(theLocalBatchOfRiskyPdfsScript, {
+    conditions: [EACH_RISKY_PDF_FAILED_WITH_ITS_REASON],
   }),
   batchlocalcontinuing: aPublishedScript(theLocalBatchContinuingPastAnIllegibleItemScript, {
     conditions: [THE_REST_SIGNED],

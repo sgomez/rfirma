@@ -12,6 +12,7 @@ import {
   settlingTheError,
 } from "../lib/events.mjs";
 import { theInvoice } from "../lib/fixtures.mjs";
+import { withACipherKeyOfSixteenBytes } from "../lib/patches.mjs";
 import { aPublishedScript } from "../lib/script.mjs";
 import { BATCH_SCRIPTS } from "./batch.mjs";
 
@@ -56,7 +57,10 @@ function listening(server, host) {
  * `retrieving` puede contestar un `op=get` en lugar de lo guardado y `refusingUploads` contesta cada
  * `op=put` con un 500.
  */
-async function anIntermediateServer({ retrieving = () => undefined, refusingUploads = false } = {}) {
+async function anIntermediateServer({
+  retrieving = () => undefined,
+  refusingUploads = false,
+} = {}) {
   const stored = new Map();
   const requests = [];
   const serving = (listener) => async (request, response) => {
@@ -374,6 +378,18 @@ async function theRefusedUploadScript() {
   );
 }
 
+/** Una firma con los datos en la URL y una clave que el cliente admite pero con la que no cifra. */
+async function theUncipherableResultScript() {
+  const server = await anIntermediateServer();
+  AutoScript.setServlets(server.storage, server.retrieve);
+  const signed = await aSignature("rfirma", "SHA256withRSA", "CAdES");
+  settle(
+    signed.signature
+      ? { event: "success", result: signed.signature }
+      : { event: "error", ...signed },
+  );
+}
+
 /** El lote remoto de siempre, con la respuesta por servidor intermedio. */
 async function theBatchThroughTheServerScript() {
   const server = await anIntermediateServer();
@@ -381,8 +397,8 @@ async function theBatchThroughTheServerScript() {
   return BATCH_SCRIPTS.batch.run();
 }
 
-const throughTheServer = (run, conditions = [], { benchOnly = false } = {}) =>
-  aPublishedScript(run, { family: "intermediate", modes: ["relay"], conditions, benchOnly });
+const throughTheServer = (run, conditions = [], { benchOnly = false, patch } = {}) =>
+  aPublishedScript(run, { family: "intermediate", modes: ["relay"], conditions, benchOnly, patch });
 
 export const RELAY_SCRIPTS = {
   relay: throughTheServer(theRelayScript, [THE_REQUEST_RETRIEVED_BY_FILEID]),
@@ -408,6 +424,9 @@ export const RELAY_SCRIPTS = {
     [THE_UNDECIPHERABLE_REQUEST_NOT_UPLOADED],
   ),
   relayrefusedupload: throughTheServer(theRefusedUploadScript, [THE_REFUSED_UPLOAD_ATTEMPTED]),
+  relayuncipherable: throughTheServer(theUncipherableResultScript, [], {
+    patch: withACipherKeyOfSixteenBytes,
+  }),
   relayrefusals: throughTheServer(theRefusalsScript, [
     A_SAF_AFTER_THE_START_TRAVELS_INTACT,
     A_SAF_BEFORE_THE_START_IS_NOT_UPLOADED,

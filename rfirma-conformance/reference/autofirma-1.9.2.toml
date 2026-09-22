@@ -81,3 +81,21 @@ id = "signandsave_cancelled_at_the_visible_area_answers_saf_43"
 outcome = "no-conforme"
 cause = "BUG-13"
 note = "Cancelar el área no aborta: sigue al certificado y a dónde guardar, y contesta CANCEL si se cancela uno de ellos o la firma si se aceptan, nunca SAF_43."
+
+[[known]]
+id = "a_xades_enveloped_signature_goes_inside_the_document"
+outcome = "no-conforme"
+cause = "BUG-32"
+note = "El firmador no recibe la variante del formato de la petición y firma como XAdES Enveloping."
+
+[[known]]
+id = "a_xades_detached_signature_references_the_document_beside_it"
+outcome = "no-conforme"
+cause = "BUG-32"
+note = "El firmador no recibe la variante del formato de la petición y firma como XAdES Enveloping."
+
+[[known]]
+id = "v4_ports_negotiation"
+outcome = "no-conforme"
+cause = "BUG-33"
+note = "El bind del primer candidato falla en el hilo del servidor y el bucle ya no prueba el siguiente."

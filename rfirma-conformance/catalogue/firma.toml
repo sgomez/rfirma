@@ -284,14 +284,94 @@ saf = "SAF_39"
 warning = "AutoFirma rechaza la cofirma antes de pedir certificado y sin enseñar ningún diálogo. Si aparece uno que pida confirmar la multifirma, acéptalo."
 
 [[check]]
-id = "a_risky_document_asks_the_person_before_being_signed"
+id = "a_certified_pdf_answers_saf_50_when_headless"
 set = "firma"
-citation = "ProtocolInvocationLauncherSign.java:789-837, 793-796"
+citation = "ProtocolInvocationLauncherSign.java:787-796; PdfUtil.java:214-229"
 statement = """
-Los avisos de seguridad del motor se resuelven preguntando a la persona, y sólo el parámetro que
-cada aviso nombra los desbloquea; con headless=true no se pregunta y se termina en SAF_50.
+Con headless=true, un PDF certificado sin cambios permitidos no se pregunta a la persona: la firma se rechaza con SAF_50.
 """
-unmeasurable = "Disparar cada aviso exige un documento hecho a medida —PDF certificado, firmas no registradas, sello a largo plazo—, y el banco de referencia no trae ninguno."
+drive = { mode = "v4", script = "signpadescertifiedheadless" }
+assistance = "click"
+saf = "SAF_50"
+warning = "Va a aparecer el diálogo de certificado antes de que llegue el rechazo."
+
+[[check]]
+id = "a_pdf_with_unregistered_signatures_answers_saf_50_when_headless"
+set = "firma"
+citation = "ProtocolInvocationLauncherSign.java:787-796; PdfSessionManager.java:305-312"
+statement = """
+Con headless=true, un PDF con firmas de un subfiltro no registrado no se pregunta a la persona: la firma se rechaza con SAF_50.
+"""
+drive = { mode = "v4", script = "signpadesunregisteredheadless" }
+assistance = "click"
+saf = "SAF_50"
+warning = "Va a aparecer el diálogo de certificado antes de que llegue el rechazo."
+
+[[check]]
+id = "a_password_protected_pdf_answers_saf_50_when_headless"
+set = "firma"
+citation = "ProtocolInvocationLauncherSign.java:787-796; PdfSessionManager.java:124-130"
+statement = """
+Con headless=true, un PDF protegido con contraseña sin que la petición la traiga no se pregunta a la persona: la firma se rechaza con SAF_50.
+"""
+drive = { mode = "v4", script = "signpadesprotectedheadless" }
+assistance = "click"
+saf = "SAF_50"
+warning = "Va a aparecer el diálogo de certificado antes de que llegue el rechazo."
+
+[[check]]
+id = "allow_signing_certified_pdfs_unlocks_a_certified_pdf"
+set = "firma"
+citation = "ProtocolInvocationLauncherSign.java:787-806; PdfExtraParams.java"
+statement = """
+Con allowSigningCertifiedPdfs=true, el PDF certificado se firma sin preguntar aunque la petición
+diga headless=true.
+"""
+drive = { mode = "v4", script = "signpadescertifiedallowed" }
+assistance = "click"
+condition = "the-signature-inside-the-pdf"
+warning = "Va a aparecer el diálogo de certificado."
+
+[[check]]
+id = "allow_cosigning_unregistered_signatures_unlocks_a_pdf_with_them"
+set = "firma"
+citation = "ProtocolInvocationLauncherSign.java:787-806; PdfExtraParams.java"
+statement = """
+Con allowCosigningUnregisteredSignatures=true, el PDF con firmas no registradas se firma sin
+preguntar aunque la petición diga headless=true.
+"""
+drive = { mode = "v4", script = "signpadesunregisteredallowed" }
+assistance = "click"
+condition = "the-signature-inside-the-pdf"
+warning = "Va a aparecer el diálogo de certificado."
+
+[[check]]
+id = "the_password_in_the_request_unlocks_a_protected_pdf"
+set = "firma"
+citation = "ProtocolInvocationLauncherSign.java:787-806; PdfExtraParams.java"
+statement = """
+Con userPassword, el PDF protegido se abre con la contraseña de la petición y se firma sin
+preguntarla aunque la petición diga headless=true.
+"""
+drive = { mode = "v4", script = "signpadesprotectedwithitspassword" }
+assistance = "click"
+completes = {}
+warning = "Va a aparecer el diálogo de certificado."
+
+[[check]]
+id = "a_certified_pdf_asks_the_person_before_being_signed"
+set = "firma"
+citation = "ProtocolInvocationLauncherSign.java:787-806"
+statement = """
+Sin headless, el aviso de un PDF certificado se resuelve preguntando a la persona, y si acepta la
+firma sigue como si la petición trajera allowSigningCertifiedPdfs=true.
+"""
+drive = { mode = "v4", script = "signpadescertified" }
+assistance = "person"
+condition = "the-signature-inside-the-pdf"
+question = "¿preguntó la aplicación si firmar un PDF certificado antes de hacerlo? [s/n]"
+person = { yes = "la aplicación preguntó antes de firmar el PDF certificado", no = "la aplicación no preguntó antes de firmar el PDF certificado", yes_means = "conforme" }
+warning = "Va a aparecer el diálogo de certificado y, después, un aviso de que el PDF está certificado: acéptalo."
 
 [[check]]
 id = "a_pades_signature_packages_itself_inside_the_pdf"
@@ -410,6 +490,7 @@ id = "a_xades_enveloped_signature_goes_inside_the_document"
 set = "firma"
 chapter = "12"
 citation = "XAdESExtraParams.java; AOSignerFactory.java:51-81"
+bug = "BUG-32"
 statement = """
 Con format=XAdES Enveloped, la firma va dentro del documento: vuelve el propio XML con la Signature
 como hija de su raíz.
@@ -424,6 +505,7 @@ id = "a_xades_detached_signature_references_the_document_beside_it"
 set = "firma"
 chapter = "12"
 citation = "XAdESExtraParams.java; AOSignerFactory.java:51-81"
+bug = "BUG-32"
 statement = """
 Con format=XAdES Detached, la firma y el documento viajan juntos pero separados: la Signature
 referencia al documento, que va a su lado y no dentro de ella.
@@ -437,10 +519,10 @@ warning = "Va a aparecer el diálogo de certificado."
 id = "a_xades_externally_detached_signature_references_the_uri_of_the_request"
 set = "firma"
 chapter = "12"
-citation = "XAdESExtraParams.java; AOSignerFactory.java:51-81"
+citation = "XAdESExtraParams.java:80-101; XAdESSigner.java:920, 995-1010"
 statement = """
-Con format=XAdES Externally Detached, la firma no lleva el documento: lo referencia por la uri que
-declara la petición.
+Una firma XAdES con format=XAdES Externally Detached en sus parámetros no lleva el documento: lo
+referencia por la uri que declaran los mismos parámetros.
 """
 drive = { mode = "v4", script = "signxadesexternallydetached" }
 assistance = "click"
@@ -541,26 +623,112 @@ saf = "SAF_28"
 warning = "Va a aparecer el diálogo de certificado antes de que llegue el rechazo."
 
 [[check]]
-id = "the_other_data_unfit_for_their_format_answer_the_codes_of_their_family"
+id = "an_unknown_expandable_policy_is_rejected_with_saf_23"
 set = "firma"
-citation = "ProtocolInvocationLauncherSign.java:741-800"
+citation = "ProtocolInvocationLauncherSign.java:486-495; ExtraParamsProcessor.java:141-146"
 statement = """
-Los demás datos que no sirven para la firma pedida comparten el punto de traducción del SAF_28:
-SAF_00 si los datos no se leen, SAF_23 si la política no casa, SAF_29 para un XAdES Enveloped sobre
-algo que no es XML, SAF_30 para unos datos de otro tipo, SAF_31 si lo que se multifirma no es una
-firma, SAF_32 para una factura ya firmada, SAF_38 para una que no lo es, SAF_40 si el documento del
-servidor no se recupera y SAF_44 para una firma sin sus datos.
+Una expPolicy que el cliente no sabe expandir se rechaza con SAF_23 antes de pedir el certificado.
 """
-unmeasurable = "Cada código necesita unos datos a medida que la sede no prepara: de la familia solo se mide el SAF_28."
+drive = { mode = "v4", script = "signwithanunknownpolicy" }
+assistance = "none"
+saf = "SAF_23"
 
 [[check]]
-id = "a_failing_postprocessing_answers_saf_42"
+id = "a_xades_enveloped_signature_over_data_that_is_no_xml_is_rejected_with_saf_29"
 set = "firma"
-citation = "ProtocolInvocationLauncherSign.java:203-207"
+citation = "ProtocolInvocationLauncherSign.java:757-761; XAdESSigner.java:265-266, 522-529"
 statement = """
-Un fallo al postprocesar la firma, que en el original sólo provoca un plugin, se rechaza con SAF_42.
+Una firma XAdES con format=XAdES Enveloped en sus parámetros, sobre algo que no es XML, se rechaza
+con SAF_29.
 """
-unmeasurable = "Exige instalar en el cliente un plugin que falle al postprocesar, y la suite se ejecuta contra una instalación sin plugins."
+drive = { mode = "v4", script = "signxadesenvelopedoveranonxml" }
+assistance = "click"
+saf = "SAF_29"
+warning = "Va a aparecer el diálogo de certificado antes de que llegue el rechazo."
+
+[[check]]
+id = "an_ooxml_signature_over_data_that_is_no_office_document_is_rejected_with_saf_30"
+set = "firma"
+citation = "ProtocolInvocationLauncherSign.java:762-766; AOOOXMLSigner.java:303-305"
+statement = """
+Una firma OOXML sobre algo que no es un documento de Office se rechaza con SAF_30.
+"""
+drive = { mode = "v4", script = "signooxmloveranonooxml" }
+assistance = "click"
+saf = "SAF_30"
+warning = "Va a aparecer el diálogo de certificado antes de que llegue el rechazo."
+
+[[check]]
+id = "a_xades_cosignature_over_data_that_is_no_signature_is_rejected_with_saf_31"
+set = "firma"
+citation = "ProtocolInvocationLauncherSign.java:782-786; AOXAdESSigner.java:822-829"
+statement = """
+Una cofirma XAdES sobre algo que no es una firma XML se rechaza con SAF_31.
+"""
+drive = { mode = "v4", script = "cosignxadesoveranonsignature" }
+assistance = "click"
+saf = "SAF_31"
+warning = "Va a aparecer el diálogo de certificado antes de que llegue el rechazo."
+
+[[check]]
+id = "a_facturae_signature_over_a_signed_invoice_is_rejected_with_saf_32"
+set = "firma"
+citation = "ProtocolInvocationLauncherSign.java:772-776; AOFacturaESigner.java:126-127"
+statement = """
+Una firma FacturaE sobre una factura que ya está firmada se rechaza con SAF_32.
+"""
+drive = { mode = "v4", script = "signfacturaeoverasignedinvoice" }
+assistance = "click"
+saf = "SAF_32"
+warning = "Va a aparecer el diálogo de certificado antes de que llegue el rechazo."
+
+[[check]]
+id = "a_facturae_signature_over_data_that_is_no_invoice_is_rejected_with_saf_38"
+set = "firma"
+citation = "ProtocolInvocationLauncherSign.java:767-771; AOFacturaESigner.java:123-124"
+statement = """
+Una firma FacturaE sobre un XML que no es una factura electrónica se rechaza con SAF_38.
+"""
+drive = { mode = "v4", script = "signfacturaeoveranoninvoice" }
+assistance = "click"
+saf = "SAF_38"
+warning = "Va a aparecer el diálogo de certificado antes de que llegue el rechazo."
+
+[[check]]
+id = "a_triphase_server_failure_is_rejected_with_saf_40"
+set = "firma"
+citation = "ProtocolInvocationLauncherSign.java:747-751; AOCAdESTriPhaseSigner.java:278-283, 371-395; ProtocolInvocationLauncherUtil.java:95-106"
+statement = """
+Si el servidor trifásico contesta a la prefirma con un error que trae una excepción suya, la firma
+se rechaza con SAF_40.
+"""
+drive = { mode = "v4", script = "signcadestriwithafailingserver" }
+assistance = "click"
+saf = "SAF_40"
+warning = "Va a aparecer el diálogo de certificado antes de que llegue el rechazo."
+
+[[check]]
+id = "a_cosignature_without_the_data_or_a_matching_digest_is_rejected_with_saf_44"
+set = "firma"
+citation = "ProtocolInvocationLauncherSign.java:777-781; CAdESCoSigner.java:241-269"
+statement = """
+Una cofirma de una firma separada que no trae una huella del algoritmo pedido no tiene qué firmar:
+se rechaza con SAF_44.
+"""
+drive = { mode = "v4", script = "cosigncadeswithoutthedata" }
+assistance = "click"
+saf = "SAF_44"
+warning = "Va a aparecer el diálogo de certificado antes de que llegue el rechazo."
+
+[[check]]
+id = "unreadable_data_chosen_by_the_person_answer_saf_00"
+set = "firma"
+citation = "ProtocolInvocationLauncherSign.java:370-375"
+statement = """
+Si la petición no trae datos y el fichero que elige la persona no se puede leer, la firma se rechaza
+con SAF_00.
+"""
+unmeasurable = "El único camino es un fichero ilegible elegido en el diálogo del cliente: la sede no manda nada que lo provoque."
 
 [[check]]
 id = "a_signature_that_cannot_be_timestamped_reports_the_failure"

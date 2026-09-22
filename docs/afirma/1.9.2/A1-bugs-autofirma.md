@@ -628,3 +628,36 @@ dirigido al defecto.
   2. Los certificados caducados se ofrecen, cuando sin ese filtro se habrían ocultado.
   3. La sede no recibe error ni aviso: el registro del cliente es el único que nombra la condición descartada.
 * **Causa raíz:** La presencia de un filtro se decide por la cadena que trae la petición y no por las condiciones que quedan tras interpretarla, y la conjunción vacía se evalúa como verdadera.
+
+---
+
+### BUG-32: Los formatos `XAdES Enveloped` y `XAdES Detached` de primer nivel firman como `XAdES Enveloping`
+
+* **Comprobaciones del catálogo:** `a_xades_enveloped_signature_goes_inside_the_document`, `a_xades_detached_signature_references_the_document_beside_it`.
+* **Estado en `master`:** **Sigue presente.** `XAdESSigner.java:269-270` sigue tomando la variante solo de `XAdESExtraParams.FORMAT`, con `XAdES Enveloping` por defecto, y el paquete `protocol` de `afirma-simple` sigue sin copiar a ese parámetro el formato de la petición.
+* **Código fuente:** `afirma-core` · `es.gob.afirma.core.signers.AOSignerFactory.java:60-62`; `afirma-crypto-xades` · `es.gob.afirma.signers.xades.XAdESSigner.java:265-266`.
+* **Descripción:** La tabla de firmadores admite `XAdES Detached`, `XAdES Enveloped` y `XAdES Enveloping` como formatos de la petición, y los resuelve los tres a `AOXAdESSigner` (`AOSignerFactory.java:60-62`). El firmador no recibe ese nombre: la variante la lee de los parámetros de la firma,
+  ```java
+  String format = extraParams.getProperty(
+          XAdESExtraParams.FORMAT, AOSignConstants.SIGN_FORMAT_XADES_ENVELOPING);
+  ```
+  y ni el lanzador ni `AOXAdESSigner` copian el formato de la petición a `XAdESExtraParams.FORMAT`. `AOFacturaESigner` sí fija su variante en ese parámetro (`AOFacturaESigner.java:91`), y es el único que lo hace.
+* **Comportamiento y consecuencia:**
+  1. `format=XAdES Enveloped` y `format=XAdES Detached` devuelven una firma `XAdES Enveloping` con el documento dentro, sin error ni aviso.
+  2. Una sede que pide una firma separada recibe el documento incrustado en la firma, y una que pide la firma dentro de su XML la recibe fuera.
+  3. Sobre datos que no son XML, `XAdES Enveloped` no se rechaza con `SAF_29`: se firman envueltos en Base64. Solo el parámetro `format=XAdES Enveloped` de los parámetros de la firma llega a esa rama.
+* **Causa raíz:** El nombre del formato elige el firmador pero no su variante, y la variante solo se lee de un parámetro que nadie rellena a partir del formato.
+
+---
+
+### BUG-33: El canal WebSocket no pasa al siguiente puerto candidato cuando el primero está ocupado
+
+* **Comprobación del catálogo:** `v4_ports_negotiation`.
+* **Estado en `master`:** **Sigue presente.** `AfirmaWebSocketServerManager.java:91` sigue dando por abierto el puerto en cuanto `instance.start()` vuelve, sin esperar al resultado del `bind`.
+* **Código fuente:** `afirma-simple` · `es.gob.afirma.standalone.protocol.AfirmaWebSocketServerManager.java:63-93`.
+* **Descripción:** El bucle de apertura prueba los puertos de `ports=` en orden y pasa al siguiente solo si la creación o el arranque del servidor lanzan una excepción. `WebSocketServer.start()` solo arranca el hilo del servidor; el `bind` ocurre dentro de ese hilo (`WebSocketServer.run`), y un puerto ocupado llega a `onError` como `BindException` cuando el bucle ya ha terminado con el primer candidato.
+* **Comportamiento y consecuencia:**
+  1. Con el primer puerto ocupado, el canal no se abre en ninguno: la sede no conecta con ningún candidato.
+  2. La lista de candidatos de la URI, cuyo fin es sortear un puerto ocupado, no tiene efecto.
+  3. `SocketOperationException` y su `SAF_45` para «ningún puerto disponible» solo se alcanzan si falla la construcción del servidor, no por un puerto en uso.
+* **Causa raíz:** El éxito de la apertura se decide por el retorno de un arranque asíncrono, no por el resultado del `bind`.

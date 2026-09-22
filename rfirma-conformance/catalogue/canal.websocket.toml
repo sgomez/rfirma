@@ -4,6 +4,7 @@
 id = "v4_ports_negotiation"
 set = "canal.websocket"
 citation = "ProtocolInvocationLauncher.java:233-236, 976-990; AfirmaWebSocketServerManager.java:64-90"
+bug = "BUG-33"
 statement = """
 El canal v4 enlaza el primer puerto libre de la lista de candidatos (ports=p1,p2,p3): con el
 primero ocupado, liga el siguiente.

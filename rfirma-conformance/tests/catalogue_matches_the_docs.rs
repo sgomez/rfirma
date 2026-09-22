@@ -109,17 +109,22 @@ fn cards_cited_in(text: &str) -> BTreeSet<String> {
     cited
 }
 
-/// Lo que la tabla del capítulo 15 dice de un código que el original nunca emite: se documenta en
+/// Lo que la tabla del capítulo 15 dice de un código que la sede nunca recibe: se documenta en
 /// el manual y no se le exige a ningún cliente.
-const THE_MARKS_OF_A_CODE_NEVER_EMITTED: [&str; 2] = ["*Huérfano*", "*Sin emisor*"];
+const THE_MARKS_OF_A_CODE_THE_SITE_NEVER_RECEIVES: [&str; 4] = [
+    "*Huérfano*",
+    "*Sin emisor*",
+    "*No llega a la sede*",
+    "*Solo con un plugin*",
+];
 
-/// Los códigos que el original emite de la tabla sinóptica del capítulo 15, por las filas que abren
+/// Los códigos que la sede puede recibir, de la tabla sinóptica del capítulo 15, por las filas que abren
 /// con uno.
 fn saf_codes_in_the_table(chapter: &str) -> BTreeSet<String> {
     chapter
         .lines()
         .filter(|line| {
-            !THE_MARKS_OF_A_CODE_NEVER_EMITTED
+            !THE_MARKS_OF_A_CODE_THE_SITE_NEVER_RECEIVES
                 .iter()
                 .any(|mark| line.contains(mark))
         })
@@ -397,8 +402,8 @@ fn every_code_of_the_error_table_is_closed_against_the_catalogue() {
 
     assert_eq!(
         table.len(),
-        44,
-        "la tabla del capítulo 15 debería tener 44 códigos que el original emite"
+        39,
+        "la tabla del capítulo 15 debería tener 39 códigos que la sede puede recibir"
     );
     assert!(
         codes_of_the_table_without_an_entry(&table, &named).is_empty(),

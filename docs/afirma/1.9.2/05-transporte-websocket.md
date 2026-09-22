@@ -397,7 +397,11 @@ if (instance == null) {
 Aspectos clave de esta inicialización:
 * **Iteración secuencial de puertos:** prueba cada puerto del array en orden. La
   primera llamada a `instance.start()` que no lance excepción fija la variable
-  estática `instance` y rompe el bucle.
+  estática `instance` y rompe el bucle. **En la práctica no pasa nunca al
+  segundo candidato:** `start()` solo arranca el hilo del servidor, y el `bind`
+  ocurre dentro de ese hilo (`WebSocketServer.run`), así que un puerto ocupado
+  no lanza nada en el bucle: llega después a `onError` como `BindException`, con
+  el primer candidato ya dado por bueno y el canal sin abrir.
 * **Fábrica SSL:** asocia la fábrica segura `DefaultSSLWebSocketServerFactory`
   configurada con el `SSLContext` provisto por `SecureSocketUtils.getSecureSSLContext()`.
 * **Fallo total de puertos:** si todos los puertos candidatos fallan (por estar en

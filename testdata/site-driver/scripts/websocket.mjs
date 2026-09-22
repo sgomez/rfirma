@@ -84,8 +84,11 @@ async function theFirstFreePort(ports) {
   return null;
 }
 
-/** Lanza el sujeto en v4 y abre el canal en el primer puerto candidato que conteste. */
-async function theProtocolV4ChannelOpening(ports, idSession) {
+/**
+ * Lanza el sujeto en v4 y abre el canal en el primer puerto candidato que conteste; si no contesta
+ * ninguno, llama a `beforeGivingUp` antes de rendirse.
+ */
+async function theProtocolV4ChannelOpening(ports, idSession, beforeGivingUp = () => {}) {
   emit({
     event: "launch",
     url: `afirma://websocket?ports=${ports.join(",")}&v=4&jvc=3&idsession=${idSession}`,
@@ -97,6 +100,7 @@ async function theProtocolV4ChannelOpening(ports, idSession) {
       return { ws: await connectWebSocket(port), port };
     } catch {}
   }
+  beforeGivingUp();
   emit({
     event: "error",
     type: "cannot_connect",
@@ -110,7 +114,17 @@ async function theProtocolV4Script() {
   const idSession = "K3m9Pq2XyZ1w8A4bC7dE";
   const candidates = [54321, 54322, 54323];
   const firstFree = await theFirstFreePort(candidates);
-  const channel = await theProtocolV4ChannelOpening(candidates, idSession);
+  const channel = await theProtocolV4ChannelOpening(candidates, idSession, () => {
+    if (firstFree !== null && firstFree !== candidates[0]) {
+      emit(
+        aConditionEvent(
+          THE_FIRST_FREE_CANDIDATE_BOUND,
+          false,
+          `primer candidato libre ${firstFree}; no contestó ningún candidato`,
+        ),
+      );
+    }
+  });
   if (!channel) return;
   const { ws: ws1, port: connectedPort } = channel;
   emit(aConditionEvent(A_CANDIDATE_PORT_BOUND, true, `conectado en puerto ${connectedPort}`));

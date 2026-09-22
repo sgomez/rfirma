@@ -136,11 +136,16 @@ warning = "Va a aparecer el diálogo de certificado para firmar: elige uno. El s
 [[check]]
 id = "a_result_that_cannot_be_ciphered_answers_saf_12"
 set = "canal.intermedio"
-citation = "ProtocolInvocationLauncherSign.java:198-202; ProtocolInvocationLauncherBatch.java:177"
+citation = "UrlParameters.java:327-344; DesCipher.java:37; ProtocolInvocationLauncherSign.java:198-202; ProtocolInvocationLauncher.java:697-713"
 statement = """
-Si el resultado no se puede cifrar con la key, la aplicación termina con SAF_12.
+Una key de ocho caracteres que no son ocho bytes pasa la validación de la petición, pero el resultado
+no se puede cifrar con ella: la aplicación sube SAF_12 sin cifrar y la sede lo recibe.
 """
-unmeasurable = "El cifrado solo falla por un error interno de la aplicación: ninguna key que la sede pueda mandar lo provoca."
+drive = { mode = "relay", script = "relayuncipherable" }
+assistance = "click"
+patience_secs = 120
+saf = "SAF_12"
+warning = "Va a aparecer el diálogo de certificado."
 
 [[check]]
 id = "the_storage_servlet_is_validated_like_the_retrieve_servlet"

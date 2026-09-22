@@ -12,8 +12,12 @@ import {
 } from "../lib/cms.mjs";
 import { aCondition, bytesOf, emit, settle, settlingTheError } from "../lib/events.mjs";
 import {
+  aCertifiedPdf,
+  aPasswordProtectedPdf,
+  aPdfWithAnUnregisteredSignature,
   theChallenge,
   theCmsSignatureOfTheSite,
+  theEd25519KeyStore,
   theInvoice,
   thePdfOfTheTest,
   theReferenceSignature,
@@ -86,9 +90,14 @@ function theSignScriptWith(algorithm, format, extraParams, content, measuring) {
 
 /** Un `cosign()` sobre `content`, con el formato y `extraParams` del guion. */
 function theCosignScript(format, extraParams, content, measuring) {
+  theCosignScriptWith("SHA256withRSA", format, extraParams, content, measuring);
+}
+
+/** Un `cosign()` con el algoritmo del guion. */
+function theCosignScriptWith(algorithm, format, extraParams, content, measuring) {
   AutoScript.cosign(
     content.toString("base64"),
-    "SHA256withRSA",
+    algorithm,
     format,
     extraParams,
     (signature, certificate) => answering(measuring, String(signature), String(certificate)),
@@ -538,6 +547,27 @@ const triphasing = (cop, content) => async () => {
   );
 };
 
+/** El error con el que el servidor trifásico falso contesta a la prefirma: una excepción suya. */
+const A_PRESIGNATURE_FAILURE =
+  "ERR-14:prefirma:java.io.IOException: la sede no entrega el documento";
+
+/** Una firma `CAdEStri` cuyo servidor trifásico falla al preparar la prefirma. */
+async function theFailingTriphaseServerScript() {
+  const serverUrl = await servletServing(() => ({ status: 200, body: A_PRESIGNATURE_FAILURE }));
+  theSignScript("CAdEStri", `serverUrl=${serverUrl}`, theChallenge());
+}
+
+/** Una cofirma SHA-512 de una firma separada cuya única huella es SHA-256: no hay qué cofirmar. */
+function theCosignWithoutTheDataScript() {
+  theCosignScriptWith("SHA512withRSA", "CAdES", "", theReferenceSignature("cades-explicit.p7s"));
+}
+
+/** Una firma con el almacén PKCS#12 de la sede, cuya única clave es Ed25519. */
+function theSignWithAnUnsupportedKeyTypeScript() {
+  AutoScript.setKeyStore(`PKCS12:${theEd25519KeyStore()}`);
+  theSignScript("CAdES", "", theChallenge());
+}
+
 /** Un `signAndSaveToFile()` de un PAdES con `visibleSignature=want`. */
 function theSignAndSaveOfAWantedVisibleSignatureScript() {
   AutoScript.signAndSaveToFile(
@@ -626,8 +656,8 @@ export const SIGNATURE_SCRIPTS = {
   ),
   signxadesexternallydetached: aPublishedScript(
     signing(
-      "XAdES Externally Detached",
-      `uri=${THE_EXTERNAL_URI}`,
+      "XAdES",
+      `format=XAdES Externally Detached\nuri=${THE_EXTERNAL_URI}`,
       theXmlDocument,
       theEnvelope("externally-detached"),
     ),
@@ -688,6 +718,51 @@ export const SIGNATURE_SCRIPTS = {
   signwithanunknownformat: aPublishedScript(signing("NoSuchFormat", "", theChallenge)),
   signwithoutaformat: aPublishedScript(signing(null, "", theChallenge)),
   signwithbrokentsa: aPublishedScript(theSignWithABrokenTsaUrlScript),
+  signwithanunknownpolicy: aPublishedScript(
+    signing("CAdES", "expPolicy=NoSuchPolicy", theChallenge),
+  ),
+  signxadesenvelopedoveranonxml: aPublishedScript(
+    signing("XAdES", "format=XAdES Enveloped", theChallenge),
+  ),
+  signooxmloveranonooxml: aPublishedScript(signing("OOXML", "", theChallenge)),
+  signfacturaeoverasignedinvoice: aPublishedScript(
+    signing("FacturaE", "", () => theReferenceSignature("facturae.xsig")),
+  ),
+  signfacturaeoveranoninvoice: aPublishedScript(signing("FacturaE", "", theXmlDocument)),
+  signcadestriwithafailingserver: aPublishedScript(theFailingTriphaseServerScript),
+  signwithanunsupportedkeytype: aPublishedScript(theSignWithAnUnsupportedKeyTypeScript),
+  signpadescertifiedheadless: aPublishedScript(signing("PAdES", "headless=true", aCertifiedPdf)),
+  signpadesunregisteredheadless: aPublishedScript(
+    signing("PAdES", "headless=true", aPdfWithAnUnregisteredSignature),
+  ),
+  signpadesprotectedheadless: aPublishedScript(
+    signing("PAdES", "headless=true", aPasswordProtectedPdf),
+  ),
+  signpadescertified: aPublishedScript(
+    signing("PAdES", "", aCertifiedPdf, theSignatureInsideThePdf),
+    { conditions: [THE_SIGNATURE_INSIDE_THE_PDF] },
+  ),
+  signpadescertifiedallowed: aPublishedScript(
+    signing(
+      "PAdES",
+      "headless=true\nallowSigningCertifiedPdfs=true",
+      aCertifiedPdf,
+      theSignatureInsideThePdf,
+    ),
+    { conditions: [THE_SIGNATURE_INSIDE_THE_PDF] },
+  ),
+  signpadesunregisteredallowed: aPublishedScript(
+    signing(
+      "PAdES",
+      "headless=true\nallowCosigningUnregisteredSignatures=true",
+      aPdfWithAnUnregisteredSignature,
+      theSignatureInsideThePdf,
+    ),
+    { conditions: [THE_SIGNATURE_INSIDE_THE_PDF] },
+  ),
+  signpadesprotectedwithitspassword: aPublishedScript(
+    signing("PAdES", "headless=true\nuserPassword=1234", aPasswordProtectedPdf),
+  ),
   cosigncades: aPublishedScript(
     cosigning("CAdES", "", theCadesImplicitSignature, withTheShape(TWO_PARALLEL_SIGNERS, "[][]")),
     { conditions: [TWO_PARALLEL_SIGNERS] },
@@ -705,6 +780,8 @@ export const SIGNATURE_SCRIPTS = {
     cosigning("PAdES", "checkSignatures=true", thePdfOfTheTest),
   ),
   cosignfacturae: aPublishedScript(cosigning("FacturaE", "", theInvoice)),
+  cosignxadesoveranonsignature: aPublishedScript(cosigning("XAdES", "", theChallenge)),
+  cosigncadeswithoutthedata: aPublishedScript(theCosignWithoutTheDataScript),
   countersigncades: aPublishedScript(
     countersigning(
       "tree",

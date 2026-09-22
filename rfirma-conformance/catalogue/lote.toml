@@ -419,14 +419,18 @@ person = { yes = "el lote XML local pidió certificado antes de rechazarse", no 
 warning = "Puede aparecer el diálogo de certificado: si aparece, elige el certificado; el rechazo llega después sin más avisos, y si aun así aparece uno de error, ciérralo."
 
 [[check]]
-id = "the_batch_failures_answer_their_own_codes"
+id = "a_risky_pdf_in_a_local_batch_fails_with_error_pre_and_its_reason"
 set = "lote"
-citation = "LocalBatchSigner.java:231-241"
+citation = "LocalBatchSigner.java:62-76, 224-242; SocketOperationException.java:26-28; JSONBatchManager.java:186-200"
 statement = """
-El lote tiene sus propios códigos para un PDF que no puede firmar: SAF_33 si está protegido con
-contraseña, SAF_34 si trae firmas no registradas y SAF_35 si está certificado.
+En un lote local, un PDF certificado, con firmas no registradas o protegido con contraseña no se
+firma ni se pregunta: su elemento vuelve con ERROR_PRE y una descripción del motivo.
 """
-unmeasurable = "Los PDF que los disparan —protegido, con firmas no registradas, certificado— no están en el banco de referencia."
+drive = { mode = "v4", script = "batchlocalriskypdfs" }
+assistance = "click"
+condition = "each-risky-pdf-failed-with-its-reason"
+patience_secs = 90
+warning = "Va a aparecer el diálogo de certificado."
 
 [[check]]
 id = "a_local_batch_accepts_the_none_format"
