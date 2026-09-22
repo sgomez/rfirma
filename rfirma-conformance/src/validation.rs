@@ -4,9 +4,10 @@
 use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 
 use crate::catalogue::Check;
-use crate::outcome::{outcome_name, the_outcome_named, PENDING_NAME};
+use crate::outcome::{outcome_name, the_outcome_named, ResultName, PENDING_NAME};
 use crate::outcome::{CheckState, Outcome};
 use crate::report::Report;
 
@@ -29,18 +30,22 @@ pub(crate) struct Reference {
     pub known: Vec<Known>,
 }
 
-#[derive(Debug, PartialEq, Eq, Serialize)]
+#[derive(Debug, PartialEq, Eq, Serialize, TS)]
 #[serde(tag = "result", rename_all = "snake_case")]
+#[ts(export)]
 pub(crate) enum Validation {
     Validated,
     Discrepant { discrepancies: Vec<Discrepancy> },
 }
 
 /// Una comprobación medible que no da lo previsto: un fallo de la suite o de la referencia.
-#[derive(Debug, PartialEq, Eq, Serialize)]
+#[derive(Debug, PartialEq, Eq, Serialize, TS)]
+#[ts(export)]
 pub(crate) struct Discrepancy {
     pub id: String,
+    #[ts(as = "ResultName")]
     pub expected: &'static str,
+    #[ts(as = "ResultName")]
     pub observed: &'static str,
     pub cause: Option<String>,
     pub note: Option<String>,

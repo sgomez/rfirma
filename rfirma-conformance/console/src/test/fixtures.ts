@@ -1,0 +1,92 @@
+import type { CheckView } from "../contract/CheckView";
+import type { ReportView } from "../contract/ReportView";
+import type { ResultName } from "../contract/ResultName";
+import type { SetView } from "../contract/SetView";
+import type { Snapshot } from "../contract/Snapshot";
+import type { Summary } from "../contract/Summary";
+
+export function aCheck(id: string, state: ResultName = "PENDIENTE"): CheckView {
+  return {
+    id,
+    chapter: "05",
+    statement: `Lo que exige ${id}.`,
+    citation: "AfirmaWebSocketServerV4.java:57-68",
+    warning: null,
+    question: null,
+    state,
+    observation: state === "PENDIENTE" ? null : "el trámite se completó",
+    date: state === "PENDIENTE" ? null : "2026-09-21",
+    duration_ms: state === "PENDIENTE" ? null : 3500,
+  };
+}
+
+function summaryOf(checks: CheckView[]): Summary {
+  const count = (state: ResultName) => checks.filter((check) => check.state === state).length;
+  return {
+    total: checks.length,
+    compliant: count("CONFORME"),
+    noncompliant: count("NO CONFORME"),
+    not_observable: count("NO OBSERVABLE"),
+    pending: count("PENDIENTE"),
+  };
+}
+
+export function aSet(name: string, checks: CheckView[]): SetView {
+  return { name, summary: summaryOf(checks), checks };
+}
+
+export function aReportView(): ReportView {
+  const sets = [
+    aSet("saludo", [aCheck("greeting_opens_the_channel", "CONFORME"), aCheck("greeting_echoes")]),
+    aSet("errores", [
+      aCheck("unsupported_protocol_uri_rejected", "NO CONFORME"),
+      aCheck("unknown_operation_rejected", "NO OBSERVABLE"),
+      aCheck("empty_uri_rejected"),
+    ]),
+  ];
+  return {
+    client: "/usr/bin/autofirma",
+    kind: "autofirma",
+    header: {
+      os: "Linux",
+      os_version: "6.8.0",
+      client_version: "1.9.2",
+      transport: "websocket",
+      store: "softhsm2:/usr/lib/softhsm/libsofthsm2.so",
+      date: "2026-09-21",
+    },
+    summary: summaryOf(sets.flatMap((set) => set.checks)),
+    sets,
+  };
+}
+
+export function aSnapshot(overrides: Partial<Snapshot> = {}): Snapshot {
+  return {
+    client: {
+      kind: "autofirma",
+      binary: "/usr/bin/autofirma",
+      launcher: "/tmp/aislado/autofirma",
+      trust_root: "/usr/lib/Autofirma/Autofirma_ROOT.cer",
+      store: "softhsm2:/usr/lib/softhsm/libsofthsm2.so",
+    },
+    client_complaints: [],
+    resolving_client: false,
+    report_name: "af-linux-prueba",
+    report: aReportView(),
+    reports: [
+      {
+        name: "af-linux-prueba",
+        kind: "autofirma",
+        client: "/usr/bin/autofirma",
+        client_version: "1.9.2",
+        date: "2026-09-21",
+        complaint: null,
+      },
+    ],
+    running: null,
+    queued: [],
+    question: null,
+    why_pending: {},
+    ...overrides,
+  };
+}

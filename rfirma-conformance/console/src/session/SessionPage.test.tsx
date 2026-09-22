@@ -1,0 +1,154 @@
+import { act, screen, waitFor, within } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
+import { aSnapshot } from "../test/fixtures";
+import { renderConsoleAt } from "../test/render";
+
+async function theSet(name: string) {
+  const heading = await screen.findByRole("heading", { name });
+  return heading.closest("section") as HTMLElement;
+}
+
+describe("the session", () => {
+  it("runs the pending checks of the set whose button was pressed and nothing else", async () => {
+    const { server, user } = renderConsoleAt("/");
+
+    await user.click(
+      within(await theSet("errores")).getByRole("button", {
+        name: "Ejecutar las pendientes de errores",
+      }),
+    );
+    await user.click(
+      within(await theSet("saludo")).getByRole("button", { name: "Ejecutar todo saludo" }),
+    );
+
+    expect(server.posted("/api/run")).toEqual([
+      { set: "errores", pending: true },
+      { set: "saludo" },
+    ]);
+  });
+
+  it("runs one check from its own button", async () => {
+    const { server, user } = renderConsoleAt("/");
+
+    await user.click(await screen.findByRole("button", { name: "Ejecutar empty_uri_rejected" }));
+
+    expect(server.posted("/api/run")).toEqual([{ check: "empty_uri_rejected" }]);
+  });
+
+  it("runs the pending checks of the whole report from the third step and with p", async () => {
+    const { server, user } = renderConsoleAt("/");
+
+    await user.click(await screen.findByRole("button", { name: /Pendientes \(2\)/ }));
+    await user.keyboard("p");
+
+    expect(server.posted("/api/run")).toEqual(["pending", "pending"]);
+  });
+
+  it("folds and unfolds every set at once, by button and by key", async () => {
+    const { user } = renderConsoleAt("/");
+    await screen.findByText("greeting_echoes");
+
+    await user.click(screen.getByRole("button", { name: /Plegar todo/ }));
+    expect(screen.queryByText("greeting_echoes")).not.toBeInTheDocument();
+    expect(screen.queryByText("empty_uri_rejected")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /Desplegar todo/ }));
+    expect(screen.getByText("greeting_echoes")).toBeInTheDocument();
+
+    await user.keyboard("[[");
+    expect(screen.queryByText("empty_uri_rejected")).not.toBeInTheDocument();
+    await user.keyboard("]");
+    expect(screen.getByText("empty_uri_rejected")).toBeInTheDocument();
+  });
+
+  it("folds only the set whose own toggle was pressed", async () => {
+    const { user } = renderConsoleAt("/");
+
+    await user.click(await screen.findByRole("button", { name: "errores" }));
+
+    expect(screen.queryByText("empty_uri_rejected")).not.toBeInTheDocument();
+    expect(screen.getByText("greeting_echoes")).toBeInTheDocument();
+  });
+
+  it("hides the checks whose result is filtered out", async () => {
+    const { user } = renderConsoleAt("/");
+    await screen.findByText("greeting_echoes");
+
+    await user.click(screen.getByRole("button", { name: /^PENDIENTE\s*\d/ }));
+
+    expect(screen.queryByText("greeting_echoes")).not.toBeInTheDocument();
+    expect(screen.getByText("greeting_opens_the_channel")).toBeInTheDocument();
+  });
+
+  it("shows the batch bar only while something runs, and skips and stops from it", async () => {
+    const { server, user } = renderConsoleAt("/");
+    await screen.findByText("greeting_echoes");
+    expect(screen.queryByRole("region", { name: "En curso" })).not.toBeInTheDocument();
+
+    act(() =>
+      server.publish(
+        aSnapshot({
+          running: { ids: ["empty_uri_rejected"], elapsed_ms: 1200 },
+          queued: ["greeting_echoes"],
+        }),
+      ),
+    );
+    const bar = await screen.findByRole("region", { name: "En curso" });
+    expect(within(bar).getByText("errores")).toBeInTheDocument();
+    expect(within(bar).getByText("0/2")).toBeInTheDocument();
+
+    await user.click(within(bar).getByRole("button", { name: /Saltar esta/ }));
+    await user.keyboard("X");
+
+    expect(server.posted("/api/skip")).toEqual([{}]);
+    expect(server.posted("/api/stop")).toEqual([{}]);
+
+    act(() => server.publish(aSnapshot()));
+    await waitFor(() =>
+      expect(screen.queryByRole("region", { name: "En curso" })).not.toBeInTheDocument(),
+    );
+  });
+
+  it("answers the question in flight with s, n or Escape", async () => {
+    const { server, user } = renderConsoleAt(
+      "/",
+      aSnapshot({
+        running: { ids: ["empty_uri_rejected"], elapsed_ms: 0 },
+        question: {
+          check: "empty_uri_rejected",
+          prompt: "¿Se abrió el diálogo? [s/n]",
+          kind: "outcome",
+        },
+      }),
+    );
+    expect(await screen.findByText("¿Se abrió el diálogo?")).toBeInTheDocument();
+
+    await user.keyboard("n");
+
+    expect(server.posted("/api/answer")).toEqual([{ answer: "n" }]);
+  });
+
+  it("keeps the report and run steps disabled until the client is resolved", async () => {
+    renderConsoleAt("/", aSnapshot({ client: null, report_name: null, report: null }));
+
+    const report = await screen.findByRole("region", { name: "2. Informe" });
+    expect(report).toHaveAttribute("aria-disabled", "true");
+    expect(screen.getByRole("region", { name: "3. Ejecutar" })).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
+  });
+
+  it("marks the client step while its changes are not resolved", async () => {
+    const { user } = renderConsoleAt("/");
+
+    await user.click(
+      within(await screen.findByRole("region", { name: "1. Cliente" })).getByRole("button", {
+        name: "Cambiar",
+      }),
+    );
+    await user.click(screen.getByRole("radio", { name: "rFirma" }));
+
+    expect(screen.getByText("cambios sin resolver")).toBeInTheDocument();
+  });
+});

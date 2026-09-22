@@ -5,12 +5,14 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 
 use crate::errand::the_published_client;
 
 /// Qué cliente es, que solo decide cómo se lanza.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "snake_case")]
+#[ts(export)]
 pub(crate) enum ClientKind {
     Autofirma,
     Rfirma,
@@ -43,7 +45,8 @@ const THE_AUTOFIRMA_ROOTS: &[&str] = &[
 /// El único transporte que habla esta fase; el relé por servidor intermedio no está sondeado.
 pub(crate) const THE_TRANSPORT: &str = "websocket";
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, TS)]
+#[ts(export)]
 pub(crate) struct Client {
     pub(crate) kind: ClientKind,
     pub(crate) binary: PathBuf,
@@ -62,7 +65,8 @@ struct IsolatedStore {
 }
 
 /// Las coordenadas que se deducen solas al crear un informe; la versión del cliente, no.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, TS)]
+#[ts(export)]
 pub(crate) struct DeducedCoordinates {
     os: String,
     os_version: String,
