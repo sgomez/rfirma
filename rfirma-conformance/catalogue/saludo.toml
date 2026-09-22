@@ -11,6 +11,7 @@ Una selección de certificado se completa de punta a punta: el canal se abre, el
 respuesta trae el certificado elegido.
 """
 drive = { mode = "v4", script = "selectcert" }
+assistance = "click"
 warning = "Va a aparecer el diálogo de selección de certificado: elige uno para que la comprobación llegue a medir algo."
 
 [[check]]
@@ -23,4 +24,6 @@ Una firma CAdES en modo explícito se completa de punta a punta y la respuesta t
 y la firma.
 """
 drive = { mode = "v4", script = "signcades" }
-warning = "Van a aparecer el diálogo de certificado y el del PIN del token."
+assistance = "click"
+greeting = true
+warning = "Va a aparecer el diálogo de certificado."

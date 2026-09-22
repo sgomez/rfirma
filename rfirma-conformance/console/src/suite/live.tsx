@@ -10,6 +10,8 @@ import {
 } from "react";
 import type { LiveLine } from "../contract/LiveLine";
 import type { Snapshot } from "../contract/Snapshot";
+import type { SuiteFailure } from "../contract/SuiteFailure";
+import { notify } from "../ui/notify";
 import type { Suite } from "./suite";
 
 export type Connection = "connecting" | "live" | "lost";
@@ -49,6 +51,13 @@ export function SuiteProvider({ suite, children }: { suite: Suite; children: Rea
     stream.addEventListener("log", (event) => {
       const line = JSON.parse((event as MessageEvent<string>).data) as LiveLine;
       for (const listener of listeners.current) listener(line);
+    });
+    stream.addEventListener("suite_failure", (event) => {
+      const failure = JSON.parse((event as MessageEvent<string>).data) as SuiteFailure;
+      const text = `Fallo de la suite en ${failure.check}: ${failure.why}`;
+      const id = nextToast.current++;
+      setToasts((shown) => [...shown.slice(-3), { id, text }]);
+      notify(text);
     });
     stream.addEventListener("open", () => setConnection("live"));
     stream.addEventListener("error", () => setConnection("lost"));

@@ -11,6 +11,7 @@ Una invocación con un esquema ajeno a afirma:// no abre canal: el original la r
 antes de leer nada más de ella.
 """
 drive = { mode = "v4", script = "protocol-foreign-scheme" }
+assistance = "none"
 condition = "no-channel-opens"
 
 [[check]]
@@ -22,6 +23,7 @@ statement = """
 Una operación no soportada (host desconocido como unknownop) se rechaza con SAF_04.
 """
 drive = { mode = "v4", script = "protocol-v4-operations" }
+assistance = "none"
 condition = "unknown-operation-saf-04"
 
 [[check]]
@@ -33,6 +35,7 @@ statement = """
 En afirma://sign?, si el parámetro op falta o no es reconocido, se rechaza con SAF_04.
 """
 drive = { mode = "v4", script = "protocol-v4-operations" }
+assistance = "none"
 condition = "invalid-op-saf-04"
 
 [[check]]
@@ -44,6 +47,7 @@ statement = """
 Si el formato de firma especificado en format no está soportado, se rechaza con SAF_06.
 """
 drive = { mode = "v4", script = "protocol-v4-operations" }
+assistance = "none"
 condition = "invented-format-saf-06"
 
 [[check]]
@@ -56,6 +60,7 @@ Si rtservlet apunta a localhost o 127.0.0.1, se rechaza con SAF_13. Por socket o
 stservlet no se valida.
 """
 drive = { mode = "v4", script = "protocol-v4-operations" }
+assistance = "click"
 condition = "local-rtservlet-saf-13"
 warning = "Si el cliente muestra el error SAF_13 en un diálogo, ciérralo para que llegue la respuesta."
 
@@ -68,6 +73,7 @@ statement = """
 Parámetros de entrada con sintaxis inválida se rechazan con SAF_03.
 """
 drive = { mode = "v4", script = "protocol-v4-operations" }
+assistance = "none"
 condition = "no-data-saf-03"
 
 [[check]]
@@ -79,8 +85,9 @@ statement = """
 Una invocación de signandsave sin cop se rechaza con SAF_04.
 """
 drive = { mode = "v4", script = "signandsavewithoutaverb" }
+assistance = "click"
 expects_saf = "SAF_04"
-warning = "Van a aparecer el diálogo de certificado y el del PIN antes de que llegue el rechazo."
+warning = "Va a aparecer el diálogo de certificado antes de que llegue el rechazo."
 
 [[check]]
 id = "a_saf_code_reaches_the_published_client_intact_over_the_websocket"
@@ -93,6 +100,8 @@ SAF_nn intacto al principio del mensaje, que es lo único por lo que el cliente 
 error.
 """
 drive = { mode = "v4", script = "signwithanunknownformat" }
+assistance = "none"
+greeting = true
 expects_saf = "SAF_06"
 
 [[check]]
@@ -105,6 +114,7 @@ Por el socket local el mismo rechazo viaja en Base64 dentro de una respuesta HTT
 publicado lo recibe descodificado con el prefijo SAF_nn intacto.
 """
 drive = { mode = "service", script = "signwithanunknownformat" }
+assistance = "none"
 expects_saf = "SAF_06"
 
 [[check]]
@@ -142,8 +152,8 @@ Cancelar un diálogo en mitad de una firma responde el literal no numerado CANCE
 y el cliente publicado lo entrega a la sede como AOCancelledOperationException.
 """
 drive = { mode = "v4", script = "signcades" }
+assistance = "person"
 harness = "cancelled_dialogue"
-needs = ["persona"]
 question = "¿se canceló la selección de certificado? [s/n]"
 warning = "Va a aparecer el diálogo de selección de certificado de una firma: cancélalo en vez de elegir."
 
@@ -180,8 +190,8 @@ confirmación y no confunde con una firma. La misma confirmación por WebSocket 
 de operaciones.
 """
 drive = { mode = "service", script = "save" }
+assistance = "person"
 harness = "save_confirmation"
-needs = ["persona"]
 question = "¿se pidió elegir dónde guardar el fichero? [s/n]"
 warning = "Va a aparecer la ventana nativa para elegir dónde guardar el fichero."
 
@@ -199,8 +209,9 @@ multifirma no es una firma, SAF_32 para una factura ya firmada, SAF_38 para una 
 SAF_40 si el documento del servidor no se recupera y SAF_44 para una firma sin sus datos.
 """
 drive = { mode = "v4", script = "signpadesoveranonpdf" }
+assistance = "click"
 expects_saf = "SAF_28"
-warning = "Van a aparecer el diálogo de certificado y el del PIN antes de que llegue el rechazo."
+warning = "Va a aparecer el diálogo de certificado antes de que llegue el rechazo."
 
 [[check]]
 id = "the_key_store_failures_answer_their_own_codes"

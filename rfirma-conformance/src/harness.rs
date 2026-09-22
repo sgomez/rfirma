@@ -95,7 +95,7 @@ pub(crate) const THE_HARNESSES: &[Harness] = &[
         name: "occupied_service_ports",
         fixtures: &[],
         measure: |probe, check, drive| {
-            let _occupied = OccupiedPorts::at(&check.required_ports());
+            let _occupied = OccupiedPorts::at(&check.ports);
             probe.drive(check, drive)
         },
         judge: |_, _, outcome, answer| the_outcome_for_a_bind_failure(outcome, answer),

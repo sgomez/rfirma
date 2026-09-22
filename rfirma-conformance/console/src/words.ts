@@ -1,3 +1,4 @@
+import type { Assistance } from "./contract/Assistance";
 import type { ClientKind } from "./contract/ClientKind";
 import type { ResultName } from "./contract/ResultName";
 import type { Summary } from "./contract/Summary";
@@ -28,6 +29,12 @@ export function countOf(summary: Summary, result: ResultName): number {
       return summary.pending;
   }
 }
+
+export const assistanceName: Record<Assistance, string> = {
+  none: "ninguna",
+  click: "clic",
+  person: "persona",
+};
 
 export function clientName(kind: ClientKind | null | undefined): string {
   if (kind === "autofirma") return "AutoFirma";

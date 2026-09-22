@@ -16,7 +16,7 @@ pub(crate) enum Site {
 }
 
 /// El camino por el que un guion llega al cliente.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub(crate) enum Family {
     V4Echo,
@@ -32,10 +32,6 @@ pub(crate) struct Mode {
 #[derive(Debug, Deserialize)]
 pub(crate) struct Script {
     pub site: Site,
-    #[cfg_attr(
-        not(test),
-        expect(dead_code, reason = "la leerá el saludo por familia de trámite")
-    )]
     pub family: Family,
     pub modes: Vec<String>,
     pub conditions: Vec<String>,

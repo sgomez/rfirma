@@ -116,7 +116,6 @@ pub(crate) struct DeducedCoordinates {
     os: String,
     os_version: String,
     transport: &'static str,
-    store: String,
 }
 
 /// Resuelve el cliente de clase `kind`, con el binario y la raíz dados a mano si los hay; cada queja
@@ -185,22 +184,12 @@ fn the_profile_of(
     })
 }
 
-pub(crate) fn the_deduced_coordinates(client: &Client) -> DeducedCoordinates {
+pub(crate) fn the_deduced_coordinates() -> DeducedCoordinates {
     DeducedCoordinates {
         os: uname("-s"),
         os_version: uname("-r"),
         transport: THE_TRANSPORT,
-        store: the_stores_of(client),
     }
-}
-
-fn the_stores_of(client: &Client) -> String {
-    client
-        .profiles
-        .iter()
-        .map(|profile| profile.store.name())
-        .collect::<Vec<_>>()
-        .join(", ")
 }
 
 fn uname(flag: &str) -> String {

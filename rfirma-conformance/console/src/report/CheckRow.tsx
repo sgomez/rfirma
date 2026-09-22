@@ -2,7 +2,7 @@ import { memo, type ReactNode, useEffect, useRef, useState } from "react";
 import type { CheckView } from "../contract/CheckView";
 import { Elapsed } from "../ui/Elapsed";
 import { type Activity, ActivityIcon, PlayIcon, ResultIcon } from "../ui/icons";
-import { calendarDate, duration, resultTone } from "../words";
+import { assistanceName, calendarDate, duration, resultTone } from "../words";
 import type { Controls } from "./SetSection";
 
 interface CheckRowProps {
@@ -130,6 +130,11 @@ function CheckDetail({
         <Field label="Fuente">
           <code>{check.citation}</code>
         </Field>
+        {check.assistance && (
+          <Field label="Asistencia">
+            {assistanceName[check.assistance]} · almacén <code>{check.store}</code>
+          </Field>
+        )}
         {check.warning && (
           <Field label="Antes de empezar" tone="notice">
             {check.warning}

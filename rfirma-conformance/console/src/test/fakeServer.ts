@@ -2,6 +2,7 @@ import type { Comparison } from "../contract/Comparison";
 import type { LiveLine } from "../contract/LiveLine";
 import type { ReportView } from "../contract/ReportView";
 import type { Snapshot } from "../contract/Snapshot";
+import type { SuiteFailure } from "../contract/SuiteFailure";
 import type { EventStream, Wire } from "../suite/suite";
 
 export interface Received {
@@ -71,6 +72,10 @@ export class FakeServer implements Wire {
 
   say(line: LiveLine) {
     for (const stream of this.streams) stream.emit("log", line);
+  }
+
+  fail(failure: SuiteFailure) {
+    for (const stream of this.streams) stream.emit("suite_failure", failure);
   }
 
   posted(path: string): unknown[] {

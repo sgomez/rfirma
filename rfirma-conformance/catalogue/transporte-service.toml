@@ -11,7 +11,7 @@ El carril del socket local completa una selección de certificado igual que el c
 esta comprobación ninguna de las suyas es de fiar.
 """
 drive = { mode = "service", script = "selectcert" }
-greeting = true
+assistance = "click"
 warning = "Va a aparecer el diálogo de selección de certificado: elige uno para que la comprobación llegue a medir algo."
 
 [[check]]
@@ -25,8 +25,9 @@ usuaria en vez de terminar en silencio. La sede no puede enterarse por ningún c
 ligado no hay cable de vuelta, y el cliente publicado acaba en «la aplicación no está instalada».
 """
 drive = { mode = "service-bind-failure", script = "selectcert" }
+assistance = "person"
 harness = "occupied_service_ports"
-needs = ["persona", "puertos:63131,63132,63133"]
+ports = [63131, 63132, 63133]
 question = "¿avisó la aplicación de que no pudo abrir el canal con la página? [s/n]"
 warning = "La suite ocupa los tres puertos del canal: el cliente no podrá abrirlo, y la página tardará unos 30 segundos en rendirse."
 
@@ -40,6 +41,7 @@ La invocación afirma://service/? con barra ante la consulta abre el canal igual
 afirma://service?.
 """
 drive = { mode = "service", script = "protocol-service-v2" }
+assistance = "none"
 condition = "the-echo-answers-ok"
 
 [[check]]
@@ -52,6 +54,7 @@ Un puerto candidato con signo negativo en ports se toma por su valor absoluto: e
 63117 si la invocación trae -63117.
 """
 drive = { mode = "service", script = "protocol-service-v1" }
+assistance = "none"
 condition = "the-echo-answers-ok"
 
 [[check]]
@@ -64,6 +67,7 @@ Los puertos candidatos se prueban en el orden en que llegan en ports y el canal 
 primero que está libre.
 """
 drive = { mode = "service", script = "protocol-service" }
+assistance = "none"
 condition = "the-first-free-candidate-bound"
 
 [[check]]
@@ -76,6 +80,7 @@ El canal sólo atiende conexiones que llegan del bucle local: a una que llega de
 del equipo no le contesta la orden.
 """
 drive = { mode = "service", script = "protocol-service" }
+assistance = "none"
 condition = "only-the-loopback-served"
 
 [[check]]
@@ -88,6 +93,7 @@ El canal lee la orden hasta el delimitador @EOF aunque llegue en varios envíos,
 partido entre dos, y no contesta antes de haberlo leído.
 """
 drive = { mode = "service", script = "protocol-service" }
+assistance = "none"
 condition = "read-until-the-eof-mark"
 
 [[check]]
@@ -99,6 +105,8 @@ statement = """
 La orden echo= con el identificador de sesión negociado recibe OK.
 """
 drive = { mode = "service", script = "protocol-service" }
+assistance = "none"
+greeting = true
 condition = "the-echo-answers-ok"
 
 [[check]]
@@ -111,6 +119,7 @@ El eco con guion (echo=-) descarta el resultado pendiente: el cmd= siguiente eje
 en vez de volver a anunciar las partes de la anterior.
 """
 drive = { mode = "service", script = "protocol-service" }
+assistance = "none"
 condition = "a-dashed-echo-discards-the-result"
 
 [[check]]
@@ -123,6 +132,7 @@ La orden cmd= con una operación entera no devuelve su resultado sino el número
 queda troceado.
 """
 drive = { mode = "service", script = "protocol-service" }
+assistance = "none"
 condition = "cmd-announces-the-parts"
 
 [[check]]
@@ -134,6 +144,7 @@ statement = """
 La orden send=@parte@total entrega cada parte anunciada, y unidas son el resultado de la operación.
 """
 drive = { mode = "service", script = "protocol-service" }
+assistance = "none"
 condition = "send-delivers-the-result"
 
 [[check]]
@@ -145,6 +156,7 @@ statement = """
 Un fragment= que no es el último de su petición recibe MORE_DATA_NEED.
 """
 drive = { mode = "service", script = "protocol-service" }
+assistance = "none"
 condition = "an-early-fragment-asks-for-more"
 
 [[check]]
@@ -156,6 +168,7 @@ statement = """
 El último fragment= de una petición recibe OK.
 """
 drive = { mode = "service", script = "protocol-service" }
+assistance = "none"
 condition = "the-last-fragment-answers-ok"
 
 [[check]]
@@ -168,6 +181,7 @@ La orden firm= ejecuta la petición reensamblada de sus fragmentos en orden y an
 resultado, que send= entrega.
 """
 drive = { mode = "service", script = "protocol-service" }
+assistance = "none"
 condition = "firm-runs-the-reassembled-request"
 
 [[check]]
@@ -180,6 +194,7 @@ Toda respuesta del canal lleva HTTP/1.1 200 OK, también las que traen un error 
 viaja en el cuerpo, nunca en el código de estado.
 """
 drive = { mode = "service", script = "protocol-service" }
+assistance = "none"
 condition = "every-answer-is-http-200"
 
 [[check]]
@@ -191,6 +206,7 @@ statement = """
 El canal del socket se abre cuando la invocación declara v=1.
 """
 drive = { mode = "service", script = "protocol-service-v1" }
+assistance = "none"
 condition = "the-echo-answers-ok"
 
 [[check]]
@@ -202,6 +218,7 @@ statement = """
 El canal del socket se abre cuando la invocación declara v=2.
 """
 drive = { mode = "service", script = "protocol-service-v2" }
+assistance = "none"
 condition = "the-echo-answers-ok"
 
 [[check]]
@@ -213,6 +230,7 @@ statement = """
 El canal del socket se abre cuando la invocación declara v=3.
 """
 drive = { mode = "service", script = "protocol-service" }
+assistance = "none"
 condition = "the-echo-answers-ok"
 
 [[check]]
@@ -236,6 +254,7 @@ La versión negociada al abrir el canal rige toda la sesión: un ver dentro de l
 por cmd= no la cambia, y ver=5 no se rechaza con SAF_21.
 """
 drive = { mode = "service", script = "protocol-service" }
+assistance = "none"
 condition = "an-inner-ver-is-ignored"
 
 [[check]]

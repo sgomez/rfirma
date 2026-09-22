@@ -11,6 +11,7 @@ Las operaciones aceptan versiones de protocolo menores o iguales a 4
 (MAX_PROTOCOL_VERSION_SUPPORTED).
 """
 drive = { mode = "v4", script = "protocol-v4-operations" }
+assistance = "none"
 condition = "ver-4-passes"
 
 [[check]]
@@ -23,6 +24,7 @@ Por el canal WebSocket la versión de protocolo de la operación la fija el cana
 petición se ignora, no se rechaza con SAF_21, y la operación sigue hasta su siguiente comprobación.
 """
 drive = { mode = "v4", script = "protocol-v4-operations" }
+assistance = "none"
 condition = "ver-5-is-ignored"
 
 [[check]]
@@ -35,6 +37,7 @@ Si mcv solicita una versión igual o inferior a la versión del aplicativo (p. e
 operación continúa sin error de versión.
 """
 drive = { mode = "v4", script = "protocol-v4-operations" }
+assistance = "none"
 condition = "mcv-below-the-client-passes"
 
 [[check]]
@@ -47,6 +50,7 @@ Si mcv solicita una versión superior a la de la aplicación (p. ej. mcv=99.0.0)
 rechazada con SAF_41.
 """
 drive = { mode = "v4", script = "protocol-v4-operations" }
+assistance = "none"
 condition = "mcv-above-the-client-saf-41"
 
 [[check]]
@@ -59,6 +63,7 @@ En versión 4 el apretón de manos WebSocket no exige idsession en la query stri
 él se acepta y la credencial se comprueba en cada mensaje.
 """
 drive = { mode = "v4", script = "protocol-v4" }
+assistance = "none"
 condition = "the-echo-with-its-session-answers-ok"
 
 [[check]]
@@ -71,6 +76,7 @@ El canal WebSocket admite las versiones de protocolo 3 y 4 (SUPPORTED_PROTOCOL_V
 llegan a abrir canal.
 """
 drive = { mode = "v3", script = "protocol-v3" }
+assistance = "none"
 harness = "supported_websocket_versions"
 
 [[check]]

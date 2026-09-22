@@ -11,6 +11,7 @@ El cliente JavaScript selecciona 3 puertos aleatorios únicos (ports=p1,p2,p3) y
 el primer puerto libre de la lista.
 """
 drive = { mode = "v4", script = "protocol-v4" }
+assistance = "none"
 condition = "a-candidate-port-bound"
 
 [[check]]
@@ -22,6 +23,8 @@ statement = """
 La petición de eco echo=-idsession=<idSession>@EOF recibe la respuesta de texto OK.
 """
 drive = { mode = "v4", script = "protocol-v4" }
+assistance = "none"
+greeting = true
 condition = "the-echo-with-its-session-answers-ok"
 
 [[check]]
@@ -34,6 +37,7 @@ El mensaje que incluye el identificador de sesión coincidente con el negociado 
 aceptado para su procesamiento.
 """
 drive = { mode = "v4", script = "protocol-v4" }
+assistance = "none"
 condition = "the-echo-with-its-session-answers-ok"
 
 [[check]]
@@ -46,6 +50,7 @@ Si el mensaje no incluye el identificador de sesión o este difiere del negociad
 servidor responde con SAF_46.
 """
 drive = { mode = "v4", script = "protocol-v4" }
+assistance = "none"
 condition = "the-echo-without-a-session-answers-saf-46"
 
 [[check]]
@@ -58,6 +63,7 @@ Si idsession en la URL de arranque contiene caracteres no alfanuméricos, se anu
 rechaza los mensajes con SAF_46.
 """
 drive = { mode = "v4", script = "protocol-v4-malformed-id" }
+assistance = "none"
 condition = "a-malformed-session-binds-nothing"
 
 [[check]]
@@ -70,6 +76,7 @@ La primera conexión se fija en wsClient; el cierre de conexiones secundarias no
 aplicación, que sólo termina cuando se cierra el cliente principal.
 """
 drive = { mode = "v4", script = "protocol-v4" }
+assistance = "none"
 condition = "a-second-client-leaves-the-channel-alive"
 
 [[check]]
@@ -82,6 +89,7 @@ En versión 3, la ausencia de ports en la URL de arranque asigna por defecto el 
 (DEFAULT_WEBSOCKET_PORT).
 """
 drive = { mode = "v3", script = "protocol-v3" }
+assistance = "none"
 condition = "the-fixed-port-bound"
 
 [[check]]
@@ -94,6 +102,7 @@ En versión 3, cualquier mensaje que empiece por echo= responde inmediatamente O
 identificador de sesión.
 """
 drive = { mode = "v3", script = "protocol-v3" }
+assistance = "none"
 condition = "a-bare-echo-answers-ok"
 
 [[check]]
@@ -106,6 +115,7 @@ En versión 3, el servidor no valida el identificador de sesión en los mensajes
 SAF_46.
 """
 drive = { mode = "v3", script = "protocol-v3" }
+assistance = "none"
 condition = "an-echo-without-a-session-is-not-refused"
 
 [[check]]
@@ -118,6 +128,7 @@ En versión 3, el cierre de una conexión secundaria no termina la aplicación; 
 sigue activo.
 """
 drive = { mode = "v3", script = "protocol-v3" }
+assistance = "none"
 condition = "a-second-client-leaves-the-channel-alive"
 
 [[check]]
@@ -130,4 +141,5 @@ El canal de la versión 4 exige que la dirección de origen sea textualmente 127
 SAF_47 a cualquier otra, el bucle local IPv6 incluido.
 """
 drive = { mode = "v4-ipv6", script = "selectcert" }
+assistance = "none"
 expects_saf = "SAF_47"

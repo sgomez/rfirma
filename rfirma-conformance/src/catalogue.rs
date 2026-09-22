@@ -7,8 +7,12 @@ use std::time::Duration;
 
 use serde::{Deserialize, Deserializer};
 
+use serde::Serialize;
+use ts_rs::TS;
+
+use crate::client::Store;
 use crate::harness::{the_harness_named, Harness};
-use crate::manifest::{Manifest, Site};
+use crate::manifest::{Family, Manifest, Site};
 
 /// El vocabulario cerrado de `set`, en el orden en que se leen sus ficheros.
 pub(crate) const THE_SETS: &[&str] = &[
@@ -24,11 +28,28 @@ pub(crate) const THE_SETS: &[&str] = &[
     "parametros",
 ];
 
-/// Lo que necesita una comprobación además del cliente, tal y como se declara en `needs`.
-pub(crate) const A_PERSON: &str = "persona";
-pub(crate) const A_STORE: &str = "almacén:";
-pub(crate) const SOME_PORTS: &str = "puertos:";
-pub(crate) const A_WAIT: &str = "espera:";
+/// Qué necesita una comprobación de la persona que está delante, en el orden de sus tramos.
+#[derive(
+    Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Deserialize, Serialize, TS,
+)]
+#[serde(rename_all = "snake_case")]
+#[ts(export)]
+pub(crate) enum Assistance {
+    #[default]
+    None,
+    Click,
+    Person,
+}
+
+impl Assistance {
+    pub(crate) fn name(self) -> &'static str {
+        match self {
+            Self::None => "ninguna",
+            Self::Click => "clic",
+            Self::Person => "persona",
+        }
+    }
+}
 
 /// Cómo se conduce al cliente publicado para ejercitar la exigencia.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
@@ -39,6 +60,7 @@ pub(crate) struct Drive {
 
 /// Una exigencia del protocolo con todo lo que se sabe de ella menos cómo se mide.
 #[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub(crate) struct Check {
     pub id: String,
     pub set: String,
@@ -54,15 +76,26 @@ pub(crate) struct Check {
     /// La condición del manifiesto que juzga la comprobación, con el nombre que le da su guion.
     #[serde(default)]
     pub condition: Option<String>,
+    /// Obligatoria en toda comprobación conducida; `None` en las no medibles.
     #[serde(default)]
-    pub needs: Vec<String>,
+    pub assistance: Option<Assistance>,
+    #[serde(default)]
+    pub store: Store,
+    #[serde(default)]
+    pub patience_secs: Option<u64>,
+    /// Los puertos que tienen que estar libres antes de conducirla.
+    #[serde(default)]
+    pub ports: Vec<u16>,
+    /// La familia de su guion, que pone el manifiesto al cargar el catálogo.
+    #[serde(skip)]
+    pub family: Option<Family>,
     #[serde(default)]
     pub warning: Option<String>,
     #[serde(default)]
     pub question: Option<String>,
     #[serde(default)]
     pub unmeasurable: Option<String>,
-    /// Si es el saludo de su conjunto: lo abre y, si no se cumple, el resto no se corre.
+    /// Si es el saludo de su familia y su tramo: si no se cumple, no se corre lo que abre.
     #[serde(default)]
     pub greeting: bool,
 }
@@ -82,34 +115,16 @@ struct Catalogue {
 }
 
 impl Check {
+    pub(crate) fn assistance(&self) -> Assistance {
+        self.assistance.unwrap_or_default()
+    }
+
     pub(crate) fn needs_a_person(&self) -> bool {
-        self.needs.iter().any(|need| need == A_PERSON)
-    }
-
-    pub(crate) fn required_store(&self) -> Option<&str> {
-        self.needs
-            .iter()
-            .find_map(|need| need.strip_prefix(A_STORE))
-    }
-
-    pub(crate) fn required_ports(&self) -> Vec<u16> {
-        self.needs
-            .iter()
-            .find_map(|need| need.strip_prefix(SOME_PORTS))
-            .map(|list| {
-                list.split(',')
-                    .filter_map(|port| port.trim().parse().ok())
-                    .collect()
-            })
-            .unwrap_or_default()
+        self.assistance() == Assistance::Person
     }
 
     pub(crate) fn declared_patience(&self) -> Option<Duration> {
-        self.needs
-            .iter()
-            .find_map(|need| need.strip_prefix(A_WAIT))
-            .and_then(|seconds| seconds.trim().parse().ok())
-            .map(Duration::from_secs)
+        self.patience_secs.map(Duration::from_secs)
     }
 }
 
@@ -129,9 +144,12 @@ fn the_set_file(set: &str) -> PathBuf {
 /// cada queja nombra la entrada y lo que le falta.
 pub(crate) fn read_the_catalogue() -> Result<Vec<Check>, String> {
     let manifest = Manifest::of_the_driver()?;
-    let checks = read_the_catalogue_files()?;
+    let mut checks = read_the_catalogue_files()?;
     let complaints = complaints_against(&checks, &manifest);
     if complaints.is_empty() {
+        for check in &mut checks {
+            check.family = the_family_of(check, &manifest);
+        }
         Ok(checks)
     } else {
         Err(format!(
@@ -169,8 +187,10 @@ fn complaints_about(checks: &[Check]) -> Vec<String> {
         empty_fields(checks),
         malformed_unmeasurable_entries(checks),
         entries_without_a_body(checks),
-        greetings_that_do_not_open_their_set(checks),
-        person_entries_without_a_question_or_a_warning(checks),
+        malformed_greetings(checks),
+        driven_entries_without_an_assistance(checks),
+        person_entries_without_a_warning(checks),
+        questions_without_a_person(checks),
         conditions_beside_a_saf(checks),
     ]
     .concat()
@@ -184,11 +204,39 @@ fn conditions_beside_a_saf(checks: &[Check]) -> Vec<String> {
         .collect()
 }
 
-/// Lo que el catálogo cita y el manifiesto no publica: modos, guiones y condiciones.
+fn the_family_of(check: &Check, manifest: &Manifest) -> Option<Family> {
+    let drive = check.drive.as_ref()?;
+    manifest
+        .scripts
+        .get(&drive.script)
+        .map(|script| script.family)
+}
+
+/// Lo que el catálogo cita y el manifiesto no publica —modos, guiones y condiciones— y los saludos
+/// que se pisan en su familia y su tramo.
 fn complaints_against(checks: &[Check], manifest: &Manifest) -> Vec<String> {
     checks
         .iter()
         .flat_map(|check| complaints_about_the_drive_of(check, manifest))
+        .chain(greetings_sharing_a_family_and_a_tranche(checks, manifest))
+        .collect()
+}
+
+fn greetings_sharing_a_family_and_a_tranche(checks: &[Check], manifest: &Manifest) -> Vec<String> {
+    let mut opened = BTreeSet::new();
+    checks
+        .iter()
+        .filter(|check| check.greeting)
+        .filter_map(|check| {
+            let family = the_family_of(check, manifest)?;
+            (!opened.insert((family, check.assistance()))).then(|| {
+                format!(
+                    "{}: otro saludo abre ya su familia en el tramo {}",
+                    check.id,
+                    check.assistance().name()
+                )
+            })
+        })
         .collect()
 }
 
@@ -300,33 +348,49 @@ fn entries_without_a_body(checks: &[Check]) -> Vec<String> {
         .collect()
 }
 
-fn greetings_that_do_not_open_their_set(checks: &[Check]) -> Vec<String> {
-    let mut opened = BTreeSet::new();
+fn malformed_greetings(checks: &[Check]) -> Vec<String> {
     checks
         .iter()
+        .filter(|check| check.greeting)
         .filter_map(|check| {
-            let first_of_its_set = opened.insert(check.set.as_str());
-            match check.greeting {
-                true if !first_of_its_set => {
-                    Some(format!("{}: saludo que no abre su conjunto", check.id))
-                }
-                true if check.drive.is_none() => Some(format!("{}: saludo sin conducir", check.id)),
-                _ => None,
+            if check.drive.is_none() {
+                Some(format!("{}: saludo sin conducir", check.id))
+            } else if check.needs_a_person() {
+                Some(format!("{}: saludo que necesita a una persona", check.id))
+            } else {
+                None
             }
         })
         .collect()
 }
 
-fn person_entries_without_a_question_or_a_warning(checks: &[Check]) -> Vec<String> {
+fn driven_entries_without_an_assistance(checks: &[Check]) -> Vec<String> {
+    checks
+        .iter()
+        .filter(|check| check.drive.is_some() && check.assistance.is_none())
+        .map(|check| format!("{}: se conduce sin declarar su asistencia", check.id))
+        .collect()
+}
+
+fn person_entries_without_a_warning(checks: &[Check]) -> Vec<String> {
     checks
         .iter()
         .filter(|check| check.needs_a_person())
-        .flat_map(|check| {
-            [("pregunta", &check.question), ("aviso", &check.warning)]
-                .into_iter()
-                .filter(|(_, said)| said.as_deref().is_none_or(|said| said.trim().is_empty()))
-                .map(|(what, _)| format!("{}: necesita a una persona y no trae {what}", check.id))
+        .filter(|check| {
+            check
+                .warning
+                .as_deref()
+                .is_none_or(|said| said.trim().is_empty())
         })
+        .map(|check| format!("{}: necesita a una persona y no trae aviso", check.id))
+        .collect()
+}
+
+fn questions_without_a_person(checks: &[Check]) -> Vec<String> {
+    checks
+        .iter()
+        .filter(|check| check.question.is_some() && !check.needs_a_person())
+        .map(|check| format!("{}: pregunta sin asistencia persona", check.id))
         .collect()
 }
 
@@ -364,7 +428,11 @@ El canal responde SAF_47 a cualquier origen que no sea 127.0.0.1.
 """
 drive = { mode = "v4-ipv6", script = "selectcert" }
 expects_saf = "SAF_47"
-needs = ["persona", "almacén:rfirma-test-ecc", "puertos:63131, 63132", "espera:90"]
+assistance = "person"
+store = "ec"
+ports = [63131, 63132]
+patience_secs = 90
+warning = "Va a aparecer el diálogo del PIN."
 question = "¿se pidió el PIN? [s/n]"
 greeting = true
 "#;
@@ -400,9 +468,9 @@ greeting = true
     fn reads_what_a_check_needs_from_its_declaration() {
         let checks = the_catalogue_in(AN_ENTRY).unwrap();
         let check = &checks[0];
-        assert!(check.needs_a_person());
-        assert_eq!(check.required_store(), Some("rfirma-test-ecc"));
-        assert_eq!(check.required_ports(), vec![63131, 63132]);
+        assert_eq!(check.assistance(), Assistance::Person);
+        assert_eq!(check.store, Store::Ec);
+        assert_eq!(check.ports, vec![63131, 63132]);
         assert_eq!(check.declared_patience(), Some(Duration::from_secs(90)));
     }
 
@@ -421,8 +489,8 @@ statement = "Algo se rechaza con SAF_03."
         .unwrap();
         let check = &checks[0];
         assert!(!check.needs_a_person());
-        assert_eq!(check.required_store(), None);
-        assert!(check.required_ports().is_empty());
+        assert_eq!(check.store, Store::Rsa);
+        assert!(check.ports.is_empty());
         assert_eq!(check.declared_patience(), None);
     }
 
@@ -460,7 +528,8 @@ statement = "Algo se rechaza con SAF_03."
         )
     }
 
-    const DRIVEN: &str = "drive = { mode = \"v4\", script = \"selectcert\" }";
+    const DRIVEN: &str =
+        "drive = { mode = \"v4\", script = \"selectcert\" }\nassistance = \"click\"";
 
     #[test]
     fn the_catalogue_of_the_repository_has_no_complaint() {
@@ -611,12 +680,43 @@ statement = "Algo se rechaza con SAF_03."
     }
 
     #[test]
-    fn the_service_set_opens_with_its_greeting() {
+    fn every_family_opens_each_of_its_tranches_with_one_greeting() {
+        let checks = read_the_catalogue().unwrap();
+        let greetings: BTreeSet<(Family, Assistance)> = checks
+            .iter()
+            .filter(|check| check.greeting)
+            .map(|check| (check.family.unwrap(), check.assistance()))
+            .collect();
+        assert_eq!(
+            greetings,
+            BTreeSet::from([
+                (Family::V4Echo, Assistance::None),
+                (Family::Service, Assistance::None),
+                (Family::EndToEnd, Assistance::None),
+                (Family::EndToEnd, Assistance::Click),
+            ])
+        );
+    }
+
+    #[test]
+    fn two_greetings_of_one_family_and_one_tranche_are_named() {
+        let checks = entries(&format!(
+            "{}{}",
+            an_entry("a_one", "saludo", &format!("{DRIVEN}\ngreeting = true")),
+            an_entry("a_two", "errores", &format!("{DRIVEN}\ngreeting = true"))
+        ));
+        assert_eq!(
+            complaints_against(&checks, &the_manifest()),
+            vec!["a_two: otro saludo abre ya su familia en el tramo clic"]
+        );
+    }
+
+    #[test]
+    fn every_driven_check_takes_the_family_of_its_script() {
         let checks = read_the_catalogue().unwrap();
         assert!(checks
             .iter()
-            .find(|check| check.set == "transporte.service")
-            .is_some_and(|check| check.greeting));
+            .all(|check| check.drive.is_some() == check.family.is_some()));
     }
 
     #[test]
@@ -706,14 +806,14 @@ statement = "Algo se rechaza con SAF_03."
     }
 
     #[test]
-    fn a_greeting_behind_another_check_or_without_a_drive_is_named() {
+    fn a_greeting_without_a_drive_or_that_needs_a_person_is_named() {
         let checks = entries(&format!(
-            "{}{}{}",
-            an_entry("a_one", "transporte.service", DRIVEN),
+            "{}{}",
             an_entry(
-                "a_late_greeting",
+                "a_person_greeting",
                 "transporte.service",
-                &format!("greeting = true\n{DRIVEN}")
+                "drive = { mode = \"v4\", script = \"selectcert\" }\nassistance = \"person\"\n\
+                 warning = \"Aviso.\"\ngreeting = true"
             ),
             an_entry(
                 "an_undriven_greeting",
@@ -724,25 +824,62 @@ statement = "Algo se rechaza con SAF_03."
         assert_eq!(
             complaints_about(&checks),
             vec![
-                "a_late_greeting: saludo que no abre su conjunto",
+                "a_person_greeting: saludo que necesita a una persona",
                 "an_undriven_greeting: saludo sin conducir"
             ]
         );
     }
 
     #[test]
-    fn a_check_that_needs_a_person_without_a_question_or_a_warning_is_named() {
+    fn a_check_that_needs_a_person_without_a_warning_is_named() {
         let checks = entries(&an_entry(
             "a_one",
             "operaciones",
-            &format!("needs = [\"persona\"]\n{DRIVEN}"),
+            "drive = { mode = \"v4\", script = \"selectcert\" }\nassistance = \"person\"",
         ));
         assert_eq!(
             complaints_about(&checks),
-            vec![
-                "a_one: necesita a una persona y no trae pregunta",
-                "a_one: necesita a una persona y no trae aviso"
-            ]
+            vec!["a_one: necesita a una persona y no trae aviso"]
         );
+    }
+
+    #[test]
+    fn a_question_without_a_person_is_named() {
+        let checks = entries(&an_entry(
+            "a_one",
+            "operaciones",
+            &format!("{DRIVEN}\nquestion = \"¿sí? [s/n]\""),
+        ));
+        assert_eq!(
+            complaints_about(&checks),
+            vec!["a_one: pregunta sin asistencia persona"]
+        );
+    }
+
+    #[test]
+    fn a_driven_check_without_an_assistance_is_named() {
+        let checks = entries(&an_entry(
+            "a_one",
+            "operaciones",
+            "drive = { mode = \"v4\", script = \"selectcert\" }",
+        ));
+        assert_eq!(
+            complaints_about(&checks),
+            vec!["a_one: se conduce sin declarar su asistencia"]
+        );
+    }
+
+    #[test]
+    fn an_unknown_assistance_store_or_field_is_rejected() {
+        for extra in [
+            "assistance = \"alguna\"",
+            "store = \"rfirma-test-ecc\"",
+            "needs = [\"persona\"]",
+        ] {
+            assert!(
+                the_catalogue_in(&an_entry("a_one", "errores", extra)).is_err(),
+                "{extra}"
+            );
+        }
     }
 }

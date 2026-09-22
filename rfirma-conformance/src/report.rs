@@ -51,7 +51,6 @@ pub struct Header {
     #[serde(alias = "subject_version")]
     pub client_version: String,
     pub transport: String,
-    pub store: String,
     pub date: String,
 }
 
@@ -61,7 +60,6 @@ pub struct HeaderCoordinates {
     pub os_version: String,
     pub client_version: String,
     pub transport: String,
-    pub store: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -104,7 +102,6 @@ impl Report {
                     os_version: coordinates.os_version,
                     client_version: coordinates.client_version,
                     transport: coordinates.transport,
-                    store: coordinates.store,
                     date: today(),
                 },
                 checks: BTreeMap::new(),
@@ -280,7 +277,6 @@ mod tests {
             os_version: "6.0".to_owned(),
             client_version: "1.9.2".to_owned(),
             transport: "websocket".to_owned(),
-            store: "softhsm2".to_owned(),
         }
     }
 

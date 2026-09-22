@@ -4,8 +4,8 @@
 use serde::Serialize;
 use ts_rs::TS;
 
-use crate::catalogue::Check;
-use crate::client::ClientKind;
+use crate::catalogue::{Assistance, Check};
+use crate::client::{ClientKind, Store};
 use crate::outcome::{result_name, ResultName};
 use crate::outcome::{CheckState, Outcome};
 use crate::report::{CheckRecord, Header, Report};
@@ -38,6 +38,8 @@ struct CheckView<'a> {
     citation: &'a str,
     warning: Option<&'a str>,
     question: Option<&'a str>,
+    assistance: Option<Assistance>,
+    store: Store,
     #[ts(as = "ResultName")]
     state: &'static str,
     observation: Option<&'a str>,
@@ -109,6 +111,8 @@ fn check_view<'a>(check: &'a Check, record: Option<&'a CheckRecord>) -> CheckVie
         citation: &check.citation,
         warning: check.warning.as_deref(),
         question: check.question.as_deref(),
+        assistance: check.assistance,
+        store: check.store,
         state: result_name(record.map(|record| record.state)),
         observation: record.and_then(|record| record.observation.as_deref()),
         date: record.and_then(|record| record.date.as_deref()),
@@ -171,7 +175,6 @@ drive = { mode = "v4", script = "save" }
                 os_version: "6.0".to_owned(),
                 client_version: "1.9.2".to_owned(),
                 transport: "websocket".to_owned(),
-                store: "softhsm2:/m.so".to_owned(),
             },
         )
         .unwrap();

@@ -11,8 +11,8 @@ save pide destino y responde una confirmación de guardado que el cliente public
 tal, no como una firma.
 """
 drive = { mode = "v4", script = "save" }
+assistance = "person"
 harness = "save_confirmation"
-needs = ["persona"]
 question = "¿se pidió elegir dónde guardar el fichero? [s/n]"
 warning = "Va a aparecer la ventana nativa para elegir dónde guardar el fichero."
 
@@ -25,8 +25,9 @@ statement = """
 El catálogo de algoritmos incluye los de curva elíptica, y signandsave los acepta igual que sign.
 """
 drive = { mode = "v4", script = "signandsavewithecdsa" }
-needs = ["almacén:rfirma-test-ecc"]
-warning = "Van a aparecer el diálogo de certificado y el del PIN: elige el certificado de curva elíptica (token rfirma-test-ecc, PIN 1234)."
+assistance = "person"
+store = "ec"
+warning = "Van a aparecer el diálogo de certificado, con el único certificado de curva elíptica del almacén ec, y el de guardar la firma: guárdala donde te proponga."
 
 [[check]]
 id = "a_signature_that_requests_a_timestamp_carries_it_or_reports_the_failure"
@@ -38,8 +39,9 @@ Si la petición pide sello de tiempo, la firma que vuelve lo lleva; si no se pud
 operación lo reporta en vez de devolver una firma sin sello.
 """
 drive = { mode = "v4", script = "signwithbrokentsa" }
+assistance = "click"
 harness = "timestamp_in_the_signature"
-warning = "Van a aparecer el diálogo de certificado y el del PIN del token."
+warning = "Va a aparecer el diálogo de certificado."
 
 [[check]]
 id = "selectcert_only_offers_certificates_with_a_private_key"
@@ -51,7 +53,8 @@ selectcert filtra los certificados sin clave privada en el almacén (checkPrivat
 token que exija autenticación, puede pedir el PIN antes de devolver el certificado.
 """
 drive = { mode = "v4", script = "selectcert" }
+assistance = "person"
+store = "token"
 harness = "private_key_check"
-needs = ["persona"]
 question = "¿se pidió el PIN del token/certificado? [s/n]"
 warning = "Van a aparecer el diálogo de selección de certificado y, si el cliente exige clave privada, el del PIN."

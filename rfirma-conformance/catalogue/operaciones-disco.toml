@@ -11,10 +11,10 @@ signandsave firma con el verbo que declara cop, pide dónde guardar el resultado
 la firma y el certificado a la sede que lo pidió.
 """
 drive = { mode = "v4", script = "signandsave" }
+assistance = "person"
 harness = "signature_saved_to_disk"
-needs = ["persona"]
 question = "¿se pidió dónde guardar la firma? [s/n]"
-warning = "Van a aparecer el diálogo de certificado, el del PIN del token y la petición de dónde guardar la firma: complétala para que la comprobación llegue a medir algo."
+warning = "Van a aparecer el diálogo de certificado y la petición de dónde guardar la firma: complétala para que la comprobación llegue a medir algo."
 
 [[check]]
 id = "signandsave_offers_the_save_name_the_request_proposed"
@@ -26,10 +26,10 @@ El nombre que la petición propone en filename es el que se ofrece al guardar, t
 extensión que trae.
 """
 drive = { mode = "v4", script = "signandsave" }
+assistance = "person"
 harness = "proposed_save_name"
-needs = ["persona"]
 question = "¿el nombre ofrecido para guardar era «challenge-signed.csig»? [s/n]"
-warning = "Van a aparecer el diálogo de certificado y el del PIN; cuando se pida dónde guardar, mira qué nombre viene propuesto antes de completarlo."
+warning = "Va a aparecer el diálogo de certificado; cuando se pida dónde guardar, mira qué nombre viene propuesto antes de completarlo."
 
 [[check]]
 id = "signandsave_rejects_an_illegal_filename_with_saf_03"
@@ -41,6 +41,7 @@ Un filename con alguno de los caracteres que el sistema de ficheros no admite se
 antes de pedir certificado alguno.
 """
 drive = { mode = "v4", script = "signandsavewithanillegalfilename" }
+assistance = "none"
 expects_saf = "SAF_03"
 
 [[check]]
@@ -53,10 +54,10 @@ Una petición de signandsave que llega sin dat ni fileid pide el documento a fir
 rechazarse, y firma el que se le dé.
 """
 drive = { mode = "v4", script = "signandsavewithoutdata" }
+assistance = "person"
 harness = "requested_input_document"
-needs = ["persona"]
 question = "¿se pidió elegir el documento a firmar? [s/n]"
-warning = "Se va a pedir primero el documento a firmar, y después vendrán el diálogo de certificado, el del PIN y la petición de dónde guardar: elige el documento preparado y completa el resto."
+warning = "Se va a pedir primero el documento a firmar, y después vendrán el diálogo de certificado y la petición de dónde guardar: elige el documento preparado y completa el resto."
 
 [[check]]
 id = "signandsave_cancelled_at_the_save_dialogue_answers_a_cancellation"
@@ -68,10 +69,10 @@ Cancelar cuando se pide dónde guardar termina el trámite como cancelación, y 
 como error ni como firma entregada.
 """
 drive = { mode = "v4", script = "signandsave" }
+assistance = "person"
 harness = "cancelled_dialogue"
-needs = ["persona"]
 question = "¿se canceló al pedirse dónde guardar? [s/n]"
-warning = "Van a aparecer el diálogo de certificado y el del PIN; cuando se pida dónde guardar, cancela en vez de guardar."
+warning = "Va a aparecer el diálogo de certificado; cuando se pida dónde guardar, cancela en vez de guardar."
 
 [[check]]
 id = "the_saving_parameters_of_the_request_configure_the_saving_of_the_signature"
@@ -94,7 +95,9 @@ La respuesta de selectcert es el certificado elegido y nada más: uno solo, codi
 URL-safe, sin firma ni campos añadidos.
 """
 drive = { mode = "v4", script = "selectcert" }
+assistance = "click"
 condition = "a-certificate-alone"
+warning = "Va a aparecer el diálogo de selección de certificado: elige el único que ofrece."
 
 [[check]]
 id = "selectcert_needs_neither_data_nor_format_nor_algorithm"
@@ -106,6 +109,8 @@ selectcert se completa sin dat, sin format y sin algorithm: ninguno de los tres 
 en la invocación.
 """
 drive = { mode = "v4", script = "selectcert" }
+assistance = "click"
+warning = "Va a aparecer el diálogo de selección de certificado: elige el único que ofrece."
 
 [[check]]
 id = "selectcert_is_recognised_with_a_trailing_slash"
@@ -128,10 +133,10 @@ Con headless=true o con mandatoryCertSelection=false, un único certificado que 
 resuelve sin pedir que se elija.
 """
 drive = { mode = "v4", script = "selectcertheadless" }
+assistance = "person"
 harness = "automatic_certificate_selection"
-needs = ["persona"]
 question = "¿se pidió elegir certificado? [s/n]"
-warning = "La exigencia presupone un único certificado utilizable en el almacén del informe: relánzala con `--store` apuntando a uno que sólo tenga ese. Si al ejecutarla aparece la lista con varios candidatos, la premisa no se cumple: cancela y deja la respuesta en blanco para que la comprobación quede pendiente en vez de condenar al cliente."
+warning = "El almacén rsa de la suite tiene un solo certificado, así que la premisa se cumple: si aun así aparece el diálogo de elegir certificado, elígelo y responde que sí se pidió."
 
 [[check]]
 id = "selectcert_cancelled_by_the_person_answers_a_cancellation"
@@ -143,8 +148,8 @@ Cancelar la selección de certificado termina el trámite como cancelación, y l
 tal en vez de como error.
 """
 drive = { mode = "v4", script = "selectcert" }
+assistance = "person"
 harness = "cancelled_dialogue"
-needs = ["persona"]
 question = "¿se canceló la selección de certificado? [s/n]"
 warning = "Va a aparecer el diálogo de selección de certificado: cancélalo en vez de elegir."
 
@@ -158,6 +163,7 @@ Un filename con alguno de los caracteres que el sistema de ficheros no admite se
 antes de pedir destino alguno.
 """
 drive = { mode = "v4", script = "savewithanillegalfilename" }
+assistance = "none"
 expects_saf = "SAF_03"
 
 [[check]]
@@ -170,8 +176,8 @@ Elegir como destino un fichero que ya existe pide confirmación antes de escribi
 escribe si se confirma.
 """
 drive = { mode = "v4", script = "save" }
+assistance = "person"
 harness = "overwrite_confirmation"
-needs = ["persona"]
 question = "¿se pidió confirmación al elegir un fichero que ya existía? [s/n]"
 warning = "Se va a pedir dónde guardar: acepta el nombre propuesto, challenge.bin, que ya existe porque se ha preparado, y acepta la confirmación que venga después."
 
@@ -196,9 +202,9 @@ load pide qué fichero cargar y responde su nombre junto a su contenido, separad
 que el protocolo fija.
 """
 drive = { mode = "v4", script = "load" }
+assistance = "person"
 condition = "the-name-next-to-the-content"
 harness = "interactive_file_load"
-needs = ["persona"]
 question = "¿se pidió elegir el fichero a cargar? [s/n]"
 warning = "Se va a pedir qué fichero cargar: elige uno de los preparados para que la comprobación llegue a medir algo."
 
@@ -212,8 +218,8 @@ Con multiload, la carga admite elegir varios ficheros y la respuesta trae cada u
 su contenido, separados por el delimitador que el protocolo fija.
 """
 drive = { mode = "v4", script = "multiload" }
+assistance = "person"
 condition = "every-file-apart"
 harness = "interactive_file_load"
-needs = ["persona"]
 question = "¿se pudieron elegir varios ficheros a la vez? [s/n]"
 warning = "Se va a pedir qué ficheros cargar: elige a la vez los dos preparados para que la comprobación llegue a medir la selección múltiple."

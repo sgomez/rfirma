@@ -14,18 +14,19 @@ consola. Sus pruebas se corren con `cargo test` dentro de este directorio; las d
 | `reference/` | Las referencias, un TOML por cliente y versión con los resultados que una ficha `BUG-NN` explica. |
 | `src/main.rs` | El arranque: lee el catálogo, levanta el servidor, imprime la URL con el token y la abre. |
 | `src/server.rs` | El servidor HTTP local y su guarda (token, `Host`, `Origin`); sirve la consola compilada de `console/dist/` en `/`, `/informe/<nombre>` y `/comparar`, y traduce rutas a la sesión sin decidir nada. |
-| `src/console.rs` | La sesión: cliente e informe elegidos, la cola, el único hilo que corre las comprobaciones y las preguntas a la persona. |
+| `src/console.rs` | La sesión: cliente e informe elegidos, la cola en tramos, el único hilo que corre las comprobaciones y el testigo de verdad, que pregunta y avisa por la página. |
+| `src/witness.rs` | El testigo, el seam entre quien corre las comprobaciones y la persona, con su falso para las pruebas. |
 | `src/report_view.rs` | La vista de un informe, igual lo corra la sesión o no: conjuntos en el orden del catálogo con sus recuentos; no sabe de la sesión. |
 | `src/snapshot.rs` | El estado de la sesión activa que recibe la página: la vista de su informe más cliente, cola, comprobación en curso y pregunta. |
 | `src/client.rs` | El cliente a prueba y qué cliente es: binario y un perfil aislado por almacén (`rsa`, `ec`, `token`), cada uno con su envoltorio y su raíz de confianza. |
 | `src/catalogue.rs` | La lectura del catálogo y su validación, de forma y contra el manifiesto de la sede, que si falla no deja arrancar. |
 | `src/manifest.rs` | El vocabulario de la sede que publica `driver.mjs --manifest`: modos y guiones con su sede, su familia y sus condiciones. |
-| `src/checks.rs` | El cuerpo ejecutable: cómo se conduce cada comprobación y cómo se resuelve su resultado, sin escribir el informe. |
+| `src/checks.rs` | El cuerpo ejecutable: cómo se conduce un grupo, la parada entre tramos, la guarda de las comprobaciones sin persona y los saludos por familia, sin escribir el informe. |
 | `src/harness.rs` | El registro de arneses que el catálogo liga por nombre: cada uno con cómo mide, qué ficheros prepara y cómo juzga. |
 | `src/verdicts.rs` | Las reglas que traducen lo observado a resultado. |
 | `src/outcome.rs` | El resultado de una comprobación, sus nombres en pantalla y PENDIENTE. |
 | `src/validation.rs` | La validación de un informe contra una referencia: validado o sus discrepancias, que son fallos de la suite o de la referencia. |
-| `src/errand.rs` | El trámite: el `driver.mjs` de `testdata/site-driver/`, el cliente invocado y lo que se extrae de cada evento. |
+| `src/errand.rs` | El trámite: el seam de quien lo corre, el `driver.mjs` de `testdata/site-driver/` con el cliente invocado, y lo que se extrae de cada evento. |
 | `src/report.rs` | El informe en disco, `reports/conformance/<nombre>/dossier.json`: lo ve cualquiera, lo continúa solo su cliente. |
 | `src/transcript.rs` | Las tramas y el registro de cada comprobación, en `transcripts/` dentro del informe. |
 | `src/livelog.rs` | La línea de registro marcada por procedencia (`sede`, `cliente`, `suite`), en fichero y en vivo. |
@@ -47,7 +48,7 @@ consola. Sus pruebas se corren con `cargo test` dentro de este directorio; las d
 | `console/src/report/` | Un informe, con o sin controles de ejecución: conjuntos plegables, filtro por resultado, la ficha de cada comprobación, la validación y las tramas. |
 | `console/src/log/LogDock.tsx` | El registro al pie, con filtro por procedencia, pausa y altura ajustable. |
 | `console/src/compare/ComparePage.tsx` | La comparación de dos informes: solo lo que difiere, por conjunto. |
-| `console/src/ui/` | Piezas sin dominio: iconos de resultado, tema, atajos de teclado, diálogo y reloj. |
+| `console/src/ui/` | Piezas sin dominio: iconos de resultado, tema, atajos de teclado, diálogo, reloj y notificaciones del escritorio. |
 | `console/src/words.ts` | Los nombres en pantalla de resultados y clientes, y el formato de fechas y duraciones. |
 | `console/src/styles.css` | La hoja de estilos única, con el tema claro y el oscuro en variables CSS. |
 | `console/src/test/` | El servidor falso que cumple el contrato, los datos de prueba y el montaje de la consola para vitest. |

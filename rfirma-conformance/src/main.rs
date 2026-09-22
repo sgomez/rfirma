@@ -18,8 +18,10 @@ mod snapshot;
 mod transcript;
 mod validation;
 mod verdicts;
+mod witness;
 
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::time::Duration;
 
 const USAGE: &str = "\
@@ -39,7 +41,8 @@ struct Probe {
     trust_root: PathBuf,
     report: PathBuf,
     patience: Duration,
-    witness: console::Witness,
+    witness: Arc<dyn witness::Witness>,
+    errands: Arc<dyn errand::Errands>,
 }
 
 fn main() {

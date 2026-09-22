@@ -41,10 +41,49 @@ pub(crate) struct ErrandOutcome {
     pub(crate) recent_client_lines: Vec<String>,
 }
 
+/// Quien corre los trámites: Node con el cliente publicado, o un falso en las pruebas.
+pub(crate) trait Errands: Send + Sync {
+    fn run(
+        &self,
+        probe: &Probe,
+        transcript_name: &str,
+        script: &str,
+        mode: &str,
+        patience: Duration,
+    ) -> ErrandOutcome;
+}
+
+pub(crate) struct NodeErrands;
+
+impl Errands for NodeErrands {
+    fn run(
+        &self,
+        probe: &Probe,
+        transcript_name: &str,
+        script: &str,
+        mode: &str,
+        patience: Duration,
+    ) -> ErrandOutcome {
+        probe.run_the_node_errand(transcript_name, script, mode, patience)
+    }
+}
+
 impl Probe {
-    /// Corre `script` en `mode` contra el cliente declarado, transcribiendo cada evento del
-    /// cliente publicado a medida que llega, y devuelve lo que se pudo medir del trámite.
+    /// Corre `script` en `mode` contra el cliente declarado y devuelve lo que se pudo medir.
     pub(crate) fn run_errand(
+        &self,
+        transcript_name: &str,
+        script: &str,
+        mode: &str,
+        patience: Duration,
+    ) -> ErrandOutcome {
+        self.errands
+            .run(self, transcript_name, script, mode, patience)
+    }
+
+    /// Corre el trámite bajo Node, transcribiendo cada evento del cliente publicado a medida que
+    /// llega; al terminar mata al cliente, respondiera o no.
+    fn run_the_node_errand(
         &self,
         transcript_name: &str,
         script: &str,

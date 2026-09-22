@@ -3,4 +3,4 @@
 /**
  * Las coordenadas de un informe, tomadas una sola vez al crearlo.
  */
-export type Header = { os: string, os_version: string, client_version: string, transport: string, store: string, date: string, };
+export type Header = { os: string, os_version: string, client_version: string, transport: string, date: string, };

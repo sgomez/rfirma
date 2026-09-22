@@ -12,15 +12,15 @@ use std::time::{Duration, Instant};
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-use crate::catalogue::Check;
+use crate::catalogue::{Assistance, Check};
 use crate::checks::{
-    the_greetings_already_failed, the_group_of, the_reason_behind_a_failed_greeting, Settlement,
+    the_greeting_that_stops, the_greetings_already_failed, the_group_of,
+    the_reason_behind_a_failed_greeting, Settlement,
 };
-use crate::client::{
-    resolve, the_deduced_coordinates, Client, ClientKind, DeducedCoordinates, Store,
-};
+use crate::client::{resolve, the_deduced_coordinates, Client, ClientKind, DeducedCoordinates};
 use crate::comparison::{compare, Comparison};
-use crate::livelog::{CheckLog, LiveLogSink, Provenance};
+use crate::errand::NodeErrands;
+use crate::livelog::{CheckLog, LiveLogSink};
 use crate::outcome::CheckState;
 use crate::report::{HeaderCoordinates, Report, THE_REPORT_FILE};
 use crate::report_view::report_view;
@@ -29,9 +29,11 @@ use crate::transcript::{log_path_of, transcript_path_of};
 use crate::validation::{
     read_the_reference, the_reference_dir, the_references_in, validate, Validation,
 };
+use crate::witness::Witness;
 use crate::Probe;
 
-/// Lo que se pide correr: una comprobación, un conjunto entero o sus pendientes, o todo lo pendiente.
+/// Lo que se pide correr: una comprobación, un conjunto entero o sus pendientes, o lo pendiente de
+/// unos tramos.
 #[derive(Debug, Deserialize, TS)]
 #[serde(untagged)]
 #[ts(export)]
@@ -44,14 +46,37 @@ pub(crate) enum Request {
         #[ts(optional)]
         pending: Option<bool>,
     },
-    Pending(AllPending),
+    Tranches {
+        tranches: Tranches,
+    },
 }
 
-#[derive(Debug, Deserialize, TS)]
+/// Los tramos de una tanda de pendientes: solo sin persona, el resto, o todos.
+#[derive(Debug, Clone, Copy, Deserialize, TS)]
 #[serde(rename_all = "snake_case")]
 #[ts(export)]
-pub(crate) enum AllPending {
-    Pending,
+pub(crate) enum Tranches {
+    Unattended,
+    Attended,
+    All,
+}
+
+impl Tranches {
+    fn take(self, assistance: Assistance) -> bool {
+        match self {
+            Self::Unattended => assistance == Assistance::None,
+            Self::Attended => assistance != Assistance::None,
+            Self::All => true,
+        }
+    }
+}
+
+/// Un fallo de la suite en una comprobación, que la página avisa aparte de su resultado.
+#[derive(Debug, Serialize, TS)]
+#[ts(export)]
+pub(crate) struct SuiteFailure {
+    check: String,
+    why: String,
 }
 
 /// Una línea del registro en vivo y la comprobación que la dio.
@@ -71,7 +96,6 @@ pub(crate) struct NewReport {
     os: String,
     os_version: String,
     transport: String,
-    store: String,
 }
 
 #[derive(Clone)]
@@ -79,9 +103,8 @@ pub(crate) struct Console {
     shared: Arc<Shared>,
 }
 
-/// Lo que el conductor y las comprobaciones ven de la sesión mientras corren.
-#[derive(Clone)]
-pub(crate) struct Witness {
+/// El testigo de verdad: pregunta y avisa a la persona a través de la página.
+struct ConsoleWitness {
     shared: Arc<Shared>,
 }
 
@@ -108,6 +131,7 @@ struct Session {
     driver: Option<u32>,
     aborting: bool,
     reasons: BTreeMap<String, String>,
+    tranche: Option<Assistance>,
 }
 
 struct OpenReport {
@@ -203,8 +227,8 @@ impl Console {
 
     pub(crate) fn the_deduced_coordinates(&self) -> Result<DeducedCoordinates, String> {
         let session = self.shared.lock();
-        let client = session.client.as_ref().ok_or(NO_CLIENT)?;
-        Ok(the_deduced_coordinates(client))
+        session.client.as_ref().ok_or(NO_CLIENT)?;
+        Ok(the_deduced_coordinates())
     }
 
     pub(crate) fn create_report(&self, new: NewReport) -> Result<(), String> {
@@ -222,7 +246,6 @@ impl Console {
             os_version: new.os_version,
             client_version: new.client_version,
             transport: new.transport,
-            store: new.store,
         };
         let mut session = self.shared.lock();
         if session.busy() {
@@ -293,8 +316,13 @@ impl Console {
                     .collect(),
                 true,
             ),
-            Request::Pending(AllPending::Pending) => (
-                self.shared.catalogue.iter().filter(is_pending).collect(),
+            Request::Tranches { tranches } => (
+                self.shared
+                    .catalogue
+                    .iter()
+                    .filter(is_pending)
+                    .filter(|check| tranches.take(check.assistance()))
+                    .collect(),
                 true,
             ),
         };
@@ -304,6 +332,7 @@ impl Console {
                 session.queue.push_back(Queued { id, in_batch });
             }
         }
+        sort_in_tranches(&mut session.queue, &self.shared.catalogue);
         self.shared.wake.notify_one();
         self.shared.publish(&session);
         Ok(())
@@ -481,13 +510,43 @@ impl Shared {
     }
 }
 
-impl Witness {
-    pub(crate) fn started_at(&self) -> Instant {
+impl ConsoleWitness {
+    fn put_to_the_person(&self, check: &str, prompt: &str, kind: &'static str) -> Option<String> {
+        let (reply, answer) = channel();
+        {
+            let mut session = self.shared.lock();
+            if session.aborting {
+                return None;
+            }
+            session.question = Some(Question {
+                check: check.to_owned(),
+                prompt: prompt.to_owned(),
+                kind,
+                reply,
+            });
+            self.shared.publish(&session);
+        }
+        let label = match kind {
+            "briefing" => "aviso",
+            "tranche" => "tramo",
+            _ => "pregunta",
+        };
+        self.harness(&format!("{label}: {prompt}"));
+        let answer = answer.recv().ok().flatten();
+        self.harness(&format!(
+            "respuesta: {}",
+            answer.as_deref().unwrap_or("(descartada)")
+        ));
+        answer
+    }
+}
+
+impl Witness for ConsoleWitness {
+    fn started_at(&self) -> Instant {
         self.shared.lock().started.unwrap_or_else(Instant::now)
     }
 
-    /// Por donde llegan las líneas de la comprobación en curso: a su fichero y a la página.
-    pub(crate) fn log_sink(&self) -> LiveLogSink {
+    fn log_sink(&self) -> LiveLogSink {
         let (log, check) = {
             let session = self.shared.lock();
             (session.log.clone(), session.running.first().cloned())
@@ -506,54 +565,43 @@ impl Witness {
         })
     }
 
-    /// Un diagnóstico del arnés, con la misma procedencia en el fichero y en la página.
-    pub(crate) fn harness(&self, text: &str) {
-        self.log_sink()
-            .push(Provenance::Suite, self.started_at().elapsed(), text);
-    }
-
-    /// Pregunta a la persona y espera; `None` si la descarta o se aborta la pasada.
-    pub(crate) fn ask(&self, check: &str, prompt: &str) -> Option<String> {
+    fn ask(&self, check: &str, prompt: &str) -> Option<String> {
         self.put_to_the_person(check, prompt, "outcome")
     }
 
-    /// Cuenta a la persona lo que va a pasar y espera a que dé paso; `false` si lo salta o se
-    /// aborta la pasada.
-    pub(crate) fn brief(&self, check: &str, briefing: &str) -> bool {
+    fn brief(&self, check: &str, briefing: &str) -> bool {
         self.put_to_the_person(check, briefing, "briefing")
             .is_some()
     }
 
-    fn put_to_the_person(&self, check: &str, prompt: &str, kind: &'static str) -> Option<String> {
-        let (reply, answer) = channel();
-        {
+    /// Si la persona no está, la cola se vacía: lo que quedaba sigue pendiente.
+    fn stand_by(&self, check: &str, tranche: Assistance) -> bool {
+        let prompt = format!(
+            "Termina un tramo y empieza el de asistencia «{}»: la cola espera a que digas que estás \
+             delante.",
+            tranche.name()
+        );
+        let present = self.put_to_the_person(check, &prompt, "tranche").is_some();
+        if !present {
             let mut session = self.shared.lock();
-            if session.aborting {
-                return None;
-            }
-            session.question = Some(Question {
-                check: check.to_owned(),
-                prompt: prompt.to_owned(),
-                kind,
-                reply,
-            });
+            session.queue.clear();
             self.shared.publish(&session);
         }
-        let label = if kind == "briefing" {
-            "aviso"
-        } else {
-            "pregunta"
-        };
-        self.harness(&format!("{label}: {prompt}"));
-        let answer = answer.recv().ok().flatten();
-        self.harness(&format!(
-            "respuesta: {}",
-            answer.as_deref().unwrap_or("(descartada)")
-        ));
-        answer
+        present
     }
 
-    pub(crate) fn driver_spawned(&self, pid: u32) {
+    fn suite_failure(&self, check: &str, why: &str) {
+        self.harness(&format!("{check}: {why}"));
+        let payload = serde_json::to_value(SuiteFailure {
+            check: check.to_owned(),
+            why: why.to_owned(),
+        })
+        .expect("el aviso se serializa");
+        self.shared
+            .broadcast(&event_frame("suite_failure", &payload));
+    }
+
+    fn driver_spawned(&self, pid: u32) {
         let mut session = self.shared.lock();
         if session.aborting {
             kill(pid);
@@ -561,17 +609,17 @@ impl Witness {
         session.driver = Some(pid);
     }
 
-    pub(crate) fn driver_finished(&self) {
+    fn driver_finished(&self) {
         self.shared.lock().driver = None;
     }
 
-    pub(crate) fn aborted(&self) -> bool {
+    fn aborted(&self) -> bool {
         self.shared.lock().aborting
     }
 }
 
 fn run_the_next_group(shared: &Arc<Shared>) {
-    let (group, probe) = {
+    let (group, probe, opening) = {
         let mut session = shared.lock();
         loop {
             match take_the_next_group(shared, &mut session) {
@@ -589,8 +637,8 @@ fn run_the_next_group(shared: &Arc<Shared>) {
         .iter()
         .filter_map(|id| shared.catalogue.iter().find(|check| &check.id == id))
         .collect();
-    let settled =
-        catch_unwind(AssertUnwindSafe(|| probe.run_group(&checks))).unwrap_or_else(|panic| {
+    let settled = catch_unwind(AssertUnwindSafe(|| probe.run_group(&checks, opening)))
+        .unwrap_or_else(|panic| {
             let why = panic
                 .downcast_ref::<String>()
                 .cloned()
@@ -612,24 +660,62 @@ fn run_the_next_group(shared: &Arc<Shared>) {
     session.log = None;
     session.driver = None;
     session.aborting = false;
+    if session.queue.is_empty() {
+        session.tranche = None;
+    }
     shared.publish(&session);
 }
 
-/// Saca de la cola lo siguiente que hay que correr y lo marca en curso; lo que su saludo fallido
-/// detiene lo deja pendiente sin correrlo.
-/// El almacén con el que se lanza la comprobación: el que pide en `needs`, o `rsa`.
-fn the_store_of(check: &Check) -> Store {
-    match check.required_store() {
-        Some("rfirma-test-ecc") => Store::Ec,
-        Some(name) => Store::named(name).unwrap_or_default(),
-        None => Store::default(),
-    }
+/// Ordena la cola en tramos —ninguna, clic, persona— con los saludos delante de cada uno.
+fn sort_in_tranches(queue: &mut VecDeque<Queued>, catalogue: &[Check]) {
+    let key = |queued: &Queued| {
+        catalogue
+            .iter()
+            .find(|check| check.id == queued.id)
+            .map(|check| (check.assistance(), !check.greeting))
+            .unwrap_or_default()
+    };
+    queue.make_contiguous().sort_by_key(key);
 }
 
+/// El tramo que abre el siguiente grupo, si la tanda ya corrió uno anterior.
+fn the_opening(previous: Option<Assistance>, next: Assistance) -> Option<Assistance> {
+    previous.filter(|previous| *previous < next).map(|_| next)
+}
+
+/// Deja pendientes, sin correrlas, las de una tanda que detiene un saludo fallido de su familia.
+fn stop_what_failed_greetings_stop(shared: &Shared, session: &mut Session) {
+    let Some(open) = &session.report else {
+        return;
+    };
+    let failed = the_greetings_already_failed(&shared.catalogue, |id| open.report.state_of(id));
+    let mut stopped = Vec::new();
+    session.queue.retain(|queued| {
+        let greeting = shared
+            .catalogue
+            .iter()
+            .find(|check| check.id == queued.id)
+            .and_then(|check| the_greeting_that_stops(check, &failed));
+        match greeting.filter(|_| queued.in_batch) {
+            Some(greeting) => {
+                stopped.push((
+                    queued.id.clone(),
+                    the_reason_behind_a_failed_greeting(greeting),
+                ));
+                false
+            }
+            None => true,
+        }
+    });
+    session.reasons.extend(stopped);
+}
+
+/// Saca de la cola lo siguiente que hay que correr, lo marca en curso y dice si abre tramo.
 fn take_the_next_group(
     shared: &Arc<Shared>,
     session: &mut Session,
-) -> Option<(Vec<String>, Probe)> {
+) -> Option<(Vec<String>, Probe, Option<Assistance>)> {
+    stop_what_failed_greetings_stop(shared, session);
     while let Some(queued) = session.queue.pop_front() {
         let (Some(client), Some(open)) = (&session.client, &session.report) else {
             session.queue.clear();
@@ -638,19 +724,8 @@ fn take_the_next_group(
         let Some(head) = shared.catalogue.iter().find(|check| check.id == queued.id) else {
             continue;
         };
-        let stopping_greeting =
-            the_greetings_already_failed(&shared.catalogue, |id| open.report.state_of(id))
-                .get(head.set.as_str())
-                .filter(|greeting| **greeting != head.id)
-                .map(|greeting| (*greeting).to_owned());
         let client = client.clone();
         let dir = open.dir.clone();
-        if let Some(greeting) = stopping_greeting.filter(|_| queued.in_batch) {
-            let why = the_reason_behind_a_failed_greeting(&greeting);
-            session.reasons.insert(head.id.clone(), why);
-            shared.publish(session);
-            continue;
-        }
         let queued_checks: Vec<&Check> = std::iter::once(head)
             .chain(
                 session
@@ -664,21 +739,24 @@ fn take_the_next_group(
             .map(|check| check.id.clone())
             .collect();
         session.queue.retain(|other| !group.contains(&other.id));
-        let profile = client.profile(the_store_of(head));
+        let opening = the_opening(session.tranche, head.assistance());
+        session.tranche = Some(head.assistance());
+        let profile = client.profile(head.store);
         let probe = Probe {
             client: profile.launcher.clone(),
             trust_root: profile.trust_root.clone(),
             report: dir.clone(),
             patience: shared.patience,
-            witness: Witness {
+            witness: Arc::new(ConsoleWitness {
                 shared: Arc::clone(shared),
-            },
+            }),
+            errands: Arc::new(NodeErrands),
         };
         session.log = CheckLog::open(&log_path_of(&dir, &group[0])).ok();
         session.running = group.clone();
         session.started = Some(Instant::now());
         shared.publish(session);
-        return Some((group, probe));
+        return Some((group, probe, opening));
     }
     None
 }
@@ -817,34 +895,107 @@ mod tests {
             .contains("no es un informe"));
     }
 
-    fn a_check_that_needs(needs: &str) -> Check {
-        crate::catalogue::the_catalogue_in(&format!(
-            r#"
+    const THREE_TRANCHES: &str = r#"
 [[check]]
-id = "a_check"
+id = "a_person_one"
 set = "errores"
 chapter = "15"
 citation = "A.java:1"
-statement = "Algo."
-drive = {{ mode = "v4", script = "protocol-v4" }}
-needs = [{needs}]
-"#,
-        ))
-        .unwrap()
-        .remove(0)
+statement = "Uno."
+drive = { mode = "v4", script = "protocol-v4" }
+assistance = "person"
+
+[[check]]
+id = "a_click_one"
+set = "errores"
+chapter = "15"
+citation = "A.java:2"
+statement = "Dos."
+drive = { mode = "v4", script = "protocol-v4" }
+assistance = "click"
+
+[[check]]
+id = "an_unattended_one"
+set = "errores"
+chapter = "15"
+citation = "A.java:3"
+statement = "Tres."
+drive = { mode = "v4", script = "protocol-v4" }
+assistance = "none"
+
+[[check]]
+id = "a_click_greeting"
+set = "errores"
+chapter = "15"
+citation = "A.java:4"
+statement = "Cuatro."
+drive = { mode = "v4", script = "protocol-v4" }
+assistance = "click"
+greeting = true
+"#;
+
+    #[test]
+    fn the_queue_runs_in_tranches_with_each_greeting_ahead_of_its_tranche() {
+        let catalogue = crate::catalogue::the_catalogue_in(THREE_TRANCHES).unwrap();
+        let mut queue: VecDeque<Queued> = catalogue
+            .iter()
+            .map(|check| Queued {
+                id: check.id.clone(),
+                in_batch: true,
+            })
+            .collect();
+
+        sort_in_tranches(&mut queue, &catalogue);
+
+        assert_eq!(
+            queue
+                .iter()
+                .map(|queued| queued.id.as_str())
+                .collect::<Vec<_>>(),
+            [
+                "an_unattended_one",
+                "a_click_greeting",
+                "a_click_one",
+                "a_person_one"
+            ]
+        );
     }
 
     #[test]
-    fn a_check_runs_in_the_store_it_needs_and_in_rsa_otherwise() {
+    fn only_a_later_tranche_after_another_one_ran_stops_the_queue() {
+        assert_eq!(the_opening(None, Assistance::Click), None);
         assert_eq!(
-            the_store_of(&a_check_that_needs(r#""almacén:rfirma-test-ecc""#)),
-            Store::Ec
+            the_opening(Some(Assistance::None), Assistance::Click),
+            Some(Assistance::Click)
         );
         assert_eq!(
-            the_store_of(&a_check_that_needs(r#""almacén:token""#)),
-            Store::Token
+            the_opening(Some(Assistance::Click), Assistance::Person),
+            Some(Assistance::Person)
         );
-        assert_eq!(the_store_of(&a_check_that_needs("")), Store::Rsa);
+        assert_eq!(
+            the_opening(Some(Assistance::Click), Assistance::Click),
+            None
+        );
+        assert_eq!(
+            the_opening(Some(Assistance::Person), Assistance::None),
+            None
+        );
+    }
+
+    #[test]
+    fn each_tranche_request_takes_its_own_assistances() {
+        let taken = |tranches: Tranches| {
+            [Assistance::None, Assistance::Click, Assistance::Person]
+                .into_iter()
+                .filter(|assistance| tranches.take(*assistance))
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(taken(Tranches::Unattended), [Assistance::None]);
+        assert_eq!(
+            taken(Tranches::Attended),
+            [Assistance::Click, Assistance::Person]
+        );
+        assert_eq!(taken(Tranches::All).len(), 3);
     }
 
     fn a_catalogue() -> Vec<Check> {
@@ -874,7 +1025,6 @@ drive = { mode = "v4", script = "protocol-v4" }
                 os_version: "6.0".to_owned(),
                 client_version: "1.0".to_owned(),
                 transport: "websocket".to_owned(),
-                store: "softhsm2".to_owned(),
             },
         )
         .unwrap();
