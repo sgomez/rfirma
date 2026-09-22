@@ -20,7 +20,8 @@ export function ClientStep({ snapshot, busy }: { snapshot: Snapshot; busy: boole
   const binaryId = useId();
   const rootId = useId();
 
-  const resolved = client ? [client.kind, client.binary, client.trust_root].join("\n") : "";
+  const trustRoot = client?.profiles[0]?.trust_root ?? "";
+  const resolved = client ? [client.kind, client.binary, trustRoot].join("\n") : "";
   useEffect(() => {
     if (!resolved) return;
     const [kind, binary = "", trustRoot = ""] = resolved.split("\n");
@@ -33,7 +34,7 @@ export function ClientStep({ snapshot, busy }: { snapshot: Snapshot; busy: boole
     client !== null &&
     (draft.kind !== client.kind ||
       (draft.binary !== "" && draft.binary !== client.binary) ||
-      (draft.trustRoot !== "" && draft.trustRoot !== client.trust_root));
+      (draft.trustRoot !== "" && draft.trustRoot !== trustRoot));
   const resolve = () =>
     suite
       .chooseClient({
@@ -41,25 +42,29 @@ export function ClientStep({ snapshot, busy }: { snapshot: Snapshot; busy: boole
         binary: draft.binary.trim() || null,
         trust_root: draft.trustRoot.trim() || null,
       })
-      .catch(complain("No se pudo resolver el cliente"));
+      .catch(complain("No se pudo preparar el cliente"));
 
   return (
     <Step
       number={1}
       label="Cliente"
       done={client !== null && !unsettled}
-      marked={unsettled ? "cambios sin resolver" : null}
+      marked={unsettled ? "cambios sin aplicar" : null}
       summary={
         snapshot.resolving_client ? (
-          <span className="working">Resolviendo… monta el almacén aislado</span>
+          <span className="working">
+            Preparando el cliente y su almacén de certificados aislado…
+          </span>
         ) : client ? (
           <span className="facts">
             <strong>{clientName(client.kind)}</strong>
             <code title="Binario">{client.binary}</code>
             <span className="fact-label">raíz</span>
-            <code title="Raíz de confianza">{client.trust_root}</code>
-            <span className="fact-label">almacén</span>
-            <code title="Almacén">{client.store}</code>
+            <code title="Raíz de confianza">{trustRoot}</code>
+            <span className="fact-label">almacenes</span>
+            <code title="Almacenes">
+              {client.profiles.map((profile) => profile.store).join(", ")}
+            </code>
           </span>
         ) : snapshot.client_complaints.length > 0 ? (
           <span className="complaint">{snapshot.client_complaints.join(" · ")}</span>

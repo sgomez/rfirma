@@ -88,7 +88,10 @@ El protocolo presenta una dualidad histórica entre los identificadores `op` y
    * `"SIGN"` (insensible a mayúsculas) → `Operation.SIGN`
    * `"COSIGN"` (insensible a mayúsculas) → `Operation.COSIGN`
    * `"COUNTERSIGN"` (insensible a mayúsculas) → `Operation.COUNTERSIGN`
-   * Cualquier otro valor devuelve `null`.
+   * Cualquier otro valor devuelve `null`. Nada lo valida antes de la firma: la
+     petición pide certificado y PIN, y el `switch` de `executeSign` revienta con
+     ese `null` y acaba en `SAF_09`, no en `SAF_04` (§6.1 y
+     [BUG-15](A1-bugs-autofirma.md#bug-15-ausencia-de-validación-de-cop-en-signandsave-provoca-nullpointerexception-y-reporte-engañoso-con-saf_09)).
 4. **El rol del parámetro `cop`:**
    En las operaciones directas de este capítulo, el cliente JavaScript
    (`autoscript.js:1958, 2944`) envía `op=sign`, `op=cosign` o `op=countersign`.
@@ -248,11 +251,17 @@ Existe una asimetría técnica fundamental en la resolución automática según 
     y firmará (como XAdES si es XML o CAdES si es binario/texto), mientras que el mismo
     fichero enviado a `cosign` o `countersign` debería fallar con `SAF_17` (en la 1.9.2,
     `SAF_03` por el BUG-27).
-  - Dado que `CAdES` precede a `CMS` en la matriz de búsqueda y las firmas CAdES derivan
-    de CMS/PKCS#7, una firma CMS estándar será identificada y clasificada como `CAdES`.
+  - `CAdES` precede a `CMS` en la matriz de búsqueda, pero su reconocedor exige
+    signingCertificate en cada firmante (`AOCAdESSigner.java:384-391`,
+    `CAdESValidator.java:117-125`): una firma CMS sin él se identifica como `CMS` y se
+    cofirma como `CMS`, sin signingCertificate en el firmante nuevo.
   - Los contenedores ASiC (`.asics`), clasificados como `CAdES` en `sign` (al no ser PDF
     ni XML), serán correctamente identificados como `CAdES-ASiC-S` o `XAdES-ASiC-S` en
     multifirma por sus respectivos reconocedores específicos.
+
+**Discrepancia con el MCF.** El manual dice que `AUTO` «no es válido para firmas
+simples» (MCF §6.2.1, págs. 52-53). El código no lo rechaza en `sign`: lo resuelve
+con las heurísticas de arriba (`ProtocolInvocationLauncherUtil.java:153-166`).
 
 ### 2.3 `algorithm`: Algoritmos de firma y composición dinámica
 
@@ -689,6 +698,11 @@ switch (cryptoOperation) {
 }
 ```
 
+La rama `default` (`731-734`) no se alcanza: el enumerado solo tiene esos tres
+valores, y un `op` no reconocido llega como `null`, con el que el propio `switch`
+(`700`) lanza `NullPointerException`. La recoge el `catch (Exception)` de
+`857-860`, que responde `SAF_09` (`ERROR_SIGNATURE_FAILED`).
+
 La rama `COSIGN` invoca la sobrecarga de **una sola ranura de datos**
 `cosign(sign, algorithm, key, certChain, extraParams)`
 (`ProtocolInvocationLauncherSign.java:710-717`), y no la sobrecarga de dos ranuras
@@ -728,6 +742,52 @@ trifásico) y en `properties` se especificó `mode=explicit` sin activar `useMan
 1. AutoFirma calcula el resumen SHA-1 de los datos: `data = MessageDigest.getInstance("SHA1").digest(data)`.
 2. Fuerza la propiedad `mimeType="hash/sha1"`.
 3. Realiza una firma XAdES estándar sobre el hash resultante en lugar de los datos íntegros.
+
+### 6.3 Formatos trifásicos y la propiedad `serverUrl`
+
+Los formatos con sufijo `tri` de la tabla del §2.2 (`CAdEStri`, `CAdES-ASiC-S-tri`,
+`XAdEStri`, `XAdES-ASiC-S-tri`, `FacturaEtri`, `PAdEStri`, `NONEtri`) se despachan
+por el mismo `executeSign` que los demás: lo único que cambia es el firmador que
+devuelve la factoría. `serverUrl` **no es un parámetro de la URI**: es una clave
+del diccionario `properties` (§2.5), que el lanzador pasa sin tocar al firmador,
+y ningún fichero de `afirma-simple` ni de `afirma-core/.../protocol` la nombra.
+
+Quien la lee es cada firmador trifásico, al empezar la operación y ya elegido el
+certificado:
+
+| Firmador | Constante | Lectura de `serverUrl` |
+|---|---|---|
+| `AOCAdESTriPhaseSigner` (también la variante ASiC-S) | `ProtocolConstants.java:31` | `afirma-crypto-cadestri-client/.../AOCAdESTriPhaseSigner.java:239-245` |
+| `AOXAdESTriPhaseSigner` (también FacturaE y la variante ASiC-S) | `AOXAdESTriPhaseSigner.java:78` | `afirma-crypto-xadestri-client/.../AOXAdESTriPhaseSigner.java:362-371` |
+| `AOPDFTriPhaseSigner` | `AOPDFTriPhaseSigner.java:48` | `afirma-crypto-padestri-client/.../AOPDFTriPhaseSigner.java:87-93` |
+| `AOPkcs1TriPhaseSigner` | `AOPkcs1TriPhaseSigner.java:42` | `afirma-core/.../signers/AOPkcs1TriPhaseSigner.java:244-252` |
+
+* **Sin `serverUrl`, o con un valor que `new URL(...)` no admite**, el firmador
+  lanza `IllegalArgumentException` (`AOCAdESTriPhaseSigner.java:243-245`), que el lanzador traduce a
+  `SAF_03` (`ProtocolInvocationLauncherSign.java:744-748`). Ocurre después de
+  elegir certificado y PIN.
+* **Ninguna comprobación de host local.** A diferencia de `rtservlet` y
+  `stservlet` (`SAF_13`, [15](15-errores.md)), el valor de `serverUrl` no pasa
+  por `UrlParameters`: no hay lista de hosts prohibidos ni rechazo del loopback.
+* **Prefirma.** `PreSigner.preSign` hace un `POST` a
+  `serverUrl?op=pre&cop=<sign|cosign|countersign>&format=…&algo=…&cert=…&doc=…`,
+  con `doc` el Base64 URL-safe de los datos de `dat` y, si quedan claves en
+  `properties` tras quitar `serverUrl` y `documentId`, `&params=` con ellas en
+  Base64 (`afirma-crypto-cadestri-client/.../PreSigner.java:64-85`). Una
+  respuesta que empieza por el prefijo de error se convierte en excepción
+  (`AOCAdESTriPhaseSigner.java:276-284`).
+* **Firma local.** La clave privada firma en el cliente los PKCS#1 que pide la
+  prefirma (`TriphaseDataSigner.doSign`, `AOCAdESTriPhaseSigner.java:299-309`).
+* **Postfirma.** `PostSigner.postSign` hace el segundo `POST` con `op=post` y el
+  resultado de la firma local (`PostSigner.java:41, 61, 82`;
+  `AOCAdESTriPhaseSigner.java:315-328`). Lo que devuelve el servidor es la firma
+  que el lanzador entrega como resultado de la operación.
+* **Cofirma y contrafirma.** CAdES y XAdES trifásicos las hacen por el mismo
+  camino, con `cop=cosign` o `cop=countersign`. `PAdEStri` trata la cofirma como
+  una firma nueva y rechaza la contrafirma (`AOPDFTriPhaseSigner.java:155-182`);
+  `FacturaEtri` rechaza ambas (`AOFacturaETriPhaseSigner.java:37-58`). Esos
+  rechazos son `UnsupportedOperationException` y llegan como `SAF_04`
+  (`ProtocolInvocationLauncherSign.java:838-841`).
 
 ---
 

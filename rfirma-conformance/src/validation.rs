@@ -169,8 +169,6 @@ note = "Guarda mal."
                 os: "Linux".to_owned(),
                 os_version: "6.0".to_owned(),
                 client_version: "1.9.2".to_owned(),
-                transport: "websocket".to_owned(),
-                store: "softhsm2:/m.so".to_owned(),
             },
         )
         .unwrap();

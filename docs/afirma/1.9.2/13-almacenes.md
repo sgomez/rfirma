@@ -274,6 +274,14 @@ Si `useDefaultStore` es falso (comportamiento por defecto):
 
 Se utiliza el nombre extraído de `keystore` o `ksb64` procesado por `getKeyStoreName`.
 
+Aquí no se comprueba que el almacén sea del sistema en curso: esa corrección
+(`getValidKeyStoreType`) solo se aplica al almacén recordado del Nivel 1. Un
+`keystore=WINDOWS` en Linux resuelve a `AOKeyStore.WINDOWS`, `AOKeyStoreManagerFactory`
+no tiene rama para él fuera de Windows y lanza `AOKeystoreAlternativeException`
+(`AOKeyStoreManagerFactory.java:121-123, 166-172`), y la operación termina con
+`SAF_08` (`ProtocolInvocationLauncherSelectCert.java:147-164`) en vez de caer al
+almacén del Nivel 4.
+
 ### 4.4 Nivel 4: Almacén predeterminado según el sistema operativo
 
 Si tras los pasos anteriores `aoks` sigue siendo `null`, se asigna el almacén base
@@ -287,6 +295,12 @@ de la plataforma mediante `AOKeyStore.getDefaultKeyStoreTypeByOs(Platform.getOS(
 | `Platform.OS.LINUX` | `AOKeyStore.SHARED_NSS` | NSS compartido de sistema (`.pki/nssdb`) |
 | `Platform.OS.SOLARIS` | `AOKeyStore.MOZ_UNI` | Perfil de Mozilla / Firefox |
 | Cualquier otro | `null` | No soportado |
+
+**Discrepancia con el MCF.** El manual dice que, si se usa Firefox, AutoFirma
+accede al almacén del navegador, y en otro caso al del sistema operativo (MCF
+§6.1.5, págs. 32-33). El código no sabe desde qué navegador llega la petición:
+sin almacén recordado (§4.1), sin `useDefaultStoreInBrowserCalls` (§4.2) y sin
+`keystore`/`ksb64` (§4.3), el almacén es el de esta tabla, `SHARED_NSS` en Linux.
 
 ---
 

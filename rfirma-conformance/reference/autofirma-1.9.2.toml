@@ -23,7 +23,7 @@ cause = "BUG-05"
 note = "El catálogo de algoritmos que signandsave admite deja fuera los de curva elíptica."
 
 [[known]]
-id = "a_signature_that_requests_a_timestamp_carries_it_or_reports_the_failure"
+id = "a_signature_that_cannot_be_timestamped_reports_the_failure"
 outcome = "no-conforme"
 cause = "BUG-23"
 note = "La firma vuelve sin el sello pedido y la operación no reporta que no se pudo sellar."
@@ -32,7 +32,7 @@ note = "La firma vuelve sin el sello pedido y la operación no reporta que no se
 id = "sign_missing_or_invalid_operation_rejected"
 outcome = "no-conforme"
 cause = "BUG-15"
-note = "sign tampoco valida op: sigue hasta el formato (SAF_06) y, con uno válido, pide certificado y acaba en SAF_09."
+note = "sign tampoco valida op: sigue hasta el formato, y el guion manda uno que no existe, así que responde SAF_06 sin pedir certificado."
 
 [[known]]
 id = "signandsave_rejects_a_request_without_a_verb_with_saf_04"
@@ -63,3 +63,45 @@ id = "a_batch_whose_presigner_does_not_answer_fails_with_saf_26"
 outcome = "no-conforme"
 cause = "BUG-29"
 note = "La ConnectException no es un HttpError y el catch genérico la reporta como SAF_27."
+
+[[known]]
+id = "a_local_xml_batch_is_refused_before_asking_for_a_certificate"
+outcome = "no-conforme"
+cause = "BUG-16"
+note = "Sin jsonbatch, el lote va al firmador XML con las URL nulas: pide certificado y sólo después responde SAF_03."
+
+[[known]]
+id = "a_filter_of_unknown_kinds_alone_keeps_expired_certificates_hidden"
+outcome = "no-conforme"
+cause = "BUG-31"
+note = "El filtro vacío deja pasar también el caducado: con dos certificados, headless ya no elige solo, sale el diálogo de selección y el trámite no vuelve."
+
+[[known]]
+id = "signandsave_cancelled_at_the_visible_area_answers_saf_43"
+outcome = "no-conforme"
+cause = "BUG-13"
+note = "Cancelar el área no aborta: sigue al certificado y a dónde guardar, y contesta CANCEL si se cancela uno de ellos o la firma si se aceptan, nunca SAF_43."
+
+[[known]]
+id = "a_xades_enveloped_signature_goes_inside_the_document"
+outcome = "no-conforme"
+cause = "BUG-32"
+note = "El firmador no recibe la variante del formato de la petición y firma como XAdES Enveloping."
+
+[[known]]
+id = "a_xades_detached_signature_references_the_document_beside_it"
+outcome = "no-conforme"
+cause = "BUG-32"
+note = "El firmador no recibe la variante del formato de la petición y firma como XAdES Enveloping."
+
+[[known]]
+id = "v4_ports_negotiation"
+outcome = "no-conforme"
+cause = "BUG-33"
+note = "El bind del primer candidato falla en el hilo del servidor y el bucle ya no prueba el siguiente."
+
+[[known]]
+id = "a_websocket_that_cannot_bind_its_ports_shows_saf_45"
+outcome = "no-conforme"
+cause = "BUG-33"
+note = "El bind falla en el hilo del servidor, después de dar el puerto por abierto: SAF_45 no llega a mostrarse."

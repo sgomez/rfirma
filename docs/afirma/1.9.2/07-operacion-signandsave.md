@@ -502,8 +502,9 @@ ejecuta las siguientes acciones dentro de un bucle `while (tryAgain)`:
 6. **Escritura binaria física:**
    Se abre un `FileOutputStream(file)` y se escriben íntegramente los bytes de la firma
    generada (`JSEUIManager.java:808-812`). Si ocurre un fallo de E/S (permisos insuficientes,
-   disco lleno o ruta de red caída), se captura la excepción genérica y se responde con
-   `SAF_05` (`ERROR_CANNOT_SAVE_DATA`, `ProtocolInvocationLauncherSignAndSave.java:564`).
+   disco lleno o ruta de red caída), el propio diálogo captura la excepción, muestra un
+   error y vuelve a pedir destino (`JSEUIManager.java:808-824`): no llega a `SAF_05`
+   (`ProtocolInvocationLauncherSignAndSave.java:563`), y cancelar entonces responde `CANCEL`.
 
 ---
 
@@ -602,13 +603,13 @@ o en el literal `CANCEL` si la interrupción proviene de la voluntad expresa del
 | `SAF_01` | *No se ha pasado la URI a procesar.* | El objeto de parámetros recibido es nulo (`options == null`). | `ProtocolInvocationLauncherSignAndSave.java:125` |
 | `SAF_03` | *Parámetros incorrectos.* | Parámetros de invocación inválidos: falta `format` o `algorithm`, algoritmo no soportado en la lista blanca (incluyendo el rechazo de algoritmos ECDSA — ver [BUG-05](A1-bugs-autofirma.md#bug-05-rechazo-de-algoritmos-ecdsa-en-la-operación-signandsave)), nombre de fichero con caracteres ilegales (`\/:*?"<>|`), clave de cifrado con longitud distinta de 32, identificador de sesión no alfanumérico o mayor de 40 caracteres, o ausencia de `cop` cuando el firmador implementa `OptionalDataInterface`. | `UrlParametersToSignAndSave.java:215, 221, 273, 281, 285, 335`, `ProtocolInvocationLauncher.java:630, 636, 748` |
 | `SAF_04` | *Operación no soportada.* | Operación no admitida: el valor de `cop` no corresponde a `SIGN`, `COSIGN` ni `COUNTERSIGN` (`SignOperation.Operation`), o el firmador no soporta la variante solicitada. | `ProtocolInvocationLauncherSignAndSave.java:761, 863` |
-| `SAF_05` | *Error al guardar los datos.* | Fallo de E/S al escribir la firma resultante en el fichero local elegido por el usuario (permisos denegados, ruta bloqueada o fallo de disco). | `ProtocolInvocationLauncherSignAndSave.java:563` |
+| `SAF_05` | *Error al guardar los datos.* | Excepción no cancelada del guardado. Un fallo de E/S al escribir no llega aquí: el diálogo avisa y vuelve a pedir destino (`JSEUIManager.java:808-824`). | `ProtocolInvocationLauncherSignAndSave.java:563` |
 | `SAF_06` | *Formato de firma no soportado.* | El formato indicado en `format` no dispone de ningún proveedor registrado en `AOSignerFactory`. | `ProtocolInvocationLauncherSignAndSave.java:261` |
 | `SAF_08` | *Error al acceder al almacén de claves.* | Imposible instanciar el gestor del almacén (`AOKeyStoreManagerFactory`) o fallo fatal al inicializar el diálogo de certificados. | `ProtocolInvocationLauncherSignAndSave.java:614, 655` |
 | `SAF_09` | *Error durante la operación de firma.* | Excepción interna del motor criptográfico (`AOException` o genérica) al calcular la firma con la clave privada. También se genera si `cop` es omitido o no reconocido y los datos vienen provistos, provocando `NullPointerException` en el `switch` de `executeSign` tras haber solicitado certificado y PIN — ver [BUG-15](A1-bugs-autofirma.md#bug-15-ausencia-de-validación-de-cop-en-signandsave-provoca-nullpointerexception-y-reporte-engañoso-con-saf_09). | `ProtocolInvocationLauncherSignAndSave.java:877, 882` |
 | `SAF_12` | *Error en el cifrado de datos.* | Error simétrico (`EncryptingException`) al cifrar la respuesta con la clave AES provista (`key`). | `ProtocolInvocationLauncherSignAndSave.java:198` |
 | `SAF_13` | *Se ha pedido un acceso a una dirección local.* | La URL de `stservlet` o `rtservlet` apunta a `localhost` o `127.0.0.1`, vulnerando la política de seguridad contra SSRF local. | `ProtocolInvocationLauncher.java:624`, `UrlParameters.java:386` |
-| `SAF_14` | *Se necesita una versión más moderna de Autofirma...* | La petición exige características no disponibles en la versión instalada (`ParameterNeedsUpdatedVersionException`). | `ProtocolInvocationLauncher.java:618` |
+| `SAF_14` | *Se necesita una versión más moderna de Autofirma...* | Reservado para `ParameterNeedsUpdatedVersionException`, que nadie lanza: no se emite ([15](15-errores.md) §4.7). | `ProtocolInvocationLauncher.java:618` |
 | `SAF_15` | *Error al descifrar los datos.* | Fallo al descifrar el XML o los datos obtenidos desde `rtservlet` con la clave `key`. | `ProtocolInvocationLauncher.java:562` |
 | `SAF_16` | *No se pueden recuperar los datos del servidor.* | Fallo de comunicación HTTP al descargar los datos de la operación desde `rtservlet` mediante `fileid`. | `ProtocolInvocationLauncher.java:556` |
 | `SAF_17` | *Firmador no reconocido.* | Con `format=AUTO`, no se ha podido inferir el tipo de documento ni asignar un firmador adecuado a partir de los datos. | `ProtocolInvocationLauncherSignAndSave.java:378` |

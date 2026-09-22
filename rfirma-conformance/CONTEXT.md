@@ -33,12 +33,26 @@ _Avoid_: conductor, driver, cliente publicado, sonda
 
 **Trámite**:
 Una ejecución de un guion de la sede contra el cliente y lo que se observó en ella. Varias
-comprobaciones pueden juzgar el mismo trámite.
+comprobaciones pueden juzgar el mismo trámite: se guarda en el informe con su **clave** —modo,
+guion, almacén, arnés y perfil de lanzamiento— y las tandas no lo relanzan. Repetir a mano una
+comprobación ya resuelta sí lanza el cliente, y el trámite nuevo sustituye al guardado. El de una comprobación con persona no tiene clave, porque lo
+que viaja depende de lo que ella haga en el diálogo.
 _Avoid_: errand (en la interfaz), ejecución, corrida
 
 **Familia de trámite**:
-El camino por el que un guion llega al cliente: el eco v4 en crudo, el canal de servicio o una
-operación de punta a punta por la sede publicada. La declara el guion, no la comprobación.
+El camino por el que un guion llega al cliente: el eco v4 en crudo, el canal de servicio, una
+operación de punta a punta por la sede publicada o esa misma operación por servidor intermedio. La
+declara el guion, no la comprobación.
+
+**Condición**:
+Lo que un guion de la sede mide durante el trámite y emite con un nombre propio de ese guion, no
+con el de una comprobación. La comprobación nombra la condición que espera, o varias que tienen que
+cumplirse todas; si una no llega, su resultado es NO OBSERVABLE, salvo que otra salga NO CONFORME.
+
+**Manifiesto**:
+Lo que la sede publica de sí misma: sus modos y sus guiones, cada uno con su sede, su familia de
+trámite y sus condiciones, y lo que solo usa el banco de la aplicación. El catálogo se valida contra
+él al arrancar.
 
 **Saludo**:
 La comprobación que abre una familia de trámite: si falla, no se corre ninguna comprobación de su
@@ -64,14 +78,32 @@ detiene entre tramo y tramo hasta que la persona dice que está. Una comprobaci�
 agota su espera es un fallo de la suite, no del cliente: queda PENDIENTE.
 _Avoid_: desatendida (para una comprobación), interactiva, manual
 
+**Expectativa**:
+Lo que una comprobación conducida espera de su trámite, declarado en el catálogo con un vocabulario
+cerrado. Por el cable, una sola de cuatro: un **código** (`SAF_NN`, cualquier SAF, `CANCEL`,
+`SAVE_OK`, `OK` o `MEMORY_ERROR`); que el trámite **se complete**, con lo que tenga que traer lo que
+vuelve (un prefijo, un OID, unos bytes, una longitud); una o varias **condiciones** de la sede; o que **nadie
+responda**. Si lo que se mide es un diálogo, la **persona** dice qué vio y qué resultado sostiene su
+sí. Una comprobación nueva con una expectativa conocida no toca código.
+_Avoid_: veredicto esperado, arnés (para cómo se juzga)
+
 **Almacén**:
 Dónde encuentra el cliente sus certificados en un trámite. Es una lista cerrada:
 - **rsa**: un único certificado RSA de pruebas, sin PIN. Es el de omisión.
 - **ec**: un único certificado de curva elíptica de pruebas, sin PIN.
 - **token**: el token PKCS#11 de pruebas, con su PIN y varios certificados.
+- **several**: varios certificados de pruebas sin PIN, para los filtros, el almacén que nombra la
+  sede y la fijación; el token queda alcanzable por su biblioteca, sin registrar.
+- **expired**: uno vigente y uno caducado, sin PIN, para ver qué oculta la selección.
 Es condición de lanzamiento: la suite prepara un perfil aislado por almacén, igual para cualquier
 cliente.
 _Avoid_: keystore, perfil (para el almacén)
+
+**Perfil de lanzamiento**:
+Las opciones con las que la suite lanza el cliente en una comprobación, que declara el catálogo:
+`plain`, el de omisión, o `headless`, que le quita a AutoFirma sus diálogos de error. Solo lo usa
+`local_access_blocked`; rFirma no lo lee.
+_Avoid_: modo (es de la sede), almacén
 
 **Conjunto**:
 Las comprobaciones que miden decisiones del mismo componente del protocolo: un canal, el
@@ -84,7 +116,8 @@ _Avoid_: grupo, suite (para un conjunto)
 El juicio de una comprobación, siempre respecto a lo que exige el protocolo y nunca respecto a lo
 que se sabe del cliente. Es una lista cerrada:
 - **CONFORME**: se comporta como exige el protocolo.
-- **NO CONFORME**: no se comporta así, incluido cuando es AutoFirma quien falla por un bug suyo.
+- **NO CONFORME**: no se comporta así, incluido cuando es AutoFirma quien falla por un bug suyo;
+  entonces la consola lo marca como esperado, pero el resultado no cambia.
 - **NO OBSERVABLE**: no se puede saber, porque la sede no llega a verlo o porque aún no se ha
   averiguado cómo medirlo. Lo que el instrumento no puede ver es NO OBSERVABLE para cualquier
   cliente.
@@ -106,11 +139,19 @@ _Avoid_: conductor, sujeto, arnés
 
 ### Validación de la suite
 
+**Bug conocido**:
+Una ficha `BUG-NN` del anexo A1 por la que AutoFirma 1.9.2 incumple lo que exige una comprobación.
+La comprobación lo declara en el catálogo, y el registro `bugs/autofirma-1.9.2.toml` guarda su
+título y si sigue en `master`, corregido o corregido a medias. La consola lo enseña en cualquier
+informe, también en los de rFirma.
+_Avoid_: fallo esperado (para el bug), causa (fuera de la referencia)
+
 **Referencia**:
 Lo que se sabe de cómo responde AutoFirma 1.9.2 por sus bugs: las comprobaciones cuyo resultado
 explica una ficha `BUG-NN` del anexo A1, casi siempre porque sale NO CONFORME, cada una con su
-resultado y su causa. Es un dato de una versión concreta de AutoFirma, no de las comprobaciones, y
-vive aparte del catálogo. Solo la usa la **validación**.
+resultado y su causa. Si sale NO CONFORME, su causa es el **bug conocido** que declara la
+comprobación; una que sale CONFORME puede tener causa sin declarar bug. Es un dato de una versión
+concreta de AutoFirma y vive aparte del catálogo. Solo la usa la **validación**.
 _Avoid_: línea base, baseline, expectativa por perfil
 
 **Validación**:

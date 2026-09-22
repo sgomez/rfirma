@@ -47,7 +47,7 @@ export function ValidateModal({
   };
 
   return (
-    <Modal wide title="Validar contra referencia" onClose={onClose}>
+    <Modal wide title="Comparar con la referencia" onClose={onClose}>
       <form
         className="inline-form"
         onSubmit={(event) => {

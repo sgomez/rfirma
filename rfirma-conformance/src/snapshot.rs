@@ -67,7 +67,7 @@ struct RunningView<'a> {
 struct QuestionView<'a> {
     check: &'a str,
     prompt: &'a str,
-    #[ts(type = "\"outcome\" | \"briefing\"")]
+    #[ts(type = "\"outcome\" | \"briefing\" | \"tranche\"")]
     kind: &'static str,
 }
 
@@ -158,8 +158,6 @@ drive = { mode = "v4", script = "save" }
                 os: "Linux".to_owned(),
                 os_version: "6.0".to_owned(),
                 client_version: "1.9.2".to_owned(),
-                transport: "websocket".to_owned(),
-                store: "softhsm2:/m.so".to_owned(),
             },
         )
         .unwrap();

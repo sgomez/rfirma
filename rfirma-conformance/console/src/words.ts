@@ -1,4 +1,8 @@
+import type { Assistance } from "./contract/Assistance";
+import type { CheckView } from "./contract/CheckView";
 import type { ClientKind } from "./contract/ClientKind";
+import type { InMaster } from "./contract/InMaster";
+import type { KnownBug } from "./contract/KnownBug";
 import type { ResultName } from "./contract/ResultName";
 import type { Summary } from "./contract/Summary";
 
@@ -27,6 +31,26 @@ export function countOf(summary: Summary, result: ResultName): number {
     case "PENDIENTE":
       return summary.pending;
   }
+}
+
+export const assistanceName: Record<Assistance, string> = {
+  none: "nada: es automática",
+  click: "elegir o pulsar en un diálogo",
+  person: "fijarte en lo que pasa y contestar",
+};
+
+const inMasterName: Record<InMaster, string> = {
+  present: "sigue en master",
+  fixed: "corregido en master",
+  partial: "corregido a medias en master",
+};
+
+export function bugLabel(bug: KnownBug): string {
+  return `Bug AutoFirma 1.9.2 · ${inMasterName[bug.master]}`;
+}
+
+export function isAnExpectedFailure(check: CheckView, kind: ClientKind): boolean {
+  return kind === "autofirma" && check.bug !== null && check.state === "NO CONFORME";
 }
 
 export function clientName(kind: ClientKind | null | undefined): string {

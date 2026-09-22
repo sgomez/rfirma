@@ -397,12 +397,16 @@ if (instance == null) {
 Aspectos clave de esta inicialización:
 * **Iteración secuencial de puertos:** prueba cada puerto del array en orden. La
   primera llamada a `instance.start()` que no lance excepción fija la variable
-  estática `instance` y rompe el bucle.
+  estática `instance` y rompe el bucle. **En la práctica no pasa nunca al
+  segundo candidato:** `start()` solo arranca el hilo del servidor, y el `bind`
+  ocurre dentro de ese hilo (`WebSocketServer.run`), así que un puerto ocupado
+  no lanza nada en el bucle: llega después a `onError` como `BindException`, con
+  el primer candidato ya dado por bueno y el canal sin abrir.
 * **Fábrica SSL:** asocia la fábrica segura `DefaultSSLWebSocketServerFactory`
   configurada con el `SSLContext` provisto por `SecureSocketUtils.getSecureSSLContext()`.
-* **Fallo total de puertos:** si todos los puertos candidatos fallan (por estar en
-  uso o bloqueados por cortafuegos locales), se lanza `SocketOperationException`
-  (`92`), lo que desemboca en el diálogo modal `SAF_45`.
+* **Fallo total de puertos:** `SocketOperationException` (`92`), que desemboca en
+  el diálogo modal `SAF_45`, solo se lanza si falla la construcción del servidor en
+  todos los candidatos; un puerto en uso no llega a lanzarla (BUG-33).
 
 ### 3.2 Configuración criptográfica TLS (`SecureSocketUtils`)
 
@@ -753,7 +757,7 @@ códigos del catálogo `SAF_nn` gestionados por `ProtocolInvocationLauncherError
 | Código | Constante en código | Mensaje asociado (`protocolmessages.properties`) | Cuándo y dónde se produce |
 |---|---|---|---|
 | `SAF_21` | `ERROR_UNSUPPORTED_PROCEDURE` | *«La versión de Autofirma instalada no es compatible con este trámite.\nActualice a la última versión disponible.»* | Versión de protocolo solicitada distinta de `3` y `4` (`ProtocolInvocationLauncher.java:242`). Muestra diálogo y termina la app. |
-| `SAF_45` | `ERROR_CANNOT_OPEN_SOCKET` | *«No se pudo abrir un socket para la comunicación con la aplicación»* | Ninguno de los puertos candidatos de `ports` pudo ser abierto (`ProtocolInvocationLauncher.java:248`). Muestra diálogo y termina la app. |
+| `SAF_45` | `ERROR_CANNOT_OPEN_SOCKET` | *«No se pudo abrir un socket para la comunicación con la aplicación»* | El servidor no pudo construirse en ninguno de los puertos candidatos de `ports` (`ProtocolInvocationLauncher.java:248`); un puerto en uso no llega aquí (BUG-33). Muestra diálogo y termina la app. |
 | `SAF_46` | `ERROR_INVALID_SESSION_ID` | *«Id de sesión inválido»* | En versión 4, el mensaje recibido no incluye `idsession=` o no coincide con el configurado en el socket (`AfirmaWebSocketServerV4.java:75`). Se responde al socket. |
 | `SAF_47` | `ERROR_EXTERNAL_REQUEST_TO_SOCKET` | *«Peticion al socket desde IP externa o sin identificar»* | En versión 4, la dirección IP remota no es exactamente `127.0.0.1` (`AfirmaWebSocketServerV4.java:65`). Se responde al socket. |
 

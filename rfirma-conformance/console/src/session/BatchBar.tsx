@@ -1,7 +1,9 @@
+import { useEffect } from "react";
 import type { QuestionView } from "../contract/QuestionView";
 import { useLive } from "../suite/live";
 import { Elapsed } from "../ui/Elapsed";
 import { ActivityIcon, SkipIcon, StopIcon } from "../ui/icons";
+import { notify } from "../ui/notify";
 import { useShortcuts } from "../ui/shortcuts";
 import type { Batch } from "./progress";
 
@@ -13,12 +15,19 @@ export function BatchBar({ batch, question }: { batch: Batch; question: Question
   const answer = (given: string | null) =>
     void suite.answer(given).catch(complain("No se pudo responder"));
   const briefing = question?.kind === "briefing";
+  const tranche = question?.kind === "tranche";
+  const trancheCheck = tranche ? question.check : null;
+  const tranchePrompt = tranche ? question.prompt : null;
+
+  useEffect(() => {
+    if (trancheCheck && tranchePrompt) notify(tranchePrompt);
+  }, [trancheCheck, tranchePrompt]);
 
   useShortcuts({
     x: skip,
     X: stop,
     s: question ? () => answer("s") : undefined,
-    n: question && !briefing ? () => answer("n") : undefined,
+    n: question && !briefing && !tranche ? () => answer("n") : undefined,
     Escape: question ? () => answer(null) : undefined,
   });
 
@@ -65,12 +74,25 @@ export function BatchBar({ batch, question }: { batch: Batch; question: Question
         <div className="question" role="alertdialog" aria-labelledby="question-title">
           <div className="question-text">
             <span className="question-kind" id="question-title">
-              {briefing ? "Antes de empezar" : "Te preguntamos"}
+              {tranche
+                ? "Te necesitamos delante"
+                : briefing
+                  ? "Antes de empezar"
+                  : "Te preguntamos"}
             </span>
             <p className="question-prompt">{question.prompt.replace(/\s*\[s\/n\]\s*$/, "")}</p>
           </div>
           <div className="question-actions">
-            {briefing ? (
+            {tranche ? (
+              <>
+                <button type="button" className="button primary" onClick={() => answer("s")}>
+                  Estoy aquí <kbd>s</kbd>
+                </button>
+                <button type="button" className="button ghost" onClick={() => answer(null)}>
+                  Detener aquí: lo demás queda pendiente <kbd>Esc</kbd>
+                </button>
+              </>
+            ) : briefing ? (
               <>
                 <button type="button" className="button primary" onClick={() => answer("s")}>
                   Empezar <kbd>s</kbd>

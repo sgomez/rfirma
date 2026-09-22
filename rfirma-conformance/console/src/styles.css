@@ -266,6 +266,10 @@ kbd {
   --tone: var(--accent);
 }
 
+.check[data-expected] {
+  --tone: var(--text-3);
+}
+
 .icon.result {
   color: var(--tone);
 }
@@ -1481,8 +1485,25 @@ select.input {
   place-items: center;
 }
 
+.check-name {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  min-width: 0;
+}
+
+.tag-bug {
+  flex: none;
+  height: 18px;
+  font-weight: 400;
+  cursor: help;
+}
+
 .check-id {
+  min-width: 0;
   overflow: hidden;
+  cursor: text;
+  user-select: text;
   font-family: var(--font-mono);
   font-size: 12.5px;
   text-overflow: ellipsis;
@@ -1507,6 +1528,7 @@ select.input {
   font-variant-numeric: tabular-nums;
 }
 
+.copy-id,
 .run-one {
   display: grid;
   place-items: center;
@@ -1522,12 +1544,17 @@ select.input {
   opacity: 0.5;
 }
 
+.check-line:hover .copy-id,
 .check-line:hover .run-one,
+.check[data-selected] .copy-id,
 .check[data-selected] .run-one,
+.copy-id:focus-visible,
+.copy-id[data-copied],
 .run-one:focus-visible {
   opacity: 1;
 }
 
+.copy-id:hover,
 .run-one:hover:not(:disabled) {
   border-color: var(--border-strong);
   background: var(--surface);

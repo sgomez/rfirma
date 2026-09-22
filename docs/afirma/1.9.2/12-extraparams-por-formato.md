@@ -266,6 +266,7 @@ se estructuran mediante el prefijo indexado `commitmentTypeIndication`*n*:
 CAdES soporta la generación de firmas con sello de tiempo (CAdES-T) mediante
 `AOCAdESSigner.java:543-550`. Si se especifica `tsaURL`, delega la conexión en
 `TsaParams` y `CMSTimestamper`:
+
 * `tsaURL`: URL del servidor RFC 3161.
 * `tsaPolicy`: OID de política de sellado (por defecto `0.4.0.2023.1.1`).
 * `tsaHashAlgorithm`: algoritmo de resumen para el sello (por defecto `SHA-512`).
@@ -278,6 +279,11 @@ CAdES soporta la generación de firmas con sello de tiempo (CAdES-T) mediante
   cualquier `Exception`. Si los parámetros de TSA presentan errores sintácticos o de configuración,
   el fallo se absorbe silenciosamente y se retorna la firma CAdES ordinaria (CAdES-BES) sin sello
   de tiempo, sin elevar error alguno hacia el llamante (ver [BUG-23](A1-bugs-autofirma.md#bug-23-silenciamiento-de-excepciones-en-la-inicialización-de-tsa-provoca-degradación-silenciosa-a-firma-sin-sello-de-tiempo-en-xades-y-cades)).
+
+**Discrepancia con el MCF.** El manual dice que AutoFirma no hace sellado de tiempo
+(MCF §4, pág. 13). El código sí sella la firma, aquí en CAdES y en XAdES en el
+§4.4, cuando `properties` trae `tsaURL`; lo que no ofrece es el sellado como
+operación aparte.
 
 ---
 

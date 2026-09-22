@@ -1,0 +1,191 @@
+# Las comprobaciones del conjunto «ficheros»; sus capítulos y su orden los declara `sets.toml`.
+
+[[check]]
+id = "save_rejects_an_illegal_filename_with_saf_03"
+set = "ficheros"
+citation = "UrlParametersToSave.java:27, 207-219"
+statement = """
+Un filename con alguno de los caracteres que el sistema de ficheros no admite se rechaza con SAF_03
+antes de pedir destino alguno.
+"""
+drive = { mode = "v4", script = "savewithanillegalfilename" }
+assistance = "click"
+saf = "SAF_03"
+warning = "AutoFirma enseña un diálogo de error antes de contestar el rechazo: ciérralo para que llegue la respuesta."
+
+[[check]]
+id = "save_confirms_before_writing_over_a_file_that_already_exists"
+set = "ficheros"
+citation = "JSEUIManager.java:781-803; ProtocolInvocationLauncherSave.java:79-91"
+statement = """
+Elegir como destino un fichero que ya existe pide confirmación antes de escribir encima, y sólo
+escribe si se confirma.
+"""
+drive = { mode = "v4", script = "save" }
+assistance = "person"
+harness = "a_file_to_overwrite"
+question = "¿se pidió confirmación al elegir un fichero que ya existía? [s/n]"
+person = { yes = "se pidió confirmación antes de escribir sobre el fichero que ya estaba", no = "se escribió sobre el fichero que ya estaba sin pedir confirmación", yes_means = "conforme" }
+warning = "Se va a pedir dónde guardar: acepta el nombre propuesto, challenge.bin, que ya existe porque se ha preparado, y acepta la confirmación que venga después."
+
+[[check]]
+id = "the_declared_extensions_filter_what_the_saving_offers"
+set = "ficheros"
+citation = "ProtocolInvocationLauncherSave.java:79-91; UrlParametersToSave.java:30, 221-233, 242-258"
+statement = """
+Las extensiones que la petición declara en exts, con la descripción de desc, filtran lo que el
+guardado ofrece.
+"""
+drive = { mode = "v4", script = "save" }
+assistance = "person"
+question = "¿la ventana de guardar filtraba por «Datos binarios» con la extensión .bin? [s/n]"
+person = { yes = "el guardado ofrecía el filtro «Datos binarios» (.bin) de la petición", no = "el guardado no ofrecía el filtro que declaraba la petición", yes_means = "conforme" }
+warning = "Va a aparecer la ventana nativa para elegir dónde guardar el fichero: fíjate en el filtro de tipos que ofrece antes de guardar o cancelar."
+
+[[check]]
+id = "load_answers_the_name_of_the_chosen_file_next_to_its_content"
+set = "ficheros"
+citation = "ProtocolInvocationLauncherLoad.java:95-103, 132-139; UrlParametersToLoad.java:27, 179-191"
+statement = """
+load pide qué fichero cargar y responde su nombre junto a su contenido, separados por el delimitador
+que el protocolo fija.
+"""
+drive = { mode = "v4", script = "load" }
+assistance = "person"
+condition = "the-name-next-to-the-content"
+harness = "files_to_load"
+question = "¿se pidió elegir el fichero a cargar? [s/n]"
+person = { yes = "se pidió elegir qué fichero cargar", no = "no se pidió elegir qué fichero cargar", yes_means = "conforme" }
+warning = "Se va a pedir qué fichero cargar: elige uno de los preparados para que la comprobación llegue a medir algo."
+
+[[check]]
+id = "multiload_answers_every_chosen_file_apart"
+set = "ficheros"
+citation = "UrlParametersToLoad.java:21, 165-170; ProtocolInvocationLauncherLoad.java:132-139"
+statement = """
+Con multiload, la carga admite elegir varios ficheros y la respuesta trae cada uno con su nombre y
+su contenido, separados por el delimitador que el protocolo fija.
+"""
+drive = { mode = "v4", script = "multiload" }
+assistance = "person"
+condition = "every-file-apart"
+harness = "files_to_load"
+question = "¿se pudieron elegir varios ficheros a la vez? [s/n]"
+person = { yes = "se pudieron elegir varios ficheros a la vez", no = "no se pudieron elegir varios ficheros a la vez", yes_means = "conforme" }
+warning = "Se va a pedir qué ficheros cargar: elige a la vez los dos preparados para que la comprobación llegue a medir la selección múltiple."
+
+[[check]]
+id = "save_answers_a_confirmation_the_published_client_recognises"
+set = "ficheros"
+citation = "CommandProcessorThread.java:290-305; AfirmaWebSocketServer.java:113; JSEUIManager.java:695-838"
+bug = "BUG-18"
+statement = """
+save pide destino y responde una confirmación de guardado que el cliente publicado reconoce como
+tal, no como una firma.
+"""
+drive = { mode = "v4", script = "save" }
+assistance = "person"
+saf = "SAVE_OK"
+question = "¿se pidió elegir dónde guardar el fichero? [s/n]"
+person = { yes = "se pidió dónde guardar el fichero", no = "no se pidió dónde guardar el fichero", yes_means = "conforme" }
+warning = "Va a aparecer la ventana nativa para elegir dónde guardar el fichero."
+
+[[check]]
+id = "a_save_that_cannot_write_asks_for_another_destination"
+set = "ficheros"
+citation = "JSEUIManager.java:808-824; ProtocolInvocationLauncherSave.java:93-99"
+statement = """
+Un fallo de escritura al guardar no termina el trámite: se avisa del error y se vuelve a pedir
+destino, y cancelar entonces llega a la sede como cancelación.
+"""
+drive = { mode = "v4", script = "save" }
+assistance = "person"
+harness = "a_file_that_cannot_be_written"
+saf = "CANCEL"
+warning = "Se va a pedir dónde guardar: acepta el nombre propuesto, challenge.bin, que ya existe y es de solo lectura; acepta la confirmación, cierra el aviso de error y, cuando vuelva a pedir destino, cancela."
+
+[[check]]
+id = "a_load_that_cannot_read_answers_saf_25"
+set = "ficheros"
+citation = "ProtocolInvocationLauncherLoad.java:143"
+statement = """
+Un fallo de lectura al cargar, sobre un fichero que no se deja leer, sale con SAF_25.
+"""
+drive = { mode = "v4", script = "load" }
+assistance = "person"
+harness = "a_file_that_cannot_be_read"
+saf = "SAF_25"
+warning = "Se va a pedir qué fichero cargar: elige ilegible.bin, que se ha preparado sin permiso de lectura, y cierra el aviso de error que pueda aparecer."
+
+[[check]]
+id = "save_without_data_answers_saf_03"
+set = "ficheros"
+citation = "UrlParametersToSave.java:136-143"
+statement = """
+Un save sin dat ni fileid se rechaza con SAF_03 antes de pedir destino alguno.
+"""
+drive = { mode = "v4", script = "savewithoutdata" }
+assistance = "none"
+saf = "SAF_03"
+
+[[check]]
+id = "save_rejects_illegal_extensions_with_saf_03"
+set = "ficheros"
+citation = "UrlParametersToSave.java:221-233"
+statement = """
+Unas exts con un carácter que no admiten —los prohibidos en un nombre de fichero, ; o un espacio—
+se rechazan con SAF_03 antes de pedir destino alguno.
+"""
+drive = { mode = "v4", script = "savewithillegalextensions" }
+assistance = "none"
+saf = "SAF_03"
+
+[[check]]
+id = "save_writes_the_decoded_bytes_of_the_data"
+set = "ficheros"
+citation = "ProtocolInvocationLauncherSave.java:74-91; UrlParametersToSave.java:136-143"
+statement = """
+save escribe en el destino elegido los bytes de dat ya decodificados, no su Base64.
+"""
+drive = { mode = "v4", script = "savereadback" }
+assistance = "person"
+harness = "the_saved_file_read_back"
+condition = "the-decoded-bytes-on-disk"
+warning = "Se va a pedir dónde guardar: acepta el nombre propuesto, challenge.bin, en la carpeta que se abre."
+
+[[check]]
+id = "save_cancelled_answers_cancel"
+set = "ficheros"
+citation = "ProtocolInvocationLauncherSave.java:93-99"
+statement = """
+Cancelar cuando save pide destino termina el trámite como cancelación, y así llega a la sede.
+"""
+drive = { mode = "v4", script = "savecancelled" }
+assistance = "person"
+saf = "CANCEL"
+warning = "Se va a pedir dónde guardar: cancela en vez de guardar."
+
+[[check]]
+id = "load_cancelled_answers_cancel"
+set = "ficheros"
+citation = "ProtocolInvocationLauncherLoad.java:105-111"
+statement = """
+Cancelar cuando load pide el fichero termina el trámite como cancelación, y así llega a la sede.
+"""
+drive = { mode = "v4", script = "loadcancelled" }
+assistance = "person"
+saf = "CANCEL"
+warning = "Se va a pedir qué fichero cargar: cancela en vez de elegir."
+
+[[check]]
+id = "multiload_without_files_answers_a_cancellation"
+set = "ficheros"
+citation = "ProtocolInvocationLauncherLoad.java:105-111"
+statement = """
+Cerrar la carga múltiple sin elegir ningún fichero termina el trámite como cancelación, y así llega
+a la sede.
+"""
+drive = { mode = "v4", script = "multiloadcancelled" }
+assistance = "person"
+saf = "CANCEL"
+warning = "Se va a pedir qué ficheros cargar: cancela sin elegir ninguno."

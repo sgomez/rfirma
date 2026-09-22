@@ -10,8 +10,8 @@ a mano, se contradice con el código y consigo mismo.
 
 **La exigencia es lo que el código de AutoFirma 1.9.2 pretende responder, cuando el propio código
 deja clara la intención**: un código SAF preparado, una validación escrita, un mensaje. Si
-AutoFirma no llega a hacerlo por un bug suyo, la exigencia no cambia: AutoFirma sale NO CONFORME y
-la referencia lo recoge con su ficha `BUG-NN`. Donde el código no muestra intención distinta de lo
+AutoFirma no llega a hacerlo por un bug suyo, la exigencia no cambia: AutoFirma sale NO CONFORME,
+la comprobación declara su ficha `BUG-NN` y la referencia lo recoge. Donde el código no muestra intención distinta de lo
 que hace, la exigencia es lo que hace.
 
 **El manual no crea exigencias, pero sí las excluye.** Si el manual y el código no coinciden,
@@ -23,7 +23,8 @@ lista: el manual lo documenta como firma PKCS#1 sin formato y lo admite en el `f
 ## Consequences
 
 - Un enunciado puede decir algo que AutoFirma no hace. No es un error del catálogo si su fuente
-  cita dónde el código muestra la intención y la referencia lleva el bug.
+  cita dónde el código muestra la intención y la comprobación declara el bug, que la consola enseña
+  en cualquier informe.
 - La frontera entre «bug» y «comportamiento» se decide con el código delante, cita incluida. Sin
   una intención visible en el código, lo que hace AutoFirma es el protocolo, aunque parezca raro.
 - Un formato que el manual retire deja de medirse: sus comprobaciones se borran, no se marcan.

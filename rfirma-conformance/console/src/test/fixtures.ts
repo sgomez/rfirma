@@ -1,4 +1,5 @@
 import type { CheckView } from "../contract/CheckView";
+import type { KnownBug } from "../contract/KnownBug";
 import type { ReportView } from "../contract/ReportView";
 import type { ResultName } from "../contract/ResultName";
 import type { SetView } from "../contract/SetView";
@@ -13,10 +14,27 @@ export function aCheck(id: string, state: ResultName = "PENDIENTE"): CheckView {
     citation: "AfirmaWebSocketServerV4.java:57-68",
     warning: null,
     question: null,
+    assistance: "none",
+    store: "rsa",
+    bug: null,
     state,
     observation: state === "PENDIENTE" ? null : "el trámite se completó",
     date: state === "PENDIENTE" ? null : "2026-09-21",
     duration_ms: state === "PENDIENTE" ? null : 3500,
+  };
+}
+
+export function aKnownBug(master: KnownBug["master"] = "present"): KnownBug {
+  return { id: "BUG-15", title: "Ausencia de validación de cop en signandsave", master };
+}
+
+export function withABug(view: ReportView, id: string, bug: KnownBug): ReportView {
+  return {
+    ...view,
+    sets: view.sets.map((set) => ({
+      ...set,
+      checks: set.checks.map((check) => (check.id === id ? { ...check, bug } : check)),
+    })),
   };
 }
 
@@ -51,8 +69,6 @@ export function aReportView(): ReportView {
       os: "Linux",
       os_version: "6.8.0",
       client_version: "1.9.2",
-      transport: "websocket",
-      store: "softhsm2:/usr/lib/softhsm/libsofthsm2.so",
       date: "2026-09-21",
     },
     summary: summaryOf(sets.flatMap((set) => set.checks)),
@@ -65,9 +81,11 @@ export function aSnapshot(overrides: Partial<Snapshot> = {}): Snapshot {
     client: {
       kind: "autofirma",
       binary: "/usr/bin/autofirma",
-      launcher: "/tmp/aislado/autofirma",
-      trust_root: "/usr/lib/Autofirma/Autofirma_ROOT.cer",
-      store: "softhsm2:/usr/lib/softhsm/libsofthsm2.so",
+      profiles: (["rsa", "ec", "token"] as const).map((store) => ({
+        store,
+        launcher: `/tmp/aislado-${store}/launch-subject`,
+        trust_root: "/usr/lib/Autofirma/Autofirma_ROOT.cer",
+      })),
     },
     client_complaints: [],
     resolving_client: false,

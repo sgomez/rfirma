@@ -1,6 +1,6 @@
 import { act, screen, waitFor, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
-import { aSnapshot } from "../test/fixtures";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { aReportView, aSnapshot } from "../test/fixtures";
 import { renderConsoleAt } from "../test/render";
 
 async function theSet(name: string) {
@@ -9,6 +9,10 @@ async function theSet(name: string) {
 }
 
 describe("the session", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it("runs the pending checks of the set whose button was pressed and nothing else", async () => {
     const { server, user } = renderConsoleAt("/");
 
@@ -35,13 +39,61 @@ describe("the session", () => {
     expect(server.posted("/api/run")).toEqual([{ check: "empty_uri_rejected" }]);
   });
 
-  it("runs the pending checks of the whole report from the third step and with p", async () => {
-    const { server, user } = renderConsoleAt("/");
+  it("runs each tranche of the pending checks from its own button, and all of them with p", async () => {
+    const report = aReportView();
+    const attended = report.sets[1]?.checks[2];
+    if (attended) attended.assistance = "click";
+    const { server, user } = renderConsoleAt("/", aSnapshot({ report }));
 
-    await user.click(await screen.findByRole("button", { name: /Pendientes \(2\)/ }));
+    await user.click(await screen.findByRole("button", { name: /Solo las automáticas \(1\)/ }));
+    await user.click(screen.getByRole("button", { name: /Las que te necesitan \(1\)/ }));
+    await user.click(screen.getByRole("button", { name: /Ejecutar todas \(2\)/ }));
     await user.keyboard("p");
 
-    expect(server.posted("/api/run")).toEqual(["pending", "pending"]);
+    expect(server.posted("/api/run")).toEqual([
+      { tranches: "unattended" },
+      { tranches: "attended" },
+      { tranches: "all" },
+      { tranches: "all" },
+    ]);
+  });
+
+  it("stops between tranches until the person is there, and says so on the desktop", async () => {
+    const shown: string[] = [];
+    vi.stubGlobal(
+      "Notification",
+      class {
+        static permission = "granted";
+        constructor(_title: string, options?: NotificationOptions) {
+          shown.push(options?.body ?? "");
+        }
+      },
+    );
+    const prompt = "Las siguientes abren diálogos del cliente de firma.";
+    const { server, user } = renderConsoleAt(
+      "/",
+      aSnapshot({
+        running: { ids: ["empty_uri_rejected"], elapsed_ms: 0 },
+        question: { check: "empty_uri_rejected", prompt, kind: "tranche" },
+      }),
+    );
+
+    await user.click(await screen.findByRole("button", { name: /Estoy/ }));
+
+    expect(screen.getByText("Te necesitamos delante")).toBeInTheDocument();
+    expect(shown).toEqual([prompt]);
+    expect(server.posted("/api/answer")).toEqual([{ answer: "s" }]);
+  });
+
+  it("warns of a failure of the suite naming its check", async () => {
+    const { server } = renderConsoleAt("/");
+    await screen.findByText("greeting_echoes");
+
+    act(() => server.fail({ check: "empty_uri_rejected", why: "agotó su espera" }));
+
+    expect(
+      await screen.findByText("Fallo de la suite en empty_uri_rejected: agotó su espera"),
+    ).toBeInTheDocument();
   });
 
   it("folds and unfolds every set at once, by button and by key", async () => {
@@ -149,6 +201,6 @@ describe("the session", () => {
     );
     await user.click(screen.getByRole("radio", { name: "rFirma" }));
 
-    expect(screen.getByText("cambios sin resolver")).toBeInTheDocument();
+    expect(screen.getByText("cambios sin aplicar")).toBeInTheDocument();
   });
 });

@@ -222,7 +222,7 @@ dirigido al defecto.
 
 ### BUG-13: Fuga de estado y asignación cruzada en `showRubricIsCanceled` entre operaciones de firma
 
-* **No observable:** fuga de estado en campo estático mutable entre operaciones; requiere inspección de memoria interna de la JVM, no llega al cable.
+* **Comprobación del catálogo:** `signandsave_cancelled_at_the_visible_area_answers_saf_43`, que mide la consecuencia 1: en `signandsave`, cancelar el área visible no aborta con `SAF_43`, y la sede recibe `CANCEL` o la firma según lo que se haga después (`ProtocolInvocationLauncherSignAndSave.java:495-502, 559, 646, 986, 1040`). La consecuencia 2, el residuo en `sign`, no llega al cable (ver su punto).
 * **Estado en `master`:** **Sigue presente.** Ambas clases conservan su `static boolean showRubricIsCanceled` sin reposición, y `ProtocolInvocationLauncherSignAndSave.java:1050` sigue asignando el de la clase `Sign`. La `VisibleSignatureMandatoryException` nueva cubre otro caso, no este.
 * **Código fuente:** `afirma-simple` · `es.gob.afirma.standalone.protocol.ProtocolInvocationLauncherSign.java:108, 960-980, 1014`, `ProtocolInvocationLauncherSignAndSave.java:107, 985-1006, 1040`.
 * **Origen de auditoría:** Anteriormente AUD-30 ([06-operaciones-firma.md](06-operaciones-firma.md), [07-operacion-signandsave.md](07-operacion-signandsave.md)).
@@ -239,7 +239,7 @@ dirigido al defecto.
   2. En ambas clases, ninguna función o método restablece jamás `showRubricIsCanceled` a `false`, ni al arrancar una nueva operación, ni al finalizarla, ni al confirmar una rúbrica exitosa.
 * **Comportamiento y consecuencia:**
   1. **En `signandsave`:** La comprobación de cancelación `checkShowRubricDialogIsCalceled` en `ProtocolInvocationLauncherSignAndSave.java:986` evalúa `if (showRubricIsCanceled)`. Al referirse a su propia variable de clase (que nunca fue modificada y permanece siempre en `false`), la condición jamás se cumple. En consecuencia, si la sede web solicita firma visible obligatoria (`visibleSignature=want`) y la persona usuaria pulsa «Cancelar» o cierra el diálogo de posicionamiento de rúbrica, la aplicación no lanza `AOCancelledOperationException` ni eleva `SAF_43`; en su lugar, prosigue silenciosamente y genera la firma en disco sin estampa visual en el PDF, desobedeciendo la restricción de la sede.
-  2. **En `sign`:** Si el diálogo de rúbrica se cancela en una operación previa de `sign` o de `signandsave`, `ProtocolInvocationLauncherSign.showRubricIsCanceled` queda fijado a `true` indefinidamente en la memoria de la JVM. En transportes de larga duración (Socket TCP o WebSocket), cualquier firma posterior con `sign` hereda este residuo booleano. Aunque en firmas exitosas posteriores la presencia de las coordenadas inyectadas evita el disparo inmediato del error, si se presenta cualquier flujo donde el diálogo no defina área y `visibleSignature=want`, se produce una cancelación forzada inmediata por el estado arrastrado de una llamada previa.
+  2. **En `sign`:** Si el diálogo de rúbrica se cancela en una operación previa de `sign` o de `signandsave`, `ProtocolInvocationLauncherSign.showRubricIsCanceled` queda fijado a `true` indefinidamente en la memoria de la JVM. En transportes de larga duración (Socket TCP o WebSocket), cualquier firma posterior con `sign` hereda este residuo booleano. Aunque en firmas exitosas posteriores la presencia de las coordenadas inyectadas evita el disparo inmediato del error, si se presenta cualquier flujo donde el diálogo no defina área y `visibleSignature=want`, se produce una cancelación forzada inmediata por el estado arrastrado de una llamada previa. Ese flujo, sin embargo, solo se da cuando el propio diálogo se cancela o falla, y las dos salidas llaman a `propertiesCreated` con propiedades vacías, que fija el campo en la operación en curso (`SignPdfDialog.java:285, 376`; `ProtocolInvocationLauncherSign.java:1014`): el residuo no cambia ningún resultado y no es observable.
 * **Causa raíz:** Uso de campos estáticos mutables compartidos para modelar el estado transitorio de un diálogo de usuario en lugar de pasar el resultado por el listener o el contexto de la invocación, combinado con un error de cualificación de clase al asignar la variable en `ProtocolInvocationLauncherSignAndSave`.
 
 ---
@@ -288,7 +288,6 @@ dirigido al defecto.
 
 ### BUG-16: Incompatibilidad de `localBatchProcess` con lotes XML provoca fallo tardío con `SAF_03` tras seleccionar certificado y PIN
 
-* **No observable:** lote XML local con `localBatchProcess=true` sin servidor de pre/postfirma; requiere interacción modal de usuario y no llega al cable del protocolo.
 * **Estado en `master`:** **Sigue presente.** `UrlParametersForBatch.java:251` sigue saltándose la validación de las URLs cuando `localBatchProcess=true`, sin exigir en ningún punto `jsonbatch=true`.
 * **Código fuente:** `afirma-core` · `es.gob.afirma.core.misc.protocol.UrlParametersForBatch.java:236-260`; `afirma-simple` · `es.gob.afirma.standalone.protocol.ProtocolInvocationLauncherBatch.java:341-346, 400-422`; `afirma-crypto-batch-client` · `es.gob.afirma.signers.batch.client.BatchSigner.java:223-228`.
 * **Origen de auditoría:** Anteriormente AUD-41 ([08-operacion-batch.md](08-operacion-batch.md)).
@@ -444,7 +443,7 @@ dirigido al defecto.
 
 ### BUG-23: Silenciamiento de excepciones en la inicialización de TSA provoca degradación silenciosa a firma sin sello de tiempo en XAdES y CAdES
 
-* **Comprobación del catálogo:** `a_signature_that_requests_a_timestamp_carries_it_or_reports_the_failure`.
+* **Comprobación del catálogo:** `a_signature_that_cannot_be_timestamped_reports_the_failure`.
 * **Estado en `master`:** **Sigue presente.** `XAdESTspUtil.java:82-84` y `AOCAdESSigner.java:576-579` conservan el `catch (Exception)` que devuelve la firma sin sello sin registrar nada.
 * **Código fuente:** `afirma-crypto-xades` · `src/main/java/es/gob/afirma/signers/xades/XAdESTspUtil.java:73-81`, `AOXAdESSigner.java:395-400`; `afirma-crypto-cades` · `src/main/java/es/gob/afirma/signers/cades/AOCAdESSigner.java:547-555`; `afirma-crypto-core-pkcs7-tsp` · `src/main/java/es/gob/afirma/signers/tsp/pkcs7/TsaParams.java:111-135`.
 * **Origen de auditoría:** Anteriormente AUD-71 ([12-extraparams-por-formato.md](12-extraparams-por-formato.md)).
@@ -499,7 +498,7 @@ dirigido al defecto.
 
 ### BUG-25: Colapso de la distinción entre protocolo obsoleto y protocolo no soportado en el arranque de canales locales
 
-* **Veredicto de la suite (2026-09-17):** no conforme, con `websocket_rejects_a_protocol_version_it_does_not_support`.
+* **No observable:** la distinción entre `SAF_21` y `SAF_22` solo se muestra en un diálogo local y el arranque no abre canal por el que llegue; en el cable, `websocket_rejects_a_protocol_version_it_does_not_support` y `websocket_rejects_an_obsolete_protocol_version` miden solo que no se abre canal.
 * **Estado en `master`:** **Sigue presente.** La distinción se ha perdido por construcción: `UnsupportedProtocolException.java:31` fija un código único en el constructor y `isNewVersionNeeded()` sigue sin consumidor.
 * **Código fuente:** `afirma-simple` · `es.gob.afirma.standalone.protocol.ProtocolInvocationLauncher.java:283-285` (socket) y `:240-244` (WebSocket); `UnsupportedProtocolException.java:33-47`; `ServiceInvocationManager.java:42-45, 212-220`; `AfirmaWebSocketServerManager.java:27-36, 100-107`; `ProtocolInvocationLauncherErrorManager.java:45, 53, 102, 110`.
 * **Origen de auditoría:** Anteriormente AUD-84 ([01-vision-general.md](01-vision-general.md), [14-versiones.md](14-versiones.md), [15-errores.md](15-errores.md)).
@@ -615,3 +614,50 @@ dirigido al defecto.
   1. Un documento del lote local con `countersign` y sin `target` en sus `extraparams` vuelve como `ERROR_PRE` con la descripción «El objetivo de la contrafirma no puede ser nulo», en lugar de contrafirmar las hojas.
   2. La misma petición en una contrafirma individual sí contrafirma las hojas: el valor por defecto depende de si el documento viaja o no en un lote.
 * **Causa raíz:** El lote local usa el validador estricto de la API Java donde la capa de protocolo usa en el resto de sitios una comparación que tolera la ausencia.
+
+---
+
+### BUG-31: Un filtro de certificado que no se reconoce desactiva el filtro de caducados y admite todos los certificados
+
+* **Comprobación del catálogo:** `a_filter_of_unknown_kinds_alone_keeps_expired_certificates_hidden`.
+* **Estado en `master`:** **Sigue presente.** `CertFilterManager.java:133-134` y `:262` no han cambiado, y `MultipleCertificateFilter.matches` sigue devolviendo `true` cuando no tiene filtros.
+* **Código fuente:** `afirma-keystores-filters` · `es.gob.afirma.keystores.filters.CertFilterManager.java:127-135, 239-244, 261-268`; `afirma-core-keystores` · `es.gob.afirma.keystores.MultipleCertificateFilter.java:34-41`.
+* **Descripción:** `parseFilter` descarta sin aviso a la sede cada condición cuyo prefijo no reconoce (`:261-263`), y también un `thumbprint:` cuyo valor no se parte en exactamente dos trozos por `:` (`:240-243`), como una huella escrita con dos puntos entre bytes. Si no queda ninguna condición, devuelve un `MultipleCertificateFilter` vacío (`:266-268`), cuyo `matches` recorre cero filtros y devuelve `true`. Como la lista de filtros ya no está vacía, el constructor no añade el `ExpiredCertificateFilter(false)` que aplica cuando la sede no pide ninguno (`:133-135`).
+* **Comportamiento y consecuencia:**
+  1. Un filtro mal escrito admite todos los certificados del almacén, en lugar de ninguno o de los que admitiría sin filtros.
+  2. Los certificados caducados se ofrecen, cuando sin ese filtro se habrían ocultado.
+  3. La sede no recibe error ni aviso: el registro del cliente es el único que nombra la condición descartada.
+* **Causa raíz:** La presencia de un filtro se decide por la cadena que trae la petición y no por las condiciones que quedan tras interpretarla, y la conjunción vacía se evalúa como verdadera.
+
+---
+
+### BUG-32: Los formatos `XAdES Enveloped` y `XAdES Detached` de primer nivel firman como `XAdES Enveloping`
+
+* **Comprobaciones del catálogo:** `a_xades_enveloped_signature_goes_inside_the_document`, `a_xades_detached_signature_references_the_document_beside_it`.
+* **Estado en `master`:** **Sigue presente.** `XAdESSigner.java:269-270` sigue tomando la variante solo de `XAdESExtraParams.FORMAT`, con `XAdES Enveloping` por defecto, y el paquete `protocol` de `afirma-simple` sigue sin copiar a ese parámetro el formato de la petición.
+* **Código fuente:** `afirma-core` · `es.gob.afirma.core.signers.AOSignerFactory.java:60-62`; `afirma-crypto-xades` · `es.gob.afirma.signers.xades.XAdESSigner.java:265-266`.
+* **Descripción:** La tabla de firmadores admite `XAdES Detached`, `XAdES Enveloped` y `XAdES Enveloping` como formatos de la petición, y los resuelve los tres a `AOXAdESSigner` (`AOSignerFactory.java:60-62`). El firmador no recibe ese nombre: la variante la lee de los parámetros de la firma,
+  ```java
+  String format = extraParams.getProperty(
+          XAdESExtraParams.FORMAT, AOSignConstants.SIGN_FORMAT_XADES_ENVELOPING);
+  ```
+  y ni el lanzador ni `AOXAdESSigner` copian el formato de la petición a `XAdESExtraParams.FORMAT`. `AOFacturaESigner` sí fija su variante en ese parámetro (`AOFacturaESigner.java:91`), y es el único que lo hace.
+* **Comportamiento y consecuencia:**
+  1. `format=XAdES Enveloped` y `format=XAdES Detached` devuelven una firma `XAdES Enveloping` con el documento dentro, sin error ni aviso.
+  2. Una sede que pide una firma separada recibe el documento incrustado en la firma, y una que pide la firma dentro de su XML la recibe fuera.
+  3. Sobre datos que no son XML, `XAdES Enveloped` no se rechaza con `SAF_29`: se firman envueltos en Base64. Solo el parámetro `format=XAdES Enveloped` de los parámetros de la firma llega a esa rama.
+* **Causa raíz:** El nombre del formato elige el firmador pero no su variante, y la variante solo se lee de un parámetro que nadie rellena a partir del formato.
+
+---
+
+### BUG-33: El canal WebSocket no pasa al siguiente puerto candidato cuando el primero está ocupado
+
+* **Comprobaciones del catálogo:** `v4_ports_negotiation`, `a_websocket_that_cannot_bind_its_ports_shows_saf_45`.
+* **Estado en `master`:** **Sigue presente.** `AfirmaWebSocketServerManager.java:91` sigue dando por abierto el puerto en cuanto `instance.start()` vuelve, sin esperar al resultado del `bind`.
+* **Código fuente:** `afirma-simple` · `es.gob.afirma.standalone.protocol.AfirmaWebSocketServerManager.java:63-93`.
+* **Descripción:** El bucle de apertura prueba los puertos de `ports=` en orden y pasa al siguiente solo si la creación o el arranque del servidor lanzan una excepción. `WebSocketServer.start()` solo arranca el hilo del servidor; el `bind` ocurre dentro de ese hilo (`WebSocketServer.run`), y un puerto ocupado llega a `onError` como `BindException` cuando el bucle ya ha terminado con el primer candidato.
+* **Comportamiento y consecuencia:**
+  1. Con el primer puerto ocupado, el canal no se abre en ninguno: la sede no conecta con ningún candidato.
+  2. La lista de candidatos de la URI, cuyo fin es sortear un puerto ocupado, no tiene efecto.
+  3. `SocketOperationException` y su `SAF_45` para «ningún puerto disponible» solo se alcanzan si falla la construcción del servidor, no por un puerto en uso.
+* **Causa raíz:** El éxito de la apertura se decide por el retorno de un arranque asíncrono, no por el resultado del `bind`.

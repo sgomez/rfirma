@@ -10,15 +10,11 @@ use serde::{Deserialize, Serialize};
 
 use crate::catalogue::Check;
 use crate::client::ClientKind;
+use crate::errand::{ErrandKey, ObservedErrand};
 use crate::outcome::{CheckState, Outcome};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CheckRecord {
-    #[serde(alias = "suite")]
-    pub set: String,
-    pub chapter: String,
-    pub citation: String,
-    pub statement: String,
     pub state: CheckState,
     pub date: Option<String>,
     #[serde(default)]
@@ -28,12 +24,8 @@ pub struct CheckRecord {
 }
 
 impl CheckRecord {
-    fn pending(check: &Check) -> Self {
+    fn pending() -> Self {
         Self {
-            set: check.set.clone(),
-            chapter: check.chapter.clone(),
-            citation: check.citation.clone(),
-            statement: check.statement.clone(),
             state: CheckState::Pending,
             date: None,
             observation: None,
@@ -48,10 +40,7 @@ impl CheckRecord {
 pub struct Header {
     pub os: String,
     pub os_version: String,
-    #[serde(alias = "subject_version")]
     pub client_version: String,
-    pub transport: String,
-    pub store: String,
     pub date: String,
 }
 
@@ -60,18 +49,16 @@ pub struct HeaderCoordinates {
     pub os: String,
     pub os_version: String,
     pub client_version: String,
-    pub transport: String,
-    pub store: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Contents {
-    #[serde(alias = "subject")]
     client: String,
-    #[serde(alias = "profile")]
     kind: ClientKind,
     header: Header,
     checks: BTreeMap<String, CheckRecord>,
+    #[serde(default)]
+    errands: BTreeMap<ErrandKey, ObservedErrand>,
 }
 
 /// El nombre del fichero del informe dentro de su directorio.
@@ -103,11 +90,10 @@ impl Report {
                     os: coordinates.os,
                     os_version: coordinates.os_version,
                     client_version: coordinates.client_version,
-                    transport: coordinates.transport,
-                    store: coordinates.store,
                     date: today(),
                 },
                 checks: BTreeMap::new(),
+                errands: BTreeMap::new(),
             },
         };
         report.cover(catalogue);
@@ -128,7 +114,7 @@ impl Report {
             self.contents
                 .checks
                 .entry(check.id.clone())
-                .or_insert_with(|| CheckRecord::pending(check));
+                .or_insert_with(CheckRecord::pending);
         }
     }
 
@@ -216,6 +202,18 @@ impl Report {
         self.save()
     }
 
+    /// El trámite ya observado con esa clave, que cualquier comprobación que la comparta juzga sin
+    /// relanzar el cliente.
+    pub fn observed(&self, key: &ErrandKey) -> Option<&ObservedErrand> {
+        self.contents.errands.get(key)
+    }
+
+    /// Guarda el trámite observado con su clave y lo deja escrito antes de devolver el control.
+    pub fn observe(&mut self, key: ErrandKey, observed: ObservedErrand) -> Result<(), String> {
+        self.contents.errands.insert(key, observed);
+        self.save()
+    }
+
     fn save(&self) -> Result<(), String> {
         let json = serde_json::to_string_pretty(&self.contents)
             .map_err(|error| format!("el informe no se pudo serializar: {error}"))?;
@@ -279,8 +277,6 @@ mod tests {
             os: "linux".to_owned(),
             os_version: "6.0".to_owned(),
             client_version: "1.9.2".to_owned(),
-            transport: "websocket".to_owned(),
-            store: "softhsm2".to_owned(),
         }
     }
 
@@ -350,8 +346,6 @@ mod tests {
             .unwrap();
         assert_eq!(record.observation.as_deref(), Some("OK"));
         assert_eq!(record.duration_ms, Some(1_250));
-        assert_eq!(record.chapter, "15");
-        assert_eq!(record.set, "errores");
     }
 
     #[test]
@@ -437,6 +431,27 @@ mod tests {
     }
 
     #[test]
+    fn a_report_whose_header_still_carries_a_transport_opens() {
+        let path = tempfile::NamedTempFile::new().unwrap().path().to_owned();
+        Report::create(
+            &path,
+            "un-binario",
+            ClientKind::Rfirma,
+            &a_catalogue_of(&["v4_echo_greeting"]),
+            some_coordinates(),
+        )
+        .unwrap();
+        let mut written: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
+        written["header"]["transport"] = "websocket".into();
+        std::fs::write(&path, written.to_string()).unwrap();
+
+        let seen = Report::read(&path).unwrap();
+
+        assert_eq!(seen.header().client_version, "1.9.2");
+    }
+
+    #[test]
     fn the_client_kind_of_a_report_survives_a_reopen() {
         let path = tempfile::NamedTempFile::new().unwrap().path().to_owned();
         let catalogue = a_catalogue_of(&["v4_echo_greeting"]);
@@ -453,32 +468,33 @@ mod tests {
     }
 
     #[test]
-    fn a_report_written_with_the_former_keys_is_read_without_migrating_it() {
+    fn an_observed_errand_survives_a_reopen_under_its_key() {
         let path = tempfile::NamedTempFile::new().unwrap().path().to_owned();
-        std::fs::write(
+        let catalogue = a_catalogue_of(&["v4_echo_greeting"]);
+        let key = ErrandKey::of(&catalogue[0]).unwrap();
+        let observed = ObservedErrand {
+            outcome: crate::errand::ErrandOutcome {
+                launched: true,
+                error_code: Some("SAF_03".to_owned()),
+                ..Default::default()
+            },
+            transcribed_in: "v4_echo_greeting".to_owned(),
+            duration_ms: 900,
+        };
+        let mut report = Report::create(
             &path,
-            r#"{
-  "subject": "/usr/bin/autofirma",
-  "profile": "autofirma",
-  "header": {
-    "os": "Linux", "os_version": "6.8", "subject_version": "1.9.2",
-    "transport": "websocket", "store": "softhsm2:/m.so", "date": "2026-09-01"
-  },
-  "checks": {
-    "v4_echo_greeting": {
-      "suite": "saludo", "chapter": "14", "citation": "A.java:1", "statement": "Saluda.",
-      "state": { "resolved": "compliant" }, "date": "2026-09-01"
-    }
-  }
-}"#,
+            "un-binario",
+            ClientKind::Rfirma,
+            &catalogue,
+            some_coordinates(),
         )
         .unwrap();
 
-        let report = Report::read(&path).unwrap();
+        report.observe(key.clone(), observed.clone()).unwrap();
 
-        assert_eq!(report.client(), "/usr/bin/autofirma");
-        assert_eq!(report.kind(), ClientKind::Autofirma);
-        assert_eq!(report.header().client_version, "1.9.2");
-        assert_eq!(report.record_of("v4_echo_greeting").unwrap().set, "saludo");
+        assert_eq!(
+            Report::open(&path, &catalogue).unwrap().observed(&key),
+            Some(&observed)
+        );
     }
 }

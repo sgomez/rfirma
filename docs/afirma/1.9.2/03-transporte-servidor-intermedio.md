@@ -700,7 +700,7 @@ obligatorias sobre `stservlet` y `rtservlet`
 2. **Bloqueo de acceso local:** El host de la URL no puede ser `localhost` ni `127.0.0.1` (`370`).
    Si coincide con alguno, lanza `ParameterLocalAccessRequestedException` (`371-373`),
    la cual es capturada en `ProtocolInvocationLauncher` para mostrar y registrar
-   el error `SAF_13` (`ERROR_LOCAL_ACCESS_BLOCKED`, `ProtocolInvocationLauncher.java:731-736`).
+   el error `SAF_13` (`ERROR_LOCAL_ACCESS_BLOCKED`, `ProtocolInvocationLauncher.java:732-737`).
 3. **Prohibición de parámetros preexistentes:** La URL del servlet no puede contener
    los caracteres `'?'` ni `'='` (`UrlParameters.java:376`). Si los contiene, lanza
    `ParameterException("Se han encontrado parametros en la URL del servlet")`.

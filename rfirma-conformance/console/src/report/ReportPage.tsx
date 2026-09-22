@@ -74,10 +74,6 @@ export function ReportPage() {
             <Meta label="Sistema">
               {view.header.os} {view.header.os_version}
             </Meta>
-            <Meta label="Almacén">
-              <code>{view.header.store}</code>
-            </Meta>
-            <Meta label="Transporte">{view.header.transport}</Meta>
             <Meta label="Fecha">{calendarDate(view.header.date)}</Meta>
           </dl>
         </div>
@@ -92,7 +88,7 @@ export function ReportPage() {
           </div>
         </div>
         <button type="button" className="button" onClick={() => setValidating(true)}>
-          Validar contra referencia…
+          Comparar con la referencia…
         </button>
       </header>
       <ReportBody

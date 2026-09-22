@@ -1,25 +1,9 @@
-//! Suite de conformidad: el cliente publicado bajo Node corre un guion del banco contra el
-//! binario declarado y transcribe lo que viajó, y una consola web local la lanza y la sigue.
-
-mod catalogue;
-mod checks;
-mod client;
-mod comparison;
-mod console;
-mod errand;
-mod harness;
-mod livelog;
-mod outcome;
-mod report;
-mod report_view;
-mod server;
-mod snapshot;
-mod transcript;
-mod validation;
-mod verdicts;
+//! El arranque de la suite de conformidad: lee el catálogo, levanta la consola y la abre.
 
 use std::path::PathBuf;
 use std::time::Duration;
+
+use rfirma_conformance::{catalogue, console, server};
 
 const USAGE: &str = "\
 uso: just conformance
@@ -30,16 +14,6 @@ cliente, el informe y las comprobaciones se eligen en la página; no hay órdene
 
 /// Cuánto espera el conductor a que alguien responda si la comprobación no declara otra cosa.
 const THE_PATIENCE: Duration = Duration::from_millis(60_000);
-
-/// Lo que necesita una pasada para medir: el cliente aislado, la raíz con la que sirve y el informe
-/// donde se transcribe.
-struct Probe {
-    client: PathBuf,
-    trust_root: PathBuf,
-    report: PathBuf,
-    patience: Duration,
-    witness: console::Witness,
-}
 
 fn main() {
     if std::env::args().len() > 1 {

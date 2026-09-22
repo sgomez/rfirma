@@ -1,0 +1,39 @@
+# Los conjuntos del catálogo en el orden en que se leen y se muestran: cada uno, el componente
+# que decide lo que miden sus comprobaciones, vive en `<name>.toml`; su primer capítulo es el de
+# omisión, y solo un conjunto de varios deja que una comprobación fije otro.
+
+[[set]]
+name = "peticion"
+chapters = ["02"]
+
+[[set]]
+name = "canal.intermedio"
+chapters = ["03"]
+
+[[set]]
+name = "canal.servicio"
+chapters = ["04"]
+
+[[set]]
+name = "canal.websocket"
+chapters = ["05"]
+
+[[set]]
+name = "firma"
+chapters = ["06", "11", "12"]
+
+[[set]]
+name = "firma-y-guarda"
+chapters = ["07"]
+
+[[set]]
+name = "lote"
+chapters = ["08"]
+
+[[set]]
+name = "certificado"
+chapters = ["09", "13"]
+
+[[set]]
+name = "ficheros"
+chapters = ["10"]

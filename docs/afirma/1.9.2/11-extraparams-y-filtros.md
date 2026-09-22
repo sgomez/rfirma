@@ -405,6 +405,12 @@ private static List<String> getFilterValues(final Properties config) {
   2. Si no existe `filter` pero existe `filters`, se toma su valor y se ignoran `filters.N`.
   3. Si no existen `filter` ni `filters`, se recorre la secuencia correlativa `filters.1`, `filters.2`, `filters.3`, ... hasta encontrar un hueco.
 
+**Discrepancia con el MCF.** El ejemplo de selección de certificado del manual
+declara `filters.0` y `filters.1` (MCF §6.6, pág. 74). El código empieza en
+`filters.1` y no consulta `filters.0`, así que en ese ejemplo solo se aplica el
+segundo filtro; el propio manual numera desde 1 en su apartado de filtros (MCF
+§7.3, págs. 86-93). La clave `filter`, en singular, no aparece en el manual.
+
 ### 6.2 Semántica lógica: Conjunción (AND) vs. Disyunción (OR)
 
 El modelo de filtrado combina conjunción y disyunción a dos niveles:

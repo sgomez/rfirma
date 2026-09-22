@@ -1,0 +1,444 @@
+# Las comprobaciones del conjunto «certificado»; sus capítulos y su orden los declara `sets.toml`.
+
+[[check]]
+id = "selectcert_answers_the_chosen_certificate_alone"
+set = "certificado"
+citation = "ProtocolInvocationLauncherSelectCert.java:231-242, 262; autoscript.js:2462-2471"
+statement = """
+La respuesta de selectcert es el certificado elegido y nada más: uno solo, codificado en Base64
+URL-safe, sin firma ni campos añadidos.
+"""
+drive = { mode = "v4", script = "selectcert" }
+assistance = "click"
+condition = "a-certificate-alone"
+warning = "Va a aparecer el diálogo de selección de certificado: elige el único que ofrece."
+
+[[check]]
+id = "selectcert_resolves_the_only_candidate_without_asking"
+set = "certificado"
+citation = "CertFilterManager.java:145-154; AOKeyStoreDialog.java:726-729"
+statement = """
+Con headless=true o con mandatoryCertSelection=false, un único certificado que pase los filtros se
+resuelve sin pedir que se elija.
+"""
+drive = { mode = "v4", script = "selectcertheadless" }
+assistance = "person"
+completes = {}
+question = "¿se pidió elegir certificado? [s/n]"
+person = { yes = "se pidió elegir certificado habiendo un único candidato", no = "el único candidato se resolvió sin pedir que se eligiera", yes_means = "no-conforme" }
+warning = "El almacén rsa de la suite tiene un solo certificado, así que la premisa se cumple: si aun así aparece el diálogo de elegir certificado, elígelo y responde que sí se pidió."
+
+[[check]]
+id = "selectcert_cancelled_by_the_person_answers_a_cancellation"
+set = "certificado"
+citation = "AOKeyStoreDialog.java:741; ProtocolInvocationLauncherSelectCert.java:201-207"
+statement = """
+Cancelar la selección de certificado termina el trámite como cancelación, y la sede la recibe como
+tal en vez de como error.
+"""
+drive = { mode = "v4", script = "selectcert" }
+assistance = "person"
+saf = "CANCEL"
+warning = "Va a aparecer el diálogo de selección de certificado: cancélalo en vez de elegir."
+
+[[check]]
+id = "selectcert_over_a_token_asks_for_its_pin"
+set = "certificado"
+citation = "ProtocolInvocationLauncherSelectCert.java:178, 193; KeyStoreUtilities.java:248"
+statement = """
+selectcert sobre un token que exige autenticación pide el PIN antes de devolver el certificado:
+solo ofrece los que tienen clave privada (checkPrivateKeys=true), y en un token eso obliga a abrir
+sesión.
+"""
+drive = { mode = "v4", script = "selectcert" }
+assistance = "person"
+store = "token"
+question = "¿se pidió el PIN del token/certificado? [s/n]"
+person = { yes = "se pidió el PIN del token", no = "el certificado volvió sin pedir el PIN", yes_means = "conforme" }
+warning = "Van a aparecer el diálogo de selección de certificado y, si el cliente exige clave privada, el del PIN del token, que es 1234: AutoFirma lo pide al abrir el token, antes de la lista; otro cliente puede pedirlo después de elegir."
+
+[[check]]
+id = "a_pinned_certificate_is_asked_for_once_and_again_when_released"
+set = "certificado"
+citation = "ProtocolInvocationLauncherSign.java:518-522, 643, 654"
+statement = """
+Con sticky, el certificado se pide en la primera operación y se reutiliza en las siguientes sin
+volver a preguntarlo; al soltarlo con resetsticky, la siguiente vuelve a pedirlo.
+"""
+drive = { mode = "v4", script = "sticky" }
+assistance = "person"
+question = "¿se pidió el certificado en la primera selección y en la tercera, y no en la segunda? [s/n]"
+person = { yes = "el certificado se pidió en la primera selección y tras soltarlo, y no mientras estuvo fijado", no = "el certificado fijado no se respetó o no se volvió a pedir al soltarlo", yes_means = "conforme" }
+warning = "Van a encadenarse tres selecciones de certificado: fíjate en cuáles te preguntan y cuáles no."
+
+[[check]]
+id = "a_key_of_an_unsupported_type_answers_saf_51"
+set = "certificado"
+chapter = "13"
+citation = "ProtocolInvocationLauncherSign.java:631-640; AOSignConstants.java:365-390"
+statement = """
+Un certificado cuya clave no es RSA, DSA ni de curva elíptica, como una Ed25519, no compone un
+algoritmo de firma: la firma se rechaza con SAF_51 después de elegirlo.
+"""
+drive = { mode = "v4", script = "signwithanunsupportedkeytype" }
+assistance = "click"
+saf = "SAF_51"
+warning = "La sede pide un almacén PKCS#12 con una clave Ed25519: su contraseña es 1234; elige su único certificado."
+
+[[check]]
+id = "a_locked_card_answers_saf_52"
+set = "certificado"
+chapter = "13"
+citation = "ProtocolInvocationLauncherSign.java:650-656; AOPkcs1Signer.java:117-120"
+statement = """
+Una tarjeta bloqueada por agotar los intentos del PIN se rechaza con SAF_52.
+"""
+unmeasurable = "Solo lo produce JMulticard con una tarjeta DNIe o CERES bloqueada de verdad; un token PKCS#11 bloqueado falla al abrir sesión y responde SAF_08."
+
+[[check]]
+id = "filters_combine_their_conditions_with_and"
+set = "certificado"
+citation = "CertFilterManager.java:188, 266-268; MultipleCertificateFilter.java:34-41"
+statement = """
+Dentro de un filtro, las condiciones separadas por «;» se exigen todas a la vez: un certificado
+pasa solo si cumple cada una.
+"""
+drive = { mode = "v4", script = "filtersand" }
+assistance = "none"
+condition = "the-expected-certificate"
+store = "several"
+
+[[check]]
+id = "indexed_filters_are_alternatives"
+set = "certificado"
+citation = "CertFilterManager.java:175-181"
+statement = """
+Los filtros numerados filters.1…filters.N son alternativas: un certificado pasa si cumple
+cualquiera de ellos, aunque otro no lo admita.
+"""
+drive = { mode = "v4", script = "filtersindexed" }
+assistance = "none"
+condition = "the-expected-certificate"
+store = "several"
+
+[[check]]
+id = "the_singular_filter_takes_precedence_over_filters"
+set = "certificado"
+citation = "CertFilterManager.java:167-174"
+statement = """
+Si la petición trae filter, en singular, se aplica ese y se ignora filters; el manual del
+integrador no documenta la forma en singular.
+"""
+drive = { mode = "v4", script = "filtersingular" }
+assistance = "none"
+condition = "the-expected-certificate"
+store = "several"
+
+[[check]]
+id = "filters_takes_precedence_over_indexed_filters"
+set = "certificado"
+citation = "CertFilterManager.java:172-175"
+statement = """
+Si la petición trae filters, se aplica ese y se ignoran los numerados filters.1…filters.N.
+"""
+drive = { mode = "v4", script = "filtersoverindexed" }
+assistance = "none"
+condition = "the-expected-certificate"
+store = "several"
+
+[[check]]
+id = "indexed_filters_start_at_one"
+set = "certificado"
+citation = "CertFilterManager.java:175-181"
+statement = """
+La numeración de los filtros empieza en filters.1 y se corta en el primer hueco: filters.0 no se
+consulta, así que el ejemplo del manual del integrador que empieza en filters.0 pierde esa
+alternativa.
+"""
+drive = { mode = "v4", script = "filtersfromone" }
+assistance = "none"
+condition = "the-expected-certificate"
+store = "several"
+
+[[check]]
+id = "a_filter_that_excludes_every_certificate_answers_saf_19"
+set = "certificado"
+citation = "AOKeyStoreDialog.java:733-737; ProtocolInvocationLauncherSelectCert.java:208-215"
+statement = """
+Si ningún certificado del almacén pasa los filtros, la selección termina con SAF_19.
+"""
+drive = { mode = "v4", script = "filtersexcludeall" }
+assistance = "click"
+saf = "SAF_19"
+store = "several"
+warning = "Puede aparecer una ventana de error de que no hay certificados: ciérrala."
+
+[[check]]
+id = "an_unknown_filter_is_ignored"
+set = "certificado"
+citation = "CertFilterManager.java:261-263"
+statement = """
+Una condición de un tipo que no se reconoce se omite sin avisar a la sede, y las demás condiciones
+del mismo filtro se siguen aplicando.
+"""
+drive = { mode = "v4", script = "filtersunknown" }
+assistance = "none"
+condition = "the-expected-certificate"
+store = "several"
+
+[[check]]
+id = "a_filter_of_unknown_kinds_alone_keeps_expired_certificates_hidden"
+set = "certificado"
+citation = "CertFilterManager.java:127-135, 261-268; MultipleCertificateFilter.java:34-41"
+bug = "BUG-31"
+statement = """
+Un filtro hecho solo de condiciones que no se reconocen no filtra nada, y tampoco debe contar como
+filtro de la sede: los certificados caducados se siguen ocultando como si no hubiera filtros.
+"""
+drive = { mode = "v4", script = "filtersunknownalone" }
+assistance = "none"
+condition = "the-expected-certificate"
+store = "expired"
+
+[[check]]
+id = "expired_certificates_are_hidden_only_without_filters"
+set = "certificado"
+citation = "CertFilterManager.java:127-135"
+statement = """
+Sin ningún filtro, los certificados caducados no se ofrecen; con cualquier filtro de la sede, sí,
+si lo cumplen.
+"""
+drive = { mode = "v4", script = "filtersexpired" }
+assistance = "none"
+condition = "the-expired-hidden-only-without-filters"
+store = "expired"
+
+[[check]]
+id = "subject_contains_filters_by_subject"
+set = "certificado"
+citation = "CertFilterManager.java:227-229; TextContainedCertificateFilter.java:36-45"
+statement = """
+subject.contains: admite los certificados cuyo titular contiene el texto dado, sin distinguir
+mayúsculas.
+"""
+drive = { mode = "v4", script = "filtersubject" }
+assistance = "none"
+condition = "the-expected-certificate"
+store = "several"
+
+[[check]]
+id = "issuer_contains_filters_by_issuer"
+set = "certificado"
+citation = "CertFilterManager.java:236-238; TextContainedCertificateFilter.java:47-55"
+statement = """
+issuer.contains: admite los certificados cuyo emisor contiene el texto dado, sin distinguir
+mayúsculas.
+"""
+drive = { mode = "v4", script = "filterissuer" }
+assistance = "none"
+condition = "the-expected-certificate"
+store = "several"
+
+[[check]]
+id = "thumbprint_selects_by_digest"
+set = "certificado"
+citation = "CertFilterManager.java:239-244; ThumbPrintCertificateFilter.java:35-40, 45-50"
+statement = """
+thumbprint:<algoritmo>:<huella> admite solo el certificado cuya huella con ese algoritmo es la
+dada en hexadecimal, sin distinguir mayúsculas y aunque traiga espacios.
+"""
+drive = { mode = "v4", script = "filterthumbprint" }
+assistance = "none"
+condition = "the-expected-certificate"
+store = "several"
+
+[[check]]
+id = "encodedcert_pins_the_given_certificate"
+set = "certificado"
+citation = "CertFilterManager.java:258-260; EncodedCertificateFilter.java:40-49"
+statement = """
+encodedcert: admite solo el certificado cuya codificación DER en Base64 es la dada.
+"""
+drive = { mode = "v4", script = "filterencodedcert" }
+assistance = "none"
+condition = "the-expected-certificate"
+store = "several"
+
+[[check]]
+id = "rfc2254_filters_match_subject_and_issuer"
+set = "certificado"
+citation = "CertFilterManager.java:224-235; RFC2254CertificateFilter.java:82-116"
+statement = """
+subject.rfc2254: e issuer.rfc2254: admiten los certificados cuyo titular o cuyo emisor cumple la
+expresión LDAP dada, atributo a atributo.
+"""
+drive = { mode = "v4", script = "filterrfc2254" }
+assistance = "none"
+condition = "the-expected-certificate"
+store = "several"
+
+[[check]]
+id = "keyusage_filters_match_declared_usages"
+set = "certificado"
+citation = "CertFilterManager.java:212-214, 276-295; KeyUsageFilter.java:26-41"
+statement = """
+Los keyusage.<uso>:true|false de un filtro se funden en un solo patrón: un certificado pasa si
+tiene activos los usos marcados true e inactivos los marcados false.
+"""
+drive = { mode = "v4", script = "filterkeyusage" }
+assistance = "none"
+condition = "the-expected-certificate"
+store = "several"
+
+[[check]]
+id = "policyid_filter_matches_certificate_policies"
+set = "certificado"
+citation = "CertFilterManager.java:245-250; PolicyIdFilter.java:62-77"
+statement = """
+policyid: admite un certificado solo si todas las políticas que declara están en la lista de OID
+dada, no basta con que declare una.
+"""
+drive = { mode = "v4", script = "filterpolicyid" }
+assistance = "none"
+condition = "the-expected-certificate"
+store = "several"
+
+[[check]]
+id = "qualified_filter_selects_by_serial"
+set = "certificado"
+citation = "CertFilterManager.java:203-205; QualifiedCertificatesFilter.java:52-58, 62-93"
+statement = """
+qualified: admite el certificado de firma cuyo número de serie en hexadecimal es el dado; el
+nombre no comprueba la cualificación del certificado.
+"""
+drive = { mode = "v4", script = "filterqualified" }
+assistance = "none"
+condition = "the-expected-certificate"
+store = "several"
+
+[[check]]
+id = "a_pkcs11_key_store_with_its_library_is_opened"
+set = "certificado"
+chapter = "13"
+citation = "UrlParameters.java:382-436; ProtocolInvocationLauncherSelectCert.java:118-121, 147-164; AOKeyStoreManagerFactory.java:103-116"
+statement = """
+Un almacén pedido como PKCS11:<biblioteca> se abre con esa biblioteca en vez del almacén del
+sistema: la selección ofrece los certificados del token y pide su PIN.
+"""
+drive = { mode = "v4", script = "keystorepkcs11" }
+assistance = "person"
+store = "several"
+question = "¿se pidió el PIN de un token y se ofrecieron sus certificados? [s/n]"
+person = { yes = "se abrió el token PKCS#11 que nombró la sede", no = "no se abrió el token que nombró la sede", yes_means = "conforme" }
+warning = "La sede pide el almacén PKCS#11 de SoftHSM: si te pide el PIN, es 1234, y elige cualquiera de los certificados que ofrezca. AutoFirma pide el PIN al abrir el token, antes de la lista; otro cliente puede pedirlo después de elegir."
+
+[[check]]
+id = "an_unknown_key_store_falls_back_to_the_default"
+set = "certificado"
+chapter = "13"
+citation = "SimpleKeyStoreManager.java:272-298; ProtocolInvocationLauncherSelectCert.java:118-126"
+statement = """
+Un almacén que no se reconoce por su nombre se sustituye por el almacén por omisión del sistema,
+sin error.
+"""
+drive = { mode = "v4", script = "keystoreunknown" }
+assistance = "none"
+condition = "the-expected-certificate"
+
+[[check]]
+id = "a_later_operation_keeps_the_key_store_selected_earlier"
+set = "certificado"
+chapter = "13"
+citation = "AOKeyStoreDialog.java:227-262; KeyStorePreferencesManager.java:365-375; ProtocolInvocationLauncherSelectCert.java:102-110"
+statement = """
+El almacén al que la persona cambia en el diálogo de selección queda recordado en el proceso, no en
+las preferencias, y las operaciones siguientes lo usan antes que el que pida la sede o el del
+sistema.
+"""
+drive = { mode = "v4", script = "keystorekept" }
+assistance = "person"
+question = "¿la segunda selección volvió al almacén PKCS#12 (te pidió otra vez un fichero) en vez de ofrecer el certificado del sistema? [s/n]"
+person = { yes = "la segunda operación usó el almacén elegido en la primera", no = "la segunda operación no recordó el almacén elegido en la primera", yes_means = "conforme" }
+warning = "En la primera selección, cambia en el diálogo al almacén PKCS#12 y abre testdata/fnmt/active-ecc.p12 (contraseña 1234); en la segunda, fíjate en qué almacén te ofrece y cancela."
+
+[[check]]
+id = "a_key_store_foreign_to_the_system_is_rejected_with_saf_08"
+set = "certificado"
+chapter = "13"
+citation = "SimpleKeyStoreManager.java:276-279; AOKeyStoreManagerFactory.java:120-123, 166-172; ProtocolInvocationLauncherSelectCert.java:147-164"
+statement = """
+Un almacén de otro sistema, como el de Windows pedido en Linux, no se sustituye por el del sistema:
+no se puede abrir y la selección termina con SAF_08.
+"""
+drive = { mode = "v4", script = "keystoreforeign" }
+assistance = "click"
+saf = "SAF_08"
+warning = "Puede aparecer una ventana de error de que no se pudo abrir el almacén: ciérrala."
+
+[[check]]
+id = "an_operation_without_sticky_releases_the_pinned_certificate"
+set = "certificado"
+citation = "ProtocolInvocationLauncherSelectCert.java:139, 195-199; ProtocolInvocationLauncherSign.java:643"
+statement = """
+Una operación sin sticky=true suelta el certificado fijado aunque no traiga resetsticky: la
+siguiente operación con sticky vuelve a seleccionar.
+"""
+drive = { mode = "v4", script = "stickyreleased" }
+assistance = "none"
+condition = "a-new-selection-after-the-release"
+store = "several"
+
+[[check]]
+id = "a_certificate_pinned_by_selectcert_signs_without_asking"
+set = "certificado"
+citation = "ProtocolInvocationLauncherSelectCert.java:195-197; ProtocolInvocationLauncherSign.java:518-521"
+statement = """
+El certificado que fija selectcert con sticky lo usa la firma siguiente con sticky sin volver a
+preguntar: la fijación es del proceso, no de la operación.
+"""
+drive = { mode = "v4", script = "stickysigns" }
+assistance = "none"
+condition = "signed-with-the-pinned-certificate"
+store = "several"
+
+[[check]]
+id = "a_pinned_certificate_ignores_the_filters_of_the_next_request"
+set = "certificado"
+citation = "ProtocolInvocationLauncherSelectCert.java:139-142"
+statement = """
+Mientras hay un certificado fijado, una operación con sticky lo reutiliza sin aplicar los filtros
+ni el almacén que trae su petición.
+"""
+drive = { mode = "v4", script = "stickyfilters" }
+assistance = "none"
+condition = "the-pinned-certificate-despite-the-filters"
+store = "several"
+
+[[check]]
+id = "selectcert_answers_the_pinned_certificate_without_asking"
+set = "certificado"
+citation = "ProtocolInvocationLauncherSelectCert.java:139-142"
+statement = """
+Con un certificado fijado, selectcert con sticky lo devuelve sin abrir el diálogo de selección.
+"""
+drive = { mode = "v4", script = "stickyselect" }
+assistance = "none"
+condition = "the-pinned-certificate-without-asking"
+store = "several"
+
+[[check]]
+id = "a_wrong_pin_asks_again_for_the_same_certificate"
+set = "certificado"
+citation = "ProtocolInvocationLauncherSign.java:658-674; CertFilterManager.java:101-108"
+statement = """
+Un PIN erróneo al firmar no cancela la operación: vuelve a abrirse el selector con solo el
+certificado elegido, y después se pide de nuevo el PIN.
+"""
+drive = { mode = "v4", script = "signcades" }
+assistance = "person"
+store = "token"
+patience_secs = 180
+completes = {}
+question = "Tras el PIN erróneo, ¿volvió a aparecer el selector con solo el certificado que habías elegido? [s/n]"
+person = { yes = "el selector volvió con solo el certificado elegido", no = "el PIN erróneo no volvió a ofrecer el mismo certificado", yes_means = "conforme" }
+warning = "Elige el certificado RSA del token y teclea un PIN erróneo; cuando vuelva a pedirse, elígelo otra vez y teclea el PIN de verdad."

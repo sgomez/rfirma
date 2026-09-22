@@ -54,6 +54,9 @@ const THE_SINGLE_SELECTION: &str = "selectcert";
 /// El guion de tres selecciones con el certificado fijado y soltado.
 const THE_STICKY_SELECTIONS: &str = "sticky";
 
+/// El guion de servidor intermedio que firma un documento demasiado largo para la URL.
+const THE_RELAY_SIGNATURE: &str = "relay";
+
 /// El guion de servidor intermedio que cofirma una factura: rFirma lo rechaza solo, sin
 /// consentimiento, y el destino solo se conoce tras leer el XML de parámetros.
 const THE_RELAY_REFUSED_OPERATION: &str = "relayrefused";
@@ -2461,7 +2464,8 @@ fn the_published_client_forced_to_the_relay_launches_without_stservlet_and_rfirm
     }
 
     let material = ChannelMaterial::fresh();
-    let client = PublishedClient::running_as(&material, BenchMode::Relay);
+    let client =
+        PublishedClient::running_the_script(&material, BenchMode::Relay, THE_RELAY_SIGNATURE);
     let servlets = Arc::new(BenchServlets::default());
 
     let launch = the_relay_launch_of(&client, &servlets);

@@ -3,4 +3,4 @@
 /**
  * Las coordenadas que se deducen solas al crear un informe; la versión del cliente, no.
  */
-export type DeducedCoordinates = { os: string, os_version: string, transport: string, store: string, };
+export type DeducedCoordinates = { os: string, os_version: string, };

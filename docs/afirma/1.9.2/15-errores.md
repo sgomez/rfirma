@@ -287,10 +287,14 @@ En la comunicación mediante socket local TCP con TLS:
 4. **Errores del propio canal socket**:
    - Falta de memoria (`OutOfMemoryError`): responde con el literal no numerado
      `MEMORY_ERROR` (`CommandProcessorThread.java:143, 481-487`).
-   - Parámetros del socket inválidos o sesión incorrecta: responde con
+   - Sesión incorrecta, lectura fallida u orden desconocida: responde con
      `SAF_03: Error en los parámetros de entrada` (`110, 116, 135`).
-   - Error de envío / I/O en socket: responde con `SAF_11` (`139`).
-   - Excepción no controlada en el comando: responde con `SAF_09` (`147`).
+   - Cualquier fallo dentro de la orden —un `cmd=` que no es una operación
+     `afirma://`, un `send=` fuera de rango, un `save` fallido o un error de
+     envío—: responde con `SAF_11`, porque `processCommand` lo envuelve en
+     `IOException` (`139`, `226-229`) (capítulo 04, §7.1).
+   - El `SAF_09` del `catch (Exception)` final (`147`) no se alcanza en la
+     práctica.
 5. **Intento de subida al servidor intermedio pese a operar por socket**: En las
    operaciones `batch`, `selectcert`, `save` y `load`, el `catch
    (SocketOperationException e)` invoca `sendDataToServer` sin comprobar
@@ -315,7 +319,8 @@ En la comunicación mediante WebSocket TLS:
      del mensaje, emite `SAF_46: Id de sesión inválido` y descarta el mensaje
      (`AfirmaWebSocketServerV4.java:73-78`).
 3. **Fallo en apertura de puertos al arrancar**: Si
-   `AfirmaWebSocketServerManager.startService` no puede enlazar ningún puerto,
+   `AfirmaWebSocketServerManager.startService` no puede construir el servidor en
+   ningún puerto (un puerto en uso no llega aquí, BUG-33),
    `launch()` captura `SocketOperationException`, muestra `SAF_45`
    (`ERROR_CANNOT_OPEN_SOCKET`) y fuerza el cierre inmediato del proceso con
    `forceCloseApplication(0)` (`ProtocolInvocationLauncher.java:246-251`).
@@ -329,7 +334,12 @@ En la firma de lotes locales monofásicos (`LocalBatchSigner.java:47-91`):
    sea `true` (`LocalBatchSigner.java:55, 66-72`).
 2. El error de cada documento individual se captura como `SocketOperationException`
    y se almacena en un objeto `LocalSingleBatchResult` con resultado `ERROR_SIGN`
-   (`"ERROR"`) y descripción igual a `e.getMessage()` (`LocalBatchSigner.java:74-75, 298-301`).
+   (`"ERROR_PRE"`, `LocalBatchSigner.java:38`) y descripción igual a `e.getMessage()`
+   (`LocalBatchSigner.java:74-75, 298-301`). Ese mensaje es el de la causa
+   (`SocketOperationException.java:26-28`), no el código: los `SAF_33`, `SAF_34` y
+   `SAF_35`, que solo emite este camino, no llegan a la sede ni al log
+   (`LocalBatchSigner.java:64`). La sede recibe `ERROR_PRE` con el texto de la
+   excepción de iText, como «El PDF esta certificado».
 3. El resultado global del lote es un JSON construido por `JSONBatchManager.buildBatchResultJson`
    que reporta el estado individual de cada firma.
 
@@ -349,7 +359,7 @@ A continuación se detalla la totalidad de los 53 códigos de error definidos en
 | `SAF_02` | `ERROR_UNSUPPORTED_PROTOCOL` | `ProtocolLauncher.2` | Protocolo no soportado | Despachador común | `ProtocolInvocationLauncher.java:175` |
 | `SAF_03` | `ERROR_PARAMS` | `ProtocolLauncher.3` | Error en los parámetros de entrada | Común a todas las operaciones y socket | `ProtocolInvocationLauncher.java:274, 359, 432, 519, 631, 741, 826`, `CommandProcessorThread.java:110, 116, 135` |
 | `SAF_04` | `ERROR_UNSUPPORTED_OPERATION` | `ProtocolLauncher.4` | Operación no soportada. Compruebe que dispone de la última versión de Autofirma. | Despachador común, `sign`, `signandsave`, `batch` | `ProtocolInvocationLauncher.java:841`, `ProtocolInvocationLauncherSign.java:733, 840`, `ProtocolInvocationLauncherSignAndSave.java:761, 863` |
-| `SAF_05` | `ERROR_CANNOT_SAVE_DATA` | `ProtocolLauncher.5` | No se ha podido guardar los datos | `save`, `signandsave` | `ProtocolInvocationLauncherSave.java:102`, `ProtocolInvocationLauncherSignAndSave.java:563` |
+| `SAF_05` | `ERROR_CANNOT_SAVE_DATA` | `ProtocolLauncher.5` | No se ha podido guardar los datos | *Sin emisor*: el fallo de escritura se captura en el diálogo, que avisa y vuelve a pedir destino (`JSEUIManager.java:808-824`) | `ProtocolInvocationLauncherSave.java:102`, `ProtocolInvocationLauncherSignAndSave.java:563` |
 | `SAF_06` | `ERROR_UNSUPPORTED_FORMAT` | `ProtocolLauncher.6` | Formato de firma no soportado | `sign`, `signandsave`, `batch` | `ProtocolInvocationLauncherSign.java:269`, `ProtocolInvocationLauncherSignAndSave.java:261`, `LocalBatchSigner.java:113` |
 | `SAF_07` | `ERROR_CANNOT_FIND_KEYSTORE` | `ProtocolLauncher.7` | No se ha podido determinar el almacén de claves a utilizar | *Huérfano* (no referenciado) | `ProtocolInvocationLauncherErrorManager.java:38, 95` |
 | `SAF_08` | `ERROR_CANNOT_ACCESS_KEYSTORE` | `ProtocolLauncher.8` | Error accediendo al almacén de claves y certificados | `sign`, `signandsave`, `batch`, `selectcert` | `ProtocolInvocationLauncherSign.java:584, 626`, `ProtocolInvocationLauncherSignAndSave.java:613, 655`, `ProtocolInvocationLauncherSelectCert.java:158, 219`, `ProtocolInvocationLauncherBatch.java:259, 311` |
@@ -358,11 +368,11 @@ A continuación se detalla la totalidad de los 53 códigos de error definidos en
 | `SAF_11` | `ERROR_SENDING_RESULT` | `ProtocolLauncher.11` | Error en el envio del resultado de la operación. | Servidor intermedio, `save`, `selectcert`, `batch`, socket | `ProtocolInvocationLauncher.java:883`, `CommandProcessorThread.java:139`, `ProtocolInvocationLauncherBatch.java:210`, `ProtocolInvocationLauncherSave.java:124`, `ProtocolInvocationLauncherSelectCert.java:279` |
 | `SAF_12` | `ERROR_ENCRIPTING_DATA` | `ProtocolLauncher.12` | Error en el cifrado de los datos a enviar | `sign`, `signandsave`, `batch`, `selectcert` | `ProtocolInvocationLauncherSign.java:200`, `ProtocolInvocationLauncherSignAndSave.java:198`, `ProtocolInvocationLauncherBatch.java:177`, `ProtocolInvocationLauncherSelectCert.java:251` |
 | `SAF_13` | `ERROR_LOCAL_ACCESS_BLOCKED` | `ProtocolLauncher.13` | Se ha pedido acceso a una dirección local, pero por seguridad se ha bloqueado el acceso | Común (`save`, `signandsave`, `sign`, `load`) | `ProtocolInvocationLauncher.java:513, 625, 735, 820` |
-| `SAF_14` | `ERROR_OBSOLETE_APP` | `ProtocolLauncher.14` | &lt;html&gt;La aplicación está obsoleta y no puede procesarse la petición.&lt;br&gt;Por favor, instale una versión actualizada y reintente el proceso de nuevo.&lt;/html&gt; | Común (`save`, `signandsave`, `sign`, `load`) | `ProtocolInvocationLauncher.java:507, 619, 729, 814` |
+| `SAF_14` | `ERROR_OBSOLETE_APP` | `ProtocolLauncher.14` | &lt;html&gt;La aplicación está obsoleta y no puede procesarse la petición.&lt;br&gt;Por favor, instale una versión actualizada y reintente el proceso de nuevo.&lt;/html&gt; | *Sin emisor*: solo en `catch` de una excepción que nadie lanza (§4.7) | `ProtocolInvocationLauncher.java:507, 619, 729, 814` |
 | `SAF_15` | `ERROR_DECRYPTING_DATA` | `ProtocolLauncher.15` | Error en el descifrado de los datos | Descarga `rtservlet` (todas las operaciones con `fileid`) | `ProtocolInvocationLauncher.java:320, 397, 473, 563, 674, 781` |
 | `SAF_16` | `ERROR_RECOVERING_DATA` | `ProtocolLauncher.16` | Error al recuperar los datos del servidor intermedio | Descarga `rtservlet` (todas las operaciones con `fileid`) | `ProtocolInvocationLauncher.java:314, 391, 467, 557, 668, 775` |
 | `SAF_17` | `ERROR_UNKNOWN_SIGNER` | `ProtocolLauncher.17` | Los datos proporcionados no son una firma electrónica reconocida | `sign`, `signandsave`, `batch` (`cosign`, `countersign`) | `ProtocolInvocationLauncherSign.java:386`, `ProtocolInvocationLauncherSignAndSave.java:378`, `LocalBatchSigner.java:125` |
-| `SAF_18` | `ERROR_DECODING_CERTIFICATE` | `ProtocolLauncher.18` | Error al descodificar el certificado de firma | `sign`, `signandsave`, `batch`, `selectcert` | `ProtocolInvocationLauncherSign.java:545`, `ProtocolInvocationLauncherSignAndSave.java:574`, `ProtocolInvocationLauncherSelectCert.java:236`, `ProtocolInvocationLauncherBatch.java:157, 348` |
+| `SAF_18` | `ERROR_DECODING_CERTIFICATE` | `ProtocolLauncher.18` | Error al descodificar el certificado de firma | *Sin emisor*: `getEncoded()` de un certificado ya cargado (§4.4) | `ProtocolInvocationLauncherSign.java:545`, `ProtocolInvocationLauncherSignAndSave.java:574`, `ProtocolInvocationLauncherSelectCert.java:236`, `ProtocolInvocationLauncherBatch.java:157, 348` |
 | `SAF_19` | `ERROR_NO_CERTIFICATES_KEYSTORE` | `ProtocolLauncher.19` | No hay ningun certificado válido en su almacén. Compruebe las fechas de caducidad e instale un certificado válido. | `sign`, `signandsave`, `batch`, `selectcert` | `ProtocolInvocationLauncherSign.java:621`, `ProtocolInvocationLauncherSignAndSave.java:650`, `ProtocolInvocationLauncherSelectCert.java:210`, `ProtocolInvocationLauncherBatch.java:305` |
 | `SAF_20` | `ERROR_LOCAL_BATCH_SIGN` | `ProtocolLauncher.20` | Error en el procesado del lote de firma. | `batch` local | `ProtocolInvocationLauncherBatch.java:386` |
 | `SAF_21` | `ERROR_UNSUPPORTED_PROCEDURE` | `ProtocolLauncher.21` | La versión de Autofirma instalada no es compatible con este trámite.<br>Actualice a la última versión disponible. | Versión de protocolo > 4, o versiones socket/ws incompatibles | `ProtocolInvocationLauncher.java:242, 284`, `ProtocolInvocationLauncherSign.java:138`, `ProtocolInvocationLauncherBatch.java:81`, `ProtocolInvocationLauncherSelectCert.java:80`, `ProtocolInvocationLauncherSave.java:53`, `ProtocolInvocationLauncherLoad.java:64` |
@@ -377,16 +387,16 @@ A continuación se detalla la totalidad de los 53 códigos de error definidos en
 | `SAF_30` | `ERROR_INVALID_DATA` | `ProtocolLauncher.40` | El formato de los datos a firmar no es adecuado para el tipo de firma seleccionado. | `sign`, `signandsave`, `batch` | `ProtocolInvocationLauncherSign.java:766`, `ProtocolInvocationLauncherSignAndSave.java:794`, `LocalBatchSigner.java:206` |
 | `SAF_31` | `ERROR_NO_SIGN_DATA` | `ProtocolLauncher.41` | Los datos introducidos no se corresponden con un objeto de firma. | `sign`, `signandsave`, `batch` | `ProtocolInvocationLauncherSign.java:786`, `ProtocolInvocationLauncherSignAndSave.java:814`, `LocalBatchSigner.java:226` |
 | `SAF_32` | `ERROR_FACE_ALREADY_SIGNED` | `ProtocolLauncher.42` | La factura ya tiene una firma electrónica y no admite firmas adicionales. | FacturaE en `sign`, `signandsave`, `batch` | `ProtocolInvocationLauncherSign.java:776`, `ProtocolInvocationLauncherSignAndSave.java:804`, `LocalBatchSigner.java:216` |
-| `SAF_33` | `ERROR_PDF_WRONG_PASSWORD` | `ProtocolLauncher.43` | La contraseña proporcionada no es válida para el PDF actual o no se proporcionó ninguna contraseña. | PDF con clave en `batch` | `LocalBatchSigner.java:241` |
-| `SAF_34` | `ERROR_PDF_UNREG_SIGN` | `ProtocolLauncher.44` | El PDF contiene firmas no registradas. | PDF en `batch` | `LocalBatchSigner.java:231` |
-| `SAF_35` | `ERROR_PDF_CERTIFIED` | `ProtocolLauncher.45` | El PDF está certificado. | PDF en `batch` | `LocalBatchSigner.java:236` |
+| `SAF_33` | `ERROR_PDF_WRONG_PASSWORD` | `ProtocolLauncher.43` | La contraseña proporcionada no es válida para el PDF actual o no se proporcionó ninguna contraseña. | *No llega a la sede*: PDF con clave en `batch` (§3.4) | `LocalBatchSigner.java:241` |
+| `SAF_34` | `ERROR_PDF_UNREG_SIGN` | `ProtocolLauncher.44` | El PDF contiene firmas no registradas. | *No llega a la sede*: PDF en `batch` (§3.4) | `LocalBatchSigner.java:231` |
+| `SAF_35` | `ERROR_PDF_CERTIFIED` | `ProtocolLauncher.45` | El PDF está certificado. | *No llega a la sede*: PDF en `batch` (§3.4) | `LocalBatchSigner.java:236` |
 | `SAF_36` | `ERROR_CANNOT_FIND_SSL_KEYSTORE` | `ProtocolLauncher.46` | No se ha podido encontrar el almacén de claves SSL para la comunicación segura. Restaure la instalación de Autofirma para generar uno nuevo. | *Huérfano* (comentado en código) | `ProtocolInvocationLauncher.java:255` |
 | `SAF_37` | `ERROR_CANNOT_ACCESS_SSL_KEYSTORE` | `ProtocolLauncher.47` | No se ha podido acceder al almacén de claves SSL para la comunicación segura. Restaure la instalación de Autofirma para generar uno nuevo. | *Huérfano* (comentado en código) | `ProtocolInvocationLauncher.java:256` |
 | `SAF_38` | `ERROR_INVALID_FACTURAE` | `ProtocolLauncher.48` | El archivo que intenta firmar no es una factura electrónica reconocida. | FacturaE en `sign`, `signandsave`, `batch` | `ProtocolInvocationLauncherSign.java:771`, `ProtocolInvocationLauncherSignAndSave.java:799`, `LocalBatchSigner.java:211` |
 | `SAF_39` | `ERROR_INVALID_SIGNATURE` | `ProtocolLauncher.49` | La firma de entrada no es válida. | Multifirma en `sign`, `signandsave`, `batch` | `ProtocolInvocationLauncherSign.java:479, 845`, `ProtocolInvocationLauncherSignAndSave.java:471, 868`, `LocalBatchSigner.java:251` |
 | `SAF_40` | `ERROR_RECOVER_SERVER_DOCUMENT` | `ProtocolLauncher.50` | Error al recuperar el documento | Firma trifásica en `sign`, `signandsave`, `batch` | `ProtocolInvocationLauncherSign.java:751`, `ProtocolInvocationLauncherSignAndSave.java:779`, `LocalBatchSigner.java:191` |
 | `SAF_41` | `ERROR_MINIMUM_VERSION_NON_SATISTIED` | `ProtocolLauncher.53` | El uso de este trámite web requiere una versión más reciente de Autofirma.<br>Actualice a la última versión disponible. | Parámetro `mcv` en todas las operaciones | `ProtocolInvocationLauncherSign.java:147`, `ProtocolInvocationLauncherSignAndSave.java:144`, `ProtocolInvocationLauncherSelectCert.java:93`, `ProtocolInvocationLauncherSave.java:66`, `ProtocolInvocationLauncherLoad.java:77`, `ProtocolInvocationLauncherBatch.java:94` |
-| `SAF_42` | `ERROR_POSTPROCESSING_DATA` | `ProtocolLauncher.54` | Error al postprocesar una firma, probablemente debido a un plugin que afecte al sistema de firma. | Postproceso de firma en `sign`, `signandsave` | `ProtocolInvocationLauncherSign.java:205`, `ProtocolInvocationLauncherSignAndSave.java:203` |
+| `SAF_42` | `ERROR_POSTPROCESSING_DATA` | `ProtocolLauncher.54` | Error al postprocesar una firma, probablemente debido a un plugin que afecte al sistema de firma. | *Solo con un plugin*: postproceso de firma en `sign`, `signandsave` (§4.5) | `ProtocolInvocationLauncherSign.java:205`, `ProtocolInvocationLauncherSignAndSave.java:203` |
 | `SAF_43` | `ERROR_VISIBLE_SIGNATURE` | `ProtocolLauncher.55` | Error durante la firma visible del PDF. | Firma visible obligatoria en `sign`, `signandsave` | `ProtocolInvocationLauncherSign.java:181`, `ProtocolInvocationLauncherSignAndSave.java:179` |
 | `SAF_44` | `ERROR_SIGN_WITHOUT_DATA` | `ProtocolLauncher.56` | La firma no contiene los datos y no se compatible con la configuración seleccionada | Multifirma detached en `sign`, `signandsave`, `batch` | `ProtocolInvocationLauncherSign.java:781`, `ProtocolInvocationLauncherSignAndSave.java:809`, `LocalBatchSigner.java:221` |
 | `SAF_45` | `ERROR_CANNOT_OPEN_SOCKET` | `ProtocolLauncher.57` | No se pudo abrir un socket para la comunicación con la aplicación | Apertura de servidor WebSocket | `ProtocolInvocationLauncher.java:248` |
@@ -406,6 +416,14 @@ A continuación se detalla la totalidad de los 53 códigos de error definidos en
   (`ProtocolInvocationLauncher.java:166-171`), o cuando el objeto de opciones
   parseado resulta ser nulo en `signandsave` (`ProtocolInvocationLauncherSignAndSave.java:123-127`)
   o `selectcert` (`ProtocolInvocationLauncherSelectCert.java:64-73`).
+  **La rama del despachador es código muerto:** ninguno de sus llamantes le
+  pasa `null`. `SimpleAfirma.main` solo lo invoca si `args[0]` empieza por
+  `afirma://` (`SimpleAfirma.java:957-962`); los servidores WebSocket le pasan
+  el `message` recibido, que ya han desreferenciado antes con
+  `message.startsWith(ECHO_REQUEST_PREFIX)` (`AfirmaWebSocketServer.java:103, 113`,
+  `AfirmaWebSocketServerV4.java:81, 91`); y el canal de sockets, el resultado de
+  un `toString()` (`CommandProcessorThread.java:293, 308, 334, 350`). Una
+  petición vacía llega como cadena vacía y la rechaza `SAF_02`, no `SAF_01`.
 * **`SAF_02` (`ERROR_UNSUPPORTED_PROTOCOL`)**: Se arroja cuando la URI no
   comienza estrictamente por el prefijo `afirma://` en minúsculas
   (`ProtocolInvocationLauncher.java:172-178`).
@@ -421,11 +439,14 @@ A continuación se detalla la totalidad de los 53 códigos de error definidos en
     (`ProtocolInvocationLauncherSign.java:746`, `ProtocolInvocationLauncherSignAndSave.java:774`).
 * **`SAF_04` (`ERROR_UNSUPPORTED_OPERATION`)**: Se emite cuando el host/operación de la
   URI no coincide con ninguno de los prefijos reconocidos
-  (`ProtocolInvocationLauncher.java:837-843`), cuando la suboperación de firma
-  (`op` o `cop`) no es `sign`, `cosign` ni `countersign`
-  (`ProtocolInvocationLauncherSign.java:733`, `ProtocolInvocationLauncherSignAndSave.java:761`),
-  o cuando la biblioteca criptográfica arroja `AOUnsupportedOperationException`
-  (`ProtocolInvocationLauncherSign.java:840`).
+  (`ProtocolInvocationLauncher.java:837-843`), o cuando la biblioteca criptográfica
+  arroja `UnsupportedOperationException` (`ProtocolInvocationLauncherSign.java:838-841`,
+  `ProtocolInvocationLauncherSignAndSave.java:861-864`). Las ramas `default` que lo
+  asignan a una suboperación (`op` o `cop`) desconocida
+  (`ProtocolInvocationLauncherSign.java:733`, `ProtocolInvocationLauncherSignAndSave.java:761`)
+  no se alcanzan: esa suboperación llega como `null`, el `switch` lanza
+  `NullPointerException` y la respuesta es `SAF_09`, tras pedir certificado y PIN
+  ([BUG-15](A1-bugs-autofirma.md#bug-15-ausencia-de-validación-de-cop-en-signandsave-provoca-nullpointerexception-y-reporte-engañoso-con-saf_09)).
 * **`SAF_13` (`ERROR_LOCAL_ACCESS_BLOCKED`)**: Disparado por la excepción
   `ParameterLocalAccessRequestedException` cuando se detecta que los servlets
   `stservlet` o `rtservlet` apuntan a direcciones locales prohibidas
@@ -433,9 +454,9 @@ A continuación se detalla la totalidad de los 53 códigos de error definidos en
   (`UrlParameters.java:279-281`, `ProtocolInvocationLauncher.java:512, 624, 734, 819`).
   La rama `batch` no lo emite: un pre/postsigner local acaba en `SAF_03`
   ([BUG-28](A1-bugs-autofirma.md#bug-28-un-servlet-del-lote-en-el-loopback-se-rechaza-con-saf_03-en-lugar-de-saf_13)).
-* **`SAF_14` (`ERROR_OBSOLETE_APP`)**: Disparado por la excepción
-  `ParameterNeedsUpdatedVersionException` cuando la petición incluye parámetros que
-  exigen una versión superior de AutoFirma (`ProtocolInvocationLauncher.java:506, 618, 728, 813`).
+* **`SAF_14` (`ERROR_OBSOLETE_APP`)**: Reservado para la excepción
+  `ParameterNeedsUpdatedVersionException` (`ProtocolInvocationLauncher.java:504-509,
+  616-621, 726-731, 811-816`), pero en la 1.9.2 no se emite: ver §4.7.
 * **`SAF_21` (`ERROR_UNSUPPORTED_PROCEDURE`)**: Versión de protocolo de comunicación
   no admitida. Ocurre cuando `requestedProtocolVersion` es superior a `VERSION_4`
   (`ProtocolInvocationLauncherSign.java:133-140`, `ProtocolInvocationLauncherSave.java:49-58`, etc.),
@@ -463,15 +484,19 @@ A continuación se detalla la totalidad de los 53 códigos de error definidos en
   `ProtocolInvocationLauncherSignAndSave.java:196-200`,
   `ProtocolInvocationLauncherSelectCert.java:249-256`,
   `ProtocolInvocationLauncherBatch.java:175-182`).
+  La sede lo provoca con una `key` de ocho caracteres que no son ocho bytes, como
+  ocho eñes: `verifyCipherKey` cuenta caracteres (`UrlParameters.java:327-344`) y
+  `DesCipher` recibe sus dieciséis bytes en UTF-8, que la JDK rechaza como clave
+  DES (`DesCipher.java:37`).
 * **`SAF_15` (`ERROR_DECRYPTING_DATA`)**: Error al descifrar los datos descargados desde
   `rtservlet` mediante la clave simétrica proporcionada (`key`)
   (`ProtocolInvocationLauncher.java:319, 396, 472, 562, 673, 780`).
 * **`SAF_16` (`ERROR_RECOVERING_DATA`)**: Error al realizar la petición HTTP GET contra
   `rtservlet` para recuperar los datos asociados al identificador `fileid`
   (`ProtocolInvocationLauncher.java:313, 390, 466, 556, 667, 774`).
-* **`SAF_45` (`ERROR_CANNOT_OPEN_SOCKET`)**: El servidor WebSocket no pudo enlazar
-  ninguno de los puertos pasados en `ports` ni el puerto por defecto `63117`
-  (`ProtocolInvocationLauncher.java:246-251`).
+* **`SAF_45` (`ERROR_CANNOT_OPEN_SOCKET`)**: El servidor WebSocket no pudo construirse
+  en ninguno de los puertos pasados en `ports` ni en el puerto por defecto `63117`
+  (`ProtocolInvocationLauncher.java:246-251`); un puerto en uso no llega aquí (BUG-33).
 * **`SAF_46` (`ERROR_INVALID_SESSION_ID`)**: En WebSocket v4, el ID de sesión del mensaje
   no coincide con el `idsession` establecido durante el apretón de manos
   (`AfirmaWebSocketServerV4.java:73-78`).
@@ -496,6 +521,9 @@ A continuación se detalla la totalidad de los 53 códigos de error definidos en
   `ProtocolInvocationLauncherSignAndSave.java:574`,
   `ProtocolInvocationLauncherSelectCert.java:236`,
   `ProtocolInvocationLauncherBatch.java:157, 348`).
+  **En la práctica no tiene emisor:** la única llamada que lo produce es
+  `getEncoded()` sobre el certificado que ya firmó, y un certificado que no se
+  codifica falla antes, al cargar el almacén, con `SAF_08`.
 * **`SAF_19` (`ERROR_NO_CERTIFICATES_KEYSTORE`)**: El almacén se abrió con éxito, pero
   no contiene ningún certificado, o ninguno de los disponibles cumple con los filtros
   especificados (`filters`, `filter`) o no es apto para firma
@@ -511,6 +539,10 @@ A continuación se detalla la totalidad de los 53 códigos de error definidos en
   (tarjeta inteligente o token PKCS#11) ha quedado bloqueado por agotar los reintentos
   del PIN (`LockedKeyStoreException`) (`ProtocolInvocationLauncherSign.java:656`,
   `ProtocolInvocationLauncherSignAndSave.java:684`, `ProtocolInvocationLauncherBatch.java:357`).
+  La excepción solo la lanzan los firmadores cuando JMulticard informa de
+  `AuthenticationModeLockedException` (`AOPkcs1Signer.java:117-120`): hace falta una
+  tarjeta DNIe o CERES bloqueada. Un token PKCS#11 bloqueado por SunPKCS11 falla al
+  abrir sesión y da `SAF_08`.
 
 ---
 
@@ -581,6 +613,10 @@ A continuación se detalla la totalidad de los 53 códigos de error definidos en
 * **`SAF_42` (`ERROR_POSTPROCESSING_DATA`)**: Fallo al ejecutar los complementos de
   postprocesado de la firma (`PostSignProcessor` / plugins)
   (`ProtocolInvocationLauncherSign.java:205`, `ProtocolInvocationLauncherSignAndSave.java:203`).
+  **Solo lo alcanza un plugin:** el procesador nativo solo lanza `EncryptingException`,
+  que es `SAF_12` (`NativeSignDataProcessor.java:82-83`); el `catch (Exception)` que da
+  `SAF_42` es para el procesador en línea de un plugin (`ProtocolInvocationLauncherSign.java:223-244`),
+  y una instalación sin plugins no lo emite.
 * **`SAF_43` (`ERROR_VISIBLE_SIGNATURE`)**: Ocurre cuando la firma visible PDF está configurada
   como obligatoria y el usuario cancela la definición del área o falla su estampación
   (`VisibleSignatureMandatoryException`)
@@ -605,9 +641,11 @@ A continuación se detalla la totalidad de los 53 códigos de error definidos en
 
 ### 4.6 Errores de operaciones de guardado, carga y lotes
 
-* **`SAF_05` (`ERROR_CANNOT_SAVE_DATA`)**: Error al escribir físicamente el fichero
-  firmado o los datos en el disco local (`IOException`)
+* **`SAF_05` (`ERROR_CANNOT_SAVE_DATA`)**: Cualquier excepción no cancelada del guardado
   (`ProtocolInvocationLauncherSave.java:102`, `ProtocolInvocationLauncherSignAndSave.java:563`).
+  Un fallo de escritura no llega: `JSEUIManager.saveDataToFile` lo captura, muestra un
+  error y vuelve a pedir destino (`JSEUIManager.java:808-824`); si la persona cancela,
+  la sede recibe `CANCEL`.
 * **`SAF_20` (`ERROR_LOCAL_BATCH_SIGN`)**: Fallo general en la orquestación del lote local
   monofásico (`ProtocolInvocationLauncherBatch.java:386`).
 * **`SAF_25` (`ERROR_CANNOT_LOAD_DATA`)**: Error al leer los datos de los ficheros
@@ -690,6 +728,12 @@ Los dos últimos comparten causa: la incorporación en versiones posteriores del
 mecanismo de configuración en tiempo de ejecución sustituyó el error terminal por
 un diálogo de confirmación, y los códigos previstos para la vía terminal quedaron
 en el diccionario sin emisor.
+
+`SAF_14` (`ERROR_OBSOLETE_APP`) no está en la lista porque sí lo referencian
+instrucciones ejecutables, pero tampoco llega nunca al cable: solo lo emiten los
+cuatro `catch (ParameterNeedsUpdatedVersionException)` del despachador
+(`ProtocolInvocationLauncher.java:504, 616, 726, 811`), y esa excepción no la
+lanza nadie. nadie la instancia: su constructor es de paquete (`ParameterNeedsUpdatedVersionException.java:18`) y no hay ningún `new` en el repositorio.
 
 ---
 

@@ -1,5 +1,6 @@
 import { memo } from "react";
 import type { CheckView } from "../contract/CheckView";
+import type { ClientKind } from "../contract/ClientKind";
 import type { SetView } from "../contract/SetView";
 import type { Activity } from "../ui/icons";
 import { Chevron, PlayIcon } from "../ui/icons";
@@ -20,6 +21,7 @@ export interface Controls {
 interface SetSectionProps {
   set: SetView;
   checks: CheckView[];
+  kind: ClientKind;
   folded: boolean;
   onToggle: (name: string) => void;
   expanded: ReadonlySet<string>;
@@ -33,6 +35,7 @@ interface SetSectionProps {
 export const SetSection = memo(function SetSection({
   set,
   checks,
+  kind,
   folded,
   onToggle,
   expanded,
@@ -90,6 +93,7 @@ export const SetSection = memo(function SetSection({
             <CheckRow
               key={check.id}
               check={check}
+              kind={kind}
               activity={progress.activityOf(check.id)}
               whyPending={progress.whyPending(check.id)}
               runningSince={progress.runningSince}

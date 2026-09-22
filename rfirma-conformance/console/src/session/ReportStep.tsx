@@ -141,8 +141,6 @@ const FIELDS: [keyof NewReport, string, string?][] = [
   ["client_version", "Versión del cliente", "nadie puede deducirla"],
   ["os", "Sistema"],
   ["os_version", "Versión del sistema"],
-  ["store", "Almacén"],
-  ["transport", "Transporte"],
 ];
 
 function NewReportModal({ onClose }: { onClose: () => void }) {
@@ -153,8 +151,6 @@ function NewReportModal({ onClose }: { onClose: () => void }) {
     client_version: "",
     os: "",
     os_version: "",
-    transport: "",
-    store: "",
   });
   const [complaint, setComplaint] = useState<string | null>(null);
 
@@ -203,7 +199,7 @@ function NewReportModal({ onClose }: { onClose: () => void }) {
           <label key={key} className="form-row">
             <span className="field-label">{label}</span>
             <input
-              className={`input${key === "store" ? " mono" : ""}`}
+              className="input"
               required
               value={draft[key]}
               placeholder={hint}

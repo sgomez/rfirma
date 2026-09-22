@@ -125,7 +125,8 @@ socket**, es decir, servidor intermedio (`ProtocolInvocationLauncher.java:136-13
 La de tres argumentos (`153`) hace lo siguiente antes de despachar:
 
 1. En macOS instala el manejador de «Acerca de…» (`154-164`).
-2. Si `urlString == null` → `SAF_01` (`166-171`); si no empieza por
+2. Si `urlString == null` → `SAF_01` (`166-171`), rama a la que ningún
+   llamante llega (ver `15-errores.md` §4.2); si no empieza por
    `afirma://` **estrictamente con minúsculas** → `SAF_02` (`172-178`). Aunque
    `SimpleAfirma.main` permite detectar la llamada ignorando mayúsculas
    (`args[0].toLowerCase().startsWith("afirma://")`), el despachador `launch`
@@ -150,7 +151,7 @@ forma sin barra (`autoscript.js:2081`, `2878`, `4381`).
 
 | Prefijo(s) aceptado(s) | Línea del `startsWith` | Qué hace |
 |---|---|---|
-| `afirma://websocket?`, `afirma://websocket/?` | `225` | Lee `v` (`getVersion`, por defecto 1) y `ports`/`idsession` (`getChannelInfo`); sin `ports` usa `63117` (`87`, `232-235`); arranca `AfirmaWebSocketServerManager.startService` (`238`). Versión no soportada → `SAF_21` y `halt(0)` (`240-245`); ningún puerto libre → `SAF_45` y `halt(0)` (`246-251`). Devuelve `"OK"` (`260`). |
+| `afirma://websocket?`, `afirma://websocket/?` | `225` | Lee `v` (`getVersion`, por defecto 1) y `ports`/`idsession` (`getChannelInfo`); sin `ports` usa `63117` (`87`, `232-235`); arranca `AfirmaWebSocketServerManager.startService` (`238`). Versión no soportada → `SAF_21` y `halt(0)` (`240-245`); servidor sin construir en ningún puerto → `SAF_45` y `halt(0)` (`246-251`), que un puerto en uso no alcanza (BUG-33). Devuelve `"OK"` (`260`). |
 | `afirma://service?`, `afirma://service/?` | `264` | Igual, pero `ports` es obligatorio: sin él, `SAF_03` (`270-277`). Arranca `ServiceInvocationManager.startService` (`280`); versión no soportada → `SAF_21` (`281-288`). Devuelve `"OK"` (`290`), aunque en la práctica `startService` no retorna (ver §4). |
 | `afirma://batch?`, `afirma://batch/?` | `293` | `ProtocolInvocationLauncherBatch.processBatch` (`345`). |
 | `afirma://selectcert?`, `afirma://selectcert/?` | `370` | `ProtocolInvocationLauncherSelectCert.processSelectCert` (`413-416`). |
@@ -186,7 +187,7 @@ ejemplo, `643-752`):
 4. Si `!bySocket && params.isActiveWaiting()` → `requestWait` (`683-685`, §4.3).
 5. Llamar al `process<Op>`. Devolver la cadena resultante; si `!bySocket`,
    antes subirla al `stservlet` con `sendDataToServer` (`719-724`).
-6. Errores de parámetros: `ParameterNeedsUpdatedVersionException` → `SAF_14`,
+6. Errores de parámetros: `ParameterNeedsUpdatedVersionException` → `SAF_14` (nadie la lanza; ver [15](15-errores.md) §4.7),
    `ParameterLocalAccessRequestedException` → `SAF_13`, `ParameterException` →
    `SAF_03`, cualquier otra → `SAF_03` (`726-750`).
 
@@ -438,7 +439,7 @@ código:
 | `UrlParametersForBatch.java` | Parámetros de `batch`; aquí `dat` es la definición del lote (`22`, `263-269`). |
 | `ParameterException.java` | Error de parámetro incorrecto o ausente → `SAF_03` (`13`). |
 | `ParameterLocalAccessRequestedException.java` | Un servlet apuntaba a `localhost`/`127.0.0.1` → `SAF_13` (`14`). |
-| `ParameterNeedsUpdatedVersionException.java` | La petición necesita una versión más nueva de la aplicación → `SAF_14` (`14`). |
+| `ParameterNeedsUpdatedVersionException.java` | La petición necesita una versión más nueva de la aplicación → `SAF_14` (`14`). Su constructor es de paquete y nadie la instancia (`18`). |
 | `ProtocoloMessages.java` | Acceso al *bundle* de mensajes de este paquete (`15`). |
 | `package-info.java` | Documentación del paquete. |
 

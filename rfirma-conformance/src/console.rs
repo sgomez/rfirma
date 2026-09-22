@@ -12,14 +12,15 @@ use std::time::{Duration, Instant};
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-use crate::catalogue::Check;
+use crate::catalogue::{Assistance, Check};
 use crate::checks::{
-    the_greetings_already_failed, the_group_of, the_reason_behind_a_failed_greeting, Settlement,
+    the_greeting_that_stops, the_greetings_already_failed, the_group_of,
+    the_reason_behind_a_failed_greeting, Settled, Settlement,
 };
-use crate::client::ClientKind;
-use crate::client::{resolve, the_deduced_coordinates, Client, DeducedCoordinates};
+use crate::client::{resolve, the_deduced_coordinates, Client, ClientKind, DeducedCoordinates};
 use crate::comparison::{compare, Comparison};
-use crate::livelog::{CheckLog, LiveLogSink, Provenance};
+use crate::errand::{ErrandKey, ErrandRunner, NodeRunner, ObservedErrand};
+use crate::livelog::{CheckLog, LiveLogSink};
 use crate::outcome::CheckState;
 use crate::report::{HeaderCoordinates, Report, THE_REPORT_FILE};
 use crate::report_view::report_view;
@@ -28,9 +29,11 @@ use crate::transcript::{log_path_of, transcript_path_of};
 use crate::validation::{
     read_the_reference, the_reference_dir, the_references_in, validate, Validation,
 };
+use crate::witness::Witness;
 use crate::Probe;
 
-/// Lo que se pide correr: una comprobación, un conjunto entero o sus pendientes, o todo lo pendiente.
+/// Lo que se pide correr: una comprobación, un conjunto entero o sus pendientes, o lo pendiente de
+/// unos tramos.
 #[derive(Debug, Deserialize, TS)]
 #[serde(untagged)]
 #[ts(export)]
@@ -43,14 +46,37 @@ pub(crate) enum Request {
         #[ts(optional)]
         pending: Option<bool>,
     },
-    Pending(AllPending),
+    Tranches {
+        tranches: Tranches,
+    },
 }
 
-#[derive(Debug, Deserialize, TS)]
+/// Los tramos de una tanda de pendientes: solo sin persona, el resto, o todos.
+#[derive(Debug, Clone, Copy, Deserialize, TS)]
 #[serde(rename_all = "snake_case")]
 #[ts(export)]
-pub(crate) enum AllPending {
-    Pending,
+pub(crate) enum Tranches {
+    Unattended,
+    Attended,
+    All,
+}
+
+impl Tranches {
+    fn take(self, assistance: Assistance) -> bool {
+        match self {
+            Self::Unattended => assistance == Assistance::None,
+            Self::Attended => assistance != Assistance::None,
+            Self::All => true,
+        }
+    }
+}
+
+/// Un fallo de la suite en una comprobación, que la página avisa aparte de su resultado.
+#[derive(Debug, Serialize, TS)]
+#[ts(export)]
+pub(crate) struct SuiteFailure {
+    check: String,
+    why: String,
 }
 
 /// Una línea del registro en vivo y la comprobación que la dio.
@@ -69,23 +95,21 @@ pub(crate) struct NewReport {
     client_version: String,
     os: String,
     os_version: String,
-    transport: String,
-    store: String,
 }
 
 #[derive(Clone)]
-pub(crate) struct Console {
+pub struct Console {
     shared: Arc<Shared>,
 }
 
-/// Lo que el conductor y las comprobaciones ven de la sesión mientras corren.
-#[derive(Clone)]
-pub(crate) struct Witness {
+/// El testigo de verdad: pregunta y avisa a la persona a través de la página.
+struct ConsoleWitness {
     shared: Arc<Shared>,
 }
 
 struct Shared {
     catalogue: Vec<Check>,
+    runner: Arc<dyn ErrandRunner>,
     reports_dir: PathBuf,
     patience: Duration,
     session: Mutex<Session>,
@@ -107,6 +131,7 @@ struct Session {
     driver: Option<u32>,
     aborting: bool,
     reasons: BTreeMap<String, String>,
+    tranche: Option<Assistance>,
 }
 
 struct OpenReport {
@@ -118,6 +143,7 @@ struct OpenReport {
 struct Queued {
     id: String,
     in_batch: bool,
+    rerun: bool,
 }
 
 struct Question {
@@ -139,10 +165,20 @@ impl Session {
 }
 
 impl Console {
-    pub(crate) fn new(catalogue: Vec<Check>, reports_dir: PathBuf, patience: Duration) -> Self {
+    pub fn new(catalogue: Vec<Check>, reports_dir: PathBuf, patience: Duration) -> Self {
+        Self::running_errands_with(catalogue, reports_dir, patience, Arc::new(NodeRunner))
+    }
+
+    fn running_errands_with(
+        catalogue: Vec<Check>,
+        reports_dir: PathBuf,
+        patience: Duration,
+        runner: Arc<dyn ErrandRunner>,
+    ) -> Self {
         Self {
             shared: Arc::new(Shared {
                 catalogue,
+                runner,
                 reports_dir,
                 patience,
                 session: Mutex::new(Session::default()),
@@ -153,7 +189,7 @@ impl Console {
     }
 
     /// Arranca el hilo que corre, de una en una, lo que se vaya encolando.
-    pub(crate) fn start_the_runner(&self) {
+    pub fn start_the_runner(&self) {
         let shared = Arc::clone(&self.shared);
         spawn(move || loop {
             run_the_next_group(&shared);
@@ -178,7 +214,7 @@ impl Console {
         {
             let mut session = self.shared.lock();
             if session.busy() {
-                return Err("no se cambia de cliente con un informe corriendo".to_owned());
+                return Err("no se cambia de cliente con un informe en marcha".to_owned());
             }
             session.resolving_client = true;
             self.shared.publish(&session);
@@ -202,8 +238,8 @@ impl Console {
 
     pub(crate) fn the_deduced_coordinates(&self) -> Result<DeducedCoordinates, String> {
         let session = self.shared.lock();
-        let client = session.client.as_ref().ok_or(NO_CLIENT)?;
-        Ok(the_deduced_coordinates(client))
+        session.client.as_ref().ok_or(NO_CLIENT)?;
+        Ok(the_deduced_coordinates())
     }
 
     pub(crate) fn create_report(&self, new: NewReport) -> Result<(), String> {
@@ -220,8 +256,6 @@ impl Console {
             os: new.os,
             os_version: new.os_version,
             client_version: new.client_version,
-            transport: new.transport,
-            store: new.store,
         };
         let mut session = self.shared.lock();
         if session.busy() {
@@ -263,7 +297,7 @@ impl Console {
         let open = session
             .report
             .as_ref()
-            .ok_or("elige o crea un informe antes de correr nada")?;
+            .ok_or("elige o crea un informe antes de ejecutar nada")?;
         let client = session.client.as_ref().ok_or(NO_CLIENT)?;
         if let Some(complaint) = open
             .report
@@ -292,17 +326,34 @@ impl Console {
                     .collect(),
                 true,
             ),
-            Request::Pending(AllPending::Pending) => (
-                self.shared.catalogue.iter().filter(is_pending).collect(),
+            Request::Tranches { tranches } => (
+                self.shared
+                    .catalogue
+                    .iter()
+                    .filter(is_pending)
+                    .filter(|check| tranches.take(check.assistance()))
+                    .collect(),
                 true,
             ),
         };
-        let ids: Vec<String> = wanted.iter().map(|check| check.id.clone()).collect();
-        for id in ids {
-            if !session.is_queued_or_running(&id) {
-                session.queue.push_back(Queued { id, in_batch });
-            }
+        let fresh: Vec<Queued> = wanted
+            .iter()
+            .filter(|check| !session.is_queued_or_running(&check.id))
+            .map(|check| Queued {
+                id: check.id.clone(),
+                in_batch,
+                rerun: !in_batch && !is_pending(check),
+            })
+            .collect();
+        if fresh.is_empty() {
+            return Err(match &request {
+                Request::Check { check } => format!("«{check}» ya está en la cola o en curso"),
+                _ => "no hay nada pendiente que ejecutar en esa tanda que no esté ya en la cola"
+                    .to_owned(),
+            });
         }
+        session.queue.extend(fresh);
+        sort_in_tranches(&mut session.queue, &self.shared.catalogue);
         self.shared.wake.notify_one();
         self.shared.publish(&session);
         Ok(())
@@ -405,7 +456,7 @@ impl Console {
 }
 
 const NO_CLIENT: &str = "elige un cliente primero";
-const NO_SWITCHING_REPORTS: &str = "no se cambia de informe con otro corriendo";
+const NO_SWITCHING_REPORTS: &str = "no se cambia de informe con otro en marcha";
 
 impl Shared {
     fn lock(&self) -> MutexGuard<'_, Session> {
@@ -480,13 +531,43 @@ impl Shared {
     }
 }
 
-impl Witness {
-    pub(crate) fn started_at(&self) -> Instant {
+impl ConsoleWitness {
+    fn put_to_the_person(&self, check: &str, prompt: &str, kind: &'static str) -> Option<String> {
+        let (reply, answer) = channel();
+        {
+            let mut session = self.shared.lock();
+            if session.aborting {
+                return None;
+            }
+            session.question = Some(Question {
+                check: check.to_owned(),
+                prompt: prompt.to_owned(),
+                kind,
+                reply,
+            });
+            self.shared.publish(&session);
+        }
+        let label = match kind {
+            "briefing" => "aviso",
+            "tranche" => "espera",
+            _ => "pregunta",
+        };
+        self.harness(&format!("{label}: {prompt}"));
+        let answer = answer.recv().ok().flatten();
+        self.harness(&format!(
+            "respuesta: {}",
+            answer.as_deref().unwrap_or("(descartada)")
+        ));
+        answer
+    }
+}
+
+impl Witness for ConsoleWitness {
+    fn started_at(&self) -> Instant {
         self.shared.lock().started.unwrap_or_else(Instant::now)
     }
 
-    /// Por donde llegan las líneas de la comprobación en curso: a su fichero y a la página.
-    pub(crate) fn log_sink(&self) -> LiveLogSink {
+    fn log_sink(&self) -> LiveLogSink {
         let (log, check) = {
             let session = self.shared.lock();
             (session.log.clone(), session.running.first().cloned())
@@ -505,54 +586,40 @@ impl Witness {
         })
     }
 
-    /// Un diagnóstico del arnés, con la misma procedencia en el fichero y en la página.
-    pub(crate) fn harness(&self, text: &str) {
-        self.log_sink()
-            .push(Provenance::Suite, self.started_at().elapsed(), text);
-    }
-
-    /// Pregunta a la persona y espera; `None` si la descarta o se aborta la pasada.
-    pub(crate) fn ask(&self, check: &str, prompt: &str) -> Option<String> {
+    fn ask(&self, check: &str, prompt: &str) -> Option<String> {
         self.put_to_the_person(check, prompt, "outcome")
     }
 
-    /// Cuenta a la persona lo que va a pasar y espera a que dé paso; `false` si lo salta o se
-    /// aborta la pasada.
-    pub(crate) fn brief(&self, check: &str, briefing: &str) -> bool {
+    fn brief(&self, check: &str, briefing: &str) -> bool {
         self.put_to_the_person(check, briefing, "briefing")
             .is_some()
     }
 
-    fn put_to_the_person(&self, check: &str, prompt: &str, kind: &'static str) -> Option<String> {
-        let (reply, answer) = channel();
-        {
+    /// Si la persona no está, la cola se vacía: lo que quedaba sigue pendiente.
+    fn stand_by(&self, check: &str, tranche: Assistance) -> bool {
+        let present = self
+            .put_to_the_person(check, the_call_to_the_person(tranche), "tranche")
+            .is_some();
+        if !present {
             let mut session = self.shared.lock();
-            if session.aborting {
-                return None;
-            }
-            session.question = Some(Question {
-                check: check.to_owned(),
-                prompt: prompt.to_owned(),
-                kind,
-                reply,
-            });
+            session.queue.clear();
             self.shared.publish(&session);
         }
-        let label = if kind == "briefing" {
-            "aviso"
-        } else {
-            "pregunta"
-        };
-        self.harness(&format!("{label}: {prompt}"));
-        let answer = answer.recv().ok().flatten();
-        self.harness(&format!(
-            "respuesta: {}",
-            answer.as_deref().unwrap_or("(descartada)")
-        ));
-        answer
+        present
     }
 
-    pub(crate) fn driver_spawned(&self, pid: u32) {
+    fn suite_failure(&self, check: &str, why: &str) {
+        self.harness(&format!("{check}: {why}"));
+        let payload = serde_json::to_value(SuiteFailure {
+            check: check.to_owned(),
+            why: why.to_owned(),
+        })
+        .expect("el aviso se serializa");
+        self.shared
+            .broadcast(&event_frame("suite_failure", &payload));
+    }
+
+    fn driver_spawned(&self, pid: u32) {
         let mut session = self.shared.lock();
         if session.aborting {
             kill(pid);
@@ -560,17 +627,22 @@ impl Witness {
         session.driver = Some(pid);
     }
 
-    pub(crate) fn driver_finished(&self) {
+    fn driver_finished(&self) {
         self.shared.lock().driver = None;
     }
 
-    pub(crate) fn aborted(&self) -> bool {
+    fn aborted(&self) -> bool {
         self.shared.lock().aborting
     }
 }
 
 fn run_the_next_group(shared: &Arc<Shared>) {
-    let (group, probe, store) = {
+    let Next {
+        group,
+        probe,
+        opening,
+        already,
+    } = {
         let mut session = shared.lock();
         loop {
             match take_the_next_group(shared, &mut session) {
@@ -588,38 +660,111 @@ fn run_the_next_group(shared: &Arc<Shared>) {
         .iter()
         .filter_map(|id| shared.catalogue.iter().find(|check| &check.id == id))
         .collect();
-    let settled = catch_unwind(AssertUnwindSafe(|| probe.run_group(&checks, &store)))
-        .unwrap_or_else(|panic| {
-            let why = panic
-                .downcast_ref::<String>()
-                .cloned()
-                .or_else(|| panic.downcast_ref::<&str>().map(|text| (*text).to_owned()))
-                .unwrap_or_default();
-            probe.witness.harness(&format!("el arnés reventó: {why}"));
-            checks
-                .iter()
-                .map(|check| Settlement::Pending {
-                    id: check.id.clone(),
-                    why: format!("el arnés reventó: {why}"),
-                })
-                .collect()
-        });
+    let settled = catch_unwind(AssertUnwindSafe(|| {
+        probe.run_group(&checks, opening, already.as_ref())
+    }))
+    .unwrap_or_else(|panic| {
+        let why = panic
+            .downcast_ref::<String>()
+            .cloned()
+            .or_else(|| panic.downcast_ref::<&str>().map(|text| (*text).to_owned()))
+            .unwrap_or_default();
+        probe.witness.harness(&format!("el arnés reventó: {why}"));
+        checks
+            .iter()
+            .map(|check| Settlement::Pending {
+                id: check.id.clone(),
+                why: format!("el arnés reventó: {why}"),
+            })
+            .collect::<Vec<_>>()
+            .into()
+    });
     let mut session = shared.lock();
-    settle(&mut session, &group, settled, &probe);
+    let key = checks.first().and_then(|head| ErrandKey::of(head));
+    settle(&mut session, &group, key, already, settled, &probe);
     session.running.clear();
     session.started = None;
     session.log = None;
     session.driver = None;
     session.aborting = false;
+    if session.queue.is_empty() {
+        session.tranche = None;
+    }
     shared.publish(&session);
 }
 
-/// Saca de la cola lo siguiente que hay que correr y lo marca en curso; lo que su saludo fallido
-/// detiene lo deja pendiente sin correrlo.
-fn take_the_next_group(
-    shared: &Arc<Shared>,
-    session: &mut Session,
-) -> Option<(Vec<String>, Probe, String)> {
+fn the_call_to_the_person(tranche: Assistance) -> &'static str {
+    match tranche {
+        Assistance::None => "Vienen comprobaciones automáticas. Pulsa «Estoy aquí» para seguir.",
+        Assistance::Click => {
+            "Ya han terminado las comprobaciones automáticas. Las siguientes abren diálogos \
+             del cliente de firma en los que tendrás que elegir un certificado o pulsar un botón. \
+             Pulsa «Estoy aquí» cuando estés delante del ordenador."
+        }
+        Assistance::Person => {
+            "Ahora vienen comprobaciones en las que tendrás que fijarte en lo que hace el cliente \
+             de firma y contestar qué ha pasado. Pulsa «Estoy aquí» cuando estés delante del \
+             ordenador."
+        }
+    }
+}
+
+/// Ordena la cola en tramos —ninguna, clic, persona— con los saludos delante de cada uno.
+fn sort_in_tranches(queue: &mut VecDeque<Queued>, catalogue: &[Check]) {
+    let key = |queued: &Queued| {
+        catalogue
+            .iter()
+            .find(|check| check.id == queued.id)
+            .map(|check| (check.assistance(), !check.greeting))
+            .unwrap_or_default()
+    };
+    queue.make_contiguous().sort_by_key(key);
+}
+
+/// El tramo que abre el siguiente grupo, si la tanda ya corrió uno anterior.
+fn the_opening(previous: Option<Assistance>, next: Assistance) -> Option<Assistance> {
+    previous.filter(|previous| *previous < next).map(|_| next)
+}
+
+/// Deja pendientes, sin correrlas, las de una tanda que detiene un saludo fallido de su familia.
+fn stop_what_failed_greetings_stop(shared: &Shared, session: &mut Session) {
+    let Some(open) = &session.report else {
+        return;
+    };
+    let failed = the_greetings_already_failed(&shared.catalogue, |id| open.report.state_of(id));
+    let mut stopped = Vec::new();
+    session.queue.retain(|queued| {
+        let greeting = shared
+            .catalogue
+            .iter()
+            .find(|check| check.id == queued.id)
+            .and_then(|check| the_greeting_that_stops(check, &failed));
+        match greeting.filter(|_| queued.in_batch) {
+            Some(greeting) => {
+                stopped.push((
+                    queued.id.clone(),
+                    the_reason_behind_a_failed_greeting(greeting),
+                ));
+                false
+            }
+            None => true,
+        }
+    });
+    session.reasons.extend(stopped);
+}
+
+/// Lo siguiente que corre: el grupo, con qué, si abre tramo y el trámite ya observado que lo juzga.
+struct Next {
+    group: Vec<String>,
+    probe: Probe,
+    opening: Option<Assistance>,
+    already: Option<ObservedErrand>,
+}
+
+/// Saca de la cola lo siguiente que hay que correr, lo marca en curso y dice si abre tramo; lo que
+/// se juzga con un trámite ya observado no abre ninguno, porque no lanza el cliente.
+fn take_the_next_group(shared: &Arc<Shared>, session: &mut Session) -> Option<Next> {
+    stop_what_failed_greetings_stop(shared, session);
     while let Some(queued) = session.queue.pop_front() {
         let (Some(client), Some(open)) = (&session.client, &session.report) else {
             session.queue.clear();
@@ -628,20 +773,8 @@ fn take_the_next_group(
         let Some(head) = shared.catalogue.iter().find(|check| check.id == queued.id) else {
             continue;
         };
-        let stopping_greeting =
-            the_greetings_already_failed(&shared.catalogue, |id| open.report.state_of(id))
-                .get(head.set.as_str())
-                .filter(|greeting| **greeting != head.id)
-                .map(|greeting| (*greeting).to_owned());
         let client = client.clone();
         let dir = open.dir.clone();
-        let store = open.report.header().store.clone();
-        if let Some(greeting) = stopping_greeting.filter(|_| queued.in_batch) {
-            let why = the_reason_behind_a_failed_greeting(&greeting);
-            session.reasons.insert(head.id.clone(), why);
-            shared.publish(session);
-            continue;
-        }
         let queued_checks: Vec<&Check> = std::iter::once(head)
             .chain(
                 session
@@ -650,36 +783,73 @@ fn take_the_next_group(
                     .filter_map(|other| shared.catalogue.iter().find(|check| check.id == other.id)),
             )
             .collect();
-        let group: Vec<String> = the_group_of(head, &queued_checks)
-            .into_iter()
-            .map(|check| check.id.clone())
-            .collect();
+        let group: Vec<String> = if queued.rerun {
+            vec![head.id.clone()]
+        } else {
+            the_group_of(head, &queued_checks)
+                .into_iter()
+                .map(|check| check.id.clone())
+                .collect()
+        };
         session.queue.retain(|other| !group.contains(&other.id));
+        let already = ErrandKey::of(head)
+            .filter(|_| !queued.rerun)
+            .and_then(|key| open.report.observed(&key).cloned());
+        let opening = if already.is_none() {
+            let opening = the_opening(session.tranche, head.assistance());
+            session.tranche = Some(head.assistance());
+            opening
+        } else {
+            None
+        };
+        let profile = client.profile(head.store);
         let probe = Probe {
-            client: client.launcher,
-            trust_root: client.trust_root,
+            client: profile.launcher.clone(),
+            launch: head.launch,
+            trust_root: profile.trust_root.clone(),
             report: dir.clone(),
             patience: shared.patience,
-            witness: Witness {
+            witness: Arc::new(ConsoleWitness {
                 shared: Arc::clone(shared),
-            },
+            }),
+            runner: Arc::clone(&shared.runner),
         };
-        session.log = CheckLog::open(&log_path_of(&dir, &group[0])).ok();
+        session.log = already
+            .is_none()
+            .then(|| CheckLog::open(&log_path_of(&dir, &group[0])).ok())
+            .flatten();
         session.running = group.clone();
         session.started = Some(Instant::now());
         shared.publish(session);
-        return Some((group, probe, store));
+        return Some(Next {
+            group,
+            probe,
+            opening,
+            already,
+        });
     }
     None
 }
 
-/// Apunta en el informe lo que dejó el grupo, y copia a cada miembro el registro y las tramas del
-/// trámite que compartieron.
-fn settle(session: &mut Session, group: &[String], settled: Vec<Settlement>, probe: &Probe) {
+/// Apunta en el informe lo que dejó el grupo y el trámite nuevo con su clave, y copia a cada
+/// miembro el registro y las tramas del trámite que compartieron.
+fn settle(
+    session: &mut Session,
+    group: &[String],
+    key: Option<ErrandKey>,
+    already: Option<ObservedErrand>,
+    settled: Settled,
+    probe: &Probe,
+) {
     let Some(open) = session.report.as_mut() else {
         return;
     };
-    for settlement in settled {
+    if let (Some(key), Some(observed)) = (key, settled.observed) {
+        if let Err(complaint) = open.report.observe(key, observed) {
+            probe.witness.harness(&complaint);
+        }
+    }
+    for settlement in settled.settlements {
         match settlement {
             Settlement::Resolved {
                 id,
@@ -697,11 +867,14 @@ fn settle(session: &mut Session, group: &[String], settled: Vec<Settlement>, pro
             }
         }
     }
-    let head = &group[0];
-    for member in &group[1..] {
-        let _ = std::fs::copy(log_path_of(&open.dir, head), log_path_of(&open.dir, member));
+    let source = already.map_or_else(|| group[0].clone(), |observed| observed.transcribed_in);
+    for member in group.iter().filter(|member| **member != source) {
         let _ = std::fs::copy(
-            transcript_path_of(&open.dir, head),
+            log_path_of(&open.dir, &source),
+            log_path_of(&open.dir, member),
+        );
+        let _ = std::fs::copy(
+            transcript_path_of(&open.dir, &source),
             transcript_path_of(&open.dir, member),
         );
     }
@@ -777,6 +950,7 @@ fn kill(pid: u32) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::errand::fake::RecordedRunner;
 
     #[test]
     fn a_report_name_is_one_directory_and_never_a_way_out() {
@@ -807,6 +981,110 @@ mod tests {
             .contains("no es un informe"));
     }
 
+    const THREE_TRANCHES: &str = r#"
+[[check]]
+id = "a_person_one"
+set = "errores"
+chapter = "15"
+citation = "A.java:1"
+statement = "Uno."
+drive = { mode = "v4", script = "protocol-v4" }
+assistance = "person"
+
+[[check]]
+id = "a_click_one"
+set = "errores"
+chapter = "15"
+citation = "A.java:2"
+statement = "Dos."
+drive = { mode = "v4", script = "protocol-v4" }
+assistance = "click"
+
+[[check]]
+id = "an_unattended_one"
+set = "errores"
+chapter = "15"
+citation = "A.java:3"
+statement = "Tres."
+drive = { mode = "v4", script = "protocol-v4" }
+assistance = "none"
+
+[[check]]
+id = "a_click_greeting"
+set = "errores"
+chapter = "15"
+citation = "A.java:4"
+statement = "Cuatro."
+drive = { mode = "v4", script = "protocol-v4" }
+assistance = "click"
+greeting = true
+"#;
+
+    #[test]
+    fn the_queue_runs_in_tranches_with_each_greeting_ahead_of_its_tranche() {
+        let catalogue = crate::catalogue::the_catalogue_in(THREE_TRANCHES).unwrap();
+        let mut queue: VecDeque<Queued> = catalogue
+            .iter()
+            .map(|check| Queued {
+                id: check.id.clone(),
+                in_batch: true,
+                rerun: false,
+            })
+            .collect();
+
+        sort_in_tranches(&mut queue, &catalogue);
+
+        assert_eq!(
+            queue
+                .iter()
+                .map(|queued| queued.id.as_str())
+                .collect::<Vec<_>>(),
+            [
+                "an_unattended_one",
+                "a_click_greeting",
+                "a_click_one",
+                "a_person_one"
+            ]
+        );
+    }
+
+    #[test]
+    fn only_a_later_tranche_after_another_one_ran_stops_the_queue() {
+        assert_eq!(the_opening(None, Assistance::Click), None);
+        assert_eq!(
+            the_opening(Some(Assistance::None), Assistance::Click),
+            Some(Assistance::Click)
+        );
+        assert_eq!(
+            the_opening(Some(Assistance::Click), Assistance::Person),
+            Some(Assistance::Person)
+        );
+        assert_eq!(
+            the_opening(Some(Assistance::Click), Assistance::Click),
+            None
+        );
+        assert_eq!(
+            the_opening(Some(Assistance::Person), Assistance::None),
+            None
+        );
+    }
+
+    #[test]
+    fn each_tranche_request_takes_its_own_assistances() {
+        let taken = |tranches: Tranches| {
+            [Assistance::None, Assistance::Click, Assistance::Person]
+                .into_iter()
+                .filter(|assistance| tranches.take(*assistance))
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(taken(Tranches::Unattended), [Assistance::None]);
+        assert_eq!(
+            taken(Tranches::Attended),
+            [Assistance::Click, Assistance::Person]
+        );
+        assert_eq!(taken(Tranches::All).len(), 3);
+    }
+
     fn a_catalogue() -> Vec<Check> {
         crate::catalogue::the_catalogue_in(
             r#"
@@ -833,8 +1111,6 @@ drive = { mode = "v4", script = "protocol-v4" }
                 os: "Linux".to_owned(),
                 os_version: "6.0".to_owned(),
                 client_version: "1.0".to_owned(),
-                transport: "websocket".to_owned(),
-                store: "softhsm2".to_owned(),
             },
         )
         .unwrap();
@@ -891,5 +1167,301 @@ drive = { mode = "v4", script = "protocol-v4" }
             event_frame("log", &serde_json::json!({"line": "x"})),
             "event: log\ndata: {\"line\":\"x\"}\n\n"
         );
+    }
+
+    const A_BATCH_WITH_THREE_KEYS: &str = r#"
+[[check]]
+id = "a_rejection"
+set = "errores"
+chapter = "15"
+citation = "A.java:1"
+statement = "Se rechaza."
+drive = { mode = "v4", script = "signwithoutaformat" }
+assistance = "none"
+saf = "SAF_03"
+
+[[check]]
+id = "its_twin"
+set = "parametros"
+chapter = "15"
+citation = "A.java:2"
+statement = "También."
+drive = { mode = "v4", script = "signwithoutaformat" }
+assistance = "none"
+saf = "SAF_03"
+
+[[check]]
+id = "the_same_in_ec"
+set = "errores"
+chapter = "15"
+citation = "A.java:3"
+statement = "En curva elíptica."
+drive = { mode = "v4", script = "signwithoutaformat" }
+assistance = "none"
+store = "ec"
+saf = "SAF_03"
+
+[[check]]
+id = "an_echo"
+set = "errores"
+chapter = "05"
+citation = "A.java:4"
+statement = "Un eco."
+drive = { mode = "v4", script = "protocol-v4" }
+assistance = "none"
+no_answer = true
+
+[[check]]
+id = "the_same_with_a_click"
+set = "errores"
+chapter = "15"
+citation = "A.java:5"
+statement = "Lo mismo, en el tramo de clic."
+drive = { mode = "v4", script = "signwithoutaformat" }
+assistance = "click"
+saf = "SAF_03"
+"#;
+
+    fn a_console_replaying(runner: &Arc<RecordedRunner>) -> (Console, tempfile::TempDir) {
+        let dir = tempfile::tempdir().unwrap();
+        let catalogue = crate::catalogue::the_catalogue_in(A_BATCH_WITH_THREE_KEYS).unwrap();
+        a_report_in(dir.path(), "a-report", ClientKind::Rfirma, &catalogue);
+        let console = Console::running_errands_with(
+            catalogue,
+            dir.path().to_owned(),
+            Duration::from_secs(1),
+            Arc::clone(runner) as Arc<dyn ErrandRunner>,
+        );
+        console.shared.lock().client = Some(Client {
+            kind: ClientKind::Rfirma,
+            binary: PathBuf::from("/usr/bin/rfirma"),
+            profiles: crate::client::Store::ALL
+                .into_iter()
+                .map(|store| crate::client::Profile {
+                    store,
+                    launcher: dir.path().join(store.name()).join("launch-subject"),
+                    trust_root: dir.path().join("root.pem"),
+                })
+                .collect(),
+        });
+        console.open_report("a-report".to_owned()).unwrap();
+        (console, dir)
+    }
+
+    fn a_rejecting_runner() -> Arc<RecordedRunner> {
+        RecordedRunner::replaying(&[(
+            "signwithoutaformat",
+            crate::errand::the_recorded("a-rejection-with-saf-03"),
+        )])
+    }
+
+    fn run_the_queue(console: &Console) {
+        while !console.shared.lock().queue.is_empty() {
+            run_the_next_group(&console.shared);
+        }
+    }
+
+    fn the_state_of(console: &Console, id: &str) -> Option<CheckState> {
+        let session = console.shared.lock();
+        session.report.as_ref().unwrap().report.state_of(id)
+    }
+
+    #[test]
+    fn a_batch_launches_the_client_once_per_distinct_errand_key() {
+        let runner = a_rejecting_runner();
+        let (console, _dir) = a_console_replaying(&runner);
+
+        console
+            .enqueue(Request::Tranches {
+                tranches: Tranches::All,
+            })
+            .unwrap();
+        run_the_queue(&console);
+
+        assert_eq!(
+            runner.runs(),
+            [
+                "v4/signwithoutaformat",
+                "v4/signwithoutaformat",
+                "v4/protocol-v4"
+            ]
+        );
+        for id in [
+            "a_rejection",
+            "its_twin",
+            "the_same_in_ec",
+            "the_same_with_a_click",
+        ] {
+            assert_eq!(
+                the_state_of(&console, id),
+                Some(CheckState::Resolved(crate::outcome::Outcome::Compliant)),
+                "{id}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_check_whose_errand_is_already_in_the_report_does_not_launch_the_client() {
+        let runner = a_rejecting_runner();
+        let (console, dir) = a_console_replaying(&runner);
+        console
+            .enqueue(Request::Check {
+                check: "a_rejection".to_owned(),
+            })
+            .unwrap();
+        run_the_queue(&console);
+
+        console
+            .enqueue(Request::Check {
+                check: "the_same_with_a_click".to_owned(),
+            })
+            .unwrap();
+        run_the_queue(&console);
+
+        assert_eq!(runner.runs(), ["v4/signwithoutaformat"]);
+        assert_eq!(
+            the_state_of(&console, "the_same_with_a_click"),
+            Some(CheckState::Resolved(crate::outcome::Outcome::Compliant))
+        );
+        let transcripts = dir.path().join("a-report");
+        assert_eq!(
+            std::fs::read_to_string(transcript_path_of(&transcripts, "the_same_with_a_click"))
+                .unwrap(),
+            std::fs::read_to_string(transcript_path_of(&transcripts, "a_rejection")).unwrap()
+        );
+    }
+
+    #[test]
+    fn rerunning_a_finished_check_launches_the_client_again_and_keeps_the_new_errand() {
+        let runner = a_rejecting_runner();
+        let (console, _dir) = a_console_replaying(&runner);
+        let a_rejection = || Request::Check {
+            check: "a_rejection".to_owned(),
+        };
+        console.enqueue(a_rejection()).unwrap();
+        run_the_queue(&console);
+
+        console.enqueue(a_rejection()).unwrap();
+        run_the_queue(&console);
+
+        assert_eq!(
+            runner.runs(),
+            ["v4/signwithoutaformat", "v4/signwithoutaformat"]
+        );
+        assert_eq!(
+            the_state_of(&console, "a_rejection"),
+            Some(CheckState::Resolved(crate::outcome::Outcome::Compliant))
+        );
+        console
+            .enqueue(Request::Check {
+                check: "its_twin".to_owned(),
+            })
+            .unwrap();
+        run_the_queue(&console);
+        assert_eq!(runner.runs().len(), 2);
+    }
+
+    #[test]
+    fn rerunning_a_check_leaves_the_others_sharing_its_errand_untouched() {
+        let runner = a_rejecting_runner();
+        let (console, _dir) = a_console_replaying(&runner);
+        console
+            .enqueue(Request::Check {
+                check: "a_rejection".to_owned(),
+            })
+            .unwrap();
+        run_the_queue(&console);
+
+        console
+            .enqueue(Request::Check {
+                check: "a_rejection".to_owned(),
+            })
+            .unwrap();
+        run_the_queue(&console);
+
+        assert_eq!(
+            the_state_of(&console, "its_twin"),
+            Some(CheckState::Pending)
+        );
+    }
+
+    #[test]
+    fn a_batch_still_reuses_the_errand_of_a_finished_check() {
+        let runner = a_rejecting_runner();
+        let (console, _dir) = a_console_replaying(&runner);
+        console
+            .enqueue(Request::Check {
+                check: "a_rejection".to_owned(),
+            })
+            .unwrap();
+        run_the_queue(&console);
+
+        console
+            .enqueue(Request::Set {
+                set: "errores".to_owned(),
+                pending: None,
+            })
+            .unwrap();
+        run_the_queue(&console);
+
+        assert_eq!(
+            runner.runs(),
+            [
+                "v4/signwithoutaformat",
+                "v4/signwithoutaformat",
+                "v4/protocol-v4"
+            ]
+        );
+    }
+
+    #[test]
+    fn asking_for_a_check_already_in_the_queue_is_refused() {
+        let runner = a_rejecting_runner();
+        let (console, _dir) = a_console_replaying(&runner);
+        let a_rejection = || Request::Check {
+            check: "a_rejection".to_owned(),
+        };
+        console.enqueue(a_rejection()).unwrap();
+
+        let refused = console.enqueue(a_rejection()).unwrap_err();
+
+        assert!(refused.contains("ya está en la cola"), "{refused}");
+    }
+
+    #[test]
+    fn a_batch_with_nothing_left_to_run_is_refused() {
+        let runner = a_rejecting_runner();
+        let (console, _dir) = a_console_replaying(&runner);
+        let everything = || Request::Tranches {
+            tranches: Tranches::All,
+        };
+        console.enqueue(everything()).unwrap();
+        run_the_queue(&console);
+
+        let refused = console.enqueue(everything()).unwrap_err();
+
+        assert!(refused.contains("nada pendiente"), "{refused}");
+    }
+
+    #[test]
+    fn the_errand_observed_in_a_session_is_reused_after_reopening_the_report() {
+        let runner = a_rejecting_runner();
+        let (console, _dir) = a_console_replaying(&runner);
+        console
+            .enqueue(Request::Check {
+                check: "a_rejection".to_owned(),
+            })
+            .unwrap();
+        run_the_queue(&console);
+
+        console.open_report("a-report".to_owned()).unwrap();
+        console
+            .enqueue(Request::Check {
+                check: "its_twin".to_owned(),
+            })
+            .unwrap();
+        run_the_queue(&console);
+
+        assert_eq!(runner.runs().len(), 1);
     }
 }

@@ -14,6 +14,10 @@ que rFirma implementa: es la fuente contra la que se auditará rFirma después.
   en el código (`ver`, `stservlet`, `SAF_09`), nunca traducidos.
 * Prosa en castellano; identificadores y literales del protocolo en su forma
   original.
+* Donde el manual del integrador (MCF, `MCF-manual-integrador-ES.pdf`, citado por
+  apartado y página) dice otra cosa que el código, se anota junto al punto
+  afectado como **Discrepancia con el MCF**, y lo descrito es lo que hace el
+  código (ADR-0026).
 
 ## Dónde vive el protocolo en el código original
 

@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import type { Assistance } from "../contract/Assistance";
 import type { ReportView } from "../contract/ReportView";
+import type { Tranches } from "../contract/Tranches";
 import { LogDock } from "../log/LogDock";
 import { ReportBody } from "../report/ReportBody";
 import type { Controls } from "../report/SetSection";
@@ -8,6 +10,7 @@ import { TranscriptModal } from "../report/TranscriptModal";
 import { ValidateModal } from "../report/ValidateModal";
 import { useLive } from "../suite/live";
 import { PlayIcon } from "../ui/icons";
+import { askToNotify } from "../ui/notify";
 import { focusedCheck, useShortcuts } from "../ui/shortcuts";
 import { BatchBar } from "./BatchBar";
 import { ClientStep } from "./ClientStep";
@@ -50,17 +53,13 @@ export function SessionPage() {
     [suite, complain],
   );
 
-  const runPending = () => void suite.run("pending").catch(complain("No se pudo poner en cola"));
-  const runAll = async (report: ReportView) => {
-    try {
-      for (const set of report.sets) await suite.run({ set: set.name });
-    } catch (error) {
-      complain("No se pudo poner en cola")(error);
-    }
+  const runTranches = (tranches: Tranches) => {
+    if (tranches === "all") askToNotify();
+    void suite.run({ tranches }).catch(complain("No se pudo poner en cola"));
   };
 
   useShortcuts({
-    p: view && view.summary.pending > 0 ? runPending : undefined,
+    p: view && view.summary.pending > 0 ? () => runTranches("all") : undefined,
     r: view
       ? () => {
           const check = focusedCheck();
@@ -103,21 +102,25 @@ export function SessionPage() {
           actions={
             view && (
               <>
-                <button
-                  type="button"
-                  className="button primary"
-                  onClick={runPending}
-                  disabled={view.summary.pending === 0}
-                  aria-keyshortcuts="p"
-                >
-                  <PlayIcon /> Pendientes ({view.summary.pending}) <kbd>p</kbd>
-                </button>
-                <button type="button" className="button" onClick={() => void runAll(view)}>
-                  Todo
-                </button>
+                {TRANCHE_BUTTONS.map(([tranches, label, takes]) => {
+                  const count = pendingIn(view, takes);
+                  const all = tranches === "all";
+                  return (
+                    <button
+                      key={tranches}
+                      type="button"
+                      className={all ? "button primary" : "button"}
+                      onClick={() => runTranches(tranches)}
+                      disabled={count === 0}
+                      aria-keyshortcuts={all ? "p" : undefined}
+                    >
+                      {all && <PlayIcon />} {label} ({count}) {all && <kbd>p</kbd>}
+                    </button>
+                  );
+                })}
                 <span className="divider" aria-hidden="true" />
                 <button type="button" className="button ghost" onClick={() => setValidating(true)}>
-                  Validar contra referencia…
+                  Comparar con la referencia…
                 </button>
               </>
             )
@@ -154,4 +157,16 @@ export function SessionPage() {
       )}
     </>
   );
+}
+
+const TRANCHE_BUTTONS: [Tranches, string, (assistance: Assistance) => boolean][] = [
+  ["unattended", "Solo las automáticas", (assistance) => assistance === "none"],
+  ["attended", "Las que te necesitan", (assistance) => assistance !== "none"],
+  ["all", "Ejecutar todas", () => true],
+];
+
+function pendingIn(view: ReportView, takes: (assistance: Assistance) => boolean): number {
+  return view.sets
+    .flatMap((set) => set.checks)
+    .filter((check) => check.state === "PENDIENTE" && takes(check.assistance ?? "none")).length;
 }

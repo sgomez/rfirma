@@ -1,12 +1,29 @@
 import { memo, type ReactNode, useEffect, useRef, useState } from "react";
 import type { CheckView } from "../contract/CheckView";
+import type { ClientKind } from "../contract/ClientKind";
+import type { KnownBug } from "../contract/KnownBug";
 import { Elapsed } from "../ui/Elapsed";
-import { type Activity, ActivityIcon, PlayIcon, ResultIcon } from "../ui/icons";
-import { calendarDate, duration, resultTone } from "../words";
+import {
+  type Activity,
+  ActivityIcon,
+  CheckMark,
+  CopyIcon,
+  PlayIcon,
+  ResultIcon,
+} from "../ui/icons";
+import {
+  assistanceName,
+  bugLabel,
+  calendarDate,
+  duration,
+  isAnExpectedFailure,
+  resultTone,
+} from "../words";
 import type { Controls } from "./SetSection";
 
 interface CheckRowProps {
   check: CheckView;
+  kind: ClientKind;
   activity: Activity | null;
   whyPending: string | null;
   runningSince: number | null;
@@ -19,6 +36,7 @@ interface CheckRowProps {
 
 export const CheckRow = memo(function CheckRow({
   check,
+  kind,
   activity,
   whyPending,
   runningSince,
@@ -30,33 +48,49 @@ export const CheckRow = memo(function CheckRow({
 }: CheckRowProps) {
   const settled = useJustSettled(check.state);
   const detailId = `detail-${check.id}`;
+  const expected = isAnExpectedFailure(check, kind);
   return (
     <li
       className="check"
       data-check={check.id}
       data-tone={resultTone[check.state]}
+      data-expected={expected || undefined}
       data-activity={activity ?? undefined}
       data-selected={selected || undefined}
       data-settled={settled || undefined}
     >
       <div className="check-line">
-        <button
-          type="button"
+        {/* biome-ignore lint/a11y/useSemanticElements: un <button> no deja seleccionar el nombre */}
+        <div
+          role="button"
+          tabIndex={0}
           className="check-toggle"
           data-check-row
           aria-expanded={expanded}
           aria-controls={detailId}
-          onClick={() => onToggle(check.id)}
+          onClick={() => {
+            if (!endsATextSelection()) onToggle(check.id);
+          }}
+          onKeyDown={(event) => {
+            if (event.target !== event.currentTarget) return;
+            if (event.key !== "Enter" && event.key !== " ") return;
+            event.preventDefault();
+            onToggle(check.id);
+          }}
         >
           <span className="check-icon">
             {activity ? <ActivityIcon activity={activity} /> : <ResultIcon result={check.state} />}
           </span>
-          <span className="check-id">{check.id}</span>
+          <span className="check-name">
+            <span className="check-id">{check.id}</span>
+            {check.bug && <BugTag bug={check.bug} />}
+          </span>
           <span className="check-chapter">cap. {check.chapter}</span>
           <span className="check-status">
             <Status check={check} activity={activity} runningSince={runningSince} />
           </span>
-        </button>
+        </div>
+        <CopyId id={check.id} />
         {controls && (
           <button
             type="button"
@@ -74,6 +108,7 @@ export const CheckRow = memo(function CheckRow({
         <CheckDetail
           id={detailId}
           check={check}
+          expected={expected}
           activity={activity}
           whyPending={whyPending}
           onTranscript={onTranscript}
@@ -82,6 +117,40 @@ export const CheckRow = memo(function CheckRow({
     </li>
   );
 });
+
+function endsATextSelection(): boolean {
+  const selection = window.getSelection();
+  return selection !== null && !selection.isCollapsed && selection.toString() !== "";
+}
+
+function BugTag({ bug }: { bug: KnownBug }) {
+  return (
+    <span className="tag tag-bug" title={`${bug.id}: ${bug.title}`}>
+      {bugLabel(bug)}
+    </span>
+  );
+}
+
+function CopyId({ id }: { id: string }) {
+  const [copied, setCopied] = useState(false);
+  useEffect(() => {
+    if (!copied) return;
+    const timer = window.setTimeout(() => setCopied(false), 1200);
+    return () => window.clearTimeout(timer);
+  }, [copied]);
+  return (
+    <button
+      type="button"
+      className="copy-id"
+      data-copied={copied || undefined}
+      onClick={() => void navigator.clipboard.writeText(id).then(() => setCopied(true))}
+      aria-label={`Copiar ${id}`}
+      title={copied ? "Copiado" : "Copiar el nombre"}
+    >
+      {copied ? <CheckMark /> : <CopyIcon />}
+    </button>
+  );
+}
 
 function Status({
   check,
@@ -105,12 +174,14 @@ function Status({
 function CheckDetail({
   id,
   check,
+  expected,
   activity,
   whyPending,
   onTranscript,
 }: {
   id: string;
   check: CheckView;
+  expected: boolean;
   activity: Activity | null;
   whyPending: string | null;
   onTranscript: (id: string) => void;
@@ -130,18 +201,29 @@ function CheckDetail({
         <Field label="Fuente">
           <code>{check.citation}</code>
         </Field>
+        {check.assistance && (
+          <Field label="Qué te pide">
+            {assistanceName[check.assistance]} · almacén <code>{check.store}</code>
+          </Field>
+        )}
         {check.warning && (
           <Field label="Antes de empezar" tone="notice">
             {check.warning}
           </Field>
         )}
         {check.question && <Field label="Te preguntaremos">{check.question}</Field>}
+        {check.bug && (
+          <Field label="Bug conocido">
+            {bugLabel(check.bug)} · <code>{check.bug.id}</code> {check.bug.title}
+          </Field>
+        )}
         {check.observation && <Field label="Qué pasó">{check.observation}</Field>}
         <Field label="Resultado">
           <span className={`result-label tone-${resultTone[check.state]}`}>
             <ResultIcon result={check.state} size={12} decorative />
             {shownResult ?? check.state}
           </span>
+          {expected && !shownResult && <span className="muted"> · esperado por el bug</span>}
           {check.date && <span className="muted"> · {calendarDate(check.date)}</span>}
           {check.duration_ms !== null && (
             <span className="muted"> · {duration(check.duration_ms)}</span>
