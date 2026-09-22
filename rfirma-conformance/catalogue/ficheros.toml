@@ -113,3 +113,76 @@ assistance = "person"
 harness = "a_file_that_cannot_be_read"
 saf = "SAF_25"
 warning = "Se va a pedir qué fichero cargar: elige ilegible.bin, que se ha preparado sin permiso de lectura, y cierra el aviso de error que pueda aparecer."
+
+[[check]]
+id = "save_without_data_answers_saf_03"
+set = "ficheros"
+citation = "UrlParametersToSave.java:136-143"
+statement = """
+Un save sin dat ni fileid se rechaza con SAF_03 antes de pedir destino alguno.
+"""
+drive = { mode = "v4", script = "savewithoutdata" }
+assistance = "none"
+saf = "SAF_03"
+
+[[check]]
+id = "save_rejects_illegal_extensions_with_saf_03"
+set = "ficheros"
+citation = "UrlParametersToSave.java:221-233"
+statement = """
+Unas exts con un carácter que no admiten —los prohibidos en un nombre de fichero, ; o un espacio—
+se rechazan con SAF_03 antes de pedir destino alguno.
+"""
+drive = { mode = "v4", script = "savewithillegalextensions" }
+assistance = "none"
+saf = "SAF_03"
+
+[[check]]
+id = "save_writes_the_decoded_bytes_of_the_data"
+set = "ficheros"
+citation = "ProtocolInvocationLauncherSave.java:74-91; UrlParametersToSave.java:136-143"
+statement = """
+save escribe en el destino elegido los bytes de dat ya decodificados, no su Base64.
+"""
+drive = { mode = "v4", script = "savereadback" }
+assistance = "person"
+harness = "the_saved_file_read_back"
+condition = "the-decoded-bytes-on-disk"
+warning = "Se va a pedir dónde guardar: acepta el nombre propuesto, challenge.bin, en la carpeta que se abre."
+
+[[check]]
+id = "save_cancelled_answers_cancel"
+set = "ficheros"
+citation = "ProtocolInvocationLauncherSave.java:93-99"
+statement = """
+Cancelar cuando save pide destino termina el trámite como cancelación, y así llega a la sede.
+"""
+drive = { mode = "v4", script = "savecancelled" }
+assistance = "person"
+saf = "CANCEL"
+warning = "Se va a pedir dónde guardar: cancela en vez de guardar."
+
+[[check]]
+id = "load_cancelled_answers_cancel"
+set = "ficheros"
+citation = "ProtocolInvocationLauncherLoad.java:105-111"
+statement = """
+Cancelar cuando load pide el fichero termina el trámite como cancelación, y así llega a la sede.
+"""
+drive = { mode = "v4", script = "loadcancelled" }
+assistance = "person"
+saf = "CANCEL"
+warning = "Se va a pedir qué fichero cargar: cancela en vez de elegir."
+
+[[check]]
+id = "multiload_without_files_answers_a_cancellation"
+set = "ficheros"
+citation = "ProtocolInvocationLauncherLoad.java:105-111"
+statement = """
+Cerrar la carga múltiple sin elegir ningún fichero termina el trámite como cancelación, y así llega
+a la sede.
+"""
+drive = { mode = "v4", script = "multiloadcancelled" }
+assistance = "person"
+saf = "CANCEL"
+warning = "Se va a pedir qué ficheros cargar: cancela sin elegir ninguno."

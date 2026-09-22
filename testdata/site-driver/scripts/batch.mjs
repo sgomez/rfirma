@@ -17,7 +17,12 @@ import {
   theReferenceSignature,
   theXmlDocument,
 } from "../lib/fixtures.mjs";
-import { withJsonbatchCapitalised, withoutNeedcertInTheBatch } from "../lib/patches.mjs";
+import { theCmsSignature } from "../lib/cms.mjs";
+import {
+  withJsonbatchCapitalised,
+  withLocalBatchProcessOnAnXmlBatch,
+  withoutNeedcertInTheBatch,
+} from "../lib/patches.mjs";
 import { isABarePkcs1 } from "../lib/pkcs1.mjs";
 import { aPublishedScript } from "../lib/script.mjs";
 
@@ -39,6 +44,7 @@ const THE_URL_NEITHER_FETCHED_NOR_SIGNED = "the-url-neither-fetched-nor-signed";
 const ONLY_THE_RESULT = "only-the-result";
 const THE_BATCH_READ_AS_XML = "the-batch-read-as-xml";
 const THE_ITEM_A_BARE_PKCS1 = "the-item-a-bare-pkcs1";
+const THE_ITEM_EXTRAPARAMS_REPLACE_THE_BATCH_ONES = "the-item-extraparams-replace-the-batch-ones";
 
 /** Los parámetros de la query y los del cuerpo del POST, donde `UrlHttpManagerImpl` los manda. */
 async function theServletParameters(request) {
@@ -426,9 +432,16 @@ const theBinaryItem = (format) => anItem("bin", theLocalBatchBinary(), format);
 const theXmlItem = (format = "XAdES") => anItem("xml", theXmlDocument(), format);
 
 /** Un lote local de `setLocalBatchProcess(true)` sobre `items`, sin presigner ni postsigner. */
-function aLocalBatch({ format = "CAdES", suboperation = "sign", stopOnError, items, callbacks }) {
+function aLocalBatch({
+  format = "CAdES",
+  suboperation = "sign",
+  extraParams = null,
+  stopOnError,
+  items,
+  callbacks,
+}) {
   AutoScript.setLocalBatchProcess(true);
-  AutoScript.createBatch("SHA256", format, suboperation, null);
+  AutoScript.createBatch("SHA256", format, suboperation, extraParams);
   for (const [id, content, itemFormat, extraParams] of items) {
     AutoScript.addDocumentToBatch(id, content, itemFormat, undefined, extraParams);
   }
@@ -754,6 +767,80 @@ function theLocalBatchInFormatNoneScript() {
   });
 }
 
+/** Un presigner que contesta siempre con el estado HTTP dado, sin llegar a prefirmar. */
+function aPresignerAnswering(status) {
+  return async () => {
+    const presigner = await servletServing(() => ({
+      status,
+      body: `el presigner responde ${status}`,
+    }));
+    AutoScript.createBatch("SHA256", "CAdES", "sign");
+    AutoScript.addDocumentToBatch("uno", Buffer.from("primer documento").toString("base64"));
+    AutoScript.signBatchProcess(true, presigner, presigner, null, ...theBatchCallbacks());
+  };
+}
+
+/** Un lote local de un solo binario, para cancelar el diálogo de certificado que abre. */
+function theLocalBatchToCancelScript() {
+  aLocalBatch({ stopOnError: false, items: [theBinaryItem()], callbacks: theBatchCallbacks() });
+}
+
+/** Un lote local sin `format`: `createBatch` con el formato `undefined` lo deja fuera del JSON. */
+function theLocalBatchWithoutAFormatScript() {
+  AutoScript.setLocalBatchProcess(true);
+  AutoScript.createBatch("SHA256", undefined, "sign", null);
+  AutoScript.addDocumentToBatch("bin", theLocalBatchBinary().toString("base64"));
+  AutoScript.signBatchProcess(false, null, null, null, ...theBatchCallbacks());
+}
+
+function carriesItsContent(item) {
+  if (item?.result !== "DONE_AND_SAVED" || !item.signature) return null;
+  return theCmsSignature(bytesOf(item.signature))?.content != null;
+}
+
+/** El lote pide `mode=implicit`; «propio» trae sus `extraParams` y «heredado» no, así que solo este lo hereda. */
+function theLocalBatchWithItemExtraParamsScript() {
+  aLocalBatch({
+    extraParams: "mode=implicit",
+    stopOnError: false,
+    items: [
+      anItem("heredado", theLocalBatchBinary()),
+      anItem("propio", theLocalBatchBinary(), undefined, "contentDescription=documento propio"),
+    ],
+    callbacks: theBatchCallbacks((result) => {
+      const items = theLocalItems(result);
+      const inherited = carriesItsContent(items.get("heredado"));
+      const own = carriesItsContent(items.get("propio"));
+      const replaced = inherited === true && own === false;
+      return [
+        aCondition(
+          THE_ITEM_EXTRAPARAMS_REPLACE_THE_BATCH_ONES,
+          replaced,
+          inherited === null || own === null
+            ? "algún documento no volvió firmado en CAdES"
+            : `el documento sin extraParams ${inherited ? "heredó" : "no heredó"} mode=implicit y el que trae los suyos ${own ? "también lo aplicó" : "no lo aplicó"}`,
+        ),
+      ];
+    }),
+  });
+}
+
+/** Un lote XML con `localBatchProcess=true` y sin servlets, que el publicado sólo manda en JSON. */
+function theLocalXmlBatchScript() {
+  const lote =
+    '<signbatch algorithm="SHA256" stoponerror="false">' + '<singlesign id="uno"/></signbatch>';
+  AutoScript.setLocalBatchProcess(true);
+  AutoScript.signBatch(
+    Buffer.from(lote, "utf8").toString("base64"),
+    null,
+    null,
+    null,
+    (result, certificate) =>
+      settle({ event: "success", result: String(result), certificate: String(certificate) }),
+    settlingTheError,
+  );
+}
+
 export const BATCH_SCRIPTS = {
   batch: aPublishedScript(() => theBatchScript(), {
     conditions: [
@@ -823,5 +910,16 @@ export const BATCH_SCRIPTS = {
   }),
   batchlocalnone: aPublishedScript(theLocalBatchInFormatNoneScript, {
     conditions: [THE_ITEM_A_BARE_PKCS1],
+  }),
+  batchpresigner400: aPublishedScript(aPresignerAnswering(400)),
+  batchpresigner404: aPublishedScript(aPresignerAnswering(404)),
+  batchpresigner500: aPublishedScript(aPresignerAnswering(500)),
+  batchcancelled: aPublishedScript(theLocalBatchToCancelScript),
+  batchlocalwithoutformat: aPublishedScript(theLocalBatchWithoutAFormatScript),
+  batchlocalextraparams: aPublishedScript(theLocalBatchWithItemExtraParamsScript, {
+    conditions: [THE_ITEM_EXTRAPARAMS_REPLACE_THE_BATCH_ONES],
+  }),
+  batchlocalxml: aPublishedScript(theLocalXmlBatchScript, {
+    patch: withLocalBatchProcessOnAnXmlBatch,
   }),
 };

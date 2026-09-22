@@ -288,7 +288,6 @@ dirigido al defecto.
 
 ### BUG-16: Incompatibilidad de `localBatchProcess` con lotes XML provoca fallo tardío con `SAF_03` tras seleccionar certificado y PIN
 
-* **No observable:** lote XML local con `localBatchProcess=true` sin servidor de pre/postfirma; requiere interacción modal de usuario y no llega al cable del protocolo.
 * **Estado en `master`:** **Sigue presente.** `UrlParametersForBatch.java:251` sigue saltándose la validación de las URLs cuando `localBatchProcess=true`, sin exigir en ningún punto `jsonbatch=true`.
 * **Código fuente:** `afirma-core` · `es.gob.afirma.core.misc.protocol.UrlParametersForBatch.java:236-260`; `afirma-simple` · `es.gob.afirma.standalone.protocol.ProtocolInvocationLauncherBatch.java:341-346, 400-422`; `afirma-crypto-batch-client` · `es.gob.afirma.signers.batch.client.BatchSigner.java:223-228`.
 * **Origen de auditoría:** Anteriormente AUD-41 ([08-operacion-batch.md](08-operacion-batch.md)).

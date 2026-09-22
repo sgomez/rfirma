@@ -63,3 +63,9 @@ id = "a_batch_whose_presigner_does_not_answer_fails_with_saf_26"
 outcome = "no-conforme"
 cause = "BUG-29"
 note = "La ConnectException no es un HttpError y el catch genérico la reporta como SAF_27."
+
+[[known]]
+id = "a_local_xml_batch_is_refused_before_asking_for_a_certificate"
+outcome = "no-conforme"
+cause = "BUG-16"
+note = "Sin jsonbatch, el lote va al firmador XML con las URL nulas: pide certificado y sólo después responde SAF_03."

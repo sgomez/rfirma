@@ -213,12 +213,46 @@ warning = "Va a aparecer el diálogo de certificado."
 [[check]]
 id = "the_signature_response_adds_extradata_as_a_third_component"
 set = "firma"
-citation = "NativeSignDataProcessor.java:77, 97, 112-126"
+citation = "NativeSignDataProcessor.java:77, 97, 112-126; ProtocolInvocationLauncherSign.java:552-557; autoscript.js:2509-2541"
 statement = """
 Cuando la persona eligió el fichero en disco y la versión de protocolo es 3 o mayor, la respuesta
 añade un tercer componente con los metadatos en JSON; por debajo se queda en la pareja.
 """
-unmeasurable = "El cliente publicado entrega a su callback sólo la firma y el certificado: el tercer componente no llega a ningún evento observable desde el guion."
+drive = { mode = "v4", script = "signwithoutdata" }
+assistance = "person"
+harness = "a_document_to_sign"
+condition = "the-filename-in-a-third-component"
+warning = "Se va a pedir primero el documento a firmar, y después vendrá el diálogo de certificado: elige documento.txt, el preparado, y firma."
+
+[[check]]
+id = "sign_asks_for_the_document_when_the_request_brings_no_data"
+set = "firma"
+citation = "ProtocolInvocationLauncherSign.java:300-357"
+statement = """
+Una firma cuya petición no trae dat pide a la persona el documento a firmar antes que el
+certificado, y cancelar esa elección termina el trámite como cancelación.
+"""
+drive = { mode = "v4", script = "signwithoutdatacancelled" }
+assistance = "person"
+saf = "CANCEL"
+question = "¿se pidió elegir el documento a firmar antes que el certificado? [s/n]"
+person = { yes = "se pidió el documento a firmar", no = "no se pidió el documento a firmar", yes_means = "conforme" }
+warning = "Se va a pedir el documento a firmar: cancela esa ventana en vez de elegir nada."
+
+[[check]]
+id = "cosign_asks_for_the_signature_file_when_the_request_brings_no_data"
+set = "firma"
+citation = "ProtocolInvocationLauncherSign.java:300-357"
+statement = """
+Una cofirma cuya petición no trae dat pide a la persona el fichero de firma antes que el
+certificado, y cancelar esa elección termina el trámite como cancelación.
+"""
+drive = { mode = "v4", script = "cosignwithoutdatacancelled" }
+assistance = "person"
+saf = "CANCEL"
+question = "¿se pidió elegir el fichero de firma a cofirmar antes que el certificado? [s/n]"
+person = { yes = "se pidió el fichero de firma a cofirmar", no = "no se pidió el fichero de firma a cofirmar", yes_means = "conforme" }
+warning = "Se va a pedir el fichero de firma a cofirmar: cancela esa ventana en vez de elegir nada."
 
 [[check]]
 id = "check_signatures_lets_a_first_signature_through"

@@ -360,7 +360,7 @@ fn the_briefing_of(group: &[&Check], fixtures: Option<&str>) -> String {
 
 /// El perfil aislado, que es el HOME con el que el envoltorio lanza al cliente y donde abre sus
 /// diálogos.
-fn the_isolated_home_of(launcher: &std::path::Path) -> &std::path::Path {
+pub(crate) fn the_isolated_home_of(launcher: &std::path::Path) -> &std::path::Path {
     launcher.parent().unwrap_or(launcher)
 }
 

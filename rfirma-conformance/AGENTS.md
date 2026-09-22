@@ -36,7 +36,7 @@ consola. Sus pruebas se corren con `cargo test` dentro de este directorio; las d
 | `../testdata/site-driver/manifest.mjs` | El manifiesto: los modos y todos los guiones, cada uno con su sede, su familia, sus modos, sus condiciones y si es solo del banco. |
 | `../testdata/site-driver/lib/` | Lo común a los guiones: eventos y condiciones, modos, parches del `autoscript.js`, navegador mínimo, documentos de referencia y los analizadores de firma (CMS, XML, ZIP, PDF y PKCS#1) con los que se miden las condiciones. |
 | `../testdata/site-driver/test/` | Las pruebas de los analizadores de firma, que se corren con `node --test test/*.test.mjs`, y sus muestras hechas con OpenSSL y `zip`. |
-| `../testdata/site-driver/scripts/` | Los guiones, un módulo por familia: certificado, firma, ficheros, lote, intermedio, WebSocket a mano y socket a mano. |
+| `../testdata/site-driver/scripts/` | Los guiones, un módulo por familia: certificado, firma, petición, ficheros, lote, intermedio, WebSocket a mano y socket a mano. |
 | `tests/catalogue_matches_the_docs.rs` | El cruce del catálogo, leído con el cargador del crate, y la referencia con `docs/afirma/1.9.2/`: capítulos, tabla SAF y fichas A1. |
 | `tests/transcripts/` | Tramas grabadas de trámites de verdad, las que reproduce el ejecutor falso. |
 | `.cargo/config.toml` | Dónde deja ts-rs los tipos del contrato: `console/src/contract/`. |

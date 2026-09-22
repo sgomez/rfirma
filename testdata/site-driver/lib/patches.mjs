@@ -76,3 +76,14 @@ export function withJsonbatchCapitalised(source) {
     'generateDataKeyValue ("jsonBatch", true);',
   );
 }
+
+/** Manda `localBatchProcess=true` también con un lote XML, que el publicado sólo marca en JSON. */
+export function withLocalBatchProcessOnAnXmlBatch(source) {
+  const theBatchData =
+    'data.dat = createKeyValuePair ("dat",  batchB64 == "" ? null : batchB64, true);';
+  return replacingOrFailing(
+    source,
+    theBatchData,
+    `${theBatchData}\n\t\t\t\tif (localBatchProcess) { data.localBatchProcess = createKeyValuePair ("localBatchProcess", true); }`,
+  );
+}

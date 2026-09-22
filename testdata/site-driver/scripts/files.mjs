@@ -6,6 +6,9 @@ import { aPublishedScript } from "../lib/script.mjs";
 
 const THE_NAME_NEXT_TO_THE_CONTENT = "the-name-next-to-the-content";
 const EVERY_FILE_APART = "every-file-apart";
+const THE_FILENAME_IN_A_THIRD_COMPONENT = "the-filename-in-a-third-component";
+/** La mide el arnés de la suite, que lee el fichero guardado en el perfil aislado. */
+const THE_DECODED_BYTES_ON_DISK = "the-decoded-bytes-on-disk";
 
 const THE_SAVING_EXTENSION = "csig";
 const THE_SAVING_DESCRIPTION = "Firma de la sede";
@@ -47,6 +50,94 @@ function theSaveWithAnIllegalFilenameScript() {
     "bin",
     "Datos binarios",
     (data) => settle({ event: "success", data: String(data) }),
+    settlingTheError,
+  );
+}
+
+/** Un `saveDataToFile()` sin datos: la petición viaja sin `dat`. */
+function theSaveWithoutDataScript() {
+  AutoScript.saveDataToFile(
+    null,
+    "Guarda nada",
+    "challenge.bin",
+    "bin",
+    "Datos binarios",
+    (data) => settle({ event: "success", data: String(data) }),
+    settlingTheError,
+  );
+}
+
+/** Un `saveDataToFile()` cuyas extensiones traen un `;`, que `exts` no admite. */
+function theSaveWithIllegalExtensionsScript() {
+  AutoScript.saveDataToFile(
+    theChallenge().toString("base64"),
+    "Guarda el reto del banco de referencia",
+    "challenge.bin",
+    "b;in",
+    "Datos binarios",
+    (data) => settle({ event: "success", data: String(data) }),
+    settlingTheError,
+  );
+}
+
+/** Una carga, simple o múltiple, sin medir nada: sólo importa cómo termina al cancelarla. */
+function theLoadToCancelScript(multiple) {
+  const load = multiple
+    ? AutoScript.getMultiFileNameContentBase64
+    : AutoScript.getFileNameContentBase64;
+  load(
+    multiple ? "Carga varios documentos" : "Carga un documento",
+    "bin",
+    "Datos binarios",
+    null,
+    (filenames, data) =>
+      settle({ event: "success", filenames: String(filenames), data: String(data) }),
+    settlingTheError,
+  );
+}
+
+/** Un `sign()` sin datos: la petición viaja sin `dat` y el documento se pide en disco. */
+function theSignWithoutDataScript(measuring) {
+  AutoScript.sign(
+    "",
+    "SHA256withRSA",
+    "CAdES",
+    "mode=implicit",
+    (signature, certificate, extraInfo) => {
+      if (measuring) emit(theFilenameInAThirdComponent(extraInfo));
+      settle({ event: "success", result: String(signature), certificate: String(certificate) });
+    },
+    settlingTheError,
+  );
+}
+
+function theFilenameInAThirdComponent(extraInfo) {
+  let filename = null;
+  try {
+    filename = extraInfo ? JSON.parse(String(extraInfo)).filename : null;
+  } catch {
+    filename = null;
+  }
+  const carried = typeof filename === "string" && filename.length > 0;
+  return aConditionEvent(
+    THE_FILENAME_IN_A_THIRD_COMPONENT,
+    carried,
+    carried
+      ? `la respuesta trajo un tercer componente con el nombre «${filename}»`
+      : `la respuesta no trajo el nombre del fichero elegido en un tercer componente (${extraInfo === null ? "no hubo" : `llegó ${String(extraInfo).slice(0, 40)}`})`,
+  );
+}
+
+/** Un `coSign()` sin firma: la petición viaja sin `dat` y la firma se pide en disco. */
+function theCosignWithoutDataScript() {
+  AutoScript.coSign(
+    "",
+    null,
+    "SHA256withRSA",
+    "CAdES",
+    "",
+    (signature, certificate) =>
+      settle({ event: "success", result: String(signature), certificate: String(certificate) }),
     settlingTheError,
   );
 }
@@ -200,4 +291,15 @@ export const FILE_SCRIPTS = {
   signandsavewithanillegalfilename: aPublishedScript(theSignAndSaveWithAnIllegalFilenameScript),
   signandsavewithsavingparameters: aPublishedScript(theSignAndSaveWithSavingParametersScript),
   signandsavewithecdsa: aPublishedScript(theSignAndSaveWithAnEcdsaAlgorithmScript),
+  savecancelled: aPublishedScript(theSaveScript),
+  savewithoutdata: aPublishedScript(theSaveWithoutDataScript),
+  savewithillegalextensions: aPublishedScript(theSaveWithIllegalExtensionsScript),
+  savereadback: aPublishedScript(theSaveScript, { conditions: [THE_DECODED_BYTES_ON_DISK] }),
+  loadcancelled: aPublishedScript(() => theLoadToCancelScript(false)),
+  multiloadcancelled: aPublishedScript(() => theLoadToCancelScript(true)),
+  signwithoutdata: aPublishedScript(() => theSignWithoutDataScript(true), {
+    conditions: [THE_FILENAME_IN_A_THIRD_COMPONENT],
+  }),
+  signwithoutdatacancelled: aPublishedScript(() => theSignWithoutDataScript(false)),
+  cosignwithoutdatacancelled: aPublishedScript(theCosignWithoutDataScript),
 };
