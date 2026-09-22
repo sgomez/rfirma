@@ -10,7 +10,7 @@ statement = """
 Un dat que empieza por file:/ se rechaza antes de leer nada, con SAF_03: la sede no puede pedir que
 se firme un fichero local.
 """
-drive = { mode = "v4", script = "protocol-v4-parameters" }
+drive = { mode = "v4", script = "protocol-v4" }
 assistance = "none"
 condition = "dat-with-a-local-file-saf-03"
 
@@ -37,7 +37,7 @@ statement = """
 rtservlet sólo admite los esquemas http y https: un ftp:// se rechaza con SAF_03 antes de recuperar
 nada.
 """
-drive = { mode = "v4", script = "protocol-v4-parameters" }
+drive = { mode = "v4", script = "protocol-v4" }
 assistance = "none"
 condition = "rtservlet-over-ftp-saf-03"
 
@@ -50,7 +50,7 @@ statement = """
 Un rtservlet cuyo host es localhost o 127.0.0.1 se rechaza con SAF_13: el acceso a una dirección
 local está bloqueado.
 """
-drive = { mode = "v4", script = "protocol-v4-parameters" }
+drive = { mode = "v4", script = "protocol-v4" }
 assistance = "none"
 condition = "rtservlet-on-localhost-saf-13"
 
@@ -62,7 +62,7 @@ citation = "UrlParameters.java:376-378"
 statement = """
 La URL de rtservlet no puede traer parámetros propios: una con ? o = se rechaza con SAF_03.
 """
-drive = { mode = "v4", script = "protocol-v4-parameters" }
+drive = { mode = "v4", script = "protocol-v4" }
 assistance = "none"
 condition = "rtservlet-with-a-query-saf-03"
 
@@ -87,7 +87,7 @@ ver no tiene cota inferior: una versión menor que la soportada, negativa inclui
 petición sigue hasta el control siguiente. La cota superior en 4, con su SAF_21, la mide el conjunto
 de versiones.
 """
-drive = { mode = "v4", script = "protocol-v4-parameters" }
+drive = { mode = "v4", script = "protocol-v4" }
 assistance = "none"
 condition = "ver-below-passes"
 
@@ -100,7 +100,7 @@ statement = """
 Un mcv que no tiene forma de versión se rechaza con SAF_03. La versión que se alcanza y la que no,
 con su SAF_41, las mide el conjunto de versiones.
 """
-drive = { mode = "v4", script = "protocol-v4-parameters" }
+drive = { mode = "v4", script = "protocol-v4" }
 assistance = "none"
 condition = "mcv-malformed-saf-03"
 
@@ -112,7 +112,7 @@ citation = "UrlParameters.java:50; UrlParametersToSign.java:218-221"
 statement = """
 El id de la operación tiene como mucho veinte caracteres: uno de veintiuno se rechaza con SAF_03.
 """
-drive = { mode = "v4", script = "protocol-v4-parameters" }
+drive = { mode = "v4", script = "protocol-v4" }
 assistance = "none"
 condition = "id-of-21-saf-03"
 
@@ -125,7 +125,7 @@ statement = """
 Un id alfanumérico de exactamente veinte caracteres se acepta y la petición sigue hasta el control
 siguiente.
 """
-drive = { mode = "v4", script = "protocol-v4-parameters" }
+drive = { mode = "v4", script = "protocol-v4" }
 assistance = "none"
 condition = "id-of-20-passes"
 
@@ -138,7 +138,7 @@ statement = """
 Sin id, fileid hace de identificador de la operación y pasa sus mismos controles: uno de más de
 veinte caracteres se rechaza con SAF_03.
 """
-drive = { mode = "v4", script = "protocol-v4-parameters" }
+drive = { mode = "v4", script = "protocol-v4" }
 assistance = "none"
 condition = "fileid-of-21-saf-03"
 
@@ -151,7 +151,7 @@ statement = """
 Un properties que no se puede descodificar se descarta en vez de rechazar la petición, que sigue
 hasta el control siguiente sin parámetros adicionales.
 """
-drive = { mode = "v4", script = "protocol-v4-parameters" }
+drive = { mode = "v4", script = "protocol-v4" }
 assistance = "none"
 condition = "properties-malformed-passes"
 
@@ -164,7 +164,7 @@ statement = """
 Un ksb64 que no es Base64 se ignora como si no se hubiera nombrado almacén, en vez de rechazar la
 petición.
 """
-drive = { mode = "v4", script = "protocol-v4-parameters" }
+drive = { mode = "v4", script = "protocol-v4" }
 assistance = "none"
 condition = "ksb64-malformed-passes"
 

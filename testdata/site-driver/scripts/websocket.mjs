@@ -112,6 +112,7 @@ async function theProtocolV4Script() {
     );
   }
 
+  await theOrdersOverTheChannel(ws1, idSession);
   ws1.close();
   settle({ event: "success" });
 }
@@ -174,15 +175,13 @@ const THE_V4_OPERATION_PROBES = [
   },
 ];
 
-async function theProtocolV4OperationsScript() {
-  const idSession = "Op4Rt6Yu8Io0Pa2Sd4Fg";
-  const channel = await theProtocolV4ChannelOpening([54381, 54382, 54383], idSession);
-  if (!channel) return;
+/** Manda por el canal abierto cada orden y juzga su respuesta; tras el primer silencio no manda más. */
+async function theOrdersOverTheChannel(ws, idSession) {
   let silentAt = null;
-  for (const { condition, order, holds } of THE_V4_OPERATION_PROBES) {
+  for (const { condition, order, holds } of [...THE_V4_OPERATION_PROBES, ...THE_PARAMETER_PROBES]) {
     const answer = silentAt
       ? null
-      : await exchangeWithin(channel.ws, order(idSession), THE_OPERATION_ANSWER_DEADLINE_MS);
+      : await exchangeWithin(ws, order(idSession), THE_OPERATION_ANSWER_DEADLINE_MS);
     if (answer === null) {
       silentAt ??= condition;
       emit(
@@ -196,8 +195,6 @@ async function theProtocolV4OperationsScript() {
     }
     emit(aConditionEvent(condition, holds(answer), answer));
   }
-  channel.ws.close();
-  settle({ event: "success" });
 }
 
 async function theProtocolV4MalformedIdScript() {
@@ -252,45 +249,13 @@ const THE_PARAMETER_CASES = [
   ["ksb64-malformed-passes", "dat=SG9sYQ&ksb64=esto-no-es-base64!", "SAF_06"],
 ];
 
-async function theProtocolV4ParametersScript() {
-  const ports = [54341, 54342, 54343];
-  const idSession = "Pq7Rs2Tu9Vw4Xy1Za6Bc";
-  emit({
-    event: "launch",
-    url: `afirma://websocket?ports=${ports.join(",")}&v=4&jvc=3&idsession=${idSession}`,
-  });
-  await new Promise((r) => setTimeout(r, 3000));
-
-  let ws = null;
-  for (const p of ports) {
-    try {
-      ws = await connectWebSocket(p);
-      break;
-    } catch {}
-  }
-  if (!ws) {
-    emit({
-      event: "error",
-      type: "cannot_connect",
-      message: "no se pudo conectar a los puertos candidatos",
-    });
-    settle({ event: "error" });
-    return;
-  }
-  await exchange(ws, `echo=-idsession=${idSession}@EOF`);
-
-  for (const [condition, parameters, expected] of THE_PARAMETER_CASES) {
-    const answer = await exchange(
-      ws,
-      `afirma://sign?op=sign&format=NoSuchFormat&algorithm=SHA256withRSA&${parameters}` +
-        `&idsession=${idSession}`,
-    );
-    emit(aConditionEvent(condition, answer.startsWith(expected), answer));
-  }
-
-  ws.close();
-  settle({ event: "success" });
-}
+const THE_PARAMETER_PROBES = THE_PARAMETER_CASES.map(([condition, parameters, expected]) => ({
+  condition,
+  order: (idSession) =>
+    `afirma://sign?op=sign&format=NoSuchFormat&algorithm=SHA256withRSA&${parameters}` +
+    `&idsession=${idSession}`,
+  holds: (answer) => answer.startsWith(expected),
+}));
 
 async function theProtocolV3Script() {
   const idSession = "sessionv3test";
@@ -394,15 +359,8 @@ export const WEBSOCKET_SCRIPTS = {
     THE_ECHO_WITH_ITS_SESSION_ANSWERS_OK,
     THE_ECHO_WITHOUT_A_SESSION_ANSWERS_SAF_46,
     A_SECOND_CLIENT_LEAVES_THE_CHANNEL_ALIVE,
+    ...[...THE_V4_OPERATION_PROBES, ...THE_PARAMETER_PROBES].map(({ condition }) => condition),
   ]),
-  "protocol-v4-operations": onTheFourthProtocol(
-    theProtocolV4OperationsScript,
-    THE_V4_OPERATION_PROBES.map(({ condition }) => condition),
-  ),
-  "protocol-v4-parameters": onTheFourthProtocol(
-    theProtocolV4ParametersScript,
-    THE_PARAMETER_CASES.map(([condition]) => condition),
-  ),
   "protocol-v4-malformed-id": onTheFourthProtocol(theProtocolV4MalformedIdScript, [
     A_MALFORMED_SESSION_BINDS_NOTHING,
   ]),

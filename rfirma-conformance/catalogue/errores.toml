@@ -22,7 +22,7 @@ citation = "ProtocolInvocationLauncher.java:837-843"
 statement = """
 Una operación no soportada (host desconocido como unknownop) se rechaza con SAF_04.
 """
-drive = { mode = "v4", script = "protocol-v4-operations" }
+drive = { mode = "v4", script = "protocol-v4" }
 assistance = "none"
 condition = "unknown-operation-saf-04"
 
@@ -34,7 +34,7 @@ citation = "SingleSignOperation.java:68-79; ProtocolInvocationLauncherSign.java:
 statement = """
 En afirma://sign?, si el parámetro op falta o no es reconocido, se rechaza con SAF_04.
 """
-drive = { mode = "v4", script = "protocol-v4-operations" }
+drive = { mode = "v4", script = "protocol-v4" }
 assistance = "none"
 condition = "invalid-op-saf-04"
 
@@ -46,7 +46,7 @@ citation = "ProtocolInvocationLauncherSign.java:269"
 statement = """
 Si el formato de firma especificado en format no está soportado, se rechaza con SAF_06.
 """
-drive = { mode = "v4", script = "protocol-v4-operations" }
+drive = { mode = "v4", script = "protocol-v4" }
 assistance = "none"
 condition = "invented-format-saf-06"
 
@@ -59,7 +59,7 @@ statement = """
 Si rtservlet apunta a localhost o 127.0.0.1, se rechaza con SAF_13. Por socket o WebSocket el
 stservlet no se valida.
 """
-drive = { mode = "v4", script = "protocol-v4-operations" }
+drive = { mode = "v4", script = "protocol-v4" }
 assistance = "click"
 condition = "local-rtservlet-saf-13"
 warning = "Si el cliente muestra el error SAF_13 en un diálogo, ciérralo para que llegue la respuesta."
@@ -72,7 +72,7 @@ citation = "UrlParametersToSign.java:222-227; ProtocolInvocationLauncher.java:74
 statement = """
 Parámetros de entrada con sintaxis inválida se rechazan con SAF_03.
 """
-drive = { mode = "v4", script = "protocol-v4-operations" }
+drive = { mode = "v4", script = "protocol-v4" }
 assistance = "none"
 condition = "no-data-saf-03"
 
