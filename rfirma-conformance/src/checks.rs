@@ -40,7 +40,7 @@ impl Settlement {
 impl Probe {
     /// Corre un grupo de comprobaciones que comparten trámite —el conductor arranca una sola vez y
     /// cada entrada lee de lo que viajó lo suyo— y dice cómo quedó cada una, sin escribir nada.
-    pub(crate) fn run_group(&self, group: &[&Check], declared_store: &str) -> Vec<Settlement> {
+    pub(crate) fn run_group(&self, group: &[&Check]) -> Vec<Settlement> {
         let head = group[0];
         if let Some(motive) = &head.unmeasurable {
             return vec![self.settle(
@@ -49,7 +49,7 @@ impl Probe {
                 Duration::ZERO,
             )];
         }
-        if let Some(why) = the_unmet_precondition_of(head, declared_store) {
+        if let Some(why) = the_unmet_precondition_of(head) {
             self.witness.harness(&format!("no se corre: {why}"));
             return vec![Settlement::pending(head, why)];
         }
@@ -187,9 +187,9 @@ impl Probe {
     }
 }
 
-/// Lo que la comprobación necesita y el informe no trae; `None` si no le falta nada.
-fn the_unmet_precondition_of(check: &Check, declared_store: &str) -> Option<String> {
-    the_unmet_need_of(check, declared_store).or_else(|| the_occupied_port_complaint(check))
+/// Lo que la comprobación necesita y el equipo no le da; `None` si no le falta nada.
+fn the_unmet_precondition_of(check: &Check) -> Option<String> {
+    the_occupied_port_complaint(check)
 }
 
 /// Las comprobaciones que comparten trámite con `head` y pueden resolverse del mismo trámite: las
@@ -287,19 +287,6 @@ fn the_wait_announcement_of(check: &Check) -> Option<String> {
             "Esta comprobación tarda por diseño: hasta {}s. El silencio mientras tanto no es un \
              cuelgue.",
             patience.as_secs()
-        )
-    })
-}
-
-/// El almacén que la comprobación declara en `needs` y el informe no trae, con el mensaje que dice
-/// cómo correrla; `None` si lo trae o no pide ninguno.
-fn the_unmet_need_of(check: &Check, declared_store: &str) -> Option<String> {
-    let wanted = check.required_store()?;
-    let has_it = declared_store == wanted || declared_store.contains("softhsm");
-    (!has_it).then(|| {
-        format!(
-            "el informe declara el almacén «{declared_store}»; esta comprobación exige \
-             «{wanted}»: córrela en un informe nuevo creado con el almacén «{wanted}»"
         )
     })
 }
@@ -598,26 +585,6 @@ needs = [{needs}]
         ))
         .unwrap()
         .remove(0)
-    }
-
-    #[test]
-    fn a_store_mismatch_names_the_missing_store_and_where_to_run_it() {
-        let check = a_check_that_needs(r#""almacén:rfirma-test-ecc""#);
-        let reason = the_unmet_need_of(&check, "rfirma-test").unwrap();
-        assert!(reason.contains("«rfirma-test»"));
-        assert!(reason.contains("informe nuevo creado con el almacén «rfirma-test-ecc»"));
-    }
-
-    #[test]
-    fn softhsm_satisfies_any_declared_store() {
-        let check = a_check_that_needs(r#""almacén:rfirma-test-ecc""#);
-        assert_eq!(the_unmet_need_of(&check, "softhsm2-token-generico"), None);
-    }
-
-    #[test]
-    fn a_check_without_a_declared_store_needs_nothing_from_it() {
-        let check = a_check_that_needs(r#""espera:5""#);
-        assert_eq!(the_unmet_need_of(&check, "cualquier-almacen"), None);
     }
 
     #[test]

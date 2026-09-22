@@ -65,9 +65,11 @@ export function aSnapshot(overrides: Partial<Snapshot> = {}): Snapshot {
     client: {
       kind: "autofirma",
       binary: "/usr/bin/autofirma",
-      launcher: "/tmp/aislado/autofirma",
-      trust_root: "/usr/lib/Autofirma/Autofirma_ROOT.cer",
-      store: "softhsm2:/usr/lib/softhsm/libsofthsm2.so",
+      profiles: (["rsa", "ec", "token"] as const).map((store) => ({
+        store,
+        launcher: `/tmp/aislado-${store}/launch-subject`,
+        trust_root: "/usr/lib/Autofirma/Autofirma_ROOT.cer",
+      })),
     },
     client_complaints: [],
     resolving_client: false,

@@ -16,8 +16,9 @@ use crate::catalogue::Check;
 use crate::checks::{
     the_greetings_already_failed, the_group_of, the_reason_behind_a_failed_greeting, Settlement,
 };
-use crate::client::ClientKind;
-use crate::client::{resolve, the_deduced_coordinates, Client, DeducedCoordinates};
+use crate::client::{
+    resolve, the_deduced_coordinates, Client, ClientKind, DeducedCoordinates, Store,
+};
 use crate::comparison::{compare, Comparison};
 use crate::livelog::{CheckLog, LiveLogSink, Provenance};
 use crate::outcome::CheckState;
@@ -570,7 +571,7 @@ impl Witness {
 }
 
 fn run_the_next_group(shared: &Arc<Shared>) {
-    let (group, probe, store) = {
+    let (group, probe) = {
         let mut session = shared.lock();
         loop {
             match take_the_next_group(shared, &mut session) {
@@ -588,8 +589,8 @@ fn run_the_next_group(shared: &Arc<Shared>) {
         .iter()
         .filter_map(|id| shared.catalogue.iter().find(|check| &check.id == id))
         .collect();
-    let settled = catch_unwind(AssertUnwindSafe(|| probe.run_group(&checks, &store)))
-        .unwrap_or_else(|panic| {
+    let settled =
+        catch_unwind(AssertUnwindSafe(|| probe.run_group(&checks))).unwrap_or_else(|panic| {
             let why = panic
                 .downcast_ref::<String>()
                 .cloned()
@@ -616,10 +617,19 @@ fn run_the_next_group(shared: &Arc<Shared>) {
 
 /// Saca de la cola lo siguiente que hay que correr y lo marca en curso; lo que su saludo fallido
 /// detiene lo deja pendiente sin correrlo.
+/// El almacén con el que se lanza la comprobación: el que pide en `needs`, o `rsa`.
+fn the_store_of(check: &Check) -> Store {
+    match check.required_store() {
+        Some("rfirma-test-ecc") => Store::Ec,
+        Some(name) => Store::named(name).unwrap_or_default(),
+        None => Store::default(),
+    }
+}
+
 fn take_the_next_group(
     shared: &Arc<Shared>,
     session: &mut Session,
-) -> Option<(Vec<String>, Probe, String)> {
+) -> Option<(Vec<String>, Probe)> {
     while let Some(queued) = session.queue.pop_front() {
         let (Some(client), Some(open)) = (&session.client, &session.report) else {
             session.queue.clear();
@@ -635,7 +645,6 @@ fn take_the_next_group(
                 .map(|greeting| (*greeting).to_owned());
         let client = client.clone();
         let dir = open.dir.clone();
-        let store = open.report.header().store.clone();
         if let Some(greeting) = stopping_greeting.filter(|_| queued.in_batch) {
             let why = the_reason_behind_a_failed_greeting(&greeting);
             session.reasons.insert(head.id.clone(), why);
@@ -655,9 +664,10 @@ fn take_the_next_group(
             .map(|check| check.id.clone())
             .collect();
         session.queue.retain(|other| !group.contains(&other.id));
+        let profile = client.profile(the_store_of(head));
         let probe = Probe {
-            client: client.launcher,
-            trust_root: client.trust_root,
+            client: profile.launcher.clone(),
+            trust_root: profile.trust_root.clone(),
             report: dir.clone(),
             patience: shared.patience,
             witness: Witness {
@@ -668,7 +678,7 @@ fn take_the_next_group(
         session.running = group.clone();
         session.started = Some(Instant::now());
         shared.publish(session);
-        return Some((group, probe, store));
+        return Some((group, probe));
     }
     None
 }
@@ -805,6 +815,36 @@ mod tests {
             .as_deref()
             .unwrap()
             .contains("no es un informe"));
+    }
+
+    fn a_check_that_needs(needs: &str) -> Check {
+        crate::catalogue::the_catalogue_in(&format!(
+            r#"
+[[check]]
+id = "a_check"
+set = "errores"
+chapter = "15"
+citation = "A.java:1"
+statement = "Algo."
+drive = {{ mode = "v4", script = "protocol-v4" }}
+needs = [{needs}]
+"#,
+        ))
+        .unwrap()
+        .remove(0)
+    }
+
+    #[test]
+    fn a_check_runs_in_the_store_it_needs_and_in_rsa_otherwise() {
+        assert_eq!(
+            the_store_of(&a_check_that_needs(r#""almacén:rfirma-test-ecc""#)),
+            Store::Ec
+        );
+        assert_eq!(
+            the_store_of(&a_check_that_needs(r#""almacén:token""#)),
+            Store::Token
+        );
+        assert_eq!(the_store_of(&a_check_that_needs("")), Store::Rsa);
     }
 
     fn a_catalogue() -> Vec<Check> {
