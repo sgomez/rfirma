@@ -1,5 +1,5 @@
 import type { TFunction } from "i18next";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { FileIcon, InfoIcon } from "../design-system/icons";
 import { CertificateSelect } from "../signing/CertificateSelect";
@@ -14,12 +14,13 @@ import type {
   SiteOperation,
 } from "./errand";
 import { consentActionKey } from "./errand";
-import { SedeBody } from "./SedeFrame";
+import { SedeBody, useConsentCountdown } from "./SedeFrame";
 
 interface SedeConsentProps {
   origin: string | null;
   operation: SiteOperation;
   stage: Extract<ErrandStage, { kind: "consent" }>;
+  countdown: boolean;
   onConsent: (certificateId: string) => void;
   onCancel: () => void;
 }
@@ -38,7 +39,14 @@ interface SedeConsentProps {
  * deja uno, almacén que no pide PIN— la persona no vería absolutamente nada
  * (ID-272).
  */
-export function SedeConsent({ origin, operation, stage, onConsent, onCancel }: SedeConsentProps) {
+export function SedeConsent({
+  origin,
+  operation,
+  stage,
+  countdown,
+  onConsent,
+  onCancel,
+}: SedeConsentProps) {
   const { t } = useTranslation();
   const [chosen, setChosen] = useState<Certificate | null>(
     stage.certificates.find((certificate) => certificate.remembered) ??
@@ -49,6 +57,14 @@ export function SedeConsent({ origin, operation, stage, onConsent, onCancel }: S
   // firmar: una sola pregunta, resuelta en el vocabulario del trámite y no
   // repetida aquí.
   const identity = consentActionKey(operation) === "identify";
+  const remaining = useConsentCountdown(countdown);
+  const ready = chosen !== null && remaining === 0;
+  const consentButton = useRef<HTMLButtonElement>(null);
+  const action = identity ? t("sede.consent.identify") : t("sede.consent.sign");
+
+  useEffect(() => {
+    if (ready && focusIsUnclaimed()) consentButton.current?.focus();
+  }, [ready]);
 
   return (
     <SedeBody
@@ -59,12 +75,13 @@ export function SedeConsent({ origin, operation, stage, onConsent, onCancel }: S
             {t("actions.cancel")}
           </button>
           <button
+            ref={consentButton}
             type="button"
             className="rf-btn rf-btn--primary"
-            disabled={chosen === null}
+            disabled={!ready}
             onClick={() => chosen !== null && onConsent(chosen.id)}
           >
-            {identity ? t("sede.consent.identify") : t("sede.consent.sign")}
+            {remaining > 0 ? t("sede.consent.countdown", { action, seconds: remaining }) : action}
           </button>
         </>
       }
@@ -281,4 +298,9 @@ function signatureRoundNote(t: TFunction, round: SignatureRound): string | null 
         ? t("sede.consent.counterSignatureTree")
         : t("sede.consent.counterSignatureLeafs");
   }
+}
+
+/** Nadie ha llevado el foco a otro sitio mientras el botón seguía desactivado. */
+function focusIsUnclaimed(): boolean {
+  return document.activeElement === null || document.activeElement === document.body;
 }

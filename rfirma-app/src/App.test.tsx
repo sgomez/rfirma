@@ -191,6 +191,7 @@ function renderApp(
       rememberActivity: true,
       notifyNewVersion: true,
       setupWizardSeen: false,
+      consentCountdown: true,
       ...settings,
     },
     () => void recents.clear(),
@@ -301,6 +302,7 @@ describe("App", () => {
         rememberActivity: true,
         notifyNewVersion: true,
         setupWizardSeen: false,
+        consentCountdown: true,
       }),
       save: refused,
       forgetActivity: async () => {},
@@ -866,6 +868,7 @@ describe("App", () => {
         rememberActivity: true,
         notifyNewVersion: true,
         setupWizardSeen: false,
+        consentCountdown: true,
       }),
       save: async () => {},
       forgetActivity: async () => {

@@ -200,6 +200,7 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
       theme: Theme
       offersTheOriginalFolder: bool
       setupWizardSeen: bool
+      consentCountdown: bool
 
   pub struct SiteErrandView
       origin: Option<String>

@@ -15,6 +15,7 @@ const defaults: Preferences = {
   rememberActivity: true,
   notifyNewVersion: true,
   setupWizardSeen: false,
+  consentCountdown: true,
 };
 
 const noop = async () => {};
@@ -292,6 +293,19 @@ describe("PreferencesView", () => {
     );
 
     expect(onChange).toHaveBeenCalledWith({ ...defaults, notifyNewVersion: false });
+  });
+
+  it("turns the three-second countdown before signing for a site off without asking", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    renderView({ onChange });
+    await openTab(user, "Firma");
+
+    await user.click(
+      screen.getByRole("switch", { name: /Contar tres segundos antes de firmar en una sede/ }),
+    );
+
+    expect(onChange).toHaveBeenCalledWith({ ...defaults, consentCountdown: false });
   });
 
   it("closes on Cerrar", async () => {

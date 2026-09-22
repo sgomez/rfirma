@@ -292,6 +292,9 @@ export function noErrand(): SiteErrandPort {
  */
 export const OUTCOME_CLOSE_MS = 15_000;
 
+/** Los segundos que el botón de consentir tarda en activarse cuando la persona no ha apagado la cuenta atrás. */
+export const CONSENT_COUNTDOWN_SECONDS = 3;
+
 /** La dirección que Chrome no deja abrir desde fuera: se copia, no se pulsa. */
 export const CHROME_LOCAL_NETWORK_SETTINGS = "chrome://settings/content/loopbackNetwork";
 

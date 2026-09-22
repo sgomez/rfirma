@@ -62,6 +62,8 @@ crossing! {
         pub offers_the_original_folder: bool,
         /// Si el asistente del primer arranque ya se ha visto.
         pub setup_wizard_seen: bool,
+        /// Si el botón de consentir de la ventana de sede espera una cuenta atrás.
+        pub consent_countdown: bool,
     }
 }
 
@@ -76,6 +78,7 @@ impl From<Preferences> for ConfigurationView {
             theme: preferences.theme,
             offers_the_original_folder: preferences.offers_the_original_folder,
             setup_wizard_seen: preferences.setup_wizard_seen,
+            consent_countdown: preferences.consent_countdown,
         }
     }
 }
@@ -91,6 +94,7 @@ impl From<ConfigurationView> for Preferences {
             theme: view.theme,
             offers_the_original_folder: view.offers_the_original_folder,
             setup_wizard_seen: view.setup_wizard_seen,
+            consent_countdown: view.consent_countdown,
         }
     }
 }

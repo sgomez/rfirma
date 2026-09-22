@@ -14,6 +14,7 @@ import "./SedeWindow.css";
 interface SedeWindowProps {
   errands: SiteErrandPort;
   externalDestinations?: ExternalDestinationOpener;
+  consentCountdown?: boolean;
   onOpenHelp?: () => void;
 }
 
@@ -36,7 +37,12 @@ interface SedeWindowProps {
  * de «no ha llegado» lo decide el backend con su reloj de respaldo y lo publica
  * como un momento más.
  */
-export function SedeWindow({ errands, externalDestinations, onOpenHelp }: SedeWindowProps) {
+export function SedeWindow({
+  errands,
+  externalDestinations,
+  consentCountdown = true,
+  onOpenHelp,
+}: SedeWindowProps) {
   const [errand, setErrand] = useState<Errand | null>(null);
 
   useEffect(() => errands.watch(setErrand), [errands]);
@@ -47,6 +53,7 @@ export function SedeWindow({ errands, externalDestinations, onOpenHelp }: SedeWi
       errand={errand}
       errands={errands}
       externalDestinations={externalDestinations}
+      consentCountdown={consentCountdown}
       onOpenHelp={onOpenHelp}
     />
   );
@@ -62,11 +69,13 @@ function SedeDialog({
   errand,
   errands,
   externalDestinations,
+  consentCountdown,
   onOpenHelp,
 }: {
   errand: Errand;
   errands: SiteErrandPort;
   externalDestinations?: ExternalDestinationOpener;
+  consentCountdown: boolean;
   onOpenHelp?: () => void;
 }) {
   const { t } = useTranslation();
@@ -103,6 +112,7 @@ function SedeDialog({
             origin={errand.origin}
             operation={errand.operation}
             stage={stage}
+            countdown={consentCountdown}
             onConsent={(certificateId) => void errands.consent(certificateId)}
             onCancel={cancel}
           />

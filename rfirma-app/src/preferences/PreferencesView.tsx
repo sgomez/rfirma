@@ -436,6 +436,15 @@ export function PreferencesView({
           </button>
         </div>
       </div>
+      <Switch
+        checked={preferences.consentCountdown}
+        label={t("preferences.consentCountdown.label")}
+        hint={t("preferences.consentCountdown.hint")}
+        wide
+        onChange={(checked) =>
+          void change("signing", () => onChange({ ...preferences, consentCountdown: checked }))
+        }
+      />
       {saveNotice("signing")}
     </>
   );

@@ -52,6 +52,8 @@ export interface Preferences {
    * escribe una vez, al pulsar «Terminar» —con o sin las dos acciones hechas.
    */
   setupWizardSeen: boolean;
+  /** Si «Firmar» espera tres segundos desactivado en la ventana de sede. */
+  consentCountdown: boolean;
 }
 
 /**

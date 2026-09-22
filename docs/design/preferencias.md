@@ -205,9 +205,16 @@ Es la entrada, y lleva un solo grupo: **Privacidad**.
    Razonamiento y alternativas descartadas en el
    [ADR-0011](../adr/0011-destino-del-documento-firmado.md).
 
+5. **Contar tres segundos antes de firmar en una sede** (interruptor, activo
+   por omisión), con una línea de ayuda: el botón de firmar empieza
+   desactivado para que un Intro por descuido no firme. Gobierna la ventana de
+   sede y nada más ([ventana-de-sede.md](ventana-de-sede.md)): apagado, `Firmar`
+   nace activo y con el foco, y un Intro firma con el certificado preseleccionado.
+   Apagarlo no pide confirmación: no borra nada.
+
 ### Certificados en fichero
 
-5. **La lista de certificados instalados en rFirma**, con **dos gestos y nada
+6. **La lista de certificados instalados en rFirma**, con **dos gestos y nada
    más**: **«Añadir…»**, arriba a la derecha del panel, que abre el selector
    de ficheros del sistema, y **«Quitar»** al final de cada fila (ID-198).
 
@@ -247,12 +254,12 @@ Es la entrada, y lleva un solo grupo: **Privacidad**.
 
 ### Apariencia
 
-6. **Tema** (desplegable): *El del sistema*, *Claro* u *Oscuro*. Por omisión,
+7. **Tema** (desplegable): *El del sistema*, *Claro* u *Oscuro*. Por omisión,
    el del sistema, que **no es «claro»**: es no forzar nada y dejar que mande
    `prefers-color-scheme`. Los otros dos escriben `data-theme` en `<html>`, que
    es lo que los tokens de color del bundle leen para redefinir los roles. El
    cambio se aplica en caliente, como el resto de la pantalla.
-7. **Idioma** (desplegable). Español, català, euskara, galego e inglés: son
+8. **Idioma** (desplegable). Español, català, euskara, galego e inglés: son
    cinco desde el ID-124, que sacó el valencià porque sus reglas de plural no
    son las del castellano. El cambio se aplica en caliente. Un idioma solo
    aparece aquí si tiene **todas** las cadenas traducidas. En la primera

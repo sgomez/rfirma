@@ -36,6 +36,8 @@ pub struct Configuration {
     pub theme: Theme,
     /// Indica si el asistente del primer arranque ya se ha visto.
     pub setup_wizard_seen: bool,
+    /// Indica si el botón de consentir de la ventana de sede espera una cuenta atrás.
+    pub consent_countdown: bool,
 }
 
 impl Default for Configuration {
@@ -48,6 +50,7 @@ impl Default for Configuration {
             notify_new_version: true,
             theme: Theme::System,
             setup_wizard_seen: false,
+            consent_countdown: true,
         }
     }
 }

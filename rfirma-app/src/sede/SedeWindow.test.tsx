@@ -290,7 +290,7 @@ describe("SedeWindow", () => {
           },
         }),
       );
-      renderWithCatalog(<SedeWindow errands={port} />);
+      renderWithCatalog(<SedeWindow errands={port} consentCountdown={false} />);
 
       expect(
         screen.getByText(
@@ -356,7 +356,7 @@ describe("SedeWindow", () => {
 
     it("appears with a single certificate too: a site never causes a silent signature", () => {
       const { port } = scriptedErrand(consenting());
-      renderWithCatalog(<SedeWindow errands={port} />);
+      renderWithCatalog(<SedeWindow errands={port} consentCountdown={false} />);
 
       expect(screen.getByRole("button", { name: "Firmar" })).toBeInTheDocument();
     });
@@ -364,7 +364,7 @@ describe("SedeWindow", () => {
     it("consents with the chosen certificate's handle", async () => {
       const user = userEvent.setup();
       const { port, calls } = scriptedErrand(consenting());
-      renderWithCatalog(<SedeWindow errands={port} />);
+      renderWithCatalog(<SedeWindow errands={port} consentCountdown={false} />);
 
       await user.click(screen.getByRole("button", { name: "Firmar" }));
 
@@ -414,7 +414,7 @@ describe("SedeWindow", () => {
       const { port, calls } = scriptedErrand(
         consenting({ document: null, signs: 3, signing: null }),
       );
-      renderWithCatalog(<SedeWindow errands={port} />);
+      renderWithCatalog(<SedeWindow errands={port} consentCountdown={false} />);
 
       await userEvent.click(screen.getByRole("button", { name: "Firmar" }));
 
@@ -425,7 +425,7 @@ describe("SedeWindow", () => {
       const { port } = scriptedErrand(consenting({ document: null, signing: null }), {
         operation: "selectcert",
       });
-      renderWithCatalog(<SedeWindow errands={port} />);
+      renderWithCatalog(<SedeWindow errands={port} consentCountdown={false} />);
 
       expect(screen.getByRole("button", { name: "Enviar mis datos" })).toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "Firmar" })).not.toBeInTheDocument();
@@ -442,6 +442,75 @@ describe("SedeWindow", () => {
       renderWithCatalog(<SedeWindow errands={port} />);
 
       expect(screen.getByText(/Se enviarán tu nombre, tu NIF/)).toBeInTheDocument();
+    });
+
+    describe("the countdown before signing", () => {
+      beforeEach(() => vi.useFakeTimers());
+      afterEach(() => vi.useRealTimers());
+
+      const elapseCountdown = async () => {
+        for (let second = 0; second < 3; second++) await elapse(1000);
+      };
+
+      it("counts Firmar (3), (2), (1) down disabled, and enables Firmar after three seconds", async () => {
+        const { port } = scriptedErrand(consenting());
+        renderWithCatalog(<SedeWindow errands={port} />);
+
+        expect(screen.getByRole("button", { name: "Firmar (3)" })).toBeDisabled();
+        await elapse(1000);
+        expect(screen.getByRole("button", { name: "Firmar (2)" })).toBeDisabled();
+        await elapse(1000);
+        expect(screen.getByRole("button", { name: "Firmar (1)" })).toBeDisabled();
+        await elapse(1000);
+        expect(screen.getByRole("button", { name: "Firmar" })).toBeEnabled();
+      });
+
+      it("focuses Firmar once the countdown ends, so Enter signs with the remembered certificate", async () => {
+        const { port, calls } = scriptedErrand(
+          consenting({
+            certificates: [
+              certificate(),
+              certificate({ id: "handle-2", label: "Otro", remembered: true }),
+            ],
+          }),
+        );
+        renderWithCatalog(<SedeWindow errands={port} />);
+
+        await elapseCountdown();
+        const sign = screen.getByRole("button", { name: "Firmar" });
+        expect(sign).toHaveFocus();
+        fireEvent.click(document.activeElement as HTMLElement);
+
+        expect(calls.consent).toHaveBeenCalledWith("handle-2");
+      });
+
+      it("does not take the focus back from what the person moved it to during the countdown", async () => {
+        const { port } = scriptedErrand(consenting());
+        renderWithCatalog(<SedeWindow errands={port} />);
+
+        screen.getByRole("button", { name: "Cancelar" }).focus();
+        await elapseCountdown();
+
+        expect(screen.getByRole("button", { name: "Cancelar" })).toHaveFocus();
+      });
+
+      it("counts down «Enviar mis datos» too: sending an identity is no less final", async () => {
+        const { port } = scriptedErrand(consenting({ document: null, signing: null }), {
+          operation: "selectcert",
+        });
+        renderWithCatalog(<SedeWindow errands={port} />);
+
+        expect(screen.getByRole("button", { name: "Enviar mis datos (3)" })).toBeDisabled();
+      });
+
+      it("starts enabled and focused, with no number, when the person turned the countdown off", () => {
+        const { port } = scriptedErrand(consenting());
+        renderWithCatalog(<SedeWindow errands={port} consentCountdown={false} />);
+
+        const sign = screen.getByRole("button", { name: "Firmar" });
+        expect(sign).toBeEnabled();
+        expect(sign).toHaveFocus();
+      });
     });
   });
 

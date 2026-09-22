@@ -28,6 +28,7 @@ fn what_was_chosen_lands_on_the_disk_and_on_the_live_copy() {
         theme: Theme::Dark,
         offers_the_original_folder: false,
         setup_wizard_seen: false,
+        consent_countdown: true,
     };
 
     memory
@@ -123,6 +124,7 @@ fn writing_the_configuration_never_moves_the_destination_folder() {
         theme: Theme::Dark,
         offers_the_original_folder: false,
         setup_wizard_seen: false,
+        consent_countdown: true,
     };
 
     let next = merged(&live, &chosen);
@@ -134,6 +136,20 @@ fn writing_the_configuration_never_moves_the_destination_folder() {
     assert_eq!(next.language, Language::English);
     assert!(!next.remember_visible_signature);
     assert_eq!(next.theme, Theme::Dark);
+}
+
+#[test]
+fn turning_the_consent_countdown_off_survives_the_round_trip_to_the_window() {
+    let configuration = Configuration {
+        consent_countdown: false,
+        ..Configuration::default()
+    };
+    let view = shown(
+        &configuration,
+        std::path::Path::new("/home/quien/Documentos"),
+    );
+
+    assert!(!merged(&configuration, &view).consent_countdown);
 }
 
 #[test]

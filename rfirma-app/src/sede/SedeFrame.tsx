@@ -1,5 +1,5 @@
-import { type ReactNode, useEffect, useRef } from "react";
-import { OUTCOME_CLOSE_MS } from "./errand";
+import { type ReactNode, useEffect, useRef, useState } from "react";
+import { CONSENT_COUNTDOWN_SECONDS, OUTCOME_CLOSE_MS } from "./errand";
 
 /**
  * El cuerpo y el pie, que son iguales en los cinco momentos.
@@ -47,4 +47,17 @@ export function useOutcomeClock(onClose: () => void, enabled = true) {
     const timer = setTimeout(() => latest.current(), OUTCOME_CLOSE_MS);
     return () => clearTimeout(timer);
   }, [enabled]);
+}
+
+/** Los segundos que le faltan al botón de consentir para activarse; cero sin cuenta atrás. */
+export function useConsentCountdown(enabled: boolean): number {
+  const [remaining, setRemaining] = useState(enabled ? CONSENT_COUNTDOWN_SECONDS : 0);
+
+  useEffect(() => {
+    if (remaining === 0) return;
+    const timer = setTimeout(() => setRemaining((seconds) => seconds - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [remaining]);
+
+  return remaining;
 }

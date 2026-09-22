@@ -30,6 +30,7 @@ const aConfiguration = {
   theme: "system",
   offersTheOriginalFolder: false,
   setupWizardSeen: false,
+  consentCountdown: true,
 };
 
 const anOrder = {
@@ -554,6 +555,7 @@ describe("los puertos de la configuración sobre Tauri", () => {
       rememberActivity: true,
       notifyNewVersion: true,
       setupWizardSeen: false,
+      consentCountdown: true,
     });
   });
 
@@ -589,6 +591,7 @@ describe("los puertos de la configuración sobre Tauri", () => {
       rememberActivity: true,
       notifyNewVersion: true,
       setupWizardSeen: false,
+      consentCountdown: false,
     });
 
     expect(invoke).toHaveBeenLastCalledWith("write_configuration", {
@@ -597,6 +600,7 @@ describe("los puertos de la configuración sobre Tauri", () => {
         language: "en",
         theme: "dark",
         rememberVisibleSignature: false,
+        consentCountdown: false,
       },
     });
   });
@@ -623,6 +627,7 @@ describe("los puertos de la configuración sobre Tauri", () => {
       rememberActivity: true,
       notifyNewVersion: true,
       setupWizardSeen: true,
+      consentCountdown: true,
     });
 
     const [, { configuration }] = invoke.mock.calls.at(-1) as [string, { configuration: object }];

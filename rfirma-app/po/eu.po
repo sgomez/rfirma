@@ -1033,6 +1033,12 @@ msgstr ""
 "Laukiaren orrialdea, kokapena eta edukia hurrengo dokumentuan berrerabiltzen "
 "dira."
 
+msgid "preferences.consentCountdown.label"
+msgstr "Hiru segundo zenbatu egoitza batean sinatu aurretik"
+
+msgid "preferences.consentCountdown.hint"
+msgstr "Sinatzeko botoia desgaituta hasten da, nahi gabeko Intro batek sina ez dezan."
+
 msgid "preferences.rememberActivity.label"
 msgstr "Gogoratu nire jarduera"
 
@@ -1361,6 +1367,10 @@ msgstr "Sinatu"
 
 msgid "sede.consent.identify"
 msgstr "Nire datuak bidali"
+
+#. {{action}} es el texto del botón («Firmar»); {{seconds}}, los segundos que faltan para activarlo.
+msgid "sede.consent.countdown"
+msgstr "{{action}} ({{seconds}})"
 
 msgid "sede.confirm.title"
 msgstr "Sinatu aurretik berretsi behar da"
