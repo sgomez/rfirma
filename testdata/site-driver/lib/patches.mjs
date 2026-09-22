@@ -76,3 +76,13 @@ export function withJsonbatchCapitalised(source) {
     'generateDataKeyValue ("jsonBatch", true);',
   );
 }
+
+/** Deja que `setStickySignatory(false, true)` suelte la fijación sin mandar `resetsticky`. */
+export function withAReleaseWithoutReset(source) {
+  return replacingOrFailing(
+    source,
+    "var setStickySignatory = function(sticky) {",
+    "var setStickySignatory = function(sticky, withoutReset) {\n" +
+      "\t\t\tif (withoutReset) { stickySignatory = sticky; return; }",
+  );
+}

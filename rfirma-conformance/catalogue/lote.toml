@@ -331,3 +331,18 @@ local, SAF_27 cuando el servicio de lotes informa de un error, y SAF_33, SAF_34 
 con contraseña, con firmas no registradas o certificado.
 """
 unmeasurable = "Los PDF que los disparan —protegido, con firmas no registradas, certificado— no están en el banco de referencia, y la sede no simula un servicio de lotes que conteste un error lógico en su formato."
+
+[[check]]
+id = "a_batch_honours_the_certificate_filters_of_its_request"
+set = "lote"
+citation = "ProtocolInvocationLauncherBatch.java:129, 273-284"
+statement = """
+El lote aplica los filtros de certificado y headless que trae en properties, como selectcert y
+sign: con un único candidato, firma con él.
+"""
+drive = { mode = "v4", script = "batchfiltered" }
+assistance = "click"
+condition = "the-batch-signed-with-the-filtered-certificate"
+store = "several"
+patience_secs = 90
+warning = "Si aparece un diálogo, firma con el certificado de seudónimo (TEST-0000) solo si es el único que ofrece; si ofrece más, cancela."

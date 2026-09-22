@@ -36,7 +36,7 @@ impl ClientKind {
 }
 
 /// El almacén de un perfil aislado: `rsa` y `ec`, una NSS sin contraseña con un solo certificado;
-/// `token`, SoftHSM con PIN.
+/// `token`, SoftHSM con PIN; `several` y `expired`, NSS con varios, para los filtros.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "snake_case")]
 #[ts(export)]
@@ -45,10 +45,18 @@ pub(crate) enum Store {
     Rsa,
     Ec,
     Token,
+    Several,
+    Expired,
 }
 
 impl Store {
-    pub(crate) const ALL: [Self; 3] = [Self::Rsa, Self::Ec, Self::Token];
+    pub(crate) const ALL: [Self; 5] = [
+        Self::Rsa,
+        Self::Ec,
+        Self::Token,
+        Self::Several,
+        Self::Expired,
+    ];
 
     pub(crate) fn named(name: &str) -> Option<Self> {
         Self::ALL.into_iter().find(|store| store.name() == name)
@@ -59,6 +67,8 @@ impl Store {
             Self::Rsa => "rsa",
             Self::Ec => "ec",
             Self::Token => "token",
+            Self::Several => "several",
+            Self::Expired => "expired",
         }
     }
 }

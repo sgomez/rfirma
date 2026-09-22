@@ -615,3 +615,17 @@ dirigido al defecto.
   1. Un documento del lote local con `countersign` y sin `target` en sus `extraparams` vuelve como `ERROR_PRE` con la descripción «El objetivo de la contrafirma no puede ser nulo», en lugar de contrafirmar las hojas.
   2. La misma petición en una contrafirma individual sí contrafirma las hojas: el valor por defecto depende de si el documento viaja o no en un lote.
 * **Causa raíz:** El lote local usa el validador estricto de la API Java donde la capa de protocolo usa en el resto de sitios una comparación que tolera la ausencia.
+
+---
+
+### BUG-31: Un filtro de certificado que no se reconoce desactiva el filtro de caducados y admite todos los certificados
+
+* **Comprobación del catálogo:** `a_filter_of_unknown_kinds_alone_keeps_expired_certificates_hidden`.
+* **Estado en `master`:** **Sigue presente.** `CertFilterManager.java:133-134` y `:262` no han cambiado, y `MultipleCertificateFilter.matches` sigue devolviendo `true` cuando no tiene filtros.
+* **Código fuente:** `afirma-keystores-filters` · `es.gob.afirma.keystores.filters.CertFilterManager.java:127-135, 239-244, 261-268`; `afirma-core-keystores` · `es.gob.afirma.keystores.MultipleCertificateFilter.java:34-41`.
+* **Descripción:** `parseFilter` descarta sin aviso a la sede cada condición cuyo prefijo no reconoce (`:261-263`), y también un `thumbprint:` cuyo valor no se parte en exactamente dos trozos por `:` (`:240-243`), como una huella escrita con dos puntos entre bytes. Si no queda ninguna condición, devuelve un `MultipleCertificateFilter` vacío (`:266-268`), cuyo `matches` recorre cero filtros y devuelve `true`. Como la lista de filtros ya no está vacía, el constructor no añade el `ExpiredCertificateFilter(false)` que aplica cuando la sede no pide ninguno (`:133-135`).
+* **Comportamiento y consecuencia:**
+  1. Un filtro mal escrito admite todos los certificados del almacén, en lugar de ninguno o de los que admitiría sin filtros.
+  2. Los certificados caducados se ofrecen, cuando sin ese filtro se habrían ocultado.
+  3. La sede no recibe error ni aviso: el registro del cliente es el único que nombra la condición descartada.
+* **Causa raíz:** La presencia de un filtro se decide por la cadena que trae la petición y no por las condiciones que quedan tras interpretarla, y la conjunción vacía se evalúa como verdadera.

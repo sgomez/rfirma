@@ -274,6 +274,14 @@ Si `useDefaultStore` es falso (comportamiento por defecto):
 
 Se utiliza el nombre extraído de `keystore` o `ksb64` procesado por `getKeyStoreName`.
 
+Aquí no se comprueba que el almacén sea del sistema en curso: esa corrección
+(`getValidKeyStoreType`) solo se aplica al almacén recordado del Nivel 1. Un
+`keystore=WINDOWS` en Linux resuelve a `AOKeyStore.WINDOWS`, `AOKeyStoreManagerFactory`
+no tiene rama para él fuera de Windows y lanza `AOKeystoreAlternativeException`
+(`AOKeyStoreManagerFactory.java:121-123, 166-172`), y la operación termina con
+`SAF_08` (`ProtocolInvocationLauncherSelectCert.java:147-164`) en vez de caer al
+almacén del Nivel 4.
+
 ### 4.4 Nivel 4: Almacén predeterminado según el sistema operativo
 
 Si tras los pasos anteriores `aoks` sigue siendo `null`, se asigna el almacén base

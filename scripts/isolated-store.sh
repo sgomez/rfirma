@@ -10,6 +10,11 @@
 # * rsa, ec: una NSS sin contrasena con un solo certificado de testdata/fnmt/,
 #   sin SoftHSM registrado y con SOFTHSM2_CONF apuntando a un directorio de
 #   tokens vacio. Ningun cliente pide PIN.
+# * several: la NSS sin contrasena con el RSA activo, el de curva eliptica y el
+#   de seudonimo, para medir los filtros; SoftHSM queda alcanzable por su
+#   biblioteca, sin registrar, para la sede que lo nombre.
+# * expired: la NSS sin contrasena con el de curva eliptica y el caducado, sin
+#   SoftHSM.
 # * token: la NSS vacia con SoftHSM registrado; sus tokens piden el PIN.
 #
 # El certificado personal del titular no llega al perfil: AutoFirma recibe
@@ -29,7 +34,7 @@ softhsm_conf="${SOFTHSM2_CONF:-$HOME/.config/softhsm2/softhsm2.conf}"
 subject="${1:-}"
 store="${3:-rsa}"
 if [ ! -x "$subject" ]; then
-    echo "uso: $0 <ruta-del-binario> [autofirma|rfirma] [rsa|ec|token]" >&2
+    echo "uso: $0 <ruta-del-binario> [autofirma|rfirma] [rsa|ec|token|several|expired]" >&2
     exit 2
 fi
 
@@ -40,11 +45,13 @@ case "${2:-$(basename "$subject")}" in
 esac
 
 case "$store" in
-    rsa) p12="active-rsa.p12" ;;
-    ec) p12="active-ecc.p12" ;;
-    token) p12="" ;;
+    rsa) p12s="active-rsa.p12" ;;
+    ec) p12s="active-ecc.p12" ;;
+    token) p12s="" ;;
+    several) p12s="active-rsa.p12 active-ecc.p12 pseudonym-rsa.p12" ;;
+    expired) p12s="active-ecc.p12 expired-rsa.p12" ;;
     *)
-        echo "almacen desconocido: $store (rsa, ec o token)" >&2
+        echo "almacen desconocido: $store (rsa, ec, token, several o expired)" >&2
         exit 2
         ;;
 esac
@@ -78,16 +85,20 @@ if [ "$store" = token ]; then
     }
     modutil -dbdir "sql:$nssdb" -add softhsm2 -libfile "$module" -force >/dev/null
 else
-    password="$(the_password_of "$p12")"
-    [ -n "$password" ] || {
-        echo "no encuentro la contrasena de $p12 en $fnmt/README.md" >&2
-        exit 1
-    }
-    pk12util -i "$fnmt/$p12" -d "sql:$nssdb" -W "$password" -K "" >/dev/null
-    mkdir -p "$profile/softhsm/tokens"
-    softhsm_conf="$profile/softhsm/softhsm2.conf"
-    printf 'directories.tokendir = %s\nobjectstore.backend = file\n' \
-        "$profile/softhsm/tokens" > "$softhsm_conf"
+    for p12 in $p12s; do
+        password="$(the_password_of "$p12")"
+        [ -n "$password" ] || {
+            echo "no encuentro la contrasena de $p12 en $fnmt/README.md" >&2
+            exit 1
+        }
+        pk12util -i "$fnmt/$p12" -d "sql:$nssdb" -W "$password" -K "" >/dev/null
+    done
+    if [ "$store" != several ]; then
+        mkdir -p "$profile/softhsm/tokens"
+        softhsm_conf="$profile/softhsm/softhsm2.conf"
+        printf 'directories.tokendir = %s\nobjectstore.backend = file\n' \
+            "$profile/softhsm/tokens" > "$softhsm_conf"
+    fi
 fi
 
 wrapper="$profile/launch-subject"

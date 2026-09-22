@@ -19,7 +19,7 @@ consola. Sus pruebas se corren con `cargo test` dentro de este directorio; las d
 | `src/witness.rs` | El testigo, el seam entre quien corre las comprobaciones y la persona, con su falso para las pruebas. |
 | `src/report_view.rs` | La vista de un informe, igual lo corra la sesión o no: conjuntos en el orden del catálogo con sus recuentos; no sabe de la sesión. |
 | `src/snapshot.rs` | El estado de la sesión activa que recibe la página: la vista de su informe más cliente, cola, comprobación en curso y pregunta. |
-| `src/client.rs` | El cliente a prueba y qué cliente es: binario y un perfil aislado por almacén (`rsa`, `ec`, `token`), cada uno con su envoltorio y su raíz de confianza. |
+| `src/client.rs` | El cliente a prueba y qué cliente es: binario y un perfil aislado por almacén (`rsa`, `ec`, `token`, `several`, `expired`), cada uno con su envoltorio y su raíz de confianza. |
 | `src/catalogue.rs` | La lectura del catálogo y su validación, de forma y contra el manifiesto de la sede, que si falla no deja arrancar. |
 | `src/manifest.rs` | El vocabulario de la sede que publica `driver.mjs --manifest`: modos y guiones con su sede, su familia y sus condiciones. |
 | `src/checks.rs` | El cuerpo ejecutable: cómo se conduce un grupo o se juzga con un trámite ya observado, la parada entre tramos, la guarda de las comprobaciones sin persona y los saludos por familia, sin escribir el informe. |
@@ -36,6 +36,7 @@ consola. Sus pruebas se corren con `cargo test` dentro de este directorio; las d
 | `../testdata/site-driver/manifest.mjs` | El manifiesto: los modos y todos los guiones, cada uno con su sede, su familia, sus modos, sus condiciones y si es solo del banco. |
 | `../testdata/site-driver/lib/` | Lo común a los guiones: eventos y condiciones, modos, parches del `autoscript.js`, navegador mínimo, documentos de referencia y los analizadores de firma (CMS, XML, ZIP y PDF) con los que se miden las condiciones. |
 | `../testdata/site-driver/test/` | Las pruebas de los analizadores de firma, que se corren con `node --test test/*.test.mjs`, y sus muestras hechas con OpenSSL y `zip`. |
+| `../testdata/site-driver/certificates/` | Los certificados, sin su clave, del kit de la FNMT que montan los almacenes `several` y `expired`: con ellos los guiones reconocen qué certificado volvió. |
 | `../testdata/site-driver/scripts/` | Los guiones, un módulo por familia: certificado, firma, ficheros, lote, intermedio, WebSocket a mano y socket a mano. |
 | `tests/catalogue_matches_the_docs.rs` | El cruce del catálogo, leído con el cargador del crate, y la referencia con `docs/afirma/1.9.2/`: capítulos, tabla SAF y fichas A1. |
 | `tests/transcripts/` | Tramas grabadas de trámites de verdad, las que reproduce el ejecutor falso. |
