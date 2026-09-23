@@ -28,7 +28,7 @@ Busca en este índice, y si aun así necesitas el fichero, entra con
 | 0017 | La arquitectura de los dos lados: puertos en la ventana, contextos con capas en el backend |
 | 0018 | rFirma no es un lector de PDF: la firma empieza por un verbo |
 | 0019 | El recuadro que pide la sede cruza crudo al puente, sin la conversión del local |
-| 0020 | La apertura de la ventana de sede no pisa un momento posterior del trámite |
+| 0020 | La ventana de sede existe antes que la operación, y solo se enseña cuando hay algo que decir |
 | 0021 | La versión negociada al abrir el canal rige la sesión; `ver` solo cuenta sin canal |
 | 0022 | El almacén que nombra la sede: cuál se obedece y cuál sale con `SAF_07` |
 | 0023 | El catálogo de algoritmos es el del original, SHA-1 incluido |

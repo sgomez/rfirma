@@ -9,49 +9,9 @@ use crate::identity::application::certificates::ListedCertificates;
 use crate::signing::application::tests::a_memory;
 use crate::site::application::errand::*;
 use crate::site::application::site::{attend_launch, Attendance};
-use crate::site::application::startup::{SiteWindow, SiteWindowContent};
+use crate::site::application::startup::SiteWindow;
 use crate::site::domain::channel::{ArrivalMode, ChannelTenure};
 use crate::site::domain::protocol::{AfirmaUrl, ChannelMessage, NegotiatedCredential, SafCode};
-
-/// Ventana doblada que apunta lo que el trámite le pide.
-#[derive(Default)]
-struct AWindow {
-    asked: std::sync::Mutex<Vec<&'static str>>,
-}
-
-impl AWindow {
-    fn asked(&self) -> Vec<&'static str> {
-        self.asked
-            .lock()
-            .expect("el doble no envenena su cerrojo")
-            .clone()
-    }
-
-    fn note(&self, what: &'static str) {
-        self.asked
-            .lock()
-            .expect("el doble no envenena su cerrojo")
-            .push(what);
-    }
-}
-
-impl SiteWindow for AWindow {
-    fn open(&self, _content: SiteWindowContent<'_>) {
-        self.note("abierta");
-    }
-    fn show(&self) {
-        self.note("enseñada");
-    }
-    fn hide(&self) {
-        self.note("oculta");
-    }
-    fn close(&self) {
-        self.note("cerrada");
-    }
-    fn errand_ended(&self, _delivered: Acknowledgement) {
-        self.note("trámite-terminado");
-    }
-}
 
 fn a_websocket_errand_begun() -> LiveErrand {
     let live = LiveErrand::default();
@@ -198,28 +158,6 @@ fn a_wire_noting_into(
         }),
         receiver,
     )
-}
-
-/// Atiende la operación sobre una mesa sin certificados ni motores que contesten.
-fn attended_on_a_bare_desk(url: AfirmaUrl, reply: ReplyHandle, live: &LiveErrand) -> ErrandStep {
-    let home = tempfile::tempdir().expect("hay directorio temporal");
-    let memory = a_memory(home.path());
-    let listed = ListedCertificates::new();
-    let opened_documents = OpenedDocuments::new();
-    let engine = AnEngine::answering(&[]);
-    let policies = APolicyEngine::answering("");
-    let scratch = home.path().join("errand");
-    let desk = a_desk(
-        &engine,
-        &policies,
-        &[],
-        home.path(),
-        &listed,
-        &opened_documents,
-        &memory,
-        &scratch,
-    );
-    attend(&desk, url, reply, live).expect("hay codec")
 }
 
 #[test]

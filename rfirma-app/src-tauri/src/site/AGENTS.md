@@ -32,7 +32,7 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `adapters/tls/mod.rs` | El reparto de las dos piezas del material TLS; reexporta `LocalCa`. |
 | `adapters/tls/server.rs` | El certificado del servidor local, en memoria. Pruebas en `adapters/tls/server/tests.rs`. |
 | `adapters/tls/store.rs` | Las dos ranuras de la CA local en disco, detrás del puerto `LocalCaSlots`. Pruebas en `adapters/tls/store/tests.rs`. |
-| `adapters/relay.rs` | El transporte del servidor intermedio: la operación se resuelve al abrir; un rechazo deja la subida como entrega pendiente. Fijaciones en `adapters/relay/tests/mod.rs`. |
+| `adapters/relay.rs` | El transporte del servidor intermedio: la operación se resuelve al abrir y queda, como la subida de un rechazo, en entrega pendiente. Fijaciones en `adapters/relay/tests/mod.rs`. |
 | `adapters/relay/tests/document_variant.rs` | Pruebas del relay para la variante `fileid`/`dat` en la URL. |
 | `adapters/relay/tests/parameters_variant.rs` | Pruebas del relay para la variante que recupera los parámetros por XML. |
 | `adapters/relay/tests/active_wait.rs` | Pruebas del latido de la espera activa del relay. |
@@ -48,9 +48,9 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `application/errand/replies.rs` | Las respuestas finales, y **el único sitio que escribe en el cable**. |
 | `application/errand/request.rs` | `SiteRequest`: lo que la sede quiere, sin versión. |
 | `application/errand/state.rs` | El estado del trámite, con un solo dueño (`LiveErrand`). Pruebas en `application/errand/state/tests.rs`. |
-| `application/errand/state/revelation.rs` | La revelación de la ventana por temporizador de respaldo o por llegada del navegador. |
+| `application/errand/state/revelation.rs` | La revelación de la ventana: por temporizador de respaldo, por llegada del navegador o porque el trámite tiene algo que decir (ADR-0020). |
 | `application/errand/tests/mod.rs` | El reparto de las pruebas del trámite por comportamiento. Solo en pruebas. |
-| `application/errand/tests/support.rs` | Los dobles del trámite en grada A: motor, transporte, códec, token, vecinos y mesa de pruebas. Solo en pruebas. |
+| `application/errand/tests/support.rs` | Los dobles del trámite en grada A: motor, transporte, códec, token, vecinos, ventana y mesa de pruebas. Solo en pruebas. |
 | `application/errand/tests/support_requests.rs` | Los constructores de peticiones y consentimientos que usan esas pruebas. Solo en pruebas. |
 | `application/errand/tests/certificate_selection.rs` | Pruebas de la selección de certificado de sede, del arranque a la respuesta. Solo en pruebas. |
 | `application/errand/tests/signature_basics.rs` | Pruebas de la firma de sede básica: recuadro, rúbrica y páginas añadidas. Solo en pruebas. |
@@ -64,20 +64,21 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `application/errand/tests/countersignature_and_gzip.rs` | Pruebas de contrafirma, gzip y firma sin `dat`. Solo en pruebas. |
 | `application/errand/tests/headless_and_checked.rs` | Pruebas del modo `headless` y de `checkSignatures`. Solo en pruebas. |
 | `application/errand/tests/websocket.rs` | Pruebas del trámite de sede sobre WebSocket. Solo en pruebas. |
+| `application/errand/tests/relay_window.rs` | Pruebas de cuándo enseña su ventana un trámite de llegada inmediata. Solo en pruebas. |
 | `application/filtering.rs` | El listado de certificados que la sede acepta. Pruebas en `application/filtering/tests.rs`. |
 | `application/local_batch.rs` | El bucle del lote local: el ciclo de sede por elemento y `stoponerror`. Pruebas en `application/local_batch/tests.rs`. |
 | `application/policies.rs` | **La política de firma que declara la sede.** Pruebas en `application/policies/tests.rs`. |
 | `application/session.rs` | La sesión de firma **de sede**, y `SiteRefusal`, la situación de cada negativa sin traducir. Pruebas en `application/session/tests.rs`. |
-| `application/site.rs` | **La invocación de una sede**: la negociación de arranque, que elige códec y decide si un rechazo sale por el socket o por la ventana. Pruebas en `application/site/tests.rs`. |
+| `application/site.rs` | **La invocación de una sede**: la negociación de arranque, que elige códec y decide si un rechazo sale por el socket o por la ventana. No dispara la entrega. Pruebas en `application/site/tests.rs`. |
 | `application/startup/channel.rs` | El canal abierto y sostenido, y quién lo sostiene o por qué no lo hay. Pruebas en `application/startup/channel/tests.rs`. |
-| `application/startup/mod.rs` | El arranque: si se enseña la ventana principal o se atiende un trámite de sede, y con qué momento se abre la de sede. Pruebas partidas por comportamiento en `application/startup/tests/`. |
+| `application/startup/mod.rs` | El arranque: si se enseña la ventana principal o se atiende un trámite de sede, con qué momento se abre la de sede y cuándo se dispara la entrega (ADR-0020). Pruebas partidas por comportamiento en `application/startup/tests/`. |
 | `application/startup/tests.rs` | El índice de las pruebas de `startup`: solo declara sus submódulos. Solo en pruebas. |
 | `application/startup/tests/fixtures.rs` | El doble `World` y los ayudantes de arranque que comparten las pruebas de `startup`. Solo en pruebas. |
 | `application/startup/tests/opening.rs` | Qué ventana abre cada lanzamiento, y los callejones de la CA local en el arranque. Solo en pruebas. |
 | `application/startup/tests/errand_lifecycle.rs` | Cómo termina el trámite ya atendido: rechazo retenido, plazo vencido, WebSocket con o sin navegador. Solo en pruebas. |
 | `application/startup/tests/warning.rs` | El aviso al cliente web antiguo antes de abrir el canal. Solo en pruebas. |
-| `application/startup/tests/window_timing.rs` | Cuándo se enseña la ventana: llegada inmediata del relay, momento entregado y temporizador de respaldo. Solo en pruebas. |
-| `application/startup/tests/relay_refusal.rs` | El rechazo del relay: destino conocido, subida fallida, trámite en curso. Solo en pruebas. |
+| `application/startup/tests/window_timing.rs` | Cuándo se abre y se enseña la ventana: llegada inmediata del relay, momento entregado y temporizador de respaldo. Solo en pruebas. |
+| `application/startup/tests/relay_refusal.rs` | El relay que termina sin enseñar la ventana o la enseña: rechazo con destino conocido, operación contestada al llegar, subida fallida, trámite en curso. Solo en pruebas. |
 | `application/startup/repair.rs` | La reparación de la CA local desde la ventana de sede. Pruebas en `application/startup/repair/tests.rs`. |
 | `application/trust.rs` | Cuándo se instala la CA local en los almacenes, cómo se solapa con la siguiente y cómo se retira de todos ellos. Pruebas en `application/trust/tests.rs`. |
 | `domain/batch/mod.rs` | El reparto del lote, y `BatchFormat`: si el lote viaja en el XML heredado o en JSON. |

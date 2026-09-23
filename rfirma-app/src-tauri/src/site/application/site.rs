@@ -70,7 +70,7 @@ pub fn negotiate(url: &AfirmaUrl, codecs: &CodecTable) -> Result<Negotiated, Ref
 pub enum Attendance {
     /// Canal abierto sirviendo la conversación con la sede.
     Serving {
-        /// Canal abierto para la sesión.
+        /// Canal abierto para la sesión, con la entrega inmediata aún sin disparar.
         channel: OpenChannel,
         /// Trámite activo registrado.
         errand: Errand,
@@ -106,16 +106,14 @@ pub fn attend_launch(
         Ok(negotiated) => {
             let duty = ChannelDuty::Serve(negotiated.credential.clone());
             match transport(&negotiated.location, duty) {
-                Ok(mut channel) => {
-                    let arrival = channel.arrival_mode();
-                    // Se retira antes de begin(): dispatch() exige un códec ya registrado.
-                    let delivery = channel.take_delivery();
-                    let errand = Errand::of(negotiated.credential, arrival, negotiated.codec)
-                        .with_tenure(negotiated.location.tenure());
+                Ok(channel) => {
+                    let errand = Errand::of(
+                        negotiated.credential,
+                        channel.arrival_mode(),
+                        negotiated.codec,
+                    )
+                    .with_tenure(negotiated.location.tenure());
                     if live.begin(errand.clone()) {
-                        if let Some(delivery) = delivery {
-                            delivery.now();
-                        }
                         return Attendance::Serving { channel, errand };
                     }
 

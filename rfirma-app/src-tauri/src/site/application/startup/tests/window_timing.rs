@@ -3,7 +3,7 @@ use super::fixtures::{a_codec_table, a_launch, World, CREDENTIAL};
 use crate::site::domain::channel::{ChannelDuty, ChannelLocation, Delivery, OpenChannel, Shutdown};
 
 #[test]
-fn a_relay_launch_creates_the_window_and_shows_it_immediately() {
+fn a_relay_launch_opens_its_window_hidden_and_leaves_showing_it_to_the_operation() {
     let world = Arc::new(World::default());
     let live = LiveErrand::default();
     let relay_url = "afirma://open?id=123456&stservlet=https://example.com/store&dat=dGVzdA==";
@@ -20,13 +20,13 @@ fn a_relay_launch_creates_the_window_and_shows_it_immediately() {
     assert!(matches!(attendance, Attendance::Serving { .. }));
     assert_eq!(
         world.steps(),
-        ["canal", "ventana:creada:Immediate", "ventana:enseñada"],
-        "relay no tiene canal que esperar: se enseña de inmediato"
+        ["canal", "ventana:creada:Immediate"],
+        "relay no tiene canal que esperar, pero tampoco nada que decir hasta que llegue la operación"
     );
 }
 
 #[test]
-fn an_immediate_arrival_shows_the_window_even_though_the_channel_has_a_port() {
+fn an_immediate_arrival_arms_no_backing_timeout_even_though_the_channel_has_a_port() {
     let world = Arc::new(World::default());
     let live = LiveErrand::default();
 
@@ -39,20 +39,22 @@ fn an_immediate_arrival_shows_the_window_even_though_the_channel_has_a_port() {
         ))
     };
 
-    let attendance = attend_site_launch(
+    let attendance = attend_site_launch_with_threshold(
         &a_launch(&format!("v=4&idsession={CREDENTIAL}")),
         &a_codec_table(),
         &transport,
         Arc::clone(&world) as Arc<dyn SiteWindow>,
         &live,
         LocalCaReach::NotAnObstacle,
+        Duration::from_millis(20),
     );
+    std::thread::sleep(Duration::from_millis(60));
 
     assert!(matches!(attendance, Attendance::Serving { .. }));
     assert_eq!(
         world.steps(),
-        ["canal", "ventana:creada:Immediate", "ventana:enseñada"],
-        "una llegada inmediata enseña la ventana aunque el canal tenga puerto"
+        ["canal", "ventana:creada:Immediate"],
+        "una llegada inmediata no espera a ningún navegador aunque el canal tenga puerto"
     );
 }
 
@@ -142,10 +144,7 @@ fn a_relay_launch_with_fileid_and_stservlet_in_url_preserves_the_delivered_momen
         Some(delivered_moment),
         "el arranque con stservlet en la URL conserva el momento entregado"
     );
-    assert_eq!(
-        world.steps(),
-        ["ventana:creada:Immediate", "ventana:enseñada"]
-    );
+    assert_eq!(world.steps(), ["ventana:creada:Immediate"]);
 }
 
 #[test]
@@ -196,10 +195,7 @@ fn a_relay_launch_with_fileid_and_parameters_xml_preserves_the_delivered_moment(
         Some(delivered_moment),
         "el arranque con parametros por fileid conserva el momento entregado"
     );
-    assert_eq!(
-        world.steps(),
-        ["ventana:creada:Immediate", "ventana:enseñada"]
-    );
+    assert_eq!(world.steps(), ["ventana:creada:Immediate"]);
 }
 
 #[test]

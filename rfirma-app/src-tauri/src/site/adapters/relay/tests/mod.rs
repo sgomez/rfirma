@@ -120,8 +120,7 @@ fn duty() -> ChannelDuty {
     ChannelDuty::Serve(NegotiatedCredential::Absent)
 }
 
-/// Abre el canal y dispara su entrega diferida, como haría `attend_launch` tras registrar el
-/// trámite.
+/// Abre el canal y dispara su entrega diferida, como hace el arranque tras registrar la ventana.
 fn opened_and_delivered(relay: &Relay, info: &ChannelLocation) -> OpenChannel {
     let mut channel = relay.open(info, duty()).expect("abre y entrega");
     channel

@@ -198,11 +198,16 @@ fn the_published_client_forced_to_the_relay_uploads_the_saf_of_a_refused_operati
         &LiveErrand::default(),
     );
 
-    assert!(
-        matches!(attendance, Attendance::Serving { .. }),
-        "el destino ya se conocia en el xml de parametros: deberia servir para contestar por el: \
-         {attendance:?}"
-    );
+    let Attendance::Serving { mut channel, .. } = attendance else {
+        panic!(
+            "el destino ya se conocia en el xml de parametros: deberia servir para contestar por \
+             el: {attendance:?}"
+        );
+    };
+    channel
+        .take_delivery()
+        .expect("la llegada del servidor intermedio es inmediata")
+        .now();
 
     let stored_at = stored_at
         .lock()

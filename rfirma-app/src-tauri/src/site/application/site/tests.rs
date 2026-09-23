@@ -266,7 +266,7 @@ fn the_negotiation_table_picks_the_relay_codec_for_an_operation_with_servlet() {
 }
 
 #[test]
-fn a_relay_launch_delivers_only_after_the_errand_is_registered() {
+fn a_relay_launch_registers_the_errand_and_leaves_its_delivery_unfired() {
     use crate::site::adapters::relay::Relay;
     use crate::site::application::tests::InMemoryServlets;
     use crate::site::ports::{Inbox, ReplyHandle, Transport as _};
@@ -299,11 +299,24 @@ fn a_relay_launch_delivers_only_after_the_errand_is_registered() {
         &live,
     );
 
-    assert!(matches!(attendance, Attendance::Serving { .. }));
+    let Attendance::Serving { mut channel, .. } = attendance else {
+        panic!("se esperaba servir, salio {attendance:?}");
+    };
+    assert_eq!(
+        *codec_was_already_registered.lock().expect("el candado"),
+        None,
+        "la entrega la dispara el arranque, una vez registrada la ventana"
+    );
+
+    channel
+        .take_delivery()
+        .expect("la llegada del servidor intermedio es inmediata")
+        .now();
+
     assert_eq!(
         *codec_was_already_registered.lock().expect("el candado"),
         Some(true),
-        "la entrega debe llegar despues de registrar el tramite, no antes"
+        "cuando se dispara, el tramite ya estaba registrado"
     );
 }
 
