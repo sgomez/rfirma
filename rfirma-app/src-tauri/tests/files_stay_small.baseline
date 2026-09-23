@@ -6,5 +6,6 @@ rfirma-app/src-tauri/src/site/domain/protocol/operation.rs 1322
 rfirma-app/src-tauri/src/site/domain/protocol/operation/tests.rs 2167
 rfirma-app/src-tauri/tests/module_directions.rs 651
 rfirma-app/src-tauri/tests/pkcs11_token.rs 616
-rfirma-app/src/App.test.tsx 1576
-rfirma-app/src/App.tsx 1231
+rfirma-app/src/sede/SedeWindow.test.tsx 881
+rfirma-app/src/sede/siteErrands.test.ts 870
+rfirma-app/src/sede/siteErrands.ts 542
