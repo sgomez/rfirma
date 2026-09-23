@@ -13,6 +13,9 @@ habla con el token. Rutas relativas a `src/identity/`.
 | `domain/mod.rs`, `application/mod.rs`, `adapters/mod.rs` | Solo `pub mod`: el reparto de cada capa. |
 | `application/tests.rs` | Los andamios de la grada A que comparten todos los contextos: `NoToken`, `NoMemory`, `a_certificate`, `a_usable_certificate` y `listed_from`. Solo en pruebas. |
 | `adapters/pkcs11/mod.rs` | La capa PKCS#11, y `RealToken`, el único adaptador de producción del puerto `Token`. |
+| `adapters/pkcs11/listing.rs` | Recorre las ranuras de un almacén y filtra los certificados con clave privada emparejada. |
+| `adapters/pkcs11/mechanism.rs` | Elige el mecanismo de firma que ofrece la ranura y firma con la clave privada. |
+| `adapters/pkcs11/session.rs` | Abre el módulo PKCS#11, cachea su contexto y localiza ranura y clave privada. |
 | `adapters/pkcs11/nss.rs` | Cómo entra un `.p12` en un almacén NSS propio, con el PKCS#12 de `libsmime3`. Declara `NssHost` y `RealNssHost`, para `site/adapters/nss.rs`. Pruebas en `adapters/pkcs11/nss/tests.rs`. |
 | `adapters/pkcs11/stores.rs` | Dónde se buscan los certificados, incluidos los `.p12` instalados. Pruebas en `adapters/pkcs11/stores/tests.rs`. |
 | `adapters/failures.rs` | La única traducción de lo que va mal en identidad a la vista de la ventana y al código de la sede (ADR-0009). Pruebas en `adapters/failures/tests.rs`. |
