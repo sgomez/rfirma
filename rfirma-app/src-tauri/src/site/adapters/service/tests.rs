@@ -102,13 +102,13 @@ async fn the_last_fragment_is_answered_with_ok() {
 }
 
 #[tokio::test]
-async fn a_fragment_with_the_wrong_credential_is_refused() {
+async fn a_fragment_with_the_wrong_credential_is_refused_with_saf_03() {
     let chunk = URL_SAFE.encode("mitad");
     let raw = format!("fragment=@1@2@{chunk}idsession=otraPaginaDelEquipo0@EOF");
 
     let response = respond(&raw, true, &serving(), &answering_with("x"), &no_state()).await;
 
-    assert!(body_of(&response.0).starts_with("SAF_46"));
+    assert!(body_of(&response.0).starts_with("SAF_03"));
 }
 
 #[tokio::test]
@@ -179,7 +179,7 @@ async fn a_send_returns_the_part_that_firm_already_computed() {
 }
 
 #[tokio::test]
-async fn a_send_with_the_wrong_credential_is_refused() {
+async fn a_send_with_the_wrong_credential_is_refused_with_saf_03() {
     let response = respond(
         "send=@1@1idsession=otraPaginaDelEquipo0@EOF",
         true,
@@ -189,7 +189,7 @@ async fn a_send_with_the_wrong_credential_is_refused() {
     )
     .await;
 
-    assert!(body_of(&response.0).starts_with("SAF_46"));
+    assert!(body_of(&response.0).starts_with("SAF_03"));
 }
 
 #[tokio::test]
@@ -260,7 +260,7 @@ async fn a_repeated_command_answers_the_number_of_parts_without_relaunching_the_
 }
 
 #[tokio::test]
-async fn a_command_with_the_wrong_credential_is_refused() {
+async fn a_command_with_the_wrong_credential_is_refused_with_saf_03() {
     let encoded = URL_SAFE.encode("afirma://selectcert?op=selectcert");
     let response = respond(
         &format!("cmd={encoded}idsession=0000000000000000000O@EOF"),
@@ -273,8 +273,7 @@ async fn a_command_with_the_wrong_credential_is_refused() {
 
     assert_eq!(
         body_of(&response.0),
-        WireAnswer::refused_because_of(SafCode::InvalidSessionId, Parameter::IdSession)
-            .on_the_wire()
+        WireAnswer::refused_because_of(SafCode::Params, Parameter::IdSession).on_the_wire()
     );
 }
 
@@ -328,4 +327,269 @@ async fn the_firm_response_carries_an_acknowledgement_fulfilled_once_the_write_i
         delivered.lock().expect("el candado")[0].wait(std::time::Duration::from_millis(0)),
         "el acuse deberia cumplirse en cuanto quien escribe en el socket lo confirma"
     );
+}
+
+const A_SAVE: &str = "afirma://save?op=save&filename=reto.bin&dat=cmV0bw";
+
+#[tokio::test]
+async fn a_save_command_answers_save_ok_and_not_the_number_of_parts() {
+    let response = respond(
+        &a_command(A_SAVE),
+        true,
+        &serving(),
+        &answering_with("SAVE_OK"),
+        &no_state(),
+    )
+    .await;
+
+    assert_eq!(body_of(&response.0), "SAVE_OK");
+}
+
+#[tokio::test]
+async fn a_save_sent_in_fragments_answers_save_ok_to_firm() {
+    let state = no_state();
+    let first = URL_SAFE.encode("afirma://save?op=save&");
+    let second = URL_SAFE.encode("filename=reto.bin&dat=cmV0bw");
+    for fragment in [
+        format!("fragment=@1@2@{first}idsession={CREDENTIAL}@EOF"),
+        format!("fragment=@2@2@{second}idsession={CREDENTIAL}@EOF"),
+    ] {
+        respond(
+            &fragment,
+            true,
+            &serving(),
+            &answering_with("SAVE_OK"),
+            &state,
+        )
+        .await;
+    }
+
+    let response = respond(
+        &format!("firm=idsession={CREDENTIAL}@EOF"),
+        true,
+        &serving(),
+        &answering_with("SAVE_OK"),
+        &state,
+    )
+    .await;
+
+    assert_eq!(body_of(&response.0), "SAVE_OK");
+}
+
+#[tokio::test]
+async fn a_cancelled_save_answers_cancel() {
+    let response = respond(
+        &a_command(A_SAVE),
+        true,
+        &serving(),
+        &answering_with("CANCEL"),
+        &no_state(),
+    )
+    .await;
+
+    assert_eq!(body_of(&response.0), "CANCEL");
+}
+
+#[tokio::test]
+async fn a_save_leaves_no_parts_for_the_next_operation() {
+    let state = no_state();
+    let launches = Arc::new(Mutex::new(0));
+    let inbox = counting_answers_with("SAVE_OK", &launches);
+
+    respond(&a_command(A_SAVE), true, &serving(), &inbox, &state).await;
+    let second = respond(&a_command(A_SAVE), true, &serving(), &inbox, &state).await;
+
+    assert_eq!(body_of(&second.0), "SAVE_OK");
+    assert_eq!(*launches.lock().expect("el contador no esta envenenado"), 2);
+}
+
+async fn answered(raw: &str, inbox: &Inbox, state: &Arc<Mutex<ServiceState>>) -> String {
+    body_of(&respond(raw, true, &serving(), inbox, state).await.0)
+}
+
+#[tokio::test]
+async fn an_echo_from_a_foreign_session_is_refused_with_saf_03() {
+    let body = answered(
+        "echo=-idsession=OtraSesionAjena00000@EOF",
+        &answering_with("no se llama"),
+        &no_state(),
+    )
+    .await;
+
+    assert!(body.starts_with("SAF_03"), "{body}");
+}
+
+#[tokio::test]
+async fn an_unknown_order_is_refused_with_saf_03() {
+    let body = answered(
+        &format!("nada=idsession={CREDENTIAL}@EOF"),
+        &answering_with("no se llama"),
+        &no_state(),
+    )
+    .await;
+
+    assert!(body.starts_with("SAF_03"), "{body}");
+}
+
+#[tokio::test]
+async fn a_command_that_is_not_an_operation_is_refused_with_saf_11() {
+    let launches = Arc::new(Mutex::new(0));
+    let inbox = counting_answers_with("no se llama", &launches);
+
+    for uri in [
+        "afirma://service?ports=54351&v=3",
+        "https://sede.example/tramite",
+    ] {
+        let body = answered(&a_command(uri), &inbox, &no_state()).await;
+
+        assert!(body.starts_with("SAF_11"), "{uri}: {body}");
+    }
+    assert_eq!(*launches.lock().expect("el contador no esta envenenado"), 0);
+}
+
+#[tokio::test]
+async fn a_send_beyond_the_announced_parts_is_refused_with_saf_11() {
+    let state = no_state();
+    let inbox = answering_with("resultado");
+    answered(
+        &a_command("afirma://selectcert?op=selectcert"),
+        &inbox,
+        &state,
+    )
+    .await;
+
+    let beyond_the_total = answered(
+        &format!("send=@3@1idsession={CREDENTIAL}@EOF"),
+        &inbox,
+        &state,
+    )
+    .await;
+    let beyond_what_was_computed = answered(
+        &format!("send=@2@2idsession={CREDENTIAL}@EOF"),
+        &inbox,
+        &state,
+    )
+    .await;
+
+    assert!(beyond_the_total.starts_with("SAF_11"), "{beyond_the_total}");
+    assert!(
+        beyond_what_was_computed.starts_with("SAF_11"),
+        "{beyond_what_was_computed}"
+    );
+}
+
+#[tokio::test]
+async fn a_save_that_ends_in_a_refusal_is_answered_with_saf_11() {
+    let refusal = WireAnswer::refused(SafCode::Params).on_the_wire();
+    let inbox = Inbox::for_operations(move |_url: AfirmaUrl, reply: ReplyHandle| {
+        reply.answer(refusal.clone());
+    });
+
+    let body = answered(
+        &a_command("afirma://save?op=save&filename=rfirma.txt&exts=txt"),
+        &inbox,
+        &no_state(),
+    )
+    .await;
+
+    assert!(body.starts_with("SAF_11"), "{body}");
+}
+
+#[tokio::test]
+async fn the_fragments_of_the_script_are_reassembled_and_run_by_firm() {
+    let state = no_state();
+    let inbox = answering_with("SAF_06: Formato de firma no soportado");
+    let operation = "afirma://sign?op=sign&format=NoSuchFormat&algorithm=SHA256withRSA&dat=SG9sYQ";
+    let (first, last) = operation.split_at(operation.len().div_ceil(2));
+    let fragment = |part: usize, chunk: &str| {
+        format!(
+            "fragment=@{part}@2@{}idsession={CREDENTIAL}@EOF",
+            URL_SAFE.encode(chunk)
+        )
+    };
+    answered(&format!("echo=-idsession={CREDENTIAL}@EOF"), &inbox, &state).await;
+
+    let early = answered(&fragment(1, first), &inbox, &state).await;
+    let closing = answered(&fragment(2, last), &inbox, &state).await;
+    let fired = answered(&format!("firm=idsession={CREDENTIAL}@EOF"), &inbox, &state).await;
+    let sent = answered(
+        &format!("send=@1@1idsession={CREDENTIAL}@EOF"),
+        &inbox,
+        &state,
+    )
+    .await;
+
+    assert_eq!(
+        [
+            early.as_str(),
+            closing.as_str(),
+            fired.as_str(),
+            sent.as_str()
+        ],
+        [
+            MORE_DATA_NEED,
+            ECHO_OK,
+            "1",
+            "SAF_06: Formato de firma no soportado"
+        ]
+    );
+}
+
+#[test]
+fn only_a_recognised_order_of_the_negotiated_session_holds_the_idle_clock() {
+    let echo = format!("echo=-idsession={CREDENTIAL}@EOF");
+
+    assert!(a_valid_order(&echo, true, &serving()));
+    assert!(!a_valid_order(&echo, false, &serving()));
+    assert!(!a_valid_order(
+        "echo=-idsession=OtraSesionAjena00000@EOF",
+        true,
+        &serving()
+    ));
+    assert!(!a_valid_order(
+        &format!("nada=idsession={CREDENTIAL}@EOF"),
+        true,
+        &serving()
+    ));
+}
+
+#[tokio::test(start_paused = true)]
+async fn an_idle_channel_stops_listening_and_says_so() {
+    use std::sync::atomic::{AtomicBool, Ordering};
+
+    use crate::site::adapters::tls::LocalServerCertificate;
+    use crate::site::domain::local_ca::LocalCa;
+
+    let ca = LocalCa::generate().expect("la CA local deberia generarse");
+    let certificate =
+        LocalServerCertificate::issued_by(&ca).expect("el certificado del servidor local");
+    let acceptor = Arc::new(acceptor_for(&certificate).expect("el aceptador TLS"));
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+        .await
+        .expect("un puerto libre del bucle local");
+    let idled = Arc::new(AtomicBool::new(false));
+    let inbox = answering_with("no se llama").when_the_channel_idles({
+        let idled = Arc::clone(&idled);
+        move || idled.store(true, Ordering::SeqCst)
+    });
+    let (_stop, stopped) = oneshot::channel();
+
+    let accepting = tokio::spawn(accept_until_stopped(
+        listener,
+        acceptor,
+        serving(),
+        inbox,
+        no_state(),
+        IdleClock::started(SOCKET_TIMEOUT),
+        stopped,
+    ));
+
+    tokio::time::timeout(
+        SOCKET_TIMEOUT + std::time::Duration::from_secs(1),
+        accepting,
+    )
+    .await
+    .expect("el canal deberia dejar de escuchar al vencer el reloj")
+    .expect("el bucle de aceptacion no deberia fallar");
+    assert!(idled.load(Ordering::SeqCst));
 }

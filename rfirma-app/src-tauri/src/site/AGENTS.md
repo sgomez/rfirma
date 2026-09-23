@@ -24,6 +24,7 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `adapters/desk.rs` | `Neighbours`: lo que el trámite pide a los contextos vecinos, servido sobre sus tres raíces, y la composición del algoritmo de la sede con la clave del certificado. Pruebas en `adapters/desk/tests.rs`. |
 | `adapters/scratch.rs` | La carpeta de paso donde cae el documento de la sede mientras dura el trámite, y las rutas que elige la persona al guardar o cargar (ADR-0011); también nombra, cierra con `flock` y barre la carpeta de paso propia del proceso. Pruebas en `adapters/scratch/tests.rs`. |
 | `adapters/service/mod.rs` | El transporte de producción de `service`: TLS crudo sobre el *loopback*, sin WebSocket. Pruebas en `adapters/service/tests.rs`. |
+| `adapters/service/idle.rs` | El reloj de inactividad del canal `service`, que lo cierra a los noventa segundos sin una orden válida (ADR-0024). Pruebas en `adapters/service/idle/tests.rs`. |
 | `adapters/batch_services.rs` | El cliente de los dos servlets del lote remoto, sobre `reqwest::blocking`. Pruebas en `adapters/batch_services/tests.rs`. |
 | `adapters/servlets.rs` | El cliente del servidor intermedio de producción, sobre `reqwest::blocking`. Pruebas en `adapters/servlets/tests.rs`. |
 | `adapters/nss.rs` | El registro en los almacenes NSS por la API de NSS y **no** por `certutil`, que no está en el flatpak, sobre el `NssHost` de `identity/adapters/pkcs11/nss.rs`. Pruebas en `adapters/nss/tests.rs`. |
@@ -65,6 +66,7 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `application/errand/tests/countersignature_and_gzip.rs` | Pruebas de contrafirma, gzip y firma sin `dat`. Solo en pruebas. |
 | `application/errand/tests/headless_and_checked.rs` | Pruebas del modo `headless` y de `checkSignatures`. Solo en pruebas. |
 | `application/errand/tests/websocket.rs` | Pruebas del trámite de sede sobre WebSocket. Solo en pruebas. |
+| `application/errand/tests/service.rs` | Pruebas del trámite de sede sobre el canal `service`. Solo en pruebas. |
 | `application/errand/tests/relay_window.rs` | Pruebas de cuándo enseña su ventana un trámite de llegada inmediata. Solo en pruebas. |
 | `application/filtering.rs` | El listado de certificados que la sede acepta. Pruebas en `application/filtering/tests.rs`. |
 | `application/local_batch.rs` | El bucle del lote local: el ciclo de sede por elemento y `stoponerror`. Pruebas en `application/local_batch/tests.rs`. |

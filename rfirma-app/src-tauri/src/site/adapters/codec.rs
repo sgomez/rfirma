@@ -15,7 +15,7 @@ use crate::site::application::errand::{LocalBatchAsk, ProtocolCodec, SiteOutcome
 const RESULT_SEPARATOR: char = '|';
 
 /// El texto exacto que espera `autoscript.js` cuando el guardado sale bien (`CommandProcessorThread.java:295,336`).
-const SAVE_OK: &str = "SAVE_OK";
+pub const SAVE_OK: &str = "SAVE_OK";
 
 /// Códec de la versión 4 del protocolo de comunicación con la sede.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]

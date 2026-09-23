@@ -443,6 +443,7 @@ fn the_transport(
         let handle = app.clone();
         let arrived_handle = app.clone();
         let left_handle = app.clone();
+        let idle_handle = app.clone();
         site::ports::Inbox::of(
             move || {
                 arrived_handle
@@ -459,6 +460,12 @@ fn the_transport(
                 .state::<site::SiteRoot>()
                 .errand
                 .the_first_client_left();
+        })
+        .when_the_channel_idles(move || {
+            idle_handle
+                .state::<site::SiteRoot>()
+                .errand
+                .the_channel_went_idle();
         })
     };
 

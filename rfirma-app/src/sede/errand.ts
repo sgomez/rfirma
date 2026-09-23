@@ -210,8 +210,8 @@ export type SigningPhase = "signing" | "returning";
  * dos, porque rFirma no puede saber si el permiso del navegador se denegó.
  */
 type NoChannelReason =
-  /** El canal no se ha podido abrir: sin puertos libres, sin material TLS
-   * utilizable, o sin llegar a escuchar. Las tres se reparan igual. */
+  /** El canal no se ha podido abrir: sin material TLS utilizable, o sin llegar
+   * a escuchar. Las dos se reparan igual; los puertos ocupados son un rechazo. */
   | "channelNotOpened"
   /** La CA local no ha entrado en ningún almacén NSS: sin ella no hay canal. */
   | "localCaMissing";

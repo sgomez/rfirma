@@ -268,7 +268,7 @@ impl LiveErrand {
     fn serves_many_operations(&self) -> bool {
         crate::lock(&self.errand)
             .as_ref()
-            .is_some_and(|errand| errand.tenure == ChannelTenure::WhileTheFirstClientStays)
+            .is_some_and(|errand| errand.tenure != ChannelTenure::OneOperation)
     }
 
     fn the_window(&self) -> Option<Arc<dyn SiteWindow>> {
@@ -282,6 +282,15 @@ impl LiveErrand {
 
     /// Termina el trámite de WebSocket porque se ha ido su primer cliente, y cierra su ventana.
     pub fn the_first_client_left(&self) {
+        self.let_the_channel_go();
+    }
+
+    /// Termina el trámite de `service` porque su canal ha vencido sin órdenes, y cierra su ventana.
+    pub fn the_channel_went_idle(&self) {
+        self.let_the_channel_go();
+    }
+
+    fn let_the_channel_go(&self) {
         if !self.serves_many_operations() {
             return;
         }

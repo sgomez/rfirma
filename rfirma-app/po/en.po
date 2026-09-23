@@ -1455,6 +1455,9 @@ msgstr "You cancelled the signature"
 msgid "sede.outcome.refusedTitle"
 msgstr "rFirma turned the request down"
 
+msgid "sede.outcome.portsTakenTitle"
+msgstr "rFirma could not open the channel with the page"
+
 msgid "sede.outcome.refusedNote"
 msgstr "For whoever maintains the site:"
 
@@ -1499,6 +1502,9 @@ msgid "sede.refusals.errandInFlight"
 msgstr ""
 "{{origin}} asks for a signature with another errand open, and rFirma handles "
 "one at a time."
+
+msgid "sede.refusals.portsTaken"
+msgstr "{{origin}} offers ports that another application is already using, so rFirma could not open the channel to answer it. Close that application — it may be AutoFirma or another copy of rFirma — and try again from the page."
 
 msgid "sede.refusals.unknown"
 msgstr "{{origin}} sent something rFirma can't handle."

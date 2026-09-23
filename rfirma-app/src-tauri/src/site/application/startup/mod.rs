@@ -5,11 +5,15 @@ pub mod repair;
 
 use std::path::PathBuf;
 
-use crate::site::domain::channel::{ArrivalMode, Delivery};
+use crate::site::domain::channel::{
+    ArrivalMode, ChannelError, Delivery, Situation as ChannelSituation,
+};
 use crate::site::domain::trust::{blocks_the_site, Moment as TrustMoment};
 use crate::site::ports::{LocalCaSlots, TrustStores};
 
-use crate::site::domain::protocol::{warns_of_an_old_web_client, AfirmaUrl, Refusal};
+use crate::site::domain::protocol::{
+    warns_of_an_old_web_client, AfirmaUrl, Refusal, RefusalSituation, SafCode,
+};
 
 use super::errand::{Acknowledgement, Errand, LiveErrand, Moment, NoChannel};
 use super::site::{self, Attendance, ChannelTransport, CodecTable};
@@ -223,11 +227,11 @@ pub fn attend_site_launch_with_threshold(
         }
         Attendance::ChannelNotOpened(error) => {
             if live.current().is_none() {
-                let dead_end = match error.refusal() {
-                    Some(refusal) => DeadEnd::RefusedWithoutChannel(refusal.clone()),
-                    None => DeadEnd::ChannelNotOpened,
-                };
-                open(live, &*window, SiteWindowContent::ADeadEnd(dead_end));
+                open(
+                    live,
+                    &*window,
+                    SiteWindowContent::ADeadEnd(the_dead_end_of(error)),
+                );
                 window.show();
             }
         }
@@ -269,6 +273,19 @@ pub fn attend_site_launch_with_threshold(
     }
 
     attendance
+}
+
+fn the_dead_end_of(error: &ChannelError) -> DeadEnd {
+    if let Some(refusal) = error.refusal() {
+        return DeadEnd::RefusedWithoutChannel(refusal.clone());
+    }
+    match error.situation() {
+        ChannelSituation::NoDrawnPortIsFree => DeadEnd::RefusedWithoutChannel(
+            Refusal::new(SafCode::CannotOpenSocket, error.detail())
+                .because(RefusalSituation::PortsTaken),
+        ),
+        _ => DeadEnd::ChannelNotOpened,
+    }
 }
 
 /// Un arranque aplazado hasta que la persona descarta el aviso que lo precede.

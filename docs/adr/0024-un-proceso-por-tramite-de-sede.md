@@ -9,9 +9,12 @@ une al otro ni lo cierra. Es el modelo del original: `SimpleAfirma.main`
 atiende la URL con `launch()` y sale, y solo la herramienta de escritorio
 comprueba si ya está abierta.
 
-**Lo que dura un trámite lo decide su transporte.** Con `service` y con el
-servidor intermedio, el trámite es una operación, y acaba con su respuesta.
-Con WebSocket (`afirma://websocket`, versiones 3 y 4), el trámite atiende las
+**Lo que dura un trámite lo decide su transporte.** Con el servidor
+intermedio, el trámite es una operación, y acaba con su respuesta. Con
+`service`, el trámite atiende las operaciones que lleguen hasta que el canal
+pasa noventa segundos sin una orden válida, como el temporizador
+`SOCKET_TIMEOUT` del original, que para en cada orden reconocida, vuelve a
+contar al contestarla y termina el proceso al vencer. Con WebSocket (`afirma://websocket`, versiones 3 y 4), el trámite atiende las
 operaciones sucesivas que lleguen por el canal **mientras siga conectado su
 primer cliente**, como el original: `SimpleAfirma.main` no fuerza el cierre
 cuando la URL empieza por `afirma://websocket`, y el `onClose` del servidor
@@ -36,7 +39,7 @@ un límite del proceso, no de la sede.
 - **Dos trámites conviven en dos procesos**, cada uno en la terna de `ports=`
   que sorteó su navegador; no hay cerrojo de exclusión. Dentro de un proceso
   sigue habiendo un solo trámite.
-- **Con `service` y con el servidor intermedio, el proceso de sede termina
+- **Con el servidor intermedio, el proceso de sede termina
   cuando el trámite ha terminado y no hay ventana visible**; si la hay, al
   cerrarse, a mano o por el cierre automático del desenlace. La aplicación
   avisa de que el trámite terminó por el puerto de ventana; el adaptador
@@ -44,7 +47,8 @@ un límite del proceso, no de la sede.
   oculta; Tauri sale al quedarse sin ventanas. Un rechazo que viaja por el
   canal también abre la ventana oculta, que se cierra al servirse el rechazo o
   al vencer la espera. Nadie llama a `exit`.
-- **Con WebSocket, contestar acaba la operación, no el trámite.** Se olvidan
+- **Con WebSocket y con `service`, contestar acaba la operación, no el
+  trámite.** Se olvidan
   la petición, el consentimiento, el asa de respuesta y el documento de paso
   de esa operación; el canal, el códec negociado, la ventana y `sticky`
   (ADR-0010) siguen. Cada operación que llega vuelve a enseñar la ventana en
@@ -58,6 +62,13 @@ un límite del proceso, no de la sede.
   contesta al cerrarse, y la ventana se oculta y olvida la operación **antes**
   de escribir la respuesta, porque la sede puede mandar la siguiente en cuanto
   la lee.
+- **Con `service`, el trámite y el proceso terminan cuando el canal vence
+  sin órdenes**: noventa segundos sin una orden válida en curso. Una orden
+  rechazada antes de reconocerla —de fuera del bucle local, con otra
+  credencial o que no es ninguna de las cinco— no vuelve a poner la cuenta a
+  cero, para que un tercero no pueda sostener el proceso a base de órdenes
+  inválidas. Al vencer, el canal deja de escuchar y la aplicación cierra la
+  ventana, y Tauri sale al quedarse sin ventanas.
 - **Con WebSocket, el trámite y el proceso terminan cuando se va el primer
   cliente**: el que completó primero el saludo cierra su conexión, sea como
   sea. La aplicación cierra entonces la ventana, con la operación que hubiera
@@ -83,7 +94,8 @@ un límite del proceso, no de la sede.
   el cierre hasta el acuse de entrega con un tope de un segundo, y sale.
   Con el rechazo de la petición en pantalla, manda ese rechazo en vez de
   `CANCEL`. Con otro desenlace o en un callejón sin salida, sale sin más. Con
-  WebSocket y el primer cliente conectado, en vez de salir la oculta. Sobre
+  WebSocket y el primer cliente conectado, o con `service` y el navegador ya
+  llegado, en vez de salir la oculta. Sobre
   el aviso de `jvc`, solo lo descarta.
 - **La biblioteca nativa se abre en el primer trabajo**, no al arrancar: un
   rechazo de protocolo solo paga el hilo del aislado, que nace ocioso.
@@ -126,8 +138,13 @@ un límite del proceso, no de la sede.
   operación de una sede ya no encuentra el canal y paga una invocación nueva,
   con su espera de arranque; y las órdenes que una sede manda seguidas por el
   mismo socket se quedan sin respuesta desde la primera.
+- **Un trámite por operación también con `service`.** Era el modelo
+  anterior. Descartado: cerrar el rechazo de la petición en pantalla cerraba
+  la ventana, y con ella el proceso y el canal; las órdenes que la sede manda
+  detrás recibían `ECONNREFUSED`, cuando el original sigue escuchando hasta
+  que vence su temporizador.
 - **El latido del original (`setConnectionLostTimeout`, 60 s y 240 s en
-  lote).** Descartado: el canal no tiene temporizador propio, y una conexión
+  lote).** Descartado para WebSocket: el canal no tiene temporizador propio, y una conexión
   callada tiene que sobrevivir a esos plazos; cerrar la pestaña o el navegador
   ya llega como cierre del socket.
 - **Un aviso de `jvc` que no retiene el canal.** Descartado: con el canal ya

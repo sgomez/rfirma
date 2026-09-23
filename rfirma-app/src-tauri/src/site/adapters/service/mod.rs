@@ -12,17 +12,22 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::sync::oneshot;
 use tokio_native_tls::TlsAcceptor;
 
+mod idle;
+
+use idle::{IdleClock, SOCKET_TIMEOUT};
+
 use crate::lock;
 use crate::site::adapters::channel::bind_first_free;
 use crate::site::adapters::channel::conversation::{answer, Answer, ECHO_OK};
 use crate::site::adapters::channel::server::acceptor_for;
+use crate::site::adapters::codec::SAVE_OK;
 use crate::site::adapters::tls::{LocalCaStore, LocalServerCertificate};
 use crate::site::domain::channel::{
     ChannelDuty, ChannelError, ChannelLocation, OpenChannel, Shutdown, Situation,
 };
 use crate::site::domain::protocol::{
-    credential_matches, http_response, read_request, split_response, AfirmaUrl, FragmentBuffer,
-    FramedRequest, NotOfTheFraming, Parameter, SafCode, WireAnswer, MORE_DATA_NEED,
+    credential_matches, http_response, read_request, request_credential, split_response, AfirmaUrl,
+    FragmentBuffer, FramedRequest, Parameter, SafCode, WireAnswer, CANCELLED, MORE_DATA_NEED, SAVE,
 };
 
 use crate::site::application::errand::{
@@ -113,8 +118,9 @@ async fn serve(
 
     let (stop, stopped) = oneshot::channel();
     let state = Arc::new(Mutex::new(ServiceState::default()));
+    let clock = IdleClock::started(SOCKET_TIMEOUT);
     tokio::spawn(accept_until_stopped(
-        listener, acceptor, duty, inbox, state, stopped,
+        listener, acceptor, duty, inbox, state, clock, stopped,
     ));
 
     Ok(OpenChannel::new(
@@ -131,6 +137,7 @@ async fn accept_until_stopped(
     duty: ChannelDuty,
     inbox: Inbox,
     state: Arc<Mutex<ServiceState>>,
+    clock: IdleClock,
     stopped: oneshot::Receiver<()>,
 ) {
     tokio::pin!(stopped);
@@ -138,14 +145,19 @@ async fn accept_until_stopped(
     loop {
         tokio::select! {
             _ = &mut stopped => break,
+            () = clock.expired() => {
+                inbox.channel_went_idle();
+                break;
+            }
             accepted = listener.accept() => {
                 let Ok((stream, peer)) = accepted else { continue };
                 let acceptor = Arc::clone(&acceptor);
                 let duty = duty.clone();
                 let inbox = inbox.clone();
                 let state = Arc::clone(&state);
+                let clock = clock.clone();
                 tokio::spawn(async move {
-                    attend(stream, peer, &acceptor, &duty, &inbox, &state).await;
+                    attend(stream, peer, &acceptor, &duty, &inbox, &state, &clock).await;
                 });
             }
         }
@@ -159,6 +171,7 @@ async fn attend(
     duty: &ChannelDuty,
     inbox: &Inbox,
     state: &Arc<Mutex<ServiceState>>,
+    clock: &IdleClock,
 ) {
     let Ok(mut encrypted) = acceptor.accept(stream).await else {
         return;
@@ -169,6 +182,7 @@ async fn attend(
         return;
     };
 
+    let _in_flight = a_valid_order(&raw, from_loopback, duty).then(|| clock.order_arrived());
     let (response, acknowledged) = respond(&raw, from_loopback, duty, inbox, state).await;
     let delivered = encrypted.write_all(&response).await.is_ok();
     let _ = encrypted.shutdown().await;
@@ -177,6 +191,16 @@ async fn attend(
             acknowledged.fulfil();
         }
     }
+}
+
+/// Una orden que para el reloj de inactividad: las rechazadas antes de reconocerla no lo reinician.
+fn a_valid_order(raw: &str, from_loopback: bool, duty: &ChannelDuty) -> bool {
+    let ChannelDuty::Serve(credential) = duty else {
+        return false;
+    };
+    from_loopback
+        && credential_matches(credential, request_credential(raw).as_deref())
+        && read_request(raw).is_ok()
 }
 
 const THE_EOF_MARK: &[u8] = b"@EOF";
@@ -203,7 +227,6 @@ async fn the_framed_request(stream: &mut (impl tokio::io::AsyncRead + Unpin)) ->
     }
 }
 
-#[expect(clippy::too_many_lines)]
 async fn respond(
     raw: &str,
     from_loopback: bool,
@@ -212,25 +235,20 @@ async fn respond(
     state: &Arc<Mutex<ServiceState>>,
 ) -> (Vec<u8>, Option<Acknowledged>) {
     if !from_loopback {
-        return (
-            http_response(&WireAnswer::refused(SafCode::ExternalRequestToSocket).on_the_wire()),
-            None,
-        );
+        return (refused(SafCode::ExternalRequestToSocket), None);
     }
 
     let credential = match duty {
         ChannelDuty::Refuse(answer) => return (http_response(&answer.on_the_wire()), None),
         ChannelDuty::Serve(credential) => credential,
     };
+    if !credential_matches(credential, request_credential(raw).as_deref()) {
+        return (the_invalid_session_response(), None);
+    }
 
     let request = match read_request(raw) {
         Ok(request) => request,
-        Err(NotOfTheFraming) => {
-            return (
-                http_response(&WireAnswer::refused(SafCode::UnsupportedOperation).on_the_wire()),
-                None,
-            )
-        }
+        Err(refused_order) => return (refused(refused_order.code()), None),
     };
 
     match request {
@@ -244,66 +262,36 @@ async fn respond(
             handle_operation(&message, duty, from_loopback, inbox, state).await
         }
         FramedRequest::Fragment {
-            part,
-            total,
-            chunk,
-            credential: candidate,
+            part, total, chunk, ..
         } => {
-            if !credential_matches(credential, candidate.as_deref()) {
-                return (the_invalid_session_response(), None);
-            }
-            let mut state = lock(state);
-            state.fragments.insert(part, chunk);
-            (
-                http_response(if part == total {
-                    ECHO_OK
-                } else {
-                    MORE_DATA_NEED
-                }),
-                None,
-            )
+            lock(state).fragments.insert(part, chunk);
+            let answer = if part == total {
+                ECHO_OK
+            } else {
+                MORE_DATA_NEED
+            };
+            (http_response(answer), None)
         }
-        FramedRequest::Firm {
-            credential: candidate,
-        } => {
-            if !credential_matches(credential, candidate.as_deref()) {
-                return (the_invalid_session_response(), None);
-            }
+        FramedRequest::Firm { .. } => {
             inbox.arrived();
             if let Some(response) = the_response_already_computed(state) {
                 return (response, None);
             }
             let combined = lock(state).fragments.combined();
             let Some(url) = combined.and_then(|message| AfirmaUrl::parse(&message).ok()) else {
-                return (
-                    http_response(
-                        &WireAnswer::refused(SafCode::UnsupportedOperation).on_the_wire(),
-                    ),
-                    None,
-                );
+                return (refused(SafCode::UnsupportedOperation), None);
             };
             launch_operation(url, inbox, state).await
         }
-        FramedRequest::Send {
-            part,
-            total,
-            credential: candidate,
-        } => {
-            if !credential_matches(credential, candidate.as_deref()) {
-                return (the_invalid_session_response(), None);
-            }
-            let state = lock(state);
-            if part < 1 || part > total || part > state.parts.len() {
-                return (
-                    http_response(
-                        &WireAnswer::refused(SafCode::UnsupportedOperation).on_the_wire(),
-                    ),
-                    None,
-                );
-            }
-            (http_response(&state.parts[part - 1]), None)
-        }
+        FramedRequest::Send { part, .. } => match lock(state).parts.get(part - 1) {
+            Some(computed) => (http_response(computed), None),
+            None => (refused(SafCode::SendingResult), None),
+        },
     }
+}
+
+fn refused(code: SafCode) -> Vec<u8> {
+    http_response(&WireAnswer::refused(code).on_the_wire())
 }
 
 /// El número de partes de una respuesta ya calculada, para que un reintento de `cmd=` o de
@@ -315,8 +303,7 @@ fn the_response_already_computed(state: &Arc<Mutex<ServiceState>>) -> Option<Vec
 
 fn the_invalid_session_response() -> Vec<u8> {
     http_response(
-        &WireAnswer::refused_because_of(SafCode::InvalidSessionId, Parameter::IdSession)
-            .on_the_wire(),
+        &WireAnswer::refused_because_of(SafCode::Params, Parameter::IdSession).on_the_wire(),
     )
 }
 
@@ -345,13 +332,15 @@ async fn handle_operation(
 
 /// Entrega la operación al trámite y espera su resultado, ya troceado en partes (`toSend`,
 /// `calculateNumberPartsResponse` en el original): la respuesta a `cmd=`/`firm=` es el número de
-/// partes, que `send=` reparte luego. El acuse acompaña esta respuesta porque es la única que
+/// partes, que `send=` reparte luego, salvo en un guardado, que contesta su confirmación sin
+/// trocear (líneas 290-305 y 333-346). El acuse acompaña esta respuesta porque es la única que
 /// nace de la entrega al trámite: las de `send=` solo reparten lo ya calculado.
 async fn launch_operation(
     url: AfirmaUrl,
     inbox: &Inbox,
     state: &Arc<Mutex<ServiceState>>,
 ) -> (Vec<u8>, Option<Acknowledged>) {
+    let answers_without_parts = url.verb() == SAVE;
     let (sender, receiver) = oneshot::channel();
     let (acknowledged, acknowledgement) = Acknowledgement::pair();
     inbox.deliver(
@@ -362,17 +351,26 @@ async fn launch_operation(
         }),
     );
     let Ok(result) = receiver.await else {
-        return (
-            http_response(&WireAnswer::refused(SafCode::UnsupportedOperation).on_the_wire()),
-            None,
-        );
+        return (refused(SafCode::UnsupportedOperation), None);
     };
+    if answers_without_parts {
+        return (the_save_confirmation(&result), Some(acknowledged));
+    }
     let mut state = lock(state);
     state.parts = split_response(&result);
     (
         http_response(&state.parts.len().to_string()),
         Some(acknowledged),
     )
+}
+
+/// `SAVE_OK` o `CANCEL` tal cual; cualquier otro desenlace del guardado, `SAF_11` (líneas 341-345).
+fn the_save_confirmation(result: &str) -> Vec<u8> {
+    if result == SAVE_OK || result == CANCELLED {
+        http_response(result)
+    } else {
+        refused(SafCode::SendingResult)
+    }
 }
 
 #[cfg(test)]

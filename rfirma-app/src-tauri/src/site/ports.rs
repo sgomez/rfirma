@@ -118,6 +118,7 @@ pub struct Inbox {
     operations: Arc<dyn Fn(AfirmaUrl, ReplyHandle) + Send + Sync>,
     already_arrived: Arc<std::sync::atomic::AtomicBool>,
     first_client_left: Arc<dyn Fn() + Send + Sync>,
+    channel_went_idle: Arc<dyn Fn() + Send + Sync>,
 }
 
 impl Inbox {
@@ -131,6 +132,7 @@ impl Inbox {
             operations: Arc::new(operations),
             already_arrived: Arc::new(std::sync::atomic::AtomicBool::new(false)),
             first_client_left: Arc::new(|| {}),
+            channel_went_idle: Arc::new(|| {}),
         }
     }
 
@@ -145,6 +147,19 @@ impl Inbox {
     /// Notifica que se ha ido el primer cliente del WebSocket.
     pub fn first_client_left(&self) {
         (self.first_client_left)();
+    }
+
+    /// El mismo buzón, avisando cuando el canal `service` venza sin órdenes.
+    pub fn when_the_channel_idles(self, idled: impl Fn() + Send + Sync + 'static) -> Self {
+        Self {
+            channel_went_idle: Arc::new(idled),
+            ..self
+        }
+    }
+
+    /// Notifica que el canal `service` ha vencido sin órdenes.
+    pub fn channel_went_idle(&self) {
+        (self.channel_went_idle)();
     }
 
     /// Crea un buzón que solo atiende operaciones (para pruebas y servidor intermedio).

@@ -1361,6 +1361,9 @@ msgstr ""
 msgid "sede.outcome.refusedTitle"
 msgstr ""
 
+msgid "sede.outcome.portsTakenTitle"
+msgstr ""
+
 msgid "sede.outcome.refusedNote"
 msgstr ""
 
@@ -1398,6 +1401,9 @@ msgid "sede.refusals.unsupportedKeyStore"
 msgstr ""
 
 msgid "sede.refusals.errandInFlight"
+msgstr ""
+
+msgid "sede.refusals.portsTaken"
 msgstr ""
 
 msgid "sede.refusals.unknown"

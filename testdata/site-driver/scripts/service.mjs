@@ -48,9 +48,13 @@ const THE_SERVICE_START_PATIENCE_MS = 30000;
 const AN_OPERATION_REFUSED_BY_ITS_FORMAT =
   "afirma://sign?op=sign&format=NoSuchFormat&algorithm=SHA256withRSA&dat=SG9sYQ";
 
-/** Otra que tampoco pide certificado y se rechaza por otro motivo: un fichero local en `dat`. */
-const AN_OPERATION_REFUSED_BY_ITS_LOCAL_FILE =
-  "afirma://sign?op=sign&format=NoSuchFormat&algorithm=SHA256withRSA&dat=file:/etc/hostname";
+/**
+ * Otra que tampoco pide certificado ni enseña diálogo, con otro código: la `expPolicy` que no sabe
+ * expandir da SAF_23 antes de elegir certificado (`ProtocolInvocationLauncherSign.java:486-495`).
+ */
+const AN_OPERATION_REFUSED_BY_ITS_POLICY =
+  "afirma://sign?op=sign&format=CAdES&algorithm=SHA256withRSA&dat=SG9sYQ" +
+  `&properties=${asServiceBase64("expPolicy=NoSuchPolicy")}`;
 
 /** El Base64 URL-safe con relleno con el que viaja una URL dentro de `cmd=` y de `fragment=`. */
 function asServiceBase64(text) {
@@ -276,7 +280,7 @@ async function theServiceProtocolScript() {
   const second = await theServiceOperation(
     order,
     idSession,
-    AN_OPERATION_REFUSED_BY_ITS_LOCAL_FILE,
+    AN_OPERATION_REFUSED_BY_ITS_POLICY,
   );
   emit(
     aMeasuredConditionEvent(

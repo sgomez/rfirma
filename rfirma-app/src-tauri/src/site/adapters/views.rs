@@ -461,6 +461,8 @@ crossing! {
         UnsupportedKeyStore,
         /// Ya existe otro trámite en curso.
         ErrandInFlight,
+        /// Otra aplicación ocupa todos los puertos que ofrece la sede.
+        PortsTaken,
         /// El servlet de prefirma del lote remoto no respondió.
         BatchPresignerUnreachable,
         /// El servlet de postfirma del lote remoto no respondió.
@@ -485,6 +487,7 @@ impl From<RefusalSituation> for RefusalSituationView {
             RefusalSituation::MissingFormat => Self::MissingFormat,
             RefusalSituation::UnsupportedKeyStore => Self::UnsupportedKeyStore,
             RefusalSituation::ErrandInFlight => Self::ErrandInFlight,
+            RefusalSituation::PortsTaken => Self::PortsTaken,
             RefusalSituation::Unknown => Self::Unknown,
         }
     }

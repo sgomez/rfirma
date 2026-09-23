@@ -82,8 +82,59 @@ fn a_command_without_credential_is_handed_over_unchanged() {
 }
 
 #[test]
-fn a_command_that_is_not_base64_is_not_of_the_framing() {
-    assert_eq!(read_request("cmd=not-base64!!!"), Err(NotOfTheFraming));
+fn a_command_that_is_not_base64_is_unworkable() {
+    assert_eq!(
+        read_request("cmd=not-base64!!!"),
+        Err(RefusedOrder::Unworkable)
+    );
+}
+
+#[test]
+fn a_command_that_is_not_an_afirma_operation_is_unworkable() {
+    assert_eq!(
+        read_request(&cmd_of("https://sede.example/tramite")),
+        Err(RefusedOrder::Unworkable)
+    );
+}
+
+#[test]
+fn a_command_that_nests_another_service_invocation_is_unworkable() {
+    for nested in [
+        "afirma://service?ports=54351&v=3",
+        "afirma://service/?ports=54351",
+    ] {
+        assert_eq!(read_request(&cmd_of(nested)), Err(RefusedOrder::Unworkable));
+    }
+}
+
+#[test]
+fn a_send_outside_the_announced_parts_is_unworkable() {
+    for raw in ["send=@3@1@EOF", "send=@0@1@EOF"] {
+        assert_eq!(read_request(raw), Err(RefusedOrder::Unworkable));
+    }
+}
+
+#[test]
+fn a_malformed_fragment_is_unworkable() {
+    assert_eq!(
+        read_request("fragment=@uno@2@x@EOF"),
+        Err(RefusedOrder::Unworkable)
+    );
+}
+
+#[test]
+fn an_unknown_order_is_answered_with_saf_03_and_an_unworkable_one_with_saf_11() {
+    assert_eq!(RefusedOrder::Unknown.code(), SafCode::Params);
+    assert_eq!(RefusedOrder::Unworkable.code(), SafCode::SendingResult);
+}
+
+#[test]
+fn the_credential_of_a_request_is_read_from_its_tail_whatever_the_order() {
+    assert_eq!(
+        request_credential("nada=idsession=OtraSesionAjena00000@EOF").as_deref(),
+        Some("OtraSesionAjena00000")
+    );
+    assert_eq!(request_credential("echo=-@EOF"), None);
 }
 
 #[test]
@@ -131,9 +182,9 @@ fn a_send_reads_the_requested_part_and_total() {
 }
 
 #[test]
-fn anything_without_one_of_the_five_commands_is_not_of_the_framing() {
-    assert_eq!(read_request("GET / HTTP/1.1"), Err(NotOfTheFraming));
-    assert_eq!(read_request(""), Err(NotOfTheFraming));
+fn anything_without_one_of_the_five_commands_is_an_unknown_order() {
+    assert_eq!(read_request("GET / HTTP/1.1"), Err(RefusedOrder::Unknown));
+    assert_eq!(read_request(""), Err(RefusedOrder::Unknown));
 }
 
 #[test]

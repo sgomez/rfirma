@@ -227,14 +227,13 @@ pub fn drawn_ports(url: &AfirmaUrl) -> Vec<u16> {
     parse_ports(url.parameter("ports")).unwrap_or_default()
 }
 
-/// Dónde contestaría un rechazo a esta URL, si se puede determinar sin conocer si la invocación
-/// entera vale: por los puertos que trajo, por el puerto fijo si declaró la versión 3, o por el
-/// servidor intermedio si ya trae `stservlet` e `id`.
+/// Dónde contestaría un rechazo a esta URL; en ninguno si es un `service` de versión ajena.
 pub fn location_for_a_refusal(url: &AfirmaUrl) -> Option<ChannelLocation> {
     let ports = drawn_ports(url);
 
     if url.verb() == SERVICE_VERB {
-        return (!ports.is_empty()).then(|| ChannelLocation::Service(ports));
+        let speaks_the_version = is_a_service_version(declared_version(url.parameter("v")));
+        return (speaks_the_version && !ports.is_empty()).then(|| ChannelLocation::Service(ports));
     }
 
     if let Some(location) = relay_location_for_a_refusal(url) {
@@ -403,7 +402,7 @@ fn check_protocol_version(declared: Option<&str>) -> Result<i64, Refusal> {
 fn check_service_version(declared: Option<&str>) -> Result<i64, Refusal> {
     let version = declared_version(declared);
 
-    if (1..=THIRD_PROTOCOL_VERSION).contains(&version) {
+    if is_a_service_version(version) {
         return Ok(version);
     }
 
@@ -415,6 +414,10 @@ fn check_service_version(declared: Option<&str>) -> Result<i64, Refusal> {
         ),
     )
     .because(RefusalSituation::UnsupportedProtocolVersion))
+}
+
+fn is_a_service_version(version: i64) -> bool {
+    (1..=THIRD_PROTOCOL_VERSION).contains(&version)
 }
 
 fn parse_ports(declared: Option<&str>) -> Result<Vec<u16>, Refusal> {
