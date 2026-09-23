@@ -338,34 +338,19 @@ fn run_site(paths: desktop::adapters::paths::Paths, url: String, said_by_the_rol
             say(said_by_the_role);
 
             let handle = app.handle().clone();
-            let site = app.state::<SiteRoot>();
-            let transport = the_transport(&site.ca_store, &handle);
             let window = Arc::new(site::adapters::window::TauriSiteWindow::new(handle.clone()));
             site::adapters::trace::note_the_launch(&url);
 
-            let startup = site::application::startup::attend_startup(
-                Some(&url),
-                site::application::startup::TrustAtStartup {
-                    store: site.trust.store.as_ref(),
-                    profiles: &site.trust.profiles,
-                    stores: site.trust.stores.as_ref(),
-                },
-                &site.codecs,
-                &transport,
-                window,
-                &site.errand,
-            );
-
-            say(startup.said);
-
-            let site::application::startup::Opening::TheSiteErrand(attendance) = startup.opening
-            else {
-                unreachable!("una URL de sede siempre atiende el trámite")
+            let launch = {
+                let (handle, window, url) = (handle.clone(), Arc::clone(&window), url.clone());
+                move || attend_the_site_launch(&handle, &url, window)
             };
-            say(site::application::startup::hold_the_channel(
-                &site.held_channel,
-                attendance,
-            ));
+            site::application::startup::warn_before_launching(
+                &url,
+                window,
+                &app.state::<SiteRoot>().errand,
+                Box::new(launch),
+            );
 
             Ok(())
         })
@@ -377,6 +362,40 @@ fn run_site(paths: desktop::adapters::paths::Paths, url: String, said_by_the_rol
             ))
         })
         .run(erase_the_scratch_folder_on_exit);
+}
+
+/// Atiende la invocación de sede y sostiene su canal.
+fn attend_the_site_launch(
+    handle: &tauri::AppHandle,
+    url: &str,
+    window: Arc<site::adapters::window::TauriSiteWindow>,
+) {
+    use tauri::Manager;
+
+    let site = handle.state::<SiteRoot>();
+    let transport = the_transport(&site.ca_store, handle);
+    let startup = site::application::startup::attend_startup(
+        Some(url),
+        site::application::startup::TrustAtStartup {
+            store: site.trust.store.as_ref(),
+            profiles: &site.trust.profiles,
+            stores: site.trust.stores.as_ref(),
+        },
+        &site.codecs,
+        &transport,
+        window,
+        &site.errand,
+    );
+
+    say(startup.said);
+
+    let site::application::startup::Opening::TheSiteErrand(attendance) = startup.opening else {
+        unreachable!("una URL de sede siempre atiende el trámite")
+    };
+    say(site::application::startup::hold_the_channel(
+        &site.held_channel,
+        attendance,
+    ));
 }
 
 /// Abre la ventana principal de la aplicación.

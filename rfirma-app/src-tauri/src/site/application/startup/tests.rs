@@ -84,6 +84,7 @@ impl SiteWindow for World {
             SiteWindowContent::ADeadEnd(DeadEnd::RefusedWithoutChannel(refusal)) => {
                 format!("ventana:rechazo:{}", refusal.code())
             }
+            SiteWindowContent::TheOldWebClientWarning => "ventana:aviso".to_owned(),
         });
     }
 
@@ -706,55 +707,65 @@ fn a_service_launch_creates_the_window_hidden_and_does_not_show_it() {
     );
 }
 
-fn launched_by_an_old_web_client(world: &Arc<World>, live: &LiveErrand, launch: &str) {
-    let attendance = attend_site_launch(
+fn launching_through_the_warning(world: &Arc<World>, live: &Arc<LiveErrand>, launch: &str) {
+    let (world_of_the_launch, live_of_the_launch, url) =
+        (Arc::clone(world), Arc::clone(live), launch.to_owned());
+    warn_before_launching(
         launch,
-        &a_codec_table(),
-        &|location, duty| world.transport(location, duty),
         Arc::clone(world) as Arc<dyn SiteWindow>,
         live,
-        LocalCaReach::NotAnObstacle,
+        Box::new(move || {
+            attend_site_launch(
+                &url,
+                &a_codec_table(),
+                &|location, duty| world_of_the_launch.transport(location, duty),
+                Arc::clone(&world_of_the_launch) as Arc<dyn SiteWindow>,
+                &live_of_the_launch,
+                LocalCaReach::NotAnObstacle,
+            );
+        }),
     );
-    assert!(matches!(attendance, Attendance::Serving { .. }));
 }
 
 #[test]
-fn a_launch_from_an_old_web_client_warns_with_the_channel_already_open() {
+fn an_old_web_client_warns_before_the_channel_listens() {
     let world = Arc::new(World::default());
-    let live = LiveErrand::default();
+    let live = Arc::new(LiveErrand::default());
 
-    launched_by_an_old_web_client(
+    launching_through_the_warning(
         &world,
         &live,
         &a_launch(&format!("v=4&jvc=0&idsession={CREDENTIAL}")),
     );
 
-    assert_eq!(
-        world.steps(),
-        ["canal", "ventana:creada:Awaited", "ventana:enseñada"]
-    );
+    assert_eq!(world.steps(), ["ventana:aviso", "ventana:enseñada"]);
     assert_eq!(live.moment(), Some(Moment::OldWebClient));
+    assert!(live.current().is_none());
 }
 
 #[test]
-fn dismissing_the_warning_before_the_browser_arrives_hides_the_window_and_the_errand_goes_on() {
+fn dismissing_the_warning_opens_the_channel_once_and_the_errand_waits_hidden() {
     let world = Arc::new(World::default());
-    let live = LiveErrand::default();
-    launched_by_an_old_web_client(
+    let live = Arc::new(LiveErrand::default());
+    launching_through_the_warning(
         &world,
         &live,
         &a_launch(&format!("v=4&jvc=0&idsession={CREDENTIAL}")),
     );
 
-    crate::site::application::errand::dismiss_the_warning(&live);
+    assert!(crate::site::application::errand::dismiss_the_warning(&live));
+    assert!(!crate::site::application::errand::dismiss_the_warning(
+        &live
+    ));
 
     assert_eq!(
         world.steps(),
         [
-            "canal",
-            "ventana:creada:Awaited",
+            "ventana:aviso",
             "ventana:enseñada",
-            "ventana:oculta"
+            "ventana:oculta",
+            "canal",
+            "ventana:creada:Awaited"
         ]
     );
     assert_eq!(live.moment(), Some(Moment::Waiting));
@@ -762,10 +773,10 @@ fn dismissing_the_warning_before_the_browser_arrives_hides_the_window_and_the_er
 }
 
 #[test]
-fn closing_the_window_over_the_warning_only_dismisses_it() {
+fn closing_the_window_over_the_warning_opens_the_channel_too() {
     let world = Arc::new(World::default());
-    let live = LiveErrand::default();
-    launched_by_an_old_web_client(
+    let live = Arc::new(LiveErrand::default());
+    launching_through_the_warning(
         &world,
         &live,
         &a_launch(&format!("v=4&jvc=0&idsession={CREDENTIAL}")),
@@ -777,29 +788,57 @@ fn closing_the_window_over_the_warning_only_dismisses_it() {
         after,
         crate::site::application::errand::WindowAfterClosing::StaysHidden
     );
-    assert_eq!(live.moment(), Some(Moment::Waiting));
+    assert!(world.steps().contains(&"canal".to_owned()));
     assert!(live.current().is_some(), "el aviso no detiene la operación");
 }
 
 #[test]
-fn dismissing_the_warning_of_a_service_errand_whose_browser_arrived_leaves_the_window_up() {
+fn an_old_web_client_warns_before_a_relay_operation_too() {
     let world = Arc::new(World::default());
-    let live = LiveErrand::default();
-    launched_by_an_old_web_client(
+    let live = Arc::new(LiveErrand::default());
+    launching_through_the_warning(
         &world,
         &live,
-        &format!("afirma://service?ports=51001,51002,51003&v=1&jvc=0&idsession={CREDENTIAL}"),
+        "afirma://open?jvc=0&id=123456&stservlet=https://example.com/store&dat=dGVzdA==",
     );
-    live.browser_arrived();
+    assert_eq!(world.steps(), ["ventana:aviso", "ventana:enseñada"]);
 
     crate::site::application::errand::dismiss_the_warning(&live);
 
-    assert!(
-        !world.steps().contains(&"ventana:oculta".to_owned()),
-        "la siguiente operación de service no vuelve a enseñarla: {:?}",
-        world.steps()
+    assert_eq!(
+        world.steps(),
+        [
+            "ventana:aviso",
+            "ventana:enseñada",
+            "ventana:oculta",
+            "canal",
+            "ventana:creada:Immediate",
+            "ventana:enseñada"
+        ]
     );
-    assert_eq!(live.moment(), Some(Moment::Waiting));
+}
+
+#[test]
+fn without_a_javascript_version_code_below_one_the_channel_opens_at_once() {
+    for jvc in ["&jvc=1", "&jvc=3", "", "&jvc=noesunnumero"] {
+        let world = Arc::new(World::default());
+        let live = Arc::new(LiveErrand::default());
+
+        launching_through_the_warning(
+            &world,
+            &live,
+            &a_launch(&format!("v=4{jvc}&idsession={CREDENTIAL}")),
+        );
+
+        assert_eq!(
+            world.steps(),
+            ["canal", "ventana:creada:Awaited"],
+            "con {jvc:?}"
+        );
+        assert!(!crate::site::application::errand::dismiss_the_warning(
+            &live
+        ));
+    }
 }
 
 #[test]

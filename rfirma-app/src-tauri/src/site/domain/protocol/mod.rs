@@ -39,11 +39,6 @@
 //!   comprueba el `algorithm` de `<signbatch>` ni del JSON de lote y lo
 //!   pasa tal cual a la JCA; aquí un nombre no reconocido sale de
 //!   inmediato con `SAF_03` nombrando `algorithm` antes de pedir credenciales.
-//! - **El aviso de `jvc` menor que 1 no detiene el canal**. El original lo
-//!   enseña en un diálogo modal antes de abrirlo
-//!   (`ProtocolInvocationLauncher.java:196-214`); aquí el canal se abre a la
-//!   vez y el aviso se queda en la ventana hasta descartarlo o hasta que llegue
-//!   una operación.
 
 pub mod algorithm;
 pub mod cipher;

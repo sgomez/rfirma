@@ -1,6 +1,6 @@
 //! Estado del trámite con la sede y gestión de su ciclo de vida (ADR-0016).
 
-use crate::site::application::startup::SiteWindow;
+use crate::site::application::startup::{HeldLaunch, SiteWindow};
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 use std::sync::{Arc, Condvar, Mutex};
@@ -64,6 +64,7 @@ pub struct LiveErrand {
     delivered: Mutex<Option<Acknowledgement>>,
     stuck: Mutex<Option<CertificateRef>>,
     arrived: std::sync::atomic::AtomicBool,
+    held_launch: Mutex<Option<HeldLaunch>>,
 }
 
 /// Datos identificativos y de conexión de un trámite en curso.
@@ -333,15 +334,18 @@ impl LiveErrand {
         }
     }
 
-    /// Vuelve a la espera tras el aviso, y oculta la ventana salvo que ya nada vaya a enseñarla otra vez.
-    pub(super) fn put_away_the_warning(&self) {
-        self.note(Moment::Waiting);
-        if self.is_revealed() && !self.keeps_serving() {
-            return;
-        }
-        if let Some(window) = self.the_window() {
-            window.hide();
-        }
+    /// Retiene el arranque hasta que la persona descarte el aviso que lo precede.
+    pub fn hold_back(&self, launch: HeldLaunch) {
+        *crate::lock(&self.held_launch) = Some(launch);
+    }
+
+    /// Si hay un arranque retenido tras un aviso.
+    pub fn holds_back_a_launch(&self) -> bool {
+        crate::lock(&self.held_launch).is_some()
+    }
+
+    pub(super) fn take_the_held_launch(&self) -> Option<HeldLaunch> {
+        crate::lock(&self.held_launch).take()
     }
 
     /// Oculta la ventana de una operación contestada sin nada que enseñar.

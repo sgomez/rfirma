@@ -87,11 +87,18 @@ pub fn site_install_certificate(
     install_certificate(app_handle, identity, password)
 }
 
-/// Descarta el aviso del cliente web antiguo sin tocar el canal.
+/// Descarta el aviso del cliente web antiguo y sigue con el arranque que retenía.
 #[tauri::command(async)]
-pub fn site_dismiss_the_warning(app_handle: tauri::AppHandle, site: State<'_, SiteRoot>) {
-    crate::site::application::errand::dismiss_the_warning(&site.errand);
-    site_window::publish_the_moment(&app_handle);
+pub fn site_dismiss_the_warning(app_handle: tauri::AppHandle) {
+    use tauri::Manager as _;
+
+    // El canal se abre con `block_on`, que no cabe en un hilo del runtime asíncrono.
+    std::thread::spawn(move || {
+        crate::site::application::errand::dismiss_the_warning(
+            &app_handle.state::<SiteRoot>().errand,
+        );
+        site_window::publish_the_moment(&app_handle);
+    });
 }
 
 /// Vuelve a consultar los certificados disponibles en el trámite de sede.

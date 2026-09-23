@@ -144,11 +144,10 @@ mínimo del original—, la ventana se enseña al arrancar con un aviso: título
 rFirma es antigua y puede tener errores o no ser segura, que se puede seguir y a
 quién avisar si algo falla, y un único botón, `Entendido`, en `--primary`.
 
-**El aviso no detiene nada.** El original lo enseña en un diálogo modal antes de
-abrir el canal; aquí el canal ya está abierto mientras se lee, y la primera
-operación que llegue sustituye el aviso por su momento. `Entendido` y la cruz
-hacen lo mismo: descartan el aviso y la ventana vuelve a la espera, oculta
-como siempre, sin abandonar el trámite.
+**El aviso retiene el arranque, no lo detiene.** Como el diálogo modal del
+original, sale antes de abrir el canal: mientras se lee, la sede no encuentra
+a nadie escuchando. `Entendido` y la cruz hacen lo mismo: descartan el aviso y
+el trámite arranca como uno normal, con su espera.
 
 
 El corazón del ticket: la pantalla que hoy no existe.

@@ -62,6 +62,11 @@ un límite del proceso, no de la sede.
   termina nada, y sus operaciones se atienden igual. Sin temporizador de
   inactividad ni latido. Si el navegador no llega nunca, la espera de treinta
   segundos enseña la ventana como siempre, y cerrarla termina el proceso.
+- **Un `jvc` menor que 1 retiene el arranque tras un aviso**, como el diálogo
+  modal del original: la ventana lo enseña antes de abrir el canal o de ir al
+  servidor intermedio, y descartarlo, con `Entendido` o con la X, arranca el
+  trámite como si no hubiera habido aviso. Las esperas de arranque cuentan
+  desde ahí.
 - **Una operación a la vez por canal.** Por una misma conexión llegan en
   serie: lo que el cliente mande mientras una está en vuelo se atiende al
   acabar ella. Una operación que llega por otra conexión con una en vuelo se
@@ -75,7 +80,8 @@ un límite del proceso, no de la sede.
   el cierre hasta el acuse de entrega con un tope de un segundo, y sale.
   Con el rechazo de la petición en pantalla, manda ese rechazo en vez de
   `CANCEL`. Con otro desenlace o en un callejón sin salida, sale sin más. Con
-  WebSocket y el primer cliente conectado, en vez de salir la oculta.
+  WebSocket y el primer cliente conectado, en vez de salir la oculta. Sobre
+  el aviso de `jvc`, solo lo descarta.
 - **La biblioteca nativa se abre en el primer trabajo**, no al arrancar: un
   rechazo de protocolo solo paga el hilo del aislado, que nace ocioso.
 - **Carpeta de paso propia por proceso, en los dos roles**, nombrada por rol
@@ -121,6 +127,9 @@ un límite del proceso, no de la sede.
   lote).** Descartado: el canal no tiene temporizador propio, y una conexión
   callada tiene que sobrevivir a esos plazos; cerrar la pestaña o el navegador
   ya llega como cierre del socket.
+- **Un aviso de `jvc` que no retiene el canal.** Descartado: con el canal ya
+  abierto, la sede opera en el acto y su primera operación sustituye el aviso
+  antes de que nadie lo lea.
 - **Poner en cola la operación que llega por otra conexión.** Descartado: el
   original no lo describe, y un rechazo inmediato con el código de trámite
   vivo no deja a nadie esperando detrás de un diálogo que no ve.

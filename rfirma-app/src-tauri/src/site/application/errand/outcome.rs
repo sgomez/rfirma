@@ -401,7 +401,7 @@ pub enum Moment {
     ShowingTheRefusal(Refusal),
     /// Canal abierto pero el navegador nunca envió el mensaje inicial tras expirar el tiempo de espera.
     Unreachable,
-    /// Aviso de que la página usa un cliente web anterior al mínimo, que no detiene el canal.
+    /// Aviso de que la página usa un cliente web anterior al mínimo; el canal se abre al descartarlo.
     OldWebClient,
 }
 

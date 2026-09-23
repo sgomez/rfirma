@@ -412,7 +412,7 @@ crossing! {
         },
         /// Canal abierto pero el navegador nunca conectó o envió mensaje inicial.
         Unreachable,
-        /// La página usa un cliente web anterior al mínimo; el canal sigue abierto.
+        /// La página usa un cliente web anterior al mínimo; el canal se abre al descartarlo.
         OldWebClient,
     }
 }

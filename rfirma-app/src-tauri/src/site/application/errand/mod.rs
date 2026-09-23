@@ -428,12 +428,13 @@ pub fn decline(live: &LiveErrand) -> SiteOutcome {
 /// Tope de espera al acuse de entrega antes de cerrar la ventana de sede por el gestor de ventanas.
 pub const WINDOW_CLOSE_ACKNOWLEDGEMENT_TIMEOUT: Duration = Duration::from_secs(1);
 
-/// La persona descarta el aviso del cliente web antiguo, y la ventana vuelve a esperar; `true` si lo había.
+/// La persona descarta el aviso del cliente web antiguo, y el arranque que retenía sigue; `true` si lo había.
 pub fn dismiss_the_warning(live: &LiveErrand) -> bool {
-    if live.moment() != Some(Moment::OldWebClient) {
+    let Some(launch) = live.take_the_held_launch() else {
         return false;
-    }
-    live.put_away_the_warning();
+    };
+    live.note(Moment::Waiting);
+    launch();
     true
 }
 
@@ -452,11 +453,11 @@ pub fn answer_before_closing(live: &LiveErrand) -> WindowAfterClosing {
 }
 
 fn answer_before_closing_within(live: &LiveErrand, timeout: Duration) -> WindowAfterClosing {
-    if live.current().is_none() {
-        return WindowAfterClosing::Closes;
-    }
     if dismiss_the_warning(live) {
         return WindowAfterClosing::StaysHidden;
+    }
+    if live.current().is_none() {
+        return WindowAfterClosing::Closes;
     }
     let outcome = live
         .the_shown_refusal()

@@ -182,7 +182,7 @@ export interface SiteCommands {
   installLocalCa(): Promise<void>;
   /** `close_site_window`. */
   closeWindow(): Promise<void>;
-  /** `site_dismiss_the_warning`: el canal no se toca. */
+  /** `site_dismiss_the_warning`: al descartarlo se abre el canal que retenía. */
   dismissWarning(): Promise<void>;
   /** Lo que el PDF dice de sí mismo, o `null` si no se ha podido leer. */
   describeDocument(id: string): Promise<DescribedDocument | null>;

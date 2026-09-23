@@ -28,6 +28,9 @@ const ERRAND_ENDED_ACKNOWLEDGEMENT_TIMEOUT: std::time::Duration = std::time::Dur
 pub fn open_the_site_window(app: &tauri::AppHandle) {
     use tauri::{WebviewUrl, WebviewWindowBuilder};
 
+    if app.get_webview_window(SITE_WINDOW).is_some() {
+        return;
+    }
     let built = WebviewWindowBuilder::new(app, SITE_WINDOW, WebviewUrl::App("sede.html".into()))
         .title("rFirma")
         .inner_size(520.0, 420.0)
@@ -52,7 +55,8 @@ fn handle_close_requested(app: &tauri::AppHandle, event: &tauri::WindowEvent) {
     let tauri::WindowEvent::CloseRequested { api, .. } = event else {
         return;
     };
-    if app.state::<SiteRoot>().errand.current().is_none() {
+    let live = &app.state::<SiteRoot>().errand;
+    if live.current().is_none() && !live.holds_back_a_launch() {
         return;
     }
     api.prevent_close();

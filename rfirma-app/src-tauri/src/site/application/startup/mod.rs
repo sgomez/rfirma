@@ -63,6 +63,8 @@ pub enum SiteWindowContent<'a> {
     TheErrand(&'a Errand),
     /// Trámite bloqueado por una condición irrecuperable.
     ADeadEnd(DeadEnd),
+    /// Aviso de un cliente web antiguo, que retiene el arranque hasta descartarlo.
+    TheOldWebClientWarning,
 }
 
 /// Situaciones de bloqueo que impiden continuar el trámite con la sede.
@@ -211,10 +213,6 @@ pub fn attend_site_launch_with_threshold(
                     match errand.arrival() {
                         ArrivalMode::Awaited => {
                             live.arm_backing_timeout(Arc::clone(&window), threshold);
-                            if comes_from_an_old_web_client(url) {
-                                live.note(Moment::OldWebClient);
-                                window.show();
-                            }
                         }
                         ArrivalMode::Immediate => window.show(),
                     }
@@ -271,6 +269,27 @@ pub fn attend_site_launch_with_threshold(
     attendance
 }
 
+/// Un arranque aplazado hasta que la persona descarta el aviso que lo precede.
+pub type HeldLaunch = Box<dyn FnOnce() + Send>;
+
+/// Enseña el aviso de un cliente web antiguo y retiene el arranque hasta descartarlo; sin aviso, arranca en el acto.
+pub fn warn_before_launching(
+    url: &str,
+    window: Arc<dyn SiteWindow>,
+    live: &LiveErrand,
+    launch: HeldLaunch,
+) {
+    if !comes_from_an_old_web_client(url) {
+        return launch();
+    }
+    open(live, &*window, SiteWindowContent::TheOldWebClientWarning);
+    window.show();
+    live.hold_back(Box::new(move || {
+        window.hide();
+        launch();
+    }));
+}
+
 fn comes_from_an_old_web_client(url: &str) -> bool {
     AfirmaUrl::parse(url).is_ok_and(|url| warns_of_an_old_web_client(&url))
 }
@@ -307,6 +326,7 @@ impl SiteWindowContent<'_> {
             Self::ADeadEnd(DeadEnd::RefusedWithoutChannel(refusal)) => {
                 Moment::RefusedWithoutChannel(refusal.clone())
             }
+            Self::TheOldWebClientWarning => Moment::OldWebClient,
         }
     }
 }
