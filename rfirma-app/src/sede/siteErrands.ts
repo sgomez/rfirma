@@ -1,18 +1,23 @@
-import type { Catalog } from "../i18n/catalog";
 import type { Certificate } from "../signing/certificate";
 import type { StageResult } from "../signing/flow";
 import type { StoreSecret } from "../signing/secret";
+import {
+  documentInPlay,
+  documentOf,
+  errandOf,
+  refusedBy,
+  refusedByTheBatch,
+} from "./errandConversion";
+import type { Errand, ErrandStage, SiteDocument, SiteErrandPort, SiteOutcome } from "./errand";
 import type {
-  Errand,
-  ErrandStage,
-  LocalBatchItem,
-  RefusalSituation,
-  SignatureRound,
-  SigningKind,
-  SiteDocument,
-  SiteErrandPort,
-  SiteOutcome,
-} from "./errand";
+  DescribedDocument,
+  PortalResult,
+  SecretResult,
+  SiteErrandView,
+  SiteStageView,
+} from "./siteErrandView";
+
+export type { DescribedDocument, SiteErrandView } from "./siteErrandView";
 
 /**
  * **El `SiteErrandPort` de verdad**, el que sustituye a `noErrand()` (ID-335,
@@ -21,8 +26,9 @@ import type {
  * No conoce a Tauri, y por eso está aquí y no en `tauri.ts`: recibe las órdenes
  * del backend ya envueltas en [`SiteCommands`] —una función por orden— y lo que
  * pone de su parte es la única cosa que hay que pensar, que es **la conversión
- * de lo que llega a lo que la ventana espera** (TD-78). El fichero que sabe que
- * debajo hay Tauri sigue siendo uno solo, y allí cada método es una línea.
+ * de lo que llega a lo que la ventana espera** (TD-78), delegada en
+ * `errandConversion.ts`. El fichero que sabe que debajo hay Tauri sigue siendo
+ * uno solo, y allí cada método es una línea.
  *
  * # Los momentos no vienen todos del backend
  *
@@ -34,98 +40,6 @@ import type {
  * backend no tiene nada que publicar entremedias, y sondearle por ello sería
  * inventar un ir y venir que no existe.
  */
-
-/**
- * **El trámite tal como lo emite el backend**: `commands::SiteErrandView`,
- * campo a campo.
- *
- * Detrás no hay ninguna ruta (ADR-0011): el documento que manda la sede viaja
- * por su **asa opaca** y el origen viaja **a secas**, sólo para atribuir
- * (ID-271, ID-339).
- */
-export interface SiteErrandView {
-  origin: string | null;
-  stage: SiteStageView;
-}
-
-/** El momento de la secuencia, tal como lo emite el backend. */
-type SiteStageView =
-  | { kind: "waiting" }
-  | { kind: "askingForConsent"; certificates: readonly Certificate[] }
-  | {
-      kind: "askingToSign";
-      /** El asa opaca con la que se lee el documento, nunca su ruta (ID-286). */
-      document: string;
-      /** Qué es lo que se pide firmar, según el formato de la petición (#530). */
-      signing: SigningKind;
-      round: SignatureRound;
-      certificates: readonly Certificate[];
-      unregisteredSignatures: boolean;
-      /** El asa que `headless` ya resolvió: la única fila que pasó el filtro. */
-      alreadyChosen: string | null;
-    }
-  | {
-      kind: "askingToConfirm";
-      /** El mensaje con el que pregunta el original, por su código. */
-      messageCode: string;
-    }
-  | {
-      kind: "askingToSignTheBatch";
-      /** Cuántas firmas lleva el lote. */
-      signs: number;
-      certificates: readonly Certificate[];
-      /** El asa que `sticky` preselecciona: la fijada en la sesión de sede, la que el desplegable elige sola. */
-      alreadyChosen: string | null;
-    }
-  | {
-      kind: "askingToSignTheLocalBatch";
-      /** Los elementos del lote, en el orden en que la sede los declaró. */
-      items: readonly LocalBatchItem[];
-      certificates: readonly Certificate[];
-      /** El asa que `sticky` preselecciona: la fijada en la sesión de sede, la que el desplegable elige sola. */
-      alreadyChosen: string | null;
-    }
-  | { kind: "saving"; filename: string | null }
-  | { kind: "loading"; multiple: boolean }
-  | { kind: "noChannel"; reason: "channelNotOpened" | "localCaMissing" }
-  | { kind: "outcome"; outcome: { kind: "refused"; situation: string; detail: string } }
-  | { kind: "noCertificate"; reason: "none" | "excluded"; owned: number }
-  | { kind: "unreachable" }
-  | { kind: "oldWebClient" };
-
-/**
- * Lo que el PDF de la sede dice de sí mismo, leído por su asa.
- *
- * Es lo único que se puede enseñar del documento: la petición **no trae
- * nombre** (ID-270) y de la ruta del fichero de paso no llega nada. Sale de
- * abrir los bytes que devuelve `read_document`, así que `null` es que no se han
- * podido leer, y entonces no hay tarjeta que pintar.
- */
-export interface DescribedDocument {
-  title: string | null;
-  pages: number;
-  sizeBytes: number;
-}
-
-/**
- * Cómo acaba una orden del portal: `TokenFailure` clasifica situaciones de
- * PKCS#11 y no le sirve al diálogo del portal, que rechaza con las suyas
- * propias (`saveCancelled`, `cannotLoadData`…), así que aquí el rechazo va sin
- * clasificar y `refusalOf` lo traduce al mismo catálogo que el resto.
- */
-type PortalResult<T> =
-  | { ok: true; value: T }
-  | { ok: false; failure: { situation: string; detail: string } };
-
-/** El rechazo de una orden tal como cruza: la situación sin clasificar y el detalle crudo. */
-interface UnclassifiedFailure {
-  situation: string;
-  detail: string;
-  attemptsLeft: number | null;
-}
-
-/** Cómo acaba la orden del secreto, que en el lote firma y entrega de una vez. */
-type SecretResult<T> = { ok: true; value: T } | { ok: false; failure: UnclassifiedFailure };
 
 /**
  * **Las órdenes del trámite, una función por orden.**
@@ -186,185 +100,6 @@ export interface SiteCommands {
   dismissWarning(): Promise<void>;
   /** Lo que el PDF dice de sí mismo, o `null` si no se ha podido leer. */
   describeDocument(id: string): Promise<DescribedDocument | null>;
-}
-
-/**
- * Las situaciones de rechazo que el catálogo sabe redactar.
- *
- * Un `Record` y no una lista: si `sede.refusals` gana una clave, `tsc` exige
- * que entre también aquí, y ninguna situación nueva acaba cayendo en `unknown`
- * sin que nadie se entere.
- */
-const REFUSALS: Record<keyof Catalog["sede"]["refusals"], true> = {
-  appendedSignaturePage: true,
-  unsupportedFilter: true,
-  unsupportedProtocolVersion: true,
-  missingFormat: true,
-  unsupportedKeyStore: true,
-  errandInFlight: true,
-  saveCancelled: true,
-  loadCancelled: true,
-  cannotSaveData: true,
-  cannotLoadData: true,
-  batchPresignerUnreachable: true,
-  batchPostsignerUnreachable: true,
-  batchInvalidPresignResponse: true,
-  batchInvalidPostsignResponse: true,
-  batchSigningFailed: true,
-  unknown: true,
-};
-
-/** Cómo nombra el lote sus fallos, que vuelven por la orden y sin el prefijo con el que cruzarían. */
-const BATCH_LABELS: Record<string, RefusalSituation> = {
-  presignerUnreachable: "batchPresignerUnreachable",
-  postsignerUnreachable: "batchPostsignerUnreachable",
-  invalidPresignResponse: "batchInvalidPresignResponse",
-  invalidPostsignResponse: "batchInvalidPostsignResponse",
-};
-
-/** La situación tal como la sabe nombrar el catálogo, o `unknown`. */
-function refusalOf(situation: string): RefusalSituation {
-  const batch = BATCH_LABELS[situation];
-  if (batch !== undefined) return batch;
-  return situation in REFUSALS ? (situation as RefusalSituation) : "unknown";
-}
-
-/** Un fallo de una etapa, contado como el desenlace que la ventana enseña. */
-function refusedBy(failure: { situation: string; detail: string }): SiteOutcome {
-  return { kind: "refused", situation: refusalOf(failure.situation), detail: failure.detail };
-}
-
-/**
- * Lo mismo, sabiendo que lo que falló era un lote: sus fallos de firma llegan
- * con la situación del token (`incorrectPin`, `tokenAbsent`…), que aquí no
- * nombra nada, y el lote los llama «lote fallido».
- */
-function refusedByTheBatch(failure: { situation: string; detail: string }): SiteOutcome {
-  const named = refusalOf(failure.situation);
-  return {
-    kind: "refused",
-    situation: named === "unknown" ? "batchSigningFailed" : named,
-    detail: failure.detail,
-  };
-}
-
-/**
- * **El momento del backend, en el vocabulario de la ventana** (TD-78).
- *
- * La operación no viaja en el evento porque está en el momento: la sede que
- * sólo pide identidad manda `askingForConsent`, y la que manda un documento
- * manda `askingToSign`. En la espera todavía no se sabe cuál de las dos es, y
- * ahí `operation` no la mira nadie —`consentActionKey` sólo se consulta al
- * consentir—.
- *
- * `document` llega aparte porque leerlo por su asa es una ida y vuelta al
- * backend, y esta función es pura.
- */
-export function errandOf(view: SiteErrandView, document: SiteDocument | null = null): Errand {
-  const stage = view.stage;
-  const operation = stage.kind === "askingForConsent" ? "selectcert" : "sign";
-  return { origin: view.origin, operation, stage: stageOf(stage, document) };
-}
-
-function stageOf(stage: SiteStageView, document: SiteDocument | null): ErrandStage {
-  switch (stage.kind) {
-    case "waiting":
-      return { kind: "waiting" };
-    case "unreachable":
-      return { kind: "unreachable" };
-    case "oldWebClient":
-      return { kind: "oldWebClient" };
-    case "noChannel":
-      return { kind: "noChannel", reason: stage.reason };
-    case "noCertificate":
-      return { kind: "noCertificate", reason: stage.reason, owned: stage.owned };
-    case "saving":
-      return { kind: "saving", filename: stage.filename };
-    case "loading":
-      return { kind: "loading", multiple: stage.multiple };
-    case "outcome":
-      return {
-        kind: "outcome",
-        outcome: {
-          kind: "refused",
-          situation: refusalOf(stage.outcome.situation),
-          detail: stage.outcome.detail,
-        },
-      };
-    case "askingForConsent":
-      // Sin documento porque no lo hay: `selectcert` no manda ninguno. Y
-      // `narrowed` es `false` porque el backend no dice si la sede acotó la
-      // lista: lo que cruza son las filas ya cribadas y nunca el criterio
-      // (ID-277).
-      return {
-        kind: "consent",
-        document: null,
-        signs: null,
-        signing: null,
-        items: null,
-        certificates: stage.certificates,
-        narrowed: false,
-      };
-    case "askingToSign":
-      return {
-        kind: "consent",
-        document,
-        signs: null,
-        signing: stage.signing,
-        items: null,
-        certificates: stage.certificates,
-        narrowed: false,
-      };
-    case "askingToConfirm":
-      return { kind: "confirming", messageCode: stage.messageCode };
-    case "askingToSignTheBatch":
-      // Sin documento porque el lote no manda ninguno: sus ficheros se quedan
-      // en la sede y lo que se consiente es cuántas firmas van a salir.
-      return {
-        kind: "consent",
-        document: null,
-        signs: stage.signs,
-        signing: null,
-        items: null,
-        certificates: stage.certificates,
-        narrowed: false,
-      };
-    case "askingToSignTheLocalBatch":
-      // Igual que el lote remoto, y además con el resumen de cada elemento:
-      // sin él, un lote podría colar un documento que nadie consintió.
-      return {
-        kind: "consent",
-        document: null,
-        signs: stage.items.length,
-        signing: null,
-        items: stage.items,
-        certificates: stage.certificates,
-        narrowed: false,
-      };
-  }
-}
-
-/**
- * El documento del consentimiento, con lo que dice de sí mismo y lo que la
- * sede pide firmar sobre lo que ya trae.
- *
- * La ronda cruza entera y sin recuento: cuántas firmas lleva el PDF no lo
- * cuenta nadie, y lo que la ficha pide enseñar es qué será la firma de la
- * persona —cofirma, o contrafirma sobre todas o sobre las últimas—.
- */
-function documentOf(
-  described: DescribedDocument | null,
-  round: SignatureRound,
-  unregisteredSignatures: boolean,
-): SiteDocument | null {
-  if (described === null) return null;
-  return { ...described, round, hasUnregisteredSignatures: unregisteredSignatures };
-}
-
-/** Qué documento se estaba consintiendo, para poder nombrarlo en el desenlace. */
-function documentInPlay(errand: Errand | null): SiteDocument | null {
-  const stage = errand?.stage;
-  return stage?.kind === "consent" ? stage.document : null;
 }
 
 /**
