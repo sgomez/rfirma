@@ -1,64 +1,26 @@
-import {
-  type FormEvent,
-  type KeyboardEvent,
-  type ReactNode,
-  type Ref,
-  useEffect,
-  useId,
-  useRef,
-  useState,
-} from "react";
+import { type KeyboardEvent, type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { classify, type NamedFailure } from "../errors/classify";
-import { ErrorNotice } from "../errors/ErrorNotice";
 import { useLanguage } from "../i18n/LanguageProvider";
-import { LANGUAGES } from "../i18n/languages";
 import type { Certificate } from "../signing/certificate";
 import "./PreferencesView.css";
+import { trapTabWithinCurrentTarget } from "./focusTrap";
+import { PasswordPrompt } from "./PasswordPrompt";
+import {
+  AppearanceSection,
+  CertificatesSection,
+  GeneralSection,
+  SigningSection,
+} from "./PreferencesSections";
 import type { Preferences } from "./preferences";
-import { Select } from "./Select";
-import { Switch } from "./Switch";
-import { THEMES } from "./theme";
 
 /** Las cuatro secciones del índice, en el orden en que se apilan. */
 const SECTIONS = ["general", "signing", "certificates", "appearance"] as const;
 
-type Section = (typeof SECTIONS)[number];
-
-/** Lo que puede recibir el foco dentro de un modal. */
-const FOCUSABLE = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
-
-/**
- * El tabulador da la vuelta dentro del modal en vez de salirse a la pantalla
- * que queda detrás. Solo se aplica a los dos modales que se ponen delante
- * —confirmar el borrado, la contraseña del `.p12`—: la pantalla en sí ya no
- * atrapa el foco, así que el menú de la cabecera sigue alcanzable con el
- * teclado mientras Preferencias está delante.
- */
-function trapFocus(modal: HTMLElement | null, event: KeyboardEvent<HTMLDivElement>) {
-  if (modal === null) return;
-  const focusable = [...modal.querySelectorAll<HTMLElement>(FOCUSABLE)].filter(
-    (element) => !element.hasAttribute("disabled") && element.tabIndex !== -1,
-  );
-  const first = focusable.at(0);
-  const last = focusable.at(-1);
-  if (first === undefined || last === undefined) return;
-  if (event.shiftKey && document.activeElement === first) {
-    event.preventDefault();
-    last.focus();
-  } else if (!event.shiftKey && document.activeElement === last) {
-    event.preventDefault();
-    first.focus();
-  }
-}
-
-/** El tabulador da la vuelta dentro del modal al que está enganchado. */
-function trapTabWithinCurrentTarget(event: KeyboardEvent<HTMLDivElement>) {
-  if (event.key === "Tab") trapFocus(event.currentTarget, event);
-}
+export type Section = (typeof SECTIONS)[number];
 
 /** Un ajuste que el disco no aceptó, y en qué sección se pulsó (ID-70). */
-interface SaveFailure {
+export interface SaveFailure {
   section: Section;
   /** El texto original del rechazo, para el detalle técnico del aviso. */
   detail: string;
@@ -147,6 +109,10 @@ interface PreferencesViewProps {
  * la carpeta —no su ruta— y un botón que abre el selector de directorio del
  * sistema, que devuelve exactamente ese último segmento en los cuatro canales
  * (ID-65, ADR-0011).
+ *
+ * Cada sección del índice es un componente propio de
+ * [`PreferencesSections`](./PreferencesSections.tsx); esta vista solo guarda
+ * el estado, gestiona los dos modales y reparte los cambios.
  */
 export function PreferencesView({
   preferences,
@@ -158,7 +124,7 @@ export function PreferencesView({
   onRemoveCertificate,
   onClose,
 }: PreferencesViewProps) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { language, setLanguage } = useLanguage();
   const [confirmingPurge, setConfirmingPurge] = useState(false);
   const [saveFailure, setSaveFailure] = useState<SaveFailure | null>(null);
@@ -315,223 +281,62 @@ export function PreferencesView({
 
   const tabId = (section: Section) => `${titleId}-tab-${section}`;
 
-  /** El aviso de guardado de una sección, o nada si el fallo fue en otra. */
-  const saveNotice = (section: Section) =>
-    saveFailure?.section === section ? (
-      <ErrorNotice situation="settingNotSaved" technicalDetail={saveFailure.detail} />
-    ) : null;
-
-  /** El título de página que abre cada panel: versalitas, con su divisoria debajo. */
-  const heading = (label: Section, headingId: string, action?: ReactNode) => (
-    <>
-      <div className="rf-row preferences__heading-row">
-        <p className="rf-label preferences__heading" id={headingId}>
-          {t(`preferences.sections.${label}`)}
-        </p>
-        {action}
-      </div>
-      <hr className="rf-divider" />
-    </>
-  );
-
-  /** El encabezado de un grupo dentro de un panel: sin divisoria, en caja baja. */
-  const groupHeading = (label: "privacy", headingId: string) => (
-    <p className="rf-title preferences__group-heading" id={headingId}>
-      {t(`preferences.sections.${label}`)}
-    </p>
-  );
-
-  /**
-   * Lo que identifica cada fila **es el certificado, no el fichero**: del
-   * `.p12` no se recuerda nada, ni la ruta (ID-196), así que aquí no hay ni
-   * ruta ni «volver a localizar». La fecha de caducidad va en la misma línea
-   * que el DNI y el emisor; un caducado la cambia por su insignia.
-   */
-  const certificateLine = (certificate: Certificate) =>
-    [
-      certificate.idNumber,
-      t("panel.certificate.issuer", { issuer: certificate.issuer }),
-      certificate.status.kind === "valid"
-        ? t("preferences.certificates.expires", {
-            date: new Intl.DateTimeFormat(i18n.language, { dateStyle: "long" }).format(
-              certificate.status.notAfter * 1000,
-            ),
-          })
-        : null,
-    ]
-      .filter((piece) => piece !== null && piece !== "")
-      .join(" · ");
-
-  const general = (
-    <>
-      {heading("general", `${titleId}-heading-general`)}
-      <fieldset className="preferences__group" aria-labelledby={`${titleId}-heading-privacy`}>
-        {groupHeading("privacy", `${titleId}-heading-privacy`)}
-        <Switch
-          checked={preferences.rememberActivity}
-          label={t("preferences.rememberActivity.label")}
-          hint={t("preferences.rememberActivity.hint")}
-          wide
-          onChange={rememberActivity}
-        />
-        <button
-          type="button"
-          className="rf-btn rf-btn--secondary preferences__clear"
-          onClick={() => void forget()}
-        >
-          {t("preferences.rememberActivity.clear")}
-        </button>
-        {forgetFailure !== null && (
-          <ErrorNotice situation="activityNotForgotten" technicalDetail={forgetFailure} />
-        )}
-        <Switch
-          checked={preferences.notifyNewVersion}
-          label={t("preferences.notifyNewVersion.label")}
-          wide
-          onChange={(checked) =>
-            void change("general", () => onChange({ ...preferences, notifyNewVersion: checked }))
-          }
-        />
-      </fieldset>
-      {saveNotice("general")}
-    </>
-  );
-
-  const signing = (
-    <>
-      {heading("signing", `${titleId}-heading-signing`)}
-      <Switch
-        checked={preferences.rememberVisibleSignature}
-        label={t("preferences.rememberVisibleSignature.label")}
-        hint={t("preferences.rememberVisibleSignature.hint")}
-        wide
-        onChange={(checked) =>
+  const panels: Record<Section, ReactNode> = {
+    general: (
+      <GeneralSection
+        titleId={titleId}
+        saveFailure={saveFailure}
+        rememberActivity={preferences.rememberActivity}
+        onRememberActivityChange={rememberActivity}
+        onForgetClick={() => void forget()}
+        forgetFailure={forgetFailure}
+        notifyNewVersion={preferences.notifyNewVersion}
+        onNotifyNewVersionChange={(checked) =>
+          void change("general", () => onChange({ ...preferences, notifyNewVersion: checked }))
+        }
+      />
+    ),
+    signing: (
+      <SigningSection
+        titleId={titleId}
+        saveFailure={saveFailure}
+        preferences={preferences}
+        onRememberVisibleSignatureChange={(checked) =>
           void change("signing", () =>
             onChange({ ...preferences, rememberVisibleSignature: checked }),
           )
         }
-      />
-      <div className="preferences__destination">
-        <p className="rf-label" id={`${titleId}-destination`}>
-          {t("preferences.destination.label")}
-        </p>
-        {preferences.offersOriginalFolder && (
-          <p className="rf-prose preferences__destination-note">
-            {t("preferences.destination.nextToOriginal")}
-          </p>
-        )}
-        <div className="rf-row rf-gap-sm preferences__destination-row">
-          {preferences.offersOriginalFolder && (
-            <span className="rf-prose preferences__destination-mode-label">
-              {t("preferences.destination.inThisFolder")}
-            </span>
-          )}
-          <p className="rf-prose preferences__destination-folder">{preferences.destination}</p>
-          <button
-            type="button"
-            className="rf-btn rf-btn--secondary"
-            onClick={() => void change("signing", onChooseDestination)}
-          >
-            {t("preferences.destination.change")}
-          </button>
-        </div>
-      </div>
-      <Switch
-        checked={preferences.consentCountdown}
-        label={t("preferences.consentCountdown.label")}
-        wide
-        onChange={(checked) =>
+        onChooseDestinationClick={() => void change("signing", onChooseDestination)}
+        onConsentCountdownChange={(checked) =>
           void change("signing", () => onChange({ ...preferences, consentCountdown: checked }))
         }
       />
-      {saveNotice("signing")}
-    </>
-  );
-
-  const certificates = (
-    <>
-      {heading(
-        "certificates",
-        `${titleId}-heading-certificates`,
-        <button
-          type="button"
-          className="rf-btn rf-btn--secondary preferences__add-certificate"
-          onClick={() => {
-            setCertificateFailure(null);
-            setAskingPassword(true);
-          }}
-        >
-          {t("preferences.certificates.add")}
-        </button>,
-      )}
-      {certificateFailure !== null && (
-        <ErrorNotice
-          situation={certificateFailure.situation}
-          technicalDetail={
-            certificateFailure.situation === "keyNotRsa" ? undefined : certificateFailure.detail
-          }
-        />
-      )}
-      {installedCertificates.length === 0 ? (
-        <p className="rf-prose preferences__certificates-empty">
-          {t("preferences.certificates.empty")}
-        </p>
-      ) : (
-        <ul className="preferences__certificates">
-          {installedCertificates.map((certificate) => (
-            <li className="rf-row preferences__certificate" key={certificate.id}>
-              <span className="preferences__certificate-text">
-                <span className="rf-title preferences__certificate-holder">
-                  {certificate.holderName}
-                  {certificate.status.kind === "expired" && (
-                    <span className="rf-badge">{t("preferences.certificates.expired")}</span>
-                  )}
-                </span>
-                <span className="rf-body rf-text-muted">{certificateLine(certificate)}</span>
-              </span>
-              <button
-                type="button"
-                className="rf-btn rf-btn--ghost preferences__remove-certificate"
-                aria-label={t("preferences.certificates.remove", {
-                  holder: certificate.holderName,
-                })}
-                onClick={() => void remove(certificate)}
-              >
-                {t("actions.remove")}
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-    </>
-  );
-
-  const appearance = (
-    <>
-      {heading("appearance", `${titleId}-heading-appearance`)}
-      <Select
-        label={t("preferences.theme.label")}
-        value={preferences.theme}
-        options={THEMES.map((theme) => ({
-          value: theme,
-          label: t(`preferences.theme.${theme}`),
-        }))}
-        onChange={(theme) => void change("appearance", () => onChange({ ...preferences, theme }))}
+    ),
+    certificates: (
+      <CertificatesSection
+        titleId={titleId}
+        certificateFailure={certificateFailure}
+        installedCertificates={installedCertificates}
+        onAddClick={() => {
+          setCertificateFailure(null);
+          setAskingPassword(true);
+        }}
+        onRemoveClick={(certificate) => void remove(certificate)}
       />
-      <Select
-        label={t("preferences.language.label")}
-        value={language}
-        options={LANGUAGES.map((tag) => ({
-          value: tag,
-          label: t(`languages.${tag}`),
-        }))}
-        onChange={(chosen) => void change("appearance", () => setLanguage(chosen))}
+    ),
+    appearance: (
+      <AppearanceSection
+        titleId={titleId}
+        saveFailure={saveFailure}
+        theme={preferences.theme}
+        onThemeChange={(theme) =>
+          void change("appearance", () => onChange({ ...preferences, theme }))
+        }
+        language={language}
+        onLanguageChange={(chosen) => void change("appearance", () => setLanguage(chosen))}
       />
-      {saveNotice("appearance")}
-    </>
-  );
-
-  const panels: Record<Section, ReactNode> = { general, signing, certificates, appearance };
+    ),
+  };
 
   return (
     <section className="preferences" aria-labelledby={titleId}>
@@ -629,82 +434,5 @@ export function PreferencesView({
         </div>
       )}
     </section>
-  );
-}
-
-interface PasswordPromptProps {
-  ref: Ref<HTMLDivElement>;
-  labelledBy: string;
-  onSubmit: (password: string) => void;
-  onCancel: () => void;
-}
-
-/**
- * La contraseña **del fichero** `.p12`, tecleada antes de elegirlo.
- *
- * Ese orden no es un descuido: el selector de ficheros lo abre el backend y no
- * la ventana (ID-63), así que la orden de instalar llega con la contraseña ya
- * puesta y el selector aparece después. La contraseña no se guarda en ningún
- * estado que sobreviva al envío — de un `.p12` instalado no se recuerda nada,
- * ni la ruta ni la contraseña (ID-195, ID-196).
- *
- * Es un `.rf-dialog` propio porque aquí **todavía no hay
- * certificado**: ese diálogo se identifica por el titular con el que se va a
- * firmar, y aquí no se sabe ni cuál es ni cuántos trae el fichero.
- */
-function PasswordPrompt({ ref, labelledBy, onSubmit, onCancel }: PasswordPromptProps) {
-  const { t } = useTranslation();
-  const [typed, setTyped] = useState("");
-  const field = useId();
-  const box = useRef<HTMLInputElement>(null);
-
-  // El foco entra en el campo y no en el marco: es lo único que se puede hacer
-  // dentro de este diálogo, y quien lo abrió venía de pulsar «Añadir…».
-  useEffect(() => {
-    box.current?.focus();
-  }, []);
-
-  const submit = (event: FormEvent) => {
-    event.preventDefault();
-    onSubmit(typed);
-  };
-
-  return (
-    <div
-      className="rf-dialog preferences__password"
-      role="dialog"
-      aria-modal="true"
-      tabIndex={-1}
-      ref={ref}
-      aria-labelledby={labelledBy}
-      onKeyDown={trapTabWithinCurrentTarget}
-    >
-      <p className="rf-title" id={labelledBy}>
-        {t("pin.titlePassword")}
-      </p>
-      <form onSubmit={submit}>
-        <div className="rf-field">
-          <label className="rf-label" htmlFor={field}>
-            {t("pin.labelPassword")}
-          </label>
-          <input
-            id={field}
-            className="rf-input"
-            type="password"
-            ref={box}
-            value={typed}
-            onChange={(event) => setTyped(event.target.value)}
-          />
-        </div>
-        <div className="rf-row preferences__confirm-actions">
-          <button type="button" className="rf-btn rf-btn--ghost" onClick={onCancel}>
-            {t("actions.cancel")}
-          </button>
-          <button type="submit" className="rf-btn rf-btn--primary">
-            {t("preferences.certificates.password.submit")}
-          </button>
-        </div>
-      </form>
-    </div>
   );
 }
