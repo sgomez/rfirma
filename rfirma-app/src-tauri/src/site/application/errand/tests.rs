@@ -738,7 +738,7 @@ fn the_three_verbs_run_the_errand_with_a_codec_a_filter_and_a_transport_in_memor
 #[test]
 fn what_the_codec_does_not_attend_is_answered_with_the_codec_s_own_line() {
     let live = LiveErrand::speaking(Arc::new(ACodec::answering(vec![SiteRequest::NotAttended(
-        crate::site::domain::protocol::Refusal::new(SafCode::UnsupportedOperation, "eso no"),
+        crate::site::domain::protocol::Refusal::new(SafCode::UnsupportedFormat, "eso no"),
     )])));
     let home = tempfile::tempdir().expect("hay directorio temporal");
     let memory = a_memory(home.path());
@@ -950,7 +950,7 @@ fn closing_the_window_with_an_errand_still_alive_cancels_it_on_the_wire() {
         a_codec()
     )));
 
-    decline_before_closing_within(&live, Duration::from_secs(1));
+    answer_before_closing_within(&live, Duration::from_secs(1));
 
     assert_eq!(what_the_site_received(&mut wire), Some("CANCEL".to_owned()));
     assert!(live.current().is_none());
@@ -968,7 +968,7 @@ fn closing_the_window_with_the_outcome_already_on_screen_sends_nothing() {
     declined(&live);
     assert_eq!(what_the_site_received(&mut wire), Some("CANCEL".to_owned()));
 
-    decline_before_closing_within(&live, Duration::from_secs(1));
+    answer_before_closing_within(&live, Duration::from_secs(1));
 
     assert_eq!(what_the_site_received(&mut wire), None);
 }
@@ -984,7 +984,7 @@ fn closing_the_window_gives_up_waiting_for_the_acknowledgement_past_its_threshol
     )));
 
     let started = std::time::Instant::now();
-    decline_before_closing_within(&live, Duration::from_millis(20));
+    answer_before_closing_within(&live, Duration::from_millis(20));
     let elapsed = started.elapsed();
 
     assert_eq!(what_the_site_received(&mut wire), Some("CANCEL".to_owned()));
@@ -1731,11 +1731,11 @@ fn a_countersignature_is_answered_with_the_code_of_an_unsupported_operation() {
         &live,
     );
 
-    let ErrandStep::Answering(reply) = step else {
+    let ErrandStep::ShowingTheRefusal(refusal) = step else {
         panic!("countersign no existe en PAdES: {step:?}");
     };
     assert_eq!(
-        on_the_wire(&reply),
+        refusal.answer().on_the_wire(),
         WireAnswer::refused(SafCode::UnsupportedOperation).on_the_wire()
     );
 }
@@ -3088,11 +3088,11 @@ fn a_refusal_of_the_protocol_never_reaches_the_token() {
         &live,
     );
 
-    let ErrandStep::Answering(reply) = step else {
+    let ErrandStep::ShowingTheRefusal(refusal) = step else {
         panic!("el protocolo rechaza la lectura de un fichero local: {step:?}");
     };
     assert_eq!(
-        on_the_wire(&reply),
+        refusal.answer().on_the_wire(),
         WireAnswer::refused_because_of(SafCode::Params, Parameter::Data).on_the_wire()
     );
 }
@@ -4738,7 +4738,7 @@ fn gzip_true_decompresses_the_document_before_consent_in_the_five_operations() {
 }
 
 #[test]
-fn gzip_true_with_invalid_dat_answers_saf03_on_the_wire() {
+fn gzip_true_with_invalid_dat_is_refused_with_saf03() {
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
     let memory = a_memory(home.path());
     let ours = vec![a_usable_certificate("FIRMA")];
@@ -4764,13 +4764,17 @@ fn gzip_true_with_invalid_dat_answers_saf03_on_the_wire() {
     let not_gzipped = b"not-a-valid-gzip-stream";
     let url = a_signature_over(not_gzipped, "sign", "&gzip=true");
     let step = attend_operation(&desk, &url, decoded(&url), &live);
-    assert!(matches!(
-        step,
-        ErrandStep::Answering(SiteOutcome::RefusedByTheProtocol(_))
-    ));
+    let ErrandStep::ShowingTheRefusal(refusal) = step else {
+        panic!("un gzip que no se descomprime se rechaza: {step:?}");
+    };
+    assert_eq!(
+        refusal.answer().on_the_wire(),
+        WireAnswer::refused_because_of(SafCode::Params, Parameter::Data).on_the_wire()
+    );
     assert_eq!(
         what_the_site_received(&mut wire),
-        Some(WireAnswer::refused_because_of(SafCode::Params, Parameter::Data).on_the_wire())
+        None,
+        "hasta que se cierre la ventana"
     );
 }
 
@@ -5489,7 +5493,7 @@ fn a_websocket_launch_begins_an_errand_that_serves_many_operations() {
 }
 
 #[test]
-fn a_websocket_errand_answers_the_operation_after_a_refused_one() {
+fn a_websocket_errand_answers_the_operation_after_the_refusal_it_showed() {
     let window = Arc::new(AWindow::default());
     let live = a_websocket_errand(&window);
     let home = tempfile::tempdir().expect("hay directorio temporal");
@@ -5517,10 +5521,11 @@ fn a_websocket_errand_answers_the_operation_after_a_refused_one() {
         first,
         &live,
     );
+    let _ = answer_before_closing_within(&live, Duration::from_secs(1));
     let (second, mut second_wire) = the_wire();
     let answered = attend(&desk, an_operation(""), second, &live);
 
-    assert!(matches!(refused, Some(ErrandStep::Answering(_))));
+    assert!(matches!(refused, Some(ErrandStep::ShowingTheRefusal(_))));
     assert!(what_the_site_received(&mut first_wire).is_some_and(|line| line.starts_with("SAF_04")));
     assert!(matches!(answered, Some(ErrandStep::Answering(_))));
     assert!(
@@ -5570,6 +5575,122 @@ fn a_websocket_operation_shows_the_window_and_hides_it_when_it_answers_unseen() 
         Some(Moment::Waiting),
         "la siguiente operacion se enseña como la primera"
     );
+}
+
+/// Asa de respuesta que apunta en la ventana doblada cuándo sale la respuesta.
+fn a_wire_noting_into(
+    window: &Arc<AWindow>,
+) -> (ReplyHandle, tokio::sync::oneshot::Receiver<String>) {
+    let (sender, receiver) = tokio::sync::oneshot::channel();
+    let window = Arc::clone(window);
+    (
+        ReplyHandle::of(move |text| {
+            window.note("contestada");
+            let _ = sender.send(text);
+            Acknowledgement::immediate()
+        }),
+        receiver,
+    )
+}
+
+/// Atiende la operación sobre una mesa sin certificados ni motores que contesten.
+fn attended_on_a_bare_desk(url: AfirmaUrl, reply: ReplyHandle, live: &LiveErrand) -> ErrandStep {
+    let home = tempfile::tempdir().expect("hay directorio temporal");
+    let memory = a_memory(home.path());
+    let listed = ListedCertificates::new();
+    let opened_documents = OpenedDocuments::new();
+    let engine = AnEngine::answering(&[]);
+    let policies = APolicyEngine::answering("");
+    let scratch = home.path().join("errand");
+    let desk = a_desk(
+        &engine,
+        &policies,
+        &[],
+        home.path(),
+        &listed,
+        &opened_documents,
+        &memory,
+        &scratch,
+    );
+    attend(&desk, url, reply, live).expect("hay codec")
+}
+
+#[test]
+fn a_refusal_of_the_request_is_shown_and_answered_only_once_its_window_closes() {
+    let window = Arc::new(AWindow::default());
+    let live = a_websocket_errand(&window);
+    let (handle, mut wire) = a_wire_noting_into(&window);
+
+    let step = attended_on_a_bare_desk(
+        arriving(&format!("afirma://sign?op=sign&format=CAdES&algorithm=SHA256withRSA&dat=SG9sYQ&id=rfirma-1&idsession={CREDENTIAL}")),
+        handle,
+        &live,
+    );
+
+    assert!(matches!(step, ErrandStep::ShowingTheRefusal(_)), "{step:?}");
+    assert!(
+        matches!(live.moment(), Some(Moment::ShowingTheRefusal(ref refusal)) if refusal.code() == SafCode::Params),
+        "{:?}",
+        live.moment()
+    );
+    assert_eq!(
+        what_the_site_received(&mut wire),
+        None,
+        "la sede espera a que se cierre"
+    );
+    assert_eq!(window.asked(), ["enseñada"]);
+
+    let after = answer_before_closing_within(&live, Duration::from_secs(1));
+
+    assert_eq!(after, WindowAfterClosing::StaysHidden);
+    assert!(what_the_site_received(&mut wire).is_some_and(|line| line.starts_with("SAF_03")));
+    assert_eq!(
+        window.asked(),
+        ["enseñada", "oculta", "contestada"],
+        "se oculta antes de contestar, o la siguiente operación podría llegar a una ventana que se oculta después"
+    );
+    assert!(live.current().is_some(), "el canal sigue sirviendo");
+}
+
+#[test]
+fn a_refusal_the_original_answers_without_a_dialogue_is_answered_at_once() {
+    let window = Arc::new(AWindow::default());
+    let live = a_websocket_errand(&window);
+    let (handle, mut wire) = the_wire();
+
+    let step = attended_on_a_bare_desk(
+        arriving(&format!("afirma://sign?op=sign&format=INVENTADO&algorithm=SHA256&dat=SG9sYQ&idsession={CREDENTIAL}")),
+        handle,
+        &live,
+    );
+
+    assert!(matches!(step, ErrandStep::Answering(_)), "{step:?}");
+    assert!(what_the_site_received(&mut wire).is_some_and(|line| line.starts_with("SAF_06")));
+    assert_eq!(window.asked(), ["enseñada", "oculta"]);
+}
+
+#[test]
+fn closing_the_window_of_a_shown_refusal_answers_it_instead_of_cancelling() {
+    let live = LiveErrand::default();
+    assert!(live.begin(Errand::of(
+        NegotiatedCredential::Required(a_credential()),
+        ArrivalMode::Awaited,
+        Arc::new(ACodec::answering(vec![SiteRequest::NotAttended(
+            crate::site::domain::protocol::Refusal::params("el id no es alfanumerico"),
+        )])),
+    )));
+    let (handle, mut wire) = the_wire();
+    let _ = attended_on_a_bare_desk(an_operation(""), handle, &live);
+
+    let after = answer_before_closing_within(&live, Duration::from_secs(1));
+
+    assert_eq!(after, WindowAfterClosing::Closes);
+    assert!(
+        what_the_site_received(&mut wire)
+            .is_some_and(|line| line.starts_with("RefusedByTheProtocol(")),
+        "la sede recibe el rechazo, no un CANCEL"
+    );
+    assert!(live.current().is_none());
 }
 
 #[test]

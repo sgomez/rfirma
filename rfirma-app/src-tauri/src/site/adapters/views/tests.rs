@@ -83,6 +83,16 @@ fn a_refusal_without_a_channel_crosses_with_its_situation_and_its_detail() {
 }
 
 #[test]
+fn a_refusal_shown_before_it_is_answered_crosses_as_the_refused_outcome() {
+    let refusal = crate::site::domain::protocol::Refusal::params("el id no es alfanumerico");
+
+    assert_eq!(
+        SiteErrandView::from(&Moment::ShowingTheRefusal(refusal.clone())),
+        SiteErrandView::refused(&refusal)
+    );
+}
+
+#[test]
 fn the_round_crosses_named_as_the_site_asked_for_it() {
     let view = SiteErrandView::from(&Moment::AskingToSign {
         document: "doc-1".to_owned(),

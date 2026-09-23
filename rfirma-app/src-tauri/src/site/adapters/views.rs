@@ -215,7 +215,9 @@ impl From<&Moment> for SiteErrandView {
             Moment::NoChannel(NoChannel::LocalCaMissing) => {
                 Self::no_channel(NoChannelView::LocalCaMissing)
             }
-            Moment::RefusedWithoutChannel(refusal) => Self::refused(refusal),
+            Moment::RefusedWithoutChannel(refusal) | Moment::ShowingTheRefusal(refusal) => {
+                Self::refused(refusal)
+            }
             Moment::Unreachable => Self::unreachable(),
         }
     }

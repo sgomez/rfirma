@@ -50,7 +50,11 @@ un límite del proceso, no de la sede.
   (ADR-0010) siguen. Cada operación que llega vuelve a enseñar la ventana en
   la espera, como la primera; una operación contestada sin nada que enseñar
   la oculta en el acto, y la que dejó un desenlace en pantalla la oculta al
-  cerrarse, a mano o por su cierre automático.
+  cerrarse, a mano o por su cierre automático. El rechazo de la petición
+  misma (`SAF_03`, `SAF_04`, `SAF_13`) es un desenlace que la sede aún no ha
+  recibido, como el diálogo de error del original: se contesta al cerrarse, y
+  la ventana se oculta y olvida la operación **antes** de escribir la
+  respuesta, porque la sede puede mandar la siguiente en cuanto la lee.
 - **Con WebSocket, el trámite y el proceso terminan cuando se va el primer
   cliente**: el que completó primero el saludo cierra su conexión, sea como
   sea. La aplicación cierra entonces la ventana, con la operación que hubiera
@@ -69,7 +73,8 @@ un límite del proceso, no de la sede.
 - **Cerrar la ventana por el gestor de ventanas es cancelar.** En
   consentimiento, confirmación o firma, la X manda `CANCEL` a la sede, retiene
   el cierre hasta el acuse de entrega con un tope de un segundo, y sale.
-  Con el desenlace en pantalla o en un callejón sin salida, sale sin más. Con
+  Con el rechazo de la petición en pantalla, manda ese rechazo en vez de
+  `CANCEL`. Con otro desenlace o en un callejón sin salida, sale sin más. Con
   WebSocket y el primer cliente conectado, en vez de salir la oculta.
 - **La biblioteca nativa se abre en el primer trabajo**, no al arrancar: un
   rechazo de protocolo solo paga el hilo del aislado, que nace ocioso.

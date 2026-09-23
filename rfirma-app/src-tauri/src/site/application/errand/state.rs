@@ -11,7 +11,7 @@ use crate::signing::domain::bridge::{Format, SignatureOperation};
 use crate::site::domain::batch::LocalBatch;
 use crate::site::domain::channel::{ArrivalMode, ChannelTenure};
 use crate::site::domain::protocol::{
-    AfirmaUrl, AskedAlgorithm, BatchRequest, NegotiatedCredential, SiteFilter,
+    AfirmaUrl, AskedAlgorithm, BatchRequest, NegotiatedCredential, Refusal, SiteFilter,
 };
 
 use super::outcome::{
@@ -135,6 +135,7 @@ enum PendingConsent {
     LocalBatch(PendingLocalBatch),
     Saving(SavingConsent),
     Loading(LoadingConsent),
+    ShownRefusal(Refusal),
 }
 
 /// Lo que el lote remoto necesita entre el consentimiento y la postfirma.
@@ -321,6 +322,17 @@ impl LiveErrand {
         }
     }
 
+    /// Oculta la ventana y termina la operación antes de contestar, para que la siguiente no llegue a una ventana que se oculta después.
+    pub(super) fn answer_once_put_away(&self, outcome: &SiteOutcome) {
+        let reply = crate::lock(&self.reply).take();
+        self.put_away_the_window();
+        self.end_the_operation();
+        drop(crate::lock(&self.delivered).take());
+        if let (Some(reply), Some(codec)) = (reply, self.codec()) {
+            drop(reply.answer(codec.encode(outcome)));
+        }
+    }
+
     /// Oculta la ventana de una operación contestada sin nada que enseñar.
     pub(super) fn put_away_the_window(&self) {
         if !self.serves_many_operations() {
@@ -458,6 +470,19 @@ impl LiveErrand {
     pub(super) fn the_signature_consented(&self) -> Option<PendingSignature> {
         match &*crate::lock(&self.consent) {
             Some(PendingConsent::Signature(pending)) => Some(pending.clone()),
+            _ => None,
+        }
+    }
+
+    /// Registra el rechazo que la ventana enseña antes de contestarlo.
+    pub(super) fn remember_the_refusal(&self, refusal: Refusal) {
+        *crate::lock(&self.consent) = Some(PendingConsent::ShownRefusal(refusal));
+    }
+
+    /// El rechazo que la ventana enseña y la sede aún no ha recibido, si lo hay.
+    pub(super) fn the_shown_refusal(&self) -> Option<Refusal> {
+        match &*crate::lock(&self.consent) {
+            Some(PendingConsent::ShownRefusal(refusal)) => Some(refusal.clone()),
             _ => None,
         }
     }

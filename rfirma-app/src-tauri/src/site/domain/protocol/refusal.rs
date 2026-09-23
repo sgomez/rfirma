@@ -100,6 +100,14 @@ impl Refusal {
     pub fn detail(&self) -> &str {
         &self.detail
     }
+
+    /// Si el original lo enseña en su diálogo de error antes de contestar: los de la petición misma.
+    pub fn is_shown_before_it_is_answered(&self) -> bool {
+        matches!(
+            self.code,
+            SafCode::Params | SafCode::UnsupportedOperation | SafCode::LocalAccessBlocked
+        )
+    }
 }
 
 impl fmt::Display for Refusal {

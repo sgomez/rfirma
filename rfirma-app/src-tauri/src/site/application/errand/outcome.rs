@@ -49,6 +49,8 @@ pub enum ErrandStep {
     },
     /// Respuesta directa para la sede sin requerir consentimiento.
     Answering(SiteOutcome),
+    /// Rechazo que se enseña y que la sede no recibe hasta que la persona cierra la ventana.
+    ShowingTheRefusal(Refusal),
 }
 
 impl ErrandStep {
@@ -89,6 +91,7 @@ impl ErrandStep {
                 reason: *reason,
                 owned: *owned,
             }),
+            Self::ShowingTheRefusal(refusal) => Some(Moment::ShowingTheRefusal(refusal.clone())),
             Self::Answering(_) => None,
         }
     }
@@ -394,6 +397,8 @@ pub enum Moment {
     NoChannel(NoChannel),
     /// Rechazo del protocolo sin canal por el que responder.
     RefusedWithoutChannel(Refusal),
+    /// Rechazo de la petición que espera a que la persona cierre la ventana para salir al canal.
+    ShowingTheRefusal(Refusal),
     /// Canal abierto pero el navegador nunca envió el mensaje inicial tras expirar el tiempo de espera.
     Unreachable,
 }

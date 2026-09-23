@@ -79,7 +79,11 @@ que representa el escritorio, para que se vea su tamaño real.
    —la firma, `CANCEL` o el código de error— sale de inmediato, sin esperar a
    que nadie cierre nada ([#316](https://github.com/sgomez/rfirma/issues/316)).
    Esta ventana no es el acuse: es donde vive la precisión que el código de
-   error no puede llevar.
+   error no puede llevar. **La excepción es el rechazo de la petición misma**
+   —parámetros mal formados (`SAF_03`), operación que no existe (`SAF_04`),
+   servlet en el propio equipo (`SAF_13`)—: el original lo enseña en su diálogo
+   de error y no contesta hasta que se cierra, y rFirma hace lo mismo con su
+   desenlace de rechazo.
 
 ### Un solo documento por petición
 
@@ -278,6 +282,15 @@ arreglarlo, porque no puede: es que **acaba de arrancarse un programa en su
 equipo a petición de una web**, y un rFirma que aparece y desaparece en silencio
 es indistinguible de uno roto. Lo único accionable es el detalle copiable, para
 llevárselo a quien mantiene la sede.
+
+El **rechazo de la petición misma** que llega por un canal ya abierto usa este
+mismo desenlace, pero la sede todavía no tiene su respuesta: el `SAF_NN` sale
+cuando la persona pulsa `Cerrar` o cierra la ventana, como con el diálogo de
+error del original. Con WebSocket la ventana se oculta antes de contestar, y la
+siguiente operación del canal vuelve a enseñarla; si llegan varios rechazos
+seguidos, se enseñan y se contestan de uno en uno, en orden. Los demás rechazos
+—formato que no existe, versión mínima, versión de protocolo— se contestan en el
+acto y no enseñan nada, porque el original tampoco los enseña.
 
 **La caja del detalle es de la sede, y solo de la sede**: dentro van la etiqueta
 `Detalle` con el botón de copiar a su derecha y, debajo, el texto a ancho

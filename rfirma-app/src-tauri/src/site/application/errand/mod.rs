@@ -109,6 +109,7 @@ fn remembered(live: &LiveErrand, step: ErrandStep) -> ErrandStep {
         ErrandStep::Saving(consent) => live.remember_saving((**consent).clone()),
         ErrandStep::Loading(consent) => live.remember_loading((**consent).clone()),
         ErrandStep::NoCertificate { .. } => live.forget_the_consent(),
+        ErrandStep::ShowingTheRefusal(refusal) => live.remember_the_refusal(refusal.clone()),
         ErrandStep::Answering(_) => {}
     }
 
@@ -427,18 +428,33 @@ pub fn decline(live: &LiveErrand) -> SiteOutcome {
 /// Tope de espera al acuse de entrega antes de cerrar la ventana de sede por el gestor de ventanas.
 pub const WINDOW_CLOSE_ACKNOWLEDGEMENT_TIMEOUT: Duration = Duration::from_secs(1);
 
-/// Decide qué hacer con el trámite cuando el gestor de ventanas pide cerrar la ventana de sede:
-/// con trámite vivo, cancela como el botón de cancelar y espera su acuse de entrega hasta el
-/// tope; sin trámite vivo, no hace nada, porque no hay nada que cancelar.
-pub fn decline_before_closing(live: &LiveErrand) {
-    decline_before_closing_within(live, WINDOW_CLOSE_ACKNOWLEDGEMENT_TIMEOUT);
+/// Qué le queda a la ventana de sede tras contestar su cierre por el gestor de ventanas.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum WindowAfterClosing {
+    /// Se cierra, y con ella el proceso.
+    Closes,
+    /// Ya se ha ocultado, porque el canal sigue sirviendo (ADR-0024).
+    StaysHidden,
 }
 
-fn decline_before_closing_within(live: &LiveErrand, timeout: Duration) {
+/// Contesta a la sede antes de cerrar la ventana: el rechazo que enseñaba, o `CANCEL` si había algo que consentir.
+pub fn answer_before_closing(live: &LiveErrand) -> WindowAfterClosing {
+    answer_before_closing_within(live, WINDOW_CLOSE_ACKNOWLEDGEMENT_TIMEOUT)
+}
+
+fn answer_before_closing_within(live: &LiveErrand, timeout: Duration) -> WindowAfterClosing {
     if live.current().is_none() {
-        return;
+        return WindowAfterClosing::Closes;
     }
-    live.answer_the_site(&SiteOutcome::Cancelled);
+    let outcome = live
+        .the_shown_refusal()
+        .map_or(SiteOutcome::Cancelled, SiteOutcome::RefusedByTheProtocol);
+    if live.keeps_serving() {
+        live.answer_once_put_away(&outcome);
+        return WindowAfterClosing::StaysHidden;
+    }
+    live.answer_the_site(&outcome);
     live.wait_for_delivery(timeout);
     live.end();
+    WindowAfterClosing::Closes
 }

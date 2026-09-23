@@ -422,7 +422,7 @@ fn a_websocket_errand_whose_browser_never_arrived_ends_like_any_other() {
         &live,
         LocalCaReach::NotAnObstacle,
     );
-    crate::site::application::errand::decline_before_closing(&live);
+    crate::site::application::errand::answer_before_closing(&live);
 
     assert!(live.current().is_none());
     assert_eq!(

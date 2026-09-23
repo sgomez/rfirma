@@ -28,7 +28,8 @@ interface SedeOutcomeProps {
 
 /**
  * **4 · Desenlace.** En todos ellos **la sede ya ha recibido su respuesta**: los
- * dos canales van desacompasados a propósito (#316).
+ * dos canales van desacompasados a propósito (#316). Salvo el rechazo de la
+ * petición misma, que sale al cerrar, como el diálogo de error del original.
  *
  * El **rechazo** cubre los del transporte, que ocurren antes de que haya nada
  * que consentir. El argumento para enseñarlo no es que la persona pueda
