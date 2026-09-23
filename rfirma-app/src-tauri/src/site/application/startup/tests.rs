@@ -706,6 +706,102 @@ fn a_service_launch_creates_the_window_hidden_and_does_not_show_it() {
     );
 }
 
+fn launched_by_an_old_web_client(world: &Arc<World>, live: &LiveErrand, launch: &str) {
+    let attendance = attend_site_launch(
+        launch,
+        &a_codec_table(),
+        &|location, duty| world.transport(location, duty),
+        Arc::clone(world) as Arc<dyn SiteWindow>,
+        live,
+        LocalCaReach::NotAnObstacle,
+    );
+    assert!(matches!(attendance, Attendance::Serving { .. }));
+}
+
+#[test]
+fn a_launch_from_an_old_web_client_warns_with_the_channel_already_open() {
+    let world = Arc::new(World::default());
+    let live = LiveErrand::default();
+
+    launched_by_an_old_web_client(
+        &world,
+        &live,
+        &a_launch(&format!("v=4&jvc=0&idsession={CREDENTIAL}")),
+    );
+
+    assert_eq!(
+        world.steps(),
+        ["canal", "ventana:creada:Awaited", "ventana:enseñada"]
+    );
+    assert_eq!(live.moment(), Some(Moment::OldWebClient));
+}
+
+#[test]
+fn dismissing_the_warning_before_the_browser_arrives_hides_the_window_and_the_errand_goes_on() {
+    let world = Arc::new(World::default());
+    let live = LiveErrand::default();
+    launched_by_an_old_web_client(
+        &world,
+        &live,
+        &a_launch(&format!("v=4&jvc=0&idsession={CREDENTIAL}")),
+    );
+
+    crate::site::application::errand::dismiss_the_warning(&live);
+
+    assert_eq!(
+        world.steps(),
+        [
+            "canal",
+            "ventana:creada:Awaited",
+            "ventana:enseñada",
+            "ventana:oculta"
+        ]
+    );
+    assert_eq!(live.moment(), Some(Moment::Waiting));
+    assert!(live.current().is_some());
+}
+
+#[test]
+fn closing_the_window_over_the_warning_only_dismisses_it() {
+    let world = Arc::new(World::default());
+    let live = LiveErrand::default();
+    launched_by_an_old_web_client(
+        &world,
+        &live,
+        &a_launch(&format!("v=4&jvc=0&idsession={CREDENTIAL}")),
+    );
+
+    let after = crate::site::application::errand::answer_before_closing(&live);
+
+    assert_eq!(
+        after,
+        crate::site::application::errand::WindowAfterClosing::StaysHidden
+    );
+    assert_eq!(live.moment(), Some(Moment::Waiting));
+    assert!(live.current().is_some(), "el aviso no detiene la operación");
+}
+
+#[test]
+fn dismissing_the_warning_of_a_service_errand_whose_browser_arrived_leaves_the_window_up() {
+    let world = Arc::new(World::default());
+    let live = LiveErrand::default();
+    launched_by_an_old_web_client(
+        &world,
+        &live,
+        &format!("afirma://service?ports=51001,51002,51003&v=1&jvc=0&idsession={CREDENTIAL}"),
+    );
+    live.browser_arrived();
+
+    crate::site::application::errand::dismiss_the_warning(&live);
+
+    assert!(
+        !world.steps().contains(&"ventana:oculta".to_owned()),
+        "la siguiente operación de service no vuelve a enseñarla: {:?}",
+        world.steps()
+    );
+    assert_eq!(live.moment(), Some(Moment::Waiting));
+}
+
 #[test]
 fn a_relay_launch_creates_the_window_and_shows_it_immediately() {
     let world = Arc::new(World::default());

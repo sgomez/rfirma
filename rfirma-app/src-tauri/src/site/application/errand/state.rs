@@ -333,6 +333,17 @@ impl LiveErrand {
         }
     }
 
+    /// Vuelve a la espera tras el aviso, y oculta la ventana salvo que ya nada vaya a enseñarla otra vez.
+    pub(super) fn put_away_the_warning(&self) {
+        self.note(Moment::Waiting);
+        if self.is_revealed() && !self.keeps_serving() {
+            return;
+        }
+        if let Some(window) = self.the_window() {
+            window.hide();
+        }
+    }
+
     /// Oculta la ventana de una operación contestada sin nada que enseñar.
     pub(super) fn put_away_the_window(&self) {
         if !self.serves_many_operations() {

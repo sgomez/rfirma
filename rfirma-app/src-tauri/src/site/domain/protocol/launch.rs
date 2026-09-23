@@ -278,6 +278,13 @@ fn is_a_relay_launch(url: &AfirmaUrl) -> bool {
         || (url.parameter("fileid").is_some() && url.parameter("rtservlet").is_some())
 }
 
+/// Si el `jvc` de la invocación es menor que 1, el cliente web anterior al mínimo del original.
+pub fn warns_of_an_old_web_client(url: &AfirmaUrl) -> bool {
+    url.parameter("jvc")
+        .and_then(|jvc| jvc.parse::<i32>().ok())
+        .is_some_and(|jvc| jvc < 1)
+}
+
 /// Si la sede pide espera activa (`aw`) antes de operar.
 pub fn asks_for_active_wait(url: &AfirmaUrl) -> bool {
     url.parameter("aw").is_some_and(reads_as_true)

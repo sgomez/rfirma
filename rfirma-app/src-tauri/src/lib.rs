@@ -229,6 +229,7 @@ fn with_the_five_roots(
             site::adapters::tauri::site_finish_signing,
             site::adapters::tauri::site_install_certificate,
             site::adapters::tauri::site_look_again,
+            site::adapters::tauri::site_dismiss_the_warning,
             site::adapters::tauri::site_save_file,
             site::adapters::tauri::site_load_files,
             site::adapters::tauri::install_local_ca,

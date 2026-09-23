@@ -93,6 +93,14 @@ fn a_refusal_shown_before_it_is_answered_crosses_as_the_refused_outcome() {
 }
 
 #[test]
+fn the_old_web_client_warning_crosses_named() {
+    assert_eq!(
+        serde_json::to_value(SiteErrandView::from(&Moment::OldWebClient)).expect("el aviso cruza"),
+        serde_json::json!({ "origin": null, "stage": { "kind": "oldWebClient" } })
+    );
+}
+
+#[test]
 fn the_round_crosses_named_as_the_site_asked_for_it() {
     let view = SiteErrandView::from(&Moment::AskingToSign {
         document: "doc-1".to_owned(),

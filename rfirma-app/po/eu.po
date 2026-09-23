@@ -1500,6 +1500,15 @@ msgstr "rFirmaren akatsa dela uste duzu?"
 msgid "sede.outcome.autoClose"
 msgstr "Bere kabuz itxiko da {{seconds}} s barru."
 
+msgid "sede.oldWebClient.title"
+msgstr "Orri hau zaharkituta dago"
+
+msgid "sede.oldWebClient.body"
+msgstr "Orriak rFirmarekin hitz egiten duen piezaren bertsio zahar bat erabiltzen du, eta akatsak izan ditzake edo baliteke segurua ez izatea. Izapidearekin jarrai dezakezu; zerbait gaizki badoa, jakinarazi orria kudeatzen duenari."
+
+msgid "sede.oldWebClient.dismiss"
+msgstr "Ulertuta"
+
 msgid "sede.refusals.appendedSignaturePage"
 msgstr ""
 "{{origin}}(e)k sinadura amaieran gehitutako orrialde batean jartzeko "

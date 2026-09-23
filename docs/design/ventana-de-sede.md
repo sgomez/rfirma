@@ -136,7 +136,20 @@ Firefox 260 px y la de Chrome **322 px** — le quedan seis píxeles. Si la pros
 vuelve a crecer, lo primero que cae bajo el pliegue es el botón `Copiar` y la
 ruta por el candado, que es justo lo que hay que enseñar.
 
-### 2 · Consentimiento — `SedeConsentimiento`
+### 1b · La página está desactualizada — sin artboard
+
+Cuando la invocación trae `jvc` menor que 1 —un `autoscript.js` anterior al
+mínimo del original—, la ventana se enseña al arrancar con un aviso: título
+«Esta página está desactualizada», una frase que dice que la pieza que habla con
+rFirma es antigua y puede tener errores o no ser segura, que se puede seguir y a
+quién avisar si algo falla, y un único botón, `Entendido`, en `--primary`.
+
+**El aviso no detiene nada.** El original lo enseña en un diálogo modal antes de
+abrir el canal; aquí el canal ya está abierto mientras se lee, y la primera
+operación que llegue sustituye el aviso por su momento. `Entendido` y la cruz
+hacen lo mismo: descartan el aviso y la ventana vuelve a la espera, oculta
+como siempre, sin abandonar el trámite.
+
 
 El corazón del ticket: la pantalla que hoy no existe.
 
@@ -342,6 +355,7 @@ cancela— se borró por explicar lo evidente.
 | Estado | Artboard | Acción principal |
 | ------ | -------- | ---------------- |
 | Esperando el canal | `SedeEspera` · `momento = esperando` | ninguna; `Cancelar` en `--ghost` |
+| La página está desactualizada | sin artboard | `Entendido` |
 | El canal no se abre (Chrome / Firefox) | `SedeEspera` · `no-va-chrome`, `no-va-firefox` | `Instalar…` (la CA local) |
 | Consentimiento de firma | `SedeConsentimiento` · `forma = confirmacion` | `Firmar` |
 | Consentimiento de cesión de datos | `SedeConsentimiento` · `situacion = entregar identidad` | `Enviar mis datos` |

@@ -90,7 +90,8 @@ export type SiteStageView =
   | { kind: "noChannel"; reason: "channelNotOpened" | "localCaMissing" }
   | { kind: "outcome"; outcome: { kind: "refused"; situation: string; detail: string } }
   | { kind: "noCertificate"; reason: "none" | "excluded"; owned: number }
-  | { kind: "unreachable" };
+  | { kind: "unreachable" }
+  | { kind: "oldWebClient" };
 
 /**
  * Lo que el PDF de la sede dice de sí mismo, leído por su asa.
@@ -181,6 +182,8 @@ export interface SiteCommands {
   installLocalCa(): Promise<void>;
   /** `close_site_window`. */
   closeWindow(): Promise<void>;
+  /** `site_dismiss_the_warning`: el canal no se toca. */
+  dismissWarning(): Promise<void>;
   /** Lo que el PDF dice de sí mismo, o `null` si no se ha podido leer. */
   describeDocument(id: string): Promise<DescribedDocument | null>;
 }
@@ -269,6 +272,8 @@ function stageOf(stage: SiteStageView, document: SiteDocument | null): ErrandSta
       return { kind: "waiting" };
     case "unreachable":
       return { kind: "unreachable" };
+    case "oldWebClient":
+      return { kind: "oldWebClient" };
     case "noChannel":
       return { kind: "noChannel", reason: stage.reason };
     case "noCertificate":
@@ -572,5 +577,7 @@ export function siteErrands(commands: SiteCommands): SiteErrandPort {
     },
 
     installLocalCa: () => commands.installLocalCa(),
+
+    dismissWarning: () => commands.dismissWarning(),
   };
 }

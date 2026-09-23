@@ -60,6 +60,7 @@ fn handle_close_requested(app: &tauri::AppHandle, event: &tauri::WindowEvent) {
     std::thread::spawn(move || {
         let after = errand::answer_before_closing(&app.state::<SiteRoot>().errand);
         if after == errand::WindowAfterClosing::StaysHidden {
+            publish_the_moment(&app);
             return;
         }
         if let Some(window) = app.get_webview_window(SITE_WINDOW) {

@@ -9,7 +9,7 @@ use crate::site::domain::channel::{ArrivalMode, Delivery};
 use crate::site::domain::trust::{blocks_the_site, Moment as TrustMoment};
 use crate::site::ports::{LocalCaSlots, TrustStores};
 
-use crate::site::domain::protocol::Refusal;
+use crate::site::domain::protocol::{warns_of_an_old_web_client, AfirmaUrl, Refusal};
 
 use super::errand::{Acknowledgement, Errand, LiveErrand, Moment, NoChannel};
 use super::site::{self, Attendance, ChannelTransport, CodecTable};
@@ -211,6 +211,10 @@ pub fn attend_site_launch_with_threshold(
                     match errand.arrival() {
                         ArrivalMode::Awaited => {
                             live.arm_backing_timeout(Arc::clone(&window), threshold);
+                            if comes_from_an_old_web_client(url) {
+                                live.note(Moment::OldWebClient);
+                                window.show();
+                            }
                         }
                         ArrivalMode::Immediate => window.show(),
                     }
@@ -265,6 +269,10 @@ pub fn attend_site_launch_with_threshold(
     }
 
     attendance
+}
+
+fn comes_from_an_old_web_client(url: &str) -> bool {
+    AfirmaUrl::parse(url).is_ok_and(|url| warns_of_an_old_web_client(&url))
 }
 
 fn end_or_show_the_refusal(window: &dyn SiteWindow, handed_out: bool) {

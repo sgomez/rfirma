@@ -40,6 +40,7 @@ ORDENES DE TAURI                          (<contexto>/adapters/tauri*.rs)
   async site_confirm_signatures() -> Result<(), Failure>
   async site_finish_signing() -> Result<(), Failure>
   async site_install_certificate(password: String) -> Result<bool, Failure>
+  async site_dismiss_the_warning()
   async site_look_again()
   async site_save_file() -> Result<bool, Failure>
   async site_load_files() -> Result<Option<u32>, Failure>
@@ -239,6 +240,7 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
       Saving { filename: Option<String> }
       Loading { multiple: bool }
       Unreachable
+      OldWebClient
 
   pub enum NoChannelView
       ChannelNotOpened

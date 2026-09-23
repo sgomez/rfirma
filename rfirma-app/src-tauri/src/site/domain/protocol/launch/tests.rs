@@ -22,11 +22,38 @@ fn the_launch_invocation_the_published_client_sends_is_read_whole() {
 }
 
 #[test]
-fn the_javascript_version_code_is_ignored_on_purpose() {
+fn the_javascript_version_code_never_refuses_a_launch() {
     for jvc in ["jvc=3", "jvc=0", "jvc=noesunnumero", ""] {
         let url = format!("afirma://websocket?ports=49152&v=4&{jvc}&idsession=abc");
         assert!(LaunchRequest::parse(&url).is_ok(), "con {jvc}");
     }
+}
+
+#[test]
+fn only_a_javascript_version_code_below_one_warns_of_an_old_web_client() {
+    let warns = |jvc: &str| {
+        let url = AfirmaUrl::parse(&format!(
+            "afirma://websocket?ports=49152&v=4{jvc}&idsession=abc"
+        ))
+        .expect("la URL se parte");
+        warns_of_an_old_web_client(&url)
+    };
+
+    assert!(warns("&jvc=0"));
+    assert!(warns("&jvc=-3"));
+    assert!(warns("&jvc=%2B0"), "Integer.parseInt admite el signo");
+    assert!(!warns("&jvc=1"));
+    assert!(!warns("&jvc=3"));
+    assert!(!warns(""), "sin jvc vale 1");
+    assert!(!warns("&jvc=noesunnumero"), "lo que no es un número vale 1");
+    assert!(
+        !warns("&jvc=+0"),
+        "el + es un espacio, e Integer.parseInt no lo recorta"
+    );
+    assert!(
+        !warns("&jvc=-99999999999"),
+        "lo que no cabe en un int vale 1"
+    );
 }
 
 #[test]

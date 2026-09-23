@@ -219,6 +219,10 @@ impl From<&Moment> for SiteErrandView {
                 Self::refused(refusal)
             }
             Moment::Unreachable => Self::unreachable(),
+            Moment::OldWebClient => Self {
+                origin: None,
+                stage: SiteStageView::OldWebClient,
+            },
         }
     }
 }
@@ -408,6 +412,8 @@ crossing! {
         },
         /// Canal abierto pero el navegador nunca conectó o envió mensaje inicial.
         Unreachable,
+        /// La página usa un cliente web anterior al mínimo; el canal sigue abierto.
+        OldWebClient,
     }
 }
 
