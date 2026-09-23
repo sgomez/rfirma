@@ -637,6 +637,7 @@ impl ProtocolCodec for ACodec {
     }
 }
 #[test]
+#[expect(clippy::too_many_lines)]
 fn the_three_verbs_run_the_errand_with_a_codec_a_filter_and_a_transport_in_memory() {
     let opened = RefCell::new(Vec::new());
     let transport = |location: &ChannelLocation, duty: ChannelDuty| {
@@ -782,6 +783,7 @@ fn what_the_codec_does_not_attend_is_answered_with_the_codec_s_own_line() {
 }
 /// El mismo trámite de selección de certificado, de punta a punta, sobre la forma de arranque
 /// que se le pase: puertos sorteados (protocolo 4) o puerto fijo (protocolo 3).
+#[expect(clippy::too_many_lines)]
 fn a_selection_of_a_certificate_goes_all_the_way_from_the_launch_to_the_answer_over(
     launch: &str,
     expected_port: u16,
@@ -1117,6 +1119,7 @@ fn a_sign_and_save(extra: &str) -> AfirmaUrl {
 }
 
 /// Trámite completo de firma con el canal abierto, sobre la forma de arranque que se le pase.
+#[expect(clippy::too_many_lines)]
 fn the_whole_signature_errand_over(
     launch: &str,
     expected_port: u16,
@@ -2209,6 +2212,7 @@ fn the_whole_errand_asking_for(asked: &str, expected: Format) {
 }
 
 /// Lo mismo, sobre el documento y con la firma de referencia que se le digan.
+#[expect(clippy::too_many_lines)]
 fn the_whole_errand_asking_for_over(
     asked: &str,
     document: &[u8],
@@ -3362,6 +3366,7 @@ fn with_no_certificate_at_all_nothing_goes_out_and_the_errand_stays_live() {
     );
 }
 #[test]
+#[expect(clippy::too_many_lines)]
 fn on_the_signing_path_an_empty_keystore_stops_before_anything_is_written() {
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
     let memory = a_memory(home.path());
@@ -4602,6 +4607,7 @@ fn gzipped(bytes: &[u8]) -> Vec<u8> {
 }
 
 #[test]
+#[expect(clippy::too_many_lines)]
 fn gzip_true_decompresses_the_document_before_consent_in_the_five_operations() {
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
     let memory = a_memory(home.path());

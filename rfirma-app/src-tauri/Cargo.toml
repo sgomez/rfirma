@@ -180,5 +180,8 @@ rsa = "0.9"
 # prefijo, que es justo lo que el ID-16 exige contrastar.
 sha2 = { version = "0.10", features = ["oid"] }
 
+[lints.clippy]
+too_many_lines = "warn"
+
 [profile.release]
 strip = true
