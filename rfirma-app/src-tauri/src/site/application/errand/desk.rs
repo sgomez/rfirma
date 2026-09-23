@@ -282,6 +282,7 @@ struct SignatureAsk<'a> {
 }
 
 /// El cuerpo compartido de `consent_to_sign` y `consent_to_sign_and_save`.
+#[expect(clippy::too_many_lines)]
 fn consent_to_a_signature<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
     desk: &ErrandDesk<'_, E, P, N>,
     ask: SignatureAsk<'_>,
