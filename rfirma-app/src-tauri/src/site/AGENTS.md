@@ -32,19 +32,36 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `adapters/tls/mod.rs` | El reparto de las dos piezas del material TLS; reexporta `LocalCa`. |
 | `adapters/tls/server.rs` | El certificado del servidor local, en memoria. Pruebas en `adapters/tls/server/tests.rs`. |
 | `adapters/tls/store.rs` | Las dos ranuras de la CA local en disco, detrás del puerto `LocalCaSlots`. Pruebas en `adapters/tls/store/tests.rs`. |
-| `adapters/relay.rs` | El transporte del servidor intermedio: sin canal que sostener, la operación se resuelve al abrir, con lo que trajo la invocación o con lo que se recupera del `rtservlet`; un rechazo deja la subida como entrega pendiente. Pruebas en `adapters/relay/tests.rs`. |
+| `adapters/relay.rs` | El transporte del servidor intermedio: la operación se resuelve al abrir; un rechazo deja la subida como entrega pendiente. Fijaciones en `adapters/relay/tests/mod.rs`. |
+| `adapters/relay/tests/document_variant.rs` | Pruebas del relay para la variante `fileid`/`dat` en la URL. |
+| `adapters/relay/tests/parameters_variant.rs` | Pruebas del relay para la variante que recupera los parámetros por XML. |
+| `adapters/relay/tests/active_wait.rs` | Pruebas del latido de la espera activa del relay. |
 | `adapters/trace.rs` | La traza por `stderr` de las URL `afirma://` que llegan, viva solo en compilación de desarrollo. Sin pruebas propias. |
 | `adapters/transport.rs` | El transporte de producción del `wss` sobre el *loopback*. |
 | `adapters/views.rs` | Los tipos que cruzan a la ventana de sede y su única conversión. Pruebas en `adapters/views/tests.rs`. |
 | `adapters/window.rs` | El adaptador de la ventana de sede: la crea, la enseña, la oculta o la cierra, le publica lo que va pasando y decide qué hace su cierre por el gestor de ventanas con el trámite vivo (ADR-0024). |
 | `application/batch.rs` | El lote remoto ya consentido: prefirma, `PK1` con el token y postfirma. No decide el consentimiento. Pruebas en `application/batch/tests.rs`. |
 | `application/errand/desk.rs` | La mesa del trámite (`ErrandDesk`) y los consentimientos que se deciden sobre ella. |
-| `application/errand/mod.rs` | Los verbos, y el reparto. **Léelo antes que sus hermanos**: es lo único que una orden llama. Pruebas en `application/errand/tests.rs`. |
+| `application/errand/mod.rs` | Los verbos, y el reparto. **Léelo antes que sus hermanos**: es lo único que una orden llama. Pruebas en `application/errand/tests/`. |
 | `application/errand/outcome.rs` | El vocabulario de salida del trámite, y el puerto `ProtocolCodec`, que lo lee y lo escribe en el cable. |
 | `application/errand/replies.rs` | Las respuestas finales, y **el único sitio que escribe en el cable**. |
 | `application/errand/request.rs` | `SiteRequest`: lo que la sede quiere, sin versión. |
 | `application/errand/state.rs` | El estado del trámite, con un solo dueño (`LiveErrand`). Pruebas en `application/errand/state/tests.rs`. |
-| `application/errand/tests.rs` | Las pruebas del trámite entero, en grada A, con los vecinos doblados y el hilo de `fixtures.rs`. Solo en pruebas. |
+| `application/errand/tests/mod.rs` | El reparto de las pruebas del trámite por comportamiento. Solo en pruebas. |
+| `application/errand/tests/support.rs` | Los dobles del trámite en grada A: motor, transporte, códec, token, vecinos y mesa de pruebas. Solo en pruebas. |
+| `application/errand/tests/support_requests.rs` | Los constructores de peticiones y consentimientos que usan esas pruebas. Solo en pruebas. |
+| `application/errand/tests/certificate_selection.rs` | Pruebas de la selección de certificado de sede, del arranque a la respuesta. Solo en pruebas. |
+| `application/errand/tests/signature_basics.rs` | Pruebas de la firma de sede básica: recuadro, rúbrica y páginas añadidas. Solo en pruebas. |
+| `application/errand/tests/signature_consent.rs` | Pruebas del consentimiento de firma: política, firmas sin registrar y `signandsave` sin `dat`. Solo en pruebas. |
+| `application/errand/tests/signature_formats.rs` | Pruebas de algoritmo, resumen y formato de la firma de sede. Solo en pruebas. |
+| `application/errand/tests/document_and_save.rs` | Pruebas de elección de documento, guardado y carga por orden de la sede. Solo en pruebas. |
+| `application/errand/tests/token_and_launch.rs` | Pruebas del token, el almacén vacío y el arranque de un segundo trámite. Solo en pruebas. |
+| `application/errand/tests/sticky_selection.rs` | Pruebas del certificado pegajoso de una selección. Solo en pruebas. |
+| `application/errand/tests/batch_remote.rs` | Pruebas del lote remoto de sede. Solo en pruebas. |
+| `application/errand/tests/batch_local.rs` | Pruebas del lote local de sede. Solo en pruebas. |
+| `application/errand/tests/countersignature_and_gzip.rs` | Pruebas de contrafirma, gzip y firma sin `dat`. Solo en pruebas. |
+| `application/errand/tests/headless_and_checked.rs` | Pruebas del modo `headless` y de `checkSignatures`. Solo en pruebas. |
+| `application/errand/tests/websocket.rs` | Pruebas del trámite de sede sobre WebSocket. Solo en pruebas. |
 | `application/filtering.rs` | El listado de certificados que la sede acepta. Pruebas en `application/filtering/tests.rs`. |
 | `application/local_batch.rs` | El bucle del lote local: el ciclo de sede por elemento y `stoponerror`. Pruebas en `application/local_batch/tests.rs`. |
 | `application/policies.rs` | **La política de firma que declara la sede.** Pruebas en `application/policies/tests.rs`. |
@@ -142,13 +159,14 @@ situación. Dos cosas que salen mal si se olvidan:
   nuevo, no un `if`.
 - **Lo que la ventana de sede ve** se traduce en `adapters/views.rs`; quién lo
   publica es `adapters/window.rs`.
-- Las pruebas del trámite van en `application/errand/tests.rs`, con el códec, el
-  transporte y los dos motores del puente doblados. Dos oráculos siguen
+- Las pruebas del trámite van en `application/errand/tests/`, repartidas por
+  comportamiento, con el códec, el transporte y los dos motores del puente
+  doblados. Dos oráculos siguen
   congelados: `just check-contract` compara `just contract` con
   `tests/contract.snapshot`, y la grada C del canal y el banco de conformidad no
   se tocan.
 - **Un formato que entra en `Format::bridged()`** (`signing/domain/bridge.rs`)
-  deja de ser el contraejemplo que era: revisa `application/errand/tests.rs`,
+  deja de ser el contraejemplo que era: revisa `application/errand/tests/signature_formats.rs`,
   que lo usaba como formato que el puente no atiende, y la resolución de `auto`
   sobre bytes que no son un PDF.
 - **El recuadro y la rúbrica son de PAdES**: con cualquier otro formato el
