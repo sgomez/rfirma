@@ -300,6 +300,21 @@ Avisar en el carril rápido rompería todos los PRs a la vez, un día cualquiera
 `merge: auto` puesto. El cron es el único sitio donde avisar no bloquea a nadie. Sin congelar el
 reloj: escondería fallos reales de cadena.
 
+## Cobertura del frontend: el mismo suelo que en Rust, en TypeScript
+
+`@vitest/coverage-v8` mide `rfirma-app/src`, y `coverage.thresholds` en `vite.config.ts` es la
+puerta: **90 % de líneas**, la medida inicial redondeada hacia abajo, con `autoUpdate: false` —la
+misma política manual del suelo de Rust, nunca un commit del CI subiéndolo solo. Corre dentro de
+`just test-ts`, que ya era parte de `check-ts` (Cadena TypeScript, carril rápido): el coste
+añadido es la instrumentación de la propia suite de Vitest, segundos, no un job nuevo.
+
+`coverage.include: ["src/**/*.{ts,tsx}"]` está puesto a propósito, y no es el comportamiento por
+omisión de Vitest —que **sólo mide los ficheros que algún test llega a importar**—: sin `include`,
+un fichero nuevo sin ninguna prueba no cuenta en absoluto, ni suma ni resta, y el suelo deja de
+detectar exactamente el caso que existe para atrapar. Con `include`, un fichero de `src/` que
+ningún test toca puntúa 0 % de líneas y arrastra la media, igual que en Rust un `cargo llvm-cov`
+mide el binario entero y no sólo lo que una prueba ejecuta.
+
 ## Consequences
 
 - La casilla de linting del ADR-0013 decía `eslint`; queda sustituida por Biome.

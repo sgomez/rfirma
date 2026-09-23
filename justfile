@@ -282,10 +282,10 @@ check-native:
 test-java: bootstrap
     cd {{ bridge }} && mvn -B verify
 
-# vitest.
+# vitest, con cobertura: el suelo de coverage.thresholds en vite.config.ts (ADR-0014).
 [private]
 test-ts: po-import
-    cd {{ app }} && pnpm exec vitest run --reporter=dot
+    cd {{ app }} && pnpm exec vitest run --coverage --reporter=dot
 
 # cargo test, mas la compilacion de las pruebas de grada C.
 [private]
