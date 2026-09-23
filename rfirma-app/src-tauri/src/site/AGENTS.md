@@ -39,16 +39,19 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `adapters/relay/tests/active_wait.rs` | Pruebas del latido de la espera activa del relay. |
 | `adapters/trace.rs` | La traza por `stderr` de las URL `afirma://` que llegan, viva solo en compilación de desarrollo. Sin pruebas propias. |
 | `adapters/transport.rs` | El transporte de producción del `wss` sobre el *loopback*. |
+| `adapters/triphase_server.rs` | El cliente del servidor trifásico que la sede nombra en `serverUrl`, sobre `reqwest::blocking`; **no** es el de los servlets del lote. Pruebas en `adapters/triphase_server/tests.rs`. |
 | `adapters/views.rs` | Los tipos que cruzan a la ventana de sede y su única conversión. Pruebas en `adapters/views/tests.rs`. |
 | `adapters/window.rs` | El adaptador de la ventana de sede: la crea, la enseña, la oculta o la cierra, le publica lo que va pasando y decide qué hace su cierre por el gestor de ventanas con el trámite vivo (ADR-0024). |
 | `application/batch.rs` | El lote remoto ya consentido: prefirma, `PK1` con el token y postfirma. No decide el consentimiento. Pruebas en `application/batch/tests.rs`. |
 | `application/errand/desk.rs` | La mesa del trámite (`ErrandDesk`), `attend_operation` y el consentimiento de firma, guardado y carga. |
 | `application/errand/desk/certificates.rs` | El consentimiento de selección de certificados: sede, lote remoto y lote local. |
+| `application/errand/desk/scratch.rs` | El documento de paso de la mesa: dónde se escribe y con qué extensión. |
 | `application/errand/mod.rs` | Los verbos, y el reparto. **Léelo antes que sus hermanos**: es lo único que una orden llama. Pruebas en `application/errand/tests/`. |
 | `application/errand/outcome.rs` | El vocabulario de salida del trámite, y el puerto `ProtocolCodec`, que lo lee y lo escribe en el cable. |
 | `application/errand/replies.rs` | Las respuestas finales, y **el único sitio que escribe en el cable**. |
 | `application/errand/request.rs` | `SiteRequest`: lo que la sede quiere, sin versión. |
 | `application/errand/state.rs` | El estado del trámite, con un solo dueño (`LiveErrand`). Pruebas en `application/errand/state/tests.rs`. |
+| `application/errand/server_signature.rs` | La firma que la sede manda hacer a su servidor trifásico, del certificado elegido a la firma que se entrega; no abre el ciclo del puente. |
 | `application/errand/state/revelation.rs` | La revelación de la ventana: por temporizador de respaldo, por llegada del navegador o porque el trámite tiene algo que decir (ADR-0020). |
 | `application/errand/tests/mod.rs` | El reparto de las pruebas del trámite por comportamiento. Solo en pruebas. |
 | `application/errand/tests/support.rs` | Los dobles del trámite en grada A: motor, transporte, códec, token, vecinos y mesa de pruebas. Solo en pruebas. |
@@ -60,6 +63,7 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `application/errand/tests/signature_formats.rs` | Pruebas de algoritmo, resumen y formato de la firma de sede. Solo en pruebas. |
 | `application/errand/tests/document_and_save.rs` | Pruebas de elección de documento, guardado y carga por orden de la sede. Solo en pruebas. |
 | `application/errand/tests/token_and_launch.rs` | Pruebas del token, el almacén vacío y el arranque de un segundo trámite. Solo en pruebas. |
+| `application/errand/tests/triphase_server.rs` | Pruebas de la firma contra el servidor trifásico de la sede: la entrega, `SAF_03` y `SAF_40`. Solo en pruebas. |
 | `application/errand/tests/sticky_selection.rs` | Pruebas del certificado pegajoso de una selección. Solo en pruebas. |
 | `application/errand/tests/batch_remote.rs` | Pruebas del lote remoto de sede. Solo en pruebas. |
 | `application/errand/tests/batch_local.rs` | Pruebas del lote local de sede. Solo en pruebas. |
@@ -84,6 +88,7 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `application/startup/tests/relay_refusal.rs` | El relay que termina sin enseñar la ventana o la enseña: rechazo con destino conocido, operación contestada al llegar, subida fallida, trámite en curso. Solo en pruebas. |
 | `application/startup/repair.rs` | La reparación de la CA local desde la ventana de sede. Pruebas en `application/startup/repair/tests.rs`. |
 | `application/trust.rs` | Cuándo se instala la CA local en los almacenes, cómo se solapa con la siguiente y cómo se retira de todos ellos. Pruebas en `application/trust/tests.rs`. |
+| `application/triphase.rs` | La firma CAdES trifásica ya consentida contra el servidor de la sede: prefirma allí, `PK1` con el token aquí y postfirma allí. Pruebas en `application/triphase/tests.rs`. |
 | `domain/batch/mod.rs` | El reparto del lote, y `BatchFormat`: si el lote viaja en el XML heredado o en JSON. |
 | `domain/batch/local.rs` | El lote local leído del JSON de la sede, con lo que cada firma hereda del lote. **No** es el lote remoto. Pruebas en `domain/batch/local/tests.rs`. |
 | `domain/batch/json.rs` | Un JSON de solo lectura y escritura con el orden del documento, para el lote remoto. Pruebas en `domain/batch/json/tests.rs`. |
@@ -134,6 +139,7 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `domain/tls_error.rs`, `domain/trust_error.rs`, `domain/relay_error.rs` | Las situaciones (ADR-0009) del material del canal, de la confianza y del servidor intermedio. Pruebas en `domain/tls_error/tests.rs`, `domain/trust_error/tests.rs` y `domain/relay_error/tests.rs`. |
 | `domain/signing.rs` | Lo que vuelve de la firma que pidió la sede: la firma en memoria, o el rechazo ya traducido por quien firmó. |
 | `domain/trust.rs` | El reparto, y las cuatro reglas **puras** de la confianza. Aquí vive el puerto `TrustStores`. Léelo antes que sus hermanos. Pruebas en `domain/trust/tests.rs`. |
+| `domain/triphase_server.rs` | El protocolo del servidor trifásico de `serverUrl` y su situación (ADR-0009): los dos formularios y cómo se leen sus respuestas. **No** es el lote remoto. Pruebas en `domain/triphase_server/tests.rs`. |
 | `ports.rs` | **Los doce puertos**: los propios del contexto (`BatchServices` incluido), los dos motores que presta el puente y lo que el trámite pide a los vecinos. Pruebas en `ports/tests.rs`. |
 
 ## Al tocar lo que sale hacia la sede

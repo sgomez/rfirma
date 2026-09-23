@@ -9,6 +9,7 @@ use crate::site::domain::batch_error::Situation as BatchSituation;
 use crate::site::domain::channel::Situation as ChannelSituation;
 use crate::site::domain::protocol::{SafCode, WireAnswer};
 use crate::site::domain::relay_error::Situation as RelaySituation;
+use crate::site::domain::triphase_server::Situation as TriphaseSituation;
 
 /// La vista para la ventana y el código para la sede de un rechazo, decididos juntos.
 pub fn told(refusal: &SiteRefusal) -> (Failure, SafCode) {
@@ -82,6 +83,34 @@ pub fn told(refusal: &SiteRefusal) -> (Failure, SafCode) {
             SafCode::ConfirmationNeeded,
         ),
         SiteRefusal::CouldNotValidate(error) => (Failure::from(error), code_of_bridge(error)),
+        SiteRefusal::Triphase(error) => (
+            Failure::new(
+                label_of_triphase(error.situation()),
+                error.detail().to_owned(),
+            ),
+            code_of_triphase(error.situation()),
+        ),
+    }
+}
+
+/// Etiqueta de ventana de una situación de la firma contra el servidor trifásico.
+fn label_of_triphase(situation: TriphaseSituation) -> &'static str {
+    match situation {
+        TriphaseSituation::ServerUrlMissing => "triphaseServerUrlMissing",
+        TriphaseSituation::ServerException => "triphaseServerException",
+        TriphaseSituation::ServerUnreachable => "triphaseServerUnreachable",
+        TriphaseSituation::UnexpectedAnswer => "triphaseServerUnexpectedAnswer",
+    }
+}
+
+/// Código de protocolo de una situación de la firma contra el servidor trifásico (`ProtocolInvocationLauncherSign`, 1.9.2).
+pub fn code_of_triphase(situation: TriphaseSituation) -> SafCode {
+    match situation {
+        TriphaseSituation::ServerUrlMissing => SafCode::Params,
+        TriphaseSituation::ServerException => SafCode::RecoverServerDocument,
+        TriphaseSituation::ServerUnreachable | TriphaseSituation::UnexpectedAnswer => {
+            SafCode::SignatureFailed
+        }
     }
 }
 

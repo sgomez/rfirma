@@ -212,3 +212,43 @@ fn the_chosen_document_resolves_the_format_auto_of_a_signature_without_data() {
     assert_eq!(request.document(), b"%PDF-1.7\nelegido");
     assert_eq!(request.round(), SignatureRound::First);
 }
+
+#[test]
+fn a_cades_triphase_signature_goes_through_the_site_server() {
+    let url = an_operation(&format!(
+        "op={COSIGN}&format=CAdEStri&algorithm=SHA256&dat={}",
+        dat(b"firma previa")
+    ));
+
+    let SiteOperation::Sign(request) = read_operation(&url).expect("se atiende") else {
+        panic!("es una firma");
+    };
+    assert!(request.goes_through_the_site_server());
+    assert_eq!(request.format(), RequestedFormat::Cades);
+}
+
+#[test]
+fn a_plain_cades_signature_is_made_here() {
+    let url = an_operation(&format!(
+        "op={SIGN}&format=CAdES&algorithm=SHA256&dat={}",
+        dat(b"datos")
+    ));
+
+    let SiteOperation::Sign(request) = read_operation(&url).expect("se atiende") else {
+        panic!("es una firma");
+    };
+    assert!(!request.goes_through_the_site_server());
+}
+
+#[test]
+fn a_cades_triphase_signature_without_data_still_goes_through_the_site_server() {
+    let url = an_operation("op=sign&format=CAdEStri&algorithm=SHA256");
+
+    let SiteOperation::SignWithoutDocument(pending) = read_operation(&url).expect("se atiende")
+    else {
+        panic!("es una firma sin documento");
+    };
+    assert!(pending
+        .with_chosen_document(b"datos".to_vec())
+        .goes_through_the_site_server());
+}

@@ -13,8 +13,10 @@ use crate::signing::domain::bridge::{Format, SignatureOperation};
 use crate::site::domain::batch::LocalBatch;
 use crate::site::domain::channel::{ArrivalMode, ChannelTenure};
 use crate::site::domain::protocol::{
-    AfirmaUrl, AskedAlgorithm, BatchRequest, NegotiatedCredential, Refusal, SiteFilter,
+    AfirmaUrl, AskedAlgorithm, BatchRequest, NegotiatedCredential, Refusal, SignatureRound,
+    SiteFilter,
 };
+use crate::site::domain::signing::SiteSignature;
 
 use super::outcome::{
     ConfirmationConsent, LoadingConsent, Moment, ProtocolCodec, SavingConsent, SavingHints,
@@ -160,6 +162,21 @@ pub(super) struct PendingSignature {
     pub(super) unregistered_signatures: bool,
     /// Pistas de guardado, si esta firma viene de `signandsave`.
     pub(super) saving: Option<Box<SavingHints>>,
+    /// La firma que hace el servidor trifásico de la sede, si se hace allí.
+    pub(super) through_the_server: Option<ServerSignature>,
+}
+
+/// Lo que la firma contra el servidor trifásico lleva del consentimiento a la entrega.
+#[derive(Clone, Debug)]
+pub(super) struct ServerSignature {
+    /// Los datos, o la firma previa en cofirma y contrafirma.
+    pub(super) document: Vec<u8>,
+    /// La operación que pidió la sede.
+    pub(super) round: SignatureRound,
+    /// El certificado que la persona consintió, una vez consentido.
+    pub(super) chosen: Option<TokenCertificate>,
+    /// La firma que devolvió la postfirma, una vez hecha.
+    pub(super) signed: Option<SiteSignature>,
 }
 
 impl LiveErrand {
@@ -400,6 +417,15 @@ impl LiveErrand {
         *crate::lock(&self.consent) = Some(PendingConsent::Batch(pending));
     }
 
+    /// Si el trámite tiene una firma contra el servidor trifásico consentida esperando el secreto.
+    pub fn a_server_signature_is_pending(&self) -> bool {
+        matches!(
+            &*crate::lock(&self.consent),
+            Some(PendingConsent::Signature(pending))
+                if pending.through_the_server.as_ref().is_some_and(|server| server.chosen.is_some())
+        )
+    }
+
     /// Si el trámite tiene un lote consentido esperando el secreto.
     pub fn a_batch_is_pending(&self) -> bool {
         matches!(
@@ -408,11 +434,15 @@ impl LiveErrand {
         )
     }
 
-    /// El certificado consentido del lote, remoto o local, que espera el secreto.
-    pub fn the_batch_certificate(&self) -> Option<TokenCertificate> {
+    /// El certificado consentido que espera el secreto sin ciclo abierto: el del lote, remoto o local, o el de la firma contra el servidor trifásico.
+    pub fn the_certificate_awaiting_the_secret(&self) -> Option<TokenCertificate> {
         match &*crate::lock(&self.consent) {
             Some(PendingConsent::Batch(pending)) => pending.chosen.clone(),
             Some(PendingConsent::LocalBatch(pending)) => pending.chosen.clone(),
+            Some(PendingConsent::Signature(pending)) => pending
+                .through_the_server
+                .as_ref()
+                .and_then(|server| server.chosen.clone()),
             _ => None,
         }
     }

@@ -44,7 +44,7 @@ pub fn sign_with_pin(pin: String, app_handle: tauri::AppHandle) -> Result<(), Fa
     })
 }
 
-/// La única puerta del PIN: cierra el lote consentido o firma el ciclo abierto.
+/// La única puerta del PIN: cierra el lote consentido o la firma contra el servidor trifásico, o firma el ciclo abierto.
 pub fn signed_with_the_secret(
     desk: &crate::site::SiteDesk<'_>,
     live: &crate::site::LiveErrand,
@@ -55,7 +55,7 @@ pub fn signed_with_the_secret(
     let prompter = signing.prompter.as_ref();
     let language = signing.configuration().language;
 
-    let Some(certificate) = live.the_batch_certificate() else {
+    let Some(certificate) = live.the_certificate_awaiting_the_secret() else {
         return Ok(session::signed_on_the_token(
             &signer,
             &signing.session,
@@ -65,7 +65,7 @@ pub fn signed_with_the_secret(
         )?);
     };
     let secret = session::secret_for_the_batch(&signer, &certificate, prompter, language, pin)?;
-    crate::site::the_pending_batch_signed(desk, live, &secret)
+    crate::site::the_pending_signature_signed(desk, live, &secret)
 }
 
 /// Postfirma: comprueba el sello, ensambla el PDF y lo deja caer.

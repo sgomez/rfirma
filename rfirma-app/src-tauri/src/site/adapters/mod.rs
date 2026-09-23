@@ -18,5 +18,6 @@ pub mod tauri;
 pub mod tls;
 pub mod trace;
 pub mod transport;
+pub mod triphase_server;
 pub mod views;
 pub mod window;

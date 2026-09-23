@@ -561,6 +561,9 @@ pub(crate) fn a_desk<'a>(
         scratch_dir: scratch.to_path_buf(),
         scratch: std::sync::Arc::new(crate::site::adapters::scratch::RealScratch),
         batch: std::sync::Arc::new(InMemoryBatchServices::default()),
+        triphase: std::sync::Arc::new(
+            crate::site::application::tests::InMemoryTriphaseServer::default(),
+        ),
     }
 }
 

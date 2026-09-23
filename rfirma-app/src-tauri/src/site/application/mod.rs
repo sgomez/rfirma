@@ -8,6 +8,7 @@ pub mod policies;
 pub mod session;
 pub mod site;
 pub mod startup;
+pub mod triphase;
 pub mod trust;
 
 #[cfg(test)]

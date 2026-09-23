@@ -1,9 +1,11 @@
 //! Mesa del trámite: dependencias de ejecución y evaluación del consentimiento.
 
 mod certificates;
+mod scratch;
 
 use certificates::the_only_row_among;
 pub use certificates::{consent_for, consent_to_the_batch, consent_to_the_local_batch};
+pub(in crate::site::application) use scratch::{keep_the_document, write_the_document};
 
 use std::collections::BTreeMap;
 use std::path::PathBuf;
@@ -12,7 +14,6 @@ use std::sync::Arc;
 use base64::engine::general_purpose::STANDARD;
 use base64::Engine as _;
 
-use crate::documents::domain::handles;
 use crate::identity::domain::certificate::TokenCertificate;
 use crate::signing::domain::bridge::Format;
 use crate::signing::domain::{AdmissibleDocument, ALLOW_UNREGISTERED_KEY};
@@ -36,7 +37,7 @@ use crate::site::application::policies;
 use crate::site::application::session::SiteRefusal;
 use crate::site::ports::{
     BatchServices, Certificates, FilterEngine, PolicyEngine, Scratch, ScratchDocuments,
-    SiteSigning, TokenSigning, ValidationEngine,
+    SiteSigning, TokenSigning, TriphaseServer, ValidationEngine,
 };
 
 /// `properties`: la sede pide validar las firmas que ya trae el documento antes de seguir.
@@ -63,6 +64,8 @@ pub struct ErrandDesk<'a, E: FilterEngine, P: PolicyEngine, N: Neighbours> {
     pub scratch: Arc<dyn Scratch + Send + Sync>,
     /// Los dos servlets del lote remoto.
     pub batch: Arc<dyn BatchServices + Send + Sync>,
+    /// El servidor trifásico que la sede nombra en `serverUrl`.
+    pub triphase: Arc<dyn TriphaseServer + Send + Sync>,
 }
 
 /// Atiende la operación recibida por el canal local evaluando los certificados disponibles.
@@ -231,6 +234,7 @@ pub fn consent_to_sign<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
             declared_params: request.declared_params(),
             filter: request.filter(),
             headless: request.is_headless(),
+            through_the_site_server: request.goes_through_the_site_server(),
             confirmed: BTreeMap::new(),
         },
         None,
@@ -263,6 +267,7 @@ pub fn consent_to_sign_and_save<E: FilterEngine, P: PolicyEngine, N: Neighbours>
             declared_params: request.declared_params(),
             filter: request.filter(),
             headless: request.is_headless(),
+            through_the_site_server: false,
             confirmed: BTreeMap::new(),
         },
         Some(Box::new(saving)),
@@ -280,6 +285,7 @@ struct SignatureAsk<'a> {
     declared_params: &'a [(String, String)],
     filter: &'a SiteFilter,
     headless: bool,
+    through_the_site_server: bool,
     confirmed: BTreeMap<String, String>,
 }
 
@@ -385,6 +391,7 @@ fn consent_to_a_signature<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
         unregistered_signatures,
         saving,
         already_chosen,
+        for_the_site_server: ask.through_the_site_server.then(|| ask.document.to_vec()),
     }))
 }
 
@@ -429,6 +436,7 @@ fn the_previous_signatures_hold<E: FilterEngine, P: PolicyEngine, N: Neighbours>
             declared: ask.declared_params.to_vec(),
             filter: ask.filter.clone(),
             headless: ask.headless,
+            through_the_site_server: ask.through_the_site_server,
             saving,
             confirmed: ask.confirmed.clone(),
             parameter,
@@ -460,6 +468,7 @@ pub fn consent_to_the_confirmed_signature<E: FilterEngine, P: PolicyEngine, N: N
             declared_params: &pending.declared,
             filter: &pending.filter,
             headless: pending.headless,
+            through_the_site_server: pending.through_the_site_server,
             confirmed,
         },
         pending.saving,
@@ -491,51 +500,4 @@ fn accepted_listing<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
         return Err(no_certificate_the_site_accepts(live, owned));
     }
     Ok(accepted)
-}
-
-pub(in crate::site::application) fn keep_the_document<
-    E: FilterEngine,
-    P: PolicyEngine,
-    N: Neighbours,
->(
-    desk: &ErrandDesk<'_, E, P, N>,
-    live: &LiveErrand,
-    format: Format,
-    bytes: &[u8],
-) -> Result<String, SiteRefusal> {
-    let path = write_the_document(desk, format, bytes)?;
-    live.keep_the_scratch(path.clone(), desk.scratch.clone());
-    Ok(desk.neighbours.open_unrecorded(path))
-}
-
-/// Deja el documento en el directorio de paso sin apuntarlo en el trámite: quien lo llame decide
-/// cuándo borrarlo (el lote local lo hace elemento a elemento, no al final del trámite).
-pub(in crate::site::application) fn write_the_document<
-    E: FilterEngine,
-    P: PolicyEngine,
-    N: Neighbours,
->(
-    desk: &ErrandDesk<'_, E, P, N>,
-    format: Format,
-    bytes: &[u8],
-) -> Result<PathBuf, SiteRefusal> {
-    desk.scratch
-        .make_the_folder(&desk.scratch_dir)
-        .map_err(SiteRefusal::ScratchFolderMissing)?;
-    let path = desk
-        .scratch_dir
-        .join(format!("{}.{}", handles::mint(), what_arrives_in(format)));
-    desk.scratch
-        .write(&path, bytes)
-        .map_err(SiteRefusal::ScratchUnwritable)?;
-    Ok(path)
-}
-
-/// La extensión del documento que se firma en ese formato, no la de la firma que sale.
-fn what_arrives_in(format: Format) -> &'static str {
-    match format {
-        Format::Pades => "pdf",
-        Format::Xades(_) | Format::FacturaE => "xml",
-        Format::Cades | Format::CadesAsicS | Format::Cms => "bin",
-    }
 }

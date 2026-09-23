@@ -220,6 +220,7 @@ pub(crate) fn a_desk_for_the_batch<'a>(
         scratch_dir: home.join("errand"),
         scratch: Arc::new(crate::site::adapters::scratch::RealScratch),
         batch: services,
+        triphase: Arc::new(crate::site::application::tests::InMemoryTriphaseServer::default()),
     }
 }
 

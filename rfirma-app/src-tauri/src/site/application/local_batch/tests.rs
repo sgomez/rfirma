@@ -142,6 +142,7 @@ fn a_desk_that_is_never_touched(
         scratch_dir: home.join("errand"),
         scratch: Arc::new(Untouched),
         batch: Arc::new(Untouched),
+        triphase: Arc::new(crate::site::application::tests::InMemoryTriphaseServer::default()),
     }
 }
 

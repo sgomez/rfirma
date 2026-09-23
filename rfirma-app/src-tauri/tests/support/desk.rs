@@ -115,6 +115,7 @@ pub fn the_desk_of(roots: &Roots) -> ErrandDesk<'_, Isolate, Isolate, Neighbours
         scratch_dir: roots.site.scratch_dir.clone(),
         scratch: roots.site.scratch.clone(),
         batch: roots.site.batch.clone(),
+        triphase: roots.site.triphase.clone(),
     }
 }
 

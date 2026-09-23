@@ -10,6 +10,7 @@ use crate::site::application::filtering;
 use crate::site::domain::batch_error::BatchError;
 use crate::site::domain::protocol::{AskedAlgorithm, SiteFilter};
 use crate::site::domain::signing::{SigningRefusal, SiteSignature};
+use crate::site::domain::triphase_server::TriphaseServerError;
 use crate::site::ports::{Certificates, FilterEngine, SiteSigning, SiteSigningRequest};
 
 /// Por qué el trámite no sigue, antes de traducirlo a la ventana y al cable.
@@ -51,6 +52,8 @@ pub enum SiteRefusal {
     ConfirmationNeeded(String),
     /// Las firmas del documento no se han podido examinar.
     CouldNotValidate(BridgeError),
+    /// La firma contra el servidor trifásico de la sede no ha salido.
+    Triphase(TriphaseServerError),
 }
 
 impl From<SigningRefusal> for SiteRefusal {
@@ -82,6 +85,7 @@ impl SiteRefusal {
             | Self::ConfirmationNeeded(detail) => detail.clone(),
             Self::Signing(refusal) | Self::BatchSigningFailed(refusal) => refusal.detail.clone(),
             Self::Batch(error) => error.detail().to_owned(),
+            Self::Triphase(error) => error.detail().to_owned(),
         }
     }
 }

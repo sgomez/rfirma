@@ -17,8 +17,10 @@ use crate::site::domain::protocol::{DataSource, Refusal, SiteOperation};
 use crate::site::domain::relay_error::{RelayError, Situation as RelaySituation};
 use crate::site::domain::signing::SigningRefusal;
 use crate::site::domain::tls_error::{Situation as TlsSituation, TlsError};
+use crate::site::domain::triphase_server::TriphaseServerError;
 use crate::site::ports::{
-    BatchServices, Certificates, LocalCaSlots, Servlets, TokenSigning, ValidationEngine,
+    BatchServices, Certificates, LocalCaSlots, Servlets, TokenSigning, TriphaseServer,
+    ValidationEngine,
 };
 
 /// Las dos ranuras de la CA local en memoria, escribibles o no.
@@ -435,4 +437,48 @@ pub fn a_runtime() -> tokio::runtime::Handle {
             tokio::runtime::Runtime::new().expect("el runtime de fondo de las pruebas arranca")
         });
     tokio::runtime::Handle::try_current().unwrap_or_else(|_| BACKGROUND.handle().clone())
+}
+
+/// Una llamada que recibió el servidor trifásico en memoria: su URL y su formulario.
+pub(crate) type ReceivedForm = (String, Vec<(&'static str, String)>);
+
+/// Un servidor trifásico que contesta lo que se le dé a la prefirma y a la postfirma, y apunta cada formulario.
+#[derive(Default)]
+pub(crate) struct InMemoryTriphaseServer {
+    presign: Vec<u8>,
+    postsign: Vec<u8>,
+    received: Mutex<Vec<ReceivedForm>>,
+}
+
+impl InMemoryTriphaseServer {
+    /// Un servidor con esas dos respuestas.
+    pub(crate) fn answering(presign: &[u8], postsign: &[u8]) -> Self {
+        Self {
+            presign: presign.to_vec(),
+            postsign: postsign.to_vec(),
+            ..Self::default()
+        }
+    }
+
+    /// La URL y el formulario de cada llamada, en el orden en que llegaron.
+    pub(crate) fn forms(&self) -> Vec<ReceivedForm> {
+        crate::lock(&self.received).clone()
+    }
+}
+
+impl TriphaseServer for InMemoryTriphaseServer {
+    fn post(
+        &self,
+        server_url: &str,
+        form: &[(&'static str, String)],
+    ) -> Result<Vec<u8>, TriphaseServerError> {
+        crate::lock(&self.received).push((server_url.to_owned(), form.to_vec()));
+        let asked_for_the_presign = form
+            .iter()
+            .any(|(key, value)| *key == "op" && value == "pre");
+        Ok(match asked_for_the_presign {
+            true => self.presign.clone(),
+            false => self.postsign.clone(),
+        })
+    }
 }

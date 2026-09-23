@@ -149,6 +149,7 @@ fn signing_and_saving_ends_in_the_saving_moment_with_the_der_to_answer_with() {
         scratch_dir: scratch.clone(),
         scratch: Arc::new(crate::site::adapters::scratch::RealScratch),
         batch: Arc::new(InMemoryBatchServices::default()),
+        triphase: Arc::new(crate::site::application::tests::InMemoryTriphaseServer::default()),
     };
 
     assert!(live.begin(Errand::of(

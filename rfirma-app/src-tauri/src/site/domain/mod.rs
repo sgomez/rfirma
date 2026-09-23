@@ -8,5 +8,6 @@ pub mod protocol;
 pub mod relay_error;
 pub mod signing;
 pub mod tls_error;
+pub mod triphase_server;
 pub mod trust;
 pub mod trust_error;

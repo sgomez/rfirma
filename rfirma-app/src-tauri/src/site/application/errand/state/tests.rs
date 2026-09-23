@@ -28,6 +28,7 @@ fn a_pending_signature() -> PendingSignature {
         from_the_site: BTreeMap::new(),
         unregistered_signatures: false,
         saving: None,
+        through_the_server: None,
     }
 }
 
