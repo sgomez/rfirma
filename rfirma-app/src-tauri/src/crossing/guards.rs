@@ -181,6 +181,7 @@ fn the_portal_path_inside(value: &serde_json::Value) -> Option<String> {
 }
 
 /// Genera todas las salidas producidas a partir de un documento del portal.
+#[expect(clippy::too_many_lines)]
 fn crossings_from_a_portal_document() -> Vec<Serialised> {
     use crate::crossing::Failure;
     use crate::documents::adapters::files::RealFiles;

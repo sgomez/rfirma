@@ -272,6 +272,7 @@ fn names_of(der: &[u8]) -> (String, String) {
 }
 
 /// Importa un fichero PKCS#12 en el almacén NSS indicado.
+#[expect(clippy::too_many_lines)]
 pub fn import_pkcs12(directory: &Path, pkcs12: &[u8], password: &str) -> Result<(), TokenError> {
     let nss = nss_library()
         .map_err(|err| TokenError::new(Situation::ModuleNotFound, err.detail().to_owned()))?;
