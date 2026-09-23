@@ -51,7 +51,14 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `application/session.rs` | La sesión de firma **de sede**, y `SiteRefusal`, la situación de cada negativa sin traducir. Pruebas en `application/session/tests.rs`. |
 | `application/site.rs` | **La invocación de una sede**: la negociación de arranque, que elige códec y decide si un rechazo sale por el socket o por la ventana. Pruebas en `application/site/tests.rs`. |
 | `application/startup/channel.rs` | El canal abierto y sostenido, y quién lo sostiene o por qué no lo hay. Pruebas en `application/startup/channel/tests.rs`. |
-| `application/startup/mod.rs` | El arranque: si se enseña la ventana principal o se atiende un trámite de sede, y con qué momento se abre la de sede. Pruebas en `application/startup/tests.rs`. |
+| `application/startup/mod.rs` | El arranque: si se enseña la ventana principal o se atiende un trámite de sede, y con qué momento se abre la de sede. Pruebas partidas por comportamiento en `application/startup/tests/`. |
+| `application/startup/tests.rs` | El índice de las pruebas de `startup`: solo declara sus submódulos. Solo en pruebas. |
+| `application/startup/tests/fixtures.rs` | El doble `World` y los ayudantes de arranque que comparten las pruebas de `startup`. Solo en pruebas. |
+| `application/startup/tests/opening.rs` | Qué ventana abre cada lanzamiento, y los callejones de la CA local en el arranque. Solo en pruebas. |
+| `application/startup/tests/errand_lifecycle.rs` | Cómo termina el trámite ya atendido: rechazo retenido, plazo vencido, WebSocket con o sin navegador. Solo en pruebas. |
+| `application/startup/tests/warning.rs` | El aviso al cliente web antiguo antes de abrir el canal. Solo en pruebas. |
+| `application/startup/tests/window_timing.rs` | Cuándo se enseña la ventana: llegada inmediata del relay, momento entregado y temporizador de respaldo. Solo en pruebas. |
+| `application/startup/tests/relay_refusal.rs` | El rechazo del relay: destino conocido, subida fallida, trámite en curso. Solo en pruebas. |
 | `application/startup/repair.rs` | La reparación de la CA local desde la ventana de sede. Pruebas en `application/startup/repair/tests.rs`. |
 | `application/trust.rs` | Cuándo se instala la CA local en los almacenes, cómo se solapa con la siguiente y cómo se retira de todos ellos. Pruebas en `application/trust/tests.rs`. |
 | `domain/batch/mod.rs` | El reparto del lote, y `BatchFormat`: si el lote viaja en el XML heredado o en JSON. |

@@ -38,7 +38,13 @@ rojo.
 | Módulo | Qué es |
 |---|---|
 | `main.tsx` | **El cableado de la ventana principal** (`index.html`): quién implementa cada puerto. Empieza aquí siempre. |
-| `tauri.ts` | Los puertos que hablan con Tauri. La otra cara de los `adapters/tauri.rs` de cada contexto. |
+| `tauri.ts` | El punto de import de los puertos que hablan con Tauri: reexporta los `tauri*.ts` de abajo. La otra cara de los `adapters/tauri.rs` de cada contexto. |
+| `tauriStage.ts` | Clasifica el fallo de una orden de Tauri y envuelve su llamada. Lo comparten `tauriSigning.ts` y `tauriSede.ts`. |
+| `tauriSigning.ts` | Los puertos de Tauri de la firma: certificados, las tres etapas, la rúbrica y el sello. |
+| `tauriDocuments.ts` | Los puertos de Tauri del documento: el portal, el arrastre, la bandeja y el visor. |
+| `tauriPreferences.ts` | Los puertos de Tauri de la configuración: ajustes, idioma, destino y la versión publicada. |
+| `tauriSede.ts` | El puerto de Tauri del trámite de sede. |
+| `tauriStatus.ts` | El puerto de Tauri del estado de la instalación. |
 | `App.tsx` | El árbol de la ventana y el estado que la recorre. |
 | **`shell/`** | La ventana y su cabecera (ADR-0007). |
 | `shell/MainWindow.tsx` | El marco, con el hueco de la franja entre la cabecera y las regiones. |
@@ -81,7 +87,10 @@ rojo.
 | `signing/stampPreview.ts` | El sello que se ve dentro del recuadro antes de firmar: su puerto, sus estados y el umbral del documento grande. Sin React. |
 | `signing/useStampPreview.ts` | Cuándo se compone el sello y qué se enseña mientras tanto. Su trabajo es **no** componer. |
 | **`viewer/`** | El visor de PDF. |
-| `viewer/DocumentViewer.tsx` | El visor y los tres gestos del recuadro. |
+| `viewer/DocumentViewer.tsx` | El JSX del visor: la hoja, el recuadro y la botonera. |
+| `viewer/StampPill.tsx` | La pastilla flotante del estado del sello. |
+| `viewer/useViewerPage.ts` | La pintada sobre el `<canvas>`, el recorrido de páginas y el zoom. |
+| `viewer/useViewerBox.ts` | Los tres gestos del recuadro de la firma visible: arrastrar, redimensionar y trazar. |
 | `viewer/pdf.ts` | La frontera con `pdf.js`, escrita como puerto. |
 | `viewer/pdfjsLoader.ts` | El worker de `pdf.js`, empaquetado por Vite. |
 | `viewer/renderQueue.ts` | Una sola pintada viva sobre el lienzo, y el observador del tamaño que dispara la siguiente. |
@@ -90,6 +99,7 @@ rojo.
 | `viewer/signatureBox.ts` | El recuadro: dónde se guarda, cómo se redimensiona y cómo se traza. |
 | `viewer/useBoxDrag.ts` | **Arrastrar** el recuadro que ya existe, y redimensionarlo por sus cuatro tiradores. |
 | `viewer/useBoxTrace.ts` | **Trazar** el recuadro sobre la hoja: el gesto que lo hace nacer. Hermano del anterior, no un modo suyo. |
+| `viewer/testing/documentViewerFixtures.ts` | El doble de `pdf.js` y los atajos de consulta del DOM que comparten las pruebas de `DocumentViewer*.test.tsx`. |
 | **`status/`** | El estado de la instalación. |
 | `status/status.ts` | El puerto de consulta y medición de estado, con su doble en memoria y el nombre en pantalla de cada sitio. Sin React. |
 | `status/StatusView.tsx` | La vista del cuerpo con el estado de rFirma. |

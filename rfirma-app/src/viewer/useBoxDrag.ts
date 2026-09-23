@@ -39,7 +39,7 @@ export interface BoxDragHandlers {
 }
 
 /** Los dos gestos del recuadro, cada uno para su elemento. */
-interface BoxDrag {
+export interface BoxDrag {
   /** Mover: van sobre el recuadro entero. */
   box: BoxDragHandlers;
   /** Redimensionar: van sobre el tirador de esa esquina. */

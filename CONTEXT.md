@@ -250,7 +250,7 @@ con el que se comprueba que rfirma habla con el cliente real y no con una idea p
 proceso y con veredicto verde o rojo de `cargo test`. Es el otro trabajo, no el mismo que el del
 **cliente de canal**: aquél cubre lo que el real no puede provocar, y éste cubre lo que el real
 hace. No se copia al repositorio: se descarga a etiqueta fijada, con `sha256` y caché
-(`just autoscript`), y vive en `tests/conformance_bench.rs`.
+(`just autoscript`), y vive repartido en `tests/conformance_*.rs`.
 _Avoid_: tests de integración, e2e, banco de pruebas, suite de conformidad, cliente de canal
 
 **Suite de conformidad**:
