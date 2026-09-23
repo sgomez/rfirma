@@ -162,7 +162,11 @@ export function App({
   // Mientras los ajustes se leen todavía no se sabe, y lo guardado por omisión es recordar.
   const documents = useDocuments(recents, picker, settings?.rememberActivity ?? true);
   const activeId = documents.active?.id ?? null;
-  const { destination } = useDestinationPreview(destinations, activeId, settings?.destination ?? null);
+  const { destination } = useDestinationPreview(
+    destinations,
+    activeId,
+    settings?.destination ?? null,
+  );
   const { t, i18n } = useTranslation();
   // El instante del recuadro **es estado, no un reloj**: se fija al abrir el
   // documento y no vuelve a correr. Recalcularlo en cada pintada haría que la

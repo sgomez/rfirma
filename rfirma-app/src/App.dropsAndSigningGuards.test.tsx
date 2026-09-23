@@ -1,7 +1,14 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { aCertificate, document, pdfsOf, pdfsWithViews, renderApp, trayDropZone } from "./App.testSupport";
+import {
+  aCertificate,
+  document,
+  pdfsOf,
+  pdfsWithViews,
+  renderApp,
+  trayDropZone,
+} from "./App.testSupport";
 import type { DocumentInHand } from "./documents/document";
 import { inMemoryRecents } from "./documents/recents";
 import type { Certificate } from "./signing/certificate";

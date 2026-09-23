@@ -105,7 +105,18 @@ export function useSignFlow({
         language,
       }),
     };
-  }, [chosen, signature, pdf, placement, geometry, boxPage, activeDocument, rubric, signedAt, language]);
+  }, [
+    chosen,
+    signature,
+    pdf,
+    placement,
+    geometry,
+    boxPage,
+    activeDocument,
+    rubric,
+    signedAt,
+    language,
+  ]);
 
   const stamp = useStampPreview({
     composer: stamps,

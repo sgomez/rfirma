@@ -1,5 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { hasMenuAttention, type SignalRow, type StatusPort, withLocalCaCertificateMeasured } from "./status/status";
+import {
+  hasMenuAttention,
+  type SignalRow,
+  type StatusPort,
+  withLocalCaCertificateMeasured,
+} from "./status/status";
 import type { NewVersion, VersionCheck } from "./updates/newVersion";
 
 /**
@@ -66,5 +71,12 @@ export function useStartupNotices(status: StatusPort, versions: VersionCheck) {
     // arriba).
   }, []);
 
-  return { newVersion, versionDismissed, setVersionDismissed, statusRows, setStatusRows, hasAttention };
+  return {
+    newVersion,
+    versionDismissed,
+    setVersionDismissed,
+    statusRows,
+    setStatusRows,
+    hasAttention,
+  };
 }
