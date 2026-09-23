@@ -97,9 +97,13 @@ rojo.
 | **`preferences/`** | Los ajustes. |
 | `preferences/preferences.ts` | Lo que la aplicación recuerda. |
 | `preferences/PreferencesView.tsx` | La vista del cuerpo con los ajustes, con su índice de **cuatro** secciones. |
+| `preferences/PreferencesSections.tsx` | El contenido de cada sección del índice, como componentes propios. |
+| `preferences/PasswordPrompt.tsx` | El diálogo de la contraseña del `.p12`, antes de elegir el fichero. |
+| `preferences/focusTrap.ts` | El tabulador que da la vuelta dentro de un modal. |
 | `preferences/Switch.tsx` | El interruptor. |
 | `preferences/Select.tsx` | El desplegable. |
 | `preferences/theme.ts` | El tema de la ventana. |
+| `preferences/testSupport.tsx` | Los dobles y ayudas que comparten sus pruebas. |
 | **`i18n/`** | Catálogo propio, cinco idiomas, generado desde `po/` (ADR-0009 enmendado). Los bloques de comentario que explican el mecanismo están indexados en `i18n/AGENTS.md`. |
 | `i18n/catalog.ts` | La forma del catálogo. |
 | `i18n/i18n.ts` | La traducción. |
