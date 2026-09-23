@@ -1,6 +1,7 @@
 import type { Certificate } from "../signing/certificate";
 import type { StageResult } from "../signing/flow";
 import type { StoreSecret } from "../signing/secret";
+import type { Errand, ErrandStage, SiteDocument, SiteErrandPort, SiteOutcome } from "./errand";
 import {
   documentInPlay,
   documentOf,
@@ -8,7 +9,6 @@ import {
   refusedBy,
   refusedByTheBatch,
 } from "./errandConversion";
-import type { Errand, ErrandStage, SiteDocument, SiteErrandPort, SiteOutcome } from "./errand";
 import type {
   DescribedDocument,
   PortalResult,

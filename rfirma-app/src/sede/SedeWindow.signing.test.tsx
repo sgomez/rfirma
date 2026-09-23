@@ -2,8 +2,8 @@ import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { renderWithCatalog } from "../testing/render";
-import { certificate, scriptedErrand } from "./sedeWindowFixtures";
 import { SedeWindow } from "./SedeWindow";
+import { certificate, scriptedErrand } from "./sedeWindowFixtures";
 
 /**
  * Grada A: el momento 2b (la confirmación que exige el validador), el 3 (la

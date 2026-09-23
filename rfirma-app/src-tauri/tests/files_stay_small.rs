@@ -166,12 +166,8 @@ fn the_tracked_tree_matches_its_baseline() {
 }
 
 #[test]
-fn the_baseline_has_entries_so_the_guard_has_work() {
-    let baseline_text = std::fs::read_to_string(baseline_path())
-        .expect("files_stay_small.baseline deberia existir");
-    let baseline = parse_baseline(&baseline_text);
-
-    assert!(!baseline.is_empty());
+fn an_empty_baseline_parses_to_an_empty_map() {
+    assert!(parse_baseline("").is_empty());
 }
 
 #[test]

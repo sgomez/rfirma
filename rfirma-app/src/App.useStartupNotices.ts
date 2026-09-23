@@ -66,9 +66,6 @@ export function useStartupNotices(status: StatusPort, versions: VersionCheck) {
     return () => {
       current = false;
     };
-    // biome-ignore lint/correctness/useExhaustiveDependencies: se lee de la
-    // `ref` a propósito para no volver a arrancar con cada pintada (ver más
-    // arriba).
   }, []);
 
   return {

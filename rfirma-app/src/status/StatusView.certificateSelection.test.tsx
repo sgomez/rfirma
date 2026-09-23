@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { renderWithCatalog } from "../testing/render";
 import { StatusView } from "./StatusView";
-import { type SignalRow, type StatusPort } from "./status";
+import type { SignalRow, StatusPort } from "./status";
 
 const stillChecking: SignalRow = {
   signal: "localCaCertificate",

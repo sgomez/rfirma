@@ -1,9 +1,9 @@
-import { vi } from "vitest";
 import type { Mock } from "vitest";
+import { vi } from "vitest";
 import type { Certificate } from "../signing/certificate";
 import type { Errand } from "./errand";
-import { siteErrands } from "./siteErrands";
 import type { DescribedDocument, SiteCommands, SiteErrandView } from "./siteErrands";
+import { siteErrands } from "./siteErrands";
 
 /** Los dobles y auxiliares que comparten las pruebas de `siteErrands` (TD-78). */
 

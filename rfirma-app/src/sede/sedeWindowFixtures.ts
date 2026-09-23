@@ -1,6 +1,6 @@
 import { act } from "@testing-library/react";
-import { vi } from "vitest";
 import type { Mock } from "vitest";
+import { vi } from "vitest";
 import type { Certificate } from "../signing/certificate";
 import type { Errand, ErrandStage, SiteDocument, SiteErrandPort } from "./errand";
 import { noErrand } from "./errand";

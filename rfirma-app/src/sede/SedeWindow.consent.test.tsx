@@ -3,8 +3,8 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithCatalog } from "../testing/render";
 import type { ErrandStage } from "./errand";
-import { certificate, elapse, scriptedErrand } from "./sedeWindowFixtures";
 import { SedeWindow } from "./SedeWindow";
+import { certificate, elapse, scriptedErrand } from "./sedeWindowFixtures";
 
 /** Grada A: el momento 2, el consentimiento, con su cuenta atrás (TD-63). */
 

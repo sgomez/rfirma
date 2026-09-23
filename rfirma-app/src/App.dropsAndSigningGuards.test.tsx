@@ -12,7 +12,7 @@ import {
 import type { DocumentInHand } from "./documents/document";
 import { inMemoryRecents } from "./documents/recents";
 import type { Certificate } from "./signing/certificate";
-import { type SigningBackend, type SigningOrder } from "./signing/flow";
+import type { SigningBackend, SigningOrder } from "./signing/flow";
 import { emptyRubricPicker } from "./signing/rubric";
 import type { Placement } from "./viewer/signatureBox";
 

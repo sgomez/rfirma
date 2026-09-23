@@ -5,8 +5,8 @@ import { RenderErrorBoundary } from "../errors/RenderErrorBoundary";
 import type { Certificate } from "../signing/certificate";
 import { renderWithCatalog } from "../testing/render";
 import { OUTCOME_CLOSE_MS } from "./errand";
-import { elapse, scriptedErrand, signedDocument } from "./sedeWindowFixtures";
 import { SedeWindow } from "./SedeWindow";
+import { elapse, scriptedErrand, signedDocument } from "./sedeWindowFixtures";
 
 /**
  * Grada A: el momento 5 (sin certificado utilizable), el fallo de un hijo y la

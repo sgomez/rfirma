@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import type { Placing } from "./App.signingOrder";
+import type { PdfDocument } from "./viewer/pdf";
 import {
   activating,
   NO_PAGE_SETS,
@@ -12,7 +13,6 @@ import {
   standardRectOf,
   storing,
 } from "./viewer/signatureBox";
-import type { PdfDocument } from "./viewer/pdf";
 
 /**
  * El bloque «Colocación»: el recuadro y las tres opciones de página que lo

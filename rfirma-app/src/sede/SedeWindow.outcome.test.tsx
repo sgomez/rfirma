@@ -3,8 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { inMemoryExternalDestinationOpener } from "../desktop/externalDestination";
 import { renderWithCatalog } from "../testing/render";
 import { OUTCOME_CLOSE_MS } from "./errand";
-import { elapse, scriptedErrand, signedDocument } from "./sedeWindowFixtures";
 import { SedeWindow } from "./SedeWindow";
+import { elapse, scriptedErrand, signedDocument } from "./sedeWindowFixtures";
 
 /** Grada A: el momento 4, el desenlace, y su cierre a los quince segundos (TD-63). */
 

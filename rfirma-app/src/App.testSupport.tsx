@@ -59,10 +59,10 @@ export function row(name: string, overrides: Partial<RecentDocument> = {}): Rece
   };
 }
 
-export const A4 = { width: 595, height: 842 };
+const A4 = { width: 595, height: 842 };
 
 /** Un viewport de `pdf.js` sin rotación: escala y voltea el eje Y. */
-export function viewportAt(scale: number): Viewport {
+function viewportAt(scale: number): Viewport {
   return {
     width: A4.width * scale,
     height: A4.height * scale,
@@ -72,7 +72,7 @@ export function viewportAt(scale: number): Viewport {
 }
 
 /** Un PDF que se deja pintar: `pdf.js` no cabe en `jsdom` (ver `pdf.ts`). */
-export function aPdfOf(pageCount: number): PdfDocument {
+function aPdfOf(pageCount: number): PdfDocument {
   const pageOf = (number: number): PdfPage => ({
     number,
     rotate: 0,
@@ -101,9 +101,7 @@ export function pdfsOf(pages: Record<string, number>): PdfSource {
  * hace falta para que `correctPositionSignature` se coma alguna en silencio
  * (ID-105) y para probarlo hace falta más de un tamaño en el mismo documento.
  */
-export function aPdfWithViews(
-  views: readonly (readonly [number, number, number, number])[],
-): PdfDocument {
+function aPdfWithViews(views: readonly (readonly [number, number, number, number])[]): PdfDocument {
   const pageOf = (number: number): PdfPage => {
     const view = views[number - 1];
     if (view === undefined) throw new Error(`no hay view para la página ${number}`);

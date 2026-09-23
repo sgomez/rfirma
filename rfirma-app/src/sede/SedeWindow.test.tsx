@@ -2,8 +2,8 @@ import { fireEvent, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { renderWithCatalog } from "../testing/render";
 import { CHROME_LOCAL_NETWORK_SETTINGS, noErrand } from "./errand";
-import { scriptedErrand } from "./sedeWindowFixtures";
 import { SedeWindow } from "./SedeWindow";
+import { scriptedErrand } from "./sedeWindowFixtures";
 
 /**
  * Grada A: la ventana de sede entera, **por su puerto** (TD-63). No hay

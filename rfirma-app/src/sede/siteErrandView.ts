@@ -84,7 +84,7 @@ export type PortalResult<T> =
   | { ok: false; failure: { situation: string; detail: string } };
 
 /** El rechazo de una orden tal como cruza: la situación sin clasificar y el detalle crudo. */
-export interface UnclassifiedFailure {
+interface UnclassifiedFailure {
   situation: string;
   detail: string;
   attemptsLeft: number | null;
