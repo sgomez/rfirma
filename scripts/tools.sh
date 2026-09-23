@@ -3,6 +3,7 @@ set -euo pipefail
 
 ruff_version="${RUFF_VERSION:?}"
 crap_version="${CRAP_VERSION:?}"
+machete_version="${MACHETE_VERSION:?}"
 default_graalvm="${DEFAULT_GRAALVM:?}"
 system_libs="${SYSTEM_LIBS:?}"
 
@@ -98,5 +99,7 @@ cargo llvm-cov --version >/dev/null 2>&1 || \
     echo "aviso: falta cargo-llvm-cov (cargo binstall cargo-llvm-cov)"
 cargo crap --version >/dev/null 2>&1 || \
     echo "aviso: falta cargo-crap (cargo binstall cargo-crap@$crap_version)"
+cargo machete --version >/dev/null 2>&1 || \
+    echo "aviso: falta cargo-machete (cargo binstall cargo-machete@$machete_version)"
 [ "$failures" = 0 ] || exit 1
 echo "herramientas: correcto"

@@ -19,6 +19,9 @@ native_lib := bridge / "target/lib/rfirma/librfirma_crypto.so"
 # rojo un PR que no lo ha tocado (ADR-0014).
 crap_version := "0.4.3"
 
+# Version fijada, misma razon que crap_version (ADR-0014).
+machete_version := "0.9.2"
+
 # Version fijada, misma razon que crap_version. Igual en .github/workflows/ci.yml.
 diff_cover_version := "10.6.0"
 
@@ -92,11 +95,11 @@ check-repo: check-version
 check-java: test-java
 
 [group('ci')]
-check-ts: check-po lint-ts lint-i18n build-ts test-ts check-landing
+check-ts: check-po lint-ts lint-i18n knip build-ts test-ts check-landing
 
-# lint-rust + crap + check-contract, sin `cargo build --release` ni `cargo test` sueltos.
+# lint-rust + machete + crap + check-contract, sin `cargo build --release` ni `cargo test` sueltos.
 [group('ci')]
-check-rust: lint-rust crap check-contract
+check-rust: lint-rust machete crap check-contract
 
 # ---------------------------------------------------------------------------
 # Herramientas y dependencias
@@ -106,6 +109,7 @@ check-rust: lint-rust crap check-contract
 [group('dev')]
 tools:
     RUFF_VERSION="{{ ruff_version }}" CRAP_VERSION="{{ crap_version }}" \
+        MACHETE_VERSION="{{ machete_version }}" \
         DEFAULT_GRAALVM="{{ default_graalvm }}" SYSTEM_LIBS="{{ system_libs }}" \
         {{ justfile_directory() }}/scripts/tools.sh
 
@@ -158,6 +162,11 @@ check-po:
 lint-i18n: po-import
     cd {{ app }} && pnpm exec i18next-cli extract --ci
     cd {{ app }} && pnpm exec i18next-cli status --unused
+
+# Dependencias y exports sin uso del frontend (knip.json).
+[private]
+knip: po-import
+    cd {{ app }} && pnpm exec knip
 
 # Instala o quita los certificados de pruebas en SoftHSM: `just certs install|uninstall`.
 [group('dev')]
@@ -255,6 +264,11 @@ fmt-python:
 lint-rust: build-ts
     cd {{ tauri }} && cargo fmt --all -- --check
     cd {{ tauri }} && cargo clippy --all-targets --all-features -- -D warnings
+
+# Dependencias de Cargo.toml que no usa nadie. No compila: analiza el fuente.
+[private]
+machete:
+    cd {{ tauri }} && cargo machete
 
 # ---------------------------------------------------------------------------
 # Build

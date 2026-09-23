@@ -31,7 +31,7 @@ export const ZOOM_MAX = 4;
  * sesiones y se dice en voz alta, así que pulsar «acercar» tiene que caer en un
  * número redondo y no en el 137 % en el que quedó el pellizco.
  */
-export const ZOOM_STEPS = [0.5, 0.75, 1, 1.25, 1.5, 2, 3];
+const ZOOM_STEPS = [0.5, 0.75, 1, 1.25, 1.5, 2, 3];
 
 /**
  * El tope del mapa de bits: `zoom * devicePixelRatio` no pasa de 4× (ID-119).
@@ -75,7 +75,7 @@ export type ZoomMode =
 export const DEFAULT_ZOOM: ZoomMode = { kind: "fit-page" };
 
 /** Un zoom recortado al rango. Todo lo que sale de aquí ha pasado por esto. */
-export function clampZoom(value: number): number {
+function clampZoom(value: number): number {
   if (!Number.isFinite(value)) return 1;
   return Math.min(Math.max(value, ZOOM_MIN), ZOOM_MAX);
 }

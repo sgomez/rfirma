@@ -3,7 +3,7 @@ import { ChevronDownIcon } from "../design-system/icons";
 import "./Select.css";
 
 /** Una opción del desplegable: el valor que se guarda y el texto que se ve. */
-export interface Option<T extends string> {
+interface Option<T extends string> {
   value: T;
   label: string;
 }

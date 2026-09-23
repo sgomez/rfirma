@@ -209,7 +209,7 @@ export type SigningPhase = "signing" | "returning";
  * diagnostica en la ventana: la pantalla de reparación es la misma para las
  * dos, porque rFirma no puede saber si el permiso del navegador se denegó.
  */
-export type NoChannelReason =
+type NoChannelReason =
   /** El canal no se ha podido abrir: sin puertos libres, sin material TLS
    * utilizable, o sin llegar a escuchar. Las tres se reparan igual. */
   | "channelNotOpened"

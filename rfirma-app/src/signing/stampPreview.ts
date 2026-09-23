@@ -81,7 +81,7 @@ export type StampPreview =
  * solo. Se elige el tamaño y no el tiempo del ciclo anterior porque el tamaño
  * se sabe **antes** de pagar el primer ciclo, y el tiempo sólo después.
  */
-export const ON_DEMAND_BYTES = 8 * 1024 * 1024;
+const ON_DEMAND_BYTES = 8 * 1024 * 1024;
 
 /**
  * Si la vista previa se recalcula sola al soltar el recuadro.

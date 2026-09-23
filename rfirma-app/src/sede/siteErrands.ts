@@ -49,7 +49,7 @@ export interface SiteErrandView {
 }
 
 /** El momento de la secuencia, tal como lo emite el backend. */
-export type SiteStageView =
+type SiteStageView =
   | { kind: "waiting" }
   | { kind: "askingForConsent"; certificates: readonly Certificate[] }
   | {
@@ -113,7 +113,7 @@ export interface DescribedDocument {
  * propias (`saveCancelled`, `cannotLoadData`…), así que aquí el rechazo va sin
  * clasificar y `refusalOf` lo traduce al mismo catálogo que el resto.
  */
-export type PortalResult<T> =
+type PortalResult<T> =
   | { ok: true; value: T }
   | { ok: false; failure: { situation: string; detail: string } };
 
@@ -125,7 +125,7 @@ interface UnclassifiedFailure {
 }
 
 /** Cómo acaba la orden del secreto, que en el lote firma y entrega de una vez. */
-export type SecretResult<T> = { ok: true; value: T } | { ok: false; failure: UnclassifiedFailure };
+type SecretResult<T> = { ok: true; value: T } | { ok: false; failure: UnclassifiedFailure };
 
 /**
  * **Las órdenes del trámite, una función por orden.**

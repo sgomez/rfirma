@@ -1,0 +1,5 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": ["src/sede/main.tsx", "i18next.config.ts"],
+  "ignore": ["src/design-system/bundle/**"]
+}

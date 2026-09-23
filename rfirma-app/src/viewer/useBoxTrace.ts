@@ -11,7 +11,7 @@ import type { BoxDragHandlers } from "./useBoxDrag";
  * un clic seco sobre ella significa «dame el foco» y no puede pasar a colocar
  * una firma.
  */
-export const TRACE_THRESHOLD_PX = 4;
+const TRACE_THRESHOLD_PX = 4;
 
 /**
  * Mientras se traza **no hay mínimo**: el rectángulo que se ve es el que la mano
