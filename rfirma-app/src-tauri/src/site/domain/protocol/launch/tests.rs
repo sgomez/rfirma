@@ -416,13 +416,22 @@ fn a_relay_launch_with_fileid_but_no_rtservlet_is_refused() {
 }
 
 #[test]
-fn a_relay_launch_with_neither_dat_nor_fileid_is_refused() {
-    let refusal = LaunchRequest::parse(
-        "afirma://sign?algorithm=SHA256withRSA&stservlet=https://relay.example/store&id=tx5",
+fn a_relay_selectcert_without_dat_uploads_to_the_url_destination() {
+    let request = LaunchRequest::parse(
+        "afirma://selectcert?op=selectcert&stservlet=https://relay.example/store&id=tx5",
     )
-    .expect_err("sin datos que operar no hay nada que hacer");
+    .expect("la seleccion de certificado no lleva datos que operar");
 
-    assert_eq!(refusal.code(), SafCode::Params);
+    let ChannelLocation::Relay(info) = request.location() else {
+        panic!("una operacion con servlet negocia canal de servidor intermedio");
+    };
+    assert_eq!(
+        info.request,
+        RelayRequest::Inline {
+            store_servlet: "https://relay.example/store".to_owned(),
+            id: "tx5".to_owned(),
+        }
+    );
 }
 
 #[test]

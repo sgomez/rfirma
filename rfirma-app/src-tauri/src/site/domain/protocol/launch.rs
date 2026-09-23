@@ -74,7 +74,7 @@ pub enum NegotiatedCredential {
 /// De dónde salen la operación y el destino de la respuesta en un arranque de servidor intermedio.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum RelayRequest {
-    /// La URL trae la operación entera, `dat` incluido.
+    /// La URL trae la operación entera, con su `dat` si la operación lo lleva.
     Inline {
         /// Servlet de almacenamiento (`stservlet`), donde se sube la respuesta.
         store_servlet: String,
@@ -323,15 +323,8 @@ fn relay_request_of(url: &AfirmaUrl) -> Result<RelayRequest, Refusal> {
         .ok_or_else(|| Refusal::params("la operacion con servidor intermedio no trae 'id'"))
         .and_then(|it| checked_identifier(it, Parameter::Identifier))?;
 
-    if url.parameter("dat").is_some() {
+    let Some(fileid) = fileid.filter(|_| url.parameter("dat").is_none()) else {
         return Ok(RelayRequest::Inline { store_servlet, id });
-    }
-
-    let Some(fileid) = fileid else {
-        return Err(Refusal::params(
-            "la operacion con servidor intermedio no trae ni 'dat' ni 'fileid': no hay datos \
-             que operar",
-        ));
     };
     let Some(retrieve_servlet) = retrieve_servlet else {
         return Err(Refusal::params(
