@@ -39,6 +39,8 @@ pub struct SiteRoot {
     pub scratch: Arc<dyn ports::Scratch + Send + Sync>,
     /// Los dos servlets del lote remoto.
     pub batch: Arc<dyn ports::BatchServices + Send + Sync>,
+    /// El servidor trifásico que la sede nombra en `serverUrl`.
+    pub triphase: Arc<dyn ports::TriphaseServer + Send + Sync>,
     /// Diálogos del sistema operativo a través del portal.
     pub portal: Arc<dyn crate::documents::ports::PortalDialogs + Send + Sync>,
 }
@@ -85,8 +87,8 @@ impl SiteRoot {
 /// La mesa del trámite sobre las raíces de producción.
 pub type SiteDesk<'a> = ErrandDesk<'a, Isolate, Isolate, adapters::desk::Neighbours<'a>>;
 
-/// Cierra el lote consentido, remoto o local, con el secreto que entró por la única puerta del PIN.
-pub fn the_pending_batch_signed(
+/// Cierra lo consentido fuera del ciclo —el lote, remoto o local, o la firma contra el servidor trifásico— con el secreto que entró por la única puerta del PIN.
+pub fn the_pending_signature_signed(
     desk: &SiteDesk<'_>,
     live: &LiveErrand,
     secret: &ProtectedSecret,
@@ -94,6 +96,10 @@ pub fn the_pending_batch_signed(
     let secret = secret
         .expose_secret()
         .map_err(|_| Failure::new("unknown", "el secreto tecleado no es texto válido"))?;
+    if live.a_server_signature_is_pending() {
+        return application::errand::finish_the_server_signature(desk, secret, live)
+            .map_err(Failure::from);
+    }
     if live.a_batch_is_pending() {
         return application::errand::finish_the_batch(desk, secret, live).map_err(Failure::from);
     }

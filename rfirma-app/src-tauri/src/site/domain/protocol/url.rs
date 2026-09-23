@@ -5,6 +5,7 @@ use std::collections::BTreeMap;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use base64::{DecodeError, Engine as _};
 
+use super::codes::Parameter;
 use super::refusal::Refusal;
 
 const SCHEME: &str = "afirma://";
@@ -91,7 +92,11 @@ impl AfirmaUrl {
             separator = '&';
             line.push_str(name);
             line.push('=');
-            line.push_str(&abridged_value(value));
+            if name == Parameter::Properties.name() {
+                line.push_str(&sized(value));
+            } else {
+                line.push_str(&abridged_value(value));
+            }
         }
         line
     }
@@ -104,11 +109,14 @@ impl AfirmaUrl {
 }
 
 pub(super) fn abridged_value(value: &str) -> String {
-    let size = value.chars().count();
-    if size <= LONGEST_TRACED_VALUE {
+    if value.chars().count() <= LONGEST_TRACED_VALUE {
         return value.to_owned();
     }
-    format!("<{size} caracteres>")
+    sized(value)
+}
+
+fn sized(value: &str) -> String {
+    format!("<{} caracteres>", value.chars().count())
 }
 
 /// El Base64 **URL-safe** del protocolo, con la misma tolerancia en todos los

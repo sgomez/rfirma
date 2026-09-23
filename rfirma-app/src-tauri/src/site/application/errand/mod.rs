@@ -4,6 +4,7 @@ pub mod desk;
 pub mod outcome;
 pub mod replies;
 pub mod request;
+mod server_signature;
 pub mod state;
 
 #[cfg(test)]
@@ -16,6 +17,7 @@ use crate::identity::domain::certificate::TokenCertificate;
 use crate::identity::domain::secret::StoreSecret;
 use crate::site::domain::batch::build_local_result;
 use crate::site::domain::protocol::{AfirmaUrl, SiteFilter};
+use crate::site::domain::signing::SigningRefusal;
 
 use crate::site::application::batch;
 use crate::site::application::local_batch;
@@ -41,6 +43,7 @@ pub use replies::{
     signature_handed_over, the_signature_did_not_come_out,
 };
 pub use request::{LocalBatchAsk, SiteRequest};
+pub use server_signature::finish_the_server_signature;
 pub use state::{Errand, LiveErrand, NegotiatedCodec};
 
 /// Atiende la operación recibida por el canal local.
@@ -95,6 +98,14 @@ fn remembered(live: &LiveErrand, step: ErrandStep) -> ErrandStep {
             from_the_site: asked.from_the_site.clone(),
             unregistered_signatures: asked.unregistered_signatures,
             saving: asked.saving.clone(),
+            through_the_server: asked.for_the_site_server.clone().map(|document| {
+                state::ServerSignature {
+                    document,
+                    round: asked.round,
+                    chosen: None,
+                    signed: None,
+                }
+            }),
         }),
         ErrandStep::AskingToConfirm(consent) => live.remember_the_confirmation((**consent).clone()),
         ErrandStep::AskingToSignTheBatch(consent) => live.remember_the_batch(state::PendingBatch {
@@ -171,6 +182,9 @@ pub fn consent<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
     let Some(pending) = live.the_signature_consented() else {
         return Err(ConsentError::NothingPending);
     };
+    if let Some(server) = pending.through_the_server.clone() {
+        return server_signature::consented(desk, pending, server, certificate, live);
+    }
 
     signing::begin_for_the_site(
         &SiteTerms {
@@ -198,6 +212,7 @@ fn the_chosen_and_its_secret<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
     sticky: bool,
     certificate: &str,
     live: &LiveErrand,
+    secret_refused: fn(SigningRefusal) -> SiteRefusal,
 ) -> Result<(TokenCertificate, StoreSecret), ConsentError> {
     let refused =
         |live: &LiveErrand, refusal| ConsentError::Refused(told_to_the_site(live, refusal));
@@ -218,7 +233,7 @@ fn the_chosen_and_its_secret<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
     let secret = desk
         .neighbours
         .secret_of(chosen)
-        .map_err(|refusal| refused(live, SiteRefusal::BatchSigningFailed(refusal)))?;
+        .map_err(|refusal| refused(live, secret_refused(refusal)))?;
 
     if sticky {
         live.stick(chosen.reference());
@@ -240,6 +255,7 @@ fn the_batch_consented<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
         request.sticky().is_sticky(),
         certificate,
         live,
+        SiteRefusal::BatchSigningFailed,
     )?;
 
     live.remember_the_batch(state::PendingBatch {
@@ -262,6 +278,7 @@ fn the_local_batch_consented<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
         pending.request.sticky().is_sticky(),
         certificate,
         live,
+        SiteRefusal::BatchSigningFailed,
     )?;
 
     live.remember_the_local_batch(state::PendingLocalBatch {
@@ -328,8 +345,11 @@ pub fn finish<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
     let saving = live
         .the_signature_consented()
         .and_then(|pending| pending.saving);
-    let signed = signing::finish_for_the_site(&desk.neighbours)
-        .map_err(|refusal| told_to_the_site(live, refusal))?;
+    let signed = match server_signature::the_signature_from_the_server(live) {
+        Some(signed) => signed,
+        None => signing::finish_for_the_site(&desk.neighbours)
+            .map_err(|refusal| told_to_the_site(live, refusal))?,
+    };
 
     Ok(match saving {
         None => {

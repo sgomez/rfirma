@@ -114,17 +114,17 @@ class XadesPreSignTest {
 
     @Test
     void refuses_a_xades_variant_it_does_not_know_naming_it() throws Exception {
-        final Properties externallyDetached = new Properties();
-        externallyDetached.setProperty("format", "XAdES Externally Detached");
+        final Properties unknown = new Properties();
+        unknown.setProperty("format", "XMLDSig Enveloped");
 
         final Exception failure =
-                assertThrows(IllegalArgumentException.class, () -> preSign(externallyDetached));
+                assertThrows(IllegalArgumentException.class, () -> preSign(unknown));
 
-        assertTrue(failure.getMessage().contains("XAdES Externally Detached"),
+        assertTrue(failure.getMessage().contains("XMLDSig Enveloped"),
                 failure.getMessage());
         final String json = NativeBridge.errorJson(failure);
         assertTrue(json.startsWith("{\"ok\":false"), json);
-        assertTrue(json.contains("XAdES Externally Detached"), json);
+        assertTrue(json.contains("XMLDSig Enveloped"), json);
     }
 
     @Test

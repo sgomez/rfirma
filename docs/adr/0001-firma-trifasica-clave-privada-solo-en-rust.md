@@ -16,6 +16,10 @@ operativo.
   que lo permitiera es un fallo de diseño, no una optimización.
 - La frontera FFI transporta datos a firmar y firmas ya hechas, nunca material
   de clave.
+- Cuando la sede pide una firma trifásica contra su propio servidor
+  (`serverUrl`), la prefirma y la postfirma las hace ese servidor y no el
+  puente, pero cada `PRE` lo sigue firmando Rust con el token: la clave
+  tampoco sale hacia la sede.
 - Renunciamos a las rutas de firma monofásica que la suite Java ofrece: aunque
   funcionarían para certificados en software, tener dos caminos distintos según
   el origen del certificado duplicaría la superficie a probar y haría fácil que

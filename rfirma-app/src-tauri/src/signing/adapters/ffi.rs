@@ -9,7 +9,7 @@ use crate::signing::domain::to_java_properties;
 use crate::signing::domain::bridge::{
     BridgeError, Candidate, ExpandRequest, FilterRequest, Format, LibraryNotFound, Origin,
     PostSignRequest, PreSignRequest, PreSignature, SignatureVerdict, ValidationRequest,
-    LIBRARY_DIRECTORY_VARIABLE,
+    XadesVariant, LIBRARY_DIRECTORY_VARIABLE,
 };
 
 mod responses;
@@ -450,9 +450,51 @@ fn declares_its_variant(format: Format) -> bool {
     }
 }
 
-/// La envoltura la manda el formato pedido, no la sede: por eso se escribe la última.
+/// Las envolturas que el firmador XAdES del original lee de `format` en los `extraParams`.
+const XADES_ENVELOPES: [&str; 4] = [
+    "XAdES Enveloping",
+    "XAdES Enveloped",
+    "XAdES Detached",
+    "XAdES Externally Detached",
+];
+
+/// Si el formato pedido es una firma XAdES cuya envoltura puede declarar la sede.
+fn yields_to_the_envelope_of_the_site(format: Format) -> bool {
+    match format {
+        Format::Xades(XadesVariant::Detached)
+        | Format::Xades(XadesVariant::Enveloping)
+        | Format::Xades(XadesVariant::Enveloped) => true,
+        Format::Xades(XadesVariant::AsicS)
+        | Format::Pades
+        | Format::Cades
+        | Format::CadesAsicS
+        | Format::Cms
+        | Format::FacturaE => false,
+    }
+}
+
+/// La envoltura XAdES que declara el último `format` de los `extraParams`, si es una del original.
+fn the_envelope_the_site_declared(extra_params: &str) -> Option<&str> {
+    extra_params
+        .lines()
+        .filter_map(|line| {
+            let (key, value) = line.trim_start().split_once(['=', ':'])?;
+            (key.trim_end() == VARIANT_KEY).then(|| value.trim())
+        })
+        .next_back()
+        .filter(|declared| {
+            XADES_ENVELOPES
+                .iter()
+                .any(|envelope| envelope.eq_ignore_ascii_case(declared))
+        })
+}
+
+/// La envoltura XAdES que declara la sede manda; si no hay, la del formato se escribe la última.
 fn with_the_variant_of_the_format(extra_params: &str, format: Format) -> String {
-    if !declares_its_variant(format) {
+    if !declares_its_variant(format)
+        || (yields_to_the_envelope_of_the_site(format)
+            && the_envelope_the_site_declared(extra_params).is_some())
+    {
         return extra_params.to_owned();
     }
     let mut block = extra_params.to_owned();

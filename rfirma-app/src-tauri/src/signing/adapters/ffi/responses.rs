@@ -3,7 +3,7 @@
 use base64::Engine;
 
 use crate::signing::domain::bridge::{
-    BridgeError, PreSignBlock, PreSignature, SealedPreSignature, SignatureVerdict,
+    BridgeError, DataRejection, PreSignBlock, PreSignature, SealedPreSignature, SignatureVerdict,
 };
 use crate::signing::domain::SessionSeal;
 
@@ -148,7 +148,11 @@ fn parse_response(json: &str) -> Result<serde_json::Value, BridgeError> {
                         BridgeError::PdfHasUnregisteredSignatures(detail)
                     }
                     Some(INCOMPATIBLE_POLICY_KIND) => BridgeError::IncompatiblePolicy(detail),
-                    _ => BridgeError::Failed(detail),
+                    Some(kind) => match data_rejection_of(kind) {
+                        Some(rejection) => BridgeError::DataRejected(rejection, detail),
+                        None => BridgeError::Failed(detail),
+                    },
+                    None => BridgeError::Failed(detail),
                 },
             )
         }
@@ -156,6 +160,19 @@ fn parse_response(json: &str) -> Result<serde_json::Value, BridgeError> {
             "no trae \"ok\": {json}"
         ))),
     }
+}
+
+fn data_rejection_of(kind: &str) -> Option<DataRejection> {
+    Some(match kind {
+        "invalidPdf" => DataRejection::InvalidPdf,
+        "invalidXml" => DataRejection::InvalidXml,
+        "invalidData" => DataRejection::InvalidData,
+        "noSignData" => DataRejection::NoSignData,
+        "facturaeAlreadySigned" => DataRejection::FacturaeAlreadySigned,
+        "invalidFacturae" => DataRejection::InvalidFacturae,
+        "signWithoutData" => DataRejection::SignWithoutData,
+        _ => return None,
+    })
 }
 
 fn field<'a>(response: &'a serde_json::Value, name: &str) -> Result<&'a str, BridgeError> {

@@ -462,17 +462,20 @@ public final class NativeBridge {
     /** La clase con la que se marca todo lo demas. */
     static final String GENERIC_FAILURE_KIND = "failed";
 
-    /**
-     * El nombre de la excepcion de AutoFirma que se distingue. Se compara por
-     * nombre y no por {@code instanceof} para no obligar a que la clase este
-     * enlazada en la imagen nativa por una rama de error.
-     */
-    private static final String UNREGISTERED_SIGNATURES_EXCEPTION =
-            "es.gob.afirma.signers.pades.common.PdfHasUnregisteredSignaturesException";
-
-    /** Igual que la de arriba, y por lo mismo: se compara por nombre. */
-    private static final String INCOMPATIBLE_POLICY_EXCEPTION =
-            "es.gob.afirma.core.signers.ExtraParamsProcessor$IncompatiblePolicyException";
+    /** Por nombre, para no enlazar la clase en la imagen nativa; en el orden de los catch del lanzador original. */
+    private static final String[][] KNOWN_EXCEPTIONS = {
+        { "es.gob.afirma.signers.pades.common.PdfHasUnregisteredSignaturesException",
+            UNREGISTERED_SIGNATURES_KIND },
+        { "es.gob.afirma.core.signers.ExtraParamsProcessor$IncompatiblePolicyException",
+            INCOMPATIBLE_POLICY_KIND },
+        { "es.gob.afirma.signers.pades.InvalidPdfException", "invalidPdf" },
+        { "es.gob.afirma.signers.xml.InvalidXMLException", "invalidXml" },
+        { "es.gob.afirma.core.AOFormatFileException", "invalidData" },
+        { "es.gob.afirma.signers.xades.InvalidEFacturaDataException", "invalidFacturae" },
+        { "es.gob.afirma.signers.xades.EFacturaAlreadySignedException", "facturaeAlreadySigned" },
+        { "es.gob.afirma.signers.pkcs7.ContainsNoDataException", "signWithoutData" },
+        { "es.gob.afirma.core.AOInvalidFormatException", "noSignData" },
+    };
 
     static String errorJson(final Throwable e) {
         final String message = e.getMessage() == null ? e.getClass().getName()
@@ -501,15 +504,24 @@ public final class NativeBridge {
     static String kindOf(final Throwable e) {
         Throwable cause = e;
         for (int depth = 0; cause != null && depth < MAX_CAUSE_DEPTH; depth++) {
-            if (UNREGISTERED_SIGNATURES_EXCEPTION.equals(cause.getClass().getName())) {
-                return UNREGISTERED_SIGNATURES_KIND;
-            }
-            if (INCOMPATIBLE_POLICY_EXCEPTION.equals(cause.getClass().getName())) {
-                return INCOMPATIBLE_POLICY_KIND;
+            final String kind = knownKindOf(cause.getClass());
+            if (kind != null) {
+                return kind;
             }
             cause = cause.getCause() == cause ? null : cause.getCause();
         }
         return GENERIC_FAILURE_KIND;
+    }
+
+    private static String knownKindOf(final Class<?> thrown) {
+        for (final String[] known : KNOWN_EXCEPTIONS) {
+            for (Class<?> type = thrown; type != null; type = type.getSuperclass()) {
+                if (known[0].equals(type.getName())) {
+                    return known[1];
+                }
+            }
+        }
+        return null;
     }
 
     private static final Pattern PKCS1_LIST = Pattern.compile(

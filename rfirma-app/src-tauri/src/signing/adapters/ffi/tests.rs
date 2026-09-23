@@ -1,7 +1,7 @@
 use super::responses::{only_pkcs1, parse_signed_document, pkcs1_list};
 use super::*;
 use crate::signing::domain::bridge::{
-    SealedPreSignature, SignatureVerdict, XadesVariant, LIBRARY_FILE,
+    DataRejection, SealedPreSignature, SignatureVerdict, XadesVariant, LIBRARY_FILE,
 };
 use crate::signing::domain::SessionSeal;
 use std::alloc::{alloc, dealloc, Layout};
@@ -243,6 +243,33 @@ fn a_presign_without_a_single_block_to_sign_is_malformed() {
     );
 }
 
+#[test]
+fn each_rejection_of_the_data_comes_back_with_its_own_kind() {
+    for (kind, expected) in [
+        ("invalidPdf", DataRejection::InvalidPdf),
+        ("invalidXml", DataRejection::InvalidXml),
+        ("invalidData", DataRejection::InvalidData),
+        ("noSignData", DataRejection::NoSignData),
+        (
+            "facturaeAlreadySigned",
+            DataRejection::FacturaeAlreadySigned,
+        ),
+        ("invalidFacturae", DataRejection::InvalidFacturae),
+        ("signWithoutData", DataRejection::SignWithoutData),
+    ] {
+        let error = parse_presign(&format!(
+            r#"{{"ok":false,"kind":"{kind}","error":"lo que dijera Java"}}"#
+        ))
+        .expect_err("un rechazo no es una prefirma");
+
+        assert!(
+            matches!(&error, BridgeError::DataRejected(rejection, detail)
+                if *rejection == expected && detail == "lo que dijera Java"),
+            "{kind}: {error:?}"
+        );
+    }
+}
+
 /// Una prefirma sellada con las firmas sintéticas de sus bloques.
 fn a_sealed_presignature(json: &str) -> SealedPreSignature {
     let presigned = parse_presign(json).expect("es el JSON del contrato");
@@ -324,18 +351,63 @@ fn each_bridged_format_goes_to_the_entry_points_of_its_own_family() {
 }
 
 #[test]
-fn the_variant_of_the_format_wins_over_the_one_the_site_declared() {
+fn the_envelope_the_site_declared_wins_over_the_variant_of_the_format() {
     let sent = "format=XAdES Enveloping\nsignaturePage=1\n";
 
     let block = with_the_variant_of_the_format(sent, Format::Xades(XadesVariant::Detached));
 
+    assert_eq!(block, sent);
+}
+
+#[test]
+fn a_generic_xades_keeps_every_envelope_the_original_signs() {
+    for envelope in [
+        "XAdES Enveloping",
+        "XAdES Enveloped",
+        "XAdES Detached",
+        "XAdES Externally Detached",
+        "xades enveloped",
+    ] {
+        let sent = format!("uri=https://sede.example/documento.xml\nformat = {envelope}\n");
+
+        let block = with_the_variant_of_the_format(&sent, Format::Xades(XadesVariant::Enveloping));
+
+        assert_eq!(block, sent);
+    }
+}
+
+#[test]
+fn without_an_envelope_from_the_site_the_variant_of_the_format_is_written() {
+    let sent = "signaturePage=1";
+
+    let block = with_the_variant_of_the_format(sent, Format::Xades(XadesVariant::Enveloped));
+
+    assert_eq!(block, "signaturePage=1\nformat=XAdES Enveloped\n");
+}
+
+#[test]
+fn the_site_cannot_turn_a_xades_signature_into_another_processor() {
+    for declared in ["XAdES-ASiC-S", "FacturaE", "CAdES"] {
+        let sent = format!("format={declared}\n");
+
+        let block = with_the_variant_of_the_format(&sent, Format::Xades(XadesVariant::Enveloping));
+
+        assert!(
+            block.ends_with("format=XAdES Enveloping\n"),
+            "la variante del formato se escribe la ultima: {block}"
+        );
+    }
+}
+
+#[test]
+fn the_asic_s_container_is_not_overridden_by_an_envelope_of_the_site() {
+    let sent = "format=XAdES Enveloped\n";
+
+    let block = with_the_variant_of_the_format(sent, Format::Xades(XadesVariant::AsicS));
+
     assert!(
-        block.starts_with(sent),
-        "lo de la sede sigue entero: {block}"
-    );
-    assert!(
-        block.ends_with("format=XAdES Detached\n"),
-        "la variante del formato se escribe la ultima: {block}"
+        block.ends_with("format=XAdES-ASiC-S\n"),
+        "el contenedor se nombra el ultimo: {block}"
     );
 }
 

@@ -110,6 +110,7 @@ fn composed_roots(paths: desktop::adapters::paths::Paths, invocation: Option<Inv
         scratch_dir: std::env::temp_dir(),
         scratch: Arc::new(site::adapters::scratch::RealScratch),
         batch: Arc::new(site::adapters::batch_services::RelayBatchServices::default()),
+        triphase: Arc::new(site::adapters::triphase_server::HttpTriphaseServer::default()),
         portal: dialogs.clone(),
     };
     Roots {

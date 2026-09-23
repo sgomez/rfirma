@@ -20,6 +20,7 @@ use crate::site::domain::protocol::{
 use crate::site::domain::relay_error::RelayError;
 use crate::site::domain::signing::{SigningRefusal, SiteSignature};
 use crate::site::domain::tls_error::TlsError;
+use crate::site::domain::triphase_server::TriphaseServerError;
 use crate::site::domain::trust_error::TrustError;
 
 impl From<SignatureRound> for SignatureOperation {
@@ -263,6 +264,16 @@ pub trait BatchServices {
         certs: &[Vec<u8>],
         tridata: &TriphaseData,
     ) -> Result<Vec<u8>, BatchError>;
+}
+
+/// Puerto de salida hacia el servidor trifásico que la sede nombra en `serverUrl`.
+pub trait TriphaseServer {
+    /// Manda el formulario por `POST` y devuelve el cuerpo crudo de la respuesta.
+    fn post(
+        &self,
+        server_url: &str,
+        form: &[(&'static str, String)],
+    ) -> Result<Vec<u8>, TriphaseServerError>;
 }
 
 /// Las dos ranuras de la CA local: la que sirve y la siguiente del solape (ADR-0005).

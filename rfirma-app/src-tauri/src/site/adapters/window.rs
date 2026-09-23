@@ -180,6 +180,7 @@ pub(crate) fn with_the_desk<R>(
         scratch_dir: site.scratch_dir.clone(),
         scratch: site.scratch.clone(),
         batch: site.batch.clone(),
+        triphase: site.triphase.clone(),
     };
     call(&desk, &site.errand)
 }

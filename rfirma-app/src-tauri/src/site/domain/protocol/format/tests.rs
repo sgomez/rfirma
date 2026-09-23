@@ -115,3 +115,12 @@ fn each_format_maps_to_its_signed_file_extension() {
     );
     assert_eq!(RequestedFormat::FacturaE.extension(), "xsig");
 }
+
+#[test]
+fn only_cades_triphase_is_signed_through_the_site_server() {
+    assert!(goes_through_the_site_server("CAdEStri"));
+    assert!(goes_through_the_site_server(" cadestri "));
+    for format in ["CAdES", "PAdEStri", "XAdEStri", "FacturaEtri", "auto"] {
+        assert!(!goes_through_the_site_server(format), "{format}");
+    }
+}

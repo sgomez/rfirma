@@ -12,7 +12,7 @@ use crate::signing::domain::bridge::{
     BridgeError, Format, PostSignRequest, PreSignBlock, PreSignRequest, PreSignature,
     SignatureOperation,
 };
-use crate::signing::domain::{AdmissibleDocument, SessionSeal, SignatureConfig};
+use crate::signing::domain::{AdmissibleDocument, SessionSeal, SignatureConfig, Waivers};
 use crate::signing::ports::{Bridge, Signer};
 
 const BORDER: &str = include_str!("../../adapters/ffi.rs");
@@ -216,7 +216,7 @@ fn a_cades_cycle_reaches_the_bridge_instead_of_stopping_at_the_format() {
     let bridge = ABridgeLikeTheRealOne::default();
     let chosen = a_certificate("FIRMA", b"der");
     let config = an_invisible_signature();
-    let document = AdmissibleDocument::check_for(Format::Cades, b"no soy un PDF")
+    let document = AdmissibleDocument::check_for(Format::Cades, b"no soy un PDF", Waivers::NONE)
         .expect("CAdES no mira el /SubFilter");
 
     let cycle = presign(
@@ -247,8 +247,9 @@ fn an_asic_s_cades_cycle_reaches_the_bridge_by_the_cades_entries() {
     let bridge = ABridgeLikeTheRealOne::default();
     let chosen = a_certificate("FIRMA", b"der");
     let config = an_invisible_signature();
-    let document = AdmissibleDocument::check_for(Format::CadesAsicS, b"no soy un PDF")
-        .expect("el contenedor no mira el /SubFilter");
+    let document =
+        AdmissibleDocument::check_for(Format::CadesAsicS, b"no soy un PDF", Waivers::NONE)
+            .expect("el contenedor no mira el /SubFilter");
 
     let cycle = presign(
         &bridge,
@@ -278,7 +279,7 @@ fn a_pades_cycle_sends_the_bridge_the_very_same_call_as_before_the_format() {
     let bridge = ABridgeLikeTheRealOne::default();
     let chosen = a_certificate("FIRMA", b"der");
     let config = an_invisible_signature();
-    let document = AdmissibleDocument::check_for(Format::Pades, b"%PDF-1.7")
+    let document = AdmissibleDocument::check_for(Format::Pades, b"%PDF-1.7", Waivers::NONE)
         .expect("es un PDF que se puede firmar");
 
     let cycle = presign(
@@ -328,7 +329,7 @@ fn a_countersignature_asks_the_secret_once_and_signs_every_block_it_got() {
     let token = ATokenThatCounts::default();
     let chosen = a_certificate("FIRMA", b"der");
     let config = an_invisible_signature();
-    let document = AdmissibleDocument::check_for(Format::Cades, b"una firma CAdES")
+    let document = AdmissibleDocument::check_for(Format::Cades, b"una firma CAdES", Waivers::NONE)
         .expect("CAdES no mira el /SubFilter");
 
     let cycle = presign(
@@ -369,7 +370,7 @@ fn a_cosignature_names_its_operation_at_the_border() {
     let bridge = ABridgeLikeTheRealOne::default();
     let chosen = a_certificate("FIRMA", b"der");
     let config = an_invisible_signature();
-    let document = AdmissibleDocument::check_for(Format::Cades, b"una firma CAdES")
+    let document = AdmissibleDocument::check_for(Format::Cades, b"una firma CAdES", Waivers::NONE)
         .expect("CAdES no mira el /SubFilter");
 
     presign(
@@ -446,7 +447,8 @@ fn prompter_supplies_secret_when_store_requires_typed_on_screen() {
         &bridge,
         a_request(
             Format::Cades,
-            AdmissibleDocument::check_for(Format::Cades, b"documento").expect("admisible"),
+            AdmissibleDocument::check_for(Format::Cades, b"documento", Waivers::NONE)
+                .expect("admisible"),
             &[certificate.der().to_vec()],
             &an_invisible_signature(),
             certificate.reference(),
@@ -528,7 +530,8 @@ fn the_secret_of_a_store_that_is_a_file_is_asked_for_as_a_password() {
         &bridge,
         a_request(
             Format::Cades,
-            AdmissibleDocument::check_for(Format::Cades, b"documento").expect("admisible"),
+            AdmissibleDocument::check_for(Format::Cades, b"documento", Waivers::NONE)
+                .expect("admisible"),
             &[b"der".to_vec()],
             &an_invisible_signature(),
             &in_a_firefox_profile,
@@ -588,7 +591,8 @@ fn prompter_cancellation_aborts_signing_cycle() {
         &bridge,
         a_request(
             Format::Cades,
-            AdmissibleDocument::check_for(Format::Cades, b"documento").expect("admisible"),
+            AdmissibleDocument::check_for(Format::Cades, b"documento", Waivers::NONE)
+                .expect("admisible"),
             &[certificate.der().to_vec()],
             &an_invisible_signature(),
             certificate.reference(),

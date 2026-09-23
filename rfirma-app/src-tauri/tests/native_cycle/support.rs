@@ -17,7 +17,7 @@ use rfirma_lib::signing::adapters::ffi::{locate, NativeBridge};
 use rfirma_lib::signing::application::cycle::{self, SigningRequest};
 use rfirma_lib::signing::domain::bridge::{Format, SignatureOperation};
 use rfirma_lib::signing::domain::{
-    AdmissibleDocument, PadesRect, PageSet, Placement, SignatureConfig,
+    AdmissibleDocument, PadesRect, PageSet, Placement, SignatureConfig, Waivers,
 };
 use rfirma_lib::site::adapters::desk::composed_for;
 use rfirma_lib::site::domain::protocol::AskedAlgorithm;
@@ -162,7 +162,7 @@ pub(crate) fn a_cycle_signed_by(
             format,
             algorithm,
             operation,
-            document: AdmissibleDocument::check_for(format, data)
+            document: AdmissibleDocument::check_for(format, data, Waivers::NONE)
                 .expect("el puente firma cualquier byte fuera de PAdES"),
             chain: &chain,
             config: &config,

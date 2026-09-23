@@ -1,12 +1,15 @@
 //! El vocabulario con el que se habla al puente nativo, sin la carga de la biblioteca.
 
 use std::fmt;
-use std::os::raw::c_int;
 use std::path::{Path, PathBuf};
 
 use base64::Engine;
 
 use super::{SealMismatch, SessionSeal};
+
+mod error;
+
+pub use error::{BridgeError, DataRejection};
 
 /// Nombre del fichero de la librería nativa compartida (ADR-0004, ADR-0012).
 pub const LIBRARY_FILE: &str = "librfirma_crypto.so";
@@ -465,84 +468,6 @@ pub enum SignatureVerdict {
         /// Código del mensaje con el que pregunta el original.
         message_code: String,
     },
-}
-
-/// Errores posibles al cruzar la frontera FFI con el puente nativo.
-#[derive(Debug)]
-pub enum BridgeError {
-    /// No se puede determinar la ruta del ejecutable.
-    ExecutablePathUnknown(String),
-    /// No hay librería que cargar.
-    NotFound(LibraryNotFound),
-    /// Error de carga dinámica de la librería.
-    Load {
-        /// Fichero que se intentó abrir.
-        path: PathBuf,
-        /// Detalle devuelto por el cargador dinámico.
-        detail: String,
-    },
-    /// Falta un símbolo esperado en la librería.
-    MissingSymbol {
-        /// Símbolo ausente.
-        symbol: String,
-        /// Detalle devuelto por el cargador dinámico.
-        detail: String,
-    },
-    /// Error al crear el isolate de GraalVM.
-    IsolateFailed(c_int),
-    /// Argumento con byte nulo no convertible a CString.
-    InvalidArgument(&'static str),
-    /// El puente ha devuelto un puntero nulo.
-    NullResponse,
-    /// Respuesta con formato no válido devuelta por el puente.
-    MalformedResponse(String),
-    /// Fallo devuelto por el puente nativo.
-    Failed(String),
-    /// La política de firma no se puede aplicar al formato solicitado.
-    IncompatiblePolicy(String),
-    /// El PDF contiene firmas no registradas en su diccionario.
-    PdfHasUnregisteredSignatures(String),
-    /// El puente no resuelve todavía ese formato de firma.
-    FormatNotBridged(Format),
-}
-
-impl fmt::Display for BridgeError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::ExecutablePathUnknown(detail) => {
-                write!(f, "no puedo saber dónde está el ejecutable: {detail}")
-            }
-            Self::NotFound(error) => write!(f, "{error}"),
-            Self::Load { path, detail } => {
-                write!(f, "no puedo cargar {}: {detail}", path.display())
-            }
-            Self::MissingSymbol { symbol, detail } => {
-                write!(f, "la librería no exporta {symbol}: {detail}")
-            }
-            Self::IsolateFailed(code) => write!(f, "graal_create_isolate ha devuelto {code}"),
-            Self::InvalidArgument(name) => write!(f, "{name} lleva un \\0 dentro"),
-            Self::NullResponse => write!(f, "el puente ha devuelto NULL"),
-            Self::MalformedResponse(detail) => write!(f, "respuesta ilegible del puente: {detail}"),
-            Self::Failed(detail) => write!(f, "el puente ha fallado: {detail}"),
-            Self::IncompatiblePolicy(detail) => {
-                write!(f, "la politica de firma no se puede aplicar: {detail}")
-            }
-            Self::PdfHasUnregisteredSignatures(detail) => {
-                write!(f, "el PDF trae firmas no registradas: {detail}")
-            }
-            Self::FormatNotBridged(format) => {
-                write!(f, "el puente no atiende el formato {format}")
-            }
-        }
-    }
-}
-
-impl std::error::Error for BridgeError {}
-
-impl From<LibraryNotFound> for BridgeError {
-    fn from(error: LibraryNotFound) -> Self {
-        Self::NotFound(error)
-    }
 }
 
 #[cfg(test)]

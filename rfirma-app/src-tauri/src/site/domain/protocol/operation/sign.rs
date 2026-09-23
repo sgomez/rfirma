@@ -4,7 +4,7 @@ use super::super::algorithm::AskedAlgorithm;
 use super::super::codes::Parameter;
 use super::super::data_source::DataSource;
 use super::super::filters::{site_filter, SiteFilter};
-use super::super::format::{format_of, RequestedFormat};
+use super::super::format::{format_of, goes_through_the_site_server, RequestedFormat};
 use super::super::refusal::Refusal;
 use super::super::url::AfirmaUrl;
 use super::document::{optional_document, read_document};
@@ -76,6 +76,7 @@ pub struct SignRequest {
     declared: Vec<(String, String)>,
     filter: SiteFilter,
     headless: bool,
+    through_the_site_server: bool,
 }
 
 impl SignRequest {
@@ -113,6 +114,11 @@ impl SignRequest {
     pub fn is_headless(&self) -> bool {
         self.headless
     }
+
+    /// Si la prefirma y la postfirma las hace el servidor trifásico de la sede.
+    pub fn goes_through_the_site_server(&self) -> bool {
+        self.through_the_site_server
+    }
 }
 
 /// La firma que la sede pidió sin `dat`: todo lo suyo menos el documento, que elige la persona
@@ -132,6 +138,7 @@ pub struct PendingSignRequest {
     load_description: Option<String>,
     load_starting_folder: Option<String>,
     load_filename: Option<String>,
+    through_the_site_server: bool,
 }
 
 impl PendingSignRequest {
@@ -177,6 +184,7 @@ impl PendingSignRequest {
             declared: self.declared,
             filter: self.filter,
             headless: self.headless,
+            through_the_site_server: self.through_the_site_server,
         }
     }
 }
@@ -207,6 +215,9 @@ pub(super) fn sign_request(
 
     let properties = declared_properties(url);
     let declared = properties.crossing().to_vec();
+    let through_the_site_server = url
+        .parameter("format")
+        .is_some_and(goes_through_the_site_server);
     if url.parameter("dat").is_none() {
         return Ok(SiteOperation::SignWithoutDocument(PendingSignRequest {
             round,
@@ -219,6 +230,7 @@ pub(super) fn sign_request(
             load_starting_folder: property_value(&declared, FILENAME_CURRENT_DIR),
             load_filename: properties.actual_name().map(str::to_owned),
             declared,
+            through_the_site_server,
         }));
     }
 
@@ -241,6 +253,7 @@ pub(super) fn sign_request(
         filter: site_filter(&declared),
         headless: properties.is_headless(),
         declared,
+        through_the_site_server,
     }))
 }
 

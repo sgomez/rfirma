@@ -6,7 +6,7 @@ use crate::identity::adapters::failures::{code_of_secret_on_the_reader_keypad, c
 use crate::memory_error::{MemoryError, Situation as MemorySituation};
 use crate::signing::application::cycle::CycleError;
 use crate::signing::application::session::CycleFailure;
-use crate::signing::domain::bridge::BridgeError;
+use crate::signing::domain::bridge::{BridgeError, DataRejection};
 use crate::signing::domain::isolate_gone::IsolateGone;
 use crate::signing::domain::{PlacementError, Refusal, SealMismatch};
 use crate::site::domain::protocol::SafCode;
@@ -62,6 +62,7 @@ fn bridge_told(error: &BridgeError) -> (&'static str, SafCode) {
         }
         BridgeError::IncompatiblePolicy(_) => ("bridgeFailed", SafCode::InvalidPolicy),
         BridgeError::FormatNotBridged(_) => ("bridgeFailed", SafCode::UnsupportedFormat),
+        BridgeError::DataRejected(rejection, _) => ("bridgeFailed", code_of_rejection(*rejection)),
         BridgeError::ExecutablePathUnknown(_)
         | BridgeError::NotFound(_)
         | BridgeError::Load { .. }
@@ -71,6 +72,18 @@ fn bridge_told(error: &BridgeError) -> (&'static str, SafCode) {
         | BridgeError::NullResponse
         | BridgeError::MalformedResponse(_)
         | BridgeError::Failed(_) => ("bridgeFailed", SafCode::SignatureFailed),
+    }
+}
+
+fn code_of_rejection(rejection: DataRejection) -> SafCode {
+    match rejection {
+        DataRejection::InvalidPdf => SafCode::InvalidPdf,
+        DataRejection::InvalidXml => SafCode::InvalidXml,
+        DataRejection::InvalidData => SafCode::InvalidData,
+        DataRejection::NoSignData => SafCode::NoSignData,
+        DataRejection::FacturaeAlreadySigned => SafCode::FacturaeAlreadySigned,
+        DataRejection::InvalidFacturae => SafCode::InvalidFacturae,
+        DataRejection::SignWithoutData => SafCode::SignWithoutData,
     }
 }
 

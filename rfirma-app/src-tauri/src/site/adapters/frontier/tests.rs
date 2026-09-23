@@ -15,6 +15,7 @@ use crate::site::adapters::desk::signing_refusal_of;
 use crate::site::application::filtering::FilteringError;
 use crate::site::domain::batch_error::{BatchError, Situation as BatchSituation};
 use crate::site::domain::relay_error::Situation as RelaySituation;
+use crate::site::domain::triphase_server::{Situation as TriphaseSituation, TriphaseServerError};
 
 fn every_refusal_of_the_errand() -> Vec<SiteRefusal> {
     vec![
@@ -60,6 +61,22 @@ fn every_refusal_of_the_errand() -> Vec<SiteRefusal> {
             &CycleFailure::NoOpenCycle,
         ))),
         SiteRefusal::LocalBatch("el lote local no declara ninguna firma".to_owned()),
+        SiteRefusal::Triphase(TriphaseServerError::new(
+            TriphaseSituation::ServerUrlMissing,
+            "no hay serverUrl",
+        )),
+        SiteRefusal::Triphase(TriphaseServerError::new(
+            TriphaseSituation::ServerException,
+            "java.io.IOException: la sede no entrega el documento",
+        )),
+        SiteRefusal::Triphase(TriphaseServerError::new(
+            TriphaseSituation::ServerUnreachable,
+            "connection refused",
+        )),
+        SiteRefusal::Triphase(TriphaseServerError::new(
+            TriphaseSituation::UnexpectedAnswer,
+            "no es Base64",
+        )),
     ]
 }
 
@@ -305,5 +322,25 @@ fn the_batch_codes_match_the_original_catalogue() {
     assert_eq!(
         code_of_batch(BatchSituation::InvalidPostsignResponse),
         SafCode::BatchSignature
+    );
+}
+
+#[test]
+fn the_triphase_codes_match_the_original_catalogue() {
+    assert_eq!(
+        code_of_triphase(TriphaseSituation::ServerUrlMissing),
+        SafCode::Params
+    );
+    assert_eq!(
+        code_of_triphase(TriphaseSituation::ServerException),
+        SafCode::RecoverServerDocument
+    );
+    assert_eq!(
+        code_of_triphase(TriphaseSituation::ServerUnreachable),
+        SafCode::SignatureFailed
+    );
+    assert_eq!(
+        code_of_triphase(TriphaseSituation::UnexpectedAnswer),
+        SafCode::SignatureFailed
     );
 }
