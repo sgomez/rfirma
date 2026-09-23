@@ -50,8 +50,13 @@ pub fn attend<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
     reply: ReplyHandle,
     live: &LiveErrand,
 ) -> Option<ErrandStep> {
+    live.an_operation_arrives();
     live.answer_through(reply);
-    dispatch(desk, url, live)
+    let step = dispatch(desk, url, live);
+    if matches!(step, Some(ErrandStep::Answering(_))) {
+        live.put_away_the_window();
+    }
+    step
 }
 
 /// Reevalúa la petición recibida tras un cambio en los certificados disponibles.

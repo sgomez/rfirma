@@ -52,3 +52,23 @@ fn the_relay_cipher_key_never_shows_up_in_a_debug_of_the_channel_location() {
 
     assert!(!printed.contains("12345678"));
 }
+
+#[test]
+fn a_websocket_channel_serves_operations_while_its_first_client_stays() {
+    assert_eq!(
+        ChannelLocation::Drawn(vec![51001, 51002]).tenure(),
+        ChannelTenure::WhileTheFirstClientStays
+    );
+    assert_eq!(
+        ChannelLocation::Fixed(63117).tenure(),
+        ChannelTenure::WhileTheFirstClientStays
+    );
+}
+
+#[test]
+fn a_service_channel_serves_a_single_operation() {
+    assert_eq!(
+        ChannelLocation::Service(vec![51001]).tenure(),
+        ChannelTenure::OneOperation
+    );
+}

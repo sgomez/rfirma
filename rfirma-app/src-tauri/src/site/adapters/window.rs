@@ -47,11 +47,14 @@ pub fn open_the_site_window(app: &tauri::AppHandle) {
 /// Cancela el trámite vivo, si lo hay, antes de dejar cerrar la ventana de sede por el gestor de
 /// ventanas: retiene el cierre, cancela como el botón de cancelar y reintenta cerrar cuando
 /// termina, momento en el que este mismo evento vuelve a llegar con el trámite ya terminado.
+/// Mientras el WebSocket siga sirviendo, la oculta en vez de cerrarla (ADR-0024).
 fn handle_close_requested(app: &tauri::AppHandle, event: &tauri::WindowEvent) {
     let tauri::WindowEvent::CloseRequested { api, .. } = event else {
         return;
     };
-    if app.state::<SiteRoot>().errand.current().is_none() {
+    let live = &app.state::<SiteRoot>().errand;
+    let keeps_serving = live.keeps_serving();
+    if live.current().is_none() {
         return;
     }
     api.prevent_close();
@@ -59,7 +62,11 @@ fn handle_close_requested(app: &tauri::AppHandle, event: &tauri::WindowEvent) {
     std::thread::spawn(move || {
         errand::decline_before_closing(&app.state::<SiteRoot>().errand);
         if let Some(window) = app.get_webview_window(SITE_WINDOW) {
-            let _ = window.close();
+            let _ = if keeps_serving {
+                window.hide()
+            } else {
+                window.close()
+            };
         }
     });
 }
@@ -93,6 +100,18 @@ impl crate::site::application::startup::SiteWindow for TauriSiteWindow {
     fn show(&self) {
         publish_the_moment(&self.app);
         show_the_site_window(&self.app);
+    }
+
+    fn hide(&self) {
+        if let Some(window) = self.app.get_webview_window(SITE_WINDOW) {
+            let _ = window.hide();
+        }
+    }
+
+    fn close(&self) {
+        if let Some(window) = self.app.get_webview_window(SITE_WINDOW) {
+            let _ = window.close();
+        }
     }
 
     fn errand_ended(&self, delivered: Acknowledgement) {

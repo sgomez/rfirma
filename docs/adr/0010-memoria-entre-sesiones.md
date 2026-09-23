@@ -245,7 +245,8 @@ de ella no sale nunca una respuesta. Tres reglas:
    `already_chosen`. Sin ventana no hay certificado.
 2. **El recuerdo que gobierna `sticky` pertenece a la sesión de sede que lo
    fijó**, y muere con ella; con un proceso por invocación (ADR-0024), la
-   sesión es en la práctica esa invocación. Lo que persiste en `state.json`
+   sesión es ese proceso: con WebSocket, todas las operaciones que llegan
+   mientras siga su primer cliente. Lo que persiste en `state.json`
    entre sesiones sigue existiendo, pero solo para preseleccionar: en el panel
    de firma y, cuando la sesión no ha fijado ninguno, en la ventana de sede.
 3. **`resetsticky` borra el recuerdo de su propia sesión**, nunca la memoria

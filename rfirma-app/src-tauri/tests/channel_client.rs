@@ -330,6 +330,8 @@ async fn a_site_launch_ends_with_the_echo_answered_over_the_open_channel() {
             self.0.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
         }
         fn show(&self) {}
+        fn hide(&self) {}
+        fn close(&self) {}
         fn errand_ended(&self, _delivered: rfirma_lib::site::ports::Acknowledgement) {}
     }
 
@@ -514,4 +516,171 @@ async fn the_acknowledgement_is_not_fulfilled_for_a_client_already_gone() {
         !acknowledgement.wait(Duration::from_millis(300)),
         "el cliente ya se ha ido: el acuse no deberia cumplirse"
     );
+}
+
+/// El cometido de servir con la credencial de siempre.
+fn serving_the_credential() -> ChannelDuty {
+    ChannelDuty::Serve(NegotiatedCredential::Required(
+        ChannelCredential::parse(CREDENTIAL).expect("credencial"),
+    ))
+}
+
+fn an_operation(verb: &str) -> String {
+    format!("afirma://{verb}?op={verb}&idsession={CREDENTIAL}")
+}
+
+/// Trámite que contesta en el acto cada operación con su verbo.
+fn answering_each_operation() -> SiteOperations {
+    SiteOperations::for_operations(|url: AfirmaUrl, reply: ReplyHandle| {
+        let _ = reply.answer(format!("contestada:{}", url.verb()));
+    })
+}
+
+/// Espera, sin pasarse, a que la cuenta llegue a lo esperado.
+async fn counted(count: &std::sync::atomic::AtomicUsize, expected: usize) -> usize {
+    let deadline = tokio::time::Instant::now() + Duration::from_secs(2);
+    loop {
+        let now = count.load(std::sync::atomic::Ordering::SeqCst);
+        if now == expected || tokio::time::Instant::now() >= deadline {
+            return now;
+        }
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn two_operations_over_the_same_socket_get_two_answers() {
+    let channel =
+        AChannel::serving_with(serving_the_credential(), answering_each_operation()).await;
+    let mut client = channel.a_client().await;
+
+    let first = client.say(&an_operation("selectcert")).await;
+    let second = client.say(&an_operation("sign")).await;
+
+    assert_eq!(first.as_deref(), Some("contestada:selectcert"));
+    assert_eq!(second.as_deref(), Some("contestada:sign"));
+    assert!(
+        client.is_still_open().await,
+        "el canal sigue abierto para la siguiente operacion"
+    );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn what_an_operation_leaves_on_the_openssl_error_queue_does_not_break_the_channel() {
+    let channel = AChannel::serving_with(
+        serving_the_credential(),
+        SiteOperations::for_operations(|url: AfirmaUrl, reply: ReplyHandle| {
+            let left = openssl::x509::X509::from_pem(b"no es un certificado")
+                .expect_err("un PEM roto no se lee");
+            for error in left.errors() {
+                error.put();
+            }
+            let _ = reply.answer(format!("contestada:{}", url.verb()));
+        }),
+    )
+    .await;
+    let mut client = channel.a_client().await;
+
+    let first = client.say(&an_operation("selectcert")).await;
+    let second = client.say(&an_operation("sign")).await;
+
+    assert_eq!(first.as_deref(), Some("contestada:selectcert"));
+    assert_eq!(second.as_deref(), Some("contestada:sign"));
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn an_operation_while_another_is_in_flight_is_refused_as_busy() {
+    let held: std::sync::Arc<std::sync::Mutex<Option<ReplyHandle>>> =
+        std::sync::Arc::new(std::sync::Mutex::new(None));
+    let keeping = std::sync::Arc::clone(&held);
+    let channel = AChannel::serving_with(
+        serving_the_credential(),
+        SiteOperations::for_operations(move |_url: AfirmaUrl, reply: ReplyHandle| {
+            *keeping.lock().expect("el candado") = Some(reply);
+        }),
+    )
+    .await;
+    let mut first = channel.a_client().await;
+    let mut second = channel.a_client().await;
+    first
+        .socket
+        .send(Message::text(an_operation("selectcert")))
+        .await
+        .expect("la operacion deberia salir");
+    while held.lock().expect("el candado").is_none() {
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+
+    let refused = second.say(&an_operation("sign")).await;
+
+    assert_eq!(
+        refused,
+        Some(
+            rfirma_lib::site::domain::protocol::WireAnswer::refused(SafCode::CannotOpenSocket)
+                .on_the_wire()
+        ),
+        "no se atienden dos operaciones a la vez"
+    );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn only_the_first_client_leaving_is_told() {
+    let left = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+    let counting = std::sync::Arc::clone(&left);
+    let channel = AChannel::serving_with(
+        serving_the_credential(),
+        answering_each_operation().when_the_first_client_leaves(move || {
+            counting.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        }),
+    )
+    .await;
+    let mut first = channel.a_client().await;
+    assert_eq!(first.echo(CREDENTIAL).await.as_deref(), Some("OK"));
+    let mut second = channel.a_client().await;
+    assert_eq!(second.echo(CREDENTIAL).await.as_deref(), Some("OK"));
+
+    drop(second);
+
+    assert_eq!(
+        counted(&left, 1).await,
+        0,
+        "un cliente secundario que se va no termina nada"
+    );
+    assert_eq!(first.echo(CREDENTIAL).await.as_deref(), Some("OK"));
+
+    drop(first);
+
+    assert_eq!(counted(&left, 1).await, 1);
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn the_first_client_leaving_mid_operation_is_told() {
+    let left = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+    let counting = std::sync::Arc::clone(&left);
+    let held: std::sync::Arc<std::sync::Mutex<Option<ReplyHandle>>> =
+        std::sync::Arc::new(std::sync::Mutex::new(None));
+    let keeping = std::sync::Arc::clone(&held);
+    let channel = AChannel::serving_with(
+        serving_the_credential(),
+        SiteOperations::for_operations(move |_url: AfirmaUrl, reply: ReplyHandle| {
+            *keeping.lock().expect("el candado") = Some(reply);
+        })
+        .when_the_first_client_leaves(move || {
+            counting.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        }),
+    )
+    .await;
+    let mut client = channel.a_client().await;
+    client
+        .socket
+        .send(Message::text(an_operation("selectcert")))
+        .await
+        .expect("la operacion deberia salir");
+    while held.lock().expect("el candado").is_none() {
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+
+    client.socket.close(None).await.expect("el cierre sale");
+
+    assert_eq!(counted(&left, 1).await, 1);
 }

@@ -36,12 +36,13 @@ use crate::site::adapters::desk::signing_refusal_of;
 use crate::site::adapters::frontier;
 use crate::site::application::session::SiteRefusal;
 use crate::site::application::site::{attend_launch, Attendance};
+use crate::site::application::startup::{SiteWindow, SiteWindowContent};
 use crate::site::application::tests::read_operation;
 use crate::site::application::tests::{
     AValidator, InMemoryBatchServices, InMemoryTokenSigning, NotAsked,
 };
 use crate::site::domain::channel::{
-    ArrivalMode, ChannelDuty, ChannelError, ChannelLocation, OpenChannel, Shutdown,
+    ArrivalMode, ChannelDuty, ChannelError, ChannelLocation, ChannelTenure, OpenChannel, Shutdown,
 };
 use crate::site::domain::protocol::{
     AfirmaUrl, AskedAlgorithm, ChannelCredential, ChannelMessage, NegotiatedCredential, Parameter,
@@ -806,6 +807,7 @@ fn a_selection_of_a_certificate_goes_all_the_way_from_the_launch_to_the_answer_o
         live.current().is_some(),
         "el tramite queda vivo mientras se atiende"
     );
+    live.browser_arrived();
 
     let (handle, mut wire) = the_wire();
     live.answer_through(handle);
@@ -866,8 +868,8 @@ fn a_selection_of_a_certificate_goes_all_the_way_from_the_launch_to_the_answer_o
         "la sede recibe el certificado en el acto, por el asa del tramite"
     );
     assert!(
-        live.current().is_none(),
-        "contestada la sede, el tramite deja de estar vivo sin que nadie cierre nada"
+        live.current().is_some() && live.the_request().is_none(),
+        "contestada la sede, el WebSocket espera la siguiente operacion sin nada pendiente"
     );
 }
 #[test]
@@ -932,7 +934,7 @@ fn a_selection_that_is_declined_ends_in_a_cancel_on_the_wire_and_nothing_after_i
         Some("CANCEL".to_owned()),
         "cancelar sale al cable en el acto, sin esperar a que nadie cierre nada"
     );
-    assert!(live.current().is_none());
+    assert!(live.what_the_site_asked().is_none());
 
     declined(&live);
     assert_eq!(what_the_site_received(&mut wire), None);
@@ -1226,8 +1228,8 @@ fn the_whole_signature_errand_over(
         "el cliente publicado parte por `|` y no espera ningun tercer campo"
     );
     assert!(
-        live.current().is_none(),
-        "contestada la sede, el tramite deja de estar vivo"
+        live.the_signature_consented().is_none(),
+        "contestada la sede, no queda firma pendiente"
     );
     assert!(
         !scratch_file.exists(),
@@ -1320,7 +1322,7 @@ fn a_signature_that_is_declined_ends_in_a_cancel_and_leaves_no_scratch_behind() 
         Some("CANCEL".to_owned()),
         "cancelar sale al cable en el acto, sin esperar a que nadie cierre nada"
     );
-    assert!(live.current().is_none());
+    assert!(live.the_signature_consented().is_none());
     assert!(
         !scratch_file.exists(),
         "el fichero de paso se borra tambien al cancelar"
@@ -3230,7 +3232,7 @@ fn a_launch_that_loses_the_place_while_its_channel_opens_has_it_closed_and_is_re
     assert_eq!(errand.arrival(), ArrivalMode::Awaited);
 }
 #[test]
-fn once_the_first_site_has_its_answer_the_next_launch_is_attended() {
+fn once_the_first_client_has_left_the_next_launch_is_attended() {
     let live = a_live();
     let asked = RefCell::new(Vec::new());
 
@@ -3241,6 +3243,7 @@ fn once_the_first_site_has_its_answer_the_next_launch_is_attended() {
         &live,
     );
     declined(&live);
+    live.the_first_client_left();
 
     let next = attend_launch(
         &a_launch("55001"),
@@ -5397,4 +5400,219 @@ fn a_local_batch_ignores_check_signatures_as_the_original_does() {
         3,
         "el lote firma sus tres elementos sin preguntar por las firmas previas"
     );
+}
+
+/// Ventana doblada que apunta lo que el trámite le pide.
+#[derive(Default)]
+struct AWindow {
+    asked: std::sync::Mutex<Vec<&'static str>>,
+}
+
+impl AWindow {
+    fn asked(&self) -> Vec<&'static str> {
+        self.asked
+            .lock()
+            .expect("el doble no envenena su cerrojo")
+            .clone()
+    }
+
+    fn note(&self, what: &'static str) {
+        self.asked
+            .lock()
+            .expect("el doble no envenena su cerrojo")
+            .push(what);
+    }
+}
+
+impl SiteWindow for AWindow {
+    fn open(&self, _content: SiteWindowContent<'_>) {
+        self.note("abierta");
+    }
+    fn show(&self) {
+        self.note("enseñada");
+    }
+    fn hide(&self) {
+        self.note("oculta");
+    }
+    fn close(&self) {
+        self.note("cerrada");
+    }
+    fn errand_ended(&self, _delivered: Acknowledgement) {
+        self.note("trámite-terminado");
+    }
+}
+
+fn a_websocket_errand_begun() -> LiveErrand {
+    let live = LiveErrand::default();
+    assert!(live.begin(
+        Errand::of(
+            NegotiatedCredential::Required(a_credential()),
+            ArrivalMode::Awaited,
+            a_codec(),
+        )
+        .with_tenure(ChannelTenure::WhileTheFirstClientStays)
+    ));
+    live
+}
+
+/// Un trámite de WebSocket vivo, con su ventana, y el navegador ya llegado.
+fn a_websocket_errand(window: &Arc<AWindow>) -> LiveErrand {
+    let live = a_websocket_errand_begun();
+    live.keep_the_window(Arc::clone(window) as Arc<dyn SiteWindow>);
+    live.browser_arrived();
+    live
+}
+
+fn arriving(message: &str) -> AfirmaUrl {
+    let ChannelMessage::Operation { url } = ChannelMessage::read(message) else {
+        panic!("una URL del protocolo es una operacion");
+    };
+    url
+}
+
+#[test]
+fn a_websocket_launch_begins_an_errand_that_serves_many_operations() {
+    let asked = RefCell::new(Vec::new());
+    let live = LiveErrand::default();
+
+    let attendance = attend_launch(
+        &a_launch("54001,54002,54003"),
+        &a_codec_table(),
+        &a_transport(&asked),
+        &live,
+    );
+
+    let Attendance::Serving { errand, .. } = attendance else {
+        panic!("un arranque bueno se atiende: {attendance:?}");
+    };
+    assert_eq!(errand.tenure(), ChannelTenure::WhileTheFirstClientStays);
+}
+
+#[test]
+fn a_websocket_errand_answers_the_operation_after_a_refused_one() {
+    let window = Arc::new(AWindow::default());
+    let live = a_websocket_errand(&window);
+    let home = tempfile::tempdir().expect("hay directorio temporal");
+    let memory = a_memory(home.path());
+    let listed = ListedCertificates::new();
+    let opened_documents = OpenedDocuments::new();
+    let engine = AnEngine::answering(&[]);
+    let policies = APolicyEngine::answering("");
+    let scratch = home.path().join("errand");
+    let desk = a_desk(
+        &engine,
+        &policies,
+        &[],
+        home.path(),
+        &listed,
+        &opened_documents,
+        &memory,
+        &scratch,
+    );
+
+    let (first, mut first_wire) = the_wire();
+    let refused = attend(
+        &desk,
+        arriving(&format!("afirma://unknownop?idsession={CREDENTIAL}")),
+        first,
+        &live,
+    );
+    let (second, mut second_wire) = the_wire();
+    let answered = attend(&desk, an_operation(""), second, &live);
+
+    assert!(matches!(refused, Some(ErrandStep::Answering(_))));
+    assert!(what_the_site_received(&mut first_wire).is_some_and(|line| line.starts_with("SAF_04")));
+    assert!(matches!(answered, Some(ErrandStep::Answering(_))));
+    assert!(
+        what_the_site_received(&mut second_wire).is_some(),
+        "la segunda operacion tambien se contesta"
+    );
+    assert!(
+        live.current().is_some(),
+        "el tramite sigue mientras siga el primer cliente"
+    );
+    assert!(
+        !window.asked().contains(&"trámite-terminado"),
+        "la ventana no se entera de un final que no lo es: {:?}",
+        window.asked()
+    );
+}
+
+#[test]
+fn a_websocket_operation_shows_the_window_and_hides_it_when_it_answers_unseen() {
+    let window = Arc::new(AWindow::default());
+    let live = a_websocket_errand(&window);
+    let home = tempfile::tempdir().expect("hay directorio temporal");
+    let memory = a_memory(home.path());
+    let listed = ListedCertificates::new();
+    let opened_documents = OpenedDocuments::new();
+    let engine = AnEngine::answering(&[]);
+    let policies = APolicyEngine::answering("");
+    let scratch = home.path().join("errand");
+    let desk = a_desk(
+        &engine,
+        &policies,
+        &[],
+        home.path(),
+        &listed,
+        &opened_documents,
+        &memory,
+        &scratch,
+    );
+    live.note(Moment::Unreachable);
+
+    let (handle, _wire) = the_wire();
+    let _ = attend(&desk, an_operation(""), handle, &live);
+
+    assert_eq!(window.asked(), ["enseñada", "oculta"]);
+    assert_eq!(
+        live.moment(),
+        Some(Moment::Waiting),
+        "la siguiente operacion se enseña como la primera"
+    );
+}
+
+#[test]
+fn the_first_client_leaving_ends_the_websocket_errand_and_closes_its_window() {
+    let window = Arc::new(AWindow::default());
+    let live = a_websocket_errand(&window);
+    assert!(live.keeps_serving());
+
+    live.the_first_client_left();
+
+    assert!(live.current().is_none());
+    assert!(!live.keeps_serving());
+    assert_eq!(window.asked(), ["cerrada"]);
+}
+
+#[test]
+fn a_websocket_errand_keeps_serving_only_once_the_browser_has_arrived() {
+    let live = a_websocket_errand_begun();
+    assert!(
+        !live.keeps_serving(),
+        "sin navegador, cerrar la ventana termina como siempre"
+    );
+
+    live.browser_arrived();
+
+    assert!(live.keeps_serving());
+}
+
+#[test]
+fn a_single_operation_errand_ignores_the_first_client_leaving_and_never_keeps_serving() {
+    let window = Arc::new(AWindow::default());
+    let live = LiveErrand::default();
+    assert!(live.begin(Errand::of(
+        NegotiatedCredential::Required(a_credential()),
+        ArrivalMode::Awaited,
+        a_codec(),
+    )));
+    live.keep_the_window(Arc::clone(&window) as Arc<dyn SiteWindow>);
+    live.browser_arrived();
+
+    live.the_first_client_left();
+
+    assert!(live.current().is_some());
+    assert!(!live.keeps_serving());
+    assert!(window.asked().is_empty());
 }

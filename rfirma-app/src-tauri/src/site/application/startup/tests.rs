@@ -91,6 +91,14 @@ impl SiteWindow for World {
         self.note("ventana:enseñada");
     }
 
+    fn hide(&self) {
+        self.note("ventana:oculta");
+    }
+
+    fn close(&self) {
+        self.note("ventana:cerrada");
+    }
+
     fn errand_ended(&self, delivered: Acknowledgement) {
         delivered.wait(Duration::from_secs(1));
         self.note("ventana:trámite-terminado");
@@ -329,12 +337,12 @@ fn the_channel_refusal_wait_expires_and_closes_the_hidden_window_too() {
 }
 
 #[test]
-fn ending_the_errand_notifies_the_window_it_kept() {
+fn ending_a_service_errand_notifies_the_window_it_kept() {
     let world = Arc::new(World::default());
     let live = LiveErrand::default();
 
     let _attendance = attend_site_launch(
-        &a_launch(&format!("v=4&idsession={CREDENTIAL}")),
+        &format!("afirma://service?ports=51001,51002,51003&v=1&idsession={CREDENTIAL}"),
         &a_codec_table(),
         &|location, duty| world.transport(location, duty),
         Arc::clone(&world) as Arc<dyn SiteWindow>,
@@ -357,6 +365,74 @@ fn ending_the_errand_notifies_the_window_it_kept() {
             "ventana:trámite-terminado".to_owned(),
         ],
         "al terminar el trámite, la ventana que se guardó al empezar recibe el aviso"
+    );
+}
+
+#[test]
+fn a_websocket_errand_outlives_its_answer_and_closes_its_window_when_the_first_client_leaves() {
+    let world = Arc::new(World::default());
+    let live = LiveErrand::default();
+
+    let _attendance = attend_site_launch(
+        &a_launch(&format!("v=4&idsession={CREDENTIAL}")),
+        &a_codec_table(),
+        &|location, duty| world.transport(location, duty),
+        Arc::clone(&world) as Arc<dyn SiteWindow>,
+        &live,
+        LocalCaReach::NotAnObstacle,
+    );
+    live.browser_arrived();
+    crate::site::application::errand::replies::declined(&live);
+
+    assert_eq!(
+        world.steps(),
+        [
+            "canal".to_owned(),
+            "ventana:creada:Awaited".to_owned(),
+            "ventana:enseñada".to_owned(),
+        ],
+        "contestar no termina un trámite de WebSocket"
+    );
+    assert!(live.current().is_some());
+
+    live.the_first_client_left();
+
+    assert_eq!(
+        world.steps(),
+        [
+            "canal".to_owned(),
+            "ventana:creada:Awaited".to_owned(),
+            "ventana:enseñada".to_owned(),
+            "ventana:cerrada".to_owned(),
+        ],
+        "irse el primer cliente cierra la ventana, y con ella el proceso"
+    );
+}
+
+#[test]
+fn a_websocket_errand_whose_browser_never_arrived_ends_like_any_other() {
+    let world = Arc::new(World::default());
+    let live = LiveErrand::default();
+
+    let _attendance = attend_site_launch(
+        &a_launch(&format!("v=4&idsession={CREDENTIAL}")),
+        &a_codec_table(),
+        &|location, duty| world.transport(location, duty),
+        Arc::clone(&world) as Arc<dyn SiteWindow>,
+        &live,
+        LocalCaReach::NotAnObstacle,
+    );
+    crate::site::application::errand::decline_before_closing(&live);
+
+    assert!(live.current().is_none());
+    assert_eq!(
+        world.steps(),
+        [
+            "canal".to_owned(),
+            "ventana:creada:Awaited".to_owned(),
+            "ventana:trámite-terminado".to_owned(),
+        ],
+        "sin navegador, cerrar la ventana termina el trámite y el proceso"
     );
 }
 

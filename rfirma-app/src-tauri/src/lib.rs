@@ -422,6 +422,7 @@ fn the_transport(
     let inbox = {
         let handle = app.clone();
         let arrived_handle = app.clone();
+        let left_handle = app.clone();
         site::ports::Inbox::of(
             move || {
                 arrived_handle
@@ -433,6 +434,12 @@ fn the_transport(
                 site::adapters::window::attend_site_operation(&handle, url, reply);
             },
         )
+        .when_the_first_client_leaves(move || {
+            left_handle
+                .state::<site::SiteRoot>()
+                .errand
+                .the_first_client_left();
+        })
     };
 
     let wss = site::adapters::transport::LoopbackWss::new(store.clone(), inbox.clone());

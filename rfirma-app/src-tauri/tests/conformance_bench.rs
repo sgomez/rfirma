@@ -975,36 +975,26 @@ async fn the_errand_channel(
         AfirmaUrl::parse(&url).expect("la invocacion del cliente publicado deberia leerse");
     let launch = LaunchRequest::from_url(&parsed).expect("la invocacion deberia atenderse");
 
+    let location = client.the_channel_location(&launch);
     let channel = the_channel_at(
-        &client.the_channel_location(&launch),
+        &location,
         material,
         ChannelDuty::Serve(launch.credential().clone()),
         operations,
     )
     .await;
     assert!(
-        roots.site.errand.begin(Errand::of(
-            launch.credential().clone(),
-            channel.arrival_mode(),
-            the_codec_of(roots, &launch),
-        )),
+        roots.site.errand.begin(
+            Errand::of(
+                launch.credential().clone(),
+                channel.arrival_mode(),
+                the_codec_of(roots, &launch),
+            )
+            .with_tenure(location.tenure())
+        ),
         "la invocacion anterior deberia haber cerrado su tramite"
     );
     channel
-}
-
-/// Atiende la siguiente selección del guion: abre el canal donde la sede lo invocó, deja que el
-/// trámite la conteste y devuelve el evento del `successCallback` del cliente publicado.
-async fn the_next_selection(
-    client: &PublishedClient,
-    material: &ChannelMaterial,
-    roots: &Arc<Roots>,
-    consents: &Arc<AtomicUsize>,
-) -> Event {
-    let channel = the_errand_channel(client, material, roots, the_errand_of(roots, consents)).await;
-    let event = client.next_event();
-    channel.close();
-    event
 }
 
 /// El certificado que el `successCallback` del cliente publicado recibió.
@@ -1034,7 +1024,10 @@ async fn the_sticky_selections_of(mode: BenchMode) {
     let material = ChannelMaterial::fresh();
     let client = PublishedClient::running_the_script(&material, mode, THE_STICKY_SELECTIONS);
 
-    let stuck = the_next_selection(&client, &material, &roots, &consents).await;
+    let channel =
+        the_errand_channel(&client, &material, &roots, the_errand_of(&roots, &consents)).await;
+
+    let stuck = client.next_event();
     let first = the_certificate_of(&stuck, "stuck");
     assert_eq!(
         consents.load(Ordering::SeqCst),
@@ -1042,7 +1035,7 @@ async fn the_sticky_selections_of(mode: BenchMode) {
         "la primera seleccion siempre pregunta"
     );
 
-    let again = the_next_selection(&client, &material, &roots, &consents).await;
+    let again = client.next_event();
     assert_eq!(
         the_certificate_of(&again, "stuck-again"),
         first,
@@ -1054,7 +1047,7 @@ async fn the_sticky_selections_of(mode: BenchMode) {
         "con sticky la segunda seleccion tambien pregunta: sin ventana no hay certificado"
     );
 
-    let released = the_next_selection(&client, &material, &roots, &consents).await;
+    let released = client.next_event();
     assert_eq!(
         the_certificate_of(&released, "released"),
         first,
@@ -1068,6 +1061,7 @@ async fn the_sticky_selections_of(mode: BenchMode) {
 
     let done = client.next_event();
     assert_eq!(done.name(), "done", "el guion tenia que acabar entero");
+    channel.close();
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]

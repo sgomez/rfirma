@@ -29,6 +29,10 @@ pub trait SiteWindow: Send + Sync + 'static {
     fn open(&self, content: SiteWindowContent<'_>);
     /// Muestra y da foco a la ventana.
     fn show(&self);
+    /// Oculta la ventana sin cerrarla, a la espera de la siguiente operación.
+    fn hide(&self);
+    /// Cierra la ventana, y con ella el proceso.
+    fn close(&self);
     /// Notifica que el trámite ha terminado, con el acuse de que la respuesta ya salió por el
     /// canal; cierra la ventana solo si sigue oculta.
     fn errand_ended(&self, delivered: Acknowledgement);
@@ -40,6 +44,12 @@ impl<T: SiteWindow + ?Sized> SiteWindow for Arc<T> {
     }
     fn show(&self) {
         (**self).show();
+    }
+    fn hide(&self) {
+        (**self).hide();
+    }
+    fn close(&self) {
+        (**self).close();
     }
     fn errand_ended(&self, delivered: Acknowledgement) {
         (**self).errand_ended(delivered);
