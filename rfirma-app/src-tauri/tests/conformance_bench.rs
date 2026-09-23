@@ -1191,6 +1191,7 @@ fn the_local_batch_errand_of(
 
 /// El lote remoto de dos documentos, del `signBatchJSON` del cliente publicado al resultado
 /// congelado del postsigner, pasando por los dos servlets que levanta el conductor.
+#[expect(clippy::too_many_lines)]
 async fn the_remote_batch_of(mode: BenchMode) {
     if !the_bench_can_be_mounted() {
         return;
@@ -1297,6 +1298,7 @@ async fn the_published_client_signs_a_remote_batch_also_over_the_third_protocol(
 
 /// El lote remoto heredado en XML, del `signBatch` del cliente publicado al resultado congelado
 /// del postsigner, pasando por los dos servlets que levanta el conductor.
+#[expect(clippy::too_many_lines)]
 async fn the_remote_xml_batch_of(mode: BenchMode) {
     if !the_bench_can_be_mounted() {
         return;
@@ -1496,6 +1498,7 @@ fn local_batch_item<'a>(result: &'a serde_json::Value, id: &str) -> &'a serde_js
 /// El lote local de tres elementos (PDF/`PAdES`, binario/`CAdES`, XML/`XAdES`) firmado con
 /// `setLocalBatchProcess(true)` y sin presigner ni postsigner: las tres firmas validan con la
 /// herramienta de su formato.
+#[expect(clippy::too_many_lines)]
 async fn the_local_batch_of(mode: BenchMode) {
     if !the_bench_can_be_mounted() {
         return;

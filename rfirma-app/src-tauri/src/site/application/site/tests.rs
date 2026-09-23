@@ -84,6 +84,7 @@ fn a_launch(parameters: &str) -> String {
 /// La tabla de negociación es la prueba central del ticket: cada forma de invocación de arranque
 /// decide un (códec, ubicación de canal) o un rechazo, en un solo sitio.
 #[test]
+#[expect(clippy::too_many_lines)]
 fn the_negotiation_table_decides_codec_and_location_by_the_shape_of_the_launch() {
     struct Case {
         name: &'static str,

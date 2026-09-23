@@ -138,6 +138,7 @@ fn what_stays_inside() -> Vec<(&'static str, Value)> {
 }
 
 /// Todo lo que sale hacia la sede, construido desde su caso de uso.
+#[expect(clippy::too_many_lines)]
 fn everything_that_goes_out_to_the_site() -> Vec<String> {
     let mut lines = Vec::new();
 

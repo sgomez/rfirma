@@ -203,6 +203,7 @@ async fn the_framed_request(stream: &mut (impl tokio::io::AsyncRead + Unpin)) ->
     }
 }
 
+#[expect(clippy::too_many_lines)]
 async fn respond(
     raw: &str,
     from_loopback: bool,
