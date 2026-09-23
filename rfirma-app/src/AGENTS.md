@@ -62,6 +62,14 @@ rojo.
 | `signing/flow.ts` | Las tres etapas de la trifásica. |
 | `signing/useSigning.ts` | El estado de la firma. |
 | `signing/SigningPanel.tsx` | El panel, con el botón de sellar. |
+| `signing/CertificateBlock.tsx` | El certificado, en sus cinco estados, dentro del panel. |
+| `signing/PlacementFieldset.tsx` | El bloque «Colocación» del panel: los tres modos de página y el botón de sellar. |
+| `signing/usePlacementField.ts` | El estado del bloque «Colocación»: lo tecleado en el campo de páginas. |
+| `signing/placementField.ts` | Las situaciones del campo de páginas y su eco, redactados. Sin React. |
+| `signing/SignatureFieldsFieldset.tsx` | Qué se estampa en el recuadro: las casillas, el motivo y la rúbrica. |
+| `signing/PanelFooter.tsx` | El pie del panel: destino o fallo, y el botón que firma. |
+| `signing/panelFormat.ts` | El tamaño del documento en la unidad que reconoce el usuario. Sin React. |
+| `signing/Checkbox.tsx` | La casilla del panel. |
 | `signing/CertificateSelect.tsx` | La elección de certificado. |
 | `signing/secret.ts` | Cómo hay que pedirle el secreto al almacén: sin sesión, tecleado en pantalla, o en el teclado del lector. Sin React. |
 | `signing/SigningProgressDialog.tsx` | El progreso. |
@@ -95,9 +103,13 @@ rojo.
 | **`preferences/`** | Los ajustes. |
 | `preferences/preferences.ts` | Lo que la aplicación recuerda. |
 | `preferences/PreferencesView.tsx` | La vista del cuerpo con los ajustes, con su índice de **cuatro** secciones. |
+| `preferences/PreferencesSections.tsx` | El contenido de cada sección del índice, como componentes propios. |
+| `preferences/PasswordPrompt.tsx` | El diálogo de la contraseña del `.p12`, antes de elegir el fichero. |
+| `preferences/focusTrap.ts` | El tabulador que da la vuelta dentro de un modal. |
 | `preferences/Switch.tsx` | El interruptor. |
 | `preferences/Select.tsx` | El desplegable. |
 | `preferences/theme.ts` | El tema de la ventana. |
+| `preferences/testSupport.tsx` | Los dobles y ayudas que comparten sus pruebas. |
 | **`i18n/`** | Catálogo propio, cinco idiomas, generado desde `po/` (ADR-0009 enmendado). Los bloques de comentario que explican el mecanismo están indexados en `i18n/AGENTS.md`. |
 | `i18n/catalog.ts` | La forma del catálogo. |
 | `i18n/i18n.ts` | La traducción. |

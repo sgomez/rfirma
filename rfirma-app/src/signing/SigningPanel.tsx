@@ -1,27 +1,23 @@
-import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { AlertIcon, CheckIcon, FileIcon, FolderIcon, InfoIcon } from "../design-system/icons";
+import { FileIcon, InfoIcon } from "../design-system/icons";
 import type { NamedFailure } from "../errors/classify";
-import { ErrorNotice } from "../errors/ErrorNotice";
 import { Switch } from "../preferences/Switch";
-import {
-  type PageChoice,
-  type PageSet,
-  type PageSets,
-  type Placement,
-  sealedPages,
-  sealsPage,
-} from "../viewer/signatureBox";
-import { CertificateSelect, statusWarning } from "./CertificateSelect";
+import type { PageChoice, PageSet, PageSets, Placement } from "../viewer/signatureBox";
+import { CertificateBlock } from "./CertificateBlock";
 import type { Certificate } from "./certificate";
 import { isUsable } from "./certificate";
 import type { Destination } from "./destination";
-import { shortenDestination } from "./destination";
 import type { SigningFailure } from "./failure";
-import { formatPageRange, type PageRangeError, parsePageRange } from "./pageRange";
+import { PanelFooter } from "./PanelFooter";
+import { PlacementFieldset } from "./PlacementFieldset";
+import { formatSize } from "./panelFormat";
 import type { Rubric, RubricFailure } from "./rubric";
+import { SignatureFieldsFieldset } from "./SignatureFieldsFieldset";
 import "./SigningPanel.css";
+import { usePlacementField } from "./usePlacementField";
 import type { VisibleSignature } from "./visibleSignature";
+
+export { formatSize } from "./panelFormat";
 
 /** El documento que se va a firmar, con lo que el panel enseña de él. */
 interface SigningDocument {
@@ -165,111 +161,25 @@ export function SigningPanel({
   onOpenHelp,
 }: SigningPanelProps) {
   const { t, i18n } = useTranslation();
-  const reasonId = useId();
-  const placementName = useId();
   const chosen = certificate.kind === "chosen" ? certificate.certificate : null;
   const usable = chosen !== null && isUsable(chosen.status);
-  // El destino recortado. Sin nombre compuesto —la carpeta no se deja
-  // comprobar— se enseña el del documento, que es lo único que se sabe.
-  const shortened = shortenDestination({
-    folder: destination.folder,
-    name: destination.name ?? document.name,
+
+  const { pagesText, rangeError, echo, sealedCount, sealButton, typePages } = usePlacementField({
+    documentPages: document.pages,
+    pageSets,
+    pageChoice,
+    placement,
+    viewedPage,
+    onChoosePages,
+    onSeal,
+    onUnseal,
   });
-
-  // ── El bloque «Colocación» ────────────────────────────────────────────────
-  //
-  // Lo tecleado vive aquí y el conjunto vive arriba, y los dos se mantienen a
-  // la par por **identidad**: el conjunto que este panel acaba de emitir se
-  // apunta en `seenPages`, así que solo se reescribe el campo cuando el
-  // conjunto cambia **desde fuera** —sellar o quitar una página en el visor,
-  // ID-99—. Sin esa distinción, teclear `1,2-3` se convertiría en `1-3` bajo
-  // los dedos, porque la forma comprimida no es la que se está escribiendo.
-  // El campo lo escribe **el conjunto de «Estas páginas»**, y no el conjunto
-  // activo: con `Solo 1 página` o `Todas` delante el campo ni se pinta, y al
-  // volver tiene que traer lo que se tecleó allí, no lo que dejó la otra opción
-  // (#188).
-  const pages = pageSets.these;
-  const [pagesText, setPagesText] = useState(() =>
-    pages === null ? "" : formatPageRange(pages, document.pages),
-  );
-  const [seenPages, setSeenPages] = useState<PageSet | null>(pages);
-  if (pages !== seenPages) {
-    setSeenPages(pages);
-    setPagesText(pages === null ? "" : formatPageRange(pages, document.pages));
-  }
-  const parsed = parsePageRange(pagesText, document.pages);
-  // El campo vacío bajo «Estas páginas» es **una situación más**, no un
-  // conjunto: no nombra ninguna página, lo dice bajo el campo y apaga el botón
-  // de firmar. Lo que no hace es emitir `onPlace(null)` — ver `typePages`.
-  const rangeError: FieldTrouble | null =
-    pageChoice !== "these"
-      ? null
-      : pagesText.trim() === ""
-        ? { kind: "empty" }
-        : !parsed.ok
-          ? parsed.error
-          : null;
-  const sealedCount = placement === null ? 0 : sealedPages(placement.pages, document.pages).length;
-  const echo = placement === null ? null : echoOf(placement.pages, document.pages, t);
-
-  // El botón de sellar, y cuál de sus tres caras toca (#194, antes ID-101).
-  // Quitar el sello se ofrece cuando la página lo lleva, salvo con «Todas las
-  // páginas» activa: esa opción no tiene conjunto propio que guardar
-  // (`storing` lo descarta, `signatureBox.ts`), así que `onUnseal` resolvería
-  // «todas» en páginas sueltas y `placementOf` las recompondría en «todas» acto
-  // seguido — el botón parecería no hacer nada. Restarle una página a «todas»
-  // pide primero pasar a «Estas páginas», que sí recuerda lo suyo.
-  const sealed =
-    placement !== null && pageChoice !== "all" && sealsPage(placement.pages, viewedPage);
-  const sealButton = sealed
-    ? { label: t("panel.placement.unseal"), variant: "rf-btn--ghost", act: onUnseal }
-    : pageChoice === "all"
-      ? { label: t("panel.placement.sealAll"), variant: "rf-btn--primary", act: onSeal }
-      : {
-          label: t("panel.placement.seal"),
-          variant: placement === null ? "rf-btn--primary" : "rf-btn--secondary",
-          act: onSeal,
-        };
-
-  // Elegir páginas **coloca** (#185): quien recibe esto pone el recuadro en su
-  // posición estándar si todavía no había ninguno. El panel no sabe dónde cae
-  // —no mide páginas— y por eso manda el conjunto y nada más.
-  const place = (next: PageSet | null) => {
-    setSeenPages(next);
-    onChoosePages(next);
-  };
-
-  const typePages = (value: string) => {
-    setPagesText(value);
-    const typed = parsePageRange(value, document.pages);
-    // Lo que no se entiende **no se aplica a medias**: el conjunto se queda
-    // como estaba y el error apaga el botón de firmar (ID-22, ID-98).
-    //
-    // Y el campo vacío tampoco se aplica: borrarlo es el paso normal para
-    // reescribir el rango, y emitir `onPlace(null)` ahí se llevaba la
-    // colocación **entera, `rect` incluido**, sin camino de vuelta desde el
-    // campo —había que volver a arrastrar sobre la hoja—. Mientras está vacío
-    // la colocación se queda como estaba y la situación `empty` bloquea.
-    if (typed.ok && typed.pages !== null) place(typed.pages);
-  };
-
-  // Cambiar de opción es **solo** cambiar de opción: el conjunto de cada una lo
-  // guarda quien las tiene las tres, y la siembra de la que se estrena también
-  // (#188). Antes esto reescribía el conjunto activo con lo que hubiera, y por
-  // ahí se colaba el estado compartido.
-  const chooseChoice = (choice: PageChoice) => {
-    onChangePageChoice(choice);
-  };
 
   // Con el interruptor encendido y sin colocar **no se firma**, y el pie manda
   // hacer la acción en vez de describir el estado (ID-93). Con el interruptor
   // apagado se firma, invisible, como siempre.
   const unplaced = signature.enabled && placement === null;
   const blocked = signature.enabled && (placement === null || rangeError !== null);
-
-  const changeField = (field: keyof VisibleSignature["fields"], checked: boolean) => {
-    onChangeSignature({ ...signature, fields: { ...signature.fields, [field]: checked } });
-  };
 
   return (
     <div className="panel">
@@ -337,449 +247,44 @@ export function SigningPanel({
 
           {usable && signature.enabled && (
             <>
-              <fieldset className="panel__placement">
-                <legend className="rf-label">{t("panel.placement.title")}</legend>
+              <PlacementFieldset
+                documentPages={document.pages}
+                pageSets={pageSets}
+                pageChoice={pageChoice}
+                onChangePageChoice={onChangePageChoice}
+                pagesText={pagesText}
+                onTypePages={typePages}
+                rangeError={rangeError}
+                echo={echo}
+                sealedCount={sealedCount}
+                sealButton={sealButton}
+              />
 
-                <label className="panel__placement-option">
-                  <input
-                    type="radio"
-                    name={placementName}
-                    checked={pageChoice === "single"}
-                    onChange={() => chooseChoice("single")}
-                  />
-                  <span className="rf-body">{t("panel.placement.single")}</span>
-                  {/* La etiqueta es fija y el número va en el pie: «esta
-                      página» no dice cuál y deja de ser cierto en cuanto pasas
-                      de página (ID-97). */}
-                  {/* Su página, no la del conjunto activo: con «Todas»
-                      delante este pie sigue diciendo la suya, que es la que
-                      volverá si se elige (#188). */}
-                  <span className="rf-hint panel__placement-foot">
-                    {pageSets.single === null
-                      ? t("panel.placement.singleUnplaced")
-                      : t("panel.placement.singlePage", { page: pageSets.single })}
-                  </span>
-                </label>
-
-                <label className="panel__placement-option">
-                  <input
-                    type="radio"
-                    name={placementName}
-                    checked={pageChoice === "these"}
-                    onChange={() => chooseChoice("these")}
-                  />
-                  <span className="rf-body">{t("panel.placement.these")}</span>
-                </label>
-
-                {pageChoice === "these" && (
-                  <div
-                    className={
-                      rangeError === null
-                        ? "rf-field panel__placement-field"
-                        : "rf-field rf-field--error panel__placement-field"
-                    }
-                  >
-                    <input
-                      className="rf-input"
-                      type="text"
-                      inputMode="numeric"
-                      value={pagesText}
-                      aria-label={t("panel.placement.field")}
-                      aria-invalid={rangeError !== null}
-                      placeholder="1,2-3,10-20"
-                      onChange={(event) => typePages(event.target.value)}
-                    />
-                    {rangeError === null ? (
-                      echo !== null && <p className="rf-hint">{echo}</p>
-                    ) : (
-                      <p className="rf-hint panel__placement-error">
-                        <span className="panel__notice-icon">
-                          <AlertIcon />
-                        </span>
-                        <span>{messageFor(rangeError, t)}</span>
-                      </p>
-                    )}
-                  </div>
-                )}
-
-                <label className="panel__placement-option">
-                  <input
-                    type="radio"
-                    name={placementName}
-                    checked={pageChoice === "all"}
-                    onChange={() => chooseChoice("all")}
-                  />
-                  <span className="rf-body">
-                    {t("panel.placement.all", { pages: document.pages })}
-                  </span>
-                </label>
-
-                {/* El botón de sellar vive en el bloque «Colocación», a todo
-                    el ancho y bajo los radios (#194): hasta la v0.3.0 iba en
-                    una pastilla bajo la hoja, en flujo dentro del área de
-                    desplazamiento del visor, así que ampliar la hoja se lo
-                    llevaba fuera de la vista. La etiqueta es la única cara
-                    que hace falta: cuenta lo mismo que decían los tres
-                    mensajes que ocupaba antes. */}
-                <button
-                  type="button"
-                  className={`rf-btn ${sealButton.variant} panel__placement-seal`}
-                  onClick={sealButton.act}
-                >
-                  {sealButton.label}
-                </button>
-
-                {/* Un solo campo de firma con el widget replicado, no una firma
-                    por página: es lo que se estampa, y decirlo aquí evita
-                    prometer trece firmas. */}
-                {sealedCount > 1 && (
-                  <p className="rf-hint">
-                    {t("panel.placement.replicated", { count: sealedCount })}
-                  </p>
-                )}
-              </fieldset>
-
-              <fieldset className="panel__fields">
-                <legend className="rf-label">{t("panel.visibleSignature.content")}</legend>
-                <Checkbox
-                  checked={signature.fields.signerName}
-                  label={t("panel.visibleSignature.fields.signerName")}
-                  onChange={(checked) => changeField("signerName", checked)}
-                />
-                <Checkbox
-                  checked={signature.fields.issuer}
-                  label={t("panel.visibleSignature.fields.issuer")}
-                  onChange={(checked) => changeField("issuer", checked)}
-                />
-                <Checkbox
-                  checked={signature.fields.signedAt}
-                  label={t("panel.visibleSignature.fields.signedAt")}
-                  onChange={(checked) => changeField("signedAt", checked)}
-                />
-                <Checkbox
-                  checked={signature.rubric && rubric !== null}
-                  disabled={rubric === null}
-                  label={t("panel.visibleSignature.fields.rubric")}
-                  hint={rubric === null ? t("panel.visibleSignature.fields.rubricDisabled") : null}
-                  onChange={(checked) => onChangeSignature({ ...signature, rubric: checked })}
-                />
-                <Checkbox
-                  checked={signature.fields.reason}
-                  label={t("panel.visibleSignature.fields.reason")}
-                  onChange={(checked) => changeField("reason", checked)}
-                />
-              </fieldset>
-
-              {signature.fields.reason && (
-                <div className="rf-field">
-                  <label className="rf-label" htmlFor={reasonId}>
-                    {t("panel.visibleSignature.reason.label")}
-                  </label>
-                  <input
-                    className="rf-input"
-                    id={reasonId}
-                    type="text"
-                    value={signature.reason}
-                    placeholder={t("panel.visibleSignature.reason.placeholder")}
-                    onChange={(event) =>
-                      onChangeSignature({ ...signature, reason: event.target.value })
-                    }
-                  />
-                </div>
-              )}
-
-              <div className="panel__rubric">
-                <p className="rf-label">{t("panel.visibleSignature.rubric.title")}</p>
-                <div className="panel__rubric-row">
-                  {rubric && (
-                    <img
-                      className="panel__rubric-thumbnail"
-                      src={rubric.dataUrl}
-                      width={rubric.width}
-                      height={rubric.height}
-                      alt={t("panel.visibleSignature.rubric.thumbnail")}
-                    />
-                  )}
-                  <button
-                    type="button"
-                    className="rf-btn rf-btn--secondary panel__rubric-choose"
-                    onClick={onChooseRubric}
-                  >
-                    {rubric
-                      ? t("panel.visibleSignature.rubric.change")
-                      : t("panel.visibleSignature.rubric.choose")}
-                  </button>
-                </div>
-                {rubric && (
-                  <p className="rf-hint">{t("panel.visibleSignature.rubric.flattened")}</p>
-                )}
-                {rubricFailure && (
-                  <ErrorNotice
-                    situation={rubricFailure.situation}
-                    technicalDetail={rubricFailure.detail}
-                    onOpenHelp={onOpenHelp}
-                  />
-                )}
-              </div>
+              <SignatureFieldsFieldset
+                signature={signature}
+                onChangeSignature={onChangeSignature}
+                rubric={rubric}
+                rubricFailure={rubricFailure}
+                onChooseRubric={onChooseRubric}
+                onOpenHelp={onOpenHelp}
+              />
             </>
           )}
         </section>
       </div>
 
-      <footer className="panel__footer">
-        {failure ? (
-          <ErrorNotice
-            situation={failure.situation}
-            technicalDetail={failure.detail}
-            onOpenHelp={onOpenHelp}
-          />
-        ) : (
-          <div className="panel__destination">
-            {/* El rótulo es una promesa, así que **desaparece** cuando no se
-                puede cumplir: con la carpeta no escribible el pie dice solo
-                que no se puede escribir en ella, y no las dos cosas a la vez. */}
-            {destination.writable && <p className="rf-label">{t("panel.footer.savedIn")}</p>}
-            <div className="rf-row rf-gap-xs panel__destination-row">
-              <span className="panel__destination-icon">
-                <FolderIcon />
-              </span>
-              {/* El destino son **dos cosas**: la carpeta, atenuada y precedida
-                  de `…/` —hay carpetas por encima y no se afirma cuáles—, y el
-                  nombre sin atenuar, que es el dato (ID-63). El recorte lo
-                  decide `shortenDestination`; la línea envuelve antes que
-                  cortarse, así que aquí no hay ninguna elipsis de CSS.
-
-                  El aviso de que no se puede escribir **no se recorta**: es una
-                  frase entera y perderla por elipsis sería perder el aviso
-                  cuando más falta hace. */}
-              {destination.writable ? (
-                <p className="rf-prose panel__destination-path">
-                  <span className="rf-text-muted">{`…/${shortened.folder}/`}</span>
-                  {shortened.name}
-                </p>
-              ) : (
-                <p className="rf-prose panel__destination-unwritable">
-                  {t("panel.footer.unwritable", { folder: shortened.folder })}
-                </p>
-              )}
-              <button
-                type="button"
-                className="rf-btn rf-btn--ghost panel__destination-change"
-                onClick={onChangeDestination}
-              >
-                {t("actions.change")}
-              </button>
-            </div>
-          </div>
-        )}
-        {/* Manda hacer la acción, no describe un estado: quien lee esto tiene
-            que saber qué hacer a continuación (ID-93). */}
-        {unplaced && <p className="rf-hint panel__place-first">{t("panel.footer.placeFirst")}</p>}
-        <button
-          type="button"
-          className="rf-btn rf-btn--primary panel__sign"
-          disabled={!usable || signing || blocked}
-          onClick={onSign}
-        >
-          {failure ? t("panel.footer.retry") : t("actions.sign")}
-        </button>
-      </footer>
+      <PanelFooter
+        failure={failure}
+        destination={destination}
+        documentName={document.name}
+        onChangeDestination={onChangeDestination}
+        unplaced={unplaced}
+        usable={usable}
+        signing={signing}
+        blocked={blocked}
+        onSign={onSign}
+        onOpenHelp={onOpenHelp}
+      />
     </div>
   );
-}
-
-/**
- * La línea de eco bajo el campo: **qué páginas se van a sellar**, dichas una a
- * una (ID-98). Se nombran las seis primeras y el resto se cuenta, que es lo que
- * cabe en la columna más estrecha de la ventana.
- */
-function echoOf(
-  pages: PageSet,
-  pageCount: number,
-  t: ReturnType<typeof useTranslation>["t"],
-): string | null {
-  const list = sealedPages(pages, pageCount);
-  if (list.length === 0) return null;
-  const shown = list.slice(0, ECHO_LIMIT).join(", ");
-  const rest = list.length - ECHO_LIMIT;
-  return rest > 0
-    ? t("panel.placement.echoMore", { pages: shown, count: rest })
-    : t("panel.placement.echo", { pages: shown });
-}
-
-/** Cuántas páginas se nombran antes de pasar a contarlas. */
-const ECHO_LIMIT = 6;
-
-/**
- * Lo que le pasa al campo: las situaciones del analizador, más **el campo
- * vacío**, que no es suya. `parsePageRange("")` es un `ok` con conjunto vacío
- * —el módulo es puro y ahí no hay nada que reprochar—, pero bajo «Estas
- * páginas» un campo sin páginas no puede firmar y hay que decirlo.
- */
-type FieldTrouble = PageRangeError | { kind: "empty" };
-
-/**
- * La situación del campo, redactada. Es la vista quien la redacta y no el
- * analizador, que solo sabe qué ha pasado y no en qué idioma se cuenta (ID-29).
- */
-function messageFor(error: FieldTrouble, t: ReturnType<typeof useTranslation>["t"]): string {
-  switch (error.kind) {
-    case "empty":
-      return t("panel.placement.errors.empty");
-    case "beyond":
-      return t("panel.placement.errors.beyond", {
-        pageCount: error.pageCount,
-        page: error.page,
-      });
-    case "reversed":
-      return t("panel.placement.errors.reversed", { entry: error.entry });
-    case "zero":
-      return t("panel.placement.errors.zero");
-    case "malformed":
-      return t("panel.placement.errors.malformed", { entry: error.entry });
-  }
-}
-
-/** El certificado, en sus cinco estados. */
-function CertificateBlock({
-  state,
-  onChoose,
-  onRetry,
-  onChooseModule,
-  onOpenHelp,
-}: {
-  state: CertificateState;
-  onChoose: (certificate: Certificate) => void;
-  onRetry: () => void;
-  onChooseModule: () => void;
-  onOpenHelp?: () => void;
-}) {
-  const { t, i18n } = useTranslation();
-
-  if (state.kind === "loading") {
-    return (
-      <div className="panel__skeletons">
-        <p className="rf-prose rf-text-muted">{t("panel.certificate.loading")}</p>
-        <span className="panel__skeleton" />
-        <span className="panel__skeleton" />
-      </div>
-    );
-  }
-
-  if (state.kind === "empty") {
-    return (
-      <div className="panel__no-certificates">
-        <div className="panel__notice-title">
-          <AlertIcon />
-          <span className="rf-title">{t("panel.certificate.empty.title")}</span>
-        </div>
-        <p className="rf-prose rf-text-muted">{t("panel.certificate.empty.body")}</p>
-        <div className="rf-row rf-gap-xs panel__no-certificates-actions">
-          <button type="button" className="rf-btn rf-btn--secondary panel__retry" onClick={onRetry}>
-            {t("panel.certificate.retry")}
-          </button>
-          <button type="button" className="rf-btn rf-btn--ghost" onClick={onChooseModule}>
-            {t("panel.certificate.otherModule")}
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (state.kind === "failed") {
-    // El mismo lenguaje que `empty` —título, explicación, botón de volver a
-    // buscar— con texto propio, más el fallo ya clasificado con su detalle
-    // crudo debajo: quien firma tiene que poder distinguir «mete la tarjeta»
-    // de «algo va mal» (ID-10).
-    return (
-      <div className="panel__no-certificates">
-        <div className="panel__notice-title">
-          <AlertIcon />
-          <span className="rf-title">{t("panel.certificate.failed.title")}</span>
-        </div>
-        <p className="rf-prose rf-text-muted">{t("panel.certificate.failed.body")}</p>
-        <ErrorNotice
-          situation={state.failure.situation}
-          technicalDetail={state.failure.detail}
-          onOpenHelp={onOpenHelp}
-        />
-        <div className="rf-row rf-gap-xs panel__no-certificates-actions">
-          <button type="button" className="rf-btn rf-btn--secondary panel__retry" onClick={onRetry}>
-            {t("panel.certificate.retry")}
-          </button>
-          <button type="button" className="rf-btn rf-btn--ghost" onClick={onChooseModule}>
-            {t("panel.certificate.otherModule")}
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // Elegido o no, el hueco lo ocupa el mismo desplegable: cambiar de
-  // certificado es volver a abrirlo, y por eso el botón `Cambiar` de la tarjeta
-  // ya no existe.
-  const chosen = state.kind === "chosen" ? state.certificate : null;
-  return (
-    <>
-      <CertificateSelect certificates={state.certificates} chosen={chosen} onChoose={onChoose} />
-      {/* Con uno solo se elige solo, así que puede quedar puesto uno que no
-          sirve: el aviso se queda debajo del disparador, donde estaba en la
-          tarjeta. Elegido de la lista esto no se ve nunca, porque las filas
-          inutilizables no se dejan elegir. */}
-      {chosen !== null && !isUsable(chosen.status) && (
-        <p className="rf-prose panel__certificate-warning" role="alert">
-          {statusWarning(chosen.status, i18n.language, t)}
-        </p>
-      )}
-    </>
-  );
-}
-
-/** Una casilla. No sale del sistema de diseño: se maqueta con tokens. */
-function Checkbox({
-  checked,
-  disabled = false,
-  label,
-  hint = null,
-  onChange,
-}: {
-  checked: boolean;
-  disabled?: boolean;
-  label: string;
-  hint?: string | null;
-  onChange: (checked: boolean) => void;
-}) {
-  const hintId = useId();
-
-  return (
-    <div className="panel__checkbox">
-      <label className="panel__checkbox-label">
-        <input
-          className="panel__checkbox-input"
-          type="checkbox"
-          checked={checked}
-          disabled={disabled}
-          aria-describedby={hint ? hintId : undefined}
-          onChange={(event) => onChange(event.target.checked)}
-        />
-        <span className="panel__checkbox-box" aria-hidden="true">
-          {checked && <CheckIcon />}
-        </span>
-        <span className="rf-prose">{label}</span>
-      </label>
-      {hint && (
-        <p className="rf-hint panel__checkbox-hint" id={hintId}>
-          {hint}
-        </p>
-      )}
-    </div>
-  );
-}
-
-/** «2,4 MB». El tamaño en la unidad que el usuario reconoce, no en bytes. */
-export function formatSize(bytes: number, locale: string): string {
-  const megabytes = bytes / 1_000_000;
-  const format = new Intl.NumberFormat(locale, { maximumFractionDigits: 1 });
-  if (megabytes >= 1) return `${format.format(megabytes)} MB`;
-  return `${format.format(bytes / 1000)} kB`;
 }
