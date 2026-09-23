@@ -16,7 +16,5 @@ rfirma-app/src/App.tsx 1231
 rfirma-app/src/sede/SedeWindow.test.tsx 881
 rfirma-app/src/sede/siteErrands.test.ts 870
 rfirma-app/src/sede/siteErrands.ts 542
-rfirma-app/src/tauri.test.ts 689
-rfirma-app/src/tauri.ts 632
 rfirma-app/src/viewer/DocumentViewer.test.tsx 1471
 rfirma-app/src/viewer/DocumentViewer.tsx 960
