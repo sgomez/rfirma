@@ -28,11 +28,6 @@ export function forcedToProtocolVersion(source, version, port) {
   return source;
 }
 
-/** Fuerza el `autoscript.js` a hablar con el bucle local IPv6. */
-export function forcedToIpv6Loopback(source) {
-  return replacingOrFailing(source, 'var SERVER_HOST = "127.0.0.1";', 'var SERVER_HOST = "[::1]";');
-}
-
 /** Fija los tres puertos candidatos del transporte sin WebSocket, que el original sortea. */
 export function forcedToFixedServicePorts(source, ports) {
   return replacingOrFailing(

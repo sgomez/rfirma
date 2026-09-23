@@ -40,8 +40,8 @@ fn the_sede_reaches_the_local_server_by_name_and_by_address() {
         .expect("deberia ser UTF-8");
     assert_eq!(common_name, "localhost");
     assert!(
-        text.contains("DNS:localhost, IP Address:127.0.0.1"),
-        "hacen falta las dos entradas en la SAN:\n{text}"
+        text.contains("DNS:localhost, IP Address:127.0.0.1, IP Address:0:0:0:0:0:0:0:1"),
+        "hacen falta el nombre y los dos bucles locales en la SAN:\n{text}"
     );
 }
 

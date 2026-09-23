@@ -1,10 +1,4 @@
 [[known]]
-id = "the_v4_channel_answers_saf_47_to_an_origin_that_is_not_loopback"
-outcome = "conforme"
-cause = "BUG-11"
-note = "Lo cumple por comparar la dirección textualmente, que es lo que la ficha describe."
-
-[[known]]
 id = "the_service_channel_reports_a_bind_failure_instead_of_claiming_success"
 outcome = "no-conforme"
 cause = "BUG-10"

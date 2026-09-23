@@ -17,9 +17,10 @@ mod idle;
 use idle::{IdleClock, SOCKET_TIMEOUT};
 
 use crate::lock;
-use crate::site::adapters::channel::bind_first_free;
+use crate::site::adapters::channel::bind::LoopbackAcceptor;
 use crate::site::adapters::channel::conversation::{answer, Answer, ECHO_OK};
 use crate::site::adapters::channel::server::acceptor_for;
+use crate::site::adapters::channel::{bind_first_free, LoopbackListeners};
 use crate::site::adapters::codec::SAVE_OK;
 use crate::site::adapters::tls::{LocalCaStore, LocalServerCertificate};
 use crate::site::domain::channel::{
@@ -99,22 +100,16 @@ fn open(
 }
 
 async fn serve(
-    listener: std::net::TcpListener,
+    listener: LoopbackListeners,
     certificate: &LocalServerCertificate,
     duty: ChannelDuty,
     inbox: Inbox,
 ) -> Result<OpenChannel, ChannelError> {
-    let port = listener
-        .local_addr()
-        .map_err(|error| ChannelError::new(Situation::NotListening, error.to_string()))?
-        .port();
+    let not_listening =
+        |error: std::io::Error| ChannelError::new(Situation::NotListening, error.to_string());
+    let port = listener.port().map_err(not_listening)?;
     let acceptor = Arc::new(acceptor_for(certificate)?);
-
-    listener
-        .set_nonblocking(true)
-        .map_err(|error| ChannelError::new(Situation::NotListening, error.to_string()))?;
-    let listener = tokio::net::TcpListener::from_std(listener)
-        .map_err(|error| ChannelError::new(Situation::NotListening, error.to_string()))?;
+    let listener = listener.into_async().map_err(not_listening)?;
 
     let (stop, stopped) = oneshot::channel();
     let state = Arc::new(Mutex::new(ServiceState::default()));
@@ -132,7 +127,7 @@ async fn serve(
 }
 
 async fn accept_until_stopped(
-    listener: tokio::net::TcpListener,
+    listener: LoopbackAcceptor,
     acceptor: Arc<TlsAcceptor>,
     duty: ChannelDuty,
     inbox: Inbox,

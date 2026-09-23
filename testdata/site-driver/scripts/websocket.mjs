@@ -1,6 +1,9 @@
 // Los guiones del canal WebSocket: el protocolo escrito en crudo y el canal que reutiliza la sede publicada.
 
+import { randomBytes } from "node:crypto";
 import { createServer } from "node:net";
+import { networkInterfaces } from "node:os";
+import { connect as connectTls } from "node:tls";
 
 import { theLaunchesSoFar } from "../lib/browser.mjs";
 import { aConditionEvent, aMeasuredConditionEvent, emit, settle } from "../lib/events.mjs";
@@ -20,6 +23,7 @@ const THE_FIRST_FREE_CANDIDATE_BOUND = "the-first-free-candidate-bound";
 const THE_ECHO_WITH_ANOTHER_SESSION_ANSWERS_SAF_46 = "the-echo-with-another-session-answers-saf-46";
 const AN_UNSUPPORTED_VERSION_OPENS_NO_CHANNEL = "an-unsupported-version-opens-no-channel";
 const THE_CHANNEL_OPENS_DESPITE_THE_WARNING = "the-channel-opens-despite-the-warning";
+const A_FOREIGN_ORIGIN_ANSWERS_SAF_47 = "a-foreign-origin-answers-saf-47";
 
 /** Lo que se espera a que un arranque que no debe abrir canal lo abra antes de darlo por no abierto. */
 const THE_UNOPENED_CHANNEL_PATIENCE_MS = 10000;
@@ -564,6 +568,133 @@ async function theChannelOpeningWithin(ports, patienceMs) {
   return null;
 }
 
+function aHostAddressOutsideTheLoopback() {
+  return (
+    Object.values(networkInterfaces())
+      .flat()
+      .find((address) => address?.family === "IPv4" && !address.internal)?.address ?? null
+  );
+}
+
+/** Un mensaje de texto de cliente, enmascarado como exige el RFC 6455. */
+function aMaskedTextFrame(text) {
+  const payload = Buffer.from(text, "utf8");
+  const mask = randomBytes(4);
+  const length =
+    payload.length < 126
+      ? Buffer.from([0x80 | payload.length])
+      : Buffer.from([0x80 | 126, payload.length >> 8, payload.length & 0xff]);
+  const masked = Buffer.from(payload.map((byte, index) => byte ^ mask[index % 4]));
+  return Buffer.concat([Buffer.from([0x81]), length, mask, masked]);
+}
+
+/** El texto del primer mensaje del servidor en `bytes`, o `null` si aún no está entero. */
+function theFirstServerText(bytes) {
+  if (bytes.length < 2) return null;
+  let length = bytes[1] & 0x7f;
+  let offset = 2;
+  if (length === 126) {
+    if (bytes.length < 4) return null;
+    length = bytes.readUInt16BE(2);
+    offset = 4;
+  }
+  if (bytes.length < offset + length) return null;
+  return bytes.subarray(offset, offset + length).toString("utf8");
+}
+
+/**
+ * Un eco por WSS a `127.0.0.1:port` saliendo desde `origin`: lo que conteste el canal, o el fallo.
+ * El `WebSocket` de Node no deja elegir la dirección de origen, así que se habla a mano.
+ */
+function anEchoFromTheOrigin(origin, port, message) {
+  return new Promise((resolve) => {
+    const socket = connectTls({
+      host: "127.0.0.1",
+      port,
+      localAddress: origin,
+      rejectUnauthorized: false,
+    });
+    let received = Buffer.alloc(0);
+    let upgraded = false;
+    const finish = (outcome) => {
+      clearTimeout(patience);
+      socket.destroy();
+      resolve(outcome);
+    };
+    const patience = setTimeout(
+      () => finish({ text: null, failure: "silencio" }),
+      THE_OPERATION_ANSWER_DEADLINE_MS,
+    );
+    socket.on("secureConnect", () => {
+      socket.write(
+        [
+          "GET / HTTP/1.1",
+          `Host: 127.0.0.1:${port}`,
+          "Upgrade: websocket",
+          "Connection: Upgrade",
+          `Sec-WebSocket-Key: ${randomBytes(16).toString("base64")}`,
+          "Sec-WebSocket-Version: 13",
+          "",
+          "",
+        ].join("\r\n"),
+      );
+    });
+    socket.on("data", (chunk) => {
+      received = Buffer.concat([received, chunk]);
+      if (!upgraded) {
+        const end = received.indexOf("\r\n\r\n");
+        if (end < 0) return;
+        const statusLine = received.subarray(0, received.indexOf("\r\n")).toString("latin1");
+        if (!statusLine.includes(" 101 ")) {
+          finish({ text: null, failure: statusLine });
+          return;
+        }
+        upgraded = true;
+        received = received.subarray(end + 4);
+        socket.write(aMaskedTextFrame(message));
+      }
+      const text = theFirstServerText(received);
+      if (text !== null) finish({ text, failure: null });
+    });
+    socket.on("close", () => finish({ text: null, failure: "cerró sin contestar" }));
+    socket.on("error", (error) => finish({ text: null, failure: error.code ?? error.message }));
+  });
+}
+
+/** Un eco que llega al canal v4 desde una dirección del equipo fuera del bucle local. */
+async function theForeignOriginScript() {
+  const idSession = "Fo4Or6Ig8In0Sa2Fq4Sv";
+  const channel = await theProtocolV4ChannelOpening([54491, 54492, 54493], idSession);
+  if (channel === null) return;
+
+  const origin = aHostAddressOutsideTheLoopback();
+  if (origin === null) {
+    emit(
+      aMeasuredConditionEvent(
+        A_FOREIGN_ORIGIN_ANSWERS_SAF_47,
+        null,
+        "el equipo no tiene ninguna dirección fuera del bucle local",
+      ),
+    );
+  } else {
+    const answer = await anEchoFromTheOrigin(
+      origin,
+      channel.port,
+      `echo=-idsession=${idSession}@EOF`,
+    );
+    emit(
+      aConditionEvent(
+        A_FOREIGN_ORIGIN_ANSWERS_SAF_47,
+        answer.text?.startsWith("SAF_47") ?? false,
+        `desde fuera del bucle local: ${answer.text ?? answer.failure}`,
+      ),
+    );
+  }
+
+  channel.ws.close();
+  settle({ event: "success" });
+}
+
 function theForeignSchemeScript() {
   const ports = [54391, 54392, 54393];
   return theChannelThatMustNotOpen(
@@ -731,6 +862,9 @@ export const WEBSOCKET_SCRIPTS = {
     A_MALFORMED_SESSION_BINDS_NOTHING,
   ]),
   "protocol-foreign-scheme": onTheFourthProtocol(theForeignSchemeScript, [NO_CHANNEL_OPENS]),
+  "protocol-v4-foreign-origin": onTheFourthProtocol(theForeignOriginScript, [
+    A_FOREIGN_ORIGIN_ANSWERS_SAF_47,
+  ]),
   "protocol-v4-version-1": onTheFourthProtocol(
     theUnsupportedVersionScript(1, [54431, 54432, 54433]),
     [AN_UNSUPPORTED_VERSION_OPENS_NO_CHANNEL],

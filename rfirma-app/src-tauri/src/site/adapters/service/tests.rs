@@ -564,9 +564,11 @@ async fn an_idle_channel_stops_listening_and_says_so() {
     let certificate =
         LocalServerCertificate::issued_by(&ca).expect("el certificado del servidor local");
     let acceptor = Arc::new(acceptor_for(&certificate).expect("el aceptador TLS"));
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
-        .await
-        .expect("un puerto libre del bucle local");
+    let listener = LoopbackListeners::from(
+        std::net::TcpListener::bind("127.0.0.1:0").expect("un puerto libre del bucle local"),
+    )
+    .into_async()
+    .expect("el escuchador en tokio");
     let idled = Arc::new(AtomicBool::new(false));
     let inbox = answering_with("no se llama").when_the_channel_idles({
         let idled = Arc::clone(&idled);
