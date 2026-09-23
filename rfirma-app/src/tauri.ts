@@ -118,7 +118,7 @@ export function tauriSigningBackend(): SigningBackend {
  * enchufada como `discard` arriba y no exportada suelta para que alguien se
  * acuerde de invocarla.
  */
-export function cancelSigning(): Promise<void> {
+function cancelSigning(): Promise<void> {
   return invoke<void>("cancel_signing");
 }
 

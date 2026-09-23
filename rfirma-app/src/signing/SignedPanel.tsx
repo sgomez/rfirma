@@ -7,7 +7,7 @@ import "./SigningPanel.css";
 import "./SignedPanel.css";
 
 /** El documento que quedó escrito, con lo que el panel enseña de él. */
-export interface SignedSummary {
+interface SignedSummary {
   /** El nombre del fichero firmado. La ruta no se enseña nunca (ADR-0011). */
   name: string;
   /** Cuántas páginas tiene, o `null` si no se sabe: no se inventa un número. */

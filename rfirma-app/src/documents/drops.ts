@@ -98,8 +98,3 @@ export function inMemoryDocumentDrops(pending: Drop | null = null): FakeDocument
     },
   };
 }
-
-/** Un arrastre que no ocurre nunca. Es el relleno de una composición sin él. */
-export function noDocumentDrops(): DocumentDrops {
-  return { subscribe: () => () => {}, pending: async () => null };
-}

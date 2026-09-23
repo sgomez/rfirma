@@ -24,7 +24,7 @@ import "./SigningPanel.css";
 import type { VisibleSignature } from "./visibleSignature";
 
 /** El documento que se va a firmar, con lo que el panel enseña de él. */
-export interface SigningDocument {
+interface SigningDocument {
   name: string;
   pages: number;
   /** El tamaño, o `null` mientras nadie lo sepa: no se inventa un cero. */

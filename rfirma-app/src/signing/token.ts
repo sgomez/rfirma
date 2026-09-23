@@ -15,7 +15,7 @@
  * interactiva del secreto y los reintentos; los fallos definitivos se cuentan
  * al pie del panel o en el desenlace del trámite.
  */
-export type TokenSituation =
+type TokenSituation =
   | "incorrectPin"
   | "pinLocked"
   | "tokenAbsent"

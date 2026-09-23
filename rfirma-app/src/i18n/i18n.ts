@@ -3,7 +3,7 @@ import { initReactI18next } from "react-i18next";
 import { CATALOGS, FALLBACK_LANGUAGE, LANGUAGES, type LanguageTag } from "./languages";
 
 /** El único espacio de nombres: el catálogo es uno y cabe entero en memoria. */
-export const NAMESPACE = "translation";
+const NAMESPACE = "translation";
 
 const resources = Object.fromEntries(LANGUAGES.map((tag) => [tag, { [NAMESPACE]: CATALOGS[tag] }]));
 

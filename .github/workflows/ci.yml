@@ -71,6 +71,9 @@ env:
   # de vida, asi que una publicacion suya no puede poner en rojo un PR que no
   # la ha tocado. Tiene que coincidir con `crap_version` del justfile.
   CRAP_VERSION: '0.4.3'
+  # Version FIJADA de cargo-machete (ADR-0014), misma razon que CRAP_VERSION.
+  # Tiene que coincidir con `machete_version` del justfile.
+  MACHETE_VERSION: '0.9.2'
   # Version FIJADA de ruff, misma razon que CRAP_VERSION: sin ruff.toml ni
   # pyproject.toml en el repositorio, el conjunto de reglas por defecto es el
   # que traiga la version instalada, y una `ruff` nueva puede poner el
@@ -248,10 +251,11 @@ jobs:
       # cada ejecucion. La version de cargo-crap va fijada; la de llvm-cov no
       # hace falta porque no es una puerta, solo produce el lcov.
       - uses: cargo-bins/cargo-binstall@75b4bfae1b2c753a6806bbce6e6cb89b602de33c # v1.22.0
-      - name: Herramienta de cobertura y de CRAP
+      - name: Herramienta de cobertura, de CRAP y de dependencias sin uso
         run: |
           cargo binstall --no-confirm cargo-llvm-cov
           cargo binstall --no-confirm "cargo-crap@${CRAP_VERSION}"
+          cargo binstall --no-confirm "cargo-machete@${MACHETE_VERSION}"
 
       # EL BANCO DE CONFORMIDAD (TD-55): `autoscript.js` del tag v1.9.2, el
       # mismo fichero que sirve una sede de verdad, para que hable con nuestro

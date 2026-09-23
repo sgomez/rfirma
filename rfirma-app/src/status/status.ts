@@ -8,7 +8,7 @@ export type Signal = "version" | "siteSignature" | "localCaCertificate" | "userC
 
 export type Verdict = "correct" | "attention" | "incorrect" | "notApplicable" | "checking";
 
-export type ActionKind = "repair" | "choice" | "link";
+type ActionKind = "repair" | "choice" | "link";
 
 export type StoreBrand = "firefox" | "chrome" | "nssdb" | "card" | "installed";
 
@@ -34,7 +34,7 @@ export function storeBrandLabel(t: TFunction, brand: StoreBrand): string {
 }
 
 /** Un sitio y cuántos certificados firmables propios tiene. */
-export interface StoreCertificates {
+interface StoreCertificates {
   brand: StoreBrand;
   certificates: number;
 }
@@ -44,13 +44,13 @@ export type SignalDetail =
   | { kind: "trust"; stores: StoreDetail[] }
   | { kind: "certificates"; stores: StoreCertificates[] };
 
-export interface StatusAction {
+interface StatusAction {
   kind: ActionKind;
   target: string;
 }
 
 /** Candidata a firmar en sedes, para el desplegable de la señal `Firma en sedes`. */
-export interface SiteSignatureCandidate {
+interface SiteSignatureCandidate {
   id: string;
   name: string;
   selected: boolean;
@@ -73,7 +73,7 @@ export type WithdrawalOutcome =
   | { kind: "failed"; reason: string };
 
 /** Un almacén NSS con el resultado de retirar de él la CA local de rFirma. */
-export interface StoreWithdrawal {
+interface StoreWithdrawal {
   brand: StoreBrand;
   outcome: WithdrawalOutcome;
 }

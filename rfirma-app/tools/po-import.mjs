@@ -31,7 +31,7 @@ import { fileURLToPath } from "node:url";
 import gettextParser from "gettext-parser";
 
 /** El idioma de referencia: es la fuente de las claves y siempre se genera. */
-export const REFERENCE_LANGUAGE = "es";
+const REFERENCE_LANGUAGE = "es";
 
 /**
  * Los sufijos de plural, en el orden en que van los `msgstr[n]` de cada
@@ -46,10 +46,10 @@ export const REFERENCE_LANGUAGE = "es";
  * (ID-122): quien reparte en tiempo de ejecución es `Intl.PluralRules` dentro
  * de i18next, no la expresión en C del `.po`.
  */
-export const PLURAL_SUFFIXES = ["one", "many", "other"];
+const PLURAL_SUFFIXES = ["one", "many", "other"];
 
 /** Los cinco idiomas, en el orden en que se enseñan (ID-124). */
-export const LANGUAGE_ORDER = ["es", "ca", "eu", "gl", "en"];
+const LANGUAGE_ORDER = ["es", "ca", "eu", "gl", "en"];
 
 /**
  * Las entradas de un `.po`, como pares `clave → texto` ya con el sufijo de
@@ -90,7 +90,7 @@ export function isComplete(entries) {
  * así los cinco catálogos salen con las mismas claves en el mismo orden, que
  * es lo que compara `i18n.test.tsx`.
  */
-export function nest(entries) {
+function nest(entries) {
   const root = {};
   for (const [key, text] of entries) {
     const path = key.split(".");
@@ -127,7 +127,7 @@ function renderKey(key) {
  * anotarlo sería morderse la cola. Los demás se declaran `Catalog`, y es `tsc`
  * quien comprueba que no falta ni sobra una clave.
  */
-export function renderCatalog(tag, catalog) {
+function renderCatalog(tag, catalog) {
   const banner = `// Generado por tools/po-import.mjs desde po/${tag}.po. No editar a mano:\n// las cadenas se traducen en el .po (ADR-0009 enmendado, ID-121).\n`;
   const body = renderObject(catalog, 0);
   if (tag === REFERENCE_LANGUAGE) {
@@ -177,7 +177,7 @@ function sortLikeI18nextCli(value) {
  * incompleto» deja de ser una regla que alguien tiene que comprobar y pasa a
  * ser irrepresentable.
  */
-export function renderIndex(tags) {
+function renderIndex(tags) {
   const imports = tags.map((tag) => `import ${tag} from "./${tag}";`).join("\n");
   const list = tags.map((tag) => `"${tag}"`).join(", ");
   return `// Generado por tools/po-import.mjs. No editar a mano.\n//\n// Los idiomas que se publican son los que llegaron al 100 % en su .po: los\n// demás no tienen fichero, y por eso no pueden estar en esta lista (ID-123).\n\nimport type { Catalog } from "../catalog";\n${imports}\n\n/** Los idiomas publicados, en el orden en que se enseñan. */\nexport const LANGUAGES = [${list}] as const;\n\n/** El catálogo de cada idioma publicado. */\nexport const CATALOGS: Record<(typeof LANGUAGES)[number], Catalog> = { ${tags.join(", ")} };\n`;

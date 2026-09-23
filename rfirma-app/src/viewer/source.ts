@@ -23,7 +23,7 @@ export interface DocumentFailure {
  * elegir un PDF corrupto se quedaba mirando la zona de soltar sin que nadie le
  * dijera qué había pasado.
  */
-export type OpenedPdf =
+type OpenedPdf =
   /**
    * El PDF abierto y **cuánto ocupa**, en bytes.
    *

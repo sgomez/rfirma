@@ -315,6 +315,47 @@ detectar exactamente el caso que existe para atrapar. Con `include`, un fichero 
 ningún test toca puntúa 0 % de líneas y arrastra la media, igual que en Rust un `cargo llvm-cov`
 mide el binario entero y no sólo lo que una prueba ejecuta.
 
+## `cargo-machete` y `knip`: dependencias y exports sin uso
+
+Dos arneses de gradas A, uno por cadena, y los dos bloquean el CI:
+
+| Arnés | Qué mide | Dónde vive | Job (carril rápido) |
+| --- | --- | --- | --- |
+| `cargo-machete` | Dependencias de `Cargo.toml` que no usa nadie | receta `machete`, dentro de `check-rust` | Cadena Rust |
+| `knip` | Dependencias y *exports* de TypeScript sin uso | `pnpm exec knip`, receta `knip`, dentro de `check-ts` | Cadena TypeScript |
+
+Ninguno de los dos compila ni instrumenta nada: `cargo-machete` analiza el árbol de sintaxis de
+los fuentes sin invocar a `rustc`, y `knip` recorre los módulos que alcanza desde sus puntos de
+entrada. El coste que añaden al CI son segundos.
+
+`cargo-machete` va a **versión fijada** (`machete_version` en el `justfile`, `MACHETE_VERSION` en
+`ci.yml`), la misma razón que `cargo-crap`: un solo mantenedor no debe poder poner en rojo un PR
+que no lo ha tocado.
+
+`knip.json` es la configuración mínima, y cada entrada existe por un falso positivo real, no por
+gusto:
+
+- **`entry`** añade `src/sede/main.tsx` y `i18next.config.ts`. `knip` ya detecta `src/main.tsx`
+  desde `index.html` con su complemento de Vite, pero `sede.html` es un **segundo** punto de
+  entrada (ID-335) que ese complemento no ve: sin declararlo, `sede/main.tsx` entero —y todo lo
+  que sólo él usa, como `tauriSiteErrands`— sale como código muerto. `i18next.config.ts` no lo
+  importa nada del árbol de `src/`: es la configuración que invoca `i18next-cli` desde fuera
+  (`just lint-i18n`), y con él como entrada la dependencia de desarrollo `i18next-cli` deja de
+  salir como no usada, porque su único `import` está ahí.
+- **`ignore`** cubre `src/design-system/bundle/**`: el bundle normativo del sistema de diseño
+  (ADR del #80), copiado en línea desde el proyecto de diseño y sellado por `bundle.lock`, no es
+  código de la aplicación —es un IIFE que se serviría por `<script>` aparte, y hoy no lo sirve
+  nadie—, así que no es dead code que podar, es un artefacto que otra puerta ya vigila
+  (`check-bundle.sh`).
+
+`cargo-machete` no encontró nada que limpiar al escribir esta puerta. `knip` sí: diecisiete
+*exports* y otros tantos tipos exportados que ningún fichero fuera del suyo importaba —el
+`export` sobraba, no el código—, incluida `cancelSigning` en `tauri.ts`, cuyo propio comentario ya
+decía que no debía exportarse suelta. Tres de esos *exports* —`CloseIcon`, `noDocumentDrops` y el
+tipo `ErrorSituationWithHelp`— resultaron, al quitarles el `export`, código muerto de verdad
+(`tsc --noUnusedLocals` los denunció en cuanto dejaron de tener una salida): no sólo sobraba la
+palabra, sobraba la declaración entera, y se borraron.
+
 ## Consequences
 
 - La casilla de linting del ADR-0013 decía `eslint`; queda sustituida por Biome.

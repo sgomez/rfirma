@@ -54,7 +54,7 @@ export interface RubricFailure {
 }
 
 /** Lo que devuelve elegir una rúbrica: la imagen, un fallo, o una cancelación. */
-export type RubricChoice = { rubric: Rubric } | { failure: RubricFailure } | null;
+type RubricChoice = { rubric: Rubric } | { failure: RubricFailure } | null;
 
 /**
  * Por dónde entra la rúbrica. Puerto por lo mismo que el selector de

@@ -35,16 +35,14 @@ function isOneLine(situation: ErrorSituation): situation is OneLineSituation {
  * certificado caducado, etc.) no llevan enlace para no mandar a la persona al
  * sitio equivocado.
  */
-export const ERROR_SITUATIONS_WITH_HELP = [
+const ERROR_SITUATIONS_WITH_HELP = [
   "bridgeFailed",
   "sealMismatch",
   "unknown",
   "renderFailed",
 ] as const;
 
-export type ErrorSituationWithHelp = (typeof ERROR_SITUATIONS_WITH_HELP)[number];
-
-export function hasHelpLink(situation: ErrorSituation): boolean {
+function hasHelpLink(situation: ErrorSituation): boolean {
   return (ERROR_SITUATIONS_WITH_HELP as readonly string[]).includes(situation);
 }
 
