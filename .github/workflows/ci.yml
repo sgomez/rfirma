@@ -147,7 +147,7 @@ jobs:
       # No instala Node: sin `runtime` ni `devEngines.runtime` en el manifiesto,
       # la accion no toca el tiempo de ejecucion, y de eso sigue encargandose
       # `actions/setup-node` en el paso siguiente.
-      - uses: pnpm/setup@703c52620218391530e48b9e8870d5c0082e1b9b # v2.1.0
+      - uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3.0.0
         with:
           working-directory: rfirma-app
           install: false
@@ -197,7 +197,7 @@ jobs:
       # Rust necesita la cadena de Node aunque no ejecute una sola prueba de
       # TypeScript: tauri-build lee frontendDist (../dist) dentro de su propio
       # build.rs, asi que sin `vite build` clippy no llega a mirar ni una linea.
-      - uses: pnpm/setup@703c52620218391530e48b9e8870d5c0082e1b9b # v2.1.0
+      - uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3.0.0
         with:
           working-directory: rfirma-app
           install: false
@@ -253,7 +253,7 @@ jobs:
       # Binarios preconstruidos: compilarlos desde fuente serian minutos en
       # cada ejecucion. La version de cargo-crap va fijada; la de llvm-cov no
       # hace falta porque no es una puerta, solo produce el lcov.
-      - uses: cargo-bins/cargo-binstall@75b4bfae1b2c753a6806bbce6e6cb89b602de33c # v1.22.0
+      - uses: cargo-bins/cargo-binstall@b874e25ea559687bec77e281e9b271aa1367b624 # v1.23.0
       - name: Herramienta de cobertura, de CRAP y de dependencias sin uso
         run: |
           cargo binstall --no-confirm cargo-llvm-cov
@@ -339,7 +339,7 @@ jobs:
           key: m2-${{ runner.os }}-${{ hashFiles('scripts/bootstrap.sh', 'rfirma-native-bridge/pom.xml') }}
           restore-keys: m2-${{ runner.os }}-
 
-      - uses: pnpm/setup@703c52620218391530e48b9e8870d5c0082e1b9b # v2.1.0
+      - uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3.0.0
         if: steps.scope.outputs.build == 'true'
         with:
           working-directory: rfirma-app
@@ -432,7 +432,7 @@ jobs:
         if: steps.scope.outputs.build == 'true'
         run: just test-native
 
-      - uses: cargo-bins/cargo-binstall@75b4bfae1b2c753a6806bbce6e6cb89b602de33c # v1.22.0
+      - uses: cargo-bins/cargo-binstall@b874e25ea559687bec77e281e9b271aa1367b624 # v1.23.0
         if: steps.scope.outputs.build == 'true'
       - name: Herramientas de cobertura y de CRAP
         if: steps.scope.outputs.build == 'true'
@@ -494,7 +494,7 @@ jobs:
               fi ;;
           esac
 
-      - uses: pnpm/setup@703c52620218391530e48b9e8870d5c0082e1b9b # v2.1.0
+      - uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3.0.0
         if: steps.scope.outputs.build == 'true'
         with:
           working-directory: rfirma-app
