@@ -32,6 +32,15 @@ impl World {
             .clone()
     }
 
+    pub(super) fn wait_until_shown(&self) {
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+        while !self.steps().iter().any(|step| step == "ventana:enseñada")
+            && std::time::Instant::now() < deadline
+        {
+            std::thread::sleep(std::time::Duration::from_millis(5));
+        }
+    }
+
     fn port_of(location: &ChannelLocation) -> u16 {
         match location {
             ChannelLocation::Drawn(ports) | ChannelLocation::Service(ports) => {

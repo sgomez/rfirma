@@ -49,13 +49,7 @@ fn the_channel_refusal_wait_expires_and_shows_the_refusal_too() {
         Duration::from_millis(30),
     );
 
-    for _ in 0..20 {
-        if live.is_revealed() {
-            break;
-        }
-        std::thread::yield_now();
-        std::thread::sleep(Duration::from_millis(10));
-    }
+    world.wait_until_shown();
 
     assert_eq!(
         world.steps(),
