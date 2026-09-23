@@ -19,6 +19,8 @@ pub enum RefusalSituation {
     UnsupportedKeyStore,
     /// Ya hay un trámite de sede en curso.
     ErrandInFlight,
+    /// Otra aplicación ocupa todos los puertos que ofrece la sede.
+    PortsTaken,
     /// Cualquier otra situación no clasificada individualmente.
     #[default]
     Unknown,

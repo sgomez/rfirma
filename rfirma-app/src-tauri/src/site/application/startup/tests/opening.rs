@@ -4,6 +4,7 @@ use super::fixtures::{
 };
 use crate::site::application::tests::InMemoryCaSlots;
 use crate::site::domain::local_ca::LocalCa;
+use crate::site::domain::protocol::RefusalSituation;
 
 #[test]
 fn a_site_launch_attends_the_errand_and_never_shows_the_main_window() {
@@ -241,8 +242,39 @@ fn every_port_taken_shows_the_dead_end_in_the_site_window() {
     );
     assert_eq!(
         world.steps(),
-        ["canal", "ventana:sin-puertos", "ventana:enseñada"],
+        ["canal", "ventana:rechazo:SAF_45", "ventana:enseñada"],
         "el desenlace no se pierde: se enseña en la ventana"
+    );
+}
+
+#[test]
+fn every_port_taken_tells_the_person_the_ports_are_taken_instead_of_blaming_the_browser() {
+    let world = Arc::new(World {
+        every_port_taken: true,
+        ..World::default()
+    });
+    let live = LiveErrand::default();
+
+    let _ = attend_site_launch(
+        &format!("afirma://service?ports=63131,63132,63133&v=1&idsession={CREDENTIAL}"),
+        &a_codec_table(),
+        &|location, duty| world.transport(location, duty),
+        Arc::clone(&world) as Arc<dyn SiteWindow>,
+        &live,
+        LocalCaReach::NotAnObstacle,
+    );
+
+    let Some(Moment::RefusedWithoutChannel(refusal)) = live.moment() else {
+        panic!(
+            "la ventana dice que no pudo abrir el canal: {:?}",
+            live.moment()
+        );
+    };
+    assert_eq!(refusal.situation(), RefusalSituation::PortsTaken);
+    assert!(
+        refusal.detail().contains("ocupados"),
+        "el detalle es el del fallo al ligar: {}",
+        refusal.detail()
     );
 }
 

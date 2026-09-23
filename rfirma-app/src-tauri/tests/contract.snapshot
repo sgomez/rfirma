@@ -256,6 +256,7 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
       MissingFormat
       UnsupportedKeyStore
       ErrandInFlight
+      PortsTaken
       BatchPresignerUnreachable
       BatchPostsignerUnreachable
       BatchInvalidPresignResponse

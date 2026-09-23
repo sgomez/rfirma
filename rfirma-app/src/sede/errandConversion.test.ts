@@ -122,6 +122,20 @@ describe("cada momento que llega se convierte en lo que la ventana espera", () =
     });
   });
 
+  it("keeps the ports another application holds as their own refusal", () => {
+    const view: SiteErrandView = {
+      origin: null,
+      stage: {
+        kind: "outcome",
+        outcome: { kind: "refused", situation: "portsTaken", detail: "CRUDO" },
+      },
+    };
+
+    expect(errandOf(view).stage).toMatchObject({
+      outcome: { situation: "portsTaken" },
+    });
+  });
+
   it("turns no usable certificate into its own moment", () => {
     const view: SiteErrandView = {
       origin: "sede.ejemplo.gob.es",
