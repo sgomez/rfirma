@@ -1,5 +1,5 @@
 [[known]]
-id = "the_v4_channel_answers_saf_47_to_an_origin_that_is_not_127_0_0_1"
+id = "the_v4_channel_answers_saf_47_to_an_origin_that_is_not_loopback"
 outcome = "conforme"
 cause = "BUG-11"
 note = "Lo cumple por comparar la dirección textualmente, que es lo que la ficha describe."

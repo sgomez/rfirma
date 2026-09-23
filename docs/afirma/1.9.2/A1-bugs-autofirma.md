@@ -193,7 +193,7 @@ dirigido al defecto.
 
 ### BUG-11: Rechazo del bucle local IPv6 (`::1`) en el WebSocket versión 4
 
-* **Comprobación del catálogo:** `the_v4_channel_answers_saf_47_to_an_origin_that_is_not_127_0_0_1`.
+* **Comprobación del catálogo:** `the_v4_channel_answers_saf_47_to_an_origin_that_is_not_loopback`.
 * **Estado en `master`:** **Sigue presente.** Solo cambia el código de error emitido.
 * **Código fuente:** `afirma-simple` · `es.gob.afirma.standalone.protocol.AfirmaWebSocketServerV4.java:38, 57-68`.
 * **Origen de auditoría:** Anteriormente AUD-28 ([05-transporte-websocket.md](05-transporte-websocket.md)).
