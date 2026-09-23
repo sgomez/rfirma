@@ -365,7 +365,7 @@ diff-coverage:
 [group('ci')]
 crap-ffi: (certs "install") check-native build-ts
     mkdir -p "{{ coverage_out }}/crap-ffi"
-    cd {{ tauri }} && RFIRMA_LIB_DIR="$(dirname "{{ native_lib }}")" cargo llvm-cov --test native_cycle --test native_leak --test native_first_xades --all-features --lcov --output-path "{{ coverage_out }}/crap-ffi/lcov.info" \
+    cd {{ tauri }} && RFIRMA_LIB_DIR="$(dirname "{{ native_lib }}")" cargo llvm-cov --test native_cycle --test native_cycle_cades --test native_cycle_xades --test native_cycle_visual --test native_cycle_seal --test native_leak --test native_first_xades --all-features --lcov --output-path "{{ coverage_out }}/crap-ffi/lcov.info" \
         -- --ignored
     cd {{ tauri }} && cargo crap --path '{{ ffi_allow }}' --lcov "{{ coverage_out }}/crap-ffi/lcov.info" --threshold 30 --fail-above
 
