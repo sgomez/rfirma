@@ -262,7 +262,7 @@ patience_secs = 180
 condition = "the-selection-answers-a-certificate"
 question = "¿ofreció la selección los certificados del almacén del sistema, sin pedir el PIN de un token? [s/n]"
 person = { yes = "se abrió el almacén que nombraba keystore", no = "se abrió otro almacén que el que nombraba keystore", yes_means = "conforme" }
-warning = "La sede nombra el almacén del sistema en keystore y el token de SoftHSM en ksb64: fíjate en qué almacén ofrece la selección y no des ningún PIN; elige un certificado o cancela."
+warning = "La sede nombra el almacén del sistema en keystore y el token de SoftHSM en ksb64: fíjate en qué almacén ofrece la selección, no des ningún PIN y elige un certificado: si cancelas, la comprobación sale discrepante."
 
 [[check]]
 id = "jvc_only_warns_below_one"
