@@ -32,7 +32,10 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `adapters/tls/mod.rs` | El reparto de las dos piezas del material TLS; reexporta `LocalCa`. |
 | `adapters/tls/server.rs` | El certificado del servidor local, en memoria. Pruebas en `adapters/tls/server/tests.rs`. |
 | `adapters/tls/store.rs` | Las dos ranuras de la CA local en disco, detrás del puerto `LocalCaSlots`. Pruebas en `adapters/tls/store/tests.rs`. |
-| `adapters/relay.rs` | El transporte del servidor intermedio: sin canal que sostener, la operación se resuelve al abrir, con lo que trajo la invocación o con lo que se recupera del `rtservlet`; un rechazo deja la subida como entrega pendiente. Pruebas en `adapters/relay/tests.rs`. |
+| `adapters/relay.rs` | El transporte del servidor intermedio: la operación se resuelve al abrir; un rechazo deja la subida como entrega pendiente. Fijaciones en `adapters/relay/tests/mod.rs`. |
+| `adapters/relay/tests/document_variant.rs` | Pruebas del relay para la variante `fileid`/`dat` en la URL. |
+| `adapters/relay/tests/parameters_variant.rs` | Pruebas del relay para la variante que recupera los parámetros por XML. |
+| `adapters/relay/tests/active_wait.rs` | Pruebas del latido de la espera activa del relay. |
 | `adapters/trace.rs` | La traza por `stderr` de las URL `afirma://` que llegan, viva solo en compilación de desarrollo. Sin pruebas propias. |
 | `adapters/transport.rs` | El transporte de producción del `wss` sobre el *loopback*. |
 | `adapters/views.rs` | Los tipos que cruzan a la ventana de sede y su única conversión. Pruebas en `adapters/views/tests.rs`. |
@@ -96,7 +99,14 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `domain/protocol/launch.rs` | La invocación de arranque: verbo, versión de protocolo, ubicación de canal y credencial. Pruebas en `domain/protocol/launch/tests.rs`. |
 | `domain/protocol/message.rs` | Lo que llega por el canal ya abierto y con qué credencial viene. Puro. Pruebas en `domain/protocol/message/tests.rs`. |
 | `domain/protocol/mod.rs` | El reparto, y las cosas en las que rFirma se aparta del original a propósito. Léelo antes que sus hermanos. |
-| `domain/protocol/operation.rs` | Lo que la sede pide por el canal ya abierto: el verbo y su petición, sea de firma, de guardado, de carga o de lote. Pruebas en `domain/protocol/operation/tests.rs`. |
+| `domain/protocol/operation.rs` | Lo que la sede pide por el canal ya abierto: el verbo, el reparto de sus tipos entre los ficheros hermanos y `read_operation`, que los distingue. Pruebas en `domain/protocol/operation/tests.rs`. |
+| `domain/protocol/operation/batch.rs` | La petición `batch`, local o contra los dos servlets remotos. |
+| `domain/protocol/operation/document.rs` | La lectura del `dat`: descarga, Base64 a la manera del original y `gzip`. |
+| `domain/protocol/operation/guards.rs` | Las guardias de formato y algoritmo que comparten `sign` y `signandsave`. |
+| `domain/protocol/operation/properties.rs` | La lectura de parámetros y del `properties` que manda la sede. |
+| `domain/protocol/operation/save_load.rs` | Las peticiones `save` y `load`. |
+| `domain/protocol/operation/sign.rs` | Las peticiones `sign`, `cosign` y `countersign`: sus tipos y su lectura. |
+| `domain/protocol/operation/sign_and_save.rs` | La petición `signandsave`: firmar y guardar en un solo trámite. |
 | `domain/protocol/parameters.rs` | Lo común a toda operación: las guardias de forma —versión mínima, fichero local, clave de cifrado, identificador de sesión y URL de servlet— y los dos indicadores del certificado pegado. Pruebas en `domain/protocol/parameters/tests.rs`. |
 | `domain/protocol/relay_parameters.rs` | El XML de parámetros que la sede sube al servlet cuando la operación no cabe en la URL; **no** es el documento a firmar. Pruebas en `domain/protocol/relay_parameters/tests.rs`. |
 | `domain/protocol/refusal.rs` | El rechazo del protocolo: el código que sale al cable, el detalle crudo que **no** sale, y cómo lo nombra la ventana. Pruebas en `domain/protocol/refusal/tests.rs`. |
