@@ -32,6 +32,9 @@
 //!   aquí, si al fallar no se sabe todavía dónde subir la respuesta (una URL
 //!   inválida, o un XML de parámetros que no se pudo descargar), el rechazo
 //!   se queda en la ventana en vez de forzar una descarga solo para saberlo.
+//! - **Un `dat` que empieza por `ftp://` sale con `SAF_03`**. El original lo
+//!   baja (`DataDownloader.downloadData`, 1.9.2); aquí solo se baja por
+//!   `http(s)`, y firmarlo como su texto sería firmar la URL.
 //! - **El algoritmo de lote se valida en el parser**. El original no
 //!   comprueba el `algorithm` de `<signbatch>` ni del JSON de lote y lo
 //!   pasa tal cual a la JCA; aquí un nombre no reconocido sale de

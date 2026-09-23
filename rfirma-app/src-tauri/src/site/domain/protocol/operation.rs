@@ -935,14 +935,21 @@ fn read_document(url: &AfirmaUrl, data: &dyn DataSource) -> Result<Vec<u8>, Refu
     Ok(document)
 }
 
-/// Los bytes de `dat`, bajados de su URL o descodificados del Base64
-/// (`DataDownloader.downloadData`, 1.9.2).
-///
-/// El `gzip=true` se resuelve antes de mirar si el valor era una URL, igual que el original: lo
-/// que se baja de una URL no se descomprime nunca, porque una URL no es Base64.
+/// Los bytes de `dat`: bajados de su URL, descodificados del Base64 o, si no lo es, su texto
+/// tal cual (`DataDownloader.downloadData`, 1.9.2).
 fn data_of(url: &AfirmaUrl, data: &dyn DataSource) -> Result<Vec<u8>, Refusal> {
     let value = required(url, "dat", Parameter::Data)?;
-    if let Some(remote) = download_url(value) {
+    if is_gzip(url) && is_base64_to_the_original(value) {
+        let compressed = decode_like_the_original(value)
+            .ok_or_else(|| Refusal::about(Parameter::Data, "el parametro 'dat' no es Base64"))?;
+        if compressed.is_empty() {
+            return Ok(compressed);
+        }
+        return decompress_gzip(&compressed);
+    }
+
+    let trimmed = java_trim(value);
+    if let Some(remote) = download_url(trimmed) {
         return data.download(remote).map_err(|detail| {
             Refusal::about(
                 Parameter::Data,
@@ -950,12 +957,109 @@ fn data_of(url: &AfirmaUrl, data: &dyn DataSource) -> Result<Vec<u8>, Refusal> {
             )
         });
     }
-
-    let decoded = decode_base64(value, Parameter::Data)?;
-    if is_gzip(url) && !decoded.is_empty() {
-        return decompress_gzip(&decoded);
+    if trimmed.starts_with(FTP) {
+        return Err(Refusal::about(
+            Parameter::Data,
+            format!("rFirma no baja datos por ftp: '{trimmed}'"),
+        ));
     }
-    Ok(decoded)
+
+    if is_base64_to_the_original(trimmed) {
+        if let Some(decoded) = decode_like_the_original(trimmed) {
+            return Ok(decoded);
+        }
+    }
+    Ok(trimmed.as_bytes().to_vec())
+}
+
+const FTP: &str = "ftp://";
+
+/// El alfabeto de `Base64.isBase64` (1.9.2), con sus espacios y su `~`.
+const ALPHABET_OF_THE_ORIGINAL: &[u8] =
+    b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz=_-\t\n+/0123456789\r~";
+
+/// Si `Base64.isBase64` (1.9.2) lo daría por Base64: su alfabeto, el `=` solo al final y una
+/// longitud múltiplo de cuatro sin contar los saltos de línea.
+fn is_base64_to_the_original(value: &str) -> bool {
+    let bytes = value.as_bytes();
+    let mut counted = 0;
+    for (position, byte) in bytes.iter().enumerate() {
+        if !ALPHABET_OF_THE_ORIGINAL.contains(byte) {
+            return false;
+        }
+        if *byte == b'=' && position + 2 < bytes.len() {
+            return false;
+        }
+        if *byte != b'\n' && *byte != b'\r' {
+            counted += 1;
+        }
+    }
+    counted % 4 == 0
+}
+
+/// El Base64 como lo lee `Base64.decode` (1.9.2): salta los espacios, descarta el cuarteto
+/// incompleto del final y no mira los bits sobrantes; nada si hay un carácter que no descodifica.
+fn decode_like_the_original(value: &str) -> Option<Vec<u8>> {
+    let bytes = value.as_bytes();
+    if bytes.is_empty() {
+        return Some(Vec::new());
+    }
+    if bytes.len() < 4 {
+        return None;
+    }
+    let mut decoded = Vec::with_capacity(bytes.len() * 3 / 4);
+    let mut quartet = [(0_u8, 0_u32); 4];
+    let mut filled = 0;
+    for &byte in bytes {
+        let sextet = match byte {
+            b' ' | b'\t' | b'\n' | b'\r' => continue,
+            b'=' => 0xFF,
+            other => sextet_of(other)?,
+        };
+        quartet[filled] = (byte, sextet);
+        filled += 1;
+        if filled == 4 {
+            decode_quartet(&quartet, &mut decoded);
+            filled = 0;
+            if byte == b'=' {
+                break;
+            }
+        }
+    }
+    Some(decoded)
+}
+
+fn sextet_of(byte: u8) -> Option<u32> {
+    let sextet = match byte {
+        b'A'..=b'Z' => byte - b'A',
+        b'a'..=b'z' => byte - b'a' + 26,
+        b'0'..=b'9' => byte - b'0' + 52,
+        b'+' | b'-' => 62,
+        b'/' | b'_' => 63,
+        _ => return None,
+    };
+    Some(u32::from(sextet))
+}
+
+fn decode_quartet(quartet: &[(u8, u32); 4], decoded: &mut Vec<u8>) {
+    let [(_, first), (_, second), (third_byte, third), (fourth_byte, fourth)] = *quartet;
+    let bits = first << 18 | second << 12;
+    if third_byte == b'=' {
+        decoded.push((bits >> 16) as u8);
+        return;
+    }
+    let bits = bits | third << 6;
+    if fourth_byte == b'=' {
+        decoded.extend([(bits >> 16) as u8, (bits >> 8) as u8]);
+        return;
+    }
+    let bits = bits | fourth;
+    decoded.extend([(bits >> 16) as u8, (bits >> 8) as u8, bits as u8]);
+}
+
+/// `String.trim` de Java: fuera todo carácter hasta el espacio por los dos extremos.
+fn java_trim(value: &str) -> &str {
+    value.trim_matches(|character: char| character <= ' ')
 }
 
 fn is_gzip(url: &AfirmaUrl) -> bool {
@@ -1039,7 +1143,7 @@ fn batch_request(url: &AfirmaUrl, data: &dyn DataSource) -> Result<SiteOperation
 
     let value = required(url, "dat", Parameter::Data)?;
     let lote = data_of(url, data)?;
-    let lote_base64 = match is_gzip(url) || download_url(value).is_some() {
+    let lote_base64 = match is_gzip(url) || !is_base64_to_the_original(value) {
         true => STANDARD.encode(&lote),
         false => value.to_owned(),
     };

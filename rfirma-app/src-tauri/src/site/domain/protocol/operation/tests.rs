@@ -781,13 +781,100 @@ fn each_missing_parameter_of_a_signature_names_itself() {
     }
 }
 
+fn url_encoded(text: &str) -> String {
+    text.bytes().map(|byte| format!("%{byte:02X}")).collect()
+}
+
+fn the_signed_document(dat: &str, extra: &str) -> Vec<u8> {
+    let url = an_operation(&format!(
+        "op=sign&idsession=8jAkPZfRw2mQxN4TbYuL&format=CAdES&algorithm=SHA256withRSA&dat={dat}{extra}"
+    ));
+    let SiteOperation::Sign(request) = read_operation(&url).expect("se atiende") else {
+        panic!("es sign");
+    };
+    request.document().to_vec()
+}
+
 #[test]
-fn a_document_that_is_not_base64_names_the_parameter_that_came_wrong() {
-    let url = an_operation("op=sign&format=PAdES&algorithm=SHA256&dat=::%");
+fn a_dat_outside_the_base64_alphabet_is_signed_as_its_text() {
+    assert_eq!(the_signed_document("dato*literal!", ""), b"dato*literal!");
+}
 
-    let refusal = read_operation(&url).expect_err("no es Base64");
+#[test]
+fn a_dat_whose_length_is_not_a_multiple_of_four_is_signed_as_its_text() {
+    assert_eq!(the_signed_document("abcde", ""), b"abcde");
+}
 
-    assert_eq!(refusal.blame(), Some(Parameter::Data));
+#[test]
+fn a_dat_with_padding_before_its_last_two_characters_is_signed_as_its_text() {
+    assert_eq!(the_signed_document("ab=cdefg", ""), b"ab=cdefg");
+}
+
+#[test]
+fn a_lone_padding_sign_is_signed_as_its_text() {
+    assert_eq!(the_signed_document("%3D", ""), b"=");
+}
+
+#[test]
+fn a_dat_the_decoder_cannot_read_is_signed_as_its_text() {
+    assert_eq!(the_signed_document("abc~", ""), b"abc~");
+}
+
+#[test]
+fn a_literal_dat_is_signed_in_utf8() {
+    assert_eq!(
+        the_signed_document("%C3%B1and%C3%BA", ""),
+        "ñandú".as_bytes()
+    );
+}
+
+#[test]
+fn a_literal_dat_is_trimmed_like_the_original() {
+    assert_eq!(the_signed_document("+dato*literal!+", ""), b"dato*literal!");
+}
+
+#[test]
+fn a_base64_dat_is_still_decoded() {
+    assert_eq!(
+        the_signed_document(&dat(b"hola rFirma"), ""),
+        b"hola rFirma"
+    );
+}
+
+#[test]
+fn a_base64_dat_with_leftover_bits_is_decoded_like_the_original() {
+    assert_eq!(the_signed_document("YR==", ""), b"a");
+}
+
+#[test]
+fn a_base64_dat_split_in_lines_is_decoded() {
+    assert_eq!(the_signed_document("aG9s%0AYQ==", ""), b"hola");
+}
+
+#[test]
+fn gzip_true_over_a_literal_dat_signs_its_text_uncompressed() {
+    assert_eq!(
+        the_signed_document("dato*literal!", "&gzip=true"),
+        b"dato*literal!"
+    );
+}
+
+#[test]
+fn a_literal_local_batch_is_forwarded_in_base64() {
+    let plain = json_lote("SHA256", true);
+    let url = an_operation(&format!(
+        "op=batch&idsession=8jAkPZfRw2mQxN4TbYuL&localBatchProcess=true&jsonbatch=true&dat={}",
+        url_encoded(&plain)
+    ));
+
+    let SiteOperation::Batch(request) = read_operation(&url).expect("se atiende") else {
+        panic!("es un lote");
+    };
+    assert_eq!(request.lote(), plain.as_bytes());
+    assert_eq!(
+        request.lote_base64(),
+        base64::engine::general_purpose::STANDARD.encode(plain.as_bytes())
+    );
 }
 
 #[test]
@@ -824,7 +911,7 @@ fn the_extra_params_of_the_site_arrive_whole_and_unexpanded() {
 
 #[test]
 fn a_signature_with_nothing_to_sign_says_exactly_that() {
-    let url = an_operation("op=sign&format=PAdES&algorithm=SHA256&dat=%3D");
+    let url = an_operation("op=sign&format=PAdES&algorithm=SHA256&dat=A%09%09A");
 
     let refusal = read_operation(&url).expect_err("no hay nada que firmar");
 
@@ -1908,10 +1995,10 @@ fn a_download_that_fails_names_the_data_parameter() {
 }
 
 #[test]
-fn a_scheme_that_is_not_http_is_still_read_as_base64() {
+fn an_ftp_dat_is_refused_instead_of_signed_as_its_text() {
     let url = a_signature_of_a_url(SIGN, "ftp://sede.example/4711.pdf", "");
 
-    let refusal = read_operation(&url).expect_err("ni se baja ni es Base64");
+    let refusal = read_operation(&url).expect_err("no se baja por ftp");
 
     assert_eq!(refusal.blame(), Some(Parameter::Data));
 }
@@ -2032,7 +2119,7 @@ fn a_cosignature_and_a_countersignature_without_data_ask_for_it_too() {
 
 #[test]
 fn an_empty_dat_is_still_nothing_to_sign_and_not_a_document_to_choose() {
-    let url = an_operation("op=sign&format=PAdES&algorithm=SHA256&dat=%3D");
+    let url = an_operation("op=sign&format=PAdES&algorithm=SHA256&dat=A%09%09A");
 
     let refusal = read_operation(&url).expect_err("no hay nada que firmar");
 

@@ -3741,7 +3741,7 @@ fn a_batch(extra: &str) -> AfirmaUrl {
         "afirma://batch?op=batch&idsession={CREDENTIAL}&jsonbatch=true&\
          batchpresignerurl=https%3A%2F%2Fpresigner.example%2Fpre&\
          batchpostsignerurl=https%3A%2F%2Fpostsigner.example%2Fpost&dat={}{extra}",
-        base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(A_JSON_LOTE)
+        base64::engine::general_purpose::URL_SAFE.encode(A_JSON_LOTE)
     );
     let ChannelMessage::Operation { url } = ChannelMessage::read(&text) else {
         panic!("una URL del protocolo es una operacion");
@@ -4092,7 +4092,7 @@ fn a_local_batch(extra: &str) -> AfirmaUrl {
     let text = format!(
         "afirma://batch?op=batch&idsession={CREDENTIAL}&jsonbatch=true&\
          localBatchProcess=true&dat={}{extra}",
-        base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(&lote)
+        base64::engine::general_purpose::URL_SAFE.encode(&lote)
     );
     let ChannelMessage::Operation { url } = ChannelMessage::read(&text) else {
         panic!("una URL del protocolo es una operacion");
@@ -4116,7 +4116,7 @@ fn a_local_batch_with_a_failing_second_item(stop_on_error: bool) -> AfirmaUrl {
     let text = format!(
         "afirma://batch?op=batch&idsession={CREDENTIAL}&jsonbatch=true&\
          localBatchProcess=true&dat={}",
-        base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(&lote)
+        base64::engine::general_purpose::URL_SAFE.encode(&lote)
     );
     let ChannelMessage::Operation { url } = ChannelMessage::read(&text) else {
         panic!("una URL del protocolo es una operacion");

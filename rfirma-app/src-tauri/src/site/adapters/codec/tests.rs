@@ -114,7 +114,7 @@ fn a_local_batch(lote: &str) -> AfirmaUrl {
     an_operation(&format!(
         "afirma://batch?op=batch&idsession={CREDENTIAL}&jsonbatch=true&\
          localBatchProcess=true&dat={}",
-        base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(lote)
+        base64::engine::general_purpose::URL_SAFE.encode(lote)
     ))
 }
 
