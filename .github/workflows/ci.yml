@@ -77,6 +77,9 @@ env:
   # `ruff check` de `check-repo` en rojo sin tocar una linea de Python. Tiene que coincidir
   # con `ruff_version` del justfile.
   RUFF_VERSION: '0.16.6'
+  # Version FIJADA de diff-cover, misma razon que CRAP_VERSION. Tiene que
+  # coincidir con `diff_cover_version` del justfile.
+  DIFF_COVER_VERSION: '10.6.0'
   CARGO_TERM_COLOR: always
 
 jobs:
@@ -252,6 +255,8 @@ jobs:
         run: |
           cargo binstall --no-confirm cargo-llvm-cov
           cargo binstall --no-confirm "cargo-crap@${CRAP_VERSION}"
+      - name: diff-cover
+        run: pipx install "diff-cover==${DIFF_COVER_VERSION}"
 
       # EL BANCO DE CONFORMIDAD (TD-55): `autoscript.js` del tag v1.9.2, el
       # mismo fichero que sirve una sede de verdad, para que hable con nuestro
@@ -283,6 +288,15 @@ jobs:
       # arbol de dependencias entero que aqui no ejecuta nadie — lo compila el
       # carril lento, junto al empaquetado que lo usa.
       - run: just check-rust
+
+      # `diff-coverage` pide origin/main como ref local, y `check-rust` tiene
+      # que seguir corriendo sin red (ADR-0013, ADR-0014): el fetch va aqui, no
+      # en el justfile. `--diff-range-notation=..` evita depender de un
+      # merge-base que un fetch superficial no puede calcular.
+      - name: Cobertura del diff contra origin/main
+        run: |
+          git fetch --depth=1 origin main
+          just diff-coverage
 
   # ==========================================================================
   # CARRIL LENTO
