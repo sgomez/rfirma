@@ -2,6 +2,7 @@
 
 mod support;
 mod support_requests;
+mod support_window;
 
 mod batch_local;
 mod batch_remote;

@@ -50,7 +50,8 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `application/errand/state.rs` | El estado del trámite, con un solo dueño (`LiveErrand`). Pruebas en `application/errand/state/tests.rs`. |
 | `application/errand/state/revelation.rs` | La revelación de la ventana: por temporizador de respaldo, por llegada del navegador o porque el trámite tiene algo que decir (ADR-0020). |
 | `application/errand/tests/mod.rs` | El reparto de las pruebas del trámite por comportamiento. Solo en pruebas. |
-| `application/errand/tests/support.rs` | Los dobles del trámite en grada A: motor, transporte, códec, token, vecinos, ventana y mesa de pruebas. Solo en pruebas. |
+| `application/errand/tests/support.rs` | Los dobles del trámite en grada A: motor, transporte, códec, token, vecinos y mesa de pruebas. Solo en pruebas. |
+| `application/errand/tests/support_window.rs` | La ventana doblada y la mesa desnuda con las que se prueba cuándo se enseña un trámite. Solo en pruebas. |
 | `application/errand/tests/support_requests.rs` | Los constructores de peticiones y consentimientos que usan esas pruebas. Solo en pruebas. |
 | `application/errand/tests/certificate_selection.rs` | Pruebas de la selección de certificado de sede, del arranque a la respuesta. Solo en pruebas. |
 | `application/errand/tests/signature_basics.rs` | Pruebas de la firma de sede básica: recuadro, rúbrica y páginas añadidas. Solo en pruebas. |
@@ -99,7 +100,9 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `domain/protocol/format.rs` | El formato que la sede nombra en `format=`, cerrado y con los alias del original; **no es el `Format` del puente**, al que lo traduce `ports.rs`. Pruebas en `domain/protocol/format/tests.rs`. |
 | `domain/protocol/framing.rs` | **El framing artesanal del transporte `service`**, sin socket: lector y escritor puros. Pruebas en `domain/protocol/framing/tests.rs`. |
 | `domain/protocol/key_store.rs` | **El almacén que la sede nombra en `keystore` o `ksb64`**, y cuál de ellos abre rFirma (ADR-0022). Pruebas en `domain/protocol/key_store/tests.rs`. |
-| `domain/protocol/launch.rs` | La invocación de arranque: verbo, versión de protocolo, ubicación de canal y credencial. Pruebas en `domain/protocol/launch/tests.rs`. |
+| `domain/protocol/launch.rs` | La invocación de arranque: verbo, versión de protocolo, ubicación de canal y credencial. Pruebas en `domain/protocol/launch/tests/`. |
+| `domain/protocol/launch/tests/mod.rs` | Pruebas de la invocación de arranque: versión, credencial, puertos, `service`, identificadores y servlets. Solo en pruebas. |
+| `domain/protocol/launch/tests/relay.rs` | Pruebas del arranque por servidor intermedio: su destino, sus servlets y su clave. Solo en pruebas. |
 | `domain/protocol/message.rs` | Lo que llega por el canal ya abierto y con qué credencial viene. Puro. Pruebas en `domain/protocol/message/tests.rs`. |
 | `domain/protocol/mod.rs` | El reparto, y las cosas en las que rFirma se aparta del original a propósito. Léelo antes que sus hermanos. |
 | `domain/protocol/operation.rs` | Lo que la sede pide por el canal ya abierto: el verbo, el reparto de sus tipos entre los ficheros hermanos y `read_operation`, que los distingue. Pruebas partidas por comportamiento en `domain/protocol/operation/tests/`. |
