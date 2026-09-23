@@ -2,6 +2,3 @@ rfirma-app/src-tauri/src/site/application/errand/desk.rs 651
 rfirma-app/src-tauri/src/site/application/errand/state.rs 546
 rfirma-app/src-tauri/src/site/application/errand/tests.rs 5290
 rfirma-app/src-tauri/src/site/domain/protocol/operation/tests.rs 2167
-rfirma-app/src/sede/SedeWindow.test.tsx 881
-rfirma-app/src/sede/siteErrands.test.ts 870
-rfirma-app/src/sede/siteErrands.ts 542
