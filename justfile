@@ -19,6 +19,14 @@ native_lib := bridge / "target/lib/rfirma/librfirma_crypto.so"
 # rojo un PR que no lo ha tocado (ADR-0014).
 crap_version := "0.4.3"
 
+# Version fijada, misma razon que crap_version. Igual en .github/workflows/ci.yml.
+diff_cover_version := "10.6.0"
+
+# Suelo global de lineas cubiertas en Rust (ADR-0014): la medida real en el
+# momento de introducir el suelo, redondeada hacia abajo. Sube a mano, en su
+# propia PR, cuando la medida real lo supere en un punto entero.
+coverage_floor := "78"
+
 # target/ compartido entre worktrees de agentes; el checkout principal se
 # queda fuera porque cargo toma un cerrojo sobre el arbol mientras compila
 # (ADR-0014).
@@ -303,17 +311,28 @@ test-native: (certs "install") check-native build-ts
 # CRAP: solo en Rust (ADR-0014)
 # ---------------------------------------------------------------------------
 
-# Genera el lcov de toda la suite con cargo llvm-cov.
+# Genera el lcov de toda la suite con cargo llvm-cov y no baja del suelo (ADR-0014).
 [private]
 coverage: (certs "install") build-ts
     mkdir -p "{{ coverage_out }}/coverage"
-    cd {{ tauri }} && cargo llvm-cov --all-features --lcov --output-path "{{ coverage_out }}/coverage/lcov.info"
+    cd {{ tauri }} && cargo llvm-cov --all-features --lcov --output-path "{{ coverage_out }}/coverage/lcov.info" \
+        --fail-under-lines {{ coverage_floor }}
 
 # La puerta del carril rapido, con el modulo FFI oculto.
 [private]
 crap: coverage
     cd {{ tauri }} && cargo crap --lcov "{{ coverage_out }}/coverage/lcov.info" --threshold 30 --fail-above \
         --allow '{{ ffi_allow }}'
+
+# Cobertura del diff contra origin/main (ADR-0014): reutiliza el lcov.info que
+# ya dejo `coverage` (dependencia de `check-rust`) en disco, sin volver a
+# instrumentar la suite. Pide red (fetch de origin/main), asi que queda fuera
+# de `check-rust` y la llama directamente ci.yml, despues de `just check-rust`.
+[group('ci')]
+diff-coverage:
+    cd {{ tauri }} && diff-cover "{{ coverage_out }}/coverage/lcov.info" \
+        --compare-branch=origin/main --diff-range-notation=.. --fail-under=80 \
+        --exclude '**/adapters/tauri.rs' 'main.rs' '{{ ffi_allow }}'
 
 # Corre unicamente el ciclo nativo (grada C) y mide el adaptador FFI.
 [group('ci')]

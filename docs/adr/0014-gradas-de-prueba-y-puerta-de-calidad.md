@@ -228,6 +228,35 @@ pasan de 80 líneas llevan `#[expect(clippy::too_many_lines)]`: `expect` falla
 en cuanto la función deja de pasarse, así que hace de trinquete sin fichero
 aparte.
 
+## El suelo de cobertura y la cobertura del diff
+
+CRAP puntúa por función; nada impedía que la cobertura global bajara sin que
+ninguna función concreta lo delatara. El [#852](https://github.com/sgomez/rfirma/issues/852)
+añade dos puertas más, las dos en Rust y las dos alimentadas por el mismo
+`lcov.info` de `cargo llvm-cov` que ya produce `coverage`:
+
+- **Un suelo global que no baja**: `--fail-under-lines` dentro de la propia
+  receta `coverage`, con el porcentaje en `coverage_floor` del `justfile` —
+  fijado igual que `crap_version`, no una media móvil. Sube **a mano, en su
+  propia PR**, cuando la medida real lo supere en un punto entero; nunca lo
+  sube un commit del CI, por la misma razón que el trinquete de CRAP se
+  descartó más arriba: un fichero que cambia solo no tiene revisor.
+- **Cobertura del diff**: `diff-cover` sobre ese mismo `lcov.info`, comparando
+  contra `origin/main` con `--diff-range-notation=..` para no depender de un
+  merge-base que un `git fetch --depth=1` no puede calcular. Quedan fuera
+  `**/adapters/tauri.rs` y `main.rs` (pegamento de Tauri, cobertura cero por
+  diseño) y el módulo FFI (`ffi_allow`, el mismo que `--allow` oculta de
+  CRAP): ese se mide en el carril lento, no en este `lcov`.
+
+**La cobertura del diff pide red — `origin/main` como ref local — y por eso
+no vive dentro de `check-rust`.** La receta `diff-coverage` es `[group('ci')]`,
+no parte de la cadena `check`: `check-rust` tiene que seguir corriendo sin red
+en un portátil, la misma invariante que ya protegía al banco de conformidad
+más arriba. El `git fetch` va en `ci.yml`, no en el `justfile`.
+
+Ni una ni otra tocan Java ni TypeScript, por la misma razón que CRAP: el
+código de riesgo está en Rust.
+
 ## Un solo hook: formato, antes del push
 
 `pre-push` con **lefthook**, y dentro **solo formato**: `cargo fmt --all -- --check`, el
@@ -340,3 +369,6 @@ reloj: escondería fallos reales de cadena.
   que el CI comprueba **hoy** hasta entonces.
 - `just check` crece por dentro (Biome, clippy, `fmt --check`, `cargo test --no-run` de la grada
   C, `cargo crap`); su nombre y su papel no cambian, que es el contrato del ADR-0013.
+- `coverage` deja de ser solo informativa: falla si la cobertura de líneas baja de
+  `coverage_floor`. `diff-coverage`, que sí pide red, corre aparte en el CI y no entra en
+  `check-rust` ni en `just check`.
