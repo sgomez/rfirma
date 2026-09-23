@@ -102,13 +102,13 @@ async fn the_last_fragment_is_answered_with_ok() {
 }
 
 #[tokio::test]
-async fn a_fragment_with_the_wrong_credential_is_refused() {
+async fn a_fragment_with_the_wrong_credential_is_refused_with_saf_03() {
     let chunk = URL_SAFE.encode("mitad");
     let raw = format!("fragment=@1@2@{chunk}idsession=otraPaginaDelEquipo0@EOF");
 
     let response = respond(&raw, true, &serving(), &answering_with("x"), &no_state()).await;
 
-    assert!(body_of(&response.0).starts_with("SAF_46"));
+    assert!(body_of(&response.0).starts_with("SAF_03"));
 }
 
 #[tokio::test]
@@ -179,7 +179,7 @@ async fn a_send_returns_the_part_that_firm_already_computed() {
 }
 
 #[tokio::test]
-async fn a_send_with_the_wrong_credential_is_refused() {
+async fn a_send_with_the_wrong_credential_is_refused_with_saf_03() {
     let response = respond(
         "send=@1@1idsession=otraPaginaDelEquipo0@EOF",
         true,
@@ -189,7 +189,7 @@ async fn a_send_with_the_wrong_credential_is_refused() {
     )
     .await;
 
-    assert!(body_of(&response.0).starts_with("SAF_46"));
+    assert!(body_of(&response.0).starts_with("SAF_03"));
 }
 
 #[tokio::test]
@@ -260,7 +260,7 @@ async fn a_repeated_command_answers_the_number_of_parts_without_relaunching_the_
 }
 
 #[tokio::test]
-async fn a_command_with_the_wrong_credential_is_refused() {
+async fn a_command_with_the_wrong_credential_is_refused_with_saf_03() {
     let encoded = URL_SAFE.encode("afirma://selectcert?op=selectcert");
     let response = respond(
         &format!("cmd={encoded}idsession=0000000000000000000O@EOF"),
@@ -273,8 +273,7 @@ async fn a_command_with_the_wrong_credential_is_refused() {
 
     assert_eq!(
         body_of(&response.0),
-        WireAnswer::refused_because_of(SafCode::InvalidSessionId, Parameter::IdSession)
-            .on_the_wire()
+        WireAnswer::refused_because_of(SafCode::Params, Parameter::IdSession).on_the_wire()
     );
 }
 
@@ -402,4 +401,136 @@ async fn a_save_leaves_no_parts_for_the_next_operation() {
 
     assert_eq!(body_of(&second.0), "SAVE_OK");
     assert_eq!(*launches.lock().expect("el contador no esta envenenado"), 2);
+}
+
+async fn answered(raw: &str, inbox: &Inbox, state: &Arc<Mutex<ServiceState>>) -> String {
+    body_of(&respond(raw, true, &serving(), inbox, state).await.0)
+}
+
+#[tokio::test]
+async fn an_echo_from_a_foreign_session_is_refused_with_saf_03() {
+    let body = answered(
+        "echo=-idsession=OtraSesionAjena00000@EOF",
+        &answering_with("no se llama"),
+        &no_state(),
+    )
+    .await;
+
+    assert!(body.starts_with("SAF_03"), "{body}");
+}
+
+#[tokio::test]
+async fn an_unknown_order_is_refused_with_saf_03() {
+    let body = answered(
+        &format!("nada=idsession={CREDENTIAL}@EOF"),
+        &answering_with("no se llama"),
+        &no_state(),
+    )
+    .await;
+
+    assert!(body.starts_with("SAF_03"), "{body}");
+}
+
+#[tokio::test]
+async fn a_command_that_is_not_an_operation_is_refused_with_saf_11() {
+    let launches = Arc::new(Mutex::new(0));
+    let inbox = counting_answers_with("no se llama", &launches);
+
+    for uri in [
+        "afirma://service?ports=54351&v=3",
+        "https://sede.example/tramite",
+    ] {
+        let body = answered(&a_command(uri), &inbox, &no_state()).await;
+
+        assert!(body.starts_with("SAF_11"), "{uri}: {body}");
+    }
+    assert_eq!(*launches.lock().expect("el contador no esta envenenado"), 0);
+}
+
+#[tokio::test]
+async fn a_send_beyond_the_announced_parts_is_refused_with_saf_11() {
+    let state = no_state();
+    let inbox = answering_with("resultado");
+    answered(
+        &a_command("afirma://selectcert?op=selectcert"),
+        &inbox,
+        &state,
+    )
+    .await;
+
+    let beyond_the_total = answered(
+        &format!("send=@3@1idsession={CREDENTIAL}@EOF"),
+        &inbox,
+        &state,
+    )
+    .await;
+    let beyond_what_was_computed = answered(
+        &format!("send=@2@2idsession={CREDENTIAL}@EOF"),
+        &inbox,
+        &state,
+    )
+    .await;
+
+    assert!(beyond_the_total.starts_with("SAF_11"), "{beyond_the_total}");
+    assert!(
+        beyond_what_was_computed.starts_with("SAF_11"),
+        "{beyond_what_was_computed}"
+    );
+}
+
+#[tokio::test]
+async fn a_save_that_ends_in_a_refusal_is_answered_with_saf_11() {
+    let refusal = WireAnswer::refused(SafCode::Params).on_the_wire();
+    let inbox = Inbox::for_operations(move |_url: AfirmaUrl, reply: ReplyHandle| {
+        reply.answer(refusal.clone());
+    });
+
+    let body = answered(
+        &a_command("afirma://save?op=save&filename=rfirma.txt&exts=txt"),
+        &inbox,
+        &no_state(),
+    )
+    .await;
+
+    assert!(body.starts_with("SAF_11"), "{body}");
+}
+
+#[tokio::test]
+async fn the_fragments_of_the_script_are_reassembled_and_run_by_firm() {
+    let state = no_state();
+    let inbox = answering_with("SAF_06: Formato de firma no soportado");
+    let operation = "afirma://sign?op=sign&format=NoSuchFormat&algorithm=SHA256withRSA&dat=SG9sYQ";
+    let (first, last) = operation.split_at(operation.len().div_ceil(2));
+    let fragment = |part: usize, chunk: &str| {
+        format!(
+            "fragment=@{part}@2@{}idsession={CREDENTIAL}@EOF",
+            URL_SAFE.encode(chunk)
+        )
+    };
+    answered(&format!("echo=-idsession={CREDENTIAL}@EOF"), &inbox, &state).await;
+
+    let early = answered(&fragment(1, first), &inbox, &state).await;
+    let closing = answered(&fragment(2, last), &inbox, &state).await;
+    let fired = answered(&format!("firm=idsession={CREDENTIAL}@EOF"), &inbox, &state).await;
+    let sent = answered(
+        &format!("send=@1@1idsession={CREDENTIAL}@EOF"),
+        &inbox,
+        &state,
+    )
+    .await;
+
+    assert_eq!(
+        [
+            early.as_str(),
+            closing.as_str(),
+            fired.as_str(),
+            sent.as_str()
+        ],
+        [
+            MORE_DATA_NEED,
+            ECHO_OK,
+            "1",
+            "SAF_06: Formato de firma no soportado"
+        ]
+    );
 }

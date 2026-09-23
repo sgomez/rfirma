@@ -67,8 +67,8 @@ pub use detection::{shape_of, DetectedShape};
 pub use filters::{site_filter, SiteFilter, ACCEPTED_CRITERIA, UNMEASURED_CRITERIA};
 pub use format::{format_of, RequestedFormat, XadesEnvelope};
 pub use framing::{
-    credential_matches, http_response, read_request, split_response, FragmentBuffer, FramedRequest,
-    NotOfTheFraming, MORE_DATA_NEED, RESPONSE_MAX_SIZE,
+    credential_matches, http_response, read_request, request_credential, split_response,
+    FragmentBuffer, FramedRequest, RefusedOrder, MORE_DATA_NEED, RESPONSE_MAX_SIZE,
 };
 pub use key_store::refuse_a_key_store_rfirma_does_not_open;
 pub use launch::{

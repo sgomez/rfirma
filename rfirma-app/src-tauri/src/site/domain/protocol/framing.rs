@@ -4,6 +4,7 @@
 use base64::engine::general_purpose::URL_SAFE;
 use base64::Engine as _;
 
+use super::codes::SafCode;
 use super::launch::NegotiatedCredential;
 
 const CMD: &str = "cmd=";
@@ -14,6 +15,8 @@ const SEND: &str = "send=";
 const EOF: &str = "@EOF";
 const IDSESSION: &str = "idsession";
 const RESET: &str = "-";
+const AFIRMA_SCHEME: &str = "afirma://";
+const NESTED_SERVICE: [&str; 2] = ["afirma://service?", "afirma://service/?"];
 
 /// Tamaño máximo de cada parte de una respuesta fragmentada (`RESPONSE_MAX_SIZE`, línea 57).
 pub const RESPONSE_MAX_SIZE: usize = 1_000_000;
@@ -50,19 +53,35 @@ pub enum FramedRequest {
     },
 }
 
-/// La petición cruda no trae ninguno de los cinco comandos del framing
-/// (`getUriTypeFromRequest`, línea 229).
+/// Por qué no se atiende una petición cruda.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct NotOfTheFraming;
+pub enum RefusedOrder {
+    /// No trae ninguno de los cinco comandos (`getUriTypeFromRequest`, línea 247).
+    Unknown,
+    /// Trae uno que no se puede atender tal como llega (`processCommand`, líneas 226-229).
+    Unworkable,
+}
+
+impl RefusedOrder {
+    /// El código con que se contesta (`CommandProcessorThread.run`, líneas 133-140).
+    pub fn code(self) -> SafCode {
+        match self {
+            Self::Unknown => SafCode::Params,
+            Self::Unworkable => SafCode::SendingResult,
+        }
+    }
+}
 
 /// Lee la petición cruda tal como llega del socket: separa la credencial de canal de la cola
 /// (`idsession=…@EOF`) y reconoce el comando, en el mismo orden que `getUriTypeFromRequest`
 /// (línea 229): `cmd=`, `echo=`, `fragment=`, `firm=`, `send=`.
-pub fn read_request(raw: &str) -> Result<FramedRequest, NotOfTheFraming> {
+pub fn read_request(raw: &str) -> Result<FramedRequest, RefusedOrder> {
     let (data, credential) = split_credential(raw);
 
     if let Some(value) = after(data, CMD) {
-        let decoded = decode_base64(value).ok_or(NotOfTheFraming)?;
+        let decoded = decode_base64(value)
+            .filter(|uri| is_an_operation(uri))
+            .ok_or(RefusedOrder::Unworkable)?;
         return Ok(FramedRequest::Command {
             message: with_credential(&decoded, credential.as_deref()),
         });
@@ -74,7 +93,7 @@ pub fn read_request(raw: &str) -> Result<FramedRequest, NotOfTheFraming> {
         });
     }
     if let Some(value) = after(data, FRAGMENT) {
-        let (part, total, chunk) = parse_fragment(value).ok_or(NotOfTheFraming)?;
+        let (part, total, chunk) = parse_fragment(value).ok_or(RefusedOrder::Unworkable)?;
         return Ok(FramedRequest::Fragment {
             part,
             total,
@@ -86,7 +105,7 @@ pub fn read_request(raw: &str) -> Result<FramedRequest, NotOfTheFraming> {
         return Ok(FramedRequest::Firm { credential });
     }
     if let Some(value) = after(data, SEND) {
-        let (part, total) = parse_send(value).ok_or(NotOfTheFraming)?;
+        let (part, total) = parse_send(value).ok_or(RefusedOrder::Unworkable)?;
         return Ok(FramedRequest::Send {
             part,
             total,
@@ -94,7 +113,12 @@ pub fn read_request(raw: &str) -> Result<FramedRequest, NotOfTheFraming> {
         });
     }
 
-    Err(NotOfTheFraming)
+    Err(RefusedOrder::Unknown)
+}
+
+/// La credencial de canal que trae la petición cruda, si trae alguna (`read`, líneas 567-582).
+pub fn request_credential(raw: &str) -> Option<String> {
+    split_credential(raw).1
 }
 
 /// Si la credencial negociada exige una y la petición trae otra, o no trae ninguna
@@ -197,6 +221,11 @@ fn after<'a>(data: &'a str, marker: &str) -> Option<&'a str> {
         .map(|position| &data[position + marker.len()..])
 }
 
+/// Una URI `afirma://` que no es otra invocación de `service` (`doCmdPetition`, línea 329).
+fn is_an_operation(uri: &str) -> bool {
+    uri.starts_with(AFIRMA_SCHEME) && !NESTED_SERVICE.iter().any(|nested| uri.starts_with(nested))
+}
+
 fn decode_base64(value: &str) -> Option<String> {
     let bytes = URL_SAFE.decode(value.trim()).ok()?;
     String::from_utf8(bytes).ok()
@@ -233,7 +262,7 @@ fn parse_send(value: &str) -> Option<(usize, usize)> {
     fields.next()?;
     let part = fields.next()?.parse().ok()?;
     let total = fields.next()?.parse().ok()?;
-    Some((part, total))
+    (1..=total).contains(&part).then_some((part, total))
 }
 
 #[cfg(test)]
