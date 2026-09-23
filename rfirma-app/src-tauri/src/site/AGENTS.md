@@ -99,7 +99,7 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `domain/protocol/launch.rs` | La invocación de arranque: verbo, versión de protocolo, ubicación de canal y credencial. Pruebas en `domain/protocol/launch/tests.rs`. |
 | `domain/protocol/message.rs` | Lo que llega por el canal ya abierto y con qué credencial viene. Puro. Pruebas en `domain/protocol/message/tests.rs`. |
 | `domain/protocol/mod.rs` | El reparto, y las cosas en las que rFirma se aparta del original a propósito. Léelo antes que sus hermanos. |
-| `domain/protocol/operation.rs` | Lo que la sede pide por el canal ya abierto: el verbo, el reparto de sus tipos entre los ficheros hermanos y `read_operation`, que los distingue. Pruebas en `domain/protocol/operation/tests.rs`. |
+| `domain/protocol/operation.rs` | Lo que la sede pide por el canal ya abierto: el verbo, el reparto de sus tipos entre los ficheros hermanos y `read_operation`, que los distingue. Pruebas partidas por comportamiento en `domain/protocol/operation/tests/`. |
 | `domain/protocol/operation/batch.rs` | La petición `batch`, local o contra los dos servlets remotos. |
 | `domain/protocol/operation/document.rs` | La lectura del `dat`: descarga, Base64 a la manera del original y `gzip`. |
 | `domain/protocol/operation/guards.rs` | Las guardias de formato y algoritmo que comparten `sign` y `signandsave`. |
@@ -107,6 +107,16 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `domain/protocol/operation/save_load.rs` | Las peticiones `save` y `load`. |
 | `domain/protocol/operation/sign.rs` | Las peticiones `sign`, `cosign` y `countersign`: sus tipos y su lectura. |
 | `domain/protocol/operation/sign_and_save.rs` | La petición `signandsave`: firmar y guardar en un solo trámite. |
+| `domain/protocol/operation/tests.rs` | El índice de las pruebas de `operation`: solo declara sus submódulos. Solo en pruebas. |
+| `domain/protocol/operation/tests/fixtures.rs` | Los ayudantes y dobles de `DataSource` que comparten las pruebas de `operation`. Solo en pruebas. |
+| `domain/protocol/operation/tests/batch.rs` | Las pruebas de la petición `batch`. Solo en pruebas. |
+| `domain/protocol/operation/tests/dispatch.rs` | Las pruebas de `read_operation` en sí: el verbo, el orden de las guardias comunes y el guion de conformidad. Solo en pruebas. |
+| `domain/protocol/operation/tests/document.rs` | Las pruebas de la lectura del `dat`: descarga, Base64 y `gzip`. Solo en pruebas. |
+| `domain/protocol/operation/tests/guards.rs` | Las pruebas de las guardias de formato y algoritmo, y de la factura como caso de multifirma prohibida. Solo en pruebas. |
+| `domain/protocol/operation/tests/properties.rs` | Las pruebas de la lectura de parámetros y del `properties` que manda la sede. Solo en pruebas. |
+| `domain/protocol/operation/tests/save_load.rs` | Las pruebas de las peticiones `save` y `load`. Solo en pruebas. |
+| `domain/protocol/operation/tests/sign.rs` | Las pruebas de `sign`, `cosign` y `countersign`. Solo en pruebas. |
+| `domain/protocol/operation/tests/sign_and_save.rs` | Las pruebas de `signandsave`. Solo en pruebas. |
 | `domain/protocol/parameters.rs` | Lo común a toda operación: las guardias de forma —versión mínima, fichero local, clave de cifrado, identificador de sesión y URL de servlet— y los dos indicadores del certificado pegado. Pruebas en `domain/protocol/parameters/tests.rs`. |
 | `domain/protocol/relay_parameters.rs` | El XML de parámetros que la sede sube al servlet cuando la operación no cabe en la URL; **no** es el documento a firmar. Pruebas en `domain/protocol/relay_parameters/tests.rs`. |
 | `domain/protocol/refusal.rs` | El rechazo del protocolo: el código que sale al cable, el detalle crudo que **no** sale, y cómo lo nombra la ventana. Pruebas en `domain/protocol/refusal/tests.rs`. |
