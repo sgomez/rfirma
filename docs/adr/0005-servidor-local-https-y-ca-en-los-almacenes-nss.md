@@ -415,15 +415,24 @@ loopback», que son remedios opuestos— es de la v0.5.
   nuestro simplemente no lo declara todavía. Lo que sostiene el hito v0.4 no es que el
   flatpak no pueda ser la puerta, sino las otras fichas, que se sostienen solas.
 
-## Enmienda: el canal escucha en `127.0.0.1`, y `::1` queda fuera a propósito
+## Enmienda: el canal escucha en los dos bucles locales, y nunca en la comodín
 
-El certificado se emite con SAN `DNS:localhost` e `IP:127.0.0.1`, y el canal se
-ata a esa misma dirección, nunca a la comodín. `::1` no se sirve: quien conecte
-por el bucle local IPv6 no encuentra nada escuchando.
+El canal se ata al mismo puerto en `127.0.0.1` y en `::1`, nunca a la comodín, y
+el certificado se emite con SAN `DNS:localhost`, `IP:127.0.0.1` e `IP:::1`. Un
+puerto sorteado ocupado en cualquiera de los dos se salta como cualquier otro;
+en un equipo sin IPv6 el canal escucha solo en `127.0.0.1`.
 
-No es un olvido. El cliente oficial tiene cableado `SERVER_HOST = "127.0.0.1"`,
-así que ninguna sede lo necesita, y admitirlo obliga a tocar dos sitios a la
-vez —un segundo `bind` y la SAN del certificado—, con el coste de reinstalación
-de CA que este ADR ya describe. La comprobación de procedencia sí pregunta por
-la propiedad de bucle local de la dirección, no compara cadenas, así que
-aceptaría `::1` sin cambios el día que se sirva.
+Dónde se escucha es red, no protocolo: el cliente publicado llama siempre a
+`127.0.0.1`, pero quien resuelva `localhost` a `::1` también llega. La
+comprobación de procedencia admite cualquier origen de bucle local, todo
+`127.0.0.0/8` y `::1`, y responde `SAF_47` al resto.
+
+Considered Options:
+
+- **Solo `127.0.0.1`.** Se descarta: dejaba sin canal a quien llegara por `::1`,
+  y el argumento que lo sostenía —que servir `::1` obligaba a reinstalar la CA—
+  era falso: las *name constraints* de la CA ya permiten `::1` y el certificado
+  del servidor se emite en memoria en cada arranque.
+- **Todo `127.0.0.0/8`.** Se descarta: un socket en `127.0.0.1` no recibe lo que
+  va a `127.0.0.2`, y recibirlo todo exige la comodín, que abre el puerto a la
+  red; además la CA solo admite `127.0.0.1` exacto.

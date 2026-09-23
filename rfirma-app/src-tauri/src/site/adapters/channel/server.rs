@@ -1,7 +1,7 @@
 //! Servidor WebSocket local sobre TLS para operaciones con la sede (ADR-0005).
 
 use std::collections::VecDeque;
-use std::net::{SocketAddr, TcpListener};
+use std::net::SocketAddr;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
@@ -11,6 +11,7 @@ use tokio_native_tls::native_tls::{Identity, TlsAcceptor as NativeTlsAcceptor};
 use tokio_native_tls::TlsAcceptor;
 use tokio_tungstenite::tungstenite::Message;
 
+use crate::site::adapters::channel::bind::{LoopbackAcceptor, LoopbackListeners};
 use crate::site::adapters::channel::conversation::{another_operation_in_flight, answer, Answer};
 use crate::site::adapters::tls::LocalServerCertificate;
 use crate::site::domain::channel::ChannelDuty;
@@ -24,22 +25,16 @@ pub type SiteOperations = Inbox;
 
 /// Inicia la escucha del canal sobre un listener ya enlazado.
 pub async fn serve(
-    listener: TcpListener,
+    listener: LoopbackListeners,
     certificate: &LocalServerCertificate,
     duty: ChannelDuty,
     operations: SiteOperations,
 ) -> Result<OpenChannel, ChannelError> {
-    let port = listener
-        .local_addr()
-        .map_err(|error| ChannelError::new(Situation::NotListening, error.to_string()))?
-        .port();
+    let not_listening =
+        |error: std::io::Error| ChannelError::new(Situation::NotListening, error.to_string());
+    let port = listener.port().map_err(not_listening)?;
     let acceptor = Arc::new(acceptor_for(certificate)?);
-
-    listener
-        .set_nonblocking(true)
-        .map_err(|error| ChannelError::new(Situation::NotListening, error.to_string()))?;
-    let listener = tokio::net::TcpListener::from_std(listener)
-        .map_err(|error| ChannelError::new(Situation::NotListening, error.to_string()))?;
+    let listener = listener.into_async().map_err(not_listening)?;
 
     let (stop, stopped) = oneshot::channel();
     tokio::spawn(accept_until_stopped(
@@ -87,7 +82,7 @@ pub(crate) fn acceptor_for(
 }
 
 async fn accept_until_stopped(
-    listener: tokio::net::TcpListener,
+    listener: LoopbackAcceptor,
     acceptor: Arc<TlsAcceptor>,
     duty: ChannelDuty,
     operations: SiteOperations,

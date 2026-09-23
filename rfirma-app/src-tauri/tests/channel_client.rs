@@ -20,7 +20,7 @@ use rfirma_lib::site::domain::protocol::{
 use rfirma_lib::site::ports::ReplyHandle;
 use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 use tokio_tungstenite::tungstenite::Message;
-use tokio_tungstenite::Connector;
+use tokio_tungstenite::{Connector, MaybeTlsStream};
 
 /// La credencial que la sede sortea: veinte alfanuméricos.
 const CREDENTIAL: &str = "8jAkPZfRw2mQxN4TbYuL";
@@ -48,7 +48,7 @@ impl AChannel {
         let listener = std::net::TcpListener::bind("127.0.0.1:0")
             .expect("el sistema deberia dar un puerto efimero");
 
-        let channel = serve(listener, &certificate, duty, operations)
+        let channel = serve(listener.into(), &certificate, duty, operations)
             .await
             .expect("el canal deberia levantarse");
 
@@ -114,6 +114,40 @@ impl ChannelClient {
             Ok((socket, _)) => Ok(Self { socket }),
             Err(error) => Err(error.to_string()),
         }
+    }
+
+    /// Contra una dirección concreta, verificándola en la SAN como IP y no como nombre.
+    async fn try_connect_to_the_address(
+        address: &str,
+        port: u16,
+        ca_pem: &[u8],
+    ) -> Result<Self, String> {
+        let mut builder = TlsConnector::builder();
+        builder.add_root_certificate(
+            Certificate::from_pem(ca_pem).expect("la CA local deberia leerse"),
+        );
+        let connector = tokio_native_tls::TlsConnector::from(
+            builder.build().expect("el conector deberia construirse"),
+        );
+        let tcp = tokio::net::TcpStream::connect((address, port))
+            .await
+            .map_err(|error| error.to_string())?;
+        let tls = connector
+            .connect(address, tcp)
+            .await
+            .map_err(|error| error.to_string())?;
+        let host = if address.contains(':') {
+            format!("[{address}]")
+        } else {
+            address.to_owned()
+        };
+        let request = format!("wss://{host}:{port}/")
+            .into_client_request()
+            .expect("la URL del canal deberia ser una peticion");
+        let (socket, _) = tokio_tungstenite::client_async(request, MaybeTlsStream::NativeTls(tls))
+            .await
+            .map_err(|error| error.to_string())?;
+        Ok(Self { socket })
     }
 
     async fn connect(port: u16, ca_pem: Option<&[u8]>) -> Self {
@@ -276,6 +310,44 @@ async fn the_channel_ends_up_on_one_of_the_ports_the_site_drew() {
     )
     .await;
     assert_eq!(client.echo(CREDENTIAL).await, Some("OK".to_owned()));
+}
+
+#[tokio::test]
+async fn the_channel_answers_on_both_loopbacks() {
+    if std::net::TcpListener::bind("[::1]:0").is_err() {
+        return;
+    }
+    let ca = LocalCa::generate().expect("la CA local deberia generarse");
+    let certificate =
+        LocalServerCertificate::issued_by(&ca).expect("el certificado deberia emitirse");
+    let port = {
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").expect("puerto efimero");
+        listener.local_addr().expect("atado").port()
+    };
+    let listener = bind_first_free(&ChannelLocation::Drawn(vec![port])).expect("estaba libre");
+    let channel = serve(
+        listener,
+        &certificate,
+        ChannelDuty::Serve(NegotiatedCredential::Required(
+            ChannelCredential::parse(CREDENTIAL).expect("credencial"),
+        )),
+        no_operations(),
+    )
+    .await
+    .expect("el canal deberia levantarse");
+    let ca_pem = ca.certificate_pem().expect("la CA local en PEM");
+
+    for address in ["127.0.0.1", "::1"] {
+        let mut client =
+            ChannelClient::try_connect_to_the_address(address, channel.port(), &ca_pem)
+                .await
+                .unwrap_or_else(|error| panic!("por {address} deberia conectar: {error}"));
+        assert_eq!(
+            client.echo(CREDENTIAL).await,
+            Some("OK".to_owned()),
+            "por {address}"
+        );
+    }
 }
 
 #[tokio::test]

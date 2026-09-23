@@ -24,7 +24,9 @@ pub use rfirma_lib::signing::application::session::sign_on_token;
 pub use rfirma_lib::signing::ports::{
     ProtectedSecret, SecretPromptError, SecretPromptRequest, SecretPrompter,
 };
-pub use rfirma_lib::site::adapters::channel::{bind_first_free, serve, SiteOperations};
+pub use rfirma_lib::site::adapters::channel::{
+    bind_first_free, serve, LoopbackListeners, SiteOperations,
+};
 pub use rfirma_lib::site::adapters::data_download::HttpDataSource;
 pub use rfirma_lib::site::adapters::desk::Neighbours;
 pub use rfirma_lib::site::adapters::relay::Relay;
@@ -542,7 +544,7 @@ pub async fn the_channel_at(
 
 /// Ata la ubicación esperando a que se libere: el puerto fijo del protocolo 3 es el mismo en cada
 /// invocación del guion, y la anterior tarda en soltarlo.
-pub async fn bound_once_free(location: &ChannelLocation) -> TcpListener {
+pub async fn bound_once_free(location: &ChannelLocation) -> LoopbackListeners {
     let mut refusal = String::new();
     for _ in 0..PORT_ATTEMPTS {
         match bind_first_free(location) {
