@@ -77,13 +77,7 @@ impl SiteWindow for World {
             SiteWindowContent::TheErrand(errand) => {
                 format!("ventana:creada:{:?}", errand.arrival())
             }
-            SiteWindowContent::ADeadEnd(DeadEnd::ChannelNotOpened) => {
-                "ventana:sin-puertos".to_owned()
-            }
-            SiteWindowContent::ADeadEnd(DeadEnd::NoLocalCa) => "ventana:sin-ca".to_owned(),
-            SiteWindowContent::ADeadEnd(DeadEnd::RefusedWithoutChannel(refusal)) => {
-                format!("ventana:rechazo:{}", refusal.code())
-            }
+            SiteWindowContent::ADeadEnd(dead_end) => note_of(&dead_end),
             SiteWindowContent::TheOldWebClientWarning => "ventana:aviso".to_owned(),
         });
     }
@@ -103,6 +97,14 @@ impl SiteWindow for World {
     fn errand_ended(&self, delivered: Acknowledgement) {
         delivered.wait(Duration::from_secs(1));
         self.note("ventana:trámite-terminado");
+    }
+}
+
+fn note_of(dead_end: &DeadEnd) -> String {
+    match dead_end {
+        DeadEnd::ChannelNotOpened => "ventana:sin-puertos".to_owned(),
+        DeadEnd::NoLocalCa => "ventana:sin-ca".to_owned(),
+        DeadEnd::RefusedWithoutChannel(refusal) => format!("ventana:rechazo:{}", refusal.code()),
     }
 }
 
