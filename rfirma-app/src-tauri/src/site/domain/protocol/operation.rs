@@ -11,8 +11,8 @@ use super::filters::{site_filter, SiteFilter};
 use super::format::{format_of, RequestedFormat, XadesEnvelope};
 use super::key_store::refuse_a_key_store_rfirma_does_not_open;
 use super::parameters::{
-    check_local_access_is_not_requested, check_minimum_client_version, check_servlet_url,
-    sticky_certificate, StickyCertificate,
+    check_common_parameters, check_minimum_client_version, check_operation_identifier,
+    check_servlet_url, sticky_certificate, StickyCertificate,
 };
 use super::refusal::{Refusal, RefusalSituation};
 use super::url::{decode_protocol_base64, AfirmaUrl};
@@ -604,10 +604,8 @@ impl BatchRequest {
 
 /// Lee la operación que llegó por el canal, o por qué se rechaza.
 pub fn read_operation(url: &AfirmaUrl, data: &dyn DataSource) -> Result<SiteOperation, Refusal> {
+    check_the_parameters_the_original_parses(url)?;
     check_minimum_client_version(url.parameter("mcv"))?;
-    if let Some(data) = url.parameter("dat") {
-        check_local_access_is_not_requested(data)?;
-    }
 
     let asked = match verb_of(url).as_str() {
         SELECT_CERTIFICATE => {
@@ -639,6 +637,18 @@ pub fn read_operation(url: &AfirmaUrl, data: &dyn DataSource) -> Result<SiteOper
         refuse_a_key_store_rfirma_does_not_open(url)?;
     }
     Ok(asked)
+}
+
+/// Las guardias comunes, solo en los verbos cuya URL analiza el original; el resto sale con `SAF_04` sin mirarla.
+fn check_the_parameters_the_original_parses(url: &AfirmaUrl) -> Result<(), Refusal> {
+    match url.verb() {
+        LOAD => check_common_parameters(url),
+        SIGN | COSIGN | COUNTERSIGN | SIGN_AND_SAVE | SELECT_CERTIFICATE | SAVE | BATCH => {
+            check_common_parameters(url)?;
+            check_operation_identifier(url)
+        }
+        _ => Ok(()),
+    }
 }
 
 /// La petición de firma, con las cuatro comprobaciones de

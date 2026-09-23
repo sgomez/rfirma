@@ -5,7 +5,7 @@ use crate::site::domain::channel::ChannelLocation;
 use super::cipher::CipherKey;
 use super::codes::{Parameter, SafCode};
 use super::parameters::{
-    check_minimum_protocol_version, check_servlet_url, checked_identifier,
+    check_minimum_protocol_version, check_servlet_url, checked_identifier, cipher_key_of,
     minimum_protocol_version, reads_as_true,
 };
 use super::refusal::{Refusal, RefusalSituation};
@@ -191,11 +191,7 @@ impl LaunchRequest {
         check_minimum_protocol_version(version)?;
         let request = relay_request_of(url)?;
 
-        let key = match url.parameter("key").filter(|value| !value.is_empty()) {
-            Some(value) => CipherKey::from_url_parameter(value)
-                .map_err(|error| Refusal::about(Parameter::CipherKey, error.detail().to_owned()))?,
-            None => None,
-        };
+        let key = cipher_key_of(url)?;
 
         Ok(Self {
             version,

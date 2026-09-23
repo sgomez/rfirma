@@ -1,5 +1,6 @@
 //! Lo común a toda operación: las guardias de forma y los dos indicadores del certificado pegado.
 
+use super::cipher::CipherKey;
 use super::codes::{Parameter, SafCode};
 use super::launch::PROTOCOL_VERSION;
 use super::refusal::{Refusal, RefusalSituation};
@@ -73,6 +74,42 @@ pub fn checked_identifier(value: String, blame: Parameter) -> Result<String, Ref
     }
 
     Ok(value)
+}
+
+/// Las guardias de `UrlParameters.setCommonParameters` (1.9.2): la clave, y el `dat` local o el `fileid` sin un `rtservlet` válido.
+pub fn check_common_parameters(url: &AfirmaUrl) -> Result<(), Refusal> {
+    cipher_key_of(url)?;
+    match url.parameter("dat") {
+        Some(data) => check_local_access_is_not_requested(data),
+        None if url.parameter("fileid").is_some() => check_retrieve_servlet(url),
+        None => Ok(()),
+    }
+}
+
+fn check_retrieve_servlet(url: &AfirmaUrl) -> Result<(), Refusal> {
+    let servlet = url.parameter("rtservlet").ok_or_else(|| {
+        Refusal::about(
+            Parameter::RetrieveServlet,
+            "la operacion trae 'fileid' pero no 'rtservlet', y sin el no se recupera nada",
+        )
+    })?;
+    check_servlet_url(servlet, Parameter::RetrieveServlet)
+}
+
+/// La clave de cifrado de `key`, nada si no vino o vino vacía, o el `SAF_03` si no mide ocho.
+pub fn cipher_key_of(url: &AfirmaUrl) -> Result<Option<CipherKey>, Refusal> {
+    CipherKey::from_url_parameter(url.parameter("key").unwrap_or_default())
+        .map_err(|error| Refusal::about(Parameter::CipherKey, error.detail().to_owned()))
+}
+
+/// El identificador de la operación, `id` o, si no viene, `fileid`, que el original usa como nombre de fichero.
+pub fn check_operation_identifier(url: &AfirmaUrl) -> Result<(), Refusal> {
+    let (value, blame) = match (url.parameter("id"), url.parameter("fileid")) {
+        (Some(id), _) => (id, Parameter::Identifier),
+        (None, Some(fileid)) => (fileid, Parameter::FileId),
+        (None, None) => return Ok(()),
+    };
+    checked_identifier(value.to_owned(), blame).map(drop)
 }
 
 /// Comprueba una URL de servlet como `UrlParameters.validateURL`: `http` o `https`, host no
