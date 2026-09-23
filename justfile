@@ -458,7 +458,7 @@ mutants:
     diff="$(mktemp)"
     trap 'rm -f "$diff"' EXIT
     git diff --relative "$tag" -- . > "$diff"
-    cargo mutants --in-diff "$diff" \
+    cargo mutants --in-place --in-diff "$diff" \
         --exclude 'adapters/tauri.rs' --exclude 'main.rs' --exclude '{{ ffi_allow }}'
 
 # Instala, prueba y construye la landing de rfirma.sgomez.me.

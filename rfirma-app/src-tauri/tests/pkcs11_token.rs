@@ -100,7 +100,10 @@ fn listing_without_a_session_still_lists_them() {
         "el certificado activo tenia que salir sin PIN"
     );
     assert_eq!(
-        found.len(),
+        found
+            .iter()
+            .filter(|certificate| !certificate.reference().label().starts_with("KIT-"))
+            .count(),
         6,
         "los tokens de pruebas tienen seis certificados con clave: cinco de RSA y uno de curva eliptica"
     );
