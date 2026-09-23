@@ -56,7 +56,7 @@ impl SiteErrandView {
             stage: SiteStageView::Outcome {
                 outcome: SiteOutcomeView::Refused {
                     situation: refusal.situation().into(),
-                    detail: refusal.detail().to_owned(),
+                    detail: format!("{}: {}", refusal.code(), refusal.detail()),
                 },
             },
         }

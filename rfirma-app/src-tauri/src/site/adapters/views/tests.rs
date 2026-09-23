@@ -59,7 +59,7 @@ fn saving_and_loading_cross_with_the_name_and_never_a_path() {
 }
 
 #[test]
-fn a_refusal_without_a_channel_crosses_with_its_situation_and_its_detail() {
+fn a_refusal_without_a_channel_crosses_with_its_situation_and_its_detail_led_by_its_code() {
     let refusal = crate::site::domain::protocol::Refusal::new(
         crate::site::domain::protocol::SafCode::UnsupportedProcedure,
         "la sede declara la version de protocolo 3",
@@ -75,7 +75,7 @@ fn a_refusal_without_a_channel_crosses_with_its_situation_and_its_detail() {
                 "outcome": {
                     "kind": "refused",
                     "situation": "unsupportedProtocolVersion",
-                    "detail": "la sede declara la version de protocolo 3",
+                    "detail": "SAF_21: la sede declara la version de protocolo 3",
                 },
             },
         })
