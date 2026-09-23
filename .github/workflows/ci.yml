@@ -264,7 +264,7 @@ jobs:
 
       # EL BANCO DE CONFORMIDAD (TD-55): `autoscript.js` del tag v1.9.2, el
       # mismo fichero que sirve una sede de verdad, para que hable con nuestro
-      # canal bajo Node en tests/conformance_bench.rs.
+      # canal bajo Node en tests/conformance_*.rs.
       #
       # Es una DESCARGA DE PREPARACION, NO UNA PRUEBA DE RED (ID-312): pasa una
       # vez, la cache la guarda por su sha256 y a partir de ahi el banco es
@@ -277,7 +277,7 @@ jobs:
       # AQUI NO HAY `continue-on-error`: si esto falla, el banco falta, y un
       # banco que se salta en silencio es decoracion. `just autoscript` sale con
       # 1 tanto si la descarga falla como si el sha no cuadra, y ademas
-      # tests/conformance_bench.rs comprueba la variable CI y falla en vez de
+      # tests/conformance_*.rs comprueban la variable CI y falla en vez de
       # saltarse. Solo en local se salta.
       - name: Cache del banco de conformidad
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0

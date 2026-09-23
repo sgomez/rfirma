@@ -4,7 +4,6 @@ rfirma-app/src-tauri/src/site/application/errand/state.rs 546
 rfirma-app/src-tauri/src/site/application/errand/tests.rs 5290
 rfirma-app/src-tauri/src/site/domain/protocol/operation.rs 1322
 rfirma-app/src-tauri/src/site/domain/protocol/operation/tests.rs 2167
-rfirma-app/src-tauri/tests/conformance_bench.rs 2544
 rfirma-app/src-tauri/tests/module_directions.rs 651
 rfirma-app/src-tauri/tests/native_cycle.rs 1416
 rfirma-app/src-tauri/tests/pkcs11_token.rs 616
