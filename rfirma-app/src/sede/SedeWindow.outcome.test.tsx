@@ -116,6 +116,24 @@ describe("4 · outcome", () => {
     ).toBeInTheDocument();
   });
 
+  it("says another application holds the ports instead of blaming the browser", () => {
+    const { port } = scriptedErrand({
+      kind: "outcome",
+      outcome: {
+        kind: "refused",
+        situation: "portsTaken",
+        detail: "63131: Address already in use (os error 98)",
+      },
+    });
+    renderWithCatalog(<SedeWindow errands={port} />);
+
+    expect(
+      screen.getByText(/ofrece unos puertos que otra aplicación ya está usando/),
+    ).toBeInTheDocument();
+    expect(screen.getByText("63131: Address already in use (os error 98)")).toBeInTheDocument();
+    expect(screen.queryByText("La petición no ha llegado")).not.toBeInTheDocument();
+  });
+
   it("adds nothing to a cancellation: the title already says it", () => {
     const { port } = scriptedErrand({
       kind: "outcome",

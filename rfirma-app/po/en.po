@@ -1500,6 +1500,9 @@ msgstr ""
 "{{origin}} asks for a signature with another errand open, and rFirma handles "
 "one at a time."
 
+msgid "sede.refusals.portsTaken"
+msgstr "{{origin}} offers ports that another application is already using, so rFirma could not open the channel to answer it. Close that application — it may be AutoFirma or another copy of rFirma — and try again from the page."
+
 msgid "sede.refusals.unknown"
 msgstr "{{origin}} sent something rFirma can't handle."
 

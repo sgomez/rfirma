@@ -1400,6 +1400,9 @@ msgstr ""
 msgid "sede.refusals.errandInFlight"
 msgstr ""
 
+msgid "sede.refusals.portsTaken"
+msgstr ""
+
 msgid "sede.refusals.unknown"
 msgstr ""
 

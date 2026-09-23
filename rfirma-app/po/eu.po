@@ -1536,6 +1536,9 @@ msgstr ""
 "{{origin}}(e)k sinadura bat eskatzen du beste izapide bat irekita dagoela, "
 "eta rFirmak banaka artatzen ditu."
 
+msgid "sede.refusals.portsTaken"
+msgstr "{{origin}}(e)k eskaintzen dituen atakak beste aplikazio bat erabiltzen ari da, eta rFirmak ezin izan du erantzuteko kanala ireki. Itxi aplikazio hori (AutoFirma edo rFirmaren beste kopia bat izan daiteke) eta saiatu berriro orritik."
+
 msgid "sede.refusals.unknown"
 msgstr "{{origin}}(e)k rFirmak artatu ezin duen zerbait bidali du."
 

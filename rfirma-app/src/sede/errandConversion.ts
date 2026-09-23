@@ -23,6 +23,7 @@ const REFUSALS: Record<keyof Catalog["sede"]["refusals"], true> = {
   missingFormat: true,
   unsupportedKeyStore: true,
   errandInFlight: true,
+  portsTaken: true,
   saveCancelled: true,
   loadCancelled: true,
   cannotSaveData: true,

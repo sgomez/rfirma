@@ -1520,6 +1520,9 @@ msgstr ""
 "{{origin}} pide una firma con otro trámite abierto, y rFirma atiende uno "
 "cada vez."
 
+msgid "sede.refusals.portsTaken"
+msgstr "{{origin}} ofrece unos puertos que otra aplicación ya está usando, así que rFirma no ha podido abrir el canal para contestarla. Cierra esa aplicación —puede ser AutoFirma u otra copia de rFirma— y vuelve a intentarlo desde la página."
+
 msgid "sede.refusals.unknown"
 msgstr "{{origin}} ha enviado algo que rFirma no puede atender."
 

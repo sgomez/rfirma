@@ -243,6 +243,8 @@ function RefusalSentence({
       return <>{t("sede.refusals.unsupportedKeyStore", subject)}</>;
     case "errandInFlight":
       return <>{t("sede.refusals.errandInFlight", subject)}</>;
+    case "portsTaken":
+      return <>{t("sede.refusals.portsTaken", subject)}</>;
     case "saveCancelled":
       return <>{t("sede.refusals.saveCancelled", subject)}</>;
     case "loadCancelled":
