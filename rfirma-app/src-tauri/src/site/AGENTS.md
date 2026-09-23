@@ -41,12 +41,14 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `adapters/views.rs` | Los tipos que cruzan a la ventana de sede y su única conversión. Pruebas en `adapters/views/tests.rs`. |
 | `adapters/window.rs` | El adaptador de la ventana de sede: la crea, la enseña, la oculta o la cierra, le publica lo que va pasando y decide qué hace su cierre por el gestor de ventanas con el trámite vivo (ADR-0024). |
 | `application/batch.rs` | El lote remoto ya consentido: prefirma, `PK1` con el token y postfirma. No decide el consentimiento. Pruebas en `application/batch/tests.rs`. |
-| `application/errand/desk.rs` | La mesa del trámite (`ErrandDesk`) y los consentimientos que se deciden sobre ella. |
+| `application/errand/desk.rs` | La mesa del trámite (`ErrandDesk`), `attend_operation` y el consentimiento de firma, guardado y carga. |
+| `application/errand/desk/certificates.rs` | El consentimiento de selección de certificados: sede, lote remoto y lote local. |
 | `application/errand/mod.rs` | Los verbos, y el reparto. **Léelo antes que sus hermanos**: es lo único que una orden llama. Pruebas en `application/errand/tests/`. |
 | `application/errand/outcome.rs` | El vocabulario de salida del trámite, y el puerto `ProtocolCodec`, que lo lee y lo escribe en el cable. |
 | `application/errand/replies.rs` | Las respuestas finales, y **el único sitio que escribe en el cable**. |
 | `application/errand/request.rs` | `SiteRequest`: lo que la sede quiere, sin versión. |
 | `application/errand/state.rs` | El estado del trámite, con un solo dueño (`LiveErrand`). Pruebas en `application/errand/state/tests.rs`. |
+| `application/errand/state/revelation.rs` | La revelación de la ventana por temporizador de respaldo o por llegada del navegador. |
 | `application/errand/tests/mod.rs` | El reparto de las pruebas del trámite por comportamiento. Solo en pruebas. |
 | `application/errand/tests/support.rs` | Los dobles del trámite en grada A: motor, transporte, códec, token, vecinos y mesa de pruebas. Solo en pruebas. |
 | `application/errand/tests/support_requests.rs` | Los constructores de peticiones y consentimientos que usan esas pruebas. Solo en pruebas. |
