@@ -317,17 +317,22 @@ impl PublishedClient {
     /// Siguiente evento emitido por el cliente publicado, saltandose las observaciones de la suite.
     pub fn next_event(&self) -> Event {
         loop {
-            let event = match self.events.recv_timeout(PATIENCE) {
-                Ok(event) => event,
-                Err(RecvTimeoutError::Timeout) => {
-                    panic!("el cliente publicado no dijo nada en {PATIENCE:?}")
-                }
-                Err(RecvTimeoutError::Disconnected) => {
-                    panic!("el conductor murio sin dar un veredicto")
-                }
-            };
+            let event = self.next_event_or_condition();
             if event.name() != "condition" {
                 return event;
+            }
+        }
+    }
+
+    /// El siguiente evento, también si es una condición que midió la sede.
+    pub fn next_event_or_condition(&self) -> Event {
+        match self.events.recv_timeout(PATIENCE) {
+            Ok(event) => event,
+            Err(RecvTimeoutError::Timeout) => {
+                panic!("el cliente publicado no dijo nada en {PATIENCE:?}")
+            }
+            Err(RecvTimeoutError::Disconnected) => {
+                panic!("el conductor murio sin dar un veredicto")
             }
         }
     }
