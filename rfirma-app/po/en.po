@@ -1471,7 +1471,7 @@ msgid "sede.oldWebClient.title"
 msgstr "This page is out of date"
 
 msgid "sede.oldWebClient.body"
-msgstr "The page uses an old version of the part that talks to rFirma, and it may have bugs or not be secure. You can carry on; if something goes wrong, tell whoever runs the page."
+msgstr "The page uses an old version of the part that talks to rFirma, and it may have bugs or not be secure. Press Got it to continue; if something goes wrong, tell whoever runs the page."
 
 msgid "sede.oldWebClient.dismiss"
 msgstr "Got it"

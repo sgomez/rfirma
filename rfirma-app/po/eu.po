@@ -1504,7 +1504,7 @@ msgid "sede.oldWebClient.title"
 msgstr "Orri hau zaharkituta dago"
 
 msgid "sede.oldWebClient.body"
-msgstr "Orriak rFirmarekin hitz egiten duen piezaren bertsio zahar bat erabiltzen du, eta akatsak izan ditzake edo baliteke segurua ez izatea. Izapidearekin jarrai dezakezu; zerbait gaizki badoa, jakinarazi orria kudeatzen duenari."
+msgstr "Orriak rFirmarekin hitz egiten duen piezaren bertsio zahar bat erabiltzen du, eta akatsak izan ditzake edo baliteke segurua ez izatea. Sakatu Ulertuta jarraitzeko; zerbait gaizki badoa, jakinarazi orria kudeatzen duenari."
 
 msgid "sede.oldWebClient.dismiss"
 msgstr "Ulertuta"

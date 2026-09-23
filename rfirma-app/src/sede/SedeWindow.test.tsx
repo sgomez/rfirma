@@ -83,12 +83,12 @@ describe("SedeWindow", () => {
   });
 
   describe("the old web client warning", () => {
-    it("says the page is out of date and that the signature can go on", () => {
+    it("says the page is out of date and that Got it lets it continue", () => {
       const { port } = scriptedErrand({ kind: "oldWebClient" });
       renderWithCatalog(<SedeWindow errands={port} />);
 
       expect(screen.getByText("Esta página está desactualizada")).toBeInTheDocument();
-      expect(screen.getByText(/puedes seguir/i)).toBeInTheDocument();
+      expect(screen.getByText(/pulsa entendido para continuar/i)).toBeInTheDocument();
     });
 
     it("is dismissed with its only button, without cancelling or closing the errand", () => {

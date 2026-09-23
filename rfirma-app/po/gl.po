@@ -1473,7 +1473,7 @@ msgid "sede.oldWebClient.title"
 msgstr "Esta páxina está desactualizada"
 
 msgid "sede.oldWebClient.body"
-msgstr "A páxina usa unha versión antiga da peza que fala con rFirma, e pode ter erros ou non ser segura. Podes seguir co trámite; se algo falla, avisa a quen mantén a páxina."
+msgstr "A páxina usa unha versión antiga da peza que fala con rFirma, e pode ter erros ou non ser segura. Preme Entendido para continuar; se algo falla, avisa a quen mantén a páxina."
 
 msgid "sede.oldWebClient.dismiss"
 msgstr "Entendido"
