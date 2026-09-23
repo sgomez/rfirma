@@ -16,11 +16,10 @@ o el consentimiento de rFirma. La cola los agrupa en su tramo.
   corre sin nadie delante.
 - Las comprobaciones cuyo objeto es el PIN o elegir entre varios certificados corren con el almacén
   `token`.
-- Un rechazo que AutoFirma enseña en un diálogo de error antes de contestar —los de parámetros, y
-  los de guardar, cargar, seleccionar y lote— no llega a la sede hasta que alguien lo cierra: esas
-  comprobaciones van en el tramo `clic`. Solo `local_access_blocked` se lanza con el perfil
-  `headless` (`-Des.gob.afirma.protocolinvocation.HeadLess=true`), que quita esos diálogos sin
-  cambiar lo que envía la sede.
+- Un rechazo que el cliente enseña en una ventana antes de contestar —los de parámetros, incluido
+  el acceso local de `local_access_blocked`, y los de guardar, cargar, seleccionar y lote— no llega
+  a la sede hasta que alguien la cierra: esas comprobaciones van en el tramo `clic`, sin excepción.
+  La suite lanza los dos clientes con las mismas opciones.
 
 ## Considered Options
 
@@ -36,5 +35,10 @@ o el consentimiento de rFirma. La cola los agrupa en su tramo.
   testigo si los clics agrupados siguen pesando.
 - **Lanzar AutoFirma siempre con `HeadLess=true`.** Descartada: cambia el comportamiento de un
   solo cliente, y esconde el diálogo que mide `a_parameter_rejection_is_shown_before_it_is_answered`.
+- **Un perfil de lanzamiento `headless` por comprobación**, que añadía
+  `-Des.gob.afirma.protocolinvocation.HeadLess=true` solo a las que lo declaraban, para que el
+  rechazo del acceso local corriera sin nadie delante. Descartada: rFirma también enseña ese
+  rechazo en su ventana y no lee la opción, así que la comprobación seguía necesitando un clic; y
+  un perfil que solo afecta a un cliente mide cosas distintas en cada uno.
 - **El certificado recordado con `sticky`.** Descartada: `sticky` es objeto de sus propias
   comprobaciones, y en rFirma solo preselecciona (ADR-0010).

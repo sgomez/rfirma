@@ -731,7 +731,6 @@ assistance = "none"
     fn a_probe(witness: &Arc<FakeWitness>, runner: &Arc<RecordedRunner>) -> Probe {
         Probe {
             client: PathBuf::from("/nowhere/launch-subject"),
-            launch: crate::client::Launch::Plain,
             trust_root: PathBuf::from("/nowhere/root.pem"),
             report: tempfile::tempdir().unwrap().keep(),
             patience: Duration::from_secs(1),

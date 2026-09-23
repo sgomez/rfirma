@@ -29,7 +29,6 @@ use std::time::Duration;
 /// donde se transcribe y quien corre los trámites.
 struct Probe {
     client: PathBuf,
-    launch: client::Launch,
     trust_root: PathBuf,
     report: PathBuf,
     patience: Duration,

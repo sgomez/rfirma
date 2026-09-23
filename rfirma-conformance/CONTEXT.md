@@ -34,7 +34,7 @@ _Avoid_: conductor, driver, cliente publicado, sonda
 **Trámite**:
 Una ejecución de un guion de la sede contra el cliente y lo que se observó en ella. Varias
 comprobaciones pueden juzgar el mismo trámite: se guarda en el informe con su **clave** —modo,
-guion, almacén, arnés y perfil de lanzamiento— y las tandas no lo relanzan. Repetir a mano una
+guion, almacén y arnés— y las tandas no lo relanzan. Repetir a mano una
 comprobación ya resuelta sí lanza el cliente, y el trámite nuevo sustituye al guardado. El de una comprobación con persona no tiene clave, porque lo
 que viaja depende de lo que ella haga en el diálogo.
 _Avoid_: errand (en la interfaz), ejecución, corrida
@@ -98,12 +98,6 @@ Dónde encuentra el cliente sus certificados en un trámite. Es una lista cerrad
 Es condición de lanzamiento: la suite prepara un perfil aislado por almacén, igual para cualquier
 cliente.
 _Avoid_: keystore, perfil (para el almacén)
-
-**Perfil de lanzamiento**:
-Las opciones con las que la suite lanza el cliente en una comprobación, que declara el catálogo:
-`plain`, el de omisión, o `headless`, que le quita a AutoFirma sus diálogos de error. Solo lo usa
-`local_access_blocked`; rFirma no lo lee.
-_Avoid_: modo (es de la sede), almacén
 
 **Conjunto**:
 Las comprobaciones que miden decisiones del mismo componente del protocolo: un canal, el

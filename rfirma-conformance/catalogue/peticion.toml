@@ -47,9 +47,10 @@ statement = """
 Si rtservlet apunta a localhost o 127.0.0.1, se rechaza con SAF_13.
 """
 drive = { mode = "v4", script = "protocol-v4-local-access" }
-assistance = "none"
-launch = "headless"
+assistance = "click"
+patience_secs = 600
 condition = "local-rtservlet-saf-13"
+warning = "AutoFirma enseña un diálogo de error antes de contestar el rechazo: ciérralo según aparezca."
 
 [[check]]
 id = "a_non_alphanumeric_identifier_is_refused_with_saf_03"

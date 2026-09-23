@@ -709,7 +709,7 @@ export const WEBSOCKET_SCRIPTS = {
     theProbesOverTheFourthProtocol(
       [54451, 54452, 54453],
       [THE_LOCAL_RTSERVLET_PROBE],
-      THE_OPERATION_ANSWER_DEADLINE_MS,
+      THE_DIALOGUE_PATIENCE_MS,
     ),
     theConditionsOf([THE_LOCAL_RTSERVLET_PROBE]),
   ),
