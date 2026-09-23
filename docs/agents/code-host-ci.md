@@ -89,7 +89,7 @@ FNMT test key, so what it proves is the **contract** — a PKCS#1 over the DER
 bytes of the presign — not the card path.
 
 The same lane also runs **the real card path**:
-`rfirma-app/src-tauri/tests/native_cycle.rs` drives the
+`rfirma-app/src-tauri/tests/native_cycle*.rs` drives the
 whole triphase cycle with phase 2 on the **SoftHSM token**, over the four
 visible-signature cases (no text and no rubric, text only, rubric only, both)
 plus a cosignature, with `pdfsig` on every PDF it produces. The rubric is

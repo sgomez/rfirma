@@ -137,7 +137,9 @@ echo "          $(sha256sum "$LIB_BUNDLE/librfirma_crypto.so" | cut -c1-16)... \
 (
     cd "$RAIZ/rfirma-app/src-tauri" \
         && RFIRMA_LIB_DIR="$LIB_BUNDLE" \
-           cargo test --all-features --test native_cycle -- \
+           cargo test --all-features \
+           --test native_cycle --test native_cycle_cades --test native_cycle_xades \
+           --test native_cycle_visual --test native_cycle_seal -- \
            --include-ignored full_cycle::
 ) || { echo "FALLO el ciclo contra la libreria del bundle"; exit 1; }
 echo "OK  ciclo trifasico y pdfsig contra los bytes que se distribuyen"
