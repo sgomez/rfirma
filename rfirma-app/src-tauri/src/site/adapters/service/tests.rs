@@ -329,3 +329,77 @@ async fn the_firm_response_carries_an_acknowledgement_fulfilled_once_the_write_i
         "el acuse deberia cumplirse en cuanto quien escribe en el socket lo confirma"
     );
 }
+
+const A_SAVE: &str = "afirma://save?op=save&filename=reto.bin&dat=cmV0bw";
+
+#[tokio::test]
+async fn a_save_command_answers_save_ok_and_not_the_number_of_parts() {
+    let response = respond(
+        &a_command(A_SAVE),
+        true,
+        &serving(),
+        &answering_with("SAVE_OK"),
+        &no_state(),
+    )
+    .await;
+
+    assert_eq!(body_of(&response.0), "SAVE_OK");
+}
+
+#[tokio::test]
+async fn a_save_sent_in_fragments_answers_save_ok_to_firm() {
+    let state = no_state();
+    let first = URL_SAFE.encode("afirma://save?op=save&");
+    let second = URL_SAFE.encode("filename=reto.bin&dat=cmV0bw");
+    for fragment in [
+        format!("fragment=@1@2@{first}idsession={CREDENTIAL}@EOF"),
+        format!("fragment=@2@2@{second}idsession={CREDENTIAL}@EOF"),
+    ] {
+        respond(
+            &fragment,
+            true,
+            &serving(),
+            &answering_with("SAVE_OK"),
+            &state,
+        )
+        .await;
+    }
+
+    let response = respond(
+        &format!("firm=idsession={CREDENTIAL}@EOF"),
+        true,
+        &serving(),
+        &answering_with("SAVE_OK"),
+        &state,
+    )
+    .await;
+
+    assert_eq!(body_of(&response.0), "SAVE_OK");
+}
+
+#[tokio::test]
+async fn a_cancelled_save_answers_cancel() {
+    let response = respond(
+        &a_command(A_SAVE),
+        true,
+        &serving(),
+        &answering_with("CANCEL"),
+        &no_state(),
+    )
+    .await;
+
+    assert_eq!(body_of(&response.0), "CANCEL");
+}
+
+#[tokio::test]
+async fn a_save_leaves_no_parts_for_the_next_operation() {
+    let state = no_state();
+    let launches = Arc::new(Mutex::new(0));
+    let inbox = counting_answers_with("SAVE_OK", &launches);
+
+    respond(&a_command(A_SAVE), true, &serving(), &inbox, &state).await;
+    let second = respond(&a_command(A_SAVE), true, &serving(), &inbox, &state).await;
+
+    assert_eq!(body_of(&second.0), "SAVE_OK");
+    assert_eq!(*launches.lock().expect("el contador no esta envenenado"), 2);
+}

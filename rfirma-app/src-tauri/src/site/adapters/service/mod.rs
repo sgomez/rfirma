@@ -22,7 +22,7 @@ use crate::site::domain::channel::{
 };
 use crate::site::domain::protocol::{
     credential_matches, http_response, read_request, split_response, AfirmaUrl, FragmentBuffer,
-    FramedRequest, NotOfTheFraming, Parameter, SafCode, WireAnswer, MORE_DATA_NEED,
+    FramedRequest, NotOfTheFraming, Parameter, SafCode, WireAnswer, MORE_DATA_NEED, SAVE,
 };
 
 use crate::site::application::errand::{
@@ -345,13 +345,15 @@ async fn handle_operation(
 
 /// Entrega la operación al trámite y espera su resultado, ya troceado en partes (`toSend`,
 /// `calculateNumberPartsResponse` en el original): la respuesta a `cmd=`/`firm=` es el número de
-/// partes, que `send=` reparte luego. El acuse acompaña esta respuesta porque es la única que
+/// partes, que `send=` reparte luego, salvo en un guardado, que contesta su confirmación sin
+/// trocear (líneas 290-305 y 333-346). El acuse acompaña esta respuesta porque es la única que
 /// nace de la entrega al trámite: las de `send=` solo reparten lo ya calculado.
 async fn launch_operation(
     url: AfirmaUrl,
     inbox: &Inbox,
     state: &Arc<Mutex<ServiceState>>,
 ) -> (Vec<u8>, Option<Acknowledged>) {
+    let answers_without_parts = url.verb() == SAVE;
     let (sender, receiver) = oneshot::channel();
     let (acknowledged, acknowledgement) = Acknowledgement::pair();
     inbox.deliver(
@@ -367,6 +369,9 @@ async fn launch_operation(
             None,
         );
     };
+    if answers_without_parts {
+        return (http_response(&result), Some(acknowledged));
+    }
     let mut state = lock(state);
     state.parts = split_response(&result);
     (
