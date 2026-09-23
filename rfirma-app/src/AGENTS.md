@@ -38,7 +38,13 @@ rojo.
 | Módulo | Qué es |
 |---|---|
 | `main.tsx` | **El cableado de la ventana principal** (`index.html`): quién implementa cada puerto. Empieza aquí siempre. |
-| `tauri.ts` | Los puertos que hablan con Tauri. La otra cara de los `adapters/tauri.rs` de cada contexto. |
+| `tauri.ts` | El punto de import de los puertos que hablan con Tauri: reexporta los `tauri*.ts` de abajo. La otra cara de los `adapters/tauri.rs` de cada contexto. |
+| `tauriStage.ts` | Clasifica el fallo de una orden de Tauri y envuelve su llamada. Lo comparten `tauriSigning.ts` y `tauriSede.ts`. |
+| `tauriSigning.ts` | Los puertos de Tauri de la firma: certificados, las tres etapas, la rúbrica y el sello. |
+| `tauriDocuments.ts` | Los puertos de Tauri del documento: el portal, el arrastre, la bandeja y el visor. |
+| `tauriPreferences.ts` | Los puertos de Tauri de la configuración: ajustes, idioma, destino y la versión publicada. |
+| `tauriSede.ts` | El puerto de Tauri del trámite de sede. |
+| `tauriStatus.ts` | El puerto de Tauri del estado de la instalación. |
 | `App.tsx` | El árbol de la ventana y el estado que la recorre. |
 | **`shell/`** | La ventana y su cabecera (ADR-0007). |
 | `shell/MainWindow.tsx` | El marco, con el hueco de la franja entre la cabecera y las regiones. |
@@ -56,6 +62,14 @@ rojo.
 | `signing/flow.ts` | Las tres etapas de la trifásica. |
 | `signing/useSigning.ts` | El estado de la firma. |
 | `signing/SigningPanel.tsx` | El panel, con el botón de sellar. |
+| `signing/CertificateBlock.tsx` | El certificado, en sus cinco estados, dentro del panel. |
+| `signing/PlacementFieldset.tsx` | El bloque «Colocación» del panel: los tres modos de página y el botón de sellar. |
+| `signing/usePlacementField.ts` | El estado del bloque «Colocación»: lo tecleado en el campo de páginas. |
+| `signing/placementField.ts` | Las situaciones del campo de páginas y su eco, redactados. Sin React. |
+| `signing/SignatureFieldsFieldset.tsx` | Qué se estampa en el recuadro: las casillas, el motivo y la rúbrica. |
+| `signing/PanelFooter.tsx` | El pie del panel: destino o fallo, y el botón que firma. |
+| `signing/panelFormat.ts` | El tamaño del documento en la unidad que reconoce el usuario. Sin React. |
+| `signing/Checkbox.tsx` | La casilla del panel. |
 | `signing/CertificateSelect.tsx` | La elección de certificado. |
 | `signing/secret.ts` | Cómo hay que pedirle el secreto al almacén: sin sesión, tecleado en pantalla, o en el teclado del lector. Sin React. |
 | `signing/SigningProgressDialog.tsx` | El progreso. |
@@ -89,9 +103,13 @@ rojo.
 | **`preferences/`** | Los ajustes. |
 | `preferences/preferences.ts` | Lo que la aplicación recuerda. |
 | `preferences/PreferencesView.tsx` | La vista del cuerpo con los ajustes, con su índice de **cuatro** secciones. |
+| `preferences/PreferencesSections.tsx` | El contenido de cada sección del índice, como componentes propios. |
+| `preferences/PasswordPrompt.tsx` | El diálogo de la contraseña del `.p12`, antes de elegir el fichero. |
+| `preferences/focusTrap.ts` | El tabulador que da la vuelta dentro de un modal. |
 | `preferences/Switch.tsx` | El interruptor. |
 | `preferences/Select.tsx` | El desplegable. |
 | `preferences/theme.ts` | El tema de la ventana. |
+| `preferences/testSupport.tsx` | Los dobles y ayudas que comparten sus pruebas. |
 | **`i18n/`** | Catálogo propio, cinco idiomas, generado desde `po/` (ADR-0009 enmendado). Los bloques de comentario que explican el mecanismo están indexados en `i18n/AGENTS.md`. |
 | `i18n/catalog.ts` | La forma del catálogo. |
 | `i18n/i18n.ts` | La traducción. |
