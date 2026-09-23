@@ -1,14 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { AboutDialog } from "./about/AboutDialog";
 import { formatSignedAt, type PageGeometry, placingFrom } from "./App.signingOrder";
 import { useCertificateSearch } from "./App.useCertificateSearch";
 import { useDropNotices } from "./App.useDropNotices";
 import { usePlacementControls } from "./App.usePlacementControls";
 import { useDestinationPreview, usePreferencesState } from "./App.usePreferencesState";
-import { useSignFlow } from "./App.useSignFlow";
 import { useSignedSummary } from "./App.useSignedSummary";
+import { useSignFlow } from "./App.useSignFlow";
 import { useStartupNotices } from "./App.useStartupNotices";
+import { AboutDialog } from "./about/AboutDialog";
 import type { ExternalDestinationOpener } from "./desktop/externalDestination";
 import { unavailableExternalDestinationOpener } from "./desktop/externalDestination";
 import { DocumentTray } from "./documents/DocumentTray";
@@ -243,7 +243,7 @@ export function App({
     return () => {
       current = false;
     };
-  }, [documents.active, pdfs]);
+  }, [documents.active, pdfs, setPlacing]);
 
   const { dropNotice } = useDropNotices(drops, documents.accept, documents.enter, activeId);
 

@@ -1,6 +1,7 @@
 //! Pruebas de integración del backend contra el módulo PKCS#11 SoftHSM (ADR-0014).
 
-mod pkcs11_token_support;
+#[path = "pkcs11_token/support.rs"]
+mod support;
 
 use std::path::Path;
 
@@ -19,7 +20,7 @@ use rsa::pkcs1v15::Signature;
 use rsa::signature::Verifier;
 use sha2::{Digest, Sha256};
 
-use pkcs11_token_support::{
+use support::{
     certificate_labelled, certificate_with_cka_id, certificates, epoch, module, openssl_verifies,
     openssl_verifies_for, reference, sign_with_bare_rsa_pkcs, signing_error, verifying_key, ACTIVE,
     ACTIVE_EC, EXPIRED, PIN, PRESIGN, REVOKED, TOKEN, TWIN, TWIN_OF_THE_ACTIVE_KEY,

@@ -1,12 +1,12 @@
 /** Los puertos de Tauri de la firma: certificados, las tres etapas, la rúbrica y el sello (#60, #128, #194). */
 
 import { invoke } from "@tauri-apps/api/core";
+import { classify } from "./errors/classify";
 import type { Certificate, CertificateStore } from "./signing/certificate";
 import type { SignedDocument, SigningBackend } from "./signing/flow";
 import type { Rubric, RubricPicker, RubricSituation } from "./signing/rubric";
 import type { StoreSecret } from "./signing/secret";
 import type { StampComposer } from "./signing/stampPreview";
-import { classify } from "./errors/classify";
 import { stage } from "./tauriStage";
 import { pdfjsLoader } from "./viewer/pdfjsLoader";
 

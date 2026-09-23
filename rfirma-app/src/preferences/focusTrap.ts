@@ -10,7 +10,7 @@ const FOCUSABLE = 'button, [href], input, select, textarea, [tabindex]:not([tabi
  * atrapa el foco, así que el menú de la cabecera sigue alcanzable con el
  * teclado mientras Preferencias está delante.
  */
-export function trapFocus(modal: HTMLElement | null, event: KeyboardEvent<HTMLDivElement>) {
+function trapFocus(modal: HTMLElement | null, event: KeyboardEvent<HTMLDivElement>) {
   if (modal === null) return;
   const focusable = [...modal.querySelectorAll<HTMLElement>(FOCUSABLE)].filter(
     (element) => !element.hasAttribute("disabled") && element.tabIndex !== -1,

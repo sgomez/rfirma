@@ -16,10 +16,8 @@ export const defaults: Preferences = {
   consentCountdown: true,
 };
 
-export const noop = async () => {};
-
 /** `2030-01-15T00:00:00Z`, en segundos desde la época. */
-export const IN_2030 = 1_894_752_000;
+const IN_2030 = 1_894_752_000;
 
 /** `2020-01-15T00:00:00Z`, en segundos desde la época. */
 export const IN_2020 = 1_579_046_400;
@@ -37,6 +35,8 @@ export function anInstalledCertificate(overrides: Partial<Certificate> = {}): Ce
     ...overrides,
   };
 }
+
+const noop = async () => {};
 
 export function renderView(props: Partial<Parameters<typeof PreferencesView>[0]> = {}) {
   return renderWithCatalog(

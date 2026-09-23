@@ -1,8 +1,9 @@
 //! Guarda de dirección entre capas y contextos del backend, leída de las rutas (ADR-0017, RD-03).
 
-mod module_directions_support;
+#[path = "module_directions/support.rs"]
+mod support;
 
-use module_directions_support::{
+use support::{
     contexts_among, crate_imports, keeps_the_world_out, offences_in, place_modules, place_of,
     tracked_modules, world_offences_in, Module, Tier, THE_WORLD,
 };
