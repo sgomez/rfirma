@@ -196,6 +196,38 @@ instala con `cargo binstall` a una **versión fijada** en el `justfile`. Si se a
 se quita en una línea y no arrastra nada: es una comprobación aparte, no un formato que impregne
 el código.
 
+## El tamaño de fichero se congela con un baseline, no con un umbral suelto
+
+Un umbral de líneas sin memoria no frena el crecimiento: cada PR añade unas
+decenas de líneas a un fichero que ya se pasaba, y ninguna PR concreta cruza
+la raya sola. `tests/files_stay_small.rs` (grada A) recorre
+`rfirma-app/src-tauri/src`, `rfirma-app/src-tauri/tests` y `rfirma-app/src`, y
+compara lo medido —líneas no vacías— contra `files_stay_small.baseline`, un
+fichero versionado de `ruta → líneas`. Umbrales: **500** en producción y
+**600** en tests; es test todo fichero bajo un directorio `tests/`, llamado
+`tests.rs`, o terminado en `.test.ts(x)`. Fuera de la guarda,
+`rfirma-app/src/i18n/locales/*` (datos, no código) y los ficheros generados.
+
+La guarda falla en los cinco casos que hacen del baseline una lista exacta, no
+un suelo: un fichero listado que crece, uno nuevo por encima del umbral que no
+está en la lista, uno que baja sin que su línea se actualice, uno listado que
+ya no existe, y uno listado que ha quedado por debajo del umbral. El mensaje
+de fallo dice qué hacer: partir un fichero de tests por comportamiento en
+`tests/<comportamiento>.rs` sacando los helpers a `tests/support.rs`, o
+separar la responsabilidad que sobra en uno de producción. Esta decisión
+**no** parte los ficheros que ya se pasan hoy: la guarda los congela con su
+tamaño actual, y cada uno se parte por su responsabilidad real en su propia
+PR. Con ella se acaba también el `tests.rs` único por módulo en los módulos
+nuevos.
+
+Acompaña a `too_many_lines` de clippy, con `too-many-lines-threshold = 80` en
+`clippy.toml` y `too_many_lines = "warn"` en `[lints.clippy]` de `Cargo.toml`
+—no está en el grupo por omisión de clippy, a diferencia de
+`too_many_arguments`, que ya estaba activo y no se toca—. Las funciones que ya
+pasan de 80 líneas llevan `#[expect(clippy::too_many_lines)]`: `expect` falla
+en cuanto la función deja de pasarse, así que hace de trinquete sin fichero
+aparte.
+
 ## El suelo de cobertura y la cobertura del diff
 
 CRAP puntúa por función; nada impedía que la cobertura global bajara sin que
