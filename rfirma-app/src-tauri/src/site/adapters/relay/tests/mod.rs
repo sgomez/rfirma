@@ -90,6 +90,10 @@ impl Spy {
 }
 
 fn a_relay(servlets: Arc<OrderedSpy>) -> (Relay, Spy) {
+    a_relay_on(servlets, crate::site::application::tests::a_runtime())
+}
+
+fn a_relay_on(servlets: Arc<OrderedSpy>, runtime: tokio::runtime::Handle) -> (Relay, Spy) {
     let delivered = Arc::new(Mutex::new(None));
     let failures = Arc::new(Mutex::new(Vec::new()));
 
@@ -106,6 +110,7 @@ fn a_relay(servlets: Arc<OrderedSpy>) -> (Relay, Spy) {
         servlets as Arc<dyn Servlets + Send + Sync>,
         inbox,
         on_upload_failure,
+        runtime,
     );
     (
         relay,

@@ -287,6 +287,7 @@ fn a_relay_launch_delivers_only_after_the_errand_is_registered() {
         Arc::new(InMemoryServlets::default()),
         inbox,
         Arc::new(|_refusal| {}),
+        crate::site::application::tests::a_runtime(),
     );
 
     let url = "afirma://sign?algorithm=SHA256withRSA&dat=ZmlybWFkbw&stservlet=https://relay.\
@@ -512,6 +513,7 @@ fn a_resolution_failure_with_a_known_destination_uploads_like_a_negotiation_refu
         servlets,
         Inbox::for_operations(|_url, _reply| {}),
         Arc::new(|_refusal| {}),
+        crate::site::application::tests::a_runtime(),
     );
 
     let url = "afirma://sign?algorithm=SHA256withRSA&stservlet=https://relay.example/store&id=tx1\

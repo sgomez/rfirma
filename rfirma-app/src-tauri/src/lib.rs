@@ -475,6 +475,7 @@ fn the_transport(
                 site::adapters::window::note_a_relay_failure(&handle, refusal);
             })
         },
+        tauri::async_runtime::handle().inner().clone(),
     );
 
     move |location, duty| match location {

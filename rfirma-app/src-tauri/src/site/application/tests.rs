@@ -427,3 +427,12 @@ impl ValidationEngine for AValidator {
             .map_err(|()| BridgeError::Failed("el validador no arranca".to_owned()))
     }
 }
+
+/// El runtime de la prueba en curso o, si corre fuera de uno, uno compartido de fondo.
+pub fn a_runtime() -> tokio::runtime::Handle {
+    static BACKGROUND: std::sync::LazyLock<tokio::runtime::Runtime> =
+        std::sync::LazyLock::new(|| {
+            tokio::runtime::Runtime::new().expect("el runtime de fondo de las pruebas arranca")
+        });
+    tokio::runtime::Handle::try_current().unwrap_or_else(|_| BACKGROUND.handle().clone())
+}

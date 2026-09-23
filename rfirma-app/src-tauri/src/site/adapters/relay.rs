@@ -27,20 +27,23 @@ pub struct Relay {
     servlets: Arc<dyn Servlets + Send + Sync>,
     inbox: Inbox,
     on_upload_failure: Arc<dyn Fn(Refusal) + Send + Sync>,
+    runtime: tokio::runtime::Handle,
 }
 
 impl Relay {
-    /// Un transporte de servidor intermedio sobre los servlets, el buzón y el aviso que se da
-    /// cuando la subida se rechaza.
+    /// Un transporte de servidor intermedio sobre los servlets, el buzón, el aviso que se da
+    /// cuando la subida se rechaza y el runtime donde late la espera activa.
     pub fn new(
         servlets: Arc<dyn Servlets + Send + Sync>,
         inbox: Inbox,
         on_upload_failure: Arc<dyn Fn(Refusal) + Send + Sync>,
+        runtime: tokio::runtime::Handle,
     ) -> Self {
         Self {
             servlets,
             inbox,
             on_upload_failure,
+            runtime,
         }
     }
 }
@@ -98,6 +101,7 @@ impl Transport for Relay {
             })?;
 
         let heartbeat = spawn_heartbeat(
+            &self.runtime,
             resolved.active_wait,
             Arc::clone(&self.servlets),
             &resolved.store_servlet,
@@ -195,6 +199,7 @@ impl Drop for HeartbeatInner {
 }
 
 fn spawn_heartbeat(
+    runtime: &tokio::runtime::Handle,
     active_wait: bool,
     servlets: Arc<dyn Servlets + Send + Sync>,
     store_servlet: &str,
@@ -205,15 +210,13 @@ fn spawn_heartbeat(
     }
     let (stop_tx, stop_rx) = oneshot::channel();
     let heartbeat = Heartbeat::new(stop_tx);
-    if let Ok(handle) = tokio::runtime::Handle::try_current() {
-        handle.spawn(pulse_active_wait(
-            servlets,
-            store_servlet.to_owned(),
-            id.to_owned(),
-            heartbeat.upload_lock(),
-            stop_rx,
-        ));
-    }
+    runtime.spawn(pulse_active_wait(
+        servlets,
+        store_servlet.to_owned(),
+        id.to_owned(),
+        heartbeat.upload_lock(),
+        stop_rx,
+    ));
     Some(heartbeat)
 }
 
