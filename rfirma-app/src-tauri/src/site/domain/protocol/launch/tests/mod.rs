@@ -371,6 +371,15 @@ fn a_refusal_location_of_a_service_launch_uses_the_service_variant() {
 }
 
 #[test]
+fn a_refusal_location_of_a_service_launch_outside_its_versions_is_none() {
+    for v in ["0", "4", "99"] {
+        let url = AfirmaUrl::parse(&format!("afirma://service?ports=54421&v={v}")).unwrap();
+
+        assert_eq!(location_for_a_refusal(&url), None, "con v={v}");
+    }
+}
+
+#[test]
 fn a_refusal_location_of_a_service_launch_without_ports_is_none() {
     let url = AfirmaUrl::parse("afirma://service?v=1").unwrap();
 
