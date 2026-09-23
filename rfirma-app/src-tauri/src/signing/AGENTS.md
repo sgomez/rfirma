@@ -33,6 +33,7 @@ relativas a `src/signing/`; para situarte en un fichero, `just outline <ruta>`.
 | `application/session.rs` | La sesión: las dos prefirmas —la local y la de sede—, la firma y la postfirma; `CycleFailure` es lo que puede salir mal. Pruebas en `application/session/tests.rs`. |
 | `domain/admissibility.rs` | Lo que no se puede firmar en PAdES, decidido antes del PIN; lo que la petición levanta (`Waivers`), y el `/SubFilter` que el puente no lee. No es de ningún otro formato. Pruebas en `domain/admissibility/tests.rs`. |
 | `domain/bridge.rs` | El vocabulario del puente —`Format` entre otros— y las tres etapas del ciclo: `PreSignature` → `SealedPreSignature` → `CompletedCycle`. La carga es de `adapters/ffi.rs`. Pruebas en `domain/bridge/tests.rs`. |
+| `domain/bridge/error.rs` | `BridgeError` y `DataRejection`: lo que puede salir mal al cruzar la frontera con el puente, sin la frontera. |
 | `domain/config.rs` | Los siete ajustes de firma y ni uno más, y `SigningChoice`, lo que la persona decidió de esta firma; aquí viven `Placement` y `PadesRect`. Pruebas en `domain/config/tests.rs`. |
 | `domain/isolate_gone.rs` | El marcador de que el hilo del isolate murió, sin el hilo. |
 | `domain/language.rs` | Los cinco idiomas (ADR-0009). Pruebas en `domain/language/tests.rs`. |
