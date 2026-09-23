@@ -1,7 +1,6 @@
 rfirma-app/src-tauri/src/site/adapters/relay/tests.rs 766
 rfirma-app/src-tauri/src/site/application/errand/desk.rs 651
 rfirma-app/src-tauri/src/site/application/errand/state.rs 546
-rfirma-app/src-tauri/src/site/application/errand/tests.rs 5290
 rfirma-app/src-tauri/src/site/domain/protocol/operation.rs 1322
 rfirma-app/src-tauri/src/site/domain/protocol/operation/tests.rs 2167
 rfirma-app/src-tauri/tests/module_directions.rs 651

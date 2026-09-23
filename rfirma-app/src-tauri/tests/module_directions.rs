@@ -176,7 +176,7 @@ fn tracked_modules() -> Vec<Module> {
         .expect("la lista de git deberia ser UTF-8")
         .lines()
         .filter(|entry| entry.ends_with(".rs"))
-        .filter(|entry| !entry.ends_with("/tests.rs"))
+        .filter(|entry| !entry.ends_with("/tests.rs") && !entry.contains("/tests/"))
         .map(|entry| {
             let relative = entry
                 .strip_prefix("src/")
