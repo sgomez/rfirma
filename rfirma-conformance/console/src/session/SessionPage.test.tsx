@@ -203,4 +203,25 @@ describe("the session", () => {
 
     expect(screen.getByText("cambios sin aplicar")).toBeInTheDocument();
   });
+
+  it("empties the binary and the trust root of another client, and gives them back to its own", async () => {
+    const { user } = renderConsoleAt("/");
+
+    await user.click(
+      within(await screen.findByRole("region", { name: "1. Cliente" })).getByRole("button", {
+        name: "Cambiar",
+      }),
+    );
+    const binary = screen.getByRole("textbox", { name: "Binario" });
+    const root = screen.getByRole("textbox", { name: "Raíz de confianza" });
+    const resolved = [(binary as HTMLInputElement).value, (root as HTMLInputElement).value];
+    await user.click(screen.getByRole("radio", { name: "rFirma" }));
+
+    expect(binary).toHaveValue("");
+    expect(root).toHaveValue("");
+
+    await user.click(screen.getByRole("radio", { name: "AutoFirma" }));
+
+    expect([binary, root].map((field) => (field as HTMLInputElement).value)).toEqual(resolved);
+  });
 });

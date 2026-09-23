@@ -24,7 +24,9 @@
 # El certificado personal del titular no llega al perfil: AutoFirma recibe
 # HOME y -Duser.home, rFirma HOME y XDG_*. La CA local de rFirma la crea este
 # script dentro del perfil, sin lanzar el cliente; la raiz de AutoFirma es la de
-# su instalacion.
+# su instalacion. rFirma arranca en castellano, con el tema claro y sin la
+# cuenta atras de consentir, como si la persona lo hubiera elegido en sus
+# preferencias.
 #
 # El perfil se rehace entero en cada llamada.
 
@@ -145,8 +147,15 @@ the_local_ca_of_rfirma() {
     echo "$dir/local-ca.crt.pem"
 }
 
+the_configuration_of_rfirma() {
+    local dir="$profile/.config/rfirma"
+    mkdir -p "$dir"
+    printf '{"consent_countdown": false, "language": "es", "theme": "light"}\n' > "$dir/config.json"
+}
+
 trust_root=""
 if [ "$kind" = rfirma ]; then
+    the_configuration_of_rfirma
     command -v openssl >/dev/null || {
         echo "falta: openssl" >&2
         exit 1

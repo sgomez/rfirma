@@ -29,6 +29,13 @@ export function ClientStep({ snapshot, busy }: { snapshot: Snapshot; busy: boole
     setEditing(false);
   }, [resolved]);
 
+  const choose = (kind: ClientKind) =>
+    setDraft(
+      client?.kind === kind
+        ? { kind, binary: client.binary, trustRoot }
+        : { kind, binary: "", trustRoot: "" },
+    );
+
   const open = editing || !client;
   const unsettled =
     client !== null &&
@@ -106,7 +113,7 @@ export function ClientStep({ snapshot, busy }: { snapshot: Snapshot; busy: boole
                     name="client-kind"
                     value={kind}
                     checked={draft.kind === kind}
-                    onChange={() => setDraft({ ...draft, kind })}
+                    onChange={() => choose(kind)}
                   />
                   <span>{clientName(kind)}</span>
                 </label>
