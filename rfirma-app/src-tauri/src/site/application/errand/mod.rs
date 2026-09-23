@@ -53,8 +53,10 @@ pub fn attend<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
     live.an_operation_arrives();
     live.answer_through(reply);
     let step = dispatch(desk, url, live);
-    if matches!(step, Some(ErrandStep::Answering(_))) {
-        live.put_away_the_window();
+    match step {
+        Some(ErrandStep::Answering(_)) => live.put_away_the_window(),
+        Some(_) => live.reveal_an_immediate_arrival(),
+        None => {}
     }
     step
 }

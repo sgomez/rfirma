@@ -106,8 +106,7 @@ fn an_old_web_client_warns_before_a_relay_operation_too() {
             "ventana:enseñada",
             "ventana:oculta",
             "canal",
-            "ventana:creada:Immediate",
-            "ventana:enseñada"
+            "ventana:creada:Immediate"
         ]
     );
 }

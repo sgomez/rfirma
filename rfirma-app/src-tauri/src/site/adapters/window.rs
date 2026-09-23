@@ -141,7 +141,7 @@ pub fn publish_the_moment(app: &tauri::AppHandle) {
 pub fn note_a_relay_failure(app: &tauri::AppHandle, refusal: Refusal) {
     app.state::<SiteRoot>()
         .errand
-        .note(errand::Moment::RefusedWithoutChannel(refusal));
+        .the_site_did_not_get_the_answer(refusal);
     publish_the_moment(app);
 }
 

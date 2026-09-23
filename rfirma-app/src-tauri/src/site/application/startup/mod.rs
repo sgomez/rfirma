@@ -197,10 +197,12 @@ pub fn attend_site_launch_with_threshold(
     let mut attendance = site::attend_launch(url, codecs, transport, live);
 
     match &mut attendance {
-        Attendance::Serving { errand, .. } => {
+        Attendance::Serving { channel, errand } => {
             live.keep_the_window(Arc::clone(&window));
+            let delivery = channel.take_delivery();
             match local_ca {
                 LocalCaReach::Nowhere => {
+                    deliver(delivery);
                     open(
                         live,
                         &*window,
@@ -210,12 +212,10 @@ pub fn attend_site_launch_with_threshold(
                 }
                 LocalCaReach::NotAnObstacle => {
                     open(live, &*window, SiteWindowContent::TheErrand(&*errand));
-                    match errand.arrival() {
-                        ArrivalMode::Awaited => {
-                            live.arm_backing_timeout(Arc::clone(&window), threshold);
-                        }
-                        ArrivalMode::Immediate => window.show(),
+                    if errand.arrival() == ArrivalMode::Awaited {
+                        live.arm_backing_timeout(Arc::clone(&window), threshold);
                     }
+                    deliver(delivery);
                 }
             }
         }
@@ -302,15 +302,14 @@ fn end_or_show_the_refusal(window: &dyn SiteWindow, handed_out: bool) {
     }
 }
 
-fn open(live: &LiveErrand, window: &dyn SiteWindow, content: SiteWindowContent<'_>) {
-    let opening = content.moment();
-    if !live
-        .moment()
-        .as_ref()
-        .is_some_and(|current| current.is_posterior_to(&opening))
-    {
-        live.note(opening);
+fn deliver(delivery: Option<Delivery>) {
+    if let Some(delivery) = delivery {
+        delivery.now();
     }
+}
+
+fn open(live: &LiveErrand, window: &dyn SiteWindow, content: SiteWindowContent<'_>) {
+    live.note(content.moment());
     window.open(content);
 }
 

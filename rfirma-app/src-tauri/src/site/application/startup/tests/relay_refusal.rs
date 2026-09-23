@@ -3,6 +3,7 @@ use super::fixtures::{a_codec_table, World, CREDENTIAL};
 use crate::site::domain::channel::{
     ChannelDuty, ChannelError, ChannelLocation, Delivery, OpenChannel, Shutdown,
 };
+use crate::site::domain::protocol::SafCode;
 
 #[test]
 fn a_relay_refusal_with_a_known_destination_fires_its_delivery_and_ends_the_errand_unseen() {
@@ -155,5 +156,105 @@ fn a_relay_refusal_by_an_errand_in_flight_still_fires_its_delivery_unseen() {
         ["canal", "canal", "subida"],
         "la subida se dispara aunque ya haya un trámite vivo, sin ventana ni fin de trámite \
          propios"
+    );
+}
+
+/// Un transporte de servidor intermedio cuya entrega hace lo que le diga la prueba con el trámite.
+fn a_relay_delivering(
+    world: &Arc<World>,
+    live: &Arc<LiveErrand>,
+    delivering: fn(&World, &LiveErrand),
+) -> impl Fn(&ChannelLocation, ChannelDuty) -> Result<OpenChannel, ChannelError> {
+    let world = Arc::clone(world);
+    let live = Arc::clone(live);
+    move |location: &ChannelLocation, duty: ChannelDuty| {
+        world.note("canal");
+        assert!(matches!(location, ChannelLocation::Relay(_)));
+        assert!(matches!(duty, ChannelDuty::Serve(_)));
+        let world = Arc::clone(&world);
+        let live = Arc::clone(&live);
+        Ok(OpenChannel::with_delivery(
+            0,
+            Shutdown::of(|| {}),
+            Delivery::of(move || delivering(&world, &live)),
+        ))
+    }
+}
+
+const A_RELAY_OPERATION: &str = "afirma://sign?format=NoSuchFormat&algorithm=SHA256withRSA&\
+                                 dat=ZmlybWFkbw&stservlet=https://relay.example/store&id=tx1";
+
+#[test]
+fn a_relay_operation_answered_on_arrival_ends_the_errand_without_ever_showing_the_window() {
+    let world = Arc::new(World::default());
+    let live = Arc::new(LiveErrand::default());
+    let transport = a_relay_delivering(&world, &live, |world, live| {
+        world.note("entrega");
+        live.end();
+    });
+
+    let attendance = attend_site_launch_with_threshold(
+        A_RELAY_OPERATION,
+        &a_codec_table(),
+        &transport,
+        Arc::clone(&world) as Arc<dyn SiteWindow>,
+        &live,
+        LocalCaReach::NotAnObstacle,
+        Duration::from_millis(200),
+    );
+
+    assert!(matches!(attendance, Attendance::Serving { .. }));
+    assert_eq!(
+        world.steps(),
+        [
+            "canal",
+            "ventana:creada:Immediate",
+            "entrega",
+            "ventana:trámite-terminado"
+        ],
+        "la ventana ya estaba abierta y oculta al entregarse la operación: el fin del trámite la \
+         encuentra, y nadie la enseña porque no hay nada que decir"
+    );
+    assert!(live.current().is_none());
+}
+
+#[test]
+fn a_relay_answer_whose_upload_fails_shows_the_window_before_the_errand_ends() {
+    let world = Arc::new(World::default());
+    let live = Arc::new(LiveErrand::default());
+    let transport = a_relay_delivering(&world, &live, |world, live| {
+        world.note("subida-fallida");
+        live.the_site_did_not_get_the_answer(Refusal::new(
+            SafCode::SendingResult,
+            "el servlet rechazo la subida",
+        ));
+        live.end();
+    });
+
+    attend_site_launch_with_threshold(
+        A_RELAY_OPERATION,
+        &a_codec_table(),
+        &transport,
+        Arc::clone(&world) as Arc<dyn SiteWindow>,
+        &live,
+        LocalCaReach::NotAnObstacle,
+        Duration::from_millis(200),
+    );
+
+    assert_eq!(
+        world.steps(),
+        [
+            "canal",
+            "ventana:creada:Immediate",
+            "subida-fallida",
+            "ventana:enseñada",
+            "ventana:trámite-terminado"
+        ],
+        "la sede no recibió la respuesta: lo ve la persona, y la ventana ya enseñada no se cierra"
+    );
+    assert!(
+        matches!(live.moment(), Some(Moment::RefusedWithoutChannel(ref refusal)) if refusal.code() == SafCode::SendingResult),
+        "{:?}",
+        live.moment()
     );
 }

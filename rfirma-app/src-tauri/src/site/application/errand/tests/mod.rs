@@ -9,6 +9,7 @@ mod certificate_selection;
 mod countersignature_and_gzip;
 mod document_and_save;
 mod headless_and_checked;
+mod relay_window;
 mod signature_basics;
 mod signature_consent;
 mod signature_formats;
