@@ -481,7 +481,7 @@ fn the_envelope_the_site_declared(extra_params: &str) -> Option<&str> {
             let (key, value) = line.trim_start().split_once(['=', ':'])?;
             (key.trim_end() == VARIANT_KEY).then(|| value.trim())
         })
-        .last()
+        .next_back()
         .filter(|declared| {
             XADES_ENVELOPES
                 .iter()
