@@ -46,6 +46,15 @@ rojo.
 | `tauriSede.ts` | El puerto de Tauri del trámite de sede. |
 | `tauriStatus.ts` | El puerto de Tauri del estado de la instalación. |
 | `App.tsx` | El árbol de la ventana y el estado que la recorre. |
+| `App.signingOrder.ts` | La colocación guardada, la geometría de la página y la orden de firma armada en un solo sitio. Sin React. |
+| `App.useCertificateSearch.ts` | Buscar certificados, instalar y quitar `.p12`, y elegir uno del desplegable. |
+| `App.useDropNotices.ts` | El arrastre sobre la ventana y la invocación externa, y el aviso que dejan. |
+| `App.usePlacementControls.ts` | El bloque «Colocación»: el recuadro y las tres opciones de página. |
+| `App.usePreferencesState.ts` | Los ajustes, el destino previsto para el documento activo y la rúbrica adoptada. |
+| `App.useSignFlow.ts` | La vista previa del sello y la firma, con los dos avisos que pueden interponerse antes del PIN. |
+| `App.useSignedSummary.ts` | El acuse de recibo del documento firmado y los dos caminos hasta el fichero. |
+| `App.useStartupNotices.ts` | El aviso de versión nueva y las filas del panel de estado, medidos al arrancar. |
+| `App.testSupport.tsx` | Los dobles y el `renderApp` que comparten las pruebas de `App`. |
 | **`shell/`** | La ventana y su cabecera (ADR-0007). |
 | `shell/MainWindow.tsx` | El marco, con el hueco de la franja entre la cabecera y las regiones. |
 | `shell/NotificationStrip.tsx` | La franja de notificación: el patrón, no el aviso concreto. |

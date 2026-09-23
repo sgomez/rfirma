@@ -14,7 +14,7 @@ interface StampPreviewInput {
   onDemand: boolean;
 }
 
-interface StampPreviewState {
+export interface StampPreviewState {
   state: StampPreview;
   /**
    * El PDF **con el sello ya estampado**, que el visor pinta en lugar del
