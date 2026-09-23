@@ -15,7 +15,7 @@ use super::format::RequestedFormat;
 use super::key_store::refuse_a_key_store_rfirma_does_not_open;
 use super::parameters::{
     check_common_parameters, check_minimum_client_version, check_operation_identifier,
-    sticky_certificate, StickyCertificate,
+    check_protocol_version_bounds, minimum_protocol_version, sticky_certificate, StickyCertificate,
 };
 use super::refusal::Refusal;
 use super::url::AfirmaUrl;
@@ -125,6 +125,29 @@ impl SelectCertificate {
     pub fn is_headless(&self) -> bool {
         self.headless
     }
+}
+
+const DISPATCHED_VERBS: [&str; 8] = [
+    SELECT_CERTIFICATE,
+    SIGN,
+    COSIGN,
+    COUNTERSIGN,
+    SAVE,
+    LOAD,
+    BATCH,
+    SIGN_AND_SAVE,
+];
+
+/// Lee la operación como `read_operation`, pero rechaza con `SAF_21` la que exige en `ver` un protocolo posterior.
+pub fn read_operation_within_the_protocol(
+    url: &AfirmaUrl,
+    data: &dyn DataSource,
+) -> Result<SiteOperation, Refusal> {
+    check_the_parameters_the_original_parses(url)?;
+    if DISPATCHED_VERBS.contains(&verb_of(url).as_str()) {
+        check_protocol_version_bounds(minimum_protocol_version(url))?;
+    }
+    read_operation(url, data)
 }
 
 /// Lee la operación que llegó por el canal, o por qué se rechaza.
