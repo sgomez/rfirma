@@ -1,5 +1,6 @@
 use super::*;
 use crate::identity::domain::error::{Situation as TokenSituation, TokenError};
+use crate::signing::domain::bridge::DataRejection;
 
 #[test]
 fn the_three_pdf_situations_get_three_different_codes() {
@@ -106,4 +107,22 @@ fn the_memory_situations_have_their_camel_case_names_and_their_codes() {
         memory_told(MemorySituation::Unwritable),
         ("settingsUnwritable", SafCode::CannotSaveData)
     );
+}
+
+#[test]
+fn each_rejection_of_the_data_leaves_for_the_site_with_the_code_of_the_original() {
+    for (rejection, code) in [
+        (DataRejection::InvalidPdf, "SAF_28"),
+        (DataRejection::InvalidXml, "SAF_29"),
+        (DataRejection::InvalidData, "SAF_30"),
+        (DataRejection::NoSignData, "SAF_31"),
+        (DataRejection::FacturaeAlreadySigned, "SAF_32"),
+        (DataRejection::InvalidFacturae, "SAF_38"),
+        (DataRejection::SignWithoutData, "SAF_44"),
+    ] {
+        let error = BridgeError::DataRejected(rejection, "da igual el texto".to_owned());
+
+        assert_eq!(code_of_bridge(&error).as_str(), code, "{rejection:?}");
+        assert_eq!(Failure::from(error).situation, "bridgeFailed");
+    }
 }

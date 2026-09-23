@@ -504,6 +504,27 @@ pub enum BridgeError {
     PdfHasUnregisteredSignatures(String),
     /// El puente no resuelve todavía ese formato de firma.
     FormatNotBridged(Format),
+    /// El firmador del original rechaza los datos por no ser lo que el formato pide.
+    DataRejected(DataRejection, String),
+}
+
+/// Por qué el firmador del original rechaza los datos que se le dan.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DataRejection {
+    /// Lo que se da a PAdES no es un PDF que el firmador pueda leer.
+    InvalidPdf,
+    /// Lo que se da a una firma XML no es XML.
+    InvalidXml,
+    /// Los datos no casan con el formato de firma pedido.
+    InvalidData,
+    /// Lo que se da a una multifirma no es una firma.
+    NoSignData,
+    /// La factura ya está firmada y no admite más firmas.
+    FacturaeAlreadySigned,
+    /// Lo que se da a FacturaE no es una factura.
+    InvalidFacturae,
+    /// La firma previa no trae los datos ni una huella del algoritmo pedido.
+    SignWithoutData,
 }
 
 impl fmt::Display for BridgeError {
@@ -532,6 +553,9 @@ impl fmt::Display for BridgeError {
             }
             Self::FormatNotBridged(format) => {
                 write!(f, "el puente no atiende el formato {format}")
+            }
+            Self::DataRejected(_, detail) => {
+                write!(f, "el firmador rechaza los datos: {detail}")
             }
         }
     }

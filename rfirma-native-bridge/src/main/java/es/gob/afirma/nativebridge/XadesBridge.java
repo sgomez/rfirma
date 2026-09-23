@@ -11,10 +11,12 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.TimeZone;
 
+import es.gob.afirma.core.AOInvalidFormatException;
 import es.gob.afirma.core.signers.AOSignConstants;
 import es.gob.afirma.core.signers.CounterSignTarget;
 import es.gob.afirma.core.signers.TriphaseData;
 import es.gob.afirma.core.signers.asic.ASiCUtil;
+import es.gob.afirma.signers.xades.AOXAdESSigner;
 import es.gob.afirma.signers.xades.XAdESConstants;
 import es.gob.afirma.signers.xades.asic.AOXAdESASiCSSigner;
 import es.gob.afirma.triphase.signer.processors.FacturaETriPhasePreProcessor;
@@ -132,6 +134,7 @@ public final class XadesBridge {
         if (target != null) {
             effectiveParams.setProperty(PARAM_TARGET, target);
         }
+        requireASignatureToMultisign(requested, document, effectiveParams);
 
         final TimeZone timeZone = TimeZone.getDefault();
         final String time = Long.toString(System.currentTimeMillis());
@@ -313,6 +316,15 @@ public final class XadesBridge {
         }
         throw new IllegalArgumentException("el PKCS#1 «" + id + "» no corresponde a ninguna"
                 + " prefirma de esta sesion trifasica");
+    }
+
+    private static void requireASignatureToMultisign(final String operation,
+            final byte[] document, final Properties effectiveParams)
+            throws AOInvalidFormatException {
+        if (!OPERATION_SIGN.equals(operation) && !isFacturaE(effectiveParams)
+                && !new AOXAdESSigner().isSign(document)) {
+            throw new AOInvalidFormatException("No se ha indicado una firma XAdES para " + operation);
+        }
     }
 
     private static String requireKnownOperation(final String operation) {

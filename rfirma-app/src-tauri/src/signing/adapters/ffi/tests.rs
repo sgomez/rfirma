@@ -1,7 +1,7 @@
 use super::responses::{only_pkcs1, parse_signed_document, pkcs1_list};
 use super::*;
 use crate::signing::domain::bridge::{
-    SealedPreSignature, SignatureVerdict, XadesVariant, LIBRARY_FILE,
+    DataRejection, SealedPreSignature, SignatureVerdict, XadesVariant, LIBRARY_FILE,
 };
 use crate::signing::domain::SessionSeal;
 use std::alloc::{alloc, dealloc, Layout};
@@ -241,6 +241,33 @@ fn a_presign_without_a_single_block_to_sign_is_malformed() {
         matches!(error, BridgeError::MalformedResponse(_)),
         "{error}"
     );
+}
+
+#[test]
+fn each_rejection_of_the_data_comes_back_with_its_own_kind() {
+    for (kind, expected) in [
+        ("invalidPdf", DataRejection::InvalidPdf),
+        ("invalidXml", DataRejection::InvalidXml),
+        ("invalidData", DataRejection::InvalidData),
+        ("noSignData", DataRejection::NoSignData),
+        (
+            "facturaeAlreadySigned",
+            DataRejection::FacturaeAlreadySigned,
+        ),
+        ("invalidFacturae", DataRejection::InvalidFacturae),
+        ("signWithoutData", DataRejection::SignWithoutData),
+    ] {
+        let error = parse_presign(&format!(
+            r#"{{"ok":false,"kind":"{kind}","error":"lo que dijera Java"}}"#
+        ))
+        .expect_err("un rechazo no es una prefirma");
+
+        assert!(
+            matches!(&error, BridgeError::DataRejected(rejection, detail)
+                if *rejection == expected && detail == "lo que dijera Java"),
+            "{kind}: {error:?}"
+        );
+    }
 }
 
 /// Una prefirma sellada con las firmas sintéticas de sus bloques.
