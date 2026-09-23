@@ -2,7 +2,8 @@
 
 use std::cell::RefCell;
 
-use crate::site::application::errand::*;
+use super::support::*;
+use super::support_requests::*;
 use crate::crossing::Failure;
 use crate::documents::application::documents::{self, OpenedDocuments};
 use crate::identity::application::tests::{a_usable_certificate, listed_from};
@@ -12,19 +13,16 @@ use crate::signing::application::session::CycleFailure;
 use crate::signing::application::tests::a_memory;
 use crate::signing::domain::bridge::BridgeError;
 use crate::site::adapters::desk::signing_refusal_of;
+use crate::site::application::errand::*;
 use crate::site::application::session::SiteRefusal;
 use crate::site::application::site::{attend_launch, Attendance};
 use crate::site::domain::channel::ArrivalMode;
 use crate::site::domain::protocol::{
-    NegotiatedCredential,
-    SafCode, SignatureRound,
-    SiteVisibleSignature, WireAnswer, THE_PORT_OF_THE_THIRD_PROTOCOL,
+    NegotiatedCredential, SafCode, SignatureRound, SiteVisibleSignature, WireAnswer,
+    THE_PORT_OF_THE_THIRD_PROTOCOL,
 };
 use crate::site::domain::signing::SiteSignature;
 use base64::Engine as _;
-use super::support::*;
-use super::support_requests::*;
-
 
 /// Trámite completo de firma con el canal abierto, sobre la forma de arranque que se le pase.
 #[expect(clippy::too_many_lines)]

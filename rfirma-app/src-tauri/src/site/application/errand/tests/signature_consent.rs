@@ -1,21 +1,15 @@
 //! Pruebas del consentimiento de firma: politica, firmas sin registrar y sign_and_save sin dat.
 
-
-use crate::site::application::errand::*;
+use super::support::*;
+use super::support_requests::*;
 use crate::documents::application::documents::OpenedDocuments;
 use crate::identity::application::certificates::ListedCertificates;
 use crate::identity::application::tests::{a_usable_certificate, listed_from};
 use crate::signing::application::tests::a_memory;
-use crate::signing::domain::bridge::{
-    Format, XadesVariant,
-};
-use crate::site::domain::protocol::{
-    ChannelMessage,
-    SafCode, SignatureRound, WireAnswer,
-};
+use crate::signing::domain::bridge::{Format, XadesVariant};
+use crate::site::application::errand::*;
+use crate::site::domain::protocol::{ChannelMessage, SafCode, SignatureRound, WireAnswer};
 use base64::Engine as _;
-use super::support::*;
-use super::support_requests::*;
 
 #[test]
 fn a_pdf_with_signatures_it_cannot_read_is_asked_about_inside_the_consent() {
@@ -487,4 +481,3 @@ fn the_moment_of_a_consent_carries_the_format_the_site_asked_for() {
     };
     assert_eq!(format, Format::Pades);
 }
-

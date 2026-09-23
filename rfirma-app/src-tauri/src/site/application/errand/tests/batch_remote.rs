@@ -2,19 +2,16 @@
 
 use std::sync::Arc;
 
-use crate::site::application::errand::*;
+use super::support::*;
+use super::support_requests::*;
 use crate::identity::application::tests::{a_usable_certificate, listed_from};
 use crate::identity::ports::CertificateMemory;
 use crate::signing::application::tests::a_memory;
 use crate::site::adapters::frontier;
+use crate::site::application::errand::*;
 use crate::site::application::tests::InMemoryBatchServices;
-use crate::site::domain::protocol::{
-    AfirmaUrl, ChannelMessage,
-    SafCode, WireAnswer,
-};
+use crate::site::domain::protocol::{AfirmaUrl, ChannelMessage, SafCode, WireAnswer};
 use base64::Engine as _;
-use super::support::*;
-use super::support_requests::*;
 
 const A_JSON_LOTE: &str = "{\"algorithm\":\"SHA256\",\"stoponerror\":false,\"singlesigns\":[{\"id\":\"001\",\"datareference\":\"AAAA\"},{\"id\":\"002\",\"datareference\":\"BBBB\"}]}";
 
@@ -313,4 +310,3 @@ fn a_batch_that_is_declined_ends_in_a_cancel() {
         Some(frontier::cancelled().on_the_wire())
     );
 }
-

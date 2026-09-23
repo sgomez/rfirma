@@ -3,20 +3,15 @@
 use std::cell::RefCell;
 use std::sync::Arc;
 
-use crate::site::application::errand::*;
+use super::support::*;
 use crate::documents::application::documents::OpenedDocuments;
 use crate::identity::application::certificates::ListedCertificates;
 use crate::signing::application::tests::a_memory;
+use crate::site::application::errand::*;
 use crate::site::application::site::{attend_launch, Attendance};
 use crate::site::application::startup::{SiteWindow, SiteWindowContent};
-use crate::site::domain::channel::{
-    ArrivalMode, ChannelTenure,
-};
-use crate::site::domain::protocol::{
-    AfirmaUrl, ChannelMessage, NegotiatedCredential,
-    SafCode,
-};
-use super::support::*;
+use crate::site::domain::channel::{ArrivalMode, ChannelTenure};
+use crate::site::domain::protocol::{AfirmaUrl, ChannelMessage, NegotiatedCredential, SafCode};
 
 /// Ventana doblada que apunta lo que el trámite le pide.
 #[derive(Default)]

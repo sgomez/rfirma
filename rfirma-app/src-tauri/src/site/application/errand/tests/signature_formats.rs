@@ -1,27 +1,21 @@
 //! Pruebas de algoritmo, resumen y formato de la firma de sede.
 
-
-use crate::site::application::errand::*;
+use super::support::*;
+use super::support_requests::*;
 use crate::documents::application::documents::{self, OpenedDocuments};
 use crate::identity::application::tests::{a_usable_certificate, listed_from};
 use crate::identity::domain::algorithm::SignatureAlgorithm;
 use crate::signing::application::session::{self};
 use crate::signing::application::tests::{
-    a_memory, A_CADES_SIGNATURE, A_FACTURAE_SIGNATURE,
-    A_XADES_SIGNATURE,
+    a_memory, A_CADES_SIGNATURE, A_FACTURAE_SIGNATURE, A_XADES_SIGNATURE,
 };
-use crate::signing::domain::bridge::{
-    Format, XadesVariant,
-};
+use crate::signing::domain::bridge::{Format, XadesVariant};
+use crate::site::application::errand::*;
 use crate::site::domain::channel::ArrivalMode;
 use crate::site::domain::protocol::{
-    AfirmaUrl, AskedAlgorithm, ChannelMessage, NegotiatedCredential,
-    SafCode,
-    SiteVisibleSignature,
+    AfirmaUrl, AskedAlgorithm, ChannelMessage, NegotiatedCredential, SafCode, SiteVisibleSignature,
 };
 use base64::Engine as _;
-use super::support::*;
-use super::support_requests::*;
 
 /// El reto de 64 bytes del banco de referencia, lo que una sede manda en `dat` para un CAdES.
 const A_CHALLENGE: &[u8] = include_bytes!("../../../../../../../testdata/reference/challenge.bin");
@@ -394,4 +388,3 @@ fn the_document_of_a_cades_errand_never_passes_through_as_a_pdf() {
         "lo que se firma es lo que la sede mando"
     );
 }
-

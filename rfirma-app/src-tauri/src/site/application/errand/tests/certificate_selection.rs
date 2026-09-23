@@ -3,23 +3,22 @@
 use std::cell::RefCell;
 use std::sync::Arc;
 
-use crate::site::application::errand::*;
+use super::support::*;
 use crate::crossing::Failure;
 use crate::documents::application::documents::OpenedDocuments;
 use crate::identity::application::certificates::ListedCertificates;
 use crate::identity::application::tests::{a_usable_certificate, listed_from};
 use crate::signing::application::tests::a_memory;
 use crate::site::adapters::frontier;
+use crate::site::application::errand::*;
 use crate::site::application::site::{attend_launch, Attendance};
 use crate::site::domain::channel::{
     ArrivalMode, ChannelDuty, ChannelLocation, OpenChannel, Shutdown,
 };
 use crate::site::domain::protocol::{
-    NegotiatedCredential,
-    SafCode, THE_PORT_OF_THE_THIRD_PROTOCOL,
+    NegotiatedCredential, SafCode, THE_PORT_OF_THE_THIRD_PROTOCOL,
 };
 use base64::Engine as _;
-use super::support::*;
 
 #[test]
 #[expect(clippy::too_many_lines)]
@@ -404,4 +403,3 @@ fn a_connection_that_drops_while_the_operation_is_pending_does_not_take_the_erra
         "y el tramite termina igual, sin reintentar nada"
     );
 }
-

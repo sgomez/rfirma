@@ -1,11 +1,10 @@
 //! Pruebas del certificado pegajoso de una seleccion.
 
-
-use crate::site::application::errand::*;
+use super::support::*;
 use crate::identity::application::tests::{a_usable_certificate, listed_from};
 use crate::identity::ports::CertificateMemory;
 use crate::signing::application::tests::a_memory;
-use super::support::*;
+use crate::site::application::errand::*;
 
 #[test]
 fn a_sticky_selection_opens_the_window_with_the_desk_remembered_row_preselected_and_answers_nothing(
@@ -235,4 +234,3 @@ fn without_sticky_the_remembered_certificate_changes_nothing() {
     assert!(matches!(reply, SiteOutcome::Certificate(_)));
     assert_eq!(live.the_stuck(), None, "sin 'sticky' no se fija nada");
 }
-

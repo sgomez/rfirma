@@ -2,7 +2,8 @@
 
 use std::path::Path;
 
-use crate::site::application::errand::*;
+use super::support::*;
+use super::support_requests::*;
 use crate::documents::application::documents::OpenedDocuments;
 use crate::identity::application::certificates::ListedCertificates;
 use crate::identity::application::tests::{a_usable_certificate, listed_from};
@@ -11,14 +12,10 @@ use crate::signing::adapters::memory::Memory;
 use crate::signing::application::tests::a_memory;
 use crate::signing::domain::bridge::SignatureVerdict;
 use crate::site::adapters::frontier;
+use crate::site::application::errand::*;
 use crate::site::application::tests::AValidator;
-use crate::site::domain::protocol::{
-    SafCode,
-    SiteVisibleSignature, WireAnswer,
-};
+use crate::site::domain::protocol::{SafCode, SiteVisibleSignature, WireAnswer};
 use base64::Engine as _;
-use super::support::*;
-use super::support_requests::*;
 
 /// El `properties` con `headless=true`, ya en Base64 del protocolo.
 fn headless_properties() -> String {
@@ -507,4 +504,3 @@ fn a_local_batch_ignores_check_signatures_as_the_original_does() {
         "el lote firma sus tres elementos sin preguntar por las firmas previas"
     );
 }
-

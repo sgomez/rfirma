@@ -2,23 +2,22 @@
 
 use std::cell::RefCell;
 
-use crate::site::application::errand::*;
+use super::support::*;
+use super::support_requests::*;
 use crate::crossing::Failure;
 use crate::documents::application::documents::OpenedDocuments;
 use crate::identity::application::certificates::ListedCertificates;
 use crate::identity::application::tests::{a_usable_certificate, listed_from, NoMemory};
 use crate::identity::domain::certificate::TokenCertificate;
 use crate::signing::application::tests::a_memory;
+use crate::site::application::errand::*;
 use crate::site::application::site::{attend_launch, Attendance};
 use crate::site::domain::channel::{
     ArrivalMode, ChannelDuty, ChannelLocation, OpenChannel, Shutdown,
 };
 use crate::site::domain::protocol::{
-    NegotiatedCredential, Parameter,
-    SafCode, SiteFilter, WireAnswer,
+    NegotiatedCredential, Parameter, SafCode, SiteFilter, WireAnswer,
 };
-use super::support::*;
-use super::support_requests::*;
 
 #[test]
 fn a_refusal_of_the_protocol_never_reaches_the_token() {
@@ -457,7 +456,6 @@ fn leaving_the_no_certificate_screen_cancels_the_errand() {
         "y no queda nada que reatender"
     );
 }
-
 
 #[test]
 fn neither_headless_nor_the_mandatory_selection_skips_the_consent() {

@@ -1,24 +1,18 @@
 //! Pruebas de contrafirma, gzip y firma sin dat.
 
-
-use crate::site::application::errand::*;
+use super::support::*;
+use super::support_requests::*;
 use crate::documents::application::documents::{self, OpenedDocuments};
 use crate::identity::application::certificates::ListedCertificates;
 use crate::identity::application::tests::{a_usable_certificate, listed_from};
-use crate::signing::application::tests::{
-    a_memory, A_CADES_SIGNATURE,
-};
-use crate::signing::domain::bridge::{
-    Format, SignatureOperation, XadesVariant,
-};
+use crate::signing::application::tests::{a_memory, A_CADES_SIGNATURE};
+use crate::signing::domain::bridge::{Format, SignatureOperation, XadesVariant};
+use crate::site::application::errand::*;
 use crate::site::domain::channel::ArrivalMode;
 use crate::site::domain::protocol::{
-    AfirmaUrl, ChannelMessage, NegotiatedCredential, Parameter,
-    SafCode, WireAnswer,
+    AfirmaUrl, ChannelMessage, NegotiatedCredential, Parameter, SafCode, WireAnswer,
 };
 use base64::Engine as _;
-use super::support::*;
-use super::support_requests::*;
 
 /// La contrafirma que pide una sede, con el formato y el `target` que se le digan.
 fn a_countersignature_asking_for(format: &str, target: &str, document: &[u8]) -> AfirmaUrl {
@@ -490,4 +484,3 @@ fn a_document_chosen_for_a_signature_without_dat_continues_the_errand() {
         )
     );
 }
-

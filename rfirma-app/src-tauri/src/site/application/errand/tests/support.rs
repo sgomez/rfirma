@@ -4,7 +4,6 @@ use std::cell::RefCell;
 use std::path::Path;
 use std::sync::Arc;
 
-use crate::site::application::errand::*;
 use crate::documents::application::documents::OpenedDocuments;
 use crate::documents::domain::document::Document;
 use crate::identity::application::certificates::ListedCertificates;
@@ -18,26 +17,22 @@ use crate::identity::ports::Token as _;
 use crate::signing::adapters::failures::told_of_cycle;
 use crate::signing::adapters::memory::Memory;
 use crate::signing::application::session::{self, CycleFailure, DocumentToSign, SigningSession};
-use crate::signing::application::tests::{
-    ABridgeThatSigns, AnIsolateWith, NoIsolate,
-};
-use crate::signing::domain::bridge::{
-    BridgeError, Format, SignatureOperation,
-};
+use crate::signing::application::tests::{ABridgeThatSigns, AnIsolateWith, NoIsolate};
+use crate::signing::domain::bridge::{BridgeError, Format, SignatureOperation};
 use crate::signing::domain::isolate_gone::IsolateGone;
 use crate::signing::ports::{Bridge, IsolateHost, Signer};
 use crate::site::adapters::channel::{answer as what_the_channel_answers, Answer};
 use crate::site::adapters::codec::V4Codec;
 use crate::site::adapters::desk::signing_refusal_of;
+use crate::site::application::errand::*;
 use crate::site::application::tests::read_operation;
-use crate::site::application::tests::{
-    InMemoryBatchServices, InMemoryTokenSigning, NotAsked,
-};
+use crate::site::application::tests::{InMemoryBatchServices, InMemoryTokenSigning, NotAsked};
 use crate::site::domain::channel::{
     ChannelDuty, ChannelError, ChannelLocation, OpenChannel, Shutdown,
 };
 use crate::site::domain::protocol::{
-    AfirmaUrl, ChannelCredential, ChannelMessage, NegotiatedCredential, SelectCertificate, SiteOperation,
+    AfirmaUrl, ChannelCredential, ChannelMessage, NegotiatedCredential, SelectCertificate,
+    SiteOperation,
 };
 use crate::site::domain::signing::{SigningRefusal, SiteSignature};
 use crate::site::ports::{
@@ -108,7 +103,8 @@ pub(crate) fn the_wire() -> (ReplyHandle, tokio::sync::oneshot::Receiver<String>
 }
 
 /// Asa de respuesta simulada cuyo acuse de entrega nunca llega.
-pub(crate) fn a_wire_that_never_confirms() -> (ReplyHandle, tokio::sync::oneshot::Receiver<String>) {
+pub(crate) fn a_wire_that_never_confirms() -> (ReplyHandle, tokio::sync::oneshot::Receiver<String>)
+{
     let (sender, receiver) = tokio::sync::oneshot::channel();
     (
         ReplyHandle::of(move |text| {
@@ -153,7 +149,9 @@ pub(crate) fn on_the_wire(outcome: &SiteOutcome) -> String {
 }
 
 /// Lo que sale al cable, si ha salido algo.
-pub(crate) fn what_the_site_received(wire: &mut tokio::sync::oneshot::Receiver<String>) -> Option<String> {
+pub(crate) fn what_the_site_received(
+    wire: &mut tokio::sync::oneshot::Receiver<String>,
+) -> Option<String> {
     wire.try_recv().ok()
 }
 

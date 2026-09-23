@@ -3,7 +3,7 @@
 use std::path::Path;
 use std::sync::Arc;
 
-use crate::site::application::errand::*;
+use super::support::*;
 use crate::documents::application::documents::OpenedDocuments;
 use crate::identity::application::certificates::ListedCertificates;
 use crate::identity::application::tests::{a_usable_certificate, listed_from};
@@ -11,16 +11,12 @@ use crate::identity::domain::certificate::TokenCertificate;
 use crate::signing::adapters::memory::Memory;
 use crate::signing::application::session::SigningSession;
 use crate::signing::application::tests::a_memory;
+use crate::site::application::errand::*;
 use crate::site::application::tests::read_operation;
-use crate::site::application::tests::{
-    InMemoryBatchServices, InMemoryTokenSigning, NotAsked,
-};
-use crate::site::domain::protocol::{
-    AfirmaUrl, ChannelMessage, SignRequest, SiteOperation,
-};
+use crate::site::application::tests::{InMemoryBatchServices, InMemoryTokenSigning, NotAsked};
+use crate::site::domain::protocol::{AfirmaUrl, ChannelMessage, SignRequest, SiteOperation};
 use crate::site::domain::signing::SiteSignature;
 use base64::Engine as _;
-use super::support::*;
 
 /// Un PDF mínimo, que es lo que la sede manda dentro de `dat`.
 pub(crate) const A_PDF: &[u8] = b"%PDF-1.7\n";
@@ -93,7 +89,9 @@ pub(crate) fn a_signature_arriving_over_the_channel(verb: &str) -> AfirmaUrl {
 }
 
 /// La petición de `signandsave` ya leída, que es lo que recibe el caso de uso.
-pub(crate) fn sign_and_save_requested(url: &AfirmaUrl) -> crate::site::domain::protocol::SignAndSaveRequest {
+pub(crate) fn sign_and_save_requested(
+    url: &AfirmaUrl,
+) -> crate::site::domain::protocol::SignAndSaveRequest {
     let SiteOperation::SignAndSave(request) =
         read_operation(url).expect("es una operacion que se atiende")
     else {
@@ -186,7 +184,6 @@ pub(crate) fn a_desk_without_any_store<'a>(
     a_desk(engine, policies, &[], home, listed, opened, memory, scratch)
 }
 
-
 /// Una mesa que lista los certificados dados y habla con los servlets del lote dados.
 pub(crate) fn a_desk_for_the_batch<'a>(
     engine: &'a AnEngine,
@@ -226,7 +223,6 @@ pub(crate) fn a_desk_for_the_batch<'a>(
     }
 }
 
-
 pub(crate) const A_LOCAL_PDF: &[u8] = b"%PDF-1.4\n";
 pub(crate) const A_LOCAL_BINARY: &[u8] = b"\x00\x01\x02\x03";
 pub(crate) const A_LOCAL_XML: &[u8] = b"<?xml version=\"1.0\"?><a/>";
@@ -235,7 +231,6 @@ pub(crate) const A_LOCAL_XML: &[u8] = b"<?xml version=\"1.0\"?><a/>";
 pub(crate) fn in_the_batch(document: &[u8]) -> String {
     base64::engine::general_purpose::STANDARD.encode(document)
 }
-
 
 /// Un lote local de tres elementos con `format=auto`: un PDF, un binario que se cofirma y un XML.
 pub(crate) fn a_local_batch(extra: &str) -> AfirmaUrl {
@@ -259,7 +254,6 @@ pub(crate) fn a_local_batch(extra: &str) -> AfirmaUrl {
     url
 }
 
-
 /// Una mesa que firma de verdad por el ciclo de sede, con el puente doblado atendiendo.
 #[expect(
     clippy::too_many_arguments,
@@ -281,7 +275,6 @@ pub(crate) fn a_desk_for_the_local_batch<'a>(
     desk
 }
 
-
 /// El resultado del lote que la sede acaba de recibir, ya descodificado.
 pub(crate) fn the_batch_result(wire: &mut tokio::sync::oneshot::Receiver<String>) -> String {
     let answered = what_the_site_received(wire).expect("la sede recibe el resultado del lote");
@@ -291,7 +284,5 @@ pub(crate) fn the_batch_result(wire: &mut tokio::sync::oneshot::Receiver<String>
     String::from_utf8(decoded).expect("el resultado del lote es JSON")
 }
 
-
 /// El documento sobre el que se piden las firmas XAdES del cable: cualquier XML vale.
 pub(crate) const AN_XML_CHALLENGE: &[u8] = b"<?xml version=\"1.0\"?><documento/>";
-

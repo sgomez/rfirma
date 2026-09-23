@@ -2,21 +2,17 @@
 
 use std::sync::Arc;
 
-use crate::site::application::errand::*;
+use super::support::*;
+use super::support_requests::*;
 use crate::documents::application::documents::OpenedDocuments;
 use crate::identity::application::tests::{a_usable_certificate, listed_from};
 use crate::signing::application::tests::a_memory;
-use crate::signing::domain::bridge::{
-    Format, XadesVariant,
-};
+use crate::signing::domain::bridge::{Format, XadesVariant};
 use crate::site::adapters::frontier;
+use crate::site::application::errand::*;
 use crate::site::application::tests::InMemoryBatchServices;
-use crate::site::domain::protocol::{
-    AfirmaUrl, ChannelMessage, SignatureRound,
-};
+use crate::site::domain::protocol::{AfirmaUrl, ChannelMessage, SignatureRound};
 use base64::Engine as _;
-use super::support::*;
-use super::support_requests::*;
 
 /// Un lote local de tres elementos donde el segundo pide un formato que el puente no atiende
 /// (`cades-asic-s`), para ejercitar el fallo de un elemento sin depender del puente doblado.
@@ -335,4 +331,3 @@ fn a_local_batch_that_is_declined_ends_in_a_cancel() {
         Some(frontier::cancelled().on_the_wire())
     );
 }
-

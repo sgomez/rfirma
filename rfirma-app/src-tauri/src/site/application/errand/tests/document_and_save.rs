@@ -2,25 +2,22 @@
 
 use std::sync::Arc;
 
-use crate::site::application::errand::*;
+use super::support::*;
+use super::support_requests::*;
 use crate::documents::application::documents::OpenedDocuments;
 use crate::identity::application::certificates::ListedCertificates;
 use crate::identity::application::tests::{a_usable_certificate, listed_from};
 use crate::signing::application::session::SigningSession;
 use crate::signing::application::tests::a_memory;
+use crate::site::application::errand::*;
 use crate::site::application::session::SiteRefusal;
-use crate::site::application::tests::{
-    InMemoryBatchServices, InMemoryTokenSigning, NotAsked,
-};
+use crate::site::application::tests::{InMemoryBatchServices, InMemoryTokenSigning, NotAsked};
 use crate::site::domain::channel::ArrivalMode;
 use crate::site::domain::protocol::{
-    AfirmaUrl, ChannelMessage, NegotiatedCredential,
-    SafCode, SignatureRound, WireAnswer,
+    AfirmaUrl, ChannelMessage, NegotiatedCredential, SafCode, SignatureRound, WireAnswer,
 };
 use crate::site::domain::signing::SiteSignature;
 use base64::Engine as _;
-use super::support::*;
-use super::support_requests::*;
 
 #[test]
 fn document_chosen_reads_the_scratch_path_lists_certificates_and_continues_the_errand() {
