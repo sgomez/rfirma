@@ -11,6 +11,10 @@ fn an_occupied_port() -> (TcpListener, u16) {
     (listener, port)
 }
 
+fn ipv6_loopback_is_available() -> bool {
+    TcpListener::bind(SocketAddr::from((Ipv6Addr::LOCALHOST, 0))).is_ok()
+}
+
 #[test]
 fn the_first_free_of_the_drawn_ports_is_the_one_that_is_bound() {
     let (occupied, taken) = an_occupied_port();
@@ -21,7 +25,7 @@ fn the_first_free_of_the_drawn_ports_is_the_one_that_is_bound() {
         .expect("el segundo estaba libre");
 
     assert_eq!(
-        listener.local_addr().expect("atado").port(),
+        listener.port().expect("atado"),
         available,
         "se prueban en el orden en que la sede los mando"
     );
@@ -35,11 +39,48 @@ fn the_channel_only_listens_on_the_loopback() {
 
     let listener = bind_first_free(&ChannelLocation::Drawn(vec![available])).expect("estaba libre");
 
-    assert_eq!(
-        listener.local_addr().expect("atado").ip(),
-        Ipv4Addr::LOCALHOST,
-        "un canal atado a 0.0.0.0 estaria abierto a la red local"
+    let addresses = listener.addresses();
+    assert!(
+        addresses.iter().all(|address| address.ip().is_loopback()),
+        "un canal atado a la comodin estaria abierto a la red local: {addresses:?}"
     );
+}
+
+#[test]
+fn the_channel_listens_on_both_loopbacks_at_the_same_port() {
+    if !ipv6_loopback_is_available() {
+        return;
+    }
+    let (free, available) = an_occupied_port();
+    drop(free);
+
+    let listener = bind_first_free(&ChannelLocation::Drawn(vec![available])).expect("estaba libre");
+
+    assert_eq!(
+        listener.addresses(),
+        vec![
+            SocketAddr::from((Ipv4Addr::LOCALHOST, available)),
+            SocketAddr::from((Ipv6Addr::LOCALHOST, available)),
+        ]
+    );
+}
+
+#[test]
+fn a_port_taken_on_the_ipv6_loopback_is_skipped_like_any_taken_port() {
+    if !ipv6_loopback_is_available() {
+        return;
+    }
+    let occupied = TcpListener::bind(SocketAddr::from((Ipv6Addr::LOCALHOST, 0)))
+        .expect("el sistema deberia dar un puerto efimero");
+    let taken = occupied.local_addr().expect("atado").port();
+    let (free, available) = an_occupied_port();
+    drop(free);
+
+    let listener = bind_first_free(&ChannelLocation::Drawn(vec![taken, available]))
+        .expect("el segundo estaba libre en los dos bucles locales");
+
+    assert_eq!(listener.port().expect("atado"), available);
+    drop(occupied);
 }
 
 #[test]
@@ -82,7 +123,7 @@ fn a_fixed_port_is_bound_even_if_it_is_the_port_of_the_third_protocol() {
         .expect("un puerto fijo se ata tal cual, aunque sea el 63117");
 
     assert_eq!(
-        listener.local_addr().expect("atado").port(),
+        listener.port().expect("atado"),
         THE_PORT_OF_THE_THIRD_PROTOCOL
     );
 }

@@ -258,14 +258,7 @@ fn the_backing_timeout_expires_and_reveals_the_unreachable_window() {
         "recién arrancado no está enseñada"
     );
 
-    // Esperamos a que venza el timeout
-    for _ in 0..20 {
-        if live.is_revealed() {
-            break;
-        }
-        std::thread::yield_now();
-        std::thread::sleep(Duration::from_millis(10));
-    }
+    world.wait_until_shown();
 
     assert!(
         live.is_revealed(),

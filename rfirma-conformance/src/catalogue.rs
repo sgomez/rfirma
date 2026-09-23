@@ -606,7 +606,7 @@ citation = "AfirmaWebSocketServerV4.java:57-68"
 statement = """
 El canal responde SAF_47 a cualquier origen que no sea 127.0.0.1.
 """
-drive = { mode = "v4-ipv6", script = "selectcert" }
+drive = { mode = "v4", script = "selectcert" }
 saf = "SAF_47"
 assistance = "person"
 store = "ec"
@@ -629,7 +629,7 @@ greeting = true
         assert_eq!(
             check.drive.as_ref().unwrap(),
             &Drive {
-                mode: "v4-ipv6".to_owned(),
+                mode: "v4".to_owned(),
                 script: "selectcert".to_owned()
             }
         );

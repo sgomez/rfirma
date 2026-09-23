@@ -31,7 +31,7 @@ impl LocalServerCertificate {
     pub fn issued_by(ca: &LocalCa) -> Result<Self, TlsError> {
         let key = generate_key()?;
         let certificate = issue(ca, &key, COMMON_NAME, |names| {
-            names.dns(PERMITTED_DNS_NAME).ip("127.0.0.1");
+            names.dns(PERMITTED_DNS_NAME).ip("127.0.0.1").ip("::1");
         })
         .map_err(|error| TlsError::new(Situation::MaterialNotGenerated, error.to_string()))?;
         Ok(Self { certificate, key })

@@ -69,10 +69,12 @@ tampoco mira su certificado local en ese transporte.
 - Por servidor intermedio, una operación que se contesta sola termina el
   proceso sin enseñar nada; una que pide consentimiento abre la ventana ya en
   ese paso.
-- El rechazo por el canal del arranque (versión no soportada, parámetro
-  inválido) sigue su camino: la ventana oculta lo sostiene hasta servirlo, o
-  hasta que vence el plazo sin que llegue el navegador, y entonces lo enseña.
-  El de un trámite ya en curso no toca la ventana de ese trámite.
+- El rechazo por el canal del arranque (parámetro inválido) sigue su camino:
+  la ventana oculta lo sostiene hasta servirlo, o hasta que vence el plazo sin
+  que llegue el navegador, y entonces lo enseña. Una versión de protocolo que
+  el verbo de arranque no habla no va por el canal: se enseña en la ventana
+  sin ligar ningún puerto, como hace AutoFirma. El de un trámite ya en curso
+  no toca la ventana de ese trámite.
 - Con WebSocket queda una carrera que esta regla no cubre: el canal escucha
   desde que se abre en `attend_launch`, y un navegador muy rápido podría
   entregar su operación antes de que el arranque abra la ventana.

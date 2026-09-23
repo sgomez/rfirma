@@ -67,7 +67,7 @@ fn starting_with_nothing_shows_the_main_window() {
 fn a_refused_launch_opens_the_hidden_window_and_arms_the_channel_refusal_wait() {
     let world = Arc::new(World::default());
     let store = a_store();
-    let invocation = invoked_with(&[&a_launch(&format!("v=99&idsession={CREDENTIAL}"))]);
+    let invocation = invoked_with(&[&a_launch("v=4&idsession=abc-def")]);
 
     let startup = starting_with(&world, &store, &invocation);
 
@@ -81,7 +81,7 @@ fn a_refused_launch_opens_the_hidden_window_and_arms_the_channel_refusal_wait() 
     );
     assert_eq!(
         world.steps(),
-        ["canal", "ventana:rechazo:SAF_21"],
+        ["canal", "ventana:rechazo:SAF_03"],
         "un rechazo por el canal abre la ventana oculta sin enseñarla, y no toca la CA local"
     );
 }
@@ -298,6 +298,21 @@ fn a_launch_without_ports_shows_its_refusal_in_the_window() {
         world.steps(),
         ["ventana:rechazo:SAF_03", "ventana:enseñada"],
         "sin puertos no se intenta abrir ningun socket ni tocar la CA local"
+    );
+}
+
+#[test]
+fn a_launch_in_a_version_it_does_not_speak_shows_its_refusal_in_the_window_without_a_channel() {
+    let world = Arc::new(World::default());
+    let store = a_store();
+    let invocation = invoked_with(&[&a_launch(&format!("v=99&idsession={CREDENTIAL}"))]);
+
+    let _startup = starting_with(&world, &store, &invocation);
+
+    assert_eq!(
+        world.steps(),
+        ["ventana:rechazo:SAF_21", "ventana:enseñada"],
+        "una version ajena no liga ningun puerto"
     );
 }
 

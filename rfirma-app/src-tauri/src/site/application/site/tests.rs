@@ -139,12 +139,9 @@ fn the_negotiation_table_decides_codec_and_location_by_the_shape_of_the_launch()
             expected: Expected::RefusedInTheWindow(SafCode::Params),
         },
         Case {
-            name: "una version no soportada con puertos se rechaza por el canal",
+            name: "una version no soportada con puertos se rechaza en la ventana",
             url: a_launch("ports=54001&v=99&idsession=abc"),
-            expected: Expected::RefusedOverTheChannel {
-                location: ChannelLocation::Drawn(vec![54001]),
-                code: SafCode::UnsupportedProcedure,
-            },
+            expected: Expected::RefusedInTheWindow(SafCode::UnsupportedProcedure),
         },
         Case {
             name: "v4 sin ports se rechaza en la ventana: no hay puerto candidato",
@@ -417,6 +414,28 @@ fn a_service_launch_outside_its_versions_is_refused_in_the_window_without_bindin
 }
 
 #[test]
+fn a_websocket_launch_outside_its_versions_is_refused_in_the_window_without_binding() {
+    for version in ["&v=0", "&v=1", "&v=2", "&v=5", "&v=99", ""] {
+        let transport = ATransport::default();
+
+        let attendance = attend_launch(
+            &a_launch(&format!(
+                "ports=54001,54002{version}&idsession={CREDENTIAL}"
+            )),
+            &a_codec_table(),
+            &|location, duty| transport.open(location, duty),
+            &LiveErrand::default(),
+        );
+
+        let Attendance::RefusingInTheWindow(refusal) = attendance else {
+            panic!("'{version}' no abre canal: {attendance:?}");
+        };
+        assert_eq!(refusal.code(), SafCode::UnsupportedProcedure, "'{version}'");
+        transport.was_never_asked();
+    }
+}
+
+#[test]
 fn a_service_launch_in_versions_one_two_and_three_opens_its_channel() {
     for version in 1..=3 {
         let transport = ATransport::default();
@@ -523,7 +542,7 @@ fn a_refusal_that_cannot_be_answered_over_a_socket_falls_back_to_the_window() {
     let transport = ATransport::that_cannot_bind();
 
     let attendance = attend_launch(
-        &a_launch("ports=54001&v=99&idsession=abc"),
+        &a_launch("ports=54001&v=4"),
         &a_codec_table(),
         &|location, duty| transport.open(location, duty),
         &LiveErrand::default(),
@@ -532,7 +551,7 @@ fn a_refusal_that_cannot_be_answered_over_a_socket_falls_back_to_the_window() {
     let Attendance::RefusingInTheWindow(refusal) = attendance else {
         panic!("sin canal disponible no hay socket: {attendance:?}");
     };
-    assert_eq!(refusal.code(), SafCode::UnsupportedProcedure);
+    assert_eq!(refusal.code(), SafCode::Params);
 }
 
 #[test]

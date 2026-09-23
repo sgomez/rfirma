@@ -45,7 +45,7 @@ async fn the_url_the_published_client_builds_is_the_one_rfirma_reads() {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn an_unsupported_version_reaches_the_error_callback_of_the_published_client() {
+async fn a_malformed_credential_reaches_the_error_callback_of_the_published_client() {
     if !the_bench_can_be_mounted() {
         return;
     }
@@ -54,12 +54,9 @@ async fn an_unsupported_version_reaches_the_error_callback_of_the_published_clie
     let client = PublishedClient::running_against(&material);
     let url = client.the_launch_url();
 
-    let unsupported = url.replace(
-        &format!("&v={THE_VERSION_THE_PUBLISHED_CLIENT_SPEAKS}"),
-        "&v=99",
-    );
-    let refusal = LaunchRequest::parse(&unsupported).expect_err("la version 99 no se habla aqui");
-    assert_eq!(refusal.code(), SafCode::UnsupportedProcedure);
+    let malformed = url.replace("idsession=", "idsession=-");
+    let refusal = LaunchRequest::parse(&malformed).expect_err("el idsession no vale");
+    assert_eq!(refusal.code(), SafCode::Params);
 
     let parsed = AfirmaUrl::parse(&url).expect("la invocacion deberia leerse");
     let _channel =
@@ -77,7 +74,7 @@ async fn an_unsupported_version_reaches_the_error_callback_of_the_published_clie
         verdict.field("type"),
         "java.lang.InterruptedException",
         "lo medido contra el tag v1.9.2: el cierre del canal es lo que el \
-         cliente publicado convierte en error, no el `SAF_21` que le contestamos"
+         cliente publicado convierte en error, no el `SAF_03` que le contestamos"
     );
 }
 

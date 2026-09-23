@@ -1,160 +1,16 @@
 //! Cliente de canal para probar el canal local de punta a punta (ADR-0005).
 
-use std::time::Duration;
+#[path = "channel_client/support.rs"]
+mod support;
+use support::*;
 
-use futures_util::{SinkExt, StreamExt};
-use native_tls::{Certificate, TlsConnector};
-use rfirma_lib::site::adapters::channel::{
-    bind_first_free, serve, SiteOperations, THE_PORT_OF_THE_THIRD_PROTOCOL,
-};
+use rfirma_lib::site::adapters::channel::{bind_first_free, THE_PORT_OF_THE_THIRD_PROTOCOL};
 use rfirma_lib::site::adapters::codec::V4Codec;
-use rfirma_lib::site::adapters::tls::LocalServerCertificate;
 use rfirma_lib::site::application::errand::LiveErrand;
 use rfirma_lib::site::application::site::{Attendance, CodecTable};
 use rfirma_lib::site::application::startup::{attend_site_launch, LocalCaReach};
-use rfirma_lib::site::domain::channel::{ChannelDuty, ChannelLocation, OpenChannel};
-use rfirma_lib::site::domain::local_ca::LocalCa;
-use rfirma_lib::site::domain::protocol::{
-    AfirmaUrl, ChannelCredential, LaunchRequest, NegotiatedCredential, SafCode,
-};
-use rfirma_lib::site::ports::ReplyHandle;
-use tokio_tungstenite::tungstenite::client::IntoClientRequest;
-use tokio_tungstenite::tungstenite::Message;
-use tokio_tungstenite::Connector;
-
-/// La credencial que la sede sortea: veinte alfanuméricos.
-const CREDENTIAL: &str = "8jAkPZfRw2mQxN4TbYuL";
-
-/// Lo que tarda de más una respuesta que no va a llegar.
-const PATIENCE: Duration = Duration::from_secs(10);
-
-/// Canal levantado sobre un puerto efímero.
-struct AChannel {
-    channel: OpenChannel,
-    ca_pem: Vec<u8>,
-}
-
-impl AChannel {
-    /// Levanta el canal para ese cometido, sobre un puerto que da el sistema.
-    async fn serving(duty: ChannelDuty) -> Self {
-        Self::serving_with(duty, no_operations()).await
-    }
-
-    /// Levanta el canal con el trámite doblado.
-    async fn serving_with(duty: ChannelDuty, operations: SiteOperations) -> Self {
-        let ca = LocalCa::generate().expect("la CA local deberia generarse");
-        let certificate =
-            LocalServerCertificate::issued_by(&ca).expect("el certificado deberia emitirse");
-        let listener = std::net::TcpListener::bind("127.0.0.1:0")
-            .expect("el sistema deberia dar un puerto efimero");
-
-        let channel = serve(listener, &certificate, duty, operations)
-            .await
-            .expect("el canal deberia levantarse");
-
-        Self {
-            channel,
-            ca_pem: ca.certificate_pem().expect("la CA local en PEM"),
-        }
-    }
-
-    /// El canal que sirve la conversación con la credencial de siempre.
-    async fn serving_the_echo() -> Self {
-        Self::serving(ChannelDuty::Serve(NegotiatedCredential::Required(
-            ChannelCredential::parse(CREDENTIAL).expect("veinte alfanumericos son credencial"),
-        )))
-        .await
-    }
-
-    fn port(&self) -> u16 {
-        self.channel.port()
-    }
-
-    /// El cliente de canal: un `wss://` que confía en esta CA local y nada más.
-    async fn a_client(&self) -> ChannelClient {
-        ChannelClient::connect(self.port(), Some(&self.ca_pem)).await
-    }
-}
-
-/// Cliente de canal que habla `wss://` contra el servidor local.
-struct ChannelClient {
-    socket: tokio_tungstenite::WebSocketStream<
-        tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>,
-    >,
-}
-
-impl ChannelClient {
-    /// Conexión TLS y `Upgrade` de WebSocket encima.
-    async fn try_connect(port: u16, ca_pem: Option<&[u8]>) -> Result<Self, String> {
-        let mut builder = TlsConnector::builder();
-        if let Some(ca_pem) = ca_pem {
-            builder.add_root_certificate(
-                Certificate::from_pem(ca_pem).expect("la CA local deberia leerse"),
-            );
-        }
-        let connector = builder.build().expect("el conector deberia construirse");
-
-        let request = format!("wss://localhost:{port}/")
-            .into_client_request()
-            .expect("la URL del canal deberia ser una peticion");
-
-        let connected = tokio::time::timeout(
-            PATIENCE,
-            tokio_tungstenite::connect_async_tls_with_config(
-                request,
-                None,
-                false,
-                Some(Connector::NativeTls(connector)),
-            ),
-        )
-        .await
-        .map_err(|_| "el saludo no termino".to_owned())?;
-
-        match connected {
-            Ok((socket, _)) => Ok(Self { socket }),
-            Err(error) => Err(error.to_string()),
-        }
-    }
-
-    async fn connect(port: u16, ca_pem: Option<&[u8]>) -> Self {
-        Self::try_connect(port, ca_pem)
-            .await
-            .expect("el saludo deberia terminar bien")
-    }
-
-    /// Manda un mensaje y espera la respuesta.
-    async fn say(&mut self, message: &str) -> Option<String> {
-        self.socket
-            .send(Message::text(message.to_owned()))
-            .await
-            .expect("el canal deberia aceptar el mensaje");
-
-        loop {
-            let received = tokio::time::timeout(PATIENCE, self.socket.next())
-                .await
-                .expect("la respuesta deberia llegar")?;
-            match received.expect("la respuesta deberia leerse") {
-                Message::Text(text) => return Some(text.as_str().to_owned()),
-                Message::Close(_) => return None,
-                _ => continue,
-            }
-        }
-    }
-
-    /// El eco tal y como lo manda el cliente publicado.
-    async fn echo(&mut self, credential: &str) -> Option<String> {
-        self.say(&format!("echo=-idsession={credential}@EOF")).await
-    }
-
-    /// ¿Sigue abierto el canal después de la respuesta?
-    async fn is_still_open(&mut self) -> bool {
-        match tokio::time::timeout(Duration::from_millis(200), self.socket.next()).await {
-            Err(_) => true,
-            Ok(None) => false,
-            Ok(Some(received)) => !matches!(received, Ok(Message::Close(_)) | Err(_)),
-        }
-    }
-}
+use rfirma_lib::site::domain::channel::ChannelLocation;
+use rfirma_lib::site::domain::protocol::LaunchRequest;
 
 #[tokio::test]
 async fn the_channel_answers_the_echo_with_ok_over_tls() {
@@ -214,12 +70,10 @@ async fn an_echo_with_another_credential_is_refused_and_the_channel_keeps_answer
 }
 
 #[tokio::test]
-async fn a_launch_with_an_unsupported_version_is_refused_over_the_socket() {
-    let refusal = LaunchRequest::parse(&format!(
-        "afirma://websocket?ports=0&v=99&idsession={CREDENTIAL}"
-    ))
-    .expect_err("la version 99 no se habla aqui");
-    assert_eq!(refusal.code(), SafCode::UnsupportedProcedure);
+async fn a_launch_with_a_malformed_credential_is_refused_over_the_socket() {
+    let refusal = LaunchRequest::parse("afirma://websocket?ports=54001&v=4&idsession=abc-def")
+        .expect_err("el idsession no vale");
+    assert_eq!(refusal.code(), SafCode::Params);
 
     let canal = AChannel::serving(ChannelDuty::Refuse(refusal.answer())).await;
     let mut client = canal.a_client().await;
@@ -228,7 +82,10 @@ async fn a_launch_with_an_unsupported_version_is_refused_over_the_socket() {
 
     assert_eq!(
         answer,
-        Some("SAF_21: Este tramite no es compatible con la version instalada".to_owned())
+        Some(
+            "SAF_03: Error en los parametros de entrada; el parametro que falla es 'idsession'"
+                .to_owned()
+        )
     );
     assert!(
         !client.is_still_open().await,
@@ -276,6 +133,44 @@ async fn the_channel_ends_up_on_one_of_the_ports_the_site_drew() {
     )
     .await;
     assert_eq!(client.echo(CREDENTIAL).await, Some("OK".to_owned()));
+}
+
+#[tokio::test]
+async fn the_channel_answers_on_both_loopbacks() {
+    if std::net::TcpListener::bind("[::1]:0").is_err() {
+        return;
+    }
+    let ca = LocalCa::generate().expect("la CA local deberia generarse");
+    let certificate =
+        LocalServerCertificate::issued_by(&ca).expect("el certificado deberia emitirse");
+    let port = {
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").expect("puerto efimero");
+        listener.local_addr().expect("atado").port()
+    };
+    let listener = bind_first_free(&ChannelLocation::Drawn(vec![port])).expect("estaba libre");
+    let channel = serve(
+        listener,
+        &certificate,
+        ChannelDuty::Serve(NegotiatedCredential::Required(
+            ChannelCredential::parse(CREDENTIAL).expect("credencial"),
+        )),
+        no_operations(),
+    )
+    .await
+    .expect("el canal deberia levantarse");
+    let ca_pem = ca.certificate_pem().expect("la CA local en PEM");
+
+    for address in ["127.0.0.1", "::1"] {
+        let mut client =
+            ChannelClient::try_connect_to_the_address(address, channel.port(), &ca_pem)
+                .await
+                .unwrap_or_else(|error| panic!("por {address} deberia conectar: {error}"));
+        assert_eq!(
+            client.echo(CREDENTIAL).await,
+            Some("OK".to_owned()),
+            "por {address}"
+        );
+    }
 }
 
 #[tokio::test]
@@ -382,11 +277,6 @@ async fn a_site_launch_ends_with_the_echo_answered_over_the_open_channel() {
     assert_eq!(client.echo(CREDENTIAL).await, Some("OK".to_owned()));
 }
 
-/// Trámite que no contesta las operaciones recibidas.
-fn no_operations() -> SiteOperations {
-    SiteOperations::for_operations(|_, _| {})
-}
-
 /// Más que el máximo de 240s que el original le daba a un lote (`setConnectionLostTimeout`).
 const LONGER_THAN_THE_ORIGINAL_BATCH_ALLOWANCE: Duration = Duration::from_secs(245);
 
@@ -412,275 +302,4 @@ async fn a_silent_wss_connection_survives_longer_than_the_original_batch_allowan
         Some("OK".to_owned()),
         "el eco deberia contestarse tras el silencio, sin timeout propio de por medio"
     );
-}
-
-#[tokio::test(flavor = "multi_thread")]
-async fn an_operation_is_answered_by_the_errand_and_not_by_the_channel() {
-    let held: std::sync::Arc<std::sync::Mutex<Option<ReplyHandle>>> =
-        std::sync::Arc::new(std::sync::Mutex::new(None));
-    let keeping = std::sync::Arc::clone(&held);
-
-    let channel = AChannel::serving_with(
-        ChannelDuty::Serve(NegotiatedCredential::Required(
-            ChannelCredential::parse(CREDENTIAL).expect("credencial"),
-        )),
-        SiteOperations::for_operations(move |url: AfirmaUrl, reply: ReplyHandle| {
-            assert_eq!(url.verb(), "selectcert");
-            *keeping.lock().expect("el candado") = Some(reply);
-        }),
-    )
-    .await;
-    let mut client = channel.a_client().await;
-
-    assert_eq!(client.echo(CREDENTIAL).await.as_deref(), Some("OK"));
-
-    let operation = format!("afirma://selectcert?op=selectcert&idsession={CREDENTIAL}");
-    client
-        .socket
-        .send(Message::text(operation))
-        .await
-        .expect("la operacion deberia salir");
-
-    let waited = tokio::time::timeout(Duration::from_millis(300), client.socket.next()).await;
-    assert!(
-        waited.is_err(),
-        "la operacion no se contesta hasta que lo haga el tramite: {waited:?}"
-    );
-
-    let reply = held
-        .lock()
-        .expect("el candado")
-        .take()
-        .expect("el tramite recibio el asa");
-    let acknowledgement = reply.answer("CANCEL".to_owned());
-
-    let answered = tokio::time::timeout(PATIENCE, client.socket.next())
-        .await
-        .expect("la respuesta del tramite deberia llegar")
-        .expect("hay mensaje")
-        .expect("y se lee");
-    assert_eq!(answered.into_text().expect("es texto").as_str(), "CANCEL");
-    assert!(
-        acknowledgement.wait(Duration::from_millis(0)),
-        "el cliente ya ha recibido la respuesta: el acuse deberia estar cumplido"
-    );
-}
-
-#[tokio::test(flavor = "multi_thread")]
-async fn the_acknowledgement_is_not_fulfilled_for_a_client_already_gone() {
-    let held: std::sync::Arc<std::sync::Mutex<Option<ReplyHandle>>> =
-        std::sync::Arc::new(std::sync::Mutex::new(None));
-    let keeping = std::sync::Arc::clone(&held);
-
-    let channel = AChannel::serving_with(
-        ChannelDuty::Serve(NegotiatedCredential::Required(
-            ChannelCredential::parse(CREDENTIAL).expect("credencial"),
-        )),
-        SiteOperations::for_operations(move |_url: AfirmaUrl, reply: ReplyHandle| {
-            *keeping.lock().expect("el candado") = Some(reply);
-        }),
-    )
-    .await;
-    let mut client = channel.a_client().await;
-
-    // No se lee la respuesta del eco: queda sin leer en el búfer de recepción del cliente, así
-    // que al cerrarlo en caliente el sistema manda un RST en vez de un cierre ordenado.
-    client
-        .socket
-        .send(Message::text(format!("echo=-idsession={CREDENTIAL}@EOF")))
-        .await
-        .expect("el eco deberia salir");
-
-    let operation = format!("afirma://selectcert?op=selectcert&idsession={CREDENTIAL}");
-    client
-        .socket
-        .send(Message::text(operation))
-        .await
-        .expect("la operacion deberia salir");
-
-    while held.lock().expect("el candado").is_none() {
-        tokio::time::sleep(Duration::from_millis(10)).await;
-    }
-    let reply = held
-        .lock()
-        .expect("el candado")
-        .take()
-        .expect("el tramite recibio el asa");
-
-    drop(client);
-    tokio::time::sleep(Duration::from_millis(100)).await;
-
-    let acknowledgement = reply.answer("CANCEL".to_owned());
-
-    assert!(
-        !acknowledgement.wait(Duration::from_millis(300)),
-        "el cliente ya se ha ido: el acuse no deberia cumplirse"
-    );
-}
-
-/// El cometido de servir con la credencial de siempre.
-fn serving_the_credential() -> ChannelDuty {
-    ChannelDuty::Serve(NegotiatedCredential::Required(
-        ChannelCredential::parse(CREDENTIAL).expect("credencial"),
-    ))
-}
-
-fn an_operation(verb: &str) -> String {
-    format!("afirma://{verb}?op={verb}&idsession={CREDENTIAL}")
-}
-
-/// Trámite que contesta en el acto cada operación con su verbo.
-fn answering_each_operation() -> SiteOperations {
-    SiteOperations::for_operations(|url: AfirmaUrl, reply: ReplyHandle| {
-        let _ = reply.answer(format!("contestada:{}", url.verb()));
-    })
-}
-
-/// Espera, sin pasarse, a que la cuenta llegue a lo esperado.
-async fn counted(count: &std::sync::atomic::AtomicUsize, expected: usize) -> usize {
-    let deadline = tokio::time::Instant::now() + Duration::from_secs(2);
-    loop {
-        let now = count.load(std::sync::atomic::Ordering::SeqCst);
-        if now == expected || tokio::time::Instant::now() >= deadline {
-            return now;
-        }
-        tokio::time::sleep(Duration::from_millis(10)).await;
-    }
-}
-
-#[tokio::test(flavor = "multi_thread")]
-async fn two_operations_over_the_same_socket_get_two_answers() {
-    let channel =
-        AChannel::serving_with(serving_the_credential(), answering_each_operation()).await;
-    let mut client = channel.a_client().await;
-
-    let first = client.say(&an_operation("selectcert")).await;
-    let second = client.say(&an_operation("sign")).await;
-
-    assert_eq!(first.as_deref(), Some("contestada:selectcert"));
-    assert_eq!(second.as_deref(), Some("contestada:sign"));
-    assert!(
-        client.is_still_open().await,
-        "el canal sigue abierto para la siguiente operacion"
-    );
-}
-
-#[tokio::test(flavor = "multi_thread")]
-async fn what_an_operation_leaves_on_the_openssl_error_queue_does_not_break_the_channel() {
-    let channel = AChannel::serving_with(
-        serving_the_credential(),
-        SiteOperations::for_operations(|url: AfirmaUrl, reply: ReplyHandle| {
-            let left = openssl::x509::X509::from_pem(b"no es un certificado")
-                .expect_err("un PEM roto no se lee");
-            for error in left.errors() {
-                error.put();
-            }
-            let _ = reply.answer(format!("contestada:{}", url.verb()));
-        }),
-    )
-    .await;
-    let mut client = channel.a_client().await;
-
-    let first = client.say(&an_operation("selectcert")).await;
-    let second = client.say(&an_operation("sign")).await;
-
-    assert_eq!(first.as_deref(), Some("contestada:selectcert"));
-    assert_eq!(second.as_deref(), Some("contestada:sign"));
-}
-
-#[tokio::test(flavor = "multi_thread")]
-async fn an_operation_while_another_is_in_flight_is_refused_as_busy() {
-    let held: std::sync::Arc<std::sync::Mutex<Option<ReplyHandle>>> =
-        std::sync::Arc::new(std::sync::Mutex::new(None));
-    let keeping = std::sync::Arc::clone(&held);
-    let channel = AChannel::serving_with(
-        serving_the_credential(),
-        SiteOperations::for_operations(move |_url: AfirmaUrl, reply: ReplyHandle| {
-            *keeping.lock().expect("el candado") = Some(reply);
-        }),
-    )
-    .await;
-    let mut first = channel.a_client().await;
-    let mut second = channel.a_client().await;
-    first
-        .socket
-        .send(Message::text(an_operation("selectcert")))
-        .await
-        .expect("la operacion deberia salir");
-    while held.lock().expect("el candado").is_none() {
-        tokio::time::sleep(Duration::from_millis(10)).await;
-    }
-
-    let refused = second.say(&an_operation("sign")).await;
-
-    assert_eq!(
-        refused,
-        Some(
-            rfirma_lib::site::domain::protocol::WireAnswer::refused(SafCode::CannotOpenSocket)
-                .on_the_wire()
-        ),
-        "no se atienden dos operaciones a la vez"
-    );
-}
-
-#[tokio::test(flavor = "multi_thread")]
-async fn only_the_first_client_leaving_is_told() {
-    let left = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
-    let counting = std::sync::Arc::clone(&left);
-    let channel = AChannel::serving_with(
-        serving_the_credential(),
-        answering_each_operation().when_the_first_client_leaves(move || {
-            counting.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-        }),
-    )
-    .await;
-    let mut first = channel.a_client().await;
-    assert_eq!(first.echo(CREDENTIAL).await.as_deref(), Some("OK"));
-    let mut second = channel.a_client().await;
-    assert_eq!(second.echo(CREDENTIAL).await.as_deref(), Some("OK"));
-
-    drop(second);
-
-    assert_eq!(
-        counted(&left, 1).await,
-        0,
-        "un cliente secundario que se va no termina nada"
-    );
-    assert_eq!(first.echo(CREDENTIAL).await.as_deref(), Some("OK"));
-
-    drop(first);
-
-    assert_eq!(counted(&left, 1).await, 1);
-}
-
-#[tokio::test(flavor = "multi_thread")]
-async fn the_first_client_leaving_mid_operation_is_told() {
-    let left = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
-    let counting = std::sync::Arc::clone(&left);
-    let held: std::sync::Arc<std::sync::Mutex<Option<ReplyHandle>>> =
-        std::sync::Arc::new(std::sync::Mutex::new(None));
-    let keeping = std::sync::Arc::clone(&held);
-    let channel = AChannel::serving_with(
-        serving_the_credential(),
-        SiteOperations::for_operations(move |_url: AfirmaUrl, reply: ReplyHandle| {
-            *keeping.lock().expect("el candado") = Some(reply);
-        })
-        .when_the_first_client_leaves(move || {
-            counting.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-        }),
-    )
-    .await;
-    let mut client = channel.a_client().await;
-    client
-        .socket
-        .send(Message::text(an_operation("selectcert")))
-        .await
-        .expect("la operacion deberia salir");
-    while held.lock().expect("el candado").is_none() {
-        tokio::time::sleep(Duration::from_millis(10)).await;
-    }
-
-    client.socket.close(None).await.expect("el cierre sale");
-
-    assert_eq!(counted(&left, 1).await, 1);
 }

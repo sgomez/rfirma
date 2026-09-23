@@ -227,13 +227,18 @@ pub fn drawn_ports(url: &AfirmaUrl) -> Vec<u16> {
     parse_ports(url.parameter("ports")).unwrap_or_default()
 }
 
-/// Dónde contestaría un rechazo a esta URL; en ninguno si es un `service` de versión ajena.
+/// Dónde contestaría un rechazo a esta URL; en ninguno si el arranque es de versión ajena.
 pub fn location_for_a_refusal(url: &AfirmaUrl) -> Option<ChannelLocation> {
     let ports = drawn_ports(url);
+    let version = declared_version(url.parameter("v"));
 
     if url.verb() == SERVICE_VERB {
-        let speaks_the_version = is_a_service_version(declared_version(url.parameter("v")));
-        return (speaks_the_version && !ports.is_empty()).then(|| ChannelLocation::Service(ports));
+        return (is_a_service_version(version) && !ports.is_empty())
+            .then(|| ChannelLocation::Service(ports));
+    }
+
+    if url.verb() == LAUNCH_VERB && !is_a_websocket_version(version) {
+        return None;
     }
 
     if let Some(location) = relay_location_for_a_refusal(url) {
@@ -244,7 +249,7 @@ pub fn location_for_a_refusal(url: &AfirmaUrl) -> Option<ChannelLocation> {
         return Some(ChannelLocation::Drawn(ports));
     }
 
-    if declared_version(url.parameter("v")) == THIRD_PROTOCOL_VERSION {
+    if version == THIRD_PROTOCOL_VERSION {
         return Some(ChannelLocation::Fixed(THE_PORT_OF_THE_THIRD_PROTOCOL));
     }
 
@@ -386,7 +391,7 @@ fn declared_version(declared: Option<&str>) -> i64 {
 fn check_protocol_version(declared: Option<&str>) -> Result<i64, Refusal> {
     let version = declared_version(declared);
 
-    if version == PROTOCOL_VERSION || version == THIRD_PROTOCOL_VERSION {
+    if is_a_websocket_version(version) {
         return Ok(version);
     }
 
@@ -414,6 +419,10 @@ fn check_service_version(declared: Option<&str>) -> Result<i64, Refusal> {
         ),
     )
     .because(RefusalSituation::UnsupportedProtocolVersion))
+}
+
+fn is_a_websocket_version(version: i64) -> bool {
+    version == PROTOCOL_VERSION || version == THIRD_PROTOCOL_VERSION
 }
 
 fn is_a_service_version(version: i64) -> bool {

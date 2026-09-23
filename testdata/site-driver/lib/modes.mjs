@@ -6,7 +6,6 @@ import {
 } from "./browser.mjs";
 import {
   forcedToFixedServicePorts,
-  forcedToIpv6Loopback,
   forcedToProtocolVersion,
 } from "./patches.mjs";
 
@@ -28,13 +27,6 @@ function withoutWebSocket() {
 export const MODES = {
   v4: {},
   v3: { patch: (source) => forcedToProtocolVersion(source, 3, theThirdProtocolPort()) },
-  "v4-ipv6": {
-    // El certificado del canal solo nombra `IP:127.0.0.1`: sin esto fallaría TLS, no el cliente.
-    prepare() {
-      process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
-    },
-    patch: forcedToIpv6Loopback,
-  },
   service: { prepare: withoutWebSocket },
   "service-bind-failure": {
     prepare: withoutWebSocket,
