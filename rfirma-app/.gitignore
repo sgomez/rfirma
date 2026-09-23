@@ -1,6 +1,7 @@
 node_modules/
 dist/
 lcov.info
+coverage/
 
 # Generado por tauri-build en cada compilacion (esquemas de capacidades).
 src-tauri/gen/

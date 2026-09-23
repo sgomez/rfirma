@@ -93,5 +93,17 @@ export default defineConfig({
     globals: false,
     setupFiles: ["./src/test-setup.ts"],
     include: ["src/**/*.test.{ts,tsx}"],
+    coverage: {
+      provider: "v8",
+      // `include` fuerza a medir tambien los ficheros que ningun test toca:
+      // sin el, uno nuevo sin pruebas no cuenta y el suelo no lo detecta,
+      // la misma trampa que ADR-0014 ya resolvio en Rust con `llvm-cov`.
+      include: ["src/**/*.{ts,tsx}"],
+      thresholds: {
+        // Medida inicial redondeada hacia abajo (ADR-0014); se sube a mano.
+        lines: 90,
+        autoUpdate: false,
+      },
+    },
   },
 });
