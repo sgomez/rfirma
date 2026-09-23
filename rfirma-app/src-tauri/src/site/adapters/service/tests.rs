@@ -534,3 +534,62 @@ async fn the_fragments_of_the_script_are_reassembled_and_run_by_firm() {
         ]
     );
 }
+
+#[test]
+fn only_a_recognised_order_of_the_negotiated_session_holds_the_idle_clock() {
+    let echo = format!("echo=-idsession={CREDENTIAL}@EOF");
+
+    assert!(a_valid_order(&echo, true, &serving()));
+    assert!(!a_valid_order(&echo, false, &serving()));
+    assert!(!a_valid_order(
+        "echo=-idsession=OtraSesionAjena00000@EOF",
+        true,
+        &serving()
+    ));
+    assert!(!a_valid_order(
+        &format!("nada=idsession={CREDENTIAL}@EOF"),
+        true,
+        &serving()
+    ));
+}
+
+#[tokio::test(start_paused = true)]
+async fn an_idle_channel_stops_listening_and_says_so() {
+    use std::sync::atomic::{AtomicBool, Ordering};
+
+    use crate::site::adapters::tls::LocalServerCertificate;
+    use crate::site::domain::local_ca::LocalCa;
+
+    let ca = LocalCa::generate().expect("la CA local deberia generarse");
+    let certificate =
+        LocalServerCertificate::issued_by(&ca).expect("el certificado del servidor local");
+    let acceptor = Arc::new(acceptor_for(&certificate).expect("el aceptador TLS"));
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+        .await
+        .expect("un puerto libre del bucle local");
+    let idled = Arc::new(AtomicBool::new(false));
+    let inbox = answering_with("no se llama").when_the_channel_idles({
+        let idled = Arc::clone(&idled);
+        move || idled.store(true, Ordering::SeqCst)
+    });
+    let (_stop, stopped) = oneshot::channel();
+
+    let accepting = tokio::spawn(accept_until_stopped(
+        listener,
+        acceptor,
+        serving(),
+        inbox,
+        no_state(),
+        IdleClock::started(SOCKET_TIMEOUT),
+        stopped,
+    ));
+
+    tokio::time::timeout(
+        SOCKET_TIMEOUT + std::time::Duration::from_secs(1),
+        accepting,
+    )
+    .await
+    .expect("el canal deberia dejar de escuchar al vencer el reloj")
+    .expect("el bucle de aceptacion no deberia fallar");
+    assert!(idled.load(Ordering::SeqCst));
+}

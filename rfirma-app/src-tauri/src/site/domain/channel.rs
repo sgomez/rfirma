@@ -35,6 +35,8 @@ pub enum ChannelTenure {
     OneOperation,
     /// Todas las que lleguen mientras siga conectado el primer cliente del WebSocket.
     WhileTheFirstClientStays,
+    /// Todas las que lleguen hasta que el canal `service` pase noventa segundos sin una orden válida.
+    UntilTheChannelIdles,
 }
 
 impl ChannelLocation {
@@ -42,7 +44,8 @@ impl ChannelLocation {
     pub fn tenure(&self) -> ChannelTenure {
         match self {
             Self::Drawn(_) | Self::Fixed(_) => ChannelTenure::WhileTheFirstClientStays,
-            Self::Service(_) | Self::Relay(_) => ChannelTenure::OneOperation,
+            Self::Service(_) => ChannelTenure::UntilTheChannelIdles,
+            Self::Relay(_) => ChannelTenure::OneOperation,
         }
     }
 }

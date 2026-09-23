@@ -12,6 +12,10 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::sync::oneshot;
 use tokio_native_tls::TlsAcceptor;
 
+mod idle;
+
+use idle::{IdleClock, SOCKET_TIMEOUT};
+
 use crate::lock;
 use crate::site::adapters::channel::bind_first_free;
 use crate::site::adapters::channel::conversation::{answer, Answer, ECHO_OK};
@@ -114,8 +118,9 @@ async fn serve(
 
     let (stop, stopped) = oneshot::channel();
     let state = Arc::new(Mutex::new(ServiceState::default()));
+    let clock = IdleClock::started(SOCKET_TIMEOUT);
     tokio::spawn(accept_until_stopped(
-        listener, acceptor, duty, inbox, state, stopped,
+        listener, acceptor, duty, inbox, state, clock, stopped,
     ));
 
     Ok(OpenChannel::new(
@@ -132,6 +137,7 @@ async fn accept_until_stopped(
     duty: ChannelDuty,
     inbox: Inbox,
     state: Arc<Mutex<ServiceState>>,
+    clock: IdleClock,
     stopped: oneshot::Receiver<()>,
 ) {
     tokio::pin!(stopped);
@@ -139,14 +145,19 @@ async fn accept_until_stopped(
     loop {
         tokio::select! {
             _ = &mut stopped => break,
+            () = clock.expired() => {
+                inbox.channel_went_idle();
+                break;
+            }
             accepted = listener.accept() => {
                 let Ok((stream, peer)) = accepted else { continue };
                 let acceptor = Arc::clone(&acceptor);
                 let duty = duty.clone();
                 let inbox = inbox.clone();
                 let state = Arc::clone(&state);
+                let clock = clock.clone();
                 tokio::spawn(async move {
-                    attend(stream, peer, &acceptor, &duty, &inbox, &state).await;
+                    attend(stream, peer, &acceptor, &duty, &inbox, &state, &clock).await;
                 });
             }
         }
@@ -160,6 +171,7 @@ async fn attend(
     duty: &ChannelDuty,
     inbox: &Inbox,
     state: &Arc<Mutex<ServiceState>>,
+    clock: &IdleClock,
 ) {
     let Ok(mut encrypted) = acceptor.accept(stream).await else {
         return;
@@ -170,6 +182,7 @@ async fn attend(
         return;
     };
 
+    let _in_flight = a_valid_order(&raw, from_loopback, duty).then(|| clock.order_arrived());
     let (response, acknowledged) = respond(&raw, from_loopback, duty, inbox, state).await;
     let delivered = encrypted.write_all(&response).await.is_ok();
     let _ = encrypted.shutdown().await;
@@ -178,6 +191,16 @@ async fn attend(
             acknowledged.fulfil();
         }
     }
+}
+
+/// Una orden que para el reloj de inactividad: las rechazadas antes de reconocerla no lo reinician.
+fn a_valid_order(raw: &str, from_loopback: bool, duty: &ChannelDuty) -> bool {
+    let ChannelDuty::Serve(credential) = duty else {
+        return false;
+    };
+    from_loopback
+        && credential_matches(credential, request_credential(raw).as_deref())
+        && read_request(raw).is_ok()
 }
 
 const THE_EOF_MARK: &[u8] = b"@EOF";

@@ -66,9 +66,9 @@ fn a_websocket_channel_serves_operations_while_its_first_client_stays() {
 }
 
 #[test]
-fn a_service_channel_serves_a_single_operation() {
+fn a_service_channel_serves_operations_until_it_idles() {
     assert_eq!(
         ChannelLocation::Service(vec![51001]).tenure(),
-        ChannelTenure::OneOperation
+        ChannelTenure::UntilTheChannelIdles
     );
 }
