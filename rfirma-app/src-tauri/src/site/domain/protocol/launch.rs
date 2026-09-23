@@ -252,14 +252,15 @@ pub fn location_for_a_refusal(url: &AfirmaUrl) -> Option<ChannelLocation> {
     None
 }
 
-/// La ubicación de servidor intermedio de un rechazo, cuando la URL ya trae `stservlet` e `id`:
-/// solo lleva el destino, sin descargar el XML de parámetros para averiguarlo.
+/// La ubicación de servidor intermedio de un rechazo, cuando la URL ya trae un `stservlet` válido
+/// e `id`: solo lleva el destino, sin descargar el XML de parámetros para averiguarlo.
 fn relay_location_for_a_refusal(url: &AfirmaUrl) -> Option<ChannelLocation> {
     if !is_a_relay_launch(url) {
         return None;
     }
 
-    let store_servlet = given(url, "stservlet")?;
+    let store_servlet = given(url, "stservlet")
+        .filter(|servlet| check_servlet_url(servlet, Parameter::StoreServlet).is_ok())?;
     let id = given(url, "id")?;
 
     Some(ChannelLocation::Relay(RelayChannelInfo {

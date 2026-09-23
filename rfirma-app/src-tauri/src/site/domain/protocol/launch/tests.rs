@@ -302,6 +302,21 @@ fn a_refusal_location_of_a_relay_launch_with_stservlet_and_id_is_its_own_destina
 }
 
 #[test]
+fn a_refusal_location_of_a_relay_launch_whose_stservlet_is_local_is_none() {
+    let url = AfirmaUrl::parse(
+        "afirma://sign?algorithm=SHA256withRSA&dat=ZmlybWFkbw&stservlet=http://127.0.0.1:8080/store\
+         &id=tx2",
+    )
+    .expect("es una URL de servidor intermedio");
+
+    assert_eq!(
+        location_for_a_refusal(&url),
+        None,
+        "un stservlet que se rechaza por local no recibe el rechazo"
+    );
+}
+
+#[test]
 fn a_refusal_location_of_a_relay_launch_without_stservlet_in_the_url_is_none() {
     let url = AfirmaUrl::parse(PUBLISHED_PARAMETERS_BY_FILEID)
         .expect("es una URL de servidor intermedio con solo fileid");
