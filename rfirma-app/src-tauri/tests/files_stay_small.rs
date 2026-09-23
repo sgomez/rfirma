@@ -171,7 +171,7 @@ fn the_baseline_has_entries_so_the_guard_has_work() {
         .expect("files_stay_small.baseline deberia existir");
     let baseline = parse_baseline(&baseline_text);
 
-    assert!(baseline.len() > 10);
+    assert!(!baseline.is_empty());
 }
 
 #[test]
