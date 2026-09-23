@@ -5,7 +5,7 @@ use base64::Engine as _;
 
 use crate::site::domain::batch::parse_local_batch;
 use crate::site::domain::protocol::{
-    read_operation, AfirmaUrl, BatchRequest, SiteOperation, WireAnswer,
+    read_operation, AfirmaUrl, BatchRequest, Refusal, SiteOperation, WireAnswer,
 };
 
 use crate::site::adapters::data_download::HttpDataSource;
@@ -23,20 +23,7 @@ pub struct V4Codec;
 
 impl ProtocolCodec for V4Codec {
     fn decode(&self, message: &AfirmaUrl) -> SiteRequest {
-        match read_operation(message, &HttpDataSource) {
-            Ok(SiteOperation::SelectCertificate(request)) => {
-                SiteRequest::SelectCertificate(request)
-            }
-            Ok(SiteOperation::Sign(request)) => SiteRequest::Sign(request),
-            Ok(SiteOperation::SignWithoutDocument(request)) => {
-                SiteRequest::SignWithoutDocument(request)
-            }
-            Ok(SiteOperation::Save(request)) => SiteRequest::Save(request),
-            Ok(SiteOperation::Load(request)) => SiteRequest::Load(request),
-            Ok(SiteOperation::SignAndSave(request)) => SiteRequest::SignAndSave(request),
-            Ok(SiteOperation::Batch(request)) => batch_asked(request),
-            Err(refusal) => SiteRequest::NotAttended(refusal),
-        }
+        request_of(read_operation(message, &HttpDataSource))
     }
 
     fn encode(&self, outcome: &SiteOutcome) -> String {
@@ -72,6 +59,22 @@ impl ProtocolCodec for V4Codec {
                 None => STANDARD.encode(result),
             },
         }
+    }
+}
+
+/// La petición que el trámite atiende a partir de la operación leída.
+pub(super) fn request_of(read: Result<SiteOperation, Refusal>) -> SiteRequest {
+    match read {
+        Ok(SiteOperation::SelectCertificate(request)) => SiteRequest::SelectCertificate(request),
+        Ok(SiteOperation::Sign(request)) => SiteRequest::Sign(request),
+        Ok(SiteOperation::SignWithoutDocument(request)) => {
+            SiteRequest::SignWithoutDocument(request)
+        }
+        Ok(SiteOperation::Save(request)) => SiteRequest::Save(request),
+        Ok(SiteOperation::Load(request)) => SiteRequest::Load(request),
+        Ok(SiteOperation::SignAndSave(request)) => SiteRequest::SignAndSave(request),
+        Ok(SiteOperation::Batch(request)) => batch_asked(request),
+        Err(refusal) => SiteRequest::NotAttended(refusal),
     }
 }
 
