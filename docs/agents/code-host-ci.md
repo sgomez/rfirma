@@ -242,7 +242,7 @@ and `just check-rust` — together exactly what `just check` runs, minus the
 downloads the conformance bench's fixture (`autoscript.js` at tag `v1.9.2`,
 pinned by `sha256`) into `testdata/conformance/`. CI runs it as its own,
 mandatory step in both lanes; locally it is optional, and without it
-`tests/conformance_bench.rs` **skips** — which is the one way a local pass and a
+`tests/conformance_*.rs` **skips** — which is the one way a local pass and a
 CI pass differ. Run it once and they mean the same thing again. In CI the bench
 never skips: the test checks the `CI` variable and fails instead (ADR-0014).
 

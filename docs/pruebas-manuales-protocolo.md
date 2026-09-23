@@ -13,7 +13,7 @@ junto al validador oficial. Se ejecuta **una vez por etiqueta `v*`**, por una pe
 Todo lo que sí corre solo está en las gradas: el códec y la conversación en `src/protocol/`, el
 **cliente de canal** —el propio, en Rust— en `tests/channel_client.rs` (puerto `:0`), el **banco
 de conformidad** —el `autoscript.js` publicado del tag `v1.9.2`, bajo Node— en
-`tests/conformance_bench.rs`, y el paseo completo en `tests/native_cycle.rs` (grada C).
+`tests/conformance_*.rs`, y el paseo completo en `tests/native_cycle.rs` (grada C).
 
 ## La lista
 

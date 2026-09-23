@@ -34,7 +34,7 @@ consola. Sus pruebas se corren con `cargo test` dentro de este directorio; las d
 | `src/transcript.rs` | Las tramas y el registro de cada comprobación, en `transcripts/` dentro del informe. |
 | `src/livelog.rs` | La línea de registro marcada por procedencia (`sede`, `cliente`, `suite`), en fichero y en vivo. |
 | `src/comparison.rs` | La comparación de dos informes, comprobación a comprobación en el orden del catálogo y con su conjunto. |
-| `../testdata/site-driver/driver.mjs` | La sede bajo Node: corre un guion en un modo, o publica el manifiesto con `--manifest`; la comparte con `conformance_bench.rs` de la aplicación. |
+| `../testdata/site-driver/driver.mjs` | La sede bajo Node: corre un guion en un modo, o publica el manifiesto con `--manifest`; la comparte con los `conformance_*.rs` de la aplicación. |
 | `../testdata/site-driver/manifest.mjs` | El manifiesto: los modos y todos los guiones, cada uno con su sede, su familia, sus modos, sus condiciones y si es solo del banco. |
 | `../testdata/site-driver/lib/` | Lo común a los guiones: eventos y condiciones, modos, parches del `autoscript.js`, navegador mínimo, documentos de referencia y los analizadores de firma (CMS, XML, ZIP, PDF y PKCS#1) con los que se miden las condiciones. |
 | `../testdata/site-driver/test/` | Las pruebas de los analizadores de firma, que se corren con `node --test test/*.test.mjs`, y sus muestras hechas con OpenSSL y `zip`. |

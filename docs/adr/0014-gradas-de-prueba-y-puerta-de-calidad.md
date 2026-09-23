@@ -50,7 +50,7 @@ necesite.
 
 El caso que obliga a escribirlo es el **banco de conformidad** (TD-55): el `autoscript.js`
 publicado en el tag `v1.9.2` de `clienteafirma`, corriendo bajo Node contra el canal `wss://` de
-rfirma en `tests/conformance_bench.rs`. El sujeto es **nuestro** canal; el cliente publicado es
+rfirma en `tests/conformance_*.rs`. El sujeto es **nuestro** canal; el cliente publicado es
 el instrumento, y es un fichero de 219 KB con su huella. **Es grada B, en el carril rápido**, y
 es el único sitio donde se mide que hablamos el mismo dialecto que el cliente que ejecutan las
 sedes de verdad. Lo baja `just autoscript` —el pin, URL y `sha256`, vive en el `justfile`— y el
