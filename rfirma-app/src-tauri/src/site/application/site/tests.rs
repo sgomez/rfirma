@@ -397,6 +397,49 @@ fn without_drawn_ports_the_refusal_is_only_shown_in_the_window() {
 }
 
 #[test]
+fn a_service_launch_outside_its_versions_is_refused_in_the_window_without_binding() {
+    for version in ["0", "4", "99"] {
+        let transport = ATransport::default();
+
+        let attendance = attend_launch(
+            &format!("afirma://service?ports=54421,54422&v={version}&idsession={CREDENTIAL}"),
+            &a_codec_table(),
+            &|location, duty| transport.open(location, duty),
+            &LiveErrand::default(),
+        );
+
+        let Attendance::RefusingInTheWindow(refusal) = attendance else {
+            panic!("v={version} no abre canal: {attendance:?}");
+        };
+        assert_eq!(refusal.code(), SafCode::UnsupportedProcedure, "v={version}");
+        transport.was_never_asked();
+    }
+}
+
+#[test]
+fn a_service_launch_in_versions_one_two_and_three_opens_its_channel() {
+    for version in 1..=3 {
+        let transport = ATransport::default();
+
+        let attendance = attend_launch(
+            &format!("afirma://service?ports=54421,54422&v={version}&idsession={CREDENTIAL}"),
+            &a_codec_table(),
+            &|location, duty| transport.open(location, duty),
+            &LiveErrand::default(),
+        );
+
+        assert!(
+            matches!(attendance, Attendance::Serving { .. }),
+            "v={version}: {attendance:?}"
+        );
+        assert_eq!(
+            transport.asked_once().0,
+            ChannelLocation::Service(vec![54421, 54422])
+        );
+    }
+}
+
+#[test]
 fn a_malformed_credential_is_refused_over_the_socket() {
     let transport = ATransport::default();
 
