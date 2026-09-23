@@ -36,6 +36,8 @@ const AN_UNDECIPHERABLE_REQUEST = "0.QUJDREVG";
 
 /** Lo que tarda como mucho entre dos avisos de espera, con holgura sobre los diez segundos. */
 const THE_WAIT_PERIOD_MS = { from: 8000, to: 13000 };
+/** Lo que se espera a que la aplicación suba algo tras entregarle una petición estropeada. */
+const THE_SILENCE_AFTER_THE_SPOILED_REQUEST_MS = 5000;
 
 /** Los parámetros de la query y los del cuerpo del POST, donde `UrlHttpManagerImpl` los manda. */
 async function theServletParameters(request) {
@@ -259,11 +261,21 @@ function theFileidIn(requests) {
  */
 function aSpoiledRetrievalScript(answer, condition) {
   return async () => {
+    let concluded = false;
     const server = await anIntermediateServer({
-      retrieving: (entry, requests) => (entry.id === theFileidIn(requests) ? answer : undefined),
+      retrieving: (entry, requests) => {
+        if (entry.id !== theFileidIn(requests)) return undefined;
+        setTimeout(
+          () => settling({ event: "error", type: "silence", message: "la aplicación calló" }),
+          THE_SILENCE_AFTER_THE_SPOILED_REQUEST_MS,
+        );
+        return answer;
+      },
     });
     AutoScript.setServlets(server.storage, server.retrieve);
     const settling = (event) => {
+      if (concluded) return;
+      concluded = true;
       const fileid = theFileidIn(server.requests);
       const asked = server.getsFrom(THE_RETRIEVE_PATH).some((entry) => entry.id === fileid);
       const uploaded = theUploadedResults(server).filter((entry) => entry.id !== fileid);
