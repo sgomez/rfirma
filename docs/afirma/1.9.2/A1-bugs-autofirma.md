@@ -526,7 +526,7 @@ dirigido al defecto.
 
 ### BUG-26: Los errores anteriores al inicio de la operación no se suben al servidor intermedio y la sede los percibe como «AutoFirma no instalada»
 
-* **No observable:** es del transporte por servidor intermedio (reporte de errores previos al arranque hacia el servlet), que queda para más adelante.
+* **Comprobación del catálogo:** `a_saf_code_travels_to_the_intermediate_server_even_before_the_operation_began`.
 * **Estado en `master`:** **Corregido a medias.** Los fallos de recuperación y descifrado de la configuración remota se suben ya mediante `IntermediateServerErrorSendedException` y `processIntermediateServiceError` (`ProtocolInvocationLauncher.java:922`). Los seis anteriores al inicio de la operación —`SAF_01`, `SAF_02`, `SAF_03`, `SAF_04`, `SAF_13` y `SAF_14`— siguen mostrando diálogo y devolviendo la cadena sin subir nada.
 * **Código fuente:** `afirma-simple` · `es.gob.afirma.standalone.protocol.ProtocolInvocationLauncher.java:165-177` (URI nula y esquema no reconocido), `:356-367, 429-440, 504-527, 616-639, 726-749, 811-832` (bloques `catch` de parámetros de cada operación), `:663-677` (recuperación de la configuración remota, replicado en los seis bloques), `:837-842` (operación no reconocida), frente a los únicos puntos de subida en `:353, 426, 501, 603, 612, 712, 721, 808`; `afirma-ui-miniapplet-deploy/src/main/webapp/js/autoscript.js:3722, 4729-4768`.
 * **Origen de auditoría:** Anteriormente AUD-83 ([15-errores.md](15-errores.md)).
@@ -661,3 +661,15 @@ dirigido al defecto.
   2. La lista de candidatos de la URI, cuyo fin es sortear un puerto ocupado, no tiene efecto.
   3. `SocketOperationException` y su `SAF_45` para «ningún puerto disponible» solo se alcanzan si falla la construcción del servidor, no por un puerto en uso.
 * **Causa raíz:** El éxito de la apertura se decide por el retorno de un arranque asíncrono, no por el resultado del `bind`.
+
+### BUG-34: Una clave de cifrado de ocho caracteres que no son ocho bytes pasa la validación y falla al cifrar
+
+* **Comprobaciones del catálogo:** `a_cipher_key_of_eight_characters_but_not_eight_bytes_answers_saf_03`.
+* **Estado en `master`:** **Sigue presente.** `UrlParameters.java:405` sigue midiendo la clave con `key.length()`, en caracteres, y el cifrado sigue siendo DES sobre sus bytes (`DesServerCipher.java:80`).
+* **Código fuente:** `afirma-core` · `es.gob.afirma.core.misc.protocol.UrlParameters.java:327-344`; `afirma-simple` · `es.gob.afirma.standalone.crypto.DesCipher.java:37`.
+* **Descripción:** `verifyCipherKey` acepta la `key` si mide ocho caracteres y devuelve `key.getBytes()` con la codificación por defecto. Una clave de ocho caracteres fuera de ASCII, como ocho eñes, da dieciséis bytes en UTF-8, y `DesCipher` la rechaza como clave DES al cifrar el resultado.
+* **Comportamiento y consecuencia:**
+  1. La petición se da por válida y la persona elige certificado y firma.
+  2. El resultado no se puede cifrar: se sube `SAF_12` sin cifrar (`ProtocolInvocationLauncherSign.java:198-202`) y la firma se pierde.
+  3. La sede recibe un fallo de cifrado de la aplicación donde el defecto es suyo, un parámetro `key` inválido, que con cualquier otra longitud recibiría como `SAF_03`.
+* **Causa raíz:** La validación mide la clave en caracteres y el cifrado la usa en bytes.

@@ -197,10 +197,14 @@ pub fn attend_site_launch_with_threshold(
     let mut attendance = site::attend_launch(url, codecs, transport, live);
 
     match &mut attendance {
-        Attendance::Serving { errand, .. } => {
+        Attendance::Serving { channel, errand } => {
             live.keep_the_window(Arc::clone(&window));
+            let delivery = channel.take_delivery();
+            let the_browser_comes_through_the_local_channel =
+                errand.arrival() == ArrivalMode::Awaited;
             match local_ca {
-                LocalCaReach::Nowhere => {
+                LocalCaReach::Nowhere if the_browser_comes_through_the_local_channel => {
+                    deliver(delivery);
                     open(
                         live,
                         &*window,
@@ -208,14 +212,12 @@ pub fn attend_site_launch_with_threshold(
                     );
                     window.show();
                 }
-                LocalCaReach::NotAnObstacle => {
+                LocalCaReach::Nowhere | LocalCaReach::NotAnObstacle => {
                     open(live, &*window, SiteWindowContent::TheErrand(&*errand));
-                    match errand.arrival() {
-                        ArrivalMode::Awaited => {
-                            live.arm_backing_timeout(Arc::clone(&window), threshold);
-                        }
-                        ArrivalMode::Immediate => window.show(),
+                    if errand.arrival() == ArrivalMode::Awaited {
+                        live.arm_backing_timeout(Arc::clone(&window), threshold);
                     }
+                    deliver(delivery);
                 }
             }
         }
@@ -257,9 +259,9 @@ pub fn attend_site_launch_with_threshold(
                     }
                 }
                 ArrivalMode::Immediate => {
-                    let handed_out = channel.take_delivery().is_none_or(Delivery::now);
+                    deliver(channel.take_delivery());
                     if no_errand_in_flight {
-                        end_or_show_the_refusal(&*window, handed_out);
+                        window.show();
                     }
                 }
             }
@@ -294,23 +296,14 @@ fn comes_from_an_old_web_client(url: &str) -> bool {
     AfirmaUrl::parse(url).is_ok_and(|url| warns_of_an_old_web_client(&url))
 }
 
-fn end_or_show_the_refusal(window: &dyn SiteWindow, handed_out: bool) {
-    if handed_out {
-        window.errand_ended(Acknowledgement::immediate());
-    } else {
-        window.show();
+fn deliver(delivery: Option<Delivery>) {
+    if let Some(delivery) = delivery {
+        delivery.now();
     }
 }
 
 fn open(live: &LiveErrand, window: &dyn SiteWindow, content: SiteWindowContent<'_>) {
-    let opening = content.moment();
-    if !live
-        .moment()
-        .as_ref()
-        .is_some_and(|current| current.is_posterior_to(&opening))
-    {
-        live.note(opening);
-    }
+    live.note(content.moment());
     window.open(content);
 }
 

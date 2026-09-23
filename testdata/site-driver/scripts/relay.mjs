@@ -22,7 +22,7 @@ const THE_REQUEST_RETRIEVED_BY_FILEID = "the-request-retrieved-by-fileid";
 const EACH_OPERATION_LAUNCHED_APART = "each-operation-launched-apart";
 const THE_RETRIEVAL_FAILURE_NOT_UPLOADED = "the-retrieval-failure-not-uploaded";
 const A_SAF_AFTER_THE_START_TRAVELS_INTACT = "a-saf-after-the-start-travels-intact";
-const A_SAF_BEFORE_THE_START_IS_NOT_UPLOADED = "a-saf-before-the-start-is-not-uploaded";
+const A_SAF_BEFORE_THE_START_TRAVELS_INTACT = "a-saf-before-the-start-travels-intact";
 const THE_LOCAL_STORAGE_SERVLET_REFUSED = "the-local-storage-servlet-refused";
 const THE_UNDECIPHERABLE_REQUEST_NOT_UPLOADED = "the-undecipherable-request-not-uploaded";
 const THE_REFUSED_UPLOAD_ATTEMPTED = "the-refused-upload-attempted";
@@ -36,6 +36,8 @@ const AN_UNDECIPHERABLE_REQUEST = "0.QUJDREVG";
 
 /** Lo que tarda como mucho entre dos avisos de espera, con holgura sobre los diez segundos. */
 const THE_WAIT_PERIOD_MS = { from: 8000, to: 13000 };
+/** Lo que se espera a que la aplicación suba algo tras entregarle una petición estropeada. */
+const THE_SILENCE_AFTER_THE_SPOILED_REQUEST_MS = 5000;
 
 /** Los parámetros de la query y los del cuerpo del POST, donde `UrlHttpManagerImpl` los manda. */
 async function theServletParameters(request) {
@@ -259,11 +261,21 @@ function theFileidIn(requests) {
  */
 function aSpoiledRetrievalScript(answer, condition) {
   return async () => {
+    let concluded = false;
     const server = await anIntermediateServer({
-      retrieving: (entry, requests) => (entry.id === theFileidIn(requests) ? answer : undefined),
+      retrieving: (entry, requests) => {
+        if (entry.id !== theFileidIn(requests)) return undefined;
+        setTimeout(
+          () => settling({ event: "error", type: "silence", message: "la aplicación calló" }),
+          THE_SILENCE_AFTER_THE_SPOILED_REQUEST_MS,
+        );
+        return answer;
+      },
     });
     AutoScript.setServlets(server.storage, server.retrieve);
     const settling = (event) => {
+      if (concluded) return;
+      concluded = true;
       const fileid = theFileidIn(server.requests);
       const asked = server.getsFrom(THE_RETRIEVE_PATH).some((entry) => entry.id === fileid);
       const uploaded = theUploadedResults(server).filter((entry) => entry.id !== fileid);
@@ -305,7 +317,7 @@ function aSignature(data, algorithm, format) {
   });
 }
 
-/** Dos rechazos: uno de la firma ya empezada, que se sube, y uno de parámetros, que no. */
+/** Dos rechazos, uno de la firma ya empezada y uno de parámetros: los dos se suben con su código. */
 async function theRefusalsScript() {
   const server = await anIntermediateServer();
   AutoScript.setServlets(server.storage, server.retrieve);
@@ -322,8 +334,8 @@ async function theRefusalsScript() {
   const late = theUploadedResults(server).slice(uploadsBefore);
   emit(
     aConditionEvent(
-      A_SAF_BEFORE_THE_START_IS_NOT_UPLOADED,
-      late.length === 0,
+      A_SAF_BEFORE_THE_START_TRAVELS_INTACT,
+      late.some((entry) => entry.dat.startsWith("SAF_03")),
       late.length === 0
         ? `nada subido; la página acabó con ${beforeTheStart.message ?? beforeTheStart.signature}`
         : `se subió ${late.map((entry) => entry.dat).join(", ")}`,
@@ -429,7 +441,7 @@ export const RELAY_SCRIPTS = {
   }),
   relayrefusals: throughTheServer(theRefusalsScript, [
     A_SAF_AFTER_THE_START_TRAVELS_INTACT,
-    A_SAF_BEFORE_THE_START_IS_NOT_UPLOADED,
+    A_SAF_BEFORE_THE_START_TRAVELS_INTACT,
   ]),
   relaylocalstorage: throughTheServer(theLocalStorageScript, [THE_LOCAL_STORAGE_SERVLET_REFUSED]),
   relaybatch: throughTheServer(theBatchThroughTheServerScript, BATCH_SCRIPTS.batch.conditions),

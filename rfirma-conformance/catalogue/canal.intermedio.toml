@@ -87,20 +87,20 @@ condition = "each-operation-launched-apart"
 warning = "Va a aparecer dos veces el diálogo de selección de certificado: elige uno cada vez."
 
 [[check]]
-id = "a_saf_code_travels_to_the_intermediate_server_only_once_the_operation_began"
+id = "a_saf_code_travels_to_the_intermediate_server_even_before_the_operation_began"
 set = "canal.intermedio"
 citation = "ProtocolInvocationLauncher.java:601-604, 710-713, 738-743, 870-889"
+bug = "BUG-26"
 statement = """
-Por servidor intermedio el rechazo se sube a stservlet con el prefijo SAF_nn intacto. Los que se
-detectan antes de empezar la operación —SAF_01, SAF_02, SAF_03, SAF_04, SAF_13, SAF_14, SAF_15 y
-SAF_16— no llegan a subirse, y la sede los percibe como una aplicación que no está instalada
-(BUG-26).
+Por servidor intermedio el rechazo se sube a stservlet con el prefijo SAF_nn intacto, tanto el de la
+operación ya empezada como el de un parámetro que se detecta antes de empezarla (SAF_03): por canal
+local ese mismo SAF_03 llega a la sede.
 """
 drive = { mode = "relay", script = "relayrefusals" }
 assistance = "click"
 patience_secs = 180
-condition = ["a-saf-after-the-start-travels-intact", "a-saf-before-the-start-is-not-uploaded"]
-warning = "La segunda firma lleva un algoritmo que no se admite: AutoFirma enseña un diálogo de error; ciérralo."
+condition = ["a-saf-after-the-start-travels-intact", "a-saf-before-the-start-travels-intact"]
+warning = "La segunda firma lleva un algoritmo que no se admite: la aplicación enseña un error; ciérralo."
 
 [[check]]
 id = "an_undecipherable_request_answers_saf_15"
@@ -134,18 +134,19 @@ person = { yes = "la aplicación mostró SAF_11", no = "la aplicación no mostr�
 warning = "Va a aparecer el diálogo de certificado para firmar: elige uno. El servidor intermedio de la suite rechaza el resultado: si la aplicación muestra un error, fíjate en su código antes de cerrarlo."
 
 [[check]]
-id = "a_result_that_cannot_be_ciphered_answers_saf_12"
+id = "a_cipher_key_of_eight_characters_but_not_eight_bytes_answers_saf_03"
 set = "canal.intermedio"
 citation = "UrlParameters.java:327-344; DesCipher.java:37; ProtocolInvocationLauncherSign.java:198-202; ProtocolInvocationLauncher.java:697-713"
+bug = "BUG-34"
 statement = """
-Una key de ocho caracteres que no son ocho bytes pasa la validación de la petición, pero el resultado
-no se puede cifrar con ella: la aplicación sube SAF_12 sin cifrar y la sede lo recibe.
+Una key de ocho caracteres que no son ocho bytes no sirve como clave DES: se rechaza con SAF_03 antes
+de pedir el certificado, y no se firma para acabar en un SAF_12 sin cifrar.
 """
 drive = { mode = "relay", script = "relayuncipherable" }
 assistance = "click"
 patience_secs = 120
-saf = "SAF_12"
-warning = "Va a aparecer el diálogo de certificado."
+saf = "SAF_03"
+warning = "Puede aparecer un diálogo de certificado o uno de error: si pide certificado, elige uno; si muestra un error, fíjate en su código antes de cerrarlo."
 
 [[check]]
 id = "the_storage_servlet_is_validated_like_the_retrieve_servlet"

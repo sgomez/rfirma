@@ -164,3 +164,8 @@ master = "present"
 id = "BUG-33"
 title = "El canal WebSocket no pasa al siguiente puerto candidato cuando el primero está ocupado"
 master = "present"
+
+[[bug]]
+id = "BUG-34"
+title = "Una clave de cifrado de ocho caracteres que no son ocho bytes pasa la validación y falla al cifrar"
+master = "present"

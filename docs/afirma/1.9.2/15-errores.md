@@ -355,7 +355,7 @@ A continuación se detalla la totalidad de los 53 códigos de error definidos en
 | Código | Constante en código | Clave de recurso | Mensaje oficial en español | Ámbito / Operación | Referencias principales en código |
 |---|---|---|---|---|---|
 | `SAF_00` | `ERROR_CANNOT_READ_DATA` | `ProtocolLauncher.0` | No se han podido leer los datos a firmar | `sign`, `signandsave` | `ProtocolInvocationLauncherSign.java:374`, `ProtocolInvocationLauncherSignAndSave.java:366` |
-| `SAF_01` | `ERROR_NULL_URI` | `ProtocolLauncher.1` | La URL recibida es nula | Común, `signandsave`, `selectcert` | `ProtocolInvocationLauncher.java:168`, `ProtocolInvocationLauncherSignAndSave.java:125`, `ProtocolInvocationLauncherSelectCert.java:66` |
+| `SAF_01` | `ERROR_NULL_URI` | `ProtocolLauncher.1` | La URL recibida es nula | *Sin emisor*: ni la URI ni las opciones llegan nunca nulas (§4.2) | `ProtocolInvocationLauncher.java:168`, `ProtocolInvocationLauncherSignAndSave.java:125`, `ProtocolInvocationLauncherSelectCert.java:66` |
 | `SAF_02` | `ERROR_UNSUPPORTED_PROTOCOL` | `ProtocolLauncher.2` | Protocolo no soportado | Despachador común | `ProtocolInvocationLauncher.java:175` |
 | `SAF_03` | `ERROR_PARAMS` | `ProtocolLauncher.3` | Error en los parámetros de entrada | Común a todas las operaciones y socket | `ProtocolInvocationLauncher.java:274, 359, 432, 519, 631, 741, 826`, `CommandProcessorThread.java:110, 116, 135` |
 | `SAF_04` | `ERROR_UNSUPPORTED_OPERATION` | `ProtocolLauncher.4` | Operación no soportada. Compruebe que dispone de la última versión de Autofirma. | Despachador común, `sign`, `signandsave`, `batch` | `ProtocolInvocationLauncher.java:841`, `ProtocolInvocationLauncherSign.java:733, 840`, `ProtocolInvocationLauncherSignAndSave.java:761, 863` |
@@ -424,6 +424,9 @@ A continuación se detalla la totalidad de los 53 códigos de error definidos en
   `AfirmaWebSocketServerV4.java:81, 91`); y el canal de sockets, el resultado de
   un `toString()` (`CommandProcessorThread.java:293, 308, 334, 350`). Una
   petición vacía llega como cadena vacía y la rechaza `SAF_02`, no `SAF_01`.
+  Las guardas de `signandsave` y `selectcert` tampoco saltan: el analizador
+  siempre construye las opciones con `new`
+  (`ProtocolInvocationUriParserUtil.java:158, 173`).
 * **`SAF_02` (`ERROR_UNSUPPORTED_PROTOCOL`)**: Se arroja cuando la URI no
   comienza estrictamente por el prefijo `afirma://` en minúsculas
   (`ProtocolInvocationLauncher.java:172-178`).
@@ -487,7 +490,7 @@ A continuación se detalla la totalidad de los 53 códigos de error definidos en
   La sede lo provoca con una `key` de ocho caracteres que no son ocho bytes, como
   ocho eñes: `verifyCipherKey` cuenta caracteres (`UrlParameters.java:327-344`) y
   `DesCipher` recibe sus dieciséis bytes en UTF-8, que la JDK rechaza como clave
-  DES (`DesCipher.java:37`).
+  DES (`DesCipher.java:37`); es el BUG-34.
 * **`SAF_15` (`ERROR_DECRYPTING_DATA`)**: Error al descifrar los datos descargados desde
   `rtservlet` mediante la clave simétrica proporcionada (`key`)
   (`ProtocolInvocationLauncher.java:319, 396, 472, 562, 673, 780`).

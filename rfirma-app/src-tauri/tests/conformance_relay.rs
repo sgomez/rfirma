@@ -95,10 +95,12 @@ fn the_published_client_forced_to_the_relay_launches_without_stservlet_and_rfirm
     let inbox = Inbox::for_operations(move |url, reply| {
         *inbox_delivered.lock().expect("el candado") = Some((url, reply));
     });
+    let background = tokio::runtime::Runtime::new().expect("el runtime de la espera activa");
     let relay = Relay::new(
         Arc::clone(&servlets) as Arc<dyn Servlets + Send + Sync>,
         inbox,
         Arc::new(|_| {}),
+        background.handle().clone(),
     );
 
     let mut channel = relay
@@ -178,10 +180,12 @@ fn the_published_client_forced_to_the_relay_uploads_the_saf_of_a_refused_operati
             .unwrap_or_else(|| Refusal::params("el guion esperaba un rechazo del protocolo"));
         reply.answer(refusal.answer().on_the_wire());
     });
+    let background = tokio::runtime::Runtime::new().expect("el runtime de la espera activa");
     let relay = Relay::new(
         Arc::clone(&servlets) as Arc<dyn Servlets + Send + Sync>,
         inbox,
         Arc::new(|_| {}),
+        background.handle().clone(),
     );
 
     let codecs = CodecTable {
@@ -198,11 +202,16 @@ fn the_published_client_forced_to_the_relay_uploads_the_saf_of_a_refused_operati
         &LiveErrand::default(),
     );
 
-    assert!(
-        matches!(attendance, Attendance::Serving { .. }),
-        "el destino ya se conocia en el xml de parametros: deberia servir para contestar por el: \
-         {attendance:?}"
-    );
+    let Attendance::Serving { mut channel, .. } = attendance else {
+        panic!(
+            "el destino ya se conocia en el xml de parametros: deberia servir para contestar por \
+             el: {attendance:?}"
+        );
+    };
+    channel
+        .take_delivery()
+        .expect("la llegada del servidor intermedio es inmediata")
+        .now();
 
     let stored_at = stored_at
         .lock()

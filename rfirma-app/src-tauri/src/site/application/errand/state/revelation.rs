@@ -1,11 +1,12 @@
-//! Revelación de la ventana por temporizador de respaldo o por llegada del navegador.
+//! Revelación de la ventana: por temporizador de respaldo, por llegada del navegador o porque el trámite tiene algo que decir.
 
 use std::sync::{Arc, Condvar, Mutex};
 use std::time::Duration;
 
 use crate::site::application::errand::outcome::Moment;
 use crate::site::application::startup::SiteWindow;
-use crate::site::ports::Acknowledgement;
+use crate::site::domain::channel::ArrivalMode;
+use crate::site::domain::protocol::Refusal;
 
 use super::LiveErrand;
 
@@ -19,8 +20,8 @@ pub(super) struct RevelationInner {
 pub(super) enum RevelationAction {
     /// Revela la ventana del trámite que sigue esperando al navegador.
     Show,
-    /// Cierra la ventana oculta que sostenía un rechazo retenido por el canal.
-    EndTheErrand,
+    /// Enseña el rechazo retenido por el canal, se haya servido o no.
+    ShowTheRefusal,
 }
 
 #[derive(Clone)]
@@ -36,10 +37,10 @@ impl LiveErrand {
         self.arm_expiring_wait(window, threshold, RevelationAction::Show);
     }
 
-    /// Arma la espera de que se sirva un rechazo retenido por el canal, cerrando la ventana
-    /// oculta que lo sostiene al cumplirse o al vencer el plazo.
+    /// Arma la espera de que se sirva un rechazo retenido por el canal, que se enseña al
+    /// cumplirse o al vencer el plazo.
     pub fn arm_channel_refusal_wait(&self, window: Arc<dyn SiteWindow>, threshold: Duration) {
-        self.arm_expiring_wait(window, threshold, RevelationAction::EndTheErrand);
+        self.arm_expiring_wait(window, threshold, RevelationAction::ShowTheRefusal);
     }
 
     fn arm_expiring_wait(
@@ -85,9 +86,7 @@ impl LiveErrand {
                         *timer_moment.lock().unwrap() = Some(Moment::Unreachable);
                         timer_window.show();
                     }
-                    RevelationAction::EndTheErrand => {
-                        timer_window.errand_ended(Acknowledgement::immediate());
-                    }
+                    RevelationAction::ShowTheRefusal => timer_window.show(),
                 }
             }
         });
@@ -103,8 +102,7 @@ impl LiveErrand {
         }
     }
 
-    /// Notifica que el navegador ha llegado al canal, revelando la ventana o cerrándola,
-    /// según lo que se armó.
+    /// Notifica que el navegador ha llegado al canal, revelando la ventana.
     pub fn browser_arrived(&self) {
         self.arrived
             .store(true, std::sync::atomic::Ordering::SeqCst);
@@ -118,11 +116,27 @@ impl LiveErrand {
                 drop(inner);
                 match handle.action {
                     RevelationAction::Show => handle.window.show(),
-                    RevelationAction::EndTheErrand => {
-                        handle.window.errand_ended(Acknowledgement::immediate());
-                    }
+                    RevelationAction::ShowTheRefusal => handle.window.show(),
                 }
             }
+        }
+    }
+
+    /// Enseña la ventana de un trámite sin navegador que esperar, porque su operación tiene algo que decir.
+    pub(in crate::site::application::errand) fn reveal_an_immediate_arrival(&self) {
+        let immediate = self
+            .current()
+            .is_some_and(|errand| errand.arrival() == ArrivalMode::Immediate);
+        if let (true, Some(window)) = (immediate, self.the_window()) {
+            window.show();
+        }
+    }
+
+    /// Enseña a la persona el rechazo con el que la respuesta no llegó a la sede.
+    pub fn the_site_did_not_get_the_answer(&self, refusal: Refusal) {
+        self.note(Moment::RefusedWithoutChannel(refusal));
+        if let Some(window) = self.the_window() {
+            window.show();
         }
     }
 

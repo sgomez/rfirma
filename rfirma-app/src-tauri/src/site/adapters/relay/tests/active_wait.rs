@@ -166,3 +166,29 @@ async fn when_handles_are_dropped_without_answering_the_heartbeat_stops() {
         "el latido debe detenerse si los asideros se descartan sin responder"
     );
 }
+
+#[test]
+fn the_heartbeat_pulses_when_the_channel_opens_outside_the_runtime() {
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_time()
+        .start_paused(true)
+        .build()
+        .expect("el runtime de la prueba arranca");
+    let key = a_key();
+    let servlets = Arc::new(OrderedSpy::default());
+    servlets
+        .store(STORE_SERVLET, "fileid-1", &encrypt(b"contenido", &key))
+        .expect("guarda");
+    servlets.log.lock().expect("el candado").clear();
+    let (relay, _spy) = a_relay_on(Arc::clone(&servlets), runtime.handle().clone());
+    let info = ChannelLocation::Relay(a_fileid_info(RETRIEVE_SERVLET, Some(key), true));
+
+    let _channel = opened_and_delivered(&relay, &info);
+    runtime.block_on(async {
+        tokio::task::yield_now().await;
+        tokio::time::advance(Duration::from_secs(10)).await;
+        tokio::task::yield_now().await;
+    });
+
+    assert_eq!(servlets.log(), vec!["wait", "get", "wait"]);
+}
