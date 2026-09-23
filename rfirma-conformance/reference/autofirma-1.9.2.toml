@@ -111,3 +111,9 @@ id = "a_saf_code_travels_to_the_intermediate_server_even_before_the_operation_be
 outcome = "no-conforme"
 cause = "BUG-26"
 note = "El SAF_03 de un parámetro inválido se enseña en un diálogo y no se sube: la sede se rinde como si no estuviera instalada."
+
+[[known]]
+id = "a_cipher_key_of_eight_characters_but_not_eight_bytes_answers_saf_03"
+outcome = "no-conforme"
+cause = "BUG-34"
+note = "Da la key por buena al contar caracteres, firma y sube SAF_12 sin cifrar al no poder usar sus dieciséis bytes como clave DES."

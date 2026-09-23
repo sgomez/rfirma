@@ -490,7 +490,7 @@ A continuación se detalla la totalidad de los 53 códigos de error definidos en
   La sede lo provoca con una `key` de ocho caracteres que no son ocho bytes, como
   ocho eñes: `verifyCipherKey` cuenta caracteres (`UrlParameters.java:327-344`) y
   `DesCipher` recibe sus dieciséis bytes en UTF-8, que la JDK rechaza como clave
-  DES (`DesCipher.java:37`).
+  DES (`DesCipher.java:37`); es el BUG-34.
 * **`SAF_15` (`ERROR_DECRYPTING_DATA`)**: Error al descifrar los datos descargados desde
   `rtservlet` mediante la clave simétrica proporcionada (`key`)
   (`ProtocolInvocationLauncher.java:319, 396, 472, 562, 673, 780`).
