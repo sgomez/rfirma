@@ -101,5 +101,7 @@ cargo crap --version >/dev/null 2>&1 || \
     echo "aviso: falta cargo-crap (cargo binstall cargo-crap@$crap_version)"
 cargo machete --version >/dev/null 2>&1 || \
     echo "aviso: falta cargo-machete (cargo binstall cargo-machete@$machete_version)"
+cargo mutants --version >/dev/null 2>&1 || \
+    echo "aviso: falta cargo-mutants (solo hace falta para 'just mutants'; cargo binstall cargo-mutants)"
 [ "$failures" = 0 ] || exit 1
 echo "herramientas: correcto"

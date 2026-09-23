@@ -257,6 +257,34 @@ más arriba. El `git fetch` va en `ci.yml`, no en el `justfile`.
 Ni una ni otra tocan Java ni TypeScript, por la misma razón que CRAP: el
 código de riesgo está en Rust.
 
+## Mutation testing y duplicación: informan, no bloquean
+
+El [#852](https://github.com/sgomez/rfirma/issues/852) añade dos arneses más, y a
+propósito ninguno de los dos entra en `just check` ni en el CI de las PR: los dos
+son caros de correr en cada `push` y ninguno tiene todavía un histórico que diga
+qué veredicto es ruido.
+
+**`just mutants`** (`cargo-mutants`, grupo `release`) mide si las pruebas
+detectarían un cambio real en el código, no solo si lo cubren: muta una línea —
+invierte una comparación, cambia el resultado de una función— y falla si ninguna
+prueba lo nota. Correr sobre todo el árbol es demasiado lento para el día a día,
+así que el alcance es `--in-diff` contra el último tag `v*`
+(`git describe --tags --abbrev=0 --match 'v*'`), con el diff generado en
+`rfirma-app/src-tauri` mismo (`git diff --relative`, para que las rutas del diff
+casen con las que `cargo-mutants` espera relativas al paquete) y los mismos
+adaptadores ocultos que `crap --allow`: `adapters/tauri.rs`, `main.rs` y el módulo
+FFI (`ffi_allow`). Se lanza **a mano, antes de publicar una versión**: el
+veredicto es leer la lista de mutantes que sobreviven y decidir, no un exit code
+que bloquee. Pasará a `release.yml` cuando haya histórico de tiempos y de
+resultados que diga que merece la pena automatizarlo.
+
+**`just duplication`** (`jscpd`, grupo `dev`) informa de código duplicado en los
+ficheros de tests, en Rust y en TypeScript — el mismo sumidero que motivó la
+guarda de tamaño de más arriba tiende también a repetir el mismo `arrange` en vez
+de extraerlo a un helper. Solo informa: sin `--threshold` ni `--exit-code`, así
+que nunca sale en rojo. No entra en el CI hasta ver cuánto ruido da en la
+práctica.
+
 ## Un solo hook: formato, antes del push
 
 `pre-push` con **lefthook**, y dentro **solo formato**: `cargo fmt --all -- --check`, el

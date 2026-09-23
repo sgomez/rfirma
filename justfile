@@ -202,6 +202,19 @@ autoscript:
 protocol-map *args:
     python3 {{ justfile_directory() }}/scripts/protocol-map.py {{ args }}
 
+# jscpd sobre los ficheros de tests en Rust y TS. Solo informa, no entra en el CI (ADR-0014).
+[group('dev')]
+duplication: deps
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd {{ app }}
+    echo "== Rust: tests/ y tests.rs =="
+    pnpm exec jscpd --format rust --pattern '**/{tests/**/*.rs,tests.rs}' \
+        "{{ tauri }}/src" "{{ tauri }}/tests" --reporters console
+    echo
+    echo "== TypeScript: *.test.ts(x) =="
+    pnpm exec jscpd --pattern '**/*.{test.ts,test.tsx}' src --reporters console
+
 # ---------------------------------------------------------------------------
 # Navegacion
 # ---------------------------------------------------------------------------
@@ -434,6 +447,19 @@ bundle quick="false": check-native build-ts
 [group('release')]
 flatpak-sources:
     {{ justfile_directory() }}/scripts/flatpak-sources.sh
+
+# Mutation testing incremental, a mano antes de publicar una version: no bloquea (ADR-0014).
+[group('release')]
+mutants:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd {{ tauri }}
+    tag="$(git describe --tags --abbrev=0 --match 'v*')"
+    diff="$(mktemp)"
+    trap 'rm -f "$diff"' EXIT
+    git diff --relative "$tag" -- . > "$diff"
+    cargo mutants --in-diff "$diff" \
+        --exclude 'adapters/tauri.rs' --exclude 'main.rs' --exclude '{{ ffi_allow }}'
 
 # Instala, prueba y construye la landing de rfirma.sgomez.me.
 [private]
