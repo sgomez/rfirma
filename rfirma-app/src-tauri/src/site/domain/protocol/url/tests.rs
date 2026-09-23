@@ -171,3 +171,14 @@ fn an_abridged_url_without_parameters_is_only_the_verb() {
 
     assert_eq!(url.abridged(), "afirma://websocket");
 }
+
+#[test]
+fn an_abridged_url_never_shows_the_properties_however_short() {
+    let url = AfirmaUrl::parse("afirma://sign?op=sign&properties=dXNlclBhc3N3b3JkPTEyMzQ")
+        .expect("la operacion deberia parsearse");
+
+    assert_eq!(
+        url.abridged(),
+        "afirma://sign?op=sign&properties=<23 caracteres>"
+    );
+}
