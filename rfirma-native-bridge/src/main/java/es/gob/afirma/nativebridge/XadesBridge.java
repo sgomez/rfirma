@@ -384,6 +384,9 @@ public final class XadesBridge {
         if (FORMAT_ENVELOPED.equalsIgnoreCase(name)) {
             return FORMAT_ENVELOPED;
         }
+        if (FORMAT_EXTERNALLY_DETACHED.equalsIgnoreCase(name)) {
+            return FORMAT_EXTERNALLY_DETACHED;
+        }
         if (FORMAT_ASIC_S.equalsIgnoreCase(name)) {
             return FORMAT_ASIC_S;
         }
@@ -392,7 +395,8 @@ public final class XadesBridge {
         }
         throw new IllegalArgumentException("la variante XAdES «" + name + "» no la"
                 + " atiende el puente: solo " + FORMAT_ENVELOPING + ", " + FORMAT_DETACHED + ", "
-                + FORMAT_ENVELOPED + ", " + FORMAT_ASIC_S + " y " + FORMAT_FACTURAE);
+                + FORMAT_ENVELOPED + ", " + FORMAT_EXTERNALLY_DETACHED + ", " + FORMAT_ASIC_S
+                + " y " + FORMAT_FACTURAE);
     }
 
     /**

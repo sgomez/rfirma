@@ -2,6 +2,7 @@ package es.gob.afirma.nativebridge;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -38,6 +39,7 @@ class XadesVariantsTest {
     private static final String XMLDSIG_NS = "http://www.w3.org/2000/09/xmldsig#";
     private static final String ASIC_SIGNATURE_ENTRY = "META-INF/signatures.xml";
     private static final String ASIC_DATA_ENTRY = "dataobject.xml";
+    private static final String EXTERNAL_URI = "https://sede.example/documento.xml";
 
     @Test
     void signs_detached_leaving_the_data_beside_the_signature() throws Exception {
@@ -57,6 +59,18 @@ class XadesVariantsTest {
                 "en Enveloped la firma se cuelga del documento y la raiz sigue siendo la suya");
         assertEquals(1, signaturesIn(signed), "el XML firmado lleva una ds:Signature");
         assertBothValidatorsAccept(signed);
+    }
+
+    @Test
+    void signs_externally_detached_referencing_the_uri_of_the_params() throws Exception {
+        final Properties params = variant("XAdES Externally Detached");
+        params.setProperty("uri", EXTERNAL_URI);
+
+        final byte[] signed = XadesCycle.sign(XadesCycle.referenceXml(), params);
+
+        final String xml = new String(signed, StandardCharsets.UTF_8);
+        assertTrue(xml.contains("URI=\"" + EXTERNAL_URI + "\""), xml);
+        assertFalse(xml.contains("Documento de prueba"), xml);
     }
 
     @Test
