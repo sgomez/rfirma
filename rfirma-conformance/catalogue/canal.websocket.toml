@@ -115,7 +115,7 @@ assistance = "none"
 condition = "a-second-client-leaves-the-channel-alive"
 
 [[check]]
-id = "the_v4_channel_answers_saf_47_to_an_origin_that_is_not_127_0_0_1"
+id = "the_v4_channel_answers_saf_47_to_an_origin_that_is_not_loopback"
 set = "canal.websocket"
 citation = "AfirmaWebSocketServerV4.java:57-68, 100-102"
 statement = """
