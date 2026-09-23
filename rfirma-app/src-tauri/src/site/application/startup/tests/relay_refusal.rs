@@ -6,7 +6,7 @@ use crate::site::domain::channel::{
 use crate::site::domain::protocol::SafCode;
 
 #[test]
-fn a_relay_refusal_with_a_known_destination_fires_its_delivery_and_ends_the_errand_unseen() {
+fn a_relay_refusal_with_a_known_destination_fires_its_delivery_and_shows_the_refusal() {
     let world = Arc::new(World::default());
     let live = LiveErrand::default();
     let world_for_transport = Arc::clone(&world);
@@ -49,9 +49,9 @@ fn a_relay_refusal_with_a_known_destination_fires_its_delivery_and_ends_the_erra
             "canal",
             "ventana:rechazo:SAF_21",
             "subida",
-            "ventana:trámite-terminado"
+            "ventana:enseñada"
         ],
-        "la llegada inmediata dispara la subida y termina el tramite sin enseñar la ventana"
+        "la sede recibe el rechazo y la persona lo ve, como el diálogo de error del original"
     );
 }
 

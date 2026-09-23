@@ -259,9 +259,9 @@ pub fn attend_site_launch_with_threshold(
                     }
                 }
                 ArrivalMode::Immediate => {
-                    let handed_out = channel.take_delivery().is_none_or(Delivery::now);
+                    deliver(channel.take_delivery());
                     if no_errand_in_flight {
-                        end_or_show_the_refusal(&*window, handed_out);
+                        window.show();
                     }
                 }
             }
@@ -294,14 +294,6 @@ pub fn warn_before_launching(
 
 fn comes_from_an_old_web_client(url: &str) -> bool {
     AfirmaUrl::parse(url).is_ok_and(|url| warns_of_an_old_web_client(&url))
-}
-
-fn end_or_show_the_refusal(window: &dyn SiteWindow, handed_out: bool) {
-    if handed_out {
-        window.errand_ended(Acknowledgement::immediate());
-    } else {
-        window.show();
-    }
 }
 
 fn deliver(delivery: Option<Delivery>) {

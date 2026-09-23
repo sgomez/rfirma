@@ -1,8 +1,9 @@
 use super::super::*;
 use super::fixtures::{a_codec_table, a_launch, World, CREDENTIAL};
+use crate::site::domain::protocol::SafCode;
 
 #[test]
-fn serving_the_retained_refusal_ends_the_wait_and_closes_the_hidden_window() {
+fn serving_the_retained_refusal_ends_the_wait_and_shows_the_refusal() {
     let world = Arc::new(World::default());
     let live = LiveErrand::default();
 
@@ -23,17 +24,18 @@ fn serving_the_retained_refusal_ends_the_wait_and_closes_the_hidden_window() {
 
     assert_eq!(
         world.steps(),
-        [
-            "canal",
-            "ventana:rechazo:SAF_21",
-            "ventana:trámite-terminado"
-        ],
-        "servir el rechazo cierra la ventana oculta sin esperar el plazo"
+        ["canal", "ventana:rechazo:SAF_21", "ventana:enseñada"],
+        "servir el rechazo lo enseña sin esperar el plazo"
+    );
+    assert!(
+        matches!(live.moment(), Some(Moment::RefusedWithoutChannel(ref refusal)) if refusal.code() == SafCode::UnsupportedProcedure),
+        "la ventana enseña el rechazo servido: {:?}",
+        live.moment()
     );
 }
 
 #[test]
-fn the_channel_refusal_wait_expires_and_closes_the_hidden_window_too() {
+fn the_channel_refusal_wait_expires_and_shows_the_refusal_too() {
     let world = Arc::new(World::default());
     let live = LiveErrand::default();
 
@@ -57,12 +59,13 @@ fn the_channel_refusal_wait_expires_and_closes_the_hidden_window_too() {
 
     assert_eq!(
         world.steps(),
-        [
-            "canal",
-            "ventana:rechazo:SAF_21",
-            "ventana:trámite-terminado"
-        ],
-        "al vencer el plazo sin servirse, la ventana oculta se cierra igualmente"
+        ["canal", "ventana:rechazo:SAF_21", "ventana:enseñada"],
+        "al vencer el plazo sin servirse, el rechazo se enseña igualmente"
+    );
+    assert!(
+        matches!(live.moment(), Some(Moment::RefusedWithoutChannel(_))),
+        "vencer el plazo no lo convierte en «la petición no ha llegado»: {:?}",
+        live.moment()
     );
 }
 

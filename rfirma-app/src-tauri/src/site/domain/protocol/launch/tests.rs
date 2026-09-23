@@ -638,6 +638,18 @@ fn a_cipher_key_of_the_wrong_length_is_refused_naming_the_key() {
 }
 
 #[test]
+fn a_cipher_key_of_eight_characters_that_are_not_eight_bytes_is_refused_naming_the_key() {
+    let refusal = LaunchRequest::parse(
+        "afirma://sign?dat=ZmlybWFkbw&stservlet=https://relay.example/store&id=tx1&\
+         key=%C3%B1%C3%B1%C3%B1%C3%B1%C3%B1%C3%B1%C3%B1%C3%B1",
+    )
+    .expect_err("ocho eñes no son una clave DES");
+
+    assert_eq!(refusal.code(), SafCode::Params);
+    assert_eq!(refusal.blame(), Some(Parameter::CipherKey));
+}
+
+#[test]
 fn the_active_wait_flag_is_read_like_boolean_parse_boolean() {
     let asked = |value: &str| {
         asks_for_active_wait(

@@ -20,8 +20,12 @@ importe en qué orden lleguen las cosas:
    «Conectando con la sede»: la operación la enseña si su paso deja algo
    delante —un consentimiento, un rechazo enseñado, la falta de certificados…
    (`errand::attend` → `reveal_an_immediate_arrival`)—, y un fallo al subir la
-   respuesta la enseña con el rechazo (`the_site_did_not_get_the_answer`). Si la
-   operación se contesta sin nada que enseñar (un `SAF_06` subido), el trámite
+   respuesta la enseña con el rechazo (`the_site_did_not_get_the_answer`). **Un
+   rechazo que el original enseña es algo que decir aunque la sede ya lo
+   tenga**: todos los del arranque, y de la operación los del análisis de la
+   petición (`Refusal::is_shown_before_it_is_answered`), que el original pasa
+   por su diálogo de error. Los que nacen al procesar la operación, como un
+   `SAF_06` o un `SAF_12`, el original solo los sube, y aquí igual: el trámite
    termina con la ventana oculta y el proceso acaba sin que llegue a verse. Con
    WebSocket y `service` la espera no cambia: la ventana nace oculta, la enseña
    la llegada del navegador, y el temporizador de respaldo (`WAITING_THRESHOLD`)
@@ -34,6 +38,13 @@ local que ella cifra: el servidor intermedio no pasa por él, y AutoFirma
 tampoco mira su certificado local en ese transporte.
 
 ## Considered Options
+
+- **Callar el rechazo del arranque que la sede ya ha recibido** (la versión
+  anterior de este ADR): servido el rechazo, la ventana oculta se cerraba, y
+  solo un fallo al subirlo la enseñaba. Se descarta porque se aparta del
+  original, que enseña en su diálogo todo error del arranque, y porque deja a
+  la persona sin saber si la aplicación ha fallado, se ha colgado o tiene que
+  repetir.
 
 - **Una regla de precedencia de momentos** (la versión anterior de este ADR):
   `attend_launch` disparaba la entrega antes de que el arranque abriera la
@@ -58,9 +69,10 @@ tampoco mira su certificado local en ese transporte.
 - Por servidor intermedio, una operación que se contesta sola termina el
   proceso sin enseñar nada; una que pide consentimiento abre la ventana ya en
   ese paso.
-- El rechazo por el canal del arranque (versión no soportada, credencial
-  duplicada) sigue su camino: la ventana oculta lo sostiene, y se cierra al
-  servirse o se enseña si la subida falla.
+- El rechazo por el canal del arranque (versión no soportada, parámetro
+  inválido) sigue su camino: la ventana oculta lo sostiene hasta servirlo, o
+  hasta que vence el plazo sin que llegue el navegador, y entonces lo enseña.
+  El de un trámite ya en curso no toca la ventana de ese trámite.
 - Con WebSocket queda una carrera que esta regla no cubre: el canal escucha
   desde que se abre en `attend_launch`, y un navegador muy rápido podría
   entregar su operación antes de que el arranque abra la ventana.
