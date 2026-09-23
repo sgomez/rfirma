@@ -215,8 +215,14 @@ impl From<&Moment> for SiteErrandView {
             Moment::NoChannel(NoChannel::LocalCaMissing) => {
                 Self::no_channel(NoChannelView::LocalCaMissing)
             }
-            Moment::RefusedWithoutChannel(refusal) => Self::refused(refusal),
+            Moment::RefusedWithoutChannel(refusal) | Moment::ShowingTheRefusal(refusal) => {
+                Self::refused(refusal)
+            }
             Moment::Unreachable => Self::unreachable(),
+            Moment::OldWebClient => Self {
+                origin: None,
+                stage: SiteStageView::OldWebClient,
+            },
         }
     }
 }
@@ -406,6 +412,8 @@ crossing! {
         },
         /// Canal abierto pero el navegador nunca conectó o envió mensaje inicial.
         Unreachable,
+        /// La página usa un cliente web anterior al mínimo; el canal se abre al descartarlo.
+        OldWebClient,
     }
 }
 

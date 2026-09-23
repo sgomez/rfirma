@@ -114,7 +114,7 @@ fn a_local_batch(lote: &str) -> AfirmaUrl {
     an_operation(&format!(
         "afirma://batch?op=batch&idsession={CREDENTIAL}&jsonbatch=true&\
          localBatchProcess=true&dat={}",
-        base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(lote)
+        base64::engine::general_purpose::URL_SAFE.encode(lote)
     ))
 }
 
@@ -149,6 +149,10 @@ fn a_local_batch_the_site_wrote_wrong_is_not_attended() {
         panic!("un lote local sin formato no se atiende: {request:?}");
     };
     assert!(refusal.answer().on_the_wire().starts_with("SAF_"));
+    assert!(
+        !refusal.is_shown_before_it_is_answered(),
+        "el original lee el lote al procesarlo, sin diálogo"
+    );
 }
 
 #[test]

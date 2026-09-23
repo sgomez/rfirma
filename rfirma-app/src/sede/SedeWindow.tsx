@@ -5,6 +5,7 @@ import type { Errand, SiteErrandPort } from "./errand";
 import { SedeConfirm } from "./SedeConfirm";
 import { SedeConsent } from "./SedeConsent";
 import { SedeNoCertificate } from "./SedeNoCertificate";
+import { SedeOldWebClient } from "./SedeOldWebClient";
 import { SedeOutcome } from "./SedeOutcome";
 import { SedeSigning } from "./SedeSigning";
 import { SedeTransfer } from "./SedeTransfer";
@@ -106,6 +107,9 @@ function SedeDialog({
             onInstallLocalCa={() => void errands.installLocalCa()}
             onCancel={cancel}
           />
+        )}
+        {stage.kind === "oldWebClient" && (
+          <SedeOldWebClient onDismiss={() => void errands.dismissWarning()} />
         )}
         {stage.kind === "consent" && (
           <SedeConsent

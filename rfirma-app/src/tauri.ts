@@ -635,6 +635,7 @@ export function tauriSiteErrands(): SiteErrandPort {
     lookAgain: () => invoke<void>("site_look_again"),
     installLocalCa: () => invoke<void>("install_local_ca"),
     closeWindow: () => invoke<void>("close_site_window"),
+    dismissWarning: () => invoke<void>("site_dismiss_the_warning"),
     // Los bytes viajan como bytes, igual que en `read_document` de la ventana
     // principal, y se abren con el mismo `pdf.js`: el tamaño sale de los bytes
     // porque no hay una segunda forma de saberlo —de la ruta del fichero de

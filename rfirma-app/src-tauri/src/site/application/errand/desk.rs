@@ -71,6 +71,9 @@ pub fn attend_operation<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
     live: &LiveErrand,
 ) -> ErrandStep {
     let operation = match request {
+        SiteRequest::NotAttended(refusal) if refusal.is_shown_before_it_is_answered() => {
+            return ErrandStep::ShowingTheRefusal(refusal)
+        }
         SiteRequest::NotAttended(refusal) => {
             return answering(live, SiteOutcome::RefusedByTheProtocol(refusal))
         }

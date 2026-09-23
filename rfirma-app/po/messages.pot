@@ -1373,6 +1373,15 @@ msgstr ""
 msgid "sede.outcome.autoClose"
 msgstr ""
 
+msgid "sede.oldWebClient.title"
+msgstr ""
+
+msgid "sede.oldWebClient.body"
+msgstr ""
+
+msgid "sede.oldWebClient.dismiss"
+msgstr ""
+
 msgid "sede.refusals.appendedSignaturePage"
 msgstr ""
 

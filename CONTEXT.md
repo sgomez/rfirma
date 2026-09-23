@@ -187,7 +187,9 @@ _Avoid_: portal, cliente web, tercero
 **Trámite de sede**:
 Lo que rFirma atiende desde que llega una URL `afirma://` hasta que la sede
 tiene su respuesta: la negociación de arranque, el consentimiento de la
-persona, la firma y la entrega. Uno por **proceso de sede**.
+persona, la firma y la entrega. Uno por **proceso de sede**. Con WebSocket
+abarca todas las operaciones que llegan por el canal mientras siga conectado
+su primer cliente.
 _Avoid_: errand en prosa, sesión, operación (que es cada verbo del protocolo)
 
 **Rol del proceso**:

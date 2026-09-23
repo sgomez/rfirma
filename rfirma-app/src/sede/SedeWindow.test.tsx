@@ -39,6 +39,7 @@ function scriptedErrand(stage: ErrandStage, errand: Partial<Errand> = {}) {
     lookAgain: vi.fn(),
     installCertificate: vi.fn(),
     installLocalCa: vi.fn(),
+    dismissWarning: vi.fn(),
   };
   const port: SiteErrandPort = {
     ...noErrand(),
@@ -53,6 +54,7 @@ function scriptedErrand(stage: ErrandStage, errand: Partial<Errand> = {}) {
     lookAgain: async () => calls.lookAgain(),
     installCertificate: async () => calls.installCertificate(),
     installLocalCa: async () => calls.installLocalCa(),
+    dismissWarning: async () => calls.dismissWarning(),
   };
   return { port, calls };
 }
@@ -78,6 +80,27 @@ describe("SedeWindow", () => {
     renderWithCatalog(<SedeWindow errands={noErrand()} />);
 
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  describe("the old web client warning", () => {
+    it("says the page is out of date and that Got it lets it continue", () => {
+      const { port } = scriptedErrand({ kind: "oldWebClient" });
+      renderWithCatalog(<SedeWindow errands={port} />);
+
+      expect(screen.getByText("Esta página está desactualizada")).toBeInTheDocument();
+      expect(screen.getByText(/pulsa entendido para continuar/i)).toBeInTheDocument();
+    });
+
+    it("is dismissed with its only button, without cancelling or closing the errand", () => {
+      const { port, calls } = scriptedErrand({ kind: "oldWebClient" });
+      renderWithCatalog(<SedeWindow errands={port} />);
+
+      fireEvent.click(screen.getByRole("button", { name: "Entendido" }));
+
+      expect(calls.dismissWarning).toHaveBeenCalledOnce();
+      expect(calls.cancel).not.toHaveBeenCalled();
+      expect(calls.close).not.toHaveBeenCalled();
+    });
   });
 
   describe("1 · waiting for the channel", () => {

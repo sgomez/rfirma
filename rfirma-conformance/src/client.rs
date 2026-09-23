@@ -73,35 +73,6 @@ impl Store {
     }
 }
 
-/// Con qué opciones se lanza el cliente: `headless` le quita a AutoFirma sus diálogos de error.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub(crate) enum Launch {
-    #[default]
-    Plain,
-    Headless,
-}
-
-impl Launch {
-    pub(crate) fn name(self) -> &'static str {
-        match self {
-            Self::Plain => "plain",
-            Self::Headless => "headless",
-        }
-    }
-
-    /// Lo que el envoltorio de `isolated-store.sh` añade a `JDK_JAVA_OPTIONS`; rFirma no lo lee.
-    pub(crate) fn java_options(self) -> &'static str {
-        match self {
-            Self::Plain => "",
-            Self::Headless => "-Des.gob.afirma.protocolinvocation.HeadLess=true",
-        }
-    }
-}
-
-/// La variable con la que el envoltorio recibe las opciones de lanzamiento de Java.
-pub(crate) const THE_JAVA_OPTIONS_VARIABLE: &str = "RFIRMA_PROBE_JAVA_OPTIONS";
-
 /// Donde deja la raíz de confianza la instalación de AutoFirma, en el orden en que se busca.
 const THE_AUTOFIRMA_ROOTS: &[&str] = &[
     "/usr/lib/Autofirma/Autofirma_ROOT.cer",

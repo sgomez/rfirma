@@ -64,5 +64,10 @@ pub fn answer(duty: &ChannelDuty, from_loopback: bool, message: &str) -> Answer 
     }
 }
 
+/// El rechazo de una operación que llega con otra aún en vuelo por el mismo canal.
+pub fn another_operation_in_flight() -> String {
+    WireAnswer::refused(SafCode::CannotOpenSocket).on_the_wire()
+}
+
 #[cfg(test)]
 mod tests;

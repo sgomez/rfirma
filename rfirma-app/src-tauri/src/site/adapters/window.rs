@@ -28,6 +28,9 @@ const ERRAND_ENDED_ACKNOWLEDGEMENT_TIMEOUT: std::time::Duration = std::time::Dur
 pub fn open_the_site_window(app: &tauri::AppHandle) {
     use tauri::{WebviewUrl, WebviewWindowBuilder};
 
+    if app.get_webview_window(SITE_WINDOW).is_some() {
+        return;
+    }
     let built = WebviewWindowBuilder::new(app, SITE_WINDOW, WebviewUrl::App("sede.html".into()))
         .title("rFirma")
         .inner_size(520.0, 420.0)
@@ -44,20 +47,26 @@ pub fn open_the_site_window(app: &tauri::AppHandle) {
     }
 }
 
-/// Cancela el trámite vivo, si lo hay, antes de dejar cerrar la ventana de sede por el gestor de
-/// ventanas: retiene el cierre, cancela como el botón de cancelar y reintenta cerrar cuando
-/// termina, momento en el que este mismo evento vuelve a llegar con el trámite ya terminado.
+/// Contesta al trámite vivo, si lo hay, antes de dejar cerrar la ventana de sede por el gestor de
+/// ventanas: retiene el cierre, contesta el rechazo que enseñaba o cancela, y reintenta cerrar
+/// cuando termina, momento en el que este mismo evento vuelve a llegar con el trámite ya terminado.
+/// Mientras el WebSocket siga sirviendo, la oculta en vez de cerrarla (ADR-0024).
 fn handle_close_requested(app: &tauri::AppHandle, event: &tauri::WindowEvent) {
     let tauri::WindowEvent::CloseRequested { api, .. } = event else {
         return;
     };
-    if app.state::<SiteRoot>().errand.current().is_none() {
+    let live = &app.state::<SiteRoot>().errand;
+    if live.current().is_none() && !live.holds_back_a_launch() {
         return;
     }
     api.prevent_close();
     let app = app.clone();
     std::thread::spawn(move || {
-        errand::decline_before_closing(&app.state::<SiteRoot>().errand);
+        let after = errand::answer_before_closing(&app.state::<SiteRoot>().errand);
+        if after == errand::WindowAfterClosing::StaysHidden {
+            publish_the_moment(&app);
+            return;
+        }
         if let Some(window) = app.get_webview_window(SITE_WINDOW) {
             let _ = window.close();
         }
@@ -93,6 +102,18 @@ impl crate::site::application::startup::SiteWindow for TauriSiteWindow {
     fn show(&self) {
         publish_the_moment(&self.app);
         show_the_site_window(&self.app);
+    }
+
+    fn hide(&self) {
+        if let Some(window) = self.app.get_webview_window(SITE_WINDOW) {
+            let _ = window.hide();
+        }
+    }
+
+    fn close(&self) {
+        if let Some(window) = self.app.get_webview_window(SITE_WINDOW) {
+            let _ = window.close();
+        }
     }
 
     fn errand_ended(&self, delivered: Acknowledgement) {

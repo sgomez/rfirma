@@ -32,6 +32,9 @@
 //!   aquí, si al fallar no se sabe todavía dónde subir la respuesta (una URL
 //!   inválida, o un XML de parámetros que no se pudo descargar), el rechazo
 //!   se queda en la ventana en vez de forzar una descarga solo para saberlo.
+//! - **Un `dat` que empieza por `ftp://` sale con `SAF_03`**. El original lo
+//!   baja (`DataDownloader.downloadData`, 1.9.2); aquí solo se baja por
+//!   `http(s)`, y firmarlo como su texto sería firmar la URL.
 //! - **El algoritmo de lote se valida en el parser**. El original no
 //!   comprueba el `algorithm` de `<signbatch>` ni del JSON de lote y lo
 //!   pasa tal cual a la JCA; aquí un nombre no reconocido sale de
@@ -69,9 +72,9 @@ pub use framing::{
 };
 pub use key_store::refuse_a_key_store_rfirma_does_not_open;
 pub use launch::{
-    asks_for_active_wait, drawn_ports, location_for_a_refusal, ChannelCredential, LaunchRequest,
-    NegotiatedCredential, RelayChannelInfo, RelayRequest, PROTOCOL_VERSION,
-    THE_PORT_OF_THE_THIRD_PROTOCOL, THIRD_PROTOCOL_VERSION,
+    asks_for_active_wait, drawn_ports, location_for_a_refusal, warns_of_an_old_web_client,
+    ChannelCredential, LaunchRequest, NegotiatedCredential, RelayChannelInfo, RelayRequest,
+    PROTOCOL_VERSION, THE_PORT_OF_THE_THIRD_PROTOCOL, THIRD_PROTOCOL_VERSION,
 };
 pub use message::ChannelMessage;
 pub use operation::{

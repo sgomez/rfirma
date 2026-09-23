@@ -77,13 +77,8 @@ impl SiteWindow for World {
             SiteWindowContent::TheErrand(errand) => {
                 format!("ventana:creada:{:?}", errand.arrival())
             }
-            SiteWindowContent::ADeadEnd(DeadEnd::ChannelNotOpened) => {
-                "ventana:sin-puertos".to_owned()
-            }
-            SiteWindowContent::ADeadEnd(DeadEnd::NoLocalCa) => "ventana:sin-ca".to_owned(),
-            SiteWindowContent::ADeadEnd(DeadEnd::RefusedWithoutChannel(refusal)) => {
-                format!("ventana:rechazo:{}", refusal.code())
-            }
+            SiteWindowContent::ADeadEnd(dead_end) => note_of(&dead_end),
+            SiteWindowContent::TheOldWebClientWarning => "ventana:aviso".to_owned(),
         });
     }
 
@@ -91,9 +86,25 @@ impl SiteWindow for World {
         self.note("ventana:enseñada");
     }
 
+    fn hide(&self) {
+        self.note("ventana:oculta");
+    }
+
+    fn close(&self) {
+        self.note("ventana:cerrada");
+    }
+
     fn errand_ended(&self, delivered: Acknowledgement) {
         delivered.wait(Duration::from_secs(1));
         self.note("ventana:trámite-terminado");
+    }
+}
+
+fn note_of(dead_end: &DeadEnd) -> String {
+    match dead_end {
+        DeadEnd::ChannelNotOpened => "ventana:sin-puertos".to_owned(),
+        DeadEnd::NoLocalCa => "ventana:sin-ca".to_owned(),
+        DeadEnd::RefusedWithoutChannel(refusal) => format!("ventana:rechazo:{}", refusal.code()),
     }
 }
 
@@ -329,12 +340,12 @@ fn the_channel_refusal_wait_expires_and_closes_the_hidden_window_too() {
 }
 
 #[test]
-fn ending_the_errand_notifies_the_window_it_kept() {
+fn ending_a_service_errand_notifies_the_window_it_kept() {
     let world = Arc::new(World::default());
     let live = LiveErrand::default();
 
     let _attendance = attend_site_launch(
-        &a_launch(&format!("v=4&idsession={CREDENTIAL}")),
+        &format!("afirma://service?ports=51001,51002,51003&v=1&idsession={CREDENTIAL}"),
         &a_codec_table(),
         &|location, duty| world.transport(location, duty),
         Arc::clone(&world) as Arc<dyn SiteWindow>,
@@ -357,6 +368,74 @@ fn ending_the_errand_notifies_the_window_it_kept() {
             "ventana:trámite-terminado".to_owned(),
         ],
         "al terminar el trámite, la ventana que se guardó al empezar recibe el aviso"
+    );
+}
+
+#[test]
+fn a_websocket_errand_outlives_its_answer_and_closes_its_window_when_the_first_client_leaves() {
+    let world = Arc::new(World::default());
+    let live = LiveErrand::default();
+
+    let _attendance = attend_site_launch(
+        &a_launch(&format!("v=4&idsession={CREDENTIAL}")),
+        &a_codec_table(),
+        &|location, duty| world.transport(location, duty),
+        Arc::clone(&world) as Arc<dyn SiteWindow>,
+        &live,
+        LocalCaReach::NotAnObstacle,
+    );
+    live.browser_arrived();
+    crate::site::application::errand::replies::declined(&live);
+
+    assert_eq!(
+        world.steps(),
+        [
+            "canal".to_owned(),
+            "ventana:creada:Awaited".to_owned(),
+            "ventana:enseñada".to_owned(),
+        ],
+        "contestar no termina un trámite de WebSocket"
+    );
+    assert!(live.current().is_some());
+
+    live.the_first_client_left();
+
+    assert_eq!(
+        world.steps(),
+        [
+            "canal".to_owned(),
+            "ventana:creada:Awaited".to_owned(),
+            "ventana:enseñada".to_owned(),
+            "ventana:cerrada".to_owned(),
+        ],
+        "irse el primer cliente cierra la ventana, y con ella el proceso"
+    );
+}
+
+#[test]
+fn a_websocket_errand_whose_browser_never_arrived_ends_like_any_other() {
+    let world = Arc::new(World::default());
+    let live = LiveErrand::default();
+
+    let _attendance = attend_site_launch(
+        &a_launch(&format!("v=4&idsession={CREDENTIAL}")),
+        &a_codec_table(),
+        &|location, duty| world.transport(location, duty),
+        Arc::clone(&world) as Arc<dyn SiteWindow>,
+        &live,
+        LocalCaReach::NotAnObstacle,
+    );
+    crate::site::application::errand::answer_before_closing(&live);
+
+    assert!(live.current().is_none());
+    assert_eq!(
+        world.steps(),
+        [
+            "canal".to_owned(),
+            "ventana:creada:Awaited".to_owned(),
+            "ventana:trámite-terminado".to_owned(),
+        ],
+        "sin navegador, cerrar la ventana termina el trámite y el proceso"
     );
 }
 
@@ -628,6 +707,140 @@ fn a_service_launch_creates_the_window_hidden_and_does_not_show_it() {
         ["canal", "ventana:creada:Awaited"],
         "service crea la ventana oculta y no la muestra al arrancar"
     );
+}
+
+fn launching_through_the_warning(world: &Arc<World>, live: &Arc<LiveErrand>, launch: &str) {
+    let (world_of_the_launch, live_of_the_launch, url) =
+        (Arc::clone(world), Arc::clone(live), launch.to_owned());
+    warn_before_launching(
+        launch,
+        Arc::clone(world) as Arc<dyn SiteWindow>,
+        live,
+        Box::new(move || {
+            attend_site_launch(
+                &url,
+                &a_codec_table(),
+                &|location, duty| world_of_the_launch.transport(location, duty),
+                Arc::clone(&world_of_the_launch) as Arc<dyn SiteWindow>,
+                &live_of_the_launch,
+                LocalCaReach::NotAnObstacle,
+            );
+        }),
+    );
+}
+
+#[test]
+fn an_old_web_client_warns_before_the_channel_listens() {
+    let world = Arc::new(World::default());
+    let live = Arc::new(LiveErrand::default());
+
+    launching_through_the_warning(
+        &world,
+        &live,
+        &a_launch(&format!("v=4&jvc=0&idsession={CREDENTIAL}")),
+    );
+
+    assert_eq!(world.steps(), ["ventana:aviso", "ventana:enseñada"]);
+    assert_eq!(live.moment(), Some(Moment::OldWebClient));
+    assert!(live.current().is_none());
+}
+
+#[test]
+fn dismissing_the_warning_opens_the_channel_once_and_the_errand_waits_hidden() {
+    let world = Arc::new(World::default());
+    let live = Arc::new(LiveErrand::default());
+    launching_through_the_warning(
+        &world,
+        &live,
+        &a_launch(&format!("v=4&jvc=0&idsession={CREDENTIAL}")),
+    );
+
+    assert!(crate::site::application::errand::dismiss_the_warning(&live));
+    assert!(!crate::site::application::errand::dismiss_the_warning(
+        &live
+    ));
+
+    assert_eq!(
+        world.steps(),
+        [
+            "ventana:aviso",
+            "ventana:enseñada",
+            "ventana:oculta",
+            "canal",
+            "ventana:creada:Awaited"
+        ]
+    );
+    assert_eq!(live.moment(), Some(Moment::Waiting));
+    assert!(live.current().is_some());
+}
+
+#[test]
+fn closing_the_window_over_the_warning_opens_the_channel_too() {
+    let world = Arc::new(World::default());
+    let live = Arc::new(LiveErrand::default());
+    launching_through_the_warning(
+        &world,
+        &live,
+        &a_launch(&format!("v=4&jvc=0&idsession={CREDENTIAL}")),
+    );
+
+    let after = crate::site::application::errand::answer_before_closing(&live);
+
+    assert_eq!(
+        after,
+        crate::site::application::errand::WindowAfterClosing::StaysHidden
+    );
+    assert!(world.steps().contains(&"canal".to_owned()));
+    assert!(live.current().is_some(), "el aviso no detiene la operación");
+}
+
+#[test]
+fn an_old_web_client_warns_before_a_relay_operation_too() {
+    let world = Arc::new(World::default());
+    let live = Arc::new(LiveErrand::default());
+    launching_through_the_warning(
+        &world,
+        &live,
+        "afirma://open?jvc=0&id=123456&stservlet=https://example.com/store&dat=dGVzdA==",
+    );
+    assert_eq!(world.steps(), ["ventana:aviso", "ventana:enseñada"]);
+
+    crate::site::application::errand::dismiss_the_warning(&live);
+
+    assert_eq!(
+        world.steps(),
+        [
+            "ventana:aviso",
+            "ventana:enseñada",
+            "ventana:oculta",
+            "canal",
+            "ventana:creada:Immediate",
+            "ventana:enseñada"
+        ]
+    );
+}
+
+#[test]
+fn without_a_javascript_version_code_below_one_the_channel_opens_at_once() {
+    for jvc in ["&jvc=1", "&jvc=3", "", "&jvc=noesunnumero"] {
+        let world = Arc::new(World::default());
+        let live = Arc::new(LiveErrand::default());
+
+        launching_through_the_warning(
+            &world,
+            &live,
+            &a_launch(&format!("v=4{jvc}&idsession={CREDENTIAL}")),
+        );
+
+        assert_eq!(
+            world.steps(),
+            ["canal", "ventana:creada:Awaited"],
+            "con {jvc:?}"
+        );
+        assert!(!crate::site::application::errand::dismiss_the_warning(
+            &live
+        ));
+    }
 }
 
 #[test]

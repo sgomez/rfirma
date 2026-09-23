@@ -49,6 +49,7 @@ function doubled(overrides: Partial<SiteCommands> = {}) {
     lookAgain: vi.fn(),
     installLocalCa: vi.fn(),
     closeWindow: vi.fn(),
+    dismissWarning: vi.fn(),
     describeDocument: vi.fn(),
   };
   const commands: SiteCommands = {
@@ -97,6 +98,7 @@ function doubled(overrides: Partial<SiteCommands> = {}) {
     lookAgain: async () => calls.lookAgain(),
     installLocalCa: async () => calls.installLocalCa(),
     closeWindow: async () => calls.closeWindow(),
+    dismissWarning: async () => calls.dismissWarning(),
     describeDocument: async (id) => {
       calls.describeDocument(id);
       return described;
@@ -272,6 +274,15 @@ describe("cada momento que llega se convierte en lo que la ventana espera", () =
     };
 
     expect(errandOf(view).stage).toEqual({ kind: "noChannel", reason: "localCaMissing" });
+  });
+
+  it("turns the old web client warning into its own moment", () => {
+    const view: SiteErrandView = {
+      origin: null,
+      stage: { kind: "oldWebClient" },
+    };
+
+    expect(errandOf(view).stage).toEqual({ kind: "oldWebClient" });
   });
 
   it("turns unreachable into the unreachable moment", () => {
@@ -1005,9 +1016,11 @@ describe("las salidas de la pantalla sin certificado", () => {
     await port.lookAgain();
     await port.installLocalCa();
     await port.close();
+    await port.dismissWarning();
 
     expect(calls.lookAgain).toHaveBeenCalledOnce();
     expect(calls.installLocalCa).toHaveBeenCalledOnce();
     expect(calls.closeWindow).toHaveBeenCalledOnce();
+    expect(calls.dismissWarning).toHaveBeenCalledOnce();
   });
 });

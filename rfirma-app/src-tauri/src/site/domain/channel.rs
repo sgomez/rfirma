@@ -28,6 +28,25 @@ pub enum ChannelLocation {
     Relay(RelayChannelInfo),
 }
 
+/// Cuántas operaciones atiende el trámite abierto sobre un canal (ADR-0024).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ChannelTenure {
+    /// Una sola: con su respuesta acaban el trámite y el proceso.
+    OneOperation,
+    /// Todas las que lleguen mientras siga conectado el primer cliente del WebSocket.
+    WhileTheFirstClientStays,
+}
+
+impl ChannelLocation {
+    /// Cuántas operaciones atiende el trámite que escucha aquí.
+    pub fn tenure(&self) -> ChannelTenure {
+        match self {
+            Self::Drawn(_) | Self::Fixed(_) => ChannelTenure::WhileTheFirstClientStays,
+            Self::Service(_) | Self::Relay(_) => ChannelTenure::OneOperation,
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Situation {
     /// Ninguno de los puertos sorteados por la sede estaba libre.

@@ -781,13 +781,100 @@ fn each_missing_parameter_of_a_signature_names_itself() {
     }
 }
 
+fn url_encoded(text: &str) -> String {
+    text.bytes().map(|byte| format!("%{byte:02X}")).collect()
+}
+
+fn the_signed_document(dat: &str, extra: &str) -> Vec<u8> {
+    let url = an_operation(&format!(
+        "op=sign&idsession=8jAkPZfRw2mQxN4TbYuL&format=CAdES&algorithm=SHA256withRSA&dat={dat}{extra}"
+    ));
+    let SiteOperation::Sign(request) = read_operation(&url).expect("se atiende") else {
+        panic!("es sign");
+    };
+    request.document().to_vec()
+}
+
 #[test]
-fn a_document_that_is_not_base64_names_the_parameter_that_came_wrong() {
-    let url = an_operation("op=sign&format=PAdES&algorithm=SHA256&dat=::%");
+fn a_dat_outside_the_base64_alphabet_is_signed_as_its_text() {
+    assert_eq!(the_signed_document("dato*literal!", ""), b"dato*literal!");
+}
 
-    let refusal = read_operation(&url).expect_err("no es Base64");
+#[test]
+fn a_dat_whose_length_is_not_a_multiple_of_four_is_signed_as_its_text() {
+    assert_eq!(the_signed_document("abcde", ""), b"abcde");
+}
 
-    assert_eq!(refusal.blame(), Some(Parameter::Data));
+#[test]
+fn a_dat_with_padding_before_its_last_two_characters_is_signed_as_its_text() {
+    assert_eq!(the_signed_document("ab=cdefg", ""), b"ab=cdefg");
+}
+
+#[test]
+fn a_lone_padding_sign_is_signed_as_its_text() {
+    assert_eq!(the_signed_document("%3D", ""), b"=");
+}
+
+#[test]
+fn a_dat_the_decoder_cannot_read_is_signed_as_its_text() {
+    assert_eq!(the_signed_document("abc~", ""), b"abc~");
+}
+
+#[test]
+fn a_literal_dat_is_signed_in_utf8() {
+    assert_eq!(
+        the_signed_document("%C3%B1and%C3%BA", ""),
+        "ñandú".as_bytes()
+    );
+}
+
+#[test]
+fn a_literal_dat_is_trimmed_like_the_original() {
+    assert_eq!(the_signed_document("+dato*literal!+", ""), b"dato*literal!");
+}
+
+#[test]
+fn a_base64_dat_is_still_decoded() {
+    assert_eq!(
+        the_signed_document(&dat(b"hola rFirma"), ""),
+        b"hola rFirma"
+    );
+}
+
+#[test]
+fn a_base64_dat_with_leftover_bits_is_decoded_like_the_original() {
+    assert_eq!(the_signed_document("YR==", ""), b"a");
+}
+
+#[test]
+fn a_base64_dat_split_in_lines_is_decoded() {
+    assert_eq!(the_signed_document("aG9s%0AYQ==", ""), b"hola");
+}
+
+#[test]
+fn gzip_true_over_a_literal_dat_signs_its_text_uncompressed() {
+    assert_eq!(
+        the_signed_document("dato*literal!", "&gzip=true"),
+        b"dato*literal!"
+    );
+}
+
+#[test]
+fn a_literal_local_batch_is_forwarded_in_base64() {
+    let plain = json_lote("SHA256", true);
+    let url = an_operation(&format!(
+        "op=batch&idsession=8jAkPZfRw2mQxN4TbYuL&localBatchProcess=true&jsonbatch=true&dat={}",
+        url_encoded(&plain)
+    ));
+
+    let SiteOperation::Batch(request) = read_operation(&url).expect("se atiende") else {
+        panic!("es un lote");
+    };
+    assert_eq!(request.lote(), plain.as_bytes());
+    assert_eq!(
+        request.lote_base64(),
+        base64::engine::general_purpose::STANDARD.encode(plain.as_bytes())
+    );
 }
 
 #[test]
@@ -824,7 +911,7 @@ fn the_extra_params_of_the_site_arrive_whole_and_unexpanded() {
 
 #[test]
 fn a_signature_with_nothing_to_sign_says_exactly_that() {
-    let url = an_operation("op=sign&format=PAdES&algorithm=SHA256&dat=%3D");
+    let url = an_operation("op=sign&format=PAdES&algorithm=SHA256&dat=A%09%09A");
 
     let refusal = read_operation(&url).expect_err("no hay nada que firmar");
 
@@ -1908,10 +1995,10 @@ fn a_download_that_fails_names_the_data_parameter() {
 }
 
 #[test]
-fn a_scheme_that_is_not_http_is_still_read_as_base64() {
+fn an_ftp_dat_is_refused_instead_of_signed_as_its_text() {
     let url = a_signature_of_a_url(SIGN, "ftp://sede.example/4711.pdf", "");
 
-    let refusal = read_operation(&url).expect_err("ni se baja ni es Base64");
+    let refusal = read_operation(&url).expect_err("no se baja por ftp");
 
     assert_eq!(refusal.blame(), Some(Parameter::Data));
 }
@@ -2032,7 +2119,7 @@ fn a_cosignature_and_a_countersignature_without_data_ask_for_it_too() {
 
 #[test]
 fn an_empty_dat_is_still_nothing_to_sign_and_not_a_document_to_choose() {
-    let url = an_operation("op=sign&format=PAdES&algorithm=SHA256&dat=%3D");
+    let url = an_operation("op=sign&format=PAdES&algorithm=SHA256&dat=A%09%09A");
 
     let refusal = read_operation(&url).expect_err("no hay nada que firmar");
 
@@ -2241,4 +2328,258 @@ fn the_store_is_read_after_the_rest_of_the_parameters() {
 
     assert_eq!(refusal.code(), SafCode::Params);
     assert_eq!(refusal.blame(), Some(Parameter::Format));
+}
+
+const CHANNEL_SESSION: &str = "Rj5Ct7Pr9Ob1Es3Tt5Ab";
+
+/// La orden tal y como la manda por el canal el guion de conformidad.
+fn an_order(url: &str) -> AfirmaUrl {
+    AfirmaUrl::parse(&format!("{url}&idsession={CHANNEL_SESSION}")).expect("es del protocolo")
+}
+
+/// La firma del guion que, pasado el análisis de parámetros, se para en un formato inexistente.
+fn a_signature_order(parameters: &str) -> AfirmaUrl {
+    an_order(&format!(
+        "afirma://sign?op=sign&format=NoSuchFormat&algorithm=SHA256withRSA&{parameters}"
+    ))
+}
+
+fn code_of_the_order(url: &AfirmaUrl) -> SafCode {
+    read_operation(url).expect_err("la orden se rechaza").code()
+}
+
+#[test]
+fn a_selection_with_a_fileid_and_no_rtservlet_is_refused_as_a_parameter_error() {
+    let url = an_order("afirma://selectcert/?fileid=abc123");
+
+    assert_eq!(code_of_the_order(&url), SafCode::Params);
+}
+
+#[test]
+fn a_batch_with_a_fileid_and_no_rtservlet_is_refused_as_a_parameter_error() {
+    let url = an_order("afirma://batch/?fileid=abc123");
+
+    assert_eq!(code_of_the_order(&url), SafCode::Params);
+}
+
+#[test]
+fn a_signature_whose_id_is_not_alphanumeric_is_refused_as_a_parameter_error() {
+    let url = an_order("afirma://sign?op=sign&id=rfirma-1&format=CAdES&algorithm=SHA256");
+
+    let refusal = read_operation(&url).expect_err("el id no es alfanumerico");
+
+    assert_eq!(refusal.code(), SafCode::Params);
+    assert_eq!(refusal.blame(), Some(Parameter::Identifier));
+}
+
+#[test]
+fn a_cipher_key_of_seven_characters_is_refused_as_a_parameter_error() {
+    let url = an_order(&format!(
+        "afirma://sign?op=sign&format=INVENTADO&algorithm=SHA256&dat={}&key=1234567",
+        dat(b"rfirma")
+    ));
+
+    let refusal = read_operation(&url).expect_err("la clave no tiene ocho caracteres");
+
+    assert_eq!(refusal.code(), SafCode::Params);
+    assert_eq!(refusal.blame(), Some(Parameter::CipherKey));
+}
+
+#[test]
+fn a_signature_with_a_fileid_and_no_rtservlet_is_refused_before_its_format() {
+    let url = a_signature_order("fileid=abc123");
+
+    assert_eq!(code_of_the_order(&url), SafCode::Params);
+}
+
+#[test]
+fn a_signature_with_a_local_file_in_dat_is_refused_before_its_format() {
+    let url = a_signature_order("dat=file:/etc/hostname");
+
+    assert_eq!(code_of_the_order(&url), SafCode::Params);
+}
+
+#[test]
+fn an_rtservlet_over_ftp_is_refused_as_a_parameter_error() {
+    let url = a_signature_order("fileid=abc123&rtservlet=ftp://sede.example/rt");
+
+    let refusal = read_operation(&url).expect_err("ftp no es http ni https");
+
+    assert_eq!(refusal.code(), SafCode::Params);
+    assert_eq!(refusal.blame(), Some(Parameter::RetrieveServlet));
+}
+
+#[test]
+fn an_rtservlet_on_localhost_is_refused_as_a_local_access() {
+    let url = a_signature_order("fileid=abc123&rtservlet=http://localhost/rt");
+
+    assert_eq!(code_of_the_order(&url), SafCode::LocalAccessBlocked);
+}
+
+#[test]
+fn an_rtservlet_on_the_loopback_address_is_refused_as_a_local_access() {
+    let url = an_order("afirma://sign?op=sign&fileid=rfirma&rtservlet=http://127.0.0.1/rt");
+
+    assert_eq!(code_of_the_order(&url), SafCode::LocalAccessBlocked);
+}
+
+#[test]
+fn an_rtservlet_with_a_query_of_its_own_is_refused_as_a_parameter_error() {
+    let url =
+        a_signature_order("fileid=abc123&rtservlet=https%3A%2F%2Fsede.example%2Frt%3Fop%3Dget");
+
+    assert_eq!(code_of_the_order(&url), SafCode::Params);
+}
+
+#[test]
+fn a_malformed_minimum_client_version_is_refused_as_a_parameter_error() {
+    let url = a_signature_order("dat=SG9sYQ&mcv=uno.dos");
+
+    assert_eq!(code_of_the_order(&url), SafCode::Params);
+}
+
+#[test]
+fn an_id_of_twenty_one_characters_is_refused_as_a_parameter_error() {
+    let url = a_signature_order(&format!("dat=SG9sYQ&id={}", "a".repeat(21)));
+
+    assert_eq!(code_of_the_order(&url), SafCode::Params);
+}
+
+#[test]
+fn an_id_of_twenty_characters_reaches_the_format() {
+    let url = a_signature_order(&format!("dat=SG9sYQ&id={}", "a".repeat(20)));
+
+    assert_eq!(code_of_the_order(&url), SafCode::UnsupportedFormat);
+}
+
+#[test]
+fn a_fileid_of_twenty_one_characters_is_refused_even_with_dat() {
+    let url = a_signature_order(&format!("dat=SG9sYQ&fileid={}", "a".repeat(21)));
+
+    let refusal = read_operation(&url).expect_err("sin id, el fileid es el identificador");
+
+    assert_eq!(refusal.code(), SafCode::Params);
+    assert_eq!(refusal.blame(), Some(Parameter::FileId));
+}
+
+#[test]
+fn the_id_wins_over_the_fileid_as_the_identifier_of_the_operation() {
+    let url = a_signature_order(&format!("dat=SG9sYQ&id=abc123&fileid={}", "a".repeat(21)));
+
+    assert_eq!(code_of_the_order(&url), SafCode::UnsupportedFormat);
+}
+
+#[test]
+fn a_malformed_properties_or_ksb64_reaches_the_format() {
+    for probed in ["properties=esto-no-es-base64!", "ksb64=esto-no-es-base64!"] {
+        let url = a_signature_order(&format!("dat=SG9sYQ&{probed}"));
+
+        assert_eq!(
+            code_of_the_order(&url),
+            SafCode::UnsupportedFormat,
+            "{probed}"
+        );
+    }
+}
+
+#[test]
+fn an_unknown_verb_of_the_channel_is_refused_as_unsupported() {
+    let url = an_order("afirma://unknownop?op=unknownop");
+
+    assert_eq!(code_of_the_order(&url), SafCode::UnsupportedOperation);
+}
+
+#[test]
+fn an_invalid_op_over_a_signature_is_refused_as_unsupported_and_not_by_its_format() {
+    let url = an_order(&format!(
+        "afirma://sign?op=invalid&format=INVENTADO&algorithm=SHA256&dat={}",
+        dat(b"rfirma")
+    ));
+
+    assert_eq!(code_of_the_order(&url), SafCode::UnsupportedOperation);
+}
+
+#[test]
+fn an_unknown_verb_is_refused_as_unsupported_before_any_common_guard() {
+    let url = an_order("afirma://unknownop?key=1234567&dat=file:/etc/hostname");
+
+    assert_eq!(code_of_the_order(&url), SafCode::UnsupportedOperation);
+}
+
+#[test]
+fn the_cipher_key_is_checked_before_the_rtservlet() {
+    let url = a_signature_order("key=1234567&fileid=abc123&rtservlet=http://localhost/rt");
+
+    assert_eq!(code_of_the_order(&url), SafCode::Params);
+}
+
+#[test]
+fn the_rtservlet_is_checked_before_the_identifier() {
+    let url = a_signature_order(&format!(
+        "fileid={}&rtservlet=http://localhost/rt",
+        "a".repeat(21)
+    ));
+
+    assert_eq!(code_of_the_order(&url), SafCode::LocalAccessBlocked);
+}
+
+#[test]
+fn the_common_guards_are_checked_before_the_minimum_client_version() {
+    let url = a_signature_order("dat=SG9sYQ&mcv=99.0.0&key=1234567");
+
+    assert_eq!(code_of_the_order(&url), SafCode::Params);
+}
+
+#[test]
+fn a_load_does_not_check_the_identifier_of_the_operation() {
+    let url = an_order(&format!("afirma://load?id={}", "a".repeat(21)));
+
+    read_operation(&url).expect("la carga no usa identificador");
+}
+
+#[test]
+fn a_load_with_a_fileid_and_no_rtservlet_is_refused_as_a_parameter_error() {
+    let url = an_order("afirma://load?fileid=abc123");
+
+    assert_eq!(code_of_the_order(&url), SafCode::Params);
+}
+
+#[test]
+fn a_valid_fileid_with_its_rtservlet_passes_the_common_guards() {
+    let url = an_order(
+        "afirma://sign?op=sign&format=CAdES&algorithm=SHA256withRSA&fileid=abc123\
+         &rtservlet=https://sede.example/rt",
+    );
+
+    read_operation(&url).expect("el fileid y su rtservlet son validos");
+}
+
+#[test]
+fn an_operation_the_original_does_not_know_is_shown_before_it_is_answered() {
+    let url = AfirmaUrl::parse("afirma://noexiste?op=noexiste").expect("es del protocolo");
+
+    let refusal = read_operation(&url).expect_err("no se atiende");
+
+    assert!(refusal.is_shown_before_it_is_answered());
+}
+
+#[test]
+fn a_multisignature_the_signer_does_not_support_is_answered_without_being_shown() {
+    let found_while_signing = [
+        an_invoice_signature(COSIGN, "FacturaE"),
+        an_invoice_signature(COUNTERSIGN, "FacturaE"),
+        an_invoice_signature(COSIGN, AUTO),
+        a_signature(COUNTERSIGN, ""),
+        an_operation(&format!(
+            "op={SIGN_AND_SAVE}&cop={COUNTERSIGN}&format=PAdES"
+        )),
+        an_operation(&format!("op={SIGN_AND_SAVE}&cop=resign&format=PAdES")),
+    ];
+
+    for url in found_while_signing {
+        let refusal = read_operation(&url).expect_err("no se atiende");
+
+        assert_eq!(refusal.code(), SafCode::UnsupportedOperation, "{url:?}");
+        assert!(!refusal.is_shown_before_it_is_answered(), "{url:?}");
+    }
 }

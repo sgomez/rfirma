@@ -5,7 +5,7 @@ use crate::site::domain::channel::ChannelLocation;
 use super::cipher::CipherKey;
 use super::codes::{Parameter, SafCode};
 use super::parameters::{
-    check_minimum_protocol_version, check_servlet_url, checked_identifier,
+    check_minimum_protocol_version, check_servlet_url, checked_identifier, cipher_key_of,
     minimum_protocol_version, reads_as_true,
 };
 use super::refusal::{Refusal, RefusalSituation};
@@ -191,11 +191,7 @@ impl LaunchRequest {
         check_minimum_protocol_version(version)?;
         let request = relay_request_of(url)?;
 
-        let key = match url.parameter("key").filter(|value| !value.is_empty()) {
-            Some(value) => CipherKey::from_url_parameter(value)
-                .map_err(|error| Refusal::about(Parameter::CipherKey, error.detail().to_owned()))?,
-            None => None,
-        };
+        let key = cipher_key_of(url)?;
 
         Ok(Self {
             version,
@@ -280,6 +276,13 @@ fn relay_location_for_a_refusal(url: &AfirmaUrl) -> Option<ChannelLocation> {
 fn is_a_relay_launch(url: &AfirmaUrl) -> bool {
     url.parameter("stservlet").is_some()
         || (url.parameter("fileid").is_some() && url.parameter("rtservlet").is_some())
+}
+
+/// Si el `jvc` de la invocación es menor que 1, el cliente web anterior al mínimo del original.
+pub fn warns_of_an_old_web_client(url: &AfirmaUrl) -> bool {
+    url.parameter("jvc")
+        .and_then(|jvc| jvc.parse::<i32>().ok())
+        .is_some_and(|jvc| jvc < 1)
 }
 
 /// Si la sede pide espera activa (`aw`) antes de operar.

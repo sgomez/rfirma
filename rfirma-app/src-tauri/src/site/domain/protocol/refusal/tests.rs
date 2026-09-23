@@ -34,3 +34,40 @@ fn the_untranslated_detail_is_not_part_of_what_goes_out() {
     assert!(!line.contains("passwd"), "«{line}» lleva el detalle crudo");
     assert!(line.ends_with("el parametro que falla es 'idsession'"));
 }
+
+#[test]
+fn only_a_refusal_of_the_request_itself_is_shown_before_it_is_answered() {
+    let shown = [
+        SafCode::Params,
+        SafCode::UnsupportedOperation,
+        SafCode::LocalAccessBlocked,
+    ];
+    let answered_at_once = [
+        SafCode::UnsupportedFormat,
+        SafCode::MinimumVersionNonSatisfied,
+        SafCode::UnsupportedProcedure,
+    ];
+
+    for code in shown {
+        assert!(
+            Refusal::new(code, "").is_shown_before_it_is_answered(),
+            "{code}"
+        );
+    }
+    for code in answered_at_once {
+        assert!(
+            !Refusal::new(code, "").is_shown_before_it_is_answered(),
+            "{code}"
+        );
+    }
+}
+
+#[test]
+fn a_refusal_found_while_processing_the_request_is_answered_at_once() {
+    for code in [SafCode::Params, SafCode::UnsupportedOperation] {
+        let refusal = Refusal::new(code, "").found_while_processing();
+
+        assert!(!refusal.is_shown_before_it_is_answered(), "{code}");
+        assert_eq!(refusal.code(), code);
+    }
+}

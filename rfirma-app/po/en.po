@@ -1467,6 +1467,15 @@ msgstr "Does this look like an rFirma bug?"
 msgid "sede.outcome.autoClose"
 msgstr "It'll close by itself in {{seconds}} s."
 
+msgid "sede.oldWebClient.title"
+msgstr "This page is out of date"
+
+msgid "sede.oldWebClient.body"
+msgstr "The page uses an old version of the part that talks to rFirma, and it may have bugs or not be secure. Press Got it to continue; if something goes wrong, tell whoever runs the page."
+
+msgid "sede.oldWebClient.dismiss"
+msgstr "Got it"
+
 msgid "sede.refusals.appendedSignaturePage"
 msgstr ""
 "{{origin}} asks to place the signature on a page appended at the end, and "

@@ -1481,6 +1481,15 @@ msgstr "Et sembla un error de rFirma?"
 msgid "sede.outcome.autoClose"
 msgstr "Es tancarà sola d'aquí a {{seconds}} s."
 
+msgid "sede.oldWebClient.title"
+msgstr "Aquesta pàgina està desactualitzada"
+
+msgid "sede.oldWebClient.body"
+msgstr "La pàgina fa servir una versió antiga de la peça que parla amb rFirma, i pot tenir errors o no ser segura. Prem Entesos per continuar; si alguna cosa falla, avisa qui manté la pàgina."
+
+msgid "sede.oldWebClient.dismiss"
+msgstr "Entesos"
+
 msgid "sede.refusals.appendedSignaturePage"
 msgstr ""
 "{{origin}} demana col·locar la signatura en una pàgina afegida al final, i "

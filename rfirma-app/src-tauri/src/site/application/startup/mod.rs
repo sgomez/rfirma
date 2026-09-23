@@ -9,7 +9,7 @@ use crate::site::domain::channel::{ArrivalMode, Delivery};
 use crate::site::domain::trust::{blocks_the_site, Moment as TrustMoment};
 use crate::site::ports::{LocalCaSlots, TrustStores};
 
-use crate::site::domain::protocol::Refusal;
+use crate::site::domain::protocol::{warns_of_an_old_web_client, AfirmaUrl, Refusal};
 
 use super::errand::{Acknowledgement, Errand, LiveErrand, Moment, NoChannel};
 use super::site::{self, Attendance, ChannelTransport, CodecTable};
@@ -29,6 +29,10 @@ pub trait SiteWindow: Send + Sync + 'static {
     fn open(&self, content: SiteWindowContent<'_>);
     /// Muestra y da foco a la ventana.
     fn show(&self);
+    /// Oculta la ventana sin cerrarla, a la espera de la siguiente operación.
+    fn hide(&self);
+    /// Cierra la ventana, y con ella el proceso.
+    fn close(&self);
     /// Notifica que el trámite ha terminado, con el acuse de que la respuesta ya salió por el
     /// canal; cierra la ventana solo si sigue oculta.
     fn errand_ended(&self, delivered: Acknowledgement);
@@ -40,6 +44,12 @@ impl<T: SiteWindow + ?Sized> SiteWindow for Arc<T> {
     }
     fn show(&self) {
         (**self).show();
+    }
+    fn hide(&self) {
+        (**self).hide();
+    }
+    fn close(&self) {
+        (**self).close();
     }
     fn errand_ended(&self, delivered: Acknowledgement) {
         (**self).errand_ended(delivered);
@@ -53,6 +63,8 @@ pub enum SiteWindowContent<'a> {
     TheErrand(&'a Errand),
     /// Trámite bloqueado por una condición irrecuperable.
     ADeadEnd(DeadEnd),
+    /// Aviso de un cliente web antiguo, que retiene el arranque hasta descartarlo.
+    TheOldWebClientWarning,
 }
 
 /// Situaciones de bloqueo que impiden continuar el trámite con la sede.
@@ -257,6 +269,31 @@ pub fn attend_site_launch_with_threshold(
     attendance
 }
 
+/// Un arranque aplazado hasta que la persona descarta el aviso que lo precede.
+pub type HeldLaunch = Box<dyn FnOnce() + Send>;
+
+/// Enseña el aviso de un cliente web antiguo y retiene el arranque hasta descartarlo; sin aviso, arranca en el acto.
+pub fn warn_before_launching(
+    url: &str,
+    window: Arc<dyn SiteWindow>,
+    live: &LiveErrand,
+    launch: HeldLaunch,
+) {
+    if !comes_from_an_old_web_client(url) {
+        return launch();
+    }
+    open(live, &*window, SiteWindowContent::TheOldWebClientWarning);
+    window.show();
+    live.hold_back(Box::new(move || {
+        window.hide();
+        launch();
+    }));
+}
+
+fn comes_from_an_old_web_client(url: &str) -> bool {
+    AfirmaUrl::parse(url).is_ok_and(|url| warns_of_an_old_web_client(&url))
+}
+
 fn end_or_show_the_refusal(window: &dyn SiteWindow, handed_out: bool) {
     if handed_out {
         window.errand_ended(Acknowledgement::immediate());
@@ -289,6 +326,7 @@ impl SiteWindowContent<'_> {
             Self::ADeadEnd(DeadEnd::RefusedWithoutChannel(refusal)) => {
                 Moment::RefusedWithoutChannel(refusal.clone())
             }
+            Self::TheOldWebClientWarning => Moment::OldWebClient,
         }
     }
 }

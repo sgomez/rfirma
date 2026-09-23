@@ -47,9 +47,10 @@ statement = """
 Si rtservlet apunta a localhost o 127.0.0.1, se rechaza con SAF_13.
 """
 drive = { mode = "v4", script = "protocol-v4-local-access" }
-assistance = "none"
-launch = "headless"
+assistance = "click"
+patience_secs = 600
 condition = "local-rtservlet-saf-13"
+warning = "AutoFirma enseña un diálogo de error antes de contestar el rechazo: ciérralo según aparezca."
 
 [[check]]
 id = "a_non_alphanumeric_identifier_is_refused_with_saf_03"
@@ -262,7 +263,7 @@ patience_secs = 180
 condition = "the-selection-answers-a-certificate"
 question = "¿ofreció la selección los certificados del almacén del sistema, sin pedir el PIN de un token? [s/n]"
 person = { yes = "se abrió el almacén que nombraba keystore", no = "se abrió otro almacén que el que nombraba keystore", yes_means = "conforme" }
-warning = "La sede nombra el almacén del sistema en keystore y el token de SoftHSM en ksb64: fíjate en qué almacén ofrece la selección y no des ningún PIN; elige un certificado o cancela."
+warning = "La sede nombra el almacén del sistema en keystore y el token de SoftHSM en ksb64: fíjate en qué almacén ofrece la selección, no des ningún PIN y elige un certificado: si cancelas, la comprobación sale discrepante."
 
 [[check]]
 id = "jvc_only_warns_below_one"

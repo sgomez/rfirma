@@ -50,8 +50,13 @@ pub fn attend<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
     reply: ReplyHandle,
     live: &LiveErrand,
 ) -> Option<ErrandStep> {
+    live.an_operation_arrives();
     live.answer_through(reply);
-    dispatch(desk, url, live)
+    let step = dispatch(desk, url, live);
+    if matches!(step, Some(ErrandStep::Answering(_))) {
+        live.put_away_the_window();
+    }
+    step
 }
 
 /// Reevalúa la petición recibida tras un cambio en los certificados disponibles.
@@ -104,6 +109,7 @@ fn remembered(live: &LiveErrand, step: ErrandStep) -> ErrandStep {
         ErrandStep::Saving(consent) => live.remember_saving((**consent).clone()),
         ErrandStep::Loading(consent) => live.remember_loading((**consent).clone()),
         ErrandStep::NoCertificate { .. } => live.forget_the_consent(),
+        ErrandStep::ShowingTheRefusal(refusal) => live.remember_the_refusal(refusal.clone()),
         ErrandStep::Answering(_) => {}
     }
 
@@ -422,18 +428,46 @@ pub fn decline(live: &LiveErrand) -> SiteOutcome {
 /// Tope de espera al acuse de entrega antes de cerrar la ventana de sede por el gestor de ventanas.
 pub const WINDOW_CLOSE_ACKNOWLEDGEMENT_TIMEOUT: Duration = Duration::from_secs(1);
 
-/// Decide qué hacer con el trámite cuando el gestor de ventanas pide cerrar la ventana de sede:
-/// con trámite vivo, cancela como el botón de cancelar y espera su acuse de entrega hasta el
-/// tope; sin trámite vivo, no hace nada, porque no hay nada que cancelar.
-pub fn decline_before_closing(live: &LiveErrand) {
-    decline_before_closing_within(live, WINDOW_CLOSE_ACKNOWLEDGEMENT_TIMEOUT);
+/// La persona descarta el aviso del cliente web antiguo, y el arranque que retenía sigue; `true` si lo había.
+pub fn dismiss_the_warning(live: &LiveErrand) -> bool {
+    let Some(launch) = live.take_the_held_launch() else {
+        return false;
+    };
+    live.note(Moment::Waiting);
+    launch();
+    true
 }
 
-fn decline_before_closing_within(live: &LiveErrand, timeout: Duration) {
-    if live.current().is_none() {
-        return;
+/// Qué le queda a la ventana de sede tras contestar su cierre por el gestor de ventanas.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum WindowAfterClosing {
+    /// Se cierra, y con ella el proceso.
+    Closes,
+    /// Ya se ha ocultado, porque el canal sigue sirviendo (ADR-0024).
+    StaysHidden,
+}
+
+/// Contesta a la sede antes de cerrar la ventana: el rechazo que enseñaba, o `CANCEL` si había algo que consentir.
+pub fn answer_before_closing(live: &LiveErrand) -> WindowAfterClosing {
+    answer_before_closing_within(live, WINDOW_CLOSE_ACKNOWLEDGEMENT_TIMEOUT)
+}
+
+fn answer_before_closing_within(live: &LiveErrand, timeout: Duration) -> WindowAfterClosing {
+    if dismiss_the_warning(live) {
+        return WindowAfterClosing::StaysHidden;
     }
-    live.answer_the_site(&SiteOutcome::Cancelled);
+    if live.current().is_none() {
+        return WindowAfterClosing::Closes;
+    }
+    let outcome = live
+        .the_shown_refusal()
+        .map_or(SiteOutcome::Cancelled, SiteOutcome::RefusedByTheProtocol);
+    if live.keeps_serving() {
+        live.answer_once_put_away(&outcome);
+        return WindowAfterClosing::StaysHidden;
+    }
+    live.answer_the_site(&outcome);
     live.wait_for_delivery(timeout);
     live.end();
+    WindowAfterClosing::Closes
 }

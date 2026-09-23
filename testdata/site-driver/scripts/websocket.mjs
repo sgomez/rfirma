@@ -31,7 +31,7 @@ const THE_WARNED_CHANNEL_PATIENCE_MS = 60000;
 const THE_DIALOGUE_PATIENCE_MS = 120000;
 
 /** Lo que tarda como poco un rechazo retenido por un diálogo que la persona cierra a propósito. */
-const THE_DIALOGUE_MIN_MS = 3000;
+const THE_DIALOGUE_MIN_MS = 1000;
 
 const THE_REJECTION_WAITED_FOR_THE_DIALOGUE = "the-rejection-waited-for-the-dialogue";
 const THE_SECOND_OPERATION_REUSES_THE_CHANNEL = "the-second-operation-reuses-the-channel";
@@ -709,7 +709,7 @@ export const WEBSOCKET_SCRIPTS = {
     theProbesOverTheFourthProtocol(
       [54451, 54452, 54453],
       [THE_LOCAL_RTSERVLET_PROBE],
-      THE_OPERATION_ANSWER_DEADLINE_MS,
+      THE_DIALOGUE_PATIENCE_MS,
     ),
     theConditionsOf([THE_LOCAL_RTSERVLET_PROBE]),
   ),

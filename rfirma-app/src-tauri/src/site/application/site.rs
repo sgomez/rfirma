@@ -110,7 +110,8 @@ pub fn attend_launch(
                     let arrival = channel.arrival_mode();
                     // Se retira antes de begin(): dispatch() exige un códec ya registrado.
                     let delivery = channel.take_delivery();
-                    let errand = Errand::of(negotiated.credential, arrival, negotiated.codec);
+                    let errand = Errand::of(negotiated.credential, arrival, negotiated.codec)
+                        .with_tenure(negotiated.location.tenure());
                     if live.begin(errand.clone()) {
                         if let Some(delivery) = delivery {
                             delivery.now();

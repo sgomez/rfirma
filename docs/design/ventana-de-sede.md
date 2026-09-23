@@ -79,7 +79,11 @@ que representa el escritorio, para que se vea su tamaño real.
    —la firma, `CANCEL` o el código de error— sale de inmediato, sin esperar a
    que nadie cierre nada ([#316](https://github.com/sgomez/rfirma/issues/316)).
    Esta ventana no es el acuse: es donde vive la precisión que el código de
-   error no puede llevar.
+   error no puede llevar. **La excepción es el rechazo de la petición misma**
+   —parámetros mal formados (`SAF_03`), operación que no existe (`SAF_04`),
+   servlet en el propio equipo (`SAF_13`)—, siempre que nazca al analizarla: el
+   original lo enseña en su diálogo de error y no contesta hasta que se cierra,
+   y rFirma hace lo mismo con su desenlace de rechazo.
 
 ### Un solo documento por petición
 
@@ -132,7 +136,19 @@ Firefox 260 px y la de Chrome **322 px** — le quedan seis píxeles. Si la pros
 vuelve a crecer, lo primero que cae bajo el pliegue es el botón `Copiar` y la
 ruta por el candado, que es justo lo que hay que enseñar.
 
-### 2 · Consentimiento — `SedeConsentimiento`
+### 1b · La página está desactualizada — sin artboard
+
+Cuando la invocación trae `jvc` menor que 1 —un `autoscript.js` anterior al
+mínimo del original—, la ventana se enseña al arrancar con un aviso: título
+«Esta página está desactualizada», una frase que dice que la pieza que habla con
+rFirma es antigua y puede tener errores o no ser segura, que se puede seguir y a
+quién avisar si algo falla, y un único botón, `Entendido`, en `--primary`.
+
+**El aviso retiene el arranque, no lo detiene.** Como el diálogo modal del
+original, sale antes de abrir el canal: mientras se lee, la sede no encuentra
+a nadie escuchando. `Entendido` y la cruz hacen lo mismo: descartan el aviso y
+el trámite arranca como uno normal, con su espera.
+
 
 El corazón del ticket: la pantalla que hoy no existe.
 
@@ -279,6 +295,17 @@ equipo a petición de una web**, y un rFirma que aparece y desaparece en silenci
 es indistinguible de uno roto. Lo único accionable es el detalle copiable, para
 llevárselo a quien mantiene la sede.
 
+El **rechazo de la petición misma** que llega por un canal ya abierto usa este
+mismo desenlace, pero la sede todavía no tiene su respuesta: el `SAF_NN` sale
+cuando la persona pulsa `Cerrar` o cierra la ventana, como con el diálogo de
+error del original. Con WebSocket la ventana se oculta antes de contestar, y la
+siguiente operación del canal vuelve a enseñarla; si llegan varios rechazos
+seguidos, se enseñan y se contestan de uno en uno, en orden. Los demás rechazos
+—formato que no existe, versión mínima, versión de protocolo, y los que nacen al
+procesar la petición aunque compartan código, como la cofirma de una factura
+(`SAF_04`)— se contestan en el acto y no enseñan nada, porque el original
+tampoco los enseña.
+
 **La caja del detalle es de la sede, y solo de la sede**: dentro van la etiqueta
 `Detalle` con el botón de copiar a su derecha y, debajo, el texto a ancho
 completo. El enlace a `Comentarios y ayuda` —que solo aparece cuando ni siquiera
@@ -329,6 +356,7 @@ cancela— se borró por explicar lo evidente.
 | Estado | Artboard | Acción principal |
 | ------ | -------- | ---------------- |
 | Esperando el canal | `SedeEspera` · `momento = esperando` | ninguna; `Cancelar` en `--ghost` |
+| La página está desactualizada | sin artboard | `Entendido` |
 | El canal no se abre (Chrome / Firefox) | `SedeEspera` · `no-va-chrome`, `no-va-firefox` | `Instalar…` (la CA local) |
 | Consentimiento de firma | `SedeConsentimiento` · `forma = confirmacion` | `Firmar` |
 | Consentimiento de cesión de datos | `SedeConsentimiento` · `situacion = entregar identidad` | `Enviar mis datos` |

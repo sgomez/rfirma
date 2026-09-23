@@ -117,6 +117,7 @@ pub struct Inbox {
     arrived: Arc<dyn Fn() + Send + Sync>,
     operations: Arc<dyn Fn(AfirmaUrl, ReplyHandle) + Send + Sync>,
     already_arrived: Arc<std::sync::atomic::AtomicBool>,
+    first_client_left: Arc<dyn Fn() + Send + Sync>,
 }
 
 impl Inbox {
@@ -129,7 +130,21 @@ impl Inbox {
             arrived: Arc::new(arrived),
             operations: Arc::new(operations),
             already_arrived: Arc::new(std::sync::atomic::AtomicBool::new(false)),
+            first_client_left: Arc::new(|| {}),
         }
+    }
+
+    /// El mismo buzón, avisando cuando se vaya el primer cliente del WebSocket.
+    pub fn when_the_first_client_leaves(self, left: impl Fn() + Send + Sync + 'static) -> Self {
+        Self {
+            first_client_left: Arc::new(left),
+            ..self
+        }
+    }
+
+    /// Notifica que se ha ido el primer cliente del WebSocket.
+    pub fn first_client_left(&self) {
+        (self.first_client_left)();
     }
 
     /// Crea un buzón que solo atiende operaciones (para pruebas y servidor intermedio).

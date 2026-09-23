@@ -2,7 +2,7 @@
 
 use super::*;
 
-use base64::engine::general_purpose::URL_SAFE_NO_PAD;
+use base64::engine::general_purpose::{URL_SAFE, URL_SAFE_NO_PAD};
 
 use crate::identity::application::tests::a_usable_certificate;
 use crate::site::application::tests::read_operation;
@@ -32,7 +32,7 @@ fn a_batch_request(lote: &str, json: bool) -> crate::site::domain::protocol::Bat
         "afirma://batch?op=batch&idsession=8jAkPZfRw2mQxN4TbYuL&\
          batchpresignerurl=https%3A%2F%2Fpresigner.example%2Fpre&\
          batchpostsignerurl=https%3A%2F%2Fpostsigner.example%2Fpost{json_flag}&dat={}",
-        URL_SAFE_NO_PAD.encode(lote)
+        URL_SAFE.encode(lote)
     );
     let url = AfirmaUrl::parse(&text).expect("es una URL del protocolo");
     let SiteOperation::Batch(request) = read_operation(&url).expect("es un lote que se atiende")
@@ -79,7 +79,7 @@ fn a_json_batch_reaches_both_servlets_with_the_pk1_of_every_presigned_sign() {
     };
     assert_eq!(url, "https://presigner.example/pre");
     assert_eq!(*format, BatchFormat::Json);
-    assert_eq!(lote_base64, &URL_SAFE_NO_PAD.encode(JSON_LOTE));
+    assert_eq!(lote_base64, &URL_SAFE.encode(JSON_LOTE));
     assert_eq!(certs, &vec![certificate.der().to_vec()]);
 
     let ReceivedBatchCall::Postsign { url, tridata, .. } = &received[1] else {
@@ -120,7 +120,7 @@ fn an_xml_batch_travels_as_xml_with_the_triphase_data_of_the_legacy_presigner() 
         panic!("la segunda llamada es la postfirma");
     };
     assert_eq!(*format, BatchFormat::Xml);
-    assert_eq!(lote_base64, &URL_SAFE_NO_PAD.encode(XML_LOTE));
+    assert_eq!(lote_base64, &URL_SAFE.encode(XML_LOTE));
     assert_eq!(tridata.signs()[0].param("PK1"), Some("UEsxOkFCQw=="));
 }
 

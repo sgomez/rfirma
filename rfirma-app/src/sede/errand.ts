@@ -132,6 +132,11 @@ export type ErrandStage =
    */
   | { kind: "unreachable" }
   /**
+   * La página usa un cliente web anterior al mínimo. Es un aviso y no un
+   * callejón: el canal ya está abierto y la operación que llegue lo sustituye.
+   */
+  | { kind: "oldWebClient" }
+  /**
    * **El canal no se ha abierto y ya no va a abrirse** (ID-341). No es el
    * umbral del reloj: aquí rFirma ya lo sabe —no le queda ni un puerto que
    * atar, o la CA local no ha entrado en ningún almacén— y por eso se enseña la
@@ -262,6 +267,8 @@ export interface SiteErrandPort {
   installCertificate(): Promise<void>;
   /** Instala la CA local, sin la cual el navegador ni llega a preguntar. */
   installLocalCa(): Promise<void>;
+  /** Descarta el aviso del cliente web antiguo; el trámite sigue esperando. */
+  dismissWarning(): Promise<void>;
 }
 
 /**
@@ -280,6 +287,7 @@ export function noErrand(): SiteErrandPort {
     lookAgain: async () => {},
     installCertificate: async () => {},
     installLocalCa: async () => {},
+    dismissWarning: async () => {},
   };
 }
 

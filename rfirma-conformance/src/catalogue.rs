@@ -10,7 +10,7 @@ use serde::{Deserialize, Deserializer};
 use serde::Serialize;
 use ts_rs::TS;
 
-use crate::client::{Launch, Store};
+use crate::client::Store;
 use crate::harness::{the_harness_named, Harness};
 use crate::judge::{Code, Contents, Expectation, OnTheWire, Person};
 use crate::known_bug::{the_known_bug, KnownBug};
@@ -92,8 +92,6 @@ pub struct Check {
     pub(crate) assistance: Option<Assistance>,
     #[serde(default)]
     pub(crate) store: Store,
-    #[serde(default)]
-    pub(crate) launch: Launch,
     #[serde(default)]
     pub patience_secs: Option<u64>,
     /// Los puertos que tienen que estar libres antes de conducirla.
@@ -1073,17 +1071,6 @@ statement = "Algo se rechaza con SAF_03."
                 (Family::Intermediate, Assistance::Click),
             ])
         );
-    }
-
-    #[test]
-    fn only_local_access_blocked_launches_headless() {
-        let headless: Vec<String> = read_the_catalogue()
-            .unwrap()
-            .into_iter()
-            .filter(|check| check.launch == Launch::Headless)
-            .map(|check| check.id)
-            .collect();
-        assert_eq!(headless, vec!["local_access_blocked".to_owned()]);
     }
 
     #[test]

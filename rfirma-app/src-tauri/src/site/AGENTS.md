@@ -36,7 +36,7 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `adapters/trace.rs` | La traza por `stderr` de las URL `afirma://` que llegan, viva solo en compilación de desarrollo. Sin pruebas propias. |
 | `adapters/transport.rs` | El transporte de producción del `wss` sobre el *loopback*. |
 | `adapters/views.rs` | Los tipos que cruzan a la ventana de sede y su única conversión. Pruebas en `adapters/views/tests.rs`. |
-| `adapters/window.rs` | El adaptador de la ventana de sede: la crea, le publica lo que va pasando, cancela el trámite si el gestor de ventanas la cierra con uno vivo y, al terminar el trámite, decide si la cierra según siga oculta. |
+| `adapters/window.rs` | El adaptador de la ventana de sede: la crea, la enseña, la oculta o la cierra, le publica lo que va pasando y decide qué hace su cierre por el gestor de ventanas con el trámite vivo (ADR-0024). |
 | `application/batch.rs` | El lote remoto ya consentido: prefirma, `PK1` con el token y postfirma. No decide el consentimiento. Pruebas en `application/batch/tests.rs`. |
 | `application/errand/desk.rs` | La mesa del trámite (`ErrandDesk`) y los consentimientos que se deciden sobre ella. |
 | `application/errand/mod.rs` | Los verbos, y el reparto. **Léelo antes que sus hermanos**: es lo único que una orden llama. Pruebas en `application/errand/tests.rs`. |
@@ -62,7 +62,7 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `domain/batch/result.rs` | El resultado del lote: el del remoto que no pudo prefirmar nada, y el del local con una firma por elemento. Pruebas en `domain/batch/result/tests.rs`. |
 | `domain/batch_error.rs` | La situación del lote remoto (ADR-0009): alcance de los dos servlets y forma de su respuesta. Pruebas en `domain/batch_error/tests.rs`. |
 | `domain/local_ca.rs` | La **CA local**, pura: la genera y la lee de PEM, y no toca el disco. Pruebas en `domain/local_ca/tests.rs`. |
-| `domain/channel.rs` | El canal visto desde dentro: cometido, ubicación donde escucha, situaciones (ADR-0009) y asa, todo sin socket. Pruebas en `domain/channel/tests.rs`. |
+| `domain/channel.rs` | El canal visto desde dentro: cometido, ubicación donde escucha, cuántas operaciones atiende (ADR-0024), situaciones (ADR-0009) y asa, todo sin socket. Pruebas en `domain/channel/tests.rs`. |
 | `domain/protocol/algorithm.rs` | El algoritmo que nombra la sede reducido a su huella; **no compone con la clave**, eso es de `adapters/desk.rs`. Pruebas en `domain/protocol/algorithm/tests.rs`. |
 | `domain/protocol/cipher.rs` | El cifrado DES del servidor intermedio, calcado del original. Pruebas en `domain/protocol/cipher/tests.rs`. |
 | `domain/protocol/codes.rs` | **El catálogo publicado**: los `SAF_00`…`SAF_52` y las tres respuestas que no son códigos. Pruebas en `domain/protocol/codes/tests.rs`. |
@@ -76,7 +76,7 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `domain/protocol/message.rs` | Lo que llega por el canal ya abierto y con qué credencial viene. Puro. Pruebas en `domain/protocol/message/tests.rs`. |
 | `domain/protocol/mod.rs` | El reparto, y las cosas en las que rFirma se aparta del original a propósito. Léelo antes que sus hermanos. |
 | `domain/protocol/operation.rs` | Lo que la sede pide por el canal ya abierto: el verbo y su petición, sea de firma, de guardado, de carga o de lote. Pruebas en `domain/protocol/operation/tests.rs`. |
-| `domain/protocol/parameters.rs` | Lo común a toda operación: las guardias de forma —versión mínima, fichero local, identificador de sesión y URL de servlet— y los dos indicadores del certificado pegado. Pruebas en `domain/protocol/parameters/tests.rs`. |
+| `domain/protocol/parameters.rs` | Lo común a toda operación: las guardias de forma —versión mínima, fichero local, clave de cifrado, identificador de sesión y URL de servlet— y los dos indicadores del certificado pegado. Pruebas en `domain/protocol/parameters/tests.rs`. |
 | `domain/protocol/relay_parameters.rs` | El XML de parámetros que la sede sube al servlet cuando la operación no cabe en la URL; **no** es el documento a firmar. Pruebas en `domain/protocol/relay_parameters/tests.rs`. |
 | `domain/protocol/refusal.rs` | El rechazo del protocolo: el código que sale al cable, el detalle crudo que **no** sale, y cómo lo nombra la ventana. Pruebas en `domain/protocol/refusal/tests.rs`. |
 | `domain/protocol/url.rs` | Una URL `afirma://` partida en verbo y pares, con las rarezas del original. Pruebas en `domain/protocol/url/tests.rs`. |
