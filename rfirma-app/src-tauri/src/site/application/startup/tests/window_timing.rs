@@ -199,7 +199,7 @@ fn a_relay_launch_with_fileid_and_parameters_xml_preserves_the_delivered_moment(
 }
 
 #[test]
-fn opening_with_a_dead_end_is_never_suppressed_by_a_delivered_moment() {
+fn a_relay_launch_is_attended_even_without_a_local_ca() {
     let world = Arc::new(World::default());
     let live = Arc::new(LiveErrand::default());
     let relay_url = "afirma://open?id=123456&stservlet=https://example.com/store&dat=dGVzdA==";
@@ -231,10 +231,10 @@ fn opening_with_a_dead_end_is_never_suppressed_by_a_delivered_moment() {
     assert!(matches!(attendance, Attendance::Serving { .. }));
     assert_eq!(
         live.moment(),
-        Some(Moment::NoChannel(NoChannel::LocalCaMissing)),
-        "un callejon sin salida como la falta de CA local siempre se impone sobre la operacion"
+        Some(delivered_moment),
+        "el servidor intermedio no pasa por el canal local: la falta de su CA no tapa la operación"
     );
-    assert_eq!(world.steps(), ["ventana:sin-ca", "ventana:enseñada"]);
+    assert_eq!(world.steps(), ["ventana:creada:Immediate"]);
 }
 
 #[test]

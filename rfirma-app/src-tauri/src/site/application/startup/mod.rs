@@ -200,8 +200,10 @@ pub fn attend_site_launch_with_threshold(
         Attendance::Serving { channel, errand } => {
             live.keep_the_window(Arc::clone(&window));
             let delivery = channel.take_delivery();
+            let the_browser_comes_through_the_local_channel =
+                errand.arrival() == ArrivalMode::Awaited;
             match local_ca {
-                LocalCaReach::Nowhere => {
+                LocalCaReach::Nowhere if the_browser_comes_through_the_local_channel => {
                     deliver(delivery);
                     open(
                         live,
@@ -210,7 +212,7 @@ pub fn attend_site_launch_with_threshold(
                     );
                     window.show();
                 }
-                LocalCaReach::NotAnObstacle => {
+                LocalCaReach::Nowhere | LocalCaReach::NotAnObstacle => {
                     open(live, &*window, SiteWindowContent::TheErrand(&*errand));
                     if errand.arrival() == ArrivalMode::Awaited {
                         live.arm_backing_timeout(Arc::clone(&window), threshold);

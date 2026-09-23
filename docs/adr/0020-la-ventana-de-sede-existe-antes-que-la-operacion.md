@@ -28,9 +28,10 @@ importe en qué orden lleguen las cosas:
    la enseña con «La petición no ha llegado» si el navegador no llega.
 
 Los callejones sin salida del arranque —puertos ocupados, rechazo sin canal,
-CA local ausente— son algo que decir, y se enseñan en el acto. Con la CA local
-ausente el callejón se abre tras la entrega, para que la operación entregada no
-tape lo que bloquea el trámite.
+CA local ausente— son algo que decir, y se enseñan en el acto. La CA local solo
+es callejón con WebSocket y `service`, donde el navegador llega por el canal
+local que ella cifra: el servidor intermedio no pasa por él, y AutoFirma
+tampoco mira su certificado local en ese transporte.
 
 ## Considered Options
 
