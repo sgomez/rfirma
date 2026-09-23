@@ -1,5 +1,9 @@
+use super::responses::{only_pkcs1, parse_signed_document, pkcs1_list};
 use super::*;
-use crate::signing::domain::bridge::{SignatureVerdict, XadesVariant, LIBRARY_FILE};
+use crate::signing::domain::bridge::{
+    SealedPreSignature, SignatureVerdict, XadesVariant, LIBRARY_FILE,
+};
+use crate::signing::domain::SessionSeal;
 use std::alloc::{alloc, dealloc, Layout};
 use std::cell::{Cell, RefCell};
 use std::collections::{HashMap, HashSet};
