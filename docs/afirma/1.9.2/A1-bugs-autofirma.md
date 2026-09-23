@@ -526,7 +526,7 @@ dirigido al defecto.
 
 ### BUG-26: Los errores anteriores al inicio de la operación no se suben al servidor intermedio y la sede los percibe como «AutoFirma no instalada»
 
-* **No observable:** es del transporte por servidor intermedio (reporte de errores previos al arranque hacia el servlet), que queda para más adelante.
+* **Comprobación del catálogo:** `a_saf_code_travels_to_the_intermediate_server_even_before_the_operation_began`.
 * **Estado en `master`:** **Corregido a medias.** Los fallos de recuperación y descifrado de la configuración remota se suben ya mediante `IntermediateServerErrorSendedException` y `processIntermediateServiceError` (`ProtocolInvocationLauncher.java:922`). Los seis anteriores al inicio de la operación —`SAF_01`, `SAF_02`, `SAF_03`, `SAF_04`, `SAF_13` y `SAF_14`— siguen mostrando diálogo y devolviendo la cadena sin subir nada.
 * **Código fuente:** `afirma-simple` · `es.gob.afirma.standalone.protocol.ProtocolInvocationLauncher.java:165-177` (URI nula y esquema no reconocido), `:356-367, 429-440, 504-527, 616-639, 726-749, 811-832` (bloques `catch` de parámetros de cada operación), `:663-677` (recuperación de la configuración remota, replicado en los seis bloques), `:837-842` (operación no reconocida), frente a los únicos puntos de subida en `:353, 426, 501, 603, 612, 712, 721, 808`; `afirma-ui-miniapplet-deploy/src/main/webapp/js/autoscript.js:3722, 4729-4768`.
 * **Origen de auditoría:** Anteriormente AUD-83 ([15-errores.md](15-errores.md)).

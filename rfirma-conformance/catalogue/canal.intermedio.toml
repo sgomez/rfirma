@@ -87,20 +87,20 @@ condition = "each-operation-launched-apart"
 warning = "Va a aparecer dos veces el diálogo de selección de certificado: elige uno cada vez."
 
 [[check]]
-id = "a_saf_code_travels_to_the_intermediate_server_only_once_the_operation_began"
+id = "a_saf_code_travels_to_the_intermediate_server_even_before_the_operation_began"
 set = "canal.intermedio"
 citation = "ProtocolInvocationLauncher.java:601-604, 710-713, 738-743, 870-889"
+bug = "BUG-26"
 statement = """
-Por servidor intermedio el rechazo se sube a stservlet con el prefijo SAF_nn intacto. Los que se
-detectan antes de empezar la operación —SAF_01, SAF_02, SAF_03, SAF_04, SAF_13, SAF_14, SAF_15 y
-SAF_16— no llegan a subirse, y la sede los percibe como una aplicación que no está instalada
-(BUG-26).
+Por servidor intermedio el rechazo se sube a stservlet con el prefijo SAF_nn intacto, tanto el de la
+operación ya empezada como el de un parámetro que se detecta antes de empezarla (SAF_03): por canal
+local ese mismo SAF_03 llega a la sede.
 """
 drive = { mode = "relay", script = "relayrefusals" }
 assistance = "click"
 patience_secs = 180
-condition = ["a-saf-after-the-start-travels-intact", "a-saf-before-the-start-is-not-uploaded"]
-warning = "La segunda firma lleva un algoritmo que no se admite: AutoFirma enseña un diálogo de error; ciérralo."
+condition = ["a-saf-after-the-start-travels-intact", "a-saf-before-the-start-travels-intact"]
+warning = "La segunda firma lleva un algoritmo que no se admite: la aplicación enseña un error; ciérralo."
 
 [[check]]
 id = "an_undecipherable_request_answers_saf_15"
