@@ -265,13 +265,26 @@ fn a_refusal_location_falls_back_to_the_fixed_port_when_the_site_declared_the_th
 
 #[test]
 fn a_refusal_location_prefers_drawn_ports_when_the_site_sent_any() {
-    let url =
-        AfirmaUrl::parse("afirma://websocket?ports=54001&v=2").expect("es una URL del protocolo");
+    let url = AfirmaUrl::parse("afirma://websocket?ports=54001&v=3&idsession=abc-def")
+        .expect("es una URL del protocolo");
+    assert!(
+        LaunchRequest::from_url(&url).is_err(),
+        "el idsession no vale"
+    );
 
     assert_eq!(
         location_for_a_refusal(&url),
         Some(ChannelLocation::Drawn(vec![54001]))
     );
+}
+
+#[test]
+fn a_refusal_location_of_a_websocket_launch_outside_its_versions_is_none() {
+    for version in ["&v=0", "&v=1", "&v=2", "&v=5", "&v=99", ""] {
+        let url = AfirmaUrl::parse(&format!("afirma://websocket?ports=54001{version}")).unwrap();
+
+        assert_eq!(location_for_a_refusal(&url), None, "con '{version}'");
+    }
 }
 
 #[test]

@@ -246,12 +246,10 @@ Lo concreto que se deduce, y que sí es implementable:
 - **El tercer campo de la respuesta de firma se emite**, porque la condición es
   `getProtocolVersion() >= 3` y el servidor V4 pasa `4`
   (`NativeSignDataProcessor.java:97`; `AfirmaWebSocketServerV4.java:91`).
-- Ante `v` no soportada, **rfirma tiene margen para mejorar el original**: abrir el socket igual y
-  contestar `SAF_21` al primer mensaje, en vez de cerrarse en silencio como hace AutoFirma. Cerrar
-  la aplicación deja al navegador reintentando 15 × 2 s hasta el diálogo de «no se encuentra la
-  aplicación», que es peor experiencia y no aporta nada. **Esto es una propuesta, no una medición**:
-  no se ha comprobado que el cliente publicado se comporte bien con un socket que abre y luego
-  responde un error a la primera petición.
+- Ante `v` no soportada, rfirma sigue al original: enseña `SAF_21` en la ventana y no liga ningún
+  puerto (`ProtocolInvocationLauncher.java:240`-`245`). Se descartó abrir el socket igual y
+  contestar `SAF_21` al primer mensaje: la suite de conformidad mide que AutoFirma no liga puerto,
+  y el cliente publicado no enseña el `SAF_21` que le llegue por el canal.
 - **`jvc` se ignora.** En la 1.9.2 no decide nada que rfirma tenga que reproducir; el único efecto
   es un diálogo de aviso, y rfirma no tiene por qué reproducir un diálogo del original.
 

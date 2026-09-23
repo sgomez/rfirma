@@ -8,7 +8,7 @@ fn serving_the_retained_refusal_ends_the_wait_and_shows_the_refusal() {
     let live = LiveErrand::default();
 
     let _attendance = attend_site_launch_with_threshold(
-        &a_launch(&format!("v=99&idsession={CREDENTIAL}")),
+        &a_launch("v=4&idsession=abc-def"),
         &a_codec_table(),
         &|location, duty| world.transport(location, duty),
         Arc::clone(&world) as Arc<dyn SiteWindow>,
@@ -17,18 +17,18 @@ fn serving_the_retained_refusal_ends_the_wait_and_shows_the_refusal() {
         Duration::from_millis(200),
     );
 
-    assert_eq!(world.steps(), ["canal", "ventana:rechazo:SAF_21"]);
+    assert_eq!(world.steps(), ["canal", "ventana:rechazo:SAF_03"]);
 
     // El navegador llega y se le sirve el rechazo retenido.
     live.browser_arrived();
 
     assert_eq!(
         world.steps(),
-        ["canal", "ventana:rechazo:SAF_21", "ventana:enseñada"],
+        ["canal", "ventana:rechazo:SAF_03", "ventana:enseñada"],
         "servir el rechazo lo enseña sin esperar el plazo"
     );
     assert!(
-        matches!(live.moment(), Some(Moment::RefusedWithoutChannel(ref refusal)) if refusal.code() == SafCode::UnsupportedProcedure),
+        matches!(live.moment(), Some(Moment::RefusedWithoutChannel(ref refusal)) if refusal.code() == SafCode::Params),
         "la ventana enseña el rechazo servido: {:?}",
         live.moment()
     );
@@ -40,7 +40,7 @@ fn the_channel_refusal_wait_expires_and_shows_the_refusal_too() {
     let live = LiveErrand::default();
 
     let _attendance = attend_site_launch_with_threshold(
-        &a_launch(&format!("v=99&idsession={CREDENTIAL}")),
+        &a_launch("v=4&idsession=abc-def"),
         &a_codec_table(),
         &|location, duty| world.transport(location, duty),
         Arc::clone(&world) as Arc<dyn SiteWindow>,
@@ -59,7 +59,7 @@ fn the_channel_refusal_wait_expires_and_shows_the_refusal_too() {
 
     assert_eq!(
         world.steps(),
-        ["canal", "ventana:rechazo:SAF_21", "ventana:enseñada"],
+        ["canal", "ventana:rechazo:SAF_03", "ventana:enseñada"],
         "al vencer el plazo sin servirse, el rechazo se enseña igualmente"
     );
     assert!(

@@ -214,12 +214,10 @@ async fn an_echo_with_another_credential_is_refused_and_the_channel_keeps_answer
 }
 
 #[tokio::test]
-async fn a_launch_with_an_unsupported_version_is_refused_over_the_socket() {
-    let refusal = LaunchRequest::parse(&format!(
-        "afirma://websocket?ports=0&v=99&idsession={CREDENTIAL}"
-    ))
-    .expect_err("la version 99 no se habla aqui");
-    assert_eq!(refusal.code(), SafCode::UnsupportedProcedure);
+async fn a_launch_with_a_malformed_credential_is_refused_over_the_socket() {
+    let refusal = LaunchRequest::parse("afirma://websocket?ports=54001&v=4&idsession=abc-def")
+        .expect_err("el idsession no vale");
+    assert_eq!(refusal.code(), SafCode::Params);
 
     let canal = AChannel::serving(ChannelDuty::Refuse(refusal.answer())).await;
     let mut client = canal.a_client().await;
@@ -228,7 +226,10 @@ async fn a_launch_with_an_unsupported_version_is_refused_over_the_socket() {
 
     assert_eq!(
         answer,
-        Some("SAF_21: Este tramite no es compatible con la version instalada".to_owned())
+        Some(
+            "SAF_03: Error en los parametros de entrada; el parametro que falla es 'idsession'"
+                .to_owned()
+        )
     );
     assert!(
         !client.is_still_open().await,
