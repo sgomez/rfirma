@@ -282,3 +282,60 @@ async fn cosigning_an_invoice_with_facturae_is_refused() {
 
     channel.close();
 }
+
+/// Un `sign()` con `format=XAdES` cuyas condiciones, medidas por la sede, salen todas conformes.
+async fn the_envelope_of(script: &str) {
+    if !the_bench_can_be_mounted() {
+        return;
+    }
+
+    let events = the_events_of_a_signing_script(script).await;
+
+    let verdict = events.last().expect("hay desenlace");
+    assert_eq!(verdict.name(), "success", "{}", verdict.field("message"));
+    let conditions: Vec<(&str, &str)> = events
+        .iter()
+        .filter(|event| event.name() == "condition")
+        .map(|event| (event.field("verdict"), event.field("observation")))
+        .collect();
+    assert!(!conditions.is_empty(), "la sede mide la envoltura");
+    assert!(
+        conditions
+            .iter()
+            .all(|(verdict, _)| *verdict == "compliant"),
+        "la sede midio: {conditions:?}"
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "grada C: necesita la libreria nativa (RFIRMA_LIB_DIR) y el token de pruebas"]
+async fn a_generic_xades_signs_externally_detached_when_its_params_ask_for_it() {
+    the_envelope_of("signxadesexternallydetached").await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "grada C: necesita la libreria nativa (RFIRMA_LIB_DIR) y el token de pruebas"]
+async fn the_age_policy_turns_a_xades_enveloping_into_detached() {
+    the_envelope_of("signxadesagepolicy").await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "grada C: necesita la libreria nativa (RFIRMA_LIB_DIR) y el token de pruebas"]
+async fn a_xades_enveloped_over_data_that_is_no_xml_is_rejected_with_saf_29() {
+    if !the_bench_can_be_mounted() {
+        return;
+    }
+
+    let events = the_events_of_a_signing_script("signxadesenvelopedoveranonxml").await;
+
+    let verdict = events.last().expect("hay desenlace");
+    assert_eq!(
+        verdict.name(),
+        "error",
+        "tenia que acabar en el errorCallback"
+    );
+    assert_eq!(
+        verdict.field("message"),
+        WireAnswer::refused(SafCode::InvalidXml).on_the_wire()
+    );
+}

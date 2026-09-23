@@ -250,6 +250,68 @@ pub fn the_sign_errand_of(
     })
 }
 
+/// El trámite de una firma que consiente, abre el secreto por la única puerta del PIN y entrega, salvo que el puente la rechace.
+pub fn the_errand_that_signs_unless_refused(roots: &Arc<Roots>) -> SiteOperations {
+    let roots = Arc::clone(roots);
+
+    SiteOperations::for_operations(move |url, reply: ErrandReply| {
+        let desk = the_desk_of(&roots);
+        let live = &roots.site.errand;
+
+        let answering = ErrandReply::of(move |text| reply.answer(text));
+        let Some(ErrandStep::AskingToSign(consent)) = errand::attend(&desk, url, answering, live)
+        else {
+            return;
+        };
+        let chosen = consent
+            .certificates
+            .iter()
+            .find(|row| row.label == THE_TEST_CERTIFICATE && row.status.is_usable())
+            .unwrap_or_else(|| {
+                panic!("el token de pruebas no ofrecio {THE_TEST_CERTIFICATE}: monta `just certs install`")
+            });
+
+        if errand::consent(&desk, &chosen.id, live).is_err() {
+            return;
+        }
+        tokio::task::block_in_place(|| {
+            if signed_with_the_secret(&desk, live, THE_TOKEN_SECRET).is_ok() {
+                errand::finish(&desk, live).expect("la firma deberia entregarse");
+            }
+        });
+    })
+}
+
+/// Los eventos y las condiciones que mide la sede de un guion de firma en v4, hasta su desenlace.
+pub async fn the_events_of_a_signing_script(script: &str) -> Vec<Event> {
+    let material = ChannelMaterial::fresh();
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let roots = Arc::new(tokio::task::block_in_place(|| {
+        a_running_rfirma(home.path())
+    }));
+    let client = PublishedClient::running_the_script(&material, BenchMode::Fourth, script);
+
+    let channel = the_errand_channel(
+        &client,
+        &material,
+        &roots,
+        the_errand_that_signs_unless_refused(&roots),
+    )
+    .await;
+
+    let mut events = Vec::new();
+    loop {
+        let event = client.next_event_or_condition();
+        let settled = matches!(event.name(), "success" | "error");
+        events.push(event);
+        if settled {
+            break;
+        }
+    }
+    channel.close();
+    events
+}
+
 /// El trámite atendiendo `saveDataToFile`: abre el diálogo del portal y escribe en disco o cancela.
 pub fn the_save_errand_of(roots: &Arc<Roots>) -> SiteOperations {
     let roots = Arc::clone(roots);
