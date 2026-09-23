@@ -30,6 +30,7 @@ pub struct Refusal {
     code: SafCode,
     blame: Option<Parameter>,
     situation: RefusalSituation,
+    found_while_processing: bool,
     detail: String,
 }
 
@@ -40,6 +41,7 @@ impl Refusal {
             code,
             blame: None,
             situation: RefusalSituation::Unknown,
+            found_while_processing: false,
             detail: detail.into(),
         }
     }
@@ -55,6 +57,7 @@ impl Refusal {
             code: SafCode::Params,
             blame: Some(blame),
             situation: RefusalSituation::Unknown,
+            found_while_processing: false,
             detail: detail.into(),
         }
     }
@@ -70,6 +73,13 @@ impl Refusal {
     #[must_use = "devuelve el rechazo clasificado, no lo modifica en su sitio"]
     pub fn because(mut self, situation: RefusalSituation) -> Self {
         self.situation = situation;
+        self
+    }
+
+    /// El mismo rechazo, nacido al procesar la petición y no al analizarla.
+    #[must_use = "devuelve el rechazo marcado, no lo modifica en su sitio"]
+    pub fn found_while_processing(mut self) -> Self {
+        self.found_while_processing = true;
         self
     }
 
@@ -101,12 +111,13 @@ impl Refusal {
         &self.detail
     }
 
-    /// Si el original lo enseña en su diálogo de error antes de contestar: los de la petición misma.
+    /// Si el original lo enseña en su diálogo de error antes de contestar: los del análisis de la petición.
     pub fn is_shown_before_it_is_answered(&self) -> bool {
-        matches!(
-            self.code,
-            SafCode::Params | SafCode::UnsupportedOperation | SafCode::LocalAccessBlocked
-        )
+        !self.found_while_processing
+            && matches!(
+                self.code,
+                SafCode::Params | SafCode::UnsupportedOperation | SafCode::LocalAccessBlocked
+            )
     }
 }
 

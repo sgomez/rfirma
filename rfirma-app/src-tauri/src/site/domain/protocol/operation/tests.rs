@@ -2553,3 +2553,33 @@ fn a_valid_fileid_with_its_rtservlet_passes_the_common_guards() {
 
     read_operation(&url).expect("el fileid y su rtservlet son validos");
 }
+
+#[test]
+fn an_operation_the_original_does_not_know_is_shown_before_it_is_answered() {
+    let url = AfirmaUrl::parse("afirma://noexiste?op=noexiste").expect("es del protocolo");
+
+    let refusal = read_operation(&url).expect_err("no se atiende");
+
+    assert!(refusal.is_shown_before_it_is_answered());
+}
+
+#[test]
+fn a_multisignature_the_signer_does_not_support_is_answered_without_being_shown() {
+    let found_while_signing = [
+        an_invoice_signature(COSIGN, "FacturaE"),
+        an_invoice_signature(COUNTERSIGN, "FacturaE"),
+        an_invoice_signature(COSIGN, AUTO),
+        a_signature(COUNTERSIGN, ""),
+        an_operation(&format!(
+            "op={SIGN_AND_SAVE}&cop={COUNTERSIGN}&format=PAdES"
+        )),
+        an_operation(&format!("op={SIGN_AND_SAVE}&cop=resign&format=PAdES")),
+    ];
+
+    for url in found_while_signing {
+        let refusal = read_operation(&url).expect_err("no se atiende");
+
+        assert_eq!(refusal.code(), SafCode::UnsupportedOperation, "{url:?}");
+        assert!(!refusal.is_shown_before_it_is_answered(), "{url:?}");
+    }
+}

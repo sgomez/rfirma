@@ -82,7 +82,7 @@ fn batch_asked(request: BatchRequest) -> SiteRequest {
     }
     match parse_local_batch(request.lote()) {
         Ok(batch) => SiteRequest::LocalBatch(Box::new(LocalBatchAsk { request, batch })),
-        Err(refusal) => SiteRequest::NotAttended(refusal),
+        Err(refusal) => SiteRequest::NotAttended(refusal.found_while_processing()),
     }
 }
 

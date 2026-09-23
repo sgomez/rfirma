@@ -762,7 +762,8 @@ pub fn refuse_a_multisignature_of_an_invoice(
             SafCode::UnsupportedOperation,
             "una factura ni se cofirma ni se contrafirma: AOFacturaESigner lanza una \
              UnsupportedOperationException en las dos",
-        ));
+        )
+        .found_while_processing());
     }
     Ok(())
 }
@@ -836,6 +837,7 @@ fn countersign_refusal() -> Refusal {
         "'countersign' no existe fuera de CAdES y XAdES: AOPDFSigner.countersign lanza una \
          UnsupportedOperationException",
     )
+    .found_while_processing()
 }
 
 /// La petición de `signandsave`: misma lectura y mismos rechazos que `sign`,
@@ -911,7 +913,8 @@ fn round_of_cop(url: &AfirmaUrl, declared: &[(String, String)]) -> Result<Signat
                 "el 'cop' de 'signandsave' no admite '{other}': solo 'sign', 'cosign' o \
                  'countersign'"
             ),
-        )),
+        )
+        .found_while_processing()),
     }
 }
 

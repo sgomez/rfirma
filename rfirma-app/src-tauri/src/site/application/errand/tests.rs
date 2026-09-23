@@ -1731,11 +1731,11 @@ fn a_countersignature_is_answered_with_the_code_of_an_unsupported_operation() {
         &live,
     );
 
-    let ErrandStep::ShowingTheRefusal(refusal) = step else {
+    let ErrandStep::Answering(reply) = step else {
         panic!("countersign no existe en PAdES: {step:?}");
     };
     assert_eq!(
-        refusal.answer().on_the_wire(),
+        on_the_wire(&reply),
         WireAnswer::refused(SafCode::UnsupportedOperation).on_the_wire()
     );
 }
@@ -5667,6 +5667,22 @@ fn a_refusal_the_original_answers_without_a_dialogue_is_answered_at_once() {
     assert!(matches!(step, ErrandStep::Answering(_)), "{step:?}");
     assert!(what_the_site_received(&mut wire).is_some_and(|line| line.starts_with("SAF_06")));
     assert_eq!(window.asked(), ["enseñada", "oculta"]);
+}
+
+#[test]
+fn cosigning_an_invoice_is_answered_at_once_as_the_original_answers_it_while_signing() {
+    let window = Arc::new(AWindow::default());
+    let live = a_websocket_errand(&window);
+    let (handle, mut wire) = the_wire();
+
+    let step = attended_on_a_bare_desk(
+        arriving(&format!("afirma://cosign?op=cosign&format=FacturaE&algorithm=SHA256withRSA&dat=PEZhY3R1cmFlPjxGaWxlSGVhZGVyLz48UGFydGllcy8-PEludm9pY2VzLz48L0ZhY3R1cmFlPg==&idsession={CREDENTIAL}")),
+        handle,
+        &live,
+    );
+
+    assert!(matches!(step, ErrandStep::Answering(_)), "{step:?}");
+    assert!(what_the_site_received(&mut wire).is_some_and(|line| line.starts_with("SAF_04")));
 }
 
 #[test]

@@ -81,9 +81,9 @@ que representa el escritorio, para que se vea su tamaño real.
    Esta ventana no es el acuse: es donde vive la precisión que el código de
    error no puede llevar. **La excepción es el rechazo de la petición misma**
    —parámetros mal formados (`SAF_03`), operación que no existe (`SAF_04`),
-   servlet en el propio equipo (`SAF_13`)—: el original lo enseña en su diálogo
-   de error y no contesta hasta que se cierra, y rFirma hace lo mismo con su
-   desenlace de rechazo.
+   servlet en el propio equipo (`SAF_13`)—, siempre que nazca al analizarla: el
+   original lo enseña en su diálogo de error y no contesta hasta que se cierra,
+   y rFirma hace lo mismo con su desenlace de rechazo.
 
 ### Un solo documento por petición
 
@@ -301,8 +301,10 @@ cuando la persona pulsa `Cerrar` o cierra la ventana, como con el diálogo de
 error del original. Con WebSocket la ventana se oculta antes de contestar, y la
 siguiente operación del canal vuelve a enseñarla; si llegan varios rechazos
 seguidos, se enseñan y se contestan de uno en uno, en orden. Los demás rechazos
-—formato que no existe, versión mínima, versión de protocolo— se contestan en el
-acto y no enseñan nada, porque el original tampoco los enseña.
+—formato que no existe, versión mínima, versión de protocolo, y los que nacen al
+procesar la petición aunque compartan código, como la cofirma de una factura
+(`SAF_04`)— se contestan en el acto y no enseñan nada, porque el original
+tampoco los enseña.
 
 **La caja del detalle es de la sede, y solo de la sede**: dentro van la etiqueta
 `Detalle` con el botón de copiar a su derecha y, debajo, el texto a ancho

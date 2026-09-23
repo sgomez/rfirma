@@ -50,11 +50,14 @@ un límite del proceso, no de la sede.
   (ADR-0010) siguen. Cada operación que llega vuelve a enseñar la ventana en
   la espera, como la primera; una operación contestada sin nada que enseñar
   la oculta en el acto, y la que dejó un desenlace en pantalla la oculta al
-  cerrarse, a mano o por su cierre automático. El rechazo de la petición
-  misma (`SAF_03`, `SAF_04`, `SAF_13`) es un desenlace que la sede aún no ha
-  recibido, como el diálogo de error del original: se contesta al cerrarse, y
-  la ventana se oculta y olvida la operación **antes** de escribir la
-  respuesta, porque la sede puede mandar la siguiente en cuanto la lee.
+  cerrarse, a mano o por su cierre automático. El rechazo que nace al
+  analizar la petición (`SAF_03`, `SAF_04`, `SAF_13`) es un desenlace que la
+  sede aún no ha recibido, como el diálogo de error del original; el que nace
+  al procesarla —una factura que no se cofirma, un lote local mal escrito—
+  sale en el acto, porque el original tampoco lo enseña. El primero se
+  contesta al cerrarse, y la ventana se oculta y olvida la operación **antes**
+  de escribir la respuesta, porque la sede puede mandar la siguiente en cuanto
+  la lee.
 - **Con WebSocket, el trámite y el proceso terminan cuando se va el primer
   cliente**: el que completó primero el saludo cierra su conexión, sea como
   sea. La aplicación cierra entonces la ventana, con la operación que hubiera

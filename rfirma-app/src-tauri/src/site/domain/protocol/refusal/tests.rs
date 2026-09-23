@@ -61,3 +61,13 @@ fn only_a_refusal_of_the_request_itself_is_shown_before_it_is_answered() {
         );
     }
 }
+
+#[test]
+fn a_refusal_found_while_processing_the_request_is_answered_at_once() {
+    for code in [SafCode::Params, SafCode::UnsupportedOperation] {
+        let refusal = Refusal::new(code, "").found_while_processing();
+
+        assert!(!refusal.is_shown_before_it_is_answered(), "{code}");
+        assert_eq!(refusal.code(), code);
+    }
+}
