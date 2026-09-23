@@ -21,7 +21,7 @@ use crate::signing::domain::{
     compose_layer2_text, AdmissibleDocument, CompletedCycle, Format, PlacementError, SessionSeal,
     SignatureConfig, SigningChoice, VisibleTextFields,
 };
-use crate::signing::domain::{Refusal, SignatureOperation, TokenSignatures};
+use crate::signing::domain::{Refusal, SignatureOperation, TokenSignatures, Waivers};
 use crate::signing::ports::{DocumentBytes, IsolateHost, Signer};
 use crate::signing::ports::{ProtectedSecret, SecretName, SecretPromptRequest, SecretPrompter};
 
@@ -61,7 +61,7 @@ pub fn begin(
     isolate: &impl IsolateHost,
     session: &SigningSession,
 ) -> Result<StoreSecret, CycleFailure> {
-    let bytes = admitted_bytes(files, &document.document, Format::Pades)?;
+    let bytes = admitted_bytes(files, &document.document, Format::Pades, Waivers::NONE)?;
     let config = config_for(choice, chosen)?;
     open_the_cycle(
         signer,
@@ -103,7 +103,12 @@ pub fn begin_for_the_site(
     isolate: &impl IsolateHost,
     session: &SigningSession,
 ) -> Result<StoreSecret, CycleFailure> {
-    let bytes = admitted_bytes(files, &document.document, declared.format)?;
+    let bytes = admitted_bytes(
+        files,
+        &document.document,
+        declared.format,
+        waivers_of(declared.parameters),
+    )?;
     let config = config_for(
         &SigningChoice::for_the_site(declared.allow_unregistered_signatures),
         chosen,
@@ -212,7 +217,7 @@ fn open_the_cycle(
     let from_the_site = from_the_site.clone();
 
     let cycle = on_the_bridge(isolate, move |bridge| {
-        let document = AdmissibleDocument::check_for(format, &bytes)?;
+        let document = AdmissibleDocument::check_for(format, &bytes, waivers_of(&from_the_site))?;
         cycle::presign(
             bridge,
             SigningRequest {
@@ -431,12 +436,21 @@ pub fn admitted_bytes(
     files: &dyn DocumentBytes,
     document: &Document,
     format: Format,
+    waivers: Waivers,
 ) -> Result<Vec<u8>, CycleFailure> {
     let bytes = files
         .read(document.reading_path())
         .map_err(DocumentError::Unreadable)?;
-    AdmissibleDocument::check_for(format, &bytes).map_err(CycleError::from)?;
+    AdmissibleDocument::check_for(format, &bytes, waivers).map_err(CycleError::from)?;
     Ok(bytes)
+}
+
+fn waivers_of(from_the_site: &BTreeMap<String, String>) -> Waivers {
+    Waivers::declared_in(
+        from_the_site
+            .iter()
+            .map(|(key, value)| (key.as_str(), value.as_str())),
+    )
 }
 
 /// Comprueba si el documento contiene firmas previas no reconocibles.
@@ -444,7 +458,7 @@ pub fn unregistered_signatures_in(
     files: &dyn DocumentBytes,
     document: &Document,
 ) -> Result<bool, CycleFailure> {
-    let bytes = admitted_bytes(files, document, Format::Pades)?;
+    let bytes = admitted_bytes(files, document, Format::Pades, Waivers::NONE)?;
     Ok(AdmissibleDocument::check(&bytes)?.has_unregistered_signatures())
 }
 

@@ -69,6 +69,7 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `application/errand/tests/batch_local.rs` | Pruebas del lote local de sede. Solo en pruebas. |
 | `application/errand/tests/countersignature_and_gzip.rs` | Pruebas de contrafirma, gzip y firma sin `dat`. Solo en pruebas. |
 | `application/errand/tests/headless_and_checked.rs` | Pruebas del modo `headless` y de `checkSignatures`. Solo en pruebas. |
+| `application/errand/tests/pdf_awaiting_the_person.rs` | Pruebas del PDF certificado, cifrado o con firmas no registradas: lo que la petición levanta y lo que `headless` rechaza con `SAF_50`. Solo en pruebas. |
 | `application/errand/tests/websocket.rs` | Pruebas del trámite de sede sobre WebSocket. Solo en pruebas. |
 | `application/errand/tests/service.rs` | Pruebas del trámite de sede sobre el canal `service`. Solo en pruebas. |
 | `application/errand/tests/relay_window.rs` | Pruebas de cuándo enseña su ventana un trámite de llegada inmediata. Solo en pruebas. |

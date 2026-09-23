@@ -1,4 +1,5 @@
-use super::{AdmissibleDocument, Refusal};
+use super::{AdmissibleDocument, Refusal, Waivers};
+use crate::signing::domain::bridge::Format;
 
 /// **Grada A**: son bytes, y las reglas se prueban en el carril rápido.
 fn a_pdf(body: &str) -> Vec<u8> {
@@ -148,4 +149,84 @@ fn every_refusal_says_why_and_names_a_situation() {
         assert!(!refusal.to_string().is_empty(), "{refusal:?} no dice nada");
         assert!(!refusal.situation().is_empty(), "{refusal:?} no se traduce");
     }
+}
+
+fn a_certified_pdf() -> Vec<u8> {
+    a_pdf("9 0 obj\n<< /Type /Sig /Reference [ << /TransformMethod /DocMDP >> ] >>\nendobj")
+}
+
+fn an_encrypted_pdf() -> Vec<u8> {
+    a_pdf("trailer\n<< /Size 9 /Encrypt 8 0 R /Root 1 0 R >>")
+}
+
+fn declaring(params: &[(&str, &str)]) -> Waivers {
+    Waivers::declared_in(params.iter().copied())
+}
+
+#[test]
+fn allow_signing_certified_pdfs_admits_a_certified_pdf() {
+    let pdf = a_certified_pdf();
+
+    let waivers = declaring(&[("allowSigningCertifiedPdfs", "TRUE")]);
+
+    assert!(AdmissibleDocument::check_waiving(&pdf, waivers).is_ok());
+}
+
+#[test]
+fn a_certified_pdf_the_request_forbids_is_still_refused_without_awaiting_anyone() {
+    let pdf = a_certified_pdf();
+    let waivers = declaring(&[("allowSigningCertifiedPdfs", "false")]);
+
+    let refusal = AdmissibleDocument::check_waiving(&pdf, waivers).expect_err("prohibido");
+
+    assert_eq!(refusal, Refusal::Certified);
+    assert!(!refusal.awaits_the_person(waivers));
+}
+
+#[test]
+fn a_certified_pdf_the_request_says_nothing_about_awaits_the_person() {
+    let refusal = AdmissibleDocument::check(&a_certified_pdf()).expect_err("certificado");
+
+    assert!(refusal.awaits_the_person(Waivers::NONE));
+}
+
+#[test]
+fn a_password_in_the_request_admits_an_encrypted_pdf() {
+    for key in ["userPassword", "ownerPassword"] {
+        let waivers = declaring(&[(key, "1234")]);
+
+        assert!(
+            AdmissibleDocument::check_waiving(&an_encrypted_pdf(), waivers).is_ok(),
+            "{key} abre el PDF"
+        );
+    }
+}
+
+#[test]
+fn an_encrypted_pdf_without_a_password_awaits_the_person() {
+    let refusal = AdmissibleDocument::check(&an_encrypted_pdf()).expect_err("cifrado");
+
+    assert_eq!(refusal, Refusal::Encrypted);
+    assert!(refusal.awaits_the_person(Waivers::NONE));
+}
+
+#[test]
+fn what_is_not_a_pdf_awaits_no_one() {
+    assert!(!Refusal::NotAPdf.awaits_the_person(Waivers::NONE));
+}
+
+#[test]
+fn a_password_does_not_waive_the_certification_behind_it() {
+    let mut pdf = an_encrypted_pdf();
+    pdf.extend_from_slice(&a_certified_pdf());
+
+    let refusal = AdmissibleDocument::check_waiving(&pdf, declaring(&[("userPassword", "1234")]))
+        .expect_err("sigue certificado");
+
+    assert_eq!(refusal, Refusal::Certified);
+}
+
+#[test]
+fn a_format_other_than_pades_is_admitted_whatever_the_waivers() {
+    assert!(AdmissibleDocument::check_for(Format::Cades, b"no soy un PDF", Waivers::NONE).is_ok());
 }

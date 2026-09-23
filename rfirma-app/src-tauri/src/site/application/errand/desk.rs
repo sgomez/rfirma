@@ -16,7 +16,7 @@ use base64::Engine as _;
 
 use crate::identity::domain::certificate::TokenCertificate;
 use crate::signing::domain::bridge::Format;
-use crate::signing::domain::{AdmissibleDocument, ALLOW_UNREGISTERED_KEY};
+use crate::signing::domain::{AdmissibleDocument, Waivers, ALLOW_UNREGISTERED_KEY};
 use crate::site::domain::protocol::{
     forget_the_box, refuse_a_countersignature_outside_cades_and_xades,
     refuse_a_multisignature_of_an_invoice, refuse_explicit_xades, visible_signature_of, AfirmaUrl,
@@ -320,8 +320,17 @@ fn consent_to_a_signature<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
         }
     };
 
-    let admitted = match AdmissibleDocument::check_for(format, ask.document) {
+    let waivers = waivers_declared_in(&ask);
+    let admitted = match AdmissibleDocument::check_for(format, ask.document, waivers) {
         Ok(admitted) => admitted,
+        Err(inadmissible) if ask.headless && inadmissible.awaits_the_person(waivers) => {
+            return answering(
+                live,
+                SiteOutcome::Refused(SiteRefusal::ConfirmationNeeded(
+                    inadmissible.situation().to_owned(),
+                )),
+            )
+        }
         Err(inadmissible) => {
             return answering(
                 live,
@@ -352,6 +361,14 @@ fn consent_to_a_signature<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
     let unregistered_signatures = admitted.has_unregistered_signatures();
     if unregistered_signatures && allowed_by_the_site == Some(false) {
         return answering(live, SiteOutcome::Cancelled);
+    }
+    if unregistered_signatures && allowed_by_the_site.is_none() && ask.headless {
+        return answering(
+            live,
+            SiteOutcome::Refused(SiteRefusal::ConfirmationNeeded(
+                UNREGISTERED_SIGNATURES.to_owned(),
+            )),
+        );
     }
 
     let visible = if format == Format::Pades {
@@ -393,6 +410,21 @@ fn consent_to_a_signature<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
         already_chosen,
         for_the_site_server: ask.through_the_site_server.then(|| ask.document.to_vec()),
     }))
+}
+
+const UNREGISTERED_SIGNATURES: &str = "pdfHasUnregisteredSignatures";
+
+fn waivers_declared_in(ask: &SignatureAsk<'_>) -> Waivers {
+    Waivers::declared_in(
+        ask.declared_params
+            .iter()
+            .map(|(key, value)| (key.as_str(), value.as_str()))
+            .chain(
+                ask.confirmed
+                    .iter()
+                    .map(|(key, value)| (key.as_str(), value.as_str())),
+            ),
+    )
 }
 
 /// Si la sede pidió validar las firmas previas; la clave la interpreta el trámite y no cruza al puente.

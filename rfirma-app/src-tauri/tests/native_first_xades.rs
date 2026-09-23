@@ -8,7 +8,7 @@ use rfirma_lib::identity::domain::certificate::TokenCertificate;
 use rfirma_lib::signing::adapters::ffi::{locate, NativeBridge};
 use rfirma_lib::signing::application::cycle::{self, SigningRequest};
 use rfirma_lib::signing::domain::bridge::{Format, SignatureOperation, XadesVariant};
-use rfirma_lib::signing::domain::{AdmissibleDocument, SignatureConfig};
+use rfirma_lib::signing::domain::{AdmissibleDocument, SignatureConfig, Waivers};
 
 const PIN: &str = "1234";
 /// Certificado activo del kit de pruebas.
@@ -54,7 +54,7 @@ fn sign_xades(bridge: &NativeBridge, certificate: &TokenCertificate) {
             format,
             algorithm: cycle::ALGORITHM,
             operation: SignatureOperation::Sign,
-            document: AdmissibleDocument::check_for(format, A_REFERENCE_XML)
+            document: AdmissibleDocument::check_for(format, A_REFERENCE_XML, Waivers::NONE)
                 .expect("un XML es firmable en XAdES"),
             chain: &chain,
             config: &config,

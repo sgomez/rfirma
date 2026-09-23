@@ -31,6 +31,10 @@ const DOC_MDP: &[u8] = b"/DocMDP";
 /// justo el caso de la cofirma, y está aquí para poder decirlo.
 const BYTE_RANGE: &[u8] = b"/ByteRange";
 
+const USER_PASSWORD_KEY: &str = "userPassword";
+const OWNER_PASSWORD_KEY: &str = "ownerPassword";
+const ALLOW_SIGNING_CERTIFIED_KEY: &str = "allowSigningCertifiedPdfs";
+
 /// La clave `/SubFilter` de un diccionario de firma, que es la que dice **con
 /// qué formato** se firmó.
 const SUB_FILTER: &[u8] = b"/SubFilter";
@@ -76,6 +80,47 @@ impl Refusal {
             Self::Certified => "documentCertified",
         }
     }
+
+    /// Si la levantaría una persona, con su contraseña o su confirmación, porque la petición no la resolvió.
+    pub fn awaits_the_person(self, waivers: Waivers) -> bool {
+        match self {
+            Self::NotAPdf => false,
+            Self::Encrypted => true,
+            Self::Certified => waivers.signing_certified.is_none(),
+        }
+    }
+}
+
+/// Lo que la petición declara para levantar una negativa: una contraseña, o firmar aunque esté certificado.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct Waivers {
+    password: bool,
+    signing_certified: Option<bool>,
+}
+
+impl Waivers {
+    /// Lo de quien no declara nada: la firma local.
+    pub const NONE: Self = Self {
+        password: false,
+        signing_certified: None,
+    };
+
+    /// Las claves del original que levantan una negativa, leídas de los `extraParams`.
+    pub fn declared_in<'p>(params: impl IntoIterator<Item = (&'p str, &'p str)>) -> Self {
+        params
+            .into_iter()
+            .fold(Self::NONE, |waivers, (key, value)| match key {
+                USER_PASSWORD_KEY | OWNER_PASSWORD_KEY => Self {
+                    password: true,
+                    ..waivers
+                },
+                ALLOW_SIGNING_CERTIFIED_KEY => Self {
+                    signing_certified: Some(value.eq_ignore_ascii_case("true")),
+                    ..waivers
+                },
+                _ => waivers,
+            })
+    }
 }
 
 impl fmt::Display for Refusal {
@@ -112,13 +157,18 @@ pub struct AdmissibleDocument<'a> {
 impl<'a> AdmissibleDocument<'a> {
     /// Mira las tres marcas. **No abre nada y no descifra nada.**
     pub fn check(pdf: &'a [u8]) -> Result<Self, Refusal> {
+        Self::check_waiving(pdf, Waivers::NONE)
+    }
+
+    /// Las mismas marcas, sin las negativas que la petición ya resolvió.
+    pub fn check_waiving(pdf: &'a [u8], waivers: Waivers) -> Result<Self, Refusal> {
         if !has_header(pdf) {
             return Err(Refusal::NotAPdf);
         }
-        if is_encrypted(pdf) {
+        if is_encrypted(pdf) && !waivers.password {
             return Err(Refusal::Encrypted);
         }
-        if contains(pdf, DOC_MDP) {
+        if contains(pdf, DOC_MDP) && waivers.signing_certified != Some(true) {
             return Err(Refusal::Certified);
         }
         Ok(Self {
@@ -129,9 +179,13 @@ impl<'a> AdmissibleDocument<'a> {
     }
 
     /// Las tres marcas son del PDF, así que solo se miran cuando la firma es PAdES.
-    pub fn check_for(format: Format, document: &'a [u8]) -> Result<Self, Refusal> {
+    pub fn check_for(
+        format: Format,
+        document: &'a [u8],
+        waivers: Waivers,
+    ) -> Result<Self, Refusal> {
         match format {
-            Format::Pades => Self::check(document),
+            Format::Pades => Self::check_waiving(document, waivers),
             _ => Ok(Self {
                 pdf: document,
                 already_signed: false,
