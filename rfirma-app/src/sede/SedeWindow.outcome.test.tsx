@@ -199,6 +199,31 @@ describe("4 · outcome", () => {
     expect(screen.queryByRole("button", { name: /Comentarios y ayuda/ })).not.toBeInTheDocument();
   });
 
+  it("titles taken ports as a channel that could not open, not as a refusal", () => {
+    const { port } = scriptedErrand({
+      kind: "outcome",
+      outcome: { kind: "refused", situation: "portsTaken", detail: "63131: en uso" },
+    });
+    renderWithCatalog(<SedeWindow errands={port} />);
+
+    expect(
+      screen.getByText("rFirma no ha podido abrir el canal con la página"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("rFirma ha rechazado la petición")).not.toBeInTheDocument();
+  });
+
+  it("does not close by itself on taken ports: the person has to close the other application", async () => {
+    const { port, calls } = scriptedErrand({
+      kind: "outcome",
+      outcome: { kind: "refused", situation: "portsTaken", detail: "63131: en uso" },
+    });
+    renderWithCatalog(<SedeWindow errands={port} />);
+
+    await elapse(OUTCOME_CLOSE_MS * 2);
+    expect(calls.close).not.toHaveBeenCalled();
+    expect(screen.queryByText(/se cerrará sola/i)).not.toBeInTheDocument();
+  });
+
   it("does not close by itself on unknown refusal", async () => {
     const { port, calls } = scriptedErrand({
       kind: "outcome",

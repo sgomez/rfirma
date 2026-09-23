@@ -1361,6 +1361,9 @@ msgstr ""
 msgid "sede.outcome.refusedTitle"
 msgstr ""
 
+msgid "sede.outcome.portsTakenTitle"
+msgstr ""
+
 msgid "sede.outcome.refusedNote"
 msgstr ""
 

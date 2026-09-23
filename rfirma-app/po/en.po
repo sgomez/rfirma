@@ -1455,6 +1455,9 @@ msgstr "You cancelled the signature"
 msgid "sede.outcome.refusedTitle"
 msgstr "rFirma turned the request down"
 
+msgid "sede.outcome.portsTakenTitle"
+msgstr "rFirma could not open the channel with the page"
+
 msgid "sede.outcome.refusedNote"
 msgstr "For whoever maintains the site:"
 

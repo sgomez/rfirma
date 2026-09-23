@@ -1469,6 +1469,9 @@ msgstr "Has cancel·lat la signatura"
 msgid "sede.outcome.refusedTitle"
 msgstr "rFirma ha rebutjat la petició"
 
+msgid "sede.outcome.portsTakenTitle"
+msgstr "rFirma no ha pogut obrir el canal amb la pàgina"
+
 msgid "sede.outcome.refusedNote"
 msgstr "Per a qui manté la seu:"
 

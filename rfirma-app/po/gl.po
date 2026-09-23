@@ -1457,6 +1457,9 @@ msgstr "Cancelaches a sinatura"
 msgid "sede.outcome.refusedTitle"
 msgstr "rFirma rexeitou a petición"
 
+msgid "sede.outcome.portsTakenTitle"
+msgstr "rFirma non puido abrir a canle coa páxina"
+
 msgid "sede.outcome.refusedNote"
 msgstr "Para quen mantén a sede:"
 

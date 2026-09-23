@@ -1488,6 +1488,9 @@ msgstr "Sinadura bertan behera utzi duzu"
 msgid "sede.outcome.refusedTitle"
 msgstr "rFirmak eskaera baztertu du"
 
+msgid "sede.outcome.portsTakenTitle"
+msgstr "rFirmak ezin izan du orriarekiko kanala ireki"
+
 msgid "sede.outcome.refusedNote"
 msgstr "Egoitza mantentzen duenarentzat:"
 

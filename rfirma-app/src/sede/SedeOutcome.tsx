@@ -50,7 +50,9 @@ export function SedeOutcome({
 }: SedeOutcomeProps) {
   const { t } = useTranslation();
   const carriesHelp = outcome.kind === "refused" && outcome.situation === "unknown";
-  useOutcomeClock(onClose, !carriesHelp);
+  const asksToAct = outcome.kind === "refused" && outcome.situation === "portsTaken";
+  const staysOpen = carriesHelp || asksToAct;
+  useOutcomeClock(onClose, !staysOpen);
 
   const openHelp = () => {
     onOpenHelp?.();
@@ -62,7 +64,7 @@ export function SedeOutcome({
       steadyFooter
       footer={
         <>
-          {!carriesHelp && (
+          {!staysOpen && (
             <p className="rf-hint sede-outcome__auto-close">
               {t("sede.outcome.autoClose", { seconds: OUTCOME_CLOSE_MS / 1000 })}
             </p>
@@ -283,6 +285,10 @@ function title(outcome: SiteOutcome, t: TFunction): string {
       return t("sede.outcome.loadedTitle");
     case "cancelled":
       return t("sede.outcome.cancelledTitle");
+    case "refused":
+      return outcome.situation === "portsTaken"
+        ? t("sede.outcome.portsTakenTitle")
+        : t("sede.outcome.refusedTitle");
     default:
       return t("sede.outcome.refusedTitle");
   }
