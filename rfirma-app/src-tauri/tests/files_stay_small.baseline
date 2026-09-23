@@ -1,5 +1,3 @@
-rfirma-app/src-tauri/src/identity/adapters/pkcs11/mod.rs 535
-rfirma-app/src-tauri/src/signing/adapters/ffi.rs 576
 rfirma-app/src-tauri/src/site/adapters/relay/tests.rs 766
 rfirma-app/src-tauri/src/site/application/errand/desk.rs 651
 rfirma-app/src-tauri/src/site/application/errand/state.rs 546
@@ -16,7 +14,3 @@ rfirma-app/src/App.tsx 1231
 rfirma-app/src/sede/SedeWindow.test.tsx 881
 rfirma-app/src/sede/siteErrands.test.ts 870
 rfirma-app/src/sede/siteErrands.ts 542
-rfirma-app/src/tauri.test.ts 689
-rfirma-app/src/tauri.ts 632
-rfirma-app/src/viewer/DocumentViewer.test.tsx 1471
-rfirma-app/src/viewer/DocumentViewer.tsx 960
