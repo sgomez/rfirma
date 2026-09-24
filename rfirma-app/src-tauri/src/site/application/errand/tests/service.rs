@@ -10,6 +10,7 @@ use crate::site::application::site::{attend_launch, Attendance};
 use crate::site::application::startup::SiteWindow;
 use crate::site::domain::channel::ChannelTenure;
 use crate::site::domain::protocol::{AfirmaUrl, ChannelMessage};
+use std::time::Duration;
 
 fn a_service_launch() -> String {
     format!("afirma://service?ports=54351,54352,54353&v=3&jvc=3&idsession={CREDENTIAL}")

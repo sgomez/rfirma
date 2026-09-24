@@ -248,6 +248,9 @@ de 329 px no cabe una página que se pueda marcar.
   petición, la sede recibe `SAF_43` y queda el desenlace «cancelado»; en los
   demás casos se pasa al consentimiento, y se firma donde decía la petición o
   sin firma visible.
+- Cerrar la ventana con la X en este paso es pulsar `Cancelar`, como cerrar el
+  diálogo del área en el original: con `SAF_43` la ventana se cierra; en los
+  demás casos sigue abierta, ya en el consentimiento.
 - Si el PDF no se deja abrir, el cuerpo lo dice en una línea y solo queda
   `Cancelar`.
 
@@ -332,9 +335,10 @@ llevárselo a quien mantiene la sede.
 Los rechazos que nacen **durante** el trámite tienen también su frase: los del
 propio trámite nombran el origen, y los del token, el puente y el documento se
 cuentan con el mismo título que les da la ventana principal («El PIN no es
-correcto»), sin redactarlos dos veces. En un lote, los del token se quedan en
-«la firma del lote no ha llegado a completarse». Solo cae en la frase genérica
-lo que ni el backend sabe clasificar (`unknown`).
+correcto»), sin redactarlos dos veces, también dentro de un lote. En un lote,
+lo que no tiene frase propia se queda en «la firma del lote no ha llegado a
+completarse». Fuera de él, solo cae en la frase genérica lo que ni el backend
+sabe clasificar (`unknown`).
 
 El **rechazo de la petición misma** que llega por un canal ya abierto usa este
 mismo desenlace, pero la sede todavía no tiene su respuesta: el `SAF_NN` sale

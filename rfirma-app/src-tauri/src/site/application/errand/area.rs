@@ -23,18 +23,45 @@ pub fn area_marked(
     let Some(if_cancelled) = live.the_area_to_mark() else {
         return Err(ConsentError::NothingPending);
     };
-    match (marked, if_cancelled) {
-        (Some(placement), _) => live.settle_the_area(Some(placement.extra_params())),
-        (None, IfCancelled::Refuses) => {
-            answering(
-                live,
-                SiteOutcome::RefusedByTheProtocol(the_mandatory_area_was_cancelled()),
-            );
-            return Ok(AfterTheArea::Answered);
+    if let Some(placement) = marked {
+        live.settle_the_area(Some(placement.extra_params()));
+        return Ok(AfterTheArea::Consenting);
+    }
+    match cancel_the_area(live, if_cancelled) {
+        Some(refusal) => {
+            answering(live, refusal);
+            Ok(AfterTheArea::Answered)
         }
-        (None, IfCancelled::SignsWhereTheSiteSaid | IfCancelled::SignsInvisible) => {
+        None => Ok(AfterTheArea::Consenting),
+    }
+}
+
+/// Lo que deja cancelar el diálogo del área que hubiera pendiente.
+pub(super) enum PendingAreaCancelled {
+    NoneWasPending,
+    Consenting,
+    Refused(SiteOutcome),
+}
+
+/// Cancela el diálogo del área pendiente, si lo hay, como su botón `Cancelar`.
+pub(super) fn cancel_the_pending_area(live: &LiveErrand) -> PendingAreaCancelled {
+    let Some(if_cancelled) = live.the_area_to_mark() else {
+        return PendingAreaCancelled::NoneWasPending;
+    };
+    cancel_the_area(live, if_cancelled).map_or(
+        PendingAreaCancelled::Consenting,
+        PendingAreaCancelled::Refused,
+    )
+}
+
+fn cancel_the_area(live: &LiveErrand, if_cancelled: IfCancelled) -> Option<SiteOutcome> {
+    match if_cancelled {
+        IfCancelled::Refuses => Some(SiteOutcome::RefusedByTheProtocol(
+            the_mandatory_area_was_cancelled(),
+        )),
+        IfCancelled::SignsWhereTheSiteSaid | IfCancelled::SignsInvisible => {
             live.settle_the_area(None);
+            None
         }
     }
-    Ok(AfterTheArea::Consenting)
 }

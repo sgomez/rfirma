@@ -79,15 +79,15 @@ export function refusedBy(failure: { situation: string; detail: string }): SiteO
 }
 
 /**
- * Lo mismo, sabiendo que lo que falló era un lote: sus fallos de firma llegan
- * con la situación del token (`incorrectPin`, `tokenAbsent`…), y el lote los
- * llama «lote fallido».
+ * Lo mismo, sabiendo que lo que falló era un lote: la situación del token
+ * (`incorrectPin`, `tokenAbsent`…) se cuenta con su título, y la que no tiene
+ * texto propio, como «lote fallido».
  */
 export function refusedByTheBatch(failure: { situation: string; detail: string }): SiteOutcome {
   const named = refusalOf(failure.situation);
   return {
     kind: "refused",
-    situation: named === "unknown" || isNamedByTheDesk(named) ? "batchSigningFailed" : named,
+    situation: named === "unknown" ? "batchSigningFailed" : named,
     detail: failure.detail,
   };
 }
