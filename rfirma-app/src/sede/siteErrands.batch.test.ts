@@ -73,13 +73,13 @@ describe("el lote remoto", () => {
       kind: "outcome",
       outcome: {
         kind: "refused",
-        situation: "batchSigningFailed",
+        situation: "incorrectPin",
         detail: "el PIN no es correcto",
       },
     });
   });
 
-  it("names a failed batch signature as such when the secret cannot even be asked for", async () => {
+  it("tells the token situation when the secret cannot even be asked for in a batch", async () => {
     const { push, port, last } = watched({
       beginSigning: async () => ({
         ok: false,
@@ -93,7 +93,7 @@ describe("el lote remoto", () => {
 
     expect(last()?.stage).toEqual({
       kind: "outcome",
-      outcome: { kind: "refused", situation: "batchSigningFailed", detail: "no hay token" },
+      outcome: { kind: "refused", situation: "tokenAbsent", detail: "no hay token" },
     });
   });
 });

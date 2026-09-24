@@ -335,9 +335,10 @@ llevárselo a quien mantiene la sede.
 Los rechazos que nacen **durante** el trámite tienen también su frase: los del
 propio trámite nombran el origen, y los del token, el puente y el documento se
 cuentan con el mismo título que les da la ventana principal («El PIN no es
-correcto»), sin redactarlos dos veces. En un lote, los del token se quedan en
-«la firma del lote no ha llegado a completarse». Solo cae en la frase genérica
-lo que ni el backend sabe clasificar (`unknown`).
+correcto»), sin redactarlos dos veces, también dentro de un lote. En un lote,
+lo que no tiene frase propia se queda en «la firma del lote no ha llegado a
+completarse». Fuera de él, solo cae en la frase genérica lo que ni el backend
+sabe clasificar (`unknown`).
 
 El **rechazo de la petición misma** que llega por un canal ya abierto usa este
 mismo desenlace, pero la sede todavía no tiene su respuesta: el `SAF_NN` sale
