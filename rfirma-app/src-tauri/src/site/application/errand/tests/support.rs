@@ -432,6 +432,10 @@ impl SiteSigning for TheNeighbours<'_> {
             signer_der: signed.signer_der,
         })
     }
+
+    fn the_pdf_password(&self, _after_a_wrong_one: bool) -> Option<String> {
+        None
+    }
 }
 
 /// Los mismos vecinos, pero la firma ya está hecha: para probar la rama de `finish` que compone
@@ -496,6 +500,10 @@ impl SiteSigning for ASignerThatSucceeds<'_> {
             signature: self.signature.signature.clone(),
             signer_der: self.signature.signer_der.clone(),
         })
+    }
+
+    fn the_pdf_password(&self, _after_a_wrong_one: bool) -> Option<String> {
+        None
     }
 }
 

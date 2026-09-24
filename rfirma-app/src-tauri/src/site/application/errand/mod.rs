@@ -4,6 +4,7 @@ mod area;
 mod closing;
 pub mod desk;
 pub mod outcome;
+mod pdf_password;
 pub mod replies;
 pub mod request;
 mod server_signature;
@@ -22,8 +23,9 @@ use crate::site::domain::signing::SigningRefusal;
 
 use crate::site::application::batch;
 use crate::site::application::local_batch;
-use crate::site::application::session::{self as signing, SiteTerms};
+use crate::site::application::session::{self as signing};
 use crate::site::ports::{FilterEngine, PolicyEngine};
+use pdf_password::Unopened;
 
 pub use crate::site::application::session::SiteRefusal;
 pub use crate::site::ports::{
@@ -104,6 +106,7 @@ fn remembered(live: &LiveErrand, step: ErrandStep) -> ErrandStep {
             operation: asked.round.into(),
             from_the_site: asked.from_the_site.clone(),
             unregistered_signatures: asked.unregistered_signatures,
+            headless: asked.headless,
             saving: asked.saving.clone(),
             through_the_server: asked.for_the_site_server.clone().map(|server| {
                 state::ServerSignature {
@@ -157,6 +160,8 @@ pub enum ConsentError {
     NothingPending,
     /// El trámite se ha rechazado, y la sede ya lo sabe.
     Refused(SiteRefusal),
+    /// La persona no dio lo que se le pidió, y la sede ya ha recibido la cancelación.
+    Declined,
 }
 
 /// Registra el consentimiento con el certificado seleccionado y avanza el trámite.
@@ -195,23 +200,16 @@ pub fn consent<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
         return server_signature::consented(desk, pending, server, certificate, live);
     }
 
-    signing::begin_for_the_site(
-        &SiteTerms {
-            engine: desk.engine,
-            filter: &pending.filter,
-            format: pending.format,
-            algorithm: pending.algorithm,
-            operation: pending.operation,
-            from_the_site: &pending.from_the_site,
-            allow_unregistered_signatures: pending.unregistered_signatures,
-        },
-        &pending.document,
-        certificate,
-        &desk.neighbours,
-        &desk.neighbours,
-    )
-    .map(Consented::SigningWith)
-    .map_err(|refusal| ConsentError::Refused(told_to_the_site(live, refusal)))
+    match pdf_password::begun_with_the_pdf_password(desk, &pending, certificate) {
+        Ok(secret) => Ok(Consented::SigningWith(secret)),
+        Err(Unopened::Refused(refusal)) => {
+            Err(ConsentError::Refused(told_to_the_site(live, refusal)))
+        }
+        Err(Unopened::Declined) => {
+            declined(live);
+            Err(ConsentError::Declined)
+        }
+    }
 }
 
 /// El certificado que la persona eligió y el secreto de su almacén, abierto una sola vez.

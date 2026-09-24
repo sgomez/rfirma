@@ -3,6 +3,8 @@ package es.gob.afirma.nativebridge;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import java.io.ByteArrayOutputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Properties;
@@ -10,12 +12,19 @@ import java.util.Properties;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
+import com.aowagie.text.Document;
+import com.aowagie.text.Paragraph;
+import com.aowagie.text.pdf.PdfWriter;
+
 import es.gob.afirma.core.AOFormatFileException;
 import es.gob.afirma.core.AOInvalidFormatException;
 import es.gob.afirma.signers.pades.InvalidPdfException;
 
 /** Grada A: cada rechazo de los datos viaja con la clase que el lanzador del original traduce a su codigo. */
 class DataRejectionKindTest {
+
+    /** {@code PdfWriter.STANDARD_ENCRYPTION_128}, que la biblioteca no publica. */
+    private static final int STANDARD_ENCRYPTION_128 = 1;
 
     private static byte[] reference(final String name) throws Exception {
         return Files.readAllBytes(Path.of("..", "testdata", "reference", name));
@@ -83,6 +92,38 @@ class DataRejectionKindTest {
     @Test
     void a_pdf_the_signer_cannot_read_travels_as_invalid_pdf_and_not_as_invalid_data() {
         assertEquals("invalidPdf", NativeBridge.kindOf(new InvalidPdfException("no es un PDF")));
+    }
+
+    private static byte[] aPdfLockedWith(final String password) throws Exception {
+        final ByteArrayOutputStream out = new ByteArrayOutputStream();
+        final Document document = new Document();
+        final PdfWriter writer = PdfWriter.getInstance(document, out);
+        writer.setEncryption(password.getBytes(StandardCharsets.ISO_8859_1),
+                password.getBytes(StandardCharsets.ISO_8859_1), 0, STANDARD_ENCRYPTION_128);
+        document.open();
+        document.add(new Paragraph("Documento cifrado de prueba de rfirma."));
+        document.close();
+        return out.toByteArray();
+    }
+
+    private static Properties withPassword(final String password) {
+        final Properties params = new Properties();
+        params.setProperty("userPassword", password);
+        return params;
+    }
+
+    @Test
+    void a_pdf_opened_with_a_wrong_password_travels_as_pdf_password_needed() {
+        assertEquals("pdfPasswordNeeded", kindOfFailure(() -> PadesBridge.preSign(
+                aPdfLockedWith("1234"), "SHA256withRSA", TestFixtures.certificateChain(),
+                withPassword("4321"))));
+    }
+
+    @Test
+    void a_locked_pdf_without_a_password_travels_as_pdf_password_needed() {
+        assertEquals("pdfPasswordNeeded", kindOfFailure(() -> PadesBridge.preSign(
+                aPdfLockedWith("1234"), "SHA256withRSA", TestFixtures.certificateChain(),
+                new Properties())));
     }
 
     @Test

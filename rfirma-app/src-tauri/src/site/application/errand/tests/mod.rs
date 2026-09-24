@@ -13,6 +13,7 @@ mod dialog_folder;
 mod document_and_save;
 mod headless_and_checked;
 mod pdf_awaiting_the_person;
+mod pdf_password;
 mod relay_window;
 mod service;
 mod signature_basics;

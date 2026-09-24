@@ -84,6 +84,7 @@ fn code_of_rejection(rejection: DataRejection) -> SafCode {
         DataRejection::FacturaeAlreadySigned => SafCode::FacturaeAlreadySigned,
         DataRejection::InvalidFacturae => SafCode::InvalidFacturae,
         DataRejection::SignWithoutData => SafCode::SignWithoutData,
+        DataRejection::PdfPasswordNeeded => SafCode::PdfWrongPassword,
     }
 }
 

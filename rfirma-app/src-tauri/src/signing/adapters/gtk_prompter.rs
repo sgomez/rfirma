@@ -33,6 +33,12 @@ fn title_text(lang: Language, secret: SecretName) -> &'static str {
 
         (Language::English, SecretName::Pin) => "Enter PIN",
         (Language::English, SecretName::Password) => "Enter password",
+
+        (Language::Spanish, SecretName::DocumentPassword) => "Introduce la contraseña del PDF",
+        (Language::Catalan, SecretName::DocumentPassword) => "Introdueix la contrasenya del PDF",
+        (Language::Basque, SecretName::DocumentPassword) => "Sartu PDFaren pasahitza",
+        (Language::Galician, SecretName::DocumentPassword) => "Introduce o contrasinal do PDF",
+        (Language::English, SecretName::DocumentPassword) => "Enter the PDF password",
     }
 }
 
@@ -62,6 +68,20 @@ fn incorrect_secret_text(lang: Language, secret: SecretName) -> &'static str {
 
         (Language::English, SecretName::Pin) => "Incorrect PIN. Try again.",
         (Language::English, SecretName::Password) => "Incorrect password. Try again.",
+
+        (Language::Spanish, SecretName::DocumentPassword) => {
+            "Contraseña del PDF incorrecta. Vuelve a intentarlo."
+        }
+        (Language::Catalan, SecretName::DocumentPassword) => {
+            "Contrasenya del PDF incorrecta. Torna-ho a provar."
+        }
+        (Language::Basque, SecretName::DocumentPassword) => {
+            "PDFaren pasahitza okerra. Saiatu berriro."
+        }
+        (Language::Galician, SecretName::DocumentPassword) => {
+            "Contrasinal do PDF incorrecto. Tenta de novo."
+        }
+        (Language::English, SecretName::DocumentPassword) => "Incorrect PDF password. Try again.",
     }
 }
 

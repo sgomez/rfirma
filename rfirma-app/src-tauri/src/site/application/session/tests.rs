@@ -166,6 +166,10 @@ impl SiteSigning for NobodyHasItOpen {
                 crate::site::adapters::desk::signing_refusal_of(told_of_cycle(&failure))
             })
     }
+
+    fn the_pdf_password(&self, _after_a_wrong_one: bool) -> Option<String> {
+        None
+    }
 }
 
 use crate::identity::domain::secret::StoreSecret;

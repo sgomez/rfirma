@@ -360,6 +360,49 @@ completes = {}
 warning = "Va a aparecer el diálogo de certificado."
 
 [[check]]
+id = "a_wrong_pdf_password_answers_saf_50_when_headless"
+set = "firma"
+citation = "ProtocolInvocationLauncherSign.java:789-796; PdfUtil.java:176-180"
+statement = """
+Con headless=true, un PDF protegido cuya contraseña de la petición no lo abre no se pregunta a la
+persona: la firma se rechaza con SAF_50, no con SAF_09 ni con SAF_33.
+"""
+drive = { mode = "v4", script = "signpadeswrongpasswordheadless" }
+assistance = "click"
+saf = "SAF_50"
+warning = "Va a aparecer el diálogo de certificado antes de que llegue el rechazo."
+
+[[check]]
+id = "a_wrong_pdf_password_is_asked_to_the_person"
+set = "firma"
+citation = "ProtocolInvocationLauncherSign.java:812-827; BadPdfPasswordException.java:57-59"
+statement = """
+Sin headless, un PDF protegido cuya contraseña de la petición no lo abre no se rechaza: se pide la
+contraseña a la persona y, con la buena, se firma.
+"""
+drive = { mode = "v4", script = "signpadeswrongpassword" }
+assistance = "person"
+completes = {}
+question = "¿se pidió la contraseña del PDF? [s/n]"
+person = { yes = "se pidió la contraseña del PDF", no = "no se pidió la contraseña del PDF", yes_means = "conforme" }
+warning = "Elige el certificado; cuando se pida la contraseña del PDF, escribe 1234."
+
+[[check]]
+id = "a_protected_pdf_without_a_password_is_asked_to_the_person"
+set = "firma"
+citation = "ProtocolInvocationLauncherSign.java:812-836; PdfUtil.java:176-182"
+statement = """
+Sin headless ni contraseña en la petición, un PDF protegido pide su contraseña a la persona, y
+cancelar esa petición termina el trámite como cancelación.
+"""
+drive = { mode = "v4", script = "signpadesprotected" }
+assistance = "person"
+saf = "CANCEL"
+question = "¿se pidió la contraseña del PDF? [s/n]"
+person = { yes = "se pidió la contraseña del PDF", no = "no se pidió la contraseña del PDF", yes_means = "conforme" }
+warning = "Elige el certificado; cuando se pida la contraseña del PDF, cancela esa ventana en vez de escribirla."
+
+[[check]]
 id = "a_certified_pdf_asks_the_person_before_being_signed"
 set = "firma"
 citation = "ProtocolInvocationLauncherSign.java:787-806"

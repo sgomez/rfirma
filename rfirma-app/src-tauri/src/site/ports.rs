@@ -398,6 +398,9 @@ pub trait SiteSigning {
 
     /// Cierra el ciclo en memoria: el PDF firmado y el DER del firmante, sin escribir nada.
     fn finish(&self) -> Result<SiteSignature, SigningRefusal>;
+
+    /// Pide a la persona la contraseña del PDF cifrado; `None` si no la da.
+    fn the_pdf_password(&self, after_a_wrong_one: bool) -> Option<String>;
 }
 
 /// La firma de bytes con el token que pide el lote remoto: el secreto se abre una vez y sirve para todas las firmas, sin puente y sin que la clave salga del token (ADR-0001).

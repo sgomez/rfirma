@@ -119,6 +119,7 @@ fn each_rejection_of_the_data_leaves_for_the_site_with_the_code_of_the_original(
         (DataRejection::FacturaeAlreadySigned, "SAF_32"),
         (DataRejection::InvalidFacturae, "SAF_38"),
         (DataRejection::SignWithoutData, "SAF_44"),
+        (DataRejection::PdfPasswordNeeded, "SAF_33"),
     ] {
         let error = BridgeError::DataRejected(rejection, "da igual el texto".to_owned());
 

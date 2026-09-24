@@ -11,6 +11,8 @@ pub enum SecretName {
     Pin,
     /// La contraseña de un almacén que es un fichero.
     Password,
+    /// La contraseña que abre un PDF cifrado; no es de ningún almacén.
+    DocumentPassword,
 }
 
 impl SecretName {

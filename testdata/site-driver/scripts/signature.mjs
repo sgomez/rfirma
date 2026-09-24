@@ -798,6 +798,13 @@ export const SIGNATURE_SCRIPTS = {
   signpadesprotectedwithitspassword: aPublishedScript(
     signing("PAdES", "headless=true\nuserPassword=1234", aPasswordProtectedPdf),
   ),
+  signpadeswrongpasswordheadless: aPublishedScript(
+    signing("PAdES", "headless=true\nuserPassword=4321", aPasswordProtectedPdf),
+  ),
+  signpadeswrongpassword: aPublishedScript(
+    signing("PAdES", "userPassword=4321", aPasswordProtectedPdf),
+  ),
+  signpadesprotected: aPublishedScript(signing("PAdES", "", aPasswordProtectedPdf)),
   cosigncades: aPublishedScript(
     cosigning("CAdES", "", theCadesImplicitSignature, withTheShape(TWO_PARALLEL_SIGNERS, "[][]")),
     { conditions: [TWO_PARALLEL_SIGNERS] },

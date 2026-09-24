@@ -165,6 +165,8 @@ pub(super) struct PendingSignature {
     pub(super) from_the_site: BTreeMap<String, String>,
     /// Si el documento contiene firmas no reconocidas.
     pub(super) unregistered_signatures: bool,
+    /// Si la sede pidió `headless`: lo que haga falta preguntar se rechaza.
+    pub(super) headless: bool,
     /// Pistas de guardado, si esta firma viene de `signandsave`.
     pub(super) saving: Option<Box<SavingHints>>,
     /// La firma que hace el servidor trifásico de la sede, si se hace allí.

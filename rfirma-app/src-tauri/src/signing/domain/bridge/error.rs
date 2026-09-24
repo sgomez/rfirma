@@ -64,6 +64,8 @@ pub enum DataRejection {
     InvalidFacturae,
     /// La firma previa no trae los datos ni una huella del algoritmo pedido.
     SignWithoutData,
+    /// El PDF está cifrado y la contraseña que se le dio no lo abre, o no se le dio ninguna.
+    PdfPasswordNeeded,
 }
 
 impl fmt::Display for BridgeError {

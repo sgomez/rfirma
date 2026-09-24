@@ -10,7 +10,9 @@ pub mod placement;
 pub mod properties;
 pub mod session_seal;
 
-pub use admissibility::{AdmissibleDocument, Refusal, Waivers, ALLOW_SIGNING_CERTIFIED_KEY};
+pub use admissibility::{
+    unlocked_with, AdmissibleDocument, Refusal, Waivers, ALLOW_SIGNING_CERTIFIED_KEY,
+};
 pub use bridge::{
     CompletedCycle, Format, SealedPreSignature, SignatureOperation, TokenSignature, TokenSignatures,
 };

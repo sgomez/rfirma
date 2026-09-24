@@ -1,5 +1,6 @@
 //! Detección rápida de admisibilidad de documentos antes de solicitar el PIN.
 
+use std::collections::BTreeMap;
 use std::fmt;
 
 use super::bridge::Format;
@@ -122,6 +123,30 @@ impl Waivers {
                 _ => waivers,
             })
     }
+
+    /// Las mismas, con una persona delante que teclea la contraseña si hace falta.
+    pub fn the_person_types_the_password(self) -> Self {
+        Self {
+            password: true,
+            ..self
+        }
+    }
+
+    /// Si la petición trae alguna de las dos contraseñas del PDF.
+    pub fn declares_a_password(self) -> bool {
+        self.password
+    }
+}
+
+/// Los parámetros con la contraseña que tecleó la persona, que el original fija como de propietario y sin la de usuario.
+pub fn unlocked_with(
+    params: &BTreeMap<String, String>,
+    password: &str,
+) -> BTreeMap<String, String> {
+    let mut unlocked = params.clone();
+    unlocked.remove(USER_PASSWORD_KEY);
+    unlocked.insert(OWNER_PASSWORD_KEY.to_owned(), password.to_owned());
+    unlocked
 }
 
 impl fmt::Display for Refusal {
