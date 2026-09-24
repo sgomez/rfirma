@@ -78,6 +78,53 @@ async fn the_published_client_signs_a_binary_challenge_with_cades_explicit_also_
     the_sign_of(BenchMode::Third, THE_SIGN_CADES_EXPLICIT).await;
 }
 
+/// Un `sign()` del cliente publicado con `format=NONE`: lo que vuelve es el PKCS#1 del reto con la
+/// clave del certificado, sin CMS alrededor.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "grada C: necesita la libreria nativa (RFIRMA_LIB_DIR) y el token de pruebas"]
+async fn the_published_client_signs_a_binary_challenge_as_a_bare_pkcs1() {
+    if !the_bench_can_be_mounted() {
+        return;
+    }
+
+    let material = ChannelMaterial::fresh();
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let roots = Arc::new(tokio::task::block_in_place(|| {
+        a_running_rfirma(home.path())
+    }));
+    let signer = Arc::new(Mutex::new(None));
+    let client = PublishedClient::running_the_script(&material, BenchMode::Fourth, THE_SIGN_NONE);
+
+    let channel = the_errand_channel(
+        &client,
+        &material,
+        &roots,
+        the_sign_errand_of(&roots, &signer),
+    )
+    .await;
+
+    let verdict = client.next_event();
+    assert_eq!(
+        verdict.name(),
+        "success",
+        "'{THE_SIGN_NONE}' tenia que acabar en el successCallback, y acabo en {}: {}",
+        verdict.name(),
+        verdict.field("message")
+    );
+    let pkcs1 = STANDARD
+        .decode(verdict.field("result"))
+        .expect("la firma NONE llega en base64");
+    let signer_der = signer
+        .lock()
+        .expect("nadie envenena el apunte del firmante")
+        .clone()
+        .expect("el tramite tenia que haber consentido con un certificado");
+    let challenge = std::fs::read(the_challenge_path()).expect("el reto del banco");
+    verified_as_a_bare_pkcs1(&pkcs1, &challenge, &signer_der);
+
+    channel.close();
+}
+
 /// Dos trámites de sede a la vez en el mismo proceso, cada uno con su propia terna de `ports=`
 /// (ID-06): no hay techo de trámites simultáneos ni estado global que los estorbe. No toma
 /// `ONE_AT_A_TIME`, porque eso solo lo necesitan los casos de lote con servlets.

@@ -991,6 +991,7 @@ declarado con mimeType=hash/sha1.
 drive = { mode = "v4", script = "signxadesexplicit" }
 assistance = "click"
 condition = "the-sha1-of-the-data-signed"
+deprecated = true
 warning = "Va a aparecer el diálogo de certificado."
 
 [[check]]

@@ -14,6 +14,9 @@ pub fn expanded_for_the_site<E: PolicyEngine>(
     format: Format,
     signed_data_length: usize,
 ) -> Result<BTreeMap<String, String>, BridgeError> {
+    if format.signed_without_the_bridge() {
+        return Ok(declared.iter().cloned().collect());
+    }
     let block = to_java_properties(&declared.iter().cloned().collect());
     let expanded = engine.expand(&block, format.name(), signed_data_length)?;
     Ok(pairs_of(&expanded).into_iter().collect())

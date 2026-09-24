@@ -4,12 +4,21 @@ use crate::site::domain::protocol::AfirmaUrl;
 
 use crate::site::application::errand::{ProtocolCodec, SiteOutcome, SiteRequest};
 
-use super::codec::V4Codec;
+use super::codec::{carries_extra_data, V4Codec};
 
-/// Códec de la versión 1 del protocolo de comunicación con la sede: el mismo catálogo y la
-/// misma forma de respuesta que la versión 4, medido contra el original.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub struct V1Codec;
+/// Códec del transporte `service`: el mismo catálogo y la misma forma de respuesta que la
+/// versión 4, medido contra el original, con el tercer componente según la versión negociada.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct V1Codec {
+    version: i64,
+}
+
+impl V1Codec {
+    /// Un códec que habla la versión de `service` que la sede declaró.
+    pub fn new(version: i64) -> Self {
+        Self { version }
+    }
+}
 
 impl ProtocolCodec for V1Codec {
     fn decode(&self, message: &AfirmaUrl) -> SiteRequest {
@@ -18,6 +27,9 @@ impl ProtocolCodec for V1Codec {
 
     fn encode(&self, outcome: &SiteOutcome) -> String {
         match outcome {
+            SiteOutcome::Signature { .. } if carries_extra_data(self.version) => {
+                V4Codec.encode(outcome)
+            }
             SiteOutcome::Signature {
                 signer_der,
                 signature,

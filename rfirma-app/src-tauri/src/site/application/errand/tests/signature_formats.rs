@@ -388,3 +388,66 @@ fn the_document_of_a_cades_errand_never_passes_through_as_a_pdf() {
         "lo que se firma es lo que la sede mando"
     );
 }
+
+#[test]
+fn a_none_signature_goes_to_the_wire_as_the_bare_pkcs1_of_the_token() {
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let memory = a_memory(home.path());
+    let ours = vec![a_usable_certificate("FIRMA")];
+    let (listed, _) = listed_from(&ours);
+    let opened = OpenedDocuments::new();
+    let live = a_live();
+    let engine = AnEngine::answering(&[&[0], &[0]]);
+    let policies = APolicyEngine::answering(EXPANDED_WITH_A_BOX);
+    let scratch = home.path().join("errand");
+    let mut desk = a_desk(
+        &engine,
+        &policies,
+        &[],
+        home.path(),
+        &listed,
+        &opened,
+        &memory,
+        &scratch,
+    );
+    desk.neighbours.ours = ours.clone();
+    desk.neighbours.bridge = TheBridge::answering();
+    assert!(live.begin(Errand::of(
+        NegotiatedCredential::Required(a_credential()),
+        ArrivalMode::Awaited,
+        a_codec()
+    )));
+    let (handle, mut wire) = the_wire();
+
+    let step = attend(
+        &desk,
+        a_signature_asking_for("NONE", A_CHALLENGE),
+        handle,
+        &live,
+    )
+    .expect("hay codec negociado");
+    let ErrandStep::AskingToSign(asking) = step else {
+        panic!("NONE llega al consentimiento: {step:?}");
+    };
+    assert_eq!(asking.format, Format::Pkcs1);
+    let chosen = asking.certificates[0].id.clone();
+    consent(&desk, &chosen, &live).expect("el certificado vale");
+    session::sign_on_token(&desk.neighbours.signer, &desk.neighbours.session, "1234")
+        .expect("el token firma los datos");
+    finish(&desk, &live).expect("la firma sale");
+
+    let encode = base64::engine::general_purpose::URL_SAFE;
+    assert_eq!(
+        what_the_site_received(&mut wire),
+        Some(format!(
+            "{}|{}",
+            encode.encode(ours[0].der()),
+            encode.encode([0x01; 256])
+        )),
+        "el PKCS#1 del token, sin CMS alrededor"
+    );
+    assert!(
+        desk.neighbours.bridge.formats_of_the_presigns().is_empty(),
+        "NONE no cruza al puente"
+    );
+}

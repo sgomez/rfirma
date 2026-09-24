@@ -9,6 +9,7 @@ use super::super::url::AfirmaUrl;
 use super::properties::required;
 use super::sign::SignatureRound;
 use super::AUTO;
+use crate::site::domain::triphase_server::ServerFormat;
 
 /// Resuelve el formato efectivo con `format=auto`, exigiendo firma previa si la ronda es multifirma.
 pub(super) fn resolve_auto_format(
@@ -40,10 +41,9 @@ pub fn refuse_a_multisignature_of_an_invoice(
     if !first && matches!(format, RequestedFormat::FacturaE) {
         return Err(Refusal::new(
             SafCode::UnsupportedOperation,
-            "una factura ni se cofirma ni se contrafirma: AOFacturaESigner lanza una \
-             UnsupportedOperationException en las dos",
+            "FacturaE no admite cofirma ni contrafirma",
         )
-        .found_while_processing());
+        .because(RefusalSituation::InvoiceMultisignature));
     }
     Ok(())
 }
@@ -64,21 +64,32 @@ pub fn refuse_a_countersignature_outside_cades_and_xades(
     Ok(())
 }
 
-/// `mode=explicit` con XAdES: `SAF_06`, la desviación que documenta `domain/protocol/mod.rs`.
+/// `SAF_06` donde AutoFirma firmaría la huella SHA-1 en vez del documento.
 pub fn refuse_explicit_xades(
+    round: SignatureRound,
     format: RequestedFormat,
+    through_the_site_server: Option<ServerFormat>,
     declared_params: &[(String, String)],
 ) -> Result<(), Refusal> {
-    let explicit = declared_params.iter().any(|(key, value)| {
-        key.eq_ignore_ascii_case("mode") && value.eq_ignore_ascii_case("explicit")
-    });
-    if explicit && matches!(format, RequestedFormat::Xades(_)) {
+    let signs_the_digest = matches!(round, SignatureRound::First)
+        && matches!(format, RequestedFormat::Xades(_))
+        && through_the_site_server != Some(ServerFormat::Xades)
+        && declares(declared_params, "mode", "explicit")
+        && !declares(declared_params, "useManifest", "true");
+    if signs_the_digest {
         return Err(Refusal::new(
             SafCode::UnsupportedFormat,
-            "'mode=explicit' con XAdES no se reproduce: ver domain/protocol/mod.rs",
-        ));
+            "mode=explicit con XAdES (firma de la huella SHA-1)",
+        )
+        .because(RefusalSituation::ExplicitXades));
     }
     Ok(())
+}
+
+fn declares(declared_params: &[(String, String)], key: &str, value: &str) -> bool {
+    declared_params.iter().any(|(declared, its)| {
+        declared.eq_ignore_ascii_case(key) && its.eq_ignore_ascii_case(value)
+    })
 }
 
 /// El formato que nombra la sede, nada si pide `auto`, o el `SAF_06` que nombra
@@ -109,13 +120,10 @@ pub(super) fn check_algorithm(url: &AfirmaUrl) -> Result<AskedAlgorithm, Refusal
     })
 }
 
-/// `'countersign' solo existe en CAdES y XAdES`, compartido por `read_operation`
-/// y por el `cop` de `signandsave`.
 fn countersign_refusal() -> Refusal {
     Refusal::new(
         SafCode::UnsupportedOperation,
-        "'countersign' no existe fuera de CAdES y XAdES: AOPDFSigner.countersign lanza una \
-         UnsupportedOperationException",
+        "contrafirma fuera de CAdES, CMS y XAdES",
     )
-    .found_while_processing()
+    .because(RefusalSituation::UnsupportedCountersignature)
 }

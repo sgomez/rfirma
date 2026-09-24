@@ -167,7 +167,8 @@ _Avoid_: excepción, falso negativo
 
 **Formato deprecado**:
 Un formato que el manual de AutoFirma desaconseja y mantiene solo por retrocompatibilidad (CMS,
-XMLDSig, ODF y OOXML): AutoFirma lo soporta y rFirma no. La comprobación que lo mide lo declara en
-el catálogo; su resultado no cambia, pero la consola la marca y su NO CONFORME se cuenta aparte de
-los fallos del cliente.
+XMLDSig, ODF y OOXML), o un modo obsoleto dentro de un formato que AutoFirma marca como tal (la
+XAdES explícita): AutoFirma lo soporta y rFirma no. La comprobación que lo mide lo declara en el
+catálogo; su resultado no cambia, pero la consola la marca y su NO CONFORME se cuenta aparte de los
+fallos del cliente.
 _Avoid_: obsoleto, retirado

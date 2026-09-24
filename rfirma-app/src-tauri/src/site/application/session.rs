@@ -22,8 +22,6 @@ pub enum SiteRefusal {
     Inadmissible(Inadmissible),
     /// Las políticas de la sede no se han podido expandir.
     Policies(BridgeError),
-    /// El puente no atiende el formato que pide la sede.
-    FormatNotBridged(BridgeError),
     /// El filtro de la sede no se ha podido aplicar al listado.
     CouldNotFilter(filtering::FilteringError),
     /// La sede excluye todos los certificados que hay.
@@ -68,9 +66,7 @@ impl SiteRefusal {
         match self {
             Self::Token(error) => error.to_string(),
             Self::Inadmissible(refusal) => refusal.to_string(),
-            Self::Policies(error)
-            | Self::FormatNotBridged(error)
-            | Self::CouldNotValidate(error) => error.to_string(),
+            Self::Policies(error) | Self::CouldNotValidate(error) => error.to_string(),
             Self::CouldNotFilter(_) => "el filtro de la sede no se ha podido aplicar".to_owned(),
             Self::NoCertificateTheSiteAccepts => {
                 "la sede excluye todos los certificados que hay".to_owned()

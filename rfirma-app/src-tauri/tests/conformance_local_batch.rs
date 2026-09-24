@@ -10,6 +10,7 @@ use support::*;
 fn the_local_batch_errand_of(
     roots: &Arc<Roots>,
     signer: &Arc<Mutex<Option<Vec<u8>>>>,
+    items: usize,
 ) -> SiteOperations {
     let roots = Arc::clone(roots);
     let signer = Arc::clone(signer);
@@ -24,11 +25,7 @@ fn the_local_batch_errand_of(
         else {
             return;
         };
-        assert_eq!(
-            consent.items.len(),
-            3,
-            "el lote local del guion lleva tres elementos"
-        );
+        assert_eq!(consent.items.len(), items, "los elementos del guion");
 
         let chosen = consent
             .certificates
@@ -91,7 +88,7 @@ async fn the_local_batch_of(mode: BenchMode) {
         &client,
         &material,
         &roots,
-        the_local_batch_errand_of(&roots, &signer),
+        the_local_batch_errand_of(&roots, &signer, 3),
     )
     .await;
 
@@ -203,7 +200,7 @@ async fn the_local_batch_with_an_illegible_item_of(mode: BenchMode) {
         &client,
         &material,
         &roots,
-        the_local_batch_errand_of(&roots, &signer),
+        the_local_batch_errand_of(&roots, &signer, 3),
     )
     .await;
 
@@ -254,4 +251,66 @@ async fn the_published_client_stops_a_local_batch_on_an_illegible_item() {
 async fn the_published_client_stops_a_local_batch_on_an_illegible_item_also_over_the_third_protocol(
 ) {
     the_local_batch_with_an_illegible_item_of(BenchMode::Third).await;
+}
+
+/// Un lote local en `format=NONE`: el binario vuelve con el PKCS#1 de sus datos, sin CMS alrededor.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "grada C: necesita la libreria nativa (RFIRMA_LIB_DIR) y el token de pruebas"]
+async fn the_published_client_signs_a_local_batch_in_format_none_as_bare_pkcs1() {
+    if !the_bench_can_be_mounted() {
+        return;
+    }
+
+    let material = ChannelMaterial::fresh();
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let roots = Arc::new(tokio::task::block_in_place(|| {
+        a_running_rfirma(home.path())
+    }));
+    let signer = Arc::new(Mutex::new(None));
+    let client = PublishedClient::running_the_script(
+        &material,
+        BenchMode::Fourth,
+        THE_LOCAL_BATCH_IN_FORMAT_NONE,
+    );
+
+    let channel = the_errand_channel(
+        &client,
+        &material,
+        &roots,
+        the_local_batch_errand_of(&roots, &signer, 1),
+    )
+    .await;
+
+    let verdict = client.next_event();
+    assert_eq!(
+        verdict.name(),
+        "success",
+        "el lote local en NONE tenia que acabar en el successCallback, y acabo en {}: {}",
+        verdict.name(),
+        verdict.field("message")
+    );
+    let result: serde_json::Value = serde_json::from_slice(
+        &STANDARD
+            .decode(verdict.field("result"))
+            .expect("el resultado del lote local llega en base64"),
+    )
+    .expect("el resultado del lote local es JSON");
+    let item = local_batch_item(&result, "bin");
+    assert_eq!(item["result"], "DONE_AND_SAVED", "{result}");
+
+    let pkcs1 = STANDARD
+        .decode(
+            item["signature"]
+                .as_str()
+                .expect("la firma llega en base64"),
+        )
+        .expect("la firma es base64 valido");
+    let signer_der = signer
+        .lock()
+        .expect("nadie envenena el apunte del firmante")
+        .clone()
+        .expect("el tramite tenia que haber consentido con un certificado");
+    verified_as_a_bare_pkcs1(&pkcs1, THE_LOCAL_BATCH_BINARY, &signer_der);
+
+    channel.close();
 }

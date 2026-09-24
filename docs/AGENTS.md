@@ -31,7 +31,7 @@ Busca en este índice, y si aun así necesitas el fichero, entra con
 | 0020 | La ventana de sede existe antes que la operación, y solo se enseña cuando hay algo que decir |
 | 0021 | La versión negociada al abrir el canal rige la sesión; `ver` solo cuenta sin canal |
 | 0022 | El almacén que nombra la sede: cuál se obedece y cuál sale con `SAF_07` |
-| 0023 | El catálogo de algoritmos es el del original, SHA-1 incluido |
+| 0023 | Se sigue al original en los casos felices salvo contradicción o riesgo grave: SHA-1 sí, XAdES explícita no |
 | 0024 | Un proceso por trámite de sede, y el escritorio aparte |
 | 0025 | `selectcert` no abre sesión en el token: sin PIN en una operación que no firma |
 | 0029 | La envoltura XAdES la declara la sede; el nombre del formato solo la suple |

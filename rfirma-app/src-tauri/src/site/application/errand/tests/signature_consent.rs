@@ -153,7 +153,7 @@ fn a_document_that_is_not_a_pdf_is_refused_before_anything_is_written() {
     assert!(!scratch.exists(), "no se ha escrito nada");
 }
 #[test]
-fn a_countersignature_is_answered_with_the_code_of_an_unsupported_operation() {
+fn a_countersignature_is_shown_with_the_code_of_an_unsupported_operation() {
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
     let memory = a_memory(home.path());
     let listed = ListedCertificates::new();
@@ -179,11 +179,11 @@ fn a_countersignature_is_answered_with_the_code_of_an_unsupported_operation() {
         &live,
     );
 
-    let ErrandStep::Answering(reply) = step else {
+    let ErrandStep::ShowingTheRefusal(refusal) = step else {
         panic!("countersign no existe en PAdES: {step:?}");
     };
     assert_eq!(
-        on_the_wire(&reply),
+        refusal.answer().on_the_wire(),
         WireAnswer::refused(SafCode::UnsupportedOperation).on_the_wire()
     );
 }
@@ -389,7 +389,6 @@ fn the_asic_s_container_of_cades_reaches_the_consent_like_any_other_format() {
     assert_eq!(consent.round, SignatureRound::First);
 }
 
-/// `mode=explicit` con XAdES no se reproduce: `SAF_06` antes de pedir consentimiento.
 #[test]
 fn explicit_mode_with_xades_is_refused_before_asking_for_consent() {
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
@@ -421,8 +420,8 @@ fn explicit_mode_with_xades_is_refused_before_asking_for_consent() {
         &live,
     );
 
-    let ErrandStep::Answering(SiteOutcome::RefusedByTheProtocol(refusal)) = step else {
-        panic!("'mode=explicit' con XAdES no se reproduce: {step:?}");
+    let ErrandStep::ShowingTheRefusal(refusal) = step else {
+        panic!("la XAdES explicita firma la huella SHA-1: {step:?}");
     };
     assert_eq!(refusal.code(), SafCode::UnsupportedFormat);
 }

@@ -101,9 +101,12 @@ fn composed_roots(paths: desktop::adapters::paths::Paths, invocation: Option<Inv
         codecs: site::application::site::CodecTable {
             v4: Arc::new(site::adapters::codec::V4Codec),
             v3: Arc::new(site::adapters::codec_v3::V3Codec),
-            v1: Arc::new(site::adapters::codec_v1::V1Codec),
-            relay: Arc::new(|key| {
-                Arc::new(site::adapters::codec_relay::RelayCodec::new(key))
+            v1: Arc::new(|version| {
+                Arc::new(site::adapters::codec_v1::V1Codec::new(version))
+                    as site::application::errand::NegotiatedCodec
+            }),
+            relay: Arc::new(|key, version| {
+                Arc::new(site::adapters::codec_relay::RelayCodec::new(key, version))
                     as site::application::errand::NegotiatedCodec
             }),
         },

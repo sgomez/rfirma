@@ -1620,6 +1620,24 @@ msgstr "Has cancel·lat la petició del PIN, així que la signatura que demanava
 msgid "sede.refusals.promptFailed"
 msgstr "rFirma no t'ha pogut demanar el PIN per a la signatura que demanava {{origin}}."
 
+msgid "sede.refusals.explicitXades"
+msgstr "{{origin}} ha demanat un tipus de signatura antic que ja no és segur: aquesta signatura es podria fer passar per la d'un altre document diferent del teu. Per això rFirma no la fa. No és culpa teva; si necessites acabar el tràmit, contacta amb {{origin}}."
+
+msgid "sede.refusals.invoiceMultisignature"
+msgstr "{{origin}} ha demanat afegir una signatura a una factura electrònica que ja està signada. Una factura electrònica només admet una signatura, així que rFirma no ho pot fer. No és culpa teva; si necessites acabar el tràmit, contacta amb {{origin}}."
+
+msgid "sede.refusals.unsupportedCountersignature"
+msgstr "{{origin}} ha demanat signar sobre la signatura d'una altra persona en un tipus de document que no ho permet, així que rFirma no ho pot fer. No és culpa teva; si necessites acabar el tràmit, contacta amb {{origin}}."
+
+msgid "sede.siteNotes.explicitXades"
+msgstr "Traieu mode=explicit o feu servir CAdES explícita, que signa el document sense incloure'l."
+
+msgid "sede.siteNotes.invoiceMultisignature"
+msgstr "FacturaE no admet cosignatura ni contrasignatura; demaneu una signatura simple (sign)."
+
+msgid "sede.siteNotes.unsupportedCountersignature"
+msgstr "La contrasignatura només existeix en CAdES, CMS i XAdES; en un altre format, demaneu una cosignatura (cosign)."
+
 msgid "sede.noCertificate.noneTitle"
 msgstr "No tens cap certificat"
 

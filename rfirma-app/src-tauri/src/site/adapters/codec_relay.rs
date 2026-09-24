@@ -5,7 +5,7 @@ use base64::Engine as _;
 
 use crate::site::domain::protocol::{encrypt, AfirmaUrl, CipherKey, WireAnswer};
 
-use crate::site::adapters::codec::V4Codec;
+use crate::site::adapters::codec::{carries_extra_data, extra_data_of, V4Codec};
 use crate::site::adapters::frontier;
 use crate::site::application::errand::{ProtocolCodec, SiteOutcome, SiteRequest};
 
@@ -20,12 +20,13 @@ const SAVE_OK: &str = "OK";
 #[derive(Clone, Debug)]
 pub struct RelayCodec {
     key: Option<CipherKey>,
+    version: i64,
 }
 
 impl RelayCodec {
-    /// Un códec con la clave que la sede negoció para este servidor intermedio, si la hay.
-    pub fn new(key: Option<CipherKey>) -> Self {
-        Self { key }
+    /// Un códec con la clave que la sede negoció para este servidor intermedio, si la hay, y su versión.
+    pub fn new(key: Option<CipherKey>, version: i64) -> Self {
+        Self { key, version }
     }
 
     fn on_the_wire(&self, bytes: &[u8]) -> String {
@@ -47,13 +48,20 @@ impl ProtocolCodec for RelayCodec {
             SiteOutcome::Signature {
                 signer_der,
                 signature,
-                ..
+                chosen_document,
             } => {
-                format!(
+                let pair = format!(
                     "{}{RESULT_SEPARATOR}{}",
                     self.on_the_wire(signer_der),
                     self.on_the_wire(signature)
-                )
+                );
+                match chosen_document {
+                    Some(name) if carries_extra_data(self.version) => format!(
+                        "{pair}{RESULT_SEPARATOR}{}",
+                        self.on_the_wire(extra_data_of(name).as_bytes())
+                    ),
+                    _ => pair,
+                }
             }
             SiteOutcome::Saved => SAVE_OK.to_owned(),
             SiteOutcome::Loaded(files) => files

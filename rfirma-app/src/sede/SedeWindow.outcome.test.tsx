@@ -123,7 +123,7 @@ describe("4 · outcome", () => {
   it.each([
     ...Object.entries(es.sede.refusals).map(([situation, phrase]) => ({
       situation: situation as RefusalSituation,
-      text: phrase.replace("{{origin}}", "sede.ejemplo.gob.es"),
+      text: phrase.replaceAll("{{origin}}", "sede.ejemplo.gob.es"),
     })),
     ...NAMED_BY_THE_DESK.map((situation) => ({
       situation,
@@ -155,6 +155,53 @@ describe("4 · outcome", () => {
         "Has cerrado el diálogo de guardado sin elegir dónde guardar el fichero que pedía sede.ejemplo.gob.es.",
       ),
     ).toBeInTheDocument();
+  });
+
+  it.each([
+    {
+      situation: "explicitXades",
+      detail: "SAF_06: mode=explicit con XAdES (firma de la huella SHA-1)",
+      sentence:
+        "sede.ejemplo.gob.es ha pedido un tipo de firma antiguo que ya no es seguro: esa firma podría hacerse pasar por la de otro documento distinto del tuyo. Por eso rFirma no la hace. No es un fallo tuyo; si necesitas terminar el trámite, contacta con sede.ejemplo.gob.es.",
+      note: "Quitad mode=explicit o usad CAdES explícita, que firma el documento sin incluirlo.",
+    },
+    {
+      situation: "invoiceMultisignature",
+      detail: "SAF_04: FacturaE no admite cofirma ni contrafirma",
+      sentence:
+        "sede.ejemplo.gob.es ha pedido añadir una firma a una factura electrónica que ya está firmada. Una factura electrónica solo admite una firma, así que rFirma no puede hacerlo. No es un fallo tuyo; si necesitas terminar el trámite, contacta con sede.ejemplo.gob.es.",
+      note: "FacturaE no admite cofirma ni contrafirma; pedid una firma simple (sign).",
+    },
+    {
+      situation: "unsupportedCountersignature",
+      detail: "SAF_04: contrafirma fuera de CAdES, CMS y XAdES",
+      sentence:
+        "sede.ejemplo.gob.es ha pedido firmar sobre la firma de otra persona en un tipo de documento que no lo permite, así que rFirma no puede hacerlo. No es un fallo tuyo; si necesitas terminar el trámite, contacta con sede.ejemplo.gob.es.",
+      note: "La contrafirma solo existe en CAdES, CMS y XAdES; en otro formato, pedid una cofirma (cosign).",
+    },
+  ] as const)(
+    "explains why rFirma refuses $situation, with a note for the site and the raw detail",
+    ({ situation, detail, sentence, note }) => {
+      const { port } = scriptedErrand({
+        kind: "outcome",
+        outcome: { kind: "refused", situation, detail },
+      });
+      renderWithCatalog(<SedeWindow errands={port} />);
+
+      expect(screen.getByText(sentence)).toBeInTheDocument();
+      expect(screen.getByText(note)).toBeInTheDocument();
+      expect(screen.getByText(detail)).toBeInTheDocument();
+    },
+  );
+
+  it("adds no note for the site to a refusal that has none", () => {
+    const { port } = scriptedErrand({
+      kind: "outcome",
+      outcome: { kind: "refused", situation: "unsupportedFilter", detail: "CRUDO" },
+    });
+    renderWithCatalog(<SedeWindow errands={port} />);
+
+    expect(screen.queryByText(/pedid/)).not.toBeInTheDocument();
   });
 
   it("says another application holds the ports instead of blaming the browser", () => {

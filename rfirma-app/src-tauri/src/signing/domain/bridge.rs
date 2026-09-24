@@ -141,11 +141,13 @@ pub enum Format {
     Xades(XadesVariant),
     /// Firma de una factura electrónica.
     FacturaE,
+    /// Firma PKCS#1 de los datos, sin envoltorio.
+    Pkcs1,
 }
 
 impl Format {
     /// Todos los formatos del vocabulario, para recorrerlos.
-    pub const ALL: [Self; 9] = [
+    pub const ALL: [Self; 10] = [
         Self::Pades,
         Self::Cades,
         Self::CadesAsicS,
@@ -155,6 +157,7 @@ impl Format {
         Self::Xades(XadesVariant::Enveloped),
         Self::Xades(XadesVariant::AsicS),
         Self::FacturaE,
+        Self::Pkcs1,
     ];
 
     /// El nombre con el que el original lo espera (`AOSignConstants.SIGN_FORMAT_*`).
@@ -169,6 +172,7 @@ impl Format {
             Self::Xades(XadesVariant::Enveloped) => "XAdES Enveloped",
             Self::Xades(XadesVariant::AsicS) => "XAdES-ASiC-S",
             Self::FacturaE => "FacturaE",
+            Self::Pkcs1 => "NONE",
         }
     }
 
@@ -181,13 +185,19 @@ impl Format {
             | Self::Cms
             | Self::Xades(_)
             | Self::FacturaE => Ok(self),
+            Self::Pkcs1 => Err(BridgeError::FormatNotBridged(self)),
         }
+    }
+
+    /// Si el formato lo resuelve Rust entero, sin prefirma ni postfirma en el puente.
+    pub fn signed_without_the_bridge(self) -> bool {
+        self == Self::Pkcs1
     }
 
     /// El formato si el original tiene validador de firmas para él, y si no la situación que lo niega.
     pub fn validated(self) -> Result<Self, BridgeError> {
         match self {
-            Self::CadesAsicS | Self::Xades(XadesVariant::AsicS) => {
+            Self::CadesAsicS | Self::Xades(XadesVariant::AsicS) | Self::Pkcs1 => {
                 Err(BridgeError::FormatNotBridged(self))
             }
             Self::Pades | Self::Cades | Self::Cms | Self::Xades(_) | Self::FacturaE => Ok(self),

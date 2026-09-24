@@ -81,6 +81,12 @@ pub const THE_LOCAL_BATCH: &str = "batchlocal";
 /// El guion del lote local con el binario declarado `PAdES`, ilegible, y `stoponerror=true`.
 pub const THE_LOCAL_BATCH_WITH_AN_ILLEGIBLE_ITEM: &str = "batchlocalillegible";
 
+/// El guion del lote local en `format=NONE` sobre el binario.
+pub const THE_LOCAL_BATCH_IN_FORMAT_NONE: &str = "batchlocalnone";
+
+/// El guion de `sign` con `format=NONE` sobre el reto binario.
+pub const THE_SIGN_NONE: &str = "signnone";
+
 /// El guion de `sign` con `format=CAdES` y `mode=explicit` sobre el reto binario.
 pub const THE_SIGN_CADES_EXPLICIT: &str = "signcades";
 

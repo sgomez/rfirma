@@ -157,3 +157,22 @@ fn the_box_the_site_placed_reaches_the_bridge_exactly_as_it_came() {
         );
     }
 }
+
+#[test]
+fn a_bare_pkcs1_keeps_what_the_site_declared_without_asking_the_bridge() {
+    let engine = AnEngine::that_refuses_the_policy();
+
+    let expanded = expanded_for_the_site(
+        &engine,
+        &declared(&[("policyIdentifier", "urn:oid:2.16.724.1.3.1.1.2.1.9")]),
+        Format::Pkcs1,
+        20,
+    )
+    .expect("NONE no expande politica");
+
+    assert_eq!(
+        expanded,
+        params(&[("policyIdentifier", "urn:oid:2.16.724.1.3.1.1.2.1.9")])
+    );
+    assert!(engine.asked.borrow().is_empty(), "el puente no se entera");
+}

@@ -26,6 +26,7 @@ relativas a `src/signing/`; para situarte en un fichero, `just outline <ruta>`.
 | `adapters/tauri.rs` | Las órdenes de firma local: el ciclo, la previsualización, la esquina PAdES, la configuración y las firmas no registradas. Pruebas en `adapters/tauri/tests.rs`. |
 | `adapters/views.rs` | `PlacementView` y `ConfigurationView`, con sus conversiones desde `VisibleBox` y `Preferences` y de vuelta. Sin pruebas propias. |
 | `adapters/files.rs` | `RealDocumentBytes`: leer del disco el PDF que se va a firmar. |
+| `application/bare_pkcs1.rs` | `BarePkcs1`, el `Bridge` de la firma NONE: el ciclo sin puente, con los datos como bloque y el PKCS#1 del token como firma (ADR-0001). Pruebas en `application/bare_pkcs1/tests.rs`. |
 | `application/configuration.rs` | Los ajustes como `Preferences`, puros: cómo se enseñan y cómo se combinan. Quien los guarda es la orden. Pruebas en `application/configuration/tests.rs`. |
 | `application/configuration_memory.rs` | Lo que el usuario elige y la aplicación obedece. Pruebas en `application/configuration_memory/tests.rs`. |
 | `application/cycle.rs` | El ciclo trifásico, parametrizado por formato, sobre los puertos `Bridge` y `Token`. El único caso de uso que cruza la FFI **para firmar**. Pruebas en `application/cycle/tests.rs`. |

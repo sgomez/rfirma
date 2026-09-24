@@ -18,7 +18,7 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `adapters/channel/reply.rs` | El asa por la que se le contesta a la sede cuando la respuesta llega mucho después. Pruebas en `adapters/channel/reply/tests.rs`. |
 | `adapters/channel/server.rs` | El servidor del canal. **No existe escuchador en claro.** |
 | `adapters/codec.rs` | El códec de la versión 4 del protocolo. Pruebas en `adapters/codec/tests.rs`. |
-| `adapters/codec_v1.rs`, `adapters/codec_v3.rs` | Los códecs de las versiones 1 y 3, que delegan en el de la 4 en vez de repetirlo; el de la 3, además, rechaza la operación que exige un `ver` posterior. Pruebas en `adapters/codec_v1/tests.rs` y `adapters/codec_v3/tests.rs`. |
+| `adapters/codec_v1.rs`, `adapters/codec_v3.rs` | Los códecs del transporte `service` y de la versión 3, que delegan en el de la 4 en vez de repetirlo; el de la 3, además, rechaza la operación que exige un `ver` posterior. Pruebas en `adapters/codec_v1/tests.rs` y `adapters/codec_v3/tests.rs`. |
 | `adapters/codec_relay.rs` | El códec del servidor intermedio, el que cifra la respuesta con la clave negociada. Pruebas en `adapters/codec_relay/tests.rs`. |
 | `adapters/data_download.rs` | El cliente HTTP que baja el `dat` que la sede manda como URL. Pruebas en `adapters/data_download/tests.rs`. |
 | `adapters/desk.rs` | `Neighbours`: lo que el trámite pide a los contextos vecinos, servido sobre sus tres raíces, y la composición del algoritmo de la sede con la clave del certificado. Pruebas en `adapters/desk/tests.rs`. |
@@ -41,6 +41,7 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `adapters/transport.rs` | El transporte de producción del `wss` sobre el *loopback*. |
 | `adapters/triphase_server.rs` | El cliente del servidor trifásico que la sede nombra en `serverUrl`, sobre `reqwest::blocking`; **no** es el de los servlets del lote. Pruebas en `adapters/triphase_server/tests.rs`. |
 | `adapters/views.rs` | Los tipos que cruzan a la ventana de sede y su única conversión. Pruebas en `adapters/views/tests.rs`. |
+| `adapters/views/outcome.rs` | Los tipos del desenlace que cruzan a la ventana de sede: el rechazo clasificado y la falta de certificado. Pruebas en `adapters/views/tests.rs`. |
 | `adapters/window.rs` | El adaptador de la ventana de sede: la crea, la enseña, la oculta o la cierra, le publica lo que va pasando y decide qué hace su cierre por el gestor de ventanas con el trámite vivo (ADR-0024). |
 | `application/batch.rs` | El lote remoto ya consentido: prefirma, `PK1` con el token y postfirma. No decide el consentimiento. Pruebas en `application/batch/tests.rs`. |
 | `application/errand/area.rs` | El diálogo del área de la firma visible: el área que marca la persona, o lo que hace cancelarlo (ADR-0019). |
@@ -82,6 +83,7 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `application/errand/tests/pdf_password.rs` | Pruebas de la contraseña del PDF cifrado después de elegir certificado: pedirla, repetirla, cancelarla y el rechazo con `headless`. Solo en pruebas. |
 | `application/errand/tests/websocket.rs` | Pruebas del trámite de sede sobre WebSocket. Solo en pruebas. |
 | `application/errand/tests/service.rs` | Pruebas del trámite de sede sobre el canal `service`. Solo en pruebas. |
+| `application/errand/tests/shown_refusals.rs` | Pruebas de las firmas que rFirma se niega a hacer: el rechazo se enseña, con el documento de la sede o el elegido en disco, y la sede recibe su código al cerrar la ventana. Solo en pruebas. |
 | `application/errand/tests/relay_window.rs` | Pruebas de cuándo enseña su ventana un trámite de llegada inmediata. Solo en pruebas. |
 | `application/filtering.rs` | El listado de certificados que la sede acepta. Pruebas en `application/filtering/tests.rs`. |
 | `application/local_batch.rs` | El bucle del lote local: el ciclo de sede por elemento y `stoponerror`. Pruebas en `application/local_batch/tests.rs`. |
@@ -190,10 +192,9 @@ situación. Dos cosas que salen mal si se olvidan:
   congelados: `just check-contract` compara `just contract` con
   `tests/contract.snapshot`, y la grada C del canal y el banco de conformidad no
   se tocan.
-- **Un formato que entra en `Format::bridged()`** (`signing/domain/bridge.rs`)
-  deja de ser el contraejemplo que era: revisa `application/errand/tests/signature_formats.rs`,
-  que lo usaba como formato que el puente no atiende, y la resolución de `auto`
-  sobre bytes que no son un PDF.
+- **Todo `Format` que nombra la sede llega al consentimiento**: el trámite no
+  filtra por `Format::bridged()`, y el que no cruza al puente, `NONE`, lo firma
+  `signing/application/bare_pkcs1.rs` (ADR-0001).
 - **El recuadro y la rúbrica son de PAdES**: con cualquier otro formato el
   trámite ni los lee ni los rechaza, y los olvida antes del consentimiento
   (`forget_the_box`), de modo que ninguna de sus claves llega al puente.

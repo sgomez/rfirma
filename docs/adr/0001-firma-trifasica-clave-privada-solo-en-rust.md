@@ -25,6 +25,13 @@ operativo.
   firma que se entrega es la que el servidor devuelve tras `OK NEWID=`. Vale
   igual para `sign` que para `signandsave`, que guarda en disco esa misma firma
   antes de entregarla.
+- La firma `NONE` (`AOPkcs1Signer`, el PKCS#1 de los datos sin envoltorio) no
+  tiene nada que prefirmar ni que ensamblar, así que no abre el puente: recorre
+  el mismo ciclo, con los datos como único bloque que firma el token y su
+  PKCS#1 como documento firmado, y lo resuelve Rust entero. Vale para `sign`,
+  `signandsave` y el `format` del lote local. La cofirma y la contrafirma de
+  `NONE` salen con `SAF_04`, como la `UnsupportedOperationException` del
+  original.
 - Renunciamos a las rutas de firma monofásica que la suite Java ofrece: aunque
   funcionarían para certificados en software, tener dos caminos distintos según
   el origen del certificado duplicaría la superficie a probar y haría fácil que

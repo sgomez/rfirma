@@ -1496,6 +1496,24 @@ msgstr ""
 msgid "sede.refusals.promptFailed"
 msgstr ""
 
+msgid "sede.refusals.explicitXades"
+msgstr ""
+
+msgid "sede.refusals.invoiceMultisignature"
+msgstr ""
+
+msgid "sede.refusals.unsupportedCountersignature"
+msgstr ""
+
+msgid "sede.siteNotes.explicitXades"
+msgstr ""
+
+msgid "sede.siteNotes.invoiceMultisignature"
+msgstr ""
+
+msgid "sede.siteNotes.unsupportedCountersignature"
+msgstr ""
+
 msgid "sede.noCertificate.noneTitle"
 msgstr ""
 

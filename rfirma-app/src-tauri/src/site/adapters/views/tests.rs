@@ -1,9 +1,8 @@
 use super::{CounterTarget, Format, LocalBatchItem, Moment, SignatureRound, SignatureRoundView};
-use super::{
-    NoCertificateView, NoChannelView, RefusalSituation, RefusalSituationView, SiteErrandView,
-};
+use super::{NoCertificateView, NoChannelView, RefusalSituationView, SiteErrandView};
 use crate::signing::domain::bridge::XadesVariant;
 use crate::site::domain::batch_error::Situation as BatchSituation;
+use crate::site::domain::protocol::RefusalSituation;
 
 #[test]
 fn the_dead_ends_cross_named_and_never_written_out() {
@@ -155,6 +154,55 @@ fn each_batch_situation_crosses_as_its_own_view() {
             BatchSituation::InvalidPostsignResponse,
             RefusalSituationView::BatchInvalidPostsignResponse,
         ),
+    ] {
+        assert_eq!(RefusalSituationView::from(situation), expected);
+    }
+}
+
+#[test]
+fn each_refusal_situation_crosses_as_its_own_view() {
+    for (situation, expected) in [
+        (
+            RefusalSituation::AppendedSignaturePage,
+            RefusalSituationView::AppendedSignaturePage,
+        ),
+        (
+            RefusalSituation::UnsupportedFilter,
+            RefusalSituationView::UnsupportedFilter,
+        ),
+        (
+            RefusalSituation::UnsupportedProtocolVersion,
+            RefusalSituationView::UnsupportedProtocolVersion,
+        ),
+        (
+            RefusalSituation::MissingFormat,
+            RefusalSituationView::MissingFormat,
+        ),
+        (
+            RefusalSituation::UnsupportedKeyStore,
+            RefusalSituationView::UnsupportedKeyStore,
+        ),
+        (
+            RefusalSituation::ErrandInFlight,
+            RefusalSituationView::ErrandInFlight,
+        ),
+        (
+            RefusalSituation::PortsTaken,
+            RefusalSituationView::PortsTaken,
+        ),
+        (
+            RefusalSituation::ExplicitXades,
+            RefusalSituationView::ExplicitXades,
+        ),
+        (
+            RefusalSituation::InvoiceMultisignature,
+            RefusalSituationView::InvoiceMultisignature,
+        ),
+        (
+            RefusalSituation::UnsupportedCountersignature,
+            RefusalSituationView::UnsupportedCountersignature,
+        ),
+        (RefusalSituation::Unknown, RefusalSituationView::Unknown),
     ] {
         assert_eq!(RefusalSituationView::from(situation), expected);
     }

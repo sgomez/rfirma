@@ -191,8 +191,8 @@ fn the_published_client_forced_to_the_relay_uploads_the_saf_of_a_refused_operati
     let codecs = CodecTable {
         v4: Arc::new(V4Codec),
         v3: Arc::new(V3Codec),
-        v1: Arc::new(V1Codec),
-        relay: Arc::new(|key| Arc::new(RelayCodec::new(key)) as NegotiatedCodec),
+        v1: Arc::new(|version| Arc::new(V1Codec::new(version)) as NegotiatedCodec),
+        relay: Arc::new(|key, version| Arc::new(RelayCodec::new(key, version)) as NegotiatedCodec),
     };
 
     let attendance = attend_launch(

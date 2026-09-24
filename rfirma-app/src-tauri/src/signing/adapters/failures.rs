@@ -62,6 +62,7 @@ fn bridge_told(error: &BridgeError) -> (&'static str, SafCode) {
         }
         BridgeError::IncompatiblePolicy(_) => ("bridgeFailed", SafCode::InvalidPolicy),
         BridgeError::FormatNotBridged(_) => ("bridgeFailed", SafCode::UnsupportedFormat),
+        BridgeError::UnsupportedOperation(..) => ("bridgeFailed", SafCode::UnsupportedOperation),
         BridgeError::DataRejected(rejection, _) => ("bridgeFailed", code_of_rejection(*rejection)),
         BridgeError::ExecutablePathUnknown(_)
         | BridgeError::NotFound(_)

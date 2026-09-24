@@ -81,20 +81,38 @@ fn every_format_says_the_name_the_original_expects() {
             "XAdES Enveloped",
             "XAdES-ASiC-S",
             "FacturaE",
+            "NONE",
         ]
     );
 }
 
 #[test]
-fn the_bridge_resolves_every_format_of_the_vocabulary() {
+fn the_bridge_resolves_every_format_of_the_vocabulary_but_the_bare_pkcs1() {
     for format in Format::ALL {
+        if format == Format::Pkcs1 {
+            continue;
+        }
         assert_eq!(format.bridged().expect("tiene entradas"), format);
+        assert!(!format.signed_without_the_bridge(), "{format}");
     }
 }
 
 #[test]
-fn the_containers_have_no_validator_of_their_own_in_the_original() {
-    for format in [Format::CadesAsicS, Format::Xades(XadesVariant::AsicS)] {
+fn a_bare_pkcs1_never_crosses_to_the_bridge() {
+    assert!(Format::Pkcs1.signed_without_the_bridge());
+    assert!(matches!(
+        Format::Pkcs1.bridged(),
+        Err(BridgeError::FormatNotBridged(Format::Pkcs1))
+    ));
+}
+
+#[test]
+fn the_containers_and_the_bare_pkcs1_have_no_validator_of_their_own_in_the_original() {
+    for format in [
+        Format::CadesAsicS,
+        Format::Xades(XadesVariant::AsicS),
+        Format::Pkcs1,
+    ] {
         assert!(
             matches!(
                 format.validated(),
@@ -107,7 +125,7 @@ fn the_containers_have_no_validator_of_their_own_in_the_original() {
     for format in Format::ALL {
         if matches!(
             format,
-            Format::CadesAsicS | Format::Xades(XadesVariant::AsicS)
+            Format::CadesAsicS | Format::Xades(XadesVariant::AsicS) | Format::Pkcs1
         ) {
             continue;
         }

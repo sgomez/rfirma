@@ -1,13 +1,14 @@
 use super::super::*;
 use super::fixtures::{
-    an_invoice_signature, an_operation, dat, read_downloading, read_operation, ADownload,
-    AN_INVOICE, A_REMOTE_DOCUMENT,
+    an_invoice_signature, an_operation, dat, properties, read_downloading, read_operation,
+    ADownload, AN_INVOICE, A_REMOTE_DOCUMENT,
 };
-use crate::site::domain::protocol::XadesEnvelope;
+use crate::site::domain::protocol::{RefusalSituation, XadesEnvelope};
+use crate::site::domain::triphase_server::ServerFormat;
 
 #[test]
 fn a_format_the_original_does_not_sign_in_three_phases_is_refused_by_the_protocol() {
-    for name in ["OOXML", "ODF", "SOAP", "NONE"] {
+    for name in ["OOXML", "ODF", "SOAP"] {
         let url = an_operation(&format!(
             "op=sign&format={name}&algorithm=SHA256withRSA&dat={}",
             dat(b"%PDF-1.7\n")
@@ -311,23 +312,58 @@ fn an_algorithm_rfirma_cannot_produce_names_its_parameter() {
     assert_eq!(refusal.blame(), Some(Parameter::Algorithm));
 }
 
+fn explicit() -> Vec<(String, String)> {
+    vec![("mode".to_owned(), "explicit".to_owned())]
+}
+
+fn explicit_with_a_manifest() -> Vec<(String, String)> {
+    vec![
+        ("mode".to_owned(), "explicit".to_owned()),
+        ("useManifest".to_owned(), "true".to_owned()),
+    ]
+}
+
+const ENVELOPING: RequestedFormat = RequestedFormat::Xades(XadesEnvelope::Enveloping);
+
 #[test]
 fn explicit_mode_with_xades_is_refused_with_saf_06() {
-    let refusal = refuse_explicit_xades(
-        RequestedFormat::Xades(XadesEnvelope::Enveloping),
-        &[("mode".to_owned(), "explicit".to_owned())],
-    )
-    .expect_err("la XAdES explicita no se reproduce");
+    let refusal = refuse_explicit_xades(SignatureRound::First, ENVELOPING, None, &explicit())
+        .expect_err("la XAdES explicita firma la huella SHA-1");
 
     assert_eq!(refusal.code(), SafCode::UnsupportedFormat);
     assert!(refusal.detail().contains("mode=explicit"));
 }
 
 #[test]
+fn signing_and_saving_an_explicit_xades_is_refused_with_saf_06() {
+    let url = an_operation(&format!(
+        "op={SIGN_AND_SAVE}&cop={SIGN}&idsession=8jAkPZfRw2mQxN4TbYuL&format=XAdES&\
+         algorithm=SHA256withRSA&properties={}&dat={}",
+        properties("mode=explicit"),
+        dat(b"<a/>")
+    ));
+    let SiteOperation::SignAndSave(request) = read_operation(&url).expect("se lee") else {
+        panic!("es un signandsave");
+    };
+
+    let refusal = refuse_explicit_xades(
+        request.round(),
+        request.format(),
+        request.through_the_site_server(),
+        request.declared_params(),
+    )
+    .expect_err("signandsave con XAdES explicita firma la huella SHA-1");
+
+    assert_eq!(refusal.code(), SafCode::UnsupportedFormat);
+}
+
+#[test]
 fn explicit_mode_with_pades_is_not_refused_here() {
     refuse_explicit_xades(
+        SignatureRound::First,
         RequestedFormat::Pades,
-        &[("mode".to_owned(), "explicit".to_owned())],
+        None,
+        &explicit(),
     )
     .expect("PAdES no tiene esta desviacion");
 }
@@ -335,10 +371,50 @@ fn explicit_mode_with_pades_is_not_refused_here() {
 #[test]
 fn implicit_mode_with_xades_is_not_refused() {
     refuse_explicit_xades(
+        SignatureRound::First,
         RequestedFormat::Xades(XadesEnvelope::Detached),
+        None,
         &[("mode".to_owned(), "implicit".to_owned())],
     )
     .expect("solo se rechaza el modo explicito");
+}
+
+#[test]
+fn an_explicit_xades_cosignature_is_not_refused() {
+    refuse_explicit_xades(SignatureRound::Again, ENVELOPING, None, &explicit())
+        .expect("AutoFirma solo firma la huella en sign");
+}
+
+#[test]
+fn an_explicit_xades_countersignature_is_not_refused() {
+    let round = SignatureRound::Counter {
+        target: CounterTarget::Leafs,
+    };
+
+    refuse_explicit_xades(round, ENVELOPING, None, &explicit())
+        .expect("AutoFirma solo firma la huella en sign");
+}
+
+#[test]
+fn an_explicit_xadestri_signature_is_not_refused() {
+    refuse_explicit_xades(
+        SignatureRound::First,
+        ENVELOPING,
+        Some(ServerFormat::Xades),
+        &explicit(),
+    )
+    .expect("AutoFirma no firma la huella en XAdEStri");
+}
+
+#[test]
+fn an_explicit_xades_signature_with_a_manifest_is_not_refused() {
+    refuse_explicit_xades(
+        SignatureRound::First,
+        ENVELOPING,
+        None,
+        &explicit_with_a_manifest(),
+    )
+    .expect("AutoFirma no firma la huella con useManifest=true");
 }
 
 #[test]
@@ -362,7 +438,7 @@ fn cosigning_or_countersigning_an_invoice_is_refused_with_the_code_of_the_origin
             read_operation(&an_invoice_signature(verb, "FacturaE")).expect_err("no se multifirma");
 
         assert_eq!(refusal.code(), SafCode::UnsupportedOperation);
-        assert!(refusal.detail().contains("factura"), "{}", refusal.detail());
+        assert_eq!(refusal.situation(), RefusalSituation::InvoiceMultisignature);
     }
 }
 
@@ -417,4 +493,50 @@ fn the_format_auto_is_resolved_over_the_downloaded_document() {
         panic!("es una firma");
     };
     assert_eq!(request.format(), RequestedFormat::Pades);
+}
+
+#[test]
+fn the_explicit_xades_refusal_is_shown_with_its_own_situation_and_detail() {
+    let refusal = refuse_explicit_xades(SignatureRound::First, ENVELOPING, None, &explicit())
+        .expect_err("la XAdES explicita firma la huella SHA-1");
+
+    assert_eq!(refusal.situation(), RefusalSituation::ExplicitXades);
+    assert_eq!(
+        refusal.to_string(),
+        "SAF_06: mode=explicit con XAdES (firma de la huella SHA-1)"
+    );
+    assert!(refusal.is_shown_before_it_is_answered());
+}
+
+#[test]
+fn the_refusal_of_a_multisigned_invoice_is_shown_with_its_own_situation_and_detail() {
+    let refusal =
+        refuse_a_multisignature_of_an_invoice(SignatureRound::Again, RequestedFormat::FacturaE)
+            .expect_err("una factura no se cofirma");
+
+    assert_eq!(refusal.situation(), RefusalSituation::InvoiceMultisignature);
+    assert_eq!(
+        refusal.to_string(),
+        "SAF_04: FacturaE no admite cofirma ni contrafirma"
+    );
+    assert!(refusal.is_shown_before_it_is_answered());
+}
+
+#[test]
+fn the_refusal_of_a_countersignature_outside_cades_and_xades_is_shown_with_its_own_situation() {
+    let round = SignatureRound::Counter {
+        target: CounterTarget::Leafs,
+    };
+    let refusal = refuse_a_countersignature_outside_cades_and_xades(round, RequestedFormat::Pades)
+        .expect_err("PAdES no contrafirma");
+
+    assert_eq!(
+        refusal.situation(),
+        RefusalSituation::UnsupportedCountersignature
+    );
+    assert_eq!(
+        refusal.to_string(),
+        "SAF_04: contrafirma fuera de CAdES, CMS y XAdES"
+    );
+    assert!(refusal.is_shown_before_it_is_answered());
 }

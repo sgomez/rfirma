@@ -25,6 +25,7 @@ fn every_format_the_site_can_name_crosses_to_the_one_the_bridge_knows() {
             Format::Xades(XadesVariant::AsicS),
         ),
         (RequestedFormat::FacturaE, Format::FacturaE),
+        (RequestedFormat::Pkcs1, Format::Pkcs1),
     ];
 
     assert_eq!(table.len(), Format::ALL.len(), "sin formato sin traducir");
