@@ -17,7 +17,18 @@ impl ProtocolCodec for V1Codec {
     }
 
     fn encode(&self, outcome: &SiteOutcome) -> String {
-        V4Codec.encode(outcome)
+        match outcome {
+            SiteOutcome::Signature {
+                signer_der,
+                signature,
+                ..
+            } => V4Codec.encode(&SiteOutcome::Signature {
+                signer_der: signer_der.clone(),
+                signature: signature.clone(),
+                chosen_document: None,
+            }),
+            _ => V4Codec.encode(outcome),
+        }
     }
 }
 

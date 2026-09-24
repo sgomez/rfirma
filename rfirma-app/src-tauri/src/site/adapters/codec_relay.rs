@@ -47,6 +47,7 @@ impl ProtocolCodec for RelayCodec {
             SiteOutcome::Signature {
                 signer_der,
                 signature,
+                ..
             } => {
                 format!(
                     "{}{RESULT_SEPARATOR}{}",

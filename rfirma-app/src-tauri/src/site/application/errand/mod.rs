@@ -383,6 +383,7 @@ pub fn document_chosen<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
         return LoadCompletion::Delivered(replies::declined(live));
     };
     let chosen_name = Some(name.clone());
+    live.name_the_chosen_document(name.clone());
     let document = match desk.scratch.read(path) {
         Ok(document) => document,
         Err(detail) => {

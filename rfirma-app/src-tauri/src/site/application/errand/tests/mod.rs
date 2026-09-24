@@ -7,6 +7,7 @@ mod support_window;
 mod batch_local;
 mod batch_remote;
 mod certificate_selection;
+mod chosen_document;
 mod countersignature_and_gzip;
 mod dialog_folder;
 mod document_and_save;

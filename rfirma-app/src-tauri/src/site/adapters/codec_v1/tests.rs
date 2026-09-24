@@ -27,8 +27,19 @@ fn it_encodes_a_signature_exactly_like_the_fourth_protocol() {
     let outcome = SiteOutcome::Signature {
         signer_der: vec![0xfb, 0xff, 0xbf],
         signature: b"%PDF".to_vec(),
+        chosen_document: None,
     };
     assert_eq!(V1Codec.encode(&outcome), V4Codec.encode(&outcome));
+    assert_eq!(V1Codec.encode(&outcome), "-_-_|JVBERg==");
+}
+
+#[test]
+fn it_leaves_the_chosen_document_out_of_a_signature() {
+    let outcome = SiteOutcome::Signature {
+        signer_der: vec![0xfb, 0xff, 0xbf],
+        signature: b"%PDF".to_vec(),
+        chosen_document: Some("documento.txt".to_owned()),
+    };
     assert_eq!(V1Codec.encode(&outcome), "-_-_|JVBERg==");
 }
 

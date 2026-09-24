@@ -1,5 +1,6 @@
 //! Estado del trámite con la sede y gestión de su ciclo de vida (ADR-0016).
 
+mod chosen_document;
 mod revelation;
 
 use crate::site::application::startup::{HeldLaunch, SiteWindow};
@@ -50,6 +51,7 @@ pub struct LiveErrand {
     stuck: Mutex<Option<CertificateRef>>,
     arrived: std::sync::atomic::AtomicBool,
     held_launch: Mutex<Option<HeldLaunch>>,
+    chosen_document: Mutex<Option<String>>,
 }
 
 /// Datos identificativos y de conexión de un trámite en curso.
@@ -282,6 +284,7 @@ impl LiveErrand {
             scratch.files.erase(&scratch.path);
         }
         *crate::lock(&self.asked) = None;
+        *crate::lock(&self.chosen_document) = None;
         self.forget_the_consent();
     }
 
