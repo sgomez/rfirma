@@ -4,4 +4,4 @@ import type { KnownBug } from "./KnownBug";
 import type { ResultName } from "./ResultName";
 import type { Store } from "./Store";
 
-export type CheckView = { id: string, chapter: string, statement: string, citation: string, warning: string | null, question: string | null, assistance: Assistance | null, store: Store, bug: KnownBug | null, state: ResultName, observation: string | null, date: string | null, duration_ms: number | null, };
+export type CheckView = { id: string, chapter: string, statement: string, citation: string, warning: string | null, question: string | null, assistance: Assistance | null, store: Store, bug: KnownBug | null, deprecated: boolean, state: ResultName, observation: string | null, date: string | null, duration_ms: number | null, };

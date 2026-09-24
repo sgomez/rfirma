@@ -164,3 +164,10 @@ _Avoid_: sorpresa, regresión
 Una exigencia en la que rFirma no hace lo que AutoFirma porque un ADR suyo lo decidió. La suite no
 la conoce: sale NO CONFORME sin causa, y el porqué lo cuenta el ADR.
 _Avoid_: excepción, falso negativo
+
+**Formato deprecado**:
+Un formato que el manual de AutoFirma desaconseja y mantiene solo por retrocompatibilidad (CMS,
+XMLDSig, ODF y OOXML): AutoFirma lo soporta y rFirma no. La comprobación que lo mide lo declara en
+el catálogo; su resultado no cambia, pero la consola la marca y su NO CONFORME se cuenta aparte de
+los fallos del cliente.
+_Avoid_: obsoleto, retirado

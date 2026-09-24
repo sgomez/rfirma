@@ -1,6 +1,6 @@
 import type { Summary } from "../contract/Summary";
 import { ResultIcon } from "../ui/icons";
-import { countOf, RESULTS, resultTone } from "../words";
+import { countOf, DEPRECATED_LABEL, RESULTS, resultTone } from "../words";
 
 export function SummaryBar({ summary, compact = false }: { summary: Summary; compact?: boolean }) {
   const done = summary.total - summary.pending;
@@ -20,6 +20,9 @@ export function SummaryBar({ summary, compact = false }: { summary: Summary; com
           />
         );
       })}
+      {summary.deprecated > 0 && (
+        <span className="segment tone-deprecated" style={{ flexGrow: summary.deprecated }} />
+      )}
     </div>
   );
 }
@@ -36,6 +39,11 @@ export function Counts({ summary }: { summary: Summary }) {
           </li>
         );
       })}
+      {summary.deprecated > 0 && (
+        <li className="deprecated-count" title={DEPRECATED_LABEL}>
+          <span className="count">{summary.deprecated} deprecados</span>
+        </li>
+      )}
     </ul>
   );
 }

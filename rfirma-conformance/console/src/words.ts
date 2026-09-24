@@ -33,6 +33,15 @@ export function countOf(summary: Summary, result: ResultName): number {
   }
 }
 
+export function rowsWith(summary: Summary, result: ResultName): number {
+  return countOf(summary, result) + (result === "NO CONFORME" ? summary.deprecated : 0);
+}
+
+export const DEPRECATED_LABEL = "Formato deprecado";
+
+export const DEPRECATED_REASON =
+  "El manual de AutoFirma lo desaconseja (MCF, §8): AutoFirma lo soporta y rFirma no, y su NO CONFORME no cuenta como fallo.";
+
 export const assistanceName: Record<Assistance, string> = {
   none: "nada: es automática",
   click: "elegir o pulsar en un diálogo",

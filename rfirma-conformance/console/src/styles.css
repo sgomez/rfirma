@@ -1101,6 +1101,10 @@ select.input {
   font-variant-numeric: tabular-nums;
 }
 
+.segment.tone-deprecated {
+  background: color-mix(in srgb, var(--fail) 35%, transparent);
+}
+
 .counts li.is-zero {
   opacity: 0.35;
 }
@@ -1490,6 +1494,13 @@ select.input {
   align-items: center;
   gap: var(--s2);
   min-width: 0;
+}
+
+.tag-deprecated {
+  flex: none;
+  height: 18px;
+  font-weight: 400;
+  cursor: help;
 }
 
 .tag-bug {

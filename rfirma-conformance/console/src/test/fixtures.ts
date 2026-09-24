@@ -17,6 +17,7 @@ export function aCheck(id: string, state: ResultName = "PENDIENTE"): CheckView {
     assistance: "none",
     store: "rsa",
     bug: null,
+    deprecated: false,
     state,
     observation: state === "PENDIENTE" ? null : "el trámite se completó",
     date: state === "PENDIENTE" ? null : "2026-09-21",
@@ -38,12 +39,26 @@ export function withABug(view: ReportView, id: string, bug: KnownBug): ReportVie
   };
 }
 
+export function withADeprecatedFormat(view: ReportView, id: string): ReportView {
+  const sets = view.sets.map((set) =>
+    aSet(
+      set.name,
+      set.checks.map((check) => (check.id === id ? { ...check, deprecated: true } : check)),
+    ),
+  );
+  return { ...view, sets, summary: summaryOf(sets.flatMap((set) => set.checks)) };
+}
+
 function summaryOf(checks: CheckView[]): Summary {
   const count = (state: ResultName) => checks.filter((check) => check.state === state).length;
+  const deprecated = checks.filter(
+    (check) => check.deprecated && check.state === "NO CONFORME",
+  ).length;
   return {
     total: checks.length,
     compliant: count("CONFORME"),
-    noncompliant: count("NO CONFORME"),
+    noncompliant: count("NO CONFORME") - deprecated,
+    deprecated,
     not_observable: count("NO OBSERVABLE"),
     pending: count("PENDIENTE"),
   };
