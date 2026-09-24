@@ -228,7 +228,7 @@ fn round_of_cop(url: &AfirmaUrl, declared: &[(String, String)]) -> Result<Signat
     match cop.as_str() {
         SIGN => Ok(SignatureRound::First),
         COSIGN => Ok(SignatureRound::Again),
-        COUNTERSIGN => counter_round(declared),
+        COUNTERSIGN => Ok(counter_round(declared)),
         other => Err(Refusal::new(
             SafCode::UnsupportedOperation,
             format!(
