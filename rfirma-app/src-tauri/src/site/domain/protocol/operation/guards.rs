@@ -41,10 +41,9 @@ pub fn refuse_a_multisignature_of_an_invoice(
     if !first && matches!(format, RequestedFormat::FacturaE) {
         return Err(Refusal::new(
             SafCode::UnsupportedOperation,
-            "una factura ni se cofirma ni se contrafirma: AOFacturaESigner lanza una \
-             UnsupportedOperationException en las dos",
+            "FacturaE no admite cofirma ni contrafirma",
         )
-        .found_while_processing());
+        .because(RefusalSituation::InvoiceMultisignature));
     }
     Ok(())
 }
@@ -80,8 +79,9 @@ pub fn refuse_explicit_xades(
     if signs_the_digest {
         return Err(Refusal::new(
             SafCode::UnsupportedFormat,
-            "'mode=explicit' con XAdES no se reproduce: ver domain/protocol/mod.rs",
-        ));
+            "mode=explicit con XAdES (firma de la huella SHA-1)",
+        )
+        .because(RefusalSituation::ExplicitXades));
     }
     Ok(())
 }
@@ -120,13 +120,10 @@ pub(super) fn check_algorithm(url: &AfirmaUrl) -> Result<AskedAlgorithm, Refusal
     })
 }
 
-/// `'countersign' solo existe en CAdES y XAdES`, compartido por `read_operation`
-/// y por el `cop` de `signandsave`.
 fn countersign_refusal() -> Refusal {
     Refusal::new(
         SafCode::UnsupportedOperation,
-        "'countersign' no existe fuera de CAdES y XAdES: AOPDFSigner.countersign lanza una \
-         UnsupportedOperationException",
+        "contrafirma fuera de CAdES, CMS y XAdES",
     )
-    .found_while_processing()
+    .because(RefusalSituation::UnsupportedCountersignature)
 }

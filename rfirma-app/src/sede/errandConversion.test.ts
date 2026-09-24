@@ -124,6 +124,21 @@ describe("cada momento que llega se convierte en lo que la ventana espera", () =
     });
   });
 
+  it.each(["explicitXades", "invoiceMultisignature", "unsupportedCountersignature"])(
+    "keeps %s, a signature rFirma refuses to make, as its own refusal",
+    (situation) => {
+      const view: SiteErrandView = {
+        origin: null,
+        stage: {
+          kind: "outcome",
+          outcome: { kind: "refused", situation, detail: "CRUDO" },
+        },
+      };
+
+      expect(errandOf(view).stage).toMatchObject({ outcome: { situation } });
+    },
+  );
+
   it("keeps the ports another application holds as their own refusal", () => {
     const view: SiteErrandView = {
       origin: null,

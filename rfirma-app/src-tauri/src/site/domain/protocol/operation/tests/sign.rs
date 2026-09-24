@@ -2,7 +2,7 @@ use super::super::*;
 use super::fixtures::{
     a_countersignature, a_signature, an_operation, dat, properties, read_operation,
 };
-use crate::site::domain::protocol::XadesEnvelope;
+use crate::site::domain::protocol::{RefusalSituation, XadesEnvelope};
 use crate::site::domain::triphase_server::ServerFormat;
 
 #[test]
@@ -32,7 +32,10 @@ fn a_countersignature_in_pades_is_refused_with_the_code_of_the_original() {
     let refusal = read_operation(&a_signature(COUNTERSIGN, "")).expect_err("no existe");
 
     assert_eq!(refusal.code(), SafCode::UnsupportedOperation);
-    assert!(refusal.detail().contains("countersign"));
+    assert_eq!(
+        refusal.situation(),
+        RefusalSituation::UnsupportedCountersignature
+    );
 }
 
 #[test]

@@ -21,6 +21,12 @@ pub enum RefusalSituation {
     ErrandInFlight,
     /// Otra aplicación ocupa todos los puertos que ofrece la sede.
     PortsTaken,
+    /// La sede pide la XAdES explícita, que firma la huella SHA-1 y no el documento.
+    ExplicitXades,
+    /// La sede pide cofirmar o contrafirmar una factura electrónica.
+    InvoiceMultisignature,
+    /// La sede pide contrafirmar fuera de CAdES, CMS y XAdES.
+    UnsupportedCountersignature,
     /// Cualquier otra situación no clasificada individualmente.
     #[default]
     Unknown,
@@ -113,13 +119,20 @@ impl Refusal {
         &self.detail
     }
 
-    /// Si el original lo enseña en su diálogo de error antes de contestar: los del análisis de la petición.
+    /// Si se enseña antes de contestar: lo que el original enseña al analizar, y lo que rFirma no firma.
     pub fn is_shown_before_it_is_answered(&self) -> bool {
-        !self.found_while_processing
+        let refused_to_sign = matches!(
+            self.situation,
+            RefusalSituation::ExplicitXades
+                | RefusalSituation::InvoiceMultisignature
+                | RefusalSituation::UnsupportedCountersignature
+        );
+        let shown_by_the_original = !self.found_while_processing
             && matches!(
                 self.code,
                 SafCode::Params | SafCode::UnsupportedOperation | SafCode::LocalAccessBlocked
-            )
+            );
+        refused_to_sign || shown_by_the_original
     }
 }
 

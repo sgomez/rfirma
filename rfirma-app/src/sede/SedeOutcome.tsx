@@ -135,6 +135,7 @@ export function SedeOutcome({
               <RefusalSentence situation={outcome.situation} origin={origin} />
             </p>
             <p className="rf-hint">{t("sede.outcome.refusedNote")}</p>
+            <SiteNote situation={outcome.situation} />
             <div className="rf-stack rf-gap-xs sede-outcome__detail">
               <div className="rf-row rf-gap-xs sede-outcome__detail-head">
                 <span className="rf-label">{t("sede.outcome.detail")}</span>
@@ -247,6 +248,12 @@ function RefusalSentence({
       return <>{t("sede.refusals.errandInFlight", subject)}</>;
     case "portsTaken":
       return <>{t("sede.refusals.portsTaken", subject)}</>;
+    case "explicitXades":
+      return <>{t("sede.refusals.explicitXades", subject)}</>;
+    case "invoiceMultisignature":
+      return <>{t("sede.refusals.invoiceMultisignature", subject)}</>;
+    case "unsupportedCountersignature":
+      return <>{t("sede.refusals.unsupportedCountersignature", subject)}</>;
     case "saveCancelled":
       return <>{t("sede.refusals.saveCancelled", subject)}</>;
     case "loadCancelled":
@@ -337,6 +344,22 @@ function RefusalSentence({
       return <>{t("errors.situations.folderUnwritable.title")}</>;
     case "noFreeName":
       return <>{t("errors.situations.noFreeName.title")}</>;
+  }
+}
+
+/** Lo que quien mantiene la sede puede cambiar para que rFirma firme, cuando rFirma se niega. */
+function SiteNote({ situation }: { situation: RefusalSituation }) {
+  const { t } = useTranslation();
+
+  switch (situation) {
+    case "explicitXades":
+      return <p className="rf-hint">{t("sede.siteNotes.explicitXades")}</p>;
+    case "invoiceMultisignature":
+      return <p className="rf-hint">{t("sede.siteNotes.invoiceMultisignature")}</p>;
+    case "unsupportedCountersignature":
+      return <p className="rf-hint">{t("sede.siteNotes.unsupportedCountersignature")}</p>;
+    default:
+      return null;
   }
 }
 

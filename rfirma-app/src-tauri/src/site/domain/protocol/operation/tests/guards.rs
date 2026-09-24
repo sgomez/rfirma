@@ -3,7 +3,7 @@ use super::fixtures::{
     an_invoice_signature, an_operation, dat, properties, read_downloading, read_operation,
     ADownload, AN_INVOICE, A_REMOTE_DOCUMENT,
 };
-use crate::site::domain::protocol::XadesEnvelope;
+use crate::site::domain::protocol::{RefusalSituation, XadesEnvelope};
 use crate::site::domain::triphase_server::ServerFormat;
 
 #[test]
@@ -438,7 +438,7 @@ fn cosigning_or_countersigning_an_invoice_is_refused_with_the_code_of_the_origin
             read_operation(&an_invoice_signature(verb, "FacturaE")).expect_err("no se multifirma");
 
         assert_eq!(refusal.code(), SafCode::UnsupportedOperation);
-        assert!(refusal.detail().contains("factura"), "{}", refusal.detail());
+        assert_eq!(refusal.situation(), RefusalSituation::InvoiceMultisignature);
     }
 }
 
@@ -493,4 +493,50 @@ fn the_format_auto_is_resolved_over_the_downloaded_document() {
         panic!("es una firma");
     };
     assert_eq!(request.format(), RequestedFormat::Pades);
+}
+
+#[test]
+fn the_explicit_xades_refusal_is_shown_with_its_own_situation_and_detail() {
+    let refusal = refuse_explicit_xades(SignatureRound::First, ENVELOPING, None, &explicit())
+        .expect_err("la XAdES explicita firma la huella SHA-1");
+
+    assert_eq!(refusal.situation(), RefusalSituation::ExplicitXades);
+    assert_eq!(
+        refusal.to_string(),
+        "SAF_06: mode=explicit con XAdES (firma de la huella SHA-1)"
+    );
+    assert!(refusal.is_shown_before_it_is_answered());
+}
+
+#[test]
+fn the_refusal_of_a_multisigned_invoice_is_shown_with_its_own_situation_and_detail() {
+    let refusal =
+        refuse_a_multisignature_of_an_invoice(SignatureRound::Again, RequestedFormat::FacturaE)
+            .expect_err("una factura no se cofirma");
+
+    assert_eq!(refusal.situation(), RefusalSituation::InvoiceMultisignature);
+    assert_eq!(
+        refusal.to_string(),
+        "SAF_04: FacturaE no admite cofirma ni contrafirma"
+    );
+    assert!(refusal.is_shown_before_it_is_answered());
+}
+
+#[test]
+fn the_refusal_of_a_countersignature_outside_cades_and_xades_is_shown_with_its_own_situation() {
+    let round = SignatureRound::Counter {
+        target: CounterTarget::Leafs,
+    };
+    let refusal = refuse_a_countersignature_outside_cades_and_xades(round, RequestedFormat::Pades)
+        .expect_err("PAdES no contrafirma");
+
+    assert_eq!(
+        refusal.situation(),
+        RefusalSituation::UnsupportedCountersignature
+    );
+    assert_eq!(
+        refusal.to_string(),
+        "SAF_04: contrafirma fuera de CAdES, CMS y XAdES"
+    );
+    assert!(refusal.is_shown_before_it_is_answered());
 }

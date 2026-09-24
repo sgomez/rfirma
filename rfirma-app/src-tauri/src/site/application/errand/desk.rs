@@ -301,11 +301,11 @@ fn consent_to_a_signature<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
     live: &LiveErrand,
 ) -> ErrandStep {
     if let Err(refusal) = refuse_a_multisignature_of_an_invoice(ask.round, ask.format) {
-        return answering(live, SiteOutcome::RefusedByTheProtocol(refusal));
+        return ErrandStep::ShowingTheRefusal(refusal);
     }
 
     if let Err(refusal) = refuse_a_countersignature_outside_cades_and_xades(ask.round, ask.format) {
-        return answering(live, SiteOutcome::RefusedByTheProtocol(refusal));
+        return ErrandStep::ShowingTheRefusal(refusal);
     }
 
     if let Err(refusal) = refuse_explicit_xades(
@@ -314,7 +314,7 @@ fn consent_to_a_signature<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
         ask.through_the_site_server,
         ask.declared_params,
     ) {
-        return answering(live, SiteOutcome::RefusedByTheProtocol(refusal));
+        return ErrandStep::ShowingTheRefusal(refusal);
     }
 
     let format = match Format::from(ask.format).bridged() {

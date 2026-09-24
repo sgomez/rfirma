@@ -217,7 +217,7 @@ fn a_refusal_the_original_answers_without_a_dialogue_is_answered_at_once() {
 }
 
 #[test]
-fn cosigning_an_invoice_is_answered_at_once_as_the_original_answers_it_while_signing() {
+fn cosigning_an_invoice_is_shown_before_it_is_answered() {
     let window = Arc::new(AWindow::default());
     let live = a_websocket_errand(&window);
     let (handle, mut wire) = the_wire();
@@ -228,8 +228,8 @@ fn cosigning_an_invoice_is_answered_at_once_as_the_original_answers_it_while_sig
         &live,
     );
 
-    assert!(matches!(step, ErrandStep::Answering(_)), "{step:?}");
-    assert!(what_the_site_received(&mut wire).is_some_and(|line| line.starts_with("SAF_04")));
+    assert!(matches!(step, ErrandStep::ShowingTheRefusal(_)), "{step:?}");
+    assert_eq!(what_the_site_received(&mut wire), None);
 }
 
 #[test]

@@ -1643,6 +1643,24 @@ msgstr "PIN eskaera bertan behera utzi duzu; beraz, {{origin}}(e)k eskatzen zuen
 msgid "sede.refusals.promptFailed"
 msgstr "rFirmak ezin izan dizu PINa eskatu {{origin}}(e)k eskatzen zuen sinadurarako."
 
+msgid "sede.refusals.explicitXades"
+msgstr "{{origin}}(e)k sinadura mota zahar bat eskatu du, jada segurua ez dena: sinadura hori zurea ez den beste dokumentu batena balitz bezala pasa liteke. Horregatik, rFirmak ez du egiten. Ez da zure akatsa; izapidea amaitu behar baduzu, jarri harremanetan {{origin}}(e)rekin."
+
+msgid "sede.refusals.invoiceMultisignature"
+msgstr "{{origin}}(e)k dagoeneko sinatuta dagoen faktura elektroniko bati sinadura bat gehitzeko eskatu du. Faktura elektronikoak sinadura bakarra onartzen du, beraz rFirmak ezin du egin. Ez da zure akatsa; izapidea amaitu behar baduzu, jarri harremanetan {{origin}}(e)rekin."
+
+msgid "sede.refusals.unsupportedCountersignature"
+msgstr "{{origin}}(e)k beste pertsona baten sinaduraren gainean sinatzeko eskatu du, hori onartzen ez duen dokumentu mota batean, beraz rFirmak ezin du egin. Ez da zure akatsa; izapidea amaitu behar baduzu, jarri harremanetan {{origin}}(e)rekin."
+
+msgid "sede.siteNotes.explicitXades"
+msgstr "Kendu mode=explicit edo erabili CAdES esplizitua, dokumentua sartu gabe sinatzen baitu."
+
+msgid "sede.siteNotes.invoiceMultisignature"
+msgstr "FacturaE-k ez du kosinadurarik ez kontrasinadurarik onartzen; eskatu sinadura soil bat (sign)."
+
+msgid "sede.siteNotes.unsupportedCountersignature"
+msgstr "Kontrasinadura CAdES, CMS eta XAdES formatuetan bakarrik dago; beste formatu batean, eskatu kosinadura bat (cosign)."
+
 msgid "sede.noCertificate.noneTitle"
 msgstr "Ez duzu ziurtagiririk"
 
