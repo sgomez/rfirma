@@ -135,6 +135,9 @@ public final class XadesBridge {
             effectiveParams.setProperty(PARAM_TARGET, target);
         }
         requireASignatureToMultisign(requested, document, effectiveParams);
+        if (OPERATION_SIGN.equals(requested)) {
+            SignatureTimestamp.requireAUsableTsa(effectiveParams);
+        }
 
         final TimeZone timeZone = TimeZone.getDefault();
         final String time = Long.toString(System.currentTimeMillis());
@@ -266,9 +269,9 @@ public final class XadesBridge {
             case OPERATION_COUNTERSIGN -> processor.preProcessPostCounterSign(
                     document, stamp.algorithm(), chain, effectiveParams, session,
                     CounterSignTarget.getTarget(stamp.target()));
-            default -> processor.preProcessPostSign(
+            default -> SignatureTimestamp.stampXades(processor.preProcessPostSign(
                     signerDocument(effectiveParams, document), stamp.algorithm(), chain,
-                    signerParams(effectiveParams, document), session);
+                    signerParams(effectiveParams, document), session), effectiveParams);
         };
 
         return isAsicS(effectiveParams) ? asicSContainer(signature, document, effectiveParams)

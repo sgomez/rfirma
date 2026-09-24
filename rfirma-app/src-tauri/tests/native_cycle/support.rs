@@ -141,6 +141,28 @@ pub(crate) fn a_cycle_signed_by(
     operation: SignatureOperation,
     declared: &[(&str, &str)],
 ) -> Vec<u8> {
+    a_cycle_that_may_fail(
+        certificate,
+        secret,
+        format,
+        algorithm,
+        data,
+        operation,
+        declared,
+    )
+    .unwrap_or_else(|failure| panic!("{failure}"))
+}
+
+/// El mismo ciclo sin dar por hecho que salga: el fallo de la prefirma o de la postfirma, en texto.
+pub(crate) fn a_cycle_that_may_fail(
+    certificate: &TokenCertificate,
+    secret: &str,
+    format: Format,
+    algorithm: SignatureAlgorithm,
+    data: &[u8],
+    operation: SignatureOperation,
+    declared: &[(&str, &str)],
+) -> Result<Vec<u8>, String> {
     let bridge = bridge();
     let chain = certificate.chain();
     let reference = certificate.reference().clone();
@@ -170,7 +192,7 @@ pub(crate) fn a_cycle_signed_by(
             certificate: &reference,
         },
     )
-    .unwrap_or_else(|error| panic!("la prefirma en {format} debería salir: {error}"));
+    .map_err(|error| format!("la prefirma en {format} debería salir: {error}"))?;
 
     let signature = cycle
         .sign_on_token(&pkcs11::RealToken, secret)
@@ -178,8 +200,8 @@ pub(crate) fn a_cycle_signed_by(
 
     cycle
         .postsign(&bridge, signature, &cycle.seal_in_transit())
-        .unwrap_or_else(|error| panic!("la postfirma en {format} debería ensamblar: {error}"))
-        .into_signed_document()
+        .map(|completed| completed.into_signed_document())
+        .map_err(|error| format!("la postfirma en {format} debería ensamblar: {error}"))
 }
 
 pub(crate) fn write_to_target(name: &str, bytes: &[u8]) -> PathBuf {

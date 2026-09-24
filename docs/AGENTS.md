@@ -35,6 +35,7 @@ Busca en este índice, y si aun así necesitas el fichero, entra con
 | 0024 | Un proceso por trámite de sede, y el escritorio aparte |
 | 0025 | `selectcert` no abre sesión en el token: sin PIN en una operación que no firma |
 | 0029 | La envoltura XAdES la declara la sede; el nombre del formato solo la suple |
+| 0030 | Una firma que pide sello de tiempo y no se puede sellar no sale: `SAF_09`, nunca una firma sin sello |
 
 Los ADR que solo afectan a la suite de conformidad viven en `rfirma-conformance/docs/adr/` y
 comparten la numeración: el siguiente ADR, esté donde esté, toma el número libre más alto.
