@@ -86,7 +86,7 @@ export const NAMED_BY_THE_DESK = [
   "noFreeName",
 ] as const satisfies readonly (keyof Catalog["errors"]["situations"])[];
 
-export type NamedByTheDesk = (typeof NAMED_BY_THE_DESK)[number];
+type NamedByTheDesk = (typeof NAMED_BY_THE_DESK)[number];
 
 /**
  * Cómo acabó el trámite. En los tres casos **la sede ya ha recibido su
