@@ -1542,6 +1542,18 @@ msgstr ""
 msgid "sede.refusals.batchSigningFailed"
 msgstr "The batch signature {{origin}} asked for didn't complete."
 
+msgid "sede.refusals.triphaseServerUrlMissing"
+msgstr "{{origin}} asked to sign with its signing service, but didn't say where it is."
+
+msgid "sede.refusals.triphaseServerException"
+msgstr "The {{origin}} signing service returned an error."
+
+msgid "sede.refusals.triphaseServerUnreachable"
+msgstr "The {{origin}} signing service didn't answer."
+
+msgid "sede.refusals.triphaseServerUnexpectedAnswer"
+msgstr "The {{origin}} signing service answered something rFirma can't read."
+
 msgid "sede.noCertificate.noneTitle"
 msgstr "You don't have any certificate"
 

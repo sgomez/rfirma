@@ -98,6 +98,27 @@ describe("4 · outcome", () => {
     expect(screen.getByText("presigner: connection refused")).toBeInTheDocument();
   });
 
+  it.each([
+    [
+      "triphaseServerUrlMissing",
+      "sede.ejemplo.gob.es ha pedido firmar con su servicio de firma, pero no ha dicho dónde está.",
+    ],
+    ["triphaseServerException", "El servicio de firma de sede.ejemplo.gob.es ha dado un error."],
+    ["triphaseServerUnreachable", "El servicio de firma de sede.ejemplo.gob.es no ha contestado."],
+    [
+      "triphaseServerUnexpectedAnswer",
+      "El servicio de firma de sede.ejemplo.gob.es ha contestado algo que rFirma no sabe leer.",
+    ],
+  ] as const)("gives the triphase server refusal %s its own phrase", (situation, phrase) => {
+    const { port } = scriptedErrand({
+      kind: "outcome",
+      outcome: { kind: "refused", situation, detail: "CRUDO" },
+    });
+    renderWithCatalog(<SedeWindow errands={port} />);
+
+    expect(screen.getByText(phrase)).toBeInTheDocument();
+  });
+
   it("classifies a cancelled save as its own refusal, with its own phrase", () => {
     const { port } = scriptedErrand({
       kind: "outcome",

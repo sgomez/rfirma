@@ -1560,6 +1560,18 @@ msgid "sede.refusals.batchSigningFailed"
 msgstr ""
 "La signatura del lot que demanava {{origin}} no s'ha arribat a completar."
 
+msgid "sede.refusals.triphaseServerUrlMissing"
+msgstr "{{origin}} ha demanat signar amb el seu servei de signatura, però no ha dit on és."
+
+msgid "sede.refusals.triphaseServerException"
+msgstr "El servei de signatura de {{origin}} ha donat un error."
+
+msgid "sede.refusals.triphaseServerUnreachable"
+msgstr "El servei de signatura de {{origin}} no ha contestat."
+
+msgid "sede.refusals.triphaseServerUnexpectedAnswer"
+msgstr "El servei de signatura de {{origin}} ha contestat alguna cosa que rFirma no sap llegir."
+
 msgid "sede.noCertificate.noneTitle"
 msgstr "No tens cap certificat"
 
