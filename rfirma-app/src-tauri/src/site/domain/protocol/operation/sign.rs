@@ -5,6 +5,7 @@ use super::super::data_source::DataSource;
 use super::super::filters::{site_filter, SiteFilter};
 use super::super::format::{format_of, RequestedFormat};
 use super::super::key_store::module_named_by;
+use super::super::parameters::{sticky_certificate, StickyCertificate};
 use super::super::refusal::Refusal;
 use super::super::url::AfirmaUrl;
 use super::document::{optional_document, read_document};
@@ -84,6 +85,7 @@ pub struct SignRequest {
     document: Vec<u8>,
     declared: Vec<(String, String)>,
     filter: SiteFilter,
+    sticky: StickyCertificate,
     headless: bool,
     through_the_site_server: Option<ServerFormat>,
 }
@@ -119,6 +121,11 @@ impl SignRequest {
         &self.filter
     }
 
+    /// Lo que la sede pide sobre el certificado pegado.
+    pub fn sticky(&self) -> StickyCertificate {
+        self.sticky
+    }
+
     /// Si la sede se conforma con el único certificado que pase el filtro (`headless`).
     pub fn is_headless(&self) -> bool {
         self.headless
@@ -142,6 +149,7 @@ pub struct PendingSignRequest {
     requested: Option<RequestedFormat>,
     declared: Vec<(String, String)>,
     filter: SiteFilter,
+    sticky: StickyCertificate,
     headless: bool,
     load_extensions: Vec<String>,
     load_description: Option<String>,
@@ -192,6 +200,7 @@ impl PendingSignRequest {
             document,
             declared: self.declared,
             filter: self.filter,
+            sticky: self.sticky,
             headless: self.headless,
             through_the_site_server: self.through_the_site_server,
         }
@@ -225,12 +234,14 @@ pub(super) fn sign_request(
     let properties = declared_properties(url);
     let declared = properties.crossing().to_vec();
     let through_the_site_server = url.parameter("format").and_then(ServerFormat::named);
+    let sticky = sticky_certificate(url);
     if url.parameter("dat").is_none() {
         return Ok(SiteOperation::SignWithoutDocument(PendingSignRequest {
             round,
             algorithm,
             requested,
             filter: site_filter(&declared).within_the_module(module_named_by(url)),
+            sticky,
             headless: properties.is_headless(),
             load_extensions: comma_list_value(property_value(&declared, FILENAME_EXTS)),
             load_description: property_value(&declared, FILENAME_DESCRIPTION),
@@ -258,6 +269,7 @@ pub(super) fn sign_request(
         format,
         document,
         filter: site_filter(&declared).within_the_module(module_named_by(url)),
+        sticky,
         headless: properties.is_headless(),
         declared,
         through_the_site_server,

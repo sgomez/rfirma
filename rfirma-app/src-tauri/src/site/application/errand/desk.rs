@@ -4,8 +4,8 @@ mod certificates;
 mod confirmation;
 mod scratch;
 
-use certificates::the_only_row_among;
 pub use certificates::{consent_for, consent_to_the_batch, consent_to_the_local_batch};
+use certificates::{rows_preselecting_the_stuck, the_only_row_among, what_the_site_accepts};
 pub use confirmation::consent_to_the_confirmed_signature;
 use confirmation::{
     asking_to_confirm, asks_to_check_signatures, the_previous_signatures_hold,
@@ -27,6 +27,7 @@ use crate::site::domain::protocol::{
     refuse_a_multisignature_of_an_invoice, refuse_explicit_xades, visible_signature_of, AfirmaUrl,
     AskedAlgorithm, LoadRequest, PendingSignRequest, RequestedFormat, SaveRequest,
     SignAndSaveRequest, SignRequest, SignatureRound, SiteFilter, SiteVisibleSignature,
+    StickyCertificate,
 };
 use crate::site::domain::triphase_server::ServerFormat;
 
@@ -34,10 +35,9 @@ use super::outcome::{
     ErrandStep, ForTheSiteServer, LoadingConsent, PendingSignature, SavingConsent, SavingHints,
     SigningConsent, SiteOutcome,
 };
-use super::replies::{answering, no_certificate_at_all, no_certificate_the_site_accepts};
+use super::replies::answering;
 use super::request::SiteRequest;
 use super::state::LiveErrand;
-use crate::site::application::filtering;
 use crate::site::application::policies;
 use crate::site::application::session::SiteRefusal;
 use crate::site::ports::{
@@ -235,6 +235,7 @@ pub fn consent_to_sign<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
             round: request.round(),
             declared_params: request.declared_params(),
             filter: request.filter(),
+            sticky: request.sticky(),
             headless: request.is_headless(),
             through_the_site_server: request.through_the_site_server(),
             confirmed: BTreeMap::new(),
@@ -268,6 +269,7 @@ pub fn consent_to_sign_and_save<E: FilterEngine, P: PolicyEngine, N: Neighbours>
             round: request.round(),
             declared_params: request.declared_params(),
             filter: request.filter(),
+            sticky: request.sticky(),
             headless: request.is_headless(),
             through_the_site_server: request.through_the_site_server(),
             confirmed: BTreeMap::new(),
@@ -286,6 +288,7 @@ struct SignatureAsk<'a> {
     round: SignatureRound,
     declared_params: &'a [(String, String)],
     filter: &'a SiteFilter,
+    sticky: StickyCertificate,
     headless: bool,
     through_the_site_server: Option<ServerFormat>,
     confirmed: BTreeMap<String, String>,
@@ -393,7 +396,14 @@ fn consent_to_a_signature<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
         SiteVisibleSignature::Declined
     };
 
-    let accepted = match accepted_listing(desk, ask.filter, ours, live) {
+    let accepted = match what_the_site_accepts(
+        desk.engine,
+        ask.filter,
+        ask.sticky,
+        ours,
+        &desk.neighbours,
+        live,
+    ) {
         Ok(accepted) => accepted,
         Err(step) => return step,
     };
@@ -403,11 +413,13 @@ fn consent_to_a_signature<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
         Err(refusal) => return answering(live, SiteOutcome::Refused(refusal)),
     };
 
-    let certificates = desk.neighbours.rows_of(accepted);
-    let already_chosen = ask
-        .headless
-        .then(|| the_only_row_among(&certificates))
-        .flatten();
+    let (certificates, stuck) =
+        rows_preselecting_the_stuck(accepted, ask.sticky, &desk.neighbours, live);
+    let already_chosen = stuck.or_else(|| {
+        ask.headless
+            .then(|| the_only_row_among(&certificates))
+            .flatten()
+    });
     ErrandStep::AskingToSign(Box::new(SigningConsent {
         document,
         format,
@@ -447,30 +459,4 @@ fn waivers_declared_in(ask: &SignatureAsk<'_>) -> Waivers {
     } else {
         declared.the_person_types_the_password()
     }
-}
-
-fn accepted_listing<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
-    desk: &ErrandDesk<'_, E, P, N>,
-    filter: &SiteFilter,
-    ours: Vec<TokenCertificate>,
-    live: &LiveErrand,
-) -> Result<Vec<TokenCertificate>, ErrandStep> {
-    if ours.is_empty() {
-        return Err(no_certificate_at_all());
-    }
-
-    let owned = ours.len();
-    let accepted =
-        filtering::keep_what_the_site_accepts(desk.engine, filter, ours, &desk.neighbours)
-            .map_err(|error| {
-                answering(
-                    live,
-                    SiteOutcome::Refused(SiteRefusal::CouldNotFilter(error)),
-                )
-            })?;
-
-    if accepted.is_empty() {
-        return Err(no_certificate_the_site_accepts(live, owned));
-    }
-    Ok(accepted)
 }
