@@ -12,6 +12,7 @@ import java.util.TimeZone;
 
 import es.gob.afirma.core.signers.CounterSignTarget;
 import es.gob.afirma.core.signers.TriphaseData;
+import es.gob.afirma.core.signers.asic.ASiCUtil;
 import es.gob.afirma.triphase.signer.processors.CAdESASiCSTriPhasePreProcessor;
 import es.gob.afirma.triphase.signer.processors.CAdESTriPhasePreProcessor;
 
@@ -67,6 +68,8 @@ public final class CadesBridge {
     private static final String FORMAT_ASIC_S = "CAdES-ASiC-S";
 
     private static final String PARAM_MODE = "mode";
+    private static final String MODE_EXPLICIT = "explicit";
+    private static final String PARAM_ASICS_FILENAME = "asicsFilename";
     private static final String PARAM_PRECALCULATED_HASH = "precalculatedHashAlgorithm";
 
     private static final String PARAM_TARGET = "target";
@@ -108,6 +111,7 @@ public final class CadesBridge {
         final Properties effectiveParams = copyOf(extraParams);
         if (OPERATION_SIGN.equals(requested)) {
             dropModeUnderAPrecalculatedHash(effectiveParams);
+            SignatureTimestamp.requireAUsableTsa(effectiveParams);
         }
 
         final TimeZone timeZone = TimeZone.getDefault();
@@ -226,9 +230,28 @@ public final class CadesBridge {
             case OPERATION_COUNTERSIGN -> processor.preProcessPostCounterSign(
                     document, stamp.algorithm(), chain, effectiveParams, session,
                     CounterSignTarget.getTarget(stamp.target()));
-            default -> processor.preProcessPostSign(
-                    document, stamp.algorithm(), chain, effectiveParams, session);
+            default -> postSignature(document, stamp.algorithm(), chain, effectiveParams, session);
         };
+    }
+
+    /**
+     * Solo la firma se sella, como en {@code AOCAdESSigner}; en ASiC-S, antes de
+     * cerrar el contenedor, como en {@code AOCAdESASiCSSigner}.
+     */
+    private static byte[] postSignature(final byte[] document, final String algorithm,
+            final X509Certificate[] chain, final Properties effectiveParams,
+            final TriphaseData session) throws Exception {
+        if (!isAsicS(effectiveParams)) {
+            return SignatureTimestamp.stampCms(new CAdESTriPhasePreProcessor().preProcessPostSign(
+                    document, algorithm, chain, effectiveParams, session), effectiveParams);
+        }
+        final Properties signerParams = copyOf(effectiveParams);
+        signerParams.setProperty(PARAM_MODE, MODE_EXPLICIT);
+        final byte[] signature = SignatureTimestamp.stampCms(new CAdESTriPhasePreProcessor()
+                .preProcessPostSign(document, algorithm, chain, signerParams, session),
+                effectiveParams);
+        return ASiCUtil.createSContainer(signature, document, ASiCUtil.ENTRY_NAME_BINARY_SIGNATURE,
+                effectiveParams.getProperty(PARAM_ASICS_FILENAME));
     }
 
     private static void attachPkcs1(final TriphaseData session,

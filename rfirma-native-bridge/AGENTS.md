@@ -11,6 +11,8 @@ con `native-image` (ADR-0004). Lo que decide y firma vive en Rust.
 | `src/main/java/.../PadesBridge.java` | Preproceso y postproceso PAdES, incluida la firma visible. |
 | `src/main/java/.../CadesBridge.java` | Preproceso y postproceso CAdES: firma, cofirma y contrafirma, y el contenedor ASiC-S, que entra por aquí con su propio procesador. |
 | `src/main/java/.../XadesBridge.java` | Preproceso y postproceso XAdES: firma en las variantes Enveloping, Detached, Enveloped y ASiC-S, cofirma y contrafirma con `target=tree\|leafs`, y la factura electrónica, que entra por aquí con su propio procesador. |
+| `src/main/java/.../SignatureTimestamp.java` | El sello de tiempo que pide `tsaURL` en CAdES y XAdES (ADR-0030); no el de PAdES, que sella el procesador del original. |
+| `src/main/java/.../TimestampFailedException.java` | El fallo con el que una firma que pidió sello y no se pudo sellar no sale. |
 | `src/main/java/.../ValidationBridge.java` | El veredicto del validador del original sobre las firmas que ya trae un documento: valida, invalida o pendiente de que la persona confirme. No firma nada. |
 | `src/main/java/.../FilterBridge.java` | Los filtros de certificado que pide la sede. |
 | `src/main/java/.../ExtraParamsBridge.java` | La traducción de `extraParams` de AutoFirma. |

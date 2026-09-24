@@ -397,6 +397,15 @@
       ]
     },
     {
+      "type": "nu.xom.jaxen.saxpath.base.XPathReader",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
       "type": "org.spongycastle.jcajce.provider.asymmetric.EC$Mappings",
       "methods": [
         {
