@@ -9,7 +9,7 @@ use crate::site::application::session::SiteRefusal;
 use crate::site::domain::batch::LocalBatch;
 use crate::site::domain::protocol::{
     AfirmaUrl, AskedAlgorithm, BatchRequest, PendingSignRequest, Refusal, RequestedFormat,
-    SignAndSaveRequest, SignatureRound, SiteFilter, SiteVisibleSignature,
+    SignAndSaveRequest, SignatureRound, SiteFilter, SiteVisibleSignature, StickyCertificate,
 };
 use crate::site::domain::signing::SiteSignature;
 use crate::site::domain::triphase_server::ServerFormat;
@@ -187,6 +187,8 @@ pub struct ConfirmationConsent {
     pub declared: Vec<(String, String)>,
     /// Filtro de certificados solicitado por la sede.
     pub filter: SiteFilter,
+    /// Lo que la sede pide sobre el certificado pegado.
+    pub sticky: StickyCertificate,
     /// Si la sede se conforma con el único certificado que pase el filtro.
     pub headless: bool,
     /// El firmador del servidor trifásico de la sede, si la prefirma y la postfirma se hacen allí.

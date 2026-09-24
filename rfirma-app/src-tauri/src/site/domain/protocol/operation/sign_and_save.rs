@@ -6,6 +6,7 @@ use super::super::data_source::DataSource;
 use super::super::filters::{site_filter, SiteFilter};
 use super::super::format::{format_of, RequestedFormat};
 use super::super::key_store::module_named_by;
+use super::super::parameters::{sticky_certificate, StickyCertificate};
 use super::super::refusal::Refusal;
 use super::super::url::AfirmaUrl;
 use super::document::optional_document;
@@ -41,6 +42,7 @@ pub struct SignAndSaveRequest {
     requested: Option<RequestedFormat>,
     declared: Vec<(String, String)>,
     filter: SiteFilter,
+    sticky: StickyCertificate,
     headless: bool,
     filename: Option<String>,
     extensions: Vec<String>,
@@ -84,6 +86,11 @@ impl SignAndSaveRequest {
     /// Lo que la sede pide del listado.
     pub fn filter(&self) -> &SiteFilter {
         &self.filter
+    }
+
+    /// Lo que la sede pide sobre el certificado pegado.
+    pub fn sticky(&self) -> StickyCertificate {
+        self.sticky
     }
 
     /// Nombre de fichero que propone la sede.
@@ -204,6 +211,7 @@ pub(super) fn sign_and_save_request(
         document,
         requested,
         filter: site_filter(&declared).within_the_module(module_named_by(url)),
+        sticky: sticky_certificate(url),
         headless: properties.is_headless(),
         filename,
         extensions: comma_list_value(property_value(&declared, FILENAME_SAVE_EXTS)),

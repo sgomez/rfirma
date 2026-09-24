@@ -267,3 +267,26 @@ entero, nombre y NIF incluidos, sin que se abra nada— y dos sedes distintas
 reciben el mismo, que es una huella para correlacionar a quien firma. No es
 fuga de clave: la clave no sale del token (ADR-0001). Es entrega de datos
 personales sin que nadie los conceda, y por eso cambia la regla.
+
+## Enmienda: `sign` y `signandsave` preseleccionan igual que `selectcert`, y solo si el filtro nuevo acepta
+
+Las tres reglas de la enmienda anterior son de `selectcert`, pero el recuerdo
+que gobierna `sticky` es de la sesión de sede entera, no de una operación. Dos
+reglas más las extienden a `sign` y `signandsave`:
+
+1. **`sign` y `signandsave` con `sticky=true` preseleccionan, no contestan**,
+   igual que `selectcert` y el lote: la fila que la sesión fijó llega marcada
+   a la ventana de firma como `already_chosen`, y la firma sigue esperando el
+   consentimiento de la persona.
+2. **El certificado fijado solo se preselecciona si el filtro de la petición
+   nueva lo acepta.** Si no, la ventana se abre sin preselección, con los
+   certificados que ese filtro admite.
+
+### Considered Options
+
+- **Que el fijado se salte el filtro nuevo, como el original.** Es lo que hace
+  `AutoFirma` (`ProtocolInvocationLauncherSign`, 1.9.2): con `sticky=true`
+  contesta directamente con el certificado fijado, sin mirar si el filtro de
+  la petición lo admite. Se descarta: contestar con un certificado que
+  incumple el filtro que la propia petición declara es contradecirse, una de
+  las excepciones del ADR-0023 al «se sigue al original».
