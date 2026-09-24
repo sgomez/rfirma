@@ -1,6 +1,7 @@
 //! Vocabulario de salida del trámite con la sede y la ventana, y el códec que lo pone en el cable.
 
 use std::collections::BTreeMap;
+use std::path::{Path, PathBuf};
 
 use crate::identity::domain::certificate::ListedCertificate;
 use crate::signing::domain::bridge::Format;
@@ -269,6 +270,26 @@ pub struct SavingConsent {
     pub starting_folder: Option<String>,
     /// El DER del firmante con el que contestar si esto viene de `signandsave`, `None` en `save`.
     pub signer_der: Option<Vec<u8>>,
+}
+
+impl SavingConsent {
+    /// La carpeta en la que se abre el diálogo: la que declaró la sede o, si no, `home`.
+    pub fn dialog_folder(&self, home: Option<&Path>) -> Option<PathBuf> {
+        declared_or_home(self.starting_folder.as_deref(), home)
+    }
+}
+
+impl LoadingConsent {
+    /// La carpeta en la que se abre el selector: la que declaró la sede o, si no, `home`.
+    pub fn dialog_folder(&self, home: Option<&Path>) -> Option<PathBuf> {
+        declared_or_home(self.starting_folder.as_deref(), home)
+    }
+}
+
+fn declared_or_home(declared: Option<&str>, home: Option<&Path>) -> Option<PathBuf> {
+    declared
+        .map(PathBuf::from)
+        .or_else(|| home.map(Path::to_path_buf))
 }
 
 /// Datos para el selector de carga del portal: el nombre cruza, la ruta nunca (ADR-0011).
