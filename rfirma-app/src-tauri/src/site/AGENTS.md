@@ -50,6 +50,7 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `application/errand/desk/confirmation.rs` | La confirmación que la firma de sede espera de la persona antes del consentimiento: la que pide el validador con `checkSignatures` y la del PDF certificado. |
 | `application/errand/desk/scratch.rs` | El documento de paso de la mesa: dónde se escribe y con qué extensión. |
 | `application/errand/mod.rs` | Los verbos, y el reparto. **Léelo antes que sus hermanos**: es lo único que una orden llama. Pruebas en `application/errand/tests/`. |
+| `application/errand/pdf_password.rs` | La firma de sede sobre un PDF cifrado: la contraseña que se pide a la persona hasta que lo abre, o el `SAF_50` con `headless`. No decide qué PDF está cifrado. |
 | `application/errand/outcome.rs` | El vocabulario de salida del trámite, y el puerto `ProtocolCodec`, que lo lee y lo escribe en el cable. |
 | `application/errand/replies.rs` | Las respuestas finales, y **el único sitio que escribe en el cable**. |
 | `application/errand/request.rs` | `SiteRequest`: lo que la sede quiere, sin versión. |
@@ -78,6 +79,7 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `application/errand/tests/countersignature_and_gzip.rs` | Pruebas de contrafirma, gzip y firma sin `dat`. Solo en pruebas. |
 | `application/errand/tests/headless_and_checked.rs` | Pruebas del modo `headless` y de `checkSignatures`. Solo en pruebas. |
 | `application/errand/tests/pdf_awaiting_the_person.rs` | Pruebas del PDF certificado, cifrado o con firmas no registradas: lo que la petición levanta, lo que `headless` rechaza con `SAF_50` y lo que se le pregunta a la persona. Solo en pruebas. |
+| `application/errand/tests/pdf_password.rs` | Pruebas de la contraseña del PDF cifrado después de elegir certificado: pedirla, repetirla, cancelarla y el rechazo con `headless`. Solo en pruebas. |
 | `application/errand/tests/websocket.rs` | Pruebas del trámite de sede sobre WebSocket. Solo en pruebas. |
 | `application/errand/tests/service.rs` | Pruebas del trámite de sede sobre el canal `service`. Solo en pruebas. |
 | `application/errand/tests/relay_window.rs` | Pruebas de cuándo enseña su ventana un trámite de llegada inmediata. Solo en pruebas. |

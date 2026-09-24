@@ -27,6 +27,7 @@ fn a_pending_signature() -> PendingSignature {
         operation: crate::signing::domain::bridge::SignatureOperation::Sign,
         from_the_site: BTreeMap::new(),
         unregistered_signatures: false,
+        headless: false,
         saving: None,
         through_the_server: None,
         area: None,

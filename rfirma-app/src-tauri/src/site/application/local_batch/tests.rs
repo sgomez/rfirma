@@ -57,6 +57,10 @@ impl SiteSigning for Untouched {
     fn finish(&self) -> Result<SiteSignature, SigningRefusal> {
         unreachable!("la guarda no llega a cerrar el ciclo")
     }
+
+    fn the_pdf_password(&self, _after_a_wrong_one: bool) -> Option<String> {
+        unreachable!("la guarda no llega a pedir la contraseña del PDF")
+    }
 }
 
 impl TokenSigning for Untouched {

@@ -136,10 +136,13 @@ fn a_certified_pdf_the_site_forbids_keeps_the_code_of_a_certified_pdf_even_under
 }
 
 #[test]
-fn a_password_protected_pdf_without_headless_keeps_the_code_of_a_wrong_password() {
+fn a_password_protected_pdf_without_headless_goes_on_to_the_certificate() {
     let step = a_consent_over(A_PASSWORD_PROTECTED_PDF, "");
 
-    assert_eq!(the_code_of(&step), SafCode::PdfWrongPassword);
+    assert!(
+        matches!(step, ErrandStep::AskingToSign(_)),
+        "la contraseña se le pide a la persona: {step:?}"
+    );
 }
 
 #[test]

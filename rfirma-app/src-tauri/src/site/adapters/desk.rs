@@ -12,7 +12,7 @@ use crate::identity::domain::error::{Situation, TokenError};
 use crate::identity::domain::secret::StoreSecret;
 use crate::identity::IdentityRoot;
 use crate::signing::adapters::failures::told_of_cycle;
-use crate::signing::ports::Signer;
+use crate::signing::ports::{SecretName, SecretPromptRequest, Signer};
 use crate::signing::{DeclaredByTheSite, SigningRoot};
 use crate::site::domain::protocol::{AskedAlgorithm, SafCode};
 use crate::site::domain::signing::{SigningRefusal, SiteSignature};
@@ -95,6 +95,20 @@ impl SiteSigning for Neighbours<'_> {
             signature: signed.completed.into_signed_document(),
             signer_der: signed.signer_der,
         })
+    }
+
+    fn the_pdf_password(&self, after_a_wrong_one: bool) -> Option<String> {
+        let typed = self
+            .signing
+            .prompter
+            .prompt_secret(&SecretPromptRequest {
+                secret: SecretName::DocumentPassword,
+                holder: None,
+                language: self.signing.configuration().language,
+                incorrect_secret: after_a_wrong_one,
+            })
+            .ok()?;
+        typed.as_str().ok().map(str::to_owned)
     }
 }
 

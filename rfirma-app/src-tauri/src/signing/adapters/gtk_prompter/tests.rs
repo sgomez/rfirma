@@ -24,7 +24,11 @@ fn juan_perez() -> PromptedHolder {
 #[test]
 fn localizes_into_all_five_official_languages() {
     for lang in Language::ALL {
-        for secret in [SecretName::Pin, SecretName::Password] {
+        for secret in [
+            SecretName::Pin,
+            SecretName::Password,
+            SecretName::DocumentPassword,
+        ] {
             let mut request = a_request(Some(juan_perez()), lang);
             request.secret = secret;
 
@@ -62,9 +66,27 @@ fn a_module_is_asked_for_a_pin_and_a_file_store_for_a_password() {
 }
 
 #[test]
+fn a_locked_pdf_is_asked_for_its_own_password() {
+    let mut request = a_request(None, Language::Spanish);
+    request.secret = SecretName::DocumentPassword;
+
+    let document = localize(&request);
+
+    assert_eq!(document.title, "Introduce la contraseña del PDF");
+    assert_eq!(
+        document.incorrect_secret,
+        "Contraseña del PDF incorrecta. Vuelve a intentarlo."
+    );
+}
+
+#[test]
 fn no_text_of_the_dialog_ever_counts_attempts() {
     for lang in Language::ALL {
-        for secret in [SecretName::Pin, SecretName::Password] {
+        for secret in [
+            SecretName::Pin,
+            SecretName::Password,
+            SecretName::DocumentPassword,
+        ] {
             let mut request = a_request(Some(juan_perez()), lang);
             request.secret = secret;
             request.incorrect_secret = true;

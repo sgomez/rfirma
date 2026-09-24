@@ -471,6 +471,7 @@ public final class NativeBridge {
             UNREGISTERED_SIGNATURES_KIND },
         { "es.gob.afirma.core.signers.ExtraParamsProcessor$IncompatiblePolicyException",
             INCOMPATIBLE_POLICY_KIND },
+        { "es.gob.afirma.core.RuntimePasswordNeededException", "pdfPasswordNeeded" },
         { "es.gob.afirma.signers.pades.InvalidPdfException", "invalidPdf" },
         { "es.gob.afirma.signers.xml.InvalidXMLException", "invalidXml" },
         { "es.gob.afirma.core.AOFormatFileException", "invalidData" },

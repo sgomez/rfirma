@@ -256,6 +256,7 @@ fn each_rejection_of_the_data_comes_back_with_its_own_kind() {
         ),
         ("invalidFacturae", DataRejection::InvalidFacturae),
         ("signWithoutData", DataRejection::SignWithoutData),
+        ("pdfPasswordNeeded", DataRejection::PdfPasswordNeeded),
     ] {
         let error = parse_presign(&format!(
             r#"{{"ok":false,"kind":"{kind}","error":"lo que dijera Java"}}"#

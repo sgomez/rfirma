@@ -139,6 +139,8 @@ pub struct SigningConsent {
     pub filter: SiteFilter,
     /// Si el documento contiene firmas que no se pueden interpretar.
     pub unregistered_signatures: bool,
+    /// Si la sede pidió `headless`: lo que haga falta preguntar se rechaza.
+    pub headless: bool,
     /// Pistas de guardado, si esta firma viene de `signandsave`.
     pub saving: Option<Box<SavingHints>>,
     /// Asa del certificado que ya está resuelto y el desplegable elige solo.

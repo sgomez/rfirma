@@ -161,6 +161,10 @@ impl From<ConsentError> for Failure {
                 "no hay ninguna identificacion ni firma pendiente que contestar",
             ),
             ConsentError::Refused(refusal) => refusal.into(),
+            ConsentError::Declined => Self::new(
+                "userCancelled",
+                "la persona no ha dado la contraseña del PDF",
+            ),
         }
     }
 }

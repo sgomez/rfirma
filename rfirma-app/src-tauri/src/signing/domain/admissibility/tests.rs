@@ -1,4 +1,6 @@
-use super::{AdmissibleDocument, Refusal, Waivers};
+use std::collections::BTreeMap;
+
+use super::{unlocked_with, AdmissibleDocument, Refusal, Waivers};
 use crate::signing::domain::bridge::Format;
 
 /// **Grada A**: son bytes, y las reglas se prueban en el carril rápido.
@@ -208,6 +210,33 @@ fn an_encrypted_pdf_without_a_password_awaits_the_person() {
 
     assert_eq!(refusal, Refusal::Encrypted);
     assert!(refusal.awaits_the_person(Waivers::NONE));
+}
+
+#[test]
+fn an_encrypted_pdf_is_admitted_when_the_person_will_type_its_password() {
+    let waivers = Waivers::NONE.the_person_types_the_password();
+
+    assert!(AdmissibleDocument::check_waiving(&an_encrypted_pdf(), waivers).is_ok());
+    assert!(!Waivers::NONE.declares_a_password());
+    assert!(declaring(&[("userPassword", "1234")]).declares_a_password());
+}
+
+#[test]
+fn the_typed_password_opens_the_pdf_as_its_owner_and_the_declared_one_is_forgotten() {
+    let declared = BTreeMap::from([
+        ("userPassword".to_owned(), "mal".to_owned()),
+        ("headless".to_owned(), "false".to_owned()),
+    ]);
+
+    let unlocked = unlocked_with(&declared, "1234");
+
+    assert_eq!(
+        unlocked,
+        BTreeMap::from([
+            ("ownerPassword".to_owned(), "1234".to_owned()),
+            ("headless".to_owned(), "false".to_owned()),
+        ])
+    );
 }
 
 #[test]

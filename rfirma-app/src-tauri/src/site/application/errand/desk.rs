@@ -418,6 +418,7 @@ fn consent_to_a_signature<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
         visible,
         filter: ask.filter.clone(),
         unregistered_signatures,
+        headless: ask.headless,
         saving,
         already_chosen,
         for_the_site_server: ask.through_the_site_server.map(|format| ForTheSiteServer {
@@ -430,7 +431,7 @@ fn consent_to_a_signature<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
 const UNREGISTERED_SIGNATURES: &str = "pdfHasUnregisteredSignatures";
 
 fn waivers_declared_in(ask: &SignatureAsk<'_>) -> Waivers {
-    Waivers::declared_in(
+    let declared = Waivers::declared_in(
         ask.declared_params
             .iter()
             .map(|(key, value)| (key.as_str(), value.as_str()))
@@ -439,7 +440,12 @@ fn waivers_declared_in(ask: &SignatureAsk<'_>) -> Waivers {
                     .iter()
                     .map(|(key, value)| (key.as_str(), value.as_str())),
             ),
-    )
+    );
+    if ask.headless {
+        declared
+    } else {
+        declared.the_person_types_the_password()
+    }
 }
 
 fn accepted_listing<E: FilterEngine, P: PolicyEngine, N: Neighbours>(

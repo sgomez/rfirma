@@ -27,6 +27,9 @@ import type {
 
 export type { DescribedDocument, SiteErrandView } from "./siteErrandView";
 
+/** La firma que la persona dejó sin la contraseña del PDF: la sede ya ha recibido `CANCEL`. */
+const DECLINED = "userCancelled";
+
 /**
  * **El `SiteErrandPort` de verdad**, el que sustituye a `noErrand()` (ID-335,
  * ID-336).
@@ -279,6 +282,10 @@ export function siteErrands(commands: SiteCommands): SiteErrandPort {
       move({ kind: "signing", certificate, phase: "signing" });
       const begun = await commands.beginSigning(certificateId);
       if (arrival !== arrivals) return;
+      if (!begun.ok && (begun.failure.situation as string) === DECLINED) {
+        finish({ kind: "cancelled", document: stage.document });
+        return;
+      }
       if (!begun.ok) {
         finish(stage.signs !== null ? refusedByTheBatch(begun.failure) : refusedBy(begun.failure));
         return;

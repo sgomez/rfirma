@@ -355,6 +355,25 @@ describe("los momentos que pone el adaptador", () => {
     });
   });
 
+  it("shows the cancelled outcome when the person gives no password for the PDF", async () => {
+    const { push, port, calls, last } = watched({
+      beginSigning: async () => ({
+        ok: false,
+        failure: {
+          situation: "userCancelled" as TokenFailure["situation"],
+          detail: "la persona no ha dado la contraseña del PDF",
+          attemptsLeft: null,
+        },
+      }),
+    });
+    push(ASKING_TO_SIGN);
+    await vi.waitFor(() => expect(last()?.stage.kind).toBe("consent"));
+    await port.consent("handle-1");
+
+    expect(calls.signWithPin).not.toHaveBeenCalled();
+    expect(last()?.stage).toMatchObject({ outcome: { kind: "cancelled" } });
+  });
+
   it("ends the errand when a signing stage fails for anything else", async () => {
     const { push, port, last } = watched({
       finishSigning: async () => ({

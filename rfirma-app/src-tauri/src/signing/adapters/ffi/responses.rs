@@ -172,6 +172,7 @@ fn data_rejection_of(kind: &str) -> Option<DataRejection> {
         "facturaeAlreadySigned" => DataRejection::FacturaeAlreadySigned,
         "invalidFacturae" => DataRejection::InvalidFacturae,
         "signWithoutData" => DataRejection::SignWithoutData,
+        "pdfPasswordNeeded" => DataRejection::PdfPasswordNeeded,
         _ => return None,
     })
 }

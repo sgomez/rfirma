@@ -23,3 +23,10 @@ pub struct SigningRefusal {
     /// Los intentos de PIN que quedan, si el token los dijo.
     pub attempts_left: Option<u32>,
 }
+
+impl SigningRefusal {
+    /// Si lo que falta para firmar es la contraseña del PDF: la sede no la trajo, o la que trajo no lo abre.
+    pub fn awaits_the_pdf_password(&self) -> bool {
+        self.code == SafCode::PdfWrongPassword
+    }
+}
