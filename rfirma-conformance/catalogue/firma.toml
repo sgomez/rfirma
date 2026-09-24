@@ -854,6 +854,48 @@ condition = ["through-the-triphase-server", "the-presignature-signed-with-the-ke
 warning = "Va a aparecer el diálogo de certificado."
 
 [[check]]
+id = "a_pades_triphase_signature_goes_through_the_server_url"
+set = "firma"
+citation = "AOSignerFactory.java:74; AOPDFTriPhaseSigner.java:65-151; PDFTriPhaseSignerUtil.java:69, 74-218; TriphaseDataSigner.java:48-99"
+statement = """
+Una firma PAdEStri sobre un PDF hace la prefirma y la postfirma contra el serverUrl de properties
+con cop=sign y format=pades, firma con la clave del certificado la prefirma que le devuelve y
+entrega a la sede el PDF firmado de la postfirma.
+"""
+drive = { mode = "v4", script = "signpadestri" }
+assistance = "click"
+condition = ["through-the-triphase-server", "the-presignature-signed-with-the-key", "the-server-signature-as-it-came"]
+warning = "Va a aparecer el diálogo de certificado."
+
+[[check]]
+id = "a_xades_triphase_signature_goes_through_the_server_url"
+set = "firma"
+citation = "AOSignerFactory.java:64; AOXAdESTriPhaseSigner.java:149-151, 154-168, 341-546; TriphaseDataSigner.java:48-99"
+statement = """
+Una firma XAdEStri sobre un XML hace la prefirma y la postfirma contra el serverUrl de properties
+con cop=sign y format=XAdES, firma con la clave del certificado la prefirma que le devuelve y
+entrega a la sede la firma de la postfirma.
+"""
+drive = { mode = "v4", script = "signxadestri" }
+assistance = "click"
+condition = ["through-the-triphase-server", "the-presignature-signed-with-the-key", "the-server-signature-as-it-came"]
+warning = "Va a aparecer el diálogo de certificado."
+
+[[check]]
+id = "a_facturae_triphase_signature_goes_through_the_server_url"
+set = "firma"
+citation = "AOSignerFactory.java:59; AOFacturaETriPhaseSigner.java:32-34; AOXAdESTriPhaseSigner.java:154-168, 341-546; TriphaseDataSigner.java:48-99"
+statement = """
+Una firma FacturaEtri sobre una factura sin firmar hace la prefirma y la postfirma contra el
+serverUrl de properties con cop=sign y format=FacturaE, firma con la clave del certificado la
+prefirma que le devuelve y entrega a la sede la factura firmada de la postfirma.
+"""
+drive = { mode = "v4", script = "signfacturaetri" }
+assistance = "click"
+condition = ["through-the-triphase-server", "the-presignature-signed-with-the-key", "the-server-signature-as-it-came"]
+warning = "Va a aparecer el diálogo de certificado."
+
+[[check]]
 id = "a_triphase_signature_without_server_url_answers_saf_03"
 set = "firma"
 citation = "AOCAdESTriPhaseSigner.java:239-245; ProtocolInvocationLauncherSign.java:744-748"
