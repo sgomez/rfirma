@@ -491,7 +491,9 @@ fn by_the_person(
         Verdict::noncompliant(phrase)
     } else {
         let this_far = on_the_wire.unwrap_or_else(|| completed(observed, &Contents::default()));
-        if this_far.outcome == Outcome::NotObservable {
+        let a_cancellation_arrived =
+            observed.error_type.as_deref() == Some(THE_CANCELLED_OPERATION_EXCEPTION);
+        if this_far.outcome == Outcome::NotObservable && !a_cancellation_arrived {
             this_far
         } else {
             Verdict::noncompliant(phrase)
@@ -949,11 +951,11 @@ mod tests {
                 Resolved(NC, Some("no se pidió")),
             ),
             case(
-                "a dialogue unseen on an errand that never came back is not observable",
+                "a dialogue unseen on a cancelled errand is noncompliant",
                 DIALOGUE,
                 with_error(CANCELLED),
                 No,
-                Resolved(NO, Some(CANCELLED)),
+                Resolved(NC, Some("no se pidió")),
             ),
             case(
                 "a dialogue whose client never launched is not observable before asking",
