@@ -256,7 +256,8 @@ pub(super) fn sign_request(
 
 /// La ronda de `countersign`, con el objetivo que declaró la sede o el `leafs` del original.
 pub(super) fn counter_round(declared: &[(String, String)]) -> SignatureRound {
-    let target = property_value(declared, TARGET)
-        .map_or(CounterTarget::Leafs, |declared| CounterTarget::named(&declared));
+    let target = property_value(declared, TARGET).map_or(CounterTarget::Leafs, |declared| {
+        CounterTarget::named(&declared)
+    });
     SignatureRound::Counter { target }
 }
