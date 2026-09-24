@@ -45,7 +45,7 @@ fn the_window_and_the_site_hear_about_a_missing_token_from_the_same_line() {
     assert_eq!(situation_name(Situation::TokenAbsent), "tokenAbsent");
     assert_eq!(
         code_of_token(Situation::TokenAbsent),
-        SafCode::CannotFindKeystore
+        SafCode::CannotAccessKeystore
     );
     assert_eq!(code_of_token(Situation::PinLocked), SafCode::LockedKeystore);
     assert_eq!(

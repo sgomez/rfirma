@@ -72,7 +72,7 @@ fn the_three_verbs_run_the_errand_with_a_codec_a_filter_and_a_transport_in_memor
         panic!("sin almacen la mesa contesta en el acto: {step:?}");
     };
     let (failure, code) = frontier::told(refusal);
-    assert_eq!(code, SafCode::CannotFindKeystore);
+    assert_eq!(code, SafCode::CannotAccessKeystore);
     assert_eq!(failure.situation, "moduleNotFound");
     assert!(
         what_the_site_received(&mut wire)

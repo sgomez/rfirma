@@ -10,9 +10,9 @@ fn token_told(situation: Situation) -> (&'static str, SafCode) {
     match situation {
         Situation::IncorrectPin => ("incorrectPin", SafCode::CannotAccessKeystore),
         Situation::PinLocked => ("pinLocked", SafCode::LockedKeystore),
-        Situation::TokenAbsent => ("tokenAbsent", SafCode::CannotFindKeystore),
+        Situation::TokenAbsent => ("tokenAbsent", SafCode::CannotAccessKeystore),
         Situation::ExpiredSession => ("expiredSession", SafCode::CannotAccessKeystore),
-        Situation::ModuleNotFound => ("moduleNotFound", SafCode::CannotFindKeystore),
+        Situation::ModuleNotFound => ("moduleNotFound", SafCode::CannotAccessKeystore),
         Situation::CertificateNotFound => {
             ("certificateNotFound", SafCode::NoCertificatesInKeystore)
         }
