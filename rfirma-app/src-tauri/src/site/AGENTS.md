@@ -190,10 +190,9 @@ situación. Dos cosas que salen mal si se olvidan:
   congelados: `just check-contract` compara `just contract` con
   `tests/contract.snapshot`, y la grada C del canal y el banco de conformidad no
   se tocan.
-- **Un formato que entra en `Format::bridged()`** (`signing/domain/bridge.rs`)
-  deja de ser el contraejemplo que era: revisa `application/errand/tests/signature_formats.rs`,
-  que lo usaba como formato que el puente no atiende, y la resolución de `auto`
-  sobre bytes que no son un PDF.
+- **Todo `Format` que nombra la sede llega al consentimiento**: el trámite no
+  filtra por `Format::bridged()`, y el que no cruza al puente, `NONE`, lo firma
+  `signing/application/bare_pkcs1.rs` (ADR-0001).
 - **El recuadro y la rúbrica son de PAdES**: con cualquier otro formato el
   trámite ni los lee ni los rechaza, y los olvida antes del consentimiento
   (`forget_the_box`), de modo que ninguna de sus claves llega al puente.

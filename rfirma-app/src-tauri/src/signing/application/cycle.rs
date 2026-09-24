@@ -184,6 +184,11 @@ impl OpenCycle {
         &self.certificate
     }
 
+    /// Formato con el que se abrió el ciclo.
+    pub fn format(&self) -> Format {
+        self.format
+    }
+
     /// Indica si el documento ya contenía firmas previas.
     pub fn is_cosigning(&self) -> bool {
         self.already_signed_before

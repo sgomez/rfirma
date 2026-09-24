@@ -31,6 +31,17 @@ fn a_pdf_with_unregistered_signatures_asks_for_confirmation() {
 }
 
 #[test]
+fn an_operation_the_signer_does_not_make_leaves_for_the_site_as_saf_04() {
+    let error = BridgeError::UnsupportedOperation(
+        crate::signing::domain::Format::Pkcs1,
+        crate::signing::domain::bridge::SignatureOperation::Cosign,
+    );
+
+    assert_eq!(code_of_bridge(&error), SafCode::UnsupportedOperation);
+    assert_eq!(SafCode::UnsupportedOperation.as_str(), "SAF_04");
+}
+
+#[test]
 fn a_format_the_bridge_does_not_resolve_leaves_for_the_site_as_saf_06() {
     let error = BridgeError::FormatNotBridged(crate::signing::domain::Format::Cades);
 

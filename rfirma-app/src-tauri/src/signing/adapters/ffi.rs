@@ -440,6 +440,7 @@ fn entry_points_for(format: Format) -> Result<EntryPoints, BridgeError> {
         Format::Pades => Ok(EntryPoints::Pades),
         Format::Cades | Format::CadesAsicS | Format::Cms => Ok(EntryPoints::Cades),
         Format::Xades(_) | Format::FacturaE => Ok(EntryPoints::Xades),
+        Format::Pkcs1 => Err(BridgeError::FormatNotBridged(format)),
     }
 }
 
@@ -449,7 +450,7 @@ fn declares_its_variant(format: Format) -> bool {
         Format::Cades | Format::CadesAsicS | Format::Cms | Format::Xades(_) | Format::FacturaE => {
             true
         }
-        Format::Pades => false,
+        Format::Pades | Format::Pkcs1 => false,
     }
 }
 
@@ -472,7 +473,8 @@ fn yields_to_the_envelope_of_the_site(format: Format) -> bool {
         | Format::Cades
         | Format::CadesAsicS
         | Format::Cms
-        | Format::FacturaE => false,
+        | Format::FacturaE
+        | Format::Pkcs1 => false,
     }
 }
 

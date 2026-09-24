@@ -331,3 +331,56 @@ fn a_local_batch_that_is_declined_ends_in_a_cancel() {
         Some(frontier::cancelled().on_the_wire())
     );
 }
+
+#[test]
+fn a_local_batch_in_format_none_returns_the_bare_pkcs1_of_each_item() {
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let memory = a_memory(home.path());
+    let ours = vec![a_usable_certificate("FIRMA")];
+    let (listed, _) = listed_from(&ours);
+    let opened = OpenedDocuments::new();
+    let live = a_live();
+    let (handle, mut wire) = the_wire();
+    live.answer_through(handle);
+    let engine = AnEngine::answering(&[&[0], &[0]]);
+    let policies = APolicyEngine::answering("");
+    let scratch = home.path().join("errand");
+    let desk = a_desk_for_the_local_batch(
+        &engine,
+        &policies,
+        home.path(),
+        &listed,
+        &opened,
+        &memory,
+        &scratch,
+        &ours,
+    );
+    let lote = format!(
+        "{{\"algorithm\":\"SHA256\",\"format\":\"NONE\",\"singlesigns\":[\
+         {{\"id\":\"001\",\"datareference\":\"{}\"}}]}}",
+        in_the_batch(A_LOCAL_BINARY),
+    );
+    let ChannelMessage::Operation { url } = ChannelMessage::read(&format!(
+        "afirma://batch?op=batch&idsession={CREDENTIAL}&jsonbatch=true&\
+         localBatchProcess=true&dat={}",
+        base64::engine::general_purpose::URL_SAFE.encode(&lote)
+    )) else {
+        panic!("una URL del protocolo es una operacion");
+    };
+
+    let step = attend_operation(&desk, &url, decoded(&url), &live);
+    let ErrandStep::AskingToSignTheLocalBatch(asked) = remembered(&live, step) else {
+        panic!("un lote local en NONE pide consentimiento");
+    };
+    consent(&desk, &asked.certificates[0].id, &live).expect("el certificado sirve");
+    finish_the_local_batch(&desk, "1234", &live).expect("el lote local contesta");
+
+    let result = the_batch_result(&mut wire);
+    assert!(
+        result.contains(&format!(
+            "\"id\":\"001\",\"result\":\"DONE_AND_SAVED\",\"signature\":\"{}\"",
+            base64::engine::general_purpose::STANDARD.encode([0x01; 256])
+        )),
+        "el PKCS#1 del token, sin nada alrededor: {result}"
+    );
+}

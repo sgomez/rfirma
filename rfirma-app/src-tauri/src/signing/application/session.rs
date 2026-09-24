@@ -12,6 +12,7 @@ use crate::identity::domain::error::TokenError;
 use crate::identity::domain::holder::{prompted_holder_of, stamped_holder_of, StampedHolder};
 use crate::identity::domain::secret::{SecretOnTheReaderKeypad, StoreSecret};
 use crate::lock;
+use crate::signing::application::bare_pkcs1::BarePkcs1;
 use crate::signing::application::cycle::{
     self, CycleError, OpenCycle, SigningRequest, NOTHING_FROM_A_SITE,
 };
@@ -216,7 +217,7 @@ fn open_the_cycle(
     let chain = chosen.chain();
     let from_the_site = from_the_site.clone();
 
-    let cycle = on_the_bridge(isolate, move |bridge| {
+    let cycle = on_the_bridge_of(format, isolate, move |bridge| {
         let document = AdmissibleDocument::check_for(format, &bytes, waivers_of(&from_the_site))?;
         cycle::presign(
             bridge,
@@ -347,7 +348,7 @@ pub fn finish(
         signer_der,
     } = take_signed_cycle(session)?;
 
-    let completed = on_the_bridge(isolate, move |bridge| {
+    let completed = on_the_bridge_of(cycle.format(), isolate, move |bridge| {
         cycle.postsign(bridge, signature, &seal)
     })?;
 
@@ -487,6 +488,19 @@ pub struct SignedCycle {
     pub seal: SessionSeal,
     pub certificate: CertificateRef,
     pub signer_der: Vec<u8>,
+}
+
+fn on_the_bridge_of<T: Send + 'static>(
+    format: Format,
+    isolate: &impl IsolateHost,
+    task: impl FnOnce(&dyn crate::signing::ports::Bridge) -> Result<T, cycle::CycleError>
+        + Send
+        + 'static,
+) -> Result<T, CycleFailure> {
+    if format.signed_without_the_bridge() {
+        return task(&BarePkcs1).map_err(CycleFailure::from);
+    }
+    on_the_bridge(isolate, task)
 }
 
 pub(crate) fn on_the_bridge<T: Send + 'static>(
