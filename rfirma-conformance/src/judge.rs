@@ -451,7 +451,7 @@ fn contains(haystack: &[u8], needle: &[u8]) -> bool {
             .any(|window| window == needle)
 }
 
-fn decoded(encoded: &str) -> Option<Vec<u8>> {
+pub(crate) fn decoded(encoded: &str) -> Option<Vec<u8>> {
     let compact: String = encoded.split_whitespace().collect();
     [STANDARD, STANDARD_NO_PAD, URL_SAFE, URL_SAFE_NO_PAD]
         .iter()

@@ -3,6 +3,7 @@ use super::fixtures::{
     a_countersignature, a_signature, an_operation, dat, properties, read_operation,
 };
 use crate::site::domain::protocol::XadesEnvelope;
+use crate::site::domain::triphase_server::ServerFormat;
 
 #[test]
 fn a_signature_carries_its_format_its_algorithm_and_the_document() {
@@ -223,7 +224,7 @@ fn a_cades_triphase_signature_goes_through_the_site_server() {
     let SiteOperation::Sign(request) = read_operation(&url).expect("se atiende") else {
         panic!("es una firma");
     };
-    assert!(request.goes_through_the_site_server());
+    assert_eq!(request.through_the_site_server(), Some(ServerFormat::Cades));
     assert_eq!(request.format(), RequestedFormat::Cades);
 }
 
@@ -237,7 +238,7 @@ fn a_plain_cades_signature_is_made_here() {
     let SiteOperation::Sign(request) = read_operation(&url).expect("se atiende") else {
         panic!("es una firma");
     };
-    assert!(!request.goes_through_the_site_server());
+    assert_eq!(request.through_the_site_server(), None);
 }
 
 #[test]
@@ -248,7 +249,24 @@ fn a_cades_triphase_signature_without_data_still_goes_through_the_site_server() 
     else {
         panic!("es una firma sin documento");
     };
-    assert!(pending
-        .with_chosen_document(b"datos".to_vec())
-        .goes_through_the_site_server());
+    assert_eq!(
+        pending
+            .with_chosen_document(b"datos".to_vec())
+            .through_the_site_server(),
+        Some(ServerFormat::Cades)
+    );
+}
+
+#[test]
+fn a_pades_triphase_signature_goes_through_the_site_server() {
+    let url = an_operation(&format!(
+        "op={SIGN}&format=PAdEStri&algorithm=SHA256&dat={}",
+        dat(b"%PDF-1.7\n")
+    ));
+
+    let SiteOperation::Sign(request) = read_operation(&url).expect("se atiende") else {
+        panic!("es una firma");
+    };
+    assert_eq!(request.through_the_site_server(), Some(ServerFormat::Pades));
+    assert_eq!(request.format(), RequestedFormat::Pades);
 }

@@ -34,9 +34,9 @@ pub use desk::{
     consent_to_the_local_batch, ErrandDesk, Neighbours,
 };
 pub use outcome::{
-    BatchConsent, ConfirmationConsent, ErrandStep, LoadCompletion, LoadingConsent,
-    LocalBatchConsent, LocalBatchItem, Moment, NoCertificate, NoChannel, PendingSignature,
-    ProtocolCodec, SavingConsent, SigningConsent, SiteOutcome,
+    BatchConsent, ConfirmationConsent, ErrandStep, ForTheSiteServer, LoadCompletion,
+    LoadingConsent, LocalBatchConsent, LocalBatchItem, Moment, NoCertificate, NoChannel,
+    PendingSignature, ProtocolCodec, SavingConsent, SigningConsent, SiteOutcome,
 };
 pub use replies::{
     batch_handed_over, declined, identify_with, identity_handed_over, loaded, saved,
@@ -98,9 +98,10 @@ fn remembered(live: &LiveErrand, step: ErrandStep) -> ErrandStep {
             from_the_site: asked.from_the_site.clone(),
             unregistered_signatures: asked.unregistered_signatures,
             saving: asked.saving.clone(),
-            through_the_server: asked.for_the_site_server.clone().map(|document| {
+            through_the_server: asked.for_the_site_server.clone().map(|server| {
                 state::ServerSignature {
-                    document,
+                    format: server.format,
+                    document: server.document,
                     round: asked.round,
                     chosen: None,
                     signed: None,

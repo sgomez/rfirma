@@ -33,6 +33,10 @@ const REFUSALS: Record<keyof Catalog["sede"]["refusals"], true> = {
   batchInvalidPresignResponse: true,
   batchInvalidPostsignResponse: true,
   batchSigningFailed: true,
+  triphaseServerUrlMissing: true,
+  triphaseServerException: true,
+  triphaseServerUnreachable: true,
+  triphaseServerUnexpectedAnswer: true,
   unknown: true,
 };
 

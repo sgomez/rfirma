@@ -1,6 +1,7 @@
 //! Vocabulario de salida del trámite con la sede y la ventana, y el códec que lo pone en el cable.
 
 use std::collections::BTreeMap;
+use std::path::{Path, PathBuf};
 
 use crate::identity::domain::certificate::ListedCertificate;
 use crate::signing::domain::bridge::Format;
@@ -11,6 +12,7 @@ use crate::site::domain::protocol::{
     SignAndSaveRequest, SignatureRound, SiteFilter, SiteVisibleSignature,
 };
 use crate::site::domain::signing::SiteSignature;
+use crate::site::domain::triphase_server::ServerFormat;
 
 use super::request::SiteRequest;
 
@@ -141,8 +143,17 @@ pub struct SigningConsent {
     pub saving: Option<Box<SavingHints>>,
     /// Asa del certificado que ya está resuelto y el desplegable elige solo.
     pub already_chosen: Option<String>,
-    /// Los datos que viajan al servidor trifásico de la sede, si la firma se hace allí.
-    pub for_the_site_server: Option<Vec<u8>>,
+    /// Lo que viaja al servidor trifásico de la sede, si la firma se hace allí.
+    pub for_the_site_server: Option<ForTheSiteServer>,
+}
+
+/// El firmador del servidor trifásico de la sede y los datos que le llegan.
+#[derive(Clone, Debug)]
+pub struct ForTheSiteServer {
+    /// El firmador trifásico que eligió la sede.
+    pub format: ServerFormat,
+    /// Los datos, o la firma previa en cofirma y contrafirma.
+    pub document: Vec<u8>,
 }
 
 /// Lo que hace falta para repetir la firma cuando la persona confirma lo que el validador
@@ -163,8 +174,8 @@ pub struct ConfirmationConsent {
     pub filter: SiteFilter,
     /// Si la sede se conforma con el único certificado que pase el filtro.
     pub headless: bool,
-    /// Si la prefirma y la postfirma las hace el servidor trifásico de la sede.
-    pub through_the_site_server: bool,
+    /// El firmador del servidor trifásico de la sede, si la prefirma y la postfirma se hacen allí.
+    pub through_the_site_server: Option<ServerFormat>,
     /// Pistas de guardado, si esta firma viene de `signandsave`.
     pub saving: Option<Box<SavingHints>>,
     /// Las claves ya confirmadas en confirmaciones anteriores.
@@ -259,6 +270,26 @@ pub struct SavingConsent {
     pub starting_folder: Option<String>,
     /// El DER del firmante con el que contestar si esto viene de `signandsave`, `None` en `save`.
     pub signer_der: Option<Vec<u8>>,
+}
+
+impl SavingConsent {
+    /// La carpeta en la que se abre el diálogo: la que declaró la sede o, si no, `home`.
+    pub fn dialog_folder(&self, home: Option<&Path>) -> Option<PathBuf> {
+        declared_or_home(self.starting_folder.as_deref(), home)
+    }
+}
+
+impl LoadingConsent {
+    /// La carpeta en la que se abre el selector: la que declaró la sede o, si no, `home`.
+    pub fn dialog_folder(&self, home: Option<&Path>) -> Option<PathBuf> {
+        declared_or_home(self.starting_folder.as_deref(), home)
+    }
+}
+
+fn declared_or_home(declared: Option<&str>, home: Option<&Path>) -> Option<PathBuf> {
+    declared
+        .map(PathBuf::from)
+        .or_else(|| home.map(Path::to_path_buf))
 }
 
 /// Datos para el selector de carga del portal: el nombre cruza, la ruta nunca (ADR-0011).

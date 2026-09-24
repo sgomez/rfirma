@@ -1546,6 +1546,18 @@ msgstr ""
 msgid "sede.refusals.batchSigningFailed"
 msgstr "A sinatura do lote que pedía {{origin}} non chegou a completarse."
 
+msgid "sede.refusals.triphaseServerUrlMissing"
+msgstr "{{origin}} pediu asinar co seu servizo de sinatura, pero non dixo onde está."
+
+msgid "sede.refusals.triphaseServerException"
+msgstr "O servizo de sinatura de {{origin}} deu un erro."
+
+msgid "sede.refusals.triphaseServerUnreachable"
+msgstr "O servizo de sinatura de {{origin}} non contestou."
+
+msgid "sede.refusals.triphaseServerUnexpectedAnswer"
+msgstr "O servizo de sinatura de {{origin}} contestou algo que rFirma non sabe ler."
+
 msgid "sede.noCertificate.noneTitle"
 msgstr "Non tes ningún certificado"
 

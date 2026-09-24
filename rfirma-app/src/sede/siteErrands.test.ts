@@ -333,6 +333,28 @@ describe("los momentos que pone el adaptador", () => {
     });
   });
 
+  it.each([
+    "triphaseServerUrlMissing",
+    "triphaseServerException",
+    "triphaseServerUnreachable",
+    "triphaseServerUnexpectedAnswer",
+  ] as const)("names the triphase server failure %s as its own refusal", async (situation) => {
+    const { push, port, last } = watched({
+      signWithPin: async () => ({
+        ok: false,
+        failure: { situation, detail: "CRUDO", attemptsLeft: null },
+      }),
+    });
+    push(ASKING_TO_SIGN);
+    await vi.waitFor(() => expect(last()?.stage.kind).toBe("consent"));
+    await port.consent("handle-1");
+
+    expect(last()?.stage).toEqual({
+      kind: "outcome",
+      outcome: { kind: "refused", situation, detail: "CRUDO" },
+    });
+  });
+
   it("ends the errand when a signing stage fails for anything else", async () => {
     const { push, port, last } = watched({
       finishSigning: async () => ({

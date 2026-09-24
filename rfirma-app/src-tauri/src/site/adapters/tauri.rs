@@ -133,6 +133,11 @@ fn nothing_pending(what: &str) -> Failure {
     )
 }
 
+/// El directorio personal de quien usa rFirma, si se sabe.
+fn this_home() -> Option<std::path::PathBuf> {
+    std::env::var_os("HOME").map(std::path::PathBuf::from)
+}
+
 /// Las pistas para el diálogo de guardado del portal que declaró la sede.
 fn dialog_clues_for_saving(
     consent: &crate::site::application::errand::SavingConsent,
@@ -142,10 +147,7 @@ fn dialog_clues_for_saving(
         filename: consent.filename.clone(),
         extensions: consent.extensions.clone(),
         description: consent.description.clone(),
-        starting_folder: consent
-            .starting_folder
-            .as_ref()
-            .map(std::path::PathBuf::from),
+        starting_folder: consent.dialog_folder(this_home().as_deref()),
     }
 }
 
@@ -231,10 +233,7 @@ fn dialog_clues_for_loading(
         filename: consent.filename.clone(),
         extensions: consent.extensions.clone(),
         description: consent.description.clone(),
-        starting_folder: consent
-            .starting_folder
-            .as_ref()
-            .map(std::path::PathBuf::from),
+        starting_folder: consent.dialog_folder(this_home().as_deref()),
     }
 }
 

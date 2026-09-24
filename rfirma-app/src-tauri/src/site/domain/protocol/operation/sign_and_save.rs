@@ -20,6 +20,7 @@ use super::properties::{
 use super::save_load::check_filename;
 use super::sign::{counter_round, SignatureRound};
 use super::{SiteOperation, COSIGN, COUNTERSIGN, SIGN};
+use crate::site::domain::triphase_server::ServerFormat;
 
 /// `ProtocolLauncher.30`: el nombre por defecto cuando la sede no propone ninguno.
 const DEFAULT_SIGNED_NAME: &str = "Firma";
@@ -49,6 +50,7 @@ pub struct SignAndSaveRequest {
     load_starting_folder: Option<String>,
     load_filename: Option<String>,
     chosen_name: Option<String>,
+    through_the_site_server: Option<ServerFormat>,
 }
 
 impl SignAndSaveRequest {
@@ -139,6 +141,11 @@ impl SignAndSaveRequest {
         self.headless
     }
 
+    /// El firmador del servidor trifásico de la sede, si la prefirma y la postfirma se hacen allí.
+    pub fn through_the_site_server(&self) -> Option<ServerFormat> {
+        self.through_the_site_server
+    }
+
     /// El documento que la persona acaba de elegir, que con `format=auto` fija el formato
     /// efectivo igual que si hubiera llegado en `dat`. El nombre del fichero elegido (con su
     /// extensión) alimenta el segundo escalón de `proposed_name`.
@@ -206,6 +213,7 @@ pub(super) fn sign_and_save_request(
         load_starting_folder: property_value(&declared, FILENAME_CURRENT_DIR),
         load_filename: properties.actual_name().map(str::to_owned),
         chosen_name: None,
+        through_the_site_server: url.parameter("format").and_then(ServerFormat::named),
         declared,
     }))
 }

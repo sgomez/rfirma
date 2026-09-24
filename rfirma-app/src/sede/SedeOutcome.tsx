@@ -265,6 +265,14 @@ function RefusalSentence({
       return <>{t("sede.refusals.batchInvalidPostsignResponse", subject)}</>;
     case "batchSigningFailed":
       return <>{t("sede.refusals.batchSigningFailed", subject)}</>;
+    case "triphaseServerUrlMissing":
+      return <>{t("sede.refusals.triphaseServerUrlMissing", subject)}</>;
+    case "triphaseServerException":
+      return <>{t("sede.refusals.triphaseServerException", subject)}</>;
+    case "triphaseServerUnreachable":
+      return <>{t("sede.refusals.triphaseServerUnreachable", subject)}</>;
+    case "triphaseServerUnexpectedAnswer":
+      return <>{t("sede.refusals.triphaseServerUnexpectedAnswer", subject)}</>;
     default:
       // Una situación nueva en el catálogo cae aquí hasta que se le escriba su
       // rama: `unknown` dice lo que pasa sin fingir que se sabe cuál era.

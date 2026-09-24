@@ -58,6 +58,8 @@ const A_BARE_PKCS1 = "a-bare-pkcs1";
 const THROUGH_THE_TRIPHASE_SERVER = "through-the-triphase-server";
 const THE_PRESIGNATURE_SIGNED_WITH_THE_KEY = "the-presignature-signed-with-the-key";
 const THE_SERVER_SIGNATURE_AS_IT_CAME = "the-server-signature-as-it-came";
+/** La mide el arnés de la suite, que lee el fichero guardado en el perfil aislado. */
+const THE_RETURNED_SIGNATURE_ON_DISK = "the-returned-signature-on-disk";
 const WITHOUT_A_VISIBLE_SIGNATURE = "without-a-visible-signature";
 const WHERE_THE_REQUEST_SAYS = "the-signature-where-the-request-says";
 const THE_DEFAULT_ENVELOPE = "the-default-envelope";
@@ -454,32 +456,43 @@ const whatTheTriphaseServerReceived = { pre: null, post: null };
 /** El Base64 URL-safe con relleno que lee el `Base64` de AutoFirma. */
 const inUrlSafeBase64 = (bytes) => bytes.toString("base64").replace(/\+/g, "-").replace(/\//g, "_");
 
-const theTriphaseResult = () => theReferenceSignature("cades-implicit.p7s");
+/** Lo que cada formato trifásico manda en `format` y la firma congelada que le devuelve la postfirma. */
+const THE_TRIPHASE_FORMATS = {
+  CAdEStri: { format: "CAdES", signature: () => theReferenceSignature("cades-implicit.p7s") },
+  PAdEStri: { format: "pades", signature: aCertifiedPdf },
+  XAdEStri: { format: "XAdES", signature: () => theReferenceSignature("xades-enveloping.xml") },
+  FacturaEtri: { format: "FacturaE", signature: () => theReferenceSignature("facturae.xsig") },
+};
 
-function theTriphasePresignature() {
+function theTriphasePresignature(format) {
   const xml =
-    '<xml>\n <firmas format="CAdES">\n  <firma Id="1">\n' +
+    `<xml>\n <firmas format="${format}">\n  <firma Id="1">\n` +
     `   <param n="PRE">${THE_PRESIGNATURE.toString("base64")}</param>\n` +
     "  </firma>\n </firmas>\n</xml>";
   return inUrlSafeBase64(Buffer.from(xml, "utf8"));
 }
 
 /** El servidor trifásico falso: `op=pre` devuelve la prefirma, `op=post` la firma congelada. */
-function theTriphaseServer(query) {
+const theTriphaseServer = (triphase) => (query) => {
   const received = Object.fromEntries(
     ["op", "cop", "format", "doc", "cert", "session"].map((name) => [name, query.get(name)]),
   );
-  emit({ event: "triphase", op: String(received.op), cop: String(received.cop) });
+  emit({
+    event: "triphase",
+    op: String(received.op),
+    cop: String(received.cop),
+    format: String(received.format),
+  });
   if (received.op === "pre") {
     whatTheTriphaseServerReceived.pre = received;
-    return { status: 200, body: theTriphasePresignature() };
+    return { status: 200, body: theTriphasePresignature(received.format) };
   }
   if (received.op === "post") {
     whatTheTriphaseServerReceived.post = received;
-    return { status: 200, body: `OK NEWID=${inUrlSafeBase64(theTriphaseResult())}` };
+    return { status: 200, body: `OK NEWID=${inUrlSafeBase64(triphase.signature())}` };
   }
   return { status: 400, body: "ERR-01: operación trifásica desconocida" };
-}
+};
 
 /** El PKCS#1 que la postfirma trae en `session` verifica la prefirma con el certificado de `cert`. */
 function thePresignatureSignedWithTheKey(post) {
@@ -490,19 +503,25 @@ function thePresignatureSignedWithTheKey(post) {
   return !!pk1 && isABarePkcs1(THE_PRESIGNATURE, bytesOf(pk1), certificate);
 }
 
-const theTriphaseConditions = (cop, content) => (signature) => {
+const theTriphaseConditions = (triphase, cop, content) => (signature) => {
   const { pre, post } = whatTheTriphaseServerReceived;
+  const { format } = triphase;
   const through =
-    pre?.cop === cop && post?.cop === cop && !!pre.doc && bytesOf(pre.doc).equals(content());
+    pre?.cop === cop &&
+    post?.cop === cop &&
+    pre.format === format &&
+    post.format === format &&
+    !!pre.doc &&
+    bytesOf(pre.doc).equals(content());
   const signedWithTheKey = thePresignatureSignedWithTheKey(post);
-  const asItCame = bytesOf(signature).equals(theTriphaseResult());
+  const asItCame = bytesOf(signature).equals(triphase.signature());
   return [
     aCondition(
       THROUGH_THE_TRIPHASE_SERVER,
       through,
       through
-        ? `la prefirma y la postfirma llegaron al serverUrl con cop=${cop} y los datos en doc`
-        : `el serverUrl no recibió la prefirma y la postfirma con cop=${cop} y los datos`,
+        ? `la prefirma y la postfirma llegaron al serverUrl con cop=${cop}, format=${format} y los datos en doc`
+        : `el serverUrl no recibió la prefirma y la postfirma con cop=${cop}, format=${format} y los datos`,
     ),
     aCondition(
       THE_PRESIGNATURE_SIGNED_WITH_THE_KEY,
@@ -527,20 +546,39 @@ const THE_TRIPHASE_CONDITIONS = [
   THE_SERVER_SIGNATURE_AS_IT_CAME,
 ];
 
+const THE_TRIPHASE_CONDITIONS_ON_DISK = [
+  ...THE_TRIPHASE_CONDITIONS,
+  THE_RETURNED_SIGNATURE_ON_DISK,
+];
+
 const THE_OPERATIONS = {
   sign: theSignScript,
   cosign: theCosignScript,
   countersign: theCountersignScript,
 };
 
-/** Una operación `CAdEStri` cuyo `serverUrl` es el servidor trifásico falso de la sede. */
-const triphasing = (cop, content) => async () => {
-  const serverUrl = await servletServing(theTriphaseServer);
-  THE_OPERATIONS[cop](
-    "CAdEStri",
+/** Un `signAndSaveToFile()` con `cop=sign` que propone guardar el resultado como `filename`. */
+const savingAs = (filename) => (format, extraParams, content, measuring) =>
+  AutoScript.signAndSaveToFile(
+    "sign",
+    content.toString("base64"),
+    "SHA256withRSA",
+    format,
+    extraParams,
+    filename,
+    (signature, certificate) => answering(measuring, String(signature), String(certificate)),
+    settlingTheError,
+  );
+
+/** Una operación trifásica cuyo `serverUrl` es el servidor trifásico falso de la sede. */
+const triphasing = (format, cop, content, operation = THE_OPERATIONS[cop]) => async () => {
+  const triphase = THE_TRIPHASE_FORMATS[format];
+  const serverUrl = await servletServing(theTriphaseServer(triphase));
+  operation(
+    format,
     `serverUrl=${serverUrl}`,
     content(),
-    theTriphaseConditions(cop, content),
+    theTriphaseConditions(triphase, cop, content),
   );
 };
 
@@ -806,15 +844,41 @@ export const SIGNATURE_SCRIPTS = {
   signnone: aPublishedScript(signing("NONE", "", theChallenge, aBarePkcs1), {
     conditions: [A_BARE_PKCS1],
   }),
-  signcadestri: aPublishedScript(triphasing("sign", theChallenge), {
+  signcadestri: aPublishedScript(triphasing("CAdEStri", "sign", theChallenge), {
     conditions: THE_TRIPHASE_CONDITIONS,
   }),
-  cosigncadestri: aPublishedScript(triphasing("cosign", theCadesImplicitSignature), {
+  cosigncadestri: aPublishedScript(triphasing("CAdEStri", "cosign", theCadesImplicitSignature), {
     conditions: THE_TRIPHASE_CONDITIONS,
   }),
-  countersigncadestri: aPublishedScript(triphasing("countersign", theCadesImplicitSignature), {
+  countersigncadestri: aPublishedScript(
+    triphasing("CAdEStri", "countersign", theCadesImplicitSignature),
+    { conditions: THE_TRIPHASE_CONDITIONS },
+  ),
+  signpadestri: aPublishedScript(triphasing("PAdEStri", "sign", thePdfOfTheTest), {
     conditions: THE_TRIPHASE_CONDITIONS,
   }),
+  signxadestri: aPublishedScript(triphasing("XAdEStri", "sign", theXmlDocument), {
+    conditions: THE_TRIPHASE_CONDITIONS,
+  }),
+  signfacturaetri: aPublishedScript(triphasing("FacturaEtri", "sign", theInvoice), {
+    conditions: THE_TRIPHASE_CONDITIONS,
+  }),
+  signandsavecadestri: aPublishedScript(
+    triphasing("CAdEStri", "sign", theChallenge, savingAs("challenge-signed.csig")),
+    { conditions: THE_TRIPHASE_CONDITIONS_ON_DISK },
+  ),
+  signandsavepadestri: aPublishedScript(
+    triphasing("PAdEStri", "sign", thePdfOfTheTest, savingAs("documento-firmado.pdf")),
+    { conditions: THE_TRIPHASE_CONDITIONS_ON_DISK },
+  ),
+  signandsavexadestri: aPublishedScript(
+    triphasing("XAdEStri", "sign", theXmlDocument, savingAs("documento-firmado.xsig")),
+    { conditions: THE_TRIPHASE_CONDITIONS_ON_DISK },
+  ),
+  signandsavefacturaetri: aPublishedScript(
+    triphasing("FacturaEtri", "sign", theInvoice, savingAs("factura-firmada.xsig")),
+    { conditions: THE_TRIPHASE_CONDITIONS_ON_DISK },
+  ),
   signcadestriwithoutserverurl: aPublishedScript(signing("CAdEStri", "", theChallenge)),
   signpadesoptional: aPublishedScript(
     signing("PAdES", "visibleSignature=optional", thePdfOfTheTest, withoutAVisibleSignature),

@@ -67,6 +67,7 @@ pub fn finish_the_server_signature<E: FilterEngine, P: PolicyEngine, N: Neighbou
             secret,
         },
         &ServerAsk {
+            format: server.format,
             round: server.round,
             algorithm: pending.algorithm,
             document: &server.document,

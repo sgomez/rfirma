@@ -12,6 +12,7 @@ fn the_site_declaring(pairs: &[(&str, &str)]) -> BTreeMap<String, String> {
 
 fn a_call(round: SignatureRound) -> ServerCall<'static> {
     ServerCall {
+        format: ServerFormat::Cades,
         round,
         algorithm: "SHA256withRSA",
         certificate: b"el certificado",
@@ -65,7 +66,7 @@ fn the_server_does_not_get_back_the_server_url_nor_the_document_id() {
         ("mode", "implicit"),
     ]);
 
-    let params = params_for_the_server(&declared, SignatureRound::First);
+    let params = params_for_the_server(&declared, ServerFormat::Cades, SignatureRound::First);
 
     assert_eq!(params, the_site_declaring(&[("mode", "implicit")]));
 }
@@ -74,12 +75,107 @@ fn the_server_does_not_get_back_the_server_url_nor_the_document_id() {
 fn a_countersignature_tells_the_server_its_target() {
     let params = params_for_the_server(
         &BTreeMap::new(),
+        ServerFormat::Xades,
         SignatureRound::Counter {
             target: CounterTarget::Tree,
         },
     );
 
     assert_eq!(params, the_site_declaring(&[("target", "tree")]));
+}
+
+#[test]
+fn each_triphase_format_of_the_site_names_its_server_format() {
+    for (named, expected) in [
+        ("CAdEStri", ServerFormat::Cades),
+        (" padestri ", ServerFormat::Pades),
+        ("XAdEStri", ServerFormat::Xades),
+        ("FacturaEtri", ServerFormat::FacturaE),
+    ] {
+        assert_eq!(ServerFormat::named(named), Some(expected), "{named}");
+    }
+    for named in ["CAdES", "PAdES", "XAdES", "FacturaE", "auto", "NONEtri"] {
+        assert_eq!(ServerFormat::named(named), None, "{named}");
+    }
+}
+
+#[test]
+fn each_server_format_travels_as_its_triphase_signer_sends_it() {
+    for (format, on_the_wire) in [
+        (ServerFormat::Cades, "CAdES"),
+        (ServerFormat::Pades, "pades"),
+        (ServerFormat::Xades, "XAdES"),
+        (ServerFormat::FacturaE, "FacturaE"),
+    ] {
+        let call = ServerCall {
+            format,
+            ..a_call(SignatureRound::First)
+        };
+
+        assert_eq!(
+            the_value_of(&presign_form(&call), "format"),
+            Some(on_the_wire)
+        );
+        assert_eq!(
+            the_value_of(
+                &postsign_form(&call, &TriphaseData::new(None, Vec::new())),
+                "format"
+            ),
+            Some(on_the_wire)
+        );
+    }
+}
+
+#[test]
+fn a_pades_cosignature_asks_the_server_for_a_signature() {
+    let call = ServerCall {
+        format: ServerFormat::Pades,
+        ..a_call(SignatureRound::Again)
+    };
+
+    assert_eq!(the_value_of(&presign_form(&call), "cop"), Some("sign"));
+}
+
+#[test]
+fn a_xades_cosignature_asks_the_server_for_a_cosignature() {
+    let call = ServerCall {
+        format: ServerFormat::Xades,
+        ..a_call(SignatureRound::Again)
+    };
+
+    assert_eq!(the_value_of(&presign_form(&call), "cop"), Some("cosign"));
+}
+
+#[test]
+fn the_pades_server_gets_every_param_of_the_site() {
+    let declared = the_site_declaring(&[
+        ("serverUrl", "https://sede.example/tri"),
+        ("documentId", "abc"),
+        ("layer2Text", "firmado"),
+    ]);
+
+    let params = params_for_the_server(&declared, ServerFormat::Pades, SignatureRound::First);
+
+    assert_eq!(params, declared);
+}
+
+#[test]
+fn the_xades_server_does_not_get_back_the_server_url_nor_the_pkcs1_validation() {
+    for format in [ServerFormat::Xades, ServerFormat::FacturaE] {
+        let declared = the_site_declaring(&[
+            ("serverUrl", "https://sede.example/tri"),
+            ("validatePkcs1", "false"),
+            ("documentId", "abc"),
+        ]);
+
+        let params = params_for_the_server(&declared, format, SignatureRound::First);
+
+        assert_eq!(
+            params,
+            the_site_declaring(&[("documentId", "abc")]),
+            "{format:?}"
+        );
+    }
 }
 
 #[test]
