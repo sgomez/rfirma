@@ -1348,6 +1348,9 @@ msgstr ""
 "It looks like the PDF was modified after its last signature. Do you want to "
 "sign it anyway?"
 
+msgid "sede.confirm.messages.signingCertifiedPdf"
+msgstr "The PDF you want to sign is certified and does not allow new signatures. Adding yours will invalidate the previous signature. Do you want to sign it anyway?"
+
 msgid "sede.confirm.messages.signingModifiedPdfForm"
 msgstr ""
 "The PDF has a form whose fields were changed after it was signed. Do you "

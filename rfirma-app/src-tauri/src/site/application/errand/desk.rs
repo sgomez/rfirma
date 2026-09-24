@@ -1,22 +1,27 @@
 //! Mesa del trámite: dependencias de ejecución y evaluación del consentimiento.
 
 mod certificates;
+mod confirmation;
 mod scratch;
 
 use certificates::the_only_row_among;
 pub use certificates::{consent_for, consent_to_the_batch, consent_to_the_local_batch};
+pub use confirmation::consent_to_the_confirmed_signature;
+use confirmation::{
+    asking_to_confirm, asks_to_check_signatures, the_previous_signatures_hold,
+    SIGNING_CERTIFIED_PDF,
+};
 pub(in crate::site::application) use scratch::{keep_the_document, write_the_document};
 
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use base64::engine::general_purpose::STANDARD;
-use base64::Engine as _;
-
 use crate::identity::domain::certificate::TokenCertificate;
 use crate::signing::domain::bridge::Format;
-use crate::signing::domain::{AdmissibleDocument, Waivers, ALLOW_UNREGISTERED_KEY};
+use crate::signing::domain::{
+    AdmissibleDocument, Refusal, Waivers, ALLOW_SIGNING_CERTIFIED_KEY, ALLOW_UNREGISTERED_KEY,
+};
 use crate::site::domain::protocol::{
     forget_the_box, refuse_a_countersignature_outside_cades_and_xades,
     refuse_a_multisignature_of_an_invoice, refuse_explicit_xades, visible_signature_of, AfirmaUrl,
@@ -26,13 +31,12 @@ use crate::site::domain::protocol::{
 use crate::site::domain::triphase_server::ServerFormat;
 
 use super::outcome::{
-    ConfirmationConsent, ErrandStep, ForTheSiteServer, LoadingConsent, PendingSignature,
-    SavingConsent, SavingHints, SigningConsent, SiteOutcome,
+    ErrandStep, ForTheSiteServer, LoadingConsent, PendingSignature, SavingConsent, SavingHints,
+    SigningConsent, SiteOutcome,
 };
 use super::replies::{answering, no_certificate_at_all, no_certificate_the_site_accepts};
 use super::request::SiteRequest;
 use super::state::LiveErrand;
-use crate::signing::domain::bridge::SignatureVerdict;
 use crate::site::application::filtering;
 use crate::site::application::policies;
 use crate::site::application::session::SiteRefusal;
@@ -40,9 +44,6 @@ use crate::site::ports::{
     BatchServices, Certificates, FilterEngine, PolicyEngine, Scratch, ScratchDocuments,
     SiteSigning, TokenSigning, TriphaseServer, ValidationEngine,
 };
-
-/// `properties`: la sede pide validar las firmas que ya trae el documento antes de seguir.
-const CHECK_SIGNATURES: &str = "checkSignatures";
 
 /// Lo que el trámite pide a los vecinos, junto: los certificados, el documento de paso y la firma.
 pub trait Neighbours: Certificates + ScratchDocuments + SiteSigning + TokenSigning {}
@@ -332,6 +333,14 @@ fn consent_to_a_signature<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
                 )),
             )
         }
+        Err(Refusal::Certified) if Refusal::Certified.awaits_the_person(waivers) => {
+            return asking_to_confirm(
+                &ask,
+                saving,
+                ALLOW_SIGNING_CERTIFIED_KEY.to_owned(),
+                SIGNING_CERTIFIED_PDF.to_owned(),
+            )
+        }
         Err(inadmissible) => {
             return answering(
                 live,
@@ -430,88 +439,6 @@ fn waivers_declared_in(ask: &SignatureAsk<'_>) -> Waivers {
                     .iter()
                     .map(|(key, value)| (key.as_str(), value.as_str())),
             ),
-    )
-}
-
-/// Si la sede pidió validar las firmas previas; la clave la interpreta el trámite y no cruza al puente.
-fn asks_to_check_signatures(from_the_site: &mut BTreeMap<String, String>) -> bool {
-    from_the_site
-        .remove(CHECK_SIGNATURES)
-        .is_some_and(|declared| declared.trim().eq_ignore_ascii_case("true"))
-}
-
-/// El veredicto del validador del original sobre lo que el documento ya traía firmado.
-fn the_previous_signatures_hold<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
-    desk: &ErrandDesk<'_, E, P, N>,
-    ask: &SignatureAsk<'_>,
-    saving: Option<Box<SavingHints>>,
-    format: Format,
-    live: &LiveErrand,
-) -> Result<(), ErrandStep> {
-    match desk
-        .validation
-        .verdict_of(&STANDARD.encode(ask.document), format)
-    {
-        Ok(SignatureVerdict::Valid) => Ok(()),
-        Ok(SignatureVerdict::Invalid { reason }) => Err(answering(
-            live,
-            SiteOutcome::Refused(SiteRefusal::InvalidSignature(reason)),
-        )),
-        Ok(SignatureVerdict::ConfirmationNeeded { message_code, .. }) if ask.headless => {
-            Err(answering(
-                live,
-                SiteOutcome::Refused(SiteRefusal::ConfirmationNeeded(message_code)),
-            ))
-        }
-        Ok(SignatureVerdict::ConfirmationNeeded {
-            parameter,
-            message_code,
-        }) => Err(ErrandStep::AskingToConfirm(Box::new(ConfirmationConsent {
-            document: ask.document.to_vec(),
-            requested: ask.format,
-            algorithm: ask.algorithm,
-            round: ask.round,
-            declared: ask.declared_params.to_vec(),
-            filter: ask.filter.clone(),
-            headless: ask.headless,
-            through_the_site_server: ask.through_the_site_server,
-            saving,
-            confirmed: ask.confirmed.clone(),
-            parameter,
-            message_code,
-        }))),
-        Err(error) => Err(answering(
-            live,
-            SiteOutcome::Refused(SiteRefusal::CouldNotValidate(error)),
-        )),
-    }
-}
-
-/// Repite la firma con la clave que la persona acaba de confirmar, y vuelve a validar.
-pub fn consent_to_the_confirmed_signature<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
-    desk: &ErrandDesk<'_, E, P, N>,
-    pending: ConfirmationConsent,
-    ours: Vec<TokenCertificate>,
-    live: &LiveErrand,
-) -> ErrandStep {
-    let mut confirmed = pending.confirmed;
-    confirmed.insert(pending.parameter, "true".to_owned());
-    consent_to_a_signature(
-        desk,
-        SignatureAsk {
-            document: &pending.document,
-            format: pending.requested,
-            algorithm: pending.algorithm,
-            round: pending.round,
-            declared_params: &pending.declared,
-            filter: &pending.filter,
-            headless: pending.headless,
-            through_the_site_server: pending.through_the_site_server,
-            confirmed,
-        },
-        pending.saving,
-        ours,
-        live,
     )
 }
 

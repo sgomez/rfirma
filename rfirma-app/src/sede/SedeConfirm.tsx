@@ -11,9 +11,9 @@ interface SedeConfirmProps {
 }
 
 /**
- * **2b · Hay que confirmar.** El validador del original no da por buenas las
- * firmas que el documento ya trae y la decisión no es de rFirma: se pregunta con
- * las palabras del original y no se resume ni se reinterpreta.
+ * **2b · Hay que confirmar.** El original no firma sin preguntar —el validador
+ * no da por buenas las firmas previas, o el PDF está certificado— y la decisión
+ * no es de rFirma: se pregunta con sus palabras, sin resumir ni reinterpretar.
  *
  * Es un momento y no un diálogo encima del consentimiento: llega **antes** de
  * que haya nada que consentir, y cancelar aquí es contestarle a la sede, no
@@ -69,6 +69,8 @@ function confirmationMessage(t: TFunction, messageCode: string): string {
   switch (messageCode) {
     case "pdfShadowAttackSuspect":
       return t("sede.confirm.messages.pdfShadowAttackSuspect");
+    case "signingCertifiedPdf":
+      return t("sede.confirm.messages.signingCertifiedPdf");
     case "signingModifiedPdfForm":
       return t("sede.confirm.messages.signingModifiedPdfForm");
     default:

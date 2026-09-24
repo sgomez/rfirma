@@ -35,6 +35,13 @@ describe("2b · confirming what the validator flags", () => {
     ).toBeInTheDocument();
   });
 
+  it("warns that signing a certified PDF invalidates the signature it already has", () => {
+    const { port } = scriptedErrand({ kind: "confirming", messageCode: "signingCertifiedPdf" });
+    renderWithCatalog(<SedeWindow errands={port} />);
+
+    expect(screen.getByText(/está certificado y no admite nuevas firmas/i)).toBeInTheDocument();
+  });
+
   it("names the code when the message is one rFirma has no words for", () => {
     const { port } = scriptedErrand({ kind: "confirming", messageCode: "somethingNewer" });
     renderWithCatalog(<SedeWindow errands={port} />);

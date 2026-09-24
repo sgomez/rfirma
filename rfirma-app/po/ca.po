@@ -1362,6 +1362,9 @@ msgstr ""
 "Sembla que el PDF s'ha modificat després de l'última signatura. Vols signar-"
 "lo de totes maneres?"
 
+msgid "sede.confirm.messages.signingCertifiedPdf"
+msgstr "El PDF que vols signar està certificat i no admet noves signatures. Afegir-hi la teva invalidarà la signatura anterior. Vols signar-lo de totes maneres?"
+
 msgid "sede.confirm.messages.signingModifiedPdfForm"
 msgstr ""
 "El PDF té un formulari amb camps que s'han canviat després de signar-lo. "

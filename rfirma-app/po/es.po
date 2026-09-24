@@ -1366,6 +1366,9 @@ msgstr ""
 "Parece que el PDF se ha modificado después de la última firma. ¿Quieres "
 "firmarlo de todos modos?"
 
+msgid "sede.confirm.messages.signingCertifiedPdf"
+msgstr "El PDF que quieres firmar está certificado y no admite nuevas firmas. Añadir la tuya invalidará la firma anterior. ¿Quieres firmarlo de todos modos?"
+
 msgid "sede.confirm.messages.signingModifiedPdfForm"
 msgstr ""
 "El PDF tiene un formulario cuyos campos se han cambiado después de firmarlo. "
