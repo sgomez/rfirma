@@ -41,7 +41,7 @@ comparten la numeración: el siguiente ADR, esté donde esté, toma el número l
 
 | ADR | Sobre qué manda |
 |---|---|
-| 0026 | La exigencia es lo que pretende el código de AutoFirma; el manual solo excluye |
+| 0026 | La exigencia es lo que pretende el código de AutoFirma; el manual solo rebaja |
 | 0027 | Dos sedes: la publicada para lo de punta a punta, la escrita a mano para la gramática |
 | 0028 | Un clic por trámite: la suite quita el PIN, pero no esconde la elección del certificado |
 
