@@ -119,6 +119,30 @@ describe("4 · outcome", () => {
     expect(screen.getByText(phrase)).toBeInTheDocument();
   });
 
+  it("tells a token failure with the title the desktop already gives it", () => {
+    const { port } = scriptedErrand({
+      kind: "outcome",
+      outcome: { kind: "refused", situation: "incorrectPin", detail: "CKR_PIN_INCORRECT" },
+    });
+    renderWithCatalog(<SedeWindow errands={port} />);
+
+    expect(screen.getByText("El PIN no es correcto")).toBeInTheDocument();
+  });
+
+  it("tells a site that answers after the errand ended with its own phrase", () => {
+    const { port } = scriptedErrand({
+      kind: "outcome",
+      outcome: { kind: "refused", situation: "siteErrandNotLive", detail: "CRUDO" },
+    });
+    renderWithCatalog(<SedeWindow errands={port} />);
+
+    expect(
+      screen.getByText(
+        "El trámite con sede.ejemplo.gob.es ya había terminado cuando llegó tu respuesta.",
+      ),
+    ).toBeInTheDocument();
+  });
+
   it("classifies a cancelled save as its own refusal, with its own phrase", () => {
     const { port } = scriptedErrand({
       kind: "outcome",

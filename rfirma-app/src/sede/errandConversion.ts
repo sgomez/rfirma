@@ -1,11 +1,12 @@
 import type { Catalog } from "../i18n/catalog";
-import type {
-  Errand,
-  ErrandStage,
-  RefusalSituation,
-  SignatureRound,
-  SiteDocument,
-  SiteOutcome,
+import {
+  type Errand,
+  type ErrandStage,
+  NAMED_BY_THE_DESK,
+  type RefusalSituation,
+  type SignatureRound,
+  type SiteDocument,
+  type SiteOutcome,
 } from "./errand";
 import type { DescribedDocument, SiteErrandView, SiteStageView } from "./siteErrandView";
 
@@ -37,11 +38,23 @@ const REFUSALS: Record<keyof Catalog["sede"]["refusals"], true> = {
   triphaseServerException: true,
   triphaseServerUnreachable: true,
   triphaseServerUnexpectedAnswer: true,
+  certificateNotFound: true,
+  folderMissing: true,
+  unwritable: true,
+  invalidSignature: true,
+  confirmationNeeded: true,
+  localBatchSign: true,
+  siteErrandNotLive: true,
+  pdfHasUnregisteredSignatures: true,
+  secretOnTheReaderKeypad: true,
+  userCancelled: true,
+  promptFailed: true,
   unknown: true,
 };
 
-/** Cómo nombra el lote sus fallos, que vuelven por la orden y sin el prefijo con el que cruzarían. */
-const BATCH_LABELS: Record<string, RefusalSituation> = {
+/** Las etiquetas del backend que el catálogo ya redacta con otro nombre: las del lote, sin su prefijo. */
+const RENAMED: Record<string, RefusalSituation> = {
+  unreadable: "cannotLoadData",
   presignerUnreachable: "batchPresignerUnreachable",
   postsignerUnreachable: "batchPostsignerUnreachable",
   invalidPresignResponse: "batchInvalidPresignResponse",
@@ -50,9 +63,14 @@ const BATCH_LABELS: Record<string, RefusalSituation> = {
 
 /** La situación tal como la sabe nombrar el catálogo, o `unknown`. */
 function refusalOf(situation: string): RefusalSituation {
-  const batch = BATCH_LABELS[situation];
-  if (batch !== undefined) return batch;
-  return situation in REFUSALS ? (situation as RefusalSituation) : "unknown";
+  const renamed = RENAMED[situation];
+  if (renamed !== undefined) return renamed;
+  if (situation in REFUSALS || isNamedByTheDesk(situation)) return situation as RefusalSituation;
+  return "unknown";
+}
+
+function isNamedByTheDesk(situation: string): boolean {
+  return (NAMED_BY_THE_DESK as readonly string[]).includes(situation);
 }
 
 /** Un fallo de una etapa, contado como el desenlace que la ventana enseña. */
@@ -62,14 +80,14 @@ export function refusedBy(failure: { situation: string; detail: string }): SiteO
 
 /**
  * Lo mismo, sabiendo que lo que falló era un lote: sus fallos de firma llegan
- * con la situación del token (`incorrectPin`, `tokenAbsent`…), que aquí no
- * nombra nada, y el lote los llama «lote fallido».
+ * con la situación del token (`incorrectPin`, `tokenAbsent`…), y el lote los
+ * llama «lote fallido».
  */
 export function refusedByTheBatch(failure: { situation: string; detail: string }): SiteOutcome {
   const named = refusalOf(failure.situation);
   return {
     kind: "refused",
-    situation: named === "unknown" ? "batchSigningFailed" : named,
+    situation: named === "unknown" || isNamedByTheDesk(named) ? "batchSigningFailed" : named,
     detail: failure.detail,
   };
 }

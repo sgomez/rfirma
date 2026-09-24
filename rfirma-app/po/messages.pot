@@ -1463,6 +1463,39 @@ msgstr ""
 msgid "sede.refusals.triphaseServerUnexpectedAnswer"
 msgstr ""
 
+msgid "sede.refusals.certificateNotFound"
+msgstr ""
+
+msgid "sede.refusals.folderMissing"
+msgstr ""
+
+msgid "sede.refusals.unwritable"
+msgstr ""
+
+msgid "sede.refusals.invalidSignature"
+msgstr ""
+
+msgid "sede.refusals.confirmationNeeded"
+msgstr ""
+
+msgid "sede.refusals.localBatchSign"
+msgstr ""
+
+msgid "sede.refusals.siteErrandNotLive"
+msgstr ""
+
+msgid "sede.refusals.pdfHasUnregisteredSignatures"
+msgstr ""
+
+msgid "sede.refusals.secretOnTheReaderKeypad"
+msgstr ""
+
+msgid "sede.refusals.userCancelled"
+msgstr ""
+
+msgid "sede.refusals.promptFailed"
+msgstr ""
+
 msgid "sede.noCertificate.noneTitle"
 msgstr ""
 

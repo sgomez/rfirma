@@ -329,7 +329,7 @@ describe("los momentos que pone el adaptador", () => {
 
     expect(last()?.stage).toEqual({
       kind: "outcome",
-      outcome: { kind: "refused", situation: "unknown", detail: "CKR_PIN_INCORRECT" },
+      outcome: { kind: "refused", situation: "incorrectPin", detail: "CKR_PIN_INCORRECT" },
     });
   });
 
