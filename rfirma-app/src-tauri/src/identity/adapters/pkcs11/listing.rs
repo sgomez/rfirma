@@ -63,7 +63,11 @@ fn signable_certificates(
     logged_in: bool,
 ) -> Result<Vec<TokenCertificate>, TokenError> {
     if store.class() == StoreClass::Card && !logged_in {
-        return all_certificates_in_session(session, store, token_label);
+        // Sin sesión no hay clave privada que emparejar: se filtra por contenido (ADR-0025).
+        return Ok(all_certificates_in_session(session, store, token_label)?
+            .into_iter()
+            .filter(|certificate| !certificate.cannot_sign_by_content())
+            .collect());
     }
 
     let visible_private_keys = private_key_ids(session)?;

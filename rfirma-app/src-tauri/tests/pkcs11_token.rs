@@ -107,6 +107,12 @@ fn listing_without_a_session_still_lists_them() {
         6,
         "los tokens de pruebas tienen seis certificados con clave: cinco de RSA y uno de curva eliptica"
     );
+    assert!(
+        found
+            .iter()
+            .all(|certificate| certificate.reference().label() != "FNMT-CA-EMISORA"),
+        "un certificado de CA no puede firmar por su contenido (ADR-0025) y no debe salir sin sesion"
+    );
 }
 
 #[test]

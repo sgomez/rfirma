@@ -17,6 +17,7 @@
 #   id 03  FNMT-REVOCADO-99999999R   clave + certificado  (revocado en 2024)
 #   id 04  FNMT-GEMELO-99999999R     clave + certificado  (par de claves activo)
 #   id 05  FNMT-GEMELO-99999999R     clave + certificado  (par de claves caducado)
+#   id 06  FNMT-CA-EMISORA           solo certificado     (de CA, para ADR-0025)
 #
 # En `rfirma-test-ecc`, uno solo, de curva eliptica P-256:
 #
@@ -124,6 +125,20 @@ import_certificate() {
     echo "importado el certificado $label (id $id)"
 }
 
+# import_ca_certificate <fichero .p12> <contrasena> <id> <etiqueta>
+#
+# La CA emisora viaja dentro del .p12 (ADR-0025), sin fichero aparte.
+import_ca_certificate() {
+    local p12="$1" password="$2" id="$3" label="$4"
+    has_id "$certificates" "$id" && return 0
+    openssl pkcs12 -in "$p12" -passin "pass:$password" -cacerts -nokeys -legacy \
+        | openssl x509 -outform DER -out "$workdir/cert.der"
+    pkcs11-tool --module "$module" --token-label "$token_label" --login --pin "$pin" \
+        --write-object "$workdir/cert.der" --type cert --id "$id" --label "$label" \
+        >/dev/null
+    echo "importado el certificado de CA $label (id $id)"
+}
+
 # import_private_key <fichero .p12> <contrasena> <id> <etiqueta>
 import_private_key() {
     local p12="$1" password="$2" id="$3" label="$4"
@@ -150,6 +165,8 @@ import_private_key "$kit/active-rsa.p12"  "1234"         "04" "FNMT-GEMELO-99999
 import_certificate "$kit/active-rsa.p12"  "1234"         "04" "FNMT-GEMELO-99999999R"
 import_private_key "$kit/expired-rsa.p12" "G5cp,fYC9gje" "05" "FNMT-GEMELO-99999999R"
 import_certificate "$kit/expired-rsa.p12" "G5cp,fYC9gje" "05" "FNMT-GEMELO-99999999R"
+
+import_ca_certificate "$kit/active-rsa.p12" "1234" "06" "FNMT-CA-EMISORA"
 
 echo "token $token_label listo en $module"
 

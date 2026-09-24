@@ -1,4 +1,123 @@
 use super::*;
+use openssl::hash::MessageDigest;
+use openssl::nid::Nid;
+use openssl::x509::extension::{BasicConstraints, KeyUsage};
+use openssl::x509::{X509Name, X509};
+
+use crate::site::domain::local_ca::{generate_key, random_serial};
+
+fn a_certificate_with_extensions(
+    label: &str,
+    build: impl FnOnce(&mut openssl::x509::X509Builder),
+) -> TokenCertificate {
+    let key = generate_key().expect("la clave de pruebas deberia generarse");
+    let mut name = X509Name::builder().expect("deberia poder construirse un nombre");
+    name.append_entry_by_nid(Nid::COMMONNAME, label)
+        .expect("el nombre comun deberia entrar");
+    let name = name.build();
+
+    let mut builder = X509::builder().expect("deberia poder construirse un certificado");
+    builder.set_version(2).expect("la version deberia ponerse");
+    builder
+        .set_serial_number(&random_serial().expect("el serie deberia generarse"))
+        .expect("el serie deberia ponerse");
+    builder
+        .set_subject_name(&name)
+        .expect("el titular deberia ponerse");
+    builder
+        .set_issuer_name(&name)
+        .expect("el emisor deberia ponerse");
+    builder.set_pubkey(&key).expect("la clave deberia ponerse");
+    builder
+        .set_not_before(&openssl::asn1::Asn1Time::days_from_now(0).expect("deberia haber fecha"))
+        .expect("el inicio deberia ponerse");
+    builder
+        .set_not_after(&openssl::asn1::Asn1Time::days_from_now(30).expect("deberia haber fecha"))
+        .expect("el fin deberia ponerse");
+
+    build(&mut builder);
+
+    builder
+        .sign(&key, MessageDigest::sha256())
+        .expect("el certificado de pruebas deberia firmarse");
+
+    let der = builder
+        .build()
+        .to_der()
+        .expect("el certificado deberia poder salir en DER");
+    crate::identity::application::tests::a_certificate(label, &der)
+}
+
+#[test]
+fn a_ca_certificate_cannot_sign_by_content() {
+    let certificate = a_certificate_with_extensions("CA", |builder| {
+        let extension = BasicConstraints::new()
+            .critical()
+            .ca()
+            .build()
+            .expect("basicConstraints deberia construirse");
+        builder
+            .append_extension(extension)
+            .expect("basicConstraints deberia anadirse");
+    });
+
+    assert!(certificate.cannot_sign_by_content());
+}
+
+#[test]
+fn a_key_usage_without_signature_bits_cannot_sign_by_content() {
+    let certificate = a_certificate_with_extensions("CIFRADO", |builder| {
+        let extension = KeyUsage::new()
+            .critical()
+            .key_encipherment()
+            .build()
+            .expect("keyUsage deberia construirse");
+        builder
+            .append_extension(extension)
+            .expect("keyUsage deberia anadirse");
+    });
+
+    assert!(certificate.cannot_sign_by_content());
+}
+
+#[test]
+fn a_certificate_without_key_usage_can_sign_by_content() {
+    let certificate = a_certificate_with_extensions("SIN_KEY_USAGE", |_builder| {});
+
+    assert!(!certificate.cannot_sign_by_content());
+}
+
+#[test]
+fn a_key_usage_with_non_repudiation_can_sign_by_content() {
+    let certificate = a_certificate_with_extensions("NO_REPUDIO", |builder| {
+        let extension = KeyUsage::new()
+            .critical()
+            .non_repudiation()
+            .build()
+            .expect("keyUsage deberia construirse");
+        builder
+            .append_extension(extension)
+            .expect("keyUsage deberia anadirse");
+    });
+
+    assert!(!certificate.cannot_sign_by_content());
+}
+
+#[test]
+fn a_key_usage_with_digital_signature_can_sign_by_content() {
+    let certificate = a_certificate_with_extensions("FIRMA_DIGITAL", |builder| {
+        let extension = KeyUsage::new()
+            .critical()
+            .digital_signature()
+            .build()
+            .expect("keyUsage deberia construirse");
+        builder
+            .append_extension(extension)
+            .expect("keyUsage deberia anadirse");
+    });
+
+    assert!(!certificate.cannot_sign_by_content());
+}
 
 #[test]
 fn a_reference_carries_the_four_coordinates_and_nothing_else() {
