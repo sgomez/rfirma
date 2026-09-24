@@ -36,10 +36,12 @@ sha each review was submitted against:
 
 ```bash
 gh api "repos/{owner}/{repo}/pulls/<PR>/reviews" \
-  --jq 'map(select(.state != "PENDING")) | last | .commit_id // empty'
+  --jq 'map(select(.state != "PENDING" and (.body // "") != "")) | last | .commit_id // empty'
 ```
 
-Empty = never reviewed (full scope). Otherwise the sha anchors the
+The body filter skips thread replies: GitHub records each one as an
+empty-bodied review pinned to the head at reply time, which after a fix push
+is the fix commit itself. Empty = never reviewed (full scope). Otherwise the sha anchors the
 incremental diff, once `git merge-base --is-ancestor <sha> HEAD` confirms the
 branch was not rewritten under it.
 
