@@ -1436,6 +1436,18 @@ msgstr ""
 msgid "sede.refusals.batchSigningFailed"
 msgstr ""
 
+msgid "sede.refusals.triphaseServerUrlMissing"
+msgstr ""
+
+msgid "sede.refusals.triphaseServerException"
+msgstr ""
+
+msgid "sede.refusals.triphaseServerUnreachable"
+msgstr ""
+
+msgid "sede.refusals.triphaseServerUnexpectedAnswer"
+msgstr ""
+
 msgid "sede.noCertificate.noneTitle"
 msgstr ""
 

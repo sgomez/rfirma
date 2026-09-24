@@ -1583,6 +1583,18 @@ msgstr ""
 msgid "sede.refusals.batchSigningFailed"
 msgstr "{{origin}}(e)k eskatzen zuen sortaren sinadura ez da osatzera iritsi."
 
+msgid "sede.refusals.triphaseServerUrlMissing"
+msgstr "{{origin}}(e)k bere sinadura-zerbitzuarekin sinatzeko eskatu du, baina ez du esan non dagoen."
+
+msgid "sede.refusals.triphaseServerException"
+msgstr "{{origin}}(e)ko sinadura-zerbitzuak errore bat eman du."
+
+msgid "sede.refusals.triphaseServerUnreachable"
+msgstr "{{origin}}(e)ko sinadura-zerbitzuak ez du erantzun."
+
+msgid "sede.refusals.triphaseServerUnexpectedAnswer"
+msgstr "{{origin}}(e)ko sinadura-zerbitzuak rFirmak irakurtzen ez dakien zerbait erantzun du."
+
 msgid "sede.noCertificate.noneTitle"
 msgstr "Ez duzu ziurtagiririk"
 
