@@ -66,6 +66,9 @@ public final class CadesBridge {
     private static final String PARAM_FORMAT = "format";
     private static final String FORMAT_ASIC_S = "CAdES-ASiC-S";
 
+    private static final String PARAM_MODE = "mode";
+    private static final String PARAM_PRECALCULATED_HASH = "precalculatedHashAlgorithm";
+
     private static final String PARAM_TARGET = "target";
     private static final String TARGET_TREE = "tree";
     private static final String TARGET_LEAFS = "leafs";
@@ -103,6 +106,9 @@ public final class CadesBridge {
         final String target =
                 OPERATION_COUNTERSIGN.equals(requested) ? counterSignTarget(extraParams) : null;
         final Properties effectiveParams = copyOf(extraParams);
+        if (OPERATION_SIGN.equals(requested)) {
+            dropModeUnderAPrecalculatedHash(effectiveParams);
+        }
 
         final TimeZone timeZone = TimeZone.getDefault();
         final String time = Long.toString(System.currentTimeMillis());
@@ -297,6 +303,13 @@ public final class CadesBridge {
     private static boolean isAsicS(final Properties effectiveParams) {
         final String format = effectiveParams.getProperty(PARAM_FORMAT);
         return format != null && FORMAT_ASIC_S.equalsIgnoreCase(format.trim());
+    }
+
+    /** Lo que hace {@code AOCAdESSigner.sign} y no el procesador trifasico. */
+    private static void dropModeUnderAPrecalculatedHash(final Properties effectiveParams) {
+        if (effectiveParams.containsKey(PARAM_PRECALCULATED_HASH)) {
+            effectiveParams.remove(PARAM_MODE);
+        }
     }
 
     private static Properties copyOf(final Properties extraParams) {

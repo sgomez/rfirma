@@ -53,12 +53,14 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `application/errand/state.rs` | El estado del trámite, con un solo dueño (`LiveErrand`). Pruebas en `application/errand/state/tests.rs`. |
 | `application/errand/server_signature.rs` | La firma que la sede manda hacer a su servidor trifásico, del certificado elegido a la firma que se entrega; no abre el ciclo del puente. |
 | `application/errand/state/revelation.rs` | La revelación de la ventana: por temporizador de respaldo, por llegada del navegador o porque el trámite tiene algo que decir (ADR-0020). |
+| `application/errand/state/chosen_document.rs` | El nombre del fichero que la persona eligió en disco para firmar, que la respuesta devuelve a la sede. |
 | `application/errand/tests/mod.rs` | El reparto de las pruebas del trámite por comportamiento. Solo en pruebas. |
 | `application/errand/tests/support.rs` | Los dobles del trámite en grada A: motor, transporte, códec, token, vecinos y mesa de pruebas. Solo en pruebas. |
 | `application/errand/tests/support_window.rs` | La ventana doblada y la mesa desnuda con las que se prueba cuándo se enseña un trámite. Solo en pruebas. |
 | `application/errand/tests/support_requests.rs` | Los constructores de peticiones y consentimientos que usan esas pruebas. Solo en pruebas. |
 | `application/errand/tests/certificate_selection.rs` | Pruebas de la selección de certificado de sede, del arranque a la respuesta. Solo en pruebas. |
 | `application/errand/tests/signature_basics.rs` | Pruebas de la firma de sede básica: recuadro, rúbrica y páginas añadidas. Solo en pruebas. |
+| `application/errand/tests/chosen_document.rs` | Pruebas del nombre del documento elegido en disco, que vuelve en el tercer componente de la respuesta. Solo en pruebas. |
 | `application/errand/tests/signature_consent.rs` | Pruebas del consentimiento de firma: política, firmas sin registrar y `signandsave` sin `dat`. Solo en pruebas. |
 | `application/errand/tests/signature_formats.rs` | Pruebas de algoritmo, resumen y formato de la firma de sede. Solo en pruebas. |
 | `application/errand/tests/dialog_folder.rs` | Pruebas de la carpeta en la que se abre el diálogo de sede al guardar y al cargar. Solo en pruebas. |

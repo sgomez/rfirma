@@ -353,20 +353,6 @@ fn gzip_with_value_other_than_true_leaves_dat_uncompressed() {
     assert_eq!(request.document(), compressed.as_slice());
 }
 
-fn a_signature_without_dat(extra: &str) -> AfirmaUrl {
-    let properties = base64::engine::general_purpose::URL_SAFE.encode(
-        "filenameExts=pdf\nfilenameDescription=PDF\nfilenameCurrentDir=/home/persona\n".as_bytes(),
-    );
-    let text = format!(
-        "afirma://sign?op=sign&idsession={CREDENTIAL}&format=PAdES&\
-         algorithm=SHA256withRSA&properties={properties}{extra}"
-    );
-    let ChannelMessage::Operation { url } = ChannelMessage::read(&text) else {
-        panic!("una URL del protocolo es una operacion");
-    };
-    url
-}
-
 #[test]
 fn signing_without_dat_opens_the_loading_moment_with_the_sites_hints() {
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");

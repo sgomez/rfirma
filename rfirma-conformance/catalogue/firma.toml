@@ -158,6 +158,7 @@ CMS, y el firmante nuevo tampoco lo lleva.
 drive = { mode = "v4", script = "cosignautooveracmssignature" }
 assistance = "click"
 condition = "cosigned-as-cms"
+deprecated = true
 warning = "Va a aparecer el diálogo de certificado."
 
 [[check]]
@@ -656,6 +657,7 @@ Una firma OOXML sobre algo que no es un documento de Office se rechaza con SAF_3
 drive = { mode = "v4", script = "signooxmloveranonooxml" }
 assistance = "click"
 saf = "SAF_30"
+deprecated = true
 warning = "Va a aparecer el diálogo de certificado antes de que llegue el rechazo."
 
 [[check]]

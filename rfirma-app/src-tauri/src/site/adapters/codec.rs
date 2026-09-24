@@ -32,12 +32,20 @@ impl ProtocolCodec for V4Codec {
             SiteOutcome::Signature {
                 signer_der,
                 signature,
+                chosen_document,
             } => {
-                format!(
+                let pair = format!(
                     "{}{RESULT_SEPARATOR}{}",
                     on_the_wire(signer_der),
                     on_the_wire(signature)
-                )
+                );
+                match chosen_document {
+                    Some(name) => format!(
+                        "{pair}{RESULT_SEPARATOR}{}",
+                        on_the_wire(extra_data_of(name).as_bytes())
+                    ),
+                    None => pair,
+                }
             }
             SiteOutcome::Saved => SAVE_OK.to_owned(),
             SiteOutcome::Loaded(files) => files
@@ -87,6 +95,14 @@ fn batch_asked(request: BatchRequest) -> SiteRequest {
         Ok(batch) => SiteRequest::LocalBatch(Box::new(LocalBatchAsk { request, batch })),
         Err(refusal) => SiteRequest::NotAttended(refusal.found_while_processing()),
     }
+}
+
+/// El JSON de `buildExtraDataResult` (`NativeSignDataProcessor.java:112-126`), con el valor escapado.
+fn extra_data_of(chosen_document: &str) -> String {
+    format!(
+        "{{\"filename\": {}}}",
+        serde_json::Value::from(chosen_document)
+    )
 }
 
 fn on_the_wire(bytes: &[u8]) -> String {

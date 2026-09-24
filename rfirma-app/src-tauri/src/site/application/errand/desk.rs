@@ -340,13 +340,15 @@ fn consent_to_a_signature<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
         }
     };
 
-    let mut from_the_site =
-        match policies::expanded_for_the_site(desk.policies, ask.declared_params, format) {
-            Ok(expanded) => expanded,
-            Err(error) => {
-                return answering(live, SiteOutcome::Refused(SiteRefusal::Policies(error)))
-            }
-        };
+    let mut from_the_site = match policies::expanded_for_the_site(
+        desk.policies,
+        ask.declared_params,
+        format,
+        ask.document.len(),
+    ) {
+        Ok(expanded) => expanded,
+        Err(error) => return answering(live, SiteOutcome::Refused(SiteRefusal::Policies(error))),
+    };
 
     from_the_site.extend(ask.confirmed.clone());
 

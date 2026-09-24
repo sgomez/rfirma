@@ -15,6 +15,8 @@ import {
   assistanceName,
   bugLabel,
   calendarDate,
+  DEPRECATED_LABEL,
+  DEPRECATED_REASON,
   duration,
   isAnExpectedFailure,
   resultTone,
@@ -48,7 +50,7 @@ export const CheckRow = memo(function CheckRow({
 }: CheckRowProps) {
   const settled = useJustSettled(check.state);
   const detailId = `detail-${check.id}`;
-  const expected = isAnExpectedFailure(check, kind);
+  const expected = isAnExpectedFailure(check, kind) || isADeprecatedFailure(check);
   return (
     <li
       className="check"
@@ -84,6 +86,11 @@ export const CheckRow = memo(function CheckRow({
           <span className="check-name">
             <span className="check-id">{check.id}</span>
             {check.bug && <BugTag bug={check.bug} />}
+            {check.deprecated && (
+              <span className="tag tag-deprecated" title={DEPRECATED_REASON}>
+                {DEPRECATED_LABEL}
+              </span>
+            )}
           </span>
           <span className="check-chapter">cap. {check.chapter}</span>
           <span className="check-status">
@@ -121,6 +128,10 @@ export const CheckRow = memo(function CheckRow({
 function endsATextSelection(): boolean {
   const selection = window.getSelection();
   return selection !== null && !selection.isCollapsed && selection.toString() !== "";
+}
+
+function isADeprecatedFailure(check: CheckView): boolean {
+  return check.deprecated && check.state === "NO CONFORME";
 }
 
 function BugTag({ bug }: { bug: KnownBug }) {
@@ -217,13 +228,18 @@ function CheckDetail({
             {bugLabel(check.bug)} · <code>{check.bug.id}</code> {check.bug.title}
           </Field>
         )}
+        {check.deprecated && <Field label={DEPRECATED_LABEL}>{DEPRECATED_REASON}</Field>}
         {check.observation && <Field label="Qué pasó">{check.observation}</Field>}
         <Field label="Resultado">
           <span className={`result-label tone-${resultTone[check.state]}`}>
             <ResultIcon result={check.state} size={12} decorative />
             {shownResult ?? check.state}
           </span>
-          {expected && !shownResult && <span className="muted"> · esperado por el bug</span>}
+          {expected && !shownResult && (
+            <span className="muted">
+              {check.deprecated ? " · no cuenta como fallo" : " · esperado por el bug"}
+            </span>
+          )}
           {check.date && <span className="muted"> · {calendarDate(check.date)}</span>}
           {check.duration_ms !== null && (
             <span className="muted"> · {duration(check.duration_ms)}</span>

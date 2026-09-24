@@ -109,6 +109,9 @@ pub struct Check {
     /// El bug de AutoFirma 1.9.2 por el que el original incumple lo que se exige.
     #[serde(default, deserialize_with = "a_known_bug")]
     pub bug: Option<&'static KnownBug>,
+    /// Si mide un formato que el manual de AutoFirma desaconseja y rFirma no soporta.
+    #[serde(default)]
+    pub deprecated: bool,
     /// Si es el saludo de su familia y su tramo: si no se cumple, no se corre lo que abre.
     #[serde(default)]
     pub greeting: bool,
@@ -687,6 +690,14 @@ statement = "Algo se rechaza con SAF_03."
 
         assert_eq!(checks[0].bug.map(|bug| bug.id.as_str()), Some("BUG-15"));
         assert!(checks[0].the_declared_text().contains("BUG-15"));
+    }
+
+    #[test]
+    fn a_check_of_a_deprecated_format_says_so_and_the_rest_do_not() {
+        let entry = format!("{AN_ENTRY}deprecated = true\n");
+
+        assert!(the_catalogue_in(&entry).unwrap()[0].deprecated);
+        assert!(!the_catalogue_in(AN_ENTRY).unwrap()[0].deprecated);
     }
 
     #[test]

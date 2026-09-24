@@ -114,16 +114,22 @@ fn a_countersignature_under_format_auto_over_a_cades_signature_is_a_cades_one() 
 }
 
 #[test]
-fn a_countersignature_with_a_target_that_is_neither_tree_nor_leafs_is_refused() {
+fn a_countersignature_with_a_target_other_than_tree_counters_the_leafs_like_the_original() {
     let url = a_countersignature(
         "CAdES",
-        &format!("&properties={}", properties("target=roots\n")),
+        &format!("&properties={}", properties("target=signers\n")),
     );
 
-    let refusal = read_operation(&url).expect_err("solo hay dos objetivos");
+    let SiteOperation::Sign(request) = read_operation(&url).expect("CAdES contrafirma") else {
+        panic!("es una firma");
+    };
 
-    assert_eq!(refusal.code(), SafCode::Params);
-    assert!(refusal.detail().contains("roots"));
+    assert_eq!(
+        request.round(),
+        SignatureRound::Counter {
+            target: CounterTarget::Leafs
+        }
+    );
 }
 
 #[test]

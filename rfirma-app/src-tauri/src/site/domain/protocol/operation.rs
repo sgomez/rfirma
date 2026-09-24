@@ -168,7 +168,7 @@ pub fn read_operation(url: &AfirmaUrl, data: &dyn DataSource) -> Result<SiteOper
         COSIGN => sign_request(url, SignatureRound::Again, data),
         COUNTERSIGN => sign_request(
             url,
-            counter_round(declared_properties(url).crossing())?,
+            counter_round(declared_properties(url).crossing()),
             data,
         ),
         SAVE => save_request(url, data),

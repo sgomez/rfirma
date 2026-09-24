@@ -440,6 +440,8 @@ pub struct ExpandRequest<'a> {
     pub extra_params: &'a str,
     /// Formato de firma.
     pub format: &'a str,
+    /// Longitud de los datos que se van a firmar.
+    pub signed_data_length: usize,
 }
 
 /// Parámetros para validar las firmas que ya trae un documento.

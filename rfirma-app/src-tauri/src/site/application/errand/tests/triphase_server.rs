@@ -92,6 +92,7 @@ fn a_cades_triphase_signature_hands_the_site_what_the_server_signed() {
         Some(on_the_wire(&SiteOutcome::Signature {
             signer_der: ours[0].der().to_vec(),
             signature: b"la firma del servidor".to_vec(),
+            chosen_document: None,
         }))
     );
     assert_eq!(
@@ -224,6 +225,7 @@ fn the_forms_of_a_triphase_signature(
         Some(on_the_wire(&SiteOutcome::Signature {
             signer_der: ours[0].der().to_vec(),
             signature: b"la firma del servidor".to_vec(),
+            chosen_document: None,
         }))
     );
     server.forms().into_iter().map(|(_, form)| form).collect()

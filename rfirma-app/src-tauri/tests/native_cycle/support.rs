@@ -316,7 +316,11 @@ pub(crate) fn an_installed_certificate(installed: &Path) -> TokenCertificate {
 
 /// El CMS que un PDF firmado lleva dentro, tal y como lo vuelca pdfsig (ADR-0014).
 pub(crate) fn the_cms_inside(pdf: &Path) -> PathBuf {
-    let dumped = Path::new(env!("CARGO_TARGET_TMPDIR")).join("pades-con-cadena.volcado");
+    let dumped = Path::new(env!("CARGO_TARGET_TMPDIR")).join(
+        pdf.with_extension("volcado")
+            .file_name()
+            .expect("el PDF tiene nombre"),
+    );
     let _ = std::fs::remove_dir_all(&dumped);
     std::fs::create_dir_all(&dumped).expect("deberia poder crearse el directorio del volcado");
 

@@ -44,8 +44,29 @@ fn a_signature_goes_out_behind_its_certificate_separated_by_a_bar() {
         V4Codec.encode(&SiteOutcome::Signature {
             signer_der: vec![0xfb, 0xff, 0xbf],
             signature: b"%PDF".to_vec(),
+            chosen_document: None,
         }),
         "-_-_|JVBERg=="
+    );
+}
+
+#[test]
+fn a_signature_over_a_chosen_document_adds_its_name_as_json_in_a_third_component() {
+    let encoded = V4Codec.encode(&SiteOutcome::Signature {
+        signer_der: vec![0xfb, 0xff, 0xbf],
+        signature: b"%PDF".to_vec(),
+        chosen_document: Some("documento \"final\".txt".to_owned()),
+    });
+
+    let third = encoded
+        .strip_prefix("-_-_|JVBERg==|")
+        .expect("tres componentes");
+    let json = base64::engine::general_purpose::URL_SAFE
+        .decode(third)
+        .expect("Base64 URL-safe");
+    assert_eq!(
+        String::from_utf8(json).expect("UTF-8"),
+        r#"{"filename": "documento \"final\".txt"}"#
     );
 }
 

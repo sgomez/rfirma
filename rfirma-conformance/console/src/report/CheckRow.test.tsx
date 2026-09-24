@@ -1,7 +1,13 @@
 import { screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ClientKind } from "../contract/ClientKind";
-import { aKnownBug, aReportView, aSnapshot, withABug } from "../test/fixtures";
+import {
+  aKnownBug,
+  aReportView,
+  aSnapshot,
+  withABug,
+  withADeprecatedFormat,
+} from "../test/fixtures";
 import { renderConsoleAt } from "../test/render";
 
 const THE_CHECK = "empty_uri_rejected";
@@ -9,6 +15,14 @@ const A_FAILED_CHECK = "unsupported_protocol_uri_rejected";
 
 function aReportWhereABugFails(kind: ClientKind, master: "present" | "fixed" | "partial") {
   const report = { ...withABug(aReportView(), A_FAILED_CHECK, aKnownBug(master)), kind };
+  return aSnapshot({ report });
+}
+
+function aReportOfRfirmaWhereADeprecatedFormatFails() {
+  const report = {
+    ...withADeprecatedFormat(aReportView(), A_FAILED_CHECK),
+    kind: "rfirma" as const,
+  };
   return aSnapshot({ report });
 }
 
@@ -111,5 +125,35 @@ describe("a check row", () => {
     renderConsoleAt("/", aReportWhereABugFails("rfirma", "present"));
 
     expect(theItemOf(await theRowOf(A_FAILED_CHECK))).not.toHaveAttribute("data-expected");
+  });
+
+  it("labels a check of a deprecated format and says why in its detail", async () => {
+    const { user } = renderConsoleAt("/", aReportOfRfirmaWhereADeprecatedFormatFails());
+    const row = await theRowOf(A_FAILED_CHECK);
+
+    await user.click(row);
+
+    expect(within(row).getByText("Formato deprecado")).toBeInTheDocument();
+    const detail = screen.getByText("Formato deprecado", { selector: "dt" }).closest(".field");
+    expect(detail).toHaveTextContent(/AutoFirma lo soporta y rFirma no/);
+  });
+
+  it("does not count as a failure the noncompliance of rFirma in a deprecated format", async () => {
+    const { user } = renderConsoleAt("/", aReportOfRfirmaWhereADeprecatedFormatFails());
+    const row = await theRowOf(A_FAILED_CHECK);
+
+    await user.click(row);
+
+    expect(theItemOf(row)).toHaveAttribute("data-expected");
+    expect(screen.getByText(/no cuenta como fallo/, { selector: ".muted" })).toBeInTheDocument();
+    expect(
+      screen.getAllByText(/1 deprecados/, { selector: ".counts .count" }).length,
+    ).toBeGreaterThan(0);
+  });
+
+  it("leaves unlabelled a check of a supported format", async () => {
+    renderConsoleAt("/", aReportOfRfirmaWhereADeprecatedFormatFails());
+
+    expect(within(await theRowOf(THE_CHECK)).queryByText("Formato deprecado")).toBeNull();
   });
 });

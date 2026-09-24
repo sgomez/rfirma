@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.security.MessageDigest;
 import java.util.Properties;
 
 import org.bouncycastle.cms.CMSProcessableByteArray;
@@ -47,6 +48,18 @@ class CadesFullCycleTest {
         assertNotNull(cms.getSignedContent(), "el modo implicito lleva el contenido dentro");
         assertArrayEquals(document, (byte[]) cms.getSignedContent().getContent());
         assertTrue(verifies(cms), "BouncyCastle no da la firma CAdES implicita por valida");
+    }
+
+    @Test
+    void a_precalculated_hash_leaves_the_data_out_even_in_implicit_mode() throws Exception {
+        final byte[] hash = MessageDigest.getInstance("SHA-256").digest(TestFixtures.challenge());
+        final Properties params = new Properties();
+        params.setProperty("precalculatedHashAlgorithm", "SHA-256");
+        params.setProperty("mode", "implicit");
+
+        final CMSSignedData cms = new CMSSignedData(CadesCycle.sign(hash, params, "sign"));
+
+        assertNull(cms.getSignedContent(), "la huella precalculada invalida el modo implicito");
     }
 
     /**

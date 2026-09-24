@@ -42,6 +42,7 @@ struct CheckView<'a> {
     assistance: Option<Assistance>,
     store: Store,
     bug: Option<&'a KnownBug>,
+    deprecated: bool,
     #[ts(as = "ResultName")]
     state: &'static str,
     observation: Option<&'a str>,
@@ -55,17 +56,22 @@ struct CheckView<'a> {
 pub(crate) struct Summary {
     pub total: usize,
     pub compliant: usize,
+    /// Sin los de un formato deprecado, que no son un fallo del cliente y van en `deprecated`.
     pub noncompliant: usize,
+    pub deprecated: usize,
     pub not_observable: usize,
     pub pending: usize,
 }
 
 impl Summary {
-    fn count(&mut self, state: Option<CheckState>) {
+    fn count(&mut self, check: &Check, state: Option<CheckState>) {
         self.total += 1;
         match state {
             None | Some(CheckState::Pending) => self.pending += 1,
             Some(CheckState::Resolved(Outcome::Compliant)) => self.compliant += 1,
+            Some(CheckState::Resolved(Outcome::Noncompliant)) if check.deprecated => {
+                self.deprecated += 1;
+            }
             Some(CheckState::Resolved(Outcome::Noncompliant)) => self.noncompliant += 1,
             Some(CheckState::Resolved(Outcome::NotObservable)) => self.not_observable += 1,
         }
@@ -78,16 +84,16 @@ pub(crate) fn report_view<'a>(report: &'a Report, catalogue: &'a [Check]) -> Rep
     for check in catalogue {
         let record = report.record_of(&check.id);
         let state = record.map(|record| record.state);
-        summary.count(state);
+        summary.count(check, state);
         let view = check_view(check, record);
         match sets.last_mut() {
             Some(set) if set.name == check.set => {
-                set.summary.count(state);
+                set.summary.count(check, state);
                 set.checks.push(view);
             }
             _ => {
                 let mut set_summary = Summary::default();
-                set_summary.count(state);
+                set_summary.count(check, state);
                 sets.push(SetView {
                     name: &check.set,
                     summary: set_summary,
@@ -116,6 +122,7 @@ fn check_view<'a>(check: &'a Check, record: Option<&'a CheckRecord>) -> CheckVie
         assistance: check.assistance,
         store: check.store,
         bug: check.bug,
+        deprecated: check.deprecated,
         state: result_name(record.map(|record| record.state)),
         observation: record.and_then(|record| record.observation.as_deref()),
         date: record.and_then(|record| record.date.as_deref()),
@@ -249,18 +256,37 @@ bug = "BUG-18"
             [
                 (
                     "saludo",
-                    &json!({"total": 1, "compliant": 1, "noncompliant": 0, "not_observable": 0, "pending": 0})
+                    &json!({"total": 1, "compliant": 1, "noncompliant": 0, "deprecated": 0, "not_observable": 0, "pending": 0})
                 ),
                 (
                     "operaciones",
-                    &json!({"total": 2, "compliant": 0, "noncompliant": 1, "not_observable": 0, "pending": 1})
+                    &json!({"total": 2, "compliant": 0, "noncompliant": 1, "deprecated": 0, "not_observable": 0, "pending": 1})
                 ),
             ]
         );
         assert_eq!(
             json["summary"],
-            json!({"total": 3, "compliant": 1, "noncompliant": 1, "not_observable": 0, "pending": 1})
+            json!({"total": 3, "compliant": 1, "noncompliant": 1, "deprecated": 0, "not_observable": 0, "pending": 1})
         );
+    }
+
+    #[test]
+    fn a_noncompliance_in_a_deprecated_format_is_counted_apart_from_the_failures() {
+        let deprecated = THREE_CHECKS.replace("bug = \"BUG-18\"", "deprecated = true");
+        let catalogue = the_catalogue_in(&deprecated).unwrap();
+        let (_dir, report) = a_report_of(
+            ClientKind::Rfirma,
+            "/usr/bin/rfirma",
+            &catalogue,
+            Outcome::Noncompliant,
+        );
+
+        let json = the_json_of(&report_view(&report, &catalogue));
+
+        assert_eq!(the_check(&json, "a_save")["deprecated"], true);
+        assert_eq!(the_check(&json, "a_greeting")["deprecated"], false);
+        assert_eq!(json["summary"]["noncompliant"], 0);
+        assert_eq!(json["summary"]["deprecated"], 1);
     }
 
     #[test]

@@ -134,7 +134,8 @@ type PostSignSymbol = unsafe extern "C" fn(
 
 type FilterSymbol = unsafe extern "C" fn(*mut c_void, *const c_char, *const c_char) -> *mut c_char;
 
-type ExpandSymbol = unsafe extern "C" fn(*mut c_void, *const c_char, *const c_char) -> *mut c_char;
+type ExpandSymbol =
+    unsafe extern "C" fn(*mut c_void, *const c_char, *const c_char, i64) -> *mut c_char;
 
 type ValidateSymbol =
     unsafe extern "C" fn(*mut c_void, *const c_char, *const c_char) -> *mut c_char;
@@ -359,8 +360,10 @@ impl NativeBridge {
     pub fn expand_extra_params(&self, request: ExpandRequest<'_>) -> Result<String, BridgeError> {
         let params = c_string(request.extra_params, "los extraParams")?;
         let format = c_string(request.format, "el formato")?;
-        let json =
-            self.call(|thread| unsafe { (self.expand)(thread, params.as_ptr(), format.as_ptr()) })?;
+        let length = i64::try_from(request.signed_data_length).unwrap_or(i64::MAX);
+        let json = self.call(|thread| unsafe {
+            (self.expand)(thread, params.as_ptr(), format.as_ptr(), length)
+        })?;
         parse_expanded_params(&json)
     }
 
