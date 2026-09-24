@@ -186,7 +186,7 @@ pub(crate) fn a_sign_and_save_without_dat(extra: &str) -> AfirmaUrl {
 }
 
 /// Una mesa sin ningun almacen: cualquier operacion que mirase certificados fallaria con
-/// `CannotFindKeystore` (ver `the_three_verbs_run_the_errand...`). Guardar y cargar no la miran.
+/// `CannotAccessKeystore` (ver `the_three_verbs_run_the_errand...`). Guardar y cargar no la miran.
 pub(crate) fn a_desk_without_any_store<'a>(
     engine: &'a AnEngine,
     policies: &'a APolicyEngine,

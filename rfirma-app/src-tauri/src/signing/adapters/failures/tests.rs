@@ -58,7 +58,7 @@ fn what_breaks_after_the_consent_keeps_its_own_code_and_its_own_name() {
                 TokenSituation::TokenAbsent,
                 "no hay tarjeta",
             ))),
-            SafCode::CannotFindKeystore,
+            SafCode::CannotAccessKeystore,
             "tokenAbsent",
         ),
         (
