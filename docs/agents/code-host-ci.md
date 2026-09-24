@@ -25,9 +25,7 @@ Three operations read the same `CI` workflow, for different readers.
   ```
 
   Empty output with at least one check present = green. Any entry is a
-  failing or still-running check; its `link` is the job URL to quote. Green
-  here does **not** license skipping the local run in this repo — read "What
-  green actually means" below before deciding.
+  failing or still-running check; its `link` is the job URL to quote.
 
 - **Classify a red — did the failing job actually execute?** (any reader,
   before spending a fix cycle on it): take `<run-id>` from the failing
@@ -133,9 +131,6 @@ put it: locally `just dev`, `just bundle` and `just flatpak` **fail naming
 every compile, and `RFIRMA_SKIP_NATIVE=1` is how you say you know what you are
 doing. Do not copy
 that variable into a local shell profile.
-
-**So the reviewer still installs and runs everything itself** — a green check
-is not a substitute for it.
 
 ### Two lanes, split by speed
 

@@ -101,7 +101,7 @@ sistema de diseño entero (14 KB).
 Dos de ellos son **anexos de una sola fase**, y no se abren fuera de ella:
 `code-host-ci.md` (esperar, leer o clasificar el CI de una PR — incluye qué
 verifica de verdad el verde y los dos carriles) y `issue-authoring.md` (crear
-issues hijos: enlace nativo de sub-issue y `## Spec extract`).
+issues hijos: enlace nativo de sub-issue, `## Spec extract` y `## Complexity`).
 
 Los lee el orquestador y los trabajadores de `/developer`. **No los leas si no
 vas a publicar un issue o una PR.**
