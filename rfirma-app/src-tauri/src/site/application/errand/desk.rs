@@ -360,6 +360,9 @@ fn consent_to_a_signature<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
     };
 
     from_the_site.extend(ask.confirmed.clone());
+    if let SignatureRound::Counter { target } = ask.round {
+        from_the_site.insert(COUNTER_TARGET_KEY.to_owned(), target.name().to_owned());
+    }
 
     if asks_to_check_signatures(&mut from_the_site) {
         if let Err(step) = the_previous_signatures_hold(desk, &ask, saving.clone(), format, live) {
@@ -429,6 +432,7 @@ fn consent_to_a_signature<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
 }
 
 const UNREGISTERED_SIGNATURES: &str = "pdfHasUnregisteredSignatures";
+const COUNTER_TARGET_KEY: &str = "target";
 
 fn waivers_declared_in(ask: &SignatureAsk<'_>) -> Waivers {
     let declared = Waivers::declared_in(

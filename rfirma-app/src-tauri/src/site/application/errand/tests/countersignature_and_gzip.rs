@@ -160,6 +160,85 @@ fn a_xades_countersignature_reaches_the_bridge_as_a_countersignature_over_its_ta
     );
 }
 
+/// Los `extraParams` con los que cruza al puente una contrafirma CAdES con esas propiedades.
+fn presign_params_of_a_countersignature_declaring(properties: &str) -> String {
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let memory = a_memory(home.path());
+    let ours = vec![a_usable_certificate("FIRMA")];
+    let (listed, _) = listed_from(&ours);
+    let opened = OpenedDocuments::new();
+    let live = a_live();
+    let engine = AnEngine::answering(&[&[0], &[0]]);
+    let policies = APolicyEngine::answering(properties);
+    let scratch = home.path().join("errand");
+    let mut desk = a_desk(
+        &engine,
+        &policies,
+        &[],
+        home.path(),
+        &listed,
+        &opened,
+        &memory,
+        &scratch,
+    );
+    desk.neighbours.ours = ours.clone();
+    desk.neighbours.bridge = TheBridge::answering();
+    assert!(live.begin(Errand::of(
+        NegotiatedCredential::Required(a_credential()),
+        ArrivalMode::Awaited,
+        a_codec()
+    )));
+    let (handle, _wire) = the_wire();
+    let document = base64::engine::general_purpose::URL_SAFE.encode(A_CADES_SIGNATURE);
+    let encoded = base64::engine::general_purpose::URL_SAFE.encode(properties);
+    let text = format!(
+        "afirma://countersign?op=countersign&idsession={CREDENTIAL}&format=CAdES&\
+         algorithm=SHA256withRSA&dat={document}&properties={encoded}"
+    );
+    let ChannelMessage::Operation { url } = ChannelMessage::read(&text) else {
+        panic!("una URL del protocolo es una operacion");
+    };
+
+    let step = attend(&desk, url, handle, &live).expect("hay codec negociado");
+    let ErrandStep::AskingToSign(asking) = step else {
+        panic!("una contrafirma CAdES llega al consentimiento: {step:?}");
+    };
+    let chosen = asking.certificates[0].id.clone();
+    let Consented::SigningWith(_) = consent(&desk, &chosen, &live).expect("el certificado vale")
+    else {
+        panic!("una firma se consiente firmando");
+    };
+    desk.neighbours.bridge.extra_params_of_the_presign()
+}
+
+fn target_lines_of(params: &str) -> Vec<&str> {
+    params
+        .lines()
+        .filter(|line| line.trim_start().starts_with("target="))
+        .collect()
+}
+
+#[test]
+fn a_countersignature_with_another_target_crosses_to_the_bridge_over_the_leafs() {
+    let params = presign_params_of_a_countersignature_declaring("target=signers\n");
+
+    assert_eq!(target_lines_of(&params), vec!["target=leafs"], "{params}");
+}
+
+#[test]
+fn a_countersignature_without_target_crosses_to_the_bridge_over_the_leafs() {
+    let params = presign_params_of_a_countersignature_declaring("mode=implicit\n");
+
+    assert_eq!(target_lines_of(&params), vec!["target=leafs"], "{params}");
+}
+
+#[test]
+fn a_countersignature_over_the_tree_crosses_to_the_bridge_over_the_tree() {
+    let params = presign_params_of_a_countersignature_declaring("target=TREE\n");
+
+    assert_eq!(target_lines_of(&params), vec!["target=tree"], "{params}");
+}
+
 fn gzipped(bytes: &[u8]) -> Vec<u8> {
     use std::io::Write;
     let mut encoder = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::default());
