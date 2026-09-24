@@ -63,7 +63,7 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `application/errand/tests/signature_formats.rs` | Pruebas de algoritmo, resumen y formato de la firma de sede. Solo en pruebas. |
 | `application/errand/tests/document_and_save.rs` | Pruebas de elección de documento, guardado y carga por orden de la sede. Solo en pruebas. |
 | `application/errand/tests/token_and_launch.rs` | Pruebas del token, el almacén vacío y el arranque de un segundo trámite. Solo en pruebas. |
-| `application/errand/tests/triphase_server.rs` | Pruebas de la firma contra el servidor trifásico de la sede: la entrega, `SAF_03` y `SAF_40`. Solo en pruebas. |
+| `application/errand/tests/triphase_server.rs` | Pruebas de la firma contra el servidor trifásico de la sede, en `sign` y en `signandsave`: la entrega, el guardado, `SAF_03` y `SAF_40`. Solo en pruebas. |
 | `application/errand/tests/sticky_selection.rs` | Pruebas del certificado pegajoso de una selección. Solo en pruebas. |
 | `application/errand/tests/batch_remote.rs` | Pruebas del lote remoto de sede. Solo en pruebas. |
 | `application/errand/tests/batch_local.rs` | Pruebas del lote local de sede. Solo en pruebas. |

@@ -1,6 +1,7 @@
 use super::super::*;
 use super::fixtures::{a_sign_and_save, an_operation, dat, gzipped, properties, read_operation};
 use crate::site::domain::protocol::XadesEnvelope;
+use crate::site::domain::triphase_server::ServerFormat;
 
 #[test]
 fn signing_and_saving_carries_its_document_and_the_round_that_cop_asks_for() {
@@ -355,4 +356,58 @@ fn gzip_true_decompresses_the_document_of_sign_and_save() {
         panic!("es signandsave");
     };
     assert_eq!(request.document(), Some(plain.as_slice()));
+}
+
+#[test]
+fn signing_and_saving_in_a_triphase_format_goes_through_the_site_server() {
+    for (format, data, server) in [
+        ("CAdEStri", &b"datos"[..], ServerFormat::Cades),
+        ("PAdEStri", &b"%PDF-1.7\n"[..], ServerFormat::Pades),
+        ("XAdEStri", &b"<documento/>"[..], ServerFormat::Xades),
+        (
+            "FacturaEtri",
+            &b"<fe:Facturae/>"[..],
+            ServerFormat::FacturaE,
+        ),
+    ] {
+        let url = an_operation(&format!(
+            "op={SIGN_AND_SAVE}&cop={SIGN}&format={format}&algorithm=SHA256&dat={}",
+            dat(data)
+        ));
+
+        let SiteOperation::SignAndSave(request) = read_operation(&url).expect("se atiende") else {
+            panic!("es un firmar y guardar");
+        };
+        assert_eq!(request.through_the_site_server(), Some(server), "{format}");
+    }
+}
+
+#[test]
+fn signing_and_saving_in_plain_cades_is_made_here() {
+    let url = an_operation(&format!(
+        "op={SIGN_AND_SAVE}&cop={SIGN}&format=CAdES&algorithm=SHA256&dat={}",
+        dat(b"datos")
+    ));
+
+    let SiteOperation::SignAndSave(request) = read_operation(&url).expect("se atiende") else {
+        panic!("es un firmar y guardar");
+    };
+    assert_eq!(request.through_the_site_server(), None);
+}
+
+#[test]
+fn signing_and_saving_in_triphase_without_data_still_goes_through_the_site_server() {
+    let url = an_operation(&format!(
+        "op={SIGN_AND_SAVE}&cop={SIGN}&format=CAdEStri&algorithm=SHA256"
+    ));
+
+    let SiteOperation::SignAndSave(request) = read_operation(&url).expect("se atiende") else {
+        panic!("es un firmar y guardar");
+    };
+    assert_eq!(
+        request
+            .with_chosen_document(b"datos".to_vec(), None)
+            .through_the_site_server(),
+        Some(ServerFormat::Cades)
+    );
 }
