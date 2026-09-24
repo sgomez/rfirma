@@ -1,4 +1,4 @@
-//! El protocolo del servidor trifásico CAdES que la sede nombra en `serverUrl`: qué se le pide y cómo se lee lo que contesta; no es el lote remoto (`AOCAdESTriPhaseSigner`, 1.9.2).
+//! El protocolo del servidor trifásico que la sede nombra en `serverUrl`, en CAdES, PAdES, XAdES y FacturaE: qué se le pide y cómo se lee lo que contesta; no es el lote remoto.
 
 use std::collections::BTreeMap;
 use std::fmt;
@@ -15,7 +15,7 @@ use super::protocol::{CounterTarget, SignatureRound};
 pub const SERVER_URL: &str = "serverUrl";
 const DOCUMENT_ID: &str = "documentId";
 const TARGET: &str = "target";
-const FORMAT: &str = "CAdES";
+const VALIDATE_PKCS1: &str = "validatePkcs1";
 const ERROR_PREFIX: &str = "ERR-";
 const CONFIG_NEEDED_PREFIX: &str = "ERR-21:";
 const SUCCESS: &str = "OK";
@@ -25,6 +25,62 @@ const TOLERANT: GeneralPurpose = GeneralPurpose::new(
     &URL_SAFE_ALPHABET,
     GeneralPurposeConfig::new().with_decode_padding_mode(DecodePaddingMode::Indifferent),
 );
+
+/// El firmador trifásico de AutoFirma que la sede elige con su `format=`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ServerFormat {
+    /// `CAdEStri` (`AOCAdESTriPhaseSigner`, 1.9.2).
+    Cades,
+    /// `PAdEStri` (`AOPDFTriPhaseSigner`, 1.9.2).
+    Pades,
+    /// `XAdEStri` (`AOXAdESTriPhaseSigner`, 1.9.2).
+    Xades,
+    /// `FacturaEtri` (`AOFacturaETriPhaseSigner`, 1.9.2).
+    FacturaE,
+}
+
+const NAMED: [(&str, ServerFormat); 4] = [
+    ("cadestri", ServerFormat::Cades),
+    ("padestri", ServerFormat::Pades),
+    ("xadestri", ServerFormat::Xades),
+    ("facturaetri", ServerFormat::FacturaE),
+];
+
+impl ServerFormat {
+    /// El firmador que nombra ese `format=`, o nada si la firma no se hace en el servidor de la sede.
+    pub fn named(text: &str) -> Option<Self> {
+        let asked = text.trim();
+        NAMED
+            .iter()
+            .find(|(name, _)| name.eq_ignore_ascii_case(asked))
+            .map(|(_, format)| *format)
+    }
+
+    fn on_the_wire(self) -> &'static str {
+        match self {
+            Self::Cades => "CAdES",
+            Self::Pades => "pades",
+            Self::Xades => "XAdES",
+            Self::FacturaE => "FacturaE",
+        }
+    }
+
+    fn withheld(self) -> &'static [&'static str] {
+        match self {
+            Self::Cades => &[SERVER_URL, DOCUMENT_ID],
+            Self::Pades => &[],
+            Self::Xades | Self::FacturaE => &[SERVER_URL, VALIDATE_PKCS1],
+        }
+    }
+
+    fn crypto_operation(self, round: SignatureRound) -> &'static str {
+        match (self, round) {
+            (Self::Pades, _) | (_, SignatureRound::First) => "sign",
+            (_, SignatureRound::Again) => "cosign",
+            (_, SignatureRound::Counter { .. }) => "countersign",
+        }
+    }
+}
 
 /// Por qué la firma contra el servidor trifásico no ha salido (ADR-0009).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -77,6 +133,8 @@ impl std::error::Error for TriphaseServerError {}
 /// Lo que viaja en las dos llamadas al servidor.
 #[derive(Clone, Copy, Debug)]
 pub struct ServerCall<'a> {
+    /// El firmador trifásico que eligió la sede.
+    pub format: ServerFormat,
     /// La operación que pidió la sede.
     pub round: SignatureRound,
     /// El algoritmo ya compuesto con la clave del certificado.
@@ -116,14 +174,16 @@ fn is_http_with_a_host(url: &str) -> bool {
     })
 }
 
-/// Los parámetros que recibe el servidor: los de la sede sin los que ya viajan aparte, y el objetivo de la contrafirma.
+/// Los parámetros que recibe el servidor: los de la sede sin los que retira su firmador, y el objetivo de la contrafirma.
 pub fn params_for_the_server(
     from_the_site: &BTreeMap<String, String>,
+    format: ServerFormat,
     round: SignatureRound,
 ) -> BTreeMap<String, String> {
     let mut params = from_the_site.clone();
-    params.remove(SERVER_URL);
-    params.remove(DOCUMENT_ID);
+    for withheld in format.withheld() {
+        params.remove(*withheld);
+    }
     if let SignatureRound::Counter { target } = round {
         let named = match target {
             CounterTarget::Tree => "tree",
@@ -152,8 +212,8 @@ pub fn postsign_form(call: &ServerCall<'_>, signed: &TriphaseData) -> Vec<(&'sta
 fn common_form(op: &str, call: &ServerCall<'_>) -> Vec<(&'static str, String)> {
     let mut form = vec![
         ("op", op.to_owned()),
-        ("cop", crypto_operation_of(call.round).to_owned()),
-        ("format", FORMAT.to_owned()),
+        ("cop", call.format.crypto_operation(call.round).to_owned()),
+        ("format", call.format.on_the_wire().to_owned()),
         ("algo", call.algorithm.to_owned()),
         ("cert", URL_SAFE.encode(call.certificate)),
     ];
@@ -161,14 +221,6 @@ fn common_form(op: &str, call: &ServerCall<'_>) -> Vec<(&'static str, String)> {
         form.push(("params", URL_SAFE.encode(params.as_bytes())));
     }
     form
-}
-
-fn crypto_operation_of(round: SignatureRound) -> &'static str {
-    match round {
-        SignatureRound::First => "sign",
-        SignatureRound::Again => "cosign",
-        SignatureRound::Counter { .. } => "countersign",
-    }
 }
 
 /// La sesión que devuelve la prefirma, o el error que contestó el servidor.

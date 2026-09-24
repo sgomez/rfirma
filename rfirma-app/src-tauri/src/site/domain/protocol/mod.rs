@@ -65,7 +65,7 @@ pub use codes::{Parameter, SafCode, WireAnswer, CANCELLED, NOTHING, OUT_OF_MEMOR
 pub use data_source::{download_url, DataSource};
 pub use detection::{shape_of, DetectedShape};
 pub use filters::{site_filter, SiteFilter, ACCEPTED_CRITERIA, UNMEASURED_CRITERIA};
-pub use format::{format_of, goes_through_the_site_server, RequestedFormat, XadesEnvelope};
+pub use format::{format_of, RequestedFormat, XadesEnvelope};
 pub use framing::{
     credential_matches, http_response, read_request, request_credential, split_response,
     FragmentBuffer, FramedRequest, RefusedOrder, MORE_DATA_NEED, RESPONSE_MAX_SIZE,

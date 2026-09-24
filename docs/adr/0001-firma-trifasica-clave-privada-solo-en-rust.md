@@ -17,9 +17,12 @@ operativo.
 - La frontera FFI transporta datos a firmar y firmas ya hechas, nunca material
   de clave.
 - Cuando la sede pide una firma trifásica contra su propio servidor
-  (`serverUrl`), la prefirma y la postfirma las hace ese servidor y no el
-  puente, pero cada `PRE` lo sigue firmando Rust con el token: la clave
-  tampoco sale hacia la sede.
+  (`serverUrl`) con `CAdEStri`, `PAdEStri`, `XAdEStri` o `FacturaEtri`, la
+  prefirma y la postfirma las hace ese servidor y no el puente, pero cada
+  `PRE` lo sigue firmando Rust con el token en PKCS#1: la clave tampoco sale
+  hacia la sede. El formulario de cada formato es el de su firmador trifásico
+  de AutoFirma 1.9.2 (`format`, `cop` y los `extraParams` que retira), y la
+  firma que se entrega es la que el servidor devuelve tras `OK NEWID=`.
 - Renunciamos a las rutas de firma monofásica que la suite Java ofrece: aunque
   funcionarían para certificados en software, tener dos caminos distintos según
   el origen del certificado duplicaría la superficie a probar y haría fácil que

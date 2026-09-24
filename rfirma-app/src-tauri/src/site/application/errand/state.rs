@@ -17,6 +17,7 @@ use crate::site::domain::protocol::{
     SiteFilter,
 };
 use crate::site::domain::signing::SiteSignature;
+use crate::site::domain::triphase_server::ServerFormat;
 
 use super::outcome::{
     ConfirmationConsent, LoadingConsent, Moment, ProtocolCodec, SavingConsent, SavingHints,
@@ -169,6 +170,8 @@ pub(super) struct PendingSignature {
 /// Lo que la firma contra el servidor trifásico lleva del consentimiento a la entrega.
 #[derive(Clone, Debug)]
 pub(super) struct ServerSignature {
+    /// El firmador trifásico que eligió la sede.
+    pub(super) format: ServerFormat,
     /// Los datos, o la firma previa en cofirma y contrafirma.
     pub(super) document: Vec<u8>,
     /// La operación que pidió la sede.

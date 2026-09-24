@@ -11,6 +11,7 @@ use crate::site::domain::protocol::{
     SignAndSaveRequest, SignatureRound, SiteFilter, SiteVisibleSignature,
 };
 use crate::site::domain::signing::SiteSignature;
+use crate::site::domain::triphase_server::ServerFormat;
 
 use super::request::SiteRequest;
 
@@ -141,8 +142,17 @@ pub struct SigningConsent {
     pub saving: Option<Box<SavingHints>>,
     /// Asa del certificado que ya está resuelto y el desplegable elige solo.
     pub already_chosen: Option<String>,
-    /// Los datos que viajan al servidor trifásico de la sede, si la firma se hace allí.
-    pub for_the_site_server: Option<Vec<u8>>,
+    /// Lo que viaja al servidor trifásico de la sede, si la firma se hace allí.
+    pub for_the_site_server: Option<ForTheSiteServer>,
+}
+
+/// El firmador del servidor trifásico de la sede y los datos que le llegan.
+#[derive(Clone, Debug)]
+pub struct ForTheSiteServer {
+    /// El firmador trifásico que eligió la sede.
+    pub format: ServerFormat,
+    /// Los datos, o la firma previa en cofirma y contrafirma.
+    pub document: Vec<u8>,
 }
 
 /// Lo que hace falta para repetir la firma cuando la persona confirma lo que el validador
@@ -163,8 +173,8 @@ pub struct ConfirmationConsent {
     pub filter: SiteFilter,
     /// Si la sede se conforma con el único certificado que pase el filtro.
     pub headless: bool,
-    /// Si la prefirma y la postfirma las hace el servidor trifásico de la sede.
-    pub through_the_site_server: bool,
+    /// El firmador del servidor trifásico de la sede, si la prefirma y la postfirma se hacen allí.
+    pub through_the_site_server: Option<ServerFormat>,
     /// Pistas de guardado, si esta firma viene de `signandsave`.
     pub saving: Option<Box<SavingHints>>,
     /// Las claves ya confirmadas en confirmaciones anteriores.

@@ -89,7 +89,7 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `application/startup/tests/relay_refusal.rs` | El relay que termina sin enseñar la ventana o la enseña: rechazo con destino conocido, operación contestada al llegar, subida fallida, trámite en curso. Solo en pruebas. |
 | `application/startup/repair.rs` | La reparación de la CA local desde la ventana de sede. Pruebas en `application/startup/repair/tests.rs`. |
 | `application/trust.rs` | Cuándo se instala la CA local en los almacenes, cómo se solapa con la siguiente y cómo se retira de todos ellos. Pruebas en `application/trust/tests.rs`. |
-| `application/triphase.rs` | La firma CAdES trifásica ya consentida contra el servidor de la sede: prefirma allí, `PK1` con el token aquí y postfirma allí. Pruebas en `application/triphase/tests.rs`. |
+| `application/triphase.rs` | La firma trifásica ya consentida contra el servidor de la sede, en CAdES, PAdES, XAdES o FacturaE: prefirma allí, `PK1` con el token aquí y postfirma allí. Pruebas en `application/triphase/tests.rs`. |
 | `domain/batch/mod.rs` | El reparto del lote, y `BatchFormat`: si el lote viaja en el XML heredado o en JSON. |
 | `domain/batch/local.rs` | El lote local leído del JSON de la sede, con lo que cada firma hereda del lote. **No** es el lote remoto. Pruebas en `domain/batch/local/tests.rs`. |
 | `domain/batch/json.rs` | Un JSON de solo lectura y escritura con el orden del documento, para el lote remoto. Pruebas en `domain/batch/json/tests.rs`. |
@@ -140,7 +140,7 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `domain/tls_error.rs`, `domain/trust_error.rs`, `domain/relay_error.rs` | Las situaciones (ADR-0009) del material del canal, de la confianza y del servidor intermedio. Pruebas en `domain/tls_error/tests.rs`, `domain/trust_error/tests.rs` y `domain/relay_error/tests.rs`. |
 | `domain/signing.rs` | Lo que vuelve de la firma que pidió la sede: la firma en memoria, o el rechazo ya traducido por quien firmó. |
 | `domain/trust.rs` | El reparto, y las cuatro reglas **puras** de la confianza. Aquí vive el puerto `TrustStores`. Léelo antes que sus hermanos. Pruebas en `domain/trust/tests.rs`. |
-| `domain/triphase_server.rs` | El protocolo del servidor trifásico de `serverUrl` y su situación (ADR-0009): los dos formularios y cómo se leen sus respuestas. **No** es el lote remoto. Pruebas en `domain/triphase_server/tests.rs`. |
+| `domain/triphase_server.rs` | El protocolo del servidor trifásico de `serverUrl` y su situación (ADR-0009): el firmador de cada formato, los dos formularios y cómo se leen sus respuestas. **No** es el lote remoto. Pruebas en `domain/triphase_server/tests.rs`. |
 | `ports.rs` | **Los doce puertos**: los propios del contexto (`BatchServices` incluido), los dos motores que presta el puente y lo que el trámite pide a los vecinos. Pruebas en `ports/tests.rs`. |
 
 ## Al tocar lo que sale hacia la sede
