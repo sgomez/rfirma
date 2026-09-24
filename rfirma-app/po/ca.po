@@ -1587,6 +1587,39 @@ msgstr "El servei de signatura de {{origin}} no ha contestat."
 msgid "sede.refusals.triphaseServerUnexpectedAnswer"
 msgstr "El servei de signatura de {{origin}} ha contestat alguna cosa que rFirma no sap llegir."
 
+msgid "sede.refusals.certificateNotFound"
+msgstr "El certificat triat ja no està disponible o {{origin}} no l'accepta."
+
+msgid "sede.refusals.folderMissing"
+msgstr "La carpeta on rFirma havia d'escriure per a {{origin}} ja no existeix."
+
+msgid "sede.refusals.unwritable"
+msgstr "rFirma no ha pogut escriure el fitxer que necessitava {{origin}}."
+
+msgid "sede.refusals.invalidSignature"
+msgstr "El document que ha enviat {{origin}} porta una signatura que no és vàlida."
+
+msgid "sede.refusals.confirmationNeeded"
+msgstr "{{origin}} ha demanat signar sense preguntar-te, però el document necessita que confirmis alguna cosa abans."
+
+msgid "sede.refusals.localBatchSign"
+msgstr "El lot que ha enviat {{origin}} no es pot signar tal com arriba."
+
+msgid "sede.refusals.siteErrandNotLive"
+msgstr "El tràmit amb {{origin}} ja havia acabat quan ha arribat la teva resposta."
+
+msgid "sede.refusals.pdfHasUnregisteredSignatures"
+msgstr "El PDF que ha enviat {{origin}} porta signatures que no consten al seu formulari, i rFirma no hi signa a sobre sense que ho confirmis."
+
+msgid "sede.refusals.secretOnTheReaderKeypad"
+msgstr "El PIN d'aquest certificat es tecleja al lector, i rFirma encara no el sap demanar així."
+
+msgid "sede.refusals.userCancelled"
+msgstr "Has cancel·lat la petició del PIN, així que la signatura que demanava {{origin}} no s'ha fet."
+
+msgid "sede.refusals.promptFailed"
+msgstr "rFirma no t'ha pogut demanar el PIN per a la signatura que demanava {{origin}}."
+
 msgid "sede.noCertificate.noneTitle"
 msgstr "No tens cap certificat"
 

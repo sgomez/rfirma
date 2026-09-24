@@ -216,8 +216,8 @@ function DocumentRow({ document }: { document: SiteDocument }) {
  * se dice el hecho y quien lee saca la conclusión.
  *
  * Cada clave se escribe **entera**, sin plantilla: una clave
- * ensamblada con plantilla no la ve ni `extract --ci` ni `status --unused`, y
- * las seis saldrían como claves sin uso (`src/AGENTS.md`).
+ * ensamblada con plantilla no la ve ni `extract --ci` ni `status --unused`
+ * (`src/AGENTS.md`). Lo que ya nombra el escritorio se cuenta con su título.
  *
  * Sin origen válido el sujeto es la petición: nombrar a secas atribuye sin
  * afirmar, y el hueco tampoco se rellena con un invento.
@@ -273,10 +273,70 @@ function RefusalSentence({
       return <>{t("sede.refusals.triphaseServerUnreachable", subject)}</>;
     case "triphaseServerUnexpectedAnswer":
       return <>{t("sede.refusals.triphaseServerUnexpectedAnswer", subject)}</>;
-    default:
-      // Una situación nueva en el catálogo cae aquí hasta que se le escriba su
-      // rama: `unknown` dice lo que pasa sin fingir que se sabe cuál era.
+    case "certificateNotFound":
+      return <>{t("sede.refusals.certificateNotFound", subject)}</>;
+    case "folderMissing":
+      return <>{t("sede.refusals.folderMissing", subject)}</>;
+    case "unwritable":
+      return <>{t("sede.refusals.unwritable", subject)}</>;
+    case "invalidSignature":
+      return <>{t("sede.refusals.invalidSignature", subject)}</>;
+    case "confirmationNeeded":
+      return <>{t("sede.refusals.confirmationNeeded", subject)}</>;
+    case "localBatchSign":
+      return <>{t("sede.refusals.localBatchSign", subject)}</>;
+    case "siteErrandNotLive":
+      return <>{t("sede.refusals.siteErrandNotLive", subject)}</>;
+    case "pdfHasUnregisteredSignatures":
+      return <>{t("sede.refusals.pdfHasUnregisteredSignatures", subject)}</>;
+    case "secretOnTheReaderKeypad":
+      return <>{t("sede.refusals.secretOnTheReaderKeypad", subject)}</>;
+    case "userCancelled":
+      return <>{t("sede.refusals.userCancelled", subject)}</>;
+    case "promptFailed":
+      return <>{t("sede.refusals.promptFailed", subject)}</>;
+    case "unknown":
       return <>{t("sede.refusals.unknown", subject)}</>;
+    case "incorrectPin":
+      return <>{t("errors.situations.incorrectPin.title")}</>;
+    case "pinLocked":
+      return <>{t("errors.situations.pinLocked.title")}</>;
+    case "tokenAbsent":
+      return <>{t("errors.situations.tokenAbsent.title")}</>;
+    case "expiredSession":
+      return <>{t("errors.situations.expiredSession.title")}</>;
+    case "moduleNotFound":
+      return <>{t("errors.situations.moduleNotFound.title")}</>;
+    case "pkcs12Unreadable":
+      return <>{t("errors.situations.pkcs12Unreadable.title")}</>;
+    case "keyNotRsa":
+      return <>{t("errors.situations.keyNotRsa.title")}</>;
+    case "mechanismNotOffered":
+      return <>{t("errors.situations.mechanismNotOffered.title")}</>;
+    case "notAPdf":
+      return <>{t("errors.situations.notAPdf.title")}</>;
+    case "documentEncrypted":
+      return <>{t("errors.situations.documentEncrypted.title")}</>;
+    case "documentCertified":
+      return <>{t("errors.situations.documentCertified.title")}</>;
+    case "documentUnreadable":
+      return <>{t("errors.situations.documentUnreadable.title")}</>;
+    case "boxOutOfPage":
+      return <>{t("errors.situations.boxOutOfPage.title")}</>;
+    case "pageOutOfDocument":
+      return <>{t("errors.situations.pageOutOfDocument.title")}</>;
+    case "sealMismatch":
+      return <>{t("errors.situations.sealMismatch.title")}</>;
+    case "bridgeFailed":
+      return <>{t("errors.situations.bridgeFailed.title")}</>;
+    case "notAFolder":
+      return <>{t("errors.situations.notAFolder.title")}</>;
+    case "folderUnreadable":
+      return <>{t("errors.situations.folderUnreadable.title")}</>;
+    case "folderUnwritable":
+      return <>{t("errors.situations.folderUnwritable.title")}</>;
+    case "noFreeName":
+      return <>{t("errors.situations.noFreeName.title")}</>;
   }
 }
 

@@ -100,7 +100,7 @@ describe("cada momento que llega se convierte en lo que la ventana espera", () =
       origin: null,
       stage: {
         kind: "outcome",
-        outcome: { kind: "refused", situation: "siteErrandNotLive", detail: "CRUDO" },
+        outcome: { kind: "refused", situation: "aSituationNobodyWrites", detail: "CRUDO" },
       },
     };
 
@@ -317,28 +317,67 @@ describe("el lote local: el resumen de cada elemento", () => {
   });
 });
 
-/** Las etiquetas que escriben los `label_of_*` de la frontera de sede, leídas del Rust como texto. */
-function labelsTheFrontierWrites(): string[] {
-  const frontier = readFileSync(
-    join(process.cwd(), "src-tauri/src/site/adapters/frontier.rs"),
-    "utf8",
-  );
-  const labelFunctions = [
-    ...frontier.matchAll(/fn label_of_\w+\([^)]*\) -> &'static str \{([\s\S]*?)\n\}/g),
-  ];
-  return labelFunctions.flatMap(([, body = ""]) =>
-    [...body.matchAll(/=> "(\w+)"/g)].map(([, label = ""]) => label),
-  );
+/** De dónde salen las etiquetas que llegan a la ventana de sede, y qué funciones se leen o se saltan. */
+const SOURCES_OF_SITE_LABELS: { file: string; only?: string[]; skip?: string[] }[] = [
+  { file: "site/adapters/frontier.rs" },
+  { file: "site/adapters/tauri.rs" },
+  { file: "site/mod.rs" },
+  { file: "identity/adapters/failures.rs" },
+  { file: "identity/domain/secret.rs" },
+  { file: "signing/domain/admissibility.rs" },
+  { file: "signing/adapters/failures.rs", skip: ["memory_told"] },
+  { file: "documents/adapters/failures.rs", only: ["document_told", "destination_told"] },
+];
+
+const LABEL_PATTERNS = [
+  /(?:Failure|Self)::new\(\s*"(\w+)"/g,
+  /\(\s*"(\w+)",\s*SafCode::/g,
+  /=> "(\w+)"/g,
+  /-> &'static str \{\s*"(\w+)"\s*\}/g,
+];
+
+function functionBody(source: string, name: string): string {
+  return new RegExp(`^( *)(?:pub )?fn ${name}\\b[\\s\\S]*?\\n\\1\\}`, "m").exec(source)?.[0] ?? "";
+}
+
+/** Las etiquetas que el backend puede mandar a la ventana de sede, leídas del Rust como texto. */
+function labelsThatReachTheSiteWindow(): string[] {
+  const labels = SOURCES_OF_SITE_LABELS.flatMap(({ file, only, skip = [] }) => {
+    const source = readFileSync(join(process.cwd(), "src-tauri/src", file), "utf8");
+    const read = only
+      ? only.map((name) => functionBody(source, name)).join("\n")
+      : skip.reduce((kept, name) => kept.replace(functionBody(source, name), ""), source);
+    return LABEL_PATTERNS.flatMap((pattern) =>
+      [...read.matchAll(pattern)].map(([, label = ""]) => label),
+    );
+  });
+  return [...new Set(labels)].filter((label) => label !== "unknown");
 }
 
 describe("la frontera de sede y la ventana nombran lo mismo", () => {
-  it("finds the labels of the triphase server and of the remote batch in the frontier", () => {
-    expect(labelsTheFrontierWrites()).toEqual(
-      expect.arrayContaining(["triphaseServerUrlMissing", "presignerUnreachable"]),
+  it("finds the labels of every source that reaches the site window", () => {
+    const labels = labelsThatReachTheSiteWindow();
+
+    expect(labels).toEqual(
+      expect.arrayContaining([
+        "triphaseServerUrlMissing",
+        "presignerUnreachable",
+        "siteErrandNotLive",
+        "cannotLoadData",
+        "incorrectPin",
+        "secretOnTheReaderKeypad",
+        "documentCertified",
+        "pdfHasUnregisteredSignatures",
+        "userCancelled",
+        "documentUnreadable",
+        "noFreeName",
+      ]),
     );
+    expect(labels).not.toContain("settingsUnreadable");
+    expect(labels).not.toContain("damagedImage");
   });
 
-  it.each(labelsTheFrontierWrites())("names %s instead of leaving it unknown", (label) => {
+  it.each(labelsThatReachTheSiteWindow())("names %s instead of leaving it unknown", (label) => {
     expect(refusedBy({ situation: label, detail: "" })).not.toMatchObject({ situation: "unknown" });
   });
 });

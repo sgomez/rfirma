@@ -57,11 +57,36 @@ export interface SiteDocument {
  * Por qué rFirma rechazó la petición, **clasificado** y no redactado en el
  * backend (ADR-0009, ID-29).
  *
- * Son los rechazos del transporte (#316), los que ocurren **antes** de que
- * haya nada que consentir. La lista sale del catálogo, así que una situación
- * nueva se añade en `po/messages.pot` y `tsc` la exige aquí.
+ * Las propias de la sede salen de `sede.refusals`; las del token, el puente y
+ * el documento se cuentan con el título que ya les da el escritorio.
  */
-export type RefusalSituation = keyof Catalog["sede"]["refusals"];
+export type RefusalSituation = keyof Catalog["sede"]["refusals"] | NamedByTheDesk;
+
+/** Las situaciones del escritorio que la ventana de sede cuenta con su mismo título. */
+export const NAMED_BY_THE_DESK = [
+  "incorrectPin",
+  "pinLocked",
+  "tokenAbsent",
+  "expiredSession",
+  "moduleNotFound",
+  "pkcs12Unreadable",
+  "keyNotRsa",
+  "mechanismNotOffered",
+  "notAPdf",
+  "documentEncrypted",
+  "documentCertified",
+  "documentUnreadable",
+  "boxOutOfPage",
+  "pageOutOfDocument",
+  "sealMismatch",
+  "bridgeFailed",
+  "notAFolder",
+  "folderUnreadable",
+  "folderUnwritable",
+  "noFreeName",
+] as const satisfies readonly (keyof Catalog["errors"]["situations"])[];
+
+type NamedByTheDesk = (typeof NAMED_BY_THE_DESK)[number];
 
 /**
  * Cómo acabó el trámite. En los tres casos **la sede ya ha recibido su

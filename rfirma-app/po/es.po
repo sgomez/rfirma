@@ -1591,6 +1591,39 @@ msgstr "El servicio de firma de {{origin}} no ha contestado."
 msgid "sede.refusals.triphaseServerUnexpectedAnswer"
 msgstr "El servicio de firma de {{origin}} ha contestado algo que rFirma no sabe leer."
 
+msgid "sede.refusals.certificateNotFound"
+msgstr "El certificado elegido ya no está disponible o {{origin}} no lo acepta."
+
+msgid "sede.refusals.folderMissing"
+msgstr "La carpeta en la que rFirma tenía que escribir para {{origin}} ya no existe."
+
+msgid "sede.refusals.unwritable"
+msgstr "rFirma no ha podido escribir el fichero que necesitaba {{origin}}."
+
+msgid "sede.refusals.invalidSignature"
+msgstr "El documento que ha enviado {{origin}} trae una firma que no es válida."
+
+msgid "sede.refusals.confirmationNeeded"
+msgstr "{{origin}} ha pedido firmar sin preguntarte, pero el documento necesita que confirmes algo antes."
+
+msgid "sede.refusals.localBatchSign"
+msgstr "El lote que ha enviado {{origin}} no se puede firmar tal como viene."
+
+msgid "sede.refusals.siteErrandNotLive"
+msgstr "El trámite con {{origin}} ya había terminado cuando llegó tu respuesta."
+
+msgid "sede.refusals.pdfHasUnregisteredSignatures"
+msgstr "El PDF que ha enviado {{origin}} trae firmas que no constan en su formulario, y rFirma no firma encima sin que lo confirmes."
+
+msgid "sede.refusals.secretOnTheReaderKeypad"
+msgstr "El PIN de este certificado se teclea en el lector, y rFirma todavía no sabe pedirlo así."
+
+msgid "sede.refusals.userCancelled"
+msgstr "Has cancelado la petición del PIN, así que la firma que pedía {{origin}} no se ha hecho."
+
+msgid "sede.refusals.promptFailed"
+msgstr "rFirma no ha podido pedirte el PIN para la firma que pedía {{origin}}."
+
 msgid "sede.noCertificate.noneTitle"
 msgstr "No tienes ningún certificado"
 

@@ -1610,6 +1610,39 @@ msgstr "{{origin}}(e)ko sinadura-zerbitzuak ez du erantzun."
 msgid "sede.refusals.triphaseServerUnexpectedAnswer"
 msgstr "{{origin}}(e)ko sinadura-zerbitzuak rFirmak irakurtzen ez dakien zerbait erantzun du."
 
+msgid "sede.refusals.certificateNotFound"
+msgstr "Aukeratutako ziurtagiria jada ez dago erabilgarri, edo {{origin}}(e)k ez du onartzen."
+
+msgid "sede.refusals.folderMissing"
+msgstr "rFirmak {{origin}}(e)rako idatzi behar zuen karpeta jada ez da existitzen."
+
+msgid "sede.refusals.unwritable"
+msgstr "rFirmak ezin izan du idatzi {{origin}}(e)k behar zuen fitxategia."
+
+msgid "sede.refusals.invalidSignature"
+msgstr "{{origin}}(e)k bidali duen dokumentuak baliozkoa ez den sinadura bat dakar."
+
+msgid "sede.refusals.confirmationNeeded"
+msgstr "{{origin}}(e)k zuri galdetu gabe sinatzeko eskatu du, baina dokumentuak zerbait berrestea behar du lehenago."
+
+msgid "sede.refusals.localBatchSign"
+msgstr "{{origin}}(e)k bidali duen sorta ezin da dagoen bezala sinatu."
+
+msgid "sede.refusals.siteErrandNotLive"
+msgstr "{{origin}}(e)rekin zegoen izapidea amaituta zegoen zure erantzuna iritsi zenean."
+
+msgid "sede.refusals.pdfHasUnregisteredSignatures"
+msgstr "{{origin}}(e)k bidali duen PDFak bere inprimakian jasota ez dauden sinadurak dakartza, eta rFirmak ez du horien gainean sinatzen zuk berretsi gabe."
+
+msgid "sede.refusals.secretOnTheReaderKeypad"
+msgstr "Ziurtagiri honen PINa irakurgailuan idazten da, eta rFirmak oraindik ez daki horrela eskatzen."
+
+msgid "sede.refusals.userCancelled"
+msgstr "PIN eskaera bertan behera utzi duzu; beraz, {{origin}}(e)k eskatzen zuen sinadura ez da egin."
+
+msgid "sede.refusals.promptFailed"
+msgstr "rFirmak ezin izan dizu PINa eskatu {{origin}}(e)k eskatzen zuen sinadurarako."
+
 msgid "sede.noCertificate.noneTitle"
 msgstr "Ez duzu ziurtagiririk"
 
