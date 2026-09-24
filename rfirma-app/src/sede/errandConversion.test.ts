@@ -1,6 +1,8 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import type { Errand } from "./errand";
-import { errandOf } from "./errandConversion";
+import { errandOf, refusedBy } from "./errandConversion";
 import { ASKING_TO_SIGN, certificate, watched } from "./siteErrandsFixtures";
 import type { SiteErrandView } from "./siteErrandView";
 
@@ -312,5 +314,24 @@ describe("el lote local: el resumen de cada elemento", () => {
         narrowed: false,
       },
     });
+  });
+});
+
+/** Las etiquetas que escriben los `label_of_*` de la frontera de sede, leídas del Rust como texto. */
+function labelsTheFrontierWrites(): string[] {
+  const frontier = readFileSync(join(process.cwd(), "src-tauri/src/site/adapters/frontier.rs"), "utf8");
+  const labelFunctions = [...frontier.matchAll(/fn label_of_\w+\([^)]*\) -> &'static str \{([\s\S]*?)\n\}/g)];
+  return labelFunctions.flatMap(([, body]) => [...body.matchAll(/=> "(\w+)"/g)].map(([, label]) => label));
+}
+
+describe("la frontera de sede y la ventana nombran lo mismo", () => {
+  it("finds the labels of the triphase server and of the remote batch in the frontier", () => {
+    expect(labelsTheFrontierWrites()).toEqual(
+      expect.arrayContaining(["triphaseServerUrlMissing", "presignerUnreachable"]),
+    );
+  });
+
+  it.each(labelsTheFrontierWrites())("names %s instead of leaving it unknown", (label) => {
+    expect(refusedBy({ situation: label, detail: "" })).not.toMatchObject({ situation: "unknown" });
   });
 });
