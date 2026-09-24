@@ -73,6 +73,16 @@ async fn a_pdf_with_unregistered_signatures_answers_saf_50_when_headless() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 #[ignore = "grada C: necesita la libreria nativa (RFIRMA_LIB_DIR) y el token de pruebas"]
+async fn a_wrong_pdf_password_answers_saf_50_when_headless() {
+    the_refusal_of(
+        "signpadeswrongpasswordheadless",
+        SafCode::ConfirmationNeeded,
+    )
+    .await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[ignore = "grada C: necesita la libreria nativa (RFIRMA_LIB_DIR) y el token de pruebas"]
 async fn allow_signing_certified_pdfs_unlocks_a_certified_pdf() {
     the_signature_of("signpadescertifiedallowed", 1).await;
 }
