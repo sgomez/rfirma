@@ -117,9 +117,9 @@ The PDF that goes to it is `manual-gate.pdf`: the maximal case, a box with
 It lands in the test's `CARGO_TARGET_TMPDIR`
 (`rfirma-app/src-tauri/target/tmp/manual-gate.pdf` today), the test prints its
 absolute path, and the slow lane uploads it as the workflow artifact
-**`pdf-puerta-manual`**. So closing the gate is: run the slow lane (tag, manual
-dispatch, or a PR labelled `native`), download that artifact, upload it to
-VALIDe. If the maximal case validates, the other three are subsets of it.
+**`pdf-puerta-manual`**. So closing the gate is: take that artifact from any
+`Imagen nativa` run — every PR and every push to `main` has one — and upload it
+to VALIDe. If the maximal case validates, the other three are subsets of it.
 
 **The fast lane does not build the native library, deliberately.** It no longer
 needs `RFIRMA_SKIP_NATIVE=1` for that — `check-rust` does not go through
@@ -141,7 +141,7 @@ to be fast.
 | --- | --- | --- |
 | fast | `Cadena Java`, `Cadena TypeScript`, `Cadena Rust` (parallel) | every PR, every push to `main` |
 | native | `Imagen nativa` (parallel) | every PR, every push to `main`, tags `v*`, manual dispatch, weekly cron |
-| slow | `Binario de release` | tags `v*`, manual dispatch, weekly cron, or a PR labelled `release` or `native` |
+| slow | `Binario de release` | tags `v*`, manual dispatch, weekly cron, or a PR labelled `release` (read on the next push, not when the label is added) |
 | cron | `Caducidad del kit FNMT` | weekly cron and manual dispatch only |
 
 The fast lane costs **~2 min warm**, and that number is the **Rust** job: the
@@ -173,7 +173,7 @@ instead of escaping to `main`. Rebuilding `native-image` only happens when the J
 bridge actually changes.
 
 The **release binary** is built in its own job and remains scoped to releases,
-manual runs, cron, or PRs explicitly labelled `release` or `native`.
+manual runs, cron, or PRs explicitly labelled `release`.
 
 **A job's conclusion does not distinguish "passed" from "skipped every step".**
 Read the steps, not the conclusion, whenever a green job is the evidence for
@@ -185,10 +185,9 @@ gh api "repos/{owner}/{repo}/actions/runs/<run-id>/jobs" \
 ```
 
 This is the same `steps > 0` test that tells a code-red from an infra-red
-above, applied to a *green* job. It is what catches the label arriving too
-late as well as never: `labeled` and `synchronize` compete for the same
-`concurrency` group in `ci.yml`, so labelling in the same breath as a push can
-lose the race and leave the unlabelled run as the survivor.
+above, applied to a *green* job. It is what catches a `release` label added
+after the last push: the workflow does not listen for `labeled`, so the
+`Binario de release` job of that run is green with every step skipped.
 
 The weekly cron does triple duty: it keeps the `~/.m2` cache from expiring
 (GitHub evicts after 7 days unused, and refilling it means compiling all of

@@ -22,25 +22,19 @@
 # Solo el de Rust paga los 34 s de apt y los ~40 s de restaurar la cache de
 # cargo.
 #
-# DOS CARRILES, POR VELOCIDAD. Esto es antes que nada el bucle de
+# CARRILES, POR VELOCIDAD. Esto es antes que nada el bucle de
 # realimentacion de un agente, asi que lo que corre siempre tiene que ser
 # rapido:
 #
 #   cadena Java / TypeScript / Rust   en cada PR y en cada push a main
-#   native                            solo en etiquetas, a mano, con la
-#                                     etiqueta 'native', y una vez por semana
-#
-# El puente Java apenas se va a tocar una vez escrito, asi que reconstruir la
-# imagen nativa en cada PR seria pagar cuatro veces el carril rapido para no
-# enterarse de nada nuevo. Quien si la toque, que ponga la etiqueta 'native'
-# en su PR.
+#   native                            en cada PR y en cada push a main, con
+#                                     la libreria nativa cacheada
+#   release                           en etiquetas, a mano, una vez por
+#                                     semana y en PR con la etiqueta 'release'
 name: CI
 
 on:
   pull_request:
-    # 'labeled' incluido a proposito: sin el, poner la etiqueta 'native' no
-    # dispararia nada y habria que empujar otra vez para que se enterase.
-    types: [opened, synchronize, reopened, labeled]
   push:
     branches: [main]
   workflow_dispatch:
@@ -485,11 +479,11 @@ jobs:
             push|workflow_dispatch|schedule)
               echo "build=true" >> "$GITHUB_OUTPUT" ;;
             pull_request)
-              if ${{ contains(github.event.pull_request.labels.*.name, 'release') || contains(github.event.pull_request.labels.*.name, 'native') }}; then
+              if ${{ contains(github.event.pull_request.labels.*.name, 'release') }}; then
                 echo "build=true" >> "$GITHUB_OUTPUT"
               else
                 echo "build=false" >> "$GITHUB_OUTPUT"
-                echo "Compilacion de release omitida. Pon la etiqueta \`release\` o \`native\` en el PR si hace falta compilar el binario de release." \
+                echo "Compilacion de release omitida. Pon la etiqueta \`release\` en el PR y empuja si hace falta compilar el binario de release." \
                   >> "$GITHUB_STEP_SUMMARY"
               fi ;;
           esac
