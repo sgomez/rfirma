@@ -3,6 +3,7 @@
 mod listing;
 mod mechanism;
 pub mod nss;
+pub mod p11kit;
 mod session;
 pub mod stores;
 

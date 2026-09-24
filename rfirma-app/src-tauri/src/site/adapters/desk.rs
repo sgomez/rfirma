@@ -40,6 +40,10 @@ impl Certificates for Neighbours<'_> {
         self.identity.rows_of(found)
     }
 
+    fn discovered_module(&self, library: &str) -> Option<PathBuf> {
+        self.identity.discovered_module(library)
+    }
+
     fn usable<'a>(
         &self,
         found: &'a [TokenCertificate],

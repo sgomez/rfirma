@@ -12,7 +12,7 @@ use super::data_source::DataSource;
 use super::filters::{site_filter, SiteFilter};
 #[cfg(test)]
 use super::format::RequestedFormat;
-use super::key_store::refuse_a_key_store_rfirma_does_not_open;
+use super::key_store::{module_named_by, refuse_a_key_store_rfirma_does_not_open};
 use super::parameters::{
     check_common_parameters, check_minimum_client_version, check_operation_identifier,
     check_protocol_version_bounds, minimum_protocol_version, sticky_certificate, StickyCertificate,
@@ -159,7 +159,7 @@ pub fn read_operation(url: &AfirmaUrl, data: &dyn DataSource) -> Result<SiteOper
         SELECT_CERTIFICATE => {
             let declared = declared_properties(url);
             Ok(SiteOperation::SelectCertificate(SelectCertificate {
-                filter: site_filter(declared.crossing()),
+                filter: site_filter(declared.crossing()).within_the_module(module_named_by(url)),
                 sticky: sticky_certificate(url),
                 headless: declared.is_headless(),
             }))

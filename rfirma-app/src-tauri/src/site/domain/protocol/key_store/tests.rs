@@ -1,4 +1,4 @@
-use super::{key_store_named_by, refuse_a_key_store_rfirma_does_not_open};
+use super::{key_store_named_by, module_named_by, refuse_a_key_store_rfirma_does_not_open};
 use crate::site::domain::protocol::codes::{Parameter, SafCode};
 use crate::site::domain::protocol::refusal::RefusalSituation;
 use crate::site::domain::protocol::url::AfirmaUrl;
@@ -153,4 +153,43 @@ fn the_visible_name_of_a_store_names_it_as_the_constant_does() {
 
         assert_eq!(refusal.code(), SafCode::CannotAccessKeystore);
     }
+}
+
+#[test]
+fn a_pkcs11_store_with_its_library_is_left_to_the_listing() {
+    for named in [
+        "PKCS11:/usr/lib/softhsm/libsofthsm2.so",
+        "PKCS#11:/usr/lib/softhsm/libsofthsm2.so",
+        "pkcs11:/usr/lib/softhsm/libsofthsm2.so",
+    ] {
+        refuse_a_key_store_rfirma_does_not_open(&ksb64(named))
+            .expect("el adaptador decide si es un modulo que rFirma ya abre");
+    }
+}
+
+#[test]
+fn a_pkcs11_store_names_its_module_as_it_came() {
+    assert_eq!(
+        module_named_by(&ksb64("PKCS11:\"/usr/lib/softhsm/libsofthsm2.so\"")).as_deref(),
+        Some("/usr/lib/softhsm/libsofthsm2.so")
+    );
+    assert_eq!(
+        module_named_by(&a_selection("keystore=PKCS%2311:/usr/lib/opensc-pkcs11.so")).as_deref(),
+        Some("/usr/lib/opensc-pkcs11.so")
+    );
+}
+
+#[test]
+fn a_pkcs11_store_without_a_library_names_no_module_and_is_refused() {
+    assert_eq!(module_named_by(&ksb64("PKCS11")), None);
+    let refusal = refuse_a_key_store_rfirma_does_not_open(&ksb64("PKCS11"))
+        .expect_err("sin biblioteca no hay modulo que acotar");
+
+    assert_eq!(refusal.code(), SafCode::CannotAccessKeystore);
+}
+
+#[test]
+fn a_library_behind_any_other_store_names_no_module() {
+    assert_eq!(module_named_by(&ksb64("MOZ_UNI:/usr/lib/libnss3.so")), None);
+    assert_eq!(module_named_by(&ksb64(":/usr/lib/opensc-pkcs11.so")), None);
 }

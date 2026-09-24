@@ -1,7 +1,7 @@
 //! Los dobles de los puertos de `site`: las ranuras de la CA local en memoria, los servlets del servidor intermedio y los certificados tal como los ve un trámite.
 
 use std::collections::BTreeMap;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
 use crate::identity::application::certificates::ListedCertificates;
@@ -345,6 +345,14 @@ impl Certificates for Directory<'_> {
             self.listed,
             self.memory,
         )
+    }
+
+    fn discovered_module(&self, library: &str) -> Option<PathBuf> {
+        self.certificates
+            .iter()
+            .map(|certificate| certificate.reference().module())
+            .find(|module| *module == Path::new(library))
+            .map(Path::to_path_buf)
     }
 
     fn usable<'a>(

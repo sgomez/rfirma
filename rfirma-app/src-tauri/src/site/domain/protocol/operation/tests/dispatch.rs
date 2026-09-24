@@ -81,6 +81,55 @@ fn a_selection_that_names_the_store_rfirma_opens_goes_on() {
     .expect("es el almacen que rFirma abre");
 }
 
+#[test]
+fn a_selection_that_names_a_pkcs11_module_is_narrowed_to_it() {
+    let named =
+        base64::engine::general_purpose::URL_SAFE.encode(b"PKCS11:/usr/lib/softhsm/libsofthsm2.so");
+
+    let asked = read_operation(&an_operation(&format!(
+        "op=selectcert&idsession=8jAkPZfRw2mQxN4TbYuL&ksb64={named}"
+    )))
+    .expect("la acotacion la decide el adaptador");
+
+    let SiteOperation::SelectCertificate(selection) = asked else {
+        panic!("es una seleccion");
+    };
+    assert_eq!(
+        selection.filter().module(),
+        Some("/usr/lib/softhsm/libsofthsm2.so")
+    );
+}
+
+#[test]
+fn a_signature_that_names_a_pkcs11_module_is_narrowed_to_it() {
+    let named =
+        base64::engine::general_purpose::URL_SAFE.encode(b"PKCS11:/usr/lib/opensc-pkcs11.so");
+
+    let asked = read_operation(&a_signature(SIGN, &format!("&ksb64={named}")))
+        .expect("la acotacion la decide el adaptador");
+
+    let SiteOperation::Sign(signature) = asked else {
+        panic!("es una firma");
+    };
+    assert_eq!(
+        signature.filter().module(),
+        Some("/usr/lib/opensc-pkcs11.so")
+    );
+}
+
+#[test]
+fn a_selection_that_names_no_module_is_not_narrowed() {
+    let asked = read_operation(&an_operation(
+        "op=selectcert&idsession=8jAkPZfRw2mQxN4TbYuL",
+    ))
+    .expect("es una seleccion corriente");
+
+    let SiteOperation::SelectCertificate(selection) = asked else {
+        panic!("es una seleccion");
+    };
+    assert_eq!(selection.filter().module(), None);
+}
+
 /// Guardar y cargar no eligen certificado, y allí el original ni mira el almacén.
 #[test]
 fn a_save_that_names_a_store_is_not_refused_for_naming_it() {

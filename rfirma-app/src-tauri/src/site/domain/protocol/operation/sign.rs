@@ -4,6 +4,7 @@ use super::super::algorithm::AskedAlgorithm;
 use super::super::data_source::DataSource;
 use super::super::filters::{site_filter, SiteFilter};
 use super::super::format::{format_of, RequestedFormat};
+use super::super::key_store::module_named_by;
 use super::super::refusal::Refusal;
 use super::super::url::AfirmaUrl;
 use super::document::{optional_document, read_document};
@@ -229,7 +230,7 @@ pub(super) fn sign_request(
             round,
             algorithm,
             requested,
-            filter: site_filter(&declared),
+            filter: site_filter(&declared).within_the_module(module_named_by(url)),
             headless: properties.is_headless(),
             load_extensions: comma_list_value(property_value(&declared, FILENAME_EXTS)),
             load_description: property_value(&declared, FILENAME_DESCRIPTION),
@@ -256,7 +257,7 @@ pub(super) fn sign_request(
         algorithm,
         format,
         document,
-        filter: site_filter(&declared),
+        filter: site_filter(&declared).within_the_module(module_named_by(url)),
         headless: properties.is_headless(),
         declared,
         through_the_site_server,

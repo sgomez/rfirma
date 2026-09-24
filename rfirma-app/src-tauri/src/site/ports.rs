@@ -340,6 +340,9 @@ pub trait Certificates {
     /// Las filas con su asa acuñada y el recordado marcado, para la ventana.
     fn rows_of(&self, found: Vec<TokenCertificate>) -> Vec<ListedCertificate>;
 
+    /// El módulo PKCS#11 ya descubierto que es la biblioteca que nombra la sede, si lo hay.
+    fn discovered_module(&self, library: &str) -> Option<PathBuf>;
+
     /// El certificado de la última búsqueda tras el asa, si sigue en el token y está vigente.
     fn usable<'a>(
         &self,

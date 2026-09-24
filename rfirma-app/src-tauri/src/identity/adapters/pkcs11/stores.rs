@@ -2,7 +2,8 @@
 
 use std::path::{Path, PathBuf};
 
-use crate::identity::domain::store::Store;
+use super::p11kit;
+use crate::identity::domain::store::{Store, StoreClass};
 
 /// Rutas candidatas fijas para módulos PKCS#11 estándar.
 pub const CANDIDATE_MODULES: &[&str] = &["/usr/lib/softhsm/libsofthsm2.so"];
@@ -62,9 +63,26 @@ pub fn candidate_modules_under(usr_lib: &Path) -> Vec<PathBuf> {
     candidates
 }
 
-/// Rutas candidatas para módulos PKCS#11 estándar en el sistema.
-pub fn candidate_modules() -> Vec<PathBuf> {
-    candidate_modules_under(Path::new("/usr/lib"))
+/// Los módulos PKCS#11 instalados bajo `usr`: los candidatos fijos y los registrados en p11-kit.
+pub fn discovered_modules(usr: &Path, p11kit_directories: &[PathBuf]) -> Vec<PathBuf> {
+    let registered = p11kit::registered_modules(p11kit_directories, usr);
+    present_among(
+        candidate_modules_under(&usr.join("lib"))
+            .into_iter()
+            .chain(registered),
+        |path| path.is_file(),
+    )
+}
+
+/// El módulo PKCS#11 descubierto que es, canonizada, la biblioteca que nombra la sede.
+pub fn discovered_module_named(stores: &[Store], library: &str) -> Option<PathBuf> {
+    let named = Path::new(library).canonicalize().ok()?;
+    stores
+        .iter()
+        .filter(|store| store.class() == StoreClass::Card)
+        .map(Store::path)
+        .find(|module| module.canonicalize().is_ok_and(|module| module == named))
+        .map(Path::to_path_buf)
 }
 
 /// Descubre los almacenes disponibles en el entorno actual.
@@ -74,7 +92,11 @@ pub fn from_environment() -> Vec<Store> {
     }
 
     let home = std::env::var_os("HOME").map(PathBuf::from);
-    let mut stores: Vec<Store> = present_among(candidate_modules(), |path| path.is_file())
+    let p11kit_directories = home
+        .as_deref()
+        .map(p11kit::configuration_directories)
+        .unwrap_or_default();
+    let mut stores: Vec<Store> = discovered_modules(Path::new("/usr"), &p11kit_directories)
         .into_iter()
         .map(Store::module)
         .collect();
