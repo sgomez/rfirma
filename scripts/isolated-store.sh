@@ -124,7 +124,7 @@ if [ "$store" = token ]; then
     import_token_object "active-rsa.p12" "$(the_password_of active-rsa.p12)" \
         "01" "FNMT-ACTIVO-99999999R"
     import_token_object "active-ecc.p12" "$(the_password_of active-ecc.p12)" \
-        "01" "FNMT-ACTIVO-ECC-99949991H"
+        "02" "FNMT-ACTIVO-ECC-99949991H"
 else
     for p12 in $p12s; do
         password="$(the_password_of "$p12")"
