@@ -210,10 +210,11 @@ los dos silencios y **no rellena ninguno con un invento**; y **ya firmado y con
 alguna firma no reconocida** (#355, #363).
 
 En esta quinta situación el PDF trae alguna firma cuyo `/SubFilter` rFirma no
-sabe leer. **No es un rechazo**: el PDF certificado sí invalida con certeza y
-por eso se rechaza sin preguntar; esto es desconocimiento nuestro, y rechazarlo
-dejaría a rFirma rechazando documentos que AutoFirma sí firma (ID-298). Se
-pregunta, y la pregunta vive **dentro del mismo consentimiento** — no hay un
+sabe leer. **No es un rechazo**: esto es desconocimiento nuestro, y rechazarlo
+dejaría a rFirma rechazando documentos que AutoFirma sí firma (ID-298). A
+diferencia del PDF certificado, que invalida con certeza y por eso tiene su
+propia pregunta (2b), aquí la pregunta vive **dentro del mismo
+consentimiento** — no hay un
 sexto momento. La frase es de información, no de alarma: «rFirma no reconoce
 alguna de las firmas que ya tiene este documento, y al añadir la tuya podrían
 dejar de verse como válidas», con el mismo icono de información y el mismo
@@ -226,11 +227,18 @@ poder sostenerlo es peor que el silencio (ID-305).
 
 ### 2b · Hay que confirmar — sin artboard
 
-Sólo cuando la sede pide `checkSignatures=true` y el validador del original no
-da por buenas las firmas que el documento ya trae **sin que la persona lo
-confirme** (hoy: PDF sospechoso de haber sido modificado tras la última firma, y
-formulario cuyos campos cambiaron después de firmarse). Con `headless=true` no
-hay pregunta: la sede recibe `SAF_50` y aquí no se enseña nada.
+Sólo cuando el original no firmaría **sin que la persona lo confirme**: la sede
+pide `checkSignatures=true` y el validador no da por buenas las firmas que el
+documento ya trae (PDF sospechoso de haber sido modificado tras la última firma,
+o formulario cuyos campos cambiaron después de firmarse), o el PDF está
+**certificado** y la sede no dijo nada de `allowSigningCertifiedPdfs`. Con
+`headless=true` no hay pregunta: la sede recibe `SAF_50` y aquí no se enseña
+nada; con `allowSigningCertifiedPdfs=false`, el PDF certificado se rechaza sin
+preguntar con `SAF_35`.
+
+El original hace la pregunta del PDF certificado después de elegir el
+certificado, porque la descubre al firmar; rFirma la descubre al leer el
+documento y la hace antes, con el mismo resultado para la sede.
 
 Llega **antes** del consentimiento, así que no hay documento que resumir ni
 certificado que elegir: sólo la pregunta y dos salidas. La pregunta se enseña
@@ -238,9 +246,9 @@ certificado que elegir: sólo la pregunta y dos salidas. La pregunta se enseña
 el código del mensaje que cruza la frontera; un código que rFirma todavía no
 sepa redactar sale con una frase genérica que lo nombra, porque es lo único que
 permite reportarlo. rFirma no reinterpreta ni gradúa el aviso: quien sabe lo que
-ha visto es el validador.
+ha visto es el original.
 
-- `Continuar` —acción principal— fija la clave que el validador pidió y **repite
+- `Continuar` —acción principal— fija la clave que el original pide y **repite
   la validación**; el momento que sigue lo publica el backend, y con las firmas
   ya confirmadas es el consentimiento.
 - `Cancelar` es contestar `CANCEL` a la sede, y por eso deja el desenlace

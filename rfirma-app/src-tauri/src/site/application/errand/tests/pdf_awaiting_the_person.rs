@@ -4,6 +4,7 @@ use super::support::*;
 use super::support_requests::*;
 use crate::documents::application::documents::OpenedDocuments;
 use crate::identity::application::tests::{a_usable_certificate, listed_from};
+use crate::identity::domain::certificate::TokenCertificate;
 use crate::signing::application::tests::a_memory;
 use crate::site::adapters::frontier;
 use crate::site::application::errand::*;
@@ -18,7 +19,17 @@ const A_PASSWORD_PROTECTED_PDF: &[u8] =
 
 const THE_PASSWORD: &str = "s3cr3t-of-the-pdf";
 
+type TheDesk<'a> = ErrandDesk<'a, AnEngine, APolicyEngine, TheNeighbours<'a>>;
+
 fn a_consent_over(pdf: &[u8], declared: &str) -> ErrandStep {
+    a_consent_over_and_then(pdf, declared, |_, step, _, _| step)
+}
+
+fn a_consent_over_and_then(
+    pdf: &[u8],
+    declared: &str,
+    then: impl FnOnce(&TheDesk<'_>, ErrandStep, Vec<TokenCertificate>, &LiveErrand) -> ErrandStep,
+) -> ErrandStep {
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
     let memory = a_memory(home.path());
     let ours = vec![a_usable_certificate("FIRMA")];
@@ -30,25 +41,27 @@ fn a_consent_over(pdf: &[u8], declared: &str) -> ErrandStep {
     let scratch = home.path().join("errand");
     let properties = base64::engine::general_purpose::URL_SAFE.encode(declared);
 
-    consent_to_sign(
-        &a_desk(
-            &engine,
-            &policies,
-            &[],
-            home.path(),
-            &listed,
-            &opened,
-            &memory,
-            &scratch,
-        ),
+    let desk = a_desk(
+        &engine,
+        &policies,
+        &[],
+        home.path(),
+        &listed,
+        &opened,
+        &memory,
+        &scratch,
+    );
+    let step = consent_to_sign(
+        &desk,
         &signature_requested(&a_signature_over(
             pdf,
             "sign",
             &format!("&properties={properties}"),
         )),
-        ours,
+        ours.clone(),
         &live,
-    )
+    );
+    then(&desk, step, ours, &live)
 }
 
 fn the_code_of(step: &ErrandStep) -> SafCode {
@@ -81,10 +94,35 @@ fn a_pdf_with_unregistered_signatures_under_headless_is_answered_with_the_code_o
 }
 
 #[test]
-fn a_certified_pdf_without_headless_keeps_the_code_of_a_certified_pdf() {
+fn a_certified_pdf_without_headless_asks_the_person_with_the_words_of_the_original() {
     let step = a_consent_over(A_CERTIFIED_PDF, "");
 
-    assert_eq!(the_code_of(&step), SafCode::PdfCertified);
+    let ErrandStep::AskingToConfirm(consent) = step else {
+        panic!("la persona decide si se firma: {step:?}");
+    };
+    assert_eq!(consent.parameter, "allowSigningCertifiedPdfs");
+    assert_eq!(consent.message_code, "signingCertifiedPdf");
+}
+
+#[test]
+fn a_certified_pdf_the_person_accepts_reaches_the_bridge_with_the_permission() {
+    let step = a_consent_over_and_then(A_CERTIFIED_PDF, "", |desk, step, ours, live| {
+        let ErrandStep::AskingToConfirm(consent) = step else {
+            panic!("la persona decide si se firma: {step:?}");
+        };
+        consent_to_the_confirmed_signature(desk, *consent, ours, live)
+    });
+
+    let ErrandStep::AskingToSign(consent) = step else {
+        panic!("la persona ya lo permitio: {step:?}");
+    };
+    assert_eq!(
+        consent
+            .from_the_site
+            .get("allowSigningCertifiedPdfs")
+            .map(String::as_str),
+        Some("true")
+    );
 }
 
 #[test]

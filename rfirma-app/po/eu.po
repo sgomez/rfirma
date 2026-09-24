@@ -1377,6 +1377,9 @@ msgstr ""
 "Badirudi PDFa azken sinaduraren ondoren aldatu dela. Hala ere sinatu nahi "
 "duzu?"
 
+msgid "sede.confirm.messages.signingCertifiedPdf"
+msgstr "Sinatu nahi duzun PDFa ziurtatuta dago, eta ez du sinadura berririk onartzen. Zurea gehitzeak aurreko sinadura baliogabetuko du. Hala ere sinatu nahi duzu?"
+
 msgid "sede.confirm.messages.signingModifiedPdfForm"
 msgstr ""
 "PDF dokumentuak inprimaki bat du, eta haren eremuak sinatu ondoren aldatu "

@@ -30,7 +30,7 @@ pub enum ErrandStep {
     },
     /// Momento de consentimiento de firma de documento para la ventana.
     AskingToSign(Box<SigningConsent>),
-    /// Momento en el que la firma no sigue sin que la persona confirme (`checkSignatures`).
+    /// Momento en el que la firma no sigue sin que la persona confirme: `checkSignatures` o PDF certificado.
     AskingToConfirm(Box<ConfirmationConsent>),
     /// Momento de consentimiento del lote remoto para la ventana.
     AskingToSignTheBatch(Box<BatchConsent>),
@@ -156,8 +156,7 @@ pub struct ForTheSiteServer {
     pub document: Vec<u8>,
 }
 
-/// Lo que hace falta para repetir la firma cuando la persona confirma lo que el validador
-/// del original no da por bueno por sí solo.
+/// Lo que hace falta para repetir la firma cuando la persona confirma lo que el original no firma sin preguntar.
 #[derive(Clone, Debug)]
 pub struct ConfirmationConsent {
     /// El documento que se firma, tal y como llegó.
@@ -390,7 +389,7 @@ pub enum Moment {
         /// El asa del certificado que ya está resuelto, si lo está.
         already_chosen: Option<String>,
     },
-    /// La firma no sigue sin que la persona confirme lo que el validador del original señala.
+    /// La firma no sigue sin que la persona confirme lo que el original le preguntaría.
     AskingToConfirm {
         /// Código del mensaje con el que pregunta el original.
         message_code: String,

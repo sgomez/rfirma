@@ -33,7 +33,8 @@ const BYTE_RANGE: &[u8] = b"/ByteRange";
 
 const USER_PASSWORD_KEY: &str = "userPassword";
 const OWNER_PASSWORD_KEY: &str = "ownerPassword";
-const ALLOW_SIGNING_CERTIFIED_KEY: &str = "allowSigningCertifiedPdfs";
+/// La clave del original que permite firmar un PDF certificado.
+pub const ALLOW_SIGNING_CERTIFIED_KEY: &str = "allowSigningCertifiedPdfs";
 
 /// La clave `/SubFilter` de un diccionario de firma, que es la que dice **con
 /// qué formato** se firmó.
