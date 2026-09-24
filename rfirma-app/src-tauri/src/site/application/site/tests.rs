@@ -12,10 +12,14 @@ fn a_codec_table() -> CodecTable {
     CodecTable {
         v4: Arc::new(V4Codec),
         v3: Arc::new(V3Codec),
-        v1: Arc::new(crate::site::adapters::codec_v1::V1Codec),
-        relay: Arc::new(|key| {
-            Arc::new(crate::site::adapters::codec_relay::RelayCodec::new(key))
+        v1: Arc::new(|version| {
+            Arc::new(crate::site::adapters::codec_v1::V1Codec::new(version))
                 as crate::site::application::errand::NegotiatedCodec
+        }),
+        relay: Arc::new(|key, version| {
+            Arc::new(crate::site::adapters::codec_relay::RelayCodec::new(
+                key, version,
+            )) as crate::site::application::errand::NegotiatedCodec
         }),
     }
 }
@@ -258,9 +262,60 @@ fn the_negotiation_table_picks_the_relay_codec_for_an_operation_with_servlet() {
         .expect("un valor no vacio siempre produce clave");
     assert_eq!(
         errand.codec().encode(&outcome),
-        crate::site::adapters::codec_relay::RelayCodec::new(Some(key)).encode(&outcome),
+        crate::site::adapters::codec_relay::RelayCodec::new(Some(key), 1).encode(&outcome),
         "la fila de servidor intermedio cifra con la clave que trajo la url"
     );
+}
+
+fn a_signature_over_a_chosen_document() -> SiteOutcome {
+    SiteOutcome::Signature {
+        signer_der: vec![0xfb, 0xff, 0xbf],
+        signature: b"%PDF".to_vec(),
+        chosen_document: Some("documento.txt".to_owned()),
+    }
+}
+
+fn components_of_a_signature_negotiated_by(url: &str) -> usize {
+    let transport = ATransport::default();
+    let attendance = attend_launch(
+        url,
+        &a_codec_table(),
+        &|location, duty| transport.open(location, duty),
+        &LiveErrand::default(),
+    );
+    let Attendance::Serving { errand, .. } = &attendance else {
+        panic!("se esperaba servir, salio {attendance:?}");
+    };
+    errand
+        .codec()
+        .encode(&a_signature_over_a_chosen_document())
+        .split('|')
+        .count()
+}
+
+#[test]
+fn the_service_codec_hears_the_version_the_site_declared() {
+    let with_version = |version| {
+        components_of_a_signature_negotiated_by(&format!(
+            "afirma://service?ports=54421,54422&v={version}&idsession={CREDENTIAL}"
+        ))
+    };
+
+    assert_eq!(with_version(2), 2);
+    assert_eq!(with_version(3), 3);
+}
+
+#[test]
+fn the_relay_codec_hears_the_version_the_operation_requires() {
+    let with_version = |version| {
+        components_of_a_signature_negotiated_by(&format!(
+            "afirma://sign?algorithm=SHA256withRSA&dat=ZmlybWFkbw&stservlet=https://relay.\
+             example/store&id=tx1&key=12345678&ver={version}"
+        ))
+    };
+
+    assert_eq!(with_version(1), 2);
+    assert_eq!(with_version(3), 3);
 }
 
 #[test]

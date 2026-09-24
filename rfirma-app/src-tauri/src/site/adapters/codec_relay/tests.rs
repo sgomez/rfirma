@@ -20,7 +20,7 @@ fn an_operation(text: &str) -> AfirmaUrl {
 #[test]
 fn it_decodes_exactly_like_the_fourth_protocol() {
     let message = an_operation("afirma://selectcert?op=selectcert");
-    let codec = RelayCodec::new(None);
+    let codec = RelayCodec::new(None, 1);
 
     assert_eq!(
         format!("{:?}", codec.decode(&message)),
@@ -39,7 +39,7 @@ fn without_a_key_the_response_travels_in_plain_base64() {
         chosen_document: None,
     };
 
-    assert_eq!(RelayCodec::new(None).encode(&outcome), "+/+/|JVBERg==");
+    assert_eq!(RelayCodec::new(None, 1).encode(&outcome), "+/+/|JVBERg==");
 }
 
 #[test]
@@ -51,7 +51,7 @@ fn with_a_key_each_field_is_ciphered_on_its_own_and_recoverable() {
         chosen_document: None,
     };
 
-    let wire = RelayCodec::new(Some(key.clone())).encode(&outcome);
+    let wire = RelayCodec::new(Some(key.clone()), 1).encode(&outcome);
     let (signer, signed) = wire.split_once(RESULT_SEPARATOR).expect("dos campos");
 
     assert_eq!(
@@ -61,6 +61,50 @@ fn with_a_key_each_field_is_ciphered_on_its_own_and_recoverable() {
     assert_eq!(decrypt(signed, Some(&key)).expect("descifra"), b"%PDF");
 }
 
+fn a_signature_over_a_chosen_document() -> SiteOutcome {
+    SiteOutcome::Signature {
+        signer_der: vec![0xfb, 0xff, 0xbf],
+        signature: b"%PDF".to_vec(),
+        chosen_document: Some("documento.txt".to_owned()),
+    }
+}
+
+#[test]
+fn below_the_third_protocol_the_chosen_document_stays_out() {
+    for version in 1..=2 {
+        assert_eq!(
+            RelayCodec::new(None, version).encode(&a_signature_over_a_chosen_document()),
+            "+/+/|JVBERg==",
+            "ver={version}"
+        );
+    }
+}
+
+#[test]
+fn from_the_third_protocol_the_chosen_document_travels_as_a_third_field() {
+    for version in 3..=4 {
+        assert_eq!(
+            RelayCodec::new(None, version).encode(&a_signature_over_a_chosen_document()),
+            "+/+/|JVBERg==|eyJmaWxlbmFtZSI6ICJkb2N1bWVudG8udHh0In0=",
+            "ver={version}"
+        );
+    }
+}
+
+#[test]
+fn with_a_key_the_chosen_document_is_ciphered_on_its_own_and_recoverable() {
+    let key = a_key();
+
+    let wire = RelayCodec::new(Some(key.clone()), 3).encode(&a_signature_over_a_chosen_document());
+    let fields: Vec<&str> = wire.split(RESULT_SEPARATOR).collect();
+
+    assert_eq!(fields.len(), 3, "{wire}");
+    assert_eq!(
+        decrypt(fields[2], Some(&key)).expect("descifra"),
+        br#"{"filename": "documento.txt"}"#
+    );
+}
+
 #[test]
 fn without_a_key_a_batch_travels_in_plain_base64_per_field() {
     let outcome = SiteOutcome::Batch {
@@ -68,7 +112,7 @@ fn without_a_key_a_batch_travels_in_plain_base64_per_field() {
         signer_der: Some(vec![0xfb, 0xff, 0xbf]),
     };
 
-    assert_eq!(RelayCodec::new(None).encode(&outcome), "PHhtbC8+|+/+/");
+    assert_eq!(RelayCodec::new(None, 1).encode(&outcome), "PHhtbC8+|+/+/");
 }
 
 #[test]
@@ -79,7 +123,7 @@ fn with_a_key_each_batch_field_is_ciphered_on_its_own_and_recoverable() {
         signer_der: Some(vec![0xfb, 0xff, 0xbf]),
     };
 
-    let wire = RelayCodec::new(Some(key.clone())).encode(&outcome);
+    let wire = RelayCodec::new(Some(key.clone()), 1).encode(&outcome);
     let (result, signer) = wire.split_once(RESULT_SEPARATOR).expect("dos campos");
 
     assert_eq!(decrypt(result, Some(&key)).expect("descifra"), b"<xml/>");
@@ -93,8 +137,11 @@ fn with_a_key_each_batch_field_is_ciphered_on_its_own_and_recoverable() {
 fn a_save_goes_out_as_a_plain_ok_never_ciphered() {
     let key = a_key();
 
-    assert_eq!(RelayCodec::new(None).encode(&SiteOutcome::Saved), "OK");
-    assert_eq!(RelayCodec::new(Some(key)).encode(&SiteOutcome::Saved), "OK");
+    assert_eq!(RelayCodec::new(None, 1).encode(&SiteOutcome::Saved), "OK");
+    assert_eq!(
+        RelayCodec::new(Some(key), 1).encode(&SiteOutcome::Saved),
+        "OK"
+    );
 }
 
 #[test]
@@ -102,7 +149,7 @@ fn a_load_ciphers_its_content_but_never_its_name() {
     let key = a_key();
     let outcome = SiteOutcome::Loaded(vec![("firma.pdf".to_owned(), b"%PDF".to_vec())]);
 
-    let wire = RelayCodec::new(Some(key.clone())).encode(&outcome);
+    let wire = RelayCodec::new(Some(key.clone()), 1).encode(&outcome);
     let (name, content) = wire.split_once(':').expect("nombre y contenido");
 
     assert_eq!(name, "firma.pdf");
@@ -112,7 +159,7 @@ fn a_load_ciphers_its_content_but_never_its_name() {
 #[test]
 fn errors_travel_in_plain_text_even_with_a_key() {
     let key = a_key();
-    let codec = RelayCodec::new(Some(key));
+    let codec = RelayCodec::new(Some(key), 1);
 
     assert_eq!(codec.encode(&SiteOutcome::Cancelled), "CANCEL");
     let refused = codec.encode(&SiteOutcome::Refused(SiteRefusal::ScratchUnwritable(

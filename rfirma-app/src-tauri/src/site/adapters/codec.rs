@@ -6,6 +6,7 @@ use base64::Engine as _;
 use crate::site::domain::batch::parse_local_batch;
 use crate::site::domain::protocol::{
     read_operation, AfirmaUrl, BatchRequest, Refusal, SiteOperation, WireAnswer,
+    THIRD_PROTOCOL_VERSION,
 };
 
 use crate::site::adapters::data_download::HttpDataSource;
@@ -97,8 +98,13 @@ fn batch_asked(request: BatchRequest) -> SiteRequest {
     }
 }
 
+/// Si la versión negociada añade a la firma el tercer componente (`ProtocolInvocationLauncherSign.java:552-557`).
+pub(super) fn carries_extra_data(version: i64) -> bool {
+    version >= THIRD_PROTOCOL_VERSION
+}
+
 /// El JSON de `buildExtraDataResult` (`NativeSignDataProcessor.java:112-126`), con el valor escapado.
-fn extra_data_of(chosen_document: &str) -> String {
+pub(super) fn extra_data_of(chosen_document: &str) -> String {
     format!(
         "{{\"filename\": {}}}",
         serde_json::Value::from(chosen_document)

@@ -12,8 +12,11 @@ use super::errand::{Errand, LiveErrand, NegotiatedCodec};
 
 pub use super::errand::ChannelTransport;
 
-/// Construye el códec del servidor intermedio con la clave que trajo esta invocación.
-pub type RelayCodecFactory = Arc<dyn Fn(Option<CipherKey>) -> NegotiatedCodec + Send + Sync>;
+/// Construye el códec de `service` con la versión que declaró esta invocación.
+pub type ServiceCodecFactory = Arc<dyn Fn(i64) -> NegotiatedCodec + Send + Sync>;
+
+/// Construye el códec del servidor intermedio con la clave y la versión que trajo esta invocación.
+pub type RelayCodecFactory = Arc<dyn Fn(Option<CipherKey>, i64) -> NegotiatedCodec + Send + Sync>;
 
 /// La tabla de adaptadores que la raíz de composición entrega a la negociación: el códec que
 /// habla cada forma de invocación de arranque. Un verbo o un transporte nuevos son una fila más.
@@ -23,9 +26,9 @@ pub struct CodecTable {
     pub v4: NegotiatedCodec,
     /// Códec de la versión 3: puerto fijo, sin sorteo.
     pub v3: NegotiatedCodec,
-    /// Códec de la versión 1 del transporte `service`, sin WebSocket.
-    pub v1: NegotiatedCodec,
-    /// Códec del servidor intermedio, construido con la clave de cada invocación.
+    /// Códec del transporte `service`, sin WebSocket, construido con la versión de cada invocación.
+    pub v1: ServiceCodecFactory,
+    /// Códec del servidor intermedio, construido con la clave y la versión de cada invocación.
     pub relay: RelayCodecFactory,
 }
 
@@ -54,8 +57,8 @@ pub struct Negotiated {
 pub fn negotiate(url: &AfirmaUrl, codecs: &CodecTable) -> Result<Negotiated, Refusal> {
     let request = LaunchRequest::from_url(url)?;
     let codec = match request.location() {
-        ChannelLocation::Relay(info) => (codecs.relay)(info.key.clone()),
-        ChannelLocation::Service(_) => codecs.v1.clone(),
+        ChannelLocation::Relay(info) => (codecs.relay)(info.key.clone(), request.version()),
+        ChannelLocation::Service(_) => (codecs.v1)(request.version()),
         _ => codecs.codec_for(request.version()),
     };
     Ok(Negotiated {
