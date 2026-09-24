@@ -4,7 +4,7 @@ use std::fmt;
 use std::os::raw::c_int;
 use std::path::PathBuf;
 
-use super::{Format, LibraryNotFound};
+use super::{Format, LibraryNotFound, SignatureOperation};
 
 /// Errores posibles al cruzar la frontera FFI con el puente nativo.
 #[derive(Debug)]
@@ -43,6 +43,8 @@ pub enum BridgeError {
     PdfHasUnregisteredSignatures(String),
     /// El puente no resuelve todavía ese formato de firma.
     FormatNotBridged(Format),
+    /// El firmador del original no hace esa operación en ese formato.
+    UnsupportedOperation(Format, SignatureOperation),
     /// El firmador del original rechaza los datos por no ser lo que el formato pide.
     DataRejected(DataRejection, String),
 }
@@ -94,6 +96,9 @@ impl fmt::Display for BridgeError {
             }
             Self::FormatNotBridged(format) => {
                 write!(f, "el puente no atiende el formato {format}")
+            }
+            Self::UnsupportedOperation(format, operation) => {
+                write!(f, "el formato {format} no admite {}", operation.name())
             }
             Self::DataRejected(_, detail) => {
                 write!(f, "el firmador rechaza los datos: {detail}")

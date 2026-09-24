@@ -33,6 +33,9 @@ fn every_name_of_the_original_reads_as_the_format_it_names() {
         ("FacturaE", RequestedFormat::FacturaE),
         ("FacturaEtri", RequestedFormat::FacturaE),
         ("Factura-e", RequestedFormat::FacturaE),
+        ("NONE", RequestedFormat::Pkcs1),
+        ("PKCS1", RequestedFormat::Pkcs1),
+        ("PKCS#1", RequestedFormat::Pkcs1),
     ];
 
     for (name, expected) in table {
@@ -58,8 +61,6 @@ fn what_the_original_does_not_sign_in_three_phases_names_no_format() {
         "OOXML",
         "ODF",
         "SOAP",
-        "NONE",
-        "PKCS1",
         "XMLDSig",
         "XMLDSig Enveloping",
         "XMLDSig Detached",
@@ -114,4 +115,5 @@ fn each_format_maps_to_its_signed_file_extension() {
         "asics"
     );
     assert_eq!(RequestedFormat::FacturaE.extension(), "xsig");
+    assert_eq!(RequestedFormat::Pkcs1.extension(), "p1");
 }

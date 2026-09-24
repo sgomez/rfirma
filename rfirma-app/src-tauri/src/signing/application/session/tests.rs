@@ -452,3 +452,82 @@ fn the_open_cycle_is_signed_with_the_typed_pin_or_through_the_dialog() {
         );
     }
 }
+
+/// Un token que firma sin pedir secreto y devuelve lo firmado marcado con su algoritmo.
+struct ATokenThatMarksWhatItSigns;
+
+impl crate::signing::ports::Signer for ATokenThatMarksWhatItSigns {
+    fn secret_of(
+        &self,
+        _reference: &crate::identity::domain::certificate::CertificateRef,
+    ) -> Result<
+        crate::identity::domain::secret::StoreSecret,
+        crate::identity::domain::error::TokenError,
+    > {
+        Ok(crate::identity::domain::secret::StoreSecret::NotNeeded)
+    }
+
+    fn offers(
+        &self,
+        _reference: &crate::identity::domain::certificate::CertificateRef,
+        _algorithm: crate::identity::domain::algorithm::SignatureAlgorithm,
+    ) -> Result<(), crate::identity::domain::error::TokenError> {
+        Ok(())
+    }
+
+    fn sign(
+        &self,
+        _reference: &crate::identity::domain::certificate::CertificateRef,
+        _pin: &str,
+        algorithm: crate::identity::domain::algorithm::SignatureAlgorithm,
+        data: &[u8],
+    ) -> Result<Vec<u8>, crate::identity::domain::error::TokenError> {
+        Ok([algorithm.name().as_bytes(), b" sobre ", data].concat())
+    }
+
+    fn accepts_the_secret(
+        &self,
+        _reference: &crate::identity::domain::certificate::CertificateRef,
+        _secret: &crate::identity::domain::protected_secret::ProtectedSecret,
+    ) -> Result<(), crate::identity::domain::error::TokenError> {
+        Ok(())
+    }
+}
+
+#[test]
+fn a_bare_pkcs1_for_the_site_is_the_token_signing_the_data_without_the_bridge() {
+    use super::{begin_for_the_site, DeclaredByTheSite};
+    use crate::identity::domain::algorithm::SignatureAlgorithm;
+    use crate::signing::domain::bridge::SignatureOperation;
+
+    let path = "/run/user/1000/sede/datos.bin";
+    let files = DocumentsInMemory::default().with(path, b"los datos de la sede");
+    let session = SigningSession::default();
+
+    begin_for_the_site(
+        &files,
+        DocumentToSign {
+            handle: "asa".to_owned(),
+            document: Document::opened(path),
+        },
+        &a_certificate("FIRMA", &[]),
+        DeclaredByTheSite {
+            format: Format::Pkcs1,
+            algorithm: SignatureAlgorithm::Sha512Rsa,
+            operation: SignatureOperation::Sign,
+            parameters: &std::collections::BTreeMap::new(),
+            allow_unregistered_signatures: false,
+        },
+        &ATokenThatMarksWhatItSigns,
+        &NoIsolate,
+        &session,
+    )
+    .expect("NONE se prefirma sin el hilo del puente");
+    sign_on_token(&ATokenThatMarksWhatItSigns, &session, "").expect("el token firma");
+    let signed = finish(&NoIsolate, &session).expect("NONE se postfirma sin el hilo del puente");
+
+    assert_eq!(
+        signed.completed.signed_document(),
+        b"SHA512withRSA sobre los datos de la sede"
+    );
+}

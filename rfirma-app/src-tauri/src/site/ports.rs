@@ -49,6 +49,7 @@ impl From<RequestedFormat> for Format {
             }
             RequestedFormat::Xades(XadesEnvelope::AsicS) => Self::Xades(XadesVariant::AsicS),
             RequestedFormat::FacturaE => Self::FacturaE,
+            RequestedFormat::Pkcs1 => Self::Pkcs1,
         }
     }
 }

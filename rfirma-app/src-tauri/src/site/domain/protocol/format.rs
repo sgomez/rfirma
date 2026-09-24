@@ -30,10 +30,12 @@ pub enum RequestedFormat {
     Xades(XadesEnvelope),
     /// Firma de una factura electrónica.
     FacturaE,
+    /// Firma PKCS#1 de los datos, sin envoltorio.
+    Pkcs1,
 }
 
 /// Cada nombre de `AOSignConstants` que rFirma lee, con el formato que nombra.
-const NAMED: [(&str, RequestedFormat); 16] = [
+const NAMED: [(&str, RequestedFormat); 19] = [
     ("pades", RequestedFormat::Pades),
     ("padestri", RequestedFormat::Pades),
     ("adobe pdf", RequestedFormat::Pades),
@@ -62,10 +64,13 @@ const NAMED: [(&str, RequestedFormat); 16] = [
     ("facturae", RequestedFormat::FacturaE),
     ("facturaetri", RequestedFormat::FacturaE),
     ("factura-e", RequestedFormat::FacturaE),
+    ("none", RequestedFormat::Pkcs1),
+    ("pkcs1", RequestedFormat::Pkcs1),
+    ("pkcs#1", RequestedFormat::Pkcs1),
 ];
 
 impl RequestedFormat {
-    /// El formato que nombra ese `format=`, o nada si el original no lo firma trifásico.
+    /// El formato que nombra ese `format=`, o nada si rFirma no lo firma.
     pub fn named(text: &str) -> Option<Self> {
         let asked = text.trim().to_ascii_lowercase();
         NAMED
@@ -81,6 +86,7 @@ impl RequestedFormat {
             Self::Cades | Self::Cms => "csig",
             Self::CadesAsicS | Self::Xades(XadesEnvelope::AsicS) => "asics",
             Self::Xades(_) | Self::FacturaE => "xsig",
+            Self::Pkcs1 => "p1",
         }
     }
 }

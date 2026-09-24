@@ -69,9 +69,7 @@ fn sign_one<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
 ) -> Result<Vec<u8>, SiteRefusal> {
     refuse_a_countersignature_outside_cades_and_xades(sign.round(), sign.effective_format())
         .map_err(|refusal| SiteRefusal::LocalBatch(refusal.to_string()))?;
-    let format = Format::from(sign.effective_format())
-        .bridged()
-        .map_err(SiteRefusal::FormatNotBridged)?;
+    let format = Format::from(sign.effective_format());
 
     let path = write_the_document(desk, format, sign.document())?;
     let document = desk.neighbours.open_unrecorded(path.clone());

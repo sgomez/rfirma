@@ -53,6 +53,6 @@ fn what_arrives_in(format: Format) -> &'static str {
     match format {
         Format::Pades => "pdf",
         Format::Xades(_) | Format::FacturaE => "xml",
-        Format::Cades | Format::CadesAsicS | Format::Cms => "bin",
+        Format::Cades | Format::CadesAsicS | Format::Cms | Format::Pkcs1 => "bin",
     }
 }

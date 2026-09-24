@@ -492,6 +492,20 @@ pub fn the_refusing_errand_of(roots: &Arc<Roots>) -> SiteOperations {
         errand::attend(&desk, url, answering, live);
     })
 }
+/// Comprueba que `signature` es el PKCS#1 en SHA-256 de `data`, sin nada alrededor, con la clave del certificado.
+pub fn verified_as_a_bare_pkcs1(signature: &[u8], data: &[u8], certificate_der: &[u8]) {
+    let key = openssl::x509::X509::from_der(certificate_der)
+        .and_then(|certificate| certificate.public_key())
+        .expect("el firmante es un certificado X.509 con clave publica");
+    let mut verifier = openssl::sign::Verifier::new(openssl::hash::MessageDigest::sha256(), &key)
+        .expect("openssl verifica PKCS#1 en SHA-256");
+    verifier.update(data).expect("openssl lee los datos");
+    assert!(
+        verifier.verify(signature).unwrap_or(false),
+        "lo que volvio no es el PKCS#1 de los datos con la clave del certificado"
+    );
+}
+
 /// Comprueba el CMS detached con `openssl cms -verify`, contra el `content` que firmó.
 pub fn verified_by_openssl(cms: &[u8], content: &Path) {
     let cms_file = a_der_file(cms);

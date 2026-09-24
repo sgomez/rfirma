@@ -246,7 +246,7 @@ impl From<Format> for SigningKindView {
     fn from(format: Format) -> Self {
         match format {
             Format::Pades => Self::Pdf,
-            Format::Cades | Format::CadesAsicS | Format::Cms => Self::Challenge,
+            Format::Cades | Format::CadesAsicS | Format::Cms | Format::Pkcs1 => Self::Challenge,
             Format::Xades(_) => Self::Xml,
             Format::FacturaE => Self::Invoice,
         }

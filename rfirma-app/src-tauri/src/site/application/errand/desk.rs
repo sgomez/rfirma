@@ -312,15 +312,7 @@ fn consent_to_a_signature<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
         return answering(live, SiteOutcome::RefusedByTheProtocol(refusal));
     }
 
-    let format = match Format::from(ask.format).bridged() {
-        Ok(format) => format,
-        Err(error) => {
-            return answering(
-                live,
-                SiteOutcome::Refused(SiteRefusal::FormatNotBridged(error)),
-            )
-        }
-    };
+    let format = Format::from(ask.format);
 
     let waivers = waivers_declared_in(&ask);
     let admitted = match AdmissibleDocument::check_for(format, ask.document, waivers) {

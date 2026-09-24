@@ -7,7 +7,7 @@ use crate::site::domain::protocol::XadesEnvelope;
 
 #[test]
 fn a_format_the_original_does_not_sign_in_three_phases_is_refused_by_the_protocol() {
-    for name in ["OOXML", "ODF", "SOAP", "NONE"] {
+    for name in ["OOXML", "ODF", "SOAP"] {
         let url = an_operation(&format!(
             "op=sign&format={name}&algorithm=SHA256withRSA&dat={}",
             dat(b"%PDF-1.7\n")
