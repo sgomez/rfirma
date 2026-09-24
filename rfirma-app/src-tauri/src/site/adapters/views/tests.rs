@@ -160,6 +160,55 @@ fn each_batch_situation_crosses_as_its_own_view() {
 }
 
 #[test]
+fn each_refusal_situation_crosses_as_its_own_view() {
+    for (situation, expected) in [
+        (
+            RefusalSituation::AppendedSignaturePage,
+            RefusalSituationView::AppendedSignaturePage,
+        ),
+        (
+            RefusalSituation::UnsupportedFilter,
+            RefusalSituationView::UnsupportedFilter,
+        ),
+        (
+            RefusalSituation::UnsupportedProtocolVersion,
+            RefusalSituationView::UnsupportedProtocolVersion,
+        ),
+        (
+            RefusalSituation::MissingFormat,
+            RefusalSituationView::MissingFormat,
+        ),
+        (
+            RefusalSituation::UnsupportedKeyStore,
+            RefusalSituationView::UnsupportedKeyStore,
+        ),
+        (
+            RefusalSituation::ErrandInFlight,
+            RefusalSituationView::ErrandInFlight,
+        ),
+        (
+            RefusalSituation::PortsTaken,
+            RefusalSituationView::PortsTaken,
+        ),
+        (
+            RefusalSituation::ExplicitXades,
+            RefusalSituationView::ExplicitXades,
+        ),
+        (
+            RefusalSituation::InvoiceMultisignature,
+            RefusalSituationView::InvoiceMultisignature,
+        ),
+        (
+            RefusalSituation::UnsupportedCountersignature,
+            RefusalSituationView::UnsupportedCountersignature,
+        ),
+        (RefusalSituation::Unknown, RefusalSituationView::Unknown),
+    ] {
+        assert_eq!(RefusalSituationView::from(situation), expected);
+    }
+}
+
+#[test]
 fn the_batch_consent_crosses_with_how_many_signs_it_has_and_who_is_already_chosen() {
     assert_eq!(
         serde_json::to_value(SiteErrandView::from(&Moment::AskingToSignTheBatch {
