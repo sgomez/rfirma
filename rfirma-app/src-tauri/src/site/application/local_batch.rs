@@ -7,7 +7,9 @@ use crate::signing::domain::bridge::Format;
 use crate::site::application::errand::desk::{write_the_document, ErrandDesk, Neighbours};
 use crate::site::application::session::SiteRefusal;
 use crate::site::domain::batch::{LocalBatch, LocalBatchResult, LocalSingleSign};
-use crate::site::domain::protocol::AskedAlgorithm;
+use crate::site::domain::protocol::{
+    refuse_a_countersignature_outside_cades_and_xades, AskedAlgorithm,
+};
 use crate::site::ports::{FilterEngine, PolicyEngine, SiteSigningRequest};
 
 /// Caso de uso: firma cada elemento del lote local con el ciclo de sede, aplicando `stoponerror`.
@@ -65,6 +67,8 @@ fn sign_one<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
     secret: &str,
     sign: &LocalSingleSign,
 ) -> Result<Vec<u8>, SiteRefusal> {
+    refuse_a_countersignature_outside_cades_and_xades(sign.round(), sign.effective_format())
+        .map_err(|refusal| SiteRefusal::LocalBatch(refusal.to_string()))?;
     let format = Format::from(sign.effective_format())
         .bridged()
         .map_err(SiteRefusal::FormatNotBridged)?;

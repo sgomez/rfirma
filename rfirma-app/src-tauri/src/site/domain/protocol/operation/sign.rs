@@ -41,6 +41,22 @@ impl CounterTarget {
             Self::Leafs
         }
     }
+
+    /// El que contrafirma el lote local: el árbol si lo nombra, y las hojas en cualquier otro caso.
+    pub fn of_a_local_batch(declared: Option<&str>) -> Self {
+        match declared.and_then(Self::named) {
+            Some(Self::Tree) => Self::Tree,
+            _ => Self::Leafs,
+        }
+    }
+
+    /// El valor de `target=` que lo nombra.
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Tree => TARGET_TREE,
+            Self::Leafs => TARGET_LEAFS,
+        }
+    }
 }
 
 /// Cuál de las tres firmas pidió la sede.

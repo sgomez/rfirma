@@ -2,7 +2,7 @@ use base64::engine::general_purpose::STANDARD;
 
 use super::*;
 use crate::site::domain::protocol::codes::SafCode;
-use crate::site::domain::protocol::XadesEnvelope;
+use crate::site::domain::protocol::{CounterTarget, XadesEnvelope};
 
 /// **Grada A**: entra el JSON que arma `autoscript.js` y sale el lote leído. No
 /// hay socket, ni token, ni puente.
@@ -145,19 +145,67 @@ fn a_format_that_autofirma_does_not_sign_in_three_phases_is_refused() {
     assert_eq!(refusal.code(), SafCode::UnsupportedFormat);
 }
 
-#[test]
-fn a_countersign_suboperation_is_not_attended() {
+/// Una contrafirma CAdES con los `extraparams` que se le digan, o sin ellos.
+fn a_countersign_batch(extra_params: Option<&str>) -> LocalBatch {
+    let declared = extra_params
+        .map(|params| format!(",\"extraparams\":\"{}\"", base64(params)))
+        .unwrap_or_default();
     let json = a_batch(
         "\"algorithm\":\"SHA256\",\"format\":\"CAdES\",\"suboperation\":\"countersign\"",
         &format!(
-            "{{\"id\":\"001\",\"datareference\":\"{}\"}}",
+            "{{\"id\":\"001\",\"datareference\":\"{}\"{declared}}}",
             base64("dato")
         ),
     );
+    parse_local_batch(json.as_bytes()).expect("la contrafirma se atiende")
+}
 
-    let refusal = parse_local_batch(json.as_bytes()).expect_err("la contrafirma no se atiende");
+fn the_target_param_of(batch: &LocalBatch) -> Vec<&str> {
+    batch.signs()[0]
+        .extra_params()
+        .iter()
+        .filter(|(key, _)| key == "target")
+        .map(|(_, value)| value.as_str())
+        .collect()
+}
 
-    assert_eq!(refusal.code(), SafCode::UnsupportedOperation);
+#[test]
+fn a_countersign_without_target_countersigns_the_leaves() {
+    let batch = a_countersign_batch(None);
+
+    assert_eq!(
+        batch.signs()[0].round(),
+        SignatureRound::Counter {
+            target: CounterTarget::Leafs
+        }
+    );
+    assert_eq!(the_target_param_of(&batch), ["leafs"]);
+}
+
+#[test]
+fn a_countersign_with_target_tree_countersigns_the_whole_tree() {
+    let batch = a_countersign_batch(Some("target=Tree"));
+
+    assert_eq!(
+        batch.signs()[0].round(),
+        SignatureRound::Counter {
+            target: CounterTarget::Tree
+        }
+    );
+    assert_eq!(the_target_param_of(&batch), ["tree"]);
+}
+
+#[test]
+fn a_countersign_with_any_other_target_countersigns_the_leaves() {
+    let batch = a_countersign_batch(Some("target=signers"));
+
+    assert_eq!(
+        batch.signs()[0].round(),
+        SignatureRound::Counter {
+            target: CounterTarget::Leafs
+        }
+    );
+    assert_eq!(the_target_param_of(&batch), ["leafs"]);
 }
 
 #[test]
