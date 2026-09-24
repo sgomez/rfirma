@@ -323,14 +323,13 @@ chapter = "13"
 citation = "UrlParameters.java:382-436; ProtocolInvocationLauncherSelectCert.java:118-121, 147-164; AOKeyStoreManagerFactory.java:103-116"
 statement = """
 Un almacén pedido como PKCS11:<biblioteca> se abre con esa biblioteca en vez del almacén del
-sistema: la selección ofrece los certificados del token y pide su PIN.
+sistema: el certificado que vuelve es del token, no del almacén del sistema.
 """
 drive = { mode = "v4", script = "keystorepkcs11" }
-assistance = "person"
-store = "token"
-question = "¿se pidió el PIN de un token y se ofrecieron sus certificados? [s/n]"
-person = { yes = "se abrió el token PKCS#11 que nombró la sede", no = "no se abrió el token que nombró la sede", yes_means = "conforme" }
-warning = "La sede pide el almacén PKCS#11 de SoftHSM: si te pide el PIN, es 1234, y elige cualquiera de los certificados que ofrezca. AutoFirma pide el PIN al abrir el token, antes de la lista; otro cliente puede pedirlo después de elegir."
+assistance = "click"
+condition = "a-certificate-of-the-named-token"
+store = "token_apart"
+warning = "La sede pide el almacén PKCS#11 de SoftHSM: elige cualquiera de los certificados que ofrezca y, si te pide el PIN, es 1234."
 
 [[check]]
 id = "an_unknown_key_store_falls_back_to_the_default"

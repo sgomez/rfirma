@@ -92,6 +92,8 @@ Dónde encuentra el cliente sus certificados en un trámite. Es una lista cerrad
 - **rsa**: un único certificado RSA de pruebas, sin PIN. Es el de omisión.
 - **ec**: un único certificado de curva elíptica de pruebas, sin PIN.
 - **token**: el token PKCS#11 de pruebas, con su PIN y varios certificados.
+- **token_apart**: el mismo token sin registrar en el almacén del sistema, que tiene otro
+  certificado: distingue el almacén que la sede nombra por su biblioteca del sistema.
 - **several**: varios certificados de pruebas sin PIN, para los filtros, el almacén que nombra la
   sede y la fijación; el token queda alcanzable por su biblioteca, sin registrar.
 - **expired**: uno vigente y uno caducado, sin PIN, para ver qué oculta la selección.
