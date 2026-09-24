@@ -54,7 +54,7 @@ import org.graalvm.word.PointerBase;
  * postsign ok  {"ok":true,"pdf":"&lt;b64&gt;"}   y en CAdES {"ok":true,"signature":"&lt;b64&gt;"}
  * filter   ok  {"ok":true,"selected":[0,2]}
  * expand   ok  {"ok":true,"params":"&lt;bloque properties&gt;"}
- * validate ok  {"ok":true,"verdict":"valid"}
+ * validate ok  {"ok":true,"verdict":"valid"}   o "unsigned" si no trae firmas
  *              {"ok":true,"verdict":"invalid","reason":"&lt;VALIDITY_ERROR&gt;"}
  *              {"ok":true,"verdict":"confirmationNeeded","param":"&lt;clave&gt;",
  *               "messageCode":"&lt;codigo de mensaje&gt;"}

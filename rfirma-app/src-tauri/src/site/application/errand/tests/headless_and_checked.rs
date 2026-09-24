@@ -186,6 +186,16 @@ fn a_desk_that_validates<'a>(
 
 /// El consentimiento de una firma cuya sede pidió `checkSignatures`, con el veredicto que se le diga.
 fn a_checked_consent(verdict: SignatureVerdict, pdf: &[u8], properties: &str) -> ErrandStep {
+    a_checked_consent_to("sign", verdict, pdf, properties)
+}
+
+/// Lo mismo, para la operación que se le diga.
+fn a_checked_consent_to(
+    verb: &str,
+    verdict: SignatureVerdict,
+    pdf: &[u8],
+    properties: &str,
+) -> ErrandStep {
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
     let memory = a_memory(home.path());
     let ours = vec![a_usable_certificate("FIRMA")];
@@ -212,7 +222,7 @@ fn a_checked_consent(verdict: SignatureVerdict, pdf: &[u8], properties: &str) ->
 
     let step = consent_to_sign(
         &desk,
-        &signature_requested(&a_signature_over(pdf, "sign", properties)),
+        &signature_requested(&a_signature_over(pdf, verb, properties)),
         ours.clone(),
         &live,
     );
@@ -227,15 +237,26 @@ fn a_checked_consent(verdict: SignatureVerdict, pdf: &[u8], properties: &str) ->
 
 #[test]
 fn a_first_signature_over_a_document_without_signatures_passes_the_check() {
-    let asked = a_checked_consent(SignatureVerdict::Valid, A_PDF, "");
+    let asked = a_checked_consent(SignatureVerdict::Unsigned, A_PDF, "");
 
     let ErrandStep::AskingToSign(consent) = asked else {
-        panic!("un documento sin firmas es valido: {asked:?}");
+        panic!("una primera firma no necesita firmas previas: {asked:?}");
     };
     assert!(
         !consent.from_the_site.contains_key("checkSignatures"),
         "la clave la interpreta el tramite y no cruza al puente"
     );
+}
+
+#[test]
+fn a_cosignature_over_a_document_without_signatures_is_answered_with_the_code_of_an_invalid_signature(
+) {
+    let asked = a_checked_consent_to("cosign", SignatureVerdict::Unsigned, A_PDF, "");
+
+    let ErrandStep::Answering(SiteOutcome::Refused(refusal)) = &asked else {
+        panic!("una multifirma sin firmas que validar se rechaza: {asked:?}");
+    };
+    assert_eq!(frontier::told(refusal).1, SafCode::InvalidSignature);
 }
 
 #[test]
