@@ -1,9 +1,8 @@
 use super::{CounterTarget, Format, LocalBatchItem, Moment, SignatureRound, SignatureRoundView};
-use super::{
-    NoCertificateView, NoChannelView, RefusalSituation, RefusalSituationView, SiteErrandView,
-};
+use super::{NoCertificateView, NoChannelView, RefusalSituationView, SiteErrandView};
 use crate::signing::domain::bridge::XadesVariant;
 use crate::site::domain::batch_error::Situation as BatchSituation;
+use crate::site::domain::protocol::RefusalSituation;
 
 #[test]
 fn the_dead_ends_cross_named_and_never_written_out() {
