@@ -5,6 +5,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use serde::{Deserialize, Serialize};
 use x509_cert::der::Decode;
+use x509_cert::ext::pkix::{BasicConstraints, KeyUsage};
 use x509_cert::Certificate;
 
 use crate::identity::domain::algorithm::KeyKind;
@@ -178,6 +179,26 @@ impl TokenCertificate {
             EC_PUBLIC_KEY => Some(KeyKind::Ec),
             _ => None,
         }
+    }
+
+    /// Por su contenido no puede firmar: es de CA, o declara `keyUsage` sin firma (ADR-0025).
+    pub fn cannot_sign_by_content(&self) -> bool {
+        let Ok(certificate) = Certificate::from_der(&self.der) else {
+            return false;
+        };
+        let tbs = certificate.tbs_certificate();
+
+        if let Ok(Some((_, constraints))) = tbs.get_extension::<BasicConstraints>() {
+            if constraints.ca {
+                return true;
+            }
+        }
+
+        if let Ok(Some((_, key_usage))) = tbs.get_extension::<KeyUsage>() {
+            return !key_usage.digital_signature() && !key_usage.non_repudiation();
+        }
+
+        false
     }
 
     /// Estado del certificado en el instante actual.

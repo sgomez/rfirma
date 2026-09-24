@@ -10,12 +10,26 @@ rFirma no lo hace: lista los certificados por sus objetos públicos y devuelve e
 elegido sin abrir sesión en el token. **Una operación que no firma no pide el
 PIN.**
 
+Sin sesión no hay forma fiable de saber qué certificado tiene detrás una clave
+privada emparejada, pero sí de saber qué certificado **no puede firmar por su
+propio contenido**: uno de CA (`basicConstraints` con `cA=true`), o uno que
+declara `keyUsage` sin `digitalSignature` ni `nonRepudiation`. Esos dos se
+descartan del listado de un almacén de tarjeta o token sin sesión; el que no
+declara `keyUsage` se conserva, porque su ausencia no dice que no pueda
+firmar. Esta regla es sobre el certificado, no sobre el módulo: se aplica
+igual con o sin sesión, y por eso también filtra el listado de un token con
+sesión abierta.
+
 ## Consequences
 
-- Un certificado presente en el token sin clave privada asociada puede llegar a
-  ofrecerse en la lista. Es el precio, y es el lado correcto del que
-  equivocarse: quien elige un certificado inservible lo descubre al firmar, y
-  quien sólo se identifica no ha tecleado su PIN por el camino.
+- Un certificado presente en el token sin clave privada asociada, pero cuyo
+  contenido no lo descarta, puede llegar a ofrecerse en la lista. Es el
+  precio, y es el lado correcto del que equivocarse: quien elige un
+  certificado inservible lo descubre al firmar, y quien sólo se identifica no
+  ha tecleado su PIN por el camino.
+- Los almacenes NSS y los tokens con sesión abierta no cambian de
+  comportamiento por el filtro de sesión: siguen filtrando por clave privada
+  emparejada, que ahí sí es legible.
 - Frente al cliente publicado, rFirma sale **no conforme** en la exigencia
   `selectcert_over_a_token_asks_for_its_pin` de la suite de
   conformidad. La suite no sabe qué cliente mide, así que no lo explica: es
@@ -23,11 +37,14 @@ PIN.**
 
 ## Considered Options
 
-- **Imitar `checkPrivateKeys=true`.** Descartada: pedir el PIN en una operación
-  que no firma enseña a la persona a teclearlo sin mirar por qué se lo piden,
-  que es justo el hábito que un cliente de firma no debe cultivar; y deja la
-  sesión del token abierta para un trámite que no la necesita.
-- **Filtrar por clave privada sin abrir sesión.** Descartada: el atributo que lo
-  diría no es legible en todos los módulos PKCS#11 sin sesión, así que el filtro
-  sería silenciosamente distinto según el token, y un filtro que a veces filtra
-  es peor que no filtrar.
+- **Imitar `checkPrivateKeys=true`, o pedir el PIN al listar para
+  identificarse.** Descartada: pedir el PIN en una operación que no firma
+  enseña a la persona a teclearlo sin mirar por qué se lo piden, que es justo
+  el hábito que un cliente de firma no debe cultivar; y deja la sesión del
+  token abierta para un trámite que no la necesita.
+- **Filtrar por clave privada, o por emparejamiento con la clave pública, sin
+  abrir sesión.** Descartada: el atributo que lo diría no es legible en todos
+  los módulos PKCS#11 sin sesión, así que el filtro sería silenciosamente
+  distinto según el token, y un filtro que a veces filtra es peor que no
+  filtrar. El filtro por contenido del certificado no tiene este problema:
+  lee del propio DER, igual en cualquier módulo.
