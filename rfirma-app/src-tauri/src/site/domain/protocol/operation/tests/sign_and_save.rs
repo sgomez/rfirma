@@ -1,6 +1,6 @@
 use super::super::*;
 use super::fixtures::{a_sign_and_save, an_operation, dat, gzipped, properties, read_operation};
-use crate::site::domain::protocol::XadesEnvelope;
+use crate::site::domain::protocol::{RefusalSituation, XadesEnvelope};
 use crate::site::domain::triphase_server::ServerFormat;
 
 #[test]
@@ -173,7 +173,10 @@ fn signing_and_saving_with_countersign_is_refused_with_the_code_of_the_original(
     let refusal = read_operation(&url).expect_err("no existe en PAdES");
 
     assert_eq!(refusal.code(), SafCode::UnsupportedOperation);
-    assert!(refusal.detail().contains("countersign"));
+    assert_eq!(
+        refusal.situation(),
+        RefusalSituation::UnsupportedCountersignature
+    );
 }
 
 #[test]

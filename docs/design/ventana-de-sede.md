@@ -345,11 +345,15 @@ mismo desenlace, pero la sede todavía no tiene su respuesta: el `SAF_NN` sale
 cuando la persona pulsa `Cerrar` o cierra la ventana, como con el diálogo de
 error del original. Con WebSocket la ventana se oculta antes de contestar, y la
 siguiente operación del canal vuelve a enseñarla; si llegan varios rechazos
-seguidos, se enseñan y se contestan de uno en uno, en orden. Los demás rechazos
-—formato que no existe, versión mínima, versión de protocolo, y los que nacen al
-procesar la petición aunque compartan código, como la cofirma de una factura
-(`SAF_04`)— se contestan en el acto y no enseñan nada, porque el original
-tampoco los enseña.
+seguidos, se enseñan y se contestan de uno en uno, en orden. Lo mismo vale
+para las firmas que rFirma se niega a hacer —la XAdES explícita (ADR-0023), la
+cofirma o contrafirma de una factura electrónica y la contrafirma fuera de
+CAdES, CMS y XAdES—, tanto si el documento lo manda la sede como si lo elige la
+persona: su frase dice que no es un fallo de quien firma, y debajo de «Para
+quien mantiene la sede:» va una nota con lo que la sede puede cambiar. Los demás
+rechazos —formato que no existe, versión mínima, versión de protocolo, y los que
+nacen al procesar la petición aunque compartan código— se contestan en el acto
+y no enseñan nada, porque el original tampoco los enseña.
 
 **La caja del detalle es de la sede, y solo de la sede**: dentro van la etiqueta
 `Detalle` con el botón de copiar a su derecha y, debajo, el texto a ancho

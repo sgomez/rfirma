@@ -11,10 +11,9 @@
 //!   como un XML cualquiera dejaría una factura que su propia política invalida.
 //!   Quien lo decide es `detection.rs`, con la misma comprobación de raíz y
 //!   tres hijos que `AOFacturaESigner.isValidDataFile`.
-//! - **La XAdES explícita no se reproduce**. El original avisa de que
-//!   `mode=explicit` está obsoleto y hashea el dato con SHA1 antes de firmar
-//!   (`ProtocolInvocationLauncherSign.java:390-405`); aquí `mode=explicit`
-//!   con XAdES sale con `SAF_06`.
+//! - **La XAdES explícita no se reproduce** (ADR-0023): donde el original
+//!   firmaría la huella SHA-1 del documento, aquí se enseña el rechazo y sale
+//!   `SAF_06`.
 //! - **El Base64 del servidor intermedio rechaza un carácter fuera del
 //!   alfabeto**. El original nunca lanza su «Bad Base64 input character»:
 //!   ningún valor de su tabla queda por debajo del umbral que lo dispara

@@ -1602,6 +1602,24 @@ msgstr "You cancelled the PIN request, so the signature {{origin}} asked for was
 msgid "sede.refusals.promptFailed"
 msgstr "rFirma couldn't ask you for the PIN for the signature {{origin}} asked for."
 
+msgid "sede.refusals.explicitXades"
+msgstr "{{origin}} asked for an old kind of signature that is no longer safe: that signature could pass for the signature of a different document from yours. That's why rFirma doesn't make it. It's not your fault; if you need to finish the errand, contact {{origin}}."
+
+msgid "sede.refusals.invoiceMultisignature"
+msgstr "{{origin}} asked to add a signature to an electronic invoice that is already signed. An electronic invoice only takes one signature, so rFirma can't do it. It's not your fault; if you need to finish the errand, contact {{origin}}."
+
+msgid "sede.refusals.unsupportedCountersignature"
+msgstr "{{origin}} asked to sign over someone else's signature on a kind of document that doesn't allow it, so rFirma can't do it. It's not your fault; if you need to finish the errand, contact {{origin}}."
+
+msgid "sede.siteNotes.explicitXades"
+msgstr "Remove mode=explicit or use explicit CAdES, which signs the document without including it."
+
+msgid "sede.siteNotes.invoiceMultisignature"
+msgstr "FacturaE doesn't support cosigning or countersigning; ask for a simple signature (sign)."
+
+msgid "sede.siteNotes.unsupportedCountersignature"
+msgstr "Countersigning only exists in CAdES, CMS and XAdES; in any other format, ask for a cosignature (cosign)."
+
 msgid "sede.noCertificate.noneTitle"
 msgstr "You don't have any certificate"
 

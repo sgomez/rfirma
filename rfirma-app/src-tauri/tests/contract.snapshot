@@ -259,6 +259,9 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
       UnsupportedKeyStore
       ErrandInFlight
       PortsTaken
+      ExplicitXades
+      InvoiceMultisignature
+      UnsupportedCountersignature
       BatchPresignerUnreachable
       BatchPostsignerUnreachable
       BatchInvalidPresignResponse

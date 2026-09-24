@@ -82,6 +82,7 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `application/errand/tests/pdf_password.rs` | Pruebas de la contraseña del PDF cifrado después de elegir certificado: pedirla, repetirla, cancelarla y el rechazo con `headless`. Solo en pruebas. |
 | `application/errand/tests/websocket.rs` | Pruebas del trámite de sede sobre WebSocket. Solo en pruebas. |
 | `application/errand/tests/service.rs` | Pruebas del trámite de sede sobre el canal `service`. Solo en pruebas. |
+| `application/errand/tests/shown_refusals.rs` | Pruebas de las firmas que rFirma se niega a hacer: el rechazo se enseña, con el documento de la sede o el elegido en disco, y la sede recibe su código al cerrar la ventana. Solo en pruebas. |
 | `application/errand/tests/relay_window.rs` | Pruebas de cuándo enseña su ventana un trámite de llegada inmediata. Solo en pruebas. |
 | `application/filtering.rs` | El listado de certificados que la sede acepta. Pruebas en `application/filtering/tests.rs`. |
 | `application/local_batch.rs` | El bucle del lote local: el ciclo de sede por elemento y `stoponerror`. Pruebas en `application/local_batch/tests.rs`. |
