@@ -132,3 +132,4 @@ siguen en `.scratch/archive/`.
 2026-09-24 spec=#931 sub=#933 model=sonnet effort=medium pr=#940 verdict=CLEAN cycles=0 mergefix=0 wave=1 outcome=merged
 2026-09-24 spec=#931 sub=#935 model=sonnet effort=medium pr=#941 verdict=CLEAN cycles=0 mergefix=1 wave=1 outcome=merged
 2026-09-24 spec=#931 sub=#937 model=sonnet effort=medium pr=#942 verdict=CLEAN cycles=1 mergefix=0 wave=1 outcome=merged
+2026-09-24 spec=#931 sub=#934 model=sonnet effort=medium pr=#943 verdict=CLEAN cycles=1 mergefix=0 wave=2 outcome=merged
