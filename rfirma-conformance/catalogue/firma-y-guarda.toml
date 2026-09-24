@@ -124,3 +124,64 @@ drive = { mode = "v4", script = "signandsavepadesvisible" }
 assistance = "person"
 saf = "SAF_43"
 warning = "Va a aparecer el diálogo del área visible sobre el PDF: cancélalo sin marcar nada. Si después aparecen el certificado o dónde guardar, cancélalos también."
+
+[[check]]
+id = "signandsave_a_cades_triphase_signature_goes_through_the_server_url_and_is_saved"
+set = "firma-y-guarda"
+citation = "ProtocolInvocationLauncherSignAndSave.java:258, 536-566, 578-588, 722-737; AOSignerFactory.java:53; AOCAdESTriPhaseSigner.java:239-356; PreSigner.java:64-85; PostSigner.java:41-82; JSEUIManager.java:808-814"
+statement = """
+En signandsave, una firma CAdEStri hace la prefirma y la postfirma contra el serverUrl de properties
+con cop=sign y format=CAdES, firma con la clave del certificado la prefirma que le devuelve, y la
+firma de la postfirma es la que guarda en disco y la que entrega a la sede.
+"""
+drive = { mode = "v4", script = "signandsavecadestri" }
+assistance = "person"
+harness = "the_saved_signature_read_back"
+condition = ["through-the-triphase-server", "the-presignature-signed-with-the-key", "the-server-signature-as-it-came", "the-returned-signature-on-disk"]
+warning = "Van a aparecer el diálogo de certificado y la petición de dónde guardar la firma: guárdala con el nombre propuesto, challenge-signed.csig, en la carpeta que se abre."
+
+[[check]]
+id = "signandsave_a_pades_triphase_signature_goes_through_the_server_url_and_is_saved"
+set = "firma-y-guarda"
+citation = "ProtocolInvocationLauncherSignAndSave.java:258, 536-566, 578-588, 722-737; AOSignerFactory.java:74; AOPDFTriPhaseSigner.java:65-151; PDFTriPhaseSignerUtil.java:69, 74-218; TriphaseDataSigner.java:48-99; JSEUIManager.java:808-814"
+statement = """
+En signandsave, una firma PAdEStri sobre un PDF hace la prefirma y la postfirma contra el serverUrl
+de properties con cop=sign y format=pades, firma con la clave del certificado la prefirma que le
+devuelve, y el PDF firmado de la postfirma es el que guarda en disco y el que entrega a la sede.
+"""
+drive = { mode = "v4", script = "signandsavepadestri" }
+assistance = "person"
+harness = "the_saved_signature_read_back"
+condition = ["through-the-triphase-server", "the-presignature-signed-with-the-key", "the-server-signature-as-it-came", "the-returned-signature-on-disk"]
+warning = "Van a aparecer el diálogo de certificado y la petición de dónde guardar la firma: guárdala con el nombre propuesto, documento-firmado.pdf, en la carpeta que se abre."
+
+[[check]]
+id = "signandsave_a_xades_triphase_signature_goes_through_the_server_url_and_is_saved"
+set = "firma-y-guarda"
+citation = "ProtocolInvocationLauncherSignAndSave.java:258, 536-566, 578-588, 722-737; AOSignerFactory.java:64; AOXAdESTriPhaseSigner.java:149-151, 154-168, 341-546; TriphaseDataSigner.java:48-99; JSEUIManager.java:808-814"
+statement = """
+En signandsave, una firma XAdEStri sobre un XML hace la prefirma y la postfirma contra el serverUrl
+de properties con cop=sign y format=XAdES, firma con la clave del certificado la prefirma que le
+devuelve, y la firma de la postfirma es la que guarda en disco y la que entrega a la sede.
+"""
+drive = { mode = "v4", script = "signandsavexadestri" }
+assistance = "person"
+harness = "the_saved_signature_read_back"
+condition = ["through-the-triphase-server", "the-presignature-signed-with-the-key", "the-server-signature-as-it-came", "the-returned-signature-on-disk"]
+warning = "Van a aparecer el diálogo de certificado y la petición de dónde guardar la firma: guárdala con el nombre propuesto, documento-firmado.xsig, en la carpeta que se abre."
+
+[[check]]
+id = "signandsave_a_facturae_triphase_signature_goes_through_the_server_url_and_is_saved"
+set = "firma-y-guarda"
+citation = "ProtocolInvocationLauncherSignAndSave.java:258, 536-566, 578-588, 722-737; AOSignerFactory.java:59; AOFacturaETriPhaseSigner.java:32-34; AOXAdESTriPhaseSigner.java:154-168, 341-546; TriphaseDataSigner.java:48-99; JSEUIManager.java:808-814"
+statement = """
+En signandsave, una firma FacturaEtri sobre una factura sin firmar hace la prefirma y la postfirma
+contra el serverUrl de properties con cop=sign y format=FacturaE, firma con la clave del
+certificado la prefirma que le devuelve, y la factura firmada de la postfirma es la que guarda en
+disco y la que entrega a la sede.
+"""
+drive = { mode = "v4", script = "signandsavefacturaetri" }
+assistance = "person"
+harness = "the_saved_signature_read_back"
+condition = ["through-the-triphase-server", "the-presignature-signed-with-the-key", "the-server-signature-as-it-came", "the-returned-signature-on-disk"]
+warning = "Van a aparecer el diálogo de certificado y la petición de dónde guardar la firma: guárdala con el nombre propuesto, factura-firmada.xsig, en la carpeta que se abre."
