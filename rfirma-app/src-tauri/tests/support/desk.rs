@@ -480,8 +480,8 @@ pub fn the_sign_and_save_errand_of(
     })
 }
 
-/// El trámite atendiendo una operación que el protocolo rechaza sin pedir consentimiento: la
-/// URL se decodifica y la respuesta sale por el canal en el mismo `attend`.
+/// El trámite atendiendo una operación que rFirma rechaza: si el rechazo se enseña, la persona
+/// cierra la ventana y la respuesta sale entonces.
 pub fn the_refusing_errand_of(roots: &Arc<Roots>) -> SiteOperations {
     let roots = Arc::clone(roots);
 
@@ -489,7 +489,10 @@ pub fn the_refusing_errand_of(roots: &Arc<Roots>) -> SiteOperations {
         let desk = the_desk_of(&roots);
         let live = &roots.site.errand;
         let answering = ErrandReply::of(move |text| reply.answer(text));
-        errand::attend(&desk, url, answering, live);
+        if let Some(ErrandStep::ShowingTheRefusal(_)) = errand::attend(&desk, url, answering, live)
+        {
+            errand::answer_before_closing(live);
+        }
     })
 }
 /// Comprueba que `signature` es el PKCS#1 en SHA-256 de `data`, sin nada alrededor, con la clave del certificado.
