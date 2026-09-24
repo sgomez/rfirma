@@ -2,7 +2,8 @@ import { fireEvent, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { inMemoryExternalDestinationOpener } from "../desktop/externalDestination";
 import { renderWithCatalog } from "../testing/render";
-import { OUTCOME_CLOSE_MS } from "./errand";
+import es from "../i18n/locales/es";
+import { NAMED_BY_THE_DESK, OUTCOME_CLOSE_MS, type RefusalSituation } from "./errand";
 import { SedeWindow } from "./SedeWindow";
 import { elapse, scriptedErrand, signedDocument } from "./sedeWindowFixtures";
 
@@ -119,28 +120,23 @@ describe("4 · outcome", () => {
     expect(screen.getByText(phrase)).toBeInTheDocument();
   });
 
-  it("tells a token failure with the title the desktop already gives it", () => {
+  it.each([
+    ...Object.entries(es.sede.refusals).map(([situation, phrase]) => ({
+      situation: situation as RefusalSituation,
+      text: phrase.replace("{{origin}}", "sede.ejemplo.gob.es"),
+    })),
+    ...NAMED_BY_THE_DESK.map((situation) => ({
+      situation,
+      text: es.errors.situations[situation].title,
+    })),
+  ])("tells the $situation refusal with its own sentence", ({ situation, text }) => {
     const { port } = scriptedErrand({
       kind: "outcome",
-      outcome: { kind: "refused", situation: "incorrectPin", detail: "CKR_PIN_INCORRECT" },
+      outcome: { kind: "refused", situation, detail: "CRUDO" },
     });
     renderWithCatalog(<SedeWindow errands={port} />);
 
-    expect(screen.getByText("El PIN no es correcto")).toBeInTheDocument();
-  });
-
-  it("tells a site that answers after the errand ended with its own phrase", () => {
-    const { port } = scriptedErrand({
-      kind: "outcome",
-      outcome: { kind: "refused", situation: "siteErrandNotLive", detail: "CRUDO" },
-    });
-    renderWithCatalog(<SedeWindow errands={port} />);
-
-    expect(
-      screen.getByText(
-        "El trámite con sede.ejemplo.gob.es ya había terminado cuando llegó tu respuesta.",
-      ),
-    ).toBeInTheDocument();
+    expect(screen.getByText(text)).toBeInTheDocument();
   });
 
   it("classifies a cancelled save as its own refusal, with its own phrase", () => {
