@@ -321,7 +321,9 @@ describe("el lote local: el resumen de cada elemento", () => {
 function labelsTheFrontierWrites(): string[] {
   const frontier = readFileSync(join(process.cwd(), "src-tauri/src/site/adapters/frontier.rs"), "utf8");
   const labelFunctions = [...frontier.matchAll(/fn label_of_\w+\([^)]*\) -> &'static str \{([\s\S]*?)\n\}/g)];
-  return labelFunctions.flatMap(([, body]) => [...body.matchAll(/=> "(\w+)"/g)].map(([, label]) => label));
+  return labelFunctions.flatMap(([, body = ""]) =>
+    [...body.matchAll(/=> "(\w+)"/g)].map(([, label = ""]) => label),
+  );
 }
 
 describe("la frontera de sede y la ventana nombran lo mismo", () => {
