@@ -34,9 +34,11 @@ uno cualquiera.
    original elige en Linux cuando nadie nombra ninguno
    (`AOKeyStore.getDefaultKeyStoreTypeByOs`). Obedecerlo no cambia de dónde
    sale el certificado: solo confirma que la sede pidió lo que va a ocurrir.
-4. **Cualquier otro nombre de `AOKeyStore` sale con `SAF_07`**, nombrando el
-   parámetro por el que vino, y la ventana lo cuenta como
-   `unsupportedKeyStore`. Ahí están el `PKCS12`, que necesitaría una contraseña
+4. **Cualquier otro nombre de `AOKeyStore` sale con `SAF_08`**
+   (`ERROR_CANNOT_ACCESS_KEYSTORE`), nombrando el parámetro por el que vino, y
+   la ventana lo cuenta como `unsupportedKeyStore`. Es el código con el que el
+   original contesta cuando no puede abrir el almacén que se le pide —el de
+   Windows en Linux, por ejemplo—, y por eso el que una sede sabe tratar. Ahí están el `PKCS12`, que necesitaría una contraseña
    que la orden de instalación no lleva; el `WINDOWS` y el `APPLE`, que no
    existen en Linux; y las tarjetas, que quedan fuera de rFirma por desviación
    declarada.
@@ -54,8 +56,11 @@ canonizarla sería tocar el disco desde una regla pura.
 
 ## Consequences
 
-- La sede que acota el almacén recibe una respuesta del catálogo publicado y
-  puede decidir. La que no lo acota no nota nada.
+- La sede que acota el almacén recibe el mismo `SAF_08` que le daría el
+  original al no poder abrirlo, y puede decidir. La que no lo acota no nota
+  nada.
+- El código no distingue el motivo del rechazo; la ventana sí, porque
+  `unsupportedKeyStore` cuenta qué almacén o qué biblioteca se nombró.
 - No hace falta el camino de contraseña de un `.p12` que la orden
   `site_install_certificate` no tiene: el `PKCS12` de una sede se rechaza antes
   de necesitarlo. El día que ese camino exista, este ADR se reescribe para
@@ -68,6 +73,12 @@ canonizarla sería tocar el disco desde una regla pura.
 
 **Seguir ignorándolo.** Es lo que había, y es aceptar de más: la sede pide un
 almacén concreto y se le firma con otro sin decírselo. Descartada.
+
+**Rechazar con `SAF_07` (`ERROR_CANNOT_FIND_KEYSTORE`).** Su nombre parece
+describir el caso, pero en 1.9.2 es un código huérfano: está en el catálogo y
+el original no lo emite nunca. Una sede no ha visto jamás un `SAF_07` y no
+tiene rama que lo trate; el `SAF_08` es lo que recibe del original cuando el
+almacén que nombra no se abre. Descartada.
 
 **Rechazar el parámetro entero, lo nombre lo que lo nombre.** Simple, y deja
 fuera a las sedes que nombran el almacén NSS que rFirma ya usa —que es

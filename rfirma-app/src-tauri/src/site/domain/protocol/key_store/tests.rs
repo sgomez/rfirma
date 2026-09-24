@@ -85,12 +85,12 @@ fn a_store_the_original_does_not_recognise_is_ignored_as_the_original_does() {
 }
 
 #[test]
-fn a_pkcs12_named_by_the_site_is_refused_with_a_code_of_the_catalogue() {
+fn a_pkcs12_named_by_the_site_is_refused_with_saf_08() {
     let url = ksb64("PKCS12:/ruta/al/almacen.p12");
 
     let refusal = refuse_a_key_store_rfirma_does_not_open(&url).expect_err("rFirma no lo abre");
 
-    assert_eq!(refusal.code(), SafCode::CannotFindKeystore);
+    assert_eq!(refusal.code().as_str(), "SAF_08");
     assert_eq!(refusal.blame(), Some(Parameter::KeyStore));
     assert_eq!(refusal.situation(), RefusalSituation::UnsupportedKeyStore);
 }
@@ -119,7 +119,7 @@ fn the_stores_of_the_original_that_rfirma_does_not_open_are_refused_one_by_one()
         let refusal = refuse_a_key_store_rfirma_does_not_open(&ksb64(store))
             .expect_err("es un almacen que rFirma no abre");
 
-        assert_eq!(refusal.code(), SafCode::CannotFindKeystore);
+        assert_eq!(refusal.code(), SafCode::CannotAccessKeystore);
     }
 }
 
@@ -136,7 +136,7 @@ fn a_library_is_refused_even_when_the_store_is_the_one_rfirma_opens() {
     let refusal = refuse_a_key_store_rfirma_does_not_open(&ksb64("MOZ_UNI:/usr/lib/libnss3.so"))
         .expect_err("rFirma no carga la biblioteca que le nombren");
 
-    assert_eq!(refusal.code(), SafCode::CannotFindKeystore);
+    assert_eq!(refusal.code(), SafCode::CannotAccessKeystore);
 }
 
 #[test]
@@ -151,6 +151,6 @@ fn the_visible_name_of_a_store_names_it_as_the_constant_does() {
         let refusal = refuse_a_key_store_rfirma_does_not_open(&ksb64(store))
             .expect_err("el original lo resuelve por el nombre visible");
 
-        assert_eq!(refusal.code(), SafCode::CannotFindKeystore);
+        assert_eq!(refusal.code(), SafCode::CannotAccessKeystore);
     }
 }

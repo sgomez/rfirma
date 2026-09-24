@@ -87,7 +87,7 @@ pub fn key_store_named_by(url: &AfirmaUrl) -> Option<NamedKeyStore> {
     })
 }
 
-/// El `SAF_07` del almacén que la sede nombra y rFirma no abre (ADR-0022).
+/// El `SAF_08` del almacén que la sede nombra y rFirma no abre (ADR-0022).
 pub fn refuse_a_key_store_rfirma_does_not_open(url: &AfirmaUrl) -> Result<(), Refusal> {
     let Some(named) = key_store_named_by(url) else {
         return Ok(());
@@ -111,7 +111,7 @@ pub fn refuse_a_key_store_rfirma_does_not_open(url: &AfirmaUrl) -> Result<(), Re
 }
 
 fn refused(blame: Parameter, detail: String) -> Refusal {
-    Refusal::new(SafCode::CannotFindKeystore, detail)
+    Refusal::new(SafCode::CannotAccessKeystore, detail)
         .blaming(blame)
         .because(RefusalSituation::UnsupportedKeyStore)
 }

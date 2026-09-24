@@ -67,7 +67,7 @@ fn a_signature_that_names_a_store_rfirma_does_not_open_is_refused() {
     let refusal = read_operation(&a_signature(SIGN, &format!("&ksb64={named}")))
         .expect_err("rFirma no abre ese almacen");
 
-    assert_eq!(refusal.code(), SafCode::CannotFindKeystore);
+    assert_eq!(refusal.code(), SafCode::CannotAccessKeystore);
     assert_eq!(refusal.blame(), Some(Parameter::KeyStore));
 }
 
