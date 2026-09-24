@@ -10,6 +10,7 @@ use std::time::Duration;
 use crate::catalogue::{Check, Drive};
 use crate::checks::the_isolated_home_of;
 use crate::errand::{ErrandOutcome, ProtocolConditionResult};
+use crate::judge::decoded;
 use crate::outcome::Outcome;
 use crate::Probe;
 
@@ -90,6 +91,24 @@ pub(crate) const THE_HARNESSES: &[Harness] = &[
         },
     },
     Harness {
+        name: "the_saved_signature_read_back",
+        fixtures: &[],
+        mode: READ_AND_WRITE,
+        measure: |probe, check, drive| {
+            let saved = the_isolated_home_of(&probe.client).join(the_name_proposed_by(drive));
+            let _ = std::fs::remove_file(&saved);
+            let mut outcome = probe.drive(check, drive);
+            let returned = outcome.signature.as_deref().and_then(decoded);
+            outcome
+                .protocol_conditions
+                .push(the_saved_signature_against(
+                    std::fs::read(&saved).ok().as_deref(),
+                    returned.as_deref(),
+                ));
+            outcome
+        },
+    },
+    Harness {
         name: "a_file_with_a_non_ascii_name",
         fixtures: &[("señal-año.bin", "Fichero con un nombre que no es ASCII.\n")],
         mode: READ_AND_WRITE,
@@ -143,6 +162,60 @@ fn the_saved_bytes_against(saved: Option<&[u8]>, data: &[u8]) -> ProtocolConditi
     };
     ProtocolConditionResult {
         name: THE_DECODED_BYTES_ON_DISK.to_owned(),
+        outcome,
+        observation: Some(observation),
+    }
+}
+
+/// El nombre que propone en `filename` cada guion de firmar y guardar cuya firma se relee.
+const THE_SAVED_SIGNATURES: &[(&str, &str)] = &[
+    ("signandsavecadestri", "challenge-signed.csig"),
+    ("signandsavepadestri", "documento-firmado.pdf"),
+    ("signandsavexadestri", "documento-firmado.xsig"),
+    ("signandsavefacturaetri", "factura-firmada.xsig"),
+];
+
+const THE_RETURNED_SIGNATURE_ON_DISK: &str = "the-returned-signature-on-disk";
+
+fn the_name_proposed_by(drive: &Drive) -> &'static str {
+    THE_SAVED_SIGNATURES
+        .iter()
+        .find(|(script, _)| *script == drive.script)
+        .map(|(_, name)| *name)
+        .unwrap_or_else(|| panic!("el guion {} no propone un nombre conocido", drive.script))
+}
+
+fn the_saved_signature_against(
+    saved: Option<&[u8]>,
+    returned: Option<&[u8]>,
+) -> ProtocolConditionResult {
+    let (outcome, observation) = match (saved, returned) {
+        (None, _) => (
+            Outcome::NotObservable,
+            "no hay firma guardada con el nombre propuesto en la carpeta del diálogo".to_owned(),
+        ),
+        (Some(_), None) => (
+            Outcome::NotObservable,
+            "se guardó un fichero, pero la sede no recibió firma con la que compararlo".to_owned(),
+        ),
+        (Some(saved), Some(returned)) if saved == returned => (
+            Outcome::Compliant,
+            format!(
+                "el fichero guardado tiene los {} bytes de la firma que recibió la sede",
+                saved.len()
+            ),
+        ),
+        (Some(saved), Some(returned)) => (
+            Outcome::Noncompliant,
+            format!(
+                "el fichero guardado tiene {} bytes que no son los {} de la firma que recibió la sede",
+                saved.len(),
+                returned.len()
+            ),
+        ),
+    };
+    ProtocolConditionResult {
+        name: THE_RETURNED_SIGNATURE_ON_DISK.to_owned(),
         outcome,
         observation: Some(observation),
     }
@@ -232,6 +305,39 @@ mod tests {
             .iter()
             .flat_map(|harness| harness.fixtures)
             .any(|(name, _)| *name == THE_SAVED_NAME));
+    }
+
+    #[test]
+    fn the_saved_signature_is_judged_against_the_one_the_site_received() {
+        let judged = |saved: Option<&[u8]>, returned: Option<&[u8]>| {
+            the_saved_signature_against(saved, returned).outcome
+        };
+        assert_eq!(judged(Some(b"firma"), Some(b"firma")), Outcome::Compliant);
+        assert_eq!(judged(Some(b"otra"), Some(b"firma")), Outcome::Noncompliant);
+        assert_eq!(judged(None, Some(b"firma")), Outcome::NotObservable);
+        assert_eq!(judged(Some(b"firma"), None), Outcome::NotObservable);
+    }
+
+    #[test]
+    fn every_check_that_reads_back_the_signature_drives_a_script_that_proposes_its_name() {
+        let orphans: Vec<String> = read_the_catalogue()
+            .unwrap()
+            .iter()
+            .filter(|check| {
+                check.harness.map(|harness| harness.name) == Some("the_saved_signature_read_back")
+            })
+            .filter_map(|check| check.drive.as_ref())
+            .filter(|drive| {
+                !THE_SAVED_SIGNATURES
+                    .iter()
+                    .any(|(script, _)| *script == drive.script)
+            })
+            .map(|drive| drive.script.clone())
+            .collect();
+        assert!(
+            orphans.is_empty(),
+            "guiones sin nombre propuesto: {orphans:?}"
+        );
     }
 
     #[test]

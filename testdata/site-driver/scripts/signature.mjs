@@ -58,6 +58,8 @@ const A_BARE_PKCS1 = "a-bare-pkcs1";
 const THROUGH_THE_TRIPHASE_SERVER = "through-the-triphase-server";
 const THE_PRESIGNATURE_SIGNED_WITH_THE_KEY = "the-presignature-signed-with-the-key";
 const THE_SERVER_SIGNATURE_AS_IT_CAME = "the-server-signature-as-it-came";
+/** La mide el arnés de la suite, que lee el fichero guardado en el perfil aislado. */
+const THE_RETURNED_SIGNATURE_ON_DISK = "the-returned-signature-on-disk";
 const WITHOUT_A_VISIBLE_SIGNATURE = "without-a-visible-signature";
 const WHERE_THE_REQUEST_SAYS = "the-signature-where-the-request-says";
 const THE_DEFAULT_ENVELOPE = "the-default-envelope";
@@ -544,17 +546,35 @@ const THE_TRIPHASE_CONDITIONS = [
   THE_SERVER_SIGNATURE_AS_IT_CAME,
 ];
 
+const THE_TRIPHASE_CONDITIONS_ON_DISK = [
+  ...THE_TRIPHASE_CONDITIONS,
+  THE_RETURNED_SIGNATURE_ON_DISK,
+];
+
 const THE_OPERATIONS = {
   sign: theSignScript,
   cosign: theCosignScript,
   countersign: theCountersignScript,
 };
 
+/** Un `signAndSaveToFile()` con `cop=sign` que propone guardar el resultado como `filename`. */
+const savingAs = (filename) => (format, extraParams, content, measuring) =>
+  AutoScript.signAndSaveToFile(
+    "sign",
+    content.toString("base64"),
+    "SHA256withRSA",
+    format,
+    extraParams,
+    filename,
+    (signature, certificate) => answering(measuring, String(signature), String(certificate)),
+    settlingTheError,
+  );
+
 /** Una operación trifásica cuyo `serverUrl` es el servidor trifásico falso de la sede. */
-const triphasing = (format, cop, content) => async () => {
+const triphasing = (format, cop, content, operation = THE_OPERATIONS[cop]) => async () => {
   const triphase = THE_TRIPHASE_FORMATS[format];
   const serverUrl = await servletServing(theTriphaseServer(triphase));
-  THE_OPERATIONS[cop](
+  operation(
     format,
     `serverUrl=${serverUrl}`,
     content(),
@@ -843,6 +863,22 @@ export const SIGNATURE_SCRIPTS = {
   signfacturaetri: aPublishedScript(triphasing("FacturaEtri", "sign", theInvoice), {
     conditions: THE_TRIPHASE_CONDITIONS,
   }),
+  signandsavecadestri: aPublishedScript(
+    triphasing("CAdEStri", "sign", theChallenge, savingAs("challenge-signed.csig")),
+    { conditions: THE_TRIPHASE_CONDITIONS_ON_DISK },
+  ),
+  signandsavepadestri: aPublishedScript(
+    triphasing("PAdEStri", "sign", thePdfOfTheTest, savingAs("documento-firmado.pdf")),
+    { conditions: THE_TRIPHASE_CONDITIONS_ON_DISK },
+  ),
+  signandsavexadestri: aPublishedScript(
+    triphasing("XAdEStri", "sign", theXmlDocument, savingAs("documento-firmado.xsig")),
+    { conditions: THE_TRIPHASE_CONDITIONS_ON_DISK },
+  ),
+  signandsavefacturaetri: aPublishedScript(
+    triphasing("FacturaEtri", "sign", theInvoice, savingAs("factura-firmada.xsig")),
+    { conditions: THE_TRIPHASE_CONDITIONS_ON_DISK },
+  ),
   signcadestriwithoutserverurl: aPublishedScript(signing("CAdEStri", "", theChallenge)),
   signpadesoptional: aPublishedScript(
     signing("PAdES", "visibleSignature=optional", thePdfOfTheTest, withoutAVisibleSignature),
