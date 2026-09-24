@@ -33,7 +33,13 @@ documento entero.
    contradiga a sí mismo o haya un problema grave de seguridad.** Un cliente
    que rechaza lo que el original firma no protege a nadie: se queda sin
    usarse. La excepción se aplica solo donde se cumple, y con el mismo alcance
-   que el caso del original que la justifica.
+   que el caso del original que la justifica. **Un caso feliz es aquel en el
+   que el original produce algo válido.** Un certificado caducado no lo es:
+   `CertFilterManager` lo entrega cuando el filtro de la sede lo nombra
+   explícitamente (por ejemplo, por su número de serie), pero la firma que
+   resulta no tiene valor jurídico. Que el original lo entregue en ese caso no
+   ata a rFirma, que no lo entrega nunca, admita o no el filtro de la sede al
+   certificado caducado.
 2. **Se acepta el catálogo de algoritmos del original, y nada más.** SHA-1,
    SHA-256, SHA-384 y SHA-512, con clave RSA o de curva elíptica. MD5 y
    RIPEMD-160 siguen fuera, como allí.
@@ -108,3 +114,9 @@ los dos. Descartada.
 rFirma: rechazaba cofirmas, contrafirmas, `XAdEStri` y `useManifest=true`, que
 el original firma enteras. Rechazar un caso feliz sin el riesgo que justifica
 la excepción la extiende más allá de su motivo. Descartada.
+
+**Entregar a la sede un certificado caducado cuando su filtro lo admite, como
+hace el original.** Es exactamente lo que la regla 1 permitiría si entregar un
+certificado caducado fuera un caso feliz: no lo es, porque la firma que
+resulta no tiene valor jurídico aunque el original la produzca sin protestar.
+Descartada.
