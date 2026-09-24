@@ -163,7 +163,7 @@ fn a_token_that_cannot_sign_comes_back_with_its_code_and_its_situation() {
     let refusal =
         secret_for_the_batch(&AbsentToken, &certificate).expect_err("sin token no hay secreto");
 
-    assert_eq!(refusal.code, SafCode::CannotFindKeystore);
+    assert_eq!(refusal.code, SafCode::CannotAccessKeystore);
     assert_eq!(refusal.situation, "tokenAbsent");
 }
 

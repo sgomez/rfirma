@@ -543,7 +543,7 @@ fn a_document_chosen_for_a_signature_without_dat_continues_the_errand() {
     assert_eq!(
         what_the_site_received(&mut wire).as_deref(),
         Some(
-            WireAnswer::refused(SafCode::CannotFindKeystore)
+            WireAnswer::refused(SafCode::CannotAccessKeystore)
                 .on_the_wire()
                 .as_str()
         )

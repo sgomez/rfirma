@@ -63,7 +63,7 @@ fn document_chosen_reads_the_scratch_path_lists_certificates_and_continues_the_e
     assert_eq!(
         what_the_site_received(&mut wire).as_deref(),
         Some(
-            WireAnswer::refused(SafCode::CannotFindKeystore)
+            WireAnswer::refused(SafCode::CannotAccessKeystore)
                 .on_the_wire()
                 .as_str()
         )
