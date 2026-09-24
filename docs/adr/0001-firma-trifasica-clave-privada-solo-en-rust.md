@@ -22,7 +22,9 @@ operativo.
   `PRE` lo sigue firmando Rust con el token en PKCS#1: la clave tampoco sale
   hacia la sede. El formulario de cada formato es el de su firmador trifásico
   de AutoFirma 1.9.2 (`format`, `cop` y los `extraParams` que retira), y la
-  firma que se entrega es la que el servidor devuelve tras `OK NEWID=`.
+  firma que se entrega es la que el servidor devuelve tras `OK NEWID=`. Vale
+  igual para `sign` que para `signandsave`, que guarda en disco esa misma firma
+  antes de entregarla.
 - Renunciamos a las rutas de firma monofásica que la suite Java ofrece: aunque
   funcionarían para certificados en software, tener dos caminos distintos según
   el origen del certificado duplicaría la superficie a probar y haría fácil que

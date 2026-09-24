@@ -268,7 +268,7 @@ pub fn consent_to_sign_and_save<E: FilterEngine, P: PolicyEngine, N: Neighbours>
             declared_params: request.declared_params(),
             filter: request.filter(),
             headless: request.is_headless(),
-            through_the_site_server: None,
+            through_the_site_server: request.through_the_site_server(),
             confirmed: BTreeMap::new(),
         },
         Some(Box::new(saving)),
