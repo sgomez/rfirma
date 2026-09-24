@@ -4,6 +4,7 @@ import type { ExternalDestinationOpener } from "../desktop/externalDestination";
 import type { Errand, SiteErrandPort } from "./errand";
 import { SedeConfirm } from "./SedeConfirm";
 import { SedeConsent } from "./SedeConsent";
+import { SedeMarking } from "./SedeMarking";
 import { SedeNoCertificate } from "./SedeNoCertificate";
 import { SedeOldWebClient } from "./SedeOldWebClient";
 import { SedeOutcome } from "./SedeOutcome";
@@ -119,6 +120,13 @@ function SedeDialog({
             countdown={consentCountdown}
             onConsent={(certificateId) => void errands.consent(certificateId)}
             onCancel={cancel}
+          />
+        )}
+        {stage.kind === "marking" && (
+          <SedeMarking
+            pdf={stage.pdf}
+            onMark={(area) => errands.markArea(area)}
+            onCancel={() => void errands.markArea(null)}
           />
         )}
         {stage.kind === "confirming" && (

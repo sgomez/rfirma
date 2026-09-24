@@ -1270,6 +1270,18 @@ msgstr ""
 msgid "sede.confirm.continue"
 msgstr ""
 
+msgid "sede.marking.title"
+msgstr ""
+
+msgid "sede.marking.hint"
+msgstr ""
+
+msgid "sede.marking.accept"
+msgstr ""
+
+msgid "sede.marking.unreadable"
+msgstr ""
+
 msgid "sede.signing.title"
 msgstr ""
 

@@ -1366,6 +1366,18 @@ msgstr ""
 msgid "sede.confirm.continue"
 msgstr "Continuar"
 
+msgid "sede.marking.title"
+msgstr "Marca onde vai a túa sinatura"
+
+msgid "sede.marking.hint"
+msgstr "A páxina pide que a túa sinatura se vexa no documento. Traza o cadro sobre a páxina co rato."
+
+msgid "sede.marking.accept"
+msgstr "Continuar"
+
+msgid "sede.marking.unreadable"
+msgstr "Non se puido abrir o documento para marcar onde vai a sinatura."
+
 msgid "sede.signing.title"
 msgstr "Asinando"
 

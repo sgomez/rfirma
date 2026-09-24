@@ -26,6 +26,7 @@ export function scriptedErrand(stage: ErrandStage, errand: Partial<Errand> = {})
   const calls: Record<
     | "consent"
     | "confirmSignatures"
+    | "markArea"
     | "cancel"
     | "close"
     | "lookAgain"
@@ -36,6 +37,7 @@ export function scriptedErrand(stage: ErrandStage, errand: Partial<Errand> = {})
   > = {
     consent: vi.fn(),
     confirmSignatures: vi.fn(),
+    markArea: vi.fn(),
     cancel: vi.fn(),
     close: vi.fn(),
     lookAgain: vi.fn(),
@@ -51,6 +53,7 @@ export function scriptedErrand(stage: ErrandStage, errand: Partial<Errand> = {})
     },
     consent: async (id) => calls.consent(id),
     confirmSignatures: async () => calls.confirmSignatures(),
+    markArea: async (area) => calls.markArea(area),
     cancel: async () => calls.cancel(),
     close: async () => calls.close(),
     lookAgain: async () => calls.lookAgain(),

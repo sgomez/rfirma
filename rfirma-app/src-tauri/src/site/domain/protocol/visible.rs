@@ -17,6 +17,7 @@ const PAGES: &str = "signaturePages";
 const VISIBLE_SIGNATURE: &str = "visibleSignature";
 const RUBRIC_IMAGE: &str = "signatureRubricImage";
 const WANT: &str = "want";
+const OPTIONAL: &str = "optional";
 const APPEND: &str = "append";
 
 /// Recuadro de firma visible solicitado por la sede.
@@ -26,28 +27,64 @@ pub enum SiteVisibleSignature {
     PlacedByTheSite,
     /// La petición no incluye recuadro a colocar.
     Declined,
+    /// La persona marca el área antes de consentir, y cancelar hace lo que dice el valor.
+    MarkedByThePerson(IfCancelled),
+}
+
+/// Qué pasa si la persona cancela el diálogo del área.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum IfCancelled {
+    /// `visibleSignature=want` sin área en la petición: la sede recibe `SAF_43`.
+    Refuses,
+    /// La petición trae el área: se firma en ella.
+    SignsWhereTheSiteSaid,
+    /// `visibleSignature=optional` sin área en la petición: se firma invisible.
+    SignsInvisible,
 }
 
 /// Evalúa si la sede solicita recuadro de firma visible o si se rechaza la petición.
 pub fn visible_signature_of(
     params: &BTreeMap<String, String>,
 ) -> Result<SiteVisibleSignature, Refusal> {
-    if the_site_placed_the_box(params) {
+    let placed = the_site_placed_the_box(params);
+    if placed {
         refuse_an_appended_page(params)?;
-        return Ok(SiteVisibleSignature::PlacedByTheSite);
     }
 
-    if the_site_makes_it_mandatory(params) {
-        return Err(Refusal::new(
-            SafCode::VisibleSignature,
-            format!(
-                "'{VISIBLE_SIGNATURE}={WANT}' exige recuadro y la peticion no trae posicion y \
-                 pagina: no hay donde colocarlo"
-            ),
-        ));
-    }
+    let visible = match (the_person_is_asked(params), placed) {
+        (Some(_), true) => {
+            SiteVisibleSignature::MarkedByThePerson(IfCancelled::SignsWhereTheSiteSaid)
+        }
+        (Some(true), false) => SiteVisibleSignature::MarkedByThePerson(IfCancelled::Refuses),
+        (Some(false), false) => {
+            SiteVisibleSignature::MarkedByThePerson(IfCancelled::SignsInvisible)
+        }
+        (None, true) => SiteVisibleSignature::PlacedByTheSite,
+        (None, false) => SiteVisibleSignature::Declined,
+    };
+    Ok(visible)
+}
 
-    Ok(SiteVisibleSignature::Declined)
+/// La negativa que recibe la sede cuando la persona cancela un área obligatoria.
+pub fn the_mandatory_area_was_cancelled() -> Refusal {
+    Refusal::new(
+        SafCode::VisibleSignature,
+        format!(
+            "'{VISIBLE_SIGNATURE}={WANT}' exige recuadro, la peticion no trae posicion y pagina \
+             y la persona ha cancelado el dialogo del area"
+        ),
+    )
+}
+
+/// Sustituye el área de la petición por la que marcó la persona.
+pub fn mark_the_area(
+    params: &mut BTreeMap<String, String>,
+    area: impl IntoIterator<Item = (String, String)>,
+) {
+    for key in CORNERS.iter().chain(&[PAGE, PAGES]) {
+        params.remove(*key);
+    }
+    params.extend(area);
 }
 
 /// Olvida el recuadro y la rúbrica que declaró la sede: solo los lee un firmador PDF.
@@ -65,10 +102,16 @@ fn the_site_placed_the_box(params: &BTreeMap<String, String>) -> bool {
         && (params.contains_key(PAGE) || params.contains_key(PAGES))
 }
 
-fn the_site_makes_it_mandatory(params: &BTreeMap<String, String>) -> bool {
-    params
-        .get(VISIBLE_SIGNATURE)
-        .is_some_and(|value| value.eq_ignore_ascii_case(WANT))
+/// `Some(true)` con `want`, `Some(false)` con `optional`, y `None` sin diálogo que abrir.
+fn the_person_is_asked(params: &BTreeMap<String, String>) -> Option<bool> {
+    let value = params.get(VISIBLE_SIGNATURE)?;
+    if value.eq_ignore_ascii_case(WANT) {
+        Some(true)
+    } else if value.eq_ignore_ascii_case(OPTIONAL) {
+        Some(false)
+    } else {
+        None
+    }
 }
 
 fn refuse_an_appended_page(params: &BTreeMap<String, String>) -> Result<(), Refusal> {

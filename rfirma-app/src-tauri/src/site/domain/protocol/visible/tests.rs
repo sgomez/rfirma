@@ -1,4 +1,7 @@
-use super::{visible_signature_of, SiteVisibleSignature};
+use super::{
+    mark_the_area, the_mandatory_area_was_cancelled, visible_signature_of, IfCancelled,
+    SiteVisibleSignature,
+};
 use crate::site::domain::protocol::{Parameter, SafCode};
 use std::collections::BTreeMap;
 
@@ -43,30 +46,57 @@ fn the_page_of_the_box_also_counts_when_it_comes_in_the_singular_key() {
 }
 
 #[test]
-fn an_optional_visible_signature_without_a_place_to_put_it_is_signed_invisible() {
+fn an_optional_visible_signature_without_an_area_asks_the_person_and_cancelling_signs_invisible() {
     let asked = asked(&[("visibleSignature", "optional")]);
 
     assert_eq!(
         visible_signature_of(&asked),
-        Ok(SiteVisibleSignature::Declined)
+        Ok(SiteVisibleSignature::MarkedByThePerson(
+            IfCancelled::SignsInvisible
+        ))
     );
 }
 
 #[test]
-fn a_mandatory_visible_signature_without_a_place_to_put_it_is_refused() {
-    let refusal = visible_signature_of(&asked(&[("visibleSignature", "want")]))
-        .expect_err("no hay donde colocar el recuadro");
+fn a_mandatory_visible_signature_without_an_area_asks_the_person_and_cancelling_refuses() {
+    assert_eq!(
+        visible_signature_of(&asked(&[("visibleSignature", "want")])),
+        Ok(SiteVisibleSignature::MarkedByThePerson(
+            IfCancelled::Refuses
+        ))
+    );
+}
+
+#[test]
+fn a_cancelled_mandatory_area_is_answered_with_the_visible_signature_code() {
+    let refusal = the_mandatory_area_was_cancelled();
 
     assert_eq!(refusal.code(), SafCode::VisibleSignature);
     assert_eq!(refusal.blame(), None);
 }
 
 #[test]
-fn the_mandatory_flag_is_read_without_telling_capitals_apart() {
-    let refusal = visible_signature_of(&asked(&[("visibleSignature", "WANT")]))
-        .expect_err("sigue siendo obligatorio");
+fn the_flag_is_read_without_telling_capitals_apart() {
+    assert_eq!(
+        visible_signature_of(&asked(&[("visibleSignature", "WANT")])),
+        Ok(SiteVisibleSignature::MarkedByThePerson(
+            IfCancelled::Refuses
+        ))
+    );
+    assert_eq!(
+        visible_signature_of(&asked(&[("visibleSignature", "Optional")])),
+        Ok(SiteVisibleSignature::MarkedByThePerson(
+            IfCancelled::SignsInvisible
+        ))
+    );
+}
 
-    assert_eq!(refusal.code(), SafCode::VisibleSignature);
+#[test]
+fn a_flag_that_is_neither_want_nor_optional_opens_no_dialog() {
+    assert_eq!(
+        visible_signature_of(&asked(&[("visibleSignature", "yes")])),
+        Ok(SiteVisibleSignature::Declined)
+    );
 }
 
 #[test]
@@ -78,24 +108,70 @@ fn the_mandatory_flag_padded_with_spaces_is_not_mandatory_either_in_the_original
 }
 
 #[test]
-fn a_mandatory_visible_signature_that_came_placed_is_just_a_signature() {
-    let asked = placed(&[("signaturePages", "1"), ("visibleSignature", "want")]);
+fn a_wanted_or_optional_area_that_came_in_the_request_is_still_asked_and_cancelling_keeps_it() {
+    for flag in ["want", "optional"] {
+        let asked = placed(&[("signaturePages", "1"), ("visibleSignature", flag)]);
 
-    assert_eq!(
-        visible_signature_of(&asked),
-        Ok(SiteVisibleSignature::PlacedByTheSite)
-    );
+        assert_eq!(
+            visible_signature_of(&asked),
+            Ok(SiteVisibleSignature::MarkedByThePerson(
+                IfCancelled::SignsWhereTheSiteSaid
+            )),
+            "con '{flag}'"
+        );
+    }
 }
 
 #[test]
 fn corners_without_a_page_are_not_a_place_to_put_the_box() {
-    let refusal = {
-        let mut asked = placed(&[("visibleSignature", "want")]);
-        asked.remove("signaturePages");
-        visible_signature_of(&asked).expect_err("faltaba la pagina")
-    };
+    let mut asked = placed(&[("visibleSignature", "want")]);
+    asked.remove("signaturePages");
 
-    assert_eq!(refusal.code(), SafCode::VisibleSignature);
+    assert_eq!(
+        visible_signature_of(&asked),
+        Ok(SiteVisibleSignature::MarkedByThePerson(
+            IfCancelled::Refuses
+        ))
+    );
+}
+
+#[test]
+fn the_area_the_person_marks_replaces_every_key_of_the_request_area() {
+    let mut asked = placed(&[("signaturePage", "2"), ("signaturePages", "3")]);
+
+    mark_the_area(
+        &mut asked,
+        [
+            ("signaturePages".to_owned(), "1".to_owned()),
+            (
+                "signaturePositionOnPageLowerLeftX".to_owned(),
+                "10".to_owned(),
+            ),
+            (
+                "signaturePositionOnPageLowerLeftY".to_owned(),
+                "20".to_owned(),
+            ),
+            (
+                "signaturePositionOnPageUpperRightX".to_owned(),
+                "130".to_owned(),
+            ),
+            (
+                "signaturePositionOnPageUpperRightY".to_owned(),
+                "54".to_owned(),
+            ),
+        ],
+    );
+
+    assert_eq!(
+        asked,
+        self::asked(&[
+            ("signaturePages", "1"),
+            ("signaturePositionOnPageLowerLeftX", "10"),
+            ("signaturePositionOnPageLowerLeftY", "20"),
+            ("signaturePositionOnPageUpperRightX", "130"),
+            ("signaturePositionOnPageUpperRightY", "54"),
+        ])
+    );
 }
 
 #[test]
@@ -118,7 +194,9 @@ fn a_custom_appearance_with_nothing_to_customise_is_the_appearance_by_default() 
 
     assert_eq!(
         visible_signature_of(&asked),
-        Ok(SiteVisibleSignature::Declined)
+        Ok(SiteVisibleSignature::MarkedByThePerson(
+            IfCancelled::SignsInvisible
+        ))
     );
 }
 
@@ -155,19 +233,23 @@ fn an_append_without_the_box_placed_adds_no_page_and_signs_invisible() {
 
     assert_eq!(
         visible_signature_of(&asked),
-        Ok(SiteVisibleSignature::Declined)
+        Ok(SiteVisibleSignature::MarkedByThePerson(
+            IfCancelled::SignsInvisible
+        ))
     );
 }
 
 #[test]
-fn an_append_without_the_box_placed_is_still_the_missing_box_refusal() {
-    let refusal = visible_signature_of(&asked(&[
-        ("visibleSignature", "want"),
-        ("signaturePages", "append"),
-    ]))
-    .expect_err("no hay donde colocar el recuadro");
-
-    assert_eq!(refusal.code(), SafCode::VisibleSignature);
+fn an_append_without_the_box_placed_is_still_a_mandatory_area_to_mark() {
+    assert_eq!(
+        visible_signature_of(&asked(&[
+            ("visibleSignature", "want"),
+            ("signaturePages", "append"),
+        ])),
+        Ok(SiteVisibleSignature::MarkedByThePerson(
+            IfCancelled::Refuses
+        ))
+    );
 }
 
 #[test]

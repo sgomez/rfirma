@@ -1,5 +1,6 @@
 //! Trámite de sede: atención de la operación del canal, consentimiento y entrega de respuesta.
 
+mod area;
 pub mod desk;
 pub mod outcome;
 pub mod replies;
@@ -28,6 +29,7 @@ pub use crate::site::application::session::SiteRefusal;
 pub use crate::site::ports::{
     Acknowledged, Acknowledgement, ChannelTransport, Inbox, ReplyHandle, Transport,
 };
+pub use area::{area_marked, AfterTheArea};
 pub use desk::{
     attend_operation, consent_for, consent_to_sign, consent_to_sign_and_save,
     consent_to_sign_with_chosen_document, consent_to_the_batch, consent_to_the_confirmed_signature,
@@ -107,6 +109,7 @@ fn remembered(live: &LiveErrand, step: ErrandStep) -> ErrandStep {
                     signed: None,
                 }
             }),
+            area: state::AreaToMark::asked_in(asked),
         }),
         ErrandStep::AskingToConfirm(consent) => live.remember_the_confirmation((**consent).clone()),
         ErrandStep::AskingToSignTheBatch(consent) => live.remember_the_batch(state::PendingBatch {

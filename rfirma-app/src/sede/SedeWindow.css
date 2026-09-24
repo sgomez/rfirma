@@ -309,6 +309,21 @@
   flex: none;
 }
 
+/* 1c · Marcar el área de la firma visible */
+
+.sede-marking {
+  height: 100%;
+  min-height: 0;
+}
+
+.sede-marking__viewer {
+  flex: 1;
+  min-height: 0;
+  border: 1px solid var(--rf-border-subtle);
+  border-radius: var(--rf-radius-md);
+  overflow: hidden;
+}
+
 /* 2b · Hay que confirmar */
 
 .sede-confirm {

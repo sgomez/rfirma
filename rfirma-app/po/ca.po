@@ -1378,6 +1378,18 @@ msgstr ""
 msgid "sede.confirm.continue"
 msgstr "Continuar"
 
+msgid "sede.marking.title"
+msgstr "Marca on va la teva signatura"
+
+msgid "sede.marking.hint"
+msgstr "La pàgina demana que la teva signatura es vegi al document. Traça el requadre sobre la pàgina amb el ratolí."
+
+msgid "sede.marking.accept"
+msgstr "Continuar"
+
+msgid "sede.marking.unreadable"
+msgstr "No s'ha pogut obrir el document per marcar on va la signatura."
+
 msgid "sede.signing.title"
 msgstr "Signant"
 

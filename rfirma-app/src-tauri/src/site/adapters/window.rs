@@ -7,7 +7,7 @@ use crate::identity::IdentityRoot;
 use crate::signing::adapters::isolate::Isolate;
 use crate::signing::SigningRoot;
 use crate::site::application::errand::{
-    self, Acknowledgement, ErrandDesk, ErrandStep, LiveErrand, ReplyHandle,
+    self, Acknowledgement, ErrandDesk, ErrandStep, LiveErrand, Moment, ReplyHandle,
 };
 use crate::site::domain::protocol::{AfirmaUrl, Refusal};
 use crate::site::SiteRoot;
@@ -21,6 +21,12 @@ pub const SITE_WINDOW: &str = "site";
 /// Nombre del evento con el que la ventana de sede recibe el trámite.
 pub const SITE_ERRAND: &str = "site-errand";
 
+/// El tamaño de la ventana en todos los momentos menos en el del área.
+const DIALOG_SIZE: (f64, f64) = (520.0, 420.0);
+
+/// El tamaño de la ventana mientras la persona marca el área de la firma visible sobre el PDF.
+const AREA_SIZE: (f64, f64) = (780.0, 660.0);
+
 /// Tope razonable para esperar a que la respuesta salga por el canal antes de cerrar.
 const ERRAND_ENDED_ACKNOWLEDGEMENT_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(2);
 
@@ -33,7 +39,7 @@ pub fn open_the_site_window(app: &tauri::AppHandle) {
     }
     let built = WebviewWindowBuilder::new(app, SITE_WINDOW, WebviewUrl::App("sede.html".into()))
         .title("rFirma")
-        .inner_size(520.0, 420.0)
+        .inner_size(DIALOG_SIZE.0, DIALOG_SIZE.1)
         .resizable(false)
         .visible(false)
         .build();
@@ -133,8 +139,27 @@ pub fn publish_the_moment(app: &tauri::AppHandle) {
         return;
     };
     if let Some(window) = app.get_webview_window(SITE_WINDOW) {
+        fit_to(&window, &moment);
         let _ = window.emit(SITE_ERRAND, SiteErrandView::from(&moment));
     }
+}
+
+/// Agranda la ventana para el área de la firma visible y la devuelve a su tamaño al salir.
+fn fit_to(window: &tauri::WebviewWindow, moment: &Moment) {
+    let (width, height) = if matches!(moment, Moment::MarkingTheArea { .. }) {
+        AREA_SIZE
+    } else {
+        DIALOG_SIZE
+    };
+    let scale = window.scale_factor().unwrap_or(1.0);
+    let current = window
+        .inner_size()
+        .map(|size| size.to_logical::<f64>(scale));
+    if current.is_ok_and(|size| size.width.round() == width && size.height.round() == height) {
+        return;
+    }
+    let _ = window.set_size(tauri::LogicalSize::new(width, height));
+    let _ = window.center();
 }
 
 /// Publica el rechazo de un servidor intermedio que no pudo entregar la respuesta a la sede.

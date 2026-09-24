@@ -18,6 +18,8 @@ export interface SiteErrandView {
 export type SiteStageView =
   | { kind: "waiting" }
   | { kind: "askingForConsent"; certificates: readonly Certificate[] }
+  /** La sede pide `visibleSignature`: el área se marca sobre el PDF antes del consentimiento. */
+  | { kind: "markingTheArea"; document: string }
   | {
       kind: "askingToSign";
       /** El asa opaca con la que se lee el documento, nunca su ruta (ID-286). */

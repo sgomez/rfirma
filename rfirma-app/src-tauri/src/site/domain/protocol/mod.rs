@@ -95,4 +95,7 @@ pub use refusal::{Refusal, RefusalSituation};
 pub use relay_parameters::operation_of_the_parameters_xml;
 pub use url::AfirmaUrl;
 pub use version::{Version, IMPLEMENTED_AUTOFIRMA_VERSION};
-pub use visible::{forget_the_box, visible_signature_of, SiteVisibleSignature};
+pub use visible::{
+    forget_the_box, mark_the_area, the_mandatory_area_was_cancelled, visible_signature_of,
+    IfCancelled, SiteVisibleSignature,
+};

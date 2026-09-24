@@ -62,13 +62,13 @@ impl ErrandStep {
             Self::AskingForConsent { certificates, .. } => Some(Moment::AskingForConsent {
                 certificates: certificates.clone(),
             }),
-            Self::AskingToSign(consent) => Some(Moment::AskingToSign {
-                document: consent.document.clone(),
-                format: consent.format,
-                round: consent.round,
-                certificates: consent.certificates.clone(),
-                unregistered_signatures: consent.unregistered_signatures,
-                already_chosen: consent.already_chosen.clone(),
+            Self::AskingToSign(consent) => Some(match consent.visible {
+                SiteVisibleSignature::MarkedByThePerson(_) => Moment::MarkingTheArea {
+                    document: consent.document.clone(),
+                },
+                SiteVisibleSignature::PlacedByTheSite | SiteVisibleSignature::Declined => {
+                    consent.consenting()
+                }
             }),
             Self::AskingToConfirm(consent) => Some(Moment::AskingToConfirm {
                 message_code: consent.message_code.clone(),
@@ -145,6 +145,20 @@ pub struct SigningConsent {
     pub already_chosen: Option<String>,
     /// Lo que viaja al servidor trifásico de la sede, si la firma se hace allí.
     pub for_the_site_server: Option<ForTheSiteServer>,
+}
+
+impl SigningConsent {
+    /// El momento en el que la persona elige certificado y consiente.
+    pub fn consenting(&self) -> Moment {
+        Moment::AskingToSign {
+            document: self.document.clone(),
+            format: self.format,
+            round: self.round,
+            certificates: self.certificates.clone(),
+            unregistered_signatures: self.unregistered_signatures,
+            already_chosen: self.already_chosen.clone(),
+        }
+    }
 }
 
 /// El firmador del servidor trifásico de la sede y los datos que le llegan.
@@ -388,6 +402,11 @@ pub enum Moment {
         unregistered_signatures: bool,
         /// El asa del certificado que ya está resuelto, si lo está.
         already_chosen: Option<String>,
+    },
+    /// La persona marca sobre el PDF el área de la firma visible, antes de elegir certificado.
+    MarkingTheArea {
+        /// Identificador del documento para la ventana.
+        document: String,
     },
     /// La firma no sigue sin que la persona confirme lo que el original le preguntaría.
     AskingToConfirm {

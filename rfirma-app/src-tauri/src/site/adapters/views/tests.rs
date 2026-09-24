@@ -288,3 +288,18 @@ fn the_confirming_moment_crosses_with_the_message_code_of_the_original() {
         })
     );
 }
+
+#[test]
+fn the_area_moment_crosses_with_the_handle_of_the_document() {
+    let view = SiteErrandView::from(&Moment::MarkingTheArea {
+        document: "doc-1".to_owned(),
+    });
+
+    assert_eq!(
+        serde_json::to_value(view).expect("el momento cruza"),
+        serde_json::json!({
+            "origin": null,
+            "stage": { "kind": "markingTheArea", "document": "doc-1" },
+        })
+    );
+}

@@ -38,6 +38,7 @@ ORDENES DE TAURI                          (<contexto>/adapters/tauri*.rs)
   async site_decline()
   async site_begin_signing(certificate: String) -> Result<SecretView, Failure>
   async site_confirm_signatures() -> Result<(), Failure>
+  async site_mark_area(area: Option<PlacementOrder>) -> Result<bool, Failure>
   async site_finish_signing() -> Result<(), Failure>
   async site_install_certificate(password: String) -> Result<bool, Failure>
   async site_dismiss_the_warning()
@@ -230,6 +231,7 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
   pub enum SiteStageView   (serde: etiqueta "kind")
       Waiting
       AskingForConsent { certificates: Vec<CertificateView> }
+      MarkingTheArea { document: String }
       AskingToSign { document: String, signing: SigningKindView, round: SignatureRoundView, certificates: Vec<CertificateView>, unregisteredSignatures: bool, alreadyChosen: Option<String> }
       AskingToConfirm { messageCode: String }
       AskingToSignTheBatch { signs: usize, certificates: Vec<CertificateView>, alreadyChosen: Option<String> }

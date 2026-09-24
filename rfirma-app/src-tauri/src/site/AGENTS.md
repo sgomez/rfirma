@@ -43,6 +43,7 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `adapters/views.rs` | Los tipos que cruzan a la ventana de sede y su única conversión. Pruebas en `adapters/views/tests.rs`. |
 | `adapters/window.rs` | El adaptador de la ventana de sede: la crea, la enseña, la oculta o la cierra, le publica lo que va pasando y decide qué hace su cierre por el gestor de ventanas con el trámite vivo (ADR-0024). |
 | `application/batch.rs` | El lote remoto ya consentido: prefirma, `PK1` con el token y postfirma. No decide el consentimiento. Pruebas en `application/batch/tests.rs`. |
+| `application/errand/area.rs` | El diálogo del área de la firma visible: el área que marca la persona, o lo que hace cancelarlo (ADR-0019). |
 | `application/errand/desk.rs` | La mesa del trámite (`ErrandDesk`), `attend_operation` y el consentimiento de firma, guardado y carga. |
 | `application/errand/desk/certificates.rs` | El consentimiento de selección de certificados: sede, lote remoto y lote local. |
 | `application/errand/desk/confirmation.rs` | La confirmación que la firma de sede espera de la persona antes del consentimiento: la que pide el validador con `checkSignatures` y la del PDF certificado. |
@@ -53,6 +54,7 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `application/errand/request.rs` | `SiteRequest`: lo que la sede quiere, sin versión. |
 | `application/errand/state.rs` | El estado del trámite, con un solo dueño (`LiveErrand`). Pruebas en `application/errand/state/tests.rs`. |
 | `application/errand/server_signature.rs` | La firma que la sede manda hacer a su servidor trifásico, del certificado elegido a la firma que se entrega; no abre el ciclo del puente. |
+| `application/errand/state/area.rs` | El área de la firma visible que espera a la persona antes del consentimiento. |
 | `application/errand/state/revelation.rs` | La revelación de la ventana: por temporizador de respaldo, por llegada del navegador o porque el trámite tiene algo que decir (ADR-0020). |
 | `application/errand/state/chosen_document.rs` | El nombre del fichero que la persona eligió en disco para firmar, que la respuesta devuelve a la sede. |
 | `application/errand/tests/mod.rs` | El reparto de las pruebas del trámite por comportamiento. Solo en pruebas. |
@@ -68,6 +70,7 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `application/errand/tests/document_and_save.rs` | Pruebas de elección de documento, guardado y carga por orden de la sede. Solo en pruebas. |
 | `application/errand/tests/token_and_launch.rs` | Pruebas del token, el almacén vacío y el arranque de un segundo trámite. Solo en pruebas. |
 | `application/errand/tests/triphase_server.rs` | Pruebas de la firma contra el servidor trifásico de la sede, en `sign` y en `signandsave`: la entrega, el guardado, `SAF_03` y `SAF_40`. Solo en pruebas. |
+| `application/errand/tests/visible_area.rs` | Pruebas del diálogo del área de la firma visible: marcarla, cancelarla y lo que llega al puente. Solo en pruebas. |
 | `application/errand/tests/sticky_selection.rs` | Pruebas del certificado pegajoso de una selección. Solo en pruebas. |
 | `application/errand/tests/batch_remote.rs` | Pruebas del lote remoto de sede. Solo en pruebas. |
 | `application/errand/tests/batch_local.rs` | Pruebas del lote local de sede. Solo en pruebas. |

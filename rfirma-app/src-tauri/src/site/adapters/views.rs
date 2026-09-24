@@ -25,28 +25,27 @@ crossing! {
 }
 
 impl SiteErrandView {
-    /// Estado inicial a la espera de la petición de la sede.
-    pub fn waiting() -> Self {
+    /// Una etapa sin origen que atribuir.
+    fn at(stage: SiteStageView) -> Self {
         Self {
             origin: None,
-            stage: SiteStageView::Waiting,
+            stage,
         }
+    }
+
+    /// Estado inicial a la espera de la petición de la sede.
+    pub fn waiting() -> Self {
+        Self::at(SiteStageView::Waiting)
     }
 
     /// Estado cuando el canal no ha podido abrirse.
     pub fn no_channel(reason: NoChannelView) -> Self {
-        Self {
-            origin: None,
-            stage: SiteStageView::NoChannel { reason },
-        }
+        Self::at(SiteStageView::NoChannel { reason })
     }
 
     /// Estado cuando el navegador no llega a comunicarse con el canal en el tiempo previsto.
     pub fn unreachable() -> Self {
-        Self {
-            origin: None,
-            stage: SiteStageView::Unreachable,
-        }
+        Self::at(SiteStageView::Unreachable)
     }
 
     /// Estado de rechazo de la petición sin canal disponible.
@@ -191,6 +190,9 @@ impl From<&Moment> for SiteErrandView {
                 *unregistered_signatures,
                 already_chosen.as_deref(),
             ),
+            Moment::MarkingTheArea { document } => Self::at(SiteStageView::MarkingTheArea {
+                document: document.clone(),
+            }),
             Moment::AskingToConfirm { message_code } => Self::asking_to_confirm(message_code),
             Moment::AskingToSignTheBatch {
                 signs,
@@ -219,10 +221,7 @@ impl From<&Moment> for SiteErrandView {
                 Self::refused(refusal)
             }
             Moment::Unreachable => Self::unreachable(),
-            Moment::OldWebClient => Self {
-                origin: None,
-                stage: SiteStageView::OldWebClient,
-            },
+            Moment::OldWebClient => Self::at(SiteStageView::OldWebClient),
         }
     }
 }
@@ -339,6 +338,11 @@ crossing! {
         AskingForConsent {
             /// Certificados disponibles para la selección.
             certificates: Vec<CertificateView>,
+        },
+        /// La persona marca sobre el PDF el área de la firma visible.
+        MarkingTheArea {
+            /// Asa del documento que manda la sede.
+            document: String,
         },
         /// Solicitud de consentimiento de firma.
         #[serde(rename_all = "camelCase")]

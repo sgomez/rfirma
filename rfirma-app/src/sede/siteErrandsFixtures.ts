@@ -1,6 +1,7 @@
 import type { Mock } from "vitest";
 import { vi } from "vitest";
 import type { Certificate } from "../signing/certificate";
+import { recordingDocument } from "../viewer/testing/documentViewerFixtures";
 import type { Errand } from "./errand";
 import type { DescribedDocument, SiteCommands, SiteErrandView } from "./siteErrands";
 import { siteErrands } from "./siteErrands";
@@ -23,6 +24,9 @@ export function certificate(overrides: Partial<Certificate> = {}): Certificate {
 
 export const described: DescribedDocument = { title: "Solicitud", pages: 3, sizeBytes: 4096 };
 
+/** El PDF abierto para marcar el área, sin nada que pintar. */
+export const opened = recordingDocument().document;
+
 /** Las órdenes, dobladas, y el asa para empujar momentos por el evento. */
 function doubled(overrides: Partial<SiteCommands> = {}) {
   const stop: Mock = vi.fn();
@@ -32,6 +36,7 @@ function doubled(overrides: Partial<SiteCommands> = {}) {
     readErrand: vi.fn(),
     identify: vi.fn(),
     confirmSignatures: vi.fn(),
+    markArea: vi.fn(),
     decline: vi.fn(),
     beginSigning: vi.fn(),
     signWithPin: vi.fn(),
@@ -44,6 +49,7 @@ function doubled(overrides: Partial<SiteCommands> = {}) {
     closeWindow: vi.fn(),
     dismissWarning: vi.fn(),
     describeDocument: vi.fn(),
+    openDocument: vi.fn(),
   };
   const commands: SiteCommands = {
     watch: (onView) => {
@@ -62,6 +68,10 @@ function doubled(overrides: Partial<SiteCommands> = {}) {
     confirmSignatures: async () => {
       calls.confirmSignatures();
       return { ok: true, value: undefined };
+    },
+    markArea: async (area) => {
+      calls.markArea(area);
+      return { ok: true, value: true };
     },
     decline: async () => calls.decline(),
     beginSigning: async (id) => {
@@ -96,6 +106,10 @@ function doubled(overrides: Partial<SiteCommands> = {}) {
       calls.describeDocument(id);
       return described;
     },
+    openDocument: async (id) => {
+      calls.openDocument(id);
+      return opened;
+    },
     ...overrides,
   };
 
@@ -122,6 +136,11 @@ export const ASKING_TO_SIGN: SiteErrandView = {
     unregisteredSignatures: true,
     alreadyChosen: null,
   },
+};
+
+export const MARKING_THE_AREA: SiteErrandView = {
+  origin: "sede.ejemplo.gob.es",
+  stage: { kind: "markingTheArea", document: "asa-opaca-1" },
 };
 
 export const ASKING_TO_CONFIRM: SiteErrandView = {

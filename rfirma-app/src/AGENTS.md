@@ -146,6 +146,7 @@ rojo.
 | `sede/siteErrandsFixtures.ts` | Los dobles de `SiteCommands` y los momentos de ejemplo que comparten las pruebas de `siteErrands`. |
 | `sede/errand.ts` | El vocabulario del trámite y su puerto `SiteErrandPort`, con el doble `noErrand` y los relojes. Sin React. |
 | `sede/SedeWindow.tsx` | El marco de 520 × 420 px y el reparto entre los momentos. |
+| `sede/SedeMarking.tsx` | 1c · El área de la firma visible trazada sobre el PDF con el visor de la ventana principal, antes del consentimiento. |
 | `sede/sedeWindowFixtures.ts` | Los dobles de `SiteErrandPort` y los momentos de ejemplo que comparten las pruebas de `SedeWindow`. |
 | `sede/SedeFrame.tsx` | Cuerpo y pie —56 px clavados en firma y salida— y los relojes de la ventana en forma de `hook`. |
 | `sede/SedeWaiting.tsx` | 1 · La espera y las dos recetas de navegador, que **no diagnostican**. |
