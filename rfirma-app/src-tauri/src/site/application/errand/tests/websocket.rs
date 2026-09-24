@@ -13,6 +13,7 @@ use crate::site::application::site::{attend_launch, Attendance};
 use crate::site::application::startup::SiteWindow;
 use crate::site::domain::channel::{ArrivalMode, ChannelTenure};
 use crate::site::domain::protocol::{AfirmaUrl, ChannelMessage, NegotiatedCredential, SafCode};
+use std::time::Duration;
 
 fn a_websocket_errand_begun() -> LiveErrand {
     let live = LiveErrand::default();

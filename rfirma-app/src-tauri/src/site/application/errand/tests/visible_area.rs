@@ -9,6 +9,7 @@ use crate::signing::domain::{PadesRect, PageSet, Placement};
 use crate::site::application::errand::*;
 use crate::site::domain::channel::ArrivalMode;
 use crate::site::domain::protocol::NegotiatedCredential;
+use std::time::Duration;
 
 const THE_SITE_AREA: &str = "signaturePositionOnPageLowerLeftX=100\n\
                              signaturePositionOnPageLowerLeftY=100\n\
@@ -29,15 +30,33 @@ fn the_person_marks() -> Placement {
 }
 
 /// Lo que se ve primero, lo que deja el diálogo del área, lo que se ve después y lo que sale.
-struct Walked {
+struct Walked<After> {
     first: Option<Moment>,
-    after: Result<AfterTheArea, String>,
+    after: Result<After, String>,
     then: Option<Moment>,
     wire: Option<String>,
     presign: Option<String>,
 }
 
-fn walked(expanded: &str, marked: Option<&Placement>) -> Walked {
+fn walked(expanded: &str, marked: Option<&Placement>) -> Walked<AfterTheArea> {
+    walked_by(expanded, |live| {
+        area_marked(live, marked).map_err(|error| format!("{error:?}"))
+    })
+}
+
+fn closed_by_the_window_manager(expanded: &str) -> Walked<WindowAfterClosing> {
+    walked_by(expanded, |live| {
+        Ok(answer_before_closing_within(
+            live,
+            Duration::from_millis(20),
+        ))
+    })
+}
+
+fn walked_by<After>(
+    expanded: &str,
+    leave_the_area: impl FnOnce(&LiveErrand) -> Result<After, String>,
+) -> Walked<After> {
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
     let memory = a_memory(home.path());
     let ours = vec![a_usable_certificate("FIRMA")];
@@ -71,7 +90,7 @@ fn walked(expanded: &str, marked: Option<&Placement>) -> Walked {
         panic!("hay un certificado que la sede acepta: {step:?}");
     };
     let first = live.moment();
-    let after = area_marked(&live, marked).map_err(|error| format!("{error:?}"));
+    let after = leave_the_area(&live);
     let then = live.moment();
     let consented = consent(&desk, &asking.certificates[0].id, &live);
     let presign = consented
@@ -154,6 +173,36 @@ fn cancelling_an_optional_area_signs_invisible() {
     let walked = walked("visibleSignature=optional\n", None);
 
     assert_eq!(walked.after, Ok(AfterTheArea::Consenting));
+    let presign = walked.presign.expect("la firma sigue");
+    assert!(!presign.contains("signaturePosition"), "{presign}");
+}
+
+#[test]
+fn closing_the_window_on_a_wanted_area_without_one_in_the_request_answers_saf_43() {
+    let walked = closed_by_the_window_manager("visibleSignature=want\n");
+
+    assert_eq!(walked.after, Ok(WindowAfterClosing::Closes));
+    let wire = walked.wire.expect("la sede recibe su respuesta");
+    assert!(wire.starts_with("SAF_43"), "{wire}");
+    assert_eq!(walked.presign, None, "no se firma nada");
+}
+
+#[test]
+fn closing_the_window_on_a_wanted_area_that_came_in_the_request_signs_there() {
+    let expanded = format!("{THE_SITE_AREA}visibleSignature=want\n");
+    let walked = closed_by_the_window_manager(&expanded);
+
+    assert_eq!(walked.after, Ok(WindowAfterClosing::StaysOpen));
+    assert!(is_the_consent(walked.then.as_ref()), "{:?}", walked.then);
+    let presign = walked.presign.expect("la firma sigue");
+    assert!(presign.contains("signaturePage=1"), "{presign}");
+}
+
+#[test]
+fn closing_the_window_on_an_optional_area_signs_invisible() {
+    let walked = closed_by_the_window_manager("visibleSignature=optional\n");
+
+    assert_eq!(walked.after, Ok(WindowAfterClosing::StaysOpen));
     let presign = walked.presign.expect("la firma sigue");
     assert!(!presign.contains("signaturePosition"), "{presign}");
 }

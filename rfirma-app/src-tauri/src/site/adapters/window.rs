@@ -56,7 +56,8 @@ pub fn open_the_site_window(app: &tauri::AppHandle) {
 /// Contesta al trámite vivo, si lo hay, antes de dejar cerrar la ventana de sede por el gestor de
 /// ventanas: retiene el cierre, contesta el rechazo que enseñaba o cancela, y reintenta cerrar
 /// cuando termina, momento en el que este mismo evento vuelve a llegar con el trámite ya terminado.
-/// Mientras el WebSocket siga sirviendo, la oculta en vez de cerrarla (ADR-0024).
+/// Mientras el WebSocket siga sirviendo, la oculta en vez de cerrarla (ADR-0024); con el diálogo
+/// del área abierto, solo lo cancela.
 fn handle_close_requested(app: &tauri::AppHandle, event: &tauri::WindowEvent) {
     let tauri::WindowEvent::CloseRequested { api, .. } = event else {
         return;
@@ -69,7 +70,7 @@ fn handle_close_requested(app: &tauri::AppHandle, event: &tauri::WindowEvent) {
     let app = app.clone();
     std::thread::spawn(move || {
         let after = errand::answer_before_closing(&app.state::<SiteRoot>().errand);
-        if after == errand::WindowAfterClosing::StaysHidden {
+        if after != errand::WindowAfterClosing::Closes {
             publish_the_moment(&app);
             return;
         }

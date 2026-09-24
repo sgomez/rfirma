@@ -1,6 +1,7 @@
 //! Trámite de sede: atención de la operación del canal, consentimiento y entrega de respuesta.
 
 mod area;
+mod closing;
 pub mod desk;
 pub mod outcome;
 pub mod replies;
@@ -12,7 +13,6 @@ pub mod state;
 mod tests;
 
 use std::path::PathBuf;
-use std::time::Duration;
 
 use crate::identity::domain::certificate::TokenCertificate;
 use crate::identity::domain::secret::StoreSecret;
@@ -30,6 +30,11 @@ pub use crate::site::ports::{
     Acknowledged, Acknowledgement, ChannelTransport, Inbox, ReplyHandle, Transport,
 };
 pub use area::{area_marked, AfterTheArea};
+#[cfg(test)]
+use closing::answer_before_closing_within;
+pub use closing::{
+    answer_before_closing, WindowAfterClosing, WINDOW_CLOSE_ACKNOWLEDGEMENT_TIMEOUT,
+};
 pub use desk::{
     attend_operation, consent_for, consent_to_sign, consent_to_sign_and_save,
     consent_to_sign_with_chosen_document, consent_to_the_batch, consent_to_the_confirmed_signature,
@@ -452,9 +457,6 @@ pub fn decline(live: &LiveErrand) -> SiteOutcome {
     declined(live)
 }
 
-/// Tope de espera al acuse de entrega antes de cerrar la ventana de sede por el gestor de ventanas.
-pub const WINDOW_CLOSE_ACKNOWLEDGEMENT_TIMEOUT: Duration = Duration::from_secs(1);
-
 /// La persona descarta el aviso del cliente web antiguo, y el arranque que retenía sigue; `true` si lo había.
 pub fn dismiss_the_warning(live: &LiveErrand) -> bool {
     let Some(launch) = live.take_the_held_launch() else {
@@ -463,38 +465,4 @@ pub fn dismiss_the_warning(live: &LiveErrand) -> bool {
     live.note(Moment::Waiting);
     launch();
     true
-}
-
-/// Qué le queda a la ventana de sede tras contestar su cierre por el gestor de ventanas.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum WindowAfterClosing {
-    /// Se cierra, y con ella el proceso.
-    Closes,
-    /// Ya se ha ocultado, porque el canal sigue sirviendo (ADR-0024).
-    StaysHidden,
-}
-
-/// Contesta a la sede antes de cerrar la ventana: el rechazo que enseñaba, o `CANCEL` si había algo que consentir.
-pub fn answer_before_closing(live: &LiveErrand) -> WindowAfterClosing {
-    answer_before_closing_within(live, WINDOW_CLOSE_ACKNOWLEDGEMENT_TIMEOUT)
-}
-
-fn answer_before_closing_within(live: &LiveErrand, timeout: Duration) -> WindowAfterClosing {
-    if dismiss_the_warning(live) {
-        return WindowAfterClosing::StaysHidden;
-    }
-    if live.current().is_none() {
-        return WindowAfterClosing::Closes;
-    }
-    let outcome = live
-        .the_shown_refusal()
-        .map_or(SiteOutcome::Cancelled, SiteOutcome::RefusedByTheProtocol);
-    if live.keeps_serving() {
-        live.answer_once_put_away(&outcome);
-        return WindowAfterClosing::StaysHidden;
-    }
-    live.answer_the_site(&outcome);
-    live.wait_for_delivery(timeout);
-    live.end();
-    WindowAfterClosing::Closes
 }

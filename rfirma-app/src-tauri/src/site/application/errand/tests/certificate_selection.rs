@@ -19,6 +19,7 @@ use crate::site::domain::protocol::{
     NegotiatedCredential, SafCode, THE_PORT_OF_THE_THIRD_PROTOCOL,
 };
 use base64::Engine as _;
+use std::time::Duration;
 
 #[test]
 #[expect(clippy::too_many_lines)]

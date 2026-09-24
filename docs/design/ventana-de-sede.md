@@ -248,6 +248,9 @@ de 329 px no cabe una página que se pueda marcar.
   petición, la sede recibe `SAF_43` y queda el desenlace «cancelado»; en los
   demás casos se pasa al consentimiento, y se firma donde decía la petición o
   sin firma visible.
+- Cerrar la ventana con la X en este paso es pulsar `Cancelar`, como cerrar el
+  diálogo del área en el original: con `SAF_43` la ventana se cierra; en los
+  demás casos sigue abierta, ya en el consentimiento.
 - Si el PDF no se deja abrir, el cuerpo lo dice en una línea y solo queda
   `Cancelar`.
 
