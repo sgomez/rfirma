@@ -6,12 +6,13 @@ mod support;
 mod full_cycle {
     use rfirma_lib::identity::domain::algorithm::SignatureAlgorithm;
     use rfirma_lib::signing::application::cycle;
-    use rfirma_lib::signing::domain::bridge::{Format, SignatureOperation};
+    use rfirma_lib::signing::domain::bridge::{ExpandRequest, Format, SignatureOperation};
     use rfirma_lib::site::adapters::desk::composed_for;
+    use rfirma_lib::site::domain::protocol::pairs_of;
     use rfirma_lib::site::domain::protocol::AskedAlgorithm;
 
     use super::support::{
-        a_cycle_of, a_cycle_signed_by, an_installed_certificate, cades_cycle,
+        a_cycle_of, a_cycle_signed_by, an_installed_certificate, bridge, cades_cycle,
         ecdsa_composed_for_the_ec_certificate, openssl_cms_finds_no_content_in, openssl_cms_verify,
         openssl_prints_the_certificates_of, sign_cades, signing_certificate, the_cms_inside,
         the_original_validator_accepts, write_to_target, ACTIVE_EC, CHALLENGE, NO_SECRET, PIN,
@@ -112,6 +113,56 @@ mod full_cycle {
 
         assert_eq!(openssl_cms_verify(&signature, None), CHALLENGE);
         the_original_validator_accepts(&signature);
+    }
+
+    const THE_AGE_POLICY_OID: &[u8] = &[
+        0x06, 0x0a, 0x60, 0x85, 0x54, 0x01, 0x03, 0x01, 0x01, 0x02, 0x01, 0x09,
+    ];
+
+    fn signed_under_the_age_policy(format: Format, data: &[u8]) -> Vec<u8> {
+        let expanded = bridge()
+            .expand_extra_params(ExpandRequest {
+                extra_params: "expPolicy=FirmaAGE\n",
+                format: format.name(),
+                signed_data_length: data.len(),
+            })
+            .expect("el expansor tiene que contestar");
+        let declared = pairs_of(&expanded);
+        let declared: Vec<(&str, &str)> = declared
+            .iter()
+            .map(|(key, value)| (key.as_str(), value.as_str()))
+            .collect();
+        let installed = tempfile::tempdir().expect("deberia haber directorio temporal");
+
+        a_cycle_signed_by(
+            &an_installed_certificate(installed.path()),
+            NO_SECRET,
+            format,
+            cycle::ALGORITHM,
+            data,
+            SignatureOperation::Sign,
+            &declared,
+        )
+    }
+
+    #[test]
+    #[ignore = "grada C: necesita el token y librfirma_crypto.so (just test-native)"]
+    fn a_cades_signature_under_the_age_policy_carries_the_policy_and_the_data() {
+        let signed = signed_under_the_age_policy(Format::Cades, CHALLENGE);
+        let signature = write_to_target("cades-politica-age.p7s", &signed);
+
+        assert!(contains(&signed, THE_AGE_POLICY_OID));
+        assert_eq!(openssl_cms_verify(&signature, None), CHALLENGE);
+    }
+
+    #[test]
+    #[ignore = "grada C: necesita el token y librfirma_crypto.so (just test-native)"]
+    fn a_pades_signature_under_the_age_policy_carries_the_policy() {
+        let signed = signed_under_the_age_policy(Format::Pades, &a_one_page_pdf());
+        let pdf = write_to_target("pades-politica-age.pdf", &signed);
+
+        let cms = std::fs::read(the_cms_inside(&pdf)).expect("el CMS del PDF");
+        assert!(contains(&cms, THE_AGE_POLICY_OID));
     }
 
     #[test]

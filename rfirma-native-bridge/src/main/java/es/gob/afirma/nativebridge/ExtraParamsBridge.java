@@ -31,6 +31,8 @@ import es.gob.afirma.core.signers.ExtraParamsProcessor;
  * lanza {@code IncompatiblePolicyException} <b>y borra la clave</b>
  * ({@code :146}, {@code :172}). Ese fallo sube tal cual: una sede que declara
  * una politica que no se puede aplicar no debe recibir una firma sin ella.</li>
+ * <li>En CAdES sin {@code mode} declarado, un documento de menos de 1 MB se
+ * firma en modo implicito y uno mayor en explicito ({@code :230}-{@code :241}).</li>
  * <li>En PAdES con la politica de la AGE el subfiltro tiene que ser
  * {@code ETSI.CAdES.detached}; otro distinto es incompatible ({@code :294}-
  * {@code :303}). Es el mismo que rFirma envia siempre
@@ -42,23 +44,28 @@ public final class ExtraParamsBridge {
 
     private ExtraParamsBridge() { }
 
+    /** Lo unico que el original mira de los datos firmados: si llegan a 1 MB ({@code ExtraParamsProcessor:239}). */
+    private static final int SIZE_1MB = 1024 * 1024;
+
     /**
      * El bloque de {@code extraParams} con la politica ya expandida.
      *
-     * <p>Se llama a la sobrecarga de tres argumentos con {@code null} en los
-     * datos firmados: la unica que los mira es la rama CAdES
-     * ({@code ExtraParamsProcessor:152}-{@code 157}) y aqui el formato es
-     * siempre PAdES.
-     *
-     * @param extraParams el bloque {@code java.util.Properties} de la sede.
-     * @param format      el formato de firma, {@code PAdES}.
+     * @param extraParams      el bloque {@code java.util.Properties} de la sede.
+     * @param format           el formato de firma.
+     * @param signedDataLength la longitud de los datos que se van a firmar.
      * @return el bloque expandido, en el mismo formato.
      * @throws ExtraParamsProcessor.IncompatiblePolicyException si la politica
      *         declarada no se puede aplicar a ese formato.
      */
-    public static String expand(final Properties extraParams, final String format)
+    public static String expand(final Properties extraParams, final String format,
+            final long signedDataLength)
             throws ExtraParamsProcessor.IncompatiblePolicyException {
-        return write(ExtraParamsProcessor.expandProperties(extraParams, null, format));
+        return write(ExtraParamsProcessor.expandProperties(
+                extraParams, dataOfTheSameSizeClass(signedDataLength), format));
+    }
+
+    private static byte[] dataOfTheSameSizeClass(final long signedDataLength) {
+        return new byte[(int) Math.min(signedDataLength, SIZE_1MB)];
     }
 
     /**

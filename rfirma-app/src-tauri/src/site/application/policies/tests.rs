@@ -5,7 +5,7 @@ use crate::signing::domain::SignatureConfig;
 use std::cell::RefCell;
 
 struct AnEngine {
-    asked: RefCell<Vec<(String, String)>>,
+    asked: RefCell<Vec<(String, String, usize)>>,
     answer: Result<String, ()>,
 }
 
@@ -26,10 +26,17 @@ impl AnEngine {
 }
 
 impl PolicyEngine for AnEngine {
-    fn expand(&self, extra_params: &str, format: &str) -> Result<String, BridgeError> {
-        self.asked
-            .borrow_mut()
-            .push((extra_params.to_owned(), format.to_owned()));
+    fn expand(
+        &self,
+        extra_params: &str,
+        format: &str,
+        signed_data_length: usize,
+    ) -> Result<String, BridgeError> {
+        self.asked.borrow_mut().push((
+            extra_params.to_owned(),
+            format.to_owned(),
+            signed_data_length,
+        ));
         self.answer.clone().map_err(|()| {
             BridgeError::IncompatiblePolicy("politica que no se puede aplicar".to_owned())
         })
@@ -58,12 +65,13 @@ fn the_declared_block_reaches_the_engine_as_a_pades_expansion() {
         &engine,
         &declared(&[("expPolicy", "FirmaAGE")]),
         Format::Pades,
+        0,
     )
     .expect("ok");
 
     assert_eq!(
         engine.asked.borrow().as_slice(),
-        [("expPolicy=FirmaAGE\n".to_owned(), "PAdES".to_owned())]
+        [("expPolicy=FirmaAGE\n".to_owned(), "PAdES".to_owned(), 0)]
     );
     assert_eq!(
         expanded,
@@ -72,19 +80,20 @@ fn the_declared_block_reaches_the_engine_as_a_pades_expansion() {
 }
 
 #[test]
-fn the_engine_is_asked_to_expand_for_the_format_of_the_request() {
+fn the_engine_is_asked_to_expand_for_the_format_and_the_size_of_the_document() {
     let engine = AnEngine::answering("");
 
     expanded_for_the_site(
         &engine,
         &declared(&[("expPolicy", "FirmaAGE")]),
         Format::Cades,
+        1_024,
     )
     .expect("ok");
 
     assert_eq!(
         engine.asked.borrow().as_slice(),
-        [("expPolicy=FirmaAGE\n".to_owned(), "CAdES".to_owned())]
+        [("expPolicy=FirmaAGE\n".to_owned(), "CAdES".to_owned(), 1_024)]
     );
 }
 
@@ -96,6 +105,7 @@ fn a_policy_that_cannot_be_applied_is_not_signed_around() {
         &engine,
         &declared(&[("expPolicy", "Inventada")]),
         Format::Pades,
+        0,
     );
 
     assert!(refused.is_err());

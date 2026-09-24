@@ -313,7 +313,12 @@ pub trait FilterEngine {
 /// El expansor de la política de firma declarada por la sede, que también presta el puente.
 pub trait PolicyEngine {
     /// Expande las propiedades de política de firma en formato Java Properties.
-    fn expand(&self, extra_params: &str, format: &str) -> Result<String, BridgeError>;
+    fn expand(
+        &self,
+        extra_params: &str,
+        format: &str,
+        signed_data_length: usize,
+    ) -> Result<String, BridgeError>;
 }
 
 /// El validador de firmas del original, que también presta el puente.
