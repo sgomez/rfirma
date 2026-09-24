@@ -22,6 +22,7 @@ use crate::site::domain::triphase_server::ServerFormat;
 const TARGET: &str = "target";
 
 const TARGET_TREE: &str = "tree";
+const TARGET_LEAFS: &str = "leafs";
 
 /// A qué firmas de la que llega alcanza una contrafirma (`CounterSignTarget`, 1.9.2).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -39,6 +40,14 @@ impl CounterTarget {
             Self::Tree
         } else {
             Self::Leafs
+        }
+    }
+
+    /// El valor de `target=` que lo nombra.
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Tree => TARGET_TREE,
+            Self::Leafs => TARGET_LEAFS,
         }
     }
 }

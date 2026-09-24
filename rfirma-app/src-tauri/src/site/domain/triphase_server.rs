@@ -9,7 +9,7 @@ use base64::engine::{DecodePaddingMode, GeneralPurpose, GeneralPurposeConfig};
 use base64::Engine as _;
 
 use super::batch::TriphaseData;
-use super::protocol::{CounterTarget, SignatureRound};
+use super::protocol::SignatureRound;
 
 /// La clave de `properties` con la dirección del servidor.
 pub const SERVER_URL: &str = "serverUrl";
@@ -185,11 +185,7 @@ pub fn params_for_the_server(
         params.remove(*withheld);
     }
     if let SignatureRound::Counter { target } = round {
-        let named = match target {
-            CounterTarget::Tree => "tree",
-            CounterTarget::Leafs => "leafs",
-        };
-        params.insert(TARGET.to_owned(), named.to_owned());
+        params.insert(TARGET.to_owned(), target.name().to_owned());
     }
     params
 }

@@ -118,6 +118,7 @@ pub fn parse_verdict(json: &str) -> Result<SignatureVerdict, BridgeError> {
     let response = parse_response(json)?;
     match field(&response, "verdict")? {
         "valid" => Ok(SignatureVerdict::Valid),
+        "unsigned" => Ok(SignatureVerdict::Unsigned),
         "invalid" => Ok(SignatureVerdict::Invalid {
             reason: field(&response, "reason")?.to_owned(),
         }),

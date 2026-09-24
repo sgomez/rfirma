@@ -35,6 +35,8 @@ final class ValidationBridge {
 
     static final String INVALID = "invalid";
 
+    static final String UNSIGNED = "unsigned";
+
     static final String CONFIRMATION_NEEDED = "confirmationNeeded";
 
     /** El veredicto, con la clave a fijar y el codigo de mensaje del original solo en el tercero. */
@@ -87,8 +89,11 @@ final class ValidationBridge {
 
     private static Verdict verdictOf(final List<SignValidity> validities) {
         for (final SignValidity validity : validities) {
-            if (isFine(validity) || withoutSignatures(validity.getError())) {
+            if (isFine(validity)) {
                 continue;
+            }
+            if (withoutSignatures(validity.getError())) {
+                return new Verdict(UNSIGNED, null, null, null);
             }
             return new Verdict(INVALID, nameOf(validity.getError()), null, null);
         }
@@ -102,7 +107,7 @@ final class ValidationBridge {
                 || VALIDITY_ERROR.SIGN_PROFILE_NOT_CHECKED == validity.getError();
     }
 
-    /** Un documento sin firmas es valido, y el original lo cuenta como un {@code KO}. */
+    /** El original lo cuenta como un {@code KO} que solo deja pasar una primera firma. */
     private static boolean withoutSignatures(final VALIDITY_ERROR error) {
         return VALIDITY_ERROR.NO_SIGN == error;
     }

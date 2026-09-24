@@ -184,3 +184,20 @@ fn a_batch_with_an_algorithm_rfirma_does_not_sign_is_refused() {
 
     assert!(matches!(refusal, SiteRefusal::LocalBatch(_)));
 }
+
+#[test]
+fn a_pades_countersign_in_the_batch_fails_that_item_without_signing_it() {
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let desk = a_desk_that_is_never_touched(home.path());
+    let certificate = a_usable_certificate("FIRMA");
+    let batch = a_local_batch(
+        r#"{"algorithm":"SHA256","format":"PAdES","suboperation":"countersign","stoponerror":false,"singlesigns":[{"id":"1","datareference":"ZGF0bw=="}]}"#,
+    );
+
+    let results = signed_local_batch(&desk, &certificate, "1234", &batch)
+        .expect("el lote empieza aunque el elemento no se atienda");
+
+    assert_eq!(results.len(), 1);
+    assert_eq!(results[0].signature(), None);
+    assert!(results[0].description().is_some());
+}

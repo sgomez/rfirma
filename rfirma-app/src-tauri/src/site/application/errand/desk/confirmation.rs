@@ -8,6 +8,7 @@ use base64::Engine as _;
 use crate::identity::domain::certificate::TokenCertificate;
 use crate::signing::domain::bridge::{Format, SignatureVerdict};
 use crate::site::application::session::SiteRefusal;
+use crate::site::domain::protocol::SignatureRound;
 use crate::site::ports::{FilterEngine, PolicyEngine};
 
 use super::{consent_to_a_signature, ErrandDesk, Neighbours, SignatureAsk};
@@ -43,6 +44,11 @@ pub(super) fn the_previous_signatures_hold<E: FilterEngine, P: PolicyEngine, N: 
         .verdict_of(&STANDARD.encode(ask.document), format)
     {
         Ok(SignatureVerdict::Valid) => Ok(()),
+        Ok(SignatureVerdict::Unsigned) if ask.round == SignatureRound::First => Ok(()),
+        Ok(SignatureVerdict::Unsigned) => Err(answering(
+            live,
+            SiteOutcome::Refused(SiteRefusal::InvalidSignature("NO_SIGN".to_owned())),
+        )),
         Ok(SignatureVerdict::Invalid { reason }) => Err(answering(
             live,
             SiteOutcome::Refused(SiteRefusal::InvalidSignature(reason)),

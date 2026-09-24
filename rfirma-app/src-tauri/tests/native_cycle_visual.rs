@@ -83,8 +83,8 @@ mod full_cycle {
 
         assert_eq!(
             verdict_of(&bridge, &pdf),
-            SignatureVerdict::Valid,
-            "un documento sin firmas es valido"
+            SignatureVerdict::Unsigned,
+            "un documento sin firmas cruza como tal"
         );
 
         let signed = sign(&pdf, &a_config_of("", None));

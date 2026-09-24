@@ -456,8 +456,10 @@ pub struct ValidationRequest<'a> {
 /// Lo que el validador del original dice de las firmas de un documento.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum SignatureVerdict {
-    /// Las firmas valen, y un documento sin ninguna también.
+    /// Las firmas valen.
     Valid,
+    /// El documento no trae firmas: solo una primera firma puede seguir.
+    Unsigned,
     /// Alguna firma no vale, con el motivo tal como lo nombra el original.
     Invalid {
         /// Motivo del original.

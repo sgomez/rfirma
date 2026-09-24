@@ -17,17 +17,17 @@ import com.aowagie.text.pdf.PdfReader;
 
 import org.junit.jupiter.api.Test;
 
-/** Las tres salidas del veredicto, sobre firmas hechas aqui mismo. */
+/** Las salidas del veredicto, sobre firmas hechas aqui mismo. */
 class ValidationBridgeTest {
 
     private static final String ALGORITHM = "SHA256withRSA";
 
     @Test
-    void a_document_without_signatures_is_valid() throws Exception {
+    void a_document_without_signatures_is_unsigned() throws Exception {
         final ValidationBridge.Verdict verdict =
                 ValidationBridge.validate(TestFixtures.samplePdf(), "PAdES");
 
-        assertEquals(ValidationBridge.VALID, verdict.outcome());
+        assertEquals(ValidationBridge.UNSIGNED, verdict.outcome());
     }
 
     @Test

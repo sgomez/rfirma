@@ -479,6 +479,14 @@ fn a_document_whose_signatures_hold_comes_back_valid() {
 }
 
 #[test]
+fn a_document_without_signatures_crosses_as_unsigned() {
+    assert_eq!(
+        parse_verdict(r#"{"ok":true,"verdict":"unsigned"}"#).expect("es valida"),
+        SignatureVerdict::Unsigned
+    );
+}
+
+#[test]
 fn a_signature_that_does_not_hold_brings_the_reason_of_the_original() {
     assert_eq!(
         parse_verdict(r#"{"ok":true,"verdict":"invalid","reason":"NO_MATCH_DATA"}"#)

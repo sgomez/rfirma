@@ -5,9 +5,12 @@ use base64::Engine as _;
 
 use super::json::Json;
 use crate::site::domain::protocol::{
-    format_of, pairs_of, without_the_launcher_keys, Parameter, Refusal, RequestedFormat, SafCode,
-    SignatureRound, AUTO, COSIGN, SIGN,
+    format_of, pairs_of, without_the_launcher_keys, CounterTarget, Parameter, Refusal,
+    RequestedFormat, SafCode, SignatureRound, AUTO, COSIGN, COUNTERSIGN, SIGN,
 };
+
+/// `extraParams`: a qué firmas alcanza la contrafirma.
+const TARGET: &str = "target";
 
 /// Una firma del lote local, con lo que heredó del lote (`SingleSignOperation`, 1.9.2).
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -30,7 +33,7 @@ impl LocalSingleSign {
         &self.document
     }
 
-    /// `sign` o `cosign`, propio o heredado del lote.
+    /// `sign`, `cosign` o `countersign`, propio o heredado del lote.
     pub fn round(&self) -> SignatureRound {
         self.round
     }
@@ -169,34 +172,58 @@ fn single_sign(
             )
         })?;
 
+    let round = match single.get("suboperation").and_then(Json::as_str) {
+        Some(name) => round_named(name)?,
+        None => round,
+    };
+    let mut extra_params = match single.get("extraparams").and_then(Json::as_str) {
+        Some(encoded) => expand_extra_params(encoded)?,
+        None => extra_params.to_vec(),
+    };
+    let round = match round {
+        SignatureRound::Counter { .. } => SignatureRound::Counter {
+            target: with_the_counter_target_resolved(&mut extra_params),
+        },
+        other => other,
+    };
+
     Ok(LocalSingleSign {
         id,
         document: decode_base64(reference)?,
-        round: match single.get("suboperation").and_then(Json::as_str) {
-            Some(name) => round_named(name)?,
-            None => round,
-        },
+        round,
         format: match single.get("format").and_then(Json::as_str) {
             Some(name) => format_named(name)?,
             None => format,
         },
-        extra_params: match single.get("extraparams").and_then(Json::as_str) {
-            Some(encoded) => expand_extra_params(encoded)?,
-            None => extra_params.to_vec(),
-        },
+        extra_params,
     })
 }
 
-/// La ronda que nombra `suboperation`, sin `countersign`: rFirma solo firma y cofirma.
+/// La ronda que nombra `suboperation`; la contrafirma, a falta de resolver su objetivo.
 fn round_named(name: &str) -> Result<SignatureRound, Refusal> {
     match name.trim().to_ascii_lowercase().as_str() {
         SIGN => Ok(SignatureRound::First),
         COSIGN => Ok(SignatureRound::Again),
+        COUNTERSIGN => Ok(SignatureRound::Counter {
+            target: CounterTarget::Leafs,
+        }),
         other => Err(Refusal::new(
             SafCode::UnsupportedOperation,
-            format!("la suboperacion '{other}' del lote no se atiende: solo 'sign' o 'cosign'"),
+            format!("la suboperacion '{other}' del lote no se atiende"),
         )),
     }
+}
+
+/// El objetivo de la contrafirma del lote, que queda escrito en `target` para el firmador.
+fn with_the_counter_target_resolved(extra_params: &mut Vec<(String, String)>) -> CounterTarget {
+    let declared = extra_params
+        .iter()
+        .find(|(key, _)| key == TARGET)
+        .map(|(_, value)| value.as_str());
+    let target = declared.map_or(CounterTarget::Leafs, CounterTarget::named);
+    extra_params.retain(|(key, _)| key != TARGET);
+    extra_params.push((TARGET.to_owned(), target.name().to_owned()));
+    target
 }
 
 /// El formato que nombra el lote, nada si pide `auto`, o el `SAF_06` que lo nombra.
