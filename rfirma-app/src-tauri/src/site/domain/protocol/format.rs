@@ -85,11 +85,6 @@ impl RequestedFormat {
     }
 }
 
-/// Si ese `format=` pide la firma CAdES trifásica contra el `serverUrl` de la sede.
-pub fn goes_through_the_site_server(text: &str) -> bool {
-    text.trim().eq_ignore_ascii_case("cadestri")
-}
-
 /// El formato efectivo de `format=auto`, leído de la cabecera del documento.
 pub fn format_of(document: &[u8]) -> RequestedFormat {
     match shape_of(document) {

@@ -23,10 +23,11 @@ use crate::site::domain::protocol::{
     AskedAlgorithm, LoadRequest, PendingSignRequest, RequestedFormat, SaveRequest,
     SignAndSaveRequest, SignRequest, SignatureRound, SiteFilter, SiteVisibleSignature,
 };
+use crate::site::domain::triphase_server::ServerFormat;
 
 use super::outcome::{
-    ConfirmationConsent, ErrandStep, LoadingConsent, PendingSignature, SavingConsent, SavingHints,
-    SigningConsent, SiteOutcome,
+    ConfirmationConsent, ErrandStep, ForTheSiteServer, LoadingConsent, PendingSignature,
+    SavingConsent, SavingHints, SigningConsent, SiteOutcome,
 };
 use super::replies::{answering, no_certificate_at_all, no_certificate_the_site_accepts};
 use super::request::SiteRequest;
@@ -234,7 +235,7 @@ pub fn consent_to_sign<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
             declared_params: request.declared_params(),
             filter: request.filter(),
             headless: request.is_headless(),
-            through_the_site_server: request.goes_through_the_site_server(),
+            through_the_site_server: request.through_the_site_server(),
             confirmed: BTreeMap::new(),
         },
         None,
@@ -267,7 +268,7 @@ pub fn consent_to_sign_and_save<E: FilterEngine, P: PolicyEngine, N: Neighbours>
             declared_params: request.declared_params(),
             filter: request.filter(),
             headless: request.is_headless(),
-            through_the_site_server: false,
+            through_the_site_server: None,
             confirmed: BTreeMap::new(),
         },
         Some(Box::new(saving)),
@@ -285,7 +286,7 @@ struct SignatureAsk<'a> {
     declared_params: &'a [(String, String)],
     filter: &'a SiteFilter,
     headless: bool,
-    through_the_site_server: bool,
+    through_the_site_server: Option<ServerFormat>,
     confirmed: BTreeMap<String, String>,
 }
 
@@ -408,7 +409,10 @@ fn consent_to_a_signature<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
         unregistered_signatures,
         saving,
         already_chosen,
-        for_the_site_server: ask.through_the_site_server.then(|| ask.document.to_vec()),
+        for_the_site_server: ask.through_the_site_server.map(|format| ForTheSiteServer {
+            format,
+            document: ask.document.to_vec(),
+        }),
     }))
 }
 

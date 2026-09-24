@@ -16,9 +16,13 @@ use crate::site::domain::protocol::{AfirmaUrl, ChannelMessage, SafCode, WireAnsw
 const THE_SERVER: &str = "serverUrl=https://sede.example/tri";
 
 fn a_cades_triphase(op: &str) -> AfirmaUrl {
+    a_triphase("CAdEStri", op, b"los datos")
+}
+
+fn a_triphase(format: &str, op: &str, data: &[u8]) -> AfirmaUrl {
     let text = format!(
-        "afirma://{op}?op={op}&idsession={CREDENTIAL}&format=CAdEStri&algorithm=SHA256&dat={}",
-        URL_SAFE.encode(b"los datos")
+        "afirma://{op}?op={op}&idsession={CREDENTIAL}&format={format}&algorithm=SHA256&dat={}",
+        URL_SAFE.encode(data)
     );
     let ChannelMessage::Operation { url } = ChannelMessage::read(&text) else {
         panic!("una URL del protocolo es una operacion");
@@ -176,4 +180,72 @@ fn a_triphase_server_that_fails_the_presign_is_refused_with_saf_40() {
         Some(WireAnswer::refused(SafCode::RecoverServerDocument).on_the_wire())
     );
     assert!(desk.neighbours.neighbours.token.signed().is_empty());
+}
+
+fn the_forms_of_a_triphase_signature(
+    format: &str,
+    data: &[u8],
+) -> Vec<Vec<(&'static str, String)>> {
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let memory = a_memory(home.path());
+    let ours = vec![a_usable_certificate("FIRMA")];
+    let (listed, _) = listed_from(&ours);
+    let live = a_live();
+    let (handle, mut wire) = the_wire();
+    live.answer_through(handle);
+    let engine = AnEngine::answering(&[&[0], &[0]]);
+    let policies = APolicyEngine::answering(THE_SERVER);
+    let server = Arc::new(InMemoryTriphaseServer::answering(
+        &a_presignature(),
+        format!("OK NEWID={}", URL_SAFE.encode(b"la firma del servidor")).as_bytes(),
+    ));
+    let desk = ErrandDesk {
+        triphase: Arc::clone(&server) as _,
+        ..a_desk_for_the_batch(
+            &engine,
+            &policies,
+            home.path(),
+            &listed,
+            &memory,
+            &ours,
+            Arc::new(InMemoryBatchServices::default()),
+        )
+    };
+
+    let url = a_triphase(format, "sign", data);
+    let step = attend_operation(&desk, &url, decoded(&url), &live);
+    let chosen = the_only_row_of(remembered(&live, step));
+    consent(&desk, &chosen, &live).expect("el certificado sirve");
+    finish_the_server_signature(&desk, "1234", &live).expect("las tres fases salen");
+    finish(&desk, &live).expect("la firma se entrega");
+
+    assert_eq!(
+        what_the_site_received(&mut wire),
+        Some(on_the_wire(&SiteOutcome::Signature {
+            signer_der: ours[0].der().to_vec(),
+            signature: b"la firma del servidor".to_vec(),
+        }))
+    );
+    server.forms().into_iter().map(|(_, form)| form).collect()
+}
+
+#[test]
+fn every_triphase_format_reaches_the_server_with_the_format_its_signer_sends() {
+    for (format, data, on_the_wire) in [
+        ("PAdEStri", &b"%PDF-1.7\n"[..], "pades"),
+        ("XAdEStri", &b"<documento/>"[..], "XAdES"),
+        ("FacturaEtri", &b"<fe:Facturae/>"[..], "FacturaE"),
+    ] {
+        let forms = the_forms_of_a_triphase_signature(format, data);
+
+        assert_eq!(forms.len(), 2, "{format}");
+        for form in &forms {
+            assert!(
+                form.contains(&("format", on_the_wire.to_owned())),
+                "{format}"
+            );
+            assert!(form.contains(&("cop", "sign".to_owned())), "{format}");
+            assert!(form.contains(&("doc", URL_SAFE.encode(data))), "{format}");
+        }
+    }
 }

@@ -1,4 +1,4 @@
-//! La firma CAdES trifásica ya consentida contra el servidor de la sede: prefirma allí, `PK1` con el token aquí y postfirma allí; no pasa por el puente (ADR-0001).
+//! La firma trifásica ya consentida contra el servidor de la sede: prefirma allí, `PK1` con el token aquí y postfirma allí; no pasa por el puente (ADR-0001).
 
 use std::collections::BTreeMap;
 
@@ -11,7 +11,7 @@ use crate::site::domain::protocol::{AskedAlgorithm, SignatureRound};
 use crate::site::domain::signing::SigningRefusal;
 use crate::site::domain::triphase_server::{
     params_for_the_server, postsign_form, postsigned, presign_form, presigned, server_url_of,
-    ServerCall, Situation, TriphaseServerError,
+    ServerCall, ServerFormat, Situation, TriphaseServerError,
 };
 use crate::site::ports::{TokenSigning, TriphaseServer};
 
@@ -29,6 +29,8 @@ pub struct ServerRun<'a> {
 
 /// Lo que la sede pidió firmar.
 pub struct ServerAsk<'a> {
+    /// El firmador trifásico que eligió la sede.
+    pub format: ServerFormat,
     /// La operación que pidió la sede.
     pub round: SignatureRound,
     /// La huella que pidió la sede.
@@ -45,10 +47,11 @@ pub fn signed_through_the_server(
     ask: &ServerAsk<'_>,
 ) -> Result<Vec<u8>, SiteRefusal> {
     let server_url = server_url_of(ask.from_the_site).map_err(SiteRefusal::Triphase)?;
-    let params = params_for_the_server(ask.from_the_site, ask.round);
+    let params = params_for_the_server(ask.from_the_site, ask.format, ask.round);
     let params = (!params.is_empty()).then(|| to_java_properties(&params));
     let algorithm = composed_name(ask.algorithm, run.certificate.key_kind());
     let call = ServerCall {
+        format: ask.format,
         round: ask.round,
         algorithm: &algorithm,
         certificate: run.certificate.der(),

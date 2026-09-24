@@ -4,7 +4,7 @@ use super::super::algorithm::AskedAlgorithm;
 use super::super::codes::Parameter;
 use super::super::data_source::DataSource;
 use super::super::filters::{site_filter, SiteFilter};
-use super::super::format::{format_of, goes_through_the_site_server, RequestedFormat};
+use super::super::format::{format_of, RequestedFormat};
 use super::super::refusal::Refusal;
 use super::super::url::AfirmaUrl;
 use super::document::{optional_document, read_document};
@@ -17,6 +17,7 @@ use super::properties::{
     FILENAME_DESCRIPTION, FILENAME_EXTS,
 };
 use super::SiteOperation;
+use crate::site::domain::triphase_server::ServerFormat;
 
 /// `extraParams`: a qué firmas alcanza la contrafirma.
 const TARGET: &str = "target";
@@ -76,7 +77,7 @@ pub struct SignRequest {
     declared: Vec<(String, String)>,
     filter: SiteFilter,
     headless: bool,
-    through_the_site_server: bool,
+    through_the_site_server: Option<ServerFormat>,
 }
 
 impl SignRequest {
@@ -115,8 +116,8 @@ impl SignRequest {
         self.headless
     }
 
-    /// Si la prefirma y la postfirma las hace el servidor trifásico de la sede.
-    pub fn goes_through_the_site_server(&self) -> bool {
+    /// El firmador del servidor trifásico de la sede, si la prefirma y la postfirma se hacen allí.
+    pub fn through_the_site_server(&self) -> Option<ServerFormat> {
         self.through_the_site_server
     }
 }
@@ -138,7 +139,7 @@ pub struct PendingSignRequest {
     load_description: Option<String>,
     load_starting_folder: Option<String>,
     load_filename: Option<String>,
-    through_the_site_server: bool,
+    through_the_site_server: Option<ServerFormat>,
 }
 
 impl PendingSignRequest {
@@ -215,9 +216,7 @@ pub(super) fn sign_request(
 
     let properties = declared_properties(url);
     let declared = properties.crossing().to_vec();
-    let through_the_site_server = url
-        .parameter("format")
-        .is_some_and(goes_through_the_site_server);
+    let through_the_site_server = url.parameter("format").and_then(ServerFormat::named);
     if url.parameter("dat").is_none() {
         return Ok(SiteOperation::SignWithoutDocument(PendingSignRequest {
             round,

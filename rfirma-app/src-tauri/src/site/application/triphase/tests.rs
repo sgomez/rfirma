@@ -42,6 +42,16 @@ fn signed_with(
     round: SignatureRound,
     from_the_site: &BTreeMap<String, String>,
 ) -> Result<Vec<u8>, SiteRefusal> {
+    signed_in(ServerFormat::Cades, server, token, round, from_the_site)
+}
+
+fn signed_in(
+    format: ServerFormat,
+    server: &InMemoryTriphaseServer,
+    token: &InMemoryTokenSigning,
+    round: SignatureRound,
+    from_the_site: &BTreeMap<String, String>,
+) -> Result<Vec<u8>, SiteRefusal> {
     let certificate = a_usable_certificate("firmante");
     signed_through_the_server(
         &ServerRun {
@@ -51,6 +61,7 @@ fn signed_with(
             secret: "1234",
         },
         &ServerAsk {
+            format,
             round,
             algorithm: AskedAlgorithm::Sha256,
             document: b"los datos",
@@ -210,4 +221,33 @@ fn the_algorithm_travels_composed_with_the_key_of_the_certificate() {
         composed_name(AskedAlgorithm::Sha512, Some(KeyKind::Ec)),
         "SHA512withECDSA"
     );
+}
+
+#[test]
+fn a_pades_cosignature_reaches_the_server_as_a_pades_signature_with_every_param() {
+    let server = InMemoryTriphaseServer::answering(
+        &a_presignature_asking_to_sign(b"prefirma"),
+        &a_postsign_handing_back(b"pdf firmado"),
+    );
+    let token = InMemoryTokenSigning::default();
+    let from_the_site = the_site_declaring(&[("serverUrl", SERVER_URL)]);
+
+    let signature = signed_in(
+        ServerFormat::Pades,
+        &server,
+        &token,
+        SignatureRound::Again,
+        &from_the_site,
+    )
+    .expect("la firma sale");
+
+    assert_eq!(signature, b"pdf firmado");
+    for (_, form) in server.forms() {
+        assert_eq!(the_value_of(&form, "format"), Some("pades"));
+        assert_eq!(the_value_of(&form, "cop"), Some("sign"));
+        assert_eq!(
+            the_value_of(&form, "params"),
+            Some(URL_SAFE.encode(to_java_properties(&from_the_site)).as_str())
+        );
+    }
 }
