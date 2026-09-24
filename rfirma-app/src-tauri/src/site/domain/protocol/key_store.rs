@@ -14,6 +14,9 @@ const THE_NSS_STORES: [KeyStoreOfTheOriginal; 2] = [
     ("Mozilla / Firefox (unificado)", "MOZ_UNI"),
 ];
 
+/// Los dos nombres del almacén PKCS#11, el único que admite biblioteca, y solo como acotación.
+const THE_PKCS11_STORE: [KeyStoreOfTheOriginal; 1] = [("PKCS#11", "PKCS11")];
+
 /// El nombre visible de un `AOKeyStore` y el de su constante, que son las dos puertas por las
 /// que el original resuelve el almacén (`SimpleKeyStoreManager.getKeyStore`, 1.9.2).
 type KeyStoreOfTheOriginal = (&'static str, &'static str);
@@ -87,12 +90,24 @@ pub fn key_store_named_by(url: &AfirmaUrl) -> Option<NamedKeyStore> {
     })
 }
 
-/// El `SAF_07` del almacén que la sede nombra y rFirma no abre (ADR-0022).
+/// La biblioteca que la sede pone detrás del almacén PKCS#11, tal y como vino (ADR-0022).
+pub fn module_named_by(url: &AfirmaUrl) -> Option<String> {
+    let named = key_store_named_by(url)?;
+    if !named_among(named.name(), &THE_PKCS11_STORE) {
+        return None;
+    }
+    named.library
+}
+
+/// El `SAF_08` del almacén que la sede nombra y rFirma no abre (ADR-0022).
 pub fn refuse_a_key_store_rfirma_does_not_open(url: &AfirmaUrl) -> Result<(), Refusal> {
     let Some(named) = key_store_named_by(url) else {
         return Ok(());
     };
     if let Some(library) = named.library() {
+        if named_among(named.name(), &THE_PKCS11_STORE) {
+            return Ok(());
+        }
         return Err(refused(
             named.declared_in(),
             format!("rFirma no carga la biblioteca '{library}' que nombra la sede"),
@@ -111,7 +126,7 @@ pub fn refuse_a_key_store_rfirma_does_not_open(url: &AfirmaUrl) -> Result<(), Re
 }
 
 fn refused(blame: Parameter, detail: String) -> Refusal {
-    Refusal::new(SafCode::CannotFindKeystore, detail)
+    Refusal::new(SafCode::CannotAccessKeystore, detail)
         .blaming(blame)
         .because(RefusalSituation::UnsupportedKeyStore)
 }

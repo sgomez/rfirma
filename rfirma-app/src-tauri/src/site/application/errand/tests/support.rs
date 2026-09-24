@@ -1,7 +1,7 @@
 //! Los dobles y ayudantes en grada A compartidos por las pruebas del tramite.
 
 use std::cell::RefCell;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use crate::documents::application::documents::OpenedDocuments;
@@ -360,6 +360,14 @@ impl Certificates for TheNeighbours<'_> {
         )
     }
 
+    fn discovered_module(&self, library: &str) -> Option<PathBuf> {
+        self.ours
+            .iter()
+            .map(|certificate| certificate.reference().module())
+            .find(|module| *module == Path::new(library))
+            .map(Path::to_path_buf)
+    }
+
     fn usable<'a>(
         &self,
         found: &'a [TokenCertificate],
@@ -457,6 +465,10 @@ impl Certificates for ASignerThatSucceeds<'_> {
 
     fn rows_of(&self, found: Vec<TokenCertificate>) -> Vec<ListedCertificate> {
         self.neighbours.rows_of(found)
+    }
+
+    fn discovered_module(&self, library: &str) -> Option<PathBuf> {
+        self.neighbours.discovered_module(library)
     }
 
     fn usable<'a>(

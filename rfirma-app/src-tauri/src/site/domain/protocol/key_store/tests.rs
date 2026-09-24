@@ -1,4 +1,4 @@
-use super::{key_store_named_by, refuse_a_key_store_rfirma_does_not_open};
+use super::{key_store_named_by, module_named_by, refuse_a_key_store_rfirma_does_not_open};
 use crate::site::domain::protocol::codes::{Parameter, SafCode};
 use crate::site::domain::protocol::refusal::RefusalSituation;
 use crate::site::domain::protocol::url::AfirmaUrl;
@@ -85,12 +85,12 @@ fn a_store_the_original_does_not_recognise_is_ignored_as_the_original_does() {
 }
 
 #[test]
-fn a_pkcs12_named_by_the_site_is_refused_with_a_code_of_the_catalogue() {
+fn a_pkcs12_named_by_the_site_is_refused_with_saf_08() {
     let url = ksb64("PKCS12:/ruta/al/almacen.p12");
 
     let refusal = refuse_a_key_store_rfirma_does_not_open(&url).expect_err("rFirma no lo abre");
 
-    assert_eq!(refusal.code(), SafCode::CannotFindKeystore);
+    assert_eq!(refusal.code().as_str(), "SAF_08");
     assert_eq!(refusal.blame(), Some(Parameter::KeyStore));
     assert_eq!(refusal.situation(), RefusalSituation::UnsupportedKeyStore);
 }
@@ -119,7 +119,7 @@ fn the_stores_of_the_original_that_rfirma_does_not_open_are_refused_one_by_one()
         let refusal = refuse_a_key_store_rfirma_does_not_open(&ksb64(store))
             .expect_err("es un almacen que rFirma no abre");
 
-        assert_eq!(refusal.code(), SafCode::CannotFindKeystore);
+        assert_eq!(refusal.code(), SafCode::CannotAccessKeystore);
     }
 }
 
@@ -136,7 +136,7 @@ fn a_library_is_refused_even_when_the_store_is_the_one_rfirma_opens() {
     let refusal = refuse_a_key_store_rfirma_does_not_open(&ksb64("MOZ_UNI:/usr/lib/libnss3.so"))
         .expect_err("rFirma no carga la biblioteca que le nombren");
 
-    assert_eq!(refusal.code(), SafCode::CannotFindKeystore);
+    assert_eq!(refusal.code(), SafCode::CannotAccessKeystore);
 }
 
 #[test]
@@ -151,6 +151,45 @@ fn the_visible_name_of_a_store_names_it_as_the_constant_does() {
         let refusal = refuse_a_key_store_rfirma_does_not_open(&ksb64(store))
             .expect_err("el original lo resuelve por el nombre visible");
 
-        assert_eq!(refusal.code(), SafCode::CannotFindKeystore);
+        assert_eq!(refusal.code(), SafCode::CannotAccessKeystore);
     }
+}
+
+#[test]
+fn a_pkcs11_store_with_its_library_is_left_to_the_listing() {
+    for named in [
+        "PKCS11:/usr/lib/softhsm/libsofthsm2.so",
+        "PKCS#11:/usr/lib/softhsm/libsofthsm2.so",
+        "pkcs11:/usr/lib/softhsm/libsofthsm2.so",
+    ] {
+        refuse_a_key_store_rfirma_does_not_open(&ksb64(named))
+            .expect("el adaptador decide si es un modulo que rFirma ya abre");
+    }
+}
+
+#[test]
+fn a_pkcs11_store_names_its_module_as_it_came() {
+    assert_eq!(
+        module_named_by(&ksb64("PKCS11:\"/usr/lib/softhsm/libsofthsm2.so\"")).as_deref(),
+        Some("/usr/lib/softhsm/libsofthsm2.so")
+    );
+    assert_eq!(
+        module_named_by(&a_selection("keystore=PKCS%2311:/usr/lib/opensc-pkcs11.so")).as_deref(),
+        Some("/usr/lib/opensc-pkcs11.so")
+    );
+}
+
+#[test]
+fn a_pkcs11_store_without_a_library_names_no_module_and_is_refused() {
+    assert_eq!(module_named_by(&ksb64("PKCS11")), None);
+    let refusal = refuse_a_key_store_rfirma_does_not_open(&ksb64("PKCS11"))
+        .expect_err("sin biblioteca no hay modulo que acotar");
+
+    assert_eq!(refusal.code(), SafCode::CannotAccessKeystore);
+}
+
+#[test]
+fn a_library_behind_any_other_store_names_no_module() {
+    assert_eq!(module_named_by(&ksb64("MOZ_UNI:/usr/lib/libnss3.so")), None);
+    assert_eq!(module_named_by(&ksb64(":/usr/lib/opensc-pkcs11.so")), None);
 }

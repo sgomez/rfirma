@@ -27,6 +27,10 @@ impl Certificates for Untouched {
         unreachable!("la guarda no llega a formar filas")
     }
 
+    fn discovered_module(&self, _library: &str) -> Option<PathBuf> {
+        unreachable!("la guarda no llega a acotar el listado")
+    }
+
     fn usable<'a>(
         &self,
         _found: &'a [TokenCertificate],

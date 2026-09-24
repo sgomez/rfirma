@@ -26,6 +26,9 @@ fn every_refusal_of_the_errand() -> Vec<SiteRefusal> {
         SiteRefusal::Inadmissible(Inadmissible::Encrypted),
         SiteRefusal::Policies(BridgeError::IncompatiblePolicy("la politica".to_owned())),
         SiteRefusal::CouldNotFilter(FilteringError::EngineOutOfRange(9)),
+        SiteRefusal::CouldNotFilter(FilteringError::ModuleNotDiscovered(
+            "/tmp/modulo.so".to_owned(),
+        )),
         SiteRefusal::NoCertificateTheSiteAccepts,
         SiteRefusal::NotUsableForTheSite(FilteringError::ExcludedByTheSite("X".to_owned())),
         SiteRefusal::ScratchFolderMissing("no such directory".to_owned()),
@@ -177,6 +180,21 @@ fn every_situation_of_ours_lands_inside_the_published_catalogue() {
             line.starts_with("SAF_") && line.len() > 4,
             "«{line}» no la lee el cliente publicado como un error"
         );
+    }
+}
+
+#[test]
+fn a_module_the_site_names_and_rfirma_has_not_discovered_is_answered_with_saf_08() {
+    for refusal in [
+        SiteRefusal::CouldNotFilter(FilteringError::ModuleNotDiscovered("/tmp/m.so".to_owned())),
+        SiteRefusal::NotUsableForTheSite(FilteringError::ModuleNotDiscovered(
+            "/tmp/m.so".to_owned(),
+        )),
+    ] {
+        let (failure, code) = told(&refusal);
+
+        assert_eq!(code, SafCode::CannotAccessKeystore);
+        assert_eq!(failure.situation, "unsupportedKeyStore");
     }
 }
 

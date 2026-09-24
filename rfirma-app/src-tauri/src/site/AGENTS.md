@@ -116,7 +116,7 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `domain/protocol/codes.rs` | **El catálogo publicado**: los `SAF_00`…`SAF_52` y las tres respuestas que no son códigos. Pruebas en `domain/protocol/codes/tests.rs`. |
 | `domain/protocol/data_source.rs` | El puerto que baja el `dat` que viaja como URL, y qué valor es una descarga y no unos datos. Pruebas en `domain/protocol/data_source/tests.rs`. |
 | `domain/protocol/detection.rs` | El detector puro del documento: «PDF / factura / XML / binario», sin nombrar ningún formato de firma. Pruebas en `domain/protocol/detection/tests.rs`. |
-| `domain/protocol/filters.rs` | La expresión de filtro de la sede, que cruza entera al motor, y el catálogo de criterios medidos contra el original. Pruebas en `domain/protocol/filters/tests.rs`. |
+| `domain/protocol/filters.rs` | La expresión de filtro de la sede, que cruza entera al motor, la biblioteca PKCS#11 a la que acota el listado (ADR-0022) y el catálogo de criterios medidos contra el original. Pruebas en `domain/protocol/filters/tests.rs`. |
 | `domain/protocol/format.rs` | El formato que la sede nombra en `format=`, cerrado y con los alias del original; **no es el `Format` del puente**, al que lo traduce `ports.rs`. Pruebas en `domain/protocol/format/tests.rs`. |
 | `domain/protocol/framing.rs` | **El framing artesanal del transporte `service`**, sin socket: lector y escritor puros. Pruebas en `domain/protocol/framing/tests.rs`. |
 | `domain/protocol/key_store.rs` | **El almacén que la sede nombra en `keystore` o `ksb64`**, y cuál de ellos abre rFirma (ADR-0022). Pruebas en `domain/protocol/key_store/tests.rs`. |

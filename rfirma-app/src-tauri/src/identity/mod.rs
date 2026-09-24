@@ -44,6 +44,11 @@ impl IdentityRoot {
         stores
     }
 
+    /// El módulo PKCS#11 descubierto que es, canonizada, la biblioteca que se nombra.
+    pub fn discovered_module(&self, library: &str) -> Option<PathBuf> {
+        adapters::pkcs11::stores::discovered_module_named(&self.stores, library)
+    }
+
     /// Los certificados de todos los almacenes, o por qué ninguno se ha podido abrir.
     pub fn certificates(&self) -> Result<Vec<TokenCertificate>, TokenError> {
         application::certificates::certificates_with_their_chains(

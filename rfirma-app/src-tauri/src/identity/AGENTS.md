@@ -17,7 +17,8 @@ habla con el token. Rutas relativas a `src/identity/`.
 | `adapters/pkcs11/mechanism.rs` | Elige el mecanismo de firma que ofrece la ranura y firma con la clave privada. |
 | `adapters/pkcs11/session.rs` | Abre el módulo PKCS#11, cachea su contexto y localiza ranura y clave privada. |
 | `adapters/pkcs11/nss.rs` | Cómo entra un `.p12` en un almacén NSS propio, con el PKCS#12 de `libsmime3`. Declara `NssHost` y `RealNssHost`, para `site/adapters/nss.rs`. Pruebas en `adapters/pkcs11/nss/tests.rs`. |
-| `adapters/pkcs11/stores.rs` | Dónde se buscan los certificados, incluidos los `.p12` instalados. Pruebas en `adapters/pkcs11/stores/tests.rs`. |
+| `adapters/pkcs11/stores.rs` | Dónde se buscan los certificados, incluidos los `.p12` instalados, y qué módulo descubierto es la biblioteca que nombra la sede (ADR-0022). Pruebas en `adapters/pkcs11/stores/tests.rs`. |
+| `adapters/pkcs11/p11kit.rs` | Los módulos PKCS#11 que la instalación registra en p11-kit, leídos de sus ficheros `.module`; no carga ninguno. Pruebas en `adapters/pkcs11/p11kit/tests.rs`. |
 | `adapters/failures.rs` | La única traducción de lo que va mal en identidad a la vista de la ventana y al código de la sede (ADR-0009). Pruebas en `adapters/failures/tests.rs`. |
 | `adapters/tauri.rs` | Las tres órdenes de identidad: listar certificados, instalar y quitar un `.p12`. |
 | `adapters/views.rs` | Lo que cruza a la ventana: `CertificateView`, `StatusView` y `SecretView`. Pruebas en `adapters/views/tests.rs`. |

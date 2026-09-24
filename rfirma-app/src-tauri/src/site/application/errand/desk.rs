@@ -461,12 +461,13 @@ fn accepted_listing<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
 
     let owned = ours.len();
     let accepted =
-        filtering::keep_what_the_site_accepts(desk.engine, filter, ours).map_err(|error| {
-            answering(
-                live,
-                SiteOutcome::Refused(SiteRefusal::CouldNotFilter(error)),
-            )
-        })?;
+        filtering::keep_what_the_site_accepts(desk.engine, filter, ours, &desk.neighbours)
+            .map_err(|error| {
+                answering(
+                    live,
+                    SiteOutcome::Refused(SiteRefusal::CouldNotFilter(error)),
+                )
+            })?;
 
     if accepted.is_empty() {
         return Err(no_certificate_the_site_accepts(live, owned));

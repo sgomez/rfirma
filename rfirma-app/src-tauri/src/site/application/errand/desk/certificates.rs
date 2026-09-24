@@ -26,11 +26,17 @@ pub fn consent_for<E: FilterEngine>(
     certificates: &dyn Certificates,
     live: &LiveErrand,
 ) -> ErrandStep {
-    let accepted =
-        match what_the_site_accepts(engine, request.filter(), request.sticky(), ours, live) {
-            Ok(accepted) => accepted,
-            Err(step) => return step,
-        };
+    let accepted = match what_the_site_accepts(
+        engine,
+        request.filter(),
+        request.sticky(),
+        ours,
+        certificates,
+        live,
+    ) {
+        Ok(accepted) => accepted,
+        Err(step) => return step,
+    };
 
     if request.is_headless() {
         if let Some(only) = the_only_one_among(&accepted) {
@@ -54,11 +60,17 @@ pub fn consent_to_the_batch<E: FilterEngine>(
     certificates: &dyn Certificates,
     live: &LiveErrand,
 ) -> ErrandStep {
-    let accepted =
-        match what_the_site_accepts(engine, request.filter(), request.sticky(), ours, live) {
-            Ok(accepted) => accepted,
-            Err(step) => return step,
-        };
+    let accepted = match what_the_site_accepts(
+        engine,
+        request.filter(),
+        request.sticky(),
+        ours,
+        certificates,
+        live,
+    ) {
+        Ok(accepted) => accepted,
+        Err(step) => return step,
+    };
 
     let (rows, stuck) = rows_preselecting_the_stuck(accepted, request.sticky(), certificates, live);
     let already_chosen = stuck.or_else(|| {
@@ -86,11 +98,17 @@ pub fn consent_to_the_local_batch<E: FilterEngine>(
     live: &LiveErrand,
 ) -> ErrandStep {
     let LocalBatchAsk { request, batch } = ask;
-    let accepted =
-        match what_the_site_accepts(engine, request.filter(), request.sticky(), ours, live) {
-            Ok(accepted) => accepted,
-            Err(step) => return step,
-        };
+    let accepted = match what_the_site_accepts(
+        engine,
+        request.filter(),
+        request.sticky(),
+        ours,
+        certificates,
+        live,
+    ) {
+        Ok(accepted) => accepted,
+        Err(step) => return step,
+    };
 
     let (rows, stuck) = rows_preselecting_the_stuck(accepted, request.sticky(), certificates, live);
     let already_chosen = stuck.or_else(|| {
@@ -123,6 +141,7 @@ fn what_the_site_accepts<E: FilterEngine>(
     filter: &SiteFilter,
     sticky: StickyCertificate,
     ours: Vec<TokenCertificate>,
+    certificates: &dyn Certificates,
     live: &LiveErrand,
 ) -> Result<Vec<TokenCertificate>, ErrandStep> {
     if sticky.resets() {
@@ -134,8 +153,8 @@ fn what_the_site_accepts<E: FilterEngine>(
     }
 
     let owned = ours.len();
-    let accepted =
-        filtering::keep_what_the_site_accepts(engine, filter, ours).map_err(|error| {
+    let accepted = filtering::keep_what_the_site_accepts(engine, filter, ours, certificates)
+        .map_err(|error| {
             answering(
                 live,
                 SiteOutcome::Refused(SiteRefusal::CouldNotFilter(error)),

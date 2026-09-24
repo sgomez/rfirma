@@ -45,6 +45,10 @@ impl Certificates for ALockedPdf<'_> {
         self.neighbours.rows_of(found)
     }
 
+    fn discovered_module(&self, library: &str) -> Option<PathBuf> {
+        self.neighbours.discovered_module(library)
+    }
+
     fn usable<'a>(
         &self,
         found: &'a [TokenCertificate],

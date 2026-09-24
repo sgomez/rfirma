@@ -30,6 +30,9 @@ pub fn told(refusal: &SiteRefusal) -> (Failure, SafCode) {
             ),
             SafCode::NoCertificatesInKeystore,
         ),
+        SiteRefusal::NotUsableForTheSite(error @ FilteringError::ModuleNotDiscovered(_)) => {
+            (Failure::from(error), SafCode::CannotAccessKeystore)
+        }
         SiteRefusal::NotUsableForTheSite(error) => {
             (Failure::from(error), SafCode::NoCertificatesInKeystore)
         }
@@ -206,6 +209,10 @@ impl From<&FilteringError> for Failure {
             FilteringError::ExcludedByTheSite(label) => Self::new(
                 "certificateNotFound",
                 format!("la sede excluye {label}: su filtro ya no lo acepta"),
+            ),
+            FilteringError::ModuleNotDiscovered(library) => Self::new(
+                "unsupportedKeyStore",
+                format!("rFirma no carga la biblioteca '{library}' que nombra la sede"),
             ),
         }
     }

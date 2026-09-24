@@ -404,3 +404,29 @@ fn a_connection_that_drops_while_the_operation_is_pending_does_not_take_the_erra
         "y el tramite termina igual, sin reintentar nada"
     );
 }
+
+#[test]
+fn a_selection_narrowed_to_a_module_rfirma_has_not_discovered_is_answered_with_saf_08() {
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let memory = a_memory(home.path());
+    let ours = vec![a_usable_certificate("FIRMA")];
+    let (listed, _) = listed_from(&ours);
+    let live = a_live();
+    let named =
+        base64::engine::general_purpose::URL_SAFE.encode(b"PKCS11:/tmp/cargado-por-la-sede.so");
+
+    let step = consent_for(
+        &AnEngine::answering(&[&[0]]),
+        &requested(&an_operation(&format!("&ksb64={named}"))),
+        ours,
+        &a_neighbourhood(home.path(), &listed, opened_for_nobody(), &memory),
+        &live,
+    );
+
+    let ErrandStep::Answering(SiteOutcome::Refused(refusal)) = &step else {
+        panic!("rFirma no carga el modulo que nombra la sede: {step:?}");
+    };
+    let (failure, code) = frontier::told(refusal);
+    assert_eq!(code, SafCode::CannotAccessKeystore);
+    assert_eq!(failure.situation, "unsupportedKeyStore");
+}

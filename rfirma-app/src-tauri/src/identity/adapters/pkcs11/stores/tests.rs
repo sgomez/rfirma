@@ -433,3 +433,106 @@ fn finds_softhsm_in_multiarch_subdirectory() {
     });
     assert_eq!(present, vec![module_path]);
 }
+
+#[test]
+fn a_registered_module_that_is_already_a_candidate_is_listed_once() {
+    let temp = tempfile::tempdir().expect("deberia poder crearse un directorio temporal");
+    let usr = temp.path().join("usr");
+    let softhsm = usr.join("lib/x86_64-linux-gnu/softhsm/libsofthsm2.so");
+    let opensc = usr.join("lib/x86_64-linux-gnu/pkcs11/opensc-pkcs11.so");
+    for library in [&softhsm, &opensc] {
+        std::fs::create_dir_all(library.parent().expect("tiene padre"))
+            .expect("deberia poder crearse el directorio");
+        std::fs::write(library, b"").expect("deberia poder escribirse la biblioteca");
+    }
+    let registry = temp.path().join("modules");
+    std::fs::create_dir_all(&registry).expect("deberia poder crearse el registro");
+    std::fs::write(
+        registry.join("softhsm2.module"),
+        format!("module: {}\n", softhsm.display()),
+    )
+    .expect("deberia poder escribirse el .module");
+    std::fs::write(
+        registry.join("opensc-pkcs11.module"),
+        "module: opensc-pkcs11.so\n",
+    )
+    .expect("deberia poder escribirse el .module");
+
+    let ours: Vec<PathBuf> = discovered_modules(&usr, &[registry])
+        .into_iter()
+        .filter(|module| module.starts_with(temp.path()))
+        .collect();
+
+    assert_eq!(ours, vec![softhsm, opensc]);
+}
+
+#[test]
+fn a_library_named_by_the_site_matches_the_discovered_module_it_canonicalises_to() {
+    let temp = tempfile::tempdir().expect("deberia poder crearse un directorio temporal");
+    let real = temp
+        .path()
+        .join("lib/x86_64-linux-gnu/softhsm/libsofthsm2.so");
+    std::fs::create_dir_all(real.parent().expect("tiene padre"))
+        .expect("deberia poder crearse el directorio");
+    std::fs::write(&real, b"").expect("deberia poder escribirse la biblioteca");
+    let without_multiarch = temp.path().join("lib/softhsm/libsofthsm2.so");
+    std::fs::create_dir_all(without_multiarch.parent().expect("tiene padre"))
+        .expect("deberia poder crearse el directorio");
+    std::os::unix::fs::symlink(&real, &without_multiarch).expect("deberia poder enlazarse");
+    let stores = [Store::module(&without_multiarch)];
+
+    assert_eq!(
+        discovered_module_named(&stores, real.to_str().expect("ruta valida")),
+        Some(without_multiarch.clone())
+    );
+    assert_eq!(
+        discovered_module_named(&stores, without_multiarch.to_str().expect("ruta valida")),
+        Some(without_multiarch)
+    );
+}
+
+#[test]
+fn a_library_that_rfirma_has_not_discovered_matches_nothing() {
+    let temp = tempfile::tempdir().expect("deberia poder crearse un directorio temporal");
+    let discovered = temp.path().join("descubierto.so");
+    let other = temp.path().join("otro.so");
+    std::fs::write(&discovered, b"").expect("deberia poder escribirse la biblioteca");
+    std::fs::write(&other, b"").expect("deberia poder escribirse la biblioteca");
+    let stores = [Store::module(&discovered)];
+
+    assert_eq!(
+        discovered_module_named(&stores, other.to_str().expect("ruta valida")),
+        None
+    );
+    assert_eq!(discovered_module_named(&stores, "/no/existe.so"), None);
+}
+
+#[test]
+fn the_softoken_behind_an_nss_profile_is_not_a_module_the_site_can_name() {
+    let temp = tempfile::tempdir().expect("deberia poder crearse un directorio temporal");
+    let softoken = temp.path().join("libsoftokn3.so");
+    std::fs::write(&softoken, b"").expect("deberia poder escribirse el softoken");
+    let stores = [Store::nss(&softoken, &temp.path().join(".pki/nssdb"))];
+
+    assert_eq!(
+        discovered_module_named(&stores, softoken.to_str().expect("ruta valida")),
+        None
+    );
+}
+
+#[test]
+fn the_softhsm_path_without_multiarch_is_the_one_discovered_on_this_machine() {
+    let named = Path::new("/usr/lib/softhsm/libsofthsm2.so");
+    let multiarch = Path::new("/usr/lib/x86_64-linux-gnu/softhsm/libsofthsm2.so");
+    if !multiarch.is_file() {
+        return;
+    }
+
+    assert_eq!(
+        discovered_module_named(
+            &[Store::module(multiarch)],
+            named.to_str().expect("ruta valida")
+        ),
+        Some(multiarch.to_path_buf())
+    );
+}

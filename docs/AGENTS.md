@@ -30,7 +30,7 @@ Busca en este índice, y si aun así necesitas el fichero, entra con
 | 0019 | El recuadro que pide la sede cruza crudo al puente, sin la conversión del local |
 | 0020 | La ventana de sede existe antes que la operación, y solo se enseña cuando hay algo que decir |
 | 0021 | La versión negociada al abrir el canal rige la sesión; `ver` solo cuenta sin canal |
-| 0022 | El almacén que nombra la sede: cuál se obedece y cuál sale con `SAF_07` |
+| 0022 | El almacén que nombra la sede: cuál se obedece, a qué módulo descubierto acota `PKCS11:<ruta>` y cuál sale con `SAF_08` |
 | 0023 | Se sigue al original en los casos felices salvo contradicción o riesgo grave: SHA-1 sí, XAdES explícita no |
 | 0024 | Un proceso por trámite de sede, y el escritorio aparte |
 | 0025 | `selectcert` no abre sesión en el token: sin PIN en una operación que no firma |

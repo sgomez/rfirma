@@ -5,6 +5,7 @@ use super::super::codes::SafCode;
 use super::super::data_source::DataSource;
 use super::super::filters::{site_filter, SiteFilter};
 use super::super::format::{format_of, RequestedFormat};
+use super::super::key_store::module_named_by;
 use super::super::refusal::Refusal;
 use super::super::url::AfirmaUrl;
 use super::document::optional_document;
@@ -202,7 +203,7 @@ pub(super) fn sign_and_save_request(
         algorithm,
         document,
         requested,
-        filter: site_filter(&declared),
+        filter: site_filter(&declared).within_the_module(module_named_by(url)),
         headless: properties.is_headless(),
         filename,
         extensions: comma_list_value(property_value(&declared, FILENAME_SAVE_EXTS)),

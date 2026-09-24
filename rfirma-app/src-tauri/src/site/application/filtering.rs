@@ -19,6 +19,8 @@ pub enum FilteringError {
     EngineOutOfRange(usize),
     /// La sede excluye el certificado elegido.
     ExcludedByTheSite(String),
+    /// La sede acota a una biblioteca PKCS#11 que no es ningún módulo que rFirma haya descubierto.
+    ModuleNotDiscovered(String),
 }
 
 impl From<TokenError> for FilteringError {
@@ -40,7 +42,7 @@ pub fn listing_the_site_accepts<E: FilterEngine>(
     filter: &SiteFilter,
 ) -> Result<Vec<TokenCertificate>, FilteringError> {
     let ours = certificates.listed()?;
-    keep_what_the_site_accepts(engine, filter, ours)
+    keep_what_the_site_accepts(engine, filter, ours, certificates)
 }
 
 /// Aplica el filtro de la sede a una lista de certificados ya filtrada localmente.
@@ -48,7 +50,9 @@ pub fn keep_what_the_site_accepts<E: FilterEngine>(
     engine: &E,
     filter: &SiteFilter,
     certificates: Vec<TokenCertificate>,
+    directory: &dyn Certificates,
 ) -> Result<Vec<TokenCertificate>, FilteringError> {
+    let certificates = within_the_module(filter, certificates, directory)?;
     let accepted = accepted_indexes(engine, filter, &certificates)?;
 
     Ok(certificates
@@ -69,14 +73,32 @@ pub fn usable_certificate_for_the_site<'a, E: FilterEngine>(
 ) -> Result<&'a TokenCertificate, FilteringError> {
     let chosen = directory.usable(certificates, handle)?;
 
-    let only_this_one = std::slice::from_ref(chosen).to_vec();
-    if accepted_indexes(engine, filter, &only_this_one)?.is_empty() {
+    let only_this_one = within_the_module(filter, vec![chosen.clone()], directory)?;
+    if only_this_one.is_empty() || accepted_indexes(engine, filter, &only_this_one)?.is_empty() {
         return Err(FilteringError::ExcludedByTheSite(
             chosen.reference().label().to_owned(),
         ));
     }
 
     Ok(chosen)
+}
+
+/// Los certificados del módulo al que acota la sede, que tiene que ser uno ya descubierto (ADR-0022).
+fn within_the_module(
+    filter: &SiteFilter,
+    certificates: Vec<TokenCertificate>,
+    directory: &dyn Certificates,
+) -> Result<Vec<TokenCertificate>, FilteringError> {
+    let Some(named) = filter.module() else {
+        return Ok(certificates);
+    };
+    let module = directory
+        .discovered_module(named)
+        .ok_or_else(|| FilteringError::ModuleNotDiscovered(named.to_owned()))?;
+    Ok(certificates
+        .into_iter()
+        .filter(|certificate| certificate.reference().module() == module)
+        .collect())
 }
 
 fn accepted_indexes<E: FilterEngine>(

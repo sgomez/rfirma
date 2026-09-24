@@ -1,6 +1,10 @@
 use super::*;
 use crate::crossing::Failure;
-use crate::identity::application::tests::{a_certificate, listed_from, NoMemory};
+use crate::identity::application::certificates::ListedCertificates;
+use crate::identity::application::tests::{
+    a_certificate, a_usable_certificate, listed_from, NoMemory,
+};
+use crate::identity::domain::certificate::CertificateRef;
 use crate::signing::domain::bridge::BridgeError;
 use crate::site::application::tests::Directory;
 use crate::site::domain::protocol::site_filter;
@@ -37,13 +41,42 @@ fn a_filter(expression: &str) -> SiteFilter {
     site_filter(&[("filters".to_owned(), expression.to_owned())])
 }
 
+fn a_directory<'a>(
+    certificates: &[TokenCertificate],
+    listed: &'a ListedCertificates,
+) -> Directory<'a> {
+    Directory {
+        certificates: certificates.to_vec(),
+        listed,
+        memory: &NoMemory,
+    }
+}
+
+const OPENSC: &str = "/usr/lib/x86_64-linux-gnu/pkcs11/opensc-pkcs11.so";
+
+fn a_card_certificate(label: &str, der: &[u8]) -> TokenCertificate {
+    TokenCertificate::new(
+        CertificateRef::new(OPENSC, "tarjeta", label, vec![0x02]),
+        der.to_vec(),
+    )
+}
+
+fn a_usable_card_certificate(label: &str) -> TokenCertificate {
+    a_card_certificate(label, a_usable_certificate(label).der())
+}
+
 #[test]
 fn the_expression_and_the_listing_reach_the_engine_untouched() {
     let engine = AnEngine::answering(&[0]);
     let certificates = vec![a_certificate("UNO", &[0x01]), a_certificate("DOS", &[0x02])];
 
-    keep_what_the_site_accepts(&engine, &a_filter("subject.contains:PEREZ"), certificates)
-        .expect("el motor contesta");
+    keep_what_the_site_accepts(
+        &engine,
+        &a_filter("subject.contains:PEREZ"),
+        certificates.clone(),
+        &a_directory(&certificates, &ListedCertificates::new()),
+    )
+    .expect("el motor contesta");
 
     let asked = engine.asked.borrow();
     assert_eq!(asked.len(), 1);
@@ -56,8 +89,13 @@ fn only_the_certificates_the_engine_picked_come_back() {
     let engine = AnEngine::answering(&[1]);
     let certificates = vec![a_certificate("UNO", &[0x01]), a_certificate("DOS", &[0x02])];
 
-    let kept = keep_what_the_site_accepts(&engine, &a_filter("ssl:true"), certificates)
-        .expect("el motor contesta");
+    let kept = keep_what_the_site_accepts(
+        &engine,
+        &a_filter("ssl:true"),
+        certificates.clone(),
+        &a_directory(&certificates, &ListedCertificates::new()),
+    )
+    .expect("el motor contesta");
 
     assert_eq!(kept.len(), 1);
     assert_eq!(kept[0].reference().label(), "DOS");
@@ -68,8 +106,13 @@ fn a_site_that_excludes_them_all_gives_an_empty_listing_and_not_a_failure() {
     let engine = AnEngine::answering(&[]);
     let certificates = vec![a_certificate("UNO", &[0x01])];
 
-    let kept = keep_what_the_site_accepts(&engine, &a_filter("dnie:true"), certificates)
-        .expect("excluirlos todos no es un fallo");
+    let kept = keep_what_the_site_accepts(
+        &engine,
+        &a_filter("dnie:true"),
+        certificates.clone(),
+        &a_directory(&certificates, &ListedCertificates::new()),
+    )
+    .expect("excluirlos todos no es un fallo");
 
     assert!(kept.is_empty());
 }
@@ -79,8 +122,13 @@ fn a_site_that_declares_nothing_still_reaches_the_engine() {
     let engine = AnEngine::answering(&[0]);
     let certificates = vec![a_certificate("UNO", &[0x01])];
 
-    keep_what_the_site_accepts(&engine, &SiteFilter::default(), certificates)
-        .expect("el motor contesta");
+    keep_what_the_site_accepts(
+        &engine,
+        &SiteFilter::default(),
+        certificates.clone(),
+        &a_directory(&certificates, &ListedCertificates::new()),
+    )
+    .expect("el motor contesta");
 
     assert_eq!(engine.asked.borrow()[0].0, "");
 }
@@ -141,8 +189,13 @@ fn an_index_outside_the_listing_is_a_failure_and_not_a_silent_shorter_list() {
     let engine = AnEngine::answering(&[7]);
     let certificates = vec![a_certificate("UNO", &[0x01])];
 
-    let failure = keep_what_the_site_accepts(&engine, &a_filter("ssl:true"), certificates)
-        .expect_err("7 no es una fila");
+    let failure = keep_what_the_site_accepts(
+        &engine,
+        &a_filter("ssl:true"),
+        certificates.clone(),
+        &a_directory(&certificates, &ListedCertificates::new()),
+    )
+    .expect_err("7 no es una fila");
 
     let failure = Failure::from(failure);
     assert!(failure.detail.contains('7'), "{}", failure.detail);
@@ -166,4 +219,94 @@ fn the_rfirma_criteria_run_before_the_expression_of_the_site() {
         ours < theirs,
         "la expresion de la sede se estaria aplicando antes que los criterios de rFirma"
     );
+}
+
+#[test]
+fn a_site_that_names_a_module_only_sees_the_certificates_of_that_module() {
+    let engine = AnEngine::answering(&[0]);
+    let certificates = vec![
+        a_certificate("UNO", &[0x01]),
+        a_card_certificate("DOS", &[0x02]),
+    ];
+    let listed = ListedCertificates::new();
+
+    let kept = keep_what_the_site_accepts(
+        &engine,
+        &a_filter("ssl:true").within_the_module(Some(OPENSC.to_owned())),
+        certificates.clone(),
+        &a_directory(&certificates, &listed),
+    )
+    .expect("el modulo esta descubierto");
+
+    assert_eq!(kept.len(), 1);
+    assert_eq!(kept[0].reference().label(), "DOS");
+    assert_eq!(engine.asked.borrow()[0].1, "Ag==");
+}
+
+#[test]
+fn a_module_rfirma_has_not_discovered_is_a_key_store_it_does_not_open() {
+    let engine = AnEngine::answering(&[0]);
+    let certificates = vec![a_certificate("UNO", &[0x01])];
+    let listed = ListedCertificates::new();
+
+    let failure = keep_what_the_site_accepts(
+        &engine,
+        &SiteFilter::default().within_the_module(Some("/tmp/cargado-por-la-sede.so".to_owned())),
+        certificates.clone(),
+        &a_directory(&certificates, &listed),
+    )
+    .expect_err("rFirma no carga el modulo que nombra la sede");
+
+    assert!(matches!(failure, FilteringError::ModuleNotDiscovered(_)));
+    let failure = Failure::from(failure);
+    assert_eq!(failure.situation, "unsupportedKeyStore");
+    assert!(
+        failure.detail.contains("/tmp/cargado-por-la-sede.so"),
+        "{}",
+        failure.detail
+    );
+    assert!(engine.asked.borrow().is_empty());
+}
+
+#[test]
+fn a_certificate_outside_the_module_the_site_names_is_not_usable() {
+    let engine = AnEngine::answering(&[0]);
+    let certificates = [
+        a_usable_certificate("FIRMA"),
+        a_usable_card_certificate("TARJETA"),
+    ];
+    let (listed, handles) = listed_from(&certificates);
+
+    let failure = usable_certificate_for_the_site(
+        &engine,
+        &SiteFilter::default().within_the_module(Some(OPENSC.to_owned())),
+        &certificates,
+        &handles[0],
+        &a_directory(&certificates, &listed),
+    )
+    .expect_err("no es del modulo que nombra la sede");
+
+    assert!(matches!(failure, FilteringError::ExcludedByTheSite(_)));
+    assert!(engine.asked.borrow().is_empty());
+}
+
+#[test]
+fn a_certificate_inside_the_module_the_site_names_is_usable() {
+    let engine = AnEngine::answering(&[0]);
+    let certificates = [
+        a_usable_certificate("FIRMA"),
+        a_usable_card_certificate("TARJETA"),
+    ];
+    let (listed, handles) = listed_from(&certificates);
+
+    let chosen = usable_certificate_for_the_site(
+        &engine,
+        &SiteFilter::default().within_the_module(Some(OPENSC.to_owned())),
+        &certificates,
+        &handles[1],
+        &a_directory(&certificates, &listed),
+    )
+    .expect("es del modulo que nombra la sede");
+
+    assert_eq!(chosen.reference().label(), "TARJETA");
 }
