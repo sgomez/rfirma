@@ -327,7 +327,7 @@ sistema: la selección ofrece los certificados del token y pide su PIN.
 """
 drive = { mode = "v4", script = "keystorepkcs11" }
 assistance = "person"
-store = "several"
+store = "token"
 question = "¿se pidió el PIN de un token y se ofrecieron sus certificados? [s/n]"
 person = { yes = "se abrió el token PKCS#11 que nombró la sede", no = "no se abrió el token que nombró la sede", yes_means = "conforme" }
 warning = "La sede pide el almacén PKCS#11 de SoftHSM: si te pide el PIN, es 1234, y elige cualquiera de los certificados que ofrezca. AutoFirma pide el PIN al abrir el token, antes de la lista; otro cliente puede pedirlo después de elegir."

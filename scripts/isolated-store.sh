@@ -7,15 +7,15 @@
 #
 # Almacenes:
 #
-# * rsa, ec: una NSS sin contrasena con un solo certificado de testdata/fnmt/,
-#   sin SoftHSM registrado y con SOFTHSM2_CONF apuntando a un directorio de
-#   tokens vacio. Ningun cliente pide PIN.
-# * several: la NSS sin contrasena con el RSA activo, el de curva eliptica y el
-#   de seudonimo, para medir los filtros; SoftHSM queda alcanzable por su
-#   biblioteca, sin registrar, para la sede que lo nombre.
-# * expired: la NSS sin contrasena con el de curva eliptica y el caducado, sin
-#   SoftHSM.
-# * token: la NSS vacia con SoftHSM registrado; sus tokens piden el PIN.
+# * rsa, ec, several, expired: una NSS sin contrasena con los certificados de
+#   testdata/fnmt/ que le tocan; SOFTHSM2_CONF apunta a un directorio de
+#   tokens propio y vacio del perfil. Ningun cliente pide PIN.
+# * token: la NSS vacia con SoftHSM registrado, un token propio del perfil con
+#   el RSA activo y el de curva eliptica de testdata/fnmt/, cada uno con su
+#   clave; el PIN es 1234.
+#
+# Ningun envoltorio apunta nunca al SOFTHSM2_CONF de quien corre la suite:
+# cada perfil monta el suyo, este lo use o no.
 #
 # El certificado personal del titular no llega al perfil: AutoFirma recibe
 # HOME y -Duser.home, rFirma HOME y XDG_*. La CA local de rFirma la crea este
@@ -31,7 +31,6 @@ set -euo pipefail
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 fnmt="$here/../testdata/fnmt"
 module="${RFIRMA_PKCS11_MODULE:-/usr/lib/softhsm/libsofthsm2.so}"
-softhsm_conf="${SOFTHSM2_CONF:-$HOME/.config/softhsm2/softhsm2.conf}"
 
 subject="${1:-}"
 store="${3:-rsa}"
@@ -68,6 +67,16 @@ for tool in certutil modutil pk12util; do
     }
 done
 
+if [ "$store" = token ]; then
+    for tool in softhsm2-util pkcs11-tool openssl; do
+        command -v "$tool" >/dev/null || {
+            echo "falta: $tool" >&2
+            echo "  sudo apt install -y softhsm2 opensc openssl" >&2
+            exit 1
+        }
+    done
+fi
+
 # La contrasena del .p12 sale de la tabla de testdata/fnmt/README.md.
 the_password_of() {
     awk -F'|' -v name="\`$1\`" '$2 ~ name { gsub(/[ `]/, "", $3); print $3; exit }' \
@@ -79,6 +88,12 @@ rm -rf "$profile"
 mkdir -p "$nssdb"
 certutil -d "sql:$nssdb" -N --empty-password
 
+mkdir -p "$profile/softhsm/tokens"
+softhsm_conf="$profile/softhsm/softhsm2.conf"
+printf 'directories.tokendir = %s\nobjectstore.backend = file\n' \
+    "$profile/softhsm/tokens" > "$softhsm_conf"
+export SOFTHSM2_CONF="$softhsm_conf"
+
 if [ "$store" = token ]; then
     [ -f "$module" ] || {
         echo "falta el modulo PKCS#11: $module" >&2
@@ -86,6 +101,30 @@ if [ "$store" = token ]; then
         exit 1
     }
     modutil -dbdir "sql:$nssdb" -add softhsm2 -libfile "$module" -force >/dev/null
+
+    token_label="rfirma-conformance"
+    softhsm2-util --init-token --free --label "$token_label" \
+        --so-pin 3737 --pin 1234 >/dev/null
+
+    # import_token_object <fichero .p12> <contrasena> <id> <etiqueta>
+    import_token_object() {
+        local p12="$1" password="$2" id="$3" label="$4"
+        openssl pkcs12 -in "$fnmt/$p12" -passin "pass:$password" -clcerts -nokeys -legacy \
+            | openssl x509 -outform DER -out "$profile/softhsm/cert-$id.der"
+        pkcs11-tool --module "$module" --token-label "$token_label" --login --pin 1234 \
+            --write-object "$profile/softhsm/cert-$id.der" --type cert --id "$id" --label "$label" \
+            >/dev/null
+        openssl pkcs12 -in "$fnmt/$p12" -passin "pass:$password" -nocerts -nodes -legacy \
+            | openssl pkcs8 -topk8 -nocrypt -outform DER -out "$profile/softhsm/key-$id.der"
+        pkcs11-tool --module "$module" --token-label "$token_label" --login --pin 1234 \
+            --write-object "$profile/softhsm/key-$id.der" --type privkey --id "$id" --label "$label" \
+            >/dev/null
+    }
+
+    import_token_object "active-rsa.p12" "$(the_password_of active-rsa.p12)" \
+        "01" "FNMT-ACTIVO-99999999R"
+    import_token_object "active-ecc.p12" "$(the_password_of active-ecc.p12)" \
+        "01" "FNMT-ACTIVO-ECC-99949991H"
 else
     for p12 in $p12s; do
         password="$(the_password_of "$p12")"
@@ -95,12 +134,6 @@ else
         }
         pk12util -i "$fnmt/$p12" -d "sql:$nssdb" -W "$password" -K "" >/dev/null
     done
-    if [ "$store" != several ]; then
-        mkdir -p "$profile/softhsm/tokens"
-        softhsm_conf="$profile/softhsm/softhsm2.conf"
-        printf 'directories.tokendir = %s\nobjectstore.backend = file\n' \
-            "$profile/softhsm/tokens" > "$softhsm_conf"
-    fi
 fi
 
 wrapper="$profile/launch-subject"
