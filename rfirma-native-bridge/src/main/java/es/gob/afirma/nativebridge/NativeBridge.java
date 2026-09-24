@@ -382,7 +382,8 @@ public final class NativeBridge {
      *
      * @param extraParams los {@code extraParams} de la sede, en formato
      *                    {@code java.util.Properties}.
-     * @param format      el formato de firma, {@code PAdES}.
+     * @param format      el formato de firma.
+     * @param signedDataLength la longitud de los datos que se van a firmar.
      * @return JSON con el bloque expandido. Propiedad del llamante: se libera
      *         con {@code autofirma_free_string}.
      */
@@ -390,11 +391,13 @@ public final class NativeBridge {
     public static CCharPointer expandExtraParams(
             final IsolateThread thread,
             final CCharPointer extraParams,
-            final CCharPointer format) {
+            final CCharPointer format,
+            final long signedDataLength) {
         try {
             final String expanded = ExtraParamsBridge.expand(
                     SessionStamp.parseParams(CTypeConversion.toJavaString(extraParams)),
-                    CTypeConversion.toJavaString(format));
+                    CTypeConversion.toJavaString(format),
+                    signedDataLength);
 
             final StringBuilder json = new StringBuilder("{\"ok\":true");
             field(json, "params", expanded);

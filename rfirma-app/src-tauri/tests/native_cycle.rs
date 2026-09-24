@@ -154,6 +154,7 @@ mod full_cycle {
             .expand_extra_params(ExpandRequest {
                 extra_params: "expPolicy=FirmaAGE\n",
                 format: "PAdES",
+                signed_data_length: 0,
             })
             .expect("el expansor tiene que contestar desde dentro de la imagen");
 
@@ -180,6 +181,7 @@ mod full_cycle {
             .expand_extra_params(ExpandRequest {
                 extra_params: "expPolicy=PoliticaQueNoExiste\n",
                 format: "PAdES",
+                signed_data_length: 0,
             })
             .expect_err("esa politica no se puede aplicar");
 

@@ -35,10 +35,16 @@ impl FilterEngine for NativeBridge {
 }
 
 impl PolicyEngine for NativeBridge {
-    fn expand(&self, extra_params: &str, format: &str) -> Result<String, BridgeError> {
+    fn expand(
+        &self,
+        extra_params: &str,
+        format: &str,
+        signed_data_length: usize,
+    ) -> Result<String, BridgeError> {
         self.expand_extra_params(ExpandRequest {
             extra_params,
             format,
+            signed_data_length,
         })
     }
 }
@@ -79,10 +85,17 @@ impl FilterEngine for Isolate {
 }
 
 impl PolicyEngine for Isolate {
-    fn expand(&self, extra_params: &str, format: &str) -> Result<String, BridgeError> {
+    fn expand(
+        &self,
+        extra_params: &str,
+        format: &str,
+        signed_data_length: usize,
+    ) -> Result<String, BridgeError> {
         let declared = extra_params.to_owned();
         let format = format.to_owned();
-        ran(self.run(move |bridge| PolicyEngine::expand(bridge, &declared, &format)))?
+        ran(self.run(move |bridge| {
+            PolicyEngine::expand(bridge, &declared, &format, signed_data_length)
+        }))?
     }
 }
 

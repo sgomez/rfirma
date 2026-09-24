@@ -594,6 +594,7 @@ impl PolicyEngine for APolicyEngine {
         &self,
         extra_params: &str,
         _format: &str,
+        _signed_data_length: usize,
     ) -> Result<String, crate::signing::domain::bridge::BridgeError> {
         self.asked.borrow_mut().push(extra_params.to_owned());
         self.answer.clone().map_err(|()| {

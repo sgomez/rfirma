@@ -30,7 +30,7 @@ class ExtraParamsBridgeTest {
 
     @Test
     void expands_the_age_policy_into_the_keys_the_original_writes() throws Exception {
-        final String block = ExtraParamsBridge.expand(params("expPolicy", "FirmaAGE"), "PAdES");
+        final String block = ExtraParamsBridge.expand(params("expPolicy", "FirmaAGE"), "PAdES", 0);
 
         assertFalse(block.contains("expPolicy="),
                 "la clave expandible se consume: " + block);
@@ -41,8 +41,32 @@ class ExtraParamsBridgeTest {
     }
 
     @Test
+    void packages_a_cades_document_under_one_megabyte_implicitly() throws Exception {
+        final String block = ExtraParamsBridge.expand(
+                params("expPolicy", "FirmaAGE"), "CAdES", 1024 * 1024 - 1);
+
+        assertTrue(block.contains("mode=implicit\n"), block);
+    }
+
+    @Test
+    void leaves_a_cades_document_of_one_megabyte_or_more_out_of_the_signature() throws Exception {
+        final String block = ExtraParamsBridge.expand(
+                params("expPolicy", "FirmaAGE"), "CAdES", 5L * 1024 * 1024 * 1024);
+
+        assertTrue(block.contains("mode=explicit\n"), block);
+    }
+
+    @Test
+    void keeps_the_mode_the_site_declared() throws Exception {
+        final String block = ExtraParamsBridge.expand(
+                params("expPolicy", "FirmaAGE", "mode", "explicit"), "CAdES", 10);
+
+        assertTrue(block.contains("mode=explicit\n"), block);
+    }
+
+    @Test
     void leaves_alone_what_declares_no_policy() throws Exception {
-        final String block = ExtraParamsBridge.expand(params("signReason", "Conforme"), "PAdES");
+        final String block = ExtraParamsBridge.expand(params("signReason", "Conforme"), "PAdES", 0);
 
         assertEquals("signReason=Conforme\n", block);
     }
@@ -54,7 +78,7 @@ class ExtraParamsBridgeTest {
     @Test
     void refuses_a_policy_that_does_not_fit_the_format() {
         assertThrows(ExtraParamsProcessor.IncompatiblePolicyException.class,
-                () -> ExtraParamsBridge.expand(params("expPolicy", "PoliticaInventada"), "PAdES"));
+                () -> ExtraParamsBridge.expand(params("expPolicy", "PoliticaInventada"), "PAdES", 0));
     }
 
     /** Y un subfiltro que la politica de la AGE no admite tampoco pasa. */
@@ -63,7 +87,7 @@ class ExtraParamsBridgeTest {
         assertThrows(ExtraParamsProcessor.IncompatiblePolicyException.class,
                 () -> ExtraParamsBridge.expand(
                         params("expPolicy", "FirmaAGE", "signatureSubFilter", "adbe.pkcs7.detached"),
-                        "PAdES"));
+                        "PAdES", 0));
     }
 
     /**

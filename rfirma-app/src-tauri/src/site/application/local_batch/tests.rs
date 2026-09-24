@@ -85,7 +85,12 @@ impl FilterEngine for Untouched {
 }
 
 impl PolicyEngine for Untouched {
-    fn expand(&self, _extra_params: &str, _format: &str) -> Result<String, BridgeError> {
+    fn expand(
+        &self,
+        _extra_params: &str,
+        _format: &str,
+        _signed_data_length: usize,
+    ) -> Result<String, BridgeError> {
         unreachable!("la guarda no llega a expandir políticas")
     }
 }
