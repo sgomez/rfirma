@@ -1,7 +1,6 @@
 //! Las peticiones de `sign`, `cosign` y `countersign`.
 
 use super::super::algorithm::AskedAlgorithm;
-use super::super::codes::Parameter;
 use super::super::data_source::DataSource;
 use super::super::filters::{site_filter, SiteFilter};
 use super::super::format::{format_of, RequestedFormat};
@@ -23,7 +22,6 @@ use crate::site::domain::triphase_server::ServerFormat;
 const TARGET: &str = "target";
 
 const TARGET_TREE: &str = "tree";
-const TARGET_LEAFS: &str = "leafs";
 
 /// A qué firmas de la que llega alcanza una contrafirma (`CounterSignTarget`, 1.9.2).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -35,12 +33,12 @@ pub enum CounterTarget {
 }
 
 impl CounterTarget {
-    /// El objetivo que nombra ese `target=`, o nada si no es ninguno de los dos.
-    pub fn named(text: &str) -> Option<Self> {
-        match text.trim().to_ascii_lowercase().as_str() {
-            TARGET_TREE => Some(Self::Tree),
-            TARGET_LEAFS => Some(Self::Leafs),
-            _ => None,
+    /// El árbol si ese `target=` es `tree`; las hojas si es cualquier otra cosa, como el original.
+    pub fn named(text: &str) -> Self {
+        if text.trim().eq_ignore_ascii_case(TARGET_TREE) {
+            Self::Tree
+        } else {
+            Self::Leafs
         }
     }
 }
@@ -257,20 +255,8 @@ pub(super) fn sign_request(
 }
 
 /// La ronda de `countersign`, con el objetivo que declaró la sede o el `leafs` del original.
-pub(super) fn counter_round(declared: &[(String, String)]) -> Result<SignatureRound, Refusal> {
-    let Some(declared) = property_value(declared, TARGET) else {
-        return Ok(SignatureRound::Counter {
-            target: CounterTarget::Leafs,
-        });
-    };
-    CounterTarget::named(&declared)
-        .map(|target| SignatureRound::Counter { target })
-        .ok_or_else(|| {
-            Refusal::about(
-                Parameter::Properties,
-                format!(
-                    "el objetivo de contrafirma '{declared}' no se atiende: solo 'tree' o 'leafs'"
-                ),
-            )
-        })
+pub(super) fn counter_round(declared: &[(String, String)]) -> SignatureRound {
+    let target = property_value(declared, TARGET)
+        .map_or(CounterTarget::Leafs, |declared| CounterTarget::named(&declared));
+    SignatureRound::Counter { target }
 }
