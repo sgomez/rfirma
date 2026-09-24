@@ -6,7 +6,9 @@ use super::support::*;
 use super::support_requests::*;
 use crate::documents::application::documents::OpenedDocuments;
 use crate::identity::application::certificates::ListedCertificates;
-use crate::identity::application::tests::{a_usable_certificate, listed_from};
+use crate::identity::application::tests::{
+    a_usable_certificate, an_expired_certificate, listed_from,
+};
 use crate::identity::domain::certificate::TokenCertificate;
 use crate::signing::adapters::memory::Memory;
 use crate::signing::application::tests::a_memory;
@@ -49,6 +51,39 @@ fn headless_with_a_single_accepted_certificate_answers_without_asking() {
 
     let ErrandStep::Answering(SiteOutcome::Certificate(_)) = step else {
         panic!("con un solo certificado admitido no se pregunta: {step:?}");
+    };
+}
+
+#[test]
+fn headless_with_a_single_expired_candidate_answers_saf19_without_asking() {
+    let step = a_headless_selection(vec![an_expired_certificate("CADUCADO")], &[0]);
+
+    let ErrandStep::NoCertificate {
+        reason: NoCertificate::TheSiteExcludedThemAll,
+        answered: Some(reply),
+        ..
+    } = step
+    else {
+        panic!("un unico candidato caducado no abre ventana en headless: {step:?}");
+    };
+    assert_eq!(
+        on_the_wire(&reply),
+        WireAnswer::refused(SafCode::NoCertificatesInKeystore).on_the_wire()
+    );
+}
+
+#[test]
+fn headless_with_an_expired_and_a_usable_candidate_picks_the_usable_one() {
+    let step = a_headless_selection(
+        vec![
+            an_expired_certificate("CADUCADO"),
+            a_usable_certificate("FIRMA"),
+        ],
+        &[0, 1],
+    );
+
+    let ErrandStep::Answering(SiteOutcome::Certificate(_)) = step else {
+        panic!("con un solo candidato vigente tampoco se pregunta: {step:?}");
     };
 }
 
@@ -110,6 +145,51 @@ fn a_signature_under_headless_arrives_with_its_only_certificate_already_chosen()
 }
 
 #[test]
+fn a_signature_under_headless_with_a_single_expired_candidate_answers_saf19_without_asking() {
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let memory = a_memory(home.path());
+    let ours = vec![an_expired_certificate("CADUCADO")];
+    let (listed, _) = listed_from(&ours);
+    let opened = OpenedDocuments::new();
+    let live = a_live();
+    let engine = AnEngine::answering(&[&[0]]);
+    let policies = APolicyEngine::answering("");
+    let scratch = home.path().join("errand");
+
+    let step = consent_to_sign(
+        &a_desk(
+            &engine,
+            &policies,
+            &[],
+            home.path(),
+            &listed,
+            &opened,
+            &memory,
+            &scratch,
+        ),
+        &signature_requested(&a_signature(
+            "sign",
+            &format!("&properties={}", headless_properties()),
+        )),
+        ours,
+        &live,
+    );
+
+    let ErrandStep::NoCertificate {
+        reason: NoCertificate::TheSiteExcludedThemAll,
+        answered: Some(reply),
+        ..
+    } = step
+    else {
+        panic!("un unico candidato caducado no abre ventana en headless: {step:?}");
+    };
+    assert_eq!(
+        on_the_wire(&reply),
+        WireAnswer::refused(SafCode::NoCertificatesInKeystore).on_the_wire()
+    );
+}
+
+#[test]
 fn a_signature_without_headless_leaves_the_choice_open() {
     let asked = a_consent_to_sign("");
 
@@ -117,6 +197,58 @@ fn a_signature_without_headless_leaves_the_choice_open() {
         panic!("hay algo que firmar");
     };
     assert_eq!(consent.already_chosen, None);
+}
+
+#[test]
+fn a_signature_without_headless_shows_an_expired_candidate_with_its_status_but_never_chooses_it() {
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let memory = a_memory(home.path());
+    let ours = vec![
+        an_expired_certificate("CADUCADO"),
+        a_usable_certificate("FIRMA"),
+    ];
+    let (listed, _) = listed_from(&ours);
+    let opened = OpenedDocuments::new();
+    let live = a_live();
+    let engine = AnEngine::answering(&[&[0, 1]]);
+    let policies = APolicyEngine::answering("");
+    let scratch = home.path().join("errand");
+
+    let step = consent_to_sign(
+        &a_desk(
+            &engine,
+            &policies,
+            &[],
+            home.path(),
+            &listed,
+            &opened,
+            &memory,
+            &scratch,
+        ),
+        &signature_requested(&a_signature("sign", "")),
+        ours,
+        &live,
+    );
+
+    let ErrandStep::AskingToSign(consent) = step else {
+        panic!("hay algo que firmar: {step:?}");
+    };
+    assert_eq!(
+        consent.certificates.len(),
+        2,
+        "la ventana enseña el caducado, no lo oculta"
+    );
+    assert!(
+        consent
+            .certificates
+            .iter()
+            .any(|row| !row.status.is_usable()),
+        "y con su estado, que dice que no se puede elegir"
+    );
+    assert_eq!(
+        consent.already_chosen, None,
+        "sin headless no se elige nadie por la persona"
+    );
 }
 
 /// Sin `properties` legible no hay filtro, ni parámetros adicionales, ni recuadro que enseñar:

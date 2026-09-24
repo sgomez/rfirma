@@ -2,7 +2,7 @@ use super::*;
 use crate::crossing::Failure;
 use crate::identity::application::certificates::ListedCertificates;
 use crate::identity::application::tests::{
-    a_certificate, a_usable_certificate, listed_from, NoMemory,
+    a_certificate, a_usable_certificate, an_expired_certificate, listed_from, NoMemory,
 };
 use crate::identity::domain::certificate::CertificateRef;
 use crate::signing::domain::bridge::BridgeError;
@@ -131,6 +131,29 @@ fn a_site_that_declares_nothing_still_reaches_the_engine() {
     .expect("el motor contesta");
 
     assert_eq!(engine.asked.borrow()[0].0, "");
+}
+
+#[test]
+fn without_any_filter_the_engine_s_own_default_still_hides_the_expired_one() {
+    let certificates = vec![
+        an_expired_certificate("CADUCADO"),
+        a_usable_certificate("FIRMA"),
+    ];
+    // Sin filtros declarados el motor original añade su propio filtro de caducidad
+    // (`CertFilterManager`, ETSI TS 119 102-1) y omite el índice del caducado.
+    let engine = AnEngine::answering(&[1]);
+    let listed = ListedCertificates::new();
+
+    let kept = keep_what_the_site_accepts(
+        &engine,
+        &SiteFilter::default(),
+        certificates.clone(),
+        &a_directory(&certificates, &listed),
+    )
+    .expect("el motor contesta");
+
+    assert_eq!(kept.len(), 1, "el caducado sigue oculto, como el original");
+    assert_eq!(kept[0].reference().label(), "FIRMA");
 }
 
 #[test]
@@ -288,6 +311,53 @@ fn a_certificate_outside_the_module_the_site_names_is_not_usable() {
 
     assert!(matches!(failure, FilteringError::ExcludedByTheSite(_)));
     assert!(engine.asked.borrow().is_empty());
+}
+
+#[test]
+fn the_engine_admitting_an_expired_certificate_still_keeps_it_for_the_window_to_show() {
+    let engine = AnEngine::answering(&[0]);
+    let certificates = vec![an_expired_certificate("CADUCADO")];
+
+    let kept = keep_what_the_site_accepts(
+        &engine,
+        &a_filter("ssl:true"),
+        certificates.clone(),
+        &a_directory(&certificates, &ListedCertificates::new()),
+    )
+    .expect("el motor lo admite");
+
+    assert_eq!(
+        kept.len(),
+        1,
+        "la ventana necesita verlo, aunque no se vaya a entregar"
+    );
+}
+
+#[test]
+fn an_expired_certificate_is_never_usable_even_when_the_site_admits_it() {
+    let engine = AnEngine::answering(&[0]);
+    let certificates = [an_expired_certificate("CADUCADO")];
+    let (listed, handles) = listed_from(&certificates);
+
+    let failure = usable_certificate_for_the_site(
+        &engine,
+        &a_filter("ssl:true"),
+        &certificates,
+        &handles[0],
+        &Directory {
+            certificates: certificates.to_vec(),
+            listed: &listed,
+            memory: &NoMemory,
+        },
+    )
+    .expect_err("un certificado caducado no se entrega aunque la sede lo admita");
+
+    let failure = Failure::from(failure);
+    assert_eq!(failure.situation, "certificateNotFound");
+    assert!(
+        engine.asked.borrow().is_empty(),
+        "un certificado caducado no llega a preguntarse al motor"
+    );
 }
 
 #[test]

@@ -400,6 +400,7 @@ fn consent_to_a_signature<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
         desk.engine,
         ask.filter,
         ask.sticky,
+        ask.headless,
         ours,
         &desk.neighbours,
         live,
