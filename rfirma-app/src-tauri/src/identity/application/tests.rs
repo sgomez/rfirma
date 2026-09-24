@@ -1,6 +1,7 @@
 //! Los dobles de los puertos de `identity` y los certificados de prueba que comparten las gradas A de todos los contextos.
 
 use std::path::Path;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use crate::identity::application::certificates::ListedCertificates;
 use crate::identity::domain::algorithm::SignatureAlgorithm;
@@ -101,6 +102,54 @@ pub(crate) fn a_usable_certificate(label: &str) -> TokenCertificate {
         .to_der()
         .expect("el certificado deberia poder salir en DER");
     a_certificate(label, &der)
+}
+
+/// Construye un certificado X.509 caducado: en vigor hace sesenta días, hasta hace treinta.
+pub(crate) fn an_expired_certificate(label: &str) -> TokenCertificate {
+    let not_before = SystemTime::now() - Duration::from_secs(60 * 24 * 60 * 60);
+    let not_after = SystemTime::now() - Duration::from_secs(30 * 24 * 60 * 60);
+
+    let key = generate_key().expect("la clave de pruebas deberia generarse");
+    let mut name = X509Name::builder().expect("deberia poder construirse un nombre");
+    name.append_entry_by_nid(Nid::COMMONNAME, label)
+        .expect("el nombre comun deberia entrar");
+    let name = name.build();
+
+    let mut builder = X509::builder().expect("deberia poder construirse un certificado");
+    builder.set_version(2).expect("la version deberia ponerse");
+    builder
+        .set_serial_number(&random_serial().expect("el serie deberia generarse"))
+        .expect("el serie deberia ponerse");
+    builder
+        .set_subject_name(&name)
+        .expect("el titular deberia ponerse");
+    builder
+        .set_issuer_name(&name)
+        .expect("el emisor deberia ponerse");
+    builder.set_pubkey(&key).expect("la clave deberia ponerse");
+    builder
+        .set_not_before(&unix_time(not_before))
+        .expect("el inicio deberia ponerse");
+    builder
+        .set_not_after(&unix_time(not_after))
+        .expect("el fin deberia ponerse");
+    builder
+        .sign(&key, MessageDigest::sha256())
+        .expect("el certificado de pruebas deberia firmarse");
+
+    let der = builder
+        .build()
+        .to_der()
+        .expect("el certificado deberia poder salir en DER");
+    a_certificate(label, &der)
+}
+
+fn unix_time(instant: SystemTime) -> Asn1Time {
+    let secs = instant
+        .duration_since(UNIX_EPOCH)
+        .expect("el instante deberia ser posterior a 1970")
+        .as_secs();
+    Asn1Time::from_unix(secs as i64).expect("deberia poder construirse la fecha")
 }
 
 /// Una memoria que no recuerda ningún certificado y no escribe en ningún sitio.

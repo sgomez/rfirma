@@ -30,6 +30,7 @@ pub fn consent_for<E: FilterEngine>(
         engine,
         request.filter(),
         request.sticky(),
+        request.is_headless(),
         ours,
         certificates,
         live,
@@ -64,6 +65,7 @@ pub fn consent_to_the_batch<E: FilterEngine>(
         engine,
         request.filter(),
         request.sticky(),
+        request.is_headless(),
         ours,
         certificates,
         live,
@@ -102,6 +104,7 @@ pub fn consent_to_the_local_batch<E: FilterEngine>(
         engine,
         request.filter(),
         request.sticky(),
+        request.is_headless(),
         ours,
         certificates,
         live,
@@ -140,6 +143,7 @@ pub(super) fn what_the_site_accepts<E: FilterEngine>(
     engine: &E,
     filter: &SiteFilter,
     sticky: StickyCertificate,
+    headless: bool,
     ours: Vec<TokenCertificate>,
     certificates: &dyn Certificates,
     live: &LiveErrand,
@@ -161,7 +165,12 @@ pub(super) fn what_the_site_accepts<E: FilterEngine>(
             )
         })?;
 
-    if accepted.is_empty() {
+    if accepted.is_empty()
+        || (headless
+            && accepted
+                .iter()
+                .all(|certificate| !certificate.status().is_usable()))
+    {
         return Err(no_certificate_the_site_accepts(live, owned));
     }
 

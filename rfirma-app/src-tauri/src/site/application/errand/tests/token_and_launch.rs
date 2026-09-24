@@ -7,7 +7,9 @@ use super::support_requests::*;
 use crate::crossing::Failure;
 use crate::documents::application::documents::OpenedDocuments;
 use crate::identity::application::certificates::ListedCertificates;
-use crate::identity::application::tests::{a_usable_certificate, listed_from, NoMemory};
+use crate::identity::application::tests::{
+    a_usable_certificate, an_expired_certificate, listed_from, NoMemory,
+};
 use crate::identity::domain::certificate::TokenCertificate;
 use crate::signing::application::tests::a_memory;
 use crate::site::application::errand::*;
@@ -252,6 +254,38 @@ fn a_certificate_the_site_no_longer_accepts_is_never_handed_over() {
     assert_eq!(
         on_the_wire(&reply),
         WireAnswer::refused(SafCode::NoCertificatesInKeystore).on_the_wire()
+    );
+    assert!(
+        reply
+            .refusal()
+            .is_some_and(|it| Failure::from(it).situation == "certificateNotFound"),
+        "la ventana sabe cual es la situacion: {reply:?}"
+    );
+}
+#[test]
+fn an_expired_certificate_the_site_admits_is_never_handed_over() {
+    let ours: Vec<TokenCertificate> = vec![an_expired_certificate("CADUCADO")];
+    let (listed, handles) = listed_from(&ours);
+    let live = a_live();
+
+    let reply = identity_handed_over(
+        &AnEngine::answering(&[&[0]]),
+        &SiteFilter::default(),
+        false,
+        &ours,
+        &handles[0],
+        &crate::site::application::tests::Directory {
+            certificates: ours.clone(),
+            listed: &listed,
+            memory: &NoMemory,
+        },
+        &live,
+    );
+
+    assert_eq!(
+        on_the_wire(&reply),
+        WireAnswer::refused(SafCode::NoCertificatesInKeystore).on_the_wire(),
+        "aunque el motor lo admita, un certificado caducado no se entrega"
     );
     assert!(
         reply

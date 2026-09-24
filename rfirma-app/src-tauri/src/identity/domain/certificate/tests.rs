@@ -138,3 +138,15 @@ fn a_revocation_is_not_a_token_failure() {
 
     assert!(!status.is_usable());
 }
+
+#[test]
+fn a_certificate_past_its_not_after_is_expired_and_not_usable() {
+    let certificate = crate::identity::application::tests::an_expired_certificate("CADUCADO");
+
+    assert!(
+        matches!(certificate.status(), CertificateStatus::Expired { .. }),
+        "{:?}",
+        certificate.status()
+    );
+    assert!(!certificate.status().is_usable());
+}
