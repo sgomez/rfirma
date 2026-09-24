@@ -41,8 +41,7 @@ con `native-image` (ADR-0004). Lo que decide y firma vive en Rust.
   distintas de la 25 alcanzan clases distintas: con la de este equipo
   `ApacheCanonicalizer` no queda alcanzable y las pruebas de grada C pasan;
   con la del CI sí queda, y revientan con un `MissingResourceException` de
-  `com.sun.org.apache.xml.internal.security.resource.xmlsecurity`. El tamaño
-  del `.so` delata cuál has construido (41,5 MB frente a 48,4 MB). Antes de
+  `com.sun.org.apache.xml.internal.security.resource.xmlsecurity`. Antes de
   dar por transitorio un rojo del carril lento que no reproduces, baja el JDK
   exacto de ese run (`graalvm-ce-builds`) y reconstruye con él.
 * **`native-image` emite seis ficheros y se distribuye uno.** Los cinco
