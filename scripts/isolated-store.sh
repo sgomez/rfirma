@@ -13,6 +13,9 @@
 # * token: la NSS vacia con SoftHSM registrado, un token propio del perfil con
 #   el RSA activo y el de curva eliptica de testdata/fnmt/, cada uno con su
 #   clave; el PIN es 1234.
+# * token_apart: el mismo token, sin registrar en la NSS, y en la NSS solo el
+#   de seudonimo, que no esta en el token: distingue el almacen que nombra la
+#   sede por su biblioteca del almacen del sistema.
 #
 # Ningun envoltorio apunta nunca al SOFTHSM2_CONF de quien corre la suite:
 # cada perfil monta el suyo, este lo use o no.
@@ -35,7 +38,7 @@ module="${RFIRMA_PKCS11_MODULE:-/usr/lib/softhsm/libsofthsm2.so}"
 subject="${1:-}"
 store="${3:-rsa}"
 if [ ! -x "$subject" ]; then
-    echo "uso: $0 <ruta-del-binario> [autofirma|rfirma] [rsa|ec|token|several|expired]" >&2
+    echo "uso: $0 <ruta-del-binario> [autofirma|rfirma] [rsa|ec|token|token_apart|several|expired]" >&2
     exit 2
 fi
 
@@ -49,10 +52,11 @@ case "$store" in
     rsa) p12s="active-rsa.p12" ;;
     ec) p12s="active-ecc.p12" ;;
     token) p12s="" ;;
+    token_apart) p12s="pseudonym-rsa.p12" ;;
     several) p12s="active-rsa.p12 active-ecc.p12 pseudonym-rsa.p12" ;;
     expired) p12s="active-ecc.p12 expired-rsa.p12" ;;
     *)
-        echo "almacen desconocido: $store (rsa, ec, token, several o expired)" >&2
+        echo "almacen desconocido: $store (rsa, ec, token, token_apart, several o expired)" >&2
         exit 2
         ;;
 esac
@@ -67,7 +71,10 @@ for tool in certutil modutil pk12util; do
     }
 done
 
-if [ "$store" = token ]; then
+with_token=false
+case "$store" in token | token_apart) with_token=true ;; esac
+
+if $with_token; then
     for tool in softhsm2-util pkcs11-tool openssl; do
         command -v "$tool" >/dev/null || {
             echo "falta: $tool" >&2
@@ -94,13 +101,15 @@ printf 'directories.tokendir = %s\nobjectstore.backend = file\n' \
     "$profile/softhsm/tokens" > "$softhsm_conf"
 export SOFTHSM2_CONF="$softhsm_conf"
 
-if [ "$store" = token ]; then
+if $with_token; then
     [ -f "$module" ] || {
         echo "falta el modulo PKCS#11: $module" >&2
         echo "  sudo apt install -y softhsm2" >&2
         exit 1
     }
-    modutil -dbdir "sql:$nssdb" -add softhsm2 -libfile "$module" -force >/dev/null
+    if [ "$store" = token ]; then
+        modutil -dbdir "sql:$nssdb" -add softhsm2 -libfile "$module" -force >/dev/null
+    fi
 
     token_label="rfirma-conformance"
     softhsm2-util --init-token --free --label "$token_label" \
@@ -125,16 +134,16 @@ if [ "$store" = token ]; then
         "01" "FNMT-ACTIVO-99999999R"
     import_token_object "active-ecc.p12" "$(the_password_of active-ecc.p12)" \
         "02" "FNMT-ACTIVO-ECC-99949991H"
-else
-    for p12 in $p12s; do
-        password="$(the_password_of "$p12")"
-        [ -n "$password" ] || {
-            echo "no encuentro la contrasena de $p12 en $fnmt/README.md" >&2
-            exit 1
-        }
-        pk12util -i "$fnmt/$p12" -d "sql:$nssdb" -W "$password" -K "" >/dev/null
-    done
 fi
+
+for p12 in $p12s; do
+    password="$(the_password_of "$p12")"
+    [ -n "$password" ] || {
+        echo "no encuentro la contrasena de $p12 en $fnmt/README.md" >&2
+        exit 1
+    }
+    pk12util -i "$fnmt/$p12" -d "sql:$nssdb" -W "$password" -K "" >/dev/null
+done
 
 wrapper="$profile/launch-subject"
 if [ "$kind" = rfirma ]; then

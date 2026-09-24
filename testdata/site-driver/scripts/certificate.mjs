@@ -73,8 +73,9 @@ const THE_PINNED_WITHOUT_ASKING = "the-pinned-certificate-without-asking";
 const THE_PINNED_DESPITE_THE_FILTERS = "the-pinned-certificate-despite-the-filters";
 const SIGNED_WITH_THE_PINNED = "signed-with-the-pinned-certificate";
 const A_NEW_SELECTION_AFTER_THE_RELEASE = "a-new-selection-after-the-release";
+const A_CERTIFICATE_OF_THE_NAMED_TOKEN = "a-certificate-of-the-named-token";
 
-/** Los certificados del kit de la FNMT que montan los almacenes `several` y `expired`. */
+/** Los certificados del kit de la FNMT con los que se montan los almacenes aislados. */
 const THE_KIT = {
   "active-rsa": "el RSA activo (99999999R)",
   "active-ecc": "el de curva elíptica (99949991H)",
@@ -293,6 +294,15 @@ async function theReleaseWithoutResetScript() {
 
 const PKCS11_OF_SOFTHSM = "PKCS11:/usr/lib/softhsm/libsofthsm2.so";
 
+/** En el almacén `token_apart`: el token tiene los dos activos y la NSS, solo el de seudónimo. */
+async function theNamedTokenScript() {
+  AutoScript.setKeyStore(PKCS11_OF_SOFTHSM);
+  const answer = await aSelection([]);
+  const fromTheToken = isTheKit(answer, "active-rsa") || isTheKit(answer, "active-ecc");
+  emit(aConditionEvent(A_CERTIFICATE_OF_THE_NAMED_TOKEN, fromTheToken, described(answer)));
+  settlingThe(answer);
+}
+
 /** El DER del de seudónimo en Base64, como lo pide `encodedcert:`. */
 const theEncodedPseudonym = () => theKitCertificate("pseudonym-rsa").toString("base64");
 
@@ -372,7 +382,9 @@ export const CERTIFICATE_SCRIPTS = {
   batchfiltered: aPublishedScript(theFilteredBatchScript, {
     conditions: [THE_BATCH_SIGNED_WITH_THE_FILTERED],
   }),
-  keystorepkcs11: aPublishedScript(() => theBareSelectionScript([], PKCS11_OF_SOFTHSM)),
+  keystorepkcs11: aPublishedScript(theNamedTokenScript, {
+    conditions: [A_CERTIFICATE_OF_THE_NAMED_TOKEN],
+  }),
   keystoreunknown: aSelectionFromTheKeyStore("NINGUNO", [], "active-rsa"),
   keystoreforeign: aPublishedScript(() => theBareSelectionScript(["headless=true"], "WINDOWS")),
   keystorekept: aPublishedScript(theKeyStoreKeptScript),
