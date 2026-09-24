@@ -136,7 +136,7 @@ fn summary_of(sign: &LocalSingleSign) -> LocalBatchItem {
     }
 }
 
-fn what_the_site_accepts<E: FilterEngine>(
+pub(super) fn what_the_site_accepts<E: FilterEngine>(
     engine: &E,
     filter: &SiteFilter,
     sticky: StickyCertificate,
@@ -185,7 +185,7 @@ fn the_only_one_among(accepted: &[TokenCertificate]) -> Option<Vec<u8>> {
 }
 
 /// Las filas de los aceptados, con la fijada en la sesión como única preseleccionada si `sticky` la encuentra, y su asa.
-fn rows_preselecting_the_stuck(
+pub(super) fn rows_preselecting_the_stuck(
     accepted: Vec<TokenCertificate>,
     sticky: StickyCertificate,
     certificates: &dyn Certificates,
