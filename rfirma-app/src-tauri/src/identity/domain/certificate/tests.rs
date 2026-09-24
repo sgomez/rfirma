@@ -104,6 +104,22 @@ fn a_key_usage_with_non_repudiation_can_sign_by_content() {
 }
 
 #[test]
+fn a_key_usage_with_digital_signature_can_sign_by_content() {
+    let certificate = a_certificate_with_extensions("FIRMA_DIGITAL", |builder| {
+        let extension = KeyUsage::new()
+            .critical()
+            .digital_signature()
+            .build()
+            .expect("keyUsage deberia construirse");
+        builder
+            .append_extension(extension)
+            .expect("keyUsage deberia anadirse");
+    });
+
+    assert!(!certificate.cannot_sign_by_content());
+}
+
+#[test]
 fn a_reference_carries_the_four_coordinates_and_nothing_else() {
     let reference =
         CertificateRef::new("/usr/lib/x.so", "rfirma-test", "ETIQUETA", vec![0x2a, 0x01]);

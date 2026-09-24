@@ -127,9 +127,7 @@ import_certificate() {
 
 # import_ca_certificate <fichero .p12> <contrasena> <id> <etiqueta>
 #
-# El certificado de la CA emisora ya viaja dentro del .p12, como parte de la
-# cadena; no hace falta un fichero aparte para probar el filtro por contenido
-# del ADR-0025.
+# La CA emisora viaja dentro del .p12 (ADR-0025), sin fichero aparte.
 import_ca_certificate() {
     local p12="$1" password="$2" id="$3" label="$4"
     has_id "$certificates" "$id" && return 0

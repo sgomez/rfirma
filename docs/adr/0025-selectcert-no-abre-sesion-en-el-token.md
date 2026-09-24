@@ -14,11 +14,11 @@ Sin sesión no hay forma fiable de saber qué certificado tiene detrás una clav
 privada emparejada, pero sí de saber qué certificado **no puede firmar por su
 propio contenido**: uno de CA (`basicConstraints` con `cA=true`), o uno que
 declara `keyUsage` sin `digitalSignature` ni `nonRepudiation`. Esos dos se
-descartan del listado de un almacén de tarjeta o token sin sesión; el que no
-declara `keyUsage` se conserva, porque su ausencia no dice que no pueda
-firmar. Esta regla es sobre el certificado, no sobre el módulo: se aplica
-igual con o sin sesión, y por eso también filtra el listado de un token con
-sesión abierta.
+descartan del listado de un almacén de tarjeta o token **sin sesión**; el que
+no declara `keyUsage` se conserva, porque su ausencia no dice que no pueda
+firmar. Con sesión abierta ya hay una clave privada que emparejar, así que el
+filtro por contenido no entra: el listado sigue filtrando solo por esa clave
+emparejada, igual que en NSS.
 
 ## Consequences
 
