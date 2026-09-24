@@ -41,6 +41,7 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `adapters/transport.rs` | El transporte de producción del `wss` sobre el *loopback*. |
 | `adapters/triphase_server.rs` | El cliente del servidor trifásico que la sede nombra en `serverUrl`, sobre `reqwest::blocking`; **no** es el de los servlets del lote. Pruebas en `adapters/triphase_server/tests.rs`. |
 | `adapters/views.rs` | Los tipos que cruzan a la ventana de sede y su única conversión. Pruebas en `adapters/views/tests.rs`. |
+| `adapters/views/outcome.rs` | Los tipos del desenlace que cruzan a la ventana de sede: el rechazo clasificado y la falta de certificado. Pruebas en `adapters/views/tests.rs`. |
 | `adapters/window.rs` | El adaptador de la ventana de sede: la crea, la enseña, la oculta o la cierra, le publica lo que va pasando y decide qué hace su cierre por el gestor de ventanas con el trámite vivo (ADR-0024). |
 | `application/batch.rs` | El lote remoto ya consentido: prefirma, `PK1` con el token y postfirma. No decide el consentimiento. Pruebas en `application/batch/tests.rs`. |
 | `application/errand/area.rs` | El diálogo del área de la firma visible: el área que marca la persona, o lo que hace cancelarlo (ADR-0019). |
