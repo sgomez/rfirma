@@ -276,7 +276,11 @@ pub fn the_errand_that_signs_unless_refused(roots: &Arc<Roots>) -> SiteOperation
         }
         tokio::task::block_in_place(|| {
             if signed_with_the_secret(&desk, live, THE_TOKEN_SECRET).is_ok() {
-                errand::finish(&desk, live).expect("la firma deberia entregarse");
+                if let Some(ErrandStep::Saving(consent)) =
+                    errand::finish(&desk, live).expect("la firma deberia entregarse")
+                {
+                    saved_through_the_portal(&roots, &desk, &consent, live);
+                }
             }
         });
     })
@@ -284,11 +288,21 @@ pub fn the_errand_that_signs_unless_refused(roots: &Arc<Roots>) -> SiteOperation
 
 /// Los eventos y las condiciones que mide la sede de un guion de firma en v4, hasta su desenlace.
 pub async fn the_events_of_a_signing_script(script: &str) -> Vec<Event> {
+    the_events_of_a_script_saving_to(script, None).await
+}
+
+/// Lo mismo, con el diálogo de guardado del portal eligiendo esa ruta si el trámite guarda.
+pub async fn the_events_of_a_script_saving_to(
+    script: &str,
+    saving_to: Option<&Path>,
+) -> Vec<Event> {
     let material = ChannelMaterial::fresh();
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
-    let roots = Arc::new(tokio::task::block_in_place(|| {
-        a_running_rfirma(home.path())
-    }));
+    let mut roots = tokio::task::block_in_place(|| a_running_rfirma(home.path()));
+    if let Some(path) = saving_to {
+        roots.site.portal = Arc::new(TestPortalDialogs::saving_to(path));
+    }
+    let roots = Arc::new(roots);
     let client = PublishedClient::running_the_script(&material, BenchMode::Fourth, script);
 
     let channel = the_errand_channel(
@@ -324,34 +338,43 @@ pub fn the_save_errand_of(roots: &Arc<Roots>) -> SiteOperations {
         let Some(ErrandStep::Saving(consent)) = errand::attend(&desk, url, answering, live) else {
             return;
         };
-
-        let clues = DialogClues {
-            title: consent.title.clone(),
-            filename: consent.filename.clone(),
-            extensions: consent.extensions.clone(),
-            description: consent.description.clone(),
-            starting_folder: consent.starting_folder.as_ref().map(PathBuf::from),
-        };
-        let chosen = roots
-            .site
-            .portal
-            .save_file(&clues)
-            .expect("el diálogo del portal para guardar no falla");
-        match chosen {
-            Some(path) => {
-                errand::saved(
-                    desk.scratch.as_ref(),
-                    &path,
-                    &consent.data,
-                    consent.signer_der.as_deref(),
-                    live,
-                );
-            }
-            None => {
-                errand::decline(live);
-            }
-        }
+        saved_through_the_portal(&roots, &desk, &consent, live);
     })
+}
+
+/// Abre el diálogo de guardado del portal y escribe lo que el trámite guarda, o declina si se cancela.
+fn saved_through_the_portal(
+    roots: &Roots,
+    desk: &ErrandDesk<'_, Isolate, Isolate, Neighbours<'_>>,
+    consent: &errand::SavingConsent,
+    live: &errand::LiveErrand,
+) {
+    let clues = DialogClues {
+        title: consent.title.clone(),
+        filename: consent.filename.clone(),
+        extensions: consent.extensions.clone(),
+        description: consent.description.clone(),
+        starting_folder: consent.starting_folder.as_ref().map(PathBuf::from),
+    };
+    let chosen = roots
+        .site
+        .portal
+        .save_file(&clues)
+        .expect("el diálogo del portal para guardar no falla");
+    match chosen {
+        Some(path) => {
+            errand::saved(
+                desk.scratch.as_ref(),
+                &path,
+                &consent.data,
+                consent.signer_der.as_deref(),
+                live,
+            );
+        }
+        None => {
+            errand::decline(live);
+        }
+    }
 }
 
 /// El trámite atendiendo `load` o `multiload`: abre el selector del portal y entrega o cancela.
@@ -453,33 +476,7 @@ pub fn the_sign_and_save_errand_of(
         let Some(ErrandStep::Saving(saving_consent)) = saving_step else {
             panic!("signandsave tenía que desembocar en ErrandStep::Saving");
         };
-
-        let clues = DialogClues {
-            title: saving_consent.title.clone(),
-            filename: saving_consent.filename.clone(),
-            extensions: saving_consent.extensions.clone(),
-            description: saving_consent.description.clone(),
-            starting_folder: saving_consent.starting_folder.as_ref().map(PathBuf::from),
-        };
-        let chosen = roots
-            .site
-            .portal
-            .save_file(&clues)
-            .expect("el diálogo del portal para guardar no falla");
-        match chosen {
-            Some(path) => {
-                errand::saved(
-                    desk.scratch.as_ref(),
-                    &path,
-                    &saving_consent.data,
-                    saving_consent.signer_der.as_deref(),
-                    live,
-                );
-            }
-            None => {
-                errand::decline(live);
-            }
-        }
+        saved_through_the_portal(&roots, &desk, &saving_consent, live);
     })
 }
 
