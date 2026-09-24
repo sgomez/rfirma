@@ -114,9 +114,39 @@ mod full_cycle {
     use rfirma_lib::site::application::filtering;
     use rfirma_lib::site::domain::protocol::site_filter;
 
+    use std::path::PathBuf;
+
+    use rfirma_lib::identity::domain::certificate::{ListedCertificate, TokenCertificate};
+    use rfirma_lib::identity::domain::error::TokenError;
+    use rfirma_lib::site::ports::Certificates;
+
     use base64::Engine;
 
     use super::support::{bridge, signing_certificate, ACTIVE};
+
+    struct NoDiscoveredModules;
+
+    impl Certificates for NoDiscoveredModules {
+        fn listed(&self) -> Result<Vec<TokenCertificate>, TokenError> {
+            unreachable!("el filtrado recibe el listado hecho")
+        }
+
+        fn rows_of(&self, _found: Vec<TokenCertificate>) -> Vec<ListedCertificate> {
+            unreachable!("el filtrado no pinta filas")
+        }
+
+        fn discovered_module(&self, _library: &str) -> Option<PathBuf> {
+            None
+        }
+
+        fn usable<'a>(
+            &self,
+            _found: &'a [TokenCertificate],
+            _handle: &str,
+        ) -> Result<&'a TokenCertificate, TokenError> {
+            unreachable!("el filtrado no elige certificado")
+        }
+    }
 
     #[test]
     #[ignore = "grada C: necesita librfirma_crypto.so (just test-native)"]
@@ -201,8 +231,9 @@ mod full_cycle {
             "subject.contains:EIDAS CERTIFICADO PRUEBAS".to_owned(),
         )]);
 
-        let kept = filtering::keep_what_the_site_accepts(&bridge, &filter, listing)
-            .expect("el motor contesta");
+        let kept =
+            filtering::keep_what_the_site_accepts(&bridge, &filter, listing, &NoDiscoveredModules)
+                .expect("el motor contesta");
 
         assert_eq!(kept.len(), 1);
         assert_eq!(kept[0].reference().label(), ACTIVE);
