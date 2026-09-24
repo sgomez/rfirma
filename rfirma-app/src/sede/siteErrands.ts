@@ -1,7 +1,15 @@
 import type { Certificate } from "../signing/certificate";
 import type { StageResult } from "../signing/flow";
 import type { StoreSecret } from "../signing/secret";
-import type { Errand, ErrandStage, SiteDocument, SiteErrandPort, SiteOutcome } from "./errand";
+import type { PdfDocument } from "../viewer/pdf";
+import type {
+  Errand,
+  ErrandStage,
+  MarkedArea,
+  SiteDocument,
+  SiteErrandPort,
+  SiteOutcome,
+} from "./errand";
 import {
   documentInPlay,
   documentOf,
@@ -68,6 +76,8 @@ export interface SiteCommands {
   identify(certificate: string): Promise<StageResult<void>>;
   /** `site_confirm_signatures`: fija la clave confirmada y vuelve a validar. */
   confirmSignatures(): Promise<StageResult<void>>;
+  /** `site_mark_area`: `true` si el trámite sigue al consentimiento, `false` si la sede ya tiene su respuesta. */
+  markArea(area: MarkedArea | null): Promise<StageResult<boolean>>;
   /** `site_decline`: la sede recibe `CANCEL` en el acto. */
   decline(): Promise<void>;
   /** `site_begin_signing`: prefirma, y dice cómo pedir el secreto. */
@@ -100,6 +110,8 @@ export interface SiteCommands {
   dismissWarning(): Promise<void>;
   /** Lo que el PDF dice de sí mismo, o `null` si no se ha podido leer. */
   describeDocument(id: string): Promise<DescribedDocument | null>;
+  /** El PDF abierto para marcar sobre él el área de la firma visible, o `null` si no se ha podido abrir. */
+  openDocument(id: string): Promise<PdfDocument | null>;
 }
 
 /**
@@ -179,6 +191,12 @@ export function siteErrands(commands: SiteCommands): SiteErrandPort {
     // Un momento del backend manda sobre cualquier momento local: la sede ya
     // ha contestado, o el trámite ha cambiado de sitio.
     signing = null;
+    if (view.stage.kind === "markingTheArea") {
+      const pdf = await commands.openDocument(view.stage.document);
+      if (arrival !== arrivals) return;
+      publish({ ...errandOf(view), stage: { kind: "marking", pdf } });
+      return;
+    }
     if (view.stage.kind !== "askingToSign") {
       publish(errandOf(view));
       void openPortal(view.stage, arrival);
@@ -278,6 +296,20 @@ export function siteErrands(commands: SiteCommands): SiteErrandPort {
       const confirmed = await commands.confirmSignatures();
       if (arrival !== arrivals) return;
       if (!confirmed.ok) finish(refusedBy(confirmed.failure));
+    },
+
+    async markArea(area) {
+      if (errand?.stage.kind !== "marking") return;
+      // El consentimiento que sigue lo publica el backend; el contador separa
+      // ese momento del desenlace local de un área obligatoria cancelada.
+      const arrival = arrivals;
+      const marked = await commands.markArea(area);
+      if (arrival !== arrivals) return;
+      if (!marked.ok) {
+        finish(refusedBy(marked.failure));
+        return;
+      }
+      if (!marked.value) finish({ kind: "cancelled", document: null });
     },
 
     async cancel() {

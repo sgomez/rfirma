@@ -1,5 +1,6 @@
 //! Estado del trámite con la sede y gestión de su ciclo de vida (ADR-0016).
 
+mod area;
 mod chosen_document;
 mod revelation;
 
@@ -25,6 +26,7 @@ use super::outcome::{
     SiteOutcome,
 };
 use crate::site::ports::{Acknowledgement, ReplyHandle, Scratch};
+pub(super) use area::AreaToMark;
 use revelation::RevelationHandle;
 
 /// Códec negociado, compartido entre el trámite y quien lo apuntó.
@@ -167,6 +169,8 @@ pub(super) struct PendingSignature {
     pub(super) saving: Option<Box<SavingHints>>,
     /// La firma que hace el servidor trifásico de la sede, si se hace allí.
     pub(super) through_the_server: Option<ServerSignature>,
+    /// El área de la firma visible que falta por marcar, si falta.
+    pub(super) area: Option<AreaToMark>,
 }
 
 /// Lo que la firma contra el servidor trifásico lleva del consentimiento a la entrega.
@@ -511,7 +515,9 @@ impl LiveErrand {
     /// Firma consentida pendiente, si la hay.
     pub(super) fn the_signature_consented(&self) -> Option<PendingSignature> {
         match &*crate::lock(&self.consent) {
-            Some(PendingConsent::Signature(pending)) => Some(pending.clone()),
+            Some(PendingConsent::Signature(pending)) if pending.area.is_none() => {
+                Some(pending.clone())
+            }
             _ => None,
         }
     }

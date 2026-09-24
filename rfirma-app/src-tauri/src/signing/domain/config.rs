@@ -102,7 +102,8 @@ pub struct Placement {
 }
 
 impl Placement {
-    fn extra_params(&self) -> Vec<(String, String)> {
+    /// Las claves de `extraParams` que colocan el recuadro.
+    pub fn extra_params(&self) -> Vec<(String, String)> {
         let Self { rect, pages } = self;
         let PadesRect {
             lower_left_x,

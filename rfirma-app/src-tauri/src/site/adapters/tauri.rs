@@ -10,6 +10,7 @@ use super::window::{self as site_window, SITE_WINDOW};
 use crate::crossing::Failure;
 use crate::identity::adapters::tauri::install_certificate;
 use crate::identity::adapters::views::SecretView;
+use crate::signing::adapters::orders::PlacementOrder;
 
 /// Cierra la ventana del trámite de sede.
 #[tauri::command(async)]
@@ -64,6 +65,24 @@ pub fn site_confirm_signatures(app_handle: tauri::AppHandle) -> Result<(), Failu
     })?;
     site_window::publish_what_moved(&app_handle, Some(moved));
     Ok(())
+}
+
+/// Cierra el diálogo del área de la firma visible con la que marcó la persona, o sin ninguna si lo canceló; `false` si la sede ya tiene su respuesta.
+#[tauri::command(async)]
+pub fn site_mark_area(
+    area: Option<PlacementOrder>,
+    app_handle: tauri::AppHandle,
+) -> Result<bool, Failure> {
+    use tauri::Manager as _;
+
+    let marked = area.as_ref().map(PlacementOrder::placement).transpose()?;
+    let site = app_handle.state::<SiteRoot>();
+    let after = crate::site::application::errand::area_marked(&site.errand, marked.as_ref())?;
+    let goes_on = after == crate::site::application::errand::AfterTheArea::Consenting;
+    if goes_on {
+        site_window::publish_the_moment(&app_handle);
+    }
+    Ok(goes_on)
 }
 
 /// Postfirma del trámite de sede y entrega del resultado a la sede, o el paso al guardado

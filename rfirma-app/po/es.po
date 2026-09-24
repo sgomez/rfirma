@@ -1382,6 +1382,18 @@ msgstr ""
 msgid "sede.confirm.continue"
 msgstr "Continuar"
 
+msgid "sede.marking.title"
+msgstr "Marca dónde va tu firma"
+
+msgid "sede.marking.hint"
+msgstr "La página pide que tu firma se vea en el documento. Traza el recuadro sobre la página con el ratón."
+
+msgid "sede.marking.accept"
+msgstr "Continuar"
+
+msgid "sede.marking.unreadable"
+msgstr "No se ha podido abrir el documento para marcar dónde va la firma."
+
 msgid "sede.signing.title"
 msgstr "Firmando"
 

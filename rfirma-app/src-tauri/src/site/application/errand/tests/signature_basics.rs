@@ -18,7 +18,7 @@ use crate::site::application::session::SiteRefusal;
 use crate::site::application::site::{attend_launch, Attendance};
 use crate::site::domain::channel::ArrivalMode;
 use crate::site::domain::protocol::{
-    NegotiatedCredential, SafCode, SignatureRound, SiteVisibleSignature, WireAnswer,
+    IfCancelled, NegotiatedCredential, SafCode, SignatureRound, SiteVisibleSignature, WireAnswer,
     THE_PORT_OF_THE_THIRD_PROTOCOL,
 };
 use crate::site::domain::signing::SiteSignature;
@@ -371,8 +371,7 @@ fn a_box_the_site_placed_is_honoured_and_the_signature_goes_on() {
          signaturePositionOnPageLowerLeftY=100\n\
          signaturePositionOnPageUpperRightX=300\n\
          signaturePositionOnPageUpperRightY=180\n\
-         signaturePages=-1\n\
-         visibleSignature=want\n",
+         signaturePages=-1\n",
     );
 
     let ErrandStep::AskingToSign(consent) = asked else {
@@ -389,25 +388,27 @@ fn a_box_the_site_placed_is_honoured_and_the_signature_goes_on() {
     );
 }
 #[test]
-fn an_optional_box_the_site_never_placed_is_signed_invisible() {
+fn an_optional_box_the_site_never_placed_asks_the_person_and_cancelling_signs_invisible() {
     let asked = a_consent_to_sign("visibleSignature=optional\nvisibleAppearance=custom\n");
 
     let ErrandStep::AskingToSign(consent) = asked else {
-        panic!("se firma igual, sin recuadro: {asked:?}");
+        panic!("se pide el area antes de consentir: {asked:?}");
     };
-    assert_eq!(consent.visible, SiteVisibleSignature::Declined);
+    assert_eq!(
+        consent.visible,
+        SiteVisibleSignature::MarkedByThePerson(IfCancelled::SignsInvisible)
+    );
 }
 #[test]
-fn a_mandatory_box_the_site_never_placed_cancels_before_anyone_is_asked() {
+fn a_mandatory_box_the_site_never_placed_asks_the_person_before_refusing() {
     let asked = a_consent_to_sign("visibleSignature=want\n");
 
-    let ErrandStep::Answering(reply) = asked else {
-        panic!("no hay donde colocar el recuadro: {asked:?}");
+    let ErrandStep::AskingToSign(consent) = asked else {
+        panic!("se pide el area antes de contestar: {asked:?}");
     };
-    assert!(
-        on_the_wire(&reply).starts_with("SAF_43"),
-        "lo que sale es el codigo de la firma visible: {}",
-        on_the_wire(&reply)
+    assert_eq!(
+        consent.visible,
+        SiteVisibleSignature::MarkedByThePerson(IfCancelled::Refuses)
     );
 }
 #[test]

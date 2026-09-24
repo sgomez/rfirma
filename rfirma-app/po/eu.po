@@ -1393,6 +1393,18 @@ msgstr ""
 msgid "sede.confirm.continue"
 msgstr "Jarraitu"
 
+msgid "sede.marking.title"
+msgstr "Markatu non doan zure sinadura"
+
+msgid "sede.marking.hint"
+msgstr "Orriak zure sinadura dokumentuan ikustea eskatzen du. Marraztu laukia orrian saguarekin."
+
+msgid "sede.marking.accept"
+msgstr "Jarraitu"
+
+msgid "sede.marking.unreadable"
+msgstr "Ezin izan da dokumentua ireki sinadura non doan markatzeko."
+
 msgid "sede.signing.title"
 msgstr "Sinatzen"
 

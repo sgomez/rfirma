@@ -71,8 +71,10 @@ que representa el escritorio, para que se vea su tamaño real.
 1. **Una sede nunca provoca una firma silenciosa.** Los parámetros `headless` y
    `mandatoryCertSelection` se ignoran los dos: la pantalla de consentimiento
    aparece siempre, también cuando sólo hay un certificado.
-2. **No hay visor, ni bandeja, ni destino, ni memoria.** El documento que manda
-   la sede no se recuerda en ninguna parte y no entra en recientes.
+2. **No hay bandeja, ni destino, ni memoria.** El documento que manda la sede
+   no se recuerda en ninguna parte y no entra en recientes. **El visor solo
+   aparece cuando la sede pide marcar el área de la firma visible** (momento
+   1c), y es el de la ventana principal sin su botonera de abrir documentos.
 3. **Nunca se enumera lo que la sede descartó**, ni el criterio con que lo
    descartó. Eso es política de la sede, no información de quien firma.
 4. **Los dos canales van desacompasados a propósito.** Lo que la sede recibe
@@ -225,6 +227,30 @@ No se enseña recuento ni titulares de las firmas que sí se entienden: rFirma n
 tiene validador y no lo va a tener en esta versión, y enseñar «válida» sin
 poder sostenerlo es peor que el silencio (ID-305).
 
+### 1c · Marcar el área de la firma visible — sin artboard
+
+Solo cuando la sede pide una firma PAdES con `visibleSignature=want` u
+`optional`. Llega **antes** del consentimiento, como el diálogo de colocación
+del original, y es el único momento en el que la ventana **crece**: pasa a
+780 × 660 px mientras dura y vuelve a 520 × 420 al salir, porque en la caja útil
+de 329 px no cabe una página que se pueda marcar.
+
+- **Título**: «Marca dónde va tu firma», y debajo una frase que dice que la
+  página pide que la firma se vea y cómo se traza el recuadro.
+- **Cuerpo**: el visor de la ventana principal (`visor-de-documento.md`) con el
+  PDF de la sede, sin sello de vista previa: la persona traza el recuadro sobre
+  una página y puede moverlo, redimensionarlo y cambiar de página. El recuadro
+  va a **una sola** página, la del trazo.
+- **Acción principal**: `Continuar`, desactivada hasta que hay recuadro. Lleva
+  al consentimiento, y el área marcada sustituye a la que trajera la petición.
+- `Cancelar` en `--ghost` **no cancela el trámite**: cierra el diálogo del área,
+  y lo que sigue depende de la petición (ADR-0019). Con `want` y sin área en la
+  petición, la sede recibe `SAF_43` y queda el desenlace «cancelado»; en los
+  demás casos se pasa al consentimiento, y se firma donde decía la petición o
+  sin firma visible.
+- Si el PDF no se deja abrir, el cuerpo lo dice en una línea y solo queda
+  `Cancelar`.
+
 ### 2b · Hay que confirmar — sin artboard
 
 Sólo cuando el original no firmaría **sin que la persona lo confirme**: la sede
@@ -368,6 +394,7 @@ cancela— se borró por explicar lo evidente.
 | El canal no se abre (Chrome / Firefox) | `SedeEspera` · `no-va-chrome`, `no-va-firefox` | `Instalar…` (la CA local) |
 | Consentimiento de firma | `SedeConsentimiento` · `forma = confirmacion` | `Firmar` |
 | Consentimiento de cesión de datos | `SedeConsentimiento` · `situacion = entregar identidad` | `Enviar mis datos` |
+| Marcar el área de la firma visible | sin artboard | `Continuar` |
 | Hay que confirmar | sin artboard | `Continuar` |
 | Firmando | `SedeFirmando` · `firmando · se puede cancelar` | ninguna; `Cancelar` en `--ghost` |
 | Devolviendo a la sede | `SedeFirmando` · `devolviendo a la sede` | ninguna; el pie queda vacío |

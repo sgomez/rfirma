@@ -21,4 +21,5 @@ mod signature_formats;
 mod sticky_selection;
 mod token_and_launch;
 mod triphase_server;
+mod visible_area;
 mod websocket;

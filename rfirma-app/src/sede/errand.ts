@@ -1,5 +1,7 @@
 import type { Catalog } from "../i18n/catalog";
 import type { Certificate } from "../signing/certificate";
+import type { SigningOrder } from "../signing/flow";
+import type { PdfDocument } from "../viewer/pdf";
 
 /**
  * El trámite que abre una sede electrónica por `afirma://`, en el lado de la
@@ -120,6 +122,9 @@ export interface LocalBatchItem {
   round: SignatureRound;
 }
 
+/** El área de la firma visible que marca la persona, con la forma del recuadro de la firma local. */
+export type MarkedArea = SigningOrder["placement"];
+
 /** En qué momento de la secuencia está la ventana. */
 export type ErrandStage =
   /**
@@ -188,6 +193,11 @@ export type ErrandStage =
    * salidas: seguir, que fija la clave y vuelve a comprobar, o cancelar.
    */
   | { kind: "confirming"; messageCode: string }
+  /**
+   * La sede pide la firma visible y la persona marca su área sobre el PDF antes
+   * de elegir certificado. `null` es que el PDF no se ha podido abrir.
+   */
+  | { kind: "marking"; pdf: PdfDocument | null }
   | { kind: "outcome"; outcome: SiteOutcome }
   /**
    * No hay nada que consentir ni nada que elegir, y son **dos situaciones
@@ -254,6 +264,8 @@ export interface SiteErrandPort {
   consent(certificateId: string): Promise<void>;
   /** Sigue con lo que el validador del original señaló: se vuelve a comprobar sin preguntar. */
   confirmSignatures(): Promise<void>;
+  /** Cierra el diálogo del área de la firma visible con la que marcó la persona, o cancelándolo con `null`. */
+  markArea(area: MarkedArea | null): Promise<void>;
   /**
    * Abandona el trámite. Libera el `idsession` y la sede recibe `CANCEL` de
    * inmediato, sin esperar a que nadie cierre nada.
@@ -282,6 +294,7 @@ export function noErrand(): SiteErrandPort {
     watch: () => () => {},
     consent: async () => {},
     confirmSignatures: async () => {},
+    markArea: async () => {},
     cancel: async () => {},
     close: async () => {},
     lookAgain: async () => {},

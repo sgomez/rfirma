@@ -143,6 +143,8 @@ function stageOf(stage: SiteStageView, document: SiteDocument | null): ErrandSta
       };
     case "askingToConfirm":
       return { kind: "confirming", messageCode: stage.messageCode };
+    case "markingTheArea":
+      return { kind: "marking", pdf: null };
     case "askingToSignTheBatch":
       // Sin documento porque el lote no manda ninguno: sus ficheros se quedan
       // en la sede y lo que se consiente es cuántas firmas van a salir.

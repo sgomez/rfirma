@@ -1364,6 +1364,18 @@ msgstr ""
 msgid "sede.confirm.continue"
 msgstr "Continue"
 
+msgid "sede.marking.title"
+msgstr "Mark where your signature goes"
+
+msgid "sede.marking.hint"
+msgstr "The page asks for your signature to be visible on the document. Draw the box on the page with the mouse."
+
+msgid "sede.marking.accept"
+msgstr "Continue"
+
+msgid "sede.marking.unreadable"
+msgstr "The document could not be opened to mark where the signature goes."
+
 msgid "sede.signing.title"
 msgstr "Signing"
 

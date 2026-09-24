@@ -53,6 +53,7 @@ export function tauriSiteErrands(): SiteErrandPort {
     readErrand: () => invoke<SiteErrandView | null>("read_site_errand"),
     identify: (certificate) => stage(() => invoke<void>("site_identify", { certificate })),
     confirmSignatures: () => stage(() => invoke<void>("site_confirm_signatures")),
+    markArea: (area) => stage(() => invoke<boolean>("site_mark_area", { area })),
     decline: () => invoke<void>("site_decline"),
     beginSigning: (certificate) =>
       stage(() => invoke<StoreSecret>("site_begin_signing", { certificate })),
@@ -79,6 +80,15 @@ export function tauriSiteErrands(): SiteErrandPort {
         const bytes = new Uint8Array(await invoke<ArrayBuffer>("read_document", { id }));
         const pdf = await loader.load(bytes);
         return { title: pdf.title ?? null, pages: pdf.pageCount, sizeBytes: bytes.byteLength };
+      } catch {
+        return null;
+      }
+    },
+    openDocument: async (id) => {
+      try {
+        return await loader.load(
+          new Uint8Array(await invoke<ArrayBuffer>("read_document", { id })),
+        );
       } catch {
         return null;
       }

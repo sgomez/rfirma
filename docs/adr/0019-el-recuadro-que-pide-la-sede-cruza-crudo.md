@@ -3,10 +3,12 @@
 El [ADR-0006](0006-firma-visible-se-configura-sobre-el-documento.md) manda
 sobre el recuadro que la persona **arrastra sobre el visor**: nace de un
 arrastre, se guarda en espacio de usuario y llega al puente tras dos
-conversiones. Un trámite de sede no tiene visor sobre el que arrastrar nada:
-el recuadro, si lo hay, viene ya puesto en los `extraParams` de la petición
-(`signaturePositionOnPage*` y `signaturePage` o `signaturePages`). Es **otro
-recuadro**, con otro origen y otra regla, y este ADR es el que manda sobre él.
+conversiones. En un trámite de sede el recuadro, si lo hay, viene ya puesto en
+los `extraParams` de la petición (`signaturePositionOnPage*` y `signaturePage`
+o `signaturePages`). Es **otro recuadro**, con otro origen y otra regla, y
+este ADR es el que manda sobre él. La única excepción es la petición que trae
+`visibleSignature`: ahí la sede pide que la persona marque el área, y el
+recuadro vuelve a nacer de un trazo sobre el visor.
 
 Hay entonces **dos caminos del recuadro, y no comparten conversión**:
 
@@ -14,7 +16,9 @@ Hay entonces **dos caminos del recuadro, y no comparten conversión**:
   (`T⁻¹`, en `signing::placement`), porque ella apuntó a un punto de la
   pantalla y el recuadro tiene que caer ahí. Es el
   [ADR-0006](0006-firma-visible-se-configura-sobre-el-documento.md) y la
-  medición de `docs/research/coordenadas-recuadro-pades.md`.
+  medición de `docs/research/coordenadas-recuadro-pades.md`. Vale igual para
+  el área que la persona marca en la ventana de sede: la traza sobre el mismo
+  visor y cruza por la misma orden de colocación que el camino local.
 - **Lo elige la sede.** Sus claves cruzan al puente **tal y como vinieron**,
   letra por letra, sin pasar por ningún tipo nuestro.
 
@@ -60,16 +64,20 @@ que pide no se atiende.
 - **Las páginas contadas desde el final las resuelve el puente, y solo él.**
   `normalizePage` ya convierte `-1` en la última; resolverlas también en Rust
   daría la página equivocada.
-- **`visibleSignature=want` sin recuadro** se rechaza con `SAF_43` en el acto.
-  AutoFirma enseña ahí su diálogo de colocación y emite ese código si se
-  cancela; rFirma no tiene diálogo, así que llega al mismo código
-  directamente. La bandera se compara **sin recortar espacios**, como el
-  original: un `" WANT "` allí no es obligatorio y la firma sale invisible, y
-  recortar aquí endurecería una negativa que el original no hace.
-- **`visibleSignature=optional` sin recuadro** firma invisible, y un
-  `visibleAppearance=custom` sin datos estampa el aspecto por omisión. Es en
-  lo que queda «la persona ha declinado colocar» cuando no hay ni visor ni
-  diálogo.
+- **`visibleSignature=want` u `optional`**, en un formato PAdES, abren **antes
+  del consentimiento** el diálogo del área: la persona traza el recuadro sobre
+  el PDF, con o sin área en la petición, como hace el diálogo de colocación de
+  AutoFirma (`ProtocolInvocationLauncherSign`). La bandera se compara sin
+  distinguir mayúsculas y **sin recortar espacios**, como el original: un
+  `" WANT "` allí no abre diálogo y la firma sale como la petición diga.
+- **El área que marca la persona sustituye a la de la petición**: se borran
+  las cuatro esquinas y las dos claves de página que trajera la sede y se
+  escriben las de la persona, ya convertidas con `T⁻¹`. Es lo que hace el
+  original, que reescribe esas claves con las de su diálogo.
+- **Cancelar el diálogo** hace lo que haría el original: con `want` y sin área
+  en la petición, la sede recibe `SAF_43`; con área en la petición, se firma en
+  ella, sea `want` u `optional`; con `optional` y sin área, se firma invisible,
+  y un `visibleAppearance=custom` sin datos estampa el aspecto por omisión.
 - **`signaturePages=append` con recuadro puesto** se rechaza con `SAF_03`
   nombrando `properties`, no con `SAF_43`: añadir una página en blanco es
   modificar el documento antes de firmarlo, y la sede tiene que poder
@@ -102,6 +110,13 @@ ella lo puso. Descartada.
 viaje de ida y vuelta que pierde por el camino `signaturePage`, los rangos y
 los índices negativos, y que da una segunda opinión sobre un texto que ya
 interpreta el puente. Descartada.
+
+**Rechazar `visibleSignature=want` sin área con `SAF_43` en el acto**, sin
+diálogo. Fue lo que hizo rFirma mientras no tenía dónde marcar el área, y
+coincidía en el código con el original solo cuando la persona cancelaba: con
+`want` y el área en la petición el original sigue preguntando, y con
+`optional` la persona podía colocar una firma que rFirma le negaba. Descartada
+en cuanto la ventana de sede tuvo visor.
 
 **Resolver en Rust las páginas negativas** para validar el destino como se
 hace en el camino local. Daría la página equivocada, porque el puente las
