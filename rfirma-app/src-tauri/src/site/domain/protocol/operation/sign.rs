@@ -22,6 +22,7 @@ use crate::site::domain::triphase_server::ServerFormat;
 const TARGET: &str = "target";
 
 const TARGET_TREE: &str = "tree";
+const TARGET_LEAFS: &str = "leafs";
 
 /// A qué firmas de la que llega alcanza una contrafirma (`CounterSignTarget`, 1.9.2).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -39,14 +40,6 @@ impl CounterTarget {
             Self::Tree
         } else {
             Self::Leafs
-        }
-    }
-
-    /// El que contrafirma el lote local: el árbol si lo nombra, y las hojas en cualquier otro caso.
-    pub fn of_a_local_batch(declared: Option<&str>) -> Self {
-        match declared.and_then(Self::named) {
-            Some(Self::Tree) => Self::Tree,
-            _ => Self::Leafs,
         }
     }
 

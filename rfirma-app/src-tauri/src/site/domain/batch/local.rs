@@ -220,7 +220,7 @@ fn with_the_counter_target_resolved(extra_params: &mut Vec<(String, String)>) ->
         .iter()
         .find(|(key, _)| key == TARGET)
         .map(|(_, value)| value.as_str());
-    let target = CounterTarget::of_a_local_batch(declared);
+    let target = declared.map_or(CounterTarget::Leafs, CounterTarget::named);
     extra_params.retain(|(key, _)| key != TARGET);
     extra_params.push((TARGET.to_owned(), target.name().to_owned()));
     target
