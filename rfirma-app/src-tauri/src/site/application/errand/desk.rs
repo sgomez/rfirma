@@ -308,7 +308,12 @@ fn consent_to_a_signature<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
         return answering(live, SiteOutcome::RefusedByTheProtocol(refusal));
     }
 
-    if let Err(refusal) = refuse_explicit_xades(ask.format, ask.declared_params) {
+    if let Err(refusal) = refuse_explicit_xades(
+        ask.round,
+        ask.format,
+        ask.through_the_site_server,
+        ask.declared_params,
+    ) {
         return answering(live, SiteOutcome::RefusedByTheProtocol(refusal));
     }
 

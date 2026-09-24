@@ -12,9 +12,10 @@
 //!   Quien lo decide es `detection.rs`, con la misma comprobación de raíz y
 //!   tres hijos que `AOFacturaESigner.isValidDataFile`.
 //! - **La XAdES explícita no se reproduce**. El original avisa de que
-//!   `mode=explicit` está obsoleto y hashea el dato con SHA1 antes de firmar
-//!   (`ProtocolInvocationLauncherSign.java:390-405`); aquí `mode=explicit`
-//!   con XAdES sale con `SAF_06`.
+//!   `mode=explicit` está obsoleto y, en `sign` sin `useManifest=true` y fuera
+//!   de `XAdEStri`, hashea el dato con SHA1 antes de firmar
+//!   (`ProtocolInvocationLauncherSign.java:392-406`); aquí eso sale con
+//!   `SAF_06`, y en el resto de casos `mode` se ignora, como allí.
 //! - **El Base64 del servidor intermedio rechaza un carácter fuera del
 //!   alfabeto**. El original nunca lanza su «Bad Base64 input character»:
 //!   ningún valor de su tabla queda por debajo del umbral que lo dispara
