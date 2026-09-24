@@ -18,7 +18,7 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `adapters/channel/reply.rs` | El asa por la que se le contesta a la sede cuando la respuesta llega mucho después. Pruebas en `adapters/channel/reply/tests.rs`. |
 | `adapters/channel/server.rs` | El servidor del canal. **No existe escuchador en claro.** |
 | `adapters/codec.rs` | El códec de la versión 4 del protocolo. Pruebas en `adapters/codec/tests.rs`. |
-| `adapters/codec_v1.rs`, `adapters/codec_v3.rs` | Los códecs de las versiones 1 y 3, que delegan en el de la 4 en vez de repetirlo; el de la 3, además, rechaza la operación que exige un `ver` posterior. Pruebas en `adapters/codec_v1/tests.rs` y `adapters/codec_v3/tests.rs`. |
+| `adapters/codec_v1.rs`, `adapters/codec_v3.rs` | Los códecs del transporte `service` y de la versión 3, que delegan en el de la 4 en vez de repetirlo; el de la 3, además, rechaza la operación que exige un `ver` posterior. Pruebas en `adapters/codec_v1/tests.rs` y `adapters/codec_v3/tests.rs`. |
 | `adapters/codec_relay.rs` | El códec del servidor intermedio, el que cifra la respuesta con la clave negociada. Pruebas en `adapters/codec_relay/tests.rs`. |
 | `adapters/data_download.rs` | El cliente HTTP que baja el `dat` que la sede manda como URL. Pruebas en `adapters/data_download/tests.rs`. |
 | `adapters/desk.rs` | `Neighbours`: lo que el trámite pide a los contextos vecinos, servido sobre sus tres raíces, y la composición del algoritmo de la sede con la clave del certificado. Pruebas en `adapters/desk/tests.rs`. |

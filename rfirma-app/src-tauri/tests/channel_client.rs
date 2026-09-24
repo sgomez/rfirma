@@ -235,10 +235,13 @@ async fn a_site_launch_ends_with_the_echo_answered_over_the_open_channel() {
         &CodecTable {
             v4: std::sync::Arc::new(V4Codec),
             v3: std::sync::Arc::new(rfirma_lib::site::adapters::codec_v3::V3Codec),
-            v1: std::sync::Arc::new(rfirma_lib::site::adapters::codec_v1::V1Codec),
-            relay: std::sync::Arc::new(|key| {
+            v1: std::sync::Arc::new(|version| {
+                std::sync::Arc::new(rfirma_lib::site::adapters::codec_v1::V1Codec::new(version))
+                    as rfirma_lib::site::application::errand::NegotiatedCodec
+            }),
+            relay: std::sync::Arc::new(|key, version| {
                 std::sync::Arc::new(rfirma_lib::site::adapters::codec_relay::RelayCodec::new(
-                    key,
+                    key, version,
                 )) as rfirma_lib::site::application::errand::NegotiatedCodec
             }),
         },
