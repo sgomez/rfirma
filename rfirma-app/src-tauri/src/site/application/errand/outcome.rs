@@ -332,6 +332,8 @@ pub enum SiteOutcome {
         signer_der: Vec<u8>,
         /// La firma, en el formato que pidió la sede.
         signature: Vec<u8>,
+        /// El nombre del fichero firmado, cuando lo eligió la persona.
+        chosen_document: Option<String>,
     },
     /// El fichero pedido por la sede queda escrito donde la persona eligió.
     Saved,

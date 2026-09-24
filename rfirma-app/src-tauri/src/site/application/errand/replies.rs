@@ -69,6 +69,7 @@ pub fn signature_handed_over(live: &LiveErrand, signed: &SiteSignature) -> SiteO
         SiteOutcome::Signature {
             signer_der: signed.signer_der.clone(),
             signature: signed.signature.clone(),
+            chosen_document: live.the_chosen_document(),
         },
     )
 }
@@ -107,6 +108,7 @@ pub fn saved(
                 Some(signer_der) => SiteOutcome::Signature {
                     signer_der: signer_der.to_vec(),
                     signature: data.to_vec(),
+                    chosen_document: live.the_chosen_document(),
                 },
                 None => SiteOutcome::Saved,
             },

@@ -27,6 +27,7 @@ fn it_encodes_a_signature_exactly_like_the_fourth_protocol() {
     let outcome = SiteOutcome::Signature {
         signer_der: vec![0xfb, 0xff, 0xbf],
         signature: b"%PDF".to_vec(),
+        chosen_document: None,
     };
     assert_eq!(V3Codec.encode(&outcome), V4Codec.encode(&outcome));
     assert_eq!(V3Codec.encode(&outcome), "-_-_|JVBERg==");

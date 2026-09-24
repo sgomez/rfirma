@@ -152,6 +152,21 @@ pub(crate) fn a_consent_to_sign_over(pdf: &[u8], expanded: &str) -> ErrandStep {
     )
 }
 
+/// La operación de `sign` sin `dat`, con las pistas del selector.
+pub(crate) fn a_signature_without_dat(extra: &str) -> AfirmaUrl {
+    let properties = base64::engine::general_purpose::URL_SAFE.encode(
+        "filenameExts=pdf\nfilenameDescription=PDF\nfilenameCurrentDir=/home/persona\n".as_bytes(),
+    );
+    let text = format!(
+        "afirma://sign?op=sign&idsession={CREDENTIAL}&format=PAdES&\
+         algorithm=SHA256withRSA&properties={properties}{extra}"
+    );
+    let ChannelMessage::Operation { url } = ChannelMessage::read(&text) else {
+        panic!("una URL del protocolo es una operacion");
+    };
+    url
+}
+
 /// La operación de `signandsave` sin `dat`, con las pistas del selector y las de guardado.
 pub(crate) fn a_sign_and_save_without_dat(extra: &str) -> AfirmaUrl {
     let properties = base64::engine::general_purpose::URL_SAFE.encode(
