@@ -1,8 +1,8 @@
 import { fireEvent, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { inMemoryExternalDestinationOpener } from "../desktop/externalDestination";
-import { renderWithCatalog } from "../testing/render";
 import es from "../i18n/locales/es";
+import { renderWithCatalog } from "../testing/render";
 import { NAMED_BY_THE_DESK, OUTCOME_CLOSE_MS, type RefusalSituation } from "./errand";
 import { SedeWindow } from "./SedeWindow";
 import { elapse, scriptedErrand, signedDocument } from "./sedeWindowFixtures";
