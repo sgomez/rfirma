@@ -122,7 +122,10 @@ pub fn consent_to_the_local_batch<E: FilterEngine>(
     });
 
     ErrandStep::AskingToSignTheLocalBatch(Box::new(LocalBatchConsent {
-        items: batch.signs().iter().map(summary_of).collect(),
+        items: batch
+            .as_ref()
+            .map(|batch| batch.signs().iter().map(summary_of).collect())
+            .unwrap_or_default(),
         request,
         batch,
         certificates: rows,

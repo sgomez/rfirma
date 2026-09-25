@@ -1402,6 +1402,9 @@ msgstr "Gardando o ficheiro"
 msgid "sede.saving.lead"
 msgstr "Escolle no diálogo do sistema onde queres gardalo."
 
+msgid "sede.saving.leadUnwritable"
+msgstr "Non se puido gardar no destino escollido. Escolle outro no diálogo do sistema."
+
 msgid "sede.loading.title"
 msgstr "Cargando un ficheiro"
 

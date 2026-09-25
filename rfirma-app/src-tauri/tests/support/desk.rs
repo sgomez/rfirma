@@ -369,7 +369,8 @@ fn saved_through_the_portal(
                 &consent.data,
                 consent.signer_der.as_deref(),
                 live,
-            );
+            )
+            .expect("el destino del portal doblado se deja escribir");
         }
         None => {
             errand::decline(live);

@@ -313,7 +313,8 @@ fn saved_through_the_server(url: &AfirmaUrl) -> SavedThroughTheServer {
         &saving.data,
         saving.signer_der.as_deref(),
         &live,
-    );
+    )
+    .expect("el destino se deja escribir");
     SavedThroughTheServer {
         forms: server.forms().into_iter().map(|(_, form)| form).collect(),
         on_disk: std::fs::read(&destination).expect("se ha guardado"),

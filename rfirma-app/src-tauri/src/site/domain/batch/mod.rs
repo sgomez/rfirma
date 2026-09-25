@@ -1,11 +1,13 @@
 //! El lote sin trámite: `TriphaseData`, la prefirma con errores del remoto, la lectura del local y el resultado de los dos.
 
+pub mod header;
 pub mod json;
 pub mod local;
 pub mod presign;
 pub mod result;
 pub mod triphase;
 
+pub use header::batch_algorithm;
 pub use local::{parse_local_batch, LocalBatch, LocalSingleSign};
 pub use presign::{
     parse_json_presign, update_batch_with_errors, BatchDataResult, PresignError, PresignOutcome,

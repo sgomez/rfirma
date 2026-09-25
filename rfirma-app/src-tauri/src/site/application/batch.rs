@@ -6,11 +6,11 @@ use base64::Engine as _;
 use crate::identity::domain::certificate::TokenCertificate;
 use crate::site::application::session::SiteRefusal;
 use crate::site::domain::batch::{
-    apply_pk1, build_empty_result, build_result, parse_json_presign, update_batch_with_errors,
-    BatchDataResult, BatchFormat, TriphaseData,
+    apply_pk1, batch_algorithm, build_empty_result, build_result, parse_json_presign,
+    update_batch_with_errors, BatchDataResult, BatchFormat, TriphaseData,
 };
 use crate::site::domain::batch_error::{BatchError, Situation};
-use crate::site::domain::protocol::BatchRequest;
+use crate::site::domain::protocol::{BatchRequest, SafCode};
 use crate::site::domain::signing::SigningRefusal;
 use crate::site::ports::{BatchServices, TokenSigning};
 
@@ -105,15 +105,14 @@ fn every_pre_signed(
     request: &BatchRequest,
     triphase_data: TriphaseData,
 ) -> Result<TriphaseData, SiteRefusal> {
+    let algorithm =
+        batch_algorithm(format_of(request), request.lote()).map_err(unreadable_algorithm)?;
     let mut refused: Option<SigningRefusal> = None;
     let with_pk1 = apply_pk1(triphase_data, |pre| {
         if refused.is_some() {
             return Vec::new();
         }
-        match run
-            .token
-            .sign(run.certificate, run.secret, request.algorithm(), pre)
-        {
+        match run.token.sign(run.certificate, run.secret, &algorithm, pre) {
             Ok(pk1) => pk1,
             Err(refusal) => {
                 refused = Some(refusal);
@@ -127,6 +126,15 @@ fn every_pre_signed(
         Some(refusal) => Err(SiteRefusal::BatchSigningFailed(refusal)),
         None => Ok(with_pk1),
     }
+}
+
+fn unreadable_algorithm(detail: String) -> SiteRefusal {
+    SiteRefusal::BatchSigningFailed(SigningRefusal {
+        code: SafCode::BatchSignature,
+        situation: "unreadableBatchAlgorithm".to_owned(),
+        detail,
+        attempts_left: None,
+    })
 }
 
 fn updated_batch(

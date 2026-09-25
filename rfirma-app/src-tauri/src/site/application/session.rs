@@ -32,8 +32,6 @@ pub enum SiteRefusal {
     ScratchFolderMissing(String),
     /// El documento de paso no se ha podido escribir.
     ScratchUnwritable(String),
-    /// El fichero elegido por la persona para guardar no se ha podido escribir.
-    CannotSaveData(String),
     /// Uno de los ficheros elegidos por la persona para cargar no se ha podido leer.
     CannotLoadData(String),
     /// La firma no ha salido, y quien la hizo ya dijo con qué código y con qué vista.
@@ -74,7 +72,6 @@ impl SiteRefusal {
             Self::NotUsableForTheSite(_) => "el certificado elegido ya no vale".to_owned(),
             Self::ScratchFolderMissing(detail)
             | Self::ScratchUnwritable(detail)
-            | Self::CannotSaveData(detail)
             | Self::CannotLoadData(detail)
             | Self::LocalBatch(detail)
             | Self::InvalidSignature(detail)
