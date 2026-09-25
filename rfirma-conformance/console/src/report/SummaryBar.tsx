@@ -1,6 +1,6 @@
 import type { Summary } from "../contract/Summary";
 import { ResultIcon } from "../ui/icons";
-import { countOf, RESULTS, resultTone, unexplained } from "../words";
+import { countOf, explanationTally, RESULTS, resultTone, unexplained } from "../words";
 
 export function SummaryBar({ summary, compact = false }: { summary: Summary; compact?: boolean }) {
   const done = summary.total - summary.pending;
@@ -36,19 +36,21 @@ export function Counts({ summary }: { summary: Summary }) {
           <li key={result} className={count === 0 ? "is-zero" : undefined}>
             <ResultIcon result={result} size={11} />
             <span className="count">{count}</span>
+            {result === "NO CONFORME" && count > 0 && <ExplainedBadge summary={summary} />}
           </li>
         );
       })}
-      {summary.noncompliant > 0 && (
-        <li
-          className="explained-count"
-          title="Un NO CONFORME con cualquier etiqueta está explicado"
-        >
-          <span className="count">
-            {unexplained(summary)} sin explicar · {summary.explained} explicados
-          </span>
-        </li>
-      )}
     </ul>
+  );
+}
+
+function ExplainedBadge({ summary }: { summary: Summary }) {
+  return (
+    <span
+      className="explained-count"
+      title={`${explanationTally(summary)}. Un NO CONFORME con cualquier etiqueta está explicado`}
+    >
+      {summary.explained} expl.
+    </span>
   );
 }
