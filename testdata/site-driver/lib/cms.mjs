@@ -198,9 +198,14 @@ function theSignersWithWhatTheySign(signers, content) {
   ]);
 }
 
+function theUnverifiableAlgorithmOf(signer) {
+  if (signer.signedAttributes && !DIGESTS[signer.digestAlgorithm]) return signer.digestAlgorithm;
+  if (!theSignatureDigestOf(signer)) return signer.signatureAlgorithm;
+  return null;
+}
+
 function theKeysVerifying(signer, content, keys) {
   const hash = theSignatureDigestOf(signer);
-  if (!hash) return null;
   const signed = signer.signedAttributes ?? content;
   return keys.filter((key) => {
     try {
@@ -224,6 +229,8 @@ export function theCmsVerification(bytes, certificate, detachedContent = null) {
   const keys = [returnedKey, ...theCertificatesIn(bytes).map(theKeyOf).filter(Boolean)];
   let byTheReturned = false;
   for (const { signer, content: signed } of theSignersWithWhatTheySign(cms.signers, content)) {
+    const unverifiable = theUnverifiableAlgorithmOf(signer);
+    if (unverifiable) return aVerification(null, `la sede no sabe verificar ${unverifiable}`);
     if (signer.signedAttributes && !signsTheData(signer, signed)) {
       return aVerification(
         false,
@@ -231,9 +238,6 @@ export function theCmsVerification(bytes, certificate, detachedContent = null) {
       );
     }
     const verifying = theKeysVerifying(signer, signed, keys);
-    if (verifying === null) {
-      return aVerification(null, `la sede no sabe verificar ${signer.signatureAlgorithm}`);
-    }
     if (verifying.length === 0) {
       return aVerification(false, "la firma de un firmante no verifica con ninguna clave");
     }

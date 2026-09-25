@@ -45,6 +45,17 @@ function withAByteFlippedAt(bytes, at) {
   return altered;
 }
 
+const SHA256_OID = Buffer.from("0609608648016503040201", "hex");
+const SHA224_OID = Buffer.from("0609608648016503040204", "hex");
+
+function withTheOidReplaced(bytes, from, to) {
+  const altered = Buffer.from(bytes);
+  for (let at = altered.indexOf(from); at >= 0; at = altered.indexOf(from, at + 1)) {
+    to.copy(altered, at);
+  }
+  return altered;
+}
+
 describe("the CMS analyzer", () => {
   it("reads an implicit CAdES as one signer with the data inside", () => {
     const cms = theCmsSignature(aReference("cades-implicit.p7s"));
@@ -285,6 +296,13 @@ describe("the CMS verifier", () => {
     const verification = theCmsVerification(aReference("cades-implicit.p7s"), anotherCertificate);
     assert.equal(verification.verified, false);
   });
+
+  it("leaves unmeasured a digest algorithm it does not implement", () => {
+    const altered = withTheOidReplaced(aReference("cades-implicit.p7s"), SHA256_OID, SHA224_OID);
+    const verification = theCmsVerification(altered, theSigner);
+    assert.equal(verification.verified, null, verification.reason);
+    assert.match(verification.reason, /2\.16\.840\.1\.101\.3\.4\.2\.4/);
+  });
 });
 
 describe("the PAdES verifier", () => {
@@ -309,6 +327,13 @@ describe("the PAdES verifier", () => {
 
   it("refuses a signed PDF when the returned certificate did not sign it", () => {
     assert.equal(thePadesVerification(thePdf, anotherCertificate).verified, false);
+  });
+
+  it("leaves unmeasured a digest algorithm it does not implement", () => {
+    const hex = (oid) => Buffer.from(oid.toString("hex"), "latin1");
+    const altered = withTheOidReplaced(thePdf, hex(SHA256_OID), hex(SHA224_OID));
+    const verification = thePadesVerification(altered, theSigner);
+    assert.equal(verification.verified, null, verification.reason);
   });
 });
 
@@ -357,5 +382,16 @@ describe("the XAdES verifier", () => {
       "../2001/10/xml-exc-c14n#",
     );
     assert.equal(theXadesVerification(exclusive, theSigner).verified, null);
+  });
+
+  it("leaves unmeasured a signature or digest algorithm it does not implement", () => {
+    const xml = anXml("xades-enveloping.xml");
+    for (const altered of [
+      xml.replace("xmldsig-more#rsa-sha256", "xmldsig-more#rsa-sha224"),
+      xml.replace("xmlenc#sha512", "xmldsig-more#sha224"),
+    ]) {
+      const verification = theXadesVerification(altered, theSigner);
+      assert.equal(verification.verified, null, verification.reason);
+    }
   });
 });
