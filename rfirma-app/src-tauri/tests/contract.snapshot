@@ -170,6 +170,20 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
       signedAt: bool
       reason: bool
 
+  pub enum DatumOrder
+      Signer
+      Issuer
+      SignedAt
+
+  pub enum PhrasePartOrder   (serde: sin etiqueta)
+      Text { text: String }
+      Datum { datum: DatumOrder }
+
+  pub enum VisibleContentOrder   (serde: etiqueta "model")
+      Complete
+      RubricOnly
+      Custom { phrase: Vec<PhrasePartOrder> }
+
   pub struct PlacementOrder
       page: u32
       pages: PageSet
@@ -182,6 +196,8 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
       document: String
       certificate: String
       placement: Option<PlacementOrder>
+      content: Option<VisibleContentOrder>
+      withRubric: bool
       fields: VisibleFieldsOrder
       reason: String
       signedAt: String

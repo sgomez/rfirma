@@ -4,10 +4,11 @@ use super::{
 };
 use crate::crossing::Failure;
 use crate::documents::domain::document::Document;
-use crate::identity::application::tests::{a_certificate, NoToken};
+use crate::identity::application::tests::{a_certificate, NoToken, TestAuthority};
 use crate::signing::adapters::orders::{PlacementOrder, SigningOrder};
 use crate::signing::application::tests::{an_order, DocumentsInMemory, NoIsolate};
-use crate::signing::domain::{Format, PageSet, SigningChoice, Waivers};
+use crate::signing::domain::{Format, PageSet, SignatureConfig, SigningChoice, Waivers};
+use serde_json::json;
 
 fn chosen(order: &SigningOrder) -> SigningChoice {
     order.choice().expect("el recuadro cabe")
@@ -530,4 +531,102 @@ fn a_bare_pkcs1_for_the_site_is_the_token_signing_the_data_without_the_bridge() 
         signed.completed.signed_document(),
         b"SHA512withRSA sobre los datos de la sede"
     );
+}
+
+const A_HOLDER_WITH_AN_ID: &str = "ADA LOVELACE BYRON - 99999999R";
+const THE_MASKED_HOLDER: &str = "ADA LOVELACE BYRON - ***9999**";
+
+fn an_order_with(content: serde_json::Value, with_rubric: bool) -> SigningOrder {
+    SigningOrder {
+        content: Some(serde_json::from_value(content).expect("el contenido es de la ventana")),
+        with_rubric,
+        rubric: Some("UNA-RUBRICA".to_owned()),
+        ..an_order()
+    }
+}
+
+fn config_of(order: &SigningOrder) -> SignatureConfig {
+    let certificate = TestAuthority::root("AC FNMT Usuarios")
+        .issues(A_HOLDER_WITH_AN_ID)
+        .as_certificate("FIRMA");
+    config_for(&chosen(order), &certificate).expect("cabe")
+}
+
+#[test]
+fn the_complete_model_is_the_signer_the_date_and_the_issuer() {
+    let config = config_of(&an_order_with(json!({ "model": "complete" }), false));
+
+    assert_eq!(
+        config.layer2_text,
+        format!(
+            "Firmado por: {THE_MASKED_HOLDER}. Fecha: 31/08/26, 12:00:00. Emisor: AC FNMT Usuarios."
+        )
+    );
+    assert_eq!(
+        config.rubric_image, None,
+        "sin «Con rúbrica» no va la imagen"
+    );
+}
+
+#[test]
+fn the_rubric_only_model_is_the_image_and_no_text() {
+    let config = config_of(&an_order_with(json!({ "model": "rubricOnly" }), false));
+
+    assert_eq!(config.layer2_text, "");
+    assert_eq!(config.rubric_image.as_deref(), Some("UNA-RUBRICA"));
+}
+
+#[test]
+fn the_custom_model_substitutes_each_datum_and_masks_the_id_inside_the_signer() {
+    let phrase = json!([
+        { "text": "Conforme, " },
+        { "datum": "signer" },
+        { "text": " el " },
+        { "datum": "signedAt" },
+        { "text": " con " },
+        { "datum": "issuer" },
+    ]);
+
+    let config = config_of(&an_order_with(
+        json!({ "model": "custom", "phrase": phrase }),
+        true,
+    ));
+
+    assert_eq!(
+        config.layer2_text,
+        format!("Conforme, {THE_MASKED_HOLDER} el 31/08/26, 12:00:00 con AC FNMT Usuarios")
+    );
+    assert_eq!(config.rubric_image.as_deref(), Some("UNA-RUBRICA"));
+}
+
+#[test]
+fn a_placeholder_typed_into_the_phrase_does_not_reach_the_bridge() {
+    let phrase = json!([{ "text": "$$SUBJECTCN$$ y $$$ISSUERCN$$$" }]);
+
+    let config = config_of(&an_order_with(
+        json!({ "model": "custom", "phrase": phrase }),
+        false,
+    ));
+
+    assert!(!config.layer2_text.contains("$$"), "{}", config.layer2_text);
+}
+
+#[test]
+fn the_boxes_and_the_reason_of_today_still_compose_the_text() {
+    let order = SigningOrder {
+        reason: "Conforme".to_owned(),
+        rubric: Some("UNA-RUBRICA".to_owned()),
+        ..an_order()
+    };
+
+    let config = config_of(&order);
+
+    assert_eq!(
+        config.layer2_text,
+        format!(
+            "Firmado por: {THE_MASKED_HOLDER}. Emisor: AC FNMT Usuarios. \
+             Fecha: 31/08/26, 12:00:00.\nMotivo: Conforme"
+        )
+    );
+    assert_eq!(config.rubric_image.as_deref(), Some("UNA-RUBRICA"));
 }

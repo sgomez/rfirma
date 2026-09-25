@@ -89,20 +89,102 @@ pub fn compose_layer2_text(fields: &VisibleTextFields<'_>, language: Language) -
         pseudonym,
     } = fields;
 
-    let signer = signer_name.map(|name| {
-        if *pseudonym {
-            name.to_owned()
-        } else {
-            obfuscate_ids(name)
-        }
-    });
-
-    let sentences = [
-        (labels.signer, signer),
+    let paragraph = paragraph_of([
+        (
+            labels.signer,
+            signer_name.map(|name| masked_signer(name, *pseudonym)),
+        ),
         (labels.issuer, issuer.map(str::to_owned)),
         (labels.signed_at, signed_at.map(str::to_owned)),
-    ];
+    ]);
 
+    match reason.map(|reason| format!("{}: {reason}", labels.reason)) {
+        Some(reason) if paragraph.is_empty() => reason,
+        Some(reason) => format!("{paragraph}\n{reason}"),
+        None => paragraph,
+    }
+}
+
+/// El contenido de la firma visible, elegido por modelo.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum VisibleContent {
+    /// Firmante, fecha y emisor.
+    Complete,
+    /// Solo la imagen de la rúbrica, sin texto.
+    RubricOnly,
+    /// La frase que compuso la persona, con sus datos.
+    Custom(Vec<PhrasePart>),
+}
+
+/// Un trozo de la frase de *Personalizada*: texto literal o un dato.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum PhrasePart {
+    Text(String),
+    Datum(Datum),
+}
+
+/// Un dato que la firma visible toma del certificado o de la firma.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Datum {
+    Signer,
+    Issuer,
+    SignedAt,
+}
+
+/// Los valores de los datos para una firma concreta.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct VisibleData<'a> {
+    /// El `CN` del firmante, sin enmascarar.
+    pub signer_name: &'a str,
+    /// El `CN` del emisor del certificado.
+    pub issuer: &'a str,
+    /// La fecha y hora de la firma, ya formateadas.
+    pub signed_at: &'a str,
+    /// Si el certificado es de seudónimo, cuyo nombre no se enmascara.
+    pub pseudonym: bool,
+}
+
+impl VisibleData<'_> {
+    fn value_of(&self, datum: Datum) -> String {
+        match datum {
+            Datum::Signer => masked_signer(self.signer_name, self.pseudonym),
+            Datum::Issuer => self.issuer.to_owned(),
+            Datum::SignedAt => self.signed_at.to_owned(),
+        }
+    }
+}
+
+/// Compone el texto de la firma visible de un modelo, sin comodines que el puente pueda sustituir.
+pub fn compose_visible_content(
+    content: &VisibleContent,
+    data: &VisibleData<'_>,
+    language: Language,
+) -> String {
+    let text = match content {
+        VisibleContent::Complete => complete_text(data, language),
+        VisibleContent::RubricOnly => String::new(),
+        VisibleContent::Custom(phrase) => phrase
+            .iter()
+            .map(|part| match part {
+                PhrasePart::Text(text) => text.clone(),
+                PhrasePart::Datum(datum) => data.value_of(*datum),
+            })
+            .collect(),
+    };
+    without_placeholders(text)
+}
+
+fn complete_text(data: &VisibleData<'_>, language: Language) -> String {
+    let labels = labels(language);
+    let present = |datum| Some(data.value_of(datum)).filter(|value| !value.is_empty());
+    paragraph_of([
+        (labels.signer, present(Datum::Signer)),
+        (labels.signed_at, present(Datum::SignedAt)),
+        (labels.issuer, present(Datum::Issuer)),
+    ])
+}
+
+fn paragraph_of(sentences: [(&str, Option<String>); 3]) -> String {
     let mut paragraph = sentences
         .into_iter()
         .filter_map(|(label, value)| value.map(|value| format!("{label}: {value}")))
@@ -111,12 +193,23 @@ pub fn compose_layer2_text(fields: &VisibleTextFields<'_>, language: Language) -
     if !paragraph.is_empty() {
         paragraph.push('.');
     }
+    paragraph
+}
 
-    match reason.map(|reason| format!("{}: {reason}", labels.reason)) {
-        Some(reason) if paragraph.is_empty() => reason,
-        Some(reason) => format!("{paragraph}\n{reason}"),
-        None => paragraph,
+fn masked_signer(name: &str, pseudonym: bool) -> String {
+    if pseudonym {
+        name.to_owned()
+    } else {
+        obfuscate_ids(name)
     }
+}
+
+/// El puente sustituiría un `$$SUBJECTCN$$` escrito a mano sin pasar por la máscara (ADR-0006).
+fn without_placeholders(mut text: String) -> String {
+    while text.contains("$$") {
+        text = text.replace("$$", "$");
+    }
+    text
 }
 
 /// Enmascara los identificadores dentro de un texto.

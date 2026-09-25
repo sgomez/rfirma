@@ -1,5 +1,7 @@
-use super::PlacementOrder;
-use crate::signing::domain::PageSet;
+use super::{PlacementOrder, SigningOrder};
+use crate::signing::domain::{
+    ChosenFields, Datum, PageSet, PhrasePart, VisibleContent, VisibleText,
+};
 
 #[test]
 fn accepts_a_rect_with_the_fractional_coordinates_the_viewer_sends() {
@@ -71,4 +73,68 @@ fn carries_the_page_set_through_to_the_placement() {
         .placement()
         .expect("cabe y existe");
     assert_eq!(placed.pages, PageSet::only([1, 3]).expect("no esta vacio"));
+}
+
+fn a_signing_order_of_today() -> serde_json::Value {
+    serde_json::json!({
+        "document": "/run/user/1000/doc/1e8b83b9/contrato.pdf",
+        "certificate": "FIRMA",
+        "placement": null,
+        "fields": { "signerName": true, "issuer": false, "signedAt": true, "reason": false },
+        "reason": "",
+        "signedAt": "31/08/26, 12:00:00",
+        "rubric": null,
+        "language": "es",
+    })
+}
+
+#[test]
+fn the_order_the_window_sends_today_still_composes_from_the_boxes() {
+    let order: SigningOrder =
+        serde_json::from_value(a_signing_order_of_today()).expect("la orden de hoy se acepta");
+
+    let choice = order
+        .choice()
+        .expect("sin recuadro no hay nada que validar");
+
+    assert_eq!(
+        choice.text,
+        VisibleText::Fields(ChosenFields {
+            signer_name: true,
+            signed_at: true,
+            ..ChosenFields::default()
+        })
+    );
+}
+
+#[test]
+fn an_order_by_model_needs_neither_the_boxes_nor_the_reason() {
+    let mut sent = a_signing_order_of_today();
+    let fields = sent.as_object_mut().expect("es un objeto");
+    fields.remove("fields");
+    fields.remove("reason");
+    fields.insert(
+        "content".to_owned(),
+        serde_json::json!({ "model": "custom", "phrase": [{ "datum": "issuer" }, { "text": "." }] }),
+    );
+    fields.insert("withRubric".to_owned(), serde_json::json!(true));
+
+    let order: SigningOrder = serde_json::from_value(sent).expect("la orden por modelo se acepta");
+
+    assert_eq!(
+        order.choice().expect("sin recuadro").text,
+        VisibleText::Model(VisibleContent::Custom(vec![
+            PhrasePart::Datum(Datum::Issuer),
+            PhrasePart::Text(".".to_owned()),
+        ]))
+    );
+    assert!(order.with_rubric);
+}
+
+#[test]
+fn a_model_the_window_does_not_know_is_refused() {
+    let mut sent = a_signing_order_of_today();
+    sent["content"] = serde_json::json!({ "model": "stamp" });
+
+    assert!(serde_json::from_value::<SigningOrder>(sent).is_err());
 }
