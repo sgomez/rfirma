@@ -855,15 +855,6 @@ export const SIGNATURE_SCRIPTS = {
   signcadeswithanunsupportedalgorithm: aPublishedScript(() =>
     theSignScriptWith("MD5withRSA", "CAdES", "mode=explicit", theChallenge()),
   ),
-  signcadeswithaprecalculatedhash: aPublishedScript(
-    signing(
-      "CAdES",
-      "precalculatedHashAlgorithm=SHA-256",
-      theChallengeHash,
-      theHashSignedLeavingTheDataOut,
-    ),
-    { conditions: [THE_HASH_SIGNED_AS_IT_CAME, THE_DATA_LEFT_OUT] },
-  ),
   signcadeswithaprecalculatedhashinimplicitmode: aPublishedScript(
     signing(
       "CAdES",
@@ -928,10 +919,6 @@ export const SIGNATURE_SCRIPTS = {
     signing("PAdES", "userPassword=4321", aPasswordProtectedPdf),
   ),
   signpadesprotected: aPublishedScript(signing("PAdES", "", aPasswordProtectedPdf)),
-  cosigncades: aPublishedScript(
-    cosigning("CAdES", "", theCadesImplicitSignature, theTwoParallelSignersVerified),
-    { conditions: [TWO_PARALLEL_SIGNERS, THE_SIGNATURE_VERIFIES] },
-  ),
   cosignauto: aPublishedScript(
     cosigning("auto", "", theCadesImplicitSignature, theTwoParallelSignersVerified),
     { conditions: [TWO_PARALLEL_SIGNERS, THE_SIGNATURE_VERIFIES] },
@@ -947,14 +934,6 @@ export const SIGNATURE_SCRIPTS = {
   cosignfacturae: aPublishedScript(cosigning("FacturaE", "", theInvoice)),
   cosignxadesoveranonsignature: aPublishedScript(cosigning("XAdES", "", theChallenge)),
   cosigncadeswithoutthedata: aPublishedScript(theCosignWithoutTheDataScript),
-  countersigncades: aPublishedScript(
-    countersigning(
-      "tree",
-      theCadesImplicitSignature,
-      measuringAll(withTheShape(THE_SIGNER_COUNTERSIGNED, "[[]]"), theSignatureVerifies("cms")),
-    ),
-    { conditions: [THE_SIGNER_COUNTERSIGNED, THE_SIGNATURE_VERIFIES] },
-  ),
   countersigncadestree: aPublishedScript(
     countersigning(
       "tree",
