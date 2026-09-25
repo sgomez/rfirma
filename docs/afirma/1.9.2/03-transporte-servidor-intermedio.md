@@ -489,6 +489,15 @@ Al descifrar (`CypherDataManager.decipherData`, `CypherDataManager.java:51-61`):
    `padding` octetos: `Arrays.copyOf(decipheredData, decipheredData.length - padding)`
    (`CypherDataManager.java:60`).
 
+### 4.5 Descifrado en la página
+
+`autoscript.js` descifra cada trozo del resultado con su propio DES y trunca, además del relleno
+declarado, ocho octetos más en el último trozo: `deciphered.length - parseInt(padding) -
+(intermediate ? 0 : 8)` (`autoscript.js:4833-4840`). La aplicación no añade ese bloque
+(`DesCipher.java:64-69`), así que el último trozo llega a la sede ocho octetos más corto. En una firma
+sin `extraData`, como la del canal intermedio de 1.9.2, el último trozo es la propia firma
+(`autoscript.js:4588-4589`).
+
 ---
 
 ## 5. Espera activa: `aw=true`, `#WAIT` y `ActiveWaitingThread`

@@ -24,6 +24,10 @@ formas llegue a ver el resultado.
   que usa.
 - Una comprobación no puede fingir la respuesta del cliente. Si la sede no llega a observar nada,
   el resultado es NO OBSERVABLE, nunca uno compuesto por el propio guion.
+- Lo que la sede publicada estropea no se imputa al cliente. El `decipher` de `autoscript.js` quita
+  ocho octetos de más al último trozo del resultado del servidor intermedio, así que la firma que
+  llega por ese canal se mide sobre lo que la aplicación subió, descifrado con la clave de la URL y
+  el relleno que declara.
 
 ## Considered Options
 

@@ -2,7 +2,7 @@
 
 import { createServer } from "node:http";
 
-import { theLaunchesSoFar } from "../lib/browser.mjs";
+import { theLastLaunch, theLaunchesSoFar } from "../lib/browser.mjs";
 import {
   aConditionEvent,
   aMeasuredConditionEvent,
@@ -177,6 +177,23 @@ function aDocumentTooLongForTheUrl() {
   return Buffer.from("%PDF-1.7\n".concat("d".repeat(3000)), "utf8");
 }
 
+/** Una parte cifrada descifrada con su relleno declarado, sin el bloque que `decipher` de `autoscript.js` quita al final. */
+function decipheredAsUploaded(part, key) {
+  const dot = part.indexOf(".");
+  const ciphered = Cipher.base64ToString(part.slice(dot + 1).replace(/-/g, "+").replace(/_/g, "/"));
+  const deciphered = Cipher.des(key, ciphered, 0, 0, null);
+  return Cipher.stringToBase64(deciphered.slice(0, deciphered.length - Number(part.slice(0, dot))));
+}
+
+/** La firma tal como la subió la aplicación, o `null` si no subió un resultado cifrado. */
+function theUploadedSignature(server) {
+  const [result] = theUploadedResults(server).slice(-1);
+  const key = theLastLaunch() && new URL(theLastLaunch()).searchParams.get("key");
+  if (!result || !key || !isCipheredWithTheKey(result.dat)) return null;
+  const [, signature] = result.dat.split("|");
+  return signature ? decipheredAsUploaded(signature, key) : null;
+}
+
 /** La firma larga que la página sube al StorageService y la aplicación recupera con `fileid`. */
 async function theRelayScript() {
   const server = await anIntermediateServer();
@@ -201,7 +218,7 @@ async function theRelayScript() {
         ),
       );
       const verifying = theSignatureVerifies("cms", aDocumentTooLongForTheUrl);
-      for (const condition of verifying(signature, certificate)) {
+      for (const condition of verifying(theUploadedSignature(server) ?? signature, certificate)) {
         emit({ event: "condition", ...condition });
       }
       settle({ event: "success", result: String(signature), certificate: String(certificate) });

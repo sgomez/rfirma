@@ -6,10 +6,16 @@ import { request as httpsRequest } from "node:https";
 import { emit } from "./events.mjs";
 
 let launches = 0;
+let lastLaunch = null;
 
 /** Cuántas veces ha invocado la página a la aplicación hasta ahora. */
 export function theLaunchesSoFar() {
   return launches;
+}
+
+/** La última URL con la que la página invocó a la aplicación, o `null`. */
+export function theLastLaunch() {
+  return lastLaunch;
 }
 
 /** Monta en `globalThis` lo que el cliente publicado espera de una página. */
@@ -82,6 +88,7 @@ export function installTheMinimalBrowser() {
     },
     set location(url) {
       launches += 1;
+      lastLaunch = String(url);
       emit({ event: "launch", url: String(url) });
     },
   };
