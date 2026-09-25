@@ -399,7 +399,7 @@ pub fn document_chosen<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
         Err(detail) => {
             return LoadCompletion::Delivered(replies::over(
                 live,
-                SiteOutcome::Refused(SiteRefusal::CannotLoadData(detail)),
+                SiteOutcome::Refused(SiteRefusal::CannotReadData(detail)),
             ))
         }
     };

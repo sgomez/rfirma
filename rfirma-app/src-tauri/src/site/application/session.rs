@@ -34,6 +34,8 @@ pub enum SiteRefusal {
     ScratchUnwritable(String),
     /// Uno de los ficheros elegidos por la persona para cargar no se ha podido leer.
     CannotLoadData(String),
+    /// El documento que eligió la persona para firmar no se ha podido leer.
+    CannotReadData(String),
     /// La firma no ha salido, y quien la hizo ya dijo con qué código y con qué vista.
     Signing(SigningRefusal),
     /// El lote remoto no se ha podido completar: alcance de los servlets o forma de su respuesta.
@@ -73,6 +75,7 @@ impl SiteRefusal {
             Self::ScratchFolderMissing(detail)
             | Self::ScratchUnwritable(detail)
             | Self::CannotLoadData(detail)
+            | Self::CannotReadData(detail)
             | Self::LocalBatch(detail)
             | Self::InvalidSignature(detail)
             | Self::ConfirmationNeeded(detail) => detail.clone(),

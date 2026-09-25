@@ -48,6 +48,10 @@ pub fn told(refusal: &SiteRefusal) -> (Failure, SafCode) {
             Failure::new("unreadable", detail.clone()),
             SafCode::CannotLoadData,
         ),
+        SiteRefusal::CannotReadData(detail) => (
+            Failure::new("documentUnreadable", detail.clone()),
+            SafCode::CannotReadData,
+        ),
         SiteRefusal::Signing(refusal) => (
             Failure {
                 situation: refusal.situation.clone(),
