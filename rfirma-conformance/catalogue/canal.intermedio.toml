@@ -151,14 +151,14 @@ id = "the_storage_servlet_is_validated_like_the_retrieve_servlet"
 set = "canal.intermedio"
 citation = "UrlParametersToSign.java:254-275; UrlParameters.java:369-374; ProtocolInvocationLauncher.java:731-737"
 statement = """
-Cuando la operación viaja por servidor intermedio, stservlet se valida como rtservlet: uno en el
-bucle local se rechaza con SAF_13 tras recuperar la petición del rtservlet, y no recibe nada.
+Cuando la operación viaja por servidor intermedio, stservlet se valida como rtservlet: con uno en
+el bucle local, la aplicación recupera la petición del rtservlet y no sube nada a ningún servlet.
 """
 
 [check.drive]
 mode = "relay"
 script = "relaylocalstorage"
-patience_secs = 120
+patience_secs = 180
 act.consent = "La sede pide guardar el resultado en el bucle local: si la aplicación muestra un error, ciérralo; si en su lugar pide certificado, elige uno."
 expects.completes.conditions = ["the-local-storage-servlet-refused"]
 

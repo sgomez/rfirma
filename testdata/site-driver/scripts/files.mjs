@@ -10,7 +10,7 @@ const THE_NAME_NEXT_TO_THE_CONTENT = "the-name-next-to-the-content";
 const EVERY_FILE_APART = "every-file-apart";
 const THE_FILENAME_IN_A_THIRD_COMPONENT = "the-filename-in-a-third-component";
 const THE_PICKED_SIGNATURE_COSIGNED = "the-picked-signature-cosigned";
-/** La firma que el arnés de la suite deja en disco para que la persona la elija. */
+/** La firma del banco de referencia que el arnés de la suite deja en disco como `firma.csig`. */
 const THE_SIGNATURE_TO_PICK = "cades-implicit.p7s";
 /** La mide el arnés de la suite, que lee el fichero guardado en el perfil aislado. */
 const THE_DECODED_BYTES_ON_DISK = "the-decoded-bytes-on-disk";

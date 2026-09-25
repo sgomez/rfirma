@@ -122,7 +122,6 @@ code = "SAF_13"
 point = "parser"
 covered = [
   "a_retrieve_servlet_on_a_local_host_is_refused_with_saf_13",
-  "the_storage_servlet_is_validated_like_the_retrieve_servlet",
   "a_batch_servlet_on_the_local_loopback_is_refused_with_saf_13",
 ]
 

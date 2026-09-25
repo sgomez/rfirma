@@ -39,6 +39,8 @@ const AN_UNDECIPHERABLE_REQUEST = "0.QUJDREVG";
 const THE_WAIT_PERIOD_MS = { from: 8000, to: 13000 };
 /** Lo que se espera a que la aplicación suba algo tras entregarle una petición estropeada. */
 const THE_SILENCE_AFTER_THE_SPOILED_REQUEST_MS = 5000;
+/** Lo que se espera a una subida tras recuperar una petición con el StorageService local. */
+const THE_SILENCE_AFTER_THE_LOCAL_STORAGE_MS = 60000;
 
 /** Los parámetros de la query y los del cuerpo del POST, donde `UrlHttpManagerImpl` los manda. */
 async function theServletParameters(request) {
@@ -349,10 +351,16 @@ async function theRefusalsScript() {
   settle({ event: "success" });
 }
 
-/**
- * Una firma larga cuyo StorageService está en el bucle local: la aplicación recupera la petición del
- * RetrieveService de la sede y, después, no debe subir nada.
- */
+/** Las subidas que llegan a cualquier servlet desde `since`, esperando hasta `until` a la primera. */
+async function theUploadsBetween(server, since, until) {
+  const uploads = () => server.requests.filter((entry) => entry.op === "put" && entry.at >= since);
+  while (uploads().length === 0 && Date.now() < until) {
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+  return uploads();
+}
+
+/** Una firma larga con el StorageService en el bucle local: recuperada la petición, nada se sube. */
 async function theLocalStorageScript() {
   const server = await anIntermediateServer();
   AutoScript.setServlets(server.loopbackStorage, server.retrieve);
@@ -365,7 +373,11 @@ async function theLocalStorageScript() {
   const fileid = theFileidIn(server.requests);
   const retrieval = server.getsFrom(THE_RETRIEVE_PATH).find((entry) => entry.id === fileid);
   const uploaded = retrieval
-    ? server.requests.filter((entry) => entry.op === "put" && entry.at >= retrieval.at)
+    ? await theUploadsBetween(
+        server,
+        retrieval.at,
+        retrieval.at + THE_SILENCE_AFTER_THE_LOCAL_STORAGE_MS,
+      )
     : [];
   emit(
     aMeasuredConditionEvent(
