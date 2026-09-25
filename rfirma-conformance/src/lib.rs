@@ -10,6 +10,7 @@ mod errand;
 mod harness;
 mod judge;
 pub mod known_bug;
+pub mod label;
 mod livelog;
 mod manifest;
 mod outcome;

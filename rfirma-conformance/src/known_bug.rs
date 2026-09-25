@@ -1,15 +1,13 @@
 //! El registro de los bugs conocidos de AutoFirma 1.9.2, las fichas del anexo A1 con su estado en
-//! `master`; no dice qué comprobación incumple cada uno, eso lo declara el catálogo.
+//! `master`; no dice qué comprobación incumple cada uno, eso lo declaran las etiquetas del catálogo.
 
 use std::sync::LazyLock;
 
-use serde::{Deserialize, Serialize};
-use ts_rs::TS;
+use serde::Deserialize;
 
 /// Si el bug sigue vivo en la rama de desarrollo del original.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, TS)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "lowercase")]
-#[ts(export)]
 pub enum InMaster {
     Fixed,
     Present,
@@ -17,9 +15,8 @@ pub enum InMaster {
 }
 
 /// Una ficha `BUG-NN` del anexo A1: su título, sin marcas de Markdown, y su estado en `master`.
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize, TS)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(deny_unknown_fields)]
-#[ts(export)]
 pub struct KnownBug {
     pub id: String,
     pub title: String,

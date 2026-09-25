@@ -35,8 +35,9 @@ emparejada, igual que en NSS.
   este ADR. Lo que sí viaja es qué certificado vuelve: si la suite llega a
   medir `checkPrivateKeys=true` —un certificado sin clave en el token, y la
   exigencia de que vuelva uno con clave—, rFirma saldrá **no conforme** por
-  la primera consecuencia, y esa desviación deliberada tendrá su porqué en
-  este ADR.
+  la primera consecuencia: esa comprobación llevará la etiqueta
+  `rfirma:adr-0025`, que la explica en cualquier informe, y este ADR tendrá
+  que citar su id. Hoy ninguna la lleva.
 
 ## Considered Options
 

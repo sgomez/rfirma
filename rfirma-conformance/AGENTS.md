@@ -28,7 +28,8 @@ consola. Sus pruebas se corren con `cargo test` dentro de este directorio; las d
 | `src/checks.rs` | El cuerpo ejecutable: cómo se conduce un grupo o se juzga con un trámite ya observado, la parada entre tramos, la guarda de las comprobaciones sin persona y los saludos por familia, sin escribir el informe. |
 | `src/harness.rs` | El registro de arneses que el catálogo liga por nombre: lo que una comprobación monta alrededor del trámite —puertos ocupados, ficheros preparados—; no juzga. |
 | `src/judge.rs` | El juez: lo observado frente a la expectativa declarada, a un resultado; con el vocabulario cerrado de expectativas, y sin lanzar trámites ni preguntar a nadie. |
-| `src/known_bug.rs` | La lectura del registro de bugs conocidos, con el que el catálogo resuelve el `bug` de cada comprobación. |
+| `src/known_bug.rs` | La lectura del registro de bugs conocidos, con el que se resuelve la etiqueta `autofirma:bug:1.9.2`. |
+| `src/label.rs` | Las etiquetas de una comprobación, su lista cerrada y su lectura del `explained_by` del catálogo; no cambian el resultado. |
 | `src/outcome.rs` | El resultado de una comprobación, sus nombres en pantalla y PENDIENTE. |
 | `src/validation.rs` | La validación de un informe contra una referencia: validado o sus discrepancias, que son fallos de la suite o de la referencia. |
 | `src/errand.rs` | El trámite: su clave, lo observado que se guarda, el seam `ErrandRunner` con su adaptador de Node y su falso de tramas grabadas, y lo que se extrae de cada evento. |
@@ -42,7 +43,7 @@ consola. Sus pruebas se corren con `cargo test` dentro de este directorio; las d
 | `../testdata/site-driver/test/` | Las pruebas de los analizadores de firma, que se corren con `node --test test/*.test.mjs`, y sus muestras hechas con OpenSSL y `zip`. |
 | `../testdata/site-driver/certificates/` | Los certificados, sin su clave, del kit de la FNMT que montan los almacenes `several`, `expired` y `token_apart`: con ellos los guiones reconocen qué certificado volvió. |
 | `../testdata/site-driver/scripts/` | Los guiones, un módulo por familia: certificado, firma, petición, ficheros, lote, servidor intermedio servido por HTTP, canal WebSocket y socket a mano. |
-| `tests/catalogue_matches_the_docs.rs` | El cruce del catálogo, leído con el cargador del crate, y la referencia con `docs/afirma/1.9.2/`: capítulos, tabla SAF, fichas A1 y el registro de bugs, y el bug de cada comprobación con la causa de la referencia. |
+| `tests/catalogue_matches_the_docs.rs` | El cruce del catálogo, leído con el cargador del crate, y la referencia con `docs/afirma/1.9.2/`: capítulos, tabla SAF, fichas A1 y el registro de bugs, el bug de cada comprobación con la causa de la referencia, y cada etiqueta `rfirma:adr-NNNN` con el ADR que la cita. |
 | `tests/transcripts/` | Tramas grabadas de trámites de verdad, las que reproduce el ejecutor falso. |
 | `.cargo/config.toml` | Dónde deja ts-rs los tipos del contrato: `console/src/contract/`. |
 | `console/` | La consola web, un proyecto pnpm propio con React y Vite, fuera de `rfirma-app` y del CI; `just conformance-console` la compila en `console/dist/`. |
