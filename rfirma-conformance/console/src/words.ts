@@ -35,6 +35,11 @@ export function unexplained(summary: Summary): number {
   return summary.noncompliant - summary.explained;
 }
 
+export function explanationTally(summary: Summary): string {
+  const explained = summary.explained === 1 ? "1 explicado" : `${summary.explained} explicados`;
+  return `${unexplained(summary)} sin explicar · ${explained}`;
+}
+
 export function isExplained(check: CheckView): boolean {
   return check.state === "NO CONFORME" && check.labels.length > 0;
 }

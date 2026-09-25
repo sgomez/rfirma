@@ -126,17 +126,13 @@ describe("a check row", () => {
     renderConsoleAt("/", aReportOf("rfirma", A_FAILED_CHECK, [AN_ADR_LABEL]));
     await theRowOf(A_FAILED_CHECK);
 
-    expect(
-      screen.getAllByText("0 sin explicar · 1 explicados", { selector: ".counts .count" }).length,
-    ).toBeGreaterThan(0);
+    expect(screen.getAllByTitle(/^0 sin explicar · 1 explicado\./).length).toBeGreaterThan(0);
   });
 
   it("counts as unexplained a noncompliance without labels", async () => {
     renderConsoleAt("/", aReportOf("autofirma", THE_CHECK, [A_BUG_LABEL]));
     await theRowOf(A_FAILED_CHECK);
 
-    expect(
-      screen.getAllByText("1 sin explicar · 0 explicados", { selector: ".counts .count" }).length,
-    ).toBeGreaterThan(0);
+    expect(screen.getAllByTitle(/^1 sin explicar · 0 explicados\./).length).toBeGreaterThan(0);
   });
 });
