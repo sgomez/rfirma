@@ -14,7 +14,7 @@ mode = "v4"
 script = "signcades"
 greeting = true
 act.consent = "Va a aparecer el diálogo de certificado."
-expects.completes.conditions = ["a-single-signer"]
+expects.completes.conditions = ["a-single-signer", "the-signature-verifies"]
 
 [[check]]
 id = "cosign_is_dispatched_over_a_previous_signature"
@@ -30,7 +30,7 @@ previo y el nuevo en paralelo.
 mode = "v4"
 script = "cosigncades"
 act.consent = "Va a aparecer el diálogo de certificado."
-expects.completes.conditions = ["two-parallel-signers"]
+expects.completes.conditions = ["two-parallel-signers", "the-signature-verifies"]
 
 [[check]]
 id = "countersign_is_dispatched_over_a_previous_signature"
@@ -45,7 +45,7 @@ vuelve con una contrafirma.
 mode = "v4"
 script = "countersigncades"
 act.consent = "Va a aparecer el diálogo de certificado."
-expects.completes.conditions = ["the-signer-countersigned"]
+expects.completes.conditions = ["the-signer-countersigned", "the-signature-verifies"]
 
 [[check]]
 id = "countersign_with_target_tree_countersigns_every_node"
@@ -60,7 +60,7 @@ firmante ya contrafirmado, contrafirma al firmante y a su contrafirma.
 mode = "v4"
 script = "countersigncadestree"
 act.consent = "Va a aparecer el diálogo de certificado."
-expects.completes.conditions = ["every-node-countersigned"]
+expects.completes.conditions = ["every-node-countersigned", "the-signature-verifies"]
 
 [[check]]
 id = "countersign_with_another_target_countersigns_only_the_leaves"
@@ -75,7 +75,37 @@ contrafirma, que es la hoja, recibe una contrafirma nueva.
 mode = "v4"
 script = "countersigncadesanothertarget"
 act.consent = "Va a aparecer el diálogo de certificado."
-expects.completes.conditions = ["only-the-leaves-countersigned"]
+expects.completes.conditions = ["only-the-leaves-countersigned", "the-signature-verifies"]
+
+[[check]]
+id = "cosign_over_a_xades_signature_adds_a_parallel_signer"
+set = "firma"
+citation = "ProtocolInvocationLauncherSign.java:710-717; XAdESCoSigner.java"
+statement = """
+La cofirma de una firma XAdES añade un firmante en paralelo al previo: el XML que vuelve lleva
+las dos Signature, ninguna contrafirma de la otra, y cada una verifica con la clave de su firmante.
+"""
+
+[check.drive]
+mode = "v4"
+script = "cosignxades"
+act.consent = "Va a aparecer el diálogo de certificado."
+expects.completes.conditions = ["two-parallel-signers", "the-signature-verifies"]
+
+[[check]]
+id = "countersign_over_a_xades_signature_countersigns_its_signer"
+set = "firma"
+citation = "ProtocolInvocationLauncherSign.java:723-724; XAdESCounterSigner.java"
+statement = """
+La contrafirma de una firma XAdES firma la firma previa: el XML que vuelve lleva la contrafirma
+dentro del firmante previo, y cada Signature verifica con la clave de su firmante.
+"""
+
+[check.drive]
+mode = "v4"
+script = "countersignxades"
+act.consent = "Va a aparecer el diálogo de certificado."
+expects.completes.conditions = ["the-signer-countersigned", "the-signature-verifies"]
 
 [[check]]
 id = "the_signature_format_is_mandatory"
@@ -120,7 +150,7 @@ y firma en CAdES, en vez de exigir que la sede lo nombre.
 mode = "v4"
 script = "signauto"
 act.consent = "Va a aparecer el diálogo de certificado."
-expects.completes.conditions = ["a-cades-signature"]
+expects.completes.conditions = ["a-cades-signature", "the-signature-verifies"]
 
 [[check]]
 id = "format_auto_resolves_an_xml_first_signature"
@@ -135,7 +165,7 @@ contenido y firma en XAdES sin pedir formato.
 mode = "v4"
 script = "signxadesauto"
 act.consent = "Va a aparecer el diálogo de certificado."
-expects.completes.conditions = ["a-xades-signature"]
+expects.completes.conditions = ["a-xades-signature", "the-signature-verifies"]
 
 [[check]]
 id = "format_auto_identifies_the_previous_signature_of_a_multisignature"
@@ -151,7 +181,7 @@ vuelve con los dos firmantes en paralelo.
 mode = "v4"
 script = "cosignauto"
 act.consent = "Va a aparecer el diálogo de certificado."
-expects.completes.conditions = ["two-parallel-signers"]
+expects.completes.conditions = ["two-parallel-signers", "the-signature-verifies"]
 
 [[check]]
 id = "format_auto_over_data_that_is_no_signature_is_rejected_with_saf_17"
@@ -229,7 +259,129 @@ mode = "v4"
 script = "signcades"
 store = "ec"
 act.consent = "Va a aparecer el diálogo de certificado, con el almacén de curva elíptica."
-expects.completes.conditions = ["the-algorithm-of-the-key"]
+expects.completes.conditions = ["the-algorithm-of-the-key", "the-signature-verifies"]
+
+[[check]]
+id = "a_cades_signature_is_made_with_the_sha384_requested"
+set = "firma"
+citation = "UrlParametersToSign.java:60-74, 287-293; ProtocolInvocationLauncherSign.java:632-640; AOSignConstants.java:365-390"
+statement = """
+Una firma CAdES pedida con SHA384withRSA se hace con SHA-384: la firma que vuelve declara
+ese resumen y verifica con la clave del certificado.
+"""
+
+[check.drive]
+mode = "v4"
+script = "signcadessha384"
+act.consent = "Va a aparecer el diálogo de certificado."
+expects.completes.conditions = ["the-digest-requested", "the-signature-verifies"]
+
+[[check]]
+id = "a_cades_signature_is_made_with_the_sha512_requested"
+set = "firma"
+citation = "UrlParametersToSign.java:60-74, 287-293; ProtocolInvocationLauncherSign.java:632-640; AOSignConstants.java:365-390"
+statement = """
+Una firma CAdES pedida con SHA512withRSA se hace con SHA-512: la firma que vuelve declara
+ese resumen y verifica con la clave del certificado.
+"""
+
+[check.drive]
+mode = "v4"
+script = "signcadessha512"
+act.consent = "Va a aparecer el diálogo de certificado."
+expects.completes.conditions = ["the-digest-requested", "the-signature-verifies"]
+
+[[check]]
+id = "a_xades_signature_is_made_with_the_sha384_requested"
+set = "firma"
+citation = "UrlParametersToSign.java:60-74, 287-293; ProtocolInvocationLauncherSign.java:632-640; AOSignConstants.java:365-390"
+statement = """
+Una firma XAdES pedida con SHA384withRSA se hace con SHA-384: la firma que vuelve declara
+ese resumen y verifica con la clave del certificado.
+"""
+
+[check.drive]
+mode = "v4"
+script = "signxadessha384"
+act.consent = "Va a aparecer el diálogo de certificado."
+expects.completes.conditions = ["the-digest-requested", "the-signature-verifies"]
+
+[[check]]
+id = "a_xades_signature_is_made_with_the_sha512_requested"
+set = "firma"
+citation = "UrlParametersToSign.java:60-74, 287-293; ProtocolInvocationLauncherSign.java:632-640; AOSignConstants.java:365-390"
+statement = """
+Una firma XAdES pedida con SHA512withRSA se hace con SHA-512: la firma que vuelve declara
+ese resumen y verifica con la clave del certificado.
+"""
+
+[check.drive]
+mode = "v4"
+script = "signxadessha512"
+act.consent = "Va a aparecer el diálogo de certificado."
+expects.completes.conditions = ["the-digest-requested", "the-signature-verifies"]
+
+[[check]]
+id = "a_pades_signature_is_made_with_the_sha384_requested"
+set = "firma"
+citation = "UrlParametersToSign.java:60-74, 287-293; ProtocolInvocationLauncherSign.java:632-640; AOSignConstants.java:365-390"
+statement = """
+Una firma PAdES pedida con SHA384withRSA se hace con SHA-384: la firma que vuelve declara
+ese resumen y verifica con la clave del certificado.
+"""
+
+[check.drive]
+mode = "v4"
+script = "signpadessha384"
+act.consent = "Va a aparecer el diálogo de certificado."
+expects.completes.conditions = ["the-digest-requested", "the-signature-verifies"]
+
+[[check]]
+id = "a_pades_signature_is_made_with_the_sha512_requested"
+set = "firma"
+citation = "UrlParametersToSign.java:60-74, 287-293; ProtocolInvocationLauncherSign.java:632-640; AOSignConstants.java:365-390"
+statement = """
+Una firma PAdES pedida con SHA512withRSA se hace con SHA-512: la firma que vuelve declara
+ese resumen y verifica con la clave del certificado.
+"""
+
+[check.drive]
+mode = "v4"
+script = "signpadessha512"
+act.consent = "Va a aparecer el diálogo de certificado."
+expects.completes.conditions = ["the-digest-requested", "the-signature-verifies"]
+
+[[check]]
+id = "a_xades_signature_with_an_elliptic_curve_key_verifies"
+set = "firma"
+citation = "ProtocolInvocationLauncherSign.java:632-640; AOSignConstants.java:365-390"
+statement = """
+Con un certificado de curva elíptica, una firma XAdES pedida con SHA256withRSA se hace con ECDSA y
+verifica con la clave del certificado.
+"""
+
+[check.drive]
+mode = "v4"
+script = "signxades"
+store = "ec"
+act.consent = "Va a aparecer el diálogo de certificado, con el almacén de curva elíptica."
+expects.completes.conditions = ["the-default-envelope", "the-signature-verifies"]
+
+[[check]]
+id = "a_pades_signature_with_an_elliptic_curve_key_verifies"
+set = "firma"
+citation = "ProtocolInvocationLauncherSign.java:632-640; AOSignConstants.java:365-390"
+statement = """
+Con un certificado de curva elíptica, una firma PAdES pedida con SHA256withRSA se hace con ECDSA y
+verifica con la clave del certificado.
+"""
+
+[check.drive]
+mode = "v4"
+script = "signpades"
+store = "ec"
+act.consent = "Va a aparecer el diálogo de certificado, con el almacén de curva elíptica."
+expects.completes.conditions = ["the-signature-inside-the-pdf", "the-signature-verifies"]
 
 [[check]]
 id = "the_signature_response_carries_the_certificate_and_the_signature_apart"
@@ -483,7 +635,7 @@ diccionario de firma, su /ByteRange y su /Contents.
 mode = "v4"
 script = "signpades"
 act.consent = "Va a aparecer el diálogo de certificado."
-expects.completes.conditions = ["the-signature-inside-the-pdf"]
+expects.completes.conditions = ["the-signature-inside-the-pdf", "the-signature-verifies"]
 
 [[check]]
 id = "a_visible_pades_signature_asks_the_person_to_mark_the_area"
@@ -530,7 +682,7 @@ Con mode=implicit, CAdES empotra los datos firmados en el PKCS#7 que vuelve.
 mode = "v4"
 script = "signcadesimplicit"
 act.consent = "Va a aparecer el diálogo de certificado."
-expects.completes.conditions = ["the-data-inside"]
+expects.completes.conditions = ["the-data-inside", "the-signature-verifies"]
 
 [[check]]
 id = "the_age_policy_packages_a_document_under_one_megabyte_implicitly"
@@ -594,7 +746,7 @@ la propia Signature.
 mode = "v4"
 script = "signxadesenveloping"
 act.consent = "Va a aparecer el diálogo de certificado."
-expects.completes.conditions = ["the-envelope-requested"]
+expects.completes.conditions = ["the-envelope-requested", "the-signature-verifies"]
 
 [[check]]
 id = "a_xades_enveloped_signature_goes_inside_the_document"
@@ -611,7 +763,7 @@ como hija de su raíz.
 mode = "v4"
 script = "signxadesenveloped"
 act.consent = "Va a aparecer el diálogo de certificado."
-expects.completes.conditions = ["the-envelope-requested"]
+expects.completes.conditions = ["the-envelope-requested", "the-signature-verifies"]
 
 [[check]]
 id = "a_xades_detached_signature_references_the_document_beside_it"
@@ -628,7 +780,7 @@ referencia al documento, que va a su lado y no dentro de ella.
 mode = "v4"
 script = "signxadesdetached"
 act.consent = "Va a aparecer el diálogo de certificado."
-expects.completes.conditions = ["the-envelope-requested"]
+expects.completes.conditions = ["the-envelope-requested", "the-signature-verifies"]
 
 [[check]]
 id = "a_xades_externally_detached_signature_references_the_uri_of_the_request"
@@ -676,7 +828,7 @@ lugar de producción, y la firma que vuelve los declara.
 mode = "v4"
 script = "signfacturaewitharole"
 act.consent = "Va a aparecer el diálogo de certificado."
-expects.completes.conditions = ["the-role-and-the-place-signed"]
+expects.completes.conditions = ["the-role-and-the-place-signed", "the-signature-verifies"]
 
 [[check]]
 id = "facturae_drops_a_parameter_outside_its_white_list_instead_of_failing"
@@ -1007,6 +1159,36 @@ act.consent = "Va a aparecer el diálogo de certificado."
 expects.completes.conditions = ["through-the-triphase-server", "the-presignature-signed-with-the-key", "the-server-signature-as-it-came"]
 
 [[check]]
+id = "a_xades_triphase_cosign_goes_through_the_server_url"
+set = "firma"
+citation = "AOXAdESTriPhaseSigner.java:78, 362-371; PreSigner.java:64-85"
+statement = """
+Una cofirma XAdEStri recorre el mismo camino que la firma, con cop=cosign y la firma previa como
+documento.
+"""
+
+[check.drive]
+mode = "v4"
+script = "cosignxadestri"
+act.consent = "Va a aparecer el diálogo de certificado."
+expects.completes.conditions = ["through-the-triphase-server", "the-presignature-signed-with-the-key", "the-server-signature-as-it-came"]
+
+[[check]]
+id = "a_xades_triphase_countersign_goes_through_the_server_url"
+set = "firma"
+citation = "AOXAdESTriPhaseSigner.java:78, 362-371; PreSigner.java:64-85"
+statement = """
+Una contrafirma XAdEStri recorre el mismo camino que la firma, con cop=countersign y la firma
+previa como documento.
+"""
+
+[check.drive]
+mode = "v4"
+script = "countersignxadestri"
+act.consent = "Va a aparecer el diálogo de certificado."
+expects.completes.conditions = ["through-the-triphase-server", "the-presignature-signed-with-the-key", "the-server-signature-as-it-came"]
+
+[[check]]
 id = "a_pades_triphase_signature_goes_through_the_server_url"
 set = "firma"
 citation = "AOSignerFactory.java:74; AOPDFTriPhaseSigner.java:65-151; PDFTriPhaseSignerUtil.java:69, 74-218; TriphaseDataSigner.java:48-99"
@@ -1082,7 +1264,7 @@ Una firma CAdES sin mode ni política que lo fije es explícita: vuelve sin los 
 mode = "v4"
 script = "signcadeswithoutmode"
 act.consent = "Va a aparecer el diálogo de certificado."
-expects.completes.conditions = ["the-data-left-out"]
+expects.completes.conditions = ["the-data-left-out", "the-signature-verifies"]
 
 [[check]]
 id = "a_xades_signature_without_format_is_enveloping"
@@ -1097,7 +1279,7 @@ Una firma XAdES sin el parámetro format es enveloping: los datos van dentro de 
 mode = "v4"
 script = "signxades"
 act.consent = "Va a aparecer el diálogo de certificado."
-expects.completes.conditions = ["the-default-envelope"]
+expects.completes.conditions = ["the-default-envelope", "the-signature-verifies"]
 
 [[check]]
 id = "an_explicit_xades_signs_the_sha1_of_the_data"

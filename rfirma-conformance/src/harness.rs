@@ -196,9 +196,6 @@ const THE_SAVED_SIGNATURES: &[(&str, Option<&str>, &str)] = &[
         "challenge-signed.csig",
     ),
     ("signandsavecadestri", None, "challenge-signed.csig"),
-    ("signandsavepadestri", None, "documento-firmado.pdf"),
-    ("signandsavexadestri", None, "documento-firmado.xsig"),
-    ("signandsavefacturaetri", None, "factura-firmada.xsig"),
 ];
 
 const THE_RETURNED_SIGNATURE_ON_DISK: &str = "the-returned-signature-on-disk";

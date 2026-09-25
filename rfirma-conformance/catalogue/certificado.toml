@@ -467,4 +467,4 @@ script = "signcades"
 store = "token"
 patience_secs = 180
 act.wrong_pin = "Elige el certificado RSA del token y teclea un PIN erróneo, 0000; cuando vuelva a pedirse, elígelo otra vez y teclea el de verdad, 1234."
-expects.completes = {}
+expects.completes.conditions = ["the-signature-verifies"]

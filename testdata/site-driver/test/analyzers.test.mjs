@@ -12,6 +12,7 @@ import {
   theCertificatesIn,
   theCmsSignature,
   theCmsVerification,
+  theDigestsOf,
   theKeyFamilyOf,
   thePublicKeyAlgorithmOf,
   theShapeOf,
@@ -19,6 +20,7 @@ import {
 import {
   isASignedPdf,
   isAVisibleArea,
+  thePadesSigners,
   thePadesVerification,
   theSignatureRectangles,
 } from "../lib/pades.mjs";
@@ -27,6 +29,8 @@ import {
   isAXadesSignature,
   signsTheRoleAndThePlace,
   theXadesEnvelope,
+  theXadesSignatureDigest,
+  theXadesSigners,
   theXadesVerification,
 } from "../lib/xades.mjs";
 import { theZipEntries } from "../lib/zip.mjs";
@@ -117,6 +121,13 @@ describe("the CMS analyzer", () => {
     }
   });
 
+  it("reads the digests a signer signs with", () => {
+    const [signer] = theCmsSignature(aReference("cades-implicit.p7s")).signers;
+    assert.deepEqual(theDigestsOf(signer), ["sha256", "sha256"]);
+    const [ecdsa] = theCmsSignature(aSample("cms-ecdsa.p7s")).signers;
+    assert.deepEqual(theDigestsOf(ecdsa), ["sha256", "sha256"]);
+  });
+
   it("answers null for what is not a SignedData", () => {
     assert.equal(theCmsSignature(aReference("document.xml")), null);
     assert.equal(theCmsSignature(theChallenge), null);
@@ -155,6 +166,28 @@ describe("the XML signature analyzer", () => {
     assert.equal(theXadesEnvelope(anXml("document.xml"), "documento"), null);
   });
 
+  it("reads the digest of the signature method, not the one of the references", () => {
+    const xml = anXml("xades-enveloping.xml");
+    assert.equal(theXadesSignatureDigest(xml), "sha256");
+    const sha512 = xml.replace(
+      "http://www.w3.org/2001/04/xmldsig-more#rsa-sha256",
+      "http://www.w3.org/2001/04/xmldsig-more#rsa-sha512",
+    );
+    assert.equal(theXadesSignatureDigest(sha512), "sha512");
+    assert.equal(theXadesSignatureDigest(anXml("document.xml")), null);
+  });
+
+  it("counts the signatures of a cosignature and the countersignatures among them", () => {
+    assert.deepEqual(theXadesSigners(anXml("xades-enveloping.cosign.xml")), {
+      signatures: 2,
+      countersignatures: 0,
+    });
+    assert.deepEqual(theXadesSigners(anXml("xades-enveloping.countersign-tree.xml")), {
+      signatures: 2,
+      countersignatures: 1,
+    });
+  });
+
   it("tells a XAdES signature from a bare document", () => {
     assert.equal(isAXadesSignature(anXml("xades-enveloping.xml")), true);
     assert.equal(isAXadesSignature(anXml("document.xml")), false);
@@ -180,6 +213,12 @@ describe("the signed PDF analyzer", () => {
     const dictionary =
       "<< /Type /Sig /Filter /Adobe.PPKLite /ByteRange [0 10 20 30] /Contents <3082> >>";
     assert.equal(isASignedPdf(aPdf(`5 0 obj\n${dictionary}\nendobj`)), true);
+  });
+
+  it("reads the signers of the signatures that cover the whole PDF", () => {
+    const signers = thePadesSigners(aSample("pades-rsa.pdf"));
+    assert.equal(signers.length, 1);
+    assert.deepEqual(theDigestsOf(signers[0]), ["sha256", "sha256"]);
   });
 
   it("refuses a PDF without signature and what is not a PDF", () => {

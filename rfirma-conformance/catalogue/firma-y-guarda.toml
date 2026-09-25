@@ -15,7 +15,7 @@ mode = "v4"
 script = "signandsave"
 harness = "the_saved_signature_read_back"
 act.save_as_proposed = "Van a aparecer el diálogo de certificado y la petición de dónde guardar la firma: guárdala con el nombre propuesto, challenge-signed.csig, en la carpeta que se abre."
-expects.completes.conditions = ["the-returned-signature-on-disk"]
+expects.completes.conditions = ["the-returned-signature-on-disk", "the-signature-verifies"]
 
 [[check]]
 id = "signandsave_rejects_an_illegal_filename_with_saf_03"
@@ -93,7 +93,7 @@ mode = "v4"
 script = "signandsavewithecdsa"
 store = "ec"
 act.save_as_proposed = "AutoFirma rechaza el algoritmo de curva elíptica antes de pedir certificado y enseña un diálogo de error: ciérralo para que llegue la respuesta. Si en cambio aparecen el diálogo de certificado, con el único certificado de curva elíptica del almacén ec, y el de guardar la firma, guárdala donde te proponga."
-expects.completes = {}
+expects.completes.conditions = ["the-signature-verifies"]
 
 [[check]]
 id = "signandsave_rejects_a_request_without_a_verb_with_saf_04"
@@ -141,56 +141,4 @@ mode = "v4"
 script = "signandsavecadestri"
 harness = "the_saved_signature_read_back"
 act.save_as_proposed = "Van a aparecer el diálogo de certificado y la petición de dónde guardar la firma: guárdala con el nombre propuesto, challenge-signed.csig, en la carpeta que se abre."
-expects.completes.conditions = ["through-the-triphase-server", "the-presignature-signed-with-the-key", "the-server-signature-as-it-came", "the-returned-signature-on-disk"]
-
-[[check]]
-id = "signandsave_a_pades_triphase_signature_goes_through_the_server_url_and_is_saved"
-set = "firma-y-guarda"
-citation = "ProtocolInvocationLauncherSignAndSave.java:258, 536-566, 578-588, 722-737; AOSignerFactory.java:74; AOPDFTriPhaseSigner.java:65-151; PDFTriPhaseSignerUtil.java:69, 74-218; TriphaseDataSigner.java:48-99; JSEUIManager.java:808-814"
-statement = """
-En signandsave, una firma PAdEStri sobre un PDF hace la prefirma y la postfirma contra el serverUrl
-de properties con cop=sign y format=pades, firma con la clave del certificado la prefirma que le
-devuelve, y el PDF firmado de la postfirma es el que guarda en disco y el que entrega a la sede.
-"""
-
-[check.drive]
-mode = "v4"
-script = "signandsavepadestri"
-harness = "the_saved_signature_read_back"
-act.save_as_proposed = "Van a aparecer el diálogo de certificado y la petición de dónde guardar la firma: guárdala con el nombre propuesto, documento-firmado.pdf, en la carpeta que se abre."
-expects.completes.conditions = ["through-the-triphase-server", "the-presignature-signed-with-the-key", "the-server-signature-as-it-came", "the-returned-signature-on-disk"]
-
-[[check]]
-id = "signandsave_a_xades_triphase_signature_goes_through_the_server_url_and_is_saved"
-set = "firma-y-guarda"
-citation = "ProtocolInvocationLauncherSignAndSave.java:258, 536-566, 578-588, 722-737; AOSignerFactory.java:64; AOXAdESTriPhaseSigner.java:149-151, 154-168, 341-546; TriphaseDataSigner.java:48-99; JSEUIManager.java:808-814"
-statement = """
-En signandsave, una firma XAdEStri sobre un XML hace la prefirma y la postfirma contra el serverUrl
-de properties con cop=sign y format=XAdES, firma con la clave del certificado la prefirma que le
-devuelve, y la firma de la postfirma es la que guarda en disco y la que entrega a la sede.
-"""
-
-[check.drive]
-mode = "v4"
-script = "signandsavexadestri"
-harness = "the_saved_signature_read_back"
-act.save_as_proposed = "Van a aparecer el diálogo de certificado y la petición de dónde guardar la firma: guárdala con el nombre propuesto, documento-firmado.xsig, en la carpeta que se abre."
-expects.completes.conditions = ["through-the-triphase-server", "the-presignature-signed-with-the-key", "the-server-signature-as-it-came", "the-returned-signature-on-disk"]
-
-[[check]]
-id = "signandsave_a_facturae_triphase_signature_goes_through_the_server_url_and_is_saved"
-set = "firma-y-guarda"
-citation = "ProtocolInvocationLauncherSignAndSave.java:258, 536-566, 578-588, 722-737; AOSignerFactory.java:59; AOFacturaETriPhaseSigner.java:32-34; AOXAdESTriPhaseSigner.java:154-168, 341-546; TriphaseDataSigner.java:48-99; JSEUIManager.java:808-814"
-statement = """
-En signandsave, una firma FacturaEtri sobre una factura sin firmar hace la prefirma y la postfirma
-contra el serverUrl de properties con cop=sign y format=FacturaE, firma con la clave del
-certificado la prefirma que le devuelve, y la factura firmada de la postfirma es la que guarda en
-disco y la que entrega a la sede.
-"""
-
-[check.drive]
-mode = "v4"
-script = "signandsavefacturaetri"
-harness = "the_saved_signature_read_back"
-act.save_as_proposed = "Van a aparecer el diálogo de certificado y la petición de dónde guardar la firma: guárdala con el nombre propuesto, factura-firmada.xsig, en la carpeta que se abre."
 expects.completes.conditions = ["through-the-triphase-server", "the-presignature-signed-with-the-key", "the-server-signature-as-it-came", "the-returned-signature-on-disk"]

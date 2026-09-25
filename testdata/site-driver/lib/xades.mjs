@@ -106,6 +106,22 @@ export function isAXadesSignature(xml) {
   );
 }
 
+/** El resumen del `SignatureMethod` de la primera `Signature`, o `null`. */
+export function theXadesSignatureDigest(xml) {
+  const signature = theFirstSignature(xml);
+  if (!signature) return null;
+  const method = /<(?:[\w.-]+:)?SignatureMethod\s[^>]*Algorithm="([^"]*)"/.exec(
+    xml.slice(signature.start, signature.end),
+  );
+  return method ? (XML_SIGNATURES[method[1]]?.hash ?? method[1]) : null;
+}
+
+/** Cuántas `Signature` lleva el XML y cuántas `CounterSignature`. */
+export function theXadesSigners(xml) {
+  const opening = (local) => [...xml.matchAll(aTag(local))].filter((match) => !match[1]).length;
+  return { signatures: opening("Signature"), countersignatures: opening("CounterSignature") };
+}
+
 const theTextsOf = (xml, local) =>
   [...xml.matchAll(new RegExp(`<(?:[\\w.-]+:)?${local}(?:\\s[^>]*)?>([^<]*)<`, "g"))].map((match) =>
     match[1].trim(),

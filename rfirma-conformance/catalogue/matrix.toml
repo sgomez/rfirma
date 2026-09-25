@@ -1,0 +1,385 @@
+# La matriz de happy paths: cada celda operación × formato × canal × clave cubierta por una
+# comprobación, no aplicable con su motivo o hueco declarado. Solo se exigen las celdas de sus planos;
+# un eje que el plano no recorre, y el que una celda no nombra, toma el valor del origen.
+
+origin = { operation = "sign", format = "CAdES", channel = "v4", key = "rsa-sha256" }
+
+channel = ["v4", "v3", "service", "relay"]
+
+[[operation]]
+name = "sign"
+signs = true
+
+[[operation]]
+name = "cosign"
+signs = true
+
+[[operation]]
+name = "countersign"
+signs = true
+
+[[operation]]
+name = "signandsave"
+signs = true
+
+[[operation]]
+name = "save"
+signs = false
+
+[[operation]]
+name = "batch"
+signs = true
+
+[[format]]
+name = "CAdES"
+verified_by = "the-signature-verifies"
+
+[[format]]
+name = "XAdES"
+verified_by = "the-signature-verifies"
+
+[[format]]
+name = "PAdES"
+verified_by = "the-signature-verifies"
+
+[[format]]
+name = "FacturaE"
+verified_by = "the-signature-verifies"
+
+[[format]]
+name = "CAdEStri"
+verified_by = "the-presignature-signed-with-the-key"
+
+[[format]]
+name = "XAdEStri"
+verified_by = "the-presignature-signed-with-the-key"
+
+[[format]]
+name = "PAdEStri"
+verified_by = "the-presignature-signed-with-the-key"
+
+[[format]]
+name = "FacturaEtri"
+verified_by = "the-presignature-signed-with-the-key"
+
+[[key]]
+name = "rsa-sha256"
+store = "rsa"
+
+[[key]]
+name = "rsa-sha384"
+store = "rsa"
+
+[[key]]
+name = "rsa-sha512"
+store = "rsa"
+
+[[key]]
+name = "ec-sha256"
+store = "ec"
+
+[[key]]
+name = "pkcs11-rsa-sha256"
+store = "token"
+
+[[plane]]
+operation = ["sign", "cosign", "countersign"]
+format = "*"
+
+[[plane]]
+operation = "*"
+channel = "*"
+
+[[plane]]
+format = ["CAdES", "XAdES", "PAdES", "FacturaE"]
+key = "*"
+
+# Operación × formato, por v4 con RSA y SHA-256.
+
+[[cell]]
+covered = "sign_is_dispatched_as_a_first_signature"
+
+[[cell]]
+format = "XAdES"
+covered = "a_xades_signature_without_format_is_enveloping"
+
+[[cell]]
+format = "PAdES"
+covered = "a_pades_signature_packages_itself_inside_the_pdf"
+
+[[cell]]
+format = "FacturaE"
+covered = "facturae_signs_with_the_roles_and_the_place_of_its_white_list"
+
+[[cell]]
+format = "CAdEStri"
+covered = "a_triphase_signature_goes_through_the_server_url"
+
+[[cell]]
+format = "XAdEStri"
+covered = "a_xades_triphase_signature_goes_through_the_server_url"
+
+[[cell]]
+format = "PAdEStri"
+covered = "a_pades_triphase_signature_goes_through_the_server_url"
+
+[[cell]]
+format = "FacturaEtri"
+covered = "a_facturae_triphase_signature_goes_through_the_server_url"
+
+[[cell]]
+operation = "cosign"
+covered = "cosign_is_dispatched_over_a_previous_signature"
+
+[[cell]]
+operation = "cosign"
+format = "XAdES"
+covered = "cosign_over_a_xades_signature_adds_a_parallel_signer"
+
+[[cell]]
+operation = "cosign"
+format = "PAdES"
+gap = "La cofirma PAdES es otra firma sobre un PDF ya firmado (06-operaciones-firma); ningún guion la completa."
+
+[[cell]]
+operation = "cosign"
+format = "FacturaE"
+not_applicable = "FacturaE rechaza la cofirma con SAF_04 (AOFacturaESigner.java:140-156): lo mide facturae_refuses_cosign_with_saf_04."
+
+[[cell]]
+operation = "cosign"
+format = "CAdEStri"
+covered = "a_triphase_cosign_goes_through_the_server_url"
+
+[[cell]]
+operation = "cosign"
+format = "XAdEStri"
+covered = "a_xades_triphase_cosign_goes_through_the_server_url"
+
+[[cell]]
+operation = "cosign"
+format = "PAdEStri"
+gap = "PAdEStri trata la cofirma como una firma nueva (AOPDFTriPhaseSigner.java:155-182, 06-operaciones-firma §6.3); ningún guion la hace."
+
+[[cell]]
+operation = "cosign"
+format = "FacturaEtri"
+not_applicable = "FacturaEtri rechaza la cofirma con SAF_04 (AOFacturaETriPhaseSigner.java:37-58, 06-operaciones-firma §6.3)."
+
+[[cell]]
+operation = "countersign"
+covered = "countersign_is_dispatched_over_a_previous_signature"
+
+[[cell]]
+operation = "countersign"
+format = "XAdES"
+covered = "countersign_over_a_xades_signature_countersigns_its_signer"
+
+[[cell]]
+operation = "countersign"
+format = "PAdES"
+not_applicable = "PAdES rechaza la contrafirma con SAF_04 (AOPDFSigner.java:336): lo mide a_pades_countersign_is_refused_with_saf_04."
+
+[[cell]]
+operation = "countersign"
+format = "FacturaE"
+not_applicable = "FacturaE rechaza la contrafirma con SAF_04 (AOFacturaESigner.java:161-168): lo mide facturae_refuses_countersign_with_saf_04."
+
+[[cell]]
+operation = "countersign"
+format = "CAdEStri"
+covered = "a_triphase_countersign_goes_through_the_server_url"
+
+[[cell]]
+operation = "countersign"
+format = "XAdEStri"
+covered = "a_xades_triphase_countersign_goes_through_the_server_url"
+
+[[cell]]
+operation = "countersign"
+format = "PAdEStri"
+not_applicable = "PAdEStri rechaza la contrafirma con SAF_04 (AOPDFTriPhaseSigner.java:155-182, 06-operaciones-firma §6.3)."
+
+[[cell]]
+operation = "countersign"
+format = "FacturaEtri"
+not_applicable = "FacturaEtri rechaza la contrafirma con SAF_04 (AOFacturaETriPhaseSigner.java:37-58, 06-operaciones-firma §6.3)."
+
+# Operación × canal, en CAdES con RSA y SHA-256.
+
+[[cell]]
+channel = "v3"
+covered = "the_v3_channel_completes_a_signature"
+
+[[cell]]
+channel = "service"
+covered = "the_service_channel_completes_a_signature"
+
+[[cell]]
+channel = "relay"
+covered = "a_long_request_is_retrieved_by_fileid"
+
+[[cell]]
+operation = "cosign"
+channel = "v3"
+gap = "Ninguna cofirma viaja por el canal WebSocket de la versión 3."
+
+[[cell]]
+operation = "cosign"
+channel = "service"
+gap = "Ninguna cofirma viaja por el canal de servicio."
+
+[[cell]]
+operation = "cosign"
+channel = "relay"
+gap = "Ninguna cofirma viaja por el servidor intermedio."
+
+[[cell]]
+operation = "countersign"
+channel = "v3"
+gap = "Ninguna contrafirma viaja por el canal WebSocket de la versión 3."
+
+[[cell]]
+operation = "countersign"
+channel = "service"
+gap = "Ninguna contrafirma viaja por el canal de servicio."
+
+[[cell]]
+operation = "countersign"
+channel = "relay"
+gap = "Ninguna contrafirma viaja por el servidor intermedio."
+
+[[cell]]
+operation = "signandsave"
+covered = "signandsave_saves_the_signature_and_returns_it_to_the_site"
+
+[[cell]]
+operation = "signandsave"
+channel = "v3"
+gap = "Ningún signandsave viaja por el canal WebSocket de la versión 3."
+
+[[cell]]
+operation = "signandsave"
+channel = "service"
+gap = "Ningún signandsave viaja por el canal de servicio."
+
+[[cell]]
+operation = "signandsave"
+channel = "relay"
+gap = "Ningún signandsave viaja por el servidor intermedio."
+
+[[cell]]
+operation = "save"
+covered = "save_writes_the_decoded_bytes_of_the_data"
+
+[[cell]]
+operation = "save"
+channel = "v3"
+gap = "Ningún save completo viaja por el canal WebSocket de la versión 3."
+
+[[cell]]
+operation = "save"
+channel = "service"
+gap = "Por el canal de servicio solo se mide el save que falla (a_failed_save_over_the_service_channel_answers_saf_11)."
+
+[[cell]]
+operation = "save"
+channel = "relay"
+gap = "Ningún save viaja por el servidor intermedio."
+
+[[cell]]
+operation = "batch"
+gap = "El lote remoto devuelve lo que da el postfirmador, y de los PK1 que firma el cliente solo se mira que estén (the-postsigner-gets-every-item-with-pk1), no que verifiquen."
+
+[[cell]]
+operation = "batch"
+channel = "v3"
+gap = "Ningún lote viaja por el canal WebSocket de la versión 3."
+
+[[cell]]
+operation = "batch"
+channel = "service"
+gap = "Ningún lote viaja por el canal de servicio."
+
+[[cell]]
+operation = "batch"
+channel = "relay"
+gap = "El lote por servidor intermedio se completa sin ninguna condición que verifique lo firmado (the_batch_result_reaches_the_site_through_the_intermediate_server)."
+
+# Formato × clave, en sign por v4.
+
+[[cell]]
+key = "rsa-sha384"
+covered = "a_cades_signature_is_made_with_the_sha384_requested"
+
+[[cell]]
+key = "rsa-sha512"
+covered = "a_cades_signature_is_made_with_the_sha512_requested"
+
+[[cell]]
+key = "ec-sha256"
+covered = "the_algorithm_is_recomposed_with_the_key_of_the_certificate"
+
+[[cell]]
+key = "pkcs11-rsa-sha256"
+covered = "a_wrong_pin_does_not_cancel_the_signature"
+
+[[cell]]
+format = "XAdES"
+key = "rsa-sha384"
+covered = "a_xades_signature_is_made_with_the_sha384_requested"
+
+[[cell]]
+format = "XAdES"
+key = "rsa-sha512"
+covered = "a_xades_signature_is_made_with_the_sha512_requested"
+
+[[cell]]
+format = "XAdES"
+key = "ec-sha256"
+covered = "a_xades_signature_with_an_elliptic_curve_key_verifies"
+
+[[cell]]
+format = "XAdES"
+key = "pkcs11-rsa-sha256"
+gap = "Ninguna firma XAdES se hace con el token PKCS#11."
+
+[[cell]]
+format = "PAdES"
+key = "rsa-sha384"
+covered = "a_pades_signature_is_made_with_the_sha384_requested"
+
+[[cell]]
+format = "PAdES"
+key = "rsa-sha512"
+covered = "a_pades_signature_is_made_with_the_sha512_requested"
+
+[[cell]]
+format = "PAdES"
+key = "ec-sha256"
+covered = "a_pades_signature_with_an_elliptic_curve_key_verifies"
+
+[[cell]]
+format = "PAdES"
+key = "pkcs11-rsa-sha256"
+gap = "Ninguna firma PAdES se hace con el token PKCS#11."
+
+[[cell]]
+format = "FacturaE"
+key = "rsa-sha384"
+gap = "Ninguna factura se firma con SHA-384."
+
+[[cell]]
+format = "FacturaE"
+key = "rsa-sha512"
+gap = "Ninguna factura se firma con SHA-512."
+
+[[cell]]
+format = "FacturaE"
+key = "ec-sha256"
+gap = "Ninguna factura se firma con un certificado de curva elíptica."
+
+[[cell]]
+format = "FacturaE"
+key = "pkcs11-rsa-sha256"
+gap = "Ninguna factura se firma con el token PKCS#11."

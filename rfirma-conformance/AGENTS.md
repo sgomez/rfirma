@@ -11,6 +11,7 @@ consola. Sus pruebas se corren con `cargo test` dentro de este directorio; las d
 | `CONTEXT.md` | El glosario de la suite, un bounded context aparte del de la aplicación. |
 | `docs/adr/` | Las decisiones que solo afectan a la suite, numeradas con las de `docs/adr/` de la raíz. |
 | `catalogue/` | El catálogo: sus conjuntos en `sets.toml`, con su orden y sus capítulos, y un TOML por conjunto con los metadatos de cada comprobación; no nombra a ningún cliente. |
+| `catalogue/matrix.toml` | La matriz de happy paths: sus ejes, sus planos y el estado de cada celda, cubierta por el id de una comprobación, no aplicable o hueco. |
 | `saf-table.toml` | La tabla SAF: cada código que la sede puede recibir por punto de decisión, cubierto por ids del catálogo, no medible o hueco; una vista, no un conjunto. |
 | `bugs/autofirma-1.9.2.toml` | El registro de bugs conocidos: cada ficha `BUG-NN` del anexo A1 con su título y su estado en `master`; qué comprobación incumple cada uno lo declara el catálogo. |
 | `reference/` | Las referencias, un TOML por cliente y versión con los resultados que una ficha `BUG-NN` explica. |
@@ -25,6 +26,7 @@ consola. Sus pruebas se corren con `cargo test` dentro de este directorio; las d
 | `src/catalogue.rs` | La comprobación como tipo —exigencia, cómo se provoca, qué hace la persona y una sola expectativa— y la lectura del catálogo con lo que el tipo no puede decir: ids repetidos, dos comprobaciones que miden lo mismo y lo que no casa con el manifiesto de la sede. |
 | `src/saf_table.rs` | La lectura de la tabla SAF y su cruce con el catálogo: ids que no miden su fila, comprobaciones de un SAF sin fila y dos que observan el mismo rechazo. |
 | `src/manifest.rs` | El vocabulario de la sede que publica `driver.mjs --manifest`: modos y guiones con su sede, su familia y sus condiciones. |
+| `src/matrix.rs` | La lectura de la matriz de happy paths y lo que no casa con el catálogo: celdas sin estado, repetidas o fuera de todo plano, y comprobaciones que no miden la celda que cubren. |
 | `src/checks.rs` | El cuerpo ejecutable: cómo se conduce un grupo o se juzga con un trámite ya observado, la parada entre tramos, la guarda de las comprobaciones sin persona y los saludos por familia, sin escribir el informe. |
 | `src/harness.rs` | El registro de arneses que el catálogo liga por nombre: lo que una comprobación monta alrededor del trámite —puertos ocupados, ficheros preparados—; no juzga. |
 | `src/judge.rs` | El juez: lo observado frente a la expectativa declarada, a un resultado; con el vocabulario cerrado de expectativas, y sin lanzar trámites ni preguntar a nadie. |

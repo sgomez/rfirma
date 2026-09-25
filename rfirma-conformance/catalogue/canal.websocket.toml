@@ -199,6 +199,21 @@ script = "protocol-v3"
 expects.completes.conditions = ["ver-5-over-v3-saf-21"]
 
 [[check]]
+id = "the_v3_channel_completes_a_signature"
+set = "canal.websocket"
+citation = "AfirmaWebSocketServer.java:41, 113; ProtocolInvocationLauncher.java:653-655"
+statement = """
+El canal WebSocket de la versión 3 completa una firma de punta a punta: la firma CAdES que vuelve
+verifica con la clave del certificado.
+"""
+
+[check.drive]
+mode = "v3"
+script = "signcades"
+act.consent = "Va a aparecer el diálogo de certificado."
+expects.completes.conditions = ["a-single-signer", "the-signature-verifies"]
+
+[[check]]
 id = "a_second_operation_reuses_the_open_channel"
 set = "canal.websocket"
 citation = "autoscript.js:2094-2131; MCF anexo I.1, pág. 158"

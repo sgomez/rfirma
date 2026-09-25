@@ -13,6 +13,7 @@ pub mod known_bug;
 pub mod label;
 mod livelog;
 mod manifest;
+mod matrix;
 mod outcome;
 mod report;
 mod report_view;

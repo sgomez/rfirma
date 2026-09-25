@@ -16,6 +16,7 @@ use crate::judge::Expectation;
 use crate::known_bug::KnownBug;
 use crate::label::{the_declared_labels, Label};
 use crate::manifest::{Family, Manifest, Site};
+use crate::matrix::{the_matrix_against, THE_MATRIX_FILE};
 
 /// Un conjunto declarado en `catalogue/sets.toml`: su nombre y sus capítulos, el primero el de
 /// omisión.
@@ -353,7 +354,7 @@ fn files_of_no_set(sets: &[Set]) -> Result<Vec<String>, String> {
     let declared: BTreeSet<String> = sets
         .iter()
         .map(|set| format!("{}.toml", set.name))
-        .chain([THE_SETS_FILE.to_owned()])
+        .chain([THE_SETS_FILE.to_owned(), THE_MATRIX_FILE.to_owned()])
         .collect();
     let mut orphans: Vec<String> = std::fs::read_dir(&dir)
         .map_err(|error| format!("{} no se pudo leer: {error}", dir.display()))?
@@ -375,6 +376,7 @@ pub fn read_the_catalogue() -> Result<Vec<Check>, String> {
         for check in &mut checks {
             check.family = the_family_of(check, &manifest);
         }
+        the_matrix_against(&checks)?;
         Ok(checks)
     } else {
         Err(format!(
