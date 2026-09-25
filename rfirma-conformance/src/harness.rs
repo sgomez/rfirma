@@ -2,7 +2,7 @@
 //! —puertos ocupados, ficheros preparados—, no cómo se juzga.
 
 use std::net::TcpListener;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::thread::{sleep, spawn, JoinHandle};
@@ -113,9 +113,15 @@ pub(crate) const THE_HARNESSES: &[Harness] = &[
             let mut outcome = probe.drive(check, drive);
             let returned = outcome.signature.as_deref().and_then(decoded);
             let found = std::fs::read(&saved).ok();
+            let renamed = || {
+                let directory = saved.parent()?;
+                a_signature_saved_under_another_name(directory, returned.as_deref()?)
+            };
             outcome.protocol_conditions.push(
                 match astray.filter(|astray| found.is_none() && astray.exists()) {
                     Some(_) => a_signature_saved_astray(),
+                    None if found.is_none() => renamed()
+                        .unwrap_or_else(|| the_saved_signature_against(None, returned.as_deref())),
                     None => the_saved_signature_against(found.as_deref(), returned.as_deref()),
                 },
             );
@@ -181,8 +187,7 @@ fn the_saved_bytes_against(saved: Option<&[u8]>, data: &[u8]) -> ProtocolConditi
     }
 }
 
-/// Cada guion de firmar y guardar cuya firma se relee, con la carpeta que declara en
-/// `filenameSaveCurrentDir`, si declara una, y el nombre que propone en `filename`.
+/// Cada guion de firmar y guardar que se relee, con su `filenameSaveCurrentDir` y su `filename`.
 const THE_SAVED_SIGNATURES: &[(&str, Option<&str>, &str)] = &[
     ("signandsave", None, "challenge-signed.csig"),
     (
@@ -251,6 +256,30 @@ fn the_saved_signature_against(
         outcome,
         observation: Some(observation),
     }
+}
+
+fn a_signature_saved_under_another_name(
+    directory: &Path,
+    returned: &[u8],
+) -> Option<ProtocolConditionResult> {
+    let same_length = |entry: &std::fs::DirEntry| {
+        entry
+            .metadata()
+            .is_ok_and(|metadata| metadata.is_file() && metadata.len() == returned.len() as u64)
+    };
+    let saved = std::fs::read_dir(directory)
+        .ok()?
+        .flatten()
+        .filter(same_length)
+        .find(|entry| std::fs::read(entry.path()).is_ok_and(|bytes| bytes == returned))?;
+    Some(ProtocolConditionResult {
+        name: THE_RETURNED_SIGNATURE_ON_DISK.to_owned(),
+        outcome: Outcome::Noncompliant,
+        observation: Some(format!(
+            "la firma se guardó como «{}» y no con el nombre propuesto",
+            saved.file_name().to_string_lossy()
+        )),
+    })
 }
 
 /// Cada cuánto mira el ocupante si le han dicho que suelte el puerto.
@@ -348,6 +377,25 @@ mod tests {
         assert_eq!(judged(Some(b"otra"), Some(b"firma")), Outcome::Noncompliant);
         assert_eq!(judged(None, Some(b"firma")), Outcome::NotObservable);
         assert_eq!(judged(Some(b"firma"), None), Outcome::NotObservable);
+    }
+
+    #[test]
+    fn a_signature_saved_under_another_name_is_noncompliant() {
+        let directory = tempfile::tempdir().unwrap();
+        std::fs::write(directory.path().join("otro-nombre.csig"), b"firma").unwrap();
+        std::fs::write(directory.path().join("ajeno.bin"), b"ajeno").unwrap();
+        let judged = a_signature_saved_under_another_name(directory.path(), b"firma");
+        assert_eq!(
+            judged.map(|condition| (condition.outcome, condition.observation)),
+            Some((
+                Outcome::Noncompliant,
+                Some(
+                    "la firma se guardó como «otro-nombre.csig» y no con el nombre propuesto"
+                        .to_owned()
+                )
+            ))
+        );
+        assert!(a_signature_saved_under_another_name(directory.path(), b"otra").is_none());
     }
 
     #[test]

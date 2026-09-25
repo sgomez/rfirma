@@ -242,6 +242,7 @@ siquiera uno que pida visibleSignature=want.
 [check.drive]
 mode = "v4"
 script = "batchlocalvisible"
+patience_secs = 120
 act.consent = "Va a aparecer el diálogo de certificado del lote: elige el certificado y no hagas nada más."
 expects.completes.conditions = ["every-document-signed-without-a-dialogue"]
 

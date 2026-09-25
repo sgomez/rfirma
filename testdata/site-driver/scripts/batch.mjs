@@ -633,14 +633,20 @@ function theLocalBatchAskingForAVisibleSignatureScript() {
   aLocalBatch({
     stopOnError: false,
     items: [anItem("pdf", thePdfOfTheTest(), "PAdES", "visibleSignature=want")],
-    callbacks: theBatchCallbacks(() => [
-      aCondition(
-        EVERY_DOCUMENT_SIGNED_WITHOUT_A_DIALOGUE,
-        true,
-        "el lote volvió sin que ningún documento se quedara esperando en un diálogo",
-      ),
-    ]),
+    callbacks: theBatchCallbacks(theLocalBatchWithoutADialogueConditions),
   });
+}
+
+/** Lo que mide el lote que pide firma visible al volver solo: el PDF tiene que haber salido firmado. */
+export function theLocalBatchWithoutADialogueConditions(result) {
+  const pdf = theLocalItems(result).get("pdf");
+  return [
+    aCondition(
+      EVERY_DOCUMENT_SIGNED_WITHOUT_A_DIALOGUE,
+      signedAs(pdf, "pdf"),
+      `el lote volvió sin diálogo y el PDF salió ${pdf?.result ?? "ausente"}`,
+    ),
+  ];
 }
 
 /** El OID `ecdsa-with-SHA256` (1.2.840.10045.4.3.2) con su etiqueta y su longitud DER. */

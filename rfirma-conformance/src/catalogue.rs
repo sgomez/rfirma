@@ -549,8 +549,7 @@ fn greetings_that_need_a_person(checks: &[Check]) -> Vec<String> {
         .collect()
 }
 
-/// Dos comprobaciones que conducen el mismo trámite, con la misma acción de la persona, y esperan
-/// lo mismo son la misma comprobación.
+/// Dos comprobaciones con el mismo trámite, la misma acción y la misma expectativa son una sola.
 fn checks_that_measure_the_same(checks: &[Check]) -> Vec<String> {
     let driven: Vec<(&Check, &Trial)> = checks
         .iter()
