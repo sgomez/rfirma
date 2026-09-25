@@ -35,11 +35,13 @@ que es justo lo que la fila del certificado informa.
 **Es la ventana de 1180 × 700 px, no un diálogo sobre ella.** La
 [cabecera](cabecera.md) del
 [ADR-0007](../adr/0007-cabecera-unica-sin-barra-de-menus.md) se queda intacta
-arriba, con su insignia de documento; el panel ocupa todo lo que hay debajo.
+arriba; el panel ocupa todo lo que hay debajo, tira de pestañas incluida: las
+pestañas son de documentos, y el panel no es de ninguno.
 
 Tres regiones:
 
-1. **Cabecera**, 56 px, sin tocar.
+1. **Cabecera**, 52 px, sin tocar, con su raya inferior: tapada la tira, nadie
+   más la pone.
 2. **Cuerpo**: una fila de título con `Estado de rFirma` a la izquierda y
    `Volver a comprobar` a la derecha, y bajo ella la **tabla**, que es la zona
    que se desplaza.
@@ -413,9 +415,8 @@ existe, ni en el aviso del menú. Contar obligaría a decidir qué se cuenta y a
 mantener esa cuenta en dos sitios; la verdad está en la tabla, y la tabla se
 mira.
 
-**El nombre de la ventana es «Estado de rFirma», no «Estado».** En esa misma
-franja vive la insignia del documento, y «Estado» a secas se leería como estado
-del documento.
+**El nombre de la ventana es «Estado de rFirma», no «Estado».** «Estado» a
+secas se leería como estado del documento abierto.
 
 **El acoplamiento y la retirada se validaron el mismo día y en este mismo
 artboard**, que estrena la palanca «Desplegable de Firma en sedes». Esa palanca

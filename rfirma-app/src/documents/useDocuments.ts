@@ -83,7 +83,7 @@ export interface Documents {
  * preferencia apagada, abrir un documento **no** lo apunta en la bandeja. Sin
  * este dueño, apagarla solo purgaba una vez y el siguiente documento volvía a
  * quedarse, con lo que el estado «Vacía … o con «Recordar mi actividad»
- * apagado» de `bandeja-de-documentos.md` era inalcanzable.
+ * apagado» de `pestanas-de-documentos.md` era inalcanzable.
  */
 export function useDocuments(
   store: RecentsStore,

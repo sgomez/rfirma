@@ -38,13 +38,15 @@ paso pone por delante el deslinde: rFirma no es la aplicación oficial.
 **Es la ventana principal de 1180 × 700 px, no un diálogo sobre ella.** El
 primer arranque no tiene documento que tapar, y un modal con la aplicación
 muerta detrás miente sobre lo que hay debajo. Lleva la cabecera única del
-[ADR-0007](../adr/0007-cabecera-unica-sin-barra-de-menus.md) —56 px, el nombre y
-el menú— y nada más de la ventana principal: no hay panel lateral, ni recientes,
-ni pie de destino, porque todavía no hay nada que enseñar ahí.
+[ADR-0007](../adr/0007-cabecera-unica-sin-barra-de-menus.md) —52 px, el nombre y
+el menú— y nada más de la ventana principal: ni tira de pestañas, ni panel de
+firma, ni recientes, porque todavía no hay ningún documento que enseñar.
 
 Tres regiones:
 
-1. **Cabecera**, 56 px, con raya inferior.
+1. **Cabecera**, 52 px, con raya inferior de 1 px `--rf-border-subtle`. En la
+   ventana principal esa raya la pone la tira de pestañas; aquí no hay tira, así
+   que la lleva la propia cabecera.
 2. **Cuerpo**, `flex:1`, desplazable, con una **columna de lectura de 640 px
    centrada**. Arriba de todo, el indicador de paso: dos rayas de 22 × 4 px y
    «Paso *n* de 2».
@@ -176,13 +178,18 @@ artboard `PrimerArranque` de la página «Recorrido de firma», cuya anotación
 guarda el porqué de cada punto. La copia legible sin cuenta está en
 [`docs/design/artboards/`](artboards/README.md).
 
+**Sin tira de pestañas.** Al pasar la ventana principal a pestañas de
+documentos (25/09/2026), esta pantalla tomó su cabecera de 52 px pero no la
+tira: una tira vacía, o con solo el «+», invitaría a abrir un PDF antes de
+terminar la configuración.
+
 **Dos pantallas, y no tres ni una.** Se descartaron las otras dos estructuras
 que se dibujaron:
 
 - **Tres pantallas encadenadas** —bienvenida, certificado, protocolo— alargan a
   tres pasos lo que son dos decisiones.
 - **Una sola página con los tres bloques apilados**, además, **no cabe**: medía
-  unos 770 px contra los 644 px del hueco, así que se desplazaba. Una sola
+  unos 770 px contra los 648 px del hueco, así que se desplazaba. Una sola
   página se lee de un vistazo sólo si cabe de un vistazo.
 
 **El deslinde reutiliza la clave i18n `independence`**, que ya existe y ya está

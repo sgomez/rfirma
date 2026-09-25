@@ -217,7 +217,7 @@ export function renderApp(
 /**
  * La zona de soltar **de la bandeja**. Desde que el visor existe hay dos con el
  * mismo rótulo —la de la bandeja y la del visor vacío—, y las dos fichas las
- * piden: `bandeja-de-documentos.md` y `visor-de-documento.md`.
+ * piden: `pestanas-de-documentos.md` y `visor-de-documento.md`.
  */
 export function trayDropZone() {
   const tray = screen.getByRole("region", { name: "Bandeja de documentos" });

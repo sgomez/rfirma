@@ -21,7 +21,7 @@
    tiene hueco que repartir y queda inerte —la caja pegada arriba y la línea de
    privacidad descolgada al fondo—. Con las dos filas a su tamaño, el hueco
    sobrante existe y `place-content: center` lo reparte, que es la pila
-   centrada del artboard (`EstadoVacio.dc.html:147`). */
+   centrada del artboard (`Main.dc.html`). */
 .viewer--empty {
   grid-template-rows: auto;
   place-content: center;
@@ -290,7 +290,7 @@
   border-radius: var(--rf-radius-pill);
   background: var(--rf-surface);
   box-shadow: var(--rf-shadow-elevated);
-  /* Como en el artboard (`EstadoDocumentoCargado.dc.html:219`): la barra es una
+  /* Como en el artboard (`Main.dc.html`): la barra es una
      sola línea y el «de 27» nunca parte. */
   white-space: nowrap;
 }

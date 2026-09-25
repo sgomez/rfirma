@@ -8,7 +8,7 @@ terminar ese issue—. Se ha usado para decidir en la v0.2, la v0.3 y la 0.3.1, 
 importó a un repositorio público. Se ha usado también en la v0.4. **No preguntes si hay que
 borrarlo: no, hasta la v1.0.**
 
-Son los veintidós artboards del canvas de Claude Design «Autofirma de escritorio
+Son los catorce artboards del canvas de Claude Design «Autofirma de escritorio
 en Rust», bajados literalmente, más el `canvas.json` que los ordena y los titula.
 Tres de ellos —`Main`, `EstadoExito` y `PreferenciasPantalla`— se rehicieron el
 02/09/2026 con las decisiones de v0.2 del
@@ -49,20 +49,12 @@ página «Ventana de sede · v0.5» va aparte porque es otra ventana:
 
 | # | Artboard | Estado |
 | - | -------- | ------ |
-| 1 | `EstadoVacio` | Vacío, con el menú de la cabecera **dibujado abierto**: sus cuatro entradas, el divisor, el aviso y el foco por teclado |
-| 2 | `EstadoDocumentoCargado` | Documento cargado, sin certificado |
-| 2b | `EstadoElegirCertificado` | Eligiendo entre varios certificados |
-| 3 | `EstadoCargandoCertificados` | Buscando certificados, y el diálogo de secreto del almacén cuando la sesión se abre **antes** de listar |
-| 4 | `EstadoSinCertificados` | Sin certificados, con salida a instalar uno |
-| 5 | `Main` | **Colocando** la firma visible — el nudo del recorrido, con el pie del destino y el bloque de colocación de v0.3, el botón de sellar de la 0.3.1 y la franja de notificación de la v0.4 |
-| 6 | `EstadoPin` | Pidiendo el secreto del almacén — PIN o contraseña, según la clase de almacén |
-| 7 | `EstadoPinIncorrecto` | Secreto incorrecto |
-| 8 | `EstadoFirmando` | Firmando, con las tres fases |
-| 9 | `EstadoExito` | Firmado — el resumen, sin la ficha 14 |
-| 10 | `EstadoErrorFirma` | Error de firma, en el pie del panel |
-| 5b | `EstadoPaginasSinSello` | Antes de firmar: las páginas donde el recuadro no cabe |
+| 5 | `Main` | La ventana principal entera, con sus estados como palanca: vacío, buscando certificados, sin certificados, sin certificado elegido, listo, certificados abiertos, firmando (diálogo con velo), firmado (el resumen) y error al firmar; la firma visible y su contenido, el menú de la cabecera, el menú «+», la franja de versión nueva bajo las pestañas, el destino, el zoom y la vista previa |
+| 5b | `EstadoPaginasSinFirmaVisible` | Antes de firmar: las páginas donde la firma visible no cabe |
+| 6 | `EstadoPin` | Pidiendo el secreto del almacén — PIN o contraseña, según la clase de almacén —, sobre `Main` buscando certificados o lista, según el almacén |
+| 7 | `EstadoPinIncorrecto` | Secreto incorrecto, con el mismo fondo que el 6 |
 | — | `PreferenciasPantalla` | Preferencias, a pantalla completa, como visor de pestañas en vertical: el índice permanente y un solo panel a la derecha |
-| — | `EstadoAcercaDe` | Diálogo de «acerca de», con el «cómo actualizar» de la v0.4 |
+| — | `EstadoAcercaDe` | Diálogo de «acerca de», con el «cómo actualizar» de la v0.4, sobre `Main` lista |
 | S1 | `SedeEspera` | Ventana de sede: esperando el canal, y las dos recetas de reparación cuando no se abre |
 | S2 | `SedeConsentimiento` | Ventana de sede: el consentimiento — quién pide, qué se firma (o qué datos se ceden) y con qué certificado |
 | S3 | `SedeFirmando` | Ventana de sede: firmando y devolviendo la firma a la sede |
@@ -103,14 +95,15 @@ Claude Design, cuya copia se queda atrás—, y `comprueba.sh` lo verifica contr
 ese fichero. Compararlos solo entre sí no valía: trece ficheros de acuerdo
 entre ellos dan verde con el sistema de diseño equivocado entero.
 
-## `EstadoElegirCertificado` no viene del canvas original
+## La lista de certificados no viene del canvas original
 
-Los otros doce se bajaron del canvas tal cual. Este se **añadió después**, el
-01/09/2026, porque el recorrido no tenía pantalla para elegir entre varios
-certificados: con más de uno el panel enseñaba «Elegir certificado» y ese botón
+Nació como artboard aparte, `EstadoElegirCertificado`, **añadido después** del
+canvas original, el 01/09/2026; desde Main v4 es la posición «certificados
+abiertos» de `Main`. Se añadió porque el recorrido no tenía pantalla para
+elegir entre varios certificados: con más de uno el panel enseñaba «Elegir certificado» y ese botón
 se limitaba a volver a buscar, así que no había forma de elegir ninguno.
 
-Es el único que **se puede pulsar**: abre el desplegable, se desplaza y se
+**Se puede pulsar**: abre el desplegable, se desplaza y se
 elige, y lleva tres palancas —estado inicial, cuántos certificados hay y si se
 listan los que no sirven— para poder decidir mirando en vez de suponiendo. Lo
 que se decidió con él:
@@ -670,3 +663,55 @@ sección, salvo el diálogo de apagar «Recordar mi actividad», que es un velo 
 la ventana entera. El caso del flatpak —el escritorio no deja elegir quién
 atiende `afirma://`— ya no se dibuja aquí en ninguna forma: viaja con el
 desplegable a `PanelEstado`.
+
+## Lo que cambió en Main v4
+
+La ventana principal se rehízo y **pasó a ser un solo artboard**, `Main`, con
+sus estados como palanca. Se exploró en cuatro artboards de trabajo —`MainV3A`,
+`MainV3B`, `MainV3C` y `MainV4D`— que se fundieron en `Main` y se borraron con
+sus páginas. Su título pasa a «5 · Ventana principal · todos los estados».
+
+- **Pestañas en lugar de la bandeja lateral.** Cabecera de 52 px sin insignia ni
+  certificado, tira de pestañas de 40 px con el «+» y los recientes en su menú.
+- **Panel de 380 px con pie fijo de 162 px**: «Guardar en» con carpeta y nombre,
+  y el botón partido «Firmar como <nombre> ▾», que abre los certificados hacia
+  arriba. La primera vez, sin certificado recordado, dice «Elegir certificado ▾»
+  y no se preselecciona ninguno.
+- **Firma visible apagada por defecto**; encenderla la coloca. Una página /
+  Varias / Todas, modelos Completa / Solo rúbrica / Personalizada con la firma
+  real en miniatura, rúbrica en una fila propia, datos como pastillas. Sin
+  comodines, sin motivo, sin fuente ni tamaño. Sin certificado, el recuadro va
+  vacío, con marco y tiradores.
+- **Se fundieron en `Main`** y se borraron: `EstadoVacio` (y su menú de la
+  cabecera), `EstadoElegirCertificado`, `EstadoCargandoCertificados`,
+  `EstadoSinCertificados`, `EstadoFirmando` (diálogo con velo), `EstadoExito`
+  (el resumen) y `EstadoErrorFirma` (estado del panel, con «Reintentar» y
+  «Volver» en el pie).
+- **Se borró `EstadoDocumentoCargado`**: sin certificado ya no hay un estado
+  aparte.
+- **La franja de versión nueva baja** de la cabecera a debajo de las pestañas.
+- **`EstadoPaginasSinSello` pasa a llamarse `EstadoPaginasSinFirmaVisible`** (y
+  su ficha, [`dialogo-paginas-sin-firma-visible`](../dialogo-paginas-sin-firma-visible.md)):
+  se redibuja sobre `Main` en «listo» con la firma visible en «Varias», velo en
+  `z-index:20`, y todos los textos dicen «firma visible». Sigue haciendo falta:
+  la biblioteca descarta en silencio las páginas donde el recuadro no cabe.
+- **`EstadoPin`, `EstadoPinIncorrecto` y `EstadoAcercaDe` cambian solo el
+  fondo**: la ventana nueva bajo el velo.
+- **`PreferenciasPantalla`, `PanelEstado` y `RetirarCertificado`** pasan a la
+  cabecera de 52 px sin insignia; las dos vistas tapan también la tira de
+  pestañas (`top:52px`) y los velos llevan `z-index:20`. La ventana que
+  Preferencias escondía detrás se borra: no se veía.
+- **`PrimerArranque`** toma la cabecera de 52 px y **no** lleva tira de
+  pestañas; la raya inferior la pone la propia cabecera.
+- **La página «Recorrido de firma» se recoloca** sin huecos: los siete artboards
+  en dos filas y las anotaciones en una tercera.
+- **Palabra retirada**: la marca sobre la página es «firma visible», nunca
+  «sello».
+
+El porqué de cada descarte está en la anotación `nota-main` y en las fichas
+[`ventana-principal`](../ventana-principal.md),
+[`panel-de-firma`](../panel-de-firma.md),
+[`visor-de-documento`](../visor-de-documento.md),
+[`pestanas-de-documentos`](../pestanas-de-documentos.md),
+[`cabecera`](../cabecera.md) y
+[`dialogo-progreso-firma`](../dialogo-progreso-firma.md).

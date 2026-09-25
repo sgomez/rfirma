@@ -7,13 +7,21 @@ Ninguno de los escritorios objetivo la usa hoy: GNOME la retiró de su guía de
 estilo en favor de una cabecera con botón de menú, y Windows 11 no la emplea en
 sus aplicaciones nuevas.
 
-`rfirma` tiene **una sola cabecera permanente**: identidad a la izquierda,
-estado del documento y un botón de menú a la derecha. Las vistas son del cuerpo
-de la ventana.
+`rfirma` tiene **una sola cabecera permanente**, de 52 px: identidad a la
+izquierda y un botón de menú a la derecha. Debajo, con un documento abierto, la
+**tira de pestañas**, una por documento, que se lee con la cabecera como una
+sola franja. La cabecera no lleva el estado del documento ni el certificado: el
+documento firmado lo marca su pestaña con ✓, y el certificado lo dice el botón
+de firmar. Una insignia de estado en la cabecera se descartó por eso: repetía la
+pestaña y confundía «Estado de rFirma» con el estado del documento. Las vistas
+—Preferencias y el panel de estado— son del cuerpo de la ventana y tapan
+también la tira, porque las pestañas son de documentos y esas vistas no son de
+ninguno.
 
 Los menús que se han eliminado no se han movido a otro sitio: **no hacían
-falta**. Abrir un documento ya tiene la zona de soltar de la bandeja; guardar
-tiene la fila «Se guardará en» del panel de firma; y paginación y zoom viven en
+falta**. Abrir un documento ya tiene el «+» de la tira de pestañas y la zona de
+soltar; guardar tiene la caja «Guardar en» del pie del panel de firma; y
+paginación y zoom viven en
 la barra flotante del visor, que es exactamente lo que un menú *Ver* habría
 contenido.
 

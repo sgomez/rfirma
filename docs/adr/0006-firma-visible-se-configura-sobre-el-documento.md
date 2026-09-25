@@ -12,16 +12,19 @@ sobre la página renderizada, con el zoom que haga falta. No hay rejilla de nuev
 posiciones: dónde va la firma depende del documento —normalmente bajo el nombre
 de la persona—, no de una casilla abstracta.
 
-**El contenido se marca, no se escribe.** El usuario elige con casillas qué
-aparece dentro del recuadro: su rúbrica, nombre y apellidos, DNI, fecha y hora,
-y opcionalmente un motivo. La aplicación compone a partir de ahí la plantilla
-con comodines que la biblioteca espera. Los comodines siguen existiendo en los
+**El contenido se elige, no se escribe con comodines.** El usuario elige un
+modelo —Completa, Solo rúbrica o Personalizada—, cada uno con la firma real en
+miniatura, y aparte si lleva su rúbrica. En Personalizada escribe una frase en
+la que los datos del certificado —firmante, emisor, fecha— entran como
+pastillas desde un menú, ya resueltos. No hay motivo aparte, ni fuente, tamaño
+o color: el texto se ajusta al recuadro. La aplicación compone a partir de ahí
+el texto que la biblioteca espera. Los comodines siguen existiendo en los
 `extraParams` de PAdES, pero como detalle de implementación: no son vocabulario
 de usuario.
 
 **Firma visible y rúbrica son dos cosas distintas**, y la interfaz las separa:
-la *firma visible* es el recuadro que se estampa en la página, que se activa o
-no; la *rúbrica* es la imagen de la firma manuscrita escaneada que va dentro de
+la *firma visible* es el recuadro que se estampa en la página, que se enciende
+o no; la *rúbrica* es la imagen de la firma manuscrita escaneada que va dentro de
 él, y es opcional. Confundirlas fue el fallo más caro del primer prototipo.
 
 Como la apariencia queda decidida antes de la prefirma, se puede previsualizar
@@ -36,9 +39,9 @@ el resultado exacto antes de pedir el PIN.
   referencia del PDF. Convertir de píxeles de pantalla con zoom a puntos PDF,
   con el origen abajo a la izquierda, es responsabilidad de la aplicación y es
   una fuente de errores de un solo píxel: necesita pruebas.
-- La composición de la plantilla de texto a partir de las casillas es código
+- La composición del texto a partir del modelo y de sus pastillas es código
   nuestro, y es el único sitio donde aparecen los comodines. Añadir un dato
-  nuevo al recuadro es añadir una casilla y una entrada a esa tabla.
+  nuevo al recuadro es añadir una pastilla al menú y una entrada a esa tabla.
 - La sustitución de comodines la hace la biblioteca en la **prefirma**, y la
   postfirma debe recibir exactamente los mismos `extraParams` y el mismo
   instante de firma, o la firma sale inválida sin dar error. Ver el hallazgo
@@ -46,6 +49,11 @@ el resultado exacto antes de pedir el PIN.
 - Se pierde la posibilidad de teclear comodines arbitrarios que AutoFirma sí
   permite. Es deliberado: quien los necesite no es el usuario objetivo de este
   hito.
+- Se descartaron dos formas anteriores del contenido. **Una casilla por dato**
+  —firmante, emisor, fecha, rúbrica, motivo— componiendo un párrafo: tres
+  modelos con la firma real se leen sin leer, y Personalizada cubre lo demás.
+  **El motivo** como campo propio: era un segundo texto libre junto a una frase
+  que ya lo es.
 
 ## Enmienda: la colocación es un rectángulo y un conjunto de páginas
 
@@ -55,20 +63,21 @@ arrastrada sobre ella. Se sustituye por un concepto con nombre, **la
 colocación**: un rectángulo en espacio de usuario y el **conjunto de páginas**
 donde se estampa.
 
-### El recuadro nace de un arrastre, y antes no existe
+### Encender la firma visible la coloca
 
 Hasta v0.2 el recuadro aparecía solo, de tamaño fijo, en la esquina de la
-página que se mirara, y **seguía a quien pasaba de página**. Deja de ser así: el
-recuadro existe cuando la persona lo coloca, y **«colocado» no es una bandera
-sino tener al menos una página sellada**. Sin ninguna no hay recuadro en ninguna
-parte y firmar está apagado —también con «todas las páginas», porque elegir
-todas no coloca nada—; quitar la última página devuelve al estado del PDF recién
-abierto.
+página que se mirara, y **seguía a quien pasaba de página**. Deja de ser así:
+la firma visible está **apagada por defecto**, y firmar sin ella está permitido.
+**Encenderla la coloca**: el recuadro aparece en la página a la vista, abajo a
+la derecha, a un margen del borde, y desde ahí se arrastra o se redimensiona.
+«Colocado» no es una bandera: **no existe «encendida y sin colocar»**. Apagarla
+y volver a encenderla recupera la colocación que había.
 
-Hay entonces **dos noes distintos**, y no se confunden: con el interruptor de
-firma visible **apagado** se firma, invisible; **encendido y sin colocar**, el
-botón de firmar está deshabilitado y el panel dice qué hacer. Firmar invisible
-«por omisión» borraría la distinción y haría que el interruptor mintiera.
+La v0.3 hacía nacer el recuadro de un arrastre y exigía al menos una página con
+firma visible: encendida y sin colocar, firmar estaba apagado. Se descartó
+porque ese estado, con interruptor y sin recuadro, nadie sabía dibujarlo ni
+explicarlo. Lo único que apaga firmar es un rango de páginas que no se puede
+resolver (ID-22).
 
 ### Una página deja de ser el caso, y el conjunto es el caso
 
@@ -88,7 +97,7 @@ engañar. El recuadro se dibuja **idéntico en todas las páginas del conjunto y
 ninguna más**; la página donde se arrastró no se dibuja distinta, y fuera del
 conjunto la página va en blanco, sin fantasma a trazos.
 
-### Donde el recuadro no cabe, la página se queda sin sello
+### Donde el recuadro no cabe, la página se queda sin firma visible
 
 `correctPositionSignature` recorta contra la **primera** página de la lista y
 **descarta en silencio** aquellas donde no cabe la esquina inferior izquierda
@@ -96,7 +105,7 @@ conjunto la página va en blanco, sin fantasma a trazos.
 el mismo PDF ocurre de verdad. El ID-22 rechaza la degradación **silenciosa**,
 no la consentida: antes de firmar se avisa en un modal con «cancelar» o «firmar
 de todos modos», que dice el recuento —*n* de las *m* **elegidas**, no de las
-del documento— y **«sin sello», nunca «recortadas»**, porque la firma
+del documento— y **«sin firma visible», nunca «recortadas»**, porque la firma
 criptográfica cubre el documento entero pase lo que pase.
 
 ### La previsualización que este ADR prometía se cumple, y no es una puerta
@@ -108,10 +117,13 @@ autoritativo. El sondeo [#115](https://github.com/sgomez/rfirma/issues/115)
 desactivó la premisa: un **ciclo trifásico en seco** con un `PK1` inventado
 produce bytes visibles idénticos a los del firmado de verdad, y `pdf.js` los
 pinta sin código de dibujo nuevo. La regla que sale de ahí es una sola: **o es
-el sello de verdad, o no hay recuadro** — no se enseña nunca una aproximación.
+la firma visible de verdad, o el recuadro va vacío** — no se enseña nunca una
+aproximación. Sin certificado no hay firma que componer: el recuadro conserva
+marco y tiradores, se puede colocar, y va vacío. La miniatura de cada modelo en
+el panel es ese mismo dibujo.
 
 Y una segunda regla, del mismo signo: **la vista previa no es una puerta**. Si
-el sello no se puede componer, el recuadro lo dice y **se firma igual**; sobre
+la firma visible no se puede componer, el recuadro lo dice y **se firma igual**; sobre
 si se puede firmar manda el botón de firmar.
 
 ### Lo que este hito deja fuera, y por qué

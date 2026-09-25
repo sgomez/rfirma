@@ -181,6 +181,34 @@ puede desaparecer de aquí — el enlace al canvas ya vive en las fichas.
 
 No hay ningún prototipo en vuelo.
 
+El caso de uso **la ventana principal repensada** se validó el **26/09/2026**
+y salió de esta tabla. Se exploró en cuatro páginas de trabajo —«Main v3 · A»,
+«Main v3 · B», «Main v3 · C» y el compendio «Main v4 · D»— que se fundieron en
+`Main` y se borraron. `Main` pasa a ser **la ventana entera en un solo
+artboard**, con sus estados como palanca: se fundieron en él `EstadoVacio`,
+`EstadoElegirCertificado`, `EstadoCargandoCertificados`,
+`EstadoSinCertificados`, `EstadoFirmando`, `EstadoExito` y `EstadoErrorFirma`, y
+se borró `EstadoDocumentoCargado`. `EstadoPaginasSinSello` se renombró a
+`EstadoPaginasSinFirmaVisible`, y el resto de la página «Recorrido de firma» y
+de «Estado de rFirma» se redibujó sobre la cabecera de 52 px y la tira de
+pestañas. Sus fichas son
+[`ventana-principal.md`](../design/ventana-principal.md),
+[`cabecera.md`](../design/cabecera.md),
+[`pestanas-de-documentos.md`](../design/pestanas-de-documentos.md) —antes
+`bandeja-de-documentos.md`—,
+[`panel-de-firma.md`](../design/panel-de-firma.md),
+[`visor-de-documento.md`](../design/visor-de-documento.md),
+[`dialogo-progreso-firma.md`](../design/dialogo-progreso-firma.md) y
+[`dialogo-paginas-sin-firma-visible.md`](../design/dialogo-paginas-sin-firma-visible.md),
+y de rebote [`dialogo-pin.md`](../design/dialogo-pin.md),
+[`preferencias.md`](../design/preferencias.md),
+[`panel-de-estado.md`](../design/panel-de-estado.md),
+[`retirar-certificado.md`](../design/retirar-certificado.md),
+[`primer-arranque.md`](../design/primer-arranque.md) y
+[`ventana-de-sede.md`](../design/ventana-de-sede.md), y todas enlazan el canvas
+desde su sección «Decisiones». La regla «firma visible, nunca sello» y las capas
+de la ventana van a [`design-system.md`](../design/design-system.md).
+
 El caso de uso **la retirada desde dentro**
 ([#660](https://github.com/sgomez/rfirma/issues/660), mapa
 [#652](https://github.com/sgomez/rfirma/issues/652)) se validó el **17/09/2026**

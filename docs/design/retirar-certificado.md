@@ -40,7 +40,7 @@ nunca ha tocado la CA.
 
 ## Estructura
 
-**El velo empieza a los 56 px, bajo la cabecera, que se queda viva y sin
+**El velo empieza a los 52 px, bajo la cabecera, que se queda viva y sin
 atenuar.** Detrás no hay una reconstrucción parecida del panel: es el panel, con
 su misma cabecera, su misma fila de título, su misma tabla de cuatro columnas y
 su mismo pie.

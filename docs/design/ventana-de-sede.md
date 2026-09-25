@@ -241,7 +241,7 @@ de 329 px no cabe una página que se pueda marcar.
 - **Título**: «Marca dónde va tu firma», y debajo una frase que dice que la
   página pide que la firma se vea y cómo se traza el recuadro.
 - **Cuerpo**: el visor de la ventana principal (`visor-de-documento.md`) con el
-  PDF de la sede, sin sello de vista previa: la persona traza el recuadro sobre
+  PDF de la sede, sin firma visible de vista previa: la persona traza el recuadro sobre
   una página y puede moverlo, redimensionarlo y cambiar de página. El recuadro
   va a **una sola** página, la del trazo.
 - **Acción principal**: `Continuar`, desactivada hasta que hay recuadro. Lleva
@@ -431,7 +431,7 @@ Tokens: `--rf-bg`, `--rf-surface`, `--rf-text`, `--rf-text-muted`,
 `--rf-radius-md|lg|pill`, `--rf-shadow-elevated`, `--rf-space-xs|sm|md`.
 
 **Un solo criterio de botones**, copiado de `Main`, «2b · Elegir certificado» y
-«5b · Páginas sin sello», sin inventar ninguno: **una** acción principal por
+«5b · Páginas sin firma visible», sin inventar ninguno: **una** acción principal por
 pantalla en `--primary`; `--ghost` para salir, cancelar y para las microacciones
 en línea (`Copiar`, `Ver`, `Cambiar`); `--secondary` sólo para una alternativa de
 peso al lado de la principal, que en esta ventana **no existe en ninguna

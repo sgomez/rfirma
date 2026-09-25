@@ -13,7 +13,7 @@ interface UnsealedPagesDialogProps {
 }
 
 /**
- * El diálogo de páginas sin sello (docs/design/dialogo-paginas-sin-sello.md,
+ * El diálogo de páginas sin sello (docs/design/dialogo-paginas-sin-firma-visible.md,
  * ID-105, ID-106).
  *
  * Aparece **justo antes de firmar**, y solo cuando `correctPositionSignature`

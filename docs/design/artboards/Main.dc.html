@@ -105,646 +105,957 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
   box-shadow:var(--rf-shadow-elevated);width:420px}
 </style>
 </helmet>
-<div class="rf-root" data-theme="{{tema}}" style="width:1180px;height:700px;display:flex;flex-direction:column;position:relative;overflow:hidden">
-<header class="rf-row" style="height:56px;flex:none;padding:0 var(--rf-space-sm) 0 var(--rf-space-md);
-  gap:var(--rf-space-sm);border-bottom:1px solid var(--rf-border-subtle);
-  background:var(--rf-surface);position:relative;z-index:5">
-  <span class="rf-title" style="font-size:15px;letter-spacing:.4px">rFirma</span>
-  <div style="flex:1"></div>
-  <span class="rf-badge">Sin firmar</span>
-  <span style="width:40px;height:40px;flex:none;display:flex;align-items:center;justify-content:center;
-    border-radius:var(--rf-radius-md);color:var(--rf-text)">
+<div class="rf-root" data-theme="{{ tema }}" style="width:1180px;height:700px;display:flex;flex-direction:column;position:relative;overflow:hidden">
+<header class="rf-row" style="height:52px;flex:none;padding:0 var(--rf-space-xs) 0 var(--rf-space-md);
+  gap:var(--rf-space-sm);background:var(--rf-surface);position:relative;z-index:{{ zCabecera }}">
+  <span class="rf-title" style="font-size:15px;letter-spacing:.4px;flex:1">rFirma</span>
+  <span title="Menú" style="width:40px;height:40px;flex:none;display:flex;align-items:center;justify-content:center;
+    border-radius:var(--rf-radius-md);{{ estiloBotonMenu }}">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></span>
+  <sc-if value="{{ menuAbierto }}" hint-placeholder-val="{{ false }}">
+    <div role="menu" style="position:absolute;top:50px;right:var(--rf-space-xs);min-width:230px;padding:6px;
+      background:var(--rf-bg);border:1px solid var(--rf-border-subtle);border-radius:var(--rf-radius-md);
+      box-shadow:var(--rf-shadow-elevated);display:flex;flex-direction:column;gap:2px">
+      <sc-for list="{{ entradasMenu }}" as="e" hint-placeholder-count="4">
+        <sc-if value="{{ e.hayDivisor }}" hint-placeholder-val="{{ false }}">
+          <hr class="rf-divider" style="margin:4px 0">
+        </sc-if>
+        <span class="rf-prose rf-row rf-gap-xs" role="menuitem" style="padding:9px 10px;border-radius:var(--rf-radius-sm);cursor:pointer;{{ e.estiloFoco }}">
+          <span style="flex:1;min-width:0">{{ e.texto }}</span>
+          <span style="width:14px;height:14px;flex:none;display:flex;align-items:center;justify-content:center">
+            <sc-if value="{{ e.esEnlace }}" hint-placeholder-val="{{ false }}">
+              <span style="display:flex;color:var(--rf-text-muted)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6"/><path d="M20 4 11 13"/><path d="M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4"/></svg></span>
+            </sc-if>
+            <sc-if value="{{ e.hayAviso }}" hint-placeholder-val="{{ false }}">
+              <span style="display:flex;color:var(--rf-text)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 2.5 20h19z"/><path d="M12 10v4M12 17v.5"/></svg></span>
+            </sc-if>
+          </span>
+        </span>
+      </sc-for>
+    </div>
+  </sc-if>
 </header>
-<sc-if value="{{hayVersionNueva}}" hint-placeholder-val="{{true}}">
+
+<nav class="rf-row" style="height:40px;flex:none;align-items:flex-end;gap:2px;padding:0 var(--rf-space-xs);
+  background:var(--rf-surface);border-bottom:1px solid var(--rf-border-subtle);position:relative;z-index:10">
+  <sc-if value="{{ desborda }}" hint-placeholder-val="{{ false }}">
+    <button type="button" title="Pestañas anteriores" style="{{ estiloHueco }}">
+      <span style="{{ estiloBotonHueco }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></span></button>
+  </sc-if>
+  <div style="height:33px;margin-bottom:-1px;flex:0 1 auto;min-width:0;overflow:hidden">
+    <div class="rf-row" style="height:100%;align-items:stretch;gap:2px;transform:translateX(-{{ desplazamiento }}px)">
+      <sc-for list="{{ pestanas }}" as="p" hint-placeholder-count="3">
+        <div class="rf-row" title="{{ p.nombre }}" style="{{ p.estilo }}">
+          <span style="display:flex;flex:none"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg></span>
+          <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ p.nombre }}</span>
+          <sc-if value="{{ p.firmado }}" hint-placeholder-val="{{ false }}">
+            <span title="Firmado" style="display:flex;flex:none;color:var(--rf-text-muted)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+          </sc-if>
+          <span title="Cerrar" style="{{ p.estiloCerrar }}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6 6 18"/></svg></span>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+  <sc-if value="{{ desborda }}" hint-placeholder-val="{{ false }}">
+    <button type="button" title="Pestañas siguientes" style="{{ estiloHueco }}">
+      <span style="{{ estiloBotonHueco }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></button>
+  </sc-if>
+  <div style="position:relative;flex:none;display:flex;align-self:flex-end">
+    <button type="button" title="Abrir un PDF" style="{{ estiloHueco }}">
+      <span style="{{ estiloBotonHueco }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span></button>
+    <sc-if value="{{ menuMas }}" hint-placeholder-val="{{ false }}">
+      <div class="rf-stack" style="position:absolute;top:100%;margin-top:4px;{{ alineaMenu }};width:340px;z-index:8;padding:6px;gap:2px;
+        border-radius:var(--rf-radius-lg);border:1px solid var(--rf-border-subtle);background:var(--rf-bg);box-shadow:var(--rf-shadow-elevated);text-align:left">
+        <div class="rf-row" style="gap:10px;min-height:36px;padding:0 10px;border-radius:var(--rf-radius-md);background:var(--rf-surface);font-size:13px;font-weight:600;cursor:pointer">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>Abrir un PDF…</div>
+        <hr class="rf-divider" style="margin:4px 0">
+        <span class="rf-label" style="padding:4px 10px 2px;letter-spacing:.6px;text-transform:uppercase">Recientes</span>
+        <sc-for list="{{ recientes }}" as="r" hint-placeholder-count="6">
+          <div class="rf-row" style="gap:10px;padding:6px 10px;border-radius:var(--rf-radius-md);{{ r.estilo }}" title="{{ r.titulo }}">
+            <div class="rf-stack" style="flex:1;min-width:0;gap:3px">
+              <span class="rf-row" style="gap:6px;min-width:0">
+                <span style="min-width:0;font-size:13px;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.nombre }}</span>
+                <sc-if value="{{ r.firmado }}" hint-placeholder-val="{{ false }}">
+                  <span title="Firmado" style="display:flex;flex:none;color:var(--rf-text-muted)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+                </sc-if>
+              </span>
+              <span class="rf-text-muted" style="font-size:12px;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.carpeta }}</span>
+            </div>
+            <span class="rf-text-muted" style="flex:none;font-size:12px;{{ r.estiloCuando }}">{{ r.cuando }}</span>
+          </div>
+        </sc-for>
+        <hr class="rf-divider" style="margin:4px 0">
+        <div class="rf-row" style="min-height:32px;padding:0 10px;border-radius:var(--rf-radius-md);font-size:13px;color:var(--rf-text-muted);cursor:pointer">Vaciar la lista</div>
+      </div>
+    </sc-if>
+  </div>
+  <span style="flex:1;min-width:0"></span>
+</nav>
+
+<sc-if value="{{ hayVersionNueva }}" hint-placeholder-val="{{ false }}">
   <div class="rf-row rf-gap-xs" style="flex:none;padding:8px var(--rf-space-sm);
     border-bottom:1px solid var(--rf-border-subtle);background:var(--rf-surface)">
     <span style="display:flex;flex:none;color:var(--rf-text-muted)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V6M6 12l6-6 6 6"/></svg></span>
     <p class="rf-prose" style="flex:1;min-width:0">Hay una versión nueva de rFirma: <strong>0.4.1</strong></p>
-    <button class="rf-btn rf-btn--secondary" style="flex:none;min-height:30px;padding:0 var(--rf-space-xs);font-size:12px">Cómo actualizar</button>
-    <span style="width:28px;height:28px;flex:none;display:flex;align-items:center;justify-content:center;
+    <button type="button" class="rf-btn rf-btn--secondary" style="flex:none;min-height:30px;padding:0 var(--rf-space-xs);font-size:12px">Cómo actualizar</button>
+    <span title="Cerrar" style="width:28px;height:28px;flex:none;display:flex;align-items:center;justify-content:center;
       border-radius:var(--rf-radius-sm);color:var(--rf-text-muted);cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6 6 18"/></svg></span>
   </div>
 </sc-if>
-<div class="rf-row" style="flex:1;min-height:0;align-items:stretch">
-<aside class="rf-stack rf-gap-sm" style="width:300px;flex:none;padding:var(--rf-space-sm);overflow:auto;
-  border-right:1px solid var(--rf-border-subtle);background:var(--rf-surface)">
-  <div class="rf-stack rf-gap-xs" style="align-items:center;justify-content:center;
-    padding:var(--rf-space-sm);gap:var(--rf-space-xs);
-    border:1px dashed var(--rf-border-strong);
-    border-radius:var(--rf-radius-md);cursor:pointer">
-    <span style="color:var(--rf-text-muted);display:flex"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M8 8l4-4 4 4"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg></span>
-    <p class="rf-prose" style="text-align:center">Arrastra un PDF o pulsa para abrirlo</p>
-  </div>
-  <p class="rf-label" style="letter-spacing:.6px;text-transform:uppercase">Recientes</p>
-  <div class="rf-stack" style="gap:6px;padding:var(--rf-space-sm);
-    border-radius:var(--rf-radius-md);border:1px solid var(--rf-border-strong);
-    background:var(--rf-bg)">
-    <p class="rf-prose" style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Solicitud-subvencion.pdf</p>
-    <div class="rf-row rf-gap-xs">
-      <span class="rf-badge">Firmado</span>
-      <span class="rf-body rf-text-muted">hoy, 10:58</span>
+
+<div class="rf-row" style="flex:1;min-height:0;align-items:stretch;background:var(--rf-bg)">
+
+<sc-if value="{{ vacio }}" hint-placeholder-val="{{ false }}">
+  <div class="rf-stack" style="flex:1;align-items:center;justify-content:center;gap:24px;background:var(--rf-bg)">
+    <div class="rf-stack rf-gap-sm" style="width:520px;height:170px;flex:none;align-items:center;justify-content:center;
+      border:2px dashed var(--rf-border-strong);border-radius:var(--rf-radius-lg);cursor:pointer;background:var(--rf-surface)">
+      <span style="color:var(--rf-text-muted);display:flex"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M8 8l4-4 4 4"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg></span>
+      <p class="rf-title" style="font-size:16px">Arrastra un PDF o pulsa para abrirlo</p>
+      <p class="rf-body rf-text-muted">No sale de tu ordenador</p>
+    </div>
+    <div class="rf-stack" style="width:520px;flex:none;gap:2px">
+      <div class="rf-row" style="padding:0 10px 4px">
+        <span class="rf-label" style="flex:1;letter-spacing:.6px;text-transform:uppercase">Recientes</span>
+        <button type="button" class="rf-btn rf-btn--ghost" style="min-height:24px;padding:0 8px;font-size:12px">Vaciar la lista</button>
+      </div>
+      <sc-for list="{{ recientes }}" as="r" hint-placeholder-count="6">
+        <div class="rf-row" style="gap:10px;padding:6px 10px;border-radius:var(--rf-radius-md);{{ r.estilo }}" title="{{ r.titulo }}">
+          <div class="rf-stack" style="flex:1;min-width:0;gap:3px">
+            <span class="rf-row" style="gap:6px;min-width:0">
+              <span style="min-width:0;font-size:13px;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.nombre }}</span>
+              <sc-if value="{{ r.firmado }}" hint-placeholder-val="{{ false }}">
+                <span title="Firmado" style="display:flex;flex:none;color:var(--rf-text-muted)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+              </sc-if>
+            </span>
+            <span class="rf-text-muted" style="font-size:12px;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.carpeta }}</span>
+          </div>
+          <span class="rf-text-muted" style="flex:none;font-size:12px;{{ r.estiloCuando }}">{{ r.cuando }}</span>
+        </div>
+      </sc-for>
     </div>
   </div>
-  <div class="rf-stack rf-card--interactive" style="gap:6px;padding:var(--rf-space-sm);
-    border-radius:var(--rf-radius-md);border:1px solid transparent;background:transparent">
-    <p class="rf-prose" style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Anexo-II-memoria.pdf</p>
-    <div class="rf-row rf-gap-xs">
-      <span class="rf-badge">Sin firmar</span>
-      <span class="rf-body rf-text-muted">hoy, 09:40</span>
-    </div>
-  </div>
-  <div class="rf-stack rf-card--interactive" style="gap:6px;padding:var(--rf-space-sm);
-    border-radius:var(--rf-radius-md);border:1px solid transparent;background:transparent">
-    <p class="rf-prose" style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Contrato-alquiler.pdf</p>
-    <div class="rf-row rf-gap-xs">
-      <span class="rf-badge">Firmado</span>
-      <span class="rf-body rf-text-muted">ayer, 17:20</span>
-    </div>
-  </div>
-  <div class="rf-stack rf-card--interactive" style="gap:6px;padding:var(--rf-space-sm);
-    border-radius:var(--rf-radius-md);border:1px solid transparent;background:transparent">
-    <p class="rf-prose" style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Modelo-036.pdf</p>
-    <div class="rf-row rf-gap-xs">
-      <span class="rf-badge">Firmado</span>
-      <span class="rf-body rf-text-muted">28/08</span>
-    </div>
-  </div>
-</aside>
-<div style="flex:1;min-width:0;position:relative;overflow:hidden;background:var(--rf-surface)">
-  <div class="rf-stack rf-gap-sm" style="position:absolute;inset:0;align-items:center;
-    justify-content:center;padding:var(--rf-space-md) var(--rf-space-md) 88px">
-    <div style="position:relative;width:{{ anchoPagina }}px;flex:none">
-    <div data-theme="light" style="width:100%;aspect-ratio:1/1.414;background:var(--rf-bg);
-      border:1px solid var(--rf-border-subtle);border-radius:var(--rf-radius-sm);
-      box-shadow:var(--rf-shadow-card);position:relative;overflow:hidden;
-      display:flex;flex-direction:column;gap:10px;padding:32px">
-      <div style="height:12px;width:46%;border-radius:2px;background:var(--rf-border-strong);opacity:.5"></div>
-      <div style="height:8px"></div>
-      <div style="height:6px;width:65%;border-radius:2px;background:var(--rf-border-subtle)"></div><div style="height:6px;width:66%;border-radius:2px;background:var(--rf-border-subtle)"></div><div style="height:6px;width:67%;border-radius:2px;background:var(--rf-border-subtle)"></div><div style="height:6px;width:68%;border-radius:2px;background:var(--rf-border-subtle)"></div><div style="height:6px;width:69%;border-radius:2px;background:var(--rf-border-subtle)"></div><div style="height:6px;width:70%;border-radius:2px;background:var(--rf-border-subtle)"></div><div style="height:6px;width:71%;border-radius:2px;background:var(--rf-border-subtle)"></div><div style="height:6px;width:72%;border-radius:2px;background:var(--rf-border-subtle)"></div><div style="height:6px;width:73%;border-radius:2px;background:var(--rf-border-subtle)"></div>
-      <div style="height:12px"></div>
-      <div style="height:6px;width:91%;border-radius:2px;background:var(--rf-border-subtle)"></div><div style="height:6px;width:92%;border-radius:2px;background:var(--rf-border-subtle)"></div><div style="height:6px;width:93%;border-radius:2px;background:var(--rf-border-subtle)"></div><div style="height:6px;width:94%;border-radius:2px;background:var(--rf-border-subtle)"></div><div style="height:6px;width:95%;border-radius:2px;background:var(--rf-border-subtle)"></div>
-      <div style="height:16px"></div>
-      <div style="height:7px;width:38%;border-radius:2px;background:var(--rf-border-strong);opacity:.55"></div>
-      <div style="height:6px;width:26%;border-radius:2px;background:var(--rf-border-subtle)"></div>
-        <sc-if value="{{ hayRecuadro }}" hint-placeholder-val="{{ true }}">
-          <div style="{{ estiloRecuadro }}">
-            <sc-if value="{{ contenidoVisible }}" hint-placeholder-val="{{ true }}">
-            <svg width="30" height="16" viewBox="0 0 84 40" fill="none" stroke="var(--rf-text)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none;opacity:{{ opacidadSello }}">
-              <path d="M4 30c8-18 13-22 16-14 3 8-4 18-7 16-3-2 6-14 15-16 6-1 4 8 8 9 4 1 8-6 12-10"/>
-              <path d="M50 24c6 2 12-2 18-8M62 32c6 0 12-3 18-9"/></svg>
-            <div style="display:flex;flex-direction:column;gap:2px;min-width:0;opacity:{{ opacidadSello }}">
-              <div style="font-size:7px;color:var(--rf-text);line-height:1.35">Firmado por EIDAS CERTIFICADO PRUEBAS - ***9999**. Fecha 03/09/2026 11:04. Emitido por AC FNMT Usuarios.</div>
+</sc-if>
+
+<sc-if value="{{ hayDoc }}" hint-placeholder-val="{{ true }}">
+  <div style="flex:1;min-width:0;position:relative;overflow:hidden;background:var(--rf-bg)">
+
+    <div style="position:absolute;{{ posicionHoja }};width:{{ anchoHoja }}px;opacity:{{ opacidadHoja }}">
+      <div data-theme="light" style="width:100%;aspect-ratio:1/1.414;background:var(--rf-bg);
+        border:1px solid var(--rf-border-subtle);border-radius:var(--rf-radius-sm);box-shadow:var(--rf-shadow-card);position:relative">
+       <div style="position:absolute;left:0;top:0;width:326px;display:flex;flex-direction:column;gap:8px;padding:30px;transform:scale({{ escala }});transform-origin:0 0">
+        <div style="height:12px;width:46%;border-radius:2px;background:var(--rf-border-strong);opacity:.5"></div>
+        <div style="height:6px"></div>
+        <div style="height:6px;width:88%;border-radius:2px;background:var(--rf-border-subtle)"></div><div style="height:6px;width:92%;border-radius:2px;background:var(--rf-border-subtle)"></div><div style="height:6px;width:85%;border-radius:2px;background:var(--rf-border-subtle)"></div><div style="height:6px;width:90%;border-radius:2px;background:var(--rf-border-subtle)"></div><div style="height:6px;width:60%;border-radius:2px;background:var(--rf-border-subtle)"></div>
+        <div style="height:10px"></div>
+        <div style="height:6px;width:91%;border-radius:2px;background:var(--rf-border-subtle)"></div><div style="height:6px;width:94%;border-radius:2px;background:var(--rf-border-subtle)"></div><div style="height:6px;width:89%;border-radius:2px;background:var(--rf-border-subtle)"></div><div style="height:6px;width:93%;border-radius:2px;background:var(--rf-border-subtle)"></div><div style="height:6px;width:72%;border-radius:2px;background:var(--rf-border-subtle)"></div>
+        <div style="height:10px"></div>
+        <div style="height:6px;width:90%;border-radius:2px;background:var(--rf-border-subtle)"></div><div style="height:6px;width:86%;border-radius:2px;background:var(--rf-border-subtle)"></div><div style="height:6px;width:40%;border-radius:2px;background:var(--rf-border-subtle)"></div>
+        <div style="height:18px"></div>
+        <div style="height:7px;width:38%;border-radius:2px;background:var(--rf-border-strong);opacity:.55"></div>
+        <div style="height:6px;width:26%;border-radius:2px;background:var(--rf-border-subtle)"></div>
+       </div>
+
+        <sc-if value="{{ arrastrando }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute;right:{{ margenDerecho }}px;bottom:{{ margenInferior }}px;width:{{ anchoFirma }}px;height:{{ altoFirma }}px;
+            border:1.5px dashed var(--rf-border-strong);border-radius:2px;opacity:.6"></div>
+        </sc-if>
+        <sc-if value="{{ hayFirmaAqui }}" hint-placeholder-val="{{ true }}">
+          <div style="{{ estiloFirma }}">
+            <div style="display:flex;align-items:center;gap:6px;width:100%;height:100%;padding:{{ firmaRender.relleno }};overflow:hidden;opacity:{{ opacidadRender }}">
+              <sc-if value="{{ sinDibujar }}" hint-placeholder-val="{{ false }}">
+                <span title="No se ha podido dibujar" style="flex:1;display:flex;align-items:center;justify-content:center;color:var(--rf-text-muted)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16v.5"/></svg></span>
+              </sc-if>
+              <sc-if value="{{ firmaRender.hayHueco }}" hint-placeholder-val="{{ true }}">
+                <div title="{{ firmaRender.tituloHueco }}" style="{{ firmaRender.estiloHueco }}">
+                  <sc-if value="{{ firmaRender.conImagen }}" hint-placeholder-val="{{ true }}">
+                    <svg viewBox="0 0 84 40" preserveAspectRatio="xMidYMid meet" fill="none" stroke="var(--rf-text)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="width:100%;height:100%"><path d="M4 30c8-18 13-22 16-14 3 8-4 18-7 16-3-2 6-14 15-16 6-1 4 8 8 9 4 1 8-6 12-10"/><path d="M50 24c6 2 12-2 18-8M62 32c6 0 12-3 18-9"/></svg>
+                  </sc-if>
+                </div>
+              </sc-if>
+              <sc-if value="{{ firmaRender.hayTexto }}" hint-placeholder-val="{{ true }}">
+                <div style="flex:1;min-width:0;text-align:left;line-height:1.25;color:var(--rf-text);overflow-wrap:anywhere;font-size:{{ firmaRender.fs }}px">
+                  <sc-for list="{{ firmaRender.lineas }}" as="l" hint-placeholder-count="2"><div>{{ l }}</div></sc-for>
+                </div>
+              </sc-if>
             </div>
+            <sc-if value="{{ tiradores }}" hint-placeholder-val="{{ true }}">
+              <span style="position:absolute;left:-5px;top:-5px;width:9px;height:9px;background:var(--rf-bg);border:1.5px solid var(--rf-primary);border-radius:1px"></span>
+              <span style="position:absolute;right:-5px;top:-5px;width:9px;height:9px;background:var(--rf-bg);border:1.5px solid var(--rf-primary);border-radius:1px"></span>
+              <span style="position:absolute;left:-5px;bottom:-5px;width:9px;height:9px;background:var(--rf-bg);border:1.5px solid var(--rf-primary);border-radius:1px"></span>
+              <span style="position:absolute;right:-5px;bottom:-5px;width:9px;height:9px;background:var(--rf-bg);border:1.5px solid var(--rf-primary);border-radius:1px"></span>
             </sc-if>
-            <sc-if value="{{ selloFallido }}" hint-placeholder-val="{{ false }}">
-              <span style="display:flex;color:var(--rf-text-muted)">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16v.5"/></svg></span>
-            </sc-if>
-            <sc-if value="{{ contenidoOculto }}" hint-placeholder-val="{{ false }}">
-              <svg width="100%" height="70%" viewBox="0 0 84 40" preserveAspectRatio="xMidYMid meet" fill="none" stroke="var(--rf-text)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="opacity:.55">
-                <path d="M4 30c8-18 13-22 16-14 3 8-4 18-7 16-3-2 6-14 15-16 6-1 4 8 8 9 4 1 8-6 12-10"/></svg>
-            </sc-if>
-            <div style="{{ tiradorTL }}"></div>
-            <div style="{{ tiradorTR }}"></div>
-            <div style="{{ tiradorBL }}"></div>
-            <div style="{{ tiradorBR }}"></div>
-            <div style="position:absolute;top:-26px;left:-2px;display:flex;align-items:center;gap:5px;
-              padding:3px 8px;border-radius:var(--rf-radius-pill);background:var(--rf-primary);
-              color:var(--rf-on-primary);font-size:9px;font-weight:700;white-space:nowrap">{{ pastillaRecuadro }}</div>
           </div>
         </sc-if>
-    </div>
-    </div>
-  </div>
-  <sc-if value="{{ haySello }}" hint-placeholder-val="{{ true }}">
-    <div class="rf-row rf-gap-xs" style="position:absolute;bottom:calc(var(--rf-space-md) + 52px);left:50%;
-      transform:translateX(-50%);padding:6px 8px 6px 14px;min-height:40px;box-sizing:border-box;
-      border-radius:var(--rf-radius-pill);background:var(--rf-surface);
-      border:1px solid var(--rf-border-strong);box-shadow:var(--rf-shadow-elevated);white-space:nowrap">
-      <span class="rf-body" style="flex:none">{{ textoSello }}</span>
-      <sc-if value="{{ hayBotonSello }}" hint-placeholder-val="{{ false }}">
-        <button type="button" class="rf-btn rf-btn--primary" style="flex:none;min-height:28px;
-          padding:0 var(--rf-space-sm);border-radius:var(--rf-radius-pill);font-size:12px">{{ botonSello }}</button>
-      </sc-if>
-      <sc-if value="{{ sinBotonSello }}" hint-placeholder-val="{{ true }}">
-        <span style="width:0;height:28px;flex:none" aria-hidden="true"></span>
-      </sc-if>
-    </div>
-  </sc-if>
-  <div class="rf-row" style="position:absolute;bottom:var(--rf-space-md);left:50%;
-    transform:translateX(-50%);gap:2px;padding:4px;border-radius:var(--rf-radius-pill);
-    border:1px solid var(--rf-border-subtle);background:var(--rf-surface);
-    box-shadow:var(--rf-shadow-elevated);white-space:nowrap">
-    <button type="button" onClick="{{ vaPrimera }}" style="{{ estiloNav }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 6l-6 6 6 6M9 6l-6 6 6 6"/></svg></button>
-    <button type="button" onClick="{{ vaAtras }}" style="{{ estiloNav }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></button>
-    <div class="rf-row rf-gap-xs" style="padding:0 6px;flex:none">
-      <span style="min-width:34px;height:30px;flex:none;display:flex;align-items:center;justify-content:center;
-        border:1px solid var(--rf-border-strong);border-radius:var(--rf-radius-sm);
-        font-size:13px;font-weight:700">{{ viendoNum }}</span>
-      <span class="rf-body rf-text-muted" style="flex:none">de {{ n }}</span>
-    </div>
-    <button type="button" onClick="{{ vaAdelante }}" style="{{ estiloNav }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>
-    <button type="button" onClick="{{ vaUltima }}" style="{{ estiloNav }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 6l6 6-6 6M15 6l6 6-6 6"/></svg></button>
-    <span style="width:1px;height:24px;flex:none;margin:0 4px;background:var(--rf-border-subtle)"></span>
-    <span style="width:32px;height:32px;flex:none;display:flex;align-items:center;justify-content:center;border-radius:var(--rf-radius-pill);color:var(--rf-text)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/></svg></span>
-    <span class="rf-body" style="min-width:44px;flex:none;text-align:center;font-weight:700">100 %</span>
-    <span style="width:32px;height:32px;flex:none;display:flex;align-items:center;justify-content:center;border-radius:var(--rf-radius-pill);color:var(--rf-text)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span>
-    <span style="width:32px;height:32px;flex:none;display:flex;align-items:center;justify-content:center;border-radius:var(--rf-radius-pill);color:var(--rf-text-muted)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></span>
-  </div>
-</div>
-<aside class="rf-stack" style="width:360px;flex:none;border-left:1px solid var(--rf-border-subtle);
-  background:var(--rf-surface);height:100%">
-  <div class="rf-stack" style="gap:11px;padding:var(--rf-space-sm);overflow:auto;flex:1">
-    <div class="rf-row rf-gap-xs" style="align-items:flex-start">
-      <span style="color:var(--rf-text-muted);display:flex;margin-top:2px"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg></span>
-      <div class="rf-stack" style="gap:4px;flex:1;min-width:0">
-        <p class="rf-title" style="font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Solicitud-subvencion.pdf</p>
-        <p class="rf-body rf-text-muted">{{ n }} páginas · 2,4 MB</p>
       </div>
     </div>
-    <div class="rf-stack rf-gap-xs" style="padding:10px var(--rf-space-sm);border:1px solid var(--rf-border-subtle);
-      border-radius:var(--rf-radius-md);background:var(--rf-bg)">
-      <div class="rf-row rf-gap-xs">
-        <span style="display:flex;flex:none;color:var(--rf-text-muted)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></svg></span>
-        <p class="rf-prose" style="flex:1">Ya lleva <strong>1 firma</strong>: la tuya será una <strong>cofirma</strong>.</p>
-        <span class="rf-row" style="gap:2px;flex:none;font-size:12px;font-weight:600;cursor:pointer">
-          Ver
-          <span style="display:flex"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
-        </span>
-      </div>
-    </div>
-    <hr class="rf-divider">
-    <div class="rf-stack rf-gap-sm">
-      <p class="rf-label" style="letter-spacing:.6px;text-transform:uppercase">Certificado</p>
-      <div class="rf-card" style="padding:var(--rf-space-sm);gap:6px;border-color:var(--rf-border-strong)">
-        <div class="rf-row rf-gap-xs">
-          <span style="color:var(--rf-text-muted);display:flex"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="9" r="5"/><path d="M8.5 13.5 7 21l5-2.5L17 21l-1.5-7.5"/></svg></span>
-          <span class="rf-title" style="font-size:14px">EIDAS CERTIFICADO PRUEBAS</span>
-        </div>
-        <p class="rf-body rf-text-muted">99999999R · AC FNMT Usuarios</p>
-      </div>
-    </div>
-    <hr class="rf-divider">
-    <div class="rf-stack rf-gap-sm">
-      <p class="rf-label" style="letter-spacing:.6px;text-transform:uppercase">Firma visible</p>
-      <div class="rf-row rf-gap-xs">
-        <span style="width:40px;height:24px;flex:none;border-radius:var(--rf-radius-pill);position:relative;
-          background:var(--rf-primary)">
-          <span style="position:absolute;top:4px;right:4px;width:16px;height:16px;
-            border-radius:var(--rf-radius-pill);background:var(--rf-on-primary)"></span>
-        </span>
-        <p class="rf-prose" style="flex:1">Estampar un recuadro de firma en el documento</p>
-      </div>
-      <div class="rf-stack" style="padding:var(--rf-space-sm);border:1px solid var(--rf-border-strong);
-        border-radius:var(--rf-radius-md);background:var(--rf-bg);gap:10px">
-      <p class="rf-label">Colocación</p>
 
-      <sc-for list="{{ opciones }}" as="o" hint-placeholder-count="3">
-        <div class="rf-stack" style="gap:6px">
-          <button type="button" onClick="{{ o.elegir }}" style="{{ o.estilo }}">
-            <span style="width:15px;height:15px;flex:none;margin-top:2px;border-radius:var(--rf-radius-pill);border:1.5px solid var(--rf-border-strong);display:flex;align-items:center;justify-content:center">
-              <sc-if value="{{ o.activa }}" hint-placeholder-val="{{ false }}"><span style="width:7px;height:7px;border-radius:var(--rf-radius-pill);background:var(--rf-primary)"></span></sc-if>
-            </span>
-            <span class="rf-stack" style="gap:2px;flex:1;min-width:0;text-align:left">
-              <span class="rf-prose" style="line-height:1.35">{{ o.texto }}</span>
-              <sc-if value="{{ o.hayPie }}" hint-placeholder-val="{{ false }}">
-                <span class="rf-body rf-text-muted" style="line-height:1.35">{{ o.pie }}</span>
-              </sc-if>
-            </span>
-          </button>
-          <sc-if value="{{ o.campo }}" hint-placeholder-val="{{ false }}">
-            <div class="rf-stack" style="gap:5px;padding-left:23px">
-              <span class="rf-input" style="{{ estiloCampo }}">{{ textoCampo }}</span>
-              <sc-if value="{{ hayError }}" hint-placeholder-val="{{ false }}">
-                <span class="rf-row rf-gap-xs" style="align-items:flex-start">
-                  <span style="display:flex;flex:none;margin-top:1px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 2.5 20h19z"/><path d="M12 10v4M12 17v.5"/></svg></span>
-                  <span class="rf-body" style="flex:1;line-height:1.4">{{ error }}</span>
-                </span>
-              </sc-if>
+    <sc-if value="{{ hayAvisoVista }}" hint-placeholder-val="{{ false }}">
+      <div class="rf-row rf-gap-xs" style="position:absolute;bottom:calc(var(--rf-space-md) + 52px);left:50%;
+        transform:translateX(-50%);padding:6px 8px 6px 14px;min-height:40px;box-sizing:border-box;
+        border-radius:var(--rf-radius-pill);background:var(--rf-surface);
+        border:1px solid var(--rf-border-strong);box-shadow:var(--rf-shadow-elevated);white-space:nowrap">
+        <span class="rf-body" style="flex:none">{{ textoAvisoVista }}</span>
+        <button type="button" class="rf-btn rf-btn--primary" style="flex:none;min-height:28px;
+          padding:0 var(--rf-space-sm);border-radius:var(--rf-radius-pill);font-size:12px">{{ botonAvisoVista }}</button>
+      </div>
+    </sc-if>
+    <div class="rf-row" style="position:absolute;bottom:var(--rf-space-md);left:50%;
+      transform:translateX(-50%);gap:2px;padding:4px;border-radius:var(--rf-radius-pill);
+      border:1px solid var(--rf-border-subtle);background:var(--rf-surface);
+      box-shadow:var(--rf-shadow-elevated);white-space:nowrap">
+      <button type="button" title="Primera página" style="{{ estiloNav }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 6l-6 6 6 6M9 6l-6 6 6 6"/></svg></button>
+      <button type="button" title="Página anterior" style="{{ estiloNav }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></button>
+      <div class="rf-row rf-gap-xs" style="padding:0 6px;flex:none">
+        <span style="min-width:34px;height:30px;flex:none;display:flex;align-items:center;justify-content:center;
+          border:1px solid var(--rf-border-strong);border-radius:var(--rf-radius-sm);
+          font-size:13px;font-weight:700;padding:0 4px">{{ viendo }}</span>
+        <span class="rf-body rf-text-muted" style="flex:none">de {{ n }}</span>
+      </div>
+      <button type="button" title="Página siguiente" style="{{ estiloNav }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>
+      <button type="button" title="Última página" style="{{ estiloNav }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 6l6 6-6 6M15 6l6 6-6 6"/></svg></button>
+      <span style="width:1px;height:24px;flex:none;margin:0 4px;background:var(--rf-border-subtle)"></span>
+      <span title="Alejar" style="width:32px;height:32px;flex:none;display:flex;align-items:center;justify-content:center;border-radius:var(--rf-radius-pill);color:var(--rf-text)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/></svg></span>
+      <span class="rf-body" style="min-width:44px;flex:none;text-align:center;font-weight:700">{{ zoom }}</span>
+      <span title="Acercar" style="width:32px;height:32px;flex:none;display:flex;align-items:center;justify-content:center;border-radius:var(--rf-radius-pill);color:var(--rf-text)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span>
+      <span title="Ajustar a la ventana" style="width:32px;height:32px;flex:none;display:flex;align-items:center;justify-content:center;border-radius:var(--rf-radius-pill);color:var(--rf-text-muted)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></span>
+    </div>
+  </div>
+
+  <aside class="rf-stack" style="width:380px;flex:none;border-left:1px solid var(--rf-border-subtle);background:var(--rf-bg);position:relative">
+    <div class="rf-stack" style="flex:1;min-height:0;overflow-y:{{ desbordePanel }};padding:14px 24px 12px;gap:12px">
+      <sc-if value="{{ hayCofirma }}" hint-placeholder-val="{{ false }}">
+        <div class="rf-stack" style="flex:none;border:1px solid var(--rf-border-subtle);border-radius:var(--rf-radius-md)">
+          <div class="rf-row rf-gap-xs" style="padding:8px 8px 8px 12px">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" style="flex:none"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.5"/></svg>
+            <span class="rf-body" style="flex:1;font-size:13px">Ya lleva <strong>{{ cuantasPrevias }}</strong></span>
+            <button type="button" class="rf-btn rf-btn--ghost" style="min-height:24px;padding:0 8px;font-size:12px">{{ textoVer }}</button>
+          </div>
+          <sc-if value="{{ detallePrevias }}" hint-placeholder-val="{{ false }}">
+            <sc-for list="{{ previas }}" as="f" hint-placeholder-count="3">
+              <div class="rf-stack" style="gap:4px;padding:9px 12px;border-top:1px solid var(--rf-border-subtle)">
+                <span style="font-size:13px;line-height:1.35;overflow-wrap:anywhere">{{ f.quien }}</span>
+                <span class="rf-body rf-text-muted">{{ f.cuando }}</span>
+              </div>
+            </sc-for>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ sinCertificados }}" hint-placeholder-val="{{ false }}">
+        <div class="rf-stack" style="flex:none;gap:4px">
+          <div class="rf-row" style="gap:8px;font-weight:700;font-size:14px">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 2.5 20h19z"/><path d="M12 10v4M12 17v.5"/></svg>Sin certificados</div>
+          <p class="rf-body rf-text-muted" style="padding-left:26px">No hay ningún certificado con el que firmar.</p>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ firmado }}" hint-placeholder-val="{{ false }}">
+        <div class="rf-row" style="flex:none;gap:8px;font-weight:700;font-size:14px">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l3 3 5-6"/></svg>Firmado a las 11:04</div>
+        <div class="rf-stack" style="flex:none;gap:8px">
+          <span class="rf-label" style="letter-spacing:.6px;text-transform:uppercase">Resumen</span>
+          <div class="rf-row rf-gap-xs">
+            <span class="rf-badge">PAdES</span>
+            <sc-if value="{{ ficha14 }}" hint-placeholder-val="{{ false }}">
+              <span class="rf-badge">{{ cuantasFirmas }}</span>
+            </sc-if>
+          </div>
+          <sc-if value="{{ ficha14 }}" hint-placeholder-val="{{ false }}">
+            <div class="rf-stack" style="gap:6px">
+              <sc-for list="{{ firmasResumen }}" as="f" hint-placeholder-count="2">
+                <div class="rf-card" style="padding:10px 12px;gap:4px">
+                  <div class="rf-row rf-gap-xs">
+                    <span style="flex:1;min-width:0;font-size:13px;font-weight:600;line-height:1.35;overflow-wrap:anywhere">{{ f.quien }}</span>
+                    <sc-if value="{{ f.tuya }}" hint-placeholder-val="{{ false }}">
+                      <span class="rf-badge rf-badge--primary" style="flex:none">La tuya</span>
+                    </sc-if>
+                  </div>
+                  <span class="rf-body rf-text-muted">{{ f.cuando }}</span>
+                </div>
+              </sc-for>
             </div>
           </sc-if>
         </div>
-      </sc-for>
+      </sc-if>
 
-      <sc-if value="{{ diceLimitacion }}" hint-placeholder-val="{{ true }}">
-        <p class="rf-body rf-text-muted" style="line-height:1.45;padding-top:2px;border-top:1px solid var(--rf-border-subtle);margin-top:2px">{{ frase }}</p>
+      <sc-if value="{{ errorFirma }}" hint-placeholder-val="{{ false }}">
+        <div class="rf-stack" style="flex:none;gap:8px;padding:12px 14px;border:2px solid var(--rf-border-strong);border-radius:var(--rf-radius-md)">
+          <div class="rf-row" style="gap:8px;font-weight:700;font-size:14px">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 2.5 20h19z"/><path d="M12 10v4M12 17v.5"/></svg>No se ha podido firmar</div>
+          <p class="rf-prose">El certificado ha dejado de estar disponible mientras se firmaba.</p>
+          <p class="rf-prose">El documento sigue como estaba: no se ha guardado nada.</p>
+          <p class="rf-body rf-text-muted" style="font-family:ui-monospace,Menlo,monospace;line-height:1.5">CKR_DEVICE_REMOVED durante C_Sign (fase: firma)</p>
+          <button type="button" class="rf-btn rf-btn--ghost" style="align-self:flex-start;padding-left:0;min-height:28px;font-size:12px">Copiar detalle</button>
+        </div>
       </sc-if>
-      <sc-if value="{{ hayAviso }}" hint-placeholder-val="{{ true }}">
-        <button type="button" onClick="{{ pulsaAviso }}" class="rf-btn {{ claseBotonAviso }}" style="width:100%;min-height:36px">{{ botonAviso }}</button>
+
+      <sc-if value="{{ hayFirmaVisible }}" hint-placeholder-val="{{ true }}">
+      <div class="rf-stack" style="flex:none;gap:10px">
+        <div class="rf-row" style="height:30px;gap:12px">
+          <span class="rf-label" style="flex:1">Firma visible</span>
+          <sc-if value="{{ hayInterruptor }}" hint-placeholder-val="{{ true }}">
+            <span title="{{ tituloInterruptor }}" style="width:40px;height:24px;flex:none;border-radius:var(--rf-radius-pill);position:relative;cursor:pointer;border:1px solid var(--rf-border-strong);{{ estiloInterruptor }}">
+              <span style="position:absolute;width:16px;height:16px;border-radius:var(--rf-radius-pill);{{ estiloPomo }}"></span>
+            </span>
+          </sc-if>
+          <sc-if value="{{ firmado }}" hint-placeholder-val="{{ false }}">
+            <span style="flex:none;font-size:13px;line-height:1.35">{{ valorFirma }}</span>
+          </sc-if>
+        </div>
+        <sc-if value="{{ firmaActiva }}" hint-placeholder-val="{{ false }}">
+          <div class="rf-stack" style="gap:10px;{{ estiloControles }}">
+            <div class="rf-row" style="height:32px;padding:2px;gap:2px;border:1px solid var(--rf-border-strong);border-radius:var(--rf-radius-md)">
+              <sc-for list="{{ segmentos }}" as="s" hint-placeholder-count="3">
+                <button type="button" style="{{ s.estilo }}">{{ s.texto }}</button>
+              </sc-for>
+            </div>
+            <sc-if value="{{ hayCampo }}" hint-placeholder-val="{{ false }}">
+              <div class="rf-stack" style="gap:6px">
+                <div class="rf-row" style="gap:8px">
+                  <span class="rf-input" style="{{ estiloCampo }}">{{ textoCampo }}</span>
+                  <sc-if value="{{ hayBotonRango }}" hint-placeholder-val="{{ false }}">
+                    <button type="button" class="rf-btn rf-btn--secondary" style="flex:none;min-height:36px;padding:0 10px;font-size:13px">{{ botonPagina }}</button>
+                  </sc-if>
+                </div>
+                <sc-if value="{{ hayError }}" hint-placeholder-val="{{ false }}">
+                  <span class="rf-row rf-gap-xs" style="align-items:flex-start">
+                    <span style="display:flex;flex:none"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 2.5 20h19z"/><path d="M12 10v4M12 17v.5"/></svg></span>
+                    <span class="rf-body" style="flex:1;line-height:1.4;font-weight:700">{{ error }}</span>
+                  </span>
+                </sc-if>
+              </div>
+            </sc-if>
+            <sc-if value="{{ hayLineaPagina }}" hint-placeholder-val="{{ false }}">
+              <div class="rf-row" style="gap:8px;min-height:30px">
+                <span style="flex:1;min-width:0;font-size:13px;line-height:1.35">{{ textoPagina }}</span>
+                <sc-if value="{{ hayBotonPagina }}" hint-placeholder-val="{{ false }}">
+                  <button type="button" class="rf-btn rf-btn--secondary" style="flex:none;min-height:30px;padding:0 10px;font-size:13px">{{ botonPagina }}</button>
+                </sc-if>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+      </div>
       </sc-if>
+
+      <sc-if value="{{ firmaActiva }}" hint-placeholder-val="{{ false }}">
+        <div class="rf-stack" style="flex:none;gap:8px;position:relative;z-index:6;{{ estiloControles }}">
+          <sc-if value="{{ hayModelos }}" hint-placeholder-val="{{ false }}">
+            <span class="rf-label" style="height:16px;display:flex;align-items:center">Modelo</span>
+          </sc-if>
+
+          <sc-if value="{{ hayModelos }}" hint-placeholder-val="{{ false }}">
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
+              <sc-for list="{{ modelos }}" as="m" hint-placeholder-count="4">
+                <button type="button" title="{{ m.titulo }}" style="{{ m.estilo }}">
+                  <div style="width:100%;height:30px;border:1px solid var(--rf-border-subtle);border-radius:2px;background:var(--rf-bg);overflow:hidden">
+                    <div style="display:flex;align-items:center;gap:6px;width:100%;height:100%;padding:{{ m.relleno }};overflow:hidden">
+                      <sc-if value="{{ m.hayHueco }}" hint-placeholder-val="{{ true }}">
+                        <div title="{{ m.tituloHueco }}" style="{{ m.estiloHueco }}">
+                          <sc-if value="{{ m.conImagen }}" hint-placeholder-val="{{ true }}">
+                            <svg viewBox="0 0 84 40" preserveAspectRatio="xMidYMid meet" fill="none" stroke="var(--rf-text)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="width:100%;height:100%"><path d="M4 30c8-18 13-22 16-14 3 8-4 18-7 16-3-2 6-14 15-16 6-1 4 8 8 9 4 1 8-6 12-10"/><path d="M50 24c6 2 12-2 18-8M62 32c6 0 12-3 18-9"/></svg>
+                          </sc-if>
+                        </div>
+                      </sc-if>
+                      <sc-if value="{{ m.hayTexto }}" hint-placeholder-val="{{ true }}">
+                        <div style="flex:1;min-width:0;text-align:left;line-height:1.25;color:var(--rf-text);overflow-wrap:anywhere;font-size:{{ m.fs }}px">
+                          <sc-for list="{{ m.lineas }}" as="l" hint-placeholder-count="2"><div>{{ l }}</div></sc-for>
+                        </div>
+                      </sc-if>
+                    </div>
+                  </div>
+                  <span style="font-size:12px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%">{{ m.nombre }}</span>
+                </button>
+              </sc-for>
+            </div>
+          </sc-if>
+          <div class="rf-row" style="gap:8px;min-height:30px">
+            <span title="{{ tituloInterruptorRubrica }}" style="width:40px;height:24px;flex:none;border-radius:var(--rf-radius-pill);position:relative;border:1px solid var(--rf-border-strong);cursor:pointer;{{ estiloInterruptorRubrica }}">
+              <span style="position:absolute;width:16px;height:16px;border-radius:var(--rf-radius-pill);{{ estiloPomoRubrica }}"></span>
+            </span>
+            <span title="{{ tituloInterruptorRubrica }}" style="flex:1;font-size:13px;{{ estiloTextoRubrica }}">Con rúbrica</span>
+            <div style="width:48px;height:30px;flex:none;border-radius:var(--rf-radius-sm);display:flex;align-items:center;justify-content:center;color:var(--rf-text);background:var(--rf-bg);{{ estiloMiniatura }}">
+              <sc-if value="{{ hayImagenRubrica }}" hint-placeholder-val="{{ true }}">
+                <svg width="36" height="17" viewBox="0 0 84 40" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 30c8-18 13-22 16-14 3 8-4 18-7 16-3-2 6-14 15-16 6-1 4 8 8 9 4 1 8-6 12-10"/><path d="M50 24c6 2 12-2 18-8M62 32c6 0 12-3 18-9"/></svg>
+              </sc-if>
+            </div>
+            <button type="button" class="rf-btn rf-btn--secondary" style="flex:none;min-height:30px;padding:0 10px;font-size:13px">{{ botonRubrica }}</button>
+          </div>
+
+          <sc-if value="{{ hayFrase }}" hint-placeholder-val="{{ true }}">
+            <div class="rf-stack" style="gap:6px;position:relative">
+              <div class="rf-row" style="align-items:flex-end;gap:6px;padding:4px 4px 4px 10px;border:1px solid var(--rf-border-strong);border-radius:var(--rf-radius-sm);background:var(--rf-bg)">
+                <div style="flex:1;min-width:0;padding:2px 0;font-size:13px;line-height:1.8;color:var(--rf-text);cursor:text">
+                  <sc-for list="{{ frase }}" as="t" hint-placeholder-count="6"><span style="{{ t.estilo }}">{{ t.texto }}</span></sc-for><span style="display:inline-block;width:1px;height:15px;vertical-align:-3px;margin-left:1px;background:var(--rf-text)"></span>
+                </div>
+                  <button type="button" class="rf-btn rf-btn--secondary" style="flex:none;min-height:28px;height:28px;padding:0 10px;font-size:13px;gap:4px">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Dato</button>
+              </div>
+              <sc-if value="{{ menuDato }}" hint-placeholder-val="{{ false }}">
+                <div class="rf-stack" style="position:absolute;right:0;top:100%;margin-top:4px;width:250px;z-index:6;padding:6px;gap:2px;
+                  border-radius:var(--rf-radius-lg);border:1px solid var(--rf-border-subtle);background:var(--rf-bg);box-shadow:var(--rf-shadow-elevated)">
+                  <sc-for list="{{ datos }}" as="x" hint-placeholder-count="5">
+                    <div class="rf-row" style="gap:10px;min-height:32px;padding:0 10px;border-radius:var(--rf-radius-md);cursor:pointer;{{ x.estilo }}">
+                      <span style="flex:none;font-size:13px">{{ x.nombre }}</span>
+                      <span class="rf-text-muted" style="flex:1;min-width:0;text-align:right;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ x.ejemplo }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </sc-if>
+            </div>
+          </sc-if>
+
+        </div>
+      </sc-if>
+    </div>
+
+    <sc-if value="{{ eligiendoCert }}" hint-placeholder-val="{{ false }}">
+      <div class="rf-stack" style="position:absolute;left:24px;right:24px;bottom:68px;max-height:calc(100% - 76px);overflow-y:auto;z-index:6;padding:6px;gap:2px;
+        border-radius:var(--rf-radius-lg);border:1px solid var(--rf-border-subtle);background:var(--rf-bg);box-shadow:var(--rf-shadow-elevated)">
+        <sc-for list="{{ certificados }}" as="c" hint-placeholder-count="4">
+          <sc-if value="{{ c.hayGrupo }}" hint-placeholder-val="{{ false }}">
+            <span class="rf-label" style="flex:none;padding:8px 12px 2px;letter-spacing:.6px;text-transform:uppercase">{{ c.grupo }}</span>
+          </sc-if>
+          <div class="rf-row" title="{{ c.titulo }}" style="{{ c.estilo }}">
+            <div class="rf-stack" style="gap:3px;flex:1;min-width:0">
+              <span style="font-size:14px;font-weight:600;line-height:1.35;overflow-wrap:anywhere">{{ c.nombre }}</span>
+              <span class="rf-body rf-text-muted" style="line-height:1.3">{{ c.pie }}</span>
+              <sc-if value="{{ c.motivo }}" hint-placeholder-val="{{ false }}">
+                <span class="rf-body" style="line-height:1.3;font-weight:700">{{ c.motivo }}</span>
+              </sc-if>
+            </div>
+            <sc-if value="{{ c.elegido }}" hint-placeholder-val="{{ false }}">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+            </sc-if>
+          </div>
+        </sc-for>
       </div>
-      <div class="rf-stack" style="gap:6px">
-        <p class="rf-label">Contenido</p>
-        <div class="rf-row rf-gap-xs" style="align-items:flex-start;min-height:24px">
-          <span style="width:18px;height:18px;flex:none;margin-top:1px;border-radius:var(--rf-radius-sm);
-            display:flex;align-items:center;justify-content:center;
-            background:var(--rf-primary);color:var(--rf-on-primary)">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5 9.5 18 20 6"/></svg>
+    </sc-if>
+
+    <div class="rf-stack" style="flex:none;gap:10px;padding:10px 24px 16px;border-top:1px solid var(--rf-border-subtle);background:var(--rf-bg)">
+      <div class="rf-stack" style="gap:4px">
+        <div class="rf-row" style="height:24px"><span class="rf-label" style="flex:1">{{ rotuloDestino }}</span><button type="button" class="rf-btn rf-btn--ghost" style="{{ estiloCambiar }}">Cambiar</button></div>
+        <sc-if value="{{ destinoRoto }}" hint-placeholder-val="{{ false }}">
+          <div class="rf-row" style="gap:8px;height:53px;padding:7px 10px;border:2px solid var(--rf-border-strong);border-radius:var(--rf-radius-md)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M12 4 2.5 20h19z"/><path d="M12 10v4M12 17v.5"/></svg>
+            <span title="{{ carpeta }}" style="flex:1;min-width:0;font-size:13px;line-height:1.35;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;overflow-wrap:anywhere">No se puede escribir en <strong>{{ carpeta }}</strong></span>
+          </div>
+        </sc-if>
+        <sc-if value="{{ destinoOk }}" hint-placeholder-val="{{ true }}">
+        <div class="rf-stack" style="gap:5px;padding:7px 10px;border:1px solid var(--rf-border-subtle);border-radius:var(--rf-radius-md);background:var(--rf-surface)">
+          <span class="rf-row rf-text-muted" style="gap:8px;min-width:0" title="{{ carpeta }}">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" style="flex:none"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+            <span style="font-size:12px;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ carpeta }}</span>
           </span>
-          <div class="rf-stack" style="gap:2px;flex:1;min-width:0"><span class="rf-prose">Firmante</span></div>
-        </div>
-        <div class="rf-row rf-gap-xs" style="align-items:flex-start;min-height:24px">
-          <span style="width:18px;height:18px;flex:none;margin-top:1px;border-radius:var(--rf-radius-sm);
-            display:flex;align-items:center;justify-content:center;
-            background:var(--rf-primary);color:var(--rf-on-primary)">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5 9.5 18 20 6"/></svg>
+          <span class="rf-row" style="gap:8px;min-width:0" title="{{ salidaEntera }}">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>
+            <span style="font-size:13px;line-height:1.3;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ salida }}</span>
           </span>
-          <div class="rf-stack" style="gap:2px;flex:1;min-width:0"><span class="rf-prose">Emisor</span></div>
         </div>
-        <div class="rf-row rf-gap-xs" style="align-items:flex-start;min-height:24px">
-          <span style="width:18px;height:18px;flex:none;margin-top:1px;border-radius:var(--rf-radius-sm);
-            display:flex;align-items:center;justify-content:center;
-            background:var(--rf-primary);color:var(--rf-on-primary)">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5 9.5 18 20 6"/></svg>
-          </span>
-          <div class="rf-stack" style="gap:2px;flex:1;min-width:0"><span class="rf-prose">Fecha</span></div>
+        </sc-if>
+      </div>
+      <sc-if value="{{ partido }}" hint-placeholder-val="{{ true }}">
+        <div class="rf-row" style="height:44px;opacity:{{ opacidadFirmar }}">
+          <button type="button" class="rf-btn rf-btn--primary" title="{{ tituloFirmar }}" style="flex:1;min-width:0;gap:6px;padding:0 14px;border-radius:var(--rf-radius-md) 0 0 var(--rf-radius-md)">
+            <sc-if value="{{ buscando }}" hint-placeholder-val="{{ false }}">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="flex:none"><path d="M12 3a9 9 0 1 0 9 9"/></svg>
+            </sc-if>
+            <span style="flex:none;font-weight:400">{{ verbo }}</span>
+            <span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ nombreCorto }}</span>
+          </button>
+          <button type="button" title="Elegir otro certificado" class="rf-btn rf-btn--primary" style="flex:none;width:44px;padding:0;
+            border-radius:0 var(--rf-radius-md) var(--rf-radius-md) 0;border-left:1px solid var(--rf-on-primary)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ flecha }}"/></svg></button>
         </div>
-        <div class="rf-row rf-gap-xs" style="align-items:flex-start;min-height:24px">
-          <span style="width:18px;height:18px;flex:none;margin-top:1px;border-radius:var(--rf-radius-sm);
-            display:flex;align-items:center;justify-content:center;
-            background:var(--rf-primary);color:var(--rf-on-primary)">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5 9.5 18 20 6"/></svg>
-          </span>
-          <div class="rf-stack" style="gap:2px;flex:1;min-width:0"><span class="rf-prose">Rúbrica</span></div>
+      </sc-if>
+      <sc-if value="{{ sinElegir }}" hint-placeholder-val="{{ false }}">
+        <div class="rf-row" style="height:44px">
+          <button type="button" class="rf-btn rf-btn--primary" style="flex:1;min-width:0;gap:8px;padding:0 14px">
+            <span style="font-weight:700">Elegir certificado</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M6 9l6 6 6-6"/></svg></button>
         </div>
-        <div class="rf-row rf-gap-xs" style="align-items:flex-start;min-height:24px">
-          <span style="width:18px;height:18px;flex:none;margin-top:1px;border-radius:var(--rf-radius-sm);
-            display:flex;align-items:center;justify-content:center;border:1px solid var(--rf-border-strong)"></span>
-          <div class="rf-stack" style="gap:2px;flex:1;min-width:0"><span class="rf-prose">Motivo</span></div>
+      </sc-if>
+      <sc-if value="{{ firmado }}" hint-placeholder-val="{{ false }}">
+        <div class="rf-row" style="height:44px;gap:8px">
+          <button type="button" class="rf-btn rf-btn--primary" style="flex:1;min-width:0">Abrir el PDF</button>
+          <button type="button" title="Abrir la carpeta" class="rf-btn rf-btn--secondary" style="flex:none;width:44px;padding:0">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></button>
+          <button type="button" class="rf-btn rf-btn--ghost" style="flex:none;padding:0 10px">Volver a firmar</button>
+        </div>
+      </sc-if>
+      <sc-if value="{{ sinCertificados }}" hint-placeholder-val="{{ false }}">
+        <div class="rf-row" style="height:44px;gap:8px">
+          <button type="button" class="rf-btn rf-btn--primary" title="No hay ningún certificado con el que firmar." style="flex:1;min-width:0">Añadir un certificado…</button>
+          <button type="button" class="rf-btn rf-btn--secondary" style="flex:none;padding:0 12px">Volver a buscar</button>
+        </div>
+      </sc-if>
+      <sc-if value="{{ errorFirma }}" hint-placeholder-val="{{ false }}">
+        <div class="rf-row" style="height:44px;gap:8px">
+          <button type="button" class="rf-btn rf-btn--primary" style="flex:1;min-width:0">Reintentar</button>
+          <button type="button" class="rf-btn rf-btn--ghost" style="flex:none;padding:0 10px">Volver</button>
+        </div>
+      </sc-if>
+    </div>
+  </aside>
+</sc-if>
+</div>
+
+<sc-if value="{{ firmando }}" hint-placeholder-val="{{ false }}">
+  <div class="rf-scrim" style="z-index:20">
+    <div class="rf-dialog">
+      <p class="rf-title">Firmando el documento…</p>
+      <div class="rf-stack rf-gap-sm">
+        <div class="rf-row rf-gap-xs">
+          <span style="width:20px;height:20px;flex:none;display:flex;align-items:center;justify-content:center;color:var(--rf-text)">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5 9.5 18 20 6"/></svg></span>
+          <p class="rf-prose">Preparando la firma <span class="rf-text-muted">(prefirma)</span></p>
+        </div>
+        <div class="rf-row rf-gap-xs">
+          <span style="width:20px;height:20px;flex:none;display:flex;align-items:center;justify-content:center;color:var(--rf-text)">
+            <span style="width:10px;height:10px;border-radius:50%;background:var(--rf-primary)"></span></span>
+          <p class="rf-prose" style="font-weight:700">Firmando</p>
+        </div>
+        <div class="rf-row rf-gap-xs">
+          <span style="width:20px;height:20px;flex:none;display:flex;align-items:center;justify-content:center;color:var(--rf-text-muted)">
+            <span style="width:10px;height:10px;border-radius:50%;border:1px solid var(--rf-border-strong)"></span></span>
+          <p class="rf-prose" style="color:var(--rf-text-muted)">Ensamblando el PDF <span class="rf-text-muted">(postfirma)</span></p>
         </div>
       </div>
-      <div class="rf-row rf-gap-xs">
-        <div style="width:56px;height:36px;flex:none;border-radius:var(--rf-radius-sm);
-          border:1px solid var(--rf-border-strong);display:flex;align-items:center;justify-content:center;
-          color:var(--rf-text)">
-          <svg width="42" height="20" viewBox="0 0 84 40" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M4 30c8-18 13-22 16-14 3 8-4 18-7 16-3-2 6-14 15-16 6-1 4 8 8 9 4 1 8-6 12-10"/>
-            <path d="M50 24c6 2 12-2 18-8M62 32c6 0 12-3 18-9"/>
-          </svg></div>
-        <button class="rf-btn rf-btn--secondary" style="flex:1;min-height:36px">Cambiar la imagen de la rúbrica…</button>
+      <div style="height:4px;border-radius:var(--rf-radius-pill);background:var(--rf-border-subtle);overflow:hidden">
+        <div style="width:55%;height:100%;background:var(--rf-primary)"></div>
       </div>
     </div>
   </div>
-  <div class="rf-stack rf-gap-sm" style="padding:var(--rf-space-sm);
-    border-top:1px solid var(--rf-border-subtle);flex:none">
-    <sc-if value="{{destinoOk}}" hint-placeholder-val="{{true}}">
-      <div class="rf-stack" style="gap:4px">
-        <p class="rf-label">Se guardará en</p>
-        <div class="rf-row rf-gap-xs" style="align-items:flex-start">
-          <span style="color:var(--rf-text-muted);display:flex;flex:none;margin-top:3px"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></span>
-          <p class="rf-prose" style="flex:1;min-width:0;overflow-wrap:anywhere"><span class="rf-text-muted">{{carpeta}}</span>{{fichero}}</p>
-          <button class="rf-btn rf-btn--ghost" style="flex:none;min-height:32px;padding:0 var(--rf-space-xs);font-size:12px">Cambiar</button>
-        </div>
-      </div>
-    </sc-if>
-    <sc-if value="{{destinoRoto}}" hint-placeholder-val="{{false}}">
-      <div class="rf-row rf-gap-xs" style="align-items:flex-start">
-        <span style="display:flex;flex:none;margin-top:2px"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 2.5 20h19z"/><path d="M12 10v4M12 17v.5"/></svg></span>
-        <p class="rf-prose" style="flex:1;min-width:0">No se puede escribir en <strong>Documentos</strong></p>
-        <button class="rf-btn rf-btn--ghost" style="flex:none;min-height:32px;padding:0 var(--rf-space-xs);font-size:12px">Cambiar</button>
-      </div>
-    </sc-if>
-    <sc-if value="{{ faltaColocar }}" hint-placeholder-val="{{ true }}">
-      <div class="rf-row rf-gap-xs" style="align-items:flex-start">
-        <span style="display:flex;flex:none;margin-top:1px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4h9a2 2 0 0 1 2 2v12M5 8h9a2 2 0 0 1 2 2v10H7a2 2 0 0 1-2-2z"/></svg></span>
-        <p class="rf-body" style="flex:1;line-height:1.45">{{ textoFalta }}</p>
-      </div>
-    </sc-if>
-    <button class="rf-btn rf-btn--primary" disabled="{{ firmarApagado }}" style="width:100%">Firmar documento</button>
-  </div>
-</aside>
-</div>
+</sc-if>
 </div>
 </x-dc>
-<script data-dc-script data-props='{"tema":{"editor":"enum","options":["light","dark"],"default":"light","section":"Tema"},"caso":{"editor":"enum","options":["1 · recien abierto, sin colocar","1.1 · una pagina, sellada la 3","1.2 · una pagina, mirando otra","2 · todas, sin colocar","2.1 · todas, colocado","3 · algunas, sin colocar","3.1 · algunas, colocado","3.2 · algunas, en una pagina sellada"],"default":"1 · recien abierto, sin colocar","section":"Colocacion"},"tecleado":{"editor":"enum","options":["lo que digan los botones","10-40 · paginas que no existen","3-1 · rango al reves","1;2;3 · separador equivocado"],"default":"lo que digan los botones","section":"Colocacion"},"vista":{"editor":"enum","options":["fiel · el sello de verdad","recalculando","moviendo o redimensionando","no se ha podido dibujar"],"default":"fiel · el sello de verdad","section":"Vista previa"},"paginas":{"editor":"enum","options":["4","27","200"],"default":"27","section":"Documento"},"zoom":{"editor":"enum","options":["50 %","100 %","300 %"],"default":"100 %","section":"Visor"},"tamano":{"editor":"enum","options":["normal","al minimo"],"default":"normal","section":"Recuadro"},"version":{"editor":"enum","options":["hay version nueva","al dia"],"default":"hay version nueva","section":"Version"},"destino":{"editor":"enum","options":["cabe entero","nombre largo","segunda firma","carpeta larga","no disponible"],"default":"cabe entero","section":"Pie · destino"},"cabeza":{"editor":"range","min":6,"max":44,"step":1,"default":18,"section":"Pie · recorte"},"cabezaCarpeta":{"editor":"range","min":8,"max":34,"step":1,"default":16,"section":"Pie · recorte"},"$preview":{"width":1180,"height":700}}'>
+<script data-dc-script data-props='{"tema": {"editor": "enum", "options": ["light", "dark"], "default": "light", "section": "Tema"}, "estado": {"editor": "enum", "options": ["listo", "vacio", "buscando certificados", "sin certificados", "sin certificado elegido", "certificados abiertos", "firmando", "firmado", "error al firmar"], "default": "listo", "section": "Estado"}, "firmaVisible": {"editor": "enum", "options": ["apagada", "una pagina", "una pagina, mirando otra", "varias, mirando una que esta", "varias, mirando una que no esta", "varias con error del rango", "todas", "arrastrandola"], "default": "apagada", "section": "Firma visible"}, "errorRango": {"editor": "enum", "options": ["pagina que no existe", "al reves", "mal escrito"], "default": "pagina que no existe", "section": "Firma visible"}, "vista": {"editor": "enum", "options": ["fiel", "recalculando", "no se ha podido dibujar"], "default": "fiel", "section": "Vista previa de la firma visible"}, "contenidoFirma": {"editor": "enum", "options": ["Completa", "Solo rubrica", "Personalizada", "Personalizada, menu + Dato abierto"], "default": "Completa", "section": "Contenido de la firma"}, "conRubrica": {"editor": "enum", "options": ["encendido", "apagado", "encendido sin imagen cargada"], "default": "encendido", "section": "Contenido de la firma"}, "tamano": {"editor": "enum", "options": ["normal", "pequeno (el texto se reduce)"], "default": "normal", "section": "Contenido de la firma"}, "zoom": {"editor": "enum", "options": ["50 %", "100 %", "300 %"], "default": "100 %", "section": "Visor"}, "cuantos": {"editor": "enum", "options": ["2", "4", "9"], "default": "4", "section": "Lista de certificados"}, "caducados": {"editor": "boolean", "default": true, "section": "Lista de certificados"}, "orden": {"editor": "enum", "options": ["agrupado · utilizables primero", "como hoy · el orden en que cargaron los modulos"], "default": "agrupado · utilizables primero", "section": "Lista de certificados"}, "firmasPrevias": {"editor": "enum", "options": ["ninguna", "1", "varias, con el detalle"], "default": "ninguna", "section": "Firmas previas"}, "ficha14": {"editor": "boolean", "default": false, "section": "Ficha 14 (v1.0)"}, "destino": {"editor": "enum", "options": ["cabe entero", "segunda firma", "no disponible"], "default": "cabe entero", "section": "Pie · destino"}, "menuMas": {"editor": "enum", "options": ["cerrado", "abierto"], "default": "cerrado", "section": "Menu +"}, "menu": {"editor": "enum", "options": ["cerrado", "abierto"], "default": "cerrado", "section": "Menu de la cabecera"}, "aviso": {"editor": "enum", "options": ["hay algo que revisar", "todo en orden"], "default": "hay algo que revisar", "section": "Menu de la cabecera"}, "foco": {"editor": "enum", "options": ["sin foco", "teclado · primera entrada", "teclado · la salida al navegador"], "default": "sin foco", "section": "Menu de la cabecera"}, "version": {"editor": "enum", "options": ["al dia", "hay version nueva"], "default": "al dia", "section": "Version"}, "contenido": {"editor": "enum", "options": ["normal", "extremo"], "default": "normal", "section": "Contenido"}, "$preview": {"width": 1180, "height": 700}}'>
 class Component extends DCLogic {
-  porElMedio(texto, cabeza, cola) {
-    if (texto.length - cola.length <= cabeza) { return texto; }
-    return texto.slice(0, cabeza) + "…" + cola;
-  }
-  recortaFichero(nombre, cabeza) {
-    const punto = nombre.lastIndexOf(".");
-    const ext = punto > 0 ? nombre.slice(punto) : "";
-    const tronco = punto > 0 ? nombre.slice(0, punto) : nombre;
-    const casa = tronco.match(/-firmado(-\d+)?$/);
-    const cola = casa ? casa[0] : "";
-    const nucleo = tronco.slice(0, tronco.length - cola.length);
-    if (nucleo.length <= cabeza) { return nombre; }
-    return nucleo.slice(0, cabeza) + "…" + cola + ext;
-  }
-  recortaCarpeta(nombre, cabeza) {
-    if (nombre.length <= cabeza) { return nombre; }
-    return nombre.slice(0, cabeza) + "…";
-  }
-
-  todas(n) { const a = []; for (let i = 1; i <= n; i++) { a.push(i); } return a; }
-
-  // El formato de impresión de toda la vida: 1,2-3,10-20.
-  // El ID-22 prohíbe la degradación silenciosa: nada se recorta ni se ignora.
-  parseRango(txt, n) {
-    const limpio = (txt || "").trim();
-    if (limpio === "") { return { sel: [], error: "" }; }
-    const vistos = {}; const sel = []; let error = "";
-    const trozos = limpio.split(",");
-    for (let i = 0; i < trozos.length; i++) {
-      const t = trozos[i].trim();
-      if (t === "") { continue; }
-      const solo = t.match(/^(\d+)$/);
-      const par = t.match(/^(\d+)\s*-\s*(\d+)$/);
-      if (!solo && !par) {
-        error = error || "«" + t + "» no se entiende. Números y rangos separados por comas: 1,2-3,10-20.";
-        continue;
-      }
-      const a = parseInt(solo ? solo[1] : par[1], 10);
-      const b = parseInt(solo ? solo[1] : par[2], 10);
-      if (a === 0 || b === 0) { error = error || "No hay página 0: la primera es la 1."; continue; }
-      if (b < a) { error = error || "«" + t + "» va al revés: el primer número tiene que ser el menor."; continue; }
-      if (b > n) { error = error || "El documento tiene " + n + " páginas y has escrito hasta la " + b + "."; continue; }
-      for (let p = a; p <= b; p++) { if (!vistos[p]) { vistos[p] = true; sel.push(p); } }
+  datos(extremo) {
+    if (extremo) {
+      return {
+        extremo: true,
+        doc: "Anexo-II-memoria-justificativa-proyecto-investigacion-convocatoria-2026-version-definitiva-revisada.pdf",
+        n: 184,
+        carpeta: "Convocatoria ayudas I+D 2026 · documentación administrativa definitiva",
+        titular: "María del Carmen Fernández-Villaverde de la Torre",
+        nombreCorto: "María del Carmen Fernández-Villaverde",
+        cn: "FERNÁNDEZ-VILLAVERDE DE LA TORRE MARÍA DEL CARMEN - ***9999**",
+        emisor: "AC FNMT Usuarios", caduca: "Caduca en 11/2027",
+        una: 62, varias: [1].concat(this.rango(60, 70)).concat([184]), viendo: 62, otraPagina: 100,
+        antes: [
+          "Resolucion-definitiva-concesion-ayudas-2026.pdf", "Modelo-036.pdf", "Acta-comision-evaluacion.pdf",
+          "Presupuesto-desglosado-anualidades-2026-2028.pdf"
+        ],
+        despues: [
+          "Declaracion-responsable-otras-ayudas.pdf", "CV-investigadora-principal.pdf", "Convenio-colaboracion.pdf",
+          "Certificado-estar-al-corriente-AEAT.pdf", "Certificado-Seguridad-Social.pdf", "Plan-de-gestion-de-datos.pdf",
+          "Informe-comite-etica.pdf"
+        ],
+        firmadas: ["Resolucion-definitiva-concesion-ayudas-2026.pdf", "Modelo-036.pdf", "CV-investigadora-principal.pdf"],
+        encima: "Declaracion-responsable-otras-ayudas.pdf",
+        previas: [
+          { quien: "Fundación para la Investigación Biomédica del Hospital Universitario de Ejemplo", cuando: "12/09/2026 10:32" },
+          { quien: "José Antonio Pérez-Castellanos de los Santos", cuando: "15/09/2026 09:05" },
+          { quien: "Universidad de Villaejemplo", cuando: "20/09/2026 18:47" }
+        ]
+      };
     }
-    sel.sort(function (x, y) { return x - y; });
-    return { sel: sel, error: error };
+    return {
+      extremo: false,
+      doc: "Solicitud-subvencion.pdf", n: 6,
+      carpeta: "Documentos",
+      titular: "Lucía Martín Ortega", nombreCorto: "Lucía Martín", cn: "MARTÍN ORTEGA LUCÍA - ***9999**",
+      emisor: "AC FNMT Usuarios", caduca: "Caduca en 03/2028",
+      una: 6, varias: [1, 6], viendo: 6, otraPagina: 3,
+      antes: [], despues: ["Contrato-alquiler.pdf", "Modelo-036.pdf"],
+      firmadas: ["Contrato-alquiler.pdf", "Modelo-036.pdf"],
+      encima: "Contrato-alquiler.pdf",
+      previas: [
+        { quien: "Ana Ruiz Gómez", cuando: "12/09/2026 10:32" },
+        { quien: "Ayuntamiento de Villaejemplo", cuando: "15/09/2026 09:05" },
+        { quien: "Pedro Sanz Liébana", cuando: "20/09/2026 18:47" }
+      ]
+    };
   }
-
-  // El camino de vuelta: un conjunto se escribe en el campo como rangos.
-  comprime(sel) {
-    if (sel.length === 0) { return ""; }
+  rango(a, b) { const r = []; for (let i = a; i <= b; i++) { r.push(i); } return r; }
+  salida(doc) { return doc.replace(/\.pdf$/i, "-firmado.pdf"); }
+  recorta(nombre, cabeza) {
+    const cola = "-firmado.pdf";
+    if (nombre.length <= cabeza + cola.length) { return nombre; }
+    return nombre.slice(0, cabeza) + "…" + cola;
+  }
+  comprime(sel, guion) {
     const t = []; let i = 0;
     while (i < sel.length) {
       let j = i;
       while (j + 1 < sel.length && sel[j + 1] === sel[j] + 1) { j++; }
-      t.push(j - i >= 1 ? sel[i] + "-" + sel[j] : String(sel[i]));
+      t.push(j > i ? sel[i] + guion + sel[j] : String(sel[i]));
       i = j + 1;
     }
-    return t.join(",");
+    return t.join(", ");
   }
-
-  escenario(caso, n) {
-    const algunas = [3].concat(this.todas(n).filter(function (p) { return p >= 10 && p <= 20; }));
-    const mapa = {
-      "1 · recien abierto, sin colocar":     { modo: "una", texto: "", ancla: 0, viendo: 1, puesto: false },
-      "1.1 · una pagina, sellada la 3":      { modo: "una", texto: "", ancla: 3, viendo: 3, puesto: true },
-      "1.2 · una pagina, mirando otra":      { modo: "una", texto: "", ancla: 3, viendo: 7, puesto: true },
-      "2 · todas, sin colocar":              { modo: "todas", texto: "", ancla: 0, viendo: 1, puesto: false },
-      "2.1 · todas, colocado":               { modo: "todas", texto: "", ancla: 5, viendo: 5, puesto: true },
-      "3 · algunas, sin colocar":            { modo: "algunas", texto: "", ancla: 0, viendo: 1, puesto: false },
-      "3.1 · algunas, colocado":             { modo: "algunas", texto: this.comprime(algunas), ancla: 3, viendo: 3, puesto: true },
-      "3.2 · algunas, en una pagina sellada": { modo: "algunas", texto: this.comprime(algunas), ancla: 3, viendo: 12, puesto: true }
-    };
-    const e = mapa[caso] || mapa["1 · recien abierto, sin colocar"];
-    return {
-      modo: e.modo,
-      texto: e.texto,
-      ancla: Math.min(e.ancla, n),
-      viendo: Math.min(e.viendo, n),
-      puesto: e.puesto
-    };
-  }
-
-  lee() {
-    const n = parseInt(this.props.paginas ?? "27", 10);
-    const caso = this.props.caso ?? "1 · recien abierto, sin colocar";
-    const tecleado = this.props.tecleado ?? "lo que digan los botones";
-    const clave = [caso, this.props.paginas, tecleado].join("|");
-    const base = this.escenario(caso, n);
-    if (tecleado !== "lo que digan los botones") {
-      base.modo = "algunas";
-      base.texto = tecleado.split(" ")[0];
-      base.puesto = true;
-      if (base.ancla === 0) { base.ancla = 1; }
+  tecleo(d, error) {
+    if (error === "al reves") {
+      return d.extremo ? { texto: "1, 70-60, 184", error: "«70-60» va al revés" } : { texto: "6-1", error: "«6-1» va al revés" };
     }
-    const s = (this.state && this.state.clave === clave) ? this.state : {};
-    return {
-      n: n, clave: clave,
-      modo: s.modo ?? base.modo,
-      texto: s.texto ?? base.texto,
-      ancla: s.ancla ?? base.ancla,
-      viendo: s.viendo ?? base.viendo,
-      puesto: s.puesto ?? base.puesto
-    };
+    if (error === "mal escrito") {
+      return { texto: d.extremo ? "1; 60-70; 184" : "1;6", error: "Separa las páginas con comas" };
+    }
+    return d.extremo ? { texto: "1, 60-70, 184-190", error: "Solo hay 184 páginas" } : { texto: "10-40", error: "Solo hay 6 páginas" };
   }
-
-  renderVals() {
-    const self = this;
-    const v = this.lee();
-    const n = v.n;
-    const clave = v.clave;
-
-    const r = v.modo === "algunas" ? this.parseRango(v.texto, n) : { sel: [], error: "" };
-    // «Colocado» no es una bandera aparte: es que haya al menos una página sellada.
-    const sel = v.modo === "una" ? (v.puesto ? [v.ancla] : [])
-      : v.modo === "todas" ? (v.puesto ? this.todas(n) : [])
-      : r.sel;
-    const cuantas = sel.length;
-    const colocado = cuantas > 0;
-    const hayError = v.modo === "algunas" && r.error !== "";
-    const enConjunto = sel.indexOf(v.viendo) !== -1;
-
-    const pon = function (c) { self.setState(Object.assign({ clave: clave, modo: v.modo, texto: v.texto, ancla: v.ancla, viendo: v.viendo, puesto: v.puesto }, c)); };
-
-    // --- Acciones sobre el lienzo ---
-    const sellarEsta = function () {
-      if (v.modo === "una") { pon({ ancla: v.viendo, puesto: true }); return; }
-      if (v.modo === "todas") { pon({ ancla: v.viendo, puesto: true }); return; }
-      const nuevo = sel.indexOf(v.viendo) === -1 ? sel.concat([v.viendo]) : sel;
-      nuevo.sort(function (a, b) { return a - b; });
-      pon({ texto: self.comprime(nuevo), ancla: colocado ? v.ancla : v.viendo, puesto: true });
-    };
-    const quitarEsta = function () {
-      const nuevo = sel.filter(function (p) { return p !== v.viendo; });
-      // Sin páginas se vuelve al caso 1: no hay un estado intermedio con recuadro y sin sitio.
-      pon({ texto: self.comprime(nuevo), puesto: nuevo.length > 0, ancla: nuevo.length > 0 ? v.ancla : 0 });
-    };
-
-    // --- Cambio de modo: sobrevive la página donde se colocó el recuadro ---
-    const cambiaModo = function (m) {
-      return function () {
-        if (m === "algunas") {
-          const arranque = cuantas > 0 ? sel : (v.puesto ? [v.ancla] : []);
-          pon({ modo: m, texto: self.comprime(arranque) });
-        } else {
-          pon({ modo: m });
-        }
+  valorFirmado(c, n) {
+    if (c.modo === "ninguna") { return "No"; }
+    if (c.modo === "todas") { return "En todas las páginas"; }
+    if (c.sel.length === 1) { return "En la página " + c.sel[0]; }
+    return "En " + c.sel.length + " de " + n + " páginas";
+  }
+  pestanas(d, hayDoc, firmado) {
+    const base = "height:100%;flex:none;width:" + (d.extremo ? 168 : 240) + "px;padding:0 6px 0 12px;gap:8px;"
+      + "border:1px solid transparent;border-bottom:0;border-radius:var(--rf-radius-md) var(--rf-radius-md) 0 0;font-size:13px;";
+    const cerrar = "width:20px;height:20px;flex:none;display:flex;align-items:center;justify-content:center;"
+      + "border-radius:var(--rf-radius-sm);color:var(--rf-text-muted);";
+    const tab = function (nombre, tipo, marca) {
+      const activa = tipo === "activa";
+      const encima = tipo === "encima";
+      return {
+        nombre: nombre, firmado: marca,
+        estilo: base + (activa ? "background:var(--rf-bg);border-color:var(--rf-border-subtle);color:var(--rf-text);font-weight:600;cursor:default"
+          : encima ? "background:var(--rf-border-subtle);color:var(--rf-text);cursor:pointer"
+          : "color:var(--rf-text-muted);cursor:pointer"),
+        estiloCerrar: cerrar + (activa || encima ? "" : "visibility:hidden")
       };
     };
-
-    const irA = function (p) { return function () { pon({ viendo: Math.max(1, Math.min(n, p)) }); }; };
-
-    // --- Geometría. Colocar por botón o por campo deja el sello en su sitio
-    // estándar: abajo a la derecha, a un margen del borde. ---
-    const PW = 595, PH = 842;
-    const alMinimo = (this.props.tamano ?? "normal") === "al minimo";
-    const anchoPt = alMinimo ? 120 : 286;
-    const altoPt = alMinimo ? 36 : 118;
-    const wPct = anchoPt / PW, hPct = altoPt / PH;
-    const lPct = 1 - 0.08 - wPct, tPct = 1 - 0.08 - hPct;
-
-    const zoom = parseInt(this.props.zoom ?? "100 %", 10) / 100;
-    const anchoPagina = Math.round(400 * zoom);
-    const anchoCaja = anchoPagina * wPct;
-
-    // Fuera del conjunto no se dibuja nada: un recuadro a trazos insinuaria que ahi hay algo.
-    const caja = function (borde, extra) {
-      return "position:absolute;left:" + (lPct * 100).toFixed(2) + "%;top:" + (tPct * 100).toFixed(2)
-        + "%;width:" + (wPct * 100).toFixed(2) + "%;height:" + (hPct * 100).toFixed(2) + "%;"
-        + "border:1.5px " + borde + ";border-radius:2px;box-sizing:border-box;" + extra;
-    };
-    const lado = 10, off = -(lado / 2);
-    const tirador = function (esq) {
-      return "position:absolute;" + esq + ";width:" + lado + "px;height:" + lado + "px;"
-        + "background:var(--rf-bg);border:1.5px solid var(--rf-border-strong);border-radius:1px;box-sizing:border-box";
-    };
-
-    // --- El aviso bajo la hoja: uno solo, con tres caras ---
-    let hayAviso = true, textoAviso = "", botonAviso = "", claseBotonAviso = "rf-btn--secondary", pulsaAviso = sellarEsta;
-    if (!colocado) {
-      textoAviso = "Aún no has colocado la firma";
-      botonAviso = v.modo === "todas" ? "Colocar el sello aquí" : "Sellar esta página";
-      claseBotonAviso = "rf-btn--primary";
-    } else if (!enConjunto) {
-      textoAviso = "Esta página no se sella";
-      botonAviso = "Sellar esta página";
-    } else if (v.modo === "algunas") {
-      textoAviso = "Esta página se sella";
-      botonAviso = "Quitar el sello";
-      claseBotonAviso = "rf-btn--ghost";
-      pulsaAviso = quitarEsta;
-    } else {
-      hayAviso = false;
+    const r = [];
+    if (hayDoc) {
+      d.antes.forEach(function (n) { r.push(tab(n, n === d.encima ? "encima" : "otra", d.firmadas.indexOf(n) >= 0)); });
+      r.push(tab(firmado ? this.salida(d.doc) : d.doc, "activa", firmado));
+      d.despues.forEach(function (n) { r.push(tab(n, n === d.encima ? "encima" : "otra", d.firmadas.indexOf(n) >= 0)); });
     }
+    return r;
+  }
+  certificados(d, cuantos, conCaducados, agrupado) {
+    const todos = [
+      { nombre: d.titular, emisor: d.emisor, almacen: "Firefox", caduca: d.caduca, elegido: true },
+      { nombre: d.titular + " — Asociación Vecinal Ejemplo", emisor: "AC Representación", almacen: "Instalado en rFirma", caduca: "Caduca en 06/2027" },
+      { nombre: d.titular, emisor: d.emisor, almacen: "Chrome", caduca: d.caduca },
+      { nombre: d.titular, emisor: d.emisor, almacen: "Firefox", motivo: "Caducó el 3 de marzo de 2025" },
+      { nombre: "Pedro Sanz Liébana", emisor: "AC FNMT Usuarios", almacen: "Firefox", caduca: "Caduca en 10/2027" },
+      { nombre: "Ana Ruiz Gómez", emisor: "AC FNMT Usuarios", almacen: "Chrome", caduca: "Caduca en 01/2028" },
+      { nombre: "Ana Ruiz Gómez", emisor: "AC Representación", almacen: "Instalado en rFirma", caduca: "Caduca en 05/2027" },
+      { nombre: "Pedro Sanz Liébana", emisor: "AC FNMT Usuarios", almacen: "Chrome", motivo: "Revocado el 12 de enero de 2026" },
+      { nombre: "Ana Ruiz Gómez", emisor: "AC FNMT Usuarios", almacen: "Firefox", caduca: "Caduca en 01/2028" }
+    ];
+    let lista = todos.slice(0, cuantos).filter(function (c) { return conCaducados || !c.motivo; });
+    if (agrupado) {
+      lista = lista.slice().sort(function (a, b) {
+        const u = (a.motivo ? 1 : 0) - (b.motivo ? 1 : 0);
+        if (u !== 0) { return u; }
+        const t = a.nombre.localeCompare(b.nombre, "es");
+        return t !== 0 ? t : a.almacen.localeCompare(b.almacen, "es");
+      });
+    }
+    return lista.map(function (c, i) {
+      const antes = i > 0 ? lista[i - 1] : null;
+      return {
+        nombre: c.nombre, elegido: c.elegido === true, motivo: c.motivo || "",
+        pie: c.emisor + " · " + c.almacen + (c.caduca ? " · " + c.caduca : ""),
+        hayGrupo: agrupado && (i === 0 || Boolean(antes.motivo) !== Boolean(c.motivo)),
+        grupo: c.motivo ? "No utilizables" : "Disponibles",
+        titulo: c.motivo ? c.motivo : c.nombre,
+        estilo: "flex:none;gap:12px;padding:10px 12px;border-radius:var(--rf-radius-md);cursor:pointer;"
+          + (c.elegido ? "background:var(--rf-surface);" : "") + (c.motivo ? "opacity:.45;cursor:not-allowed;" : "")
+      };
+    });
+  }
+  menuCabecera(aviso, foco) {
+    const enfocada = foco === "teclado · primera entrada" ? 0 : foco === "teclado · la salida al navegador" ? 2 : -1;
+    return [
+      { texto: "Estado de rFirma", hayAviso: aviso === "hay algo que revisar" },
+      { texto: "Preferencias…", hayDivisor: true },
+      { texto: "Comentarios y ayuda", esEnlace: true },
+      { texto: "Acerca de rFirma" }
+    ].map(function (e, i) {
+      return {
+        texto: e.texto, hayAviso: e.hayAviso === true, hayDivisor: e.hayDivisor === true, esEnlace: e.esEnlace === true,
+        estiloFoco: i === enfocada ? "background:var(--rf-surface);outline:2px solid var(--rf-focus-ring);outline-offset:2px" : ""
+      };
+    });
+  }
+  colocacion(d, opcion) {
+    if (opcion === "apagada") { return { modo: "ninguna", sel: [], viendo: d.viendo }; }
+    if (opcion === "una pagina, mirando otra") { return { modo: "una", sel: [d.una], viendo: d.otraPagina }; }
+    if (opcion === "varias, mirando una que esta" || opcion === "varias con error del rango") { return { modo: "varias", sel: d.varias, viendo: d.viendo }; }
+    if (opcion === "varias, mirando una que no esta") { return { modo: "varias", sel: d.varias, viendo: d.otraPagina }; }
+    if (opcion === "todas") { return { modo: "todas", sel: this.rango(1, d.n), viendo: d.viendo }; }
+    return { modo: "una", sel: [d.una], viendo: d.una };
+  }
+  piezas(d, cual) {
+    const dato = function (t) { return { texto: t, dato: true }; };
+    const txt = function (t) { return { texto: t, dato: false }; };
+    if (cual === "personalizada") {
+      return [txt("Visto bueno de "), dato(d.cn), txt(", "), dato("25/09/2026")];
+    }
+    return [txt("Firmado por "), dato(d.cn), txt(" el "), dato("25/09/2026"), txt(" con un certificado de "), dato(d.emisor)];
+  }
+  lineasDe(d, cual) {
+    if (cual === "completa") { return [d.cn, "25/09/2026", d.emisor]; }
+    if (cual === "solo") { return []; }
+    return [this.piezas(d, "personalizada").map(function (p) { return p.texto; }).join("")];
+  }
+  render(d, cual, o, w, h) {
+    const lineas = this.lineasDe(d, cual);
+    const hayTexto = lineas.length > 0;
+    const hayHueco = cual === "solo" || o.rubrica !== "apagado";
+    const conImagen = hayHueco && o.rubrica === "encendido";
+    const pad = o.tarjeta ? 3 : 4;
+    const rw = hayTexto ? Math.round(w * 0.3) : w - 2 * pad - 4;
+    const tw = w - 2 * pad - 4 - (hayHueco && hayTexto ? rw + 6 : 0);
+    const th = h - 2 * pad - 2;
+    const chars = lineas.join("").length || 1;
+    const larga = lineas.join(" ").split(" ").reduce(function (m, x) { return Math.max(m, x.length); }, 1);
+    const fs = Math.max(3, Math.floor(Math.min(o.tope || 9, Math.sqrt(tw * th / (0.62 * 1.25 * 1.25 * chars)),
+      th / (1.25 * Math.max(1, lineas.length) * 1.1), tw / (0.62 * larga)) * 10) / 10);
+    return {
+      lineas: lineas, fs: fs, hayTexto: hayTexto, hayHueco: hayHueco, conImagen: conImagen,
+      relleno: pad + "px " + (pad + 2) + "px",
+      tituloHueco: hayHueco && !conImagen ? "Sin rúbrica cargada" : "",
+      estiloHueco: "position:relative;flex:" + (hayTexto ? "none" : "1") + ";width:" + rw + "px;height:" + th + "px;display:flex;align-items:center;justify-content:center;"
+        + "border-radius:2px;padding:1px;" + (conImagen ? "border:1px solid transparent;" : "border:1px dashed var(--rf-border-strong);")
+    };
+  }
+  recientes(d, hayDoc) {
+    const lista = d.extremo ? [
+      [d.doc, "Convocatoria ayudas I+D 2026 · documentación administrativa definitiva", "hoy", false, true, false],
+      ["Resolucion-definitiva-concesion-ayudas-2026.pdf", "Convocatoria ayudas I+D 2026 · resoluciones", "hoy", true, true, false],
+      ["Declaracion-responsable-otras-ayudas.pdf", "Convocatoria ayudas I+D 2026 · declaraciones", "ayer", false, true, false],
+      ["Informe-final-justificacion-economica-segunda-anualidad-proyecto-coordinado.pdf", "Justificación 2025 · informes finales remitidos a la agencia", "12 sep", false, false, false],
+      ["Acta-constitucion-consorcio-investigacion.pdf", "Consorcio · actas", "3 sep", true, false, false],
+      ["Borrador-convenio-colaboracion-universidad-empresa.pdf", "", "28 ago", false, false, true]
+    ] : [
+      ["Solicitud-subvencion.pdf", "Documentos", "hoy", false, true, false],
+      ["Contrato-alquiler.pdf", "Documentos", "hoy", true, true, false],
+      ["Modelo-036.pdf", "Descargas", "ayer", true, true, false],
+      ["Certificado-empadronamiento.pdf", "Descargas", "12 sep", false, false, false],
+      ["Factura-luz-agosto.pdf", "Documentos · Casa", "3 sep", true, false, false],
+      ["Autorizacion-excursion.pdf", "", "28 ago", false, false, true]
+    ];
+    return lista.map(function (x, i) {
+      const abierto = x[4] && hayDoc;
+      const falta = x[5];
+      return {
+        nombre: x[0], firmado: x[3],
+        carpeta: falta ? "No se encuentra" : x[1],
+        cuando: abierto ? "Abierto" : x[2],
+        titulo: falta ? "No se encuentra" : abierto ? "Ir a su pestaña" : x[1],
+        estiloCuando: abierto ? "font-style:italic" : "",
+        estilo: falta ? "opacity:.45;cursor:not-allowed" : "cursor:pointer"
+      };
+    });
+  }
+  renderVals() {
+    const d = this.datos((this.props.contenido ?? "normal") === "extremo");
+    const estado = this.props.estado ?? "listo";
+    const tema = this.props.tema ?? "light";
+    const z = parseInt(this.props.zoom ?? "100 %", 10) / 100;
+    const vista = this.props.vista ?? "fiel";
+    const destino = this.props.destino ?? "cabe entero";
+    const ficha14 = this.props.ficha14 === true || this.props.ficha14 === "true";
+    const conCaducados = !(this.props.caducados === false || this.props.caducados === "false");
+    const menuAbierto = (this.props.menu ?? "cerrado") === "abierto";
+    const opcion = this.props.firmaVisible ?? "apagada";
+    const previas = this.props.firmasPrevias ?? "ninguna";
+    const contenidoFirma = this.props.contenidoFirma ?? "1 · frase editable";
+    const pequeno = (this.props.tamano ?? "normal") !== "normal";
+    const vacio = estado === "vacio";
+    const firmando = estado === "firmando";
+    const firmado = estado === "firmado";
+    const eligiendo = estado === "certificados abiertos";
+    const buscando = estado === "buscando certificados";
+    const sinCertificados = estado === "sin certificados";
+    const errorFirma = estado === "error al firmar";
+    const sinElegir = estado === "sin certificado elegido";
+    const editable = estado === "listo" || eligiendo || buscando || sinCertificados || sinElegir;
+    const hayDoc = !vacio;
 
-    const opciones = [
-      { clave: "una", texto: "Solo 1 página", pie: v.puesto || colocado ? "Página " + (v.ancla || v.viendo) : "aún sin colocar", hayPie: true, campo: false },
-      { clave: "algunas", texto: "Estas páginas", pie: "", hayPie: false, campo: true },
-      { clave: "todas", texto: "Todas las páginas (" + n + ")", pie: "", hayPie: false, campo: false }
-    ].map(function (o) {
-      const activa = v.modo === o.clave;
-      return Object.assign({}, o, {
-        activa: activa,
-        campo: o.campo && activa,
-        elegir: cambiaModo(o.clave),
-        estilo: "display:flex;align-items:flex-start;gap:9px;width:100%;padding:5px 6px;border:none;cursor:pointer;"
-          + "font-family:inherit;border-radius:var(--rf-radius-sm);background:" + (activa ? "var(--rf-surface)" : "transparent")
+    const nPreviasDe = function (x) { return x === "1" ? 1 : x === "ninguna" ? 0 : 3; };
+    const c = this.colocacion(d, opcion);
+    const activa = c.modo !== "ninguna";
+    const t = opcion === "varias con error del rango" ? this.tecleo(d, this.props.errorRango ?? "pagina que no existe") : null;
+    const hayError = !firmado && t !== null;
+    const hayFirmaAqui = c.sel.indexOf(c.viendo) >= 0;
+    const arrastrando = opcion === "arrastrandola" && editable;
+
+    const elegido = contenidoFirma.indexOf("Personalizada") === 0 ? "personalizada"
+      : contenidoFirma === "Solo rubrica" ? "solo" : "completa";
+    const pedida = this.props.conRubrica ?? "encendido";
+    const soloRubrica = elegido === "solo";
+    const rubrica = soloRubrica && pedida === "apagado" ? "encendido" : pedida;
+    const rubricaOn = rubrica !== "apagado";
+    const opcionesRender = { rubrica: rubrica, tarjeta: false };
+    const anchoFirma = Math.round((pequeno ? 118 : 176) * z);
+    const altoFirma = Math.round((pequeno ? 38 : (d.extremo ? 64 : 56)) * z);
+    const sinCertificado = buscando || sinCertificados || sinElegir;
+    const vistaActiva = editable && hayFirmaAqui && !arrastrando && !sinCertificado;
+    const sinDibujar = vistaActiva && vista === "no se ha podido dibujar";
+    const recalculando = vistaActiva && vista === "recalculando";
+    const self = this;
+    const modelos = [
+      { clave: "completa", nombre: "Completa" }, { clave: "solo", nombre: "Solo rúbrica" }, { clave: "personalizada", nombre: "Personalizada" }
+    ].map(function (m) {
+      const r = self.render(d, m.clave, Object.assign({}, opcionesRender, { tarjeta: true }), 98, 30);
+      const sel = m.clave === elegido;
+      const bloqueada = m.clave === "solo" && !rubricaOn;
+      return Object.assign(r, {
+        nombre: m.nombre,
+        titulo: bloqueada ? "Necesita la rúbrica" : "",
+        estilo: (bloqueada ? "opacity:.45;cursor:not-allowed;" : "") + "display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:3px;min-width:0;border-radius:var(--rf-radius-md);font-family:inherit;color:var(--rf-text);cursor:pointer;"
+          + "border:1px solid " + (sel ? "var(--rf-primary);box-shadow:inset 0 0 0 1px var(--rf-primary);background:var(--rf-surface)" : "var(--rf-border-subtle);background:transparent")
       });
     });
+    const frase = this.piezas(d, "personalizada").map(function (p) {
+      return {
+        texto: p.texto,
+        estilo: p.dato ? "display:inline;padding:2px 6px;margin:0 1px;-webkit-box-decoration-break:clone;box-decoration-break:clone;border-radius:var(--rf-radius-sm);background:var(--rf-border-subtle);color:var(--rf-text);cursor:grab" : ""
+      };
+    });
+    const datosMenu = [
+      ["Firmante", d.cn], ["Emisor", d.emisor], ["Fecha", "25/09/2026"]
+    ].map(function (x, i) { return { nombre: x[0], ejemplo: x[1], estilo: i === 1 ? "background:var(--rf-surface)" : "" }; });
 
-    const navBtn = "width:32px;height:32px;flex:none;display:flex;align-items:center;justify-content:center;"
-      + "border-radius:var(--rf-radius-pill);color:var(--rf-text);background:none;border:none;cursor:pointer;padding:0";
+    const segmentos = [
+      { clave: "una", texto: "Una página" }, { clave: "varias", texto: "Varias" }, { clave: "todas", texto: "Todas" }
+    ].map(function (s) {
+      const sel = c.modo === s.clave;
+      return {
+        texto: s.texto,
+        estilo: "flex:1;min-width:0;height:100%;border:none;border-radius:var(--rf-radius-sm);font-family:inherit;font-size:13px;cursor:pointer;"
+          + "white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 6px;"
+          + (sel ? "background:var(--rf-primary);color:var(--rf-on-primary);font-weight:700" : "background:transparent;color:var(--rf-text);font-weight:600")
+      };
+    });
 
-    // --- Pie del destino (v0.2, ticket #123): se conserva entero ---
-    const caso = this.props.destino ?? "cabe entero";
-    const cabeza = this.props.cabeza ?? 18;
-    const cabezaCarpeta = this.props.cabezaCarpeta ?? 16;
-    const casos = {
-      "cabe entero": ["Documentos", "Solicitud-subvencion-firmado.pdf"],
-      "nombre largo": ["Documentos", "contrato-de-arrendamiento-de-vivienda-2026-firmado.pdf"],
-      "segunda firma": ["Documentos", "contrato-de-arrendamiento-de-vivienda-2026-firmado-2.pdf"],
-      "carpeta larga": ["Expedientes de subvencion 2026", "Solicitud-subvencion-firmado.pdf"],
-      "no disponible": ["Documentos", "Solicitud-subvencion-firmado.pdf"]
-    };
-    const par = casos[caso] || casos["cabe entero"];
-
-    // Que se ve DENTRO del recuadro (ficha 7, #156). La regla que lo sostiene:
-    // o es el sello de verdad, o no hay recuadro. Sin certificado el bloque
-    // entero de firma visible esta apagado, asi que aqui siempre hay uno.
-    const vista = this.props.vista ?? "fiel · el sello de verdad";
-    const selloFallido = vista === "no se ha podido dibujar";
-    const selloQuieto = vista.indexOf("fiel") === 0;
-    let opacidadSello = 1;
-    let insigniaVista = "Vista fiel";
-    let claseVista = "rf-badge--primary";
-    let bordeVista = "var(--rf-border-subtle)";
-    let botonVista = "";
-    let textoSello = "";
-    let explicaVista = "Es el sello de verdad: lo dibuja el mismo compositor que firmará, en un ciclo trifásico en seco. Lo que ves es lo que quedará.";
-    if (vista === "recalculando") {
-      opacidadSello = 0.35;
-      insigniaVista = "Calculando…";
-      claseVista = "";
-      explicaVista = "Se recalcula sola al soltar. En un documento grande pasa a pedirse: 0,15 s en un PDF normal, 1,9 s en un escaneado de 37 MB.";
-      botonVista = "Ver cómo queda";
-      textoSello = "Documento grande: el sello no se recalcula solo";
-    } else if (vista === "moviendo o redimensionando") {
-      opacidadSello = 0.35;
-      insigniaVista = "Moviendo";
-      claseVista = "";
-      explicaVista = "Mientras dura el gesto se congela la vista anterior, atenuada: recalcular por fotograma cuesta 507 MB de RSS. Al soltar se rehace.";
-      textoSello = "Sello congelado mientras mueves el recuadro";
-    } else if (selloFallido) {
-      insigniaVista = "No se ha podido dibujar";
-      claseVista = "";
-      bordeVista = "var(--rf-border-strong)";
-      explicaVista = "No se ha podido componer el sello. La vista previa no es una puerta: se dice y se firma igual.";
-      botonVista = "Volver a intentarlo";
-      textoSello = "No se ha podido dibujar el sello";
+    let textoPagina = "", botonPagina = "", hayLineaPagina = false;
+    if (c.modo === "una") {
+      hayLineaPagina = true;
+      textoPagina = "En la página " + c.sel[0];
+      botonPagina = hayFirmaAqui ? "" : "Ponerla aquí";
+    } else if (c.modo === "varias" && !hayError) {
+      botonPagina = hayFirmaAqui ? "Quitarla de aquí" : "Ponerla aquí";
     }
 
-    // --- La franja bajo la cabecera es EL SITIO DONDE rFIRMA NOTIFICA (ID-181).
-    // No es un apaño del aviso de version: es el patron de notificacion de la
-    // ventana, y el aviso de version es su primer inquilino. Se descartaron una
-    // insignia en el boton de menu (invisible hasta que se abre el menu, y solo
-    // sirve para lo que ya vive en «Acerca de») y una linea en el pie (rFirma no
-    // tiene barra de estado: estrenaba un mueble entero para una frase que casi
-    // siempre no esta). La palanca solo decide si hay algo que notificar. ---
-    const hayVersionNueva = (this.props.version ?? "hay version nueva") !== "al dia";
+    const posicion = arrastrando ? "left:" + Math.round(56 * z) + "px;top:" + Math.round(196 * z) + "px;"
+      : "right:" + Math.round(22 * z) + "px;bottom:" + Math.round(30 * z) + "px;";
+    const render = this.render(d, elegido, Object.assign({}, opcionesRender, { tope: 9 * z }), anchoFirma, altoFirma);
+    if (sinDibujar || sinCertificado) { render.hayTexto = false; render.hayHueco = false; }
+    const nFirmas = 1 + nPreviasDe(previas);
+    const firmasResumen = [{ quien: d.titular, cuando: "***9999** · hoy, 11:04", tuya: true }]
+      .concat(d.previas.slice(0, nFirmas - 1).map(function (f) { return { quien: f.quien, cuando: f.cuando, tuya: false }; }));
+    const salidaEntera = this.salida(d.doc);
+    const nPrevias = previas === "1" ? 1 : previas === "ninguna" ? 0 : 3;
+    const hueco = "height:33px;margin-bottom:-1px;flex:none;display:flex;align-items:center;justify-content:center;"
+      + "padding:0 2px;border:1px solid transparent;border-bottom:0;background:none;font-family:inherit;color:var(--rf-text);cursor:pointer";
 
+    const salidaDestino = destino === "segunda firma" ? salidaEntera.replace(/\.pdf$/i, "-2.pdf") : salidaEntera;
     return {
-      hayVersionNueva: hayVersionNueva,
-      destinoOk: caso !== "no disponible",
-      destinoRoto: caso === "no disponible",
-      carpeta: "…/" + this.recortaCarpeta(par[0], cabezaCarpeta) + "/",
-      fichero: this.recortaFichero(par[1], cabeza),
-      tema: this.props.tema ?? "light",
-      n: n,
-      viendoNum: v.viendo,
-      anchoPagina: anchoPagina,
-      hayRecuadro: enConjunto,
-      estiloRecuadro: caja("solid var(--rf-primary)",
-        "background:var(--rf-bg);display:flex;align-items:center;gap:6px;padding:6px;cursor:move"),
-      contenidoVisible: anchoCaja >= 150 && !selloFallido,
-      contenidoOculto: anchoCaja < 150 && !selloFallido,
-      selloFallido: selloFallido,
-      opacidadSello: opacidadSello,
-      insigniaVista: insigniaVista,
-      claseVista: claseVista,
-      bordeVista: bordeVista,
-      explicaVista: explicaVista,
-      hayBotonVista: botonVista !== "",
-      botonVista: botonVista,
-      tiradorTL: tirador("top:" + off + "px;left:" + off + "px"),
-      tiradorTR: tirador("top:" + off + "px;right:" + off + "px"),
-      tiradorBL: tirador("bottom:" + off + "px;left:" + off + "px"),
-      tiradorBR: tirador("bottom:" + off + "px;right:" + off + "px"),
-      pastillaRecuadro: selloQuieto
-        ? (cuantas === 1 ? "La única página sellada"
-            : "Página " + v.viendo + " de las " + cuantas + " selladas")
-        : (selloFallido ? "Sin vista previa" : (vista === "recalculando" ? "Calculando…" : "Arrastrando")),
-      haySello: textoSello !== "",
-      textoSello: textoSello,
-      hayBotonSello: botonVista !== "",
-      sinBotonSello: botonVista === "",
-      botonSello: botonVista,
-      hayAviso: hayAviso,
-      textoAviso: textoAviso,
-      botonAviso: botonAviso,
-      claseBotonAviso: claseBotonAviso,
-      pulsaAviso: pulsaAviso,
-      estiloNav: navBtn,
-      vaPrimera: irA(1), vaAtras: irA(v.viendo - 1), vaAdelante: irA(v.viendo + 1), vaUltima: irA(n),
-      opciones: opciones,
-      textoCampo: v.texto === "" ? "1,2-3,10-20" : v.texto,
-      estiloCampo: "display:block;width:100%;padding:7px 9px;font-size:13px;border-radius:var(--rf-radius-md);"
-        + "background:var(--rf-surface);color:var(--rf-" + (v.texto === "" ? "text-muted" : "text") + ");"
-        + "border:1px solid var(--rf-" + (hayError ? "text" : "border-strong") + ")",
-      hayError: hayError,
-      error: r.error,
-      diceLimitacion: cuantas > 1,
-      frase: "El mismo recuadro, en el mismo sitio y del mismo tamaño, en las " + cuantas
-        + " páginas: es un solo campo de firma repetido, no " + cuantas + " firmas.",
-      faltaColocar: !colocado,
-      textoFalta: "Coloca la firma sobre el documento: arrastra un recuadro o pulsa el botón que hay bajo la página.",
-      firmarApagado: !colocado || hayError
+      tema: tema,
+      zCabecera: menuAbierto ? 11 : 5,
+      menuAbierto: menuAbierto,
+      estiloBotonMenu: menuAbierto ? "background:var(--rf-primary);color:var(--rf-on-primary)" : "color:var(--rf-text)",
+      entradasMenu: this.menuCabecera(this.props.aviso ?? "hay algo que revisar", this.props.foco ?? "sin foco"),
+      hayVersionNueva: (this.props.version ?? "al dia") === "hay version nueva",
+      firmando: firmando,
+      buscando: buscando, sinCertificados: sinCertificados, errorFirma: errorFirma,
+      hayFirmaVisible: !errorFirma,
+      ficha14: ficha14, cuantasFirmas: nFirmas === 1 ? "1 firma" : nFirmas + " firmas", firmasResumen: firmasResumen,
+      destinoRoto: destino === "no disponible" && !firmado,
+      destinoOk: !(destino === "no disponible" && !firmado),
+      zoom: Math.round(z * 100) + " %",
+      escala: z,
+      anchoHoja: Math.round(326 * z),
+      posicionHoja: z > 1 ? "right:24px;bottom:24px" : "left:50%;top:40px;transform:translateX(-50%)",
+      margenDerecho: Math.round(22 * z), margenInferior: Math.round(30 * z),
+      sinDibujar: sinDibujar,
+      opacidadRender: recalculando ? ".35" : "1",
+      hayAvisoVista: sinDibujar || recalculando,
+      textoAvisoVista: sinDibujar ? "No se ha podido dibujar la firma visible" : "Documento grande: la firma visible no se recalcula sola",
+      botonAvisoVista: sinDibujar ? "Volver a intentarlo" : "Ver cómo queda",
+      vacio: vacio, hayDoc: hayDoc,
+      pestanas: this.pestanas(d, hayDoc, firmado),
+      desborda: d.extremo && hayDoc, desplazamiento: d.extremo && hayDoc ? 190 : 0,
+      menuMas: (this.props.menuMas ?? "cerrado") === "abierto",
+      alineaMenu: d.extremo && hayDoc ? "right:0" : "left:0",
+      recientes: this.recientes(d, hayDoc),
+      estiloHueco: hueco,
+      estiloBotonHueco: "height:28px;min-width:28px;display:flex;align-items:center;justify-content:center;border-radius:var(--rf-radius-md)",
+
+      opacidadHoja: firmando ? ".45" : "1",
+      hayFirmaAqui: hayFirmaAqui, arrastrando: arrastrando,
+      tiradores: editable && hayFirmaAqui,
+      anchoFirma: anchoFirma, altoFirma: altoFirma,
+      firmaRender: render,
+      estiloFirma: "position:absolute;" + posicion + "width:" + anchoFirma + "px;height:" + altoFirma + "px;background:var(--rf-bg);border-radius:2px;"
+        + (editable ? "border:1.5px solid var(--rf-primary);cursor:move;" : "border:1.5px solid transparent;")
+        + (arrastrando ? "box-shadow:var(--rf-shadow-elevated);" : ""),
+      estiloNav: "width:32px;height:32px;flex:none;display:flex;align-items:center;justify-content:center;"
+        + "border-radius:var(--rf-radius-pill);color:var(--rf-text);background:none;border:none;cursor:pointer;padding:0",
+      viendo: c.viendo, n: d.n,
+
+      hayCofirma: nPrevias > 0 && !firmado && !errorFirma,
+      cuantasPrevias: nPrevias === 1 ? "1 firma" : nPrevias + " firmas",
+      detallePrevias: nPrevias > 1,
+      textoVer: nPrevias > 1 ? "Ocultar" : "Ver",
+      previas: d.previas,
+
+      firmado: firmado, partido: !firmado && !sinCertificados && !errorFirma && !sinElegir, sinElegir: sinElegir,
+      hayInterruptor: !firmado,
+      tituloInterruptor: activa ? "Quitar la firma visible" : "Añadir una firma visible",
+      estiloInterruptor: (activa ? "background:var(--rf-primary);border-color:transparent" : "background:transparent")
+        + (firmando ? ";opacity:.35" : ""),
+      estiloPomo: "top:3px;" + (activa ? "left:19px;background:var(--rf-on-primary)" : "left:3px;background:var(--rf-border-strong)"),
+      valorFirma: this.valorFirmado(c, d.n),
+      firmaActiva: activa && !firmado && !errorFirma,
+      estiloControles: firmando ? "opacity:.35" : "",
+      segmentos: segmentos,
+      hayCampo: c.modo === "varias",
+      textoCampo: t ? t.texto : this.comprime(c.sel, "-"),
+      estiloCampo: "flex:1;min-width:0;display:flex;align-items:center;min-height:36px;font-size:14px;border-radius:var(--rf-radius-sm);"
+        + "border:" + (hayError ? "2px solid var(--rf-text)" : "1px solid var(--rf-border-strong)"),
+      hayError: hayError, error: t ? t.error : "",
+      hayLineaPagina: hayLineaPagina, textoPagina: textoPagina,
+      hayBotonPagina: botonPagina !== "" && editable && c.modo === "una", botonPagina: botonPagina,
+      hayBotonRango: botonPagina !== "" && editable && c.modo === "varias",
+
+      desbordePanel: contenidoFirma.indexOf("menu") >= 0 && editable ? "visible" : "auto",
+      hayModelos: true, modelos: modelos,
+      hayFrase: elegido === "personalizada",
+      frase: frase,
+      menuDato: contenidoFirma.indexOf("menu") >= 0 && editable,
+      datos: datosMenu,
+      tituloInterruptorRubrica: soloRubrica ? "Solo rúbrica la necesita" : "",
+      estiloInterruptorRubrica: (rubricaOn ? "background:var(--rf-primary);border-color:transparent" : "background:transparent")
+        + (soloRubrica ? ";opacity:.45;cursor:not-allowed" : ""),
+      estiloPomoRubrica: "top:3px;" + (rubricaOn ? "left:19px;background:var(--rf-on-primary)" : "left:3px;background:var(--rf-border-strong)"),
+      estiloTextoRubrica: soloRubrica ? "color:var(--rf-text-muted);cursor:not-allowed" : "cursor:pointer",
+      hayImagenRubrica: rubrica === "encendido",
+      estiloMiniatura: rubrica === "encendido" ? "border:1px solid var(--rf-border-strong)" : "border:1px dashed var(--rf-border-strong)",
+      botonRubrica: rubrica === "encendido" ? "Cambiar…" : "Cargar…",
+
+      rotuloDestino: firmado ? "Guardado en" : "Guardar en",
+      carpeta: d.carpeta,
+      salida: this.recorta(salidaDestino, d.extremo ? 22 : 40),
+      salidaEntera: salidaDestino,
+      estiloCambiar: "flex:none;min-height:24px;padding:0 8px;font-size:13px;color:var(--rf-text);"
+        + (firmado ? "visibility:hidden;" : "") + (firmando ? "opacity:.35;" : ""),
+
+      eligiendoCert: eligiendo,
+      certificados: this.certificados(d, parseInt(this.props.cuantos ?? "4", 10), conCaducados,
+        (this.props.orden ?? "agrupado").indexOf("agrupado") === 0),
+      opacidadFirmar: firmando || hayError || buscando ? ".55" : "1",
+      verbo: buscando ? "Buscando certificados…" : firmando ? "Firmando como" : "Firmar como",
+      nombreCorto: buscando ? "" : d.nombreCorto,
+      tituloFirmar: buscando ? "" : d.titular,
+      flecha: eligiendo ? "M6 15l6-6 6 6" : "M6 9l6 6 6-6"
     };
   }
 }

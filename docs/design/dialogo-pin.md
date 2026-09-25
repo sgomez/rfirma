@@ -20,13 +20,14 @@ comparten momento:
 
 | Almacén | Cuándo se pide | Botón |
 | ------- | -------------- | ----- |
-| Módulo PKCS#11 | **antes de listar**, en «Cargando certificados» | `Continuar` |
+| Módulo PKCS#11 | **antes de listar**, mientras se buscan los certificados | `Continuar` |
 | Perfil de navegador con contraseña maestra | **antes de listar**, ídem | `Continuar` |
 | `.p12` instalado en rFirma | **al firmar** | `Firmar` |
 
 Los dos primeros abren sesión para poder **enumerar**, así que el diálogo puede
-aparecer **antes de que exista lista de certificados**: se dibuja sobre el
-estado «Cargando certificados», sin lista detrás. El tercero es el contrario: un
+aparecer **antes de que exista lista de certificados**: se dibuja sobre la
+ventana buscando certificados, con el botón «Buscando certificados…» inactivo en
+el pie. El tercero es el contrario: un
 almacén NSS de un solo fichero lista sus certificados sin secreto —sólo las
 claves privadas lo exigen (ID-195)—, así que ahí el secreto llega al final,
 cuando ya se sabe con qué se firma.
@@ -159,10 +160,12 @@ y del dibujo (ID-201 a ID-204).
 
 Validado en el canvas [Autofirma de escritorio en Rust](https://claude.ai/design/p/c0ddbfa7-0982-498f-8f8c-8e2f8f0c6132), página
 **Recorrido de firma**, artboards «6 · Pidiendo PIN» y «7 · PIN incorrecto», con
-la palanca **Clase de almacén** que recorre las tres situaciones. El diálogo
-aparece además, copiado literal en su posición de perfil de Firefox, sobre
-«3 · Cargando certificados»: dos pantallas contando lo mismo con dos textos
-distintos serían dos verdades.
+la palanca **Clase de almacén** que recorre las tres situaciones y cambia
+también el fondo: la ventana buscando certificados en las dos de «antes de
+listar», la ventana lista para firmar en la del `.p12`. El estado «buscando
+certificados» de la [ventana principal](ventana-principal.md) no repite el
+diálogo: dos pantallas contando lo mismo con dos textos distintos serían dos
+verdades.
 
 Decidido en el [#250](https://github.com/sgomez/rfirma/issues/250) (ID-188,
 ID-190, ID-191, ID-195).

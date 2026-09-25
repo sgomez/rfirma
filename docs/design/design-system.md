@@ -143,6 +143,11 @@ Todo `padding`, `margin` y `gap` sale de la escala. **Nunca un px suelto.**
 `md` es el valor por defecto: botones, tarjetas, campos. `xl` se reserva a
 diálogos. `pill` solo a insignias.
 
+**Capas de la ventana principal**, para que nada nuevo quede debajo de lo que
+ya flota: cabecera 5 (11 con su menú abierto), desplegables del panel 6, menú del
+«+» 8, tira de pestañas 10, **velo de diálogo 20**. `.rf-scrim` no trae
+`z-index`: quien lo coloca lo pone.
+
 Dos elevaciones: `--rf-shadow-card` (reposo) y `--rf-shadow-elevated`
 (flotante). Ambas son sombras de cuatro capas y **su valor es el del bundle
 versionado**, que es el único del repositorio: el `<helmet>` de los artboards
@@ -252,8 +257,8 @@ código nuevo. `.rf-btn--disabled` es el equivalente en clase del atributo
 ### Botón
 
 ```html
-<button class="rf-btn rf-btn--primary">Firmar documento</button>
-<button class="rf-btn rf-btn--secondary">Elegir certificado</button>
+<button class="rf-btn rf-btn--primary">Abrir el PDF</button>
+<button class="rf-btn rf-btn--secondary">Volver a buscar</button>
 <button class="rf-btn rf-btn--ghost">Cancelar</button>
 ```
 
@@ -264,8 +269,8 @@ color del texto de un botón primario**. Como máximo un `--primary` por vista.
 
 ```html
 <div class="rf-card">
-  <p class="rf-title">DNIe</p>
-  <p class="rf-body rf-text-muted">Caduca el 14/03/2029</p>
+  <p class="rf-title">Lucía Martín Ortega</p>
+  <p class="rf-body rf-text-muted">***9999** · hoy, 11:04</p>
 </div>
 ```
 
@@ -289,6 +294,16 @@ Entre campos, `--rf-space-md`. Error: `.rf-field--error` en el contenedor, que
 engorda el borde y pone la ayuda en negrita — y nada más delante del texto (ver
 sección 8).
 
+### Interruptor
+
+Pista de 40 × 24 px con `--rf-radius-pill`, borde de 1 px en
+`--rf-border-strong` y pomo de 16 px a 3 px del borde. **Apagado**: pista
+transparente y pomo `--rf-border-strong` a la izquierda. **Encendido**: borde
+transparente, pista `--rf-primary` y pomo `--rf-on-primary` desplazado 16 px.
+Bloqueado, al 45 % con el motivo en el `title`. No está en el bundle: es
+`rfirma-app/src/preferences/Switch.tsx` con `Switch.css`, y lo usan Preferencias
+y la firma visible del panel de firma.
+
 ### Insignia
 
 ```html
@@ -310,54 +325,37 @@ el bundle: es una regla de colocación, y son cuatro puntos.
 2. **El alto de la lista no se recorta para que quepa.** Si no cabe, sobresale.
    Bajar el `max-height` de la lista para que entre en la ventana es mutilar el
    componente para tapar el fallo real.
-3. **Se ordena con lo que ya existe**: `z-index: 5` —el mismo de la cabecera de
-   la ventana principal— y `--rf-shadow-elevated`. Ni un color ni una sombra
-   literales.
+3. **Se ordena con lo que ya existe**: las capas de la sección 5 y
+   `--rf-shadow-elevated`. Ni un color ni una sombra literales.
 4. **Cuando el disparador vive dentro de una columna que se desplaza de verdad,
    el panel no puede colgar de él**: se saca a la raíz —un **portal**— y se
    ancla a la posición del disparador. Quitarle el `overflow` a la columna no es
    opción, porque la columna sí tiene que desplazarse.
 
-**Está medido, y el defecto era anterior a la ventana de sede.** En
-`EstadoElegirCertificado` el panel colgaba del disparador dentro de la columna
-lateral, que desplaza 740 px de contenido en 466 px visibles: su `overflow: auto`
-**cortaba 63 px de los 232** de la lista, justo donde empieza el pie de «Se
-guardará en / Firmar documento», y lo hacía **en la opción por defecto** del
-artboard, con 4 y con 9 certificados. Las filas de abajo no se podían ni ver ni
-elegir. El arreglo dibujado —el panel a la raíz del artboard, anclado con las
-medidas del disparador— es el equivalente del portal que usará la
-implementación. El mismo defecto reapareció en la ventana de sede por otra vía,
-un `overflow: hidden` en el cuerpo de la ventana, y el recorte coincidía con el
-borde superior del pie, así que parecía que el pie tapaba la lista a medias.
+El defecto que dio pie a la regla fue real dos veces: el `overflow: auto` de la
+columna del panel de firma cortaba la lista de certificados justo donde empezaba
+el pie, y un `overflow: hidden` en el cuerpo de la ventana de sede hacía lo
+mismo con la suya. La lista del botón «Firmar como» se abre hacia arriba desde el
+pie y **cuelga del panel, no de la zona que se desliza**, por la misma razón.
 
 ### Ruta de destino
 
 Dónde va a caer un fichero: **la última carpeta y el nombre**, nunca la ruta
-entera. Nace en el pie del panel de firma y lo fija el
+entera. Vive en el pie del panel de firma y lo fija el
 [ADR-0011](../adr/0011-destino-del-documento-firmado.md).
 
-```html
-<p class="rf-prose" style="flex:1;min-width:0;overflow-wrap:anywhere">
-  <span class="rf-text-muted">…/Documentos/</span>contrato-de-arrend…-firmado.pdf
-</p>
-```
-
-Tres reglas, y las tres son el componente:
+Una caja con **dos líneas**: arriba la carpeta, con icono de carpeta, a 12 px en
+`--rf-text-muted`; debajo el nombre, con icono de PDF, a 13 px en negrita.
 
 1. **La carpeta va atenuada y el nombre no.** La carpeta es contexto; el nombre
-   es el dato. Delante lleva `…/`, que dice que hay carpetas por encima sin
-   afirmar cuáles: bajo el sandbox la aplicación no las conoce, y fuera de él no
-   se enseñan igualmente.
+   es el dato.
 2. **El nombre se recorta por el medio**, no por la cola. Se conservan siempre
    la extensión y el sufijo `-firmado` con su número de desempate —`-2`, `-3`—,
-   porque son la respuesta a «¿voy a machacar el anterior?», que es lo que se
-   mira. El `…` se come el centro del tronco. La **carpeta no se recorta nunca
-   por el medio**; si hace falta, por la cola: un nombre de carpeta se reconoce
-   por el principio y no tiene ninguna cola que preservar.
-3. **La línea envuelve antes que cortarse.** Nada de `white-space: nowrap` con
-   `overflow: hidden`: eso corta en seco lo que el `…` ya había recortado, y sin
-   avisar. Envuelve con `overflow-wrap: anywhere`, y quien la acompaña —el icono
-   de carpeta, el botón `Cambiar`— se alinea arriba (`align-items: flex-start`).
+   porque son la respuesta a «¿voy a machacar el anterior?». La **carpeta se
+   recorta por la cola**: se reconoce por el principio.
+3. **Cada línea cabe en una**: `white-space: nowrap` con elipsis, y entera en el
+   `title`. El recorte por el medio del nombre se hace antes, así que la elipsis
+   solo actúa si ni el recorte basta.
 
 Se maqueta con tokens; no hay clase propia en el bundle.
 
@@ -442,6 +440,15 @@ la conclusión.
 | «**El fallo es de** sede.ejemplo.gob.es: pide colocar la firma en una página añadida al final, y rFirma no hace eso» | «sede.ejemplo.gob.es pide colocar la firma en una página añadida al final, y rFirma no hace eso» |
 | «Si insiste, **dile** esto:» | «Para quien mantiene la sede:» |
 
+### Las palabras de la firma
+
+- **Firmar** es la operación.
+- **Firma visible** es la marca sobre la página. **Nunca «sello», «sellar» ni
+  «sellada»** en la interfaz, sus `title` ni sus identificadores: «sello» es otra
+  cosa en eIDAS (el de entidad) y en rFirma (el sello de tiempo y el de sesión
+  del [ADR-0016](../adr/0016-sello-de-sesion-una-sola-invariante.md)).
+- **Rúbrica** es el trazo manuscrito escaneado que va dentro, y es opcional.
+
 ### Lo que no se recorta
 
 Recortar no es empobrecer el contenido. **No se toca**, por corta que quede la
@@ -452,7 +459,7 @@ frase:
 - La instrucción que sí es accionable, como «tras permitir, vuelve a la sede y
   pulsa Reintentar».
 - La frase que no se puede deducir mirando, como «rFirma no guarda copia» cuando
-  la aplicación **sí** tiene bandeja de recientes.
+  la aplicación **sí** tiene lista de recientes.
 - La regla dura de no enumerar nunca lo que la sede descartó: eso no se recorta,
   es que no se escribe.
 
