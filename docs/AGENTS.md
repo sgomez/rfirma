@@ -44,7 +44,7 @@ comparten la numeración: el siguiente ADR, esté donde esté, toma el número l
 |---|---|
 | 0026 | La exigencia es lo que pretende el código de AutoFirma; el manual solo rebaja |
 | 0027 | Dos sedes: la publicada para lo de punta a punta, la escrita a mano para la gramática |
-| 0028 | Un clic por trámite: la suite quita el PIN, pero no esconde la elección del certificado |
+| 0028 | Un clic solo donde hay algo que decidir: la suite quita el PIN y rFirma de conformidad consiente lo que no deja elección |
 | 0031 | La sede verifica las firmas sin dependencias externas, con su propia C14N inclusiva |
 
 ## `research/` — mediciones (por qué algo es como es)

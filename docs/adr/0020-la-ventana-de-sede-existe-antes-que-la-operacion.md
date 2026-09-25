@@ -75,6 +75,12 @@ tampoco mira su certificado local en ese transporte.
   el verbo de arranque no habla no va por el canal: se enseña en la ventana
   sin ligar ningún puerto, como hace AutoFirma. El de un trámite ya en curso
   no toca la ventana de ese trámite.
+- Un consentimiento siempre espera a la persona, salvo en la compilación de
+  conformidad (feature `conformance-autoconsent`, ADR-0028): con su
+  interruptor encendido, un paso que no deja nada que decidir se consiente por
+  el recorrido del clic y la ventana se cierra como al acabar el desenlace,
+  aunque haya llegado a enseñarse un instante. Ningún binario publicado la
+  lleva.
 - Con WebSocket queda una carrera que esta regla no cubre: el canal escucha
   desde que se abre en `attend_launch`, y un navegador muy rápido podría
   entregar su operación antes de que el arranque abra la ventana.

@@ -3,8 +3,11 @@
 La suite mide un binario instalado de AutoFirma o rFirma con el `autoscript.js` de la sede como
 instrumento. Es un crate aparte y fuera del CI (ADR-0013), y no es una grada ni una puerta
 (ADR-0014). Su única cara es la consola web que levanta `just conformance`: no hay órdenes de
-consola. Sus pruebas se corren con `cargo test` dentro de este directorio; las de la consola, con
-`pnpm exec vitest run` y `pnpm exec biome ci` dentro de `console/`.
+consola. Contra un rFirma que no pida el clic donde no hay nada que decidir, la levanta
+`just conformance-autoconsent`, que compila ese rFirma aparte e imprime la ruta del binario que
+se elige como cliente (ADR-0028). Sus pruebas se corren con `cargo test` dentro de este
+directorio; las de la consola, con `pnpm exec vitest run` y `pnpm exec biome ci` dentro de
+`console/`.
 
 | Fichero | Qué es |
 |---|---|

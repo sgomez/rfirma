@@ -85,7 +85,9 @@ Qué necesita una comprobación de la persona que está delante, deducido de su 
 cerrada:
 - **ninguna**: no aparece ninguna ventana.
 - **clic**: aparece el selector de certificado, el consentimiento o un error que hay que cerrar,
-  solo como medio para llegar a lo que se mide.
+  solo como medio para llegar a lo que se mide. La suite enciende en esos trámites el
+  **consentimiento automático** del cliente, que solo existe en un rFirma compilado para la suite
+  y solo actúa si no queda nada que decidir.
 - **persona**: la persona hace en el diálogo una acción con nombre, y lo que haga cambia lo que
   viaja.
 Las comprobaciones de una tanda se corren en **tramos** por asistencia, en ese orden, y la cola se
