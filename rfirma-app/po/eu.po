@@ -1429,6 +1429,9 @@ msgstr "Fitxategia gordetzen"
 msgid "sede.saving.lead"
 msgstr "Aukeratu sistemaren elkarrizketa-koadroan non gorde nahi duzun."
 
+msgid "sede.saving.leadUnwritable"
+msgstr "Ezin izan da aukeratutako helmugan gorde. Aukeratu beste bat sistemaren elkarrizketa-koadroan."
+
 msgid "sede.loading.title"
 msgstr "Fitxategi bat kargatzen"
 

@@ -142,8 +142,8 @@ pub(super) struct PendingBatch {
 pub(super) struct PendingLocalBatch {
     /// El lote tal y como lo pidió la sede.
     pub(super) request: BatchRequest,
-    /// Las firmas del lote, ya leídas.
-    pub(super) batch: LocalBatch,
+    /// Las firmas del lote, o por qué no se pudieron leer.
+    pub(super) batch: Result<LocalBatch, Refusal>,
     /// El certificado que la persona consintió, una vez consentido.
     pub(super) chosen: Option<TokenCertificate>,
 }

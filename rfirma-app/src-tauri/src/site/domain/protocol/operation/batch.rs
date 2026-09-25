@@ -3,7 +3,6 @@
 use base64::engine::general_purpose::STANDARD;
 use base64::Engine as _;
 
-use super::super::algorithm::AskedAlgorithm;
 use super::super::codes::Parameter;
 use super::super::data_source::DataSource;
 use super::super::filters::{site_filter, SiteFilter};
@@ -22,8 +21,8 @@ const LOCAL_BATCH_PROCESS: &str = "localBatchProcess";
 /// mismo cuando la sede pide `localBatchProcess=true` (`BatchSigner`,
 /// `LocalBatchSigner`, 1.9.2).
 ///
-/// Lleva el lote **tal y como llegó**: los bytes decodificados para leer lo
-/// mínimo que hace falta aquí, y el Base64 original intacto, porque lo que
+/// Lleva el lote **tal y como llegó**: los bytes decodificados, que se leen al
+/// firmar y no aquí, y el Base64 original intacto, porque lo que
 /// viaja a los servlets es una sustitución textual sobre ese Base64 y no una
 /// recodificación de los bytes.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -38,8 +37,6 @@ pub struct BatchRequest {
     filter: SiteFilter,
     sticky: StickyCertificate,
     headless: bool,
-    algorithm: String,
-    stop_on_error: bool,
 }
 
 impl BatchRequest {
@@ -92,20 +89,10 @@ impl BatchRequest {
     pub fn is_headless(&self) -> bool {
         self.headless
     }
-
-    /// El algoritmo del lote, ya admitido (fija el algoritmo del PKCS#1).
-    pub fn algorithm(&self) -> &str {
-        &self.algorithm
-    }
-
-    /// Si el lote para en el primer error (aquí solo se lee y se guarda).
-    pub fn stops_on_error(&self) -> bool {
-        self.stop_on_error
-    }
 }
 
-/// La petición del lote remoto: dos URL de servlet, el lote y lo mínimo que se
-/// lee de dentro de él (`ProtocolInvocationLauncherBatch`, 1.9.2).
+/// La petición del lote: las dos URL de servlet del remoto y el lote sin leer
+/// (`ProtocolInvocationLauncherBatch`, 1.9.2).
 pub(super) fn batch_request(
     url: &AfirmaUrl,
     data: &dyn DataSource,
@@ -134,7 +121,6 @@ pub(super) fn batch_request(
         true => STANDARD.encode(&lote),
         false => value.to_owned(),
     };
-    let (algorithm, stop_on_error) = batch_algorithm_and_stop_on_error(json, &lote)?;
 
     let (presigner_url, postsigner_url) = match servlets {
         Some((presigner_url, postsigner_url)) => (Some(presigner_url), Some(postsigner_url)),
@@ -154,8 +140,6 @@ pub(super) fn batch_request(
         filter: site_filter(declared.crossing()).within_the_module(module_named_by(url)),
         sticky: sticky_certificate(url),
         headless: declared.is_headless(),
-        algorithm,
-        stop_on_error,
     }))
 }
 
@@ -167,85 +151,4 @@ fn batch_servlets(url: &AfirmaUrl) -> Result<(String, String), Refusal> {
     check_servlet_url(postsigner_url, Parameter::BatchPostsignerUrl)?;
 
     Ok((presigner_url.to_owned(), postsigner_url.to_owned()))
-}
-
-/// El `algorithm` y el `stoponerror` del lote: atributo de `<signbatch>` en el
-/// XML heredado, o campos del objeto raíz en JSON.
-fn batch_algorithm_and_stop_on_error(json: bool, lote: &[u8]) -> Result<(String, bool), Refusal> {
-    let (algorithm, stop_on_error) = if json {
-        batch_header_from_json(lote)?
-    } else {
-        batch_header_from_xml(lote)?
-    };
-
-    if AskedAlgorithm::named(&algorithm).is_none() {
-        return Err(Refusal::about(
-            Parameter::Algorithm,
-            format!("el algoritmo de lote '{algorithm}' no se atiende"),
-        ));
-    }
-
-    Ok((algorithm, stop_on_error))
-}
-
-fn batch_header_from_json(lote: &[u8]) -> Result<(String, bool), Refusal> {
-    let value: serde_json::Value = serde_json::from_slice(lote).map_err(|error| {
-        Refusal::about(
-            Parameter::Data,
-            format!("el lote no es JSON valido: {error}"),
-        )
-    })?;
-
-    let algorithm = value
-        .get("algorithm")
-        .and_then(serde_json::Value::as_str)
-        .ok_or_else(|| Refusal::about(Parameter::Algorithm, "falta el parametro 'algorithm'"))?
-        .to_owned();
-    let stop_on_error = value
-        .get("stoponerror")
-        .and_then(serde_json::Value::as_bool)
-        .unwrap_or(false);
-
-    Ok((algorithm, stop_on_error))
-}
-
-fn batch_header_from_xml(lote: &[u8]) -> Result<(String, bool), Refusal> {
-    let text = std::str::from_utf8(lote).map_err(|error| {
-        Refusal::about(Parameter::Data, format!("el lote no es UTF-8: {error}"))
-    })?;
-
-    let mut reader = quick_xml::Reader::from_str(text);
-    loop {
-        match reader.read_event() {
-            Ok(quick_xml::events::Event::Start(tag) | quick_xml::events::Event::Empty(tag)) => {
-                let mut algorithm = None;
-                let mut stop_on_error = false;
-                for attribute in tag.attributes().flatten() {
-                    let value = String::from_utf8_lossy(attribute.value.as_ref()).into_owned();
-                    match attribute.key.as_ref() {
-                        b"algorithm" => algorithm = Some(value),
-                        b"stoponerror" => stop_on_error = value.eq_ignore_ascii_case("true"),
-                        _ => {}
-                    }
-                }
-                let algorithm = algorithm.ok_or_else(|| {
-                    Refusal::about(Parameter::Algorithm, "falta el parametro 'algorithm'")
-                })?;
-                return Ok((algorithm, stop_on_error));
-            }
-            Ok(quick_xml::events::Event::Eof) => {
-                return Err(Refusal::about(
-                    Parameter::Data,
-                    "el lote no tiene elemento raiz",
-                ));
-            }
-            Err(error) => {
-                return Err(Refusal::about(
-                    Parameter::Data,
-                    format!("el lote no es XML valido: {error}"),
-                ));
-            }
-            _ => {}
-        }
-    }
 }

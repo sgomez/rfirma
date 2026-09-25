@@ -104,6 +104,7 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `application/triphase.rs` | La firma trifásica ya consentida contra el servidor de la sede, en CAdES, PAdES, XAdES o FacturaE: prefirma allí, `PK1` con el token aquí y postfirma allí. Pruebas en `application/triphase/tests.rs`. |
 | `domain/batch/mod.rs` | El reparto del lote, y `BatchFormat`: si el lote viaja en el XML heredado o en JSON. |
 | `domain/batch/local.rs` | El lote local leído del JSON de la sede, con lo que cada firma hereda del lote. **No** es el lote remoto. Pruebas en `domain/batch/local/tests.rs`. |
+| `domain/batch/header.rs` | El algoritmo que declara la cabecera del lote remoto, que se lee al firmar y **no** al analizar la petición. Pruebas en `domain/batch/header/tests.rs`. |
 | `domain/batch/json.rs` | Un JSON de solo lectura y escritura con el orden del documento, para el lote remoto. Pruebas en `domain/batch/json/tests.rs`. |
 | `domain/batch/triphase.rs` | `TriphaseData` calcado del original, y la regla de `PK1` que firma y borra el `PRE`. Pruebas en `domain/batch/triphase/tests.rs`. |
 | `domain/batch/presign.rs` | La prefirma JSON del lote con errores por elemento, y el lote actualizado con ellos. Pruebas en `domain/batch/presign/tests.rs`. |

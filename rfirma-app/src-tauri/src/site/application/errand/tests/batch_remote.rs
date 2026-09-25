@@ -9,7 +9,8 @@ use crate::identity::ports::CertificateMemory;
 use crate::signing::application::tests::a_memory;
 use crate::site::adapters::frontier;
 use crate::site::application::errand::*;
-use crate::site::application::tests::InMemoryBatchServices;
+use crate::site::application::tests::{InMemoryBatchServices, ReceivedBatchCall};
+use crate::site::domain::batch::BatchFormat;
 use crate::site::domain::protocol::{AfirmaUrl, ChannelMessage, SafCode, WireAnswer};
 use base64::Engine as _;
 
@@ -272,6 +273,54 @@ fn a_batch_whose_postsigner_answers_nothing_is_answered_with_the_code_of_a_faile
 
     finish_the_batch(&desk, "1234", &live).expect_err("una postfirma invalida no sale");
 
+    assert_eq!(
+        what_the_site_received(&mut wire),
+        Some(WireAnswer::refused(SafCode::BatchSignature).on_the_wire())
+    );
+}
+
+#[test]
+fn a_json_batch_asked_with_jsonbatch_capitalised_reaches_the_presigner_as_the_legacy_xml() {
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let memory = a_memory(home.path());
+    let ours = vec![a_usable_certificate("FIRMA")];
+    let (listed, _) = listed_from(&ours);
+    let live = a_live();
+    let (handle, mut wire) = the_wire();
+    live.answer_through(handle);
+    let engine = AnEngine::answering(&[&[0], &[0]]);
+    let policies = APolicyEngine::answering("");
+    let services = Arc::new(InMemoryBatchServices::default());
+    let desk = a_desk_for_the_batch(
+        &engine,
+        &policies,
+        home.path(),
+        &listed,
+        &memory,
+        &ours,
+        Arc::clone(&services),
+    );
+    let ChannelMessage::Operation { url } = ChannelMessage::read(&format!(
+        "afirma://batch?op=batch&idsession={CREDENTIAL}&jsonBatch=true&\
+         batchpresignerurl=https%3A%2F%2Fpresigner.example%2Fpre&\
+         batchpostsignerurl=https%3A%2F%2Fpostsigner.example%2Fpost&dat={}",
+        base64::engine::general_purpose::URL_SAFE.encode(A_JSON_LOTE)
+    )) else {
+        panic!("una URL del protocolo es una operacion");
+    };
+
+    let step = attend_operation(&desk, &url, decoded(&url), &live);
+    let chosen = the_only_row_of(remembered(&live, step));
+    consent(&desk, &chosen, &live).expect("el certificado sirve");
+    finish_the_batch(&desk, "1234", &live).expect_err("el prefirmador rechaza el lote");
+
+    assert!(matches!(
+        services.received().first(),
+        Some(ReceivedBatchCall::Presign {
+            format: BatchFormat::Xml,
+            ..
+        })
+    ));
     assert_eq!(
         what_the_site_received(&mut wire),
         Some(WireAnswer::refused(SafCode::BatchSignature).on_the_wire())

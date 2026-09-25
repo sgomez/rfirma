@@ -189,17 +189,16 @@ fn load_cancelled() -> Failure {
 /// Traduce el desenlace de un guardado a lo que espera la ventana: `true` si hay que enseñar el
 /// desenlace de guardado, `false` si el guardado era el cierre de un `signandsave` que ya se
 /// enseñó como firmado.
-fn told_of_saving(
-    outcome: &crate::site::application::errand::SiteOutcome,
-) -> Result<bool, Failure> {
-    use crate::site::application::errand::{SiteOutcome, SiteRefusal};
-    match outcome {
-        SiteOutcome::Refused(SiteRefusal::CannotSaveData(detail)) => {
-            Err(Failure::new("cannotSaveData", detail.clone()))
-        }
-        SiteOutcome::Saved => Ok(true),
-        _ => Ok(false),
-    }
+fn told_of_saving(outcome: &crate::site::application::errand::SiteOutcome) -> bool {
+    matches!(
+        outcome,
+        crate::site::application::errand::SiteOutcome::Saved
+    )
+}
+
+/// El destino elegido no se dejó escribir: el guardado sigue pendiente y la ventana vuelve a pedir destino.
+fn destination_unwritable(detail: String) -> Failure {
+    Failure::new("saveDestinationUnwritable", detail)
 }
 
 /// Escribe donde la persona eligió, o cancela si cerró el diálogo sin elegir.
@@ -219,8 +218,9 @@ fn write_where_chosen(
         &consent.data,
         consent.signer_der.as_deref(),
         live,
-    );
-    told_of_saving(&outcome)
+    )
+    .map_err(destination_unwritable)?;
+    Ok(told_of_saving(&outcome))
 }
 
 /// Abre el diálogo de guardado del portal y escribe el fichero donde la persona eligió
