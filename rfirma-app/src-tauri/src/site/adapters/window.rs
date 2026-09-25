@@ -175,6 +175,8 @@ pub fn note_a_relay_failure(app: &tauri::AppHandle, refusal: Refusal) {
 pub fn attend_site_operation(app: &tauri::AppHandle, url: AfirmaUrl, reply: ReplyHandle) {
     super::trace::note_the_operation(&url);
     let attended = with_the_desk(app, |desk, live| errand::attend(desk, url, reply, live));
+    #[cfg(feature = "conformance-autoconsent")]
+    super::unattended::consent_if_nothing_to_decide(app, attended.as_ref());
     publish_what_moved(app, attended);
 }
 

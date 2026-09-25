@@ -9,6 +9,8 @@ pub mod replies;
 pub mod request;
 mod server_signature;
 pub mod state;
+#[cfg(feature = "conformance-autoconsent")]
+pub mod unattended;
 
 #[cfg(test)]
 mod tests;

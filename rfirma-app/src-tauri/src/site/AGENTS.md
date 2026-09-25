@@ -40,6 +40,7 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `adapters/trace.rs` | La traza por `stderr` de las URL `afirma://` que llegan, viva solo en compilación de desarrollo. Sin pruebas propias. |
 | `adapters/transport.rs` | El transporte de producción del `wss` sobre el *loopback*. |
 | `adapters/triphase_server.rs` | El cliente del servidor trifásico que la sede nombra en `serverUrl`, sobre `reqwest::blocking`; **no** es el de los servlets del lote. Pruebas en `adapters/triphase_server/tests.rs`. |
+| `adapters/unattended.rs` | El consentimiento que la compilación de conformidad da sola por el camino del clic, encendido por `RFIRMA_CONFORMANCE_AUTOCONSENT=1`; solo existe con la feature `conformance-autoconsent` (ADR-0020). Sin pruebas propias. |
 | `adapters/views.rs` | Los tipos que cruzan a la ventana de sede y su única conversión. Pruebas en `adapters/views/tests.rs`. |
 | `adapters/views/outcome.rs` | Los tipos del desenlace que cruzan a la ventana de sede: el rechazo clasificado y la falta de certificado. Pruebas en `adapters/views/tests.rs`. |
 | `adapters/window.rs` | El adaptador de la ventana de sede: la crea, la enseña, la oculta o la cierra, le publica lo que va pasando y decide qué hace su cierre por el gestor de ventanas con el trámite vivo (ADR-0024). |
@@ -57,6 +58,7 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `application/errand/request.rs` | `SiteRequest`: lo que la sede quiere, sin versión. |
 | `application/errand/state.rs` | El estado del trámite, con un solo dueño (`LiveErrand`). Pruebas en `application/errand/state/tests.rs`. |
 | `application/errand/server_signature.rs` | La firma que la sede manda hacer a su servidor trifásico, del certificado elegido a la firma que se entrega; no abre el ciclo del puente. |
+| `application/errand/unattended.rs` | Cuándo un paso no deja nada que decidir y la compilación de conformidad puede consentir sola; solo existe con la feature `conformance-autoconsent`. Pruebas en `application/errand/tests/unattended.rs`. |
 | `application/errand/state/area.rs` | El área de la firma visible que espera a la persona antes del consentimiento. |
 | `application/errand/state/revelation.rs` | La revelación de la ventana: por temporizador de respaldo, por llegada del navegador o porque el trámite tiene algo que decir (ADR-0020). |
 | `application/errand/state/chosen_document.rs` | El nombre del fichero que la persona eligió en disco para firmar, que la respuesta devuelve a la sede. |
@@ -84,6 +86,7 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `application/errand/tests/websocket.rs` | Pruebas del trámite de sede sobre WebSocket. Solo en pruebas. |
 | `application/errand/tests/service.rs` | Pruebas del trámite de sede sobre el canal `service`. Solo en pruebas. |
 | `application/errand/tests/shown_refusals.rs` | Pruebas de las firmas que rFirma se niega a hacer: el rechazo se enseña, con el documento de la sede o el elegido en disco, y la sede recibe su código al cerrar la ventana. Solo en pruebas. |
+| `application/errand/tests/unattended.rs` | Pruebas de cuándo la compilación de conformidad consiente sola. Solo en pruebas, y solo con la feature `conformance-autoconsent`. |
 | `application/errand/tests/relay_window.rs` | Pruebas de cuándo enseña su ventana un trámite de llegada inmediata. Solo en pruebas. |
 | `application/filtering.rs` | El listado de certificados que la sede acepta. Pruebas en `application/filtering/tests.rs`. |
 | `application/local_batch.rs` | El bucle del lote local: el ciclo de sede por elemento y `stoponerror`. Pruebas en `application/local_batch/tests.rs`. |

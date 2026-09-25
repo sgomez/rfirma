@@ -32,6 +32,10 @@ path = "src/lib.rs"
 # empotrados en vez del servidor de vite y el recargado en caliente moriria.
 custom-protocol = ["tauri/custom-protocol"]
 
+# Solo para la suite de conformidad: ninguna receta de publicacion la activa, y
+# packaging/verifica-contenido.sh rechaza el paquete que la lleve (ADR-0028).
+conformance-autoconsent = []
+
 [build-dependencies]
 # ADR-0013: build.rs se queda en tauri_build::build(). No invoca a Maven ni a
 # native-image jamás; de eso se encarga `just native`.
@@ -185,3 +189,8 @@ too_many_lines = "warn"
 
 [profile.release]
 strip = true
+
+# El de `just conformance-autoconsent`: fuera de target/release para que el binario
+# de la suite no se confunda nunca con el que se publica.
+[profile.conformance]
+inherits = "release"

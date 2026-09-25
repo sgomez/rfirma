@@ -23,5 +23,7 @@ mod signature_formats;
 mod sticky_selection;
 mod token_and_launch;
 mod triphase_server;
+#[cfg(feature = "conformance-autoconsent")]
+mod unattended;
 mod visible_area;
 mod websocket;

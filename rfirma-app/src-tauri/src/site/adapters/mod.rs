@@ -19,5 +19,7 @@ pub mod tls;
 pub mod trace;
 pub mod transport;
 pub mod triphase_server;
+#[cfg(feature = "conformance-autoconsent")]
+pub mod unattended;
 pub mod views;
 pub mod window;
