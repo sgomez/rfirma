@@ -99,7 +99,8 @@ mod full_cycle {
     #[test]
     #[ignore = "grada C: necesita el token y librfirma_crypto.so (just test-native)"]
     fn a_cades_signature_with_the_sha512_the_site_asked_for_validates() {
-        let algorithm = composed_for(AskedAlgorithm::Sha512, signing_certificate().key_kind());
+        let algorithm = composed_for(AskedAlgorithm::Sha512, signing_certificate().key_kind())
+            .expect("el certificado de prueba es RSA o de curva eliptica");
         assert_eq!(algorithm, SignatureAlgorithm::Sha512Rsa);
 
         let signed = a_cycle_of(

@@ -93,7 +93,8 @@ pub(crate) fn reference() -> CertificateRef {
 pub(crate) fn ecdsa_composed_for_the_ec_certificate(
     certificate: &TokenCertificate,
 ) -> SignatureAlgorithm {
-    let algorithm = composed_for(AskedAlgorithm::Sha256, certificate.key_kind());
+    let algorithm = composed_for(AskedAlgorithm::Sha256, certificate.key_kind())
+        .expect("el certificado de prueba es RSA o de curva eliptica");
     assert_eq!(algorithm, SignatureAlgorithm::Sha256Ecdsa);
     algorithm
 }

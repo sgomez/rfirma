@@ -419,7 +419,8 @@ impl SiteSigning for TheNeighbours<'_> {
                 algorithm: crate::site::adapters::desk::composed_for(
                     request.algorithm,
                     request.certificate.key_kind(),
-                ),
+                )
+                .expect("el certificado de prueba es RSA o de curva eliptica"),
                 operation: request.operation,
                 parameters: request.from_the_site,
                 allow_unregistered_signatures: request.allow_unregistered_signatures,

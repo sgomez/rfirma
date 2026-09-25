@@ -1,7 +1,7 @@
 use std::sync::Mutex;
 
 use super::*;
-use crate::identity::application::tests::a_certificate;
+use crate::identity::application::tests::{a_certificate, a_usable_certificate};
 use crate::identity::domain::algorithm::{KeyKind, SignatureAlgorithm};
 use crate::identity::domain::certificate::CertificateRef;
 
@@ -47,7 +47,7 @@ impl Signer for RecordingSigner {
 #[test]
 fn one_secret_serves_every_signature_of_the_batch() {
     let signer = RecordingSigner::default();
-    let certificate = a_certificate("FNMT-ACTIVO", b"der");
+    let certificate = a_usable_certificate("FNMT-ACTIVO");
 
     let secret = secret_for_the_batch(&signer, &certificate).expect("el secreto deberia salir");
     for pre in [b"uno".as_slice(), b"dos".as_slice()] {
@@ -67,7 +67,7 @@ fn one_secret_serves_every_signature_of_the_batch() {
 #[test]
 fn an_algorithm_rfirma_does_not_compose_comes_back_with_the_code_of_the_original() {
     let signer = RecordingSigner::default();
-    let certificate = a_certificate("FNMT-ACTIVO", b"der");
+    let certificate = a_usable_certificate("FNMT-ACTIVO");
 
     let refusal = signed_by_the_token(&signer, &certificate, "1234", "RIPEMD160", b"uno")
         .expect_err("RIPEMD160 no lo compone rFirma");
@@ -81,7 +81,7 @@ fn an_algorithm_rfirma_does_not_compose_comes_back_with_the_code_of_the_original
 #[test]
 fn the_algorithm_is_read_as_the_site_writes_it() {
     let signer = RecordingSigner::default();
-    let certificate = a_certificate("FNMT-ACTIVO", b"der");
+    let certificate = a_usable_certificate("FNMT-ACTIVO");
 
     for algorithm in [
         " SHA256 ",
@@ -113,14 +113,19 @@ fn the_digest_the_site_asks_for_is_composed_with_the_key_of_the_certificate() {
             SignatureAlgorithm::Sha512Ecdsa,
         ),
     ] {
-        assert_eq!(composed_for(asked, Some(KeyKind::Rsa)), rsa);
-        assert_eq!(composed_for(asked, Some(KeyKind::Ec)), ec);
-        assert_eq!(
-            composed_for(asked, None),
-            rsa,
-            "sin clave legible se compone con RSA y el token dira que no"
-        );
+        assert_eq!(composed_for(asked, Some(KeyKind::Rsa)), Ok(rsa));
+        assert_eq!(composed_for(asked, Some(KeyKind::Ec)), Ok(ec));
     }
+}
+
+#[test]
+fn a_key_neither_rsa_nor_ec_is_refused_as_an_incompatible_key_type() {
+    let refusal = composed_for(AskedAlgorithm::Sha256, None)
+        .map_err(refusal_of_token)
+        .expect_err("una clave desconocida no se compone con RSA");
+
+    assert_eq!(refusal.code, SafCode::IncompatibleKeyType);
+    assert_eq!(refusal.situation, "keyNotRsa");
 }
 
 #[test]
@@ -172,18 +177,18 @@ fn the_suffix_declared_by_the_site_is_ignored_and_the_certificate_key_class_rule
     let asked = AskedAlgorithm::named("SHA256withRSA").expect("es SHA256");
     assert_eq!(
         composed_for(asked, Some(KeyKind::Ec)),
-        SignatureAlgorithm::Sha256Ecdsa
+        Ok(SignatureAlgorithm::Sha256Ecdsa)
     );
 
     let asked_ecdsa = AskedAlgorithm::named("SHA384withECDSA").expect("es SHA384");
     assert_eq!(
         composed_for(asked_ecdsa, Some(KeyKind::Rsa)),
-        SignatureAlgorithm::Sha384Rsa
+        Ok(SignatureAlgorithm::Sha384Rsa)
     );
 
     let asked_hyphen = AskedAlgorithm::named("SHA-512withRSA").expect("es SHA512");
     assert_eq!(
         composed_for(asked_hyphen, Some(KeyKind::Ec)),
-        SignatureAlgorithm::Sha512Ecdsa
+        Ok(SignatureAlgorithm::Sha512Ecdsa)
     );
 }

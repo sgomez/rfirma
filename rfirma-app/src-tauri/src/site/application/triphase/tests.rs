@@ -6,6 +6,7 @@ use base64::engine::general_purpose::{STANDARD, URL_SAFE};
 use base64::Engine as _;
 
 use crate::identity::application::tests::a_usable_certificate;
+use crate::identity::domain::error::Situation as TokenSituation;
 use crate::site::application::tests::{InMemoryTokenSigning, InMemoryTriphaseServer};
 use crate::site::domain::protocol::{CounterTarget, SafCode};
 
@@ -214,12 +215,26 @@ fn a_token_that_refuses_leaves_the_postsign_unasked() {
 #[test]
 fn the_algorithm_travels_composed_with_the_key_of_the_certificate() {
     assert_eq!(
-        composed_name(AskedAlgorithm::Sha256, Some(KeyKind::Rsa)),
-        "SHA256withRSA"
+        composed_name(AskedAlgorithm::Sha256, Some(KeyKind::Rsa))
+            .ok()
+            .as_deref(),
+        Some("SHA256withRSA")
     );
     assert_eq!(
-        composed_name(AskedAlgorithm::Sha512, Some(KeyKind::Ec)),
-        "SHA512withECDSA"
+        composed_name(AskedAlgorithm::Sha512, Some(KeyKind::Ec))
+            .ok()
+            .as_deref(),
+        Some("SHA512withECDSA")
+    );
+}
+
+#[test]
+fn a_key_neither_rsa_nor_ec_never_travels_to_the_server() {
+    let refusal = composed_name(AskedAlgorithm::Sha256, None).expect_err("no se compone con RSA");
+
+    assert!(
+        matches!(&refusal, SiteRefusal::Token(error) if error.situation() == TokenSituation::KeyNotRsa),
+        "{refusal:?}"
     );
 }
 

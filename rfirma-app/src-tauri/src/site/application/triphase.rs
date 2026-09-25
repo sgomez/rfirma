@@ -4,6 +4,7 @@ use std::collections::BTreeMap;
 
 use crate::identity::domain::algorithm::KeyKind;
 use crate::identity::domain::certificate::TokenCertificate;
+use crate::identity::domain::error::{Situation as TokenSituation, TokenError};
 use crate::signing::domain::properties::to_java_properties;
 use crate::site::application::session::SiteRefusal;
 use crate::site::domain::batch::{apply_pk1, TriphaseData};
@@ -49,7 +50,7 @@ pub fn signed_through_the_server(
     let server_url = server_url_of(ask.from_the_site).map_err(SiteRefusal::Triphase)?;
     let params = params_for_the_server(ask.from_the_site, ask.format, ask.round);
     let params = (!params.is_empty()).then(|| to_java_properties(&params));
-    let algorithm = composed_name(ask.algorithm, run.certificate.key_kind());
+    let algorithm = composed_name(ask.algorithm, run.certificate.key_kind())?;
     let call = ServerCall {
         format: ask.format,
         round: ask.round,
@@ -102,12 +103,18 @@ fn every_pre_signed(
     }
 }
 
-fn composed_name(asked: AskedAlgorithm, key: Option<KeyKind>) -> String {
+fn composed_name(asked: AskedAlgorithm, key: Option<KeyKind>) -> Result<String, SiteRefusal> {
     let with = match key {
         Some(KeyKind::Ec) => "ECDSA",
-        Some(KeyKind::Rsa) | None => "RSA",
+        Some(KeyKind::Rsa) => "RSA",
+        None => {
+            return Err(SiteRefusal::Token(TokenError::new(
+                TokenSituation::KeyNotRsa,
+                "la clave del certificado no es RSA ni de curva eliptica",
+            )))
+        }
     };
-    format!("{}with{with}", asked.name())
+    Ok(format!("{}with{with}", asked.name()))
 }
 
 #[cfg(test)]
