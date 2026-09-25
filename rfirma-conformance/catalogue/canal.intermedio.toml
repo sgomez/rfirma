@@ -48,7 +48,7 @@ mode = "relay"
 script = "relay"
 patience_secs = 120
 act.consent = "Va a aparecer el diálogo de certificado para firmar: elige uno."
-expects.completes.conditions = ["the-request-retrieved-by-fileid"]
+expects.completes.conditions = ["the-request-retrieved-by-fileid", "the-signature-verifies"]
 
 [[check]]
 id = "a_retriever_error_answers_saf_16"

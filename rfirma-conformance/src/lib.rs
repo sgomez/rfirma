@@ -12,6 +12,7 @@ mod judge;
 pub mod known_bug;
 mod livelog;
 mod manifest;
+mod matrix;
 mod outcome;
 mod report;
 mod report_view;

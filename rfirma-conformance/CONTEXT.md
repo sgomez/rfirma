@@ -101,6 +101,21 @@ Lo que ninguna sede puede ver no tiene expectativa: la comprobación se declara 
 motivo, y no se conduce. Una comprobación nueva con una expectativa conocida no toca código.
 _Avoid_: veredicto esperado, arnés (para cómo se juzga)
 
+**Matriz de happy paths**:
+Lo que responde si está confirmado el camino feliz de una operación: las **celdas** operación ×
+formato × canal × clave que se exigen, agrupadas en planos que recorren dos ejes y dejan los demás en
+el origen. Una combinación que ningún plano recorre no se exige. El catálogo no arranca si una celda
+exigida queda sin estado o si la comprobación que la cubre no la mide.
+_Avoid_: cobertura, tabla de happy paths
+
+**Celda**:
+Una combinación de la **matriz de happy paths** con uno de tres estados: **cubierta** por una sola
+comprobación que se conduce en su canal y con su almacén, espera que el trámite se complete y, si
+la operación devuelve firma, la condición que la verifica con la clave del certificado; **no
+aplica**, con su motivo en el manual o en una ficha `BUG-NN`; o **hueco** declarado, lo que falta
+por medir.
+_Avoid_: caso, combinación
+
 **Almacén**:
 Dónde encuentra el cliente sus certificados en un trámite. Es una lista cerrada:
 - **rsa**: un único certificado RSA de pruebas, sin PIN. Es el de omisión.

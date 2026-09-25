@@ -2,7 +2,7 @@
 
 import { constants, inflateSync } from "node:zlib";
 
-import { theCmsVerification } from "./cms.mjs";
+import { theCmsSignature, theCmsVerification } from "./cms.mjs";
 
 /** Si los bytes son un PDF con un diccionario `/Sig` que cubre un `/ByteRange` y trae `/Contents`. */
 export function isASignedPdf(bytes) {
@@ -78,6 +78,11 @@ function theWholeDocumentSignatures(bytes) {
       cms: Buffer.from(contents[1].replace(/\s/g, ""), "hex"),
       signed: Buffer.concat([bytes.subarray(0, head), bytes.subarray(gap)]),
     }));
+}
+
+/** Los firmantes de las firmas que cubren el PDF entero. */
+export function thePadesSigners(bytes) {
+  return theWholeDocumentSignatures(bytes).flatMap(({ cms }) => theCmsSignature(cms)?.signers ?? []);
 }
 
 /** Si alguna firma que cubre el PDF entero verifica sobre su `/ByteRange` con el certificado devuelto. */

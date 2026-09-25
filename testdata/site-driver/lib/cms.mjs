@@ -190,6 +190,11 @@ function theSignatureDigestOf(signer) {
   return SIGNATURE_DIGESTS[signer.signatureAlgorithm];
 }
 
+/** Los resúmenes con los que firma un firmante: el de su `digestAlgorithm` y el de su algoritmo de firma. */
+export function theDigestsOf(signer) {
+  return [DIGESTS[signer.digestAlgorithm] ?? null, theSignatureDigestOf(signer) ?? null];
+}
+
 /** Cada firmante con lo que firma: el contenido los de primer nivel, la firma de su padre las contrafirmas. */
 function theSignersWithWhatTheySign(signers, content) {
   return signers.flatMap((signer) => [

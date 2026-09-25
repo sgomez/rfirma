@@ -6,6 +6,7 @@ import { gzipSync } from "node:zlib";
 import {
   signsTheData,
   theCmsSignature,
+  theDigestsOf,
   theKeyFamilyOf,
   thePublicKeyAlgorithmOf,
   theShapeOf,
@@ -23,12 +24,23 @@ import {
   theReferenceSignature,
   theXmlDocument,
 } from "../lib/fixtures.mjs";
-import { isASignedPdf, isAVisibleArea, theSignatureRectangles } from "../lib/pades.mjs";
+import {
+  isASignedPdf,
+  isAVisibleArea,
+  thePadesSigners,
+  theSignatureRectangles,
+} from "../lib/pades.mjs";
 import { withTheDataDeclaredGzipped } from "../lib/patches.mjs";
 import { isABarePkcs1 } from "../lib/pkcs1.mjs";
 import { aPublishedScript } from "../lib/script.mjs";
 import { THE_SIGNATURE_VERIFIES, theSignatureVerifies } from "../lib/verification.mjs";
-import { isAXadesSignature, signsTheRoleAndThePlace, theXadesEnvelope } from "../lib/xades.mjs";
+import {
+  isAXadesSignature,
+  signsTheRoleAndThePlace,
+  theXadesEnvelope,
+  theXadesSignatureDigest,
+  theXadesSigners,
+} from "../lib/xades.mjs";
 import { theZipEntries } from "../lib/zip.mjs";
 import { servletServing } from "./batch.mjs";
 
@@ -68,6 +80,7 @@ const THE_DEFAULT_ENVELOPE = "the-default-envelope";
 const THE_SHA1_OF_THE_DATA_SIGNED = "the-sha1-of-the-data-signed";
 const THE_ENVELOPE_THE_POLICY_DEMANDS = "the-envelope-the-policy-demands";
 const THE_AGE_POLICY_INSIDE = "the-age-policy-inside";
+const THE_DIGEST_REQUESTED = "the-digest-requested";
 
 /** El documento de referencia se llama `documento`, y así se busca dentro de la firma XML. */
 const THE_DOCUMENT_ROOT = "documento";
@@ -312,6 +325,37 @@ function theDataAndTheSignatureInside(signature) {
   ];
 }
 
+const THE_DIGESTS_OF = {
+  cms: (signature) => theCmsSignature(signature)?.signers.flatMap(theDigestsOf) ?? [],
+  pdf: (signature) => thePadesSigners(signature).flatMap(theDigestsOf),
+  xml: (signature) => [theXadesSignatureDigest(signature.toString("utf8"))],
+};
+
+/** La firma usa el resumen `hash` que pidió la sede, en su resumen y en su algoritmo de firma. */
+const theDigestRequested = (format, hash) => (signature) => {
+  const digests = THE_DIGESTS_OF[format](bytesOf(signature));
+  const held = digests.length > 0 && digests.every((digest) => digest === hash);
+  return [
+    aCondition(
+      THE_DIGEST_REQUESTED,
+      held,
+      `se pidió ${hash}; la firma usa ${[...new Set(digests)].join(", ") || "un resumen ilegible"}`,
+    ),
+  ];
+};
+
+/** El XAdES que vuelve lleva `signatures` firmas, `countersignatures` de ellas contrafirmas. */
+const withTheXadesSigners = (name, signatures, countersignatures) => (signature) => {
+  const signers = theXadesSigners(inXml(signature));
+  return [
+    aCondition(
+      name,
+      signers.signatures === signatures && signers.countersignatures === countersignatures,
+      `${signers.signatures} Signature, ${signers.countersignatures} de ellas contrafirma`,
+    ),
+  ];
+};
+
 const measuringAll =
   (...measurings) =>
   (signature, certificate) =>
@@ -356,6 +400,22 @@ const theTwoParallelSignersVerified = measuringAll(
   withTheShape(TWO_PARALLEL_SIGNERS, "[][]"),
   theSignatureVerifies("cms"),
 );
+const theXadesEnvelopingSignature = () => theReferenceSignature("xades-enveloping.xml");
+
+/** Una firma `family` sobre `content` con el algoritmo `algorithm`, cuyo resumen es `hash`. */
+const digesting = (algorithm, hash, format, family, content, data = () => null) =>
+  aPublishedScript(
+    () =>
+      theSignScriptWith(
+        algorithm,
+        format,
+        "",
+        content(),
+        measuringAll(theDigestRequested(family, hash), theSignatureVerifies(family, data)),
+      ),
+    { conditions: [THE_DIGEST_REQUESTED, THE_SIGNATURE_VERIFIES] },
+  );
+
 const theCountersignedCadesSignature = () =>
   theReferenceSignature("cades-implicit.countersign-tree.p7s");
 
@@ -915,6 +975,34 @@ export const SIGNATURE_SCRIPTS = {
     ),
     { conditions: [ONLY_THE_LEAVES_COUNTERSIGNED, THE_SIGNATURE_VERIFIES] },
   ),
+  cosignxades: aPublishedScript(
+    cosigning(
+      "XAdES",
+      "",
+      theXadesEnvelopingSignature,
+      measuringAll(withTheXadesSigners(TWO_PARALLEL_SIGNERS, 2, 0), theSignatureVerifies("xml")),
+    ),
+    { conditions: [TWO_PARALLEL_SIGNERS, THE_SIGNATURE_VERIFIES] },
+  ),
+  countersignxades: aPublishedScript(
+    () =>
+      theCountersignScript(
+        "XAdES",
+        "target=tree",
+        theXadesEnvelopingSignature(),
+        measuringAll(
+          withTheXadesSigners(THE_SIGNER_COUNTERSIGNED, 2, 1),
+          theSignatureVerifies("xml"),
+        ),
+      ),
+    { conditions: [THE_SIGNER_COUNTERSIGNED, THE_SIGNATURE_VERIFIES] },
+  ),
+  signcadessha384: digesting("SHA384withRSA", "sha384", "CAdES", "cms", theChallenge, theChallenge),
+  signcadessha512: digesting("SHA512withRSA", "sha512", "CAdES", "cms", theChallenge, theChallenge),
+  signxadessha384: digesting("SHA384withRSA", "sha384", "XAdES", "xml", theXmlDocument),
+  signxadessha512: digesting("SHA512withRSA", "sha512", "XAdES", "xml", theXmlDocument),
+  signpadessha384: digesting("SHA384withRSA", "sha384", "PAdES", "pdf", thePdfOfTheTest),
+  signpadessha512: digesting("SHA512withRSA", "sha512", "PAdES", "pdf", thePdfOfTheTest),
   signnone: aPublishedScript(signing("NONE", "", theChallenge, aBarePkcs1), {
     conditions: [A_BARE_PKCS1],
   }),
@@ -926,6 +1014,14 @@ export const SIGNATURE_SCRIPTS = {
   }),
   countersigncadestri: aPublishedScript(
     triphasing("CAdEStri", "countersign", theCadesImplicitSignature),
+    { conditions: THE_TRIPHASE_CONDITIONS },
+  ),
+  cosignxadestri: aPublishedScript(
+    triphasing("XAdEStri", "cosign", theXadesEnvelopingSignature),
+    { conditions: THE_TRIPHASE_CONDITIONS },
+  ),
+  countersignxadestri: aPublishedScript(
+    triphasing("XAdEStri", "countersign", theXadesEnvelopingSignature),
     { conditions: THE_TRIPHASE_CONDITIONS },
   ),
   signpadestri: aPublishedScript(triphasing("PAdEStri", "sign", thePdfOfTheTest), {
@@ -943,15 +1039,15 @@ export const SIGNATURE_SCRIPTS = {
   ),
   signandsavepadestri: aPublishedScript(
     triphasing("PAdEStri", "sign", thePdfOfTheTest, savingAs("documento-firmado.pdf")),
-    { conditions: THE_TRIPHASE_CONDITIONS_ON_DISK },
+    { conditions: THE_TRIPHASE_CONDITIONS_ON_DISK, benchOnly: true },
   ),
   signandsavexadestri: aPublishedScript(
     triphasing("XAdEStri", "sign", theXmlDocument, savingAs("documento-firmado.xsig")),
-    { conditions: THE_TRIPHASE_CONDITIONS_ON_DISK },
+    { conditions: THE_TRIPHASE_CONDITIONS_ON_DISK, benchOnly: true },
   ),
   signandsavefacturaetri: aPublishedScript(
     triphasing("FacturaEtri", "sign", theInvoice, savingAs("factura-firmada.xsig")),
-    { conditions: THE_TRIPHASE_CONDITIONS_ON_DISK },
+    { conditions: THE_TRIPHASE_CONDITIONS_ON_DISK, benchOnly: true },
   ),
   signcadestriwithoutserverurl: aPublishedScript(signing("CAdEStri", "", theChallenge)),
   signpadesoptional: aPublishedScript(
