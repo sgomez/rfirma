@@ -17,11 +17,14 @@ pub use bridge::{
     CompletedCycle, Format, SealedPreSignature, SignatureOperation, TokenSignature, TokenSignatures,
 };
 pub use config::{
-    ChosenFields, PadesRect, Placement, Setting, SignatureConfig, SigningChoice,
+    ChosenFields, PadesRect, Placement, Setting, SignatureConfig, SigningChoice, VisibleText,
     ALLOW_UNREGISTERED_KEY, SUB_FILTER,
 };
 pub use language::Language;
-pub use layer2_text::{compose_layer2_text, mask_id_number, VisibleTextFields};
+pub use layer2_text::{
+    compose_layer2_text, compose_visible_content, mask_id_number, Datum, PhrasePart,
+    VisibleContent, VisibleData, VisibleTextFields,
+};
 pub use placement::{
     BoxSize, MediaBox, OutOfDocument, OutOfPage, Page, PageSet, PlacementError, Rotation, Spot,
     UserSpaceRect, ViewerRect, VisibleBox,

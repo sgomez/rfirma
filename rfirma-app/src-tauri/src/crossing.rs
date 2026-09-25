@@ -143,6 +143,9 @@ impl Crossing {
         if let Some(tag) = self.tag() {
             text.push_str(&format!("   (serde: etiqueta \"{tag}\")"));
         }
+        if self.serde_attribute().contains("untagged") {
+            text.push_str("   (serde: sin etiqueta)");
+        }
         if let Some(source) = self.lent_from {
             text.push_str(&format!("   [{source}]"));
         }

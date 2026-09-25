@@ -197,8 +197,9 @@ Este ADR guardaba «la última configuración de firma visible» como una sola c
 del grupo de estado. Se parte en dos:
 
 - **Global**, y gobernado por el interruptor de Preferencias: el propio
-  interruptor de firma visible, las cinco casillas, el motivo y el tamaño del
-  recuadro. Eso es lo que se reutiliza en el siguiente documento.
+  interruptor de firma visible, el modelo de su contenido —con la frase, si es
+  *Personalizada*—, «Con rúbrica» y el tamaño del recuadro. Eso es lo que se
+  reutiliza en el siguiente documento.
 - **Por documento**: la **página y la posición** del recuadro, guardadas en la
   fila de recientes de ese documento.
 

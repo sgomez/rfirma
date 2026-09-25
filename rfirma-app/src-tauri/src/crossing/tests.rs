@@ -34,6 +34,15 @@ crossing! {
     }
 }
 
+crossing! {
+    #[derive(Clone, Debug, PartialEq, Eq, serde::Deserialize)]
+    #[serde(untagged)]
+    pub enum SyntheticPartOrder {
+        Text { text: String },
+        Count { count: u32 },
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Borrowed {
     All,
@@ -63,6 +72,14 @@ fn a_tagged_enum_renders_its_tag_and_its_variants_on_one_line_each() {
     assert_eq!(
         SyntheticStageView::CROSSING.rendered(),
         "\n  pub enum SyntheticStageView   (serde: etiqueta \"kind\")\n      Waiting\n      AskingToSign { document: String, attemptsLeft: Option<u32> }\n"
+    );
+}
+
+#[test]
+fn an_untagged_enum_says_so_because_its_variant_names_never_travel() {
+    assert_eq!(
+        SyntheticPartOrder::CROSSING.rendered(),
+        "\n  pub enum SyntheticPartOrder   (serde: sin etiqueta)\n      Text { text: String }\n      Count { count: u32 }\n"
     );
 }
 
