@@ -3,7 +3,7 @@
 [[row]]
 code = "SAF_00"
 point = "before_certificate"
-unmeasurable = "Solo lo da un fichero ilegible elegido en el diálogo del cliente (unreadable_data_chosen_by_the_person_answer_saf_00)."
+covered = ["unreadable_data_chosen_by_the_person_answer_saf_00"]
 
 [[row]]
 code = "SAF_02"

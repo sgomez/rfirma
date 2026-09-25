@@ -936,7 +936,13 @@ statement = """
 Si la petición no trae datos y el fichero que elige la persona no se puede leer, la firma se rechaza
 con SAF_00.
 """
-unmeasurable = "El único camino es un fichero ilegible elegido en el diálogo del cliente: la sede no manda nada que lo provoque."
+
+[check.drive]
+mode = "v4"
+script = "signwithoutdata"
+harness = "a_file_that_cannot_be_read"
+act.pick_file = "Se va a pedir qué fichero firmar: elige ilegible.bin, que se ha preparado sin permiso de lectura, y cierra el aviso de error que pueda aparecer."
+expects.code = "SAF_00"
 
 [[check]]
 id = "a_signature_that_cannot_be_timestamped_reports_the_failure"
