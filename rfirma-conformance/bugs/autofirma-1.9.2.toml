@@ -169,3 +169,8 @@ master = "present"
 id = "BUG-34"
 title = "Una clave de cifrado de ocho caracteres que no son ocho bytes pasa la validación y falla al cifrar"
 master = "present"
+
+[[bug]]
+id = "BUG-35"
+title = "Una clave que el almacén no sabe cargar se reporta como SAF_08 y no llega al SAF_51 del tipo de clave incompatible"
+master = "present"

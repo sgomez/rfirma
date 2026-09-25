@@ -93,3 +93,9 @@ id = "a_cipher_key_of_eight_characters_but_not_eight_bytes_answers_saf_03"
 outcome = "no-conforme"
 cause = "BUG-34"
 note = "Da la key por buena al contar caracteres, firma y sube SAF_12 sin cifrar al no poder usar sus dieciséis bytes como clave DES."
+
+[[known]]
+id = "a_key_of_an_unsupported_type_answers_saf_51"
+outcome = "no-conforme"
+cause = "BUG-35"
+note = "SunPKCS11 no carga la clave Ed25519 del token y el fallo de carga se reporta como SAF_08 antes de comprobar el tipo de clave."

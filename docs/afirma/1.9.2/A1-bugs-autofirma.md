@@ -674,3 +674,15 @@ dirigido al defecto.
   2. El resultado no se puede cifrar: se sube `SAF_12` sin cifrar (`ProtocolInvocationLauncherSign.java:198-202`) y la firma se pierde.
   3. La sede recibe un fallo de cifrado de la aplicación donde el defecto es suyo, un parámetro `key` inválido, que con cualquier otra longitud recibiría como `SAF_03`.
 * **Causa raíz:** La validación mide la clave en caracteres y el cifrado la usa en bytes.
+
+### BUG-35: Una clave que el almacén no sabe cargar se reporta como `SAF_08` y no llega al `SAF_51` del tipo de clave incompatible
+
+* **Comprobación del catálogo:** `a_key_of_an_unsupported_type_answers_saf_51`.
+* **Estado en `master`:** **Sigue presente.** `ProtocolInvocationLauncherSign.java:656` sigue cargando la clave dentro del bloque del diálogo, cuyo `catch` genérico responde `LOADING_KEYSTORE_INTERNAL_ERROR`; el `INVALID_SIGNING_KEY` del tipo de clave sigue detrás, sin alcanzarse.
+* **Código fuente:** `afirma-simple` · `es.gob.afirma.standalone.protocol.ProtocolInvocationLauncherSign.java:613, 624-627, 631-640`; `ProtocolInvocationLauncherSignAndSave.java:642, 653-656, 663-668`.
+* **Descripción:** Tras elegir certificado, `getKeyEntry` carga la clave dentro del mismo `try` que muestra el diálogo, y cualquier excepción que no sea una cancelación ni la falta de certificados se reporta como `ERROR_CANNOT_ACCESS_KEYSTORE`. La comprobación del tipo de clave, que responde `ERROR_INCOMPATIBLE_KEY_TYPE`, viene después y exige que la clave ya esté cargada. El proveedor SunPKCS11 de Java 21 y 25 no carga claves Ed25519 (`KeyStoreException: unknown key type`), así que con un token PKCS#11 o con NSS el fallo ocurre en la carga.
+* **Comportamiento y consecuencia:**
+  1. Un certificado Ed25519 de un token o de NSS se ofrece en el diálogo y se puede elegir.
+  2. Al elegirlo, la sede recibe `SAF_08`, «no se puede acceder al almacén», con el almacén accesible.
+  3. `SAF_51` solo se alcanza con un almacén cuyo proveedor sí cargue la clave, como un PKCS#12.
+* **Causa raíz:** La carga de la clave comparte el `catch` genérico del diálogo de selección, y el proveedor no admite el tipo de clave que el diálogo ofrece.
