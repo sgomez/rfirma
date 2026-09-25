@@ -16,6 +16,7 @@ const aConfiguration = {
   offersTheOriginalFolder: false,
   setupWizardSeen: false,
   consentCountdown: true,
+  honourAutomaticSelection: false,
 };
 
 /**
@@ -43,6 +44,23 @@ describe("los puertos de la configuración sobre Tauri", () => {
       notifyNewVersion: true,
       setupWizardSeen: false,
       consentCountdown: true,
+      honourAutomaticSelection: false,
+    });
+  });
+
+  it("carries the automatic selection requested by sites both ways", async () => {
+    invoke.mockImplementation((command: string) =>
+      command === "read_configuration"
+        ? Promise.resolve({ ...aConfiguration, honourAutomaticSelection: true })
+        : Promise.resolve(undefined),
+    );
+
+    const read = await tauriPreferences().read();
+    await tauriPreferences().save({ ...read, honourAutomaticSelection: false });
+
+    expect(read.honourAutomaticSelection).toBe(true);
+    expect(invoke).toHaveBeenLastCalledWith("write_configuration", {
+      configuration: { ...aConfiguration, honourAutomaticSelection: false },
     });
   });
 
@@ -79,6 +97,7 @@ describe("los puertos de la configuración sobre Tauri", () => {
       notifyNewVersion: true,
       setupWizardSeen: false,
       consentCountdown: false,
+      honourAutomaticSelection: false,
     });
 
     expect(invoke).toHaveBeenLastCalledWith("write_configuration", {
@@ -88,6 +107,7 @@ describe("los puertos de la configuración sobre Tauri", () => {
         theme: "dark",
         rememberVisibleSignature: false,
         consentCountdown: false,
+        honourAutomaticSelection: false,
       },
     });
   });
@@ -115,6 +135,7 @@ describe("los puertos de la configuración sobre Tauri", () => {
       notifyNewVersion: true,
       setupWizardSeen: true,
       consentCountdown: true,
+      honourAutomaticSelection: false,
     });
 
     const [, { configuration }] = invoke.mock.calls.at(-1) as [string, { configuration: object }];

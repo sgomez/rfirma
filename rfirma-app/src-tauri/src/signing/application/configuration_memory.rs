@@ -38,6 +38,8 @@ pub struct Configuration {
     pub setup_wizard_seen: bool,
     /// Indica si el botón de consentir de la ventana de sede espera una cuenta atrás.
     pub consent_countdown: bool,
+    /// Indica si la sede puede elegir sola el único certificado candidato (ADR-0032).
+    pub honour_automatic_selection: bool,
 }
 
 impl Default for Configuration {
@@ -51,6 +53,7 @@ impl Default for Configuration {
             theme: Theme::System,
             setup_wizard_seen: false,
             consent_countdown: true,
+            honour_automatic_selection: false,
         }
     }
 }

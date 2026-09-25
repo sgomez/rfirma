@@ -10,9 +10,12 @@ con los tokens de SoftHSM fuera de su alcance. Es una condición de lanzamiento,
 cualquier cliente. Donde ese almacén deja un solo candidato tras los filtros, la petición lleva
 `mandatoryCertSelection=false`, nunca `headless`: el cliente conforme resuelve al único candidato
 sin preguntar (`CertFilterManager.java:145-154`, `AOKeyStoreDialog.java:726-729`), y si el trámite
-no enseña ninguna otra ventana, la comprobación no tiene acción y va al tramo `ninguna`. Queda un
-clic donde hay algo que elegir o que cerrar: varios certificados, el PIN de un token, o una ventana
-que el cliente enseña antes de contestar. La cola los agrupa en su tramo.
+no enseña ninguna otra ventana, la comprobación no tiene acción y va al tramo `ninguna`. rFirma
+solo respeta el parámetro con la preferencia `honour_automatic_selection` encendida (ADR-0032):
+el perfil aislado de la suite la activa, así que el informe mide rFirma con ella, que es el
+comportamiento de fábrica del original. Queda un clic donde hay algo que elegir o que cerrar:
+varios certificados, el PIN de un token, o una ventana que el cliente enseña antes de contestar.
+La cola los agrupa en su tramo.
 
 **Una acción de persona se retira solo si ningún cliente no conforme daría un resultado
 distinguible por la sede.** Se queda mientras un cliente que se salta el diálogo, o que lo resuelve
@@ -36,6 +39,10 @@ así.
   resuelvan al único candidato sin preguntar lo exigen sus propias comprobaciones, en una selección
   y en una firma: un cliente que pregunta no vuelve solo y sale no conforme. En las demás del tramo
   `ninguna`, ese cliente agota la espera y la comprobación queda pendiente.
+- Las comprobaciones del PDF con `headless` van al tramo `ninguna`: con un único candidato, ningún
+  cliente enseña nada antes de contestar `SAF_50` o de firmar. La excepción es la del PDF con
+  firmas no registradas que la sede permite, que sigue en `clic` porque rFirma enseña ese aviso en
+  su consentimiento con la preferencia encendida.
 - Dos comprobaciones que esperan el mismo `CANCEL` no son duplicadas si un cliente no conforme
   falla cada una de un modo distinto: la cancelación del cliente conforme es el resultado esperado,
   no lo que se mide. Lo demás de un diálogo se exige por lo que la petición provoca sin nadie
@@ -56,9 +63,15 @@ así.
   que no existe; lo que vuelve a la sede es lo mismo, y lo que el parámetro sí cambia —que el
   selector no salga— lo exigen sus propias comprobaciones. Donde lo medido es el selector, no se
   añade.
+- **Dejarlo fuera porque rFirma enseña siempre su consentimiento.** Descartada: rFirma respeta el
+  parámetro con un único candidato si la persona enciende `honour_automatic_selection`
+  (ADR-0032), y el perfil de la suite la enciende. Donde rFirma sigue preguntando con la
+  preferencia —un PDF con firmas no registradas, o más de un candidato contando los caducados que
+  admite un filtro explícito—, la comprobación se queda en `clic`.
 - **Un interruptor de lanzamiento en rFirma que se salte el consentimiento.** Descartada: una
   aplicación de firma que firma sin preguntar si se lo pide una variable de entorno es un agujero,
-  y AutoFirma no tiene equivalente.
+  y AutoFirma no tiene equivalente. La preferencia del ADR-0032 no lo es: la enciende la persona y
+  solo resuelve al único candidato, como el original.
 - **Automatizar el escritorio para pulsar el clic** (`ydotool` sobre la ventana nueva). No
   descartada del todo, pero aplazada: es neutral respecto al cliente, pero depende del foco y del
   tiempo, y un Enter en la ventana equivocada falsea el resultado. Cabe como otro adaptador del

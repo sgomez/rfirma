@@ -146,6 +146,10 @@ mod full_cycle {
         ) -> Result<&'a TokenCertificate, TokenError> {
             unreachable!("el filtrado no elige certificado")
         }
+
+        fn automatic_selection_honoured(&self) -> bool {
+            unreachable!("el filtrado no decide el consentimiento")
+        }
     }
 
     #[test]

@@ -135,6 +135,7 @@ export const ASKING_TO_SIGN: SiteErrandView = {
     certificates: [certificate()],
     unregisteredSignatures: true,
     alreadyChosen: null,
+    withoutAsking: false,
   },
 };
 

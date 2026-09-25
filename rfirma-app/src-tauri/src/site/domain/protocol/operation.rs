@@ -29,7 +29,7 @@ mod sign;
 mod sign_and_save;
 
 use batch::batch_request;
-use properties::{declared_properties, verb_of};
+use properties::{declared_properties, verb_of, Unattended};
 use save_load::{load_request, save_request};
 use sign::{counter_round, sign_request};
 use sign_and_save::sign_and_save_request;
@@ -107,7 +107,7 @@ impl SiteOperation {
 pub struct SelectCertificate {
     filter: SiteFilter,
     sticky: StickyCertificate,
-    headless: bool,
+    unattended: Unattended,
 }
 
 impl SelectCertificate {
@@ -121,9 +121,14 @@ impl SelectCertificate {
         self.sticky
     }
 
-    /// Si la sede se conforma con el único certificado que pase el filtro (`headless`).
+    /// Si la sede pidió `headless`: lo que haga falta preguntar se rechaza.
     pub fn is_headless(&self) -> bool {
-        self.headless
+        self.unattended.is_headless()
+    }
+
+    /// Si la sede se conforma con el único candidato que pase el filtro.
+    pub fn waives_the_choice(&self) -> bool {
+        self.unattended.waives_the_choice()
     }
 }
 
@@ -161,7 +166,7 @@ pub fn read_operation(url: &AfirmaUrl, data: &dyn DataSource) -> Result<SiteOper
             Ok(SiteOperation::SelectCertificate(SelectCertificate {
                 filter: site_filter(declared.crossing()).within_the_module(module_named_by(url)),
                 sticky: sticky_certificate(url),
-                headless: declared.is_headless(),
+                unattended: declared.unattended(),
             }))
         }
         SIGN => sign_request(url, SignatureRound::First, data),

@@ -349,6 +349,9 @@ pub trait Certificates {
         found: &'a [TokenCertificate],
         handle: &str,
     ) -> Result<&'a TokenCertificate, TokenError>;
+
+    /// Si la persona deja que la sede elija sola el único candidato (ADR-0032).
+    fn automatic_selection_honoured(&self) -> bool;
 }
 
 /// El documento de paso del trámite, apuntado como abierto sin rastro para que la ventana lo lea (ADR-0011).

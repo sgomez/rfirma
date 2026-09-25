@@ -23,10 +23,10 @@ fn a_literal_local_batch_is_forwarded_in_base64() {
 }
 
 #[test]
-fn the_batch_reads_headless_from_its_properties_too() {
+fn the_batch_reads_the_waived_choice_from_its_properties_too() {
     let url = a_batch(&format!(
         "&properties={}&dat={}",
-        properties("headless=true\n"),
+        properties("mandatoryCertSelection=false\n"),
         dat(xml_lote("SHA256", false).as_bytes())
     ));
 
@@ -34,7 +34,7 @@ fn the_batch_reads_headless_from_its_properties_too() {
         panic!("es un lote");
     };
 
-    assert!(request.is_headless());
+    assert!(request.waives_the_choice());
 }
 
 #[test]

@@ -38,6 +38,10 @@ impl Certificates for Untouched {
     ) -> Result<&'a TokenCertificate, TokenError> {
         unreachable!("la guarda no llega a buscar el certificado")
     }
+
+    fn automatic_selection_honoured(&self) -> bool {
+        unreachable!("la guarda no llega a elegir certificado")
+    }
 }
 
 impl ScratchDocuments for Untouched {

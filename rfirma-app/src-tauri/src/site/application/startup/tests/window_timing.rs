@@ -109,6 +109,7 @@ fn a_relay_launch_with_fileid_and_stservlet_in_url_preserves_the_delivered_momen
         certificates: Vec::new(),
         unregistered_signatures: false,
         already_chosen: None,
+        without_asking: false,
     };
 
     let live_for_delivery = Arc::clone(&live);
@@ -160,6 +161,7 @@ fn a_relay_launch_with_fileid_and_parameters_xml_preserves_the_delivered_moment(
         certificates: Vec::new(),
         unregistered_signatures: false,
         already_chosen: None,
+        without_asking: false,
     };
 
     let live_for_delivery = Arc::clone(&live);

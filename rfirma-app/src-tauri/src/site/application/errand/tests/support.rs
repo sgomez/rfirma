@@ -375,6 +375,10 @@ impl Certificates for TheNeighbours<'_> {
     ) -> Result<&'a TokenCertificate, TokenError> {
         crate::identity::application::certificates::usable_certificate(found, handle, self.listed)
     }
+
+    fn automatic_selection_honoured(&self) -> bool {
+        self.memory.configuration().honour_automatic_selection
+    }
 }
 
 impl TokenSigning for TheNeighbours<'_> {
@@ -478,6 +482,10 @@ impl Certificates for ASignerThatSucceeds<'_> {
         handle: &str,
     ) -> Result<&'a TokenCertificate, TokenError> {
         self.neighbours.usable(found, handle)
+    }
+
+    fn automatic_selection_honoured(&self) -> bool {
+        self.neighbours.automatic_selection_honoured()
     }
 }
 

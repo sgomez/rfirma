@@ -11,7 +11,7 @@ use super::super::parameters::{check_servlet_url, sticky_certificate, StickyCert
 use super::super::refusal::Refusal;
 use super::super::url::AfirmaUrl;
 use super::document::{data_of, is_base64_to_the_original, is_gzip};
-use super::properties::{declared_properties, required};
+use super::properties::{declared_properties, required, Unattended};
 use super::SiteOperation;
 
 /// `localBatchProcess=true`: el lote se firma aquí y no contra los dos servlets.
@@ -36,7 +36,7 @@ pub struct BatchRequest {
     needcert: bool,
     filter: SiteFilter,
     sticky: StickyCertificate,
-    headless: bool,
+    unattended: Unattended,
 }
 
 impl BatchRequest {
@@ -85,9 +85,14 @@ impl BatchRequest {
         self.sticky
     }
 
-    /// Si la sede se conforma con el único certificado que pase el filtro (`headless`).
+    /// Si la sede pidió `headless`: lo que haga falta preguntar se rechaza.
     pub fn is_headless(&self) -> bool {
-        self.headless
+        self.unattended.is_headless()
+    }
+
+    /// Si la sede se conforma con el único candidato que pase el filtro.
+    pub fn waives_the_choice(&self) -> bool {
+        self.unattended.waives_the_choice()
     }
 }
 
@@ -139,7 +144,7 @@ pub(super) fn batch_request(
             .is_some_and(|value| value.eq_ignore_ascii_case("true")),
         filter: site_filter(declared.crossing()).within_the_module(module_named_by(url)),
         sticky: sticky_certificate(url),
-        headless: declared.is_headless(),
+        unattended: declared.unattended(),
     }))
 }
 

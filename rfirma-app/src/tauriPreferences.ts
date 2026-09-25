@@ -33,6 +33,7 @@ interface ConfigurationView {
    */
   setupWizardSeen: boolean;
   consentCountdown: boolean;
+  honourAutomaticSelection: boolean;
 }
 
 function readConfiguration(): Promise<ConfigurationView> {
@@ -72,6 +73,7 @@ export function tauriPreferences(): PreferencesStore {
         notifyNewVersion: configuration.notifyNewVersion,
         setupWizardSeen: configuration.setupWizardSeen,
         consentCountdown: configuration.consentCountdown,
+        honourAutomaticSelection: configuration.honourAutomaticSelection,
       };
     },
     save: async (preferences) => {
@@ -84,6 +86,7 @@ export function tauriPreferences(): PreferencesStore {
         notifyNewVersion: preferences.notifyNewVersion,
         setupWizardSeen: preferences.setupWizardSeen,
         consentCountdown: preferences.consentCountdown,
+        honourAutomaticSelection: preferences.honourAutomaticSelection,
       });
     },
     forgetActivity: () => invoke<void>("forget_activity"),

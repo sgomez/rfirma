@@ -34,10 +34,8 @@ interface SedeConsentProps {
  * que se reutiliza de él es su **desplegable**, tal cual —mismo componente,
  * misma agrupación, mismo alto de lista—, dentro de la confirmación.
  *
- * Aparece **siempre**, también con un solo certificado: `headless` y
- * `mandatoryCertSelection` se ignoran los dos, porque encadenados —filtro que
- * deja uno, almacén que no pide PIN— la persona no vería absolutamente nada
- * (ID-272).
+ * Aparece también con un solo certificado, salvo que la persona deje elegir a
+ * la sede (ADR-0032).
  */
 export function SedeConsent({
   origin,

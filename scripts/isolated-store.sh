@@ -197,7 +197,7 @@ the_local_ca_of_rfirma() {
 the_configuration_of_rfirma() {
     local dir="$profile/.config/rfirma"
     mkdir -p "$dir"
-    printf '{"version": 1, "consent_countdown": false, "setup_wizard_seen": true, "language": "es", "theme": "light"}\n' \
+    printf '{"version": 1, "consent_countdown": false, "honour_automatic_selection": true, "setup_wizard_seen": true, "language": "es", "theme": "light"}\n' \
         > "$dir/config.json"
 }
 

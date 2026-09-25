@@ -310,6 +310,11 @@ export function PreferencesView({
         onConsentCountdownChange={(checked) =>
           void change("signing", () => onChange({ ...preferences, consentCountdown: checked }))
         }
+        onHonourAutomaticSelectionChange={(checked) =>
+          void change("signing", () =>
+            onChange({ ...preferences, honourAutomaticSelection: checked }),
+          )
+        }
       />
     ),
     certificates: (
