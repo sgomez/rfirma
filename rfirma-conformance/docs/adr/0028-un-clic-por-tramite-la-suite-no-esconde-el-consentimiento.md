@@ -34,7 +34,8 @@ o el consentimiento de rFirma. La cola los agrupa en su tramo.
   tiempo, y un Enter en la ventana equivocada falsea el resultado. Cabe como otro adaptador del
   testigo si los clics agrupados siguen pesando.
 - **Lanzar AutoFirma siempre con `HeadLess=true`.** Descartada: cambia el comportamiento de un
-  solo cliente, y esconde el diálogo que mide `a_parameter_rejection_is_shown_before_it_is_answered`.
+  solo cliente, y con él lo que viaja: el rechazo de parámetros llega sin esperar a que nadie
+  cierre su ventana.
 - **Un perfil de lanzamiento `headless` por comprobación**, que añadía
   `-Des.gob.afirma.protocolinvocation.HeadLess=true` solo a las que lo declaraban, para que el
   rechazo del acceso local corriera sin nadie delante. Descartada: rFirma también enseña ese

@@ -1216,7 +1216,7 @@ select.input {
   flex: none;
 }
 
-.question {
+.call {
   display: flex;
   align-items: center;
   gap: var(--s4);
@@ -1225,12 +1225,12 @@ select.input {
   background: var(--accent-soft);
 }
 
-.question-text {
+.call-text {
   flex: 1 1 auto;
   min-width: 0;
 }
 
-.question-kind {
+.call-kind {
   color: var(--accent-text);
   font-size: var(--text-xs);
   font-weight: 600;
@@ -1238,7 +1238,7 @@ select.input {
   text-transform: uppercase;
 }
 
-.question-prompt {
+.call-prompt {
   margin-top: 2px;
   font-size: var(--text-l);
   font-weight: 500;
@@ -1246,7 +1246,7 @@ select.input {
   text-wrap: pretty;
 }
 
-.question-actions {
+.call-actions {
   display: flex;
   gap: var(--s2);
   flex: none;
@@ -1615,7 +1615,7 @@ select.input {
 }
 
 .check[data-activity="running"] > .check-line,
-.check[data-activity="asking"] > .check-line {
+.check[data-activity="waiting"] > .check-line {
   background: var(--accent-soft);
 }
 
@@ -2205,12 +2205,12 @@ select.input {
     flex-wrap: wrap;
   }
 
-  .question {
+  .call {
     flex-direction: column;
     align-items: stretch;
   }
 
-  .question-actions {
+  .call-actions {
     justify-content: flex-end;
   }
 
@@ -2272,7 +2272,7 @@ select.input {
     animation: sweep 1.8s ease-in-out infinite;
   }
 
-  .question {
+  .call {
     animation: open-down 220ms var(--ease);
   }
 

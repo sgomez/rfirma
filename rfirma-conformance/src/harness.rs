@@ -2,19 +2,20 @@
 //! —puertos ocupados, ficheros preparados—, no cómo se juzga.
 
 use std::net::TcpListener;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::thread::{sleep, spawn, JoinHandle};
 use std::time::Duration;
 
-use crate::catalogue::{Check, Drive};
+use crate::catalogue::{Check, Provocation};
 use crate::checks::the_isolated_home_of;
 use crate::errand::{ErrandOutcome, ProtocolConditionResult};
 use crate::judge::decoded;
 use crate::outcome::Outcome;
 use crate::Probe;
 
-type Measure = fn(&Probe, &Check, &Drive) -> ErrandOutcome;
+type Measure = fn(&Probe, &Check, &Provocation) -> ErrandOutcome;
 
 /// Un arnés que el catálogo liga por nombre.
 #[derive(Debug)]
@@ -28,7 +29,12 @@ pub(crate) struct Harness {
 
 impl Harness {
     /// Conduce el trámite de la comprobación con lo que el arnés monte alrededor.
-    pub(crate) fn measure(&self, probe: &Probe, check: &Check, drive: &Drive) -> ErrandOutcome {
+    pub(crate) fn measure(
+        &self,
+        probe: &Probe,
+        check: &Check,
+        drive: &Provocation,
+    ) -> ErrandOutcome {
         (self.measure)(probe, check, drive)
     }
 }
@@ -95,16 +101,30 @@ pub(crate) const THE_HARNESSES: &[Harness] = &[
         fixtures: &[],
         mode: READ_AND_WRITE,
         measure: |probe, check, drive| {
-            let saved = the_isolated_home_of(&probe.client).join(the_name_proposed_by(drive));
-            let _ = std::fs::remove_file(&saved);
+            let home = the_isolated_home_of(&probe.client);
+            let (declared, name) = the_destination_proposed_by(drive);
+            let saved = declared
+                .map_or_else(|| home.to_path_buf(), PathBuf::from)
+                .join(name);
+            let astray = declared.map(|_| home.join(name));
+            for path in std::iter::once(&saved).chain(astray.as_ref()) {
+                let _ = std::fs::remove_file(path);
+            }
             let mut outcome = probe.drive(check, drive);
             let returned = outcome.signature.as_deref().and_then(decoded);
-            outcome
-                .protocol_conditions
-                .push(the_saved_signature_against(
-                    std::fs::read(&saved).ok().as_deref(),
-                    returned.as_deref(),
-                ));
+            let found = std::fs::read(&saved).ok();
+            let renamed = || {
+                let directory = saved.parent()?;
+                a_signature_saved_under_another_name(directory, returned.as_deref()?)
+            };
+            outcome.protocol_conditions.push(
+                match astray.filter(|astray| found.is_none() && astray.exists()) {
+                    Some(_) => a_signature_saved_astray(),
+                    None if found.is_none() => renamed()
+                        .unwrap_or_else(|| the_saved_signature_against(None, returned.as_deref())),
+                    None => the_saved_signature_against(found.as_deref(), returned.as_deref()),
+                },
+            );
             outcome
         },
     },
@@ -119,7 +139,7 @@ pub(crate) const THE_HARNESSES: &[Harness] = &[
         fixtures: &[],
         mode: READ_AND_WRITE,
         measure: |probe, check, drive| {
-            let _occupied = OccupiedPorts::at(&check.ports);
+            let _occupied = OccupiedPorts::at(&drive.ports);
             probe.drive(check, drive)
         },
     },
@@ -167,22 +187,39 @@ fn the_saved_bytes_against(saved: Option<&[u8]>, data: &[u8]) -> ProtocolConditi
     }
 }
 
-/// El nombre que propone en `filename` cada guion de firmar y guardar cuya firma se relee.
-const THE_SAVED_SIGNATURES: &[(&str, &str)] = &[
-    ("signandsavecadestri", "challenge-signed.csig"),
-    ("signandsavepadestri", "documento-firmado.pdf"),
-    ("signandsavexadestri", "documento-firmado.xsig"),
-    ("signandsavefacturaetri", "factura-firmada.xsig"),
+/// Cada guion de firmar y guardar que se relee, con su `filenameSaveCurrentDir` y su `filename`.
+const THE_SAVED_SIGNATURES: &[(&str, Option<&str>, &str)] = &[
+    ("signandsave", None, "challenge-signed.csig"),
+    (
+        "signandsavewithsavingparameters",
+        Some("/tmp"),
+        "challenge-signed.csig",
+    ),
+    ("signandsavecadestri", None, "challenge-signed.csig"),
+    ("signandsavepadestri", None, "documento-firmado.pdf"),
+    ("signandsavexadestri", None, "documento-firmado.xsig"),
+    ("signandsavefacturaetri", None, "factura-firmada.xsig"),
 ];
 
 const THE_RETURNED_SIGNATURE_ON_DISK: &str = "the-returned-signature-on-disk";
 
-fn the_name_proposed_by(drive: &Drive) -> &'static str {
+fn the_destination_proposed_by(drive: &Provocation) -> (Option<&'static str>, &'static str) {
     THE_SAVED_SIGNATURES
         .iter()
-        .find(|(script, _)| *script == drive.script)
-        .map(|(_, name)| *name)
+        .find(|(script, _, _)| *script == drive.script)
+        .map(|(_, directory, name)| (*directory, *name))
         .unwrap_or_else(|| panic!("el guion {} no propone un nombre conocido", drive.script))
+}
+
+fn a_signature_saved_astray() -> ProtocolConditionResult {
+    ProtocolConditionResult {
+        name: THE_RETURNED_SIGNATURE_ON_DISK.to_owned(),
+        outcome: Outcome::Noncompliant,
+        observation: Some(
+            "la firma se guardó en la carpeta del perfil y no en la que declara la petición"
+                .to_owned(),
+        ),
+    }
 }
 
 fn the_saved_signature_against(
@@ -219,6 +256,30 @@ fn the_saved_signature_against(
         outcome,
         observation: Some(observation),
     }
+}
+
+fn a_signature_saved_under_another_name(
+    directory: &Path,
+    returned: &[u8],
+) -> Option<ProtocolConditionResult> {
+    let same_length = |entry: &std::fs::DirEntry| {
+        entry
+            .metadata()
+            .is_ok_and(|metadata| metadata.is_file() && metadata.len() == returned.len() as u64)
+    };
+    let saved = std::fs::read_dir(directory)
+        .ok()?
+        .flatten()
+        .filter(same_length)
+        .find(|entry| std::fs::read(entry.path()).is_ok_and(|bytes| bytes == returned))?;
+    Some(ProtocolConditionResult {
+        name: THE_RETURNED_SIGNATURE_ON_DISK.to_owned(),
+        outcome: Outcome::Noncompliant,
+        observation: Some(format!(
+            "la firma se guardó como «{}» y no con el nombre propuesto",
+            saved.file_name().to_string_lossy()
+        )),
+    })
 }
 
 /// Cada cuánto mira el ocupante si le han dicho que suelte el puerto.
@@ -279,7 +340,7 @@ mod tests {
         let named: BTreeSet<&str> = read_the_catalogue()
             .unwrap()
             .iter()
-            .filter_map(|check| check.harness)
+            .filter_map(|check| check.harness())
             .map(|harness| harness.name)
             .collect();
         let unnamed: Vec<&str> = THE_HARNESSES
@@ -319,18 +380,37 @@ mod tests {
     }
 
     #[test]
+    fn a_signature_saved_under_another_name_is_noncompliant() {
+        let directory = tempfile::tempdir().unwrap();
+        std::fs::write(directory.path().join("otro-nombre.csig"), b"firma").unwrap();
+        std::fs::write(directory.path().join("ajeno.bin"), b"ajeno").unwrap();
+        let judged = a_signature_saved_under_another_name(directory.path(), b"firma");
+        assert_eq!(
+            judged.map(|condition| (condition.outcome, condition.observation)),
+            Some((
+                Outcome::Noncompliant,
+                Some(
+                    "la firma se guardó como «otro-nombre.csig» y no con el nombre propuesto"
+                        .to_owned()
+                )
+            ))
+        );
+        assert!(a_signature_saved_under_another_name(directory.path(), b"otra").is_none());
+    }
+
+    #[test]
     fn every_check_that_reads_back_the_signature_drives_a_script_that_proposes_its_name() {
         let orphans: Vec<String> = read_the_catalogue()
             .unwrap()
             .iter()
             .filter(|check| {
-                check.harness.map(|harness| harness.name) == Some("the_saved_signature_read_back")
+                check.harness().map(|harness| harness.name) == Some("the_saved_signature_read_back")
             })
-            .filter_map(|check| check.drive.as_ref())
+            .filter_map(|check| check.provocation())
             .filter(|drive| {
                 !THE_SAVED_SIGNATURES
                     .iter()
-                    .any(|(script, _)| *script == drive.script)
+                    .any(|(script, _, _)| *script == drive.script)
             })
             .map(|drive| drive.script.clone())
             .collect();

@@ -74,7 +74,7 @@ describe("the session", () => {
       "/",
       aSnapshot({
         running: { ids: ["empty_uri_rejected"], elapsed_ms: 0 },
-        question: { check: "empty_uri_rejected", prompt, kind: "tranche" },
+        call: { check: "empty_uri_rejected", prompt, kind: "tranche" },
       }),
     );
 
@@ -161,23 +161,26 @@ describe("the session", () => {
     );
   });
 
-  it("answers the question in flight with s, n or Escape", async () => {
+  it("tells what to do before a check that needs the person, and starts it with s", async () => {
     const { server, user } = renderConsoleAt(
       "/",
       aSnapshot({
         running: { ids: ["empty_uri_rejected"], elapsed_ms: 0 },
-        question: {
+        call: {
           check: "empty_uri_rejected",
-          prompt: "¿Se abrió el diálogo? [s/n]",
-          kind: "outcome",
+          prompt: "Se va a pedir dónde guardar: cancela en vez de guardar.",
+          kind: "briefing",
         },
       }),
     );
-    expect(await screen.findByText("¿Se abrió el diálogo?")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Se va a pedir dónde guardar: cancela en vez de guardar."),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^No/ })).not.toBeInTheDocument();
 
-    await user.keyboard("n");
+    await user.keyboard("s");
 
-    expect(server.posted("/api/answer")).toEqual([{ answer: "n" }]);
+    expect(server.posted("/api/answer")).toEqual([{ answer: "s" }]);
   });
 
   it("keeps the report and run steps disabled until the client is resolved", async () => {

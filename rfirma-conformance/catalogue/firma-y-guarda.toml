@@ -3,31 +3,19 @@
 [[check]]
 id = "signandsave_saves_the_signature_and_returns_it_to_the_site"
 set = "firma-y-guarda"
-citation = "ProtocolInvocationLauncherSignAndSave.java:536-566; NativeSignDataProcessor.java:54-104"
+citation = "ProtocolInvocationLauncherSignAndSave.java:536-566, 1103-1126; NativeSignDataProcessor.java:54-104; UrlParametersToSignAndSave.java:38"
 statement = """
-signandsave firma con el verbo que declara cop, pide dónde guardar el resultado y devuelve además
-la firma y el certificado a la sede que lo pidió.
+signandsave firma con el verbo que declara cop, ofrece guardar el resultado con el nombre que la
+petición propone en filename y devuelve además la firma y el certificado a la sede que lo pidió: lo
+guardado es lo que recibe la sede.
 """
-drive = { mode = "v4", script = "signandsave" }
-assistance = "person"
-completes = {}
-question = "¿se pidió dónde guardar la firma? [s/n]"
-person = { yes = "se pidió dónde guardar la firma y volvió a la sede", no = "no se pidió dónde guardar la firma", yes_means = "conforme" }
-warning = "Van a aparecer el diálogo de certificado y la petición de dónde guardar la firma: complétala para que la comprobación llegue a medir algo."
 
-[[check]]
-id = "signandsave_offers_the_save_name_the_request_proposed"
-set = "firma-y-guarda"
-citation = "ProtocolInvocationLauncherSignAndSave.java:1103-1126; UrlParametersToSignAndSave.java:38"
-statement = """
-El nombre que la petición propone en filename es el que se ofrece al guardar, tal cual y con la
-extensión que trae.
-"""
-drive = { mode = "v4", script = "signandsave" }
-assistance = "person"
-question = "¿el nombre ofrecido para guardar era «challenge-signed.csig»? [s/n]"
-person = { yes = "se ofreció para guardar el nombre que la petición propuso", no = "la firma se guardó con un nombre que la petición no propuso", yes_means = "conforme" }
-warning = "Va a aparecer el diálogo de certificado; cuando se pida dónde guardar, mira qué nombre viene propuesto antes de completarlo."
+[check.drive]
+mode = "v4"
+script = "signandsave"
+harness = "the_saved_signature_read_back"
+act.save_as_proposed = "Van a aparecer el diálogo de certificado y la petición de dónde guardar la firma: guárdala con el nombre propuesto, challenge-signed.csig, en la carpeta que se abre."
+expects.completes.conditions = ["the-returned-signature-on-disk"]
 
 [[check]]
 id = "signandsave_rejects_an_illegal_filename_with_saf_03"
@@ -37,10 +25,12 @@ statement = """
 Un filename con alguno de los caracteres que el sistema de ficheros no admite se rechaza con SAF_03
 antes de pedir certificado alguno.
 """
-drive = { mode = "v4", script = "signandsavewithanillegalfilename" }
-assistance = "click"
-saf = "SAF_03"
-warning = "AutoFirma enseña un diálogo de error antes de contestar el rechazo: ciérralo para que llegue la respuesta."
+
+[check.drive]
+mode = "v4"
+script = "signandsavewithanillegalfilename"
+act.consent = "AutoFirma enseña un diálogo de error antes de contestar el rechazo: ciérralo para que llegue la respuesta."
+expects.code = "SAF_03"
 
 [[check]]
 id = "signandsave_asks_for_the_document_when_the_request_brings_no_data"
@@ -50,12 +40,13 @@ statement = """
 Una petición de signandsave que llega sin dat ni fileid pide el documento a firmar en vez de
 rechazarse, y firma el que se le dé.
 """
-drive = { mode = "v4", script = "signandsavewithoutdata" }
-assistance = "person"
+
+[check.drive]
+mode = "v4"
+script = "signandsavewithoutdata"
 harness = "a_document_to_sign"
-question = "¿se pidió elegir el documento a firmar? [s/n]"
-person = { yes = "se pidió el documento a firmar antes de firmarlo", no = "la petición sin datos se resolvió sin pedir el documento a firmar", yes_means = "conforme" }
-warning = "Se va a pedir primero el documento a firmar, y después vendrán el diálogo de certificado y la petición de dónde guardar: elige el documento preparado y completa el resto."
+act.pick_file = "Se va a pedir primero el documento a firmar, y después vendrán el diálogo de certificado y la petición de dónde guardar: elige documento.txt, el preparado, y guarda la firma donde te proponga."
+expects.completes = {}
 
 [[check]]
 id = "signandsave_cancelled_at_the_save_dialogue_answers_a_cancellation"
@@ -65,24 +56,28 @@ statement = """
 Cancelar cuando se pide dónde guardar termina el trámite como cancelación, y así llega a la sede: ni
 como error ni como firma entregada.
 """
-drive = { mode = "v4", script = "signandsavecancelled" }
-assistance = "person"
-saf = "CANCEL"
-warning = "Va a aparecer el diálogo de certificado; cuando se pida dónde guardar, cancela en vez de guardar."
+
+[check.drive]
+mode = "v4"
+script = "signandsavecancelled"
+act.cancel = "Va a aparecer el diálogo de certificado; cuando se pida dónde guardar, cancela en vez de guardar."
+expects.code = "CANCEL"
 
 [[check]]
-id = "the_saving_parameters_of_the_request_configure_the_saving_of_the_signature"
+id = "the_saving_directory_of_the_request_is_where_the_signature_is_saved"
 set = "firma-y-guarda"
-citation = "ProtocolInvocationLauncherSignAndSave.java:537-553; AfirmaExtraParams.java:30, 33, 36"
+citation = "ProtocolInvocationLauncherSignAndSave.java:537-553; AfirmaExtraParams.java:36"
 statement = """
-Las extensiones, la descripción y el directorio inicial que la petición declara en filenameSaveExts,
-filenameSaveDescription y filenameSaveCurrentDir configuran el guardado del resultado.
+El directorio inicial que la petición declara en filenameSaveCurrentDir es donde se abre el
+guardado del resultado: aceptar lo que propone deja la firma en él.
 """
-drive = { mode = "v4", script = "signandsavewithsavingparameters" }
-assistance = "person"
-question = "¿la ventana de guardar la firma se abrió en /tmp y filtraba por «Firma de la sede» con la extensión .csig? [s/n]"
-person = { yes = "el guardado se abrió en el directorio y con el filtro que declaraba la petición", no = "el guardado no siguió el directorio o el filtro que declaraba la petición", yes_means = "conforme" }
-warning = "Van a aparecer el diálogo de certificado y la ventana para guardar la firma: fíjate en su carpeta inicial y en su filtro de tipos antes de guardar o cancelar."
+
+[check.drive]
+mode = "v4"
+script = "signandsavewithsavingparameters"
+harness = "the_saved_signature_read_back"
+act.save_as_proposed = "Van a aparecer el diálogo de certificado y la ventana para guardar la firma: guárdala con el nombre propuesto, challenge-signed.csig, en la carpeta en la que se abra."
+expects.completes.conditions = ["the-returned-signature-on-disk"]
 
 [[check]]
 id = "signandsave_accepts_an_elliptic_curve_algorithm"
@@ -92,11 +87,13 @@ bug = "BUG-05"
 statement = """
 El catálogo de algoritmos incluye los de curva elíptica, y signandsave los acepta igual que sign.
 """
-drive = { mode = "v4", script = "signandsavewithecdsa" }
-assistance = "person"
-completes = {}
+
+[check.drive]
+mode = "v4"
+script = "signandsavewithecdsa"
 store = "ec"
-warning = "AutoFirma rechaza el algoritmo de curva elíptica antes de pedir certificado y enseña un diálogo de error: ciérralo para que llegue la respuesta. Si en cambio aparecen el diálogo de certificado, con el único certificado de curva elíptica del almacén ec, y el de guardar la firma, guárdala donde te proponga."
+act.save_as_proposed = "AutoFirma rechaza el algoritmo de curva elíptica antes de pedir certificado y enseña un diálogo de error: ciérralo para que llegue la respuesta. Si en cambio aparecen el diálogo de certificado, con el único certificado de curva elíptica del almacén ec, y el de guardar la firma, guárdala donde te proponga."
+expects.completes = {}
 
 [[check]]
 id = "signandsave_rejects_a_request_without_a_verb_with_saf_04"
@@ -106,10 +103,12 @@ bug = "BUG-15"
 statement = """
 Una invocación de signandsave sin cop se rechaza con SAF_04.
 """
-drive = { mode = "v4", script = "signandsavewithoutaverb" }
-assistance = "click"
-saf = "SAF_04"
-warning = "Va a aparecer el diálogo de certificado antes de que llegue el rechazo."
+
+[check.drive]
+mode = "v4"
+script = "signandsavewithoutaverb"
+act.consent = "Va a aparecer el diálogo de certificado antes de que llegue el rechazo."
+expects.code = "SAF_04"
 
 [[check]]
 id = "signandsave_cancelled_at_the_visible_area_answers_saf_43"
@@ -120,10 +119,12 @@ statement = """
 En signandsave, con visibleSignature=want y sin el área en la petición, cancelar el diálogo del área
 aborta con SAF_43 como en sign.
 """
-drive = { mode = "v4", script = "signandsavepadesvisible" }
-assistance = "person"
-saf = "SAF_43"
-warning = "Va a aparecer el diálogo del área visible sobre el PDF: cancélalo sin marcar nada. Si después aparecen el certificado o dónde guardar, cancélalos también."
+
+[check.drive]
+mode = "v4"
+script = "signandsavepadesvisible"
+act.cancel = "Va a aparecer el diálogo del área visible sobre el PDF: cancélalo sin marcar nada. Si después aparecen el certificado o dónde guardar, cancélalos también."
+expects.code = "SAF_43"
 
 [[check]]
 id = "signandsave_a_cades_triphase_signature_goes_through_the_server_url_and_is_saved"
@@ -134,11 +135,13 @@ En signandsave, una firma CAdEStri hace la prefirma y la postfirma contra el ser
 con cop=sign y format=CAdES, firma con la clave del certificado la prefirma que le devuelve, y la
 firma de la postfirma es la que guarda en disco y la que entrega a la sede.
 """
-drive = { mode = "v4", script = "signandsavecadestri" }
-assistance = "person"
+
+[check.drive]
+mode = "v4"
+script = "signandsavecadestri"
 harness = "the_saved_signature_read_back"
-condition = ["through-the-triphase-server", "the-presignature-signed-with-the-key", "the-server-signature-as-it-came", "the-returned-signature-on-disk"]
-warning = "Van a aparecer el diálogo de certificado y la petición de dónde guardar la firma: guárdala con el nombre propuesto, challenge-signed.csig, en la carpeta que se abre."
+act.save_as_proposed = "Van a aparecer el diálogo de certificado y la petición de dónde guardar la firma: guárdala con el nombre propuesto, challenge-signed.csig, en la carpeta que se abre."
+expects.completes.conditions = ["through-the-triphase-server", "the-presignature-signed-with-the-key", "the-server-signature-as-it-came", "the-returned-signature-on-disk"]
 
 [[check]]
 id = "signandsave_a_pades_triphase_signature_goes_through_the_server_url_and_is_saved"
@@ -149,11 +152,13 @@ En signandsave, una firma PAdEStri sobre un PDF hace la prefirma y la postfirma 
 de properties con cop=sign y format=pades, firma con la clave del certificado la prefirma que le
 devuelve, y el PDF firmado de la postfirma es el que guarda en disco y el que entrega a la sede.
 """
-drive = { mode = "v4", script = "signandsavepadestri" }
-assistance = "person"
+
+[check.drive]
+mode = "v4"
+script = "signandsavepadestri"
 harness = "the_saved_signature_read_back"
-condition = ["through-the-triphase-server", "the-presignature-signed-with-the-key", "the-server-signature-as-it-came", "the-returned-signature-on-disk"]
-warning = "Van a aparecer el diálogo de certificado y la petición de dónde guardar la firma: guárdala con el nombre propuesto, documento-firmado.pdf, en la carpeta que se abre."
+act.save_as_proposed = "Van a aparecer el diálogo de certificado y la petición de dónde guardar la firma: guárdala con el nombre propuesto, documento-firmado.pdf, en la carpeta que se abre."
+expects.completes.conditions = ["through-the-triphase-server", "the-presignature-signed-with-the-key", "the-server-signature-as-it-came", "the-returned-signature-on-disk"]
 
 [[check]]
 id = "signandsave_a_xades_triphase_signature_goes_through_the_server_url_and_is_saved"
@@ -164,11 +169,13 @@ En signandsave, una firma XAdEStri sobre un XML hace la prefirma y la postfirma 
 de properties con cop=sign y format=XAdES, firma con la clave del certificado la prefirma que le
 devuelve, y la firma de la postfirma es la que guarda en disco y la que entrega a la sede.
 """
-drive = { mode = "v4", script = "signandsavexadestri" }
-assistance = "person"
+
+[check.drive]
+mode = "v4"
+script = "signandsavexadestri"
 harness = "the_saved_signature_read_back"
-condition = ["through-the-triphase-server", "the-presignature-signed-with-the-key", "the-server-signature-as-it-came", "the-returned-signature-on-disk"]
-warning = "Van a aparecer el diálogo de certificado y la petición de dónde guardar la firma: guárdala con el nombre propuesto, documento-firmado.xsig, en la carpeta que se abre."
+act.save_as_proposed = "Van a aparecer el diálogo de certificado y la petición de dónde guardar la firma: guárdala con el nombre propuesto, documento-firmado.xsig, en la carpeta que se abre."
+expects.completes.conditions = ["through-the-triphase-server", "the-presignature-signed-with-the-key", "the-server-signature-as-it-came", "the-returned-signature-on-disk"]
 
 [[check]]
 id = "signandsave_a_facturae_triphase_signature_goes_through_the_server_url_and_is_saved"
@@ -180,8 +187,10 @@ contra el serverUrl de properties con cop=sign y format=FacturaE, firma con la c
 certificado la prefirma que le devuelve, y la factura firmada de la postfirma es la que guarda en
 disco y la que entrega a la sede.
 """
-drive = { mode = "v4", script = "signandsavefacturaetri" }
-assistance = "person"
+
+[check.drive]
+mode = "v4"
+script = "signandsavefacturaetri"
 harness = "the_saved_signature_read_back"
-condition = ["through-the-triphase-server", "the-presignature-signed-with-the-key", "the-server-signature-as-it-came", "the-returned-signature-on-disk"]
-warning = "Van a aparecer el diálogo de certificado y la petición de dónde guardar la firma: guárdala con el nombre propuesto, factura-firmada.xsig, en la carpeta que se abre."
+act.save_as_proposed = "Van a aparecer el diálogo de certificado y la petición de dónde guardar la firma: guárdala con el nombre propuesto, factura-firmada.xsig, en la carpeta que se abre."
+expects.completes.conditions = ["through-the-triphase-server", "the-presignature-signed-with-the-key", "the-server-signature-as-it-came", "the-returned-signature-on-disk"]

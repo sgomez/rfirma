@@ -20,9 +20,9 @@ export function useProgress(snapshot: Snapshot | null, live: boolean): Progress 
     if (!snapshot || !live) return idle;
     const running = new Set(snapshot.running?.ids ?? []);
     const queued = new Set(snapshot.queued);
-    const asking = snapshot.question?.check ?? null;
+    const called = snapshot.call?.check ?? null;
     const activityOf = (id: string): Activity | null => {
-      if (asking === id) return "asking";
+      if (called === id) return "waiting";
       if (running.has(id)) return "running";
       if (queued.has(id)) return "queued";
       return null;

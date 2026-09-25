@@ -1,5 +1,5 @@
-//! El juez: lo observado en un trámite, la expectativa que declara el catálogo y la respuesta de la
-//! persona, a un resultado; no lanza trámites ni prepara nada.
+//! El juez: lo observado en un trámite frente a la expectativa que declara el catálogo, a un
+//! resultado; no lanza trámites, no prepara nada y no pregunta a nadie.
 
 use std::fmt;
 
@@ -20,58 +20,42 @@ const THE_OUT_OF_MEMORY_ERROR: &str = "es.gob.afirma.core.OutOfMemoryError";
 const APPLICATION_NOT_FOUND_EXCEPTION: &str =
     "es.gob.afirma.standalone.ApplicationNotFoundException";
 
-/// Un resultado con su observación, o pendiente si la persona no respondió.
-pub(crate) enum CheckOutcome {
-    Resolved {
-        outcome: Outcome,
-        observation: Option<String>,
-    },
-    StillPending,
+/// Lo que una comprobación conducida espera de su trámite: una sola cosa del vocabulario cerrado.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub(crate) enum Expectation {
+    Code(Code),
+    Completes(Completion),
+    Silence,
 }
 
-impl CheckOutcome {
-    pub(crate) fn of(outcome: Outcome, observation: impl Into<String>) -> Self {
-        Self::Resolved {
-            outcome,
-            observation: Some(observation.into()),
+impl Expectation {
+    /// Las condiciones de la sede que juzgan la comprobación, con el nombre que les da su guion.
+    pub(crate) fn conditions(&self) -> &[String] {
+        match self {
+            Self::Completes(completion) => &completion.conditions,
+            Self::Code(_) | Self::Silence => &[],
         }
     }
-}
 
-/// Lo que respondió la persona a la pregunta de la comprobación.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum Answer {
-    Yes,
-    No,
-    Unanswered,
-}
-
-impl Answer {
-    /// La respuesta escrita en la consola: sí si empieza por «s», y vacía si no contestó.
-    pub(crate) fn read(reply: &str) -> Self {
-        let reply = reply.trim().to_lowercase();
-        if reply.is_empty() {
-            Self::Unanswered
-        } else if reply.starts_with('s') {
-            Self::Yes
-        } else {
-            Self::No
+    /// Lo que la expectativa nombra en códigos y condiciones, para cruzarlo con el manual.
+    pub(crate) fn the_declared_text(&self) -> String {
+        match self {
+            Self::Code(code) => code.to_string(),
+            Self::Completes(completion) => completion.conditions.join("\n"),
+            Self::Silence => String::new(),
         }
     }
-}
 
-/// Lo que una comprobación espera del trámite, tal y como la declara el catálogo.
-pub(crate) struct Expectation<'a> {
-    pub(crate) on_the_wire: Option<OnTheWire<'a>>,
-    pub(crate) person: Option<&'a Person>,
-}
-
-/// Lo que se espera que viaje por el cable: una de las cuatro formas del vocabulario.
-pub(crate) enum OnTheWire<'a> {
-    Saf(&'a Code),
-    Completes(&'a Contents),
-    Conditions(&'a [String]),
-    NoAnswer,
+    /// Si espera lo mismo que `other`, sin mirar el orden de sus condiciones.
+    pub(crate) fn is_the_same_as(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Completes(one), Self::Completes(another)) => {
+                one.with_its_conditions_sorted() == another.with_its_conditions_sorted()
+            }
+            _ => self == other,
+        }
+    }
 }
 
 /// El código que tiene que recibir la sede: `SAF_NN`, `SAF_*` o una cadena reconocida.
@@ -131,10 +115,12 @@ fn is_a_saf_code(name: &str) -> bool {
         .is_some_and(|digits| digits.len() == 2 && digits.bytes().all(|byte| byte.is_ascii_digit()))
 }
 
-/// Lo que tiene que traer el resultado; sin nada declarado, basta con que vuelva.
+/// Lo que tiene que traer el trámite completo; sin nada declarado, basta con que vuelva.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub(crate) struct Contents {
+pub(crate) struct Completion {
+    #[serde(default)]
+    conditions: Vec<String>,
     #[serde(default)]
     starts_with: Option<String>,
     #[serde(default)]
@@ -143,6 +129,21 @@ pub(crate) struct Contents {
     contains_bytes: Option<Base64Bytes>,
     #[serde(default)]
     byte_length: Option<usize>,
+}
+
+impl Completion {
+    fn with_its_conditions_sorted(&self) -> Self {
+        let mut sorted = self.clone();
+        sorted.conditions.sort();
+        sorted
+    }
+
+    fn declares_what_comes_back(&self) -> bool {
+        Self {
+            conditions: Vec::new(),
+            ..self.clone()
+        } != Self::default()
+    }
 }
 
 /// Un OID en notación de puntos, con su codificación DER para buscarlo entre los bytes.
@@ -208,51 +209,15 @@ impl TryFrom<String> for Base64Bytes {
     }
 }
 
-/// Lo que la persona dice de lo que vio: una frase por respuesta, y qué resultado sostiene el sí.
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub(crate) struct Person {
-    yes: String,
-    no: String,
-    yes_means: Meaning,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
-enum Meaning {
-    #[serde(rename = "conforme")]
-    Compliant,
-    #[serde(rename = "no-conforme")]
-    Noncompliant,
-}
-
-/// El resultado: lo que viajó, frente a lo que se esperaba y lo que dijo la persona.
-pub(crate) fn judge(
-    observed: &ErrandOutcome,
-    expectation: &Expectation<'_>,
-    answer: Answer,
-) -> CheckOutcome {
-    if let Some(unobservable) = the_preamble(observed, expectation.on_the_wire.as_ref()) {
-        return unobservable.into();
-    }
-    let on_the_wire = expectation
-        .on_the_wire
-        .as_ref()
-        .map(|wire| on_the_wire(observed, wire));
-    match expectation.person {
-        Some(person) => by_the_person(person, answer, on_the_wire, observed),
-        None => on_the_wire
-            .unwrap_or_else(|| Verdict::unobservable("la comprobación no declara qué espera"))
-            .into(),
-    }
-}
-
-struct Verdict {
-    outcome: Outcome,
-    observation: Option<String>,
+/// Un resultado con su observación.
+#[derive(Debug, PartialEq, Eq)]
+pub(crate) struct Verdict {
+    pub(crate) outcome: Outcome,
+    pub(crate) observation: Option<String>,
 }
 
 impl Verdict {
-    fn of(outcome: Outcome, observation: impl Into<String>) -> Self {
+    pub(crate) fn of(outcome: Outcome, observation: impl Into<String>) -> Self {
         Self {
             outcome,
             observation: Some(observation.into()),
@@ -279,35 +244,39 @@ impl Verdict {
     }
 }
 
-impl From<Verdict> for CheckOutcome {
-    fn from(verdict: Verdict) -> Self {
-        Self::Resolved {
-            outcome: verdict.outcome,
-            observation: verdict.observation,
-        }
+/// El resultado: lo que viajó frente a lo que se esperaba.
+pub(crate) fn judge(observed: &ErrandOutcome, expectation: &Expectation) -> Verdict {
+    if let Some(unobservable) = the_preamble(observed, expectation) {
+        return unobservable;
+    }
+    match expectation {
+        Expectation::Code(code) => against_the_code(observed, code),
+        Expectation::Completes(completion) => completed(observed, completion),
+        Expectation::Silence => unanswered(observed),
     }
 }
 
-/// Lo que no deja juzgar nada, salvo que la condición esperada llegara igualmente.
-fn the_preamble(observed: &ErrandOutcome, wire: Option<&OnTheWire<'_>>) -> Option<Verdict> {
-    if let Some(OnTheWire::Conditions(names)) = wire {
-        if names
-            .iter()
-            .any(|name| the_condition(observed, name).is_some())
-        {
-            return None;
-        }
+/// Lo que no deja juzgar nada, salvo que una condición esperada llegara igualmente.
+fn the_preamble(observed: &ErrandOutcome, expectation: &Expectation) -> Option<Verdict> {
+    if any_emitted(observed, expectation.conditions()) {
+        return None;
     }
     if !observed.launched {
         return Some(Verdict::unobservable("el cliente no llegó a arrancar"));
     }
     match observed.error_type.as_deref() {
         Some(THE_DRIVER_CRASH) => Some(Verdict::unobservable_as(observed)),
-        Some(THE_EXHAUSTED_PATIENCE) if !matches!(wire, Some(OnTheWire::NoAnswer)) => {
+        Some(THE_EXHAUSTED_PATIENCE) if *expectation != Expectation::Silence => {
             Some(Verdict::unobservable_as(observed))
         }
         _ => None,
     }
+}
+
+fn any_emitted(observed: &ErrandOutcome, names: &[String]) -> bool {
+    names
+        .iter()
+        .any(|name| the_condition(observed, name).is_some())
 }
 
 fn the_condition<'a>(
@@ -318,15 +287,6 @@ fn the_condition<'a>(
         .protocol_conditions
         .iter()
         .find(|condition| condition.name == name)
-}
-
-fn on_the_wire(observed: &ErrandOutcome, wire: &OnTheWire<'_>) -> Verdict {
-    match wire {
-        OnTheWire::Saf(code) => against_the_code(observed, code),
-        OnTheWire::Completes(contents) => completed(observed, contents),
-        OnTheWire::Conditions(names) => the_conditions(observed, names),
-        OnTheWire::NoAnswer => unanswered(observed),
-    }
 }
 
 /// Todas las condiciones a la vez: una no conforme pesa más que una sin medir.
@@ -398,21 +358,46 @@ fn against_the_code(observed: &ErrandOutcome, expected: &Code) -> Verdict {
     }
 }
 
-fn completed(observed: &ErrandOutcome, contents: &Contents) -> Verdict {
-    if let Some(code) = observed.error_code.as_deref() {
+/// Lo que midió la sede decide; si no midió nada, un código de error recibido es un fallo visible.
+fn completed(observed: &ErrandOutcome, completion: &Completion) -> Verdict {
+    let conditions = &completion.conditions;
+    if any_emitted(observed, conditions) {
+        let verdict = the_conditions(observed, conditions);
+        if verdict.outcome != Outcome::Compliant || !completion.declares_what_comes_back() {
+            return verdict;
+        }
+        return what_came_back(observed, completion);
+    }
+    if let Some(code) = an_error_code_the_site_received(observed) {
         return Verdict::noncompliant(format!(
             "{code} donde el protocolo exige que el trámite se complete"
         ));
     }
+    if conditions.is_empty() {
+        what_came_back(observed, completion)
+    } else {
+        the_conditions(observed, conditions)
+    }
+}
+
+fn an_error_code_the_site_received(observed: &ErrandOutcome) -> Option<&str> {
+    match what_the_site_received(observed) {
+        Received::Code("OK" | "SAVE_OK") => None,
+        Received::Code(code) => Some(code),
+        _ => None,
+    }
+}
+
+fn what_came_back(observed: &ErrandOutcome, completion: &Completion) -> Verdict {
     match observed.signature.as_deref().or(observed.data.as_deref()) {
-        Some(result) => the_contents_of(result, contents),
+        Some(result) => the_contents_of(result, completion),
         None => Verdict::unobservable_as(observed),
     }
 }
 
-fn the_contents_of(result: &str, contents: &Contents) -> Verdict {
+fn the_contents_of(result: &str, contents: &Completion) -> Verdict {
     const COMPLETED: &str = "el trámite se completó";
-    if *contents == Contents::default() {
+    if !contents.declares_what_comes_back() {
         return Verdict::compliant(COMPLETED);
     }
     let Some(bytes) = decoded(result) else {
@@ -466,40 +451,6 @@ fn unanswered(observed: &ErrandOutcome) -> Verdict {
         }
         Received::AResult => Verdict::noncompliant("un resultado donde no debía responder nadie"),
     }
-}
-
-/// La respuesta esperada deja decidir al cable; un «no» inesperado pesa si el trámite llegó.
-fn by_the_person(
-    person: &Person,
-    answer: Answer,
-    on_the_wire: Option<Verdict>,
-    observed: &ErrandOutcome,
-) -> CheckOutcome {
-    let said_yes = match answer {
-        Answer::Unanswered => return CheckOutcome::StillPending,
-        Answer::Yes => true,
-        Answer::No => false,
-    };
-    let phrase = if said_yes { &person.yes } else { &person.no };
-    let as_expected = said_yes == (person.yes_means == Meaning::Compliant);
-    let verdict = if as_expected {
-        match on_the_wire {
-            Some(verdict) if verdict.outcome != Outcome::Compliant => verdict,
-            _ => Verdict::compliant(phrase),
-        }
-    } else if said_yes {
-        Verdict::noncompliant(phrase)
-    } else {
-        let this_far = on_the_wire.unwrap_or_else(|| completed(observed, &Contents::default()));
-        let a_cancellation_arrived =
-            observed.error_type.as_deref() == Some(THE_CANCELLED_OPERATION_EXCEPTION);
-        if this_far.outcome == Outcome::NotObservable && !a_cancellation_arrived {
-            this_far
-        } else {
-            Verdict::noncompliant(phrase)
-        }
-    };
-    verdict.into()
 }
 
 #[cfg(test)]
@@ -572,7 +523,6 @@ mod tests {
             ..observed()
         }
     }
-
     const CRASH: &str = THE_DRIVER_CRASH;
     const TIMEOUT: &str = THE_EXHAUSTED_PATIENCE;
     const NOBODY: &str = APPLICATION_NOT_FOUND_EXCEPTION;
@@ -582,225 +532,197 @@ mod tests {
         0x06, 0x0B, 0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x09, 0x10, 0x02, 0x0E,
     ];
 
-    const DIALOGUE: &str = "question = \"¿se pidió? [s/n]\"\n\
-         person = { yes = \"se pidió\", no = \"no se pidió\", yes_means = \"conforme\" }";
-    const UNWANTED: &str = "question = \"¿se pidió? [s/n]\"\n\
-         person = { yes = \"se pidió\", no = \"no se pidió\", yes_means = \"no-conforme\" }";
-
-    enum Expected {
-        Resolved(Outcome, Option<&'static str>),
-        Pending,
-    }
-
-    use Expected::{Pending, Resolved};
     use Outcome::{Compliant as C, Noncompliant as NC, NotObservable as NO};
 
     struct Case {
         name: &'static str,
         declares: String,
         observed: ErrandOutcome,
-        answer: Answer,
-        expected: Expected,
+        expected: (Outcome, Option<&'static str>),
     }
 
     fn case(
         name: &'static str,
         declares: impl Into<String>,
         observed: ErrandOutcome,
-        answer: Answer,
-        expected: Expected,
+        expected: (Outcome, Option<&'static str>),
     ) -> Case {
         Case {
             name,
             declares: declares.into(),
             observed,
-            answer,
             expected,
         }
     }
 
-    fn with_dialogue(wire: &str) -> String {
-        format!("{wire}\n{DIALOGUE}")
-    }
-
-    fn with_unwanted(wire: &str) -> String {
-        format!("{wire}\n{UNWANTED}")
-    }
-
     fn the_table() -> Vec<Case> {
-        use Answer::{No, Unanswered as Silent, Yes};
         let mut pdf = b"%PDF-1.7 ".to_vec();
         pdf.extend_from_slice(&TIMESTAMP_DER);
         vec![
             case(
                 "the expected saf code is compliant",
-                "saf = \"SAF_06\"",
+                "expects.code = \"SAF_06\"",
                 with_code("SAF_06"),
-                Silent,
-                Resolved(C, Some("SAF_06")),
+                (C, Some("SAF_06")),
             ),
             case(
                 "another saf code says which was expected",
-                "saf = \"SAF_06\"",
+                "expects.code = \"SAF_06\"",
                 with_code("SAF_03"),
-                Silent,
-                Resolved(NC, Some("SAF_03 donde el protocolo exige SAF_06")),
+                (NC, Some("SAF_03 donde el protocolo exige SAF_06")),
             ),
             case(
                 "a result where a saf was due is noncompliant",
-                "saf = \"SAF_06\"",
+                "expects.code = \"SAF_06\"",
                 with_signature(b"firma"),
-                Silent,
-                Resolved(NC, Some("un resultado donde el protocolo exige SAF_06")),
+                (NC, Some("un resultado donde el protocolo exige SAF_06")),
             ),
             case(
                 "an uncoded error where a saf was due is noncompliant",
-                "saf = \"SAF_06\"",
+                "expects.code = \"SAF_06\"",
                 with_error("java.lang.Exception"),
-                Silent,
-                Resolved(
+                (
                     NC,
                     Some("java.lang.Exception donde el protocolo exige SAF_06"),
                 ),
             ),
             case(
                 "nobody answering where a saf was due is noncompliant",
-                "saf = \"SAF_47\"",
+                "expects.code = \"SAF_47\"",
                 with_error(NOBODY),
-                Silent,
-                Resolved(NC, Some("nadie respondió donde el protocolo exige SAF_47")),
+                (NC, Some("nadie respondió donde el protocolo exige SAF_47")),
             ),
             case(
                 "a crashed driver is not observable",
-                "saf = \"SAF_47\"",
+                "expects.code = \"SAF_47\"",
                 with_error(CRASH),
-                Silent,
-                Resolved(NO, Some(CRASH)),
+                (NO, Some(CRASH)),
             ),
             case(
                 "an exhausted patience is not observable",
-                "saf = \"SAF_06\"",
+                "expects.code = \"SAF_06\"",
                 with_error(TIMEOUT),
-                Silent,
-                Resolved(NO, Some(TIMEOUT)),
+                (NO, Some(TIMEOUT)),
             ),
             case(
                 "a client that never launched is not observable",
-                "saf = \"SAF_06\"",
+                "expects.code = \"SAF_06\"",
                 unlaunched(),
-                Silent,
-                Resolved(NO, Some("el cliente no llegó a arrancar")),
+                (NO, Some("el cliente no llegó a arrancar")),
             ),
             case(
                 "an errand that brought nothing is not observable",
-                "saf = \"SAF_06\"",
+                "expects.code = \"SAF_06\"",
                 observed(),
-                Silent,
-                Resolved(NO, None),
+                (NO, None),
             ),
             case(
                 "any saf code is admitted when any is expected",
-                "saf = \"SAF_*\"",
+                "expects.code = \"SAF_*\"",
                 with_code("SAF_09"),
-                Silent,
-                Resolved(C, Some("SAF_09")),
+                (C, Some("SAF_09")),
             ),
             case(
                 "a signature where any saf was due is noncompliant",
-                "saf = \"SAF_*\"",
+                "expects.code = \"SAF_*\"",
                 with_signature(b"firma"),
-                Silent,
-                Resolved(
+                (
                     NC,
                     Some("un resultado donde el protocolo exige un código SAF"),
                 ),
             ),
             case(
                 "a cancellation the site received as such is compliant",
-                "saf = \"CANCEL\"",
+                "expects.code = \"CANCEL\"",
                 with_error(CANCELLED),
-                Silent,
-                Resolved(C, Some("CANCEL")),
+                (C, Some("CANCEL")),
             ),
             case(
                 "a signature where a cancellation was due is noncompliant",
-                "saf = \"CANCEL\"",
+                "expects.code = \"CANCEL\"",
                 with_signature(b"firma"),
-                Silent,
-                Resolved(NC, Some("un resultado donde el protocolo exige CANCEL")),
+                (NC, Some("un resultado donde el protocolo exige CANCEL")),
             ),
             case(
                 "an exhausted memory is recognised",
-                "saf = \"MEMORY_ERROR\"",
+                "expects.code = \"MEMORY_ERROR\"",
                 with_error("es.gob.afirma.core.OutOfMemoryError"),
-                Silent,
-                Resolved(C, Some("MEMORY_ERROR")),
+                (C, Some("MEMORY_ERROR")),
             ),
             case(
                 "a save confirmation is recognised",
-                "saf = \"SAVE_OK\"",
+                "expects.code = \"SAVE_OK\"",
                 with_data("SAVE_OK"),
-                Silent,
-                Resolved(C, Some("SAVE_OK")),
+                (C, Some("SAVE_OK")),
             ),
             case(
                 "ok where save_ok was due is noncompliant",
-                "saf = \"SAVE_OK\"",
+                "expects.code = \"SAVE_OK\"",
                 with_data("OK"),
-                Silent,
-                Resolved(NC, Some("OK donde el protocolo exige SAVE_OK")),
+                (NC, Some("OK donde el protocolo exige SAVE_OK")),
             ),
             case(
                 "a completed errand is compliant",
-                "completes = {}",
+                "expects.completes = {}",
                 with_data("MIIC"),
-                Silent,
-                Resolved(C, Some("el trámite se completó")),
+                (C, Some("el trámite se completó")),
             ),
             case(
                 "a rejected valid request is never painted green",
-                "completes = {}",
+                "expects.completes = {}",
                 with_code("SAF_03"),
-                Silent,
-                Resolved(
+                (
                     NC,
                     Some("SAF_03 donde el protocolo exige que el trámite se complete"),
                 ),
             ),
             case(
-                "a completion that brought nothing is not observable",
-                "completes = {}",
+                "a cancellation where a completion was due is noncompliant",
+                "expects.completes = {}",
                 with_error(CANCELLED),
-                Silent,
-                Resolved(NO, Some(CANCELLED)),
+                (
+                    NC,
+                    Some("CANCEL donde el protocolo exige que el trámite se complete"),
+                ),
+            ),
+            case(
+                "a memory error where a completion was due is noncompliant",
+                "expects.completes = {}",
+                with_error(THE_OUT_OF_MEMORY_ERROR),
+                (
+                    NC,
+                    Some("MEMORY_ERROR donde el protocolo exige que el trámite se complete"),
+                ),
+            ),
+            case(
+                "a completion that brought nothing is not observable",
+                "expects.completes = {}",
+                observed(),
+                (NO, None),
             ),
             case(
                 "a result that starts as declared is compliant",
-                "completes = { starts_with = \"%PDF\" }",
+                "expects.completes = { starts_with = \"%PDF\" }",
                 with_signature(&pdf),
-                Silent,
-                Resolved(C, Some("el trámite se completó")),
+                (C, Some("el trámite se completó")),
             ),
             case(
                 "a result that starts otherwise is noncompliant",
-                "completes = { starts_with = \"%PDF\" }",
+                "expects.completes = { starts_with = \"%PDF\" }",
                 with_signature(b"PK\x03\x04"),
-                Silent,
-                Resolved(NC, Some("lo que volvió no empieza por «%PDF»")),
+                (NC, Some("lo que volvió no empieza por «%PDF»")),
             ),
             case(
                 "a result carrying the declared oid is compliant",
-                format!("completes = {{ contains_oid = \"{TIMESTAMP_OID}\" }}"),
+                format!("expects.completes = {{ contains_oid = \"{TIMESTAMP_OID}\" }}"),
                 with_signature(&pdf),
-                Silent,
-                Resolved(C, Some("el trámite se completó")),
+                (C, Some("el trámite se completó")),
             ),
             case(
                 "a result without the declared oid is noncompliant",
-                format!("completes = {{ contains_oid = \"{TIMESTAMP_OID}\" }}"),
+                format!("expects.completes = {{ contains_oid = \"{TIMESTAMP_OID}\" }}"),
                 with_signature(b"CMS sin sello"),
-                Silent,
-                Resolved(
+                (
                     NC,
                     Some("lo que volvió no lleva el OID 1.2.840.113549.1.9.16.2.14"),
                 ),
@@ -808,255 +730,140 @@ mod tests {
             case(
                 "a result carrying the declared bytes is compliant",
                 format!(
-                    "completes = {{ contains_bytes = \"{}\" }}",
+                    "expects.completes = {{ contains_bytes = \"{}\" }}",
                     STANDARD.encode(b"reto")
                 ),
                 with_signature(b"antes reto despues"),
-                Silent,
-                Resolved(C, Some("el trámite se completó")),
+                (C, Some("el trámite se completó")),
             ),
             case(
                 "a result without the declared bytes is noncompliant",
                 format!(
-                    "completes = {{ contains_bytes = \"{}\" }}",
+                    "expects.completes = {{ contains_bytes = \"{}\" }}",
                     STANDARD.encode(b"reto")
                 ),
                 with_signature(b"otra cosa"),
-                Silent,
-                Resolved(NC, Some("lo que volvió no contiene los bytes declarados")),
+                (NC, Some("lo que volvió no contiene los bytes declarados")),
             ),
             case(
                 "a result as long as the key is compliant",
-                "completes = { byte_length = 4 }",
+                "expects.completes = { byte_length = 4 }",
                 with_signature(b"1234"),
-                Silent,
-                Resolved(C, Some("el trámite se completó")),
+                (C, Some("el trámite se completó")),
             ),
             case(
                 "a result of another length is noncompliant",
-                "completes = { byte_length = 256 }",
+                "expects.completes = { byte_length = 256 }",
                 with_signature(b"1234"),
-                Silent,
-                Resolved(NC, Some("lo que volvió mide 4 bytes y no 256")),
+                (NC, Some("lo que volvió mide 4 bytes y no 256")),
             ),
             case(
                 "a result that is not base64 fails its byte checks",
-                "completes = { byte_length = 4 }",
+                "expects.completes = { byte_length = 4 }",
                 with_data("no es base64: %%%"),
-                Silent,
-                Resolved(NC, Some("lo que volvió no es Base64")),
+                (NC, Some("lo que volvió no es Base64")),
             ),
             case(
                 "the expected condition is the outcome",
-                "condition = \"a-certificate-alone\"",
+                "expects.completes.conditions = [\"a-certificate-alone\"]",
                 with_condition("a-certificate-alone", NC),
-                Silent,
-                Resolved(NC, Some("lo que midió la sede")),
+                (NC, Some("lo que midió la sede")),
             ),
             case(
                 "a condition nobody expects does not judge",
-                "condition = \"a-certificate-alone\"",
+                "expects.completes.conditions = [\"a-certificate-alone\"]",
                 with_condition("another", C),
-                Silent,
-                Resolved(NO, Some("la sede no emitió «a-certificate-alone»")),
+                (NO, Some("la sede no emitió «a-certificate-alone»")),
             ),
             case(
                 "every condition of a list holding is compliant",
-                "condition = [\"a-certificate-alone\", \"another\"]",
+                "expects.completes.conditions = [\"a-certificate-alone\", \"another\"]",
                 with_conditions(&[("a-certificate-alone", C), ("another", C)]),
-                Silent,
-                Resolved(C, Some("lo que midió la sede; lo que midió la sede")),
+                (C, Some("lo que midió la sede; lo que midió la sede")),
             ),
             case(
                 "one condition of a list failing is noncompliant",
-                "condition = [\"a-certificate-alone\", \"another\"]",
+                "expects.completes.conditions = [\"a-certificate-alone\", \"another\"]",
                 with_conditions(&[("a-certificate-alone", C), ("another", NC)]),
-                Silent,
-                Resolved(NC, Some("lo que midió la sede")),
+                (NC, Some("lo que midió la sede")),
             ),
             case(
                 "a condition of a list left unsent is not observable",
-                "condition = [\"a-certificate-alone\", \"another\"]",
+                "expects.completes.conditions = [\"a-certificate-alone\", \"another\"]",
                 with_condition("a-certificate-alone", C),
-                Silent,
-                Resolved(NO, Some("la sede no emitió «another»")),
+                (NO, Some("la sede no emitió «another»")),
             ),
             case(
                 "a failing condition outweighs one left unsent",
-                "condition = [\"a-certificate-alone\", \"another\"]",
+                "expects.completes.conditions = [\"a-certificate-alone\", \"another\"]",
                 ErrandOutcome {
                     error_type: Some(TIMEOUT.to_owned()),
                     ..with_condition("another", NC)
                 },
-                Silent,
-                Resolved(NC, Some("lo que midió la sede")),
+                (NC, Some("lo que midió la sede")),
             ),
             case(
                 "an emitted condition is judged even without a launch",
-                "condition = \"no-channel-opens\"",
+                "expects.completes.conditions = [\"no-channel-opens\"]",
                 ErrandOutcome {
                     launched: false,
                     ..with_condition("no-channel-opens", C)
                 },
-                Silent,
-                Resolved(C, Some("lo que midió la sede")),
+                (C, Some("lo que midió la sede")),
             ),
             case(
-                "nobody answering where nobody should is compliant",
-                "no_answer = true",
-                with_error(NOBODY),
-                Silent,
-                Resolved(C, Some("nadie respondió")),
-            ),
-            case(
-                "an exhausted patience where nobody should answer is compliant",
-                "no_answer = true",
-                with_error(TIMEOUT),
-                Silent,
-                Resolved(C, Some("nadie respondió")),
-            ),
-            case(
-                "an answer where nobody should answer is noncompliant",
-                "no_answer = true",
-                with_code("SAF_06"),
-                Silent,
-                Resolved(NC, Some("SAF_06 donde no debía responder nadie")),
-            ),
-            case(
-                "a dialogue nobody answered stays pending",
-                DIALOGUE,
-                with_data("MIIC"),
-                Silent,
-                Pending,
-            ),
-            case(
-                "a dialogue that was seen is compliant",
-                DIALOGUE,
-                with_data("MIIC"),
-                Yes,
-                Resolved(C, Some("se pidió")),
-            ),
-            case(
-                "a dialogue that was seen is compliant even if nothing came back",
-                DIALOGUE,
-                with_error(CANCELLED),
-                Yes,
-                Resolved(C, Some("se pidió")),
-            ),
-            case(
-                "a dialogue unseen on an errand that came back is noncompliant",
-                DIALOGUE,
-                with_signature(b"firma"),
-                No,
-                Resolved(NC, Some("no se pidió")),
-            ),
-            case(
-                "a dialogue unseen on a cancelled errand is noncompliant",
-                DIALOGUE,
-                with_error(CANCELLED),
-                No,
-                Resolved(NC, Some("no se pidió")),
-            ),
-            case(
-                "a dialogue whose client never launched is not observable before asking",
-                DIALOGUE,
-                unlaunched(),
-                Silent,
-                Resolved(NO, Some("el cliente no llegó a arrancar")),
-            ),
-            case(
-                "a crashed dialogue is not observable before asking",
-                DIALOGUE,
-                with_error(CRASH),
-                Silent,
-                Resolved(NO, Some(CRASH)),
-            ),
-            case(
-                "a seen dialogue lets the wire decide",
-                with_dialogue("saf = \"SAVE_OK\""),
-                with_data("SAVE_OK"),
-                Yes,
-                Resolved(C, Some("se pidió")),
-            ),
-            case(
-                "a seen dialogue with the wrong code is noncompliant",
-                with_dialogue("saf = \"SAVE_OK\""),
-                with_error("java.lang.Exception"),
-                Yes,
-                Resolved(
+                "a saf where the conditions of a completion were due is noncompliant",
+                "expects.completes.conditions = [\"a-certificate-alone\"]",
+                with_code("SAF_03"),
+                (
                     NC,
-                    Some("java.lang.Exception donde el protocolo exige SAVE_OK"),
+                    Some("SAF_03 donde el protocolo exige que el trámite se complete"),
                 ),
             ),
             case(
-                "a seen dialogue with an unfinished errand is not observable",
-                with_dialogue("completes = {}"),
-                observed(),
-                Yes,
-                Resolved(NO, None),
-            ),
-            case(
-                "a seen dialogue takes the condition the site measured",
-                with_dialogue("condition = \"every-file-apart\""),
-                with_condition("every-file-apart", NC),
-                Yes,
-                Resolved(NC, Some("lo que midió la sede")),
-            ),
-            case(
-                "an unseen dialogue with its condition is noncompliant",
-                with_dialogue("condition = \"every-file-apart\""),
-                with_condition("every-file-apart", C),
-                No,
-                Resolved(NC, Some("no se pidió")),
-            ),
-            case(
-                "an unwanted dialogue that was seen is noncompliant",
-                with_unwanted("completes = {}"),
-                with_data("MIIC"),
-                Yes,
-                Resolved(NC, Some("se pidió")),
-            ),
-            case(
-                "an unwanted dialogue seen on an errand that never came back is noncompliant",
-                with_unwanted("completes = {}"),
+                "a cancellation where the conditions of a completion were due is noncompliant",
+                "expects.completes.conditions = [\"a-certificate-alone\"]",
                 with_error(CANCELLED),
-                Yes,
-                Resolved(NC, Some("se pidió")),
+                (
+                    NC,
+                    Some("CANCEL donde el protocolo exige que el trámite se complete"),
+                ),
             ),
             case(
-                "an unwanted dialogue not seen lets the wire decide",
-                with_unwanted("completes = {}"),
-                with_data("MIIC"),
-                No,
-                Resolved(C, Some("no se pidió")),
+                "an emitted condition decides over a saf that came with it",
+                "expects.completes.conditions = [\"the-refused-upload-attempted\"]",
+                ErrandOutcome {
+                    error_code: Some("SAF_11".to_owned()),
+                    ..with_condition("the-refused-upload-attempted", C)
+                },
+                (C, Some("lo que midió la sede")),
             ),
             case(
-                "an unwanted dialogue not seen on an errand that never came back is not observable",
-                with_unwanted("completes = {}"),
-                observed(),
-                No,
-                Resolved(NO, None),
+                "a completion with conditions also weighs what came back",
+                "expects.completes = { starts_with = \"%PDF\", conditions = [\"another\"] }",
+                ErrandOutcome {
+                    signature: Some(STANDARD.encode(b"PK\x03\x04")),
+                    ..with_condition("another", C)
+                },
+                (NC, Some("lo que volvió no empieza por «%PDF»")),
             ),
             case(
-                "a silence the person was told about is compliant",
-                with_dialogue("no_answer = true"),
+                "nobody answering where nobody should is compliant",
+                "expects = \"silence\"",
                 with_error(NOBODY),
-                Yes,
-                Resolved(C, Some("se pidió")),
+                (C, Some("nadie respondió")),
             ),
             case(
-                "a silence nobody was told about is noncompliant",
-                with_dialogue("no_answer = true"),
-                with_error(NOBODY),
-                No,
-                Resolved(NC, Some("no se pidió")),
+                "an exhausted patience where nobody should answer is compliant",
+                "expects = \"silence\"",
+                with_error(TIMEOUT),
+                (C, Some("nadie respondió")),
             ),
             case(
-                "a channel that opened after all is noncompliant whatever was said",
-                with_dialogue("no_answer = true"),
+                "an answer where nobody should answer is noncompliant",
+                "expects = \"silence\"",
                 with_code("SAF_06"),
-                Yes,
-                Resolved(NC, Some("SAF_06 donde no debía responder nadie")),
+                (NC, Some("SAF_06 donde no debía responder nadie")),
             ),
         ]
     }
@@ -1064,9 +871,8 @@ mod tests {
     fn a_check_declaring(declares: &str) -> crate::catalogue::Check {
         the_catalogue_in(&format!(
             "[[check]]\nid = \"an_id\"\nset = \"errores\"\nchapter = \"15\"\n\
-             citation = \"A.java:1\"\nstatement = \"Algo.\"\n\
-             drive = {{ mode = \"v4\", script = \"selectcert\" }}\nassistance = \"person\"\n\
-             {declares}\n"
+             citation = \"A.java:1\"\nstatement = \"Algo.\"\n\n\
+             [check.drive]\nmode = \"v4\"\nscript = \"selectcert\"\n{declares}\n"
         ))
         .unwrap_or_else(|complaint| panic!("{declares}: {complaint}"))
         .remove(0)
@@ -1078,27 +884,14 @@ mod tests {
             .into_iter()
             .filter_map(|case| {
                 let check = a_check_declaring(&case.declares);
-                let judged = judge(&case.observed, &check.expectation(), case.answer);
-                let agrees = match (&judged, &case.expected) {
-                    (CheckOutcome::StillPending, Pending) => true,
-                    (
-                        CheckOutcome::Resolved {
-                            outcome,
-                            observation,
-                        },
-                        Resolved(expected, said),
-                    ) => outcome == expected && observation.as_deref() == *said,
-                    _ => false,
-                };
+                let judged = judge(&case.observed, &check.trial().unwrap().expects);
+                let (outcome, said) = case.expected;
+                let agrees = judged.outcome == outcome && judged.observation.as_deref() == said;
                 (!agrees).then(|| {
-                    let got = match judged {
-                        CheckOutcome::StillPending => "pendiente".to_owned(),
-                        CheckOutcome::Resolved {
-                            outcome,
-                            observation,
-                        } => format!("{outcome:?} {observation:?}"),
-                    };
-                    format!("{}: {got}", case.name)
+                    format!(
+                        "{}: {:?} {:?}",
+                        case.name, judged.outcome, judged.observation
+                    )
                 })
             })
             .collect();
@@ -1106,10 +899,14 @@ mod tests {
     }
 
     #[test]
-    fn an_answer_is_read_from_what_was_written() {
-        assert_eq!(Answer::read("Sí"), Answer::Yes);
-        assert_eq!(Answer::read("n"), Answer::No);
-        assert_eq!(Answer::read("  "), Answer::Unanswered);
+    fn two_expectations_are_the_same_whatever_the_order_of_their_conditions() {
+        let one = a_check_declaring("expects.completes.conditions = [\"a\", \"b\"]");
+        let other = a_check_declaring("expects.completes.conditions = [\"b\", \"a\"]");
+        let another = a_check_declaring("expects.completes.conditions = [\"a\"]");
+
+        let expects = |check: &crate::catalogue::Check| check.trial().unwrap().expects.clone();
+        assert!(expects(&one).is_the_same_as(&expects(&other)));
+        assert!(!expects(&one).is_the_same_as(&expects(&another)));
     }
 
     #[test]
@@ -1121,17 +918,19 @@ mod tests {
     #[test]
     fn a_word_outside_the_vocabulary_is_rejected_when_read() {
         for declares in [
-            "saf = \"SAF_6\"",
-            "saf = \"ERROR\"",
-            "completes = { contains_oid = \"uno.dos\" }",
-            "completes = { contains_bytes = \"%%%\" }",
-            "completes = { ends_with = \"%%EOF\" }",
-            "person = { yes = \"sí\", no = \"no\", yes_means = \"no-observable\" }",
+            "expects.code = \"SAF_6\"",
+            "expects.code = \"ERROR\"",
+            "expects.completes = { contains_oid = \"uno.dos\" }",
+            "expects.completes = { contains_bytes = \"%%%\" }",
+            "expects.completes = { ends_with = \"%%EOF\" }",
+            "expects = \"nothing\"",
+            "expects.condition = [\"a\"]",
         ] {
             assert!(
                 the_catalogue_in(&format!(
                     "[[check]]\nid = \"a\"\nset = \"errores\"\nchapter = \"1\"\n\
-                     citation = \"A\"\nstatement = \"B\"\n{declares}\n"
+                     citation = \"A\"\nstatement = \"B\"\n\n\
+                     [check.drive]\nmode = \"v4\"\nscript = \"selectcert\"\n{declares}\n"
                 ))
                 .is_err(),
                 "{declares}"

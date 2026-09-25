@@ -169,7 +169,8 @@ function Status({
   runningSince,
 }: Pick<CheckRowProps, "check" | "activity" | "runningSince">) {
   if (activity === "queued") return <span className="tag">en cola</span>;
-  if (activity === "asking") return <span className="tag tag-accent">esperando tu respuesta</span>;
+  if (activity === "waiting")
+    return <span className="tag tag-accent">esperando a que des paso</span>;
   if (activity === "running") {
     return (
       <span className="tag tag-accent">
@@ -200,8 +201,8 @@ function CheckDetail({
   const shownResult =
     activity === "running"
       ? "en curso"
-      : activity === "asking"
-        ? "esperando tu respuesta"
+      : activity === "waiting"
+        ? "esperando a que des paso"
         : activity === "queued"
           ? "en cola"
           : null;
@@ -222,7 +223,6 @@ function CheckDetail({
             {check.warning}
           </Field>
         )}
-        {check.question && <Field label="Te preguntaremos">{check.question}</Field>}
         {check.bug && (
           <Field label="Bug conocido">
             {bugLabel(check.bug)} · <code>{check.bug.id}</code> {check.bug.title}

@@ -10,6 +10,7 @@ import {
   emit,
   settle,
   settlingTheError,
+  unansweredMeansAsked,
 } from "../lib/events.mjs";
 import {
   aCertifiedPdf,
@@ -29,6 +30,7 @@ import { isABarePkcs1 } from "../lib/pkcs1.mjs";
 import { aPublishedScript } from "../lib/script.mjs";
 
 const THROUGH_BOTH_SERVLETS = "through-both-servlets";
+const EVERY_DOCUMENT_SIGNED_WITHOUT_A_DIALOGUE = "every-document-signed-without-a-dialogue";
 const THE_PRESIGNER_GETS_THE_CHAIN = "the-presigner-gets-the-batch-and-the-chain";
 const THE_POSTSIGNER_GETS_PK1 = "the-postsigner-gets-every-item-with-pk1";
 const THE_RESULT_AS_IT_CAME = "the-result-as-it-came";
@@ -627,11 +629,24 @@ function theLocalBatchOfASignatureScript(suboperation) {
 
 /** El lote local de un PDF que pide `visibleSignature=want`, que el lote tiene que ignorar. */
 function theLocalBatchAskingForAVisibleSignatureScript() {
+  unansweredMeansAsked(EVERY_DOCUMENT_SIGNED_WITHOUT_A_DIALOGUE);
   aLocalBatch({
     stopOnError: false,
     items: [anItem("pdf", thePdfOfTheTest(), "PAdES", "visibleSignature=want")],
-    callbacks: theBatchCallbacks(),
+    callbacks: theBatchCallbacks(theLocalBatchWithoutADialogueConditions),
   });
+}
+
+/** Lo que mide el lote que pide firma visible al volver solo: el PDF tiene que haber salido firmado. */
+export function theLocalBatchWithoutADialogueConditions(result) {
+  const pdf = theLocalItems(result).get("pdf");
+  return [
+    aCondition(
+      EVERY_DOCUMENT_SIGNED_WITHOUT_A_DIALOGUE,
+      signedAs(pdf, "pdf"),
+      `el lote volvió sin diálogo y el PDF salió ${pdf?.result ?? "ausente"}`,
+    ),
+  ];
 }
 
 /** El OID `ecdsa-with-SHA256` (1.2.840.10045.4.3.2) con su etiqueta y su longitud DER. */
@@ -935,7 +950,9 @@ export const BATCH_SCRIPTS = {
   batchlocalcountersign: aPublishedScript(() => theLocalBatchOfASignatureScript("countersign"), {
     conditions: [THE_SUBOPERATION_DONE],
   }),
-  batchlocalvisible: aPublishedScript(theLocalBatchAskingForAVisibleSignatureScript),
+  batchlocalvisible: aPublishedScript(theLocalBatchAskingForAVisibleSignatureScript, {
+    conditions: [EVERY_DOCUMENT_SIGNED_WITHOUT_A_DIALOGUE],
+  }),
   batchlocalecdsa: aPublishedScript(theLocalBatchWithAnEllipticKeyScript, {
     conditions: [THE_ALGORITHM_OF_THE_KEY],
   }),

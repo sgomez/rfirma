@@ -167,7 +167,7 @@ dirigido al defecto.
 
 ### BUG-10: Silenciamiento de excepciones en `ServiceInvocationManager.startService` y retorno erróneo de `OK` tras fallo de inicialización del socket
 
-* **Comprobación del catálogo:** `the_service_channel_reports_a_bind_failure_instead_of_claiming_success`.
+* **No observable:** con los puertos del canal ocupados la sede no conecta con ninguno, devuelva el lanzador `OK` o no: ese `OK` no le llega, y avisar o no a quien está delante es cosa de la interfaz, no del protocolo.
 * **Estado en `master`:** **Corregido.** `ServiceInvocationManager.startService` declara ya `throws SllKeyStoreException, IOException` y `ProtocolInvocationLauncher.java:323-332` las captura por separado: el `OK_RESPONSE` solo se alcanza si no hubo excepción.
 * **Código fuente:** `afirma-simple` · `es.gob.afirma.standalone.protocol.ServiceInvocationManager.java:148-168`, `ProtocolInvocationLauncher.java:279-291`.
 * **Origen de auditoría:** Anteriormente AUD-26 ([01-vision-general.md](01-vision-general.md), [04-transporte-socket.md](04-transporte-socket.md)).
@@ -288,6 +288,7 @@ dirigido al defecto.
 
 ### BUG-16: Incompatibilidad de `localBatchProcess` con lotes XML provoca fallo tardío con `SAF_03` tras seleccionar certificado y PIN
 
+* **No observable:** el `SAF_03` llega a la sede igual, antes o después de pedir certificado; cuándo se pregunta a quien está delante es cosa de la interfaz, no del protocolo. El rechazo lo mide `a_local_xml_batch_is_refused_with_saf_03`.
 * **Estado en `master`:** **Sigue presente.** `UrlParametersForBatch.java:251` sigue saltándose la validación de las URLs cuando `localBatchProcess=true`, sin exigir en ningún punto `jsonbatch=true`.
 * **Código fuente:** `afirma-core` · `es.gob.afirma.core.misc.protocol.UrlParametersForBatch.java:236-260`; `afirma-simple` · `es.gob.afirma.standalone.protocol.ProtocolInvocationLauncherBatch.java:341-346, 400-422`; `afirma-crypto-batch-client` · `es.gob.afirma.signers.batch.client.BatchSigner.java:223-228`.
 * **Origen de auditoría:** Anteriormente AUD-41 ([08-operacion-batch.md](08-operacion-batch.md)).
@@ -652,7 +653,7 @@ dirigido al defecto.
 
 ### BUG-33: El canal WebSocket no pasa al siguiente puerto candidato cuando el primero está ocupado
 
-* **Comprobaciones del catálogo:** `v4_ports_negotiation`, `a_websocket_that_cannot_bind_its_ports_shows_saf_45`.
+* **Comprobación del catálogo:** `v4_ports_negotiation`.
 * **Estado en `master`:** **Sigue presente.** `AfirmaWebSocketServerManager.java:91` sigue dando por abierto el puerto en cuanto `instance.start()` vuelve, sin esperar al resultado del `bind`.
 * **Código fuente:** `afirma-simple` · `es.gob.afirma.standalone.protocol.AfirmaWebSocketServerManager.java:63-93`.
 * **Descripción:** El bucle de apertura prueba los puertos de `ports=` en orden y pasa al siguiente solo si la creación o el arranque del servidor lanzan una excepción. `WebSocketServer.start()` solo arranca el hilo del servidor; el `bind` ocurre dentro de ese hilo (`WebSocketServer.run`), y un puerto ocupado llega a `onError` como `BindException` cuando el bucle ya ha terminado con el primer candidato.

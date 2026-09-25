@@ -10,6 +10,8 @@ const EVERY_FILE_APART = "every-file-apart";
 const THE_FILENAME_IN_A_THIRD_COMPONENT = "the-filename-in-a-third-component";
 /** La mide el arnés de la suite, que lee el fichero guardado en el perfil aislado. */
 const THE_DECODED_BYTES_ON_DISK = "the-decoded-bytes-on-disk";
+/** La mide el arnés de la suite, que relee la firma guardada donde la propone la petición. */
+const THE_RETURNED_SIGNATURE_ON_DISK = "the-returned-signature-on-disk";
 
 /** Emite si la firma del reto verifica y cierra el trámite con ella. */
 function settlingTheVerifiedSignature(signature, certificate) {
@@ -291,14 +293,18 @@ export const FILE_SCRIPTS = {
   savewithanillegalfilename: aPublishedScript(theSaveWithAnIllegalFilenameScript),
   load: aPublishedScript(theLoadScript, { conditions: [THE_NAME_NEXT_TO_THE_CONTENT] }),
   multiload: aPublishedScript(theMultiLoadScript, { conditions: [EVERY_FILE_APART] }),
-  signandsave: aPublishedScript(theSignAndSaveScript, { conditions: [THE_SIGNATURE_VERIFIES] }),
+  signandsave: aPublishedScript(theSignAndSaveScript, {
+    conditions: [THE_SIGNATURE_VERIFIES, THE_RETURNED_SIGNATURE_ON_DISK],
+  }),
   signandsavecancelled: aPublishedScript(theSignAndSaveScript, {
     conditions: [THE_SIGNATURE_VERIFIES],
   }),
   signandsavewithoutaverb: aPublishedScript(theSignAndSaveWithoutAVerbScript),
   signandsavewithoutdata: aPublishedScript(theSignAndSaveWithoutDataScript),
   signandsavewithanillegalfilename: aPublishedScript(theSignAndSaveWithAnIllegalFilenameScript),
-  signandsavewithsavingparameters: aPublishedScript(theSignAndSaveWithSavingParametersScript),
+  signandsavewithsavingparameters: aPublishedScript(theSignAndSaveWithSavingParametersScript, {
+    conditions: [THE_RETURNED_SIGNATURE_ON_DISK],
+  }),
   signandsavewithecdsa: aPublishedScript(theSignAndSaveWithAnEcdsaAlgorithmScript, {
     conditions: [THE_SIGNATURE_VERIFIES],
   }),

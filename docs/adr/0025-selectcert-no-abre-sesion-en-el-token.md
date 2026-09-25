@@ -30,10 +30,13 @@ emparejada, igual que en NSS.
 - Los almacenes NSS y los tokens con sesión abierta no cambian de
   comportamiento por el filtro de sesión: siguen filtrando por clave privada
   emparejada, que ahí sí es legible.
-- Frente al cliente publicado, rFirma sale **no conforme** en la exigencia
-  `selectcert_over_a_token_asks_for_its_pin` de la suite de
-  conformidad. La suite no sabe qué cliente mide, así que no lo explica: es
-  una desviación deliberada, y su porqué es este ADR.
+- La suite de conformidad no mide si ni cuándo se pide el PIN: es interfaz,
+  no protocolo, así que ninguna de sus comprobaciones sale no conforme por
+  este ADR. Lo que sí viaja es qué certificado vuelve: si la suite llega a
+  medir `checkPrivateKeys=true` —un certificado sin clave en el token, y la
+  exigencia de que vuelva uno con clave—, rFirma saldrá **no conforme** por
+  la primera consecuencia, y esa desviación deliberada tendrá su porqué en
+  este ADR.
 
 ## Considered Options
 

@@ -54,7 +54,7 @@ pub(crate) struct Discrepancy {
 pub(crate) fn validate(report: &Report, catalogue: &[Check], reference: &Reference) -> Validation {
     let discrepancies: Vec<Discrepancy> = catalogue
         .iter()
-        .filter(|check| check.unmeasurable.is_none())
+        .filter(|check| check.unmeasurable().is_none())
         .filter_map(|check| {
             let known = reference.known.iter().find(|known| known.id == check.id);
             let expected = known.map_or(Outcome::Compliant, |known| known.outcome);
@@ -131,7 +131,11 @@ set = "saludo"
 chapter = "14"
 citation = "A.java:1"
 statement = "Saluda."
-drive = { mode = "v4", script = "protocol-v4" }
+
+[check.drive]
+mode = "v4"
+script = "protocol-v4"
+expects.completes = {}
 
 [[check]]
 id = "a_save"
@@ -139,7 +143,11 @@ set = "operaciones"
 chapter = "16"
 citation = "C.java:3"
 statement = "Guarda."
-drive = { mode = "v4", script = "save" }
+
+[check.drive]
+mode = "v4"
+script = "save"
+expects.completes = {}
 
 [[check]]
 id = "an_unmeasurable_one"

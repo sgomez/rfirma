@@ -8,11 +8,13 @@ statement = """
 El verbo sign se reconoce como primera firma y la operación se despacha con él: la firma que vuelve
 tiene un solo firmante y ninguna contrafirma.
 """
-drive = { mode = "v4", script = "signcades" }
-assistance = "click"
-condition = "a-single-signer"
+
+[check.drive]
+mode = "v4"
+script = "signcades"
 greeting = true
-warning = "Va a aparecer el diálogo de certificado."
+act.consent = "Va a aparecer el diálogo de certificado."
+expects.completes.conditions = ["a-single-signer"]
 
 [[check]]
 id = "cosign_is_dispatched_over_a_previous_signature"
@@ -23,10 +25,12 @@ El verbo cosign se reconoce como cofirma y cofirma la firma previa que viaja en 
 ranura de datos que el protocolo tiene para la multifirma: la firma que vuelve lleva el firmante
 previo y el nuevo en paralelo.
 """
-drive = { mode = "v4", script = "cosigncades" }
-assistance = "click"
-condition = "two-parallel-signers"
-warning = "Va a aparecer el diálogo de certificado."
+
+[check.drive]
+mode = "v4"
+script = "cosigncades"
+act.consent = "Va a aparecer el diálogo de certificado."
+expects.completes.conditions = ["two-parallel-signers"]
 
 [[check]]
 id = "countersign_is_dispatched_over_a_previous_signature"
@@ -36,10 +40,12 @@ statement = """
 El verbo countersign se reconoce como contrafirma y contrafirma la firma previa: su único firmante
 vuelve con una contrafirma.
 """
-drive = { mode = "v4", script = "countersigncades" }
-assistance = "click"
-condition = "the-signer-countersigned"
-warning = "Va a aparecer el diálogo de certificado."
+
+[check.drive]
+mode = "v4"
+script = "countersigncades"
+act.consent = "Va a aparecer el diálogo de certificado."
+expects.completes.conditions = ["the-signer-countersigned"]
 
 [[check]]
 id = "countersign_with_target_tree_countersigns_every_node"
@@ -49,10 +55,12 @@ statement = """
 Con target=tree, la contrafirma alcanza a todos los nodos del árbol de firmantes: sobre un
 firmante ya contrafirmado, contrafirma al firmante y a su contrafirma.
 """
-drive = { mode = "v4", script = "countersigncadestree" }
-assistance = "click"
-condition = "every-node-countersigned"
-warning = "Va a aparecer el diálogo de certificado."
+
+[check.drive]
+mode = "v4"
+script = "countersigncadestree"
+act.consent = "Va a aparecer el diálogo de certificado."
+expects.completes.conditions = ["every-node-countersigned"]
 
 [[check]]
 id = "countersign_with_another_target_countersigns_only_the_leaves"
@@ -62,10 +70,12 @@ statement = """
 Un target que no es tree se resuelve como las hojas: sobre un firmante ya contrafirmado, sólo la
 contrafirma, que es la hoja, recibe una contrafirma nueva.
 """
-drive = { mode = "v4", script = "countersigncadesanothertarget" }
-assistance = "click"
-condition = "only-the-leaves-countersigned"
-warning = "Va a aparecer el diálogo de certificado."
+
+[check.drive]
+mode = "v4"
+script = "countersigncadesanothertarget"
+act.consent = "Va a aparecer el diálogo de certificado."
+expects.completes.conditions = ["only-the-leaves-countersigned"]
 
 [[check]]
 id = "the_signature_format_is_mandatory"
@@ -75,10 +85,12 @@ statement = """
 El parámetro format es obligatorio en la invocación directa: una petición de firma que no lo trae
 se rechaza con SAF_03 en vez de elegir un formato por su cuenta.
 """
-drive = { mode = "v4", script = "signwithoutaformat" }
-assistance = "click"
-saf = "SAF_03"
-warning = "AutoFirma enseña un diálogo de error antes de contestar el rechazo: ciérralo para que llegue la respuesta."
+
+[check.drive]
+mode = "v4"
+script = "signwithoutaformat"
+act.consent = "AutoFirma enseña un diálogo de error antes de contestar el rechazo: ciérralo para que llegue la respuesta."
+expects.code = "SAF_03"
 
 [[check]]
 id = "an_unsupported_format_is_rejected_with_saf_06"
@@ -88,10 +100,12 @@ statement = """
 Un format que no está en el catálogo de la factoría y no es auto se rechaza con SAF_06 antes de
 pedir certificado alguno.
 """
-drive = { mode = "v4", script = "signwithanunknownformat" }
-assistance = "none"
+
+[check.drive]
+mode = "v4"
+script = "signwithanunknownformat"
 greeting = true
-saf = "SAF_06"
+expects.code = "SAF_06"
 
 [[check]]
 id = "format_auto_resolves_a_binary_first_signature"
@@ -101,10 +115,12 @@ statement = """
 Con format=auto, una primera firma sobre datos binarios resuelve el formato analizando el contenido
 y firma en CAdES, en vez de exigir que la sede lo nombre.
 """
-drive = { mode = "v4", script = "signauto" }
-assistance = "click"
-condition = "a-cades-signature"
-warning = "Va a aparecer el diálogo de certificado."
+
+[check.drive]
+mode = "v4"
+script = "signauto"
+act.consent = "Va a aparecer el diálogo de certificado."
+expects.completes.conditions = ["a-cades-signature"]
 
 [[check]]
 id = "format_auto_resolves_an_xml_first_signature"
@@ -114,10 +130,12 @@ statement = """
 Con format=auto, una primera firma sobre un XML que no es factura se resuelve por el análisis del
 contenido y firma en XAdES sin pedir formato.
 """
-drive = { mode = "v4", script = "signxadesauto" }
-assistance = "click"
-condition = "a-xades-signature"
-warning = "Va a aparecer el diálogo de certificado."
+
+[check.drive]
+mode = "v4"
+script = "signxadesauto"
+act.consent = "Va a aparecer el diálogo de certificado."
+expects.completes.conditions = ["a-xades-signature"]
 
 [[check]]
 id = "format_auto_identifies_the_previous_signature_of_a_multisignature"
@@ -128,10 +146,12 @@ Con format=auto, una multifirma identifica el formato recorriendo los firmadores
 reconocimiento sobre la firma previa, no analizando el tipo del documento: la cofirma de una CAdES
 vuelve con los dos firmantes en paralelo.
 """
-drive = { mode = "v4", script = "cosignauto" }
-assistance = "click"
-condition = "two-parallel-signers"
-warning = "Va a aparecer el diálogo de certificado."
+
+[check.drive]
+mode = "v4"
+script = "cosignauto"
+act.consent = "Va a aparecer el diálogo de certificado."
+expects.completes.conditions = ["two-parallel-signers"]
 
 [[check]]
 id = "format_auto_over_data_that_is_no_signature_is_rejected_with_saf_17"
@@ -142,24 +162,28 @@ statement = """
 Una multifirma con format=auto sobre datos que no son una firma se aborta con SAF_17, en vez de
 firmarlos como si fuesen una primera firma.
 """
-drive = { mode = "v4", script = "cosignautowithoutasignature" }
-assistance = "none"
-saf = "SAF_17"
+
+[check.drive]
+mode = "v4"
+script = "cosignautowithoutasignature"
+expects.code = "SAF_17"
 
 [[check]]
 id = "format_auto_cosigns_a_cms_signature_as_cms"
 set = "firma"
 citation = "AOSignerFactory.java:92-118; AOCAdESSigner.java:384-391; CAdESValidator.java:117-125"
+deprecated = true
 statement = """
 CAdES precede a CMS/PKCS#7 en la matriz de reconocimiento de auto, pero solo reconoce firmas cuyos
 firmantes llevan todos signingCertificate: una firma CMS sin él se identifica y se cofirma como
 CMS, y el firmante nuevo tampoco lo lleva.
 """
-drive = { mode = "v4", script = "cosignautooveracmssignature" }
-assistance = "click"
-condition = "cosigned-as-cms"
-deprecated = true
-warning = "Va a aparecer el diálogo de certificado."
+
+[check.drive]
+mode = "v4"
+script = "cosignautooveracmssignature"
+act.consent = "Va a aparecer el diálogo de certificado."
+expects.completes.conditions = ["cosigned-as-cms"]
 
 [[check]]
 id = "the_algorithm_catalogue_accepts_a_digest_without_a_key_type"
@@ -169,10 +193,12 @@ statement = """
 La lista blanca de algoritmos admite tanto los nombres con tipo de clave (SHA256withRSA) como los
 de sólo resumen (SHA256), y la firma con uno de estos últimos se completa.
 """
-drive = { mode = "v4", script = "signcadeswithadigestonlyalgorithm" }
-assistance = "click"
-completes = {}
-warning = "Va a aparecer el diálogo de certificado."
+
+[check.drive]
+mode = "v4"
+script = "signcadeswithadigestonlyalgorithm"
+act.consent = "Va a aparecer el diálogo de certificado."
+expects.completes = {}
 
 [[check]]
 id = "an_algorithm_outside_the_catalogue_is_rejected"
@@ -182,10 +208,12 @@ statement = """
 Un algorithm fuera de la lista blanca se rechaza con SAF_03, sin degradarlo en silencio a uno
 admitido.
 """
-drive = { mode = "v4", script = "signcadeswithanunsupportedalgorithm" }
-assistance = "click"
-saf = "SAF_03"
-warning = "AutoFirma enseña un diálogo de error antes de contestar el rechazo: ciérralo para que llegue la respuesta."
+
+[check.drive]
+mode = "v4"
+script = "signcadeswithanunsupportedalgorithm"
+act.consent = "AutoFirma enseña un diálogo de error antes de contestar el rechazo: ciérralo para que llegue la respuesta."
+expects.code = "SAF_03"
 
 [[check]]
 id = "the_algorithm_is_recomposed_with_the_key_of_the_certificate"
@@ -195,11 +223,13 @@ statement = """
 El algoritmo final se recompone con el tipo de clave del certificado elegido: pedir SHA256withRSA y
 elegir un certificado de curva elíptica firma con SHA256withECDSA en vez de fallar.
 """
-drive = { mode = "v4", script = "signcades" }
+
+[check.drive]
+mode = "v4"
+script = "signcades"
 store = "ec"
-assistance = "click"
-condition = "the-algorithm-of-the-key"
-warning = "Va a aparecer el diálogo de certificado, con el almacén de curva elíptica."
+act.consent = "Va a aparecer el diálogo de certificado, con el almacén de curva elíptica."
+expects.completes.conditions = ["the-algorithm-of-the-key"]
 
 [[check]]
 id = "the_signature_response_carries_the_certificate_and_the_signature_apart"
@@ -209,10 +239,12 @@ statement = """
 La respuesta de firma entrega el certificado del firmante y la firma como componentes separados, no
 como un único bloque que la sede tenga que despiezar.
 """
-drive = { mode = "v4", script = "signcades" }
-assistance = "click"
-condition = "certificate-and-signature-apart"
-warning = "Va a aparecer el diálogo de certificado."
+
+[check.drive]
+mode = "v4"
+script = "signcades"
+act.consent = "Va a aparecer el diálogo de certificado."
+expects.completes.conditions = ["certificate-and-signature-apart"]
 
 [[check]]
 id = "the_signature_response_adds_extradata_as_a_third_component"
@@ -222,11 +254,13 @@ statement = """
 Cuando la persona eligió el fichero en disco y la versión de protocolo es 3 o mayor, la respuesta
 añade un tercer componente con los metadatos en JSON; por debajo se queda en la pareja.
 """
-drive = { mode = "v4", script = "signwithoutdata" }
-assistance = "person"
+
+[check.drive]
+mode = "v4"
+script = "signwithoutdata"
 harness = "a_document_to_sign"
-condition = "the-filename-in-a-third-component"
-warning = "Se va a pedir primero el documento a firmar, y después vendrá el diálogo de certificado: elige documento.txt, el preparado, y firma."
+act.pick_file = "Se va a pedir primero el documento a firmar, y después vendrá el diálogo de certificado: elige documento.txt, el preparado, y firma."
+expects.completes.conditions = ["the-filename-in-a-third-component"]
 
 [[check]]
 id = "sign_asks_for_the_document_when_the_request_brings_no_data"
@@ -236,12 +270,12 @@ statement = """
 Una firma cuya petición no trae dat pide a la persona el documento a firmar antes que el
 certificado, y cancelar esa elección termina el trámite como cancelación.
 """
-drive = { mode = "v4", script = "signwithoutdatacancelled" }
-assistance = "person"
-saf = "CANCEL"
-question = "¿se pidió elegir el documento a firmar antes que el certificado? [s/n]"
-person = { yes = "se pidió el documento a firmar", no = "no se pidió el documento a firmar", yes_means = "conforme" }
-warning = "Se va a pedir el documento a firmar: cancela esa ventana en vez de elegir nada."
+
+[check.drive]
+mode = "v4"
+script = "signwithoutdatacancelled"
+act.cancel = "Se va a pedir el documento a firmar: cancela esa ventana en vez de elegir nada."
+expects.code = "CANCEL"
 
 [[check]]
 id = "cosign_asks_for_the_signature_file_when_the_request_brings_no_data"
@@ -251,12 +285,12 @@ statement = """
 Una cofirma cuya petición no trae dat pide a la persona el fichero de firma antes que el
 certificado, y cancelar esa elección termina el trámite como cancelación.
 """
-drive = { mode = "v4", script = "cosignwithoutdatacancelled" }
-assistance = "person"
-saf = "CANCEL"
-question = "¿se pidió elegir el fichero de firma a cofirmar antes que el certificado? [s/n]"
-person = { yes = "se pidió el fichero de firma a cofirmar", no = "no se pidió el fichero de firma a cofirmar", yes_means = "conforme" }
-warning = "Se va a pedir el fichero de firma a cofirmar: cancela esa ventana en vez de elegir nada."
+
+[check.drive]
+mode = "v4"
+script = "cosignwithoutdatacancelled"
+act.cancel = "Se va a pedir el fichero de firma a cofirmar: cancela esa ventana en vez de elegir nada."
+expects.code = "CANCEL"
 
 [[check]]
 id = "check_signatures_lets_a_first_signature_through"
@@ -266,10 +300,12 @@ statement = """
 Con checkSignatures=true, una primera firma sobre un documento sin firmas previas continúa: que no
 haya firma que validar es lo normal cuando se va a firmar por primera vez.
 """
-drive = { mode = "v4", script = "signpadeschecking" }
-assistance = "click"
-completes = {}
-warning = "Va a aparecer el diálogo de certificado."
+
+[check.drive]
+mode = "v4"
+script = "signpadeschecking"
+act.consent = "Va a aparecer el diálogo de certificado."
+expects.completes = {}
 
 [[check]]
 id = "check_signatures_stops_a_multisignature_it_cannot_validate"
@@ -279,10 +315,12 @@ statement = """
 Con checkSignatures=true, una multifirma sobre un documento cuya validación previa sale KO se
 aborta con SAF_39 en vez de firmar encima.
 """
-drive = { mode = "v4", script = "cosignpadeschecking" }
-assistance = "click"
-saf = "SAF_39"
-warning = "AutoFirma rechaza la cofirma antes de pedir certificado y sin enseñar ningún diálogo. Si aparece uno que pida confirmar la multifirma, acéptalo."
+
+[check.drive]
+mode = "v4"
+script = "cosignpadeschecking"
+act.consent = "AutoFirma rechaza la cofirma antes de pedir certificado y sin enseñar ningún diálogo. Si aparece uno que pida confirmar la multifirma, acéptalo."
+expects.code = "SAF_39"
 
 [[check]]
 id = "a_certified_pdf_answers_saf_50_when_headless"
@@ -291,10 +329,12 @@ citation = "ProtocolInvocationLauncherSign.java:787-796; PdfUtil.java:214-229"
 statement = """
 Con headless=true, un PDF certificado sin cambios permitidos no se pregunta a la persona: la firma se rechaza con SAF_50.
 """
-drive = { mode = "v4", script = "signpadescertifiedheadless" }
-assistance = "click"
-saf = "SAF_50"
-warning = "Va a aparecer el diálogo de certificado antes de que llegue el rechazo."
+
+[check.drive]
+mode = "v4"
+script = "signpadescertifiedheadless"
+act.consent = "Va a aparecer el diálogo de certificado antes de que llegue el rechazo."
+expects.code = "SAF_50"
 
 [[check]]
 id = "a_pdf_with_unregistered_signatures_answers_saf_50_when_headless"
@@ -303,10 +343,12 @@ citation = "ProtocolInvocationLauncherSign.java:787-796; PdfSessionManager.java:
 statement = """
 Con headless=true, un PDF con firmas de un subfiltro no registrado no se pregunta a la persona: la firma se rechaza con SAF_50.
 """
-drive = { mode = "v4", script = "signpadesunregisteredheadless" }
-assistance = "click"
-saf = "SAF_50"
-warning = "Va a aparecer el diálogo de certificado antes de que llegue el rechazo."
+
+[check.drive]
+mode = "v4"
+script = "signpadesunregisteredheadless"
+act.consent = "Va a aparecer el diálogo de certificado antes de que llegue el rechazo."
+expects.code = "SAF_50"
 
 [[check]]
 id = "a_password_protected_pdf_answers_saf_50_when_headless"
@@ -315,10 +357,12 @@ citation = "ProtocolInvocationLauncherSign.java:787-796; PdfSessionManager.java:
 statement = """
 Con headless=true, un PDF protegido con contraseña sin que la petición la traiga no se pregunta a la persona: la firma se rechaza con SAF_50.
 """
-drive = { mode = "v4", script = "signpadesprotectedheadless" }
-assistance = "click"
-saf = "SAF_50"
-warning = "Va a aparecer el diálogo de certificado antes de que llegue el rechazo."
+
+[check.drive]
+mode = "v4"
+script = "signpadesprotectedheadless"
+act.consent = "Va a aparecer el diálogo de certificado antes de que llegue el rechazo."
+expects.code = "SAF_50"
 
 [[check]]
 id = "allow_signing_certified_pdfs_unlocks_a_certified_pdf"
@@ -328,10 +372,12 @@ statement = """
 Con allowSigningCertifiedPdfs=true, el PDF certificado se firma sin preguntar aunque la petición
 diga headless=true.
 """
-drive = { mode = "v4", script = "signpadescertifiedallowed" }
-assistance = "click"
-condition = "the-signature-inside-the-pdf"
-warning = "Va a aparecer el diálogo de certificado."
+
+[check.drive]
+mode = "v4"
+script = "signpadescertifiedallowed"
+act.consent = "Va a aparecer el diálogo de certificado."
+expects.completes.conditions = ["the-signature-inside-the-pdf"]
 
 [[check]]
 id = "allow_cosigning_unregistered_signatures_unlocks_a_pdf_with_them"
@@ -341,10 +387,12 @@ statement = """
 Con allowCosigningUnregisteredSignatures=true, el PDF con firmas no registradas se firma sin
 preguntar aunque la petición diga headless=true.
 """
-drive = { mode = "v4", script = "signpadesunregisteredallowed" }
-assistance = "click"
-condition = "the-signature-inside-the-pdf"
-warning = "Va a aparecer el diálogo de certificado."
+
+[check.drive]
+mode = "v4"
+script = "signpadesunregisteredallowed"
+act.consent = "Va a aparecer el diálogo de certificado."
+expects.completes.conditions = ["the-signature-inside-the-pdf"]
 
 [[check]]
 id = "the_password_in_the_request_unlocks_a_protected_pdf"
@@ -354,10 +402,12 @@ statement = """
 Con userPassword, el PDF protegido se abre con la contraseña de la petición y se firma sin
 preguntarla aunque la petición diga headless=true.
 """
-drive = { mode = "v4", script = "signpadesprotectedwithitspassword" }
-assistance = "click"
-completes = {}
-warning = "Va a aparecer el diálogo de certificado."
+
+[check.drive]
+mode = "v4"
+script = "signpadesprotectedwithitspassword"
+act.consent = "Va a aparecer el diálogo de certificado."
+expects.completes = {}
 
 [[check]]
 id = "a_wrong_pdf_password_answers_saf_50_when_headless"
@@ -367,10 +417,12 @@ statement = """
 Con headless=true, un PDF protegido cuya contraseña de la petición no lo abre no se pregunta a la
 persona: la firma se rechaza con SAF_50, no con SAF_09 ni con SAF_33.
 """
-drive = { mode = "v4", script = "signpadeswrongpasswordheadless" }
-assistance = "click"
-saf = "SAF_50"
-warning = "Va a aparecer el diálogo de certificado antes de que llegue el rechazo."
+
+[check.drive]
+mode = "v4"
+script = "signpadeswrongpasswordheadless"
+act.consent = "Va a aparecer el diálogo de certificado antes de que llegue el rechazo."
+expects.code = "SAF_50"
 
 [[check]]
 id = "a_wrong_pdf_password_is_asked_to_the_person"
@@ -380,12 +432,12 @@ statement = """
 Sin headless, un PDF protegido cuya contraseña de la petición no lo abre no se rechaza: se pide la
 contraseña a la persona y, con la buena, se firma.
 """
-drive = { mode = "v4", script = "signpadeswrongpassword" }
-assistance = "person"
-completes = {}
-question = "¿se pidió la contraseña del PDF? [s/n]"
-person = { yes = "se pidió la contraseña del PDF", no = "no se pidió la contraseña del PDF", yes_means = "conforme" }
-warning = "Elige el certificado; cuando se pida la contraseña del PDF, escribe 1234."
+
+[check.drive]
+mode = "v4"
+script = "signpadeswrongpassword"
+act.type_password = "Elige el certificado; cuando se pida la contraseña del PDF, escribe 1234."
+expects.completes = {}
 
 [[check]]
 id = "a_protected_pdf_without_a_password_is_asked_to_the_person"
@@ -395,27 +447,27 @@ statement = """
 Sin headless ni contraseña en la petición, un PDF protegido pide su contraseña a la persona, y
 cancelar esa petición termina el trámite como cancelación.
 """
-drive = { mode = "v4", script = "signpadesprotected" }
-assistance = "person"
-saf = "CANCEL"
-question = "¿se pidió la contraseña del PDF? [s/n]"
-person = { yes = "se pidió la contraseña del PDF", no = "no se pidió la contraseña del PDF", yes_means = "conforme" }
-warning = "Elige el certificado; cuando se pida la contraseña del PDF, cancela esa ventana en vez de escribirla."
+
+[check.drive]
+mode = "v4"
+script = "signpadesprotected"
+act.cancel = "Elige el certificado; cuando se pida la contraseña del PDF, cancela esa ventana en vez de escribirla."
+expects.code = "CANCEL"
 
 [[check]]
 id = "a_certified_pdf_asks_the_person_before_being_signed"
 set = "firma"
 citation = "ProtocolInvocationLauncherSign.java:787-806"
 statement = """
-Sin headless, el aviso de un PDF certificado se resuelve preguntando a la persona, y si acepta la
-firma sigue como si la petición trajera allowSigningCertifiedPdfs=true.
+Sin headless, el aviso de un PDF certificado se resuelve preguntando a la persona: si lo rechaza, el
+trámite termina como cancelación en vez de firmarse.
 """
-drive = { mode = "v4", script = "signpadescertified" }
-assistance = "person"
-condition = "the-signature-inside-the-pdf"
-question = "¿preguntó la aplicación si firmar un PDF certificado antes de hacerlo? [s/n]"
-person = { yes = "la aplicación preguntó antes de firmar el PDF certificado", no = "la aplicación no preguntó antes de firmar el PDF certificado", yes_means = "conforme" }
-warning = "Va a aparecer el diálogo de certificado y, después, un aviso de que el PDF está certificado: acéptalo."
+
+[check.drive]
+mode = "v4"
+script = "signpadescertified"
+act.refuse = "Va a aparecer el diálogo de certificado y, después, un aviso de que el PDF está certificado: recházalo."
+expects.code = "CANCEL"
 
 [[check]]
 id = "a_pades_signature_packages_itself_inside_the_pdf"
@@ -426,10 +478,12 @@ statement = """
 PAdES firma el PDF y devuelve el propio documento con la firma incrustada: un PDF con su
 diccionario de firma, su /ByteRange y su /Contents.
 """
-drive = { mode = "v4", script = "signpades" }
-assistance = "click"
-condition = "the-signature-inside-the-pdf"
-warning = "Va a aparecer el diálogo de certificado."
+
+[check.drive]
+mode = "v4"
+script = "signpades"
+act.consent = "Va a aparecer el diálogo de certificado."
+expects.completes.conditions = ["the-signature-inside-the-pdf"]
 
 [[check]]
 id = "a_visible_pades_signature_asks_the_person_to_mark_the_area"
@@ -437,14 +491,15 @@ set = "firma"
 chapter = "12"
 citation = "ProtocolInvocationLauncherSign.java:503-505, 914-936, 945-953"
 statement = """
-Con visibleSignature=want, la firma abre el diálogo en el que la persona marca el área visible
-antes de firmar.
+Con visibleSignature=want y sin el área en la petición, la firma pide a la persona el área visible,
+y la firma sale visible donde la marca.
 """
-drive = { mode = "v4", script = "signpadesvisible" }
-assistance = "person"
-question = "¿se te pidió marcar el área de la firma visible sobre el PDF? [s/n]"
-person = { yes = "se pidió marcar el área de la firma visible", no = "la firma salió sin pedir el área que el protocolo exige marcar", yes_means = "conforme" }
-warning = "Va a aparecer el diálogo del área visible sobre el PDF, y después el del certificado."
+
+[check.drive]
+mode = "v4"
+script = "signpadesvisible"
+act.mark_area = "Va a aparecer el diálogo del área visible sobre el PDF: marca un recuadro cualquiera, y después elige certificado."
+expects.completes.conditions = ["with-a-visible-signature"]
 
 [[check]]
 id = "an_explicit_cades_signature_leaves_the_data_out"
@@ -455,10 +510,12 @@ statement = """
 CAdES acepta mode como parámetro de formato: con mode=explicit la firma vuelve separada, sin los
 datos dentro del PKCS#7.
 """
-drive = { mode = "v4", script = "signcades" }
-assistance = "click"
-condition = "the-data-left-out"
-warning = "Va a aparecer el diálogo de certificado."
+
+[check.drive]
+mode = "v4"
+script = "signcades"
+act.consent = "Va a aparecer el diálogo de certificado."
+expects.completes.conditions = ["the-data-left-out"]
 
 [[check]]
 id = "an_implicit_cades_signature_carries_the_data_inside"
@@ -468,10 +525,12 @@ citation = "CAdESExtraParams.java; CAdESParameters.java:100-335"
 statement = """
 Con mode=implicit, CAdES empotra los datos firmados en el PKCS#7 que vuelve.
 """
-drive = { mode = "v4", script = "signcadesimplicit" }
-assistance = "click"
-condition = "the-data-inside"
-warning = "Va a aparecer el diálogo de certificado."
+
+[check.drive]
+mode = "v4"
+script = "signcadesimplicit"
+act.consent = "Va a aparecer el diálogo de certificado."
+expects.completes.conditions = ["the-data-inside"]
 
 [[check]]
 id = "the_age_policy_packages_a_document_under_one_megabyte_implicitly"
@@ -482,10 +541,12 @@ statement = """
 Al expandir la política de la AGE (expPolicy=FirmaAGE) sin mode declarado, un documento de menos de
 1 MB se empaqueta en modo implícito: la firma vuelve con los datos dentro.
 """
-drive = { mode = "v4", script = "signcadesagepolicy" }
-assistance = "click"
-condition = "the-data-inside"
-warning = "Va a aparecer el diálogo de certificado."
+
+[check.drive]
+mode = "v4"
+script = "signcadesagepolicy"
+act.consent = "Va a aparecer el diálogo de certificado."
+expects.completes.conditions = ["the-data-inside"]
 
 [[check]]
 id = "a_precalculated_hash_replaces_the_data_of_a_cades_signature"
@@ -496,10 +557,12 @@ statement = """
 Con precalculatedHashAlgorithm, lo que viaja en dat es una huella y no el documento: CAdES firma la
 huella tal cual, como messageDigest, y no empotra datos.
 """
-drive = { mode = "v4", script = "signcadeswithaprecalculatedhash" }
-assistance = "click"
-condition = ["the-hash-signed-as-it-came", "the-data-left-out"]
-warning = "Va a aparecer el diálogo de certificado."
+
+[check.drive]
+mode = "v4"
+script = "signcadeswithaprecalculatedhash"
+act.consent = "Va a aparecer el diálogo de certificado."
+expects.completes.conditions = ["the-hash-signed-as-it-came", "the-data-left-out"]
 
 [[check]]
 id = "a_precalculated_hash_overrides_an_implicit_mode"
@@ -510,10 +573,12 @@ statement = """
 Con precalculatedHashAlgorithm se invalida mode: aun pidiendo mode=implicit, la firma de la huella
 vuelve sin datos dentro.
 """
-drive = { mode = "v4", script = "signcadeswithaprecalculatedhashinimplicitmode" }
-assistance = "click"
-condition = ["the-hash-signed-as-it-came", "the-data-left-out"]
-warning = "Va a aparecer el diálogo de certificado."
+
+[check.drive]
+mode = "v4"
+script = "signcadeswithaprecalculatedhashinimplicitmode"
+act.consent = "Va a aparecer el diálogo de certificado."
+expects.completes.conditions = ["the-hash-signed-as-it-came", "the-data-left-out"]
 
 [[check]]
 id = "a_xades_enveloping_signature_carries_the_document_inside"
@@ -524,10 +589,12 @@ statement = """
 Con format=XAdES Enveloping, la firma envuelve al documento: el documento firmado viaja dentro de
 la propia Signature.
 """
-drive = { mode = "v4", script = "signxadesenveloping" }
-assistance = "click"
-condition = "the-envelope-requested"
-warning = "Va a aparecer el diálogo de certificado."
+
+[check.drive]
+mode = "v4"
+script = "signxadesenveloping"
+act.consent = "Va a aparecer el diálogo de certificado."
+expects.completes.conditions = ["the-envelope-requested"]
 
 [[check]]
 id = "a_xades_enveloped_signature_goes_inside_the_document"
@@ -539,10 +606,12 @@ statement = """
 Con format=XAdES Enveloped, la firma va dentro del documento: vuelve el propio XML con la Signature
 como hija de su raíz.
 """
-drive = { mode = "v4", script = "signxadesenveloped" }
-assistance = "click"
-condition = "the-envelope-requested"
-warning = "Va a aparecer el diálogo de certificado."
+
+[check.drive]
+mode = "v4"
+script = "signxadesenveloped"
+act.consent = "Va a aparecer el diálogo de certificado."
+expects.completes.conditions = ["the-envelope-requested"]
 
 [[check]]
 id = "a_xades_detached_signature_references_the_document_beside_it"
@@ -554,10 +623,12 @@ statement = """
 Con format=XAdES Detached, la firma y el documento viajan juntos pero separados: la Signature
 referencia al documento, que va a su lado y no dentro de ella.
 """
-drive = { mode = "v4", script = "signxadesdetached" }
-assistance = "click"
-condition = "the-envelope-requested"
-warning = "Va a aparecer el diálogo de certificado."
+
+[check.drive]
+mode = "v4"
+script = "signxadesdetached"
+act.consent = "Va a aparecer el diálogo de certificado."
+expects.completes.conditions = ["the-envelope-requested"]
 
 [[check]]
 id = "a_xades_externally_detached_signature_references_the_uri_of_the_request"
@@ -568,10 +639,12 @@ statement = """
 Una firma XAdES con format=XAdES Externally Detached en sus parámetros no lleva el documento: lo
 referencia por la uri que declaran los mismos parámetros.
 """
-drive = { mode = "v4", script = "signxadesexternallydetached" }
-assistance = "click"
-condition = "the-envelope-requested"
-warning = "Va a aparecer el diálogo de certificado."
+
+[check.drive]
+mode = "v4"
+script = "signxadesexternallydetached"
+act.consent = "Va a aparecer el diálogo de certificado."
+expects.completes.conditions = ["the-envelope-requested"]
 
 [[check]]
 id = "xades_applies_the_transforms_the_request_declares"
@@ -582,10 +655,12 @@ statement = """
 XAdES aplica la cadena de transformaciones que declaran xmlTransforms y sus claves indexadas, y la
 firma que vuelve las declara.
 """
-drive = { mode = "v4", script = "signxadeswithatransform" }
-assistance = "click"
-condition = "the-transform-declared"
-warning = "Va a aparecer el diálogo de certificado."
+
+[check.drive]
+mode = "v4"
+script = "signxadeswithatransform"
+act.consent = "Va a aparecer el diálogo de certificado."
+expects.completes.conditions = ["the-transform-declared"]
 
 [[check]]
 id = "facturae_signs_with_the_roles_and_the_place_of_its_white_list"
@@ -596,10 +671,12 @@ statement = """
 FacturaE es un XAdES Enveloped fijo que acepta de su lista blanca los cargos del firmante y el
 lugar de producción, y la firma que vuelve los declara.
 """
-drive = { mode = "v4", script = "signfacturaewitharole" }
-assistance = "click"
-condition = "the-role-and-the-place-signed"
-warning = "Va a aparecer el diálogo de certificado."
+
+[check.drive]
+mode = "v4"
+script = "signfacturaewitharole"
+act.consent = "Va a aparecer el diálogo de certificado."
+expects.completes.conditions = ["the-role-and-the-place-signed"]
 
 [[check]]
 id = "facturae_drops_a_parameter_outside_its_white_list_instead_of_failing"
@@ -610,10 +687,12 @@ statement = """
 Un parámetro que no está en la lista blanca de FacturaE se descarta y la firma se completa igual,
 en vez de rechazar la petición.
 """
-drive = { mode = "v4", script = "signfacturaewithaforbiddenparam" }
-assistance = "click"
-completes = {}
-warning = "Va a aparecer el diálogo de certificado."
+
+[check.drive]
+mode = "v4"
+script = "signfacturaewithaforbiddenparam"
+act.consent = "Va a aparecer el diálogo de certificado."
+expects.completes = {}
 
 [[check]]
 id = "an_asic_s_container_packages_the_signature_next_to_the_data"
@@ -624,21 +703,12 @@ statement = """
 CAdES-ASiC-S fuerza el modo explícito y devuelve un contenedor ZIP con el documento y la firma
 desprendida dentro, en META-INF/signature.p7s, no la firma suelta.
 """
-drive = { mode = "v4", script = "signcadesasics" }
-assistance = "click"
-condition = "the-data-and-the-signature-inside"
-warning = "Va a aparecer el diálogo de certificado."
 
-[[check]]
-id = "sign_unsupported_format_rejected"
-set = "firma"
-citation = "ProtocolInvocationLauncherSign.java:269"
-statement = """
-Si el formato de firma especificado en format no está soportado, se rechaza con SAF_06.
-"""
-drive = { mode = "v4", script = "protocol-v4" }
-assistance = "none"
-condition = "invented-format-saf-06"
+[check.drive]
+mode = "v4"
+script = "signcadesasics"
+act.consent = "Va a aparecer el diálogo de certificado."
+expects.completes.conditions = ["the-data-and-the-signature-inside"]
 
 [[check]]
 id = "a_signature_cancelled_by_the_person_answers_cancel_without_a_code"
@@ -648,10 +718,12 @@ statement = """
 Cancelar un diálogo en mitad de una firma responde el literal no numerado CANCEL, sin prefijo SAF_,
 y el cliente publicado lo entrega a la sede como AOCancelledOperationException.
 """
-drive = { mode = "v4", script = "signcades" }
-assistance = "person"
-saf = "CANCEL"
-warning = "Va a aparecer el diálogo de selección de certificado de una firma: cancélalo en vez de elegir."
+
+[check.drive]
+mode = "v4"
+script = "signcades"
+act.cancel = "Va a aparecer el diálogo de selección de certificado de una firma: cancélalo en vez de elegir."
+expects.code = "CANCEL"
 
 [[check]]
 id = "a_pades_signature_over_data_that_is_no_pdf_is_rejected_with_saf_28"
@@ -661,10 +733,12 @@ statement = """
 Un PAdES sobre algo que no es un PDF se rechaza con SAF_28, el código de su familia, y no con el
 SAF_09 genérico.
 """
-drive = { mode = "v4", script = "signpadesoveranonpdf" }
-assistance = "click"
-saf = "SAF_28"
-warning = "Va a aparecer el diálogo de certificado antes de que llegue el rechazo."
+
+[check.drive]
+mode = "v4"
+script = "signpadesoveranonpdf"
+act.consent = "Va a aparecer el diálogo de certificado antes de que llegue el rechazo."
+expects.code = "SAF_28"
 
 [[check]]
 id = "an_unknown_expandable_policy_is_rejected_with_saf_23"
@@ -673,9 +747,11 @@ citation = "ProtocolInvocationLauncherSign.java:486-495; ExtraParamsProcessor.ja
 statement = """
 Una expPolicy que el cliente no sabe expandir se rechaza con SAF_23 antes de pedir el certificado.
 """
-drive = { mode = "v4", script = "signwithanunknownpolicy" }
-assistance = "none"
-saf = "SAF_23"
+
+[check.drive]
+mode = "v4"
+script = "signwithanunknownpolicy"
+expects.code = "SAF_23"
 
 [[check]]
 id = "a_xades_enveloped_signature_over_data_that_is_no_xml_is_rejected_with_saf_29"
@@ -685,23 +761,27 @@ statement = """
 Una firma XAdES con format=XAdES Enveloped en sus parámetros, sobre algo que no es XML, se rechaza
 con SAF_29.
 """
-drive = { mode = "v4", script = "signxadesenvelopedoveranonxml" }
-assistance = "click"
-saf = "SAF_29"
-warning = "Va a aparecer el diálogo de certificado antes de que llegue el rechazo."
+
+[check.drive]
+mode = "v4"
+script = "signxadesenvelopedoveranonxml"
+act.consent = "Va a aparecer el diálogo de certificado antes de que llegue el rechazo."
+expects.code = "SAF_29"
 
 [[check]]
 id = "an_ooxml_signature_over_data_that_is_no_office_document_is_rejected_with_saf_30"
 set = "firma"
 citation = "ProtocolInvocationLauncherSign.java:762-766; AOOOXMLSigner.java:303-305"
+deprecated = true
 statement = """
 Una firma OOXML sobre algo que no es un documento de Office se rechaza con SAF_30.
 """
-drive = { mode = "v4", script = "signooxmloveranonooxml" }
-assistance = "click"
-saf = "SAF_30"
-deprecated = true
-warning = "Va a aparecer el diálogo de certificado antes de que llegue el rechazo."
+
+[check.drive]
+mode = "v4"
+script = "signooxmloveranonooxml"
+act.consent = "Va a aparecer el diálogo de certificado antes de que llegue el rechazo."
+expects.code = "SAF_30"
 
 [[check]]
 id = "a_xades_cosignature_over_data_that_is_no_signature_is_rejected_with_saf_31"
@@ -710,10 +790,12 @@ citation = "ProtocolInvocationLauncherSign.java:782-786; AOXAdESSigner.java:822-
 statement = """
 Una cofirma XAdES sobre algo que no es una firma XML se rechaza con SAF_31.
 """
-drive = { mode = "v4", script = "cosignxadesoveranonsignature" }
-assistance = "click"
-saf = "SAF_31"
-warning = "Va a aparecer el diálogo de certificado antes de que llegue el rechazo."
+
+[check.drive]
+mode = "v4"
+script = "cosignxadesoveranonsignature"
+act.consent = "Va a aparecer el diálogo de certificado antes de que llegue el rechazo."
+expects.code = "SAF_31"
 
 [[check]]
 id = "a_facturae_signature_over_a_signed_invoice_is_rejected_with_saf_32"
@@ -722,10 +804,12 @@ citation = "ProtocolInvocationLauncherSign.java:772-776; AOFacturaESigner.java:1
 statement = """
 Una firma FacturaE sobre una factura que ya está firmada se rechaza con SAF_32.
 """
-drive = { mode = "v4", script = "signfacturaeoverasignedinvoice" }
-assistance = "click"
-saf = "SAF_32"
-warning = "Va a aparecer el diálogo de certificado antes de que llegue el rechazo."
+
+[check.drive]
+mode = "v4"
+script = "signfacturaeoverasignedinvoice"
+act.consent = "Va a aparecer el diálogo de certificado antes de que llegue el rechazo."
+expects.code = "SAF_32"
 
 [[check]]
 id = "a_facturae_signature_over_data_that_is_no_invoice_is_rejected_with_saf_38"
@@ -734,10 +818,12 @@ citation = "ProtocolInvocationLauncherSign.java:767-771; AOFacturaESigner.java:1
 statement = """
 Una firma FacturaE sobre un XML que no es una factura electrónica se rechaza con SAF_38.
 """
-drive = { mode = "v4", script = "signfacturaeoveranoninvoice" }
-assistance = "click"
-saf = "SAF_38"
-warning = "Va a aparecer el diálogo de certificado antes de que llegue el rechazo."
+
+[check.drive]
+mode = "v4"
+script = "signfacturaeoveranoninvoice"
+act.consent = "Va a aparecer el diálogo de certificado antes de que llegue el rechazo."
+expects.code = "SAF_38"
 
 [[check]]
 id = "a_triphase_server_failure_is_rejected_with_saf_40"
@@ -747,10 +833,12 @@ statement = """
 Si el servidor trifásico contesta a la prefirma con un error que trae una excepción suya, la firma
 se rechaza con SAF_40.
 """
-drive = { mode = "v4", script = "signcadestriwithafailingserver" }
-assistance = "click"
-saf = "SAF_40"
-warning = "Va a aparecer el diálogo de certificado antes de que llegue el rechazo."
+
+[check.drive]
+mode = "v4"
+script = "signcadestriwithafailingserver"
+act.consent = "Va a aparecer el diálogo de certificado antes de que llegue el rechazo."
+expects.code = "SAF_40"
 
 [[check]]
 id = "a_cosignature_without_the_data_or_a_matching_digest_is_rejected_with_saf_44"
@@ -760,10 +848,12 @@ statement = """
 Una cofirma de una firma separada que no trae una huella del algoritmo pedido no tiene qué firmar:
 se rechaza con SAF_44.
 """
-drive = { mode = "v4", script = "cosigncadeswithoutthedata" }
-assistance = "click"
-saf = "SAF_44"
-warning = "Va a aparecer el diálogo de certificado antes de que llegue el rechazo."
+
+[check.drive]
+mode = "v4"
+script = "cosigncadeswithoutthedata"
+act.consent = "Va a aparecer el diálogo de certificado antes de que llegue el rechazo."
+expects.code = "SAF_44"
 
 [[check]]
 id = "unreadable_data_chosen_by_the_person_answer_saf_00"
@@ -785,10 +875,12 @@ statement = """
 Si la petición pide sello de tiempo y no se puede sellar, la operación lo reporta con un código SAF
 en vez de devolver una firma sin sello.
 """
-drive = { mode = "v4", script = "signwithbrokentsa" }
-assistance = "click"
-saf = "SAF_*"
-warning = "Va a aparecer el diálogo de certificado."
+
+[check.drive]
+mode = "v4"
+script = "signwithbrokentsa"
+act.consent = "Va a aparecer el diálogo de certificado."
+expects.code = "SAF_*"
 
 [[check]]
 id = "a_wanted_visible_signature_cancelled_answers_saf_43"
@@ -799,10 +891,12 @@ statement = """
 Con visibleSignature=want y sin el área en la petición, cancelar el diálogo del área aborta la firma
 con SAF_43, no con el CANCEL de una cancelación.
 """
-drive = { mode = "v4", script = "signpadesvisible" }
-assistance = "person"
-saf = "SAF_43"
-warning = "Va a aparecer el diálogo del área visible sobre el PDF: cancélalo sin marcar nada."
+
+[check.drive]
+mode = "v4"
+script = "signpadesvisible"
+act.cancel = "Va a aparecer el diálogo del área visible sobre el PDF: cancélalo sin marcar nada."
+expects.code = "SAF_43"
 
 [[check]]
 id = "an_optional_visible_signature_cancelled_signs_without_it"
@@ -813,10 +907,12 @@ statement = """
 Con visibleSignature=optional, cancelar el diálogo del área no aborta: el PDF se firma con una firma
 invisible, cuyo campo no ocupa área en la página.
 """
-drive = { mode = "v4", script = "signpadesoptional" }
-assistance = "person"
-condition = "without-a-visible-signature"
-warning = "Va a aparecer el diálogo del área visible sobre el PDF: cancélalo sin marcar nada, y después elige certificado."
+
+[check.drive]
+mode = "v4"
+script = "signpadesoptional"
+act.cancel = "Va a aparecer el diálogo del área visible sobre el PDF: cancélalo sin marcar nada, y después elige certificado."
+expects.completes.conditions = ["without-a-visible-signature"]
 
 [[check]]
 id = "a_wanted_visible_signature_with_its_area_is_not_aborted_by_cancelling"
@@ -827,10 +923,12 @@ statement = """
 Con visibleSignature=want y el área ya en la petición, el diálogo del área aparece igual, pero
 cancelarlo no aborta: la firma sale visible en el área que la petición declaraba.
 """
-drive = { mode = "v4", script = "signpadeswantedwithanarea" }
-assistance = "person"
-condition = "the-signature-where-the-request-says"
-warning = "Va a aparecer el diálogo del área visible sobre el PDF: cancélalo sin marcar nada, y después elige certificado."
+
+[check.drive]
+mode = "v4"
+script = "signpadeswantedwithanarea"
+act.cancel = "Va a aparecer el diálogo del área visible sobre el PDF: cancélalo sin marcar nada, y después elige certificado."
+expects.completes.conditions = ["the-signature-where-the-request-says"]
 
 [[check]]
 id = "a_visible_pades_signature_is_placed_where_the_request_says"
@@ -841,10 +939,12 @@ statement = """
 Sin visibleSignature, signaturePage y las cuatro signaturePositionOnPage* colocan la firma visible
 sin abrir ningún diálogo, con su campo en el área que la petición declara.
 """
-drive = { mode = "v4", script = "signpadesplaced" }
-assistance = "click"
-condition = "the-signature-where-the-request-says"
-warning = "Va a aparecer el diálogo de certificado."
+
+[check.drive]
+mode = "v4"
+script = "signpadesplaced"
+act.consent = "Va a aparecer el diálogo de certificado."
+expects.completes.conditions = ["the-signature-where-the-request-says"]
 
 [[check]]
 id = "a_none_signature_is_a_bare_pkcs1"
@@ -854,10 +954,12 @@ statement = """
 El formato NONE firma los datos en PKCS#1 sin envoltorio: lo que vuelve es la firma de la clave del
 certificado sobre los datos, sin CMS alrededor.
 """
-drive = { mode = "v4", script = "signnone" }
-assistance = "click"
-condition = "a-bare-pkcs1"
-warning = "Va a aparecer el diálogo de certificado."
+
+[check.drive]
+mode = "v4"
+script = "signnone"
+act.consent = "Va a aparecer el diálogo de certificado."
+expects.completes.conditions = ["a-bare-pkcs1"]
 
 [[check]]
 id = "a_triphase_signature_goes_through_the_server_url"
@@ -867,10 +969,12 @@ statement = """
 Una firma CAdEStri hace la prefirma y la postfirma contra el serverUrl de properties, firma con la
 clave del certificado la prefirma que le devuelve y entrega a la sede la firma de la postfirma.
 """
-drive = { mode = "v4", script = "signcadestri" }
-assistance = "click"
-condition = ["through-the-triphase-server", "the-presignature-signed-with-the-key", "the-server-signature-as-it-came"]
-warning = "Va a aparecer el diálogo de certificado."
+
+[check.drive]
+mode = "v4"
+script = "signcadestri"
+act.consent = "Va a aparecer el diálogo de certificado."
+expects.completes.conditions = ["through-the-triphase-server", "the-presignature-signed-with-the-key", "the-server-signature-as-it-came"]
 
 [[check]]
 id = "a_triphase_cosign_goes_through_the_server_url"
@@ -880,10 +984,12 @@ statement = """
 Una cofirma CAdEStri recorre el mismo camino que la firma, con cop=cosign y la firma previa como
 documento.
 """
-drive = { mode = "v4", script = "cosigncadestri" }
-assistance = "click"
-condition = ["through-the-triphase-server", "the-presignature-signed-with-the-key", "the-server-signature-as-it-came"]
-warning = "Va a aparecer el diálogo de certificado."
+
+[check.drive]
+mode = "v4"
+script = "cosigncadestri"
+act.consent = "Va a aparecer el diálogo de certificado."
+expects.completes.conditions = ["through-the-triphase-server", "the-presignature-signed-with-the-key", "the-server-signature-as-it-came"]
 
 [[check]]
 id = "a_triphase_countersign_goes_through_the_server_url"
@@ -893,10 +999,12 @@ statement = """
 Una contrafirma CAdEStri recorre el mismo camino que la firma, con cop=countersign y la firma previa
 como documento.
 """
-drive = { mode = "v4", script = "countersigncadestri" }
-assistance = "click"
-condition = ["through-the-triphase-server", "the-presignature-signed-with-the-key", "the-server-signature-as-it-came"]
-warning = "Va a aparecer el diálogo de certificado."
+
+[check.drive]
+mode = "v4"
+script = "countersigncadestri"
+act.consent = "Va a aparecer el diálogo de certificado."
+expects.completes.conditions = ["through-the-triphase-server", "the-presignature-signed-with-the-key", "the-server-signature-as-it-came"]
 
 [[check]]
 id = "a_pades_triphase_signature_goes_through_the_server_url"
@@ -907,10 +1015,12 @@ Una firma PAdEStri sobre un PDF hace la prefirma y la postfirma contra el server
 con cop=sign y format=pades, firma con la clave del certificado la prefirma que le devuelve y
 entrega a la sede el PDF firmado de la postfirma.
 """
-drive = { mode = "v4", script = "signpadestri" }
-assistance = "click"
-condition = ["through-the-triphase-server", "the-presignature-signed-with-the-key", "the-server-signature-as-it-came"]
-warning = "Va a aparecer el diálogo de certificado."
+
+[check.drive]
+mode = "v4"
+script = "signpadestri"
+act.consent = "Va a aparecer el diálogo de certificado."
+expects.completes.conditions = ["through-the-triphase-server", "the-presignature-signed-with-the-key", "the-server-signature-as-it-came"]
 
 [[check]]
 id = "a_xades_triphase_signature_goes_through_the_server_url"
@@ -921,10 +1031,12 @@ Una firma XAdEStri sobre un XML hace la prefirma y la postfirma contra el server
 con cop=sign y format=XAdES, firma con la clave del certificado la prefirma que le devuelve y
 entrega a la sede la firma de la postfirma.
 """
-drive = { mode = "v4", script = "signxadestri" }
-assistance = "click"
-condition = ["through-the-triphase-server", "the-presignature-signed-with-the-key", "the-server-signature-as-it-came"]
-warning = "Va a aparecer el diálogo de certificado."
+
+[check.drive]
+mode = "v4"
+script = "signxadestri"
+act.consent = "Va a aparecer el diálogo de certificado."
+expects.completes.conditions = ["through-the-triphase-server", "the-presignature-signed-with-the-key", "the-server-signature-as-it-came"]
 
 [[check]]
 id = "a_facturae_triphase_signature_goes_through_the_server_url"
@@ -935,10 +1047,12 @@ Una firma FacturaEtri sobre una factura sin firmar hace la prefirma y la postfir
 serverUrl de properties con cop=sign y format=FacturaE, firma con la clave del certificado la
 prefirma que le devuelve y entrega a la sede la factura firmada de la postfirma.
 """
-drive = { mode = "v4", script = "signfacturaetri" }
-assistance = "click"
-condition = ["through-the-triphase-server", "the-presignature-signed-with-the-key", "the-server-signature-as-it-came"]
-warning = "Va a aparecer el diálogo de certificado."
+
+[check.drive]
+mode = "v4"
+script = "signfacturaetri"
+act.consent = "Va a aparecer el diálogo de certificado."
+expects.completes.conditions = ["through-the-triphase-server", "the-presignature-signed-with-the-key", "the-server-signature-as-it-came"]
 
 [[check]]
 id = "a_triphase_signature_without_server_url_answers_saf_03"
@@ -948,10 +1062,12 @@ statement = """
 Una firma trifásica sin serverUrl en properties se rechaza con SAF_03, después de elegir el
 certificado.
 """
-drive = { mode = "v4", script = "signcadestriwithoutserverurl" }
-assistance = "click"
-saf = "SAF_03"
-warning = "Va a aparecer el diálogo de certificado antes de que llegue el rechazo."
+
+[check.drive]
+mode = "v4"
+script = "signcadestriwithoutserverurl"
+act.consent = "Va a aparecer el diálogo de certificado antes de que llegue el rechazo."
+expects.code = "SAF_03"
 
 [[check]]
 id = "a_cades_signature_without_mode_is_explicit"
@@ -961,10 +1077,12 @@ citation = "CAdESParameters.java:122-123; AOSignConstants.java:283"
 statement = """
 Una firma CAdES sin mode ni política que lo fije es explícita: vuelve sin los datos dentro.
 """
-drive = { mode = "v4", script = "signcadeswithoutmode" }
-assistance = "click"
-condition = "the-data-left-out"
-warning = "Va a aparecer el diálogo de certificado."
+
+[check.drive]
+mode = "v4"
+script = "signcadeswithoutmode"
+act.consent = "Va a aparecer el diálogo de certificado."
+expects.completes.conditions = ["the-data-left-out"]
 
 [[check]]
 id = "a_xades_signature_without_format_is_enveloping"
@@ -974,25 +1092,29 @@ citation = "XAdESSigner.java:265-266"
 statement = """
 Una firma XAdES sin el parámetro format es enveloping: los datos van dentro de la propia firma.
 """
-drive = { mode = "v4", script = "signxades" }
-assistance = "click"
-condition = "the-default-envelope"
-warning = "Va a aparecer el diálogo de certificado."
+
+[check.drive]
+mode = "v4"
+script = "signxades"
+act.consent = "Va a aparecer el diálogo de certificado."
+expects.completes.conditions = ["the-default-envelope"]
 
 [[check]]
 id = "an_explicit_xades_signs_the_sha1_of_the_data"
 set = "firma"
 chapter = "12"
 citation = "ProtocolInvocationLauncherSign.java:394-406, 886-893"
+deprecated = true
 statement = """
 Una firma XAdES con mode=explicit y sin useManifest firma el SHA-1 de los datos en su lugar,
 declarado con mimeType=hash/sha1.
 """
-drive = { mode = "v4", script = "signxadesexplicit" }
-assistance = "click"
-condition = "the-sha1-of-the-data-signed"
-deprecated = true
-warning = "Va a aparecer el diálogo de certificado."
+
+[check.drive]
+mode = "v4"
+script = "signxadesexplicit"
+act.consent = "Va a aparecer el diálogo de certificado."
+expects.completes.conditions = ["the-sha1-of-the-data-signed"]
 
 [[check]]
 id = "the_age_policy_overrides_a_conflicting_xades_envelope"
@@ -1003,10 +1125,12 @@ statement = """
 Con expPolicy=FirmaAGE, un XAdES que pide format=XAdES Enveloping sale Detached: la política solo
 admite Detached o Enveloped y fuerza la primera.
 """
-drive = { mode = "v4", script = "signxadesagepolicy" }
-assistance = "click"
-condition = "the-envelope-the-policy-demands"
-warning = "Va a aparecer el diálogo de certificado."
+
+[check.drive]
+mode = "v4"
+script = "signxadesagepolicy"
+act.consent = "Va a aparecer el diálogo de certificado."
+expects.completes.conditions = ["the-envelope-the-policy-demands"]
 
 [[check]]
 id = "the_age_policy_is_declared_inside_a_xades_signature"
@@ -1016,10 +1140,12 @@ citation = "ExtraParamsProcessor.java:281; AdESPolicyPropertiesManager.java; pol
 statement = """
 Con expPolicy=FirmaAGE, la firma XAdES declara el identificador de la política de la AGE y su huella.
 """
-drive = { mode = "v4", script = "signxadesagepolicy" }
-assistance = "click"
-condition = "the-age-policy-inside"
-warning = "Va a aparecer el diálogo de certificado."
+
+[check.drive]
+mode = "v4"
+script = "signxadesagepolicy"
+act.consent = "Va a aparecer el diálogo de certificado."
+expects.completes.conditions = ["the-age-policy-inside"]
 
 [[check]]
 id = "the_age_policy_is_declared_inside_a_cades_signature"
@@ -1029,10 +1155,12 @@ citation = "ExtraParamsProcessor.java:251; AdESPolicyPropertiesManager.java; pol
 statement = """
 Con expPolicy=FirmaAGE, la firma CAdES declara el identificador de la política de la AGE y su huella.
 """
-drive = { mode = "v4", script = "signcadesagepolicy" }
-assistance = "click"
-condition = "the-age-policy-inside"
-warning = "Va a aparecer el diálogo de certificado."
+
+[check.drive]
+mode = "v4"
+script = "signcadesagepolicy"
+act.consent = "Va a aparecer el diálogo de certificado."
+expects.completes.conditions = ["the-age-policy-inside"]
 
 [[check]]
 id = "the_age_policy_is_declared_inside_a_pades_signature"
@@ -1042,10 +1170,12 @@ citation = "ExtraParamsProcessor.java:296-305; AdESPolicyPropertiesManager.java;
 statement = """
 Con expPolicy=FirmaAGE, la firma PAdES declara el identificador de la política de la AGE y su huella.
 """
-drive = { mode = "v4", script = "signpadesagepolicy" }
-assistance = "click"
-condition = "the-age-policy-inside"
-warning = "Va a aparecer el diálogo de certificado."
+
+[check.drive]
+mode = "v4"
+script = "signpadesagepolicy"
+act.consent = "Va a aparecer el diálogo de certificado."
+expects.completes.conditions = ["the-age-policy-inside"]
 
 [[check]]
 id = "a_pades_countersign_is_refused_with_saf_04"
@@ -1055,10 +1185,12 @@ citation = "AOPDFSigner.java:336; ProtocolInvocationLauncherSign.java:838-841"
 statement = """
 PAdES no admite contrafirma: una contrafirma PAdES se rechaza con SAF_04, operación no soportada.
 """
-drive = { mode = "v4", script = "countersignpades" }
-assistance = "click"
-saf = "SAF_04"
-warning = "Va a aparecer el diálogo de certificado antes de que llegue el rechazo."
+
+[check.drive]
+mode = "v4"
+script = "countersignpades"
+act.consent = "Va a aparecer el diálogo de certificado antes de que llegue el rechazo."
+expects.code = "SAF_04"
 
 [[check]]
 id = "facturae_refuses_cosign_with_saf_04"
@@ -1068,10 +1200,12 @@ citation = "AOFacturaESigner.java:140-156; ProtocolInvocationLauncherSign.java:8
 statement = """
 FacturaE no admite cofirma: una cofirma FacturaE se rechaza con SAF_04, operación no soportada.
 """
-drive = { mode = "v4", script = "cosignfacturae" }
-assistance = "click"
-saf = "SAF_04"
-warning = "Va a aparecer el diálogo de certificado antes de que llegue el rechazo."
+
+[check.drive]
+mode = "v4"
+script = "cosignfacturae"
+act.consent = "Va a aparecer el diálogo de certificado antes de que llegue el rechazo."
+expects.code = "SAF_04"
 
 [[check]]
 id = "facturae_refuses_countersign_with_saf_04"
@@ -1082,7 +1216,9 @@ statement = """
 FacturaE no admite contrafirma: una contrafirma FacturaE se rechaza con SAF_04, operación no
 soportada.
 """
-drive = { mode = "v4", script = "countersignfacturae" }
-assistance = "click"
-saf = "SAF_04"
-warning = "Va a aparecer el diálogo de certificado antes de que llegue el rechazo."
+
+[check.drive]
+mode = "v4"
+script = "countersignfacturae"
+act.consent = "Va a aparecer el diálogo de certificado antes de que llegue el rechazo."
+expects.code = "SAF_04"
