@@ -1040,7 +1040,7 @@ msgid "preferences.honourAutomaticSelection.label"
 msgstr "Errespetatu egoitzak eskatzen duen ziurtagiri-hautapen automatikoa"
 
 msgid "preferences.honourAutomaticSelection.hint"
-msgstr "Egoitzak zure ziurtagirietako bakarra onartzen badu, galdetu gabe erabiltzen da. Zure biltegiak PINik eskatzen ez badu, sinadura ezer ikusi gabe aterako da."
+msgstr "Egoitzak eskatzen badu eta zure ziurtagirietako bakarra onartzen badu, galdetu gabe erabiltzen da. Zure biltegiak PINik eskatzen ez badu, sinadura ezer ikusi gabe aterako da."
 
 msgid "preferences.rememberActivity.label"
 msgstr "Gogoratu nire jarduera"

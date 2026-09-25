@@ -36,7 +36,10 @@ ADR-0023 al «se sigue al original».
    fichero sin `dat`, el de guardar de `signandsave`, el área de la firma
    visible y, con `mandatoryCertSelection=false`, las preguntas del PDF y del
    validador se siguen enseñando. Solo `headless=true` las rechaza con
-   `SAF_50`, y eso no depende de la preferencia.
+   `SAF_50`, y eso no depende de la preferencia. Y la ventana solo consiente
+   sola si no tiene ningún aviso que enseñar: un PDF con firmas no
+   registradas, cuya pregunta rFirma hace dentro del consentimiento, lo pide
+   siempre, aunque la sede declare `allowCosigningUnregisteredSignatures=true`.
 4. **`sticky` no cambia con la preferencia** (ADR-0010): el fijado en la sesión
    se preselecciona entre varios candidatos, pero no contesta.
 5. **La suite de conformidad mide rFirma con la preferencia encendida**: el

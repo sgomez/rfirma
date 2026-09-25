@@ -1017,7 +1017,7 @@ msgid "preferences.honourAutomaticSelection.label"
 msgstr "Honour the automatic certificate selection requested by the site"
 
 msgid "preferences.honourAutomaticSelection.hint"
-msgstr "If the site accepts only one of your certificates, it is used without asking you. If your store does not ask for a PIN, the signature goes out without you seeing anything."
+msgstr "If the site asks for it and accepts only one of your certificates, it is used without asking you. If your store does not ask for a PIN, the signature goes out without you seeing anything."
 
 msgid "preferences.rememberActivity.label"
 msgstr "Remember my activity"

@@ -1,6 +1,7 @@
 //! Pruebas de la selección automática que pide la sede con `headless` o `mandatoryCertSelection=false`.
 
 use super::support::*;
+use super::support_requests::A_PDF_SIGNED_BY_SOMETHING_ELSE;
 use crate::documents::application::documents::OpenedDocuments;
 use crate::identity::application::tests::{a_usable_certificate, listed_from};
 use crate::identity::domain::certificate::TokenCertificate;
@@ -238,4 +239,57 @@ fn a_certificate_stuck_among_two_candidates_is_preselected_but_still_asked() {
         consent.already_chosen.as_deref(),
         Some(consent.certificates[1].id.as_str())
     );
+}
+
+fn a_signature_over(verb: &str, declared: &str, document: &[u8]) -> AfirmaUrl {
+    an_operation_declaring(
+        &format!("op={verb}&format=PAdES&algorithm=SHA256withRSA"),
+        declared,
+        document,
+    )
+}
+
+#[test]
+fn with_the_preference_a_pdf_with_unregistered_signatures_is_still_asked() {
+    for verb in ["sign", "cosign"] {
+        let url = a_signature_over(verb, NOT_MANDATORY, A_PDF_SIGNED_BY_SOMETHING_ELSE);
+
+        assert_eq!(
+            consent_of(&attended(&url, one(), true)),
+            Consent::Asked,
+            "{verb}"
+        );
+    }
+}
+
+#[test]
+fn with_the_preference_unregistered_signatures_the_site_allows_are_still_asked() {
+    let declared = format!("{NOT_MANDATORY}allowCosigningUnregisteredSignatures=true\n");
+    let url = a_signature_over("cosign", &declared, A_PDF_SIGNED_BY_SOMETHING_ELSE);
+
+    assert_eq!(consent_of(&attended(&url, one(), true)), Consent::Asked);
+}
+
+#[test]
+fn with_the_preference_a_sign_and_save_over_unregistered_signatures_is_still_asked() {
+    let url = an_operation_declaring(
+        "op=signandsave&cop=sign&format=PAdES&algorithm=SHA256withRSA&filename=firma.pdf",
+        NOT_MANDATORY,
+        A_PDF_SIGNED_BY_SOMETHING_ELSE,
+    );
+
+    assert_eq!(consent_of(&attended(&url, one(), true)), Consent::Asked);
+}
+
+#[test]
+fn a_selection_answered_without_asking_sticks_its_certificate_when_the_site_asks() {
+    let ours = one();
+    let expected = ours[0].reference().clone();
+    let live = a_live();
+    let url = an_operation_declaring("op=selectcert&sticky=true", HEADLESS, b"");
+
+    let step = attended_by(&url, ours, true, &live);
+
+    assert_eq!(consent_of(&step), Consent::Skipped);
+    assert_eq!(live.the_stuck(), Some(expected));
 }

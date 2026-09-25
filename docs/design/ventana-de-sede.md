@@ -72,7 +72,8 @@ que representa el escritorio, para que se vea su tamaño real.
    pantalla de consentimiento aparece también cuando sólo hay un certificado,
    aunque la sede pida la selección automática con `headless` o
    `mandatoryCertSelection=false`; solo se la salta, con un único candidato, si
-   la persona lo ha permitido en Preferencias (ADR-0032).
+   la persona lo ha permitido en Preferencias y la pantalla no tiene ningún
+   aviso que enseñar, como el de las firmas no registradas (ADR-0032).
 2. **No hay bandeja, ni destino, ni memoria.** El documento que manda la sede
    no se recuerda en ninguna parte y no entra en recientes. **El visor solo
    aparece cuando la sede pide marcar el área de la firma visible** (momento

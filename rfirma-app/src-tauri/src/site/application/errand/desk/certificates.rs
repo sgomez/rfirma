@@ -41,7 +41,10 @@ pub fn consent_for<E: FilterEngine>(
 
     if request.waives_the_choice() && certificates.automatic_selection_honoured() {
         if let Some(only) = the_only_one_among(&accepted) {
-            return answering(live, SiteOutcome::Certificate(only));
+            if request.sticky().is_sticky() {
+                live.stick(only.reference());
+            }
+            return answering(live, SiteOutcome::Certificate(only.der().to_vec()));
         }
     }
 
@@ -193,6 +196,14 @@ impl Preselected {
             without_asking,
         }
     }
+
+    /// La misma preselección, que ya no consiente sola si el consentimiento tiene un aviso que enseñar.
+    pub fn unless_there_is_a_notice(self, notice: bool) -> Self {
+        Self {
+            without_asking: self.without_asking && !notice,
+            ..self
+        }
+    }
 }
 
 fn the_only_row_among(rows: &[ListedCertificate]) -> Option<String> {
@@ -201,12 +212,12 @@ fn the_only_row_among(rows: &[ListedCertificate]) -> Option<String> {
     usable.next().is_none().then(|| only.id.clone())
 }
 
-fn the_only_one_among(accepted: &[TokenCertificate]) -> Option<Vec<u8>> {
+fn the_only_one_among(accepted: &[TokenCertificate]) -> Option<&TokenCertificate> {
     let mut usable = accepted
         .iter()
         .filter(|certificate| certificate.status().is_usable());
     let only = usable.next()?;
-    usable.next().is_none().then(|| only.der().to_vec())
+    usable.next().is_none().then_some(only)
 }
 
 /// Las filas de los aceptados, con la fijada en la sesión como única preseleccionada si `sticky` la encuentra, y su asa.

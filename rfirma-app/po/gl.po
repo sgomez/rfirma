@@ -1019,7 +1019,7 @@ msgid "preferences.honourAutomaticSelection.label"
 msgstr "Respectar a selección automática de certificado que pida a sede"
 
 msgid "preferences.honourAutomaticSelection.hint"
-msgstr "Se a sede só acepta un dos teus certificados, úsase sen preguntarche. Se o teu almacén non pide PIN, a sinatura sairá sen que vexas nada."
+msgstr "Se a sede o pide e só acepta un dos teus certificados, úsase sen preguntarche. Se o teu almacén non pide PIN, a sinatura sairá sen que vexas nada."
 
 msgid "preferences.rememberActivity.label"
 msgstr "Lembrar a miña actividade"

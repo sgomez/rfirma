@@ -424,7 +424,8 @@ fn consent_to_a_signature<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
         stuck,
         ask.waives_the_choice,
         &desk.neighbours,
-    );
+    )
+    .unless_there_is_a_notice(unregistered_signatures);
     ErrandStep::AskingToSign(Box::new(SigningConsent {
         document,
         format,
