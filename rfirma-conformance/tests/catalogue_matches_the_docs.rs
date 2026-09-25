@@ -1,11 +1,12 @@
 //! El catálogo y la referencia se cruzan con la documentación de `docs/afirma/1.9.2/`: capítulos,
-//! tabla SAF del capítulo 15, fichas del anexo A1 y su registro de bugs.
+//! tabla SAF del capítulo 15, fichas del anexo A1, su registro de bugs y la tabla SAF × punto de decisión.
 
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 
 use rfirma_conformance::catalogue::read_the_catalogue;
 use rfirma_conformance::known_bug::{the_known_bugs, InMaster};
+use rfirma_conformance::saf_table::{read_the_saf_table, the_codes_of};
 
 #[derive(Debug, Default)]
 struct Entry {
@@ -264,6 +265,20 @@ fn codes_of_the_table_without_an_entry(
     table.difference(named).cloned().collect()
 }
 
+fn codes_the_saf_table_and_the_manual_disagree_on(
+    manual: &BTreeSet<String>,
+    rows: &BTreeSet<String>,
+) -> Vec<String> {
+    manual
+        .difference(rows)
+        .map(|code| format!("{code}: la sede puede recibirlo y no tiene fila"))
+        .chain(
+            rows.difference(manual)
+                .map(|code| format!("{code}: tiene fila y la sede no puede recibirlo")),
+        )
+        .collect()
+}
+
 fn cited_cards_that_do_not_exist(entries: &[Entry], cards: &BTreeSet<String>) -> Vec<String> {
     entries
         .iter()
@@ -414,6 +429,33 @@ fn every_code_of_the_error_table_is_closed_against_the_catalogue() {
         "hay códigos de la tabla del capítulo 15 sin entrada, sin familia y sin declararse no \
          medibles:\n  {}",
         codes_of_the_table_without_an_entry(&table, &named).join("\n  ")
+    );
+}
+
+#[test]
+fn every_code_the_site_can_receive_has_a_row_in_the_saf_table_and_no_other_does() {
+    let manual = saf_codes_in_the_table(&read(&the_manual().join("15-errores.md")));
+    let rows =
+        the_codes_of(&read_the_saf_table().unwrap_or_else(|complaint| panic!("{complaint}")));
+
+    assert!(
+        codes_the_saf_table_and_the_manual_disagree_on(&manual, &rows).is_empty(),
+        "la tabla SAF no casa con la del capítulo 15:\n  {}",
+        codes_the_saf_table_and_the_manual_disagree_on(&manual, &rows).join("\n  ")
+    );
+}
+
+#[test]
+fn a_code_without_a_row_and_a_row_the_site_never_receives_are_both_caught_and_named() {
+    let manual = BTreeSet::from(["SAF_03".to_owned(), "SAF_06".to_owned()]);
+    let rows = BTreeSet::from(["SAF_03".to_owned(), "SAF_07".to_owned()]);
+
+    assert_eq!(
+        codes_the_saf_table_and_the_manual_disagree_on(&manual, &rows),
+        vec![
+            "SAF_06: la sede puede recibirlo y no tiene fila",
+            "SAF_07: tiene fila y la sede no puede recibirlo",
+        ]
     );
 }
 

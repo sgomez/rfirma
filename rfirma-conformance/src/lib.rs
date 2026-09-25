@@ -15,6 +15,7 @@ mod manifest;
 mod outcome;
 mod report;
 mod report_view;
+pub mod saf_table;
 pub mod server;
 mod snapshot;
 mod transcript;

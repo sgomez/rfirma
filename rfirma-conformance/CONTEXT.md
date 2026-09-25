@@ -122,6 +122,22 @@ comprobación tiene **un solo** conjunto, el del componente que decide; el códi
 que observa nunca deciden dónde va.
 _Avoid_: grupo, suite (para un conjunto)
 
+**Punto de decisión**:
+Dónde decide el original un código SAF: el **analizador** de la petición, el **canal** que la trae,
+la operación **antes del certificado** (o sin pedir ninguno, como guardar y cargar), el **almacén**
+al elegirlo, la firma **después del certificado**, o un servicio remoto: el **prefirmador** o el
+**postfirmador** del lote y el **servidor trifásico**. Es una lista cerrada. Un mismo código puede
+decidirse en varios; un NO CONFORME de SAF suele venir de dónde se decide, no de qué código es.
+_Avoid_: origen, capa (para un punto de decisión)
+
+**Tabla SAF**:
+Cada código SAF que la sede puede recibir, cruzado con cada punto de decisión desde el que el
+original lo emite. Cada fila está **cubierta** por comprobaciones que lo miden, es **no medible**
+con su motivo, o es un **hueco** declarado, que nadie mide todavía. Es una vista sobre el catálogo,
+no un conjunto: una comprobación no cambia de conjunto por estar en una fila, y toda la que espera
+un `SAF_NN` está en una sola.
+_Avoid_: matriz de errores, cobertura SAF (para la tabla)
+
 **Resultado**:
 El juicio de una comprobación, siempre respecto a lo que exige el protocolo y nunca respecto a lo
 que se sabe del cliente. Es una lista cerrada:
