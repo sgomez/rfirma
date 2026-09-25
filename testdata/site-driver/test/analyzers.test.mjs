@@ -303,6 +303,29 @@ describe("the CMS verifier", () => {
     assert.equal(verification.verified, null, verification.reason);
     assert.match(verification.reason, /2\.16\.840\.1\.101\.3\.4\.2\.4/);
   });
+
+  it("names the unknown digest of a signer without signed attributes", () => {
+    const cms = aSample("cms-sha224-without-attributes.p7s");
+    const verification = theCmsVerification(cms, theCertificatesIn(cms)[0]);
+    assert.equal(verification.verified, null, verification.reason);
+    assert.match(verification.reason, /2\.16\.840\.1\.101\.3\.4\.2\.4/);
+  });
+
+  it("refuses a cosignature whose second signer fails behind an unverifiable first one", () => {
+    const cms = aReference("cades-implicit.cosign.p7s");
+    const [first, second] = theCmsSignature(cms).signers;
+    const digestAt = cms.lastIndexOf(SHA256_OID, cms.indexOf(first.signedAttributes.subarray(2)));
+    const unverifiableFirst = Buffer.from(cms);
+    SHA224_OID.copy(unverifiableFirst, digestAt);
+    assert.equal(theCmsVerification(unverifiableFirst, theSigner).verified, null);
+    const alsoBrokenSecond = withAByteFlippedAt(
+      unverifiableFirst,
+      cms.indexOf(second.signature) + 10,
+    );
+    const verification = theCmsVerification(alsoBrokenSecond, theSigner);
+    assert.equal(verification.verified, false, verification.reason);
+    assert.match(verification.reason, /no verifica con ninguna clave/);
+  });
 });
 
 describe("the PAdES verifier", () => {
@@ -393,5 +416,18 @@ describe("the XAdES verifier", () => {
       const verification = theXadesVerification(altered, theSigner);
       assert.equal(verification.verified, null, verification.reason);
     }
+  });
+
+  it("refuses a cosignature whose second Signature fails behind an unverifiable first one", () => {
+    const xml = anXml("xades-enveloping.cosign.xml").replace(
+      "xmldsig-more#rsa-sha256",
+      "xmldsig-more#rsa-sha224",
+    );
+    assert.equal(theXadesVerification(xml, theSigner).verified, null);
+    const at = xml.lastIndexOf('-SignatureValue">') + '-SignatureValue">'.length;
+    const altered = `${xml.slice(0, at)}${xml[at] === "A" ? "B" : "A"}${xml.slice(at + 1)}`;
+    const verification = theXadesVerification(altered, theSigner);
+    assert.equal(verification.verified, false, verification.reason);
+    assert.match(verification.reason, /SignedInfo/);
   });
 });
