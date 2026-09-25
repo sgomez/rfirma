@@ -3,7 +3,9 @@
 use super::support::*;
 use super::support_requests::A_PDF_SIGNED_BY_SOMETHING_ELSE;
 use crate::documents::application::documents::OpenedDocuments;
-use crate::identity::application::tests::{a_usable_certificate, listed_from};
+use crate::identity::application::tests::{
+    a_usable_certificate, an_expired_certificate, listed_from,
+};
 use crate::identity::domain::certificate::TokenCertificate;
 use crate::signing::application::configuration_memory::Configuration;
 use crate::signing::application::tests::{a_memory, A_CADES_SIGNATURE};
@@ -94,6 +96,18 @@ fn attended_by(
     honoured: bool,
     live: &LiveErrand,
 ) -> ErrandStep {
+    let everyone: Vec<usize> = (0..ours.len()).collect();
+    attended_accepting(url, ours, &everyone, honoured, live)
+}
+
+/// Atiende la operación con la preferencia dada, y la sede acepta solo los certificados de `accepted`.
+fn attended_accepting(
+    url: &AfirmaUrl,
+    ours: Vec<TokenCertificate>,
+    accepted: &[usize],
+    honoured: bool,
+    live: &LiveErrand,
+) -> ErrandStep {
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
     let memory = a_memory(home.path());
     memory
@@ -104,8 +118,7 @@ fn attended_by(
         .expect("la memoria de pruebas escribe");
     let (listed, _) = listed_from(&ours);
     let opened = OpenedDocuments::new();
-    let everyone: Vec<usize> = (0..ours.len()).collect();
-    let engine = AnEngine::answering(&[&everyone]);
+    let engine = AnEngine::answering(&[accepted]);
     let policies = APolicyEngine::answering("");
     let scratch = home.path().join("errand");
     let mut desk = a_desk(
@@ -292,4 +305,49 @@ fn a_selection_answered_without_asking_sticks_its_certificate_when_the_site_asks
 
     assert_eq!(consent_of(&step), Consent::Skipped);
     assert_eq!(live.the_stuck(), Some(expected));
+}
+
+fn a_usable_and_an_expired() -> Vec<TokenCertificate> {
+    vec![
+        a_usable_certificate("VIGENTE"),
+        an_expired_certificate("CADUCADO"),
+    ]
+}
+
+#[test]
+fn with_the_preference_an_expired_candidate_the_filter_admits_still_counts_and_is_asked() {
+    for url in every_operation(NOT_MANDATORY) {
+        let step = attended_accepting(&url, a_usable_and_an_expired(), &[0, 1], true, &a_live());
+
+        assert_eq!(consent_of(&step), Consent::Asked, "{url:?}");
+    }
+}
+
+#[test]
+fn with_the_preference_an_expired_candidate_the_filter_drops_is_not_counted() {
+    for url in every_operation(NOT_MANDATORY) {
+        let step = attended_accepting(&url, a_usable_and_an_expired(), &[0], true, &a_live());
+
+        assert_eq!(consent_of(&step), Consent::Skipped, "{url:?}");
+    }
+}
+
+#[test]
+fn an_expired_candidate_that_forces_the_question_leaves_the_usable_one_preselected() {
+    let step = attended_accepting(
+        &a_signature("sign", NOT_MANDATORY),
+        a_usable_and_an_expired(),
+        &[0, 1],
+        true,
+        &a_live(),
+    );
+
+    let ErrandStep::AskingToSign(consent) = step else {
+        panic!("hay algo que firmar: {step:?}");
+    };
+    assert!(!consent.without_asking);
+    assert_eq!(
+        consent.already_chosen.as_deref(),
+        Some(consent.certificates[0].id.as_str())
+    );
 }

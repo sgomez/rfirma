@@ -182,7 +182,7 @@ pub(super) struct Preselected {
 }
 
 impl Preselected {
-    /// La fijada en la sesión o el único candidato; sin preguntar, solo este y con la preferencia (`AOKeyStoreDialog.show`, 1.9.2).
+    /// La fijada en la sesión o el único vigente; sin preguntar, solo si es la única fila y con la preferencia (`AOKeyStoreDialog.show`, 1.9.2).
     pub fn among(
         rows: &[ListedCertificate],
         stuck: Option<String>,
@@ -190,7 +190,8 @@ impl Preselected {
         certificates: &dyn Certificates,
     ) -> Self {
         let only = choice_waived.then(|| the_only_row_among(rows)).flatten();
-        let without_asking = only.is_some() && certificates.automatic_selection_honoured();
+        let without_asking =
+            only.is_some() && rows.len() == 1 && certificates.automatic_selection_honoured();
         Self {
             row: stuck.or(only),
             without_asking,
@@ -213,11 +214,10 @@ fn the_only_row_among(rows: &[ListedCertificate]) -> Option<String> {
 }
 
 fn the_only_one_among(accepted: &[TokenCertificate]) -> Option<&TokenCertificate> {
-    let mut usable = accepted
-        .iter()
-        .filter(|certificate| certificate.status().is_usable());
-    let only = usable.next()?;
-    usable.next().is_none().then_some(only)
+    match accepted {
+        [only] if only.status().is_usable() => Some(only),
+        _ => None,
+    }
 }
 
 /// Las filas de los aceptados, con la fijada en la sesión como única preseleccionada si `sticky` la encuentra, y su asa.

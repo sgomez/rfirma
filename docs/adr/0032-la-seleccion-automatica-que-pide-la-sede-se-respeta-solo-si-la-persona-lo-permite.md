@@ -29,9 +29,11 @@ ADR-0023 al «se sigue al original».
 2. **La preferencia «Respetar la selección automática de certificado que pida
    la sede»** (`honour_automatic_selection`, apagada por omisión) restaura el
    original: con `headless=true` o `mandatoryCertSelection=false` y un único
-   candidato utilizable, `selectcert` contesta sin ventana, y la firma y los
-   lotes siguen sin esperar a la persona —la ventana consiente sola con ese
-   candidato—. Con dos o más candidatos se pregunta igual.
+   candidato, `selectcert` contesta sin ventana, y la firma y los lotes siguen
+   sin esperar a la persona —la ventana consiente sola con ese candidato—. Los
+   candidatos se cuentan como el original, con todo lo que admite el filtro de
+   la sede: si declara filtros explícitos, los caducados que admite cuentan
+   aunque rFirma no firme con ellos. Con dos o más se pregunta igual.
 3. **La preferencia no se salta nada más.** El PIN, el diálogo para elegir el
    fichero sin `dat`, el de guardar de `signandsave`, el área de la firma
    visible y, con `mandatoryCertSelection=false`, las preguntas del PDF y del

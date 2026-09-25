@@ -81,7 +81,7 @@ fn headless_with_a_single_expired_candidate_answers_saf19_without_asking() {
 }
 
 #[test]
-fn headless_with_an_expired_and_a_usable_candidate_picks_the_usable_one() {
+fn headless_with_an_expired_candidate_the_filter_admits_and_a_usable_one_still_asks() {
     let step = a_headless_selection(
         vec![
             an_expired_certificate("CADUCADO"),
@@ -90,9 +90,10 @@ fn headless_with_an_expired_and_a_usable_candidate_picks_the_usable_one() {
         &[0, 1],
     );
 
-    let ErrandStep::Answering(SiteOutcome::Certificate(_)) = step else {
-        panic!("con un solo candidato vigente tampoco se pregunta: {step:?}");
+    let ErrandStep::AskingForConsent { certificates, .. } = step else {
+        panic!("el original cuenta el caducado que el filtro admite y pregunta: {step:?}");
     };
+    assert_eq!(certificates.len(), 2);
 }
 
 #[test]
