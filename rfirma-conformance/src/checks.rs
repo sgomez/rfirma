@@ -8,7 +8,7 @@ use std::time::{Duration, Instant};
 
 use crate::catalogue::{Assistance, Check, Provocation};
 use crate::errand::{ErrandKey, ErrandOutcome, ObservedErrand, THE_DRIVER_CRASH};
-use crate::harness::the_leftover_names;
+use crate::harness::THE_HARNESSES;
 use crate::judge::{judge, Verdict};
 use crate::outcome::outcome_name;
 use crate::outcome::{CheckState, Outcome};
@@ -174,7 +174,7 @@ impl Probe {
     /// la comprobación, tras borrar los que dejó cualquier otra; `None` si no necesita ninguno.
     fn prepare_the_fixtures_of(&self, check: &Check) -> Result<Option<String>, String> {
         let directory = the_isolated_home_of(&self.client);
-        for name in the_leftover_names() {
+        for (name, _) in THE_HARNESSES.iter().flat_map(|harness| harness.fixtures) {
             let _ = std::fs::remove_file(directory.join(name));
         }
         let fixtures = check.harness().map_or(&[][..], |harness| harness.fixtures);
@@ -388,7 +388,7 @@ mod tests {
         let catalogue = the_catalogue_in(
             r#"
 [[check]]
-id = "a_load"
+id = "a_save"
 set = "operaciones.disco"
 chapter = "10"
 citation = "A.java:1"
@@ -396,21 +396,23 @@ statement = "Uno."
 
 [check.drive]
 mode = "v4"
-script = "load"
-harness = "a_file_that_cannot_be_read"
-act.pick_file = "Se va a pedir qué fichero cargar."
-expects.code = "SAF_25"
+script = "save"
+harness = "a_file_to_overwrite"
+act.cancel = "Se va a pedir dónde guardar."
+expects.code = "CANCEL"
 "#,
         )
         .unwrap();
         let group: Vec<&Check> = catalogue.iter().collect();
 
-        let briefing =
-            the_briefing_of(&group, Some("Ficheros preparados en /tmp/x: ilegible.bin."));
+        let briefing = the_briefing_of(
+            &group,
+            Some("Ficheros preparados en /tmp/x: ya-existe.txt."),
+        );
 
         assert_eq!(
             briefing,
-            "Se va a pedir qué fichero cargar.\n\nFicheros preparados en /tmp/x: ilegible.bin."
+            "Se va a pedir dónde guardar.\n\nFicheros preparados en /tmp/x: ya-existe.txt."
         );
     }
 
@@ -447,7 +449,10 @@ expects.code = "SAF_25"
                 .map_or(0, |harness| harness.fixtures.len())
         };
 
-        assert_eq!(prepared("a_load_that_cannot_read_answers_saf_25"), 1);
+        assert_eq!(
+            prepared("save_confirms_before_writing_over_a_file_that_already_exists"),
+            1
+        );
         assert_eq!(
             prepared("load_answers_the_name_of_the_chosen_file_next_to_its_content"),
             2

@@ -415,6 +415,21 @@ act.pick_file = "Se va a pedir primero el documento a firmar, y después vendrá
 expects.completes.conditions = ["the-filename-in-a-third-component"]
 
 [[check]]
+id = "cosign_asks_for_the_signature_file_when_the_request_brings_no_data"
+set = "firma"
+citation = "ProtocolInvocationLauncherSign.java:300-357"
+statement = """
+Una cofirma cuya petición no trae dat pide a la persona el fichero de firma antes que el
+certificado, y cancelar esa elección termina el trámite como cancelación.
+"""
+
+[check.drive]
+mode = "v4"
+script = "cosignwithoutdatacancelled"
+act.cancel = "Se va a pedir el fichero de firma a cofirmar: cancela esa ventana en vez de elegir nada."
+expects.code = "CANCEL"
+
+[[check]]
 id = "check_signatures_lets_a_first_signature_through"
 set = "firma"
 citation = "ProtocolInvocationLauncherSign.java:409-483, 866-871"
@@ -560,6 +575,36 @@ mode = "v4"
 script = "signpadeswrongpassword"
 act.type_password = "Elige el certificado; cuando se pida la contraseña del PDF, escribe 1234."
 expects.completes = {}
+
+[[check]]
+id = "a_protected_pdf_without_a_password_is_asked_to_the_person"
+set = "firma"
+citation = "ProtocolInvocationLauncherSign.java:812-836; PdfUtil.java:176-182"
+statement = """
+Sin headless ni contraseña en la petición, un PDF protegido pide su contraseña a la persona, y
+cancelar esa petición termina el trámite como cancelación.
+"""
+
+[check.drive]
+mode = "v4"
+script = "signpadesprotected"
+act.cancel = "Elige el certificado; cuando se pida la contraseña del PDF, cancela esa ventana en vez de escribirla."
+expects.code = "CANCEL"
+
+[[check]]
+id = "a_certified_pdf_asks_the_person_before_being_signed"
+set = "firma"
+citation = "ProtocolInvocationLauncherSign.java:787-806"
+statement = """
+Sin headless, el aviso de un PDF certificado se resuelve preguntando a la persona: si lo rechaza, el
+trámite termina como cancelación en vez de firmarse.
+"""
+
+[check.drive]
+mode = "v4"
+script = "signpadescertified"
+act.cancel = "Va a aparecer el diálogo de certificado y, después, un aviso de que el PDF está certificado: recházalo en vez de aceptarlo."
+expects.code = "CANCEL"
 
 [[check]]
 id = "a_pades_signature_packages_itself_inside_the_pdf"

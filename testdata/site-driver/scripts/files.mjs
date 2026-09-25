@@ -91,15 +91,18 @@ function theSaveWithIllegalExtensionsScript() {
   );
 }
 
-/** Una carga sin medir nada: sólo importa cómo termina al cancelarla. */
-function theLoadToCancelScript() {
-  AutoScript.getFileNameContentBase64(
-    "Carga un documento",
+/** Una carga, simple o múltiple, sin medir nada: sólo importa cómo termina al cancelarla. */
+function theLoadToCancelScript(multiple) {
+  const load = multiple
+    ? AutoScript.getMultiFileNameContentBase64
+    : AutoScript.getFileNameContentBase64;
+  load(
+    multiple ? "Carga varios documentos" : "Carga un documento",
     "bin",
     "Datos binarios",
     null,
-    (filename, data) =>
-      settle({ event: "success", filenames: String(filename), data: String(data) }),
+    (filenames, data) =>
+      settle({ event: "success", filenames: String(filenames), data: String(data) }),
     settlingTheError,
   );
 }
@@ -133,6 +136,20 @@ function theFilenameInAThirdComponent(extraInfo) {
     carried
       ? `la respuesta trajo un tercer componente con el nombre «${filename}»`
       : `la respuesta no trajo el nombre del fichero elegido en un tercer componente (${extraInfo === null ? "no hubo" : `llegó ${String(extraInfo).slice(0, 40)}`})`,
+  );
+}
+
+/** Un `coSign()` sin firma: la petición viaja sin `dat` y la firma se pide en disco. */
+function theCosignWithoutDataScript() {
+  AutoScript.coSign(
+    "",
+    null,
+    "SHA256withRSA",
+    "CAdES",
+    "",
+    (signature, certificate) =>
+      settle({ event: "success", result: String(signature), certificate: String(certificate) }),
+    settlingTheError,
   );
 }
 
@@ -295,8 +312,10 @@ export const FILE_SCRIPTS = {
   savewithoutdata: aPublishedScript(theSaveWithoutDataScript),
   savewithillegalextensions: aPublishedScript(theSaveWithIllegalExtensionsScript),
   savereadback: aPublishedScript(theSaveScript, { conditions: [THE_DECODED_BYTES_ON_DISK] }),
-  loadcancelled: aPublishedScript(theLoadToCancelScript),
+  loadcancelled: aPublishedScript(() => theLoadToCancelScript(false)),
+  multiloadcancelled: aPublishedScript(() => theLoadToCancelScript(true)),
   signwithoutdata: aPublishedScript(theSignWithoutDataScript, {
     conditions: [THE_FILENAME_IN_A_THIRD_COMPONENT],
   }),
+  cosignwithoutdatacancelled: aPublishedScript(theCosignWithoutDataScript),
 };

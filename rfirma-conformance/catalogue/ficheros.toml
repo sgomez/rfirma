@@ -16,6 +16,22 @@ act.consent = "AutoFirma enseña un diálogo de error antes de contestar el rech
 expects.code = "SAF_03"
 
 [[check]]
+id = "save_confirms_before_writing_over_a_file_that_already_exists"
+set = "ficheros"
+citation = "JSEUIManager.java:781-803; ProtocolInvocationLauncherSave.java:79-91"
+statement = """
+Elegir como destino un fichero que ya existe pide confirmación antes de escribir encima: si no se
+confirma, vuelve a pedir destino, y cancelarlo termina el trámite como cancelación.
+"""
+
+[check.drive]
+mode = "v4"
+script = "save"
+harness = "a_file_to_overwrite"
+act.cancel = "Se va a pedir dónde guardar: acepta el nombre propuesto, challenge.bin, que ya existe porque se ha preparado; cuando te pregunte si lo sobrescribes, di que no, y cancela el diálogo de guardar que vuelve a abrirse."
+expects.code = "CANCEL"
+
+[[check]]
 id = "load_answers_the_name_of_the_chosen_file_next_to_its_content"
 set = "ficheros"
 citation = "ProtocolInvocationLauncherLoad.java:95-103, 132-139; UrlParametersToLoad.java:27, 179-191"
@@ -62,6 +78,22 @@ mode = "v4"
 script = "save"
 act.save_as_proposed = "Va a aparecer la ventana nativa para elegir dónde guardar el fichero: guárdalo con el nombre que propone."
 expects.code = "SAVE_OK"
+
+[[check]]
+id = "a_save_that_cannot_write_asks_for_another_destination"
+set = "ficheros"
+citation = "JSEUIManager.java:808-824; ProtocolInvocationLauncherSave.java:93-99"
+statement = """
+Un fallo de escritura al guardar no termina el trámite: se avisa del error y se vuelve a pedir
+destino, y cancelar entonces llega a la sede como cancelación.
+"""
+
+[check.drive]
+mode = "v4"
+script = "save"
+harness = "a_file_that_cannot_be_written"
+act.cancel = "Se va a pedir dónde guardar: acepta el nombre propuesto, challenge.bin, que ya existe y es de solo lectura; acepta la confirmación, cierra el aviso de error y, cuando vuelva a pedir destino, cancela."
+expects.code = "CANCEL"
 
 [[check]]
 id = "a_load_that_cannot_read_answers_saf_25"
@@ -148,3 +180,17 @@ script = "loadcancelled"
 act.cancel = "Se va a pedir qué fichero cargar: cancela en vez de elegir."
 expects.code = "CANCEL"
 
+[[check]]
+id = "multiload_without_files_answers_a_cancellation"
+set = "ficheros"
+citation = "ProtocolInvocationLauncherLoad.java:105-111"
+statement = """
+Cerrar la carga múltiple sin elegir ningún fichero termina el trámite como cancelación, y así llega
+a la sede.
+"""
+
+[check.drive]
+mode = "v4"
+script = "multiloadcancelled"
+act.cancel = "Se va a pedir qué ficheros cargar: cancela sin elegir ninguno."
+expects.code = "CANCEL"

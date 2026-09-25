@@ -56,6 +56,18 @@ pub(crate) const THE_HARNESSES: &[Harness] = &[
         measure: JUST_DRIVE,
     },
     Harness {
+        name: "a_file_to_overwrite",
+        fixtures: &[("challenge.bin", "Este fichero se sobrescribe.\n")],
+        mode: READ_AND_WRITE,
+        measure: JUST_DRIVE,
+    },
+    Harness {
+        name: "a_file_that_cannot_be_written",
+        fixtures: &[("challenge.bin", "Este fichero es de solo lectura.\n")],
+        mode: 0o444,
+        measure: JUST_DRIVE,
+    },
+    Harness {
         name: "a_file_that_cannot_be_read",
         fixtures: &[("ilegible.bin", "Este fichero no se puede leer.\n")],
         mode: 0o000,
@@ -133,17 +145,8 @@ pub(crate) const THE_HARNESSES: &[Harness] = &[
     },
 ];
 
-/// El nombre que proponen los guiones de guardar, que borra la preparación de cada comprobación.
+/// El nombre que propone el guion `savereadback`, que ya borra la preparación de cada comprobación.
 const THE_SAVED_NAME: &str = "challenge.bin";
-
-/// Los ficheros que una comprobación puede dejar en la carpeta del perfil: los de cada arnés y el guardado.
-pub(crate) fn the_leftover_names() -> impl Iterator<Item = &'static str> {
-    THE_HARNESSES
-        .iter()
-        .flat_map(|harness| harness.fixtures)
-        .map(|(name, _)| *name)
-        .chain(std::iter::once(THE_SAVED_NAME))
-}
 
 const THE_DECODED_BYTES_ON_DISK: &str = "the-decoded-bytes-on-disk";
 
@@ -356,7 +359,10 @@ mod tests {
 
     #[test]
     fn the_saved_file_is_one_that_the_preparation_clears() {
-        assert!(the_leftover_names().any(|name| name == THE_SAVED_NAME));
+        assert!(THE_HARNESSES
+            .iter()
+            .flat_map(|harness| harness.fixtures)
+            .any(|(name, _)| *name == THE_SAVED_NAME));
     }
 
     #[test]
