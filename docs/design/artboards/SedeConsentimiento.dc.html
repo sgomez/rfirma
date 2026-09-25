@@ -256,9 +256,11 @@ const TODOS = [
 class Component extends DCLogic {
   renderVals() {
     // EL CORAZON DEL #317. Sostiene la invariante mas fuerte del hito: una sede
-    // NUNCA provoca una firma silenciosa. `headless` y `mandatoryCertSelection`
-    // se ignoran los dos, asi que esta pantalla aparece SIEMPRE, tambien con un
-    // solo certificado.
+    // no provoca una firma silenciosa sin permiso de la persona. Esta pantalla
+    // aparece tambien con un solo certificado, aunque la sede pida la seleccion
+    // automatica con `headless` o `mandatoryCertSelection=false`; solo se la
+    // salta, con un unico candidato, si la persona lo ha permitido en
+    // Preferencias y no hay ningun aviso que ensenar (ADR-0032).
     //
     // UN SOLO DOCUMENTO. La peticion trae `op`, `idsession`, `algorithm`,
     // `format`, `dat` (UN PDF en Base64) y `properties`. No hay lote ni `batch`
