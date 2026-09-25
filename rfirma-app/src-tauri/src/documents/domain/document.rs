@@ -91,6 +91,11 @@ impl Document {
     }
 }
 
+/// Si la ruta es un fichero concedido por el portal de documentos del sandbox.
+pub fn is_a_portal_grant(path: &Path) -> bool {
+    portal_id_in(path).is_some()
+}
+
 fn portal_id_in(reading_path: &Path) -> Option<String> {
     let directory = reading_path.parent()?;
     let identifier = directory.file_name()?.to_str()?;

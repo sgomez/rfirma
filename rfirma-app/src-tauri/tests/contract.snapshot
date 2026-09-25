@@ -16,7 +16,8 @@ ORDENES DE TAURI                          (<contexto>/adapters/tauri*.rs)
   async forget_recent(id: String) -> Result<(), Failure>
   async choose_rubric() -> Option<RubricChoiceView>
   async read_rubric() -> Result<Option<RubricView>, Failure>
-  async preview_destination(id: String) -> Result<DestinationView, Failure>
+  async preview_destination(id: String, destination: Option<String>) -> Result<DestinationView, Failure>
+  async choose_single_destination(id: String) -> Result<Option<SingleDestinationView>, Failure>
   async choose_destination() -> Result<Option<String>, Failure>
   async open_signed_document() -> Result<(), Failure>
   async open_signed_folder() -> Result<(), Failure>
@@ -25,7 +26,7 @@ ORDENES DE TAURI                          (<contexto>/adapters/tauri*.rs)
   async remove_certificate(id: String) -> Result<(), Failure>
         begin_signing(order: SigningOrder) -> Result<SecretView, Failure>
   async sign_with_pin(pin: String) -> Result<(), Failure>
-        finish_signing() -> Result<SignedDocumentView, Failure>
+        finish_signing(destination: Option<String>) -> Result<SignedDocumentView, Failure>
         cancel_signing()
   async preview_signature(order: SigningOrder) -> Result<tauri::ipc::Response, Failure>
         pades_lower_left(placement: PlacementOrder) -> Result<[i32; 2], Failure>
@@ -114,6 +115,12 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
   pub struct DestinationView
       folder: String
       name: Option<String>
+      writable: bool
+
+  pub struct SingleDestinationView
+      id: String
+      folder: String
+      name: String
       writable: bool
 
   pub struct SignedDocumentView

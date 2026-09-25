@@ -68,16 +68,20 @@ pub fn signed_with_the_secret(
     crate::site::the_pending_signature_signed(desk, live, &secret)
 }
 
-/// Postfirma: comprueba el sello, ensambla el PDF y lo deja caer.
+/// Postfirma: comprueba el sello, ensambla el PDF y lo deja caer donde se eligió.
 #[tauri::command]
 pub fn finish_signing(
+    destination: Option<String>,
     identity: State<'_, IdentityRoot>,
     documents: State<'_, DocumentsRoot>,
     signing: State<'_, SigningRoot>,
 ) -> Result<SignedDocumentView, Failure> {
     let signed = crate::signing::application::session::finish(&signing.isolate, &signing.session)?;
-    let (landing, delivered) =
-        documents.deliver(&signed.document, signed.completed.signed_document())?;
+    let (landing, delivered) = documents.deliver(
+        &signed.document,
+        signed.completed.signed_document(),
+        destination.as_deref(),
+    )?;
     identity.remember_the_certificate(&signed.certificate);
     if documents.is_remembered(&signed.handle) {
         documents.note_signed(&landing, &signed.completed);
