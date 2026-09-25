@@ -105,6 +105,7 @@ impl SiteErrandView {
         signs: usize,
         certificates: &[ListedCertificate],
         already_chosen: Option<&str>,
+        without_asking: bool,
     ) -> Self {
         Self {
             origin: None,
@@ -112,6 +113,7 @@ impl SiteErrandView {
                 signs,
                 certificates: rows_of(certificates),
                 already_chosen: already_chosen.map(str::to_owned),
+                without_asking,
             },
         }
     }
@@ -121,6 +123,7 @@ impl SiteErrandView {
         items: &[LocalBatchItem],
         certificates: &[ListedCertificate],
         already_chosen: Option<&str>,
+        without_asking: bool,
     ) -> Self {
         Self {
             origin: None,
@@ -128,6 +131,7 @@ impl SiteErrandView {
                 items: items.iter().map(LocalBatchItemView::from).collect(),
                 certificates: rows_of(certificates),
                 already_chosen: already_chosen.map(str::to_owned),
+                without_asking,
             },
         }
     }
@@ -150,6 +154,7 @@ impl SiteErrandView {
         certificates: &[ListedCertificate],
         unregistered_signatures: bool,
         already_chosen: Option<&str>,
+        without_asking: bool,
     ) -> Self {
         Self {
             origin: None,
@@ -160,6 +165,7 @@ impl SiteErrandView {
                 certificates: rows_of(certificates),
                 unregistered_signatures,
                 already_chosen: already_chosen.map(str::to_owned),
+                without_asking,
             },
         }
     }
@@ -185,6 +191,7 @@ impl From<&Moment> for SiteErrandView {
                 certificates,
                 unregistered_signatures,
                 already_chosen,
+                without_asking,
             } => Self::asking_to_sign(
                 document,
                 *format,
@@ -192,6 +199,7 @@ impl From<&Moment> for SiteErrandView {
                 certificates,
                 *unregistered_signatures,
                 already_chosen.as_deref(),
+                *without_asking,
             ),
             Moment::MarkingTheArea { document } => Self::at(SiteStageView::MarkingTheArea {
                 document: document.clone(),
@@ -201,14 +209,24 @@ impl From<&Moment> for SiteErrandView {
                 signs,
                 certificates,
                 already_chosen,
-            } => Self::asking_to_sign_the_batch(*signs, certificates, already_chosen.as_deref()),
+                without_asking,
+            } => Self::asking_to_sign_the_batch(
+                *signs,
+                certificates,
+                already_chosen.as_deref(),
+                *without_asking,
+            ),
             Moment::AskingToSignTheLocalBatch {
                 items,
                 certificates,
                 already_chosen,
-            } => {
-                Self::asking_to_sign_the_local_batch(items, certificates, already_chosen.as_deref())
-            }
+                without_asking,
+            } => Self::asking_to_sign_the_local_batch(
+                items,
+                certificates,
+                already_chosen.as_deref(),
+                *without_asking,
+            ),
             Moment::NoCertificate { reason, owned } => {
                 Self::without_certificates((*reason).into(), *owned)
             }
@@ -362,6 +380,8 @@ crossing! {
             unregistered_signatures: bool,
             /// Asa del certificado que ya está resuelto, si lo está.
             already_chosen: Option<String>,
+            /// Si la ventana consiente sola con `already_chosen`, sin esperar a la persona.
+            without_asking: bool,
         },
         /// La firma espera a que la persona confirme lo que el validador del original señala.
         #[serde(rename_all = "camelCase")]
@@ -376,8 +396,10 @@ crossing! {
             signs: usize,
             /// Certificados disponibles para la selección.
             certificates: Vec<CertificateView>,
-            /// Asa del certificado que `sticky` ya resolvió, si lo resolvió.
+            /// Asa del certificado preseleccionado: el fijado en la sesión o el único candidato.
             already_chosen: Option<String>,
+            /// Si la ventana consiente sola con `already_chosen`, sin esperar a la persona.
+            without_asking: bool,
         },
         /// Solicitud de consentimiento del lote local, con el resumen de cada elemento.
         #[serde(rename_all = "camelCase")]
@@ -386,8 +408,10 @@ crossing! {
             items: Vec<LocalBatchItemView>,
             /// Certificados disponibles para la selección.
             certificates: Vec<CertificateView>,
-            /// Asa del certificado que `sticky` ya resolvió, si lo resolvió.
+            /// Asa del certificado preseleccionado: el fijado en la sesión o el único candidato.
             already_chosen: Option<String>,
+            /// Si la ventana consiente sola con `already_chosen`, sin esperar a la persona.
+            without_asking: bool,
         },
         /// Canal no disponible.
         NoChannel {

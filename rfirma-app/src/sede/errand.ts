@@ -175,8 +175,8 @@ export type ErrandStage =
   | { kind: "noChannel"; reason: NoChannelReason }
   /**
    * El corazón del trámite: una **confirmación escrita**, no el selector de
-   * certificados (ID-269). Aparece siempre, también con un solo certificado:
-   * `headless` y `mandatoryCertSelection` se ignoran los dos (ID-272).
+   * certificados (ID-269). Aparece también con un solo certificado, salvo que
+   * la persona deje elegir a la sede (ADR-0032).
    */
   | {
       kind: "consent";

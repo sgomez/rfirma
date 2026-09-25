@@ -4,6 +4,7 @@ mod support;
 mod support_requests;
 mod support_window;
 
+mod automatic_selection;
 mod batch_local;
 mod batch_remote;
 mod certificate_selection;

@@ -29,8 +29,10 @@ export type SiteStageView =
       round: SignatureRound;
       certificates: readonly Certificate[];
       unregisteredSignatures: boolean;
-      /** El asa que `headless` ya resolvió: la única fila que pasó el filtro. */
+      /** El asa preseleccionada: la fijada en la sesión o la única fila que pasó el filtro. */
       alreadyChosen: string | null;
+      /** La ventana consiente sola con `alreadyChosen`, sin esperar a la persona. */
+      withoutAsking: boolean;
     }
   | {
       kind: "askingToConfirm";
@@ -42,16 +44,20 @@ export type SiteStageView =
       /** Cuántas firmas lleva el lote. */
       signs: number;
       certificates: readonly Certificate[];
-      /** El asa que `sticky` preselecciona: la fijada en la sesión de sede, la que el desplegable elige sola. */
+      /** El asa preseleccionada: la fijada en la sesión o la única fila que pasó el filtro. */
       alreadyChosen: string | null;
+      /** La ventana consiente sola con `alreadyChosen`, sin esperar a la persona. */
+      withoutAsking: boolean;
     }
   | {
       kind: "askingToSignTheLocalBatch";
       /** Los elementos del lote, en el orden en que la sede los declaró. */
       items: readonly LocalBatchItem[];
       certificates: readonly Certificate[];
-      /** El asa que `sticky` preselecciona: la fijada en la sesión de sede, la que el desplegable elige sola. */
+      /** El asa preseleccionada: la fijada en la sesión o la única fila que pasó el filtro. */
       alreadyChosen: string | null;
+      /** La ventana consiente sola con `alreadyChosen`, sin esperar a la persona. */
+      withoutAsking: boolean;
     }
   | { kind: "saving"; filename: string | null }
   | { kind: "loading"; multiple: boolean }

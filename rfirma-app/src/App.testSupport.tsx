@@ -187,6 +187,7 @@ export function renderApp(
       notifyNewVersion: true,
       setupWizardSeen: false,
       consentCountdown: true,
+      honourAutomaticSelection: false,
       ...settings,
     },
     () => void recents.clear(),

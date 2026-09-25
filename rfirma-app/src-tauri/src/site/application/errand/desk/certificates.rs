@@ -30,7 +30,7 @@ pub fn consent_for<E: FilterEngine>(
         engine,
         request.filter(),
         request.sticky(),
-        request.is_headless(),
+        request.waives_the_choice(),
         ours,
         certificates,
         live,
@@ -39,7 +39,7 @@ pub fn consent_for<E: FilterEngine>(
         Err(step) => return step,
     };
 
-    if request.is_headless() {
+    if request.waives_the_choice() && certificates.automatic_selection_honoured() {
         if let Some(only) = the_only_one_among(&accepted) {
             return answering(live, SiteOutcome::Certificate(only));
         }
@@ -65,7 +65,7 @@ pub fn consent_to_the_batch<E: FilterEngine>(
         engine,
         request.filter(),
         request.sticky(),
-        request.is_headless(),
+        request.waives_the_choice(),
         ours,
         certificates,
         live,
@@ -75,18 +75,14 @@ pub fn consent_to_the_batch<E: FilterEngine>(
     };
 
     let (rows, stuck) = rows_preselecting_the_stuck(accepted, request.sticky(), certificates, live);
-    let already_chosen = stuck.or_else(|| {
-        request
-            .is_headless()
-            .then(|| the_only_row_among(&rows))
-            .flatten()
-    });
+    let preselected = Preselected::among(&rows, stuck, request.waives_the_choice(), certificates);
 
     ErrandStep::AskingToSignTheBatch(Box::new(BatchConsent {
         signs: batch::how_many(&request),
         request,
         certificates: rows,
-        already_chosen,
+        already_chosen: preselected.row,
+        without_asking: preselected.without_asking,
     }))
 }
 
@@ -104,7 +100,7 @@ pub fn consent_to_the_local_batch<E: FilterEngine>(
         engine,
         request.filter(),
         request.sticky(),
-        request.is_headless(),
+        request.waives_the_choice(),
         ours,
         certificates,
         live,
@@ -114,12 +110,7 @@ pub fn consent_to_the_local_batch<E: FilterEngine>(
     };
 
     let (rows, stuck) = rows_preselecting_the_stuck(accepted, request.sticky(), certificates, live);
-    let already_chosen = stuck.or_else(|| {
-        request
-            .is_headless()
-            .then(|| the_only_row_among(&rows))
-            .flatten()
-    });
+    let preselected = Preselected::among(&rows, stuck, request.waives_the_choice(), certificates);
 
     ErrandStep::AskingToSignTheLocalBatch(Box::new(LocalBatchConsent {
         items: batch
@@ -129,7 +120,8 @@ pub fn consent_to_the_local_batch<E: FilterEngine>(
         request,
         batch,
         certificates: rows,
-        already_chosen,
+        already_chosen: preselected.row,
+        without_asking: preselected.without_asking,
     }))
 }
 
@@ -146,7 +138,7 @@ pub(super) fn what_the_site_accepts<E: FilterEngine>(
     engine: &E,
     filter: &SiteFilter,
     sticky: StickyCertificate,
-    headless: bool,
+    choice_waived: bool,
     ours: Vec<TokenCertificate>,
     certificates: &dyn Certificates,
     live: &LiveErrand,
@@ -169,7 +161,7 @@ pub(super) fn what_the_site_accepts<E: FilterEngine>(
         })?;
 
     if accepted.is_empty()
-        || (headless
+        || (choice_waived
             && accepted
                 .iter()
                 .all(|certificate| !certificate.status().is_usable()))
@@ -180,9 +172,30 @@ pub(super) fn what_the_site_accepts<E: FilterEngine>(
     Ok(accepted)
 }
 
-/// El único certificado utilizable de la lista, que `headless` acepta sin preguntar
-/// (`CertFilterManager.isMandatoryCertificate`, 1.9.2).
-pub(super) fn the_only_row_among(rows: &[ListedCertificate]) -> Option<String> {
+/// La fila que llega elegida a la ventana, y si la ventana consiente sola con ella.
+pub(super) struct Preselected {
+    pub row: Option<String>,
+    pub without_asking: bool,
+}
+
+impl Preselected {
+    /// La fijada en la sesión o el único candidato; sin preguntar, solo este y con la preferencia (`AOKeyStoreDialog.show`, 1.9.2).
+    pub fn among(
+        rows: &[ListedCertificate],
+        stuck: Option<String>,
+        choice_waived: bool,
+        certificates: &dyn Certificates,
+    ) -> Self {
+        let only = choice_waived.then(|| the_only_row_among(rows)).flatten();
+        let without_asking = only.is_some() && certificates.automatic_selection_honoured();
+        Self {
+            row: stuck.or(only),
+            without_asking,
+        }
+    }
+}
+
+fn the_only_row_among(rows: &[ListedCertificate]) -> Option<String> {
     let mut usable = rows.iter().filter(|row| row.status.is_usable());
     let only = usable.next()?;
     usable.next().is_none().then(|| only.id.clone())

@@ -19,6 +19,11 @@ fn the_consent_countdown_starts_on() {
 }
 
 #[test]
+fn the_site_does_not_choose_the_certificate_alone_by_default() {
+    assert!(!Configuration::default().honour_automatic_selection);
+}
+
+#[test]
 fn the_setup_wizard_has_not_been_seen_by_default() {
     assert!(!Configuration::default().setup_wizard_seen);
 }
@@ -70,6 +75,7 @@ fn a_configuration_missing_a_field_takes_the_default_for_it() {
     assert!(configuration.remember_activity);
     assert!(configuration.notify_new_version);
     assert!(configuration.consent_countdown);
+    assert!(!configuration.honour_automatic_selection);
 }
 
 #[test]
@@ -87,6 +93,7 @@ fn the_configuration_holds_no_path_to_the_rubric_the_user_chose() {
         vec![
             "consent_countdown",
             "destination",
+            "honour_automatic_selection",
             "language",
             "notify_new_version",
             "remember_activity",

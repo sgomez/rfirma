@@ -77,11 +77,13 @@ impl ErrandStep {
                 signs: consent.signs,
                 certificates: consent.certificates.clone(),
                 already_chosen: consent.already_chosen.clone(),
+                without_asking: consent.without_asking,
             }),
             Self::AskingToSignTheLocalBatch(consent) => Some(Moment::AskingToSignTheLocalBatch {
                 items: consent.items.clone(),
                 certificates: consent.certificates.clone(),
                 already_chosen: consent.already_chosen.clone(),
+                without_asking: consent.without_asking,
             }),
             Self::Saving(consent) => Some(Moment::Saving {
                 filename: consent.filename.clone().or_else(|| consent.title.clone()),
@@ -145,6 +147,8 @@ pub struct SigningConsent {
     pub saving: Option<Box<SavingHints>>,
     /// Asa del certificado que ya está resuelto y el desplegable elige solo.
     pub already_chosen: Option<String>,
+    /// Si la ventana consiente sola con `already_chosen`, sin esperar a la persona.
+    pub without_asking: bool,
     /// Lo que viaja al servidor trifásico de la sede, si la firma se hace allí.
     pub for_the_site_server: Option<ForTheSiteServer>,
 }
@@ -159,6 +163,7 @@ impl SigningConsent {
             certificates: self.certificates.clone(),
             unregistered_signatures: self.unregistered_signatures,
             already_chosen: self.already_chosen.clone(),
+            without_asking: self.without_asking,
         }
     }
 }
@@ -189,8 +194,10 @@ pub struct ConfirmationConsent {
     pub filter: SiteFilter,
     /// Lo que la sede pide sobre el certificado pegado.
     pub sticky: StickyCertificate,
-    /// Si la sede se conforma con el único certificado que pase el filtro.
+    /// Si la sede pidió `headless`: lo que haga falta preguntar se rechaza.
     pub headless: bool,
+    /// Si la sede se conforma con el único certificado que pase el filtro.
+    pub waives_the_choice: bool,
     /// El firmador del servidor trifásico de la sede, si la prefirma y la postfirma se hacen allí.
     pub through_the_site_server: Option<ServerFormat>,
     /// Pistas de guardado, si esta firma viene de `signandsave`.
@@ -212,8 +219,10 @@ pub struct BatchConsent {
     pub signs: usize,
     /// Certificados aceptados por la sede, ya cribados.
     pub certificates: Vec<ListedCertificate>,
-    /// El asa del certificado fijado en la sesión que `sticky` preselecciona.
+    /// El asa del certificado preseleccionado: el fijado en la sesión o el único candidato.
     pub already_chosen: Option<String>,
+    /// Si la ventana consiente sola con `already_chosen`, sin esperar a la persona.
+    pub without_asking: bool,
 }
 
 /// El resumen de un elemento del lote local: ni su ruta ni su contenido cruzan.
@@ -238,8 +247,10 @@ pub struct LocalBatchConsent {
     pub items: Vec<LocalBatchItem>,
     /// Certificados aceptados por la sede, ya cribados.
     pub certificates: Vec<ListedCertificate>,
-    /// El asa del certificado fijado en la sesión que `sticky` preselecciona.
+    /// El asa del certificado preseleccionado: el fijado en la sesión o el único candidato.
     pub already_chosen: Option<String>,
+    /// Si la ventana consiente sola con `already_chosen`, sin esperar a la persona.
+    pub without_asking: bool,
 }
 
 /// Pistas de guardado de `signandsave`, calculadas antes de firmar y usadas tras la postfirma.
@@ -406,6 +417,8 @@ pub enum Moment {
         unregistered_signatures: bool,
         /// El asa del certificado que ya está resuelto, si lo está.
         already_chosen: Option<String>,
+        /// Si la ventana consiente sola con `already_chosen`.
+        without_asking: bool,
     },
     /// La persona marca sobre el PDF el área de la firma visible, antes de elegir certificado.
     MarkingTheArea {
@@ -423,8 +436,10 @@ pub enum Moment {
         signs: usize,
         /// Filas ya cribadas en orden de presentación.
         certificates: Vec<ListedCertificate>,
-        /// El asa del certificado que `sticky` preselecciona, si lo hay.
+        /// El asa del certificado preseleccionado, si lo hay.
         already_chosen: Option<String>,
+        /// Si la ventana consiente sola con `already_chosen`.
+        without_asking: bool,
     },
     /// Consentimiento del lote local, con el resumen de cada uno de sus elementos.
     AskingToSignTheLocalBatch {
@@ -432,8 +447,10 @@ pub enum Moment {
         items: Vec<LocalBatchItem>,
         /// Filas ya cribadas en orden de presentación.
         certificates: Vec<ListedCertificate>,
-        /// El asa del certificado que `sticky` preselecciona, si lo hay.
+        /// El asa del certificado preseleccionado, si lo hay.
         already_chosen: Option<String>,
+        /// Si la ventana consiente sola con `already_chosen`.
+        without_asking: bool,
     },
     /// Trámite sin certificados disponibles.
     NoCertificate {

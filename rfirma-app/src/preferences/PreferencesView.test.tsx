@@ -250,6 +250,21 @@ describe("PreferencesView", () => {
     expect(onChange).toHaveBeenCalledWith({ ...defaults, consentCountdown: false });
   });
 
+  it("lets the site choose its only accepted certificate once turned on", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    renderView({ onChange });
+    await openTab(user, "Firma");
+
+    const toggle = screen.getByRole("switch", {
+      name: /Respetar la selección automática de certificado que pida la sede/,
+    });
+    expect(toggle).not.toBeChecked();
+    await user.click(toggle);
+
+    expect(onChange).toHaveBeenCalledWith({ ...defaults, honourAutomaticSelection: true });
+  });
+
   it("closes on Cerrar", async () => {
     const user = userEvent.setup();
     const onClose = vi.fn();

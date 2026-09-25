@@ -362,6 +362,10 @@ impl Certificates for Directory<'_> {
     ) -> Result<&'a TokenCertificate, TokenError> {
         crate::identity::application::certificates::usable_certificate(found, handle, self.listed)
     }
+
+    fn automatic_selection_honoured(&self) -> bool {
+        false
+    }
 }
 
 /// El origen de datos que nunca baja nada: el `dat` de la grada A viene siempre en la URL.

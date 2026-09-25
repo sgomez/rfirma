@@ -1031,6 +1031,12 @@ msgstr ""
 msgid "preferences.consentCountdown.label"
 msgstr "Protección contra firmas por descuido en las sedes"
 
+msgid "preferences.honourAutomaticSelection.label"
+msgstr "Respetar la selección automática de certificado que pida la sede"
+
+msgid "preferences.honourAutomaticSelection.hint"
+msgstr "Si la sede solo acepta uno de tus certificados, se usa sin preguntarte. Si tu almacén no pide PIN, la firma saldrá sin que veas nada."
+
 msgid "preferences.rememberActivity.label"
 msgstr "Recordar mi actividad"
 

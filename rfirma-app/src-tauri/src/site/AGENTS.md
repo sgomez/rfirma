@@ -75,6 +75,7 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `application/errand/tests/triphase_server.rs` | Pruebas de la firma contra el servidor trifásico de la sede, en `sign` y en `signandsave`: la entrega, el guardado, `SAF_03` y `SAF_40`. Solo en pruebas. |
 | `application/errand/tests/visible_area.rs` | Pruebas del diálogo del área de la firma visible: marcarla, cancelarla, cerrar la ventana en él y lo que llega al puente. Solo en pruebas. |
 | `application/errand/tests/sticky_selection.rs` | Pruebas del certificado pegajoso de una selección. Solo en pruebas. |
+| `application/errand/tests/automatic_selection.rs` | Pruebas de la selección automática que pide la sede con `headless` o `mandatoryCertSelection=false`, con y sin la preferencia que la respeta, en cada operación. Solo en pruebas. |
 | `application/errand/tests/batch_remote.rs` | Pruebas del lote remoto de sede. Solo en pruebas. |
 | `application/errand/tests/batch_local.rs` | Pruebas del lote local de sede. Solo en pruebas. |
 | `application/errand/tests/countersignature_and_gzip.rs` | Pruebas de contrafirma, gzip y firma sin `dat`. Solo en pruebas. |

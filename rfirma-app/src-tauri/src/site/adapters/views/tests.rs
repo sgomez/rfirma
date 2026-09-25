@@ -108,6 +108,7 @@ fn the_round_crosses_named_as_the_site_asked_for_it() {
         certificates: Vec::new(),
         unregistered_signatures: false,
         already_chosen: None,
+        without_asking: false,
     });
 
     assert_eq!(
@@ -127,6 +128,7 @@ fn a_countersignature_crosses_with_its_own_label_and_target() {
         certificates: Vec::new(),
         unregistered_signatures: false,
         already_chosen: None,
+        without_asking: false,
     });
 
     assert_eq!(
@@ -215,6 +217,7 @@ fn the_batch_consent_crosses_with_how_many_signs_it_has_and_who_is_already_chose
             signs: 3,
             certificates: Vec::new(),
             already_chosen: Some("una-asa".to_owned()),
+            without_asking: true,
         }))
         .expect("el consentimiento del lote cruza"),
         serde_json::json!({
@@ -224,6 +227,7 @@ fn the_batch_consent_crosses_with_how_many_signs_it_has_and_who_is_already_chose
                 "signs": 3,
                 "certificates": [],
                 "alreadyChosen": "una-asa",
+                "withoutAsking": true,
             },
         })
     );
@@ -232,6 +236,7 @@ fn the_batch_consent_crosses_with_how_many_signs_it_has_and_who_is_already_chose
             signs: 1,
             certificates: Vec::new(),
             already_chosen: None,
+            without_asking: false,
         }))
         .expect("el consentimiento del lote cruza"),
         serde_json::json!({
@@ -241,6 +246,7 @@ fn the_batch_consent_crosses_with_how_many_signs_it_has_and_who_is_already_chose
                 "signs": 1,
                 "certificates": [],
                 "alreadyChosen": null,
+                "withoutAsking": false,
             },
         })
     );
@@ -264,6 +270,7 @@ fn the_local_batch_consent_crosses_with_what_each_item_is_and_never_its_content(
             ],
             certificates: Vec::new(),
             already_chosen: None,
+            without_asking: false,
         }))
         .expect("el consentimiento del lote local cruza"),
         serde_json::json!({
@@ -276,6 +283,7 @@ fn the_local_batch_consent_crosses_with_what_each_item_is_and_never_its_content(
                 ],
                 "certificates": [],
                 "alreadyChosen": null,
+                "withoutAsking": false,
             },
         })
     );
@@ -301,6 +309,7 @@ fn what_is_signed_crosses_named_after_the_format_the_site_asked_for() {
             certificates: Vec::new(),
             unregistered_signatures: false,
             already_chosen: None,
+            without_asking: false,
         });
 
         assert_eq!(

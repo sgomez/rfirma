@@ -56,6 +56,10 @@ impl Certificates for ALockedPdf<'_> {
     ) -> Result<&'a TokenCertificate, TokenError> {
         self.neighbours.usable(found, handle)
     }
+
+    fn automatic_selection_honoured(&self) -> bool {
+        self.neighbours.automatic_selection_honoured()
+    }
 }
 
 impl TokenSigning for ALockedPdf<'_> {
@@ -180,6 +184,21 @@ fn a_wrong_password_under_headless_is_answered_with_the_code_of_confirmation_nee
     };
     assert_eq!(frontier::code_of(&refusal), SafCode::ConfirmationNeeded);
     assert!(done.asked.is_empty(), "no se pidio nada a nadie");
+}
+
+#[test]
+fn a_wrong_password_under_a_mandatory_selection_set_to_false_is_asked_to_the_person() {
+    let done = consenting(
+        "mandatoryCertSelection=false\nuserPassword=mal\n",
+        &[Some(THE_PASSWORD)],
+    );
+
+    assert!(
+        matches!(done.consented, Ok(Consented::SigningWith(_))),
+        "{:?}",
+        done.consented
+    );
+    assert_eq!(done.asked, [true]);
 }
 
 #[test]

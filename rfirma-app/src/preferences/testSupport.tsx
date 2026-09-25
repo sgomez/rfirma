@@ -14,6 +14,7 @@ export const defaults: Preferences = {
   notifyNewVersion: true,
   setupWizardSeen: false,
   consentCountdown: true,
+  honourAutomaticSelection: false,
 };
 
 /** `2030-01-15T00:00:00Z`, en segundos desde la época. */

@@ -198,6 +198,44 @@ export function siteErrands(commands: SiteCommands): SiteErrandPort {
     if (done.value !== null) finish({ kind: "loaded", fileCount: done.value });
   };
 
+  const consent = async (certificateId: string) => {
+    const stage = errand?.stage;
+    if (errand === null || stage?.kind !== "consent") return;
+    const certificate = stage.certificates.find((one) => one.id === certificateId);
+    if (certificate === undefined) return;
+
+    // El mismo contador que protege la lectura del documento, y por lo mismo:
+    // consentir espera al backend, y un momento suyo que llegue mientras
+    // tanto manda. Sin esto, el momento local que se publica al volver de la
+    // orden pisaría el que el backend acaba de publicar.
+    const arrival = arrivals;
+
+    // `selectcert` no firma nada: la sede recibe la identidad y el trámite
+    // termina ahí. El tramo que se enseña es el de entregar, que es el único
+    // que hay.
+    if (errand.operation === "selectcert") {
+      move({ kind: "signing", certificate, phase: "returning" });
+      const identified = await commands.identify(certificateId);
+      if (arrival !== arrivals) return;
+      finish(identified.ok ? { kind: "signed", document: null } : refusedBy(identified.failure));
+      return;
+    }
+
+    signing = { certificate, document: stage.document, signs: stage.signs };
+    move({ kind: "signing", certificate, phase: "signing" });
+    const begun = await commands.beginSigning(certificateId);
+    if (arrival !== arrivals) return;
+    if (!begun.ok && (begun.failure.situation as string) === DECLINED) {
+      finish({ kind: "cancelled", document: stage.document });
+      return;
+    }
+    if (!begun.ok) {
+      finish(stage.signs !== null ? refusedByTheBatch(begun.failure) : refusedBy(begun.failure));
+      return;
+    }
+    await sign("");
+  };
+
   const receive = async (view: SiteErrandView) => {
     const arrival = ++arrivals;
     // Un momento del backend manda sobre cualquier momento local: la sede ya
@@ -212,6 +250,7 @@ export function siteErrands(commands: SiteCommands): SiteErrandPort {
     if (view.stage.kind !== "askingToSign") {
       publish(errandOf(view));
       void openPortal(view.stage, arrival);
+      consentWithoutAsking(view.stage);
       return;
     }
     const described = await commands.describeDocument(view.stage.document);
@@ -219,6 +258,13 @@ export function siteErrands(commands: SiteCommands): SiteErrandPort {
     publish(
       errandOf(view, documentOf(described, view.stage.round, view.stage.unregisteredSignatures)),
     );
+    consentWithoutAsking(view.stage);
+  };
+
+  /** La sede eligió sola el único candidato y la persona lo permite en sus preferencias (ADR-0032). */
+  const consentWithoutAsking = (stage: SiteStageView) => {
+    if (!("withoutAsking" in stage) || !stage.withoutAsking || stage.alreadyChosen === null) return;
+    void consent(stage.alreadyChosen);
   };
 
   /** El tramo de la firma a la sede: firmar y entregar. */
@@ -264,43 +310,7 @@ export function siteErrands(commands: SiteCommands): SiteErrandPort {
       };
     },
 
-    async consent(certificateId) {
-      const stage = errand?.stage;
-      if (errand === null || stage?.kind !== "consent") return;
-      const certificate = stage.certificates.find((one) => one.id === certificateId);
-      if (certificate === undefined) return;
-
-      // El mismo contador que protege la lectura del documento, y por lo mismo:
-      // consentir espera al backend, y un momento suyo que llegue mientras
-      // tanto manda. Sin esto, el momento local que se publica al volver de la
-      // orden pisaría el que el backend acaba de publicar.
-      const arrival = arrivals;
-
-      // `selectcert` no firma nada: la sede recibe la identidad y el trámite
-      // termina ahí (ID-275). El tramo que se enseña es el de entregar, que es
-      // el único que hay.
-      if (errand.operation === "selectcert") {
-        move({ kind: "signing", certificate, phase: "returning" });
-        const identified = await commands.identify(certificateId);
-        if (arrival !== arrivals) return;
-        finish(identified.ok ? { kind: "signed", document: null } : refusedBy(identified.failure));
-        return;
-      }
-
-      signing = { certificate, document: stage.document, signs: stage.signs };
-      move({ kind: "signing", certificate, phase: "signing" });
-      const begun = await commands.beginSigning(certificateId);
-      if (arrival !== arrivals) return;
-      if (!begun.ok && (begun.failure.situation as string) === DECLINED) {
-        finish({ kind: "cancelled", document: stage.document });
-        return;
-      }
-      if (!begun.ok) {
-        finish(stage.signs !== null ? refusedByTheBatch(begun.failure) : refusedBy(begun.failure));
-        return;
-      }
-      await sign("");
-    },
+    consent,
 
     async confirmSignatures() {
       if (errand?.stage.kind !== "confirming") return;

@@ -942,6 +942,12 @@ msgstr ""
 msgid "preferences.consentCountdown.label"
 msgstr ""
 
+msgid "preferences.honourAutomaticSelection.label"
+msgstr ""
+
+msgid "preferences.honourAutomaticSelection.hint"
+msgstr ""
+
 msgid "preferences.rememberActivity.label"
 msgstr ""
 

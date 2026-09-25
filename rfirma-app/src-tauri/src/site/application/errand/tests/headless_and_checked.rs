@@ -11,6 +11,7 @@ use crate::identity::application::tests::{
 };
 use crate::identity::domain::certificate::TokenCertificate;
 use crate::signing::adapters::memory::Memory;
+use crate::signing::application::configuration_memory::Configuration;
 use crate::signing::application::tests::a_memory;
 use crate::signing::domain::bridge::SignatureVerdict;
 use crate::site::adapters::frontier;
@@ -24,10 +25,17 @@ fn headless_properties() -> String {
     base64::engine::general_purpose::URL_SAFE.encode(b"headless=true\n")
 }
 
-/// La selección de certificado del `headless` de la sede, con los certificados que se le digan.
+/// La selección de certificado del `headless` de la sede, con los certificados que se le digan y la
+/// preferencia que lo respeta activada.
 fn a_headless_selection(ours: Vec<TokenCertificate>, accepted: &[usize]) -> ErrandStep {
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
     let memory = a_memory(home.path());
+    memory
+        .remember_configuration(&Configuration {
+            honour_automatic_selection: true,
+            ..Configuration::default()
+        })
+        .expect("la memoria de pruebas escribe");
     let (listed, _) = listed_from(&ours);
     let live = a_live();
     let engine = AnEngine::answering(&[accepted]);
