@@ -136,17 +136,26 @@ fn attended_accepting(
 }
 
 fn consent_of(step: &ErrandStep) -> Consent {
+    if skips_the_consent(step) {
+        Consent::Skipped
+    } else {
+        Consent::Asked
+    }
+}
+
+fn skips_the_consent(step: &ErrandStep) -> bool {
     match step {
-        ErrandStep::Answering(SiteOutcome::Certificate(_)) => Consent::Skipped,
-        ErrandStep::AskingForConsent { .. } => Consent::Asked,
-        ErrandStep::AskingToSign(consent) if consent.without_asking => Consent::Skipped,
-        ErrandStep::AskingToSignTheBatch(consent) if consent.without_asking => Consent::Skipped,
-        ErrandStep::AskingToSignTheLocalBatch(consent) if consent.without_asking => {
-            Consent::Skipped
-        }
-        ErrandStep::AskingToSign(_)
-        | ErrandStep::AskingToSignTheBatch(_)
-        | ErrandStep::AskingToSignTheLocalBatch(_) => Consent::Asked,
+        ErrandStep::Answering(SiteOutcome::Certificate(_)) => true,
+        ErrandStep::AskingForConsent { .. } => false,
+        signing => a_signature_skips_the_consent(signing),
+    }
+}
+
+fn a_signature_skips_the_consent(step: &ErrandStep) -> bool {
+    match step {
+        ErrandStep::AskingToSign(consent) => consent.without_asking,
+        ErrandStep::AskingToSignTheBatch(consent) => consent.without_asking,
+        ErrandStep::AskingToSignTheLocalBatch(consent) => consent.without_asking,
         other => panic!("la operacion llega al consentimiento: {other:?}"),
     }
 }
