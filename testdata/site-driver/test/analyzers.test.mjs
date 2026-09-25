@@ -11,19 +11,39 @@ import {
   signsTheData,
   theCertificatesIn,
   theCmsSignature,
+  theCmsVerification,
   theKeyFamilyOf,
   thePublicKeyAlgorithmOf,
   theShapeOf,
 } from "../lib/cms.mjs";
-import { isASignedPdf, isAVisibleArea, theSignatureRectangles } from "../lib/pades.mjs";
+import {
+  isASignedPdf,
+  isAVisibleArea,
+  thePadesVerification,
+  theSignatureRectangles,
+} from "../lib/pades.mjs";
 import { isABarePkcs1 } from "../lib/pkcs1.mjs";
-import { isAXadesSignature, signsTheRoleAndThePlace, theXadesEnvelope } from "../lib/xades.mjs";
+import {
+  isAXadesSignature,
+  signsTheRoleAndThePlace,
+  theXadesEnvelope,
+  theXadesVerification,
+} from "../lib/xades.mjs";
 import { theZipEntries } from "../lib/zip.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const aReference = (name) => readFileSync(join(here, "../../reference", name));
 const aSample = (name) => readFileSync(join(here, "samples", name));
 const theChallenge = aReference("challenge.bin");
+const aCertificate = (name) => readFileSync(join(here, "../certificates", name));
+const theSigner = aCertificate("active-rsa.der");
+const anotherCertificate = aCertificate("pseudonym-rsa.der");
+
+function withAByteFlippedAt(bytes, at) {
+  const altered = Buffer.from(bytes);
+  altered[at] ^= 0x01;
+  return altered;
+}
 
 describe("the CMS analyzer", () => {
   it("reads an implicit CAdES as one signer with the data inside", () => {
@@ -211,5 +231,131 @@ describe("the bare PKCS#1 verifier", () => {
     );
     assert.equal(isABarePkcs1(theChallenge, aReference("cades-implicit.p7s"), certificate), false);
     assert.equal(isABarePkcs1(theChallenge, aSample("pkcs1-rsa.sig"), Buffer.from("x")), false);
+  });
+});
+
+describe("the CMS verifier", () => {
+  it("verifies an implicit CAdES with the key of the returned certificate", () => {
+    const verification = theCmsVerification(aReference("cades-implicit.p7s"), theSigner);
+    assert.equal(verification.verified, true, verification.reason);
+  });
+
+  it("verifies an explicit CAdES over the data the site sent", () => {
+    const cms = aReference("cades-explicit.p7s");
+    assert.equal(theCmsVerification(cms, theSigner, theChallenge).verified, true);
+    assert.equal(theCmsVerification(cms, theSigner, Buffer.from("otros datos")).verified, false);
+    assert.equal(theCmsVerification(cms, theSigner).verified, false);
+  });
+
+  it("verifies every signer of a cosignature and of a countersignature tree", () => {
+    for (const name of [
+      "cades-implicit.cosign.p7s",
+      "cades-implicit.countersign-tree.p7s",
+      "cades-implicit.countersign-leafs.p7s",
+    ]) {
+      const verification = theCmsVerification(aReference(name), theSigner);
+      assert.equal(verification.verified, true, `${name}: ${verification.reason}`);
+    }
+  });
+
+  it("verifies an ECDSA signer with the certificate it carries", () => {
+    const cms = aSample("cms-ecdsa.p7s");
+    const verification = theCmsVerification(cms, theCertificatesIn(cms)[0], theChallenge);
+    assert.equal(verification.verified, true, verification.reason);
+  });
+
+  it("refuses an implicit CAdES whose content has one byte altered", () => {
+    const cms = aReference("cades-implicit.p7s");
+    const altered = withAByteFlippedAt(cms, cms.indexOf(theChallenge) + 10);
+    const verification = theCmsVerification(altered, theSigner);
+    assert.equal(verification.verified, false);
+    assert.match(verification.reason, /messageDigest/);
+  });
+
+  it("refuses a CAdES whose signature value has one byte altered", () => {
+    const cms = aReference("cades-implicit.p7s");
+    const [signer] = theCmsSignature(cms).signers;
+    const altered = withAByteFlippedAt(cms, cms.indexOf(signer.signature) + 10);
+    const verification = theCmsVerification(altered, theSigner);
+    assert.equal(verification.verified, false);
+    assert.match(verification.reason, /no verifica con ninguna clave/);
+  });
+
+  it("refuses a valid CAdES when the returned certificate signed none of it", () => {
+    const verification = theCmsVerification(aReference("cades-implicit.p7s"), anotherCertificate);
+    assert.equal(verification.verified, false);
+  });
+});
+
+describe("the PAdES verifier", () => {
+  const thePdf = aSample("pades-rsa.pdf");
+
+  it("verifies the CMS over the byte range with the returned certificate", () => {
+    const verification = thePadesVerification(thePdf, theSigner);
+    assert.equal(verification.verified, true, verification.reason);
+  });
+
+  it("refuses a PDF with one byte of its signed range altered", () => {
+    const altered = withAByteFlippedAt(thePdf, thePdf.indexOf("suite de conformidad"));
+    const verification = thePadesVerification(altered, theSigner);
+    assert.equal(verification.verified, false);
+    assert.match(verification.reason, /messageDigest/);
+  });
+
+  it("refuses a PDF with bytes appended after its signed range", () => {
+    const appended = Buffer.concat([thePdf, Buffer.from("\n% cola\n", "latin1")]);
+    assert.equal(thePadesVerification(appended, theSigner).verified, false);
+  });
+
+  it("refuses a signed PDF when the returned certificate did not sign it", () => {
+    assert.equal(thePadesVerification(thePdf, anotherCertificate).verified, false);
+  });
+});
+
+describe("the XAdES verifier", () => {
+  const anXml = (name) => aReference(name).toString("utf8");
+
+  it("verifies each reference XAdES with the returned certificate", () => {
+    for (const name of [
+      "xades-enveloping.xml",
+      "xades-enveloped.xml",
+      "xades-detached.xml",
+      "xades-enveloping.cosign.xml",
+      "xades-enveloping.countersign-tree.xml",
+      "xades-enveloping.countersign-leafs.xml",
+      "facturae.xsig",
+    ]) {
+      const verification = theXadesVerification(anXml(name), theSigner);
+      assert.equal(verification.verified, true, `${name}: ${verification.reason}`);
+    }
+  });
+
+  it("refuses a XAdES whose signed document has one byte altered", () => {
+    for (const name of ["xades-enveloping.xml", "xades-enveloped.xml", "xades-detached.xml"]) {
+      const altered = anXml(name).replace("Contenido determinista", "Contenido determinisTa");
+      assert.equal(theXadesVerification(altered, theSigner).verified, false, name);
+    }
+  });
+
+  it("refuses a XAdES whose SignedInfo has one byte altered", () => {
+    const altered = anXml("xades-enveloping.xml").replace('Id="Reference-3', 'Id="Reference-4');
+    const verification = theXadesVerification(altered, theSigner);
+    assert.equal(verification.verified, false);
+    assert.match(verification.reason, /SignedInfo/);
+  });
+
+  it("refuses a valid XAdES when the returned certificate signed none of it", () => {
+    assert.equal(
+      theXadesVerification(anXml("xades-enveloping.xml"), anotherCertificate).verified,
+      false,
+    );
+  });
+
+  it("leaves unmeasured a canonicalization it does not implement", () => {
+    const exclusive = anXml("xades-enveloping.xml").replace(
+      /REC-xml-c14n-20010315/,
+      "../2001/10/xml-exc-c14n#",
+    );
+    assert.equal(theXadesVerification(exclusive, theSigner).verified, null);
   });
 });

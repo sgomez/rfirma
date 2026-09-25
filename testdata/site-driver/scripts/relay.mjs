@@ -14,6 +14,7 @@ import {
 import { theInvoice } from "../lib/fixtures.mjs";
 import { withACipherKeyOfSixteenBytes } from "../lib/patches.mjs";
 import { aPublishedScript } from "../lib/script.mjs";
+import { THE_SIGNATURE_VERIFIES, theSignatureVerifies } from "../lib/verification.mjs";
 import { BATCH_SCRIPTS } from "./batch.mjs";
 
 const THE_RESULT_UPLOADED_CIPHERED = "the-result-uploaded-ciphered";
@@ -197,6 +198,10 @@ async function theRelayScript() {
             : "nadie pidió al RetrieveService la petición que subió la página",
         ),
       );
+      const verifying = theSignatureVerifies("cms", aDocumentTooLongForTheUrl);
+      for (const condition of verifying(signature, certificate)) {
+        emit({ event: "condition", ...condition });
+      }
       settle({ event: "success", result: String(signature), certificate: String(certificate) });
     },
     settlingTheError,
@@ -413,7 +418,10 @@ const throughTheServer = (run, conditions = [], { benchOnly = false, patch } = {
   aPublishedScript(run, { family: "intermediate", modes: ["relay"], conditions, benchOnly, patch });
 
 export const RELAY_SCRIPTS = {
-  relay: throughTheServer(theRelayScript, [THE_REQUEST_RETRIEVED_BY_FILEID]),
+  relay: throughTheServer(theRelayScript, [
+    THE_REQUEST_RETRIEVED_BY_FILEID,
+    THE_SIGNATURE_VERIFIES,
+  ]),
   relayrefused: throughTheServer(theRelayRefusedScript, [], { benchOnly: true }),
   relayselectcert: throughTheServer(theSelectionThroughTheServerScript, [
     THE_RESULT_UPLOADED_CIPHERED,

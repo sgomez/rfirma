@@ -27,6 +27,7 @@ import { isASignedPdf, isAVisibleArea, theSignatureRectangles } from "../lib/pad
 import { withTheDataDeclaredGzipped } from "../lib/patches.mjs";
 import { isABarePkcs1 } from "../lib/pkcs1.mjs";
 import { aPublishedScript } from "../lib/script.mjs";
+import { THE_SIGNATURE_VERIFIES, theSignatureVerifies } from "../lib/verification.mjs";
 import { isAXadesSignature, signsTheRoleAndThePlace, theXadesEnvelope } from "../lib/xades.mjs";
 import { theZipEntries } from "../lib/zip.mjs";
 import { servletServing } from "./batch.mjs";
@@ -349,6 +350,11 @@ const countersigning = (target, content, measuring) => () =>
   theCountersignScript("CAdES", `target=${target}`, content(), measuring);
 
 const theCadesImplicitSignature = () => theReferenceSignature("cades-implicit.p7s");
+
+const theTwoParallelSignersVerified = measuringAll(
+  withTheShape(TWO_PARALLEL_SIGNERS, "[][]"),
+  theSignatureVerifies("cms"),
+);
 const theCountersignedCadesSignature = () =>
   theReferenceSignature("cades-implicit.countersign-tree.p7s");
 
@@ -571,16 +577,18 @@ const savingAs = (filename) => (format, extraParams, content, measuring) =>
   );
 
 /** Una operación trifásica cuyo `serverUrl` es el servidor trifásico falso de la sede. */
-const triphasing = (format, cop, content, operation = THE_OPERATIONS[cop]) => async () => {
-  const triphase = THE_TRIPHASE_FORMATS[format];
-  const serverUrl = await servletServing(theTriphaseServer(triphase));
-  operation(
-    format,
-    `serverUrl=${serverUrl}`,
-    content(),
-    theTriphaseConditions(triphase, cop, content),
-  );
-};
+const triphasing =
+  (format, cop, content, operation = THE_OPERATIONS[cop]) =>
+  async () => {
+    const triphase = THE_TRIPHASE_FORMATS[format];
+    const serverUrl = await servletServing(theTriphaseServer(triphase));
+    operation(
+      format,
+      `serverUrl=${serverUrl}`,
+      content(),
+      theTriphaseConditions(triphase, cop, content),
+    );
+  };
 
 /** El error con el que el servidor trifásico falso contesta a la prefirma: una excepción suya. */
 const A_PRESIGNATURE_FAILURE =
@@ -629,13 +637,27 @@ export const SIGNATURE_SCRIPTS = {
         withTheShape(A_SINGLE_SIGNER, "[]"),
         theDataLeftOut,
         theAlgorithmOfTheKey,
+        theSignatureVerifies("cms", theChallenge),
       ),
     ),
-    { conditions: [APART, A_SINGLE_SIGNER, THE_DATA_LEFT_OUT, THE_ALGORITHM_OF_THE_KEY] },
+    {
+      conditions: [
+        APART,
+        A_SINGLE_SIGNER,
+        THE_DATA_LEFT_OUT,
+        THE_ALGORITHM_OF_THE_KEY,
+        THE_SIGNATURE_VERIFIES,
+      ],
+    },
   ),
   signcadesimplicit: aPublishedScript(
-    signing("CAdES", "mode=implicit", theChallenge, theDataInside(theChallenge)),
-    { conditions: [THE_DATA_INSIDE] },
+    signing(
+      "CAdES",
+      "mode=implicit",
+      theChallenge,
+      measuringAll(theDataInside(theChallenge), theSignatureVerifies("cms")),
+    ),
+    { conditions: [THE_DATA_INSIDE, THE_SIGNATURE_VERIFIES] },
   ),
   signcadesagepolicy: aPublishedScript(
     signing(
@@ -667,27 +689,54 @@ export const SIGNATURE_SCRIPTS = {
     ),
     { conditions: [A_ZIP_CONTAINER, THE_DATA_AND_THE_SIGNATURE_INSIDE] },
   ),
-  signauto: aPublishedScript(signing("auto", "", theChallenge, allCades), {
-    conditions: [A_CADES_SIGNATURE],
-  }),
-  signxades: aPublishedScript(
-    signing("XAdES", "", theXmlDocument, theEnvelope("enveloping", THE_DEFAULT_ENVELOPE)),
-    { conditions: [THE_DEFAULT_ENVELOPE] },
+  signauto: aPublishedScript(
+    signing(
+      "auto",
+      "",
+      theChallenge,
+      measuringAll(allCades, theSignatureVerifies("cms", theChallenge)),
+    ),
+    { conditions: [A_CADES_SIGNATURE, THE_SIGNATURE_VERIFIES] },
   ),
-  signxadesauto: aPublishedScript(signing("auto", "", theXmlDocument, aXadesSignature), {
-    conditions: [A_XADES_SIGNATURE],
-  }),
+  signxades: aPublishedScript(
+    signing(
+      "XAdES",
+      "",
+      theXmlDocument,
+      measuringAll(theEnvelope("enveloping", THE_DEFAULT_ENVELOPE), theSignatureVerifies("xml")),
+    ),
+    { conditions: [THE_DEFAULT_ENVELOPE, THE_SIGNATURE_VERIFIES] },
+  ),
+  signxadesauto: aPublishedScript(
+    signing("auto", "", theXmlDocument, measuringAll(aXadesSignature, theSignatureVerifies("xml"))),
+    { conditions: [A_XADES_SIGNATURE, THE_SIGNATURE_VERIFIES] },
+  ),
   signxadesenveloping: aPublishedScript(
-    signing("XAdES Enveloping", "", theXmlDocument, theEnvelope("enveloping")),
-    { conditions: [THE_ENVELOPE_REQUESTED] },
+    signing(
+      "XAdES Enveloping",
+      "",
+      theXmlDocument,
+      measuringAll(theEnvelope("enveloping"), theSignatureVerifies("xml")),
+    ),
+    { conditions: [THE_ENVELOPE_REQUESTED, THE_SIGNATURE_VERIFIES] },
   ),
   signxadesenveloped: aPublishedScript(
-    signing("XAdES Enveloped", "", theXmlDocument, theEnvelope("enveloped")),
-    { conditions: [THE_ENVELOPE_REQUESTED] },
+    signing(
+      "XAdES Enveloped",
+      "",
+      theXmlDocument,
+      measuringAll(theEnvelope("enveloped"), theSignatureVerifies("xml")),
+    ),
+    { conditions: [THE_ENVELOPE_REQUESTED, THE_SIGNATURE_VERIFIES] },
   ),
   signxadesdetached: aPublishedScript(
-    signing("XAdES Detached", "", theXmlDocument, theEnvelope("detached")),
-    { conditions: [THE_ENVELOPE_REQUESTED] },
+    signing(
+      "XAdES Detached",
+      "",
+      theXmlDocument,
+      measuringAll(theEnvelope("detached"), theSignatureVerifies("xml")),
+    ),
+    { conditions: [THE_ENVELOPE_REQUESTED, THE_SIGNATURE_VERIFIES] },
   ),
   signxadesexternallydetached: aPublishedScript(
     signing(
@@ -707,9 +756,15 @@ export const SIGNATURE_SCRIPTS = {
     ),
     { conditions: [THE_TRANSFORM_DECLARED] },
   ),
-  signpades: aPublishedScript(signing("PAdES", "", thePdfOfTheTest, theSignatureInsideThePdf), {
-    conditions: [THE_SIGNATURE_INSIDE_THE_PDF],
-  }),
+  signpades: aPublishedScript(
+    signing(
+      "PAdES",
+      "",
+      thePdfOfTheTest,
+      measuringAll(theSignatureInsideThePdf, theSignatureVerifies("pdf")),
+    ),
+    { conditions: [THE_SIGNATURE_INSIDE_THE_PDF, THE_SIGNATURE_VERIFIES] },
+  ),
   signpadesoveranonpdf: aPublishedScript(signing("PAdES", "", theChallenge)),
   signpadeschecking: aPublishedScript(signing("PAdES", "checkSignatures=true", thePdfOfTheTest)),
   signpadesvisible: aPublishedScript(signing("PAdES", "visibleSignature=want", thePdfOfTheTest)),
@@ -719,9 +774,9 @@ export const SIGNATURE_SCRIPTS = {
       "FacturaE",
       `signerClaimedRoles=${THE_ROLE}\nsignatureProductionCity=${THE_CITY}`,
       theInvoice,
-      theRoleAndThePlace,
+      measuringAll(theRoleAndThePlace, theSignatureVerifies("xml")),
     ),
-    { conditions: [THE_ROLE_AND_THE_PLACE_SIGNED] },
+    { conditions: [THE_ROLE_AND_THE_PLACE_SIGNED, THE_SIGNATURE_VERIFIES] },
   ),
   signfacturaewithaforbiddenparam: aPublishedScript(
     signing("FacturaE", "tsaURL=http://tsa.example/tsa", theInvoice),
@@ -806,12 +861,12 @@ export const SIGNATURE_SCRIPTS = {
   ),
   signpadesprotected: aPublishedScript(signing("PAdES", "", aPasswordProtectedPdf)),
   cosigncades: aPublishedScript(
-    cosigning("CAdES", "", theCadesImplicitSignature, withTheShape(TWO_PARALLEL_SIGNERS, "[][]")),
-    { conditions: [TWO_PARALLEL_SIGNERS] },
+    cosigning("CAdES", "", theCadesImplicitSignature, theTwoParallelSignersVerified),
+    { conditions: [TWO_PARALLEL_SIGNERS, THE_SIGNATURE_VERIFIES] },
   ),
   cosignauto: aPublishedScript(
-    cosigning("auto", "", theCadesImplicitSignature, withTheShape(TWO_PARALLEL_SIGNERS, "[][]")),
-    { conditions: [TWO_PARALLEL_SIGNERS] },
+    cosigning("auto", "", theCadesImplicitSignature, theTwoParallelSignersVerified),
+    { conditions: [TWO_PARALLEL_SIGNERS, THE_SIGNATURE_VERIFIES] },
   ),
   cosignautooveracmssignature: aPublishedScript(
     cosigning("auto", "", theCmsSignatureOfTheSite, cosignedAsCms),
@@ -828,25 +883,28 @@ export const SIGNATURE_SCRIPTS = {
     countersigning(
       "tree",
       theCadesImplicitSignature,
-      withTheShape(THE_SIGNER_COUNTERSIGNED, "[[]]"),
+      measuringAll(withTheShape(THE_SIGNER_COUNTERSIGNED, "[[]]"), theSignatureVerifies("cms")),
     ),
-    { conditions: [THE_SIGNER_COUNTERSIGNED] },
+    { conditions: [THE_SIGNER_COUNTERSIGNED, THE_SIGNATURE_VERIFIES] },
   ),
   countersigncadestree: aPublishedScript(
     countersigning(
       "tree",
       theCountersignedCadesSignature,
-      withTheShape(EVERY_NODE_COUNTERSIGNED, "[[[]][]]"),
+      measuringAll(withTheShape(EVERY_NODE_COUNTERSIGNED, "[[[]][]]"), theSignatureVerifies("cms")),
     ),
-    { conditions: [EVERY_NODE_COUNTERSIGNED] },
+    { conditions: [EVERY_NODE_COUNTERSIGNED, THE_SIGNATURE_VERIFIES] },
   ),
   countersigncadesanothertarget: aPublishedScript(
     countersigning(
       "signers",
       theCountersignedCadesSignature,
-      withTheShape(ONLY_THE_LEAVES_COUNTERSIGNED, "[[[]]]"),
+      measuringAll(
+        withTheShape(ONLY_THE_LEAVES_COUNTERSIGNED, "[[[]]]"),
+        theSignatureVerifies("cms"),
+      ),
     ),
-    { conditions: [ONLY_THE_LEAVES_COUNTERSIGNED] },
+    { conditions: [ONLY_THE_LEAVES_COUNTERSIGNED, THE_SIGNATURE_VERIFIES] },
   ),
   signnone: aPublishedScript(signing("NONE", "", theChallenge, aBarePkcs1), {
     conditions: [A_BARE_PKCS1],
@@ -905,9 +963,15 @@ export const SIGNATURE_SCRIPTS = {
     { conditions: [WHERE_THE_REQUEST_SAYS] },
   ),
   signandsavepadesvisible: aPublishedScript(theSignAndSaveOfAWantedVisibleSignatureScript),
-  signcadeswithoutmode: aPublishedScript(signing("CAdES", "", theChallenge, theDataLeftOut), {
-    conditions: [THE_DATA_LEFT_OUT],
-  }),
+  signcadeswithoutmode: aPublishedScript(
+    signing(
+      "CAdES",
+      "",
+      theChallenge,
+      measuringAll(theDataLeftOut, theSignatureVerifies("cms", theChallenge)),
+    ),
+    { conditions: [THE_DATA_LEFT_OUT, THE_SIGNATURE_VERIFIES] },
+  ),
   signxadesexplicit: aPublishedScript(
     signing("XAdES", "mode=explicit", theXmlDocument, theSha1OfTheData),
     { conditions: [THE_SHA1_OF_THE_DATA_SIGNED] },
