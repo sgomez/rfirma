@@ -261,7 +261,7 @@ fn a_selector_declined_for_sign_and_save_without_dat_answers_cancel() {
 }
 
 #[test]
-fn a_document_chosen_for_sign_and_save_that_disappears_is_answered_with_saf_25() {
+fn a_document_chosen_for_sign_and_save_that_disappears_is_answered_with_saf_00() {
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
     let memory = a_memory(home.path());
     let listed = ListedCertificates::new();
@@ -299,7 +299,7 @@ fn a_document_chosen_for_sign_and_save_that_disappears_is_answered_with_saf_25()
     );
     let _ = what_the_site_received(&mut wire);
     assert!(
-        what_the_site_received(&mut wire2).is_some_and(|line| line.starts_with("SAF_25")),
+        what_the_site_received(&mut wire2).is_some_and(|line| line.starts_with("SAF_00")),
         "sale el codigo del catalogo"
     );
 }
