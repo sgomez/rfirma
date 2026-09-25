@@ -131,19 +131,27 @@ fn tlv(tag: u8, content: &[u8]) -> Vec<u8> {
     encoded
 }
 
+fn an_attribute_of(oid: &[u8]) -> Vec<u8> {
+    tlv(0x30, &[tlv(0x06, oid), tlv(0x31, &tlv(0x05, &[]))].concat())
+}
+
 fn a_signer_with_signed_attributes(attribute_types: Option<&[&[u8]]>) -> Vec<u8> {
+    a_signer_with_encoded_attributes(
+        attribute_types.map(|types| types.iter().flat_map(|oid| an_attribute_of(oid)).collect()),
+    )
+}
+
+fn a_signer_with_encoded_attributes(attributes: Option<Vec<u8>>) -> Vec<u8> {
     let mut fields = [tlv(0x02, &[1]), tlv(0x30, &[]), tlv(0x30, &[])].concat();
-    if let Some(types) = attribute_types {
-        let attributes: Vec<u8> = types
-            .iter()
-            .flat_map(|oid| tlv(0x30, &[tlv(0x06, oid), tlv(0x31, &tlv(0x05, &[]))].concat()))
-            .collect();
+    if let Some(attributes) = attributes {
         fields.extend(tlv(0xa0, &attributes));
     }
     fields.extend(tlv(0x30, &[]));
     fields.extend(tlv(0x04, b"firma"));
     tlv(0x30, &fields)
 }
+
+const NON_CANONICAL_INTEGER: &[u8] = &[0x02, 0x81, 0x05, 1, 2, 3, 4, 5];
 
 /// Un `ContentInfo` de `SignedData` mínimo, en DER, con los firmantes dados.
 pub(crate) fn a_signed_data_with(signers: &[Vec<u8>]) -> Vec<u8> {
@@ -210,6 +218,25 @@ fn a_signed_data_with_a_signer_without_signing_certificate_is_cms() {
         assert_eq!(
             detect_signature(&a_signed_data_with(&signers)),
             Some(DetectedSignature::Cms)
+        );
+    }
+}
+
+#[test]
+fn a_signer_whose_interior_cannot_be_read_falls_back_to_cades() {
+    for signer in [
+        tlv(0x30, NON_CANONICAL_INTEGER),
+        a_signer_with_encoded_attributes(Some(
+            [
+                an_attribute_of(CONTENT_TYPE),
+                tlv(0x30, NON_CANONICAL_INTEGER),
+            ]
+            .concat(),
+        )),
+    ] {
+        assert_eq!(
+            detect_signature(&a_signed_data_with(&[signer])),
+            Some(DetectedSignature::Cades)
         );
     }
 }

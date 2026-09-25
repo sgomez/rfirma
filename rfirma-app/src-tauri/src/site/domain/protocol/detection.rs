@@ -155,7 +155,7 @@ fn every_signer_carries_its_signing_certificate(document: &[u8]) -> bool {
     signer_infos(document).is_none_or(|signers| {
         signers
             .into_iter()
-            .all(|signer| carries_its_signing_certificate(signer).unwrap_or(false))
+            .all(|signer| carries_its_signing_certificate(signer).unwrap_or(true))
     })
 }
 
@@ -172,13 +172,13 @@ fn carries_its_signing_certificate(signer: AnyRef<'_>) -> Option<bool> {
     let Some(attributes) = fields.iter().find(|field| field.tag() == SIGNED_ATTRIBUTES) else {
         return Some(false);
     };
-    let carries = elements(attributes.value())?
+    let kinds = elements(attributes.value())?
         .into_iter()
-        .filter_map(|attribute| elements(attribute.value())?.first().copied())
-        .any(|kind| {
-            kind.tag() == Tag::ObjectIdentifier && OID_SIGNING_CERTIFICATES.contains(&kind.value())
-        });
-    Some(carries)
+        .map(|attribute| elements(attribute.value())?.first().copied())
+        .collect::<Option<Vec<_>>>()?;
+    Some(kinds.into_iter().any(|kind| {
+        kind.tag() == Tag::ObjectIdentifier && OID_SIGNING_CERTIFICATES.contains(&kind.value())
+    }))
 }
 
 fn elements(content: &[u8]) -> Option<Vec<AnyRef<'_>>> {
