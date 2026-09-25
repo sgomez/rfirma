@@ -27,7 +27,7 @@ import {
   withoutNeedcertInTheBatch,
 } from "../lib/patches.mjs";
 import { isABarePkcs1 } from "../lib/pkcs1.mjs";
-import { aPublishedScript } from "../lib/script.mjs";
+import { aPublishedScript, withoutAChoice } from "../lib/script.mjs";
 
 const THROUGH_BOTH_SERVLETS = "through-both-servlets";
 const EVERY_DOCUMENT_SIGNED_WITHOUT_A_DIALOGUE = "every-document-signed-without-a-dialogue";
@@ -277,7 +277,13 @@ async function theBatchScript(presigning = thePresigner, measuring = theRemoteBa
   AutoScript.createBatch("SHA256", "CAdES", "sign");
   AutoScript.addDocumentToBatch("uno", Buffer.from("primer documento").toString("base64"));
   AutoScript.addDocumentToBatch("dos", Buffer.from("segundo documento").toString("base64"));
-  AutoScript.signBatchProcess(true, presigner, postsigner, null, ...theBatchCallbacks(measuring));
+  AutoScript.signBatchProcess(
+    true,
+    presigner,
+    postsigner,
+    withoutAChoice(),
+    ...theBatchCallbacks(measuring),
+  );
 }
 
 /** Lo que exige el XML heredado del original: el lote en `xml` y la cadena en `certs`. */
@@ -355,7 +361,7 @@ async function theBatchXmlScript() {
     batchB64,
     presigner,
     postsigner,
-    null,
+    withoutAChoice(),
     (result, certificate) => {
       for (const condition of theXmlBatchConditions(String(result), String(certificate))) {
         emit({ event: "condition", ...condition });
@@ -444,13 +450,14 @@ function aLocalBatch({
   stopOnError,
   items,
   callbacks,
+  properties = withoutAChoice(),
 }) {
   AutoScript.setLocalBatchProcess(true);
   AutoScript.createBatch("SHA256", format, suboperation, extraParams);
   for (const [id, content, itemFormat, extraParams] of items) {
     AutoScript.addDocumentToBatch(id, content, itemFormat, undefined, extraParams);
   }
-  AutoScript.signBatchProcess(stopOnError, null, null, null, ...callbacks);
+  AutoScript.signBatchProcess(stopOnError, null, null, properties, ...callbacks);
 }
 
 function theLocalItems(result) {
@@ -828,7 +835,12 @@ function aPresignerAnswering(status) {
 
 /** Un lote local de un solo binario, para cancelar el diálogo de certificado que abre. */
 function theLocalBatchToCancelScript() {
-  aLocalBatch({ stopOnError: false, items: [theBinaryItem()], callbacks: theBatchCallbacks() });
+  aLocalBatch({
+    stopOnError: false,
+    items: [theBinaryItem()],
+    callbacks: theBatchCallbacks(),
+    properties: null,
+  });
 }
 
 /** Un lote local sin `format`: `createBatch` con el formato `undefined` lo deja fuera del JSON. */

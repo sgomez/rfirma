@@ -13,7 +13,6 @@ las suyas es de fiar.
 [check.drive]
 mode = "service"
 script = "signcades"
-act.consent = "Va a aparecer el diálogo de certificado."
 expects.completes.conditions = ["a-single-signer", "the-signature-verifies"]
 
 [[check]]

@@ -12,8 +12,6 @@ tiene un solo firmante y ninguna contrafirma.
 [check.drive]
 mode = "v4"
 script = "signcades"
-greeting = true
-act.consent = "Va a aparecer el diálogo de certificado."
 expects.completes.conditions = ["a-single-signer", "the-signature-verifies"]
 
 [[check]]
@@ -29,7 +27,6 @@ al firmante y a su contrafirma.
 [check.drive]
 mode = "v4"
 script = "countersigncadestree"
-act.consent = "Va a aparecer el diálogo de certificado."
 expects.completes.conditions = ["every-node-countersigned", "the-signature-verifies"]
 
 [[check]]
@@ -44,7 +41,6 @@ contrafirma, que es la hoja, recibe una contrafirma nueva.
 [check.drive]
 mode = "v4"
 script = "countersigncadesanothertarget"
-act.consent = "Va a aparecer el diálogo de certificado."
 expects.completes.conditions = ["only-the-leaves-countersigned", "the-signature-verifies"]
 
 [[check]]
@@ -59,7 +55,6 @@ las dos Signature, ninguna contrafirma de la otra, y cada una verifica con la cl
 [check.drive]
 mode = "v4"
 script = "cosignxades"
-act.consent = "Va a aparecer el diálogo de certificado."
 expects.completes.conditions = ["two-parallel-signers", "the-signature-verifies"]
 
 [[check]]
@@ -74,7 +69,6 @@ dentro del firmante previo, y cada Signature verifica con la clave de su firmant
 [check.drive]
 mode = "v4"
 script = "countersignxades"
-act.consent = "Va a aparecer el diálogo de certificado."
 expects.completes.conditions = ["the-signer-countersigned", "the-signature-verifies"]
 
 [[check]]
@@ -119,7 +113,6 @@ y firma en CAdES, en vez de exigir que la sede lo nombre.
 [check.drive]
 mode = "v4"
 script = "signauto"
-act.consent = "Va a aparecer el diálogo de certificado."
 expects.completes.conditions = ["a-cades-signature", "the-signature-verifies"]
 
 [[check]]
@@ -134,7 +127,6 @@ contenido y firma en XAdES sin pedir formato.
 [check.drive]
 mode = "v4"
 script = "signxadesauto"
-act.consent = "Va a aparecer el diálogo de certificado."
 expects.completes.conditions = ["a-xades-signature", "the-signature-verifies"]
 
 [[check]]
@@ -151,7 +143,6 @@ tipo del documento: la cofirma de una CAdES vuelve con los dos firmantes en para
 [check.drive]
 mode = "v4"
 script = "cosignauto"
-act.consent = "Va a aparecer el diálogo de certificado."
 expects.completes.conditions = ["two-parallel-signers", "the-signature-verifies"]
 
 [[check]]
@@ -183,7 +174,6 @@ CMS, y el firmante nuevo tampoco lo lleva.
 [check.drive]
 mode = "v4"
 script = "cosignautooveracmssignature"
-act.consent = "Va a aparecer el diálogo de certificado."
 expects.completes.conditions = ["cosigned-as-cms"]
 
 [[check]]
@@ -198,7 +188,6 @@ de sólo resumen (SHA256), y la firma con uno de estos últimos se completa.
 [check.drive]
 mode = "v4"
 script = "signcadeswithadigestonlyalgorithm"
-act.consent = "Va a aparecer el diálogo de certificado."
 expects.completes = {}
 
 [[check]]
@@ -229,7 +218,6 @@ elegir un certificado de curva elíptica firma con SHA256withECDSA en vez de fal
 mode = "v4"
 script = "signcades"
 store = "ec"
-act.consent = "Va a aparecer el diálogo de certificado, con el almacén de curva elíptica."
 expects.completes.conditions = ["the-algorithm-of-the-key", "the-signature-verifies"]
 
 [[check]]
@@ -244,7 +232,6 @@ ese resumen y verifica con la clave del certificado.
 [check.drive]
 mode = "v4"
 script = "signcadessha384"
-act.consent = "Va a aparecer el diálogo de certificado."
 expects.completes.conditions = ["the-digest-requested", "the-signature-verifies"]
 
 [[check]]
@@ -259,7 +246,6 @@ ese resumen y verifica con la clave del certificado.
 [check.drive]
 mode = "v4"
 script = "signcadessha512"
-act.consent = "Va a aparecer el diálogo de certificado."
 expects.completes.conditions = ["the-digest-requested", "the-signature-verifies"]
 
 [[check]]
@@ -274,7 +260,6 @@ ese resumen y verifica con la clave del certificado.
 [check.drive]
 mode = "v4"
 script = "signxadessha384"
-act.consent = "Va a aparecer el diálogo de certificado."
 expects.completes.conditions = ["the-digest-requested", "the-signature-verifies"]
 
 [[check]]
@@ -289,7 +274,6 @@ ese resumen y verifica con la clave del certificado.
 [check.drive]
 mode = "v4"
 script = "signxadessha512"
-act.consent = "Va a aparecer el diálogo de certificado."
 expects.completes.conditions = ["the-digest-requested", "the-signature-verifies"]
 
 [[check]]
@@ -304,7 +288,6 @@ ese resumen y verifica con la clave del certificado.
 [check.drive]
 mode = "v4"
 script = "signpadessha384"
-act.consent = "Va a aparecer el diálogo de certificado."
 expects.completes.conditions = ["the-digest-requested", "the-signature-verifies"]
 
 [[check]]
@@ -319,7 +302,6 @@ ese resumen y verifica con la clave del certificado.
 [check.drive]
 mode = "v4"
 script = "signpadessha512"
-act.consent = "Va a aparecer el diálogo de certificado."
 expects.completes.conditions = ["the-digest-requested", "the-signature-verifies"]
 
 [[check]]
@@ -335,7 +317,6 @@ verifica con la clave del certificado.
 mode = "v4"
 script = "signxades"
 store = "ec"
-act.consent = "Va a aparecer el diálogo de certificado, con el almacén de curva elíptica."
 expects.completes.conditions = ["the-default-envelope", "the-signature-verifies"]
 
 [[check]]
@@ -351,7 +332,6 @@ verifica con la clave del certificado.
 mode = "v4"
 script = "signpades"
 store = "ec"
-act.consent = "Va a aparecer el diálogo de certificado, con el almacén de curva elíptica."
 expects.completes.conditions = ["the-signature-inside-the-pdf", "the-signature-verifies"]
 
 [[check]]
@@ -366,7 +346,6 @@ como un único bloque que la sede tenga que despiezar.
 [check.drive]
 mode = "v4"
 script = "signcades"
-act.consent = "Va a aparecer el diálogo de certificado."
 expects.completes.conditions = ["certificate-and-signature-apart"]
 
 [[check]]
@@ -412,7 +391,6 @@ haya firma que validar es lo normal cuando se va a firmar por primera vez.
 [check.drive]
 mode = "v4"
 script = "signpadeschecking"
-act.consent = "Va a aparecer el diálogo de certificado."
 expects.completes = {}
 
 [[check]]
@@ -590,7 +568,6 @@ diccionario de firma, su /ByteRange y su /Contents.
 [check.drive]
 mode = "v4"
 script = "signpades"
-act.consent = "Va a aparecer el diálogo de certificado."
 expects.completes.conditions = ["the-signature-inside-the-pdf", "the-signature-verifies"]
 
 [[check]]
@@ -622,7 +599,6 @@ datos dentro del PKCS#7.
 [check.drive]
 mode = "v4"
 script = "signcades"
-act.consent = "Va a aparecer el diálogo de certificado."
 expects.completes.conditions = ["the-data-left-out"]
 
 [[check]]
@@ -637,7 +613,6 @@ Con mode=implicit, CAdES empotra los datos firmados en el PKCS#7 que vuelve.
 [check.drive]
 mode = "v4"
 script = "signcadesimplicit"
-act.consent = "Va a aparecer el diálogo de certificado."
 expects.completes.conditions = ["the-data-inside", "the-signature-verifies"]
 
 [[check]]
@@ -653,7 +628,6 @@ Al expandir la política de la AGE (expPolicy=FirmaAGE) sin mode declarado, un d
 [check.drive]
 mode = "v4"
 script = "signcadesagepolicy"
-act.consent = "Va a aparecer el diálogo de certificado."
 expects.completes.conditions = ["the-data-inside"]
 
 [[check]]
@@ -670,7 +644,6 @@ mode=implicit la firma de la huella vuelve sin datos dentro.
 [check.drive]
 mode = "v4"
 script = "signcadeswithaprecalculatedhashinimplicitmode"
-act.consent = "Va a aparecer el diálogo de certificado."
 expects.completes.conditions = ["the-hash-signed-as-it-came", "the-data-left-out"]
 
 [[check]]
@@ -686,7 +659,6 @@ la propia Signature.
 [check.drive]
 mode = "v4"
 script = "signxadesenveloping"
-act.consent = "Va a aparecer el diálogo de certificado."
 expects.completes.conditions = ["the-envelope-requested", "the-signature-verifies"]
 
 [[check]]
@@ -703,7 +675,6 @@ como hija de su raíz.
 [check.drive]
 mode = "v4"
 script = "signxadesenveloped"
-act.consent = "Va a aparecer el diálogo de certificado."
 expects.completes.conditions = ["the-envelope-requested", "the-signature-verifies"]
 
 [[check]]
@@ -720,7 +691,6 @@ referencia al documento, que va a su lado y no dentro de ella.
 [check.drive]
 mode = "v4"
 script = "signxadesdetached"
-act.consent = "Va a aparecer el diálogo de certificado."
 expects.completes.conditions = ["the-envelope-requested", "the-signature-verifies"]
 
 [[check]]
@@ -736,7 +706,6 @@ referencia por la uri que declaran los mismos parámetros.
 [check.drive]
 mode = "v4"
 script = "signxadesexternallydetached"
-act.consent = "Va a aparecer el diálogo de certificado."
 expects.completes.conditions = ["the-envelope-requested"]
 
 [[check]]
@@ -752,7 +721,6 @@ firma que vuelve las declara.
 [check.drive]
 mode = "v4"
 script = "signxadeswithatransform"
-act.consent = "Va a aparecer el diálogo de certificado."
 expects.completes.conditions = ["the-transform-declared"]
 
 [[check]]
@@ -768,7 +736,6 @@ lugar de producción, y la firma que vuelve los declara.
 [check.drive]
 mode = "v4"
 script = "signfacturaewitharole"
-act.consent = "Va a aparecer el diálogo de certificado."
 expects.completes.conditions = ["the-role-and-the-place-signed", "the-signature-verifies"]
 
 [[check]]
@@ -784,7 +751,6 @@ en vez de rechazar la petición.
 [check.drive]
 mode = "v4"
 script = "signfacturaewithaforbiddenparam"
-act.consent = "Va a aparecer el diálogo de certificado."
 expects.completes = {}
 
 [[check]]
@@ -800,7 +766,6 @@ desprendida dentro, en META-INF/signature.p7s, no la firma suelta.
 [check.drive]
 mode = "v4"
 script = "signcadesasics"
-act.consent = "Va a aparecer el diálogo de certificado."
 expects.completes.conditions = ["the-data-and-the-signature-inside"]
 
 [[check]]
@@ -814,9 +779,37 @@ y el cliente publicado lo entrega a la sede como AOCancelledOperationException.
 
 [check.drive]
 mode = "v4"
-script = "signcades"
+script = "signcadescancelled"
 act.cancel = "Va a aparecer el diálogo de selección de certificado de una firma: cancélalo en vez de elegir."
 expects.code = "CANCEL"
+
+[[check]]
+id = "a_signature_without_a_mandatory_selection_signs_with_the_only_candidate_without_asking"
+set = "firma"
+citation = "ProtocolInvocationLauncherSign.java:574-629; CertFilterManager.java:145-154; AOKeyStoreDialog.java:726-729"
+statement = """
+En una firma, mandatoryCertSelection=false hace que un único certificado que pase los filtros
+firme sin pedir que se elija.
+"""
+
+[check.drive]
+mode = "v4"
+script = "signcadeswithoutachoice"
+expects.completes.conditions = ["the-only-candidate-without-asking"]
+
+[[check]]
+id = "a_headless_signature_signs_with_the_only_candidate_without_asking"
+set = "firma"
+citation = "ProtocolInvocationLauncherSign.java:574-629; CertFilterManager.java:145-154; AOKeyStoreDialog.java:726-729"
+statement = """
+En una firma, headless=true hace que un único certificado que pase los filtros firme sin pedir que
+se elija.
+"""
+
+[check.drive]
+mode = "v4"
+script = "signcadesheadless"
+expects.completes.conditions = ["the-only-candidate-without-asking"]
 
 [[check]]
 id = "a_pades_signature_over_data_that_is_no_pdf_is_rejected_with_saf_28"
@@ -830,7 +823,6 @@ SAF_09 genérico.
 [check.drive]
 mode = "v4"
 script = "signpadesoveranonpdf"
-act.consent = "Va a aparecer el diálogo de certificado antes de que llegue el rechazo."
 expects.code = "SAF_28"
 
 [[check]]
@@ -858,7 +850,6 @@ con SAF_29.
 [check.drive]
 mode = "v4"
 script = "signxadesenvelopedoveranonxml"
-act.consent = "Va a aparecer el diálogo de certificado antes de que llegue el rechazo."
 expects.code = "SAF_29"
 
 [[check]]
@@ -873,7 +864,6 @@ Una firma OOXML sobre algo que no es un documento de Office se rechaza con SAF_3
 [check.drive]
 mode = "v4"
 script = "signooxmloveranonooxml"
-act.consent = "Va a aparecer el diálogo de certificado antes de que llegue el rechazo."
 expects.code = "SAF_30"
 
 [[check]]
@@ -887,7 +877,6 @@ Una cofirma XAdES sobre algo que no es una firma XML se rechaza con SAF_31.
 [check.drive]
 mode = "v4"
 script = "cosignxadesoveranonsignature"
-act.consent = "Va a aparecer el diálogo de certificado antes de que llegue el rechazo."
 expects.code = "SAF_31"
 
 [[check]]
@@ -901,7 +890,6 @@ Una firma FacturaE sobre una factura que ya está firmada se rechaza con SAF_32.
 [check.drive]
 mode = "v4"
 script = "signfacturaeoverasignedinvoice"
-act.consent = "Va a aparecer el diálogo de certificado antes de que llegue el rechazo."
 expects.code = "SAF_32"
 
 [[check]]
@@ -915,7 +903,6 @@ Una firma FacturaE sobre un XML que no es una factura electrónica se rechaza co
 [check.drive]
 mode = "v4"
 script = "signfacturaeoveranoninvoice"
-act.consent = "Va a aparecer el diálogo de certificado antes de que llegue el rechazo."
 expects.code = "SAF_38"
 
 [[check]]
@@ -930,7 +917,6 @@ se rechaza con SAF_40.
 [check.drive]
 mode = "v4"
 script = "signcadestriwithafailingserver"
-act.consent = "Va a aparecer el diálogo de certificado antes de que llegue el rechazo."
 expects.code = "SAF_40"
 
 [[check]]
@@ -945,7 +931,6 @@ se rechaza con SAF_44.
 [check.drive]
 mode = "v4"
 script = "cosigncadeswithoutthedata"
-act.consent = "Va a aparecer el diálogo de certificado antes de que llegue el rechazo."
 expects.code = "SAF_44"
 
 [[check]]
@@ -972,7 +957,6 @@ en vez de devolver una firma sin sello.
 [check.drive]
 mode = "v4"
 script = "signwithbrokentsa"
-act.consent = "Va a aparecer el diálogo de certificado."
 expects.code = "SAF_*"
 
 [[check]]
@@ -1036,7 +1020,6 @@ sin abrir ningún diálogo, con su campo en el área que la petición declara.
 [check.drive]
 mode = "v4"
 script = "signpadesplaced"
-act.consent = "Va a aparecer el diálogo de certificado."
 expects.completes.conditions = ["the-signature-where-the-request-says"]
 
 [[check]]
@@ -1051,7 +1034,6 @@ certificado sobre los datos, sin CMS alrededor.
 [check.drive]
 mode = "v4"
 script = "signnone"
-act.consent = "Va a aparecer el diálogo de certificado."
 expects.completes.conditions = ["a-bare-pkcs1"]
 
 [[check]]
@@ -1066,7 +1048,6 @@ clave del certificado la prefirma que le devuelve y entrega a la sede la firma d
 [check.drive]
 mode = "v4"
 script = "signcadestri"
-act.consent = "Va a aparecer el diálogo de certificado."
 expects.completes.conditions = ["through-the-triphase-server", "the-presignature-signed-with-the-key", "the-server-signature-as-it-came"]
 
 [[check]]
@@ -1081,7 +1062,6 @@ documento.
 [check.drive]
 mode = "v4"
 script = "cosigncadestri"
-act.consent = "Va a aparecer el diálogo de certificado."
 expects.completes.conditions = ["through-the-triphase-server", "the-presignature-signed-with-the-key", "the-server-signature-as-it-came"]
 
 [[check]]
@@ -1096,7 +1076,6 @@ como documento.
 [check.drive]
 mode = "v4"
 script = "countersigncadestri"
-act.consent = "Va a aparecer el diálogo de certificado."
 expects.completes.conditions = ["through-the-triphase-server", "the-presignature-signed-with-the-key", "the-server-signature-as-it-came"]
 
 [[check]]
@@ -1111,7 +1090,6 @@ documento.
 [check.drive]
 mode = "v4"
 script = "cosignxadestri"
-act.consent = "Va a aparecer el diálogo de certificado."
 expects.completes.conditions = ["through-the-triphase-server", "the-presignature-signed-with-the-key", "the-server-signature-as-it-came"]
 
 [[check]]
@@ -1126,7 +1104,6 @@ previa como documento.
 [check.drive]
 mode = "v4"
 script = "countersignxadestri"
-act.consent = "Va a aparecer el diálogo de certificado."
 expects.completes.conditions = ["through-the-triphase-server", "the-presignature-signed-with-the-key", "the-server-signature-as-it-came"]
 
 [[check]]
@@ -1142,7 +1119,6 @@ entrega a la sede el PDF firmado de la postfirma.
 [check.drive]
 mode = "v4"
 script = "signpadestri"
-act.consent = "Va a aparecer el diálogo de certificado."
 expects.completes.conditions = ["through-the-triphase-server", "the-presignature-signed-with-the-key", "the-server-signature-as-it-came"]
 
 [[check]]
@@ -1158,7 +1134,6 @@ entrega a la sede la firma de la postfirma.
 [check.drive]
 mode = "v4"
 script = "signxadestri"
-act.consent = "Va a aparecer el diálogo de certificado."
 expects.completes.conditions = ["through-the-triphase-server", "the-presignature-signed-with-the-key", "the-server-signature-as-it-came"]
 
 [[check]]
@@ -1174,7 +1149,6 @@ prefirma que le devuelve y entrega a la sede la factura firmada de la postfirma.
 [check.drive]
 mode = "v4"
 script = "signfacturaetri"
-act.consent = "Va a aparecer el diálogo de certificado."
 expects.completes.conditions = ["through-the-triphase-server", "the-presignature-signed-with-the-key", "the-server-signature-as-it-came"]
 
 [[check]]
@@ -1189,7 +1163,6 @@ certificado.
 [check.drive]
 mode = "v4"
 script = "signcadestriwithoutserverurl"
-act.consent = "Va a aparecer el diálogo de certificado antes de que llegue el rechazo."
 expects.code = "SAF_03"
 
 [[check]]
@@ -1204,7 +1177,6 @@ Una firma CAdES sin mode ni política que lo fije es explícita: vuelve sin los 
 [check.drive]
 mode = "v4"
 script = "signcadeswithoutmode"
-act.consent = "Va a aparecer el diálogo de certificado."
 expects.completes.conditions = ["the-data-left-out", "the-signature-verifies"]
 
 [[check]]
@@ -1219,7 +1191,6 @@ Una firma XAdES sin el parámetro format es enveloping: los datos van dentro de 
 [check.drive]
 mode = "v4"
 script = "signxades"
-act.consent = "Va a aparecer el diálogo de certificado."
 expects.completes.conditions = ["the-default-envelope", "the-signature-verifies"]
 
 [[check]]
@@ -1237,7 +1208,6 @@ declarado con mimeType=hash/sha1.
 [check.drive]
 mode = "v4"
 script = "signxadesexplicit"
-act.consent = "Va a aparecer el diálogo de certificado."
 expects.completes.conditions = ["the-sha1-of-the-data-signed"]
 
 [[check]]
@@ -1253,7 +1223,6 @@ admite Detached o Enveloped y fuerza la primera.
 [check.drive]
 mode = "v4"
 script = "signxadesagepolicy"
-act.consent = "Va a aparecer el diálogo de certificado."
 expects.completes.conditions = ["the-envelope-the-policy-demands"]
 
 [[check]]
@@ -1268,7 +1237,6 @@ Con expPolicy=FirmaAGE, la firma XAdES declara el identificador de la política 
 [check.drive]
 mode = "v4"
 script = "signxadesagepolicy"
-act.consent = "Va a aparecer el diálogo de certificado."
 expects.completes.conditions = ["the-age-policy-inside"]
 
 [[check]]
@@ -1283,7 +1251,6 @@ Con expPolicy=FirmaAGE, la firma CAdES declara el identificador de la política 
 [check.drive]
 mode = "v4"
 script = "signcadesagepolicy"
-act.consent = "Va a aparecer el diálogo de certificado."
 expects.completes.conditions = ["the-age-policy-inside"]
 
 [[check]]
@@ -1298,7 +1265,6 @@ Con expPolicy=FirmaAGE, la firma PAdES declara el identificador de la política 
 [check.drive]
 mode = "v4"
 script = "signpadesagepolicy"
-act.consent = "Va a aparecer el diálogo de certificado."
 expects.completes.conditions = ["the-age-policy-inside"]
 
 [[check]]
@@ -1313,7 +1279,6 @@ PAdES no admite contrafirma: una contrafirma PAdES se rechaza con SAF_04, operac
 [check.drive]
 mode = "v4"
 script = "countersignpades"
-act.consent = "Va a aparecer el diálogo de certificado antes de que llegue el rechazo."
 expects.code = "SAF_04"
 
 [[check]]
@@ -1328,7 +1293,6 @@ FacturaE no admite cofirma: una cofirma FacturaE se rechaza con SAF_04, operaci�
 [check.drive]
 mode = "v4"
 script = "cosignfacturae"
-act.consent = "Va a aparecer el diálogo de certificado antes de que llegue el rechazo."
 expects.code = "SAF_04"
 
 [[check]]
@@ -1344,5 +1308,4 @@ soportada.
 [check.drive]
 mode = "v4"
 script = "countersignfacturae"
-act.consent = "Va a aparecer el diálogo de certificado antes de que llegue el rechazo."
 expects.code = "SAF_04"

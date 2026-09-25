@@ -1,14 +1,18 @@
-# Un clic por trámite: la suite quita el PIN, pero no esconde la elección del certificado
+# Un clic por trámite: la suite quita el PIN y la elección que no existe, pero no las ventanas que se miden
 
 Casi cincuenta comprobaciones necesitan una firma solo como medio para llegar a lo que miden, y
 cada una abría el selector de certificado y el diálogo del PIN. Correr la suite pedía tener a
 alguien delante toda la tanda.
 
-**El PIN se quita en el almacén; la elección del certificado no se quita.** Las comprobaciones
-cuya asistencia es `clic` corren con un almacén de un único certificado sin PIN: una base NSS sin
-contraseña en el perfil aislado, con los tokens de SoftHSM fuera de su alcance. Es una condición
-de lanzamiento, igual para cualquier cliente. Queda un clic por trámite: el selector de AutoFirma
-o el consentimiento de rFirma. La cola los agrupa en su tramo.
+**El PIN se quita en el almacén; la elección que no existe, en la petición.** Las firmas corren
+con un almacén de un único certificado sin PIN: una base NSS sin contraseña en el perfil aislado,
+con los tokens de SoftHSM fuera de su alcance. Es una condición de lanzamiento, igual para
+cualquier cliente. Donde ese almacén deja un solo candidato tras los filtros, la petición lleva
+`mandatoryCertSelection=false`, nunca `headless`: el cliente conforme resuelve al único candidato
+sin preguntar (`CertFilterManager.java:145-154`, `AOKeyStoreDialog.java:726-729`), y si el trámite
+no enseña ninguna otra ventana, la comprobación no tiene acción y va al tramo `ninguna`. Queda un
+clic donde hay algo que elegir o que cerrar: varios certificados, el PIN de un token, o una ventana
+que el cliente enseña antes de contestar. La cola los agrupa en su tramo.
 
 **Una acción de persona se retira solo si ningún cliente no conforme daría un resultado
 distinguible por la sede.** Se queda mientras un cliente que se salta el diálogo, o que lo resuelve
@@ -26,6 +30,12 @@ así.
   corre sin nadie delante.
 - La firma con la clave de un token PKCS#11 corre con el almacén `token`, y su PIN conocido se
   teclea en el mismo clic; elegir entre varios certificados, con `several`.
+- `mandatoryCertSelection=false` no va en las comprobaciones que miden el selector: las que eligen
+  entre varios certificados o filtran entre varios candidatos, las que lo cancelan, las que esperan
+  con él abierto, las de `headless` y las que miden otro diálogo. Que el parámetro y `headless`
+  resuelvan al único candidato sin preguntar lo exigen sus propias comprobaciones, en una selección
+  y en una firma: un cliente que pregunta no vuelve solo y sale no conforme. En las demás del tramo
+  `ninguna`, ese cliente agota la espera y la comprobación queda pendiente.
 - Dos comprobaciones que esperan el mismo `CANCEL` no son duplicadas si un cliente no conforme
   falla cada una de un modo distinto: la cancelación del cliente conforme es el resultado esperado,
   no lo que se mide. Lo demás de un diálogo se exige por lo que la petición provoca sin nadie
@@ -37,9 +47,15 @@ así.
 
 ## Considered Options
 
-- **Añadir `headless` o `mandatoryCertSelection=false` a la petición.** Descartada: cambia lo que
-  envía la sede, y con ello lo que se mide. Además, rFirma muestra siempre el consentimiento al
-  firmar, aunque la petición traiga `headless`.
+- **Añadir `headless` a la petición.** Descartada: además del selector, se salta las
+  confirmaciones —firmas previas, PDF certificado o protegido— (`ProtocolInvocationLauncherSign.java:432,
+  793`), y con ellas lo que miden las comprobaciones de esos avisos; `headless` es objeto de sus
+  propias comprobaciones.
+- **Dejar la petición sin `mandatoryCertSelection=false`**, porque cambia lo que envía la sede y
+  con ello lo que se mide. Descartada: con un solo candidato, el parámetro solo quita una elección
+  que no existe; lo que vuelve a la sede es lo mismo, y lo que el parámetro sí cambia —que el
+  selector no salga— lo exigen sus propias comprobaciones. Donde lo medido es el selector, no se
+  añade.
 - **Un interruptor de lanzamiento en rFirma que se salte el consentimiento.** Descartada: una
   aplicación de firma que firma sin preguntar si se lo pide una variable de entorno es un agujero,
   y AutoFirma no tiene equivalente.
