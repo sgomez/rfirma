@@ -419,7 +419,6 @@ Con headless=true, un PDF certificado sin cambios permitidos no se pregunta a la
 [check.drive]
 mode = "v4"
 script = "signpadescertifiedheadless"
-act.consent = "Va a aparecer el diálogo de certificado antes de que llegue el rechazo."
 expects.code = "SAF_50"
 
 [[check]]
@@ -433,7 +432,6 @@ Con headless=true, un PDF con firmas de un subfiltro no registrado no se pregunt
 [check.drive]
 mode = "v4"
 script = "signpadesunregisteredheadless"
-act.consent = "Va a aparecer el diálogo de certificado antes de que llegue el rechazo."
 expects.code = "SAF_50"
 
 [[check]]
@@ -447,7 +445,6 @@ Con headless=true, un PDF protegido con contraseña sin que la petición la trai
 [check.drive]
 mode = "v4"
 script = "signpadesprotectedheadless"
-act.consent = "Va a aparecer el diálogo de certificado antes de que llegue el rechazo."
 expects.code = "SAF_50"
 
 [[check]]
@@ -462,7 +459,6 @@ diga headless=true.
 [check.drive]
 mode = "v4"
 script = "signpadescertifiedallowed"
-act.consent = "Va a aparecer el diálogo de certificado."
 expects.completes.conditions = ["the-signature-inside-the-pdf"]
 
 [[check]]
@@ -477,7 +473,7 @@ preguntar aunque la petición diga headless=true.
 [check.drive]
 mode = "v4"
 script = "signpadesunregisteredallowed"
-act.consent = "Va a aparecer el diálogo de certificado."
+act.consent = "AutoFirma firma sin enseñar nada. rFirma enseña su consentimiento con el aviso de las firmas no registradas: acéptalo."
 expects.completes.conditions = ["the-signature-inside-the-pdf"]
 
 [[check]]
@@ -492,7 +488,6 @@ preguntarla aunque la petición diga headless=true.
 [check.drive]
 mode = "v4"
 script = "signpadesprotectedwithitspassword"
-act.consent = "Va a aparecer el diálogo de certificado."
 expects.completes = {}
 
 [[check]]
@@ -507,7 +502,6 @@ persona: la firma se rechaza con SAF_50, no con SAF_09 ni con SAF_33.
 [check.drive]
 mode = "v4"
 script = "signpadeswrongpasswordheadless"
-act.consent = "Va a aparecer el diálogo de certificado antes de que llegue el rechazo."
 expects.code = "SAF_50"
 
 [[check]]
