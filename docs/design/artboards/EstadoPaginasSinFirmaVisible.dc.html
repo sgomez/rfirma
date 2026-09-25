@@ -1,0 +1,511 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap");
+
+:root, [data-theme="light"] {
+  --rf-bg:#ffffff; --rf-surface:#fafbfc; --rf-text:#000000; --rf-text-muted:#64748b;
+  --rf-primary:#64748b; --rf-on-primary:#ffffff; --rf-primary-hover:#475569;
+  --rf-accent:#94a3b8; --rf-border-subtle:#e5e5e5; --rf-border-strong:#64748b;
+  --rf-focus-ring:#64748b; --rf-scrim:rgba(0,0,0,.6);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --rf-bg:#18181b; --rf-surface:#15171a; --rf-text:#ffffff; --rf-text-muted:#94a3b8;
+    --rf-primary:#94a3b8; --rf-on-primary:#18181b; --rf-primary-hover:#b6c0cd;
+    --rf-accent:#64748b; --rf-border-subtle:rgba(229,229,229,.12);
+    --rf-border-strong:rgba(229,229,229,.45); --rf-focus-ring:#94a3b8;
+  }
+}
+[data-theme="dark"] {
+  --rf-bg:#18181b; --rf-surface:#15171a; --rf-text:#ffffff; --rf-text-muted:#94a3b8;
+  --rf-primary:#94a3b8; --rf-on-primary:#18181b; --rf-primary-hover:#b6c0cd;
+  --rf-accent:#64748b; --rf-border-subtle:rgba(229,229,229,.12);
+  --rf-border-strong:rgba(229,229,229,.45); --rf-focus-ring:#94a3b8;
+}
+:root {
+  --rf-space-xs:8px; --rf-space-sm:16px; --rf-space-md:24px;
+  --rf-space-lg:48px; --rf-space-xl:80px; --rf-space-2xl:144px;
+  --rf-radius-sm:4px; --rf-radius-md:6px; --rf-radius-lg:8px;
+  --rf-radius-xl:16px; --rf-radius-pill:9999px;
+  --rf-shadow-card:rgba(0,0,0,0) 0px 0px 0px 0px, rgba(0,0,0,0) 0px 0px 0px 0px, rgba(0,0,0,.1) 0px 0px 1px 0px, rgba(0,0,0,.03) 0px 2px 6px 0px;
+  --rf-shadow-elevated:rgba(0,0,0,0) 0px 0px 0px 0px, rgba(0,0,0,0) 0px 0px 0px 0px, rgba(0,0,0,.1) 0px 20px 25px -5px, rgba(0,0,0,.1) 0px 8px 10px -6px;
+  --rf-duration-fast:150ms; --rf-duration-base:300ms;
+  --rf-easing:cubic-bezier(.4,0,.2,1);
+  --rf-font-body:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+* { box-sizing:border-box; }
+html,body { margin:0; height:100%; }
+a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
+:where([data-theme]) { background:var(--rf-bg); }
+.rf-root {
+  background:var(--rf-bg); color:var(--rf-text);
+  font-family:var(--rf-font-body); height:100%;
+  -webkit-font-smoothing:antialiased;
+}
+.rf-root :focus-visible { outline:2px solid var(--rf-focus-ring); outline-offset:2px; }
+.rf-display{font-size:96px;line-height:1;font-weight:700;letter-spacing:-2.4px;margin:0}
+.rf-heading{font-size:48px;line-height:1.15;font-weight:700;margin:0}
+.rf-title{font-size:20px;line-height:1.3;font-weight:700;margin:0}
+.rf-body{font-size:12px;line-height:1;font-weight:400;margin:0}
+.rf-prose{font-size:14px;line-height:1.6;font-weight:400;margin:0}
+.rf-text-muted{color:var(--rf-text-muted)}
+.rf-text-primary{color:var(--rf-primary)}
+.rf-stack{display:flex;flex-direction:column}
+.rf-row{display:flex;flex-direction:row;align-items:center}
+.rf-gap-xs{gap:var(--rf-space-xs)} .rf-gap-sm{gap:var(--rf-space-sm)}
+.rf-gap-md{gap:var(--rf-space-md)} .rf-gap-lg{gap:var(--rf-space-lg)}
+.rf-section{padding:var(--rf-space-md)}
+.rf-divider{border:0;border-top:1px solid var(--rf-border-subtle);margin:0;width:100%}
+.rf-surface{background:var(--rf-surface)}
+.rf-card{display:flex;flex-direction:column;gap:var(--rf-space-xs);
+  padding:var(--rf-space-md);background:var(--rf-surface);
+  border:1px solid var(--rf-border-subtle);border-radius:var(--rf-radius-md)}
+.rf-card--elevated{box-shadow:var(--rf-shadow-elevated)}
+.rf-card--interactive{cursor:pointer;transition:border-color var(--rf-duration-fast) var(--rf-easing)}
+.rf-card--interactive:hover{border-color:var(--rf-border-strong)}
+.rf-btn{display:inline-flex;align-items:center;justify-content:center;gap:var(--rf-space-xs);
+  min-height:44px;padding:0 var(--rf-space-sm);border-radius:var(--rf-radius-md);
+  font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;
+  border:1px solid transparent;background:transparent;color:var(--rf-text);
+  transition:background-color var(--rf-duration-fast) var(--rf-easing),
+             border-color var(--rf-duration-fast) var(--rf-easing),
+             color var(--rf-duration-fast) var(--rf-easing)}
+.rf-btn--primary{background:var(--rf-primary);color:var(--rf-on-primary)}
+.rf-btn--primary:hover{background:var(--rf-primary-hover)}
+.rf-btn--secondary{border-color:var(--rf-border-strong);color:var(--rf-text)}
+.rf-btn--secondary:hover{border-color:var(--rf-primary-hover);color:var(--rf-primary-hover)}
+.rf-btn--ghost{color:var(--rf-text-muted)}
+.rf-btn--ghost:hover{color:var(--rf-text)}
+.rf-btn[disabled]{opacity:.45;cursor:not-allowed}
+.rf-field{display:flex;flex-direction:column;gap:var(--rf-space-xs)}
+.rf-label{font-size:12px;line-height:1;font-weight:600;color:var(--rf-text-muted)}
+.rf-input{min-height:44px;padding:0 var(--rf-space-sm);font-family:inherit;font-size:14px;
+  color:var(--rf-text);background:var(--rf-bg);
+  border:1px solid var(--rf-border-strong);border-radius:var(--rf-radius-md)}
+.rf-hint{font-size:12px;line-height:1.4;color:var(--rf-text-muted)}
+.rf-field--error .rf-input{border-width:2px}
+.rf-field--error .rf-hint{font-weight:700;color:var(--rf-text)}
+.rf-badge{display:inline-flex;align-items:center;padding:4px var(--rf-space-xs);
+  border-radius:var(--rf-radius-pill);border:1px solid var(--rf-border-subtle);
+  font-size:12px;line-height:1;font-weight:600;color:var(--rf-text-muted)}
+.rf-badge--primary{background:var(--rf-primary);color:var(--rf-on-primary);border-color:transparent}
+.rf-scrim{position:absolute;inset:0;background:var(--rf-scrim);
+  display:flex;align-items:center;justify-content:center}
+.rf-dialog{display:flex;flex-direction:column;gap:var(--rf-space-md);
+  padding:var(--rf-space-md);background:var(--rf-bg);
+  border:1px solid var(--rf-border-subtle);border-radius:var(--rf-radius-xl);
+  box-shadow:var(--rf-shadow-elevated);width:420px}
+</style>
+</helmet>
+<div class="rf-root" data-theme="{{ tema }}" style="width:1180px;height:700px;display:flex;flex-direction:column;position:relative;overflow:hidden">
+<header class="rf-row" style="height:52px;flex:none;padding:0 var(--rf-space-xs) 0 var(--rf-space-md);
+  gap:var(--rf-space-sm);background:var(--rf-surface);position:relative;z-index:5">
+  <span class="rf-title" style="font-size:15px;letter-spacing:.4px;flex:1">rFirma</span>
+  <span title="Menú" style="width:40px;height:40px;flex:none;display:flex;align-items:center;justify-content:center;
+    border-radius:var(--rf-radius-md);color:var(--rf-text)">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h16"></path></svg></span>
+</header>
+
+<nav class="rf-row" style="height:40px;flex:none;align-items:flex-end;gap:2px;padding:0 var(--rf-space-xs);
+  background:var(--rf-surface);border-bottom:1px solid var(--rf-border-subtle);position:relative;z-index:10">
+  
+  <div style="height:33px;margin-bottom:-1px;flex:0 1 auto;min-width:0;overflow:hidden">
+    <div class="rf-row" style="height:100%;align-items:stretch;gap:2px;transform:translateX(-0px)">
+      
+        <div class="rf-row" title="Solicitud-subvencion.pdf" style="height:100%;flex:none;width:240px;padding:0 6px 0 12px;gap:8px;border:1px solid transparent;border-bottom:0;border-radius:var(--rf-radius-md) var(--rf-radius-md) 0 0;font-size:13px;background:var(--rf-bg);border-color:var(--rf-border-subtle);color:var(--rf-text);font-weight:600;cursor:default">
+          <span style="display:flex;flex:none"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path><path d="M14 3v5h5"></path></svg></span>
+          <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Solicitud-subvencion.pdf</span>
+          
+          <span title="Cerrar" style="width:20px;height:20px;flex:none;display:flex;align-items:center;justify-content:center;border-radius:var(--rf-radius-sm);color:var(--rf-text-muted);"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6 6 18"></path></svg></span>
+        </div>
+      
+        <div class="rf-row" title="Contrato-alquiler.pdf" style="height:100%;flex:none;width:240px;padding:0 6px 0 12px;gap:8px;border:1px solid transparent;border-bottom:0;border-radius:var(--rf-radius-md) var(--rf-radius-md) 0 0;font-size:13px;background:var(--rf-border-subtle);color:var(--rf-text);cursor:pointer">
+          <span style="display:flex;flex:none"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path><path d="M14 3v5h5"></path></svg></span>
+          <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Contrato-alquiler.pdf</span>
+          
+            <span title="Firmado" style="display:flex;flex:none;color:var(--rf-text-muted)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span>
+          
+          <span title="Cerrar" style="width:20px;height:20px;flex:none;display:flex;align-items:center;justify-content:center;border-radius:var(--rf-radius-sm);color:var(--rf-text-muted);"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6 6 18"></path></svg></span>
+        </div>
+      
+        <div class="rf-row" title="Modelo-036.pdf" style="height:100%;flex:none;width:240px;padding:0 6px 0 12px;gap:8px;border:1px solid transparent;border-bottom:0;border-radius:var(--rf-radius-md) var(--rf-radius-md) 0 0;font-size:13px;color:var(--rf-text-muted);cursor:pointer">
+          <span style="display:flex;flex:none"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path><path d="M14 3v5h5"></path></svg></span>
+          <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Modelo-036.pdf</span>
+          
+            <span title="Firmado" style="display:flex;flex:none;color:var(--rf-text-muted)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span>
+          
+          <span title="Cerrar" style="width:20px;height:20px;flex:none;display:flex;align-items:center;justify-content:center;border-radius:var(--rf-radius-sm);color:var(--rf-text-muted);visibility:hidden"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6 6 18"></path></svg></span>
+        </div>
+      
+    </div>
+  </div>
+  
+  <div style="position:relative;flex:none;display:flex;align-self:flex-end">
+    <button type="button" title="Abrir un PDF" style="height:33px;margin-bottom:-1px;flex:none;display:flex;align-items:center;justify-content:center;padding:0 2px;border:1px solid transparent;border-bottom:0;background:none;font-family:inherit;color:var(--rf-text);cursor:pointer">
+      <span style="height:28px;min-width:28px;display:flex;align-items:center;justify-content:center;border-radius:var(--rf-radius-md)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"></path></svg></span></button>
+    
+  </div>
+  <span style="flex:1;min-width:0"></span>
+</nav>
+
+<div class="rf-row" style="flex:1;min-height:0;align-items:stretch;background:var(--rf-bg)">
+
+
+
+
+  <div style="flex:1;min-width:0;position:relative;overflow:hidden;background:var(--rf-bg)">
+
+    <div style="position:absolute;left:50%;top:40px;transform:translateX(-50%);width:326px;opacity:1">
+      <div data-theme="light" style="width:100%;aspect-ratio:1/1.414;background:var(--rf-bg);
+        border:1px solid var(--rf-border-subtle);border-radius:var(--rf-radius-sm);box-shadow:var(--rf-shadow-card);
+        position:relative;display:flex;flex-direction:column;gap:8px;padding:30px">
+        <div style="height:12px;width:46%;border-radius:2px;background:var(--rf-border-strong);opacity:.5"></div>
+        <div style="height:6px"></div>
+        <div style="height:6px;width:88%;border-radius:2px;background:var(--rf-border-subtle)"></div><div style="height:6px;width:92%;border-radius:2px;background:var(--rf-border-subtle)"></div><div style="height:6px;width:85%;border-radius:2px;background:var(--rf-border-subtle)"></div><div style="height:6px;width:90%;border-radius:2px;background:var(--rf-border-subtle)"></div><div style="height:6px;width:60%;border-radius:2px;background:var(--rf-border-subtle)"></div>
+        <div style="height:10px"></div>
+        <div style="height:6px;width:91%;border-radius:2px;background:var(--rf-border-subtle)"></div><div style="height:6px;width:94%;border-radius:2px;background:var(--rf-border-subtle)"></div><div style="height:6px;width:89%;border-radius:2px;background:var(--rf-border-subtle)"></div><div style="height:6px;width:93%;border-radius:2px;background:var(--rf-border-subtle)"></div><div style="height:6px;width:72%;border-radius:2px;background:var(--rf-border-subtle)"></div>
+        <div style="height:10px"></div>
+        <div style="height:6px;width:90%;border-radius:2px;background:var(--rf-border-subtle)"></div><div style="height:6px;width:86%;border-radius:2px;background:var(--rf-border-subtle)"></div><div style="height:6px;width:40%;border-radius:2px;background:var(--rf-border-subtle)"></div>
+        <div style="height:18px"></div>
+        <div style="height:7px;width:38%;border-radius:2px;background:var(--rf-border-strong);opacity:.55"></div>
+        <div style="height:6px;width:26%;border-radius:2px;background:var(--rf-border-subtle)"></div>
+
+        
+        
+          <div style="position:absolute;right:22px;bottom:30px;width:176px;height:56px;background:var(--rf-bg);border-radius:2px;border:1.5px solid var(--rf-primary);cursor:move;">
+            <div style="display:flex;align-items:center;gap:6px;width:100%;height:100%;padding:4px 6px;overflow:hidden">
+              
+                <div title="" style="position:relative;flex:none;width:53px;height:46px;display:flex;align-items:center;justify-content:center;border-radius:2px;padding:1px;border:1px solid transparent;">
+                  
+                    <svg viewBox="0 0 84 40" preserveAspectRatio="xMidYMid meet" fill="none" stroke="var(--rf-text)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="width:100%;height:100%"><path d="M4 30c8-18 13-22 16-14 3 8-4 18-7 16-3-2 6-14 15-16 6-1 4 8 8 9 4 1 8-6 12-10"></path><path d="M50 24c6 2 12-2 18-8M62 32c6 0 12-3 18-9"></path></svg>
+                  
+                </div>
+              
+              
+                <div style="flex:1;min-width:0;text-align:left;line-height:1.25;color:var(--rf-text);overflow-wrap:anywhere;font-size:9px">
+                  <div>MARTÍN ORTEGA LUCÍA - ***9999**</div><div>25/09/2026</div><div>AC FNMT Usuarios</div>
+                </div>
+              
+            </div>
+            
+              <span style="position:absolute;left:-5px;top:-5px;width:9px;height:9px;background:var(--rf-bg);border:1.5px solid var(--rf-primary);border-radius:1px"></span>
+              <span style="position:absolute;right:-5px;top:-5px;width:9px;height:9px;background:var(--rf-bg);border:1.5px solid var(--rf-primary);border-radius:1px"></span>
+              <span style="position:absolute;left:-5px;bottom:-5px;width:9px;height:9px;background:var(--rf-bg);border:1.5px solid var(--rf-primary);border-radius:1px"></span>
+              <span style="position:absolute;right:-5px;bottom:-5px;width:9px;height:9px;background:var(--rf-bg);border:1.5px solid var(--rf-primary);border-radius:1px"></span>
+            
+          </div>
+        
+      </div>
+    </div>
+
+    <div class="rf-row" style="position:absolute;bottom:var(--rf-space-md);left:50%;
+      transform:translateX(-50%);gap:2px;padding:4px;border-radius:var(--rf-radius-pill);
+      border:1px solid var(--rf-border-subtle);background:var(--rf-surface);
+      box-shadow:var(--rf-shadow-elevated);white-space:nowrap">
+      <button type="button" title="Primera página" style="width:32px;height:32px;flex:none;display:flex;align-items:center;justify-content:center;border-radius:var(--rf-radius-pill);color:var(--rf-text);background:none;border:none;cursor:pointer;padding:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 6l-6 6 6 6M9 6l-6 6 6 6"></path></svg></button>
+      <button type="button" title="Página anterior" style="width:32px;height:32px;flex:none;display:flex;align-items:center;justify-content:center;border-radius:var(--rf-radius-pill);color:var(--rf-text);background:none;border:none;cursor:pointer;padding:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg></button>
+      <div class="rf-row rf-gap-xs" style="padding:0 6px;flex:none">
+        <span style="min-width:34px;height:30px;flex:none;display:flex;align-items:center;justify-content:center;
+          border:1px solid var(--rf-border-strong);border-radius:var(--rf-radius-sm);
+          font-size:13px;font-weight:700;padding:0 4px">6</span>
+        <span class="rf-body rf-text-muted" style="flex:none">de {{ totalFondo }}</span>
+      </div>
+      <button type="button" title="Página siguiente" style="width:32px;height:32px;flex:none;display:flex;align-items:center;justify-content:center;border-radius:var(--rf-radius-pill);color:var(--rf-text);background:none;border:none;cursor:pointer;padding:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg></button>
+      <button type="button" title="Última página" style="width:32px;height:32px;flex:none;display:flex;align-items:center;justify-content:center;border-radius:var(--rf-radius-pill);color:var(--rf-text);background:none;border:none;cursor:pointer;padding:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 6l6 6-6 6M15 6l6 6-6 6"></path></svg></button>
+      <span style="width:1px;height:24px;flex:none;margin:0 4px;background:var(--rf-border-subtle)"></span>
+      <span title="Alejar" style="width:32px;height:32px;flex:none;display:flex;align-items:center;justify-content:center;border-radius:var(--rf-radius-pill);color:var(--rf-text)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path></svg></span>
+      <span class="rf-body" style="min-width:44px;flex:none;text-align:center;font-weight:700">100 %</span>
+      <span title="Acercar" style="width:32px;height:32px;flex:none;display:flex;align-items:center;justify-content:center;border-radius:var(--rf-radius-pill);color:var(--rf-text)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"></path></svg></span>
+      <span title="Ajustar a la ventana" style="width:32px;height:32px;flex:none;display:flex;align-items:center;justify-content:center;border-radius:var(--rf-radius-pill);color:var(--rf-text-muted)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"></path></svg></span>
+    </div>
+  </div>
+
+  <aside class="rf-stack" style="width:380px;flex:none;border-left:1px solid var(--rf-border-subtle);background:var(--rf-bg);position:relative">
+    <div class="rf-stack" style="flex:1;min-height:0;overflow-y:auto;padding:14px 24px 12px;gap:12px">
+      
+
+      
+
+      <div class="rf-stack" style="flex:none;gap:10px">
+        <div class="rf-row" style="height:30px;gap:12px">
+          <span class="rf-label" style="flex:1">Firma visible</span>
+          
+            <span title="Quitar la firma visible" style="width:40px;height:24px;flex:none;border-radius:var(--rf-radius-pill);position:relative;cursor:pointer;border:1px solid var(--rf-border-strong);background:var(--rf-primary);border-color:transparent">
+              <span style="position:absolute;width:16px;height:16px;border-radius:var(--rf-radius-pill);top:3px;left:19px;background:var(--rf-on-primary)"></span>
+            </span>
+          
+          
+        </div>
+        
+          <div class="rf-stack" style="gap:10px;">
+            <div class="rf-row" style="height:32px;padding:2px;gap:2px;border:1px solid var(--rf-border-strong);border-radius:var(--rf-radius-md)">
+              
+                <button type="button" style="flex:1;min-width:0;height:100%;border:none;border-radius:var(--rf-radius-sm);font-family:inherit;font-size:13px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 6px;background:transparent;color:var(--rf-text);font-weight:600">Una página</button>
+              
+                <button type="button" style="flex:1;min-width:0;height:100%;border:none;border-radius:var(--rf-radius-sm);font-family:inherit;font-size:13px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 6px;{{ estiloVarias }}">Varias</button>
+              
+                <button type="button" style="flex:1;min-width:0;height:100%;border:none;border-radius:var(--rf-radius-sm);font-family:inherit;font-size:13px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 6px;{{ estiloTodas }}">Todas</button>
+              
+            </div>
+            
+              <sc-if value="{{ fondoVarias }}" hint-placeholder-val="{{ true }}">
+              <div class="rf-stack" style="gap:6px">
+                <div class="rf-row" style="gap:8px">
+                  <span class="rf-input" style="flex:1;min-width:0;display:flex;align-items:center;min-height:36px;font-size:14px;border-radius:var(--rf-radius-sm);border:1px solid var(--rf-border-strong)">{{ rangoFondo }}</span>
+                  
+                    <button type="button" class="rf-btn rf-btn--secondary" style="flex:none;min-height:36px;padding:0 10px;font-size:13px">Quitarla de aquí</button>
+                  
+                </div>
+              </sc-if>
+                
+              </div>
+            
+            
+          </div>
+        
+      </div>
+
+      
+        <div class="rf-stack" style="flex:none;gap:8px;position:relative;z-index:6;">
+          
+            <span class="rf-label" style="height:16px;display:flex;align-items:center">Modelo</span>
+          
+
+          
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
+              
+                <button type="button" title="" style="display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:3px;min-width:0;border-radius:var(--rf-radius-md);font-family:inherit;color:var(--rf-text);cursor:pointer;border:1px solid var(--rf-primary);box-shadow:inset 0 0 0 1px var(--rf-primary);background:var(--rf-surface)">
+                  <div style="width:100%;height:30px;border:1px solid var(--rf-border-subtle);border-radius:2px;background:var(--rf-bg);overflow:hidden">
+                    <div style="display:flex;align-items:center;gap:6px;width:100%;height:100%;padding:3px 5px;overflow:hidden">
+                      
+                        <div title="" style="position:relative;flex:none;width:29px;height:22px;display:flex;align-items:center;justify-content:center;border-radius:2px;padding:1px;border:1px solid transparent;">
+                          
+                            <svg viewBox="0 0 84 40" preserveAspectRatio="xMidYMid meet" fill="none" stroke="var(--rf-text)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="width:100%;height:100%"><path d="M4 30c8-18 13-22 16-14 3 8-4 18-7 16-3-2 6-14 15-16 6-1 4 8 8 9 4 1 8-6 12-10"></path><path d="M50 24c6 2 12-2 18-8M62 32c6 0 12-3 18-9"></path></svg>
+                          
+                        </div>
+                      
+                      
+                        <div style="flex:1;min-width:0;text-align:left;line-height:1.25;color:var(--rf-text);overflow-wrap:anywhere;font-size:4.5px">
+                          <div>MARTÍN ORTEGA LUCÍA - ***9999**</div><div>25/09/2026</div><div>AC FNMT Usuarios</div>
+                        </div>
+                      
+                    </div>
+                  </div>
+                  <span style="font-size:12px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%">Completa</span>
+                </button>
+              
+                <button type="button" title="" style="display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:3px;min-width:0;border-radius:var(--rf-radius-md);font-family:inherit;color:var(--rf-text);cursor:pointer;border:1px solid var(--rf-border-subtle);background:transparent">
+                  <div style="width:100%;height:30px;border:1px solid var(--rf-border-subtle);border-radius:2px;background:var(--rf-bg);overflow:hidden">
+                    <div style="display:flex;align-items:center;gap:6px;width:100%;height:100%;padding:3px 5px;overflow:hidden">
+                      
+                        <div title="" style="position:relative;flex:1;width:88px;height:22px;display:flex;align-items:center;justify-content:center;border-radius:2px;padding:1px;border:1px solid transparent;">
+                          
+                            <svg viewBox="0 0 84 40" preserveAspectRatio="xMidYMid meet" fill="none" stroke="var(--rf-text)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="width:100%;height:100%"><path d="M4 30c8-18 13-22 16-14 3 8-4 18-7 16-3-2 6-14 15-16 6-1 4 8 8 9 4 1 8-6 12-10"></path><path d="M50 24c6 2 12-2 18-8M62 32c6 0 12-3 18-9"></path></svg>
+                          
+                        </div>
+                      
+                      
+                    </div>
+                  </div>
+                  <span style="font-size:12px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%">Solo rúbrica</span>
+                </button>
+              
+                <button type="button" title="" style="display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:3px;min-width:0;border-radius:var(--rf-radius-md);font-family:inherit;color:var(--rf-text);cursor:pointer;border:1px solid var(--rf-border-subtle);background:transparent">
+                  <div style="width:100%;height:30px;border:1px solid var(--rf-border-subtle);border-radius:2px;background:var(--rf-bg);overflow:hidden">
+                    <div style="display:flex;align-items:center;gap:6px;width:100%;height:100%;padding:3px 5px;overflow:hidden">
+                      
+                        <div title="" style="position:relative;flex:none;width:29px;height:22px;display:flex;align-items:center;justify-content:center;border-radius:2px;padding:1px;border:1px solid transparent;">
+                          
+                            <svg viewBox="0 0 84 40" preserveAspectRatio="xMidYMid meet" fill="none" stroke="var(--rf-text)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="width:100%;height:100%"><path d="M4 30c8-18 13-22 16-14 3 8-4 18-7 16-3-2 6-14 15-16 6-1 4 8 8 9 4 1 8-6 12-10"></path><path d="M50 24c6 2 12-2 18-8M62 32c6 0 12-3 18-9"></path></svg>
+                          
+                        </div>
+                      
+                      
+                        <div style="flex:1;min-width:0;text-align:left;line-height:1.25;color:var(--rf-text);overflow-wrap:anywhere;font-size:4.5px">
+                          <div>Visto bueno de MARTÍN ORTEGA LUCÍA - ***9999**, 25/09/2026</div>
+                        </div>
+                      
+                    </div>
+                  </div>
+                  <span style="font-size:12px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%">Personalizada</span>
+                </button>
+              
+            </div>
+          
+          <div class="rf-row" style="gap:8px;min-height:30px">
+            <span title="" style="width:40px;height:24px;flex:none;border-radius:var(--rf-radius-pill);position:relative;border:1px solid var(--rf-border-strong);cursor:pointer;background:var(--rf-primary);border-color:transparent">
+              <span style="position:absolute;width:16px;height:16px;border-radius:var(--rf-radius-pill);top:3px;left:19px;background:var(--rf-on-primary)"></span>
+            </span>
+            <span title="" style="flex:1;font-size:13px;cursor:pointer">Con rúbrica</span>
+            <div style="width:48px;height:30px;flex:none;border-radius:var(--rf-radius-sm);display:flex;align-items:center;justify-content:center;color:var(--rf-text);background:var(--rf-bg);border:1px solid var(--rf-border-strong)">
+              
+                <svg width="36" height="17" viewBox="0 0 84 40" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 30c8-18 13-22 16-14 3 8-4 18-7 16-3-2 6-14 15-16 6-1 4 8 8 9 4 1 8-6 12-10"></path><path d="M50 24c6 2 12-2 18-8M62 32c6 0 12-3 18-9"></path></svg>
+              
+            </div>
+            <button type="button" class="rf-btn rf-btn--secondary" style="flex:none;min-height:30px;padding:0 10px;font-size:13px">Cambiar…</button>
+          </div>
+
+          
+
+        </div>
+      
+    </div>
+
+    
+
+    <div class="rf-stack" style="flex:none;gap:10px;padding:10px 24px 16px;border-top:1px solid var(--rf-border-subtle);background:var(--rf-bg)">
+      <div class="rf-stack" style="gap:4px">
+        <div class="rf-row" style="height:24px"><span class="rf-label" style="flex:1">Guardar en</span><button type="button" class="rf-btn rf-btn--ghost" style="flex:none;min-height:24px;padding:0 8px;font-size:13px;color:var(--rf-text);">Cambiar</button></div>
+        <div class="rf-stack" style="gap:5px;padding:7px 10px;border:1px solid var(--rf-border-subtle);border-radius:var(--rf-radius-md);background:var(--rf-surface)">
+          <span class="rf-row rf-text-muted" style="gap:8px;min-width:0" title="Documentos">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" style="flex:none"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>
+            <span style="font-size:12px;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Documentos</span>
+          </span>
+          <span class="rf-row" style="gap:8px;min-width:0" title="Solicitud-subvencion-firmado.pdf">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path><path d="M14 3v5h5"></path></svg>
+            <span style="font-size:13px;line-height:1.3;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Solicitud-subvencion-firmado.pdf</span>
+          </span>
+        </div>
+      </div>
+      
+        <div class="rf-row" style="height:44px;opacity:1">
+          <button type="button" class="rf-btn rf-btn--primary" title="Lucía Martín Ortega" style="flex:1;min-width:0;gap:6px;padding:0 14px;border-radius:var(--rf-radius-md) 0 0 var(--rf-radius-md)">
+            <span style="flex:none;font-weight:400">Firmar como</span>
+            <span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Lucía Martín</span>
+          </button>
+          <button type="button" title="Elegir otro certificado" class="rf-btn rf-btn--primary" style="flex:none;width:44px;padding:0;
+            border-radius:0 var(--rf-radius-md) var(--rf-radius-md) 0;border-left:1px solid var(--rf-on-primary)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></button>
+        </div>
+      
+      
+    </div>
+  </aside>
+
+</div>
+
+<div class="rf-scrim" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:20">
+  <div class="rf-dialog" style="width:{{ anchoDialogo }}px;padding:var(--rf-space-md);display:flex;flex-direction:column;gap:var(--rf-space-sm)">
+
+    <div class="rf-row rf-gap-xs" style="align-items:flex-start">
+      <span style="display:flex;flex:none;margin-top:2px;color:var(--rf-text)">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 2.5 20h19z"/><path d="M12 10v4M12 17v.5"/></svg></span>
+      <p class="rf-title" style="flex:1;min-width:0;font-size:18px;line-height:1.3">{{ titulo }}</p>
+    </div>
+
+    <p class="rf-prose">{{ cuerpo }}</p>
+
+    <sc-if value="{{ hayNumeros }}" hint-placeholder-val="{{ true }}">
+      <div class="rf-stack" style="gap:6px">
+        <p class="rf-label">Páginas sin firma visible</p>
+        <div style="display:flex;flex-wrap:wrap;gap:5px">
+          <sc-for list="{{ numeros }}" as="p" hint-placeholder-count="3">
+            <span style="min-width:30px;height:26px;padding:0 6px;flex:none;border-radius:var(--rf-radius-sm);
+              border:1px solid var(--rf-border-strong);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700">{{ p.num }}</span>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ hayMiniaturas }}" hint-placeholder-val="{{ false }}">
+      <div class="rf-stack" style="gap:8px">
+        <p class="rf-label">Páginas sin firma visible</p>
+        <div style="display:flex;gap:12px;flex-wrap:wrap">
+          <sc-for list="{{ minis }}" as="m" hint-placeholder-count="3">
+            <span style="flex:none;display:flex;flex-direction:column;align-items:center;gap:4px">
+              <span data-theme="light" style="position:relative;display:block;width:{{ m.ancho }}px;height:{{ m.alto }}px;
+                background:var(--rf-bg);border:1px solid var(--rf-border-strong);border-radius:1px">
+                <span style="position:absolute;left:19px;top:43px;width:21px;height:9px;border-radius:1px;
+                  border:1px dashed var(--rf-border-strong)"></span>
+              </span>
+              <span class="rf-body rf-text-muted">{{ m.pie }}</span>
+            </span>
+          </sc-for>
+          <sc-if value="{{ hayMasMinis }}" hint-placeholder-val="{{ false }}">
+            <span class="rf-body rf-text-muted" style="align-self:center">+{{ restanMinis }} más</span>
+          </sc-if>
+        </div>
+      </div>
+    </sc-if>
+
+    <div class="rf-row rf-gap-xs" style="align-items:flex-start;padding:var(--rf-space-xs);
+      border-radius:var(--rf-radius-md);border:1px solid var(--rf-border-subtle);background:var(--rf-bg)">
+      <span style="color:var(--rf-text-muted);display:flex;flex:none;margin-top:1px">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4h9a2 2 0 0 1 2 2v12M5 8h9a2 2 0 0 1 2 2v10H7a2 2 0 0 1-2-2z"/></svg></span>
+      <p class="rf-body" style="flex:1;line-height:1.5">{{ positivo }}</p>
+    </div>
+
+    <div class="rf-row rf-gap-xs" style="justify-content:flex-end;padding-top:var(--rf-space-xs)">
+      <button class="rf-btn rf-btn--ghost">Cancelar</button>
+      <button class="rf-btn rf-btn--primary">Firmar de todos modos</button>
+    </div>
+  </div>
+</div>
+
+</div>
+</x-dc>
+<script data-dc-script data-props='{"tema":{"editor":"enum","options":["light","dark"],"default":"light","section":"Tema"},"cuantas":{"editor":"enum","options":["1 de 13 elegidas","3 de 13 elegidas","12 de 13 elegidas","3 de 27 · todas"],"default":"3 de 13 elegidas","section":"Cuantas se caen"},"$preview":{"width":1180,"height":700}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const caso = this.props.cuantas ?? "3 de 13 elegidas";
+    // Todo se cuenta sobre el CONJUNTO ELEGIDO, no sobre el documento: si eliges
+    // 13 paginas de 27 y se caen 3, la firma visible aparece en 10, no en 24.
+    const casos = {
+      "1 de 13 elegidas": [1, 13],
+      "3 de 13 elegidas": [3, 13],
+      "12 de 13 elegidas": [12, 13],
+      "3 de 27 · todas": [3, 27]
+    };
+    const par = casos[caso] || casos["3 de 13 elegidas"];
+    const k = par[0], m = par[1];
+    const quedan = m - k;
+
+    const titulo = k === 1
+      ? "Una página se quedará sin firma visible"
+      : k + " páginas se quedarán sin firma visible";
+
+    // No se nombran una a una: el total, n de m.
+    const cuerpo = "El recuadro no cabe en " + k + " de las " + m + " páginas que has elegido, "
+      + "más pequeñas que aquella sobre la que lo colocaste. "
+      + "El documento se firmará igual y la firma será válida en todo él, "
+      + "pero en esas páginas no aparecerá la firma visible.";
+
+    const positivo = quedan === 1
+      ? "La firma visible aparecerá en 1 de las " + m + " páginas elegidas."
+      : "La firma visible aparecerá en " + quedan + " de las " + m + " páginas elegidas.";
+
+    const todas = caso === "3 de 27 · todas";
+    const segOn = "background:var(--rf-primary);color:var(--rf-on-primary);font-weight:700";
+    const segOff = "background:transparent;color:var(--rf-text);font-weight:600";
+
+    return {
+      tema: this.props.tema ?? "light",
+      fondoVarias: !todas,
+      estiloVarias: todas ? segOff : segOn,
+      estiloTodas: todas ? segOn : segOff,
+      rangoFondo: "1-13",
+      totalFondo: 27,
+      anchoDialogo: 460,
+      titulo: titulo,
+      cuerpo: cuerpo,
+      hayNumeros: false,
+      numeros: [],
+      hayMiniaturas: false,
+      minis: [],
+      hayMasMinis: false,
+      restanMinis: 0,
+      positivo: positivo
+    };
+  }
+}
+</script>
+</body>
+</html>

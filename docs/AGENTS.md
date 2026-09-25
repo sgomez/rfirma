@@ -81,9 +81,9 @@ eso está en `research/contrato-protocolo-afirma.md`.
 
 ## `design/` — una ficha por pantalla (lo que ve el usuario)
 
-`ventana-principal` · `cabecera` · `bandeja-de-documentos` ·
+`ventana-principal` · `cabecera` · `pestanas-de-documentos` ·
 `visor-de-documento` · `panel-de-firma` · `preferencias` · `dialogo-pin` ·
-`dialogo-progreso-firma` · `dialogo-paginas-sin-sello` · `acerca-de` ·
+`dialogo-progreso-firma` · `dialogo-paginas-sin-firma-visible` · `acerca-de` ·
 `ventana-de-sede` (la ventana que abre una sede por `afirma://`, entera: espera,
 consentimiento, firma, desenlace y sin certificado utilizable) ·
 `primer-arranque` (el asistente que configura el equipo la primera vez) ·

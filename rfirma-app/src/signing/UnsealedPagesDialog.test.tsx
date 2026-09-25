@@ -12,7 +12,7 @@ function renderDialog(props: Partial<Parameters<typeof UnsealedPagesDialog>[0]> 
   );
 }
 
-// Grada A: el diálogo del ID-105/ID-106, contra docs/design/dialogo-paginas-sin-sello.md.
+// Grada A: el diálogo del ID-105/ID-106, contra docs/design/dialogo-paginas-sin-firma-visible.md.
 describe("UnsealedPagesDialog", () => {
   it("counts the pages that fall against the chosen set, not the document", () => {
     renderDialog({ fallen: 3, chosen: 13 });

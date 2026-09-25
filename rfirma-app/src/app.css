@@ -16,7 +16,7 @@
  */
 
 /*
- * `box-sizing: border-box` para todo, como `EstadoDocumentoCargado.dc.html:44`.
+ * `box-sizing: border-box` para todo, como `Main.dc.html`.
  *
  * Sin esta regla ninguna de las medidas transcritas del canvas es la que se
  * pinta: `.switch__track` mide 48×32 en vez de 40×24, la zona de soltar del

@@ -148,7 +148,7 @@ describe("App, al soltar ficheros en la ventana", () => {
 
 /**
  * ID-105/ID-106: el diálogo de páginas sin sello, justo antes de firmar y
- * gateado en `App.sign` (docs/design/dialogo-paginas-sin-sello.md).
+ * gateado en `App.sign` (docs/design/dialogo-paginas-sin-firma-visible.md).
  */
 describe("App, con páginas donde el recuadro no cabe", () => {
   const A4: readonly [number, number, number, number] = [0, 0, 595, 842];

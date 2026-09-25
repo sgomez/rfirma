@@ -11,9 +11,9 @@ Los ajustes de la aplicación. Se abre desde el menú de la
 
 **Un visor de pestañas en vertical**, y **no un diálogo**: es una **vista del
 cuerpo** de la ventana, que sustituye lo que hubiera bajo la
-[cabecera](cabecera.md) y ocupa todo ese hueco. La cabecera se queda **intacta,
-con su estado de documento y su menú alcanzable**, porque nada se pinta encima
-de ella: con Preferencias delante el menú de la cabecera se abre y funciona
+[cabecera](cabecera.md) y ocupa todo ese hueco, **tira de pestañas incluida**:
+las pestañas son de documentos, y Preferencias no es de ninguno. La cabecera se
+queda **intacta, con su menú alcanzable**, porque nada se pinta encima de ella: con Preferencias delante el menú de la cabecera se abre y funciona
 igual, por clic o por teclado, y desde ahí se llega a *Estado de rFirma* sin
 pasar por cerrar Preferencias antes.
 
@@ -149,15 +149,15 @@ Es la entrada, y lleva un solo grupo: **Privacidad**.
    implementa**, y el ID-180 pierde su condición.
 
    Dónde sale el aviso lo decide
-   [ventana-principal.md](ventana-principal.md): la franja bajo la cabecera. A
+   [ventana-principal.md](ventana-principal.md): la franja bajo la tira de pestañas. A
    dónde lleva, [acerca-de.md](acerca-de.md).
 
 ### Firma
 
 3. **Recordar la última configuración de firma visible** (interruptor, activo
-   por omisión), **sin texto de ayuda debajo**. El interruptor, las cinco
-   casillas, el motivo y el tamaño del recuadro se reutilizan en el siguiente
-   documento. Apagado significa **no guardarla**: el recuadro arranca en el valor
+   por omisión), **sin texto de ayuda debajo**. El interruptor, el modelo
+   —con los datos de la personalizada—, «Con rúbrica» y el tamaño del recuadro se
+   reutilizan en el siguiente documento. Apagado significa **no guardarla**: el recuadro arranca en el valor
    por omisión en cada documento. Eso es lo que hace, y es lo que la ficha tiene
    que saber; la pantalla no lo explica, porque explicarlo no cambia lo que la
    persona puede hacer con el interruptor.
@@ -165,8 +165,8 @@ Es la entrada, y lleva un solo grupo: **Privacidad**.
    **La posición no se recuerda aquí.** Va por documento, en su fila de
    recientes, porque reponer sobre otro documento una posición elegida para uno
    distinto es lo que rechaza el ID-22: el recuadro acaba fuera de página o
-   encima del texto. Este ajuste gobierna lo global; la posición la gobierna la
-   [bandeja](bandeja-de-documentos.md).
+   encima del texto. Este ajuste gobierna lo global; la posición la gobiernan
+   los [recientes](pestanas-de-documentos.md).
 
 4. **Dónde se guarda el documento firmado**. Una fila con el **nombre** de la
    carpeta —no su ruta— y un botón **«Cambiar carpeta…»** al lado, que abre el
@@ -371,10 +371,8 @@ como única salida no hay ningún estado al que navegar ni nada que confirmar, a
 que lo que queda es la vista entera del cuerpo. Así `Escape` sigue valiendo y
 `Cmd+,` en macOS sigue prometiendo lo que abre.
 
-**La cabecera no cambia** mientras Preferencias está delante, estado del
-documento incluido: la aplicación no se ha ido a ninguna parte y el documento
-sigue cargado detrás. Apagar o sustituir ese estado contaría que se ha
-navegado. El [ADR-0007](../adr/0007-cabecera-unica-sin-barra-de-menus.md) sigue
+**La cabecera no cambia** mientras Preferencias está delante: la aplicación no
+se ha ido a ninguna parte y el documento sigue cargado detrás, en su pestaña. El [ADR-0007](../adr/0007-cabecera-unica-sin-barra-de-menus.md) sigue
 intacto: una cabecera única, y `Preferencias…` sigue siendo una de sus dos
 entradas.
 

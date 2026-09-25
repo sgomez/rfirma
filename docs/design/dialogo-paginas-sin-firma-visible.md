@@ -1,13 +1,14 @@
-# Diálogo de páginas sin sello
+# Diálogo de páginas sin firma visible
 
 Avisa, **justo antes de firmar**, de que el recuadro no cabe en algunas de las
-páginas elegidas y que esas se quedarán sin sello. Es la única defensa contra
+páginas elegidas y que esas se quedarán sin firma visible. Es la única defensa contra
 una degradación que ocurriría en silencio.
 
 ## Casos de uso que la usan
 
-- Firmar un PDF en local — entre pulsar «Firmar documento» y el diálogo de PIN,
-  y **solo** si el conjunto de páginas incluye alguna donde el recuadro no cabe.
+- Firmar un PDF en local — entre pulsar «Firmar como …» y el diálogo de PIN,
+  y **solo** si la firma visible está en **Varias** o **Todas** y el conjunto de
+  páginas incluye alguna donde el recuadro no cabe.
 
 ## Por qué existe
 
@@ -25,25 +26,30 @@ contarlo y dejar decidir.
 ## Estructura
 
 Diálogo de 460 px sobre `--rf-scrim`, `--rf-radius-xl`, `--rf-shadow-elevated`.
-De arriba abajo:
+El velo tapa la ventana principal entera, cabecera y tira de pestañas incluidas,
+y por eso lleva `z-index:20`: la tira está en 10. Debajo, la ventana en «listo»
+con la firma visible en «Varias» (o «Todas»). De arriba abajo:
 
 1. **Titular** con el triángulo de aviso de 24 px y la cifra dentro: «3 páginas
-   se quedarán sin sello», o «Una página se quedará sin sello».
+   se quedarán sin firma visible», o «Una página se quedará sin firma
+   visible».
 2. **Cuerpo** en `.rf-prose`: qué pasa, por qué, y qué **no** pasa —«El recuadro
    no cabe en 3 de las 13 páginas que has elegido, más pequeñas que aquella
    sobre la que lo colocaste. El documento se firmará igual y la firma será
-   válida en todo él, pero en esas páginas no aparecerá el sello».
+   válida en todo él, pero en esas páginas no aparecerá la firma visible».
 3. **La vuelta positiva**, en un bloque con borde `--rf-border-subtle` y fondo
-   `--rf-bg`, con el icono del sello: «El sello aparecerá en 10 de las 13
-   páginas elegidas». Es el dato que de verdad decide, y por eso no va escondido
+   `--rf-bg`, con el icono de páginas: «La firma visible aparecerá en 10 de
+   las 13 páginas elegidas». Es el dato que de verdad decide, y por eso no va escondido
    en la prosa.
 4. **Dos salidas**, alineadas a la derecha: `Cancelar` fantasma y
    `Firmar de todos modos` primario.
 
 ## Vocabulario
 
-**«Sin sello», nunca «recortadas».** Recortar sugiere que algo se estampa a
-medias; lo que ocurre es que en esas páginas no se estampa nada. La firma
+**«Sin firma visible», nunca «recortadas».** Recortar sugiere que algo se
+estampa a medias; lo que ocurre es que en esas páginas no se estampa nada.
+La marca sobre la página se llama **firma visible**, como en el panel de
+firma. La firma
 criptográfica no se recorta jamás: cubre el documento entero pase lo que pase, y
 confundir las dos cosas es lo peor que puede hacer este diálogo.
 
@@ -67,7 +73,8 @@ inspección que aquí no toca: el momento de mirar páginas es antes, en el viso
 
 *m* son **las páginas que la persona ha elegido**, no las que tiene el PDF. Si
 el documento tiene 27, se han elegido 13 y se caen 3, el diálogo dice «3 de las
-13 páginas que has elegido» y «el sello aparecerá en 10 de las 13» — nunca «24
+13 páginas que has elegido» y «la firma visible aparecerá en 10 de las 13» —
+nunca «24
 de las 27», que sería cierto solo cuando se han elegido todas y en los demás
 casos es sencillamente falso.
 
@@ -94,12 +101,17 @@ y en el recuento.
   momento en que la información importa, y un aviso permanente en el panel para
   un caso poco frecuente es ruido los otros días.
 - **Aparece solo cuando hay páginas que se caen.** No es un paso del recorrido.
+- **Sigue haciendo falta con la firma visible apagada por defecto.** Con
+  «Varias» o «Todas» y el recuadro en el mismo sitio en todas, la biblioteca
+  sigue descartando en silencio las páginas donde no cabe.
 - **`Firmar de todos modos` es el primario.** La persona ha llegado hasta aquí
   para firmar; el diálogo informa, no disuade.
 
 Validado en el canvas
 [Autofirma de escritorio en Rust](https://claude.ai/design/p/c0ddbfa7-0982-498f-8f8c-8e2f8f0c6132),
-página **Recorrido de firma**, artboard «5b · Antes de firmar · páginas sin
-sello», con la palanca «Cuántas se caen» (1, 3 y 12 de 13 elegidas, más 3 de 27
-con todas elegidas). Decidido el 02/09/2026 en el
-[#155](https://github.com/sgomez/rfirma/issues/155).
+página **Recorrido de firma**, artboard `EstadoPaginasSinFirmaVisible`
+(«5b · Antes de firmar · páginas sin firma visible»), con la palanca «Cuántas se
+caen» (1, 3 y 12 de 13 elegidas, más 3 de 27 con todas elegidas; esta última
+pone «Todas» en el panel de debajo). Decidido el 02/09/2026 en el
+[#155](https://github.com/sgomez/rfirma/issues/155); redibujado el 25/09/2026
+sobre la ventana de pestañas, con el vocabulario de firma visible.

@@ -63,8 +63,8 @@ _Avoid_: sello, marca de agua, firma gráfica
 **Colocación**:
 Dónde y en qué páginas se estampa el recuadro de la firma visible: un
 rectángulo en espacio de usuario y el conjunto de páginas que lo llevan. No hay
-colocación «vacía»: mientras no haya al menos una página sellada, no hay
-recuadro en ninguna parte y no se puede firmar con firma visible. El conjunto
+colocación «vacía»: encender la firma visible la coloca en la página a la
+vista, y apagarla deja firmar sin ella; no existe «encendida y sin colocar». El conjunto
 puede ser una página, algunas o todas, y el recuadro se dibuja idéntico en
 todas ellas y en ninguna más, porque el PDF lleva un solo campo de firma con su
 widget replicado. Se recuerda por documento: «las páginas 3, 7 y 9» no
