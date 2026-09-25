@@ -217,6 +217,7 @@ impl Probe {
             &drive.script,
             &drive.mode,
             check.declared_patience().unwrap_or(self.patience),
+            check.assistance(),
         )
     }
 }

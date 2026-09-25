@@ -31,7 +31,7 @@ Con aw=true, mientras dura la operación la aplicación sube #WAIT a stservlet c
 mode = "relay"
 script = "relayselectcertslowly"
 patience_secs = 180
-act.consent = "Va a aparecer el diálogo de selección de certificado: espera unos 25 segundos antes de elegir uno, para que la suite vea varios avisos de espera."
+act.consent_after_waiting = "Va a aparecer el diálogo de selección de certificado: espera unos 25 segundos antes de elegir uno, para que la suite vea varios avisos de espera."
 expects.completes.conditions = ["wait-announced-every-ten-seconds"]
 
 [[check]]

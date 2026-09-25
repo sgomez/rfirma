@@ -90,6 +90,7 @@ pub(crate) enum Act {
     #[default]
     None,
     Consent(String),
+    ConsentAfterWaiting(String),
     Cancel(String),
     PickFile(String),
     SaveAsProposed(String),
@@ -112,6 +113,7 @@ impl Act {
         match self {
             Self::None => None,
             Self::Consent(said)
+            | Self::ConsentAfterWaiting(said)
             | Self::Cancel(said)
             | Self::PickFile(said)
             | Self::SaveAsProposed(said)
@@ -1326,5 +1328,17 @@ expects.code = "SAF_47"
                 "{extra}"
             );
         }
+    }
+
+    #[test]
+    fn a_consent_whose_timing_is_measured_is_not_a_mere_click() {
+        assert_eq!(
+            Act::ConsentAfterWaiting("Espera y elige.".to_owned()).assistance(),
+            Assistance::Person
+        );
+        assert_eq!(
+            Act::Consent("Elige.".to_owned()).assistance(),
+            Assistance::Click
+        );
     }
 }

@@ -10,7 +10,7 @@ use std::time::{Duration, Instant};
 
 use serde::{Deserialize, Serialize};
 
-use crate::catalogue::Check;
+use crate::catalogue::{Assistance, Check};
 use crate::livelog::{LiveLogSink, Provenance};
 use crate::outcome::Outcome;
 use crate::transcript::{legible, Transcript};
@@ -21,6 +21,9 @@ pub(crate) const THE_DRIVER_CRASH: &str = "uncaught";
 
 /// Lo que se anota cuando al conductor se le acaba la paciencia sin que nadie responda.
 pub(crate) const THE_EXHAUSTED_PATIENCE: &str = "timeout";
+
+/// El interruptor que se enciende en todo cliente cuando su clic es solo un medio: el que no lo lee lo ignora (ADR-0028).
+pub(crate) const THE_UNATTENDED_CONSENT: &str = "RFIRMA_CONFORMANCE_AUTOCONSENT";
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub(crate) struct ProtocolConditionResult {
@@ -93,6 +96,7 @@ pub(crate) trait ErrandRunner: Send + Sync {
         script: &str,
         mode: &str,
         patience: Duration,
+        assistance: Assistance,
     ) -> ErrandOutcome;
 }
 
@@ -108,6 +112,7 @@ impl ErrandRunner for NodeRunner {
         script: &str,
         mode: &str,
         patience: Duration,
+        assistance: Assistance,
     ) -> ErrandOutcome {
         let witness = &probe.witness;
         let start = witness.started_at();
@@ -143,6 +148,7 @@ impl ErrandRunner for NodeRunner {
                         &url,
                         log_sink.clone(),
                         start,
+                        assistance,
                     ));
                 }
             },
@@ -164,9 +170,10 @@ impl Probe {
         script: &str,
         mode: &str,
         patience: Duration,
+        assistance: Assistance,
     ) -> ErrandOutcome {
         self.runner
-            .run(self, transcript_name, script, mode, patience)
+            .run(self, transcript_name, script, mode, patience, assistance)
     }
 }
 
@@ -241,8 +248,20 @@ pub(crate) struct ClientProcess {
 }
 
 impl ClientProcess {
-    pub(crate) fn spawn(client: &Path, url: &str, log_sink: LiveLogSink, start: Instant) -> Self {
-        let mut child = Command::new(client)
+    pub(crate) fn spawn(
+        client: &Path,
+        url: &str,
+        log_sink: LiveLogSink,
+        start: Instant,
+        assistance: Assistance,
+    ) -> Self {
+        let mut command = Command::new(client);
+        if assistance == Assistance::Click {
+            command.env(THE_UNATTENDED_CONSENT, "1");
+        } else {
+            command.env_remove(THE_UNATTENDED_CONSENT);
+        }
+        let mut child = command
             .arg(url)
             .process_group(0)
             .stdout(Stdio::piped())
@@ -404,6 +423,7 @@ pub(crate) mod fake {
     use std::time::Duration;
 
     use super::{observe, ErrandOutcome, ErrandRunner};
+    use crate::catalogue::Assistance;
     use crate::transcript::Transcript;
     use crate::Probe;
 
@@ -440,6 +460,7 @@ pub(crate) mod fake {
             script: &str,
             mode: &str,
             _: Duration,
+            _: Assistance,
         ) -> ErrandOutcome {
             self.runs.lock().unwrap().push(format!("{mode}/{script}"));
             let mut transcript = Transcript::open(&probe.report, transcript_name).ok();
@@ -597,5 +618,42 @@ mod tests {
     #[test]
     fn an_errand_that_depends_on_what_the_person_does_has_no_key() {
         assert_eq!(ErrandKey::of(&a_check("act.cancel = \"Cancela.\"")), None);
+    }
+
+    /// Lo que el cliente ve del interruptor al lanzarlo para un trámite de esa asistencia.
+    fn the_switch_the_client_sees(assistance: Assistance) -> Vec<String> {
+        use std::os::unix::fs::PermissionsExt as _;
+
+        let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
+        let client = directory.path().join("cliente");
+        std::fs::write(
+            &client,
+            format!("#!/bin/sh\necho \"interruptor=${{{THE_UNATTENDED_CONSENT}:-}}\"\n"),
+        )
+        .expect("el cliente de prueba se escribe");
+        std::fs::set_permissions(&client, std::fs::Permissions::from_mode(0o755))
+            .expect("el cliente de prueba es ejecutable");
+        let lines = Arc::new(Mutex::new(Vec::new()));
+        let heard = Arc::clone(&lines);
+        let sink = LiveLogSink::new(move |line| heard.lock().unwrap().push(line));
+
+        let mut process =
+            ClientProcess::spawn(&client, "afirma://sign", sink, Instant::now(), assistance);
+        let _ = process.child.wait();
+        for drain in process.drain_handles.drain(..) {
+            let _ = drain.join();
+        }
+
+        let said = lines.lock().unwrap().clone();
+        said.iter()
+            .filter_map(|line| line.split("interruptor=").nth(1).map(str::to_owned))
+            .collect()
+    }
+
+    #[test]
+    fn only_a_client_whose_click_is_a_means_may_consent_alone() {
+        assert_eq!(the_switch_the_client_sees(Assistance::Click), ["1"]);
+        assert_eq!(the_switch_the_client_sees(Assistance::Person), [""]);
+        assert_eq!(the_switch_the_client_sees(Assistance::None), [""]);
     }
 }
