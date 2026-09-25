@@ -47,7 +47,8 @@ declara el guion, no la comprobación.
 **Condición**:
 Lo que un guion de la sede mide durante el trámite y emite con un nombre propio de ese guion, no
 con el de una comprobación. La comprobación nombra la condición que espera, o varias que tienen que
-cumplirse todas; si una no llega, su resultado es NO OBSERVABLE, salvo que otra salga NO CONFORME.
+cumplirse todas; si una no llega, su resultado es NO OBSERVABLE, salvo que otra salga NO CONFORME o
+que en su lugar llegue un código SAF: entonces el trámite no se completó, y es NO CONFORME.
 
 **Manifiesto**:
 Lo que la sede publica de sí misma: sus modos y sus guiones, cada uno con su sede, su familia de
@@ -60,19 +61,31 @@ familia, sea del conjunto que sea. La familia de punta a punta tiene dos: uno si
 el tramo `ninguna`, y una firma de verdad, que abre el tramo `clic`.
 
 **Comprobación**:
-Una entrada del catálogo: una exigencia del protocolo, cómo se provoca y cómo se juzga. Se
-presenta con **qué se exige** —lo que debe pasar—, su **fuente** —dónde lo hace el código de
-AutoFirma 1.9.2—, lo que hay que hacer **antes de empezar** o **durante la prueba**, lo que **te
-preguntaremos** al acabar y, una vez corrida, **qué pasó** y su **resultado**. Declara su
-**asistencia** y su **almacén**.
+Una entrada del catálogo: una exigencia del protocolo, cómo se provoca, qué hace la persona y una
+sola expectativa. Se presenta con **qué se exige** —lo que debe pasar—, su **fuente** —dónde lo hace
+el código de AutoFirma 1.9.2—, lo que hay que hacer **antes de empezar** o **durante la prueba** y,
+una vez corrida, **qué pasó** y su **resultado**. Declara su **acción** y su **almacén**; su
+**asistencia** se deduce de la acción. Dos comprobaciones que provocan el mismo trámite, con la misma
+acción, y esperan lo mismo son la misma, y el catálogo no arranca.
 _Avoid_: check, entrada (en la interfaz), enunciado, cita, aviso, observación
 
+**Acción**:
+Lo que hace la persona durante el trámite, con una instrucción cerrada: nada, consentir —elegir el
+certificado o pulsar en el consentimiento, solo para llegar a lo que se mide— o una acción con
+nombre: cancelar, elegir un fichero, guardar con lo propuesto, teclear un PIN erróneo, teclear la
+contraseña, marcar el área o rechazar. Es entrada del protocolo, no juicio: la persona nunca dice
+qué vio, y el resultado lo da siempre el trámite —el código, las condiciones, el disco o el
+silencio—.
+_Avoid_: pregunta, respuesta de la persona
+
 **Asistencia**:
-Qué necesita una comprobación de la persona que está delante. Es una lista cerrada:
+Qué necesita una comprobación de la persona que está delante, deducido de su acción. Es una lista
+cerrada:
 - **ninguna**: no aparece ninguna ventana.
 - **clic**: aparece el selector de certificado o el consentimiento, solo como medio para llegar a
   lo que se mide.
-- **persona**: el diálogo es lo que se mide, o alguien tiene que juzgar lo que vio.
+- **persona**: la persona hace en el diálogo una acción con nombre, y lo que haga cambia lo que
+  viaja.
 Las comprobaciones de una tanda se corren en **tramos** por asistencia, en ese orden, y la cola se
 detiene entre tramo y tramo hasta que la persona dice que está. Una comprobación `ninguna` que
 agota su espera es un fallo de la suite, no del cliente: queda PENDIENTE.
@@ -80,11 +93,12 @@ _Avoid_: desatendida (para una comprobación), interactiva, manual
 
 **Expectativa**:
 Lo que una comprobación conducida espera de su trámite, declarado en el catálogo con un vocabulario
-cerrado. Por el cable, una sola de cuatro: un **código** (`SAF_NN`, cualquier SAF, `CANCEL`,
-`SAVE_OK`, `OK` o `MEMORY_ERROR`); que el trámite **se complete**, con lo que tenga que traer lo que
-vuelve (un prefijo, un OID, unos bytes, una longitud); una o varias **condiciones** de la sede; o que **nadie
-responda**. Si lo que se mide es un diálogo, la **persona** dice qué vio y qué resultado sostiene su
-sí. Una comprobación nueva con una expectativa conocida no toca código.
+cerrado. Una sola de tres: un **código** (`SAF_NN`, cualquier SAF, `CANCEL`, `SAVE_OK`, `OK` o
+`MEMORY_ERROR`); que el trámite **se complete**, con las **condiciones** de la sede que tenga que
+cumplir y lo que tenga que traer lo que vuelve (un prefijo, un OID, unos bytes, una longitud); o el
+**silencio**, que nadie responda. Un código SAF donde se esperaba el trámite completo es NO CONFORME.
+Lo que ninguna sede puede ver no tiene expectativa: la comprobación se declara **no medible**, con su
+motivo, y no se conduce. Una comprobación nueva con una expectativa conocida no toca código.
 _Avoid_: veredicto esperado, arnés (para cómo se juzga)
 
 **Almacén**:

@@ -16,16 +16,16 @@ consola. Sus pruebas se corren con `cargo test` dentro de este directorio; las d
 | `src/lib.rs` | La raíz del crate: sus módulos y la pasada que mide (`Probe`); lo que usan el binario y las pruebas de `tests/`. |
 | `src/main.rs` | El arranque: lee el catálogo, levanta el servidor, imprime la URL con el token y la abre. |
 | `src/server.rs` | El servidor HTTP local y su guarda (token, `Host`, `Origin`); sirve la consola compilada de `console/dist/` en `/`, `/informe/<nombre>` y `/comparar`, y traduce rutas a la sesión sin decidir nada. |
-| `src/console.rs` | La sesión: cliente e informe elegidos, la cola en tramos, el único hilo que corre las comprobaciones y el testigo de verdad, que pregunta y avisa por la página. |
-| `src/witness.rs` | El testigo, el seam entre quien corre las comprobaciones y la persona, con su falso para las pruebas. |
+| `src/console.rs` | La sesión: cliente e informe elegidos, la cola en tramos, el único hilo que corre las comprobaciones y el testigo de verdad, que avisa a la persona y la espera por la página. |
+| `src/witness.rs` | El testigo, el seam entre quien corre las comprobaciones y la persona, que le cuenta lo que tiene que hacer y espera a que dé paso; con su falso para las pruebas. |
 | `src/report_view.rs` | La vista de un informe, igual lo corra la sesión o no: conjuntos en el orden del catálogo con sus recuentos; no sabe de la sesión. |
-| `src/snapshot.rs` | El estado de la sesión activa que recibe la página: la vista de su informe más cliente, cola, comprobación en curso y pregunta. |
+| `src/snapshot.rs` | El estado de la sesión activa que recibe la página: la vista de su informe más cliente, cola, comprobación en curso y la llamada a la persona. |
 | `src/client.rs` | El cliente a prueba y qué cliente es: binario y un perfil aislado por almacén (`rsa`, `ec`, `token`, `token_apart`, `several`, `expired`), cada uno con su envoltorio y su raíz de confianza. |
-| `src/catalogue.rs` | La lectura del catálogo y su validación, de forma y contra el manifiesto de la sede, que si falla no deja arrancar. |
+| `src/catalogue.rs` | La comprobación como tipo —exigencia, cómo se provoca, qué hace la persona y una sola expectativa— y la lectura del catálogo con lo que el tipo no puede decir: ids repetidos, dos comprobaciones que miden lo mismo y lo que no casa con el manifiesto de la sede. |
 | `src/manifest.rs` | El vocabulario de la sede que publica `driver.mjs --manifest`: modos y guiones con su sede, su familia y sus condiciones. |
 | `src/checks.rs` | El cuerpo ejecutable: cómo se conduce un grupo o se juzga con un trámite ya observado, la parada entre tramos, la guarda de las comprobaciones sin persona y los saludos por familia, sin escribir el informe. |
 | `src/harness.rs` | El registro de arneses que el catálogo liga por nombre: lo que una comprobación monta alrededor del trámite —puertos ocupados, ficheros preparados—; no juzga. |
-| `src/judge.rs` | El juez: lo observado, la expectativa declarada y la respuesta de la persona, a un resultado; con el vocabulario cerrado de expectativas, y sin lanzar trámites. |
+| `src/judge.rs` | El juez: lo observado frente a la expectativa declarada, a un resultado; con el vocabulario cerrado de expectativas, y sin lanzar trámites ni preguntar a nadie. |
 | `src/known_bug.rs` | La lectura del registro de bugs conocidos, con el que el catálogo resuelve el `bug` de cada comprobación. |
 | `src/outcome.rs` | El resultado de una comprobación, sus nombres en pantalla y PENDIENTE. |
 | `src/validation.rs` | La validación de un informe contra una referencia: validado o sus discrepancias, que son fallos de la suite o de la referencia. |
@@ -50,7 +50,7 @@ consola. Sus pruebas se corren con `cargo test` dentro de este directorio; las d
 | `console/src/suite/suite.ts` | El contrato HTTP tipado sobre un `Wire`, el seam cuyos adaptadores son el navegador y el servidor falso de las pruebas. |
 | `console/src/suite/live.tsx` | El estado vivo que comparten las vistas: el último estado de la sesión, las líneas del registro y los avisos de error. |
 | `console/src/shell/Shell.tsx` | El marco común: barra superior, conexión, ayuda de atajos y avisos. |
-| `console/src/session/` | La sesión activa en `/`: los pasos cliente, informe y ejecutar, y la barra de la tanda en curso con su pregunta. |
+| `console/src/session/` | La sesión activa en `/`: los pasos cliente, informe y ejecutar, y la barra de la tanda en curso con su llamada a la persona. |
 | `console/src/report/` | Un informe, con o sin controles de ejecución: conjuntos plegables, filtro por resultado, la ficha de cada comprobación, la validación y las tramas. |
 | `console/src/log/LogDock.tsx` | El registro al pie, con filtro por procedencia, pausa y altura ajustable. |
 | `console/src/compare/ComparePage.tsx` | La comparación de dos informes: solo lo que difiere, por conjunto. |
