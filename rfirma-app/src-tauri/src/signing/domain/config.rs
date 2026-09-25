@@ -5,6 +5,7 @@ use std::collections::BTreeMap;
 use serde::{Deserialize, Serialize};
 
 use super::language::Language;
+use super::layer2_text::VisibleContent;
 use super::placement::PageSet;
 
 /// Subfiltro de la firma.
@@ -176,13 +177,30 @@ pub struct ChosenFields {
     pub reason: bool,
 }
 
+/// De dónde sale el texto del recuadro: las casillas de siempre o un modelo.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum VisibleText {
+    Fields(ChosenFields),
+    Model(VisibleContent),
+}
+
+impl VisibleText {
+    /// Si la firma visible lleva la rúbrica: con las casillas, siempre que la haya; *Solo rúbrica* la fuerza.
+    pub fn carries_the_rubric(&self, with_rubric: bool) -> bool {
+        match self {
+            Self::Fields(_) => true,
+            Self::Model(content) => with_rubric || *content == VisibleContent::RubricOnly,
+        }
+    }
+}
+
 /// Lo que la persona decidió de esta firma, ya validado y sin asas: el documento y el certificado se resuelven antes.
 #[derive(Clone, Debug, PartialEq)]
 pub struct SigningChoice {
     /// Dónde cae el recuadro, o ninguno si la firma es invisible.
     pub placement: Option<Placement>,
-    /// Las casillas de texto marcadas.
-    pub fields: ChosenFields,
+    /// De dónde sale el texto del recuadro.
+    pub text: VisibleText,
     /// El motivo, o vacío si no se especifica.
     pub reason: String,
     /// La fecha y hora, ya formateadas.
@@ -200,7 +218,7 @@ impl SigningChoice {
     pub fn for_the_site(allow_unregistered_signatures: bool) -> Self {
         Self {
             placement: None,
-            fields: ChosenFields::default(),
+            text: VisibleText::Fields(ChosenFields::default()),
             reason: String::new(),
             signed_at: String::new(),
             rubric: None,

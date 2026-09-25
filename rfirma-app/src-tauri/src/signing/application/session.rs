@@ -19,8 +19,9 @@ use crate::signing::application::cycle::{
 use crate::signing::domain::isolate_gone::IsolateGone;
 use crate::signing::domain::Language;
 use crate::signing::domain::{
-    compose_layer2_text, AdmissibleDocument, CompletedCycle, Format, PlacementError, SessionSeal,
-    SignatureConfig, SigningChoice, VisibleTextFields,
+    compose_layer2_text, compose_visible_content, AdmissibleDocument, CompletedCycle, Format,
+    PlacementError, SessionSeal, SignatureConfig, SigningChoice, VisibleData, VisibleText,
+    VisibleTextFields,
 };
 use crate::signing::domain::{Refusal, SignatureOperation, TokenSignatures, Waivers};
 use crate::signing::ports::{DocumentBytes, IsolateHost, Signer};
@@ -393,28 +394,37 @@ pub fn cancel(session: &SigningSession) {
 }
 
 fn layer2_text_of(choice: &SigningChoice, holder: &StampedHolder) -> String {
-    compose_layer2_text(
-        &VisibleTextFields {
-            signer_name: choice
-                .fields
-                .signer_name
-                .then_some(holder.common_name.as_str())
-                .filter(|name| !name.is_empty()),
-            issuer: choice
-                .fields
-                .issuer
-                .then_some(holder.issuer.as_str())
-                .filter(|issuer| !issuer.is_empty()),
-            signed_at: choice.fields.signed_at.then_some(choice.signed_at.as_str()),
-            reason: choice
-                .fields
-                .reason
-                .then_some(choice.reason.as_str())
-                .filter(|reason| !reason.is_empty()),
-            pseudonym: holder.pseudonym,
-        },
-        choice.language,
-    )
+    match &choice.text {
+        VisibleText::Fields(fields) => compose_layer2_text(
+            &VisibleTextFields {
+                signer_name: fields
+                    .signer_name
+                    .then_some(holder.common_name.as_str())
+                    .filter(|name| !name.is_empty()),
+                issuer: fields
+                    .issuer
+                    .then_some(holder.issuer.as_str())
+                    .filter(|issuer| !issuer.is_empty()),
+                signed_at: fields.signed_at.then_some(choice.signed_at.as_str()),
+                reason: fields
+                    .reason
+                    .then_some(choice.reason.as_str())
+                    .filter(|reason| !reason.is_empty()),
+                pseudonym: holder.pseudonym,
+            },
+            choice.language,
+        ),
+        VisibleText::Model(content) => compose_visible_content(
+            content,
+            &VisibleData {
+                signer_name: &holder.common_name,
+                issuer: &holder.issuer,
+                signed_at: &choice.signed_at,
+                pseudonym: holder.pseudonym,
+            },
+            choice.language,
+        ),
+    }
 }
 
 /// Configuración de firma construida a partir de lo elegido y del certificado seleccionado.
