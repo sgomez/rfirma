@@ -445,6 +445,7 @@ export function DocumentViewer({
               event.preventDefault();
               commitTyped();
             } else if (event.key === "Escape") {
+              event.preventDefault();
               setTyping(null);
             }
           }}

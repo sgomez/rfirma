@@ -50,6 +50,7 @@ export function SedeWaiting({ moment, onInstallLocalCa, onCancel }: SedeWaitingP
 
   return (
     <SedeBody
+      onEscape={onCancel}
       footer={
         <>
           {unreachable && <p className="rf-hint sede-waiting__retry">{t("sede.repair.retry")}</p>}

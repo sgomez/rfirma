@@ -2,7 +2,7 @@ import type { TFunction } from "i18next";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AlertIcon } from "../design-system/icons";
-import { SedeBody } from "./SedeFrame";
+import { SedeBody, useDefaultButton } from "./SedeFrame";
 
 interface SedeConfirmProps {
   messageCode: string;
@@ -22,6 +22,7 @@ interface SedeConfirmProps {
 export function SedeConfirm({ messageCode, onConfirm, onCancel }: SedeConfirmProps) {
   const { t } = useTranslation();
   const [handing, setHanding] = useState(false);
+  const continueButton = useDefaultButton(!handing);
 
   const confirm = async () => {
     setHanding(true);
@@ -34,6 +35,7 @@ export function SedeConfirm({ messageCode, onConfirm, onCancel }: SedeConfirmPro
 
   return (
     <SedeBody
+      onEscape={onCancel}
       footer={
         <>
           <div className="sede-window__spacer" />
@@ -41,6 +43,7 @@ export function SedeConfirm({ messageCode, onConfirm, onCancel }: SedeConfirmPro
             {t("actions.cancel")}
           </button>
           <button
+            ref={continueButton}
             type="button"
             className="rf-btn rf-btn--primary"
             disabled={handing}

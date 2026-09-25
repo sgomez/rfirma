@@ -49,6 +49,13 @@ describe("2b · confirming what the validator flags", () => {
     expect(screen.getByText(/somethingNewer/)).toBeInTheDocument();
   });
 
+  it("focuses Continuar, so Enter goes on: the person already consented", () => {
+    const { port } = scriptedErrand({ kind: "confirming", messageCode: "pdfShadowAttackSuspect" });
+    renderWithCatalog(<SedeWindow errands={port} />);
+
+    expect(screen.getByRole("button", { name: "Continuar" })).toHaveFocus();
+  });
+
   it("goes on with the signature when the person confirms", async () => {
     const user = userEvent.setup();
     const { port, calls } = scriptedErrand({

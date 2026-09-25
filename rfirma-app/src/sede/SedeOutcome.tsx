@@ -16,7 +16,7 @@ import {
   type SiteDocument,
   type SiteOutcome,
 } from "./errand";
-import { SedeBody, useOutcomeClock } from "./SedeFrame";
+import { SedeBody, useDefaultButton, useOutcomeClock } from "./SedeFrame";
 
 interface SedeOutcomeProps {
   origin: string | null;
@@ -53,6 +53,7 @@ export function SedeOutcome({
   const asksToAct = outcome.kind === "refused" && outcome.situation === "portsTaken";
   const staysOpen = carriesHelp || asksToAct;
   useOutcomeClock(onClose, !staysOpen);
+  const closeButton = useDefaultButton();
 
   const openHelp = () => {
     onOpenHelp?.();
@@ -61,6 +62,7 @@ export function SedeOutcome({
 
   return (
     <SedeBody
+      onEscape={onClose}
       steadyFooter
       footer={
         <>
@@ -70,7 +72,12 @@ export function SedeOutcome({
             </p>
           )}
           <div className="sede-window__spacer" />
-          <button type="button" className="rf-btn rf-btn--primary" onClick={onClose}>
+          <button
+            ref={closeButton}
+            type="button"
+            className="rf-btn rf-btn--primary"
+            onClick={onClose}
+          >
             {t("actions.close")}
           </button>
         </>

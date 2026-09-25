@@ -346,6 +346,26 @@ describe("4 · outcome", () => {
     expect(calls.close).toHaveBeenCalledOnce();
   });
 
+  it("focuses Cerrar on a signature, so Enter closes without waiting", () => {
+    const { port } = scriptedErrand({
+      kind: "outcome",
+      outcome: { kind: "signed", document: signedDocument },
+    });
+    renderWithCatalog(<SedeWindow errands={port} />);
+
+    expect(screen.getByRole("button", { name: "Cerrar" })).toHaveFocus();
+  });
+
+  it("focuses Cerrar on a refusal that stays open, so Enter closes it", () => {
+    const { port } = scriptedErrand({
+      kind: "outcome",
+      outcome: { kind: "refused", situation: "portsTaken", detail: "" },
+    });
+    renderWithCatalog(<SedeWindow errands={port} />);
+
+    expect(screen.getByRole("button", { name: "Cerrar" })).toHaveFocus();
+  });
+
   it("closes by itself after fifteen seconds, and not before", async () => {
     const { port, calls } = scriptedErrand({
       kind: "outcome",

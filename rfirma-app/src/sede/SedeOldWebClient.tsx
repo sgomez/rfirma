@@ -1,10 +1,11 @@
 import { useTranslation } from "react-i18next";
 import { AlertIcon } from "../design-system/icons";
-import { SedeBody } from "./SedeFrame";
+import { SedeBody, useDefaultButton } from "./SedeFrame";
 
 /** El aviso de que la página usa un cliente web antiguo, que no detiene el trámite. */
 export function SedeOldWebClient({ onDismiss }: { onDismiss: () => void }) {
   const { t } = useTranslation();
+  const dismissButton = useDefaultButton();
 
   return (
     <SedeBody
@@ -12,7 +13,12 @@ export function SedeOldWebClient({ onDismiss }: { onDismiss: () => void }) {
       footer={
         <>
           <div className="sede-window__spacer" />
-          <button type="button" className="rf-btn rf-btn--primary" onClick={onDismiss}>
+          <button
+            ref={dismissButton}
+            type="button"
+            className="rf-btn rf-btn--primary"
+            onClick={onDismiss}
+          >
             {t("sede.oldWebClient.dismiss")}
           </button>
         </>
