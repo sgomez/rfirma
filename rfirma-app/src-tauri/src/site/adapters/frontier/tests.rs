@@ -324,22 +324,45 @@ fn the_relay_codes_match_the_original_catalogue() {
 
 #[test]
 fn the_batch_codes_match_the_original_catalogue() {
-    assert_eq!(
-        code_of_batch(BatchSituation::PresignerUnreachable),
-        SafCode::ContactBatchService
-    );
-    assert_eq!(
-        code_of_batch(BatchSituation::PostsignerUnreachable),
-        SafCode::ContactBatchService
-    );
-    assert_eq!(
-        code_of_batch(BatchSituation::InvalidPresignResponse),
-        SafCode::BatchSignature
-    );
-    assert_eq!(
-        code_of_batch(BatchSituation::InvalidPostsignResponse),
-        SafCode::BatchSignature
-    );
+    for (situation, code) in [
+        (
+            BatchSituation::PresignerUnreachable,
+            SafCode::ContactBatchService,
+        ),
+        (
+            BatchSituation::PostsignerUnreachable,
+            SafCode::ContactBatchService,
+        ),
+        (
+            BatchSituation::InvalidPresignResponse,
+            SafCode::BatchSignature,
+        ),
+        (
+            BatchSituation::InvalidPostsignResponse,
+            SafCode::BatchSignature,
+        ),
+    ] {
+        assert_eq!(code_of_batch(&BatchError::new(situation, "")), code);
+    }
+}
+
+#[test]
+fn a_batch_servlet_http_rejection_is_told_by_its_status() {
+    for situation in [
+        BatchSituation::InvalidPresignResponse,
+        BatchSituation::InvalidPostsignResponse,
+    ] {
+        for (status, code) in [
+            (400, SafCode::Params),
+            (403, SafCode::ContactBatchService),
+            (404, SafCode::ContactBatchService),
+            (500, SafCode::BatchSignature),
+            (503, SafCode::BatchSignature),
+        ] {
+            let error = BatchError::answered(situation, status, "");
+            assert_eq!(code_of_batch(&error), code, "{situation:?} {status}");
+        }
+    }
 }
 
 #[test]

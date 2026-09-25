@@ -67,6 +67,8 @@ impl SiteSigning for Neighbours<'_> {
             .map_err(|error| {
                 signing_refusal_of((Failure::from(error.clone()), code_of_document(&error)))
             })?;
+        let algorithm = composed_for(request.algorithm, request.certificate.key_kind())
+            .map_err(refusal_of_token)?;
         self.signing
             .begin_for_the_site(
                 request.document,
@@ -74,7 +76,7 @@ impl SiteSigning for Neighbours<'_> {
                 request.certificate,
                 DeclaredByTheSite {
                     format: request.format,
-                    algorithm: composed_for(request.algorithm, request.certificate.key_kind()),
+                    algorithm,
                     operation: request.operation,
                     parameters: request.from_the_site,
                     allow_unregistered_signatures: request.allow_unregistered_signatures,
@@ -157,8 +159,8 @@ pub fn signed_by_the_token(
     data: &[u8],
 ) -> Result<Vec<u8>, SigningRefusal> {
     let asked = AskedAlgorithm::named(algorithm)
-        .map(|asked| composed_for(asked, certificate.key_kind()))
         .ok_or_else(|| no_mechanism_for(algorithm))
+        .and_then(|asked| composed_for(asked, certificate.key_kind()))
         .map_err(refusal_of_token)?;
     signer
         .sign(certificate.reference(), secret, asked, data)
@@ -166,8 +168,17 @@ pub fn signed_by_the_token(
 }
 
 /// La huella que pide la sede, compuesta con la clase de clave del certificado (`composeSignatureAlgorithmName`, 1.9.2).
-pub fn composed_for(asked: AskedAlgorithm, key: Option<KeyKind>) -> SignatureAlgorithm {
-    match (asked, key.unwrap_or(KeyKind::Rsa)) {
+pub fn composed_for(
+    asked: AskedAlgorithm,
+    key: Option<KeyKind>,
+) -> Result<SignatureAlgorithm, TokenError> {
+    let key = key.ok_or_else(|| {
+        TokenError::new(
+            Situation::KeyNotRsa,
+            "la clave del certificado no es RSA ni de curva eliptica",
+        )
+    })?;
+    Ok(match (asked, key) {
         (AskedAlgorithm::Sha1, KeyKind::Rsa) => SignatureAlgorithm::Sha1Rsa,
         (AskedAlgorithm::Sha256, KeyKind::Rsa) => SignatureAlgorithm::Sha256Rsa,
         (AskedAlgorithm::Sha384, KeyKind::Rsa) => SignatureAlgorithm::Sha384Rsa,
@@ -176,7 +187,7 @@ pub fn composed_for(asked: AskedAlgorithm, key: Option<KeyKind>) -> SignatureAlg
         (AskedAlgorithm::Sha256, KeyKind::Ec) => SignatureAlgorithm::Sha256Ecdsa,
         (AskedAlgorithm::Sha384, KeyKind::Ec) => SignatureAlgorithm::Sha384Ecdsa,
         (AskedAlgorithm::Sha512, KeyKind::Ec) => SignatureAlgorithm::Sha512Ecdsa,
-    }
+    })
 }
 
 fn no_mechanism_for(algorithm: &str) -> TokenError {

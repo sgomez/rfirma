@@ -5,7 +5,7 @@ use crate::identity::adapters::failures::code_of_token;
 use crate::signing::adapters::failures::{code_of_bridge, code_of_inadmissible};
 use crate::site::application::errand::{ConsentError, SiteRefusal};
 use crate::site::application::filtering::FilteringError;
-use crate::site::domain::batch_error::Situation as BatchSituation;
+use crate::site::domain::batch_error::{BatchError, Situation as BatchSituation};
 use crate::site::domain::channel::Situation as ChannelSituation;
 use crate::site::domain::protocol::{SafCode, WireAnswer};
 use crate::site::domain::relay_error::Situation as RelaySituation;
@@ -58,7 +58,7 @@ pub fn told(refusal: &SiteRefusal) -> (Failure, SafCode) {
         ),
         SiteRefusal::Batch(error) => (
             Failure::new(label_of_batch(error.situation()), error.detail().to_owned()),
-            code_of_batch(error.situation()),
+            code_of_batch(error),
         ),
         SiteRefusal::BatchSigningFailed(refusal) => (
             Failure {
@@ -122,13 +122,15 @@ fn label_of_batch(situation: BatchSituation) -> &'static str {
     }
 }
 
-/// Código de protocolo de una situación del lote remoto (`ProtocolInvocationLauncherBatch`, 1.9.2).
-pub fn code_of_batch(situation: BatchSituation) -> SafCode {
-    match situation {
-        BatchSituation::PresignerUnreachable | BatchSituation::PostsignerUnreachable => {
+/// Código de protocolo de un fallo del lote remoto (`ProtocolInvocationLauncherBatch`, 1.9.2).
+pub fn code_of_batch(error: &BatchError) -> SafCode {
+    match (error.situation(), error.http_status()) {
+        (_, Some(400)) => SafCode::Params,
+        (_, Some(400..=499)) => SafCode::ContactBatchService,
+        (BatchSituation::PresignerUnreachable | BatchSituation::PostsignerUnreachable, _) => {
             SafCode::ContactBatchService
         }
-        BatchSituation::InvalidPresignResponse | BatchSituation::InvalidPostsignResponse => {
+        (BatchSituation::InvalidPresignResponse | BatchSituation::InvalidPostsignResponse, _) => {
             SafCode::BatchSignature
         }
     }

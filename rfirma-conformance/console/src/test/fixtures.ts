@@ -88,6 +88,7 @@ export function aReportView(): ReportView {
     },
     summary: summaryOf(sets.flatMap((set) => set.checks)),
     sets,
+    orphans: [],
   };
 }
 

@@ -19,6 +19,7 @@ pub enum Situation {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct BatchError {
     situation: Situation,
+    http_status: Option<u16>,
     detail: String,
 }
 
@@ -27,8 +28,22 @@ impl BatchError {
     pub fn new(situation: Situation, detail: impl Into<String>) -> Self {
         Self {
             situation,
+            http_status: None,
             detail: detail.into(),
         }
+    }
+
+    /// Crea el fallo de un servlet que contestó con un estado HTTP de error.
+    pub fn answered(situation: Situation, http_status: u16, detail: impl Into<String>) -> Self {
+        Self {
+            http_status: Some(http_status),
+            ..Self::new(situation, detail)
+        }
+    }
+
+    /// Estado HTTP de error con que contestó el servlet, si llegó a contestar.
+    pub fn http_status(&self) -> Option<u16> {
+        self.http_status
     }
 
     /// Situación clasificada del error.

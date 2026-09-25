@@ -3,6 +3,7 @@ use super::fixtures::{
     an_invoice_signature, an_operation, dat, properties, read_downloading, read_operation,
     ADownload, AN_INVOICE, A_REMOTE_DOCUMENT,
 };
+use crate::site::domain::protocol::detection::tests::a_cms_signature;
 use crate::site::domain::protocol::{RefusalSituation, XadesEnvelope};
 use crate::site::domain::triphase_server::ServerFormat;
 
@@ -218,6 +219,21 @@ fn multisig_with_format_auto_over_signed_documents_resolves_expected_formats() {
     };
     assert_eq!(request.format(), RequestedFormat::Cades);
     assert!(matches!(request.round(), SignatureRound::Counter { .. }));
+}
+
+#[test]
+fn format_auto_cosigns_a_cms_signature_as_cms() {
+    let cosign_cms = an_operation(&format!(
+        "op={COSIGN}&idsession=8jAkPZfRw2mQxN4TbYuL&format=auto&algorithm=SHA256withRSA&dat={}",
+        dat(&a_cms_signature())
+    ));
+
+    let SiteOperation::Sign(request) = read_operation(&cosign_cms).expect("CMS firmado en cosign")
+    else {
+        panic!("es una firma");
+    };
+    assert_eq!(request.format(), RequestedFormat::Cms);
+    assert_eq!(request.round(), SignatureRound::Again);
 }
 
 #[test]

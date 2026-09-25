@@ -129,6 +129,28 @@ export function ReportBody({
           <p className="empty">Ninguna comprobación tiene los resultados elegidos.</p>
         )}
       </div>
+      {view.orphans.length > 0 && <Orphans orphans={view.orphans} />}
+    </section>
+  );
+}
+
+function Orphans({ orphans }: { orphans: ReportView["orphans"] }) {
+  return (
+    <section className="orphans" aria-label="Huérfanas">
+      <h3>Huérfanas</h3>
+      <p className="hint">
+        El informe las guarda, pero el catálogo ya no las tiene: no cuentan en los recuentos y se
+        podan la próxima vez que se escriba el informe.
+      </p>
+      <ul>
+        {orphans.map((orphan) => (
+          <li key={orphan.id}>
+            <ResultIcon result={orphan.state} size={12} decorative />
+            <code>{orphan.id}</code>
+            <span>{orphan.state}</span>
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }

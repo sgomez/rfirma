@@ -64,3 +64,55 @@ async fn presign_does_not_panic_inside_tokio_context() {
     assert!(result.is_err());
     std::thread::spawn(move || drop(services)).join().unwrap();
 }
+
+fn servlet_answering(status: &'static str) -> String {
+    use std::io::{BufRead, BufReader, Write};
+
+    let listener = std::net::TcpListener::bind("127.0.0.1:0").expect("hay un puerto libre");
+    let url = format!(
+        "http://{}/servlet",
+        listener.local_addr().expect("tiene direccion")
+    );
+    std::thread::spawn(move || {
+        let (stream, _) = listener.accept().expect("llega la peticion");
+        let mut reader = BufReader::new(stream);
+        loop {
+            let mut line = String::new();
+            reader.read_line(&mut line).expect("se lee la cabecera");
+            if line == "\r\n" || line.is_empty() {
+                break;
+            }
+        }
+        let answer = format!("HTTP/1.1 {status}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");
+        reader
+            .get_mut()
+            .write_all(answer.as_bytes())
+            .expect("se contesta");
+    });
+    url
+}
+
+#[test]
+fn a_presigner_rejection_keeps_its_http_status() {
+    let url = servlet_answering("400 Bad Request");
+
+    let error = RelayBatchServices::default()
+        .presign(&url, BatchFormat::Json, "bG90ZQ", &[])
+        .expect_err("el servlet rechaza");
+
+    assert_eq!(error.situation(), Situation::InvalidPresignResponse);
+    assert_eq!(error.http_status(), Some(400));
+}
+
+#[test]
+fn a_postsigner_rejection_keeps_its_http_status() {
+    let url = servlet_answering("503 Service Unavailable");
+    let tridata = TriphaseData::new(None, vec![]);
+
+    let error = RelayBatchServices::default()
+        .postsign(&url, BatchFormat::Json, "bG90ZQ", &[], &tridata)
+        .expect_err("el servlet rechaza");
+
+    assert_eq!(error.situation(), Situation::InvalidPostsignResponse);
+    assert_eq!(error.http_status(), Some(503));
+}

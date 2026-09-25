@@ -2,6 +2,8 @@
 
 use quick_xml::events::Event;
 use quick_xml::Reader;
+use x509_cert::der::asn1::AnyRef;
+use x509_cert::der::{Decode, Reader as _, SliceReader, Tag, TagNumber, Tagged};
 
 /// Lo que dice la cabecera del documento, sin más.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -25,7 +27,9 @@ pub enum DetectedSignature {
     Invoice,
     /// XML con elemento Signature.
     Xml,
-    /// Contenedor CMS/CAdES SignedData.
+    /// `SignedData` con signingCertificate en todos sus firmantes.
+    Cades,
+    /// `SignedData` con algún firmante sin signingCertificate.
     Cms,
 }
 
@@ -38,6 +42,20 @@ const SIGNATURE_TAG: &[u8] = b"Signature";
 const OID_SIGNED_DATA: &[u8] = &[
     0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x07, 0x02,
 ];
+
+const OID_SIGNING_CERTIFICATES: [&[u8]; 2] = [
+    &[
+        0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x09, 0x10, 0x02, 0x0c,
+    ],
+    &[
+        0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x09, 0x10, 0x02, 0x2f,
+    ],
+];
+
+const SIGNED_ATTRIBUTES: Tag = Tag::ContextSpecific {
+    constructed: true,
+    number: TagNumber(0),
+};
 
 /// El nombre local de la raíz de una factura electrónica.
 const INVOICE_ROOT: &[u8] = b"Facturae";
@@ -66,7 +84,11 @@ pub fn detect_signature(document: &[u8]) -> Option<DetectedSignature> {
         return Some(DetectedSignature::Invoice);
     }
     if is_cms_signed_data(document) {
-        return Some(DetectedSignature::Cms);
+        return Some(if every_signer_carries_its_signing_certificate(document) {
+            DetectedSignature::Cades
+        } else {
+            DetectedSignature::Cms
+        });
     }
     if document
         .iter()
@@ -128,6 +150,46 @@ pub fn is_cms_signed_data(document: &[u8]) -> bool {
     document[idx..idx + OID_SIGNED_DATA.len()] == *OID_SIGNED_DATA
 }
 
+/// El reconocedor de CAdES del original (`CAdESValidator.isCAdESValid`, 1.9.2); lo que no se lee sigue siendo CAdES.
+fn every_signer_carries_its_signing_certificate(document: &[u8]) -> bool {
+    signer_infos(document).is_none_or(|signers| {
+        signers
+            .into_iter()
+            .all(|signer| carries_its_signing_certificate(signer).unwrap_or(true))
+    })
+}
+
+fn signer_infos(document: &[u8]) -> Option<Vec<AnyRef<'_>>> {
+    let content_info = AnyRef::from_der(document).ok()?;
+    let explicit = *elements(content_info.value())?.get(1)?;
+    let signed_data = AnyRef::from_der(explicit.value()).ok()?;
+    let signer_set = *elements(signed_data.value())?.last()?;
+    elements(signer_set.value())
+}
+
+fn carries_its_signing_certificate(signer: AnyRef<'_>) -> Option<bool> {
+    let fields = elements(signer.value())?;
+    let Some(attributes) = fields.iter().find(|field| field.tag() == SIGNED_ATTRIBUTES) else {
+        return Some(false);
+    };
+    let kinds = elements(attributes.value())?
+        .into_iter()
+        .map(|attribute| elements(attribute.value())?.first().copied())
+        .collect::<Option<Vec<_>>>()?;
+    Some(kinds.into_iter().any(|kind| {
+        kind.tag() == Tag::ObjectIdentifier && OID_SIGNING_CERTIFICATES.contains(&kind.value())
+    }))
+}
+
+fn elements(content: &[u8]) -> Option<Vec<AnyRef<'_>>> {
+    let mut reader = SliceReader::new(content).ok()?;
+    let mut found = Vec::new();
+    while !reader.is_finished() {
+        found.push(AnyRef::decode(&mut reader).ok()?);
+    }
+    Some(found)
+}
+
 fn contains_subsequence(haystack: &[u8], needle: &[u8]) -> bool {
     if needle.is_empty() {
         return true;
@@ -173,4 +235,4 @@ fn is_an_invoice(document: &[u8]) -> bool {
 }
 
 #[cfg(test)]
-mod tests;
+pub(crate) mod tests;

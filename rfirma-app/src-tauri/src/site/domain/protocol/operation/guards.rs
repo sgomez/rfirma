@@ -23,7 +23,8 @@ pub(super) fn resolve_auto_format(
         Some(DetectedSignature::Pdf) => Ok(RequestedFormat::Pades),
         Some(DetectedSignature::Invoice) => Ok(RequestedFormat::FacturaE),
         Some(DetectedSignature::Xml) => Ok(RequestedFormat::Xades(XadesEnvelope::Enveloping)),
-        Some(DetectedSignature::Cms) => Ok(RequestedFormat::Cades),
+        Some(DetectedSignature::Cades) => Ok(RequestedFormat::Cades),
+        Some(DetectedSignature::Cms) => Ok(RequestedFormat::Cms),
         None => Err(Refusal::new(
             SafCode::UnknownSigner,
             "el formato de firma no se ha podido determinar a partir de los datos aportados",
