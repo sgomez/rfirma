@@ -41,6 +41,13 @@ describe("SedeWindow", () => {
       expect(calls.cancel).not.toHaveBeenCalled();
       expect(calls.close).not.toHaveBeenCalled();
     });
+
+    it("focuses Entendido, so Enter dismisses it", () => {
+      const { port } = scriptedErrand({ kind: "oldWebClient" });
+      renderWithCatalog(<SedeWindow errands={port} />);
+
+      expect(screen.getByRole("button", { name: "Entendido" })).toHaveFocus();
+    });
   });
 
   describe("1 · waiting for the channel", () => {

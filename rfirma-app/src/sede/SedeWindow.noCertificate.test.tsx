@@ -61,6 +61,20 @@ describe("5 · no usable certificate", () => {
     expect(screen.queryByRole("button", { name: "Volver a buscar" })).not.toBeInTheDocument();
   });
 
+  it("focuses the main action when there is none installed", () => {
+    const { port } = scriptedErrand({ kind: "noCertificate", reason: "none", owned: 0 });
+    renderWithCatalog(<SedeWindow errands={port} />);
+
+    expect(screen.getByRole("button", { name: "Instalar un certificado…" })).toHaveFocus();
+  });
+
+  it("focuses Cerrar when the site excluded them all, because it is the only way out", () => {
+    const { port } = scriptedErrand({ kind: "noCertificate", reason: "excluded", owned: 3 });
+    renderWithCatalog(<SedeWindow errands={port} />);
+
+    expect(screen.getByRole("button", { name: "Cerrar" })).toHaveFocus();
+  });
+
   it("never enumerates what the site discarded", () => {
     const { port } = scriptedErrand({ kind: "noCertificate", reason: "excluded", owned: 3 });
     renderWithCatalog(<SedeWindow errands={port} />);

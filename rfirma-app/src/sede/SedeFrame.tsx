@@ -12,11 +12,15 @@ export function SedeBody({
   children,
   footer,
   steadyFooter = false,
+  onEscape,
 }: {
   children: ReactNode;
   footer: ReactNode;
   steadyFooter?: boolean;
+  onEscape?: () => void;
 }) {
+  useEscapeKey(onEscape);
+
   return (
     <>
       <div className="sede-window__body">{children}</div>
@@ -47,6 +51,36 @@ export function useOutcomeClock(onClose: () => void, enabled = true) {
     const timer = setTimeout(() => latest.current(), OUTCOME_CLOSE_MS);
     return () => clearTimeout(timer);
   }, [enabled]);
+}
+
+/** Escape pulsa el botón de cancelar o cerrar del momento, salvo que un control ya lo haya atendido. */
+function useEscapeKey(onEscape: (() => void) | undefined) {
+  const latest = useRef(onEscape);
+  latest.current = onEscape;
+
+  useEffect(() => {
+    const listener = (event: KeyboardEvent) => {
+      if (event.key !== "Escape" || event.defaultPrevented) return;
+      latest.current?.();
+    };
+    document.addEventListener("keydown", listener);
+    return () => document.removeEventListener("keydown", listener);
+  }, []);
+}
+
+/** El botón por defecto del momento: el foco, en cuanto se puede pulsar y si nadie lo ha llevado a otro sitio. */
+export function useDefaultButton(enabled = true) {
+  const button = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (enabled && focusIsUnclaimed()) button.current?.focus();
+  }, [enabled]);
+
+  return button;
+}
+
+function focusIsUnclaimed(): boolean {
+  return document.activeElement === null || document.activeElement === document.body;
 }
 
 /** Los segundos que le faltan al botón de consentir para activarse; cero sin cuenta atrás. */

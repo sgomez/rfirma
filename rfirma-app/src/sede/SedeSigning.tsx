@@ -38,6 +38,7 @@ export function SedeSigning({ origin, certificate, phase, onCancel }: SedeSignin
 
   return (
     <SedeBody
+      onEscape={returning ? undefined : onCancel}
       steadyFooter
       footer={
         returning ? null : (

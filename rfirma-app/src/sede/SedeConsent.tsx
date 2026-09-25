@@ -1,5 +1,5 @@
 import type { TFunction } from "i18next";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { FileIcon, InfoIcon } from "../design-system/icons";
 import { CertificateSelect } from "../signing/CertificateSelect";
@@ -14,7 +14,7 @@ import type {
   SiteOperation,
 } from "./errand";
 import { consentActionKey } from "./errand";
-import { SedeBody, useConsentCountdown } from "./SedeFrame";
+import { SedeBody, useConsentCountdown, useDefaultButton } from "./SedeFrame";
 
 interface SedeConsentProps {
   origin: string | null;
@@ -57,15 +57,12 @@ export function SedeConsent({
   const identity = consentActionKey(operation) === "identify";
   const remaining = useConsentCountdown(countdown);
   const ready = chosen !== null && remaining === 0;
-  const consentButton = useRef<HTMLButtonElement>(null);
+  const consentButton = useDefaultButton(ready);
   const action = identity ? t("sede.consent.identify") : t("sede.consent.sign");
-
-  useEffect(() => {
-    if (ready && focusIsUnclaimed()) consentButton.current?.focus();
-  }, [ready]);
 
   return (
     <SedeBody
+      onEscape={onCancel}
       footer={
         <>
           <div className="sede-window__spacer" />
@@ -296,9 +293,4 @@ function signatureRoundNote(t: TFunction, round: SignatureRound): string | null 
         ? t("sede.consent.counterSignatureTree")
         : t("sede.consent.counterSignatureLeafs");
   }
-}
-
-/** Nadie ha llevado el foco a otro sitio mientras el botón seguía desactivado. */
-function focusIsUnclaimed(): boolean {
-  return document.activeElement === null || document.activeElement === document.body;
 }

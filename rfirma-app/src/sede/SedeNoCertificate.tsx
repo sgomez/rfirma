@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import type { NoCertificateReason } from "./errand";
-import { SedeBody } from "./SedeFrame";
+import { SedeBody, useDefaultButton } from "./SedeFrame";
 
 interface SedeNoCertificateProps {
   origin: string | null;
@@ -51,18 +51,30 @@ export function SedeNoCertificate({
 }: SedeNoCertificateProps) {
   const { t } = useTranslation();
   const excluded = reason === "excluded";
+  const defaultButton = useDefaultButton();
 
   return (
     <SedeBody
+      onEscape={onLeave}
       steadyFooter
       footer={
         <>
           <div className="sede-window__spacer" />
-          <button type="button" className="rf-btn rf-btn--ghost" onClick={onLeave}>
+          <button
+            ref={excluded ? defaultButton : undefined}
+            type="button"
+            className="rf-btn rf-btn--ghost"
+            onClick={onLeave}
+          >
             {t("actions.close")}
           </button>
           {!excluded && (
-            <button type="button" className="rf-btn rf-btn--primary" onClick={onInstall}>
+            <button
+              ref={defaultButton}
+              type="button"
+              className="rf-btn rf-btn--primary"
+              onClick={onInstall}
+            >
               {t("sede.noCertificate.install")}
             </button>
           )}

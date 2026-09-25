@@ -34,6 +34,7 @@ export function SedeMarking({ pdf, onMark, onCancel }: SedeMarkingProps) {
 
   return (
     <SedeBody
+      onEscape={onCancel}
       footer={
         <>
           <div className="sede-window__spacer" />
