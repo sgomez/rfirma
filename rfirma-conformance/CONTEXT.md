@@ -108,6 +108,8 @@ Dónde encuentra el cliente sus certificados en un trámite. Es una lista cerrad
 - **token**: el token PKCS#11 de pruebas, con su PIN y varios certificados.
 - **token_apart**: el mismo token sin registrar en el almacén del sistema, que tiene otro
   certificado: distingue el almacén que la sede nombra por su biblioteca del sistema.
+- **ed25519**: un token propio sin registrar, con su PIN y un solo certificado, cuya clave es
+  Ed25519: un tipo de clave con el que no se compone ningún algoritmo de firma.
 - **several**: varios certificados de pruebas sin PIN, para los filtros, el almacén que nombra la
   sede y la fijación; el token queda alcanzable por su biblioteca, sin registrar.
 - **expired**: uno vigente y uno caducado, sin PIN, para ver qué oculta la selección.

@@ -72,7 +72,8 @@ algoritmo de firma: la firma se rechaza con SAF_51 después de elegirlo.
 [check.drive]
 mode = "v4"
 script = "signwithanunsupportedkeytype"
-act.consent = "La sede pide un almacén PKCS#12 con una clave Ed25519: su contraseña es 1234; elige su único certificado."
+store = "ed25519"
+act.consent = "La sede nombra el token PKCS#11 por su biblioteca: su PIN es 1234; elige su único certificado, el Ed25519."
 expects.code = "SAF_51"
 
 [[check]]
