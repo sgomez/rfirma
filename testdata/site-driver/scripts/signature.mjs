@@ -17,7 +17,6 @@ import {
   aPdfWithAnUnregisteredSignature,
   theChallenge,
   theCmsSignatureOfTheSite,
-  theEd25519KeyStore,
   theInvoice,
   thePdfOfTheTest,
   theReferenceSignature,
@@ -611,9 +610,9 @@ function theCosignWithoutTheDataScript() {
   theCosignScriptWith("SHA512withRSA", "CAdES", "", theReferenceSignature("cades-explicit.p7s"));
 }
 
-/** Una firma con el almacén PKCS#12 de la sede, cuya única clave es Ed25519. */
+/** En el almacén `ed25519`: una firma con el token de clave Ed25519, nombrado por su biblioteca. */
 function theSignWithAnUnsupportedKeyTypeScript() {
-  AutoScript.setKeyStore(`PKCS12:${theEd25519KeyStore()}`);
+  AutoScript.setKeyStore("PKCS11:/usr/lib/softhsm/libsofthsm2.so");
   theSignScript("CAdES", "", theChallenge());
 }
 
