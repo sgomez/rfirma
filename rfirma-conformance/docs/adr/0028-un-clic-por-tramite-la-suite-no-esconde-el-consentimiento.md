@@ -10,12 +10,22 @@ contraseña en el perfil aislado, con los tokens de SoftHSM fuera de su alcance.
 de lanzamiento, igual para cualquier cliente. Queda un clic por trámite: el selector de AutoFirma
 o el consentimiento de rFirma. La cola los agrupa en su tramo.
 
+**La persona solo actúa donde el protocolo lo exige.** Una acción con nombre se queda si el
+resultado que juzga el trámite depende de ella: la operación consiste en que la persona elija el
+fichero o el destino, o su cancelación viaja como `CANCEL`, `SAF_43` o una firma invisible. Lo
+que se puede provocar con la petición o el almacén se provoca así, y lo que la sede no puede
+distinguir no se mide: qué diálogo de una misma operación se canceló, que un PIN erróneo se vuelva
+a pedir o que un destino ya ocupado pida confirmación.
+
 ## Consequences
 
 - Una tanda completa se reparte en tres tramos (`ninguna`, `clic`, `persona`) y solo el primero
   corre sin nadie delante.
-- Las comprobaciones cuyo objeto es el PIN o elegir entre varios certificados corren con el almacén
-  `token`.
+- La firma con la clave de un token PKCS#11 corre con el almacén `token`, y su PIN conocido se
+  teclea en el mismo clic; elegir entre varios certificados, con `several`.
+- Cada operación mide su `CANCEL` una sola vez; otra cancelación solo se mide si lo que viaja es
+  distinto (`SAF_43`, una firma invisible). Lo demás de un diálogo se exige por lo que la petición
+  provoca sin nadie delante: `headless`, la contraseña o el área en la petición.
 - Un rechazo que el cliente enseña en una ventana antes de contestar —los de parámetros, incluido
   el acceso a una dirección local, y los de guardar, cargar, seleccionar y lote— no llega
   a la sede hasta que alguien la cierra: esas comprobaciones van en el tramo `clic`, sin excepción.
@@ -41,5 +51,9 @@ o el consentimiento de rFirma. La cola los agrupa en su tramo.
   rechazo del acceso local corriera sin nadie delante. Descartada: rFirma también enseña ese
   rechazo en su ventana y no lee la opción, así que la comprobación seguía necesitando un clic; y
   un perfil que solo afecta a un cliente mide cosas distintas en cada uno.
+- **Medir cada diálogo del original con su cancelación.** Era el catálogo anterior: pedir el
+  documento, pedir la contraseña del PDF, avisar de un PDF certificado o de un destino ocupado,
+  cada uno con su comprobación. Descartada: la sede recibe el mismo `CANCEL` sea cual sea el
+  diálogo, así que la comprobación medía la ventana y no el protocolo.
 - **El certificado recordado con `sticky`.** Descartada: `sticky` es objeto de sus propias
   comprobaciones, y en rFirma solo preselecciona (ADR-0010).

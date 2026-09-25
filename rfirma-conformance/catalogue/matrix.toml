@@ -322,7 +322,7 @@ covered = "the_algorithm_is_recomposed_with_the_key_of_the_certificate"
 
 [[cell]]
 key = "pkcs11-rsa-sha256"
-covered = "a_wrong_pin_does_not_cancel_the_signature"
+covered = "a_key_of_a_pkcs11_token_signs_like_one_of_the_store"
 
 [[cell]]
 format = "XAdES"
