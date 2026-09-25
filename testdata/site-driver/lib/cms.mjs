@@ -221,11 +221,12 @@ function theKeysVerifying(signer, content, keys) {
 const aVerification = (verified, reason) => ({ verified, reason });
 
 function aSignerVerdict(signer, signed, keys, returnedKey) {
-  const unverifiable = theUnverifiableAlgorithmOf(signer);
-  if (unverifiable) return aVerification(null, `la sede no sabe verificar ${unverifiable}`);
-  if (signer.signedAttributes && !signsTheData(signer, signed)) {
+  const measurableDigest = signer.signedAttributes && DIGESTS[signer.digestAlgorithm];
+  if (measurableDigest && !signsTheData(signer, signed)) {
     return aVerification(false, "el messageDigest de un firmante no es el resumen de lo que firma");
   }
+  const unverifiable = theUnverifiableAlgorithmOf(signer);
+  if (unverifiable) return aVerification(null, `la sede no sabe verificar ${unverifiable}`);
   const verifying = theKeysVerifying(signer, signed, keys);
   if (verifying.length === 0) {
     return aVerification(false, "la firma de un firmante no verifica con ninguna clave");

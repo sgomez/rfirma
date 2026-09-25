@@ -235,21 +235,30 @@ function theKeyOf(certificate) {
 
 const aVerification = (verified, reason) => ({ verified, reason });
 
-function aCheck(holds, failure) {
+function theVerdictOfThe(error) {
+  if (error instanceof UnsupportedXml) {
+    return aVerification(null, `la sede no sabe verificar: ${error.message}`);
+  }
+  return aVerification(false, `firma ilegible: ${error.message}`);
+}
+
+const theDecisiveOf = (verdicts) =>
+  verdicts.find(({ verified }) => verified === false) ??
+  verdicts.find(({ verified }) => verified === null);
+
+function aReferenceVerdict(reference, context) {
   try {
-    return aVerification(!!holds(), failure);
+    return aVerification(
+      theReferenceHolds(reference, context),
+      "el resumen de alguna Reference no es el de lo que referencia",
+    );
   } catch (error) {
-    if (error instanceof UnsupportedXml) {
-      return aVerification(null, `la sede no sabe verificar: ${error.message}`);
-    }
-    return aVerification(false, `firma ilegible: ${error.message}`);
+    return theVerdictOfThe(error);
   }
 }
 
-function aSignatureVerdict(signature, returnedKey, context) {
-  const signedInfo = aDsigChild(signature, "SignedInfo");
-  let byTheReturned = false;
-  const signedInfoCheck = aCheck(() => {
+function aSignedInfoVerdict(signature, signedInfo, returnedKey) {
+  try {
     const method = aDsigChild(signedInfo, "CanonicalizationMethod");
     const canonical = canonicalize(
       signedInfo,
@@ -267,23 +276,27 @@ function aSignatureVerdict(signature, returnedKey, context) {
         value,
       );
     const own = aDsigDescendant(aDsigChild(signature, "KeyInfo") ?? signature, "X509Certificate");
-    byTheReturned = verifiesWith(returnedKey);
-    return byTheReturned || verifiesWith(own ? theKeyOf(inBase64(own)) : null);
-  }, "algún SignedInfo no verifica con la clave de su firmante");
-  const referenceChecks = theElementChildren(signedInfo)
+    const byTheReturned = verifiesWith(returnedKey);
+    const verified = byTheReturned || verifiesWith(own ? theKeyOf(inBase64(own)) : null);
+    return {
+      ...aVerification(verified, "algún SignedInfo no verifica con la clave de su firmante"),
+      byTheReturned,
+    };
+  } catch (error) {
+    return theVerdictOfThe(error);
+  }
+}
+
+function aSignatureVerdict(signature, returnedKey, context) {
+  const signedInfo = aDsigChild(signature, "SignedInfo");
+  const signedInfoVerdict = aSignedInfoVerdict(signature, signedInfo, returnedKey);
+  const referenceVerdicts = theElementChildren(signedInfo)
     .filter((child) => child.local === "Reference")
-    .map((reference) =>
-      aCheck(
-        () => theReferenceHolds(reference, { ...context, signature }),
-        "el resumen de alguna Reference no es el de lo que referencia",
-      ),
-    );
-  const checks = [...referenceChecks, signedInfoCheck];
-  const verdict =
-    checks.find(({ verified }) => verified === null) ??
-    checks.find(({ verified }) => verified === false) ??
-    aVerification(true);
-  return { ...verdict, byTheReturned };
+    .map((reference) => aReferenceVerdict(reference, { ...context, signature }));
+  return {
+    ...(theDecisiveOf([...referenceVerdicts, signedInfoVerdict]) ?? aVerification(true)),
+    byTheReturned: signedInfoVerdict.byTheReturned === true,
+  };
 }
 
 /** Si cada `Signature` verifica con su clave y sus Reference, y alguna con el certificado devuelto. */
@@ -307,9 +320,7 @@ export function theXadesVerification(xml, certificate) {
   const verdicts = signatures.map((signature) =>
     aSignatureVerdict(signature, returnedKey, { document, elements, signatures }),
   );
-  const failure =
-    verdicts.find(({ verified }) => verified === false) ??
-    verdicts.find(({ verified }) => verified === null);
+  const failure = theDecisiveOf(verdicts);
   if (failure) return aVerification(failure.verified, failure.reason);
   if (!verdicts.some(({ byTheReturned }) => byTheReturned)) {
     return aVerification(false, "ninguna Signature verifica con el certificado devuelto");

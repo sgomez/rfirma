@@ -47,6 +47,8 @@ function withAByteFlippedAt(bytes, at) {
 
 const SHA256_OID = Buffer.from("0609608648016503040201", "hex");
 const SHA224_OID = Buffer.from("0609608648016503040204", "hex");
+const RSA_ENCRYPTION_OID = Buffer.from("06092a864886f70d010101", "hex");
+const RSASSA_PSS_OID = Buffer.from("06092a864886f70d01010a", "hex");
 
 function withTheOidReplaced(bytes, from, to) {
   const altered = Buffer.from(bytes);
@@ -311,6 +313,21 @@ describe("the CMS verifier", () => {
     assert.match(verification.reason, /2\.16\.840\.1\.101\.3\.4\.2\.4/);
   });
 
+  it("refuses a signer whose messageDigest fails behind an unverifiable signature algorithm", () => {
+    const cms = aReference("cades-implicit.p7s");
+    const [signer] = theCmsSignature(cms).signers;
+    const unverifiable = Buffer.from(cms);
+    RSASSA_PSS_OID.copy(
+      unverifiable,
+      cms.lastIndexOf(RSA_ENCRYPTION_OID, cms.indexOf(signer.signature)),
+    );
+    assert.equal(theCmsVerification(unverifiable, theSigner).verified, null);
+    const altered = withAByteFlippedAt(unverifiable, cms.indexOf(theChallenge) + 10);
+    const verification = theCmsVerification(altered, theSigner);
+    assert.equal(verification.verified, false, verification.reason);
+    assert.match(verification.reason, /messageDigest/);
+  });
+
   it("refuses a cosignature whose second signer fails behind an unverifiable first one", () => {
     const cms = aReference("cades-implicit.cosign.p7s");
     const [first, second] = theCmsSignature(cms).signers;
@@ -411,11 +428,30 @@ describe("the XAdES verifier", () => {
     const xml = anXml("xades-enveloping.xml");
     for (const altered of [
       xml.replace("xmldsig-more#rsa-sha256", "xmldsig-more#rsa-sha224"),
-      xml.replace("xmlenc#sha512", "xmldsig-more#sha224"),
+      aSample("xades-sha224-reference.xml").toString("utf8"),
     ]) {
       const verification = theXadesVerification(altered, theSigner);
       assert.equal(verification.verified, null, verification.reason);
     }
+  });
+
+  it("refuses a Signature whose broken Reference sits beside an unverifiable one", () => {
+    const xml = anXml("xades-enveloping.xml");
+    const second = xml.indexOf("xmlenc#sha512", xml.indexOf("xmlenc#sha512") + 1);
+    const unverifiable = `${xml.slice(0, second)}xmldsig-more#sha224${xml.slice(second + 13)}`;
+    const altered = unverifiable.replace("<ds:DigestValue>F", "<ds:DigestValue>G");
+    const verification = theXadesVerification(altered, theSigner);
+    assert.equal(verification.verified, false, verification.reason);
+    assert.match(verification.reason, /Reference/);
+  });
+
+  it("refuses a Signature whose SignedInfo fails beside an unverifiable Reference", () => {
+    const xml = aSample("xades-sha224-reference.xml").toString("utf8");
+    const at = xml.indexOf('-SignatureValue">') + '-SignatureValue">'.length;
+    const altered = `${xml.slice(0, at)}${xml[at] === "A" ? "B" : "A"}${xml.slice(at + 1)}`;
+    const verification = theXadesVerification(altered, theSigner);
+    assert.equal(verification.verified, false, verification.reason);
+    assert.match(verification.reason, /SignedInfo/);
   });
 
   it("refuses a cosignature whose second Signature fails behind an unverifiable first one", () => {
