@@ -76,7 +76,7 @@ guardado del resultado: aceptar lo que propone deja la firma en él.
 mode = "v4"
 script = "signandsavewithsavingparameters"
 harness = "the_saved_signature_read_back"
-act.save_as_proposed = "Van a aparecer el diálogo de certificado y la ventana para guardar la firma: guárdala con el nombre propuesto, challenge-signed.csig, en la carpeta en la que se abra."
+act.save_as_proposed = "Van a aparecer el diálogo de certificado y la ventana para guardar la firma: guárdala como challenge-signed.csig en la carpeta en la que se abra, que debe ser /tmp. Si el nombre no viene escrito, escríbelo tú: aquí se mide la carpeta, no el nombre."
 expects.completes.conditions = ["the-returned-signature-on-disk"]
 
 [[check]]
