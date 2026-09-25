@@ -486,8 +486,14 @@ Cada expresión es una **conjunción** de criterios separados por `;` (`FILTERS_
 Hay dos claves más que viajan por el mismo canal y cambian el comportamiento del diálogo
 (`CertFilterManager.java:29`-`30`, `146`-`153`):
 
-- `headless=true` → selecciona automáticamente, sin diálogo.
-- `mandatoryCertSelection=false` → lo mismo.
+- `mandatoryCertSelection=false` → si **exactamente un** certificado pasa los filtros, se elige
+  sin enseñar el diálogo (`AOKeyStoreDialog.show`, `:726`-`729`); con dos o más, el diálogo sale
+  igual.
+- `headless=true` → lo mismo con el diálogo y, además, lo que habría que preguntar a la persona
+  —PDF certificado, contraseña del PDF, firmas no registradas— se rechaza con `SAF_50`.
+
+rFirma solo respeta esa selección automática si la persona lo permite en sus preferencias
+(ADR-0032).
 
 Y una regla por defecto que es una decisión, no un accidente: **si la sede no declara ningún filtro,
 se añade uno que oculta los caducados**, citando ETSI TS 119 102-1
