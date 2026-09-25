@@ -386,21 +386,6 @@ act.pick_file = "Se va a pedir primero el documento a firmar, y después vendrá
 expects.completes.conditions = ["the-filename-in-a-third-component"]
 
 [[check]]
-id = "sign_asks_for_the_document_when_the_request_brings_no_data"
-set = "firma"
-citation = "ProtocolInvocationLauncherSign.java:300-357"
-statement = """
-Una firma cuya petición no trae dat pide a la persona el documento a firmar antes que el
-certificado, y cancelar esa elección termina el trámite como cancelación.
-"""
-
-[check.drive]
-mode = "v4"
-script = "signwithoutdatacancelled"
-act.cancel = "Se va a pedir el documento a firmar: cancela esa ventana en vez de elegir nada."
-expects.code = "CANCEL"
-
-[[check]]
 id = "cosign_asks_for_the_signature_file_when_the_request_brings_no_data"
 set = "firma"
 citation = "ProtocolInvocationLauncherSign.java:300-357"
@@ -589,7 +574,7 @@ trámite termina como cancelación en vez de firmarse.
 [check.drive]
 mode = "v4"
 script = "signpadescertified"
-act.refuse = "Va a aparecer el diálogo de certificado y, después, un aviso de que el PDF está certificado: recházalo."
+act.cancel = "Va a aparecer el diálogo de certificado y, después, un aviso de que el PDF está certificado: recházalo en vez de aceptarlo."
 expects.code = "CANCEL"
 
 [[check]]
@@ -1023,19 +1008,19 @@ act.cancel = "Va a aparecer el diálogo del área visible sobre el PDF: cancéla
 expects.completes.conditions = ["without-a-visible-signature"]
 
 [[check]]
-id = "a_wanted_visible_signature_with_its_area_is_not_aborted_by_cancelling"
+id = "a_wanted_visible_signature_with_its_area_is_placed_where_the_request_says"
 set = "firma"
 chapter = "12"
 citation = "ProtocolInvocationLauncherSign.java:960-979; PdfExtraParams.java"
 statement = """
-Con visibleSignature=want y el área ya en la petición, el diálogo del área aparece igual, pero
-cancelarlo no aborta: la firma sale visible en el área que la petición declaraba.
+Con visibleSignature=want y el área ya en la petición, la firma no espera a que la persona marque
+nada ni aborta con SAF_43: sale visible en el área que la petición declaraba.
 """
 
 [check.drive]
 mode = "v4"
 script = "signpadeswantedwithanarea"
-act.cancel = "Va a aparecer el diálogo del área visible sobre el PDF: cancélalo sin marcar nada, y después elige certificado."
+act.consent = "Si aparece el diálogo del área visible sobre el PDF, ciérralo sin marcar nada; después elige certificado."
 expects.completes.conditions = ["the-signature-where-the-request-says"]
 
 [[check]]

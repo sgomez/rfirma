@@ -398,7 +398,7 @@ statement = "Uno."
 mode = "v4"
 script = "save"
 harness = "a_file_to_overwrite"
-act.refuse = "Se va a pedir dónde guardar."
+act.cancel = "Se va a pedir dónde guardar."
 expects.code = "CANCEL"
 "#,
         )

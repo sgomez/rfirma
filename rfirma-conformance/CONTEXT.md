@@ -72,10 +72,10 @@ _Avoid_: check, entrada (en la interfaz), enunciado, cita, aviso, observación
 
 **Acción**:
 Lo que hace la persona durante el trámite, con una instrucción cerrada: nada, consentir —elegir el
-certificado, pulsar en el consentimiento o cerrar el error que aparezca, solo para llegar a lo que
-se mide— o una acción con
-nombre: cancelar, elegir un fichero, guardar con lo propuesto, teclear un PIN erróneo, teclear la
-contraseña, marcar el área o rechazar. Es entrada del protocolo, no juicio: la persona nunca dice
+certificado, teclear el PIN conocido del token, pulsar en el consentimiento o cerrar la ventana que
+aparezca, solo para llegar a lo que se mide— o una acción con nombre: cancelar, elegir un fichero,
+guardar con lo propuesto, teclear la contraseña o marcar el área, solo mientras un cliente no
+conforme daría un resultado distinto. Es entrada del protocolo, no juicio: la persona nunca dice
 qué vio, y el resultado lo da siempre el trámite —el código, las condiciones, el disco o el
 silencio—.
 _Avoid_: pregunta, respuesta de la persona

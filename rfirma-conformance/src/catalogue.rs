@@ -93,10 +93,8 @@ pub(crate) enum Act {
     Cancel(String),
     PickFile(String),
     SaveAsProposed(String),
-    WrongPin(String),
     TypePassword(String),
     MarkArea(String),
-    Refuse(String),
 }
 
 impl Act {
@@ -115,10 +113,8 @@ impl Act {
             | Self::Cancel(said)
             | Self::PickFile(said)
             | Self::SaveAsProposed(said)
-            | Self::WrongPin(said)
             | Self::TypePassword(said)
-            | Self::MarkArea(said)
-            | Self::Refuse(said) => Some(said),
+            | Self::MarkArea(said) => Some(said),
         }
     }
 }
@@ -620,7 +616,7 @@ script = "selectcert"
 store = "ec"
 ports = [63131, 63132]
 patience_secs = 90
-act.wrong_pin = "Va a aparecer el diálogo del PIN: teclea 0000."
+act.type_password = "Va a aparecer el diálogo de la contraseña: teclea 1234."
 expects.code = "SAF_47"
 "#;
 
@@ -643,7 +639,7 @@ expects.code = "SAF_47"
         assert_eq!(trial.provocation.script, "selectcert");
         assert_eq!(
             trial.act,
-            Act::WrongPin("Va a aparecer el diálogo del PIN: teclea 0000.".to_owned())
+            Act::TypePassword("Va a aparecer el diálogo de la contraseña: teclea 1234.".to_owned())
         );
         assert_eq!(trial.expects.the_declared_text(), "SAF_47");
     }
@@ -665,7 +661,7 @@ expects.code = "SAF_47"
         assert_eq!(check.declared_patience(), Some(Duration::from_secs(90)));
         assert_eq!(
             check.instruction(),
-            Some("Va a aparecer el diálogo del PIN: teclea 0000.")
+            Some("Va a aparecer el diálogo de la contraseña: teclea 1234.")
         );
     }
 
@@ -695,10 +691,8 @@ expects.code = "SAF_47"
             "cancel",
             "pick_file",
             "save_as_proposed",
-            "wrong_pin",
             "type_password",
             "mark_area",
-            "refuse",
         ] {
             assert_eq!(
                 assistance_of(&format!("act.{named} = \"Haz esto.\"")),
@@ -1293,7 +1287,7 @@ expects.code = "SAF_47"
             an_entry(
                 "a_two",
                 "errores",
-                "act.refuse = \"Rechaza.\"\nexpects.code = \"CANCEL\""
+                "act.pick_file = \"Elige.\"\nexpects.code = \"CANCEL\""
             ),
             an_entry(
                 "a_three",

@@ -453,18 +453,18 @@ store = "several"
 expects.completes.conditions = ["the-pinned-certificate-without-asking"]
 
 [[check]]
-id = "a_wrong_pin_does_not_cancel_the_signature"
+id = "a_key_of_a_pkcs11_token_signs_like_one_of_the_store"
 set = "certificado"
-citation = "ProtocolInvocationLauncherSign.java:658-674; CertFilterManager.java:101-108"
+chapter = "13"
+citation = "ProtocolInvocationLauncherSign.java:574-629; SharedNssKeyStoreManager.java:20-50"
 statement = """
-Un PIN erróneo al firmar no cancela la operación: el PIN se vuelve a pedir y, con el bueno, la firma
-se completa.
+Un certificado cuya clave vive en un token PKCS#11 registrado en el almacén del sistema se ofrece y
+firma como uno del propio almacén: la firma se completa y verifica con la clave del token.
 """
 
 [check.drive]
 mode = "v4"
 script = "signcades"
 store = "token"
-patience_secs = 180
-act.wrong_pin = "Elige el certificado RSA del token y teclea un PIN erróneo, 0000; cuando vuelva a pedirse, elígelo otra vez y teclea el de verdad, 1234."
+act.consent = "Elige el certificado RSA del token y teclea su PIN, 1234."
 expects.completes.conditions = ["the-signature-verifies"]

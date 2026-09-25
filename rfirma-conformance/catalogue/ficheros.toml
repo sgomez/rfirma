@@ -28,7 +28,7 @@ confirma, vuelve a pedir destino, y cancelarlo termina el trámite como cancelac
 mode = "v4"
 script = "save"
 harness = "a_file_to_overwrite"
-act.refuse = "Se va a pedir dónde guardar: acepta el nombre propuesto, challenge.bin, que ya existe porque se ha preparado; cuando te pregunte si lo sobrescribes, di que no, y cancela el diálogo de guardar que vuelve a abrirse."
+act.cancel = "Se va a pedir dónde guardar: acepta el nombre propuesto, challenge.bin, que ya existe porque se ha preparado; cuando te pregunte si lo sobrescribes, di que no, y cancela el diálogo de guardar que vuelve a abrirse."
 expects.code = "CANCEL"
 
 [[check]]

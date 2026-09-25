@@ -108,14 +108,14 @@ function theLoadToCancelScript(multiple) {
 }
 
 /** Un `sign()` sin datos: la petición viaja sin `dat` y el documento se pide en disco. */
-function theSignWithoutDataScript(measuring) {
+function theSignWithoutDataScript() {
   AutoScript.sign(
     "",
     "SHA256withRSA",
     "CAdES",
     "mode=implicit",
     (signature, certificate, extraInfo) => {
-      if (measuring) emit(theFilenameInAThirdComponent(extraInfo));
+      emit(theFilenameInAThirdComponent(extraInfo));
       settle({ event: "success", result: String(signature), certificate: String(certificate) });
     },
     settlingTheError,
@@ -314,9 +314,8 @@ export const FILE_SCRIPTS = {
   savereadback: aPublishedScript(theSaveScript, { conditions: [THE_DECODED_BYTES_ON_DISK] }),
   loadcancelled: aPublishedScript(() => theLoadToCancelScript(false)),
   multiloadcancelled: aPublishedScript(() => theLoadToCancelScript(true)),
-  signwithoutdata: aPublishedScript(() => theSignWithoutDataScript(true), {
+  signwithoutdata: aPublishedScript(theSignWithoutDataScript, {
     conditions: [THE_FILENAME_IN_A_THIRD_COMPONENT],
   }),
-  signwithoutdatacancelled: aPublishedScript(() => theSignWithoutDataScript(false)),
   cosignwithoutdatacancelled: aPublishedScript(theCosignWithoutDataScript),
 };
