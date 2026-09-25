@@ -1,5 +1,5 @@
 import type { CheckView } from "../contract/CheckView";
-import type { KnownBug } from "../contract/KnownBug";
+import type { LabelView } from "../contract/LabelView";
 import type { ReportView } from "../contract/ReportView";
 import type { ResultName } from "../contract/ResultName";
 import type { SetView } from "../contract/SetView";
@@ -15,8 +15,7 @@ export function aCheck(id: string, state: ResultName = "PENDIENTE"): CheckView {
     warning: null,
     assistance: "none",
     store: "rsa",
-    bug: null,
-    deprecated: false,
+    labels: [],
     state,
     observation: state === "PENDIENTE" ? null : "el trámite se completó",
     date: state === "PENDIENTE" ? null : "2026-09-21",
@@ -24,25 +23,21 @@ export function aCheck(id: string, state: ResultName = "PENDIENTE"): CheckView {
   };
 }
 
-export function aKnownBug(master: KnownBug["master"] = "present"): KnownBug {
-  return { id: "BUG-15", title: "Ausencia de validación de cop en signandsave", master };
-}
+export const AN_ADR_LABEL: LabelView = {
+  name: "rfirma:adr-0010",
+  reason: "Desviación deliberada de rFirma: la decide su ADR-0010",
+};
 
-export function withABug(view: ReportView, id: string, bug: KnownBug): ReportView {
-  return {
-    ...view,
-    sets: view.sets.map((set) => ({
-      ...set,
-      checks: set.checks.map((check) => (check.id === id ? { ...check, bug } : check)),
-    })),
-  };
-}
+export const A_BUG_LABEL: LabelView = {
+  name: "autofirma:bug:1.9.2",
+  reason: "BUG-15: Ausencia de validación de cop en signandsave (sigue en master)",
+};
 
-export function withADeprecatedFormat(view: ReportView, id: string): ReportView {
+export function withLabels(view: ReportView, id: string, labels: LabelView[]): ReportView {
   const sets = view.sets.map((set) =>
     aSet(
       set.name,
-      set.checks.map((check) => (check.id === id ? { ...check, deprecated: true } : check)),
+      set.checks.map((check) => (check.id === id ? { ...check, labels } : check)),
     ),
   );
   return { ...view, sets, summary: summaryOf(sets.flatMap((set) => set.checks)) };
@@ -50,14 +45,12 @@ export function withADeprecatedFormat(view: ReportView, id: string): ReportView 
 
 function summaryOf(checks: CheckView[]): Summary {
   const count = (state: ResultName) => checks.filter((check) => check.state === state).length;
-  const deprecated = checks.filter(
-    (check) => check.deprecated && check.state === "NO CONFORME",
-  ).length;
   return {
     total: checks.length,
     compliant: count("CONFORME"),
-    noncompliant: count("NO CONFORME") - deprecated,
-    deprecated,
+    noncompliant: count("NO CONFORME"),
+    explained: checks.filter((check) => check.state === "NO CONFORME" && check.labels.length > 0)
+      .length,
     not_observable: count("NO OBSERVABLE"),
     pending: count("PENDIENTE"),
   };

@@ -72,7 +72,8 @@ algoritmo de firma: la firma se rechaza con SAF_51 después de elegirlo.
 [check.drive]
 mode = "v4"
 script = "signwithanunsupportedkeytype"
-act.consent = "La sede pide un almacén PKCS#12 con una clave Ed25519: su contraseña es 1234; elige su único certificado."
+store = "ed25519"
+act.consent = "La sede nombra el token PKCS#11 por su biblioteca: su PIN es 1234; elige su único certificado, el Ed25519."
 expects.code = "SAF_51"
 
 [[check]]
@@ -194,7 +195,7 @@ expects.completes.conditions = ["the-expected-certificate"]
 id = "a_filter_of_unknown_kinds_alone_keeps_expired_certificates_hidden"
 set = "certificado"
 citation = "CertFilterManager.java:127-135, 261-268; MultipleCertificateFilter.java:34-41"
-bug = "BUG-31"
+explained_by.autofirma = "BUG-31"
 statement = """
 Un filtro hecho solo de condiciones que no se reconocen no filtra nada, y tampoco debe contar como
 filtro de la sede: los certificados caducados se siguen ocultando como si no hubiera filtros.
@@ -210,6 +211,7 @@ expects.completes.conditions = ["the-expected-certificate"]
 id = "expired_certificates_are_hidden_only_without_filters"
 set = "certificado"
 citation = "CertFilterManager.java:127-135"
+explained_by.rfirma = "ADR-0023"
 statement = """
 Sin ningún filtro, los certificados caducados no se ofrecen; con cualquier filtro de la sede, sí,
 si lo cumplen.
@@ -407,6 +409,7 @@ expects.completes.conditions = ["a-new-selection-after-the-release"]
 id = "a_certificate_pinned_by_selectcert_signs_without_asking"
 set = "certificado"
 citation = "ProtocolInvocationLauncherSelectCert.java:195-197; ProtocolInvocationLauncherSign.java:518-521"
+explained_by.rfirma = "ADR-0010"
 statement = """
 El certificado que fija selectcert con sticky lo usa la firma siguiente con sticky sin volver a
 preguntar: la fijación es del proceso, no de la operación.
@@ -422,6 +425,7 @@ expects.completes.conditions = ["signed-with-the-pinned-certificate"]
 id = "a_pinned_certificate_ignores_the_filters_of_the_next_request"
 set = "certificado"
 citation = "ProtocolInvocationLauncherSelectCert.java:139-142"
+explained_by.rfirma = "ADR-0010"
 statement = """
 Mientras hay un certificado fijado, una operación con sticky lo reutiliza sin aplicar los filtros
 ni el almacén que trae su petición.
@@ -437,6 +441,7 @@ expects.completes.conditions = ["the-pinned-certificate-despite-the-filters"]
 id = "selectcert_answers_the_pinned_certificate_without_asking"
 set = "certificado"
 citation = "ProtocolInvocationLauncherSelectCert.java:139-142"
+explained_by.rfirma = "ADR-0010"
 statement = """
 Con un certificado fijado, selectcert con sticky lo devuelve sin abrir el diálogo de selección.
 """

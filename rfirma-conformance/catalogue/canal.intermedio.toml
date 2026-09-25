@@ -86,7 +86,7 @@ expects.completes.conditions = ["each-operation-launched-apart"]
 id = "a_saf_code_travels_to_the_intermediate_server_even_before_the_operation_began"
 set = "canal.intermedio"
 citation = "ProtocolInvocationLauncher.java:601-604, 710-713, 738-743, 870-889"
-bug = "BUG-26"
+explained_by.autofirma = "BUG-26"
 statement = """
 Por servidor intermedio el rechazo se sube a stservlet con el prefijo SAF_nn intacto, tanto el de la
 operación ya empezada como el de un parámetro que se detecta antes de empezarla (SAF_03): por canal
@@ -136,7 +136,7 @@ expects.completes.conditions = ["the-refused-upload-attempted"]
 id = "a_cipher_key_of_eight_characters_but_not_eight_bytes_answers_saf_03"
 set = "canal.intermedio"
 citation = "UrlParameters.java:327-344; DesCipher.java:37; ProtocolInvocationLauncherSign.java:198-202; ProtocolInvocationLauncher.java:697-713"
-bug = "BUG-34"
+explained_by.autofirma = "BUG-34"
 statement = """
 Una key de ocho caracteres que no son ocho bytes no sirve como clave DES: se rechaza con SAF_03 antes
 de pedir el certificado, y no se firma para acabar en un SAF_12 sin cifrar.

@@ -1,6 +1,6 @@
 import type { Summary } from "../contract/Summary";
 import { ResultIcon } from "../ui/icons";
-import { countOf, DEPRECATED_LABEL, RESULTS, resultTone } from "../words";
+import { countOf, RESULTS, resultTone, unexplained } from "../words";
 
 export function SummaryBar({ summary, compact = false }: { summary: Summary; compact?: boolean }) {
   const done = summary.total - summary.pending;
@@ -11,7 +11,7 @@ export function SummaryBar({ summary, compact = false }: { summary: Summary; com
       aria-label={`${done} de ${summary.total} comprobaciones con resultado`}
     >
       {RESULTS.map((result) => {
-        const count = countOf(summary, result);
+        const count = result === "NO CONFORME" ? unexplained(summary) : countOf(summary, result);
         return count === 0 ? null : (
           <span
             key={result}
@@ -20,8 +20,8 @@ export function SummaryBar({ summary, compact = false }: { summary: Summary; com
           />
         );
       })}
-      {summary.deprecated > 0 && (
-        <span className="segment tone-deprecated" style={{ flexGrow: summary.deprecated }} />
+      {summary.explained > 0 && (
+        <span className="segment tone-explained" style={{ flexGrow: summary.explained }} />
       )}
     </div>
   );
@@ -39,9 +39,14 @@ export function Counts({ summary }: { summary: Summary }) {
           </li>
         );
       })}
-      {summary.deprecated > 0 && (
-        <li className="deprecated-count" title={DEPRECATED_LABEL}>
-          <span className="count">{summary.deprecated} deprecados</span>
+      {summary.noncompliant > 0 && (
+        <li
+          className="explained-count"
+          title="Un NO CONFORME con cualquier etiqueta está explicado"
+        >
+          <span className="count">
+            {unexplained(summary)} sin explicar · {summary.explained} explicados
+          </span>
         </li>
       )}
     </ul>

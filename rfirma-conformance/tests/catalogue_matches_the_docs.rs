@@ -1,11 +1,13 @@
 //! El catálogo y la referencia se cruzan con la documentación de `docs/afirma/1.9.2/`: capítulos,
-//! tabla SAF del capítulo 15, fichas del anexo A1 y su registro de bugs.
+//! tabla SAF del capítulo 15, fichas del anexo A1, su registro de bugs y la tabla SAF × punto de
+//! decisión; y cada etiqueta `rfirma:adr-NNNN` con el ADR de `docs/adr/` que la cita.
 
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 
 use rfirma_conformance::catalogue::read_the_catalogue;
 use rfirma_conformance::known_bug::{the_known_bugs, InMaster};
+use rfirma_conformance::saf_table::{read_the_saf_table, the_codes_of};
 
 #[derive(Debug, Default)]
 struct Entry {
@@ -14,6 +16,7 @@ struct Entry {
     declared: String,
     cited_cards: BTreeSet<String>,
     bug: Option<String>,
+    adr: Option<String>,
 }
 
 #[derive(Debug)]
@@ -71,6 +74,7 @@ fn an_entry(id: &str, chapter: &str, declared: &str) -> Entry {
         declared: declared.to_owned(),
         cited_cards: cards_cited_in(declared),
         bug: None,
+        adr: None,
     }
 }
 
@@ -246,6 +250,39 @@ fn bugs_out_of_step(known: &[Known], entries: &[Entry]) -> Vec<String> {
         .collect()
 }
 
+/// Las comprobaciones etiquetadas con un ADR de rFirma que no está en `docs/adr/` o no cita su id.
+fn adr_labels_without_their_citation(entries: &[Entry], adrs: &[(String, String)]) -> Vec<String> {
+    entries
+        .iter()
+        .filter_map(|entry| {
+            let adr = entry.adr.as_deref()?;
+            let prefix = format!("{}-", adr.trim_start_matches("ADR-"));
+            match adrs.iter().find(|(file, _)| file.starts_with(&prefix)) {
+                None => Some(format!("{}: {adr} no está en docs/adr/", entry.id)),
+                Some((_, text)) if !text.contains(&format!("`{}`", entry.id)) => {
+                    Some(format!("{}: el {adr} no la cita", entry.id))
+                }
+                Some(_) => None,
+            }
+        })
+        .collect()
+}
+
+fn the_adrs_of_the_repository() -> Vec<(String, String)> {
+    let dir = crate_dir().join("../docs/adr");
+    let mut adrs: Vec<(String, String)> = std::fs::read_dir(&dir)
+        .unwrap_or_else(|error| panic!("no se pudo leer {}: {error}", dir.display()))
+        .filter_map(|entry| entry.ok().map(|entry| entry.path()))
+        .filter(|path| path.extension().and_then(|ext| ext.to_str()) == Some("md"))
+        .map(|path| {
+            let name = path.file_name().unwrap().to_string_lossy().into_owned();
+            (name, read(&path))
+        })
+        .collect();
+    adrs.sort();
+    adrs
+}
+
 fn entries_whose_chapter_has_no_file(
     entries: &[Entry],
     chapters: &BTreeSet<String>,
@@ -262,6 +299,20 @@ fn codes_of_the_table_without_an_entry(
     named: &BTreeSet<String>,
 ) -> Vec<String> {
     table.difference(named).cloned().collect()
+}
+
+fn codes_the_saf_table_and_the_manual_disagree_on(
+    manual: &BTreeSet<String>,
+    rows: &BTreeSet<String>,
+) -> Vec<String> {
+    manual
+        .difference(rows)
+        .map(|code| format!("{code}: la sede puede recibirlo y no tiene fila"))
+        .chain(
+            rows.difference(manual)
+                .map(|code| format!("{code}: tiene fila y la sede no puede recibirlo")),
+        )
+        .collect()
 }
 
 fn cited_cards_that_do_not_exist(entries: &[Entry], cards: &BTreeSet<String>) -> Vec<String> {
@@ -330,7 +381,8 @@ fn the_catalogue() -> Vec<Entry> {
         .unwrap_or_else(|complaint| panic!("{complaint}"))
         .iter()
         .map(|check| Entry {
-            bug: check.bug.map(|bug| bug.id.clone()),
+            bug: check.bug().map(|bug| bug.id.clone()),
+            adr: check.adr().map(str::to_owned),
             ..an_entry(
                 &check.id,
                 &check.requirement.chapter,
@@ -414,6 +466,33 @@ fn every_code_of_the_error_table_is_closed_against_the_catalogue() {
         "hay códigos de la tabla del capítulo 15 sin entrada, sin familia y sin declararse no \
          medibles:\n  {}",
         codes_of_the_table_without_an_entry(&table, &named).join("\n  ")
+    );
+}
+
+#[test]
+fn every_code_the_site_can_receive_has_a_row_in_the_saf_table_and_no_other_does() {
+    let manual = saf_codes_in_the_table(&read(&the_manual().join("15-errores.md")));
+    let rows =
+        the_codes_of(&read_the_saf_table().unwrap_or_else(|complaint| panic!("{complaint}")));
+
+    assert!(
+        codes_the_saf_table_and_the_manual_disagree_on(&manual, &rows).is_empty(),
+        "la tabla SAF no casa con la del capítulo 15:\n  {}",
+        codes_the_saf_table_and_the_manual_disagree_on(&manual, &rows).join("\n  ")
+    );
+}
+
+#[test]
+fn a_code_without_a_row_and_a_row_the_site_never_receives_are_both_caught_and_named() {
+    let manual = BTreeSet::from(["SAF_03".to_owned(), "SAF_06".to_owned()]);
+    let rows = BTreeSet::from(["SAF_03".to_owned(), "SAF_07".to_owned()]);
+
+    assert_eq!(
+        codes_the_saf_table_and_the_manual_disagree_on(&manual, &rows),
+        vec![
+            "SAF_06: la sede puede recibirlo y no tiene fila",
+            "SAF_07: tiene fila y la sede no puede recibirlo",
+        ]
     );
 }
 
@@ -506,6 +585,47 @@ fn a_bug_the_catalogue_and_the_reference_disagree_on_is_caught_and_named() {
             "a_one: la referencia lo explica con BUG-01 y el catálogo declara ningún bug",
             "a_two: declara BUG-02 y la referencia lo da conforme",
             "a_four: declara BUG-04 y la referencia no la nombra",
+        ]
+    );
+}
+
+#[test]
+fn every_deliberate_deviation_is_labelled_with_an_adr_that_cites_the_check() {
+    let entries = the_catalogue();
+
+    assert!(
+        entries.iter().any(|entry| entry.adr.is_some()),
+        "debería haber al menos una desviación deliberada etiquetada"
+    );
+    assert!(
+        adr_labels_without_their_citation(&entries, &the_adrs_of_the_repository()).is_empty(),
+        "hay etiquetas de ADR sin su cita:\n  {}",
+        adr_labels_without_their_citation(&entries, &the_adrs_of_the_repository()).join("\n  ")
+    );
+}
+
+#[test]
+fn an_adr_label_whose_adr_is_missing_or_does_not_cite_the_check_is_caught_and_named() {
+    let labelled = |id: &str, adr: &str| Entry {
+        adr: Some(adr.to_owned()),
+        ..an_entry(id, "13", "")
+    };
+    let entries = [
+        labelled("a_cited", "ADR-0010"),
+        labelled("an_uncited", "ADR-0010"),
+        labelled("a_lost", "ADR-0099"),
+        an_entry("an_unlabelled", "13", ""),
+    ];
+    let adrs = [(
+        "0010-memoria-entre-sesiones.md".to_owned(),
+        "Lo mide `a_cited`.".to_owned(),
+    )];
+
+    assert_eq!(
+        adr_labels_without_their_citation(&entries, &adrs),
+        [
+            "an_uncited: el ADR-0010 no la cita",
+            "a_lost: ADR-0099 no está en docs/adr/",
         ]
     );
 }

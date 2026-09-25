@@ -1,0 +1,292 @@
+# La tabla SAF × punto de decisión del original: una vista sobre el catálogo, no un conjunto.
+
+[[row]]
+code = "SAF_00"
+point = "before_certificate"
+unmeasurable = "Solo lo da un fichero ilegible elegido en el diálogo del cliente (unreadable_data_chosen_by_the_person_answer_saf_00)."
+
+[[row]]
+code = "SAF_02"
+point = "parser"
+covered = ["a_foreign_scheme_opens_no_channel"]
+
+[[row]]
+code = "SAF_03"
+point = "parser"
+covered = [
+  "a_non_alphanumeric_identifier_is_refused_with_saf_03",
+  "a_local_file_in_dat_is_refused_with_saf_03",
+  "a_retrieve_servlet_outside_http_is_refused_with_saf_03",
+  "a_retrieve_servlet_carrying_its_own_parameters_is_refused_with_saf_03",
+  "an_identifier_longer_than_twenty_characters_is_refused_with_saf_03",
+  "fileid_stands_in_for_a_missing_identifier",
+  "a_cipher_key_of_the_wrong_length_answers_saf_03",
+  "fileid_without_retrieve_servlet_answers_saf_03",
+  "a_cipher_key_of_eight_characters_but_not_eight_bytes_answers_saf_03",
+  "the_signature_format_is_mandatory",
+  "an_algorithm_outside_the_catalogue_is_rejected",
+  "save_rejects_an_illegal_filename_with_saf_03",
+  "save_rejects_illegal_extensions_with_saf_03",
+  "save_without_data_answers_saf_03",
+  "signandsave_rejects_an_illegal_filename_with_saf_03",
+  "a_batch_servlet_url_carrying_its_own_parameters_is_refused_with_saf_03",
+]
+
+[[row]]
+code = "SAF_03"
+point = "channel"
+covered = [
+  "the_service_channel_answers_saf_03_to_a_foreign_session",
+  "an_unknown_order_answers_saf_03",
+]
+
+[[row]]
+code = "SAF_03"
+point = "before_certificate"
+covered = ["a_malformed_minimum_client_version_is_refused_with_saf_03"]
+
+[[row]]
+code = "SAF_03"
+point = "after_certificate"
+covered = [
+  "a_triphase_signature_without_server_url_answers_saf_03",
+  "a_local_xml_batch_is_refused_with_saf_03",
+]
+
+[[row]]
+code = "SAF_03"
+point = "batch_presigner"
+covered = ["a_presigner_answering_400_fails_with_saf_03"]
+
+[[row]]
+code = "SAF_03"
+point = "batch_postsigner"
+gap = "Ningún guion hace que el postfirmador responda un 400."
+
+[[row]]
+code = "SAF_04"
+point = "parser"
+covered = ["unsupported_operation_rejected"]
+
+[[row]]
+code = "SAF_04"
+point = "after_certificate"
+covered = [
+  "a_pades_countersign_is_refused_with_saf_04",
+  "facturae_refuses_cosign_with_saf_04",
+  "facturae_refuses_countersign_with_saf_04",
+  "sign_missing_or_invalid_operation_rejected",
+  "signandsave_rejects_a_request_without_a_verb_with_saf_04",
+]
+
+[[row]]
+code = "SAF_06"
+point = "before_certificate"
+covered = [
+  "an_unsupported_format_is_rejected_with_saf_06",
+  "a_saf_code_reaches_the_published_client_intact_over_the_service_channel",
+]
+
+[[row]]
+code = "SAF_08"
+point = "key_store"
+covered = ["a_key_store_foreign_to_the_system_is_rejected_with_saf_08"]
+
+[[row]]
+code = "SAF_09"
+point = "channel"
+unmeasurable = "El catch final de CommandProcessorThread no se alcanza: processCommand envuelve en IOException, que es SAF_11, todo lo que lanza."
+
+[[row]]
+code = "SAF_09"
+point = "after_certificate"
+gap = "Ningún trámite hace fallar al proveedor criptográfico con el certificado ya elegido; el único camino conocido es el BUG-15, donde se exige SAF_04."
+
+[[row]]
+code = "SAF_11"
+point = "channel"
+covered = [
+  "a_refused_upload_answers_saf_11",
+  "a_cmd_that_is_not_an_operation_answers_saf_11",
+  "a_send_part_out_of_range_answers_saf_11",
+  "a_failed_save_over_the_service_channel_answers_saf_11",
+]
+
+[[row]]
+code = "SAF_12"
+point = "after_certificate"
+unmeasurable = "Solo lo provoca una key que el analizador debería rechazar (BUG-34): lo que se exige es el SAF_03 de a_cipher_key_of_eight_characters_but_not_eight_bytes_answers_saf_03."
+
+[[row]]
+code = "SAF_13"
+point = "parser"
+covered = [
+  "a_retrieve_servlet_on_a_local_host_is_refused_with_saf_13",
+  "the_storage_servlet_is_validated_like_the_retrieve_servlet",
+  "a_batch_servlet_on_the_local_loopback_is_refused_with_saf_13",
+]
+
+[[row]]
+code = "SAF_15"
+point = "channel"
+covered = ["an_undecipherable_request_answers_saf_15"]
+
+[[row]]
+code = "SAF_16"
+point = "channel"
+covered = ["a_retriever_error_answers_saf_16"]
+
+[[row]]
+code = "SAF_17"
+point = "before_certificate"
+covered = ["format_auto_over_data_that_is_no_signature_is_rejected_with_saf_17"]
+
+[[row]]
+code = "SAF_19"
+point = "key_store"
+covered = ["a_filter_that_excludes_every_certificate_answers_saf_19"]
+
+[[row]]
+code = "SAF_20"
+point = "after_certificate"
+covered = ["a_malformed_local_batch_fails_with_saf_20"]
+
+[[row]]
+code = "SAF_21"
+point = "channel"
+covered = [
+  "websocket_rejects_a_protocol_version_it_does_not_support",
+  "websocket_rejects_an_obsolete_protocol_version",
+  "service_channel_version_range",
+]
+
+[[row]]
+code = "SAF_21"
+point = "before_certificate"
+covered = ["the_v3_channel_takes_the_version_of_each_operation"]
+
+[[row]]
+code = "SAF_23"
+point = "before_certificate"
+covered = ["an_unknown_expandable_policy_is_rejected_with_saf_23"]
+
+[[row]]
+code = "SAF_25"
+point = "before_certificate"
+covered = ["a_load_that_cannot_read_answers_saf_25"]
+
+[[row]]
+code = "SAF_26"
+point = "batch_presigner"
+covered = [
+  "a_batch_whose_presigner_does_not_answer_fails_with_saf_26",
+  "a_presigner_answering_404_fails_with_saf_26",
+]
+
+[[row]]
+code = "SAF_26"
+point = "batch_postsigner"
+gap = "Ningún guion deja sin respuesta al postfirmador ni le hace responder un 4xx."
+
+[[row]]
+code = "SAF_27"
+point = "batch_presigner"
+covered = ["a_presigner_answering_500_fails_with_saf_27"]
+
+[[row]]
+code = "SAF_27"
+point = "batch_postsigner"
+gap = "Ningún guion hace que el postfirmador responda un 5xx."
+
+[[row]]
+code = "SAF_28"
+point = "after_certificate"
+covered = ["a_pades_signature_over_data_that_is_no_pdf_is_rejected_with_saf_28"]
+
+[[row]]
+code = "SAF_29"
+point = "after_certificate"
+covered = ["a_xades_enveloped_signature_over_data_that_is_no_xml_is_rejected_with_saf_29"]
+
+[[row]]
+code = "SAF_30"
+point = "after_certificate"
+covered = ["an_ooxml_signature_over_data_that_is_no_office_document_is_rejected_with_saf_30"]
+
+[[row]]
+code = "SAF_31"
+point = "after_certificate"
+covered = ["a_xades_cosignature_over_data_that_is_no_signature_is_rejected_with_saf_31"]
+
+[[row]]
+code = "SAF_32"
+point = "after_certificate"
+covered = ["a_facturae_signature_over_a_signed_invoice_is_rejected_with_saf_32"]
+
+[[row]]
+code = "SAF_38"
+point = "after_certificate"
+covered = ["a_facturae_signature_over_data_that_is_no_invoice_is_rejected_with_saf_38"]
+
+[[row]]
+code = "SAF_39"
+point = "before_certificate"
+covered = ["check_signatures_stops_a_multisignature_it_cannot_validate"]
+
+[[row]]
+code = "SAF_40"
+point = "triphase_server"
+covered = ["a_triphase_server_failure_is_rejected_with_saf_40"]
+
+[[row]]
+code = "SAF_41"
+point = "before_certificate"
+covered = ["operation_minimum_client_version_unsatisfied_rejected"]
+
+[[row]]
+code = "SAF_43"
+point = "before_certificate"
+covered = [
+  "a_wanted_visible_signature_cancelled_answers_saf_43",
+  "signandsave_cancelled_at_the_visible_area_answers_saf_43",
+]
+
+[[row]]
+code = "SAF_44"
+point = "after_certificate"
+covered = ["a_cosignature_without_the_data_or_a_matching_digest_is_rejected_with_saf_44"]
+
+[[row]]
+code = "SAF_46"
+point = "channel"
+covered = ["v4_channel_credential_absent"]
+
+[[row]]
+code = "SAF_47"
+point = "channel"
+covered = ["the_v4_channel_answers_saf_47_to_an_origin_that_is_not_loopback"]
+
+[[row]]
+code = "SAF_50"
+point = "before_certificate"
+gap = "Ninguna comprobación pide checkSignatures en headless sobre un PDF con un posible shadow attack o un solapamiento."
+
+[[row]]
+code = "SAF_50"
+point = "after_certificate"
+covered = [
+  "a_certified_pdf_answers_saf_50_when_headless",
+  "a_password_protected_pdf_answers_saf_50_when_headless",
+  "a_pdf_with_unregistered_signatures_answers_saf_50_when_headless",
+  "a_wrong_pdf_password_answers_saf_50_when_headless",
+]
+
+[[row]]
+code = "SAF_51"
+point = "after_certificate"
+covered = ["a_key_of_an_unsupported_type_answers_saf_51"]
+
+[[row]]
+code = "SAF_52"
+point = "key_store"
+unmeasurable = "Solo lo da una tarjeta DNIe o CERES bloqueada de verdad (a_locked_card_answers_saf_52)."

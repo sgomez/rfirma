@@ -1,8 +1,6 @@
 import type { Assistance } from "./contract/Assistance";
 import type { CheckView } from "./contract/CheckView";
 import type { ClientKind } from "./contract/ClientKind";
-import type { InMaster } from "./contract/InMaster";
-import type { KnownBug } from "./contract/KnownBug";
 import type { ResultName } from "./contract/ResultName";
 import type { Summary } from "./contract/Summary";
 
@@ -33,34 +31,19 @@ export function countOf(summary: Summary, result: ResultName): number {
   }
 }
 
-export function rowsWith(summary: Summary, result: ResultName): number {
-  return countOf(summary, result) + (result === "NO CONFORME" ? summary.deprecated : 0);
+export function unexplained(summary: Summary): number {
+  return summary.noncompliant - summary.explained;
 }
 
-export const DEPRECATED_LABEL = "Formato deprecado";
-
-export const DEPRECATED_REASON =
-  "El manual de AutoFirma lo desaconseja (MCF, §8): AutoFirma lo soporta y rFirma no, y su NO CONFORME no cuenta como fallo.";
+export function isExplained(check: CheckView): boolean {
+  return check.state === "NO CONFORME" && check.labels.length > 0;
+}
 
 export const assistanceName: Record<Assistance, string> = {
   none: "nada: es automática",
   click: "elegir o pulsar en un diálogo",
   person: "hacer en el diálogo lo que se te indica",
 };
-
-const inMasterName: Record<InMaster, string> = {
-  present: "sigue en master",
-  fixed: "corregido en master",
-  partial: "corregido a medias en master",
-};
-
-export function bugLabel(bug: KnownBug): string {
-  return `Bug AutoFirma 1.9.2 · ${inMasterName[bug.master]}`;
-}
-
-export function isAnExpectedFailure(check: CheckView, kind: ClientKind): boolean {
-  return kind === "autofirma" && check.bug !== null && check.state === "NO CONFORME";
-}
 
 export function clientName(kind: ClientKind | null | undefined): string {
   if (kind === "autofirma") return "AutoFirma";

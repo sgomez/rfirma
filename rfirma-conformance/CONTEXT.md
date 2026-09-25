@@ -126,6 +126,8 @@ Dónde encuentra el cliente sus certificados en un trámite. Es una lista cerrad
 - **token**: el token PKCS#11 de pruebas, con su PIN y varios certificados.
 - **token_apart**: el mismo token sin registrar en el almacén del sistema, que tiene otro
   certificado: distingue el almacén que la sede nombra por su biblioteca del sistema.
+- **ed25519**: un token propio sin registrar, con su PIN y un solo certificado, cuya clave es
+  Ed25519: un tipo de clave con el que no se compone ningún algoritmo de firma.
 - **several**: varios certificados de pruebas sin PIN, para los filtros, el almacén que nombra la
   sede y la fijación; el token queda alcanzable por su biblioteca, sin registrar.
 - **expired**: uno vigente y uno caducado, sin PIN, para ver qué oculta la selección.
@@ -140,12 +142,28 @@ comprobación tiene **un solo** conjunto, el del componente que decide; el códi
 que observa nunca deciden dónde va.
 _Avoid_: grupo, suite (para un conjunto)
 
+**Punto de decisión**:
+Dónde decide el original un código SAF: el **analizador** de la petición, el **canal** que la trae,
+la operación **antes del certificado** (o sin pedir ninguno, como guardar y cargar), el **almacén**
+al elegirlo, la firma **después del certificado**, o un servicio remoto: el **prefirmador** o el
+**postfirmador** del lote y el **servidor trifásico**. Es una lista cerrada. Un mismo código puede
+decidirse en varios; un NO CONFORME de SAF suele venir de dónde se decide, no de qué código es.
+_Avoid_: origen, capa (para un punto de decisión)
+
+**Tabla SAF**:
+Cada código SAF que la sede puede recibir, cruzado con cada punto de decisión desde el que el
+original lo emite. Cada fila está **cubierta** por comprobaciones que lo miden, es **no medible**
+con su motivo, o es un **hueco** declarado, que nadie mide todavía. Es una vista sobre el catálogo,
+no un conjunto: una comprobación no cambia de conjunto por estar en una fila, y toda la que espera
+un `SAF_NN` está en una sola.
+_Avoid_: matriz de errores, cobertura SAF (para la tabla)
+
 **Resultado**:
 El juicio de una comprobación, siempre respecto a lo que exige el protocolo y nunca respecto a lo
 que se sabe del cliente. Es una lista cerrada:
 - **CONFORME**: se comporta como exige el protocolo.
-- **NO CONFORME**: no se comporta así, incluido cuando es AutoFirma quien falla por un bug suyo;
-  entonces la consola lo marca como esperado, pero el resultado no cambia.
+- **NO CONFORME**: no se comporta así, también cuando lo explica una **etiqueta**, que no cambia
+  el resultado.
 - **NO OBSERVABLE**: no se puede saber, porque la sede no llega a verlo o porque aún no se ha
   averiguado cómo medirlo. Lo que el instrumento no puede ver es NO OBSERVABLE para cualquier
   cliente.
@@ -173,11 +191,26 @@ _Avoid_: conductor, sujeto, arnés
 
 ### Validación de la suite
 
+**Etiqueta**:
+Lo que puede explicar el NO CONFORME de una comprobación, declarado en ella y enseñado igual en
+cualquier informe, sea del cliente que sea. Es una lista cerrada, y cada una tiene un origen que se
+comprueba:
+- **autofirma:bug:1.9.2**: un **bug conocido** de AutoFirma 1.9.2, con su ficha `BUG-NN`.
+- **autofirma:bug:master**: ese bug sigue en `master`; se deduce del registro, no se escribe.
+- **rfirma:adr-NNNN**: una **desviación deliberada**, con el ADR que la decide y cita la comprobación.
+- **manual:deprecated**: un **formato deprecado**.
+No cambia el resultado. Un NO CONFORME con cualquier etiqueta cuenta como **explicado**, y sin
+ninguna, **sin explicar**: esa es la cifra que mira quien ejecuta. El límite se acepta a sabiendas:
+la suite no sabe qué cliente mide, así que no dice para cuál vale cada etiqueta, y con AutoFirma
+una `rfirma:` da por explicado un fallo que para ese cliente no lo está. Quien ejecuta sabe qué ha
+lanzado y lee la que le toca; lo que sí es por cliente es la **validación**.
+_Avoid_: marca, fallo esperado, causa (fuera de la referencia)
+
 **Bug conocido**:
 Una ficha `BUG-NN` del anexo A1 por la que AutoFirma 1.9.2 incumple lo que exige una comprobación.
-La comprobación lo declara en el catálogo, y el registro `bugs/autofirma-1.9.2.toml` guarda su
-título y si sigue en `master`, corregido o corregido a medias. La consola lo enseña en cualquier
-informe, también en los de rFirma.
+La comprobación lo declara con la etiqueta `autofirma:bug:1.9.2`, y el registro
+`bugs/autofirma-1.9.2.toml` guarda su título y si sigue en `master`, corregido o corregido a
+medias; si sigue, la comprobación lleva además `autofirma:bug:master`.
 _Avoid_: fallo esperado (para el bug), causa (fuera de la referencia)
 
 **Referencia**:
@@ -201,14 +234,14 @@ de la referencia, que se investiga; nunca del cliente.
 _Avoid_: sorpresa, regresión
 
 **Desviación deliberada**:
-Una exigencia en la que rFirma no hace lo que AutoFirma porque un ADR suyo lo decidió. La suite no
-la conoce: sale NO CONFORME sin causa, y el porqué lo cuenta el ADR.
+Una exigencia en la que rFirma no hace lo que AutoFirma porque un ADR suyo lo decidió. La
+comprobación lleva la etiqueta `rfirma:adr-NNNN` y el ADR cita su id: el NO CONFORME de rFirma
+sale explicado, y el porqué lo cuenta el ADR.
 _Avoid_: excepción, falso negativo
 
 **Formato deprecado**:
 Un formato que el manual de AutoFirma desaconseja y mantiene solo por retrocompatibilidad (CMS,
 XMLDSig, ODF y OOXML), o un modo obsoleto dentro de un formato que AutoFirma marca como tal (la
-XAdES explícita): AutoFirma lo soporta y rFirma no. La comprobación que lo mide lo declara en el
-catálogo; su resultado no cambia, pero la consola la marca y su NO CONFORME se cuenta aparte de los
-fallos del cliente.
+XAdES explícita): AutoFirma lo soporta y rFirma no. La comprobación que lo mide lleva la etiqueta
+`manual:deprecated`; su resultado no cambia, y su NO CONFORME cuenta como explicado.
 _Avoid_: obsoleto, retirado

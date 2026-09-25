@@ -16,6 +16,9 @@
 # * token_apart: el mismo token, sin registrar en la NSS, y en la NSS solo el
 #   de seudonimo, que no esta en el token: distingue el almacen que nombra la
 #   sede por su biblioteca del almacen del sistema.
+# * ed25519: la NSS vacia y un token propio sin registrar con un solo
+#   certificado, el Ed25519 de testdata/site-driver/, con su clave; el PIN es
+#   1234.
 #
 # Ningun envoltorio apunta nunca al SOFTHSM2_CONF de quien corre la suite:
 # cada perfil monta el suyo, este lo use o no.
@@ -33,12 +36,13 @@ set -euo pipefail
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 fnmt="$here/../testdata/fnmt"
+site_driver="$here/../testdata/site-driver"
 module="${RFIRMA_PKCS11_MODULE:-/usr/lib/softhsm/libsofthsm2.so}"
 
 subject="${1:-}"
 store="${3:-rsa}"
 if [ ! -x "$subject" ]; then
-    echo "uso: $0 <ruta-del-binario> [autofirma|rfirma] [rsa|ec|token|token_apart|several|expired]" >&2
+    echo "uso: $0 <ruta-del-binario> [autofirma|rfirma] [rsa|ec|token|token_apart|ed25519|several|expired]" >&2
     exit 2
 fi
 
@@ -53,10 +57,11 @@ case "$store" in
     ec) p12s="active-ecc.p12" ;;
     token) p12s="" ;;
     token_apart) p12s="pseudonym-rsa.p12" ;;
+    ed25519) p12s="" ;;
     several) p12s="active-rsa.p12 active-ecc.p12 pseudonym-rsa.p12" ;;
     expired) p12s="active-ecc.p12 expired-rsa.p12" ;;
     *)
-        echo "almacen desconocido: $store (rsa, ec, token, token_apart, several o expired)" >&2
+        echo "almacen desconocido: $store (rsa, ec, token, token_apart, ed25519, several o expired)" >&2
         exit 2
         ;;
 esac
@@ -72,7 +77,7 @@ for tool in certutil modutil pk12util; do
 done
 
 with_token=false
-case "$store" in token | token_apart) with_token=true ;; esac
+case "$store" in token | token_apart | ed25519) with_token=true ;; esac
 
 if $with_token; then
     for tool in softhsm2-util pkcs11-tool openssl; do
@@ -115,25 +120,29 @@ if $with_token; then
     softhsm2-util --init-token --free --label "$token_label" \
         --so-pin 3737 --pin 1234 >/dev/null
 
-    # import_token_object <fichero .p12> <contrasena> <id> <etiqueta>
+    # import_token_object <ruta del .p12> <contrasena> <id> <etiqueta>
     import_token_object() {
         local p12="$1" password="$2" id="$3" label="$4"
-        openssl pkcs12 -in "$fnmt/$p12" -passin "pass:$password" -clcerts -nokeys -legacy \
+        openssl pkcs12 -in "$p12" -passin "pass:$password" -clcerts -nokeys -legacy \
             | openssl x509 -outform DER -out "$profile/softhsm/cert-$id.der"
         pkcs11-tool --module "$module" --token-label "$token_label" --login --pin 1234 \
             --write-object "$profile/softhsm/cert-$id.der" --type cert --id "$id" --label "$label" \
             >/dev/null
-        openssl pkcs12 -in "$fnmt/$p12" -passin "pass:$password" -nocerts -nodes -legacy \
+        openssl pkcs12 -in "$p12" -passin "pass:$password" -nocerts -nodes -legacy \
             | openssl pkcs8 -topk8 -nocrypt -outform DER -out "$profile/softhsm/key-$id.der"
         pkcs11-tool --module "$module" --token-label "$token_label" --login --pin 1234 \
             --write-object "$profile/softhsm/key-$id.der" --type privkey --id "$id" --label "$label" \
             >/dev/null
     }
 
-    import_token_object "active-rsa.p12" "$(the_password_of active-rsa.p12)" \
-        "01" "FNMT-ACTIVO-99999999R"
-    import_token_object "active-ecc.p12" "$(the_password_of active-ecc.p12)" \
-        "02" "FNMT-ACTIVO-ECC-99949991H"
+    if [ "$store" = ed25519 ]; then
+        import_token_object "$site_driver/ed25519.p12" 1234 "03" "ED25519"
+    else
+        import_token_object "$fnmt/active-rsa.p12" "$(the_password_of active-rsa.p12)" \
+            "01" "FNMT-ACTIVO-99999999R"
+        import_token_object "$fnmt/active-ecc.p12" "$(the_password_of active-ecc.p12)" \
+            "02" "FNMT-ACTIVO-ECC-99949991H"
+    fi
 fi
 
 for p12 in $p12s; do

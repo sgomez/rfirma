@@ -288,14 +288,6 @@ const aParameterRejection = (condition, order, expected) => ({
   holds: (answer) => answer.startsWith(expected),
 });
 
-/** El `rtservlet` en el bucle local, que se rechaza con `SAF_13`. */
-const THE_LOCAL_RTSERVLET_PROBE = aParameterRejection(
-  "local-rtservlet-saf-13",
-  (idSession) =>
-    `afirma://sign?op=sign&fileid=rfirma&rtservlet=http://127.0.0.1/rt&idsession=${idSession}`,
-  "SAF_13",
-);
-
 /** Los rechazos del análisis de la petición. */
 const THE_V4_REJECTION_PROBES = [
   aParameterRejection(
@@ -399,6 +391,7 @@ const THE_PARAMETER_CASES = [
   ["dat-with-a-local-file-saf-03", "dat=file:/etc/hostname", "SAF_03"],
   ["rtservlet-over-ftp-saf-03", "fileid=abc123&rtservlet=ftp://sede.example/rt", "SAF_03"],
   ["rtservlet-on-localhost-saf-13", "fileid=abc123&rtservlet=http://localhost/rt", "SAF_13"],
+  ["rtservlet-on-127-0-0-1-saf-13", "fileid=abc123&rtservlet=http://127.0.0.1/rt", "SAF_13"],
   [
     "rtservlet-with-a-query-saf-03",
     `fileid=abc123&rtservlet=${encodeURIComponent("https://sede.example/rt?op=get")}`,
@@ -807,14 +800,6 @@ export const WEBSOCKET_SCRIPTS = {
       THE_DIALOGUE_PATIENCE_MS,
     ),
     theConditionsOf(THE_REJECTIONS_IN_ORDER),
-  ),
-  "protocol-v4-local-access": onTheFourthProtocol(
-    theProbesOverTheFourthProtocol(
-      [54451, 54452, 54453],
-      [THE_LOCAL_RTSERVLET_PROBE],
-      THE_DIALOGUE_PATIENCE_MS,
-    ),
-    theConditionsOf([THE_LOCAL_RTSERVLET_PROBE]),
   ),
   "protocol-v4-keystore-over-ksb64": onTheFourthProtocol(theKeyStoreOverKsb64Script, [
     A_CERTIFICATE_OF_THE_KEYSTORE_STORE,

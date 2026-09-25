@@ -140,8 +140,3 @@ export function theCmsSignatureOfTheSite() {
 export function theReferenceSignature(name) {
   return readFileSync(join(here, "../reference", name));
 }
-
-/** El PKCS#12 con una clave Ed25519 hecho con OpenSSL junto a la sede, contraseña `1234`. */
-export function theEd25519KeyStore() {
-  return join(here, "ed25519.p12");
-}

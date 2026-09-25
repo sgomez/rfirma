@@ -4,7 +4,7 @@
 id = "v4_ports_negotiation"
 set = "canal.websocket"
 citation = "ProtocolInvocationLauncher.java:233-236, 976-990; AfirmaWebSocketServerManager.java:64-90"
-bug = "BUG-33"
+explained_by.autofirma = "BUG-33"
 statement = """
 El canal v4 enlaza el primer puerto libre de la lista de candidatos (ports=p1,p2,p3): con el
 primero ocupado, liga el siguiente.
@@ -163,7 +163,7 @@ set = "canal.websocket"
 citation = "AfirmaWebSocketServerManager.java:36, 100-107; ProtocolInvocationLauncher.java:240-245"
 statement = """
 El canal WebSocket sólo admite las versiones de protocolo 3 y 4: una URL de arranque que pide una
-posterior, v=99, se rechaza antes de ligar puerto alguno y no abre canal.
+posterior, v=99, se rechaza con SAF_21 antes de ligar puerto alguno y no abre canal.
 """
 
 [check.drive]
@@ -176,8 +176,8 @@ id = "websocket_rejects_an_obsolete_protocol_version"
 set = "canal.websocket"
 citation = "AfirmaWebSocketServerManager.java:36, 100-107; ProtocolInvocationLauncher.java:240-245"
 statement = """
-Una URL de arranque del canal WebSocket que pide una versión anterior a la 3, v=1, se rechaza antes
-de ligar puerto alguno y no abre canal.
+Una URL de arranque del canal WebSocket que pide una versión anterior a la 3, v=1, se rechaza con
+SAF_21 antes de ligar puerto alguno y no abre canal.
 """
 
 [check.drive]
