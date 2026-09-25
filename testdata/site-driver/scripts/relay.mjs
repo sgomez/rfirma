@@ -309,13 +309,13 @@ function aSpoiledRetrievalScript(answer, condition) {
 }
 
 /** Una firma por servidor intermedio resuelta cuando contesta, o al rendirse la página. */
-function aSignature(data, algorithm, format) {
+function aSignature(data, algorithm, format, extraParams = "") {
   return new Promise((resolve) => {
     AutoScript.sign(
       Buffer.from(data).toString("base64"),
       algorithm,
       format,
-      "",
+      extraParams,
       (signature) => resolve({ signature: String(signature) }),
       (type, message) => resolve({ type: String(type), message: String(message) }),
     );
@@ -349,21 +349,33 @@ async function theRefusalsScript() {
   settle({ event: "success" });
 }
 
-/** Una firma cuyo StorageService está en el bucle local: la aplicación no debe usarlo. */
+/**
+ * Una firma larga cuyo StorageService está en el bucle local: la aplicación recupera la petición del
+ * RetrieveService de la sede y, después, no debe subir nada.
+ */
 async function theLocalStorageScript() {
   const server = await anIntermediateServer();
   AutoScript.setServlets(server.loopbackStorage, server.retrieve);
-  const signed = await aSignature("rfirma", "SHA256withRSA", "CAdES");
-  const contacted = server.requests.filter(
-    (entry) => entry.listener === "loopback" && entry.op === "put",
+  const signed = await aSignature(
+    aDocumentTooLongForTheUrl(),
+    "SHA256withRSA",
+    "CAdES",
+    withoutAChoice(),
   );
+  const fileid = theFileidIn(server.requests);
+  const retrieval = server.getsFrom(THE_RETRIEVE_PATH).find((entry) => entry.id === fileid);
+  const uploaded = retrieval
+    ? server.requests.filter((entry) => entry.op === "put" && entry.at >= retrieval.at)
+    : [];
   emit(
-    aConditionEvent(
+    aMeasuredConditionEvent(
       THE_LOCAL_STORAGE_SERVLET_REFUSED,
-      contacted.length === 0,
-      contacted.length === 0
-        ? `la aplicación no subió nada a ${server.loopbackStorage}; la página acabó con ${signed.message ?? "una firma"}`
-        : `la aplicación subió ${contacted.length} veces a ${server.loopbackStorage}`,
+      retrieval ? uploaded.length === 0 : null,
+      !retrieval
+        ? `la aplicación no pidió la petición ${fileid} al RetrieveService; la página acabó con ${signed.message ?? "una firma"}`
+        : uploaded.length === 0
+          ? `la aplicación recuperó la petición y no subió nada a ${server.loopbackStorage}`
+          : `la aplicación recuperó la petición y subió ${uploaded.length} veces a ${uploaded.map((entry) => entry.listener).join(", ")}`,
     ),
   );
   settle(
