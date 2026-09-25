@@ -20,6 +20,15 @@ pub(crate) struct ReportView<'a> {
     header: &'a Header,
     summary: Summary,
     sets: Vec<SetView<'a>>,
+    orphans: Vec<OrphanView<'a>>,
+}
+
+#[derive(Debug, Serialize, TS)]
+#[ts(export)]
+struct OrphanView<'a> {
+    id: &'a str,
+    #[ts(as = "ResultName")]
+    state: &'static str,
 }
 
 #[derive(Debug, Serialize, TS)]
@@ -108,6 +117,13 @@ pub(crate) fn report_view<'a>(report: &'a Report, catalogue: &'a [Check]) -> Rep
         header: report.header(),
         summary,
         sets,
+        orphans: report
+            .orphans()
+            .map(|(id, state)| OrphanView {
+                id,
+                state: result_name(Some(state)),
+            })
+            .collect(),
     }
 }
 
@@ -287,6 +303,29 @@ bug = "BUG-18"
         assert_eq!(the_check(&json, "a_greeting")["deprecated"], false);
         assert_eq!(json["summary"]["noncompliant"], 0);
         assert_eq!(json["summary"]["deprecated"], 1);
+    }
+
+    #[test]
+    fn a_check_the_catalogue_no_longer_has_is_an_orphan_and_counts_nowhere() {
+        let catalogue = the_catalogue_in(THREE_CHECKS).unwrap();
+        let (dir, _) = a_report_of(
+            ClientKind::Rfirma,
+            "/usr/bin/rfirma",
+            &catalogue,
+            Outcome::Noncompliant,
+        );
+        let without_the_save = &THREE_CHECKS[..THREE_CHECKS.rfind("[[check]]").unwrap()];
+        let current = the_catalogue_in(without_the_save).unwrap();
+
+        let report = Report::open(&dir.path().join("dossier.json"), &current).unwrap();
+        let json = the_json_of(&report_view(&report, &current));
+
+        assert_eq!(json["summary"]["total"], 2);
+        assert_eq!(json["summary"]["noncompliant"], 0);
+        assert_eq!(
+            json["orphans"],
+            json!([{ "id": "a_save", "state": "NO CONFORME" }])
+        );
     }
 
     #[test]

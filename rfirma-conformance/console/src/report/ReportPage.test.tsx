@@ -18,6 +18,20 @@ describe("a report page", () => {
     expect(screen.getByRole("button", { name: "Comparar con la referencia…" })).toBeInTheDocument();
   });
 
+  it("lists apart the checks the catalogue no longer has", async () => {
+    const view = {
+      ...aReportView(),
+      orphans: [{ id: "a_renamed_check", state: "NO CONFORME" as const }],
+    };
+    renderConsoleAt("/informe/af-linux-prueba", aSnapshot({ report_name: "otro" }), (server) =>
+      server.reportViews.set("af-linux-prueba", view),
+    );
+
+    const orphans = await screen.findByRole("region", { name: "Huérfanas" });
+    expect(orphans).toHaveTextContent("a_renamed_check");
+    expect(orphans).toHaveTextContent("NO CONFORME");
+  });
+
   it("reads the report from the session while the session runs it", async () => {
     const snapshot = aSnapshot({
       running: { ids: ["empty_uri_rejected"], elapsed_ms: 0 },

@@ -1,7 +1,7 @@
 //! El informe de la suite de conformidad: qué comprobaciones se han corrido, con qué cliente y
 //! desde cuándo.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime};
@@ -70,6 +70,7 @@ pub const THE_REPORT_FILE: &str = "dossier.json";
 pub struct Report {
     path: PathBuf,
     contents: Contents,
+    orphans: BTreeMap<String, CheckRecord>,
 }
 
 impl Report {
@@ -95,18 +96,36 @@ impl Report {
                 checks: BTreeMap::new(),
                 errands: BTreeMap::new(),
             },
+            orphans: BTreeMap::new(),
         };
         report.cover(catalogue);
         report.save()?;
         Ok(report)
     }
 
-    /// Abre un informe ya escrito, con cualquier cliente, y da por pendiente lo que `catalogue`
-    /// tenga y él no; no escribe nada.
+    /// Abre un informe ya escrito, con cualquier cliente, da por pendiente lo que `catalogue`
+    /// tenga y él no, y aparta como huérfano lo que él tenga y `catalogue` no; no escribe nada.
     pub fn open(path: &Path, catalogue: &[Check]) -> Result<Self, String> {
         let mut report = Self::read(path)?;
+        report.set_apart_the_orphans(catalogue);
         report.cover(catalogue);
         Ok(report)
+    }
+
+    fn set_apart_the_orphans(&mut self, catalogue: &[Check]) {
+        let current: BTreeSet<&str> = catalogue.iter().map(|check| check.id.as_str()).collect();
+        let (kept, orphans) = std::mem::take(&mut self.contents.checks)
+            .into_iter()
+            .partition(|(id, _)| current.contains(id.as_str()));
+        self.contents.checks = kept;
+        self.orphans = orphans;
+    }
+
+    /// Lo que el informe guardaba de comprobaciones que el catálogo ya no tiene, con su estado.
+    pub fn orphans(&self) -> impl Iterator<Item = (&str, CheckState)> {
+        self.orphans
+            .iter()
+            .map(|(id, record)| (id.as_str(), record.state))
     }
 
     fn cover(&mut self, catalogue: &[Check]) {
@@ -161,6 +180,7 @@ impl Report {
         Ok(Self {
             path: path.to_owned(),
             contents,
+            orphans: BTreeMap::new(),
         })
     }
 
@@ -408,6 +428,33 @@ mod tests {
             report.refuses_to_continue_with("un-binario", ClientKind::Rfirma),
             None
         );
+    }
+
+    #[test]
+    fn a_check_the_catalogue_no_longer_has_is_set_apart_and_pruned_on_the_next_save() {
+        let path = tempfile::NamedTempFile::new().unwrap().path().to_owned();
+        Report::create(
+            &path,
+            "un-binario",
+            ClientKind::Rfirma,
+            &a_catalogue_of(&["v4_echo_greeting", "a_renamed_one"]),
+            some_coordinates(),
+        )
+        .unwrap();
+
+        let mut report = Report::open(&path, &a_catalogue_of(&["v4_echo_greeting"])).unwrap();
+
+        assert_eq!(report.state_of("a_renamed_one"), None);
+        assert_eq!(
+            report.orphans().collect::<Vec<_>>(),
+            [("a_renamed_one", CheckState::Pending)]
+        );
+        report
+            .resolve("v4_echo_greeting", Outcome::Compliant, None, Duration::ZERO)
+            .unwrap();
+        assert!(!std::fs::read_to_string(&path)
+            .unwrap()
+            .contains("a_renamed_one"));
     }
 
     #[test]
