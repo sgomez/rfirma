@@ -43,10 +43,12 @@ export function aConditionEvent(name, held, observation) {
   return { event: "condition", ...aCondition(name, held, observation) };
 }
 
-/** Una condición que puede quedar sin medir: `held === null` la emite como no observable. */
+/** Una condición que puede quedar sin medir: `held === null` la deja como no observable. */
+export function aMeasuredCondition(name, held, observation) {
+  if (held === null) return { name: theDeclared(name), verdict: "not_observable", observation };
+  return aCondition(name, held, observation);
+}
+
 export function aMeasuredConditionEvent(name, held, observation) {
-  if (held === null) {
-    return { event: "condition", name: theDeclared(name), verdict: "not_observable", observation };
-  }
-  return aConditionEvent(name, held, observation);
+  return { event: "condition", ...aMeasuredCondition(name, held, observation) };
 }

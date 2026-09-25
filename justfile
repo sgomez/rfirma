@@ -95,7 +95,7 @@ check-repo: check-version
 check-java: test-java
 
 [group('ci')]
-check-ts: check-po lint-ts lint-i18n knip build-ts test-ts check-landing
+check-ts: check-po lint-ts lint-i18n knip build-ts test-ts test-site-driver check-landing
 
 # lint-rust + machete + crap + check-contract, sin `cargo build --release` ni `cargo test` sueltos.
 [group('ci')]
@@ -321,6 +321,11 @@ test-java: bootstrap
 [private]
 test-ts: po-import
     cd {{ app }} && pnpm exec vitest run --coverage --reporter=dot
+
+# Las pruebas de los analizadores de firma de la sede, con el ejecutor de Node.
+[private]
+test-site-driver:
+    cd {{ justfile_directory() }}/testdata/site-driver && node --test --test-reporter=dot test/*.test.mjs
 
 # cargo test, mas la compilacion de las pruebas de grada C.
 [private]

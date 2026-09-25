@@ -3,12 +3,21 @@
 import { aConditionEvent, bytesOf, emit, settle, settlingTheError } from "../lib/events.mjs";
 import { theChallenge } from "../lib/fixtures.mjs";
 import { aPublishedScript } from "../lib/script.mjs";
+import { THE_SIGNATURE_VERIFIES, theSignatureVerifies } from "../lib/verification.mjs";
 
 const THE_NAME_NEXT_TO_THE_CONTENT = "the-name-next-to-the-content";
 const EVERY_FILE_APART = "every-file-apart";
 const THE_FILENAME_IN_A_THIRD_COMPONENT = "the-filename-in-a-third-component";
 /** La mide el arnés de la suite, que lee el fichero guardado en el perfil aislado. */
 const THE_DECODED_BYTES_ON_DISK = "the-decoded-bytes-on-disk";
+
+/** Emite si la firma del reto verifica y cierra el trámite con ella. */
+function settlingTheVerifiedSignature(signature, certificate) {
+  for (const condition of theSignatureVerifies("cms", theChallenge)(signature, certificate)) {
+    emit({ event: "condition", ...condition });
+  }
+  settle({ event: "success", result: String(signature), certificate: String(certificate) });
+}
 
 const THE_SAVING_EXTENSION = "csig";
 const THE_SAVING_DESCRIPTION = "Firma de la sede";
@@ -208,8 +217,7 @@ function theSignAndSaveScript() {
     "CAdES",
     "mode=explicit",
     "challenge-signed.csig",
-    (signature, certificate) =>
-      settle({ event: "success", result: String(signature), certificate: String(certificate) }),
+    settlingTheVerifiedSignature,
     settlingTheError,
   );
 }
@@ -273,8 +281,7 @@ function theSignAndSaveWithAnEcdsaAlgorithmScript() {
     "CAdES",
     "mode=explicit",
     "challenge-signed.csig",
-    (signature, certificate) =>
-      settle({ event: "success", result: String(signature), certificate: String(certificate) }),
+    settlingTheVerifiedSignature,
     settlingTheError,
   );
 }
@@ -284,13 +291,17 @@ export const FILE_SCRIPTS = {
   savewithanillegalfilename: aPublishedScript(theSaveWithAnIllegalFilenameScript),
   load: aPublishedScript(theLoadScript, { conditions: [THE_NAME_NEXT_TO_THE_CONTENT] }),
   multiload: aPublishedScript(theMultiLoadScript, { conditions: [EVERY_FILE_APART] }),
-  signandsave: aPublishedScript(theSignAndSaveScript),
-  signandsavecancelled: aPublishedScript(theSignAndSaveScript),
+  signandsave: aPublishedScript(theSignAndSaveScript, { conditions: [THE_SIGNATURE_VERIFIES] }),
+  signandsavecancelled: aPublishedScript(theSignAndSaveScript, {
+    conditions: [THE_SIGNATURE_VERIFIES],
+  }),
   signandsavewithoutaverb: aPublishedScript(theSignAndSaveWithoutAVerbScript),
   signandsavewithoutdata: aPublishedScript(theSignAndSaveWithoutDataScript),
   signandsavewithanillegalfilename: aPublishedScript(theSignAndSaveWithAnIllegalFilenameScript),
   signandsavewithsavingparameters: aPublishedScript(theSignAndSaveWithSavingParametersScript),
-  signandsavewithecdsa: aPublishedScript(theSignAndSaveWithAnEcdsaAlgorithmScript),
+  signandsavewithecdsa: aPublishedScript(theSignAndSaveWithAnEcdsaAlgorithmScript, {
+    conditions: [THE_SIGNATURE_VERIFIES],
+  }),
   savecancelled: aPublishedScript(theSaveScript),
   savewithoutdata: aPublishedScript(theSaveWithoutDataScript),
   savewithillegalextensions: aPublishedScript(theSaveWithIllegalExtensionsScript),

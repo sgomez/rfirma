@@ -36,7 +36,7 @@ consola. Sus pruebas se corren con `cargo test` dentro de este directorio; las d
 | `src/comparison.rs` | La comparación de dos informes, comprobación a comprobación en el orden del catálogo y con su conjunto. |
 | `../testdata/site-driver/driver.mjs` | La sede bajo Node: corre un guion en un modo, o publica el manifiesto con `--manifest`; la comparte con los `conformance_*.rs` de la aplicación. |
 | `../testdata/site-driver/manifest.mjs` | El manifiesto: los modos y todos los guiones, cada uno con su sede, su familia, sus modos, sus condiciones y si es solo del banco. |
-| `../testdata/site-driver/lib/` | Lo común a los guiones: eventos y condiciones, modos, parches del `autoscript.js`, navegador mínimo, documentos de referencia y los analizadores de firma (CMS, XML, ZIP, PDF y PKCS#1) con los que se miden las condiciones. |
+| `../testdata/site-driver/lib/` | Lo común a los guiones: eventos y condiciones, modos, parches del `autoscript.js`, navegador mínimo, documentos de referencia, los analizadores de firma (CMS, XML, ZIP, PDF y PKCS#1) con los que se miden las condiciones, su canonicalización XML y la verificación con la clave del certificado devuelto (ADR-0031). |
 | `../testdata/site-driver/test/` | Las pruebas de los analizadores de firma, que se corren con `node --test test/*.test.mjs`, y sus muestras hechas con OpenSSL y `zip`. |
 | `../testdata/site-driver/certificates/` | Los certificados, sin su clave, del kit de la FNMT que montan los almacenes `several`, `expired` y `token_apart`: con ellos los guiones reconocen qué certificado volvió. |
 | `../testdata/site-driver/scripts/` | Los guiones, un módulo por familia: certificado, firma, petición, ficheros, lote, servidor intermedio servido por HTTP, canal WebSocket y socket a mano. |

@@ -1,6 +1,8 @@
-// El analizador de PDF firmados de la sede: busca el diccionario de firma por texto, sin validar la firma.
+// El analizador de PDF firmados de la sede: busca el diccionario de firma por texto y verifica el CMS de su `/ByteRange`.
 
 import { constants, inflateSync } from "node:zlib";
+
+import { theCmsVerification } from "./cms.mjs";
 
 /** Si los bytes son un PDF con un diccionario `/Sig` que cubre un `/ByteRange` y trae `/Contents`. */
 export function isASignedPdf(bytes) {
@@ -44,7 +46,12 @@ function theCompressedObjects(body) {
   } catch {
     return [];
   }
-  const offsets = content.slice(0, first).trim().split(/\s+/).map(Number).filter((_, i) => i % 2);
+  const offsets = content
+    .slice(0, first)
+    .trim()
+    .split(/\s+/)
+    .map(Number)
+    .filter((_, i) => i % 2);
   return offsets
     .slice(0, count)
     .map((offset, i) => content.slice(first + offset, first + (offsets[i + 1] ?? content.length)));
@@ -53,4 +60,39 @@ function theCompressedObjects(body) {
 /** Si el rectángulo ocupa algo en la página: una firma invisible lo deja en `[0 0 0 0]`. */
 export function isAVisibleArea([llx, lly, urx, ury]) {
   return Math.abs(urx - llx) > 0 && Math.abs(ury - lly) > 0;
+}
+
+/** Las firmas cuyo `/ByteRange` cubre el PDF entero, cada una con su CMS y los bytes que firma. */
+function theWholeDocumentSignatures(bytes) {
+  const text = bytes.toString("latin1");
+  return [...text.matchAll(/\/ByteRange\s*\[\s*(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s*\]/g)]
+    .map((match) => match.slice(1).map(Number))
+    .filter(([start, , gap, tail]) => start === 0 && gap + tail === bytes.length)
+    .map(([, head, gap]) => ({
+      contents: /^<([0-9a-fA-F\s]*)>$/.exec(text.slice(head, gap)),
+      head,
+      gap,
+    }))
+    .filter(({ contents }) => contents)
+    .map(({ contents, head, gap }) => ({
+      cms: Buffer.from(contents[1].replace(/\s/g, ""), "hex"),
+      signed: Buffer.concat([bytes.subarray(0, head), bytes.subarray(gap)]),
+    }));
+}
+
+/** Si alguna firma que cubre el PDF entero verifica sobre su `/ByteRange` con el certificado devuelto. */
+export function thePadesVerification(bytes, certificate) {
+  if (!isASignedPdf(bytes)) return { verified: false, reason: "no es un PDF con la firma dentro" };
+  const signatures = theWholeDocumentSignatures(bytes);
+  if (signatures.length === 0) {
+    return { verified: false, reason: "ninguna firma del PDF cubre el documento entero" };
+  }
+  const verifications = signatures.map(({ cms, signed }) =>
+    theCmsVerification(cms, certificate, signed),
+  );
+  return (
+    verifications.find(({ verified }) => verified) ??
+    verifications.find(({ verified }) => verified === null) ??
+    verifications[0]
+  );
 }

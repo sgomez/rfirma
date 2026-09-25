@@ -1,6 +1,6 @@
-// El analizador de firmas CMS de la sede: lee DER y BER lo justo para medir firmantes y contenido, no valida.
+// El analizador de firmas CMS de la sede: lee DER y BER lo justo para medir firmantes y contenido, y verificarlos.
 
-import { createHash } from "node:crypto";
+import { createHash, verify, X509Certificate } from "node:crypto";
 
 const SIGNED_DATA = "1.2.840.113549.1.7.2";
 const MESSAGE_DIGEST = "1.2.840.113549.1.9.4";
@@ -87,7 +87,14 @@ function theAttributes(node) {
   );
 }
 
-function aSigner(node) {
+/** Los atributos firmados como SET, que es lo que firma el firmante, y no con su etiqueta implícita. */
+function theSignedAttributesAsASet(node, bytes) {
+  const set = Buffer.from(bytes.subarray(node.start, node.end));
+  set[0] = 0x31;
+  return set;
+}
+
+function aSigner(node, bytes) {
   const fields = node.children;
   const withSignedAttributes = isContextTag(fields[3], 0);
   const signed = withSignedAttributes ? theAttributes(fields[3]) : new Map();
@@ -98,8 +105,10 @@ function aSigner(node) {
     digestAlgorithm: theOid(fields[2].children[0]),
     signatureAlgorithm: theOid(fields[withSignedAttributes ? 4 : 3].children[0]),
     messageDigest: digest ? theOctets(digest) : null,
+    signedAttributes: withSignedAttributes ? theSignedAttributesAsASet(fields[3], bytes) : null,
+    signature: theOctets(fields[withSignedAttributes ? 5 : 4]),
     cades: signed.has(SIGNING_CERTIFICATE_V2) || signed.has(SIGNING_CERTIFICATE),
-    countersigners: (unsigned.get(COUNTERSIGNATURE) ?? []).map(aSigner),
+    countersigners: (unsigned.get(COUNTERSIGNATURE) ?? []).map((child) => aSigner(child, bytes)),
   };
 }
 
@@ -113,7 +122,7 @@ export function theCmsSignature(bytes) {
     const eContent = encapsulated[1]?.children[0];
     return {
       content: eContent ? theOctets(eContent) : null,
-      signers: fields.at(-1).children.map(aSigner),
+      signers: fields.at(-1).children.map((signer) => aSigner(signer, bytes)),
     };
   } catch {
     return null;
@@ -153,4 +162,92 @@ export function theCertificatesIn(bytes) {
   const fields = aNode(bytes, 0).children[1].children[0].children;
   const certificates = fields.find((field, index) => index > 2 && isContextTag(field, 0));
   return (certificates?.children ?? []).map((node) => bytes.subarray(node.start, node.end));
+}
+
+const SIGNATURE_DIGESTS = {
+  "1.2.840.113549.1.1.5": "sha1",
+  "1.2.840.113549.1.1.11": "sha256",
+  "1.2.840.113549.1.1.12": "sha384",
+  "1.2.840.113549.1.1.13": "sha512",
+  "1.2.840.10045.4.1": "sha1",
+  "1.2.840.10045.4.3.2": "sha256",
+  "1.2.840.10045.4.3.3": "sha384",
+  "1.2.840.10045.4.3.4": "sha512",
+};
+
+const KEY_ONLY_SIGNATURES = new Set(["1.2.840.113549.1.1.1", "1.2.840.10045.2.1"]);
+
+function theKeyOf(certificate) {
+  try {
+    return new X509Certificate(certificate).publicKey;
+  } catch {
+    return null;
+  }
+}
+
+function theSignatureDigestOf(signer) {
+  if (KEY_ONLY_SIGNATURES.has(signer.signatureAlgorithm)) return DIGESTS[signer.digestAlgorithm];
+  return SIGNATURE_DIGESTS[signer.signatureAlgorithm];
+}
+
+/** Cada firmante con lo que firma: el contenido los de primer nivel, la firma de su padre las contrafirmas. */
+function theSignersWithWhatTheySign(signers, content) {
+  return signers.flatMap((signer) => [
+    { signer, content },
+    ...theSignersWithWhatTheySign(signer.countersigners, signer.signature),
+  ]);
+}
+
+function theUnverifiableAlgorithmOf(signer) {
+  if (signer.signedAttributes && !DIGESTS[signer.digestAlgorithm]) return signer.digestAlgorithm;
+  if (!theSignatureDigestOf(signer)) return signer.signatureAlgorithm;
+  return null;
+}
+
+function theKeysVerifying(signer, content, keys) {
+  const hash = theSignatureDigestOf(signer);
+  const signed = signer.signedAttributes ?? content;
+  return keys.filter((key) => {
+    try {
+      return verify(hash, signed, key, signer.signature);
+    } catch {
+      return false;
+    }
+  });
+}
+
+const aVerification = (verified, reason) => ({ verified, reason });
+
+/** Si cada firmante del CMS, contrafirmas incluidas, verifica con su clave, y alguno con el certificado devuelto. */
+export function theCmsVerification(bytes, certificate, detachedContent = null) {
+  const cms = theCmsSignature(bytes);
+  if (!cms) return aVerification(false, "lo que volvió no es un CMS SignedData");
+  const content = cms.content ?? detachedContent;
+  if (!content) return aVerification(false, "el CMS no lleva los datos y la sede no los conoce");
+  const returnedKey = theKeyOf(certificate);
+  if (!returnedKey) return aVerification(false, "el certificado devuelto no es un X.509 DER");
+  const keys = [returnedKey, ...theCertificatesIn(bytes).map(theKeyOf).filter(Boolean)];
+  let byTheReturned = false;
+  for (const { signer, content: signed } of theSignersWithWhatTheySign(cms.signers, content)) {
+    const unverifiable = theUnverifiableAlgorithmOf(signer);
+    if (unverifiable) return aVerification(null, `la sede no sabe verificar ${unverifiable}`);
+    if (signer.signedAttributes && !signsTheData(signer, signed)) {
+      return aVerification(
+        false,
+        "el messageDigest de un firmante no es el resumen de lo que firma",
+      );
+    }
+    const verifying = theKeysVerifying(signer, signed, keys);
+    if (verifying.length === 0) {
+      return aVerification(false, "la firma de un firmante no verifica con ninguna clave");
+    }
+    byTheReturned ||= verifying.includes(returnedKey);
+  }
+  if (!byTheReturned) {
+    return aVerification(false, "ningún firmante verifica con el certificado devuelto");
+  }
+  return aVerification(
+    true,
+    "cada firmante verifica con su clave, uno con el certificado devuelto",
+  );
 }
