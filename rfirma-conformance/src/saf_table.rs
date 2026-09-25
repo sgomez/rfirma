@@ -132,8 +132,7 @@ pub fn the_codes_of(rows: &[Row]) -> BTreeSet<String> {
     rows.iter().map(|row| row.code.clone()).collect()
 }
 
-/// Lo que la tabla y el catálogo no comparten: ids que no existen o no miden el código de su
-/// fila, comprobaciones de un SAF sin fila o en dos, y dos que miden el mismo rechazo.
+/// Todo lo que la tabla dice y el catálogo no sostiene.
 pub fn complaints_against(rows: &[Row], checks: &[Check]) -> Vec<String> {
     [
         ids_that_do_not_measure_their_row(rows, checks),
@@ -216,8 +215,7 @@ fn checks_in_more_than_one_row(rows: &[Row]) -> Vec<String> {
         .collect()
 }
 
-/// Dos comprobaciones de una fila que esperan su código del mismo guion por el mismo canal
-/// observan el mismo rechazo, cambie lo que cambie la persona o el almacén.
+/// Dos comprobaciones de una fila que esperan su código del mismo guion y canal ven el mismo rechazo.
 fn checks_that_observe_the_same_rejection(rows: &[Row], checks: &[Check]) -> Vec<String> {
     let by_id: BTreeMap<&str, &Check> = checks
         .iter()

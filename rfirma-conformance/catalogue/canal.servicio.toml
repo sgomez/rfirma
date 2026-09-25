@@ -226,7 +226,7 @@ set = "canal.servicio"
 citation = "ServiceInvocationManager.java:42-45, 212-220; ProtocolInvocationLauncher.java:281-288"
 statement = """
 El canal socket HTTP (afirma://service) sólo admite las versiones 1, 2 y 3: un arranque con v=4 se
-rechaza antes de ligar puerto alguno y no abre canal.
+rechaza con SAF_21 antes de ligar puerto alguno y no abre canal.
 """
 
 [check.drive]

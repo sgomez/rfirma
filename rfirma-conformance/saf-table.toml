@@ -1,6 +1,4 @@
-# La tabla SAF × punto de decisión: cada código de la tabla del capítulo 15 que la sede puede recibir,
-# desde cada punto en el que el original lo decide, cubierto por comprobaciones del catálogo, no
-# medible con su motivo o hueco declarado. Es una vista: las comprobaciones siguen en su conjunto.
+# La tabla SAF × punto de decisión del original: una vista sobre el catálogo, no un conjunto.
 
 [[row]]
 code = "SAF_00"
@@ -32,7 +30,6 @@ covered = [
   "save_without_data_answers_saf_03",
   "signandsave_rejects_an_illegal_filename_with_saf_03",
   "a_batch_servlet_url_carrying_its_own_parameters_is_refused_with_saf_03",
-  "a_local_xml_batch_is_refused_with_saf_03",
 ]
 
 [[row]]
@@ -51,7 +48,10 @@ covered = ["a_malformed_minimum_client_version_is_refused_with_saf_03"]
 [[row]]
 code = "SAF_03"
 point = "after_certificate"
-covered = ["a_triphase_signature_without_server_url_answers_saf_03"]
+covered = [
+  "a_triphase_signature_without_server_url_answers_saf_03",
+  "a_local_xml_batch_is_refused_with_saf_03",
+]
 
 [[row]]
 code = "SAF_03"
@@ -70,19 +70,13 @@ covered = ["unsupported_operation_rejected"]
 
 [[row]]
 code = "SAF_04"
-point = "before_certificate"
-covered = [
-  "sign_missing_or_invalid_operation_rejected",
-  "signandsave_rejects_a_request_without_a_verb_with_saf_04",
-]
-
-[[row]]
-code = "SAF_04"
 point = "after_certificate"
 covered = [
   "a_pades_countersign_is_refused_with_saf_04",
   "facturae_refuses_cosign_with_saf_04",
   "facturae_refuses_countersign_with_saf_04",
+  "sign_missing_or_invalid_operation_rejected",
+  "signandsave_rejects_a_request_without_a_verb_with_saf_04",
 ]
 
 [[row]]
@@ -161,17 +155,15 @@ covered = ["a_malformed_local_batch_fails_with_saf_20"]
 code = "SAF_21"
 point = "channel"
 covered = [
-  "websocket_operation_protocol_version_ignored",
-  "a_ver_inside_an_order_leaves_the_negotiated_version_alone",
+  "websocket_rejects_a_protocol_version_it_does_not_support",
+  "websocket_rejects_an_obsolete_protocol_version",
+  "service_channel_version_range",
 ]
 
 [[row]]
 code = "SAF_21"
 point = "before_certificate"
-covered = [
-  "operation_supported_protocol_version",
-  "the_v3_channel_takes_the_version_of_each_operation",
-]
+covered = ["the_v3_channel_takes_the_version_of_each_operation"]
 
 [[row]]
 code = "SAF_23"
@@ -267,11 +259,7 @@ covered = ["a_cosignature_without_the_data_or_a_matching_digest_is_rejected_with
 [[row]]
 code = "SAF_46"
 point = "channel"
-covered = [
-  "v4_channel_credential_absent",
-  "v4_channel_credential_malformed",
-  "v3_channel_credential_ignored",
-]
+covered = ["v4_channel_credential_absent"]
 
 [[row]]
 code = "SAF_47"
