@@ -110,20 +110,112 @@ fn a_signed_xml_is_detected_as_xml_signature() {
     );
 }
 
+const SIGNING_CERTIFICATE_V1: &[u8] = &[
+    0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x09, 0x10, 0x02, 0x0c,
+];
+const SIGNING_CERTIFICATE_V2: &[u8] = &[
+    0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x09, 0x10, 0x02, 0x2f,
+];
+const CONTENT_TYPE: &[u8] = &[0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x09, 0x03];
+const DATA: &[u8] = &[0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x07, 0x01];
+
+fn tlv(tag: u8, content: &[u8]) -> Vec<u8> {
+    let length = content.len();
+    let mut encoded = vec![tag];
+    match length {
+        0..=0x7f => encoded.push(length as u8),
+        0x80..=0xff => encoded.extend([0x81, length as u8]),
+        _ => encoded.extend([0x82, (length >> 8) as u8, length as u8]),
+    }
+    encoded.extend_from_slice(content);
+    encoded
+}
+
+fn a_signer_with_signed_attributes(attribute_types: Option<&[&[u8]]>) -> Vec<u8> {
+    let mut fields = [tlv(0x02, &[1]), tlv(0x30, &[]), tlv(0x30, &[])].concat();
+    if let Some(types) = attribute_types {
+        let attributes: Vec<u8> = types
+            .iter()
+            .flat_map(|oid| tlv(0x30, &[tlv(0x06, oid), tlv(0x31, &tlv(0x05, &[]))].concat()))
+            .collect();
+        fields.extend(tlv(0xa0, &attributes));
+    }
+    fields.extend(tlv(0x30, &[]));
+    fields.extend(tlv(0x04, b"firma"));
+    tlv(0x30, &fields)
+}
+
+/// Un `ContentInfo` de `SignedData` mínimo, en DER, con los firmantes dados.
+pub(crate) fn a_signed_data_with(signers: &[Vec<u8>]) -> Vec<u8> {
+    let signed_data = tlv(
+        0x30,
+        &[
+            tlv(0x02, &[1]),
+            tlv(0x31, &[]),
+            tlv(0x30, &tlv(0x06, DATA)),
+            tlv(0x31, &signers.concat()),
+        ]
+        .concat(),
+    );
+    tlv(
+        0x30,
+        &[OID_SIGNED_DATA.to_vec(), tlv(0xa0, &signed_data)].concat(),
+    )
+}
+
+/// Un `SignedData` cuyo único firmante no lleva signingCertificate: CMS y no CAdES.
+pub(crate) fn a_cms_signature() -> Vec<u8> {
+    a_signed_data_with(&[a_signer_with_signed_attributes(Some(&[CONTENT_TYPE]))])
+}
+
 #[test]
-fn a_cms_signed_data_container_is_detected_as_cms_signature() {
+fn a_signed_data_whose_every_signer_carries_its_signing_certificate_is_cades() {
     assert_eq!(
         detect_signature(include_bytes!(
             "../../../../../../../testdata/reference/cades-implicit.p7s"
         )),
-        Some(DetectedSignature::Cms)
+        Some(DetectedSignature::Cades)
     );
     assert_eq!(
         detect_signature(include_bytes!(
             "../../../../../../../testdata/reference/cades-explicit.p7s"
         )),
-        Some(DetectedSignature::Cms)
+        Some(DetectedSignature::Cades)
     );
+    assert_eq!(
+        detect_signature(include_bytes!(
+            "../../../../../../../testdata/reference/cades-implicit.cosign.p7s"
+        )),
+        Some(DetectedSignature::Cades)
+    );
+    assert_eq!(
+        detect_signature(&a_signed_data_with(&[
+            a_signer_with_signed_attributes(Some(&[CONTENT_TYPE, SIGNING_CERTIFICATE_V1])),
+            a_signer_with_signed_attributes(Some(&[SIGNING_CERTIFICATE_V2])),
+        ])),
+        Some(DetectedSignature::Cades)
+    );
+}
+
+#[test]
+fn a_signed_data_with_a_signer_without_signing_certificate_is_cms() {
+    for signers in [
+        vec![a_signer_with_signed_attributes(None)],
+        vec![a_signer_with_signed_attributes(Some(&[CONTENT_TYPE]))],
+        vec![
+            a_signer_with_signed_attributes(Some(&[SIGNING_CERTIFICATE_V2])),
+            a_signer_with_signed_attributes(Some(&[CONTENT_TYPE])),
+        ],
+    ] {
+        assert_eq!(
+            detect_signature(&a_signed_data_with(&signers)),
+            Some(DetectedSignature::Cms)
+        );
+    }
+}
+
+#[test]
+fn neither_cms_nor_cades_is_read_out_of_a_binary_that_is_not_signed_data() {
     assert_eq!(
         detect_signature(include_bytes!(
             "../../../../../../../testdata/reference/challenge.bin"
