@@ -511,6 +511,21 @@ dev-handler mode="on":
 conformance: autoscript conformance-console
     cd {{ conformance_suite }} && cargo run -q
 
+# Compila rFirma con la feature conformance-autoconsent en su propio perfil, nunca en el de
+# release, e imprime la ruta del binario que se elige como cliente en la pagina; la suite enciende
+# el interruptor en cada tramite del tramo clic (ADR-0028).
+# La consola de la suite contra un rFirma que consiente solo cuando no hay nada que decidir.
+[group('dev')]
+conformance-autoconsent: check-native build-ts autoscript conformance-console
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd "{{ tauri }}"
+    cargo build --profile conformance --features custom-protocol,conformance-autoconsent
+    target="$(cargo metadata --format-version 1 --no-deps | python3 -c 'import json,sys; print(json.load(sys.stdin)["target_directory"])')"
+    echo "cliente: $target/conformance/rfirma"
+    cd "{{ conformance_suite }}"
+    RFIRMA_LIB_DIR="$(dirname "{{ native_lib }}")" cargo run -q
+
 # Compila la consola web de la suite en rfirma-conformance/console/dist, que el servidor lee al
 # arrancar: regenera antes los tipos del contrato que ts-rs deriva de Rust.
 [group('dev')]

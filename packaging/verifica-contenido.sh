@@ -86,3 +86,13 @@ if [ -n "$(find -L "$LAB/contenido" -name 'libawt.so')" ]; then
     exit 1
 fi
 echo "OK  libawt.so no aparece en ninguna parte"
+
+# El consentimiento automatico de la suite de conformidad solo existe con la
+# feature conformance-autoconsent (ADR-0028): su interruptor no puede estar en
+# ningun binario que se publique.
+if grep -rlaF RFIRMA_CONFORMANCE_AUTOCONSENT "$LAB/contenido" >&2; then
+    echo "SOBRA el consentimiento automatico de conformidad: el paquete se" >&2
+    echo "compilo con --features conformance-autoconsent (ADR-0028)" >&2
+    exit 1
+fi
+echo "OK  sin consentimiento automatico de conformidad"
