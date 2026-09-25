@@ -1,5 +1,7 @@
 use super::super::*;
-use super::fixtures::{a_countersignature, a_signature, an_operation, properties, read_operation};
+use super::fixtures::{
+    a_countersignature, a_sign_and_save, a_signature, an_operation, properties, read_operation,
+};
 
 #[test]
 fn the_verb_of_the_published_client_is_the_selection_of_a_certificate() {
@@ -228,46 +230,80 @@ fn the_four_keys_the_launcher_reads_itself_never_reach_the_signer() {
     );
 }
 
-#[test]
-fn headless_says_the_site_settles_for_the_only_certificate() {
+/// La selección de certificado con el `properties` dado.
+fn a_selection_declaring(declared: &str) -> SelectCertificate {
     let url = an_operation(&format!(
         "op=selectcert&properties={}",
-        properties("headless=true\n")
+        properties(declared)
     ));
-
     let SiteOperation::SelectCertificate(request) = read_operation(&url).expect("se lee") else {
         panic!("es una seleccion de certificado");
     };
+    request
+}
 
+#[test]
+fn headless_waives_the_choice_and_asks_nothing_else() {
+    let request = a_selection_declaring("headless=true\n");
+
+    assert!(request.waives_the_choice());
     assert!(request.is_headless());
 }
 
 #[test]
-fn a_mandatory_certificate_selection_set_to_false_says_the_same_as_headless() {
-    let url = an_operation(&format!(
-        "op=selectcert&properties={}",
-        properties("mandatoryCertSelection=false\n")
-    ));
+fn a_mandatory_certificate_selection_set_to_false_waives_the_choice_but_is_not_headless() {
+    let request = a_selection_declaring("mandatoryCertSelection=FALSE\n");
 
-    let SiteOperation::SelectCertificate(request) = read_operation(&url).expect("se lee") else {
-        panic!("es una seleccion de certificado");
-    };
-
-    assert!(request.is_headless());
+    assert!(request.waives_the_choice());
+    assert!(
+        !request.is_headless(),
+        "las demas preguntas se siguen haciendo"
+    );
 }
 
 #[test]
 fn a_mandatory_certificate_selection_set_to_true_keeps_the_dialog() {
-    let url = an_operation(&format!(
-        "op=selectcert&properties={}",
-        properties("mandatoryCertSelection=true\n")
-    ));
+    let request = a_selection_declaring("mandatoryCertSelection=true\n");
 
-    let SiteOperation::SelectCertificate(request) = read_operation(&url).expect("se lee") else {
-        panic!("es una seleccion de certificado");
+    assert!(!request.waives_the_choice());
+    assert!(!request.is_headless());
+}
+
+#[test]
+fn every_signature_reads_both_parameters_from_its_properties() {
+    let waived = format!(
+        "&properties={}",
+        properties("mandatoryCertSelection=false\n")
+    );
+    let urls = [
+        a_signature(SIGN, &waived),
+        a_signature(COSIGN, &waived),
+        a_countersignature("CAdES", &waived),
+    ];
+
+    for url in urls {
+        let SiteOperation::Sign(request) = read_operation(&url).expect("se firma") else {
+            panic!("es una firma: {url:?}");
+        };
+
+        assert!(request.waives_the_choice(), "{url:?}");
+        assert!(!request.is_headless(), "{url:?}");
+    }
+}
+
+#[test]
+fn a_sign_and_save_reads_both_parameters_from_its_properties() {
+    let url = a_sign_and_save(
+        SIGN,
+        &format!("&properties={}", properties("headless=true\n")),
+    );
+
+    let SiteOperation::SignAndSave(request) = read_operation(&url).expect("se lee") else {
+        panic!("es un signandsave");
     };
 
-    assert!(!request.is_headless());
+    assert!(request.waives_the_choice());
+    assert!(request.is_headless());
 }
 
 #[test]

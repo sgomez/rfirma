@@ -519,6 +519,38 @@ describe("los momentos que pone el adaptador", () => {
   });
 });
 
+describe("la selección automática que pide la sede", () => {
+  const withTheOnlyOne = (withoutAsking: boolean): SiteErrandView => ({
+    origin: "sede.ejemplo.gob.es",
+    stage: {
+      kind: "askingToSign",
+      document: "asa-opaca-1",
+      signing: "pdf",
+      round: { kind: "sign" },
+      certificates: [certificate()],
+      unregisteredSignatures: false,
+      alreadyChosen: "handle-1",
+      withoutAsking,
+    },
+  });
+
+  it("consents alone with the only candidate when the backend says so", async () => {
+    const { push, calls, last } = watched();
+    push(withTheOnlyOne(true));
+
+    await vi.waitFor(() => expect(last()?.stage).toMatchObject({ outcome: { kind: "signed" } }));
+    expect(calls.beginSigning).toHaveBeenCalledWith("handle-1");
+  });
+
+  it("waits for the person when the only candidate is merely preselected", async () => {
+    const { push, calls, last } = watched();
+    push(withTheOnlyOne(false));
+
+    await vi.waitFor(() => expect(last()?.stage.kind).toBe("consent"));
+    expect(calls.beginSigning).not.toHaveBeenCalled();
+  });
+});
+
 describe("las salidas de la pantalla sin certificado", () => {
   it("looks again after installing one", async () => {
     const { port, calls } = watched();

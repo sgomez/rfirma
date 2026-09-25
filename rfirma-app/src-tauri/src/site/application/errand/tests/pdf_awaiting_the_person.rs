@@ -105,6 +105,16 @@ fn a_certified_pdf_without_headless_asks_the_person_with_the_words_of_the_origin
 }
 
 #[test]
+fn a_certified_pdf_under_a_mandatory_selection_set_to_false_still_asks_the_person() {
+    let step = a_consent_over(A_CERTIFIED_PDF, "mandatoryCertSelection=false\n");
+
+    let ErrandStep::AskingToConfirm(consent) = step else {
+        panic!("solo headless rechaza lo que habria que preguntar: {step:?}");
+    };
+    assert_eq!(consent.message_code, "signingCertifiedPdf");
+}
+
+#[test]
 fn a_certified_pdf_the_person_accepts_reaches_the_bridge_with_the_permission() {
     let step = a_consent_over_and_then(A_CERTIFIED_PDF, "", |desk, step, ours, live| {
         let ErrandStep::AskingToConfirm(consent) = step else {

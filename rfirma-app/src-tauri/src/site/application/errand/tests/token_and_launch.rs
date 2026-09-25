@@ -492,13 +492,21 @@ fn leaving_the_no_certificate_screen_cancels_the_errand() {
 }
 
 #[test]
-fn neither_headless_nor_the_mandatory_selection_skips_the_consent() {
+fn the_two_parameters_outside_properties_do_not_skip_the_consent() {
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
     let memory = a_memory(home.path());
+    memory
+        .remember_configuration(
+            &crate::signing::application::configuration_memory::Configuration {
+                honour_automatic_selection: true,
+                ..Default::default()
+            },
+        )
+        .expect("la memoria de pruebas escribe");
     let ours = vec![a_usable_certificate("EL UNICO")];
     let (listed, _) = listed_from(&ours);
     let live = a_live();
-    let url = an_operation("&headless=true&mandatoryCertSelection=true");
+    let url = an_operation("&headless=true&mandatoryCertSelection=false");
 
     let step = consent_for(
         &AnEngine::answering(&[&[0]]),
@@ -512,12 +520,12 @@ fn neither_headless_nor_the_mandatory_selection_skips_the_consent() {
         certificates: rows, ..
     } = step
     else {
-        panic!("el consentimiento no se salta nunca: {step:?}");
+        panic!("solo cuentan dentro de 'properties': {step:?}");
     };
     assert_eq!(rows.len(), 1, "uno solo se consiente igual");
 }
 #[test]
-fn the_two_parameters_of_the_silent_signature_are_not_read_anywhere() {
+fn the_two_parameters_of_the_automatic_selection_are_read_only_by_the_protocol() {
     let production = concat!(
         include_str!("../mod.rs"),
         include_str!("../desk.rs"),
@@ -528,7 +536,7 @@ fn the_two_parameters_of_the_silent_signature_are_not_read_anywhere() {
     for parameter in ["\"headless\"", "\"mandatoryCertSelection\""] {
         assert!(
             !production.contains(parameter),
-            "{parameter} se lee en algun sitio: el consentimiento se podria saltar"
+            "{parameter} se lee fuera de 'properties': la regla de la seleccion automatica se partiria"
         );
     }
 }

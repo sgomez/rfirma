@@ -14,7 +14,7 @@ use super::guards::{
     refuse_a_multisignature_of_an_invoice, requested_format, resolve_auto_format,
 };
 use super::properties::{
-    comma_list_value, declared_properties, property_value, FILENAME_CURRENT_DIR,
+    comma_list_value, declared_properties, property_value, Unattended, FILENAME_CURRENT_DIR,
     FILENAME_DESCRIPTION, FILENAME_EXTS,
 };
 use super::SiteOperation;
@@ -86,7 +86,7 @@ pub struct SignRequest {
     declared: Vec<(String, String)>,
     filter: SiteFilter,
     sticky: StickyCertificate,
-    headless: bool,
+    unattended: Unattended,
     through_the_site_server: Option<ServerFormat>,
 }
 
@@ -126,9 +126,14 @@ impl SignRequest {
         self.sticky
     }
 
-    /// Si la sede se conforma con el único certificado que pase el filtro (`headless`).
+    /// Si la sede pidió `headless`: lo que haga falta preguntar se rechaza.
     pub fn is_headless(&self) -> bool {
-        self.headless
+        self.unattended.is_headless()
+    }
+
+    /// Si la sede se conforma con el único candidato que pase el filtro.
+    pub fn waives_the_choice(&self) -> bool {
+        self.unattended.waives_the_choice()
     }
 
     /// El firmador del servidor trifásico de la sede, si la prefirma y la postfirma se hacen allí.
@@ -150,7 +155,7 @@ pub struct PendingSignRequest {
     declared: Vec<(String, String)>,
     filter: SiteFilter,
     sticky: StickyCertificate,
-    headless: bool,
+    unattended: Unattended,
     load_extensions: Vec<String>,
     load_description: Option<String>,
     load_starting_folder: Option<String>,
@@ -164,9 +169,14 @@ impl PendingSignRequest {
         &self.filter
     }
 
-    /// Si la sede se conforma con el único certificado que pase el filtro (`headless`).
+    /// Si la sede pidió `headless`: lo que haga falta preguntar se rechaza.
     pub fn is_headless(&self) -> bool {
-        self.headless
+        self.unattended.is_headless()
+    }
+
+    /// Si la sede se conforma con el único candidato que pase el filtro.
+    pub fn waives_the_choice(&self) -> bool {
+        self.unattended.waives_the_choice()
     }
 
     /// El nombre que la sede propone al selector (`filenameActualName`), si lo declaró.
@@ -201,7 +211,7 @@ impl PendingSignRequest {
             declared: self.declared,
             filter: self.filter,
             sticky: self.sticky,
-            headless: self.headless,
+            unattended: self.unattended,
             through_the_site_server: self.through_the_site_server,
         }
     }
@@ -242,7 +252,7 @@ pub(super) fn sign_request(
             requested,
             filter: site_filter(&declared).within_the_module(module_named_by(url)),
             sticky,
-            headless: properties.is_headless(),
+            unattended: properties.unattended(),
             load_extensions: comma_list_value(property_value(&declared, FILENAME_EXTS)),
             load_description: property_value(&declared, FILENAME_DESCRIPTION),
             load_starting_folder: property_value(&declared, FILENAME_CURRENT_DIR),
@@ -270,7 +280,7 @@ pub(super) fn sign_request(
         document,
         filter: site_filter(&declared).within_the_module(module_named_by(url)),
         sticky,
-        headless: properties.is_headless(),
+        unattended: properties.unattended(),
         declared,
         through_the_site_server,
     }))

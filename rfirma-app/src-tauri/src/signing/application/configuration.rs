@@ -25,6 +25,8 @@ pub struct Preferences {
     pub setup_wizard_seen: bool,
     /// Si el botón de consentir de la ventana de sede espera una cuenta atrás.
     pub consent_countdown: bool,
+    /// Si la sede puede elegir sola el único certificado candidato (ADR-0032).
+    pub honour_automatic_selection: bool,
 }
 
 /// Resuelve el idioma soportado a partir de su código o devuelve castellano por omisión.
@@ -55,6 +57,7 @@ pub fn shown(configuration: &Configuration, documents_folder: &std::path::Path) 
             crate::documents::domain::document::the_original_folder_can_be_offered(),
         setup_wizard_seen: configuration.setup_wizard_seen,
         consent_countdown: configuration.consent_countdown,
+        honour_automatic_selection: configuration.honour_automatic_selection,
     }
 }
 
@@ -84,6 +87,7 @@ pub fn merged(live: &Configuration, chosen: &Preferences) -> Configuration {
         theme: chosen.theme,
         setup_wizard_seen: chosen.setup_wizard_seen,
         consent_countdown: chosen.consent_countdown,
+        honour_automatic_selection: chosen.honour_automatic_selection,
     }
 }
 

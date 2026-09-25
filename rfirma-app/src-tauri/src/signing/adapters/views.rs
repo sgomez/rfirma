@@ -64,6 +64,8 @@ crossing! {
         pub setup_wizard_seen: bool,
         /// Si el botón de consentir de la ventana de sede espera una cuenta atrás.
         pub consent_countdown: bool,
+        /// Si la sede puede elegir sola el único certificado candidato (ADR-0032).
+        pub honour_automatic_selection: bool,
     }
 }
 
@@ -79,6 +81,7 @@ impl From<Preferences> for ConfigurationView {
             offers_the_original_folder: preferences.offers_the_original_folder,
             setup_wizard_seen: preferences.setup_wizard_seen,
             consent_countdown: preferences.consent_countdown,
+            honour_automatic_selection: preferences.honour_automatic_selection,
         }
     }
 }
@@ -95,6 +98,7 @@ impl From<ConfigurationView> for Preferences {
             offers_the_original_folder: view.offers_the_original_folder,
             setup_wizard_seen: view.setup_wizard_seen,
             consent_countdown: view.consent_countdown,
+            honour_automatic_selection: view.honour_automatic_selection,
         }
     }
 }

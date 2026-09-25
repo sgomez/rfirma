@@ -5,7 +5,7 @@ mod confirmation;
 mod scratch;
 
 pub use certificates::{consent_for, consent_to_the_batch, consent_to_the_local_batch};
-use certificates::{rows_preselecting_the_stuck, the_only_row_among, what_the_site_accepts};
+use certificates::{rows_preselecting_the_stuck, what_the_site_accepts, Preselected};
 pub use confirmation::consent_to_the_confirmed_signature;
 use confirmation::{
     asking_to_confirm, asks_to_check_signatures, the_previous_signatures_hold,
@@ -237,6 +237,7 @@ pub fn consent_to_sign<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
             filter: request.filter(),
             sticky: request.sticky(),
             headless: request.is_headless(),
+            waives_the_choice: request.waives_the_choice(),
             through_the_site_server: request.through_the_site_server(),
             confirmed: BTreeMap::new(),
         },
@@ -271,6 +272,7 @@ pub fn consent_to_sign_and_save<E: FilterEngine, P: PolicyEngine, N: Neighbours>
             filter: request.filter(),
             sticky: request.sticky(),
             headless: request.is_headless(),
+            waives_the_choice: request.waives_the_choice(),
             through_the_site_server: request.through_the_site_server(),
             confirmed: BTreeMap::new(),
         },
@@ -290,6 +292,7 @@ struct SignatureAsk<'a> {
     filter: &'a SiteFilter,
     sticky: StickyCertificate,
     headless: bool,
+    waives_the_choice: bool,
     through_the_site_server: Option<ServerFormat>,
     confirmed: BTreeMap<String, String>,
 }
@@ -400,7 +403,7 @@ fn consent_to_a_signature<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
         desk.engine,
         ask.filter,
         ask.sticky,
-        ask.headless,
+        ask.waives_the_choice,
         ours,
         &desk.neighbours,
         live,
@@ -416,11 +419,13 @@ fn consent_to_a_signature<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
 
     let (certificates, stuck) =
         rows_preselecting_the_stuck(accepted, ask.sticky, &desk.neighbours, live);
-    let already_chosen = stuck.or_else(|| {
-        ask.headless
-            .then(|| the_only_row_among(&certificates))
-            .flatten()
-    });
+    let preselected = Preselected::among(
+        &certificates,
+        stuck,
+        ask.waives_the_choice,
+        &desk.neighbours,
+    )
+    .unless_there_is_a_notice(unregistered_signatures);
     ErrandStep::AskingToSign(Box::new(SigningConsent {
         document,
         format,
@@ -433,7 +438,8 @@ fn consent_to_a_signature<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
         unregistered_signatures,
         headless: ask.headless,
         saving,
-        already_chosen,
+        already_chosen: preselected.row,
+        without_asking: preselected.without_asking,
         for_the_site_server: ask.through_the_site_server.map(|format| ForTheSiteServer {
             format,
             document: ask.document.to_vec(),

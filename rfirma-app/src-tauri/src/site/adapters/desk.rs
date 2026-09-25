@@ -51,6 +51,10 @@ impl Certificates for Neighbours<'_> {
     ) -> Result<&'a TokenCertificate, TokenError> {
         self.identity.usable(found, handle)
     }
+
+    fn automatic_selection_honoured(&self) -> bool {
+        self.signing.configuration().honour_automatic_selection
+    }
 }
 
 impl ScratchDocuments for Neighbours<'_> {

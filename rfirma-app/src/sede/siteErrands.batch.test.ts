@@ -12,8 +12,28 @@ describe("el lote remoto", () => {
       signs: 3,
       certificates: [certificate()],
       alreadyChosen: null,
+      withoutAsking: false,
     },
   };
+
+  it("consents alone with the only candidate when the backend says so", async () => {
+    const { push, calls, last } = watched();
+    push({
+      origin: "sede.ejemplo.gob.es",
+      stage: {
+        kind: "askingToSignTheBatch",
+        signs: 3,
+        certificates: [certificate()],
+        alreadyChosen: "handle-1",
+        withoutAsking: true,
+      },
+    });
+
+    await vi.waitFor(() =>
+      expect(last()?.stage).toMatchObject({ outcome: { kind: "batchSigned" } }),
+    );
+    expect(calls.beginSigning).toHaveBeenCalledWith("handle-1");
+  });
 
   it("closes the batch with the secret alone, without a postsign of its own", async () => {
     const { push, port, seen, calls, last } = watched();
@@ -110,6 +130,7 @@ describe("el lote local", () => {
       ],
       certificates: [certificate()],
       alreadyChosen: null,
+      withoutAsking: false,
     },
   };
 

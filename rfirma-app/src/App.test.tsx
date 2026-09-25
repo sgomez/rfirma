@@ -100,6 +100,7 @@ describe("App", () => {
         notifyNewVersion: true,
         setupWizardSeen: false,
         consentCountdown: true,
+        honourAutomaticSelection: false,
       }),
       save: refused,
       forgetActivity: async () => {},

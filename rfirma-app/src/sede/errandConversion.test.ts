@@ -50,6 +50,7 @@ describe("cada momento que llega se convierte en lo que la ventana espera", () =
         signs: 3,
         certificates: [certificate()],
         alreadyChosen: null,
+        withoutAsking: false,
       },
     };
 
@@ -250,6 +251,7 @@ describe("cada momento que llega se convierte en lo que la ventana espera", () =
           certificates: [certificate()],
           unregisteredSignatures: true,
           alreadyChosen: null,
+          withoutAsking: false,
         },
       };
       const { push, last } = watched();
@@ -273,6 +275,7 @@ describe("cada momento que llega se convierte en lo que la ventana espera", () =
           certificates: [certificate()],
           unregisteredSignatures: false,
           alreadyChosen: null,
+          withoutAsking: false,
         },
       };
       const { push, last } = watched();
@@ -309,6 +312,7 @@ describe("el lote local: el resumen de cada elemento", () => {
         ],
         certificates: [certificate()],
         alreadyChosen: null,
+        withoutAsking: false,
       },
     };
 

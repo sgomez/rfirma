@@ -26,11 +26,10 @@ pub(super) const FILENAME_CURRENT_DIR: &str = "filenameCurrentDir";
 /// `properties`: el nombre que la sede propone para el fichero que se va a elegir.
 const FILENAME_ACTUAL_NAME: &str = "filenameActualName";
 
-/// `properties`: la sede se conforma con el único certificado que pase el filtro.
+/// `properties`: la sede se conforma con el único candidato y no quiere preguntas.
 const HEADLESS: &str = "headless";
 
-/// `properties`: puesto a `false` dice lo mismo que `headless=true`
-/// (`CertFilterManager.isMandatoryCertificate`, 1.9.2).
+/// `properties`: puesto a `false`, la sede se conforma con el único candidato.
 const MANDATORY_CERT_SELECTION: &str = "mandatoryCertSelection";
 
 /// `properties`: el perfil *baseline*, que el original borra antes de firmar.
@@ -106,8 +105,27 @@ pub(super) fn verb_of(url: &AfirmaUrl) -> String {
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub(super) struct DeclaredProperties {
     crossing: Vec<(String, String)>,
-    headless: bool,
+    unattended: Unattended,
     actual_name: Option<String>,
+}
+
+/// Lo que la sede declara que no hace falta preguntar a la persona.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub(super) struct Unattended {
+    headless: bool,
+    choice_waived: bool,
+}
+
+impl Unattended {
+    /// `headless=true`: lo que haga falta preguntar se rechaza.
+    pub fn is_headless(self) -> bool {
+        self.headless
+    }
+
+    /// `headless=true` o `mandatoryCertSelection=false` (`CertFilterManager.isMandatoryCertificate`, 1.9.2).
+    pub fn waives_the_choice(self) -> bool {
+        self.choice_waived
+    }
 }
 
 impl DeclaredProperties {
@@ -116,9 +134,9 @@ impl DeclaredProperties {
         &self.crossing
     }
 
-    /// Si la sede se conforma con el único certificado que pase el filtro.
-    pub fn is_headless(&self) -> bool {
-        self.headless
+    /// Lo que la sede declara que no hace falta preguntar.
+    pub fn unattended(&self) -> Unattended {
+        self.unattended
     }
 
     /// El nombre que la sede propone al selector de documento.
@@ -140,7 +158,7 @@ impl DeclaredProperties {
 pub(super) fn declared_properties(url: &AfirmaUrl) -> DeclaredProperties {
     let all = readable_properties(url);
     DeclaredProperties {
-        headless: asks_to_skip_the_dialog(&all),
+        unattended: unattended_as_declared(&all),
         actual_name: property_value(&all, FILENAME_ACTUAL_NAME),
         crossing: without_the_launcher_keys(all),
     }
@@ -167,14 +185,15 @@ fn discarded(length: usize, reason: &str) -> Vec<(String, String)> {
     Vec::new()
 }
 
-/// `headless=true`, o su sinónimo `mandatoryCertSelection=false`
-/// (`CertFilterManager.isMandatoryCertificate`, 1.9.2).
-fn asks_to_skip_the_dialog(declared: &[(String, String)]) -> bool {
+fn unattended_as_declared(declared: &[(String, String)]) -> Unattended {
     let headless = property_value(declared, HEADLESS)
         .is_some_and(|value| value.trim().eq_ignore_ascii_case("true"));
-    let mandatory = property_value(declared, MANDATORY_CERT_SELECTION)
+    let not_mandatory = property_value(declared, MANDATORY_CERT_SELECTION)
         .is_some_and(|value| value.trim().eq_ignore_ascii_case("false"));
-    headless || mandatory
+    Unattended {
+        headless,
+        choice_waived: headless || not_mandatory,
+    }
 }
 
 /// Los pares sin las cuatro claves que el lanzador interpreta él mismo, compartido con los

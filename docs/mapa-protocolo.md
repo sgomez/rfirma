@@ -455,8 +455,8 @@ lanzador. Estas son las que deciden algo.
 | Clave | Qué exige rFirma | Regla que el original ejecuta | Veredicto |
 |---|---|---|---|
 | `filter`, `filters`, `filters.N` | Se recogen con la precedencia del original y cruzan enteras al motor (`site/domain/protocol/filters.rs`) | `CertFilterManager.getFilterValues` (`CertFilterManager.java:165`): `filter` gana a `filters`, y `filters` a la serie numerada; los criterios se separan por `;` | **Igual** |
-| `headless` | Con `true`, si un solo certificado pasa el filtro no se pregunta; nunca cruza al puente | `CertFilterManager.isMandatoryCertificate:145`: con `true`, si un solo certificado pasa el filtro **no se enseña el diálogo** | **Igual** |
-| `mandatoryCertSelection` | `false` dice lo mismo que `headless=true`; nunca cruza al puente | `false` tiene el mismo efecto que `headless=true` | **Igual** |
+| `headless` | Con `true`, lo que habría que preguntar se rechaza con `SAF_50`; si un solo certificado pasa el filtro no se pregunta, pero solo con la preferencia que lo permite; nunca cruza al puente | `CertFilterManager.isMandatoryCertificate:145`: con `true`, si un solo certificado pasa el filtro **no se enseña el diálogo**; `ProtocolInvocationLauncherSign.java:793`: `SAF_50` en vez de preguntar | **Desviación declarada** (ADR-0032) |
+| `mandatoryCertSelection` | `false`: si un solo certificado pasa el filtro no se pregunta, solo con la preferencia; lo demás se sigue preguntando; nunca cruza al puente | `false` elige solo el único candidato, como `headless=true`, sin rechazar las demás preguntas | **Desviación declarada** (ADR-0032) |
 | `profile` | Se descarta antes de firmar, venga por `properties` o por los `extraparams` de un lote | `ProtocolInvocationLauncherSign.java:153` y `…SignAndSave.java:150` lo **borran** antes de firmar | **Igual** |
 | `mode=explicit` | Con XAdES, `SAF_06` | El original avisa de que está obsoleto y hashea el dato con SHA1 | **Desviación declarada** (XAdES explícita) |
 | `target` | `tree` o `leafs`; cualquier otro valor, `SAF_03` nombrando `properties`; ausente es `leafs` | `CounterSignTarget.getTarget`, con `leafs` por defecto en la contrafirma | **Igual** |

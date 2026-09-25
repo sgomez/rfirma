@@ -38,8 +38,7 @@ así.
 ## Considered Options
 
 - **Añadir `headless` o `mandatoryCertSelection=false` a la petición.** Descartada: cambia lo que
-  envía la sede, y con ello lo que se mide. Además, rFirma muestra siempre el consentimiento al
-  firmar, aunque la petición traiga `headless`.
+  envía la sede, y con ello lo que se mide.
 - **Un interruptor de lanzamiento en rFirma que se salte el consentimiento.** Descartada: una
   aplicación de firma que firma sin preguntar si se lo pide una variable de entorno es un agujero,
   y AutoFirma no tiene equivalente.

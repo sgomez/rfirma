@@ -1026,6 +1026,12 @@ msgstr ""
 msgid "preferences.consentCountdown.label"
 msgstr "Protecció contra signatures per descuit a les seus"
 
+msgid "preferences.honourAutomaticSelection.label"
+msgstr "Respectar la selecció automàtica de certificat que demani la seu"
+
+msgid "preferences.honourAutomaticSelection.hint"
+msgstr "Si la seu ho demana i només accepta un dels teus certificats, s'utilitza sense preguntar-te. Si el teu magatzem no demana PIN, la signatura sortirà sense que vegis res."
+
 msgid "preferences.rememberActivity.label"
 msgstr "Recordar la meva activitat"
 

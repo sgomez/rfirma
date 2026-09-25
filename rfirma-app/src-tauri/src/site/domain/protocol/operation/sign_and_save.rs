@@ -15,9 +15,9 @@ use super::guards::{
     refuse_a_multisignature_of_an_invoice, requested_format, resolve_auto_format,
 };
 use super::properties::{
-    comma_list_value, declared_properties, optional, property_value, FILENAME_CURRENT_DIR,
-    FILENAME_DESCRIPTION, FILENAME_EXTS, FILENAME_SAVE_CURRENT_DIR, FILENAME_SAVE_DESCRIPTION,
-    FILENAME_SAVE_EXTS,
+    comma_list_value, declared_properties, optional, property_value, Unattended,
+    FILENAME_CURRENT_DIR, FILENAME_DESCRIPTION, FILENAME_EXTS, FILENAME_SAVE_CURRENT_DIR,
+    FILENAME_SAVE_DESCRIPTION, FILENAME_SAVE_EXTS,
 };
 use super::save_load::check_filename;
 use super::sign::{counter_round, SignatureRound};
@@ -43,7 +43,7 @@ pub struct SignAndSaveRequest {
     declared: Vec<(String, String)>,
     filter: SiteFilter,
     sticky: StickyCertificate,
-    headless: bool,
+    unattended: Unattended,
     filename: Option<String>,
     extensions: Vec<String>,
     description: Option<String>,
@@ -144,9 +144,14 @@ impl SignAndSaveRequest {
         self.load_filename.as_deref()
     }
 
-    /// Si la sede se conforma con el único certificado que pase el filtro (`headless`).
+    /// Si la sede pidió `headless`: lo que haga falta preguntar se rechaza.
     pub fn is_headless(&self) -> bool {
-        self.headless
+        self.unattended.is_headless()
+    }
+
+    /// Si la sede se conforma con el único candidato que pase el filtro.
+    pub fn waives_the_choice(&self) -> bool {
+        self.unattended.waives_the_choice()
     }
 
     /// El firmador del servidor trifásico de la sede, si la prefirma y la postfirma se hacen allí.
@@ -212,7 +217,7 @@ pub(super) fn sign_and_save_request(
         requested,
         filter: site_filter(&declared).within_the_module(module_named_by(url)),
         sticky: sticky_certificate(url),
-        headless: properties.is_headless(),
+        unattended: properties.unattended(),
         filename,
         extensions: comma_list_value(property_value(&declared, FILENAME_SAVE_EXTS)),
         description: property_value(&declared, FILENAME_SAVE_DESCRIPTION),

@@ -120,6 +120,7 @@ interface SigningSectionProps {
   onRememberVisibleSignatureChange: (checked: boolean) => void;
   onChooseDestinationClick: () => void;
   onConsentCountdownChange: (checked: boolean) => void;
+  onHonourAutomaticSelectionChange: (checked: boolean) => void;
 }
 
 export function SigningSection({
@@ -129,6 +130,7 @@ export function SigningSection({
   onRememberVisibleSignatureChange,
   onChooseDestinationClick,
   onConsentCountdownChange,
+  onHonourAutomaticSelectionChange,
 }: SigningSectionProps) {
   const { t } = useTranslation();
   return (
@@ -171,6 +173,13 @@ export function SigningSection({
         label={t("preferences.consentCountdown.label")}
         wide
         onChange={onConsentCountdownChange}
+      />
+      <Switch
+        checked={preferences.honourAutomaticSelection}
+        label={t("preferences.honourAutomaticSelection.label")}
+        hint={t("preferences.honourAutomaticSelection.hint")}
+        wide
+        onChange={onHonourAutomaticSelectionChange}
       />
       <SaveNotice section="signing" saveFailure={saveFailure} />
     </>
