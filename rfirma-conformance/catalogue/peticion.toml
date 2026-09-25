@@ -46,21 +46,6 @@ act.consent = "AutoFirma enseña un diálogo de error antes de contestar cada re
 expects.completes.conditions = ["invalid-op-saf-04"]
 
 [[check]]
-id = "local_access_blocked"
-set = "peticion"
-citation = "UrlParameters.java:279-289, 369-372; ProtocolInvocationLauncher.java:732-737"
-statement = """
-Si rtservlet apunta a localhost o 127.0.0.1, se rechaza con SAF_13.
-"""
-
-[check.drive]
-mode = "v4"
-script = "protocol-v4-local-access"
-patience_secs = 600
-act.consent = "AutoFirma enseña un diálogo de error antes de contestar el rechazo: ciérralo según aparezca."
-expects.completes.conditions = ["local-rtservlet-saf-13"]
-
-[[check]]
 id = "a_non_alphanumeric_identifier_is_refused_with_saf_03"
 set = "peticion"
 citation = "UrlParametersToSign.java:222-227; ProtocolInvocationLauncher.java:741"
@@ -155,7 +140,7 @@ expects.completes.conditions = ["rtservlet-over-ftp-saf-03"]
 [[check]]
 id = "a_retrieve_servlet_on_a_local_host_is_refused_with_saf_13"
 set = "peticion"
-citation = "UrlParameters.java:284-289, 370-374"
+citation = "UrlParameters.java:279-289, 369-374; ProtocolInvocationLauncher.java:732-737"
 statement = """
 Un rtservlet cuyo host es localhost o 127.0.0.1 se rechaza con SAF_13: el acceso a una dirección
 local está bloqueado.
@@ -166,7 +151,7 @@ mode = "v4"
 script = "protocol-v4-rejections"
 patience_secs = 600
 act.consent = "AutoFirma enseña un diálogo de error antes de contestar cada rechazo de parámetros: ciérralos según aparezcan."
-expects.completes.conditions = ["rtservlet-on-localhost-saf-13"]
+expects.completes.conditions = ["rtservlet-on-localhost-saf-13", "rtservlet-on-127-0-0-1-saf-13"]
 
 [[check]]
 id = "a_retrieve_servlet_carrying_its_own_parameters_is_refused_with_saf_03"
