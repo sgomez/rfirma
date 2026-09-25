@@ -17,7 +17,7 @@ o el consentimiento de rFirma. La cola los agrupa en su tramo.
 - Las comprobaciones cuyo objeto es el PIN o elegir entre varios certificados corren con el almacén
   `token`.
 - Un rechazo que el cliente enseña en una ventana antes de contestar —los de parámetros, incluido
-  el acceso local de `local_access_blocked`, y los de guardar, cargar, seleccionar y lote— no llega
+  el acceso a una dirección local, y los de guardar, cargar, seleccionar y lote— no llega
   a la sede hasta que alguien la cierra: esas comprobaciones van en el tramo `clic`, sin excepción.
   La suite lanza los dos clientes con las mismas opciones.
 
