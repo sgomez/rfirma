@@ -171,6 +171,16 @@ describe("the file the portal is asking about", () => {
     expect(screen.getByText("Guardando el fichero")).toBeInTheDocument();
   });
 
+  it("warns that the previous destination could not be written while the dialog asks again", () => {
+    const { port } = scriptedErrand({ kind: "saving", filename: "firma.pdf", unwritable: true });
+    renderWithCatalog(<SedeWindow errands={port} />);
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "No se ha podido guardar en el destino elegido. Elige otro en el diálogo del sistema.",
+    );
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+  });
+
   it("says whether the site asked for one file or several", () => {
     const { port } = scriptedErrand({ kind: "loading", multiple: true });
     const { rerender } = renderWithCatalog(<SedeWindow errands={port} />);

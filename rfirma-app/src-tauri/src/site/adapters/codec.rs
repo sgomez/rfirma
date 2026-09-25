@@ -87,15 +87,13 @@ pub(super) fn request_of(read: Result<SiteOperation, Refusal>) -> SiteRequest {
     }
 }
 
-/// El lote local se lee aquí mismo; el remoto viaja entero a los dos servlets.
+/// El lote local se lee aquí mismo, aunque su error no sale hasta firmarlo; el remoto viaja entero a los dos servlets.
 fn batch_asked(request: BatchRequest) -> SiteRequest {
     if !request.is_local() {
         return SiteRequest::Batch(request);
     }
-    match parse_local_batch(request.lote()) {
-        Ok(batch) => SiteRequest::LocalBatch(Box::new(LocalBatchAsk { request, batch })),
-        Err(refusal) => SiteRequest::NotAttended(refusal.found_while_processing()),
-    }
+    let batch = parse_local_batch(request.lote());
+    SiteRequest::LocalBatch(Box::new(LocalBatchAsk { request, batch }))
 }
 
 /// Si la versión negociada añade a la firma el tercer componente (`ProtocolInvocationLauncherSign.java:552-557`).

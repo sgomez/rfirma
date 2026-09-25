@@ -232,8 +232,8 @@ pub struct LocalBatchItem {
 pub struct LocalBatchConsent {
     /// El lote tal y como lo pidió la sede.
     pub request: BatchRequest,
-    /// Las firmas del lote, ya leídas.
-    pub batch: LocalBatch,
+    /// Las firmas del lote, o por qué no se pudieron leer.
+    pub batch: Result<LocalBatch, Refusal>,
     /// Un resumen por elemento, en el orden en que la sede los declaró.
     pub items: Vec<LocalBatchItem>,
     /// Certificados aceptados por la sede, ya cribados.

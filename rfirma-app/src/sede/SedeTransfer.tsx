@@ -3,7 +3,9 @@ import { SedeBody } from "./SedeFrame";
 
 interface SedeTransferProps {
   /** Guardar el fichero que propone la sede, o cargar el que elija la persona. */
-  transfer: { kind: "saving"; filename: string | null } | { kind: "loading"; multiple: boolean };
+  transfer:
+    | { kind: "saving"; filename: string | null; unwritable?: boolean }
+    | { kind: "loading"; multiple: boolean };
 }
 
 /**
@@ -25,7 +27,13 @@ export function SedeTransfer({ transfer }: SedeTransferProps) {
     <SedeBody steadyFooter footer={null}>
       <div className="rf-stack sede-transfer">
         <p className="rf-title sede-transfer__title">{titleOf(transfer, t)}</p>
-        <p className="rf-prose rf-text-muted">{leadOf(transfer, t)}</p>
+        {transfer.kind === "saving" && transfer.unwritable === true ? (
+          <p className="rf-prose" role="alert">
+            {t("sede.saving.leadUnwritable")}
+          </p>
+        ) : (
+          <p className="rf-prose rf-text-muted">{leadOf(transfer, t)}</p>
+        )}
       </div>
     </SedeBody>
   );

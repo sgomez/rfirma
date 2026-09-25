@@ -93,31 +93,26 @@ pub fn declined(live: &LiveErrand) -> SiteOutcome {
     over(live, SiteOutcome::Cancelled)
 }
 
-/// Caso de uso: se escribe en la ruta que la persona eligió el fichero que pidió la sede.
+/// Caso de uso: se escribe en la ruta que la persona eligió; si no se puede, el trámite sigue esperando otro destino (`JSEUIManager`, 1.9.2).
 pub fn saved(
     scratch: &dyn Scratch,
     path: &Path,
     data: &[u8],
     signer_der: Option<&[u8]>,
     live: &LiveErrand,
-) -> SiteOutcome {
-    match scratch.write(path, data) {
-        Ok(()) => over(
-            live,
-            match signer_der {
-                Some(signer_der) => SiteOutcome::Signature {
-                    signer_der: signer_der.to_vec(),
-                    signature: data.to_vec(),
-                    chosen_document: live.the_chosen_document(),
-                },
-                None => SiteOutcome::Saved,
+) -> Result<SiteOutcome, String> {
+    scratch.write(path, data)?;
+    Ok(over(
+        live,
+        match signer_der {
+            Some(signer_der) => SiteOutcome::Signature {
+                signer_der: signer_der.to_vec(),
+                signature: data.to_vec(),
+                chosen_document: live.the_chosen_document(),
             },
-        ),
-        Err(detail) => over(
-            live,
-            SiteOutcome::Refused(SiteRefusal::CannotSaveData(detail)),
-        ),
-    }
+            None => SiteOutcome::Saved,
+        },
+    ))
 }
 
 /// Caso de uso: se leen los ficheros que la persona eligió y se entregan a la sede.

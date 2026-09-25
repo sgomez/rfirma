@@ -216,7 +216,7 @@ fn saved_with_a_signer_der_answers_the_same_line_as_a_plain_signature() {
     );
 
     assert!(
-        matches!(outcome, SiteOutcome::Signature { .. }),
+        matches!(outcome, Ok(SiteOutcome::Signature { .. })),
         "{outcome:?}"
     );
     assert_eq!(std::fs::read(&destination).expect("se ha escrito"), A_PDF);
@@ -410,7 +410,7 @@ fn a_file_is_written_where_the_person_chose_and_the_site_gets_save_ok() {
         &live,
     );
 
-    assert!(matches!(outcome, SiteOutcome::Saved));
+    assert!(matches!(outcome, Ok(SiteOutcome::Saved)));
     assert_eq!(std::fs::read(&destination).expect("se ha escrito"), A_PDF);
     assert_eq!(
         what_the_site_received(&mut wire).as_deref(),
@@ -419,7 +419,7 @@ fn a_file_is_written_where_the_person_chose_and_the_site_gets_save_ok() {
 }
 
 #[test]
-fn a_save_that_cannot_be_written_is_answered_with_saf_05() {
+fn a_save_that_cannot_be_written_waits_for_another_destination_and_cancelling_it_answers_cancel() {
     let home = tempfile::tempdir().expect("hay directorio temporal");
     let live = a_live();
     let _ = attend(
@@ -448,17 +448,22 @@ fn a_save_that_cannot_be_written_is_answered_with_saf_05() {
         &live,
     );
 
-    assert!(matches!(
-        outcome,
-        SiteOutcome::Refused(SiteRefusal::CannotSaveData(_))
-    ));
+    assert!(outcome.is_err(), "no se ha escrito nada");
     assert_eq!(
-        on_the_wire(&outcome),
-        WireAnswer::refused(SafCode::CannotSaveData).on_the_wire()
+        what_the_site_received(&mut wire),
+        None,
+        "un fallo de escritura no termina el trámite"
     );
     assert!(
-        what_the_site_received(&mut wire).is_some_and(|line| line.starts_with("SAF_05")),
-        "sale el codigo del catalogo"
+        live.the_saving_pending().is_some(),
+        "el guardado sigue esperando otro destino"
+    );
+
+    decline(&live);
+
+    assert_eq!(
+        what_the_site_received(&mut wire),
+        Some(crate::site::adapters::frontier::cancelled().on_the_wire())
     );
 }
 
@@ -477,7 +482,7 @@ fn saved_writes_the_data_it_is_given_never_a_pending_consent_it_does_not_read() 
         &live,
     );
 
-    assert!(matches!(outcome, SiteOutcome::Saved));
+    assert!(matches!(outcome, Ok(SiteOutcome::Saved)));
     assert_eq!(
         std::fs::read(&destination).expect("se ha escrito"),
         A_PDF,

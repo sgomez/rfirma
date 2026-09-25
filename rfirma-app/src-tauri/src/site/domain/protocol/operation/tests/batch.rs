@@ -38,7 +38,7 @@ fn the_batch_reads_headless_from_its_properties_too() {
 }
 
 #[test]
-fn a_batch_reads_its_two_servlets_and_the_algorithm_of_its_xml_lote() {
+fn a_batch_reads_its_two_servlets() {
     let lote = xml_lote("SHA256", true);
     let url = a_batch(&format!("&dat={}", dat(lote.as_bytes())));
 
@@ -55,12 +55,10 @@ fn a_batch_reads_its_two_servlets_and_the_algorithm_of_its_xml_lote() {
     );
     assert!(!request.is_local());
     assert!(!request.is_json());
-    assert_eq!(request.algorithm(), "SHA256");
-    assert!(request.stops_on_error());
 }
 
 #[test]
-fn a_batch_with_jsonbatch_reads_the_algorithm_of_its_json_lote() {
+fn a_batch_with_jsonbatch_is_read_as_json() {
     let lote = json_lote("SHA512", false);
     let url = a_batch(&format!("&jsonbatch=true&dat={}", dat(lote.as_bytes())));
 
@@ -68,85 +66,19 @@ fn a_batch_with_jsonbatch_reads_the_algorithm_of_its_json_lote() {
         panic!("es un lote");
     };
     assert!(request.is_json());
-    assert_eq!(request.algorithm(), "SHA512");
-    assert!(!request.stops_on_error());
 }
 
 #[test]
-fn a_batch_in_legacy_xml_reads_compound_and_hyphenated_algorithm_names() {
-    for algorithm in [
-        "SHA256withRSA",
-        "SHA384withRSA",
-        "SHA512withRSA",
-        "SHA256withECDSA",
-        "SHA384withECDSA",
-        "SHA512withECDSA",
-        "SHA-256",
-        "SHA-384",
-        "SHA-512",
-    ] {
-        let lote = xml_lote(algorithm, true);
-        let url = a_batch(&format!("&dat={}", dat(lote.as_bytes())));
+fn a_local_batch_without_algorithm_is_attended_because_it_is_read_when_signed() {
+    let url = an_operation(&format!(
+        "op=batch&idsession=8jAkPZfRw2mQxN4TbYuL&localBatchProcess=true&jsonbatch=true&dat={}",
+        dat(br#"{"format":"CAdES","singlesigns":[]}"#)
+    ));
 
-        let SiteOperation::Batch(request) = read_operation(&url).expect("se atiende") else {
-            panic!("es un lote: {algorithm}");
-        };
-        assert!(!request.is_json());
-        assert!(!request.is_local());
-        assert_eq!(request.algorithm(), algorithm);
-    }
-}
-
-#[test]
-fn a_batch_in_json_reads_compound_and_hyphenated_algorithm_names() {
-    for algorithm in [
-        "SHA256withRSA",
-        "SHA384withRSA",
-        "SHA512withRSA",
-        "SHA256withECDSA",
-        "SHA384withECDSA",
-        "SHA512withECDSA",
-        "SHA-256",
-        "SHA-384",
-        "SHA-512",
-    ] {
-        let lote = json_lote(algorithm, false);
-        let url = a_batch(&format!("&jsonbatch=true&dat={}", dat(lote.as_bytes())));
-
-        let SiteOperation::Batch(request) = read_operation(&url).expect("se atiende") else {
-            panic!("es un lote: {algorithm}");
-        };
-        assert!(request.is_json());
-        assert!(!request.is_local());
-        assert_eq!(request.algorithm(), algorithm);
-    }
-}
-
-#[test]
-fn a_local_batch_in_json_reads_compound_and_hyphenated_algorithm_names() {
-    for algorithm in [
-        "SHA256withRSA",
-        "SHA384withRSA",
-        "SHA512withRSA",
-        "SHA256withECDSA",
-        "SHA384withECDSA",
-        "SHA512withECDSA",
-        "SHA-256",
-        "SHA-384",
-        "SHA-512",
-    ] {
-        let url = an_operation(&format!(
-            "op=batch&idsession=8jAkPZfRw2mQxN4TbYuL&localBatchProcess=true&jsonbatch=true&dat={}",
-            dat(json_lote(algorithm, true).as_bytes())
-        ));
-
-        let SiteOperation::Batch(request) = read_operation(&url).expect("se atiende") else {
-            panic!("es un lote: {algorithm}");
-        };
-        assert!(request.is_local());
-        assert!(request.is_json());
-        assert_eq!(request.algorithm(), algorithm);
-    }
+    let SiteOperation::Batch(request) = read_operation(&url).expect("se atiende") else {
+        panic!("es un lote");
+    };
+    assert!(request.is_local());
 }
 
 /// Hay sedes en producción que declaran así su lote (ADR-0023).
@@ -197,34 +129,31 @@ fn a_batch_with_sha1_is_attended_like_the_original_attends_it() {
 }
 
 #[test]
-fn a_batch_with_ripemd160_is_still_refused_naming_the_parameter() {
-    let url = a_batch(&format!(
-        "&dat={}",
-        dat(xml_lote("RIPEMD160withRSA", false).as_bytes())
-    ));
+fn a_remote_batch_header_is_not_read_while_parsing_the_request() {
+    for (name, extra, lote) in [
+        ("RIPEMD160", "", xml_lote("RIPEMD160withRSA", false)),
+        ("MD5", "", xml_lote("MD5", false)),
+        ("XML sin algorithm", "", "<signbatch/>".to_owned()),
+        ("JSON sin algorithm", "&jsonbatch=true", "{}".to_owned()),
+        ("JSON leído como XML", "", json_lote("SHA256", false)),
+    ] {
+        let url = a_batch(&format!("{extra}&dat={}", dat(lote.as_bytes())));
 
-    let refusal = read_operation(&url).expect_err("RIPEMD160 no esta en el catalogo del lote");
-
-    assert_eq!(refusal.code(), SafCode::Params);
-    assert_eq!(refusal.blame(), Some(Parameter::Algorithm));
+        read_operation(&url).expect(name);
+    }
 }
 
 #[test]
-fn a_batch_header_without_algorithm_is_refused_naming_the_parameter() {
-    let xml_without_algo = "<signbatch stoponerror=\"true\"><singlesign id=\"001\"/></signbatch>";
-    let url = a_batch(&format!("&dat={}", dat(xml_without_algo.as_bytes())));
-    let refusal = read_operation(&url).expect_err("falta algorithm en XML");
-    assert_eq!(refusal.code(), SafCode::Params);
-    assert_eq!(refusal.blame(), Some(Parameter::Algorithm));
-
-    let json_without_algo = "{\"stoponerror\":true}";
+fn only_jsonbatch_in_lowercase_asks_for_a_json_batch() {
     let url = a_batch(&format!(
-        "&jsonbatch=true&dat={}",
-        dat(json_without_algo.as_bytes())
+        "&jsonBatch=true&dat={}",
+        dat(json_lote("SHA256", false).as_bytes())
     ));
-    let refusal = read_operation(&url).expect_err("falta algorithm en JSON");
-    assert_eq!(refusal.code(), SafCode::Params);
-    assert_eq!(refusal.blame(), Some(Parameter::Algorithm));
+
+    let SiteOperation::Batch(request) = read_operation(&url).expect("se atiende") else {
+        panic!("es un lote");
+    };
+    assert!(!request.is_json());
 }
 
 #[test]
@@ -267,7 +196,6 @@ fn a_local_batch_needs_no_servlet_urls() {
     assert!(request.is_json());
     assert_eq!(request.presigner_url(), None);
     assert_eq!(request.postsigner_url(), None);
-    assert!(request.stops_on_error());
 }
 
 /// El original manda el XML heredado a los servlets aunque la sede pida el lote
@@ -283,16 +211,6 @@ fn a_local_batch_in_the_legacy_xml_is_refused() {
 
     assert_eq!(refusal.code(), SafCode::Params);
     assert_eq!(refusal.blame(), Some(Parameter::Data));
-}
-
-#[test]
-fn a_batch_algorithm_rfirma_cannot_produce_names_the_algorithm_parameter() {
-    let url = a_batch(&format!("&dat={}", dat(xml_lote("MD5", false).as_bytes())));
-
-    let refusal = read_operation(&url).expect_err("MD5 no esta en el catalogo del lote");
-
-    assert_eq!(refusal.code(), SafCode::Params);
-    assert_eq!(refusal.blame(), Some(Parameter::Algorithm));
 }
 
 #[test]
@@ -365,7 +283,7 @@ fn a_batch_of_a_url_downloads_the_batch() {
     let SiteOperation::Batch(request) = operation else {
         panic!("es un lote");
     };
-    assert_eq!(request.algorithm(), "SHA256withRSA");
+    assert_eq!(request.lote(), lote);
 }
 
 #[test]

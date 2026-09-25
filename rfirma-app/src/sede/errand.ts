@@ -207,9 +207,10 @@ export type ErrandStage =
    *
    * Se enseña **el nombre que la sede propone y nunca una ruta** (ADR-0011),
    * y quien confirma es la persona dentro del diálogo: aquí no hay botón que
-   * pulsar. `null` es que la sede no propuso ninguno.
+   * pulsar. `null` es que la sede no propuso ninguno. `unwritable` es que el
+   * destino anterior no se dejó escribir y el diálogo vuelve a pedir otro.
    */
-  | { kind: "saving"; filename: string | null }
+  | { kind: "saving"; filename: string | null; unwritable?: boolean }
   /** Lo mismo para la carga: uno o varios ficheros, según lo que pida la sede. */
   | { kind: "loading"; multiple: boolean }
   /**

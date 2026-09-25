@@ -34,10 +34,6 @@
 //! - **Un `dat` que empieza por `ftp://` sale con `SAF_03`**. El original lo
 //!   baja (`DataDownloader.downloadData`, 1.9.2); aquí solo se baja por
 //!   `http(s)`, y firmarlo como su texto sería firmar la URL.
-//! - **El algoritmo de lote se valida en el parser**. El original no
-//!   comprueba el `algorithm` de `<signbatch>` ni del JSON de lote y lo
-//!   pasa tal cual a la JCA; aquí un nombre no reconocido sale de
-//!   inmediato con `SAF_03` nombrando `algorithm` antes de pedir credenciales.
 
 pub mod algorithm;
 pub mod cipher;

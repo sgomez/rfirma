@@ -259,6 +259,28 @@ fn a_token_that_refuses_to_sign_stops_the_batch_before_the_postsigner() {
 }
 
 #[test]
+fn an_algorithm_the_batch_does_not_declare_fails_the_signature_after_the_presign() {
+    let services =
+        InMemoryBatchServices::answering(PRESIGN_WITH_TWO_SIGNS.to_vec(), b"NUNCA".to_vec());
+    let token = InMemoryTokenSigning::default();
+    let certificate = a_usable_certificate("un certificado");
+    let request = a_batch_request("{\"algorithm\":\"MD5\",\"singlesigns\":[]}", true);
+
+    let refusal = signed_batch(&a_run(&services, &token, &certificate), &request)
+        .expect_err("sin algoritmo no hay PK1");
+
+    let SiteRefusal::BatchSigningFailed(failed) = refusal else {
+        panic!("es la firma del lote la que falla: {refusal:?}");
+    };
+    assert_eq!(
+        failed.code,
+        crate::site::domain::protocol::SafCode::BatchSignature
+    );
+    assert_eq!(services.received().len(), 1, "la prefirma sí sale");
+    assert_eq!(token.signing_attempts(), 0);
+}
+
+#[test]
 fn the_number_of_signs_is_read_from_the_batch_in_both_formats() {
     assert_eq!(how_many(&a_batch_request(JSON_LOTE, true)), 2);
     assert_eq!(how_many(&a_batch_request(XML_LOTE, false)), 2);
