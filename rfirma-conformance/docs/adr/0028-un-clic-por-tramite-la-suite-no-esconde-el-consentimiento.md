@@ -50,6 +50,8 @@ así.
 - Un rechazo que el cliente enseña en una ventana antes de contestar —los de parámetros, incluido
   el acceso a una dirección local, y los de guardar, cargar, seleccionar y lote— no llega
   a la sede hasta que alguien la cierra: esas comprobaciones van en el tramo `clic`, sin excepción.
+  Basta con que lo enseñe un cliente: rFirma enseña así la cofirma y la contrafirma FacturaE, la
+  contrafirma fuera de CAdES y XAdES y el XAdES explícito, que AutoFirma contesta sin ventana.
   La suite lanza los dos clientes con las mismas opciones.
 
 ## Considered Options
@@ -66,8 +68,9 @@ así.
 - **Dejarlo fuera porque rFirma enseña siempre su consentimiento.** Descartada: rFirma respeta el
   parámetro con un único candidato si la persona enciende `honour_automatic_selection`
   (ADR-0032), y el perfil de la suite la enciende. Donde rFirma sigue preguntando con la
-  preferencia —un PDF con firmas no registradas, o más de un candidato contando los caducados que
-  admite un filtro explícito—, la comprobación se queda en `clic`.
+  preferencia —un PDF con firmas no registradas, más de un candidato contando los caducados que
+  admite un filtro explícito, o un rechazo que enseña antes de contestar—, la comprobación se
+  queda en `clic`.
 - **Un interruptor de lanzamiento en rFirma que se salte el consentimiento.** Descartada: una
   aplicación de firma que firma sin preguntar si se lo pide una variable de entorno es un agujero,
   y AutoFirma no tiene equivalente. La preferencia del ADR-0032 no lo es: la enciende la persona y

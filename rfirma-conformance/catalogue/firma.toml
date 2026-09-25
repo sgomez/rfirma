@@ -1202,6 +1202,7 @@ declarado con mimeType=hash/sha1.
 [check.drive]
 mode = "v4"
 script = "signxadesexplicit"
+act.consent = "Puede aparecer una ventana con el rechazo: ciérrala. AutoFirma firma sin enseñar nada; rFirma enseña el rechazo antes de contestar a la sede."
 expects.completes.conditions = ["the-sha1-of-the-data-signed"]
 
 [[check]]
@@ -1273,6 +1274,7 @@ PAdES no admite contrafirma: una contrafirma PAdES se rechaza con SAF_04, operac
 [check.drive]
 mode = "v4"
 script = "countersignpades"
+act.consent = "Puede aparecer una ventana con el rechazo: ciérrala. AutoFirma contesta sin enseñar nada; rFirma la enseña antes de contestar a la sede."
 expects.code = "SAF_04"
 
 [[check]]
@@ -1287,6 +1289,7 @@ FacturaE no admite cofirma: una cofirma FacturaE se rechaza con SAF_04, operaci�
 [check.drive]
 mode = "v4"
 script = "cosignfacturae"
+act.consent = "Puede aparecer una ventana con el rechazo: ciérrala. AutoFirma contesta sin enseñar nada; rFirma la enseña antes de contestar a la sede."
 expects.code = "SAF_04"
 
 [[check]]
@@ -1302,4 +1305,5 @@ soportada.
 [check.drive]
 mode = "v4"
 script = "countersignfacturae"
+act.consent = "Puede aparecer una ventana con el rechazo: ciérrala. AutoFirma contesta sin enseñar nada; rFirma la enseña antes de contestar a la sede."
 expects.code = "SAF_04"
