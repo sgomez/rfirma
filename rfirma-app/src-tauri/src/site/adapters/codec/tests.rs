@@ -148,8 +148,9 @@ fn a_local_batch_arrives_already_read_and_the_remote_one_does_not() {
     let SiteRequest::LocalBatch(ask) = request else {
         panic!("el lote local llega leido: {request:?}");
     };
-    assert_eq!(ask.batch.signs().len(), 1);
-    assert_eq!(ask.batch.signs()[0].id(), "001");
+    let batch = ask.batch.expect("el lote se lee");
+    assert_eq!(batch.signs().len(), 1);
+    assert_eq!(batch.signs()[0].id(), "001");
 
     let remote = V4Codec.decode(&an_operation(&format!(
         "afirma://batch?op=batch&idsession={CREDENTIAL}&jsonbatch=true&\
@@ -162,18 +163,14 @@ fn a_local_batch_arrives_already_read_and_the_remote_one_does_not() {
 }
 
 #[test]
-fn a_local_batch_the_site_wrote_wrong_is_not_attended() {
+fn a_local_batch_the_site_wrote_wrong_is_attended_and_carries_why_it_cannot_be_read() {
     let request = V4Codec.decode(&a_local_batch(
         "{\"algorithm\":\"SHA256\",\"singlesigns\":[]}",
     ));
-    let SiteRequest::NotAttended(refusal) = request else {
-        panic!("un lote local sin formato no se atiende: {request:?}");
+    let SiteRequest::LocalBatch(ask) = request else {
+        panic!("el original lee el lote al firmarlo, después del certificado: {request:?}");
     };
-    assert!(refusal.answer().on_the_wire().starts_with("SAF_"));
-    assert!(
-        !refusal.is_shown_before_it_is_answered(),
-        "el original lee el lote al procesarlo, sin diálogo"
-    );
+    assert!(ask.batch.is_err());
 }
 
 #[test]

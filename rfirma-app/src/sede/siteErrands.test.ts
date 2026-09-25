@@ -8,6 +8,7 @@ import {
   described,
   watched,
 } from "./siteErrandsFixtures";
+import type { PortalResult } from "./siteErrandView";
 
 /**
  * Grada A: el adaptador del puerto, **contra las órdenes dobladas** (TD-78).
@@ -141,6 +142,29 @@ describe("el diálogo del portal sale solo", () => {
         outcome: { kind: "refused", situation: "unknown", detail: "el portal no contesta" },
       }),
     );
+  });
+
+  it("warns and opens the save dialog again when the chosen destination cannot be written", async () => {
+    const saveFile = vi
+      .fn<() => Promise<PortalResult<boolean>>>()
+      .mockResolvedValueOnce({
+        ok: false,
+        failure: { situation: "saveDestinationUnwritable", detail: "permiso denegado" },
+      })
+      .mockResolvedValueOnce({ ok: true, value: true });
+    const { push, seen, last } = watched({ saveFile });
+
+    push(SAVING);
+
+    await vi.waitFor(() =>
+      expect(last()?.stage).toEqual({ kind: "outcome", outcome: { kind: "saved" } }),
+    );
+    expect(saveFile).toHaveBeenCalledTimes(2);
+    expect(seen.map((errand) => errand?.stage)).toContainEqual({
+      kind: "saving",
+      filename: "firma.pdf",
+      unwritable: true,
+    });
   });
 
   it("shows the saved outcome once the file is written", async () => {

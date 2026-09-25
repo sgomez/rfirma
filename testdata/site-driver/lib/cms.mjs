@@ -199,7 +199,9 @@ function theSignersWithWhatTheySign(signers, content) {
 }
 
 function theUnverifiableAlgorithmOf(signer) {
-  if (signer.signedAttributes && !DIGESTS[signer.digestAlgorithm]) return signer.digestAlgorithm;
+  const hashesWithItsDigest =
+    signer.signedAttributes || KEY_ONLY_SIGNATURES.has(signer.signatureAlgorithm);
+  if (hashesWithItsDigest && !DIGESTS[signer.digestAlgorithm]) return signer.digestAlgorithm;
   if (!theSignatureDigestOf(signer)) return signer.signatureAlgorithm;
   return null;
 }
@@ -218,6 +220,20 @@ function theKeysVerifying(signer, content, keys) {
 
 const aVerification = (verified, reason) => ({ verified, reason });
 
+function aSignerVerdict(signer, signed, keys, returnedKey) {
+  const measurableDigest = signer.signedAttributes && DIGESTS[signer.digestAlgorithm];
+  if (measurableDigest && !signsTheData(signer, signed)) {
+    return aVerification(false, "el messageDigest de un firmante no es el resumen de lo que firma");
+  }
+  const unverifiable = theUnverifiableAlgorithmOf(signer);
+  if (unverifiable) return aVerification(null, `la sede no sabe verificar ${unverifiable}`);
+  const verifying = theKeysVerifying(signer, signed, keys);
+  if (verifying.length === 0) {
+    return aVerification(false, "la firma de un firmante no verifica con ninguna clave");
+  }
+  return { ...aVerification(true), byTheReturned: verifying.includes(returnedKey) };
+}
+
 /** Si cada firmante del CMS, contrafirmas incluidas, verifica con su clave, y alguno con el certificado devuelto. */
 export function theCmsVerification(bytes, certificate, detachedContent = null) {
   const cms = theCmsSignature(bytes);
@@ -227,23 +243,14 @@ export function theCmsVerification(bytes, certificate, detachedContent = null) {
   const returnedKey = theKeyOf(certificate);
   if (!returnedKey) return aVerification(false, "el certificado devuelto no es un X.509 DER");
   const keys = [returnedKey, ...theCertificatesIn(bytes).map(theKeyOf).filter(Boolean)];
-  let byTheReturned = false;
-  for (const { signer, content: signed } of theSignersWithWhatTheySign(cms.signers, content)) {
-    const unverifiable = theUnverifiableAlgorithmOf(signer);
-    if (unverifiable) return aVerification(null, `la sede no sabe verificar ${unverifiable}`);
-    if (signer.signedAttributes && !signsTheData(signer, signed)) {
-      return aVerification(
-        false,
-        "el messageDigest de un firmante no es el resumen de lo que firma",
-      );
-    }
-    const verifying = theKeysVerifying(signer, signed, keys);
-    if (verifying.length === 0) {
-      return aVerification(false, "la firma de un firmante no verifica con ninguna clave");
-    }
-    byTheReturned ||= verifying.includes(returnedKey);
-  }
-  if (!byTheReturned) {
+  const verdicts = theSignersWithWhatTheySign(cms.signers, content).map(
+    ({ signer, content: signed }) => aSignerVerdict(signer, signed, keys, returnedKey),
+  );
+  const failure =
+    verdicts.find(({ verified }) => verified === false) ??
+    verdicts.find(({ verified }) => verified === null);
+  if (failure) return failure;
+  if (!verdicts.some(({ byTheReturned }) => byTheReturned)) {
     return aVerification(false, "ningún firmante verifica con el certificado devuelto");
   }
   return aVerification(
