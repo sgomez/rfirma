@@ -127,7 +127,7 @@ export function SessionPage() {
           }
         />
       </div>
-      {batch && <BatchBar batch={batch} question={snapshot.question} />}
+      {batch && <BatchBar batch={batch} call={snapshot.call} />}
       {view ? (
         <ReportBody
           view={view}

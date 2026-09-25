@@ -28,15 +28,6 @@ export function forcedToProtocolVersion(source, version, port) {
   return source;
 }
 
-/** Fija los tres puertos candidatos del transporte sin WebSocket, que el original sortea. */
-export function forcedToFixedServicePorts(source, ports) {
-  return replacingOrFailing(
-    source,
-    "// Calculamos los puertos\n\t\t\t\t\tvar ports = AfirmaUtils.getRandomPorts(minPort, maxPort);",
-    `// Calculamos los puertos\n\t\t\t\t\tvar ports = [${ports.join(", ")}];`,
-  );
-}
-
 /** Añade `gzip=true` a la URL de la operación, que el `autoscript.js` publicado nunca pone. */
 export function withTheDataDeclaredGzipped(source) {
   return replacingOrFailing(

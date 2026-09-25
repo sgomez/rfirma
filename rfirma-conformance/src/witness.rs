@@ -13,9 +13,6 @@ pub(crate) trait Witness: Send + Sync {
     /// Por donde llegan las líneas de la comprobación en curso.
     fn log_sink(&self) -> LiveLogSink;
 
-    /// Pregunta a la persona y espera; `None` si la descarta o se aborta la pasada.
-    fn ask(&self, check: &str, prompt: &str) -> Option<String>;
-
     /// Cuenta a la persona lo que va a pasar y espera a que dé paso; `false` si lo salta.
     fn brief(&self, check: &str, briefing: &str) -> bool;
 
@@ -47,10 +44,9 @@ pub(crate) mod fake {
     use crate::catalogue::Assistance;
     use crate::livelog::LiveLogSink;
 
-    /// Un testigo que responde lo que se le dicta y apunta lo que se le pidió.
+    /// Un testigo que da paso siempre, salvo que se le diga que no está, y apunta lo que se le pidió.
     #[derive(Default)]
     pub(crate) struct FakeWitness {
-        pub(crate) answer: Option<String>,
         pub(crate) refuses_to_stand_by: bool,
         pub(crate) said: Mutex<Vec<String>>,
     }
@@ -72,11 +68,6 @@ pub(crate) mod fake {
 
         fn log_sink(&self) -> LiveLogSink {
             LiveLogSink::new(|_| {})
-        }
-
-        fn ask(&self, check: &str, _prompt: &str) -> Option<String> {
-            self.note(format!("ask {check}"));
-            self.answer.clone()
         }
 
         fn brief(&self, check: &str, _briefing: &str) -> bool {

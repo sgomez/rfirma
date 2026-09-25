@@ -8,6 +8,7 @@ import { connect as connectTls } from "node:tls";
 import { theLaunchesSoFar } from "../lib/browser.mjs";
 import { aConditionEvent, aMeasuredConditionEvent, emit, settle } from "../lib/events.mjs";
 import { theThirdProtocolPort } from "../lib/modes.mjs";
+import { whichOfTheKit } from "./certificate.mjs";
 import { aHandwrittenScript, aPublishedScript } from "../lib/script.mjs";
 
 const A_CANDIDATE_PORT_BOUND = "a-candidate-port-bound";
@@ -34,13 +35,15 @@ const THE_WARNED_CHANNEL_PATIENCE_MS = 60000;
 /** Lo que se espera a cada rechazo mientras la persona cierra el diálogo de error de AutoFirma. */
 const THE_DIALOGUE_PATIENCE_MS = 120000;
 
-/** Lo que tarda como poco un rechazo retenido por un diálogo que la persona cierra a propósito. */
-const THE_DIALOGUE_MIN_MS = 1000;
+/** Lo que se espera a una selección desatendida antes de darla por preguntada: menos que la paciencia. */
+const THE_UNATTENDED_DEADLINE_MS = Math.max(
+  Number(process.env.RFIRMA_BENCH_TIMEOUT_MS ?? "45000") - 8000,
+  1000,
+);
 
-const THE_REJECTION_WAITED_FOR_THE_DIALOGUE = "the-rejection-waited-for-the-dialogue";
 const THE_SECOND_OPERATION_REUSES_THE_CHANNEL = "the-second-operation-reuses-the-channel";
 const THE_NAME_ARRIVES_IN_UTF8 = "the-name-arrives-in-utf8";
-const THE_SELECTION_ANSWERS_A_CERTIFICATE = "the-selection-answers-a-certificate";
+const A_CERTIFICATE_OF_THE_KEYSTORE_STORE = "a-certificate-of-the-keystore-store";
 
 function connectWebSocket(port) {
   return new Promise((resolve, reject) => {
@@ -209,50 +212,30 @@ function theProbesOverTheFourthProtocol(ports, probes, deadlineMs) {
   };
 }
 
-/** Un rechazo de parámetros y cuánto tardó en llegar: AutoFirma lo retiene tras su diálogo. */
-async function theShownRejectionScript() {
-  const idSession = "Sh6Rj8Dl0Gq2Ue4Tt6Ab";
-  const channel = await theProtocolV4ChannelOpening([54401, 54402, 54403], idSession);
-  if (!channel) return;
-  const sentAt = Date.now();
-  const answer = await exchangeWithin(
-    channel.ws,
-    `afirma://sign?op=sign&format=CAdES&algorithm=SHA256withRSA&dat=SG9sYQ&id=rfirma-1&idsession=${idSession}`,
-    THE_DIALOGUE_PATIENCE_MS,
-  );
-  const waitedMs = Date.now() - sentAt;
-  channel.ws.close();
-  emit(
-    aMeasuredConditionEvent(
-      THE_REJECTION_WAITED_FOR_THE_DIALOGUE,
-      answer === null ? null : answer.startsWith("SAF_03") && waitedMs >= THE_DIALOGUE_MIN_MS,
-      answer === null
-        ? `nadie contestó en ${THE_DIALOGUE_PATIENCE_MS / 1000} s`
-        : `${answer} a los ${(waitedMs / 1000).toFixed(1)} s`,
-    ),
-  );
-  settle({ event: "success" });
-}
-
-/** Una selección que nombra el almacén del sistema en `keystore` y el token de SoftHSM en `ksb64`. */
+/**
+ * En el almacén `token_apart`, una selección desatendida que nombra la NSS en `keystore` y el token
+ * de SoftHSM en `ksb64`: la NSS solo tiene el de seudónimo, y el token, los dos activos.
+ */
 async function theKeyStoreOverKsb64Script() {
   const idSession = "Ks4Pr6Ec8Db0Ks2Bs4Xy";
   const channel = await theProtocolV4ChannelOpening([54481, 54482, 54483], idSession);
   if (!channel) return;
   const token = Buffer.from("PKCS11:/usr/lib/softhsm/libsofthsm2.so").toString("base64");
+  const headless = encodeURIComponent(Buffer.from("headless=true").toString("base64"));
   const answer = await exchangeWithin(
     channel.ws,
-    `afirma://selectcert?keystore=SHARED_NSS&ksb64=${token}&idsession=${idSession}`,
-    THE_DIALOGUE_PATIENCE_MS,
+    `afirma://selectcert?keystore=SHARED_NSS&ksb64=${token}&properties=${headless}&idsession=${idSession}`,
+    THE_UNATTENDED_DEADLINE_MS,
   );
   channel.ws.close();
+  const kit = answer === null ? null : whichOfTheKit(answer);
   emit(
-    aMeasuredConditionEvent(
-      THE_SELECTION_ANSWERS_A_CERTIFICATE,
-      answer === null ? null : !/^(SAF_|CANCEL)/.test(answer),
+    aConditionEvent(
+      A_CERTIFICATE_OF_THE_KEYSTORE_STORE,
+      kit === "pseudonym-rsa",
       answer === null
-        ? `nadie contestó en ${THE_DIALOGUE_PATIENCE_MS / 1000} s`
-        : `contestó ${answer.slice(0, 40)}`,
+        ? "nadie contestó a tiempo: el cliente preguntó por el PIN o por qué certificado elegir"
+        : `volvió ${kit ?? answer.slice(0, 40)}`,
     ),
   );
   settle({ event: "success" });
@@ -714,17 +697,6 @@ function theUnsupportedVersionScript(version, ports) {
     );
 }
 
-/** Los puertos del arranque que la suite ocupa antes, para que el cliente no pueda ligar ninguno. */
-const THE_OCCUPIED_PORTS = [54451, 54452, 54453];
-
-function theOccupiedPortsScript() {
-  return theChannelThatMustNotOpen(
-    `afirma://websocket?ports=${THE_OCCUPIED_PORTS.join(",")}&v=4&jvc=3&idsession=Oc2Cu4Pi6Ed8Po0Rt1S`,
-    THE_OCCUPIED_PORTS,
-    NO_CHANNEL_OPENS,
-  );
-}
-
 /** Un arranque con `jvc=0`, un cliente web anterior al mínimo: el canal tiene que abrirse igual. */
 async function theOldJavascriptScript() {
   const idSession = "Jv0Ol2Dc4Li6En8Tt0Ab";
@@ -844,11 +816,8 @@ export const WEBSOCKET_SCRIPTS = {
     ),
     theConditionsOf([THE_LOCAL_RTSERVLET_PROBE]),
   ),
-  "protocol-v4-shown-rejection": onTheFourthProtocol(theShownRejectionScript, [
-    THE_REJECTION_WAITED_FOR_THE_DIALOGUE,
-  ]),
   "protocol-v4-keystore-over-ksb64": onTheFourthProtocol(theKeyStoreOverKsb64Script, [
-    THE_SELECTION_ANSWERS_A_CERTIFICATE,
+    A_CERTIFICATE_OF_THE_KEYSTORE_STORE,
   ]),
   loadnonascii: aPublishedScript(theNonAsciiNameLoadScript, {
     modes: ["v4", "v3", "service"],
@@ -873,7 +842,6 @@ export const WEBSOCKET_SCRIPTS = {
     theUnsupportedVersionScript(99, [54441, 54442, 54443]),
     [AN_UNSUPPORTED_VERSION_OPENS_NO_CHANNEL],
   ),
-  "protocol-v4-occupied-ports": onTheFourthProtocol(theOccupiedPortsScript, [NO_CHANNEL_OPENS]),
   "protocol-v4-old-javascript": onTheFourthProtocol(theOldJavascriptScript, [
     THE_CHANNEL_OPENS_DESPITE_THE_WARNING,
   ]),

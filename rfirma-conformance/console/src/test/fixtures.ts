@@ -13,7 +13,6 @@ export function aCheck(id: string, state: ResultName = "PENDIENTE"): CheckView {
     statement: `Lo que exige ${id}.`,
     citation: "AfirmaWebSocketServerV4.java:57-68",
     warning: null,
-    question: null,
     assistance: "none",
     store: "rsa",
     bug: null,
@@ -119,7 +118,7 @@ export function aSnapshot(overrides: Partial<Snapshot> = {}): Snapshot {
     ],
     running: null,
     queued: [],
-    question: null,
+    call: null,
     why_pending: {},
     ...overrides,
   };

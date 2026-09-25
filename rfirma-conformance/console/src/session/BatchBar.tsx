@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import type { QuestionView } from "../contract/QuestionView";
+import type { CallView } from "../contract/CallView";
 import { useLive } from "../suite/live";
 import { Elapsed } from "../ui/Elapsed";
 import { ActivityIcon, SkipIcon, StopIcon } from "../ui/icons";
@@ -7,17 +7,16 @@ import { notify } from "../ui/notify";
 import { useShortcuts } from "../ui/shortcuts";
 import type { Batch } from "./progress";
 
-/** La tanda en curso, única dueña de saltar, detener y responder. */
-export function BatchBar({ batch, question }: { batch: Batch; question: QuestionView | null }) {
+/** La tanda en curso, única dueña de saltar, detener y dar paso. */
+export function BatchBar({ batch, call }: { batch: Batch; call: CallView | null }) {
   const { suite, complain } = useLive();
   const skip = () => void suite.skip().catch(complain("No se pudo saltar"));
   const stop = () => void suite.stop().catch(complain("No se pudo detener"));
   const answer = (given: string | null) =>
     void suite.answer(given).catch(complain("No se pudo responder"));
-  const briefing = question?.kind === "briefing";
-  const tranche = question?.kind === "tranche";
-  const trancheCheck = tranche ? question.check : null;
-  const tranchePrompt = tranche ? question.prompt : null;
+  const tranche = call?.kind === "tranche";
+  const trancheCheck = tranche ? call.check : null;
+  const tranchePrompt = tranche ? call.prompt : null;
 
   useEffect(() => {
     if (trancheCheck && tranchePrompt) notify(tranchePrompt);
@@ -26,15 +25,14 @@ export function BatchBar({ batch, question }: { batch: Batch; question: Question
   useShortcuts({
     x: skip,
     X: stop,
-    s: question ? () => answer("s") : undefined,
-    n: question && !briefing && !tranche ? () => answer("n") : undefined,
-    Escape: question ? () => answer(null) : undefined,
+    s: call ? () => answer("s") : undefined,
+    Escape: call ? () => answer(null) : undefined,
   });
 
   return (
     <section className="batch-bar" aria-label="En curso">
       <div className="batch-line">
-        <ActivityIcon activity={question ? "asking" : "running"} />
+        <ActivityIcon activity={call ? "waiting" : "running"} />
         <div className="batch-what">
           <span className="batch-set">{batch.set ?? "…"}</span>
           <span className="batch-sep" aria-hidden="true">
@@ -70,19 +68,15 @@ export function BatchBar({ batch, question }: { batch: Batch; question: Question
           </button>
         </div>
       </div>
-      {question && (
-        <div className="question" role="alertdialog" aria-labelledby="question-title">
-          <div className="question-text">
-            <span className="question-kind" id="question-title">
-              {tranche
-                ? "Te necesitamos delante"
-                : briefing
-                  ? "Antes de empezar"
-                  : "Te preguntamos"}
+      {call && (
+        <div className="call" role="alertdialog" aria-labelledby="call-title">
+          <div className="call-text">
+            <span className="call-kind" id="call-title">
+              {tranche ? "Te necesitamos delante" : "Antes de empezar"}
             </span>
-            <p className="question-prompt">{question.prompt.replace(/\s*\[s\/n\]\s*$/, "")}</p>
+            <p className="call-prompt">{call.prompt}</p>
           </div>
-          <div className="question-actions">
+          <div className="call-actions">
             {tranche ? (
               <>
                 <button type="button" className="button primary" onClick={() => answer("s")}>
@@ -92,25 +86,13 @@ export function BatchBar({ batch, question }: { batch: Batch; question: Question
                   Detener aquí: lo demás queda pendiente <kbd>Esc</kbd>
                 </button>
               </>
-            ) : briefing ? (
+            ) : (
               <>
                 <button type="button" className="button primary" onClick={() => answer("s")}>
                   Empezar <kbd>s</kbd>
                 </button>
                 <button type="button" className="button ghost" onClick={() => answer(null)}>
                   Saltar: queda pendiente <kbd>Esc</kbd>
-                </button>
-              </>
-            ) : (
-              <>
-                <button type="button" className="button primary" onClick={() => answer("s")}>
-                  Sí <kbd>s</kbd>
-                </button>
-                <button type="button" className="button" onClick={() => answer("n")}>
-                  No <kbd>n</kbd>
-                </button>
-                <button type="button" className="button ghost" onClick={() => answer(null)}>
-                  Descartar: queda pendiente <kbd>Esc</kbd>
                 </button>
               </>
             )}

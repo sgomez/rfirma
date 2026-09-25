@@ -49,9 +49,9 @@ pub(crate) fn compare(left: &Report, right: &Report, catalogue: &[Check]) -> Com
             let b = result_name(right.state_of(&check.id));
             Row {
                 id: check.id.clone(),
-                set: check.set.clone(),
-                chapter: check.chapter.clone(),
-                citation: check.citation.clone(),
+                set: check.requirement.set.clone(),
+                chapter: check.requirement.chapter.clone(),
+                citation: check.requirement.citation.clone(),
                 a,
                 b,
                 differ: a != b,
@@ -91,7 +91,11 @@ set = "errores"
 chapter = "15"
 citation = "ProtocolInvocationLauncher.java:741"
 statement = "Uno."
-drive = { mode = "v4", script = "selectcert" }
+
+[check.drive]
+mode = "v4"
+script = "selectcert"
+expects.completes = {}
 
 [[check]]
 id = "a_two"
@@ -99,7 +103,11 @@ set = "errores"
 chapter = "15"
 citation = "ProtocolInvocationLauncher.java:741"
 statement = "Dos."
-drive = { mode = "v4", script = "selectcert" }
+
+[check.drive]
+mode = "v4"
+script = "selectcert"
+expects.completes = {}
 
 [[check]]
 id = "m_three"
@@ -107,7 +115,11 @@ set = "operaciones"
 chapter = "16"
 citation = "SignOperation.java:12"
 statement = "Tres."
-drive = { mode = "v4", script = "sign" }
+
+[check.drive]
+mode = "v4"
+script = "sign"
+expects.completes = {}
 "#;
 
     fn a_report(kind: ClientKind, catalogue: &[Check], outcome: Outcome) -> Report {

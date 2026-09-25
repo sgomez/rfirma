@@ -3,7 +3,14 @@
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 
-import { aConditionEvent, bytesOf, emit, settle, settlingTheError } from "../lib/events.mjs";
+import {
+  aConditionEvent,
+  bytesOf,
+  emit,
+  settle,
+  settlingTheError,
+  unansweredMeansAsked,
+} from "../lib/events.mjs";
 import { withAReleaseWithoutReset } from "../lib/patches.mjs";
 import { aPublishedScript } from "../lib/script.mjs";
 
@@ -74,6 +81,8 @@ const THE_PINNED_DESPITE_THE_FILTERS = "the-pinned-certificate-despite-the-filte
 const SIGNED_WITH_THE_PINNED = "signed-with-the-pinned-certificate";
 const A_NEW_SELECTION_AFTER_THE_RELEASE = "a-new-selection-after-the-release";
 const A_CERTIFICATE_OF_THE_NAMED_TOKEN = "a-certificate-of-the-named-token";
+const THE_ONLY_CANDIDATE_WITHOUT_ASKING = "the-only-candidate-without-asking";
+const A_NEW_SELECTION_AFTER_THE_RESET = "a-new-selection-after-the-reset";
 
 /** Los certificados del kit de la FNMT con los que se montan los almacenes aislados. */
 const THE_KIT = {
@@ -87,7 +96,7 @@ function theKitCertificate(name) {
   return readFileSync(new URL(`../certificates/${name}.der`, import.meta.url));
 }
 
-function whichOfTheKit(certificate) {
+export function whichOfTheKit(certificate) {
   const der = bytesOf(certificate);
   return Object.keys(THE_KIT).find((name) => theKitCertificate(name).equals(der)) ?? null;
 }
@@ -126,27 +135,6 @@ function aSignature() {
       (type, message) => resolve({ error: `${type}: ${message}` }),
     );
   });
-}
-
-/**
- * Sin persona delante, un diálogo que no tenía que salir solo se ve como un trámite que no vuelve:
- * la condición sale no conforme antes de que se agote la espera y se mate al cliente.
- */
-function unansweredMeansAsked(condition) {
-  const patience = Number(process.env.RFIRMA_BENCH_TIMEOUT_MS ?? "45000");
-  setTimeout(
-    () => {
-      emit(
-        aConditionEvent(
-          condition,
-          false,
-          "el trámite no volvió solo: el cliente preguntó donde no tocaba o se quedó mostrando un error",
-        ),
-      );
-      settle({ event: "done" });
-    },
-    Math.max(patience - 8000, 1000),
-  );
 }
 
 function settlingThe(answer) {
@@ -238,13 +226,12 @@ function theFilteredBatchScript() {
   );
 }
 
-/** Dos selecciones de la persona: en la primera cambia al PKCS#12, y la segunda se deja ver. */
-async function theKeyStoreKeptScript() {
-  const first = await aSelection([]);
-  await theChannelClosing();
-  const second = await aSelection([]);
-  emit({ event: "success", step: "first", data: first.certificate ?? first.error });
-  settlingThe(second);
+/** En el almacén de omisión, de un solo certificado: una selección desatendida lo devuelve sin preguntar. */
+async function theOnlyCandidateScript() {
+  unansweredMeansAsked(THE_ONLY_CANDIDATE_WITHOUT_ASKING);
+  const answer = await aSelection(["headless=true"]);
+  emit(aConditionEvent(THE_ONLY_CANDIDATE_WITHOUT_ASKING, !answer.error, described(answer)));
+  settlingThe(answer);
 }
 
 const PINNING_THE_PSEUDONYM = ["headless=true", "filters=subject.contains:TEST-0000"];
@@ -292,6 +279,25 @@ async function theReleaseWithoutResetScript() {
   settlingThe(again);
 }
 
+/** Fija el de seudónimo, lo suelta con `resetsticky` y pide el de curva elíptica por su filtro. */
+async function theResetScript() {
+  unansweredMeansAsked(A_NEW_SELECTION_AFTER_THE_RESET);
+  AutoScript.setStickySignatory(true);
+  const pinned = await aSelection(PINNING_THE_PSEUDONYM);
+  await theChannelClosing();
+  AutoScript.setStickySignatory(false);
+  const after = await aSelection(FILTERING_THE_ELLIPTIC);
+  const held = isTheKit(pinned, "pseudonym-rsa") && isTheKit(after, "active-ecc");
+  emit(
+    aConditionEvent(
+      A_NEW_SELECTION_AFTER_THE_RESET,
+      held,
+      `al fijar ${described(pinned)}; tras resetsticky ${described(after)}`,
+    ),
+  );
+  settlingThe(after);
+}
+
 const PKCS11_OF_SOFTHSM = "PKCS11:/usr/lib/softhsm/libsofthsm2.so";
 
 /** En el almacén `token_apart`: el token tiene los dos activos y la NSS, solo el de seudónimo. */
@@ -318,10 +324,10 @@ export const CERTIFICATE_SCRIPTS = {
   selectcert: aPublishedScript(() => theSelectionScript(""), {
     conditions: [A_CERTIFICATE_ALONE],
   }),
-  selectcertheadless: aPublishedScript(() => theSelectionScript("headless=true"), {
-    conditions: [A_CERTIFICATE_ALONE],
+  selectcertheadless: aPublishedScript(theOnlyCandidateScript, {
+    conditions: [THE_ONLY_CANDIDATE_WITHOUT_ASKING],
   }),
-  sticky: aPublishedScript(theStickyScript),
+  sticky: aPublishedScript(theStickyScript, { benchOnly: true }),
   filtersand: aFilteredSelection(
     ["filters=issuer.contains:Ceres;subject.contains:IDCES-"],
     "active-rsa",
@@ -387,7 +393,6 @@ export const CERTIFICATE_SCRIPTS = {
   }),
   keystoreunknown: aSelectionFromTheKeyStore("NINGUNO", [], "active-rsa"),
   keystoreforeign: aPublishedScript(() => theBareSelectionScript(["headless=true"], "WINDOWS")),
-  keystorekept: aPublishedScript(theKeyStoreKeptScript),
   stickyselect: aPublishedScript(
     pinningThePseudonymAnd(THE_PINNED_WITHOUT_ASKING, () => aSelection([])),
     { conditions: [THE_PINNED_WITHOUT_ASKING] },
@@ -400,6 +405,9 @@ export const CERTIFICATE_SCRIPTS = {
   ),
   stickysigns: aPublishedScript(pinningThePseudonymAnd(SIGNED_WITH_THE_PINNED, aSignature), {
     conditions: [SIGNED_WITH_THE_PINNED],
+  }),
+  stickyreset: aPublishedScript(theResetScript, {
+    conditions: [A_NEW_SELECTION_AFTER_THE_RESET],
   }),
   stickyreleased: aPublishedScript(theReleaseWithoutResetScript, {
     conditions: [A_NEW_SELECTION_AFTER_THE_RELEASE],

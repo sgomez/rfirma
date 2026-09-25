@@ -4,18 +4,11 @@ import {
   theIntermediateServerAsXmlHttpRequest,
   theLocalServiceAsXmlHttpRequest,
 } from "./browser.mjs";
-import {
-  forcedToFixedServicePorts,
-  forcedToProtocolVersion,
-} from "./patches.mjs";
+import { forcedToProtocolVersion } from "./patches.mjs";
 
 /** El puerto fijo al que habla la versión 3 por websocket, el que la prueba le haya dado. */
 export function theThirdProtocolPort() {
   return Number(process.env.RFIRMA_BENCH_PORT ?? "63117");
-}
-
-function theServiceBindFailurePorts() {
-  return (process.env.RFIRMA_BENCH_SERVICE_PORTS ?? "63131,63132,63133").split(",").map(Number);
 }
 
 // Sin `WebSocket` el cliente publicado cae a `afirma://service?…`, y Node lo trae de serie.
@@ -28,10 +21,6 @@ export const MODES = {
   v4: {},
   v3: { patch: (source) => forcedToProtocolVersion(source, 3, theThirdProtocolPort()) },
   service: { prepare: withoutWebSocket },
-  "service-bind-failure": {
-    prepare: withoutWebSocket,
-    patch: (source) => forcedToFixedServicePorts(source, theServiceBindFailurePorts()),
-  },
   relay: {
     prepare() {
       globalThis.XMLHttpRequest = theIntermediateServerAsXmlHttpRequest();

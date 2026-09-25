@@ -52,3 +52,24 @@ export function aMeasuredCondition(name, held, observation) {
 export function aMeasuredConditionEvent(name, held, observation) {
   return { event: "condition", ...aMeasuredCondition(name, held, observation) };
 }
+
+/**
+ * Sin persona delante, un diálogo que no tenía que salir solo se ve como un trámite que no vuelve:
+ * la condición sale no conforme antes de que se agote la espera y se mate al cliente.
+ */
+export function unansweredMeansAsked(condition) {
+  const patience = Number(process.env.RFIRMA_BENCH_TIMEOUT_MS ?? "45000");
+  setTimeout(
+    () => {
+      emit(
+        aConditionEvent(
+          condition,
+          false,
+          "el trámite no volvió solo: el cliente preguntó donde no tocaba o se quedó mostrando un error",
+        ),
+      );
+      settle({ event: "done" });
+    },
+    Math.max(patience - 8000, 1000),
+  );
+}

@@ -45,7 +45,7 @@ export const DEPRECATED_REASON =
 export const assistanceName: Record<Assistance, string> = {
   none: "nada: es automática",
   click: "elegir o pulsar en un diálogo",
-  person: "fijarte en lo que pasa y contestar",
+  person: "hacer en el diálogo lo que se te indica",
 };
 
 const inMasterName: Record<InMaster, string> = {

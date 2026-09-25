@@ -102,7 +102,7 @@ pub struct Console {
     shared: Arc<Shared>,
 }
 
-/// El testigo de verdad: pregunta y avisa a la persona a través de la página.
+/// El testigo de verdad: avisa a la persona y la espera a través de la página.
 struct ConsoleWitness {
     shared: Arc<Shared>,
 }
@@ -127,7 +127,7 @@ struct Session {
     running: Vec<String>,
     started: Option<Instant>,
     log: Option<CheckLog>,
-    question: Option<Question>,
+    call: Option<Call>,
     driver: Option<u32>,
     aborting: bool,
     reasons: BTreeMap<String, String>,
@@ -146,7 +146,7 @@ struct Queued {
     rerun: bool,
 }
 
-struct Question {
+struct Call {
     check: String,
     prompt: String,
     kind: &'static str,
@@ -321,7 +321,7 @@ impl Console {
                 self.shared
                     .catalogue
                     .iter()
-                    .filter(|check| &check.set == set)
+                    .filter(|check| &check.requirement.set == set)
                     .filter(|check| !pending.unwrap_or(false) || is_pending(check))
                     .collect(),
                 true,
@@ -374,14 +374,14 @@ impl Console {
         self.shared.publish(&session);
     }
 
-    /// La respuesta de la persona a la pregunta en curso; `None` la descarta.
+    /// La respuesta de la persona a la llamada en curso; `None` la descarta.
     pub(crate) fn answer(&self, answer: Option<String>) -> Result<(), String> {
         let mut session = self.shared.lock();
-        let question = session
-            .question
+        let call = session
+            .call
             .take()
-            .ok_or("no hay ninguna pregunta en curso")?;
-        let _ = question.reply.send(answer);
+            .ok_or("no hay ninguna llamada en curso")?;
+        let _ = call.reply.send(answer);
         self.shared.publish(&session);
         Ok(())
     }
@@ -498,13 +498,10 @@ impl Shared {
                 .iter()
                 .map(|queued| queued.id.as_str())
                 .collect(),
-            question: session.question.as_ref().map(|question| {
-                (
-                    question.check.as_str(),
-                    question.prompt.as_str(),
-                    question.kind,
-                )
-            }),
+            call: session
+                .call
+                .as_ref()
+                .map(|call| (call.check.as_str(), call.prompt.as_str(), call.kind)),
             reasons: Some(&session.reasons),
         };
         let snapshot = snapshot_of(
@@ -539,7 +536,7 @@ impl ConsoleWitness {
             if session.aborting {
                 return None;
             }
-            session.question = Some(Question {
+            session.call = Some(Call {
                 check: check.to_owned(),
                 prompt: prompt.to_owned(),
                 kind,
@@ -547,10 +544,10 @@ impl ConsoleWitness {
             });
             self.shared.publish(&session);
         }
-        let label = match kind {
-            "briefing" => "aviso",
-            "tranche" => "espera",
-            _ => "pregunta",
+        let label = if kind == "briefing" {
+            "aviso"
+        } else {
+            "espera"
         };
         self.harness(&format!("{label}: {prompt}"));
         let answer = answer.recv().ok().flatten();
@@ -584,10 +581,6 @@ impl Witness for ConsoleWitness {
             .expect("la línea se serializa");
             shared.broadcast(&event_frame("log", &payload));
         })
-    }
-
-    fn ask(&self, check: &str, prompt: &str) -> Option<String> {
-        self.put_to_the_person(check, prompt, "outcome")
     }
 
     fn brief(&self, check: &str, briefing: &str) -> bool {
@@ -715,7 +708,7 @@ fn sort_in_tranches(queue: &mut VecDeque<Queued>, catalogue: &[Check]) {
         catalogue
             .iter()
             .find(|check| check.id == queued.id)
-            .map(|check| (check.assistance(), !check.greeting))
+            .map(|check| (check.assistance(), !check.greeting()))
             .unwrap_or_default()
     };
     queue.make_contiguous().sort_by_key(key);
@@ -802,7 +795,7 @@ fn take_the_next_group(shared: &Arc<Shared>, session: &mut Session) -> Option<Ne
         } else {
             None
         };
-        let profile = client.profile(head.store);
+        let profile = client.profile(head.store());
         let probe = Probe {
             client: profile.launcher.clone(),
             trust_root: profile.trust_root.clone(),
@@ -935,8 +928,8 @@ fn cut_the_running_check(session: &mut Session) {
     if let Some(pid) = session.driver {
         kill(pid);
     }
-    if let Some(question) = session.question.take() {
-        let _ = question.reply.send(None);
+    if let Some(call) = session.call.take() {
+        let _ = call.reply.send(None);
     }
 }
 
@@ -987,8 +980,12 @@ set = "errores"
 chapter = "15"
 citation = "A.java:1"
 statement = "Uno."
-drive = { mode = "v4", script = "protocol-v4" }
-assistance = "person"
+
+[check.drive]
+mode = "v4"
+script = "protocol-v4"
+act.cancel = "Cancela."
+expects.completes = {}
 
 [[check]]
 id = "a_click_one"
@@ -996,8 +993,12 @@ set = "errores"
 chapter = "15"
 citation = "A.java:2"
 statement = "Dos."
-drive = { mode = "v4", script = "protocol-v4" }
-assistance = "click"
+
+[check.drive]
+mode = "v4"
+script = "protocol-v4"
+act.consent = "Elige."
+expects.completes = {}
 
 [[check]]
 id = "an_unattended_one"
@@ -1005,8 +1006,11 @@ set = "errores"
 chapter = "15"
 citation = "A.java:3"
 statement = "Tres."
-drive = { mode = "v4", script = "protocol-v4" }
-assistance = "none"
+
+[check.drive]
+mode = "v4"
+script = "protocol-v4"
+expects.completes = {}
 
 [[check]]
 id = "a_click_greeting"
@@ -1014,8 +1018,12 @@ set = "errores"
 chapter = "15"
 citation = "A.java:4"
 statement = "Cuatro."
-drive = { mode = "v4", script = "protocol-v4" }
-assistance = "click"
+
+[check.drive]
+mode = "v4"
+script = "protocol-v4"
+act.consent = "Elige."
+expects.completes = {}
 greeting = true
 "#;
 
@@ -1093,7 +1101,11 @@ set = "saludo"
 chapter = "14"
 citation = "A.java:1"
 statement = "Saluda."
-drive = { mode = "v4", script = "protocol-v4" }
+
+[check.drive]
+mode = "v4"
+script = "protocol-v4"
+expects.completes = {}
 "#,
         )
         .unwrap()
@@ -1175,9 +1187,11 @@ set = "errores"
 chapter = "15"
 citation = "A.java:1"
 statement = "Se rechaza."
-drive = { mode = "v4", script = "signwithoutaformat" }
-assistance = "none"
-saf = "SAF_03"
+
+[check.drive]
+mode = "v4"
+script = "signwithoutaformat"
+expects.code = "SAF_03"
 
 [[check]]
 id = "its_twin"
@@ -1185,9 +1199,11 @@ set = "parametros"
 chapter = "15"
 citation = "A.java:2"
 statement = "También."
-drive = { mode = "v4", script = "signwithoutaformat" }
-assistance = "none"
-saf = "SAF_03"
+
+[check.drive]
+mode = "v4"
+script = "signwithoutaformat"
+expects.code = "SAF_03"
 
 [[check]]
 id = "the_same_in_ec"
@@ -1195,10 +1211,12 @@ set = "errores"
 chapter = "15"
 citation = "A.java:3"
 statement = "En curva elíptica."
-drive = { mode = "v4", script = "signwithoutaformat" }
-assistance = "none"
+
+[check.drive]
+mode = "v4"
+script = "signwithoutaformat"
 store = "ec"
-saf = "SAF_03"
+expects.code = "SAF_03"
 
 [[check]]
 id = "an_echo"
@@ -1206,9 +1224,11 @@ set = "errores"
 chapter = "05"
 citation = "A.java:4"
 statement = "Un eco."
-drive = { mode = "v4", script = "protocol-v4" }
-assistance = "none"
-no_answer = true
+
+[check.drive]
+mode = "v4"
+script = "protocol-v4"
+expects = "silence"
 
 [[check]]
 id = "the_same_with_a_click"
@@ -1216,9 +1236,12 @@ set = "errores"
 chapter = "15"
 citation = "A.java:5"
 statement = "Lo mismo, en el tramo de clic."
-drive = { mode = "v4", script = "signwithoutaformat" }
-assistance = "click"
-saf = "SAF_03"
+
+[check.drive]
+mode = "v4"
+script = "signwithoutaformat"
+act.consent = "Elige."
+expects.code = "SAF_03"
 "#;
 
     fn a_console_replaying(runner: &Arc<RecordedRunner>) -> (Console, tempfile::TempDir) {

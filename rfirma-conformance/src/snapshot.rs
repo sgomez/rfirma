@@ -1,5 +1,5 @@
 //! El estado de la sesión activa para la página: la vista de su informe más lo que es solo de la
-//! sesión —cliente, cola, comprobación en curso y pregunta—.
+//! sesión —cliente, cola, comprobación en curso y la llamada a la persona—.
 
 use std::collections::BTreeMap;
 use std::time::Duration;
@@ -22,7 +22,7 @@ pub(crate) struct Activity<'a> {
     pub(crate) running: &'a [String],
     pub(crate) running_for: Duration,
     pub(crate) queued: Vec<&'a str>,
-    pub(crate) question: Option<(&'a str, &'a str, &'static str)>,
+    pub(crate) call: Option<(&'a str, &'a str, &'static str)>,
     pub(crate) reasons: Option<&'a BTreeMap<String, String>>,
 }
 
@@ -50,7 +50,7 @@ pub(crate) struct Snapshot<'a> {
     reports: &'a [ReportEntry],
     running: Option<RunningView<'a>>,
     queued: &'a [&'a str],
-    question: Option<QuestionView<'a>>,
+    call: Option<CallView<'a>>,
     why_pending: BTreeMap<&'a str, &'a str>,
 }
 
@@ -64,10 +64,10 @@ struct RunningView<'a> {
 
 #[derive(Debug, Serialize, TS)]
 #[ts(export)]
-struct QuestionView<'a> {
+struct CallView<'a> {
     check: &'a str,
     prompt: &'a str,
-    #[ts(type = "\"outcome\" | \"briefing\" | \"tranche\"")]
+    #[ts(type = "\"briefing\" | \"tranche\"")]
     kind: &'static str,
 }
 
@@ -91,7 +91,7 @@ pub(crate) fn snapshot_of<'a>(
             elapsed_ms: activity.running_for.as_millis(),
         }),
         queued: &activity.queued,
-        question: activity.question.map(|(check, prompt, kind)| QuestionView {
+        call: activity.call.map(|(check, prompt, kind)| CallView {
             check,
             prompt,
             kind,
@@ -135,8 +135,11 @@ set = "operaciones"
 chapter = "16"
 citation = "B.java:2"
 statement = "Firma."
-drive = { mode = "v4", script = "sign" }
-question = "¿se pidió el PIN? [s/n]"
+
+[check.drive]
+mode = "v4"
+script = "sign"
+expects.completes = {}
 
 [[check]]
 id = "a_save"
@@ -144,7 +147,11 @@ set = "operaciones"
 chapter = "16"
 citation = "C.java:3"
 statement = "Guarda."
-drive = { mode = "v4", script = "save" }
+
+[check.drive]
+mode = "v4"
+script = "save"
+expects.completes = {}
 "#;
 
     fn a_report(catalogue: &[Check]) -> (tempfile::TempDir, Report) {
@@ -192,7 +199,7 @@ drive = { mode = "v4", script = "save" }
     }
 
     #[test]
-    fn the_running_check_the_queue_and_the_question_travel_apart_from_the_report() {
+    fn the_running_check_the_queue_and_the_call_travel_apart_from_the_report() {
         let catalogue = the_catalogue_in(TWO_CHECKS).unwrap();
         let (_dir, report) = a_report(&catalogue);
         let running = ["a_signature".to_owned()];
@@ -200,7 +207,11 @@ drive = { mode = "v4", script = "save" }
             running: &running,
             running_for: Duration::from_millis(12_000),
             queued: vec!["a_save"],
-            question: Some(("a_signature", "¿se pidió el PIN? [s/n]", "outcome")),
+            call: Some((
+                "a_signature",
+                "Va a aparecer el diálogo del PIN.",
+                "briefing",
+            )),
             ..Activity::default()
         };
 
@@ -217,8 +228,8 @@ drive = { mode = "v4", script = "save" }
         );
         assert_eq!(json["queued"], json!(["a_save"]));
         assert_eq!(
-            json["question"],
-            json!({"check": "a_signature", "prompt": "¿se pidió el PIN? [s/n]", "kind": "outcome"})
+            json["call"],
+            json!({"check": "a_signature", "prompt": "Va a aparecer el diálogo del PIN.", "kind": "briefing"})
         );
     }
 
@@ -240,7 +251,7 @@ drive = { mode = "v4", script = "save" }
         let reasons = BTreeMap::from([
             (
                 "a_signature".to_owned(),
-                "se descartó la pregunta".to_owned(),
+                "se saltó antes de empezar".to_owned(),
             ),
             ("a_save".to_owned(), "una razón vieja".to_owned()),
         ]);
@@ -258,7 +269,7 @@ drive = { mode = "v4", script = "save" }
 
         assert_eq!(
             json["why_pending"],
-            json!({"a_signature": "se descartó la pregunta"})
+            json!({"a_signature": "se saltó antes de empezar"})
         );
     }
 }

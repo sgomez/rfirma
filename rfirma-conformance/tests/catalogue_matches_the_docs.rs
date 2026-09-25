@@ -331,7 +331,11 @@ fn the_catalogue() -> Vec<Entry> {
         .iter()
         .map(|check| Entry {
             bug: check.bug.map(|bug| bug.id.clone()),
-            ..an_entry(&check.id, &check.chapter, &check.the_declared_text())
+            ..an_entry(
+                &check.id,
+                &check.requirement.chapter,
+                &check.the_declared_text(),
+            )
         })
         .collect()
 }
@@ -402,8 +406,8 @@ fn every_code_of_the_error_table_is_closed_against_the_catalogue() {
 
     assert_eq!(
         table.len(),
-        37,
-        "la tabla del capítulo 15 debería tener 37 códigos que la sede puede recibir"
+        36,
+        "la tabla del capítulo 15 debería tener 36 códigos que la sede puede recibir"
     );
     assert!(
         codes_of_the_table_without_an_entry(&table, &named).is_empty(),

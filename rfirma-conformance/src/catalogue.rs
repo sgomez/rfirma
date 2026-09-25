@@ -12,7 +12,7 @@ use ts_rs::TS;
 
 use crate::client::Store;
 use crate::harness::{the_harness_named, Harness};
-use crate::judge::{Code, Contents, Expectation, OnTheWire, Person};
+use crate::judge::Expectation;
 use crate::known_bug::{the_known_bug, KnownBug};
 use crate::manifest::{Family, Manifest, Site};
 
@@ -54,67 +54,113 @@ impl Assistance {
     }
 }
 
-/// Cómo se conduce al cliente publicado para ejercitar la exigencia.
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
-pub(crate) struct Drive {
-    pub mode: String,
-    pub script: String,
-}
-
-/// Una exigencia del protocolo con todo lo que se sabe de ella menos cómo se mide.
+/// Qué se exige, dónde lo hace el código de AutoFirma y en qué conjunto y capítulo va.
 #[derive(Debug, Clone, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct Check {
-    pub id: String,
+pub struct Requirement {
     pub set: String,
     /// El de su conjunto si no lo fija; solo lo fija en un conjunto de varios capítulos.
     #[serde(default)]
     pub chapter: String,
     pub citation: String,
     pub statement: String,
+}
+
+/// Cómo se provoca el trámite: el guion de la sede y su modo, y lo que el trámite necesita alrededor.
+#[derive(Debug, Clone, Deserialize)]
+pub(crate) struct Provocation {
+    pub mode: String,
+    pub script: String,
     #[serde(default)]
-    pub(crate) drive: Option<Drive>,
+    pub store: Store,
     #[serde(default, deserialize_with = "a_registered_harness")]
-    pub(crate) harness: Option<&'static Harness>,
-    #[serde(default)]
-    pub(crate) saf: Option<Code>,
-    #[serde(default)]
-    pub(crate) completes: Option<Contents>,
-    /// Las condiciones del manifiesto que juzgan la comprobación, con el nombre que les da su guion.
-    #[serde(default, rename = "condition", deserialize_with = "one_or_many")]
-    pub conditions: Vec<String>,
-    #[serde(default)]
-    pub no_answer: bool,
-    #[serde(default)]
-    pub(crate) person: Option<Person>,
-    /// Obligatoria en toda comprobación conducida; `None` en las no medibles.
-    #[serde(default)]
-    pub(crate) assistance: Option<Assistance>,
-    #[serde(default)]
-    pub(crate) store: Store,
-    #[serde(default)]
-    pub patience_secs: Option<u64>,
+    pub harness: Option<&'static Harness>,
     /// Los puertos que tienen que estar libres antes de conducirla.
     #[serde(default)]
     pub ports: Vec<u16>,
-    /// La familia de su guion, que pone el manifiesto al cargar el catálogo.
-    #[serde(skip)]
-    pub(crate) family: Option<Family>,
     #[serde(default)]
-    pub warning: Option<String>,
+    pub patience_secs: Option<u64>,
+}
+
+/// Lo que hace la persona durante el trámite, con la instrucción cerrada que se le da; nunca juzga.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub(crate) enum Act {
+    #[default]
+    None,
+    Consent(String),
+    Cancel(String),
+    PickFile(String),
+    SaveAsProposed(String),
+    WrongPin(String),
+    TypePassword(String),
+    MarkArea(String),
+    Refuse(String),
+}
+
+impl Act {
+    pub(crate) fn assistance(&self) -> Assistance {
+        match self {
+            Self::None => Assistance::None,
+            Self::Consent(_) => Assistance::Click,
+            _ => Assistance::Person,
+        }
+    }
+
+    pub(crate) fn instruction(&self) -> Option<&str> {
+        match self {
+            Self::None => None,
+            Self::Consent(said)
+            | Self::Cancel(said)
+            | Self::PickFile(said)
+            | Self::SaveAsProposed(said)
+            | Self::WrongPin(said)
+            | Self::TypePassword(said)
+            | Self::MarkArea(said)
+            | Self::Refuse(said) => Some(said),
+        }
+    }
+}
+
+/// Una comprobación que se conduce: cómo se provoca, qué hace la persona y qué se espera.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct Trial {
+    #[serde(flatten)]
+    pub provocation: Provocation,
     #[serde(default)]
-    pub question: Option<String>,
+    pub act: Act,
+    pub expects: Expectation,
+    /// Si es el saludo de su familia y su tramo: si no se cumple, no se corre lo que abre.
     #[serde(default)]
-    pub unmeasurable: Option<String>,
+    pub greeting: bool,
+}
+
+/// Cómo se mide una exigencia: conduciéndola, o no, con el motivo.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub(crate) enum Measure {
+    Unmeasurable(String),
+    Drive(Box<Trial>),
+}
+
+/// Una exigencia del protocolo con cómo se provoca y qué se espera de ella.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Check {
+    pub id: String,
+    #[serde(flatten)]
+    pub requirement: Requirement,
+    #[serde(flatten)]
+    pub(crate) measure: Measure,
     /// El bug de AutoFirma 1.9.2 por el que el original incumple lo que se exige.
     #[serde(default, deserialize_with = "a_known_bug")]
     pub bug: Option<&'static KnownBug>,
     /// Si mide un formato que el manual de AutoFirma desaconseja y rFirma no soporta.
     #[serde(default)]
     pub deprecated: bool,
-    /// Si es el saludo de su familia y su tramo: si no se cumple, no se corre lo que abre.
-    #[serde(default)]
-    pub greeting: bool,
+    /// La familia de su guion, que pone el manifiesto al cargar el catálogo.
+    #[serde(skip)]
+    pub(crate) family: Option<Family>,
 }
 
 fn a_registered_harness<'de, D: Deserializer<'de>>(
@@ -135,74 +181,81 @@ fn a_known_bug<'de, D: Deserializer<'de>>(
         .ok_or_else(|| serde::de::Error::custom(format!("{id} no está en el registro de bugs")))
 }
 
-fn one_or_many<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Vec<String>, D::Error> {
-    #[derive(Deserialize)]
-    #[serde(untagged)]
-    enum OneOrMany {
-        One(String),
-        Many(Vec<String>),
-    }
-    Ok(match OneOrMany::deserialize(deserializer)? {
-        OneOrMany::One(name) => vec![name],
-        OneOrMany::Many(names) => names,
-    })
-}
-
 #[derive(Debug, Deserialize)]
 struct Catalogue {
     check: Vec<Check>,
 }
 
 impl Check {
+    pub(crate) fn trial(&self) -> Option<&Trial> {
+        match &self.measure {
+            Measure::Drive(trial) => Some(trial),
+            Measure::Unmeasurable(_) => None,
+        }
+    }
+
+    pub(crate) fn unmeasurable(&self) -> Option<&str> {
+        match &self.measure {
+            Measure::Unmeasurable(motive) => Some(motive),
+            Measure::Drive(_) => None,
+        }
+    }
+
+    pub(crate) fn provocation(&self) -> Option<&Provocation> {
+        self.trial().map(|trial| &trial.provocation)
+    }
+
     pub(crate) fn assistance(&self) -> Assistance {
-        self.assistance.unwrap_or_default()
+        self.trial()
+            .map_or(Assistance::None, |trial| trial.act.assistance())
     }
 
     pub(crate) fn needs_a_person(&self) -> bool {
         self.assistance() == Assistance::Person
     }
 
+    pub(crate) fn greeting(&self) -> bool {
+        self.trial().is_some_and(|trial| trial.greeting)
+    }
+
+    pub(crate) fn store(&self) -> Store {
+        self.provocation()
+            .map_or_else(Store::default, |provocation| provocation.store)
+    }
+
+    pub(crate) fn harness(&self) -> Option<&'static Harness> {
+        self.provocation()?.harness
+    }
+
+    pub(crate) fn ports(&self) -> &[u16] {
+        self.provocation()
+            .map_or(&[], |provocation| &provocation.ports)
+    }
+
+    pub(crate) fn instruction(&self) -> Option<&str> {
+        self.trial()?.act.instruction()
+    }
+
     pub(crate) fn declared_patience(&self) -> Option<Duration> {
-        self.patience_secs.map(Duration::from_secs)
+        self.provocation()?.patience_secs.map(Duration::from_secs)
     }
 
     /// Todo lo que la comprobación dice en prosa y en códigos, sin cómo se conduce: lo que se
     /// cruza con el manual.
     pub fn the_declared_text(&self) -> String {
+        let expects = self.trial().map(|trial| trial.expects.the_declared_text());
         [
-            Some(self.statement.clone()),
-            Some(self.citation.clone()),
-            self.saf.as_ref().map(ToString::to_string),
-            (!self.conditions.is_empty()).then(|| self.conditions.join("\n")),
-            self.warning.clone(),
-            self.question.clone(),
-            self.unmeasurable.clone(),
+            Some(self.requirement.statement.clone()),
+            Some(self.requirement.citation.clone()),
+            expects.filter(|said| !said.is_empty()),
+            self.instruction().map(str::to_owned),
+            self.unmeasurable().map(str::to_owned),
             self.bug.map(|bug| bug.id.clone()),
         ]
         .into_iter()
         .flatten()
         .collect::<Vec<_>>()
         .join("\n")
-    }
-
-    /// Lo que la comprobación espera, tal y como la declara.
-    pub(crate) fn expectation(&self) -> Expectation<'_> {
-        Expectation {
-            on_the_wire: self.what_it_expects_on_the_wire().into_iter().next(),
-            person: self.person.as_ref(),
-        }
-    }
-
-    fn what_it_expects_on_the_wire(&self) -> Vec<OnTheWire<'_>> {
-        [
-            self.saf.as_ref().map(OnTheWire::Saf),
-            self.completes.as_ref().map(OnTheWire::Completes),
-            (!self.conditions.is_empty()).then_some(OnTheWire::Conditions(&self.conditions)),
-            self.no_answer.then_some(OnTheWire::NoAnswer),
-        ]
-        .into_iter()
-        .flatten()
-        .collect()
     }
 }
 
@@ -267,24 +320,25 @@ fn the_set_in(set: &Set, raw: &str) -> Result<Vec<Check>, String> {
 
 fn complaints_about_the_place_of(check: &mut Check, set: &Set) -> Option<String> {
     let id = &check.id;
-    if check.set != set.name {
+    let requirement = &mut check.requirement;
+    if requirement.set != set.name {
         return Some(format!(
             "{id}: dice ser del conjunto «{}» y está en el fichero de «{}»",
-            check.set, set.name
+            requirement.set, set.name
         ));
     }
-    if check.chapter.is_empty() {
-        check.chapter = set.chapters[0].clone();
+    if requirement.chapter.is_empty() {
+        requirement.chapter = set.chapters[0].clone();
         None
     } else if set.chapters.len() < 2 {
         Some(format!(
             "{id}: fija su capítulo y su conjunto «{}» solo tiene uno",
             set.name
         ))
-    } else if !set.chapters.contains(&check.chapter) {
+    } else if !set.chapters.contains(&requirement.chapter) {
         Some(format!(
             "{id}: el capítulo {} no es de su conjunto «{}»",
-            check.chapter, set.name
+            requirement.chapter, set.name
         ))
     } else {
         None
@@ -360,45 +414,17 @@ fn complaints_about(checks: &[Check]) -> Vec<String> {
     [
         repeated_ids(checks),
         empty_fields(checks),
-        malformed_unmeasurable_entries(checks),
-        entries_without_a_body(checks),
-        malformed_greetings(checks),
-        driven_entries_without_an_assistance(checks),
-        person_entries_without_a_warning(checks),
-        questions_without_a_person(checks),
-        expectations_out_of_shape(checks),
+        greetings_that_need_a_person(checks),
+        checks_that_measure_the_same(checks),
     ]
     .concat()
 }
 
-fn expectations_out_of_shape(checks: &[Check]) -> Vec<String> {
-    checks
-        .iter()
-        .filter_map(|check| {
-            let id = &check.id;
-            let on_the_wire = check.what_it_expects_on_the_wire().len();
-            let expects_something = on_the_wire > 0 || check.person.is_some();
-            if check.drive.is_none() {
-                return expects_something.then(|| format!("{id}: espera algo sin conducirse"));
-            }
-            if on_the_wire > 1 {
-                Some(format!("{id}: espera más de una cosa del cable"))
-            } else if !expects_something {
-                Some(format!("{id}: se conduce sin declarar qué espera"))
-            } else if check.person.is_some() != check.question.is_some() {
-                Some(format!("{id}: la persona y su pregunta no van juntas"))
-            } else {
-                None
-            }
-        })
-        .collect()
-}
-
 fn the_family_of(check: &Check, manifest: &Manifest) -> Option<Family> {
-    let drive = check.drive.as_ref()?;
+    let provocation = check.provocation()?;
     manifest
         .scripts
-        .get(&drive.script)
+        .get(&provocation.script)
         .map(|script| script.family)
 }
 
@@ -416,7 +442,7 @@ fn greetings_sharing_a_family_and_a_tranche(checks: &[Check], manifest: &Manifes
     let mut opened = BTreeSet::new();
     checks
         .iter()
-        .filter(|check| check.greeting)
+        .filter(|check| check.greeting())
         .filter_map(|check| {
             let family = the_family_of(check, manifest)?;
             (!opened.insert((family, check.assistance()))).then(|| {
@@ -432,9 +458,11 @@ fn greetings_sharing_a_family_and_a_tranche(checks: &[Check], manifest: &Manifes
 
 fn complaints_about_the_drive_of(check: &Check, manifest: &Manifest) -> Vec<String> {
     let id = &check.id;
-    let Some(drive) = &check.drive else {
+    let Some(trial) = check.trial() else {
         return Vec::new();
     };
+    let drive = &trial.provocation;
+    let conditions = trial.expects.conditions();
     let mut complaints = Vec::new();
     let mode = manifest.modes.get(&drive.mode);
     match mode {
@@ -460,15 +488,14 @@ fn complaints_about_the_drive_of(check: &Check, manifest: &Manifest) -> Vec<Stri
             drive.script, drive.mode
         ));
     }
-    if check.conditions.is_empty() && script.site == Site::Handwritten {
+    if conditions.is_empty() && script.site == Site::Handwritten {
         complaints.push(format!(
             "{id}: el guion a mano «{}» solo informa por condiciones y no espera ninguna",
             drive.script
         ));
     }
     complaints.extend(
-        check
-            .conditions
+        conditions
             .iter()
             .filter(|condition| !script.conditions.contains(condition))
             .map(|condition| {
@@ -494,87 +521,58 @@ fn empty_fields(checks: &[Check]) -> Vec<String> {
     checks
         .iter()
         .flat_map(|check| {
+            let requirement = &check.requirement;
             [
-                ("id", &check.id),
-                ("set", &check.set),
-                ("chapter", &check.chapter),
-                ("citation", &check.citation),
-                ("statement", &check.statement),
+                ("id", Some(check.id.as_str())),
+                ("set", Some(requirement.set.as_str())),
+                ("chapter", Some(requirement.chapter.as_str())),
+                ("citation", Some(requirement.citation.as_str())),
+                ("statement", Some(requirement.statement.as_str())),
+                ("unmeasurable", check.unmeasurable()),
+                ("act", check.instruction()),
             ]
             .into_iter()
-            .filter(|(_, value)| value.trim().is_empty())
+            .filter(|(_, value)| value.is_some_and(|value| value.trim().is_empty()))
             .map(|(field, _)| format!("{}: «{field}» vacío", check.id))
         })
         .collect()
 }
 
-fn malformed_unmeasurable_entries(checks: &[Check]) -> Vec<String> {
+fn greetings_that_need_a_person(checks: &[Check]) -> Vec<String> {
     checks
         .iter()
-        .filter_map(|check| match check.unmeasurable.as_deref() {
-            Some(motive) if motive.trim().is_empty() => {
-                Some(format!("{}: no medible sin motivo", check.id))
-            }
-            Some(_) if check.drive.is_some() => {
-                Some(format!("{}: no medible pero conducida", check.id))
-            }
-            _ => None,
+        .filter(|check| check.greeting() && check.needs_a_person())
+        .map(|check| format!("{}: saludo que necesita a una persona", check.id))
+        .collect()
+}
+
+/// Dos comprobaciones que conducen el mismo trámite, con la misma acción de la persona, y esperan
+/// lo mismo son la misma comprobación.
+fn checks_that_measure_the_same(checks: &[Check]) -> Vec<String> {
+    let driven: Vec<(&Check, &Trial)> = checks
+        .iter()
+        .filter_map(|check| check.trial().map(|trial| (check, trial)))
+        .collect();
+    driven
+        .iter()
+        .enumerate()
+        .filter_map(|(at, (check, trial))| {
+            driven[..at]
+                .iter()
+                .find(|(_, earlier)| measure_the_same(earlier, trial))
+                .map(|(earlier, _)| format!("{}: mide lo mismo que {}", check.id, earlier.id))
         })
         .collect()
 }
 
-fn entries_without_a_body(checks: &[Check]) -> Vec<String> {
-    checks
-        .iter()
-        .filter(|check| check.drive.is_none() && check.unmeasurable.is_none())
-        .map(|check| format!("{}: ni se conduce ni se declara no medible", check.id))
-        .collect()
-}
-
-fn malformed_greetings(checks: &[Check]) -> Vec<String> {
-    checks
-        .iter()
-        .filter(|check| check.greeting)
-        .filter_map(|check| {
-            if check.drive.is_none() {
-                Some(format!("{}: saludo sin conducir", check.id))
-            } else if check.needs_a_person() {
-                Some(format!("{}: saludo que necesita a una persona", check.id))
-            } else {
-                None
-            }
-        })
-        .collect()
-}
-
-fn driven_entries_without_an_assistance(checks: &[Check]) -> Vec<String> {
-    checks
-        .iter()
-        .filter(|check| check.drive.is_some() && check.assistance.is_none())
-        .map(|check| format!("{}: se conduce sin declarar su asistencia", check.id))
-        .collect()
-}
-
-fn person_entries_without_a_warning(checks: &[Check]) -> Vec<String> {
-    checks
-        .iter()
-        .filter(|check| check.needs_a_person())
-        .filter(|check| {
-            check
-                .warning
-                .as_deref()
-                .is_none_or(|said| said.trim().is_empty())
-        })
-        .map(|check| format!("{}: necesita a una persona y no trae aviso", check.id))
-        .collect()
-}
-
-fn questions_without_a_person(checks: &[Check]) -> Vec<String> {
-    checks
-        .iter()
-        .filter(|check| check.question.is_some() && !check.needs_a_person())
-        .map(|check| format!("{}: pregunta sin asistencia persona", check.id))
-        .collect()
+fn measure_the_same(one: &Trial, other: &Trial) -> bool {
+    let (this, that) = (&one.provocation, &other.provocation);
+    this.mode == that.mode
+        && this.script == that.script
+        && this.store == that.store
+        && this.harness.map(|harness| harness.name) == that.harness.map(|harness| harness.name)
+        && std::mem::discriminant(&one.act) == std::mem::discriminant(&other.act)
+        && one.expects.is_the_same_as(&other.expects)
 }
 
 pub(crate) fn the_catalogue_in(raw: &str) -> Result<Vec<Check>, String> {
@@ -583,9 +581,9 @@ pub(crate) fn the_catalogue_in(raw: &str) -> Result<Vec<Check>, String> {
     Ok(catalogue
         .check
         .into_iter()
-        .map(|check| Check {
-            statement: as_one_line(&check.statement),
-            ..check
+        .map(|mut check| {
+            check.requirement.statement = as_one_line(&check.requirement.statement);
+            check
         })
         .collect())
 }
@@ -600,7 +598,7 @@ fn as_one_line(statement: &str) -> String {
 mod tests {
     use super::*;
 
-    const AN_ENTRY: &str = r#"
+    const AN_ENTRY_HEAD: &str = r#"
 [[check]]
 id = "an_origin_that_is_not_local_is_rejected"
 set = "transporte.websocket"
@@ -609,72 +607,134 @@ citation = "AfirmaWebSocketServerV4.java:57-68"
 statement = """
 El canal responde SAF_47 a cualquier origen que no sea 127.0.0.1.
 """
-drive = { mode = "v4", script = "selectcert" }
-saf = "SAF_47"
-assistance = "person"
+"#;
+
+    const AN_ENTRY_DRIVE: &str = r#"
+[check.drive]
+mode = "v4"
+script = "selectcert"
 store = "ec"
 ports = [63131, 63132]
 patience_secs = 90
-warning = "Va a aparecer el diálogo del PIN."
-question = "¿se pidió el PIN? [s/n]"
-greeting = true
+act.wrong_pin = "Va a aparecer el diálogo del PIN: teclea 0000."
+expects.code = "SAF_47"
 "#;
+
+    fn an_entry_with(extra: &str) -> String {
+        format!("{AN_ENTRY_HEAD}{extra}\n{AN_ENTRY_DRIVE}")
+    }
+
+    fn the_entry() -> Check {
+        the_catalogue_in(&an_entry_with("")).unwrap().remove(0)
+    }
 
     #[test]
     fn reads_an_entry_with_every_field() {
-        let checks = the_catalogue_in(AN_ENTRY).unwrap();
-        let check = &checks[0];
+        let check = the_entry();
         assert_eq!(check.id, "an_origin_that_is_not_local_is_rejected");
-        assert_eq!(check.set, "transporte.websocket");
-        assert_eq!(check.chapter, "05");
-        assert_eq!(check.saf, Code::try_from("SAF_47".to_owned()).ok());
-        assert!(check.greeting);
+        assert_eq!(check.requirement.set, "transporte.websocket");
+        assert_eq!(check.requirement.chapter, "05");
+        let trial = check.trial().unwrap();
+        assert_eq!(trial.provocation.mode, "v4");
+        assert_eq!(trial.provocation.script, "selectcert");
         assert_eq!(
-            check.drive.as_ref().unwrap(),
-            &Drive {
-                mode: "v4".to_owned(),
-                script: "selectcert".to_owned()
-            }
+            trial.act,
+            Act::WrongPin("Va a aparecer el diálogo del PIN: teclea 0000.".to_owned())
         );
+        assert_eq!(trial.expects.the_declared_text(), "SAF_47");
     }
 
     #[test]
     fn the_statement_arrives_without_the_newlines_of_its_block() {
-        let checks = the_catalogue_in(AN_ENTRY).unwrap();
         assert_eq!(
-            checks[0].statement,
+            the_entry().requirement.statement,
             "El canal responde SAF_47 a cualquier origen que no sea 127.0.0.1."
         );
     }
 
     #[test]
     fn reads_what_a_check_needs_from_its_declaration() {
-        let checks = the_catalogue_in(AN_ENTRY).unwrap();
-        let check = &checks[0];
+        let check = the_entry();
         assert_eq!(check.assistance(), Assistance::Person);
-        assert_eq!(check.store, Store::Ec);
-        assert_eq!(check.ports, vec![63131, 63132]);
+        assert_eq!(check.store(), Store::Ec);
+        assert_eq!(check.ports(), [63131, 63132]);
         assert_eq!(check.declared_patience(), Some(Duration::from_secs(90)));
+        assert_eq!(
+            check.instruction(),
+            Some("Va a aparecer el diálogo del PIN: teclea 0000.")
+        );
     }
 
     #[test]
     fn a_check_that_needs_nothing_says_so() {
-        let checks = the_catalogue_in(
-            r#"
-[[check]]
-id = "an_id"
-set = "errores"
-chapter = "15"
-citation = "ProtocolInvocationLauncher.java:741"
-statement = "Algo se rechaza con SAF_03."
-"#,
-        )
-        .unwrap();
+        let checks =
+            the_catalogue_in(&an_entry("an_id", "errores", "expects.code = \"SAF_03\"")).unwrap();
         let check = &checks[0];
-        assert!(!check.needs_a_person());
-        assert_eq!(check.store, Store::Rsa);
-        assert!(check.ports.is_empty());
+        assert_eq!(check.assistance(), Assistance::None);
+        assert_eq!(check.instruction(), None);
+        assert_eq!(check.store(), Store::Rsa);
+        assert!(check.ports().is_empty());
         assert_eq!(check.declared_patience(), None);
+    }
+
+    #[test]
+    fn the_assistance_follows_from_what_the_person_does() {
+        let assistance_of = |act: &str| {
+            the_catalogue_in(&an_entry("an_id", "errores", &format!("{act}\n{EXPECTS}")))
+                .unwrap()
+                .remove(0)
+                .assistance()
+        };
+        assert_eq!(assistance_of(""), Assistance::None);
+        assert_eq!(assistance_of("act.consent = \"Elige.\""), Assistance::Click);
+        for named in [
+            "cancel",
+            "pick_file",
+            "save_as_proposed",
+            "wrong_pin",
+            "type_password",
+            "mark_area",
+            "refuse",
+        ] {
+            assert_eq!(
+                assistance_of(&format!("act.{named} = \"Haz esto.\"")),
+                Assistance::Person,
+                "{named}"
+            );
+        }
+    }
+
+    #[test]
+    fn an_unmeasurable_check_is_not_driven_and_needs_nobody() {
+        let checks = the_catalogue_in(&an_unmeasurable_entry("an_id", "no llega")).unwrap();
+        assert_eq!(checks[0].unmeasurable(), Some("no llega"));
+        assert!(checks[0].trial().is_none());
+        assert_eq!(checks[0].assistance(), Assistance::None);
+    }
+
+    #[test]
+    fn a_shape_the_types_do_not_admit_is_rejected_when_read() {
+        for entry in [
+            an_entry(
+                "a",
+                "errores",
+                "expects = { code = \"SAF_03\", completes = {} }",
+            ),
+            an_entry("a", "errores", ""),
+            an_entry("a", "errores", &format!("act = \"consent\"\n{EXPECTS}")),
+            an_entry("a", "errores", &format!("act.watch = \"Mira.\"\n{EXPECTS}")),
+            an_entry("a", "errores", &format!("question = \"¿Sí?\"\n{EXPECTS}")),
+            format!(
+                "{}unmeasurable = \"no llega\"\n",
+                an_entry("a", "errores", EXPECTS)
+            ),
+            format!(
+                "{}greeting = true\n",
+                an_unmeasurable_entry("a", "no llega")
+            ),
+        ] {
+            assert!(the_catalogue_in(&entry).is_err(), "{entry}");
+        }
     }
 
     #[test]
@@ -684,9 +744,7 @@ statement = "Algo se rechaza con SAF_03."
 
     #[test]
     fn a_check_names_the_known_bug_of_the_original_it_fails_by() {
-        let entry = format!("{AN_ENTRY}bug = \"BUG-15\"\n");
-
-        let checks = the_catalogue_in(&entry).unwrap();
+        let checks = the_catalogue_in(&an_entry_with("bug = \"BUG-15\"")).unwrap();
 
         assert_eq!(checks[0].bug.map(|bug| bug.id.as_str()), Some("BUG-15"));
         assert!(checks[0].the_declared_text().contains("BUG-15"));
@@ -694,17 +752,13 @@ statement = "Algo se rechaza con SAF_03."
 
     #[test]
     fn a_check_of_a_deprecated_format_says_so_and_the_rest_do_not() {
-        let entry = format!("{AN_ENTRY}deprecated = true\n");
-
-        assert!(the_catalogue_in(&entry).unwrap()[0].deprecated);
-        assert!(!the_catalogue_in(AN_ENTRY).unwrap()[0].deprecated);
+        assert!(the_catalogue_in(&an_entry_with("deprecated = true")).unwrap()[0].deprecated);
+        assert!(!the_entry().deprecated);
     }
 
     #[test]
     fn a_bug_outside_the_registry_is_refused() {
-        let entry = format!("{AN_ENTRY}bug = \"BUG-99\"\n");
-
-        let complaint = the_catalogue_in(&entry).unwrap_err();
+        let complaint = the_catalogue_in(&an_entry_with("bug = \"BUG-99\"")).unwrap_err();
 
         assert!(
             complaint.contains("BUG-99 no está en el registro de bugs"),
@@ -719,9 +773,10 @@ statement = "Algo se rechaza con SAF_03."
             .unwrap()
             .into_iter()
             .filter(|check| {
-                !sets
-                    .iter()
-                    .any(|set| set.name == check.set && set.chapters.contains(&check.chapter))
+                !sets.iter().any(|set| {
+                    set.name == check.requirement.set
+                        && set.chapters.contains(&check.requirement.chapter)
+                })
             })
             .map(|check| check.id)
             .collect();
@@ -733,8 +788,8 @@ statement = "Algo se rechaza con SAF_03."
         let checks = read_the_catalogue().unwrap();
         let mut blocks: Vec<&str> = Vec::new();
         for check in &checks {
-            if blocks.last() != Some(&check.set.as_str()) {
-                blocks.push(&check.set);
+            if blocks.last() != Some(&check.requirement.set.as_str()) {
+                blocks.push(&check.requirement.set);
             }
         }
         let declared: Vec<String> = the_declared_sets()
@@ -756,10 +811,20 @@ statement = "Algo se rechaza con SAF_03."
         }
     }
 
+    const EXPECTS: &str = "expects.completes = {}";
+
     fn an_entry_without_a_chapter(id: &str, set: &str, extra: &str) -> String {
         format!(
             "[[check]]\nid = \"{id}\"\nset = \"{set}\"\n\
-             citation = \"A.java:1\"\nstatement = \"Algo.\"\n{extra}\n\n"
+             citation = \"A.java:1\"\nstatement = \"Algo.\"\n{extra}\n\
+             unmeasurable = \"Nada que conducir.\"\n\n"
+        )
+    }
+
+    fn an_unmeasurable_entry(id: &str, motive: &str) -> String {
+        format!(
+            "[[check]]\nid = \"{id}\"\nset = \"errores\"\nchapter = \"15\"\n\
+             citation = \"A.java:1\"\nstatement = \"Algo.\"\nunmeasurable = \"{motive}\"\n\n"
         )
     }
 
@@ -770,7 +835,7 @@ statement = "Algo se rechaza con SAF_03."
             &an_entry_without_a_chapter("a_one", "firma", ""),
         )
         .unwrap();
-        assert_eq!(checks[0].chapter, "06");
+        assert_eq!(checks[0].requirement.chapter, "06");
     }
 
     #[test]
@@ -780,7 +845,7 @@ statement = "Algo se rechaza con SAF_03."
             &an_entry_without_a_chapter("a_one", "firma", "chapter = \"12\""),
         )
         .unwrap();
-        assert_eq!(checks[0].chapter, "12");
+        assert_eq!(checks[0].requirement.chapter, "12");
     }
 
     #[test]
@@ -841,32 +906,36 @@ statement = "Algo se rechaza con SAF_03."
         the_catalogue_in(raw).unwrap()
     }
 
-    fn an_entry(id: &str, set: &str, extra: &str) -> String {
+    fn an_entry(id: &str, set: &str, drive: &str) -> String {
         format!(
             "[[check]]\nid = \"{id}\"\nset = \"{set}\"\nchapter = \"01\"\n\
-             citation = \"A.java:1\"\nstatement = \"Algo.\"\n{extra}\n\n"
+             citation = \"A.java:1\"\nstatement = \"Algo.\"\n\n\
+             [check.drive]\nmode = \"v4\"\nscript = \"selectcert\"\n{drive}\n\n"
         )
     }
 
-    const DRIVEN: &str =
-        "drive = { mode = \"v4\", script = \"selectcert\" }\nassistance = \"click\"\n\
-         completes = {}";
+    fn a_drive(mode: &str, script: &str, rest: &str) -> String {
+        format!(
+            "[[check]]\nid = \"a_one\"\nset = \"errores\"\nchapter = \"01\"\n\
+             citation = \"A.java:1\"\nstatement = \"Algo.\"\n\n\
+             [check.drive]\nmode = \"{mode}\"\nscript = \"{script}\"\n{rest}\n"
+        )
+    }
+
+    const CLICKED: &str = "act.consent = \"Elige.\"\nexpects.completes = {}";
 
     #[test]
     fn the_catalogue_of_the_repository_has_no_complaint() {
         let checks = read_the_catalogue().unwrap();
-        assert!(complaints_about(&checks).is_empty());
+        assert_eq!(complaints_about(&checks), Vec::<String>::new());
     }
 
     fn the_manifest() -> Manifest {
         Manifest::of_the_driver().unwrap()
     }
 
-    fn complaints_against_the_driver(extra: &str) -> Vec<String> {
-        complaints_against(
-            &entries(&an_entry("a_one", "errores", extra)),
-            &the_manifest(),
-        )
+    fn complaints_against_the_driver(mode: &str, script: &str, rest: &str) -> Vec<String> {
+        complaints_against(&entries(&a_drive(mode, script, rest)), &the_manifest())
     }
 
     #[test]
@@ -881,7 +950,7 @@ statement = "Algo se rechaza con SAF_03."
     #[test]
     fn a_script_outside_the_manifest_is_named() {
         assert_eq!(
-            complaints_against_the_driver("drive = { mode = \"v4\", script = \"selectcrt\" }"),
+            complaints_against_the_driver("v4", "selectcrt", EXPECTS),
             vec!["a_one: el guion «selectcrt» no existe"]
         );
     }
@@ -889,9 +958,7 @@ statement = "Algo se rechaza con SAF_03."
     #[test]
     fn a_mode_outside_the_manifest_is_named() {
         assert_eq!(
-            complaints_against_the_driver(
-                "drive = { mode = \"bad-uri\", script = \"selectcert\" }"
-            ),
+            complaints_against_the_driver("bad-uri", "selectcert", EXPECTS),
             vec!["a_one: el modo «bad-uri» no existe"]
         );
     }
@@ -900,7 +967,9 @@ statement = "Algo se rechaza con SAF_03."
     fn a_condition_its_script_does_not_emit_is_named() {
         assert_eq!(
             complaints_against_the_driver(
-                "drive = { mode = \"v4\", script = \"protocol-v4\" }\ncondition = \"the-echo-answers-ok\""
+                "v4",
+                "protocol-v4",
+                "expects.completes.conditions = [\"the-echo-answers-ok\"]"
             ),
             vec!["a_one: el guion «protocol-v4» no emite la condición «the-echo-answers-ok»"]
         );
@@ -910,8 +979,9 @@ statement = "Algo se rechaza con SAF_03."
     fn only_the_conditions_of_a_list_its_script_does_not_emit_are_named() {
         assert_eq!(
             complaints_against_the_driver(
-                "drive = { mode = \"v4\", script = \"protocol-v4\" }\n\
-                 condition = [\"a-candidate-port-bound\", \"the-echo-answers-ok\"]"
+                "v4",
+                "protocol-v4",
+                "expects.completes.conditions = [\"a-candidate-port-bound\", \"the-echo-answers-ok\"]"
             ),
             vec!["a_one: el guion «protocol-v4» no emite la condición «the-echo-answers-ok»"]
         );
@@ -921,8 +991,9 @@ statement = "Algo se rechaza con SAF_03."
     fn a_script_driven_in_a_mode_it_does_not_run_in_is_named() {
         assert_eq!(
             complaints_against_the_driver(
-                "drive = { mode = \"service\", script = \"protocol-v4\" }\n\
-                 condition = \"a-candidate-port-bound\""
+                "service",
+                "protocol-v4",
+                "expects.completes.conditions = [\"a-candidate-port-bound\"]"
             ),
             vec!["a_one: el guion «protocol-v4» no funciona en el modo «service»"]
         );
@@ -936,14 +1007,7 @@ statement = "Algo se rechaza con SAF_03."
         )
         .unwrap();
         assert_eq!(
-            complaints_against(
-                &entries(&an_entry(
-                    "a_one",
-                    "errores",
-                    "drive = { mode = \"banco\", script = \"guion\" }"
-                )),
-                &manifest,
-            ),
+            complaints_against(&entries(&a_drive("banco", "guion", EXPECTS)), &manifest),
             vec![
                 "a_one: el modo «banco» es solo del banco",
                 "a_one: el guion «guion» es solo del banco"
@@ -954,62 +1018,8 @@ statement = "Algo se rechaza con SAF_03."
     #[test]
     fn a_handwritten_script_without_an_expected_condition_is_named() {
         assert_eq!(
-            complaints_against_the_driver("drive = { mode = \"v4\", script = \"protocol-v4\" }"),
+            complaints_against_the_driver("v4", "protocol-v4", EXPECTS),
             vec!["a_one: el guion a mano «protocol-v4» solo informa por condiciones y no espera ninguna"]
-        );
-    }
-
-    #[test]
-    fn a_check_expecting_two_things_on_the_wire_is_named() {
-        let checks = entries(&an_entry(
-            "a_one",
-            "errores",
-            &format!("{DRIVEN}\nsaf = \"SAF_03\""),
-        ));
-        assert_eq!(
-            complaints_about(&checks),
-            vec!["a_one: espera más de una cosa del cable"]
-        );
-    }
-
-    #[test]
-    fn a_driven_check_that_expects_nothing_is_named() {
-        let checks = entries(&an_entry(
-            "a_one",
-            "errores",
-            "drive = { mode = \"v4\", script = \"selectcert\" }\nassistance = \"click\"",
-        ));
-        assert_eq!(
-            complaints_about(&checks),
-            vec!["a_one: se conduce sin declarar qué espera"]
-        );
-    }
-
-    #[test]
-    fn an_undriven_check_that_expects_something_is_named() {
-        let checks = entries(&an_entry(
-            "a_one",
-            "errores",
-            "unmeasurable = \"no llega\"\nsaf = \"SAF_03\"",
-        ));
-        assert_eq!(
-            complaints_about(&checks),
-            vec!["a_one: espera algo sin conducirse"]
-        );
-    }
-
-    #[test]
-    fn a_person_without_a_question_is_named() {
-        let checks = entries(&an_entry(
-            "a_one",
-            "operaciones",
-            "drive = { mode = \"v4\", script = \"selectcert\" }\nassistance = \"person\"\n\
-             warning = \"Aviso.\"\n\
-             person = { yes = \"sí\", no = \"no\", yes_means = \"conforme\" }",
-        ));
-        assert_eq!(
-            complaints_about(&checks),
-            vec!["a_one: la persona y su pregunta no van juntas"]
         );
     }
 
@@ -1018,7 +1028,7 @@ statement = "Algo se rechaza con SAF_03."
         let checks = read_the_catalogue_files().unwrap();
         let driven: BTreeSet<&str> = checks
             .iter()
-            .filter_map(|check| check.drive.as_ref())
+            .filter_map(|check| check.provocation())
             .map(|drive| drive.script.as_str())
             .collect();
         let manifest = the_manifest();
@@ -1069,7 +1079,7 @@ statement = "Algo se rechaza con SAF_03."
         let checks = read_the_catalogue().unwrap();
         let greetings: BTreeSet<(Family, Assistance)> = checks
             .iter()
-            .filter(|check| check.greeting)
+            .filter(|check| check.greeting())
             .map(|check| (check.family.unwrap(), check.assistance()))
             .collect();
         assert_eq!(
@@ -1088,8 +1098,8 @@ statement = "Algo se rechaza con SAF_03."
     fn two_greetings_of_one_family_and_one_tranche_are_named() {
         let checks = entries(&format!(
             "{}{}",
-            an_entry("a_one", "saludo", &format!("{DRIVEN}\ngreeting = true")),
-            an_entry("a_two", "errores", &format!("{DRIVEN}\ngreeting = true"))
+            an_entry("a_one", "saludo", &format!("{CLICKED}\ngreeting = true")),
+            an_entry("a_two", "errores", &format!("{CLICKED}\ngreeting = true"))
         ));
         assert_eq!(
             complaints_against(&checks, &the_manifest()),
@@ -1102,36 +1112,38 @@ statement = "Algo se rechaza con SAF_03."
         let checks = read_the_catalogue().unwrap();
         assert!(checks
             .iter()
-            .all(|check| check.drive.is_some() == check.family.is_some()));
+            .all(|check| check.trial().is_some() == check.family.is_some()));
     }
 
     #[test]
     fn an_id_repeated_between_two_files_is_named() {
-        let one = entries(&an_entry("a_one", "saludo", DRIVEN));
-        let other = entries(&an_entry("a_one", "errores", DRIVEN));
+        let one = entries(&an_entry("a_one", "saludo", CLICKED));
+        let other = entries(&an_unmeasurable_entry("a_one", "no llega"));
         let mixed: Vec<Check> = one.into_iter().chain(other).collect();
 
         assert_eq!(complaints_about(&mixed), vec!["a_one: id repetido"]);
     }
 
     #[test]
-    fn an_empty_statement_or_citation_is_named() {
-        let checks = entries(
+    fn an_empty_statement_citation_motive_or_instruction_is_named() {
+        let checks = entries(&format!(
+            "{}{}",
             "[[check]]\nid = \"a_one\"\nset = \"errores\"\nchapter = \"15\"\n\
-             citation = \"\"\nstatement = \"  \"\nunmeasurable = \"no llega\"\n",
-        );
+             citation = \"\"\nstatement = \"  \"\nunmeasurable = \" \"\n\n",
+            an_entry(
+                "a_two",
+                "errores",
+                "act.cancel = \"\"\nexpects.code = \"CANCEL\""
+            )
+        ));
         assert_eq!(
             complaints_about(&checks),
-            vec!["a_one: «citation» vacío", "a_one: «statement» vacío"]
-        );
-    }
-
-    #[test]
-    fn an_entry_that_is_neither_driven_nor_unmeasurable_is_named() {
-        let checks = entries(&an_entry("a_one", "errores", ""));
-        assert_eq!(
-            complaints_about(&checks),
-            vec!["a_one: ni se conduce ni se declara no medible"]
+            vec![
+                "a_one: «citation» vacío",
+                "a_one: «statement» vacío",
+                "a_one: «unmeasurable» vacío",
+                "a_two: «act» vacío"
+            ]
         );
     }
 
@@ -1140,7 +1152,7 @@ statement = "Algo se rechaza con SAF_03."
         let complaint = the_catalogue_in(&an_entry(
             "a_one",
             "errores",
-            &format!("{DRIVEN}\nharness = \"an_absent_one\""),
+            &format!("harness = \"an_absent_one\"\n{CLICKED}"),
         ))
         .unwrap_err();
         assert!(
@@ -1154,111 +1166,90 @@ statement = "Algo se rechaza con SAF_03."
         let checks = entries(&an_entry(
             "a_one",
             "errores",
-            &format!("{DRIVEN}\nharness = \"files_to_load\""),
+            &format!("harness = \"files_to_load\"\n{CLICKED}"),
         ));
         assert_eq!(
-            checks[0].harness.map(|harness| harness.name),
+            checks[0].harness().map(|harness| harness.name),
             Some("files_to_load")
         );
     }
 
     #[test]
-    fn an_unmeasurable_check_that_is_driven_or_unmotivated_is_named() {
+    fn a_greeting_that_needs_a_person_is_named() {
+        let checks = entries(&an_entry(
+            "a_person_greeting",
+            "transporte.service",
+            "act.cancel = \"Cancela.\"\ngreeting = true\nexpects.code = \"CANCEL\"",
+        ));
+        assert_eq!(
+            complaints_about(&checks),
+            vec!["a_person_greeting: saludo que necesita a una persona"]
+        );
+    }
+
+    #[test]
+    fn two_checks_that_drive_one_errand_the_same_way_and_expect_the_same_are_named() {
         let checks = entries(&format!(
             "{}{}",
             an_entry(
                 "a_one",
                 "errores",
-                &format!("unmeasurable = \"no llega\"\n{DRIVEN}")
-            ),
-            an_entry("a_two", "errores", "unmeasurable = \"\"")
-        ));
-        assert_eq!(
-            complaints_about(&checks),
-            vec![
-                "a_one: no medible pero conducida",
-                "a_two: no medible sin motivo"
-            ]
-        );
-    }
-
-    #[test]
-    fn a_greeting_without_a_drive_or_that_needs_a_person_is_named() {
-        let checks = entries(&format!(
-            "{}{}",
-            an_entry(
-                "a_person_greeting",
-                "transporte.service",
-                "drive = { mode = \"v4\", script = \"selectcert\" }\nassistance = \"person\"\n\
-                 warning = \"Aviso.\"\ngreeting = true\ncompletes = {}"
+                "expects.completes.conditions = [\"a\", \"b\"]"
             ),
             an_entry(
-                "an_undriven_greeting",
-                "errores",
-                "unmeasurable = \"Nada que conducir.\"\ngreeting = true"
+                "a_two",
+                "firma",
+                "expects.completes.conditions = [\"b\", \"a\"]"
             )
         ));
         assert_eq!(
             complaints_about(&checks),
-            vec![
-                "a_person_greeting: saludo que necesita a una persona",
-                "an_undriven_greeting: saludo sin conducir"
-            ]
+            vec!["a_two: mide lo mismo que a_one"]
         );
     }
 
     #[test]
-    fn a_check_that_needs_a_person_without_a_warning_is_named() {
-        let checks = entries(&an_entry(
-            "a_one",
-            "operaciones",
-            "drive = { mode = \"v4\", script = \"selectcert\" }\nassistance = \"person\"\n\
-             completes = {}",
+    fn two_checks_of_one_errand_that_differ_in_what_they_expect_the_act_or_the_store_are_not() {
+        let checks = entries(&format!(
+            "{}{}{}{}",
+            an_entry(
+                "a_one",
+                "errores",
+                "act.cancel = \"Cancela.\"\nexpects.code = \"CANCEL\""
+            ),
+            an_entry(
+                "a_two",
+                "errores",
+                "act.refuse = \"Rechaza.\"\nexpects.code = \"CANCEL\""
+            ),
+            an_entry(
+                "a_three",
+                "errores",
+                "act.cancel = \"Cancela.\"\nexpects.code = \"SAF_43\""
+            ),
+            an_entry(
+                "a_four",
+                "errores",
+                "store = \"ec\"\nact.cancel = \"Cancela.\"\nexpects.code = \"CANCEL\""
+            ),
         ));
-        assert_eq!(
-            complaints_about(&checks),
-            vec!["a_one: necesita a una persona y no trae aviso"]
-        );
+        assert_eq!(complaints_about(&checks), Vec::<String>::new());
     }
 
     #[test]
-    fn a_question_without_a_person_is_named() {
-        let checks = entries(&an_entry(
-            "a_one",
-            "operaciones",
-            &format!("{DRIVEN}\nquestion = \"¿sí? [s/n]\""),
-        ));
-        assert_eq!(
-            complaints_about(&checks),
-            vec![
-                "a_one: pregunta sin asistencia persona",
-                "a_one: la persona y su pregunta no van juntas"
-            ]
-        );
-    }
-
-    #[test]
-    fn a_driven_check_without_an_assistance_is_named() {
-        let checks = entries(&an_entry(
-            "a_one",
-            "operaciones",
-            "drive = { mode = \"v4\", script = \"selectcert\" }\ncompletes = {}",
-        ));
-        assert_eq!(
-            complaints_about(&checks),
-            vec!["a_one: se conduce sin declarar su asistencia"]
-        );
-    }
-
-    #[test]
-    fn an_unknown_assistance_store_or_field_is_rejected() {
+    fn an_unknown_act_store_or_field_is_rejected() {
         for extra in [
-            "assistance = \"alguna\"",
+            "act.alguna = \"Algo.\"",
             "store = \"rfirma-test-ecc\"",
             "needs = [\"persona\"]",
         ] {
             assert!(
-                the_catalogue_in(&an_entry("a_one", "errores", extra)).is_err(),
+                the_catalogue_in(&an_entry(
+                    "a_one",
+                    "errores",
+                    &format!("{extra}\n{EXPECTS}")
+                ))
+                .is_err(),
                 "{extra}"
             );
         }

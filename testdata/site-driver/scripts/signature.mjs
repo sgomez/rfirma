@@ -62,6 +62,7 @@ const THE_SERVER_SIGNATURE_AS_IT_CAME = "the-server-signature-as-it-came";
 /** La mide el arnés de la suite, que lee el fichero guardado en el perfil aislado. */
 const THE_RETURNED_SIGNATURE_ON_DISK = "the-returned-signature-on-disk";
 const WITHOUT_A_VISIBLE_SIGNATURE = "without-a-visible-signature";
+const WITH_A_VISIBLE_SIGNATURE = "with-a-visible-signature";
 const WHERE_THE_REQUEST_SAYS = "the-signature-where-the-request-says";
 const THE_DEFAULT_ENVELOPE = "the-default-envelope";
 const THE_SHA1_OF_THE_DATA_SIGNED = "the-sha1-of-the-data-signed";
@@ -394,6 +395,11 @@ function withoutAVisibleSignature(signature) {
   const areas = theAreasOf(signature);
   const invisible = areas.length > 0 && !areas.some(isAVisibleArea);
   return [aCondition(WITHOUT_A_VISIBLE_SIGNATURE, invisible, describingTheAreas(areas))];
+}
+
+function withAVisibleSignature(signature) {
+  const areas = theAreasOf(signature);
+  return [aCondition(WITH_A_VISIBLE_SIGNATURE, areas.some(isAVisibleArea), describingTheAreas(areas))];
 }
 
 function whereTheRequestSays(signature) {
@@ -767,7 +773,10 @@ export const SIGNATURE_SCRIPTS = {
   ),
   signpadesoveranonpdf: aPublishedScript(signing("PAdES", "", theChallenge)),
   signpadeschecking: aPublishedScript(signing("PAdES", "checkSignatures=true", thePdfOfTheTest)),
-  signpadesvisible: aPublishedScript(signing("PAdES", "visibleSignature=want", thePdfOfTheTest)),
+  signpadesvisible: aPublishedScript(
+    signing("PAdES", "visibleSignature=want", thePdfOfTheTest, withAVisibleSignature),
+    { conditions: [WITH_A_VISIBLE_SIGNATURE] },
+  ),
   signfacturae: aPublishedScript(signing("FacturaE", "", theInvoice), { benchOnly: true }),
   signfacturaewitharole: aPublishedScript(
     signing(

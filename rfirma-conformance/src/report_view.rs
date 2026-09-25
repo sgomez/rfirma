@@ -47,7 +47,6 @@ struct CheckView<'a> {
     statement: &'a str,
     citation: &'a str,
     warning: Option<&'a str>,
-    question: Option<&'a str>,
     assistance: Option<Assistance>,
     store: Store,
     bug: Option<&'a KnownBug>,
@@ -96,7 +95,7 @@ pub(crate) fn report_view<'a>(report: &'a Report, catalogue: &'a [Check]) -> Rep
         summary.count(check, state);
         let view = check_view(check, record);
         match sets.last_mut() {
-            Some(set) if set.name == check.set => {
+            Some(set) if set.name == check.requirement.set => {
                 set.summary.count(check, state);
                 set.checks.push(view);
             }
@@ -104,7 +103,7 @@ pub(crate) fn report_view<'a>(report: &'a Report, catalogue: &'a [Check]) -> Rep
                 let mut set_summary = Summary::default();
                 set_summary.count(check, state);
                 sets.push(SetView {
-                    name: &check.set,
+                    name: &check.requirement.set,
                     summary: set_summary,
                     checks: vec![view],
                 });
@@ -130,13 +129,12 @@ pub(crate) fn report_view<'a>(report: &'a Report, catalogue: &'a [Check]) -> Rep
 fn check_view<'a>(check: &'a Check, record: Option<&'a CheckRecord>) -> CheckView<'a> {
     CheckView {
         id: &check.id,
-        chapter: &check.chapter,
-        statement: &check.statement,
-        citation: &check.citation,
-        warning: check.warning.as_deref(),
-        question: check.question.as_deref(),
-        assistance: check.assistance,
-        store: check.store,
+        chapter: &check.requirement.chapter,
+        statement: &check.requirement.statement,
+        citation: &check.requirement.citation,
+        warning: check.instruction(),
+        assistance: check.trial().map(|trial| trial.act.assistance()),
+        store: check.store(),
         bug: check.bug,
         deprecated: check.deprecated,
         state: result_name(record.map(|record| record.state)),
@@ -164,7 +162,11 @@ set = "saludo"
 chapter = "14"
 citation = "A.java:1"
 statement = "Saluda."
-drive = { mode = "v4", script = "protocol-v4" }
+
+[check.drive]
+mode = "v4"
+script = "protocol-v4"
+expects.completes = {}
 
 [[check]]
 id = "a_signature"
@@ -172,8 +174,11 @@ set = "operaciones"
 chapter = "16"
 citation = "B.java:2"
 statement = "Firma."
-drive = { mode = "v4", script = "sign" }
-question = "¿se pidió el PIN? [s/n]"
+
+[check.drive]
+mode = "v4"
+script = "sign"
+expects.completes = {}
 
 [[check]]
 id = "a_save"
@@ -181,8 +186,12 @@ set = "operaciones"
 chapter = "16"
 citation = "C.java:3"
 statement = "Guarda."
-drive = { mode = "v4", script = "save" }
 bug = "BUG-18"
+
+[check.drive]
+mode = "v4"
+script = "save"
+expects.completes = {}
 "#;
 
     fn a_report_of(

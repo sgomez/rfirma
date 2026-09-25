@@ -6,10 +6,10 @@ use std::net::TcpListener;
 use std::os::unix::fs::PermissionsExt;
 use std::time::{Duration, Instant};
 
-use crate::catalogue::{Assistance, Check, Drive};
+use crate::catalogue::{Assistance, Check, Provocation};
 use crate::errand::{ErrandKey, ErrandOutcome, ObservedErrand, THE_DRIVER_CRASH};
 use crate::harness::THE_HARNESSES;
-use crate::judge::{judge, Answer, CheckOutcome};
+use crate::judge::{judge, Verdict};
 use crate::outcome::outcome_name;
 use crate::outcome::{CheckState, Outcome};
 use crate::Probe;
@@ -66,10 +66,10 @@ impl Probe {
         already: Option<&ObservedErrand>,
     ) -> Settled {
         let head = group[0];
-        if let Some(motive) = &head.unmeasurable {
+        if let Some(motive) = head.unmeasurable() {
             return vec![self.settle(
                 head,
-                CheckOutcome::of(Outcome::NotObservable, motive.clone()),
+                Verdict::of(Outcome::NotObservable, motive),
                 Duration::ZERO,
             )]
             .into();
@@ -136,58 +136,37 @@ impl Probe {
         }
     }
 
-    /// Juzga cada entrada del grupo con lo observado; solo la primera pregunta a la persona.
+    /// Juzga cada entrada del grupo con lo observado.
     fn judge_the_group(
         &self,
         group: &[&Check],
         outcome: &ErrandOutcome,
         duration: Duration,
     ) -> Vec<Settlement> {
-        let head = group[0];
-        let answer = match head.question.as_deref() {
-            None => Answer::Unanswered,
-            Some(question) => match self.witness.ask(&head.id, question) {
-                Some(reply) => Answer::read(&reply),
-                None => return vec![Settlement::pending(head, "se descartó la pregunta")],
-            },
-        };
         group
             .iter()
-            .enumerate()
-            .map(|(index, check)| {
-                let answer = if index == 0 {
-                    answer
-                } else {
-                    Answer::Unanswered
-                };
-                self.settle(
-                    check,
-                    judge(outcome, &check.expectation(), answer),
-                    duration,
-                )
+            .filter_map(|check| {
+                let trial = check.trial()?;
+                Some(self.settle(check, judge(outcome, &trial.expects), duration))
             })
             .collect()
     }
 
-    fn settle(&self, check: &Check, outcome: CheckOutcome, duration: Duration) -> Settlement {
-        match outcome {
-            CheckOutcome::Resolved {
-                outcome,
-                observation,
-            } => {
-                let said = observation.as_deref().map_or_else(
-                    || outcome_name(outcome).to_owned(),
-                    |observation| format!("{} — {observation}", outcome_name(outcome)),
-                );
-                self.witness.harness(&format!("{}: {said}", check.id));
-                Settlement::Resolved {
-                    id: check.id.clone(),
-                    outcome,
-                    observation,
-                    duration,
-                }
-            }
-            CheckOutcome::StillPending => Settlement::pending(check, "no hubo respuesta"),
+    fn settle(&self, check: &Check, verdict: Verdict, duration: Duration) -> Settlement {
+        let Verdict {
+            outcome,
+            observation,
+        } = verdict;
+        let said = observation.as_deref().map_or_else(
+            || outcome_name(outcome).to_owned(),
+            |observation| format!("{} — {observation}", outcome_name(outcome)),
+        );
+        self.witness.harness(&format!("{}: {said}", check.id));
+        Settlement::Resolved {
+            id: check.id.clone(),
+            outcome,
+            observation,
+            duration,
         }
     }
 
@@ -198,7 +177,7 @@ impl Probe {
         for (name, _) in THE_HARNESSES.iter().flat_map(|harness| harness.fixtures) {
             let _ = std::fs::remove_file(directory.join(name));
         }
-        let fixtures = check.harness.map_or(&[][..], |harness| harness.fixtures);
+        let fixtures = check.harness().map_or(&[][..], |harness| harness.fixtures);
         if fixtures.is_empty() {
             return Ok(None);
         }
@@ -208,7 +187,7 @@ impl Probe {
                 directory.display()
             )
         };
-        let mode = check.harness.map_or(0o644, |harness| harness.mode);
+        let mode = check.harness().map_or(0o644, |harness| harness.mode);
         for (name, content) in fixtures {
             write_a_fixture(&directory.join(name), content, mode).map_err(unprepared)?;
         }
@@ -224,16 +203,15 @@ impl Probe {
     /// conducir.
     fn measure(&self, check: &Check) -> ErrandOutcome {
         let drive = check
-            .drive
-            .as_ref()
+            .provocation()
             .unwrap_or_else(|| panic!("la comprobación «{}» no dice cómo conducirse", check.id));
-        match check.harness {
+        match drive.harness {
             Some(harness) => harness.measure(self, check, drive),
             None => self.drive(check, drive),
         }
     }
 
-    pub(crate) fn drive(&self, check: &Check, drive: &Drive) -> ErrandOutcome {
+    pub(crate) fn drive(&self, check: &Check, drive: &Provocation) -> ErrandOutcome {
         self.run_errand(
             &check.id,
             &drive.script,
@@ -268,7 +246,7 @@ fn the_unmet_precondition_of(check: &Check) -> Option<String> {
 }
 
 /// Las comprobaciones que comparten trámite con `head` y pueden resolverse del mismo trámite: las
-/// de su misma clave y su mismo tramo, sin pregunta ni respuesta de la persona.
+/// de su misma clave y su mismo tramo.
 pub(crate) fn the_group_of<'a>(head: &'a Check, rest: &[&'a Check]) -> Vec<&'a Check> {
     let mut group = vec![head];
     if !shares_an_errand(head) {
@@ -289,17 +267,13 @@ pub(crate) fn the_group_of<'a>(head: &'a Check, rest: &[&'a Check]) -> Vec<&'a C
 }
 
 fn shares_an_errand(check: &Check) -> bool {
-    ErrandKey::of(check).is_some()
-        && !check.greeting
-        && check.question.is_none()
-        && check.person.is_none()
-        && check.unmeasurable.is_none()
+    ErrandKey::of(check).is_some() && !check.greeting()
 }
 
 /// Si la comprobación es un saludo y no se cumplió: ni resuelto de otro color ni pendiente deja
 /// medir lo que abre.
 fn a_failed_greeting(check: &Check, state: Option<CheckState>) -> bool {
-    check.greeting && state != Some(CheckState::Resolved(Outcome::Compliant))
+    check.greeting() && state != Some(CheckState::Resolved(Outcome::Compliant))
 }
 
 /// Los saludos que quedaron resueltos sin cumplirse en una pasada anterior.
@@ -339,8 +313,8 @@ fn the_warnings_of(group: &[&Check]) -> Vec<String> {
         .iter()
         .flat_map(|check| {
             check
-                .warning
-                .clone()
+                .instruction()
+                .map(str::to_owned)
                 .into_iter()
                 .chain(the_wait_announcement_of(check))
         })
@@ -348,16 +322,12 @@ fn the_warnings_of(group: &[&Check]) -> Vec<String> {
         .collect()
 }
 
-/// Lo que se cuenta a la persona antes de conducir el trámite: los avisos, dónde están los
-/// ficheros preparados y la pregunta que vendrá al terminar.
+/// Lo que se cuenta a la persona antes de conducir el trámite: lo que tiene que hacer y dónde
+/// están los ficheros preparados.
 fn the_briefing_of(group: &[&Check], fixtures: Option<&str>) -> String {
     let mut briefing = the_warnings_of(group);
     if let Some(fixtures) = fixtures {
         briefing.push(fixtures.to_owned());
-    }
-    if let Some(question) = &group[0].question {
-        let question = question.trim_end_matches("[s/n]").trim_end();
-        briefing.push(format!("Al terminar se te preguntará: {question}"));
     }
     briefing.join("\n\n")
 }
@@ -389,7 +359,7 @@ fn write_a_fixture(path: &std::path::Path, content: &str, mode: u32) -> std::io:
 /// si no declara `ports` o todos están libres.
 fn the_occupied_port_complaint(check: &Check) -> Option<String> {
     check
-        .ports
+        .ports()
         .iter()
         .copied()
         .find(|port| port_is_occupied(*port))
@@ -414,7 +384,7 @@ mod tests {
     use crate::witness::Witness;
 
     #[test]
-    fn the_briefing_names_the_warning_the_fixtures_and_the_question_to_come() {
+    fn the_briefing_names_what_to_do_and_the_fixtures() {
         let catalogue = the_catalogue_in(
             r#"
 [[check]]
@@ -423,11 +393,13 @@ set = "operaciones.disco"
 chapter = "10"
 citation = "A.java:1"
 statement = "Uno."
-drive = { mode = "v4", script = "save" }
+
+[check.drive]
+mode = "v4"
+script = "save"
 harness = "a_file_to_overwrite"
-assistance = "person"
-question = "¿se pidió confirmación? [s/n]"
-warning = "Se va a pedir dónde guardar."
+act.refuse = "Se va a pedir dónde guardar."
+expects.code = "CANCEL"
 "#,
         )
         .unwrap();
@@ -440,8 +412,7 @@ warning = "Se va a pedir dónde guardar."
 
         assert_eq!(
             briefing,
-            "Se va a pedir dónde guardar.\n\nFicheros preparados en /tmp/x: ya-existe.txt.\n\n\
-             Al terminar se te preguntará: ¿se pidió confirmación?"
+            "Se va a pedir dónde guardar.\n\nFicheros preparados en /tmp/x: ya-existe.txt."
         );
     }
 
@@ -474,7 +445,7 @@ warning = "Se va a pedir dónde guardar."
                 .iter()
                 .find(|check| check.id == id)
                 .unwrap()
-                .harness
+                .harness()
                 .map_or(0, |harness| harness.fixtures.len())
         };
 
@@ -507,7 +478,11 @@ set = "errores"
 chapter = "15"
 citation = "A.java:1"
 statement = "Uno."
-drive = { mode = "v4", script = "protocol-v4" }
+
+[check.drive]
+mode = "v4"
+script = "protocol-v4"
+expects.completes.conditions = ["a-candidate-port-bound"]
 
 [[check]]
 id = "a_two"
@@ -515,7 +490,11 @@ set = "errores"
 chapter = "15"
 citation = "A.java:2"
 statement = "Dos."
-drive = { mode = "v4", script = "protocol-v4" }
+
+[check.drive]
+mode = "v4"
+script = "protocol-v4"
+expects.completes.conditions = ["a-candidate-port-bound"]
 
 [[check]]
 id = "a_three"
@@ -523,7 +502,11 @@ set = "errores"
 chapter = "15"
 citation = "A.java:3"
 statement = "Tres."
-drive = { mode = "v3", script = "protocol-v3" }
+
+[check.drive]
+mode = "v3"
+script = "protocol-v3"
+expects.completes.conditions = ["the-fixed-port-bound"]
 "#,
         )
         .unwrap();
@@ -550,11 +533,13 @@ set = "operaciones"
 chapter = "10"
 citation = "A.java:1"
 statement = "Uno."
-drive = { mode = "v4", script = "protocol-v4" }
+
+[check.drive]
+mode = "v4"
+script = "protocol-v4"
 harness = "files_to_load"
-assistance = "person"
-question = "¿sí o no? [s/n]"
-person = { yes = "sí", no = "no", yes_means = "conforme" }
+act.pick_file = "Elige primero.bin."
+expects.completes.conditions = ["a-candidate-port-bound"]
 
 [[check]]
 id = "a_two"
@@ -562,7 +547,11 @@ set = "errores"
 chapter = "15"
 citation = "A.java:2"
 statement = "Dos."
-drive = { mode = "v4", script = "protocol-v4" }
+
+[check.drive]
+mode = "v4"
+script = "protocol-v4"
+expects.completes.conditions = ["a-candidate-port-bound"]
 "#,
         )
         .unwrap();
@@ -573,7 +562,7 @@ drive = { mode = "v4", script = "protocol-v4" }
 
     fn with_families(mut catalogue: Vec<Check>) -> Vec<Check> {
         for check in &mut catalogue {
-            check.family = match check.drive.as_ref().map(|drive| drive.script.as_str()) {
+            check.family = match check.provocation().map(|drive| drive.script.as_str()) {
                 Some("protocol-v4") => Some(Family::V4Echo),
                 Some(_) => Some(Family::EndToEnd),
                 None => None,
@@ -589,9 +578,12 @@ set = "errores"
 chapter = "06"
 citation = "A.java:1"
 statement = "Saludo sin ventana."
-drive = { mode = "v4", script = "signwithanunknownformat" }
-assistance = "none"
+
+[check.drive]
+mode = "v4"
+script = "signwithanunknownformat"
 greeting = true
+expects.code = "SAF_06"
 
 [[check]]
 id = "the_click_greeting"
@@ -599,9 +591,13 @@ set = "saludo"
 chapter = "06"
 citation = "A.java:2"
 statement = "Saludo con clic."
-drive = { mode = "v4", script = "signcades" }
-assistance = "click"
+
+[check.drive]
+mode = "v4"
+script = "signcades"
 greeting = true
+act.consent = "Elige."
+expects.completes = {}
 
 [[check]]
 id = "an_unattended_one"
@@ -609,8 +605,11 @@ set = "parametros"
 chapter = "06"
 citation = "A.java:3"
 statement = "Otra sin ventana."
-drive = { mode = "v4", script = "signwithoutaformat" }
-assistance = "none"
+
+[check.drive]
+mode = "v4"
+script = "signwithoutaformat"
+expects.code = "SAF_03"
 
 [[check]]
 id = "a_click_one"
@@ -618,8 +617,12 @@ set = "operaciones.firma"
 chapter = "06"
 citation = "A.java:4"
 statement = "Otra con clic."
-drive = { mode = "v4", script = "signcades" }
-assistance = "click"
+
+[check.drive]
+mode = "v4"
+script = "signcades"
+act.consent = "Elige."
+expects.completes = {}
 
 [[check]]
 id = "an_echo"
@@ -627,8 +630,11 @@ set = "transporte.websocket"
 chapter = "05"
 citation = "A.java:5"
 statement = "Un eco."
-drive = { mode = "v4", script = "protocol-v4" }
-assistance = "none"
+
+[check.drive]
+mode = "v4"
+script = "protocol-v4"
+expects.completes.conditions = ["a-candidate-port-bound"]
 "#;
 
     fn the_family_catalogue() -> Vec<Check> {
@@ -739,7 +745,7 @@ assistance = "none"
         }
     }
 
-    fn a_rejection(assistance: &str) -> Vec<Check> {
+    fn a_rejection(act: &str) -> Vec<Check> {
         the_catalogue_in(&format!(
             r#"
 [[check]]
@@ -748,9 +754,12 @@ set = "errores"
 chapter = "15"
 citation = "A.java:1"
 statement = "Se rechaza."
-drive = {{ mode = "v4", script = "signwithoutaformat" }}
-assistance = "{assistance}"
-saf = "SAF_03"
+
+[check.drive]
+mode = "v4"
+script = "signwithoutaformat"
+{act}
+expects.code = "SAF_03"
 
 [[check]]
 id = "its_twin"
@@ -758,13 +767,20 @@ set = "errores"
 chapter = "15"
 citation = "A.java:2"
 statement = "También."
-drive = {{ mode = "v4", script = "signwithoutaformat" }}
-assistance = "{assistance}"
-saf = "SAF_03"
+
+[check.drive]
+mode = "v4"
+script = "signwithoutaformat"
+{act}
+expects.code = "SAF_03"
 "#
         ))
         .unwrap()
     }
+
+    const CLICKED: &str = "act.consent = \"Elige.\"";
+
+    const CANCELLED: &str = "act.cancel = \"Cancela.\"";
 
     fn resolved(settled: &Settled) -> Vec<(&str, Outcome)> {
         settled
@@ -792,7 +808,7 @@ saf = "SAF_03"
     fn a_group_that_opens_a_tranche_waits_for_the_person_before_driving() {
         let witness = Arc::new(FakeWitness::default());
         let runner = a_runner(false);
-        let catalogue = a_rejection("click");
+        let catalogue = a_rejection(CLICKED);
         let group: Vec<&Check> = catalogue.iter().collect();
 
         let settled = a_probe(&witness, &runner).run_group(&group, Some(Assistance::Click), None);
@@ -811,7 +827,7 @@ saf = "SAF_03"
     fn a_group_inside_its_tranche_does_not_stop() {
         let witness = Arc::new(FakeWitness::default());
         let runner = a_runner(false);
-        let catalogue = a_rejection("click");
+        let catalogue = a_rejection(CLICKED);
         let group: Vec<&Check> = catalogue.iter().collect();
 
         a_probe(&witness, &runner).run_group(&group, None, None);
@@ -827,7 +843,7 @@ saf = "SAF_03"
             ..FakeWitness::default()
         });
         let runner = a_runner(false);
-        let catalogue = a_rejection("person");
+        let catalogue = a_rejection(CANCELLED);
         let group: Vec<&Check> = catalogue.iter().take(1).collect();
 
         let settled = a_probe(&witness, &runner).run_group(&group, Some(Assistance::Person), None);
@@ -846,7 +862,7 @@ saf = "SAF_03"
     fn an_unattended_check_that_exhausts_its_patience_is_a_failure_of_the_suite() {
         let witness = Arc::new(FakeWitness::default());
         let runner = a_runner(true);
-        let catalogue = a_rejection("none");
+        let catalogue = a_rejection("");
         let group: Vec<&Check> = catalogue.iter().collect();
 
         let settled = a_probe(&witness, &runner).run_group(&group, None, None);
@@ -868,7 +884,7 @@ saf = "SAF_03"
     fn a_click_check_that_exhausts_its_patience_is_judged_as_usual() {
         let witness = Arc::new(FakeWitness::default());
         let runner = a_runner(true);
-        let catalogue = a_rejection("click");
+        let catalogue = a_rejection(CLICKED);
         let group: Vec<&Check> = catalogue.iter().take(1).collect();
 
         let settled = a_probe(&witness, &runner).run_group(&group, None, None);
@@ -890,8 +906,12 @@ set = "errores"
 chapter = "15"
 citation = "A.java:1"
 statement = "Uno."
-drive = { mode = "v4", script = "protocol-v4" }
-warning = "el mismo aviso"
+
+[check.drive]
+mode = "v4"
+script = "protocol-v4"
+act.consent = "el mismo aviso"
+expects.completes.conditions = ["a-candidate-port-bound"]
 
 [[check]]
 id = "a_two"
@@ -899,8 +919,12 @@ set = "errores"
 chapter = "15"
 citation = "A.java:2"
 statement = "Dos."
-drive = { mode = "v4", script = "protocol-v4" }
-warning = "el mismo aviso"
+
+[check.drive]
+mode = "v4"
+script = "protocol-v4"
+act.consent = "el mismo aviso"
+expects.completes.conditions = ["a-candidate-port-bound"]
 "#,
         )
         .unwrap();
@@ -918,7 +942,11 @@ set = "errores"
 chapter = "15"
 citation = "A.java:1"
 statement = "Algo."
-drive = {{ mode = "v4", script = "protocol-v4" }}
+
+[check.drive]
+mode = "v4"
+script = "protocol-v4"
+expects.completes.conditions = ["a-candidate-port-bound"]
 {extra}
 "#,
         ))
@@ -948,15 +976,15 @@ drive = {{ mode = "v4", script = "protocol-v4" }}
 
     #[test]
     fn a_check_without_declared_patience_announces_nothing() {
-        let check = a_check_with("assistance = \"person\"");
+        let check = a_check_with("act.cancel = \"Cancela.\"");
         assert_eq!(the_wait_announcement_of(&check), None);
     }
 
     #[test]
     fn checks_in_different_stores_or_tranches_do_not_share_an_errand() {
-        let one = a_check_with("assistance = \"click\"");
-        let in_ec = a_check_with("assistance = \"click\"\nstore = \"ec\"");
-        let unattended = a_check_with("assistance = \"none\"");
+        let one = a_check_with("act.consent = \"Elige.\"");
+        let in_ec = a_check_with("act.consent = \"Elige.\"\nstore = \"ec\"");
+        let unattended = a_check_with("");
         let pending = [&one, &in_ec, &unattended];
 
         assert_eq!(the_group_of(&one, &pending).len(), 1);
@@ -966,7 +994,7 @@ drive = {{ mode = "v4", script = "protocol-v4" }}
     fn a_group_whose_errand_was_already_observed_is_judged_without_launching_the_client() {
         let witness = Arc::new(FakeWitness::default());
         let runner = a_runner(false);
-        let catalogue = a_rejection("click");
+        let catalogue = a_rejection(CLICKED);
         let group: Vec<&Check> = catalogue.iter().collect();
         let first = a_probe(&witness, &runner).run_group(&group[..1], None, None);
         let observed = first.observed.expect("un rechazo terminado se guarda");
@@ -987,7 +1015,7 @@ drive = {{ mode = "v4", script = "protocol-v4" }}
     fn an_errand_that_exhausted_its_patience_is_not_kept_to_be_judged_again() {
         let witness = Arc::new(FakeWitness::default());
         let runner = a_runner(true);
-        let catalogue = a_rejection("click");
+        let catalogue = a_rejection(CLICKED);
         let group: Vec<&Check> = catalogue.iter().take(1).collect();
 
         let settled = a_probe(&witness, &runner).run_group(&group, None, None);

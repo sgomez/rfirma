@@ -8,9 +8,11 @@ statement = """
 Una invocación con un esquema ajeno a afirma:// no abre canal: el original la rechaza con SAF_02
 antes de leer nada más de ella.
 """
-drive = { mode = "v4", script = "protocol-foreign-scheme" }
-assistance = "none"
-condition = "no-channel-opens"
+
+[check.drive]
+mode = "v4"
+script = "protocol-foreign-scheme"
+expects.completes.conditions = ["no-channel-opens"]
 
 [[check]]
 id = "unsupported_operation_rejected"
@@ -19,11 +21,13 @@ citation = "ProtocolInvocationLauncher.java:837-843"
 statement = """
 Una operación no soportada (host desconocido como unknownop) se rechaza con SAF_04.
 """
-drive = { mode = "v4", script = "protocol-v4-rejections" }
-assistance = "click"
+
+[check.drive]
+mode = "v4"
+script = "protocol-v4-rejections"
 patience_secs = 600
-condition = "unknown-operation-saf-04"
-warning = "AutoFirma enseña un diálogo de error antes de contestar cada rechazo de parámetros: ciérralos según aparezcan."
+act.consent = "AutoFirma enseña un diálogo de error antes de contestar cada rechazo de parámetros: ciérralos según aparezcan."
+expects.completes.conditions = ["unknown-operation-saf-04"]
 
 [[check]]
 id = "sign_missing_or_invalid_operation_rejected"
@@ -33,11 +37,13 @@ bug = "BUG-15"
 statement = """
 En afirma://sign?, si el parámetro op falta o no es reconocido, se rechaza con SAF_04.
 """
-drive = { mode = "v4", script = "protocol-v4-rejections" }
-assistance = "click"
+
+[check.drive]
+mode = "v4"
+script = "protocol-v4-rejections"
 patience_secs = 600
-condition = "invalid-op-saf-04"
-warning = "AutoFirma enseña un diálogo de error antes de contestar cada rechazo de parámetros: ciérralos según aparezcan."
+act.consent = "AutoFirma enseña un diálogo de error antes de contestar cada rechazo de parámetros: ciérralos según aparezcan."
+expects.completes.conditions = ["invalid-op-saf-04"]
 
 [[check]]
 id = "local_access_blocked"
@@ -46,11 +52,13 @@ citation = "UrlParameters.java:279-289, 369-372; ProtocolInvocationLauncher.java
 statement = """
 Si rtservlet apunta a localhost o 127.0.0.1, se rechaza con SAF_13.
 """
-drive = { mode = "v4", script = "protocol-v4-local-access" }
-assistance = "click"
+
+[check.drive]
+mode = "v4"
+script = "protocol-v4-local-access"
 patience_secs = 600
-condition = "local-rtservlet-saf-13"
-warning = "AutoFirma enseña un diálogo de error antes de contestar el rechazo: ciérralo según aparezca."
+act.consent = "AutoFirma enseña un diálogo de error antes de contestar el rechazo: ciérralo según aparezca."
+expects.completes.conditions = ["local-rtservlet-saf-13"]
 
 [[check]]
 id = "a_non_alphanumeric_identifier_is_refused_with_saf_03"
@@ -59,11 +67,13 @@ citation = "UrlParametersToSign.java:222-227; ProtocolInvocationLauncher.java:74
 statement = """
 Un id que no es alfanumérico, como rfirma-1, se rechaza con SAF_03: se usa como nombre de fichero.
 """
-drive = { mode = "v4", script = "protocol-v4-rejections" }
-assistance = "click"
+
+[check.drive]
+mode = "v4"
+script = "protocol-v4-rejections"
 patience_secs = 600
-condition = "no-data-saf-03"
-warning = "AutoFirma enseña un diálogo de error antes de contestar cada rechazo de parámetros: ciérralos según aparezcan."
+act.consent = "AutoFirma enseña un diálogo de error antes de contestar cada rechazo de parámetros: ciérralos según aparezcan."
+expects.completes.conditions = ["no-data-saf-03"]
 
 [[check]]
 id = "a_local_file_in_dat_is_refused_with_saf_03"
@@ -73,11 +83,13 @@ statement = """
 Un dat que empieza por file:/ se rechaza antes de leer nada, con SAF_03: la sede no puede pedir que
 se firme un fichero local.
 """
-drive = { mode = "v4", script = "protocol-v4-rejections" }
-assistance = "click"
+
+[check.drive]
+mode = "v4"
+script = "protocol-v4-rejections"
 patience_secs = 600
-condition = "dat-with-a-local-file-saf-03"
-warning = "AutoFirma enseña un diálogo de error antes de contestar cada rechazo de parámetros: ciérralos según aparezcan."
+act.consent = "AutoFirma enseña un diálogo de error antes de contestar cada rechazo de parámetros: ciérralos según aparezcan."
+expects.completes.conditions = ["dat-with-a-local-file-saf-03"]
 
 [[check]]
 id = "a_url_in_dat_is_downloaded_and_signed"
@@ -87,10 +99,12 @@ statement = """
 Un dat que es una URL http:// o https:// se descarga al leer la petición, y lo que se firma es su
 contenido.
 """
-drive = { mode = "service", script = "signdaturl" }
-assistance = "click"
-condition = "the-url-in-dat-downloaded-and-signed"
-warning = "Si el cliente descarga la URL que viaja en dat, aparece el diálogo de certificado: elige cualquiera. Si la descarga falla, AutoFirma enseña en su lugar un diálogo de error: ciérralo para que llegue el SAF_03."
+
+[check.drive]
+mode = "service"
+script = "signdaturl"
+act.consent = "Si el cliente descarga la URL que viaja en dat, aparece el diálogo de certificado: elige cualquiera. Si la descarga falla, AutoFirma enseña en su lugar un diálogo de error: ciérralo para que llegue el SAF_03."
+expects.completes.conditions = ["the-url-in-dat-downloaded-and-signed"]
 
 [[check]]
 id = "dat_that_is_not_base64_is_signed_literally"
@@ -100,10 +114,12 @@ statement = """
 Un dat que no es Base64, por su alfabeto o por su longitud, se firma tal cual, como los bytes de su
 texto.
 """
-drive = { mode = "v4", script = "signliteraldat" }
-assistance = "click"
-condition = "the-literal-dat-signed"
-warning = "Va a aparecer el diálogo de certificado."
+
+[check.drive]
+mode = "v4"
+script = "signliteraldat"
+act.consent = "Va a aparecer el diálogo de certificado."
+expects.completes.conditions = ["the-literal-dat-signed"]
 
 [[check]]
 id = "gzipped_data_is_decompressed_before_signing"
@@ -113,10 +129,12 @@ statement = """
 Con gzip=true, el dat en Base64 se descomprime antes de operar, y la firma sale sobre los datos
 descomprimidos en vez de rechazar la petición.
 """
-drive = { mode = "v4", script = "signgzip" }
-assistance = "click"
-condition = "the-uncompressed-data-signed"
-warning = "Va a aparecer el diálogo de certificado."
+
+[check.drive]
+mode = "v4"
+script = "signgzip"
+act.consent = "Va a aparecer el diálogo de certificado."
+expects.completes.conditions = ["the-uncompressed-data-signed"]
 
 [[check]]
 id = "a_retrieve_servlet_outside_http_is_refused_with_saf_03"
@@ -126,11 +144,13 @@ statement = """
 rtservlet sólo admite los esquemas http y https: un ftp:// se rechaza con SAF_03 antes de recuperar
 nada.
 """
-drive = { mode = "v4", script = "protocol-v4-rejections" }
-assistance = "click"
+
+[check.drive]
+mode = "v4"
+script = "protocol-v4-rejections"
 patience_secs = 600
-condition = "rtservlet-over-ftp-saf-03"
-warning = "AutoFirma enseña un diálogo de error antes de contestar cada rechazo de parámetros: ciérralos según aparezcan."
+act.consent = "AutoFirma enseña un diálogo de error antes de contestar cada rechazo de parámetros: ciérralos según aparezcan."
+expects.completes.conditions = ["rtservlet-over-ftp-saf-03"]
 
 [[check]]
 id = "a_retrieve_servlet_on_a_local_host_is_refused_with_saf_13"
@@ -140,11 +160,13 @@ statement = """
 Un rtservlet cuyo host es localhost o 127.0.0.1 se rechaza con SAF_13: el acceso a una dirección
 local está bloqueado.
 """
-drive = { mode = "v4", script = "protocol-v4-rejections" }
-assistance = "click"
+
+[check.drive]
+mode = "v4"
+script = "protocol-v4-rejections"
 patience_secs = 600
-condition = "rtservlet-on-localhost-saf-13"
-warning = "AutoFirma enseña un diálogo de error antes de contestar cada rechazo de parámetros: ciérralos según aparezcan."
+act.consent = "AutoFirma enseña un diálogo de error antes de contestar cada rechazo de parámetros: ciérralos según aparezcan."
+expects.completes.conditions = ["rtservlet-on-localhost-saf-13"]
 
 [[check]]
 id = "a_retrieve_servlet_carrying_its_own_parameters_is_refused_with_saf_03"
@@ -153,11 +175,13 @@ citation = "UrlParameters.java:376-378"
 statement = """
 La URL de rtservlet no puede traer parámetros propios: una con ? o = se rechaza con SAF_03.
 """
-drive = { mode = "v4", script = "protocol-v4-rejections" }
-assistance = "click"
+
+[check.drive]
+mode = "v4"
+script = "protocol-v4-rejections"
 patience_secs = 600
-condition = "rtservlet-with-a-query-saf-03"
-warning = "AutoFirma enseña un diálogo de error antes de contestar cada rechazo de parámetros: ciérralos según aparezcan."
+act.consent = "AutoFirma enseña un diálogo de error antes de contestar cada rechazo de parámetros: ciérralos según aparezcan."
+expects.completes.conditions = ["rtservlet-with-a-query-saf-03"]
 
 [[check]]
 id = "a_protocol_version_below_the_supported_one_is_accepted"
@@ -168,9 +192,11 @@ ver no tiene cota inferior: una versión menor que la soportada, negativa inclui
 petición sigue hasta el control siguiente. Se mide por el canal WebSocket v3, el que toma la
 versión de cada operación de su ver.
 """
-drive = { mode = "v3", script = "protocol-v3" }
-assistance = "none"
-condition = "ver-below-passes-over-v3"
+
+[check.drive]
+mode = "v3"
+script = "protocol-v3"
+expects.completes.conditions = ["ver-below-passes-over-v3"]
 
 [[check]]
 id = "a_malformed_minimum_client_version_is_refused_with_saf_03"
@@ -180,11 +206,13 @@ statement = """
 Un mcv que no tiene forma de versión se rechaza con SAF_03. La versión que se alcanza y la que no,
 con su SAF_41, las miden otras dos comprobaciones de este conjunto.
 """
-drive = { mode = "v4", script = "protocol-v4-rejections" }
-assistance = "click"
+
+[check.drive]
+mode = "v4"
+script = "protocol-v4-rejections"
 patience_secs = 600
-condition = "mcv-malformed-saf-03"
-warning = "AutoFirma enseña un diálogo de error antes de contestar cada rechazo de parámetros: ciérralos según aparezcan."
+act.consent = "AutoFirma enseña un diálogo de error antes de contestar cada rechazo de parámetros: ciérralos según aparezcan."
+expects.completes.conditions = ["mcv-malformed-saf-03"]
 
 [[check]]
 id = "an_identifier_longer_than_twenty_characters_is_refused_with_saf_03"
@@ -193,11 +221,13 @@ citation = "UrlParameters.java:50; UrlParametersToSign.java:218-221"
 statement = """
 El id de la operación tiene como mucho veinte caracteres: uno de veintiuno se rechaza con SAF_03.
 """
-drive = { mode = "v4", script = "protocol-v4-rejections" }
-assistance = "click"
+
+[check.drive]
+mode = "v4"
+script = "protocol-v4-rejections"
 patience_secs = 600
-condition = "id-of-21-saf-03"
-warning = "AutoFirma enseña un diálogo de error antes de contestar cada rechazo de parámetros: ciérralos según aparezcan."
+act.consent = "AutoFirma enseña un diálogo de error antes de contestar cada rechazo de parámetros: ciérralos según aparezcan."
+expects.completes.conditions = ["id-of-21-saf-03"]
 
 [[check]]
 id = "an_identifier_of_twenty_characters_is_accepted"
@@ -207,9 +237,11 @@ statement = """
 Un id alfanumérico de exactamente veinte caracteres se acepta y la petición sigue hasta el control
 siguiente.
 """
-drive = { mode = "v4", script = "protocol-v4" }
-assistance = "none"
-condition = "id-of-20-passes"
+
+[check.drive]
+mode = "v4"
+script = "protocol-v4"
+expects.completes.conditions = ["id-of-20-passes"]
 
 [[check]]
 id = "fileid_stands_in_for_a_missing_identifier"
@@ -219,11 +251,13 @@ statement = """
 Sin id, fileid hace de identificador de la operación y pasa sus mismos controles: uno de más de
 veinte caracteres se rechaza con SAF_03.
 """
-drive = { mode = "v4", script = "protocol-v4-rejections" }
-assistance = "click"
+
+[check.drive]
+mode = "v4"
+script = "protocol-v4-rejections"
 patience_secs = 600
-condition = "fileid-of-21-saf-03"
-warning = "AutoFirma enseña un diálogo de error antes de contestar cada rechazo de parámetros: ciérralos según aparezcan."
+act.consent = "AutoFirma enseña un diálogo de error antes de contestar cada rechazo de parámetros: ciérralos según aparezcan."
+expects.completes.conditions = ["fileid-of-21-saf-03"]
 
 [[check]]
 id = "malformed_properties_do_not_bring_the_request_down"
@@ -233,9 +267,11 @@ statement = """
 Un properties que no se puede descodificar se descarta en vez de rechazar la petición, que sigue
 hasta el control siguiente sin parámetros adicionales.
 """
-drive = { mode = "v4", script = "protocol-v4" }
-assistance = "none"
-condition = "properties-malformed-passes"
+
+[check.drive]
+mode = "v4"
+script = "protocol-v4"
+expects.completes.conditions = ["properties-malformed-passes"]
 
 [[check]]
 id = "a_ksb64_that_is_not_base64_is_ignored"
@@ -245,9 +281,11 @@ statement = """
 Un ksb64 que no es Base64 se ignora como si no se hubiera nombrado almacén, en vez de rechazar la
 petición.
 """
-drive = { mode = "v4", script = "protocol-v4" }
-assistance = "none"
-condition = "ksb64-malformed-passes"
+
+[check.drive]
+mode = "v4"
+script = "protocol-v4"
+expects.completes.conditions = ["ksb64-malformed-passes"]
 
 [[check]]
 id = "keystore_takes_precedence_over_ksb64"
@@ -256,30 +294,29 @@ citation = "UrlParameters.java:382-412; ProtocolInvocationLauncherSelectCert.jav
 statement = """
 Si la petición trae keystore y ksb64, el almacén que se abre es el de keystore.
 """
-drive = { mode = "v4", script = "protocol-v4-keystore-over-ksb64" }
-assistance = "person"
-store = "several"
+
+[check.drive]
+mode = "v4"
+script = "protocol-v4-keystore-over-ksb64"
+store = "token_apart"
 patience_secs = 180
-condition = "the-selection-answers-a-certificate"
-question = "¿ofreció la selección los certificados del almacén del sistema, sin pedir el PIN de un token? [s/n]"
-person = { yes = "se abrió el almacén que nombraba keystore", no = "se abrió otro almacén que el que nombraba keystore", yes_means = "conforme" }
-warning = "La sede nombra el almacén del sistema en keystore y el token de SoftHSM en ksb64: fíjate en qué almacén ofrece la selección, no des ningún PIN y elige un certificado: si cancelas, la comprobación sale discrepante."
+expects.completes.conditions = ["a-certificate-of-the-keystore-store"]
 
 [[check]]
 id = "jvc_only_warns_below_one"
 set = "peticion"
 citation = "ProtocolInvocationLauncher.java:196-214; autoscript.js:27, 4362"
 statement = """
-Con jvc menor que 1, el cliente avisa de un cliente web antiguo en un diálogo que no detiene la
-operación: al cerrarlo, el canal se abre igual.
+Con jvc menor que 1, el aviso de un cliente web antiguo no detiene la operación: el canal se abre
+igual.
 """
-drive = { mode = "v4", script = "protocol-v4-old-javascript" }
-assistance = "person"
-condition = "the-channel-opens-despite-the-warning"
+
+[check.drive]
+mode = "v4"
+script = "protocol-v4-old-javascript"
 patience_secs = 90
-question = "¿avisó el cliente de que la página usa un cliente web antiguo? [s/n]"
-person = { yes = "se avisó del cliente web antiguo", no = "con jvc=0 no se avisó del cliente web antiguo", yes_means = "conforme" }
-warning = "El arranque declara jvc=0: si aparece un aviso de cliente web antiguo, ciérralo para que el canal se abra."
+act.consent = "El arranque declara jvc=0: si aparece un aviso de cliente web antiguo, ciérralo para que el canal se abra."
+expects.completes.conditions = ["the-channel-opens-despite-the-warning"]
 
 [[check]]
 id = "operation_supported_protocol_version"
@@ -290,9 +327,11 @@ Una operación acepta una versión de protocolo menor o igual a 4 (MAX_PROTOCOL_
 con ver=4 no se rechaza con SAF_21 y sigue hasta el control siguiente. Se mide por el canal
 WebSocket v3, que toma la versión de cada operación de su ver; el v4 la fija y la ignora.
 """
-drive = { mode = "v3", script = "protocol-v3" }
-assistance = "none"
-condition = "ver-4-passes-over-v3"
+
+[check.drive]
+mode = "v3"
+script = "protocol-v3"
+expects.completes.conditions = ["ver-4-passes-over-v3"]
 
 [[check]]
 id = "operation_minimum_client_version_satisfied"
@@ -302,9 +341,11 @@ statement = """
 Si mcv solicita una versión igual o inferior a la versión del aplicativo (p. ej. mcv=1.0.0), la
 operación continúa sin error de versión.
 """
-drive = { mode = "v4", script = "protocol-v4" }
-assistance = "none"
-condition = "mcv-below-the-client-passes"
+
+[check.drive]
+mode = "v4"
+script = "protocol-v4"
+expects.completes.conditions = ["mcv-below-the-client-passes"]
 
 [[check]]
 id = "operation_minimum_client_version_unsatisfied_rejected"
@@ -314,9 +355,11 @@ statement = """
 Si mcv solicita una versión superior a la de la aplicación (p. ej. mcv=99.0.0), la operación es
 rechazada con SAF_41.
 """
-drive = { mode = "v4", script = "protocol-v4" }
-assistance = "none"
-condition = "mcv-above-the-client-saf-41"
+
+[check.drive]
+mode = "v4"
+script = "protocol-v4"
+expects.completes.conditions = ["mcv-above-the-client-saf-41"]
 
 [[check]]
 id = "the_three_verbs_are_recognised_with_a_trailing_slash"
@@ -327,13 +370,11 @@ Los tres verbos de firma se admiten tanto sin barra (afirma://<op>?) como con ba
 interrogante (afirma://<op>/?): con barra, sign, cosign y countersign llegan igual a la
 comprobación del formato.
 """
-drive = { mode = "v4", script = "protocol-v4" }
-assistance = "none"
-condition = [
-  "sign-with-a-slash-saf-06",
-  "cosign-with-a-slash-saf-06",
-  "countersign-with-a-slash-saf-06",
-]
+
+[check.drive]
+mode = "v4"
+script = "protocol-v4"
+expects.completes.conditions = ["sign-with-a-slash-saf-06", "cosign-with-a-slash-saf-06", "countersign-with-a-slash-saf-06"]
 
 [[check]]
 id = "selectcert_is_recognised_with_a_trailing_slash"
@@ -343,11 +384,13 @@ statement = """
 selectcert se admite tanto sin barra (afirma://selectcert?) como con barra antes del interrogante
 (afirma://selectcert/?): con barra, sus parámetros se analizan como los de siempre.
 """
-drive = { mode = "v4", script = "protocol-v4-rejections" }
-assistance = "click"
+
+[check.drive]
+mode = "v4"
+script = "protocol-v4-rejections"
 patience_secs = 600
-condition = "selectcert-with-a-slash-saf-03"
-warning = "AutoFirma enseña un diálogo de error antes de contestar cada rechazo de parámetros: ciérralos según aparezcan."
+act.consent = "AutoFirma enseña un diálogo de error antes de contestar cada rechazo de parámetros: ciérralos según aparezcan."
+expects.completes.conditions = ["selectcert-with-a-slash-saf-03"]
 
 [[check]]
 id = "batch_is_recognised_with_a_trailing_slash"
@@ -357,11 +400,13 @@ statement = """
 batch se admite también con barra antes del interrogante (afirma://batch/?), igual que sin ella: con
 barra, sus parámetros se analizan como los de siempre.
 """
-drive = { mode = "v4", script = "protocol-v4-rejections" }
-assistance = "click"
+
+[check.drive]
+mode = "v4"
+script = "protocol-v4-rejections"
 patience_secs = 600
-condition = "batch-with-a-slash-saf-03"
-warning = "AutoFirma enseña un diálogo de error antes de contestar cada rechazo de parámetros: ciérralos según aparezcan."
+act.consent = "AutoFirma enseña un diálogo de error antes de contestar cada rechazo de parámetros: ciérralos según aparezcan."
+expects.completes.conditions = ["batch-with-a-slash-saf-03"]
 
 [[check]]
 id = "a_cipher_key_of_the_wrong_length_answers_saf_03"
@@ -371,11 +416,13 @@ statement = """
 Una key que no mide exactamente 8 caracteres se rechaza con SAF_03, llegue la petición por el
 transporte que llegue.
 """
-drive = { mode = "v4", script = "protocol-v4-rejections" }
-assistance = "click"
+
+[check.drive]
+mode = "v4"
+script = "protocol-v4-rejections"
 patience_secs = 600
-condition = "a-cipher-key-of-seven-saf-03"
-warning = "AutoFirma enseña un diálogo de error antes de contestar cada rechazo de parámetros: ciérralos según aparezcan."
+act.consent = "AutoFirma enseña un diálogo de error antes de contestar cada rechazo de parámetros: ciérralos según aparezcan."
+expects.completes.conditions = ["a-cipher-key-of-seven-saf-03"]
 
 [[check]]
 id = "fileid_without_retrieve_servlet_answers_saf_03"
@@ -384,24 +431,10 @@ citation = "UrlParameters.java:267-278; ProtocolInvocationLauncher.java:738-743"
 statement = """
 Una petición sin dat que trae fileid pero no rtservlet se rechaza con SAF_03.
 """
-drive = { mode = "v4", script = "protocol-v4-rejections" }
-assistance = "click"
-patience_secs = 600
-condition = "fileid-without-rtservlet-saf-03"
-warning = "AutoFirma enseña un diálogo de error antes de contestar cada rechazo de parámetros: ciérralos según aparezcan."
 
-[[check]]
-id = "a_parameter_rejection_is_shown_before_it_is_answered"
-set = "peticion"
-citation = "ProtocolInvocationLauncherErrorManager.java:27-29, 151-165; ProtocolInvocationLauncher.java:738-743"
-statement = """
-Un rechazo de los parámetros de la petición se enseña en un diálogo de error, y la sede no recibe
-el SAF hasta que la persona lo cierra.
-"""
-drive = { mode = "v4", script = "protocol-v4-shown-rejection" }
-assistance = "person"
-patience_secs = 180
-condition = "the-rejection-waited-for-the-dialogue"
-question = "¿apareció un diálogo de error, y la página recibió el SAF_03 al cerrarlo? [s/n]"
-person = { yes = "el rechazo se enseñó en un diálogo y llegó al cerrarlo", no = "el rechazo llegó sin diálogo o antes de cerrarlo", yes_means = "conforme" }
-warning = "La página manda una petición con un id que no es alfanumérico: si aparece un diálogo de error, espera unos cinco segundos antes de cerrarlo."
+[check.drive]
+mode = "v4"
+script = "protocol-v4-rejections"
+patience_secs = 600
+act.consent = "AutoFirma enseña un diálogo de error antes de contestar cada rechazo de parámetros: ciérralos según aparezcan."
+expects.completes.conditions = ["fileid-without-rtservlet-saf-03"]

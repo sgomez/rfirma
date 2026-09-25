@@ -56,12 +56,12 @@ pub(crate) struct ErrandKey(String);
 impl ErrandKey {
     /// `None` si no se conduce o si lo que viaja depende de lo que haga la persona en el diálogo.
     pub(crate) fn of(check: &Check) -> Option<Self> {
-        let drive = check.drive.as_ref()?;
+        let drive = check.provocation()?;
         if check.needs_a_person() {
             return None;
         }
-        let mut key = format!("{}/{}/{}", drive.mode, drive.script, check.store.name());
-        if let Some(harness) = check.harness {
+        let mut key = format!("{}/{}/{}", drive.mode, drive.script, drive.store.name());
+        if let Some(harness) = drive.harness {
             key = format!("{key}/{}", harness.name);
         }
         Some(Self(key))
@@ -575,7 +575,8 @@ mod tests {
     fn a_check(extra: &str) -> Check {
         crate::catalogue::the_catalogue_in(&format!(
             "[[check]]\nid = \"a\"\nset = \"errores\"\nchapter = \"15\"\ncitation = \"A.java:1\"\n\
-             statement = \"Algo.\"\ndrive = {{ mode = \"v4\", script = \"save\" }}\n{extra}"
+             statement = \"Algo.\"\n\n[check.drive]\nmode = \"v4\"\nscript = \"save\"\n\
+             expects.code = \"SAVE_OK\"\n{extra}"
         ))
         .unwrap()
         .remove(0)
@@ -584,19 +585,17 @@ mod tests {
     #[test]
     fn the_key_of_an_errand_is_its_mode_script_store_and_harness() {
         assert_eq!(
-            ErrandKey::of(&a_check("assistance = \"click\"\nstore = \"ec\"")),
+            ErrandKey::of(&a_check("act.consent = \"Guarda.\"\nstore = \"ec\"")),
             Some(ErrandKey("v4/save/ec".to_owned()))
         );
         assert_eq!(
-            ErrandKey::of(&a_check(
-                "assistance = \"none\"\nharness = \"occupied_service_ports\""
-            )),
+            ErrandKey::of(&a_check("harness = \"occupied_service_ports\"")),
             Some(ErrandKey("v4/save/rsa/occupied_service_ports".to_owned()))
         );
     }
 
     #[test]
     fn an_errand_that_depends_on_what_the_person_does_has_no_key() {
-        assert_eq!(ErrandKey::of(&a_check("assistance = \"person\"")), None);
+        assert_eq!(ErrandKey::of(&a_check("act.cancel = \"Cancela.\"")), None);
     }
 }

@@ -1,7 +1,7 @@
 // Cómo se declara un guion en el manifiesto: su sede, su familia, sus modos y sus condiciones.
 
 /** Los modos en los que puede correr un guion de la sede publicada, salvo los del intermedio. */
-export const THE_PUBLISHED_SITE_MODES = ["v4", "v3", "service", "service-bind-failure"];
+export const THE_PUBLISHED_SITE_MODES = ["v4", "v3", "service"];
 
 /** Un guion de la sede publicada: una operación de punta a punta por el `autoscript.js`. */
 export function aPublishedScript(

@@ -285,7 +285,8 @@ mod tests {
                     "[[check]]\nid = \"{id}\"\nset = \"errores\"\nchapter = \"15\"\n\
                      citation = \"ProtocolInvocationLauncher.java:741\"\n\
                      statement = \"Algo se rechaza con SAF_03.\"\n\
-                     drive = {{ mode = \"v4\", script = \"selectcert\" }}\n\n"
+                     \n[check.drive]\nmode = \"v4\"\nscript = \"selectcert\"\n\
+                     expects.code = \"SAF_03\"\n\n"
                 )
             })
             .collect();
