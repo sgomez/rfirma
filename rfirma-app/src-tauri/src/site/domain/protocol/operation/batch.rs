@@ -134,7 +134,10 @@ pub(super) fn batch_request(
         true => STANDARD.encode(&lote),
         false => value.to_owned(),
     };
-    let (algorithm, stop_on_error) = batch_algorithm_and_stop_on_error(json, &lote)?;
+    let (algorithm, stop_on_error) = match local {
+        true => (String::new(), false),
+        false => batch_algorithm_and_stop_on_error(json, &lote)?,
+    };
 
     let (presigner_url, postsigner_url) = match servlets {
         Some((presigner_url, postsigner_url)) => (Some(presigner_url), Some(postsigner_url)),

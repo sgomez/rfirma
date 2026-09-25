@@ -23,17 +23,17 @@ pub enum SiteRequest {
     Load(LoadRequest),
     /// Firmar un lote remoto contra los dos servlets que declara la sede.
     Batch(BatchRequest),
-    /// Firmar aquí mismo el lote local que manda la sede, ya leído.
+    /// Firmar aquí mismo el lote local que manda la sede.
     LocalBatch(Box<LocalBatchAsk>),
     /// Operación no atendida con el rechazo correspondiente.
     NotAttended(Refusal),
 }
 
-/// El lote local ya leído, junto con lo que la sede pidió a su alrededor.
+/// El lote local, leído o no, junto con lo que la sede pidió a su alrededor.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct LocalBatchAsk {
     /// El lote tal y como lo pidió la sede.
     pub request: BatchRequest,
-    /// Las firmas del lote, ya leídas del JSON.
-    pub batch: LocalBatch,
+    /// Las firmas del lote leídas del JSON, o por qué no se pudieron leer.
+    pub batch: Result<LocalBatch, Refusal>,
 }
