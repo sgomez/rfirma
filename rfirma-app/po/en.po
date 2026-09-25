@@ -1400,6 +1400,9 @@ msgstr "Saving the file"
 msgid "sede.saving.lead"
 msgstr "Choose where to save it in the system dialog."
 
+msgid "sede.saving.leadUnwritable"
+msgstr "The chosen destination could not be written. Choose another one in the system dialog."
+
 msgid "sede.loading.title"
 msgstr "Loading a file"
 

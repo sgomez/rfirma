@@ -1414,6 +1414,9 @@ msgstr "Desant el fitxer"
 msgid "sede.saving.lead"
 msgstr "Tria al diàleg del sistema on vols desar-lo."
 
+msgid "sede.saving.leadUnwritable"
+msgstr "No s'ha pogut desar a la destinació triada. Tria'n una altra al diàleg del sistema."
+
 msgid "sede.loading.title"
 msgstr "Carregant un fitxer"
 

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { TokenFailure } from "../signing/token";
 import type { DescribedDocument, SiteErrandView } from "./siteErrands";
+import type { PortalResult } from "./siteErrandView";
 import {
   ASKING_TO_CONFIRM,
   ASKING_TO_SIGN,
@@ -141,6 +142,29 @@ describe("el diálogo del portal sale solo", () => {
         outcome: { kind: "refused", situation: "unknown", detail: "el portal no contesta" },
       }),
     );
+  });
+
+  it("warns and opens the save dialog again when the chosen destination cannot be written", async () => {
+    const answers: PortalResult<boolean>[] = [
+      {
+        ok: false,
+        failure: { situation: "saveDestinationUnwritable", detail: "permiso denegado" },
+      },
+      { ok: true, value: true },
+    ];
+    const { push, seen, last } = watched({ saveFile: async () => answers.shift()! });
+
+    push(SAVING);
+
+    await vi.waitFor(() =>
+      expect(last()?.stage).toEqual({ kind: "outcome", outcome: { kind: "saved" } }),
+    );
+    expect(answers).toHaveLength(0);
+    expect(seen.map((errand) => errand?.stage)).toContainEqual({
+      kind: "saving",
+      filename: "firma.pdf",
+      unwritable: true,
+    });
   });
 
   it("shows the saved outcome once the file is written", async () => {

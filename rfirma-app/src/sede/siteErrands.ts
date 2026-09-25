@@ -30,6 +30,11 @@ export type { DescribedDocument, SiteErrandView } from "./siteErrandView";
 /** La firma que la persona dejó sin la contraseña del PDF: la sede ya ha recibido `CANCEL`. */
 const DECLINED = "userCancelled";
 
+/** El destino elegido no se dejó escribir: el guardado sigue pendiente y se vuelve a pedir otro. */
+function isUnwritableDestination(done: PortalResult<boolean>): boolean {
+  return !done.ok && done.failure.situation === "saveDestinationUnwritable";
+}
+
 /**
  * **El `SiteErrandPort` de verdad**, el que sustituye a `noErrand()` (ID-335,
  * ID-336).
@@ -167,7 +172,11 @@ export function siteErrands(commands: SiteCommands): SiteErrandPort {
   const openPortal = async (stage: SiteStageView, arrival: number) => {
     if (stage.kind !== "saving" && stage.kind !== "loading") return;
     if (stage.kind === "saving") {
-      const done = await commands.saveFile();
+      let done = await commands.saveFile();
+      while (isUnwritableDestination(done) && arrival === arrivals) {
+        move({ kind: "saving", filename: stage.filename, unwritable: true });
+        done = await commands.saveFile();
+      }
       if (arrival !== arrivals) return;
       if (!done.ok) {
         finish(refusedBy(done.failure));

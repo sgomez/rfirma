@@ -58,6 +58,7 @@ const REFUSALS: Record<keyof Catalog["sede"]["refusals"], true> = {
 /** Las etiquetas del backend que el catálogo ya redacta con otro nombre: las del lote, sin su prefijo. */
 const RENAMED: Record<string, RefusalSituation> = {
   unreadable: "cannotLoadData",
+  saveDestinationUnwritable: "cannotSaveData",
   presignerUnreachable: "batchPresignerUnreachable",
   postsignerUnreachable: "batchPostsignerUnreachable",
   invalidPresignResponse: "batchInvalidPresignResponse",
