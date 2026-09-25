@@ -18,8 +18,12 @@ referencias externas) no se da por fallo: la condición sale NO OBSERVABLE con e
 - La C14N propia se contrasta con el banco de referencia de `testdata/reference/`, firmado por el
   original 1.9.2 y validado por su oráculo: las siete firmas XML verifican, y una alterada en un
   byte no.
-- Si un cliente firma con una canonicalización que la sede no sabe hacer, el resultado es NO
+- Si un cliente firma con una canonicalización que la sede no sabe hacer, esa parte sale NO
   OBSERVABLE, nunca NO CONFORME: el hueco es de la sede, no del cliente.
+- Las partes se combinan como un AND de tres valores, entre firmantes y dentro de cada uno
+  (Reference, SignedInfo, messageDigest, firma): un fallo real da NO CONFORME aunque otra parte no
+  se pueda medir; si nada falla y algo no se mide, NO OBSERVABLE; solo si todo verifica, CONFORME.
+  Lo que la sede no sabe medir no esconde lo que sí mide y encuentra roto.
 
 ## Considered Options
 
