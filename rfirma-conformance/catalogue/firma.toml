@@ -17,43 +17,13 @@ act.consent = "Va a aparecer el diálogo de certificado."
 expects.completes.conditions = ["a-single-signer", "the-signature-verifies"]
 
 [[check]]
-id = "cosign_is_dispatched_over_a_previous_signature"
-set = "firma"
-citation = "ProtocolInvocationLauncher.java:643-646; SignOperation.java:67-78; ProtocolInvocationLauncherSign.java:710-717"
-statement = """
-El verbo cosign se reconoce como cofirma y cofirma la firma previa que viaja en dat, la única
-ranura de datos que el protocolo tiene para la multifirma: la firma que vuelve lleva el firmante
-previo y el nuevo en paralelo.
-"""
-
-[check.drive]
-mode = "v4"
-script = "cosigncades"
-act.consent = "Va a aparecer el diálogo de certificado."
-expects.completes.conditions = ["two-parallel-signers", "the-signature-verifies"]
-
-[[check]]
-id = "countersign_is_dispatched_over_a_previous_signature"
-set = "firma"
-citation = "ProtocolInvocationLauncher.java:643-646; SignOperation.java:67-78; ProtocolInvocationLauncherSign.java:723-724"
-statement = """
-El verbo countersign se reconoce como contrafirma y contrafirma la firma previa: su único firmante
-vuelve con una contrafirma.
-"""
-
-[check.drive]
-mode = "v4"
-script = "countersigncades"
-act.consent = "Va a aparecer el diálogo de certificado."
-expects.completes.conditions = ["the-signer-countersigned", "the-signature-verifies"]
-
-[[check]]
 id = "countersign_with_target_tree_countersigns_every_node"
 set = "firma"
-citation = "ProtocolInvocationLauncherSign.java:723-724; CAdESExtraParams.java"
+citation = "ProtocolInvocationLauncher.java:643-646; SignOperation.java:67-78; ProtocolInvocationLauncherSign.java:723-724; CAdESExtraParams.java"
 statement = """
-Con target=tree, la contrafirma alcanza a todos los nodos del árbol de firmantes: sobre un
-firmante ya contrafirmado, contrafirma al firmante y a su contrafirma.
+El verbo countersign se reconoce como contrafirma y contrafirma la firma previa, y con target=tree
+alcanza a todos los nodos del árbol de firmantes: sobre un firmante ya contrafirmado, contrafirma
+al firmante y a su contrafirma.
 """
 
 [check.drive]
@@ -170,11 +140,12 @@ expects.completes.conditions = ["a-xades-signature", "the-signature-verifies"]
 [[check]]
 id = "format_auto_identifies_the_previous_signature_of_a_multisignature"
 set = "firma"
-citation = "ProtocolInvocationLauncherUtil.java:167-177; AOSignerFactory.java:92-118"
+citation = "ProtocolInvocationLauncher.java:643-646; SignOperation.java:67-78; ProtocolInvocationLauncherSign.java:710-717; ProtocolInvocationLauncherUtil.java:167-177; AOSignerFactory.java:92-118"
 statement = """
-Con format=auto, una multifirma identifica el formato recorriendo los firmadores con capacidad de
-reconocimiento sobre la firma previa, no analizando el tipo del documento: la cofirma de una CAdES
-vuelve con los dos firmantes en paralelo.
+El verbo cosign se reconoce como cofirma y cofirma la firma previa que viaja en dat, la única
+ranura de datos que el protocolo tiene para la multifirma; con format=auto, identifica el formato
+recorriendo los firmadores con capacidad de reconocimiento sobre la firma previa, no analizando el
+tipo del documento: la cofirma de una CAdES vuelve con los dos firmantes en paralelo.
 """
 
 [check.drive]
@@ -686,29 +657,14 @@ act.consent = "Va a aparecer el diálogo de certificado."
 expects.completes.conditions = ["the-data-inside"]
 
 [[check]]
-id = "a_precalculated_hash_replaces_the_data_of_a_cades_signature"
-set = "firma"
-chapter = "12"
-citation = "AOCAdESSigner.java:514-520; CAdESExtraParams.java"
-statement = """
-Con precalculatedHashAlgorithm, lo que viaja en dat es una huella y no el documento: CAdES firma la
-huella tal cual, como messageDigest, y no empotra datos.
-"""
-
-[check.drive]
-mode = "v4"
-script = "signcadeswithaprecalculatedhash"
-act.consent = "Va a aparecer el diálogo de certificado."
-expects.completes.conditions = ["the-hash-signed-as-it-came", "the-data-left-out"]
-
-[[check]]
 id = "a_precalculated_hash_overrides_an_implicit_mode"
 set = "firma"
 chapter = "12"
 citation = "AOCAdESSigner.java:514-520; CAdESExtraParams.java"
 statement = """
-Con precalculatedHashAlgorithm se invalida mode: aun pidiendo mode=implicit, la firma de la huella
-vuelve sin datos dentro.
+Con precalculatedHashAlgorithm, lo que viaja en dat es una huella y no el documento: CAdES firma la
+huella tal cual, como messageDigest, y no empotra datos; se invalida mode, y aun pidiendo
+mode=implicit la firma de la huella vuelve sin datos dentro.
 """
 
 [check.drive]

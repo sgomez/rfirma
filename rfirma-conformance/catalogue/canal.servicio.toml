@@ -1,27 +1,13 @@
 # Las comprobaciones del conjunto «canal.servicio»; sus capítulos y su orden los declara `sets.toml`.
 
 [[check]]
-id = "the_service_channel_completes_a_certificate_selection"
-set = "canal.servicio"
-citation = "ServiceInvocationManager.java:103-169; CommandProcessorThread.java:520-620"
-statement = """
-El carril del socket local completa una selección de certificado igual que el canal WebSocket: sin
-esta comprobación ninguna de las suyas es de fiar.
-"""
-
-[check.drive]
-mode = "service"
-script = "selectcert"
-act.consent = "Va a aparecer el diálogo de selección de certificado: elige uno para que la comprobación llegue a medir algo."
-expects.completes = {}
-
-[[check]]
 id = "the_service_channel_completes_a_signature"
 set = "canal.servicio"
 citation = "ServiceInvocationManager.java:103-169; CommandProcessorThread.java:520-620"
 statement = """
-El carril del socket local completa una firma de punta a punta igual que el canal WebSocket: la
-firma CAdES que vuelve verifica con la clave del certificado.
+El carril del socket local completa una operación de punta a punta igual que el canal WebSocket:
+la firma CAdES que vuelve verifica con la clave del certificado. Sin esta comprobación ninguna de
+las suyas es de fiar.
 """
 
 [check.drive]

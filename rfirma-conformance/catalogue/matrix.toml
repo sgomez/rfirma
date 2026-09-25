@@ -129,7 +129,7 @@ covered = "a_facturae_triphase_signature_goes_through_the_server_url"
 
 [[cell]]
 operation = "cosign"
-covered = "cosign_is_dispatched_over_a_previous_signature"
+covered = "format_auto_identifies_the_previous_signature_of_a_multisignature"
 
 [[cell]]
 operation = "cosign"
@@ -168,7 +168,7 @@ not_applicable = "FacturaEtri rechaza la cofirma con SAF_04 (AOFacturaETriPhaseS
 
 [[cell]]
 operation = "countersign"
-covered = "countersign_is_dispatched_over_a_previous_signature"
+covered = "countersign_with_target_tree_countersigns_every_node"
 
 [[cell]]
 operation = "countersign"
