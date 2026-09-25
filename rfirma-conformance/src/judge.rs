@@ -115,8 +115,7 @@ fn is_a_saf_code(name: &str) -> bool {
         .is_some_and(|digits| digits.len() == 2 && digits.bytes().all(|byte| byte.is_ascii_digit()))
 }
 
-/// Lo que tiene que traer el trámite completo: las condiciones de la sede y lo que vuelve; sin nada
-/// declarado, basta con que vuelva.
+/// Lo que tiene que traer el trámite completo; sin nada declarado, basta con que vuelva.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct Completion {
@@ -359,8 +358,7 @@ fn against_the_code(observed: &ErrandOutcome, expected: &Code) -> Verdict {
     }
 }
 
-/// Lo que midió la sede decide; si no midió nada, un SAF donde se esperaba el trámite completo es
-/// un fallo del cliente, no algo que no se vio.
+/// Lo que midió la sede decide; si no midió nada, un código de error recibido es un fallo visible.
 fn completed(observed: &ErrandOutcome, completion: &Completion) -> Verdict {
     let conditions = &completion.conditions;
     if any_emitted(observed, conditions) {
@@ -370,7 +368,7 @@ fn completed(observed: &ErrandOutcome, completion: &Completion) -> Verdict {
         }
         return what_came_back(observed, completion);
     }
-    if let Some(code) = observed.error_code.as_deref() {
+    if let Some(code) = an_error_code_the_site_received(observed) {
         return Verdict::noncompliant(format!(
             "{code} donde el protocolo exige que el trámite se complete"
         ));
@@ -379,6 +377,14 @@ fn completed(observed: &ErrandOutcome, completion: &Completion) -> Verdict {
         what_came_back(observed, completion)
     } else {
         the_conditions(observed, conditions)
+    }
+}
+
+fn an_error_code_the_site_received(observed: &ErrandOutcome) -> Option<&str> {
+    match what_the_site_received(observed) {
+        Received::Code("OK" | "SAVE_OK") => None,
+        Received::Code(code) => Some(code),
+        _ => None,
     }
 }
 
@@ -671,10 +677,28 @@ mod tests {
                 ),
             ),
             case(
-                "a completion that brought nothing is not observable",
+                "a cancellation where a completion was due is noncompliant",
                 "expects.completes = {}",
                 with_error(CANCELLED),
-                (NO, Some(CANCELLED)),
+                (
+                    NC,
+                    Some("CANCEL donde el protocolo exige que el trámite se complete"),
+                ),
+            ),
+            case(
+                "a memory error where a completion was due is noncompliant",
+                "expects.completes = {}",
+                with_error(THE_OUT_OF_MEMORY_ERROR),
+                (
+                    NC,
+                    Some("MEMORY_ERROR donde el protocolo exige que el trámite se complete"),
+                ),
+            ),
+            case(
+                "a completion that brought nothing is not observable",
+                "expects.completes = {}",
+                observed(),
+                (NO, None),
             ),
             case(
                 "a result that starts as declared is compliant",
@@ -794,6 +818,15 @@ mod tests {
                 (
                     NC,
                     Some("SAF_03 donde el protocolo exige que el trámite se complete"),
+                ),
+            ),
+            case(
+                "a cancellation where the conditions of a completion were due is noncompliant",
+                "expects.completes.conditions = [\"a-certificate-alone\"]",
+                with_error(CANCELLED),
+                (
+                    NC,
+                    Some("CANCEL donde el protocolo exige que el trámite se complete"),
                 ),
             ),
             case(

@@ -6,7 +6,13 @@ import { networkInterfaces } from "node:os";
 import { connect as connectTls } from "node:tls";
 
 import { theLaunchesSoFar } from "../lib/browser.mjs";
-import { aConditionEvent, aMeasuredConditionEvent, emit, settle } from "../lib/events.mjs";
+import {
+  aConditionEvent,
+  aMeasuredConditionEvent,
+  emit,
+  settle,
+  theUnattendedDeadlineMs,
+} from "../lib/events.mjs";
 import { theThirdProtocolPort } from "../lib/modes.mjs";
 import { whichOfTheKit } from "./certificate.mjs";
 import { aHandwrittenScript, aPublishedScript } from "../lib/script.mjs";
@@ -34,12 +40,6 @@ const THE_WARNED_CHANNEL_PATIENCE_MS = 60000;
 
 /** Lo que se espera a cada rechazo mientras la persona cierra el diálogo de error de AutoFirma. */
 const THE_DIALOGUE_PATIENCE_MS = 120000;
-
-/** Lo que se espera a una selección desatendida antes de darla por preguntada: menos que la paciencia. */
-const THE_UNATTENDED_DEADLINE_MS = Math.max(
-  Number(process.env.RFIRMA_BENCH_TIMEOUT_MS ?? "45000") - 8000,
-  1000,
-);
 
 const THE_SECOND_OPERATION_REUSES_THE_CHANNEL = "the-second-operation-reuses-the-channel";
 const THE_NAME_ARRIVES_IN_UTF8 = "the-name-arrives-in-utf8";
@@ -225,7 +225,7 @@ async function theKeyStoreOverKsb64Script() {
   const answer = await exchangeWithin(
     channel.ws,
     `afirma://selectcert?keystore=SHARED_NSS&ksb64=${token}&properties=${headless}&idsession=${idSession}`,
-    THE_UNATTENDED_DEADLINE_MS,
+    theUnattendedDeadlineMs(),
   );
   channel.ws.close();
   const kit = answer === null ? null : whichOfTheKit(answer);
