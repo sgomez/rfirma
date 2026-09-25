@@ -1,13 +1,17 @@
 // Los guiones de ficheros de la sede publicada: guardar, cargar y firmar y guardar.
 
+import { theCmsSignature, theShapeOf } from "../lib/cms.mjs";
 import { aConditionEvent, bytesOf, emit, settle, settlingTheError } from "../lib/events.mjs";
-import { theChallenge } from "../lib/fixtures.mjs";
+import { theChallenge, theReferenceSignature } from "../lib/fixtures.mjs";
 import { aPublishedScript, withoutAChoice } from "../lib/script.mjs";
 import { THE_SIGNATURE_VERIFIES, theSignatureVerifies } from "../lib/verification.mjs";
 
 const THE_NAME_NEXT_TO_THE_CONTENT = "the-name-next-to-the-content";
 const EVERY_FILE_APART = "every-file-apart";
 const THE_FILENAME_IN_A_THIRD_COMPONENT = "the-filename-in-a-third-component";
+const THE_PICKED_SIGNATURE_COSIGNED = "the-picked-signature-cosigned";
+/** La firma del banco de referencia que el arnés de la suite deja en disco como `firma.csig`. */
+const THE_SIGNATURE_TO_PICK = "cades-implicit.p7s";
 /** La mide el arnés de la suite, que lee el fichero guardado en el perfil aislado. */
 const THE_DECODED_BYTES_ON_DISK = "the-decoded-bytes-on-disk";
 /** La mide el arnés de la suite, que relee la firma guardada donde la propone la petición. */
@@ -139,17 +143,32 @@ function theFilenameInAThirdComponent(extraInfo) {
   );
 }
 
-/** Un `coSign()` sin firma: la petición viaja sin `dat` y la firma se pide en disco. */
+/** Una cofirma sin datos: la petición viaja sin `dat` y la firma que se cofirma se pide en disco. */
 function theCosignWithoutDataScript() {
   AutoScript.coSign(
     "",
     null,
     "SHA256withRSA",
     "CAdES",
-    "",
-    (signature, certificate) =>
-      settle({ event: "success", result: String(signature), certificate: String(certificate) }),
+    withoutAChoice(),
+    (signature, certificate) => {
+      emit(thePickedSignatureCosigned(signature));
+      settle({ event: "success", result: String(signature), certificate: String(certificate) });
+    },
     settlingTheError,
+  );
+}
+
+function thePickedSignatureCosigned(signature) {
+  const cms = theCmsSignature(bytesOf(signature));
+  const [picked] = theCmsSignature(theReferenceSignature(THE_SIGNATURE_TO_PICK)).signers;
+  const kept = cms?.signers.some((signer) => signer.signature.equals(picked.signature)) ?? false;
+  return aConditionEvent(
+    THE_PICKED_SIGNATURE_COSIGNED,
+    kept && theShapeOf(cms) === "[][]",
+    !cms
+      ? "lo que volvió no es un CMS SignedData"
+      : `firmantes con la forma ${theShapeOf(cms)}; ${kept ? "uno es" : "ninguno es"} el de la firma preparada en disco`,
   );
 }
 
@@ -317,5 +336,7 @@ export const FILE_SCRIPTS = {
   signwithoutdata: aPublishedScript(theSignWithoutDataScript, {
     conditions: [THE_FILENAME_IN_A_THIRD_COMPONENT],
   }),
-  cosignwithoutdatacancelled: aPublishedScript(theCosignWithoutDataScript),
+  cosignwithoutdata: aPublishedScript(theCosignWithoutDataScript, {
+    conditions: [THE_PICKED_SIGNATURE_COSIGNED],
+  }),
 };

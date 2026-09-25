@@ -370,14 +370,15 @@ set = "firma"
 citation = "ProtocolInvocationLauncherSign.java:300-357"
 statement = """
 Una cofirma cuya petición no trae dat pide a la persona el fichero de firma antes que el
-certificado, y cancelar esa elección termina el trámite como cancelación.
+certificado, y cofirma la firma que ella elige.
 """
 
 [check.drive]
 mode = "v4"
-script = "cosignwithoutdatacancelled"
-act.cancel = "Se va a pedir el fichero de firma a cofirmar: cancela esa ventana en vez de elegir nada."
-expects.code = "CANCEL"
+script = "cosignwithoutdata"
+harness = "a_signature_to_cosign"
+act.pick_file = "Se va a pedir primero el fichero de firma a cofirmar, y después vendrá el diálogo de certificado: elige firma.csig, la preparada, y firma."
+expects.completes.conditions = ["the-picked-signature-cosigned"]
 
 [[check]]
 id = "check_signatures_lets_a_first_signature_through"
