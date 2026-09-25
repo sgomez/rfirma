@@ -40,9 +40,15 @@ impl RelayBatchServices {
             let response = client
                 .post(&url)
                 .send()
-                .map_err(|error| BatchError::new(unreachable, error.to_string()))?
-                .error_for_status()
-                .map_err(|error| BatchError::new(invalid, error.to_string()))?;
+                .map_err(|error| BatchError::new(unreachable, error.to_string()))?;
+            let status = response.status();
+            if status.is_client_error() || status.is_server_error() {
+                return Err(BatchError::answered(
+                    invalid,
+                    status.as_u16(),
+                    status.to_string(),
+                ));
+            }
 
             response
                 .bytes()
