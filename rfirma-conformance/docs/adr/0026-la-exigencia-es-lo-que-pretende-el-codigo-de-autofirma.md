@@ -11,26 +11,27 @@ a mano, se contradice con el código y consigo mismo.
 **La exigencia es lo que el código de AutoFirma 1.9.2 pretende responder, cuando el propio código
 deja clara la intención**: un código SAF preparado, una validación escrita, un mensaje. Si
 AutoFirma no llega a hacerlo por un bug suyo, la exigencia no cambia: AutoFirma sale NO CONFORME,
-la comprobación declara su ficha `BUG-NN` y la referencia lo recoge. Donde el código no muestra intención distinta de lo
+la comprobación lleva la etiqueta `autofirma:bug:1.9.2` con su ficha `BUG-NN` y la referencia lo
+recoge. Donde el código no muestra intención distinta de lo
 que hace, la exigencia es lo que hace.
 
 **El manual no crea exigencias, pero sí las rebaja.** Si el manual y el código no coinciden,
 manda el código, y la diferencia se anota en `docs/afirma/1.9.2/`. Lo que el manual declara sin
-soporte se mide, pero no cuenta como fallo: CMS, XMLDSig, ODF y OOXML se mantienen «por
+soporte se mide, pero su NO CONFORME queda explicado: CMS, XMLDSig, ODF y OOXML se mantienen «por
 retrocompatibilidad», con «su uso desaconsejado» y sin soporte (MCF, §8, pág. 97), y sus
-comprobaciones llevan `deprecated = true`. `NONE` no está en esa lista: el manual lo documenta como
+comprobaciones llevan la etiqueta `manual:deprecated`. `NONE` no está en esa lista: el manual lo documenta como
 firma PKCS#1 sin formato y lo admite en el `format` del lote.
 
 ## Consequences
 
 - Un enunciado puede decir algo que AutoFirma no hace. No es un error del catálogo si su fuente
-  cita dónde el código muestra la intención y la comprobación declara el bug, que la consola enseña
-  en cualquier informe.
+  cita dónde el código muestra la intención y la comprobación lleva la etiqueta del bug, que la
+  consola enseña en cualquier informe.
 - La frontera entre «bug» y «comportamiento» se decide con el código delante, cita incluida. Sin
   una intención visible en el código, lo que hace AutoFirma es el protocolo, aunque parezca raro.
-- Un formato que el manual desaconseja se sigue midiendo: su comprobación se marca como formato
-  deprecado, la consola lo enseña en cualquier informe y su NO CONFORME se cuenta aparte de los
-  fallos del cliente. Que rFirma no lo soporte no es una desviación deliberada ni un fallo.
+- Un formato que el manual desaconseja se sigue midiendo: su comprobación lleva
+  `manual:deprecated`, la consola la enseña en cualquier informe y su NO CONFORME cuenta como
+  explicado. Que rFirma no lo soporte no es una desviación deliberada ni un fallo.
 
 ## Considered Options
 
@@ -44,4 +45,4 @@ firma PKCS#1 sin formato y lo admite en el `format` del lote.
   frecuente.
 - **Un formato que el manual desaconseja deja de medirse y sus comprobaciones se borran.** Era la
   regla anterior. Descartada: AutoFirma los sigue soportando, y borrarlas escondía una diferencia
-  real entre los dos clientes; marcadas, la diferencia se ve sin pasar por fallo de rFirma.
+  real entre los dos clientes; etiquetadas, la diferencia se ve sin pasar por fallo de rFirma.

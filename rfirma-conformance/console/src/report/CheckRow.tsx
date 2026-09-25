@@ -1,7 +1,5 @@
 import { memo, type ReactNode, useEffect, useRef, useState } from "react";
 import type { CheckView } from "../contract/CheckView";
-import type { ClientKind } from "../contract/ClientKind";
-import type { KnownBug } from "../contract/KnownBug";
 import { Elapsed } from "../ui/Elapsed";
 import {
   type Activity,
@@ -11,21 +9,11 @@ import {
   PlayIcon,
   ResultIcon,
 } from "../ui/icons";
-import {
-  assistanceName,
-  bugLabel,
-  calendarDate,
-  DEPRECATED_LABEL,
-  DEPRECATED_REASON,
-  duration,
-  isAnExpectedFailure,
-  resultTone,
-} from "../words";
+import { assistanceName, calendarDate, duration, isExplained, resultTone } from "../words";
 import type { Controls } from "./SetSection";
 
 interface CheckRowProps {
   check: CheckView;
-  kind: ClientKind;
   activity: Activity | null;
   whyPending: string | null;
   runningSince: number | null;
@@ -38,7 +26,6 @@ interface CheckRowProps {
 
 export const CheckRow = memo(function CheckRow({
   check,
-  kind,
   activity,
   whyPending,
   runningSince,
@@ -50,13 +37,13 @@ export const CheckRow = memo(function CheckRow({
 }: CheckRowProps) {
   const settled = useJustSettled(check.state);
   const detailId = `detail-${check.id}`;
-  const expected = isAnExpectedFailure(check, kind) || isADeprecatedFailure(check);
+  const explained = isExplained(check);
   return (
     <li
       className="check"
       data-check={check.id}
       data-tone={resultTone[check.state]}
-      data-expected={expected || undefined}
+      data-explained={explained || undefined}
       data-activity={activity ?? undefined}
       data-selected={selected || undefined}
       data-settled={settled || undefined}
@@ -85,12 +72,11 @@ export const CheckRow = memo(function CheckRow({
           </span>
           <span className="check-name">
             <span className="check-id">{check.id}</span>
-            {check.bug && <BugTag bug={check.bug} />}
-            {check.deprecated && (
-              <span className="tag tag-deprecated" title={DEPRECATED_REASON}>
-                {DEPRECATED_LABEL}
+            {check.labels.map((label) => (
+              <span key={label.name} className="tag tag-label" title={label.reason}>
+                {label.name}
               </span>
-            )}
+            ))}
           </span>
           <span className="check-chapter">cap. {check.chapter}</span>
           <span className="check-status">
@@ -115,7 +101,7 @@ export const CheckRow = memo(function CheckRow({
         <CheckDetail
           id={detailId}
           check={check}
-          expected={expected}
+          explained={explained}
           activity={activity}
           whyPending={whyPending}
           onTranscript={onTranscript}
@@ -128,18 +114,6 @@ export const CheckRow = memo(function CheckRow({
 function endsATextSelection(): boolean {
   const selection = window.getSelection();
   return selection !== null && !selection.isCollapsed && selection.toString() !== "";
-}
-
-function isADeprecatedFailure(check: CheckView): boolean {
-  return check.deprecated && check.state === "NO CONFORME";
-}
-
-function BugTag({ bug }: { bug: KnownBug }) {
-  return (
-    <span className="tag tag-bug" title={`${bug.id}: ${bug.title}`}>
-      {bugLabel(bug)}
-    </span>
-  );
 }
 
 function CopyId({ id }: { id: string }) {
@@ -186,14 +160,14 @@ function Status({
 function CheckDetail({
   id,
   check,
-  expected,
+  explained,
   activity,
   whyPending,
   onTranscript,
 }: {
   id: string;
   check: CheckView;
-  expected: boolean;
+  explained: boolean;
   activity: Activity | null;
   whyPending: string | null;
   onTranscript: (id: string) => void;
@@ -223,23 +197,24 @@ function CheckDetail({
             {check.warning}
           </Field>
         )}
-        {check.bug && (
-          <Field label="Bug conocido">
-            {bugLabel(check.bug)} · <code>{check.bug.id}</code> {check.bug.title}
+        {check.labels.length > 0 && (
+          <Field label="Etiquetas">
+            <ul className="labels">
+              {check.labels.map((label) => (
+                <li key={label.name}>
+                  <code>{label.name}</code> {label.reason}
+                </li>
+              ))}
+            </ul>
           </Field>
         )}
-        {check.deprecated && <Field label={DEPRECATED_LABEL}>{DEPRECATED_REASON}</Field>}
         {check.observation && <Field label="Qué pasó">{check.observation}</Field>}
         <Field label="Resultado">
           <span className={`result-label tone-${resultTone[check.state]}`}>
             <ResultIcon result={check.state} size={12} decorative />
             {shownResult ?? check.state}
           </span>
-          {expected && !shownResult && (
-            <span className="muted">
-              {check.deprecated ? " · no cuenta como fallo" : " · esperado por el bug"}
-            </span>
-          )}
+          {explained && !shownResult && <span className="muted"> · explicado por su etiqueta</span>}
           {check.date && <span className="muted"> · {calendarDate(check.date)}</span>}
           {check.duration_ms !== null && (
             <span className="muted"> · {duration(check.duration_ms)}</span>

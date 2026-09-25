@@ -83,8 +83,13 @@ documento entero.
   sede. Las otras dos guardas de la firma de sede —la factura electrónica que
   ya está firmada y la contrafirma fuera de CAdES, CMS y XAdES— van por el
   mismo camino: repiten el rechazo del propio AutoFirma, y no son desviaciones.
-- La comprobación de conformidad de la XAdES explícita sigue NO CONFORME y se
-  marca como deprecada, para contarla aparte de los fallos del cliente.
+- Dos comprobaciones de la suite de conformidad exigen lo que este ADR decide
+  no hacer y llevan la etiqueta `rfirma:adr-0023`: la XAdES explícita,
+  `an_explicit_xades_signs_the_sha1_of_the_data`, que además lleva
+  `manual:deprecated` porque el original la marca como obsoleta, y el
+  certificado caducado de la regla 1,
+  `expired_certificates_are_hidden_only_without_filters`. Su NO CONFORME en
+  rFirma cuenta como explicado.
 - Si una versión posterior del original retira SHA-1 de su catálogo, o la
   XAdES explícita, este ADR se reescribe midiéndolo contra ese tag.
 

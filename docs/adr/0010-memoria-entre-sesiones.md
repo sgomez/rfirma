@@ -282,6 +282,15 @@ reglas más las extienden a `sign` y `signandsave`:
    nueva lo acepta.** Si no, la ventana se abre sin preselección, con los
    certificados que ese filtro admite.
 
+La suite de conformidad mide la fijación del original, y tres de sus
+comprobaciones exigen justo lo que estas dos enmiendas deciden no hacer:
+`selectcert_answers_the_pinned_certificate_without_asking` (la regla 1 de la
+enmienda anterior), `a_certificate_pinned_by_selectcert_signs_without_asking`
+(la regla 1 de esta) y
+`a_pinned_certificate_ignores_the_filters_of_the_next_request` (la regla 2).
+Llevan la etiqueta `rfirma:adr-0010`, y su NO CONFORME en rFirma cuenta como
+explicado.
+
 ### Considered Options
 
 - **Que el fijado se salte el filtro nuevo, como el original.** Es lo que hace

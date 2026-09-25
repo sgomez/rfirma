@@ -83,7 +83,7 @@ expects.completes.conditions = ["the-returned-signature-on-disk"]
 id = "signandsave_accepts_an_elliptic_curve_algorithm"
 set = "firma-y-guarda"
 citation = "UrlParametersToSignAndSave.java:35, 67-77, 280-288; UrlParametersToSign.java:74-77"
-bug = "BUG-05"
+explained_by.autofirma = "BUG-05"
 statement = """
 El catálogo de algoritmos incluye los de curva elíptica, y signandsave los acepta igual que sign.
 """
@@ -99,7 +99,7 @@ expects.completes = {}
 id = "signandsave_rejects_a_request_without_a_verb_with_saf_04"
 set = "firma-y-guarda"
 citation = "UrlParametersToSignAndSave.java:29, 237; ProtocolInvocationLauncherSignAndSave.java:155, 728"
-bug = "BUG-15"
+explained_by.autofirma = "BUG-15"
 statement = """
 Una invocación de signandsave sin cop se rechaza con SAF_04.
 """
@@ -114,7 +114,7 @@ expects.code = "SAF_04"
 id = "signandsave_cancelled_at_the_visible_area_answers_saf_43"
 set = "firma-y-guarda"
 citation = "ProtocolInvocationLauncherSignAndSave.java:177-180, 495-502, 985-1004, 1040"
-bug = "BUG-13"
+explained_by.autofirma = "BUG-13"
 statement = """
 En signandsave, con visibleSignature=want y sin el área en la petición, cancelar el diálogo del área
 aborta con SAF_43 como en sign.

@@ -266,7 +266,7 @@ kbd {
   --tone: var(--accent);
 }
 
-.check[data-expected] {
+.check[data-explained] {
   --tone: var(--text-3);
 }
 
@@ -1101,7 +1101,7 @@ select.input {
   font-variant-numeric: tabular-nums;
 }
 
-.segment.tone-deprecated {
+.segment.tone-explained {
   background: color-mix(in srgb, var(--fail) 35%, transparent);
 }
 
@@ -1518,18 +1518,18 @@ select.input {
   min-width: 0;
 }
 
-.tag-deprecated {
+.tag-label {
   flex: none;
   height: 18px;
+  font-family: var(--font-mono);
   font-weight: 400;
   cursor: help;
 }
 
-.tag-bug {
-  flex: none;
-  height: 18px;
-  font-weight: 400;
-  cursor: help;
+.labels {
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
 .check-id {

@@ -13,7 +13,8 @@ use ts_rs::TS;
 use crate::client::Store;
 use crate::harness::{the_harness_named, Harness};
 use crate::judge::Expectation;
-use crate::known_bug::{the_known_bug, KnownBug};
+use crate::known_bug::KnownBug;
+use crate::label::{the_declared_labels, Label};
 use crate::manifest::{Family, Manifest, Site};
 
 /// Un conjunto declarado en `catalogue/sets.toml`: su nombre y sus capítulos, el primero el de
@@ -152,12 +153,13 @@ pub struct Check {
     pub requirement: Requirement,
     #[serde(flatten)]
     pub(crate) measure: Measure,
-    /// El bug de AutoFirma 1.9.2 por el que el original incumple lo que se exige.
-    #[serde(default, deserialize_with = "a_known_bug")]
-    pub bug: Option<&'static KnownBug>,
-    /// Si mide un formato que el manual de AutoFirma desaconseja y rFirma no soporta.
-    #[serde(default)]
-    pub deprecated: bool,
+    /// Lo que puede explicar su NO CONFORME, igual para cualquier cliente.
+    #[serde(
+        default,
+        rename = "explained_by",
+        deserialize_with = "the_declared_labels"
+    )]
+    pub labels: Vec<Label>,
     /// La familia de su guion, que pone el manifiesto al cargar el catálogo.
     #[serde(skip)]
     pub(crate) family: Option<Family>,
@@ -172,21 +174,22 @@ fn a_registered_harness<'de, D: Deserializer<'de>>(
         .ok_or_else(|| serde::de::Error::custom(format!("el arnés «{name}» no existe")))
 }
 
-fn a_known_bug<'de, D: Deserializer<'de>>(
-    deserializer: D,
-) -> Result<Option<&'static KnownBug>, D::Error> {
-    let id = String::deserialize(deserializer)?;
-    the_known_bug(&id)
-        .map(Some)
-        .ok_or_else(|| serde::de::Error::custom(format!("{id} no está en el registro de bugs")))
-}
-
 #[derive(Debug, Deserialize)]
 struct Catalogue {
     check: Vec<Check>,
 }
 
 impl Check {
+    /// La ficha `BUG-NN` por la que AutoFirma 1.9.2 incumple lo que se exige.
+    pub fn bug(&self) -> Option<&'static KnownBug> {
+        self.labels.iter().find_map(Label::known_bug)
+    }
+
+    /// El ADR de rFirma que decide no hacer lo que se exige.
+    pub fn adr(&self) -> Option<&str> {
+        self.labels.iter().find_map(Label::adr)
+    }
+
     pub(crate) fn trial(&self) -> Option<&Trial> {
         match &self.measure {
             Measure::Drive(trial) => Some(trial),
@@ -250,7 +253,7 @@ impl Check {
             expects.filter(|said| !said.is_empty()),
             self.instruction().map(str::to_owned),
             self.unmeasurable().map(str::to_owned),
-            self.bug.map(|bug| bug.id.clone()),
+            self.bug().map(|bug| bug.id.clone()),
         ]
         .into_iter()
         .flatten()
@@ -741,28 +744,97 @@ expects.code = "SAF_47"
         assert!(the_catalogue_in("[[check]]\nid = ").is_err());
     }
 
-    #[test]
-    fn a_check_names_the_known_bug_of_the_original_it_fails_by() {
-        let checks = the_catalogue_in(&an_entry_with("bug = \"BUG-15\"")).unwrap();
-
-        assert_eq!(checks[0].bug.map(|bug| bug.id.as_str()), Some("BUG-15"));
-        assert!(checks[0].the_declared_text().contains("BUG-15"));
+    fn the_labels_of(explained_by: &str) -> Result<Vec<String>, String> {
+        let checks = the_catalogue_in(&an_entry_with(explained_by))?;
+        Ok(checks[0].labels.iter().map(Label::name).collect())
     }
 
     #[test]
-    fn a_check_of_a_deprecated_format_says_so_and_the_rest_do_not() {
-        assert!(the_catalogue_in(&an_entry_with("deprecated = true")).unwrap()[0].deprecated);
-        assert!(!the_entry().deprecated);
+    fn a_bug_still_present_in_master_brings_the_label_of_master_along() {
+        let declared = "explained_by.autofirma = \"BUG-15\"";
+        let check = the_catalogue_in(&an_entry_with(declared))
+            .unwrap()
+            .remove(0);
+
+        assert_eq!(check.bug().map(|bug| bug.id.as_str()), Some("BUG-15"));
+        assert!(check.the_declared_text().contains("BUG-15"));
+        assert_eq!(
+            the_labels_of(declared).unwrap(),
+            ["autofirma:bug:1.9.2", "autofirma:bug:master"]
+        );
+    }
+
+    #[test]
+    fn a_bug_fixed_in_master_brings_only_the_label_of_1_9_2() {
+        assert_eq!(
+            the_labels_of("explained_by.autofirma = \"BUG-18\"").unwrap(),
+            ["autofirma:bug:1.9.2"]
+        );
+    }
+
+    #[test]
+    fn the_label_of_master_cannot_be_written_by_hand() {
+        assert!(the_labels_of("explained_by.master = \"BUG-15\"").is_err());
     }
 
     #[test]
     fn a_bug_outside_the_registry_is_refused() {
-        let complaint = the_catalogue_in(&an_entry_with("bug = \"BUG-99\"")).unwrap_err();
+        let complaint = the_labels_of("explained_by.autofirma = \"BUG-99\"").unwrap_err();
 
         assert!(
             complaint.contains("BUG-99 no está en el registro de bugs"),
             "{complaint}"
         );
+    }
+
+    #[test]
+    fn a_deliberate_deviation_is_labelled_by_the_number_of_its_adr() {
+        let declared = "explained_by.rfirma = \"ADR-0010\"";
+
+        assert_eq!(the_labels_of(declared).unwrap(), ["rfirma:adr-0010"]);
+        assert_eq!(
+            the_catalogue_in(&an_entry_with(declared)).unwrap()[0].adr(),
+            Some("ADR-0010")
+        );
+    }
+
+    #[test]
+    fn an_adr_label_that_is_not_adr_nnnn_is_refused() {
+        for written in ["0010", "ADR-10", "adr-0010", "ADR-00100"] {
+            let complaint =
+                the_labels_of(&format!("explained_by.rfirma = \"{written}\"")).unwrap_err();
+            assert!(complaint.contains("se escribe ADR-NNNN"), "{complaint}");
+        }
+    }
+
+    #[test]
+    fn a_deprecated_format_is_labelled_by_the_manual_and_the_rest_are_not() {
+        assert_eq!(
+            the_labels_of("explained_by.manual = \"deprecated\"").unwrap(),
+            ["manual:deprecated"]
+        );
+        assert!(the_entry().labels.is_empty());
+    }
+
+    #[test]
+    fn a_check_may_carry_several_labels_in_a_fixed_order() {
+        assert_eq!(
+            the_labels_of("explained_by = { manual = \"deprecated\", rfirma = \"ADR-0023\" }")
+                .unwrap(),
+            ["rfirma:adr-0023", "manual:deprecated"]
+        );
+    }
+
+    #[test]
+    fn a_label_outside_the_closed_list_is_refused() {
+        for written in [
+            "explained_by.manual = \"obsolete\"",
+            "explained_by.referee = \"x\"",
+            "bug = \"BUG-15\"",
+            "deprecated = true",
+        ] {
+            assert!(the_labels_of(written).is_err(), "{written}");
+        }
     }
 
     #[test]
