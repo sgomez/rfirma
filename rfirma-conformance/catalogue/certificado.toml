@@ -64,7 +64,6 @@ id = "a_key_of_an_unsupported_type_answers_saf_51"
 set = "certificado"
 chapter = "13"
 citation = "ProtocolInvocationLauncherSign.java:631-640; AOSignConstants.java:365-390"
-explained_by.rfirma = "ADR-0022"
 statement = """
 Un certificado cuya clave no es RSA, DSA ni de curva elíptica, como una Ed25519, no compone un
 algoritmo de firma: la firma se rechaza con SAF_51 después de elegirlo.

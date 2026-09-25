@@ -87,11 +87,6 @@ no cabe en una regla pura.
 - Instalar un módulo PKCS#11 con su fichero `.module` basta para que rFirma lo
   liste, sin tocar rFirma. El almacén de CA de p11-kit no entra nunca: con él,
   el listado ofrecería las CA del sistema como certificados de firma.
-- La comprobación de conformidad `a_key_of_an_unsupported_type_answers_saf_51`
-  pone su clave Ed25519 en un almacén `PKCS12` que nombra la sede, y rFirma la
-  rechaza con `SAF_08` por la regla 4 antes de mirar la clave: mide este ADR,
-  no el tipo de clave, y lleva la etiqueta `rfirma:adr-0022`. Con la clave en
-  un almacén que rFirma abre, la etiqueta sobra.
 - Si `AOKeyStore` gana nombres en una versión posterior del original, la tabla
   de `site/domain/protocol/key_store.rs` hay que volver a medirla contra ese
   tag.
