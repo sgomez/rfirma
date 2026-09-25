@@ -15,7 +15,7 @@ import {
 } from "../lib/events.mjs";
 import { theThirdProtocolPort } from "../lib/modes.mjs";
 import { whichOfTheKit } from "./certificate.mjs";
-import { aHandwrittenScript, aPublishedScript } from "../lib/script.mjs";
+import { aHandwrittenScript, aPublishedScript, withoutAChoice } from "../lib/script.mjs";
 
 const A_CANDIDATE_PORT_BOUND = "a-candidate-port-bound";
 const THE_ECHO_WITH_ITS_SESSION_ANSWERS_OK = "the-echo-with-its-session-answers-ok";
@@ -723,7 +723,7 @@ async function theOldJavascriptScript() {
 function aPublishedSelection() {
   return new Promise((resolve) => {
     AutoScript.selectCertificate(
-      "",
+      withoutAChoice(),
       (data) => resolve({ data: String(data) }),
       (type, message) => resolve({ type: String(type), message: String(message) }),
     );

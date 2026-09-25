@@ -12,7 +12,6 @@ URL-safe, sin firma ni campos añadidos.
 [check.drive]
 mode = "v4"
 script = "selectcert"
-act.consent = "Va a aparecer el diálogo de selección de certificado: elige el único que ofrece."
 expects.completes.conditions = ["a-certificate-alone"]
 
 [[check]]
@@ -30,6 +29,20 @@ script = "selectcertheadless"
 expects.completes.conditions = ["the-only-candidate-without-asking"]
 
 [[check]]
+id = "selectcert_without_a_mandatory_selection_resolves_the_only_candidate_without_asking"
+set = "certificado"
+citation = "CertFilterManager.java:145-154; AOKeyStoreDialog.java:726-729"
+statement = """
+Con mandatoryCertSelection=false, un único certificado que pase los filtros se resuelve sin pedir
+que se elija, igual que con headless=true.
+"""
+
+[check.drive]
+mode = "v4"
+script = "selectcertwithoutachoice"
+expects.completes.conditions = ["the-only-candidate-without-asking"]
+
+[[check]]
 id = "selectcert_cancelled_by_the_person_answers_a_cancellation"
 set = "certificado"
 citation = "AOKeyStoreDialog.java:741; ProtocolInvocationLauncherSelectCert.java:201-207"
@@ -40,7 +53,7 @@ tal en vez de como error.
 
 [check.drive]
 mode = "v4"
-script = "selectcert"
+script = "selectcertcancelled"
 act.cancel = "Va a aparecer el diálogo de selección de certificado: cancélalo en vez de elegir."
 expects.code = "CANCEL"
 

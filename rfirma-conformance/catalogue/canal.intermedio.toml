@@ -16,7 +16,6 @@ mode = "relay"
 script = "relayselectcert"
 patience_secs = 120
 greeting = true
-act.consent = "Va a aparecer el diálogo de selección de certificado: elige uno."
 expects.completes.conditions = ["the-result-uploaded-ciphered"]
 
 [[check]]
@@ -47,7 +46,6 @@ fileid y rtservlet, la recupera de rtservlet antes de operar.
 mode = "relay"
 script = "relay"
 patience_secs = 120
-act.consent = "Va a aparecer el diálogo de certificado para firmar: elige uno."
 expects.completes.conditions = ["the-request-retrieved-by-fileid", "the-signature-verifies"]
 
 [[check]]
@@ -79,7 +77,6 @@ aplicación.
 mode = "relay"
 script = "relaytwice"
 patience_secs = 180
-act.consent = "Va a aparecer dos veces el diálogo de selección de certificado: elige uno cada vez."
 expects.completes.conditions = ["each-operation-launched-apart"]
 
 [[check]]
@@ -178,5 +175,4 @@ la sede lo recoge de rtservlet.
 mode = "relay"
 script = "relaybatch"
 patience_secs = 120
-act.consent = "Va a aparecer el diálogo de certificado para firmar el lote: elige uno."
 expects.completes = {}

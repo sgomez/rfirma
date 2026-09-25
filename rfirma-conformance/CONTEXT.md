@@ -57,9 +57,8 @@ trámite y sus condiciones, y lo que solo usa el banco de la aplicación. El cat
 él al arrancar.
 
 **Saludo**:
-La comprobación que abre una familia de trámite: si falla, no se corre ninguna comprobación de su
-familia, sea del conjunto que sea. La familia de punta a punta tiene dos: uno sin ventana, que abre
-el tramo `ninguna`, y una firma de verdad, que abre el tramo `clic`.
+La comprobación que abre una familia de trámite en su primer tramo: si falla, no se corre ninguna
+comprobación de su familia en ese tramo ni en los siguientes, sea del conjunto que sea.
 
 **Comprobación**:
 Una entrada del catálogo: una exigencia del protocolo, cómo se provoca, qué hace la persona y una

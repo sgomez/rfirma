@@ -12,7 +12,6 @@ en batchpresignerurl y el postfirmador en batchpostsignerurl.
 [check.drive]
 mode = "v4"
 script = "batch"
-act.consent = "Va a aparecer el diálogo de certificado: la sede hace de prefirmador y de postfirmador del lote."
 expects.completes.conditions = ["through-both-servlets"]
 
 [[check]]
@@ -73,7 +72,6 @@ en certs.
 [check.drive]
 mode = "v4"
 script = "batch"
-act.consent = "Va a aparecer el diálogo de certificado: la sede hace de prefirmador y de postfirmador del lote."
 expects.completes.conditions = ["the-presigner-gets-the-batch-and-the-chain"]
 
 [[check]]
@@ -88,7 +86,6 @@ su PRE la que lo pidió con NEED_PRE=true.
 [check.drive]
 mode = "v4"
 script = "batch"
-act.consent = "Va a aparecer el diálogo de certificado: la sede hace de prefirmador y de postfirmador del lote."
 expects.completes.conditions = ["the-postsigner-gets-every-item-with-pk1"]
 
 [[check]]
@@ -103,7 +100,6 @@ postfirmador marcados con su error en el lote, y sólo los demás se firman con 
 [check.drive]
 mode = "v4"
 script = "batchpartial"
-act.consent = "Va a aparecer el diálogo de certificado: la sede hace de prefirmador y de postfirmador del lote."
 expects.completes.conditions = ["the-failure-marked-for-the-postsigner"]
 
 [[check]]
@@ -118,7 +114,6 @@ sede recibe esos errores como resultado.
 [check.drive]
 mode = "v4"
 script = "batchallfailed"
-act.consent = "Va a aparecer el diálogo de certificado: la sede hace de prefirmador del lote."
 expects.completes.conditions = ["the-errors-without-postsigning"]
 
 [[check]]
@@ -134,7 +129,6 @@ certificado del firmante.
 [check.drive]
 mode = "v4"
 script = "batchxml"
-act.consent = "Va a aparecer el diálogo de certificado: la sede hace de prefirmador y de postfirmador del lote."
 expects.completes.conditions = ["the-presigner-gets-the-batch-and-the-chain", "the-postsigner-gets-every-item-with-pk1", "the-certificate-in-the-answer"]
 
 [[check]]
@@ -149,7 +143,6 @@ postfirmador, tal cual y sin reinterpretarlo.
 [check.drive]
 mode = "v4"
 script = "batchxml"
-act.consent = "Va a aparecer el diálogo de certificado: la sede hace de prefirmador y de postfirmador del lote."
 expects.completes.conditions = ["the-signs-document-as-it-came"]
 
 [[check]]
@@ -165,7 +158,6 @@ DONE_AND_SAVED con su firma completa en Base64 en signature.
 mode = "v4"
 script = "batchlocal"
 patience_secs = 90
-act.consent = "Va a aparecer el diálogo de certificado, y después se firman tres documentos en el equipo."
 expects.completes.conditions = ["every-item-signed"]
 
 [[check]]
@@ -181,7 +173,6 @@ hereda el del lote.
 mode = "v4"
 script = "batchlocal"
 patience_secs = 90
-act.consent = "Va a aparecer el diálogo de certificado, y después se firman tres documentos en el equipo."
 expects.completes.conditions = ["each-item-in-its-format"]
 
 [[check]]
@@ -211,7 +202,6 @@ DONE_AND_SAVED.
 [check.drive]
 mode = "v4"
 script = "batchlocalcosign"
-act.consent = "Va a aparecer el diálogo de certificado."
 expects.completes.conditions = ["the-suboperation-done"]
 
 [[check]]
@@ -227,7 +217,6 @@ devuelve como DONE_AND_SAVED.
 [check.drive]
 mode = "v4"
 script = "batchlocalcountersign"
-act.consent = "Va a aparecer el diálogo de certificado."
 expects.completes.conditions = ["the-suboperation-done"]
 
 [[check]]
@@ -243,7 +232,6 @@ siquiera uno que pida visibleSignature=want.
 mode = "v4"
 script = "batchlocalvisible"
 patience_secs = 120
-act.consent = "Va a aparecer el diálogo de certificado del lote: elige el certificado y no hagas nada más."
 expects.completes.conditions = ["every-document-signed-without-a-dialogue"]
 
 [[check]]
@@ -259,7 +247,6 @@ para un PDF, XAdES para un XML y CAdES para el resto.
 mode = "v4"
 script = "batchlocalauto"
 patience_secs = 90
-act.consent = "Va a aparecer el diálogo de certificado, y después se firman tres documentos en el equipo."
 expects.completes.conditions = ["each-item-in-its-format"]
 
 [[check]]
@@ -275,7 +262,6 @@ SKIPPED sin su firma y los que faltaban se saltan.
 mode = "v4"
 script = "batchlocalillegible"
 patience_secs = 90
-act.consent = "Va a aparecer el diálogo de certificado; uno de los documentos del lote es ilegible a propósito."
 expects.completes.conditions = ["the-signed-rolled-back"]
 
 [[check]]
@@ -290,7 +276,6 @@ Con stoponerror=false, el documento que falla queda como ERROR_PRE y los demás 
 mode = "v4"
 script = "batchlocalcontinuing"
 patience_secs = 90
-act.consent = "Va a aparecer el diálogo de certificado; uno de los documentos del lote es ilegible a propósito."
 expects.completes.conditions = ["the-rest-signed"]
 
 [[check]]
@@ -306,7 +291,6 @@ certificado elegido: SHA256 con una clave de curva elíptica firma con ECDSA.
 mode = "v4"
 script = "batchlocalecdsa"
 store = "ec"
-act.consent = "Va a aparecer el diálogo de certificado, con el único certificado de curva elíptica del almacén ec."
 expects.completes.conditions = ["the-algorithm-of-the-key"]
 
 [[check]]
@@ -321,7 +305,6 @@ cual.
 [check.drive]
 mode = "v4"
 script = "batch"
-act.consent = "Va a aparecer el diálogo de certificado: la sede hace de prefirmador y de postfirmador del lote."
 expects.completes.conditions = ["the-result-as-it-came"]
 
 [[check]]
@@ -336,7 +319,6 @@ del firmante en DER.
 [check.drive]
 mode = "v4"
 script = "batch"
-act.consent = "Va a aparecer el diálogo de certificado: la sede hace de prefirmador y de postfirmador del lote."
 expects.completes.conditions = ["the-certificate-in-the-answer"]
 
 [[check]]
@@ -350,7 +332,6 @@ Sin needcert=true, la respuesta del lote es sólo el resultado, sin separador ni
 [check.drive]
 mode = "v4"
 script = "batchwithoutneedcert"
-act.consent = "Va a aparecer el diálogo de certificado: la sede hace de prefirmador y de postfirmador del lote."
 expects.completes.conditions = ["only-the-result"]
 
 [[check]]
@@ -454,7 +435,6 @@ ellos; el documento que no trae los suyos hereda los del lote.
 [check.drive]
 mode = "v4"
 script = "batchlocalextraparams"
-act.consent = "Va a aparecer el diálogo de certificado, y después se firman dos documentos en el equipo."
 expects.completes.conditions = ["the-item-extraparams-replace-the-batch-ones"]
 
 [[check]]
@@ -485,7 +465,6 @@ firma ni se pregunta: su elemento vuelve con ERROR_PRE y una descripción del mo
 mode = "v4"
 script = "batchlocalriskypdfs"
 patience_secs = 90
-act.consent = "Va a aparecer el diálogo de certificado."
 expects.completes.conditions = ["each-risky-pdf-failed-with-its-reason"]
 
 [[check]]
@@ -500,7 +479,6 @@ clave del certificado elegido.
 [check.drive]
 mode = "v4"
 script = "batchlocalnone"
-act.consent = "Va a aparecer el diálogo de certificado."
 expects.completes.conditions = ["the-item-a-bare-pkcs1"]
 
 [[check]]

@@ -210,7 +210,6 @@ verifica con la clave del certificado.
 [check.drive]
 mode = "v3"
 script = "signcades"
-act.consent = "Va a aparecer el diálogo de certificado."
 expects.completes.conditions = ["a-single-signer", "the-signature-verifies"]
 
 [[check]]
@@ -225,7 +224,6 @@ la aplicación.
 [check.drive]
 mode = "v4"
 script = "selectcerttwice"
-act.consent = "Va a aparecer dos veces el diálogo de selección de certificado: elige uno cada vez."
 expects.completes.conditions = ["the-second-operation-reuses-the-channel"]
 
 [[check]]

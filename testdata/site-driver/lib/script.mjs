@@ -1,4 +1,5 @@
-// Cómo se declara un guion en el manifiesto: su sede, su familia, sus modos y sus condiciones.
+// Cómo se declara un guion en el manifiesto —su sede, su familia, sus modos y sus condiciones— y la
+// propiedad que quita de su petición una elección de certificado que no existe.
 
 /** Los modos en los que puede correr un guion de la sede publicada, salvo los del intermedio. */
 export const THE_PUBLISHED_SITE_MODES = ["v4", "v3", "service"];
@@ -20,4 +21,9 @@ export function aPublishedScript(
 /** Un guion de la sede a mano: mensajes del protocolo escritos en crudo, sin `autoscript.js`. */
 export function aHandwrittenScript(run, { family, modes, conditions = [] }) {
   return { site: "handwritten", family, modes, conditions, benchOnly: false, run };
+}
+
+/** `extraParams` con `mandatoryCertSelection=false`, que elige sin preguntar al único candidato. */
+export function withoutAChoice(extraParams = "") {
+  return [extraParams, "mandatoryCertSelection=false"].filter(Boolean).join("\n");
 }

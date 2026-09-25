@@ -13,7 +13,7 @@ import {
 } from "../lib/events.mjs";
 import { theInvoice } from "../lib/fixtures.mjs";
 import { withACipherKeyOfSixteenBytes } from "../lib/patches.mjs";
-import { aPublishedScript } from "../lib/script.mjs";
+import { aPublishedScript, withoutAChoice } from "../lib/script.mjs";
 import { THE_SIGNATURE_VERIFIES, theSignatureVerifies } from "../lib/verification.mjs";
 import { BATCH_SCRIPTS } from "./batch.mjs";
 
@@ -156,11 +156,11 @@ function theWaitCondition(server) {
 }
 
 /** Una selección de certificado por servidor intermedio, medida desde los servlets. */
-async function theSelectionThroughTheServerScript() {
+const theSelectionThroughTheServerScript = (properties) => async () => {
   const server = await anIntermediateServer();
   AutoScript.setServlets(server.storage, server.retrieve);
   AutoScript.selectCertificate(
-    "",
+    properties,
     (certificate) => {
       emit(theCipheredResultCondition(server, certificate));
       emit(theWaitCondition(server));
@@ -168,7 +168,7 @@ async function theSelectionThroughTheServerScript() {
     },
     settlingTheError,
   );
-}
+};
 
 /** Un documento que en base64 pasa de `MAX_LONG_GENERAL_URL` y obliga al servidor intermedio. */
 function aDocumentTooLongForTheUrl() {
@@ -183,7 +183,7 @@ async function theRelayScript() {
     aDocumentTooLongForTheUrl().toString("base64"),
     "SHA256withRSA",
     "CAdES",
-    "mode=explicit",
+    withoutAChoice("mode=explicit"),
     (signature, certificate) => {
       const [upload] = server.putsTo(THE_STORAGE_PATH);
       const retrieved = server
@@ -229,7 +229,7 @@ function theRelayRefusedScript() {
 function aSelection() {
   return new Promise((resolve) => {
     AutoScript.selectCertificate(
-      "",
+      withoutAChoice(),
       (data) => resolve({ data: String(data) }),
       (type, message) => resolve({ type: String(type), message: String(message) }),
     );
@@ -423,11 +423,11 @@ export const RELAY_SCRIPTS = {
     THE_SIGNATURE_VERIFIES,
   ]),
   relayrefused: throughTheServer(theRelayRefusedScript, [], { benchOnly: true }),
-  relayselectcert: throughTheServer(theSelectionThroughTheServerScript, [
+  relayselectcert: throughTheServer(theSelectionThroughTheServerScript(withoutAChoice()), [
     THE_RESULT_UPLOADED_CIPHERED,
     WAIT_ANNOUNCED_EVERY_TEN_SECONDS,
   ]),
-  relayselectcertslowly: throughTheServer(theSelectionThroughTheServerScript, [
+  relayselectcertslowly: throughTheServer(theSelectionThroughTheServerScript(""), [
     THE_RESULT_UPLOADED_CIPHERED,
     WAIT_ANNOUNCED_EVERY_TEN_SECONDS,
   ]),

@@ -12,7 +12,7 @@ import {
   unansweredMeansAsked,
 } from "../lib/events.mjs";
 import { withAReleaseWithoutReset } from "../lib/patches.mjs";
-import { aPublishedScript } from "../lib/script.mjs";
+import { aPublishedScript, withoutAChoice } from "../lib/script.mjs";
 
 const A_CERTIFICATE_ALONE = "a-certificate-alone";
 
@@ -124,13 +124,13 @@ function aSelection(properties) {
 }
 
 /** Una firma CAdES del reto que se resuelve con el certificado firmante o con el error. */
-function aSignature() {
+function aSignature(extraParams = "") {
   return new Promise((resolve) => {
     AutoScript.sign(
       Buffer.from("documento de la fijación").toString("base64"),
       "SHA256withRSA",
       "CAdES",
-      "",
+      extraParams,
       (_signature, certificate) => resolve({ certificate: String(certificate) }),
       (type, message) => resolve({ error: `${type}: ${message}` }),
     );
@@ -226,13 +226,23 @@ function theFilteredBatchScript() {
   );
 }
 
-/** En el almacén de omisión, de un solo certificado: una selección desatendida lo devuelve sin preguntar. */
-async function theOnlyCandidateScript() {
-  unansweredMeansAsked(THE_ONLY_CANDIDATE_WITHOUT_ASKING);
-  const answer = await aSelection(["headless=true"]);
-  emit(aConditionEvent(THE_ONLY_CANDIDATE_WITHOUT_ASKING, !answer.error, described(answer)));
-  settlingThe(answer);
-}
+/** En el almacén de omisión, de un solo certificado: `asking` vuelve con él sin preguntar. */
+const theOnlyCandidateScript = (asking) =>
+  aPublishedScript(
+    async () => {
+      unansweredMeansAsked(THE_ONLY_CANDIDATE_WITHOUT_ASKING);
+      const answer = await asking();
+      emit(
+        aConditionEvent(
+          THE_ONLY_CANDIDATE_WITHOUT_ASKING,
+          isTheKit(answer, "active-rsa"),
+          described(answer),
+        ),
+      );
+      settlingThe(answer);
+    },
+    { conditions: [THE_ONLY_CANDIDATE_WITHOUT_ASKING] },
+  );
 
 const PINNING_THE_PSEUDONYM = ["headless=true", "filters=subject.contains:TEST-0000"];
 const FILTERING_THE_ELLIPTIC = ["headless=true", "filters=subject.contains:99949991H"];
@@ -321,12 +331,16 @@ const theSpacedThumbprint = () =>
     .join(" ");
 
 export const CERTIFICATE_SCRIPTS = {
-  selectcert: aPublishedScript(() => theSelectionScript(""), {
+  selectcert: aPublishedScript(() => theSelectionScript(withoutAChoice()), {
     conditions: [A_CERTIFICATE_ALONE],
   }),
-  selectcertheadless: aPublishedScript(theOnlyCandidateScript, {
-    conditions: [THE_ONLY_CANDIDATE_WITHOUT_ASKING],
+  selectcertcancelled: aPublishedScript(() => theSelectionScript(""), {
+    conditions: [A_CERTIFICATE_ALONE],
   }),
+  selectcertheadless: theOnlyCandidateScript(() => aSelection(["headless=true"])),
+  selectcertwithoutachoice: theOnlyCandidateScript(() => aSelection([withoutAChoice()])),
+  signcadesheadless: theOnlyCandidateScript(() => aSignature("headless=true")),
+  signcadeswithoutachoice: theOnlyCandidateScript(() => aSignature(withoutAChoice())),
   sticky: aPublishedScript(theStickyScript, { benchOnly: true }),
   filtersand: aFilteredSelection(
     ["filters=issuer.contains:Ceres;subject.contains:IDCES-"],

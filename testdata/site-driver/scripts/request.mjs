@@ -4,7 +4,7 @@ import { createServer } from "node:http";
 
 import { theCmsSignature } from "../lib/cms.mjs";
 import { aConditionEvent, bytesOf, emit, settle, settlingTheError } from "../lib/events.mjs";
-import { aPublishedScript } from "../lib/script.mjs";
+import { aPublishedScript, withoutAChoice } from "../lib/script.mjs";
 
 const THE_URL_IN_DAT_DOWNLOADED_AND_SIGNED = "the-url-in-dat-downloaded-and-signed";
 const THE_LITERAL_DAT_SIGNED = "the-literal-dat-signed";
@@ -40,7 +40,7 @@ function aSignOf(dat, measuring, failing = settlingTheError) {
     dat,
     "SHA256withRSA",
     "CAdES",
-    "mode=implicit",
+    withoutAChoice("mode=implicit"),
     (signature, certificate) => {
       emit(measuring(theImplicitContentOf(String(signature))));
       settle({ event: "success", result: String(signature), certificate: String(certificate) });

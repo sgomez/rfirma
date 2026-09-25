@@ -107,7 +107,6 @@ Una invocación de signandsave sin cop se rechaza con SAF_04.
 [check.drive]
 mode = "v4"
 script = "signandsavewithoutaverb"
-act.consent = "Va a aparecer el diálogo de certificado antes de que llegue el rechazo."
 expects.code = "SAF_04"
 
 [[check]]

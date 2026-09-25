@@ -1142,7 +1142,7 @@ expects.code = "SAF_47"
     }
 
     #[test]
-    fn every_family_opens_each_of_its_tranches_with_one_greeting() {
+    fn every_family_opens_its_first_tranche_with_one_greeting() {
         let checks = read_the_catalogue().unwrap();
         let greetings: BTreeSet<(Family, Assistance)> = checks
             .iter()
@@ -1155,8 +1155,7 @@ expects.code = "SAF_47"
                 (Family::V4Echo, Assistance::None),
                 (Family::Service, Assistance::None),
                 (Family::EndToEnd, Assistance::None),
-                (Family::EndToEnd, Assistance::Click),
-                (Family::Intermediate, Assistance::Click),
+                (Family::Intermediate, Assistance::None),
             ])
         );
     }

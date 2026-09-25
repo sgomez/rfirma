@@ -2,7 +2,7 @@
 
 import { aConditionEvent, bytesOf, emit, settle, settlingTheError } from "../lib/events.mjs";
 import { theChallenge } from "../lib/fixtures.mjs";
-import { aPublishedScript } from "../lib/script.mjs";
+import { aPublishedScript, withoutAChoice } from "../lib/script.mjs";
 import { THE_SIGNATURE_VERIFIES, theSignatureVerifies } from "../lib/verification.mjs";
 
 const THE_NAME_NEXT_TO_THE_CONTENT = "the-name-next-to-the-content";
@@ -32,7 +32,7 @@ function theSignAndSaveWithoutAVerbScript() {
     theChallenge().toString("base64"),
     "SHA256withRSA",
     "CAdES",
-    "",
+    withoutAChoice(),
     "challenge.csig",
     (data) => settle({ event: "success", data: String(data) }),
     settlingTheError,
