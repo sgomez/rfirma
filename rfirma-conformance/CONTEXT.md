@@ -128,6 +128,12 @@ de cada una. Se ve igual lo esté corriendo o no, y desde cualquier ventana; sol
 mismo cliente y la misma versión con que se creó.
 _Avoid_: expediente, tanda (para el informe), dossier
 
+**Huérfana**:
+Una comprobación que el **informe** guarda y el catálogo ya no tiene, casi siempre porque se
+renombró. Se ve aparte, no cuenta en ningún recuento y se poda la próxima vez que se escribe el
+informe.
+_Avoid_: obsoleta, retirada, fantasma
+
 **Registro**:
 Las líneas que deja una comprobación al correr, marcadas por quién las emite: la **sede**, el
 **cliente** o la **suite**.
