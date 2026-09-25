@@ -136,7 +136,7 @@ public final class XadesBridge {
         }
         requireASignatureToMultisign(requested, document, effectiveParams);
         if (OPERATION_SIGN.equals(requested)) {
-            SignatureTimestamp.requireAUsableTsa(effectiveParams);
+            SignatureTimestamp.requireAUsableTsa(timestampParams(effectiveParams));
         }
 
         final TimeZone timeZone = TimeZone.getDefault();
@@ -271,7 +271,8 @@ public final class XadesBridge {
                     CounterSignTarget.getTarget(stamp.target()));
             default -> SignatureTimestamp.stampXades(processor.preProcessPostSign(
                     signerDocument(effectiveParams, document), stamp.algorithm(), chain,
-                    signerParams(effectiveParams, document), session), effectiveParams);
+                    signerParams(effectiveParams, document), session),
+                    timestampParams(effectiveParams));
         };
 
         return isAsicS(effectiveParams) ? asicSContainer(signature, document, effectiveParams)
@@ -455,6 +456,11 @@ public final class XadesBridge {
     private static XAdESTriPhasePreProcessor processorFor(final Properties effectiveParams) {
         return isFacturaE(effectiveParams) ? new FacturaETriPhasePreProcessor()
                 : new XAdESTriPhasePreProcessor();
+    }
+
+    /** La lista blanca de FacturaE no admite {@code tsaURL}: una factura no se sella. */
+    private static Properties timestampParams(final Properties effectiveParams) {
+        return isFacturaE(effectiveParams) ? new Properties() : effectiveParams;
     }
 
     private static boolean isFacturaE(final Properties effectiveParams) {

@@ -35,10 +35,12 @@ XAdES.
    prefirma, antes de pedir el PIN. Una TSA que no contesta solo se descubre en
    la postfirma, después de firmar con el token.
 3. **Se sella lo que el original pretende sellar: la operación `sign`**,
-   incluidos el ASiC-S y la factura electrónica, cuyo firmador delega en el de
-   CAdES o en el de XAdES. En el ASiC-S se sella la firma antes de cerrar el
-   contenedor. La cofirma y la contrafirma no sellan, tampoco en el original,
-   y en ellas `tsaURL` no cuenta.
+   incluido el ASiC-S, cuyo firmador delega en el de CAdES o en el de XAdES.
+   En el ASiC-S se sella la firma antes de cerrar el contenedor. La cofirma y
+   la contrafirma no sellan, tampoco en el original, y en ellas `tsaURL` no
+   cuenta. La factura electrónica tampoco: la lista blanca de
+   `AOFacturaESigner` (`:57-87, 224-228`) descarta `tsaURL` antes de delegar
+   en XAdES, y la factura sale sin sello y sin error.
 4. **En CAdES y en XAdES el sello es de firma, y `tsType` no cuenta.** El
    sello de documento es cosa del PDF; el original tampoco lee `tsType` fuera
    de PAdES.
@@ -80,6 +82,13 @@ con intención clara (ADR-0026).
 **Sellar también la cofirma y la contrafirma.** `CMSTimestamper` sellaría a
 todos los firmantes del CMS, también a los que ya estaban, y el original no lo
 hace. Descartada: cambiaría firmas ajenas.
+
+**Sellar también la factura electrónica.** Partía de que `AOFacturaESigner`
+delega en XAdES con los mismos parámetros, y no es así: su lista blanca no
+admite `tsaURL`. Quitarlo es una decisión del original, no un error que se
+trague, así que no hay intención que restituir. Sellarla haría fallar con
+`SAF_09` una factura que el original firma, y cuando la TSA contesta, entregar
+un sello que el original no pone. Descartada.
 
 **Un código de error propio para el sello.** El texto de la ventana diría que
 fue la TSA, pero la sede recibe el mismo `SAF_09` y el mensaje del puente ya lo

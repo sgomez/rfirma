@@ -23,6 +23,7 @@ import es.gob.afirma.signvalidation.SignValidity;
 class FacturaEFullCycleTest {
 
     private static final String XMLDSIG_NS = "http://www.w3.org/2000/09/xmldsig#";
+    private static final String XADES_NS = "http://uri.etsi.org/01903/v1.3.2#";
     private static final String FACTURAE_POLICY =
             "http://www.facturae.es/politica_de_firma_formato_facturae/"
                     + "politica_de_firma_formato_facturae_v3_1.pdf";
@@ -69,6 +70,18 @@ class FacturaEFullCycleTest {
 
         assertTrue(new String(signed, StandardCharsets.UTF_8).contains(FACTURAE_POLICY),
                 "la firma de una factura declara la politica de FacturaE 3.1");
+    }
+
+    @Test
+    void an_invoice_drops_the_tsa_url_and_is_signed_without_a_timestamp() throws Exception {
+        final Properties params = asFacturaE();
+        params.setProperty("tsaURL", FakeTsa.unreachableUrl());
+
+        final byte[] signed = XadesCycle.sign(referenceInvoice(), params);
+
+        assertEquals(0, XadesCycle.parse(signed)
+                .getElementsByTagNameNS(XADES_NS, "SignatureTimeStamp").getLength(),
+                "la lista blanca de FacturaE no deja pasar tsaURL");
     }
 
     @Test
