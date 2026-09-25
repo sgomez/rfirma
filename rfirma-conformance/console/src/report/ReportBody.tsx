@@ -3,7 +3,7 @@ import type { ReportView } from "../contract/ReportView";
 import type { ResultName } from "../contract/ResultName";
 import { ResultIcon } from "../ui/icons";
 import { moveAmongChecks, useShortcuts } from "../ui/shortcuts";
-import { RESULTS, rowsWith } from "../words";
+import { countOf, RESULTS } from "../words";
 import { type Controls, type Progress, SetSection } from "./SetSection";
 
 export interface ReportBodyProps {
@@ -82,7 +82,7 @@ export function ReportBody({
             >
               <ResultIcon result={result} size={12} decorative />
               <span>{result}</span>
-              <span className="count">{rowsWith(view.summary, result)}</span>
+              <span className="count">{countOf(view.summary, result)}</span>
             </button>
           ))}
         </fieldset>
@@ -114,7 +114,6 @@ export function ReportBody({
             key={set.name}
             set={set}
             checks={checks}
-            kind={view.kind}
             folded={folded.has(set.name)}
             onToggle={toggleSet}
             expanded={expanded}

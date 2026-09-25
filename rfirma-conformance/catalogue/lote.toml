@@ -34,7 +34,7 @@ expects.completes.conditions = ["the-batch-read-as-xml"]
 id = "a_batch_servlet_on_the_local_loopback_is_refused_with_saf_13"
 set = "lote"
 citation = "UrlParameters.java:279-317; UrlParametersForBatch.java:238-259"
-bug = "BUG-28"
+explained_by.autofirma = "BUG-28"
 statement = """
 Un batchpresignerurl o batchpostsignerurl que apunta a localhost o a 127.0.0.1 se rechaza con
 SAF_13 antes de pedir certificado alguno.
@@ -218,7 +218,7 @@ expects.completes.conditions = ["the-suboperation-done"]
 id = "a_local_batch_admits_countersign_as_a_suboperation"
 set = "lote"
 citation = "JSONBatchManager.java:44-161; LocalBatchSigner.java:165-175"
-bug = "BUG-30"
+explained_by.autofirma = "BUG-30"
 statement = """
 La suboperación countersign del lote local contrafirma el documento, que ya es una firma, y lo
 devuelve como DONE_AND_SAVED.
@@ -356,7 +356,7 @@ expects.completes.conditions = ["only-the-result"]
 id = "a_batch_whose_presigner_does_not_answer_fails_with_saf_26"
 set = "lote"
 citation = "ProtocolInvocationLauncherBatch.java:362-367"
-bug = "BUG-29"
+explained_by.autofirma = "BUG-29"
 statement = """
 Si el prefirmador no responde, el lote termina con SAF_26: la sede sabe que no se pudo contactar
 con el servicio de lotes.

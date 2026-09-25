@@ -67,7 +67,7 @@ expects.completes.conditions = ["every-file-apart"]
 id = "save_answers_a_confirmation_the_published_client_recognises"
 set = "ficheros"
 citation = "CommandProcessorThread.java:290-305; AfirmaWebSocketServer.java:113; JSEUIManager.java:695-838"
-bug = "BUG-18"
+explained_by.autofirma = "BUG-18"
 statement = """
 save pide destino y responde una confirmación de guardado que el cliente publicado reconoce como
 tal, no como una firma.

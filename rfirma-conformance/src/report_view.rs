@@ -6,7 +6,7 @@ use ts_rs::TS;
 
 use crate::catalogue::{Assistance, Check};
 use crate::client::{ClientKind, Store};
-use crate::known_bug::KnownBug;
+use crate::label::Label;
 use crate::outcome::{result_name, ResultName};
 use crate::outcome::{CheckState, Outcome};
 use crate::report::{CheckRecord, Header, Report};
@@ -49,8 +49,7 @@ struct CheckView<'a> {
     warning: Option<&'a str>,
     assistance: Option<Assistance>,
     store: Store,
-    bug: Option<&'a KnownBug>,
-    deprecated: bool,
+    labels: Vec<LabelView>,
     #[ts(as = "ResultName")]
     state: &'static str,
     observation: Option<&'a str>,
@@ -59,14 +58,30 @@ struct CheckView<'a> {
     duration_ms: Option<u64>,
 }
 
+#[derive(Debug, Serialize, TS)]
+#[ts(export)]
+struct LabelView {
+    name: String,
+    reason: String,
+}
+
+impl From<&Label> for LabelView {
+    fn from(label: &Label) -> Self {
+        Self {
+            name: label.name(),
+            reason: label.reason(),
+        }
+    }
+}
+
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, TS)]
 #[ts(export)]
 pub(crate) struct Summary {
     pub total: usize,
     pub compliant: usize,
-    /// Sin los de un formato deprecado, que no son un fallo del cliente y van en `deprecated`.
     pub noncompliant: usize,
-    pub deprecated: usize,
+    /// Los NO CONFORME con alguna etiqueta, sea del cliente que sea.
+    pub explained: usize,
     pub not_observable: usize,
     pub pending: usize,
 }
@@ -77,10 +92,12 @@ impl Summary {
         match state {
             None | Some(CheckState::Pending) => self.pending += 1,
             Some(CheckState::Resolved(Outcome::Compliant)) => self.compliant += 1,
-            Some(CheckState::Resolved(Outcome::Noncompliant)) if check.deprecated => {
-                self.deprecated += 1;
+            Some(CheckState::Resolved(Outcome::Noncompliant)) => {
+                self.noncompliant += 1;
+                if !check.labels.is_empty() {
+                    self.explained += 1;
+                }
             }
-            Some(CheckState::Resolved(Outcome::Noncompliant)) => self.noncompliant += 1,
             Some(CheckState::Resolved(Outcome::NotObservable)) => self.not_observable += 1,
         }
     }
@@ -135,8 +152,7 @@ fn check_view<'a>(check: &'a Check, record: Option<&'a CheckRecord>) -> CheckVie
         warning: check.instruction(),
         assistance: check.trial().map(|trial| trial.act.assistance()),
         store: check.store(),
-        bug: check.bug,
-        deprecated: check.deprecated,
+        labels: check.labels.iter().map(LabelView::from).collect(),
         state: result_name(record.map(|record| record.state)),
         observation: record.and_then(|record| record.observation.as_deref()),
         date: record.and_then(|record| record.date.as_deref()),
@@ -186,7 +202,7 @@ set = "operaciones"
 chapter = "16"
 citation = "C.java:3"
 statement = "Guarda."
-bug = "BUG-18"
+explained_by.autofirma = "BUG-18"
 
 [check.drive]
 mode = "v4"
@@ -281,24 +297,45 @@ expects.completes = {}
             [
                 (
                     "saludo",
-                    &json!({"total": 1, "compliant": 1, "noncompliant": 0, "deprecated": 0, "not_observable": 0, "pending": 0})
+                    &json!({"total": 1, "compliant": 1, "noncompliant": 0, "explained": 0, "not_observable": 0, "pending": 0})
                 ),
                 (
                     "operaciones",
-                    &json!({"total": 2, "compliant": 0, "noncompliant": 1, "deprecated": 0, "not_observable": 0, "pending": 1})
+                    &json!({"total": 2, "compliant": 0, "noncompliant": 1, "explained": 1, "not_observable": 0, "pending": 1})
                 ),
             ]
         );
         assert_eq!(
             json["summary"],
-            json!({"total": 3, "compliant": 1, "noncompliant": 1, "deprecated": 0, "not_observable": 0, "pending": 1})
+            json!({"total": 3, "compliant": 1, "noncompliant": 1, "explained": 1, "not_observable": 0, "pending": 1})
         );
     }
 
     #[test]
-    fn a_noncompliance_in_a_deprecated_format_is_counted_apart_from_the_failures() {
-        let deprecated = THREE_CHECKS.replace("bug = \"BUG-18\"", "deprecated = true");
-        let catalogue = the_catalogue_in(&deprecated).unwrap();
+    fn a_noncompliance_with_any_label_counts_as_explained_whatever_the_client() {
+        let deviation = THREE_CHECKS.replace(
+            "explained_by.autofirma = \"BUG-18\"",
+            "explained_by = { rfirma = \"ADR-0010\", manual = \"deprecated\" }",
+        );
+        let catalogue = the_catalogue_in(&deviation).unwrap();
+
+        for (kind, binary) in [
+            (ClientKind::Autofirma, "/usr/bin/autofirma"),
+            (ClientKind::Rfirma, "/usr/bin/rfirma"),
+        ] {
+            let (_dir, report) = a_report_of(kind, binary, &catalogue, Outcome::Noncompliant);
+            let json = the_json_of(&report_view(&report, &catalogue));
+
+            assert_eq!(json["summary"]["noncompliant"], 1);
+            assert_eq!(json["summary"]["explained"], 1);
+            assert_eq!(the_check(&json, "a_save")["state"], "NO CONFORME");
+        }
+    }
+
+    #[test]
+    fn a_noncompliance_without_labels_is_unexplained() {
+        let unlabelled = THREE_CHECKS.replace("explained_by.autofirma = \"BUG-18\"", "");
+        let catalogue = the_catalogue_in(&unlabelled).unwrap();
         let (_dir, report) = a_report_of(
             ClientKind::Rfirma,
             "/usr/bin/rfirma",
@@ -308,10 +345,24 @@ expects.completes = {}
 
         let json = the_json_of(&report_view(&report, &catalogue));
 
-        assert_eq!(the_check(&json, "a_save")["deprecated"], true);
-        assert_eq!(the_check(&json, "a_greeting")["deprecated"], false);
-        assert_eq!(json["summary"]["noncompliant"], 0);
-        assert_eq!(json["summary"]["deprecated"], 1);
+        assert_eq!(json["summary"]["noncompliant"], 1);
+        assert_eq!(json["summary"]["explained"], 0);
+        assert_eq!(the_check(&json, "a_save")["labels"], json!([]));
+    }
+
+    #[test]
+    fn a_labelled_check_that_complies_counts_nothing_as_explained() {
+        let catalogue = the_catalogue_in(THREE_CHECKS).unwrap();
+        let (_dir, report) = a_report_of(
+            ClientKind::Rfirma,
+            "/usr/bin/rfirma",
+            &catalogue,
+            Outcome::Compliant,
+        );
+
+        let json = the_json_of(&report_view(&report, &catalogue));
+
+        assert_eq!(json["summary"]["explained"], 0);
     }
 
     #[test]
@@ -359,7 +410,7 @@ expects.completes = {}
     }
 
     #[test]
-    fn a_check_carries_the_known_bug_of_the_original_with_its_state_in_master() {
+    fn a_check_carries_each_label_with_its_name_and_its_reason() {
         let catalogue = the_catalogue_in(THREE_CHECKS).unwrap();
         let (_dir, report) = a_report_of(
             ClientKind::Rfirma,
@@ -369,10 +420,15 @@ expects.completes = {}
         );
 
         let json = the_json_of(&report_view(&report, &catalogue));
+        let labels = &the_check(&json, "a_save")["labels"];
 
-        assert_eq!(the_check(&json, "a_save")["bug"]["id"], "BUG-18");
-        assert_eq!(the_check(&json, "a_save")["bug"]["master"], "fixed");
-        assert_eq!(the_check(&json, "a_greeting")["bug"], Value::Null);
+        assert_eq!(labels.as_array().unwrap().len(), 1);
+        assert_eq!(labels[0]["name"], "autofirma:bug:1.9.2");
+        assert!(labels[0]["reason"]
+            .as_str()
+            .unwrap()
+            .starts_with("BUG-18: "));
+        assert_eq!(the_check(&json, "a_greeting")["labels"], json!([]));
     }
 
     #[test]
