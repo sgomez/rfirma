@@ -21,7 +21,7 @@ type Measure = fn(&Probe, &Check, &Provocation) -> ErrandOutcome;
 #[derive(Debug)]
 pub(crate) struct Harness {
     pub name: &'static str,
-    pub fixtures: &'static [(&'static str, &'static str)],
+    pub fixtures: &'static [(&'static str, &'static [u8])],
     /// Los permisos con los que quedan sus ficheros, para provocar un fallo de disco.
     pub mode: u32,
     measure: Measure,
@@ -51,33 +51,42 @@ const READ_AND_WRITE: u32 = 0o644;
 pub(crate) const THE_HARNESSES: &[Harness] = &[
     Harness {
         name: "a_document_to_sign",
-        fixtures: &[("documento.txt", "Documento para firmar.\n")],
+        fixtures: &[("documento.txt", b"Documento para firmar.\n")],
+        mode: READ_AND_WRITE,
+        measure: JUST_DRIVE,
+    },
+    Harness {
+        name: "a_signature_to_cosign",
+        fixtures: &[(
+            "firma.csig",
+            include_bytes!("../../testdata/reference/cades-implicit.p7s"),
+        )],
         mode: READ_AND_WRITE,
         measure: JUST_DRIVE,
     },
     Harness {
         name: "a_file_to_overwrite",
-        fixtures: &[("challenge.bin", "Este fichero se sobrescribe.\n")],
+        fixtures: &[("challenge.bin", b"Este fichero se sobrescribe.\n")],
         mode: READ_AND_WRITE,
         measure: JUST_DRIVE,
     },
     Harness {
         name: "a_file_that_cannot_be_written",
-        fixtures: &[("challenge.bin", "Este fichero es de solo lectura.\n")],
+        fixtures: &[("challenge.bin", b"Este fichero es de solo lectura.\n")],
         mode: 0o444,
         measure: JUST_DRIVE,
     },
     Harness {
         name: "a_file_that_cannot_be_read",
-        fixtures: &[("ilegible.bin", "Este fichero no se puede leer.\n")],
+        fixtures: &[("ilegible.bin", b"Este fichero no se puede leer.\n")],
         mode: 0o000,
         measure: JUST_DRIVE,
     },
     Harness {
         name: "files_to_load",
         fixtures: &[
-            ("primero.bin", "Primer fichero de carga.\n"),
-            ("segundo.bin", "Segundo fichero de carga.\n"),
+            ("primero.bin", b"Primer fichero de carga.\n"),
+            ("segundo.bin", b"Segundo fichero de carga.\n"),
         ],
         mode: READ_AND_WRITE,
         measure: JUST_DRIVE,
@@ -130,7 +139,7 @@ pub(crate) const THE_HARNESSES: &[Harness] = &[
     },
     Harness {
         name: "a_file_with_a_non_ascii_name",
-        fixtures: &[("señal-año.bin", "Fichero con un nombre que no es ASCII.\n")],
+        fixtures: &[("señal-año.bin", b"Fichero con un nombre que no es ASCII.\n")],
         mode: READ_AND_WRITE,
         measure: JUST_DRIVE,
     },

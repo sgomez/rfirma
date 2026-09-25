@@ -350,7 +350,7 @@ fn the_wait_announcement_of(check: &Check) -> Option<String> {
     })
 }
 
-fn write_a_fixture(path: &std::path::Path, content: &str, mode: u32) -> std::io::Result<()> {
+fn write_a_fixture(path: &std::path::Path, content: &[u8], mode: u32) -> std::io::Result<()> {
     std::fs::write(path, content)?;
     std::fs::set_permissions(path, std::fs::Permissions::from_mode(mode))
 }
@@ -431,7 +431,7 @@ expects.code = "CANCEL"
         let directory = tempfile::tempdir().unwrap();
         let path = directory.path().join("ilegible.bin");
 
-        write_a_fixture(&path, "contenido", 0o000).unwrap();
+        write_a_fixture(&path, b"contenido", 0o000).unwrap();
 
         let mode = std::fs::metadata(&path).unwrap().permissions().mode();
         assert_eq!(mode & 0o777, 0o000);
