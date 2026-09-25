@@ -58,7 +58,6 @@ export function aMeasuredConditionEvent(name, held, observation) {
  * la condición sale no conforme antes de que se agote la espera y se mate al cliente.
  */
 export function unansweredMeansAsked(condition) {
-  const patience = Number(process.env.RFIRMA_BENCH_TIMEOUT_MS ?? "45000");
   setTimeout(
     () => {
       emit(
@@ -70,6 +69,11 @@ export function unansweredMeansAsked(condition) {
       );
       settle({ event: "done" });
     },
-    Math.max(patience - 8000, 1000),
+    theUnattendedDeadlineMs(),
   );
+}
+
+/** Lo que se espera a un trámite desatendido antes de darlo por preguntado: menos que la paciencia. */
+export function theUnattendedDeadlineMs() {
+  return Math.max(Number(process.env.RFIRMA_BENCH_TIMEOUT_MS ?? "45000") - 8000, 1000);
 }
