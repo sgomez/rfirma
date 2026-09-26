@@ -119,6 +119,30 @@ describe("App · Firma visible, en qué páginas", () => {
     ).toBeInTheDocument();
   });
 
+  it("places the box on page 1 of a document opened while another was on page 3", async () => {
+    const user = userEvent.setup();
+    renderApp(
+      inMemoryRecents(),
+      [document("primero.pdf"), document("segundo.pdf")],
+      pdfsOf({ "primero.pdf": 5, "segundo.pdf": 5 }),
+    );
+    await openPdf(user);
+    const panel = await screen.findByRole("region", { name: "Panel de firma" });
+    await user.click(within(panel).getByRole("switch", { name: "Firma visible" }));
+    await within(panel).findByText("En la página 1");
+    await nextPage(user);
+    await nextPage(user);
+    await within(panel).findByRole("button", { name: "Ponerla aquí" });
+
+    await openPdf(user);
+    await screen.findByRole("tab", { name: "segundo.pdf", selected: true });
+    await screen.findByRole("application", { name: "Recuadro de la firma visible" });
+
+    const current = screen.getByRole("region", { name: "Panel de firma" });
+    await waitFor(() => expect(within(current).getByText("En la página 1")).toBeInTheDocument());
+    expect(within(current).queryByRole("button", { name: "Ponerla aquí" })).not.toBeInTheDocument();
+  });
+
   it("keeps the box and shows nothing below under «all»", async () => {
     const { user, panel } = await openVisible();
 

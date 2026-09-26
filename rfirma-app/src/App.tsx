@@ -236,6 +236,7 @@ export function App({
       setSizeBytes(opened.ok ? opened.sizeBytes : null);
       // Se guarda una sola colocación, la firmada; las otras dos opciones se siembran de ella.
       setPlacing(placingFrom(active.placement, opened.ok ? opened.pdf.pageCount : 0));
+      setViewedPage(firstSealedPage(active.placement) ?? 1);
       // Documento nuevo, hora nueva: la del anterior lleva parada desde que se
       // abrió, y el recuadro de este llevaría estampada una hora vieja.
       setSigningInstant(new Date());

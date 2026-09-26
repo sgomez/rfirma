@@ -32,9 +32,9 @@ interface SwitchProps {
  * Es un `role="switch"` de verdad y no una casilla disfrazada, para que el
  * lector de pantalla diga «activado» y no «marcado».
  *
- * El interruptor va **delante** del texto, salvo con `trailing`, que es como lo
- * dibujan «Con rúbrica» y preferencias: la pastilla es lo
- * que se busca con la vista, y a la izquierda cae siempre en la misma columna
+ * El interruptor va **delante** del texto, como lo dibujan «Con rúbrica» y
+ * preferencias; con `trailing` va detrás del rótulo. La pastilla es lo que se
+ * busca con la vista, y a la izquierda cae siempre en la misma columna
  * aunque el texto de al lado ocupe una línea o tres. La ayuda queda fuera del
  * botón, sangrada hasta el texto: dentro se sumaría al nombre accesible y el
  * lector de pantalla leería el párrafo entero al llegar al interruptor.
