@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import type { Certificate } from "./certificate";
 import { refusalFor, type SigningFailure } from "./failure";
 import type { SignedDocument, SigningBackend, SigningOrder, SigningStage } from "./flow";
@@ -6,16 +6,17 @@ import type { SignedDocument, SigningBackend, SigningOrder, SigningStage } from 
 /**
  * En qué punto del recorrido de firma está la ventana.
  *
- * `signed` lleva dentro el **identificador del documento de partida** (`origin`), y no
- * solo el fichero que quedó escrito: el acuse de recibo es de un documento
- * concreto, y sin esa atadura la ventana lo enseñaba al lado de cualquier otro
- * que se abriera después —el nombre de A con el recuento de páginas de B—.
+ * `signed` y `failed` llevan dentro el **identificador del documento de
+ * partida** (`origin`), y no solo lo que produjo el ciclo: el acuse de recibo y
+ * el error son de un documento concreto, y sin esa atadura la ventana los
+ * enseñaba al lado de cualquier otro que se abriera después —el nombre de A
+ * con el recuento de páginas de B, o el error de A sobre la pestaña de B—.
  */
 export type SigningState =
   | { kind: "idle" }
   | { kind: "running"; stage: SigningStage }
   | { kind: "signed"; document: SignedDocument; origin: string }
-  | { kind: "failed"; failure: SigningFailure };
+  | { kind: "failed"; failure: SigningFailure; origin: string };
 
 /** Lo que la ventana necesita para conducir la firma. */
 export interface Signing {
@@ -68,10 +69,6 @@ export interface Signing {
  */
 export function useSigning(backend: SigningBackend): Signing {
   const [state, setState] = useState<SigningState>({ kind: "idle" });
-  // De qué documento es el ciclo en curso. Vive en una referencia y no en el
-  // estado porque no se pinta en ninguna etapa: entra con la orden y solo
-  // vuelve a salir al llegar a «Firmado», para atarlo a su documento.
-  const origin = useRef<string | null>(null);
 
   const start = async (
     certificate: Certificate | null,
@@ -82,21 +79,20 @@ export function useSigning(backend: SigningBackend): Signing {
     // fallar por una fecha ya conocida evita iniciar el ciclo innecesariamente.
     const refusal = refusalFor(certificate);
     if (refusal) {
-      setState({ kind: "failed", failure: refusal });
+      setState({ kind: "failed", failure: refusal, origin: order.document });
       return;
     }
-    origin.current = order.document;
     setState({ kind: "running", stage: "presign" });
     const presigned = await backend.presign(order);
     if (!presigned.ok) {
-      setState({ kind: "failed", failure: presigned.failure });
+      setState({ kind: "failed", failure: presigned.failure, origin: order.document });
       return;
     }
 
     setState({ kind: "running", stage: "sign" });
     const signed = await backend.sign("");
     if (!signed.ok) {
-      setState({ kind: "failed", failure: signed.failure });
+      setState({ kind: "failed", failure: signed.failure, origin: order.document });
       return;
     }
 
@@ -104,8 +100,8 @@ export function useSigning(backend: SigningBackend): Signing {
     const assembled = await backend.postsign(singleDestinationId);
     setState(
       assembled.ok
-        ? { kind: "signed", document: assembled.value, origin: origin.current ?? "" }
-        : { kind: "failed", failure: assembled.failure },
+        ? { kind: "signed", document: assembled.value, origin: order.document }
+        : { kind: "failed", failure: assembled.failure, origin: order.document },
     );
   };
 
@@ -141,5 +137,21 @@ export function acknowledgementFor(
   activeId: string | null,
 ): Extract<SigningState, { kind: "signed" }> | null {
   if (state.kind !== "signed") return null;
+  return state.origin === activeId ? state : null;
+}
+
+/**
+ * El error de firma, **solo si sigue delante el documento que falló**.
+ *
+ * Simétrico a [`acknowledgementFor`]: cambiar de pestaña no lo cierra por su
+ * cuenta —eso lo hace quien monte el panel, olvidando el ciclo a medias en el
+ * backend con [`Signing.cancel`]—, pero no se enseña el error de un documento
+ * sobre la pestaña de otro.
+ */
+export function failureFor(
+  state: SigningState,
+  activeId: string | null,
+): Extract<SigningState, { kind: "failed" }> | null {
+  if (state.kind !== "failed") return null;
   return state.origin === activeId ? state : null;
 }

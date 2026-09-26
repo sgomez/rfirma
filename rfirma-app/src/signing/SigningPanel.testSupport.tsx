@@ -68,6 +68,7 @@ function panelWith(props: PanelProps) {
       onSign={noop}
       signing={false}
       failure={null}
+      onBack={noop}
       {...props}
     />
   );

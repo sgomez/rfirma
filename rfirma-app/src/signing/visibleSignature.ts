@@ -1,3 +1,6 @@
+import type { Placement } from "../viewer/signatureBox";
+import { sealedPages } from "../viewer/signatureBox";
+
 /**
  * Qué se estampa en el recuadro de la firma visible.
  *
@@ -61,4 +64,34 @@ export function rubricGapFor(signature: VisibleSignature, hasRubric: boolean): R
   if (hasRubric) return null;
   if (signature.content.model === "rubricOnly") return "fill";
   return signature.withRubric ? "beside" : null;
+}
+
+/**
+ * La línea de solo lectura del resumen, tras firmar
+ * (docs/design/panel-de-firma.md § El resumen, tras firmar): «No», «En la
+ * página N», «En todas las páginas» o «En N de M páginas».
+ */
+export type VisibleSignaturePlacement =
+  | { kind: "none" }
+  | { kind: "onPage"; page: number }
+  | { kind: "allPages" }
+  | { kind: "somePages"; sealed: number; total: number };
+
+/**
+ * `pageCount` es `null` cuando el recuento del documento no se conoce
+ * todavía: sin él no se puede decir «de M páginas», así que la línea entera
+ * no se compone —no se inventa un total—.
+ */
+export function summarizeVisiblePlacement(
+  enabled: boolean,
+  placement: Placement | null,
+  pageCount: number | null,
+): VisibleSignaturePlacement | null {
+  if (!enabled || placement === null) return { kind: "none" };
+  if (pageCount === null) return null;
+  if (placement.pages === "all") return { kind: "allPages" };
+  const pages = sealedPages(placement.pages, pageCount);
+  const [only] = pages;
+  if (pages.length === 1 && only !== undefined) return { kind: "onPage", page: only };
+  return { kind: "somePages", sealed: pages.length, total: pageCount };
 }

@@ -52,6 +52,13 @@
   overflow-wrap: anywhere;
 }
 
+.error-notice__copy {
+  align-self: flex-start;
+  padding-left: 0;
+  min-height: 28px;
+  font-size: 12px;
+}
+
 .error-notice__actions {
   margin-top: var(--rf-space-xs);
   align-items: center;

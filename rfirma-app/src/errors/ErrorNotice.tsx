@@ -65,6 +65,12 @@ interface ErrorNoticeProps {
   onReload?: () => void;
   /** El error boundary de cada ventana quiere el foco encima al aparecer; nadie más lo pide. */
   focusOnMount?: boolean;
+  /**
+   * Añade la tranquilidad de que nada se ha guardado (docs/design/panel-de-firma.md
+   * § Error al firmar): un fallo a mitad de una operación que escribe disco dice
+   * además que el documento sigue como estaba.
+   */
+  documentUnchanged?: boolean;
 }
 
 /**
@@ -81,6 +87,10 @@ interface ErrorNoticeProps {
  * estado congelado, no el inicial (ID-43): aquí sigue plegado, porque el
  * `CKR_*` crudo debajo del mensaje ocupa el pie entero y solo lo necesita quien
  * va a escribir un informe de fallo.
+ *
+ * Con `documentUnchanged` la tarjeta es la del error de firma
+ * (docs/design/panel-de-firma.md § Estados → Error al firmar) y nada más: título
+ * fijo, la situación como causa, la tranquilidad, el detalle y «Copiar detalle».
  */
 export function ErrorNotice({
   situation,
@@ -89,6 +99,7 @@ export function ErrorNotice({
   externalDestinations,
   onReload,
   focusOnMount,
+  documentUnchanged,
 }: ErrorNoticeProps) {
   const { t } = useTranslation();
   const notice = useRef<HTMLDivElement>(null);
@@ -102,22 +113,43 @@ export function ErrorNotice({
     void externalDestinations?.open("discussions");
   };
 
+  const copyDetail = () => {
+    if (technicalDetail !== undefined) void navigator.clipboard.writeText(technicalDetail);
+  };
+
   return (
     <div className="error-notice" role="alert" ref={notice} tabIndex={-1}>
       <p className="error-notice__title">
         <AlertIcon />
-        <span className="rf-title">{t(`errors.situations.${situation}.title`)}</span>
+        <span className="rf-title">
+          {documentUnchanged
+            ? t("errors.signingFailedTitle")
+            : t(`errors.situations.${situation}.title`)}
+        </span>
       </p>
+      {documentUnchanged && <p className="rf-prose">{t(`errors.situations.${situation}.title`)}</p>}
+      {!isOneLine(situation) && !documentUnchanged && (
+        <p className="rf-prose">
+          {t(`errors.situations.${situation as Exclude<ErrorSituation, OneLineSituation>}.body`)}
+        </p>
+      )}
+      {documentUnchanged && <p className="rf-prose">{t("errors.documentUnchanged")}</p>}
       {!isOneLine(situation) && (
         <>
-          <p className="rf-prose">
-            {t(`errors.situations.${situation as Exclude<ErrorSituation, OneLineSituation>}.body`)}
-          </p>
           <details className="error-notice__detail">
             <summary className="rf-body rf-text-muted">{t("errors.technicalDetail")}</summary>
             <pre className="error-notice__raw">{technicalDetail}</pre>
           </details>
-          {(hasHelpLink(situation) || onReload) && (
+          {documentUnchanged && (
+            <button
+              type="button"
+              className="rf-btn rf-btn--ghost error-notice__copy"
+              onClick={copyDetail}
+            >
+              {t("errors.copyDetail")}
+            </button>
+          )}
+          {!documentUnchanged && (hasHelpLink(situation) || onReload) && (
             <div className="rf-row rf-gap-xs error-notice__actions">
               {hasHelpLink(situation) && (
                 <button

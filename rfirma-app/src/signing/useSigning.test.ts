@@ -163,7 +163,11 @@ describe("useSigning", () => {
 
     await act(() => result.current.start(certificate, anOrder()));
 
-    expect(result.current.state).toEqual({ kind: "failed", failure: wrongPin });
+    expect(result.current.state).toEqual({
+      kind: "failed",
+      failure: wrongPin,
+      origin: anOrder().document,
+    });
   });
 
   it("transitions to failed state when the token is removed", async () => {
@@ -173,7 +177,11 @@ describe("useSigning", () => {
 
     await act(() => result.current.start(certificate, anOrder()));
 
-    expect(result.current.state).toEqual({ kind: "failed", failure: cardGone });
+    expect(result.current.state).toEqual({
+      kind: "failed",
+      failure: cardGone,
+      origin: anOrder().document,
+    });
   });
 
   it("keeps the postsignature failure with its own stage in the raw detail", async () => {
@@ -188,7 +196,11 @@ describe("useSigning", () => {
 
     await act(() => result.current.start(certificate, anOrder()));
 
-    expect(result.current.state).toEqual({ kind: "failed", failure: assembling });
+    expect(result.current.state).toEqual({
+      kind: "failed",
+      failure: assembling,
+      origin: anOrder().document,
+    });
   });
 
   it("warns about an expired certificate before ever asking for the PIN", async () => {
@@ -209,6 +221,7 @@ describe("useSigning", () => {
     expect(result.current.state).toEqual({
       kind: "failed",
       failure: { situation: "certificateExpired", detail: "notAfter=1767225600" },
+      origin: anOrder().document,
     });
   });
 
@@ -230,6 +243,7 @@ describe("useSigning", () => {
     expect(result.current.state).toEqual({
       kind: "failed",
       failure: { situation: "certificateRevoked", detail: "revocado: keyCompromise" },
+      origin: anOrder().document,
     });
   });
 
@@ -266,7 +280,11 @@ describe("useSigning", () => {
 
     await act(() => result.current.start(certificate, anOrder()));
 
-    expect(result.current.state).toEqual({ kind: "failed", failure: locked });
+    expect(result.current.state).toEqual({
+      kind: "failed",
+      failure: locked,
+      origin: anOrder().document,
+    });
   });
 
   it("goes back to the panel when cancelled", () => {
@@ -294,7 +312,11 @@ describe("useSigning", () => {
     );
 
     await act(() => result.current.start(certificate, anOrder()));
-    expect(result.current.state).toEqual({ kind: "failed", failure: cardGone });
+    expect(result.current.state).toEqual({
+      kind: "failed",
+      failure: cardGone,
+      origin: anOrder().document,
+    });
 
     act(() => result.current.cancel());
 

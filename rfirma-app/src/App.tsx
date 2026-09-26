@@ -7,6 +7,7 @@ import { usePlacementControls } from "./App.usePlacementControls";
 import { useDestination, usePreferencesState } from "./App.usePreferencesState";
 import { useSignedSummary } from "./App.useSignedSummary";
 import { useSignFlow } from "./App.useSignFlow";
+import { useSigningFailure } from "./App.useSigningFailure";
 import { useStartupNotices } from "./App.useStartupNotices";
 import { AboutDialog } from "./about/AboutDialog";
 import type { ExternalDestinationOpener } from "./desktop/externalDestination";
@@ -252,6 +253,7 @@ export function App({
     activeId,
     documents.reopen,
   );
+  const { failedHere } = useSigningFailure(signing, activeId);
 
   const {
     certificate,
@@ -384,6 +386,7 @@ export function App({
             onOpen={openDocument}
             onSelectRecent={documents.select}
             onClearRecents={clearRecents}
+            signingLocked={signing.state.kind === "running"}
           />
         }
         viewer={
@@ -425,7 +428,6 @@ export function App({
             // Firmado: la columna derecha cambia de contenido, no de sitio. Es
             // el único acuse de recibo que recibe quien firma, así que se monta
             // en cuanto la postfirma devuelve el documento.
-            //
             // Solo mientras siga activo **el documento que se firmó**: el
             // recuento de páginas sale del PDF abierto, y con otro delante sería
             // el nombre de un fichero con las páginas de otro. Sin documento
@@ -439,6 +441,12 @@ export function App({
                 // fichero: aquí no se recalcula nada (ID-77).
                 sizeBytes: signedHere.document.sizeBytes,
               }}
+              signedAt={signingInstant}
+              signature={signature}
+              placement={placement}
+              destination={
+                destination ?? { folder: settings?.destination ?? "", name: null, writable: true }
+              }
               onOpenDocument={() => openSigned(() => opener.openDocument())}
               onOpenFolder={() => openSigned(() => opener.openFolder())}
               onSignAgain={signAgain}
@@ -477,14 +485,8 @@ export function App({
               onSign={() => void sign()}
               signing={signing.state.kind === "running"}
               onOpenHelp={() => void externalDestinations.open("discussions")}
-              failure={
-                signing.state.kind === "failed"
-                  ? {
-                      situation: signing.state.failure.situation,
-                      detail: signing.state.failure.detail,
-                    }
-                  : null
-              }
+              failure={failedHere?.failure ?? null}
+              onBack={signing.cancel}
             />
           ) : null
         }

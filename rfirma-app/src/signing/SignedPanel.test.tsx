@@ -3,13 +3,20 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { renderWithCatalog } from "../testing/render";
 import { SignedPanel } from "./SignedPanel";
+import { DEFAULT_VISIBLE_SIGNATURE } from "./visibleSignature";
 
 const noop = () => {};
+
+const SIGNED_AT = new Date("2026-01-01T11:04:00");
 
 function renderPanel(props: Partial<Parameters<typeof SignedPanel>[0]> = {}) {
   return renderWithCatalog(
     <SignedPanel
       document={{ name: "contrato-firmado.pdf", pages: 27, sizeBytes: 2_400_000 }}
+      signedAt={SIGNED_AT}
+      signature={DEFAULT_VISIBLE_SIGNATURE}
+      placement={null}
+      destination={{ folder: "Documentos", name: null, writable: true }}
       onOpenDocument={noop}
       onOpenFolder={noop}
       onSignAgain={noop}
@@ -23,7 +30,9 @@ describe("SignedPanel", () => {
   it("names the file that was written and not the one that was opened", () => {
     renderPanel();
 
-    expect(screen.getByText("contrato-firmado.pdf")).toBeInTheDocument();
+    expect(
+      screen.getByText("contrato-firmado.pdf", { selector: ".panel__document" }),
+    ).toBeInTheDocument();
   });
 
   it("shows the pages and the size the postsign already knew", () => {
@@ -77,18 +86,74 @@ describe("SignedPanel", () => {
    * de abrir no son comodidad: bajo el sandbox son la única forma que tiene el
    * usuario de llegar a un fichero cuya ruta nunca ve (ADR-0011).
    */
-  it("offers three ways out, stacked and in the hierarchy of the artboard", () => {
+  it("offers three ways out, in the hierarchy of the artboard", () => {
     renderPanel();
 
-    const buttons = screen.getAllByRole("button");
-    expect(buttons.map((button) => button.textContent)).toEqual([
-      "Abrir el PDF",
-      "Abrir la carpeta",
-      "Volver a firmar",
-    ]);
-    expect(buttons[0]).toHaveClass("rf-btn--primary");
-    expect(buttons[1]).toHaveClass("rf-btn--secondary");
-    expect(buttons[2]).toHaveClass("rf-btn--ghost");
+    expect(screen.getByRole("button", { name: "Abrir el PDF" })).toHaveClass("rf-btn--primary");
+    // La carpeta es un botón cuadrado con solo el icono, no un texto más.
+    expect(screen.getByRole("button", { name: "Abrir la carpeta" })).toHaveClass(
+      "rf-btn--secondary",
+    );
+    expect(screen.getByRole("button", { name: "Volver a firmar" })).toHaveClass("rf-btn--ghost");
+  });
+
+  it("shows the saved-in box with Cambiar hidden without moving it", () => {
+    renderPanel();
+
+    expect(screen.getByText("Guardado en")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Cambiar" })).toHaveClass(
+      "panel__destination-change--hidden",
+    );
+  });
+
+  it("says when it was signed", () => {
+    renderPanel();
+
+    expect(screen.getByText("Firmado a las 11:04")).toBeInTheDocument();
+  });
+
+  it("shows the visible signature as a read-only line", () => {
+    renderPanel({
+      signature: { ...DEFAULT_VISIBLE_SIGNATURE, enabled: true },
+      placement: { rect: { x0: 0, y0: 0, x1: 1, y1: 1 }, pages: { only: [6] } },
+    });
+
+    expect(screen.getByText("En la página 6")).toBeInTheDocument();
+  });
+
+  it("shows how many of the document's pages carry the box", () => {
+    renderPanel({
+      document: { name: "contrato-firmado.pdf", pages: 27, sizeBytes: 2_400_000 },
+      signature: { ...DEFAULT_VISIBLE_SIGNATURE, enabled: true },
+      placement: { rect: { x0: 0, y0: 0, x1: 1, y1: 1 }, pages: { only: [1, 2] } },
+    });
+
+    expect(screen.getByText("En 2 de 27 páginas")).toBeInTheDocument();
+  });
+
+  it("says No when the visible signature was off", () => {
+    renderPanel();
+
+    expect(screen.getByText("No")).toBeInTheDocument();
+  });
+
+  it("says all pages when that was the option", () => {
+    renderPanel({
+      signature: { ...DEFAULT_VISIBLE_SIGNATURE, enabled: true },
+      placement: { rect: { x0: 0, y0: 0, x1: 1, y1: 1 }, pages: "all" },
+    });
+
+    expect(screen.getByText("En todas las páginas")).toBeInTheDocument();
+  });
+
+  it("does not invent a total when the page count is unknown", () => {
+    renderPanel({
+      document: { name: "contrato-firmado.pdf", pages: null, sizeBytes: 2_400_000 },
+      signature: { ...DEFAULT_VISIBLE_SIGNATURE, enabled: true },
+      placement: { rect: { x0: 0, y0: 0, x1: 1, y1: 1 }, pages: { only: [1, 2] } },
+    });
+
+    expect(screen.queryByText("Firma visible")).not.toBeInTheDocument();
   });
 
   it("no longer offers signing another document", () => {
