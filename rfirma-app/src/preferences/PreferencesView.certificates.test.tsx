@@ -114,7 +114,7 @@ describe("certificates in a file", () => {
   });
 
   /**
-   * ID-435: solo la contraseña incorrecta manda a revisarla; las otras dos
+   * Solo la contraseña incorrecta manda a revisarla; las otras dos
    * situaciones del `.p12` no lo mencionan.
    */
   it("says the password is wrong, and only that one asks to check it", async () => {
