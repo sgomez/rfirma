@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
 #
-# Envoltorio de nextest: cada proceso de prueba firma contra su propia copia del
-# almacen de SoftHSM, porque C_Login reescribe token.object y otro proceso que lo
-# relea a la vez pierde la ranura (CKR_GENERAL_ERROR, CKR_SLOT_ID_INVALID).
+# Envoltorio de nextest: cada proceso de prueba usa su propia copia del almacen de SoftHSM.
 
 set -euo pipefail
 
