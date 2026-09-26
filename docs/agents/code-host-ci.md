@@ -75,8 +75,9 @@ verifies:
   pinned in the `justfile`, with `--allow` over the FFI module path;
 - on the slow lane only: that `native-image --shared` still **produces the
   shared library** (cached by hash of the Java bridge), that the tier C tests
-  **pass** (`--ignored` on Rust in `test-native`, `-DexcludedGroups= -Dgroups=gradaC` on Maven),
-  and that the targeted FFI CRAP measurement **passes** (`just crap-ffi` under `cargo-crap`).
+  **pass** (`--run-ignored only` under `cargo llvm-cov nextest` in `test-native`,
+  `-DexcludedGroups= -Dgroups=gradaC` on Maven), and that the FFI CRAP measurement taken
+  from that same instrumented run **passes** (`cargo crap --path`, also in `test-native`).
 
 The fast lane does **not** verify that a signature is valid or that a PDF
 opens; **the slow lane does**: `just test-native` signs a PDF end to end
@@ -115,7 +116,7 @@ The PDF that goes to it is `manual-gate.pdf`: the maximal case, a box with
 **both** text and rubric, produced by
 `full_cycle::a_signature_with_text_and_rubric_is_the_pdf_of_the_manual_gate`.
 It lands in the test's `CARGO_TARGET_TMPDIR`
-(`rfirma-app/src-tauri/target/tmp/manual-gate.pdf` today), the test prints its
+(`rfirma-app/src-tauri/target/llvm-cov-target/tmp/manual-gate.pdf` today, because the run is instrumented), the test prints its
 absolute path, and the slow lane uploads it as the workflow artifact
 **`pdf-puerta-manual`**. So closing the gate is: take that artifact from any
 `Imagen nativa` run — every PR and every push to `main` has one — and upload it
@@ -164,7 +165,7 @@ Rust tests at all. What the caching buys (`~/.m2`, the pnpm store,
 `Swatinem/rust-cache`, prebuilt binaries instead of `cargo install`) is the
 gap between a cold run and that warm number.
 
-The `native` lane runs `just test-native` (`--ignored`, tier C) and `just crap-ffi`
+The `native` lane runs `just test-native` (tier C and the FFI CRAP gate in one instrumented pass)
 on **every PR and push to `main`**. The native library `librfirma_crypto.so` is
 cached by hash of the Java bridge and `bootstrap.sh`, so PRs that do not touch Java
 restore it in seconds and run tier C tests without rebuilding the GraalVM image.

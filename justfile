@@ -53,7 +53,7 @@ coverage_out := cargo_target / "coverage" / file_name(justfile_directory())
 ruff_version := "0.16.6"
 
 # Modulo FFI oculto de la puerta CRAP del carril rapido (ADR-0014); el carril
-# lento lo mide con `just crap-ffi`.
+# lento lo mide con `just test-native`.
 ffi_allow := "src/signing/adapters/ffi.rs"
 
 # Accesorio del banco de conformidad, fijado por etiqueta y sha256: la 1.9.2
@@ -333,10 +333,13 @@ test-rust: (certs "install") build-ts
     cd {{ tauri }} && cargo test --all-features
     cd {{ tauri }} && cargo test --all-features --no-run
 
-# Las de grada C, que el carril lento ejecuta con --ignored.
+# Las de grada C en una sola pasada instrumentada, que mide ademas el adaptador FFI (ADR-0014).
 [group('ci')]
 test-native: (certs "install") check-native build-ts
-    cd {{ tauri }} && RFIRMA_LIB_DIR="$(dirname "{{ native_lib }}")" cargo test --all-features -- --ignored
+    mkdir -p "{{ coverage_out }}/crap-ffi"
+    cd {{ tauri }} && RFIRMA_LIB_DIR="$(dirname "{{ native_lib }}")" cargo llvm-cov nextest --all-features --run-ignored only \
+        --lcov --output-path "{{ coverage_out }}/crap-ffi/lcov.info"
+    cd {{ tauri }} && cargo crap --path '{{ ffi_allow }}' --lcov "{{ coverage_out }}/crap-ffi/lcov.info" --threshold 30 --fail-above
     cd {{ bridge }} && mvn -B test -DexcludedGroups= -Dgroups=gradaC
 
 # ---------------------------------------------------------------------------
@@ -365,14 +368,6 @@ diff-coverage:
     cd {{ tauri }} && diff-cover "{{ coverage_out }}/coverage/lcov.info" \
         --compare-branch=origin/main --diff-range-notation=.. --fail-under=80 \
         --exclude '**/adapters/tauri.rs' 'main.rs' '{{ ffi_allow }}'
-
-# Corre unicamente el ciclo nativo (grada C) y mide el adaptador FFI.
-[group('ci')]
-crap-ffi: (certs "install") check-native build-ts
-    mkdir -p "{{ coverage_out }}/crap-ffi"
-    cd {{ tauri }} && RFIRMA_LIB_DIR="$(dirname "{{ native_lib }}")" cargo llvm-cov --test native_cycle --test native_cycle_cades --test native_cycle_xades --test native_cycle_visual --test native_cycle_seal --test native_leak --test native_first_xades --all-features --lcov --output-path "{{ coverage_out }}/crap-ffi/lcov.info" \
-        -- --ignored
-    cd {{ tauri }} && cargo crap --path '{{ ffi_allow }}' --lcov "{{ coverage_out }}/crap-ffi/lcov.info" --threshold 30 --fail-above
 
 # Borra el arbol instrumentado, los informes y los volcados; deja la compilacion normal.
 [group('checklist')]

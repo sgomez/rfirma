@@ -77,6 +77,9 @@ env:
   # Version FIJADA de diff-cover, misma razon que CRAP_VERSION. Tiene que
   # coincidir con `diff_cover_version` del justfile.
   DIFF_COVER_VERSION: '10.6.0'
+  # Version FIJADA de cargo-nextest, misma razon que CRAP_VERSION: reparte las
+  # pruebas de grada C y decide su veredicto. Igual en build.yml.
+  NEXTEST_VERSION: '0.9.146'
   CARGO_TERM_COLOR: always
 
 jobs:
@@ -419,25 +422,21 @@ jobs:
           export GRAALVM_HOME="$JAVA_HOME"
           just native
 
-      # Aqui SI existe librfirma_crypto.so, asi que las pruebas de grada C
-      # —marcadas #[ignore]— se ejecutan de verdad. El carril rapido solo las
-      # compila (TD-02).
-      - name: Pruebas de grada C
-        if: steps.scope.outputs.build == 'true'
-        run: just test-native
-
       - uses: cargo-bins/cargo-binstall@b874e25ea559687bec77e281e9b271aa1367b624 # v1.23.0
         if: steps.scope.outputs.build == 'true'
-      - name: Herramientas de cobertura y de CRAP
+      - name: Herramientas de cobertura, de CRAP y de pruebas
         if: steps.scope.outputs.build == 'true'
         run: |
           cargo binstall --no-confirm cargo-llvm-cov
           cargo binstall --no-confirm "cargo-crap@${CRAP_VERSION}"
+          cargo binstall --no-confirm "cargo-nextest@${NEXTEST_VERSION}"
 
-      # Medicion CRAP dirigida al adaptador FFI con las pruebas de grada C (ADR-0014).
-      - name: Puerta CRAP del adaptador FFI
+      # Aqui SI existe librfirma_crypto.so, asi que las pruebas de grada C
+      # —marcadas #[ignore]— se ejecutan de verdad, y en la misma pasada
+      # instrumentada se mide el adaptador FFI (ADR-0014).
+      - name: Pruebas de grada C y puerta CRAP del adaptador FFI
         if: steps.scope.outputs.build == 'true'
-        run: just crap-ffi
+        run: just test-native
 
       # EL PDF DE LA PUERTA MANUAL (TD-04). `pdfsig` es la puerta automatica,
       # pero el criterio de terminado del hito promete que un VALIDADOR OFICIAL
@@ -452,7 +451,7 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: pdf-puerta-manual
-          path: rfirma-app/src-tauri/target/tmp/manual-gate.pdf
+          path: rfirma-app/src-tauri/target/llvm-cov-target/tmp/manual-gate.pdf
           # `warn` y no `error`: este paso corre tambien cuando las pruebas han
           # fallado antes de llegar a la de la puerta manual, y ahi el PDF no
           # existe. Un segundo rojo — «artefacto no encontrado» — solo taparia
