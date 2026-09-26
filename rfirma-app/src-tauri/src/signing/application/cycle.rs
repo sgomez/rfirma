@@ -123,7 +123,6 @@ pub struct OpenCycle {
     presigned: PreSignature,
     certificate: CertificateRef,
     holder: Option<PromptedHolder>,
-    already_signed_before: bool,
 }
 
 /// Lo que rFirma añade de su cosecha: recuadro y rúbrica, que solo lee un firmador PDF.
@@ -174,7 +173,6 @@ pub fn presign<B: Bridge + ?Sized>(
             .chain
             .first()
             .and_then(|der| prompted_holder_of(der)),
-        already_signed_before: request.document.already_signed(),
     })
 }
 
@@ -187,11 +185,6 @@ impl OpenCycle {
     /// Formato con el que se abrió el ciclo.
     pub fn format(&self) -> Format {
         self.format
-    }
-
-    /// Indica si el documento ya contenía firmas previas.
-    pub fn is_cosigning(&self) -> bool {
-        self.already_signed_before
     }
 
     /// Copia del sello de sesión para transportarlo a la postfirma (ADR-0016).
@@ -276,7 +269,6 @@ impl std::fmt::Debug for OpenCycle {
             .field("algorithm", &self.algorithm)
             .field("certificate", &self.certificate)
             .field("blocks_to_be_signed", &self.presigned.blocks().len())
-            .field("cosigning", &self.already_signed_before)
             .finish_non_exhaustive()
     }
 }

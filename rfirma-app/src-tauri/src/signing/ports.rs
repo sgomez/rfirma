@@ -9,7 +9,9 @@ pub use crate::identity::domain::holder::PromptedHolder;
 pub use crate::identity::domain::protected_secret::ProtectedSecret;
 pub use crate::identity::domain::secret::SecretName;
 use crate::identity::domain::secret::StoreSecret;
-use crate::signing::domain::bridge::{BridgeError, PostSignRequest, PreSignRequest, PreSignature};
+use crate::signing::domain::bridge::{
+    BridgeError, PostSignRequest, PreSignRequest, PreSignature, PreviousSignaturesReport,
+};
 use crate::signing::domain::isolate_gone::IsolateGone;
 use crate::signing::domain::Language;
 
@@ -20,6 +22,15 @@ pub trait Bridge {
 
     /// Postfirma: el documento firmado a partir de una prefirma ya sellada.
     fn postsign(&self, request: PostSignRequest<'_>) -> Result<Vec<u8>, BridgeError>;
+}
+
+/// Las firmas que ya trae un PDF, leídas con el recorrido de firmantes del original.
+pub trait PreviousSignaturesEngine {
+    /// El informe de firmas previas del PDF de entrada, en Base64.
+    fn previous_signatures(
+        &self,
+        document_b64: &str,
+    ) -> Result<PreviousSignaturesReport, BridgeError>;
 }
 
 /// El hilo dueño del puente: corre una tarea con el puente delante y devuelve lo que salió (ADR-0003).

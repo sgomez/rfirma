@@ -4,6 +4,8 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
+use base64::Engine;
+
 use crate::documents::domain::document::Document;
 use crate::documents::domain::error::DocumentError;
 use crate::identity::domain::algorithm::SignatureAlgorithm;
@@ -20,10 +22,10 @@ use crate::signing::domain::isolate_gone::IsolateGone;
 use crate::signing::domain::Language;
 use crate::signing::domain::{
     compose_visible_content, AdmissibleDocument, CompletedCycle, Format, PlacementError,
-    SessionSeal, SignatureConfig, SigningChoice, VisibleData,
+    PreviousSignaturesReport, SessionSeal, SignatureConfig, SigningChoice, VisibleData,
 };
 use crate::signing::domain::{Refusal, SignatureOperation, TokenSignatures, Waivers};
-use crate::signing::ports::{DocumentBytes, IsolateHost, Signer};
+use crate::signing::ports::{DocumentBytes, IsolateHost, PreviousSignaturesEngine, Signer};
 use crate::signing::ports::{ProtectedSecret, SecretName, SecretPromptRequest, SecretPrompter};
 
 /// Sesión de firma activa entre la prefirma y la postfirma (ADR-0016).
@@ -448,6 +450,19 @@ pub fn unregistered_signatures_in(
 ) -> Result<bool, CycleFailure> {
     let bytes = admitted_bytes(files, document, Format::Pades, Waivers::NONE)?;
     Ok(AdmissibleDocument::check(&bytes)?.has_unregistered_signatures())
+}
+
+/// Firmas que ya trae el documento, con quién firmó y cuándo.
+pub fn previous_signatures_in(
+    files: &dyn DocumentBytes,
+    engine: &dyn PreviousSignaturesEngine,
+    document: &Document,
+) -> Result<PreviousSignaturesReport, CycleFailure> {
+    let bytes = admitted_bytes(files, document, Format::Pades, Waivers::NONE)?;
+    let document_b64 = base64::engine::general_purpose::STANDARD.encode(bytes);
+    Ok(engine
+        .previous_signatures(&document_b64)
+        .map_err(CycleError::from)?)
 }
 
 /// Extrae el ciclo completado en el token de la sesión activa.

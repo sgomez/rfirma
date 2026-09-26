@@ -115,6 +115,14 @@ pub fn is_pseudonym(subject: Option<&str>) -> bool {
         })
 }
 
+/// El `organizationIdentifier` (RDN 2.5.4.97) del subject, o nada si el certificado no lo lleva.
+pub fn organization_identifier_of(subject: Option<&str>) -> Option<String> {
+    const ORGANIZATION_IDENTIFIER: [&str; 3] =
+        ["2.5.4.97=", "OID.2.5.4.97=", "organizationIdentifier="];
+    let value = first_non_empty(subject.unwrap_or_default(), &ORGANIZATION_IDENTIFIER);
+    (!value.is_empty()).then_some(value)
+}
+
 /// El titular tal y como lo nombra el diálogo del secreto: quién es y con qué número.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PromptedHolder {

@@ -15,7 +15,6 @@ fn admits_an_ordinary_pdf() {
     let document = AdmissibleDocument::check(&pdf).expect("es un PDF corriente");
 
     assert_eq!(document.bytes(), pdf.as_slice());
-    assert!(!document.already_signed());
 }
 
 #[test]
@@ -99,9 +98,7 @@ fn refuses_a_certified_pdf() {
 fn admits_an_already_signed_pdf_because_that_is_the_cosigning_path() {
     let pdf = a_pdf("9 0 obj\n<< /Type /Sig /ByteRange [0 840 960 240] >>\nendobj");
 
-    let document = AdmissibleDocument::check(&pdf).expect("se cofirma");
-
-    assert!(document.already_signed());
+    AdmissibleDocument::check(&pdf).expect("se cofirma");
 }
 
 #[test]
@@ -142,7 +139,6 @@ fn an_ordinary_pdf_has_no_unregistered_signatures() {
     let document = AdmissibleDocument::check(&pdf).expect("es un PDF corriente");
 
     assert!(!document.has_unregistered_signatures());
-    assert!(!document.already_signed());
 }
 
 #[test]

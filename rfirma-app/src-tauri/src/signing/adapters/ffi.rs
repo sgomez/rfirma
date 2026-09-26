@@ -8,13 +8,14 @@ use crate::signing::domain::to_java_properties;
 
 use crate::signing::domain::bridge::{
     BridgeError, Candidate, ExpandRequest, FilterRequest, Format, LibraryNotFound, Origin,
-    PostSignRequest, PreSignRequest, PreSignature, SignatureVerdict, ValidationRequest,
-    XadesVariant, LIBRARY_DIRECTORY_VARIABLE,
+    PostSignRequest, PreSignRequest, PreSignature, PreviousSignaturesReport, SignatureVerdict,
+    ValidationRequest, XadesVariant, LIBRARY_DIRECTORY_VARIABLE,
 };
 
 mod responses;
 pub use responses::{
-    parse_expanded_params, parse_filter_selection, parse_postsign, parse_presign, parse_verdict,
+    parse_expanded_params, parse_filter_selection, parse_postsign, parse_presign,
+    parse_previous_signatures, parse_verdict,
 };
 
 const RELATIVE_LIBRARY_DIRECTORY: &str = "../lib/rfirma";
@@ -140,6 +141,8 @@ type ExpandSymbol =
 type ValidateSymbol =
     unsafe extern "C" fn(*mut c_void, *const c_char, *const c_char) -> *mut c_char;
 
+type PreviousSignaturesSymbol = unsafe extern "C" fn(*mut c_void, *const c_char) -> *mut c_char;
+
 /// La librería nativa cargada, con su isolate de GraalVM ya creado.
 ///
 /// **No es `Sync`, y es a propósito**: el `IsolateThread` de GraalVM pertenece
@@ -163,6 +166,7 @@ pub struct NativeBridge {
     filter: FilterSymbol,
     expand: ExpandSymbol,
     validate: ValidateSymbol,
+    previous_signatures: PreviousSignaturesSymbol,
     free_string: FreeStringSymbol,
     tear_down: TearDownIsolate,
 }
@@ -225,6 +229,7 @@ impl NativeBridge {
             filter,
             expand,
             validate,
+            previous_signatures,
             free_string,
             tear_down,
         ) = unsafe {
@@ -239,6 +244,7 @@ impl NativeBridge {
                 resolve::<FilterSymbol>(&library, b"autofirma_filter_certificates\0")?,
                 resolve::<ExpandSymbol>(&library, b"autofirma_expand_extra_params\0")?,
                 resolve::<ValidateSymbol>(&library, b"autofirma_validate_signatures\0")?,
+                resolve::<PreviousSignaturesSymbol>(&library, b"autofirma_previous_signatures\0")?,
                 resolve::<FreeStringSymbol>(&library, b"autofirma_free_string\0")?,
                 resolve::<TearDownIsolate>(&library, b"graal_tear_down_isolate\0")?,
             )
@@ -265,6 +271,7 @@ impl NativeBridge {
             filter,
             expand,
             validate,
+            previous_signatures,
             free_string,
             tear_down,
         })
@@ -378,6 +385,17 @@ impl NativeBridge {
             (self.validate)(thread, document.as_ptr(), format.as_ptr())
         })?;
         parse_verdict(&json)
+    }
+
+    /// Firmas que ya trae el documento, con quién firmó y cuándo.
+    pub fn previous_signatures(
+        &self,
+        document_b64: &str,
+    ) -> Result<PreviousSignaturesReport, BridgeError> {
+        let document = c_string(document_b64, "el documento")?;
+        let json =
+            self.call(|thread| unsafe { (self.previous_signatures)(thread, document.as_ptr()) })?;
+        parse_previous_signatures(&json)
     }
 
     fn call<F>(&self, invoke: F) -> Result<String, BridgeError>

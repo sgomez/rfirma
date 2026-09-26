@@ -35,6 +35,7 @@ ORDENES DE TAURI                          (<contexto>/adapters/tauri*.rs)
   async write_configuration(configuration: ConfigurationView) -> Result<(), Failure>
   async forget_activity() -> Result<(), Failure>
   async unregistered_signatures(document: String) -> Result<bool, Failure>
+  async previous_signatures(document: String) -> Result<PreviousSignaturesReportView, Failure>
   async close_site_window()
   async site_identify(certificate: String) -> Result<(), Failure>
   async site_decline()
@@ -242,6 +243,17 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
   pub struct RememberedVisibleSignatureView
       content: Option<VisibleContentView>
       withRubric: bool
+
+  pub struct PreviousSignatureView
+      name: String
+      idNumber: String
+      organizationIdentifier: Option<String>
+      issuer: String
+      certificateSerialNumber: String
+      signingTime: Option<String>
+
+  pub struct PreviousSignaturesReportView
+      signatures: Vec<PreviousSignatureView>
 
   pub struct SiteErrandView
       origin: Option<String>

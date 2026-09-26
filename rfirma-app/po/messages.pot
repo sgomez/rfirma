@@ -500,6 +500,14 @@ msgstr[0] ""
 msgstr[1] ""
 msgstr[2] ""
 
+#. Etiqueta accesible del aviso de firmas previas cuando está plegado.
+msgid "panel.previousSignatures.show"
+msgstr ""
+
+#. Etiqueta accesible del aviso de firmas previas cuando está desplegado.
+msgid "panel.previousSignatures.hide"
+msgstr ""
+
 #. Nombre accesible del segmentado que elige en qué páginas va la firma visible.
 msgid "panel.placement.title"
 msgstr ""

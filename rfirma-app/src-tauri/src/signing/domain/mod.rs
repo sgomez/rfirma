@@ -14,7 +14,8 @@ pub use admissibility::{
     unlocked_with, AdmissibleDocument, Refusal, Waivers, ALLOW_SIGNING_CERTIFIED_KEY,
 };
 pub use bridge::{
-    CompletedCycle, Format, SealedPreSignature, SignatureOperation, TokenSignature, TokenSignatures,
+    CompletedCycle, Format, PreviousSignature, PreviousSignaturesReport, SealedPreSignature,
+    SignatureOperation, TokenSignature, TokenSignatures,
 };
 pub use config::{
     PadesRect, Placement, Setting, SignatureConfig, SigningChoice, ALLOW_UNREGISTERED_KEY,

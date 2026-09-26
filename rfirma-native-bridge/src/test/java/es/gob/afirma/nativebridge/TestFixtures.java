@@ -148,4 +148,10 @@ final class TestFixtures {
     static PrivateKey privateKey() throws Exception {
         return (PrivateKey) keyStore().getKey(alias(), PASSWORD);
     }
+
+    /** La clave privada de {@link #otherCertificateChain()}. */
+    static PrivateKey otherPrivateKey() throws Exception {
+        final KeyStore ks = keyStore(REVOKED_P12);
+        return (PrivateKey) ks.getKey(alias(ks), PASSWORD);
+    }
 }

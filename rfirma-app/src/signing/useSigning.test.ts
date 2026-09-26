@@ -75,6 +75,7 @@ function backendOf(overrides: Partial<SigningBackend> = {}): SigningBackend {
     postsign: async () => ok(signed),
     padesLowerLeft: async () => [0, 0],
     unregisteredSignatures: async () => false,
+    previousSignatures: async () => ({ signatures: [] }),
     discard: async () => {},
     ...overrides,
   };

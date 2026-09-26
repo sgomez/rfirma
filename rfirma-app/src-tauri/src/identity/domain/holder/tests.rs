@@ -1,4 +1,7 @@
-use super::{attribute, common_name_of, given_name_and_surname, holder_of, is_pseudonym};
+use super::{
+    attribute, common_name_of, given_name_and_surname, holder_of, is_pseudonym,
+    organization_identifier_of,
+};
 
 #[test]
 fn reads_the_holder_and_the_id_out_of_the_subject() {
@@ -112,6 +115,29 @@ fn given_name_and_surname_are_empty_when_the_certificate_does_not_carry_them() {
         (String::new(), String::new())
     );
     assert_eq!(given_name_and_surname(None), (String::new(), String::new()));
+}
+
+#[test]
+fn organization_identifier_reads_any_of_the_three_forms_of_the_rdn() {
+    for subject in [
+        "CN=REPRESENTANTE, 2.5.4.97=VATES-A00000000, C=ES",
+        "CN=REPRESENTANTE, OID.2.5.4.97=VATES-A00000000, C=ES",
+        "CN=REPRESENTANTE, organizationIdentifier=VATES-A00000000, C=ES",
+    ] {
+        assert_eq!(
+            organization_identifier_of(Some(subject)),
+            Some("VATES-A00000000".to_owned())
+        );
+    }
+}
+
+#[test]
+fn organization_identifier_is_nothing_when_the_certificate_does_not_carry_it() {
+    assert_eq!(
+        organization_identifier_of(Some("CN=LOVELACE BYRON ADA, C=ES")),
+        None
+    );
+    assert_eq!(organization_identifier_of(None), None);
 }
 
 #[test]
