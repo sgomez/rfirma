@@ -7,7 +7,9 @@ puente ni la frontera FFI; llaman a los firmadores monofásicos del original
 1.9.2 (`AOCAdESSigner`, `AOXAdESSigner`, `AOFacturaESigner`) para producir y
 validar `testdata/reference/`, el banco que usa cada ticket de formato
 (CAdES, XAdES, FacturaE) para comparar su salida con la del original. Ver
-`testdata/reference/README.md`.
+`testdata/reference/README.md`. Lo mismo vale para
+`make-previous-signature-samples.sh` y `openssl-tsa.py`, que fabrican las
+muestras de `testdata/previous-signatures/` (ver su `README.md`).
 
 Estos guiones son el banco con el que se midieron los issues
 [#2](https://github.com/sgomez/rfirma/issues/2),
