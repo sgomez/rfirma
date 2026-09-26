@@ -52,10 +52,6 @@ function panelWith(props: PanelProps) {
       onChooseCertificate={noop}
       onRetryCertificates={noop}
       onChooseModule={noop}
-      // El interruptor apagado es el nuevo valor por omisión (#974); la
-      // mayoría de estas pruebas miran lo que hay **dentro** del bloque, así
-      // que la marca aquí, explícita, en vez de heredarla de un valor que
-      // cambia con la aplicación.
       signature={{ ...DEFAULT_VISIBLE_SIGNATURE, enabled: true }}
       onChangeSignature={noop}
       placement={{ rect, pages: { only: [3] } }}
