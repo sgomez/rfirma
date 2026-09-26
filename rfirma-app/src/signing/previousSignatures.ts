@@ -45,3 +45,20 @@ export interface PreviousSignaturesReport {
   /** Si el documento cambió después de la última firma. */
   changedAfterLastSignature: boolean;
 }
+
+const INVALID_STATUSES: readonly SignatureStatus[] = [
+  "certificateExpired",
+  "certificateNotYetValid",
+  "broken",
+  "unverifiable",
+];
+
+/**
+ * Las firmas previas no válidas: ni las válidas, ni las que no se han
+ * comprobado del todo, que no bloquean la firma.
+ */
+export function invalidSignatures(
+  signatures: readonly PreviousSignature[],
+): readonly PreviousSignature[] {
+  return signatures.filter((signature) => INVALID_STATUSES.includes(signature.status));
+}

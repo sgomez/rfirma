@@ -997,6 +997,24 @@ msgstr ""
 msgid "unregisteredSignatures.confirm"
 msgstr "Sinatu hala ere"
 
+#. El titular del diálogo «¿Firmar de todos modos?», con alguna firma previa no válida.
+msgid "signAnyway.title"
+msgstr "Sinatu hala ere?"
+
+#. {{count}} firmas previas que no son válidas, en negrita.
+msgid "signAnyway.body"
+msgid_plural "signAnyway.body"
+msgstr[0] "Dokumentu honek baliozkoa ez den sinadura 1 dakar"
+msgstr[1] "Dokumentu honek baliozkoak ez diren {{count}} sinadura ditu"
+msgstr[2] "Dokumentu honek baliozkoak ez diren {{count}} sinadura ditu"
+
+#. La sede u organismo que reciba el documento puede rechazarlo.
+msgid "signAnyway.warning"
+msgstr "Sinatzen baduzu, dokumentua jasotzen duen egoitzak edo erakundeak baztertu dezake."
+
+msgid "signAnyway.confirm"
+msgstr "Sinatu hala ere"
+
 msgid "status.title"
 msgstr "rFirmaren egoera"
 

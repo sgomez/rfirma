@@ -627,7 +627,8 @@ msgstr "Format no reconegut"
 
 #. Motivo bajo el veredicto «No se ha podido comprobar del todo».
 msgid "panel.previousSignatures.reason.notFullyChecked"
-msgstr "Signatura de llarga durada: rFirma no comprova aquest tipus de signatura"
+msgstr ""
+"Signatura de llarga durada: rFirma no comprova aquest tipus de signatura"
 
 #. Motivo bajo el veredicto «Firma rota»: no corresponde con los datos del documento.
 msgid "panel.previousSignatures.reason.brokenDataMismatch"
@@ -989,6 +990,24 @@ msgstr ""
 "signatura serà vàlida, i les que ja hi eren es queden com estan."
 
 msgid "unregisteredSignatures.confirm"
+msgstr "Signar de totes maneres"
+
+#. El titular del diálogo «¿Firmar de todos modos?», con alguna firma previa no válida.
+msgid "signAnyway.title"
+msgstr "Signar de totes maneres?"
+
+#. {{count}} firmas previas que no son válidas, en negrita.
+msgid "signAnyway.body"
+msgid_plural "signAnyway.body"
+msgstr[0] "Aquest document porta 1 signatura que no és vàlida"
+msgstr[1] "Aquest document porta {{count}} signatures que no són vàlides"
+msgstr[2] "Aquest document porta {{count}} signatures que no són vàlides"
+
+#. La sede u organismo que reciba el documento puede rechazarlo.
+msgid "signAnyway.warning"
+msgstr "Si el signes, la seu o l'organisme que rebi el document el pot rebutjar."
+
+msgid "signAnyway.confirm"
 msgstr "Signar de totes maneres"
 
 msgid "status.title"

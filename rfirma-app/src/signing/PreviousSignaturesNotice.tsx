@@ -154,7 +154,7 @@ function summaryIcon(tone: Tone, hasBroken: boolean): ReactNode {
   }
 }
 
-function statusIcon(status: SignatureStatus): ReactNode {
+export function statusIcon(status: SignatureStatus): ReactNode {
   switch (status) {
     case "valid":
       return <CheckCircleIcon size={16} />;
@@ -169,7 +169,7 @@ function statusIcon(status: SignatureStatus): ReactNode {
   }
 }
 
-function statusLabel(t: TFunction, status: SignatureStatus): string {
+export function statusLabel(t: TFunction, status: SignatureStatus): string {
   switch (status) {
     case "valid":
       return t("panel.previousSignatures.status.valid");
@@ -187,7 +187,11 @@ function statusLabel(t: TFunction, status: SignatureStatus): string {
 }
 
 /** El motivo bajo el veredicto, o `null` para una firma válida. */
-function reasonLabel(t: TFunction, status: SignatureStatus, reason: string | null): string | null {
+export function reasonLabel(
+  t: TFunction,
+  status: SignatureStatus,
+  reason: string | null,
+): string | null {
   switch (status) {
     case "valid":
       return null;
