@@ -28,14 +28,11 @@
   padding: 0 var(--rf-space-xs) 0 var(--rf-space-md);
 }
 
-/* Con el menú abierto, la cabecera sube por encima de la tira de pestañas
-   (`z-index: 10`) para que el menú flote sobre ella (docs/design/ventana-principal.md,
-   sección «Capas»). */
 .header--menuOpen {
   z-index: 11;
 }
 
-/* El nombre no va al tamaño pleno de `.rf-title`: en una franja de 56 px el
+/* El nombre no va al tamaño pleno de `.rf-title`: en una franja de 52 px el
    artboard lo baja a 15 px y le abre el tracking para que siga leyéndose como
    identidad y no como título de sección. */
 .header__name {
@@ -51,7 +48,7 @@
 }
 
 /* El botón de menú es de 40 px, más estrecho que el mínimo táctil de `.rf-btn`,
-   porque va dentro de una franja de 56 px. */
+   porque va dentro de una franja de 52 px. */
 .header__button {
   min-width: 40px;
   min-height: 40px;
