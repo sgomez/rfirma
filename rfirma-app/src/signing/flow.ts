@@ -202,7 +202,12 @@ export function unavailableSigningBackend(): SigningBackend {
     postsign: missing,
     padesLowerLeft: () => Promise.reject(new Error("no hay orden de firma expuesta todavia")),
     unregisteredSignatures: async () => false,
-    previousSignatures: async () => ({ signatures: [] }),
+    previousSignatures: async () => ({
+      signatures: [],
+      warningCount: 0,
+      tone: "information",
+      changedAfterLastSignature: false,
+    }),
     discard: async () => {},
   };
 }

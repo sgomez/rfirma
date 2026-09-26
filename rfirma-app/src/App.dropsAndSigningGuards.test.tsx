@@ -173,7 +173,12 @@ describe("App, con páginas donde el recuadro no cabe", () => {
       }),
       padesLowerLeft: async (placement) => [placement.rect[0], placement.rect[1]],
       unregisteredSignatures: async () => false,
-      previousSignatures: async () => ({ signatures: [] }),
+      previousSignatures: async () => ({
+        signatures: [],
+        warningCount: 0,
+        tone: "information",
+        changedAfterLastSignature: false,
+      }),
       discard: async () => {},
     };
     renderApp(
@@ -230,7 +235,12 @@ describe("App, con páginas donde el recuadro no cabe", () => {
       }),
       padesLowerLeft: async (placement) => [placement.rect[0], placement.rect[1]],
       unregisteredSignatures: async () => false,
-      previousSignatures: async () => ({ signatures: [] }),
+      previousSignatures: async () => ({
+        signatures: [],
+        warningCount: 0,
+        tone: "information",
+        changedAfterLastSignature: false,
+      }),
       discard: async () => {},
     };
     renderApp(
@@ -273,7 +283,12 @@ describe("App, con páginas donde el recuadro no cabe", () => {
       }),
       padesLowerLeft: async (placement) => [placement.rect[0], placement.rect[1]],
       unregisteredSignatures: async () => false,
-      previousSignatures: async () => ({ signatures: [] }),
+      previousSignatures: async () => ({
+        signatures: [],
+        warningCount: 0,
+        tone: "information",
+        changedAfterLastSignature: false,
+      }),
       discard: async () => {},
     };
     renderApp(
@@ -371,7 +386,12 @@ describe("App, con un documento que no se recuerda", () => {
       }),
       padesLowerLeft: async (placement) => [placement.rect[0], placement.rect[1]],
       unregisteredSignatures: async () => false,
-      previousSignatures: async () => ({ signatures: [] }),
+      previousSignatures: async () => ({
+        signatures: [],
+        warningCount: 0,
+        tone: "information",
+        changedAfterLastSignature: false,
+      }),
       discard: async () => {},
     };
     renderApp(
@@ -441,7 +461,12 @@ describe("App · firmas sin registrar", () => {
       }),
       padesLowerLeft: async (placement) => [placement.rect[0], placement.rect[1]],
       unregisteredSignatures: async () => true,
-      previousSignatures: async () => ({ signatures: [] }),
+      previousSignatures: async () => ({
+        signatures: [],
+        warningCount: 0,
+        tone: "information",
+        changedAfterLastSignature: false,
+      }),
       discard: async () => {},
     };
   }

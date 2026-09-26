@@ -207,6 +207,22 @@ export function CrossCircleIcon({ size = 24 }: IconProps) {
   return <VerdictIcon size={size} glyph={CROSS_CIRCLE} />;
 }
 
+/** El círculo punteado: la firma que no se ha podido comprobar del todo. */
+export function DottedCircleIcon({ size = 20 }: IconProps) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      {...PEN}
+      strokeDasharray="2.5 2.5"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <circle cx="12" cy="12" r="9" />
+    </svg>
+  );
+}
+
 /** La carpeta de la fila «Guardar en». */
 export function FolderIcon({ size = 20 }: IconProps) {
   return (
