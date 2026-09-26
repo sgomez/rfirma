@@ -46,6 +46,15 @@ pub struct Destination {
     pub writable: bool,
 }
 
+/// Destino de una sola firma ya elegido, tras su asa (ADR-0011).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ChosenDestination {
+    /// Identificador opaco del destino elegido.
+    pub id: String,
+    /// Lo que se cuenta del destino.
+    pub destination: Destination,
+}
+
 /// Documento firmado ya entregado (ADR-0011).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SignedDocument {

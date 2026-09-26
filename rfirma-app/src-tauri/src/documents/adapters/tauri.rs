@@ -6,7 +6,9 @@ use crate::documents::DocumentsRoot;
 use crate::signing::SigningRoot;
 
 use super::tauri_rubric::{RubricChoiceView, RubricView};
-use super::views::{DestinationView, OpenedDocumentView, RecentDocumentView};
+use super::views::{
+    DestinationView, OpenedDocumentView, RecentDocumentView, SingleDestinationView,
+};
 use crate::crossing::Failure;
 use crate::documents::domain::rubric::{RubricError, Situation};
 use crate::signing::adapters::views::PlacementView;
@@ -125,19 +127,30 @@ pub fn read_rubric(documents: State<'_, DocumentsRoot>) -> Result<Option<RubricV
     Ok(stored.map(|bytes| RubricView::from_bytes(&bytes)))
 }
 
-/// Destino previsto para el documento antes de firmar.
+/// Destino previsto para el documento antes de firmar: el de esta firma si se eligió uno.
 #[tauri::command(async)]
 pub fn preview_destination(
     id: String,
+    destination: Option<String>,
     documents: State<'_, DocumentsRoot>,
 ) -> Result<DestinationView, Failure> {
     let document = documents.opened_document(&id)?;
-    Ok(crate::documents::application::documents::where_it_lands(
-        documents.files.as_ref(),
-        &documents.chosen_folder(),
-        &document,
-    )
-    .into())
+    Ok(documents
+        .where_it_lands(&document, destination.as_deref())?
+        .into())
+}
+
+/// Abre el diálogo de guardar y apunta el destino de una sola firma (ADR-0011).
+#[tauri::command(async)]
+pub fn choose_single_destination(
+    id: String,
+    documents: State<'_, DocumentsRoot>,
+) -> Result<Option<SingleDestinationView>, Failure> {
+    let document = documents.opened_document(&id)?;
+    let chosen = documents
+        .choose_single_destination(&document)
+        .map_err(|error| Failure::new("folderUnwritable", error))?;
+    Ok(chosen.map(SingleDestinationView::from))
 }
 
 /// Abre el selector de directorio y guarda la carpeta de destino elegida (ADR-0011).

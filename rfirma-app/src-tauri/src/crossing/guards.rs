@@ -143,6 +143,9 @@ const A_PORTAL_HANDLE: &str = "/run/user/1000/doc/1e8b83b9/contrato.pdf";
 /// Segunda ruta de prueba concedida por el portal.
 const ANOTHER_PORTAL_HANDLE: &str = "/run/user/1000/doc/1e8b83b9/segundo.pdf";
 
+/// Ruta de prueba simulando el fichero que concede el diálogo de guardar del portal.
+const A_SAVING_GRANT: &str = "/run/user/1000/doc/5a1c02f7/contrato-firmado.pdf";
+
 /// Un tipo de salida ya serializado, con su nombre.
 struct Serialised {
     name: &'static str,
@@ -186,10 +189,11 @@ fn crossings_from_a_portal_document() -> Vec<Serialised> {
     use crate::documents::adapters::files::RealFiles;
     use crate::documents::adapters::views::{
         DestinationView, DroppedDocumentView, OpenedDocumentView, RecentDocumentView,
-        SignedDocumentView,
+        SignedDocumentView, SingleDestinationView,
     };
     use crate::documents::application::documents::OpenedDocuments;
-    use crate::documents::application::{documents, recents};
+    use crate::documents::application::tests::{InMemoryFiles, SavingDialog};
+    use crate::documents::application::{documents, recents, single_destination};
     use crate::documents::domain::destination::DestinationFolder;
     use crate::documents::domain::document::Document;
     use crate::documents::domain::recents::Badge;
@@ -247,7 +251,38 @@ fn crossings_from_a_portal_document() -> Vec<Serialised> {
             .adopt(Path::new(A_PORTAL_HANDLE))
             .expect_err("el enlace del portal no existe fuera del sandbox");
 
+    let granted_folder = Path::new(A_SAVING_GRANT)
+        .parent()
+        .expect("la concesion tiene directorio");
+    let singles = single_destination::SingleDestinations::new();
+    let disk_behind_the_portal = InMemoryFiles::new().with_folder(granted_folder);
+    let chosen_once = single_destination::choose(
+        &SavingDialog::answering(A_SAVING_GRANT),
+        &disk_behind_the_portal,
+        &singles,
+        &chosen,
+        &document,
+    )
+    .expect("el dialogo contesta")
+    .expect("se ha elegido destino");
+    let single = single_destination::chosen(&singles, &chosen_once.id).expect("el asa sigue viva");
+    let (_, signed_once) =
+        single_destination::deliver(&disk_behind_the_portal, &single, b"%PDF-firmado")
+            .expect("cae en la concesion");
+
     let mut crossings = vec![
+        Serialised::of(
+            "SingleDestinationView",
+            &SingleDestinationView::from(chosen_once),
+        ),
+        Serialised::of(
+            "DestinationView",
+            &DestinationView::from(single_destination::where_it_lands(
+                &disk_behind_the_portal,
+                &single,
+            )),
+        ),
+        Serialised::of("SignedDocumentView", &SignedDocumentView::from(signed_once)),
         Serialised::of("OpenedDocumentView", &opened_view),
         Serialised::of("Failure", &failure),
         Serialised::of("DroppedDocumentView", &dropped),

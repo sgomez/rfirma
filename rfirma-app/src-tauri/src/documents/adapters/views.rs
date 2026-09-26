@@ -7,7 +7,7 @@ use crate::crossing::crossing;
 use crate::documents::application::recents::RecentRow;
 use crate::documents::domain::recents::Badge;
 use crate::documents::domain::told::{
-    Destination, DroppedDocument, OpenedDocument, SignedDocument,
+    ChosenDestination, Destination, DroppedDocument, OpenedDocument, SignedDocument,
 };
 
 use crate::crossing::Failure;
@@ -33,6 +33,33 @@ impl From<Destination> for DestinationView {
             folder: destination.folder,
             name: destination.name,
             writable: destination.writable,
+        }
+    }
+}
+
+crossing! {
+    /// Destino de una sola firma elegido con el diálogo de guardar (ADR-0011).
+    #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+    #[serde(rename_all = "camelCase")]
+    pub struct SingleDestinationView {
+        /// Identificador opaco del destino, para la vista previa y la postfirma.
+        pub id: String,
+        /// Nombre de la carpeta; vacío si el portal no la deja saber.
+        pub folder: String,
+        /// Nombre del fichero firmado.
+        pub name: String,
+        /// Si la carpeta de destino tiene permisos de escritura.
+        pub writable: bool,
+    }
+}
+
+impl From<ChosenDestination> for SingleDestinationView {
+    fn from(chosen: ChosenDestination) -> Self {
+        Self {
+            id: chosen.id,
+            folder: chosen.destination.folder,
+            name: chosen.destination.name.unwrap_or_default(),
+            writable: chosen.destination.writable,
         }
     }
 }

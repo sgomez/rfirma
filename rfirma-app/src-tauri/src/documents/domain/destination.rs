@@ -5,7 +5,7 @@ pub use super::naming::{numbered, signed_name, FIRST_NUMBER, MAX_NAMESAKES, SIGN
 
 use std::path::{Path, PathBuf};
 
-use crate::documents::domain::document::Document;
+use crate::documents::domain::document::{is_a_portal_grant, Document};
 
 use serde::{Deserialize, Serialize};
 
@@ -29,6 +29,48 @@ impl DestinationFolder {
     /// Nombre del segmento final de la carpeta para visualización.
     pub fn name(&self) -> &str {
         self.path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .unwrap_or_default()
+    }
+}
+
+/// El fichero elegido con el diálogo de guardar, para una sola firma (ADR-0011).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SingleDestination {
+    path: PathBuf,
+}
+
+impl SingleDestination {
+    /// El destino en la ruta que devolvió el diálogo.
+    pub fn at(path: impl Into<PathBuf>) -> Self {
+        Self { path: path.into() }
+    }
+
+    /// Ruta completa donde se escribe el firmado.
+    pub fn path(&self) -> &Path {
+        &self.path
+    }
+
+    /// La carpeta donde cae el firmado.
+    pub fn folder(&self) -> &Path {
+        self.path.parent().unwrap_or_else(|| Path::new(""))
+    }
+
+    /// Nombre del fichero firmado.
+    pub fn name(&self) -> &str {
+        self.path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .unwrap_or_default()
+    }
+
+    /// Nombre de la carpeta para mostrar; vacío si es la concesión del portal (ADR-0011).
+    pub fn shown_folder(&self) -> &str {
+        if is_a_portal_grant(&self.path) {
+            return "";
+        }
+        self.folder()
             .file_name()
             .and_then(|name| name.to_str())
             .unwrap_or_default()

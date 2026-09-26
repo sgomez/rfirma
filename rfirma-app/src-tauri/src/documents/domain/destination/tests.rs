@@ -123,3 +123,20 @@ fn the_destination_shows_its_name_and_not_its_path() {
 
     assert_eq!(folder.name(), "Firmados");
 }
+
+#[test]
+fn a_single_destination_shows_its_folder_and_its_name() {
+    let destination = SingleDestination::at("/home/quien/Contratos/acuerdo.pdf");
+
+    assert_eq!(destination.folder(), Path::new("/home/quien/Contratos"));
+    assert_eq!(destination.shown_folder(), "Contratos");
+    assert_eq!(destination.name(), "acuerdo.pdf");
+}
+
+#[test]
+fn a_single_destination_granted_by_the_portal_shows_no_folder() {
+    let destination = SingleDestination::at("/run/user/1000/doc/1e8b83b9/acuerdo.pdf");
+
+    assert_eq!(destination.shown_folder(), "");
+    assert_eq!(destination.name(), "acuerdo.pdf");
+}
