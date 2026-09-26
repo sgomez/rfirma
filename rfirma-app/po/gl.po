@@ -551,89 +551,65 @@ msgstr[0] "Xa leva 1 sinatura: a túa será unha cosinatura."
 msgstr[1] "Xa leva {{count}} sinaturas: a túa será unha cosinatura."
 msgstr[2] "Xa leva {{count}} sinaturas: a túa será unha cosinatura."
 
-#. Rótulo del bloque con las tres opciones de en qué páginas se sella.
+#. Nombre accesible del segmentado que elige en qué páginas va la firma visible.
 msgid "panel.placement.title"
-msgstr "Colocación"
+msgstr "En que páxinas"
 
+#. Segmento: la firma visible en una sola página.
 msgid "panel.placement.single"
-msgstr "Só 1 páxina"
+msgstr "Unha páxina"
 
-#. Pie de «Solo 1 página»: {{page}} es la página donde se colocó el recuadro.
+#. Bajo «Una página»: {{page}} es la página donde está el recuadro.
 msgid "panel.placement.singlePage"
-msgstr "Páxina {{page}}"
+msgstr "Na páxina {{page}}"
 
-#. Pie de «Solo 1 página» cuando todavía no hay recuadro en ninguna página.
-msgid "panel.placement.singleUnplaced"
-msgstr "aínda sen colocar"
-
+#. Segmento: la firma visible en las páginas que se escriben en el campo.
 msgid "panel.placement.these"
-msgstr "Estas páxinas"
+msgstr "Varias"
 
 #. Nombre del campo donde se teclean las páginas, para quien usa lector de pantalla.
 msgid "panel.placement.field"
-msgstr "Páxinas onde se sela"
+msgstr "Páxinas da sinatura visible"
 
-#. {{pages}} es el número de páginas del documento.
+#. Segmento: la firma visible en todas las páginas del documento.
 msgid "panel.placement.all"
-msgstr "Todas as páxinas ({{pages}})"
+msgstr "Todas"
 
-#. Botón que sella la página que se está mirando. Cara por omisión, con «Solo 1 página» o «Estas páginas».
+#. Botón que pone la firma visible en la página que se está mirando, con «Una página» o «Varias».
 msgid "panel.placement.seal"
 msgstr "Poñela aquí"
 
-#. Botón que sella, con «Todas las páginas» activa: el conjunto ya está completo y falta el recuadro.
-msgid "panel.placement.sealAll"
-msgstr "Poñela aquí"
-
-#. Botón que quita el sello de la página que se está mirando, cuando ya lo lleva.
+#. Botón que quita la firma visible de la página que se está mirando, cuando ya la lleva.
 msgid "panel.placement.unseal"
 msgstr "Quitala de aquí"
 
-#. {{pages}} son las primeras páginas del conjunto, ya escritas y separadas por comas.
-msgid "panel.placement.echo"
-msgstr "Selarase nas páxinas {{pages}}."
-
-#. Igual que panel.placement.echo, con {{count}} páginas más que no se nombran.
-msgid "panel.placement.echoMore"
-msgid_plural "panel.placement.echoMore"
-msgstr[0] "Selarase nas páxinas {{pages}} e 1 máis."
-msgstr[1] "Selarase nas páxinas {{pages}} e {{count}} máis."
-msgstr[2] "Selarase nas páxinas {{pages}} e {{count}} máis."
-
-#. Se estampa un solo campo de firma con el recuadro replicado, no una firma por página.
-msgid "panel.placement.replicated"
-msgid_plural "panel.placement.replicated"
-msgstr[0] "O mesmo cadro, no mesmo sitio e do mesmo tamaño, en 1 páxina."
-msgstr[1] ""
-"O mesmo cadro, no mesmo sitio e do mesmo tamaño, nas {{count}} páxinas: é un "
-"só campo de sinatura repetido, non {{count}} sinaturas."
-msgstr[2] ""
-"O mesmo cadro, no mesmo sitio e do mesmo tamaño, nas {{count}} páxinas: é un "
-"só campo de sinatura repetido, non {{count}} sinaturas."
-
-#. {{pageCount}} son las páginas del documento y {{page}} la más alta que se ha escrito.
+#. {{count}} son las páginas del documento; se ha escrito una que no existe.
 msgid "panel.placement.errors.beyond"
-msgstr "O documento ten {{pageCount}} páxinas e escribiches ata a {{page}}."
+msgid_plural "panel.placement.errors.beyond"
+msgstr[0] "Só hai 1 páxina"
+msgstr[1] "Só hai {{count}} páxinas"
+msgstr[2] "Só hai {{count}} páxinas"
 
 #. {{entry}} es el rango tal y como se ha escrito, por ejemplo 3-1.
 msgid "panel.placement.errors.reversed"
-msgstr "«{{entry}}» vai ao revés: o primeiro número ten que ser o menor."
+msgstr "«{{entry}}» vai ao revés"
 
 msgid "panel.placement.errors.zero"
-msgstr "Non hai páxina 0: a primeira é a 1."
+msgstr "Non hai páxina 0"
 
-#. {{entry}} es lo que se ha escrito y no se entiende. El ejemplo del final no se traduce.
+#. Lo escrito no se entiende: las páginas y los rangos van separados por comas.
 msgid "panel.placement.errors.malformed"
-msgstr ""
-"«{{entry}}» non se entende. Números e rangos separados por comas: "
-"1,2-3,10-20."
+msgstr "Separa as páxinas con comas"
 
 #. El campo de páginas está vacío: no nombra ninguna, así que no se puede firmar.
 msgid "panel.placement.errors.empty"
-msgstr "Escribe en que páxinas se sela: 1,2-3,10-20."
+msgstr "Escribe as páxinas"
 
 msgid "panel.certificate.title"
 msgstr "Certificado"
+
+msgid "panel.certificate.changeTitle"
+msgstr "Elixir outro certificado"
 
 msgid "panel.certificate.loading"
 msgstr "Buscando certificados…"
@@ -673,17 +649,17 @@ msgstr "Instalado en rFirma"
 msgid "panel.certificate.retry"
 msgstr "Volver buscar"
 
-#. {{date}} es la fecha de caducidad, ya formateada según el idioma.
-msgid "panel.certificate.expiresOn"
-msgstr "caduca o {{date}}"
+
+#. {{date}} es «mes/año» de caducidad, ya formateado, para la segunda línea de
+#. la fila del botón partido.
+msgid "panel.certificate.expiresIn"
+msgstr "Caduca en {{date}}"
 
 msgid "panel.certificate.empty.title"
-msgstr "Non atopamos ningún certificado"
+msgstr "Sen certificados"
 
 msgid "panel.certificate.empty.body"
-msgstr ""
-"Se usas unha tarxeta, comproba que está inserida e que o lector está "
-"conectado."
+msgstr "Non hai ningún certificado co que asinar."
 
 msgid "panel.certificate.failed.title"
 msgstr "Non puidemos buscar os certificados"
@@ -707,11 +683,31 @@ msgstr ""
 msgid "panel.certificate.unreadable"
 msgstr "Non puidemos ler este certificado, así que non se pode asinar con el."
 
+#. Frase corta, en negrita, para la tercera línea de una fila no utilizable
+#. del botón partido. {{date}} es la fecha de caducidad, ya formateada.
+msgid "panel.certificate.expiredShort"
+msgstr "Caducou o {{date}}"
+
+msgid "panel.certificate.notYetValidShort"
+msgstr "Aínda non é válido"
+
+#. {{reason}} es el motivo de la revocación, tal como lo da el certificado.
+msgid "panel.certificate.revokedShort"
+msgstr "Revogado ({{reason}})"
+
+msgid "panel.certificate.unreadableShort"
+msgstr "Non se puido ler"
+
 msgid "panel.visibleSignature.title"
 msgstr "Sinatura visible"
 
-msgid "panel.visibleSignature.toggle"
-msgstr "Estampar un cadro de sinatura no documento"
+#. Título del interruptor de «Firma visible» cuando está apagado.
+msgid "panel.visibleSignature.turnOn"
+msgstr "Engadir unha sinatura visible"
+
+#. Título del interruptor de «Firma visible» cuando está encendido.
+msgid "panel.visibleSignature.turnOff"
+msgstr "Quitar a sinatura visible"
 
 msgid "panel.visibleSignature.model.title"
 msgstr "Modelo"
@@ -769,16 +765,6 @@ msgstr "Cambiar…"
 msgid "panel.visibleSignature.rubric.thumbnail"
 msgstr "A túa rúbrica, tal como se estampará"
 
-#. Aviso sobre el bloque de firma visible apagado: sin certificado no hay sello que dibujar.
-msgid "panel.visibleSignature.noCertificate"
-msgstr "Escolle un certificado para colocar a sinatura visible"
-
-#. Manda hacer la acción que falta: sin recuadro colocado no se puede firmar.
-msgid "panel.footer.placeFirst"
-msgstr ""
-"Coloca a sinatura sobre o documento: arrastra un cadro ou preme o botón de "
-"selar."
-
 msgid "panel.footer.savedIn"
 msgstr "Gardarase en"
 
@@ -789,13 +775,11 @@ msgstr "Non se pode escribir en {{folder}}"
 msgid "panel.footer.retrySigning"
 msgstr "Reintentar"
 
-#. {{name}} es el nombre y primer apellido de quien firma.
-msgid "panel.footer.signAs"
-msgstr "Asinar como {{name}}"
+msgid "panel.footer.signVerb"
+msgstr "Asinar como"
 
-#. {{name}} es el nombre y primer apellido de quien firma.
-msgid "panel.footer.signingAs"
-msgstr "Asinando como {{name}}"
+msgid "panel.footer.signingVerb"
+msgstr "Asinando como"
 
 msgid "panel.footer.addCertificate"
 msgstr "Engadir un certificado…"
@@ -878,7 +862,7 @@ msgstr "Pendente"
 msgid "progress.keepTheCard"
 msgstr "Non retires a tarxeta ata que remate."
 
-#. El titular del diálogo de páginas sin sello: {{count}} páginas donde el recuadro no cabe.
+#. El titular del diálogo de páginas sin firma visible: {{count}} páginas donde el recuadro no cabe.
 msgid "sealLoss.title"
 msgid_plural "sealLoss.title"
 msgstr[0] "Unha páxina quedará sen sinatura visible"
@@ -890,12 +874,13 @@ msgid "sealLoss.body"
 msgstr ""
 "O cadro non cabe en {{fallen}} das {{chosen}} páxinas que escolliches, máis "
 "pequenas ca aquela sobre a que o colocaches. O documento asinarase igual e a "
-"sinatura será válida en todo el, pero nesas páxinas non aparecerá a "
-"sinatura visible."
+"sinatura será válida en todo el, pero nesas páxinas non aparecerá a sinatura "
+"visible."
 
 #. La vuelta positiva: {{sealed}} de {{chosen}} páginas elegidas sí llevarán la firma visible.
 msgid "sealLoss.remaining"
-msgstr "A sinatura visible aparecerá en {{sealed}} das {{chosen}} páxinas escollidas."
+msgstr ""
+"A sinatura visible aparecerá en {{sealed}} das {{chosen}} páxinas escollidas."
 
 msgid "sealLoss.confirm"
 msgstr "Asinar de todos os xeitos"

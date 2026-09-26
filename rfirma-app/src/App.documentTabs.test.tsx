@@ -8,8 +8,8 @@ const now = () => Math.floor(Date.now() / 1000);
 const DAY = 86_400;
 
 function panelShows(name: string) {
-  const panel = screen.getByRole("region", { name: "Panel de firma" });
-  return within(panel).queryByText(name) !== null;
+  screen.getByRole("region", { name: "Panel de firma" });
+  return screen.queryByRole("tab", { name, selected: true }) !== null;
 }
 
 async function openPlusMenu(user: ReturnType<typeof userEvent.setup>) {

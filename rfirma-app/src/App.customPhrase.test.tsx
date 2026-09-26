@@ -40,9 +40,7 @@ async function withCustomModel(presigned: SigningOrder[] = []) {
   await openPdf(user);
   const panel = await screen.findByRole("region", { name: "Panel de firma" });
   await within(panel).findByRole("button", { name: "Firmar como Ada Lovelace" });
-  await user.click(
-    within(panel).getByRole("switch", { name: /Estampar un recuadro de firma en el documento/ }),
-  );
+  await user.click(within(panel).getByRole("switch", { name: "Firma visible" }));
   await user.click(await within(panel).findByRole("radio", { name: "Personalizada" }));
   const phrase = within(panel).getByRole("textbox", { name: "Frase de la firma" });
   return { user, panel, phrase };

@@ -79,9 +79,7 @@ describe("App", () => {
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
     // La firma visible arranca apagada (#974): hay que encenderla para ver la
     // rúbrica que ya se adoptó.
-    await user.click(
-      within(panel).getByRole("switch", { name: /Estampar un recuadro de firma en el documento/ }),
-    );
+    await user.click(within(panel).getByRole("switch", { name: "Firma visible" }));
 
     expect(
       await within(panel).findByRole("img", { name: "Tu rúbrica, tal como se estampará" }),
@@ -205,9 +203,7 @@ describe("App", () => {
 
     await openPdf(user);
 
-    const panel = await screen.findByRole("region", { name: "Panel de firma" });
-    expect(within(panel).getByText("factura.pdf")).toBeInTheDocument();
-    expect(within(panel).getByText(/^7 páginas/)).toBeInTheDocument();
+    await screen.findByRole("region", { name: "Panel de firma" });
     expect(screen.getByRole("tab", { name: "factura.pdf", selected: true })).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "Arrastra un PDF o pulsa para abrirlo" }),
@@ -239,11 +235,11 @@ describe("App", () => {
     expect(within(panel).getByRole("alert")).toHaveTextContent(
       "No hemos podido cargar el módulo de la tarjeta",
     );
-    expect(within(panel).queryByText("No hemos encontrado ningún certificado")).toBeNull();
+    expect(within(panel).queryByText("Sin certificados")).toBeNull();
     expect(within(panel).getByRole("button", { name: "Volver a buscar" })).toBeInTheDocument();
     // El fallo se queda dentro de la ficha del certificado: el documento sigue
     // pintado y el visor no se entera.
-    expect(within(panel).getByText("factura.pdf")).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "factura.pdf", selected: true })).toBeInTheDocument();
   });
 
   it("loads the list when looking again with the problem already solved", async () => {
@@ -466,13 +462,14 @@ describe("App", () => {
     await screen.findByRole("region", { name: "Panel de firma" });
 
     await openPdf(user);
-    const panel = await screen.findByRole("region", { name: "Panel de firma" });
-    await waitFor(() => expect(within(panel).getByText("segundo.pdf")).toBeInTheDocument());
+    await screen.findByRole("region", { name: "Panel de firma" });
+    await screen.findByRole("tab", { name: "segundo.pdf", selected: true });
 
     await user.click(screen.getByRole("tab", { name: "primero.pdf" }));
 
-    await waitFor(() => expect(within(panel).getByText("primero.pdf")).toBeInTheDocument());
-    expect(within(panel).getByText(/^2 páginas/)).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByRole("tab", { name: "primero.pdf", selected: true })).toBeInTheDocument(),
+    );
   });
 
   /**
@@ -492,9 +489,7 @@ describe("App", () => {
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
     await within(panel).findByRole("button", { name: "Firmar como Ada Lovelace" });
 
-    const toggle = within(panel).getByRole("switch", {
-      name: /Estampar un recuadro de firma en el documento/,
-    });
+    const toggle = within(panel).getByRole("switch", { name: "Firma visible" });
     expect(toggle).toHaveAttribute("aria-checked", "false");
     expect(within(panel).getByRole("button", { name: "Firmar como Ada Lovelace" })).toBeEnabled();
     expect(
@@ -520,21 +515,19 @@ describe("App", () => {
     await openPdf(user);
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
     await within(panel).findByRole("button", { name: "Firmar como Ada Lovelace" });
-    const toggle = within(panel).getByRole("switch", {
-      name: /Estampar un recuadro de firma en el documento/,
-    });
+    const toggle = within(panel).getByRole("switch", { name: "Firma visible" });
     const box = () => screen.queryByRole("application", { name: "Recuadro de la firma visible" });
 
     await user.click(toggle);
-    expect(await within(panel).findByText("Página 1")).toBeInTheDocument();
+    expect(await within(panel).findByText("En la página 1")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Página siguiente" }));
     await user.click(screen.getByRole("button", { name: "Página siguiente" }));
     await user.click(toggle);
     await user.click(toggle);
 
     expect(toggle).toHaveAttribute("aria-checked", "true");
-    expect(within(panel).getByText("Página 1")).toBeInTheDocument();
-    expect(within(panel).queryByText("Página 3")).not.toBeInTheDocument();
+    expect(within(panel).getByText("En la página 1")).toBeInTheDocument();
+    expect(within(panel).queryByText("En la página 3")).not.toBeInTheDocument();
     expect(box()).not.toBeInTheDocument();
   });
 

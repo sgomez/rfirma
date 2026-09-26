@@ -15,7 +15,7 @@ import {
 } from "./viewer/signatureBox";
 
 /**
- * El bloque «Colocación»: el recuadro y las tres opciones de página que lo
+ * La colocación de la firma visible: el recuadro y los tres modos de página que lo
  * llenan (#185, #188).
  *
  * `placement` —lo que ve el resto de la ventana y lo que cruza a firmar— es el
@@ -110,6 +110,16 @@ export function usePlacementControls(
     [placeStandard, placing, pageCount, viewedPage],
   );
 
+  const placeOnViewedPage = useCallback(() => {
+    const page = Math.min(Math.max(viewedPage, 1), Math.max(pageCount, 1));
+    const sets = activating(placing.sets, placing.choice, null, pageCount, page);
+    const pages = pagesOf(sets, placing.choice);
+    void placeStandard({
+      ...placing,
+      sets: pages === null ? storing(sets, placing.choice, { only: [page] }, pageCount) : sets,
+    });
+  }, [placeStandard, placing, pageCount, viewedPage]);
+
   return {
     placing,
     setPlacing,
@@ -121,5 +131,6 @@ export function usePlacementControls(
     rememberPlacement,
     choosePages,
     changePageChoice,
+    placeOnViewedPage,
   };
 }

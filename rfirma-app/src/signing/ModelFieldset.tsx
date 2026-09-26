@@ -10,7 +10,7 @@ import { type PhrasePart, rubricRuleFor, type VisibleSignature } from "./visible
 interface ModelFieldsetProps {
   signature: VisibleSignature;
   onChangeSignature: (signature: VisibleSignature) => void;
-  certificate: Certificate;
+  certificate: Certificate | null;
   rubric: Rubric | null;
   rubricFailure: RubricFailure | null;
   onChooseRubric: () => void;
@@ -56,11 +56,11 @@ export function ModelFieldset({
   );
   const samples = useMemo(
     () => ({
-      signer: certificate.stampedSigner,
-      issuer: certificate.issuer,
+      signer: certificate?.stampedSigner ?? t("panel.visibleSignature.datum.signer"),
+      issuer: certificate?.issuer ?? t("panel.visibleSignature.datum.issuer"),
       signedAt: signedAtSample,
     }),
-    [certificate.stampedSigner, certificate.issuer, signedAtSample],
+    [certificate, signedAtSample, t],
   );
   const rubricBeside =
     signature.withRubric &&
@@ -88,9 +88,9 @@ export function ModelFieldset({
             <span className="panel__model-thumbnail" aria-hidden="true">
               {rubricBeside}
               <span className="panel__model-lines">
-                <span>{certificate.stampedSigner}</span>
+                <span>{samples.signer}</span>
                 <span>{signedAtSample}</span>
-                <span>{certificate.issuer}</span>
+                <span>{samples.issuer}</span>
               </span>
             </span>
             <span className="panel__model-name">{t("panel.visibleSignature.model.complete")}</span>

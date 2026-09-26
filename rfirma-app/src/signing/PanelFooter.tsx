@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { FolderIcon } from "../design-system/icons";
-import { CertificateFooterButton } from "./CertificateFooterButton";
+import { CertificateFooterButton, LoadingCertificateFooterButton } from "./CertificateFooterButton";
 import type { Certificate } from "./certificate";
 import type { Destination } from "./destination";
 import { shortenDestination } from "./destination";
@@ -16,8 +16,6 @@ interface PanelFooterSigningProps extends PanelFooterDestinationProps {
   signed?: false;
   failure: SigningFailure | null;
   onChangeDestination: () => void;
-  /** Con el interruptor encendido y sin colocar no se firma (ID-93). */
-  unplaced: boolean;
   signing: boolean;
   blocked: boolean;
   certificate: CertificateState;
@@ -127,9 +125,6 @@ export function PanelFooter(props: PanelFooterProps) {
         </div>
       ) : (
         <>
-          {props.unplaced && !props.failure && (
-            <p className="rf-hint panel__place-first">{t("panel.footer.placeFirst")}</p>
-          )}
           {props.failure && (
             <div className="rf-row rf-gap-xs panel__failure-actions">
               <button
@@ -149,9 +144,7 @@ export function PanelFooter(props: PanelFooterProps) {
             </div>
           )}
           {!props.failure && props.certificate.kind === "loading" && (
-            <button type="button" className="rf-btn rf-btn--primary panel__sign" disabled>
-              {t("panel.certificate.loading")}
-            </button>
+            <LoadingCertificateFooterButton />
           )}
           {!props.failure &&
             (props.certificate.kind === "empty" || props.certificate.kind === "failed") && (
