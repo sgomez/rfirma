@@ -16,6 +16,7 @@ relativas a `src/signing/`; para situarte en un fichero, `just outline <ruta>`.
 | `adapters/engines.rs` | Los adaptadores de `Bridge` y de los tres motores que la sede declara en `site/ports.rs`, `FilterEngine`, `PolicyEngine` y `ValidationEngine`. Pruebas en `adapters/engines/tests.rs`. |
 | `adapters/ffi.rs` | La frontera FFI: cargar `librfirma_crypto.so` y volver sin fugas. Diez entradas, y ninguna firma. Pruebas en `adapters/ffi/tests.rs` y `adapters/ffi/tests/`. |
 | `adapters/ffi/responses.rs` | Traduce a los tipos del dominio el JSON que devuelven las diez entradas del puente. |
+| `adapters/ffi/tests/previous_signatures.rs` | Pruebas de la lectura de las firmas previas que devuelve el puente. Solo en pruebas. |
 | `adapters/gtk_prompter.rs` | Diálogo modal nativo GTK3 para la solicitud de PIN interactiva y adaptadores de pruebas (MockSecretPrompter, PreconfiguredSecretPrompter). Pruebas en `adapters/gtk_prompter/tests.rs`. |
 | `adapters/isolate.rs` | El hilo dueño del isolate de GraalVM, y el adaptador de `IsolateHost`. Pruebas en `adapters/isolate/tests.rs`. |
 | `adapters/memory.rs` | `Memory`, la memoria entre sesiones (ADR-0010), y las rebanadas que cada vecino pide por su puerto: `DocumentsMemory`, `CertificateMemory` y `VersionMemory`. Pruebas en `adapters/memory/tests.rs`. |
