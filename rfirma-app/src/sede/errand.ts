@@ -148,7 +148,7 @@ export interface LocalBatchItem {
 }
 
 /** El área de la firma visible que marca la persona, con la forma del recuadro de la firma local. */
-export type MarkedArea = SigningOrder["placement"];
+export type MarkedArea = NonNullable<SigningOrder["placement"]>;
 
 /** En qué momento de la secuencia está la ventana. */
 export type ErrandStage =

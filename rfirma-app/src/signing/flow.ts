@@ -55,7 +55,7 @@ export interface SigningOrder {
   certificate: string;
   /**
    * Dónde cae el recuadro, en **espacio de usuario PDF** (ID-21), con la
-   * `MediaBox` y la `/Rotate` de la página.
+   * `MediaBox` y la `/Rotate` de la página; `null` si la firma no es visible.
    *
    * No en puntos PAdES: la inversa de la rotación que iText aplica al cerrar el
    * documento la hace `signing::placement` en el backend, y con ella viene la
@@ -79,7 +79,7 @@ export interface SigningOrder {
     rotation: number;
     /** `[x0, y0, x1, y1]` del recuadro en espacio de usuario. */
     rect: readonly [number, number, number, number];
-  };
+  } | null;
   /** El modelo elegido. */
   content: VisibleContent;
   /** Si la firma visible lleva la rúbrica. Común a los tres modelos. */
@@ -145,7 +145,9 @@ export interface SigningBackend {
    * es el mismo backend, y duplicar el puerto para una sola llamada sería más
    * ruido que el que ahorra.
    */
-  padesLowerLeft(placement: SigningOrder["placement"]): Promise<readonly [number, number]>;
+  padesLowerLeft(
+    placement: NonNullable<SigningOrder["placement"]>,
+  ): Promise<readonly [number, number]>;
   /**
    * Si el documento trae **firmas que rFirma no sabe leer** (ID-297, ID-300).
    *
