@@ -1,9 +1,9 @@
 use super::{localize, MockSecretPrompter, PreconfiguredSecretPrompter};
+use crate::identity::domain::holder::PromptedHolder;
 use crate::identity::domain::protected_secret::ProtectedSecret;
+use crate::identity::domain::secret::SecretName;
+use crate::identity::ports::{SecretPromptError, SecretPromptRequest, SecretPrompter};
 use crate::signing::domain::Language;
-use crate::signing::ports::{
-    PromptedHolder, SecretName, SecretPromptError, SecretPromptRequest, SecretPrompter,
-};
 
 fn a_request(holder: Option<PromptedHolder>, language: Language) -> SecretPromptRequest {
     SecretPromptRequest {

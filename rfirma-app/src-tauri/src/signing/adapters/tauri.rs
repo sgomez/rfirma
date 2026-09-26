@@ -16,7 +16,7 @@ use crate::crossing::Failure;
 use crate::documents::adapters::views::SignedDocumentView;
 use crate::identity::adapters::views::SecretView;
 use crate::identity::domain::certificate::TokenCertificate;
-use crate::signing::application::session::{self, DocumentToSign};
+use crate::signing::application::session::DocumentToSign;
 use crate::signing::domain::config::SigningChoice;
 use crate::signing::domain::VisibleContent;
 
@@ -69,15 +69,21 @@ pub fn signed_with_the_secret(
     let language = signing.configuration().language;
 
     let Some(certificate) = live.the_certificate_awaiting_the_secret() else {
-        return Ok(session::signed_on_the_token(
+        return super::prompted_secret::signed_on_the_token(
             &signer,
             &signing.session,
             prompter,
             language,
             &pin,
-        )?);
+        );
     };
-    let secret = session::secret_for_the_batch(&signer, &certificate, prompter, language, &pin)?;
+    let secret = super::prompted_secret::secret_for_the_batch(
+        &signer,
+        &certificate,
+        prompter,
+        language,
+        &pin,
+    )?;
     crate::site::the_pending_signature_signed(desk, live, &secret)
 }
 

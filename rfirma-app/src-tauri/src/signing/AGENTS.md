@@ -22,6 +22,7 @@ relativas a `src/signing/`; para situarte en un fichero, `just outline <ruta>`.
 | `adapters/memory.rs` | `Memory`, la memoria entre sesiones (ADR-0010), y las rebanadas que cada vecino pide por su puerto: `DocumentsMemory`, `CertificateMemory` y `VersionMemory`. Pruebas en `adapters/memory/tests.rs`. |
 | `adapters/failures.rs` | La única traducción de las situaciones de la firma local a la vista de la ventana y al código de la sede (ADR-0009). Pruebas en `adapters/failures/tests.rs`. |
 | `adapters/orders.rs` | Lo que la ventana manda, ya deserializado, y `SigningChoice`, lo decidido sin asas; lo que no vale es un `PlacementError`. Pruebas en `adapters/orders/tests.rs`. |
+| `adapters/prompted_secret.rs` | Junta el ciclo con el diálogo interactivo del secreto, cuyo puerto es de `identity`, y su reintento. Pruebas en `adapters/prompted_secret/tests.rs`. |
 | `adapters/state.rs` | `State`, el fichero de estado tal como se guarda. Pruebas en `adapters/state/tests.rs`. |
 | `adapters/store.rs` | El fichero JSON versionado que soporta las dos memorias. Pruebas en `adapters/store/tests.rs`. |
 | `adapters/tauri.rs` | Las órdenes de firma local: el ciclo, la previsualización, la esquina PAdES, la configuración y las firmas no registradas. Pruebas en `adapters/tauri/tests.rs`. |

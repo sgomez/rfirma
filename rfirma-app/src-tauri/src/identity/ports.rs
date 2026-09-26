@@ -1,13 +1,18 @@
-//! Puertos del contexto de identidad: el token, el almacén de los `.p12` instalados y el certificado recordado.
+//! Puertos del contexto de identidad: el token, el almacén de los `.p12` instalados, el certificado
+//! recordado y el diálogo interactivo que pide un secreto (ADR-0001, ADR-0014).
 
+use std::fmt;
 use std::path::Path;
 
 use crate::identity::domain::algorithm::SignatureAlgorithm;
 use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
 use crate::identity::domain::error::{Situation, TokenError};
-use crate::identity::domain::secret::StoreSecret;
+use crate::identity::domain::holder::PromptedHolder;
+use crate::identity::domain::protected_secret::ProtectedSecret;
+use crate::identity::domain::secret::{SecretName, StoreSecret};
 use crate::identity::domain::store::Store;
 use crate::memory_error::MemoryError;
+use crate::signing::domain::Language;
 
 /// El token visto desde los casos de uso: lista, dice cómo pide el secreto, firma e importa un `.p12` (ADR-0001).
 pub trait Token {
@@ -104,3 +109,79 @@ pub trait CertificateMemory {
     /// Olvida el certificado recordado.
     fn forget_the_certificate(&self) -> Result<(), MemoryError>;
 }
+
+/// Solicitud interactiva de credenciales (PIN o contraseña de almacén).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SecretPromptRequest {
+    /// Cómo se llama el secreto que se pide.
+    pub secret: SecretName,
+    /// Titular del certificado para el que se pide el secreto, si el DER lo dice.
+    pub holder: Option<PromptedHolder>,
+    /// Idioma preferido para los textos del diálogo.
+    pub language: Language,
+    /// Indica si se trata de un reintento tras un secreto erróneo.
+    pub incorrect_secret: bool,
+}
+
+/// Fallo o interrupción en la solicitud interactiva de credenciales.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum SecretPromptError {
+    /// La persona usuaria canceló el diálogo o pulsó Escape.
+    Cancelled,
+    /// Fallo al desplegar la interfaz gráfica o error del prompter.
+    Failed(String),
+}
+
+impl fmt::Display for SecretPromptError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Cancelled => write!(f, "solicitud de secreto cancelada por la persona usuaria"),
+            Self::Failed(reason) => write!(f, "no se pudo pedir el secreto: {reason}"),
+        }
+    }
+}
+
+impl std::error::Error for SecretPromptError {}
+
+/// Puerto de diálogo interactivo para la solicitud de credenciales seguras.
+pub trait SecretPrompter: Send + Sync {
+    /// Presenta el diálogo interactivo para solicitar el secreto al usuario.
+    fn prompt_secret(
+        &self,
+        request: &SecretPromptRequest,
+    ) -> Result<ProtectedSecret, SecretPromptError>;
+}
+
+/// Fallo al pedir el secreto hasta que se acepta: el diálogo mismo, o un intento sin remedio.
+#[derive(Debug)]
+pub enum PromptedError<E> {
+    /// La solicitud interactiva del secreto fue cancelada o falló.
+    Prompt(SecretPromptError),
+    /// El intento rechazó el secreto y `rejected` dijo que no merecía la pena reintentarlo.
+    Attempt(E),
+}
+
+/// Pide el secreto hasta que `attempt` lo acepta; `rejected` decide si el rechazo merece reintentarlo,
+/// sirviendo tanto al PIN de un token como, más adelante, a la contraseña de un `.p12` (ADR-0001, ADR-0014).
+pub fn prompted_until_accepted<T, E>(
+    prompter: &dyn SecretPrompter,
+    mut request: SecretPromptRequest,
+    mut attempt: impl FnMut(&ProtectedSecret) -> Result<T, E>,
+    rejected: impl Fn(&E) -> bool,
+) -> Result<(ProtectedSecret, T), PromptedError<E>> {
+    loop {
+        let secret = prompter
+            .prompt_secret(&request)
+            .map_err(PromptedError::Prompt)?;
+        match attempt(&secret) {
+            Ok(done) => return Ok((secret, done)),
+            Err(error) if rejected(&error) => {
+                request.incorrect_secret = true;
+            }
+            Err(other) => return Err(PromptedError::Attempt(other)),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests;

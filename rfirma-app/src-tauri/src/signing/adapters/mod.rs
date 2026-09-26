@@ -8,6 +8,7 @@ pub mod gtk_prompter;
 pub mod isolate;
 pub mod memory;
 pub mod orders;
+pub mod prompted_secret;
 pub mod state;
 pub mod store;
 pub mod tauri;
