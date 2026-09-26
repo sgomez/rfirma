@@ -1,5 +1,7 @@
 //! Composición del texto de rúbrica en capa 2 para la firma visible.
 
+use serde::{Deserialize, Serialize};
+
 use super::language::Language;
 
 /// Carácter sustitutivo de la máscara. Es el de AutoFirma por omisión.
@@ -106,7 +108,7 @@ pub fn compose_layer2_text(fields: &VisibleTextFields<'_>, language: Language) -
 }
 
 /// El contenido de la firma visible, elegido por modelo.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum VisibleContent {
     /// Firmante, fecha y emisor.
     Complete,
@@ -117,14 +119,14 @@ pub enum VisibleContent {
 }
 
 /// Un trozo de la frase de *Personalizada*: texto literal o un dato.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum PhrasePart {
     Text(String),
     Datum(Datum),
 }
 
 /// Un dato que la firma visible toma del certificado o de la firma.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Datum {
     Signer,
     Issuer,

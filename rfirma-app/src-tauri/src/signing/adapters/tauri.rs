@@ -6,14 +6,16 @@ use crate::documents::DocumentsRoot;
 use crate::identity::IdentityRoot;
 use crate::signing::SigningRoot;
 
+use super::memory::Memory;
 use super::orders::{PlacementOrder, SigningOrder};
-use super::views::ConfigurationView;
+use super::views::{ConfigurationView, RememberedVisibleSignatureView};
 use crate::crossing::Failure;
 use crate::documents::adapters::views::SignedDocumentView;
 use crate::identity::adapters::views::SecretView;
 use crate::identity::domain::certificate::TokenCertificate;
 use crate::signing::application::session::{self, DocumentToSign};
 use crate::signing::domain::config::SigningChoice;
+use crate::signing::domain::VisibleContent;
 
 /// Prefirma: cruza la frontera y deja el ciclo abierto.
 #[tauri::command]
@@ -24,6 +26,7 @@ pub fn begin_signing(
     signing: State<'_, SigningRoot>,
 ) -> Result<SecretView, Failure> {
     let (document, chosen, choice) = what_is_ordered(&order, &identity, &documents)?;
+    remember_the_visible_signature_ordered(&order, &signing.memory);
     Ok(crate::signing::application::session::begin(
         signing.files.as_ref(),
         document,
@@ -34,6 +37,14 @@ pub fn begin_signing(
         &signing.session,
     )?
     .into())
+}
+
+/// El modelo, la frase y «Con rúbrica» de la orden se recuerdan en la prefirma, antes de abrir el ciclo.
+fn remember_the_visible_signature_ordered(order: &SigningOrder, memory: &Memory) {
+    if let Some(content) = &order.content {
+        let content = VisibleContent::from(content);
+        let _ = memory.remember_visible_signature(Some(&content), order.with_rubric);
+    }
 }
 
 /// Firma en el token con la clave privada (ADR-0001).
@@ -153,6 +164,14 @@ pub fn read_configuration(
     .into()
 }
 
+/// Modelo, frase y «Con rúbrica» de la última firma visible configurada (ADR-0010).
+#[tauri::command]
+pub fn remembered_visible_signature(
+    signing: State<'_, SigningRoot>,
+) -> RememberedVisibleSignatureView {
+    signing.memory.remembered_visible_signature().into()
+}
+
 /// Guarda la configuración elegida por el usuario.
 #[tauri::command(async)]
 pub fn write_configuration(
@@ -187,3 +206,6 @@ pub fn unregistered_signatures(
         )?,
     )
 }
+
+#[cfg(test)]
+mod tests;
