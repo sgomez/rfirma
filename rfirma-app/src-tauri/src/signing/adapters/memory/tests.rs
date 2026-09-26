@@ -306,7 +306,8 @@ fn the_model_and_the_phrase_come_back_in_the_next_session() {
         .remember_visible_signature(Some(&content), true)
         .expect("deberia guardarse");
 
-    let remembered = memory.remembered_visible_signature();
+    let (next_session, _) = a_memory(directory.path());
+    let remembered = next_session.remembered_visible_signature();
     assert_eq!(remembered.content, Some(content));
     assert!(remembered.rubric);
 }
