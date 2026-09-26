@@ -399,7 +399,7 @@ native: build-java
 check-glibc lib=native_lib:
     {{ justfile_directory() }}/scripts/check-glibc.sh {{ lib }}
 
-# Construye el flatpak, el unico canal soportado (ADR-0015).
+# Construye el flatpak, uno de los tres canales junto al .deb y el .rpm (ADR-0015).
 [group('ci')]
 flatpak: check-native build-ts
     #!/usr/bin/env bash
