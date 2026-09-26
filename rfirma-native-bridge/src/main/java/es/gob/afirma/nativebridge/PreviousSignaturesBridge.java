@@ -150,12 +150,7 @@ final class PreviousSignaturesBridge {
         return options;
     }
 
-    /**
-     * La revision del PDF que lo certifico «sin cambios permitidos», o 0 si no
-     * esta certificado asi. El original no lo expone: {@code ValidatePdfSignature}
-     * lo calcula igual, buscando la firma cuya referencia trae un
-     * {@code TRANSFORMMETHOD}.
-     */
+    /** La revision que certifico el PDF «sin cambios permitidos», o 0. */
     private static int certifyingRevision(final PdfReader reader, final AcroFields fields) {
         if (reader.getCertificationLevel()
                 != PdfSignatureAppearance.CERTIFIED_NO_CHANGES_ALLOWED) {

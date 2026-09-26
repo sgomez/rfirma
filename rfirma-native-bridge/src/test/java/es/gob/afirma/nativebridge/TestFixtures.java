@@ -68,21 +68,14 @@ final class TestFixtures {
         return altered;
     }
 
-    /**
-     * PDF certificado sin cambios permitidos (MDP nivel 1) con otra firma
-     * anadida en una revision posterior: el caso de ID-401 que el validador
-     * debe romper con el motivo {@code CERTIFIED_SIGN_REVISION}.
-     */
+    /** PDF certificado sin cambios permitidos con una segunda firma en una revision posterior. */
     static byte[] certifiedPdfWithSignatureInALaterRevision() throws Exception {
         final Properties certificationLevel = new Properties();
         certificationLevel.setProperty("certificationLevel", "1");
         final byte[] certified =
                 pades(samplePdf(), certificateChain(), privateKey(), certificationLevel);
 
-        // El /M de una firma PDF solo tiene resolucion de segundo: sin esta espera
-        // las dos firmas podrian caer en el mismo segundo y el orden cronologico
-        // se decidiria por el de iText, que es de la revision mas nueva a la mas
-        // vieja.
+        // /M tiene resolucion de segundo.
         Thread.sleep(1_100);
 
         final Properties overCertified = new Properties();
