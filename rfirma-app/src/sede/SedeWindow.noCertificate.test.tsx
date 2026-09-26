@@ -94,10 +94,6 @@ describe("5 · no usable certificate", () => {
   });
 });
 
-/**
- * ID-440: el puerto de instalación devuelve el fallo, y esta pantalla lo
- * enseña en línea, con la misma clasificación que Preferencias.
- */
 describe("5 · install failure", () => {
   it("shows the failure in line instead of discarding it", async () => {
     const user = userEvent.setup();

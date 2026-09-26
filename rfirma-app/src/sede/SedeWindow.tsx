@@ -89,7 +89,7 @@ function SedeDialog({
 
   const [installFailure, setInstallFailure] = useState<NamedFailure | null>(null);
   // Un fallo al instalar se enseña en línea, con la misma clasificación que
-  // Preferencias (ID-440); cancelar el selector de fichero no rechaza nada.
+  // Preferencias; cancelar el selector de fichero no rechaza nada.
   const installCertificate = async () => {
     setInstallFailure(null);
     try {

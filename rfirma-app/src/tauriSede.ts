@@ -64,7 +64,7 @@ export function tauriSiteErrands(): SiteErrandPort {
     saveFile: () => stage(() => invoke<boolean>("site_save_file")),
     loadFiles: () => stage(() => invoke<number | null>("site_load_files")),
     // La contraseña la pide el backend con su propio diálogo; `false` es
-    // que se cerró sin elegir, y un rechazo llega tal cual a quien llama (ID-440).
+    // que se cerró sin elegir, y un rechazo llega tal cual a quien llama.
     installCertificate: () => invoke<boolean>("site_install_certificate"),
     lookAgain: () => invoke<void>("site_look_again"),
     installLocalCa: () => invoke<void>("install_local_ca"),
