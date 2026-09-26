@@ -88,11 +88,7 @@ describe("App", () => {
     ).toBeInTheDocument();
   });
 
-  /**
-   * El criterio del #978: el documento siguiente arranca con el modelo y
-   * «Con rúbrica» de la última firma visible configurada, sin volver a
-   * elegirlos. Encender el interruptor los enseña; no los siembra.
-   */
+  // Encender el interruptor enseña el modelo y la rúbrica recordados; no los siembra.
   it("starts a new document with the model and rubric flag a previous session left", async () => {
     const user = userEvent.setup();
     renderApp(

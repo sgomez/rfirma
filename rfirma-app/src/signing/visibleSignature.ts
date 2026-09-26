@@ -50,7 +50,7 @@ export interface RememberedVisibleSignature {
   withRubric: boolean;
 }
 
-/** Por dónde entra la memoria global de firma visible. Se lee una vez al arrancar, igual que `RubricPicker.stored` (ID-33). */
+/** Por dónde entra la memoria global de firma visible; se lee una vez al arrancar. */
 export interface VisibleSignatureMemory {
   read(): Promise<RememberedVisibleSignature>;
 }
