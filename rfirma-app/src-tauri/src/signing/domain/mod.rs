@@ -15,7 +15,7 @@ pub use admissibility::{
 };
 pub use bridge::{
     CompletedCycle, Format, PreviousSignature, PreviousSignaturesReport, SealedPreSignature,
-    SignatureOperation, TokenSignature, TokenSignatures,
+    SignatureOperation, SignatureStatus, TokenSignature, TokenSignatures, Tone,
 };
 pub use config::{
     PadesRect, Placement, Setting, SignatureConfig, SigningChoice, ALLOW_UNREGISTERED_KEY,
