@@ -60,16 +60,18 @@ export function DocumentTabs({
   const overflows = narrow && tabs.length * (NARROW_TAB_WIDTH + GAP) > available;
   const step = (narrow ? NARROW_TAB_WIDTH : TAB_WIDTH) + GAP;
 
+  const activeIndex = tabs.findIndex((tab) => tab.id === activeId);
+
   useEffect(() => {
     const scroller = list.current;
-    const active = scroller?.querySelector<HTMLElement>(".document-tab--active");
-    if (!scroller || !active) return;
+    const active = scroller?.children.item(activeIndex);
+    if (!scroller || !(active instanceof HTMLElement)) return;
     if (active.offsetLeft < scroller.scrollLeft) scroller.scrollLeft = active.offsetLeft;
     const right = active.offsetLeft + active.offsetWidth;
     if (right > scroller.scrollLeft + scroller.clientWidth) {
       scroller.scrollLeft = right - scroller.clientWidth;
     }
-  }, [activeId, tabs.length]);
+  }, [activeIndex]);
 
   const scrollBy = (delta: number) => {
     if (list.current) list.current.scrollLeft += delta;

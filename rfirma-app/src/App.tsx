@@ -212,10 +212,8 @@ export function App({
     };
   }, [pdf, boxPage]);
 
-  // El documento activo, abierto para pintarlo. Cambiar de documento **repone
-  // el recuadro de ese documento**, que es lo que guarda su pestaña (ID-74): uno que ya estuvo abierto vuelve a su página y a su posición, y
-  // uno nuevo llega sin ninguna y arranca donde toque, no donde lo dejó el
-  // anterior (ID-22).
+  // Cambiar de pestaña repone el recuadro que guarda: uno ya abierto vuelve a su
+  // página y posición, y uno nuevo arranca donde toque, no donde lo dejó otro.
   useEffect(() => {
     const active = documents.active;
     if (!active) {
@@ -231,10 +229,7 @@ export function App({
       setPdf(opened.ok ? opened.pdf : null);
       setPdfFailure(opened.ok ? null : opened.failure);
       setSizeBytes(opened.ok ? opened.sizeBytes : null);
-      // La fila guarda **una** colocación, que es lo que se firmó: al reabrir
-      // se reparte en la opción que la explica, y las otras dos arrancan sin
-      // conjunto propio para que la primera vez que se elijan se siembren de
-      // esta (ID-74).
+      // Se guarda una sola colocación, la firmada; las otras dos opciones se siembran de ella.
       setPlacing(placingFrom(active.placement, opened.ok ? opened.pdf.pageCount : 0));
       // Documento nuevo, hora nueva: la del anterior lleva parada desde que se
       // abrió, y el recuadro de este llevaría estampada una hora vieja.
@@ -262,28 +257,12 @@ export function App({
     chooseCertificate,
   } = useCertificateSearch(certificates);
 
-  /**
-   * Abrir un documento por el portal.
-   *
-   * El `catch` no es decorativo: si la orden que abre el diálogo rechaza, la
-   * promesa quedaría sin dueño y el fallo no se contaría en ningún sitio. Se
-   * cuenta donde se cuentan los demás del documento, en el visor.
-   */
-  const openDocument = async () => {
-    try {
-      await documents.open();
-    } catch (thrown) {
-      setPdfFailure(classify(thrown));
-    }
+  // Sin el `catch`, el rechazo quedaría sin dueño; se cuenta en el visor.
+  const reportingFailure = (command: () => Promise<void>) => () => {
+    command().catch((thrown: unknown) => setPdfFailure(classify(thrown)));
   };
-
-  const clearRecents = async () => {
-    try {
-      await documents.clearRecents();
-    } catch (thrown) {
-      setPdfFailure(classify(thrown));
-    }
-  };
+  const openDocument = reportingFailure(documents.open);
+  const clearRecents = reportingFailure(documents.clearRecents);
 
   const chosen = certificate.kind === "chosen" ? certificate.certificate : null;
   const {
@@ -397,9 +376,9 @@ export function App({
             recents={documents.recents}
             onActivate={documents.activate}
             onClose={documents.close}
-            onOpen={() => void openDocument()}
+            onOpen={openDocument}
             onSelectRecent={documents.select}
-            onClearRecents={() => void clearRecents()}
+            onClearRecents={clearRecents}
           />
         }
         viewer={
@@ -416,13 +395,13 @@ export function App({
             pageChoice={pageChoice}
             onPageChange={setViewedPage}
             placementRequest={placementRequest}
-            onOpen={() => void openDocument()}
+            onOpen={openDocument}
             emptyExtra={
               documents.tabs.length === 0 ? (
                 <RecentsSection
                   recents={documents.recents}
                   onSelect={documents.select}
-                  onClear={() => void clearRecents()}
+                  onClear={clearRecents}
                 />
               ) : null
             }
