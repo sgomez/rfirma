@@ -9,7 +9,7 @@ import type { Rubric } from "./signing/rubric";
 import { composesOnRelease, type StampComposer, type StampRequest } from "./signing/stampPreview";
 import { pagesWithoutSeal } from "./signing/unsealedPages";
 import { useStampPreview } from "./signing/useStampPreview";
-import type { VisibleSignature } from "./signing/visibleSignature";
+import { rubricGapFor, type VisibleSignature } from "./signing/visibleSignature";
 import type { PdfDocument } from "./viewer/pdf";
 import { firstSealedPage, type Placement, sealedPages } from "./viewer/signatureBox";
 
@@ -239,7 +239,7 @@ export function useSignFlow({
   };
 
   return {
-    stamp,
+    stamp: { ...stamp, rubricGap: rubricGapFor(signature, rubric !== null) },
     sign,
     sealLossPrompt,
     setSealLossPrompt,

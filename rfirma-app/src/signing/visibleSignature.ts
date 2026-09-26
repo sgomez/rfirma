@@ -53,3 +53,12 @@ export function rubricRuleFor(content: VisibleContent, withRubric: boolean): Rub
   if (content.model === "rubricOnly") return { locked: "on", rubricOnlySelectable: true };
   return { locked: null, rubricOnlySelectable: withRubric };
 }
+
+/** El hueco punteado de la rúbrica encendida sin imagen: al lado del texto, o llenando el recuadro. */
+export type RubricGap = "beside" | "fill";
+
+export function rubricGapFor(signature: VisibleSignature, hasRubric: boolean): RubricGap | null {
+  if (hasRubric) return null;
+  if (signature.content.model === "rubricOnly") return "fill";
+  return signature.withRubric ? "beside" : null;
+}

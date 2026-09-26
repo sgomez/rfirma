@@ -135,6 +135,23 @@
   cursor: grabbing;
 }
 
+.viewer__rubric-gap {
+  position: absolute;
+  top: 5px;
+  bottom: 5px;
+  left: 6px;
+  border: 1px dashed var(--rf-border-strong);
+  border-radius: 2px;
+}
+
+.viewer__rubric-gap--beside {
+  width: 30%;
+}
+
+.viewer__rubric-gap--fill {
+  right: 6px;
+}
+
 /* La vista congelada durante el gesto (ID-109): sigue sirviendo para medir el
    bulto, y el atenuado dice que aún no es la definitiva. Es un velo y no un
    `opacity` sobre el lienzo porque lo que se atenúa es **el sello de antes**, no

@@ -413,6 +413,7 @@ export function App({
             // que contar cuántos ficheros venían con él.
             failure={pdfFailure ?? (dropNotice?.about === activeId ? dropNotice.failure : null)}
             stamp={stamp.state}
+            rubricGap={stamp.rubricGap}
             onComposeStamp={stamp.compose}
             onOpenHelp={() => void externalDestinations.open("discussions")}
           />

@@ -14,6 +14,7 @@ import {
 } from "../design-system/icons";
 import { ErrorNotice } from "../errors/ErrorNotice";
 import type { StampPreview } from "../signing/stampPreview";
+import type { RubricGap } from "../signing/visibleSignature";
 import "./DocumentViewer.css";
 import type { PdfDocument } from "./pdf";
 import { StampPill } from "./StampPill";
@@ -141,6 +142,8 @@ interface DocumentViewerProps {
   stamp?: StampPreview;
   /** «Ver cómo queda», y también «Volver a intentarlo». */
   onComposeStamp?: () => void;
+  /** Dónde va el hueco punteado de la rúbrica que falta por cargar. */
+  rubricGap?: RubricGap | null;
 }
 
 /**
@@ -179,6 +182,7 @@ export function DocumentViewer({
   onGesture,
   stamp,
   onComposeStamp,
+  rubricGap = null,
 }: DocumentViewerProps) {
   const { t, i18n } = useTranslation();
   const {
@@ -315,6 +319,12 @@ export function DocumentViewer({
                 <MoveIcon />
                 {t("viewer.dragHandle")}
               </span>
+              {rubricGap && stamp && stamp.kind !== "noCertificate" && stamp.kind !== "failed" && (
+                <span
+                  className={`viewer__rubric-gap viewer__rubric-gap--${rubricGap}`}
+                  title={t("panel.visibleSignature.rubric.noImageTitle")}
+                />
+              )}
               {/*
                 Los tiradores son **cromo, no papel** (ID-104): el lado va en
                 línea, en píxeles de pantalla, para que mida lo mismo al 50 %,
