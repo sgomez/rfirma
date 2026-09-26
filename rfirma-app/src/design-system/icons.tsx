@@ -216,9 +216,19 @@ export function ChevronRightIcon({ size = 16 }: IconProps) {
 }
 
 /** La punta de flecha del desplegable de Preferencias. */
-export function ChevronDownIcon({ size = 16 }: IconProps) {
+export function ChevronDownIcon({
+  size = 16,
+  strokeWidth = 1.5,
+}: IconProps & { strokeWidth?: number }) {
   return (
-    <svg width={size} height={size} {...PEN} aria-hidden="true" focusable="false">
+    <svg
+      width={size}
+      height={size}
+      {...PEN}
+      strokeWidth={strokeWidth}
+      aria-hidden="true"
+      focusable="false"
+    >
       <path d="M6 9l6 6 6-6" />
     </svg>
   );
@@ -386,6 +396,25 @@ export function RubricIcon({
     >
       <path d="M4 30c8-18 13-22 16-14 3 8-4 18-7 16-3-2 6-14 15-16 6-1 4 8 8 9 4 1 8-6 12-10" />
       <path d="M50 24c6 2 12-2 18-8M62 32c6 0 12-3 18-9" />
+    </svg>
+  );
+}
+
+/** El indicador de «buscando…»: un arco que gira, sin fin ni principio fijos. */
+export function SpinnerIcon({ size = 16 }: IconProps) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path d="M12 3a9 9 0 1 0 9 9" />
     </svg>
   );
 }

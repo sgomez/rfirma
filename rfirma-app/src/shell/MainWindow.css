@@ -1,6 +1,6 @@
 /*
  * La única ventana (docs/design/ventana-principal.md): una cabecera de 52 px,
- * la tira de pestañas y debajo el visor flexible y el panel de 360 px.
+ * la tira de pestañas y debajo el visor flexible y el panel de 380 px.
  *
  * Sin documento el panel **no está en el árbol** y queda una columna
  * (ID-51). No es un `display: none` —eso sería el primer paso hacia la
@@ -22,7 +22,7 @@
 .main-window__body {
   flex: 1;
   display: grid;
-  grid-template-columns: 1fr 360px;
+  grid-template-columns: 1fr 380px;
   min-height: 0;
 }
 
@@ -33,7 +33,7 @@
 .main-window__panel {
   min-height: 0;
   overflow-y: auto;
-  background: var(--rf-surface);
+  background: var(--rf-bg);
 }
 
 .main-window__panel {

@@ -6,20 +6,6 @@ import { DEFAULT_VISIBLE_SIGNATURE } from "./visibleSignature";
 
 // Grada A: el panel son datos y devoluciones de llamada; no habla con nadie.
 describe("SigningPanel", () => {
-  it("counts the pages in singular when the document has only one", () => {
-    renderPanel({
-      document: { name: "instancia.pdf", pages: 1, sizeBytes: null, signatures: null },
-    });
-
-    expect(screen.getByText("1 página")).toBeInTheDocument();
-  });
-
-  it("counts the pages in plural when the document has more than one", () => {
-    renderPanel();
-
-    expect(screen.getByText(/^27 páginas/)).toBeInTheDocument();
-  });
-
   it("covers the certificate, the visible-signature toggle, the page and the model cards", () => {
     renderPanel();
 
@@ -47,19 +33,11 @@ describe("SigningPanel", () => {
     expect(buttons.at(-1)).toBe(primaries[0]);
   });
 
-  // El artboard enseña «27 páginas · 2,4 MB» y un resumen de firmas que hoy
-  // nadie calcula. Lo desconocido **no ocupa sitio**: ni un guion, ni un «—»,
-  // ni un marcador de posición.
-  it("paints nothing at all in place of what nobody knows yet", () => {
+  it("shows no co-signature notice for a document that carries none", () => {
     renderPanel({
       document: { name: "contrato.pdf", pages: 27, sizeBytes: null, signatures: null },
     });
 
-    // La línea de metadatos dice las páginas y **nada más**: sin el separador
-    // que precedería al tamaño, y sin tamaño.
-    expect(screen.getByText("27 páginas")).toBeInTheDocument();
-    expect(screen.getByText("27 páginas").textContent).toBe("27 páginas");
-    expect(screen.queryByText(/—|–|\bMB\b|\bkB\b/)).not.toBeInTheDocument();
     expect(screen.queryByText(/cofirma/)).not.toBeInTheDocument();
   });
 
@@ -127,7 +105,8 @@ describe("SigningPanel", () => {
     const onRetryCertificates = vi.fn();
     renderPanel({ certificate: { kind: "empty" }, onRetryCertificates });
 
-    expect(screen.getByText(/comprueba que está insertada/)).toBeInTheDocument();
+    expect(screen.getByText("Sin certificados")).toBeInTheDocument();
+    expect(screen.getByText("No hay ningún certificado con el que firmar.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Añadir un certificado…" })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Volver a buscar" }));
 
@@ -201,7 +180,13 @@ describe("SigningPanel", () => {
     expect(onBack).toHaveBeenCalled();
   });
 
-  it("warns about an expired certificate and refuses to sign with it", () => {
+  /**
+   * Un certificado no utilizable no llega a elegirse (ADR-0010): esto solo
+   * cubre la defensa por si uno recordado caducara entre sesiones, y el pie
+   * no lleva ningún aviso propio para ello
+   * (docs/design/panel-de-firma.md § Pie).
+   */
+  it("refuses to sign with an expired chosen certificate", () => {
     renderPanel({
       certificate: {
         kind: "chosen",
@@ -210,11 +195,10 @@ describe("SigningPanel", () => {
       },
     });
 
-    expect(screen.getByRole("alert")).toHaveTextContent(/El certificado caducó el/);
     expect(screen.getByRole("button", { name: "Firmar como Ada Lovelace" })).toBeDisabled();
   });
 
-  it("warns about a revoked certificate and refuses to sign with it", () => {
+  it("refuses to sign with a revoked chosen certificate", () => {
     renderPanel({
       certificate: {
         kind: "chosen",
@@ -223,7 +207,6 @@ describe("SigningPanel", () => {
       },
     });
 
-    expect(screen.getByRole("alert")).toHaveTextContent(/revocado/);
     expect(screen.getByRole("button", { name: "Firmar como Ada Lovelace" })).toBeDisabled();
   });
 
@@ -287,6 +270,46 @@ describe("SigningPanel", () => {
     expect(screen.getAllByRole("option")).toHaveLength(2);
   });
 
+  /**
+   * La lista ancla al panel, no al chevron de 44 px que la abre: con un
+   * certificado elegido el disparador es ese chevron, y anclarse a él sacaba
+   * la lista con su mismo ancho (docs/design/panel-de-firma.md § Geometría).
+   */
+  it("anchors the certificate list to the panel's width, not the 44 px chevron", async () => {
+    const user = userEvent.setup();
+    renderPanel({
+      certificate: {
+        kind: "chosen",
+        certificate,
+        certificates: [certificate, { ...certificate, id: "otra", holderName: "Grace Hopper" }],
+      },
+    });
+    const panel = document.querySelector(".panel") as HTMLElement;
+    vi.spyOn(panel, "getBoundingClientRect").mockReturnValue({
+      top: 0,
+      bottom: 700,
+      left: 900,
+      right: 1280,
+      width: 380,
+      height: 700,
+      x: 900,
+      y: 0,
+      toJSON: () => {},
+    });
+    Object.defineProperty(window, "innerHeight", {
+      writable: true,
+      configurable: true,
+      value: 700,
+    });
+
+    await user.click(screen.getByRole("combobox", { name: "Certificado" }));
+
+    const layer = document.querySelector(".certificate-footer__layer") as HTMLElement;
+    expect(layer.style.left).toBe("924px");
+    expect(layer.style.width).toBe("332px");
+    expect(layer.style.bottom).toBe("68px");
+  });
+
   it("has no «change» button any more: the trigger is where it changes", () => {
     renderPanel();
 
@@ -305,6 +328,24 @@ describe("SigningPanel", () => {
     expect(screen.getByText("Buscando certificados…")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Buscando certificados…" })).toBeDisabled();
     expect(screen.queryByRole("combobox", { name: "Certificado" })).not.toBeInTheDocument();
+    // La fila entera se atenúa, no solo el botón (docs/design/panel-de-firma.md
+    // § Estados → Buscando certificados).
+    expect(
+      screen
+        .getByRole("button", { name: "Buscando certificados…" })
+        .closest(".certificate-footer__row"),
+    ).toHaveClass("certificate-footer__row--dim");
+  });
+
+  it("dims the whole split-button row while signing", () => {
+    renderPanel({ signing: true });
+
+    expect(screen.getByRole("button", { name: "Firmando como Ada Lovelace" }));
+    expect(
+      screen
+        .getByRole("button", { name: "Firmando como Ada Lovelace" })
+        .closest(".certificate-footer__row"),
+    ).toHaveClass("certificate-footer__row--dim");
   });
 });
 

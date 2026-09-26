@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { CheckIcon, ChevronDownIcon } from "../design-system/icons";
+import { CheckIcon, ChevronDownIcon, SpinnerIcon } from "../design-system/icons";
 import "./CertificateFooterButton.css";
-import { statusWarning } from "./CertificateSelect";
+import { shortStatusWarning } from "./CertificateSelect";
 import type { Certificate } from "./certificate";
 import { firstNameAndSurname, groupCertificates, isUsable } from "./certificate";
 
@@ -13,10 +13,16 @@ interface CertificateFooterButtonProps {
   chosen: Certificate | null;
   onChoose: (certificate: Certificate) => void;
   onSign: () => void;
-  /** Mientras la firma corre, el chevron no abre la lista. */
+  /** Mientras la firma corre, el chevron no abre la lista y la fila se atenúa. */
   signing: boolean;
   /** Con el interruptor encendido y sin colocar, o con el rango en error. */
   blocked: boolean;
+}
+
+/** «Caduca en 06/2027»: mes y año de caducidad, sin traducir su formato. */
+function expiryMonthYear(notAfter: number): string {
+  const date = new Date(notAfter * 1000);
+  return `${String(date.getMonth() + 1).padStart(2, "0")}/${date.getFullYear()}`;
 }
 
 /**
@@ -60,17 +66,19 @@ export function CertificateFooterButton({
     if (giveBackFocus) trigger.current?.focus();
   }, []);
 
-  // La lista **siempre** cuelga hacia arriba: vive en el pie, y en Tauri la
-  // ventana corta por abajo (docs/design/panel-de-firma.md § Certificado).
+  // La lista **siempre** cuelga hacia arriba, anclada al panel y no al
+  // disparador: con un certificado elegido el disparador es el chevron de
+  // 44 px, y anclarse a él sacaba la lista con su mismo ancho
+  // (docs/design/panel-de-firma.md § Geometría).
   const show = () => {
     setActive(at === -1 ? 0 : at);
-    const rect = trigger.current?.getBoundingClientRect();
-    if (rect) {
+    const panelRect = container.current?.closest(".panel")?.getBoundingClientRect();
+    if (panelRect) {
       setAnchor({
-        bottom: window.innerHeight - rect.top + 4,
-        left: rect.left,
-        width: rect.width,
-        maxHeight: Math.max(100, Math.min(232, rect.top - 8)),
+        bottom: window.innerHeight - panelRect.bottom + 68,
+        left: panelRect.left + 24,
+        width: panelRect.width - 48,
+        maxHeight: Math.max(100, panelRect.height - 76),
       });
     }
     setOpen(true);
@@ -152,9 +160,13 @@ export function CertificateFooterButton({
         tabIndex={-1}
         aria-selected={certificate.id === chosen?.id}
         aria-disabled={!usable}
+        title={
+          usable ? certificate.holderName : shortStatusWarning(certificate.status, i18n.language, t)
+        }
         className={[
           "certificate-footer__option",
           index === active ? "certificate-footer__option--active" : "",
+          certificate.id === chosen?.id ? "certificate-footer__option--chosen" : "",
           usable ? "" : "certificate-footer__option--unusable",
         ]
           .filter((piece) => piece !== "")
@@ -166,16 +178,14 @@ export function CertificateFooterButton({
         onPointerEnter={() => setActive(index)}
       >
         <span className="certificate-footer__text">
-          <span className="rf-title certificate-footer__holder">{certificate.holderName}</span>
+          <span className="certificate-footer__holder">{certificate.holderName}</span>
           <span className="rf-body rf-text-muted certificate-footer__line">
             {[
-              t("panel.certificate.issuer", { issuer: certificate.issuer }),
+              certificate.issuer,
               t(`panel.certificate.stores.${certificate.store}`),
               certificate.status.kind === "valid"
-                ? t("panel.certificate.expiresOn", {
-                    date: new Intl.DateTimeFormat(i18n.language, { dateStyle: "long" }).format(
-                      certificate.status.notAfter * 1000,
-                    ),
+                ? t("panel.certificate.expiresIn", {
+                    date: expiryMonthYear(certificate.status.notAfter),
                   })
                 : null,
             ]
@@ -184,7 +194,7 @@ export function CertificateFooterButton({
           </span>
           {!usable && (
             <span className="rf-body certificate-footer__reason">
-              {statusWarning(certificate.status, i18n.language, t)}
+              {shortStatusWarning(certificate.status, i18n.language, t)}
             </span>
           )}
         </span>
@@ -199,7 +209,13 @@ export function CertificateFooterButton({
 
   return (
     <div className="certificate-footer" ref={container}>
-      <div className="certificate-footer__row">
+      <div
+        className={
+          signing
+            ? "certificate-footer__row certificate-footer__row--dim"
+            : "certificate-footer__row"
+        }
+      >
         {chosen === null ? (
           <button
             type="button"
@@ -213,9 +229,11 @@ export function CertificateFooterButton({
             onClick={toggle}
             onKeyDown={openOnArrow}
           >
-            <span>{t("panel.certificate.choose")}</span>
+            <span className="certificate-footer__unchosen-text">
+              {t("panel.certificate.choose")}
+            </span>
             <span className={open ? "certificate-footer__arrow--up" : "certificate-footer__arrow"}>
-              <ChevronDownIcon />
+              <ChevronDownIcon size={14} strokeWidth={2} />
             </span>
           </button>
         ) : (
@@ -227,13 +245,15 @@ export function CertificateFooterButton({
               disabled={signing || blocked || unusable}
               onClick={onSign}
             >
-              {t(signing ? "panel.footer.signingAs" : "panel.footer.signAs", {
-                name: firstNameAndSurname(chosen),
-              })}
+              <span className="certificate-footer__verb">
+                {t(signing ? "panel.footer.signingVerb" : "panel.footer.signVerb")}
+              </span>{" "}
+              <span className="certificate-footer__holder-name">{firstNameAndSurname(chosen)}</span>
             </button>
             <button
               type="button"
               ref={trigger}
+              title={t("panel.certificate.changeTitle")}
               className="certificate-footer__chevron"
               role="combobox"
               aria-expanded={open}
@@ -244,18 +264,15 @@ export function CertificateFooterButton({
               onClick={toggle}
               onKeyDown={openOnArrow}
             >
-              <ChevronDownIcon />
+              <span
+                className={open ? "certificate-footer__arrow--up" : "certificate-footer__arrow"}
+              >
+                <ChevronDownIcon size={14} strokeWidth={2} />
+              </span>
             </button>
           </>
         )}
       </div>
-      {/* Por si un recordado caducado llegara a `chosen` pese al filtro de
-          App.signingOrder.ts, el motivo también se dice aquí. */}
-      {unusable && (
-        <p className="rf-prose certificate-footer__warning" role="alert">
-          {statusWarning(chosen.status, i18n.language, t)}
-        </p>
-      )}
       {open &&
         anchor &&
         createPortal(
@@ -276,7 +293,7 @@ export function CertificateFooterButton({
             >
               {groups.available.length > 0 && (
                 <>
-                  <div className="certificate-footer__group-label" role="presentation">
+                  <div className="rf-label certificate-footer__group-label" role="presentation">
                     {t("panel.certificate.groups.available")}
                   </div>
                   {groups.available.map((certificate, index) => renderOption(certificate, index))}
@@ -284,7 +301,7 @@ export function CertificateFooterButton({
               )}
               {groups.unusable.length > 0 && (
                 <>
-                  <div className="certificate-footer__group-label" role="presentation">
+                  <div className="rf-label certificate-footer__group-label" role="presentation">
                     {t("panel.certificate.groups.unusable")}
                   </div>
                   {groups.unusable.map((certificate, index) =>
@@ -296,6 +313,33 @@ export function CertificateFooterButton({
           </div>,
           document.body,
         )}
+    </div>
+  );
+}
+
+/**
+ * El mismo botón partido mientras se busca: sin certificado que nombrar, con
+ * el indicador de 16 px y el ▾ inerte (docs/design/panel-de-firma.md §
+ * Estados → Buscando certificados).
+ */
+export function LoadingCertificateFooterButton() {
+  const { t } = useTranslation();
+  return (
+    <div className="certificate-footer">
+      <div className="certificate-footer__row certificate-footer__row--dim">
+        <button type="button" className="rf-btn rf-btn--primary certificate-footer__sign" disabled>
+          <span className="certificate-footer__spinner">
+            <SpinnerIcon size={16} />
+          </span>
+          <span className="certificate-footer__verb">{t("panel.certificate.loading")}</span>
+        </button>
+        <span
+          className="certificate-footer__chevron certificate-footer__chevron--inert"
+          aria-hidden="true"
+        >
+          <ChevronDownIcon size={14} strokeWidth={2} />
+        </span>
+      </div>
     </div>
   );
 }

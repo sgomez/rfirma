@@ -38,8 +38,7 @@ describe("App", () => {
     // comporta como una cancelación (ID-73).
     await openPdf(user);
 
-    const panel = screen.getByRole("region", { name: "Panel de firma" });
-    expect(within(panel).getByText("factura.pdf")).toBeInTheDocument();
+    screen.getByRole("region", { name: "Panel de firma" });
     const tabs = screen.getByRole("navigation", { name: "Documentos abiertos" });
     expect(within(tabs).getAllByRole("tab")).toHaveLength(1);
   });

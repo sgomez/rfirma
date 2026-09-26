@@ -592,7 +592,7 @@ msgstr "Guztiak"
 msgid "panel.placement.seal"
 msgstr "Jarri hemen"
 
-#. Botón que quita el sello de la página que se está mirando, cuando ya lo lleva.
+#. Botón que quita la firma visible de la página que se está mirando, cuando ya la lleva.
 msgid "panel.placement.unseal"
 msgstr "Kendu hemendik"
 
@@ -620,6 +620,9 @@ msgstr "Idatzi orrialdeak"
 
 msgid "panel.certificate.title"
 msgstr "Ziurtagiria"
+
+msgid "panel.certificate.changeTitle"
+msgstr "Aukeratu beste ziurtagiri bat"
 
 msgid "panel.certificate.loading"
 msgstr "Ziurtagiriak bilatzen…"
@@ -659,17 +662,17 @@ msgstr "rFirman instalatuta"
 msgid "panel.certificate.retry"
 msgstr "Bilatu berriro"
 
-#. {{date}} es la fecha de caducidad, ya formateada según el idioma.
-msgid "panel.certificate.expiresOn"
+
+#. {{date}} es «mes/año» de caducidad, ya formateado, para la segunda línea de
+#. la fila del botón partido.
+msgid "panel.certificate.expiresIn"
 msgstr "{{date}}(e)an iraungitzen da"
 
 msgid "panel.certificate.empty.title"
-msgstr "Ez dugu ziurtagiririk aurkitu"
+msgstr "Ziurtagiririk ez"
 
 msgid "panel.certificate.empty.body"
-msgstr ""
-"Txartel bat erabiltzen baduzu, egiaztatu sartuta dagoela eta irakurgailua "
-"konektatuta dagoela."
+msgstr "Ez dago sinatzeko moduko ziurtagiririk."
 
 msgid "panel.certificate.failed.title"
 msgstr "Ezin izan ditugu ziurtagiriak bilatu"
@@ -693,6 +696,21 @@ msgstr ""
 
 msgid "panel.certificate.unreadable"
 msgstr "Ezin izan dugu ziurtagiri hau irakurri; beraz, ezin da harekin sinatu."
+
+#. Frase corta, en negrita, para la tercera línea de una fila no utilizable
+#. del botón partido. {{date}} es la fecha de caducidad, ya formateada.
+msgid "panel.certificate.expiredShort"
+msgstr "{{date}}(e)an iraungi zen"
+
+msgid "panel.certificate.notYetValidShort"
+msgstr "Oraindik ez da baliozkoa"
+
+#. {{reason}} es el motivo de la revocación, tal como lo da el certificado.
+msgid "panel.certificate.revokedShort"
+msgstr "Errebokatua ({{reason}})"
+
+msgid "panel.certificate.unreadableShort"
+msgstr "Ezin izan da irakurri"
 
 msgid "panel.visibleSignature.title"
 msgstr "Sinadura ikusgaia"
@@ -771,13 +789,11 @@ msgstr "Ezin da {{folder}}(e)n idatzi"
 msgid "panel.footer.retrySigning"
 msgstr "Berriro saiatu"
 
-#. {{name}} es el nombre y primer apellido de quien firma.
-msgid "panel.footer.signAs"
-msgstr "Sinatu honela: {{name}}"
+msgid "panel.footer.signVerb"
+msgstr "Sinatu honela:"
 
-#. {{name}} es el nombre y primer apellido de quien firma.
-msgid "panel.footer.signingAs"
-msgstr "{{name}} gisa sinatzen"
+msgid "panel.footer.signingVerb"
+msgstr "Honela sinatzen:"
 
 msgid "panel.footer.addCertificate"
 msgstr "Gehitu ziurtagiri bat…"
@@ -860,7 +876,7 @@ msgstr "Zain"
 msgid "progress.keepTheCard"
 msgstr "Ez atera txartela amaitu arte."
 
-#. El titular del diálogo de páginas sin sello: {{count}} páginas donde el recuadro no cabe.
+#. El titular del diálogo de páginas sin firma visible: {{count}} páginas donde el recuadro no cabe.
 msgid "sealLoss.title"
 msgid_plural "sealLoss.title"
 msgstr[0] "Orrialde bat sinadura ikusgairik gabe geratuko da"

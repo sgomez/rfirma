@@ -15,39 +15,15 @@
   min-height: 0;
 }
 
-/* 11 px entre bloques: es la medida del artboard, y no está en la escala de
-   espaciado a propósito —el panel es la columna más apretada de la ventana y
-   los 8 px de `xs` juntan demasiado los divisores—. */
+/* 12 px entre bloques, relleno `14px 24px 12px` (docs/design/panel-de-firma.md
+   § Geometría): los bloques se separan por el aire, sin divisores. */
 .panel__scroll {
   display: flex;
   flex-direction: column;
-  gap: 11px;
+  gap: 12px;
   min-height: 0;
   overflow-y: auto;
-  padding: var(--rf-space-sm);
-}
-
-/* La cabecera del panel: el icono de hoja arriba a la izquierda y, al lado, el
-   nombre y su línea de metadatos. */
-.panel__header {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--rf-space-xs);
-}
-
-.panel__header-icon {
-  display: flex;
-  flex: none;
-  margin-top: 2px;
-  color: var(--rf-text-muted);
-}
-
-.panel__header-text {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  flex: 1;
-  min-width: 0;
+  padding: 14px 24px 12px;
 }
 
 /* «CERTIFICADO», «FIRMA VISIBLE»: los rótulos de sección van en versalitas, el
@@ -68,15 +44,6 @@
 .panel__toggle--dim,
 .panel__controls--dim {
   opacity: 0.35;
-}
-
-/* El nombre se recorta con elipsis en lugar de partirse: la columna es de
-   360 px y un nombre largo partido en tres líneas empuja todo el panel. */
-.panel__document {
-  font-size: 14px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .panel__co-signature {
@@ -106,13 +73,17 @@
   font-size: 14px;
 }
 
+/* Sin caja ni borde: el triángulo y el título en una fila, el cuerpo debajo
+   sangrado hasta la columna del texto (docs/design/panel-de-firma.md §
+   Estados → Sin certificados). */
 .panel__no-certificates {
   display: flex;
   flex-direction: column;
-  gap: var(--rf-space-sm);
-  padding: var(--rf-space-sm);
-  border: 1px solid var(--rf-border-strong);
-  border-radius: var(--rf-radius-md);
+  gap: 4px;
+}
+
+.panel__notice-body {
+  padding-left: 26px;
 }
 
 /* La fila del pie cuando no hay certificados: «Añadir un certificado…» se
@@ -382,19 +353,17 @@
 }
 
 /* 162 px en todos los estados (docs/design/panel-de-firma.md § Pie fijo): el
-   pie no se mueve aunque el destino, el aviso de colocación o el de un
-   recordado caducado quieran más alto. Lo que no cabe se desplaza dentro,
-   nunca empuja el borde. */
+   pie no se mueve aunque el destino o el aviso de colocación quieran más
+   alto. Nada dentro se desplaza. */
 .panel__footer {
   display: flex;
   flex-direction: column;
-  gap: var(--rf-space-sm);
+  gap: 10px;
   height: 162px;
   flex: none;
-  padding: var(--rf-space-sm);
+  padding: 10px 24px 16px;
   border-top: 1px solid var(--rf-border-subtle);
-  background: var(--rf-surface);
-  overflow-y: auto;
+  background: var(--rf-bg);
 }
 
 .panel__destination {
@@ -446,10 +415,6 @@
    salta al perder el botón (docs/design/panel-de-firma.md § El resumen). */
 .panel__destination-change--hidden {
   visibility: hidden;
-}
-
-.panel__sign {
-  width: 100%;
 }
 
 /* La fila del pie una vez firmado: «Abrir el PDF» se lleva el ancho que

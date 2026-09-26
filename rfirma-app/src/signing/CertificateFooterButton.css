@@ -12,23 +12,52 @@
   height: 44px;
 }
 
+/* Firmando: la fila entera se atenúa, no solo el botón deshabilitado
+   (docs/design/panel-de-firma.md § Estados → Firmando). */
+.certificate-footer__row--dim {
+  opacity: 0.55;
+}
+
+/* La fila ya está al 55 %: sin esto, la opacidad de `.rf-btn[disabled]` se
+   multiplicaría con la suya y el botón saldría más apagado de la cuenta. */
+.certificate-footer__row--dim .rf-btn[disabled] {
+  opacity: 1;
+}
+
 .certificate-footer__unchosen {
   display: flex;
   width: 100%;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--rf-space-xs);
+  justify-content: center;
+  gap: 8px;
 }
 
-/* El nombre no empuja al chevron: con un titular largo se recorta y la punta
-   de flecha sigue donde el ojo la busca. */
+.certificate-footer__unchosen-text {
+  font-weight: 700;
+}
+
+/* «Firmar como» y el nombre en dos piezas: la primera a peso 400, el nombre
+   hereda el peso 600 del botón. El nombre no empuja al chevron: con un
+   titular largo se recorta y la punta de flecha sigue donde el ojo la
+   busca. */
 .certificate-footer__sign {
   flex: 1;
   min-width: 0;
+  gap: 6px;
+  padding: 0 14px;
   overflow: hidden;
   border-top-right-radius: 0;
   border-bottom-right-radius: 0;
+}
+
+.certificate-footer__verb {
+  flex: none;
   font-weight: 400;
+}
+
+.certificate-footer__holder-name {
+  min-width: 0;
+  overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -50,7 +79,24 @@
 
 .certificate-footer__chevron:disabled {
   cursor: not-allowed;
-  opacity: 0.55;
+}
+
+/* Buscando certificados: el mismo hueco del chevron, pero inerte y sin
+   botón —no hay lista que abrir todavía—. */
+.certificate-footer__chevron--inert {
+  cursor: default;
+}
+
+.certificate-footer__spinner {
+  display: flex;
+  flex: none;
+  animation: certificate-footer-spin 1s linear infinite;
+}
+
+@keyframes certificate-footer-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .certificate-footer__arrow,
@@ -62,85 +108,82 @@
   transform: rotate(180deg);
 }
 
-.certificate-footer__warning {
-  margin-top: var(--rf-space-xs);
-  padding: var(--rf-space-xs);
-  border: 2px solid var(--rf-border-strong);
-  border-radius: var(--rf-radius-md);
-  font-weight: 600;
-}
-
-/* Flota sobre el pie, ancla por posición (`bottom`/`left`/`width` inline,
-   calculados del disparador) y crece hacia arriba: ID-308, igual que
-   CertificateSelect.css. */
+/* Flota sobre el pie, anclada al panel y no al disparador (`bottom`/`left`/
+   `width` inline, calculados de `.panel`): crece hacia arriba
+   (docs/design/panel-de-firma.md § Geometría). */
 .certificate-footer__layer {
   position: fixed;
-  z-index: 200;
-  border-radius: var(--rf-radius-md);
-  box-shadow: var(--rf-shadow-elevated);
-  background: var(--rf-surface);
+  z-index: 6;
 }
 
 .certificate-footer__list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
   overflow-y: auto;
-  border: 1px solid var(--rf-border-strong);
-  border-radius: var(--rf-radius-md);
-  background: var(--rf-surface);
+  padding: 6px;
+  border: 1px solid var(--rf-border-subtle);
+  border-radius: var(--rf-radius-lg);
+  background: var(--rf-bg);
+  box-shadow: var(--rf-shadow-elevated);
 }
 
 .certificate-footer__group-label {
-  padding: 6px var(--rf-space-sm);
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--rf-text-muted);
+  padding: 8px 12px 2px;
+  letter-spacing: 0.6px;
   text-transform: uppercase;
 }
 
+/* Sin rayas entre filas: los grupos y el hueco de 2 px ya las separan. */
 .certificate-footer__option {
   display: flex;
   align-items: flex-start;
-  gap: var(--rf-space-xs);
-  padding: 12px var(--rf-space-sm);
-  border-bottom: 1px solid var(--rf-border-subtle);
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: var(--rf-radius-md);
   cursor: pointer;
 }
 
-.certificate-footer__option:last-child {
-  border-bottom: none;
+.certificate-footer__option--chosen {
+  background: var(--rf-surface);
 }
 
 .certificate-footer__text {
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
   min-width: 0;
 }
 
+/* Parte de línea en vez de recortarse: un titular largo se lee entero. */
 .certificate-footer__holder {
-  overflow: hidden;
   font-size: 14px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  font-weight: 600;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
 .certificate-footer__line {
-  line-height: 1.35;
+  line-height: 1.3;
 }
 
+/* El mismo fondo que el elegido: el diseño no fija un tono aparte para el
+   cursor del teclado, y confundirse con el fondo del panel lo haría
+   invisible. */
 .certificate-footer__option--active {
-  background: var(--rf-bg);
+  background: var(--rf-surface);
 }
 
 .certificate-footer__option--unusable {
-  opacity: 0.6;
+  opacity: 0.45;
   cursor: not-allowed;
   pointer-events: none;
 }
 
 .certificate-footer__reason {
-  line-height: 1.35;
-  font-weight: 600;
+  line-height: 1.3;
+  font-weight: 700;
 }
 
 .certificate-footer__check {
@@ -148,5 +191,5 @@
   flex: none;
   width: 16px;
   margin-top: 3px;
-  color: var(--rf-primary);
+  color: var(--rf-text);
 }

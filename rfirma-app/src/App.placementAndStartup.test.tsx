@@ -218,9 +218,8 @@ describe("App, invocada con un documento", () => {
       { document: document("contrato.pdf"), alsoEntering: [], failure: null, discarded: 0 },
     );
 
-    const panel = await screen.findByRole("region", { name: "Panel de firma" });
-    expect(within(panel).getByText("contrato.pdf")).toBeInTheDocument();
-    expect(within(panel).getByText(/^3 páginas/)).toBeInTheDocument();
+    await screen.findByRole("region", { name: "Panel de firma" });
+    expect(screen.getByRole("tab", { name: "contrato.pdf", selected: true })).toBeInTheDocument();
   });
 
   /**
@@ -272,8 +271,8 @@ describe("App, invocada con un documento", () => {
       answer({ document: document("contrato.pdf"), alsoEntering: [], failure: null, discarded: 0 });
     });
 
-    const panel = await screen.findByRole("region", { name: "Panel de firma" });
-    expect(within(panel).getByText("contrato.pdf")).toBeInTheDocument();
+    await screen.findByRole("region", { name: "Panel de firma" });
+    expect(screen.getByRole("tab", { name: "contrato.pdf", selected: true })).toBeInTheDocument();
   });
 
   /** ID-158: no arranca ningún modo especial, abre la ventana y lo dice. */
