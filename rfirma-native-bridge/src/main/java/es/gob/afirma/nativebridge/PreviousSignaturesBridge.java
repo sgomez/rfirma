@@ -1,6 +1,7 @@
 package es.gob.afirma.nativebridge;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.security.cert.X509Certificate;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
@@ -22,6 +23,7 @@ import com.aowagie.text.pdf.PdfSignatureAppearance;
 
 import es.gob.afirma.core.RuntimeConfigNeededException;
 import es.gob.afirma.signers.pades.PdfUtil;
+import es.gob.afirma.signvalidation.DataAnalizerUtil;
 import es.gob.afirma.signvalidation.SignValidity;
 import es.gob.afirma.signvalidation.SignValidity.SIGN_DETAIL_TYPE;
 import es.gob.afirma.signvalidation.SignValidity.VALIDITY_ERROR;
@@ -51,6 +53,9 @@ final class PreviousSignaturesBridge {
             new PdfName("adbe.pkcs7.detached"),
             new PdfName("adbe.pkcs7.sha1"),
             new PdfName("ETSI.CAdES.detached"));
+
+    /** El mismo tope por defecto que trae el original en {@code pagesToCheckShadowAttack}. */
+    private static final String DEFAULT_PAGES_TO_CHECK_SHADOW_ATTACK = "10";
 
     private PreviousSignaturesBridge() { }
 
@@ -129,7 +134,25 @@ final class PreviousSignaturesBridge {
         }
         dated.sort(Comparator.comparing(Dated::signingTime,
                 Comparator.nullsLast(Comparator.naturalOrder())));
-        return new Report(dated.stream().map(Dated::signature).toList(), false);
+        return new Report(dated.stream().map(Dated::signature).toList(),
+                changedAfterLastSignature(pdf, fields));
+    }
+
+    /** El PDF Shadow Attack del original, sin la excepcion con la que pide confirmar. */
+    private static boolean changedAfterLastSignature(final byte[] pdf, final AcroFields fields) {
+        final List<String> names = fields.getSignatureNames();
+        if (names.isEmpty() || fields.getRevision(names.get(0)) >= fields.getTotalRevisions()) {
+            return false;
+        }
+        try (InputStream lastSignedRevision = fields.extractRevision(names.get(0))) {
+            final SignValidity suspect = DataAnalizerUtil.checkPdfShadowAttack(
+                    pdf, lastSignedRevision, DEFAULT_PAGES_TO_CHECK_SHADOW_ATTACK);
+            return suspect != null
+                    && SIGN_DETAIL_TYPE.PENDING_CONFIRM_BY_USER == suspect.getValidity();
+        }
+        catch (final IOException e) {
+            return false;
+        }
     }
 
     static String readable(final X500Principal name) {

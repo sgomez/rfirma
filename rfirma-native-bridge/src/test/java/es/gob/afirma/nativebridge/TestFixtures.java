@@ -18,6 +18,9 @@ import java.util.Properties;
 
 import com.aowagie.text.Document;
 import com.aowagie.text.Paragraph;
+import com.aowagie.text.pdf.PRIndirectReference;
+import com.aowagie.text.pdf.PdfName;
+import com.aowagie.text.pdf.PdfReader;
 import com.aowagie.text.pdf.PdfWriter;
 
 /**
@@ -108,6 +111,50 @@ final class TestFixtures {
 
         return PadesBridge.postSign(pdf, chain, pre.stamp(), pre.session(),
                 Base64.getEncoder().encodeToString(signature.sign()));
+    }
+
+    /**
+     * Repinta la pagina en una revision incremental posterior a la firma, que es
+     * el ataque que el original llama PDF Shadow Attack. La revision se escribe a
+     * mano porque el PDF firmado cierra con un flujo de referencias cruzadas y una
+     * tabla clasica encadenada a el no la lee ni iText.
+     */
+    static byte[] withThePageRepaintedAfterSigning(final byte[] pdf) throws Exception {
+        final PdfReader reader = new PdfReader(pdf);
+        final int page =
+                ((PRIndirectReference) reader.getPageN(1).get(PdfName.CONTENTS)).getNumber();
+        final int root = ((PRIndirectReference) reader.getTrailer().get(PdfName.ROOT)).getNumber();
+        final int table = reader.getXrefSize();
+
+        final String painting = "1 0 0 RG 1 0 0 rg 50 50 400 300 re f\n";
+        final String repainted = "\n" + page + " 0 obj\n<< /Length " + painting.length()
+                + " >>\nstream\n" + painting + "endstream\nendobj\n";
+        final int pageOffset = pdf.length + 1;
+        final int tableOffset = pdf.length + repainted.length();
+
+        final ByteArrayOutputStream rows = new ByteArrayOutputStream();
+        rows.write(new byte[] {0, 0, 0, 0, 0, (byte) 0xff, (byte) 0xff});
+        rows.write(inUse(pageOffset));
+        rows.write(inUse(tableOffset));
+
+        final String opening = table + " 0 obj\n<< /Type /XRef /Size " + (table + 1)
+                + " /Index [0 1 " + page + " 1 " + table + " 1] /W [1 4 2] /Root " + root
+                + " 0 R /Prev " + reader.getLastXref() + " /Length " + rows.size()
+                + " >>\nstream\n";
+        final String closing = "\nendstream\nendobj\nstartxref\n" + tableOffset + "\n%%EOF\n";
+
+        final ByteArrayOutputStream out = new ByteArrayOutputStream();
+        out.write(pdf);
+        out.write(repainted.getBytes(StandardCharsets.ISO_8859_1));
+        out.write(opening.getBytes(StandardCharsets.ISO_8859_1));
+        out.write(rows.toByteArray());
+        out.write(closing.getBytes(StandardCharsets.ISO_8859_1));
+        return out.toByteArray();
+    }
+
+    private static byte[] inUse(final int offset) {
+        return new byte[] {1, (byte) (offset >>> 24), (byte) (offset >>> 16),
+                (byte) (offset >>> 8), (byte) offset, 0, 0};
     }
 
     /** Los 64 bytes que firman las pruebas de CAdES, donde el documento da igual. */
