@@ -1,6 +1,7 @@
 package es.gob.afirma.nativebridge;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -190,6 +191,28 @@ class PreviousSignaturesBridgeTest {
                                         new SignValidity(SIGN_DETAIL_TYPE.KO, error)))));
         assertEquals(PreviousSignaturesBridge.Status.VALID,
                 PreviousSignaturesBridge.statusOf(new SignValidity(SIGN_DETAIL_TYPE.OK, null)));
+    }
+
+    @Test
+    void a_revision_added_after_the_last_signature_without_signing_it_changed_the_document()
+            throws Exception {
+        final byte[] pdf = TestFixtures.withThePageRepaintedAfterSigning(
+                signed(TestFixtures.samplePdf(), TestFixtures.certificateChain(),
+                        TestFixtures.privateKey()));
+
+        assertTrue(PreviousSignaturesBridge.read(pdf).changedAfterLastSignature());
+    }
+
+    @Test
+    void a_normal_cosign_where_every_revision_carries_its_own_signature_does_not_flag_it()
+            throws Exception {
+        final byte[] once = signed(TestFixtures.samplePdf(),
+                TestFixtures.certificateChain(), TestFixtures.privateKey());
+        Thread.sleep(1_100);
+        final byte[] twice = signed(once,
+                TestFixtures.otherCertificateChain(), TestFixtures.otherPrivateKey());
+
+        assertFalse(PreviousSignaturesBridge.read(twice).changedAfterLastSignature());
     }
 
     @Test
