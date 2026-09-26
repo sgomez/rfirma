@@ -8,6 +8,7 @@ use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
 use crate::identity::domain::error::{Situation, TokenError};
 use crate::identity::domain::protected_secret::ProtectedSecret;
 use crate::identity::domain::secret::StoreSecret;
+use crate::identity::ports::OriginWindow;
 use crate::signing::adapters::gtk_prompter::{MockSecretPrompter, PreconfiguredSecretPrompter};
 use crate::signing::application::session::{begin, DocumentToSign, SigningSession};
 use crate::signing::application::tests::{
@@ -88,6 +89,25 @@ fn sign_on_token_with_prompter_requires_an_open_cycle() {
     let error = sign_on_token_with_prompter(&NoToken, &session, &prompter, Language::Spanish)
         .expect_err("no hay ciclo abierto");
     assert_eq!(error.situation, "unknown");
+}
+
+#[test]
+fn the_batch_secret_is_asked_over_the_site_window() {
+    let prompter = MockSecretPrompter::with_secrets(&["1234"]);
+
+    secret_for_the_batch(
+        &ATokenThatAcceptsOnly1234,
+        &a_certificate("FIRMA", b"der"),
+        &prompter,
+        Language::Spanish,
+        &ProtectedSecret::from_str(""),
+    )
+    .expect("el PIN es el bueno");
+
+    assert_eq!(
+        prompter.recorded_requests()[0].origin_window,
+        Some(OriginWindow::Site)
+    );
 }
 
 #[test]
@@ -226,6 +246,24 @@ impl Signer for ATokenThatSignsOnceThePinIsRight {
     ) -> Result<(), TokenError> {
         Ok(())
     }
+}
+
+#[test]
+fn the_token_secret_is_asked_over_the_main_window() {
+    let certificate = a_certificate("FIRMA", b"der");
+    let signer = ATokenThatSignsOnceThePinIsRight {
+        attempts: RefCell::new(0),
+    };
+    let session = a_session_with_open_cycle(&signer, &certificate);
+    let mock = MockSecretPrompter::with_secrets(&["correct_pin"]);
+
+    sign_on_token_with_prompter(&signer, &session, &mock, Language::Spanish)
+        .expect("deberia firmar");
+
+    assert_eq!(
+        mock.recorded_requests()[0].origin_window,
+        Some(OriginWindow::Main)
+    );
 }
 
 #[test]

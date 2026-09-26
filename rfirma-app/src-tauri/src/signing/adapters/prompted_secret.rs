@@ -7,7 +7,7 @@ use crate::identity::domain::holder::prompted_holder_of;
 use crate::identity::domain::protected_secret::ProtectedSecret;
 use crate::identity::domain::secret::{SecretName, StoreSecret};
 use crate::identity::ports::{
-    prompted_until_accepted, PromptedError, SecretPromptRequest, SecretPrompter,
+    prompted_until_accepted, OriginWindow, PromptedError, SecretPromptRequest, SecretPrompter,
 };
 use crate::signing::application::cycle::CycleError;
 use crate::signing::application::session::{self, CycleFailure, SigningSession};
@@ -49,6 +49,7 @@ pub fn sign_on_token_with_prompter(
         holder,
         language,
         incorrect_secret: false,
+        origin_window: Some(OriginWindow::Main),
     };
     prompted_until_accepted(
         prompter,
@@ -98,6 +99,7 @@ pub fn secret_for_the_batch(
         holder: prompted_holder_of(certificate.der()),
         language,
         incorrect_secret: false,
+        origin_window: Some(OriginWindow::Site),
     };
     let (secret, ()) = prompted_until_accepted(
         prompter,

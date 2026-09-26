@@ -129,6 +129,25 @@ pub trait Keyring {
     }
 }
 
+/// La ventana que pidió el secreto, sobre la que el diálogo se hace modal (ID-433).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum OriginWindow {
+    /// La ventana principal de la aplicación.
+    Main,
+    /// La ventana del trámite de sede.
+    Site,
+}
+
+impl OriginWindow {
+    /// La etiqueta con la que Tauri identifica esa ventana.
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Main => "main",
+            Self::Site => "site",
+        }
+    }
+}
+
 /// Solicitud interactiva de credenciales (PIN o contraseña de almacén).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SecretPromptRequest {
@@ -140,6 +159,8 @@ pub struct SecretPromptRequest {
     pub language: Language,
     /// Indica si se trata de un reintento tras un secreto erróneo.
     pub incorrect_secret: bool,
+    /// La ventana que pidió el secreto, o su ausencia si no se conoce.
+    pub origin_window: Option<OriginWindow>,
 }
 
 /// Fallo o interrupción en la solicitud interactiva de credenciales.
