@@ -30,7 +30,9 @@ fn a_certificate_crosses_without_its_der_and_without_its_module() {
         given_name: "ADA".to_owned(),
         surname: "LOVELACE BYRON".to_owned(),
         id_number: "IDCES-00000000T".to_owned(),
+        organization_identifier: None,
         issuer: "FNMT-RCM".to_owned(),
+        certificate_serial_number: "1234567890".to_owned(),
         store: store_name(StoreClass::Firefox).to_owned(),
         status: StatusView::Valid {
             not_after: 1_900_000_000,

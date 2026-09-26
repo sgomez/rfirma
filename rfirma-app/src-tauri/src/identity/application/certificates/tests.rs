@@ -443,3 +443,23 @@ fn a_row_carries_the_signer_masked_as_the_visible_signature_stamps_it() {
         "EIDAS CERTIFICADO PRUEBAS - ***9999**"
     );
 }
+
+#[test]
+fn a_row_carries_the_organization_identifier_and_the_certificate_serial_number() {
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let signer = TestAuthority::root("EIDAS CERTIFICADO PRUEBAS - 99999999R");
+    let certificate = signer.as_certificate("FIRMA");
+    let expected_serial = certificate
+        .serial_number()
+        .expect("el certificado de pruebas deberia traer numero de serie");
+
+    let rows = rows_of(
+        vec![certificate],
+        &home.path().join("certificates"),
+        &ListedCertificates::new(),
+        &a_memory(home.path()),
+    );
+
+    assert_eq!(rows[0].organization_identifier, None);
+    assert_eq!(rows[0].certificate_serial_number, expected_serial);
+}

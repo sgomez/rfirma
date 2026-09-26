@@ -172,7 +172,9 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
       givenName: String
       surname: String
       idNumber: String
+      organizationIdentifier: Option<String>
       issuer: String
+      certificateSerialNumber: String
       store: String
       status: StatusView
       remembered: bool

@@ -555,6 +555,14 @@ msgstr "Show previous signatures"
 msgid "panel.previousSignatures.hide"
 msgstr "Hide previous signatures"
 
+#. Franja al pie del aviso de firmas previas: ya firmaste con el certificado elegido.
+msgid "panel.previousSignatures.sameCertificate"
+msgstr "You already signed this with this certificate"
+
+#. Franja al pie del aviso de firmas previas: ya firmaste, pero con otro certificado tuyo.
+msgid "panel.previousSignatures.otherCertificate"
+msgstr "You already signed this, with another certificate of yours"
+
 #. Nombre accesible del segmentado que elige en qué páginas va la firma visible.
 msgid "panel.placement.title"
 msgstr "On which pages"

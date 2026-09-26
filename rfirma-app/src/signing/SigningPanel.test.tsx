@@ -148,6 +148,65 @@ describe("SigningPanel", () => {
     expect(screen.getByText("Firmarás junto a 1 firma anterior")).toBeInTheDocument();
   });
 
+  it("shows the same-certificate strip, even folded, when the chosen certificate signed before", () => {
+    renderPanel({
+      document: { id: "doc-1", name: "contrato.pdf", pages: 27, sizeBytes: 2_400_000 },
+      previousSignatures: [
+        {
+          name: "Ada Lovelace Byron",
+          idNumber: certificate.idNumber,
+          organizationIdentifier: certificate.organizationIdentifier,
+          issuer: certificate.issuer,
+          certificateSerialNumber: certificate.certificateSerialNumber,
+          signingTime: "2024-01-01T10:00:00Z",
+        },
+      ],
+    });
+
+    expect(screen.getByRole("button", { name: "Ver firmas anteriores" })).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+    expect(screen.getByText("Ya lo firmaste tú con este certificado")).toBeInTheDocument();
+  });
+
+  it("shows the other-certificate strip for a renewed certificate: same NIF and entity, other serial", () => {
+    renderPanel({
+      document: { id: "doc-1", name: "contrato.pdf", pages: 27, sizeBytes: 2_400_000 },
+      previousSignatures: [
+        {
+          name: "Ada Lovelace Byron",
+          idNumber: certificate.idNumber,
+          organizationIdentifier: certificate.organizationIdentifier,
+          issuer: certificate.issuer,
+          certificateSerialNumber: "9999999999",
+          signingTime: "2024-01-01T10:00:00Z",
+        },
+      ],
+    });
+
+    expect(screen.getByText("Ya lo firmaste tú, con otro certificado tuyo")).toBeInTheDocument();
+  });
+
+  it("shows no strip without a certificate chosen, even with a matching previous signature", () => {
+    renderPanel({
+      certificate: { kind: "unchosen", certificates: [certificate] },
+      document: { id: "doc-1", name: "contrato.pdf", pages: 27, sizeBytes: 2_400_000 },
+      previousSignatures: [
+        {
+          name: "Ada Lovelace Byron",
+          idNumber: certificate.idNumber,
+          organizationIdentifier: certificate.organizationIdentifier,
+          issuer: certificate.issuer,
+          certificateSerialNumber: certificate.certificateSerialNumber,
+          signingTime: "2024-01-01T10:00:00Z",
+        },
+      ],
+    });
+
+    expect(screen.queryByText(/Ya lo firmaste tú/)).not.toBeInTheDocument();
+  });
+
   it("pluralises the co-signature notice with more than one previous signature", () => {
     renderPanel({
       document: { id: "doc-1", name: "contrato.pdf", pages: 27, sizeBytes: 2_400_000 },

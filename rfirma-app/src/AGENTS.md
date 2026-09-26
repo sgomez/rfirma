@@ -78,8 +78,9 @@ rojo.
 | `signing/SigningPanel.tsx` | El panel, con la zona que se desliza y el pie fijo. |
 | `signing/SigningPanel.testSupport.tsx` | Los dobles y ayudas que comparten las pruebas de `SigningPanel`. |
 | `signing/CertificateNotice.tsx` | El aviso de «sin certificados», arriba de la zona que se desliza. |
-| `signing/PreviousSignaturesNotice.tsx` | El aviso de firmas previas: línea plegable con quién firmó y cuándo. |
+| `signing/PreviousSignaturesNotice.tsx` | El aviso de firmas previas: línea plegable con quién firmó y cuándo, y la franja de «ya lo firmaste tú» al pie. |
 | `signing/previousSignatures.ts` | El vocabulario de una firma previa y su informe. Sin React. |
+| `signing/sameSignerNotice.ts` | Si el certificado elegido coincide con el titular de alguna firma previa, y con cuál certificado. Sin React. |
 | `signing/PlacementFieldset.tsx` | El segmentado de páginas de la firma visible —«Una página», «Varias», «Todas»— y la línea o el campo de debajo. |
 | `signing/usePlacementField.ts` | Lo tecleado en el campo de «Varias» y qué botón toca bajo el segmentado. |
 | `signing/placementField.ts` | Las situaciones del campo de páginas, redactadas. Sin React. |

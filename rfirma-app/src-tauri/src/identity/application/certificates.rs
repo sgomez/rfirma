@@ -8,7 +8,7 @@ use crate::identity::domain::certificate::{CertificateRef, ListedCertificate, To
 use crate::identity::domain::chain::issuers_of;
 use crate::identity::domain::error::{Situation, TokenError};
 use crate::identity::domain::holder::{
-    common_name_of, given_name_and_surname, holder_of, is_pseudonym,
+    common_name_of, given_name_and_surname, holder_of, is_pseudonym, organization_identifier_of,
 };
 use crate::identity::domain::store::{Store, StoreClass};
 use crate::identity::ports::{CertificateMemory, InstalledFolder, Token};
@@ -117,7 +117,9 @@ pub fn rows_of(
                 given_name,
                 surname,
                 id_number,
+                organization_identifier: organization_identifier_of(subject.as_deref()),
                 issuer: common_name_of(certificate.issuer().as_deref()),
+                certificate_serial_number: certificate.serial_number().unwrap_or_default(),
                 store: certificate.reference().store().class_under(installed_dir),
                 status: certificate.status(),
                 remembered: remembered

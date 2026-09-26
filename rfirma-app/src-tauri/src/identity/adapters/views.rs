@@ -94,7 +94,11 @@ crossing! {
         /// Primer apellido, vacío si el certificado no lo trae.
         pub surname: String,
         pub id_number: String,
+        /// La entidad representada (`organizationIdentifier`), o nada si el certificado no la lleva.
+        pub organization_identifier: Option<String>,
         pub issuer: String,
+        /// Número de serie del certificado, en base diez.
+        pub certificate_serial_number: String,
         /// Clase de almacén del certificado.
         pub store: String,
         pub status: StatusView,
@@ -113,7 +117,9 @@ impl From<ListedCertificate> for CertificateView {
             given_name: certificate.given_name,
             surname: certificate.surname,
             id_number: certificate.id_number,
+            organization_identifier: certificate.organization_identifier,
             issuer: certificate.issuer,
+            certificate_serial_number: certificate.certificate_serial_number,
             store: store_name(certificate.store).to_owned(),
             status: certificate.status.into(),
             remembered: certificate.remembered,
