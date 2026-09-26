@@ -111,15 +111,16 @@ export function usePreferencesState(preferences: PreferencesStore, rubrics: Rubr
  * homónimo ya resueltos— y `writable` sale de comprobar la carpeta de verdad
  * (ID-63, ID-67): la ventana lo enseña, no lo deduce.
  *
- * Se pregunta **por documento**, y otra vez cuando cambia la carpeta elegida:
- * el nombre depende del documento —y de qué homónimos haya ya en la carpeta—
- * y `writable` de si la carpeta sigue estando. Sin documento delante no hay
- * destino que enseñar.
+ * Se pregunta **por documento**, y otra vez cuando cambia la carpeta elegida
+ * o el destino elegido para esta firma: el nombre depende del documento —y de
+ * qué homónimos haya ya en la carpeta— y `writable` de si la carpeta sigue
+ * estando. Sin documento delante no hay destino que enseñar.
  */
 export function useDestinationPreview(
   destinations: DestinationSource,
   activeId: string | null,
   chosenFolder: string | null,
+  singleDestinationId: string | null = null,
 ) {
   const [destination, setDestination] = useState<Destination | null>(null);
 
@@ -132,7 +133,7 @@ export function useDestinationPreview(
     }
     let current = true;
     destinations
-      .previewFor(activeId)
+      .previewFor(activeId, singleDestinationId)
       .then((found) => {
         if (current) setDestination(found);
       })
@@ -144,7 +145,7 @@ export function useDestinationPreview(
     return () => {
       current = false;
     };
-  }, [destinations, activeId, chosenFolder]);
+  }, [destinations, activeId, chosenFolder, singleDestinationId]);
 
   return { destination };
 }

@@ -163,10 +163,23 @@ export function App({
   // Mientras los ajustes se leen todavía no se sabe, y lo guardado por omisión es recordar.
   const documents = useDocuments(recents, picker, settings?.rememberActivity ?? true);
   const activeId = documents.active?.id ?? null;
+  // El destino de una sola firma, elegido con «Cambiar»: vale solo para el
+  // documento activo, así que cambiar de pestaña lo olvida (ADR-0011).
+  const [singleDestinationId, setSingleDestinationId] = useState<string | null>(null);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `activeId` dispara el efecto, no lo alimenta.
+  useEffect(() => {
+    setSingleDestinationId(null);
+  }, [activeId]);
+  const chooseSingleDestination = async () => {
+    if (activeId === null) return;
+    const chosen = await destinations.chooseSingle(activeId);
+    if (chosen !== null) setSingleDestinationId(chosen.id);
+  };
   const { destination } = useDestinationPreview(
     destinations,
     activeId,
     settings?.destination ?? null,
+    singleDestinationId,
   );
   const { t, i18n } = useTranslation();
   // El instante del recuadro **es estado, no un reloj**: se fija al abrir el
@@ -293,6 +306,7 @@ export function App({
     stamps,
     sizeBytes,
     gesturing,
+    singleDestinationId,
     startSigning: signing.start,
   });
 
@@ -474,7 +488,7 @@ export function App({
                   writable: true,
                 }
               }
-              onChangeDestination={() => setView("preferences")}
+              onChangeDestination={() => void chooseSingleDestination()}
               onSign={() => void sign()}
               signing={signing.state.kind === "running"}
               onOpenHelp={() => void externalDestinations.open("discussions")}

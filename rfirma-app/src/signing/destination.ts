@@ -30,16 +30,36 @@ export interface Destination {
 }
 
 /**
+ * El destino de **una sola firma**, elegido con el diálogo de guardar: fija
+ * carpeta y nombre a la vez y no toca la preferencia (ADR-0011).
+ */
+export interface SingleDestination extends Destination {
+  /** El identificador opaco tras el que queda, para la vista previa y la postfirma. */
+  id: string;
+}
+
+/**
  * Quién sabe dónde caerá el documento.
  *
  * Puerto, y no una llamada a Tauri, por la regla de siempre: la ventana no
  * conoce a Tauri y quien elige la implementación es `main.tsx` (ADR-0017).
- * Debajo es la orden `preview_destination`, que mira el disco —la carpeta y sus
- * homónimos— sin escribir nada y **sin crear la carpeta** (ID-38).
+ * Debajo son las órdenes `preview_destination` y `choose_single_destination`,
+ * que miran el disco —la carpeta y sus homónimos— sin escribir nada y **sin
+ * crear la carpeta** (ID-38).
  */
 export interface DestinationSource {
-  /** Dónde caerá el documento abierto con ese identificador. */
-  previewFor(documentId: string): Promise<Destination>;
+  /**
+   * Dónde caerá el documento abierto con ese identificador.
+   *
+   * Con `singleDestinationId` mira el destino elegido para esa firma en vez
+   * de la preferencia de carpeta (ID-63).
+   */
+  previewFor(documentId: string, singleDestinationId?: string | null): Promise<Destination>;
+  /**
+   * Abre el diálogo de guardar y fija carpeta y nombre **solo para esta
+   * firma**. `null` si se cerró sin elegir.
+   */
+  chooseSingle(documentId: string): Promise<SingleDestination | null>;
 }
 
 /**
@@ -74,8 +94,11 @@ export function unavailableOpener(): SignedDocumentOpener {
 }
 
 /** Un destino fijo, para pintar la ventana en una prueba sin backend. */
-export function inMemoryDestination(destination: Destination): DestinationSource {
-  return { previewFor: async () => destination };
+export function inMemoryDestination(
+  destination: Destination,
+  chooseSingle: (documentId: string) => Promise<SingleDestination | null> = async () => null,
+): DestinationSource {
+  return { previewFor: async () => destination, chooseSingle };
 }
 
 /**

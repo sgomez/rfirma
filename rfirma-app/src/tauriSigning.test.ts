@@ -75,6 +75,22 @@ describe("los puertos de firma sobre Tauri", () => {
     expect(invoke).toHaveBeenCalledWith("begin_signing", { order: anOrder });
   });
 
+  it("lands the postsignature on the preference's folder without a single destination", async () => {
+    invoke.mockResolvedValue(undefined);
+
+    await tauriSigningBackend().postsign();
+
+    expect(invoke).toHaveBeenCalledWith("finish_signing", { destination: null });
+  });
+
+  it("lands the postsignature on the single destination chosen for this signature", async () => {
+    invoke.mockResolvedValue(undefined);
+
+    await tauriSigningBackend().postsign("single-42");
+
+    expect(invoke).toHaveBeenCalledWith("finish_signing", { destination: "single-42" });
+  });
+
   /**
    * ID-190: la ventana decide entre abrir el diálogo del secreto y firmar
    * directo con lo que devuelve la prefirma, así que ese valor tiene que

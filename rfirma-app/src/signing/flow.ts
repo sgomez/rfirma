@@ -127,8 +127,13 @@ export interface SigningBackend {
    * `notNeeded` y nadie ha tecleado nada (ID-190).
    */
   sign(pin: string): Promise<StageResult<void>>;
-  /** Etapa 3: ensambla el PDF firmado y lo deja en el destino. */
-  postsign(): Promise<StageResult<SignedDocument>>;
+  /**
+   * Etapa 3: ensambla el PDF firmado y lo deja en el destino.
+   *
+   * Con `singleDestinationId` cae en el destino elegido para esta firma
+   * (ADR-0011); `null` o nada, en la preferencia de carpeta de siempre.
+   */
+  postsign(singleDestinationId?: string | null): Promise<StageResult<SignedDocument>>;
   /**
    * La esquina inferior izquierda de `placement.rect`, convertida a puntos
    * PAdES (ID-105).
