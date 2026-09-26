@@ -245,6 +245,8 @@ pub struct ListedCertificate {
     pub id: String,
     pub label: String,
     pub holder_name: String,
+    /// El `CN` tal y como lo estampa la firma visible.
+    pub stamped_signer: String,
     /// Nombre de pila, vacío si el certificado no lo trae.
     pub given_name: String,
     /// Primer apellido, vacío si el certificado no lo trae.

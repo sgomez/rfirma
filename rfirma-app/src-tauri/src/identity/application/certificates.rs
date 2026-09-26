@@ -7,10 +7,13 @@ use crate::documents::domain::handles::Handles;
 use crate::identity::domain::certificate::{CertificateRef, ListedCertificate, TokenCertificate};
 use crate::identity::domain::chain::issuers_of;
 use crate::identity::domain::error::{Situation, TokenError};
-use crate::identity::domain::holder::{common_name_of, given_name_and_surname, holder_of};
+use crate::identity::domain::holder::{
+    common_name_of, given_name_and_surname, holder_of, is_pseudonym,
+};
 use crate::identity::domain::store::{Store, StoreClass};
 use crate::identity::ports::{CertificateMemory, InstalledFolder, Token};
 use crate::memory_error::{MemoryError, Situation as StoreSituation};
+use crate::signing::domain::layer2_text::masked_signer;
 
 /// Los certificados del último listado, cada uno tras su asa.
 pub type ListedCertificates = Handles<CertificateRef>;
@@ -109,6 +112,7 @@ pub fn rows_of(
             ListedCertificate {
                 id,
                 label: certificate.reference().label().to_owned(),
+                stamped_signer: masked_signer(&holder_name, is_pseudonym(subject.as_deref())),
                 holder_name,
                 given_name,
                 surname,

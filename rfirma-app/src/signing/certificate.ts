@@ -67,6 +67,8 @@ export interface Certificate {
    * FNMT viene en orden «APELLIDO1 APELLIDO2 NOMBRE», no «nombre y apellidos».
    */
   holderName: string;
+  /** El `CN` tal y como lo estampa la firma visible: con el identificador enmascarado. */
+  stampedSigner: string;
   /** Nombre de pila del RDN `GN`, o vacío si el certificado no lo trae. */
   givenName: string;
   /** Primer apellido del RDN `SN`, o vacío si el certificado no lo trae. */

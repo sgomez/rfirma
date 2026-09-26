@@ -87,6 +87,8 @@ crossing! {
         pub id: String,
         pub label: String,
         pub holder_name: String,
+        /// El `CN` tal y como lo estampa la firma visible.
+        pub stamped_signer: String,
         /// Nombre de pila, vacío si el certificado no lo trae.
         pub given_name: String,
         /// Primer apellido, vacío si el certificado no lo trae.
@@ -107,6 +109,7 @@ impl From<ListedCertificate> for CertificateView {
             id: certificate.id,
             label: certificate.label,
             holder_name: certificate.holder_name,
+            stamped_signer: certificate.stamped_signer,
             given_name: certificate.given_name,
             surname: certificate.surname,
             id_number: certificate.id_number,

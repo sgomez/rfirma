@@ -51,19 +51,16 @@ export function ModelFieldset({
     onChangeSignature({ ...signature, content: { model: "custom", phrase } });
   const toggleRubric = () => onChangeSignature({ ...signature, withRubric: !signature.withRubric });
 
-  // Aproximación en CSS, no un render del puente: el firmante y el emisor son
-  // los del certificado elegido, tal cual se ven ya en la lista de
-  // certificados, sin la máscara del DNI que compone `signing::layer2_text`.
   const signedAtSample = new Intl.DateTimeFormat(i18n.language, { dateStyle: "short" }).format(
     new Date(),
   );
   const samples = useMemo(
     () => ({
-      signer: certificate.holderName,
+      signer: certificate.stampedSigner,
       issuer: certificate.issuer,
       signedAt: signedAtSample,
     }),
-    [certificate.holderName, certificate.issuer, signedAtSample],
+    [certificate.stampedSigner, certificate.issuer, signedAtSample],
   );
   const rubricBeside =
     signature.withRubric &&
@@ -91,7 +88,7 @@ export function ModelFieldset({
             <span className="panel__model-thumbnail" aria-hidden="true">
               {rubricBeside}
               <span className="panel__model-lines">
-                <span>{certificate.holderName}</span>
+                <span>{certificate.stampedSigner}</span>
                 <span>{signedAtSample}</span>
                 <span>{certificate.issuer}</span>
               </span>

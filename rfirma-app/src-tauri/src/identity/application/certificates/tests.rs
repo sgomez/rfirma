@@ -3,7 +3,7 @@ use std::path::Path;
 use super::ListedCertificates;
 use super::{
     certificate_behind, certificates_by_class, certificates_with_their_chains, listed_rows,
-    remember_the_certificate, usable_certificate,
+    remember_the_certificate, rows_of, usable_certificate,
 };
 use crate::identity::application::tests::{
     a_certificate, a_certificate_with_id, listed_from, NoToken, TestAuthority,
@@ -422,5 +422,24 @@ fn two_profiles_of_the_same_class_are_one_line() {
     assert_eq!(
         certificates_by_class(&token, &stores, Path::new(INSTALLED)),
         vec![(StoreClass::Firefox, 2)]
+    );
+}
+
+#[test]
+fn a_row_carries_the_signer_masked_as_the_visible_signature_stamps_it() {
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let signer = TestAuthority::root("EIDAS CERTIFICADO PRUEBAS - 99999999R");
+
+    let rows = rows_of(
+        vec![signer.as_certificate("FIRMA")],
+        &home.path().join("certificates"),
+        &ListedCertificates::new(),
+        &a_memory(home.path()),
+    );
+
+    assert_eq!(rows[0].holder_name, "EIDAS CERTIFICADO PRUEBAS - 99999999R");
+    assert_eq!(
+        rows[0].stamped_signer,
+        "EIDAS CERTIFICADO PRUEBAS - ***9999**"
     );
 }

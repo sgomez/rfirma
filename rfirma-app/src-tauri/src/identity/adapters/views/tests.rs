@@ -26,6 +26,7 @@ fn a_certificate_crosses_without_its_der_and_without_its_module() {
         id: "0123456789abcdef0123456789abcdef".to_owned(),
         label: "ETIQUETA".to_owned(),
         holder_name: "LOVELACE BYRON ADA".to_owned(),
+        stamped_signer: "LOVELACE BYRON ADA".to_owned(),
         given_name: "ADA".to_owned(),
         surname: "LOVELACE BYRON".to_owned(),
         id_number: "IDCES-00000000T".to_owned(),
