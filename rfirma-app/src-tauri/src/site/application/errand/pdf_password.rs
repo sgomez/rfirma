@@ -44,7 +44,6 @@ pub(super) fn begun_with_the_pdf_password<E: FilterEngine, P: PolicyEngine, N: N
             &pending.document,
             certificate,
             &desk.neighbours,
-            &desk.neighbours,
         );
         match begun {
             Err(SiteRefusal::Signing(refusal)) if refusal.awaits_the_pdf_password() => {}

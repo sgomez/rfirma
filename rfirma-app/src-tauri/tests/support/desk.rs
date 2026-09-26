@@ -102,12 +102,12 @@ impl SecretPrompter for MistypesTheTokenSecretOnce {
 }
 
 /// La mesa del trámite montada sobre las raíces de un rFirma en marcha.
-pub fn the_desk_of(roots: &Roots) -> ErrandDesk<'_, Isolate, Isolate, Neighbours<'_>> {
+pub fn the_desk_of(roots: &Roots) -> ErrandDesk<'_, Isolate, Isolate, Neighbourhood<'_>> {
     ErrandDesk {
         engine: &roots.signing.isolate,
         policies: &roots.signing.isolate,
         validation: &roots.signing.isolate,
-        neighbours: Neighbours {
+        neighbours: Neighbourhood {
             identity: &roots.identity,
             documents: &roots.documents,
             signing: &roots.signing,
@@ -345,7 +345,7 @@ pub fn the_save_errand_of(roots: &Arc<Roots>) -> SiteOperations {
 /// Abre el diálogo de guardado del portal y escribe lo que el trámite guarda, o declina si se cancela.
 fn saved_through_the_portal(
     roots: &Roots,
-    desk: &ErrandDesk<'_, Isolate, Isolate, Neighbours<'_>>,
+    desk: &ErrandDesk<'_, Isolate, Isolate, Neighbourhood<'_>>,
     consent: &errand::SavingConsent,
     live: &errand::LiveErrand,
 ) {

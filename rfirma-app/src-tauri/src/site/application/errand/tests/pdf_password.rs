@@ -17,9 +17,7 @@ use crate::site::application::errand::*;
 use crate::site::application::tests::{InMemoryBatchServices, InMemoryTriphaseServer, NotAsked};
 use crate::site::domain::protocol::SafCode;
 use crate::site::domain::signing::{SigningRefusal, SiteSignature};
-use crate::site::ports::{
-    Certificates, ScratchDocuments, SiteSigning, SiteSigningRequest, TokenSigning,
-};
+use crate::site::ports::{Neighbours, SiteSigningRequest};
 use base64::Engine as _;
 
 const A_PASSWORD_PROTECTED_PDF: &[u8] =
@@ -36,7 +34,7 @@ struct ALockedPdf<'a> {
     begun_with: RefCell<Vec<BTreeMap<String, String>>>,
 }
 
-impl Certificates for ALockedPdf<'_> {
+impl Neighbours for ALockedPdf<'_> {
     fn listed(&self) -> Result<Vec<TokenCertificate>, TokenError> {
         Ok(self.listed.clone())
     }
@@ -60,9 +58,11 @@ impl Certificates for ALockedPdf<'_> {
     fn automatic_selection_honoured(&self) -> bool {
         self.neighbours.automatic_selection_honoured()
     }
-}
 
-impl TokenSigning for ALockedPdf<'_> {
+    fn open_unrecorded(&self, path: std::path::PathBuf) -> String {
+        self.neighbours.open_unrecorded(path)
+    }
+
     fn secret_of(&self, certificate: &TokenCertificate) -> Result<StoreSecret, SigningRefusal> {
         self.neighbours.secret_of(certificate)
     }
@@ -76,15 +76,7 @@ impl TokenSigning for ALockedPdf<'_> {
     ) -> Result<Vec<u8>, SigningRefusal> {
         self.neighbours.sign(certificate, secret, algorithm, data)
     }
-}
 
-impl ScratchDocuments for ALockedPdf<'_> {
-    fn open_unrecorded(&self, path: std::path::PathBuf) -> String {
-        self.neighbours.open_unrecorded(path)
-    }
-}
-
-impl SiteSigning for ALockedPdf<'_> {
     fn begin(&self, request: SiteSigningRequest<'_>) -> Result<StoreSecret, SigningRefusal> {
         self.begun_with
             .borrow_mut()

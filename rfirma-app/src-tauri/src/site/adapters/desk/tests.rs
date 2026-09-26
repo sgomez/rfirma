@@ -51,10 +51,11 @@ fn one_secret_serves_every_signature_of_the_batch() {
     let signer = RecordingSigner::default();
     let certificate = a_usable_certificate("FNMT-ACTIVO");
 
-    let secret = secret_for_the_batch(&signer, &certificate).expect("el secreto deberia salir");
+    let secret =
+        secret_for_the_remote_batch(&signer, &certificate).expect("el secreto deberia salir");
     let pin = ProtectedSecret::from_str("1234");
     for pre in [b"uno".as_slice(), b"dos".as_slice()] {
-        signed_by_the_token(&signer, &certificate, &pin, "SHA256", pre).expect("firma");
+        signed_for_the_remote_batch(&signer, &certificate, &pin, "SHA256", pre).expect("firma");
     }
 
     assert!(matches!(secret, StoreSecret::TypedOnScreen));
@@ -72,7 +73,7 @@ fn an_algorithm_rfirma_does_not_compose_comes_back_with_the_code_of_the_original
     let signer = RecordingSigner::default();
     let certificate = a_usable_certificate("FNMT-ACTIVO");
 
-    let refusal = signed_by_the_token(
+    let refusal = signed_for_the_remote_batch(
         &signer,
         &certificate,
         &ProtectedSecret::from_str("1234"),
@@ -99,7 +100,7 @@ fn the_algorithm_is_read_as_the_site_writes_it() {
         "SHA256withRSA",
         "SHA512withRSA",
     ] {
-        signed_by_the_token(&signer, &certificate, &pin, algorithm, b"uno")
+        signed_for_the_remote_batch(&signer, &certificate, &pin, algorithm, b"uno")
             .expect("el algoritmo de la sede se lee sin distinguir caja ni espacios");
     }
 }
@@ -175,8 +176,8 @@ fn a_token_that_cannot_sign_comes_back_with_its_code_and_its_situation() {
 
     let certificate = a_certificate("FNMT-ACTIVO", b"der");
 
-    let refusal =
-        secret_for_the_batch(&AbsentToken, &certificate).expect_err("sin token no hay secreto");
+    let refusal = secret_for_the_remote_batch(&AbsentToken, &certificate)
+        .expect_err("sin token no hay secreto");
 
     assert_eq!(refusal.code, SafCode::CannotAccessKeystore);
     assert_eq!(refusal.situation, "tokenAbsent");

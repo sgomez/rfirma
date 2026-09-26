@@ -6,7 +6,7 @@ use crate::identity::domain::certificate::TokenCertificate;
 use crate::identity::domain::error::TokenError;
 use crate::signing::domain::bridge::BridgeError;
 use crate::site::domain::protocol::SiteFilter;
-use crate::site::ports::{Certificates, FilterEngine};
+use crate::site::ports::{FilterEngine, Neighbours};
 
 /// Por qué el filtro de la sede no ha dejado un certificado.
 #[derive(Debug)]
@@ -38,7 +38,7 @@ impl From<BridgeError> for FilteringError {
 /// Caso de uso: obtiene los certificados de los almacenes aceptados por la sede.
 pub fn listing_the_site_accepts<E: FilterEngine>(
     engine: &E,
-    certificates: &dyn Certificates,
+    certificates: &dyn Neighbours,
     filter: &SiteFilter,
 ) -> Result<Vec<TokenCertificate>, FilteringError> {
     let ours = certificates.listed()?;
@@ -50,7 +50,7 @@ pub fn keep_what_the_site_accepts<E: FilterEngine>(
     engine: &E,
     filter: &SiteFilter,
     certificates: Vec<TokenCertificate>,
-    directory: &dyn Certificates,
+    directory: &dyn Neighbours,
 ) -> Result<Vec<TokenCertificate>, FilteringError> {
     let certificates = within_the_module(filter, certificates, directory)?;
     let accepted = accepted_indexes(engine, filter, &certificates)?;
@@ -69,7 +69,7 @@ pub fn usable_certificate_for_the_site<'a, E: FilterEngine>(
     filter: &SiteFilter,
     certificates: &'a [TokenCertificate],
     handle: &str,
-    directory: &dyn Certificates,
+    directory: &dyn Neighbours,
 ) -> Result<&'a TokenCertificate, FilteringError> {
     let chosen = directory.usable(certificates, handle)?;
 
@@ -87,7 +87,7 @@ pub fn usable_certificate_for_the_site<'a, E: FilterEngine>(
 fn within_the_module(
     filter: &SiteFilter,
     certificates: Vec<TokenCertificate>,
-    directory: &dyn Certificates,
+    directory: &dyn Neighbours,
 ) -> Result<Vec<TokenCertificate>, FilteringError> {
     let Some(named) = filter.module() else {
         return Ok(certificates);

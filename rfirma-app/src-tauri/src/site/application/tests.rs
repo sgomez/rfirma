@@ -7,6 +7,7 @@ use std::sync::Mutex;
 use crate::identity::application::certificates::ListedCertificates;
 use crate::identity::domain::certificate::{ListedCertificate, TokenCertificate};
 use crate::identity::domain::error::TokenError;
+use crate::identity::domain::protected_secret::ProtectedSecret;
 use crate::identity::domain::secret::StoreSecret;
 use crate::identity::ports::CertificateMemory;
 use crate::signing::domain::bridge::{BridgeError, Format, SignatureVerdict};
@@ -15,11 +16,11 @@ use crate::site::domain::batch_error::{BatchError, Situation as BatchSituation};
 use crate::site::domain::local_ca::LocalCa;
 use crate::site::domain::protocol::{DataSource, Refusal, SiteOperation};
 use crate::site::domain::relay_error::{RelayError, Situation as RelaySituation};
-use crate::site::domain::signing::SigningRefusal;
+use crate::site::domain::signing::{SigningRefusal, SiteSignature};
 use crate::site::domain::tls_error::{Situation as TlsSituation, TlsError};
 use crate::site::domain::triphase_server::TriphaseServerError;
 use crate::site::ports::{
-    BatchServices, Certificates, LocalCaSlots, Servlets, TokenSigning, TriphaseServer,
+    BatchServices, LocalCaSlots, Neighbours, Servlets, SiteSigningRequest, TriphaseServer,
     ValidationEngine,
 };
 
@@ -301,7 +302,52 @@ impl InMemoryTokenSigning {
     }
 }
 
-impl TokenSigning for InMemoryTokenSigning {
+// Solo se le pide `secret_of` y `sign`: el resto del puerto único no lo usa el lote remoto.
+impl Neighbours for InMemoryTokenSigning {
+    fn listed(&self) -> Result<Vec<TokenCertificate>, TokenError> {
+        unreachable!("las pruebas del lote remoto no listan certificados por este puerto")
+    }
+
+    fn rows_of(&self, _found: Vec<TokenCertificate>) -> Vec<ListedCertificate> {
+        unreachable!("las pruebas del lote remoto no piden filas de certificados")
+    }
+
+    fn discovered_module(&self, _library: &str) -> Option<PathBuf> {
+        unreachable!("las pruebas del lote remoto no acotan por módulo PKCS#11")
+    }
+
+    fn usable<'a>(
+        &self,
+        _found: &'a [TokenCertificate],
+        _handle: &str,
+    ) -> Result<&'a TokenCertificate, TokenError> {
+        unreachable!("las pruebas del lote remoto no resuelven asas de certificado")
+    }
+
+    fn automatic_selection_honoured(&self) -> bool {
+        unreachable!("las pruebas del lote remoto no preguntan por la selección automática")
+    }
+
+    fn open_unrecorded(&self, _path: PathBuf) -> String {
+        unreachable!("las pruebas del lote remoto no apuntan documentos de paso")
+    }
+
+    fn begin(&self, _request: SiteSigningRequest<'_>) -> Result<StoreSecret, SigningRefusal> {
+        unreachable!("las pruebas del lote remoto no abren el ciclo de la firma de sede")
+    }
+
+    fn sign_on_token(&self, _secret: &ProtectedSecret) -> Result<(), SigningRefusal> {
+        unreachable!("las pruebas del lote remoto no firman por el ciclo de la firma de sede")
+    }
+
+    fn finish(&self) -> Result<SiteSignature, SigningRefusal> {
+        unreachable!("las pruebas del lote remoto no cierran el ciclo de la firma de sede")
+    }
+
+    fn the_pdf_password(&self, _after_a_wrong_one: bool) -> Option<String> {
+        unreachable!("las pruebas del lote remoto no piden la contraseña del PDF")
+    }
+
     fn secret_of(&self, _certificate: &TokenCertificate) -> Result<StoreSecret, SigningRefusal> {
         *crate::lock(&self.secrets_asked) += 1;
         match &self.refusing {
@@ -313,7 +359,7 @@ impl TokenSigning for InMemoryTokenSigning {
     fn sign(
         &self,
         _certificate: &TokenCertificate,
-        _secret: &crate::identity::domain::protected_secret::ProtectedSecret,
+        _secret: &ProtectedSecret,
         algorithm: &str,
         data: &[u8],
     ) -> Result<Vec<u8>, SigningRefusal> {
@@ -333,7 +379,9 @@ pub(crate) struct Directory<'a> {
     pub(crate) memory: &'a dyn CertificateMemory,
 }
 
-impl Certificates for Directory<'_> {
+// Solo se le piden los cinco verbos de certificados: el resto del puerto único no lo usan las
+// pruebas de filtrado ni de sesión.
+impl Neighbours for Directory<'_> {
     fn listed(&self) -> Result<Vec<TokenCertificate>, TokenError> {
         Ok(self.certificates.clone())
     }
@@ -365,6 +413,40 @@ impl Certificates for Directory<'_> {
 
     fn automatic_selection_honoured(&self) -> bool {
         false
+    }
+
+    fn open_unrecorded(&self, _path: PathBuf) -> String {
+        unreachable!("las pruebas de filtrado y de sesión no apuntan documentos de paso")
+    }
+
+    fn begin(&self, _request: SiteSigningRequest<'_>) -> Result<StoreSecret, SigningRefusal> {
+        unreachable!("las pruebas de filtrado y de sesión no abren el ciclo de la firma de sede")
+    }
+
+    fn sign_on_token(&self, _secret: &ProtectedSecret) -> Result<(), SigningRefusal> {
+        unreachable!("las pruebas de filtrado y de sesión no firman por el ciclo de sede")
+    }
+
+    fn finish(&self) -> Result<SiteSignature, SigningRefusal> {
+        unreachable!("las pruebas de filtrado y de sesión no cierran el ciclo de sede")
+    }
+
+    fn the_pdf_password(&self, _after_a_wrong_one: bool) -> Option<String> {
+        unreachable!("las pruebas de filtrado y de sesión no piden la contraseña del PDF")
+    }
+
+    fn secret_of(&self, _certificate: &TokenCertificate) -> Result<StoreSecret, SigningRefusal> {
+        unreachable!("las pruebas de filtrado y de sesión no piden el secreto del lote remoto")
+    }
+
+    fn sign(
+        &self,
+        _certificate: &TokenCertificate,
+        _secret: &ProtectedSecret,
+        _algorithm: &str,
+        _data: &[u8],
+    ) -> Result<Vec<u8>, SigningRefusal> {
+        unreachable!("las pruebas de filtrado y de sesión no firman por el lote remoto")
     }
 }
 

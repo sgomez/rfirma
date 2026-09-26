@@ -21,7 +21,7 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `adapters/codec_v1.rs`, `adapters/codec_v3.rs` | Los códecs del transporte `service` y de la versión 3, que delegan en el de la 4 en vez de repetirlo; el de la 3, además, rechaza la operación que exige un `ver` posterior. Pruebas en `adapters/codec_v1/tests.rs` y `adapters/codec_v3/tests.rs`. |
 | `adapters/codec_relay.rs` | El códec del servidor intermedio, el que cifra la respuesta con la clave negociada. Pruebas en `adapters/codec_relay/tests.rs`. |
 | `adapters/data_download.rs` | El cliente HTTP que baja el `dat` que la sede manda como URL. Pruebas en `adapters/data_download/tests.rs`. |
-| `adapters/desk.rs` | `Neighbours`: lo que el trámite pide a los contextos vecinos, servido sobre sus tres raíces, y la composición del algoritmo de la sede con la clave del certificado. Pruebas en `adapters/desk/tests.rs`. |
+| `adapters/desk.rs` | `Neighbourhood`: el único implementador de producción del puerto `Neighbours`, servido sobre las tres raíces vecinas. Pruebas en `adapters/desk/tests.rs`. |
 | `adapters/scratch.rs` | La carpeta de paso donde cae el documento de la sede mientras dura el trámite, y las rutas que elige la persona al guardar o cargar (ADR-0011); también nombra, cierra con `flock` y barre la carpeta de paso propia del proceso. Pruebas en `adapters/scratch/tests.rs`. |
 | `adapters/service/mod.rs` | El transporte de producción de `service`: TLS crudo sobre el *loopback*, sin WebSocket. Pruebas en `adapters/service/tests.rs`. |
 | `adapters/service/idle.rs` | El reloj de inactividad del canal `service`, que lo cierra a los noventa segundos sin una orden válida (ADR-0024). Pruebas en `adapters/service/idle/tests.rs`. |
@@ -114,7 +114,7 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `domain/batch_error.rs` | La situación del lote remoto (ADR-0009): alcance de los dos servlets y forma de su respuesta. Pruebas en `domain/batch_error/tests.rs`. |
 | `domain/local_ca.rs` | La **CA local**, pura: la genera y la lee de PEM, y no toca el disco. Pruebas en `domain/local_ca/tests.rs`. |
 | `domain/channel.rs` | El canal visto desde dentro: cometido, ubicación donde escucha, cuántas operaciones atiende (ADR-0024), situaciones (ADR-0009) y asa, todo sin socket. Pruebas en `domain/channel/tests.rs`. |
-| `domain/protocol/algorithm.rs` | El algoritmo que nombra la sede reducido a su huella; **no compone con la clave**, eso es de `adapters/desk.rs`. Pruebas en `domain/protocol/algorithm/tests.rs`. |
+| `domain/protocol/algorithm.rs` | El algoritmo que nombra la sede reducido a su huella; **no compone con la clave**, eso es de `ports.rs`. Pruebas en `domain/protocol/algorithm/tests.rs`. |
 | `domain/protocol/cipher.rs` | El cifrado DES del servidor intermedio, calcado del original. Pruebas en `domain/protocol/cipher/tests.rs`. |
 | `domain/protocol/codes.rs` | **El catálogo publicado**: los `SAF_00`…`SAF_52` y las tres respuestas que no son códigos. Pruebas en `domain/protocol/codes/tests.rs`. |
 | `domain/protocol/data_source.rs` | El puerto que baja el `dat` que viaja como URL, y qué valor es una descarga y no unos datos. Pruebas en `domain/protocol/data_source/tests.rs`. |
@@ -156,7 +156,7 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `domain/signing.rs` | Lo que vuelve de la firma que pidió la sede: la firma en memoria, o el rechazo ya traducido por quien firmó. |
 | `domain/trust.rs` | El reparto, y las cuatro reglas **puras** de la confianza. Aquí vive el puerto `TrustStores`. Léelo antes que sus hermanos. Pruebas en `domain/trust/tests.rs`. |
 | `domain/triphase_server.rs` | El protocolo del servidor trifásico de `serverUrl` y su situación (ADR-0009): el firmador de cada formato, los dos formularios y cómo se leen sus respuestas. **No** es el lote remoto. Pruebas en `domain/triphase_server/tests.rs`. |
-| `ports.rs` | **Los doce puertos**: los propios del contexto (`BatchServices` incluido), los dos motores que presta el puente y lo que el trámite pide a los vecinos. Pruebas en `ports/tests.rs`. |
+| `ports.rs` | Los puertos del contexto (`BatchServices` incluido), los motores que presta el puente, el puerto único `Neighbours` hacia los vecinos y `composed_for`, que traduce la huella de la sede a la clase de clave del certificado. Pruebas en `ports/tests.rs`. |
 
 ## Al tocar lo que sale hacia la sede
 

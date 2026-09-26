@@ -1,6 +1,7 @@
 use super::{begin_for_the_site, finish_for_the_site, SiteTerms};
 use crate::identity::application::certificates::ListedCertificates;
 use crate::identity::application::tests::{a_certificate, NoMemory, NoToken};
+use crate::identity::domain::error::TokenError;
 use crate::signing::adapters::failures::told_of_cycle;
 use crate::signing::application::session::{config_for, SigningSession};
 use crate::signing::application::tests::{an_order, NoIsolate};
@@ -8,7 +9,7 @@ use crate::signing::domain::bridge::Format;
 use crate::site::application::tests::Directory;
 use crate::site::domain::protocol::{AskedAlgorithm, SafCode, SiteFilter};
 use crate::site::domain::signing::{SigningRefusal, SiteSignature};
-use crate::site::ports::{FilterEngine, SiteSigning, SiteSigningRequest};
+use crate::site::ports::{FilterEngine, Neighbours, SiteSigningRequest};
 use std::collections::BTreeMap;
 
 const SOURCE: &str = include_str!("../session.rs");
@@ -55,10 +56,10 @@ fn the_presign_of_a_site_errand_checks_the_filter_again_before_the_pin() {
         .split_once("filtering::usable_certificate_for_the_site(")
         .expect("el filtro de la sede se vuelve a comprobar antes de pedir el secreto");
     assert!(
-        !before.contains("signing.begin("),
+        !before.contains("neighbours.begin("),
         "y se comprueba antes de abrir el ciclo"
     );
-    assert!(after.contains("signing.begin("), "que se abre después");
+    assert!(after.contains("neighbours.begin("), "que se abre después");
 }
 
 #[test]
@@ -101,12 +102,13 @@ fn a_site_signature_cannot_begin_on_a_document_that_is_not_open() {
         },
         &order.document,
         &handles[0],
-        &Directory {
-            certificates,
-            listed: &listed,
-            memory: &NoMemory,
+        &NobodyHasItOpen {
+            directory: Directory {
+                certificates,
+                listed: &listed,
+                memory: &NoMemory,
+            },
         },
-        &NobodyHasItOpen,
     )
     .expect_err("ese documento no esta abierto");
 
@@ -121,7 +123,15 @@ fn a_site_signature_cannot_begin_on_a_document_that_is_not_open() {
 
 #[test]
 fn a_postsign_without_an_open_cycle_is_refused_with_what_the_signer_said() {
-    let failure = finish_for_the_site(&NobodyHasItOpen).expect_err("no hay ciclo");
+    let listed = ListedCertificates::new();
+    let neighbours = NobodyHasItOpen {
+        directory: Directory {
+            certificates: Vec::new(),
+            listed: &listed,
+            memory: &NoMemory,
+        },
+    };
+    let failure = finish_for_the_site(&neighbours).expect_err("no hay ciclo");
 
     let (told, code) = crate::site::adapters::frontier::told(&failure);
     assert_eq!(told.situation, "unknown");
@@ -141,10 +151,46 @@ impl FilterEngine for AcceptingEngine {
     }
 }
 
-/// Quien firma cuando ningún documento está abierto: la sesión vacía sobre el token y el hilo de la grada A.
-struct NobodyHasItOpen;
+/// Quien firma cuando ningún documento está abierto: la sesión vacía sobre el token y el hilo de
+/// la grada A, con los certificados de un `Directory` para lo que el filtro vuelve a comprobar.
+struct NobodyHasItOpen<'a> {
+    directory: Directory<'a>,
+}
 
-impl SiteSigning for NobodyHasItOpen {
+impl Neighbours for NobodyHasItOpen<'_> {
+    fn listed(
+        &self,
+    ) -> Result<Vec<crate::identity::domain::certificate::TokenCertificate>, TokenError> {
+        self.directory.listed()
+    }
+
+    fn rows_of(
+        &self,
+        found: Vec<crate::identity::domain::certificate::TokenCertificate>,
+    ) -> Vec<crate::identity::domain::certificate::ListedCertificate> {
+        self.directory.rows_of(found)
+    }
+
+    fn discovered_module(&self, library: &str) -> Option<std::path::PathBuf> {
+        self.directory.discovered_module(library)
+    }
+
+    fn usable<'a>(
+        &self,
+        found: &'a [crate::identity::domain::certificate::TokenCertificate],
+        handle: &str,
+    ) -> Result<&'a crate::identity::domain::certificate::TokenCertificate, TokenError> {
+        self.directory.usable(found, handle)
+    }
+
+    fn automatic_selection_honoured(&self) -> bool {
+        self.directory.automatic_selection_honoured()
+    }
+
+    fn open_unrecorded(&self, _path: std::path::PathBuf) -> String {
+        unreachable!("ninguna prueba de esta sesion apunta un documento de paso")
+    }
+
     fn begin(&self, request: SiteSigningRequest<'_>) -> Result<StoreSecret, SigningRefusal> {
         let failure = crate::signing::application::session::CycleFailure::from(
             crate::documents::domain::error::DocumentError::no_longer_open(),
@@ -172,6 +218,23 @@ impl SiteSigning for NobodyHasItOpen {
 
     fn the_pdf_password(&self, _after_a_wrong_one: bool) -> Option<String> {
         None
+    }
+
+    fn secret_of(
+        &self,
+        _certificate: &crate::identity::domain::certificate::TokenCertificate,
+    ) -> Result<StoreSecret, SigningRefusal> {
+        unreachable!("ninguna prueba de esta sesion pide el secreto del lote remoto")
+    }
+
+    fn sign(
+        &self,
+        _certificate: &crate::identity::domain::certificate::TokenCertificate,
+        _secret: &crate::identity::domain::protected_secret::ProtectedSecret,
+        _algorithm: &str,
+        _data: &[u8],
+    ) -> Result<Vec<u8>, SigningRefusal> {
+        unreachable!("ninguna prueba de esta sesion firma por el lote remoto")
     }
 }
 

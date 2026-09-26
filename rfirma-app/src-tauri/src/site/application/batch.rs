@@ -13,7 +13,7 @@ use crate::site::domain::batch::{
 use crate::site::domain::batch_error::{BatchError, Situation};
 use crate::site::domain::protocol::{BatchRequest, SafCode};
 use crate::site::domain::signing::SigningRefusal;
-use crate::site::ports::{BatchServices, TokenSigning};
+use crate::site::ports::{BatchServices, Neighbours};
 
 /// Cuántas firmas declara el lote, para decirlo en el momento de consentimiento.
 pub fn how_many(request: &BatchRequest) -> usize {
@@ -28,7 +28,7 @@ pub struct BatchRun<'a> {
     /// Los dos servlets del lote.
     pub services: &'a dyn BatchServices,
     /// Quien firma con el token, sin que la clave salga de él (ADR-0001).
-    pub token: &'a dyn TokenSigning,
+    pub token: &'a dyn Neighbours,
     /// El certificado que la persona consintió.
     pub certificate: &'a TokenCertificate,
     /// El secreto ya abierto, el mismo para todas las firmas.

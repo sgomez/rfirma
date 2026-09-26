@@ -19,8 +19,8 @@ use rfirma_lib::signing::domain::bridge::{Format, SignatureOperation};
 use rfirma_lib::signing::domain::{
     AdmissibleDocument, PadesRect, PageSet, Placement, SignatureConfig, Waivers,
 };
-use rfirma_lib::site::adapters::desk::composed_for;
 use rfirma_lib::site::domain::protocol::AskedAlgorithm;
+use rfirma_lib::site::ports::composed_for;
 
 pub(crate) const TOKEN: &str = "rfirma-test";
 pub(crate) const PIN: &str = "1234";

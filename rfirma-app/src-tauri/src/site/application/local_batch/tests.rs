@@ -10,15 +10,13 @@ use crate::identity::domain::error::TokenError;
 use crate::signing::domain::bridge::BridgeError;
 use crate::site::domain::batch::parse_local_batch;
 use crate::site::domain::signing::{SigningRefusal, SiteSignature};
-use crate::site::ports::{
-    BatchServices, Certificates, Scratch, ScratchDocuments, SiteSigning, TokenSigning,
-};
+use crate::site::ports::{BatchServices, Neighbours, Scratch};
 
 /// Vecinos, motor y polìtica que revientan si el bucle llega a usarlos: las dos guardas de
 /// arriba deben devolver antes de tocar nada de esto.
 struct Untouched;
 
-impl Certificates for Untouched {
+impl Neighbours for Untouched {
     fn listed(&self) -> Result<Vec<TokenCertificate>, TokenError> {
         unreachable!("la guarda no llega a listar certificados")
     }
@@ -42,15 +40,11 @@ impl Certificates for Untouched {
     fn automatic_selection_honoured(&self) -> bool {
         unreachable!("la guarda no llega a elegir certificado")
     }
-}
 
-impl ScratchDocuments for Untouched {
     fn open_unrecorded(&self, _path: PathBuf) -> String {
         unreachable!("la guarda no llega a abrir ningún documento")
     }
-}
 
-impl SiteSigning for Untouched {
     fn begin(
         &self,
         _request: crate::site::ports::SiteSigningRequest<'_>,
@@ -72,9 +66,7 @@ impl SiteSigning for Untouched {
     fn the_pdf_password(&self, _after_a_wrong_one: bool) -> Option<String> {
         unreachable!("la guarda no llega a pedir la contraseña del PDF")
     }
-}
 
-impl TokenSigning for Untouched {
     fn secret_of(
         &self,
         _certificate: &TokenCertificate,

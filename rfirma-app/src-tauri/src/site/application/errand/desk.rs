@@ -40,15 +40,10 @@ use super::request::SiteRequest;
 use super::state::LiveErrand;
 use crate::site::application::policies;
 use crate::site::application::session::SiteRefusal;
+pub use crate::site::ports::Neighbours;
 use crate::site::ports::{
-    BatchServices, Certificates, FilterEngine, PolicyEngine, Scratch, ScratchDocuments,
-    SiteSigning, TokenSigning, TriphaseServer, ValidationEngine,
+    BatchServices, FilterEngine, PolicyEngine, Scratch, TriphaseServer, ValidationEngine,
 };
-
-/// Lo que el trámite pide a los vecinos, junto: los certificados, el documento de paso y la firma.
-pub trait Neighbours: Certificates + ScratchDocuments + SiteSigning + TokenSigning {}
-
-impl<N: Certificates + ScratchDocuments + SiteSigning + TokenSigning> Neighbours for N {}
 
 /// Dependencias agrupadas necesarias para la ejecución de un trámite de sede.
 pub struct ErrandDesk<'a, E: FilterEngine, P: PolicyEngine, N: Neighbours> {

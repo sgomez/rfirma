@@ -4,8 +4,9 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
+use crate::identity::domain::algorithm::{KeyKind, SignatureAlgorithm};
 use crate::identity::domain::certificate::{ListedCertificate, TokenCertificate};
-use crate::identity::domain::error::TokenError;
+use crate::identity::domain::error::{Situation, TokenError};
 use crate::identity::domain::protected_secret::ProtectedSecret;
 use crate::identity::domain::secret::StoreSecret;
 use crate::signing::domain::bridge::{
@@ -333,34 +334,6 @@ pub trait ValidationEngine {
     ) -> Result<SignatureVerdict, BridgeError>;
 }
 
-/// Los certificados de la persona vistos desde el trámite: los que hay, sus filas con asa y el que está tras un asa.
-pub trait Certificates {
-    /// Los certificados de todos los almacenes, o por qué ninguno se ha podido abrir.
-    fn listed(&self) -> Result<Vec<TokenCertificate>, TokenError>;
-
-    /// Las filas con su asa acuñada y el recordado marcado, para la ventana.
-    fn rows_of(&self, found: Vec<TokenCertificate>) -> Vec<ListedCertificate>;
-
-    /// El módulo PKCS#11 ya descubierto que es la biblioteca que nombra la sede, si lo hay.
-    fn discovered_module(&self, library: &str) -> Option<PathBuf>;
-
-    /// El certificado de la última búsqueda tras el asa, si sigue en el token y está vigente.
-    fn usable<'a>(
-        &self,
-        found: &'a [TokenCertificate],
-        handle: &str,
-    ) -> Result<&'a TokenCertificate, TokenError>;
-
-    /// Si la persona deja que la sede elija sola el único candidato (ADR-0032).
-    fn automatic_selection_honoured(&self) -> bool;
-}
-
-/// El documento de paso del trámite, apuntado como abierto sin rastro para que la ventana lo lea (ADR-0011).
-pub trait ScratchDocuments {
-    /// Apunta el documento y devuelve el asa con la que la ventana lo pide.
-    fn open_unrecorded(&self, path: PathBuf) -> String;
-}
-
 /// El acceso a disco del trámite: la carpeta de paso del documento de la sede (ADR-0016) y las
 /// rutas que la persona elige por el diálogo del portal al guardar o cargar (ADR-0011).
 pub trait Scratch {
@@ -396,9 +369,32 @@ pub struct SiteSigningRequest<'a> {
     pub allow_unregistered_signatures: bool,
 }
 
-/// La firma que la sede pide, hecha por quien firma; lo que sale mal vuelve ya con su código y su vista.
-pub trait SiteSigning {
-    /// Abre el ciclo y dice cómo se pide el secreto.
+/// Lo que el trámite pide a los tres contextos vecinos: certificados, documento de paso y firma
+/// de sede o de token, servido por un solo adaptador (ADR-0017).
+pub trait Neighbours {
+    /// Los certificados de todos los almacenes, o por qué ninguno se ha podido abrir.
+    fn listed(&self) -> Result<Vec<TokenCertificate>, TokenError>;
+
+    /// Las filas con su asa acuñada y el recordado marcado, para la ventana.
+    fn rows_of(&self, found: Vec<TokenCertificate>) -> Vec<ListedCertificate>;
+
+    /// El módulo PKCS#11 ya descubierto que es la biblioteca que nombra la sede, si lo hay.
+    fn discovered_module(&self, library: &str) -> Option<PathBuf>;
+
+    /// El certificado de la última búsqueda tras el asa, si sigue en el token y está vigente.
+    fn usable<'a>(
+        &self,
+        found: &'a [TokenCertificate],
+        handle: &str,
+    ) -> Result<&'a TokenCertificate, TokenError>;
+
+    /// Si la persona deja que la sede elija sola el único candidato (ADR-0032).
+    fn automatic_selection_honoured(&self) -> bool;
+
+    /// Apunta el documento de paso y devuelve el asa con la que la ventana lo pide.
+    fn open_unrecorded(&self, path: PathBuf) -> String;
+
+    /// Abre el ciclo de la firma de sede y dice cómo se pide el secreto.
     fn begin(&self, request: SiteSigningRequest<'_>) -> Result<StoreSecret, SigningRefusal>;
 
     /// Firma el `PRE` abierto por `begin` con un secreto ya conocido, sin volver a pedirlo.
@@ -409,14 +405,12 @@ pub trait SiteSigning {
 
     /// Pide a la persona la contraseña del PDF cifrado; `None` si no la da.
     fn the_pdf_password(&self, after_a_wrong_one: bool) -> Option<String>;
-}
 
-/// La firma de bytes con el token que pide el lote remoto: el secreto se abre una vez y sirve para todas las firmas, sin puente y sin que la clave salga del token (ADR-0001).
-pub trait TokenSigning {
-    /// Cómo se pide el secreto del certificado, una sola vez para todas las firmas.
+    /// Cómo se pide el secreto del certificado, una sola vez para todas las firmas del lote remoto.
     fn secret_of(&self, certificate: &TokenCertificate) -> Result<StoreSecret, SigningRefusal>;
 
-    /// Firma esos bytes con el algoritmo que declaró la sede y el secreto ya abierto.
+    /// Firma esos bytes con el algoritmo que declaró la sede y el secreto ya abierto, sin puente y
+    /// sin que la clave salga del token (ADR-0001).
     fn sign(
         &self,
         certificate: &TokenCertificate,
@@ -424,6 +418,29 @@ pub trait TokenSigning {
         algorithm: &str,
         data: &[u8],
     ) -> Result<Vec<u8>, SigningRefusal>;
+}
+
+/// La huella que pide la sede, compuesta con la clase de clave del certificado (`composeSignatureAlgorithmName`, 1.9.2).
+pub fn composed_for(
+    asked: AskedAlgorithm,
+    key: Option<KeyKind>,
+) -> Result<SignatureAlgorithm, TokenError> {
+    let key = key.ok_or_else(|| {
+        TokenError::new(
+            Situation::KeyNotRsa,
+            "la clave del certificado no es RSA ni de curva eliptica",
+        )
+    })?;
+    Ok(match (asked, key) {
+        (AskedAlgorithm::Sha1, KeyKind::Rsa) => SignatureAlgorithm::Sha1Rsa,
+        (AskedAlgorithm::Sha256, KeyKind::Rsa) => SignatureAlgorithm::Sha256Rsa,
+        (AskedAlgorithm::Sha384, KeyKind::Rsa) => SignatureAlgorithm::Sha384Rsa,
+        (AskedAlgorithm::Sha512, KeyKind::Rsa) => SignatureAlgorithm::Sha512Rsa,
+        (AskedAlgorithm::Sha1, KeyKind::Ec) => SignatureAlgorithm::Sha1Ecdsa,
+        (AskedAlgorithm::Sha256, KeyKind::Ec) => SignatureAlgorithm::Sha256Ecdsa,
+        (AskedAlgorithm::Sha384, KeyKind::Ec) => SignatureAlgorithm::Sha384Ecdsa,
+        (AskedAlgorithm::Sha512, KeyKind::Ec) => SignatureAlgorithm::Sha512Ecdsa,
+    })
 }
 
 #[cfg(test)]
