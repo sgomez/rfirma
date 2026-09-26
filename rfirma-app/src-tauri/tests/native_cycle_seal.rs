@@ -6,6 +6,7 @@ mod support;
 mod full_cycle {
     use base64::Engine;
     use rfirma_lib::identity::adapters::pkcs11;
+    use rfirma_lib::identity::domain::protected_secret::ProtectedSecret;
     use rfirma_lib::signing::adapters::ffi::NativeBridge;
     use rfirma_lib::signing::application::cycle::{self, SigningRequest};
     use rfirma_lib::signing::domain::bridge::{Format, SignatureOperation};
@@ -86,7 +87,7 @@ mod full_cycle {
         )
         .expect("la prefirma deberia salir");
         let signature = cycle
-            .sign_on_token(&pkcs11::RealToken, PIN)
+            .sign_on_token(&pkcs11::RealToken, &ProtectedSecret::from_str(PIN))
             .expect("el token deberia firmar");
 
         (bridge, cycle, signature)

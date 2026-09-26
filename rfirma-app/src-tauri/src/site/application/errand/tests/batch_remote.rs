@@ -81,7 +81,7 @@ fn a_batch_goes_from_the_operation_to_the_wire_asking_the_secret_only_once() {
     let consented = consent(&desk, &asked.certificates[0].id, &live).expect("el certificado sirve");
     assert!(matches!(consented, Consented::SigningWith(_)));
 
-    finish_the_batch(&desk, "1234", &live).expect("el lote sale entero");
+    finish_the_batch(&desk, &the_typed_secret(), &live).expect("el lote sale entero");
 
     assert_eq!(
         what_the_site_received(&mut wire),
@@ -127,7 +127,7 @@ fn a_batch_with_needcert_answers_the_result_and_the_signer() {
     let step = attend_operation(&desk, &url, decoded(&url), &live);
     let chosen = the_only_row_of(remembered(&live, step));
     consent(&desk, &chosen, &live).expect("el certificado sirve");
-    finish_the_batch(&desk, "1234", &live).expect("el lote sale entero");
+    finish_the_batch(&desk, &the_typed_secret(), &live).expect("el lote sale entero");
 
     let encode = base64::engine::general_purpose::STANDARD;
     assert_eq!(
@@ -234,7 +234,8 @@ fn a_batch_whose_presigner_is_unreachable_is_answered_with_the_code_of_the_batch
     let chosen = the_only_row_of(remembered(&live, step));
     consent(&desk, &chosen, &live).expect("el certificado sirve");
 
-    let refused = finish_the_batch(&desk, "1234", &live).expect_err("sin servlet no hay lote");
+    let refused =
+        finish_the_batch(&desk, &the_typed_secret(), &live).expect_err("sin servlet no hay lote");
 
     assert!(matches!(refused, ConsentError::Refused(_)));
     assert_eq!(
@@ -271,7 +272,8 @@ fn a_batch_whose_postsigner_answers_nothing_is_answered_with_the_code_of_a_faile
     let chosen = the_only_row_of(remembered(&live, step));
     consent(&desk, &chosen, &live).expect("el certificado sirve");
 
-    finish_the_batch(&desk, "1234", &live).expect_err("una postfirma invalida no sale");
+    finish_the_batch(&desk, &the_typed_secret(), &live)
+        .expect_err("una postfirma invalida no sale");
 
     assert_eq!(
         what_the_site_received(&mut wire),
@@ -312,7 +314,8 @@ fn a_json_batch_asked_with_jsonbatch_capitalised_reaches_the_presigner_as_the_le
     let step = attend_operation(&desk, &url, decoded(&url), &live);
     let chosen = the_only_row_of(remembered(&live, step));
     consent(&desk, &chosen, &live).expect("el certificado sirve");
-    finish_the_batch(&desk, "1234", &live).expect_err("el prefirmador rechaza el lote");
+    finish_the_batch(&desk, &the_typed_secret(), &live)
+        .expect_err("el prefirmador rechaza el lote");
 
     assert!(matches!(
         services.received().first(),

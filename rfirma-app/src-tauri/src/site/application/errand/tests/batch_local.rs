@@ -95,7 +95,7 @@ fn a_local_batch_reaches_the_consent_with_a_summary_of_every_item() {
     let consented = consent(&desk, &asked.certificates[0].id, &live).expect("el certificado sirve");
     assert!(matches!(consented, Consented::SigningWith(_)));
 
-    finish_the_local_batch(&desk, "1234", &live).expect("el lote local contesta");
+    finish_the_local_batch(&desk, &the_typed_secret(), &live).expect("el lote local contesta");
 
     assert_eq!(
         desk.neighbours.token.secrets_asked(),
@@ -156,7 +156,7 @@ fn a_local_batch_that_stops_on_error_skips_what_came_before_and_after() {
     };
     consent(&desk, &asked.certificates[0].id, &live).expect("el certificado sirve");
 
-    finish_the_local_batch(&desk, "1234", &live).expect("el lote local contesta");
+    finish_the_local_batch(&desk, &the_typed_secret(), &live).expect("el lote local contesta");
 
     let result = the_batch_result(&mut wire);
     assert!(
@@ -204,7 +204,7 @@ fn a_local_batch_without_stoponerror_signs_around_the_failure() {
     };
     consent(&desk, &asked.certificates[0].id, &live).expect("el certificado sirve");
 
-    finish_the_local_batch(&desk, "1234", &live).expect("el lote local contesta");
+    finish_the_local_batch(&desk, &the_typed_secret(), &live).expect("el lote local contesta");
 
     let result = the_batch_result(&mut wire);
     assert!(
@@ -252,7 +252,7 @@ fn a_local_batch_with_needcert_answers_the_signer() {
     };
     consent(&desk, &asked.certificates[0].id, &live).expect("el certificado sirve");
 
-    finish_the_local_batch(&desk, "1234", &live).expect("el lote local contesta");
+    finish_the_local_batch(&desk, &the_typed_secret(), &live).expect("el lote local contesta");
 
     let answered = what_the_site_received(&mut wire).expect("la sede recibe el resultado del lote");
     let (result, signer) = answered
@@ -373,7 +373,7 @@ fn a_local_batch_in_format_none_returns_the_bare_pkcs1_of_each_item() {
         panic!("un lote local en NONE pide consentimiento");
     };
     consent(&desk, &asked.certificates[0].id, &live).expect("el certificado sirve");
-    finish_the_local_batch(&desk, "1234", &live).expect("el lote local contesta");
+    finish_the_local_batch(&desk, &the_typed_secret(), &live).expect("el lote local contesta");
 
     let result = the_batch_result(&mut wire);
     assert!(
@@ -427,7 +427,7 @@ fn a_local_batch_without_format_is_refused_with_saf_20_only_after_the_consent() 
     assert_eq!(what_the_site_received(&mut wire), None);
 
     consent(&desk, &asked.certificates[0].id, &live).expect("el certificado sirve");
-    let refused = finish_the_local_batch(&desk, "1234", &live);
+    let refused = finish_the_local_batch(&desk, &the_typed_secret(), &live);
 
     assert!(matches!(refused, Err(ConsentError::Refused(_))));
     let answered = what_the_site_received(&mut wire).expect("la sede recibe el rechazo");
@@ -474,7 +474,7 @@ fn a_local_batch_without_algorithm_is_refused_with_saf_20_only_after_the_consent
         panic!("el algoritmo del lote local se lee al firmarlo, no antes de elegir certificado");
     };
     consent(&desk, &asked.certificates[0].id, &live).expect("el certificado sirve");
-    let refused = finish_the_local_batch(&desk, "1234", &live);
+    let refused = finish_the_local_batch(&desk, &the_typed_secret(), &live);
 
     assert!(matches!(refused, Err(ConsentError::Refused(_))));
     let answered = what_the_site_received(&mut wire).expect("la sede recibe el rechazo");

@@ -135,16 +135,6 @@ impl crate::signing::ports::Signer for TokenSigner<'_> {
         self.0.offers(reference, algorithm)
     }
 
-    fn sign(
-        &self,
-        reference: &CertificateRef,
-        pin: &str,
-        algorithm: SignatureAlgorithm,
-        data: &[u8],
-    ) -> Result<Vec<u8>, TokenError> {
-        self.0.sign(reference, pin, algorithm, data)
-    }
-
     fn accepts_the_secret(
         &self,
         reference: &CertificateRef,
@@ -178,16 +168,6 @@ impl<T: ports::Token + ?Sized> crate::signing::ports::Signer for T {
         algorithm: SignatureAlgorithm,
     ) -> Result<(), domain::error::TokenError> {
         ports::Token::offers(self, reference, algorithm)
-    }
-
-    fn sign(
-        &self,
-        reference: &domain::certificate::CertificateRef,
-        pin: &str,
-        algorithm: SignatureAlgorithm,
-        data: &[u8],
-    ) -> Result<Vec<u8>, domain::error::TokenError> {
-        ports::Token::sign(self, reference, pin, algorithm, data)
     }
 
     fn accepts_the_secret(

@@ -16,6 +16,7 @@ mod tests;
 use std::path::PathBuf;
 
 use crate::identity::domain::certificate::TokenCertificate;
+use crate::identity::domain::protected_secret::ProtectedSecret;
 use crate::identity::domain::secret::StoreSecret;
 use crate::site::domain::batch::build_local_result;
 use crate::site::domain::protocol::{AfirmaUrl, SiteFilter};
@@ -298,7 +299,7 @@ fn the_local_batch_consented<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
 /// Completa el lote remoto con el secreto ya tecleado: prefirma, `PK1` y postfirma.
 pub fn finish_the_batch<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
     desk: &ErrandDesk<'_, E, P, N>,
-    secret: &str,
+    secret: &ProtectedSecret,
     live: &LiveErrand,
 ) -> Result<(), ConsentError> {
     let pending = live
@@ -327,7 +328,7 @@ pub fn finish_the_batch<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
 /// ciclo de sede, aplicando `stoponerror`.
 pub fn finish_the_local_batch<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
     desk: &ErrandDesk<'_, E, P, N>,
-    secret: &str,
+    secret: &ProtectedSecret,
     live: &LiveErrand,
 ) -> Result<(), ConsentError> {
     let pending = live

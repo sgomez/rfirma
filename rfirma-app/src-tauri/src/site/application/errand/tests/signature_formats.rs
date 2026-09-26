@@ -233,8 +233,12 @@ fn the_whole_errand_asking_for_over(
     else {
         panic!("una firma se consiente firmando");
     };
-    session::sign_on_token(&desk.neighbours.signer, &desk.neighbours.session, "1234")
-        .expect("el token de pruebas firma el PRE");
+    session::sign_on_token(
+        &desk.neighbours.signer,
+        &desk.neighbours.session,
+        &the_typed_secret(),
+    )
+    .expect("el token de pruebas firma el PRE");
     assert!(
         finish(&desk, &live).expect("la postfirma sale").is_none(),
         "un `sign` contesta en el acto, sin momento de guardado"
@@ -432,8 +436,12 @@ fn a_none_signature_goes_to_the_wire_as_the_bare_pkcs1_of_the_token() {
     assert_eq!(asking.format, Format::Pkcs1);
     let chosen = asking.certificates[0].id.clone();
     consent(&desk, &chosen, &live).expect("el certificado vale");
-    session::sign_on_token(&desk.neighbours.signer, &desk.neighbours.session, "1234")
-        .expect("el token firma los datos");
+    session::sign_on_token(
+        &desk.neighbours.signer,
+        &desk.neighbours.session,
+        &the_typed_secret(),
+    )
+    .expect("el token firma los datos");
     finish(&desk, &live).expect("la firma sale");
 
     let encode = base64::engine::general_purpose::URL_SAFE;

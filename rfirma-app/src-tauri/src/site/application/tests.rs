@@ -313,7 +313,7 @@ impl TokenSigning for InMemoryTokenSigning {
     fn sign(
         &self,
         _certificate: &TokenCertificate,
-        _secret: &str,
+        _secret: &crate::identity::domain::protected_secret::ProtectedSecret,
         algorithm: &str,
         data: &[u8],
     ) -> Result<Vec<u8>, SigningRefusal> {

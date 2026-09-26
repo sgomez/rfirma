@@ -84,7 +84,7 @@ fn a_cades_triphase_signature_hands_the_site_what_the_server_signed() {
         Some(ours[0].der().to_vec())
     );
 
-    finish_the_server_signature(&desk, "1234", &live).expect("las tres fases salen");
+    finish_the_server_signature(&desk, &the_typed_secret(), &live).expect("las tres fases salen");
     finish(&desk, &live).expect("la firma se entrega");
 
     assert_eq!(
@@ -173,7 +173,8 @@ fn a_triphase_server_that_fails_the_presign_is_refused_with_saf_40() {
     let chosen = the_only_row_of(remembered(&live, step));
     consent(&desk, &chosen, &live).expect("el certificado sirve");
 
-    let refused = finish_the_server_signature(&desk, "1234", &live).expect_err("el servidor fallo");
+    let refused = finish_the_server_signature(&desk, &the_typed_secret(), &live)
+        .expect_err("el servidor fallo");
 
     assert!(matches!(refused, ConsentError::Refused(_)));
     assert_eq!(
@@ -217,7 +218,7 @@ fn the_forms_of_a_triphase_signature(
     let step = attend_operation(&desk, &url, decoded(&url), &live);
     let chosen = the_only_row_of(remembered(&live, step));
     consent(&desk, &chosen, &live).expect("el certificado sirve");
-    finish_the_server_signature(&desk, "1234", &live).expect("las tres fases salen");
+    finish_the_server_signature(&desk, &the_typed_secret(), &live).expect("las tres fases salen");
     finish(&desk, &live).expect("la firma se entrega");
 
     assert_eq!(
@@ -299,7 +300,7 @@ fn saved_through_the_server(url: &AfirmaUrl) -> SavedThroughTheServer {
     let step = attend_operation(&desk, url, decoded(url), &live);
     let chosen = the_only_row_of(remembered(&live, step));
     consent(&desk, &chosen, &live).expect("el certificado sirve");
-    finish_the_server_signature(&desk, "1234", &live).expect("las tres fases salen");
+    finish_the_server_signature(&desk, &the_typed_secret(), &live).expect("las tres fases salen");
     let Some(ErrandStep::Saving(saving)) = finish(&desk, &live).expect("la firma se guarda") else {
         panic!("signandsave pasa al guardado");
     };
@@ -416,7 +417,8 @@ fn signing_and_saving_against_a_failing_triphase_server_is_refused_with_saf_40()
     let chosen = the_only_row_of(remembered(&live, step));
     consent(&desk, &chosen, &live).expect("el certificado sirve");
 
-    let refused = finish_the_server_signature(&desk, "1234", &live).expect_err("el servidor fallo");
+    let refused = finish_the_server_signature(&desk, &the_typed_secret(), &live)
+        .expect_err("el servidor fallo");
 
     assert!(matches!(refused, ConsentError::Refused(_)));
     assert_eq!(

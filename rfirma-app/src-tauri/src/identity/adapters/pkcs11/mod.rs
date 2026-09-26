@@ -17,6 +17,7 @@ use cryptoki::types::AuthPin;
 use crate::identity::domain::algorithm::SignatureAlgorithm;
 use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
 use crate::identity::domain::error::{Situation, TokenError};
+use crate::identity::domain::protected_secret::ProtectedSecret;
 use crate::identity::domain::secret::StoreSecret;
 use crate::identity::domain::store::Store;
 use crate::identity::ports::Token;
@@ -48,22 +49,22 @@ impl Token for RealToken {
         offers(reference, algorithm)
     }
 
-    fn sign(
-        &self,
-        reference: &CertificateRef,
-        pin: &str,
-        algorithm: SignatureAlgorithm,
-        data: &[u8],
-    ) -> Result<Vec<u8>, TokenError> {
-        sign(reference, pin, algorithm, data)
-    }
-
     fn accepts_the_secret(
         &self,
         reference: &CertificateRef,
         secret: &crate::identity::domain::protected_secret::ProtectedSecret,
     ) -> Result<(), TokenError> {
         accepts_the_secret(reference, secret)
+    }
+
+    fn sign_with_secret(
+        &self,
+        reference: &CertificateRef,
+        secret: &ProtectedSecret,
+        algorithm: SignatureAlgorithm,
+        data: &[u8],
+    ) -> Result<Vec<u8>, TokenError> {
+        sign_with_secret(reference, secret, algorithm, data)
     }
 
     fn import_pkcs12(
@@ -128,14 +129,14 @@ pub fn offers(reference: &CertificateRef, algorithm: SignatureAlgorithm) -> Resu
     })
 }
 
-/// Firma `data` con la clave privada que acompaña al certificado referenciado.
-pub fn sign(
+/// Firma `data` con la clave privada que acompaña al certificado referenciado y el secreto protegido (ADR-0001).
+pub fn sign_with_secret(
     reference: &CertificateRef,
-    pin: &str,
+    secret: &ProtectedSecret,
     algorithm: SignatureAlgorithm,
     data: &[u8],
 ) -> Result<Vec<u8>, TokenError> {
-    with_token_turn(|| mechanism::sign_holding_the_turn(reference, pin, algorithm, data))
+    with_token_turn(|| mechanism::sign_holding_the_turn(reference, secret, algorithm, data))
 }
 
 /// Comprueba el PIN abriendo y cerrando la sesión de la ranura del certificado.

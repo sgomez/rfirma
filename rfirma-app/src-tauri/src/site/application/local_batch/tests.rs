@@ -58,7 +58,10 @@ impl SiteSigning for Untouched {
         unreachable!("la guarda no llega a abrir el ciclo")
     }
 
-    fn sign_on_token(&self, _secret: &str) -> Result<(), SigningRefusal> {
+    fn sign_on_token(
+        &self,
+        _secret: &crate::identity::domain::protected_secret::ProtectedSecret,
+    ) -> Result<(), SigningRefusal> {
         unreachable!("la guarda no llega a firmar")
     }
 
@@ -82,7 +85,7 @@ impl TokenSigning for Untouched {
     fn sign(
         &self,
         _certificate: &TokenCertificate,
-        _secret: &str,
+        _secret: &crate::identity::domain::protected_secret::ProtectedSecret,
         _algorithm: &str,
         _data: &[u8],
     ) -> Result<Vec<u8>, SigningRefusal> {
@@ -176,8 +179,13 @@ fn an_empty_batch_cannot_even_start() {
         r#"{"algorithm":"SHA256","format":"auto","stoponerror":false,"singlesigns":[]}"#,
     );
 
-    let refusal = signed_local_batch(&desk, &certificate, "1234", &batch)
-        .expect_err("un lote sin firmas no puede empezar");
+    let refusal = signed_local_batch(
+        &desk,
+        &certificate,
+        &crate::identity::domain::protected_secret::ProtectedSecret::from_str("1234"),
+        &batch,
+    )
+    .expect_err("un lote sin firmas no puede empezar");
 
     assert!(matches!(refusal, SiteRefusal::LocalBatch(_)));
 }
@@ -191,8 +199,13 @@ fn a_batch_with_an_algorithm_rfirma_does_not_sign_is_refused() {
         r#"{"algorithm":"RIPEMD160","format":"auto","stoponerror":false,"singlesigns":[{"id":"1","datareference":"ZGF0bw=="}]}"#,
     );
 
-    let refusal = signed_local_batch(&desk, &certificate, "1234", &batch)
-        .expect_err("RIPEMD160 no se atiende");
+    let refusal = signed_local_batch(
+        &desk,
+        &certificate,
+        &crate::identity::domain::protected_secret::ProtectedSecret::from_str("1234"),
+        &batch,
+    )
+    .expect_err("RIPEMD160 no se atiende");
 
     assert!(matches!(refusal, SiteRefusal::LocalBatch(_)));
 }
@@ -206,8 +219,13 @@ fn a_pades_countersign_in_the_batch_fails_that_item_without_signing_it() {
         r#"{"algorithm":"SHA256","format":"PAdES","suboperation":"countersign","stoponerror":false,"singlesigns":[{"id":"1","datareference":"ZGF0bw=="}]}"#,
     );
 
-    let results = signed_local_batch(&desk, &certificate, "1234", &batch)
-        .expect("el lote empieza aunque el elemento no se atienda");
+    let results = signed_local_batch(
+        &desk,
+        &certificate,
+        &crate::identity::domain::protected_secret::ProtectedSecret::from_str("1234"),
+        &batch,
+    )
+    .expect("el lote empieza aunque el elemento no se atienda");
 
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].signature(), None);

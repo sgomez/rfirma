@@ -249,15 +249,15 @@ fn open_the_cycle(
     Ok(secret)
 }
 
-/// Fase de firma en el token PKCS#11 con el PIN proporcionado (ADR-0001).
+/// Fase de firma en el token PKCS#11 con el secreto protegido proporcionado (ADR-0001).
 pub fn sign_on_token(
     signer: &dyn Signer,
     session: &SigningSession,
-    pin: &str,
+    secret: &ProtectedSecret,
 ) -> Result<(), CycleFailure> {
     let mut open = lock(&session.open);
     let in_flight = open.as_mut().ok_or(CycleFailure::NoOpenCycle)?;
-    in_flight.signature = Some(in_flight.cycle.sign_on_token(signer, pin)?);
+    in_flight.signature = Some(in_flight.cycle.sign_on_token(signer, secret)?);
     Ok(())
 }
 
@@ -278,18 +278,18 @@ pub fn sign_on_token_with_prompter(
     Ok(())
 }
 
-/// Firma el ciclo abierto con el PIN tecleado, o pidiéndolo al diálogo si llega vacío.
+/// Firma el ciclo abierto con el secreto tecleado, o pidiéndolo al diálogo si llega vacío.
 pub fn signed_on_the_token(
     signer: &dyn Signer,
     session: &SigningSession,
     prompter: &dyn SecretPrompter,
     language: Language,
-    pin: &str,
+    secret: &ProtectedSecret,
 ) -> Result<(), CycleFailure> {
-    if pin.is_empty() {
+    if secret.is_empty() {
         return sign_on_token_with_prompter(signer, session, prompter, language);
     }
-    sign_on_token(signer, session, pin)
+    sign_on_token(signer, session, secret)
 }
 
 /// El secreto del lote: el tecleado, el que el token acepta tras el diálogo, o vacío si no lo pide.
@@ -298,10 +298,10 @@ pub fn secret_for_the_batch(
     certificate: &TokenCertificate,
     prompter: &dyn SecretPrompter,
     language: Language,
-    typed: &str,
+    typed: &ProtectedSecret,
 ) -> Result<ProtectedSecret, CycleFailure> {
     if !typed.is_empty() {
-        return Ok(ProtectedSecret::from_str(typed));
+        return Ok(ProtectedSecret::new(typed.as_bytes()));
     }
     let mode = signer
         .secret_of(certificate.reference())

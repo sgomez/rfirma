@@ -6,6 +6,7 @@ use std::sync::Arc;
 
 use crate::identity::domain::certificate::{ListedCertificate, TokenCertificate};
 use crate::identity::domain::error::TokenError;
+use crate::identity::domain::protected_secret::ProtectedSecret;
 use crate::identity::domain::secret::StoreSecret;
 use crate::signing::domain::bridge::{
     BridgeError, Format, SignatureOperation, SignatureVerdict, XadesVariant,
@@ -401,7 +402,7 @@ pub trait SiteSigning {
     fn begin(&self, request: SiteSigningRequest<'_>) -> Result<StoreSecret, SigningRefusal>;
 
     /// Firma el `PRE` abierto por `begin` con un secreto ya conocido, sin volver a pedirlo.
-    fn sign_on_token(&self, secret: &str) -> Result<(), SigningRefusal>;
+    fn sign_on_token(&self, secret: &ProtectedSecret) -> Result<(), SigningRefusal>;
 
     /// Cierra el ciclo en memoria: el PDF firmado y el DER del firmante, sin escribir nada.
     fn finish(&self) -> Result<SiteSignature, SigningRefusal>;
@@ -419,7 +420,7 @@ pub trait TokenSigning {
     fn sign(
         &self,
         certificate: &TokenCertificate,
-        secret: &str,
+        secret: &ProtectedSecret,
         algorithm: &str,
         data: &[u8],
     ) -> Result<Vec<u8>, SigningRefusal>;

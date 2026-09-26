@@ -42,6 +42,16 @@ fn a_batch_request(lote: &str, json: bool) -> crate::site::domain::protocol::Bat
     request
 }
 
+/// El secreto de prueba, con vida `'static` para que cualquier `a_run` pueda referenciarlo.
+fn the_test_secret() -> &'static crate::identity::domain::protected_secret::ProtectedSecret {
+    use std::sync::OnceLock;
+    static SECRET: OnceLock<crate::identity::domain::protected_secret::ProtectedSecret> =
+        OnceLock::new();
+    SECRET.get_or_init(|| {
+        crate::identity::domain::protected_secret::ProtectedSecret::from_str("1234")
+    })
+}
+
 fn a_run<'a>(
     services: &'a InMemoryBatchServices,
     token: &'a InMemoryTokenSigning,
@@ -51,7 +61,7 @@ fn a_run<'a>(
         services,
         token,
         certificate,
-        secret: "1234",
+        secret: the_test_secret(),
     }
 }
 

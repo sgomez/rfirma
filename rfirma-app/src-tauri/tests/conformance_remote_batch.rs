@@ -309,7 +309,13 @@ fn the_down_presigner_batch_errand_of(roots: &Arc<Roots>) -> SiteOperations {
 
         errand::consent(&desk, &chosen.id, live).expect("el lote deberia quedar consentido");
         tokio::task::block_in_place(|| {
-            let outcome = errand::finish_the_batch(&desk, THE_TOKEN_SECRET, live);
+            let outcome = errand::finish_the_batch(
+                &desk,
+                &rfirma_lib::identity::domain::protected_secret::ProtectedSecret::from_str(
+                    THE_TOKEN_SECRET,
+                ),
+                live,
+            );
             assert!(
                 outcome.is_err(),
                 "el lote deberia rechazarse con el presigner caido"

@@ -1,5 +1,6 @@
 //! La firma que la sede manda hacer a su servidor trifásico, del certificado elegido a la firma que se entrega; no abre el ciclo del puente.
 
+use crate::identity::domain::protected_secret::ProtectedSecret;
 use crate::site::application::triphase::{signed_through_the_server, ServerAsk, ServerRun};
 use crate::site::domain::signing::SiteSignature;
 use crate::site::domain::triphase_server::server_url_of;
@@ -47,7 +48,7 @@ pub(super) fn consented<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
 /// Hace las tres fases con el secreto ya tecleado y deja la firma lista para entregarla.
 pub fn finish_the_server_signature<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
     desk: &ErrandDesk<'_, E, P, N>,
-    secret: &str,
+    secret: &ProtectedSecret,
     live: &LiveErrand,
 ) -> Result<(), ConsentError> {
     let pending = live

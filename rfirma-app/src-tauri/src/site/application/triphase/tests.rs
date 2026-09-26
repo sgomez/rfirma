@@ -37,6 +37,16 @@ fn the_site_declaring(pairs: &[(&str, &str)]) -> BTreeMap<String, String> {
         .collect()
 }
 
+/// El secreto de prueba, con vida `'static` para que cualquier `ServerRun` pueda referenciarlo.
+fn the_test_secret() -> &'static crate::identity::domain::protected_secret::ProtectedSecret {
+    use std::sync::OnceLock;
+    static SECRET: OnceLock<crate::identity::domain::protected_secret::ProtectedSecret> =
+        OnceLock::new();
+    SECRET.get_or_init(|| {
+        crate::identity::domain::protected_secret::ProtectedSecret::from_str("1234")
+    })
+}
+
 fn signed_with(
     server: &InMemoryTriphaseServer,
     token: &InMemoryTokenSigning,
@@ -59,7 +69,7 @@ fn signed_in(
             server,
             token,
             certificate: &certificate,
-            secret: "1234",
+            secret: the_test_secret(),
         },
         &ServerAsk {
             format,

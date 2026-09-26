@@ -50,10 +50,10 @@ impl Token for NoToken {
         Ok(())
     }
 
-    fn sign(
+    fn sign_with_secret(
         &self,
         _reference: &CertificateRef,
-        _pin: &str,
+        _secret: &crate::identity::domain::protected_secret::ProtectedSecret,
         _algorithm: SignatureAlgorithm,
         _data: &[u8],
     ) -> Result<Vec<u8>, TokenError> {

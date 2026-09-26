@@ -3,6 +3,7 @@
 use tauri::State;
 
 use crate::documents::DocumentsRoot;
+use crate::identity::domain::protected_secret::ProtectedSecret;
 use crate::identity::IdentityRoot;
 use crate::signing::SigningRoot;
 
@@ -61,6 +62,7 @@ pub fn signed_with_the_secret(
     live: &crate::site::LiveErrand,
     pin: &str,
 ) -> Result<(), Failure> {
+    let pin = ProtectedSecret::new(pin.as_bytes());
     let signer = desk.neighbours.identity.signer();
     let signing = desk.neighbours.signing;
     let prompter = signing.prompter.as_ref();
@@ -72,10 +74,10 @@ pub fn signed_with_the_secret(
             &signing.session,
             prompter,
             language,
-            pin,
+            &pin,
         )?);
     };
-    let secret = session::secret_for_the_batch(&signer, &certificate, prompter, language, pin)?;
+    let secret = session::secret_for_the_batch(&signer, &certificate, prompter, language, &pin)?;
     crate::site::the_pending_signature_signed(desk, live, &secret)
 }
 

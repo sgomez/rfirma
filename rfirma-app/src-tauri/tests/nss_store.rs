@@ -8,6 +8,7 @@ use rfirma_lib::identity::application::certificates::ListedCertificates;
 use rfirma_lib::identity::domain::algorithm::SignatureAlgorithm;
 use rfirma_lib::identity::domain::certificate::{CertificateStatus, TokenCertificate};
 use rfirma_lib::identity::domain::error::Situation;
+use rfirma_lib::identity::domain::protected_secret::ProtectedSecret;
 use rfirma_lib::identity::domain::store::{Store, StoreClass};
 use rsa::pkcs1v15::{Signature, VerifyingKey};
 use rsa::pkcs8::DecodePublicKey;
@@ -348,9 +349,9 @@ fn signing_with_an_nss_certificate_verifies_against_its_public_key() {
     let (_profile, store) = a_disposable_profile();
     let certificate = the_valid_one(&store);
 
-    let raw = pkcs11::sign(
+    let raw = pkcs11::sign_with_secret(
         certificate.reference(),
-        NO_MASTER_PASSWORD,
+        &ProtectedSecret::from_str(NO_MASTER_PASSWORD),
         SignatureAlgorithm::Sha256Rsa,
         PRESIGN,
     )
@@ -372,9 +373,9 @@ fn a_remembered_nss_certificate_still_signs_after_a_round_trip_through_the_state
     let remembered: rfirma_lib::identity::domain::certificate::CertificateRef =
         serde_json::from_str(&written).expect("deberia leerse");
 
-    let raw = pkcs11::sign(
+    let raw = pkcs11::sign_with_secret(
         &remembered,
-        NO_MASTER_PASSWORD,
+        &ProtectedSecret::from_str(NO_MASTER_PASSWORD),
         SignatureAlgorithm::Sha256Rsa,
         PRESIGN,
     )
@@ -395,9 +396,9 @@ fn a_certificate_without_a_private_key_says_so_instead_of_failing_generically() 
         .find(|certificate| certificate.reference().label().contains("AC "))
         .expect("el perfil tenia que traer alguna CA suelta");
 
-    let error = pkcs11::sign(
+    let error = pkcs11::sign_with_secret(
         authority.reference(),
-        NO_MASTER_PASSWORD,
+        &ProtectedSecret::from_str(NO_MASTER_PASSWORD),
         SignatureAlgorithm::Sha256Rsa,
         PRESIGN,
     )

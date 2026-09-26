@@ -4,6 +4,7 @@ use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use base64::Engine as _;
 
 use crate::identity::domain::certificate::TokenCertificate;
+use crate::identity::domain::protected_secret::ProtectedSecret;
 use crate::site::application::session::SiteRefusal;
 use crate::site::domain::batch::{
     apply_pk1, batch_algorithm, build_empty_result, build_result, parse_json_presign,
@@ -31,7 +32,7 @@ pub struct BatchRun<'a> {
     /// El certificado que la persona consintió.
     pub certificate: &'a TokenCertificate,
     /// El secreto ya abierto, el mismo para todas las firmas.
-    pub secret: &'a str,
+    pub secret: &'a ProtectedSecret,
 }
 
 /// Caso de uso: prefirma el lote, firma cada `PK1` con el token y postfirma; el resultado sale tal cual.

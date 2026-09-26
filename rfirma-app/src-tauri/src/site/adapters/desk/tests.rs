@@ -4,6 +4,7 @@ use super::*;
 use crate::identity::application::tests::{a_certificate, a_usable_certificate};
 use crate::identity::domain::algorithm::{KeyKind, SignatureAlgorithm};
 use crate::identity::domain::certificate::CertificateRef;
+use crate::identity::domain::protected_secret::ProtectedSecret;
 
 /// Un token que apunta con qué secreto y sobre qué bytes se le pidió cada firma.
 #[derive(Default)]
@@ -32,14 +33,15 @@ impl Signer for RecordingSigner {
         Ok(())
     }
 
-    fn sign(
+    fn sign_with_secret(
         &self,
         _reference: &CertificateRef,
-        pin: &str,
+        secret: &crate::identity::domain::protected_secret::ProtectedSecret,
         _algorithm: SignatureAlgorithm,
         data: &[u8],
     ) -> Result<Vec<u8>, TokenError> {
-        crate::lock(&self.signed).push((pin.to_owned(), data.to_vec()));
+        let pin = secret.as_str().expect("PIN de prueba en UTF-8").to_owned();
+        crate::lock(&self.signed).push((pin, data.to_vec()));
         Ok(b"PK1".to_vec())
     }
 }
@@ -50,8 +52,9 @@ fn one_secret_serves_every_signature_of_the_batch() {
     let certificate = a_usable_certificate("FNMT-ACTIVO");
 
     let secret = secret_for_the_batch(&signer, &certificate).expect("el secreto deberia salir");
+    let pin = ProtectedSecret::from_str("1234");
     for pre in [b"uno".as_slice(), b"dos".as_slice()] {
-        signed_by_the_token(&signer, &certificate, "1234", "SHA256", pre).expect("firma");
+        signed_by_the_token(&signer, &certificate, &pin, "SHA256", pre).expect("firma");
     }
 
     assert!(matches!(secret, StoreSecret::TypedOnScreen));
@@ -69,8 +72,14 @@ fn an_algorithm_rfirma_does_not_compose_comes_back_with_the_code_of_the_original
     let signer = RecordingSigner::default();
     let certificate = a_usable_certificate("FNMT-ACTIVO");
 
-    let refusal = signed_by_the_token(&signer, &certificate, "1234", "RIPEMD160", b"uno")
-        .expect_err("RIPEMD160 no lo compone rFirma");
+    let refusal = signed_by_the_token(
+        &signer,
+        &certificate,
+        &ProtectedSecret::from_str("1234"),
+        "RIPEMD160",
+        b"uno",
+    )
+    .expect_err("RIPEMD160 no lo compone rFirma");
 
     assert_eq!(refusal.code, SafCode::SignatureFailed);
     assert_eq!(refusal.situation, "mechanismNotOffered");
@@ -83,13 +92,14 @@ fn the_algorithm_is_read_as_the_site_writes_it() {
     let signer = RecordingSigner::default();
     let certificate = a_usable_certificate("FNMT-ACTIVO");
 
+    let pin = ProtectedSecret::from_str("1234");
     for algorithm in [
         " SHA256 ",
         "sha256withrsa",
         "SHA256withRSA",
         "SHA512withRSA",
     ] {
-        signed_by_the_token(&signer, &certificate, "1234", algorithm, b"uno")
+        signed_by_the_token(&signer, &certificate, &pin, algorithm, b"uno")
             .expect("el algoritmo de la sede se lee sin distinguir caja ni espacios");
     }
 }
@@ -152,10 +162,10 @@ fn a_token_that_cannot_sign_comes_back_with_its_code_and_its_situation() {
             Err(TokenError::new(Situation::TokenAbsent, "no hay token"))
         }
 
-        fn sign(
+        fn sign_with_secret(
             &self,
             _reference: &CertificateRef,
-            _pin: &str,
+            _secret: &crate::identity::domain::protected_secret::ProtectedSecret,
             _algorithm: SignatureAlgorithm,
             _data: &[u8],
         ) -> Result<Vec<u8>, TokenError> {
