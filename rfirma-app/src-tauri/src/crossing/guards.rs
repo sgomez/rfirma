@@ -109,7 +109,7 @@ fn types_named_by(signature: &str) -> Vec<&str> {
 }
 
 /// Tipos de salida que no contienen información procedente de un documento.
-const OUTPUTS_WITH_NO_DOCUMENT_BEHIND: [&str; 29] = [
+const OUTPUTS_WITH_NO_DOCUMENT_BEHIND: [&str; 31] = [
     "StatusView",
     "CertificateView",
     "PlacementView",
@@ -139,6 +139,8 @@ const OUTPUTS_WITH_NO_DOCUMENT_BEHIND: [&str; 29] = [
     "WithdrawalReportView",
     "StoreWithdrawalView",
     "WithdrawalView",
+    "SignatureStatusView",
+    "ToneView",
 ];
 
 /// Ruta de prueba simulando un enlace concedido por el portal.
@@ -195,6 +197,8 @@ fn a_previous_signature() -> crate::signing::domain::PreviousSignature {
         issuer: "AC FNMT Usuarios".to_owned(),
         certificate_serial_number: "1234567890".to_owned(),
         signing_time: Some("2024-01-01T10:00:00Z".to_owned()),
+        status: crate::signing::domain::SignatureStatus::Valid,
+        reason: None,
     }
 }
 
@@ -327,9 +331,10 @@ fn crossings_from_a_portal_document() -> Vec<Serialised> {
         ),
         Serialised::of(
             "PreviousSignaturesReportView",
-            &PreviousSignaturesReportView::from(PreviousSignaturesReport::new(vec![
-                a_previous_signature(),
-            ])),
+            &PreviousSignaturesReportView::from(PreviousSignaturesReport::new(
+                vec![a_previous_signature()],
+                false,
+            )),
         ),
     ];
 

@@ -4,8 +4,10 @@ use base64::Engine;
 
 use crate::identity::domain::holder::{common_name_of, holder_of, organization_identifier_of};
 use crate::signing::domain::bridge::{
-    BridgeError, DataRejection, PreSignBlock, PreSignature, PreviousSignature,
-    PreviousSignaturesReport, SealedPreSignature, SignatureVerdict,
+    BridgeError, DataRejection, PreSignBlock, PreSignature, SealedPreSignature, SignatureVerdict,
+};
+use crate::signing::domain::previous_signatures::{
+    PreviousSignature, PreviousSignaturesReport, SignatureStatus,
 };
 use crate::signing::domain::SessionSeal;
 
@@ -144,11 +146,23 @@ pub fn parse_previous_signatures(json: &str) -> Result<PreviousSignaturesReport,
             BridgeError::MalformedResponse("falta el campo \"signatures\"".to_owned())
         })?;
 
+    let changed_after_last_signature = response
+        .get("changedAfterLastSignature")
+        .and_then(serde_json::Value::as_bool)
+        .ok_or_else(|| {
+            BridgeError::MalformedResponse(
+                "falta el campo \"changedAfterLastSignature\"".to_owned(),
+            )
+        })?;
+
     let signatures = entries
         .iter()
         .map(previous_signature_of)
         .collect::<Result<Vec<_>, _>>()?;
-    Ok(PreviousSignaturesReport::new(signatures))
+    Ok(PreviousSignaturesReport::new(
+        signatures,
+        changed_after_last_signature,
+    ))
 }
 
 fn previous_signature_of(entry: &serde_json::Value) -> Result<PreviousSignature, BridgeError> {
@@ -165,6 +179,27 @@ fn previous_signature_of(entry: &serde_json::Value) -> Result<PreviousSignature,
             .get("signingTime")
             .and_then(serde_json::Value::as_str)
             .map(str::to_owned),
+        status: status_of(field(entry, "status")?)?,
+        reason: entry
+            .get("reason")
+            .and_then(serde_json::Value::as_str)
+            .map(str::to_owned),
+    })
+}
+
+fn status_of(wire_name: &str) -> Result<SignatureStatus, BridgeError> {
+    Ok(match wire_name {
+        "valid" => SignatureStatus::Valid,
+        "certificateExpired" => SignatureStatus::CertificateExpired,
+        "certificateNotYetValid" => SignatureStatus::CertificateNotYetValid,
+        "broken" => SignatureStatus::Broken,
+        "unverifiable" => SignatureStatus::Unverifiable,
+        "notFullyChecked" => SignatureStatus::NotFullyChecked,
+        other => {
+            return Err(BridgeError::MalformedResponse(format!(
+                "estado de firma previa desconocido «{other}»"
+            )))
+        }
     })
 }
 

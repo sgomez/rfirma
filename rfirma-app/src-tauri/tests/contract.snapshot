@@ -246,6 +246,19 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
       content: Option<VisibleContentView>
       withRubric: bool
 
+  pub enum SignatureStatusView
+      Valid
+      CertificateExpired
+      CertificateNotYetValid
+      Broken
+      Unverifiable
+      NotFullyChecked
+
+  pub enum ToneView
+      Information
+      Indeterminate
+      Attention
+
   pub struct PreviousSignatureView
       name: String
       idNumber: String
@@ -253,9 +266,13 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
       issuer: String
       certificateSerialNumber: String
       signingTime: Option<String>
+      status: SignatureStatusView
+      reason: Option<String>
 
   pub struct PreviousSignaturesReportView
       signatures: Vec<PreviousSignatureView>
+      warningCount: usize
+      tone: ToneView
 
   pub struct SiteErrandView
       origin: Option<String>

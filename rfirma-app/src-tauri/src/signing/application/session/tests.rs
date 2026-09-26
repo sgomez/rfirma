@@ -11,8 +11,8 @@ use crate::signing::application::tests::{
     an_order, AnEngineThatReports, DocumentsInMemory, NoIsolate,
 };
 use crate::signing::domain::{
-    Format, PageSet, PreviousSignature, PreviousSignaturesReport, SignatureConfig, SigningChoice,
-    Waivers,
+    Format, PageSet, PreviousSignature, PreviousSignaturesReport, SignatureConfig, SignatureStatus,
+    SigningChoice, Waivers,
 };
 use base64::Engine;
 use serde_json::json;
@@ -626,9 +626,13 @@ fn previous_signatures_in_returns_what_the_engine_reports() {
         issuer: "AC FNMT Usuarios".to_owned(),
         certificate_serial_number: "1".to_owned(),
         signing_time: Some("2024-01-01T10:00:00Z".to_owned()),
+        status: SignatureStatus::Valid,
+        reason: None,
     };
-    let engine = AnEngineThatReports::default()
-        .answering(PreviousSignaturesReport::new(vec![signature.clone()]));
+    let engine = AnEngineThatReports::default().answering(PreviousSignaturesReport::new(
+        vec![signature.clone()],
+        false,
+    ));
 
     let report = previous_signatures_in(&files, &engine, &document).expect("el motor contesta");
 
