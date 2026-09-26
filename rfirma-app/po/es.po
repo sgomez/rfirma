@@ -743,11 +743,6 @@ msgstr "Cambiar…"
 msgid "panel.visibleSignature.rubric.thumbnail"
 msgstr "Tu rúbrica, tal como se estampará"
 
-msgid "panel.visibleSignature.rubric.flattened"
-msgstr ""
-"Se estampa sobre blanco: el recuadro va al PDF como JPEG y un JPEG no tiene "
-"transparencia."
-
 #. Aviso sobre el bloque de firma visible apagado: sin certificado no hay sello que dibujar.
 msgid "panel.visibleSignature.noCertificate"
 msgstr "Elige un certificado para colocar la firma visible"

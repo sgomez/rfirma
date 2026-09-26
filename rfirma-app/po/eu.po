@@ -745,11 +745,6 @@ msgstr "Aldatu…"
 msgid "panel.visibleSignature.rubric.thumbnail"
 msgstr "Zure errubrika, estanpatuko den bezala"
 
-msgid "panel.visibleSignature.rubric.flattened"
-msgstr ""
-"Zuriaren gainean estanpatzen da: laukia JPEG gisa doa PDFra, eta JPEG batek "
-"ez du gardentasunik."
-
 #. Aviso sobre el bloque de firma visible apagado: sin certificado no hay sello que dibujar.
 msgid "panel.visibleSignature.noCertificate"
 msgstr "Aukeratu ziurtagiri bat sinadura ikusgaia kokatzeko"

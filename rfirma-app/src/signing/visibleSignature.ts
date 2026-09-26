@@ -15,11 +15,7 @@ type Datum = "signer" | "issuer" | "signedAt";
 /** Un trozo de la frase de *Personalizada*: texto libre o un dato. */
 type PhrasePart = { text: string } | { datum: Datum };
 
-/**
- * El contenido del recuadro, por modelo (forma sacada del prototipo del
- * lienzo). La frase de *Personalizada* viaja **estructurada**, nunca como
- * comodines entre `$$…$$` (ADR-0006).
- */
+/** El contenido del recuadro, por modelo; la frase de *Personalizada* viaja estructurada, no como comodines (ADR-0006). */
 export type VisibleContent =
   | { model: "complete" }
   | { model: "rubricOnly" }
@@ -45,12 +41,7 @@ export const DEFAULT_VISIBLE_SIGNATURE: VisibleSignature = {
   content: { model: "complete" },
 };
 
-/**
- * Lo que decide «Con rúbrica» y si *Solo rúbrica* se puede elegir, **en un
- * solo sitio** (docs/design/panel-de-firma.md § La rúbrica): *Solo rúbrica*
- * fuerza «Con rúbrica» encendido y bloqueado, y «Con rúbrica» apagado
- * desactiva *Solo rúbrica*.
- */
+/** Lo que deciden juntos «Con rúbrica» y si *Solo rúbrica* se puede elegir. */
 export interface RubricRule {
   /** Si el interruptor «Con rúbrica» está bloqueado, y en qué sentido. */
   locked: "on" | null;

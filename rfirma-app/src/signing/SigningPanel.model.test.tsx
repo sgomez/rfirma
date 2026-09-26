@@ -68,7 +68,6 @@ describe("SigningPanel · Modelo y rúbrica", () => {
 
     const thumbnail = screen.getByAltText("Tu rúbrica, tal como se estampará");
     expect(thumbnail).toHaveAttribute("src", rubric.dataUrl);
-    expect(screen.getByText(/Se estampa sobre blanco/)).toBeInTheDocument();
   });
 
   it("disables the rubric-only card while «Con rúbrica» is off", () => {

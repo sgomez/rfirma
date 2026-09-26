@@ -239,7 +239,7 @@ export function SigningPanel({
             onChange={(enabled) => onChangeSignature({ ...signature, enabled })}
           />
 
-          {usable && signature.enabled && (
+          {chosen !== null && usable && signature.enabled && (
             <>
               <PlacementFieldset
                 documentPages={document.pages}
@@ -257,6 +257,7 @@ export function SigningPanel({
               <ModelFieldset
                 signature={signature}
                 onChangeSignature={onChangeSignature}
+                certificate={chosen}
                 rubric={rubric}
                 rubricFailure={rubricFailure}
                 onChooseRubric={onChooseRubric}

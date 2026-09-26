@@ -727,11 +727,6 @@ msgstr "Change…"
 msgid "panel.visibleSignature.rubric.thumbnail"
 msgstr "Your rubric, as it will be stamped"
 
-msgid "panel.visibleSignature.rubric.flattened"
-msgstr ""
-"It's stamped on white: the box goes into the PDF as a JPEG, and a JPEG has "
-"no transparency."
-
 #. Aviso sobre el bloque de firma visible apagado: sin certificado no hay sello que dibujar.
 msgid "panel.visibleSignature.noCertificate"
 msgstr "Choose a certificate to place the visible signature"
