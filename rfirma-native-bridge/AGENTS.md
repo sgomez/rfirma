@@ -11,7 +11,7 @@ con `native-image` (ADR-0004). Lo que decide y firma vive en Rust.
 | `src/main/java/.../PadesBridge.java` | Preproceso y postproceso PAdES, incluida la firma visible. |
 | `src/main/java/.../CadesBridge.java` | Preproceso y postproceso CAdES: firma, cofirma y contrafirma, y el contenedor ASiC-S, que entra por aquí con su propio procesador. |
 | `src/main/java/.../XadesBridge.java` | Preproceso y postproceso XAdES: firma en las variantes Enveloping, Detached, Enveloped y ASiC-S, cofirma y contrafirma con `target=tree\|leafs`, y la factura electrónica, que entra por aquí con su propio procesador. |
-| `src/main/java/.../SignatureTimestamp.java` | El sello de tiempo que pide `tsaURL` en CAdES y XAdES (ADR-0030); no el de PAdES, que sella el procesador del original. |
+| `src/main/java/.../SignatureTimestamp.java` | El sello de tiempo que pide `tsaURL` en CAdES y XAdES (ADR-0030); no toca PAdES. |
 | `src/main/java/.../TimestampFailedException.java` | El fallo con el que una firma que pidió sello y no se pudo sellar no sale. |
 | `src/main/java/.../ValidationBridge.java` | El veredicto del validador del original sobre las firmas que ya trae un documento: valida, invalida o pendiente de que la persona confirme. No firma nada. |
 | `src/main/java/.../PreviousSignaturesBridge.java` | Las firmas que ya trae un PDF, una a una: quién firmó, cuándo, y su estado según el validador del original. No es el veredicto de conjunto de `ValidationBridge`. |
@@ -80,3 +80,14 @@ con `native-image` (ADR-0004). Lo que decide y firma vive en Rust.
   la dispara: solo salta cuando alguien añade una revisión incremental que no
   es una firma. Leerla al revés da una guarda que parece correcta y deja pasar
   justo el ataque que persigue.
+* **`ValidatePdfSignature.validateSign()` no es el validador entero.** Es la
+  pieza por firma que llama `validate(byte[], Properties)`; lo que esta añade
+  alrededor —el documento certificado que no admite más firmas y la regla de
+  `SignValider#checkLongStandingValiditySign`— no ocurre si llamas solo a
+  `validateSign`. Dos consecuencias: con `checkCert=true` puede devolver
+  varios veredictos para una misma firma (`CERTIFICATE_EXPIRED` junto a
+  `SIGN_PROFILE_NOT_CHECKED` en una longeva caducada), y quedarse con el
+  primer KO dice «caducado» donde el original dice «sin comprobar del todo»;
+  y nunca produce `UNKOWN_SIGNATURE_FORMAT`, así que un `/SubFilter` ajeno
+  pero íntegro cae en el mismo `SIGN_PROFILE_NOT_CHECKED` que la longeva y
+  solo el perfil `"PDF"` de `SignatureFormatDetectorPadesCades` los separa.
