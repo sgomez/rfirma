@@ -31,6 +31,7 @@ ORDENES DE TAURI                          (<contexto>/adapters/tauri*.rs)
   async preview_signature(order: SigningOrder) -> Result<tauri::ipc::Response, Failure>
         pades_lower_left(placement: PlacementOrder) -> Result<[i32; 2], Failure>
         read_configuration() -> ConfigurationView
+        remembered_visible_signature() -> RememberedVisibleSignatureView
   async write_configuration(configuration: ConfigurationView) -> Result<(), Failure>
   async forget_activity() -> Result<(), Failure>
   async unregistered_signatures(document: String) -> Result<bool, Failure>
@@ -227,6 +228,24 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
       setupWizardSeen: bool
       consentCountdown: bool
       honourAutomaticSelection: bool
+
+  pub enum DatumView
+      Signer
+      Issuer
+      SignedAt
+
+  pub enum PhrasePartView   (serde: sin etiqueta)
+      Text { text: String }
+      Datum { datum: DatumView }
+
+  pub enum VisibleContentView   (serde: etiqueta "model")
+      Complete
+      RubricOnly
+      Custom { phrase: Vec<PhrasePartView> }
+
+  pub struct RememberedVisibleSignatureView
+      content: Option<VisibleContentView>
+      withRubric: bool
 
   pub struct SiteErrandView
       origin: Option<String>

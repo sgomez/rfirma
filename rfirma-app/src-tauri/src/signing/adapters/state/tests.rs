@@ -1,7 +1,7 @@
 use super::*;
 use crate::documents::domain::recents::{Badge, RecentDocument};
 use crate::identity::domain::certificate::TokenCertificate;
-use crate::signing::domain::{PageSet, Spot};
+use crate::signing::domain::{Datum, PageSet, PhrasePart, Spot, VisibleContent};
 use std::fs;
 use std::path::Path;
 use std::time::SystemTime;
@@ -48,7 +48,7 @@ fn forgetting_everything_covers_the_recents_and_the_certificate_alike() {
 }
 
 #[test]
-fn a_visible_signature_saved_by_an_older_version_survives_the_field_that_is_gone() {
+fn a_visible_signature_saved_by_an_older_version_survives_the_fields_that_are_gone() {
     let saved = r#"{
         "enabled": true,
         "rubric": true,
@@ -63,21 +63,40 @@ fn a_visible_signature_saved_by_an_older_version_survives_the_field_that_is_gone
     }"#;
 
     let remembered: VisibleSignatureMemory =
-        serde_json::from_str(saved).expect("el campo de sobra se ignora");
+        serde_json::from_str(saved).expect("el motivo y las casillas de sobra se ignoran");
 
     assert!(remembered.enabled);
     assert!(remembered.rubric);
-    assert_eq!(remembered.reason, "Conforme");
+    assert_eq!(remembered.content, None);
     assert_eq!(remembered.size.width, 200.0);
     assert_eq!(remembered.size.height, 80.0);
+}
+
+#[test]
+fn a_visible_signature_remembers_the_model_and_the_phrase() {
+    let saved = serde_json::to_string(&VisibleSignatureMemory {
+        enabled: true,
+        rubric: true,
+        content: Some(VisibleContent::Custom(vec![
+            PhrasePart::Text("Conforme, ".to_owned()),
+            PhrasePart::Datum(Datum::Signer),
+        ])),
+        size: BoxSize {
+            width: 200.0,
+            height: 80.0,
+        },
+    })
+    .expect("deberia serializarse");
+
+    let remembered: VisibleSignatureMemory =
+        serde_json::from_str(&saved).expect("deberia deserializarse");
+
     assert_eq!(
-        remembered.fields,
-        RememberedFields {
-            signer_name: true,
-            issuer: false,
-            signed_at: true,
-            reason: true,
-        }
+        remembered.content,
+        Some(VisibleContent::Custom(vec![
+            PhrasePart::Text("Conforme, ".to_owned()),
+            PhrasePart::Datum(Datum::Signer),
+        ]))
     );
 }
 
@@ -111,13 +130,9 @@ fn what_is_global_and_what_is_of_each_document_are_two_different_places() {
         visible_signature: Some(VisibleSignatureMemory {
             enabled: true,
             rubric: true,
-            fields: RememberedFields {
-                signer_name: true,
-                issuer: true,
-                signed_at: true,
-                reason: false,
-            },
-            reason: "Conforme".to_owned(),
+            content: Some(VisibleContent::Custom(vec![PhrasePart::Text(
+                "Conforme".to_owned(),
+            )])),
             size: BoxSize {
                 width: 200.0,
                 height: 80.0,
@@ -145,7 +160,7 @@ fn what_is_global_and_what_is_of_each_document_are_two_different_places() {
         "la pagina y la posicion no son globales: son de cada documento"
     );
     assert_eq!(global["size"]["width"], 200.0);
-    assert_eq!(global["reason"], "Conforme");
+    assert_eq!(global["content"]["Custom"][0]["Text"], "Conforme");
     let row = &written["recents"][0]["placement"];
     assert_eq!(row["pages"], serde_json::json!({ "only": [3] }));
     assert_eq!(row["lower_left_x"], 48.0);

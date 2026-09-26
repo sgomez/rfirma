@@ -11,10 +11,10 @@ use crate::documents::domain::recents::Recents;
 use crate::identity::domain::certificate::CertificateRef;
 use crate::lock;
 use crate::memory_error::MemoryError;
-use crate::signing::adapters::state::State;
+use crate::signing::adapters::state::{State, VisibleSignatureMemory};
 use crate::signing::adapters::store::{JsonFile, Loaded};
 use crate::signing::application::configuration_memory::Configuration;
-use crate::signing::domain::{BoxSize, Language, Spot};
+use crate::signing::domain::{BoxSize, Language, Spot, VisibleContent};
 
 /// Las dos memorias y sus dos soportes (ADR-0010).
 #[derive(Debug)]
@@ -104,6 +104,24 @@ impl Memory {
     /// Olvida lo acumulado conservando los datos exentos (ADR-0010).
     pub fn forget_activity(&self) -> Result<(), MemoryError> {
         self.erase_activity_but_keep_the_exempt()
+    }
+
+    /// Guarda el modelo, la frase y «Con rúbrica» de la última firma visible configurada (ADR-0010).
+    pub fn remember_visible_signature(
+        &self,
+        content: Option<&VisibleContent>,
+        with_rubric: bool,
+    ) -> Result<(), MemoryError> {
+        self.touch_state(|state| {
+            let remembered = state.visible_signature.get_or_insert_default();
+            remembered.content = content.cloned();
+            remembered.rubric = with_rubric;
+        })
+    }
+
+    /// El modelo, la frase y «Con rúbrica» recordados de la última firma visible configurada.
+    pub fn remembered_visible_signature(&self) -> VisibleSignatureMemory {
+        self.loaded_state().visible_signature.unwrap_or_default()
     }
 
     /// Guarda el registro de comprobación de versión sin depender de interruptores de actividad.

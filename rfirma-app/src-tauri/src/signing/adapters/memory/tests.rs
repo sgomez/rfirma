@@ -5,7 +5,7 @@ use crate::documents::domain::recents::RecentDocument;
 use crate::identity::domain::certificate::CertificateRef;
 use crate::signing::adapters::state::{State, VisibleSignatureMemory};
 use crate::signing::domain::Language;
-use crate::signing::domain::{BoxSize, Spot};
+use crate::signing::domain::{BoxSize, Datum, PhrasePart, Spot, VisibleContent};
 use std::fs;
 use std::path::Path;
 use std::time::SystemTime;
@@ -288,6 +288,56 @@ fn with_the_visible_signature_switch_off_the_box_is_not_saved_but_the_rest_is() 
         stored.recents.entries()[0].placement().is_none(),
         "apagado no guarda tampoco la posicion de cada documento"
     );
+}
+
+#[test]
+fn the_model_and_the_phrase_come_back_in_the_next_session() {
+    let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let (memory, _) = a_memory(directory.path());
+    let content = VisibleContent::Custom(vec![
+        PhrasePart::Text("Conforme, ".to_owned()),
+        PhrasePart::Datum(Datum::Signer),
+    ]);
+    memory
+        .remember_configuration(&Configuration::default())
+        .expect("deberia guardarse la configuracion");
+
+    memory
+        .remember_visible_signature(Some(&content), true)
+        .expect("deberia guardarse");
+
+    let remembered = memory.remembered_visible_signature();
+    assert_eq!(remembered.content, Some(content));
+    assert!(remembered.rubric);
+}
+
+#[test]
+fn a_first_run_has_no_remembered_model() {
+    let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let (memory, _) = a_memory(directory.path());
+
+    let remembered = memory.remembered_visible_signature();
+
+    assert_eq!(remembered.content, None);
+    assert!(!remembered.rubric);
+}
+
+#[test]
+fn with_the_visible_signature_switch_off_the_model_is_not_saved() {
+    let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let (memory, _) = a_memory(directory.path());
+    memory
+        .remember_configuration(&Configuration {
+            remember_visible_signature: false,
+            ..Configuration::default()
+        })
+        .expect("deberia guardarse la configuracion");
+
+    memory
+        .remember_visible_signature(Some(&VisibleContent::Complete), true)
+        .expect("deberia guardarse");
+
+    assert_eq!(memory.remembered_visible_signature().content, None);
 }
 
 #[test]
