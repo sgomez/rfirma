@@ -1,11 +1,11 @@
 /*
- * Cabecera: una sola fila de 56 px sobre `--rf-surface`, separada del cuerpo
- * por `--rf-border-subtle` (docs/design/cabecera.md).
+ * Cabecera: una sola fila de 52 px sobre `--rf-surface`, sin raya propia — la
+ * pone la tira de pestañas, que va justo debajo (docs/design/cabecera.md).
  *
  * La geometría de aquí es la del artboard, medida a medida: el relleno
- * asimétrico (24 px a la izquierda, 16 a la derecha, donde va el botón), el
+ * asimétrico (24 px a la izquierda, 8 a la derecha, donde va el botón), el
  * nombre a 15 px con .4 px de tracking, el botón cuadrado de 40 px y el menú
- * flotante de 230 px anclado a 52 px del borde superior.
+ * flotante de 230 px anclado a 50 px del borde superior.
  *
  * Aquí no se fija ningún color a mano: todo sale de los tokens, como manda el
  * sistema de diseño.
@@ -24,12 +24,15 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--rf-space-sm);
-  height: 56px;
-  padding: 0 var(--rf-space-sm) 0 var(--rf-space-md);
-  border-bottom: 1px solid var(--rf-border-subtle);
+  height: 52px;
+  padding: 0 var(--rf-space-xs) 0 var(--rf-space-md);
 }
 
-/* El nombre no va al tamaño pleno de `.rf-title`: en una franja de 56 px el
+.header--menuOpen {
+  z-index: 11;
+}
+
+/* El nombre no va al tamaño pleno de `.rf-title`: en una franja de 52 px el
    artboard lo baja a 15 px y le abre el tracking para que siga leyéndose como
    identidad y no como título de sección. */
 .header__name {
@@ -45,7 +48,7 @@
 }
 
 /* El botón de menú es de 40 px, más estrecho que el mínimo táctil de `.rf-btn`,
-   porque va dentro de una franja de 56 px. */
+   porque va dentro de una franja de 52 px. */
 .header__button {
   min-width: 40px;
   min-height: 40px;
@@ -61,8 +64,8 @@
 /* El menú flota anclado a la derecha, por encima del cuerpo de la ventana. */
 .header__popup {
   position: absolute;
-  top: 52px;
-  right: var(--rf-space-sm);
+  top: 50px;
+  right: var(--rf-space-xs);
   z-index: 10;
   gap: 2px;
   min-width: 230px;
