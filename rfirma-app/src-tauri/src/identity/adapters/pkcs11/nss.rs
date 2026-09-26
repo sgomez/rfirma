@@ -25,9 +25,17 @@ pub const CANDIDATE_SMIME: &[&str] = &[
     "/usr/lib/libsmime3.so",
 ];
 
+/// Rutas candidatas para localizar la biblioteca `libnspr4.so`.
+pub const CANDIDATE_NSPR: &[&str] = &[
+    "/usr/lib/x86_64-linux-gnu/libnspr4.so",
+    "/usr/lib64/libnspr4.so",
+    "/usr/lib/libnspr4.so",
+];
+
 const SEC_SUCCESS: c_int = 0;
 const PR_TRUE: c_int = 1;
 const SI_BUFFER: c_uint = 0;
+const SEC_ERROR_BAD_PASSWORD: c_int = -0x2000 + 15;
 
 fn module_spec(directory: &Path) -> String {
     format!(
@@ -122,6 +130,7 @@ impl<H: NssHost> NssHost for &H {
 
 static NSS_LIBRARY: OnceLock<Result<Library, String>> = OnceLock::new();
 static SMIME_LIBRARY: OnceLock<Result<Library, String>> = OnceLock::new();
+static NSPR_LIBRARY: OnceLock<Result<Library, String>> = OnceLock::new();
 
 /// Carga la biblioteca `libnss3.so` compartida del sistema.
 pub fn nss_library() -> Result<&'static Library, NssUnavailable> {
@@ -141,6 +150,13 @@ pub fn nss_library() -> Result<&'static Library, NssUnavailable> {
 
 fn smime_library() -> Result<&'static Library, TokenError> {
     let loaded = SMIME_LIBRARY.get_or_init(|| first_present(CANDIDATE_SMIME, "libsmime3.so"));
+    loaded
+        .as_ref()
+        .map_err(|detail| TokenError::new(Situation::ModuleNotFound, detail.clone()))
+}
+
+fn nspr_library() -> Result<&'static Library, TokenError> {
+    let loaded = NSPR_LIBRARY.get_or_init(|| first_present(CANDIDATE_NSPR, "libnspr4.so"));
     loaded
         .as_ref()
         .map_err(|detail| TokenError::new(Situation::ModuleNotFound, detail.clone()))
@@ -277,6 +293,7 @@ pub fn import_pkcs12(directory: &Path, pkcs12: &[u8], password: &str) -> Result<
     let nss = nss_library()
         .map_err(|err| TokenError::new(Situation::ModuleNotFound, err.detail().to_owned()))?;
     let smime = smime_library()?;
+    let nspr = nspr_library()?;
 
     type NoDbInit = extern "C" fn(*const c_char) -> c_int;
     type Shutdown = extern "C" fn() -> c_int;
@@ -309,7 +326,9 @@ pub fn import_pkcs12(directory: &Path, pkcs12: &[u8], password: &str) -> Result<
     type DestroyCertList = extern "C" fn(*mut CertList);
     type ImportDerCert =
         extern "C" fn(*mut c_void, *mut SecItem, c_ulong, *const c_char, c_int) -> c_int;
+    type GetError = extern "C" fn() -> c_int;
 
+    let get_error: GetError = symbol(nspr, b"PR_GetError\0")?;
     let nss_no_db_init: NoDbInit = symbol(nss, b"NSS_NoDB_Init\0")?;
     let nss_shutdown: Shutdown = symbol(nss, b"NSS_Shutdown\0")?;
     let open_user_db: OpenUserDb = symbol(nss, b"SECMOD_OpenUserDB\0")?;
@@ -389,7 +408,14 @@ pub fn import_pkcs12(directory: &Path, pkcs12: &[u8], password: &str) -> Result<
                     return Err(failed("SEC_PKCS12DecoderUpdate"));
                 }
                 if decoder_verify(decoder) != SEC_SUCCESS {
-                    return Err(failed("SEC_PKCS12DecoderVerify"));
+                    return Err(if get_error() == SEC_ERROR_BAD_PASSWORD {
+                        TokenError::new(
+                            Situation::IncorrectPkcs12Password,
+                            "SEC_PKCS12DecoderVerify: SEC_ERROR_BAD_PASSWORD",
+                        )
+                    } else {
+                        failed("SEC_PKCS12DecoderVerify")
+                    });
                 }
                 if decoder_validate(decoder, keep_the_nickname) != SEC_SUCCESS {
                     return Err(failed("SEC_PKCS12DecoderValidateBags"));

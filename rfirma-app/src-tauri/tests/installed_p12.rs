@@ -78,6 +78,44 @@ fn an_elliptic_curve_p12(directory: &Path) -> PathBuf {
     bundle
 }
 
+/// Genera un `.p12` con un certificado sin clave privada emparejada en `directory`.
+fn a_p12_without_a_private_key(directory: &Path) -> PathBuf {
+    let key = directory.join("nokey.pem");
+    let certificate = directory.join("nokey-cert.pem");
+    let bundle = directory.join("nokey.p12");
+
+    run_openssl(&[
+        "req",
+        "-x509",
+        "-newkey",
+        "rsa:2048",
+        "-nodes",
+        "-days",
+        "30",
+        "-subj",
+        "/CN=SIN CLAVE PRIVADA",
+        "-keyout",
+        key.to_str().expect("ruta valida"),
+        "-out",
+        certificate.to_str().expect("ruta valida"),
+    ]);
+    run_openssl(&[
+        "pkcs12",
+        "-export",
+        "-nokeys",
+        "-in",
+        certificate.to_str().expect("ruta valida"),
+        "-name",
+        "SIN CLAVE PRIVADA",
+        "-passout",
+        &format!("pass:{EC_PASSWORD}"),
+        "-out",
+        bundle.to_str().expect("ruta valida"),
+    ]);
+
+    bundle
+}
+
 fn run_openssl(arguments: &[&str]) {
     let output = Command::new("openssl").args(arguments).output().expect(
         "falta openssl. Las pruebas del .p12 instalado lo necesitan: sudo apt install -y openssl",
@@ -190,7 +228,34 @@ fn a_wrong_password_is_told_apart_from_a_key_that_does_not_serve() {
     let failure = install(installed.path(), &kit_p12(), "no es la suya")
         .expect_err("con otra contrasena no se puede abrir el fichero");
 
+    assert_eq!(failure.situation, "incorrectPkcs12Password");
+    assert!(installed_stores(installed.path()).is_empty());
+}
+
+#[test]
+fn a_file_that_is_not_a_pkcs12_is_told_apart_from_a_wrong_password() {
+    let installed = an_empty_installation();
+    let workshop = tempfile::tempdir().expect("deberia poder crearse un directorio temporal");
+    let not_a_p12 = workshop.path().join("not-a.p12");
+    std::fs::write(&not_a_p12, b"esto no es un pkcs12").expect("deberia poder escribirse");
+
+    let failure = install(installed.path(), &not_a_p12, KIT_PASSWORD)
+        .expect_err("un fichero que no decodifica como pkcs12 no se puede instalar");
+
     assert_eq!(failure.situation, "pkcs12Unreadable");
+    assert!(installed_stores(installed.path()).is_empty());
+}
+
+#[test]
+fn a_p12_without_a_private_key_gives_its_own_situation() {
+    let installed = an_empty_installation();
+    let workshop = tempfile::tempdir().expect("deberia poder crearse un directorio temporal");
+    let certificate_only = a_p12_without_a_private_key(workshop.path());
+
+    let failure = install(installed.path(), &certificate_only, EC_PASSWORD)
+        .expect_err("un .p12 sin clave privada no se puede instalar");
+
+    assert_eq!(failure.situation, "pkcs12NoPrivateKey");
     assert!(installed_stores(installed.path()).is_empty());
 }
 

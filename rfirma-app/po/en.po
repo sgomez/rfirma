@@ -203,10 +203,21 @@ msgid "errors.situations.certificateRevoked.body"
 msgstr "Its issuer revoked it, so it can't sign. You need a new one."
 
 msgid "errors.situations.pkcs12Unreadable.title"
-msgstr "We couldn't open the certificate"
+msgstr "We couldn't read the file"
 
 msgid "errors.situations.pkcs12Unreadable.body"
-msgstr "Check the file's password."
+msgstr "That isn't a .p12 or .pfx certificate."
+
+msgid "errors.situations.incorrectPkcs12Password.title"
+msgstr "That password isn't right"
+
+msgid "errors.situations.incorrectPkcs12Password.body"
+msgstr "Check it and try again."
+
+#. Un solo renglon a proposito: no lleva cuerpo debajo, y por eso no hay
+#. msgid "errors.situations.pkcs12NoPrivateKey.body".
+msgid "errors.situations.pkcs12NoPrivateKey.title"
+msgstr "That file doesn't carry a private key"
 
 #. Un solo renglon a proposito (ID-211): no lleva cuerpo debajo, y por eso no
 #. hay msgid "errors.situations.keyNotRsa.body".

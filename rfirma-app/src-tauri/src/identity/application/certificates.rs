@@ -170,7 +170,7 @@ fn only_rsa_keys(token: &dyn Token, store: &Store) -> Result<(), TokenError> {
     let found = token.list(store)?;
     if found.is_empty() {
         return Err(TokenError::new(
-            Situation::Pkcs12Unreadable,
+            Situation::Pkcs12NoPrivateKey,
             "el fichero no ha dejado ningun certificado con clave privada dentro",
         ));
     }

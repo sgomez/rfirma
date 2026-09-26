@@ -211,10 +211,21 @@ msgstr ""
 "duzu."
 
 msgid "errors.situations.pkcs12Unreadable.title"
-msgstr "Ezin izan da ziurtagiria ireki"
+msgstr "Ezin izan dugu fitxategia irakurri"
 
 msgid "errors.situations.pkcs12Unreadable.body"
-msgstr "Egiaztatu fitxategiaren pasahitza."
+msgstr "Hori ez da .p12 edo .pfx formatuko ziurtagiria."
+
+msgid "errors.situations.incorrectPkcs12Password.title"
+msgstr "Pasahitza ez da zuzena"
+
+msgid "errors.situations.incorrectPkcs12Password.body"
+msgstr "Egiaztatu eta saiatu berriro."
+
+#. Un solo renglon a proposito: no lleva cuerpo debajo, y por eso no hay
+#. msgid "errors.situations.pkcs12NoPrivateKey.body".
+msgid "errors.situations.pkcs12NoPrivateKey.title"
+msgstr "Fitxategi horrek ez dakar giltza pribaturik"
 
 #. Un solo renglon a proposito (ID-211): no lleva cuerpo debajo, y por eso no
 #. hay msgid "errors.situations.keyNotRsa.body".

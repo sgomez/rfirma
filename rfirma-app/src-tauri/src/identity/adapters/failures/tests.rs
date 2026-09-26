@@ -1,6 +1,6 @@
 use super::*;
 
-const EVERY_SITUATION: [Situation; 10] = [
+const EVERY_SITUATION: [Situation; 12] = [
     Situation::IncorrectPin,
     Situation::PinLocked,
     Situation::TokenAbsent,
@@ -8,6 +8,8 @@ const EVERY_SITUATION: [Situation; 10] = [
     Situation::ModuleNotFound,
     Situation::CertificateNotFound,
     Situation::Pkcs12Unreadable,
+    Situation::IncorrectPkcs12Password,
+    Situation::Pkcs12NoPrivateKey,
     Situation::KeyNotRsa,
     Situation::MechanismNotOffered,
     Situation::Unknown,
@@ -51,6 +53,26 @@ fn the_window_and_the_site_hear_about_a_missing_token_from_the_same_line() {
     assert_eq!(
         code_of_token(Situation::KeyNotRsa),
         SafCode::IncompatibleKeyType
+    );
+}
+
+#[test]
+fn the_three_ways_a_p12_can_fail_have_three_different_names() {
+    assert_eq!(
+        situation_name(Situation::IncorrectPkcs12Password),
+        "incorrectPkcs12Password"
+    );
+    assert_eq!(
+        situation_name(Situation::Pkcs12Unreadable),
+        "pkcs12Unreadable"
+    );
+    assert_eq!(
+        situation_name(Situation::Pkcs12NoPrivateKey),
+        "pkcs12NoPrivateKey"
+    );
+    assert_eq!(
+        code_of_token(Situation::Pkcs12NoPrivateKey),
+        SafCode::NoCertificatesInKeystore
     );
 }
 
