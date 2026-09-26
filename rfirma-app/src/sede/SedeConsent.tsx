@@ -264,7 +264,11 @@ function DocumentCard({
       </div>
       {roundNote !== null && <p className="rf-body sede-consent__round">{roundNote}</p>}
       {document.previousSignatures.signatures.length > 0 && (
-        <PreviousSignaturesNotice report={document.previousSignatures} certificate={certificate} />
+        <PreviousSignaturesNotice
+          report={document.previousSignatures}
+          certificate={certificate}
+          presentation="site"
+        />
       )}
     </div>
   );

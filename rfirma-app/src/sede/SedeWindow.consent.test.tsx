@@ -177,7 +177,7 @@ describe("2 · consent", () => {
     expect(calls.cancel).toHaveBeenCalled();
   });
 
-  describe("las firmas previas del documento (ID-403, ID-404, ID-406)", () => {
+  describe("previous signatures of the document", () => {
     it.each(["sign", "cosign"] as const)(
       "shows the notice with the right count and states for a %s",
       (kind) => {
@@ -209,6 +209,79 @@ describe("2 · consent", () => {
         expect(screen.getByText(/1 aviso/)).toBeInTheDocument();
       },
     );
+
+    it("folds the notice by default even with several signatures and warnings", () => {
+      const { port } = scriptedErrand(
+        consenting({
+          document: {
+            title: "Convenio",
+            pages: 12,
+            sizeBytes: 860_000,
+            round: { kind: "sign" },
+            hasUnregisteredSignatures: false,
+            previousSignatures: reportOf(
+              [
+                previousSignatureOf(),
+                previousSignatureOf({
+                  certificateSerialNumber: "2",
+                  status: "broken",
+                  reason: null,
+                }),
+              ],
+              { warningCount: 1, tone: "attention" },
+            ),
+          },
+        }),
+      );
+      renderWithCatalog(<SedeWindow errands={port} />);
+
+      expect(screen.getByRole("button", { name: "Ver firmas anteriores" })).toHaveAttribute(
+        "aria-expanded",
+        "false",
+      );
+    });
+
+    it("renders the site variant, where the stylesheet keeps count and warnings in one line", () => {
+      const { port } = scriptedErrand(
+        consenting({
+          document: {
+            title: "Convenio",
+            pages: 12,
+            sizeBytes: 860_000,
+            round: { kind: "sign" },
+            hasUnregisteredSignatures: false,
+            previousSignatures: reportOf([previousSignatureOf()], {
+              warningCount: 1,
+              tone: "attention",
+            }),
+          },
+        }),
+      );
+      renderWithCatalog(<SedeWindow errands={port} />);
+
+      expect(document.querySelector(".panel__co-signature--site")).toBeInTheDocument();
+    });
+
+    it("uses the certificate dropdown's chevron, not the split button's", () => {
+      const { port } = scriptedErrand(
+        consenting({
+          document: {
+            title: "Convenio",
+            pages: 12,
+            sizeBytes: 860_000,
+            round: { kind: "sign" },
+            hasUnregisteredSignatures: false,
+            previousSignatures: reportOf([previousSignatureOf()]),
+          },
+        }),
+      );
+      renderWithCatalog(<SedeWindow errands={port} />);
+
+      const summary = screen.getByRole("button", { name: "Ver firmas anteriores" });
+      const chevron = summary.querySelector(".panel__co-signature-chevron svg");
+      expect(chevron).toHaveAttribute("width", "16");
+      expect(chevron).toHaveAttribute("stroke-width", "1.5");
+    });
 
     it("signs with no intermediate dialogue when a previous signature is broken", async () => {
       const user = userEvent.setup();

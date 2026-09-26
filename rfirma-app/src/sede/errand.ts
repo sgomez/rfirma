@@ -52,11 +52,7 @@ export interface SiteDocument {
    * dentro del mismo consentimiento: no hay un sexto momento (ID-302).
    */
   hasUnregisteredSignatures: boolean;
-  /**
-   * Las firmas que ya trae el documento, calculado sobre el PDF real como en
-   * el panel de escritorio (ID-406): mismo recuento, mismos estados, mismo
-   * comportamiento de «ya lo firmaste tú» (ID-403, ID-404).
-   */
+  /** Las firmas que ya trae el documento, calculadas sobre el PDF real. */
   previousSignatures: PreviousSignaturesReport;
 }
 
