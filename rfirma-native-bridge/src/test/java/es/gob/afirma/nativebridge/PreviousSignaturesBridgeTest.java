@@ -9,6 +9,8 @@ import java.net.Proxy;
 import java.net.ProxySelector;
 import java.net.SocketAddress;
 import java.net.URI;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.security.PrivateKey;
 import java.security.Signature;
 import java.security.cert.X509Certificate;
@@ -108,6 +110,19 @@ class PreviousSignaturesBridgeTest {
 
         assertEquals(PreviousSignaturesBridge.Status.CERTIFICATE_EXPIRED, signature.status());
         assertEquals("CERTIFICATE_EXPIRED", signature.reason());
+    }
+
+    @Test
+    void a_long_standing_signature_with_the_expired_certificate_is_not_fully_checked()
+            throws Exception {
+        final byte[] pdf = Files.readAllBytes(
+                Path.of("..", "testdata", "previous-signatures", "pades-long-term-expired.pdf"));
+
+        final PreviousSignaturesBridge.Signature signature =
+                PreviousSignaturesBridge.read(pdf).signatures().get(0);
+
+        assertEquals(PreviousSignaturesBridge.Status.NOT_FULLY_CHECKED, signature.status(),
+                "motivo: " + signature.reason());
     }
 
     @Test
