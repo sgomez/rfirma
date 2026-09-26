@@ -207,7 +207,7 @@ pub fn unregistered_signatures(
     )
 }
 
-/// Firmas que ya trae el documento, con quién firmó y cuándo (ID-399).
+/// Firmas que ya trae el documento, con quién firmó y cuándo.
 #[tauri::command(async)]
 pub fn previous_signatures(
     document: String,

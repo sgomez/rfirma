@@ -431,12 +431,7 @@ mod full_cycle {
             &a_one_page_pdf(),
             &a_config_of("Firmado por: PRUEBAS FNMT", None),
         );
-        assert!(
-            AdmissibleDocument::check(&first)
-                .expect("un PDF firmado se puede cofirmar")
-                .already_signed(),
-            "el PDF ya firmado tiene que reconocerse como tal"
-        );
+        AdmissibleDocument::check(&first).expect("un PDF firmado se puede cofirmar");
 
         let base = a_config_of("Firmado por: PRUEBAS FNMT", None);
         let placed = base

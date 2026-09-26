@@ -155,11 +155,10 @@ export interface SigningBackend {
    */
   unregisteredSignatures(document: string): Promise<boolean>;
   /**
-   * Las firmas que ya trae el documento, con quién firmó y cuándo (ID-399).
+   * Las firmas que ya trae el documento, con quién firmó y cuándo.
    *
-   * Se pide al abrir o cargar el documento (ID-407), no al firmar: es el
-   * informe con el que se monta el aviso de firmas previas del panel, y
-   * sustituye a la marca `already_signed` (ID-410).
+   * Se pide al abrir o cargar el documento, no al firmar: es el informe con
+   * el que se monta el aviso de firmas previas del panel.
    */
   previousSignatures(document: string): Promise<PreviousSignaturesReport>;
   /**

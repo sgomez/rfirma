@@ -387,7 +387,7 @@ impl NativeBridge {
         parse_verdict(&json)
     }
 
-    /// Firmas que ya trae el documento, con quién firmó y cuándo (ID-399).
+    /// Firmas que ya trae el documento, con quién firmó y cuándo.
     pub fn previous_signatures(
         &self,
         document_b64: &str,

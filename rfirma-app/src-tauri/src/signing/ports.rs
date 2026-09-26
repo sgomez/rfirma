@@ -24,7 +24,7 @@ pub trait Bridge {
     fn postsign(&self, request: PostSignRequest<'_>) -> Result<Vec<u8>, BridgeError>;
 }
 
-/// Las firmas que ya trae un PDF, leídas con el recorrido de firmantes del original (ID-399).
+/// Las firmas que ya trae un PDF, leídas con el recorrido de firmantes del original.
 pub trait PreviousSignaturesEngine {
     /// El informe de firmas previas del PDF de entrada, en Base64.
     fn previous_signatures(

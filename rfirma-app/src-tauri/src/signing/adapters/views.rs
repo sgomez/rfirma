@@ -192,7 +192,7 @@ impl From<VisibleSignatureMemory> for RememberedVisibleSignatureView {
 }
 
 crossing! {
-    /// Titular, fecha y certificado de una de las firmas que ya trae el documento (ID-399).
+    /// Titular, fecha y certificado de una de las firmas que ya trae el documento.
     #[derive(Clone, Debug, PartialEq, Serialize)]
     #[serde(rename_all = "camelCase")]
     pub struct PreviousSignatureView {
@@ -225,7 +225,7 @@ impl From<PreviousSignature> for PreviousSignatureView {
 }
 
 crossing! {
-    /// Las firmas que ya trae el documento, con quién firmó y cuándo (ID-399).
+    /// Las firmas que ya trae el documento, con quién firmó y cuándo.
     #[derive(Clone, Debug, PartialEq, Serialize)]
     #[serde(rename_all = "camelCase")]
     pub struct PreviousSignaturesReportView {

@@ -7,11 +7,8 @@ import type { PreviousSignature } from "./previousSignatures";
 /**
  * El aviso de firmas previas: una línea plegada con «Firmarás junto a N firmas
  * anteriores» y, desplegada, una fila por firma con quién firmó y cuándo
- * (docs/design/panel-de-firma.md § El aviso de firmas previas). Sin firmas, no
- * monta nada.
- *
- * Todavía no dice si alguna firma es válida: ese aviso llega con el informe de
- * validación (ID-400…ID-403).
+ * (docs/design/panel-de-firma.md § El aviso de firmas previas). El llamador
+ * solo lo monta con firmas, con una `key` por documento.
  */
 export function PreviousSignaturesNotice({
   signatures,
@@ -19,11 +16,7 @@ export function PreviousSignaturesNotice({
   signatures: readonly PreviousSignature[];
 }) {
   const { t, i18n } = useTranslation();
-  // Nace desplegado con más de una firma; con una sola, plegado
-  // (docs/design/panel-de-firma.md § El aviso de firmas previas).
   const [expanded, setExpanded] = useState(signatures.length > 1);
-
-  if (signatures.length === 0) return null;
 
   return (
     <div className="panel__co-signature">

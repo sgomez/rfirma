@@ -484,7 +484,7 @@ pub enum SignatureVerdict {
     },
 }
 
-/// Firmante de una de las firmas que ya trae el documento (ID-399).
+/// Firmante de una de las firmas que ya trae el documento.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PreviousSignature {
     /// El nombre del titular, leído del `CN` del sujeto.
@@ -501,7 +501,7 @@ pub struct PreviousSignature {
     pub signing_time: Option<String>,
 }
 
-/// Las firmas que ya trae el documento, en el orden cronológico que devuelve el puente (ID-399).
+/// Las firmas que ya trae el documento, en el orden cronológico que devuelve el puente.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct PreviousSignaturesReport {
     signatures: Vec<PreviousSignature>,

@@ -21,6 +21,8 @@ export { formatSize } from "./panelFormat";
 
 /** El documento que se va a firmar, con lo que el panel enseña de él. */
 interface SigningDocument {
+  /** Identifica el documento entre pestañas, para que un aviso no herede el estado del anterior. */
+  id: string;
   name: string;
   pages: number;
   /** El tamaño, o `null` mientras nadie lo sepa: no se inventa un cero. */
@@ -55,7 +57,7 @@ export type CertificateState =
 
 interface SigningPanelProps {
   document: SigningDocument;
-  /** Las firmas que ya trae el documento, pedidas al abrir o cargar (ID-407). */
+  /** Las firmas que ya trae el documento, pedidas al abrir o cargar. */
   previousSignatures: readonly PreviousSignature[];
   certificate: CertificateState;
   /** Cuál se elige en el desplegable. */
@@ -192,7 +194,9 @@ export function SigningPanel({
           />
         ) : (
           <>
-            <PreviousSignaturesNotice signatures={previousSignatures} />
+            {previousSignatures.length > 0 && (
+              <PreviousSignaturesNotice key={document.id} signatures={previousSignatures} />
+            )}
 
             {(certificate.kind === "empty" || certificate.kind === "failed") && (
               <CertificateNotice state={certificate} onOpenHelp={onOpenHelp} />

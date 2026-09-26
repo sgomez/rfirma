@@ -16,7 +16,7 @@ import es.gob.afirma.signers.pades.AOPDFSigner;
  * que usa el escritorio de AutoFirma 1.9.2.
  *
  * <p>Reutiliza {@link AOPDFSigner#getSignersStructure(byte[], boolean)}: no se
- * escanea el PDF a mano (ID-399). Ese recorrido nunca lanza para un PDF sin
+ * escanea el PDF a mano. Ese recorrido nunca lanza para un PDF sin
  * firmas, cifrado o con una firma corrupta: en los tres casos devuelve el
  * árbol vacío o salta la firma que no se pudo leer, así que esta clase tampoco
  * necesita distinguirlos.

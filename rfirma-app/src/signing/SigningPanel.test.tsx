@@ -35,7 +35,7 @@ describe("SigningPanel", () => {
 
   it("shows no co-signature notice for a document that carries none", () => {
     renderPanel({
-      document: { name: "contrato.pdf", pages: 27, sizeBytes: null },
+      document: { id: "doc-1", name: "contrato.pdf", pages: 27, sizeBytes: null },
       previousSignatures: [],
     });
 
@@ -132,7 +132,7 @@ describe("SigningPanel", () => {
 
   it("warns about the co-signature when the document already carries signatures", () => {
     renderPanel({
-      document: { name: "contrato.pdf", pages: 27, sizeBytes: 2_400_000 },
+      document: { id: "doc-1", name: "contrato.pdf", pages: 27, sizeBytes: 2_400_000 },
       previousSignatures: [
         {
           name: "Ada Lovelace Byron",
@@ -146,6 +146,151 @@ describe("SigningPanel", () => {
     });
 
     expect(screen.getByText("Firmarás junto a 1 firma anterior")).toBeInTheDocument();
+  });
+
+  it("pluralises the co-signature notice with more than one previous signature", () => {
+    renderPanel({
+      document: { id: "doc-1", name: "contrato.pdf", pages: 27, sizeBytes: 2_400_000 },
+      previousSignatures: [
+        {
+          name: "Ada Lovelace Byron",
+          idNumber: "99999999R",
+          organizationIdentifier: null,
+          issuer: "AC FNMT Usuarios",
+          certificateSerialNumber: "1",
+          signingTime: "2024-01-01T10:00:00Z",
+        },
+        {
+          name: "Charles Babbage",
+          idNumber: "88888888T",
+          organizationIdentifier: null,
+          issuer: "AC FNMT Usuarios",
+          certificateSerialNumber: "2",
+          signingTime: "2024-01-02T10:00:00Z",
+        },
+      ],
+    });
+
+    expect(screen.getByText("Firmarás junto a 2 firmas anteriores")).toBeInTheDocument();
+  });
+
+  it("nace desplegado when a report with two signatures arrives after the panel already mounted", () => {
+    const { show } = renderPanel({
+      document: { id: "doc-1", name: "contrato.pdf", pages: 27, sizeBytes: 2_400_000 },
+      previousSignatures: [],
+    });
+
+    show({
+      document: { id: "doc-1", name: "contrato.pdf", pages: 27, sizeBytes: 2_400_000 },
+      previousSignatures: [
+        {
+          name: "Ada Lovelace Byron",
+          idNumber: "99999999R",
+          organizationIdentifier: null,
+          issuer: "AC FNMT Usuarios",
+          certificateSerialNumber: "1",
+          signingTime: "2024-01-01T10:00:00Z",
+        },
+        {
+          name: "Charles Babbage",
+          idNumber: "88888888T",
+          organizationIdentifier: null,
+          issuer: "AC FNMT Usuarios",
+          certificateSerialNumber: "2",
+          signingTime: "2024-01-02T10:00:00Z",
+        },
+      ],
+    });
+
+    expect(screen.getByRole("button", { name: "Ocultar firmas anteriores" })).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+  });
+
+  it("does not carry the expanded state of the previous document into the next one", () => {
+    const { show } = renderPanel({
+      document: { id: "doc-1", name: "contrato.pdf", pages: 27, sizeBytes: 2_400_000 },
+      previousSignatures: [
+        {
+          name: "Ada Lovelace Byron",
+          idNumber: "99999999R",
+          organizationIdentifier: null,
+          issuer: "AC FNMT Usuarios",
+          certificateSerialNumber: "1",
+          signingTime: "2024-01-01T10:00:00Z",
+        },
+        {
+          name: "Charles Babbage",
+          idNumber: "88888888T",
+          organizationIdentifier: null,
+          issuer: "AC FNMT Usuarios",
+          certificateSerialNumber: "2",
+          signingTime: "2024-01-02T10:00:00Z",
+        },
+      ],
+    });
+    expect(screen.getByRole("button", { name: "Ocultar firmas anteriores" })).toBeInTheDocument();
+
+    show({
+      document: { id: "doc-2", name: "otro.pdf", pages: 3, sizeBytes: 1_000 },
+      previousSignatures: [
+        {
+          name: "Grace Hopper",
+          idNumber: "77777777J",
+          organizationIdentifier: null,
+          issuer: "AC FNMT Usuarios",
+          certificateSerialNumber: "3",
+          signingTime: "2024-02-01T10:00:00Z",
+        },
+      ],
+    });
+
+    expect(screen.getByRole("button", { name: "Ver firmas anteriores" })).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+  });
+
+  it("toggles the previous-signatures rows, the chevron and aria-expanded when pressed", async () => {
+    const user = userEvent.setup();
+    renderPanel({
+      document: { id: "doc-1", name: "contrato.pdf", pages: 27, sizeBytes: 2_400_000 },
+      previousSignatures: [
+        {
+          name: "Ada Lovelace Byron",
+          idNumber: "99999999R",
+          organizationIdentifier: null,
+          issuer: "AC FNMT Usuarios",
+          certificateSerialNumber: "1",
+          signingTime: "2024-01-01T10:00:00Z",
+        },
+      ],
+    });
+
+    const rows = () => document.querySelector(".panel__previous-signatures-list");
+    const summary = screen.getByRole("button", { name: "Ver firmas anteriores" });
+    const chevron = summary.querySelector(".panel__co-signature-chevron");
+    expect(summary).toHaveAttribute("aria-expanded", "false");
+    expect(chevron).not.toHaveClass("panel__co-signature-chevron--open");
+    expect(rows()).not.toBeInTheDocument();
+
+    await user.click(summary);
+
+    const expanded = screen.getByRole("button", { name: "Ocultar firmas anteriores" });
+    expect(expanded).toHaveAttribute("aria-expanded", "true");
+    expect(expanded.querySelector(".panel__co-signature-chevron")).toHaveClass(
+      "panel__co-signature-chevron--open",
+    );
+    expect(rows()).toBeInTheDocument();
+
+    await user.click(expanded);
+
+    expect(screen.getByRole("button", { name: "Ver firmas anteriores" })).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+    expect(rows()).not.toBeInTheDocument();
   });
 
   it("offers two ways out when no certificate turned up, in the footer", async () => {

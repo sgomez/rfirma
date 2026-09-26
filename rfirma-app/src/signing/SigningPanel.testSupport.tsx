@@ -46,7 +46,7 @@ export type PanelProps = Partial<Parameters<typeof SigningPanel>[0]>;
 function panelWith(props: PanelProps) {
   return (
     <SigningPanel
-      document={{ name: "contrato.pdf", pages: 27, sizeBytes: 2_400_000 }}
+      document={{ id: "doc-1", name: "contrato.pdf", pages: 27, sizeBytes: 2_400_000 }}
       previousSignatures={[]}
       certificate={{ kind: "chosen", certificate, certificates: [certificate] }}
       onChooseCertificate={noop}

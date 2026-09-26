@@ -455,6 +455,7 @@ export function App({
           ) : pdf && documents.active ? (
             <SigningPanel
               document={{
+                id: documents.active.id,
                 name: documents.active.name,
                 pages: pdf.pageCount,
                 sizeBytes,

@@ -1,5 +1,5 @@
 /**
- * Las firmas que ya trae un documento, con quién firmó y cuándo (ID-399).
+ * Las firmas que ya trae un documento, con quién firmó y cuándo.
  *
  * El backend las lee del PDF con el puente Java y las traduce; aquí solo se
  * enseñan, en el orden cronológico en que llegan.

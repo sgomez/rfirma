@@ -452,7 +452,7 @@ pub fn unregistered_signatures_in(
     Ok(AdmissibleDocument::check(&bytes)?.has_unregistered_signatures())
 }
 
-/// Firmas que ya trae el documento, con quién firmó y cuándo (ID-399, ID-410).
+/// Firmas que ya trae el documento, con quién firmó y cuándo.
 pub fn previous_signatures_in(
     files: &dyn DocumentBytes,
     engine: &dyn PreviousSignaturesEngine,

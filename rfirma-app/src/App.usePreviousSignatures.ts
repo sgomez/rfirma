@@ -6,7 +6,7 @@ const NO_SIGNATURES: PreviousSignaturesReport = { signatures: [] };
 
 /**
  * Las firmas que ya trae el documento activo, pedidas al abrir o cargar el
- * documento (ID-407): no se vuelven a pedir al elegir certificado.
+ * documento: no se vuelven a pedir al elegir certificado.
  *
  * Un fallo al pedirlas no es una puerta: el aviso simplemente no se monta, y
  * el resto del panel sigue funcionando igual que con un PDF sin firmas.
@@ -18,8 +18,8 @@ export function usePreviousSignatures(
   const [report, setReport] = useState<PreviousSignaturesReport>(NO_SIGNATURES);
 
   useEffect(() => {
+    setReport(NO_SIGNATURES);
     if (activeDocumentId === null) {
-      setReport(NO_SIGNATURES);
       return;
     }
     let current = true;

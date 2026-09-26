@@ -13,7 +13,7 @@ import java.util.Properties;
 
 import org.junit.jupiter.api.Test;
 
-/** Quien firmo y cuando, sobre firmas y cofirmas hechas aqui mismo (TD-100). */
+/** Quien firmo y cuando, sobre firmas y cofirmas hechas aqui mismo. */
 class PreviousSignaturesBridgeTest {
 
     private static final String ALGORITHM = "SHA256withRSA";
@@ -45,9 +45,8 @@ class PreviousSignaturesBridgeTest {
     void a_cosigned_pdf_reports_both_signers_in_chronological_order() throws Exception {
         final byte[] once = signed(TestFixtures.samplePdf(),
                 TestFixtures.certificateChain(), TestFixtures.privateKey());
-        // El /M de una firma PDF solo tiene resolucion de segundo (ID-399): sin
-        // esta espera, la cofirma podria caer en el mismo segundo que la
-        // primera y el orden cronologico dejaria de ser observable.
+        // El /M de una firma PDF solo tiene resolucion de segundo: sin esta
+        // espera ambas firmas podrian caer en el mismo segundo.
         Thread.sleep(1_100);
         final byte[] twice = signed(once,
                 TestFixtures.otherCertificateChain(), TestFixtures.otherPrivateKey());

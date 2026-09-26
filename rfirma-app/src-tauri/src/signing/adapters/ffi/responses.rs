@@ -134,9 +134,7 @@ pub fn parse_verdict(json: &str) -> Result<SignatureVerdict, BridgeError> {
     }
 }
 
-/// Parsea el informe de firmas previas del documento, traduciendo el sujeto y el
-/// emisor de cada una con las mismas utilidades que el titular de un certificado
-/// del token (ID-399): en Rust no se añade otro lector de nombres distinguidos.
+/// Parsea el informe de firmas previas, traduciendo cada firmante con las utilidades del titular.
 pub fn parse_previous_signatures(json: &str) -> Result<PreviousSignaturesReport, BridgeError> {
     let response = parse_response(json)?;
     let entries = response

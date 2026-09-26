@@ -28,10 +28,6 @@ const ENCRYPT: &[u8] = b"/Encrypt";
 /// entero, sin mirar el `/P`, y aquí se hace lo mismo: es el oráculo.
 const DOC_MDP: &[u8] = b"/DocMDP";
 
-/// El `/ByteRange` de una firma ya puesta. **No es un motivo de rechazo**: es
-/// justo el caso de la cofirma, y está aquí para poder decirlo.
-const BYTE_RANGE: &[u8] = b"/ByteRange";
-
 const USER_PASSWORD_KEY: &str = "userPassword";
 const OWNER_PASSWORD_KEY: &str = "ownerPassword";
 /// La clave del original que permite firmar un PDF certificado.
@@ -176,7 +172,6 @@ impl std::error::Error for Refusal {}
 #[derive(Clone, Copy, Debug)]
 pub struct AdmissibleDocument<'a> {
     pdf: &'a [u8],
-    already_signed: bool,
     unregistered_signatures: bool,
 }
 
@@ -199,7 +194,6 @@ impl<'a> AdmissibleDocument<'a> {
         }
         Ok(Self {
             pdf,
-            already_signed: contains(pdf, BYTE_RANGE),
             unregistered_signatures: has_unregistered_signatures(pdf),
         })
     }
@@ -214,7 +208,6 @@ impl<'a> AdmissibleDocument<'a> {
             Format::Pades => Self::check_waiving(document, waivers),
             _ => Ok(Self {
                 pdf: document,
-                already_signed: false,
                 unregistered_signatures: false,
             }),
         }
@@ -223,16 +216,6 @@ impl<'a> AdmissibleDocument<'a> {
     /// Los bytes, ya admitidos.
     pub fn bytes(&self) -> &'a [u8] {
         self.pdf
-    }
-
-    /// Si el documento **ya trae alguna firma**, es decir, si esto va a ser una
-    /// cofirma.
-    ///
-    /// No cambia nada de lo que se envía —una cofirma PAdES es una firma más,
-    /// con los mismos `extraParams`—: está para poder contarlo, y para que una
-    /// prueba pueda afirmar que la segunda firma vio la primera.
-    pub fn already_signed(&self) -> bool {
-        self.already_signed
     }
 
     /// Indica si el documento contiene firmas con subfiltros no registrados.
