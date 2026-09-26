@@ -53,13 +53,13 @@ body {
  *
  * `fixed` y no `absolute`: los diálogos son hermanos de `<MainWindow>` en
  * `App.tsx`, no hijos suyos, así que no hay antepasado posicionado del que
- * colgar. El `z-index` los pone por encima del menú de la cabecera, que es lo
- * más alto de la ventana (`Header.css:60`, `z-index: 10`).
+ * colgar. El `z-index` es el que fija `design-system.md`, «Capas de la
+ * ventana principal»: 20.
  */
 .rf-scrim {
   position: fixed;
   inset: 0;
-  z-index: 100;
+  z-index: 20;
   display: flex;
   align-items: center;
   justify-content: center;
