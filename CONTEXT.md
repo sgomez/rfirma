@@ -151,9 +151,18 @@ certificados de la máquina»
 **Almacén NSS**:
 El almacén de un navegador —el perfil de Firefox, la base de datos de Chrome—,
 que es a la vez de donde salen certificados para firmar y **donde la aplicación
-registra la CA local** para que ese navegador confíe en el servidor local. Es el
-único tipo de almacén en el que rfirma escribe.
+registra la CA local** para que ese navegador confíe en el servidor local. No es
+el único almacén en el que rfirma escribe: el Almacén de rFirma también es una
+base NSS, pero propia de la aplicación, no de un navegador.
 _Avoid_: nssdb, base de datos de certificados, almacén del navegador
+
+**Almacén de rFirma**:
+El almacén propio de rFirma en Linux: una única base NSS cifrada con un PIN
+aleatorio que la persona nunca ve ni teclea, guardado en el llavero del
+escritorio. Es donde caen los certificados personales que la persona instala.
+El gesto que los lleva ahí se llama, en la interfaz, «Instalar certificado».
+_Avoid_: almacén NSS (es otra cosa), llavero (el llavero guarda el PIN, no el
+certificado), keystore
 
 **CA local**:
 Certificado que rfirma genera en la máquina de la persona y registra en sus
