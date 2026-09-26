@@ -37,6 +37,7 @@ Busca en este índice, y si aun así necesitas el fichero, entra con
 | 0029 | La envoltura XAdES la declara la sede; el nombre del formato solo la suple |
 | 0030 | Una firma que pide sello de tiempo y no se puede sellar no sale: `SAF_09`, nunca una firma sin sello |
 | 0032 | La selección automática que pide la sede (`headless`, `mandatoryCertSelection=false`) se respeta solo si la persona lo permite en sus preferencias |
+| 0033 | La interfaz se prototipa en Claude Design, y lo que manda vive en el repositorio: fichas, bundle y copia de los artboards |
 
 Los ADR que solo afectan a la suite de conformidad viven en `rfirma-conformance/docs/adr/` y
 comparten la numeración: el siguiente ADR, esté donde esté, toma el número libre más alto.
