@@ -221,18 +221,35 @@ final class PreviousSignaturesBridge {
         }
     }
 
-    /** Un {@code KO} pesa mas que un {@code UNKNOWN}, como en el validador del original. */
+    /**
+     * Un {@code KO} pesa mas que un {@code UNKNOWN}, como en el validador del original, salvo
+     * cuando el unico {@code KO} es de certificado caducado y hay un aviso de perfil longevo:
+     * ese aviso pesa mas ({@code SignValider#checkLongStandingValiditySign} del original).
+     */
     private static SignValidity decisive(final List<SignValidity> validities) {
         SignValidity decisive = new SignValidity(SIGN_DETAIL_TYPE.OK, null);
+        SignValidity expiredCertificateKo = null;
+        SignValidity longStandingWarning = null;
         for (final SignValidity validity : validities) {
             if (SIGN_DETAIL_TYPE.KO == validity.getValidity()) {
-                return validity;
+                if (VALIDITY_ERROR.CERTIFICATE_EXPIRED != validity.getError()) {
+                    return validity;
+                }
+                expiredCertificateKo = validity;
             }
-            if (SIGN_DETAIL_TYPE.UNKNOWN == validity.getValidity()) {
-                decisive = validity;
+            else if (SIGN_DETAIL_TYPE.UNKNOWN == validity.getValidity()) {
+                if (VALIDITY_ERROR.SIGN_PROFILE_NOT_CHECKED == validity.getError()) {
+                    longStandingWarning = validity;
+                }
+                else {
+                    decisive = validity;
+                }
             }
         }
-        return decisive;
+        if (expiredCertificateKo != null) {
+            return longStandingWarning != null ? longStandingWarning : expiredCertificateKo;
+        }
+        return longStandingWarning != null ? longStandingWarning : decisive;
     }
 
     /** El original confunde el {@code /SubFilter} no reconocido con una firma longeva sin comprobar. */
