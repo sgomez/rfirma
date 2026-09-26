@@ -66,10 +66,7 @@ export function CertificateFooterButton({
     if (giveBackFocus) trigger.current?.focus();
   }, []);
 
-  // La lista **siempre** cuelga hacia arriba, anclada al panel y no al
-  // disparador: con un certificado elegido el disparador es el chevron de
-  // 44 px, y anclarse a él sacaba la lista con su mismo ancho
-  // (docs/design/panel-de-firma.md § Geometría).
+  // Anclada al panel, no al disparador (docs/design/panel-de-firma.md § Geometría).
   const show = () => {
     setActive(at === -1 ? 0 : at);
     const panelRect = container.current?.closest(".panel")?.getBoundingClientRect();
@@ -198,9 +195,11 @@ export function CertificateFooterButton({
             </span>
           )}
         </span>
-        <span className="certificate-footer__check">
-          {certificate.id === chosen?.id && <CheckIcon size={16} />}
-        </span>
+        {certificate.id === chosen?.id && (
+          <span className="certificate-footer__check">
+            <CheckIcon size={16} strokeWidth={2} />
+          </span>
+        )}
       </div>
     );
   };
@@ -317,11 +316,7 @@ export function CertificateFooterButton({
   );
 }
 
-/**
- * El mismo botón partido mientras se busca: sin certificado que nombrar, con
- * el indicador de 16 px y el ▾ inerte (docs/design/panel-de-firma.md §
- * Estados → Buscando certificados).
- */
+/** El botón partido mientras se buscan certificados, sin nombre y con el ▾ inerte. */
 export function LoadingCertificateFooterButton() {
   const { t } = useTranslation();
   return (

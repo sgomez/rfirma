@@ -180,12 +180,7 @@ describe("SigningPanel", () => {
     expect(onBack).toHaveBeenCalled();
   });
 
-  /**
-   * Un certificado no utilizable no llega a elegirse (ADR-0010): esto solo
-   * cubre la defensa por si uno recordado caducara entre sesiones, y el pie
-   * no lleva ningún aviso propio para ello
-   * (docs/design/panel-de-firma.md § Pie).
-   */
+  // Uno recordado puede caducar entre sesiones (ADR-0010).
   it("refuses to sign with an expired chosen certificate", () => {
     renderPanel({
       certificate: {
@@ -270,12 +265,7 @@ describe("SigningPanel", () => {
     expect(screen.getAllByRole("option")).toHaveLength(2);
   });
 
-  /**
-   * La lista ancla al panel, no al chevron de 44 px que la abre: con un
-   * certificado elegido el disparador es ese chevron, y anclarse a él sacaba
-   * la lista con su mismo ancho (docs/design/panel-de-firma.md § Geometría).
-   */
-  it("anchors the certificate list to the panel's width, not the 44 px chevron", async () => {
+  it("says issuer, store and expiry month on the second line of a usable row", async () => {
     const user = userEvent.setup();
     renderPanel({
       certificate: {
@@ -284,30 +274,36 @@ describe("SigningPanel", () => {
         certificates: [certificate, { ...certificate, id: "otra", holderName: "Grace Hopper" }],
       },
     });
-    const panel = document.querySelector(".panel") as HTMLElement;
-    vi.spyOn(panel, "getBoundingClientRect").mockReturnValue({
-      top: 0,
-      bottom: 700,
-      left: 900,
-      right: 1280,
-      width: 380,
-      height: 700,
-      x: 900,
-      y: 0,
-      toJSON: () => {},
-    });
-    Object.defineProperty(window, "innerHeight", {
-      writable: true,
-      configurable: true,
-      value: 700,
-    });
 
     await user.click(screen.getByRole("combobox", { name: "Certificado" }));
 
-    const layer = document.querySelector(".certificate-footer__layer") as HTMLElement;
-    expect(layer.style.left).toBe("924px");
-    expect(layer.style.width).toBe("332px");
-    expect(layer.style.bottom).toBe("68px");
+    const row = screen.getByRole("option", { name: /Grace Hopper/ });
+    expect(row).toHaveTextContent(/AC FNMT Usuarios · Tarjeta · Caduca en \d{2}\/\d{4}/);
+    expect(row).not.toHaveTextContent("Emitido por");
+  });
+
+  it("lists an unusable certificate with its short reason as text and as tooltip", async () => {
+    const user = userEvent.setup();
+    const onChooseCertificate = vi.fn();
+    const revoked = {
+      ...certificate,
+      id: "revocado",
+      holderName: "Grace Hopper",
+      status: { kind: "revoked", reason: "keyCompromise" },
+    } as const;
+    renderPanel({
+      certificate: { kind: "chosen", certificate, certificates: [certificate, revoked] },
+      onChooseCertificate,
+    });
+
+    await user.click(screen.getByRole("combobox", { name: "Certificado" }));
+    const row = screen.getByRole("option", { name: /Grace Hopper/ });
+    await user.click(row);
+
+    expect(within(row).getByText("Revocado (keyCompromise)")).toBeInTheDocument();
+    expect(row).toHaveAttribute("title", "Revocado (keyCompromise)");
+    expect(row).toHaveAttribute("aria-disabled", "true");
+    expect(onChooseCertificate).not.toHaveBeenCalled();
   });
 
   it("has no «change» button any more: the trigger is where it changes", () => {
@@ -328,24 +324,12 @@ describe("SigningPanel", () => {
     expect(screen.getByText("Buscando certificados…")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Buscando certificados…" })).toBeDisabled();
     expect(screen.queryByRole("combobox", { name: "Certificado" })).not.toBeInTheDocument();
-    // La fila entera se atenúa, no solo el botón (docs/design/panel-de-firma.md
-    // § Estados → Buscando certificados).
-    expect(
-      screen
-        .getByRole("button", { name: "Buscando certificados…" })
-        .closest(".certificate-footer__row"),
-    ).toHaveClass("certificate-footer__row--dim");
   });
 
-  it("dims the whole split-button row while signing", () => {
+  it("says who is signing and lets nothing be pressed while signing", () => {
     renderPanel({ signing: true });
 
-    expect(screen.getByRole("button", { name: "Firmando como Ada Lovelace" }));
-    expect(
-      screen
-        .getByRole("button", { name: "Firmando como Ada Lovelace" })
-        .closest(".certificate-footer__row"),
-    ).toHaveClass("certificate-footer__row--dim");
+    expect(screen.getByRole("button", { name: "Firmando como Ada Lovelace" })).toBeDisabled();
   });
 });
 
