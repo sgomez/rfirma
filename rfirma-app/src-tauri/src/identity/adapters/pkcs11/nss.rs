@@ -9,7 +9,7 @@ use x509_cert::der::Decode;
 
 use super::stores::present_among;
 use crate::identity::domain::error::{NssUnavailable, Situation, TokenError};
-use crate::identity::domain::holder::common_name_of;
+use crate::identity::domain::holder::{attribute, common_name_of};
 
 /// Rutas candidatas para localizar la biblioteca `libnss3.so`.
 pub const CANDIDATE_NSS: &[&str] = &[
@@ -35,7 +35,11 @@ pub const CANDIDATE_NSPR: &[&str] = &[
 const SEC_SUCCESS: c_int = 0;
 const PR_TRUE: c_int = 1;
 const SI_BUFFER: c_uint = 0;
+const SI_ASCII_STRING: c_uint = 8;
 const SEC_ERROR_BAD_PASSWORD: c_int = -0x2000 + 15;
+
+/// Nickname de un certificado sin `friendlyName` y sin nombre común en el sujeto.
+const CERTIFICATE_WITHOUT_A_NAME: &str = "Certificado sin nombre";
 
 fn module_spec(directory: &Path) -> String {
     format!(
@@ -84,15 +88,71 @@ extern "C" fn no_password(
 }
 
 extern "C" fn keep_the_nickname(
-    _old: *mut SecItem,
+    old: *mut SecItem,
     cancel: *mut c_int,
-    _argument: *mut c_void,
+    argument: *mut c_void,
 ) -> *mut SecItem {
     if !cancel.is_null() {
         // SAFETY: NSS pasa aquí un `PRBool` suyo, vivo durante la llamada.
         unsafe { *cancel = 0 };
     }
-    std::ptr::null_mut()
+    // SAFETY: NSS pasa aquí un `SECItem*` propio, válido o nulo, durante la llamada.
+    if !old.is_null() && unsafe { (*old).len > 0 } {
+        return std::ptr::null_mut();
+    }
+    default_nickname_for(argument).unwrap_or(std::ptr::null_mut())
+}
+
+/// El nombre común del certificado en colisión (`argument` es su `CERTCertificate`,
+/// documentado así en `p12.h` desde NSS 3.12), o el valor fijo si no lo tiene.
+fn default_nickname_for(certificate: *mut c_void) -> Option<*mut SecItem> {
+    let nss = nss_library().ok()?;
+    let certificate_der: CertificateDer = symbol(nss, b"CERT_GetCertificateDer\0").ok()?;
+    let alloc_item: AllocItem = symbol(nss, b"SECITEM_AllocItem\0").ok()?;
+
+    let mut der_item = SecItem {
+        kind: SI_BUFFER,
+        data: std::ptr::null_mut(),
+        len: 0,
+    };
+    let subject = if certificate.is_null()
+        || certificate_der(certificate, &mut der_item) != SEC_SUCCESS
+        || der_item.data.is_null()
+    {
+        String::new()
+    } else {
+        // SAFETY: NSS ha rellenado `der_item` con un buffer vivo durante la llamada.
+        let der = unsafe { std::slice::from_raw_parts(der_item.data, der_item.len as usize) };
+        names_of(der).0
+    };
+
+    let name = attribute("CN=", &subject);
+    let name = if name.is_empty() {
+        CERTIFICATE_WITHOUT_A_NAME
+    } else {
+        &name
+    };
+    Some(allocated_nickname(alloc_item, name))
+}
+
+/// Reserva un `SECItem` de tipo `siAsciiString` con `SECITEM_AllocItem` (documentado
+/// así en `p12.h`) para que NSS lo libere con su propio asignador.
+fn allocated_nickname(alloc_item: AllocItem, name: &str) -> *mut SecItem {
+    let allocated = alloc_item(
+        std::ptr::null_mut(),
+        std::ptr::null_mut(),
+        (name.len() + 1) as c_uint,
+    );
+    if allocated.is_null() {
+        return std::ptr::null_mut();
+    }
+    // SAFETY: `SECITEM_AllocItem` acaba de reservar `name.len() + 1` bytes vivos.
+    unsafe {
+        (*allocated).kind = SI_ASCII_STRING;
+        std::ptr::copy_nonoverlapping(name.as_ptr(), (*allocated).data, name.len());
+        *(*allocated).data.add(name.len()) = 0;
+    }
+    allocated
 }
 
 /// La biblioteca NSS y el turno global del token, tal como los ve quien resuelve símbolos sobre ella.
@@ -216,6 +276,7 @@ struct CertListNode {
 }
 
 type CertificateDer = extern "C" fn(*mut c_void, *mut SecItem) -> c_int;
+type AllocItem = extern "C" fn(*mut c_void, *mut SecItem, c_uint) -> *mut SecItem;
 
 fn certificates_in(list: *mut CertList, certificate_der: CertificateDer) -> Vec<Vec<u8>> {
     let mut carried = Vec::new();
