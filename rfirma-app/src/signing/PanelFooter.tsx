@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { FolderIcon } from "../design-system/icons";
+import { AlertIcon, FileIcon, FolderIcon } from "../design-system/icons";
 import { CertificateFooterButton, LoadingCertificateFooterButton } from "./CertificateFooterButton";
 import type { Certificate } from "./certificate";
 import type { Destination } from "./destination";
@@ -39,6 +39,21 @@ interface PanelFooterSignedProps extends PanelFooterDestinationProps {
 
 type PanelFooterProps = PanelFooterSigningProps | PanelFooterSignedProps;
 
+/** El mensaje de destino no escribible, con la carpeta en negrita. */
+function unwritableMessage(message: string, folder: string) {
+  const at = message.indexOf(folder);
+  if (at < 0) {
+    return message;
+  }
+  return (
+    <>
+      {message.slice(0, at)}
+      <strong>{folder}</strong>
+      {message.slice(at + folder.length)}
+    </>
+  );
+}
+
 /**
  * El pie del panel: 162 px en todos los estados
  * (docs/design/panel-de-firma.md § Pie fijo). El destino arriba —«Guardar
@@ -50,53 +65,58 @@ type PanelFooterProps = PanelFooterSigningProps | PanelFooterSignedProps;
 export function PanelFooter(props: PanelFooterProps) {
   const { t } = useTranslation();
   const { destination, documentName, signed = false } = props;
-  // El destino recortado. Sin nombre compuesto —la carpeta no se deja
-  // comprobar— se enseña el del documento, que es lo único que se sabe.
-  const shortened = shortenDestination({
-    folder: destination.folder,
-    name: destination.name ?? documentName,
-  });
-  // Una vez firmado, el rótulo ya no es una promesa que pueda incumplirse: es
-  // lo que ha quedado escrito, y se enseña siempre con su caja (ID-63).
-  const showBox = signed || destination.writable;
+  const signing = !props.signed && props.signing;
+  const fullName = destination.name ?? documentName;
+  // El recorte por el medio del nombre y por la cola de la carpeta siguen
+  // siendo los de `shortenDestination`; la elipsis de la hoja de estilos es
+  // solo el resguardo cuando ni eso basta (design-system.md § Ruta de destino).
+  const shortened = shortenDestination({ folder: destination.folder, name: fullName });
+  const writable = signed || destination.writable;
 
   return (
     <footer className="panel__footer">
       <div className="panel__destination">
-        {showBox && (
-          <p className="rf-label">{t(signed ? "panel.signed.savedIn" : "panel.footer.savedIn")}</p>
-        )}
-        <div className="rf-row rf-gap-xs panel__destination-row">
-          <span className="panel__destination-icon">
-            <FolderIcon />
-          </span>
-          {/* El destino son **dos cosas**: la carpeta, atenuada y precedida
-              de `…/` —hay carpetas por encima y no se afirma cuáles—, y el
-              nombre sin atenuar, que es el dato (ID-63). El aviso de que no
-              se puede escribir **no se recorta**: perderlo por elipsis sería
-              perderlo cuando más falta hace. */}
-          {showBox ? (
-            <p className="rf-prose panel__destination-path">
-              <span className="rf-text-muted">{`…/${shortened.folder}/`}</span>
-              {shortened.name}
-            </p>
-          ) : (
-            <p className="rf-prose panel__destination-unwritable">
-              {t("panel.footer.unwritable", { folder: shortened.folder })}
-            </p>
-          )}
+        <div className="rf-row panel__destination-label-row">
+          <p className="rf-label panel__destination-label">
+            {t(signed ? "panel.signed.savedIn" : "panel.footer.savedIn")}
+          </p>
           <button
             type="button"
             className={
-              signed
-                ? "rf-btn rf-btn--ghost panel__destination-change panel__destination-change--hidden"
-                : "rf-btn rf-btn--ghost panel__destination-change"
+              "rf-btn rf-btn--ghost panel__destination-change" +
+              (signed ? " panel__destination-change--hidden" : "") +
+              (signing ? " panel__controls--dim" : "")
             }
             onClick={props.signed ? undefined : props.onChangeDestination}
           >
             {t("actions.change")}
           </button>
         </div>
+        {writable ? (
+          <div className="panel__destination-box">
+            <span
+              className="rf-row rf-gap-xs rf-text-muted panel__destination-folder"
+              title={destination.folder}
+            >
+              <FolderIcon size={15} />
+              <span className="panel__destination-ellipsis">{shortened.folder}</span>
+            </span>
+            <span className="rf-row rf-gap-xs panel__destination-name" title={fullName}>
+              <FileIcon size={15} />
+              <span className="panel__destination-ellipsis">{shortened.name}</span>
+            </span>
+          </div>
+        ) : (
+          <div className="rf-row rf-gap-xs panel__destination-unwritable">
+            <AlertIcon size={16} />
+            <span className="panel__destination-unwritable-text">
+              {unwritableMessage(
+                t("panel.footer.unwritable", { folder: shortened.folder }),
+                shortened.folder,
+              )}
+            </span>
+          </div>
+        )}
       </div>
       {props.signed ? (
         <div className="rf-row rf-gap-xs panel__signed-actions">

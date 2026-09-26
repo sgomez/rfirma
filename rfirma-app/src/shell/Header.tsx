@@ -27,7 +27,7 @@ interface HeaderProps {
  *
  * No hay barra de menús: el ADR-0007 la retiró, y por eso aquí no hay
  * `role="menubar"` ni entradas de *Archivo* o *Ver*. Abrir un documento tiene
- * la zona de soltar de la bandeja y guardar tiene la fila «Se guardará en» del
+ * la zona de soltar de la bandeja y guardar tiene la fila «Guardar en» del
  * panel; repetirlos en un menú sería un segundo camino para lo mismo.
  *
  * En macOS las dos entradas se registran en el menú de aplicación nativo, así

@@ -372,49 +372,80 @@
   gap: 4px;
 }
 
-/* Arriba, y no centrado: el destino puede ocupar dos renglones y el icono y el
-   `Cambiar` tienen que casar con el primero. */
-.panel__destination-row {
-  align-items: flex-start;
+.panel__destination-label-row {
+  height: 24px;
 }
 
-.panel__destination-icon {
-  display: flex;
-  flex: none;
-  /* 3 px para casar con la primera línea del destino, que ya no está centrado. */
-  margin-top: 3px;
-  color: var(--rf-text-muted);
-}
-
-/* La línea **envuelve antes que cortarse** (ID-64): `white-space: nowrap` con
-   `overflow: hidden` cortaba en seco lo que la `…` de `shortenDestination` ya
-   había recortado, y sin avisar. Lo que decide qué se pierde es la función
-   pura, no la hoja de estilos. */
-.panel__destination-path {
+.panel__destination-label {
   flex: 1;
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-
-/* El aviso de carpeta no escribible **no** se recorta: es una frase entera y
-   perderla por elipsis en una columna de 360 px sería perder el aviso. */
-.panel__destination-unwritable {
-  flex: 1;
-  min-width: 0;
-  font-weight: 600;
 }
 
 .panel__destination-change {
   flex: none;
-  min-height: 32px;
+  min-height: 24px;
   padding: 0 8px;
-  font-size: 12px;
+  font-size: 13px;
+  color: var(--rf-text);
 }
 
 /* Firmado: `Cambiar` se oculta sin mover nada, así la caja del destino no
    salta al perder el botón (docs/design/panel-de-firma.md § El resumen). */
 .panel__destination-change--hidden {
   visibility: hidden;
+}
+
+.panel__destination-box {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 7px 10px;
+  border: 1px solid var(--rf-border-subtle);
+  border-radius: var(--rf-radius-md);
+  background: var(--rf-surface);
+}
+
+.panel__destination-folder {
+  min-width: 0;
+  font-size: 12px;
+}
+
+.panel__destination-name {
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* Cada línea cabe en una sola fila (design-system.md § Ruta de destino): el
+   recorte por caracteres de `shortenDestination` ya decidió qué se pierde, y
+   esta elipsis es solo el resguardo si aun así no cupiera. */
+.panel__destination-ellipsis {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* El aviso de carpeta no escribible, a la misma altura que la caja del
+   destino (53 px): dos líneas como mucho, y lo que no cabe se pierde por el
+   final de la frase, nunca a mitad de palabra. */
+.panel__destination-unwritable {
+  align-items: flex-start;
+  height: 53px;
+  padding: 7px 10px;
+  border: 2px solid var(--rf-border-strong);
+  border-radius: var(--rf-radius-md);
+}
+
+.panel__destination-unwritable-text {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
 }
 
 /* La fila del pie una vez firmado: «Abrir el PDF» se lleva el ancho que

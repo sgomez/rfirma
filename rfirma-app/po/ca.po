@@ -775,7 +775,7 @@ msgid "panel.visibleSignature.rubric.thumbnail"
 msgstr "La teva rúbrica, tal com s'estamparà"
 
 msgid "panel.footer.savedIn"
-msgstr "Es desarà a"
+msgstr "Desar a"
 
 #. {{folder}} es la ruta corta de la carpeta de destino, no la ruta completa.
 msgid "panel.footer.unwritable"
