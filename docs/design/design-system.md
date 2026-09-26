@@ -436,7 +436,7 @@ la conclusión.
 
 | Antes | Después |
 | ----- | ------- |
-| «La petición **no dice de dónde viene**. Solicita una firma. **Comprueba de dónde venías**», con triángulo de advertencia y borde de 2 px | «Origen sin identificar / La petición pide una firma y no indica de qué página viene», con icono de información y borde de 1 px |
+| «La petición **no dice de dónde viene**. Solicita una firma. **Comprueba de dónde venías**», con triángulo de advertencia y borde de 2 px | «**Una página sin identificar** pide tu firma.», en la línea del origen y sin caja ni icono |
 | «**El fallo es de** sede.ejemplo.gob.es: pide colocar la firma en una página añadida al final, y rFirma no hace eso» | «sede.ejemplo.gob.es pide colocar la firma en una página añadida al final, y rFirma no hace eso» |
 | «Si insiste, **dile** esto:» | «Para quien mantiene la sede:» |
 

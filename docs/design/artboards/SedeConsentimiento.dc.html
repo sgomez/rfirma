@@ -121,7 +121,7 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
   </div>
 
   <div style="flex:1;min-height:0;position:relative">
-    <div style="position:absolute;inset:0;padding:16px var(--rf-space-md);display:flex;flex-direction:column;gap:10px">
+    <div style="position:absolute;inset:0;padding:16px var(--rf-space-md);display:flex;flex-direction:column;gap:10px;overflow-y:auto">
 
       <sc-if value="{{esSelector}}" hint-placeholder-val="{{false}}">
         <p class="rf-title" style="flex:none;font-size:16px">Elige un certificado</p>
@@ -130,22 +130,60 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
       <sc-if value="{{hayOrigen}}" hint-placeholder-val="{{true}}">
         <p class="rf-title" style="flex:none;font-size:15px;line-height:1.35"><strong>{{sede}}</strong>{{peticion}}</p>
       </sc-if>
-
       <sc-if value="{{sinOrigen}}" hint-placeholder-val="{{false}}">
-        <div class="rf-row rf-gap-xs" style="flex:none;align-items:flex-start;padding:10px;
-          border:1px solid var(--rf-border-strong);border-radius:var(--rf-radius-md);background:var(--rf-surface)">
-          <span style="display:flex;flex:none;margin-top:1px;color:var(--rf-text-muted)">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.5"/></svg></span>
-          <div class="rf-stack" style="gap:3px;flex:1;min-width:0">
-            <p class="rf-title" style="font-size:14px;line-height:1.3">Origen sin identificar</p>
-            <p class="rf-hint">{{avisoSinOrigen}}</p>
-          </div>
+        <p class="rf-title" style="flex:none;font-size:15px;line-height:1.35"><strong>Una página sin identificar</strong>{{peticion}}</p>
+      </sc-if>
+
+      <div class="rf-stack rf-gap-xs" style="flex:none">
+        <sc-if value="{{hayEtiquetaCert}}" hint-placeholder-val="{{true}}">
+          <p class="rf-label" style="letter-spacing:.6px;text-transform:uppercase">{{etiquetaCert}}</p>
+        </sc-if>
+        <div style="position:relative">
+          <button type="button" style="display:flex;align-items:center;gap:var(--rf-space-xs);width:100%;text-align:left;padding:var(--rf-space-sm);background:var(--rf-surface);color:var(--rf-text);border:1px solid var(--rf-border-strong);border-radius:var(--rf-radius-md);font-family:inherit;cursor:pointer" onClick="{{alternar}}">
+            <span style="display:flex;flex:none;color:var(--rf-text-muted)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="9" r="5"/><path d="M8.5 13.5 7 21l5-2.5L17 21l-1.5-7.5"/></svg></span>
+            <sc-if value="{{elegido}}" hint-placeholder-val="{{true}}">
+              <span class="rf-stack" style="gap:6px;flex:1;min-width:0">
+                <span class="rf-title" style="font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{titular}}</span>
+                <span class="rf-body rf-text-muted" style="line-height:1.35">{{linea}}</span>
+              </span>
+            </sc-if>
+            <sc-if value="{{noElegido}}" hint-placeholder-val="{{false}}">
+              <span class="rf-body" style="flex:1;font-weight:600">Elegir certificado</span>
+            </sc-if>
+            <span style="{{estiloFlecha}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
+          </button>
+          <sc-if value="{{abierto}}" hint-placeholder-val="{{false}}">
+            <div class="rf-stack" style="position:absolute;left:0;right:0;top:calc(100% + 4px);max-height:156px;overflow-y:auto;z-index:6;padding:6px;gap:2px;
+              border-radius:var(--rf-radius-lg);border:1px solid var(--rf-border-subtle);background:var(--rf-bg);box-shadow:var(--rf-shadow-elevated)">
+              <sc-for list="{{certificados}}" as="c" hint-placeholder-count="4">
+                <sc-if value="{{ c.hayGrupo }}" hint-placeholder-val="{{ false }}">
+                  <span class="rf-label" style="flex:none;padding:8px 12px 2px;letter-spacing:.6px;text-transform:uppercase">{{ c.grupo }}</span>
+                </sc-if>
+                <div class="rf-row" title="{{ c.titulo }}" style="{{ c.estilo }}" onClick="{{ c.elegir }}">
+                  <div class="rf-stack" style="gap:3px;flex:1;min-width:0">
+                    <span style="font-size:14px;font-weight:600;line-height:1.35;overflow-wrap:anywhere">{{ c.nombre }}</span>
+                    <span class="rf-body rf-text-muted" style="line-height:1.3">{{ c.pie }}</span>
+                    <sc-if value="{{ c.motivo }}" hint-placeholder-val="{{ false }}">
+                      <span class="rf-body" style="line-height:1.3;font-weight:700">{{ c.motivo }}</span>
+                    </sc-if>
+                  </div>
+                  <sc-if value="{{ c.elegido }}" hint-placeholder-val="{{ false }}">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+                  </sc-if>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
         </div>
+      </div>
+
+      <sc-if value="{{hayAcotado}}" hint-placeholder-val="{{false}}">
+        <p class="rf-prose" style="flex:none;font-size:13px">{{sede}} <strong>ha limitado los certificados válidos</strong>.</p>
       </sc-if>
 
       <sc-if value="{{hayDoc}}" hint-placeholder-val="{{true}}">
         <div class="rf-stack" style="gap:6px;flex:none;padding:10px var(--rf-space-sm);
-          border:1px solid var(--rf-border-subtle);border-radius:var(--rf-radius-md);background:var(--rf-surface)">
+          border-radius:var(--rf-radius-md);background:var(--rf-surface);{{estiloDoc}}">
           <div class="rf-row rf-gap-xs" style="align-items:flex-start">
             <span style="display:flex;flex:none;margin-top:1px;color:var(--rf-text-muted)">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg></span>
@@ -156,64 +194,39 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
               </sc-if>
             </div>
           </div>
-          <sc-if value="{{hayCofirma}}" hint-placeholder-val="{{false}}">
-            <p class="rf-body" style="line-height:1.5">Ya lleva <strong>1 firma</strong>: la tuya será una <strong>cofirma</strong>.</p>
-          </sc-if>
-        </div>
-      </sc-if>
-
-
-      <sc-if value="{{haySelector}}" hint-placeholder-val="{{true}}">
-        <div class="rf-stack rf-gap-xs" style="flex:none">
-          <sc-if value="{{hayEtiquetaCert}}" hint-placeholder-val="{{true}}">
-            <p class="rf-label" style="letter-spacing:.6px;text-transform:uppercase">{{etiquetaCert}}</p>
-          </sc-if>
-          <div style="position:relative">
-            <button type="button" style="display:flex;align-items:center;gap:var(--rf-space-xs);width:100%;text-align:left;padding:var(--rf-space-sm);background:var(--rf-surface);color:var(--rf-text);border:1px solid var(--rf-border-strong);border-radius:var(--rf-radius-md);font-family:inherit;cursor:pointer" onClick="{{alternar}}">
-              <span style="display:flex;flex:none;color:var(--rf-text-muted)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="9" r="5"/><path d="M8.5 13.5 7 21l5-2.5L17 21l-1.5-7.5"/></svg></span>
-              <sc-if value="{{elegido}}" hint-placeholder-val="{{true}}">
-                <span class="rf-stack" style="gap:6px;flex:1;min-width:0">
-                  <span class="rf-title" style="font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{titular}}</span>
-                  <span class="rf-body rf-text-muted" style="line-height:1.35">{{linea}}</span>
-                </span>
-              </sc-if>
-              <sc-if value="{{noElegido}}" hint-placeholder-val="{{false}}">
-                <span class="rf-body" style="flex:1;font-weight:600">Elegir certificado</span>
-              </sc-if>
-              <span style="{{estiloFlecha}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
-            </button>
-            <sc-if value="{{abierto}}" hint-placeholder-val="{{false}}">
-              <div style="position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:5;border-radius:var(--rf-radius-md);box-shadow:var(--rf-shadow-elevated)">
-                <ul style="list-style:none;margin:0;padding:0;max-height:232px;overflow-y:auto;background:var(--rf-surface);border:1px solid var(--rf-border-strong);border-radius:var(--rf-radius-md)">
-                  <sc-for list="{{filas}}" as="fila" hint-placeholder-count="3">
-                    <li>
-                      <sc-if value="{{fila.hayEncabezado}}" hint-placeholder-val="{{false}}">
-                        <p class="rf-label" style="letter-spacing:.6px;text-transform:uppercase;margin:0;
-                          padding:8px var(--rf-space-sm) 4px;background:var(--rf-bg)">{{fila.encabezado}}</p>
-                      </sc-if>
-                      <button type="button" style="{{fila.estilo}}" disabled="{{fila.inutil}}" onClick="{{fila.elegir}}">
-                        <span class="rf-stack" style="gap:4px;flex:1;min-width:0">
-                          <span class="rf-title" style="font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{fila.titular}}</span>
-                          <span class="rf-body rf-text-muted" style="line-height:1.35">{{fila.linea}}</span>
-                          <sc-if value="{{fila.inutil}}" hint-placeholder-val="{{false}}">
-                            <span class="rf-body" style="line-height:1.35;font-weight:600">{{fila.aviso}}</span>
-                          </sc-if>
-                        </span>
-                        <span style="display:flex;flex:none;width:16px;margin-top:3px;color:var(--rf-primary)">
-                          <sc-if value="{{fila.elegida}}" hint-placeholder-val="{{false}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5 9.5 18 20 6"/></svg></sc-if>
-                        </span>
-                      </button>
-                    </li>
-                  </sc-for>
-                </ul>
+          <sc-if value="{{hayPrevias}}" hint-placeholder-val="{{true}}">
+            <div class="rf-stack" style="margin:0 calc(-1 * var(--rf-space-sm)) -10px">
+              <div role="button" tabindex="0" aria-expanded="{{ariaPrevias}}" aria-label="{{etiquetaPrevias}}" onClick="{{alternarFirmas}}" class="rf-row rf-gap-xs" style="align-items:flex-start;padding:6px 8px 6px var(--rf-space-sm);border-top:1px solid var(--rf-border-subtle);cursor:pointer">
+                <span style="display:flex;flex:none;height:18px;align-items:center"><sc-if value="{{cabInfo}}" hint-placeholder-val="{{true}}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" style="flex:none"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.5"/></svg></sc-if><sc-if value="{{cabAtencion}}" hint-placeholder-val="{{false}}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M12 4 2.5 20h19z"/><path d="M12 10v4M12 17v.5"/></svg></sc-if><sc-if value="{{cabIndet}}" hint-placeholder-val="{{false}}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><circle cx="12" cy="12" r="9" stroke-dasharray="3 3"/></svg></sc-if><sc-if value="{{cabMal}}" hint-placeholder-val="{{false}}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg></sc-if></span>
+                <span style="flex:1;min-width:0;overflow:hidden"><span class="rf-body" style="display:flex;flex-wrap:wrap;margin-left:-14px;font-size:13px;line-height:18px"><span style="white-space:nowrap;padding-left:14px">Firmarás junto a <strong>{{cuantas}}</strong>{{anteriores}}</span><sc-if value="{{hayAvisos}}" hint-placeholder-val="{{false}}"><span style="white-space:nowrap"><span style="display:inline-block;width:14px;text-align:center">·</span><strong>{{avisos}}</strong></span></sc-if></span></span>
+                <span style="{{estiloChevron}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M6 9l6 6 6-6"/></svg></span>
               </div>
-            </sc-if>
-          </div>
+              <sc-if value="{{detallePrevias}}" hint-placeholder-val="{{false}}">
+                <sc-for list="{{filas}}" as="f" hint-placeholder-count="2">
+                  <div class="rf-stack" style="gap:4px;padding:9px var(--rf-space-sm);border-top:1px solid var(--rf-border-subtle)">
+                    <span style="font-size:13px;line-height:1.35;overflow-wrap:anywhere">{{ f.quien }}</span>
+                    <div class="rf-row rf-gap-xs" style="flex-wrap:wrap">
+                      <span class="rf-body rf-text-muted" style="flex:1 0 auto;white-space:nowrap">{{ f.cuando }}</span>
+                      <span class="rf-row" style="flex:none;gap:5px;{{ f.estiloVeredicto }}"><sc-if value="{{ f.ok }}" hint-placeholder-val="{{ true }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><circle cx="12" cy="12" r="9"/><path d="M8 12.5 11 15.5 16.5 9"/></svg></sc-if><sc-if value="{{ f.atencion }}" hint-placeholder-val="{{ false }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M12 4 2.5 20h19z"/><path d="M12 10v4M12 17v.5"/></svg></sc-if><sc-if value="{{ f.indet }}" hint-placeholder-val="{{ false }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><circle cx="12" cy="12" r="9" stroke-dasharray="3 3"/></svg></sc-if><sc-if value="{{ f.mal }}" hint-placeholder-val="{{ false }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg></sc-if><span class="rf-body" style="color:inherit;font-weight:inherit">{{ f.veredicto }}</span></span>
+                    </div>
+                    <sc-if value="{{ f.hayDetalle }}" hint-placeholder-val="{{ false }}">
+                      <span class="rf-body rf-text-muted" style="line-height:1.35">{{ f.detalle }}</span>
+                    </sc-if>
+                    <sc-if value="{{ f.cambio }}" hint-placeholder-val="{{ false }}">
+                      <span class="rf-row rf-gap-xs" style="align-items:flex-start"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M12 4 2.5 20h19z"/><path d="M12 10v4M12 17v.5"/></svg><span class="rf-body" style="flex:1;line-height:1.35;font-weight:700">El documento ha cambiado después de esta firma</span></span>
+                    </sc-if>
+                  </div>
+                </sc-for>
+              </sc-if>
+              <sc-if value="{{tuyaPie}}" hint-placeholder-val="{{false}}">
+                <div class="rf-row rf-gap-xs" style="padding:9px var(--rf-space-sm);border-top:1px solid var(--rf-border-subtle);background:var(--rf-bg);border-radius:0 0 var(--rf-radius-md) var(--rf-radius-md)">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><circle cx="12" cy="8" r="4"/><path d="M4.5 20c1.2-4 4.2-6 7.5-6s6.3 2 7.5 6"/></svg>
+                  <span class="rf-body" style="flex:1;font-size:13px;font-weight:700">{{textoTuya}}</span>
+                </div>
+              </sc-if>
+            </div>
+          </sc-if>
         </div>
-      </sc-if>
-
-      <sc-if value="{{hayAcotado}}" hint-placeholder-val="{{false}}">
-        <p class="rf-prose" style="flex:none;font-size:13px">{{sede}} <strong>ha limitado los certificados válidos</strong>.</p>
       </sc-if>
 
       <sc-if value="{{hayEntrega}}" hint-placeholder-val="{{false}}">
@@ -222,7 +235,6 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
           <p class="rf-prose" style="font-size:13px">Se enviarán tu <strong>nombre</strong>, tu <strong>NIF</strong>, el <strong>emisor</strong> del certificado y su <strong>número de serie</strong>.</p>
         </div>
       </sc-if>
-
 
     </div>
   </div>
@@ -239,21 +251,89 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
 
 </div>
 </x-dc>
-<script data-dc-script data-props='{"tema":{"editor":"enum","options":["light","dark"],"default":"light","section":"Tema"},"forma":{"editor":"enum","options":["hoy · selector de certificado","confirmacion"],"default":"confirmacion","section":"Forma del consentimiento"},"situacion":{"editor":"enum","options":["un certificado","varios acotados por la sede","entregar identidad · selectcert","PDF sin titulo · sin origen"],"default":"un certificado","section":"Situacion"},"lote":{"editor":"enum","options":["uno","varios"],"default":"uno","section":"Documentos (fuera de la v0.5)"},"$preview":{"width":720,"height":600}}'>
-// La fila del desplegable, COPIADA DE la lista de certificados de `Main`: mismas clases,
-// mismo relleno (12/16), misma raya entre filas y misma atenuacion para la que
-// no se puede elegir. Aqui no se dibuja una lista propia de certificados.
-const FILA = "display:flex;align-items:flex-start;gap:var(--rf-space-xs);width:100%;" +
-  "text-align:left;padding:12px var(--rf-space-sm);background:transparent;" +
-  "color:var(--rf-text);border:0;font-family:inherit";
+<script data-dc-script data-props='{"tema": {"editor": "enum", "options": ["light", "dark"], "default": "light", "section": "Tema"}, "forma": {"editor": "enum", "options": ["hoy · selector de certificado", "confirmacion"], "default": "confirmacion", "section": "Forma del consentimiento"}, "situacion": {"editor": "enum", "options": ["un certificado", "varios acotados por la sede", "entregar identidad · selectcert", "PDF sin titulo · sin origen"], "default": "un certificado", "section": "Situacion"}, "firmasPrevias": {"editor": "enum", "options": ["ninguna", "1 · valida", "varias · todas validas", "certificado caducado", "firma longeva · certificado caducado", "firma rota · no corresponde con los datos", "firma rota · danada (1 firma)", "no se puede validar", "cambio tras la ultima firma", "ya la firmaste tu · mismo certificado", "ya la firmaste tu · certificado renovado", "todo a la vez"], "default": "ninguna", "section": "Firmas previas"}, "verFirmas": {"editor": "enum", "options": ["plegado", "desplegado"], "default": "plegado", "section": "Firmas previas"}, "desplegable": {"editor": "enum", "options": ["cerrado", "abierto"], "default": "cerrado", "section": "Certificados"}, "origen": {"editor": "enum", "options": ["con origen", "sin origen"], "default": "con origen", "section": "Origen"}, "lote": {"editor": "enum", "options": ["uno", "varios"], "default": "uno", "section": "Documentos (fuera de la v0.5)"}, "$preview": {"width": 720, "height": 600}}'>
+
+// La fila del desplegable, COPIADA DE la lista flotante de certificados de `Main`:
+// mismo relleno, mismo fondo del elegido, mismos encabezados Disponibles / No
+// utilizables y misma atenuacion para la que no se puede elegir.
+const FILA = "flex:none;gap:12px;padding:10px 12px;border-radius:var(--rf-radius-md);";
 
 const TODOS = [
-  { id: 1, titular: "ADA LOVELACE BYRON", dni: "99999999R", emisor: "AC FNMT Usuarios", almacen: "Instalado en rFirma", aviso: "" },
-  { id: 2, titular: "GRACE HOPPER MURRAY", dni: "88888888T", emisor: "AC Representación", almacen: "Chrome", aviso: "" },
-  { id: 3, titular: "ALAN TURING MATHISON", dni: "77777777P", emisor: "AC FNMT Usuarios", almacen: "Firefox", aviso: "Caducó el 3 de marzo de 2020" }
+  { id: 1, titular: "ADA LOVELACE BYRON", dni: "99999999R", emisor: "AC FNMT Usuarios", almacen: "Instalado en rFirma", caduca: "Caduca en 03/2028", aviso: "" },
+  { id: 2, titular: "GRACE HOPPER MURRAY", dni: "88888888T", emisor: "AC Representación", almacen: "Chrome", caduca: "Caduca en 06/2027", aviso: "" },
+  { id: 3, titular: "ALAN TURING MATHISON", dni: "77777777P", emisor: "AC FNMT Usuarios", almacen: "Firefox", caduca: "", aviso: "Caducó el 3 de marzo de 2020" }
 ];
 
 class Component extends DCLogic {
+
+  // LAS FIRMAS PREVIAS, EN ORDEN CRONOLOGICO. Cada fila lleva su veredicto con el
+  // vocabulario del panel de estado (Correcto / Atencion / Incorrecto), mismos
+  // trazados. «No se puede validar» usa el triangulo de Atencion y no el circulo
+  // punteado de «No aplica»: es una firma que no sabemos dar por buena, y cuenta
+  // como invalida para el boton de firmar. Una firma LONGEVA con el certificado
+  // ya caducado NO sale «Valida»: lleva estado propio, «No se ha podido comprobar
+  // del todo», con el circulo punteado de «No aplica». No cuenta como invalida
+  // ni pide confirmacion; solo sube el aviso por encima de «todo valido».
+  previasDe(d, clave) {
+    const P = d.previas;
+    const yo = { quien: d.titular, cuando: "22/09/2026 12:10" };
+    const ok = { v: "ok", texto: "Válida" };
+    const cad = { v: "atencion", texto: "Certificado caducado", detalle: "El certificado caducó el 01/08/2026" };
+    const noVal = { v: "atencion", texto: "Certificado aún no válido", detalle: "El certificado es válido desde el 01/10/2026" };
+    const rota = function (x) { return { v: "mal", texto: "Firma rota", detalle: x }; };
+    const sinVal = { v: "atencion", texto: "No se puede validar", detalle: "Formato no reconocido" };
+    const longeva = { v: "indet", texto: "No se ha podido comprobar del todo", detalle: "Firma de larga duración: rFirma no comprueba este tipo de firma" };
+    const f = function (p, e, extra) { return Object.assign({ quien: p.quien, cuando: p.cuando }, e, extra || {}); };
+    const t = {
+      "ninguna": [],
+      "1 · valida": [f(P[0], ok)],
+      "varias · todas validas": [f(P[0], ok), f(P[1], ok), f(P[2], ok)],
+      "certificado caducado": [f(P[0], ok), f(P[1], cad)],
+      "firma longeva · certificado caducado": [f(P[0], ok), f(P[1], longeva)],
+      "certificado aun no valido": [f(P[0], ok), f(P[1], noVal)],
+      "firma rota · no corresponde con los datos": [f(P[0], ok), f(P[1], rota("No corresponde con los datos"))],
+      "firma rota · danada (1 firma)": [f(P[0], rota("Está dañada"))],
+      "firma rota · PDF certificado que no admitia firmas": [f(P[0], ok), f(P[1], rota("El PDF estaba certificado y no admitía más firmas"))],
+      "no se puede validar": [f(P[0], ok), f(P[1], sinVal)],
+      "cambio tras la ultima firma": [f(P[0], ok), f(P[1], ok, { cambio: true })],
+      "ya la firmaste tu · mismo certificado": [f(P[0], ok), f(yo, ok, { tuya: "mismo" })],
+      "ya la firmaste tu · certificado renovado": [f(P[0], ok), f(yo, ok, { tuya: "otro" })],
+      "todo a la vez": [f(P[0], ok), f(P[1], cad), f(P[2], rota("No corresponde con los datos")), f(yo, ok, { tuya: "otro", cambio: true })]
+    };
+    return t[clave] || [];
+  }
+  // El aviso toma el tono de la PEOR fila. «Ha cambiado despues» sube el tono a
+  // Atencion pero no cuenta como invalida: no pide confirmacion al firmar. Una
+  // fila sin comprobar del todo queda entre «todo valido» y Atencion.
+  resumenPrevias(filas, conCertificado) {
+    const malas = filas.filter(function (f) { return f.v !== "ok" && f.v !== "indet"; });
+    const indet = filas.filter(function (f) { return f.v === "indet"; });
+    const hayMal = malas.some(function (f) { return f.v === "mal"; });
+    const hayCambio = filas.some(function (f) { return f.cambio === true; });
+    const nAvisos = malas.length + indet.length + (hayCambio ? 1 : 0);
+    const tuya = conCertificado ? (filas.filter(function (f) { return Boolean(f.tuya); })[0] || null) : null;
+    const tono = hayMal ? "mal" : (malas.length > 0 || hayCambio) ? "atencion" : indet.length > 0 ? "indet" : "info";
+    return {
+      n: filas.length, malas: malas, hayIndet: indet.length > 0, hayCambio: hayCambio, tuya: tuya, tono: tono,
+      cuantas: filas.length === 1 ? "1 firma" : filas.length + " firmas",
+      anteriores: filas.length === 1 ? " anterior" : " anteriores",
+      avisos: nAvisos === 1 ? "1 aviso" : nAvisos + " avisos",
+      hayAvisos: nAvisos > 0,
+      textoTuya: !tuya ? "" : tuya.tuya === "mismo" ? "Ya lo firmaste tú con este certificado" : "Ya lo firmaste tú, con otro certificado tuyo",
+      estiloBorde: tono === "info" ? "border:1px solid var(--rf-border-subtle)" : tono === "indet" ? "border:1px solid var(--rf-border-strong)" : "border:2px solid var(--rf-border-strong)"
+    };
+  }
+  filaVista(f, i) {
+    return {
+      quien: f.quien, cuando: f.cuando, veredicto: f.texto,
+      ok: f.v === "ok", atencion: f.v === "atencion", mal: f.v === "mal", indet: f.v === "indet",
+      estiloVeredicto: f.v === "ok" ? "color:var(--rf-text-muted)" : f.v === "indet" ? "color:var(--rf-text)" : "color:var(--rf-text);font-weight:700",
+      hayDetalle: Boolean(f.detalle), detalle: f.detalle || "",
+      pie: f.cuando + (f.detalle ? " · " + f.detalle : ""),
+      cambio: f.cambio === true,
+      separador: i > 0 ? "border-top:1px solid var(--rf-border-subtle)" : ""
+    };
+  }
   renderVals() {
     // EL CORAZON DEL #317. Sostiene la invariante mas fuerte del hito: una sede
     // no provoca una firma silenciosa sin permiso de la persona. Esta pantalla
@@ -276,8 +356,8 @@ class Component extends DCLogic {
     // «la peticion dice venir de …». Ese «dice venir» ES el registro del #312 y
     // se basta solo; el parrafo que contaba que rFirma no puede comprobarlo se
     // ha borrado. Sin origen valido (falta, vale `null`, o no empieza por
-    // `https://` — los tres el mismo caso) no se inventa nombre: se avisa con
-    // peso, y se puede consentir igual.
+    // `https://` — los tres el mismo caso) no se inventa nombre: la misma linea
+    // dice «Una pagina sin identificar pide tu firma», y se puede consentir igual.
     //
     // REGLA DURA: jamas se enumeran los certificados descartados POR LA SEDE ni
     // el criterio que los descarto. Eso seria contarle a la persona la politica
@@ -312,13 +392,12 @@ class Component extends DCLogic {
     const esVarios = sit === "varios acotados por la sede";
     const esIdentidad = sit === "entregar identidad · selectcert";
     const esSinTitulo = sit === "PDF sin titulo · sin origen";
+    const conOrigen = (this.props.origen ?? "con origen") === "con origen" && !esSinTitulo;
 
     const sede = "sede.ejemplo.gob.es";
 
     const visibles = esVarios ? TODOS : [TODOS[0]];
 
-    // El PDF cofirmado y el PDF sin titulo son documentos distintos a proposito:
-    // asi la palanca de situacion cambia el bloque entero y no una linea.
     let tituloDoc = "Solicitud de subvención 2026";
     let metaDoc = "27 páginas · 2,4 MB";
     let estiloTitulo = "";
@@ -340,38 +419,51 @@ class Component extends DCLogic {
     const hayDocumento = !esIdentidad;
 
     // Mover una palanca reinicia lo que se haya tocado con el raton.
-    const clave = [forma, sit, esLote].join("|");
+    const clave = [forma, sit, esLote, this.props.firmasPrevias, this.props.verFirmas, this.props.desplegable, this.props.origen].join("|");
     const s = (this.state && this.state.clave === clave) ? this.state : {};
     // En «hoy» el desplegable nace ABIERTO: es la unica forma de ver que esa
     // pantalla no dice ni quien pide ni que se firma, solo una lista.
-    const abierto = s.abierto !== undefined ? s.abierto : esSelector;
+    const abierto = s.abierto !== undefined ? s.abierto
+      : esSelector || (this.props.desplegable ?? "cerrado") === "abierto";
+    const desplegado = s.desplegado !== undefined ? s.desplegado
+      : (this.props.verFirmas ?? "plegado") === "desplegado";
     const elegidoId = s.elegidoId !== undefined ? s.elegidoId
       : (visibles.length ? visibles[0].id : null);
     const elegido = visibles.filter(function (c) { return c.id === elegidoId; })[0] || null;
 
     const self = this;
-    const filas = visibles.map(function (c, indice) {
+    const poner = function (cambio) {
+      self.setState(Object.assign({ clave: clave, abierto: abierto, desplegado: desplegado, elegidoId: elegidoId }, cambio));
+    };
+    const certificados = visibles.map(function (c, indice) {
       const inutil = Boolean(c.aviso);
-      const ultima = indice === visibles.length - 1;
       const anterior = indice > 0 ? visibles[indice - 1] : null;
-      const abreGrupo = visibles.length > 1 &&
-        (indice === 0 || Boolean(anterior.aviso) !== inutil);
       return {
-        hayEncabezado: abreGrupo,
-        encabezado: inutil ? "No utilizables" : "Disponibles",
-        titular: c.titular,
-        linea: c.dni + " · " + c.emisor + " · " + c.almacen,
-        aviso: c.aviso,
-        inutil: inutil,
-        elegida: c.id === elegidoId,
-        estilo: FILA +
-          (ultima ? "" : ";border-bottom:1px solid var(--rf-border-subtle)") +
-          (inutil ? ";cursor:not-allowed;opacity:.55" : ";cursor:pointer"),
-        elegir: inutil ? function () {} : function () {
-          self.setState({ clave: clave, abierto: false, elegidoId: c.id });
-        }
+        hayGrupo: visibles.length > 1 && (indice === 0 || Boolean(anterior.aviso) !== inutil),
+        grupo: inutil ? "No utilizables" : "Disponibles",
+        nombre: c.titular,
+        pie: c.emisor + " · " + c.almacen + (c.caduca ? " · " + c.caduca : ""),
+        motivo: c.aviso,
+        titulo: inutil ? c.aviso : c.titular,
+        elegido: c.id === elegidoId,
+        estilo: FILA + (c.id === elegidoId ? "background:var(--rf-surface);" : "")
+          + (inutil ? "opacity:.45;cursor:not-allowed;" : "cursor:pointer;"),
+        elegir: inutil ? function () {} : function () { poner({ abierto: false, elegidoId: c.id }); }
       };
     });
+
+    // Las firmas previas viajan dentro de la caja del documento; un lote no trae
+    // los PDF, asi que no hay firmas que contar.
+    const d = {
+      titular: elegido ? elegido.titular : "",
+      previas: [
+        { quien: "Ana Ruiz Gómez", cuando: "12/09/2026 10:32" },
+        { quien: "Ayuntamiento de Villaejemplo", cuando: "15/09/2026 09:05" },
+        { quien: "Pedro Sanz Liébana", cuando: "20/09/2026 18:47" }
+      ]
+    };
+    const filasPrevias = esLote ? [] : this.previasDe(d, this.props.firmasPrevias ?? "ninguna");
+    const r = this.resumenPrevias(filasPrevias, Boolean(elegido));
 
     return {
       tema: this.props.tema ?? "light",
@@ -380,39 +472,44 @@ class Component extends DCLogic {
 
       // El selector de hoy no dice ni quien pide ni que se firma: esa es
       // exactamente la carencia que la opcion «hoy» pone delante.
-      hayOrigen: esConfirmacion && !esSinTitulo,
-      sinOrigen: esConfirmacion && esSinTitulo,
-      avisoSinOrigen: esIdentidad
-        ? "La petición pide tus datos de identidad y no indica de qué página viene."
-        : "La petición pide una firma y no indica de qué página viene.",
+      hayOrigen: esConfirmacion && conOrigen,
+      sinOrigen: esConfirmacion && !conOrigen,
       peticion: esIdentidad ? " pide tus datos de identidad." : " pide tu firma.",
 
-      hayDoc: esConfirmacion && hayDocumento,
-      tituloDoc: tituloDoc,
-      metaDoc: metaDoc,
-      hayMetaDoc: Boolean(metaDoc),
-      estiloTitulo: estiloTitulo,
-      hayCofirma: esVarios && !esLote,
-
-      hayAcotado: esConfirmacion && esVarios,
-
-      // EL MISMO desplegable en las dos formas. Con el certificado en una linea,
-      // «confirmacion escrita» y «confirmacion · certificado plegado» dejaban de
-      // distinguirse en nada: eran la misma pantalla y se han fundido en una.
-      haySelector: true,
       hayEtiquetaCert: esConfirmacion,
       etiquetaCert: esIdentidad ? "Enviarás los datos de" : "Firmarás con",
       abierto: abierto,
-      filas: filas,
+      certificados: certificados,
       elegido: Boolean(elegido),
       noElegido: !elegido,
       titular: elegido ? elegido.titular : "",
       linea: elegido ? elegido.dni + " · Emitido por " + elegido.emisor : "",
       estiloFlecha: "display:flex;flex:none;color:var(--rf-text-muted)" +
         (abierto ? ";transform:rotate(180deg)" : ""),
-      alternar: function () {
-        self.setState({ clave: clave, abierto: !abierto, elegidoId: elegidoId });
-      },
+      alternar: function () { poner({ abierto: !abierto }); },
+
+      hayAcotado: esConfirmacion && esVarios,
+
+      hayDoc: esConfirmacion && hayDocumento,
+      tituloDoc: tituloDoc,
+      metaDoc: metaDoc,
+      hayMetaDoc: Boolean(metaDoc),
+      estiloTitulo: estiloTitulo,
+      estiloDoc: r.estiloBorde,
+      hayPrevias: r.n > 0,
+      cabInfo: r.tono === "info", cabAtencion: r.tono === "atencion", cabMal: r.tono === "mal", cabIndet: r.tono === "indet",
+      cuantas: r.cuantas,
+      anteriores: r.anteriores,
+      avisos: r.avisos,
+      hayAvisos: r.hayAvisos,
+      detallePrevias: desplegado,
+      estiloChevron: "display:flex;flex:none;height:18px;align-items:center;color:var(--rf-text-muted)" + (desplegado ? ";transform:rotate(180deg)" : ""),
+      ariaPrevias: desplegado ? "true" : "false",
+      etiquetaPrevias: desplegado ? "Ocultar firmas anteriores" : "Ver firmas anteriores",
+      alternarFirmas: function () { poner({ desplegado: !desplegado }); },
+      filas: filasPrevias.map(function (f, i) { return self.filaVista(f, i); }),
+      tuyaPie: r.tuya !== null,
+      textoTuya: r.textoTuya,
 
       hayEntrega: esConfirmacion && esIdentidad,
 

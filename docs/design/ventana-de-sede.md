@@ -155,7 +155,11 @@ a nadie escuchando. `Entendido` y la cruz hacen lo mismo: descartan el aviso y
 el trámite arranca como uno normal, con su espera.
 
 
-El corazón del ticket: la pantalla que hoy no existe.
+El corazón del ticket: la pantalla que hoy no existe. De arriba abajo: el
+origen, «Firmarás con» con el certificado, la nota de acotado si la hay, la caja
+del documento con sus firmas previas y, en el pie fijo, `Cancelar` y la acción
+principal. Si el contenido no cabe —con las firmas desplegadas—, el cuerpo se
+desplaza y el pie no se mueve.
 
 - **Origen**: `sede.ejemplo.gob.es pide tu firma de un documento PDF.` (o `de
   un reto de autenticación`, `de un documento XML`, `de una factura
@@ -166,12 +170,13 @@ El corazón del ticket: la pantalla que hoy no existe.
   que pedía el [#531](https://github.com/sgomez/rfirma/issues/531) — nadie
   firma a ciegas un reto de autenticación pensando que es un documento. El
   lote no lo dice, porque el momento no trae formato: sigue diciendo «lote de
-  N». Cuando la petición no dice de dónde viene, la etiqueta «Origen sin
-  identificar» lo dice con la misma frase sin sujeto: «La petición pide una
-  firma y no indica de qué página viene», o «pide tus datos de identidad» en
+  N». Cuando la petición no dice de dónde viene, lo dice la misma línea
+  `.rf-title` de 15 px, en el mismo sitio y sin caja ni icono: «**Una página sin
+  identificar** pide tu firma.», o «…pide tus datos de identidad.» en
   `selectcert`.
 - **Documento**: sólo lo que el PDF dice de sí mismo —título de sus metadatos si
-  lo trae, páginas, tamaño, y si ya viene firmado, con el aviso de **cofirma**—.
+  lo trae, páginas, tamaño, y si ya viene firmado, el aviso de **firmas
+  previas** dentro de la misma caja (abajo)—.
   **No hay nombre de fichero ni ruta**, porque el protocolo no los trae: el
   `extraData` con el nombre va en la **respuesta**, no en la petición.
 - **Contrafirma**: cuando la sede pide `countersign`, el aviso no es el de la
@@ -188,12 +193,14 @@ El corazón del ticket: la pantalla que hoy no existe.
   y sin tapar el desplegable ni el pie. El lote remoto sigue sin lista: sólo
   el local trae, aparte de la cuenta, el resumen de cada elemento
   ([#549](https://github.com/sgomez/rfirma/issues/549)).
-- **Certificado**: **el mismo desplegable de `panel-de-firma.md`**, sin
-  reinventarlo — mismas clases, mismo relleno de fila, misma agrupación
-  `Disponibles` / `No utilizables` y el mismo alto máximo de lista de **232 px**.
-  Ver [«Los desplegables flotan»](design-system.md) para por qué esa lista no se
-  recorta aunque se salga de los 420 px de la ventana. La etiqueta que lo
-  encabeza dice «Firmarás con», y «Enviarás los datos de» en `selectcert`.
+- **Certificado**, justo debajo del origen: cerrado, el campo desplegable con
+  insignia, titular, DNI · emisor y ▾. Abierto, **la lista flotante de
+  [`panel-de-firma.md`](panel-de-firma.md)**, sin reinventarla —`--rf-radius-lg`,
+  `--rf-shadow-elevated`, encabezados `Disponibles` / `No utilizables`, marca en
+  el elegido, no utilizables atenuados—, anclada debajo del campo con un alto
+  máximo de **156 px** y desplazamiento propio, para que no la corte el pie. La
+  etiqueta que lo encabeza dice «Firmarás con», y «Enviarás los datos de» en
+  `selectcert`.
 - **Qué se envía**, en una línea: «Se enviarán tu **nombre**, tu **DNI**, el
   **emisor** del certificado y su **número de serie**».
 - **Acción principal**: `Firmar`, o `Enviar mis datos` cuando la operación es
@@ -206,6 +213,23 @@ El corazón del ticket: la pantalla que hoy no existe.
   foco; si la persona ya ha llevado el foco a otro sitio, no se lo quita. La
   cuenta atrás se apaga en Preferencias ([preferencias.md](preferencias.md)),
   y entonces la acción nace activa y con el foco.
+
+**Las firmas previas**, dentro de la caja del documento, son el aviso de
+[`panel-de-firma.md`](panel-de-firma.md) con su mismo comportamiento: la línea
+«Firmarás junto a **N firmas** anteriores · **M avisos**», que aquí cabe
+siempre en una línea; el chevron del desplegable (16 px, trazo 1,5,
+`--rf-text-muted`) a la derecha; plegada por defecto, y al pulsarla, una fila
+por firma con quién, cuándo, su veredicto y su motivo, y «El documento ha
+cambiado después de esta firma» en la última. El icono del resumen y el borde de
+la caja toman el tono de la peor fila. «Ya lo firmaste tú» va en una franja al
+pie de la caja y se ve aunque esté plegada. Las reglas —qué cuenta como aviso,
+cómo se valida cada firma y qué es «ya lo firmaste tú»— son las del panel.
+
+**La sede no bloquea ni pide confirmación** por una firma no válida, como
+AutoFirma cuando lo invoca una sede: esta pantalla ya es un consentimiento, lo
+informa, y el botón sigue diciendo `Firmar`. «¿Firmar de todos modos?» es solo
+de la ventana principal. Un lote no trae los PDF, así que no hay firmas previas
+que contar.
 
 Cinco situaciones dibujadas: un certificado; varios **acotados por la sede** —con
 la nota «*sede* ha limitado los certificados válidos» **debajo** del desplegable,
@@ -226,9 +250,8 @@ dejar de verse como válidas», con el mismo icono de información y el mismo
 borde de 1 px que el origen sin identificar (ID-302). El botón sigue diciendo
 `Firmar`, y **«firmas sin registrar» no aparece en la interfaz**. Cancelar aquí
 es cancelar el trámite, como en cualquier otra situación del consentimiento.
-No se enseña recuento ni titulares de las firmas que sí se entienden: rFirma no
-tiene validador y no lo va a tener en esta versión, y enseñar «válida» sin
-poder sostenerlo es peor que el silencio (ID-305).
+Las firmas que sí se entienden salen en el aviso de firmas previas, cada una con
+su veredicto.
 
 ### 1c · Marcar el área de la firma visible — sin artboard
 
@@ -411,6 +434,7 @@ cancela— se borró por explicar lo evidente.
 | La página está desactualizada | sin artboard | `Entendido` |
 | El canal no se abre (Chrome / Firefox) | `SedeEspera` · `no-va-chrome`, `no-va-firefox` | `Instalar…` (la CA local) |
 | Consentimiento de firma | `SedeConsentimiento` · `forma = confirmacion` | `Firmar` |
+| Consentimiento con firmas previas | `SedeConsentimiento` · `firmasPrevias`, `verFirmas` | `Firmar` |
 | Consentimiento de cesión de datos | `SedeConsentimiento` · `situacion = entregar identidad` | `Enviar mis datos` |
 | Marcar el área de la firma visible | sin artboard | `Continuar` |
 | Hay que confirmar | sin artboard | `Continuar` |
@@ -438,7 +462,7 @@ peso al lado de la principal, que en esta ventana **no existe en ninguna
 pantalla**.
 
 Ni un color ni una sombra literales: el panel del desplegable se ordena con
-`z-index:5` —el mismo de la cabecera de la ventana principal— y
+`z-index:6` —el de la lista de certificados del panel de firma— y
 `--rf-shadow-elevated`.
 
 ## Decisiones
@@ -467,7 +491,20 @@ de datos —«pide tus datos de identidad», «Enviarás los datos de», «Envia
 datos»—; la línea de **qué se envía** se queda literal, porque ya era exacta. La
 rama de firma no cambia.
 
+**Firmar un PDF que ya trae firmas, validado el 26/09/2026** en la misma
+página, sobre `SedeConsentimiento`. Cambian tres cosas y el estilo no: el orden
+—el certificado sube detrás del origen—, la lista abierta, que pasa a ser la
+flotante de la ventana principal, y las firmas previas dentro de la caja del
+documento con el comportamiento del panel. Sin origen, una línea en lugar de la
+caja. Palancas de estado nuevas: `firmasPrevias`, `verFirmas`, `desplegable` y
+`origen`.
+
 **Lo que se descartó, y por qué:**
+
+- **«Ya lleva 1 firma: la tuya será una cofirma»**, una línea fija que no decía
+  si las firmas servían. La sustituye el aviso de firmas previas.
+- **La caja «Origen sin identificar»**, con icono y dos líneas: la misma
+  información cabe en la línea del origen, cambiando el sujeto.
 
 - **Añadir una frase que desmienta la identificación** («esto no es una firma» y
   parecidas). Decir lo que se hace basta; negar lo que no se hace es la
@@ -487,8 +524,12 @@ rama de firma no cambia.
   es «rechazo × se cierra sola»: cerrarse sola reproduciría el síntoma que el
   aviso venía a evitar.
 - **Mutilar el desplegable a 152 px** para que cupiera en la ventana. Era tapar
-  el fallo real; la lista vuelve a 232 px y **sobresale**, que es lo correcto
-  ([design-system.md](design-system.md)).
+  el fallo real; la lista volvió a 232 px y **sobresalía**
+  ([design-system.md](design-system.md)). **Punto abierto**: la tanda de las
+  firmas previas hace desplazable el cuerpo, y la lista validada con ella se
+  ancla a 156 px con desplazamiento propio. Esa medida y «Los desplegables
+  flotan» no se han reconciliado todavía; ver
+  [«Lo que hay que decidir al transcribir»](artboards/README.md).
 - **Una quinta situación de consentimiento, «cero tras el filtro de la sede».**
   No era una variante del consentimiento sino otra situación, y se mudó entera a
   `SedeSinCertificado` · `excluidos`: el caso vive en un solo sitio.

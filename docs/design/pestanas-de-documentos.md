@@ -76,7 +76,7 @@ Preferencias ([ADR-0011](../adr/0011-destino-del-documento-firmado.md)).
   con «No se encuentra» en lugar de la carpeta, y no se abre. No se purga sola:
   un USB desmontado no es un fichero borrado, y la fila revive cuando vuelve.
 - La ✓ dice que el PDF ya lleva firmas, sean de quien sean; quién y cuándo lo
-  cuenta el aviso de cofirma del [panel](panel-de-firma.md).
+  cuenta el aviso de firmas previas del [panel](panel-de-firma.md).
 
 ## Estados
 
