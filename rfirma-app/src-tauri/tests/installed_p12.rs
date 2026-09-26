@@ -116,6 +116,82 @@ fn a_p12_without_a_private_key(directory: &Path) -> PathBuf {
     bundle
 }
 
+/// Genera un `.p12` de clave RSA sin `friendlyName` en `directory`.
+fn a_p12_without_a_friendly_name(directory: &Path, subject: &str, password: &str) -> PathBuf {
+    let key = directory.join("plain.pem");
+    let certificate = directory.join("plain-cert.pem");
+    let bundle = directory.join("plain.p12");
+
+    run_openssl(&[
+        "req",
+        "-x509",
+        "-newkey",
+        "rsa:2048",
+        "-nodes",
+        "-days",
+        "30",
+        "-subj",
+        subject,
+        "-keyout",
+        key.to_str().expect("ruta valida"),
+        "-out",
+        certificate.to_str().expect("ruta valida"),
+    ]);
+    run_openssl(&[
+        "pkcs12",
+        "-export",
+        "-inkey",
+        key.to_str().expect("ruta valida"),
+        "-in",
+        certificate.to_str().expect("ruta valida"),
+        "-passout",
+        &format!("pass:{password}"),
+        "-out",
+        bundle.to_str().expect("ruta valida"),
+    ]);
+
+    bundle
+}
+
+/// Genera un `.p12` con clave elíptica y sin `friendlyName` en `directory`.
+fn an_elliptic_curve_p12_without_a_friendly_name(directory: &Path) -> PathBuf {
+    let key = directory.join("ec-plain.pem");
+    let certificate = directory.join("ec-plain-cert.pem");
+    let bundle = directory.join("ec-plain.p12");
+
+    run_openssl(&[
+        "req",
+        "-x509",
+        "-newkey",
+        "ec",
+        "-pkeyopt",
+        "ec_paramgen_curve:prime256v1",
+        "-nodes",
+        "-days",
+        "30",
+        "-subj",
+        "/CN=CLAVE ELIPTICA SIN NOMBRE AMISTOSO",
+        "-keyout",
+        key.to_str().expect("ruta valida"),
+        "-out",
+        certificate.to_str().expect("ruta valida"),
+    ]);
+    run_openssl(&[
+        "pkcs12",
+        "-export",
+        "-inkey",
+        key.to_str().expect("ruta valida"),
+        "-in",
+        certificate.to_str().expect("ruta valida"),
+        "-passout",
+        &format!("pass:{EC_PASSWORD}"),
+        "-out",
+        bundle.to_str().expect("ruta valida"),
+    ]);
+
+    bundle
+}
+
 fn run_openssl(arguments: &[&str]) {
     let output = Command::new("openssl").args(arguments).output().expect(
         "falta openssl. Las pruebas del .p12 instalado lo necesitan: sudo apt install -y openssl",
@@ -193,6 +269,59 @@ fn an_rsa_p12_installs_and_its_certificates_list_without_the_password() {
     assert!(found[0]
         .subject()
         .is_some_and(|subject| subject.contains("EIDAS")));
+}
+
+#[test]
+fn a_p12_without_a_friendly_name_installs_and_signs() {
+    let installed = an_empty_installation();
+    let workshop = tempfile::tempdir().expect("deberia poder crearse un directorio temporal");
+    let plain =
+        a_p12_without_a_friendly_name(workshop.path(), "/CN=SIN NOMBRE AMISTOSO", KIT_PASSWORD);
+
+    install(installed.path(), &plain, KIT_PASSWORD)
+        .expect("un .p12 sin friendlyName deberia instalarse igual");
+
+    let certificate = certificates(installed.path())
+        .into_iter()
+        .next()
+        .expect("tenia que haber un certificado");
+
+    let raw = pkcs11::sign_with_secret(
+        certificate.reference(),
+        &ProtectedSecret::from_str(""),
+        SignatureAlgorithm::Sha256Rsa,
+        PRESIGN,
+    )
+    .expect("un .p12 instalado sin friendlyName tiene que poder firmar sin secreto que teclear");
+
+    let signature = Signature::try_from(raw.as_slice()).expect("firma RSA");
+    verifying_key(&certificate)
+        .verify(PRESIGN, &signature)
+        .expect("la firma no verifica contra la clave publica del certificado");
+}
+
+#[test]
+fn a_p12_without_a_friendly_name_and_without_a_common_name_installs() {
+    let installed = an_empty_installation();
+    let workshop = tempfile::tempdir().expect("deberia poder crearse un directorio temporal");
+    let plain = a_p12_without_a_friendly_name(workshop.path(), "/O=SIN NOMBRE COMUN", KIT_PASSWORD);
+
+    install(installed.path(), &plain, KIT_PASSWORD)
+        .expect("un .p12 sin friendlyName ni nombre comun deberia instalarse con el nickname fijo");
+
+    assert_eq!(certificates(installed.path()).len(), 1);
+}
+
+#[test]
+fn an_elliptic_curve_p12_without_a_friendly_name_gives_the_key_rejection_not_a_read_failure() {
+    let installed = an_empty_installation();
+    let workshop = tempfile::tempdir().expect("deberia poder crearse un directorio temporal");
+    let elliptic = an_elliptic_curve_p12_without_a_friendly_name(workshop.path());
+
+    let failure = install(installed.path(), &elliptic, EC_PASSWORD)
+        .expect_err("una clave eliptica no se puede instalar, con o sin friendlyName");
+
+    assert_eq!(failure.situation, "keyNotRsa");
 }
 
 #[test]
