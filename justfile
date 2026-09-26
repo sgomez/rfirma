@@ -48,6 +48,10 @@ export CARGO_TARGET_DIR := if env("CARGO_LLVM_COV", "") == "" { cargo_target } e
 
 coverage_out := cargo_target / "coverage" / file_name(justfile_directory())
 
+# El arbol instrumentado se compila sin DWARF: la cobertura sale del mapa de
+# LLVM, y enlazar la depuracion era la mitad de su compilacion.
+no_debuginfo := "CARGO_PROFILE_DEV_DEBUG=false"
+
 # Version fijada: sin ruff.toml, el conjunto de reglas depende de la version
 # instalada. Igual en .github/workflows/ci.yml.
 ruff_version := "0.16.6"
@@ -326,7 +330,7 @@ test-rust: (certs "install") build-ts
 [group('ci')]
 test-native: (certs "install") check-native build-ts
     mkdir -p "{{ coverage_out }}/crap-ffi"
-    cd {{ tauri }} && RFIRMA_LIB_DIR="$(dirname "{{ native_lib }}")" cargo llvm-cov nextest --all-features --run-ignored only \
+    cd {{ tauri }} && RFIRMA_LIB_DIR="$(dirname "{{ native_lib }}")" {{ no_debuginfo }} cargo llvm-cov nextest --all-features --run-ignored only \
         --lcov --output-path "{{ coverage_out }}/crap-ffi/lcov.info"
     cd {{ tauri }} && cargo crap --path '{{ ffi_allow }}' --lcov "{{ coverage_out }}/crap-ffi/lcov.info" --threshold 30 --fail-above
     cd {{ bridge }} && mvn -B test -DexcludedGroups= -Dgroups=gradaC
@@ -339,7 +343,7 @@ test-native: (certs "install") check-native build-ts
 [private]
 coverage: (certs "install") build-ts
     mkdir -p "{{ coverage_out }}/coverage"
-    cd {{ tauri }} && cargo llvm-cov --all-features --lcov --output-path "{{ coverage_out }}/coverage/lcov.info" \
+    cd {{ tauri }} && {{ no_debuginfo }} cargo llvm-cov --all-features --lcov --output-path "{{ coverage_out }}/coverage/lcov.info" \
         --fail-under-lines {{ coverage_floor }}
 
 # La puerta del carril rapido, con el modulo FFI oculto.
