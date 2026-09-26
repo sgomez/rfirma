@@ -108,9 +108,7 @@ describe("App", () => {
 
     await openPdf(user);
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
-    await user.click(
-      within(panel).getByRole("switch", { name: /Estampar un recuadro de firma en el documento/ }),
-    );
+    await user.click(within(panel).getByRole("switch", { name: "Firma visible" }));
 
     expect(within(panel).getByRole("radio", { name: "Solo rúbrica" })).toBeChecked();
     expect(within(panel).getByRole("switch", { name: "Con rúbrica" })).toHaveAttribute(
