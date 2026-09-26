@@ -1338,19 +1338,12 @@ msgstr "un documento XML"
 msgid "sede.consent.signingKind.invoice"
 msgstr "unha factura electrónica"
 
-msgid "sede.consent.unknownOriginTitle"
-msgstr "Orixe sen identificar"
-
+#. Misma forma que "asksSignature", con una página sin identificar como sujeto.
 msgid "sede.consent.unknownOriginSignature"
-msgstr "A petición pide unha sinatura e non indica de que páxina vén."
-
-#. La misma frase que "unknownOriginSignature", con el formato nombrado.
-msgid "sede.consent.unknownOriginSignatureOf"
-msgstr "A petición pide asinar {{what}} e non indica de que páxina vén."
+msgstr "Unha páxina sen identificar pide a túa sinatura."
 
 msgid "sede.consent.unknownOriginIdentity"
-msgstr ""
-"A petición pide os teus datos de identidade e non indica de que páxina vén."
+msgstr "Unha páxina sen identificar pide os teus datos de identidade."
 
 #. El PDF no trae título en sus metadatos, y el nombre de fichero no viaja
 #. nunca en la petición.

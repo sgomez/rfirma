@@ -1259,14 +1259,8 @@ msgstr ""
 msgid "sede.consent.signingKind.invoice"
 msgstr ""
 
-msgid "sede.consent.unknownOriginTitle"
-msgstr ""
-
+#. Misma forma que "asksSignature", con una página sin identificar como sujeto.
 msgid "sede.consent.unknownOriginSignature"
-msgstr ""
-
-#. La misma frase que "unknownOriginSignature", con el formato nombrado.
-msgid "sede.consent.unknownOriginSignatureOf"
 msgstr ""
 
 msgid "sede.consent.unknownOriginIdentity"
