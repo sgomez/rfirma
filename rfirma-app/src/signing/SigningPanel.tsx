@@ -176,7 +176,8 @@ export function SigningPanel({
     onUnseal,
   });
 
-  const blocked = signature.enabled && rangeError !== null;
+  const visible = signature.enabled && chosen !== null;
+  const blocked = visible && rangeError !== null;
 
   return (
     <div className="panel">
@@ -211,18 +212,24 @@ export function SigningPanel({
               <div className={signing ? "panel__toggle panel__toggle--dim" : "panel__toggle"}>
                 <Switch
                   trailing
-                  checked={signature.enabled}
+                  checked={visible}
+                  disabled={chosen === null}
                   label={t("panel.visibleSignature.title")}
                   title={
-                    signature.enabled
+                    visible
                       ? t("panel.visibleSignature.turnOff")
                       : t("panel.visibleSignature.turnOn")
                   }
                   onChange={(enabled) => onChangeSignature({ ...signature, enabled })}
                 />
               </div>
+              {(certificate.kind === "loading" || certificate.kind === "unchosen") && (
+                <p className="rf-hint panel__visible-hint">
+                  {t("panel.visibleSignature.needsCertificate")}
+                </p>
+              )}
 
-              {signature.enabled && (
+              {visible && (
                 <div
                   className={signing ? "panel__placement panel__controls--dim" : "panel__placement"}
                 >
@@ -239,8 +246,12 @@ export function SigningPanel({
               )}
             </section>
 
-            {signature.enabled && (
-              <div className={signing ? "panel__controls--dim" : undefined}>
+            {visible && (
+              <div
+                className={
+                  signing ? "panel__model-controls panel__controls--dim" : "panel__model-controls"
+                }
+              >
                 <ModelFieldset
                   signature={signature}
                   onChangeSignature={onChangeSignature}

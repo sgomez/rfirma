@@ -29,6 +29,7 @@ export function ModelFieldset({
 }: ModelFieldsetProps) {
   const { t, i18n } = useTranslation();
   const modelName = useId();
+  const modelTitle = useId();
   const rule = rubricRuleFor(signature.content, signature.withRubric);
   const rubricLocked = rule.locked === "on";
   const noImageTitle = t("panel.visibleSignature.rubric.noImageTitle");
@@ -74,8 +75,10 @@ export function ModelFieldset({
 
   return (
     <>
-      <fieldset className="panel__model">
-        <legend className="rf-label">{t("panel.visibleSignature.model.title")}</legend>
+      <fieldset className="panel__model" aria-labelledby={modelTitle}>
+        <span className="rf-label panel__model-title" id={modelTitle}>
+          {t("panel.visibleSignature.model.title")}
+        </span>
         <div className="panel__model-grid">
           <label className="panel__model-card">
             <input
@@ -143,11 +146,14 @@ export function ModelFieldset({
             />
             <span className="panel__model-thumbnail" aria-hidden="true">
               {rubricBeside}
-              <span className="panel__model-lines panel__model-lines--phrase">
-                <span>
-                  {customPhrase
-                    .map((part) => ("datum" in part ? samples[part.datum] : part.text))
-                    .join("")}
+              <span className="panel__model-sketch">
+                <span className="panel__model-sketch-row">
+                  <span className="panel__model-sketch-text" />
+                  <span className="panel__model-sketch-datum" />
+                </span>
+                <span className="panel__model-sketch-row">
+                  <span className="panel__model-sketch-datum" />
+                  <span className="panel__model-sketch-text panel__model-sketch-text--short" />
                 </span>
               </span>
             </span>

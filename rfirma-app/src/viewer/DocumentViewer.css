@@ -320,6 +320,11 @@
   min-height: 32px;
   padding: 0;
   border-radius: var(--rf-radius-pill);
+  color: var(--rf-text);
+}
+
+.viewer__step:hover:not(:disabled) {
+  background: var(--rf-border-subtle);
 }
 
 /* Ocupa lo mismo con 4 páginas que con 400: el número se escribe, no se elige

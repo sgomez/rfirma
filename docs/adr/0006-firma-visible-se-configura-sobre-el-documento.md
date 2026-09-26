@@ -118,9 +118,10 @@ desactivó la premisa: un **ciclo trifásico en seco** con un `PK1` inventado
 produce bytes visibles idénticos a los del firmado de verdad, y `pdf.js` los
 pinta sin código de dibujo nuevo. La regla que sale de ahí es una sola: **o es
 la firma visible de verdad, o el recuadro va vacío** — no se enseña nunca una
-aproximación. Sin certificado no hay firma que componer: el recuadro conserva
-marco y tiradores, se puede colocar, y va vacío. La miniatura de cada modelo en
-el panel es ese mismo dibujo.
+aproximación. Sin certificado elegido no hay firma que componer, y la firma
+visible no se enciende: el interruptor queda desactivado, con un aviso debajo,
+hasta que se elige uno. Se descartó dejarla encender y colocar con el recuadro
+vacío: un recuadro que no enseña nada no ayuda a decidir dónde va la firma.
 
 Y una segunda regla, del mismo signo: **la vista previa no es una puerta**. Si
 la firma visible no se puede componer, el recuadro lo dice y **se firma igual**; sobre

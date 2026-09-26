@@ -9,6 +9,7 @@ import { useSignedSummary } from "./App.useSignedSummary";
 import { useSignFlow } from "./App.useSignFlow";
 import { useSigningFailure } from "./App.useSigningFailure";
 import { useStartupNotices } from "./App.useStartupNotices";
+import { useVisibleSignature } from "./App.useVisibleSignature";
 import { AboutDialog } from "./about/AboutDialog";
 import type { ExternalDestinationOpener } from "./desktop/externalDestination";
 import { unavailableExternalDestinationOpener } from "./desktop/externalDestination";
@@ -155,7 +156,16 @@ export function App({
   const [placementRequest, setPlacementRequest] = useState<{
     action: "seal" | "unseal";
   } | null>(null);
-  const [signature, setSignature] = useState<VisibleSignature>(initialSignature);
+  const {
+    certificate,
+    lookForCertificates,
+    installed,
+    installCertificate,
+    removeCertificate,
+    chooseCertificate,
+  } = useCertificateSearch(certificates);
+  const chosen = certificate.kind === "chosen" ? certificate.certificate : null;
+  const [signature, setSignature] = useVisibleSignature(initialSignature, chosen);
   const signing = useSigning(signer);
   const { settings, changeSettings, chooseDestination, rubric, rubricFailure, chooseRubric } =
     usePreferencesState(preferences, rubrics);
@@ -254,15 +264,6 @@ export function App({
   );
   const { failedHere } = useSigningFailure(signing, activeId);
 
-  const {
-    certificate,
-    lookForCertificates,
-    installed,
-    installCertificate,
-    removeCertificate,
-    chooseCertificate,
-  } = useCertificateSearch(certificates);
-
   // Sin el `catch`, el rechazo quedaría sin dueño; se cuenta en el visor.
   const reportingFailure = (command: () => Promise<void>) => () => {
     command().catch((thrown: unknown) => setPdfFailure(classify(thrown)));
@@ -270,7 +271,6 @@ export function App({
   const openDocument = reportingFailure(documents.open);
   const clearRecents = reportingFailure(documents.clearRecents);
 
-  const chosen = certificate.kind === "chosen" ? certificate.certificate : null;
   const {
     stamp,
     sign,

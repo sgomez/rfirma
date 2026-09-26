@@ -103,9 +103,19 @@ siguiendo la variante que se esté evaluando.
   lo describe —temas, roles de color, tokens `--rf-*`, componentes— y una prueba
   de grada A impide que se separen. Léela antes de dibujar nada y **no fijes
   colores a mano**.
-- El bundle **no se edita en el repositorio**: se cambia en el proyecto de
-  sistema de diseño, se reexporta entero sobre `bundle/` y se resella con
-  `just seal-ds-bundle`. Un retoque a mano sale en rojo en `just check-repo`.
+- El bundle y el proyecto de sistema de diseño de Claude Design («rFirma Design
+  System», `projectId` `ca5219d0-609a-4ce1-957f-e1d1d38e0c8c`,
+  `PROJECT_TYPE_DESIGN_SYSTEM`) **son el mismo fichero en dos sitios**, y el
+  sentido es **repo → proyecto**:
+  1. Se cambia el fichero en `rfirma-app/src/design-system/bundle/`.
+  2. Se resella con `just seal-ds-bundle`; sin sellar, `just check-repo` sale en
+     rojo.
+  3. Se sube **ese fichero** al proyecto con `DesignSync` (requiere
+     `/design consent`): `get_file` del remoto y `diff` con el local antes de
+     pisarlo, `finalize_plan` con solo esa ruta y `localDir` en `bundle/`, y
+     `write_files` con `localPath`.
+  No se reexporta el proyecto entero sobre `bundle/`: el remoto se quedó atrás
+  (conservaba el `"! "` de `.rf-hint` que la v0.4 retiró) y lo traería de vuelta.
 - El proyecto lleva ya adjunto el sistema de diseño compilado en
   `_ds/rfirma-design-system-ca5219d0-609a-4ce1-957f-e1d1d38e0c8c/` (tokens,
   `styles.css`, fuentes). Los artboards consumen esos tokens. Su `<helmet>` es

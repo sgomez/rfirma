@@ -658,7 +658,6 @@ msgstr "Instalado en rFirma"
 msgid "panel.certificate.retry"
 msgstr "Volver a buscar"
 
-
 #. {{date}} es «mes/año» de caducidad, ya formateado, para la segunda línea de
 #. la fila del botón partido.
 msgid "panel.certificate.expiresIn"
@@ -712,6 +711,10 @@ msgstr "No se ha podido leer"
 
 msgid "panel.visibleSignature.title"
 msgstr "Firma visible"
+
+#. Aviso bajo «Firma visible» mientras no hay certificado elegido; el interruptor está desactivado.
+msgid "panel.visibleSignature.needsCertificate"
+msgstr "Elige un certificado para añadir una firma visible."
 
 #. Título del interruptor de «Firma visible» cuando está apagado.
 msgid "panel.visibleSignature.turnOn"

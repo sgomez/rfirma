@@ -118,7 +118,7 @@ de pantalla.
 | Vacío | solo el «+» | zona de soltar y recientes | no se monta |
 | Buscando certificados | el documento | documento | editable; el botón dice «Buscando certificados…» con indicador, al 55 %. Encima, el diálogo de secreto si el almacén lo pide para listar |
 | Sin certificados | ídem | documento | «Sin certificados» arriba; el pie ofrece «Añadir un certificado…» y «Volver a buscar» |
-| Sin certificado elegido | ídem | documento; la firma visible, si está encendida, con el recuadro vacío | «Elegir certificado ▾», un solo botón que abre la lista |
+| Sin certificado elegido | ídem | documento, sin firma visible: su interruptor está desactivado hasta elegir | «Elegir certificado ▾», un solo botón que abre la lista |
 | Listo | ídem | documento, con la firma visible si está encendida | «Firmar como <nombre> ▾» |
 | Certificados abiertos | ídem | ídem | la lista flota sobre el pie, hacia arriba |
 | Pidiendo el secreto / secreto incorrecto | ídem | bajo el velo | bajo el velo |

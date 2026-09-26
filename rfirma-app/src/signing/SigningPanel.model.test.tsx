@@ -6,6 +6,13 @@ import { DEFAULT_VISIBLE_SIGNATURE } from "./visibleSignature";
 
 // Grada A: el modelo y la rúbrica (docs/design/panel-de-firma.md § El modelo, § La rúbrica).
 describe("SigningPanel · Modelo y rúbrica", () => {
+  it("groups the model cards under «Modelo»", () => {
+    renderPanel();
+
+    const group = screen.getByRole("group", { name: "Modelo" });
+    expect(within(group).getByRole("radio", { name: "Completa" })).toBeInTheDocument();
+  });
+
   it("chooses the complete model", async () => {
     const user = userEvent.setup();
     const onChangeSignature = vi.fn();
@@ -63,6 +70,21 @@ describe("SigningPanel · Modelo y rúbrica", () => {
         },
       }),
     );
+  });
+
+  it("sketches a phrase in the custom card instead of printing it", () => {
+    renderPanel({
+      signature: {
+        ...DEFAULT_VISIBLE_SIGNATURE,
+        enabled: true,
+        content: { model: "custom", phrase: [{ text: "Visto bueno de " }, { datum: "signer" }] },
+      },
+    });
+
+    const card = screen.getByRole("radio", { name: "Personalizada" }).closest("label");
+    const thumbnail = card?.querySelector(".panel__model-thumbnail");
+    expect(thumbnail?.textContent).toBe("");
+    expect(thumbnail?.querySelector(".panel__model-sketch")).not.toBeNull();
   });
 
   it("shows the signer with its identifier masked, exactly as it will be stamped", async () => {

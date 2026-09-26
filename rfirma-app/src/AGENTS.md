@@ -55,6 +55,7 @@ rojo.
 | `App.useSignedSummary.ts` | El acuse de recibo del documento firmado y los dos caminos hasta el fichero. |
 | `App.useSigningFailure.ts` | El error de firma del documento activo, y su salida al cambiar de pestaña. |
 | `App.useStartupNotices.ts` | El aviso de versión nueva y las filas del panel de estado, medidos al arrancar. |
+| `App.useVisibleSignature.ts` | La firma visible, apagada mientras no hay certificado elegido. |
 | `App.testSupport.tsx` | Los dobles y el `renderApp` que comparten las pruebas de `App`. |
 | **`shell/`** | La ventana y su cabecera (ADR-0007). |
 | `shell/MainWindow.tsx` | El marco, con el hueco de la franja entre la cabecera y las regiones. |

@@ -52,6 +52,8 @@ No hay cabecera de documento: el nombre ya está en la
   `--rf-primary` doble (borde más `inset`) y fondo `--rf-surface`.
 - **Fila de la rúbrica**: interruptor, «Con rúbrica», miniatura de 48 × 30 px y
   botón secundario de 30 px.
+- **Modelo, rúbrica y frase**: 8 px entre las tarjetas, la fila de la rúbrica y
+  la frase.
 - **Caja del destino**: relleno `7px 10px`, `--rf-radius-md`, `--rf-surface`,
   borde `--rf-border-subtle`. Arriba la carpeta a 12 px en `--rf-text-muted` con
   icono de carpeta; debajo el nombre a 13 px en negrita con icono de PDF.
@@ -119,12 +121,15 @@ con un firmante
 
 ### El modelo
 
-Tres tarjetas iguales, cada una con la firma visible real en miniatura:
+Tres tarjetas iguales, cada una con un esbozo de su firma visible:
 
-- **Completa**: firmante, fecha y emisor, una línea cada uno, y la rúbrica a la
-  izquierda si está encendida.
+- **Completa**: la frase que AutoFirma estampa por omisión, «Firmado por
+  **[Firmante]** el día **[Fecha]** con un certificado emitido por
+  **[Emisor]**». La miniatura enseña firmante, fecha y emisor, una línea cada
+  uno, y la rúbrica a la izquierda si está encendida.
 - **Solo rúbrica**: la imagen ocupando el recuadro.
-- **Personalizada**: la frase que se escribe debajo.
+- **Personalizada**: la miniatura no pinta la frase, que no cabe; la esboza con
+  dos renglones de barras de texto y pastillas de dato.
 
 **No hay fuente, tamaño ni color.** El texto se ajusta al recuadro: rFirma lo
 compone, lo envía resuelto en `layer2Text` y con `layer2FontSize = 0`, que es lo
@@ -207,8 +212,9 @@ corta por abajo.
 botón dice «Elegir certificado ▾» y es uno solo: el botón entero abre la lista
 hacia arriba. Al elegir uno pasa a «Firmar como <nombre> ▾». No se preselecciona
 ninguno, ni siquiera cuando hay uno solo —la identidad con que se firma no la
-elige la aplicación—, y nunca uno que no sirva. Mientras tanto, el recuadro de la
-firma visible se ve vacío, con marco y tiradores.
+elige la aplicación—, y nunca uno que no sirva. Mientras tanto, el interruptor
+de «Firma visible» está apagado y desactivado, y debajo dice «Elige un
+certificado para añadir una firma visible.».
 
 ## Estados
 
@@ -216,9 +222,10 @@ En el artboard `Main`, palanca «Estado», más «Firma visible», «Lista de
 certificados», «Pie · destino» y «Ficha 14»:
 
 - **Sin certificado elegido**: «Elegir certificado ▾» en un solo botón, que abre
-  la lista; si la firma visible está encendida, el recuadro va vacío.
+  la lista; «Firma visible» apagada y desactivada, con el aviso debajo.
 - **Buscando certificados**: el botón dice «Buscando certificados…» con un
-  indicador, sin nombre, al 55 % y con el ▾ inerte. El resto sigue editable.
+  indicador, sin nombre, al 55 % y con el ▾ inerte. El resto sigue editable,
+  salvo «Firma visible», desactivada y con el aviso debajo.
 - **Sin certificados**: arriba de la zona que se desliza, el triángulo, «Sin
   certificados» y «No hay ningún certificado con el que firmar.». En el pie, en
   la fila de 44 px, «Añadir un certificado…» (primario, lleva a los certificados

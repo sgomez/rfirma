@@ -109,13 +109,27 @@
   flex: 1;
 }
 
+/* Modelo, rúbrica y frase, 8 px entre ellos (docs/design/panel-de-firma.md § Geometría). */
+.panel__model-controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rf-space-1);
+}
+
 .panel__model {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
+  min-width: 0;
   margin: 0;
   padding: 0;
   border: 0;
+}
+
+.panel__model-title {
+  display: flex;
+  align-items: center;
+  height: 16px;
 }
 
 /* Rejilla de tres columnas iguales, 6 px entre ellas (docs/design/panel-de-firma.md § Geometría). */
@@ -193,6 +207,7 @@
   width: 100%;
   height: 30px;
   padding: 3px 5px;
+  overflow: hidden;
   border: 1px solid var(--rf-border-subtle);
   border-radius: 2px;
   background: var(--rf-bg);
@@ -206,8 +221,8 @@
   justify-content: center;
   gap: 1px;
   min-width: 0;
-  font-size: 6.5px;
-  line-height: 1.15;
+  font-size: 5.5px;
+  line-height: 1.2;
   color: var(--rf-text);
 }
 
@@ -217,10 +232,39 @@
   text-overflow: ellipsis;
 }
 
-/* La frase de Personalizada, partiendo de línea en la miniatura. */
-.panel__model-lines--phrase span {
-  white-space: normal;
-  overflow-wrap: anywhere;
+/* Personalizada no pinta su frase: la esboza con texto y datos en barras. */
+.panel__model-sketch {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.panel__model-sketch-row {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.panel__model-sketch-text {
+  flex: 1;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--rf-text-muted);
+}
+
+.panel__model-sketch-text--short {
+  flex: 0.5;
+}
+
+.panel__model-sketch-datum {
+  flex: none;
+  width: 16px;
+  height: 6px;
+  border-radius: var(--rf-radius-sm);
+  background: var(--rf-border-strong);
 }
 
 /* El hueco de la rúbrica dentro de una tarjeta: a la izquierda del texto en
@@ -470,6 +514,11 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+.panel__visible-hint {
+  margin: 0;
+  line-height: 1.4;
 }
 
 .panel__segmented {

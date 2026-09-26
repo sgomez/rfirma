@@ -16,39 +16,45 @@ const MIN_DIGITS: usize = 3;
 /// Dígitos del cuerpo de un DNI, NIE o CIF.
 const IDENTIFIER_DIGITS: std::ops::RangeInclusive<usize> = 7..=8;
 
-/// Las etiquetas del recuadro en un idioma.
-struct Layer2Labels {
-    signer: &'static str,
-    issuer: &'static str,
-    signed_at: &'static str,
+/// La frase por omisión de AutoFirma en un idioma, partida alrededor de sus tres datos.
+struct CompleteSentence {
+    before_signer: &'static str,
+    before_date: &'static str,
+    before_issuer: &'static str,
+    after_issuer: &'static str,
 }
 
-fn labels(language: Language) -> Layer2Labels {
+fn complete_sentence(language: Language) -> CompleteSentence {
     match language {
-        Language::Spanish => Layer2Labels {
-            signer: "Firmado por",
-            issuer: "Emisor",
-            signed_at: "Fecha",
+        Language::Spanish => CompleteSentence {
+            before_signer: "Firmado por ",
+            before_date: " el día ",
+            before_issuer: " con un certificado emitido por ",
+            after_issuer: "",
         },
-        Language::Catalan => Layer2Labels {
-            signer: "Signat per",
-            issuer: "Emissor",
-            signed_at: "Data",
+        Language::Catalan => CompleteSentence {
+            before_signer: "Signat per ",
+            before_date: " el dia ",
+            before_issuer: " amb un certificat emès per ",
+            after_issuer: "",
         },
-        Language::Basque => Layer2Labels {
-            signer: "Sinatzailea",
-            issuer: "Jaulkitzailea",
-            signed_at: "Data",
+        Language::Basque => CompleteSentence {
+            before_signer: "",
+            before_date: " sinatzaileak sinatua ",
+            before_issuer: " egunean, ",
+            after_issuer: " erakundeak emandako ziurtagiriarekin",
         },
-        Language::Galician => Layer2Labels {
-            signer: "Asinado por",
-            issuer: "Emisor",
-            signed_at: "Data",
+        Language::Galician => CompleteSentence {
+            before_signer: "Asinado por ",
+            before_date: " o día ",
+            before_issuer: " cun certificado emitido por ",
+            after_issuer: "",
         },
-        Language::English => Layer2Labels {
-            signer: "Signed by",
-            issuer: "Issuer",
-            signed_at: "Date",
+        Language::English => CompleteSentence {
+            before_signer: "Signed by ",
+            before_date: " on ",
+            before_issuer: " with a certificate issued by ",
+            after_issuer: "",
         },
     }
 }
@@ -56,7 +62,7 @@ fn labels(language: Language) -> Layer2Labels {
 /// El contenido de la firma visible, elegido por modelo.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum VisibleContent {
-    /// Firmante, fecha y emisor.
+    /// La frase por omisión de AutoFirma: firmante, fecha y emisor.
     Complete,
     /// Solo la imagen de la rúbrica, sin texto.
     RubricOnly,
@@ -130,25 +136,17 @@ pub fn compose_visible_content(
 }
 
 fn complete_text(data: &VisibleData<'_>, language: Language) -> String {
-    let labels = labels(language);
-    let present = |datum| Some(data.value_of(datum)).filter(|value| !value.is_empty());
-    paragraph_of([
-        (labels.signer, present(Datum::Signer)),
-        (labels.signed_at, present(Datum::SignedAt)),
-        (labels.issuer, present(Datum::Issuer)),
-    ])
-}
-
-fn paragraph_of(sentences: [(&str, Option<String>); 3]) -> String {
-    let mut paragraph = sentences
-        .into_iter()
-        .filter_map(|(label, value)| value.map(|value| format!("{label}: {value}")))
-        .collect::<Vec<_>>()
-        .join(". ");
-    if !paragraph.is_empty() {
-        paragraph.push('.');
-    }
-    paragraph
+    let sentence = complete_sentence(language);
+    [
+        sentence.before_signer,
+        &data.value_of(Datum::Signer),
+        sentence.before_date,
+        &data.value_of(Datum::SignedAt),
+        sentence.before_issuer,
+        &data.value_of(Datum::Issuer),
+        sentence.after_issuer,
+    ]
+    .concat()
 }
 
 /// El firmante tal y como se estampa: enmascarado, salvo si es un seudónimo.

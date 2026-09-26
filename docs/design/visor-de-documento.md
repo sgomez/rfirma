@@ -31,7 +31,10 @@ está en el panel.
   superior.
 - **Píldora**: `--rf-radius-pill`, fondo `--rf-surface`, borde
   `--rf-border-subtle`, `--rf-shadow-elevated`, 4 px de relleno, 2 px entre
-  botones. Cada botón es un círculo de 32 px con icono de 16 px. El divisor entre
+  botones. Cada botón es un círculo de 32 px con icono de 16 px en `--rf-text`,
+  no en el `--rf-text-muted` de `.rf-btn--ghost`; desactivado, a opacidad 0.45;
+  al pasar por encima de uno activado, el círculo toma fondo
+  `--rf-border-subtle`. El divisor entre
   los dos grupos es una línea de 1 × 24 px en `--rf-border-subtle`.
 - **Número de página**: pastilla de 56 × 30 px con `--rf-radius-sm`, borde
   `--rf-border-strong` y el número a 13 px en peso 700. En la aplicación es un
@@ -59,8 +62,8 @@ sustituida; la rúbrica a la izquierda si está encendida.
 
 **O es la firma de verdad, o el recuadro va vacío.** Nunca una aproximación:
 
-- **Sin certificado** —buscando, o sin ninguno— no hay firma que componer: el
-  recuadro conserva marco y tiradores, se puede colocar, y va vacío.
+- **Sin certificado elegido** —buscando, sin ninguno o sin elegir— no hay firma
+  que componer ni recuadro: la firma visible no se enciende hasta elegir uno.
 - **Mientras se arrastra o se redimensiona**, la vista anterior se congela y se
   atenúa: recalcular por fotograma cuesta 1,9 s y 507 MB de RSS en un escaneado
   de 37 MB.
@@ -107,7 +110,8 @@ eso lo dice el panel.
 ⏮ ‹ [6] de 6 › ⏭  │  − 100 % + ⤢
 ```
 
-Iconos `<svg>` en línea sobre lienzo `0 0 24 24`, trazo 1.5 (ID-53).
+Iconos `<svg>` en línea sobre lienzo `0 0 24 24`, trazo 1.5 (ID-53), salvo los
+cuatro chevrons de paginación, a trazo 2. El − y el + del zoom siguen a 1.5.
 
 - **Páginas**: primera, anterior, número editable, total, siguiente, última.
   Ocupa lo mismo con 4 páginas que con 400.
@@ -221,7 +225,7 @@ firma visible», «Contenido de la firma» y «Visor»:
   su sitio anterior a trazos al 60 %.
 - **Tamaño pequeño**: el mismo contenido con la letra reducida.
 - **Recalculando** y **no se ha podido dibujar**: ver el aviso.
-- **Sin certificado**: el recuadro vacío.
+- **Sin certificado**: la hoja limpia, sin recuadro.
 - **Zoom** 50 %, 100 % y 300 %: la hoja y el recuadro escalan; los tiradores no.
   Al 300 % el artboard enseña la esquina de la firma.
 - **Firmando**: la hoja al 45 %, bajo el velo.
