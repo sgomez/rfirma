@@ -24,14 +24,10 @@ describe("SigningPanel", () => {
     renderPanel();
 
     expect(screen.getByRole("button", { name: "Firmar como Ada Lovelace" })).toBeInTheDocument();
-    const toggle = screen.getByRole("switch", {
-      name: /Estampar un recuadro de firma en el documento/,
-    });
-    expect(toggle).toBeInTheDocument();
-    // El panel lo dibuja con `rf-gap-xs` (8 px, `Main.dc.html:306`); los 16 px
-    // son de Preferencias y se piden allí con `switch--wide`.
-    expect(toggle.closest(".switch")).not.toHaveClass("switch--wide");
-    expect(screen.getByRole("button", { name: "Quitarla de aquí" })).toBeInTheDocument();
+    const toggle = screen.getByRole("switch", { name: "Firma visible" });
+    expect(toggle.closest(".switch")).toHaveClass("switch--trailing");
+    expect(toggle).toHaveAttribute("title", "Quitar la firma visible");
+    expect(screen.getByText("En la página 3")).toBeInTheDocument();
     for (const label of ["Completa", "Solo rúbrica", "Personalizada"]) {
       expect(screen.getByRole("radio", { name: label })).toBeInTheDocument();
     }
@@ -175,22 +171,19 @@ describe("SigningPanel", () => {
   it("dims the toggle and the placement controls while signing", () => {
     renderPanel({ signing: true });
 
-    expect(screen.getByRole("switch", { name: /Estampar un recuadro/ })).toHaveClass(
-      "switch__control",
-    );
     expect(
-      screen.getByRole("switch", { name: /Estampar un recuadro/ }).closest(".panel__toggle"),
+      screen.getByRole("switch", { name: "Firma visible" }).closest(".panel__toggle"),
     ).toHaveClass("panel__toggle--dim");
-    expect(screen.getByText("Colocación").closest(".panel__controls--dim")).not.toBeNull();
+    expect(screen.getByRole("radiogroup").closest(".panel__controls--dim")).not.toBeNull();
   });
 
   it("does not dim the toggle or the placement controls otherwise", () => {
     renderPanel({ signing: false });
 
     expect(
-      screen.getByRole("switch", { name: /Estampar un recuadro/ }).closest(".panel__toggle"),
+      screen.getByRole("switch", { name: "Firma visible" }).closest(".panel__toggle"),
     ).not.toHaveClass("panel__toggle--dim");
-    expect(screen.getByText("Colocación").closest(".panel__controls--dim")).toBeNull();
+    expect(screen.getByRole("radiogroup").closest(".panel__controls--dim")).toBeNull();
   });
 
   it("keeps the destination box and calls onBack from the error's «Volver»", async () => {
@@ -315,48 +308,48 @@ describe("SigningPanel", () => {
   });
 });
 
-/**
- * ID-108. El estado del sello en sí lo cuenta ahora la pastilla flotante del
- * visor (#202) — ver `DocumentViewer.test.tsx` § «el estado del sello,
- * flotando sobre la botonera». Lo que sigue siendo del panel es el bloque
- * entero, apagado sin certificado, y que la colocación sobrevive a que el
- * certificado desaparezca y vuelva.
- */
-describe("el bloque de firma visible, sin certificado", () => {
-  const stamping = { ...DEFAULT_VISIBLE_SIGNATURE, enabled: true };
+describe("la firma visible, sin certificado elegido", () => {
+  const visible = { ...DEFAULT_VISIBLE_SIGNATURE, enabled: true };
+  const unchosen = { kind: "unchosen", certificates: [certificate] } as const;
 
-  function toggle() {
-    return screen.getByRole("switch", {
-      name: /Estampar un recuadro de firma en el documento/,
-    });
-  }
-
-  /**
-   * ID-108. El bloque entero apagado y en gris, y el interruptor **en «no»**:
-   * pintarlo encendido dentro de un bloque inerte prometía un recuadro que no
-   * hay, porque sin certificado no hay sello que dibujar.
-   */
-  it("turns the whole visible-signature block off, switch included, without a certificate", () => {
+  it("turns on without a certificate", async () => {
+    const user = userEvent.setup();
+    const onChangeSignature = vi.fn();
     renderPanel({
-      certificate: { kind: "unchosen", certificates: [certificate] },
-      signature: stamping,
+      certificate: unchosen,
+      signature: { ...visible, enabled: false },
+      onChangeSignature,
     });
 
-    expect(toggle()).toHaveAttribute("aria-checked", "false");
-    expect(
-      screen.getByText("Elige un certificado para colocar la firma visible"),
-    ).toBeInTheDocument();
-    // Y nada de lo que hay dentro del bloque, que es lo que no se puede decidir.
-    expect(screen.queryByRole("checkbox", { name: /Firmante/ })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("switch", { name: "Firma visible" }));
+
+    expect(onChangeSignature).toHaveBeenCalledWith(expect.objectContaining({ enabled: true }));
+  });
+
+  it("is configured without a certificate, with nothing asking for one first", async () => {
+    const user = userEvent.setup();
+    const onChangePageChoice = vi.fn();
+    renderPanel({ certificate: unchosen, signature: visible, onChangePageChoice });
+
+    expect(screen.getByRole("switch", { name: "Firma visible" })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+    await user.click(screen.getByRole("radio", { name: "Varias" }));
+
+    expect(onChangePageChoice).toHaveBeenCalledWith("these");
+    expect(screen.getByRole("radio", { name: "Completa" })).toBeInTheDocument();
+    expect(screen.queryByText(/Elige un certificado para colocar/)).not.toBeInTheDocument();
   });
 
   it("keeps the placement across a certificate that comes and goes", () => {
-    const { show } = renderPanel({ signature: stamping });
-    expect(screen.getByRole("button", { name: "Quitarla de aquí" })).toBeInTheDocument();
+    const { show } = renderPanel({ signature: visible });
+    expect(screen.getByText("En la página 3")).toBeInTheDocument();
 
-    show({ certificate: { kind: "empty" }, signature: stamping });
-    show({ signature: stamping });
+    show({ certificate: { kind: "empty" }, signature: visible });
+    expect(screen.getByText("En la página 3")).toBeInTheDocument();
+    show({ signature: visible });
 
-    expect(screen.getByRole("button", { name: "Quitarla de aquí" })).toBeInTheDocument();
+    expect(screen.getByText("En la página 3")).toBeInTheDocument();
   });
 });

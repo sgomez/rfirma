@@ -500,21 +500,19 @@ msgstr[0] ""
 msgstr[1] ""
 msgstr[2] ""
 
-#. Rótulo del bloque con las tres opciones de en qué páginas se sella.
+#. Nombre accesible del segmentado que elige en qué páginas va la firma visible.
 msgid "panel.placement.title"
 msgstr ""
 
+#. Segmento: la firma visible en una sola página.
 msgid "panel.placement.single"
 msgstr ""
 
-#. Pie de «Solo 1 página»: {{page}} es la página donde se colocó el recuadro.
+#. Bajo «Una página»: {{page}} es la página donde está el recuadro.
 msgid "panel.placement.singlePage"
 msgstr ""
 
-#. Pie de «Solo 1 página» cuando todavía no hay recuadro en ninguna página.
-msgid "panel.placement.singleUnplaced"
-msgstr ""
-
+#. Segmento: la firma visible en las páginas que se escriben en el campo.
 msgid "panel.placement.these"
 msgstr ""
 
@@ -522,43 +520,24 @@ msgstr ""
 msgid "panel.placement.field"
 msgstr ""
 
-#. {{pages}} es el número de páginas del documento.
+#. Segmento: la firma visible en todas las páginas del documento.
 msgid "panel.placement.all"
 msgstr ""
 
-#. Botón que sella la página que se está mirando. Cara por omisión, con «Solo 1 página» o «Estas páginas».
+#. Botón que pone la firma visible en la página que se está mirando, con «Una página» o «Varias».
 msgid "panel.placement.seal"
-msgstr ""
-
-#. Botón que sella, con «Todas las páginas» activa: el conjunto ya está completo y falta el recuadro.
-msgid "panel.placement.sealAll"
 msgstr ""
 
 #. Botón que quita la firma visible de la página que se está mirando, cuando ya la lleva.
 msgid "panel.placement.unseal"
 msgstr ""
 
-#. {{pages}} son las primeras páginas del conjunto, ya escritas y separadas por comas.
-msgid "panel.placement.echo"
-msgstr ""
-
-#. Igual que panel.placement.echo, con {{count}} páginas más que no se nombran.
-msgid "panel.placement.echoMore"
-msgid_plural "panel.placement.echoMore"
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
-
-#. Se estampa un solo campo de firma con el recuadro replicado, no una firma por página.
-msgid "panel.placement.replicated"
-msgid_plural "panel.placement.replicated"
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
-
-#. {{pageCount}} son las páginas del documento y {{page}} la más alta que se ha escrito.
+#. {{count}} son las páginas del documento; se ha escrito una que no existe.
 msgid "panel.placement.errors.beyond"
-msgstr ""
+msgid_plural "panel.placement.errors.beyond"
+msgstr[0] ""
+msgstr[1] ""
+msgstr[2] ""
 
 #. {{entry}} es el rango tal y como se ha escrito, por ejemplo 3-1.
 msgid "panel.placement.errors.reversed"
@@ -567,7 +546,7 @@ msgstr ""
 msgid "panel.placement.errors.zero"
 msgstr ""
 
-#. {{entry}} es lo que se ha escrito y no se entiende. El ejemplo del final no se traduce.
+#. Lo escrito no se entiende: las páginas y los rangos van separados por comas.
 msgid "panel.placement.errors.malformed"
 msgstr ""
 
@@ -649,7 +628,12 @@ msgstr ""
 msgid "panel.visibleSignature.title"
 msgstr ""
 
-msgid "panel.visibleSignature.toggle"
+#. Título del interruptor de «Firma visible» cuando está apagado.
+msgid "panel.visibleSignature.turnOn"
+msgstr ""
+
+#. Título del interruptor de «Firma visible» cuando está encendido.
+msgid "panel.visibleSignature.turnOff"
 msgstr ""
 
 msgid "panel.visibleSignature.model.title"
@@ -706,14 +690,6 @@ msgid "panel.visibleSignature.rubric.change"
 msgstr ""
 
 msgid "panel.visibleSignature.rubric.thumbnail"
-msgstr ""
-
-#. Aviso sobre el bloque de firma visible apagado: sin certificado no hay nada que dibujar.
-msgid "panel.visibleSignature.noCertificate"
-msgstr ""
-
-#. Manda hacer la acción que falta: sin recuadro colocado no se puede firmar.
-msgid "panel.footer.placeFirst"
 msgstr ""
 
 msgid "panel.footer.savedIn"

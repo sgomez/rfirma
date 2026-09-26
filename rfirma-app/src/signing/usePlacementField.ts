@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { PageChoice, PageSet, PageSets, Placement } from "../viewer/signatureBox";
-import { sealedPages, sealsPage } from "../viewer/signatureBox";
+import { sealsPage } from "../viewer/signatureBox";
 import { formatPageRange, parsePageRange } from "./pageRange";
-import { echoOf, type FieldTrouble, type SealButton } from "./placementField";
+import type { FieldTrouble, PageButton } from "./placementField";
 
 interface UsePlacementFieldArgs {
   documentPages: number;
@@ -17,7 +17,7 @@ interface UsePlacementFieldArgs {
 }
 
 /**
- * El bloque «Colocación»: lo tecleado en el campo de páginas se mantiene a la
+ * El campo de «Varias»: lo tecleado en el campo de páginas se mantiene a la
  * par del conjunto activo por **identidad** —el conjunto que este hook acaba
  * de emitir se apunta en `seenPages`, así que solo se reescribe el campo
  * cuando el conjunto cambia **desde fuera**, sellar o quitar una página en el
@@ -35,8 +35,8 @@ export function usePlacementField({
   onUnseal,
 }: UsePlacementFieldArgs) {
   const { t } = useTranslation();
-  // El campo lo escribe **el conjunto de «Estas páginas»**, y no el conjunto
-  // activo: con «Solo 1 página» o «Todas» delante el campo ni se pinta, y al
+  // El campo lo escribe **el conjunto de «Varias»**, y no el conjunto
+  // activo: con «Una página» o «Todas» delante el campo ni se pinta, y al
   // volver tiene que traer lo que se tecleó allí, no lo que dejó la otra
   // opción (#188).
   const pages = pageSets.these;
@@ -49,7 +49,7 @@ export function usePlacementField({
     setPagesText(pages === null ? "" : formatPageRange(pages, documentPages));
   }
   const parsed = parsePageRange(pagesText, documentPages);
-  // El campo vacío bajo «Estas páginas» es **una situación más**, no un
+  // El campo vacío bajo «Varias» es **una situación más**, no un
   // conjunto: no nombra ninguna página, lo dice bajo el campo y apaga el botón
   // de firmar.
   const rangeError: FieldTrouble | null =
@@ -60,9 +60,6 @@ export function usePlacementField({
         : !parsed.ok
           ? parsed.error
           : null;
-  const sealedCount = placement === null ? 0 : sealedPages(placement.pages, documentPages).length;
-  const echo = placement === null ? null : echoOf(placement.pages, documentPages, t);
-
   // Elegir páginas **coloca** (#185): quien recibe esto pone el recuadro en su
   // posición estándar si todavía no había ninguno. El hook no sabe dónde cae
   // —no mide páginas— y por eso manda el conjunto y nada más.
@@ -82,22 +79,13 @@ export function usePlacementField({
     if (typed.ok && typed.pages !== null) place(typed.pages);
   };
 
-  // El botón de sellar, y cuál de sus tres caras toca (#194). Quitar el sello
-  // se ofrece cuando la página lo lleva, salvo con «Todas las páginas»
-  // activa: esa opción no tiene conjunto propio que guardar (`storing` lo
-  // descarta, `signatureBox.ts`), así que restarle una página a «todas» pide
-  // primero pasar a «Estas páginas», que sí recuerda lo suyo.
-  const sealed =
-    placement !== null && pageChoice !== "all" && sealsPage(placement.pages, viewedPage);
-  const sealButton: SealButton = sealed
-    ? { label: t("panel.placement.unseal"), variant: "rf-btn--ghost", act: onUnseal }
-    : pageChoice === "all"
-      ? { label: t("panel.placement.sealAll"), variant: "rf-btn--primary", act: onSeal }
-      : {
-          label: t("panel.placement.seal"),
-          variant: placement === null ? "rf-btn--primary" : "rf-btn--secondary",
-          act: onSeal,
-        };
+  const here = placement !== null && sealsPage(placement.pages, viewedPage);
+  const pageButton: PageButton | null =
+    pageChoice === "all" || (pageChoice === "single" && here) || rangeError !== null
+      ? null
+      : here
+        ? { label: t("panel.placement.unseal"), act: onUnseal }
+        : { label: t("panel.placement.seal"), act: onSeal };
 
-  return { pagesText, rangeError, echo, sealedCount, sealButton, typePages };
+  return { pagesText, rangeError, pageButton, typePages };
 }

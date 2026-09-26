@@ -15,24 +15,14 @@ import { inMemoryVersionCheck, type VersionCheck } from "./updates/newVersion";
 import { unavailablePdfSource } from "./viewer/source";
 
 /**
- * El bloque «Colocación», con el visor y el panel a la vez (#185, #188).
- *
- * Vive en la grada A y no en el panel porque los tres caminos que colocan
- * —arrastre, pastilla y campo— acaban en el mismo recuadro **solo si los dos
- * componentes están montados**: el panel nombra páginas y no sabe dónde cae el
- * rectángulo, y el visor pone el rectángulo sin saber cuál de las tres opciones
- * manda. Probado por separado, cada uno pasaba en verde con el fallo dentro.
+ * La firma visible, con el visor y el panel a la vez: el panel nombra páginas
+ * y el visor pone el rectángulo, y solo montados juntos acaban en el mismo
+ * recuadro.
  */
-describe("App · Colocación", () => {
+describe("App · Firma visible, en qué páginas", () => {
   const remembered: Certificate = { ...aCertificate, remembered: true };
 
-  /**
-   * Abre el documento y enciende la firma visible —apagada por defecto
-   * (#974)—, que la coloca sola en la página vista; se quita otra vez para
-   * dejar el punto de partida que piden estas pruebas, el mismo de siempre:
-   * nada colocado todavía.
-   */
-  async function openPlacing() {
+  async function openVisible() {
     const user = userEvent.setup();
     renderApp(
       inMemoryRecents(),
@@ -43,90 +33,128 @@ describe("App · Colocación", () => {
     );
     await openPdf(user);
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
-    await user.click(
-      within(panel).getByRole("switch", { name: /Estampar un recuadro de firma en el documento/ }),
-    );
-    await within(panel).findByText("Colocación");
-    await user.click(within(panel).getByRole("button", { name: "Quitarla de aquí" }));
+    await within(panel).findByRole("button", { name: "Firmar como Ada Lovelace" });
+    await user.click(within(panel).getByRole("switch", { name: "Firma visible" }));
+    await within(panel).findByText("En la página 1");
     return { user, panel };
   }
 
   const box = () => screen.queryByRole("application", { name: "Recuadro de la firma visible" });
-  const pill = () => screen.getByRole("button", { name: "Ponerla aquí" });
+  const field = (panel: HTMLElement) =>
+    within(panel).getByRole("textbox", { name: "Páginas de la firma visible" });
+  const nextPage = (user: ReturnType<typeof userEvent.setup>) =>
+    user.click(screen.getByRole("button", { name: "Página siguiente" }));
 
-  it("places the box on its standard spot when a range is typed, with nothing placed yet", async () => {
-    const { user, panel } = await openPlacing();
-
-    await user.click(within(panel).getByRole("radio", { name: /Estas páginas/ }));
-    await user.type(within(panel).getByLabelText("Páginas donde se sella"), "1");
-
-    // El recuadro cae abajo a la derecha sin que nadie lo haya arrastrado: es
-    // el ID-102 pedido desde el panel, que es lo que el #185 no hacía.
-    expect(box()).not.toBeNull();
-  });
-
-  it("places the box when «all the pages» is chosen, with nothing placed yet", async () => {
-    const { user, panel } = await openPlacing();
-
-    await user.click(within(panel).getByRole("radio", { name: /Todas las páginas/ }));
+  it("turns on already placed, on the page in view, and signing stays on", async () => {
+    const { panel } = await openVisible();
 
     expect(box()).not.toBeNull();
+    expect(within(panel).getByRole("button", { name: "Firmar como Ada Lovelace" })).toBeEnabled();
+    expect(within(panel).queryByText(/Coloca la firma/)).not.toBeInTheDocument();
   });
 
-  it("keeps the pill saying the same thing on every option while nothing is placed", async () => {
-    const { user, panel } = await openPlacing();
+  it("moves the box under «one page» instead of adding a page to it", async () => {
+    const { user, panel } = await openVisible();
 
-    expect(pill()).toBeInTheDocument();
-    // Con el campo vacío «Estas páginas» sigue sin nombrar ninguna página, que
-    // es la única opción con la que se puede comparar la pastilla (#188).
-    await user.click(within(panel).getByRole("radio", { name: /Estas páginas/ }));
+    await nextPage(user);
+    await user.click(within(panel).getByRole("button", { name: "Ponerla aquí" }));
 
-    expect(pill()).toBeInTheDocument();
-  });
-
-  it("replaces the sealed page instead of adding to it under «one page only»", async () => {
-    const { user, panel } = await openPlacing();
-
-    await user.click(pill());
-    await user.click(screen.getByRole("button", { name: "Página siguiente" }));
-    await user.click(pill());
-
-    // Ni el aviso del recuadro repetido —que solo aparece con más de una— ni un
-    // conjunto de dos: esa opción nombra una página y nada más.
-    expect(within(panel).queryByText(/El mismo recuadro/)).toBeNull();
-    expect(within(panel).getByText("Página 2")).toBeInTheDocument();
+    expect(await within(panel).findByText("En la página 2")).toBeInTheDocument();
+    expect(within(panel).queryByRole("button", { name: "Ponerla aquí" })).not.toBeInTheDocument();
   });
 
   it("gives each option its own set, so going back brings what was left there", async () => {
-    const { user, panel } = await openPlacing();
-    const field = () => within(panel).getByLabelText("Páginas donde se sella");
+    const { user, panel } = await openVisible();
 
-    await user.click(pill());
-    await user.click(within(panel).getByRole("radio", { name: /Estas páginas/ }));
-    // Se estrena sembrada de la anterior, que es lo que pide la ficha.
-    expect(field()).toHaveValue("1");
+    await user.click(within(panel).getByRole("radio", { name: "Varias" }));
+    expect(field(panel)).toHaveValue("1");
 
-    await user.clear(field());
-    await user.type(field(), "2,5");
-    await user.click(within(panel).getByRole("radio", { name: /Solo 1 página/ }));
+    await user.clear(field(panel));
+    await user.type(field(panel), "2,5");
+    await user.click(within(panel).getByRole("radio", { name: "Una página" }));
 
-    // La suya, la 1, y no la más baja del conjunto de al lado (#188).
-    expect(within(panel).getByText("Página 1")).toBeInTheDocument();
+    expect(within(panel).getByText("En la página 1")).toBeInTheDocument();
 
-    await user.click(within(panel).getByRole("radio", { name: /Estas páginas/ }));
+    await user.click(within(panel).getByRole("radio", { name: "Varias" }));
 
-    expect(field()).toHaveValue("2,5");
+    expect(field(panel)).toHaveValue("2,5");
+  });
+
+  it("puts the page in view in the set under «several», and takes it off again", async () => {
+    const { user, panel } = await openVisible();
+    await user.click(within(panel).getByRole("radio", { name: "Varias" }));
+
+    await nextPage(user);
+    await user.click(within(panel).getByRole("button", { name: "Ponerla aquí" }));
+
+    await waitFor(() => expect(field(panel)).toHaveValue("1-2"));
+
+    await user.click(within(panel).getByRole("button", { name: "Quitarla de aquí" }));
+
+    await waitFor(() => expect(field(panel)).toHaveValue("1"));
+  });
+
+  it("places the box on a document opened with the switch already on", async () => {
+    const user = userEvent.setup();
+    renderApp(
+      inMemoryRecents(),
+      [document("primero.pdf"), document("segundo.pdf")],
+      pdfsOf({ "primero.pdf": 2, "segundo.pdf": 5 }),
+    );
+    await openPdf(user);
+    const panel = await screen.findByRole("region", { name: "Panel de firma" });
+    await user.click(within(panel).getByRole("switch", { name: "Firma visible" }));
+    await within(panel).findByText("En la página 1");
+
+    await openPdf(user);
+    await screen.findByRole("tab", { name: "segundo.pdf", selected: true });
+
+    expect(
+      await within(screen.getByRole("region", { name: "Panel de firma" })).findByText(
+        "En la página 1",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      await screen.findByRole("application", { name: "Recuadro de la firma visible" }),
+    ).toBeInTheDocument();
+  });
+
+  it("places the box on page 1 of a document opened while another was on page 3", async () => {
+    const user = userEvent.setup();
+    renderApp(
+      inMemoryRecents(),
+      [document("primero.pdf"), document("segundo.pdf")],
+      pdfsOf({ "primero.pdf": 5, "segundo.pdf": 5 }),
+    );
+    await openPdf(user);
+    const panel = await screen.findByRole("region", { name: "Panel de firma" });
+    await user.click(within(panel).getByRole("switch", { name: "Firma visible" }));
+    await within(panel).findByText("En la página 1");
+    await nextPage(user);
+    await nextPage(user);
+    await within(panel).findByRole("button", { name: "Ponerla aquí" });
+
+    await openPdf(user);
+    await screen.findByRole("tab", { name: "segundo.pdf", selected: true });
+    await screen.findByRole("application", { name: "Recuadro de la firma visible" });
+
+    const current = screen.getByRole("region", { name: "Panel de firma" });
+    await waitFor(() => expect(within(current).getByText("En la página 1")).toBeInTheDocument());
+    expect(within(current).queryByRole("button", { name: "Ponerla aquí" })).not.toBeInTheDocument();
+  });
+
+  it("keeps the box and shows nothing below under «all»", async () => {
+    const { user, panel } = await openVisible();
+
+    await user.click(within(panel).getByRole("radio", { name: "Todas" }));
+
+    expect(box()).not.toBeNull();
+    expect(within(panel).queryByText(/En la página/)).not.toBeInTheDocument();
+    expect(within(panel).queryByRole("button", { name: /aquí/ })).not.toBeInTheDocument();
   });
 });
 
-/**
- * ID-108: sin certificado utilizable no hay sello que dibujar, y sin sello no
- * hay recuadro. El panel lo cumplía desde siempre —apaga su bloque entero y dice
- * «Elige un certificado para colocar la firma visible»—, pero el visor tenía su
- * propia copia del estado y no lo miraba: ofrecía sellar y dejaba trazar (#190).
- */
 describe("App, sin un certificado elegido todavía", () => {
-  /** Pulsar, mover y soltar sobre la hoja: el gesto que coloca el recuadro. */
   function traceOverSheet() {
     const sheet = screen.getByRole("document", { name: "Hoja del documento" });
     fireEvent.pointerDown(sheet, { pointerId: 1, button: 0, clientX: 100, clientY: 100 });
@@ -134,47 +162,40 @@ describe("App, sin un certificado elegido todavía", () => {
     fireEvent.pointerUp(sheet, { pointerId: 1, clientX: 300, clientY: 200 });
   }
 
-  it("neither offers to seal the page nor lets the sheet be traced", async () => {
+  it("turns the visible signature on and draws its box, empty, before any certificate", async () => {
     const user = userEvent.setup();
     renderApp(inMemoryRecents(), [document("factura.pdf")], pdfsOf({ "factura.pdf": 3 }));
 
     await openPdf(user);
     await screen.findByRole("document", { name: "Hoja del documento" });
+    const panel = screen.getByRole("region", { name: "Panel de firma" });
+    await user.click(within(panel).getByRole("switch", { name: "Firma visible" }));
 
-    expect(screen.getByText("Elige un certificado para colocar la firma visible")).toBeVisible();
-    expect(screen.queryByRole("button", { name: "Ponerla aquí" })).not.toBeInTheDocument();
-
-    traceOverSheet();
-
-    expect(screen.queryByRole("application")).not.toBeInTheDocument();
+    expect(
+      await screen.findByRole("application", { name: "Recuadro de la firma visible" }),
+    ).toBeInTheDocument();
+    expect(within(panel).getByText("En la página 1")).toBeInTheDocument();
+    expect(screen.queryByText(/Elige un certificado para colocar/)).not.toBeInTheDocument();
   });
 
-  it("lets the sheet be traced as soon as a certificate is chosen", async () => {
+  it("lets the sheet be traced without a certificate", async () => {
     const user = userEvent.setup();
-    renderApp(
-      inMemoryRecents(),
-      [document("factura.pdf")],
-      pdfsOf({ "factura.pdf": 3 }),
-      {},
-      { list: async () => [aCertificate] },
-    );
+    renderApp(inMemoryRecents(), [document("factura.pdf")], pdfsOf({ "factura.pdf": 3 }));
 
     await openPdf(user);
     await screen.findByRole("document", { name: "Hoja del documento" });
     const panel = screen.getByRole("region", { name: "Panel de firma" });
-    await user.click(await within(panel).findByRole("combobox", { name: "Certificado" }));
-    // La lista vive en un portal, fuera de `panel` (ID-308).
-    await user.click(screen.getAllByRole("option")[0] as HTMLElement);
-    // La firma visible arranca apagada (#974).
-    await user.click(
-      within(panel).getByRole("switch", { name: /Estampar un recuadro de firma en el documento/ }),
-    );
+    await user.click(within(panel).getByRole("switch", { name: "Firma visible" }));
+    const placed = await screen.findByRole("application", { name: "Recuadro de la firma visible" });
+    const before = placed.getAttribute("style");
 
     traceOverSheet();
 
     expect(
-      screen.getByRole("application", { name: "Recuadro de la firma visible" }),
-    ).toBeInTheDocument();
+      screen
+        .getByRole("application", { name: "Recuadro de la firma visible" })
+        .getAttribute("style"),
+    ).not.toBe(before);
   });
 });
 

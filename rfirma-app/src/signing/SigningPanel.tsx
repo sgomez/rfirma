@@ -6,7 +6,6 @@ import { Switch } from "../preferences/Switch";
 import type { PageChoice, PageSet, PageSets, Placement } from "../viewer/signatureBox";
 import { CertificateNotice } from "./CertificateNotice";
 import type { Certificate } from "./certificate";
-import { isUsable } from "./certificate";
 import type { Destination } from "./destination";
 import type { SigningFailure } from "./failure";
 import { ModelFieldset } from "./ModelFieldset";
@@ -166,9 +165,8 @@ export function SigningPanel({
 }: SigningPanelProps) {
   const { t, i18n } = useTranslation();
   const chosen = certificate.kind === "chosen" ? certificate.certificate : null;
-  const usable = chosen !== null && isUsable(chosen.status);
 
-  const { pagesText, rangeError, echo, sealedCount, sealButton, typePages } = usePlacementField({
+  const { pagesText, rangeError, pageButton, typePages } = usePlacementField({
     documentPages: document.pages,
     pageSets,
     pageChoice,
@@ -179,11 +177,7 @@ export function SigningPanel({
     onUnseal,
   });
 
-  // Con el interruptor encendido y sin colocar **no se firma**, y el pie manda
-  // hacer la acción en vez de describir el estado (ID-93). Con el interruptor
-  // apagado se firma, invisible, como siempre.
-  const unplaced = signature.enabled && placement === null;
-  const blocked = signature.enabled && (placement === null || rangeError !== null);
+  const blocked = signature.enabled && rangeError !== null;
 
   return (
     <div className="panel">
@@ -236,59 +230,51 @@ export function SigningPanel({
               </>
             )}
 
-            <section
-              className={usable ? "panel__section" : "panel__section panel__section--inert"}
-              aria-label={t("panel.visibleSignature.title")}
-              inert={!usable}
-            >
-              <p className="rf-label panel__heading">{t("panel.visibleSignature.title")}</p>
-              {/* ID-108: sin certificado no hay sello que dibujar, y sin sello no
-                  hay recuadro. El aviso va encima del interruptor porque es lo que
-                  explica por qué el bloque entero está en gris. */}
-              {!usable && <p className="rf-hint">{t("panel.visibleSignature.noCertificate")}</p>}
+            <section className="panel__visible" aria-label={t("panel.visibleSignature.title")}>
               <div className={signing ? "panel__toggle panel__toggle--dim" : "panel__toggle"}>
                 <Switch
-                  // El interruptor se pinta **en «no»** dentro de un bloque apagado.
-                  // Encendido prometía un recuadro que no hay, y la preferencia que
-                  // guarda `signature.enabled` no se pierde: vuelve al reaparecer el
-                  // certificado, igual que la colocación.
-                  checked={usable && signature.enabled}
-                  label={t("panel.visibleSignature.toggle")}
+                  trailing
+                  checked={signature.enabled}
+                  label={t("panel.visibleSignature.title")}
+                  title={
+                    signature.enabled
+                      ? t("panel.visibleSignature.turnOff")
+                      : t("panel.visibleSignature.turnOn")
+                  }
                   onChange={(enabled) => onChangeSignature({ ...signature, enabled })}
                 />
               </div>
 
-              {chosen !== null && usable && signature.enabled && (
+              {signature.enabled && (
                 <div
-                  className={
-                    signing ? "rf-stack rf-gap-sm panel__controls--dim" : "rf-stack rf-gap-sm"
-                  }
+                  className={signing ? "panel__placement panel__controls--dim" : "panel__placement"}
                 >
                   <PlacementFieldset
-                    documentPages={document.pages}
                     pageSets={pageSets}
                     pageChoice={pageChoice}
                     onChangePageChoice={onChangePageChoice}
                     pagesText={pagesText}
                     onTypePages={typePages}
                     rangeError={rangeError}
-                    echo={echo}
-                    sealedCount={sealedCount}
-                    sealButton={sealButton}
-                  />
-
-                  <ModelFieldset
-                    signature={signature}
-                    onChangeSignature={onChangeSignature}
-                    certificate={chosen}
-                    rubric={rubric}
-                    rubricFailure={rubricFailure}
-                    onChooseRubric={onChooseRubric}
-                    onOpenHelp={onOpenHelp}
+                    pageButton={pageButton}
                   />
                 </div>
               )}
             </section>
+
+            {signature.enabled && (
+              <div className={signing ? "panel__controls--dim" : undefined}>
+                <ModelFieldset
+                  signature={signature}
+                  onChangeSignature={onChangeSignature}
+                  certificate={chosen}
+                  rubric={rubric}
+                  rubricFailure={rubricFailure}
+                  onChooseRubric={onChooseRubric}
+                  onOpenHelp={onOpenHelp}
+                />
+              </div>
+            )}
           </>
         )}
       </div>
@@ -298,7 +284,6 @@ export function SigningPanel({
         destination={destination}
         documentName={document.name}
         onChangeDestination={onChangeDestination}
-        unplaced={unplaced}
         signing={signing}
         blocked={blocked}
         certificate={certificate}
