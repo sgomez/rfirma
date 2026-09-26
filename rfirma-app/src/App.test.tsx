@@ -5,6 +5,7 @@ import { App } from "./App";
 import {
   aCertificate,
   aDestination,
+  destinationOfferingSingleChoice,
   document,
   failingCertificateStore,
   openPdf,
@@ -500,5 +501,39 @@ describe("App", () => {
     expect(within(panel).getByText("Página 1")).toBeInTheDocument();
     expect(within(panel).queryByText("Página 3")).not.toBeInTheDocument();
     expect(box()).not.toBeInTheDocument();
+  });
+
+  it("changes the folder and name shown in the footer for this signature, without touching the destination preference", async () => {
+    const user = userEvent.setup();
+    const destinations = destinationOfferingSingleChoice(
+      { folder: "Documentos", name: "factura-firmado.pdf", writable: true },
+      { id: "single-42", folder: "Escritorio", name: "factura-firmado-2.pdf", writable: true },
+    );
+    const { preferences } = renderApp(
+      inMemoryRecents(),
+      [document("factura.pdf")],
+      pdfsOf({ "factura.pdf": 2 }),
+      {},
+      {},
+      emptyRubricPicker(),
+      unavailableSigningBackend(),
+      null,
+      undefined,
+      inMemoryVersionCheck(),
+      undefined,
+      undefined,
+      destinations,
+    );
+
+    await openPdf(user);
+    const panel = await screen.findByRole("region", { name: "Panel de firma" });
+
+    expect(await within(panel).findByText("…/Documentos/")).toBeInTheDocument();
+
+    await user.click(within(panel).getByRole("button", { name: "Cambiar" }));
+
+    expect(await within(panel).findByText("…/Escritorio/")).toBeInTheDocument();
+    expect(within(panel).getByText(/factura-firmado-2\.pdf/)).toBeInTheDocument();
+    await expect(preferences.read()).resolves.toMatchObject({ destination: "Documentos" });
   });
 });

@@ -14,7 +14,13 @@ import type { Preferences } from "./preferences/preferences";
 import { inMemoryPreferences } from "./preferences/preferences";
 import type { Certificate, CertificateStore } from "./signing/certificate";
 import { emptyCertificateStore } from "./signing/certificate";
-import { inMemoryDestination, unavailableOpener } from "./signing/destination";
+import {
+  type Destination,
+  type DestinationSource,
+  inMemoryDestination,
+  type SingleDestination,
+  unavailableOpener,
+} from "./signing/destination";
 import { type SigningBackend, unavailableSigningBackend } from "./signing/flow";
 import { emptyRubricPicker, type RubricPicker } from "./signing/rubric";
 import { unavailableStampComposer } from "./signing/stampPreview";
@@ -27,6 +33,22 @@ import { type PdfSource, unavailablePdfSource } from "./viewer/source";
 /** El destino que contesta el backend mientras la prueba no diga otra cosa. */
 export const aDestination = () =>
   inMemoryDestination({ folder: "Documentos", name: "contrato-firmado.pdf", writable: true });
+
+/**
+ * Un destino que, al «Cambiar», ofrece `single` para esta firma —y solo para
+ * ella—: la vista previa vuelve a `single` en cuanto se pide con su id, y se
+ * queda en `initial` para cualquier otro (ADR-0011).
+ */
+export function destinationOfferingSingleChoice(
+  initial: Destination,
+  single: SingleDestination,
+): DestinationSource {
+  return {
+    previewFor: async (_documentId, singleDestinationId) =>
+      singleDestinationId === single.id ? single : initial,
+    chooseSingle: async () => single,
+  };
+}
 
 /**
  * **El documento que se tiene delante**: lo que entra por el diálogo o por el
@@ -179,6 +201,7 @@ export function renderApp(
   versions: VersionCheck = inMemoryVersionCheck(),
   externalDestinations: ExternalDestinationOpener = unavailableExternalDestinationOpener(),
   status?: StatusPort,
+  destinations: DestinationSource = aDestination(),
 ) {
   const preferences = inMemoryPreferences(
     {
@@ -202,7 +225,7 @@ export function renderApp(
       drops={drops}
       pdfs={pdfs}
       preferences={preferences}
-      destinations={aDestination()}
+      destinations={destinations}
       certificates={{ ...emptyCertificateStore(), ...certificates }}
       rubrics={rubrics}
       stamps={unavailableStampComposer()}

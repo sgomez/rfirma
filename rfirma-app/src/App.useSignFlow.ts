@@ -28,7 +28,13 @@ interface SignFlowInput {
   stamps: StampComposer;
   sizeBytes: number | null;
   gesturing: boolean;
-  startSigning: (certificate: Certificate, order: SigningOrder) => Promise<void>;
+  /** El destino elegido para esta firma con «Cambiar», sin tocar la preferencia (ADR-0011). */
+  singleDestinationId: string | null;
+  startSigning: (
+    certificate: Certificate,
+    order: SigningOrder,
+    singleDestinationId?: string | null,
+  ) => Promise<void>;
 }
 
 /**
@@ -51,6 +57,7 @@ export function useSignFlow({
   stamps,
   sizeBytes,
   gesturing,
+  singleDestinationId,
   startSigning,
 }: SignFlowInput) {
   // El diálogo de páginas sin sello (ID-105), guardado con la orden y el
@@ -213,7 +220,7 @@ export function useSignFlow({
       return;
     }
 
-    await startSigning(chosen, order);
+    await startSigning(chosen, order, singleDestinationId);
   };
 
   // `Firmar de todos modos` del aviso de las firmas sin registrar: la misma
@@ -235,7 +242,7 @@ export function useSignFlow({
     if (sealLossPrompt === null) return;
     const { certificate: chosen, order } = sealLossPrompt;
     setSealLossPrompt(null);
-    await startSigning(chosen, order);
+    await startSigning(chosen, order, singleDestinationId);
   };
 
   return {

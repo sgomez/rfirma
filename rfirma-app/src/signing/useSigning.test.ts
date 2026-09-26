@@ -116,6 +116,28 @@ describe("useSigning", () => {
   });
 
   /**
+   * ADR-0011: el destino de una sola firma, elegido con «Cambiar», llega a la
+   * postfirma tal cual, sin que la ventana lo guarde en ningún otro sitio.
+   */
+  it("passes the single destination's id through to the postsignature", async () => {
+    const postsign = vi.fn(async () => ok(signed));
+    const { result } = renderHook(() => useSigning(backendOf({ postsign })));
+
+    await act(() => result.current.start(certificate, anOrder(), "single-42"));
+
+    expect(postsign).toHaveBeenCalledWith("single-42");
+  });
+
+  it("lands on the preference's folder when no single destination was chosen", async () => {
+    const postsign = vi.fn(async () => ok(signed));
+    const { result } = renderHook(() => useSigning(backendOf({ postsign })));
+
+    await act(() => result.current.start(certificate, anOrder()));
+
+    expect(postsign).toHaveBeenCalledWith(null);
+  });
+
+  /**
    * Sin esto el acuse de recibo no tendría salida: el estado «Firmado» se queda
    * montado y no hay forma de volver al panel para firmar otro documento.
    */

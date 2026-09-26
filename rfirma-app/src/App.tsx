@@ -4,7 +4,7 @@ import { formatSignedAt, type PageGeometry, placingFrom } from "./App.signingOrd
 import { useCertificateSearch } from "./App.useCertificateSearch";
 import { useDropNotices } from "./App.useDropNotices";
 import { usePlacementControls } from "./App.usePlacementControls";
-import { useDestinationPreview, usePreferencesState } from "./App.usePreferencesState";
+import { useDestination, usePreferencesState } from "./App.usePreferencesState";
 import { useSignedSummary } from "./App.useSignedSummary";
 import { useSignFlow } from "./App.useSignFlow";
 import { useStartupNotices } from "./App.useStartupNotices";
@@ -163,10 +163,11 @@ export function App({
   // Mientras los ajustes se leen todavía no se sabe, y lo guardado por omisión es recordar.
   const documents = useDocuments(recents, picker, settings?.rememberActivity ?? true);
   const activeId = documents.active?.id ?? null;
-  const { destination } = useDestinationPreview(
+  const { destination, singleDestinationId, chooseSingleDestination } = useDestination(
     destinations,
     activeId,
     settings?.destination ?? null,
+    signing.state.kind,
   );
   const { t, i18n } = useTranslation();
   // El instante del recuadro **es estado, no un reloj**: se fija al abrir el
@@ -293,6 +294,7 @@ export function App({
     stamps,
     sizeBytes,
     gesturing,
+    singleDestinationId,
     startSigning: signing.start,
   });
 
@@ -468,13 +470,9 @@ export function App({
               rubricFailure={rubricFailure}
               onChooseRubric={() => void chooseRubric()}
               destination={
-                destination ?? {
-                  folder: settings?.destination ?? "",
-                  name: null,
-                  writable: true,
-                }
+                destination ?? { folder: settings?.destination ?? "", name: null, writable: true }
               }
-              onChangeDestination={() => setView("preferences")}
+              onChangeDestination={() => void chooseSingleDestination()}
               onSign={() => void sign()}
               signing={signing.state.kind === "running"}
               onOpenHelp={() => void externalDestinations.open("discussions")}

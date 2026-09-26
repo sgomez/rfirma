@@ -28,8 +28,15 @@ export interface Signing {
    * La orden va entera en esta llamada y no se guarda aquí: entre la prefirma
    * y la postfirma el ciclo vive en el backend, con su sello de sesión, y la
    * ventana no tiene nada que pueda alterar (ADR-0016).
+   *
+   * `singleDestinationId` es el destino elegido para esta firma con el
+   * diálogo de guardar (ADR-0011); sin él cae en la preferencia de carpeta.
    */
-  start: (certificate: Certificate | null, order: SigningOrder) => Promise<void>;
+  start: (
+    certificate: Certificate | null,
+    order: SigningOrder,
+    singleDestinationId?: string | null,
+  ) => Promise<void>;
   /**
    * Cancelar, o cerrar un fallo: se vuelve al panel **y
    * el backend olvida el ciclo a medias**.
@@ -66,7 +73,11 @@ export function useSigning(backend: SigningBackend): Signing {
   // vuelve a salir al llegar a «Firmado», para atarlo a su documento.
   const origin = useRef<string | null>(null);
 
-  const start = async (certificate: Certificate | null, order: SigningOrder) => {
+  const start = async (
+    certificate: Certificate | null,
+    order: SigningOrder,
+    singleDestinationId: string | null = null,
+  ) => {
     // El estado del certificado se sabe leyendo su DER, sin tocar la tarjeta:
     // fallar por una fecha ya conocida evita iniciar el ciclo innecesariamente.
     const refusal = refusalFor(certificate);
@@ -90,7 +101,7 @@ export function useSigning(backend: SigningBackend): Signing {
     }
 
     setState({ kind: "running", stage: "postsign" });
-    const assembled = await backend.postsign();
+    const assembled = await backend.postsign(singleDestinationId);
     setState(
       assembled.ok
         ? { kind: "signed", document: assembled.value, origin: origin.current ?? "" }

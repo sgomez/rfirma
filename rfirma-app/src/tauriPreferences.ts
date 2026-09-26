@@ -6,7 +6,12 @@ import { FALLBACK_LANGUAGE, isLanguageTag } from "./i18n/languages";
 import type { LanguagePreference } from "./i18n/preference";
 import type { PreferencesStore } from "./preferences/preferences";
 import { DEFAULT_THEME, isTheme, type Theme } from "./preferences/theme";
-import type { Destination, DestinationSource, SignedDocumentOpener } from "./signing/destination";
+import type {
+  Destination,
+  DestinationSource,
+  SignedDocumentOpener,
+  SingleDestination,
+} from "./signing/destination";
 import type { NewVersion, VersionCheck } from "./updates/newVersion";
 
 /**
@@ -95,7 +100,8 @@ export function tauriPreferences(): PreferencesStore {
 }
 
 /**
- * Dónde caerá el documento que hay delante: `preview_destination`.
+ * Dónde caerá el documento que hay delante: `preview_destination`, y
+ * `choose_single_destination` para fijarlo solo para esta firma.
  *
  * Lo compone el backend con la misma carpeta comprobada y el mismo
  * `landing_for` con los que va a escribir después, así que el pie enseña lo que
@@ -103,7 +109,13 @@ export function tauriPreferences(): PreferencesStore {
  */
 export function tauriDestinations(): DestinationSource {
   return {
-    previewFor: (documentId) => invoke<Destination>("preview_destination", { id: documentId }),
+    previewFor: (documentId, singleDestinationId = null) =>
+      invoke<Destination>("preview_destination", {
+        id: documentId,
+        destination: singleDestinationId,
+      }),
+    chooseSingle: (documentId) =>
+      invoke<SingleDestination | null>("choose_single_destination", { id: documentId }),
   };
 }
 

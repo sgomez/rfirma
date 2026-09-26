@@ -34,7 +34,8 @@ export function tauriSigningBackend(): SigningBackend {
   return {
     presign: (order) => stage(() => invoke<StoreSecret>("begin_signing", { order })),
     sign: (pin) => stage(() => invoke<void>("sign_with_pin", { pin })),
-    postsign: () => stage(() => invoke<SignedDocument>("finish_signing")),
+    postsign: (singleDestinationId = null) =>
+      stage(() => invoke<SignedDocument>("finish_signing", { destination: singleDestinationId })),
     padesLowerLeft: (placement) => invoke<[number, number]>("pades_lower_left", { placement }),
     unregisteredSignatures: (document) => invoke<boolean>("unregistered_signatures", { document }),
     discard: cancelSigning,
