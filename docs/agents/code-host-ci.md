@@ -140,10 +140,20 @@ to be fast.
 
 | Lane | Job | When |
 | --- | --- | --- |
-| fast | `Cadena Java`, `Cadena TypeScript`, `Cadena Rust` (parallel) | every PR, every push to `main` |
-| native | `Imagen nativa` (parallel) | every PR, every push to `main`, tags `v*`, manual dispatch, weekly cron |
+| scope | `Alcance` | every run; the four jobs below wait for it |
+| fast | `Cadena Java`, `Cadena TypeScript`, `Cadena Rust` (parallel) | every push to `main`; a PR only if its files affect the chain |
+| native | `Imagen nativa` (parallel) | every push to `main`, tags `v*`, manual dispatch, weekly cron; a PR only if its files affect it |
 | slow | `Binario de release` | tags `v*`, manual dispatch, weekly cron, or a PR labelled `release` (read on the next push, not when the label is added) |
 | cron | `Caducidad del kit FNMT` | weekly cron and manual dispatch only |
+
+**Carriles por ficheros.** En un PR, `Alcance` pasa la lista de ficheros a
+`scripts/ci-lanes.sh`, y un carril se salta —queda `skipped`, que el run
+cuenta como verde— solo si todos los ficheros están en su lista de ajenos.
+Ante la duda corre: el `justfile`, `.github/`, una ruta nueva o un fallo de la
+API los encienden todos. Las guardas de `rfirma-app/src-tauri/tests` leen
+`rfirma-app/src`, `docs/adr`, `testdata/` y el `justfile`, así que un PR solo
+de interfaz sigue pagando `Cadena Rust`. La etiqueta `ci-full` los fuerza
+todos en el siguiente push; el resumen de `Alcance` dice cuáles se omitieron.
 
 The fast lane costs **~2 min warm**, and that number is the **Rust** job: the
 other two finish inside it and are free in wall-clock terms. Java and
@@ -166,7 +176,7 @@ Rust tests at all. What the caching buys (`~/.m2`, the pnpm store,
 gap between a cold run and that warm number.
 
 The `native` lane runs `just test-native` (tier C and the FFI CRAP gate in one instrumented pass)
-on **every PR and push to `main`**. The native library `librfirma_crypto.so` is
+on **every push to `main` and every PR its files can affect**. The native library `librfirma_crypto.so` is
 cached by hash of the Java bridge and `bootstrap.sh`, so PRs that do not touch Java
 restore it in seconds and run tier C tests without rebuilding the GraalVM image.
 This ensures regressions in tier C tests or FFI compatibility are caught at PR time

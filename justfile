@@ -93,6 +93,7 @@ check-repo: check-version
     {{ justfile_directory() }}/packaging/repo/publish-tree.test.sh
     ruff check {{ justfile_directory() }}/packaging {{ justfile_directory() }}/scripts
     {{ justfile_directory() }}/scripts/tests/outline_test.sh
+    {{ justfile_directory() }}/scripts/tests/ci_lanes_test.sh
 
 # Una sola invocacion de Maven: compila con -Xlint:all, prueba y empaqueta.
 [group('ci')]

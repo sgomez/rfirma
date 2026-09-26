@@ -26,9 +26,9 @@
 # realimentacion de un agente, asi que lo que corre siempre tiene que ser
 # rapido:
 #
-#   cadena Java / TypeScript / Rust   en cada PR y en cada push a main
-#   native                            en cada PR y en cada push a main, con
-#                                     la libreria nativa cacheada
+#   cadena Java / TypeScript / Rust   en cada push a main, y en cada PR cuyos
+#                                     ficheros la afecten (job 'scope')
+#   native                            igual, con la libreria nativa cacheada
 #   release                           en etiquetas, a mano, una vez por
 #                                     semana y en PR con la etiqueta 'release'
 name: CI
@@ -90,8 +90,62 @@ jobs:
   # la espera es la del mas lento (Rust) y no la suma.
 
   # --------------------------------------------------------------------------
+  # Solo en un PR sin la etiqueta 'ci-full' puede saltarse un carril, y solo si
+  # scripts/ci-lanes.sh prueba que ningun fichero del PR lo afecta.
+  scope:
+    name: Alcance
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      java: ${{ steps.lanes.outputs.java }}
+      web: ${{ steps.lanes.outputs.web }}
+      rust: ${{ steps.lanes.outputs.rust }}
+      native: ${{ steps.lanes.outputs.native }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: scripts/ci-lanes.sh
+          sparse-checkout-cone-mode: false
+
+      - name: Decide que carriles corren
+        id: lanes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          PR: ${{ github.event.pull_request.number }}
+          CHANGED_FILES: ${{ github.event.pull_request.changed_files }}
+          FULL: ${{ contains(github.event.pull_request.labels.*.name, 'ci-full') }}
+        run: |
+          : > files
+          if [ "$EVENT" != pull_request ]; then
+            reason="evento $EVENT"
+          elif [ "$FULL" = true ]; then
+            reason="etiqueta ci-full"
+          elif [ "$CHANGED_FILES" -ge 3000 ]; then
+            reason="$CHANGED_FILES ficheros, mas de los que lista la API"
+          elif ! gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PR/files" \
+              --jq '.[] | .filename, (.previous_filename // empty)' > files; then
+            : > files
+            reason="la API no dio la lista de ficheros"
+          else
+            reason="ficheros del PR"
+          fi
+          scripts/ci-lanes.sh < files | tee -a "$GITHUB_OUTPUT" > lanes
+          {
+            echo "### Carriles ($reason)"
+            echo
+            sed 's/=true$/: corre/; s/=false$/: omitido, ningun fichero del PR lo afecta/; s/^/- /' lanes
+            echo
+            echo "Pon la etiqueta \`ci-full\` en el PR y empuja para correrlos todos."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # --------------------------------------------------------------------------
   java:
     name: Cadena Java
+    needs: scope
+    if: needs.scope.outputs.java == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -128,6 +182,8 @@ jobs:
   # --------------------------------------------------------------------------
   web:
     name: Cadena TypeScript
+    needs: scope
+    if: needs.scope.outputs.web == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -187,6 +243,8 @@ jobs:
   # --------------------------------------------------------------------------
   rust:
     name: Cadena Rust
+    needs: scope
+    if: needs.scope.outputs.rust == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -305,6 +363,8 @@ jobs:
   # ==========================================================================
   native:
     name: Imagen nativa
+    needs: scope
+    if: needs.scope.outputs.native == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
