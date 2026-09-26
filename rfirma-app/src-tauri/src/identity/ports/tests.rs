@@ -40,6 +40,7 @@ fn a_request() -> SecretPromptRequest {
         holder: None,
         language: Language::Spanish,
         incorrect_secret: false,
+        origin_window: None,
     }
 }
 

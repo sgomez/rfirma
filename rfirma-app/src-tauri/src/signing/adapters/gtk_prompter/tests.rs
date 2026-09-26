@@ -11,6 +11,7 @@ fn a_request(holder: Option<PromptedHolder>, language: Language) -> SecretPrompt
         holder,
         language,
         incorrect_secret: false,
+        origin_window: None,
     }
 }
 

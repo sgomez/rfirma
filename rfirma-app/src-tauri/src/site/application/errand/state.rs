@@ -199,6 +199,18 @@ impl LiveErrand {
         live
     }
 
+    /// Trámite de prueba con un trámite ya activo, para probar qué ve `current()`.
+    #[cfg(test)]
+    pub fn speaking_with_an_active_errand(codec: NegotiatedCodec) -> Self {
+        let live = Self::speaking(Arc::clone(&codec));
+        let _ = live.begin(Errand::of(
+            NegotiatedCredential::Absent,
+            ArrivalMode::Awaited,
+            codec,
+        ));
+        live
+    }
+
     /// Registra la ruta temporal del documento de paso.
     pub(super) fn keep_the_scratch(&self, path: PathBuf, files: Arc<dyn Scratch + Send + Sync>) {
         *crate::lock(&self.scratch) = Some(KeptScratch { path, files });

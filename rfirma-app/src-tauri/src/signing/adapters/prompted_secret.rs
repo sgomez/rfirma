@@ -7,7 +7,7 @@ use crate::identity::domain::holder::prompted_holder_of;
 use crate::identity::domain::protected_secret::ProtectedSecret;
 use crate::identity::domain::secret::{SecretName, StoreSecret};
 use crate::identity::ports::{
-    prompted_until_accepted, PromptedError, SecretPromptRequest, SecretPrompter,
+    prompted_until_accepted, OriginWindow, PromptedError, SecretPromptRequest, SecretPrompter,
 };
 use crate::signing::application::cycle::CycleError;
 use crate::signing::application::session::{self, CycleFailure, SigningSession};
@@ -34,6 +34,7 @@ pub fn sign_on_token_with_prompter(
     session: &SigningSession,
     prompter: &dyn SecretPrompter,
     language: Language,
+    origin_window: OriginWindow,
 ) -> Result<(), Failure> {
     let certificate = session::certificate_of(session)?;
     if signer.secret_of(&certificate)? != StoreSecret::TypedOnScreen {
@@ -49,6 +50,7 @@ pub fn sign_on_token_with_prompter(
         holder,
         language,
         incorrect_secret: false,
+        origin_window: Some(origin_window),
     };
     prompted_until_accepted(
         prompter,
@@ -67,9 +69,10 @@ pub fn signed_on_the_token(
     prompter: &dyn SecretPrompter,
     language: Language,
     secret: &ProtectedSecret,
+    origin_window: OriginWindow,
 ) -> Result<(), Failure> {
     if secret.is_empty() {
-        return sign_on_token_with_prompter(signer, session, prompter, language);
+        return sign_on_token_with_prompter(signer, session, prompter, language, origin_window);
     }
     Ok(session::sign_on_token(signer, session, secret)?)
 }
@@ -98,6 +101,7 @@ pub fn secret_for_the_batch(
         holder: prompted_holder_of(certificate.der()),
         language,
         incorrect_secret: false,
+        origin_window: Some(OriginWindow::Site),
     };
     let (secret, ()) = prompted_until_accepted(
         prompter,

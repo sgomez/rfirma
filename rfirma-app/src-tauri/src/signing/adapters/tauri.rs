@@ -75,6 +75,7 @@ pub fn signed_with_the_secret(
             prompter,
             language,
             &pin,
+            origin_window_of(live),
         );
     };
     let secret = super::prompted_secret::secret_for_the_batch(
@@ -85,6 +86,15 @@ pub fn signed_with_the_secret(
         &pin,
     )?;
     crate::site::the_pending_signature_signed(desk, live, &secret)
+}
+
+/// De qué ventana viene el PIN: la de sede si hay un trámite abierto, si no la principal.
+fn origin_window_of(live: &crate::site::LiveErrand) -> crate::identity::ports::OriginWindow {
+    if live.current().is_some() {
+        crate::identity::ports::OriginWindow::Site
+    } else {
+        crate::identity::ports::OriginWindow::Main
+    }
 }
 
 /// Postfirma: comprueba el sello, ensambla el PDF y lo deja caer donde se eligió.

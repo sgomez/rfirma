@@ -1,10 +1,12 @@
 //! Adaptadores del puerto `SecretPrompter`: diálogo nativo GTK3 y adaptadores de pruebas (ADR-0001, ADR-0014).
 
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex, OnceLock};
 
 use crate::identity::domain::protected_secret::ProtectedSecret;
 use crate::identity::domain::secret::SecretName;
-use crate::identity::ports::{SecretPromptError, SecretPromptRequest, SecretPrompter};
+use crate::identity::ports::{
+    OriginWindow, SecretPromptError, SecretPromptRequest, SecretPrompter,
+};
 use crate::signing::domain::Language;
 
 /// Estructura interna con los textos localizados para el diálogo modal del secreto.
@@ -105,16 +107,32 @@ pub fn localize(request: &SecretPromptRequest) -> DialogI18n {
 }
 
 /// Adaptador de producción que presenta un diálogo modal nativo GTK3 para la solicitud de PIN.
-#[derive(Default, Clone, Copy)]
-pub struct GtkSecretPrompter;
+#[derive(Clone, Default)]
+pub struct GtkSecretPrompter {
+    app: Arc<OnceLock<tauri::AppHandle>>,
+}
 
-fn window_to_be_modal_over() -> Option<gtk::Window> {
-    use gtk::prelude::*;
+impl GtkSecretPrompter {
+    /// Crea un adaptador vacío pendiente de vincular al manejador de Tauri.
+    pub fn new() -> Self {
+        Self::default()
+    }
 
-    gtk::Window::list_toplevels()
-        .into_iter()
-        .filter_map(|toplevel| toplevel.downcast::<gtk::Window>().ok())
-        .find(|window| window.is_visible() && window.is_mapped())
+    /// Vincula el manejador de la aplicación al adaptador, tras montarse la ventana (ADR-0024).
+    pub fn attach(&self, app: tauri::AppHandle) {
+        let _ = self.app.set(app);
+    }
+
+    /// La ventana que pidió el secreto, si se conoce y sigue montada.
+    fn window_to_be_modal_over(
+        &self,
+        origin: Option<OriginWindow>,
+    ) -> Option<gtk::ApplicationWindow> {
+        use tauri::Manager as _;
+
+        let app = self.app.get()?;
+        app.get_webview_window(origin?.label())?.gtk_window().ok()
+    }
 }
 
 fn heading_of(i18n: &DialogI18n) -> gtk::Box {
@@ -151,7 +169,7 @@ fn heading_of(i18n: &DialogI18n) -> gtk::Box {
     heading
 }
 
-fn dialog_for(i18n: &DialogI18n) -> gtk::Dialog {
+fn dialog_for(i18n: &DialogI18n, parent: Option<gtk::ApplicationWindow>) -> gtk::Dialog {
     use gtk::prelude::*;
 
     let dialog = gtk::Dialog::builder()
@@ -162,7 +180,7 @@ fn dialog_for(i18n: &DialogI18n) -> gtk::Dialog {
         .build();
     dialog.set_default_size(400, -1);
 
-    match window_to_be_modal_over() {
+    match parent {
         Some(parent) => {
             dialog.set_transient_for(Some(&parent));
             dialog.set_destroy_with_parent(true);
@@ -258,7 +276,10 @@ fn dismiss(dialog: gtk::Dialog) {
     }
 }
 
-fn show_gtk_dialog(request: &SecretPromptRequest) -> Result<ProtectedSecret, SecretPromptError> {
+fn show_gtk_dialog(
+    request: &SecretPromptRequest,
+    parent: Option<gtk::ApplicationWindow>,
+) -> Result<ProtectedSecret, SecretPromptError> {
     use gtk::prelude::*;
 
     if gtk::init().is_err() {
@@ -268,7 +289,7 @@ fn show_gtk_dialog(request: &SecretPromptRequest) -> Result<ProtectedSecret, Sec
     }
 
     let i18n = localize(request);
-    let dialog = dialog_for(&i18n);
+    let dialog = dialog_for(&i18n, parent);
     let entry = body_of(&dialog, &i18n, request.incorrect_secret);
 
     dialog.show_all();
@@ -286,12 +307,15 @@ impl SecretPrompter for GtkSecretPrompter {
     ) -> Result<ProtectedSecret, SecretPromptError> {
         let context = glib::MainContext::default();
         if context.is_owner() {
-            show_gtk_dialog(request)
+            let parent = self.window_to_be_modal_over(request.origin_window);
+            show_gtk_dialog(request, parent)
         } else {
             let (sender, receiver) = std::sync::mpsc::channel();
             let req = request.clone();
+            let this = self.clone();
             context.invoke(move || {
-                let res = show_gtk_dialog(&req);
+                let parent = this.window_to_be_modal_over(req.origin_window);
+                let res = show_gtk_dialog(&req, parent);
                 let _ = sender.send(res);
             });
             receiver.recv().unwrap_or(Err(SecretPromptError::Cancelled))
