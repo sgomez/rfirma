@@ -9,7 +9,10 @@ use crate::crossing::crossing;
 use crate::signing::adapters::state::VisibleSignatureMemory;
 use crate::signing::application::configuration::Preferences;
 use crate::signing::application::configuration_memory::Theme;
-use crate::signing::domain::{Datum, PageSet, PhrasePart, VisibleBox, VisibleContent};
+use crate::signing::domain::{
+    Datum, PageSet, PhrasePart, PreviousSignature, PreviousSignaturesReport, VisibleBox,
+    VisibleContent,
+};
 
 crossing! {
     /// Posición y páginas del recuadro de firma visible.
@@ -184,6 +187,61 @@ impl From<VisibleSignatureMemory> for RememberedVisibleSignatureView {
         Self {
             content: remembered.content.as_ref().map(VisibleContentView::from),
             with_rubric: remembered.rubric,
+        }
+    }
+}
+
+crossing! {
+    /// Titular, fecha y certificado de una de las firmas que ya trae el documento (ID-399).
+    #[derive(Clone, Debug, PartialEq, Serialize)]
+    #[serde(rename_all = "camelCase")]
+    pub struct PreviousSignatureView {
+        /// El nombre del titular.
+        pub name: String,
+        /// El NIF del titular.
+        pub id_number: String,
+        /// La entidad representada, si el certificado la lleva.
+        pub organization_identifier: Option<String>,
+        /// La autoridad emisora del certificado.
+        pub issuer: String,
+        /// Número de serie del certificado.
+        pub certificate_serial_number: String,
+        /// Instante de la firma en ISO-8601, si el puente lo devolvió.
+        pub signing_time: Option<String>,
+    }
+}
+
+impl From<PreviousSignature> for PreviousSignatureView {
+    fn from(signature: PreviousSignature) -> Self {
+        Self {
+            name: signature.name,
+            id_number: signature.id_number,
+            organization_identifier: signature.organization_identifier,
+            issuer: signature.issuer,
+            certificate_serial_number: signature.certificate_serial_number,
+            signing_time: signature.signing_time,
+        }
+    }
+}
+
+crossing! {
+    /// Las firmas que ya trae el documento, con quién firmó y cuándo (ID-399).
+    #[derive(Clone, Debug, PartialEq, Serialize)]
+    #[serde(rename_all = "camelCase")]
+    pub struct PreviousSignaturesReportView {
+        /// Una por firma, en orden cronológico.
+        pub signatures: Vec<PreviousSignatureView>,
+    }
+}
+
+impl From<PreviousSignaturesReport> for PreviousSignaturesReportView {
+    fn from(report: PreviousSignaturesReport) -> Self {
+        Self {
+            signatures: report
+                .into_signatures()
+                .into_iter()
+                .map(PreviousSignatureView::from)
+                .collect(),
         }
     }
 }

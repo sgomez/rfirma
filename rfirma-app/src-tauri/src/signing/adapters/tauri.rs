@@ -8,7 +8,9 @@ use crate::signing::SigningRoot;
 
 use super::memory::Memory;
 use super::orders::{PlacementOrder, SigningOrder};
-use super::views::{ConfigurationView, RememberedVisibleSignatureView};
+use super::views::{
+    ConfigurationView, PreviousSignaturesReportView, RememberedVisibleSignatureView,
+};
 use crate::crossing::Failure;
 use crate::documents::adapters::views::SignedDocumentView;
 use crate::identity::adapters::views::SecretView;
@@ -202,6 +204,24 @@ pub fn unregistered_signatures(
             signing.files.as_ref(),
             &document,
         )?,
+    )
+}
+
+/// Firmas que ya trae el documento, con quién firmó y cuándo (ID-399).
+#[tauri::command(async)]
+pub fn previous_signatures(
+    document: String,
+    documents: State<'_, DocumentsRoot>,
+    signing: State<'_, SigningRoot>,
+) -> Result<PreviousSignaturesReportView, Failure> {
+    let document = documents.opened_document(&document)?;
+    Ok(
+        crate::signing::application::session::previous_signatures_in(
+            signing.files.as_ref(),
+            &signing.isolate,
+            &document,
+        )?
+        .into(),
     )
 }
 

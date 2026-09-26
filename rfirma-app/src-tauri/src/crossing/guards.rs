@@ -186,6 +186,18 @@ fn the_portal_path_inside(value: &serde_json::Value) -> Option<String> {
     }
 }
 
+/// Una firma previa de prueba, sin ninguna ruta del portal dentro.
+fn a_previous_signature() -> crate::signing::domain::PreviousSignature {
+    crate::signing::domain::PreviousSignature {
+        name: "LOVELACE BYRON ADA".to_owned(),
+        id_number: "IDCES-00000000T".to_owned(),
+        organization_identifier: None,
+        issuer: "AC FNMT Usuarios".to_owned(),
+        certificate_serial_number: "1234567890".to_owned(),
+        signing_time: Some("2024-01-01T10:00:00Z".to_owned()),
+    }
+}
+
 /// Genera todas las salidas producidas a partir de un documento del portal.
 #[expect(clippy::too_many_lines)]
 fn crossings_from_a_portal_document() -> Vec<Serialised> {
@@ -203,10 +215,13 @@ fn crossings_from_a_portal_document() -> Vec<Serialised> {
     use crate::documents::domain::recents::Badge;
     use crate::documents::domain::recents::RecentDocument;
     use crate::signing::adapters::state::State;
-    use crate::signing::adapters::views::ConfigurationView;
+    use crate::signing::adapters::views::{
+        ConfigurationView, PreviousSignatureView, PreviousSignaturesReportView,
+    };
     use crate::signing::application::configuration;
     use crate::signing::application::configuration_memory::Configuration;
     use crate::signing::application::tests::a_memory;
+    use crate::signing::domain::PreviousSignaturesReport;
 
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
     let memory = a_memory(home.path());
@@ -305,6 +320,16 @@ fn crossings_from_a_portal_document() -> Vec<Serialised> {
         Serialised::of(
             "RubricChoiceView",
             &crate::documents::adapters::tauri_rubric::RubricChoiceView::refused(&refused_rubric),
+        ),
+        Serialised::of(
+            "PreviousSignatureView",
+            &PreviousSignatureView::from(a_previous_signature()),
+        ),
+        Serialised::of(
+            "PreviousSignaturesReportView",
+            &PreviousSignaturesReportView::from(PreviousSignaturesReport::new(vec![
+                a_previous_signature(),
+            ])),
         ),
     ];
 

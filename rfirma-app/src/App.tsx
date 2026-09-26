@@ -5,6 +5,7 @@ import { useCertificateSearch } from "./App.useCertificateSearch";
 import { useDropNotices } from "./App.useDropNotices";
 import { usePlacementControls } from "./App.usePlacementControls";
 import { useDestination, usePreferencesState } from "./App.usePreferencesState";
+import { usePreviousSignatures } from "./App.usePreviousSignatures";
 import { useSignedSummary } from "./App.useSignedSummary";
 import { useSignFlow } from "./App.useSignFlow";
 import { useSigningFailure } from "./App.useSigningFailure";
@@ -172,6 +173,7 @@ export function App({
   // Mientras los ajustes se leen todavía no se sabe, y lo guardado por omisión es recordar.
   const documents = useDocuments(recents, picker, settings?.rememberActivity ?? true);
   const activeId = documents.active?.id ?? null;
+  const previousSignatures = usePreviousSignatures(signer, activeId);
   const { destination, singleDestinationId, chooseSingleDestination } = useDestination(
     destinations,
     activeId,
@@ -456,8 +458,8 @@ export function App({
                 name: documents.active.name,
                 pages: pdf.pageCount,
                 sizeBytes,
-                signatures: null,
               }}
+              previousSignatures={previousSignatures.signatures}
               certificate={certificate}
               onChooseCertificate={chooseCertificate}
               onRetryCertificates={() => void lookForCertificates()}

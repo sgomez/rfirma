@@ -8,6 +8,7 @@
  */
 
 import type { PageSet } from "../viewer/signatureBox";
+import type { PreviousSignaturesReport } from "./previousSignatures";
 import type { StoreSecret } from "./secret";
 import type { TokenFailure } from "./token";
 import type { VisibleContent } from "./visibleSignature";
@@ -154,6 +155,14 @@ export interface SigningBackend {
    */
   unregisteredSignatures(document: string): Promise<boolean>;
   /**
+   * Las firmas que ya trae el documento, con quién firmó y cuándo (ID-399).
+   *
+   * Se pide al abrir o cargar el documento (ID-407), no al firmar: es el
+   * informe con el que se monta el aviso de firmas previas del panel, y
+   * sustituye a la marca `already_signed` (ID-410).
+   */
+  previousSignatures(document: string): Promise<PreviousSignaturesReport>;
+  /**
    * Olvida el ciclo a medias: la cuarta operación **no es una etapa**, es la
    * salida.
    *
@@ -194,6 +203,7 @@ export function unavailableSigningBackend(): SigningBackend {
     postsign: missing,
     padesLowerLeft: () => Promise.reject(new Error("no hay orden de firma expuesta todavia")),
     unregisteredSignatures: async () => false,
+    previousSignatures: async () => ({ signatures: [] }),
     discard: async () => {},
   };
 }

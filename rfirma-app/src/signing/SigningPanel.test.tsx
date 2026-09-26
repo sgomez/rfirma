@@ -35,10 +35,11 @@ describe("SigningPanel", () => {
 
   it("shows no co-signature notice for a document that carries none", () => {
     renderPanel({
-      document: { name: "contrato.pdf", pages: 27, sizeBytes: null, signatures: null },
+      document: { name: "contrato.pdf", pages: 27, sizeBytes: null },
+      previousSignatures: [],
     });
 
-    expect(screen.queryByText(/cofirma/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Firmarás junto a/)).not.toBeInTheDocument();
   });
 
   it("shows the destination folder and the file name in their own lines, and never the whole path", () => {
@@ -131,10 +132,20 @@ describe("SigningPanel", () => {
 
   it("warns about the co-signature when the document already carries signatures", () => {
     renderPanel({
-      document: { name: "contrato.pdf", pages: 27, sizeBytes: 2_400_000, signatures: 1 },
+      document: { name: "contrato.pdf", pages: 27, sizeBytes: 2_400_000 },
+      previousSignatures: [
+        {
+          name: "Ada Lovelace Byron",
+          idNumber: "99999999R",
+          organizationIdentifier: null,
+          issuer: "AC FNMT Usuarios",
+          certificateSerialNumber: "1",
+          signingTime: "2024-01-01T10:00:00Z",
+        },
+      ],
     });
 
-    expect(screen.getByText("Ya lleva 1 firma: la tuya será una cofirma.")).toBeInTheDocument();
+    expect(screen.getByText("Firmarás junto a 1 firma anterior")).toBeInTheDocument();
   });
 
   it("offers two ways out when no certificate turned up, in the footer", async () => {

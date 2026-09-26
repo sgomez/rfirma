@@ -51,6 +51,7 @@ rojo.
 | `App.useDropNotices.ts` | El arrastre sobre la ventana y la invocación externa, y el aviso que dejan. |
 | `App.usePlacementControls.ts` | La colocación de la firma visible: el recuadro y los tres modos de página. |
 | `App.usePreferencesState.ts` | Los ajustes, el destino previsto para el documento activo y la rúbrica adoptada. |
+| `App.usePreviousSignatures.ts` | El informe de firmas previas del documento activo, pedido al abrir o cargar. |
 | `App.useSignFlow.ts` | La vista previa del sello y la firma, con los dos avisos que pueden interponerse antes del PIN. |
 | `App.useSignedSummary.ts` | El acuse de recibo del documento firmado y los dos caminos hasta el fichero. |
 | `App.useSigningFailure.ts` | El error de firma del documento activo, y su salida al cambiar de pestaña. |
@@ -76,6 +77,8 @@ rojo.
 | `signing/SigningPanel.tsx` | El panel, con la zona que se desliza y el pie fijo. |
 | `signing/SigningPanel.testSupport.tsx` | Los dobles y ayudas que comparten las pruebas de `SigningPanel`. |
 | `signing/CertificateNotice.tsx` | El aviso de «sin certificados», arriba de la zona que se desliza. |
+| `signing/PreviousSignaturesNotice.tsx` | El aviso de firmas previas: línea plegable con quién firmó y cuándo. |
+| `signing/previousSignatures.ts` | El vocabulario de una firma previa y su informe. Sin React. |
 | `signing/PlacementFieldset.tsx` | El segmentado de páginas de la firma visible —«Una página», «Varias», «Todas»— y la línea o el campo de debajo. |
 | `signing/usePlacementField.ts` | Lo tecleado en el campo de «Varias» y qué botón toca bajo el segmentado. |
 | `signing/placementField.ts` | Las situaciones del campo de páginas, redactadas. Sin React. |

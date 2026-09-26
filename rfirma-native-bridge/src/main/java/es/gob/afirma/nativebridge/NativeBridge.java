@@ -24,12 +24,13 @@ import org.graalvm.word.PointerBase;
  * JSON; lo que hace la firma vive alli, donde se puede probar sin construir la
  * imagen nativa.
  *
- * <p><b>Diez entradas y ni una mas</b>: {@code autofirma_pades_presign},
+ * <p><b>Once entradas y ni una mas</b>: {@code autofirma_pades_presign},
  * {@code autofirma_pades_postsign}, {@code autofirma_cades_presign},
  * {@code autofirma_cades_postsign}, {@code autofirma_xades_presign},
  * {@code autofirma_xades_postsign}, {@code autofirma_filter_certificates},
- * {@code autofirma_expand_extra_params}, {@code autofirma_validate_signatures} y
- * {@code autofirma_free_string}. <b>Ninguna firma</b>, y esa es la invariante:
+ * {@code autofirma_expand_extra_params}, {@code autofirma_validate_signatures},
+ * {@code autofirma_previous_signatures} y {@code autofirma_free_string}.
+ * <b>Ninguna firma</b>, y esa es la invariante:
  * la clave privada no entra al isolate (ADR-0001). Se instancia
  * {@code PAdESTriPhasePreProcessor} directamente y NO {@code PreProcessorFactory},
  * que referencia los preprocesadores XAdES, FacturaE, ASiC y PKCS1 y haria
@@ -58,6 +59,9 @@ import org.graalvm.word.PointerBase;
  *              {"ok":true,"verdict":"invalid","reason":"&lt;VALIDITY_ERROR&gt;"}
  *              {"ok":true,"verdict":"confirmationNeeded","param":"&lt;clave&gt;",
  *               "messageCode":"&lt;codigo de mensaje&gt;"}
+ * previous ok  {"ok":true,"signatures":[{"subject":"&lt;DN RFC 2253&gt;",
+ *              "issuer":"&lt;DN RFC 2253&gt;","serialNumber":"&lt;decimal&gt;",
+ *              "signingTime":"&lt;instante ISO-8601&gt;"}, ...]}
  * error        {"ok":false,"error":"&lt;clase&gt;: &lt;mensaje&gt;"}
  * </pre>
  *
@@ -437,6 +441,41 @@ public final class NativeBridge {
                 field(json, "messageCode", verdict.messageCode());
             }
             return toUnmanagedCString(json.append('}').toString());
+        }
+        catch (final Throwable e) {
+            return toUnmanagedCString(errorJson(e));
+        }
+    }
+
+    /**
+     * Firmas que ya trae un PDF, con quien firmo y cuando.
+     *
+     * @param documentB64 PDF de entrada en Base64.
+     * @return JSON con la lista de firmas. Propiedad del llamante: se libera
+     *         con {@code autofirma_free_string}.
+     */
+    @CEntryPoint(name = "autofirma_previous_signatures")
+    public static CCharPointer previousSignatures(
+            final IsolateThread thread,
+            final CCharPointer documentB64) {
+        try {
+            final List<PreviousSignaturesBridge.Signature> signatures = PreviousSignaturesBridge.read(
+                    Base64.getDecoder().decode(CTypeConversion.toJavaString(documentB64)));
+
+            final StringBuilder json = new StringBuilder("{\"ok\":true,\"signatures\":[");
+            for (int i = 0; i < signatures.size(); i++) {
+                if (i > 0) {
+                    json.append(',');
+                }
+                final PreviousSignaturesBridge.Signature signature = signatures.get(i);
+                json.append('{');
+                member(json, "subject", signature.subject());
+                field(json, "issuer", signature.issuer());
+                field(json, "serialNumber", signature.serialNumber());
+                field(json, "signingTime", signature.signingTime());
+                json.append('}');
+            }
+            return toUnmanagedCString(json.append("]}").toString());
         }
         catch (final Throwable e) {
             return toUnmanagedCString(errorJson(e));

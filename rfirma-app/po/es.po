@@ -556,9 +556,17 @@ msgstr[2] "{{count}} páginas"
 
 msgid "panel.coSignature"
 msgid_plural "panel.coSignature"
-msgstr[0] "Ya lleva 1 firma: la tuya será una cofirma."
-msgstr[1] "Ya lleva {{count}} firmas: la tuya será una cofirma."
-msgstr[2] "Ya lleva {{count}} firmas: la tuya será una cofirma."
+msgstr[0] "Firmarás junto a 1 firma anterior"
+msgstr[1] "Firmarás junto a {{count}} firmas anteriores"
+msgstr[2] "Firmarás junto a {{count}} firmas anteriores"
+
+#. Etiqueta accesible del aviso de firmas previas cuando está plegado.
+msgid "panel.previousSignatures.show"
+msgstr "Ver firmas anteriores"
+
+#. Etiqueta accesible del aviso de firmas previas cuando está desplegado.
+msgid "panel.previousSignatures.hide"
+msgstr "Ocultar firmas anteriores"
 
 #. Nombre accesible del segmentado que elige en qué páginas va la firma visible.
 msgid "panel.placement.title"

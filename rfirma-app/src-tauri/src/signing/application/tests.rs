@@ -7,11 +7,11 @@ use crate::signing::adapters::memory::Memory;
 use crate::signing::adapters::orders::{PlacementOrder, SigningOrder, VisibleContentOrder};
 use crate::signing::domain::bridge::{
     BridgeError, Format, PostSignRequest, PreSignBlock, PreSignRequest, PreSignature,
-    SignatureOperation,
+    PreviousSignaturesReport, SignatureOperation,
 };
 use crate::signing::domain::isolate_gone::IsolateGone;
 use crate::signing::domain::{CompletedCycle, SessionSeal};
-use crate::signing::ports::{Bridge, DocumentBytes, IsolateHost};
+use crate::signing::ports::{Bridge, DocumentBytes, IsolateHost, PreviousSignaturesEngine};
 
 /// Un hilo del puente cuya librería no abre: lo que la grada A tiene en vez del isolate.
 pub(crate) struct NoIsolate;
@@ -126,6 +126,41 @@ impl DocumentBytes for DocumentsInMemory {
             .get(path)
             .cloned()
             .ok_or_else(|| "no such file or directory".to_owned())
+    }
+}
+
+/// Un motor de firmas previas que apunta el documento que le llegó, y devuelve lo que se le mande.
+#[derive(Default)]
+pub(crate) struct AnEngineThatReports {
+    documents_seen: std::sync::Mutex<Vec<String>>,
+    outcome: std::sync::Mutex<Option<Result<PreviousSignaturesReport, BridgeError>>>,
+}
+
+impl AnEngineThatReports {
+    /// Con este informe listo para la próxima llamada.
+    pub(crate) fn answering(self, report: PreviousSignaturesReport) -> Self {
+        *crate::lock(&self.outcome) = Some(Ok(report));
+        self
+    }
+
+    /// El documento en Base64 que vio en la última llamada.
+    pub(crate) fn last_document_b64(&self) -> String {
+        crate::lock(&self.documents_seen)
+            .last()
+            .cloned()
+            .expect("se le ha pedido algo")
+    }
+}
+
+impl PreviousSignaturesEngine for AnEngineThatReports {
+    fn previous_signatures(
+        &self,
+        document_b64: &str,
+    ) -> Result<PreviousSignaturesReport, BridgeError> {
+        crate::lock(&self.documents_seen).push(document_b64.to_owned());
+        crate::lock(&self.outcome)
+            .take()
+            .unwrap_or_else(|| Ok(PreviousSignaturesReport::default()))
     }
 }
 

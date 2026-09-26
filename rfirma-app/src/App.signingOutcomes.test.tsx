@@ -36,6 +36,7 @@ function aSigner(overrides: Partial<SigningBackend> = {}): SigningBackend {
     }),
     padesLowerLeft: async (placement) => [placement.rect[0], placement.rect[1]],
     unregisteredSignatures: async () => false,
+    previousSignatures: async () => ({ signatures: [] }),
     discard: async () => {},
     ...overrides,
   };

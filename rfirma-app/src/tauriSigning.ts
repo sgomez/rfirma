@@ -4,6 +4,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { classify } from "./errors/classify";
 import type { Certificate, CertificateStore } from "./signing/certificate";
 import type { SignedDocument, SigningBackend } from "./signing/flow";
+import type { PreviousSignaturesReport } from "./signing/previousSignatures";
 import type { Rubric, RubricPicker, RubricSituation } from "./signing/rubric";
 import type { StoreSecret } from "./signing/secret";
 import type { StampComposer } from "./signing/stampPreview";
@@ -42,6 +43,8 @@ export function tauriSigningBackend(): SigningBackend {
       stage(() => invoke<SignedDocument>("finish_signing", { destination: singleDestinationId })),
     padesLowerLeft: (placement) => invoke<[number, number]>("pades_lower_left", { placement }),
     unregisteredSignatures: (document) => invoke<boolean>("unregistered_signatures", { document }),
+    previousSignatures: (document) =>
+      invoke<PreviousSignaturesReport>("previous_signatures", { document }),
     discard: cancelSigning,
   };
 }

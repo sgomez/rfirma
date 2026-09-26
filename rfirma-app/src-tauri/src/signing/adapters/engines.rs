@@ -4,11 +4,11 @@ use crate::signing::adapters::ffi::NativeBridge;
 use crate::signing::adapters::isolate::Isolate;
 use crate::signing::domain::bridge::{
     BridgeError, ExpandRequest, FilterRequest, Format, PostSignRequest, PreSignRequest,
-    PreSignature, SignatureVerdict, ValidationRequest,
+    PreSignature, PreviousSignaturesReport, SignatureVerdict, ValidationRequest,
 };
 use crate::signing::domain::isolate_gone::IsolateGone;
 
-use crate::signing::ports::Bridge;
+use crate::signing::ports::{Bridge, PreviousSignaturesEngine};
 use crate::site::ports::{FilterEngine, PolicyEngine, ValidationEngine};
 
 impl Bridge for NativeBridge {
@@ -62,6 +62,15 @@ impl ValidationEngine for NativeBridge {
     }
 }
 
+impl PreviousSignaturesEngine for NativeBridge {
+    fn previous_signatures(
+        &self,
+        document_b64: &str,
+    ) -> Result<PreviousSignaturesReport, BridgeError> {
+        NativeBridge::previous_signatures(self, document_b64)
+    }
+}
+
 fn ran<T: Send + 'static>(
     outcome: Result<Result<T, BridgeError>, IsolateGone>,
 ) -> Result<T, BridgeError> {
@@ -107,6 +116,17 @@ impl ValidationEngine for Isolate {
     ) -> Result<SignatureVerdict, BridgeError> {
         let document = document_b64.to_owned();
         ran(self.run(move |bridge| ValidationEngine::verdict_of(bridge, &document, format)))?
+    }
+}
+
+impl PreviousSignaturesEngine for Isolate {
+    fn previous_signatures(
+        &self,
+        document_b64: &str,
+    ) -> Result<PreviousSignaturesReport, BridgeError> {
+        let document = document_b64.to_owned();
+        ran(self
+            .run(move |bridge| PreviousSignaturesEngine::previous_signatures(bridge, &document)))?
     }
 }
 

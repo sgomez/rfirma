@@ -1,13 +1,20 @@
 use super::{
-    admitted_bytes, begin, cancel, config_for, finish, is_live, note_delivered, sign_on_token,
-    signed_document, signed_folder, take_signed_cycle, DocumentToSign, SigningSession,
+    admitted_bytes, begin, cancel, config_for, finish, is_live, note_delivered,
+    previous_signatures_in, sign_on_token, signed_document, signed_folder, take_signed_cycle,
+    DocumentToSign, SigningSession,
 };
 use crate::crossing::Failure;
 use crate::documents::domain::document::Document;
 use crate::identity::application::tests::{a_certificate, NoToken, TestAuthority};
 use crate::signing::adapters::orders::{PlacementOrder, SigningOrder};
-use crate::signing::application::tests::{an_order, DocumentsInMemory, NoIsolate};
-use crate::signing::domain::{Format, PageSet, SignatureConfig, SigningChoice, Waivers};
+use crate::signing::application::tests::{
+    an_order, AnEngineThatReports, DocumentsInMemory, NoIsolate,
+};
+use crate::signing::domain::{
+    Format, PageSet, PreviousSignature, PreviousSignaturesReport, SignatureConfig, SigningChoice,
+    Waivers,
+};
+use base64::Engine;
 use serde_json::json;
 
 fn chosen(order: &SigningOrder) -> SigningChoice {
@@ -590,4 +597,49 @@ fn a_placeholder_typed_into_the_phrase_does_not_reach_the_bridge() {
     ));
 
     assert!(!config.layer2_text.contains("$$"), "{}", config.layer2_text);
+}
+
+#[test]
+fn previous_signatures_in_sends_the_document_as_base_64_to_the_engine() {
+    let files = DocumentsInMemory::default().with("/tmp/documento.pdf", b"%PDF-1.7 contenido");
+    let document = Document::opened("/tmp/documento.pdf");
+    let engine = AnEngineThatReports::default();
+
+    previous_signatures_in(&files, &engine, &document).expect("el motor contesta");
+
+    assert_eq!(
+        base64::engine::general_purpose::STANDARD
+            .decode(engine.last_document_b64())
+            .expect("es base64"),
+        b"%PDF-1.7 contenido"
+    );
+}
+
+#[test]
+fn previous_signatures_in_returns_what_the_engine_reports() {
+    let files = DocumentsInMemory::default().with("/tmp/documento.pdf", b"%PDF-1.7 contenido");
+    let document = Document::opened("/tmp/documento.pdf");
+    let signature = PreviousSignature {
+        name: "LOVELACE BYRON ADA".to_owned(),
+        id_number: "IDCES-00000000T".to_owned(),
+        organization_identifier: None,
+        issuer: "AC FNMT Usuarios".to_owned(),
+        certificate_serial_number: "1".to_owned(),
+        signing_time: Some("2024-01-01T10:00:00Z".to_owned()),
+    };
+    let engine = AnEngineThatReports::default()
+        .answering(PreviousSignaturesReport::new(vec![signature.clone()]));
+
+    let report = previous_signatures_in(&files, &engine, &document).expect("el motor contesta");
+
+    assert_eq!(report.signatures(), [signature]);
+}
+
+#[test]
+fn previous_signatures_in_does_not_reach_the_engine_for_a_document_that_is_not_there() {
+    let files = DocumentsInMemory::default();
+    let document = Document::opened("/tmp/no-existe.pdf");
+    let engine = AnEngineThatReports::default();
+
+    assert!(previous_signatures_in(&files, &engine, &document).is_err());
 }

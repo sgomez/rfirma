@@ -2,8 +2,10 @@
 
 use base64::Engine;
 
+use crate::identity::domain::holder::{common_name_of, holder_of, organization_identifier_of};
 use crate::signing::domain::bridge::{
-    BridgeError, DataRejection, PreSignBlock, PreSignature, SealedPreSignature, SignatureVerdict,
+    BridgeError, DataRejection, PreSignBlock, PreSignature, PreviousSignature,
+    PreviousSignaturesReport, SealedPreSignature, SignatureVerdict,
 };
 use crate::signing::domain::SessionSeal;
 
@@ -130,6 +132,42 @@ pub fn parse_verdict(json: &str) -> Result<SignatureVerdict, BridgeError> {
             "veredicto desconocido «{other}»"
         ))),
     }
+}
+
+/// Parsea el informe de firmas previas del documento, traduciendo el sujeto y el
+/// emisor de cada una con las mismas utilidades que el titular de un certificado
+/// del token (ID-399): en Rust no se añade otro lector de nombres distinguidos.
+pub fn parse_previous_signatures(json: &str) -> Result<PreviousSignaturesReport, BridgeError> {
+    let response = parse_response(json)?;
+    let entries = response
+        .get("signatures")
+        .and_then(serde_json::Value::as_array)
+        .ok_or_else(|| {
+            BridgeError::MalformedResponse("falta el campo \"signatures\"".to_owned())
+        })?;
+
+    let signatures = entries
+        .iter()
+        .map(previous_signature_of)
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok(PreviousSignaturesReport::new(signatures))
+}
+
+fn previous_signature_of(entry: &serde_json::Value) -> Result<PreviousSignature, BridgeError> {
+    let subject = field(entry, "subject")?;
+    let issuer = field(entry, "issuer")?;
+    let (name, id_number) = holder_of(Some(subject));
+    Ok(PreviousSignature {
+        name,
+        id_number,
+        organization_identifier: organization_identifier_of(Some(subject)),
+        issuer: common_name_of(Some(issuer)),
+        certificate_serial_number: field(entry, "serialNumber")?.to_owned(),
+        signing_time: entry
+            .get("signingTime")
+            .and_then(serde_json::Value::as_str)
+            .map(str::to_owned),
+    })
 }
 
 fn parse_response(json: &str) -> Result<serde_json::Value, BridgeError> {

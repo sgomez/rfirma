@@ -48,12 +48,58 @@
 
 .panel__co-signature {
   display: flex;
-  align-items: flex-start;
-  gap: var(--rf-space-xs);
+  flex-direction: column;
   padding: 10px var(--rf-space-sm);
   border: 1px solid var(--rf-border-subtle);
   border-radius: var(--rf-radius-md);
   background: var(--rf-bg);
+}
+
+/* Toda la línea es el blanco de clic (docs/design/panel-de-firma.md § El
+   aviso de firmas previas): el botón no lleva ni borde ni fondo propios. */
+.panel__co-signature-summary {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--rf-space-xs);
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.panel__co-signature-text {
+  flex: 1;
+}
+
+.panel__co-signature-chevron {
+  display: flex;
+  flex: none;
+  margin-top: 2px;
+  color: var(--rf-text-muted);
+}
+
+.panel__co-signature-chevron--open {
+  transform: rotate(180deg);
+}
+
+.panel__previous-signatures-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 8px 0 0;
+  padding: 8px 0 0 26px;
+  border-top: 1px solid var(--rf-border-subtle);
+  list-style: none;
+}
+
+.panel__previous-signatures-row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--rf-space-sm);
 }
 
 .panel__notice-icon {

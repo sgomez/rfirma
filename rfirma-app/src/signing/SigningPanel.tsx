@@ -1,5 +1,4 @@
 import { useTranslation } from "react-i18next";
-import { InfoIcon } from "../design-system/icons";
 import type { NamedFailure } from "../errors/classify";
 import { ErrorNotice } from "../errors/ErrorNotice";
 import { Switch } from "../preferences/Switch";
@@ -11,6 +10,8 @@ import type { SigningFailure } from "./failure";
 import { ModelFieldset } from "./ModelFieldset";
 import { PanelFooter } from "./PanelFooter";
 import { PlacementFieldset } from "./PlacementFieldset";
+import { PreviousSignaturesNotice } from "./PreviousSignaturesNotice";
+import type { PreviousSignature } from "./previousSignatures";
 import type { Rubric, RubricFailure } from "./rubric";
 import "./SigningPanel.css";
 import { usePlacementField } from "./usePlacementField";
@@ -24,13 +25,6 @@ interface SigningDocument {
   pages: number;
   /** El tamaño, o `null` mientras nadie lo sepa: no se inventa un cero. */
   sizeBytes: number | null;
-  /**
-   * Cuántas firmas trae ya. Cualquier número mayor que cero es una cofirma, y
-   * `null` es **no se sabe todavía**: la insignia de la bandeja dice si el PDF
-   * está firmado, pero no cuántas veces, y el aviso de cofirma necesita el
-   * número. Callar es mejor que decir «1 firma» a ojo.
-   */
-  signatures: number | null;
 }
 
 /**
@@ -61,6 +55,8 @@ export type CertificateState =
 
 interface SigningPanelProps {
   document: SigningDocument;
+  /** Las firmas que ya trae el documento, pedidas al abrir o cargar (ID-407). */
+  previousSignatures: readonly PreviousSignature[];
   certificate: CertificateState;
   /** Cuál se elige en el desplegable. */
   onChooseCertificate: (certificate: Certificate) => void;
@@ -137,6 +133,7 @@ interface SigningPanelProps {
  */
 export function SigningPanel({
   document,
+  previousSignatures,
   certificate,
   onChooseCertificate,
   onRetryCertificates,
@@ -195,14 +192,7 @@ export function SigningPanel({
           />
         ) : (
           <>
-            {document.signatures !== null && document.signatures > 0 && (
-              <div className="panel__co-signature">
-                <span className="panel__notice-icon">
-                  <InfoIcon />
-                </span>
-                <p className="rf-prose">{t("panel.coSignature", { count: document.signatures })}</p>
-              </div>
-            )}
+            <PreviousSignaturesNotice signatures={previousSignatures} />
 
             {(certificate.kind === "empty" || certificate.kind === "failed") && (
               <CertificateNotice state={certificate} onOpenHelp={onOpenHelp} />

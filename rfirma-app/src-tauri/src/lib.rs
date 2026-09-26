@@ -227,6 +227,7 @@ fn with_the_five_roots(
             desktop::adapters::tauri::choose_site_signature_handler,
             desktop::adapters::tauri::withdraw_rfirma,
             signing::adapters::tauri::unregistered_signatures,
+            signing::adapters::tauri::previous_signatures,
             identity::adapters::tauri::install_certificate,
             identity::adapters::tauri::remove_certificate,
             site::adapters::tauri::close_site_window,

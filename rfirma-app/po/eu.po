@@ -560,9 +560,17 @@ msgstr[2] "{{count}} orrialde"
 
 msgid "panel.coSignature"
 msgid_plural "panel.coSignature"
-msgstr[0] "1 sinadura du jada: zurea kosinadura izango da."
-msgstr[1] "{{count}} sinadura ditu jada: zurea kosinadura izango da."
-msgstr[2] "{{count}} sinadura ditu jada: zurea kosinadura izango da."
+msgstr[0] "Aurreko sinadura 1ekin batera sinatuko duzu"
+msgstr[1] "Aurreko {{count}} sinadurekin batera sinatuko duzu"
+msgstr[2] "Aurreko {{count}} sinadurekin batera sinatuko duzu"
+
+#. Etiqueta accesible del aviso de firmas previas cuando está plegado.
+msgid "panel.previousSignatures.show"
+msgstr "Ikusi aurreko sinadurak"
+
+#. Etiqueta accesible del aviso de firmas previas cuando está desplegado.
+msgid "panel.previousSignatures.hide"
+msgstr "Ezkutatu aurreko sinadurak"
 
 #. Nombre accesible del segmentado que elige en qué páginas va la firma visible.
 msgid "panel.placement.title"

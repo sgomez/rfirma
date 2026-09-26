@@ -86,7 +86,7 @@ describe("2 · consent", () => {
     );
     renderWithCatalog(<SedeWindow errands={port} />);
 
-    expect(screen.getByText(/la tuya será una cofirma/)).toBeInTheDocument();
+    expect(screen.getByText(/Firmarás junto a 1 firma anterior/)).toBeInTheDocument();
   });
 
   it.each([

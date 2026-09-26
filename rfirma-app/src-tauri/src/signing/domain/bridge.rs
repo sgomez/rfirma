@@ -484,5 +484,50 @@ pub enum SignatureVerdict {
     },
 }
 
+/// Firmante de una de las firmas que ya trae el documento (ID-399).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PreviousSignature {
+    /// El nombre del titular, leído del `CN` del sujeto.
+    pub name: String,
+    /// El NIF, leído del `SERIALNUMBER` del sujeto.
+    pub id_number: String,
+    /// El `organizationIdentifier` del sujeto, si el certificado lo lleva.
+    pub organization_identifier: Option<String>,
+    /// La autoridad emisora del certificado.
+    pub issuer: String,
+    /// Número de serie del certificado, distinto del `SERIALNUMBER` del sujeto.
+    pub certificate_serial_number: String,
+    /// Instante de la firma en ISO-8601, si el puente lo devolvió.
+    pub signing_time: Option<String>,
+}
+
+/// Las firmas que ya trae el documento, en el orden cronológico que devuelve el puente (ID-399).
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct PreviousSignaturesReport {
+    signatures: Vec<PreviousSignature>,
+}
+
+impl PreviousSignaturesReport {
+    /// Construye el informe a partir de las firmas ya traducidas, en el orden en que llegaron.
+    pub fn new(signatures: Vec<PreviousSignature>) -> Self {
+        Self { signatures }
+    }
+
+    /// Cuántas firmas trae el documento.
+    pub fn count(&self) -> usize {
+        self.signatures.len()
+    }
+
+    /// Las firmas, en orden cronológico.
+    pub fn signatures(&self) -> &[PreviousSignature] {
+        &self.signatures
+    }
+
+    /// Las firmas, en propiedad.
+    pub fn into_signatures(self) -> Vec<PreviousSignature> {
+        self.signatures
+    }
+}
+
 #[cfg(test)]
 mod tests;
