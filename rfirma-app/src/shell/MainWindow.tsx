@@ -18,39 +18,39 @@ interface MainWindowProps {
   onOpenAbout: () => void;
   /**
    * La franja de notificación, o `null` —lo normal— cuando no hay nada que
-   * notificar: entonces **no se monta** y las tres regiones suben. Es un
+   * notificar: entonces **no se monta** y las regiones suben. Es un
    * hueco, no un aviso concreto: quien decide qué se cuenta es la
    * composición. Ver [`NotificationStrip`].
    */
   notification?: ReactNode;
-  /** La vista del cuerpo que sustituye a las tres regiones, o `null` si no hay ninguna. */
+  /** La vista del cuerpo que sustituye a las regiones, o `null` si no hay ninguna. */
   view?: ReactNode;
-  /** El contenido de la bandeja, que es quien sabe de documentos. */
-  tray: ReactNode;
+  /** La tira de pestañas de los documentos abiertos, bajo la cabecera. */
+  tabs: ReactNode;
   /** El contenido del visor, que es quien sabe de páginas y de recuadros. */
   viewer: ReactNode;
   /**
    * El contenido del panel, que es quien sabe de certificados y de firma, o
    * `null` cuando no hay documento abierto: entonces el panel **no se monta**
-   * y la ventana se ve en dos columnas (ID-51).
+   * y la ventana se ve en una columna (ID-51).
    */
   panel: ReactNode;
 }
 
 /**
- * La única ventana de rFirma: una cabecera y, debajo, la bandeja, el visor y
- * —en cuanto hay documento— el panel de firma.
+ * La única ventana de rFirma: una cabecera, la tira de pestañas y, debajo, el
+ * visor y —en cuanto hay documento— el panel de firma.
  *
- * **Sin documento la ventana es de dos columnas.** El panel no se oculta con
+ * **Sin documento la ventana es de una columna.** El panel no se oculta con
  * `display: none`: no se monta (ID-51), que es lo que ya hacía la composición
  * al pasar `null` y lo que dice el estado 1 de la tabla de la ficha.
  *
  * **No hay navegación.** El recorrido entero, de abrir el documento a
  * guardarlo firmado, ocurre aquí sin cambiar de pantalla (ID-25), así que no
  * hay router y no debe aparecer uno: las diez situaciones de la ficha son
- * combinaciones del contenido de las tres regiones, no pantallas distintas.
+ * combinaciones del contenido de las regiones, no pantallas distintas.
  *
- * **Entre la cabecera y las tres regiones hay sitio para una franja** de
+ * **Entre la cabecera y las regiones hay sitio para una franja** de
  * notificación (ID-207). No está casi nunca: cuando no hay nada que notificar
  * no se monta, y la ventana es exactamente la de antes. Lo que se cuenta ahí
  * no lo sabe la ventana, que solo le presta el hueco.
@@ -68,7 +68,7 @@ export function MainWindow({
   onOpenAbout,
   notification = null,
   view = null,
-  tray,
+  tabs,
   viewer,
   panel,
 }: MainWindowProps) {
@@ -90,6 +90,7 @@ export function MainWindow({
         onOpenHelp={onOpenHelp}
         onOpenAbout={onOpenAbout}
       />
+      {view === null || view === undefined ? tabs : null}
       {notification}
       {view !== null && view !== undefined ? (
         view
@@ -99,9 +100,6 @@ export function MainWindow({
             hasPanel ? "main-window__body" : "main-window__body main-window__body--no-panel"
           }
         >
-          <section className="main-window__tray" aria-label={t("window.tray")}>
-            {tray}
-          </section>
           <section className="main-window__viewer" aria-label={t("window.viewer")}>
             {viewer}
           </section>

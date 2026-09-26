@@ -1,5 +1,5 @@
 import type { Placement } from "../viewer/signatureBox";
-import type { Badge, DocumentInHand, ShownBadge } from "./document";
+import type { Badge, DocumentInHand } from "./document";
 
 /**
  * Cuántos se recuerdan. Es el mismo `memory::recents::CAPACITY` del backend:
@@ -53,17 +53,6 @@ export interface RecentDocument {
    * llega el rectángulo entero.
    */
   placement: Placement | null;
-}
-
-/**
- * La insignia que se pinta: la cacheada, o `No disponible` si la ruta ya no
- * responde.
- *
- * `No disponible` es distinto de los otros dos valores: no describe el
- * documento sino la ruta, y por eso no se guarda y se recalcula al listar.
- */
-export function shownBadge(document: RecentDocument): ShownBadge {
-  return document.available ? document.badge : "Unavailable";
 }
 
 /**

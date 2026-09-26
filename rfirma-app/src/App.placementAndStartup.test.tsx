@@ -1,7 +1,7 @@
 import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
-import { aCertificate, document, pdfsOf, renderApp, trayDropZone } from "./App.testSupport";
+import { aCertificate, document, openPdf, pdfsOf, renderApp } from "./App.testSupport";
 import { unavailableExternalDestinationOpener } from "./desktop/externalDestination";
 import type { Drop, FakeDocumentDrops } from "./documents/drops";
 import { inMemoryDocumentDrops } from "./documents/drops";
@@ -36,7 +36,7 @@ describe("App · Colocación", () => {
       {},
       { list: async () => [remembered] },
     );
-    await user.click(trayDropZone());
+    await openPdf(user);
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
     await within(panel).findByText("Colocación");
     return { user, panel };
@@ -129,7 +129,7 @@ describe("App, sin un certificado elegido todavía", () => {
     const user = userEvent.setup();
     renderApp(inMemoryRecents(), [document("factura.pdf")], pdfsOf({ "factura.pdf": 3 }));
 
-    await user.click(trayDropZone());
+    await openPdf(user);
     await screen.findByRole("document", { name: "Hoja del documento" });
 
     expect(screen.getByText("Elige un certificado para colocar la firma visible")).toBeVisible();
@@ -150,7 +150,7 @@ describe("App, sin un certificado elegido todavía", () => {
       { list: async () => [aCertificate] },
     );
 
-    await user.click(trayDropZone());
+    await openPdf(user);
     await screen.findByRole("document", { name: "Hoja del documento" });
     const panel = screen.getByRole("region", { name: "Panel de firma" });
     await user.click(await within(panel).findByRole("combobox", { name: "Certificado" }));
@@ -261,7 +261,7 @@ describe("App, invocada con un documento", () => {
     );
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Ese fichero no es un PDF");
-    expect(screen.getByRole("region", { name: "Bandeja de documentos" })).toBeInTheDocument();
+    expect(screen.getByRole("navigation", { name: "Documentos abiertos" })).toBeInTheDocument();
   });
 
   /**
@@ -292,13 +292,13 @@ describe("App, invocada con un documento", () => {
       expect(strip).toHaveTextContent("Hay una versión nueva de rFirma: 0.4.1");
       // Nada modal: ni diálogo encima ni ventana atenuada.
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-      expect(screen.getByRole("region", { name: "Bandeja de documentos" })).toBeInTheDocument();
+      expect(screen.getByRole("navigation", { name: "Documentos abiertos" })).toBeInTheDocument();
     });
 
     it("says nothing at all when there is no new version", async () => {
       withVersionCheck(inMemoryVersionCheck());
 
-      await screen.findByRole("region", { name: "Bandeja de documentos" });
+      await screen.findByRole("navigation", { name: "Documentos abiertos" });
       expect(screen.queryByRole("status")).not.toBeInTheDocument();
     });
 
@@ -320,7 +320,7 @@ describe("App, invocada con un documento", () => {
         inMemoryVersionCheck({ version: "0.4.1" }),
       );
 
-      await screen.findByRole("region", { name: "Bandeja de documentos" });
+      await screen.findByRole("navigation", { name: "Documentos abiertos" });
       expect(screen.queryByRole("status")).not.toBeInTheDocument();
     });
 
@@ -329,7 +329,7 @@ describe("App, invocada con un documento", () => {
     it("says nothing when the check fails", async () => {
       withVersionCheck({ latest: async () => Promise.reject(new Error("sin red")) });
 
-      await screen.findByRole("region", { name: "Bandeja de documentos" });
+      await screen.findByRole("navigation", { name: "Documentos abiertos" });
       expect(screen.queryByRole("status")).not.toBeInTheDocument();
     });
 
@@ -352,7 +352,7 @@ describe("App, invocada con un documento", () => {
 
       await waitFor(() => expect(screen.queryByRole("status")).not.toBeInTheDocument());
       // La ventana sigue entera debajo: descartar no navega a ninguna parte.
-      expect(screen.getByRole("region", { name: "Bandeja de documentos" })).toBeInTheDocument();
+      expect(screen.getByRole("navigation", { name: "Documentos abiertos" })).toBeInTheDocument();
     });
   });
 });

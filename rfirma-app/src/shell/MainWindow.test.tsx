@@ -9,21 +9,20 @@ const noop = () => {};
 // Grada A. Lo que se comprueba aquí es la **estructura** del ID-25, no el
 // aspecto: las tres regiones están siempre, y no hay navegación.
 describe("MainWindow", () => {
-  it("lays out the three regions under the header", () => {
+  it("lays out the viewer and the panel under the header", () => {
     renderWithCatalog(
       <MainWindow
         status={null}
         menuAnchor="header"
         onOpenPreferences={noop}
         onOpenAbout={noop}
-        tray={null}
+        tabs={null}
         viewer={null}
         panel={<p>panel</p>}
       />,
     );
 
     expect(screen.getByRole("banner")).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "Bandeja de documentos" })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Visor del documento" })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Panel de firma" })).toBeInTheDocument();
   });
@@ -37,7 +36,7 @@ describe("MainWindow", () => {
         hasAttention
         onOpenPreferences={noop}
         onOpenAbout={noop}
-        tray={null}
+        tabs={null}
         viewer={null}
         panel={null}
       />,
@@ -49,8 +48,8 @@ describe("MainWindow", () => {
     expect(screen.getByRole("img", { name: "Requiere atención" })).toBeInTheDocument();
   });
 
-  // ID-51: sin documento el panel **no se monta**. La ventana pasa a dos
-  // columnas, que es lo que dice el estado 1 de la tabla de la ficha
+  // ID-51: sin documento el panel **no se monta**. La ventana pasa a una
+  // columna, que es lo que dice el estado 1 de la tabla de la ficha
   // (`oculto`) y lo que enseña el artboard del estado vacío.
   it("does not mount the signing panel while there is no document", () => {
     renderWithCatalog(
@@ -59,32 +58,31 @@ describe("MainWindow", () => {
         menuAnchor="header"
         onOpenPreferences={noop}
         onOpenAbout={noop}
-        tray={null}
+        tabs={null}
         viewer={null}
         panel={null}
       />,
     );
 
     expect(screen.queryByRole("region", { name: "Panel de firma" })).not.toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "Bandeja de documentos" })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Visor del documento" })).toBeInTheDocument();
   });
 
-  it("puts the tray content inside the tray region", () => {
+  it("mounts the tab strip under the header", () => {
     renderWithCatalog(
       <MainWindow
         status={null}
         menuAnchor="header"
         onOpenPreferences={noop}
         onOpenAbout={noop}
-        tray={<p>contrato.pdf</p>}
+        tabs={<nav aria-label="Documentos abiertos">contrato.pdf</nav>}
         viewer={null}
         panel={null}
       />,
     );
 
-    const tray = screen.getByRole("region", { name: "Bandeja de documentos" });
-    expect(tray).toContainElement(screen.getByText("contrato.pdf"));
+    const tabs = screen.getByRole("navigation", { name: "Documentos abiertos" });
+    expect(tabs).toContainElement(screen.getByText("contrato.pdf"));
   });
 
   it("puts the viewer content inside the viewer region", () => {
@@ -94,7 +92,7 @@ describe("MainWindow", () => {
         menuAnchor="header"
         onOpenPreferences={noop}
         onOpenAbout={noop}
-        tray={null}
+        tabs={null}
         viewer={<p>página 3 de 27</p>}
         panel={null}
       />,
@@ -111,7 +109,7 @@ describe("MainWindow", () => {
         menuAnchor="header"
         onOpenPreferences={noop}
         onOpenAbout={noop}
-        tray={null}
+        tabs={null}
         viewer={null}
         panel={null}
       />,
@@ -128,14 +126,13 @@ describe("MainWindow", () => {
         menuAnchor="header"
         onOpenPreferences={noop}
         onOpenAbout={noop}
-        tray={null}
+        tabs={null}
         viewer={null}
         panel={<p>panel</p>}
       />,
     );
 
     expect(screen.getByText("Firmado")).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "Bandeja de documentos" })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Panel de firma" })).toBeInTheDocument();
   });
 
@@ -148,7 +145,7 @@ describe("MainWindow", () => {
         menuAnchor="header"
         onOpenPreferences={noop}
         onOpenAbout={noop}
-        tray={null}
+        tabs={null}
         viewer={null}
         panel={null}
       />,
@@ -166,7 +163,7 @@ describe("MainWindow", () => {
         onOpenPreferences={noop}
         onOpenAbout={noop}
         notification={<p role="status">hay algo que contar</p>}
-        tray={null}
+        tabs={null}
         viewer={null}
         panel={null}
       />,
@@ -180,7 +177,7 @@ describe("MainWindow", () => {
     expect(body).toHaveClass("main-window__body");
   });
 
-  it("mounts a body view under the header instead of the three regions", () => {
+  it("mounts a body view under the header instead of the tabs and the regions", () => {
     renderWithCatalog(
       <MainWindow
         status={null}
@@ -188,7 +185,7 @@ describe("MainWindow", () => {
         onOpenPreferences={noop}
         onOpenAbout={noop}
         view={<div data-testid="body-view">vista de estado</div>}
-        tray={<p>tray</p>}
+        tabs={<nav aria-label="Documentos abiertos" />}
         viewer={<p>viewer</p>}
         panel={<p>panel</p>}
       />,
@@ -196,7 +193,9 @@ describe("MainWindow", () => {
 
     expect(screen.getByRole("banner")).toBeInTheDocument();
     expect(screen.getByTestId("body-view")).toBeInTheDocument();
-    expect(screen.queryByRole("region", { name: "Bandeja de documentos" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("navigation", { name: "Documentos abiertos" }),
+    ).not.toBeInTheDocument();
     expect(screen.queryByRole("region", { name: "Visor del documento" })).not.toBeInTheDocument();
     expect(screen.queryByRole("region", { name: "Panel de firma" })).not.toBeInTheDocument();
   });

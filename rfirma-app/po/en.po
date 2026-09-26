@@ -254,8 +254,8 @@ msgstr "Some files weren't added"
 
 msgid "errors.situations.droppedSomeDiscarded.body"
 msgstr ""
-"The other PDFs you dropped are already in Recent. The ones that weren't PDFs "
-"weren't added."
+"The other PDFs you dropped have been opened in tabs. The ones that weren't "
+"PDFs weren't added."
 
 msgid "errors.situations.boxOutOfPage.title"
 msgstr "The box falls outside the page"
@@ -366,10 +366,6 @@ msgid "errors.startup.windowUnavailable"
 msgstr "rFirma couldn't open its window and can't start."
 
 #. Nombre accesible de la región para lectores de pantalla, no un título visible.
-msgid "window.tray"
-msgstr "Document tray"
-
-#. Nombre accesible de la región para lectores de pantalla, no un título visible.
 msgid "window.viewer"
 msgstr "Document viewer"
 
@@ -409,29 +405,53 @@ msgstr "Signed"
 msgid "badges.unsigned"
 msgstr "Unsigned"
 
-msgid "badges.unavailable"
-msgstr "Unavailable"
+#. Nombre accesible de la tira de pestañas, no un título visible.
+msgid "tabs.label"
+msgstr "Open documents"
 
-msgid "tray.dropZone"
-msgstr "Drag a PDF here, or click to open one"
+#. Nombre del botón «+» de la tira de pestañas.
+msgid "tabs.open"
+msgstr "Open a PDF"
 
-msgid "tray.empty"
-msgstr "The documents you sign will show up here"
+msgid "tabs.previous"
+msgstr "Previous tabs"
 
-msgid "tray.recents"
+msgid "tabs.next"
+msgstr "Next tabs"
+
+#. {{name}} es el nombre del fichero de la pestaña.
+msgid "tabs.close"
+msgstr "Close {{name}}"
+
+msgid "tabs.openPdf"
+msgstr "Open a PDF…"
+
+msgid "recents.heading"
 msgstr "Recent"
 
-msgid "tray.remove"
-msgstr "Remove from the list"
+msgid "recents.clear"
+msgstr "Clear the list"
+
+msgid "recents.open"
+msgstr "Open"
+
+msgid "recents.goToTab"
+msgstr "Go to its tab"
+
+msgid "recents.missing"
+msgstr "Not found"
+
+msgid "recents.today"
+msgstr "today"
+
+msgid "recents.yesterday"
+msgstr "yesterday"
 
 msgid "viewer.dropZone"
 msgstr "Drag a PDF here, or click to open one"
 
 msgid "viewer.dropZoneHint"
-msgstr "The file browser will open"
-
-msgid "viewer.privacy"
-msgstr "PDF only. The document never leaves your computer."
+msgstr "It never leaves your computer"
 
 msgid "viewer.pageNumber"
 msgstr "Page number"
