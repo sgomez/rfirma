@@ -693,49 +693,41 @@ msgstr "Sinatura visible"
 msgid "panel.visibleSignature.toggle"
 msgstr "Estampar un cadro de sinatura no documento"
 
-msgid "panel.visibleSignature.content"
-msgstr "Contido"
+msgid "panel.visibleSignature.model.title"
+msgstr "Modelo"
 
-msgid "panel.visibleSignature.fields.rubric"
-msgstr "Rúbrica"
+msgid "panel.visibleSignature.model.complete"
+msgstr "Completa"
 
-msgid "panel.visibleSignature.fields.rubricDisabled"
-msgstr "Escolle antes unha imaxe"
+msgid "panel.visibleSignature.model.rubricOnly"
+msgstr "Só rúbrica"
 
-msgid "panel.visibleSignature.fields.signerName"
-msgstr "Asinante"
+msgid "panel.visibleSignature.model.custom"
+msgstr "Personalizada"
 
-msgid "panel.visibleSignature.fields.issuer"
-msgstr "Emisor"
+msgid "panel.visibleSignature.model.rubricOnlyDisabled"
+msgstr "Precisa a rúbrica"
 
-msgid "panel.visibleSignature.fields.signedAt"
-msgstr "Data"
+msgid "panel.visibleSignature.model.customUnavailable"
+msgstr "Dispoñible en breve"
 
-msgid "panel.visibleSignature.fields.reason"
-msgstr "Motivo"
+msgid "panel.visibleSignature.rubric.toggle"
+msgstr "Con rúbrica"
 
-msgid "panel.visibleSignature.reason.label"
-msgstr "Motivo"
+msgid "panel.visibleSignature.rubric.lockedTitle"
+msgstr "Só rúbrica precísaa"
 
-msgid "panel.visibleSignature.reason.placeholder"
-msgstr "Conforme"
-
-msgid "panel.visibleSignature.rubric.title"
-msgstr "Imaxe da rúbrica"
+msgid "panel.visibleSignature.rubric.noImageTitle"
+msgstr "Sen rúbrica cargada"
 
 msgid "panel.visibleSignature.rubric.choose"
-msgstr "Escoller imaxe"
+msgstr "Cargar…"
 
 msgid "panel.visibleSignature.rubric.change"
-msgstr "Cambiar imaxe"
+msgstr "Cambiar…"
 
 msgid "panel.visibleSignature.rubric.thumbnail"
 msgstr "A túa rúbrica, tal como se estampará"
-
-msgid "panel.visibleSignature.rubric.flattened"
-msgstr ""
-"Estámpase sobre branco: o cadro vai ao PDF como JPEG e un JPEG non ten "
-"transparencia."
 
 #. Aviso sobre el bloque de firma visible apagado: sin certificado no hay sello que dibujar.
 msgid "panel.visibleSignature.noCertificate"
@@ -1738,6 +1730,36 @@ msgstr[2] "{{origin}} non acepta ningún dos teus {{count}} certificados"
 
 msgid "sede.noCertificate.excludedBody"
 msgstr "Terás que continuar desde a sede."
+
+#~ msgid "panel.visibleSignature.rubric.title"
+#~ msgstr "Imaxe da rúbrica"
+
+#~ msgid "panel.visibleSignature.content"
+#~ msgstr "Contido"
+
+#~ msgid "panel.visibleSignature.fields.rubric"
+#~ msgstr "Rúbrica"
+
+#~ msgid "panel.visibleSignature.fields.rubricDisabled"
+#~ msgstr "Escolle antes unha imaxe"
+
+#~ msgid "panel.visibleSignature.fields.signerName"
+#~ msgstr "Asinante"
+
+#~ msgid "panel.visibleSignature.fields.issuer"
+#~ msgstr "Emisor"
+
+#~ msgid "panel.visibleSignature.fields.signedAt"
+#~ msgstr "Data"
+
+#~ msgid "panel.visibleSignature.fields.reason"
+#~ msgstr "Motivo"
+
+#~ msgid "panel.visibleSignature.reason.label"
+#~ msgstr "Motivo"
+
+#~ msgid "panel.visibleSignature.reason.placeholder"
+#~ msgstr "Conforme"
 
 #~ msgid "trust.notice.title"
 #~ msgstr "Cando unha sede che pida a sinatura"

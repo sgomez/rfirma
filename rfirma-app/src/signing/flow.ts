@@ -10,7 +10,7 @@
 import type { PageSet } from "../viewer/signatureBox";
 import type { StoreSecret } from "./secret";
 import type { TokenFailure } from "./token";
-import type { VisibleTextFields } from "./visibleSignature";
+import type { VisibleContent } from "./visibleSignature";
 
 /** Las tres etapas, en el orden en que ocurren. */
 export type SigningStage = "presign" | "sign" | "postsign";
@@ -79,9 +79,12 @@ export interface SigningOrder {
     /** `[x0, y0, x1, y1]` del recuadro en espacio de usuario. */
     rect: readonly [number, number, number, number];
   };
-  /** Qué casillas van dentro del recuadro. */
-  fields: VisibleTextFields;
-  /** El motivo. Vacío es «sin motivo». */
+  /** El modelo elegido. */
+  content: VisibleContent;
+  /** Si la firma visible lleva la rúbrica. Común a los tres modelos. */
+  withRubric: boolean;
+  /** Casillas y motivo retirados de la interfaz: el puente los acepta en blanco. */
+  fields: { signerName: boolean; issuer: boolean; signedAt: boolean; reason: boolean };
   reason: string;
   /** La fecha y hora ya formateadas, **las mismas** de la vista previa. */
   signedAt: string;

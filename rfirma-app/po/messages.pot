@@ -632,34 +632,31 @@ msgstr ""
 msgid "panel.visibleSignature.toggle"
 msgstr ""
 
-msgid "panel.visibleSignature.content"
+msgid "panel.visibleSignature.model.title"
 msgstr ""
 
-msgid "panel.visibleSignature.fields.rubric"
+msgid "panel.visibleSignature.model.complete"
 msgstr ""
 
-msgid "panel.visibleSignature.fields.rubricDisabled"
+msgid "panel.visibleSignature.model.rubricOnly"
 msgstr ""
 
-msgid "panel.visibleSignature.fields.signerName"
+msgid "panel.visibleSignature.model.custom"
 msgstr ""
 
-msgid "panel.visibleSignature.fields.issuer"
+msgid "panel.visibleSignature.model.rubricOnlyDisabled"
 msgstr ""
 
-msgid "panel.visibleSignature.fields.signedAt"
+msgid "panel.visibleSignature.model.customUnavailable"
 msgstr ""
 
-msgid "panel.visibleSignature.fields.reason"
+msgid "panel.visibleSignature.rubric.toggle"
 msgstr ""
 
-msgid "panel.visibleSignature.reason.label"
+msgid "panel.visibleSignature.rubric.lockedTitle"
 msgstr ""
 
-msgid "panel.visibleSignature.reason.placeholder"
-msgstr ""
-
-msgid "panel.visibleSignature.rubric.title"
+msgid "panel.visibleSignature.rubric.noImageTitle"
 msgstr ""
 
 msgid "panel.visibleSignature.rubric.choose"
@@ -669,9 +666,6 @@ msgid "panel.visibleSignature.rubric.change"
 msgstr ""
 
 msgid "panel.visibleSignature.rubric.thumbnail"
-msgstr ""
-
-msgid "panel.visibleSignature.rubric.flattened"
 msgstr ""
 
 #. Aviso sobre el bloque de firma visible apagado: sin certificado no hay sello que dibujar.

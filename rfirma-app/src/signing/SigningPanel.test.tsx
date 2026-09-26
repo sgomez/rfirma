@@ -1,126 +1,8 @@
 import { fireEvent, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
-import { renderWithCatalog } from "../testing/render";
-import {
-  activating,
-  type PageChoice,
-  type PageSet,
-  type PageSets,
-  pagesOf,
-  placementOf,
-  storing,
-} from "../viewer/signatureBox";
-import type { Certificate } from "./certificate";
-import type { Rubric } from "./rubric";
-import { SigningPanel } from "./SigningPanel";
+import { certificate, rect, renderLivePanel, renderPanel } from "./SigningPanel.testSupport";
 import { DEFAULT_VISIBLE_SIGNATURE } from "./visibleSignature";
-
-const certificate: Certificate = {
-  id: "0123456789abcdef0123456789abcdef",
-  label: "Firma",
-  holderName: "Ada Lovelace Byron",
-  givenName: "Ada",
-  surname: "Lovelace Byron",
-  idNumber: "99999999R",
-  issuer: "AC FNMT Usuarios",
-  store: "card",
-  status: { kind: "valid", notAfter: 1_894_752_000 },
-  remembered: false,
-};
-
-/** Un JPEG de un píxel: lo que devuelve `rubric::normalize`, ya opaco. */
-const rubric: Rubric = {
-  dataUrl: "data:image/jpeg;base64,/9j/4AAQSkZJRg==",
-  width: 240,
-  height: 80,
-};
-
-const noop = () => {};
-
-/** El recuadro, en espacio de usuario: aquí solo importa que exista. */
-const rect = { x0: 100, y0: 100, x1: 300, y1: 180 };
-
-type PanelProps = Partial<Parameters<typeof SigningPanel>[0]>;
-
-function panelWith(props: PanelProps) {
-  return (
-    <SigningPanel
-      document={{ name: "contrato.pdf", pages: 27, sizeBytes: 2_400_000, signatures: 0 }}
-      certificate={{ kind: "chosen", certificate, certificates: [certificate] }}
-      onChooseCertificate={noop}
-      onRetryCertificates={noop}
-      onChooseModule={noop}
-      signature={{ ...DEFAULT_VISIBLE_SIGNATURE, enabled: true }}
-      onChangeSignature={noop}
-      placement={{ rect, pages: { only: [3] } }}
-      pageSets={{ single: 3, these: null }}
-      onChoosePages={noop}
-      pageChoice="single"
-      onChangePageChoice={noop}
-      viewedPage={3}
-      onSeal={noop}
-      onUnseal={noop}
-      rubric={null}
-      rubricFailure={null}
-      onChooseRubric={noop}
-      destination={{ folder: "Documentos", name: "contrato-firmado.pdf", writable: true }}
-      onChangeDestination={noop}
-      onSign={noop}
-      signing={false}
-      failure={null}
-      {...props}
-    />
-  );
-}
-
-/** `show` vuelve a pintar con otras props: es el camino de vuelta del ID-99. */
-function renderPanel(props: PanelProps = {}) {
-  const result = renderWithCatalog(panelWith(props));
-  return { ...result, show: (next: PanelProps) => result.rerender(panelWith(next)) };
-}
-
-/**
- * El panel con **las tres opciones de verdad** detrás, que es como vive en
- * `App.tsx` desde el #188.
- *
- * Teclear en el campo son varias pulsaciones seguidas y cada una emite el
- * conjunto: con un espía que no lo aplica, la segunda pulsación escribiría
- * sobre un panel que sigue viendo el conjunto viejo, y lo que se probaría sería
- * el espía. El recuadro es fijo porque el panel ya no lo compone: solo nombra
- * páginas, y quién las convierte en rectángulo es cosa de `App.tsx`.
- */
-function renderLivePanel(props: PanelProps = {}) {
-  const chosen: (PageSet | null)[] = [];
-  function Live() {
-    const choice = props.pageChoice ?? "single";
-    const [sets, setSets] = useState<PageSets>({
-      single: 3,
-      these: choice === "these" ? { only: [3] } : null,
-    });
-    // La opción elegida también vive fuera del panel, como en `App.tsx`: sin
-    // eso, volver a pulsar «Solo 1 página» no dispara nada —el radio sigue
-    // marcado— y el viaje de ida y vuelta no se podría probar.
-    const [pageChoice, setPageChoice] = useState<PageChoice>(choice);
-    return panelWith({
-      ...props,
-      placement: placementOf(rect, sets, pageChoice),
-      pageSets: sets,
-      onChoosePages: (next) => {
-        chosen.push(next);
-        setSets(storing(sets, pageChoice, next, 27));
-      },
-      pageChoice,
-      onChangePageChoice: (next) => {
-        setSets(activating(sets, next, pagesOf(sets, pageChoice), 27, 3));
-        setPageChoice(next);
-      },
-    });
-  }
-  renderWithCatalog(<Live />);
-  return { chosen };
-}
 
 // Grada A: el panel son datos y devoluciones de llamada; no habla con nadie.
 describe("SigningPanel", () => {
@@ -138,15 +20,8 @@ describe("SigningPanel", () => {
     expect(screen.getByText(/^27 páginas/)).toBeInTheDocument();
   });
 
-  it("covers the certificate, the visible-signature toggle, the page, the checkboxes and the reason", async () => {
-    const user = userEvent.setup();
-    renderPanel({
-      signature: {
-        ...DEFAULT_VISIBLE_SIGNATURE,
-        enabled: true,
-        fields: { ...DEFAULT_VISIBLE_SIGNATURE.fields, reason: true },
-      },
-    });
+  it("covers the certificate, the visible-signature toggle, the page and the model cards", () => {
+    renderPanel();
 
     expect(screen.getByRole("button", { name: "Firmar como Ada Lovelace" })).toBeInTheDocument();
     const toggle = screen.getByRole("switch", {
@@ -157,12 +32,11 @@ describe("SigningPanel", () => {
     // son de Preferencias y se piden allí con `switch--wide`.
     expect(toggle.closest(".switch")).not.toHaveClass("switch--wide");
     expect(screen.getByRole("button", { name: "Quitarla de aquí" })).toBeInTheDocument();
-    for (const label of ["Firmante", "Emisor", "Fecha", "Rúbrica", "Motivo"]) {
-      expect(screen.getByRole("checkbox", { name: new RegExp(label) })).toBeInTheDocument();
+    for (const label of ["Completa", "Solo rúbrica", "Personalizada"]) {
+      expect(screen.getByRole("radio", { name: label })).toBeInTheDocument();
     }
-    expect(screen.queryByRole("checkbox", { name: /DNI/ })).not.toBeInTheDocument();
-    await user.type(screen.getByRole("textbox", { name: "Motivo" }), "!");
-    expect(screen.getByRole("button", { name: "Elegir imagen" })).toBeInTheDocument();
+    expect(screen.getByRole("switch", { name: "Con rúbrica" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Cargar…" })).toBeInTheDocument();
   });
 
   it("is the only region with a primary button, and it comes last", () => {
@@ -237,35 +111,11 @@ describe("SigningPanel", () => {
   });
 
   it("never shows a wildcard in the interface", () => {
-    // ID-19: las casillas marcan qué dato aparece, y nunca hay una cadena
+    // ID-19: el modelo elegido dice qué aparece, y nunca hay una cadena
     // como `$$SUBJECTCN$$` escrita a mano en el panel.
     renderPanel({});
 
     expect(document.body.textContent).not.toMatch(/\$\$/);
-  });
-
-  it("shows the rubric already normalized, over white, before signing", () => {
-    renderPanel({ rubric });
-
-    const thumbnail = screen.getByAltText("Tu rúbrica, tal como se estampará");
-    expect(thumbnail).toHaveAttribute("src", rubric.dataUrl);
-    expect(screen.getByText(/Se estampa sobre blanco/)).toBeInTheDocument();
-  });
-
-  it("cannot tick a rubric that does not exist", () => {
-    renderPanel({ rubric: null });
-
-    expect(screen.getByRole("checkbox", { name: /Rúbrica/ })).toBeDisabled();
-    expect(screen.getByText("Elige antes una imagen")).toBeInTheDocument();
-  });
-
-  it("counts the rubric failure as it is chosen, with the raw detail apart", () => {
-    renderPanel({
-      rubricFailure: { situation: "notAnAcceptedImage", detail: "image/gif" },
-    });
-
-    expect(screen.getByText("Esa imagen no vale como rúbrica")).toBeInTheDocument();
-    expect(screen.getByText("image/gif")).toBeInTheDocument();
   });
 
   it("warns about the co-signature when the document already carries signatures", () => {

@@ -709,49 +709,41 @@ msgstr "Sinadura ikusgaia"
 msgid "panel.visibleSignature.toggle"
 msgstr "Estanpatu sinadura-lauki bat dokumentuan"
 
-msgid "panel.visibleSignature.content"
-msgstr "Edukia"
+msgid "panel.visibleSignature.model.title"
+msgstr "Eredua"
 
-msgid "panel.visibleSignature.fields.rubric"
-msgstr "Errubrika"
+msgid "panel.visibleSignature.model.complete"
+msgstr "Osoa"
 
-msgid "panel.visibleSignature.fields.rubricDisabled"
-msgstr "Aukeratu lehenik irudi bat"
+msgid "panel.visibleSignature.model.rubricOnly"
+msgstr "Errubrika bakarrik"
 
-msgid "panel.visibleSignature.fields.signerName"
-msgstr "Sinatzailea"
+msgid "panel.visibleSignature.model.custom"
+msgstr "Pertsonalizatua"
 
-msgid "panel.visibleSignature.fields.issuer"
-msgstr "Jaulkitzailea"
+msgid "panel.visibleSignature.model.rubricOnlyDisabled"
+msgstr "Errubrika behar du"
 
-msgid "panel.visibleSignature.fields.signedAt"
-msgstr "Data"
+msgid "panel.visibleSignature.model.customUnavailable"
+msgstr "Laster eskuragarri"
 
-msgid "panel.visibleSignature.fields.reason"
-msgstr "Arrazoia"
+msgid "panel.visibleSignature.rubric.toggle"
+msgstr "Errubrikarekin"
 
-msgid "panel.visibleSignature.reason.label"
-msgstr "Arrazoia"
+msgid "panel.visibleSignature.rubric.lockedTitle"
+msgstr "Errubrika bakarrik behar du"
 
-msgid "panel.visibleSignature.reason.placeholder"
-msgstr "Ados"
-
-msgid "panel.visibleSignature.rubric.title"
-msgstr "Errubrikaren irudia"
+msgid "panel.visibleSignature.rubric.noImageTitle"
+msgstr "Ez dago errubrikarik kargatuta"
 
 msgid "panel.visibleSignature.rubric.choose"
-msgstr "Aukeratu irudia"
+msgstr "Kargatu…"
 
 msgid "panel.visibleSignature.rubric.change"
-msgstr "Aldatu irudia"
+msgstr "Aldatu…"
 
 msgid "panel.visibleSignature.rubric.thumbnail"
 msgstr "Zure errubrika, estanpatuko den bezala"
-
-msgid "panel.visibleSignature.rubric.flattened"
-msgstr ""
-"Zuriaren gainean estanpatzen da: laukia JPEG gisa doa PDFra, eta JPEG batek "
-"ez du gardentasunik."
 
 #. Aviso sobre el bloque de firma visible apagado: sin certificado no hay sello que dibujar.
 msgid "panel.visibleSignature.noCertificate"
@@ -1786,6 +1778,36 @@ msgstr[2] ""
 
 msgid "sede.noCertificate.excludedBody"
 msgstr "Egoitzatik jarraitu beharko duzu."
+
+#~ msgid "panel.visibleSignature.rubric.title"
+#~ msgstr "Errubrikaren irudia"
+
+#~ msgid "panel.visibleSignature.content"
+#~ msgstr "Edukia"
+
+#~ msgid "panel.visibleSignature.fields.rubric"
+#~ msgstr "Errubrika"
+
+#~ msgid "panel.visibleSignature.fields.rubricDisabled"
+#~ msgstr "Aukeratu lehenik irudi bat"
+
+#~ msgid "panel.visibleSignature.fields.signerName"
+#~ msgstr "Sinatzailea"
+
+#~ msgid "panel.visibleSignature.fields.issuer"
+#~ msgstr "Jaulkitzailea"
+
+#~ msgid "panel.visibleSignature.fields.signedAt"
+#~ msgstr "Data"
+
+#~ msgid "panel.visibleSignature.fields.reason"
+#~ msgstr "Arrazoia"
+
+#~ msgid "panel.visibleSignature.reason.label"
+#~ msgstr "Arrazoia"
+
+#~ msgid "panel.visibleSignature.reason.placeholder"
+#~ msgstr "Ados"
 
 #~ msgid "trust.notice.title"
 #~ msgstr "Egoitza batek sinadura eskatzen dizunean"

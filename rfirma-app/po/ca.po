@@ -702,49 +702,41 @@ msgstr "Signatura visible"
 msgid "panel.visibleSignature.toggle"
 msgstr "Estampar un requadre de signatura al document"
 
-msgid "panel.visibleSignature.content"
-msgstr "Contingut"
+msgid "panel.visibleSignature.model.title"
+msgstr "Model"
 
-msgid "panel.visibleSignature.fields.rubric"
-msgstr "Rúbrica"
+msgid "panel.visibleSignature.model.complete"
+msgstr "Completa"
 
-msgid "panel.visibleSignature.fields.rubricDisabled"
-msgstr "Tria abans una imatge"
+msgid "panel.visibleSignature.model.rubricOnly"
+msgstr "Només rúbrica"
 
-msgid "panel.visibleSignature.fields.signerName"
-msgstr "Signant"
+msgid "panel.visibleSignature.model.custom"
+msgstr "Personalitzada"
 
-msgid "panel.visibleSignature.fields.issuer"
-msgstr "Emissor"
+msgid "panel.visibleSignature.model.rubricOnlyDisabled"
+msgstr "Necessita la rúbrica"
 
-msgid "panel.visibleSignature.fields.signedAt"
-msgstr "Data"
+msgid "panel.visibleSignature.model.customUnavailable"
+msgstr "Disponible properament"
 
-msgid "panel.visibleSignature.fields.reason"
-msgstr "Motiu"
+msgid "panel.visibleSignature.rubric.toggle"
+msgstr "Amb rúbrica"
 
-msgid "panel.visibleSignature.reason.label"
-msgstr "Motiu"
+msgid "panel.visibleSignature.rubric.lockedTitle"
+msgstr "Només rúbrica la necessita"
 
-msgid "panel.visibleSignature.reason.placeholder"
-msgstr "Conforme"
-
-msgid "panel.visibleSignature.rubric.title"
-msgstr "Imatge de la rúbrica"
+msgid "panel.visibleSignature.rubric.noImageTitle"
+msgstr "Sense rúbrica carregada"
 
 msgid "panel.visibleSignature.rubric.choose"
-msgstr "Triar imatge"
+msgstr "Carregar…"
 
 msgid "panel.visibleSignature.rubric.change"
-msgstr "Canviar imatge"
+msgstr "Canviar…"
 
 msgid "panel.visibleSignature.rubric.thumbnail"
 msgstr "La teva rúbrica, tal com s'estamparà"
-
-msgid "panel.visibleSignature.rubric.flattened"
-msgstr ""
-"S'estampa sobre blanc: el requadre va al PDF com a JPEG i un JPEG no té "
-"transparència."
 
 #. Aviso sobre el bloque de firma visible apagado: sin certificado no hay sello que dibujar.
 msgid "panel.visibleSignature.noCertificate"
@@ -1755,6 +1747,36 @@ msgstr[2] "{{origin}} no accepta cap dels teus {{count}} certificats"
 
 msgid "sede.noCertificate.excludedBody"
 msgstr "Hauràs de continuar des de la seu."
+
+#~ msgid "panel.visibleSignature.rubric.title"
+#~ msgstr "Imatge de la rúbrica"
+
+#~ msgid "panel.visibleSignature.content"
+#~ msgstr "Contingut"
+
+#~ msgid "panel.visibleSignature.fields.rubric"
+#~ msgstr "Rúbrica"
+
+#~ msgid "panel.visibleSignature.fields.rubricDisabled"
+#~ msgstr "Tria abans una imatge"
+
+#~ msgid "panel.visibleSignature.fields.signerName"
+#~ msgstr "Signant"
+
+#~ msgid "panel.visibleSignature.fields.issuer"
+#~ msgstr "Emissor"
+
+#~ msgid "panel.visibleSignature.fields.signedAt"
+#~ msgstr "Data"
+
+#~ msgid "panel.visibleSignature.fields.reason"
+#~ msgstr "Motiu"
+
+#~ msgid "panel.visibleSignature.reason.label"
+#~ msgstr "Motiu"
+
+#~ msgid "panel.visibleSignature.reason.placeholder"
+#~ msgstr "Conforme"
 
 #~ msgid "trust.notice.title"
 #~ msgstr "Quan una seu et demani la signatura"

@@ -152,6 +152,60 @@ describe("el sello dentro del recuadro", () => {
  * sobre la botonera. Antes vivía en el panel, con una insignia de estado que
  * se ha retirado; aquí es solo texto y, si hace falta, un botón.
  */
+describe("el hueco de la rúbrica sin cargar", () => {
+  it("draws a dotted gap beside the text where the missing rubric will go", async () => {
+    const { document, renders } = recordingDocument();
+    renderWithCatalog(
+      <DocumentViewer
+        pdf={document}
+        placement={seated}
+        onPlace={noop}
+        onOpen={noop}
+        stamp={{ kind: "composed" }}
+        rubricGap="beside"
+      />,
+    );
+    await waitFor(() => expect(renders).toHaveLength(1));
+
+    const gap = within(box()).getByTitle("Sin rúbrica cargada");
+    expect(gap).toHaveClass("viewer__rubric-gap--beside");
+  });
+
+  it("fills the box with the gap when the model is rubric only", async () => {
+    const { document, renders } = recordingDocument();
+    renderWithCatalog(
+      <DocumentViewer
+        pdf={document}
+        placement={seated}
+        onPlace={noop}
+        onOpen={noop}
+        stamp={{ kind: "composing" }}
+        rubricGap="fill"
+      />,
+    );
+    await waitFor(() => expect(renders).toHaveLength(1));
+
+    expect(within(box()).getByTitle("Sin rúbrica cargada")).toHaveClass("viewer__rubric-gap--fill");
+  });
+
+  it("leaves the box empty when there is no certificate to compose with", async () => {
+    const { document, renders } = recordingDocument();
+    renderWithCatalog(
+      <DocumentViewer
+        pdf={document}
+        placement={seated}
+        onPlace={noop}
+        onOpen={noop}
+        stamp={{ kind: "noCertificate" }}
+        rubricGap="beside"
+      />,
+    );
+    await waitFor(() => expect(renders).toHaveLength(1));
+
+    expect(within(box()).queryByTitle("Sin rúbrica cargada")).not.toBeInTheDocument();
+  });
+});
+
 describe("el estado del sello, flotando sobre la botonera", () => {
   function stampPill() {
     return screen.queryByRole("status");

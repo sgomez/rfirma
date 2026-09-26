@@ -14,6 +14,9 @@ interface SwitchProps {
    * `rf-gap-sm` en el diálogo— y un solo número no puede ser los dos.
    */
   wide?: boolean;
+  /** Bloqueado en su valor actual; `title` dice el motivo. */
+  disabled?: boolean;
+  title?: string;
   onChange: (checked: boolean) => void;
 }
 
@@ -34,7 +37,15 @@ interface SwitchProps {
  * botón, sangrada hasta el texto: dentro se sumaría al nombre accesible y el
  * lector de pantalla leería el párrafo entero al llegar al interruptor.
  */
-export function Switch({ checked, label, hint, wide = false, onChange }: SwitchProps) {
+export function Switch({
+  checked,
+  label,
+  hint,
+  wide = false,
+  disabled = false,
+  title,
+  onChange,
+}: SwitchProps) {
   const hintId = useId();
 
   return (
@@ -44,6 +55,8 @@ export function Switch({ checked, label, hint, wide = false, onChange }: SwitchP
         role="switch"
         aria-checked={checked}
         aria-describedby={hint ? hintId : undefined}
+        disabled={disabled}
+        title={title}
         className="switch__control"
         onClick={() => onChange(!checked)}
       >
