@@ -29,15 +29,16 @@ export interface VisibleSignature {
 }
 
 /**
- * Lo que sale marcado la primera vez: recuadro sí, y dentro el firmante —con
- * el DNI ya dentro del nombre (ADR-0006 v0.3.1)— y la fecha, que es el
- * contenido de un recuadro administrativo corriente. El emisor no, por ser
- * un dato añadido y no el que se venía mostrando; la rúbrica no, porque
- * todavía no hay imagen; el motivo tampoco, porque está vacío y una etiqueta
- * «Motivo:» sin nada detrás no dice nada.
+ * Lo que sale marcado la primera vez: recuadro no —firmar sin él está
+ * permitido, y encenderlo es un gesto aparte (#974)—, y dentro, para cuando se
+ * encienda, el firmante —con el DNI ya dentro del nombre (ADR-0006 v0.3.1)— y
+ * la fecha, que es el contenido de un recuadro administrativo corriente. El
+ * emisor no, por ser un dato añadido y no el que se venía mostrando; la
+ * rúbrica no, porque todavía no hay imagen; el motivo tampoco, porque está
+ * vacío y una etiqueta «Motivo:» sin nada detrás no dice nada.
  */
 export const DEFAULT_VISIBLE_SIGNATURE: VisibleSignature = {
-  enabled: true,
+  enabled: false,
   rubric: false,
   fields: { signerName: true, issuer: false, signedAt: true, reason: false },
   reason: "",

@@ -192,10 +192,14 @@ export function App({
     changePageChoice,
   } = usePlacementControls(pdf, documents.place, viewedPage);
 
-  // La página que mide la `MediaBox` y la `/Rotate` de la orden: la **primera
-  // del conjunto**, que es la que también usa la firma de verdad (ID-96). Se lee
-  // aquí, y no dentro de la vista previa, porque leerla es asíncrono y el ciclo
-  // del sello se decide con la orden ya armada.
+  const onChangeSignature = (next: VisibleSignature) => {
+    const turnsOnWithNothingPlaced = next.enabled && !signature.enabled && placement === null;
+    setSignature(next);
+    if (turnsOnWithNothingPlaced) setPlacementRequest({ action: "seal" });
+  };
+
+  // Se lee aquí, y no en la vista previa, porque es asíncrono y el ciclo de la
+  // firma se decide con la orden ya armada.
   const boxPage = placement === null ? null : (firstSealedPage(placement) ?? 1);
   const [geometry, setGeometry] = useState<PageGeometry | null>(null);
   useEffect(() => {
@@ -451,7 +455,7 @@ export function App({
               onRetryCertificates={() => void lookForCertificates()}
               onChooseModule={() => void lookForCertificates()}
               signature={signature}
-              onChangeSignature={setSignature}
+              onChangeSignature={onChangeSignature}
               placement={placement}
               pageSets={placing.sets}
               onChoosePages={choosePages}
