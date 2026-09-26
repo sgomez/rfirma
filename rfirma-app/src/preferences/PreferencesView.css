@@ -237,19 +237,3 @@
 .preferences__remove-certificate {
   flex: none;
 }
-
-/* La contraseña del `.p12`, en el mismo `.rf-dialog` de 420 px del diálogo del
-   secreto: es el otro modal que se pone delante de esta pantalla. */
-.preferences__password {
-  display: flex;
-  flex-direction: column;
-  gap: var(--rf-space-sm);
-  width: 420px;
-  max-width: 100%;
-}
-
-.preferences__password form {
-  display: flex;
-  flex-direction: column;
-  gap: var(--rf-space-md);
-}

@@ -917,12 +917,6 @@ msgstr "Abrir o cartafol"
 msgid "panel.signed.signAgain"
 msgstr "Volver asinar"
 
-msgid "pin.titlePassword"
-msgstr "Introduce o contrasinal"
-
-msgid "pin.labelPassword"
-msgstr "Contrasinal"
-
 msgid "progress.title"
 msgstr "Asinando o documento…"
 
@@ -1252,9 +1246,6 @@ msgstr "caduca o {{date}}"
 #. Insignia de la fila de un certificado caducado, que se queda en la lista.
 msgid "preferences.certificates.expired"
 msgstr "Caducado"
-
-msgid "preferences.certificates.password.submit"
-msgstr "Continuar"
 
 msgid "preferences.theme.label"
 msgstr "Tema"

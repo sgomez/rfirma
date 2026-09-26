@@ -13,7 +13,7 @@ use domain::algorithm::SignatureAlgorithm;
 use domain::certificate::{CertificateRef, ListedCertificate, TokenCertificate};
 use domain::error::TokenError;
 use domain::store::{Store, StoreClass};
-use ports::{CertificateMemory, Token};
+use ports::{CertificateMemory, SecretPrompter, Token};
 
 /// La raíz de `identity`: el token, los almacenes, el listado vivo y el certificado recordado.
 pub struct IdentityRoot {
@@ -29,6 +29,8 @@ pub struct IdentityRoot {
     pub memory: Arc<dyn CertificateMemory + Send + Sync>,
     /// La carpeta donde vive cada `.p12` instalado.
     pub folder: Arc<dyn ports::InstalledFolder + Send + Sync>,
+    /// El diálogo interactivo que pide la contraseña al instalar un `.p12` (ID-430).
+    pub prompter: Arc<dyn SecretPrompter + Send + Sync>,
 }
 
 impl IdentityRoot {

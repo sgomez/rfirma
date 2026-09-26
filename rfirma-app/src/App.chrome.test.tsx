@@ -142,7 +142,6 @@ describe("App", () => {
     expect(certificates).toHaveTextContent("Todavía no has instalado ninguno");
 
     await user.click(within(certificates).getByRole("button", { name: "Añadir…" }));
-    await user.click(screen.getByRole("button", { name: "Continuar" }));
 
     expect(await within(certificates).findByText("Ada Lovelace Byron")).toBeInTheDocument();
   });

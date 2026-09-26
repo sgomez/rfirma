@@ -927,12 +927,6 @@ msgstr "Obrir la carpeta"
 msgid "panel.signed.signAgain"
 msgstr "Tornar a signar"
 
-msgid "pin.titlePassword"
-msgstr "Introdueix la contrasenya"
-
-msgid "pin.labelPassword"
-msgstr "Contrasenya"
-
 msgid "progress.title"
 msgstr "Signant el document…"
 
@@ -1265,9 +1259,6 @@ msgstr "caduca el {{date}}"
 #. Insignia de la fila de un certificado caducado, que se queda en la lista.
 msgid "preferences.certificates.expired"
 msgstr "Caducat"
-
-msgid "preferences.certificates.password.submit"
-msgstr "Continuar"
 
 msgid "preferences.theme.label"
 msgstr "Tema"

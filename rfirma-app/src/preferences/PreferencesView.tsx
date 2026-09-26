@@ -5,7 +5,6 @@ import { useLanguage } from "../i18n/LanguageProvider";
 import type { Certificate } from "../signing/certificate";
 import "./PreferencesView.css";
 import { trapTabWithinCurrentTarget } from "./focusTrap";
-import { PasswordPrompt } from "./PasswordPrompt";
 import {
   AppearanceSection,
   CertificatesSection,
@@ -47,13 +46,13 @@ interface PreferencesViewProps {
    */
   installedCertificates: readonly Certificate[];
   /**
-   * Instala un `.p12` con la contraseña **del fichero** y responde si quedó
-   * alguno instalado. Quien abre el selector de ficheros es el backend (ID-63),
-   * así que la contraseña se teclea antes de elegirlo. Rechaza cuando el
-   * fichero no se puede abrir o cuando su clave no es RSA ni de curva
-   * elíptica.
+   * Abre el selector de ficheros y, con el elegido, pide su contraseña e
+   * instala el `.p12`; responde si quedó alguno instalado. La contraseña no
+   * la pide esta pantalla —la pide el backend, con reintentos hasta acertar o
+   * cancelar (ID-430)—, así que aquí nunca se ve ni se teclea. Rechaza cuando
+   * el fichero no se puede abrir o cuando su clave no es RSA ni de curva elíptica (ID-197).
    */
-  onInstallCertificate: (password: string) => Promise<boolean>;
+  onInstallCertificate: () => Promise<boolean>;
   /** Quita un `.p12` instalado, por el asa de su fila. */
   onRemoveCertificate: (id: string) => Promise<void>;
   onClose: () => void;
@@ -70,8 +69,8 @@ interface PreferencesViewProps {
  * confirmar, así que `Escape` sigue valiendo y `Cmd+,` sigue prometiendo lo
  * que abre. **El foco no se atrapa aquí dentro**: el menú de la cabecera se
  * abre y funciona con Preferencias delante, tanto por clic como por
- * teclado — a diferencia de los dos modales que se ponen encima de esta
- * pantalla, que sí lo atrapan.
+ * teclado — a diferencia del modal de confirmación que se pone encima de
+ * esta pantalla, que sí lo atrapa.
  *
  * **Los cambios se aplican al hacerlos**: no hay «Guardar» ni «Cancelar», solo
  * «Cerrar», y va en un **pie fijo** porque en una pantalla que se desplaza un
@@ -113,7 +112,7 @@ interface PreferencesViewProps {
  *
  * Cada sección del índice es un componente propio de
  * [`PreferencesSections`](./PreferencesSections.tsx); esta vista solo guarda
- * el estado, gestiona los dos modales y reparte los cambios.
+ * el estado, gestiona el modal de confirmación y reparte los cambios.
  */
 export function PreferencesView({
   preferences,
@@ -130,12 +129,10 @@ export function PreferencesView({
   const [confirmingPurge, setConfirmingPurge] = useState(false);
   const [saveFailure, setSaveFailure] = useState<SaveFailure | null>(null);
   const [forgetFailure, setForgetFailure] = useState<string | null>(null);
-  const [askingPassword, setAskingPassword] = useState(false);
   const [certificateFailure, setCertificateFailure] = useState<NamedFailure | null>(null);
   const [current, setCurrent] = useState<Section>("general");
   const titleId = useId();
   const confirm = useRef<HTMLDivElement>(null);
-  const password = useRef<HTMLDivElement>(null);
   const panel = useRef<HTMLDivElement>(null);
   const tabs = useRef(new Map<Section, HTMLElement | null>());
 
@@ -148,10 +145,6 @@ export function PreferencesView({
     const onWindowKeyDown = (event: globalThis.KeyboardEvent) => {
       if (event.key !== "Escape" || event.defaultPrevented) return;
       event.preventDefault();
-      if (askingPassword) {
-        setAskingPassword(false);
-        return;
-      }
       if (confirmingPurge) {
         setConfirmingPurge(false);
         return;
@@ -160,7 +153,7 @@ export function PreferencesView({
     };
     window.addEventListener("keydown", onWindowKeyDown);
     return () => window.removeEventListener("keydown", onWindowKeyDown);
-  }, [askingPassword, confirmingPurge, onClose]);
+  }, [confirmingPurge, onClose]);
 
   // La confirmación es a su vez un diálogo modal, así que cuando se pone
   // delante el foco entra en ella y el tabulador deja de pasear por los
@@ -169,12 +162,6 @@ export function PreferencesView({
   useEffect(() => {
     if (confirmingPurge) confirm.current?.focus();
   }, [confirmingPurge]);
-
-  // Lo mismo con el diálogo de la contraseña del `.p12`, que es el otro modal
-  // que se pone delante de esta pantalla.
-  useEffect(() => {
-    if (askingPassword) password.current?.focus();
-  }, [askingPassword]);
 
   /**
    * Guarda un ajuste y, si el disco lo rechaza, deja el aviso **en la sección
@@ -226,19 +213,17 @@ export function PreferencesView({
   };
 
   /**
-   * Mete un `.p12` con la contraseña que se acaba de teclear.
-   *
-   * El selector de ficheros lo abre el backend **después** (ID-63), así que
-   * cerrarlo sin elegir nada devuelve `false` y no es un fallo: deja la lista
-   * como estaba y no pinta ningún aviso. Lo que sí lo es —la contraseña que no
-   * abre el fichero, la clave que no es RSA ni de curva elíptica— se cuenta en
-   * la sección.
+   * Mete un `.p12`: el selector de ficheros y el diálogo de la contraseña son
+   * los dos del backend (ID-63, ID-430). Cerrar cualquiera de los dos, o
+   * cancelar la contraseña, deja la lista como estaba y no pinta ningún
+   * aviso. Lo que sí lo es —la contraseña que no abre el fichero tras
+   * agotarse los reintentos, la clave que no es RSA ni de curva elíptica (ID-197)— se cuenta en la
+   * sección.
    */
-  const install = async (typed: string) => {
-    setAskingPassword(false);
+  const install = async () => {
     setCertificateFailure(null);
     try {
-      await onInstallCertificate(typed);
+      await onInstallCertificate();
     } catch (thrown) {
       setCertificateFailure(classify(thrown));
     }
@@ -324,10 +309,7 @@ export function PreferencesView({
         titleId={titleId}
         certificateFailure={certificateFailure}
         installedCertificates={installedCertificates}
-        onAddClick={() => {
-          setCertificateFailure(null);
-          setAskingPassword(true);
-        }}
+        onAddClick={() => void install()}
         onRemoveClick={(certificate) => void remove(certificate)}
       />
     ),
@@ -399,17 +381,6 @@ export function PreferencesView({
           {t("actions.close")}
         </button>
       </div>
-
-      {askingPassword && (
-        <div className="rf-scrim">
-          <PasswordPrompt
-            ref={password}
-            labelledBy={`${titleId}-password`}
-            onCancel={() => setAskingPassword(false)}
-            onSubmit={(typed) => void install(typed)}
-          />
-        </div>
-      )}
 
       {confirmingPurge && (
         <div className="rf-scrim">

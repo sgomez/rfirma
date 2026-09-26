@@ -22,7 +22,7 @@ import { pdfjsLoader } from "./viewer/pdfjsLoader";
 export function tauriCertificateStore(): CertificateStore {
   return {
     list: () => invoke<readonly Certificate[]>("list_certificates"),
-    install: (password) => invoke<boolean>("install_certificate", { password }),
+    install: () => invoke<boolean>("install_certificate"),
     remove: (id) => invoke<void>("remove_certificate", { id }),
   };
 }
