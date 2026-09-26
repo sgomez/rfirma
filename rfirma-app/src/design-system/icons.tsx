@@ -139,6 +139,16 @@ export function AlertIcon({ size = 20 }: IconProps) {
   return <VerdictIcon size={size} glyph={ALERT} />;
 }
 
+/** La franja de «ya lo firmaste tú». */
+export function PersonIcon({ size = 16 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...PEN} aria-hidden="true" focusable="false">
+      <circle cx="12" cy="8" r="4" />
+      <path d="M5 20c0-3.9 3.1-7 7-7s7 3.1 7 7" />
+    </svg>
+  );
+}
+
 /** La escarapela del certificado. */
 export function CertificateIcon({ size = 20 }: IconProps) {
   return (

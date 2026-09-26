@@ -117,7 +117,9 @@ pub fn rows_of(
                 given_name,
                 surname,
                 id_number,
+                organization_identifier: certificate.organization_identifier(),
                 issuer: common_name_of(certificate.issuer().as_deref()),
+                certificate_serial_number: certificate.serial_number().unwrap_or_default(),
                 store: certificate.reference().store().class_under(installed_dir),
                 status: certificate.status(),
                 remembered: remembered

@@ -1,22 +1,28 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { formatSignedAt } from "../App.signingOrder";
-import { ChevronDownIcon, InfoIcon } from "../design-system/icons";
+import { ChevronDownIcon, InfoIcon, PersonIcon } from "../design-system/icons";
+import type { Certificate } from "./certificate";
 import type { PreviousSignature } from "./previousSignatures";
+import { sameSignerNotice } from "./sameSignerNotice";
 
 /**
  * El aviso de firmas previas: una línea plegada con «Firmarás junto a N firmas
- * anteriores» y, desplegada, una fila por firma con quién firmó y cuándo
+ * anteriores» y, desplegada, una fila por firma con quién firmó y cuándo, y una
+ * franja al pie con «ya lo firmaste tú» si el certificado elegido coincide
  * (docs/design/panel-de-firma.md § El aviso de firmas previas). El llamador
  * solo lo monta con firmas, con una `key` por documento.
  */
 export function PreviousSignaturesNotice({
   signatures,
+  certificate,
 }: {
   signatures: readonly PreviousSignature[];
+  certificate: Certificate | null;
 }) {
   const { t, i18n } = useTranslation();
   const [expanded, setExpanded] = useState(signatures.length > 1);
+  const notice = sameSignerNotice(certificate, signatures);
 
   return (
     <div className="panel__co-signature">
@@ -59,6 +65,18 @@ export function PreviousSignaturesNotice({
             </li>
           ))}
         </ul>
+      )}
+      {notice !== null && (
+        <div className="panel__co-signature-footer">
+          <span className="panel__notice-icon">
+            <PersonIcon />
+          </span>
+          <span className="rf-body">
+            {notice === "sameCertificate"
+              ? t("panel.previousSignatures.sameCertificate")
+              : t("panel.previousSignatures.otherCertificate")}
+          </span>
+        </div>
       )}
     </div>
   );

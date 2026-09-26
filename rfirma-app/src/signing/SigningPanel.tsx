@@ -195,7 +195,11 @@ export function SigningPanel({
         ) : (
           <>
             {previousSignatures.length > 0 && (
-              <PreviousSignaturesNotice key={document.id} signatures={previousSignatures} />
+              <PreviousSignaturesNotice
+                key={document.id}
+                signatures={previousSignatures}
+                certificate={chosen}
+              />
             )}
 
             {(certificate.kind === "empty" || certificate.kind === "failed") && (

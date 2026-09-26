@@ -169,7 +169,26 @@ fn a_der_that_is_not_a_certificate_is_unreadable_rather_than_a_panic() {
     ));
     assert_eq!(certificate.subject(), None);
     assert_eq!(certificate.issuer(), None);
+    assert_eq!(certificate.serial_number(), None);
     assert!(!certificate.status().is_usable());
+}
+
+#[test]
+fn the_serial_number_reads_in_base_ten_like_the_bridge_writes_it() {
+    let serial = openssl::bn::BigNum::from_dec_str("12345678901234567890")
+        .expect("deberia poder leerse el numero de serie de prueba")
+        .to_asn1_integer()
+        .expect("deberia poder convertirse a entero ASN.1");
+    let certificate = a_certificate_with_extensions("FIRMA", |builder| {
+        builder
+            .set_serial_number(&serial)
+            .expect("el serie deberia ponerse");
+    });
+
+    assert_eq!(
+        certificate.serial_number(),
+        Some("12345678901234567890".to_owned())
+    );
 }
 
 #[test]

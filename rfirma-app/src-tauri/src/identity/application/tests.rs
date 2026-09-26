@@ -144,6 +144,49 @@ pub(crate) fn an_expired_certificate(label: &str) -> TokenCertificate {
     a_certificate(label, &der)
 }
 
+/// Construye un certificado de representante, con `organizationIdentifier` (2.5.4.97) en el subject.
+pub(crate) fn a_representative_certificate(
+    label: &str,
+    common_name: &str,
+    organization_identifier: &str,
+) -> TokenCertificate {
+    let key = generate_key().expect("la clave de pruebas deberia generarse");
+    let mut name = X509Name::builder().expect("deberia poder construirse un nombre");
+    name.append_entry_by_nid(Nid::COMMONNAME, common_name)
+        .expect("el nombre comun deberia entrar");
+    name.append_entry_by_text("organizationIdentifier", organization_identifier)
+        .expect("el organizationIdentifier deberia entrar");
+    let name = name.build();
+
+    let mut builder = X509::builder().expect("deberia poder construirse un certificado");
+    builder.set_version(2).expect("la version deberia ponerse");
+    builder
+        .set_serial_number(&random_serial().expect("el serie deberia generarse"))
+        .expect("el serie deberia ponerse");
+    builder
+        .set_subject_name(&name)
+        .expect("el titular deberia ponerse");
+    builder
+        .set_issuer_name(&name)
+        .expect("el emisor deberia ponerse");
+    builder.set_pubkey(&key).expect("la clave deberia ponerse");
+    builder
+        .set_not_before(&Asn1Time::days_from_now(0).expect("deberia haber fecha"))
+        .expect("el inicio deberia ponerse");
+    builder
+        .set_not_after(&Asn1Time::days_from_now(30).expect("deberia haber fecha"))
+        .expect("el fin deberia ponerse");
+    builder
+        .sign(&key, MessageDigest::sha256())
+        .expect("el certificado de pruebas deberia firmarse");
+
+    let der = builder
+        .build()
+        .to_der()
+        .expect("el certificado deberia poder salir en DER");
+    a_certificate(label, &der)
+}
+
 fn unix_time(instant: SystemTime) -> Asn1Time {
     let secs = instant
         .duration_since(UNIX_EPOCH)
