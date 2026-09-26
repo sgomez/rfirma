@@ -1915,7 +1915,7 @@ msgstr[2] ""
 "{{origin}}(e)k ez du zure {{count}} ziurtagirietako bat ere onartzen"
 
 msgid "sede.noCertificate.excludedBody"
-msgstr "Egoitzatik jarraitu beharko duzu."
+msgstr "Instalatu beste ziurtagiri bat, edo itxi eta jarraitu egoitzatik."
 
 #~ msgid "panel.visibleSignature.rubric.title"
 #~ msgstr "Errubrikaren irudia"

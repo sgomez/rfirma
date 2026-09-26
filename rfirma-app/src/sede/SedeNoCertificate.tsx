@@ -30,20 +30,17 @@ interface SedeNoCertificateProps {
  * otra situación. Allí hay algo que consentir y un certificado que elegir; aquí
  * no hay ni una cosa ni la otra, y el botón principal no puede decir «Firmar».
  *
- * Las dos opciones **se tienen que sentir distintas porque la salida es
- * distinta** (ID-278):
+ * Las dos razones comparten acciones —instalar otro siempre puede arreglarlo,
+ * ni siquiera cuando es la sede quien ha excluido los que ya había— y solo
+ * cambia el mensaje: **excluidos** cuenta cuántos certificados tiene la
+ * persona, porque eso es estado de su almacén, y si el recién instalado
+ * tampoco vale ese número sube solo con la pantalla sin cerrarse ni contestar
+ * a la sede.
  *
- * - **no tienes ninguno** tiene arreglo, y el arreglo no depende de la sede: hay
- *   acción principal —`Instalar un certificado…`— y la microacción `Volver a
- *   buscar`, por si se instaló con la ventana ya abierta;
- * - **la sede los ha excluido todos** no lo tiene, porque quien decide es la
- *   sede: la pantalla se queda **sin acción principal**.
- *
- * `Cerrar` está en el pie **siempre**, en las dos: es la salida etiquetada, y
- * sin ella quien no quiere instalar nada sólo tiene la cruz de la barra de
- * título. `Volver a buscar` no es del pie sino una **microacción del cuerpo**,
- * que es lo que el criterio de botones de la ficha reserva para `--ghost` en
- * línea.
+ * `Cerrar` está en el pie **siempre**: es la salida etiquetada, y sin ella
+ * quien no quiere instalar nada sólo tiene la cruz de la barra de título.
+ * `Volver a buscar` no es del pie sino una **microacción del cuerpo**, que es
+ * lo que el criterio de botones de la ficha reserva para `--ghost` en línea.
  */
 export function SedeNoCertificate({
   origin,
@@ -65,24 +62,17 @@ export function SedeNoCertificate({
       footer={
         <>
           <div className="sede-window__spacer" />
-          <button
-            ref={excluded ? defaultButton : undefined}
-            type="button"
-            className="rf-btn rf-btn--ghost"
-            onClick={onLeave}
-          >
+          <button type="button" className="rf-btn rf-btn--ghost" onClick={onLeave}>
             {t("actions.close")}
           </button>
-          {!excluded && (
-            <button
-              ref={defaultButton}
-              type="button"
-              className="rf-btn rf-btn--primary"
-              onClick={onInstall}
-            >
-              {t("sede.noCertificate.install")}
-            </button>
-          )}
+          <button
+            ref={defaultButton}
+            type="button"
+            className="rf-btn rf-btn--primary"
+            onClick={onInstall}
+          >
+            {t("sede.noCertificate.install")}
+          </button>
         </>
       }
     >
@@ -102,21 +92,17 @@ export function SedeNoCertificate({
               ? t("sede.noCertificate.noneBodyUnknownOrigin")
               : t("sede.noCertificate.noneBody", { origin })}
         </p>
-        {!excluded && (
-          <>
-            <p className="rf-hint">{t("sede.noCertificate.noneHint")}</p>
-            {failure !== null && (
-              <ErrorNotice situation={failure.situation} technicalDetail={failure.detail} />
-            )}
-            {/* La microacción va aquí, pegada a lo que arregla, y no en el pie:
-                se pulsa cuando se acaba de instalar uno con la ventana abierta. */}
-            <div className="rf-row sede-no-certificate__look-again">
-              <button type="button" className="rf-btn rf-btn--ghost" onClick={onLookAgain}>
-                {t("sede.noCertificate.lookAgain")}
-              </button>
-            </div>
-          </>
+        {!excluded && <p className="rf-hint">{t("sede.noCertificate.noneHint")}</p>}
+        {failure !== null && (
+          <ErrorNotice situation={failure.situation} technicalDetail={failure.detail} />
         )}
+        {/* La microacción va aquí, pegada a lo que arregla, y no en el pie:
+            se pulsa cuando se acaba de instalar uno con la ventana abierta. */}
+        <div className="rf-row sede-no-certificate__look-again">
+          <button type="button" className="rf-btn rf-btn--ghost" onClick={onLookAgain}>
+            {t("sede.noCertificate.lookAgain")}
+          </button>
+        </div>
       </div>
     </SedeBody>
   );

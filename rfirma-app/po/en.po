@@ -1866,7 +1866,7 @@ msgstr[1] "{{origin}} accepts none of your {{count}} certificates"
 msgstr[2] "{{origin}} accepts none of your {{count}} certificates"
 
 msgid "sede.noCertificate.excludedBody"
-msgstr "You'll have to carry on from the site."
+msgstr "Install another certificate, or close and carry on from the site."
 
 #~ msgid "panel.visibleSignature.rubric.title"
 #~ msgstr "Rubric image"
