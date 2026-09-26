@@ -45,7 +45,7 @@ final class TestFixtures {
     private static final char[] EXPIRED_PASSWORD = "G5cp,fYC9gje".toCharArray();
     private static final String SIGN_ALGORITHM = "SHA256withRSA";
     /** El {@code /SubFilter} que ningun detector de formato PAdES/CAdES del original reconoce. */
-    static final String UNRECOGNIZED_SUBFILTER = "rfirma.unknown-format";
+    private static final String UNRECOGNIZED_SUBFILTER = "rfirma.unknown-format";
 
     private TestFixtures() { }
 
