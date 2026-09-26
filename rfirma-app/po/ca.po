@@ -11,9 +11,6 @@ msgstr ""
 msgid "app.name"
 msgstr "rFirma"
 
-msgid "actions.sign"
-msgstr "Signar el document"
-
 msgid "actions.cancel"
 msgstr "Cancel·lar"
 
@@ -670,8 +667,9 @@ msgstr "Instal·lat a rFirma"
 msgid "panel.certificate.retry"
 msgstr "Tornar a cercar"
 
-msgid "panel.certificate.otherModule"
-msgstr "Un altre mòdul…"
+#. {{date}} es la fecha de caducidad, ya formateada según el idioma.
+msgid "panel.certificate.expiresOn"
+msgstr "caduca el {{date}}"
 
 msgid "panel.certificate.empty.title"
 msgstr "No hem trobat cap certificat"
@@ -770,6 +768,17 @@ msgstr "No es pot escriure a {{folder}}"
 
 msgid "panel.footer.retry"
 msgstr "Tornar-ho a intentar"
+
+#. {{name}} es el nombre y primer apellido de quien firma.
+msgid "panel.footer.signAs"
+msgstr "Signa com a {{name}}"
+
+#. {{name}} es el nombre y primer apellido de quien firma.
+msgid "panel.footer.signingAs"
+msgstr "Signant com a {{name}}"
+
+msgid "panel.footer.addCertificate"
+msgstr "Afegeix un certificat…"
 
 msgid "panel.signed.summary"
 msgstr "Resum"
@@ -1050,7 +1059,10 @@ msgid "preferences.honourAutomaticSelection.label"
 msgstr "Respectar la selecció automàtica de certificat que demani la seu"
 
 msgid "preferences.honourAutomaticSelection.hint"
-msgstr "Si la seu ho demana i només accepta un dels teus certificats, s'utilitza sense preguntar-te. Si el teu magatzem no demana PIN, la signatura sortirà sense que vegis res."
+msgstr ""
+"Si la seu ho demana i només accepta un dels teus certificats, s'utilitza "
+"sense preguntar-te. Si el teu magatzem no demana PIN, la signatura sortirà "
+"sense que vegis res."
 
 msgid "preferences.rememberActivity.label"
 msgstr "Recordar la meva activitat"
@@ -1136,7 +1148,12 @@ msgid "about.update.upToDate"
 msgstr "Tens l'última versió"
 
 msgid "about.independence"
-msgstr "Projecte independent. rFirma no està relacionada amb AutoFirma ni amb l'Administració General de l'Estat, que publiquen el client oficial, ni compta amb el seu suport. Si necessites l'aplicació oficial, descarrega-la del seu web. Si detectes algun problema amb rFirma, comunica'l al nostre repositori i no a l'equip d'AutoFirma."
+msgstr ""
+"Projecte independent. rFirma no està relacionada amb AutoFirma ni amb "
+"l'Administració General de l'Estat, que publiquen el client oficial, ni "
+"compta amb el seu suport. Si necessites l'aplicació oficial, descarrega-la "
+"del seu web. Si detectes algun problema amb rFirma, comunica'l al nostre "
+"repositori i no a l'equip d'AutoFirma."
 
 #. No se traduce: es una URL.
 msgid "about.repository"
@@ -1389,7 +1406,9 @@ msgstr ""
 "lo de totes maneres?"
 
 msgid "sede.confirm.messages.signingCertifiedPdf"
-msgstr "El PDF que vols signar està certificat i no admet noves signatures. Afegir-hi la teva invalidarà la signatura anterior. Vols signar-lo de totes maneres?"
+msgstr ""
+"El PDF que vols signar està certificat i no admet noves signatures. Afegir-"
+"hi la teva invalidarà la signatura anterior. Vols signar-lo de totes maneres?"
 
 msgid "sede.confirm.messages.signingModifiedPdfForm"
 msgstr ""
@@ -1408,7 +1427,9 @@ msgid "sede.marking.title"
 msgstr "Marca on va la teva signatura"
 
 msgid "sede.marking.hint"
-msgstr "La pàgina demana que la teva signatura es vegi al document. Traça el requadre sobre la pàgina amb el ratolí."
+msgstr ""
+"La pàgina demana que la teva signatura es vegi al document. Traça el "
+"requadre sobre la pàgina amb el ratolí."
 
 msgid "sede.marking.accept"
 msgstr "Continuar"
@@ -1441,7 +1462,9 @@ msgid "sede.saving.lead"
 msgstr "Tria al diàleg del sistema on vols desar-lo."
 
 msgid "sede.saving.leadUnwritable"
-msgstr "No s'ha pogut desar a la destinació triada. Tria'n una altra al diàleg del sistema."
+msgstr ""
+"No s'ha pogut desar a la destinació triada. Tria'n una altra al diàleg del "
+"sistema."
 
 msgid "sede.loading.title"
 msgstr "Carregant un fitxer"
@@ -1532,7 +1555,10 @@ msgid "sede.oldWebClient.title"
 msgstr "Aquesta pàgina està desactualitzada"
 
 msgid "sede.oldWebClient.body"
-msgstr "La pàgina fa servir una versió antiga de la peça que parla amb rFirma, i pot tenir errors o no ser segura. Prem Entesos per continuar; si alguna cosa falla, avisa qui manté la pàgina."
+msgstr ""
+"La pàgina fa servir una versió antiga de la peça que parla amb rFirma, i pot "
+"tenir errors o no ser segura. Prem Entesos per continuar; si alguna cosa "
+"falla, avisa qui manté la pàgina."
 
 msgid "sede.oldWebClient.dismiss"
 msgstr "Entesos"
@@ -1564,7 +1590,11 @@ msgstr ""
 "un cada vegada."
 
 msgid "sede.refusals.portsTaken"
-msgstr "{{origin}} ofereix uns ports que una altra aplicació ja fa servir, així que rFirma no ha pogut obrir el canal per respondre-la. Tanca aquesta aplicació —pot ser AutoFirma o una altra còpia de rFirma— i torna-ho a provar des de la pàgina."
+msgstr ""
+"{{origin}} ofereix uns ports que una altra aplicació ja fa servir, així que "
+"rFirma no ha pogut obrir el canal per respondre-la. Tanca aquesta aplicació —"
+"pot ser AutoFirma o una altra còpia de rFirma— i torna-ho a provar des de la "
+"pàgina."
 
 msgid "sede.refusals.unknown"
 msgstr "{{origin}} ha enviat alguna cosa que rFirma no pot atendre."
@@ -1605,7 +1635,9 @@ msgstr ""
 "La signatura del lot que demanava {{origin}} no s'ha arribat a completar."
 
 msgid "sede.refusals.triphaseServerUrlMissing"
-msgstr "{{origin}} ha demanat signar amb el seu servei de signatura, però no ha dit on és."
+msgstr ""
+"{{origin}} ha demanat signar amb el seu servei de signatura, però no ha dit "
+"on és."
 
 msgid "sede.refusals.triphaseServerException"
 msgstr "El servei de signatura de {{origin}} ha donat un error."
@@ -1614,7 +1646,9 @@ msgid "sede.refusals.triphaseServerUnreachable"
 msgstr "El servei de signatura de {{origin}} no ha contestat."
 
 msgid "sede.refusals.triphaseServerUnexpectedAnswer"
-msgstr "El servei de signatura de {{origin}} ha contestat alguna cosa que rFirma no sap llegir."
+msgstr ""
+"El servei de signatura de {{origin}} ha contestat alguna cosa que rFirma no "
+"sap llegir."
 
 msgid "sede.refusals.certificateNotFound"
 msgstr "El certificat triat ja no està disponible o {{origin}} no l'accepta."
@@ -1626,46 +1660,75 @@ msgid "sede.refusals.unwritable"
 msgstr "rFirma no ha pogut escriure el fitxer que necessitava {{origin}}."
 
 msgid "sede.refusals.invalidSignature"
-msgstr "El document que ha enviat {{origin}} porta una signatura que no és vàlida."
+msgstr ""
+"El document que ha enviat {{origin}} porta una signatura que no és vàlida."
 
 msgid "sede.refusals.confirmationNeeded"
-msgstr "{{origin}} ha demanat signar sense preguntar-te, però el document necessita que confirmis alguna cosa abans."
+msgstr ""
+"{{origin}} ha demanat signar sense preguntar-te, però el document necessita "
+"que confirmis alguna cosa abans."
 
 msgid "sede.refusals.localBatchSign"
 msgstr "El lot que ha enviat {{origin}} no es pot signar tal com arriba."
 
 msgid "sede.refusals.siteErrandNotLive"
-msgstr "El tràmit amb {{origin}} ja havia acabat quan ha arribat la teva resposta."
+msgstr ""
+"El tràmit amb {{origin}} ja havia acabat quan ha arribat la teva resposta."
 
 msgid "sede.refusals.pdfHasUnregisteredSignatures"
-msgstr "El PDF que ha enviat {{origin}} porta signatures que no consten al seu formulari, i rFirma no hi signa a sobre sense que ho confirmis."
+msgstr ""
+"El PDF que ha enviat {{origin}} porta signatures que no consten al seu "
+"formulari, i rFirma no hi signa a sobre sense que ho confirmis."
 
 msgid "sede.refusals.secretOnTheReaderKeypad"
-msgstr "El PIN d'aquest certificat es tecleja al lector, i rFirma encara no el sap demanar així."
+msgstr ""
+"El PIN d'aquest certificat es tecleja al lector, i rFirma encara no el sap "
+"demanar així."
 
 msgid "sede.refusals.userCancelled"
-msgstr "Has cancel·lat la petició del PIN, així que la signatura que demanava {{origin}} no s'ha fet."
+msgstr ""
+"Has cancel·lat la petició del PIN, així que la signatura que demanava "
+"{{origin}} no s'ha fet."
 
 msgid "sede.refusals.promptFailed"
-msgstr "rFirma no t'ha pogut demanar el PIN per a la signatura que demanava {{origin}}."
+msgstr ""
+"rFirma no t'ha pogut demanar el PIN per a la signatura que demanava "
+"{{origin}}."
 
 msgid "sede.refusals.explicitXades"
-msgstr "{{origin}} ha demanat un tipus de signatura antic que ja no és segur: aquesta signatura es podria fer passar per la d'un altre document diferent del teu. Per això rFirma no la fa. No és culpa teva; si necessites acabar el tràmit, contacta amb {{origin}}."
+msgstr ""
+"{{origin}} ha demanat un tipus de signatura antic que ja no és segur: "
+"aquesta signatura es podria fer passar per la d'un altre document diferent "
+"del teu. Per això rFirma no la fa. No és culpa teva; si necessites acabar el "
+"tràmit, contacta amb {{origin}}."
 
 msgid "sede.refusals.invoiceMultisignature"
-msgstr "{{origin}} ha demanat afegir una signatura a una factura electrònica que ja està signada. Una factura electrònica només admet una signatura, així que rFirma no ho pot fer. No és culpa teva; si necessites acabar el tràmit, contacta amb {{origin}}."
+msgstr ""
+"{{origin}} ha demanat afegir una signatura a una factura electrònica que ja "
+"està signada. Una factura electrònica només admet una signatura, així que "
+"rFirma no ho pot fer. No és culpa teva; si necessites acabar el tràmit, "
+"contacta amb {{origin}}."
 
 msgid "sede.refusals.unsupportedCountersignature"
-msgstr "{{origin}} ha demanat signar sobre la signatura d'una altra persona en un tipus de document que no ho permet, així que rFirma no ho pot fer. No és culpa teva; si necessites acabar el tràmit, contacta amb {{origin}}."
+msgstr ""
+"{{origin}} ha demanat signar sobre la signatura d'una altra persona en un "
+"tipus de document que no ho permet, així que rFirma no ho pot fer. No és "
+"culpa teva; si necessites acabar el tràmit, contacta amb {{origin}}."
 
 msgid "sede.siteNotes.explicitXades"
-msgstr "Traieu mode=explicit o feu servir CAdES explícita, que signa el document sense incloure'l."
+msgstr ""
+"Traieu mode=explicit o feu servir CAdES explícita, que signa el document "
+"sense incloure'l."
 
 msgid "sede.siteNotes.invoiceMultisignature"
-msgstr "FacturaE no admet cosignatura ni contrasignatura; demaneu una signatura simple (sign)."
+msgstr ""
+"FacturaE no admet cosignatura ni contrasignatura; demaneu una signatura "
+"simple (sign)."
 
 msgid "sede.siteNotes.unsupportedCountersignature"
-msgstr "La contrasignatura només existeix en CAdES, CMS i XAdES; en un altre format, demaneu una cosignatura (cosign)."
+msgstr ""
+"La contrasignatura només existeix en CAdES, CMS i XAdES; en un altre format, "
+"demaneu una cosignatura (cosign)."
 
 msgid "sede.noCertificate.noneTitle"
 msgstr "No tens cap certificat"

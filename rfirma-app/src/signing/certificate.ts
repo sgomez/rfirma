@@ -104,6 +104,16 @@ export function isUsable(status: CertificateStatus): boolean {
   return status.kind === "valid";
 }
 
+/**
+ * Nombre y primer apellido, para el botón «Firmar como…» (docs/design/panel-de-firma.md).
+ * `holderName` viene en orden occidental —nombre y apellidos—, así que son las
+ * dos primeras palabras; el nombre completo sigue disponible en el `title` y en
+ * la lista.
+ */
+export function firstNameAndSurname(holderName: string): string {
+  return holderName.trim().split(/\s+/).slice(0, 2).join(" ");
+}
+
 /** Los certificados, ya separados en los dos grupos que enseña el desplegable. */
 export interface CertificateGroups {
   /** Los que se pueden usar para firmar, arriba. */

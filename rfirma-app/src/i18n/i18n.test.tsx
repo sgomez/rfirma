@@ -129,12 +129,12 @@ describe("la resolución de cadenas", () => {
     // `returnEmptyString: false` es normativo (ID-130): sin él, una cadena
     // vacía se daría por buena y la interfaz saldría en blanco.
     expect(i18n.options.returnEmptyString).toBe(false);
-    expect(i18n.t("actions.sign")).toBe(es.actions.sign);
+    expect(i18n.t("actions.cancel")).toBe(es.actions.cancel);
   });
 
   it("usa el idioma pedido cuando sí está traducido", () => {
-    expect(createI18n("en").t("actions.sign")).toBe("Sign document");
-    expect(createI18n("es").t("actions.sign")).toBe("Firmar documento");
+    expect(createI18n("en").t("actions.cancel")).toBe("Cancel");
+    expect(createI18n("es").t("actions.cancel")).toBe("Cancelar");
   });
 
   it("no olfatea el idioma: no hay detector de idioma en las dependencias", () => {
@@ -174,7 +174,7 @@ function Probe({ onFailure }: { onFailure?: (thrown: unknown) => void }) {
 
   return (
     <div>
-      <p>{t("actions.sign")}</p>
+      <p>{t("actions.cancel")}</p>
       <p>{language}</p>
       <button type="button" onClick={() => void setLanguage("en").catch(onFailure)}>
         {t("actions.change")}
@@ -193,13 +193,13 @@ describe("el cambio de idioma", () => {
       </LanguageProvider>,
     );
 
-    expect(screen.getByText("Firmar documento")).toBeInTheDocument();
+    expect(screen.getByText("Cancelar")).toBeInTheDocument();
 
     await act(async () => {
       screen.getByRole("button").click();
     });
 
-    expect(screen.getByText("Sign document")).toBeInTheDocument();
+    expect(screen.getByText("Cancel")).toBeInTheDocument();
     expect(screen.getByText("en")).toBeInTheDocument();
     await expect(preference.read()).resolves.toBe("en");
   });
@@ -226,7 +226,7 @@ describe("el cambio de idioma", () => {
     // El rechazo llega a quien lo tiene que contar…
     expect(failure).toBeInstanceOf(Error);
     // …y la ventana ha vuelto al idioma anterior, que es lo que ese aviso dice.
-    expect(screen.getByText("Firmar documento")).toBeInTheDocument();
+    expect(screen.getByText("Cancelar")).toBeInTheDocument();
     expect(screen.getByText("es")).toBeInTheDocument();
   });
 
@@ -239,6 +239,6 @@ describe("el cambio de idioma", () => {
       </LanguageProvider>,
     );
 
-    expect(screen.getByText("Sign document")).toBeInTheDocument();
+    expect(screen.getByText("Cancel")).toBeInTheDocument();
   });
 });

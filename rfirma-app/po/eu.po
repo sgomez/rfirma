@@ -11,9 +11,6 @@ msgstr ""
 msgid "app.name"
 msgstr "rFirma"
 
-msgid "actions.sign"
-msgstr "Sinatu dokumentua"
-
 msgid "actions.cancel"
 msgstr "Utzi"
 
@@ -674,8 +671,9 @@ msgstr "rFirman instalatuta"
 msgid "panel.certificate.retry"
 msgstr "Bilatu berriro"
 
-msgid "panel.certificate.otherModule"
-msgstr "Beste modulu bat…"
+#. {{date}} es la fecha de caducidad, ya formateada según el idioma.
+msgid "panel.certificate.expiresOn"
+msgstr "{{date}}(e)an iraungitzen da"
 
 msgid "panel.certificate.empty.title"
 msgstr "Ez dugu ziurtagiririk aurkitu"
@@ -777,6 +775,17 @@ msgstr "Ezin da {{folder}}(e)n idatzi"
 
 msgid "panel.footer.retry"
 msgstr "Saiatu berriro"
+
+#. {{name}} es el nombre y primer apellido de quien firma.
+msgid "panel.footer.signAs"
+msgstr "Sinatu honela: {{name}}"
+
+#. {{name}} es el nombre y primer apellido de quien firma.
+msgid "panel.footer.signingAs"
+msgstr "{{name}} gisa sinatzen"
+
+msgid "panel.footer.addCertificate"
+msgstr "Gehitu ziurtagiri bat…"
 
 msgid "panel.signed.summary"
 msgstr "Laburpena"
@@ -1060,7 +1069,10 @@ msgid "preferences.honourAutomaticSelection.label"
 msgstr "Errespetatu egoitzak eskatzen duen ziurtagiri-hautapen automatikoa"
 
 msgid "preferences.honourAutomaticSelection.hint"
-msgstr "Egoitzak eskatzen badu eta zure ziurtagirietako bakarra onartzen badu, galdetu gabe erabiltzen da. Zure biltegiak PINik eskatzen ez badu, sinadura ezer ikusi gabe aterako da."
+msgstr ""
+"Egoitzak eskatzen badu eta zure ziurtagirietako bakarra onartzen badu, "
+"galdetu gabe erabiltzen da. Zure biltegiak PINik eskatzen ez badu, sinadura "
+"ezer ikusi gabe aterako da."
 
 msgid "preferences.rememberActivity.label"
 msgstr "Gogoratu nire jarduera"
@@ -1145,7 +1157,12 @@ msgid "about.update.upToDate"
 msgstr "Azken bertsioan zaude"
 
 msgid "about.independence"
-msgstr "Proiektu independentea. rFirmak ez du zerikusirik AutoFirmarekin, ez eta bezero ofiziala argitaratzen duen Estatuko Administrazio Orokorrarekin ere, eta ez du haien babesik. Aplikazio ofiziala behar baduzu, deskargatu ezazu haien webgunetik. rFirmarekin arazoren bat aurkitzen baduzu, jakinarazi gure biltegian, eta ez AutoFirmaren taldeari."
+msgstr ""
+"Proiektu independentea. rFirmak ez du zerikusirik AutoFirmarekin, ez eta "
+"bezero ofiziala argitaratzen duen Estatuko Administrazio Orokorrarekin ere, "
+"eta ez du haien babesik. Aplikazio ofiziala behar baduzu, deskargatu ezazu "
+"haien webgunetik. rFirmarekin arazoren bat aurkitzen baduzu, jakinarazi gure "
+"biltegian, eta ez AutoFirmaren taldeari."
 
 #. No se traduce: es una URL.
 msgid "about.repository"
@@ -1169,7 +1186,8 @@ msgstr ""
 "Egoitza elektronikoekin erabiltzeko zure ekipoa konfiguratu behar dugu."
 
 msgid "setup.language.body"
-msgstr "Aukeratu rFirmaren hizkuntza. Geroago alda dezakezu Hobespenak atalean."
+msgstr ""
+"Aukeratu rFirmaren hizkuntza. Geroago alda dezakezu Hobespenak atalean."
 
 msgid "setup.step"
 msgstr "Urratsa {{current}}/{{total}}"
@@ -1404,7 +1422,10 @@ msgstr ""
 "duzu?"
 
 msgid "sede.confirm.messages.signingCertifiedPdf"
-msgstr "Sinatu nahi duzun PDFa ziurtatuta dago, eta ez du sinadura berririk onartzen. Zurea gehitzeak aurreko sinadura baliogabetuko du. Hala ere sinatu nahi duzu?"
+msgstr ""
+"Sinatu nahi duzun PDFa ziurtatuta dago, eta ez du sinadura berririk "
+"onartzen. Zurea gehitzeak aurreko sinadura baliogabetuko du. Hala ere sinatu "
+"nahi duzu?"
 
 msgid "sede.confirm.messages.signingModifiedPdfForm"
 msgstr ""
@@ -1423,7 +1444,9 @@ msgid "sede.marking.title"
 msgstr "Markatu non doan zure sinadura"
 
 msgid "sede.marking.hint"
-msgstr "Orriak zure sinadura dokumentuan ikustea eskatzen du. Marraztu laukia orrian saguarekin."
+msgstr ""
+"Orriak zure sinadura dokumentuan ikustea eskatzen du. Marraztu laukia orrian "
+"saguarekin."
 
 msgid "sede.marking.accept"
 msgstr "Jarraitu"
@@ -1456,7 +1479,9 @@ msgid "sede.saving.lead"
 msgstr "Aukeratu sistemaren elkarrizketa-koadroan non gorde nahi duzun."
 
 msgid "sede.saving.leadUnwritable"
-msgstr "Ezin izan da aukeratutako helmugan gorde. Aukeratu beste bat sistemaren elkarrizketa-koadroan."
+msgstr ""
+"Ezin izan da aukeratutako helmugan gorde. Aukeratu beste bat sistemaren "
+"elkarrizketa-koadroan."
 
 msgid "sede.loading.title"
 msgstr "Fitxategi bat kargatzen"
@@ -1551,7 +1576,10 @@ msgid "sede.oldWebClient.title"
 msgstr "Orri hau zaharkituta dago"
 
 msgid "sede.oldWebClient.body"
-msgstr "Orriak rFirmarekin hitz egiten duen piezaren bertsio zahar bat erabiltzen du, eta akatsak izan ditzake edo baliteke segurua ez izatea. Sakatu Ulertuta jarraitzeko; zerbait gaizki badoa, jakinarazi orria kudeatzen duenari."
+msgstr ""
+"Orriak rFirmarekin hitz egiten duen piezaren bertsio zahar bat erabiltzen "
+"du, eta akatsak izan ditzake edo baliteke segurua ez izatea. Sakatu Ulertuta "
+"jarraitzeko; zerbait gaizki badoa, jakinarazi orria kudeatzen duenari."
 
 msgid "sede.oldWebClient.dismiss"
 msgstr "Ulertuta"
@@ -1584,7 +1612,11 @@ msgstr ""
 "eta rFirmak banaka artatzen ditu."
 
 msgid "sede.refusals.portsTaken"
-msgstr "{{origin}}(e)k eskaintzen dituen atakak beste aplikazio bat erabiltzen ari da, eta rFirmak ezin izan du erantzuteko kanala ireki. Itxi aplikazio hori (AutoFirma edo rFirmaren beste kopia bat izan daiteke) eta saiatu berriro orritik."
+msgstr ""
+"{{origin}}(e)k eskaintzen dituen atakak beste aplikazio bat erabiltzen ari "
+"da, eta rFirmak ezin izan du erantzuteko kanala ireki. Itxi aplikazio hori "
+"(AutoFirma edo rFirmaren beste kopia bat izan daiteke) eta saiatu berriro "
+"orritik."
 
 msgid "sede.refusals.unknown"
 msgstr "{{origin}}(e)k rFirmak artatu ezin duen zerbait bidali du."
@@ -1628,7 +1660,9 @@ msgid "sede.refusals.batchSigningFailed"
 msgstr "{{origin}}(e)k eskatzen zuen sortaren sinadura ez da osatzera iritsi."
 
 msgid "sede.refusals.triphaseServerUrlMissing"
-msgstr "{{origin}}(e)k bere sinadura-zerbitzuarekin sinatzeko eskatu du, baina ez du esan non dagoen."
+msgstr ""
+"{{origin}}(e)k bere sinadura-zerbitzuarekin sinatzeko eskatu du, baina ez du "
+"esan non dagoen."
 
 msgid "sede.refusals.triphaseServerException"
 msgstr "{{origin}}(e)ko sinadura-zerbitzuak errore bat eman du."
@@ -1637,58 +1671,93 @@ msgid "sede.refusals.triphaseServerUnreachable"
 msgstr "{{origin}}(e)ko sinadura-zerbitzuak ez du erantzun."
 
 msgid "sede.refusals.triphaseServerUnexpectedAnswer"
-msgstr "{{origin}}(e)ko sinadura-zerbitzuak rFirmak irakurtzen ez dakien zerbait erantzun du."
+msgstr ""
+"{{origin}}(e)ko sinadura-zerbitzuak rFirmak irakurtzen ez dakien zerbait "
+"erantzun du."
 
 msgid "sede.refusals.certificateNotFound"
-msgstr "Aukeratutako ziurtagiria jada ez dago erabilgarri, edo {{origin}}(e)k ez du onartzen."
+msgstr ""
+"Aukeratutako ziurtagiria jada ez dago erabilgarri, edo {{origin}}(e)k ez du "
+"onartzen."
 
 msgid "sede.refusals.folderMissing"
-msgstr "rFirmak {{origin}}(e)rako idatzi behar zuen karpeta jada ez da existitzen."
+msgstr ""
+"rFirmak {{origin}}(e)rako idatzi behar zuen karpeta jada ez da existitzen."
 
 msgid "sede.refusals.unwritable"
 msgstr "rFirmak ezin izan du idatzi {{origin}}(e)k behar zuen fitxategia."
 
 msgid "sede.refusals.invalidSignature"
-msgstr "{{origin}}(e)k bidali duen dokumentuak baliozkoa ez den sinadura bat dakar."
+msgstr ""
+"{{origin}}(e)k bidali duen dokumentuak baliozkoa ez den sinadura bat dakar."
 
 msgid "sede.refusals.confirmationNeeded"
-msgstr "{{origin}}(e)k zuri galdetu gabe sinatzeko eskatu du, baina dokumentuak zerbait berrestea behar du lehenago."
+msgstr ""
+"{{origin}}(e)k zuri galdetu gabe sinatzeko eskatu du, baina dokumentuak "
+"zerbait berrestea behar du lehenago."
 
 msgid "sede.refusals.localBatchSign"
 msgstr "{{origin}}(e)k bidali duen sorta ezin da dagoen bezala sinatu."
 
 msgid "sede.refusals.siteErrandNotLive"
-msgstr "{{origin}}(e)rekin zegoen izapidea amaituta zegoen zure erantzuna iritsi zenean."
+msgstr ""
+"{{origin}}(e)rekin zegoen izapidea amaituta zegoen zure erantzuna iritsi "
+"zenean."
 
 msgid "sede.refusals.pdfHasUnregisteredSignatures"
-msgstr "{{origin}}(e)k bidali duen PDFak bere inprimakian jasota ez dauden sinadurak dakartza, eta rFirmak ez du horien gainean sinatzen zuk berretsi gabe."
+msgstr ""
+"{{origin}}(e)k bidali duen PDFak bere inprimakian jasota ez dauden sinadurak "
+"dakartza, eta rFirmak ez du horien gainean sinatzen zuk berretsi gabe."
 
 msgid "sede.refusals.secretOnTheReaderKeypad"
-msgstr "Ziurtagiri honen PINa irakurgailuan idazten da, eta rFirmak oraindik ez daki horrela eskatzen."
+msgstr ""
+"Ziurtagiri honen PINa irakurgailuan idazten da, eta rFirmak oraindik ez daki "
+"horrela eskatzen."
 
 msgid "sede.refusals.userCancelled"
-msgstr "PIN eskaera bertan behera utzi duzu; beraz, {{origin}}(e)k eskatzen zuen sinadura ez da egin."
+msgstr ""
+"PIN eskaera bertan behera utzi duzu; beraz, {{origin}}(e)k eskatzen zuen "
+"sinadura ez da egin."
 
 msgid "sede.refusals.promptFailed"
-msgstr "rFirmak ezin izan dizu PINa eskatu {{origin}}(e)k eskatzen zuen sinadurarako."
+msgstr ""
+"rFirmak ezin izan dizu PINa eskatu {{origin}}(e)k eskatzen zuen sinadurarako."
 
 msgid "sede.refusals.explicitXades"
-msgstr "{{origin}}(e)k sinadura mota zahar bat eskatu du, jada segurua ez dena: sinadura hori zurea ez den beste dokumentu batena balitz bezala pasa liteke. Horregatik, rFirmak ez du egiten. Ez da zure akatsa; izapidea amaitu behar baduzu, jarri harremanetan {{origin}}(e)rekin."
+msgstr ""
+"{{origin}}(e)k sinadura mota zahar bat eskatu du, jada segurua ez dena: "
+"sinadura hori zurea ez den beste dokumentu batena balitz bezala pasa liteke. "
+"Horregatik, rFirmak ez du egiten. Ez da zure akatsa; izapidea amaitu behar "
+"baduzu, jarri harremanetan {{origin}}(e)rekin."
 
 msgid "sede.refusals.invoiceMultisignature"
-msgstr "{{origin}}(e)k dagoeneko sinatuta dagoen faktura elektroniko bati sinadura bat gehitzeko eskatu du. Faktura elektronikoak sinadura bakarra onartzen du, beraz rFirmak ezin du egin. Ez da zure akatsa; izapidea amaitu behar baduzu, jarri harremanetan {{origin}}(e)rekin."
+msgstr ""
+"{{origin}}(e)k dagoeneko sinatuta dagoen faktura elektroniko bati sinadura "
+"bat gehitzeko eskatu du. Faktura elektronikoak sinadura bakarra onartzen du, "
+"beraz rFirmak ezin du egin. Ez da zure akatsa; izapidea amaitu behar baduzu, "
+"jarri harremanetan {{origin}}(e)rekin."
 
 msgid "sede.refusals.unsupportedCountersignature"
-msgstr "{{origin}}(e)k beste pertsona baten sinaduraren gainean sinatzeko eskatu du, hori onartzen ez duen dokumentu mota batean, beraz rFirmak ezin du egin. Ez da zure akatsa; izapidea amaitu behar baduzu, jarri harremanetan {{origin}}(e)rekin."
+msgstr ""
+"{{origin}}(e)k beste pertsona baten sinaduraren gainean sinatzeko eskatu du, "
+"hori onartzen ez duen dokumentu mota batean, beraz rFirmak ezin du egin. Ez "
+"da zure akatsa; izapidea amaitu behar baduzu, jarri harremanetan {{origin}}"
+"(e)rekin."
 
 msgid "sede.siteNotes.explicitXades"
-msgstr "Kendu mode=explicit edo erabili CAdES esplizitua, dokumentua sartu gabe sinatzen baitu."
+msgstr ""
+"Kendu mode=explicit edo erabili CAdES esplizitua, dokumentua sartu gabe "
+"sinatzen baitu."
 
 msgid "sede.siteNotes.invoiceMultisignature"
-msgstr "FacturaE-k ez du kosinadurarik ez kontrasinadurarik onartzen; eskatu sinadura soil bat (sign)."
+msgstr ""
+"FacturaE-k ez du kosinadurarik ez kontrasinadurarik onartzen; eskatu "
+"sinadura soil bat (sign)."
 
 msgid "sede.siteNotes.unsupportedCountersignature"
-msgstr "Kontrasinadura CAdES, CMS eta XAdES formatuetan bakarrik dago; beste formatu batean, eskatu kosinadura bat (cosign)."
+msgstr ""
+"Kontrasinadura CAdES, CMS eta XAdES formatuetan bakarrik dago; beste formatu "
+"batean, eskatu kosinadura bat (cosign)."
 
 msgid "sede.noCertificate.noneTitle"
 msgstr "Ez duzu ziurtagiririk"

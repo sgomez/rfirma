@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Certificate } from "./certificate";
-import { groupCertificates, installedCertificates } from "./certificate";
+import { firstNameAndSurname, groupCertificates, installedCertificates } from "./certificate";
 
 function aCertificate(overrides: Partial<Certificate> = {}): Certificate {
   return {
@@ -15,6 +15,16 @@ function aCertificate(overrides: Partial<Certificate> = {}): Certificate {
     ...overrides,
   };
 }
+
+describe("firstNameAndSurname", () => {
+  it("keeps the given name and the first surname, for the «Firmar como» button", () => {
+    expect(firstNameAndSurname("Ada Lovelace Byron")).toBe("Ada Lovelace");
+  });
+
+  it("leaves a single given name as it is", () => {
+    expect(firstNameAndSurname("Ada")).toBe("Ada");
+  });
+});
 
 describe("groupCertificates", () => {
   it("puts the usable ones in the available group and the rest in the unusable one", () => {

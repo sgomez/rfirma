@@ -8,10 +8,11 @@ const noop = () => {};
 
 // Grada A: React, jsdom y el catálogo. Nada de token ni de puente.
 describe("Header", () => {
-  it("shows no status badge while no document is open", () => {
+  // #973: ni certificado ni insignia de documento — el certificado lo dice el
+  // botón «Firmar como» del panel y el estado, la pestaña.
+  it("shows no status badge, ever", () => {
     renderWithCatalog(
       <Header
-        status={null}
         menuAnchor="header"
         onOpenStatus={noop}
         onOpenPreferences={noop}
@@ -24,27 +25,11 @@ describe("Header", () => {
     expect(screen.queryByText("Firmado")).not.toBeInTheDocument();
   });
 
-  it("shows the cached badge of the open document", () => {
-    renderWithCatalog(
-      <Header
-        status="Unsigned"
-        menuAnchor="header"
-        onOpenStatus={noop}
-        onOpenPreferences={noop}
-        onOpenHelp={noop}
-        onOpenAbout={noop}
-      />,
-    );
-
-    expect(screen.getByText("Sin firmar")).toBeInTheDocument();
-  });
-
   // ID-53: el icono es un `<svg>` en línea copiado del artboard, no el `\u2630`
   // de texto que había antes ni un icono de fuente.
   it("draws the menu button with an inline svg icon", () => {
     renderWithCatalog(
       <Header
-        status={null}
         menuAnchor="header"
         onOpenStatus={noop}
         onOpenPreferences={noop}
@@ -63,7 +48,6 @@ describe("Header", () => {
   it("starts with the menu closed", () => {
     renderWithCatalog(
       <Header
-        status={null}
         menuAnchor="header"
         onOpenStatus={noop}
         onOpenPreferences={noop}
@@ -82,7 +66,6 @@ describe("Header", () => {
   it("has no menu bar, only the menu button", () => {
     renderWithCatalog(
       <Header
-        status={null}
         menuAnchor="header"
         onOpenStatus={noop}
         onOpenPreferences={noop}
@@ -99,7 +82,6 @@ describe("Header", () => {
     const user = userEvent.setup();
     renderWithCatalog(
       <Header
-        status={null}
         menuAnchor="header"
         onOpenStatus={noop}
         onOpenPreferences={noop}
@@ -124,7 +106,6 @@ describe("Header", () => {
     const openStatus = vi.fn();
     renderWithCatalog(
       <Header
-        status={null}
         menuAnchor="header"
         onOpenStatus={openStatus}
         onOpenPreferences={noop}
@@ -145,7 +126,6 @@ describe("Header", () => {
     const openHelp = vi.fn();
     renderWithCatalog(
       <Header
-        status={null}
         menuAnchor="header"
         onOpenStatus={noop}
         onOpenPreferences={noop}
@@ -165,7 +145,6 @@ describe("Header", () => {
     const user = userEvent.setup();
     renderWithCatalog(
       <Header
-        status={null}
         menuAnchor="header"
         onOpenStatus={noop}
         onOpenPreferences={noop}
@@ -199,7 +178,6 @@ describe("Header", () => {
     const user = userEvent.setup();
     renderWithCatalog(
       <Header
-        status={null}
         menuAnchor="header"
         onOpenStatus={noop}
         onOpenPreferences={noop}
@@ -218,7 +196,6 @@ describe("Header", () => {
     const user = userEvent.setup();
     renderWithCatalog(
       <Header
-        status={null}
         menuAnchor="header"
         hasAttention
         onOpenStatus={noop}
@@ -241,7 +218,6 @@ describe("Header", () => {
     const openPreferences = vi.fn();
     renderWithCatalog(
       <Header
-        status={null}
         menuAnchor="header"
         onOpenStatus={noop}
         onOpenPreferences={openPreferences}
@@ -262,7 +238,6 @@ describe("Header", () => {
     const openAbout = vi.fn();
     renderWithCatalog(
       <Header
-        status={null}
         menuAnchor="header"
         onOpenStatus={noop}
         onOpenPreferences={noop}
@@ -281,7 +256,6 @@ describe("Header", () => {
     const user = userEvent.setup();
     renderWithCatalog(
       <Header
-        status={null}
         menuAnchor="header"
         onOpenStatus={noop}
         onOpenPreferences={noop}
@@ -304,7 +278,6 @@ describe("Header", () => {
     const user = userEvent.setup();
     renderWithCatalog(
       <Header
-        status={null}
         menuAnchor="header"
         onOpenStatus={noop}
         onOpenPreferences={noop}
@@ -326,7 +299,6 @@ describe("Header", () => {
   it("hides the menu button where the two entries live in the native menu", () => {
     renderWithCatalog(
       <Header
-        status={null}
         menuAnchor="native"
         onOpenStatus={noop}
         onOpenPreferences={noop}

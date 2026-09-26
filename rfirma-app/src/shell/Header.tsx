@@ -1,17 +1,10 @@
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AlertIcon, ExternalLinkIcon, MenuIcon } from "../design-system/icons";
-import type { Badge } from "../documents/document";
 import "./Header.css";
 import type { MenuAnchor } from "./menuAnchor";
 
 interface HeaderProps {
-  /**
-   * La insignia del documento abierto, o `null` cuando no hay ninguno. Dos
-   * valores y solo dos: la cabecera no conoce `Unavailable`, que describe una
-   * fila de la bandeja y no el documento que se está firmando.
-   */
-  status: Badge | null;
   /** Dónde va el menú. Ver [`MenuAnchor`]. */
   menuAnchor: MenuAnchor;
   /**
@@ -27,8 +20,10 @@ interface HeaderProps {
 }
 
 /**
- * La franja superior de la ventana: identidad, estado del documento y el
- * **único** menú de la aplicación.
+ * La franja superior de la ventana: identidad y el **único** menú de la
+ * aplicación. Sin certificado ni insignia de documento: el certificado lo
+ * dice el botón «Firmar como» del panel y el estado, la pestaña
+ * (docs/design/cabecera.md).
  *
  * No hay barra de menús: el ADR-0007 la retiró, y por eso aquí no hay
  * `role="menubar"` ni entradas de *Archivo* o *Ver*. Abrir un documento tiene
@@ -44,7 +39,6 @@ interface HeaderProps {
  * pide.
  */
 export function Header({
-  status,
   menuAnchor,
   hasAttention = false,
   onOpenStatus,
@@ -89,11 +83,6 @@ export function Header({
     <header className="header">
       <p className="header__name rf-title">{t("app.name")}</p>
       <div className="rf-row">
-        {status !== null && (
-          <span className={status === "Signed" ? "rf-badge rf-badge--primary" : "rf-badge"}>
-            {t(status === "Signed" ? "badges.signed" : "badges.unsigned")}
-          </span>
-        )}
         {menuAnchor === "header" && (
           <div className="header__menu" ref={container}>
             <button

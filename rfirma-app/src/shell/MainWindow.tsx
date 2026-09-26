@@ -1,13 +1,10 @@
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import type { Badge } from "../documents/document";
 import { Header } from "./Header";
 import "./MainWindow.css";
 import type { MenuAnchor } from "./menuAnchor";
 
 interface MainWindowProps {
-  /** La insignia del documento abierto, o `null` si no hay ninguno. */
-  status: Badge | null;
   /** Dónde va el menú. Ver [`MenuAnchor`]. */
   menuAnchor: MenuAnchor;
   /** Si «Estado de rFirma» lleva el triángulo de aviso. Ver [`Header`]. */
@@ -59,7 +56,6 @@ interface MainWindowProps {
  * certificados. Quién llena cada región es cosa de su propio sub-issue.
  */
 export function MainWindow({
-  status,
   menuAnchor,
   hasAttention = false,
   onOpenStatus = () => {},
@@ -82,7 +78,6 @@ export function MainWindow({
   return (
     <div className="main-window">
       <Header
-        status={status}
         menuAnchor={menuAnchor}
         hasAttention={hasAttention}
         onOpenStatus={onOpenStatus}

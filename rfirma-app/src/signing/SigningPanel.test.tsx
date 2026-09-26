@@ -145,7 +145,7 @@ describe("SigningPanel", () => {
       },
     });
 
-    expect(screen.getByText("Ada Lovelace Byron")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Firmar como Ada Lovelace" })).toBeInTheDocument();
     const toggle = screen.getByRole("switch", {
       name: /Estampar un recuadro de firma en el documento/,
     });
@@ -168,7 +168,7 @@ describe("SigningPanel", () => {
     const primaries = Array.from(
       document.querySelectorAll<HTMLButtonElement>("button.rf-btn--primary"),
     );
-    expect(primaries.map((button) => button.textContent)).toEqual(["Firmar documento"]);
+    expect(primaries.map((button) => button.textContent)).toEqual(["Firmar como Ada Lovelace"]);
 
     const buttons = screen.getAllByRole("button");
     expect(buttons.at(-1)).toBe(primaries[0]);
@@ -222,7 +222,7 @@ describe("SigningPanel", () => {
     renderPanel({ destination: { folder: "Documentos", name: null, writable: false } });
 
     expect(screen.getByText("No se puede escribir en Documentos")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Firmar documento" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Firmar como Ada Lovelace" })).toBeEnabled();
   });
 
   it("does not promise a destination it has just said it cannot write to", () => {
@@ -273,17 +273,19 @@ describe("SigningPanel", () => {
     expect(screen.getByText("Ya lleva 1 firma: la tuya será una cofirma.")).toBeInTheDocument();
   });
 
-  it("offers two ways out when no certificate turned up", async () => {
+  it("offers two ways out when no certificate turned up, in the footer", async () => {
     const user = userEvent.setup();
     const onRetryCertificates = vi.fn();
     renderPanel({ certificate: { kind: "empty" }, onRetryCertificates });
 
     expect(screen.getByText(/comprueba que está insertada/)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Otro módulo…" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Añadir un certificado…" })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Volver a buscar" }));
 
     expect(onRetryCertificates).toHaveBeenCalled();
-    expect(screen.getByRole("button", { name: "Firmar documento" })).toBeDisabled();
+    // Sin certificados no hay con qué firmar, así que tampoco hay botón que
+    // deshabilitar: el pie ofrece las dos salidas y nada más.
+    expect(screen.queryByRole("combobox", { name: "Certificado" })).not.toBeInTheDocument();
   });
 
   it("shows a token failure as a translated situation with the raw CKR apart", () => {
@@ -307,7 +309,7 @@ describe("SigningPanel", () => {
     });
 
     expect(screen.getByRole("alert")).toHaveTextContent(/El certificado caducó el/);
-    expect(screen.getByRole("button", { name: "Firmar documento" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Firmar como Ada Lovelace" })).toBeDisabled();
   });
 
   it("warns about a revoked certificate and refuses to sign with it", () => {
@@ -320,12 +322,14 @@ describe("SigningPanel", () => {
     });
 
     expect(screen.getByRole("alert")).toHaveTextContent(/revocado/);
-    expect(screen.getByRole("button", { name: "Firmar documento" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Firmar como Ada Lovelace" })).toBeDisabled();
   });
 
   /** Con varios y nada elegido no hay preselección: el orden de la lista solo
    * dice en qué orden cargaron los módulos, y elegir con qué identidad se firma
-   * un documento con validez jurídica no lo hace la aplicación por su cuenta. */
+   * un documento con validez jurídica no lo hace la aplicación por su cuenta.
+   * Sin nada elegido el botón partido es **uno solo**, que abre la lista en
+   * vez de firmar (docs/design/panel-de-firma.md § Certificado). */
   it("does not preselect anything when there are several certificates", () => {
     renderPanel({
       certificate: {
@@ -337,33 +341,69 @@ describe("SigningPanel", () => {
     expect(screen.getByRole("combobox", { name: "Certificado" })).toHaveTextContent(
       "Elegir certificado",
     );
-    expect(screen.getByRole("button", { name: "Firmar documento" })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: /Firmar/ })).not.toBeInTheDocument();
   });
 
-  /** Con uno solo se elige solo: elegir entre una cosa no es elegir. */
-  it("keeps a single certificate chosen and ready to sign", () => {
-    renderPanel();
+  /**
+   * Ni siquiera con uno solo se elige solo (#973, revierte el #197): elegir
+   * con qué identidad se firma un documento con validez jurídica no lo hace
+   * la aplicación por su cuenta.
+   */
+  it("does not preselect the sole certificate either", () => {
+    renderPanel({ certificate: { kind: "unchosen", certificates: [certificate] } });
 
     expect(screen.getByRole("combobox", { name: "Certificado" })).toHaveTextContent(
-      "Ada Lovelace Byron",
+      "Elegir certificado",
     );
-    expect(screen.getByRole("button", { name: "Firmar documento" })).toBeEnabled();
+    expect(screen.queryByRole("button", { name: /Firmar/ })).not.toBeInTheDocument();
   });
 
-  /** El disparador es ahora el sitio donde se cambia, así que el botón
-   * `Cambiar` de la tarjeta ya no existe. El del pie es el del destino. */
-  it("has no «change» button in the certificate section any more", () => {
+  /**
+   * El botón dice el nombre y el primer apellido, con el nombre completo en
+   * el `title`; la lista, más abajo, lo sigue mostrando entero.
+   */
+  it("shortens the holder's name to the given name and the first surname on the button", () => {
     renderPanel();
 
-    const section = screen.getByRole("region", { name: "Certificado" });
-    expect(within(section).queryByRole("button", { name: "Cambiar" })).not.toBeInTheDocument();
+    const signButton = screen.getByRole("button", { name: "Firmar como Ada Lovelace" });
+    expect(signButton).toHaveAttribute("title", "Ada Lovelace Byron");
+  });
+
+  it("opens the certificate list upwards, over the footer", async () => {
+    const user = userEvent.setup();
+    renderPanel({
+      certificate: {
+        kind: "chosen",
+        certificate,
+        certificates: [certificate, { ...certificate, id: "otra", holderName: "Grace Hopper" }],
+      },
+    });
+
+    await user.click(screen.getByRole("combobox", { name: "Certificado" }));
+
+    const list = screen.getByRole("listbox", { name: "Certificados disponibles" });
+    expect(list).toBeInTheDocument();
+    expect(screen.getAllByRole("option")).toHaveLength(2);
+  });
+
+  it("has no «change» button any more: the trigger is where it changes", () => {
+    renderPanel();
+
+    const splitButton = screen
+      .getByRole("button", { name: "Firmar como Ada Lovelace" })
+      .closest(".certificate-footer");
+    expect(splitButton).not.toBeNull();
+    expect(
+      within(splitButton as HTMLElement).queryByRole("button", { name: "Cambiar" }),
+    ).not.toBeInTheDocument();
   });
 
   it("waits for the certificates without pretending there are none", () => {
     renderPanel({ certificate: { kind: "loading" } });
 
     expect(screen.getByText("Buscando certificados…")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Firmar documento" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Buscando certificados…" })).toBeDisabled();
+    expect(screen.queryByRole("combobox", { name: "Certificado" })).not.toBeInTheDocument();
   });
 });
 
@@ -373,7 +413,7 @@ describe("SigningPanel · Colocación", () => {
   /** El interruptor encendido, que es donde vive el bloque entero. */
   const visible = { ...DEFAULT_VISIBLE_SIGNATURE, enabled: true };
 
-  const signButton = () => screen.getByRole("button", { name: "Firmar documento" });
+  const signButton = () => screen.getByRole("button", { name: "Firmar como Ada Lovelace" });
   const field = () => screen.getByLabelText("Páginas donde se sella");
 
   it("refuses to sign a visible signature that is not placed anywhere, and says what to do", () => {

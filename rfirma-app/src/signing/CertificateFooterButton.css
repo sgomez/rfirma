@@ -1,0 +1,152 @@
+/*
+ * El botón partido del pie. Ver [`CertificateFooterButton`] y la sección
+ * «Certificado» de docs/design/panel-de-firma.md, de donde salen las medidas.
+ */
+
+.certificate-footer {
+  position: relative;
+}
+
+.certificate-footer__row {
+  display: flex;
+  height: 44px;
+}
+
+.certificate-footer__unchosen {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--rf-space-xs);
+}
+
+/* El nombre no empuja al chevron: con un titular largo se recorta y la punta
+   de flecha sigue donde el ojo la busca. */
+.certificate-footer__sign {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+  font-weight: 400;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.certificate-footer__chevron {
+  display: flex;
+  flex: none;
+  width: 44px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-left: 1px solid var(--rf-on-primary);
+  border-top-right-radius: var(--rf-radius-md);
+  border-bottom-right-radius: var(--rf-radius-md);
+  background: var(--rf-primary);
+  color: var(--rf-on-primary);
+  cursor: pointer;
+}
+
+.certificate-footer__chevron:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.certificate-footer__arrow,
+.certificate-footer__arrow--up {
+  display: flex;
+}
+
+.certificate-footer__arrow--up {
+  transform: rotate(180deg);
+}
+
+.certificate-footer__warning {
+  margin-top: var(--rf-space-xs);
+  padding: var(--rf-space-xs);
+  border: 2px solid var(--rf-border-strong);
+  border-radius: var(--rf-radius-md);
+  font-weight: 600;
+}
+
+/* Flota sobre el pie, ancla por posición (`bottom`/`left`/`width` inline,
+   calculados del disparador) y crece hacia arriba: ID-308, igual que
+   CertificateSelect.css. */
+.certificate-footer__layer {
+  position: fixed;
+  z-index: 200;
+  border-radius: var(--rf-radius-md);
+  box-shadow: var(--rf-shadow-elevated);
+  background: var(--rf-surface);
+}
+
+.certificate-footer__list {
+  overflow-y: auto;
+  border: 1px solid var(--rf-border-strong);
+  border-radius: var(--rf-radius-md);
+  background: var(--rf-surface);
+}
+
+.certificate-footer__group-label {
+  padding: 6px var(--rf-space-sm);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--rf-text-muted);
+  text-transform: uppercase;
+}
+
+.certificate-footer__option {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--rf-space-xs);
+  padding: 12px var(--rf-space-sm);
+  border-bottom: 1px solid var(--rf-border-subtle);
+  cursor: pointer;
+}
+
+.certificate-footer__option:last-child {
+  border-bottom: none;
+}
+
+.certificate-footer__text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.certificate-footer__holder {
+  overflow: hidden;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.certificate-footer__line {
+  line-height: 1.35;
+}
+
+.certificate-footer__option--active {
+  background: var(--rf-bg);
+}
+
+.certificate-footer__option--unusable {
+  opacity: 0.6;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.certificate-footer__reason {
+  line-height: 1.35;
+  font-weight: 600;
+}
+
+.certificate-footer__check {
+  display: flex;
+  flex: none;
+  width: 16px;
+  margin-top: 3px;
+  color: var(--rf-primary);
+}

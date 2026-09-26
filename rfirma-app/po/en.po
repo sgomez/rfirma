@@ -11,9 +11,6 @@ msgstr ""
 msgid "app.name"
 msgstr "rFirma"
 
-msgid "actions.sign"
-msgstr "Sign document"
-
 msgid "actions.cancel"
 msgstr "Cancel"
 
@@ -658,8 +655,9 @@ msgstr "Installed in rFirma"
 msgid "panel.certificate.retry"
 msgstr "Look again"
 
-msgid "panel.certificate.otherModule"
-msgstr "Another module…"
+#. {{date}} es la fecha de caducidad, ya formateada según el idioma.
+msgid "panel.certificate.expiresOn"
+msgstr "expires on {{date}}"
 
 msgid "panel.certificate.empty.title"
 msgstr "We didn't find any certificate"
@@ -758,6 +756,17 @@ msgstr "Can't write in {{folder}}"
 
 msgid "panel.footer.retry"
 msgstr "Try again"
+
+#. {{name}} es el nombre y primer apellido de quien firma.
+msgid "panel.footer.signAs"
+msgstr "Sign as {{name}}"
+
+#. {{name}} es el nombre y primer apellido de quien firma.
+msgid "panel.footer.signingAs"
+msgstr "Signing as {{name}}"
+
+msgid "panel.footer.addCertificate"
+msgstr "Add a certificate…"
 
 msgid "panel.signed.summary"
 msgstr "Summary"
@@ -1037,7 +1046,10 @@ msgid "preferences.honourAutomaticSelection.label"
 msgstr "Honour the automatic certificate selection requested by the site"
 
 msgid "preferences.honourAutomaticSelection.hint"
-msgstr "If the site asks for it and accepts only one of your certificates, it is used without asking you. If your store does not ask for a PIN, the signature goes out without you seeing anything."
+msgstr ""
+"If the site asks for it and accepts only one of your certificates, it is "
+"used without asking you. If your store does not ask for a PIN, the signature "
+"goes out without you seeing anything."
 
 msgid "preferences.rememberActivity.label"
 msgstr "Remember my activity"
@@ -1122,7 +1134,12 @@ msgid "about.update.upToDate"
 msgstr "You're on the latest version"
 
 msgid "about.independence"
-msgstr "Independent project. rFirma isn't related to AutoFirma or to the Spanish Administration, who publish the official client, nor is it endorsed by them. If you need the official application, download it from their website. If you find a problem with rFirma, report it in our repository, not to the AutoFirma team."
+msgstr ""
+"Independent project. rFirma isn't related to AutoFirma or to the Spanish "
+"Administration, who publish the official client, nor is it endorsed by them. "
+"If you need the official application, download it from their website. If you "
+"find a problem with rFirma, report it in our repository, not to the "
+"AutoFirma team."
 
 #. No se traduce: es una URL.
 msgid "about.repository"
@@ -1146,7 +1163,8 @@ msgstr ""
 "with government sites we need to set up your computer."
 
 msgid "setup.language.body"
-msgstr "Choose the language for rFirma. You can change it later in Preferences."
+msgstr ""
+"Choose the language for rFirma. You can change it later in Preferences."
 
 msgid "setup.step"
 msgstr "Step {{current}} of {{total}}"
@@ -1375,7 +1393,10 @@ msgstr ""
 "sign it anyway?"
 
 msgid "sede.confirm.messages.signingCertifiedPdf"
-msgstr "The PDF you want to sign is certified and does not allow new signatures. Adding yours will invalidate the previous signature. Do you want to sign it anyway?"
+msgstr ""
+"The PDF you want to sign is certified and does not allow new signatures. "
+"Adding yours will invalidate the previous signature. Do you want to sign it "
+"anyway?"
 
 msgid "sede.confirm.messages.signingModifiedPdfForm"
 msgstr ""
@@ -1394,7 +1415,9 @@ msgid "sede.marking.title"
 msgstr "Mark where your signature goes"
 
 msgid "sede.marking.hint"
-msgstr "The page asks for your signature to be visible on the document. Draw the box on the page with the mouse."
+msgstr ""
+"The page asks for your signature to be visible on the document. Draw the box "
+"on the page with the mouse."
 
 msgid "sede.marking.accept"
 msgstr "Continue"
@@ -1427,7 +1450,9 @@ msgid "sede.saving.lead"
 msgstr "Choose where to save it in the system dialog."
 
 msgid "sede.saving.leadUnwritable"
-msgstr "The chosen destination could not be written. Choose another one in the system dialog."
+msgstr ""
+"The chosen destination could not be written. Choose another one in the "
+"system dialog."
 
 msgid "sede.loading.title"
 msgstr "Loading a file"
@@ -1518,7 +1543,10 @@ msgid "sede.oldWebClient.title"
 msgstr "This page is out of date"
 
 msgid "sede.oldWebClient.body"
-msgstr "The page uses an old version of the part that talks to rFirma, and it may have bugs or not be secure. Press Got it to continue; if something goes wrong, tell whoever runs the page."
+msgstr ""
+"The page uses an old version of the part that talks to rFirma, and it may "
+"have bugs or not be secure. Press Got it to continue; if something goes "
+"wrong, tell whoever runs the page."
 
 msgid "sede.oldWebClient.dismiss"
 msgstr "Got it"
@@ -1548,7 +1576,10 @@ msgstr ""
 "one at a time."
 
 msgid "sede.refusals.portsTaken"
-msgstr "{{origin}} offers ports that another application is already using, so rFirma could not open the channel to answer it. Close that application — it may be AutoFirma or another copy of rFirma — and try again from the page."
+msgstr ""
+"{{origin}} offers ports that another application is already using, so rFirma "
+"could not open the channel to answer it. Close that application — it may be "
+"AutoFirma or another copy of rFirma — and try again from the page."
 
 msgid "sede.refusals.unknown"
 msgstr "{{origin}} sent something rFirma can't handle."
@@ -1587,7 +1618,9 @@ msgid "sede.refusals.batchSigningFailed"
 msgstr "The batch signature {{origin}} asked for didn't complete."
 
 msgid "sede.refusals.triphaseServerUrlMissing"
-msgstr "{{origin}} asked to sign with its signing service, but didn't say where it is."
+msgstr ""
+"{{origin}} asked to sign with its signing service, but didn't say where it "
+"is."
 
 msgid "sede.refusals.triphaseServerException"
 msgstr "The {{origin}} signing service returned an error."
@@ -1599,7 +1632,9 @@ msgid "sede.refusals.triphaseServerUnexpectedAnswer"
 msgstr "The {{origin}} signing service answered something rFirma can't read."
 
 msgid "sede.refusals.certificateNotFound"
-msgstr "The chosen certificate is no longer available, or {{origin}} doesn't accept it."
+msgstr ""
+"The chosen certificate is no longer available, or {{origin}} doesn't accept "
+"it."
 
 msgid "sede.refusals.folderMissing"
 msgstr "The folder rFirma had to write to for {{origin}} no longer exists."
@@ -1611,7 +1646,9 @@ msgid "sede.refusals.invalidSignature"
 msgstr "The document {{origin}} sent carries a signature that isn't valid."
 
 msgid "sede.refusals.confirmationNeeded"
-msgstr "{{origin}} asked to sign without asking you, but the document needs you to confirm something first."
+msgstr ""
+"{{origin}} asked to sign without asking you, but the document needs you to "
+"confirm something first."
 
 msgid "sede.refusals.localBatchSign"
 msgstr "The batch {{origin}} sent can't be signed as it is."
@@ -1620,34 +1657,58 @@ msgid "sede.refusals.siteErrandNotLive"
 msgstr "The errand with {{origin}} had already ended when your answer arrived."
 
 msgid "sede.refusals.pdfHasUnregisteredSignatures"
-msgstr "The PDF {{origin}} sent carries signatures that aren't recorded in its form, and rFirma won't sign on top of them unless you confirm."
+msgstr ""
+"The PDF {{origin}} sent carries signatures that aren't recorded in its form, "
+"and rFirma won't sign on top of them unless you confirm."
 
 msgid "sede.refusals.secretOnTheReaderKeypad"
-msgstr "This certificate's PIN is typed on the card reader, and rFirma can't ask for it that way yet."
+msgstr ""
+"This certificate's PIN is typed on the card reader, and rFirma can't ask for "
+"it that way yet."
 
 msgid "sede.refusals.userCancelled"
-msgstr "You cancelled the PIN request, so the signature {{origin}} asked for wasn't made."
+msgstr ""
+"You cancelled the PIN request, so the signature {{origin}} asked for wasn't "
+"made."
 
 msgid "sede.refusals.promptFailed"
-msgstr "rFirma couldn't ask you for the PIN for the signature {{origin}} asked for."
+msgstr ""
+"rFirma couldn't ask you for the PIN for the signature {{origin}} asked for."
 
 msgid "sede.refusals.explicitXades"
-msgstr "{{origin}} asked for an old kind of signature that is no longer safe: that signature could pass for the signature of a different document from yours. That's why rFirma doesn't make it. It's not your fault; if you need to finish the errand, contact {{origin}}."
+msgstr ""
+"{{origin}} asked for an old kind of signature that is no longer safe: that "
+"signature could pass for the signature of a different document from yours. "
+"That's why rFirma doesn't make it. It's not your fault; if you need to "
+"finish the errand, contact {{origin}}."
 
 msgid "sede.refusals.invoiceMultisignature"
-msgstr "{{origin}} asked to add a signature to an electronic invoice that is already signed. An electronic invoice only takes one signature, so rFirma can't do it. It's not your fault; if you need to finish the errand, contact {{origin}}."
+msgstr ""
+"{{origin}} asked to add a signature to an electronic invoice that is already "
+"signed. An electronic invoice only takes one signature, so rFirma can't do "
+"it. It's not your fault; if you need to finish the errand, contact "
+"{{origin}}."
 
 msgid "sede.refusals.unsupportedCountersignature"
-msgstr "{{origin}} asked to sign over someone else's signature on a kind of document that doesn't allow it, so rFirma can't do it. It's not your fault; if you need to finish the errand, contact {{origin}}."
+msgstr ""
+"{{origin}} asked to sign over someone else's signature on a kind of document "
+"that doesn't allow it, so rFirma can't do it. It's not your fault; if you "
+"need to finish the errand, contact {{origin}}."
 
 msgid "sede.siteNotes.explicitXades"
-msgstr "Remove mode=explicit or use explicit CAdES, which signs the document without including it."
+msgstr ""
+"Remove mode=explicit or use explicit CAdES, which signs the document without "
+"including it."
 
 msgid "sede.siteNotes.invoiceMultisignature"
-msgstr "FacturaE doesn't support cosigning or countersigning; ask for a simple signature (sign)."
+msgstr ""
+"FacturaE doesn't support cosigning or countersigning; ask for a simple "
+"signature (sign)."
 
 msgid "sede.siteNotes.unsupportedCountersignature"
-msgstr "Countersigning only exists in CAdES, CMS and XAdES; in any other format, ask for a cosignature (cosign)."
+msgstr ""
+"Countersigning only exists in CAdES, CMS and XAdES; in any other format, ask "
+"for a cosignature (cosign)."
 
 msgid "sede.noCertificate.noneTitle"
 msgstr "You don't have any certificate"

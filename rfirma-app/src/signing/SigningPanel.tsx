@@ -3,7 +3,7 @@ import { FileIcon, InfoIcon } from "../design-system/icons";
 import type { NamedFailure } from "../errors/classify";
 import { Switch } from "../preferences/Switch";
 import type { PageChoice, PageSet, PageSets, Placement } from "../viewer/signatureBox";
-import { CertificateBlock } from "./CertificateBlock";
+import { CertificateNotice } from "./CertificateNotice";
 import type { Certificate } from "./certificate";
 import { isUsable } from "./certificate";
 import type { Destination } from "./destination";
@@ -212,18 +212,12 @@ export function SigningPanel({
 
         <hr className="rf-divider" />
 
-        <section className="panel__section" aria-label={t("panel.certificate.title")}>
-          <p className="rf-label panel__heading">{t("panel.certificate.title")}</p>
-          <CertificateBlock
-            state={certificate}
-            onChoose={onChooseCertificate}
-            onRetry={onRetryCertificates}
-            onChooseModule={onChooseModule}
-            onOpenHelp={onOpenHelp}
-          />
-        </section>
-
-        <hr className="rf-divider" />
+        {(certificate.kind === "empty" || certificate.kind === "failed") && (
+          <>
+            <CertificateNotice state={certificate} onOpenHelp={onOpenHelp} />
+            <hr className="rf-divider" />
+          </>
+        )}
 
         <section
           className={usable ? "panel__section" : "panel__section panel__section--inert"}
@@ -279,9 +273,12 @@ export function SigningPanel({
         documentName={document.name}
         onChangeDestination={onChangeDestination}
         unplaced={unplaced}
-        usable={usable}
         signing={signing}
         blocked={blocked}
+        certificate={certificate}
+        onChooseCertificate={onChooseCertificate}
+        onRetryCertificates={onRetryCertificates}
+        onChooseModule={onChooseModule}
         onSign={onSign}
         onOpenHelp={onOpenHelp}
       />

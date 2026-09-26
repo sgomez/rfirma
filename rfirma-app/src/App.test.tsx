@@ -68,7 +68,8 @@ describe("App", () => {
       {},
       // Con certificado: desde el ID-108 el bloque entero de firma visible
       // —la rúbrica incluida— está apagado hasta que hay con qué firmar.
-      failingCertificateStore(0, [aCertificate]),
+      // `remembered` porque sin él no hay preselección ni con uno solo (#973).
+      failingCertificateStore(0, [{ ...aCertificate, remembered: true }]),
       rubrics,
     );
 
@@ -142,14 +143,14 @@ describe("App", () => {
     expect(screen.getByText("no se deja escribir")).toBeInTheDocument();
   });
 
-  it("opens a document from the + menu and shows its badge in the header", async () => {
+  it("opens a document from the + menu without putting its badge in the header", async () => {
     const user = userEvent.setup();
     renderApp(inMemoryRecents(), [document("factura.pdf")]);
 
     await openPdf(user);
 
     expect(await screen.findByText("factura.pdf")).toBeInTheDocument();
-    expect(screen.getByRole("banner")).toHaveTextContent("Sin firmar");
+    expect(screen.getByRole("banner")).not.toHaveTextContent("Sin firmar");
   });
 
   /**
@@ -219,7 +220,11 @@ describe("App", () => {
 
     await user.click(retry);
 
-    expect(await within(panel).findByText("Ada Lovelace Byron")).toBeInTheDocument();
+    // Sin preselección tampoco tras resolverse el fallo: el desplegable trae
+    // el certificado, pero sigue sin elegir ninguno (#973).
+    expect(await within(panel).findByRole("combobox", { name: "Certificado" })).toHaveTextContent(
+      "Elegir certificado",
+    );
   });
 
   /**
@@ -244,7 +249,7 @@ describe("App", () => {
     const trigger = await within(panel).findByRole("combobox", { name: "Certificado" });
 
     expect(trigger).toHaveTextContent("Elegir certificado");
-    expect(within(panel).getByRole("button", { name: "Firmar documento" })).toBeDisabled();
+    expect(within(panel).queryByRole("button", { name: /Firmar/ })).not.toBeInTheDocument();
 
     await user.click(trigger);
     // La lista vive en un portal, fuera de `panel` (ID-308): se busca en todo
@@ -254,10 +259,9 @@ describe("App", () => {
     if (second === undefined) throw new Error("la lista tenia que traer dos filas");
     await user.click(second);
 
-    expect(trigger).toHaveTextContent("Grace Hopper Murray");
     // Con el interruptor de firma visible encendido y sin recuadro colocado,
     // firmar sigue apagado: es el otro «no» del ID-93, y no el del certificado.
-    expect(within(panel).getByRole("button", { name: "Firmar documento" })).toBeDisabled();
+    expect(within(panel).getByRole("button", { name: "Firmar como Grace Hopper" })).toBeDisabled();
   });
 
   /**
@@ -284,12 +288,12 @@ describe("App", () => {
 
     await openPdf(user);
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
-    const trigger = await within(panel).findByRole("combobox", { name: "Certificado" });
 
-    expect(trigger).toHaveTextContent("Grace Hopper Murray");
     // Con el interruptor de firma visible encendido y sin recuadro colocado,
     // firmar sigue apagado: es el otro «no» del ID-93, y no el del certificado.
-    expect(within(panel).getByRole("button", { name: "Firmar documento" })).toBeDisabled();
+    expect(
+      await within(panel).findByRole("button", { name: "Firmar como Grace Hopper" }),
+    ).toBeDisabled();
   });
 
   /**
@@ -344,8 +348,28 @@ describe("App", () => {
     expect(trigger).toHaveTextContent("Elegir certificado");
   });
 
-  /** «Con uno solo se elige solo» gana una excepción: si ese único no sirve,
-   * el desplegable arranca sin elección (#197). */
+  /** El único caso que quedaba de «con uno solo se elige solo» —el
+   * utilizable— también desaparece (#973, revierte el #197). */
+  it("does not preselect the sole certificate even when it can be used", async () => {
+    const user = userEvent.setup();
+    renderApp(
+      inMemoryRecents(),
+      [document("factura.pdf")],
+      pdfsOf({ "factura.pdf": 2 }),
+      {},
+      { list: async () => [aCertificate] },
+    );
+
+    await user.click(trayDropZone());
+    const panel = await screen.findByRole("region", { name: "Panel de firma" });
+    const trigger = await within(panel).findByRole("combobox", { name: "Certificado" });
+
+    expect(trigger).toHaveTextContent("Elegir certificado");
+    expect(within(panel).queryByRole("button", { name: /Firmar/ })).not.toBeInTheDocument();
+  });
+
+  /** «Con uno solo se elige solo» ya no tiene excepciones que gane: si ese
+   * único no sirve, el desplegable sigue arrancando sin elección (#197). */
   it("does not preselect the sole certificate when it cannot be used", async () => {
     const user = userEvent.setup();
     const expired: Certificate = {

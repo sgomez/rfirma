@@ -351,7 +351,6 @@ describe("App", () => {
     await screen.findByRole("tab", { name: /factura\.pdf/ });
     await user.click(screen.getByRole("button", { name: "Abrir un PDF" }));
 
-    expect(screen.getByRole("banner")).toHaveTextContent("Sin firmar");
     expect(screen.getByRole("menuitem", { name: "Abrir un PDF…" })).toBeInTheDocument();
     expect(screen.queryByText("Recientes")).not.toBeInTheDocument();
   });
