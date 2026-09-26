@@ -2,16 +2,15 @@
 
 Instalar un certificado personal es llevarlo al almacén personal de la plataforma. En
 Windows es el almacén personal de la persona usuaria; en macOS, el llavero de inicio de
-sesión. Esta spec solo construye Linux, así que las otras dos quedan aquí como regla para
-cuando tengan canal de distribución propio (ADR-0015); no hay código que las implemente
-todavía.
+sesión. Windows y macOS no tienen implementación: la regla de esta sección es la que
+seguirán cuando tengan canal de distribución propio (ADR-0015).
 
 En Linux, el destino es el **Almacén de rFirma**: una única base NSS, propia de la
 aplicación, cifrada con un PIN aleatorio. El PIN lo genera rFirma la primera vez que hace
 falta y lo guarda en el llavero del escritorio; la persona no lo ve ni lo teclea nunca.
 Sustituye al almacén por fichero actual —un directorio con su propia base **sin PIN** por
-cada `.p12` instalado, descrito en `docs/research/p12-en-almacen-nss.md`— que se retira
-**sin migración**: no tiene usuarios todavía.
+cada `.p12` instalado, descrito en `docs/research/p12-en-almacen-nss.md`—, que se retira
+**sin migración**.
 
 ## De qué protege, y de qué no
 
@@ -56,14 +55,19 @@ si es la primera vez) y cuando se firma (para abrir la sesión NSS que la firma 
 ## El camino al llavero: el portal de secretos, con `oo7`
 
 rFirma llega al llavero del escritorio por el portal de secretos
-(`org.freedesktop.impl.portal.Secret`), con el crate `oo7`. Dentro del flatpak no hace
-falta ningún permiso nuevo en el manifiesto: el portal le da a la aplicación su propio
-secreto, aislado del de cualquier otra. Fuera del flatpak, `oo7` habla directamente con
-Secret Service por D-Bus.
+(`org.freedesktop.portal.Secret`), con el crate `oo7`. Dentro del flatpak no hace falta
+ningún permiso nuevo en el manifiesto: el portal le da a la aplicación su propio secreto,
+aislado del de cualquier otra. Fuera del flatpak —también en los paquetes deb y rpm, que
+son canal propio (ADR-0015)— no hay sandbox que el portal pueda mediar, y `oo7` habla
+directamente con Secret Service por D-Bus: ese proceso ve el llavero completo, igual que
+cualquier otro que corra como la persona. No cambia el modelo de amenaza del ADR-0005 —ese
+atacante ya queda fuera de él—, pero el aislamiento de esta sección solo existe dentro del
+flatpak.
 
-Se descarta dar acceso a todo el llavero de la persona (ver *Considered Options*): el
-portal aísla el secreto de rFirma del resto del llavero, que es justo lo que un cliente de
-firma necesita y nada más.
+Se descarta que el flatpak pida acceso a todo el llavero de la persona, por ejemplo con un
+`talk-name` a `org.freedesktop.secrets` en el manifiesto (ver *Considered Options*): dentro
+del sandbox, el portal ya aísla el secreto de rFirma del resto del llavero sin pedir nada
+más, que es justo lo que un cliente de firma necesita.
 
 **Estado de KDE, sin comprobar a mano todavía.** KWallet implementa
 `org.freedesktop.impl.portal.Secret` desde KDE Frameworks 6.2 (fusionado el 21 de abril de
@@ -95,18 +99,19 @@ destruir su único certificado instalado sin haberlo consentido.
 
 ## Considered Options
 
-- **Seguir con un almacén por fichero, sin cifrar, uno por `.p12`.** Es lo que hay hoy.
-  Descartada: dejar la clave privada de un certificado personal en claro en disco no
-  protege nada en reposo, y es precisamente lo que este ADR corrige.
+- **Seguir con un almacén por fichero, sin cifrar, uno por `.p12`.** Descartada: dejar la
+  clave privada de un certificado personal en claro en disco no protege nada en reposo, y es
+  precisamente lo que este ADR corrige.
 - **Contraseña maestra que teclea la persona.** Descartada: es la misma clase de secreto
-  que el PIN, pero además de un almacén más que recordar, y AutoFirma ya demuestra el
-  resultado cuando ese hábito se traslada a plantillas de configuración (`RestoreConfigLinux.java`
-  con `KS_PASSWORD` fijo en el fuente). rFirma no añade una contraseña que gestionar cuando
-  el llavero del sistema ya resuelve el mismo problema sin pedírsela a nadie.
-- **Acceso a todo el llavero de la persona, sin pasar por el portal.** Descartada: el
-  llavero completo guarda secretos de otras aplicaciones —contraseñas de red, tokens de
-  otras cuentas—, y rFirma solo necesita uno propio. El portal ya ofrece ese secreto
-  aislado sin pedir nada más.
+  que el PIN, pero además una contraseña más que la persona tiene que recordar, y AutoFirma
+  ya demuestra el resultado cuando ese hábito se traslada a plantillas de configuración
+  (`RestoreConfigLinux.java` con `KS_PASSWORD` fijo en el fuente). rFirma no añade una
+  contraseña que gestionar cuando el llavero del sistema ya resuelve el mismo problema sin
+  pedírsela a nadie.
+- **Pedir en el flatpak un `talk-name` a `org.freedesktop.secrets`, sin pasar por el
+  portal.** Descartada: el llavero completo guarda secretos de otras aplicaciones
+  —contraseñas de red, tokens de otras cuentas—, y rFirma solo necesita uno propio. Dentro
+  del sandbox, el portal ya ofrece ese secreto aislado sin pedir nada más.
 - **Usar el `.p12` directamente para firmar, sin instalarlo.** Descartada: rompe la regla
   del ID-423 —instalar es llevar el certificado al almacén de la plataforma— y deja sin
   protección en reposo exactamente la clave que este ADR protege.
@@ -114,7 +119,7 @@ destruir su único certificado instalado sin haberlo consentido.
 ## Consequences
 
 - El almacén por fichero actual y su base de datos sin PIN se retiran sin migración: quien
-  tenga un `.p12` instalado hoy lo vuelve a instalar cuando esta pieza llegue.
+  tenga un `.p12` instalado hoy lo vuelve a instalar en el Almacén de rFirma.
 - `selectcert`, el arranque y cualquier operación que no firme ni instale siguen sin tocar
   el llavero ni pedir nada a la persona.
 - Sin portal de secretos ni Secret Service disponibles, Linux se queda sin instalación de
