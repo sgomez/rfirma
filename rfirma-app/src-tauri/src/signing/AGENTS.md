@@ -35,10 +35,10 @@ relativas a `src/signing/`; para situarte en un fichero, `just outline <ruta>`.
 | `domain/admissibility.rs` | Lo que no se puede firmar en PAdES, decidido antes del PIN; lo que la petición levanta (`Waivers`), y el `/SubFilter` que el puente no lee. No es de ningún otro formato. Pruebas en `domain/admissibility/tests.rs`. |
 | `domain/bridge.rs` | El vocabulario del puente —`Format` entre otros— y las tres etapas del ciclo: `PreSignature` → `SealedPreSignature` → `CompletedCycle`. La carga es de `adapters/ffi.rs`. Pruebas en `domain/bridge/tests.rs`. |
 | `domain/bridge/error.rs` | `BridgeError` y `DataRejection`: lo que puede salir mal al cruzar la frontera con el puente, sin la frontera. |
-| `domain/config.rs` | Los siete ajustes de firma y ni uno más, y `SigningChoice`, lo que la persona decidió de esta firma; aquí viven `Placement` y `PadesRect`. Pruebas en `domain/config/tests.rs`. |
+| `domain/config.rs` | Los ajustes de firma y ni uno más, y `SigningChoice`, lo que la persona decidió de esta firma; aquí viven `Placement` y `PadesRect`. Pruebas en `domain/config/tests.rs`. |
 | `domain/isolate_gone.rs` | El marcador de que el hilo del isolate murió, sin el hilo. |
 | `domain/language.rs` | Los cinco idiomas (ADR-0009). Pruebas en `domain/language/tests.rs`. |
-| `domain/layer2_text.rs` | El texto del recuadro visible, desde las casillas o desde un modelo, y la máscara sobre el `CN`. Pruebas en `domain/layer2_text/tests.rs`. |
+| `domain/layer2_text.rs` | El texto del recuadro visible, compuesto desde un modelo, y la máscara sobre el `CN`. Pruebas en `domain/layer2_text/tests.rs`. |
 | `domain/placement.rs` | Del recuadro arrastrado en el visor al `/Rect` del PDF: `PageSet`, `VisibleBox`, `Spot`, `BoxSize` y `PlacementError`. Pruebas en `domain/placement/tests.rs`. |
 | `domain/properties.rs` | Los `extraParams` en el formato del puente, y `merged_with`: quién manda cuando la sede y rFirma tocan la misma clave. Pruebas en `domain/properties/tests.rs`. |
 | `domain/session_seal.rs` | El sello de sesión: una invariante entre prefirma y postfirma (ADR-0016). Pruebas en `domain/session_seal/tests.rs`. |
