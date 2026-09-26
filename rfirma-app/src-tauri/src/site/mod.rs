@@ -85,7 +85,7 @@ impl SiteRoot {
 }
 
 /// La mesa del trámite sobre las raíces de producción.
-pub type SiteDesk<'a> = ErrandDesk<'a, Isolate, Isolate, adapters::desk::Neighbours<'a>>;
+pub type SiteDesk<'a> = ErrandDesk<'a, Isolate, Isolate, adapters::desk::Neighbourhood<'a>>;
 
 /// Cierra lo consentido fuera del ciclo —el lote, remoto o local, o la firma contra el servidor trifásico— con el secreto que entró por la única puerta del PIN.
 pub fn the_pending_signature_signed(

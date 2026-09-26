@@ -35,9 +35,7 @@ use crate::site::domain::protocol::{
     SiteOperation,
 };
 use crate::site::domain::signing::{SigningRefusal, SiteSignature};
-use crate::site::ports::{
-    Certificates, ScratchDocuments, SiteSigning, SiteSigningRequest, TokenSigning,
-};
+use crate::site::ports::{Neighbours, SiteSigningRequest};
 
 /// Motor de filtrado simulado para pruebas.
 pub(crate) struct AnEngine {
@@ -348,7 +346,7 @@ pub(crate) struct TheNeighbours<'a> {
     pub(crate) session: SigningSession,
 }
 
-impl Certificates for TheNeighbours<'_> {
+impl Neighbours for TheNeighbours<'_> {
     fn listed(&self) -> Result<Vec<TokenCertificate>, TokenError> {
         if self.ours.is_empty() {
             return NoToken.list_across(&self.stores);
@@ -384,31 +382,11 @@ impl Certificates for TheNeighbours<'_> {
     fn automatic_selection_honoured(&self) -> bool {
         self.memory.configuration().honour_automatic_selection
     }
-}
 
-impl TokenSigning for TheNeighbours<'_> {
-    fn secret_of(&self, certificate: &TokenCertificate) -> Result<StoreSecret, SigningRefusal> {
-        self.token.secret_of(certificate)
-    }
-
-    fn sign(
-        &self,
-        certificate: &TokenCertificate,
-        secret: &crate::identity::domain::protected_secret::ProtectedSecret,
-        algorithm: &str,
-        data: &[u8],
-    ) -> Result<Vec<u8>, SigningRefusal> {
-        self.token.sign(certificate, secret, algorithm, data)
-    }
-}
-
-impl ScratchDocuments for TheNeighbours<'_> {
     fn open_unrecorded(&self, path: std::path::PathBuf) -> String {
         self.opened.mint(Document::passing_through(path))
     }
-}
 
-impl SiteSigning for TheNeighbours<'_> {
     fn begin(&self, request: SiteSigningRequest<'_>) -> Result<StoreSecret, SigningRefusal> {
         let document = crate::documents::application::documents::opened_document(
             self.opened,
@@ -425,7 +403,7 @@ impl SiteSigning for TheNeighbours<'_> {
             request.certificate,
             session::DeclaredByTheSite {
                 format: request.format,
-                algorithm: crate::site::adapters::desk::composed_for(
+                algorithm: crate::site::ports::composed_for(
                     request.algorithm,
                     request.certificate.key_kind(),
                 )
@@ -461,6 +439,20 @@ impl SiteSigning for TheNeighbours<'_> {
     fn the_pdf_password(&self, _after_a_wrong_one: bool) -> Option<String> {
         None
     }
+
+    fn secret_of(&self, certificate: &TokenCertificate) -> Result<StoreSecret, SigningRefusal> {
+        self.token.secret_of(certificate)
+    }
+
+    fn sign(
+        &self,
+        certificate: &TokenCertificate,
+        secret: &crate::identity::domain::protected_secret::ProtectedSecret,
+        algorithm: &str,
+        data: &[u8],
+    ) -> Result<Vec<u8>, SigningRefusal> {
+        self.token.sign(certificate, secret, algorithm, data)
+    }
 }
 
 /// Los mismos vecinos, pero la firma ya está hecha: para probar la rama de `finish` que compone
@@ -471,7 +463,7 @@ pub(crate) struct ASignerThatSucceeds<'a> {
     pub(crate) signature: SiteSignature,
 }
 
-impl Certificates for ASignerThatSucceeds<'_> {
+impl Neighbours for ASignerThatSucceeds<'_> {
     fn listed(&self) -> Result<Vec<TokenCertificate>, TokenError> {
         Ok(self.listed.clone())
     }
@@ -495,31 +487,11 @@ impl Certificates for ASignerThatSucceeds<'_> {
     fn automatic_selection_honoured(&self) -> bool {
         self.neighbours.automatic_selection_honoured()
     }
-}
 
-impl TokenSigning for ASignerThatSucceeds<'_> {
-    fn secret_of(&self, certificate: &TokenCertificate) -> Result<StoreSecret, SigningRefusal> {
-        self.neighbours.secret_of(certificate)
-    }
-
-    fn sign(
-        &self,
-        certificate: &TokenCertificate,
-        secret: &crate::identity::domain::protected_secret::ProtectedSecret,
-        algorithm: &str,
-        data: &[u8],
-    ) -> Result<Vec<u8>, SigningRefusal> {
-        self.neighbours.sign(certificate, secret, algorithm, data)
-    }
-}
-
-impl ScratchDocuments for ASignerThatSucceeds<'_> {
     fn open_unrecorded(&self, path: std::path::PathBuf) -> String {
         self.neighbours.open_unrecorded(path)
     }
-}
 
-impl SiteSigning for ASignerThatSucceeds<'_> {
     fn begin(&self, _request: SiteSigningRequest<'_>) -> Result<StoreSecret, SigningRefusal> {
         Ok(StoreSecret::NotNeeded)
     }
@@ -540,6 +512,20 @@ impl SiteSigning for ASignerThatSucceeds<'_> {
 
     fn the_pdf_password(&self, _after_a_wrong_one: bool) -> Option<String> {
         None
+    }
+
+    fn secret_of(&self, certificate: &TokenCertificate) -> Result<StoreSecret, SigningRefusal> {
+        self.neighbours.secret_of(certificate)
+    }
+
+    fn sign(
+        &self,
+        certificate: &TokenCertificate,
+        secret: &crate::identity::domain::protected_secret::ProtectedSecret,
+        algorithm: &str,
+        data: &[u8],
+    ) -> Result<Vec<u8>, SigningRefusal> {
+        self.neighbours.sign(certificate, secret, algorithm, data)
     }
 }
 

@@ -11,7 +11,7 @@ use crate::site::domain::batch_error::BatchError;
 use crate::site::domain::protocol::{AskedAlgorithm, SiteFilter};
 use crate::site::domain::signing::{SigningRefusal, SiteSignature};
 use crate::site::domain::triphase_server::TriphaseServerError;
-use crate::site::ports::{Certificates, FilterEngine, SiteSigning, SiteSigningRequest};
+use crate::site::ports::{FilterEngine, Neighbours, SiteSigningRequest};
 
 /// Por qué el trámite no sigue, antes de traducirlo a la ventana y al cable.
 #[derive(Debug)]
@@ -109,19 +109,18 @@ pub fn begin_for_the_site<E: FilterEngine>(
     terms: &SiteTerms<'_, E>,
     document: &str,
     certificate: &str,
-    certificates: &dyn Certificates,
-    signing: &dyn SiteSigning,
+    neighbours: &dyn Neighbours,
 ) -> Result<StoreSecret, SiteRefusal> {
-    let found = certificates.listed().map_err(SiteRefusal::Token)?;
+    let found = neighbours.listed().map_err(SiteRefusal::Token)?;
     let chosen = filtering::usable_certificate_for_the_site(
         terms.engine,
         terms.filter,
         &found,
         certificate,
-        certificates,
+        neighbours,
     )
     .map_err(SiteRefusal::NotUsableForTheSite)?;
-    Ok(signing.begin(SiteSigningRequest {
+    Ok(neighbours.begin(SiteSigningRequest {
         document,
         certificate: chosen,
         format: terms.format,
@@ -133,8 +132,8 @@ pub fn begin_for_the_site<E: FilterEngine>(
 }
 
 /// Postfirma de un trámite de sede: la firma vuelve en memoria y no se escribe nada (ADR-0011).
-pub fn finish_for_the_site(signing: &dyn SiteSigning) -> Result<SiteSignature, SiteRefusal> {
-    Ok(signing.finish()?)
+pub fn finish_for_the_site(neighbours: &dyn Neighbours) -> Result<SiteSignature, SiteRefusal> {
+    Ok(neighbours.finish()?)
 }
 
 #[cfg(test)]

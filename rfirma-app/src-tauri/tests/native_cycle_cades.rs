@@ -7,9 +7,9 @@ mod full_cycle {
     use rfirma_lib::identity::domain::algorithm::SignatureAlgorithm;
     use rfirma_lib::signing::application::cycle;
     use rfirma_lib::signing::domain::bridge::{ExpandRequest, Format, SignatureOperation};
-    use rfirma_lib::site::adapters::desk::composed_for;
     use rfirma_lib::site::domain::protocol::pairs_of;
     use rfirma_lib::site::domain::protocol::AskedAlgorithm;
+    use rfirma_lib::site::ports::composed_for;
 
     use super::support::{
         a_cycle_of, a_cycle_signed_by, an_installed_certificate, bridge, cades_cycle,

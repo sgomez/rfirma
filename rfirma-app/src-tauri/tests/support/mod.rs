@@ -28,7 +28,7 @@ pub use rfirma_lib::site::adapters::channel::{
     bind_first_free, serve, LoopbackListeners, SiteOperations,
 };
 pub use rfirma_lib::site::adapters::data_download::HttpDataSource;
-pub use rfirma_lib::site::adapters::desk::Neighbours;
+pub use rfirma_lib::site::adapters::desk::Neighbourhood;
 pub use rfirma_lib::site::adapters::relay::Relay;
 pub use rfirma_lib::site::adapters::tls::LocalServerCertificate;
 pub use rfirma_lib::site::application::errand::{

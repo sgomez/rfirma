@@ -16,14 +16,14 @@ use super::super::state::LiveErrand;
 use crate::site::application::batch;
 use crate::site::application::filtering;
 use crate::site::application::session::SiteRefusal;
-use crate::site::ports::{Certificates, FilterEngine};
+use crate::site::ports::{FilterEngine, Neighbours};
 
 /// Prepara el paso de consentimiento para una selección de certificados de sede.
 pub fn consent_for<E: FilterEngine>(
     engine: &E,
     request: &SelectCertificate,
     ours: Vec<TokenCertificate>,
-    certificates: &dyn Certificates,
+    certificates: &dyn Neighbours,
     live: &LiveErrand,
 ) -> ErrandStep {
     let accepted = match what_the_site_accepts(
@@ -61,7 +61,7 @@ pub fn consent_to_the_batch<E: FilterEngine>(
     engine: &E,
     request: BatchRequest,
     ours: Vec<TokenCertificate>,
-    certificates: &dyn Certificates,
+    certificates: &dyn Neighbours,
     live: &LiveErrand,
 ) -> ErrandStep {
     let accepted = match what_the_site_accepts(
@@ -95,7 +95,7 @@ pub fn consent_to_the_local_batch<E: FilterEngine>(
     engine: &E,
     ask: LocalBatchAsk,
     ours: Vec<TokenCertificate>,
-    certificates: &dyn Certificates,
+    certificates: &dyn Neighbours,
     live: &LiveErrand,
 ) -> ErrandStep {
     let LocalBatchAsk { request, batch } = ask;
@@ -143,7 +143,7 @@ pub(super) fn what_the_site_accepts<E: FilterEngine>(
     sticky: StickyCertificate,
     choice_waived: bool,
     ours: Vec<TokenCertificate>,
-    certificates: &dyn Certificates,
+    certificates: &dyn Neighbours,
     live: &LiveErrand,
 ) -> Result<Vec<TokenCertificate>, ErrandStep> {
     if sticky.resets() {
@@ -187,7 +187,7 @@ impl Preselected {
         rows: &[ListedCertificate],
         stuck: Option<String>,
         choice_waived: bool,
-        certificates: &dyn Certificates,
+        certificates: &dyn Neighbours,
     ) -> Self {
         let only = choice_waived.then(|| the_only_row_among(rows)).flatten();
         let without_asking =
@@ -224,7 +224,7 @@ fn the_only_one_among(accepted: &[TokenCertificate]) -> Option<&TokenCertificate
 pub(super) fn rows_preselecting_the_stuck(
     accepted: Vec<TokenCertificate>,
     sticky: StickyCertificate,
-    certificates: &dyn Certificates,
+    certificates: &dyn Neighbours,
     live: &LiveErrand,
 ) -> (Vec<ListedCertificate>, Option<String>) {
     let stuck_at = sticky

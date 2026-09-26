@@ -118,7 +118,10 @@ mod full_cycle {
 
     use rfirma_lib::identity::domain::certificate::{ListedCertificate, TokenCertificate};
     use rfirma_lib::identity::domain::error::TokenError;
-    use rfirma_lib::site::ports::Certificates;
+    use rfirma_lib::identity::domain::protected_secret::ProtectedSecret;
+    use rfirma_lib::identity::domain::secret::StoreSecret;
+    use rfirma_lib::site::domain::signing::{SigningRefusal, SiteSignature};
+    use rfirma_lib::site::ports::{Neighbours, SiteSigningRequest};
 
     use base64::Engine;
 
@@ -126,7 +129,8 @@ mod full_cycle {
 
     struct NoDiscoveredModules;
 
-    impl Certificates for NoDiscoveredModules {
+    // Solo se le pide el filtrado: el resto del puerto único no lo usa esta prueba.
+    impl Neighbours for NoDiscoveredModules {
         fn listed(&self) -> Result<Vec<TokenCertificate>, TokenError> {
             unreachable!("el filtrado recibe el listado hecho")
         }
@@ -149,6 +153,43 @@ mod full_cycle {
 
         fn automatic_selection_honoured(&self) -> bool {
             unreachable!("el filtrado no decide el consentimiento")
+        }
+
+        fn open_unrecorded(&self, _path: PathBuf) -> String {
+            unreachable!("el filtrado no apunta documentos de paso")
+        }
+
+        fn begin(&self, _request: SiteSigningRequest<'_>) -> Result<StoreSecret, SigningRefusal> {
+            unreachable!("el filtrado no abre el ciclo de la firma de sede")
+        }
+
+        fn sign_on_token(&self, _secret: &ProtectedSecret) -> Result<(), SigningRefusal> {
+            unreachable!("el filtrado no firma por el ciclo de la firma de sede")
+        }
+
+        fn finish(&self) -> Result<SiteSignature, SigningRefusal> {
+            unreachable!("el filtrado no cierra el ciclo de la firma de sede")
+        }
+
+        fn the_pdf_password(&self, _after_a_wrong_one: bool) -> Option<String> {
+            unreachable!("el filtrado no pide la contraseña del PDF")
+        }
+
+        fn secret_of(
+            &self,
+            _certificate: &TokenCertificate,
+        ) -> Result<StoreSecret, SigningRefusal> {
+            unreachable!("el filtrado no pide el secreto del lote remoto")
+        }
+
+        fn sign(
+            &self,
+            _certificate: &TokenCertificate,
+            _secret: &ProtectedSecret,
+            _algorithm: &str,
+            _data: &[u8],
+        ) -> Result<Vec<u8>, SigningRefusal> {
+            unreachable!("el filtrado no firma por el lote remoto")
         }
     }
 
