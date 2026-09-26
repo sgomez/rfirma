@@ -18,6 +18,9 @@ import java.util.Properties;
 
 import com.aowagie.text.Document;
 import com.aowagie.text.Paragraph;
+import com.aowagie.text.pdf.PRIndirectReference;
+import com.aowagie.text.pdf.PdfName;
+import com.aowagie.text.pdf.PdfReader;
 import com.aowagie.text.pdf.PdfWriter;
 
 /**
@@ -43,6 +46,9 @@ final class TestFixtures {
     private static final Path PSEUDONYM_P12 = Path.of("..", "testdata", "fnmt", "pseudonym-rsa.p12");
     private static final char[] PASSWORD = "1234".toCharArray();
     private static final char[] EXPIRED_PASSWORD = "G5cp,fYC9gje".toCharArray();
+    private static final String SIGN_ALGORITHM = "SHA256withRSA";
+    /** El {@code /SubFilter} que ningun detector de formato PAdES/CAdES del original reconoce. */
+    private static final String UNRECOGNIZED_SUBFILTER = "rfirma.unknown-format";
 
     private TestFixtures() { }
 
@@ -83,17 +89,72 @@ final class TestFixtures {
         return pades(certified, otherCertificateChain(), otherPrivateKey(), overCertified);
     }
 
+    /**
+     * El PDF firmado con un {@code /SubFilter} que el original no reconoce, en
+     * vez de con {@code ETSI.CAdES.detached}: la firma sigue siendo integra.
+     */
+    static byte[] signedWithUnrecognizedSubFilter(final byte[] pdf, final X509Certificate[] chain,
+            final PrivateKey key) throws Exception {
+        final Properties extraParams = new Properties();
+        extraParams.setProperty("signatureSubFilter", UNRECOGNIZED_SUBFILTER);
+        return pades(pdf, chain, key, extraParams);
+    }
+
     private static byte[] pades(final byte[] pdf, final X509Certificate[] chain,
             final PrivateKey key, final Properties extraParams) throws Exception {
         final PadesBridge.PreSignResult pre =
-                PadesBridge.preSign(pdf, "SHA256withRSA", chain, extraParams);
+                PadesBridge.preSign(pdf, SIGN_ALGORITHM, chain, extraParams);
 
-        final Signature signature = Signature.getInstance("SHA256withRSA");
+        final Signature signature = Signature.getInstance(SIGN_ALGORITHM);
         signature.initSign(key);
         signature.update(Base64.getDecoder().decode(pre.preSignB64()));
 
         return PadesBridge.postSign(pdf, chain, pre.stamp(), pre.session(),
                 Base64.getEncoder().encodeToString(signature.sign()));
+    }
+
+    /**
+     * Repinta la pagina en una revision incremental posterior a la firma, que es
+     * el ataque que el original llama PDF Shadow Attack. La revision se escribe a
+     * mano porque el PDF firmado cierra con un flujo de referencias cruzadas y una
+     * tabla clasica encadenada a el no la lee ni iText.
+     */
+    static byte[] withThePageRepaintedAfterSigning(final byte[] pdf) throws Exception {
+        final PdfReader reader = new PdfReader(pdf);
+        final int page =
+                ((PRIndirectReference) reader.getPageN(1).get(PdfName.CONTENTS)).getNumber();
+        final int root = ((PRIndirectReference) reader.getTrailer().get(PdfName.ROOT)).getNumber();
+        final int table = reader.getXrefSize();
+
+        final String painting = "1 0 0 RG 1 0 0 rg 50 50 400 300 re f\n";
+        final String repainted = "\n" + page + " 0 obj\n<< /Length " + painting.length()
+                + " >>\nstream\n" + painting + "endstream\nendobj\n";
+        final int pageOffset = pdf.length + 1;
+        final int tableOffset = pdf.length + repainted.length();
+
+        final ByteArrayOutputStream rows = new ByteArrayOutputStream();
+        rows.write(new byte[] {0, 0, 0, 0, 0, (byte) 0xff, (byte) 0xff});
+        rows.write(inUse(pageOffset));
+        rows.write(inUse(tableOffset));
+
+        final String opening = table + " 0 obj\n<< /Type /XRef /Size " + (table + 1)
+                + " /Index [0 1 " + page + " 1 " + table + " 1] /W [1 4 2] /Root " + root
+                + " 0 R /Prev " + reader.getLastXref() + " /Length " + rows.size()
+                + " >>\nstream\n";
+        final String closing = "\nendstream\nendobj\nstartxref\n" + tableOffset + "\n%%EOF\n";
+
+        final ByteArrayOutputStream out = new ByteArrayOutputStream();
+        out.write(pdf);
+        out.write(repainted.getBytes(StandardCharsets.ISO_8859_1));
+        out.write(opening.getBytes(StandardCharsets.ISO_8859_1));
+        out.write(rows.toByteArray());
+        out.write(closing.getBytes(StandardCharsets.ISO_8859_1));
+        return out.toByteArray();
+    }
+
+    private static byte[] inUse(final int offset) {
+        return new byte[] {1, (byte) (offset >>> 24), (byte) (offset >>> 16),
+                (byte) (offset >>> 8), (byte) offset, 0, 0};
     }
 
     /** Los 64 bytes que firman las pruebas de CAdES, donde el documento da igual. */
@@ -157,8 +218,18 @@ final class TestFixtures {
      * no se puede distinguir de «no se filtro nada».
      */
     static X509Certificate expiredCertificate() throws Exception {
+        return expiredCertificateChain()[0];
+    }
+
+    /** La cadena del certificado caducado del kit. */
+    static X509Certificate[] expiredCertificateChain() throws Exception {
+        return certificateChain(keyStore(EXPIRED_P12, EXPIRED_PASSWORD));
+    }
+
+    /** La clave privada del certificado caducado del kit. */
+    static PrivateKey expiredPrivateKey() throws Exception {
         final KeyStore ks = keyStore(EXPIRED_P12, EXPIRED_PASSWORD);
-        return certificateChain(ks)[0];
+        return (PrivateKey) ks.getKey(alias(ks), EXPIRED_PASSWORD);
     }
 
     /** El certificado con seudonimo de empleado publico del kit, suelto. */

@@ -1,6 +1,7 @@
 package es.gob.afirma.nativebridge;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.security.cert.X509Certificate;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
@@ -22,6 +23,7 @@ import com.aowagie.text.pdf.PdfSignatureAppearance;
 
 import es.gob.afirma.core.RuntimeConfigNeededException;
 import es.gob.afirma.signers.pades.PdfUtil;
+import es.gob.afirma.signvalidation.DataAnalizerUtil;
 import es.gob.afirma.signvalidation.SignValidity;
 import es.gob.afirma.signvalidation.SignValidity.SIGN_DETAIL_TYPE;
 import es.gob.afirma.signvalidation.SignValidity.VALIDITY_ERROR;
@@ -45,6 +47,15 @@ final class PreviousSignaturesBridge {
     private static final PdfName ETSI_RFC3161 = new PdfName("ETSI.RFC3161");
 
     private static final PdfName DOC_TIMESTAMP = new PdfName("DocTimeStamp");
+
+    /** Los {@code /SubFilter} que {@link SignatureFormatDetectorPadesCades#isPDF} reconoce como PAdES/CAdES. */
+    private static final List<PdfName> RECOGNIZED_SUBFILTERS = List.of(
+            new PdfName("adbe.pkcs7.detached"),
+            new PdfName("adbe.pkcs7.sha1"),
+            new PdfName("ETSI.CAdES.detached"));
+
+    /** El mismo tope por defecto que trae el original en {@code pagesToCheckShadowAttack}. */
+    private static final String DEFAULT_PAGES_TO_CHECK_SHADOW_ATTACK = "10";
 
     private PreviousSignaturesBridge() { }
 
@@ -111,7 +122,8 @@ final class PreviousSignaturesBridge {
                 validities.add(new SignValidity(SIGN_DETAIL_TYPE.KO,
                         VALIDITY_ERROR.CERTIFIED_SIGN_REVISION));
             }
-            final SignValidity validity = decisive(validities);
+            final SignValidity validity = withUnrecognizedFormat(
+                    hasUnrecognizedSubFilter(fields, name), decisive(validities));
             dated.add(new Dated(signingTime, new Signature(
                     readable(signer.getSubjectX500Principal()),
                     readable(signer.getIssuerX500Principal()),
@@ -122,7 +134,25 @@ final class PreviousSignaturesBridge {
         }
         dated.sort(Comparator.comparing(Dated::signingTime,
                 Comparator.nullsLast(Comparator.naturalOrder())));
-        return new Report(dated.stream().map(Dated::signature).toList(), false);
+        return new Report(dated.stream().map(Dated::signature).toList(),
+                changedAfterLastSignature(pdf, fields));
+    }
+
+    /** El PDF Shadow Attack del original, sin la excepcion con la que pide confirmar. */
+    private static boolean changedAfterLastSignature(final byte[] pdf, final AcroFields fields) {
+        final List<String> names = fields.getSignatureNames();
+        if (names.isEmpty() || fields.getRevision(names.get(0)) >= fields.getTotalRevisions()) {
+            return false;
+        }
+        try (InputStream lastSignedRevision = fields.extractRevision(names.get(0))) {
+            final SignValidity suspect = DataAnalizerUtil.checkPdfShadowAttack(
+                    pdf, lastSignedRevision, DEFAULT_PAGES_TO_CHECK_SHADOW_ATTACK);
+            return suspect != null
+                    && SIGN_DETAIL_TYPE.PENDING_CONFIRM_BY_USER == suspect.getValidity();
+        }
+        catch (final IOException e) {
+            return false;
+        }
     }
 
     static String readable(final X500Principal name) {
@@ -176,6 +206,11 @@ final class PreviousSignaturesBridge {
         return ETSI_RFC3161.equals(subFilter) || DOC_TIMESTAMP.equals(subFilter);
     }
 
+    private static boolean hasUnrecognizedSubFilter(final AcroFields fields, final String name) {
+        final Object subFilter = fields.getSignatureDictionary(name).get(PdfName.SUBFILTER);
+        return !RECOGNIZED_SUBFILTERS.contains(subFilter);
+    }
+
     private static List<SignValidity> validate(final String name, final AcroFields fields,
             final String profile) {
         try {
@@ -198,6 +233,15 @@ final class PreviousSignaturesBridge {
             }
         }
         return decisive;
+    }
+
+    /** El original confunde el {@code /SubFilter} no reconocido con una firma longeva sin comprobar. */
+    private static SignValidity withUnrecognizedFormat(final boolean unrecognizedSubFilter,
+            final SignValidity validity) {
+        if (unrecognizedSubFilter && validity.getError() == VALIDITY_ERROR.SIGN_PROFILE_NOT_CHECKED) {
+            return new SignValidity(SIGN_DETAIL_TYPE.KO, VALIDITY_ERROR.UNKOWN_SIGNATURE_FORMAT);
+        }
+        return validity;
     }
 
     private static String reasonOf(final SignValidity validity) {

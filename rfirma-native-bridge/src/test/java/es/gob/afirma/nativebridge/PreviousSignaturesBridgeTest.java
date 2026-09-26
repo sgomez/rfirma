@@ -1,6 +1,7 @@
 package es.gob.afirma.nativebridge;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -100,6 +101,17 @@ class PreviousSignaturesBridgeTest {
     }
 
     @Test
+    void a_pdf_signed_with_the_expired_certificate_of_the_kit_is_certificate_expired()
+            throws Exception {
+        final PreviousSignaturesBridge.Signature signature = PreviousSignaturesBridge.read(
+                signed(TestFixtures.samplePdf(), TestFixtures.expiredCertificateChain(),
+                        TestFixtures.expiredPrivateKey())).signatures().get(0);
+
+        assertEquals(PreviousSignaturesBridge.Status.CERTIFICATE_EXPIRED, signature.status());
+        assertEquals("CERTIFICATE_EXPIRED", signature.reason());
+    }
+
+    @Test
     void a_signature_whose_signed_bytes_were_altered_is_broken_with_its_reason() throws Exception {
         final byte[] altered = TestFixtures.withOneByteChangedInsideTheSignedRange(
                 signed(TestFixtures.samplePdf(), TestFixtures.certificateChain(),
@@ -126,6 +138,38 @@ class PreviousSignaturesBridgeTest {
     }
 
     @Test
+    void a_signature_with_an_unrecognized_subfilter_cannot_be_validated() throws Exception {
+        final byte[] pdf = TestFixtures.signedWithUnrecognizedSubFilter(TestFixtures.samplePdf(),
+                TestFixtures.certificateChain(), TestFixtures.privateKey());
+
+        final List<PreviousSignaturesBridge.Signature> signatures =
+                PreviousSignaturesBridge.read(pdf).signatures();
+
+        assertEquals(1, signatures.size());
+        assertEquals(PreviousSignaturesBridge.Status.UNVERIFIABLE, signatures.get(0).status());
+        assertEquals("UNKOWN_SIGNATURE_FORMAT", signatures.get(0).reason());
+    }
+
+    @Test
+    void a_recognized_signature_is_not_reclassified_by_a_later_unrecognized_subfilter()
+            throws Exception {
+        final byte[] once = signed(TestFixtures.samplePdf(),
+                TestFixtures.certificateChain(), TestFixtures.privateKey());
+        Thread.sleep(1_100);
+        final byte[] twice = TestFixtures.signedWithUnrecognizedSubFilter(once,
+                TestFixtures.otherCertificateChain(), TestFixtures.otherPrivateKey());
+
+        final List<PreviousSignaturesBridge.Signature> signatures =
+                PreviousSignaturesBridge.read(twice).signatures();
+
+        assertEquals(2, signatures.size());
+        assertEquals(PreviousSignaturesBridge.Status.NOT_FULLY_CHECKED, signatures.get(0).status(),
+                "motivo: " + signatures.get(0).reason());
+        assertEquals(PreviousSignaturesBridge.Status.UNVERIFIABLE, signatures.get(1).status());
+        assertEquals("UNKOWN_SIGNATURE_FORMAT", signatures.get(1).reason());
+    }
+
+    @Test
     void each_verdict_of_the_original_validator_maps_to_its_status() {
         assertEquals(Map.of(
                 VALIDITY_ERROR.CERTIFICATE_EXPIRED, PreviousSignaturesBridge.Status.CERTIFICATE_EXPIRED,
@@ -147,6 +191,28 @@ class PreviousSignaturesBridgeTest {
                                         new SignValidity(SIGN_DETAIL_TYPE.KO, error)))));
         assertEquals(PreviousSignaturesBridge.Status.VALID,
                 PreviousSignaturesBridge.statusOf(new SignValidity(SIGN_DETAIL_TYPE.OK, null)));
+    }
+
+    @Test
+    void a_revision_added_after_the_last_signature_without_signing_it_changed_the_document()
+            throws Exception {
+        final byte[] pdf = TestFixtures.withThePageRepaintedAfterSigning(
+                signed(TestFixtures.samplePdf(), TestFixtures.certificateChain(),
+                        TestFixtures.privateKey()));
+
+        assertTrue(PreviousSignaturesBridge.read(pdf).changedAfterLastSignature());
+    }
+
+    @Test
+    void a_normal_cosign_where_every_revision_carries_its_own_signature_does_not_flag_it()
+            throws Exception {
+        final byte[] once = signed(TestFixtures.samplePdf(),
+                TestFixtures.certificateChain(), TestFixtures.privateKey());
+        Thread.sleep(1_100);
+        final byte[] twice = signed(once,
+                TestFixtures.otherCertificateChain(), TestFixtures.otherPrivateKey());
+
+        assertFalse(PreviousSignaturesBridge.read(twice).changedAfterLastSignature());
     }
 
     @Test
