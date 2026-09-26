@@ -113,6 +113,65 @@ describe("certificates in a file", () => {
     );
   });
 
+  /**
+   * ID-435: solo la contraseña incorrecta manda a revisarla; las otras dos
+   * situaciones del `.p12` no lo mencionan.
+   */
+  it("says the password is wrong, and only that one asks to check it", async () => {
+    const user = userEvent.setup();
+    const onInstallCertificate = vi.fn(async () => {
+      throw {
+        situation: "incorrectPkcs12Password",
+        detail: "SEC_PKCS12DecoderVerify: SEC_ERROR_BAD_PASSWORD",
+      };
+    });
+    renderView({ onInstallCertificate });
+    await openTab(user, "Certificados");
+
+    await user.click(screen.getByRole("button", { name: "Añadir…" }));
+    await user.click(screen.getByRole("button", { name: "Continuar" }));
+
+    const notice = await screen.findByRole("alert");
+    expect(notice).toHaveTextContent("La contraseña no es correcta");
+    expect(notice).toHaveTextContent("Compruébala y vuelve a intentarlo.");
+  });
+
+  it("says a file it cannot read is not the same as a wrong password", async () => {
+    const user = userEvent.setup();
+    const onInstallCertificate = vi.fn(async () => {
+      throw { situation: "pkcs12Unreadable", detail: "SEC_PKCS12DecoderUpdate" };
+    });
+    renderView({ onInstallCertificate });
+    await openTab(user, "Certificados");
+
+    await user.click(screen.getByRole("button", { name: "Añadir…" }));
+    await user.click(screen.getByRole("button", { name: "Continuar" }));
+
+    const notice = await screen.findByRole("alert");
+    expect(notice).toHaveTextContent("No hemos podido leer el fichero");
+    expect(notice.textContent).not.toMatch(/contraseña/);
+  });
+
+  /** Como una clave elíptica: se cuenta en un solo renglón, sin detalle técnico. */
+  it("says a p12 without a private key does not work, in a single line", async () => {
+    const user = userEvent.setup();
+    const onInstallCertificate = vi.fn(async () => {
+      throw {
+        situation: "pkcs12NoPrivateKey",
+        detail: "el fichero no ha dejado ningun certificado con clave privada dentro",
+      };
+    });
+    renderView({ onInstallCertificate });
+    await openTab(user, "Certificados");
+
+    await user.click(screen.getByRole("button", { name: "Añadir…" }));
+    await user.click(screen.getByRole("button", { name: "Continuar" }));
+
+    const notice = await screen.findByRole("alert");
+    expect(notice).toHaveTextContent("Ese fichero no trae ninguna clave privada");
+    expect(within(notice).queryByText("Detalle técnico")).not.toBeInTheDocument();
+  });
+
   /** Cerrar el selector sin elegir nada no es un fallo: no se cuenta nada. */
   it("says nothing when the file picker was closed without choosing anything", async () => {
     const user = userEvent.setup();

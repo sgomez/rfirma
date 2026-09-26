@@ -209,10 +209,21 @@ msgstr ""
 "Su emisora lo ha revocado, así que no sirve para firmar. Necesitas uno nuevo."
 
 msgid "errors.situations.pkcs12Unreadable.title"
-msgstr "No se ha podido abrir el certificado"
+msgstr "No hemos podido leer el fichero"
 
 msgid "errors.situations.pkcs12Unreadable.body"
-msgstr "Comprueba la contraseña del fichero."
+msgstr "No es un certificado en formato .p12 o .pfx."
+
+msgid "errors.situations.incorrectPkcs12Password.title"
+msgstr "La contraseña no es correcta"
+
+msgid "errors.situations.incorrectPkcs12Password.body"
+msgstr "Compruébala y vuelve a intentarlo."
+
+#. Un solo renglon a proposito: no lleva cuerpo debajo, y por eso no hay
+#. msgid "errors.situations.pkcs12NoPrivateKey.body".
+msgid "errors.situations.pkcs12NoPrivateKey.title"
+msgstr "Ese fichero no trae ninguna clave privada"
 
 #. Un solo renglon a proposito (ID-211): no lleva cuerpo debajo, y por eso no
 #. hay msgid "errors.situations.keyNotRsa.body".

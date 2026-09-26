@@ -212,10 +212,21 @@ msgstr ""
 "un de nou."
 
 msgid "errors.situations.pkcs12Unreadable.title"
-msgstr "No s'ha pogut obrir el certificat"
+msgstr "No hem pogut llegir el fitxer"
 
 msgid "errors.situations.pkcs12Unreadable.body"
-msgstr "Comprova la contrasenya del fitxer."
+msgstr "No és un certificat en format .p12 o .pfx."
+
+msgid "errors.situations.incorrectPkcs12Password.title"
+msgstr "La contrasenya no és correcta"
+
+msgid "errors.situations.incorrectPkcs12Password.body"
+msgstr "Comprova-la i torna-ho a provar."
+
+#. Un solo renglon a proposito: no lleva cuerpo debajo, y por eso no hay
+#. msgid "errors.situations.pkcs12NoPrivateKey.body".
+msgid "errors.situations.pkcs12NoPrivateKey.title"
+msgstr "Aquest fitxer no porta cap clau privada"
 
 #. Un solo renglon a proposito (ID-211): no lleva cuerpo debajo, y por eso no
 #. hay msgid "errors.situations.keyNotRsa.body".

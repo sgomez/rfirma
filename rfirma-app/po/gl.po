@@ -206,10 +206,21 @@ msgstr ""
 "A súa emisora revogouno, así que non serve para asinar. Necesitas un novo."
 
 msgid "errors.situations.pkcs12Unreadable.title"
-msgstr "Non se puido abrir o certificado"
+msgstr "Non puidemos ler o ficheiro"
 
 msgid "errors.situations.pkcs12Unreadable.body"
-msgstr "Comproba o contrasinal do ficheiro."
+msgstr "Iso non é un certificado en formato .p12 ou .pfx."
+
+msgid "errors.situations.incorrectPkcs12Password.title"
+msgstr "O contrasinal non é correcto"
+
+msgid "errors.situations.incorrectPkcs12Password.body"
+msgstr "Compróbao e vólveo intentar."
+
+#. Un solo renglon a proposito: no lleva cuerpo debajo, y por eso no hay
+#. msgid "errors.situations.pkcs12NoPrivateKey.body".
+msgid "errors.situations.pkcs12NoPrivateKey.title"
+msgstr "Ese ficheiro non trae ningunha clave privada"
 
 #. Un solo renglon a proposito (ID-211): no lleva cuerpo debajo, y por eso no
 #. hay msgid "errors.situations.keyNotRsa.body".

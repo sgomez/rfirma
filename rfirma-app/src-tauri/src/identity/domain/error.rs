@@ -18,8 +18,12 @@ pub enum Situation {
     ModuleNotFound,
     /// No se ha encontrado el certificado indicado.
     CertificateNotFound,
-    /// El almacén PKCS#12 no se ha podido leer o la clave es incorrecta.
+    /// El fichero no se ha podido decodificar como PKCS#12.
     Pkcs12Unreadable,
+    /// La contraseña no abre el PKCS#12: NSS ha dado `SEC_ERROR_BAD_PASSWORD`.
+    IncorrectPkcs12Password,
+    /// El PKCS#12 se ha decodificado pero no trae ninguna clave privada.
+    Pkcs12NoPrivateKey,
     /// El certificado no contiene una clave RSA compatible.
     KeyNotRsa,
     /// El token no ofrece el mecanismo que pide el algoritmo de firma.
