@@ -1,9 +1,11 @@
+use std::cell::RefCell;
 use std::sync::Mutex;
 
 use super::{
-    prompted_until_accepted, PromptedError, SecretName, SecretPromptError, SecretPromptRequest,
-    SecretPrompter,
+    prompted_until_accepted, Keyring, PromptedError, SecretName, SecretPromptError,
+    SecretPromptRequest, SecretPrompter,
 };
+use crate::identity::domain::keyring::{generate_pin, KeyringError};
 use crate::identity::domain::protected_secret::ProtectedSecret;
 use crate::signing::domain::Language;
 
@@ -128,4 +130,85 @@ fn a_cancelled_prompt_stops_the_loop_without_attempting() {
         error,
         PromptedError::Prompt(SecretPromptError::Cancelled)
     ));
+}
+
+/// Un llavero en memoria: sin llavero, con llavero sin PIN, o con un PIN ya guardado.
+struct AMemoryKeyring {
+    state: RefCell<Option<Option<String>>>,
+}
+
+impl AMemoryKeyring {
+    fn without_a_keyring() -> Self {
+        Self {
+            state: RefCell::new(None),
+        }
+    }
+
+    fn without_a_pin() -> Self {
+        Self {
+            state: RefCell::new(Some(None)),
+        }
+    }
+
+    fn with_pin(pin: &str) -> Self {
+        Self {
+            state: RefCell::new(Some(Some(pin.to_owned()))),
+        }
+    }
+}
+
+impl Keyring for AMemoryKeyring {
+    fn pin(&self) -> Result<ProtectedSecret, KeyringError> {
+        match self.state.borrow().as_ref() {
+            None => Err(KeyringError::NoKeyring),
+            Some(None) => Err(KeyringError::PinMissing),
+            Some(Some(pin)) => Ok(ProtectedSecret::from_str(pin)),
+        }
+    }
+
+    fn create_pin(&self) -> Result<ProtectedSecret, KeyringError> {
+        if self.state.borrow().is_none() {
+            return Err(KeyringError::NoKeyring);
+        }
+
+        let pin = generate_pin();
+        *self.state.borrow_mut() = Some(Some(
+            pin.as_str().expect("el PIN generado es UTF-8").to_owned(),
+        ));
+        Ok(pin)
+    }
+}
+
+#[test]
+fn get_or_create_pin_creates_the_pin_the_first_time() {
+    let keyring = AMemoryKeyring::without_a_pin();
+
+    let created = keyring.get_or_create_pin().expect("crea el PIN");
+
+    assert_eq!(keyring.pin().expect("ya esta guardado"), created);
+}
+
+#[test]
+fn get_or_create_pin_reuses_the_existing_pin() {
+    let keyring = AMemoryKeyring::with_pin("ya-existente");
+
+    let pin = keyring.get_or_create_pin().expect("lee el PIN existente");
+
+    assert_eq!(pin, ProtectedSecret::from_str("ya-existente"));
+}
+
+#[test]
+fn without_a_keyring_get_or_create_pin_fails_without_creating_anything() {
+    let keyring = AMemoryKeyring::without_a_keyring();
+
+    assert_eq!(keyring.get_or_create_pin(), Err(KeyringError::NoKeyring));
+}
+
+#[test]
+fn a_keyring_with_a_lost_pin_is_told_apart_from_no_keyring_at_all() {
+    let lost_pin = AMemoryKeyring::without_a_pin();
+    let no_keyring = AMemoryKeyring::without_a_keyring();
+
+    assert_eq!(lost_pin.pin(), Err(KeyringError::PinMissing));
+    assert_eq!(no_keyring.pin(), Err(KeyringError::NoKeyring));
 }
