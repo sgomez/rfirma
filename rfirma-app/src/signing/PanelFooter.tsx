@@ -7,10 +7,14 @@ import { shortenDestination } from "./destination";
 import type { SigningFailure } from "./failure";
 import type { CertificateState } from "./SigningPanel";
 
-interface PanelFooterProps {
-  failure: SigningFailure | null;
+interface PanelFooterDestinationProps {
   destination: Destination;
   documentName: string;
+}
+
+interface PanelFooterSigningProps extends PanelFooterDestinationProps {
+  signed?: false;
+  failure: SigningFailure | null;
   onChangeDestination: () => void;
   /** Con el interruptor encendido y sin colocar no se firma (ID-93). */
   unplaced: boolean;
@@ -25,42 +29,45 @@ interface PanelFooterProps {
   onBack: () => void;
 }
 
+interface PanelFooterSignedProps extends PanelFooterDestinationProps {
+  signed: true;
+  /** Abre el PDF firmado con el visor del sistema. */
+  onOpenDocument: () => void;
+  /** Abre la carpeta donde quedó, con las firmas anteriores dentro (ID-81). */
+  onOpenFolder: () => void;
+  /** Vuelve al panel de firma con el original releído del disco (ID-80). */
+  onSignAgain: () => void;
+}
+
+type PanelFooterProps = PanelFooterSigningProps | PanelFooterSignedProps;
+
 /**
  * El pie del panel: 162 px en todos los estados
- * (docs/design/panel-de-firma.md § Pie fijo). «Guardar en» arriba y, abajo,
- * la fila de 44 px con el certificado y la acción del momento —buscar,
- * añadir uno, o el botón partido que firma—.
+ * (docs/design/panel-de-firma.md § Pie fijo). El destino arriba —«Guardar
+ * en» mientras se decide, «Guardado en» una vez escrito, con `Cambiar` oculto
+ * sin mover nada (`visibility:hidden`)— y, abajo, la fila de 44 px con la
+ * acción del momento: el certificado, «Reintentar»/«Volver», o los dos
+ * caminos hasta el fichero firmado y «Volver a firmar».
  */
-export function PanelFooter({
-  failure,
-  destination,
-  documentName,
-  onChangeDestination,
-  unplaced,
-  signing,
-  blocked,
-  certificate,
-  onChooseCertificate,
-  onRetryCertificates,
-  onChooseModule,
-  onSign,
-  onBack,
-}: PanelFooterProps) {
+export function PanelFooter(props: PanelFooterProps) {
   const { t } = useTranslation();
+  const { destination, documentName, signed = false } = props;
   // El destino recortado. Sin nombre compuesto —la carpeta no se deja
   // comprobar— se enseña el del documento, que es lo único que se sabe.
   const shortened = shortenDestination({
     folder: destination.folder,
     name: destination.name ?? documentName,
   });
+  // Una vez firmado, el rótulo ya no es una promesa que pueda incumplirse: es
+  // lo que ha quedado escrito, y se enseña siempre con su caja (ID-63).
+  const showBox = signed || destination.writable;
 
   return (
     <footer className="panel__footer">
       <div className="panel__destination">
-        {/* El rótulo es una promesa, así que **desaparece** cuando no se
-            puede cumplir: con la carpeta no escribible el pie dice solo que
-            no se puede escribir en ella, y no las dos cosas a la vez. */}
-        {destination.writable && <p className="rf-label">{t("panel.footer.savedIn")}</p>}
+        {showBox && (
+          <p className="rf-label">{t(signed ? "panel.signed.savedIn" : "panel.footer.savedIn")}</p>
+        )}
         <div className="rf-row rf-gap-xs panel__destination-row">
           <span className="panel__destination-icon">
             <FolderIcon />
@@ -70,7 +77,7 @@ export function PanelFooter({
               nombre sin atenuar, que es el dato (ID-63). El aviso de que no
               se puede escribir **no se recorta**: perderlo por elipsis sería
               perderlo cuando más falta hace. */}
-          {destination.writable ? (
+          {showBox ? (
             <p className="rf-prose panel__destination-path">
               <span className="rf-text-muted">{`…/${shortened.folder}/`}</span>
               {shortened.name}
@@ -82,66 +89,101 @@ export function PanelFooter({
           )}
           <button
             type="button"
-            className="rf-btn rf-btn--ghost panel__destination-change"
-            onClick={onChangeDestination}
+            className={
+              signed
+                ? "rf-btn rf-btn--ghost panel__destination-change panel__destination-change--hidden"
+                : "rf-btn rf-btn--ghost panel__destination-change"
+            }
+            onClick={props.signed ? undefined : props.onChangeDestination}
           >
             {t("actions.change")}
           </button>
         </div>
       </div>
-      {unplaced && !failure && (
-        <p className="rf-hint panel__place-first">{t("panel.footer.placeFirst")}</p>
-      )}
-      {failure && (
-        <div className="rf-row rf-gap-xs panel__failure-actions">
+      {props.signed ? (
+        <div className="rf-row rf-gap-xs panel__signed-actions">
           <button
             type="button"
-            className="rf-btn rf-btn--primary panel__failure-retry"
-            onClick={onSign}
+            className="rf-btn rf-btn--primary panel__signed-open"
+            onClick={props.onOpenDocument}
           >
-            {t("panel.footer.retry")}
+            {t("panel.signed.openDocument")}
           </button>
           <button
             type="button"
-            className="rf-btn rf-btn--ghost panel__failure-back"
-            onClick={onBack}
+            title={t("panel.signed.openFolder")}
+            className="rf-btn rf-btn--secondary panel__signed-folder"
+            onClick={props.onOpenFolder}
           >
-            {t("actions.back")}
-          </button>
-        </div>
-      )}
-      {!failure && certificate.kind === "loading" && (
-        <button type="button" className="rf-btn rf-btn--primary panel__sign" disabled>
-          {t("panel.certificate.loading")}
-        </button>
-      )}
-      {!failure && (certificate.kind === "empty" || certificate.kind === "failed") && (
-        <div className="rf-row rf-gap-xs panel__certificate-actions">
-          <button
-            type="button"
-            className="rf-btn rf-btn--primary panel__add-certificate"
-            onClick={onChooseModule}
-          >
-            {t("panel.footer.addCertificate")}
+            <FolderIcon />
           </button>
           <button
             type="button"
-            className="rf-btn rf-btn--secondary panel__retry"
-            onClick={onRetryCertificates}
+            className="rf-btn rf-btn--ghost panel__signed-again"
+            onClick={props.onSignAgain}
           >
-            {t("panel.certificate.retry")}
+            {t("panel.signed.signAgain")}
           </button>
         </div>
-      )}
-      {!failure && (certificate.kind === "unchosen" || certificate.kind === "chosen") && (
-        <CertificateFooterButton
-          certificates={certificate.certificates}
-          chosen={certificate.kind === "chosen" ? certificate.certificate : null}
-          onChoose={onChooseCertificate}
-          onSign={onSign}
-          signing={signing}
-          blocked={blocked}
-        />
+      ) : (
+        <>
+          {props.unplaced && !props.failure && (
+            <p className="rf-hint panel__place-first">{t("panel.footer.placeFirst")}</p>
+          )}
+          {props.failure && (
+            <div className="rf-row rf-gap-xs panel__failure-actions">
+              <button
+                type="button"
+                className="rf-btn rf-btn--primary panel__failure-retry"
+                onClick={props.onSign}
+              >
+                {t("panel.footer.retry")}
+              </button>
+              <button
+                type="button"
+                className="rf-btn rf-btn--ghost panel__failure-back"
+                onClick={props.onBack}
+              >
+                {t("actions.back")}
+              </button>
+            </div>
+          )}
+          {!props.failure && props.certificate.kind === "loading" && (
+            <button type="button" className="rf-btn rf-btn--primary panel__sign" disabled>
+              {t("panel.certificate.loading")}
+            </button>
+          )}
+          {!props.failure &&
+            (props.certificate.kind === "empty" || props.certificate.kind === "failed") && (
+              <div className="rf-row rf-gap-xs panel__certificate-actions">
+                <button
+                  type="button"
+                  className="rf-btn rf-btn--primary panel__add-certificate"
+                  onClick={props.onChooseModule}
+                >
+                  {t("panel.footer.addCertificate")}
+                </button>
+                <button
+                  type="button"
+                  className="rf-btn rf-btn--secondary panel__retry"
+                  onClick={props.onRetryCertificates}
+                >
+                  {t("panel.certificate.retry")}
+                </button>
+              </div>
+            )}
+          {!props.failure &&
+            (props.certificate.kind === "unchosen" || props.certificate.kind === "chosen") && (
+              <CertificateFooterButton
+                certificates={props.certificate.certificates}
+                chosen={props.certificate.kind === "chosen" ? props.certificate.certificate : null}
+                onChoose={props.onChooseCertificate}
+                onSign={props.onSign}
+                signing={props.signing}
+                blocked={props.blocked}
+              />
+            )}
+        </>
       )}
     </footer>
   );

@@ -69,6 +69,13 @@
   opacity: 0.4;
 }
 
+/* Firmando: el interruptor y el bloque de colocación se atenúan igual que
+   `Cambiar` en el pie (docs/design/panel-de-firma.md § Estados → Firmando). */
+.panel__toggle--dim,
+.panel__controls--dim {
+  opacity: 0.35;
+}
+
 /* El nombre se recorta con elipsis en lugar de partirse: la columna es de
    360 px y un nombre largo partido en tres líneas empuja todo el panel. */
 .panel__document {
@@ -459,8 +466,37 @@
   font-size: 12px;
 }
 
+/* Firmado: `Cambiar` se oculta sin mover nada, así la caja del destino no
+   salta al perder el botón (docs/design/panel-de-firma.md § El resumen). */
+.panel__destination-change--hidden {
+  visibility: hidden;
+}
+
 .panel__sign {
   width: 100%;
+}
+
+/* La fila del pie una vez firmado: «Abrir el PDF» se lleva el ancho que
+   sobra, la carpeta es un botón cuadrado de 44 px y «Volver a firmar» solo el
+   suyo (docs/design/panel-de-firma.md § El resumen, tras firmar). */
+.panel__signed-actions {
+  align-items: stretch;
+  height: 44px;
+}
+
+.panel__signed-open {
+  flex: 1;
+}
+
+.panel__signed-folder {
+  flex: none;
+  width: 44px;
+  padding: 0;
+}
+
+.panel__signed-again {
+  flex: none;
+  padding: 0 10px;
 }
 
 /* El bloque «Colocación»: borde propio, porque agrupa una decisión entera y no

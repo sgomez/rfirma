@@ -442,6 +442,12 @@ export function App({
                 // fichero: aquí no se recalcula nada (ID-77).
                 sizeBytes: signedHere.document.sizeBytes,
               }}
+              signedAt={signingInstant}
+              signature={signature}
+              placement={placement}
+              destination={
+                destination ?? { folder: settings?.destination ?? "", name: null, writable: true }
+              }
               onOpenDocument={() => openSigned(() => opener.openDocument())}
               onOpenFolder={() => openSigned(() => opener.openFolder())}
               onSignAgain={signAgain}

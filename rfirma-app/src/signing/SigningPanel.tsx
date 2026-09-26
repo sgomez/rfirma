@@ -246,18 +246,24 @@ export function SigningPanel({
                   hay recuadro. El aviso va encima del interruptor porque es lo que
                   explica por qué el bloque entero está en gris. */}
               {!usable && <p className="rf-hint">{t("panel.visibleSignature.noCertificate")}</p>}
-              <Switch
-                // El interruptor se pinta **en «no»** dentro de un bloque apagado.
-                // Encendido prometía un recuadro que no hay, y la preferencia que
-                // guarda `signature.enabled` no se pierde: vuelve al reaparecer el
-                // certificado, igual que la colocación.
-                checked={usable && signature.enabled}
-                label={t("panel.visibleSignature.toggle")}
-                onChange={(enabled) => onChangeSignature({ ...signature, enabled })}
-              />
+              <div className={signing ? "panel__toggle panel__toggle--dim" : "panel__toggle"}>
+                <Switch
+                  // El interruptor se pinta **en «no»** dentro de un bloque apagado.
+                  // Encendido prometía un recuadro que no hay, y la preferencia que
+                  // guarda `signature.enabled` no se pierde: vuelve al reaparecer el
+                  // certificado, igual que la colocación.
+                  checked={usable && signature.enabled}
+                  label={t("panel.visibleSignature.toggle")}
+                  onChange={(enabled) => onChangeSignature({ ...signature, enabled })}
+                />
+              </div>
 
               {chosen !== null && usable && signature.enabled && (
-                <>
+                <div
+                  className={
+                    signing ? "rf-stack rf-gap-sm panel__controls--dim" : "rf-stack rf-gap-sm"
+                  }
+                >
                   <PlacementFieldset
                     documentPages={document.pages}
                     pageSets={pageSets}
@@ -280,7 +286,7 @@ export function SigningPanel({
                     onChooseRubric={onChooseRubric}
                     onOpenHelp={onOpenHelp}
                   />
-                </>
+                </div>
               )}
             </section>
           </>

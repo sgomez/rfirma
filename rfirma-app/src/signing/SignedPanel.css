@@ -5,12 +5,16 @@
  * con otro contenido, no otra pantalla.
  */
 
-/*
- * Los tres botones van **uno sobre otro y a ancho completo** (ID-79). Apilarlos
- * ya lo hace `.panel__footer`, que es una columna; lo que se declara aquí es el
- * ancho, porque `.rf-btn` es `inline-flex` y sin esto los tres saldrían del
- * tamaño de su etiqueta y con tres anchos distintos.
- */
-.signed-panel__action {
-  width: 100%;
+.signed-panel__signed-at {
+  align-items: center;
+  font-weight: 700;
+}
+
+.signed-panel__visible-row {
+  align-items: center;
+  height: 30px;
+}
+
+.signed-panel__visible-label {
+  flex: 1;
 }

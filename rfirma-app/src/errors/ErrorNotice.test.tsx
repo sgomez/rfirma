@@ -77,6 +77,49 @@ describe("el aviso de error", () => {
     expect(details?.open).toBe(false);
     expect(details).toHaveTextContent("Detalle técnico");
   });
+
+  /**
+   * Error al firmar (docs/design/panel-de-firma.md § Estados → Error al
+   * firmar): el título es siempre el fijo, y la situación clasificada baja a
+   * ser la causa, en orden: título, causa, tranquilidad, detalle y «Copiar».
+   */
+  it("shows the fixed signing-failed title with the situation as the cause", () => {
+    renderIn(
+      "es",
+      <ErrorNotice situation="tokenAbsent" technicalDetail={RAW_DETAIL} documentUnchanged />,
+    );
+
+    const alert = screen.getByRole("alert");
+    const text = alert.textContent ?? "";
+    expect(text.indexOf("No se ha podido firmar")).toBeLessThan(
+      text.indexOf("No encontramos la tarjeta"),
+    );
+    expect(text.indexOf("No encontramos la tarjeta")).toBeLessThan(
+      text.indexOf("El documento sigue como estaba"),
+    );
+    expect(screen.getByRole("button", { name: "Copiar" })).toBeInTheDocument();
+  });
+
+  it("copies the raw technical detail to the clipboard", async () => {
+    const user = userEvent.setup();
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+    renderIn(
+      "es",
+      <ErrorNotice situation="tokenAbsent" technicalDetail={RAW_DETAIL} documentUnchanged />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Copiar" }));
+
+    expect(writeText).toHaveBeenCalledWith(RAW_DETAIL);
+  });
+
+  it("does not show the fixed title or the copy button outside signing failures", () => {
+    renderIn("es", <ErrorNotice situation="tokenAbsent" technicalDetail={RAW_DETAIL} />);
+
+    expect(screen.queryByText("No se ha podido firmar")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Copiar" })).not.toBeInTheDocument();
+  });
   it.each(["bridgeFailed", "sealMismatch", "unknown", "renderFailed"] as const)(
     "enseña el enlace a Comentarios y ayuda en la situación %s",
     (situation) => {

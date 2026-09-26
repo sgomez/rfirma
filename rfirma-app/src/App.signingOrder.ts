@@ -132,6 +132,15 @@ export function formatSignedAt(instant: Date, locale: string): string {
 }
 
 /**
+ * La hora sola, para «Firmado a las 11:04» (docs/design/panel-de-firma.md § El
+ * resumen, tras firmar): el mismo instante que `formatSignedAt`, sin la fecha
+ * ni los segundos que ahí hacen falta para el recuadro.
+ */
+export function formatSignedTime(instant: Date, locale: string): string {
+  return new Intl.DateTimeFormat(locale, { timeStyle: "short" }).format(instant);
+}
+
+/**
  * Con qué certificado se firma, a partir de los que hay.
  *
  * Nunca se elige por su cuenta: elegir con qué identidad se firma un

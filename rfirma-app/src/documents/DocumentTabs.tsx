@@ -39,10 +39,7 @@ interface DocumentTabsProps {
   onOpen: () => void;
   onSelectRecent: (row: RecentDocument) => void;
   onClearRecents: () => void;
-  /**
-   * Una sola firma en curso en toda la aplicación (ID-354): mientras dura, el
-   * botón de las demás pestañas no cambia el documento activo.
-   */
+  /** Mientras una firma está en curso, las demás pestañas no se activan. */
   signingLocked?: boolean;
 }
 

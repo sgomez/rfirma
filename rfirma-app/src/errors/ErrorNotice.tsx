@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { AlertIcon, ExternalLinkIcon } from "../design-system/icons";
+import { AlertIcon, CopyIcon, ExternalLinkIcon } from "../design-system/icons";
 import type { ExternalDestinationOpener } from "../desktop/externalDestination";
 import type { Catalog } from "../i18n/catalog";
 import "./ErrorNotice.css";
@@ -87,6 +87,11 @@ interface ErrorNoticeProps {
  * estado congelado, no el inicial (ID-43): aquí sigue plegado, porque el
  * `CKR_*` crudo debajo del mensaje ocupa el pie entero y solo lo necesita quien
  * va a escribir un informe de fallo.
+ *
+ * Con `documentUnchanged` el título fijo es «No se ha podido firmar»
+ * (docs/design/panel-de-firma.md § Estados → Error al firmar), y la situación
+ * baja a ser la causa en prosa: el fallo de firma es siempre el mismo título,
+ * y lo que cambia es por qué.
  */
 export function ErrorNotice({
   situation,
@@ -109,22 +114,43 @@ export function ErrorNotice({
     void externalDestinations?.open("discussions");
   };
 
+  const copyDetail = () => {
+    if (technicalDetail !== undefined) void navigator.clipboard.writeText(technicalDetail);
+  };
+
   return (
     <div className="error-notice" role="alert" ref={notice} tabIndex={-1}>
       <p className="error-notice__title">
         <AlertIcon />
-        <span className="rf-title">{t(`errors.situations.${situation}.title`)}</span>
+        <span className="rf-title">
+          {documentUnchanged
+            ? t("errors.signingFailedTitle")
+            : t(`errors.situations.${situation}.title`)}
+        </span>
       </p>
+      {documentUnchanged && <p className="rf-prose">{t(`errors.situations.${situation}.title`)}</p>}
+      {!isOneLine(situation) && (
+        <p className="rf-prose">
+          {t(`errors.situations.${situation as Exclude<ErrorSituation, OneLineSituation>}.body`)}
+        </p>
+      )}
       {documentUnchanged && <p className="rf-prose">{t("errors.documentUnchanged")}</p>}
       {!isOneLine(situation) && (
         <>
-          <p className="rf-prose">
-            {t(`errors.situations.${situation as Exclude<ErrorSituation, OneLineSituation>}.body`)}
-          </p>
           <details className="error-notice__detail">
             <summary className="rf-body rf-text-muted">{t("errors.technicalDetail")}</summary>
             <pre className="error-notice__raw">{technicalDetail}</pre>
           </details>
+          {documentUnchanged && (
+            <button
+              type="button"
+              className="rf-btn rf-btn--ghost error-notice__copy"
+              onClick={copyDetail}
+            >
+              <CopyIcon size={14} />
+              {t("actions.copy")}
+            </button>
+          )}
           {(hasHelpLink(situation) || onReload) && (
             <div className="rf-row rf-gap-xs error-notice__actions">
               {hasHelpLink(situation) && (

@@ -65,6 +65,11 @@ msgstr "Reload the window"
 msgid "errors.documentUnchanged"
 msgstr "The document is unchanged: nothing has been saved."
 
+#. El título fijo del error de firma (docs/design/panel-de-firma.md § Estados
+#. → Error al firmar); la situación clasificada baja a ser la causa.
+msgid "errors.signingFailedTitle"
+msgstr "Signing failed"
+
 msgid "errors.situations.unknown.title"
 msgstr "We couldn't complete the operation"
 
@@ -774,6 +779,30 @@ msgstr "Summary"
 #. Término del dominio: PAdES es la sigla del formato de firma; no se traduce.
 msgid "panel.signed.format"
 msgstr "PAdES"
+
+#. El rótulo del destino, una vez escrito (docs/design/panel-de-firma.md § El
+#. resumen, tras firmar). No es una promesa como "panel.footer.savedIn": ya
+#. ha ocurrido.
+msgid "panel.signed.savedIn"
+msgstr "Saved in"
+
+#. {{time}} es la hora, ya formateada (p. ej. "11:04").
+msgid "panel.signed.signedAt"
+msgstr "Signed at {{time}}"
+
+msgid "panel.signed.visibleSignature.none"
+msgstr "No"
+
+#. {{page}} es el número de la página.
+msgid "panel.signed.visibleSignature.onPage"
+msgstr "On page {{page}}"
+
+msgid "panel.signed.visibleSignature.allPages"
+msgstr "On every page"
+
+#. {{sealed}} es cuántas páginas llevan recuadro, {{total}} cuántas tiene el documento.
+msgid "panel.signed.visibleSignature.somePages"
+msgstr "On {{sealed}} of {{total}} pages"
 
 msgid "panel.signed.openDocument"
 msgstr "Open the PDF"

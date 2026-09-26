@@ -151,17 +151,42 @@ describe("SigningPanel", () => {
       failure: { situation: "tokenAbsent", detail: "CKR_DEVICE_REMOVED (C_Sign)" },
     });
 
+    // El título es siempre el fijo; la situación clasificada baja a ser la
+    // causa (docs/design/panel-de-firma.md § Estados → Error al firmar).
+    expect(screen.getByText("No se ha podido firmar")).toBeInTheDocument();
     expect(screen.getByText("No encontramos la tarjeta")).toBeInTheDocument();
     // El código original, ni traducido ni recortado: está para pegarlo.
     expect(screen.getByText("CKR_DEVICE_REMOVED (C_Sign)")).toBeInTheDocument();
     expect(
       screen.getByText("El documento sigue como estaba: no se ha guardado nada."),
     ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Copiar" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Volver a intentarlo" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Volver" })).toBeInTheDocument();
     // La firma visible no aporta nada mientras el documento sigue igual: se
     // esconde entera en vez de enseñarla al lado del error.
     expect(screen.queryByText("Firma visible")).not.toBeInTheDocument();
+  });
+
+  /**
+   * Firmando (docs/design/panel-de-firma.md § Estados → Firmando): el
+   * interruptor y el bloque de colocación se atenúan al 35 %.
+   */
+  it("dims the toggle and the placement controls while signing", () => {
+    renderPanel({ signing: true });
+
+    expect(screen.getByRole("switch", { name: /Estampar un recuadro/ })).toHaveClass("switch__control");
+    expect(screen.getByRole("switch", { name: /Estampar un recuadro/ }).closest(".panel__toggle")).toHaveClass("panel__toggle--dim");
+    expect(screen.getByText("Colocación").closest(".panel__controls--dim")).not.toBeNull();
+  });
+
+  it("does not dim the toggle or the placement controls otherwise", () => {
+    renderPanel({ signing: false });
+
+    expect(screen.getByRole("switch", { name: /Estampar un recuadro/ }).closest(".panel__toggle")).not.toHaveClass(
+      "panel__toggle--dim",
+    );
+    expect(screen.getByText("Colocación").closest(".panel__controls--dim")).toBeNull();
   });
 
   it("keeps the destination box and calls onBack from the error's «Volver»", async () => {
