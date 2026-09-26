@@ -55,6 +55,17 @@
   background: var(--rf-bg);
 }
 
+/* El tono es el de la peor fila (docs/design/panel-de-firma.md § El aviso de
+   firmas previas): el borde sube de grosor con la gravedad. */
+.panel__co-signature--indeterminate {
+  border-color: var(--rf-border-strong);
+}
+
+.panel__co-signature--attention {
+  border-width: 2px;
+  border-color: var(--rf-border-strong);
+}
+
 /* Toda la línea es el blanco de clic (docs/design/panel-de-firma.md § El
    aviso de firmas previas): el botón no lleva ni borde ni fondo propios. */
 .panel__co-signature-summary {
@@ -73,6 +84,18 @@
 
 .panel__co-signature-text {
   flex: 1;
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.panel__co-signature-count {
+  display: block;
+}
+
+/* En el panel de 380 px la coletilla no cabe nunca (docs/design/panel-de-firma.md
+   § El aviso de firmas previas): baja siempre a su propia línea fija. */
+.panel__co-signature-warnings {
+  display: block;
 }
 
 .panel__co-signature-chevron {
@@ -111,8 +134,41 @@
 
 .panel__previous-signatures-row {
   display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.panel__previous-signatures-row-top {
+  display: flex;
   justify-content: space-between;
   gap: var(--rf-space-sm);
+}
+
+.panel__previous-signatures-verdict {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+  color: var(--rf-text-muted);
+}
+
+.panel__previous-signatures-verdict--strong {
+  color: inherit;
+  font-weight: 600;
+}
+
+.panel__previous-signatures-row-meta {
+  margin: 0;
+}
+
+/* En la fila de la última firma, si el documento cambió después
+   (docs/design/panel-de-firma.md § El aviso de firmas previas): sube el tono,
+   pero no es una firma no válida. */
+.panel__previous-signatures-changed {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 600;
 }
 
 .panel__notice-icon {

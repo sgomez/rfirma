@@ -21,7 +21,12 @@ function recordingSigner(presigned: SigningOrder[]): SigningBackend {
     }),
     padesLowerLeft: async (placement) => [placement.rect[0], placement.rect[1]],
     unregisteredSignatures: async () => false,
-    previousSignatures: async () => ({ signatures: [] }),
+    previousSignatures: async () => ({
+      signatures: [],
+      warningCount: 0,
+      tone: "information",
+      changedAfterLastSignature: false,
+    }),
     discard: async () => {},
   };
 }

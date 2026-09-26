@@ -273,6 +273,7 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
       signatures: Vec<PreviousSignatureView>
       warningCount: usize
       tone: ToneView
+      changedAfterLastSignature: bool
 
   pub struct SiteErrandView
       origin: Option<String>
