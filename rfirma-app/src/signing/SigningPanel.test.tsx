@@ -41,18 +41,34 @@ describe("SigningPanel", () => {
     expect(screen.queryByText(/cofirma/)).not.toBeInTheDocument();
   });
 
-  it("shows the destination folder and the file name, and never the whole path", () => {
+  it("shows the destination folder and the file name in their own lines, and never the whole path", () => {
     renderPanel({
       destination: { folder: "Documentos", name: "contrato-firmado.pdf", writable: true },
     });
 
-    // El artboard parte la fila en dos: «Se guardará en» como rótulo y el
-    // destino debajo, junto al icono de carpeta. El destino son **dos cosas**:
-    // la carpeta precedida de `…/` y el nombre con el que va a caer (ID-63).
-    expect(screen.getByText("Se guardará en")).toBeInTheDocument();
-    expect(screen.getByText("…/Documentos/")).toBeInTheDocument();
-    expect(screen.getByText(/contrato-firmado\.pdf/)).toBeInTheDocument();
+    // El artboard parte la fila en dos: «Guardar en» como rótulo, con
+    // `Cambiar` a su derecha, y la caja del destino debajo con la carpeta y
+    // el nombre en dos líneas separadas.
+    expect(screen.getByText("Guardar en")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Cambiar" })).toBeInTheDocument();
+    expect(screen.getByText("Documentos")).toBeInTheDocument();
+    expect(screen.getByText("contrato-firmado.pdf")).toBeInTheDocument();
     expect(screen.queryByText(/\/home\//)).not.toBeInTheDocument();
+  });
+
+  it("carries the full folder and file name in the title of their own line", () => {
+    renderPanel({
+      destination: { folder: "Documentos", name: "contrato-firmado.pdf", writable: true },
+    });
+
+    expect(screen.getByText("Documentos").closest("[title]")).toHaveAttribute(
+      "title",
+      "Documentos",
+    );
+    expect(screen.getByText("contrato-firmado.pdf").closest("[title]")).toHaveAttribute(
+      "title",
+      "contrato-firmado.pdf",
+    );
   });
 
   it("shortens a long name through the middle and keeps its suffix and extension", () => {
@@ -72,16 +88,37 @@ describe("SigningPanel", () => {
   it("keeps the sign button alive when the destination cannot be written to", () => {
     renderPanel({ destination: { folder: "Documentos", name: null, writable: false } });
 
-    expect(screen.getByText("No se puede escribir en Documentos")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        (_, element) => element?.textContent === "No se puede escribir en Documentos",
+        {
+          selector: "span",
+        },
+      ),
+    ).toBeInTheDocument();
+    // El diseño pone la carpeta en negrita dentro de la frase.
+    expect(screen.getByText("Documentos", { selector: "strong" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Firmar como Ada Lovelace" })).toBeEnabled();
   });
 
-  it("does not promise a destination it has just said it cannot write to", () => {
-    // «Se guardará en» y «No se puede escribir en Documentos» a la vez es una
-    // contradicción: el rótulo es la promesa y desaparece con ella.
+  it("carries the full folder in the title of the unwritable message, even shortened", () => {
+    const folder = "Documentos-de-la-empresa-que-no-caben-en-una-sola-linea-del-pie";
+    renderPanel({ destination: { folder, name: null, writable: false } });
+
+    expect(
+      screen.getByText((_, element) => element?.textContent?.startsWith("No se puede") ?? false, {
+        selector: "span",
+      }),
+    ).toHaveAttribute("title", folder);
+  });
+
+  it("keeps the label even when the destination cannot be written to", () => {
+    // El artboard no quita la fila «Guardar en · Cambiar» con el destino roto:
+    // solo cambia la caja de debajo.
     renderPanel({ destination: { folder: "Documentos", name: null, writable: false } });
 
-    expect(screen.queryByText("Se guardará en")).not.toBeInTheDocument();
+    expect(screen.getByText("Guardar en")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Cambiar" })).toBeInTheDocument();
   });
 
   it("never shows a wildcard in the interface", () => {
@@ -163,6 +200,12 @@ describe("SigningPanel", () => {
       screen.getByRole("switch", { name: "Firma visible" }).closest(".panel__toggle"),
     ).not.toHaveClass("panel__toggle--dim");
     expect(screen.getByRole("radiogroup").closest(".panel__controls--dim")).toBeNull();
+  });
+
+  it("dims «Cambiar» to the same 35 % while signing", () => {
+    renderPanel({ signing: true });
+
+    expect(screen.getByRole("button", { name: "Cambiar" })).toHaveClass("panel__controls--dim");
   });
 
   it("keeps the destination box and calls onBack from the error's «Volver»", async () => {

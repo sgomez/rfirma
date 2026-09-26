@@ -763,7 +763,7 @@ msgid "panel.visibleSignature.rubric.thumbnail"
 msgstr "Your rubric, as it will be stamped"
 
 msgid "panel.footer.savedIn"
-msgstr "It will be saved in"
+msgstr "Save in"
 
 #. {{folder}} es la ruta corta de la carpeta de destino, no la ruta completa.
 msgid "panel.footer.unwritable"
