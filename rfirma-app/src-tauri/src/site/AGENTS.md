@@ -192,8 +192,8 @@ situación. Dos cosas que salen mal si se olvidan:
 - Las pruebas del trámite van en `application/errand/tests/`, repartidas por
   comportamiento, con el códec, el transporte y los dos motores del puente
   doblados. Dos oráculos siguen
-  congelados: `just check-contract` compara `just contract` con
-  `tests/contract.snapshot`, y la grada C del canal y el banco de conformidad no
+  congelados: `tests/contract_discovers_adapters.rs` compara `just contract`
+  con `tests/contract.snapshot`, y la grada C del canal y el banco de conformidad no
   se tocan.
 - **Todo `Format` que nombra la sede llega al consentimiento**: el trámite no
   filtra por `Format::bridged()`, y el que no cruza al puente, `NONE`, lo firma

@@ -97,9 +97,10 @@ check-java: test-java
 [group('ci')]
 check-ts: check-po lint-ts lint-i18n knip build-ts test-ts test-site-driver check-landing
 
-# lint-rust + machete + crap + check-contract, sin `cargo build --release` ni `cargo test` sueltos.
+# lint-rust + machete + crap, sin `cargo build --release` ni `cargo test` sueltos; la instantanea del
+# contrato la compara `tests/contract_discovers_adapters.rs` dentro de la pasada instrumentada.
 [group('ci')]
-check-rust: lint-rust machete crap check-contract
+check-rust: lint-rust machete crap
 
 # ---------------------------------------------------------------------------
 # Herramientas y dependencias
@@ -228,18 +229,6 @@ outline path:
 [group('dev')]
 contract src=(tauri / "src"):
     cd {{ tauri }} && cargo run -q --example contract -- "{{ src }}"
-
-# Comprueba que `just contract` sigue siendo el de la instantanea.
-[private]
-check-contract: build-ts
-    #!/usr/bin/env bash
-    set -eu
-    snapshot={{ tauri }}/tests/contract.snapshot
-    if ! diff -u "$snapshot" <(just contract); then
-        echo "el contrato ventana-backend ha cambiado" >&2
-        exit 1
-    fi
-    echo "check-contract: el contrato es el de la instantanea"
 
 # Compila el puente Java con -Xlint:all; sin `clean`, que borraria la libreria nativa a mitad de `just check`.
 [private]

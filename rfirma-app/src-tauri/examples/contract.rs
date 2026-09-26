@@ -10,7 +10,7 @@ fn main() {
     print!("{}", contract(&src));
 }
 
-fn contract(src: &Path) -> String {
+pub fn contract(src: &Path) -> String {
     let text = format!(
         "ORDENES DE TAURI                          (<contexto>/adapters/tauri*.rs)\n\
          \x20 Sin el estado inyectado (State<...>, AppHandle): no cruza.\n\
