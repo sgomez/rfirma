@@ -120,8 +120,8 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></span>
   </div>
 
-  <div style="flex:1;min-height:0;position:relative">
-    <div style="position:absolute;inset:0;padding:16px var(--rf-space-md);display:flex;flex-direction:column;gap:10px;overflow-y:auto">
+  <div style="flex:1;min-height:0;display:flex;flex-direction:column">
+    <div style="flex:1;min-height:0;padding:16px var(--rf-space-md);display:flex;flex-direction:column;gap:10px;overflow-y:auto">
 
       <sc-if value="{{esSelector}}" hint-placeholder-val="{{false}}">
         <p class="rf-title" style="flex:none;font-size:16px">Elige un certificado</p>
@@ -138,7 +138,7 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
         <sc-if value="{{hayEtiquetaCert}}" hint-placeholder-val="{{true}}">
           <p class="rf-label" style="letter-spacing:.6px;text-transform:uppercase">{{etiquetaCert}}</p>
         </sc-if>
-        <div style="position:relative">
+        <div style="anchor-name:--rf-cert">
           <button type="button" style="display:flex;align-items:center;gap:var(--rf-space-xs);width:100%;text-align:left;padding:var(--rf-space-sm);background:var(--rf-surface);color:var(--rf-text);border:1px solid var(--rf-border-strong);border-radius:var(--rf-radius-md);font-family:inherit;cursor:pointer" onClick="{{alternar}}">
             <span style="display:flex;flex:none;color:var(--rf-text-muted)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="9" r="5"/><path d="M8.5 13.5 7 21l5-2.5L17 21l-1.5-7.5"/></svg></span>
             <sc-if value="{{elegido}}" hint-placeholder-val="{{true}}">
@@ -153,7 +153,7 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
             <span style="{{estiloFlecha}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
           </button>
           <sc-if value="{{abierto}}" hint-placeholder-val="{{false}}">
-            <div class="rf-stack" style="position:absolute;left:0;right:0;top:calc(100% + 4px);max-height:156px;overflow-y:auto;z-index:6;padding:6px;gap:2px;
+            <div class="rf-stack" style="position:absolute;position-anchor:--rf-cert;top:anchor(bottom);left:anchor(left);width:470px;width:anchor-size(width);margin-top:4px;box-sizing:border-box;max-height:232px;overflow-y:auto;z-index:6;padding:6px;gap:2px;
               border-radius:var(--rf-radius-lg);border:1px solid var(--rf-border-subtle);background:var(--rf-bg);box-shadow:var(--rf-shadow-elevated)">
               <sc-for list="{{certificados}}" as="c" hint-placeholder-count="4">
                 <sc-if value="{{ c.hayGrupo }}" hint-placeholder-val="{{ false }}">

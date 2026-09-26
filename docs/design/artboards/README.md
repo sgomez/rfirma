@@ -134,28 +134,23 @@ cambia.
 
 ## Lo que hay que decidir al transcribir
 
-Dos cosas que el canvas da por buenas y el código o el propio lienzo no
-sostienen tal cual. No las resuelvas por tu cuenta: son un cambio de ficha.
+Una cosa que el canvas da por buena y el código no sostiene tal cual. No la
+resuelvas por tu cuenta: es un cambio de ficha.
 
-1. **El panel enseña datos que hoy nadie calcula**: «27 páginas · 2,4 MB» y,
-   con la palanca «Ficha 14» levantada, «2 firmas» y la lista de firmas. El
-   código pasa el tamaño como desconocido. El tamaño **sí** se recupera en el
-   resumen: lo conoce `finish_signing` y hoy `SignedDocumentView` lo descarta.
-   Las firmas previas ya no son un punto abierto de diseño: el aviso, sus
-   veredictos y cómo se valida cada firma están decididos en
-   [`panel-de-firma.md`](../panel-de-firma.md). Que el código aún las pase
-   como desconocidas es trabajo de implementación, no una decisión de
-   transcripción.
-2. **La lista de certificados de `SedeConsentimiento`, abierta, mide 156 px** y
-   se desplaza por dentro, anclada bajo el campo, porque el cuerpo de la ventana
-   se desplaza para que quepan las firmas desplegadas y recorta lo que sobresale.
-   Contradice la nota «LOS DESPLEGABLES FLOTAN» de la página de la sede, que
-   pedía los 232 px de la ventana principal sobresaliendo. Es lo que se validó;
-   la contradicción queda para quien decida.
+**El panel enseña datos que hoy nadie calcula**: «27 páginas · 2,4 MB» y, con
+la palanca «Ficha 14» levantada, «2 firmas» y la lista de firmas. El código pasa
+el tamaño como desconocido. El tamaño **sí** se recupera en el resumen: lo
+conoce `finish_signing` y hoy `SignedDocumentView` lo descarta. Las firmas
+previas ya no son un punto abierto de diseño: el aviso, sus veredictos y cómo se
+valida cada firma están decididos en [`panel-de-firma.md`](../panel-de-firma.md).
+Que el código aún las pase como desconocidas es trabajo de implementación, no
+una decisión de transcripción.
 
-Los otros dos puntos que había aquí —«Junto al documento original» como destino,
-y la ausencia de «Recordar mi actividad» y «Vaciar la lista»— los resolvió
-`PreferenciasPantalla`, y ya no hay nada que decidir.
+Los otros puntos que había aquí están resueltos. «Junto al documento original»
+como destino, y la ausencia de «Recordar mi actividad» y «Vaciar la lista», los
+resolvió `PreferenciasPantalla`. La lista de certificados de
+`SedeConsentimiento` **flota**, como cualquier
+[desplegable](../design-system.md#desplegable), aunque el cuerpo se desplace.
 
 ## Lo que cambió en v0.2
 

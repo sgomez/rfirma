@@ -197,8 +197,9 @@ desplaza y el pie no se mueve.
   insignia, titular, DNI · emisor y ▾. Abierto, **la lista flotante de
   [`panel-de-firma.md`](panel-de-firma.md)**, sin reinventarla —`--rf-radius-lg`,
   `--rf-shadow-elevated`, encabezados `Disponibles` / `No utilizables`, marca en
-  el elegido, no utilizables atenuados—, anclada debajo del campo con un alto
-  máximo de **156 px** y desplazamiento propio, para que no la corte el pie. La
+  el elegido, no utilizables atenuados—, anclada debajo del campo y **flotando**
+  aunque el cuerpo se desplace, como manda el
+  [desplegable del sistema de diseño](design-system.md#desplegable). La
   etiqueta que lo encabeza dice «Firmarás con», y «Enviarás los datos de» en
   `selectcert`.
 - **Qué se envía**, en una línea: «Se enviarán tu **nombre**, tu **DNI**, el
@@ -523,13 +524,10 @@ caja. Palancas de estado nuevas: `firmasPrevias`, `verFirmas`, `desplegable` y
 - **Cerrar sola a los 5 segundos.** No daba tiempo a leer, y el caso que decide
   es «rechazo × se cierra sola»: cerrarse sola reproduciría el síntoma que el
   aviso venía a evitar.
-- **Mutilar el desplegable a 152 px** para que cupiera en la ventana. Era tapar
-  el fallo real; la lista volvió a 232 px y **sobresalía**
-  ([design-system.md](design-system.md)). **Punto abierto**: la tanda de las
-  firmas previas hace desplazable el cuerpo, y la lista validada con ella se
-  ancla a 156 px con desplazamiento propio. Esa medida y «Los desplegables
-  flotan» no se han reconciliado todavía; ver
-  [«Lo que hay que decidir al transcribir»](artboards/README.md).
+- **Mutilar el desplegable** para que cupiera: a 152 px dentro de la ventana, y
+  luego a 156 px con desplazamiento propio cuando las firmas previas hicieron
+  desplazable el cuerpo. Las dos veces era tapar el fallo real
+  ([design-system.md](design-system.md#desplegable)).
 - **Una quinta situación de consentimiento, «cero tras el filtro de la sede».**
   No era una variante del consentimiento sino otra situación, y se mudó entera a
   `SedeSinCertificado` · `excluidos`: el caso vive en un solo sitio.
