@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use crate::desktop::domain::version_check::VersionCheck;
 use crate::documents::domain::recents::Recents;
 use crate::identity::domain::certificate::CertificateRef;
-use crate::signing::domain::{BoxSize, Spot};
+use crate::signing::domain::{BoxSize, Spot, VisibleContent};
 
 /// Estado acumulado por la aplicación entre ejecuciones (ADR-0010).
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
@@ -31,24 +31,12 @@ pub struct State {
 pub struct VisibleSignatureMemory {
     /// El interruptor: si se estampa recuadro.
     pub enabled: bool,
-    /// Si la rúbrica va dentro del recuadro. Es la quinta casilla.
+    /// Si la rúbrica va dentro del recuadro.
     pub rubric: bool,
-    /// Las cuatro casillas de texto.
-    pub fields: RememberedFields,
-    /// El motivo escrito. Vacío es «sin motivo».
-    pub reason: String,
+    /// El modelo y la frase de la última firma visible configurada.
+    pub content: Option<VisibleContent>,
     /// El tamaño del recuadro, en espacio de usuario PDF.
     pub size: BoxSize,
-}
-
-/// Casillas de texto visibles seleccionadas para la firma.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(default)]
-pub struct RememberedFields {
-    pub signer_name: bool,
-    pub issuer: bool,
-    pub signed_at: bool,
-    pub reason: bool,
 }
 
 impl State {

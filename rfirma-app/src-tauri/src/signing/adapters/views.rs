@@ -6,9 +6,10 @@ use serde::{Deserialize, Serialize};
 
 use crate::crossing::crossing;
 
+use crate::signing::adapters::state::VisibleSignatureMemory;
 use crate::signing::application::configuration::Preferences;
 use crate::signing::application::configuration_memory::Theme;
-use crate::signing::domain::{PageSet, VisibleBox};
+use crate::signing::domain::{Datum, PageSet, PhrasePart, VisibleBox, VisibleContent};
 
 crossing! {
     /// Posición y páginas del recuadro de firma visible.
@@ -99,6 +100,90 @@ impl From<ConfigurationView> for Preferences {
             setup_wizard_seen: view.setup_wizard_seen,
             consent_countdown: view.consent_countdown,
             honour_automatic_selection: view.honour_automatic_selection,
+        }
+    }
+}
+
+crossing! {
+    /// Un dato de la frase de *Personalizada*, de vuelta a la ventana.
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+    #[serde(rename_all = "camelCase")]
+    pub enum DatumView {
+        Signer,
+        Issuer,
+        SignedAt,
+    }
+}
+
+impl From<Datum> for DatumView {
+    fn from(datum: Datum) -> Self {
+        match datum {
+            Datum::Signer => Self::Signer,
+            Datum::Issuer => Self::Issuer,
+            Datum::SignedAt => Self::SignedAt,
+        }
+    }
+}
+
+crossing! {
+    /// Un trozo de la frase recordada: texto literal o un dato.
+    #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+    #[serde(untagged)]
+    pub enum PhrasePartView {
+        Text { text: String },
+        Datum { datum: DatumView },
+    }
+}
+
+impl From<&PhrasePart> for PhrasePartView {
+    fn from(part: &PhrasePart) -> Self {
+        match part {
+            PhrasePart::Text(text) => Self::Text { text: text.clone() },
+            PhrasePart::Datum(datum) => Self::Datum {
+                datum: (*datum).into(),
+            },
+        }
+    }
+}
+
+crossing! {
+    /// El contenido recordado de la firma visible, por modelo.
+    #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+    #[serde(tag = "model", rename_all = "camelCase")]
+    pub enum VisibleContentView {
+        Complete,
+        RubricOnly,
+        Custom { phrase: Vec<PhrasePartView> },
+    }
+}
+
+impl From<&VisibleContent> for VisibleContentView {
+    fn from(content: &VisibleContent) -> Self {
+        match content {
+            VisibleContent::Complete => Self::Complete,
+            VisibleContent::RubricOnly => Self::RubricOnly,
+            VisibleContent::Custom(phrase) => Self::Custom {
+                phrase: phrase.iter().map(PhrasePartView::from).collect(),
+            },
+        }
+    }
+}
+
+crossing! {
+    /// Modelo, frase y «Con rúbrica» recordados de la última firma visible configurada (ADR-0010).
+    #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize)]
+    #[serde(rename_all = "camelCase")]
+    pub struct RememberedVisibleSignatureView {
+        pub content: Option<VisibleContentView>,
+        pub with_rubric: bool,
+    }
+}
+
+impl From<VisibleSignatureMemory> for RememberedVisibleSignatureView {
+    fn from(remembered: VisibleSignatureMemory) -> Self {
+        Self {
+            content: remembered.content.as_ref().map(VisibleContentView::from),
+            with_rubric: remembered.rubric,
         }
     }
 }

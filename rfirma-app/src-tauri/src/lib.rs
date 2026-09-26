@@ -156,6 +156,7 @@ pub fn run() {
 
 /// Añade a un `Builder` lo que los dos roles gestionan por igual: las cinco raíces, los
 /// complementos comunes, las órdenes de Tauri y el evento de arrastre (ADR-0024).
+#[expect(clippy::too_many_lines)]
 fn with_the_five_roots(
     builder: tauri::Builder<tauri::Wry>,
     roots: Roots,
@@ -202,6 +203,7 @@ fn with_the_five_roots(
             documents::adapters::tauri::open_document,
             documents::adapters::tauri::read_document,
             signing::adapters::tauri::read_configuration,
+            signing::adapters::tauri::remembered_visible_signature,
             signing::adapters::tauri::write_configuration,
             signing::adapters::tauri::forget_activity,
             documents::adapters::tauri::list_recents,
