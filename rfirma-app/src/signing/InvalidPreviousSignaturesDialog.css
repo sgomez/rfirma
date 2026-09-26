@@ -1,0 +1,52 @@
+/*
+ * El diálogo «¿Firmar de todos modos?»
+ * (docs/design/dialogo-firmar-de-todos-modos.md): 420 px sobre el velo, con la
+ * lista de firmas no válidas topada a 264 px y scroll interno.
+ */
+
+.invalid-previous-signatures-dialog {
+  width: 420px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--rf-space-sm);
+}
+
+.invalid-previous-signatures-dialog__list {
+  max-height: 264px;
+  overflow-y: auto;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--rf-border-subtle);
+  border-radius: var(--rf-radius-md);
+  list-style: none;
+}
+
+.invalid-previous-signatures-dialog__row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--rf-space-sm);
+}
+
+.invalid-previous-signatures-dialog__row + .invalid-previous-signatures-dialog__row {
+  border-top: 1px solid var(--rf-border-subtle);
+}
+
+.invalid-previous-signatures-dialog__row-top {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--rf-space-sm);
+}
+
+.invalid-previous-signatures-dialog__verdict {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+  color: var(--rf-text-muted);
+}
+
+.invalid-previous-signatures-dialog__actions {
+  justify-content: flex-end;
+  gap: var(--rf-space-sm);
+}

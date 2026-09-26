@@ -977,6 +977,24 @@ msgstr ""
 msgid "unregisteredSignatures.confirm"
 msgstr "Sign anyway"
 
+#. El titular del diálogo «¿Firmar de todos modos?», con alguna firma previa no válida.
+msgid "signAnyway.title"
+msgstr "Sign anyway?"
+
+#. {{count}} firmas previas que no son válidas, en negrita.
+msgid "signAnyway.body"
+msgid_plural "signAnyway.body"
+msgstr[0] "This document carries 1 signature that isn't valid"
+msgstr[1] "This document carries {{count}} signatures that aren't valid"
+msgstr[2] "This document carries {{count}} signatures that aren't valid"
+
+#. La sede u organismo que reciba el documento puede rechazarlo.
+msgid "signAnyway.warning"
+msgstr "If you sign it, the office or body that receives the document may reject it."
+
+msgid "signAnyway.confirm"
+msgstr "Sign anyway"
+
 msgid "status.title"
 msgstr "rFirma Status"
 

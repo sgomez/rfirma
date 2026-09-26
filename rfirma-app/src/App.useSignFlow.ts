@@ -5,6 +5,7 @@ import type { DocumentInHand } from "./documents/document";
 import type { Certificate } from "./signing/certificate";
 import { isUsable } from "./signing/certificate";
 import type { SigningBackend, SigningOrder } from "./signing/flow";
+import { invalidSignatures, type PreviousSignature } from "./signing/previousSignatures";
 import type { Rubric } from "./signing/rubric";
 import { composesOnRelease, type StampComposer, type StampRequest } from "./signing/stampPreview";
 import { pagesWithoutSeal } from "./signing/unsealedPages";
@@ -30,6 +31,7 @@ interface SignFlowInput {
   gesturing: boolean;
   /** El destino elegido para esta firma con «Cambiar», sin tocar la preferencia (ADR-0011). */
   singleDestinationId: string | null;
+  previousSignatures: readonly PreviousSignature[];
   startSigning: (
     certificate: Certificate,
     order: SigningOrder,
@@ -39,8 +41,8 @@ interface SignFlowInput {
 
 /**
  * La firma **entera**: la vista previa del sello (ID-107), la orden que se
- * manda y los dos avisos que pueden interponerse antes del PIN (ID-105,
- * ID-297…ID-301).
+ * manda y los tres avisos que pueden interponerse antes del PIN (ID-105,
+ * ID-297…ID-301, y el de las firmas previas no válidas).
  */
 export function useSignFlow({
   pdf,
@@ -58,6 +60,7 @@ export function useSignFlow({
   sizeBytes,
   gesturing,
   singleDestinationId,
+  previousSignatures,
   startSigning,
 }: SignFlowInput) {
   // El diálogo de páginas sin sello (ID-105), guardado con la orden y el
@@ -76,6 +79,13 @@ export function useSignFlow({
     certificate: Certificate;
     order: SigningOrder;
   } | null>(null);
+  // «¿Firmar de todos modos?» con alguna firma previa no válida, antes de
+  // tocar nada más — ni la comprobación de firmas sin registrar, ni la del
+  // sello. Cierra sin pedir nada al backend: ya sabe lo que necesita del
+  // informe que trajo `usePreviousSignatures`.
+  const [invalidPreviousSignaturesPrompt, setInvalidPreviousSignaturesPrompt] = useState<
+    readonly PreviousSignature[] | null
+  >(null);
 
   // ── La vista previa del sello (ID-107) ───────────────────────────────────
   //
@@ -146,6 +156,23 @@ export function useSignFlow({
       // estrecha el tipo, y callar es mejor que fabricar una orden a medias.
       return;
     }
+    // Con alguna firma previa no válida, «Firmar como…» pregunta antes de
+    // tocar nada más.
+    const invalid = invalidSignatures(previousSignatures);
+    if (invalid.length > 0) {
+      setInvalidPreviousSignaturesPrompt(invalid);
+      return;
+    }
+
+    await signPastPreviousSignatures(pdf, activeDocument, placement, chosen);
+  };
+
+  const signPastPreviousSignatures = async (
+    pdf: PdfDocument,
+    activeDocument: DocumentInHand,
+    placement: Placement,
+    chosen: Certificate,
+  ) => {
     // La página que mide la `MediaBox` y la `/Rotate` es la **primera del
     // conjunto**: el widget se replica idéntico en todas (ID-96), así que
     // cualquiera de ellas daría la misma conversión, y la primera es la única
@@ -237,6 +264,23 @@ export function useSignFlow({
     );
   };
 
+  // `Firmar de todos modos` del diálogo de firmas previas no válidas: el
+  // resto del recorrido sigue igual, con los dos avisos que todavía pueden
+  // interponerse.
+  const signDespiteInvalidPreviousSignatures = async () => {
+    if (
+      invalidPreviousSignaturesPrompt === null ||
+      pdf === null ||
+      activeDocument === null ||
+      placement === null ||
+      chosen === null
+    ) {
+      return;
+    }
+    setInvalidPreviousSignaturesPrompt(null);
+    await signPastPreviousSignatures(pdf, activeDocument, placement, chosen);
+  };
+
   // `Firmar de todos modos`: la orden ya estaba armada, se manda tal cual.
   const signAnyway = async () => {
     if (sealLossPrompt === null) return;
@@ -254,5 +298,8 @@ export function useSignFlow({
     unregisteredPrompt,
     setUnregisteredPrompt,
     signWithUnregisteredSignatures,
+    invalidPreviousSignaturesPrompt,
+    setInvalidPreviousSignaturesPrompt,
+    signDespiteInvalidPreviousSignatures,
   };
 }
