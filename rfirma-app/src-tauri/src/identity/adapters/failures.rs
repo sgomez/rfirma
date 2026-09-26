@@ -4,6 +4,7 @@ use crate::crossing::Failure;
 use crate::identity::application::certificates::InstallError;
 use crate::identity::domain::error::{Situation, TokenError};
 use crate::identity::domain::secret::SecretOnTheReaderKeypad;
+use crate::identity::ports::SecretPromptError;
 use crate::site::domain::protocol::SafCode;
 
 fn token_told(situation: Situation) -> (&'static str, SafCode) {
@@ -51,6 +52,18 @@ pub fn code_of_secret_on_the_reader_keypad() -> SafCode {
 impl From<SecretOnTheReaderKeypad> for Failure {
     fn from(refusal: SecretOnTheReaderKeypad) -> Self {
         Self::new(refusal.situation(), refusal.to_string())
+    }
+}
+
+impl From<SecretPromptError> for Failure {
+    fn from(error: SecretPromptError) -> Self {
+        match error {
+            SecretPromptError::Cancelled => Self::new(
+                "userCancelled",
+                "solicitud de PIN cancelada por la persona usuaria",
+            ),
+            SecretPromptError::Failed(reason) => Self::new("promptFailed", reason),
+        }
     }
 }
 

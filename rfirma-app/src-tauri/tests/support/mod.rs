@@ -17,13 +17,12 @@ pub use base64::Engine as _;
 
 pub use rfirma_lib::desktop::adapters::paths::Paths;
 pub use rfirma_lib::documents::ports::{DialogClues, PortalDialogs};
+pub use rfirma_lib::identity::domain::protected_secret::ProtectedSecret;
 pub use rfirma_lib::identity::domain::store::Store;
+pub use rfirma_lib::identity::ports::{SecretPromptError, SecretPromptRequest, SecretPrompter};
 pub use rfirma_lib::signing::adapters::isolate::Isolate;
 pub use rfirma_lib::signing::adapters::tauri::signed_with_the_secret;
 pub use rfirma_lib::signing::application::session::sign_on_token;
-pub use rfirma_lib::signing::ports::{
-    ProtectedSecret, SecretPromptError, SecretPromptRequest, SecretPrompter,
-};
 pub use rfirma_lib::site::adapters::channel::{
     bind_first_free, serve, LoopbackListeners, SiteOperations,
 };

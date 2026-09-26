@@ -4,20 +4,18 @@ use base64::Engine;
 
 use crate::identity::domain::algorithm::SignatureAlgorithm;
 use crate::identity::domain::certificate::CertificateRef;
-use crate::identity::domain::error::{Situation, TokenError};
+use crate::identity::domain::error::TokenError;
 use crate::identity::domain::holder::{prompted_holder_of, PromptedHolder};
 use crate::identity::domain::protected_secret::ProtectedSecret;
-use crate::identity::domain::secret::StoreSecret;
+use crate::identity::domain::secret::SecretName;
 use crate::signing::domain::bridge::{
     BridgeError, PostSignRequest, PreSignRequest, PreSignature, SignatureOperation,
 };
-use crate::signing::domain::Language;
 use crate::signing::domain::{
     to_java_properties, AdmissibleDocument, CompletedCycle, Format, Refusal, SealMismatch,
     SessionSeal, SignatureConfig,
 };
 use crate::signing::ports::{Bridge, Signer};
-use crate::signing::ports::{SecretName, SecretPromptError, SecretPromptRequest, SecretPrompter};
 
 use crate::signing::domain::TokenSignatures;
 
@@ -66,8 +64,6 @@ pub enum CycleError {
     Token(TokenError),
     /// El sello devuelto no coincide con el emitido por la prefirma.
     Seal(SealMismatch),
-    /// La solicitud interactiva del secreto fue cancelada o falló.
-    Prompt(SecretPromptError),
 }
 
 impl std::fmt::Display for CycleError {
@@ -77,7 +73,6 @@ impl std::fmt::Display for CycleError {
             Self::Bridge(error) => write!(f, "{error}"),
             Self::Token(error) => write!(f, "{error}"),
             Self::Seal(error) => write!(f, "{error}"),
-            Self::Prompt(error) => write!(f, "{error}"),
         }
     }
 }
@@ -105,12 +100,6 @@ impl From<TokenError> for CycleError {
 impl From<SealMismatch> for CycleError {
     fn from(error: SealMismatch) -> Self {
         Self::Seal(error)
-    }
-}
-
-impl From<SecretPromptError> for CycleError {
-    fn from(error: SecretPromptError) -> Self {
-        Self::Prompt(error)
     }
 }
 
@@ -192,40 +181,12 @@ impl OpenCycle {
         self.presigned.stamp().clone()
     }
 
-    /// Fase 2: firma cada bloque en el token PKCS#11 solicitando el secreto interactivamente
-    /// mediante el prompter cuando el almacén lo requiere (`StoreSecret::TypedOnScreen`),
-    /// gestionando reintentos en caso de secreto incorrecto (ADR-0001, ADR-0014).
-    pub fn sign_with_prompter(
-        &self,
-        signer: &dyn Signer,
-        prompter: &dyn SecretPrompter,
-        language: Language,
-    ) -> Result<TokenSignatures, CycleError> {
-        let secret_mode = signer.secret_of(&self.certificate)?;
-        match secret_mode {
-            StoreSecret::NotNeeded | StoreSecret::TypedOnTheReaderKeypad => {
-                let empty = ProtectedSecret::new(b"");
-                self.presigned
-                    .signed_one_by_one(|pre| {
-                        signer.sign_with_secret(&self.certificate, &empty, self.algorithm, pre)
-                    })
-                    .map_err(CycleError::Token)
-            }
-            StoreSecret::TypedOnScreen => {
-                let request = SecretPromptRequest {
-                    secret: SecretName::of(self.certificate.store().class()),
-                    holder: self.holder.clone(),
-                    language,
-                    incorrect_secret: false,
-                };
-                let (_, signatures) = prompted_until_accepted(prompter, request, |secret| {
-                    self.presigned.signed_one_by_one(|pre| {
-                        signer.sign_with_secret(&self.certificate, secret, self.algorithm, pre)
-                    })
-                })?;
-                Ok(signatures)
-            }
-        }
+    /// Con qué se pediría el secreto de este ciclo: el nombre del secreto y el titular, si el DER lo dice.
+    pub fn secret_prompt_context(&self) -> (SecretName, Option<PromptedHolder>) {
+        (
+            SecretName::of(self.certificate.store().class()),
+            self.holder.clone(),
+        )
     }
 
     /// Fase 2: firma cada bloque en el token PKCS#11, con el secreto pedido una sola vez (ADR-0001).
@@ -270,24 +231,6 @@ impl std::fmt::Debug for OpenCycle {
             .field("certificate", &self.certificate)
             .field("blocks_to_be_signed", &self.presigned.blocks().len())
             .finish_non_exhaustive()
-    }
-}
-
-/// Pide el secreto hasta que `attempt` lo acepta; solo un PIN incorrecto vuelve a preguntar.
-pub fn prompted_until_accepted<T>(
-    prompter: &dyn SecretPrompter,
-    mut request: SecretPromptRequest,
-    mut attempt: impl FnMut(&ProtectedSecret) -> Result<T, TokenError>,
-) -> Result<(ProtectedSecret, T), CycleError> {
-    loop {
-        let secret = prompter.prompt_secret(&request)?;
-        match attempt(&secret) {
-            Ok(done) => return Ok((secret, done)),
-            Err(error) if error.situation() == Situation::IncorrectPin => {
-                request.incorrect_secret = true;
-            }
-            Err(other) => return Err(CycleError::Token(other)),
-        }
     }
 }
 

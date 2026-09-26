@@ -3,8 +3,9 @@
 use std::sync::Mutex;
 
 use crate::identity::domain::protected_secret::ProtectedSecret;
+use crate::identity::domain::secret::SecretName;
+use crate::identity::ports::{SecretPromptError, SecretPromptRequest, SecretPrompter};
 use crate::signing::domain::Language;
-use crate::signing::ports::{SecretName, SecretPromptError, SecretPromptRequest, SecretPrompter};
 
 /// Estructura interna con los textos localizados para el diálogo modal del secreto.
 #[derive(Debug, PartialEq, Eq)]
