@@ -8,9 +8,10 @@ use crate::signing::domain::to_java_properties;
 
 use crate::signing::domain::bridge::{
     BridgeError, Candidate, ExpandRequest, FilterRequest, Format, LibraryNotFound, Origin,
-    PostSignRequest, PreSignRequest, PreSignature, PreviousSignaturesReport, SignatureVerdict,
-    ValidationRequest, XadesVariant, LIBRARY_DIRECTORY_VARIABLE,
+    PostSignRequest, PreSignRequest, PreSignature, SignatureVerdict, ValidationRequest,
+    XadesVariant, LIBRARY_DIRECTORY_VARIABLE,
 };
+use crate::signing::domain::previous_signatures::PreviousSignaturesReport;
 
 mod responses;
 pub use responses::{

@@ -10,8 +10,8 @@ use crate::signing::adapters::state::VisibleSignatureMemory;
 use crate::signing::application::configuration::Preferences;
 use crate::signing::application::configuration_memory::Theme;
 use crate::signing::domain::{
-    Datum, PageSet, PhrasePart, PreviousSignature, PreviousSignaturesReport, VisibleBox,
-    VisibleContent,
+    Datum, PageSet, PhrasePart, PreviousSignature, PreviousSignaturesReport, SignatureStatus, Tone,
+    VisibleBox, VisibleContent,
 };
 
 crossing! {
@@ -192,7 +192,55 @@ impl From<VisibleSignatureMemory> for RememberedVisibleSignatureView {
 }
 
 crossing! {
-    /// Titular, fecha y certificado de una de las firmas que ya trae el documento.
+    /// El estado de una firma previa, con el nombre con el que cruza el puente.
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+    #[serde(rename_all = "camelCase")]
+    pub enum SignatureStatusView {
+        Valid,
+        CertificateExpired,
+        CertificateNotYetValid,
+        Broken,
+        Unverifiable,
+        NotFullyChecked,
+    }
+}
+
+impl From<SignatureStatus> for SignatureStatusView {
+    fn from(status: SignatureStatus) -> Self {
+        match status {
+            SignatureStatus::Valid => Self::Valid,
+            SignatureStatus::CertificateExpired => Self::CertificateExpired,
+            SignatureStatus::CertificateNotYetValid => Self::CertificateNotYetValid,
+            SignatureStatus::Broken => Self::Broken,
+            SignatureStatus::Unverifiable => Self::Unverifiable,
+            SignatureStatus::NotFullyChecked => Self::NotFullyChecked,
+        }
+    }
+}
+
+crossing! {
+    /// El tono del peor aviso, de menor a mayor gravedad.
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+    #[serde(rename_all = "camelCase")]
+    pub enum ToneView {
+        Information,
+        Indeterminate,
+        Attention,
+    }
+}
+
+impl From<Tone> for ToneView {
+    fn from(tone: Tone) -> Self {
+        match tone {
+            Tone::Information => Self::Information,
+            Tone::Indeterminate => Self::Indeterminate,
+            Tone::Attention => Self::Attention,
+        }
+    }
+}
+
+crossing! {
+    /// Titular, fecha, certificado y estado de una de las firmas que ya trae el documento.
     #[derive(Clone, Debug, PartialEq, Serialize)]
     #[serde(rename_all = "camelCase")]
     pub struct PreviousSignatureView {
@@ -208,6 +256,10 @@ crossing! {
         pub certificate_serial_number: String,
         /// Instante de la firma en ISO-8601, si el puente lo devolvió.
         pub signing_time: Option<String>,
+        /// El estado de la firma.
+        pub status: SignatureStatusView,
+        /// Motivo del original, si el estado no es `Valid`.
+        pub reason: Option<String>,
     }
 }
 
@@ -220,28 +272,38 @@ impl From<PreviousSignature> for PreviousSignatureView {
             issuer: signature.issuer,
             certificate_serial_number: signature.certificate_serial_number,
             signing_time: signature.signing_time,
+            status: SignatureStatusView::from(signature.status),
+            reason: signature.reason,
         }
     }
 }
 
 crossing! {
-    /// Las firmas que ya trae el documento, con quién firmó y cuándo.
+    /// Las firmas que ya trae el documento, con quién firmó, cuándo, los avisos y su tono.
     #[derive(Clone, Debug, PartialEq, Serialize)]
     #[serde(rename_all = "camelCase")]
     pub struct PreviousSignaturesReportView {
         /// Una por firma, en orden cronológico.
         pub signatures: Vec<PreviousSignatureView>,
+        /// Cuántos avisos deja el informe.
+        pub warning_count: usize,
+        /// El tono del peor aviso.
+        pub tone: ToneView,
     }
 }
 
 impl From<PreviousSignaturesReport> for PreviousSignaturesReportView {
     fn from(report: PreviousSignaturesReport) -> Self {
+        let warning_count = report.warning_count();
+        let tone = ToneView::from(report.tone());
         Self {
             signatures: report
                 .into_signatures()
                 .into_iter()
                 .map(PreviousSignatureView::from)
                 .collect(),
+            warning_count,
+            tone,
         }
     }
 }

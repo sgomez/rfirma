@@ -125,6 +125,18 @@ class PreviousSignaturesBridgeTest {
     }
 
     @Test
+    void a_signature_added_after_a_certified_pdf_is_broken_with_its_reason() throws Exception {
+        final List<PreviousSignaturesBridge.Signature> signatures = PreviousSignaturesBridge.read(
+                TestFixtures.certifiedPdfWithSignatureInALaterRevision()).signatures();
+
+        assertEquals(2, signatures.size());
+        assertEquals(PreviousSignaturesBridge.Status.VALID, signatures.get(0).status(),
+                "la firma que certifica el PDF sigue siendo valida");
+        assertEquals(PreviousSignaturesBridge.Status.BROKEN, signatures.get(1).status());
+        assertEquals("CERTIFIED_SIGN_REVISION", signatures.get(1).reason());
+    }
+
+    @Test
     void each_verdict_of_the_original_validator_maps_to_its_status() {
         assertEquals(Map.of(
                 VALIDITY_ERROR.CERTIFICATE_EXPIRED, PreviousSignaturesBridge.Status.CERTIFICATE_EXPIRED,

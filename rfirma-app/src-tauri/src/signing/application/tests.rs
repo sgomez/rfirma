@@ -7,10 +7,10 @@ use crate::signing::adapters::memory::Memory;
 use crate::signing::adapters::orders::{PlacementOrder, SigningOrder, VisibleContentOrder};
 use crate::signing::domain::bridge::{
     BridgeError, Format, PostSignRequest, PreSignBlock, PreSignRequest, PreSignature,
-    PreviousSignaturesReport, SignatureOperation,
+    SignatureOperation,
 };
 use crate::signing::domain::isolate_gone::IsolateGone;
-use crate::signing::domain::{CompletedCycle, SessionSeal};
+use crate::signing::domain::{CompletedCycle, PreviousSignaturesReport, SessionSeal};
 use crate::signing::ports::{Bridge, DocumentBytes, IsolateHost, PreviousSignaturesEngine};
 
 /// Un hilo del puente cuya librería no abre: lo que la grada A tiene en vez del isolate.

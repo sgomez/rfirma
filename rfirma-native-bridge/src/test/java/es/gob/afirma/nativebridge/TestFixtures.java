@@ -7,12 +7,14 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.KeyStore;
 import java.security.PrivateKey;
+import java.security.Signature;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Enumeration;
 import java.util.List;
+import java.util.Properties;
 
 import com.aowagie.text.Document;
 import com.aowagie.text.Paragraph;
@@ -64,6 +66,34 @@ final class TestFixtures {
         final int version = header + "%PDF-1.".length();
         altered[version] = (byte) (altered[version] == '7' ? '4' : '7');
         return altered;
+    }
+
+    /** PDF certificado sin cambios permitidos con una segunda firma en una revision posterior. */
+    static byte[] certifiedPdfWithSignatureInALaterRevision() throws Exception {
+        final Properties certificationLevel = new Properties();
+        certificationLevel.setProperty("certificationLevel", "1");
+        final byte[] certified =
+                pades(samplePdf(), certificateChain(), privateKey(), certificationLevel);
+
+        // /M tiene resolucion de segundo.
+        Thread.sleep(1_100);
+
+        final Properties overCertified = new Properties();
+        overCertified.setProperty("allowSigningCertifiedPdfs", "true");
+        return pades(certified, otherCertificateChain(), otherPrivateKey(), overCertified);
+    }
+
+    private static byte[] pades(final byte[] pdf, final X509Certificate[] chain,
+            final PrivateKey key, final Properties extraParams) throws Exception {
+        final PadesBridge.PreSignResult pre =
+                PadesBridge.preSign(pdf, "SHA256withRSA", chain, extraParams);
+
+        final Signature signature = Signature.getInstance("SHA256withRSA");
+        signature.initSign(key);
+        signature.update(Base64.getDecoder().decode(pre.preSignB64()));
+
+        return PadesBridge.postSign(pdf, chain, pre.stamp(), pre.session(),
+                Base64.getEncoder().encodeToString(signature.sign()));
     }
 
     /** Los 64 bytes que firman las pruebas de CAdES, donde el documento da igual. */

@@ -4,9 +4,10 @@ use crate::signing::adapters::ffi::NativeBridge;
 use crate::signing::adapters::isolate::Isolate;
 use crate::signing::domain::bridge::{
     BridgeError, ExpandRequest, FilterRequest, Format, PostSignRequest, PreSignRequest,
-    PreSignature, PreviousSignaturesReport, SignatureVerdict, ValidationRequest,
+    PreSignature, SignatureVerdict, ValidationRequest,
 };
 use crate::signing::domain::isolate_gone::IsolateGone;
+use crate::signing::domain::previous_signatures::PreviousSignaturesReport;
 
 use crate::signing::ports::{Bridge, PreviousSignaturesEngine};
 use crate::site::ports::{FilterEngine, PolicyEngine, ValidationEngine};
