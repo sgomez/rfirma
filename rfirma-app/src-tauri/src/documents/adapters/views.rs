@@ -155,6 +155,8 @@ crossing! {
         pub id: String,
         /// Nombre del fichero.
         pub name: String,
+        /// Carpeta contenedora; ausente bajo el portal (ADR-0011).
+        pub folder: Option<String>,
         /// Insignia o estado del documento.
         pub badge: Badge,
         /// Fecha de modificación en segundos Unix.
@@ -173,6 +175,7 @@ impl From<RecentRow> for RecentDocumentView {
         Self {
             id: row.id,
             name: row.name,
+            folder: row.folder,
             badge: row.badge,
             modified: row.modified,
             last_used: row.last_used,

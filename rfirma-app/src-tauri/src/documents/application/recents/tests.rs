@@ -58,6 +58,24 @@ fn the_tray_survives_being_read_again_with_its_names_badges_and_order() {
     assert_eq!(names, vec!["nomina.pdf", "contrato.pdf"]);
     assert!(rows.iter().all(|row| row.badge == Badge::Unsigned));
     assert!(rows.iter().all(|row| row.available));
+    assert!(rows
+        .iter()
+        .all(|row| row.folder.as_deref() == Some("Contratos")));
+}
+
+#[test]
+fn a_row_taken_through_the_portal_carries_no_folder() {
+    let home = where_the_memory_lives();
+    let files = a_disk();
+    let memory = a_memory(home.path());
+    let opened = OpenedDocuments::new();
+    let path = PathBuf::from("/run/user/1000/doc/1e8b83b9/original.pdf");
+    files.put(&path, b"%PDF-1.7 de prueba");
+    let id = opened.mint(Document::opened(path));
+
+    let row = record(&memory, &files, &opened, &id, None).expect("deberia anotarse");
+
+    assert_eq!(row.folder, None);
 }
 
 #[test]

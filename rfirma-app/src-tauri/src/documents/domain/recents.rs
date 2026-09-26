@@ -6,6 +6,8 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 
+use super::document::containing_folder;
+
 /// Estado de firma persistido en caché para un documento reciente.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Badge {
@@ -66,6 +68,11 @@ impl<S> RecentDocument<S> {
     /// Nombre de fichero para visualización.
     pub fn name(&self) -> &str {
         &self.name
+    }
+
+    /// Carpeta contenedora para visualización; ausente bajo el portal (ADR-0011).
+    pub fn folder(&self) -> Option<String> {
+        containing_folder(&self.path)
     }
 
     /// Insignia de firma en caché.

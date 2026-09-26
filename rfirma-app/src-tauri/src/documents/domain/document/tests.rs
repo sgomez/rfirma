@@ -94,6 +94,19 @@ fn the_document_that_came_in_never_offers_a_folder_to_write_into() {
 }
 
 #[test]
+fn a_host_path_yields_its_containing_folder_name() {
+    assert_eq!(
+        containing_folder(Path::new("/home/quien/Contratos/contrato.pdf")),
+        Some("Contratos".to_owned())
+    );
+}
+
+#[test]
+fn a_portal_grant_has_no_containing_folder() {
+    assert_eq!(containing_folder(Path::new(A_PORTAL_HANDLE)), None);
+}
+
+#[test]
 fn a_new_file_at_the_same_path_keeps_the_row_available() {
     let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
     let path = directory.path().join("contrato.pdf");

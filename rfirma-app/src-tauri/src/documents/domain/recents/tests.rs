@@ -43,6 +43,20 @@ fn a_recent_caches_what_the_row_needs_so_the_tray_paints_without_opening_it() {
 }
 
 #[test]
+fn a_recent_exposes_the_name_of_its_containing_folder() {
+    let entry = seen(&a_document("contrato.pdf"));
+
+    assert_eq!(entry.folder(), Some("Contratos".to_owned()));
+}
+
+#[test]
+fn a_recent_entered_through_the_portal_has_no_folder() {
+    let entry = seen(Path::new("/run/user/1000/doc/1e8b83b9/original.pdf"));
+
+    assert_eq!(entry.folder(), None);
+}
+
+#[test]
 fn a_path_that_no_longer_answers_stays_in_the_list_with_the_unavailable_badge() {
     let mut recents = Recents::<Spot>::default();
     recents.record(seen(&a_document("en-el-usb.pdf")));
