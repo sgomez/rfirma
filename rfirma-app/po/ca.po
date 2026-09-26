@@ -737,8 +737,28 @@ msgstr "Personalitzada"
 msgid "panel.visibleSignature.model.rubricOnlyDisabled"
 msgstr "Necessita la rúbrica"
 
-msgid "panel.visibleSignature.model.customUnavailable"
-msgstr "Disponible properament"
+msgid "panel.visibleSignature.phrase.label"
+msgstr "Frase de la signatura"
+
+msgid "panel.visibleSignature.phrase.addDatum"
+msgstr "Dada"
+
+#. Comienzo de la frase de ejemplo de Personalizada; le sigue el nombre del firmante.
+msgid "panel.visibleSignature.phrase.seedLead"
+msgstr "Vist i plau de "
+
+#. Separador de la frase de ejemplo entre el firmante y la fecha.
+msgid "panel.visibleSignature.phrase.seedJoin"
+msgstr ", "
+
+msgid "panel.visibleSignature.datum.signer"
+msgstr "Signant"
+
+msgid "panel.visibleSignature.datum.issuer"
+msgstr "Emissor"
+
+msgid "panel.visibleSignature.datum.signedAt"
+msgstr "Data"
 
 msgid "panel.visibleSignature.rubric.toggle"
 msgstr "Amb rúbrica"

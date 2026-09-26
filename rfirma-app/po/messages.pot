@@ -667,7 +667,27 @@ msgstr ""
 msgid "panel.visibleSignature.model.rubricOnlyDisabled"
 msgstr ""
 
-msgid "panel.visibleSignature.model.customUnavailable"
+msgid "panel.visibleSignature.phrase.label"
+msgstr ""
+
+msgid "panel.visibleSignature.phrase.addDatum"
+msgstr ""
+
+#. Comienzo de la frase de ejemplo de Personalizada; le sigue el nombre del firmante.
+msgid "panel.visibleSignature.phrase.seedLead"
+msgstr ""
+
+#. Separador de la frase de ejemplo entre el firmante y la fecha.
+msgid "panel.visibleSignature.phrase.seedJoin"
+msgstr ""
+
+msgid "panel.visibleSignature.datum.signer"
+msgstr ""
+
+msgid "panel.visibleSignature.datum.issuer"
+msgstr ""
+
+msgid "panel.visibleSignature.datum.signedAt"
 msgstr ""
 
 msgid "panel.visibleSignature.rubric.toggle"

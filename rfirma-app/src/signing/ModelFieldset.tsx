@@ -1,10 +1,11 @@
-import { useId } from "react";
+import { useId, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { RubricIcon } from "../design-system/icons";
 import { ErrorNotice } from "../errors/ErrorNotice";
 import type { Certificate } from "./certificate";
+import { PhraseEditor } from "./PhraseEditor";
 import type { Rubric, RubricFailure } from "./rubric";
-import { rubricRuleFor, type VisibleSignature } from "./visibleSignature";
+import { type PhrasePart, rubricRuleFor, type VisibleSignature } from "./visibleSignature";
 
 interface ModelFieldsetProps {
   signature: VisibleSignature;
@@ -32,17 +33,44 @@ export function ModelFieldset({
   const rubricLocked = rule.locked === "on";
   const noImageTitle = t("panel.visibleSignature.rubric.noImageTitle");
 
+  const lastPhrase = useRef<PhrasePart[] | null>(null);
+  if (signature.content.model === "custom") lastPhrase.current = signature.content.phrase;
+
   const selectComplete = () => onChangeSignature({ ...signature, content: { model: "complete" } });
   const selectRubricOnly = () =>
     onChangeSignature({ ...signature, content: { model: "rubricOnly" }, withRubric: true });
+  const customPhrase: PhrasePart[] = lastPhrase.current ?? [
+    { text: t("panel.visibleSignature.phrase.seedLead") },
+    { datum: "signer" },
+    { text: t("panel.visibleSignature.phrase.seedJoin") },
+    { datum: "signedAt" },
+  ];
+  const selectCustom = () =>
+    onChangeSignature({ ...signature, content: { model: "custom", phrase: customPhrase } });
+  const changePhrase = (phrase: PhrasePart[]) =>
+    onChangeSignature({ ...signature, content: { model: "custom", phrase } });
   const toggleRubric = () => onChangeSignature({ ...signature, withRubric: !signature.withRubric });
 
-  // Aproximación en CSS, no un render del puente: el firmante y el emisor son
-  // los del certificado elegido, tal cual se ven ya en la lista de
-  // certificados, sin la máscara del DNI que compone `signing::layer2_text`.
   const signedAtSample = new Intl.DateTimeFormat(i18n.language, { dateStyle: "short" }).format(
     new Date(),
   );
+  const samples = useMemo(
+    () => ({
+      signer: certificate.stampedSigner,
+      issuer: certificate.issuer,
+      signedAt: signedAtSample,
+    }),
+    [certificate.stampedSigner, certificate.issuer, signedAtSample],
+  );
+  const rubricBeside =
+    signature.withRubric &&
+    (rubric ? (
+      <span className="panel__model-rubric">
+        <RubricIcon />
+      </span>
+    ) : (
+      <span className="panel__model-rubric--empty" title={noImageTitle} />
+    ));
 
   return (
     <>
@@ -58,16 +86,9 @@ export function ModelFieldset({
               onChange={selectComplete}
             />
             <span className="panel__model-thumbnail" aria-hidden="true">
-              {signature.withRubric &&
-                (rubric ? (
-                  <span className="panel__model-rubric">
-                    <RubricIcon />
-                  </span>
-                ) : (
-                  <span className="panel__model-rubric--empty" title={noImageTitle} />
-                ))}
+              {rubricBeside}
               <span className="panel__model-lines">
-                <span>{certificate.holderName}</span>
+                <span>{certificate.stampedSigner}</span>
                 <span>{signedAtSample}</span>
                 <span>{certificate.issuer}</span>
               </span>
@@ -112,22 +133,22 @@ export function ModelFieldset({
             </span>
           </label>
 
-          <label
-            className="panel__model-card panel__model-card--disabled"
-            title={t("panel.visibleSignature.model.customUnavailable")}
-          >
+          <label className="panel__model-card">
             <input
               type="radio"
               className="panel__model-radio"
               name={modelName}
               checked={signature.content.model === "custom"}
-              disabled
-              onChange={() => {}}
+              onChange={selectCustom}
             />
             <span className="panel__model-thumbnail" aria-hidden="true">
-              <span className="panel__model-placeholder-lines">
-                <span />
-                <span />
+              {rubricBeside}
+              <span className="panel__model-lines panel__model-lines--phrase">
+                <span>
+                  {customPhrase
+                    .map((part) => ("datum" in part ? samples[part.datum] : part.text))
+                    .join("")}
+                </span>
               </span>
             </span>
             <span className="panel__model-name">{t("panel.visibleSignature.model.custom")}</span>
@@ -192,6 +213,10 @@ export function ModelFieldset({
           />
         )}
       </div>
+
+      {signature.content.model === "custom" && (
+        <PhraseEditor phrase={signature.content.phrase} samples={samples} onChange={changePhrase} />
+      )}
     </>
   );
 }

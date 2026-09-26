@@ -198,7 +198,8 @@ fn paragraph_of(sentences: [(&str, Option<String>); 3]) -> String {
     paragraph
 }
 
-fn masked_signer(name: &str, pseudonym: bool) -> String {
+/// El firmante tal y como se estampa: enmascarado, salvo si es un seudónimo.
+pub fn masked_signer(name: &str, pseudonym: bool) -> String {
     if pseudonym {
         name.to_owned()
     } else {

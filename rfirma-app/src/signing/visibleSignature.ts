@@ -13,10 +13,10 @@ import { sealedPages } from "../viewer/signatureBox";
  */
 
 /** Un dato del certificado, insertable en la frase de *Personalizada*. */
-type Datum = "signer" | "issuer" | "signedAt";
+export type Datum = "signer" | "issuer" | "signedAt";
 
 /** Un trozo de la frase de *Personalizada*: texto libre o un dato. */
-type PhrasePart = { text: string } | { datum: Datum };
+export type PhrasePart = { text: string } | { datum: Datum };
 
 /** El contenido del recuadro, por modelo; la frase de *Personalizada* viaja estructurada, no como comodines (ADR-0006). */
 export type VisibleContent =

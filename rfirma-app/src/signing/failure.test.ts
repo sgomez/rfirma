@@ -7,6 +7,7 @@ function withStatus(status: Certificate["status"]): Certificate {
     id: "0123456789abcdef0123456789abcdef",
     label: "Firma",
     holderName: "Ada Lovelace Byron",
+    stampedSigner: "Ada Lovelace Byron",
     givenName: "Ada",
     surname: "Lovelace Byron",
     idNumber: "99999999R",

@@ -261,9 +261,16 @@ export function MinusIcon({ size = 16 }: IconProps) {
 }
 
 /** El más de acercar el zoom. */
-export function PlusIcon({ size = 16 }: IconProps) {
+export function PlusIcon({ size = 16, strokeWidth = 1.5 }: IconProps & { strokeWidth?: number }) {
   return (
-    <svg width={size} height={size} {...PEN} aria-hidden="true" focusable="false">
+    <svg
+      width={size}
+      height={size}
+      {...PEN}
+      strokeWidth={strokeWidth}
+      aria-hidden="true"
+      focusable="false"
+    >
       <path d="M12 5v14M5 12h14" />
     </svg>
   );

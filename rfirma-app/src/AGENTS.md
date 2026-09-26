@@ -79,6 +79,8 @@ rojo.
 | `signing/usePlacementField.ts` | El estado del bloque «Colocación»: lo tecleado en el campo de páginas. |
 | `signing/placementField.ts` | Las situaciones del campo de páginas y su eco, redactados. Sin React. |
 | `signing/ModelFieldset.tsx` | Qué se estampa en el recuadro: las tarjetas de modelo y la rúbrica. |
+| `signing/PhraseEditor.tsx` | La frase de *Personalizada*: el campo con las pastillas de los datos y su menú «+ Dato». |
+| `signing/phraseDom.ts` | Leer la frase del campo editable y escribirla en él, y dónde está el cursor respecto a una pastilla. No es el componente. |
 | `signing/PanelFooter.tsx` | El pie fijo del panel: el destino y, según el estado, el certificado, «Reintentar»/«Volver» o el aviso de sin certificados. |
 | `signing/CertificateFooterButton.tsx` | El botón partido «Firmar como…» del pie, con su lista hacia arriba. |
 | `signing/panelFormat.ts` | El tamaño del documento en la unidad que reconoce el usuario. Sin React. |
