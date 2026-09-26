@@ -13,7 +13,7 @@ use crate::identity::domain::holder::{
 use crate::identity::domain::secret::SecretName;
 use crate::identity::domain::store::{Store, StoreClass};
 use crate::identity::ports::{
-    prompted_until_accepted, CertificateMemory, InstalledFolder, PromptedError,
+    prompted_until_accepted, CertificateMemory, InstalledFolder, OriginWindow, PromptedError,
     SecretPromptRequest, SecretPrompter, Token,
 };
 use crate::memory_error::{MemoryError, Situation as StoreSituation};
@@ -182,6 +182,7 @@ pub fn install_pkcs12_asking_its_password(
         holder: None,
         language,
         incorrect_secret: false,
+        origin_window: Some(OriginWindow::Main),
     };
     prompted_until_accepted(
         prompter,
