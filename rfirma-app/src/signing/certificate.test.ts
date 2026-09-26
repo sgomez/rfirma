@@ -7,6 +7,8 @@ function aCertificate(overrides: Partial<Certificate> = {}): Certificate {
     id: "0123456789abcdef0123456789abcdef",
     label: "Firma",
     holderName: "Ada Lovelace Byron",
+    givenName: "Ada",
+    surname: "Lovelace Byron",
     idNumber: "99999999R",
     issuer: "AC FNMT Usuarios",
     store: "card",
@@ -17,12 +19,21 @@ function aCertificate(overrides: Partial<Certificate> = {}): Certificate {
 }
 
 describe("firstNameAndSurname", () => {
-  it("keeps the given name and the first surname, for the «Firmar como» button", () => {
-    expect(firstNameAndSurname("Ada Lovelace Byron")).toBe("Ada Lovelace");
+  it("takes the given name and the first surname, for the «Firmar como» button", () => {
+    expect(firstNameAndSurname(aCertificate({ givenName: "Ada", surname: "Lovelace Byron" }))).toBe(
+      "Ada Lovelace",
+    );
   });
 
-  it("leaves a single given name as it is", () => {
-    expect(firstNameAndSurname("Ada")).toBe("Ada");
+  it("falls back to the whole CN when the certificate carries no GN or SN", () => {
+    // `holderName` en orden real de la FNMT: APELLIDO1 APELLIDO2 NOMBRE.
+    const sealCertificate = aCertificate({
+      holderName: "LOVELACE BYRON ADA",
+      givenName: "",
+      surname: "",
+    });
+
+    expect(firstNameAndSurname(sealCertificate)).toBe("LOVELACE BYRON ADA");
   });
 });
 

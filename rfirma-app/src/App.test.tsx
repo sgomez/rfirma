@@ -68,7 +68,7 @@ describe("App", () => {
       {},
       // Con certificado: desde el ID-108 el bloque entero de firma visible
       // —la rúbrica incluida— está apagado hasta que hay con qué firmar.
-      // `remembered` porque sin él no hay preselección ni con uno solo (#973).
+      // `remembered` porque sin él no hay preselección, ni con uno solo.
       failingCertificateStore(0, [{ ...aCertificate, remembered: true }]),
       rubrics,
     );
@@ -221,7 +221,7 @@ describe("App", () => {
     await user.click(retry);
 
     // Sin preselección tampoco tras resolverse el fallo: el desplegable trae
-    // el certificado, pero sigue sin elegir ninguno (#973).
+    // el certificado, pero sigue sin elegir ninguno.
     expect(await within(panel).findByRole("combobox", { name: "Certificado" })).toHaveTextContent(
       "Elegir certificado",
     );
@@ -236,7 +236,13 @@ describe("App", () => {
    */
   it("chooses no certificate by itself and takes the one that is picked", async () => {
     const user = userEvent.setup();
-    const other: Certificate = { ...aCertificate, id: "otra", holderName: "Grace Hopper Murray" };
+    const other: Certificate = {
+      ...aCertificate,
+      id: "otra",
+      holderName: "Grace Hopper Murray",
+      givenName: "Grace",
+      surname: "Hopper Murray",
+    };
     renderApp(
       inMemoryRecents(),
       [document("factura.pdf")],
@@ -276,6 +282,8 @@ describe("App", () => {
       ...aCertificate,
       id: "otra",
       holderName: "Grace Hopper Murray",
+      givenName: "Grace",
+      surname: "Hopper Murray",
       remembered: true,
     };
     renderApp(
@@ -303,7 +311,13 @@ describe("App", () => {
    */
   it("falls back to no certificate when the remembered one is gone, without an error", async () => {
     const user = userEvent.setup();
-    const other: Certificate = { ...aCertificate, id: "otra", holderName: "Grace Hopper Murray" };
+    const other: Certificate = {
+      ...aCertificate,
+      id: "otra",
+      holderName: "Grace Hopper Murray",
+      givenName: "Grace",
+      surname: "Hopper Murray",
+    };
     renderApp(
       inMemoryRecents(),
       [document("factura.pdf")],
@@ -349,7 +363,7 @@ describe("App", () => {
   });
 
   /** El único caso que quedaba de «con uno solo se elige solo» —el
-   * utilizable— también desaparece (#973, revierte el #197). */
+   * utilizable— también desaparece: nunca se elige por su cuenta. */
   it("does not preselect the sole certificate even when it can be used", async () => {
     const user = userEvent.setup();
     renderApp(
@@ -369,7 +383,7 @@ describe("App", () => {
   });
 
   /** «Con uno solo se elige solo» ya no tiene excepciones que gane: si ese
-   * único no sirve, el desplegable sigue arrancando sin elección (#197). */
+   * único no sirve, el desplegable sigue arrancando sin elección. */
   it("does not preselect the sole certificate when it cannot be used", async () => {
     const user = userEvent.setup();
     const expired: Certificate = {

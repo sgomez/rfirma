@@ -13,7 +13,7 @@ interface CertificateFooterButtonProps {
   chosen: Certificate | null;
   onChoose: (certificate: Certificate) => void;
   onSign: () => void;
-  /** Mientras la firma corre, el chevron no abre la lista (ID-93). */
+  /** Mientras la firma corre, el chevron no abre la lista. */
   signing: boolean;
   /** Con el interruptor encendido y sin colocar, o con el rango en error. */
   blocked: boolean;
@@ -232,7 +232,7 @@ export function CertificateFooterButton({
             >
               {signLabel ??
                 t(signing ? "panel.footer.signingAs" : "panel.footer.signAs", {
-                  name: firstNameAndSurname(chosen.holderName),
+                  name: firstNameAndSurname(chosen),
                 })}
             </button>
             <button
@@ -253,9 +253,8 @@ export function CertificateFooterButton({
           </>
         )}
       </div>
-      {/* Un recordado que caducó desde la última firma no debería llegar
-          «chosen» (App.signingOrder.ts lo filtra), pero si ocurriera el motivo
-          se dice aquí y no solo en la fila de la lista. */}
+      {/* Por si un recordado caducado llegara a `chosen` pese al filtro de
+          App.signingOrder.ts, el motivo también se dice aquí. */}
       {unusable && (
         <p className="rf-prose certificate-footer__warning" role="alert">
           {statusWarning(chosen.status, i18n.language, t)}

@@ -13,6 +13,8 @@ export function certificate(overrides: Partial<Certificate> = {}): Certificate {
     id: "handle-1",
     label: "FNMT",
     holderName: "ADA LOVELACE BYRON",
+    givenName: "ADA",
+    surname: "LOVELACE BYRON",
     idNumber: "99999999R",
     issuer: "FNMT-RCM",
     store: "installed",

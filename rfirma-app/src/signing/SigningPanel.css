@@ -238,13 +238,20 @@
   min-height: 36px;
 }
 
+/* 162 px en todos los estados (docs/design/panel-de-firma.md § Pie fijo): el
+   pie no se mueve aunque el destino, el aviso de colocación o el de un
+   recordado caducado quieran más alto. Lo que no cabe se desplaza dentro,
+   nunca empuja el borde. */
 .panel__footer {
   display: flex;
   flex-direction: column;
   gap: var(--rf-space-sm);
+  height: 162px;
+  flex: none;
   padding: var(--rf-space-sm);
   border-top: 1px solid var(--rf-border-subtle);
   background: var(--rf-surface);
+  overflow-y: auto;
 }
 
 .panel__destination {

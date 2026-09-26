@@ -7,7 +7,7 @@ use crate::documents::domain::handles::Handles;
 use crate::identity::domain::certificate::{CertificateRef, ListedCertificate, TokenCertificate};
 use crate::identity::domain::chain::issuers_of;
 use crate::identity::domain::error::{Situation, TokenError};
-use crate::identity::domain::holder::{common_name_of, holder_of};
+use crate::identity::domain::holder::{common_name_of, given_name_and_surname, holder_of};
 use crate::identity::domain::store::{Store, StoreClass};
 use crate::identity::ports::{CertificateMemory, InstalledFolder, Token};
 use crate::memory_error::{MemoryError, Situation as StoreSituation};
@@ -103,11 +103,15 @@ pub fn rows_of(
         .into_iter()
         .zip(handles)
         .map(|(certificate, id)| {
-            let (holder_name, id_number) = holder_of(certificate.subject().as_deref());
+            let subject = certificate.subject();
+            let (holder_name, id_number) = holder_of(subject.as_deref());
+            let (given_name, surname) = given_name_and_surname(subject.as_deref());
             ListedCertificate {
                 id,
                 label: certificate.reference().label().to_owned(),
                 holder_name,
+                given_name,
+                surname,
                 id_number,
                 issuer: common_name_of(certificate.issuer().as_deref()),
                 store: certificate.reference().store().class_under(installed_dir),

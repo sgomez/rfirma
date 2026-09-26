@@ -9,6 +9,8 @@ fn asking_with(label: &str) -> Moment {
             id: "cert-1".to_owned(),
             label: label.to_owned(),
             holder_name: String::new(),
+            given_name: String::new(),
+            surname: String::new(),
             id_number: String::new(),
             issuer: String::new(),
             store: StoreClass::Card,

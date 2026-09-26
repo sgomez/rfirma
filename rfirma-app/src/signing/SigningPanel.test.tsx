@@ -21,6 +21,8 @@ const certificate: Certificate = {
   id: "0123456789abcdef0123456789abcdef",
   label: "Firma",
   holderName: "Ada Lovelace Byron",
+  givenName: "Ada",
+  surname: "Lovelace Byron",
   idNumber: "99999999R",
   issuer: "AC FNMT Usuarios",
   store: "card",
@@ -345,9 +347,8 @@ describe("SigningPanel", () => {
   });
 
   /**
-   * Ni siquiera con uno solo se elige solo (#973, revierte el #197): elegir
-   * con qué identidad se firma un documento con validez jurídica no lo hace
-   * la aplicación por su cuenta.
+   * Ni siquiera con uno solo se elige solo: elegir con qué identidad se firma
+   * un documento con validez jurídica no lo hace la aplicación por su cuenta.
    */
   it("does not preselect the sole certificate either", () => {
     renderPanel({ certificate: { kind: "unchosen", certificates: [certificate] } });

@@ -87,6 +87,10 @@ crossing! {
         pub id: String,
         pub label: String,
         pub holder_name: String,
+        /// Nombre de pila, vacío si el certificado no lo trae.
+        pub given_name: String,
+        /// Primer apellido, vacío si el certificado no lo trae.
+        pub surname: String,
         pub id_number: String,
         pub issuer: String,
         /// Clase de almacén del certificado.
@@ -103,6 +107,8 @@ impl From<ListedCertificate> for CertificateView {
             id: certificate.id,
             label: certificate.label,
             holder_name: certificate.holder_name,
+            given_name: certificate.given_name,
+            surname: certificate.surname,
             id_number: certificate.id_number,
             issuer: certificate.issuer,
             store: store_name(certificate.store).to_owned(),

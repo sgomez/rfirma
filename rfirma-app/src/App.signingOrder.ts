@@ -132,13 +132,12 @@ export function formatSignedAt(instant: Date, locale: string): string {
 /**
  * Con qué certificado se firma, a partir de los que hay.
  *
- * Con uno solo no se pregunta: elegir entre una cosa no es elegir. Pero eso no
- * vale para uno caducado —preseleccionar un certificado inservible sería
- * elegir por la persona usuaria con qué identidad firma, y eso no lo hace la
- * aplicación por su cuenta (#197)—, así que con uno solo inservible el
- * desplegable arranca sin elección, igual que si no hubiera ninguno.
+ * Nunca se elige por su cuenta: elegir con qué identidad se firma un
+ * documento con validez jurídica es cosa de la persona usuaria, y «hay uno
+ * solo» no es una excepción a esa regla —preseleccionarlo sería elegir por
+ * ella—.
  *
- * Con varios manda **el que se usó la última vez** (#110): quien tiene cuatro
+ * Manda **el que se usó la última vez** (#110): quien tiene cuatro
  * certificados los elige una vez, no cada día. Eso no contradice la regla de
  * que la aplicación no elige por su cuenta: no está eligiendo, está devolviendo
  * lo que ya se eligió firmando. Pero viene con su estado de ahora, no con el
@@ -155,9 +154,6 @@ export function formatSignedAt(instant: Date, locale: string): string {
 export function chosenFrom(found: readonly Certificate[]): CertificateState {
   const [first] = found;
   if (first === undefined) return { kind: "empty" };
-  // Ni siquiera con uno solo se elige solo (#973, revierte el #197): elegir
-  // con qué identidad se firma un documento con validez jurídica no lo hace la
-  // aplicación por su cuenta, y «hay uno solo» no es una excepción a esa regla.
   const remembered = found.find((one) => one.remembered);
   if (remembered !== undefined && isUsable(remembered.status)) {
     return { kind: "chosen", certificate: remembered, certificates: found };

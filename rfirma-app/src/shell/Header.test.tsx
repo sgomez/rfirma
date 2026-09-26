@@ -8,8 +8,8 @@ const noop = () => {};
 
 // Grada A: React, jsdom y el catálogo. Nada de token ni de puente.
 describe("Header", () => {
-  // #973: ni certificado ni insignia de documento — el certificado lo dice el
-  // botón «Firmar como» del panel y el estado, la pestaña.
+  // Ni certificado ni insignia de documento: el certificado lo dice el botón
+  // «Firmar como» del panel, y el estado, la pestaña.
   it("shows no status badge, ever", () => {
     renderWithCatalog(
       <Header

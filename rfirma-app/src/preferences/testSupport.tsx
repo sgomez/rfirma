@@ -28,6 +28,8 @@ export function anInstalledCertificate(overrides: Partial<Certificate> = {}): Ce
     id: "0123456789abcdef",
     label: "FNMT-GEMELO",
     holderName: "Ada Lovelace Byron",
+    givenName: "Ada",
+    surname: "Lovelace Byron",
     idNumber: "IDCES-00000000T",
     issuer: "FNMT-RCM",
     store: "installed",

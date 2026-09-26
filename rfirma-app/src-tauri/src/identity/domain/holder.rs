@@ -62,6 +62,27 @@ pub fn holder_of(subject: Option<&str>) -> (String, String) {
     )
 }
 
+/// Nombre de pila y primer apellido del titular, de los RDN `GN` (2.5.4.42) y
+/// `SN` (2.5.4.4) de los certificados de persona física. Vacíos si el
+/// certificado no los lleva —sello, representante o seudónimo—, y entonces
+/// quien pinta el botón cae al `CN` entero.
+pub fn given_name_and_surname(subject: Option<&str>) -> (String, String) {
+    let subject = subject.unwrap_or_default();
+    (
+        first_non_empty(subject, &["GN=", "givenName="]),
+        first_non_empty(subject, &["SN=", "surname="]),
+    )
+}
+
+/// El primer valor no vacío de `prefixes`, probados en orden.
+fn first_non_empty(subject: &str, prefixes: &[&str]) -> String {
+    prefixes
+        .iter()
+        .map(|prefix| attribute(prefix, subject))
+        .find(|value| !value.is_empty())
+        .unwrap_or_default()
+}
+
 /// Datos del titular a estampar en la firma visible.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct StampedHolder {

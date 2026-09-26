@@ -31,8 +31,7 @@ export function CertificateNotice({
 
   if (state.kind === "failed") {
     // El mismo lenguaje que `empty` —título y explicación— con el fallo ya
-    // clasificado y su detalle crudo debajo: quien firma tiene que poder
-    // distinguir «mete la tarjeta» de «algo va mal» (ID-10).
+    // clasificado y su detalle crudo debajo.
     return (
       <div className="panel__no-certificates">
         <div className="panel__notice-title">
