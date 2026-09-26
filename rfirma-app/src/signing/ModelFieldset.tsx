@@ -75,7 +75,7 @@ export function ModelFieldset({
 
   return (
     <>
-      <div className="panel__model" role="group" aria-labelledby={modelTitle}>
+      <fieldset className="panel__model" aria-labelledby={modelTitle}>
         <span className="rf-label panel__model-title" id={modelTitle}>
           {t("panel.visibleSignature.model.title")}
         </span>
@@ -160,7 +160,7 @@ export function ModelFieldset({
             <span className="panel__model-name">{t("panel.visibleSignature.model.custom")}</span>
           </label>
         </div>
-      </div>
+      </fieldset>
 
       <div className="panel__rubric">
         <div className="panel__rubric-row">
