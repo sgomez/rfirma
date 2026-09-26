@@ -179,14 +179,14 @@ export interface CertificateStore {
   /**
    * Mete un `.p12` en rFirma y responde si quedó instalado alguno.
    *
-   * **Quien abre el selector de ficheros es el backend**, igual que con la
-   * rúbrica y con el destino (ID-63), así que la contraseña del fichero viaja
-   * antes de que exista fichero elegido. `false` es haber cerrado el selector
-   * sin elegir nada, que no es un fallo: deja la lista como estaba. Rechaza
-   * cuando el fichero no se puede abrir o cuando su clave no es RSA ni de
-   * curva elíptica.
+   * **El backend abre el selector de ficheros y, con el elegido, pide su
+   * contraseña**: esta pantalla nunca la ve ni la teclea. `false` es haber
+   * cerrado el selector, o el diálogo de la contraseña, sin elegir ni
+   * instalar nada, que no es un fallo: deja la lista como estaba. Rechaza
+   * cuando el fichero no se puede abrir o cuando su clave no es RSA ni
+   * de curva elíptica.
    */
-  install(password: string): Promise<boolean>;
+  install(): Promise<boolean>;
   /** Quita un `.p12` instalado, por el asa de su fila. */
   remove(id: string): Promise<void>;
 }

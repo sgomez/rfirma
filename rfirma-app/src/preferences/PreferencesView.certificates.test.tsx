@@ -61,32 +61,20 @@ describe("certificates in a file", () => {
     expect(within(certificates).getByText("Caducado")).toBeInTheDocument();
   });
 
-  it("asks for the password of the file and installs with it", async () => {
+  /**
+   * El selector de ficheros y la contraseña son los dos del backend:
+   * «Añadir…» no abre ningún diálogo propio.
+   */
+  it("installs with a single click, without asking the password on screen", async () => {
     const user = userEvent.setup();
     const onInstallCertificate = vi.fn(async () => true);
     renderView({ onInstallCertificate });
     await openTab(user, "Certificados");
 
     await user.click(screen.getByRole("button", { name: "Añadir…" }));
-    await user.type(screen.getByLabelText("Contraseña"), "hunter2");
-    await user.click(screen.getByRole("button", { name: "Continuar" }));
 
-    expect(onInstallCertificate).toHaveBeenCalledWith("hunter2");
-  });
-
-  it("calls the password off with Escape, without closing the screen", async () => {
-    const user = userEvent.setup();
-    const onClose = vi.fn();
-    const onInstallCertificate = vi.fn(async () => true);
-    renderView({ onClose, onInstallCertificate });
-    await openTab(user, "Certificados");
-
-    await user.click(screen.getByRole("button", { name: "Añadir…" }));
-    await user.keyboard("{Escape}");
-
+    expect(onInstallCertificate).toHaveBeenCalledWith();
     expect(screen.queryByLabelText("Contraseña")).not.toBeInTheDocument();
-    expect(onInstallCertificate).not.toHaveBeenCalled();
-    expect(onClose).not.toHaveBeenCalled();
   });
 
   it("says an unsupported key kind does not work, in a single line", async () => {
@@ -101,7 +89,6 @@ describe("certificates in a file", () => {
     await openTab(user, "Certificados");
 
     await user.click(screen.getByRole("button", { name: "Añadir…" }));
-    await user.click(screen.getByRole("button", { name: "Continuar" }));
 
     const notice = await screen.findByRole("alert");
     expect(notice).toHaveTextContent("Ese certificado no es compatible con rFirma");
@@ -128,7 +115,6 @@ describe("certificates in a file", () => {
     await openTab(user, "Certificados");
 
     await user.click(screen.getByRole("button", { name: "Añadir…" }));
-    await user.click(screen.getByRole("button", { name: "Continuar" }));
 
     const notice = await screen.findByRole("alert");
     expect(notice).toHaveTextContent("La contraseña no es correcta");
@@ -144,7 +130,6 @@ describe("certificates in a file", () => {
     await openTab(user, "Certificados");
 
     await user.click(screen.getByRole("button", { name: "Añadir…" }));
-    await user.click(screen.getByRole("button", { name: "Continuar" }));
 
     const notice = await screen.findByRole("alert");
     expect(notice).toHaveTextContent("No hemos podido leer el fichero");
@@ -164,7 +149,6 @@ describe("certificates in a file", () => {
     await openTab(user, "Certificados");
 
     await user.click(screen.getByRole("button", { name: "Añadir…" }));
-    await user.click(screen.getByRole("button", { name: "Continuar" }));
 
     const notice = await screen.findByRole("alert");
     expect(notice).toHaveTextContent("Ese fichero no trae ninguna clave privada");
@@ -178,7 +162,6 @@ describe("certificates in a file", () => {
     await openTab(user, "Certificados");
 
     await user.click(screen.getByRole("button", { name: "Añadir…" }));
-    await user.click(screen.getByRole("button", { name: "Continuar" }));
 
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });

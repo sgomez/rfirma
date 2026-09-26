@@ -129,7 +129,6 @@ rojo.
 | `preferences/preferences.ts` | Lo que la aplicación recuerda. |
 | `preferences/PreferencesView.tsx` | La vista del cuerpo con los ajustes, con su índice de **cuatro** secciones. |
 | `preferences/PreferencesSections.tsx` | El contenido de cada sección del índice, como componentes propios. |
-| `preferences/PasswordPrompt.tsx` | El diálogo de la contraseña del `.p12`, antes de elegir el fichero. |
 | `preferences/focusTrap.ts` | El tabulador que da la vuelta dentro de un modal. |
 | `preferences/Switch.tsx` | El interruptor. |
 | `preferences/Select.tsx` | El desplegable. |

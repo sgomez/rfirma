@@ -912,12 +912,6 @@ msgstr "Open the folder"
 msgid "panel.signed.signAgain"
 msgstr "Sign it again"
 
-msgid "pin.titlePassword"
-msgstr "Enter the password"
-
-msgid "pin.labelPassword"
-msgstr "Password"
-
 msgid "progress.title"
 msgstr "Signing the document…"
 
@@ -1248,9 +1242,6 @@ msgstr "expires on {{date}}"
 #. Insignia de la fila de un certificado caducado, que se queda en la lista.
 msgid "preferences.certificates.expired"
 msgstr "Expired"
-
-msgid "preferences.certificates.password.submit"
-msgstr "Continue"
 
 msgid "preferences.theme.label"
 msgstr "Theme"

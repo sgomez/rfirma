@@ -10,10 +10,15 @@ use crate::identity::domain::error::{Situation, TokenError};
 use crate::identity::domain::holder::{
     common_name_of, given_name_and_surname, holder_of, is_pseudonym,
 };
+use crate::identity::domain::secret::SecretName;
 use crate::identity::domain::store::{Store, StoreClass};
-use crate::identity::ports::{CertificateMemory, InstalledFolder, Token};
+use crate::identity::ports::{
+    prompted_until_accepted, CertificateMemory, InstalledFolder, OriginWindow, PromptedError,
+    SecretPromptRequest, SecretPrompter, Token,
+};
 use crate::memory_error::{MemoryError, Situation as StoreSituation};
 use crate::signing::domain::layer2_text::masked_signer;
+use crate::signing::domain::Language;
 
 /// Los certificados del último listado, cada uno tras su asa.
 pub type ListedCertificates = Handles<CertificateRef>;
@@ -160,6 +165,57 @@ pub fn install_pkcs12(
         folder.restrict_to_owner(&directory.join(file));
     }
     Ok(())
+}
+
+/// Quién pide la contraseña del `.p12`, en qué idioma y sobre qué ventana.
+pub struct PasswordPrompt<'a> {
+    /// El diálogo del secreto.
+    pub prompter: &'a dyn SecretPrompter,
+    /// El idioma del diálogo.
+    pub language: Language,
+    /// La ventana que pidió instalar, sobre la que el diálogo se hace modal.
+    pub origin_window: OriginWindow,
+}
+
+/// Pide la contraseña del `.p12` por el diálogo del secreto y lo instala, con reintentos hasta acertar o cancelar.
+pub fn install_pkcs12_asking_its_password(
+    token: &dyn Token,
+    folder: &dyn InstalledFolder,
+    installed_dir: &Path,
+    pkcs12: &[u8],
+    file_name: &str,
+    prompt: PasswordPrompt<'_>,
+) -> Result<(), PromptedError<InstallError>> {
+    let request = SecretPromptRequest {
+        secret: SecretName::Pkcs12Password(file_name.to_string()),
+        holder: None,
+        language: prompt.language,
+        incorrect_secret: false,
+        origin_window: Some(prompt.origin_window),
+    };
+    prompted_until_accepted(
+        prompt.prompter,
+        request,
+        |secret| {
+            install_pkcs12(
+                token,
+                folder,
+                installed_dir,
+                pkcs12,
+                secret.as_str().unwrap_or_default(),
+            )
+        },
+        wrong_pkcs12_password,
+    )
+    .map(|_| ())
+}
+
+/// Un `.p12` no se bloquea: solo la contraseña incorrecta merece reintentarse.
+fn wrong_pkcs12_password(error: &InstallError) -> bool {
+    matches!(
+        error,
+        InstallError::Token(token) if token.situation() == Situation::IncorrectPkcs12Password
+    )
 }
 
 /// Comprueba que el almacén contiene al menos un certificado y todas las claves son RSA o de curva elíptica.

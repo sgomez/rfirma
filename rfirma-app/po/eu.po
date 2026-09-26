@@ -931,12 +931,6 @@ msgstr "Ireki karpeta"
 msgid "panel.signed.signAgain"
 msgstr "Sinatu berriro"
 
-msgid "pin.titlePassword"
-msgstr "Sartu pasahitza"
-
-msgid "pin.labelPassword"
-msgstr "Pasahitza"
-
 msgid "progress.title"
 msgstr "Dokumentua sinatzen…"
 
@@ -1270,9 +1264,6 @@ msgstr "{{date}}(e)an iraungitzen da"
 #. Insignia de la fila de un certificado caducado, que se queda en la lista.
 msgid "preferences.certificates.expired"
 msgstr "Iraungita"
-
-msgid "preferences.certificates.password.submit"
-msgstr "Jarraitu"
 
 msgid "preferences.theme.label"
 msgstr "Gaia"

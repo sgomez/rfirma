@@ -65,6 +65,7 @@ fn composed_roots(paths: desktop::adapters::paths::Paths, invocation: Option<Inv
         listed: identity::application::certificates::ListedCertificates::new(),
         memory: memory.clone(),
         folder: Arc::new(identity::adapters::folder::RealInstalledFolder),
+        prompter: prompter.clone(),
     };
     let documents = DocumentsRoot {
         documents_folder: desktop::adapters::paths::documents_folder().unwrap_or_default(),

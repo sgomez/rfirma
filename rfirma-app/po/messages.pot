@@ -865,12 +865,6 @@ msgstr ""
 msgid "panel.signed.signAgain"
 msgstr ""
 
-msgid "pin.titlePassword"
-msgstr ""
-
-msgid "pin.labelPassword"
-msgstr ""
-
 msgid "progress.title"
 msgstr ""
 
@@ -1184,9 +1178,6 @@ msgstr ""
 
 #. Insignia de la fila de un certificado caducado, que se queda en la lista.
 msgid "preferences.certificates.expired"
-msgstr ""
-
-msgid "preferences.certificates.password.submit"
 msgstr ""
 
 msgid "preferences.theme.label"
