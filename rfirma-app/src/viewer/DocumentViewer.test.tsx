@@ -37,7 +37,7 @@ describe("el visor vacío", () => {
 
     expect(onOpen).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole("button", { name: "Acercar" })).not.toBeInTheDocument();
-    expect(screen.getByText(/no sale de tu ordenador/)).toBeInTheDocument();
+    expect(screen.getByText("No sale de tu ordenador")).toBeInTheDocument();
   });
 
   // TD-11: lo que se afirma es lo que se ve, no el CSS calculado. La zona de
@@ -49,7 +49,7 @@ describe("el visor vacío", () => {
 
     expect(dropZone.querySelector("svg")).not.toBeNull();
     expect(dropZone).toHaveTextContent("Arrastra un PDF o pulsa para abrirlo");
-    expect(dropZone).toHaveTextContent("Se abrirá el explorador de archivos");
+    expect(dropZone).toHaveTextContent("No sale de tu ordenador");
   });
 });
 

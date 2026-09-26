@@ -6,10 +6,10 @@ import {
   aCertificate,
   aDestination,
   document,
+  openPdf,
   pdfsOf,
   renderApp,
   row,
-  trayDropZone,
 } from "./App.testSupport";
 import { inMemoryExternalDestinationOpener } from "./desktop/externalDestination";
 import { inMemoryDocumentDrops } from "./documents/drops";
@@ -31,20 +31,20 @@ describe("App", () => {
   it("changes nothing when the dialog is closed without choosing", async () => {
     const user = userEvent.setup();
     renderApp(inMemoryRecents(), [document("factura.pdf")], pdfsOf({ "factura.pdf": 3 }));
-    await user.click(trayDropZone());
+    await openPdf(user);
     await screen.findByRole("region", { name: "Panel de firma" });
 
     // El selector en memoria se agota tras el primero, y a partir de ahí se
     // comporta como una cancelación (ID-73).
-    await user.click(trayDropZone());
+    await openPdf(user);
 
     const panel = screen.getByRole("region", { name: "Panel de firma" });
     expect(within(panel).getByText("factura.pdf")).toBeInTheDocument();
-    const tray = screen.getByRole("region", { name: "Bandeja de documentos" });
-    expect(within(tray).getAllByText("factura.pdf")).toHaveLength(1);
+    const tabs = screen.getByRole("navigation", { name: "Documentos abiertos" });
+    expect(within(tabs).getAllByRole("tab")).toHaveLength(1);
   });
 
-  it("opens Preferences from the menu, replacing the tray and the viewer", async () => {
+  it("opens Preferences from the menu, replacing the tabs and the viewer", async () => {
     const user = userEvent.setup();
     renderApp(inMemoryRecents([row("a.pdf")]));
     await screen.findByText("a.pdf");
@@ -53,12 +53,14 @@ describe("App", () => {
     await user.click(screen.getByRole("menuitem", { name: "Preferencias…" }));
 
     expect(await screen.findByRole("region", { name: "Preferencias" })).toBeInTheDocument();
-    expect(screen.queryByRole("region", { name: "Bandeja de documentos" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("navigation", { name: "Documentos abiertos" }),
+    ).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Cerrar" }));
 
     expect(screen.queryByRole("region", { name: "Preferencias" })).not.toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "Bandeja de documentos" })).toBeInTheDocument();
+    expect(screen.getByRole("navigation", { name: "Documentos abiertos" })).toBeInTheDocument();
   });
 
   it("closes Preferences with Escape", async () => {
@@ -187,12 +189,14 @@ describe("App", () => {
     await user.click(screen.getByRole("menuitem", { name: "Estado de rFirma" }));
 
     expect(screen.getByRole("heading", { name: "Estado de rFirma" })).toBeInTheDocument();
-    expect(screen.queryByRole("region", { name: "Bandeja de documentos" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("navigation", { name: "Documentos abiertos" }),
+    ).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Cerrar" }));
 
     expect(screen.queryByRole("heading", { name: "Estado de rFirma" })).not.toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "Bandeja de documentos" })).toBeInTheDocument();
+    expect(screen.getByRole("navigation", { name: "Documentos abiertos" })).toBeInTheDocument();
   });
 
   it("closes Estado de rFirma with Escape", async () => {
@@ -207,7 +211,7 @@ describe("App", () => {
     await user.keyboard("{Escape}");
 
     expect(screen.queryByRole("heading", { name: "Estado de rFirma" })).not.toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "Bandeja de documentos" })).toBeInTheDocument();
+    expect(screen.getByRole("navigation", { name: "Documentos abiertos" })).toBeInTheDocument();
   });
 
   it("keeps the header and menu reachable while Estado de rFirma is open", async () => {
@@ -261,7 +265,7 @@ describe("App", () => {
     expect(screen.queryByRole("menu")).not.toBeInTheDocument();
   });
 
-  it("empties the tray when Remember my activity is turned off", async () => {
+  it("empties the recents when Remember my activity is turned off", async () => {
     const user = userEvent.setup();
     renderApp(inMemoryRecents([row("a.pdf")]));
     await screen.findByText("a.pdf");
@@ -273,17 +277,15 @@ describe("App", () => {
     await user.click(screen.getByRole("button", { name: "Cerrar" }));
 
     await waitFor(() => expect(screen.queryByText("a.pdf")).not.toBeInTheDocument());
-    expect(
-      screen.getByText("Aquí aparecerán los documentos que vayas firmando"),
-    ).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Recientes" })).not.toBeInTheDocument();
   });
 
   /**
-   * La bandeja se vacía **aunque el borrado del disco falle** —lo que promete
+   * Los recientes se vacían **aunque el borrado del disco falle** —lo que promete
    * el rótulo es que dejen de estar— y el fallo se cuenta en Privacidad, que es
    * el otro `catch {}` vacío que el ID-70 llena.
    */
-  it("empties the tray and says the recents are still saved when the disk refuses", async () => {
+  it("empties the recents and says they are still saved when the disk refuses", async () => {
     const user = userEvent.setup();
     const recents = inMemoryRecents([row("a.pdf")]);
     const preferences: PreferencesStore = {
@@ -345,12 +347,12 @@ describe("App", () => {
     await waitFor(() => expect(screen.queryByText("a.pdf")).not.toBeInTheDocument());
     await user.click(screen.getByRole("button", { name: "Cerrar" }));
 
-    await user.click(trayDropZone());
+    await openPdf(user);
+    await screen.findByRole("tab", { name: /factura\.pdf/ });
+    await user.click(screen.getByRole("button", { name: "Abrir un PDF" }));
 
     expect(screen.getByRole("banner")).toHaveTextContent("Sin firmar");
-    expect(screen.queryByText("factura.pdf")).not.toBeInTheDocument();
-    expect(
-      screen.getByText("Aquí aparecerán los documentos que vayas firmando"),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Abrir un PDF…" })).toBeInTheDocument();
+    expect(screen.queryByText("Recientes")).not.toBeInTheDocument();
   });
 });

@@ -370,10 +370,6 @@ msgid "errors.startup.windowUnavailable"
 msgstr "rFirma non puido abrir a xanela e non pode arrincar."
 
 #. Nombre accesible de la región para lectores de pantalla, no un título visible.
-msgid "window.tray"
-msgstr "Bandexa de documentos"
-
-#. Nombre accesible de la región para lectores de pantalla, no un título visible.
 msgid "window.viewer"
 msgstr "Visor do documento"
 
@@ -413,29 +409,53 @@ msgstr "Asinado"
 msgid "badges.unsigned"
 msgstr "Sen asinar"
 
-msgid "badges.unavailable"
-msgstr "Non dispoñible"
+#. Nombre accesible de la tira de pestañas, no un título visible.
+msgid "tabs.label"
+msgstr "Documentos abertos"
 
-msgid "tray.dropZone"
-msgstr "Arrastra un PDF ou preme para abrilo"
+#. Nombre del botón «+» de la tira de pestañas.
+msgid "tabs.open"
+msgstr "Abrir un PDF"
 
-msgid "tray.empty"
-msgstr "Aquí aparecerán os documentos que vaias asinando"
+msgid "tabs.previous"
+msgstr "Pestanas anteriores"
 
-msgid "tray.recents"
+msgid "tabs.next"
+msgstr "Pestanas seguintes"
+
+#. {{name}} es el nombre del fichero de la pestaña.
+msgid "tabs.close"
+msgstr "Pechar {{name}}"
+
+msgid "tabs.openPdf"
+msgstr "Abrir un PDF…"
+
+msgid "recents.heading"
 msgstr "Recentes"
 
-msgid "tray.remove"
-msgstr "Quitar da lista"
+msgid "recents.clear"
+msgstr "Baleirar a lista"
+
+msgid "recents.open"
+msgstr "Aberto"
+
+msgid "recents.goToTab"
+msgstr "Ir á súa pestana"
+
+msgid "recents.missing"
+msgstr "Non se atopa"
+
+msgid "recents.today"
+msgstr "hoxe"
+
+msgid "recents.yesterday"
+msgstr "onte"
 
 msgid "viewer.dropZone"
 msgstr "Arrastra un PDF ou preme para abrilo"
 
 msgid "viewer.dropZoneHint"
-msgstr "Abrirase o explorador de ficheiros"
-
-msgid "viewer.privacy"
-msgstr "Só PDF. O documento non sae do teu ordenador en ningún momento."
+msgstr "Non sae do teu ordenador"
 
 msgid "viewer.pageNumber"
 msgstr "Número de páxina"

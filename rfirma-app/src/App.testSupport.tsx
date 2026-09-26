@@ -1,4 +1,5 @@
-import { screen, within } from "@testing-library/react";
+import { screen } from "@testing-library/react";
+import type { UserEvent } from "@testing-library/user-event";
 import { App } from "./App";
 import {
   type ExternalDestinationOpener,
@@ -45,7 +46,7 @@ export function document(name: string, overrides: Partial<DocumentInHand> = {}):
   };
 }
 
-/** **La fila que se guarda**: con lo que arranca la bandeja en una prueba. */
+/** **La fila que se guarda**: con lo que arrancan los recientes en una prueba. */
 export function row(name: string, overrides: Partial<RecentDocument> = {}): RecentDocument {
   return {
     id: `id-${name}`,
@@ -214,12 +215,8 @@ export function renderApp(
   return { recents, preferences, drops };
 }
 
-/**
- * La zona de soltar **de la bandeja**. Desde que el visor existe hay dos con el
- * mismo rótulo —la de la bandeja y la del visor vacío—, y las dos fichas las
- * piden: `pestanas-de-documentos.md` y `visor-de-documento.md`.
- */
-export function trayDropZone() {
-  const tray = screen.getByRole("region", { name: "Bandeja de documentos" });
-  return within(tray).getByRole("button", { name: "Arrastra un PDF o pulsa para abrirlo" });
+/** Abre un PDF por el menú «+», que es el camino que existe con y sin documentos abiertos. */
+export async function openPdf(user: UserEvent) {
+  await user.click(screen.getByRole("button", { name: "Abrir un PDF" }));
+  await user.click(screen.getByRole("menuitem", { name: "Abrir un PDF…" }));
 }

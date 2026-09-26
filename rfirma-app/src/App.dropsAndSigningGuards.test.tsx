@@ -4,10 +4,10 @@ import { describe, expect, it, vi } from "vitest";
 import {
   aCertificate,
   document,
+  openPdf,
   pdfsOf,
   pdfsWithViews,
   renderApp,
-  trayDropZone,
 } from "./App.testSupport";
 import type { DocumentInHand } from "./documents/document";
 import { inMemoryRecents } from "./documents/recents";
@@ -40,8 +40,7 @@ describe("App, al soltar ficheros en la ventana", () => {
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
     expect(within(panel).getByText("factura.pdf")).toBeInTheDocument();
     expect(within(panel).getByText(/^7 páginas/)).toBeInTheDocument();
-    const tray = screen.getByRole("region", { name: "Bandeja de documentos" });
-    expect(within(tray).getByText("Sin firmar")).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "factura.pdf", selected: true })).toBeInTheDocument();
     expect(screen.getByRole("banner")).toHaveTextContent("Sin firmar");
   });
 
@@ -58,34 +57,32 @@ describe("App, al soltar ficheros en la ventana", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("Ese fichero no es un PDF");
   });
 
-  /** ID-306: se abre el primero, y el resto entra igual en Recientes. */
-  it("opens the first of several dropped PDFs and lists the rest in the tray", async () => {
+  it("opens a tab for each of several dropped PDFs, with the first one in front", async () => {
     const { drops } = renderApp(inMemoryRecents(), [], pdfsOf({ "factura.pdf": 2 }));
 
     drops.drop(anOpened("factura.pdf", [document("contrato.pdf")]));
 
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
     expect(within(panel).getByText("factura.pdf")).toBeInTheDocument();
-    const tray = screen.getByRole("region", { name: "Bandeja de documentos" });
-    expect(await within(tray).findByText("contrato.pdf")).toBeInTheDocument();
+    expect(await screen.findByRole("tab", { name: "contrato.pdf", selected: false })).toBeVisible();
+    expect(screen.getByRole("tab", { name: "factura.pdf", selected: true })).toBeVisible();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
   /**
-   * ID-306: soltar N ficheros deja N filas en la bandeja, no una, y a la vez
+   * ID-306: soltar N ficheros abre N pestañas, no una, y a la vez
    * se dice cuántos se descartaron — las dos cosas del mismo gesto, no dos
    * casos por separado.
    */
-  it("drops N files into N tray rows and counts the discarded ones in the same gesture", async () => {
+  it("opens N tabs for N dropped files and counts the discarded ones in the same gesture", async () => {
     const { drops } = renderApp(inMemoryRecents(), [], pdfsOf({ "factura.pdf": 2 }));
 
     drops.drop(anOpened("factura.pdf", [document("contrato.pdf"), document("anexo.pdf")], 2));
 
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
     expect(within(panel).getByText("factura.pdf")).toBeInTheDocument();
-    const tray = screen.getByRole("region", { name: "Bandeja de documentos" });
-    expect(await within(tray).findByText("contrato.pdf")).toBeInTheDocument();
-    expect(within(tray).getByText("anexo.pdf")).toBeInTheDocument();
+    expect(await screen.findByRole("tab", { name: "contrato.pdf" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "anexo.pdf" })).toBeInTheDocument();
     const notice = await screen.findByRole("alert");
     expect(notice).toHaveTextContent("Algunos ficheros no se han añadido");
     expect(notice).toHaveTextContent("se han descartado 2 ficheros");
@@ -140,7 +137,7 @@ describe("App, al soltar ficheros en la ventana", () => {
     drops.drop(anOpened("factura.pdf", [], 2));
     await screen.findByRole("alert");
 
-    await user.click(trayDropZone());
+    await openPdf(user);
 
     await waitFor(() => expect(screen.queryByRole("alert")).not.toBeInTheDocument());
   });
@@ -192,7 +189,7 @@ describe("App, con páginas donde el recuadro no cabe", () => {
       signer,
     );
 
-    await user.click(trayDropZone());
+    await openPdf(user);
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
     const sign = await within(panel).findByRole("button", { name: "Firmar documento" });
     await waitFor(() => expect(sign).toBeEnabled());
@@ -248,7 +245,7 @@ describe("App, con páginas donde el recuadro no cabe", () => {
       signer,
     );
 
-    await user.click(trayDropZone());
+    await openPdf(user);
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
     const sign = await within(panel).findByRole("button", { name: "Firmar documento" });
     await waitFor(() => expect(sign).toBeEnabled());
@@ -290,7 +287,7 @@ describe("App, con páginas donde el recuadro no cabe", () => {
       signer,
     );
 
-    await user.click(trayDropZone());
+    await openPdf(user);
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
     const sign = await within(panel).findByRole("button", { name: "Firmar documento" });
     await waitFor(() => expect(sign).toBeEnabled());
@@ -322,18 +319,16 @@ describe("App, con un documento que no se recuerda", () => {
   /** Lo que mandará la sede: se pinta y se firma, pero no se guarda. */
   const fromTheSede = () => document("de-la-sede.pdf", { remembered: false });
 
-  it("paints it in the viewer without leaving a row in the tray", async () => {
+  it("paints it in the viewer without leaving it among the recents", async () => {
     const user = userEvent.setup();
     const recents = inMemoryRecents();
     renderApp(recents, [fromTheSede()], pdfsOf({ "de-la-sede.pdf": 4 }));
 
-    await user.click(trayDropZone());
+    await openPdf(user);
 
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
     expect(within(panel).getByText("de-la-sede.pdf")).toBeInTheDocument();
     expect(within(panel).getByText(/^4 páginas/)).toBeInTheDocument();
-    const tray = screen.getByRole("region", { name: "Bandeja de documentos" });
-    expect(within(tray).queryByText("de-la-sede.pdf")).not.toBeInTheDocument();
     await expect(recents.list()).resolves.toEqual([]);
   });
 
@@ -347,7 +342,7 @@ describe("App, con un documento que no se recuerda", () => {
       {},
       { list: async () => [remembered] },
     );
-    await user.click(trayDropZone());
+    await openPdf(user);
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
     await within(panel).findByText("Colocación");
 
@@ -389,7 +384,7 @@ describe("App, con un documento que no se recuerda", () => {
       signer,
     );
 
-    await user.click(trayDropZone());
+    await openPdf(user);
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
     const sign = await within(panel).findByRole("button", { name: "Firmar documento" });
     await waitFor(() => expect(sign).toBeEnabled());
@@ -428,7 +423,7 @@ describe("App · firmas sin registrar", () => {
       emptyRubricPicker(),
       signer,
     );
-    await user.click(trayDropZone());
+    await openPdf(user);
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
     const sign = await within(panel).findByRole("button", { name: "Firmar documento" });
     await waitFor(() => expect(sign).toBeEnabled());

@@ -7,9 +7,9 @@ import {
   aDestination,
   document,
   failingCertificateStore,
+  openPdf,
   pdfsOf,
   renderApp,
-  trayDropZone,
 } from "./App.testSupport";
 import { inMemoryDocumentDrops } from "./documents/drops";
 import { inMemoryDocumentPicker } from "./documents/picker";
@@ -72,7 +72,7 @@ describe("App", () => {
       rubrics,
     );
 
-    await user.click(trayDropZone());
+    await openPdf(user);
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
 
     expect(
@@ -142,11 +142,11 @@ describe("App", () => {
     expect(screen.getByText("no se deja escribir")).toBeInTheDocument();
   });
 
-  it("opens a document from the tray and shows its badge in the header", async () => {
+  it("opens a document from the + menu and shows its badge in the header", async () => {
     const user = userEvent.setup();
     renderApp(inMemoryRecents(), [document("factura.pdf")]);
 
-    await user.click(trayDropZone());
+    await openPdf(user);
 
     expect(await screen.findByText("factura.pdf")).toBeInTheDocument();
     expect(screen.getByRole("banner")).toHaveTextContent("Sin firmar");
@@ -155,24 +155,21 @@ describe("App", () => {
   /**
    * El recorrido entero del #82, contado por lo que se ve y no por las órdenes
    * que se llamaron (TD-15): se elige un PDF y queda pintado, con su nombre y
-   * sus páginas en el panel, y anotado en la bandeja como no firmado (ID-71).
+   * sus páginas en el panel, y en su pestaña.
    */
-  it("paints the chosen document in the viewer and annotates it in the tray", async () => {
+  it("paints the chosen document in the viewer and opens it in a tab", async () => {
     const user = userEvent.setup();
     renderApp(inMemoryRecents(), [document("factura.pdf")], pdfsOf({ "factura.pdf": 7 }));
 
-    await user.click(trayDropZone());
+    await openPdf(user);
 
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
     expect(within(panel).getByText("factura.pdf")).toBeInTheDocument();
     expect(within(panel).getByText(/^7 páginas/)).toBeInTheDocument();
-    const tray = screen.getByRole("region", { name: "Bandeja de documentos" });
-    expect(within(tray).getByText("Sin firmar")).toBeInTheDocument();
-    // El visor vacío tenía su propia zona de soltar; con el documento pintado
-    // solo queda la de la bandeja.
+    expect(screen.getByRole("tab", { name: "factura.pdf", selected: true })).toBeInTheDocument();
     expect(
-      screen.getAllByRole("button", { name: "Arrastra un PDF o pulsa para abrirlo" }),
-    ).toHaveLength(1);
+      screen.queryByRole("button", { name: "Arrastra un PDF o pulsa para abrirlo" }),
+    ).not.toBeInTheDocument();
   });
 
   /**
@@ -190,7 +187,7 @@ describe("App", () => {
       failingCertificateStore(1),
     );
 
-    await user.click(trayDropZone());
+    await openPdf(user);
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
 
     await waitFor(() =>
@@ -216,7 +213,7 @@ describe("App", () => {
       {},
       failingCertificateStore(1, [aCertificate]),
     );
-    await user.click(trayDropZone());
+    await openPdf(user);
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
     const retry = await within(panel).findByRole("button", { name: "Volver a buscar" });
 
@@ -242,7 +239,7 @@ describe("App", () => {
       {},
       { list: async () => [aCertificate, other] },
     );
-    await user.click(trayDropZone());
+    await openPdf(user);
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
     const trigger = await within(panel).findByRole("combobox", { name: "Certificado" });
 
@@ -285,7 +282,7 @@ describe("App", () => {
       { list: async () => [aCertificate, used] },
     );
 
-    await user.click(trayDropZone());
+    await openPdf(user);
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
     const trigger = await within(panel).findByRole("combobox", { name: "Certificado" });
 
@@ -311,7 +308,7 @@ describe("App", () => {
       { list: async () => [aCertificate, other] },
     );
 
-    await user.click(trayDropZone());
+    await openPdf(user);
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
     const trigger = await within(panel).findByRole("combobox", { name: "Certificado" });
 
@@ -340,7 +337,7 @@ describe("App", () => {
       { list: async () => [aCertificate, expired] },
     );
 
-    await user.click(trayDropZone());
+    await openPdf(user);
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
     const trigger = await within(panel).findByRole("combobox", { name: "Certificado" });
 
@@ -363,7 +360,7 @@ describe("App", () => {
       { list: async () => [expired] },
     );
 
-    await user.click(trayDropZone());
+    await openPdf(user);
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
     const trigger = await within(panel).findByRole("combobox", { name: "Certificado" });
 
@@ -374,26 +371,26 @@ describe("App", () => {
     const user = userEvent.setup();
     renderApp(inMemoryRecents(), [document("corrupto.pdf")], pdfsOf({}));
 
-    await user.click(trayDropZone());
+    await openPdf(user);
 
     expect(await screen.findByRole("alert")).toHaveTextContent("No hemos podido leer el documento");
   });
 
-  it("repaints a document when its tray row is chosen again, one after another", async () => {
+  it("repaints a document when its tab is chosen again, one after another", async () => {
     const user = userEvent.setup();
     renderApp(
       inMemoryRecents(),
       [document("primero.pdf"), document("segundo.pdf")],
       pdfsOf({ "primero.pdf": 2, "segundo.pdf": 5 }),
     );
-    await user.click(trayDropZone());
+    await openPdf(user);
     await screen.findByRole("region", { name: "Panel de firma" });
 
-    await user.click(trayDropZone());
+    await openPdf(user);
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
     await waitFor(() => expect(within(panel).getByText("segundo.pdf")).toBeInTheDocument());
 
-    await user.click(screen.getByRole("button", { name: /primero\.pdf/ }));
+    await user.click(screen.getByRole("tab", { name: "primero.pdf" }));
 
     await waitFor(() => expect(within(panel).getByText("primero.pdf")).toBeInTheDocument());
     expect(within(panel).getByText(/^2 páginas/)).toBeInTheDocument();

@@ -11,9 +11,10 @@ import { useStartupNotices } from "./App.useStartupNotices";
 import { AboutDialog } from "./about/AboutDialog";
 import type { ExternalDestinationOpener } from "./desktop/externalDestination";
 import { unavailableExternalDestinationOpener } from "./desktop/externalDestination";
-import { DocumentTray } from "./documents/DocumentTray";
+import { DocumentTabs } from "./documents/DocumentTabs";
 import type { DocumentDrops } from "./documents/drops";
 import type { DocumentPicker } from "./documents/picker";
+import { RecentsSection } from "./documents/RecentRows";
 import type { RecentsStore } from "./documents/recents";
 import { useDocuments } from "./documents/useDocuments";
 import { classify } from "./errors/classify";
@@ -101,7 +102,7 @@ export interface AppHandle {
  * backend. Quien elige las implementaciones de verdad es `main.tsx`.
  *
  * Los diálogos se montan **sobre** la ventana y no la desmontan: no hay
- * navegación, y el estado de la bandeja sigue vivo debajo.
+ * navegación, y los documentos abiertos siguen vivos debajo.
  */
 export function App({
   recents,
@@ -212,8 +213,7 @@ export function App({
   }, [pdf, boxPage]);
 
   // El documento activo, abierto para pintarlo. Cambiar de documento **repone
-  // el recuadro de ese documento**, que es lo que guarda su fila de la bandeja
-  // (ID-74): uno que ya estuvo abierto vuelve a su página y a su posición, y
+  // el recuadro de ese documento**, que es lo que guarda su pestaña (ID-74): uno que ya estuvo abierto vuelve a su página y a su posición, y
   // uno nuevo llega sin ninguna y arranca donde toque, no donde lo dejó el
   // anterior (ID-22).
   useEffect(() => {
@@ -272,6 +272,14 @@ export function App({
   const openDocument = async () => {
     try {
       await documents.open();
+    } catch (thrown) {
+      setPdfFailure(classify(thrown));
+    }
+  };
+
+  const clearRecents = async () => {
+    try {
+      await documents.clearRecents();
     } catch (thrown) {
       setPdfFailure(classify(thrown));
     }
@@ -382,13 +390,16 @@ export function App({
             />
           ) : null
         }
-        tray={
-          <DocumentTray
+        tabs={
+          <DocumentTabs
+            tabs={documents.tabs}
+            activeId={activeId}
             recents={documents.recents}
-            activeId={documents.active?.id ?? null}
+            onActivate={documents.activate}
+            onClose={documents.close}
             onOpen={() => void openDocument()}
-            onSelect={documents.select}
-            onForget={(id) => void documents.forget(id)}
+            onSelectRecent={documents.select}
+            onClearRecents={() => void clearRecents()}
           />
         }
         viewer={
@@ -406,6 +417,15 @@ export function App({
             onPageChange={setViewedPage}
             placementRequest={placementRequest}
             onOpen={() => void openDocument()}
+            emptyExtra={
+              documents.tabs.length === 0 ? (
+                <RecentsSection
+                  recents={documents.recents}
+                  onSelect={documents.select}
+                  onClear={() => void clearRecents()}
+                />
+              ) : null
+            }
             // Los dos avisos caben en el mismo sitio, y manda el del PDF: si el
             // documento que se soltó tampoco se deja pintar, eso es más urgente
             // que contar cuántos ficheros venían con él.

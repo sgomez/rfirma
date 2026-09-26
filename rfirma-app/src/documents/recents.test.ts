@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { RecentDocument } from "./recents";
-import { CAPACITY, forget, inMemoryRecents, record, shownBadge } from "./recents";
+import { CAPACITY, forget, inMemoryRecents, record } from "./recents";
 
 function document(name: string, overrides: Partial<RecentDocument> = {}): RecentDocument {
   return {
@@ -42,18 +42,6 @@ describe("record", () => {
     expect(recents).toHaveLength(CAPACITY);
     expect(recents.at(0)?.name).toBe("10.pdf");
     expect(recents.map((entry) => entry.id)).not.toContain("id-0.pdf");
-  });
-});
-
-describe("shownBadge", () => {
-  it("paints the cached badge while the document answers", () => {
-    expect(shownBadge(document("a.pdf", { badge: "Signed" }))).toBe("Signed");
-  });
-
-  it("paints Unavailable when the document no longer answers", () => {
-    expect(shownBadge(document("a.pdf", { badge: "Signed", available: false }))).toBe(
-      "Unavailable",
-    );
   });
 });
 
