@@ -446,7 +446,7 @@ msgstr "Tanca {{name}}"
 
 #. Título de la pestaña de otro documento mientras una firma está en curso.
 msgid "tabs.lockedWhileSigning"
-msgstr "No es pot canviar de document mentre se signa."
+msgstr "No es pot canviar de document mentre es signa."
 
 msgid "tabs.openPdf"
 msgstr "Obre un PDF…"
