@@ -469,16 +469,15 @@ jobs:
           path: rfirma-native-bridge/testbench/reference-signer/target
           key: reference-signer-${{ runner.os }}-${{ hashFiles('scripts/bootstrap.sh', 'rfirma-native-bridge/testbench/reference-signer/pom.xml', 'rfirma-native-bridge/testbench/reference-signer/SignatureValidator.java') }}
 
-      # La libreria nativa tarda ~2 min en compilar con native-image, pero el
-      # puente Java apenas cambia. Cachearla por el hash de rfirma-native-bridge
-      # y bootstrap.sh evita recompilarla en PRs y commits que solo tocan Rust o UI.
+      # La clave es solo lo que entra en la libreria: el codigo de produccion del
+      # puente, su pom, bootstrap.sh y GraalVM; las pruebas y el testbench no.
       - name: Cache de librfirma_crypto.so
         id: cache-native-lib
         if: steps.scope.outputs.build == 'true'
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: rfirma-native-bridge/target/lib/rfirma
-          key: native-lib-${{ runner.os }}-${{ hashFiles('scripts/bootstrap.sh', 'rfirma-native-bridge/**') }}
+          key: native-lib-${{ runner.os }}-graalvm${{ env.GRAALVM_VERSION }}-${{ hashFiles('scripts/bootstrap.sh', 'rfirma-native-bridge/pom.xml', 'rfirma-native-bridge/src/main/**') }}
 
       - name: Construye la libreria nativa
         if: steps.scope.outputs.build == 'true' && steps.cache-native-lib.outputs.cache-hit != 'true'
