@@ -1,7 +1,7 @@
 import { useId } from "react";
 import { useTranslation } from "react-i18next";
 import { formatSignedAt } from "../App.signingOrder";
-import { statusIcon, statusLabel, reasonLabel } from "./PreviousSignaturesNotice";
+import { reasonLabel, statusIcon, statusLabel } from "./PreviousSignaturesNotice";
 import type { PreviousSignature } from "./previousSignatures";
 import "./InvalidPreviousSignaturesDialog.css";
 
