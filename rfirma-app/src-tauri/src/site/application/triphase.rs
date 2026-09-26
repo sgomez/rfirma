@@ -110,7 +110,7 @@ fn composed_name(asked: AskedAlgorithm, key: Option<KeyKind>) -> Result<String, 
         Some(KeyKind::Rsa) => "RSA",
         None => {
             return Err(SiteRefusal::Token(TokenError::new(
-                TokenSituation::KeyNotRsa,
+                TokenSituation::KeyKindUnsupported,
                 "la clave del certificado no es RSA ni de curva eliptica",
             )))
         }

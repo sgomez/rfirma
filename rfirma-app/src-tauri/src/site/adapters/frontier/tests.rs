@@ -93,7 +93,7 @@ fn every_code_of_ours() -> Vec<SafCode> {
             TokenSituation::ModuleNotFound,
             TokenSituation::CertificateNotFound,
             TokenSituation::Pkcs12Unreadable,
-            TokenSituation::KeyNotRsa,
+            TokenSituation::KeyKindUnsupported,
             TokenSituation::Unknown,
         ]
         .map(code_of_token),

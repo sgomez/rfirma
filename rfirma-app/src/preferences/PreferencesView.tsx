@@ -50,7 +50,8 @@ interface PreferencesViewProps {
    * Instala un `.p12` con la contraseña **del fichero** y responde si quedó
    * alguno instalado. Quien abre el selector de ficheros es el backend (ID-63),
    * así que la contraseña se teclea antes de elegirlo. Rechaza cuando el
-   * fichero no se puede abrir o cuando su clave no es RSA (ID-197).
+   * fichero no se puede abrir o cuando su clave no es RSA ni de curva
+   * elíptica.
    */
   onInstallCertificate: (password: string) => Promise<boolean>;
   /** Quita un `.p12` instalado, por el asa de su fila. */
@@ -230,7 +231,8 @@ export function PreferencesView({
    * El selector de ficheros lo abre el backend **después** (ID-63), así que
    * cerrarlo sin elegir nada devuelve `false` y no es un fallo: deja la lista
    * como estaba y no pinta ningún aviso. Lo que sí lo es —la contraseña que no
-   * abre el fichero, la clave que no es RSA (ID-197)— se cuenta en la sección.
+   * abre el fichero, la clave que no es RSA ni de curva elíptica— se cuenta en
+   * la sección.
    */
   const install = async (typed: string) => {
     setAskingPassword(false);

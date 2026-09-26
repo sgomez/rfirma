@@ -10,7 +10,7 @@ const EVERY_SITUATION: [Situation; 12] = [
     Situation::Pkcs12Unreadable,
     Situation::IncorrectPkcs12Password,
     Situation::Pkcs12NoPrivateKey,
-    Situation::KeyNotRsa,
+    Situation::KeyKindUnsupported,
     Situation::MechanismNotOffered,
     Situation::Unknown,
 ];
@@ -51,7 +51,7 @@ fn the_window_and_the_site_hear_about_a_missing_token_from_the_same_line() {
     );
     assert_eq!(code_of_token(Situation::PinLocked), SafCode::LockedKeystore);
     assert_eq!(
-        code_of_token(Situation::KeyNotRsa),
+        code_of_token(Situation::KeyKindUnsupported),
         SafCode::IncompatibleKeyType
     );
 }

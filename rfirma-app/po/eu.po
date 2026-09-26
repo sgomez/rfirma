@@ -228,8 +228,8 @@ msgid "errors.situations.pkcs12NoPrivateKey.title"
 msgstr "Fitxategi horrek ez dakar giltza pribaturik"
 
 #. Un solo renglon a proposito (ID-211): no lleva cuerpo debajo, y por eso no
-#. hay msgid "errors.situations.keyNotRsa.body".
-msgid "errors.situations.keyNotRsa.title"
+#. hay msgid "errors.situations.keyKindUnsupported.body".
+msgid "errors.situations.keyKindUnsupported.title"
 msgstr "Ziurtagiri hori ez da rFirmarekin bateragarria"
 
 msgid "errors.situations.mechanismNotOffered.title"

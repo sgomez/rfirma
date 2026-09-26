@@ -89,14 +89,13 @@ describe("certificates in a file", () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
-  /**
-   * ID-197 + ID-211: se rechaza al instalar y en un solo renglón. Ni la
-   * curva, ni el mecanismo, ni «instala uno de clave RSA».
-   */
-  it("says an elliptic key does not work, in a single line", async () => {
+  it("says an unsupported key kind does not work, in a single line", async () => {
     const user = userEvent.setup();
     const onInstallCertificate = vi.fn(async () => {
-      throw { situation: "keyNotRsa", detail: "FIRMA: la clave no es RSA" };
+      throw {
+        situation: "keyKindUnsupported",
+        detail: "FIRMA: la clave no es RSA ni de curva eliptica",
+      };
     });
     renderView({ onInstallCertificate });
     await openTab(user, "Certificados");

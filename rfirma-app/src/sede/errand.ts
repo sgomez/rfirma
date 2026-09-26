@@ -75,7 +75,7 @@ export const NAMED_BY_THE_DESK = [
   "pkcs12Unreadable",
   "incorrectPkcs12Password",
   "pkcs12NoPrivateKey",
-  "keyNotRsa",
+  "keyKindUnsupported",
   "mechanismNotOffered",
   "notAPdf",
   "documentEncrypted",

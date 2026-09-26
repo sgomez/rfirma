@@ -18,10 +18,10 @@ use rsa::RsaPublicKey;
 use sha2::Sha256;
 use x509_cert::der::{Decode, Encode};
 
-/// Contraseña de `active-rsa.p12` del kit de pruebas.
+/// Contraseña de los `.p12` del kit de pruebas (`active-rsa.p12`, `active-ecc.p12`).
 const KIT_PASSWORD: &str = "1234";
-/// Contraseña del `.p12` de clave elíptica que fabrica esta prueba.
-const EC_PASSWORD: &str = "1234";
+/// Contraseña de los `.p12` que esta prueba fabrica al vuelo con openssl.
+const GENERATED_PASSWORD: &str = "1234";
 /// Bloque DER de prueba de `SignedAttributes` sin hashear.
 const PRESIGN: &[u8] = b"31 5f 30 18 06 09 2a 86 SignedAttributes de mentira, sin hashear";
 
@@ -37,24 +37,34 @@ fn kit_p12() -> PathBuf {
     repository_root().join("testdata/fnmt/active-rsa.p12")
 }
 
-/// Genera un `.p12` con clave elíptica en `directory`.
-fn an_elliptic_curve_p12(directory: &Path) -> PathBuf {
-    let key = directory.join("ec.pem");
-    let certificate = directory.join("ec-cert.pem");
-    let bundle = directory.join("ec.p12");
+/// El `.p12` de curva elíptica de pruebas de la FNMT.
+fn elliptic_curve_kit_p12() -> PathBuf {
+    repository_root().join("testdata/fnmt/active-ecc.p12")
+}
 
+/// Genera un `.p12` con una clave DSA (que NSS sí importa, pero que no es RSA ni de curva elíptica) en `directory`.
+fn a_p12_of_an_unsupported_key_kind(directory: &Path) -> PathBuf {
+    let parameters = directory.join("dsaparam.pem");
+    let key = directory.join("dsa.pem");
+    let certificate = directory.join("dsa-cert.pem");
+    let bundle = directory.join("dsa.p12");
+
+    run_openssl(&[
+        "dsaparam",
+        "-out",
+        parameters.to_str().expect("ruta valida"),
+        "2048",
+    ]);
     run_openssl(&[
         "req",
         "-x509",
         "-newkey",
-        "ec",
-        "-pkeyopt",
-        "ec_paramgen_curve:prime256v1",
+        &format!("dsa:{}", parameters.to_str().expect("ruta valida")),
         "-nodes",
         "-days",
         "30",
         "-subj",
-        "/CN=CLAVE ELIPTICA DE PRUEBAS",
+        "/CN=CLAVE NO SOPORTADA DE PRUEBAS",
         "-keyout",
         key.to_str().expect("ruta valida"),
         "-out",
@@ -68,9 +78,9 @@ fn an_elliptic_curve_p12(directory: &Path) -> PathBuf {
         "-in",
         certificate.to_str().expect("ruta valida"),
         "-name",
-        "CLAVE ELIPTICA DE PRUEBAS",
+        "CLAVE NO SOPORTADA DE PRUEBAS",
         "-passout",
-        &format!("pass:{EC_PASSWORD}"),
+        &format!("pass:{GENERATED_PASSWORD}"),
         "-out",
         bundle.to_str().expect("ruta valida"),
     ]);
@@ -108,7 +118,7 @@ fn a_p12_without_a_private_key(directory: &Path) -> PathBuf {
         "-name",
         "SIN CLAVE PRIVADA",
         "-passout",
-        &format!("pass:{EC_PASSWORD}"),
+        &format!("pass:{GENERATED_PASSWORD}"),
         "-out",
         bundle.to_str().expect("ruta valida"),
     ]);
@@ -153,24 +163,29 @@ fn a_p12_without_a_friendly_name(directory: &Path, subject: &str, password: &str
     bundle
 }
 
-/// Genera un `.p12` con clave elíptica y sin `friendlyName` en `directory`.
-fn an_elliptic_curve_p12_without_a_friendly_name(directory: &Path) -> PathBuf {
-    let key = directory.join("ec-plain.pem");
-    let certificate = directory.join("ec-plain-cert.pem");
-    let bundle = directory.join("ec-plain.p12");
+/// Genera un `.p12` con una clave DSA y sin `friendlyName` en `directory`.
+fn a_p12_of_an_unsupported_key_kind_without_a_friendly_name(directory: &Path) -> PathBuf {
+    let parameters = directory.join("dsaparam-plain.pem");
+    let key = directory.join("dsa-plain.pem");
+    let certificate = directory.join("dsa-plain-cert.pem");
+    let bundle = directory.join("dsa-plain.p12");
 
+    run_openssl(&[
+        "dsaparam",
+        "-out",
+        parameters.to_str().expect("ruta valida"),
+        "2048",
+    ]);
     run_openssl(&[
         "req",
         "-x509",
         "-newkey",
-        "ec",
-        "-pkeyopt",
-        "ec_paramgen_curve:prime256v1",
+        &format!("dsa:{}", parameters.to_str().expect("ruta valida")),
         "-nodes",
         "-days",
         "30",
         "-subj",
-        "/CN=CLAVE ELIPTICA SIN NOMBRE AMISTOSO",
+        "/CN=CLAVE NO SOPORTADA SIN NOMBRE AMISTOSO",
         "-keyout",
         key.to_str().expect("ruta valida"),
         "-out",
@@ -184,7 +199,7 @@ fn an_elliptic_curve_p12_without_a_friendly_name(directory: &Path) -> PathBuf {
         "-in",
         certificate.to_str().expect("ruta valida"),
         "-passout",
-        &format!("pass:{EC_PASSWORD}"),
+        &format!("pass:{GENERATED_PASSWORD}"),
         "-out",
         bundle.to_str().expect("ruta valida"),
     ]);
@@ -257,6 +272,39 @@ fn verifying_key(certificate: &TokenCertificate) -> VerifyingKey<Sha256> {
     VerifyingKey::<Sha256>::new(public_key)
 }
 
+/// Verifica con `openssl` la firma ECDSA cruda contra la clave publica del certificado.
+fn the_ecdsa_signature_verifies_against(certificate: &TokenCertificate, signature: &[u8]) {
+    let workshop = tempfile::tempdir().expect("deberia poder crearse un directorio temporal");
+    let certificate_der = workshop.path().join("certificate.der");
+    let public_key = workshop.path().join("public.pem");
+    let data = workshop.path().join("data.bin");
+    let signature_der = workshop.path().join("signature.der");
+
+    std::fs::write(&certificate_der, certificate.der()).expect("deberia poder escribirse");
+    std::fs::write(&data, PRESIGN).expect("deberia poder escribirse");
+    std::fs::write(&signature_der, signature).expect("deberia poder escribirse");
+    run_openssl(&[
+        "x509",
+        "-inform",
+        "der",
+        "-in",
+        certificate_der.to_str().expect("ruta valida"),
+        "-pubkey",
+        "-noout",
+        "-out",
+        public_key.to_str().expect("ruta valida"),
+    ]);
+    run_openssl(&[
+        "dgst",
+        "-sha256",
+        "-verify",
+        public_key.to_str().expect("ruta valida"),
+        "-signature",
+        signature_der.to_str().expect("ruta valida"),
+        data.to_str().expect("ruta valida"),
+    ]);
+}
+
 #[test]
 fn an_rsa_p12_installs_and_its_certificates_list_without_the_password() {
     let installed = an_empty_installation();
@@ -313,36 +361,73 @@ fn a_p12_without_a_friendly_name_and_without_a_common_name_installs() {
 }
 
 #[test]
-fn an_elliptic_curve_p12_without_a_friendly_name_gives_the_key_rejection_not_a_read_failure() {
+fn a_p12_of_an_unsupported_key_kind_without_a_friendly_name_gives_the_key_rejection_not_a_read_failure(
+) {
     let installed = an_empty_installation();
     let workshop = tempfile::tempdir().expect("deberia poder crearse un directorio temporal");
-    let elliptic = an_elliptic_curve_p12_without_a_friendly_name(workshop.path());
+    let unsupported = a_p12_of_an_unsupported_key_kind_without_a_friendly_name(workshop.path());
 
-    let failure = install(installed.path(), &elliptic, EC_PASSWORD)
-        .expect_err("una clave eliptica no se puede instalar, con o sin friendlyName");
+    let failure = install(installed.path(), &unsupported, GENERATED_PASSWORD).expect_err(
+        "una clave que no es RSA ni de curva eliptica no se puede instalar, con o sin friendlyName",
+    );
 
-    assert_eq!(failure.situation, "keyNotRsa");
+    assert_eq!(failure.situation, "keyKindUnsupported");
 }
 
 #[test]
-fn a_p12_with_an_elliptic_curve_key_is_refused_at_install() {
+fn an_elliptic_curve_p12_installs_and_its_certificates_list_without_the_password() {
+    let installed = an_empty_installation();
+
+    install(installed.path(), &elliptic_curve_kit_p12(), KIT_PASSWORD)
+        .expect("el .p12 de curva eliptica del kit deberia instalarse");
+
+    let found = certificates(installed.path());
+    assert_eq!(found.len(), 1, "el .p12 trae un certificado de persona");
+    assert!(found[0]
+        .subject()
+        .is_some_and(|subject| subject.contains("99949991H")));
+}
+
+#[test]
+fn a_certificate_that_came_from_an_elliptic_curve_p12_signs() {
+    let installed = an_empty_installation();
+    install(installed.path(), &elliptic_curve_kit_p12(), KIT_PASSWORD)
+        .expect("el .p12 de curva eliptica del kit deberia instalarse");
+    let certificate = certificates(installed.path())
+        .into_iter()
+        .next()
+        .expect("tenia que haber un certificado");
+
+    let raw = pkcs11::sign_with_secret(
+        certificate.reference(),
+        &ProtectedSecret::from_str(""),
+        SignatureAlgorithm::Sha256Ecdsa,
+        PRESIGN,
+    )
+    .expect("un .p12 de curva eliptica instalado tiene que poder firmar sin secreto que teclear");
+
+    the_ecdsa_signature_verifies_against(&certificate, &raw);
+}
+
+#[test]
+fn a_p12_of_an_unsupported_key_kind_is_refused_at_install() {
     let installed = an_empty_installation();
     let workshop = tempfile::tempdir().expect("deberia poder crearse un directorio temporal");
-    let elliptic = an_elliptic_curve_p12(workshop.path());
+    let unsupported = a_p12_of_an_unsupported_key_kind(workshop.path());
 
-    let failure = install(installed.path(), &elliptic, EC_PASSWORD)
-        .expect_err("una clave eliptica no se puede instalar");
+    let failure = install(installed.path(), &unsupported, GENERATED_PASSWORD)
+        .expect_err("una clave que no es RSA ni de curva eliptica no se puede instalar");
 
-    assert_eq!(failure.situation, "keyNotRsa");
+    assert_eq!(failure.situation, "keyKindUnsupported");
 }
 
 #[test]
 fn a_refused_p12_leaves_no_store_behind() {
     let installed = an_empty_installation();
     let workshop = tempfile::tempdir().expect("deberia poder crearse un directorio temporal");
-    let elliptic = an_elliptic_curve_p12(workshop.path());
+    let unsupported = a_p12_of_an_unsupported_key_kind(workshop.path());
 
-    let _ = install(installed.path(), &elliptic, EC_PASSWORD);
+    let _ = install(installed.path(), &unsupported, GENERATED_PASSWORD);
 
     assert!(
         installed_stores(installed.path()).is_empty(),
@@ -381,7 +466,7 @@ fn a_p12_without_a_private_key_gives_its_own_situation() {
     let workshop = tempfile::tempdir().expect("deberia poder crearse un directorio temporal");
     let certificate_only = a_p12_without_a_private_key(workshop.path());
 
-    let failure = install(installed.path(), &certificate_only, EC_PASSWORD)
+    let failure = install(installed.path(), &certificate_only, GENERATED_PASSWORD)
         .expect_err("un .p12 sin clave privada no se puede instalar");
 
     assert_eq!(failure.situation, "pkcs12NoPrivateKey");

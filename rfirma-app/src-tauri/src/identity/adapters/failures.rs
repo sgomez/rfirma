@@ -22,7 +22,7 @@ fn token_told(situation: Situation) -> (&'static str, SafCode) {
             ("incorrectPkcs12Password", SafCode::CannotAccessKeystore)
         }
         Situation::Pkcs12NoPrivateKey => ("pkcs12NoPrivateKey", SafCode::NoCertificatesInKeystore),
-        Situation::KeyNotRsa => ("keyNotRsa", SafCode::IncompatibleKeyType),
+        Situation::KeyKindUnsupported => ("keyKindUnsupported", SafCode::IncompatibleKeyType),
         Situation::MechanismNotOffered => ("mechanismNotOffered", SafCode::SignatureFailed),
         Situation::Unknown => ("unknown", SafCode::CannotAccessKeystore),
     }

@@ -327,8 +327,8 @@ function RefusalSentence({
       return <>{t("errors.situations.incorrectPkcs12Password.title")}</>;
     case "pkcs12NoPrivateKey":
       return <>{t("errors.situations.pkcs12NoPrivateKey.title")}</>;
-    case "keyNotRsa":
-      return <>{t("errors.situations.keyNotRsa.title")}</>;
+    case "keyKindUnsupported":
+      return <>{t("errors.situations.keyKindUnsupported.title")}</>;
     case "mechanismNotOffered":
       return <>{t("errors.situations.mechanismNotOffered.title")}</>;
     case "notAPdf":

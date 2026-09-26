@@ -135,7 +135,7 @@ fn a_key_neither_rsa_nor_ec_is_refused_as_an_incompatible_key_type() {
         .expect_err("una clave desconocida no se compone con RSA");
 
     assert_eq!(refusal.code, SafCode::IncompatibleKeyType);
-    assert_eq!(refusal.situation, "keyNotRsa");
+    assert_eq!(refusal.situation, "keyKindUnsupported");
 }
 
 #[test]
