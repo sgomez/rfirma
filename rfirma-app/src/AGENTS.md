@@ -41,7 +41,7 @@ rojo.
 | `tauri.ts` | El punto de import de los puertos que hablan con Tauri: reexporta los `tauri*.ts` de abajo. La otra cara de los `adapters/tauri.rs` de cada contexto. |
 | `tauriStage.ts` | Clasifica el fallo de una orden de Tauri y envuelve su llamada. Lo comparten `tauriSigning.ts` y `tauriSede.ts`. |
 | `tauriSigning.ts` | Los puertos de Tauri de la firma: certificados, las tres etapas, la rúbrica y el sello. |
-| `tauriDocuments.ts` | Los puertos de Tauri del documento: el portal, el arrastre, la bandeja y el visor. |
+| `tauriDocuments.ts` | Los puertos de Tauri del documento: el portal, el arrastre, los recientes y el visor. |
 | `tauriPreferences.ts` | Los puertos de Tauri de la configuración: ajustes, idioma, destino y la versión publicada. |
 | `tauriSede.ts` | El puerto de Tauri del trámite de sede. |
 | `tauriStatus.ts` | El puerto de Tauri del estado de la instalación. |
@@ -60,10 +60,11 @@ rojo.
 | `shell/NotificationStrip.tsx` | La franja de notificación: el patrón, no el aviso concreto. |
 | `shell/Header.tsx` | La cabecera única, sin barra de menús. |
 | `shell/menuAnchor.ts` | Dónde se ancla el menú de la aplicación. |
-| **`documents/`** | La bandeja. |
-| `documents/document.ts` | El vocabulario del documento: el que se tiene delante y sus insignias. No es la fila. |
-| `documents/useDocuments.ts` | El estado de la bandeja. |
-| `documents/DocumentTray.tsx` | La bandeja pintada. |
+| **`documents/`** | Los documentos abiertos y los recientes. |
+| `documents/document.ts` | El vocabulario del documento: el que se tiene delante y su insignia. No es la fila. |
+| `documents/useDocuments.ts` | El estado de las pestañas abiertas, la activa y los recientes. |
+| `documents/DocumentTabs.tsx` | La tira de pestañas bajo la cabecera, con su menú «+». |
+| `documents/RecentRows.tsx` | Las filas de los recientes, que comparten el menú «+» y el estado vacío del visor. |
 | `documents/recents.ts` | Los diez recientes —**la fila que se guarda**— y su puerto. |
 | `documents/picker.ts` | Por dónde entra un documento. |
 | `documents/drops.ts` | Qué ocurre al soltar ficheros encima, y el documento con el que se invocó a la aplicación desde fuera. |

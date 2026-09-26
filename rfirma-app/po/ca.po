@@ -266,8 +266,8 @@ msgstr "Alguns fitxers no s'han afegit"
 
 msgid "errors.situations.droppedSomeDiscarded.body"
 msgstr ""
-"La resta de PDF que has deixat anar ja són a Recents. Els que no eren PDF no "
-"s'han afegit."
+"La resta de PDF que has deixat anar s'han obert en pestanyes. Els que no "
+"eren PDF no s'han afegit."
 
 msgid "errors.situations.boxOutOfPage.title"
 msgstr "El requadre surt de la pàgina"
@@ -381,10 +381,6 @@ msgid "errors.startup.windowUnavailable"
 msgstr "rFirma no ha pogut obrir la finestra i no pot arrencar."
 
 #. Nombre accesible de la región para lectores de pantalla, no un título visible.
-msgid "window.tray"
-msgstr "Safata de documents"
-
-#. Nombre accesible de la región para lectores de pantalla, no un título visible.
 msgid "window.viewer"
 msgstr "Visor del document"
 
@@ -424,29 +420,53 @@ msgstr "Signat"
 msgid "badges.unsigned"
 msgstr "Sense signar"
 
-msgid "badges.unavailable"
-msgstr "No disponible"
+#. Nombre accesible de la tira de pestañas, no un título visible.
+msgid "tabs.label"
+msgstr "Documents oberts"
 
-msgid "tray.dropZone"
-msgstr "Arrossega un PDF o prem per obrir-lo"
+#. Nombre del botón «+» de la tira de pestañas.
+msgid "tabs.open"
+msgstr "Obre un PDF"
 
-msgid "tray.empty"
-msgstr "Aquí apareixeran els documents que vagis signant"
+msgid "tabs.previous"
+msgstr "Pestanyes anteriors"
 
-msgid "tray.recents"
+msgid "tabs.next"
+msgstr "Pestanyes següents"
+
+#. {{name}} es el nombre del fichero de la pestaña.
+msgid "tabs.close"
+msgstr "Tanca {{name}}"
+
+msgid "tabs.openPdf"
+msgstr "Obre un PDF…"
+
+msgid "recents.heading"
 msgstr "Recents"
 
-msgid "tray.remove"
-msgstr "Treure de la llista"
+msgid "recents.clear"
+msgstr "Buida la llista"
+
+msgid "recents.open"
+msgstr "Obert"
+
+msgid "recents.goToTab"
+msgstr "Vés a la seva pestanya"
+
+msgid "recents.missing"
+msgstr "No es troba"
+
+msgid "recents.today"
+msgstr "avui"
+
+msgid "recents.yesterday"
+msgstr "ahir"
 
 msgid "viewer.dropZone"
 msgstr "Arrossega un PDF o prem per obrir-lo"
 
 msgid "viewer.dropZoneHint"
-msgstr "S'obrirà l'explorador de fitxers"
-
-msgid "viewer.privacy"
-msgstr "Només PDF. El document no surt del teu ordinador en cap moment."
+msgstr "No surt del teu ordinador"
 
 msgid "viewer.pageNumber"
 msgstr "Número de pàgina"

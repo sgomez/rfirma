@@ -68,12 +68,8 @@ export function useDropNotices(
             }
           : null,
       );
-      // ID-306: los demás PDF del mismo gesto entran igual en Recientes, sin
-      // abrirse — sin cola y sin firma encadenada, una fila más por cada uno.
-      // Se anotan **uno detrás de otro**, nunca en paralelo: `store.record`
-      // lee y reescribe el estado entero sin cerrojo (`app/recents.rs`), y dos
-      // llamadas solapadas pierden una actualización o entrelazan el fichero
-      // temporal compartido. Corregido tras revisión en la PR #370.
+      // Uno detrás de otro, nunca en paralelo: `store.record` reescribe el
+      // estado entero sin cerrojo y dos llamadas solapadas pierden una.
       const document = drop.document;
       void (async () => {
         for (const entering of drop.alsoEntering) {

@@ -73,12 +73,7 @@ describe("useDocuments", () => {
     expect(await store.list()).toEqual([]);
   });
 
-  /**
-   * ID-306: los PDF que entran de más al soltar varios a la vez se anotan en
-   * la bandeja, pero el documento activo no cambia — es lo que la persona
-   * tiene delante y `enter` no lo toca.
-   */
-  it("notes a document in the tray without making it active", async () => {
+  it("opens a dropped document in a tab of its own without making it active", async () => {
     const store = inMemoryRecents();
     const factura = document("factura.pdf");
     const contrato = document("contrato.pdf");
@@ -88,15 +83,17 @@ describe("useDocuments", () => {
     await act(() => result.current.enter(contrato));
 
     expect(result.current.active).toEqual(factura);
+    expect(result.current.tabs.map((tab) => tab.name)).toEqual(["factura.pdf", "contrato.pdf"]);
     expect(result.current.recents.map((row) => row.name)).toContain("contrato.pdf");
   });
 
-  it("does not note anything when remembering is off", async () => {
+  it("opens the tab but notes nothing when remembering is off", async () => {
     const store = inMemoryRecents();
     const { result } = renderHook(() => useDocuments(store, inMemoryDocumentPicker(), false));
 
     await act(() => result.current.enter(document("contrato.pdf")));
 
+    expect(result.current.tabs.map((tab) => tab.name)).toEqual(["contrato.pdf"]);
     expect(result.current.recents).toEqual([]);
     expect(await store.list()).toEqual([]);
   });
@@ -266,15 +263,95 @@ describe("useDocuments", () => {
     expect(result.current.active).toBeNull();
   });
 
-  it("drops the active document when its row is removed from the list", async () => {
+  it("puts the tab on the right in front when the active one is closed", async () => {
     const store = inMemoryRecents();
-    const informe = document("informe.pdf");
-    const { result } = renderHook(() => useDocuments(store, inMemoryDocumentPicker([informe])));
+    const picker = inMemoryDocumentPicker([
+      document("a.pdf"),
+      document("b.pdf"),
+      document("c.pdf"),
+    ]);
+    const { result } = renderHook(() => useDocuments(store, picker));
+    await act(() => result.current.open());
+    await act(() => result.current.open());
+    await act(() => result.current.open());
+    act(() => result.current.activate("id-b.pdf"));
+
+    act(() => result.current.close("id-b.pdf"));
+
+    expect(result.current.tabs.map((tab) => tab.name)).toEqual(["a.pdf", "c.pdf"]);
+    expect(result.current.active?.name).toBe("c.pdf");
+  });
+
+  it("has nothing in front once the last tab is closed", async () => {
+    const store = inMemoryRecents();
+    const { result } = renderHook(() =>
+      useDocuments(store, inMemoryDocumentPicker([document("a.pdf")])),
+    );
     await act(() => result.current.open());
 
-    await act(() => result.current.forget("id-informe.pdf"));
+    act(() => result.current.close("id-a.pdf"));
+
+    expect(result.current.tabs).toEqual([]);
+    expect(result.current.active).toBeNull();
+  });
+
+  it("activates the tab of a recent that is already open instead of opening it twice", async () => {
+    const store = inMemoryRecents();
+    const picker = inMemoryDocumentPicker([document("a.pdf"), document("b.pdf")]);
+    const { result } = renderHook(() => useDocuments(store, picker));
+    await act(() => result.current.open());
+    await act(() => result.current.open());
+
+    act(() => {
+      const row = result.current.recents.find((one) => one.name === "a.pdf");
+      if (row) result.current.select(row);
+    });
+
+    expect(result.current.tabs).toHaveLength(2);
+    expect(result.current.active?.name).toBe("a.pdf");
+  });
+
+  it("keeps the box of a tab that is left and taken again", async () => {
+    const store = inMemoryRecents();
+    const picker = inMemoryDocumentPicker([document("a.pdf"), document("b.pdf")]);
+    const { result } = renderHook(() => useDocuments(store, picker, false));
+    await act(() => result.current.open());
+    const box = { rect: { x0: 10, y0: 20, x1: 210, y1: 120 }, pages: { only: [2] } };
+    await act(() => result.current.place(box));
+    await act(() => result.current.open());
+
+    act(() => result.current.activate("id-a.pdf"));
+
+    expect(result.current.active?.placement).toEqual(box);
+  });
+
+  it("keeps the tabs open but stops remembering them when the list is emptied", async () => {
+    const store = inMemoryRecents();
+    const { result } = renderHook(() =>
+      useDocuments(store, inMemoryDocumentPicker([document("a.pdf")])),
+    );
+    await act(() => result.current.open());
+
+    await act(() => result.current.clearRecents());
+    await act(() =>
+      result.current.place({ rect: { x0: 10, y0: 20, x1: 210, y1: 120 }, pages: { only: [2] } }),
+    );
+
+    expect(result.current.tabs.map((tab) => tab.name)).toEqual(["a.pdf"]);
+    await expect(store.list()).resolves.toEqual([]);
+  });
+
+  it("closes every tab when the whole activity is forgotten", async () => {
+    const store = inMemoryRecents();
+    const { result } = renderHook(() =>
+      useDocuments(store, inMemoryDocumentPicker([document("a.pdf")])),
+    );
+    await act(() => result.current.open());
+
+    await act(() => result.current.forgetAll());
 
     expect(result.current.recents).toEqual([]);
+    expect(result.current.tabs).toEqual([]);
     expect(result.current.active).toBeNull();
   });
 });

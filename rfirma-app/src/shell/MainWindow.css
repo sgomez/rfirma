@@ -1,8 +1,8 @@
 /*
- * La única ventana (docs/design/ventana-principal.md): una cabecera de 56 px y
- * debajo la bandeja de 300 px, el visor flexible y el panel de 360 px.
+ * La única ventana (docs/design/ventana-principal.md): una cabecera de 56 px,
+ * la tira de pestañas y debajo el visor flexible y el panel de 360 px.
  *
- * Sin documento el panel **no está en el árbol** y quedan dos columnas
+ * Sin documento el panel **no está en el árbol** y queda una columna
  * (ID-51). No es un `display: none` —eso sería el primer paso hacia la
  * navegación que el ID-25 prohíbe—: es una columna menos en el `grid` porque
  * el elemento no se monta.
@@ -22,23 +22,18 @@
 .main-window__body {
   flex: 1;
   display: grid;
-  grid-template-columns: 300px 1fr 360px;
+  grid-template-columns: 1fr 360px;
   min-height: 0;
 }
 
 .main-window__body--no-panel {
-  grid-template-columns: 300px 1fr;
+  grid-template-columns: 1fr;
 }
 
-.main-window__tray,
 .main-window__panel {
   min-height: 0;
   overflow-y: auto;
   background: var(--rf-surface);
-}
-
-.main-window__tray {
-  border-right: 1px solid var(--rf-border-subtle);
 }
 
 .main-window__panel {

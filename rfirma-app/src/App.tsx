@@ -11,9 +11,10 @@ import { useStartupNotices } from "./App.useStartupNotices";
 import { AboutDialog } from "./about/AboutDialog";
 import type { ExternalDestinationOpener } from "./desktop/externalDestination";
 import { unavailableExternalDestinationOpener } from "./desktop/externalDestination";
-import { DocumentTray } from "./documents/DocumentTray";
+import { DocumentTabs } from "./documents/DocumentTabs";
 import type { DocumentDrops } from "./documents/drops";
 import type { DocumentPicker } from "./documents/picker";
+import { RecentsSection } from "./documents/RecentRows";
 import type { RecentsStore } from "./documents/recents";
 import { useDocuments } from "./documents/useDocuments";
 import { classify } from "./errors/classify";
@@ -101,7 +102,7 @@ export interface AppHandle {
  * backend. Quien elige las implementaciones de verdad es `main.tsx`.
  *
  * Los diálogos se montan **sobre** la ventana y no la desmontan: no hay
- * navegación, y el estado de la bandeja sigue vivo debajo.
+ * navegación, y los documentos abiertos siguen vivos debajo.
  */
 export function App({
   recents,
@@ -211,11 +212,8 @@ export function App({
     };
   }, [pdf, boxPage]);
 
-  // El documento activo, abierto para pintarlo. Cambiar de documento **repone
-  // el recuadro de ese documento**, que es lo que guarda su fila de la bandeja
-  // (ID-74): uno que ya estuvo abierto vuelve a su página y a su posición, y
-  // uno nuevo llega sin ninguna y arranca donde toque, no donde lo dejó el
-  // anterior (ID-22).
+  // Cambiar de pestaña repone el recuadro que guarda: uno ya abierto vuelve a su
+  // página y posición, y uno nuevo arranca donde toque, no donde lo dejó otro.
   useEffect(() => {
     const active = documents.active;
     if (!active) {
@@ -231,10 +229,7 @@ export function App({
       setPdf(opened.ok ? opened.pdf : null);
       setPdfFailure(opened.ok ? null : opened.failure);
       setSizeBytes(opened.ok ? opened.sizeBytes : null);
-      // La fila guarda **una** colocación, que es lo que se firmó: al reabrir
-      // se reparte en la opción que la explica, y las otras dos arrancan sin
-      // conjunto propio para que la primera vez que se elijan se siembren de
-      // esta (ID-74).
+      // Se guarda una sola colocación, la firmada; las otras dos opciones se siembran de ella.
       setPlacing(placingFrom(active.placement, opened.ok ? opened.pdf.pageCount : 0));
       // Documento nuevo, hora nueva: la del anterior lleva parada desde que se
       // abrió, y el recuadro de este llevaría estampada una hora vieja.
@@ -262,20 +257,12 @@ export function App({
     chooseCertificate,
   } = useCertificateSearch(certificates);
 
-  /**
-   * Abrir un documento por el portal.
-   *
-   * El `catch` no es decorativo: si la orden que abre el diálogo rechaza, la
-   * promesa quedaría sin dueño y el fallo no se contaría en ningún sitio. Se
-   * cuenta donde se cuentan los demás del documento, en el visor.
-   */
-  const openDocument = async () => {
-    try {
-      await documents.open();
-    } catch (thrown) {
-      setPdfFailure(classify(thrown));
-    }
+  // Sin el `catch`, el rechazo quedaría sin dueño; se cuenta en el visor.
+  const reportingFailure = (command: () => Promise<void>) => () => {
+    command().catch((thrown: unknown) => setPdfFailure(classify(thrown)));
   };
+  const openDocument = reportingFailure(documents.open);
+  const clearRecents = reportingFailure(documents.clearRecents);
 
   const chosen = certificate.kind === "chosen" ? certificate.certificate : null;
   const {
@@ -382,13 +369,16 @@ export function App({
             />
           ) : null
         }
-        tray={
-          <DocumentTray
+        tabs={
+          <DocumentTabs
+            tabs={documents.tabs}
+            activeId={activeId}
             recents={documents.recents}
-            activeId={documents.active?.id ?? null}
-            onOpen={() => void openDocument()}
-            onSelect={documents.select}
-            onForget={(id) => void documents.forget(id)}
+            onActivate={documents.activate}
+            onClose={documents.close}
+            onOpen={openDocument}
+            onSelectRecent={documents.select}
+            onClearRecents={clearRecents}
           />
         }
         viewer={
@@ -405,7 +395,16 @@ export function App({
             pageChoice={pageChoice}
             onPageChange={setViewedPage}
             placementRequest={placementRequest}
-            onOpen={() => void openDocument()}
+            onOpen={openDocument}
+            emptyExtra={
+              documents.tabs.length === 0 ? (
+                <RecentsSection
+                  recents={documents.recents}
+                  onSelect={documents.select}
+                  onClear={clearRecents}
+                />
+              ) : null
+            }
             // Los dos avisos caben en el mismo sitio, y manda el del PDF: si el
             // documento que se soltó tampoco se deja pintar, eso es más urgente
             // que contar cuántos ficheros venían con él.

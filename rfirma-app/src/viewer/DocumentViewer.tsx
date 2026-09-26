@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { type ReactNode, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ChevronLeftIcon,
@@ -71,8 +71,10 @@ interface DocumentViewerProps {
    * dispara la acción es la identidad y no el valor.
    */
   placementRequest?: { action: "seal" | "unseal" } | null;
-  /** Abrir un documento, que va por el portal igual que desde la bandeja. */
+  /** Abrir un documento, que va por el portal igual que desde el menú «+». */
   onOpen: () => void;
+  /** Lo que va debajo de la zona de soltar en el estado vacío: los recientes. */
+  emptyExtra?: ReactNode;
   /**
    * Por qué no se ha podido pintar el documento que se eligió, si es que no se
    * ha podido.
@@ -165,6 +167,7 @@ export function DocumentViewer({
   placement,
   onPlace,
   onOpen,
+  emptyExtra = null,
   pageChoice = "these",
   onPageChange,
   placementRequest = null,
@@ -234,12 +237,12 @@ export function DocumentViewer({
         )}
         <button type="button" className="viewer__drop-zone" onClick={onOpen}>
           <span className="viewer__drop-icon">
-            <UploadIcon />
+            <UploadIcon size={32} />
           </span>
           <span className="rf-title viewer__drop-title">{t("viewer.dropZone")}</span>
-          <span className="rf-prose rf-text-muted">{t("viewer.dropZoneHint")}</span>
+          <span className="rf-body rf-text-muted">{t("viewer.dropZoneHint")}</span>
         </button>
-        <p className="rf-prose rf-text-muted">{t("viewer.privacy")}</p>
+        {emptyExtra}
       </div>
     );
   }

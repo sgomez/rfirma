@@ -1,23 +1,7 @@
 import type { Placement } from "../viewer/signatureBox";
 
-/**
- * El vocabulario del documento, en el lado de la interfaz: **el que se tiene
- * delante** y las insignias con las que se pinta.
- *
- * `Badge` y `ShownBadge` son los mismos valores de `memory::recents` en el
- * backend, y con los mismos nombres: `Badge` es lo que se **guarda** —se
- * conoce abriendo el documento, y por eso se cachea— y `ShownBadge` es lo que
- * se **pinta**, que es la guardada más `Unavailable`, un hecho sobre el disco
- * de ahora mismo que no se persiste nunca. Si cambia un valor allí, cambia
- * aquí.
- *
- * [`DocumentInHand`] es la otra mitad, y no es una fila: la fila vive en
- * `recents.ts` y se persiste; esto vive lo que dura el trabajo (ID-287).
- */
+/** Si el documento ya lleva firmas; es el `Badge` de `memory::recents` en el backend. */
 export type Badge = "Signed" | "Unsigned";
-
-/** La insignia que se pinta en la fila. Ver [`Badge`]. */
-export type ShownBadge = Badge | "Unavailable";
 
 /**
  * **El documento que la aplicación tiene delante**, que no es la fila que se

@@ -269,6 +269,24 @@ export function PlusIcon({ size = 16 }: IconProps) {
   );
 }
 
+/** El aspa de cerrar una pestaña. */
+export function CloseIcon({ size = 12 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...PEN} strokeWidth={1.8} aria-hidden="true" focusable="false">
+      <path d="M6 6l12 12M18 6 6 18" />
+    </svg>
+  );
+}
+
+/** La marca de «ya lleva firmas» de las pestañas y de los recientes. */
+export function SignedMarkIcon({ size = 13 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...PEN} strokeWidth={2} aria-hidden="true" focusable="false">
+      <path d="M5 12.5l4.5 4.5L19 7.5" />
+    </svg>
+  );
+}
+
 /** Las cuatro esquinas de «ajustar a la ventana». */
 export function FitIcon({ size = 16 }: IconProps) {
   return (
