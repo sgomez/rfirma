@@ -1,6 +1,5 @@
 import { useTranslation } from "react-i18next";
 import { FolderIcon } from "../design-system/icons";
-import { ErrorNotice } from "../errors/ErrorNotice";
 import { CertificateFooterButton } from "./CertificateFooterButton";
 import type { Certificate } from "./certificate";
 import type { Destination } from "./destination";
@@ -22,7 +21,8 @@ interface PanelFooterProps {
   onRetryCertificates: () => void;
   onChooseModule: () => void;
   onSign: () => void;
-  onOpenHelp?: () => void;
+  /** Cierra el error y vuelve al panel, con el ciclo a medias olvidado en el backend. */
+  onBack: () => void;
 }
 
 /**
@@ -44,7 +44,7 @@ export function PanelFooter({
   onRetryCertificates,
   onChooseModule,
   onSign,
-  onOpenHelp,
+  onBack,
 }: PanelFooterProps) {
   const { t } = useTranslation();
   // El destino recortado. Sin nombre compuesto —la carpeta no se deja
@@ -56,54 +56,66 @@ export function PanelFooter({
 
   return (
     <footer className="panel__footer">
-      {failure ? (
-        <ErrorNotice
-          situation={failure.situation}
-          technicalDetail={failure.detail}
-          onOpenHelp={onOpenHelp}
-        />
-      ) : (
-        <div className="panel__destination">
-          {/* El rótulo es una promesa, así que **desaparece** cuando no se
-              puede cumplir: con la carpeta no escribible el pie dice solo que
-              no se puede escribir en ella, y no las dos cosas a la vez. */}
-          {destination.writable && <p className="rf-label">{t("panel.footer.savedIn")}</p>}
-          <div className="rf-row rf-gap-xs panel__destination-row">
-            <span className="panel__destination-icon">
-              <FolderIcon />
-            </span>
-            {/* El destino son **dos cosas**: la carpeta, atenuada y precedida
-                de `…/` —hay carpetas por encima y no se afirma cuáles—, y el
-                nombre sin atenuar, que es el dato (ID-63). El aviso de que no
-                se puede escribir **no se recorta**: perderlo por elipsis sería
-                perderlo cuando más falta hace. */}
-            {destination.writable ? (
-              <p className="rf-prose panel__destination-path">
-                <span className="rf-text-muted">{`…/${shortened.folder}/`}</span>
-                {shortened.name}
-              </p>
-            ) : (
-              <p className="rf-prose panel__destination-unwritable">
-                {t("panel.footer.unwritable", { folder: shortened.folder })}
-              </p>
-            )}
-            <button
-              type="button"
-              className="rf-btn rf-btn--ghost panel__destination-change"
-              onClick={onChangeDestination}
-            >
-              {t("actions.change")}
-            </button>
-          </div>
+      <div className="panel__destination">
+        {/* El rótulo es una promesa, así que **desaparece** cuando no se
+            puede cumplir: con la carpeta no escribible el pie dice solo que
+            no se puede escribir en ella, y no las dos cosas a la vez. */}
+        {destination.writable && <p className="rf-label">{t("panel.footer.savedIn")}</p>}
+        <div className="rf-row rf-gap-xs panel__destination-row">
+          <span className="panel__destination-icon">
+            <FolderIcon />
+          </span>
+          {/* El destino son **dos cosas**: la carpeta, atenuada y precedida
+              de `…/` —hay carpetas por encima y no se afirma cuáles—, y el
+              nombre sin atenuar, que es el dato (ID-63). El aviso de que no
+              se puede escribir **no se recorta**: perderlo por elipsis sería
+              perderlo cuando más falta hace. */}
+          {destination.writable ? (
+            <p className="rf-prose panel__destination-path">
+              <span className="rf-text-muted">{`…/${shortened.folder}/`}</span>
+              {shortened.name}
+            </p>
+          ) : (
+            <p className="rf-prose panel__destination-unwritable">
+              {t("panel.footer.unwritable", { folder: shortened.folder })}
+            </p>
+          )}
+          <button
+            type="button"
+            className="rf-btn rf-btn--ghost panel__destination-change"
+            onClick={onChangeDestination}
+          >
+            {t("actions.change")}
+          </button>
+        </div>
+      </div>
+      {unplaced && !failure && (
+        <p className="rf-hint panel__place-first">{t("panel.footer.placeFirst")}</p>
+      )}
+      {failure && (
+        <div className="rf-row rf-gap-xs panel__failure-actions">
+          <button
+            type="button"
+            className="rf-btn rf-btn--primary panel__failure-retry"
+            onClick={onSign}
+          >
+            {t("panel.footer.retry")}
+          </button>
+          <button
+            type="button"
+            className="rf-btn rf-btn--ghost panel__failure-back"
+            onClick={onBack}
+          >
+            {t("actions.back")}
+          </button>
         </div>
       )}
-      {unplaced && <p className="rf-hint panel__place-first">{t("panel.footer.placeFirst")}</p>}
-      {certificate.kind === "loading" && (
+      {!failure && certificate.kind === "loading" && (
         <button type="button" className="rf-btn rf-btn--primary panel__sign" disabled>
           {t("panel.certificate.loading")}
         </button>
       )}
-      {(certificate.kind === "empty" || certificate.kind === "failed") && (
+      {!failure && (certificate.kind === "empty" || certificate.kind === "failed") && (
         <div className="rf-row rf-gap-xs panel__certificate-actions">
           <button
             type="button"
@@ -121,7 +133,7 @@ export function PanelFooter({
           </button>
         </div>
       )}
-      {(certificate.kind === "unchosen" || certificate.kind === "chosen") && (
+      {!failure && (certificate.kind === "unchosen" || certificate.kind === "chosen") && (
         <CertificateFooterButton
           certificates={certificate.certificates}
           chosen={certificate.kind === "chosen" ? certificate.certificate : null}
@@ -129,7 +141,6 @@ export function PanelFooter({
           onSign={onSign}
           signing={signing}
           blocked={blocked}
-          signLabel={failure ? t("panel.footer.retry") : undefined}
         />
       )}
     </footer>

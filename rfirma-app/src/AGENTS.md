@@ -53,6 +53,7 @@ rojo.
 | `App.usePreferencesState.ts` | Los ajustes, el destino previsto para el documento activo y la rúbrica adoptada. |
 | `App.useSignFlow.ts` | La vista previa del sello y la firma, con los dos avisos que pueden interponerse antes del PIN. |
 | `App.useSignedSummary.ts` | El acuse de recibo del documento firmado y los dos caminos hasta el fichero. |
+| `App.useSigningFailure.ts` | El error de firma del documento activo, y su salida al cambiar de pestaña. |
 | `App.useStartupNotices.ts` | El aviso de versión nueva y las filas del panel de estado, medidos al arrancar. |
 | `App.testSupport.tsx` | Los dobles y el `renderApp` que comparten las pruebas de `App`. |
 | **`shell/`** | La ventana y su cabecera (ADR-0007). |
@@ -78,7 +79,7 @@ rojo.
 | `signing/usePlacementField.ts` | El estado del bloque «Colocación»: lo tecleado en el campo de páginas. |
 | `signing/placementField.ts` | Las situaciones del campo de páginas y su eco, redactados. Sin React. |
 | `signing/ModelFieldset.tsx` | Qué se estampa en el recuadro: las tarjetas de modelo y la rúbrica. |
-| `signing/PanelFooter.tsx` | El pie fijo del panel: destino o fallo, y el certificado o la acción del momento. |
+| `signing/PanelFooter.tsx` | El pie fijo del panel: el destino y, según el estado, el certificado, «Reintentar»/«Volver» o el aviso de sin certificados. |
 | `signing/CertificateFooterButton.tsx` | El botón partido «Firmar como…» del pie, con su lista hacia arriba. |
 | `signing/panelFormat.ts` | El tamaño del documento en la unidad que reconoce el usuario. Sin React. |
 | `signing/CertificateSelect.tsx` | La elección de certificado, reutilizada tal cual en la sede. |

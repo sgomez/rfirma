@@ -7,6 +7,7 @@ import { usePlacementControls } from "./App.usePlacementControls";
 import { useDestination, usePreferencesState } from "./App.usePreferencesState";
 import { useSignedSummary } from "./App.useSignedSummary";
 import { useSignFlow } from "./App.useSignFlow";
+import { useSigningFailure } from "./App.useSigningFailure";
 import { useStartupNotices } from "./App.useStartupNotices";
 import { AboutDialog } from "./about/AboutDialog";
 import type { ExternalDestinationOpener } from "./desktop/externalDestination";
@@ -252,6 +253,7 @@ export function App({
     activeId,
     documents.reopen,
   );
+  const { failedHere } = useSigningFailure(signing, activeId);
 
   const {
     certificate,
@@ -384,6 +386,7 @@ export function App({
             onOpen={openDocument}
             onSelectRecent={documents.select}
             onClearRecents={clearRecents}
+            signingLocked={signing.state.kind === "running"}
           />
         }
         viewer={
@@ -477,14 +480,8 @@ export function App({
               onSign={() => void sign()}
               signing={signing.state.kind === "running"}
               onOpenHelp={() => void externalDestinations.open("discussions")}
-              failure={
-                signing.state.kind === "failed"
-                  ? {
-                      situation: signing.state.failure.situation,
-                      detail: signing.state.failure.detail,
-                    }
-                  : null
-              }
+              failure={failedHere?.failure ?? null}
+              onBack={signing.cancel}
             />
           ) : null
         }

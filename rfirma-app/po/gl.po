@@ -29,6 +29,9 @@ msgstr "Descartar"
 msgid "actions.copy"
 msgstr "Copiar"
 
+msgid "actions.back"
+msgstr "Volver"
+
 #. Endónimo: el nombre del idioma en sí mismo, no se traduce.
 msgid "languages.es"
 msgstr "Español"
@@ -57,6 +60,10 @@ msgstr "Comentarios e axuda"
 
 msgid "errors.reload"
 msgstr "Recargar a fiestra"
+
+#. Añade la tranquilidad de que nada se ha guardado, junto a un fallo ya clasificado.
+msgid "errors.documentUnchanged"
+msgstr "O documento segue igual: non se gardou nada."
 
 msgid "errors.situations.unknown.title"
 msgstr "Non se puido completar a operación"
@@ -420,6 +427,10 @@ msgstr "Pestanas seguintes"
 #. {{name}} es el nombre del fichero de la pestaña.
 msgid "tabs.close"
 msgstr "Pechar {{name}}"
+
+#. Título de la pestaña de otro documento mientras una firma está en curso.
+msgid "tabs.lockedWhileSigning"
+msgstr "Non se pode cambiar de documento mentres se asina."
 
 msgid "tabs.openPdf"
 msgstr "Abrir un PDF…"

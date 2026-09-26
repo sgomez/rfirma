@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { FileIcon, InfoIcon } from "../design-system/icons";
 import type { NamedFailure } from "../errors/classify";
+import { ErrorNotice } from "../errors/ErrorNotice";
 import { Switch } from "../preferences/Switch";
 import type { PageChoice, PageSet, PageSets, Placement } from "../viewer/signatureBox";
 import { CertificateNotice } from "./CertificateNotice";
@@ -115,6 +116,8 @@ interface SigningPanelProps {
   /** Mientras la firma corre, el botón no acepta un segundo empujón. */
   signing: boolean;
   failure: SigningFailure | null;
+  /** Cierra el error y vuelve al panel, con el ciclo a medias olvidado en el backend. */
+  onBack: () => void;
   onOpenHelp?: () => void;
 }
 
@@ -158,6 +161,7 @@ export function SigningPanel({
   onSign,
   signing,
   failure,
+  onBack,
   onOpenHelp,
 }: SigningPanelProps) {
   const { t, i18n } = useTranslation();
@@ -201,71 +205,86 @@ export function SigningPanel({
           </div>
         </div>
 
-        {document.signatures !== null && document.signatures > 0 && (
-          <div className="panel__co-signature">
-            <span className="panel__notice-icon">
-              <InfoIcon />
-            </span>
-            <p className="rf-prose">{t("panel.coSignature", { count: document.signatures })}</p>
-          </div>
-        )}
-
-        <hr className="rf-divider" />
-
-        {(certificate.kind === "empty" || certificate.kind === "failed") && (
+        {failure ? (
+          // Error al firmar: la zona que se desliza se sustituye por la tarjeta
+          // del fallo, como el resto del panel (docs/design/panel-de-firma.md §
+          // Error al firmar). La cofirma, el certificado y la firma visible no
+          // aportan nada mientras el documento sigue exactamente como estaba.
+          <ErrorNotice
+            situation={failure.situation}
+            technicalDetail={failure.detail}
+            onOpenHelp={onOpenHelp}
+            documentUnchanged
+          />
+        ) : (
           <>
-            <CertificateNotice state={certificate} onOpenHelp={onOpenHelp} />
+            {document.signatures !== null && document.signatures > 0 && (
+              <div className="panel__co-signature">
+                <span className="panel__notice-icon">
+                  <InfoIcon />
+                </span>
+                <p className="rf-prose">{t("panel.coSignature", { count: document.signatures })}</p>
+              </div>
+            )}
+
             <hr className="rf-divider" />
+
+            {(certificate.kind === "empty" || certificate.kind === "failed") && (
+              <>
+                <CertificateNotice state={certificate} onOpenHelp={onOpenHelp} />
+                <hr className="rf-divider" />
+              </>
+            )}
+
+            <section
+              className={usable ? "panel__section" : "panel__section panel__section--inert"}
+              aria-label={t("panel.visibleSignature.title")}
+              inert={!usable}
+            >
+              <p className="rf-label panel__heading">{t("panel.visibleSignature.title")}</p>
+              {/* ID-108: sin certificado no hay sello que dibujar, y sin sello no
+                  hay recuadro. El aviso va encima del interruptor porque es lo que
+                  explica por qué el bloque entero está en gris. */}
+              {!usable && <p className="rf-hint">{t("panel.visibleSignature.noCertificate")}</p>}
+              <Switch
+                // El interruptor se pinta **en «no»** dentro de un bloque apagado.
+                // Encendido prometía un recuadro que no hay, y la preferencia que
+                // guarda `signature.enabled` no se pierde: vuelve al reaparecer el
+                // certificado, igual que la colocación.
+                checked={usable && signature.enabled}
+                label={t("panel.visibleSignature.toggle")}
+                onChange={(enabled) => onChangeSignature({ ...signature, enabled })}
+              />
+
+              {chosen !== null && usable && signature.enabled && (
+                <>
+                  <PlacementFieldset
+                    documentPages={document.pages}
+                    pageSets={pageSets}
+                    pageChoice={pageChoice}
+                    onChangePageChoice={onChangePageChoice}
+                    pagesText={pagesText}
+                    onTypePages={typePages}
+                    rangeError={rangeError}
+                    echo={echo}
+                    sealedCount={sealedCount}
+                    sealButton={sealButton}
+                  />
+
+                  <ModelFieldset
+                    signature={signature}
+                    onChangeSignature={onChangeSignature}
+                    certificate={chosen}
+                    rubric={rubric}
+                    rubricFailure={rubricFailure}
+                    onChooseRubric={onChooseRubric}
+                    onOpenHelp={onOpenHelp}
+                  />
+                </>
+              )}
+            </section>
           </>
         )}
-
-        <section
-          className={usable ? "panel__section" : "panel__section panel__section--inert"}
-          aria-label={t("panel.visibleSignature.title")}
-          inert={!usable}
-        >
-          <p className="rf-label panel__heading">{t("panel.visibleSignature.title")}</p>
-          {/* ID-108: sin certificado no hay sello que dibujar, y sin sello no
-              hay recuadro. El aviso va encima del interruptor porque es lo que
-              explica por qué el bloque entero está en gris. */}
-          {!usable && <p className="rf-hint">{t("panel.visibleSignature.noCertificate")}</p>}
-          <Switch
-            // El interruptor se pinta **en «no»** dentro de un bloque apagado.
-            // Encendido prometía un recuadro que no hay, y la preferencia que
-            // guarda `signature.enabled` no se pierde: vuelve al reaparecer el
-            // certificado, igual que la colocación.
-            checked={usable && signature.enabled}
-            label={t("panel.visibleSignature.toggle")}
-            onChange={(enabled) => onChangeSignature({ ...signature, enabled })}
-          />
-
-          {chosen !== null && usable && signature.enabled && (
-            <>
-              <PlacementFieldset
-                documentPages={document.pages}
-                pageSets={pageSets}
-                pageChoice={pageChoice}
-                onChangePageChoice={onChangePageChoice}
-                pagesText={pagesText}
-                onTypePages={typePages}
-                rangeError={rangeError}
-                echo={echo}
-                sealedCount={sealedCount}
-                sealButton={sealButton}
-              />
-
-              <ModelFieldset
-                signature={signature}
-                onChangeSignature={onChangeSignature}
-                certificate={chosen}
-                rubric={rubric}
-                rubricFailure={rubricFailure}
-                onChooseRubric={onChooseRubric}
-                onOpenHelp={onOpenHelp}
-              />
-            </>
-          )}
-        </section>
       </div>
 
       <PanelFooter
@@ -281,7 +300,7 @@ export function SigningPanel({
         onRetryCertificates={onRetryCertificates}
         onChooseModule={onChooseModule}
         onSign={onSign}
-        onOpenHelp={onOpenHelp}
+        onBack={onBack}
       />
     </div>
   );

@@ -29,6 +29,9 @@ msgstr "Baztertu"
 msgid "actions.copy"
 msgstr "Kopiatu"
 
+msgid "actions.back"
+msgstr "Itzuli"
+
 #. Endónimo: el nombre del idioma en sí mismo, no se traduce.
 msgid "languages.es"
 msgstr "Español"
@@ -57,6 +60,10 @@ msgstr "Iruzkinak eta laguntza"
 
 msgid "errors.reload"
 msgstr "Birkargatu leihoa"
+
+#. Añade la tranquilidad de que nada se ha guardado, junto a un fallo ya clasificado.
+msgid "errors.documentUnchanged"
+msgstr "Dokumentua lehen bezala dago: ez da ezer gorde."
 
 msgid "errors.situations.unknown.title"
 msgstr "Ezin izan da eragiketa osatu"
@@ -432,6 +439,10 @@ msgstr "Hurrengo fitxak"
 #. {{name}} es el nombre del fichero de la pestaña.
 msgid "tabs.close"
 msgstr "Itxi {{name}}"
+
+#. Título de la pestaña de otro documento mientras una firma está en curso.
+msgid "tabs.lockedWhileSigning"
+msgstr "Ezin da dokumentuz aldatu sinatzen ari den bitartean."
 
 msgid "tabs.openPdf"
 msgstr "Ireki PDF bat…"

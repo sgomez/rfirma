@@ -65,6 +65,12 @@ interface ErrorNoticeProps {
   onReload?: () => void;
   /** El error boundary de cada ventana quiere el foco encima al aparecer; nadie más lo pide. */
   focusOnMount?: boolean;
+  /**
+   * Añade la tranquilidad de que nada se ha guardado (docs/design/panel-de-firma.md
+   * § Error al firmar): un fallo a mitad de una operación que escribe disco dice
+   * además que el documento sigue como estaba.
+   */
+  documentUnchanged?: boolean;
 }
 
 /**
@@ -89,6 +95,7 @@ export function ErrorNotice({
   externalDestinations,
   onReload,
   focusOnMount,
+  documentUnchanged,
 }: ErrorNoticeProps) {
   const { t } = useTranslation();
   const notice = useRef<HTMLDivElement>(null);
@@ -108,6 +115,7 @@ export function ErrorNotice({
         <AlertIcon />
         <span className="rf-title">{t(`errors.situations.${situation}.title`)}</span>
       </p>
+      {documentUnchanged && <p className="rf-prose">{t("errors.documentUnchanged")}</p>}
       {!isOneLine(situation) && (
         <>
           <p className="rf-prose">

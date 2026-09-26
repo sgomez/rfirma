@@ -126,6 +126,17 @@
   flex: 1;
 }
 
+/* La fila del pie con el error: «Reintentar» se lleva el ancho que sobra,
+   igual que «Añadir un certificado…», y «Volver» solo el suyo. */
+.panel__failure-actions {
+  align-items: stretch;
+  height: 44px;
+}
+
+.panel__failure-retry {
+  flex: 1;
+}
+
 .panel__model {
   display: flex;
   flex-direction: column;
