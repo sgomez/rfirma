@@ -27,15 +27,6 @@ pub trait Token {
         algorithm: SignatureAlgorithm,
     ) -> Result<(), TokenError>;
 
-    /// Firma `data` con la clave privada que acompaña al certificado, con el algoritmo pedido.
-    fn sign(
-        &self,
-        reference: &CertificateRef,
-        pin: &str,
-        algorithm: SignatureAlgorithm,
-        data: &[u8],
-    ) -> Result<Vec<u8>, TokenError>;
-
     /// Si el almacén del certificado acepta el secreto, sin firmar nada.
     fn accepts_the_secret(
         &self,
@@ -43,19 +34,14 @@ pub trait Token {
         secret: &crate::identity::domain::protected_secret::ProtectedSecret,
     ) -> Result<(), TokenError>;
 
-    /// Firma `data` con la clave privada que acompaña al certificado y el secreto protegido.
+    /// Firma `data` con la clave privada que acompaña al certificado y el secreto protegido (ADR-0001).
     fn sign_with_secret(
         &self,
         reference: &CertificateRef,
         secret: &crate::identity::domain::protected_secret::ProtectedSecret,
         algorithm: SignatureAlgorithm,
         data: &[u8],
-    ) -> Result<Vec<u8>, TokenError> {
-        let pin_str = secret.as_str().map_err(|_| {
-            TokenError::new(Situation::IncorrectPin, "el secreto no es UTF-8 valido")
-        })?;
-        self.sign(reference, pin_str, algorithm, data)
-    }
+    ) -> Result<Vec<u8>, TokenError>;
 
     /// Importa un `.p12` a un almacén NSS nuevo en ese directorio y devuelve el almacén.
     fn import_pkcs12(

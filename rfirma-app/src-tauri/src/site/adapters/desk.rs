@@ -9,6 +9,7 @@ use crate::identity::adapters::failures::code_of_token;
 use crate::identity::domain::algorithm::{KeyKind, SignatureAlgorithm};
 use crate::identity::domain::certificate::{ListedCertificate, TokenCertificate};
 use crate::identity::domain::error::{Situation, TokenError};
+use crate::identity::domain::protected_secret::ProtectedSecret;
 use crate::identity::domain::secret::StoreSecret;
 use crate::identity::IdentityRoot;
 use crate::signing::adapters::failures::told_of_cycle;
@@ -90,7 +91,7 @@ impl SiteSigning for Neighbours<'_> {
             .map_err(|failure| signing_refusal_of(told_of_cycle(&failure)))
     }
 
-    fn sign_on_token(&self, secret: &str) -> Result<(), SigningRefusal> {
+    fn sign_on_token(&self, secret: &ProtectedSecret) -> Result<(), SigningRefusal> {
         self.signing
             .sign_on_token(&self.identity.signer(), secret)
             .map_err(|failure| signing_refusal_of(told_of_cycle(&failure)))
@@ -130,7 +131,7 @@ impl TokenSigning for Neighbours<'_> {
     fn sign(
         &self,
         certificate: &TokenCertificate,
-        secret: &str,
+        secret: &ProtectedSecret,
         algorithm: &str,
         data: &[u8],
     ) -> Result<Vec<u8>, SigningRefusal> {
@@ -158,7 +159,7 @@ pub fn secret_for_the_batch(
 pub fn signed_by_the_token(
     signer: &dyn Signer,
     certificate: &TokenCertificate,
-    secret: &str,
+    secret: &ProtectedSecret,
     algorithm: &str,
     data: &[u8],
 ) -> Result<Vec<u8>, SigningRefusal> {
@@ -167,7 +168,7 @@ pub fn signed_by_the_token(
         .and_then(|asked| composed_for(asked, certificate.key_kind()))
         .map_err(refusal_of_token)?;
     signer
-        .sign(certificate.reference(), secret, asked, data)
+        .sign_with_secret(certificate.reference(), secret, asked, data)
         .map_err(refusal_of_token)
 }
 

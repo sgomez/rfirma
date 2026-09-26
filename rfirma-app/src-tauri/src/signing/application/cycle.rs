@@ -232,11 +232,11 @@ impl OpenCycle {
     pub fn sign_on_token(
         &self,
         signer: &dyn Signer,
-        pin: &str,
+        secret: &ProtectedSecret,
     ) -> Result<TokenSignatures, CycleError> {
-        Ok(self
-            .presigned
-            .signed_one_by_one(|pre| signer.sign(&self.certificate, pin, self.algorithm, pre))?)
+        Ok(self.presigned.signed_one_by_one(|pre| {
+            signer.sign_with_secret(&self.certificate, secret, self.algorithm, pre)
+        })?)
     }
 
     /// Las firmas sintéticas de la prefirma en seco, una por bloque.

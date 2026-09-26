@@ -242,7 +242,7 @@ pub fn the_sign_errand_of(
             sign_on_token(
                 &roots.identity.signer(),
                 &roots.signing.session,
-                THE_TOKEN_SECRET,
+                &ProtectedSecret::from_str(THE_TOKEN_SECRET),
             )
             .expect("la firma en el token deberia completarse");
             errand::finish(&desk, live).expect("la postfirma deberia completarse");
@@ -468,7 +468,7 @@ pub fn the_sign_and_save_errand_of(
             sign_on_token(
                 &roots.identity.signer(),
                 &roots.signing.session,
-                THE_TOKEN_SECRET,
+                &ProtectedSecret::from_str(THE_TOKEN_SECRET),
             )
             .expect("la firma en el token debería completarse");
             errand::finish(&desk, live).expect("la postfirma debería completarse")

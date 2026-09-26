@@ -155,9 +155,9 @@ fn the_same_certificate_changes_status_with_the_clock_and_not_with_the_token() {
 #[test]
 fn signing_produces_a_signature_that_the_certificate_public_key_verifies() {
     let certificate = certificate_labelled(ACTIVE);
-    let raw = pkcs11::sign(
+    let raw = pkcs11::sign_with_secret(
         &reference(ACTIVE),
-        PIN,
+        &ProtectedSecret::from_str(PIN),
         SignatureAlgorithm::Sha256Rsa,
         PRESIGN,
     )
@@ -176,9 +176,9 @@ fn signing_a_hash_with_the_bare_rsa_mechanism_would_not_verify() {
     let certificate = certificate_labelled(ACTIVE);
     let key = verifying_key(&certificate);
 
-    let ours = pkcs11::sign(
+    let ours = pkcs11::sign_with_secret(
         &reference(ACTIVE),
-        PIN,
+        &ProtectedSecret::from_str(PIN),
         SignatureAlgorithm::Sha256Rsa,
         PRESIGN,
     )
@@ -209,8 +209,13 @@ fn each_rsa_digest_signs_and_openssl_verifies_it_with_the_one_it_names() {
         (SignatureAlgorithm::Sha384Rsa, MessageDigest::sha384()),
         (SignatureAlgorithm::Sha512Rsa, MessageDigest::sha512()),
     ] {
-        let signature = pkcs11::sign(&reference(ACTIVE), PIN, algorithm, PRESIGN)
-            .unwrap_or_else(|error| panic!("{} deberia firmar: {error}", algorithm.name()));
+        let signature = pkcs11::sign_with_secret(
+            &reference(ACTIVE),
+            &ProtectedSecret::from_str(PIN),
+            algorithm,
+            PRESIGN,
+        )
+        .unwrap_or_else(|error| panic!("{} deberia firmar: {error}", algorithm.name()));
 
         assert!(
             openssl_verifies(digest, Padding::PKCS1, &signature),
@@ -222,9 +227,9 @@ fn each_rsa_digest_signs_and_openssl_verifies_it_with_the_one_it_names() {
 
 #[test]
 fn a_signature_does_not_verify_under_a_digest_that_is_not_the_one_it_was_made_with() {
-    let signature = pkcs11::sign(
+    let signature = pkcs11::sign_with_secret(
         &reference(ACTIVE),
-        PIN,
+        &ProtectedSecret::from_str(PIN),
         SignatureAlgorithm::Sha384Rsa,
         PRESIGN,
     )
@@ -239,9 +244,9 @@ fn a_signature_does_not_verify_under_a_digest_that_is_not_the_one_it_was_made_wi
 
 #[test]
 fn the_pss_form_signs_and_openssl_verifies_it_as_pss_and_not_as_pkcs1() {
-    let signature = pkcs11::sign(
+    let signature = pkcs11::sign_with_secret(
         &reference(ACTIVE),
-        PIN,
+        &ProtectedSecret::from_str(PIN),
         SignatureAlgorithm::Sha256RsaPss,
         PRESIGN,
     )
@@ -261,9 +266,9 @@ fn the_pss_form_signs_and_openssl_verifies_it_as_pss_and_not_as_pkcs1() {
 
 #[test]
 fn an_ec_algorithm_over_an_rsa_key_is_refused_naming_the_key_and_not_a_ckr() {
-    let error = pkcs11::sign(
+    let error = pkcs11::sign_with_secret(
         &reference(ACTIVE),
-        PIN,
+        &ProtectedSecret::from_str(PIN),
         SignatureAlgorithm::Sha256Ecdsa,
         PRESIGN,
     )
@@ -280,9 +285,9 @@ fn an_ec_algorithm_over_an_rsa_key_is_refused_naming_the_key_and_not_a_ckr() {
 
 #[test]
 fn an_rsa_algorithm_over_an_ec_key_is_refused_the_same_way() {
-    let error = pkcs11::sign(
+    let error = pkcs11::sign_with_secret(
         &reference(ACTIVE_EC),
-        PIN,
+        &ProtectedSecret::from_str(PIN),
         SignatureAlgorithm::Sha256Rsa,
         PRESIGN,
     )
@@ -303,8 +308,13 @@ fn each_ecdsa_digest_signs_and_openssl_verifies_it_with_the_one_it_names() {
         (SignatureAlgorithm::Sha384Ecdsa, MessageDigest::sha384()),
         (SignatureAlgorithm::Sha512Ecdsa, MessageDigest::sha512()),
     ] {
-        let signature = pkcs11::sign(&reference(ACTIVE_EC), PIN, algorithm, PRESIGN)
-            .unwrap_or_else(|error| panic!("{} deberia firmar: {error}", algorithm.name()));
+        let signature = pkcs11::sign_with_secret(
+            &reference(ACTIVE_EC),
+            &ProtectedSecret::from_str(PIN),
+            algorithm,
+            PRESIGN,
+        )
+        .unwrap_or_else(|error| panic!("{} deberia firmar: {error}", algorithm.name()));
 
         assert!(
             openssl_verifies_for(ACTIVE_EC, digest, None, &signature),
@@ -316,9 +326,9 @@ fn each_ecdsa_digest_signs_and_openssl_verifies_it_with_the_one_it_names() {
 
 #[test]
 fn an_ecdsa_signature_comes_back_in_der_and_not_as_the_raw_r_and_s_of_pkcs11() {
-    let signature = pkcs11::sign(
+    let signature = pkcs11::sign_with_secret(
         &reference(ACTIVE_EC),
-        PIN,
+        &ProtectedSecret::from_str(PIN),
         SignatureAlgorithm::Sha256Ecdsa,
         PRESIGN,
     )
@@ -337,9 +347,9 @@ fn an_ecdsa_signature_comes_back_in_der_and_not_as_the_raw_r_and_s_of_pkcs11() {
 
 #[test]
 fn an_ecdsa_signature_does_not_verify_under_a_digest_that_is_not_its_own() {
-    let signature = pkcs11::sign(
+    let signature = pkcs11::sign_with_secret(
         &reference(ACTIVE_EC),
-        PIN,
+        &ProtectedSecret::from_str(PIN),
         SignatureAlgorithm::Sha384Ecdsa,
         PRESIGN,
     )
@@ -355,16 +365,16 @@ fn an_ecdsa_signature_does_not_verify_under_a_digest_that_is_not_its_own() {
 
 #[test]
 fn signing_the_same_bytes_twice_gives_the_same_signature() {
-    let once = pkcs11::sign(
+    let once = pkcs11::sign_with_secret(
         &reference(ACTIVE),
-        PIN,
+        &ProtectedSecret::from_str(PIN),
         SignatureAlgorithm::Sha256Rsa,
         PRESIGN,
     )
     .expect("firma");
-    let twice = pkcs11::sign(
+    let twice = pkcs11::sign_with_secret(
         &reference(ACTIVE),
-        PIN,
+        &ProtectedSecret::from_str(PIN),
         SignatureAlgorithm::Sha256Rsa,
         PRESIGN,
     )
@@ -382,11 +392,16 @@ fn two_certificates_sharing_a_label_each_sign_with_their_own_key() {
     assert_eq!(other.reference().label(), TWIN);
     assert_ne!(one.reference().cka_id(), other.reference().cka_id());
 
-    let signed_by_one = pkcs11::sign(one.reference(), PIN, SignatureAlgorithm::Sha256Rsa, PRESIGN)
-        .expect("firma del primero");
-    let signed_by_other = pkcs11::sign(
+    let signed_by_one = pkcs11::sign_with_secret(
+        one.reference(),
+        &ProtectedSecret::from_str(PIN),
+        SignatureAlgorithm::Sha256Rsa,
+        PRESIGN,
+    )
+    .expect("firma del primero");
+    let signed_by_other = pkcs11::sign_with_secret(
         other.reference(),
-        PIN,
+        &ProtectedSecret::from_str(PIN),
         SignatureAlgorithm::Sha256Rsa,
         PRESIGN,
     )

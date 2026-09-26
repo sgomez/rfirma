@@ -65,6 +65,11 @@ impl FilterEngine for AnEngine {
 
 pub(crate) const CREDENTIAL: &str = "8jAkPZfRw2mQxN4TbYuL";
 
+/// El secreto tecleado en las pruebas del trámite, como llega por la única puerta del PIN.
+pub(crate) fn the_typed_secret() -> crate::identity::domain::protected_secret::ProtectedSecret {
+    crate::identity::domain::protected_secret::ProtectedSecret::from_str("1234")
+}
+
 /// Un transporte que abre siempre, en el puerto sorteado o en el fijo, y apunta lo que se le pidió.
 pub(crate) fn a_transport(
     asked: &RefCell<Vec<ChannelDuty>>,
@@ -318,10 +323,10 @@ impl Signer for ATokenThatSigns {
         ))
     }
 
-    fn sign(
+    fn sign_with_secret(
         &self,
         _reference: &CertificateRef,
-        _pin: &str,
+        _secret: &crate::identity::domain::protected_secret::ProtectedSecret,
         _algorithm: SignatureAlgorithm,
         _data: &[u8],
     ) -> Result<Vec<u8>, TokenError> {
@@ -389,7 +394,7 @@ impl TokenSigning for TheNeighbours<'_> {
     fn sign(
         &self,
         certificate: &TokenCertificate,
-        secret: &str,
+        secret: &crate::identity::domain::protected_secret::ProtectedSecret,
         algorithm: &str,
         data: &[u8],
     ) -> Result<Vec<u8>, SigningRefusal> {
@@ -436,7 +441,10 @@ impl SiteSigning for TheNeighbours<'_> {
         .map_err(|failure| signing_refusal_of(told_of_cycle(&failure)))
     }
 
-    fn sign_on_token(&self, secret: &str) -> Result<(), SigningRefusal> {
+    fn sign_on_token(
+        &self,
+        secret: &crate::identity::domain::protected_secret::ProtectedSecret,
+    ) -> Result<(), SigningRefusal> {
         session::sign_on_token(&self.signer, &self.session, secret)
             .map_err(|failure| signing_refusal_of(told_of_cycle(&failure)))
     }
@@ -497,7 +505,7 @@ impl TokenSigning for ASignerThatSucceeds<'_> {
     fn sign(
         &self,
         certificate: &TokenCertificate,
-        secret: &str,
+        secret: &crate::identity::domain::protected_secret::ProtectedSecret,
         algorithm: &str,
         data: &[u8],
     ) -> Result<Vec<u8>, SigningRefusal> {
@@ -516,7 +524,10 @@ impl SiteSigning for ASignerThatSucceeds<'_> {
         Ok(StoreSecret::NotNeeded)
     }
 
-    fn sign_on_token(&self, _secret: &str) -> Result<(), SigningRefusal> {
+    fn sign_on_token(
+        &self,
+        _secret: &crate::identity::domain::protected_secret::ProtectedSecret,
+    ) -> Result<(), SigningRefusal> {
         Ok(())
     }
 

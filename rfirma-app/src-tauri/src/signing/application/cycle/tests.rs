@@ -7,6 +7,7 @@ use crate::identity::application::tests::a_certificate;
 use crate::identity::domain::algorithm::SignatureAlgorithm;
 use crate::identity::domain::certificate::CertificateRef;
 use crate::identity::domain::error::TokenError;
+use crate::identity::domain::protected_secret::ProtectedSecret;
 use crate::identity::domain::secret::StoreSecret;
 use crate::signing::domain::bridge::{
     BridgeError, Format, PostSignRequest, PreSignBlock, PreSignRequest, PreSignature,
@@ -171,10 +172,10 @@ impl Signer for ATokenThatCounts {
         Ok(())
     }
 
-    fn sign(
+    fn sign_with_secret(
         &self,
         _reference: &CertificateRef,
-        _pin: &str,
+        _secret: &crate::identity::domain::protected_secret::ProtectedSecret,
         _algorithm: SignatureAlgorithm,
         data: &[u8],
     ) -> Result<Vec<u8>, TokenError> {
@@ -348,7 +349,7 @@ fn a_countersignature_asks_the_secret_once_and_signs_every_block_it_got() {
     .expect("el puente contrafirma en CAdES");
     let secret = token.secret_of(cycle.certificate()).expect("no hace falta");
     let signatures = cycle
-        .sign_on_token(&token, "1234")
+        .sign_on_token(&token, &ProtectedSecret::from_str("1234"))
         .expect("el token firma cada bloque");
     let seal = cycle.seal_in_transit();
     cycle
@@ -425,15 +426,15 @@ fn prompter_supplies_secret_when_store_requires_typed_on_screen() {
         ) -> Result<(), TokenError> {
             Ok(())
         }
-        fn sign(
+        fn sign_with_secret(
             &self,
             _reference: &CertificateRef,
-            pin: &str,
+            secret: &crate::identity::domain::protected_secret::ProtectedSecret,
             _algorithm: SignatureAlgorithm,
             data: &[u8],
         ) -> Result<Vec<u8>, TokenError> {
             *self.attempts.borrow_mut() += 1;
-            if pin == "correct_pin" {
+            if secret.as_str() == Ok("correct_pin") {
                 Ok(data.to_vec())
             } else {
                 Err(TokenError::new(Situation::IncorrectPin, "PIN incorrecto"))
@@ -505,10 +506,10 @@ fn the_secret_of_a_store_that_is_a_file_is_asked_for_as_a_password() {
         ) -> Result<(), TokenError> {
             Ok(())
         }
-        fn sign(
+        fn sign_with_secret(
             &self,
             _reference: &CertificateRef,
-            _pin: &str,
+            _secret: &crate::identity::domain::protected_secret::ProtectedSecret,
             _algorithm: SignatureAlgorithm,
             data: &[u8],
         ) -> Result<Vec<u8>, TokenError> {
@@ -574,10 +575,10 @@ fn prompter_cancellation_aborts_signing_cycle() {
         ) -> Result<(), TokenError> {
             Ok(())
         }
-        fn sign(
+        fn sign_with_secret(
             &self,
             _reference: &CertificateRef,
-            _pin: &str,
+            _secret: &crate::identity::domain::protected_secret::ProtectedSecret,
             _algorithm: SignatureAlgorithm,
             data: &[u8],
         ) -> Result<Vec<u8>, TokenError> {

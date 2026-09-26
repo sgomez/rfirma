@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 
 use rfirma_lib::identity::adapters::pkcs11;
 use rfirma_lib::identity::domain::certificate::TokenCertificate;
+use rfirma_lib::identity::domain::protected_secret::ProtectedSecret;
 use rfirma_lib::signing::adapters::ffi::{locate, NativeBridge};
 use rfirma_lib::signing::application::cycle::{self, SigningRequest};
 use rfirma_lib::signing::domain::bridge::{Format, SignatureOperation, XadesVariant};
@@ -63,7 +64,7 @@ fn sign_xades(bridge: &NativeBridge, certificate: &TokenCertificate) {
     )
     .unwrap_or_else(|error| panic!("la prefirma XAdES debería salir: {error}"));
     let signature = cycle
-        .sign_on_token(&pkcs11::RealToken, PIN)
+        .sign_on_token(&pkcs11::RealToken, &ProtectedSecret::from_str(PIN))
         .expect("el token debería firmar los atributos");
     cycle
         .postsign(bridge, signature, &cycle.seal_in_transit())

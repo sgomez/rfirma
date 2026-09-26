@@ -5,6 +5,7 @@ use std::collections::BTreeMap;
 use crate::identity::domain::algorithm::KeyKind;
 use crate::identity::domain::certificate::TokenCertificate;
 use crate::identity::domain::error::{Situation as TokenSituation, TokenError};
+use crate::identity::domain::protected_secret::ProtectedSecret;
 use crate::signing::domain::properties::to_java_properties;
 use crate::site::application::session::SiteRefusal;
 use crate::site::domain::batch::{apply_pk1, TriphaseData};
@@ -25,7 +26,7 @@ pub struct ServerRun<'a> {
     /// El certificado que la persona consintió.
     pub certificate: &'a TokenCertificate,
     /// El secreto ya abierto.
-    pub secret: &'a str,
+    pub secret: &'a ProtectedSecret,
 }
 
 /// Lo que la sede pidió firmar.

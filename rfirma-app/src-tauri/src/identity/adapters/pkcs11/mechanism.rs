@@ -12,12 +12,13 @@ use crate::identity::domain::algorithm::{KeyKind, SignatureAlgorithm};
 use crate::identity::domain::certificate::CertificateRef;
 use crate::identity::domain::ecdsa;
 use crate::identity::domain::error::{Situation, TokenError};
+use crate::identity::domain::protected_secret::ProtectedSecret;
 
 use super::session::{context, private_key, slot_of, the_store_is_really_there};
 
 pub(super) fn sign_holding_the_turn(
     reference: &CertificateRef,
-    pin: &str,
+    secret: &ProtectedSecret,
     algorithm: SignatureAlgorithm,
     data: &[u8],
 ) -> Result<Vec<u8>, TokenError> {
@@ -27,6 +28,9 @@ pub(super) fn sign_holding_the_turn(
     let slot = slot_of(&context, reference.token_label())?;
     let offered = the_slot_offers(&context, slot, algorithm)?;
     let session = context.open_ro_session(slot)?;
+    let pin = secret
+        .as_str()
+        .map_err(|_| TokenError::new(Situation::IncorrectPin, "el secreto no es UTF-8 valido"))?;
 
     match session.login(UserType::User, Some(&AuthPin::new(pin.into()))) {
         Ok(()) => {}

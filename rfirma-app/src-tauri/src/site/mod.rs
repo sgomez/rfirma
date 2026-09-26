@@ -93,9 +93,6 @@ pub fn the_pending_signature_signed(
     live: &LiveErrand,
     secret: &ProtectedSecret,
 ) -> Result<(), Failure> {
-    let secret = secret
-        .expose_secret()
-        .map_err(|_| Failure::new("unknown", "el secreto tecleado no es texto válido"))?;
     if live.a_server_signature_is_pending() {
         return application::errand::finish_the_server_signature(desk, secret, live)
             .map_err(Failure::from);

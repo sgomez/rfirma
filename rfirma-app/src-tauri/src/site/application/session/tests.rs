@@ -155,7 +155,10 @@ impl SiteSigning for NobodyHasItOpen {
         ))
     }
 
-    fn sign_on_token(&self, _secret: &str) -> Result<(), SigningRefusal> {
+    fn sign_on_token(
+        &self,
+        _secret: &crate::identity::domain::protected_secret::ProtectedSecret,
+    ) -> Result<(), SigningRefusal> {
         unreachable!("ninguna prueba de esta sesion llega a firmar en el token")
     }
 

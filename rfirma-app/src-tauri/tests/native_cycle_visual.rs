@@ -46,7 +46,10 @@ mod full_cycle {
         .expect("la prefirma deberia salir");
 
         let signature = cycle
-            .sign_on_token(&rfirma_lib::identity::adapters::pkcs11::RealToken, PIN)
+            .sign_on_token(
+                &rfirma_lib::identity::adapters::pkcs11::RealToken,
+                &rfirma_lib::identity::domain::protected_secret::ProtectedSecret::from_str(PIN),
+            )
             .expect("el token debería firmar los atributos");
 
         cycle

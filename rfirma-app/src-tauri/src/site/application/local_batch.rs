@@ -3,6 +3,7 @@
 use std::collections::BTreeMap;
 
 use crate::identity::domain::certificate::TokenCertificate;
+use crate::identity::domain::protected_secret::ProtectedSecret;
 use crate::signing::domain::bridge::Format;
 use crate::site::application::errand::desk::{write_the_document, ErrandDesk, Neighbours};
 use crate::site::application::session::SiteRefusal;
@@ -16,7 +17,7 @@ use crate::site::ports::{FilterEngine, PolicyEngine, SiteSigningRequest};
 pub fn signed_local_batch<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
     desk: &ErrandDesk<'_, E, P, N>,
     certificate: &TokenCertificate,
-    secret: &str,
+    secret: &ProtectedSecret,
     batch: &LocalBatch,
 ) -> Result<Vec<LocalBatchResult>, SiteRefusal> {
     if batch.signs().is_empty() {
@@ -64,7 +65,7 @@ fn sign_one<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
     desk: &ErrandDesk<'_, E, P, N>,
     certificate: &TokenCertificate,
     algorithm: AskedAlgorithm,
-    secret: &str,
+    secret: &ProtectedSecret,
     sign: &LocalSingleSign,
 ) -> Result<Vec<u8>, SiteRefusal> {
     refuse_a_countersignature_outside_cades_and_xades(sign.round(), sign.effective_format())

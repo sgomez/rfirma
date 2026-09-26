@@ -9,6 +9,7 @@ use rfirma_lib::identity::application::certificates;
 use rfirma_lib::identity::application::certificates::ListedCertificates;
 use rfirma_lib::identity::domain::algorithm::SignatureAlgorithm;
 use rfirma_lib::identity::domain::certificate::TokenCertificate;
+use rfirma_lib::identity::domain::protected_secret::ProtectedSecret;
 use rfirma_lib::identity::domain::store::Store;
 use rsa::pkcs1v15::{Signature, VerifyingKey};
 use rsa::pkcs8::DecodePublicKey;
@@ -244,9 +245,9 @@ fn a_certificate_that_came_from_a_p12_signs() {
         .next()
         .expect("tenia que haber un certificado");
 
-    let raw = pkcs11::sign(
+    let raw = pkcs11::sign_with_secret(
         certificate.reference(),
-        "",
+        &ProtectedSecret::from_str(""),
         SignatureAlgorithm::Sha256Rsa,
         PRESIGN,
     )

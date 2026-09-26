@@ -6,6 +6,7 @@ use super::{
 use crate::crossing::Failure;
 use crate::documents::domain::document::Document;
 use crate::identity::application::tests::{a_certificate, NoToken, TestAuthority};
+use crate::identity::domain::protected_secret::ProtectedSecret;
 use crate::signing::adapters::orders::{PlacementOrder, SigningOrder};
 use crate::signing::application::tests::{
     an_order, AnEngineThatReports, DocumentsInMemory, NoIsolate,
@@ -250,8 +251,12 @@ fn the_postsign_stops_before_the_bridge_when_no_cycle_was_started() {
 
 #[test]
 fn the_pin_has_nothing_to_sign_when_no_cycle_was_started() {
-    let failure = sign_on_token(&NoToken, &SigningSession::default(), "1234")
-        .expect_err("no hay ciclo abierto");
+    let failure = sign_on_token(
+        &NoToken,
+        &SigningSession::default(),
+        &ProtectedSecret::from_str("1234"),
+    )
+    .expect_err("no hay ciclo abierto");
 
     assert_eq!(Failure::from(failure).situation, "unknown");
 }
@@ -303,10 +308,10 @@ impl crate::signing::ports::Signer for ATokenThatAcceptsOnly1234 {
         Ok(())
     }
 
-    fn sign(
+    fn sign_with_secret(
         &self,
         _reference: &crate::identity::domain::certificate::CertificateRef,
-        _pin: &str,
+        _secret: &crate::identity::domain::protected_secret::ProtectedSecret,
         _algorithm: crate::identity::domain::algorithm::SignatureAlgorithm,
         _data: &[u8],
     ) -> Result<Vec<u8>, crate::identity::domain::error::TokenError> {
@@ -341,7 +346,7 @@ fn a_wrong_pin_for_a_batch_is_asked_again_before_the_batch_runs() {
         &a_certificate("FIRMA", b"der"),
         &prompter,
         Language::Spanish,
-        "",
+        &ProtectedSecret::from_str(""),
     )
     .expect("el segundo PIN es el bueno");
 
@@ -365,7 +370,7 @@ fn a_batch_whose_pin_dialog_is_cancelled_is_not_asked_again() {
         &a_certificate("FIRMA", b"der"),
         &PreconfiguredSecretPrompter::cancelling(),
         Language::Spanish,
-        "",
+        &ProtectedSecret::from_str(""),
     )
     .expect_err("cancelar el diálogo no deja secreto");
 
@@ -388,7 +393,7 @@ fn a_batch_whose_certificate_needs_no_pin_is_signed_without_asking() {
         &a_certificate("FIRMA", b"der"),
         &prompter,
         Language::Spanish,
-        "",
+        &ProtectedSecret::from_str(""),
     )
     .expect("sin PIN no hay nada que pedir");
 
@@ -412,7 +417,7 @@ fn a_pin_typed_in_the_window_closes_the_batch_without_the_dialog() {
         &a_certificate("FIRMA", b"der"),
         &prompter,
         Language::Spanish,
-        "1234",
+        &ProtectedSecret::from_str("1234"),
     )
     .expect("el PIN tecleado se usa tal cual");
 
@@ -433,8 +438,14 @@ fn the_open_cycle_is_signed_with_the_typed_pin_or_through_the_dialog() {
     let prompter = MockSecretPrompter::with_secrets(&[]);
 
     for pin in ["1234", ""] {
-        let failure = signed_on_the_token(&NoToken, &session, &prompter, Language::Spanish, pin)
-            .expect_err("sin ciclo abierto no hay nada que firmar");
+        let failure = signed_on_the_token(
+            &NoToken,
+            &session,
+            &prompter,
+            Language::Spanish,
+            &ProtectedSecret::from_str(pin),
+        )
+        .expect_err("sin ciclo abierto no hay nada que firmar");
         assert!(
             matches!(failure, CycleFailure::NoOpenCycle),
             "con PIN «{pin}»"
@@ -464,10 +475,10 @@ impl crate::signing::ports::Signer for ATokenThatMarksWhatItSigns {
         Ok(())
     }
 
-    fn sign(
+    fn sign_with_secret(
         &self,
         _reference: &crate::identity::domain::certificate::CertificateRef,
-        _pin: &str,
+        _secret: &crate::identity::domain::protected_secret::ProtectedSecret,
         algorithm: crate::identity::domain::algorithm::SignatureAlgorithm,
         data: &[u8],
     ) -> Result<Vec<u8>, crate::identity::domain::error::TokenError> {
@@ -512,7 +523,12 @@ fn a_bare_pkcs1_for_the_site_is_the_token_signing_the_data_without_the_bridge() 
         &session,
     )
     .expect("NONE se prefirma sin el hilo del puente");
-    sign_on_token(&ATokenThatMarksWhatItSigns, &session, "").expect("el token firma");
+    sign_on_token(
+        &ATokenThatMarksWhatItSigns,
+        &session,
+        &ProtectedSecret::from_str(""),
+    )
+    .expect("el token firma");
     let signed = finish(&NoIsolate, &session).expect("NONE se postfirma sin el hilo del puente");
 
     assert_eq!(

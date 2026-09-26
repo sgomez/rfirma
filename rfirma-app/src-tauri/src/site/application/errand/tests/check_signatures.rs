@@ -376,7 +376,7 @@ fn a_local_batch_ignores_check_signatures_as_the_original_does() {
     };
 
     consent(&desk, &asked.certificates[0].id, &live).expect("el certificado sirve");
-    finish_the_local_batch(&desk, "1234", &live).expect("el lote local contesta");
+    finish_the_local_batch(&desk, &the_typed_secret(), &live).expect("el lote local contesta");
 
     let result = the_batch_result(&mut wire);
     assert_eq!(

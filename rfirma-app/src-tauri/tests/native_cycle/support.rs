@@ -195,7 +195,10 @@ pub(crate) fn a_cycle_that_may_fail(
     .map_err(|error| format!("la prefirma en {format} debería salir: {error}"))?;
 
     let signature = cycle
-        .sign_on_token(&pkcs11::RealToken, secret)
+        .sign_on_token(
+            &pkcs11::RealToken,
+            &rfirma_lib::identity::domain::protected_secret::ProtectedSecret::from_str(secret),
+        )
         .expect("el token debería firmar los atributos");
 
     cycle

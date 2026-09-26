@@ -70,7 +70,7 @@ impl TokenSigning for ALockedPdf<'_> {
     fn sign(
         &self,
         certificate: &TokenCertificate,
-        secret: &str,
+        secret: &crate::identity::domain::protected_secret::ProtectedSecret,
         algorithm: &str,
         data: &[u8],
     ) -> Result<Vec<u8>, SigningRefusal> {
@@ -105,7 +105,10 @@ impl SiteSigning for ALockedPdf<'_> {
         })
     }
 
-    fn sign_on_token(&self, _secret: &str) -> Result<(), SigningRefusal> {
+    fn sign_on_token(
+        &self,
+        _secret: &crate::identity::domain::protected_secret::ProtectedSecret,
+    ) -> Result<(), SigningRefusal> {
         Ok(())
     }
 

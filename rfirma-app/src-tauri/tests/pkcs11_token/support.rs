@@ -182,6 +182,11 @@ pub(crate) fn openssl_verifies_for(
 }
 
 pub(crate) fn signing_error(reference: &CertificateRef, pin: &str) -> TokenError {
-    pkcs11::sign(reference, pin, SignatureAlgorithm::Sha256Rsa, PRESIGN)
-        .expect_err("esto tenia que fallar")
+    pkcs11::sign_with_secret(
+        reference,
+        &rfirma_lib::identity::domain::protected_secret::ProtectedSecret::from_str(pin),
+        SignatureAlgorithm::Sha256Rsa,
+        PRESIGN,
+    )
+    .expect_err("esto tenia que fallar")
 }

@@ -10,6 +10,7 @@ use std::sync::Arc;
 
 use crate::documents::domain::document::Document;
 use crate::identity::domain::certificate::TokenCertificate;
+use crate::identity::domain::protected_secret::ProtectedSecret;
 use crate::identity::domain::secret::StoreSecret;
 use adapters::isolate::Isolate;
 use adapters::memory::Memory;
@@ -78,7 +79,11 @@ impl SigningRoot {
     }
 
     /// Fase de firma en el token con el secreto ya conocido (ADR-0001).
-    pub fn sign_on_token(&self, signer: &dyn Signer, secret: &str) -> Result<(), CycleFailure> {
+    pub fn sign_on_token(
+        &self,
+        signer: &dyn Signer,
+        secret: &ProtectedSecret,
+    ) -> Result<(), CycleFailure> {
         application::session::sign_on_token(signer, &self.session, secret)
     }
 

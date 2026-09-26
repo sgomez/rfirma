@@ -261,10 +261,11 @@ fn the_token_double_counts_the_secrets_asked_and_keeps_what_it_signed() {
     let certificate = a_certificate("FNMT-ACTIVO", b"der");
 
     token.secret_of(&certificate).expect("el secreto sale");
+    let pin = crate::identity::domain::protected_secret::ProtectedSecret::from_str("1234");
     for pre in [b"uno".as_slice(), b"dos".as_slice()] {
         assert_eq!(
             token
-                .sign(&certificate, "1234", "SHA256", pre)
+                .sign(&certificate, &pin, "SHA256", pre)
                 .expect("firma"),
             [b"PK1:".as_slice(), pre].concat()
         );
@@ -296,6 +297,13 @@ fn a_token_double_that_refuses_signs_nothing() {
     let certificate = a_certificate("FNMT-ACTIVO", b"der");
 
     assert!(token.secret_of(&certificate).is_err());
-    assert!(token.sign(&certificate, "1234", "SHA256", b"uno").is_err());
+    assert!(token
+        .sign(
+            &certificate,
+            &crate::identity::domain::protected_secret::ProtectedSecret::from_str("1234"),
+            "SHA256",
+            b"uno"
+        )
+        .is_err());
     assert!(token.signed().is_empty());
 }
