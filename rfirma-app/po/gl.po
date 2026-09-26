@@ -579,7 +579,7 @@ msgstr "Todas"
 msgid "panel.placement.seal"
 msgstr "Poñela aquí"
 
-#. Botón que quita el sello de la página que se está mirando, cuando ya lo lleva.
+#. Botón que quita la firma visible de la página que se está mirando, cuando ya la lleva.
 msgid "panel.placement.unseal"
 msgstr "Quitala de aquí"
 
@@ -607,6 +607,9 @@ msgstr "Escribe as páxinas"
 
 msgid "panel.certificate.title"
 msgstr "Certificado"
+
+msgid "panel.certificate.changeTitle"
+msgstr "Elixir outro certificado"
 
 msgid "panel.certificate.loading"
 msgstr "Buscando certificados…"
@@ -646,17 +649,17 @@ msgstr "Instalado en rFirma"
 msgid "panel.certificate.retry"
 msgstr "Volver buscar"
 
-#. {{date}} es la fecha de caducidad, ya formateada según el idioma.
-msgid "panel.certificate.expiresOn"
-msgstr "caduca o {{date}}"
+
+#. {{date}} es «mes/año» de caducidad, ya formateado, para la segunda línea de
+#. la fila del botón partido.
+msgid "panel.certificate.expiresIn"
+msgstr "Caduca en {{date}}"
 
 msgid "panel.certificate.empty.title"
-msgstr "Non atopamos ningún certificado"
+msgstr "Sen certificados"
 
 msgid "panel.certificate.empty.body"
-msgstr ""
-"Se usas unha tarxeta, comproba que está inserida e que o lector está "
-"conectado."
+msgstr "Non hai ningún certificado co que asinar."
 
 msgid "panel.certificate.failed.title"
 msgstr "Non puidemos buscar os certificados"
@@ -679,6 +682,21 @@ msgstr ""
 
 msgid "panel.certificate.unreadable"
 msgstr "Non puidemos ler este certificado, así que non se pode asinar con el."
+
+#. Frase corta, en negrita, para la tercera línea de una fila no utilizable
+#. del botón partido. {{date}} es la fecha de caducidad, ya formateada.
+msgid "panel.certificate.expiredShort"
+msgstr "Caducou o {{date}}"
+
+msgid "panel.certificate.notYetValidShort"
+msgstr "Aínda non é válido"
+
+#. {{reason}} es el motivo de la revocación, tal como lo da el certificado.
+msgid "panel.certificate.revokedShort"
+msgstr "Revogado ({{reason}})"
+
+msgid "panel.certificate.unreadableShort"
+msgstr "Non se puido ler"
 
 msgid "panel.visibleSignature.title"
 msgstr "Sinatura visible"
@@ -757,13 +775,11 @@ msgstr "Non se pode escribir en {{folder}}"
 msgid "panel.footer.retrySigning"
 msgstr "Reintentar"
 
-#. {{name}} es el nombre y primer apellido de quien firma.
-msgid "panel.footer.signAs"
-msgstr "Asinar como {{name}}"
+msgid "panel.footer.signVerb"
+msgstr "Asinar como"
 
-#. {{name}} es el nombre y primer apellido de quien firma.
-msgid "panel.footer.signingAs"
-msgstr "Asinando como {{name}}"
+msgid "panel.footer.signingVerb"
+msgstr "Asinando como"
 
 msgid "panel.footer.addCertificate"
 msgstr "Engadir un certificado…"
@@ -846,7 +862,7 @@ msgstr "Pendente"
 msgid "progress.keepTheCard"
 msgstr "Non retires a tarxeta ata que remate."
 
-#. El titular del diálogo de páginas sin sello: {{count}} páginas donde el recuadro no cabe.
+#. El titular del diálogo de páginas sin firma visible: {{count}} páginas donde el recuadro no cabe.
 msgid "sealLoss.title"
 msgid_plural "sealLoss.title"
 msgstr[0] "Unha páxina quedará sen sinatura visible"
@@ -858,12 +874,13 @@ msgid "sealLoss.body"
 msgstr ""
 "O cadro non cabe en {{fallen}} das {{chosen}} páxinas que escolliches, máis "
 "pequenas ca aquela sobre a que o colocaches. O documento asinarase igual e a "
-"sinatura será válida en todo el, pero nesas páxinas non aparecerá a "
-"sinatura visible."
+"sinatura será válida en todo el, pero nesas páxinas non aparecerá a sinatura "
+"visible."
 
 #. La vuelta positiva: {{sealed}} de {{chosen}} páginas elegidas sí llevarán la firma visible.
 msgid "sealLoss.remaining"
-msgstr "A sinatura visible aparecerá en {{sealed}} das {{chosen}} páxinas escollidas."
+msgstr ""
+"A sinatura visible aparecerá en {{sealed}} das {{chosen}} páxinas escollidas."
 
 msgid "sealLoss.confirm"
 msgstr "Asinar de todos os xeitos"

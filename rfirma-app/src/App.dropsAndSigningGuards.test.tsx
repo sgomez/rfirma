@@ -37,9 +37,7 @@ describe("App, al soltar ficheros en la ventana", () => {
 
     drops.drop(anOpened("factura.pdf"));
 
-    const panel = await screen.findByRole("region", { name: "Panel de firma" });
-    expect(within(panel).getByText("factura.pdf")).toBeInTheDocument();
-    expect(within(panel).getByText(/^7 páginas/)).toBeInTheDocument();
+    await screen.findByRole("region", { name: "Panel de firma" });
     expect(screen.getByRole("tab", { name: "factura.pdf", selected: true })).toBeInTheDocument();
     expect(screen.getByRole("banner")).not.toHaveTextContent("Sin firmar");
   });
@@ -62,8 +60,7 @@ describe("App, al soltar ficheros en la ventana", () => {
 
     drops.drop(anOpened("factura.pdf", [document("contrato.pdf")]));
 
-    const panel = await screen.findByRole("region", { name: "Panel de firma" });
-    expect(within(panel).getByText("factura.pdf")).toBeInTheDocument();
+    await screen.findByRole("region", { name: "Panel de firma" });
     expect(await screen.findByRole("tab", { name: "contrato.pdf", selected: false })).toBeVisible();
     expect(screen.getByRole("tab", { name: "factura.pdf", selected: true })).toBeVisible();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
@@ -79,8 +76,7 @@ describe("App, al soltar ficheros en la ventana", () => {
 
     drops.drop(anOpened("factura.pdf", [document("contrato.pdf"), document("anexo.pdf")], 2));
 
-    const panel = await screen.findByRole("region", { name: "Panel de firma" });
-    expect(within(panel).getByText("factura.pdf")).toBeInTheDocument();
+    await screen.findByRole("region", { name: "Panel de firma" });
     expect(await screen.findByRole("tab", { name: "contrato.pdf" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "anexo.pdf" })).toBeInTheDocument();
     const notice = await screen.findByRole("alert");
@@ -326,9 +322,8 @@ describe("App, con un documento que no se recuerda", () => {
 
     await openPdf(user);
 
-    const panel = await screen.findByRole("region", { name: "Panel de firma" });
-    expect(within(panel).getByText("de-la-sede.pdf")).toBeInTheDocument();
-    expect(within(panel).getByText(/^4 páginas/)).toBeInTheDocument();
+    await screen.findByRole("region", { name: "Panel de firma" });
+    expect(screen.getByRole("tab", { name: "de-la-sede.pdf", selected: true })).toBeInTheDocument();
     await expect(recents.list()).resolves.toEqual([]);
   });
 

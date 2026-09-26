@@ -6,20 +6,6 @@ import { DEFAULT_VISIBLE_SIGNATURE } from "./visibleSignature";
 
 // Grada A: el panel son datos y devoluciones de llamada; no habla con nadie.
 describe("SigningPanel", () => {
-  it("counts the pages in singular when the document has only one", () => {
-    renderPanel({
-      document: { name: "instancia.pdf", pages: 1, sizeBytes: null, signatures: null },
-    });
-
-    expect(screen.getByText("1 página")).toBeInTheDocument();
-  });
-
-  it("counts the pages in plural when the document has more than one", () => {
-    renderPanel();
-
-    expect(screen.getByText(/^27 páginas/)).toBeInTheDocument();
-  });
-
   it("covers the certificate, the visible-signature toggle, the page and the model cards", () => {
     renderPanel();
 
@@ -47,19 +33,11 @@ describe("SigningPanel", () => {
     expect(buttons.at(-1)).toBe(primaries[0]);
   });
 
-  // El artboard enseña «27 páginas · 2,4 MB» y un resumen de firmas que hoy
-  // nadie calcula. Lo desconocido **no ocupa sitio**: ni un guion, ni un «—»,
-  // ni un marcador de posición.
-  it("paints nothing at all in place of what nobody knows yet", () => {
+  it("shows no co-signature notice for a document that carries none", () => {
     renderPanel({
       document: { name: "contrato.pdf", pages: 27, sizeBytes: null, signatures: null },
     });
 
-    // La línea de metadatos dice las páginas y **nada más**: sin el separador
-    // que precedería al tamaño, y sin tamaño.
-    expect(screen.getByText("27 páginas")).toBeInTheDocument();
-    expect(screen.getByText("27 páginas").textContent).toBe("27 páginas");
-    expect(screen.queryByText(/—|–|\bMB\b|\bkB\b/)).not.toBeInTheDocument();
     expect(screen.queryByText(/cofirma/)).not.toBeInTheDocument();
   });
 
@@ -127,7 +105,8 @@ describe("SigningPanel", () => {
     const onRetryCertificates = vi.fn();
     renderPanel({ certificate: { kind: "empty" }, onRetryCertificates });
 
-    expect(screen.getByText(/comprueba que está insertada/)).toBeInTheDocument();
+    expect(screen.getByText("Sin certificados")).toBeInTheDocument();
+    expect(screen.getByText("No hay ningún certificado con el que firmar.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Añadir un certificado…" })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Volver a buscar" }));
 
@@ -201,7 +180,8 @@ describe("SigningPanel", () => {
     expect(onBack).toHaveBeenCalled();
   });
 
-  it("warns about an expired certificate and refuses to sign with it", () => {
+  // Uno recordado puede caducar entre sesiones (ADR-0010).
+  it("refuses to sign with an expired chosen certificate", () => {
     renderPanel({
       certificate: {
         kind: "chosen",
@@ -210,11 +190,10 @@ describe("SigningPanel", () => {
       },
     });
 
-    expect(screen.getByRole("alert")).toHaveTextContent(/El certificado caducó el/);
     expect(screen.getByRole("button", { name: "Firmar como Ada Lovelace" })).toBeDisabled();
   });
 
-  it("warns about a revoked certificate and refuses to sign with it", () => {
+  it("refuses to sign with a revoked chosen certificate", () => {
     renderPanel({
       certificate: {
         kind: "chosen",
@@ -223,7 +202,6 @@ describe("SigningPanel", () => {
       },
     });
 
-    expect(screen.getByRole("alert")).toHaveTextContent(/revocado/);
     expect(screen.getByRole("button", { name: "Firmar como Ada Lovelace" })).toBeDisabled();
   });
 
@@ -287,6 +265,47 @@ describe("SigningPanel", () => {
     expect(screen.getAllByRole("option")).toHaveLength(2);
   });
 
+  it("says issuer, store and expiry month on the second line of a usable row", async () => {
+    const user = userEvent.setup();
+    renderPanel({
+      certificate: {
+        kind: "chosen",
+        certificate,
+        certificates: [certificate, { ...certificate, id: "otra", holderName: "Grace Hopper" }],
+      },
+    });
+
+    await user.click(screen.getByRole("combobox", { name: "Certificado" }));
+
+    const row = screen.getByRole("option", { name: /Grace Hopper/ });
+    expect(row).toHaveTextContent(/AC FNMT Usuarios · Tarjeta · Caduca en \d{2}\/\d{4}/);
+    expect(row).not.toHaveTextContent("Emitido por");
+  });
+
+  it("lists an unusable certificate with its short reason as text and as tooltip", async () => {
+    const user = userEvent.setup();
+    const onChooseCertificate = vi.fn();
+    const revoked = {
+      ...certificate,
+      id: "revocado",
+      holderName: "Grace Hopper",
+      status: { kind: "revoked", reason: "keyCompromise" },
+    } as const;
+    renderPanel({
+      certificate: { kind: "chosen", certificate, certificates: [certificate, revoked] },
+      onChooseCertificate,
+    });
+
+    await user.click(screen.getByRole("combobox", { name: "Certificado" }));
+    const row = screen.getByRole("option", { name: /Grace Hopper/ });
+    await user.click(row);
+
+    expect(within(row).getByText("Revocado (keyCompromise)")).toBeInTheDocument();
+    expect(row).toHaveAttribute("title", "Revocado (keyCompromise)");
+    expect(row).toHaveAttribute("aria-disabled", "true");
+    expect(onChooseCertificate).not.toHaveBeenCalled();
+  });
+
   it("has no «change» button any more: the trigger is where it changes", () => {
     renderPanel();
 
@@ -305,6 +324,12 @@ describe("SigningPanel", () => {
     expect(screen.getByText("Buscando certificados…")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Buscando certificados…" })).toBeDisabled();
     expect(screen.queryByRole("combobox", { name: "Certificado" })).not.toBeInTheDocument();
+  });
+
+  it("says who is signing and lets nothing be pressed while signing", () => {
+    renderPanel({ signing: true });
+
+    expect(screen.getByRole("button", { name: "Firmando como Ada Lovelace" })).toBeDisabled();
   });
 });
 

@@ -21,10 +21,12 @@ export function CertificateNotice({
     return (
       <div className="panel__no-certificates">
         <div className="panel__notice-title">
-          <AlertIcon />
+          <AlertIcon size={18} />
           <span className="rf-title">{t("panel.certificate.empty.title")}</span>
         </div>
-        <p className="rf-prose rf-text-muted">{t("panel.certificate.empty.body")}</p>
+        <p className="rf-body rf-text-muted panel__notice-body">
+          {t("panel.certificate.empty.body")}
+        </p>
       </div>
     );
   }
@@ -35,10 +37,12 @@ export function CertificateNotice({
     return (
       <div className="panel__no-certificates">
         <div className="panel__notice-title">
-          <AlertIcon />
+          <AlertIcon size={18} />
           <span className="rf-title">{t("panel.certificate.failed.title")}</span>
         </div>
-        <p className="rf-prose rf-text-muted">{t("panel.certificate.failed.body")}</p>
+        <p className="rf-body rf-text-muted panel__notice-body">
+          {t("panel.certificate.failed.body")}
+        </p>
         <ErrorNotice
           situation={state.failure.situation}
           technicalDetail={state.failure.detail}

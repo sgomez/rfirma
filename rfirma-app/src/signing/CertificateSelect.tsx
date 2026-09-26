@@ -321,7 +321,7 @@ export function CertificateSelect({ certificates, chosen, onChoose }: Certificat
 }
 
 /** Por qué no se puede firmar con este certificado, dicho antes del PIN. */
-export function statusWarning(status: Certificate["status"], locale: string, t: TFunction): string {
+function statusWarning(status: Certificate["status"], locale: string, t: TFunction): string {
   switch (status.kind) {
     case "expired":
       return t("panel.certificate.expired", {
@@ -333,5 +333,28 @@ export function statusWarning(status: Certificate["status"], locale: string, t: 
       return t("panel.certificate.revoked", { reason: status.reason });
     default:
       return t("panel.certificate.unreadable");
+  }
+}
+
+/**
+ * El mismo motivo que {@link statusWarning}, en la frase corta de la tercera
+ * línea de una fila no utilizable (docs/design/panel-de-firma.md § Certificado).
+ */
+export function shortStatusWarning(
+  status: Certificate["status"],
+  locale: string,
+  t: TFunction,
+): string {
+  switch (status.kind) {
+    case "expired":
+      return t("panel.certificate.expiredShort", {
+        date: new Intl.DateTimeFormat(locale, { dateStyle: "long" }).format(status.notAfter * 1000),
+      });
+    case "notYetValid":
+      return t("panel.certificate.notYetValidShort");
+    case "revoked":
+      return t("panel.certificate.revokedShort", { reason: status.reason });
+    default:
+      return t("panel.certificate.unreadableShort");
   }
 }

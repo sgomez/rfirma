@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { FolderIcon } from "../design-system/icons";
-import { CertificateFooterButton } from "./CertificateFooterButton";
+import { CertificateFooterButton, LoadingCertificateFooterButton } from "./CertificateFooterButton";
 import type { Certificate } from "./certificate";
 import type { Destination } from "./destination";
 import { shortenDestination } from "./destination";
@@ -144,9 +144,7 @@ export function PanelFooter(props: PanelFooterProps) {
             </div>
           )}
           {!props.failure && props.certificate.kind === "loading" && (
-            <button type="button" className="rf-btn rf-btn--primary panel__sign" disabled>
-              {t("panel.certificate.loading")}
-            </button>
+            <LoadingCertificateFooterButton />
           )}
           {!props.failure &&
             (props.certificate.kind === "empty" || props.certificate.kind === "failed") && (

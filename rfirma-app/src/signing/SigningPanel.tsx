@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { FileIcon, InfoIcon } from "../design-system/icons";
+import { InfoIcon } from "../design-system/icons";
 import type { NamedFailure } from "../errors/classify";
 import { ErrorNotice } from "../errors/ErrorNotice";
 import { Switch } from "../preferences/Switch";
@@ -11,7 +11,6 @@ import type { SigningFailure } from "./failure";
 import { ModelFieldset } from "./ModelFieldset";
 import { PanelFooter } from "./PanelFooter";
 import { PlacementFieldset } from "./PlacementFieldset";
-import { formatSize } from "./panelFormat";
 import type { Rubric, RubricFailure } from "./rubric";
 import "./SigningPanel.css";
 import { usePlacementField } from "./usePlacementField";
@@ -163,7 +162,7 @@ export function SigningPanel({
   onBack,
   onOpenHelp,
 }: SigningPanelProps) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const chosen = certificate.kind === "chosen" ? certificate.certificate : null;
 
   const { pagesText, rangeError, pageButton, typePages } = usePlacementField({
@@ -182,23 +181,6 @@ export function SigningPanel({
   return (
     <div className="panel">
       <div className="panel__scroll">
-        <div className="panel__header">
-          <span className="panel__header-icon">
-            <FileIcon />
-          </span>
-          <div className="panel__header-text">
-            <p className="rf-title panel__document">{document.name}</p>
-            <p className="rf-body rf-text-muted">
-              {[
-                t("panel.document.pages", { count: document.pages }),
-                document.sizeBytes === null ? null : formatSize(document.sizeBytes, i18n.language),
-              ]
-                .filter((piece) => piece !== null)
-                .join(" · ")}
-            </p>
-          </div>
-        </div>
-
         {failure ? (
           // Error al firmar: la zona que se desliza se sustituye por la tarjeta
           // del fallo, como el resto del panel (docs/design/panel-de-firma.md §
@@ -221,13 +203,8 @@ export function SigningPanel({
               </div>
             )}
 
-            <hr className="rf-divider" />
-
             {(certificate.kind === "empty" || certificate.kind === "failed") && (
-              <>
-                <CertificateNotice state={certificate} onOpenHelp={onOpenHelp} />
-                <hr className="rf-divider" />
-              </>
+              <CertificateNotice state={certificate} onOpenHelp={onOpenHelp} />
             )}
 
             <section className="panel__visible" aria-label={t("panel.visibleSignature.title")}>

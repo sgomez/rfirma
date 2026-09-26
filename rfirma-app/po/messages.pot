@@ -557,6 +557,9 @@ msgstr ""
 msgid "panel.certificate.title"
 msgstr ""
 
+msgid "panel.certificate.changeTitle"
+msgstr ""
+
 msgid "panel.certificate.loading"
 msgstr ""
 
@@ -595,8 +598,10 @@ msgstr ""
 msgid "panel.certificate.retry"
 msgstr ""
 
-#. {{date}} es la fecha de caducidad, ya formateada según el idioma.
-msgid "panel.certificate.expiresOn"
+
+#. {{date}} es «mes/año» de caducidad, ya formateado, para la segunda línea de
+#. la fila del botón partido.
+msgid "panel.certificate.expiresIn"
 msgstr ""
 
 msgid "panel.certificate.empty.title"
@@ -623,6 +628,21 @@ msgid "panel.certificate.revoked"
 msgstr ""
 
 msgid "panel.certificate.unreadable"
+msgstr ""
+
+#. Frase corta, en negrita, para la tercera línea de una fila no utilizable
+#. del botón partido. {{date}} es la fecha de caducidad, ya formateada.
+msgid "panel.certificate.expiredShort"
+msgstr ""
+
+msgid "panel.certificate.notYetValidShort"
+msgstr ""
+
+#. {{reason}} es el motivo de la revocación, tal como lo da el certificado.
+msgid "panel.certificate.revokedShort"
+msgstr ""
+
+msgid "panel.certificate.unreadableShort"
 msgstr ""
 
 msgid "panel.visibleSignature.title"
@@ -702,12 +722,10 @@ msgstr ""
 msgid "panel.footer.retrySigning"
 msgstr ""
 
-#. {{name}} es el nombre y primer apellido de quien firma.
-msgid "panel.footer.signAs"
+msgid "panel.footer.signVerb"
 msgstr ""
 
-#. {{name}} es el nombre y primer apellido de quien firma.
-msgid "panel.footer.signingAs"
+msgid "panel.footer.signingVerb"
 msgstr ""
 
 msgid "panel.footer.addCertificate"
