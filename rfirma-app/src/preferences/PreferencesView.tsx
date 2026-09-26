@@ -47,10 +47,7 @@ interface PreferencesViewProps {
   installedCertificates: readonly Certificate[];
   /**
    * Abre el selector de ficheros y, con el elegido, pide su contraseña e
-   * instala el `.p12`; responde si quedó alguno instalado. La contraseña no
-   * la pide esta pantalla —la pide el backend, con reintentos hasta acertar o
-   * cancelar (ID-430)—, así que aquí nunca se ve ni se teclea. Rechaza cuando
-   * el fichero no se puede abrir o cuando su clave no es RSA ni de curva elíptica (ID-197).
+   * instala el `.p12`; responde si quedó alguno instalado.
    */
   onInstallCertificate: () => Promise<boolean>;
   /** Quita un `.p12` instalado, por el asa de su fila. */
@@ -214,11 +211,7 @@ export function PreferencesView({
 
   /**
    * Mete un `.p12`: el selector de ficheros y el diálogo de la contraseña son
-   * los dos del backend (ID-63, ID-430). Cerrar cualquiera de los dos, o
-   * cancelar la contraseña, deja la lista como estaba y no pinta ningún
-   * aviso. Lo que sí lo es —la contraseña que no abre el fichero tras
-   * agotarse los reintentos, la clave que no es RSA ni de curva elíptica (ID-197)— se cuenta en la
-   * sección.
+   * los dos del backend. Cerrar cualquiera de los dos deja la lista como estaba.
    */
   const install = async () => {
     setCertificateFailure(null);

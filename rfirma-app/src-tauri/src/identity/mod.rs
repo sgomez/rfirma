@@ -29,7 +29,7 @@ pub struct IdentityRoot {
     pub memory: Arc<dyn CertificateMemory + Send + Sync>,
     /// La carpeta donde vive cada `.p12` instalado.
     pub folder: Arc<dyn ports::InstalledFolder + Send + Sync>,
-    /// El diálogo interactivo que pide la contraseña al instalar un `.p12` (ID-430).
+    /// El diálogo interactivo que pide la contraseña al instalar un `.p12`.
     pub prompter: Arc<dyn SecretPrompter + Send + Sync>,
 }
 

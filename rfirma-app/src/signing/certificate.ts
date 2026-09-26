@@ -180,11 +180,11 @@ export interface CertificateStore {
    * Mete un `.p12` en rFirma y responde si quedó instalado alguno.
    *
    * **El backend abre el selector de ficheros y, con el elegido, pide su
-   * contraseña** (ID-63, ID-430): esta pantalla nunca la ve ni la teclea.
-   * `false` es haber cerrado el selector, o el diálogo de la contraseña, sin
-   * elegir ni instalar nada, que no es un fallo: deja la lista como estaba.
-   * Rechaza cuando el fichero no se puede abrir o cuando su clave no es RSA ni de
-   * curva elíptica (ID-197).
+   * contraseña**: esta pantalla nunca la ve ni la teclea. `false` es haber
+   * cerrado el selector, o el diálogo de la contraseña, sin elegir ni
+   * instalar nada, que no es un fallo: deja la lista como estaba. Rechaza
+   * cuando el fichero no se puede abrir o cuando su clave no es RSA ni
+   * de curva elíptica.
    */
   install(): Promise<boolean>;
   /** Quita un `.p12` instalado, por el asa de su fila. */

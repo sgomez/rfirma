@@ -62,8 +62,8 @@ describe("certificates in a file", () => {
   });
 
   /**
-   * El selector de ficheros y la contraseña son los dos del backend
-   * (ID-63, ID-430): «Añadir…» no abre ningún diálogo propio.
+   * El selector de ficheros y la contraseña son los dos del backend:
+   * «Añadir…» no abre ningún diálogo propio.
    */
   it("installs with a single click, without asking the password on screen", async () => {
     const user = userEvent.setup();

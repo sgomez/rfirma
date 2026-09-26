@@ -32,11 +32,8 @@ const SITE_ERRAND = "site-errand";
  * `sign_with_pin` es **la misma orden** que el recorrido local, y no una gemela
  * de sede: la fase que toca la clave privada no sabe de sedes (ADR-0001).
  *
- * `site_install_certificate` es la misma orden que la ventana principal
- * (ID-430): abre el selector y pide la contraseña por su propio diálogo, con
- * reintentos. Esta pantalla no tiene dónde mostrar un fallo —`SedeNoCertificate`
- * tiene un botón y nada más—, así que uno que no sea el secreto acertado o
- * cancelado deja la pantalla como estaba.
+ * `site_install_certificate` es la misma orden que la ventana principal: abre
+ * el selector y pide la contraseña por su propio diálogo, con reintentos.
  */
 export function tauriSiteErrands(): SiteErrandPort {
   const loader = pdfjsLoader();
@@ -66,10 +63,8 @@ export function tauriSiteErrands(): SiteErrandPort {
     finishSigning: () => stage(() => invoke<void>("site_finish_signing")),
     saveFile: () => stage(() => invoke<boolean>("site_save_file")),
     loadFiles: () => stage(() => invoke<number | null>("site_load_files")),
-    // La contraseña la pide el backend con su propio diálogo (ID-430); esta
-    // pantalla no tiene dónde mostrar un fallo, así que uno que no sea el
-    // secreto acertado o cancelado deja la misma pantalla, no una promesa sin
-    // recoger.
+    // La contraseña la pide el backend con su propio diálogo; un fallo que no
+    // sea el secreto acertado o cancelado deja la misma pantalla como estaba.
     installCertificate: () => invoke<boolean>("site_install_certificate").catch(() => false),
     lookAgain: () => invoke<void>("site_look_again"),
     installLocalCa: () => invoke<void>("install_local_ca"),

@@ -13,7 +13,7 @@ pub enum SecretName {
     Password,
     /// La contraseña que abre un PDF cifrado; no es de ningún almacén.
     DocumentPassword,
-    /// La contraseña del `.p12` que se está instalando, con el nombre de su fichero (ID-431).
+    /// La contraseña del `.p12` que se está instalando, con el nombre de su fichero.
     Pkcs12Password(String),
 }
 

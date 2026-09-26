@@ -167,7 +167,7 @@ pub fn install_pkcs12(
     Ok(())
 }
 
-/// Pide la contraseña del `.p12` por el diálogo del secreto y lo instala, con reintentos hasta acertar o cancelar (ID-430, ID-432).
+/// Pide la contraseña del `.p12` por el diálogo del secreto y lo instala, con reintentos hasta acertar o cancelar.
 pub fn install_pkcs12_asking_its_password(
     token: &dyn Token,
     folder: &dyn InstalledFolder,
@@ -200,7 +200,7 @@ pub fn install_pkcs12_asking_its_password(
     .map(|_| ())
 }
 
-/// Un `.p12` no se bloquea: solo la contraseña incorrecta merece reintentarse (ID-432).
+/// Un `.p12` no se bloquea: solo la contraseña incorrecta merece reintentarse.
 fn wrong_pkcs12_password(error: &InstallError) -> bool {
     matches!(
         error,

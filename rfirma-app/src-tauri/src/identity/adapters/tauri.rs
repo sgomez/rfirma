@@ -26,7 +26,7 @@ pub fn list_certificates(
     .collect())
 }
 
-/// Abre el selector de fichero y, con el elegido, pide su contraseña e instala el `.p12` (ID-430).
+/// Abre el selector de fichero y, con el elegido, pide su contraseña e instala el `.p12`.
 #[tauri::command(async)]
 pub fn install_certificate(
     app_handle: tauri::AppHandle,
