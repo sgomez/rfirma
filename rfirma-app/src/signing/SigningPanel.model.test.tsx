@@ -43,10 +43,26 @@ describe("SigningPanel · Modelo y rúbrica", () => {
     );
   });
 
-  it("cannot choose the custom card yet", () => {
-    renderPanel();
+  it("chooses the custom model with a starting phrase of signer and date", async () => {
+    const user = userEvent.setup();
+    const onChangeSignature = vi.fn();
+    renderPanel({ onChangeSignature });
 
-    expect(screen.getByRole("radio", { name: "Personalizada" })).toBeDisabled();
+    await user.click(screen.getByRole("radio", { name: "Personalizada" }));
+
+    expect(onChangeSignature).toHaveBeenCalledWith(
+      expect.objectContaining({
+        content: {
+          model: "custom",
+          phrase: [
+            { text: "Visto bueno de " },
+            { datum: "signer" },
+            { text: ", " },
+            { datum: "signedAt" },
+          ],
+        },
+      }),
+    );
   });
 
   it("turns «Con rúbrica» off with a click, when nothing locks it", async () => {

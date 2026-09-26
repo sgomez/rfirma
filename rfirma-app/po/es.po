@@ -742,8 +742,28 @@ msgstr "Personalizada"
 msgid "panel.visibleSignature.model.rubricOnlyDisabled"
 msgstr "Necesita la rúbrica"
 
-msgid "panel.visibleSignature.model.customUnavailable"
-msgstr "Disponible próximamente"
+msgid "panel.visibleSignature.phrase.label"
+msgstr "Frase de la firma"
+
+msgid "panel.visibleSignature.phrase.addDatum"
+msgstr "Dato"
+
+#. Comienzo de la frase de ejemplo de Personalizada; le sigue el nombre del firmante.
+msgid "panel.visibleSignature.phrase.seedLead"
+msgstr "Visto bueno de "
+
+#. Separador de la frase de ejemplo entre el firmante y la fecha.
+msgid "panel.visibleSignature.phrase.seedJoin"
+msgstr ", "
+
+msgid "panel.visibleSignature.datum.signer"
+msgstr "Firmante"
+
+msgid "panel.visibleSignature.datum.issuer"
+msgstr "Emisor"
+
+msgid "panel.visibleSignature.datum.signedAt"
+msgstr "Fecha"
 
 msgid "panel.visibleSignature.rubric.toggle"
 msgstr "Con rúbrica"

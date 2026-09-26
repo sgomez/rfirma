@@ -744,8 +744,28 @@ msgstr "Pertsonalizatua"
 msgid "panel.visibleSignature.model.rubricOnlyDisabled"
 msgstr "Errubrika behar du"
 
-msgid "panel.visibleSignature.model.customUnavailable"
-msgstr "Laster eskuragarri"
+msgid "panel.visibleSignature.phrase.label"
+msgstr "Sinaduraren esaldia"
+
+msgid "panel.visibleSignature.phrase.addDatum"
+msgstr "Datua"
+
+#. Comienzo de la frase de ejemplo de Personalizada; le sigue el nombre del firmante.
+msgid "panel.visibleSignature.phrase.seedLead"
+msgstr "Oniritzia: "
+
+#. Separador de la frase de ejemplo entre el firmante y la fecha.
+msgid "panel.visibleSignature.phrase.seedJoin"
+msgstr ", "
+
+msgid "panel.visibleSignature.datum.signer"
+msgstr "Sinatzailea"
+
+msgid "panel.visibleSignature.datum.issuer"
+msgstr "Jaulkitzailea"
+
+msgid "panel.visibleSignature.datum.signedAt"
+msgstr "Data"
 
 msgid "panel.visibleSignature.rubric.toggle"
 msgstr "Errubrikarekin"
