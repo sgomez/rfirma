@@ -147,6 +147,8 @@ pub(crate) fn an_order() -> SigningOrder {
             rotation: 0,
             rect: [72.0, 500.0, 272.0, 600.0],
         }),
+        content: None,
+        with_rubric: false,
         fields: VisibleFieldsOrder {
             signer_name: true,
             issuer: true,

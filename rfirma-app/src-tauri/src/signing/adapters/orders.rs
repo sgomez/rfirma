@@ -6,8 +6,8 @@ use crate::crossing::crossing;
 
 use crate::signing::application::configuration::language_of;
 use crate::signing::domain::{
-    ChosenFields, MediaBox, Page, PageSet, Placement, PlacementError, Rotation, SigningChoice,
-    UserSpaceRect,
+    ChosenFields, Datum, MediaBox, Page, PageSet, PhrasePart, Placement, PlacementError, Rotation,
+    SigningChoice, UserSpaceRect, VisibleContent, VisibleText,
 };
 
 crossing! {
@@ -19,6 +19,63 @@ crossing! {
         pub issuer: bool,
         pub signed_at: bool,
         pub reason: bool,
+    }
+}
+
+crossing! {
+    /// Un dato de la frase de *Personalizada*.
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
+    #[serde(rename_all = "camelCase")]
+    pub enum DatumOrder {
+        Signer,
+        Issuer,
+        SignedAt,
+    }
+}
+
+crossing! {
+    /// Un trozo de la frase: `{ text }` o `{ datum }`, nunca un comodín `$$…$$` (ADR-0006).
+    #[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
+    #[serde(untagged)]
+    pub enum PhrasePartOrder {
+        Text { text: String },
+        Datum { datum: DatumOrder },
+    }
+}
+
+crossing! {
+    /// El contenido de la firma visible, por modelo.
+    #[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
+    #[serde(tag = "model", rename_all = "camelCase")]
+    pub enum VisibleContentOrder {
+        Complete,
+        RubricOnly,
+        Custom { phrase: Vec<PhrasePartOrder> },
+    }
+}
+
+impl From<&VisibleContentOrder> for VisibleContent {
+    fn from(order: &VisibleContentOrder) -> Self {
+        match order {
+            VisibleContentOrder::Complete => Self::Complete,
+            VisibleContentOrder::RubricOnly => Self::RubricOnly,
+            VisibleContentOrder::Custom { phrase } => {
+                Self::Custom(phrase.iter().map(PhrasePart::from).collect())
+            }
+        }
+    }
+}
+
+impl From<&PhrasePartOrder> for PhrasePart {
+    fn from(order: &PhrasePartOrder) -> Self {
+        match order {
+            PhrasePartOrder::Text { text } => Self::Text(text.clone()),
+            PhrasePartOrder::Datum { datum } => Self::Datum(match datum {
+                DatumOrder::Signer => Datum::Signer,
+                DatumOrder::Issuer => Datum::Issuer,
+                DatumOrder::SignedAt => Datum::SignedAt,
+            }),
+        }
     }
 }
 
@@ -76,8 +133,16 @@ crossing! {
         pub certificate: String,
         /// Dónde cae el recuadro, en espacio de usuario PDF.
         pub placement: Option<PlacementOrder>,
+        /// El contenido por modelo; sin él, mandan las casillas.
+        #[serde(default)]
+        pub content: Option<VisibleContentOrder>,
+        /// Si la firma visible lleva la rúbrica; solo cuenta con `content`.
+        #[serde(default)]
+        pub with_rubric: bool,
+        #[serde(default)]
         pub fields: VisibleFieldsOrder,
         /// El motivo, o vacío si no se especifica.
+        #[serde(default)]
         pub reason: String,
         /// La fecha y hora, ya formateadas.
         pub signed_at: String,
@@ -94,24 +159,35 @@ crossing! {
 impl SigningOrder {
     /// Lo decidido en la orden, con el recuadro ya validado; las asas se resuelven aparte.
     pub fn choice(&self) -> Result<SigningChoice, PlacementError> {
+        let text = self.visible_text();
         Ok(SigningChoice {
             placement: self
                 .placement
                 .as_ref()
                 .map(|placement| placement.placement())
                 .transpose()?,
-            fields: ChosenFields {
+            rubric: self
+                .rubric
+                .clone()
+                .filter(|_| text.carries_the_rubric(self.with_rubric)),
+            text,
+            reason: self.reason.clone(),
+            signed_at: self.signed_at.clone(),
+            language: language_of(&self.language),
+            allow_unregistered_signatures: self.allow_unregistered_signatures,
+        })
+    }
+
+    fn visible_text(&self) -> VisibleText {
+        match &self.content {
+            Some(content) => VisibleText::Model(content.into()),
+            None => VisibleText::Fields(ChosenFields {
                 signer_name: self.fields.signer_name,
                 issuer: self.fields.issuer,
                 signed_at: self.fields.signed_at,
                 reason: self.fields.reason,
-            },
-            reason: self.reason.clone(),
-            signed_at: self.signed_at.clone(),
-            rubric: self.rubric.clone(),
-            language: language_of(&self.language),
-            allow_unregistered_signatures: self.allow_unregistered_signatures,
-        })
+            }),
+        }
     }
 }
 

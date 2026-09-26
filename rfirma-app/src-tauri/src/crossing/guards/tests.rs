@@ -210,7 +210,7 @@ fn the_list_of_commands_is_closed_and_this_is_how_long_it_is() {
         .map(|(_, source)| production_half(source).matches("#[tauri::command").count())
         .sum();
 
-    assert_eq!(orders, 46, "la lista de ordenes es cerrada a proposito");
+    assert_eq!(orders, 47, "la lista de ordenes es cerrada a proposito");
 }
 
 #[test]
@@ -218,6 +218,10 @@ fn every_command_that_touches_the_portal_runs_off_the_main_thread() {
     for (file, command) in [
         ("documents/adapters/tauri.rs", "pub fn open_document("),
         ("documents/adapters/tauri.rs", "pub fn read_document("),
+        (
+            "documents/adapters/tauri.rs",
+            "pub fn choose_single_destination(",
+        ),
         (
             "documents/adapters/tauri.rs",
             "pub fn open_signed_document(",

@@ -10,10 +10,11 @@ use std::sync::Arc;
 
 use adapters::rubric::RubricStore;
 use application::documents::OpenedDocuments;
+use application::single_destination::{self as single, SingleDestinations};
 use domain::destination::DestinationFolder;
 use domain::document::Document;
 use domain::error::DocumentError;
-use domain::told::{DroppedDocument, SignedDocument};
+use domain::told::{ChosenDestination, Destination, DroppedDocument, SignedDocument};
 use ports::{DocumentFiles, DocumentsMemory};
 
 /// La raíz de `documents`: la carpeta por omisión, la rúbrica, lo abierto en esta sesión y la memoria.
@@ -24,6 +25,8 @@ pub struct DocumentsRoot {
     pub rubric: RubricStore,
     /// Los documentos abiertos en esta sesión.
     pub opened: OpenedDocuments,
+    /// Los destinos de una sola firma elegidos en esta sesión.
+    pub single_destinations: SingleDestinations,
     /// Lo que la memoria entre sesiones guarda de los documentos.
     pub memory: Arc<dyn DocumentsMemory + Send + Sync>,
     /// El disco donde viven los documentos.
@@ -54,17 +57,53 @@ impl DocumentsRoot {
         self.opened.mint(Document::passing_through(path))
     }
 
-    /// Deja el firmado en la carpeta de destino y dice dónde cayó.
+    /// Deja el firmado en el destino de esta firma, o en la carpeta de destino, y dice dónde cayó.
     pub fn deliver(
         &self,
         document: &Document,
         signed: &[u8],
+        single_destination: Option<&str>,
     ) -> Result<(PathBuf, SignedDocument), DocumentError> {
-        application::documents::deliver(
+        let Some(id) = single_destination else {
+            return application::documents::deliver(
+                self.files.as_ref(),
+                &self.chosen_folder(),
+                document,
+                signed,
+            );
+        };
+        let chosen = single::chosen(&self.single_destinations, id)?;
+        single::deliver(self.files.as_ref(), &chosen, signed)
+    }
+
+    /// Dónde caerá el documento: en el destino de esta firma, o en la carpeta de destino.
+    pub fn where_it_lands(
+        &self,
+        document: &Document,
+        single_destination: Option<&str>,
+    ) -> Result<Destination, DocumentError> {
+        let Some(id) = single_destination else {
+            return Ok(application::documents::where_it_lands(
+                self.files.as_ref(),
+                &self.chosen_folder(),
+                document,
+            ));
+        };
+        let chosen = single::chosen(&self.single_destinations, id)?;
+        Ok(single::where_it_lands(self.files.as_ref(), &chosen))
+    }
+
+    /// Abre el diálogo de guardar para elegir el destino de una sola firma.
+    pub fn choose_single_destination(
+        &self,
+        document: &Document,
+    ) -> Result<Option<ChosenDestination>, String> {
+        single::choose(
+            self.portal.as_ref(),
             self.files.as_ref(),
+            &self.single_destinations,
             &self.chosen_folder(),
             document,
-            signed,
         )
     }
 

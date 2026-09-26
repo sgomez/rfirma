@@ -33,10 +33,16 @@ _Avoid_: post-proceso, postsign, ensamblado
 
 **Configuración de firma**:
 Conjunto de parámetros con que rFirma pide la firma de un PDF: el subfiltro, el
-recuadro y su contenido, y el motivo si lo hay. Es lo que distingue una firma de
+recuadro y su contenido. Es lo que distingue una firma de
 otra a igualdad de documento y certificado. No incluye el certificado ni el
 documento, que son entradas por su cuenta.
 _Avoid_: extraParams, opciones de firma, perfil de firma
+
+**Cofirma**:
+Firma de un PDF que ya lleva otras: la nueva se añade detrás y las anteriores
+siguen siendo válidas. Si alguna de las que ya tiene no la reconoce rFirma, la
+cofirma pide antes el consentimiento de la persona.
+_Avoid_: contrafirma (es otra cosa), multifirma, segunda firma
 
 **Sello de sesión**:
 Bloque que la prefirma devuelve y que la postfirma exige recibir idéntico:
@@ -94,6 +100,20 @@ firma: sin rúbrica la firma sigue siendo válida, y una rúbrica sin firma
 electrónica no es nada. Rúbrica es **siempre** una imagen: el texto que
 acompaña al recuadro no es una rúbrica, es texto de la firma visible.
 _Avoid_: firma manuscrita (a secas), imagen de firma, sello, rúbrica de texto
+
+**Modelo**:
+La forma del contenido de la firma visible, una de tres: *Completa* (firmante,
+fecha y emisor), *Solo rúbrica* (la imagen y ningún texto) y *Personalizada*
+(una frase que la persona escribe con los datos que quiera). «Con rúbrica» se
+suma a cualquiera de los tres, y *Solo rúbrica* la lleva siempre. El texto lo
+compone rFirma y el puente no sustituye nada en él.
+_Avoid_: plantilla, casillas, formato del sello
+
+**Dato**:
+Un valor que la firma visible toma del certificado o de la firma: el firmante
+—con el número de identidad enmascarado—, el emisor o la fecha. En la frase de
+*Personalizada* viaja como dato, nunca como comodín `$$…$$`.
+_Avoid_: comodín, variable, etiqueta, campo
 
 ### Identidad y claves
 
@@ -293,6 +313,12 @@ documentos recientes, la última configuración de firma visible y el certificad
 usado la última vez. Borrarlo no reconfigura nada.
 _Avoid_: caché, historial, sesión, estado como lo que la aplicación informa de su instalación
 —eso es el **diagnóstico**
+
+**Certificado recordado**:
+El certificado de la última firma, que la aplicación vuelve a proponer en la
+siguiente. Es estado, no preferencia, y no responde por sí solo a una sede
+(ADR-0010).
+_Avoid_: certificado por defecto, certificado fijo, sticky
 
 ### Distribución
 

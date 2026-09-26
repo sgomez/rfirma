@@ -1,11 +1,11 @@
-//! Andamio de grada A de `documents`: el disco de mentira que los casos de uso llevan detrás.
+//! Andamio de grada A de `documents`: el disco y el diálogo de guardar de mentira que los casos de uso llevan detrás.
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
 use crate::documents::domain::destination::FolderFact;
-use crate::documents::ports::DocumentFiles;
+use crate::documents::ports::{DialogClues, DocumentFiles, PortalDialogs};
 
 /// El instante de modificación que este disco contesta de todo lo que tiene.
 pub const MODIFIED: u64 = 1_700_000_000;
@@ -145,5 +145,53 @@ impl DocumentFiles for InMemoryFiles {
             .filter(|path| path.parent() == Some(folder))
             .cloned()
             .collect()
+    }
+}
+
+/// Un diálogo de guardar de mentira: contesta lo que se le dijo y recuerda con qué pistas se abrió.
+pub struct SavingDialog {
+    answer: Option<PathBuf>,
+    asked_with: Mutex<Option<DialogClues>>,
+}
+
+impl SavingDialog {
+    /// Contesta con esa ruta.
+    pub fn answering(path: &str) -> Self {
+        Self {
+            answer: Some(PathBuf::from(path)),
+            asked_with: Mutex::new(None),
+        }
+    }
+
+    /// Se cierra sin elegir nada.
+    pub fn closed() -> Self {
+        Self {
+            answer: None,
+            asked_with: Mutex::new(None),
+        }
+    }
+
+    /// Las pistas con las que se abrió.
+    pub fn clues(&self) -> DialogClues {
+        self.asked_with
+            .lock()
+            .expect("el candado no se envenena")
+            .clone()
+            .expect("se ha abierto el dialogo")
+    }
+}
+
+impl PortalDialogs for SavingDialog {
+    fn pick_file(&self, _clues: &DialogClues) -> Result<Option<PathBuf>, String> {
+        unreachable!("elegir destino no abre documentos")
+    }
+
+    fn pick_files(&self, _clues: &DialogClues) -> Result<Vec<PathBuf>, String> {
+        unreachable!("elegir destino no abre documentos")
+    }
+
+    fn save_file(&self, clues: &DialogClues) -> Result<Option<PathBuf>, String> {
+        *self.asked_with.lock().expect("el candado no se envenena") = Some(clues.clone());
+        Ok(self.answer.clone())
     }
 }

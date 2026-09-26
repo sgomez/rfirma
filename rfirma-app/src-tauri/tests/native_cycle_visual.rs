@@ -8,7 +8,9 @@ mod full_cycle {
     use std::process::Command;
 
     use rfirma_lib::signing::adapters::ffi::NativeBridge;
+    use rfirma_lib::signing::adapters::orders::SigningOrder;
     use rfirma_lib::signing::application::cycle::{self, SigningRequest};
+    use rfirma_lib::signing::application::session::config_for;
     use rfirma_lib::signing::domain::bridge::{
         BridgeError, Format, SignatureOperation, SignatureVerdict, ValidationRequest, XadesVariant,
     };
@@ -338,6 +340,87 @@ mod full_cycle {
         assert!(
             path.is_file(),
             "el PDF de la puerta manual tiene que quedar en disco"
+        );
+    }
+
+    /// La configuración que el caso de uso compone para una orden por modelo, en el recuadro de prueba.
+    fn a_config_by_model(content: serde_json::Value, with_rubric: bool) -> SignatureConfig {
+        let order: SigningOrder = serde_json::from_value(serde_json::json!({
+            "document": "/run/user/1000/doc/1e8b83b9/contrato.pdf",
+            "certificate": "FIRMA",
+            "placement": null,
+            "content": content,
+            "withRubric": with_rubric,
+            "signedAt": "31/08/26, 12:00:00",
+            "rubric": a_black_rubric(),
+            "language": "es",
+        }))
+        .expect("la orden por modelo se acepta");
+        let choice = order
+            .choice()
+            .expect("sin recuadro no hay nada que validar");
+        let config = config_for(&choice, &signing_certificate()).expect("sin recuadro cabe");
+        SignatureConfig {
+            placement: a_config_of("", None).placement,
+            ..config
+        }
+    }
+
+    #[test]
+    #[ignore = "grada C: necesita librfirma_crypto.so y el token (just test-native)"]
+    fn the_complete_model_puts_text_and_no_rubric_in_the_box() {
+        let config = a_config_by_model(serde_json::json!({ "model": "complete" }), false);
+        assert_eq!(config.rubric_image, None);
+
+        let (_, page) = signed_page("cycle-model-complete.pdf", &config);
+
+        let dark = dark_pixels_in_the_signature_box(&page);
+        let area = box_area();
+        assert!(
+            dark > 0 && dark < area / 2,
+            "Completa es texto sin rubrica: {dark} pixeles oscuros de {area}"
+        );
+    }
+
+    #[test]
+    #[ignore = "grada C: necesita librfirma_crypto.so y el token (just test-native)"]
+    fn the_rubric_only_model_fills_the_box_with_the_image() {
+        let config = a_config_by_model(serde_json::json!({ "model": "rubricOnly" }), false);
+        assert_eq!(config.layer2_text, "");
+
+        let (_, page) = signed_page("cycle-model-rubric-only.pdf", &config);
+
+        let dark = dark_pixels_in_the_signature_box(&page);
+        let area = box_area();
+        assert!(
+            dark > area / 2,
+            "Solo rubrica tiene que llenar el recuadro: {dark} pixeles oscuros de {area}"
+        );
+    }
+
+    #[test]
+    #[ignore = "grada C: necesita librfirma_crypto.so y el token (just test-native)"]
+    fn the_custom_model_with_rubric_signs_the_phrase_beside_the_image() {
+        let phrase = serde_json::json!([
+            { "text": "Conforme: " },
+            { "datum": "signer" },
+            { "text": ", " },
+            { "datum": "signedAt" },
+        ]);
+        let config = a_config_by_model(
+            serde_json::json!({ "model": "custom", "phrase": phrase }),
+            true,
+        );
+        assert!(config.layer2_text.starts_with("Conforme: "));
+        assert!(config.rubric_image.is_some());
+
+        let (_, page) = signed_page("cycle-model-custom.pdf", &config);
+
+        let dark = dark_pixels_in_the_signature_box(&page);
+        let area = box_area();
+        assert!(
+            dark > area / 2,
+            "la rubrica de Personalizada no ha llegado al recuadro: {dark} de {area}"
         );
     }
 
