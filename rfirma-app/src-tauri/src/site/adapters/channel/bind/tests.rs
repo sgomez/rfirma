@@ -11,6 +11,17 @@ fn an_occupied_port() -> (TcpListener, u16) {
     (listener, port)
 }
 
+fn a_port_free_on_both_loopbacks_other_than(taken: u16) -> u16 {
+    loop {
+        let (free, port) = an_occupied_port();
+        drop(free);
+        if port != taken && TcpListener::bind(SocketAddr::from((Ipv6Addr::LOCALHOST, port))).is_ok()
+        {
+            return port;
+        }
+    }
+}
+
 fn ipv6_loopback_is_available() -> bool {
     TcpListener::bind(SocketAddr::from((Ipv6Addr::LOCALHOST, 0))).is_ok()
 }
@@ -73,8 +84,7 @@ fn a_port_taken_on_the_ipv6_loopback_is_skipped_like_any_taken_port() {
     let occupied = TcpListener::bind(SocketAddr::from((Ipv6Addr::LOCALHOST, 0)))
         .expect("el sistema deberia dar un puerto efimero");
     let taken = occupied.local_addr().expect("atado").port();
-    let (free, available) = an_occupied_port();
-    drop(free);
+    let available = a_port_free_on_both_loopbacks_other_than(taken);
 
     let listener = bind_first_free(&ChannelLocation::Drawn(vec![taken, available]))
         .expect("el segundo estaba libre en los dos bucles locales");
