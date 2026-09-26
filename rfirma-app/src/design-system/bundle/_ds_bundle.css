@@ -148,7 +148,8 @@
   font-family: var(--rf-font-body);
   font-size: var(--rf-body-size);
   font-weight: 600;
-  color: var(--rf-text);
+  line-height: 1;
+  color: var(--rf-text-muted);
 }
 .rf-input {
   min-height: 44px;
