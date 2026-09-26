@@ -78,6 +78,9 @@ env:
   # porque la linea 21 aborta dentro del JNI_OnLoad de libawt.so con cualquier
   # firma visible (issue #6).
   GRAALVM_VERSION: '25'
+  # Tienen que coincidir con las de ci.yml: `just test-native` las usa.
+  CRAP_VERSION: '0.4.3'
+  NEXTEST_VERSION: '0.9.146'
   CARGO_TERM_COLOR: always
   # La rama y el nombre del bundle que produce la receta `flatpak`.
   FLATPAK_BUNDLE: packaging/flatpak/me.sgomez.rfirma.flatpak
@@ -216,12 +219,22 @@ jobs:
       - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
         with:
           toolchain: stable
+          components: llvm-tools-preview
 
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           workspaces: rfirma-app/src-tauri
 
       - uses: ./.github/actions/setup-just
+
+      - uses: cargo-bins/cargo-binstall@b874e25ea559687bec77e281e9b271aa1367b624 # v1.23.0
+      - name: Herramientas de cobertura, de CRAP y de pruebas
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          cargo binstall --no-confirm cargo-llvm-cov
+          cargo binstall --no-confirm "cargo-crap@${CRAP_VERSION}"
+          cargo binstall --no-confirm "cargo-nextest@${NEXTEST_VERSION}"
 
       - name: Dependencias de sistema de pruebas
         run: |
@@ -259,7 +272,7 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: pdf-puerta-manual
-          path: rfirma-app/src-tauri/target/tmp/manual-gate.pdf
+          path: rfirma-app/src-tauri/target/llvm-cov-target/tmp/manual-gate.pdf
           if-no-files-found: warn
 
   # ==========================================================================

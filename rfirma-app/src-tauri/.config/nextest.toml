@@ -1,0 +1,8 @@
+experimental = ["wrapper-scripts"]
+
+[scripts.wrapper.token-per-test]
+command = { command-line = "../../scripts/token-per-test.sh", relative-to = "workspace-root" }
+
+[[profile.default.scripts]]
+filter = "all()"
+run-wrapper = "token-per-test"

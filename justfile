@@ -48,12 +48,16 @@ export CARGO_TARGET_DIR := if env("CARGO_LLVM_COV", "") == "" { cargo_target } e
 
 coverage_out := cargo_target / "coverage" / file_name(justfile_directory())
 
+# El arbol instrumentado se compila sin DWARF: la cobertura sale del mapa de
+# LLVM, y enlazar la depuracion era la mitad de su compilacion.
+no_debuginfo := "CARGO_PROFILE_DEV_DEBUG=false"
+
 # Version fijada: sin ruff.toml, el conjunto de reglas depende de la version
 # instalada. Igual en .github/workflows/ci.yml.
 ruff_version := "0.16.6"
 
 # Modulo FFI oculto de la puerta CRAP del carril rapido (ADR-0014); el carril
-# lento lo mide con `just crap-ffi`.
+# lento lo mide con `just test-native`.
 ffi_allow := "src/signing/adapters/ffi.rs"
 
 # Accesorio del banco de conformidad, fijado por etiqueta y sha256: la 1.9.2
@@ -89,6 +93,7 @@ check-repo: check-version
     {{ justfile_directory() }}/packaging/repo/publish-tree.test.sh
     ruff check {{ justfile_directory() }}/packaging {{ justfile_directory() }}/scripts
     {{ justfile_directory() }}/scripts/tests/outline_test.sh
+    {{ justfile_directory() }}/scripts/tests/ci_lanes_test.sh
 
 # Una sola invocacion de Maven: compila con -Xlint:all, prueba y empaqueta.
 [group('ci')]
@@ -97,9 +102,10 @@ check-java: test-java
 [group('ci')]
 check-ts: check-po lint-ts lint-i18n knip build-ts test-ts test-site-driver check-landing
 
-# lint-rust + machete + crap + check-contract, sin `cargo build --release` ni `cargo test` sueltos.
+# lint-rust + machete + crap, sin `cargo build --release` ni `cargo test` sueltos; la instantanea del
+# contrato la compara `tests/contract_discovers_adapters.rs` dentro de la pasada instrumentada.
 [group('ci')]
-check-rust: lint-rust machete crap check-contract
+check-rust: lint-rust machete crap
 
 # ---------------------------------------------------------------------------
 # Herramientas y dependencias
@@ -229,18 +235,6 @@ outline path:
 contract src=(tauri / "src"):
     cd {{ tauri }} && cargo run -q --example contract -- "{{ src }}"
 
-# Comprueba que `just contract` sigue siendo el de la instantanea.
-[private]
-check-contract: build-ts
-    #!/usr/bin/env bash
-    set -eu
-    snapshot={{ tauri }}/tests/contract.snapshot
-    if ! diff -u "$snapshot" <(just contract); then
-        echo "el contrato ventana-backend ha cambiado" >&2
-        exit 1
-    fi
-    echo "check-contract: el contrato es el de la instantanea"
-
 # Compila el puente Java con -Xlint:all; sin `clean`, que borraria la libreria nativa a mitad de `just check`.
 [private]
 lint-java: bootstrap
@@ -333,10 +327,13 @@ test-rust: (certs "install") build-ts
     cd {{ tauri }} && cargo test --all-features
     cd {{ tauri }} && cargo test --all-features --no-run
 
-# Las de grada C, que el carril lento ejecuta con --ignored.
+# Las de grada C en una sola pasada instrumentada, que mide ademas el adaptador FFI (ADR-0014).
 [group('ci')]
 test-native: (certs "install") check-native build-ts
-    cd {{ tauri }} && RFIRMA_LIB_DIR="$(dirname "{{ native_lib }}")" cargo test --all-features -- --ignored
+    mkdir -p "{{ coverage_out }}/crap-ffi"
+    cd {{ tauri }} && RFIRMA_LIB_DIR="$(dirname "{{ native_lib }}")" {{ no_debuginfo }} cargo llvm-cov nextest --all-features --run-ignored only \
+        --lcov --output-path "{{ coverage_out }}/crap-ffi/lcov.info"
+    cd {{ tauri }} && cargo crap --path '{{ ffi_allow }}' --lcov "{{ coverage_out }}/crap-ffi/lcov.info" --threshold 30 --fail-above
     cd {{ bridge }} && mvn -B test -DexcludedGroups= -Dgroups=gradaC
 
 # ---------------------------------------------------------------------------
@@ -347,7 +344,7 @@ test-native: (certs "install") check-native build-ts
 [private]
 coverage: (certs "install") build-ts
     mkdir -p "{{ coverage_out }}/coverage"
-    cd {{ tauri }} && cargo llvm-cov --all-features --lcov --output-path "{{ coverage_out }}/coverage/lcov.info" \
+    cd {{ tauri }} && {{ no_debuginfo }} cargo llvm-cov --all-features --lcov --output-path "{{ coverage_out }}/coverage/lcov.info" \
         --fail-under-lines {{ coverage_floor }}
 
 # La puerta del carril rapido, con el modulo FFI oculto.
@@ -365,14 +362,6 @@ diff-coverage:
     cd {{ tauri }} && diff-cover "{{ coverage_out }}/coverage/lcov.info" \
         --compare-branch=origin/main --diff-range-notation=.. --fail-under=80 \
         --exclude '**/adapters/tauri.rs' 'main.rs' '{{ ffi_allow }}'
-
-# Corre unicamente el ciclo nativo (grada C) y mide el adaptador FFI.
-[group('ci')]
-crap-ffi: (certs "install") check-native build-ts
-    mkdir -p "{{ coverage_out }}/crap-ffi"
-    cd {{ tauri }} && RFIRMA_LIB_DIR="$(dirname "{{ native_lib }}")" cargo llvm-cov --test native_cycle --test native_cycle_cades --test native_cycle_xades --test native_cycle_visual --test native_cycle_seal --test native_leak --test native_first_xades --all-features --lcov --output-path "{{ coverage_out }}/crap-ffi/lcov.info" \
-        -- --ignored
-    cd {{ tauri }} && cargo crap --path '{{ ffi_allow }}' --lcov "{{ coverage_out }}/crap-ffi/lcov.info" --threshold 30 --fail-above
 
 # Borra el arbol instrumentado, los informes y los volcados; deja la compilacion normal.
 [group('checklist')]

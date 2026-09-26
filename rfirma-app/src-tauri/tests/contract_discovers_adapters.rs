@@ -1,14 +1,30 @@
-//! `just contract` descubre las órdenes en cualquier `adapters/` de un contexto (RD-02) y saca los tipos del registro, no del fuente (#441).
+//! El contrato de `just contract` es el de la instantánea, descubre las órdenes en cualquier `adapters/` y saca los tipos del registro.
 
-use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::path::Path;
 
-fn repository_root() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR"))
-        .ancestors()
-        .nth(2)
-        .expect("src-tauri deberia colgar de la raiz del repositorio")
-        .to_path_buf()
+#[allow(dead_code)]
+#[path = "../examples/contract.rs"]
+mod example;
+
+#[test]
+fn the_contract_of_the_sources_is_the_snapshot() {
+    let manifest = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let snapshot = std::fs::read_to_string(manifest.join("tests/contract.snapshot"))
+        .expect("deberia leerse la instantanea");
+    let contract = example::contract(&manifest.join("src"));
+
+    let frozen: Vec<&str> = snapshot.lines().collect();
+    let generated: Vec<&str> = contract.lines().collect();
+    let first_difference = (0..frozen.len().max(generated.len()))
+        .map(|line| (line, (frozen.get(line), generated.get(line))))
+        .find(|(_, (frozen, generated))| frozen != generated);
+    if let Some((line, (frozen, generated))) = first_difference {
+        panic!(
+            "el contrato ventana-backend ha cambiado en la linea {}:\n  instantanea: {frozen:?}\n  fuentes:     {generated:?}\n\
+             si es a proposito, `just contract > rfirma-app/src-tauri/tests/contract.snapshot`",
+            line + 1
+        );
+    }
 }
 
 const AN_ADAPTER_IN_A_NEW_CONTEXT: &str = "\
@@ -51,19 +67,8 @@ fn an_order_in_a_new_context_appears_in_the_contract_and_the_types_come_from_the
         "#[tauri::command]\npub fn not_an_adapter() {}\n",
     );
 
-    let output = Command::new("just")
-        .args(["--justfile", "justfile", "contract"])
-        .arg(tree.path())
-        .current_dir(repository_root())
-        .output()
-        .expect("just deberia estar: `just tools` lo exige");
-    let contract = String::from_utf8_lossy(&output.stdout);
+    let contract = example::contract(tree.path());
 
-    assert!(
-        output.status.success(),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
     assert!(
         contract.contains("async synthetic_order() -> Result<(), Failure>"),
         "{contract}"

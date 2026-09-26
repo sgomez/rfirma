@@ -97,6 +97,8 @@ command -v flatpak-builder >/dev/null || \
     echo "aviso: falta flatpak-builder (solo hace falta para 'just flatpak')"
 cargo llvm-cov --version >/dev/null 2>&1 || \
     echo "aviso: falta cargo-llvm-cov (cargo binstall cargo-llvm-cov)"
+cargo nextest --version >/dev/null 2>&1 || \
+    echo "aviso: falta cargo-nextest (solo hace falta para 'just test-native'; cargo binstall cargo-nextest)"
 cargo crap --version >/dev/null 2>&1 || \
     echo "aviso: falta cargo-crap (cargo binstall cargo-crap@$crap_version)"
 cargo machete --version >/dev/null 2>&1 || \

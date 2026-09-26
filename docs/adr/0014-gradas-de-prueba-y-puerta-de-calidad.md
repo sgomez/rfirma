@@ -79,7 +79,7 @@ verdad: ofrecer tres puertos y quedarse con el que abra.
 ### Las pruebas de la grada C se compilan siempre y se ejecutan solo en el lento
 
 Se marcan con **`#[ignore]`**, en un fichero que lo dice por su nombre (`tests/native_cycle.rs`),
-y el carril lento las ejecuta con `--ignored` en `test-native` para no repetir los tests unitarios. Descartada una *feature* de cargo, que
+y el carril lento ejecuta solo esas con `--run-ignored only` en `test-native` para no repetir los tests unitarios. Descartada una *feature* de cargo, que
 además las sacaría de la compilación.
 
 `#[ignore]` tiene un punto ciego —una prueba que deja de compilar contra la frontera FFI se
@@ -167,13 +167,16 @@ así se desactiva en una semana, o enseña a los agentes a no escribir código a
 La puerta vive en el **carril rápido**, que es donde un agente la lee, con
 **`--allow` sobre la ruta del módulo FFI**: `--allow` analiza el fichero y oculta sus funciones,
 que es exactamente el matiz que hace falta. El **carril lento mide ese módulo de forma dirigida**
-(`just crap-ffi`), ejecutando el ciclo de grada C bajo `llvm-cov` y comprobando con `cargo crap --path`
-que ninguna función del adaptador FFI supera el umbral de 30 sin repetir la medición de toda la suite.
+en la misma pasada que da el veredicto de la grada C (`just test-native`): ejecuta sus pruebas bajo
+`cargo llvm-cov nextest --run-ignored only` y comprueba con `cargo crap --path` que ninguna función
+del adaptador FFI supera el umbral de 30, sin repetir la medición de toda la suite. Descartada la
+pasada aparte de antes (`cargo test --ignored` y luego `crap-ffi` bajo `llvm-cov`): compilaba la
+suite dos veces y ejecutaba los binarios de prueba uno detrás de otro, y era el camino crítico del CI.
 
 **`--allow` corrige una cobertura que se mide en otro carril; no perdona a un módulo por ser
 difícil de probar.** La distinción es la que sostiene la puerta entera: el módulo FFI se oculta
 en el carril rápido porque **sí está probado**, sólo que en la grada C, y el carril lento lo
-vuelve a medir con `crap-ffi`. Un `--allow` concedido a un módulo que nadie mide en ningún
+vuelve a medir en `test-native`. Un `--allow` concedido a un módulo que nadie mide en ningún
 carril —«es entrada/salida», «es fontanería»— desactiva la puerta por precedente, y el segundo
 entra solo. Si un módulo de entrada/salida no baja de 30, la conversación es **sobre el corte
 del módulo**, no sobre el umbral: que la parte con lógica sea una capa aparte y probable es

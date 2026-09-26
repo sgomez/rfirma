@@ -26,9 +26,9 @@
 # realimentacion de un agente, asi que lo que corre siempre tiene que ser
 # rapido:
 #
-#   cadena Java / TypeScript / Rust   en cada PR y en cada push a main
-#   native                            en cada PR y en cada push a main, con
-#                                     la libreria nativa cacheada
+#   cadena Java / TypeScript / Rust   en cada push a main, y en cada PR cuyos
+#                                     ficheros la afecten (job 'scope')
+#   native                            igual, con la libreria nativa cacheada
 #   release                           en etiquetas, a mano, una vez por
 #                                     semana y en PR con la etiqueta 'release'
 name: CI
@@ -77,6 +77,9 @@ env:
   # Version FIJADA de diff-cover, misma razon que CRAP_VERSION. Tiene que
   # coincidir con `diff_cover_version` del justfile.
   DIFF_COVER_VERSION: '10.6.0'
+  # Version FIJADA de cargo-nextest, misma razon que CRAP_VERSION: reparte las
+  # pruebas de grada C y decide su veredicto. Igual en build.yml.
+  NEXTEST_VERSION: '0.9.146'
   CARGO_TERM_COLOR: always
 
 jobs:
@@ -87,8 +90,62 @@ jobs:
   # la espera es la del mas lento (Rust) y no la suma.
 
   # --------------------------------------------------------------------------
+  # Solo en un PR sin la etiqueta 'ci-full' puede saltarse un carril, y solo si
+  # scripts/ci-lanes.sh prueba que ningun fichero del PR lo afecta.
+  scope:
+    name: Alcance
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      java: ${{ steps.lanes.outputs.java }}
+      web: ${{ steps.lanes.outputs.web }}
+      rust: ${{ steps.lanes.outputs.rust }}
+      native: ${{ steps.lanes.outputs.native }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: scripts/ci-lanes.sh
+          sparse-checkout-cone-mode: false
+
+      - name: Decide que carriles corren
+        id: lanes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          PR: ${{ github.event.pull_request.number }}
+          CHANGED_FILES: ${{ github.event.pull_request.changed_files }}
+          FULL: ${{ contains(github.event.pull_request.labels.*.name, 'ci-full') }}
+        run: |
+          : > files
+          if [ "$EVENT" != pull_request ]; then
+            reason="evento $EVENT"
+          elif [ "$FULL" = true ]; then
+            reason="etiqueta ci-full"
+          elif [ "$CHANGED_FILES" -ge 3000 ]; then
+            reason="$CHANGED_FILES ficheros, mas de los que lista la API"
+          elif ! gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PR/files" \
+              --jq '.[] | .filename, (.previous_filename // empty)' > files; then
+            : > files
+            reason="la API no dio la lista de ficheros"
+          else
+            reason="ficheros del PR"
+          fi
+          scripts/ci-lanes.sh < files | tee -a "$GITHUB_OUTPUT" > lanes
+          {
+            echo "### Carriles ($reason)"
+            echo
+            sed 's/=true$/: corre/; s/=false$/: omitido, ningun fichero del PR lo afecta/; s/^/- /' lanes
+            echo
+            echo "Pon la etiqueta \`ci-full\` en el PR y empuja para correrlos todos."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # --------------------------------------------------------------------------
   java:
     name: Cadena Java
+    needs: scope
+    if: needs.scope.outputs.java == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -125,6 +182,8 @@ jobs:
   # --------------------------------------------------------------------------
   web:
     name: Cadena TypeScript
+    needs: scope
+    if: needs.scope.outputs.web == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -184,6 +243,8 @@ jobs:
   # --------------------------------------------------------------------------
   rust:
     name: Cadena Rust
+    needs: scope
+    if: needs.scope.outputs.rust == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -211,6 +272,7 @@ jobs:
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           workspaces: rfirma-app/src-tauri
+          key: no-debuginfo
 
       # Tauri v2 en Linux compila contra WebKitGTK 4.1. Sin estos paquetes el
       # carril entero se cae en el build.rs de javascriptcore-rs-sys con un
@@ -249,6 +311,8 @@ jobs:
       # hace falta porque no es una puerta, solo produce el lcov.
       - uses: cargo-bins/cargo-binstall@b874e25ea559687bec77e281e9b271aa1367b624 # v1.23.0
       - name: Herramienta de cobertura, de CRAP y de dependencias sin uso
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           cargo binstall --no-confirm cargo-llvm-cov
           cargo binstall --no-confirm "cargo-crap@${CRAP_VERSION}"
@@ -301,6 +365,8 @@ jobs:
   # ==========================================================================
   native:
     name: Imagen nativa
+    needs: scope
+    if: needs.scope.outputs.native == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -356,6 +422,7 @@ jobs:
         if: steps.scope.outputs.build == 'true'
         with:
           workspaces: rfirma-app/src-tauri
+          key: no-debuginfo
 
       - uses: ./.github/actions/setup-just
         if: steps.scope.outputs.build == 'true'
@@ -419,25 +486,23 @@ jobs:
           export GRAALVM_HOME="$JAVA_HOME"
           just native
 
-      # Aqui SI existe librfirma_crypto.so, asi que las pruebas de grada C
-      # —marcadas #[ignore]— se ejecutan de verdad. El carril rapido solo las
-      # compila (TD-02).
-      - name: Pruebas de grada C
-        if: steps.scope.outputs.build == 'true'
-        run: just test-native
-
       - uses: cargo-bins/cargo-binstall@b874e25ea559687bec77e281e9b271aa1367b624 # v1.23.0
         if: steps.scope.outputs.build == 'true'
-      - name: Herramientas de cobertura y de CRAP
+      - name: Herramientas de cobertura, de CRAP y de pruebas
         if: steps.scope.outputs.build == 'true'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           cargo binstall --no-confirm cargo-llvm-cov
           cargo binstall --no-confirm "cargo-crap@${CRAP_VERSION}"
+          cargo binstall --no-confirm "cargo-nextest@${NEXTEST_VERSION}"
 
-      # Medicion CRAP dirigida al adaptador FFI con las pruebas de grada C (ADR-0014).
-      - name: Puerta CRAP del adaptador FFI
+      # Aqui SI existe librfirma_crypto.so, asi que las pruebas de grada C
+      # —marcadas #[ignore]— se ejecutan de verdad, y en la misma pasada
+      # instrumentada se mide el adaptador FFI (ADR-0014).
+      - name: Pruebas de grada C y puerta CRAP del adaptador FFI
         if: steps.scope.outputs.build == 'true'
-        run: just crap-ffi
+        run: just test-native
 
       # EL PDF DE LA PUERTA MANUAL (TD-04). `pdfsig` es la puerta automatica,
       # pero el criterio de terminado del hito promete que un VALIDADOR OFICIAL
@@ -452,7 +517,7 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: pdf-puerta-manual
-          path: rfirma-app/src-tauri/target/tmp/manual-gate.pdf
+          path: rfirma-app/src-tauri/target/llvm-cov-target/tmp/manual-gate.pdf
           # `warn` y no `error`: este paso corre tambien cuando las pruebas han
           # fallado antes de llegar a la de la puerta manual, y ahi el PDF no
           # existe. Un segundo rojo — «artefacto no encontrado» — solo taparia
