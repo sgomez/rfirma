@@ -415,21 +415,15 @@
   font-weight: 700;
 }
 
-/* Cada línea cabe en una sola fila (design-system.md § Ruta de destino): el
-   recorte por caracteres de `shortenDestination` ya decidió qué se pierde, y
-   esta elipsis es solo el resguardo si aun así no cupiera. */
 .panel__destination-ellipsis {
   min-width: 0;
+  line-height: 1.3;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-/* El aviso de carpeta no escribible, a la misma altura que la caja del
-   destino (53 px): dos líneas como mucho, y lo que no cabe se pierde por el
-   final de la frase, nunca a mitad de palabra. */
 .panel__destination-unwritable {
-  align-items: flex-start;
   height: 53px;
   padding: 7px 10px;
   border: 2px solid var(--rf-border-strong);

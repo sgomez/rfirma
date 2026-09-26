@@ -67,9 +67,6 @@ export function PanelFooter(props: PanelFooterProps) {
   const { destination, documentName, signed = false } = props;
   const signing = !props.signed && props.signing;
   const fullName = destination.name ?? documentName;
-  // El recorte por el medio del nombre y por la cola de la carpeta siguen
-  // siendo los de `shortenDestination`; la elipsis de la hoja de estilos es
-  // solo el resguardo cuando ni eso basta (design-system.md § Ruta de destino).
   const shortened = shortenDestination({ folder: destination.folder, name: fullName });
   const writable = signed || destination.writable;
 
@@ -109,7 +106,7 @@ export function PanelFooter(props: PanelFooterProps) {
         ) : (
           <div className="rf-row rf-gap-xs panel__destination-unwritable">
             <AlertIcon size={16} />
-            <span className="panel__destination-unwritable-text">
+            <span className="panel__destination-unwritable-text" title={destination.folder}>
               {unwritableMessage(
                 t("panel.footer.unwritable", { folder: shortened.folder }),
                 shortened.folder,

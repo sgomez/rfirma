@@ -48,7 +48,7 @@ describe("SigningPanel", () => {
 
     // El artboard parte la fila en dos: «Guardar en» como rótulo, con
     // `Cambiar` a su derecha, y la caja del destino debajo con la carpeta y
-    // el nombre en dos líneas separadas (ID-63).
+    // el nombre en dos líneas separadas.
     expect(screen.getByText("Guardar en")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Cambiar" })).toBeInTheDocument();
     expect(screen.getByText("Documentos")).toBeInTheDocument();
@@ -99,6 +99,17 @@ describe("SigningPanel", () => {
     // El diseño pone la carpeta en negrita dentro de la frase.
     expect(screen.getByText("Documentos", { selector: "strong" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Firmar como Ada Lovelace" })).toBeEnabled();
+  });
+
+  it("carries the full folder in the title of the unwritable message, even shortened", () => {
+    const folder = "Documentos-de-la-empresa-que-no-caben-en-una-sola-linea-del-pie";
+    renderPanel({ destination: { folder, name: null, writable: false } });
+
+    expect(
+      screen.getByText((_, element) => element?.textContent?.startsWith("No se puede") ?? false, {
+        selector: "span",
+      }),
+    ).toHaveAttribute("title", folder);
   });
 
   it("keeps the label even when the destination cannot be written to", () => {
