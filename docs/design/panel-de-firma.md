@@ -14,7 +14,7 @@ se elige el certificado.
 
 Zona que se desliza, de arriba abajo, cada bloque solo cuando toca:
 
-1. **Aviso de cofirma**, si el PDF ya trae firmas.
+1. **Aviso de firmas previas**, si el PDF ya trae firmas.
 2. **«Sin certificados»**, **«Firmado a las 11:04» y el resumen**, o **el error
    de firma**, según el estado.
 3. **Firma visible**: rótulo e interruptor; encendida, el segmentado de páginas
@@ -67,15 +67,91 @@ No hay cabecera de documento: el nombre ya está en la
   `--rf-shadow-elevated`. Crece hacia arriba hasta 8 px por debajo del borde del
   panel y a partir de ahí se desplaza.
 
-## El aviso de cofirma
+## El aviso de firmas previas
 
-Icono de información y borde `--rf-border-subtle`: «Ya lleva **1 firma** ·
-Ver». Con varias, desplegado con quién y cuándo y «Ocultar». No es una alarma:
-añadir una firma sin invalidar la anterior es lo normal.
+Si el PDF ya trae firmas, es el primer bloque de la zona que se desliza. Firmar
+junto a ellas es lo normal; el aviso dice cuántas hay y si alguna no es válida.
 
-**Lo que no se sabe no ocupa sitio** (ID-44). Hoy el número de firmas llega como
-desconocido, y entonces el aviso no se monta: ni un guion ni un marcador. Vuelve
-en cuanto alguien las cuente, sin rediseño.
+**La línea resumen**, que es también el botón que lo pliega y lo despliega:
+
+- El icono del tono, «Firmarás junto a **N firmas** anteriores» («**1 firma**
+  anterior» en singular) y, si hay avisos, « · **M avisos**» («**1 aviso**»).
+  Letra de 13 px con interlineado de 18.
+- En el panel de 380 px la coletilla no cabe nunca: «M avisos» baja a una
+  **segunda línea fija**, sin el «·», siempre en ese punto y nunca con un corte
+  arbitrario. Sin avisos es una línea.
+- A la derecha, el chevron del botón partido (14 px, trazo 2), hacia abajo
+  plegado y girado 180° desplegado. No hay «Ver» ni «Ocultar».
+- Toda la línea es el blanco de clic: `role="button"`, `aria-expanded` y
+  `aria-label` «Ver firmas anteriores» / «Ocultar firmas anteriores».
+- Nace desplegado con más de una firma o con algún aviso; con una sola firma
+  válida, plegado.
+
+**M avisos** suma cada firma no válida (certificado caducado, certificado aún no
+válido, firma rota, no se puede validar), cada firma que no se ha podido
+comprobar del todo y **1** si el documento ha cambiado después de la última
+firma. Así el cambio se ve aunque el aviso esté plegado.
+
+**El tono es el de la peor fila:**
+
+| Lo peor que hay | Icono | Borde |
+| --------------- | ----- | ----- |
+| Todo válido | información | 1 px `--rf-border-subtle` |
+| Una firma sin comprobar del todo | círculo punteado | 1 px `--rf-border-strong` |
+| Una firma no válida, o el documento ha cambiado después | triángulo (círculo con aspa si hay una firma rota) | 2 px `--rf-border-strong` |
+
+**Desplegado**, una fila por firma en orden cronológico, separadas por 1 px en
+`--rf-border-subtle`: quién; cuándo y su veredicto a la derecha, con los
+trazados del [panel de estado](panel-de-estado.md); y debajo su motivo en
+`--rf-text-muted`. Los veredictos:
+
+- **Válida**: círculo con marca, en `--rf-text-muted`.
+- **Certificado caducado** («El certificado caducó el …»), **Certificado aún no
+  válido** («El certificado es válido desde el …») y **No se puede validar**
+  («Formato no reconocido»): triángulo, en negrita.
+- **Firma rota**: círculo con aspa, en negrita, con uno de tres motivos: «No
+  corresponde con los datos», «Está dañada» o «El PDF estaba certificado y no
+  admitía más firmas».
+- **No se ha podido comprobar del todo** («Firma de larga duración: rFirma no
+  comprueba este tipo de firma»): círculo punteado, sin negrita. Es la firma
+  longeva (PAdES-T, LT o LTA) con el certificado ya caducado: no sale «Válida»,
+  pero tampoco cuenta como no válida.
+
+En la fila de la **última** firma, si el documento ha cambiado después, una
+línea con el triángulo y «El documento ha cambiado después de esta firma» en
+negrita. Sube el tono, pero no es una firma no válida.
+
+**«Ya lo firmaste tú»** va en una franja al pie del aviso, fondo
+`--rf-surface`, borde superior de 1 px, icono de persona y texto en negrita. Se
+ve aunque el aviso esté plegado, y solo con un certificado elegido. Dos textos:
+«Ya lo firmaste tú con este certificado» y «Ya lo firmaste tú, con otro
+certificado tuyo». No bloquea, y las filas no llevan marca «Tú».
+
+**El botón del pie no cambia**: con firmas no válidas sigue siendo «Firmar como
+<nombre>», primario. Pulsarlo abre
+[«¿Firmar de todos modos?»](dialogo-firmar-de-todos-modos.md) si hay **alguna
+firma no válida**; el cambio después de la última firma y la firma sin comprobar
+del todo no lo abren. El aviso no lleva acción propia.
+
+### Cómo se valida cada firma
+
+Como el escritorio de AutoFirma 1.9.2, y sin salir del equipo:
+
+- **Se comprueba** la integridad de la firma, su algoritmo, que el certificado
+  del firmante esté vigente **hoy** y si el PDF estaba certificado.
+- **No se comprueba** nada que pida red: ni la cadena de confianza ni la
+  revocación.
+- **La única desviación de AutoFirma**: el *shadow attack* —el documento ha
+  cambiado después de la última firma— se comprueba **siempre**, y es un aviso,
+  no una firma no válida.
+
+**«Ya lo firmaste tú»** es el mismo NIF del titular y la misma entidad
+representada (`organizationIdentifier`; «ninguna» cuenta como valor). Si el
+certificado es el mismo, «con este certificado»; si no, «con otro certificado
+tuyo».
+
+Las firmas que rFirma no reconoce siguen teniendo su propia pregunta antes de
+cofirmar: este aviso no la sustituye.
 
 ## Firma visible
 
@@ -219,7 +295,7 @@ certificado para añadir una firma visible.».
 ## Estados
 
 En el artboard `Main`, palanca «Estado», más «Firma visible», «Lista de
-certificados», «Pie · destino» y «Ficha 14»:
+certificados», «Firmas previas», «Pie · destino» y «Ficha 14»:
 
 - **Sin certificado elegido**: «Elegir certificado ▾» en un solo botón, que abre
   la lista; «Firma visible» apagada y desactivada, con el aviso debajo.
@@ -230,7 +306,9 @@ certificados», «Pie · destino» y «Ficha 14»:
   certificados» y «No hay ningún certificado con el que firmar.». En el pie, en
   la fila de 44 px, «Añadir un certificado…» (primario, lleva a los certificados
   en fichero de [Preferencias](preferencias.md)) y «Volver a buscar».
-- **Listo**: el botón «Firmar como …».
+- **Listo**: el botón «Firmar como …». Con alguna firma previa no válida, lo
+  mismo; pulsarlo abre [«¿Firmar de todos modos?»](dialogo-firmar-de-todos-modos.md)
+  (artboard `EstadoFirmarDeTodosModos`).
 - **Certificados abiertos**: la lista sobre el pie, el chevron hacia arriba.
 - **Rango con error**: ver arriba.
 - **Firmando**: interruptor, controles y `Cambiar` al 35 %; el botón al 55 %
@@ -256,7 +334,7 @@ Arriba de la zona que se desliza:
   tuya primero con `La tuya` en `.rf-badge--primary` y «***9999** · hoy, 11:04»,
   después las previas con quién y cuándo.
 - «Firma visible» pasa a una línea de solo lectura: «No», «En la página 6», «En
-  todas las páginas» o «En N de M páginas». El aviso de cofirma desaparece.
+  todas las páginas» o «En N de M páginas». El aviso de firmas previas desaparece.
 
 En el pie, «Guardado en», `Cambiar` oculto sin mover nada, y en la fila de 44 px:
 «Abrir el PDF» (primario), la carpeta (secundario, 44 px, `title` «Abrir la
@@ -311,7 +389,18 @@ acuse es de un documento concreto: al cambiar de pestaña o cerrarla, se va.
 - **El pie enseña carpeta y nombre**, en una caja, bajo un solo `Cambiar` (de
   V3 B): el nombre lo elige la aplicación y hasta firmar no se veía.
 - **«Firmar otro documento» no existe**: el «+» de la tira ya abre.
+- **El aviso de firmas previas dice la validez, no solo el número.** El de antes,
+  «Ya lleva 1 firma · Ver», con el número llegando como desconocido, no se
+  montaba nunca y no decía si las firmas servían. Ahora cuenta firmas y avisos
+  en una línea y el detalle va al desplegar.
+- **«Ya lo firmaste tú» en una franja al pie del aviso**, no como marca «Tú» en
+  la fila: la franja se ve sin desplegar.
+- **El botón del pie no cambia con firmas no válidas.** La confirmación la hace
+  el diálogo, que da la razón; el aviso no lleva botón propio.
+- **«Ha cambiado después» y «sin comprobar del todo» no piden confirmación**:
+  suben el tono y suman un aviso, pero no son firmas no válidas.
 
 Validado en el lienzo
 [Autofirma de escritorio en Rust](https://claude.ai/design/p/c0ddbfa7-0982-498f-8f8c-8e2f8f0c6132),
-página **Recorrido de firma**, artboard `Main`, el 25/09/2026.
+página **Recorrido de firma**, artboard `Main`, el 25/09/2026. El aviso de
+firmas previas y el paso a «¿Firmar de todos modos?», el 26/09/2026.

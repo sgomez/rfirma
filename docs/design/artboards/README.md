@@ -31,7 +31,9 @@ vigesimoprimero, en una página propia, «Estado de rFirma», y rehace el menú 
 menú de la cabecera».
 `PreferenciasPantalla` se rehízo con el [#657](https://github.com/sgomez/rfirma/issues/657) y se podó con el
 [#661](https://github.com/sgomez/rfirma/issues/661); ver «Lo que cambió en
-Preferencias».
+Preferencias». Firmar un PDF que ya trae firmas añade
+`EstadoFirmarDeTodosModos` y rehace el aviso de firmas previas de `Main` y de
+`SedeConsentimiento`; ver «Lo que cambió con las firmas previas».
 Están aquí para que la transcripción a JSX se pueda hacer y revisar **sin
 cuenta de Claude**, y porque el repositorio es público y su interfaz no puede
 estar especificada detrás de un servicio con acceso restringido.
@@ -51,6 +53,7 @@ página «Ventana de sede · v0.5» va aparte porque es otra ventana:
 | - | -------- | ------ |
 | 5 | `Main` | La ventana principal entera, con sus estados como palanca: vacío, buscando certificados, sin certificados, sin certificado elegido, listo, certificados abiertos, firmando (diálogo con velo), firmado (el resumen) y error al firmar; la firma visible y su contenido, el menú de la cabecera, el menú «+», la franja de versión nueva bajo las pestañas, el destino, el zoom y la vista previa |
 | 5b | `EstadoPaginasSinFirmaVisible` | Antes de firmar: las páginas donde la firma visible no cabe |
+| 5c | `EstadoFirmarDeTodosModos` | Antes de firmar: el documento trae alguna firma no válida, y se pide confirmación |
 | 6 | `EstadoPin` | Pidiendo el secreto del almacén — PIN o contraseña, según la clase de almacén —, sobre `Main` buscando certificados o lista, según el almacén |
 | 7 | `EstadoPinIncorrecto` | Secreto incorrecto, con el mismo fondo que el 6 |
 | — | `PreferenciasPantalla` | Preferencias, a pantalla completa, como visor de pestañas en vertical: el índice permanente y un solo panel a la derecha |
@@ -131,19 +134,23 @@ cambia.
 
 ## Lo que hay que decidir al transcribir
 
-Una cosa que el canvas da por buena y el código no puede sostener tal cual.
-No la resuelvas por tu cuenta: es un cambio de ficha (ID-44).
+Una cosa que el canvas da por buena y el código no sostiene tal cual. No la
+resuelvas por tu cuenta: es un cambio de ficha.
 
-1. **El panel enseña datos que hoy nadie calcula**: «27 páginas · 2,4 MB», «Ya
-   lleva 1 firma: la tuya será una cofirma» y, con la palanca «Ficha 14»
-   levantada, «2 firmas» y la lista de firmas. El código pasa el tamaño y las
-   firmas como desconocidos, y detectar si un PDF ya viene firmado está fuera
-   del alcance del #81. El tamaño **sí** se recupera en el resumen: lo conoce
-   `finish_signing` y hoy `SignedDocumentView` lo descarta.
+**El panel enseña datos que hoy nadie calcula**: «27 páginas · 2,4 MB» y, con
+la palanca «Ficha 14» levantada, «2 firmas» y la lista de firmas. El código pasa
+el tamaño como desconocido. El tamaño **sí** se recupera en el resumen: lo
+conoce `finish_signing` y hoy `SignedDocumentView` lo descarta. Las firmas
+previas ya no son un punto abierto de diseño: el aviso, sus veredictos y cómo se
+valida cada firma están decididos en [`panel-de-firma.md`](../panel-de-firma.md).
+Que el código aún las pase como desconocidas es trabajo de implementación, no
+una decisión de transcripción.
 
-Los otros dos puntos que había aquí —«Junto al documento original» como destino,
-y la ausencia de «Recordar mi actividad» y «Vaciar la lista»— los resolvió
-`PreferenciasPantalla`, y ya no hay nada que decidir.
+Los otros puntos que había aquí están resueltos. «Junto al documento original»
+como destino, y la ausencia de «Recordar mi actividad» y «Vaciar la lista», los
+resolvió `PreferenciasPantalla`. La lista de certificados de
+`SedeConsentimiento` **flota**, como cualquier
+[desplegable](../design-system.md#desplegable), aunque el cuerpo se desplace.
 
 ## Lo que cambió en v0.2
 
@@ -730,3 +737,35 @@ dibujan la píldora:
 - El fondo `--rf-border-subtle` al pasar por encima no se dibuja: los artboards
   no modelan hover. Lo recoge la ficha
   [`visor-de-documento`](../visor-de-documento.md).
+
+## Lo que cambió con las firmas previas
+
+Firmar un PDF que ya trae firmas se exploró en tres páginas de trabajo
+—`trabajo-cofirma-panel`, `trabajo-cofirma-confirmacion` y
+`trabajo-cofirma-sede`— que se fundieron y se borraron el 26/09/2026:
+
+- **`Main`** cambia el aviso de cofirma por el **aviso de firmas previas**:
+  «Firmarás junto a N firmas anteriores · M avisos», el tono de la peor fila,
+  una fila por firma con su veredicto y su motivo, «El documento ha cambiado
+  después de esta firma» y la franja «Ya lo firmaste tú». La palanca «Firmas
+  previas» recorre todos los casos, y «Ver firmas» lo enseña plegado o
+  desplegado. El botón del pie no cambia.
+- **`EstadoFirmarDeTodosModos`**, nuevo, en la página «Recorrido de firma»
+  junto a 5b: la confirmación que se abre al pulsar «Firmar como …» con alguna
+  firma no válida. Su palanca «motivo» incluye «muchas no validas (7)» para ver
+  la lista con alto máximo y desplazamiento.
+- **`EstadoPin`, `EstadoPinIncorrecto` y `EstadoAcercaDe`** copian el aviso
+  nuevo de `Main` para que ninguno conserve el viejo «Ya lleva N firmas · Ver»;
+  no exponen la palanca y lo dibujan sin firmas previas, como antes.
+- **`SedeConsentimiento`** reordena la ventana —origen, «Firmarás con», caja
+  del documento, pie—, abre el desplegable como la lista flotante de la
+  ventana principal, mete el mismo aviso dentro de la caja del documento y
+  sustituye la caja «Origen sin identificar» por la línea «**Una página sin
+  identificar** pide tu firma.». Palancas de estado nuevas: `firmasPrevias`,
+  `verFirmas`, `desplegable` y `origen`.
+
+El porqué está en las anotaciones `nota-main`, `nota-firmar-de-todos-modos` y
+`nota-sede-consentimiento`, y en las fichas
+[`panel-de-firma`](../panel-de-firma.md),
+[`dialogo-firmar-de-todos-modos`](../dialogo-firmar-de-todos-modos.md) y
+[`ventana-de-sede`](../ventana-de-sede.md).

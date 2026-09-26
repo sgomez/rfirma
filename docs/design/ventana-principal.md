@@ -41,7 +41,8 @@ pantalla.
 Sobre la ventana se abren diálogos con velo, que la oscurecen sin desmontarla:
 [el del secreto del almacén](dialogo-pin.md),
 [progreso de firma](dialogo-progreso-firma.md),
-[páginas sin firma visible](dialogo-paginas-sin-firma-visible.md) y
+[páginas sin firma visible](dialogo-paginas-sin-firma-visible.md),
+[¿firmar de todos modos?](dialogo-firmar-de-todos-modos.md) y
 [acerca de](acerca-de.md). [Preferencias](preferencias.md) y el
 [panel de estado](panel-de-estado.md) son vistas que tapan todo lo que hay bajo
 la cabecera, tira incluida.

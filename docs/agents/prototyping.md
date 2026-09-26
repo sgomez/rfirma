@@ -191,6 +191,18 @@ puede desaparecer de aquí — el enlace al canvas ya vive en las fichas.
 
 No hay ningún prototipo en vuelo.
 
+El caso de uso **firmar un PDF que ya trae firmas** se validó el **26/09/2026**
+y salió de esta tabla. Se exploró en tres páginas de trabajo
+—`trabajo-cofirma-panel`, `trabajo-cofirma-confirmacion` y
+`trabajo-cofirma-sede`— que se fundieron y se borraron: el aviso de firmas
+previas entró en `Main` (y en los estados que lo copian) y en
+`SedeConsentimiento`, y la confirmación quedó como artboard nuevo,
+`EstadoFirmarDeTodosModos`. Sus fichas son
+[`panel-de-firma.md`](../design/panel-de-firma.md),
+[`dialogo-firmar-de-todos-modos.md`](../design/dialogo-firmar-de-todos-modos.md)
+—nueva— y [`ventana-de-sede.md`](../design/ventana-de-sede.md), y las tres
+enlazan el canvas desde su sección «Decisiones».
+
 El caso de uso **la ventana principal repensada** se validó el **26/09/2026**
 y salió de esta tabla. Se exploró en cuatro páginas de trabajo —«Main v3 · A»,
 «Main v3 · B», «Main v3 · C» y el compendio «Main v4 · D»— que se fundieron en
