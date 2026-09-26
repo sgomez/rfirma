@@ -62,3 +62,11 @@ export function invalidSignatures(
 ): readonly PreviousSignature[] {
   return signatures.filter((signature) => INVALID_STATUSES.includes(signature.status));
 }
+
+/** El informe de un documento sin firmas previas, compartido por escritorio y sede. */
+export const NO_PREVIOUS_SIGNATURES: PreviousSignaturesReport = {
+  signatures: [],
+  warningCount: 0,
+  tone: "information",
+  changedAfterLastSignature: false,
+};

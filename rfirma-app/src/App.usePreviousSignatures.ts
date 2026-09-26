@@ -1,13 +1,9 @@
 import { useEffect, useState } from "react";
 import type { SigningBackend } from "./signing/flow";
-import type { PreviousSignaturesReport } from "./signing/previousSignatures";
-
-const NO_SIGNATURES: PreviousSignaturesReport = {
-  signatures: [],
-  warningCount: 0,
-  tone: "information",
-  changedAfterLastSignature: false,
-};
+import {
+  NO_PREVIOUS_SIGNATURES,
+  type PreviousSignaturesReport,
+} from "./signing/previousSignatures";
 
 /**
  * Las firmas que ya trae el documento activo, pedidas al abrir o cargar el
@@ -20,10 +16,10 @@ export function usePreviousSignatures(
   signer: SigningBackend,
   activeDocumentId: string | null,
 ): PreviousSignaturesReport {
-  const [report, setReport] = useState<PreviousSignaturesReport>(NO_SIGNATURES);
+  const [report, setReport] = useState<PreviousSignaturesReport>(NO_PREVIOUS_SIGNATURES);
 
   useEffect(() => {
-    setReport(NO_SIGNATURES);
+    setReport(NO_PREVIOUS_SIGNATURES);
     if (activeDocumentId === null) {
       return;
     }
@@ -34,7 +30,7 @@ export function usePreviousSignatures(
         if (current) setReport(found);
       })
       .catch(() => {
-        if (current) setReport(NO_SIGNATURES);
+        if (current) setReport(NO_PREVIOUS_SIGNATURES);
       });
     return () => {
       current = false;

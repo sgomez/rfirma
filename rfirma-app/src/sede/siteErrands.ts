@@ -1,5 +1,6 @@
 import type { Certificate } from "../signing/certificate";
 import type { StageResult } from "../signing/flow";
+import type { PreviousSignaturesReport } from "../signing/previousSignatures";
 import type { StoreSecret } from "../signing/secret";
 import type { PdfDocument } from "../viewer/pdf";
 import type {
@@ -120,6 +121,8 @@ export interface SiteCommands {
   describeDocument(id: string): Promise<DescribedDocument | null>;
   /** El PDF abierto para marcar sobre él el área de la firma visible, o `null` si no se ha podido abrir. */
   openDocument(id: string): Promise<PdfDocument | null>;
+  /** Las firmas que ya trae el documento, igual que pide `App.usePreviousSignatures.ts` en escritorio. */
+  previousSignatures(id: string): Promise<PreviousSignaturesReport>;
 }
 
 /**
@@ -253,10 +256,21 @@ export function siteErrands(commands: SiteCommands): SiteErrandPort {
       consentWithoutAsking(view.stage);
       return;
     }
-    const described = await commands.describeDocument(view.stage.document);
+    const [described, previousSignatures] = await Promise.all([
+      commands.describeDocument(view.stage.document),
+      commands.previousSignatures(view.stage.document),
+    ]);
     if (arrival !== arrivals) return;
     publish(
-      errandOf(view, documentOf(described, view.stage.round, view.stage.unregisteredSignatures)),
+      errandOf(
+        view,
+        documentOf(
+          described,
+          view.stage.round,
+          view.stage.unregisteredSignatures,
+          previousSignatures,
+        ),
+      ),
     );
     consentWithoutAsking(view.stage);
   };

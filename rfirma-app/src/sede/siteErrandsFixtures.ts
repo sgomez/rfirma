@@ -1,6 +1,7 @@
 import type { Mock } from "vitest";
 import { vi } from "vitest";
 import type { Certificate } from "../signing/certificate";
+import { NO_PREVIOUS_SIGNATURES } from "../signing/previousSignatures";
 import { recordingDocument } from "../viewer/testing/documentViewerFixtures";
 import type { Errand } from "./errand";
 import type { DescribedDocument, SiteCommands, SiteErrandView } from "./siteErrands";
@@ -55,6 +56,7 @@ function doubled(overrides: Partial<SiteCommands> = {}) {
     dismissWarning: vi.fn(),
     describeDocument: vi.fn(),
     openDocument: vi.fn(),
+    previousSignatures: vi.fn(),
   };
   const commands: SiteCommands = {
     watch: (onView) => {
@@ -114,6 +116,10 @@ function doubled(overrides: Partial<SiteCommands> = {}) {
     openDocument: async (id) => {
       calls.openDocument(id);
       return opened;
+    },
+    previousSignatures: async (id) => {
+      calls.previousSignatures(id);
+      return NO_PREVIOUS_SIGNATURES;
     },
     ...overrides,
   };
