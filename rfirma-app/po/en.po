@@ -763,8 +763,8 @@ msgstr "It will be saved in"
 msgid "panel.footer.unwritable"
 msgstr "Can't write in {{folder}}"
 
-msgid "panel.footer.retry"
-msgstr "Try again"
+msgid "panel.footer.retrySigning"
+msgstr "Retry"
 
 #. {{name}} es el nombre y primer apellido de quien firma.
 msgid "panel.footer.signAs"

@@ -137,7 +137,7 @@ export function PanelFooter(props: PanelFooterProps) {
                 className="rf-btn rf-btn--primary panel__failure-retry"
                 onClick={props.onSign}
               >
-                {t("panel.footer.retry")}
+                {t("panel.footer.retrySigning")}
               </button>
               <button
                 type="button"

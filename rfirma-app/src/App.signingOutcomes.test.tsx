@@ -133,7 +133,7 @@ describe("App, firmando, firmado y error", () => {
     // El pie sigue enseñando el destino: solo cambia el botón de firmar.
     expect(screen.getByText("contrato-firmado.pdf")).toBeInTheDocument();
 
-    const retry = screen.getByRole("button", { name: "Volver a intentarlo" });
+    const retry = screen.getByRole("button", { name: "Reintentar" });
     const back = screen.getByRole("button", { name: "Volver" });
     expect(retry).toBeInTheDocument();
 

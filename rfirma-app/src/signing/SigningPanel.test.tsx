@@ -161,7 +161,7 @@ describe("SigningPanel", () => {
       screen.getByText("El documento sigue como estaba: no se ha guardado nada."),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Copiar detalle" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Volver a intentarlo" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Reintentar" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Volver" })).toBeInTheDocument();
     // La firma visible no aporta nada mientras el documento sigue igual: se
     // esconde entera en vez de enseñarla al lado del error.

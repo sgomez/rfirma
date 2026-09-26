@@ -703,7 +703,7 @@ msgstr ""
 msgid "panel.footer.unwritable"
 msgstr ""
 
-msgid "panel.footer.retry"
+msgid "panel.footer.retrySigning"
 msgstr ""
 
 #. {{name}} es el nombre y primer apellido de quien firma.

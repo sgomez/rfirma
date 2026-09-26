@@ -775,8 +775,8 @@ msgstr "Es desarà a"
 msgid "panel.footer.unwritable"
 msgstr "No es pot escriure a {{folder}}"
 
-msgid "panel.footer.retry"
-msgstr "Tornar-ho a intentar"
+msgid "panel.footer.retrySigning"
+msgstr "Reintentar"
 
 #. {{name}} es el nombre y primer apellido de quien firma.
 msgid "panel.footer.signAs"

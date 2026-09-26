@@ -782,8 +782,8 @@ msgstr "Hemen gordeko da"
 msgid "panel.footer.unwritable"
 msgstr "Ezin da {{folder}}(e)n idatzi"
 
-msgid "panel.footer.retry"
-msgstr "Saiatu berriro"
+msgid "panel.footer.retrySigning"
+msgstr "Berriro saiatu"
 
 #. {{name}} es el nombre y primer apellido de quien firma.
 msgid "panel.footer.signAs"
