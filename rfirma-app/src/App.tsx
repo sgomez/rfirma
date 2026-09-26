@@ -470,11 +470,7 @@ export function App({
               rubricFailure={rubricFailure}
               onChooseRubric={() => void chooseRubric()}
               destination={
-                destination ?? {
-                  folder: settings?.destination ?? "",
-                  name: null,
-                  writable: true,
-                }
+                destination ?? { folder: settings?.destination ?? "", name: null, writable: true }
               }
               onChangeDestination={() => void chooseSingleDestination()}
               onSign={() => void sign()}
