@@ -414,9 +414,6 @@ msgstr "Quant a rFirma"
 msgid "badges.signed"
 msgstr "Signat"
 
-msgid "badges.unsigned"
-msgstr "Sense signar"
-
 #. Nombre accesible de la tira de pestañas, no un título visible.
 msgid "tabs.label"
 msgstr "Documents oberts"

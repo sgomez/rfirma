@@ -374,7 +374,7 @@ describe("App", () => {
       { list: async () => [aCertificate] },
     );
 
-    await user.click(trayDropZone());
+    await openPdf(user);
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
     const trigger = await within(panel).findByRole("combobox", { name: "Certificado" });
 

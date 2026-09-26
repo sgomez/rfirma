@@ -415,9 +415,6 @@ msgstr "rFirmari buruz"
 msgid "badges.signed"
 msgstr "Sinatuta"
 
-msgid "badges.unsigned"
-msgstr "Sinatu gabe"
-
 #. Nombre accesible de la tira de pestañas, no un título visible.
 msgid "tabs.label"
 msgstr "Dokumentu irekiak"
