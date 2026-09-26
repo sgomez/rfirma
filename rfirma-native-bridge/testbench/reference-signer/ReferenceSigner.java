@@ -122,7 +122,7 @@ public final class ReferenceSigner {
         Files.write(Path.of(args[5]), withSignatureTimestamp(signed, new TsaParams(tsaParams)));
     }
 
-    // El PdfTimestamper del 1.9.2 devuelve la firma sin sello (ADR-0030): se sella el CMS en su
+    // El PdfTimestamper del 1.9.2 devuelve la firma sin sello: se sella el CMS en su
     // hueco de /Contents, fuera del ByteRange.
     private static byte[] withSignatureTimestamp(byte[] pdf, TsaParams tsa) throws Exception {
         String text = new String(pdf, StandardCharsets.ISO_8859_1);
