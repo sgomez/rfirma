@@ -99,12 +99,14 @@ export function signingOrderFor({
       rotation: geometry.rotate,
       rect: [placement.rect.x0, placement.rect.y0, placement.rect.x1, placement.rect.y1],
     },
-    fields: signature.fields,
-    reason: signature.reason,
+    content: signature.content,
+    withRubric: signature.withRubric,
+    fields: { signerName: false, issuer: false, signedAt: false, reason: false },
+    reason: "",
     signedAt,
     // La rúbrica solo viaja si además está marcada: tener una imagen guardada
     // no es quererla dentro del recuadro.
-    rubric: signature.rubric && rubric !== null ? base64Of(rubric) : null,
+    rubric: signature.withRubric && rubric !== null ? base64Of(rubric) : null,
     language,
     // Nadie ha consentido nada todavía: el permiso se pone al aceptar el aviso
     // de las firmas sin registrar, y en ningún otro sitio (ID-301).

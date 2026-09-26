@@ -72,15 +72,15 @@ rojo.
 | `signing/flow.ts` | Las tres etapas de la trifásica. |
 | `signing/useSigning.ts` | El estado de la firma. |
 | `signing/SigningPanel.tsx` | El panel, con la zona que se desliza y el pie fijo. |
+| `signing/SigningPanel.testSupport.tsx` | Los dobles y ayudas que comparten las pruebas de `SigningPanel`. |
 | `signing/CertificateNotice.tsx` | El aviso de «sin certificados», arriba de la zona que se desliza. |
 | `signing/PlacementFieldset.tsx` | El bloque «Colocación» del panel: los tres modos de página y el botón de sellar. |
 | `signing/usePlacementField.ts` | El estado del bloque «Colocación»: lo tecleado en el campo de páginas. |
 | `signing/placementField.ts` | Las situaciones del campo de páginas y su eco, redactados. Sin React. |
-| `signing/SignatureFieldsFieldset.tsx` | Qué se estampa en el recuadro: las casillas, el motivo y la rúbrica. |
+| `signing/ModelFieldset.tsx` | Qué se estampa en el recuadro: las tarjetas de modelo y la rúbrica. |
 | `signing/PanelFooter.tsx` | El pie fijo del panel: destino o fallo, y el certificado o la acción del momento. |
 | `signing/CertificateFooterButton.tsx` | El botón partido «Firmar como…» del pie, con su lista hacia arriba. |
 | `signing/panelFormat.ts` | El tamaño del documento en la unidad que reconoce el usuario. Sin React. |
-| `signing/Checkbox.tsx` | La casilla del panel. |
 | `signing/CertificateSelect.tsx` | La elección de certificado, reutilizada tal cual en la sede. |
 | `signing/secret.ts` | Cómo hay que pedirle el secreto al almacén: sin sesión, tecleado en pantalla, o en el teclado del lector. Sin React. |
 | `signing/SigningProgressDialog.tsx` | El progreso. |

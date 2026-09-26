@@ -3,9 +3,9 @@
  * pie fijo abajo.
  *
  * El pie no se desplaza porque el destino y el botón tienen que verse **antes**
- * de firmar, no después de recorrer la configuración entera. Las casillas y la
- * miniatura se maquetan aquí con `var(--rf-*)`: el vocabulario `rf-*` está
- * cerrado y no tiene ni casillas ni interruptores.
+ * de firmar, no después de recorrer la configuración entera. Las tarjetas de
+ * modelo y la miniatura se maquetan aquí con `var(--rf-*)`: el vocabulario
+ * `rf-*` está cerrado y no tiene ni tarjetas ni interruptores.
  */
 
 .panel {
@@ -126,7 +126,7 @@
   flex: 1;
 }
 
-.panel__fields {
+.panel__model {
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -135,71 +135,115 @@
   border: 0;
 }
 
-/* La casilla y su ayuda son una columna, con la ayuda a 2 px del rótulo y
-   sangrada hasta la columna del texto —los 18 px del cuadrado más los 8 que lo
-   separan—. El artboard mete la ayuda dentro de esa columna
-   (`Main.dc.html`); aquí es hermana del `<label>` para
-   que no entre en el nombre accesible de la casilla, y la sangría es lo que la
-   deja en la misma columna que el rótulo en vez de bajo el cuadrado. */
-.panel__checkbox {
+/* Rejilla de tres columnas iguales, 6 px entre ellas (docs/design/panel-de-firma.md § Geometría). */
+.panel__model-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+/* «Necesita la rúbrica» y el resto de tarjetas: el mismo `.rf-hint` de 12 px
+   que la etiqueta, tres líneas debajo del botón (`Main.dc.html:449-467`). */
+.panel__model-card {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-}
-
-.panel__checkbox-hint {
-  padding-left: calc(18px + var(--rf-space-xs));
-}
-
-.panel__checkbox-label {
-  display: flex;
-  gap: var(--rf-space-xs);
   align-items: flex-start;
-  min-height: 24px;
+  gap: 4px;
+  min-width: 0;
+  padding: 3px;
+  border: 1px solid var(--rf-border-subtle);
+  border-radius: var(--rf-radius-md);
+  background: transparent;
+  color: var(--rf-text);
   cursor: pointer;
 }
 
-/* La casilla nativa se oculta sin salir del árbol accesible ni perder el foco:
-   `display: none` la sacaría de la tabulación y del lector de pantalla. */
-.panel__checkbox-input {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  margin: -1px;
-  padding: 0;
-  border: 0;
-  clip-path: inset(50%);
+/* El borde «doble»: uno de fuera y una sombra `inset` del mismo grosor
+   (`Main.dc.html:911`), no `border-style: double`. */
+.panel__model-card:has(input:checked) {
+  border-color: var(--rf-primary);
+  box-shadow: inset 0 0 0 1px var(--rf-primary);
+  background: var(--rf-surface);
+}
+
+.panel__model-card--disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.panel__model-card--disabled input {
+  pointer-events: none;
+}
+
+.panel__model-card > .rf-hint {
+  max-width: 100%;
   overflow: hidden;
   white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
-/* El cuadrado de 18 px del artboard: vacío con su contorno, y relleno con la
-   marca de verificación al marcarse. */
-.panel__checkbox-box {
-  flex: none;
+/* La miniatura es una aproximación en CSS, no un render (docs/design/panel-de-firma.md § El modelo). */
+.panel__model-thumbnail {
   display: flex;
   align-items: center;
+  gap: 6px;
+  width: 100%;
+  height: 30px;
+  padding: 3px 5px;
+  border: 1px solid var(--rf-border-subtle);
+  border-radius: 2px;
+  background: var(--rf-bg);
+}
+
+.panel__model-lines {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
   justify-content: center;
-  width: 18px;
-  height: 18px;
-  margin-top: 1px;
-  border: 1px solid var(--rf-border-strong);
-  border-radius: var(--rf-radius-sm);
+  gap: 3px;
+  min-width: 0;
 }
 
-.panel__checkbox-input:checked + .panel__checkbox-box {
-  border-color: transparent;
-  background: var(--rf-primary);
-  color: var(--rf-on-primary);
+.panel__model-lines span {
+  height: 3px;
+  border-radius: var(--rf-radius-pill);
+  background: var(--rf-border-strong);
 }
 
-.panel__checkbox-input:disabled + .panel__checkbox-box {
-  opacity: 0.4;
+.panel__model-lines span:nth-child(1) {
+  width: 70%;
 }
 
-.panel__checkbox-input:focus-visible + .panel__checkbox-box {
-  outline: var(--rf-focus-ring-width) solid var(--rf-focus-ring);
-  outline-offset: var(--rf-focus-ring-offset);
+.panel__model-lines span:nth-child(2) {
+  width: 50%;
+}
+
+.panel__model-lines span:nth-child(3) {
+  width: 60%;
+}
+
+/* El hueco de la rúbrica dentro de una tarjeta: a la izquierda del texto en
+   *Completa*, todo el ancho en *Solo rúbrica* (`m.estiloHueco`). */
+.panel__model-rubric,
+.panel__model-rubric--empty {
+  flex: none;
+  width: 30%;
+  height: 100%;
+  border-radius: 2px;
+}
+
+.panel__model-rubric {
+  border: 1px solid transparent;
+  background: var(--rf-border-strong);
+}
+
+.panel__model-rubric--empty {
+  border: 1px dashed var(--rf-border-strong);
+}
+
+.panel__model-rubric--full {
+  flex: 1;
+  width: auto;
 }
 
 .panel__rubric {
@@ -222,6 +266,12 @@
   border: 1px solid var(--rf-border-strong);
   border-radius: var(--rf-radius-sm);
   background: #ffffff;
+}
+
+/* El hueco de «Encendida sin imagen»: mismo hueco, sin fichero que enseñar. */
+.panel__rubric-thumbnail--empty {
+  border-style: dashed;
+  background: transparent;
 }
 
 /* La miniatura y el botón comparten fila: la imagen es la prueba de qué se va

@@ -8,11 +8,11 @@ import type { Certificate } from "./certificate";
 import { isUsable } from "./certificate";
 import type { Destination } from "./destination";
 import type { SigningFailure } from "./failure";
+import { ModelFieldset } from "./ModelFieldset";
 import { PanelFooter } from "./PanelFooter";
 import { PlacementFieldset } from "./PlacementFieldset";
 import { formatSize } from "./panelFormat";
 import type { Rubric, RubricFailure } from "./rubric";
-import { SignatureFieldsFieldset } from "./SignatureFieldsFieldset";
 import "./SigningPanel.css";
 import { usePlacementField } from "./usePlacementField";
 import type { VisibleSignature } from "./visibleSignature";
@@ -254,7 +254,7 @@ export function SigningPanel({
                 sealButton={sealButton}
               />
 
-              <SignatureFieldsFieldset
+              <ModelFieldset
                 signature={signature}
                 onChangeSignature={onChangeSignature}
                 rubric={rubric}

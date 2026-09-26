@@ -691,41 +691,38 @@ msgstr "Visible signature"
 msgid "panel.visibleSignature.toggle"
 msgstr "Stamp a signature box on the document"
 
-msgid "panel.visibleSignature.content"
-msgstr "Contents"
+msgid "panel.visibleSignature.model.title"
+msgstr "Model"
 
-msgid "panel.visibleSignature.fields.rubric"
-msgstr "Rubric"
+msgid "panel.visibleSignature.model.complete"
+msgstr "Complete"
 
-msgid "panel.visibleSignature.fields.rubricDisabled"
-msgstr "Choose an image first"
+msgid "panel.visibleSignature.model.rubricOnly"
+msgstr "Rubric only"
 
-msgid "panel.visibleSignature.fields.signerName"
-msgstr "Signer"
+msgid "panel.visibleSignature.model.custom"
+msgstr "Custom"
 
-msgid "panel.visibleSignature.fields.issuer"
-msgstr "Issuer"
+msgid "panel.visibleSignature.model.rubricOnlyDisabled"
+msgstr "Needs the rubric"
 
-msgid "panel.visibleSignature.fields.signedAt"
-msgstr "Date"
+msgid "panel.visibleSignature.model.customUnavailable"
+msgstr "Coming soon"
 
-msgid "panel.visibleSignature.fields.reason"
-msgstr "Reason"
+msgid "panel.visibleSignature.rubric.toggle"
+msgstr "With rubric"
 
-msgid "panel.visibleSignature.reason.label"
-msgstr "Reason"
+msgid "panel.visibleSignature.rubric.lockedTitle"
+msgstr "Rubric only needs it"
 
-msgid "panel.visibleSignature.reason.placeholder"
-msgstr "Approved"
-
-msgid "panel.visibleSignature.rubric.title"
-msgstr "Rubric image"
+msgid "panel.visibleSignature.rubric.noImageTitle"
+msgstr "No rubric loaded"
 
 msgid "panel.visibleSignature.rubric.choose"
-msgstr "Choose image"
+msgstr "Load…"
 
 msgid "panel.visibleSignature.rubric.change"
-msgstr "Change image"
+msgstr "Change…"
 
 msgid "panel.visibleSignature.rubric.thumbnail"
 msgstr "Your rubric, as it will be stamped"
@@ -1735,6 +1732,36 @@ msgstr[2] "{{origin}} accepts none of your {{count}} certificates"
 
 msgid "sede.noCertificate.excludedBody"
 msgstr "You'll have to carry on from the site."
+
+#~ msgid "panel.visibleSignature.rubric.title"
+#~ msgstr "Rubric image"
+
+#~ msgid "panel.visibleSignature.content"
+#~ msgstr "Contents"
+
+#~ msgid "panel.visibleSignature.fields.rubric"
+#~ msgstr "Rubric"
+
+#~ msgid "panel.visibleSignature.fields.rubricDisabled"
+#~ msgstr "Choose an image first"
+
+#~ msgid "panel.visibleSignature.fields.signerName"
+#~ msgstr "Signer"
+
+#~ msgid "panel.visibleSignature.fields.issuer"
+#~ msgstr "Issuer"
+
+#~ msgid "panel.visibleSignature.fields.signedAt"
+#~ msgstr "Date"
+
+#~ msgid "panel.visibleSignature.fields.reason"
+#~ msgstr "Reason"
+
+#~ msgid "panel.visibleSignature.reason.label"
+#~ msgstr "Reason"
+
+#~ msgid "panel.visibleSignature.reason.placeholder"
+#~ msgstr "Approved"
 
 #~ msgid "trust.notice.title"
 #~ msgstr "When a government site asks you to sign"

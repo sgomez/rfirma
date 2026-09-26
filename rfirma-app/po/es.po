@@ -707,41 +707,38 @@ msgstr "Firma visible"
 msgid "panel.visibleSignature.toggle"
 msgstr "Estampar un recuadro de firma en el documento"
 
-msgid "panel.visibleSignature.content"
-msgstr "Contenido"
+msgid "panel.visibleSignature.model.title"
+msgstr "Modelo"
 
-msgid "panel.visibleSignature.fields.rubric"
-msgstr "Rúbrica"
+msgid "panel.visibleSignature.model.complete"
+msgstr "Completa"
 
-msgid "panel.visibleSignature.fields.rubricDisabled"
-msgstr "Elige antes una imagen"
+msgid "panel.visibleSignature.model.rubricOnly"
+msgstr "Solo rúbrica"
 
-msgid "panel.visibleSignature.fields.signerName"
-msgstr "Firmante"
+msgid "panel.visibleSignature.model.custom"
+msgstr "Personalizada"
 
-msgid "panel.visibleSignature.fields.issuer"
-msgstr "Emisor"
+msgid "panel.visibleSignature.model.rubricOnlyDisabled"
+msgstr "Necesita la rúbrica"
 
-msgid "panel.visibleSignature.fields.signedAt"
-msgstr "Fecha"
+msgid "panel.visibleSignature.model.customUnavailable"
+msgstr "Disponible próximamente"
 
-msgid "panel.visibleSignature.fields.reason"
-msgstr "Motivo"
+msgid "panel.visibleSignature.rubric.toggle"
+msgstr "Con rúbrica"
 
-msgid "panel.visibleSignature.reason.label"
-msgstr "Motivo"
+msgid "panel.visibleSignature.rubric.lockedTitle"
+msgstr "Solo rúbrica la necesita"
 
-msgid "panel.visibleSignature.reason.placeholder"
-msgstr "Conforme"
-
-msgid "panel.visibleSignature.rubric.title"
-msgstr "Imagen de la rúbrica"
+msgid "panel.visibleSignature.rubric.noImageTitle"
+msgstr "Sin rúbrica cargada"
 
 msgid "panel.visibleSignature.rubric.choose"
-msgstr "Elegir imagen"
+msgstr "Cargar…"
 
 msgid "panel.visibleSignature.rubric.change"
-msgstr "Cambiar imagen"
+msgstr "Cambiar…"
 
 msgid "panel.visibleSignature.rubric.thumbnail"
 msgstr "Tu rúbrica, tal como se estampará"
@@ -1758,6 +1755,36 @@ msgstr[2] "{{origin}} no acepta ninguno de tus {{count}} certificados"
 
 msgid "sede.noCertificate.excludedBody"
 msgstr "Tendrás que continuar desde la sede."
+
+#~ msgid "panel.visibleSignature.rubric.title"
+#~ msgstr "Imagen de la rúbrica"
+
+#~ msgid "panel.visibleSignature.content"
+#~ msgstr "Contenido"
+
+#~ msgid "panel.visibleSignature.fields.rubric"
+#~ msgstr "Rúbrica"
+
+#~ msgid "panel.visibleSignature.fields.rubricDisabled"
+#~ msgstr "Elige antes una imagen"
+
+#~ msgid "panel.visibleSignature.fields.signerName"
+#~ msgstr "Firmante"
+
+#~ msgid "panel.visibleSignature.fields.issuer"
+#~ msgstr "Emisor"
+
+#~ msgid "panel.visibleSignature.fields.signedAt"
+#~ msgstr "Fecha"
+
+#~ msgid "panel.visibleSignature.fields.reason"
+#~ msgstr "Motivo"
+
+#~ msgid "panel.visibleSignature.reason.label"
+#~ msgstr "Motivo"
+
+#~ msgid "panel.visibleSignature.reason.placeholder"
+#~ msgstr "Conforme"
 
 #~ msgid "pin.title"
 #~ msgstr "Introduce el PIN"

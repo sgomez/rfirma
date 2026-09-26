@@ -54,6 +54,11 @@
   cursor: pointer;
 }
 
+.switch__control:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 /* 40×24 con el pomo de 16 px y 4 px de holgura, que es la medida del artboard.
    El área de pulsación no encoge por ello: la da `.switch__control`, que
    mantiene sus 44 px de alto mínimo. */
