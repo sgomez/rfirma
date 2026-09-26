@@ -780,7 +780,7 @@ msgid "panel.visibleSignature.rubric.thumbnail"
 msgstr "Zure errubrika, estanpatuko den bezala"
 
 msgid "panel.footer.savedIn"
-msgstr "Hemen gordeko da"
+msgstr "Gorde hemen"
 
 #. {{folder}} es la ruta corta de la carpeta de destino, no la ruta completa.
 msgid "panel.footer.unwritable"

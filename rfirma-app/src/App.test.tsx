@@ -554,11 +554,11 @@ describe("App", () => {
     await openPdf(user);
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
 
-    expect(await within(panel).findByText("…/Documentos/")).toBeInTheDocument();
+    expect(await within(panel).findByText("Documentos")).toBeInTheDocument();
 
     await user.click(within(panel).getByRole("button", { name: "Cambiar" }));
 
-    expect(await within(panel).findByText("…/Escritorio/")).toBeInTheDocument();
+    expect(await within(panel).findByText("Escritorio")).toBeInTheDocument();
     expect(within(panel).getByText(/factura-firmado-2\.pdf/)).toBeInTheDocument();
     await expect(preferences.read()).resolves.toMatchObject({ destination: "Documentos" });
   });

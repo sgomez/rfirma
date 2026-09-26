@@ -104,11 +104,10 @@ export function inMemoryDestination(
 /**
  * Cuántos caracteres caben en el nombre y en la carpeta antes de recortar.
  *
- * Son un presupuesto de caracteres y no una medida de píxeles a propósito: la
- * línea **envuelve** (`overflow-wrap: anywhere`), así que el recorte no está
- * para que quepa en un renglón —eso ya lo resuelve el salto— sino para que un
- * nombre desmedido no se coma el pie entero. Con la columna de 360 px del panel
- * dos renglones son ~40 caracteres cada uno.
+ * Son un presupuesto de caracteres y no una medida de píxeles: la elipsis de
+ * la hoja de estilos ya resuelve que la línea quepa en un renglón, pero corta
+ * por la cola, y eso perdería `-firmado-N` y la extensión. Este recorte va
+ * primero y por el medio para conservarlos siempre.
  */
 export const NAME_BUDGET = 40;
 export const FOLDER_BUDGET = 24;

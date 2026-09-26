@@ -197,7 +197,7 @@ export function CrossCircleIcon({ size = 24 }: IconProps) {
   return <VerdictIcon size={size} glyph={CROSS_CIRCLE} />;
 }
 
-/** La carpeta de la fila «Se guardará en». */
+/** La carpeta de la fila «Guardar en». */
 export function FolderIcon({ size = 20 }: IconProps) {
   return (
     <svg width={size} height={size} {...PEN} aria-hidden="true" focusable="false">
