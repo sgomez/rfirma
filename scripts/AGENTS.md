@@ -14,6 +14,7 @@ Los arneses que las recetas del `justfile` llaman por nombre, siguiendo el patr�
 | `check-glibc.sh` | Comprueba el suelo de glibc de la librería nativa. |
 | `flatpak-sources.sh` | Regenera las fuentes vendorizadas del manifiesto flatpak. |
 | `check-native.sh` | Falla nombrando `just native` si la librería nativa no está construida. |
+| `token-per-test.sh` | Envoltorio de nextest que da a cada proceso de prueba su propia copia del almacén de SoftHSM. Lo llama `.config/nextest.toml` de `rfirma-app/src-tauri`, no una receta. |
 | `clean-coverage.sh` | Borra el árbol instrumentado y los informes de cobertura sueltos. |
 | `protocol-map.py` | Genera el mapa del protocolo de AutoFirma contra la etiqueta fijada. |
 | `tests/outline_test.sh` | Prueba el esqueleto que produce `outline.sh` sobre los fixtures de `tests/fixtures/`. |
