@@ -143,7 +143,6 @@ fn the_box_the_site_placed_reaches_the_bridge_exactly_as_it_came() {
         placement: None,
         layer2_text: "Firmado por: Ada Lovelace Byron".to_owned(),
         rubric_image: None,
-        sign_reason: None,
         allow_unregistered_signatures: false,
     };
 

@@ -206,7 +206,6 @@ fn an_invisible_signature() -> SignatureConfig {
         placement: None,
         layer2_text: String::new(),
         rubric_image: None,
-        sign_reason: None,
         allow_unregistered_signatures: false,
     }
 }

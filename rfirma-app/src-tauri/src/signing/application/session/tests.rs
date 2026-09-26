@@ -116,25 +116,6 @@ fn a_box_outside_the_page_is_refused_instead_of_being_clipped_in_silence() {
 }
 
 #[test]
-fn an_empty_reason_is_not_sent_at_all() {
-    let config = config_for(&chosen(&an_order()), &a_certificate("FIRMA", &[])).expect("cabe");
-
-    assert_eq!(config.sign_reason, None);
-}
-
-#[test]
-fn a_reason_that_was_written_does_travel() {
-    let order = SigningOrder {
-        reason: "Conforme".to_owned(),
-        ..an_order()
-    };
-
-    let config = config_for(&chosen(&order), &a_certificate("FIRMA", &[])).expect("cabe");
-
-    assert_eq!(config.sign_reason.as_deref(), Some("Conforme"));
-}
-
-#[test]
 fn there_is_nothing_to_finish_when_no_cycle_was_started() {
     let session = SigningSession::default();
 
@@ -538,7 +519,7 @@ const THE_MASKED_HOLDER: &str = "ADA LOVELACE BYRON - ***9999**";
 
 fn an_order_with(content: serde_json::Value, with_rubric: bool) -> SigningOrder {
     SigningOrder {
-        content: Some(serde_json::from_value(content).expect("el contenido es de la ventana")),
+        content: serde_json::from_value(content).expect("el contenido es de la ventana"),
         with_rubric,
         rubric: Some("UNA-RUBRICA".to_owned()),
         ..an_order()
@@ -609,24 +590,4 @@ fn a_placeholder_typed_into_the_phrase_does_not_reach_the_bridge() {
     ));
 
     assert!(!config.layer2_text.contains("$$"), "{}", config.layer2_text);
-}
-
-#[test]
-fn the_boxes_and_the_reason_of_today_still_compose_the_text() {
-    let order = SigningOrder {
-        reason: "Conforme".to_owned(),
-        rubric: Some("UNA-RUBRICA".to_owned()),
-        ..an_order()
-    };
-
-    let config = config_of(&order);
-
-    assert_eq!(
-        config.layer2_text,
-        format!(
-            "Firmado por: {THE_MASKED_HOLDER}. Emisor: AC FNMT Usuarios. \
-             Fecha: 31/08/26, 12:00:00.\nMotivo: Conforme"
-        )
-    );
-    assert_eq!(config.rubric_image.as_deref(), Some("UNA-RUBRICA"));
 }

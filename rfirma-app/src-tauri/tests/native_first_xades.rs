@@ -45,7 +45,6 @@ fn sign_xades(bridge: &NativeBridge, certificate: &TokenCertificate) {
         placement: None,
         layer2_text: String::new(),
         rubric_image: None,
-        sign_reason: None,
         allow_unregistered_signatures: false,
     };
     let cycle = cycle::presign(

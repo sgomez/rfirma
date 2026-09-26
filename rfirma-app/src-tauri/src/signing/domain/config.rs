@@ -19,7 +19,6 @@ const UPPER_RIGHT_X_KEY: &str = "signaturePositionOnPageUpperRightX";
 const UPPER_RIGHT_Y_KEY: &str = "signaturePositionOnPageUpperRightY";
 const LAYER2_TEXT_KEY: &str = "layer2Text";
 const RUBRIC_IMAGE_KEY: &str = "signatureRubricImage";
-const SIGN_REASON_KEY: &str = "signReason";
 const LAYER2_FONT_SIZE_KEY: &str = "layer2FontSize";
 /// Clave para autorizar la cofirma de firmas no registradas en el puente.
 pub const ALLOW_UNREGISTERED_KEY: &str = "allowCosigningUnregisteredSignatures";
@@ -38,8 +37,6 @@ pub enum Setting {
     Layer2Text,
     /// La rúbrica, si la hay.
     RubricImage,
-    /// El motivo de la firma, si lo hay.
-    SignReason,
     /// El tamaño de letra del recuadro, siempre [`LAYER2_FONT_SIZE`].
     Layer2FontSize,
     /// Consentimiento para cofirmar firmas no registradas.
@@ -47,13 +44,12 @@ pub enum Setting {
 }
 
 impl Setting {
-    /// Los siete.
-    pub const ALL: [Self; 7] = [
+    /// Los seis.
+    pub const ALL: [Self; 6] = [
         Self::SubFilter,
         Self::Geometry,
         Self::Layer2Text,
         Self::RubricImage,
-        Self::SignReason,
         Self::Layer2FontSize,
         Self::AllowUnregisteredSignatures,
     ];
@@ -71,7 +67,6 @@ impl Setting {
             ],
             Self::Layer2Text => &[LAYER2_TEXT_KEY],
             Self::RubricImage => &[RUBRIC_IMAGE_KEY],
-            Self::SignReason => &[SIGN_REASON_KEY],
             Self::Layer2FontSize => &[LAYER2_FONT_SIZE_KEY],
             Self::AllowUnregisteredSignatures => &[ALLOW_UNREGISTERED_KEY],
         }
@@ -127,12 +122,10 @@ impl Placement {
 pub struct SignatureConfig {
     /// Dónde cae el recuadro y en qué páginas cuando lo coloca rFirma.
     pub placement: Option<Placement>,
-    /// El texto del recuadro, compuesto por [`super::layer2_text::compose_layer2_text`].
+    /// El texto del recuadro, compuesto por [`super::layer2_text::compose_visible_content`].
     pub layer2_text: String,
     /// La rúbrica en JPEG opaco y sin perfil ICC, en base64. `None` si no la hay.
     pub rubric_image: Option<String>,
-    /// El motivo de la firma. `None` si no lo hay.
-    pub sign_reason: Option<String>,
     /// Consentimiento para cofirmar firmas no registradas.
     pub allow_unregistered_signatures: bool,
 }
@@ -144,7 +137,6 @@ impl SignatureConfig {
             placement,
             layer2_text,
             rubric_image,
-            sign_reason,
             allow_unregistered_signatures,
         } = self;
 
@@ -158,39 +150,10 @@ impl SignatureConfig {
         if let Some(image) = rubric_image {
             params.insert(RUBRIC_IMAGE_KEY.to_owned(), image.clone());
         }
-        if let Some(reason) = sign_reason {
-            params.insert(SIGN_REASON_KEY.to_owned(), reason.clone());
-        }
         if *allow_unregistered_signatures {
             params.insert(ALLOW_UNREGISTERED_KEY.to_owned(), "true".to_owned());
         }
         params
-    }
-}
-
-/// Las cuatro casillas de texto del recuadro que la persona marcó.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub struct ChosenFields {
-    pub signer_name: bool,
-    pub issuer: bool,
-    pub signed_at: bool,
-    pub reason: bool,
-}
-
-/// De dónde sale el texto del recuadro: las casillas de siempre o un modelo.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum VisibleText {
-    Fields(ChosenFields),
-    Model(VisibleContent),
-}
-
-impl VisibleText {
-    /// Si la firma visible lleva la rúbrica: con las casillas, siempre que la haya; *Solo rúbrica* la fuerza.
-    pub fn carries_the_rubric(&self, with_rubric: bool) -> bool {
-        match self {
-            Self::Fields(_) => true,
-            Self::Model(content) => with_rubric || *content == VisibleContent::RubricOnly,
-        }
     }
 }
 
@@ -199,10 +162,8 @@ impl VisibleText {
 pub struct SigningChoice {
     /// Dónde cae el recuadro, o ninguno si la firma es invisible.
     pub placement: Option<Placement>,
-    /// De dónde sale el texto del recuadro.
-    pub text: VisibleText,
-    /// El motivo, o vacío si no se especifica.
-    pub reason: String,
+    /// El contenido del recuadro, por modelo.
+    pub content: VisibleContent,
     /// La fecha y hora, ya formateadas.
     pub signed_at: String,
     /// La rúbrica en JPEG y Base64, ya normalizada.
@@ -218,8 +179,7 @@ impl SigningChoice {
     pub fn for_the_site(allow_unregistered_signatures: bool) -> Self {
         Self {
             placement: None,
-            text: VisibleText::Fields(ChosenFields::default()),
-            reason: String::new(),
+            content: VisibleContent::Custom(Vec::new()),
             signed_at: String::new(),
             rubric: None,
             language: Language::Spanish,

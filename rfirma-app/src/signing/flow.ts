@@ -83,9 +83,6 @@ export interface SigningOrder {
   content: VisibleContent;
   /** Si la firma visible lleva la rúbrica. Común a los tres modelos. */
   withRubric: boolean;
-  /** Casillas y motivo retirados de la interfaz: el puente los acepta en blanco. */
-  fields: { signerName: boolean; issuer: boolean; signedAt: boolean; reason: boolean };
-  reason: string;
   /** La fecha y hora ya formateadas, **las mismas** de la vista previa. */
   signedAt: string;
   /** La rúbrica ya normalizada, en Base64; `null` si no la hay. */

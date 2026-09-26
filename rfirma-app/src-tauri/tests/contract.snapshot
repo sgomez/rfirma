@@ -175,12 +175,6 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
       status: StatusView
       remembered: bool
 
-  pub struct VisibleFieldsOrder
-      signerName: bool
-      issuer: bool
-      signedAt: bool
-      reason: bool
-
   pub enum DatumOrder
       Signer
       Issuer
@@ -207,10 +201,8 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
       document: String
       certificate: String
       placement: Option<PlacementOrder>
-      content: Option<VisibleContentOrder>
+      content: VisibleContentOrder
       withRubric: bool
-      fields: VisibleFieldsOrder
-      reason: String
       signedAt: String
       rubric: Option<String>
       language: String

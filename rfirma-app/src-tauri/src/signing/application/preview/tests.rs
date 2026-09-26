@@ -21,7 +21,6 @@ fn a_page_set_of_twenty_travels_as_a_single_presign_request() {
         }),
         layer2_text: String::new(),
         rubric_image: None,
-        sign_reason: None,
         allow_unregistered_signatures: false,
     };
 

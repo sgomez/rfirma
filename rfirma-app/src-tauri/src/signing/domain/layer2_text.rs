@@ -16,27 +16,11 @@ const MIN_DIGITS: usize = 3;
 /// Dígitos del cuerpo de un DNI, NIE o CIF.
 const IDENTIFIER_DIGITS: std::ops::RangeInclusive<usize> = 7..=8;
 
-/// Campos marcados en el panel de firma visible.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
-pub struct VisibleTextFields<'a> {
-    /// Nombre del firmante.
-    pub signer_name: Option<&'a str>,
-    /// Autoridad emisora del certificado.
-    pub issuer: Option<&'a str>,
-    /// Fecha y hora de la firma ya formateadas.
-    pub signed_at: Option<&'a str>,
-    /// Motivo de la firma.
-    pub reason: Option<&'a str>,
-    /// Indica si el certificado es de seudónimo.
-    pub pseudonym: bool,
-}
-
 /// Las etiquetas del recuadro en un idioma.
 struct Layer2Labels {
     signer: &'static str,
     issuer: &'static str,
     signed_at: &'static str,
-    reason: &'static str,
 }
 
 fn labels(language: Language) -> Layer2Labels {
@@ -45,65 +29,27 @@ fn labels(language: Language) -> Layer2Labels {
             signer: "Firmado por",
             issuer: "Emisor",
             signed_at: "Fecha",
-            reason: "Motivo",
         },
         Language::Catalan => Layer2Labels {
             signer: "Signat per",
             issuer: "Emissor",
             signed_at: "Data",
-            reason: "Motiu",
         },
         Language::Basque => Layer2Labels {
             signer: "Sinatzailea",
             issuer: "Jaulkitzailea",
             signed_at: "Data",
-            reason: "Arrazoia",
         },
         Language::Galician => Layer2Labels {
             signer: "Asinado por",
             issuer: "Emisor",
             signed_at: "Data",
-            reason: "Motivo",
         },
         Language::English => Layer2Labels {
             signer: "Signed by",
             issuer: "Issuer",
             signed_at: "Date",
-            reason: "Reason",
         },
-    }
-}
-
-/// Compone el texto del recuadro con las casillas marcadas, en el idioma de la
-/// aplicación.
-///
-/// Firmante, emisor y fecha van en **un solo párrafo**, separados por puntos;
-/// el motivo, si lo hay, en el renglón de debajo. Sin ninguna casilla marcada
-/// devuelve la cadena vacía, que **no** es lo mismo que no enviar `layer2Text`:
-/// ver [`super::config::SignatureConfig`].
-pub fn compose_layer2_text(fields: &VisibleTextFields<'_>, language: Language) -> String {
-    let labels = labels(language);
-    let VisibleTextFields {
-        signer_name,
-        issuer,
-        signed_at,
-        reason,
-        pseudonym,
-    } = fields;
-
-    let paragraph = paragraph_of([
-        (
-            labels.signer,
-            signer_name.map(|name| masked_signer(name, *pseudonym)),
-        ),
-        (labels.issuer, issuer.map(str::to_owned)),
-        (labels.signed_at, signed_at.map(str::to_owned)),
-    ]);
-
-    match reason.map(|reason| format!("{}: {reason}", labels.reason)) {
-        Some(reason) if paragraph.is_empty() => reason,
-        Some(reason) => format!("{paragraph}\n{reason}"),
-        None => paragraph,
     }
 }
 
@@ -116,6 +62,13 @@ pub enum VisibleContent {
     RubricOnly,
     /// La frase que compuso la persona, con sus datos.
     Custom(Vec<PhrasePart>),
+}
+
+impl VisibleContent {
+    /// Si la firma visible lleva la rúbrica: `withRubric` manda, salvo en *Solo rúbrica*, que la fuerza.
+    pub fn carries_the_rubric(&self, with_rubric: bool) -> bool {
+        with_rubric || *self == Self::RubricOnly
+    }
 }
 
 /// Un trozo de la frase de *Personalizada*: texto literal o un dato.

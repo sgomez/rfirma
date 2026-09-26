@@ -171,7 +171,6 @@ pub(crate) fn a_cycle_that_may_fail(
         placement: None,
         layer2_text: String::new(),
         rubric_image: None,
-        sign_reason: None,
         allow_unregistered_signatures: false,
     };
     let from_the_site: BTreeMap<String, String> = declared
@@ -441,7 +440,6 @@ pub(crate) fn a_config_of(text: &str, rubric: Option<String>) -> SignatureConfig
         }),
         layer2_text: text.to_owned(),
         rubric_image: rubric,
-        sign_reason: None,
         allow_unregistered_signatures: false,
     }
 }
