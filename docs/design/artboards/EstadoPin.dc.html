@@ -256,21 +256,21 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
       transform:translateX(-50%);gap:2px;padding:4px;border-radius:var(--rf-radius-pill);
       border:1px solid var(--rf-border-subtle);background:var(--rf-surface);
       box-shadow:var(--rf-shadow-elevated);white-space:nowrap">
-      <button type="button" title="Primera página" style="{{ estiloNav }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 6l-6 6 6 6M9 6l-6 6 6 6"/></svg></button>
-      <button type="button" title="Página anterior" style="{{ estiloNav }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></button>
+      <button type="button" title="Primera página" style="{{ estiloNav }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 6l-6 6 6 6M9 6l-6 6 6 6"/></svg></button>
+      <button type="button" title="Página anterior" style="{{ estiloNav }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></button>
       <div class="rf-row rf-gap-xs" style="padding:0 6px;flex:none">
         <span style="min-width:34px;height:30px;flex:none;display:flex;align-items:center;justify-content:center;
           border:1px solid var(--rf-border-strong);border-radius:var(--rf-radius-sm);
           font-size:13px;font-weight:700;padding:0 4px">{{ viendo }}</span>
         <span class="rf-body rf-text-muted" style="flex:none">de {{ n }}</span>
       </div>
-      <button type="button" title="Página siguiente" style="{{ estiloNav }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>
-      <button type="button" title="Última página" style="{{ estiloNav }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 6l6 6-6 6M15 6l6 6-6 6"/></svg></button>
+      <button type="button" title="Página siguiente" style="{{ estiloNav }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>
+      <button type="button" title="Última página" style="{{ estiloNav }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 6l6 6-6 6M15 6l6 6-6 6"/></svg></button>
       <span style="width:1px;height:24px;flex:none;margin:0 4px;background:var(--rf-border-subtle)"></span>
       <span title="Alejar" style="width:32px;height:32px;flex:none;display:flex;align-items:center;justify-content:center;border-radius:var(--rf-radius-pill);color:var(--rf-text)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/></svg></span>
       <span class="rf-body" style="min-width:44px;flex:none;text-align:center;font-weight:700">100 %</span>
       <span title="Acercar" style="width:32px;height:32px;flex:none;display:flex;align-items:center;justify-content:center;border-radius:var(--rf-radius-pill);color:var(--rf-text)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span>
-      <span title="Ajustar a la ventana" style="width:32px;height:32px;flex:none;display:flex;align-items:center;justify-content:center;border-radius:var(--rf-radius-pill);color:var(--rf-text-muted)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></span>
+      <span title="Ajustar a la ventana" style="width:32px;height:32px;flex:none;display:flex;align-items:center;justify-content:center;border-radius:var(--rf-radius-pill);color:var(--rf-text)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></span>
     </div>
   </div>
 
@@ -789,7 +789,7 @@ class Component extends DCLogic {
       estiloFirma: "position:absolute;" + posicion + "width:" + anchoFirma + "px;height:" + altoFirma + "px;background:var(--rf-bg);border-radius:2px;"
         + (editable ? "border:1.5px solid var(--rf-primary);cursor:move;" : "border:1.5px solid transparent;")
         + (arrastrando ? "box-shadow:var(--rf-shadow-elevated);" : ""),
-      estiloNav: "width:32px;height:32px;flex:none;display:flex;align-items:center;justify-content:center;"
+      estiloNav: "width:32px;height:32px;flex:none;display:flex;align-items:center;justify-content:center;border-radius:var(--rf-radius-pill);color:var(--rf-text);background:none;border:none;cursor:pointer;padding:0"
         + "border-radius:var(--rf-radius-pill);color:var(--rf-text);background:none;border:none;cursor:pointer;padding:0",
       viendo: c.viendo, n: d.n,
 

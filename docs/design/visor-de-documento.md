@@ -31,7 +31,10 @@ está en el panel.
   superior.
 - **Píldora**: `--rf-radius-pill`, fondo `--rf-surface`, borde
   `--rf-border-subtle`, `--rf-shadow-elevated`, 4 px de relleno, 2 px entre
-  botones. Cada botón es un círculo de 32 px con icono de 16 px. El divisor entre
+  botones. Cada botón es un círculo de 32 px con icono de 16 px en `--rf-text`,
+  no en el `--rf-text-muted` de `.rf-btn--ghost`; desactivado, a opacidad 0.45;
+  al pasar por encima de uno activado, el círculo toma fondo
+  `--rf-border-subtle`. El divisor entre
   los dos grupos es una línea de 1 × 24 px en `--rf-border-subtle`.
 - **Número de página**: pastilla de 56 × 30 px con `--rf-radius-sm`, borde
   `--rf-border-strong` y el número a 13 px en peso 700. En la aplicación es un
@@ -107,7 +110,8 @@ eso lo dice el panel.
 ⏮ ‹ [6] de 6 › ⏭  │  − 100 % + ⤢
 ```
 
-Iconos `<svg>` en línea sobre lienzo `0 0 24 24`, trazo 1.5 (ID-53).
+Iconos `<svg>` en línea sobre lienzo `0 0 24 24`, trazo 1.5 (ID-53), salvo los
+cuatro chevrons de paginación, a trazo 2. El − y el + del zoom siguen a 1.5.
 
 - **Páginas**: primera, anterior, número editable, total, siguiente, última.
   Ocupa lo mismo con 4 páginas que con 400.

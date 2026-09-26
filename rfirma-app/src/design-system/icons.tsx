@@ -207,9 +207,19 @@ export function FolderIcon({ size = 20 }: IconProps) {
 }
 
 /** La flecha «siguiente» de la barra del visor y de los enlaces del panel. */
-export function ChevronRightIcon({ size = 16 }: IconProps) {
+export function ChevronRightIcon({
+  size = 16,
+  strokeWidth = 1.5,
+}: IconProps & { strokeWidth?: number }) {
   return (
-    <svg width={size} height={size} {...PEN} aria-hidden="true" focusable="false">
+    <svg
+      width={size}
+      height={size}
+      {...PEN}
+      strokeWidth={strokeWidth}
+      aria-hidden="true"
+      focusable="false"
+    >
       <path d="M9 6l6 6-6 6" />
     </svg>
   );
@@ -235,27 +245,57 @@ export function ChevronDownIcon({
 }
 
 /** La flecha «anterior» de la barra del visor. */
-export function ChevronLeftIcon({ size = 16 }: IconProps) {
+export function ChevronLeftIcon({
+  size = 16,
+  strokeWidth = 1.5,
+}: IconProps & { strokeWidth?: number }) {
   return (
-    <svg width={size} height={size} {...PEN} aria-hidden="true" focusable="false">
+    <svg
+      width={size}
+      height={size}
+      {...PEN}
+      strokeWidth={strokeWidth}
+      aria-hidden="true"
+      focusable="false"
+    >
       <path d="M15 6l-6 6 6 6" />
     </svg>
   );
 }
 
 /** La doble flecha «a la primera página». */
-export function ChevronsLeftIcon({ size = 16 }: IconProps) {
+export function ChevronsLeftIcon({
+  size = 16,
+  strokeWidth = 1.5,
+}: IconProps & { strokeWidth?: number }) {
   return (
-    <svg width={size} height={size} {...PEN} aria-hidden="true" focusable="false">
+    <svg
+      width={size}
+      height={size}
+      {...PEN}
+      strokeWidth={strokeWidth}
+      aria-hidden="true"
+      focusable="false"
+    >
       <path d="M17 6l-6 6 6 6M9 6l-6 6 6 6" />
     </svg>
   );
 }
 
 /** La doble flecha «a la última página». */
-export function ChevronsRightIcon({ size = 16 }: IconProps) {
+export function ChevronsRightIcon({
+  size = 16,
+  strokeWidth = 1.5,
+}: IconProps & { strokeWidth?: number }) {
   return (
-    <svg width={size} height={size} {...PEN} aria-hidden="true" focusable="false">
+    <svg
+      width={size}
+      height={size}
+      {...PEN}
+      strokeWidth={strokeWidth}
+      aria-hidden="true"
+      focusable="false"
+    >
       <path d="M7 6l6 6-6 6M15 6l6 6-6 6" />
     </svg>
   );

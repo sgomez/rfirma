@@ -715,3 +715,18 @@ El porqué de cada descarte está en la anotación `nota-main` y en las fichas
 [`pestanas-de-documentos`](../pestanas-de-documentos.md),
 [`cabecera`](../cabecera.md) y
 [`dialogo-progreso-firma`](../dialogo-progreso-firma.md).
+
+## Lo que cambió en la píldora del visor
+
+Se validó en la aplicación y se trasladó a `Main`, `EstadoPin`,
+`EstadoPinIncorrecto`, `EstadoAcercaDe` y `EstadoPaginasSinFirmaVisible`, que
+dibujan la píldora:
+
+- **Los botones de la píldora van en `--rf-text`**, también «Ajustar a la
+  ventana», que estaba en `--rf-text-muted`; los de paginación llevan el círculo
+  de `--rf-radius-pill` sin fondo ni borde.
+- **Los cuatro chevrons de paginación pasan a trazo 2**; el − y el + del zoom
+  siguen a 1.5.
+- El fondo `--rf-border-subtle` al pasar por encima no se dibuja: los artboards
+  no modelan hover. Lo recoge la ficha
+  [`visor-de-documento`](../visor-de-documento.md).

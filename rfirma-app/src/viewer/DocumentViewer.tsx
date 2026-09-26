@@ -386,7 +386,7 @@ export function DocumentViewer({
           disabled={page === 1}
           onClick={() => goTo(1)}
         >
-          <ChevronsLeftIcon />
+          <ChevronsLeftIcon strokeWidth={2} />
         </button>
         <button
           type="button"
@@ -395,7 +395,7 @@ export function DocumentViewer({
           disabled={page === 1}
           onClick={() => goTo(page - 1)}
         >
-          <ChevronLeftIcon />
+          <ChevronLeftIcon strokeWidth={2} />
         </button>
         <div className="rf-row rf-gap-xs viewer__pages">
           <input
@@ -416,7 +416,7 @@ export function DocumentViewer({
           disabled={page === pageCount}
           onClick={() => goTo(page + 1)}
         >
-          <ChevronRightIcon />
+          <ChevronRightIcon strokeWidth={2} />
         </button>
         <button
           type="button"
@@ -425,7 +425,7 @@ export function DocumentViewer({
           disabled={page === pageCount}
           onClick={() => goTo(pageCount)}
         >
-          <ChevronsRightIcon />
+          <ChevronsRightIcon strokeWidth={2} />
         </button>
 
         <span className="viewer__divider rf-divider" />
