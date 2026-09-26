@@ -46,7 +46,7 @@ fn the_model_ordered_in_the_prefirma_comes_back_in_the_next_session() {
         ],
     };
     let order = SigningOrder {
-        content: Some(content.clone()),
+        content: content.clone(),
         with_rubric: true,
         ..an_order()
     };
@@ -57,16 +57,6 @@ fn the_model_ordered_in_the_prefirma_comes_back_in_the_next_session() {
     let remembered = next_session.remembered_visible_signature();
     assert_eq!(remembered.content, Some(VisibleContent::from(&content)));
     assert!(remembered.rubric);
-}
-
-#[test]
-fn an_order_without_content_does_not_touch_the_memory() {
-    let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
-    let memory = Memory::at(&Paths::under(directory.path()));
-
-    remember_the_visible_signature_ordered(&an_order(), &memory);
-
-    assert_eq!(memory.remembered_visible_signature().content, None);
 }
 
 #[test]

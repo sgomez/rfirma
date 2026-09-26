@@ -101,8 +101,6 @@ export function signingOrderFor({
     },
     content: signature.content,
     withRubric: signature.withRubric,
-    fields: { signerName: false, issuer: false, signedAt: false, reason: false },
-    reason: "",
     signedAt,
     // La rúbrica solo viaja si además está marcada: tener una imagen guardada
     // no es quererla dentro del recuadro.

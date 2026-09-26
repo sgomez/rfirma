@@ -55,8 +55,6 @@ const anOrder = (): SigningOrder => ({
   },
   content: { model: "complete" },
   withRubric: false,
-  fields: { signerName: false, issuer: false, signedAt: false, reason: false },
-  reason: "",
   signedAt: "31/08/26, 12:00:00",
   rubric: null,
   language: "es",

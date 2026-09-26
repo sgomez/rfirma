@@ -4,7 +4,7 @@ use std::path::Path;
 
 use crate::desktop::adapters::paths::Paths;
 use crate::signing::adapters::memory::Memory;
-use crate::signing::adapters::orders::{PlacementOrder, SigningOrder, VisibleFieldsOrder};
+use crate::signing::adapters::orders::{PlacementOrder, SigningOrder, VisibleContentOrder};
 use crate::signing::domain::bridge::{
     BridgeError, Format, PostSignRequest, PreSignBlock, PreSignRequest, PreSignature,
     SignatureOperation,
@@ -147,15 +147,8 @@ pub(crate) fn an_order() -> SigningOrder {
             rotation: 0,
             rect: [72.0, 500.0, 272.0, 600.0],
         }),
-        content: None,
+        content: VisibleContentOrder::Complete,
         with_rubric: false,
-        fields: VisibleFieldsOrder {
-            signer_name: true,
-            issuer: true,
-            signed_at: true,
-            reason: true,
-        },
-        reason: String::new(),
         signed_at: "31/08/26, 12:00:00".to_owned(),
         rubric: None,
         language: "es".to_owned(),

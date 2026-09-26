@@ -41,10 +41,8 @@ pub fn begin_signing(
 
 /// El modelo, la frase y «Con rúbrica» de la orden se recuerdan en la prefirma, antes de abrir el ciclo.
 fn remember_the_visible_signature_ordered(order: &SigningOrder, memory: &Memory) {
-    if let Some(content) = &order.content {
-        let content = VisibleContent::from(content);
-        let _ = memory.remember_visible_signature(Some(&content), order.with_rubric);
-    }
+    let content = VisibleContent::from(&order.content);
+    let _ = memory.remember_visible_signature(Some(&content), order.with_rubric);
 }
 
 /// Firma en el token con la clave privada (ADR-0001).

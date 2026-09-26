@@ -22,7 +22,6 @@ fn minimal() -> SignatureConfig {
         placement: placed_on(PageSet::only_page(3)),
         layer2_text: "Firmado por: Ada Lovelace Byron".to_owned(),
         rubric_image: None,
-        sign_reason: None,
         allow_unregistered_signatures: false,
     }
 }
@@ -30,7 +29,6 @@ fn minimal() -> SignatureConfig {
 fn complete() -> SignatureConfig {
     SignatureConfig {
         rubric_image: Some("/9j/4AAQSkZJRg==".to_owned()),
-        sign_reason: Some("Conforme".to_owned()),
         allow_unregistered_signatures: true,
         ..minimal()
     }
@@ -38,11 +36,11 @@ fn complete() -> SignatureConfig {
 
 #[test]
 fn closes_the_configuration_and_this_is_how_many_settings_it_has() {
-    assert_eq!(Setting::ALL.len(), 7);
+    assert_eq!(Setting::ALL.len(), 6);
 }
 
 #[test]
-fn emits_no_key_outside_the_five_settings() {
+fn emits_no_key_outside_the_settings() {
     let owned: HashSet<&str> = Setting::ALL
         .iter()
         .flat_map(|setting| setting.keys().iter().copied())
@@ -52,7 +50,7 @@ fn emits_no_key_outside_the_five_settings() {
         for key in config.extra_params().keys() {
             assert!(
                 owned.contains(key.as_str()),
-                "«{key}» no pertenece a ninguno de los seis ajustes"
+                "«{key}» no pertenece a ninguno de los ajustes"
             );
         }
     }
@@ -62,7 +60,7 @@ fn emits_no_key_outside_the_five_settings() {
 fn emits_every_key_the_settings_declare() {
     // La dirección contraria a la de arriba: una clave declarada en
     // `Setting::keys()` que `extra_params` no llegue a emitir nunca sería
-    // una promesa muerta. `complete()` tiene los siete ajustes puestos, así
+    // una promesa muerta. `complete()` tiene los seis ajustes puestos, así
     // que sobre ella la contención va en los dos sentidos.
     let declared: HashSet<&str> = Setting::ALL
         .iter()
@@ -141,20 +139,18 @@ fn always_sends_the_font_size_as_zero() {
 }
 
 #[test]
-fn omits_the_rubric_and_the_reason_when_there_are_none() {
+fn omits_the_rubric_when_there_is_none() {
     let params = minimal().extra_params();
     assert!(!params.contains_key("signatureRubricImage"));
-    assert!(!params.contains_key("signReason"));
 }
 
 #[test]
-fn sends_the_rubric_and_the_reason_when_there_are() {
+fn sends_the_rubric_when_there_is_one() {
     let params = complete().extra_params();
     assert_eq!(
         params.get("signatureRubricImage"),
         Some(&"/9j/4AAQSkZJRg==".to_owned())
     );
-    assert_eq!(params.get("signReason"), Some(&"Conforme".to_owned()));
 }
 
 #[test]

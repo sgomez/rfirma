@@ -19,9 +19,8 @@ use crate::signing::application::cycle::{
 use crate::signing::domain::isolate_gone::IsolateGone;
 use crate::signing::domain::Language;
 use crate::signing::domain::{
-    compose_layer2_text, compose_visible_content, AdmissibleDocument, CompletedCycle, Format,
-    PlacementError, SessionSeal, SignatureConfig, SigningChoice, VisibleData, VisibleText,
-    VisibleTextFields,
+    compose_visible_content, AdmissibleDocument, CompletedCycle, Format, PlacementError,
+    SessionSeal, SignatureConfig, SigningChoice, VisibleData,
 };
 use crate::signing::domain::{Refusal, SignatureOperation, TokenSignatures, Waivers};
 use crate::signing::ports::{DocumentBytes, IsolateHost, Signer};
@@ -394,37 +393,16 @@ pub fn cancel(session: &SigningSession) {
 }
 
 fn layer2_text_of(choice: &SigningChoice, holder: &StampedHolder) -> String {
-    match &choice.text {
-        VisibleText::Fields(fields) => compose_layer2_text(
-            &VisibleTextFields {
-                signer_name: fields
-                    .signer_name
-                    .then_some(holder.common_name.as_str())
-                    .filter(|name| !name.is_empty()),
-                issuer: fields
-                    .issuer
-                    .then_some(holder.issuer.as_str())
-                    .filter(|issuer| !issuer.is_empty()),
-                signed_at: fields.signed_at.then_some(choice.signed_at.as_str()),
-                reason: fields
-                    .reason
-                    .then_some(choice.reason.as_str())
-                    .filter(|reason| !reason.is_empty()),
-                pseudonym: holder.pseudonym,
-            },
-            choice.language,
-        ),
-        VisibleText::Model(content) => compose_visible_content(
-            content,
-            &VisibleData {
-                signer_name: &holder.common_name,
-                issuer: &holder.issuer,
-                signed_at: &choice.signed_at,
-                pseudonym: holder.pseudonym,
-            },
-            choice.language,
-        ),
-    }
+    compose_visible_content(
+        &choice.content,
+        &VisibleData {
+            signer_name: &holder.common_name,
+            issuer: &holder.issuer,
+            signed_at: &choice.signed_at,
+            pseudonym: holder.pseudonym,
+        },
+        choice.language,
+    )
 }
 
 /// Configuración de firma construida a partir de lo elegido y del certificado seleccionado.
@@ -437,7 +415,6 @@ pub fn config_for(
         placement: choice.placement.clone(),
         layer2_text: layer2_text_of(choice, &holder),
         rubric_image: choice.rubric.clone(),
-        sign_reason: (!choice.reason.is_empty()).then(|| choice.reason.clone()),
         allow_unregistered_signatures: choice.allow_unregistered_signatures,
     })
 }
