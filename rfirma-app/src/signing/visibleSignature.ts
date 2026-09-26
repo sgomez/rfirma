@@ -44,6 +44,26 @@ export const DEFAULT_VISIBLE_SIGNATURE: VisibleSignature = {
   content: { model: "complete" },
 };
 
+/** Modelo, frase y «Con rúbrica» de la última firma visible configurada, o nada la primera vez (ADR-0010). */
+export interface RememberedVisibleSignature {
+  content: VisibleContent | null;
+  withRubric: boolean;
+}
+
+/** Por dónde entra la memoria global de firma visible; se lee una vez al arrancar. */
+export interface VisibleSignatureMemory {
+  read(): Promise<RememberedVisibleSignature>;
+}
+
+/** El recuadro apagado con lo último recordado; sin memoria, `DEFAULT_VISIBLE_SIGNATURE`. */
+export function visibleSignatureFrom(remembered: RememberedVisibleSignature): VisibleSignature {
+  return {
+    enabled: false,
+    withRubric: remembered.withRubric,
+    content: remembered.content ?? DEFAULT_VISIBLE_SIGNATURE.content,
+  };
+}
+
 /** Lo que deciden juntos «Con rúbrica» y si *Solo rúbrica* se puede elegir. */
 export interface RubricRule {
   /** Si el interruptor «Con rúbrica» está bloqueado, y en qué sentido. */

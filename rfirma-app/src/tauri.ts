@@ -39,5 +39,6 @@ export {
   tauriRubricPicker,
   tauriSigningBackend,
   tauriStampComposer,
+  tauriVisibleSignatureMemory,
 } from "./tauriSigning";
 export { tauriStatusPort } from "./tauriStatus";

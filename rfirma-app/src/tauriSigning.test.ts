@@ -3,8 +3,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const invoke = vi.hoisted(() => vi.fn());
 vi.mock("@tauri-apps/api/core", () => ({ invoke }));
 
-const { tauriCertificateStore, tauriRubricPicker, tauriSigningBackend, tauriStampComposer } =
-  await import("./tauriSigning");
+const {
+  tauriCertificateStore,
+  tauriRubricPicker,
+  tauriSigningBackend,
+  tauriStampComposer,
+  tauriVisibleSignatureMemory,
+} = await import("./tauriSigning");
 
 const anOrder = {
   document: "/run/user/1000/doc/1e8b83b9/contrato.pdf",
@@ -294,5 +299,20 @@ describe("el puerto de la rúbrica sobre Tauri", () => {
     const found = await tauriRubricPicker().stored();
 
     expect(found).toEqual({ dataUrl: "data:image/jpeg;base64,/9j/", width: 200, height: 80 });
+  });
+
+  it("asks the backend for the visible signature a previous session configured", async () => {
+    invoke.mockResolvedValue({ content: null, withRubric: false });
+
+    await tauriVisibleSignatureMemory().read();
+
+    expect(invoke.mock.calls.map(([command]) => command)).toEqual(["remembered_visible_signature"]);
+  });
+
+  it("returns what the backend remembers, unchanged", async () => {
+    const remembered = { content: { model: "rubricOnly" as const }, withRubric: true };
+    invoke.mockResolvedValue(remembered);
+
+    await expect(tauriVisibleSignatureMemory().read()).resolves.toEqual(remembered);
   });
 });

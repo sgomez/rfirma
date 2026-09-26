@@ -7,6 +7,10 @@ import type { SignedDocument, SigningBackend } from "./signing/flow";
 import type { Rubric, RubricPicker, RubricSituation } from "./signing/rubric";
 import type { StoreSecret } from "./signing/secret";
 import type { StampComposer } from "./signing/stampPreview";
+import type {
+  RememberedVisibleSignature,
+  VisibleSignatureMemory,
+} from "./signing/visibleSignature";
 import { stage } from "./tauriStage";
 import { pdfjsLoader } from "./viewer/pdfjsLoader";
 
@@ -110,6 +114,13 @@ export function tauriRubricPicker(): RubricPicker {
       const found = await invoke<RubricViewPayload | null>("read_rubric");
       return found === null ? null : rubricOf(found);
     },
+  };
+}
+
+/** Modelo, frase y «Con rúbrica» de la última firma visible configurada: `remembered_visible_signature`. */
+export function tauriVisibleSignatureMemory(): VisibleSignatureMemory {
+  return {
+    read: () => invoke<RememberedVisibleSignature>("remembered_visible_signature"),
   };
 }
 
