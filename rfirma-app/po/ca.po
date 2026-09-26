@@ -29,6 +29,9 @@ msgstr "Descartar"
 msgid "actions.copy"
 msgstr "Copiar"
 
+msgid "actions.back"
+msgstr "Tornar"
+
 #. Endónimo: el nombre del idioma en sí mismo, no se traduce.
 msgid "languages.es"
 msgstr "Español"
@@ -57,6 +60,19 @@ msgstr "Comentaris i ajuda"
 
 msgid "errors.reload"
 msgstr "Recarrega la finestra"
+
+#. El botón que copia el detalle técnico crudo del error de firma.
+msgid "errors.copyDetail"
+msgstr "Copia el detall"
+
+#. Añade la tranquilidad de que nada se ha guardado, junto a un fallo ya clasificado.
+msgid "errors.documentUnchanged"
+msgstr "El document segueix igual: no s'ha desat res."
+
+#. El título fijo del error de firma (docs/design/panel-de-firma.md § Estados
+#. → Error al firmar); la situación clasificada baja a ser la causa.
+msgid "errors.signingFailedTitle"
+msgstr "No s'ha pogut signar"
 
 msgid "errors.situations.unknown.title"
 msgstr "No s'ha pogut completar l'operació"
@@ -432,6 +448,10 @@ msgstr "Pestanyes següents"
 msgid "tabs.close"
 msgstr "Tanca {{name}}"
 
+#. Título de la pestaña de otro documento mientras una firma está en curso.
+msgid "tabs.lockedWhileSigning"
+msgstr "No es pot canviar de document mentre es signa."
+
 msgid "tabs.openPdf"
 msgstr "Obre un PDF…"
 
@@ -755,8 +775,8 @@ msgstr "Es desarà a"
 msgid "panel.footer.unwritable"
 msgstr "No es pot escriure a {{folder}}"
 
-msgid "panel.footer.retry"
-msgstr "Tornar-ho a intentar"
+msgid "panel.footer.retrySigning"
+msgstr "Reintentar"
 
 #. {{name}} es el nombre y primer apellido de quien firma.
 msgid "panel.footer.signAs"
@@ -775,6 +795,30 @@ msgstr "Resum"
 #. Término del dominio: PAdES es la sigla del formato de firma; no se traduce.
 msgid "panel.signed.format"
 msgstr "PAdES"
+
+#. El rótulo del destino, una vez escrito (docs/design/panel-de-firma.md § El
+#. resumen, tras firmar). No es una promesa como "panel.footer.savedIn": ya
+#. ha ocurrido.
+msgid "panel.signed.savedIn"
+msgstr "Desat a"
+
+#. {{time}} es la hora, ya formateada (p. ej. "11:04").
+msgid "panel.signed.signedAt"
+msgstr "Signat a les {{time}}"
+
+msgid "panel.signed.visibleSignature.none"
+msgstr "No"
+
+#. {{page}} es el número de la página.
+msgid "panel.signed.visibleSignature.onPage"
+msgstr "A la pàgina {{page}}"
+
+msgid "panel.signed.visibleSignature.allPages"
+msgstr "A totes les pàgines"
+
+#. {{sealed}} es cuántas páginas llevan recuadro, {{total}} cuántas tiene el documento.
+msgid "panel.signed.visibleSignature.somePages"
+msgstr "A {{sealed}} de {{total}} pàgines"
 
 msgid "panel.signed.openDocument"
 msgstr "Obrir el PDF"

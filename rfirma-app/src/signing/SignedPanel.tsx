@@ -1,10 +1,15 @@
 import { useTranslation } from "react-i18next";
-import { FileIcon } from "../design-system/icons";
+import { formatSignedTime } from "../App.signingOrder";
+import { CheckCircleIcon, FileIcon } from "../design-system/icons";
 import type { NamedFailure } from "../errors/classify";
 import { ErrorNotice } from "../errors/ErrorNotice";
+import type { Placement } from "../viewer/signatureBox";
+import type { Destination } from "./destination";
+import { PanelFooter } from "./PanelFooter";
 import { formatSize } from "./SigningPanel";
 import "./SigningPanel.css";
 import "./SignedPanel.css";
+import { summarizeVisiblePlacement, type VisibleSignature } from "./visibleSignature";
 
 /** El documento que quedó escrito, con lo que el panel enseña de él. */
 interface SignedSummary {
@@ -24,6 +29,12 @@ interface SignedSummary {
 
 interface SignedPanelProps {
   document: SignedSummary;
+  /** El instante estampado en el recuadro, para «Firmado a las 11:04». */
+  signedAt: Date;
+  /** Lo que se estampó, para la línea de solo lectura «Firma visible». */
+  signature: VisibleSignature;
+  placement: Placement | null;
+  destination: Destination;
   /** Abre el PDF firmado con el visor del sistema. */
   onOpenDocument: () => void;
   /** Abre la carpeta donde quedó, con las firmas anteriores dentro (ID-81). */
@@ -60,15 +71,19 @@ interface SignedPanelProps {
  * un descuido; contar las firmas del PDF pide volver a abrirlo, y eso es de
  * v1.0.
  *
- * Los tres botones del pie son las tres salidas del estado, y los dos primeros
- * cargan más peso del que parece: bajo el sandbox la aplicación nunca conoce la
- * ruta del documento y el usuario nunca la ve (ADR-0011), así que son la única
- * forma que tiene de llegar al fichero que acaba de firmar (ID-79). **No hay
- * «Firmar otro documento»**: lo hubo y se retira, porque la bandeja siempre
- * ofrece abrir y aceptar arrastre.
+ * El pie es el mismo `PanelFooter` que el panel de firma, en su variante
+ * `signed`: los dos primeros botones cargan más peso del que parece —bajo el
+ * sandbox la aplicación nunca conoce la ruta del documento y el usuario nunca
+ * la ve (ADR-0011), así que son la única forma que tiene de llegar al fichero
+ * que acaba de firmar (ID-79)—. **No hay «Firmar otro documento»**: lo hubo y
+ * se retira, porque la bandeja siempre ofrece abrir y aceptar arrastre.
  */
 export function SignedPanel({
   document,
+  signedAt,
+  signature,
+  placement,
+  destination,
   onOpenDocument,
   onOpenFolder,
   onSignAgain,
@@ -76,6 +91,7 @@ export function SignedPanel({
   onOpenHelp,
 }: SignedPanelProps) {
   const { t, i18n } = useTranslation();
+  const visiblePlacement = summarizeVisiblePlacement(signature.enabled, placement, document.pages);
 
   return (
     <div className="panel">
@@ -99,6 +115,13 @@ export function SignedPanel({
           </div>
         </div>
 
+        <div className="rf-row rf-gap-xs signed-panel__signed-at">
+          <CheckCircleIcon size={18} />
+          <span className="rf-body">
+            {t("panel.signed.signedAt", { time: formatSignedTime(signedAt, i18n.language) })}
+          </span>
+        </div>
+
         {/*
          * El encabezado con una sola insignia debajo **guarda el sitio de la
          * ficha 14**: ahí irán el número de firmas del documento y la tarjeta
@@ -111,6 +134,25 @@ export function SignedPanel({
           </div>
         </section>
 
+        {visiblePlacement && (
+          <div className="rf-row signed-panel__visible-row">
+            <span className="rf-label signed-panel__visible-label">
+              {t("panel.visibleSignature.title")}
+            </span>
+            <span className="rf-body signed-panel__visible-signature">
+              {visiblePlacement.kind === "none" && t("panel.signed.visibleSignature.none")}
+              {visiblePlacement.kind === "allPages" && t("panel.signed.visibleSignature.allPages")}
+              {visiblePlacement.kind === "onPage" &&
+                t("panel.signed.visibleSignature.onPage", { page: visiblePlacement.page })}
+              {visiblePlacement.kind === "somePages" &&
+                t("panel.signed.visibleSignature.somePages", {
+                  sealed: visiblePlacement.sealed,
+                  total: visiblePlacement.total,
+                })}
+            </span>
+          </div>
+        )}
+
         {failure && (
           <ErrorNotice
             situation={failure.situation}
@@ -120,29 +162,14 @@ export function SignedPanel({
         )}
       </div>
 
-      <footer className="panel__footer">
-        <button
-          type="button"
-          className="rf-btn rf-btn--primary signed-panel__action"
-          onClick={onOpenDocument}
-        >
-          {t("panel.signed.openDocument")}
-        </button>
-        <button
-          type="button"
-          className="rf-btn rf-btn--secondary signed-panel__action"
-          onClick={onOpenFolder}
-        >
-          {t("panel.signed.openFolder")}
-        </button>
-        <button
-          type="button"
-          className="rf-btn rf-btn--ghost signed-panel__action"
-          onClick={onSignAgain}
-        >
-          {t("panel.signed.signAgain")}
-        </button>
-      </footer>
+      <PanelFooter
+        signed
+        destination={destination}
+        documentName={document.name}
+        onOpenDocument={onOpenDocument}
+        onOpenFolder={onOpenFolder}
+        onSignAgain={onSignAgain}
+      />
     </div>
   );
 }

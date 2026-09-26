@@ -39,6 +39,8 @@ interface DocumentTabsProps {
   onOpen: () => void;
   onSelectRecent: (row: RecentDocument) => void;
   onClearRecents: () => void;
+  /** Mientras una firma está en curso, las demás pestañas no se activan. */
+  signingLocked?: boolean;
 }
 
 /** La tira de pestañas bajo la cabecera, con su menú «+». */
@@ -51,6 +53,7 @@ export function DocumentTabs({
   onOpen,
   onSelectRecent,
   onClearRecents,
+  signingLocked = false,
 }: DocumentTabsProps) {
   const { t } = useTranslation();
   const strip = useRef<HTMLElement>(null);
@@ -95,19 +98,22 @@ export function DocumentTabs({
       <div className="document-tabs__list" ref={list} role="tablist">
         {tabs.map((tab) => {
           const active = tab.id === activeId;
+          const locked = signingLocked && !active;
           return (
             <div
               key={tab.id}
               role="presentation"
               className={active ? "document-tab document-tab--active" : "document-tab"}
               style={{ width: narrow ? NARROW_TAB_WIDTH : TAB_WIDTH }}
-              title={tab.name}
+              title={locked ? t("tabs.lockedWhileSigning") : tab.name}
             >
               <button
                 type="button"
                 role="tab"
                 aria-selected={active}
+                aria-disabled={locked}
                 className="document-tab__select"
+                disabled={locked}
                 onClick={() => onActivate(tab.id)}
               >
                 <span className="document-tab__icon">

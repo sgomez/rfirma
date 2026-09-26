@@ -17,8 +17,6 @@ interface CertificateFooterButtonProps {
   signing: boolean;
   /** Con el interruptor encendido y sin colocar, o con el rango en error. */
   blocked: boolean;
-  /** Sustituye «Firmar como…» cuando el pie está enseñando un fallo previo. */
-  signLabel?: string;
 }
 
 /**
@@ -36,7 +34,6 @@ export function CertificateFooterButton({
   onSign,
   signing,
   blocked,
-  signLabel,
 }: CertificateFooterButtonProps) {
   const { t, i18n } = useTranslation();
   const [open, setOpen] = useState(false);
@@ -230,10 +227,9 @@ export function CertificateFooterButton({
               disabled={signing || blocked || unusable}
               onClick={onSign}
             >
-              {signLabel ??
-                t(signing ? "panel.footer.signingAs" : "panel.footer.signAs", {
-                  name: firstNameAndSurname(chosen),
-                })}
+              {t(signing ? "panel.footer.signingAs" : "panel.footer.signAs", {
+                name: firstNameAndSurname(chosen),
+              })}
             </button>
             <button
               type="button"
