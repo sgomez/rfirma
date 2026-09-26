@@ -11,9 +11,6 @@ msgstr ""
 msgid "app.name"
 msgstr ""
 
-msgid "actions.sign"
-msgstr ""
-
 msgid "actions.cancel"
 msgstr ""
 
@@ -355,9 +352,6 @@ msgstr ""
 msgid "badges.signed"
 msgstr ""
 
-msgid "badges.unsigned"
-msgstr ""
-
 #. Nombre accesible de la tira de pestañas, no un título visible.
 msgid "tabs.label"
 msgstr ""
@@ -602,7 +596,8 @@ msgstr ""
 msgid "panel.certificate.retry"
 msgstr ""
 
-msgid "panel.certificate.otherModule"
+#. {{date}} es la fecha de caducidad, ya formateada según el idioma.
+msgid "panel.certificate.expiresOn"
 msgstr ""
 
 msgid "panel.certificate.empty.title"
@@ -695,6 +690,17 @@ msgid "panel.footer.unwritable"
 msgstr ""
 
 msgid "panel.footer.retry"
+msgstr ""
+
+#. {{name}} es el nombre y primer apellido de quien firma.
+msgid "panel.footer.signAs"
+msgstr ""
+
+#. {{name}} es el nombre y primer apellido de quien firma.
+msgid "panel.footer.signingAs"
+msgstr ""
+
+msgid "panel.footer.addCertificate"
 msgstr ""
 
 msgid "panel.signed.summary"

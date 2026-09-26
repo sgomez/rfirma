@@ -12,7 +12,6 @@ describe("MainWindow", () => {
   it("lays out the viewer and the panel under the header", () => {
     renderWithCatalog(
       <MainWindow
-        status={null}
         menuAnchor="header"
         onOpenPreferences={noop}
         onOpenAbout={noop}
@@ -31,7 +30,6 @@ describe("MainWindow", () => {
     const user = userEvent.setup();
     renderWithCatalog(
       <MainWindow
-        status={null}
         menuAnchor="header"
         hasAttention
         onOpenPreferences={noop}
@@ -54,7 +52,6 @@ describe("MainWindow", () => {
   it("does not mount the signing panel while there is no document", () => {
     renderWithCatalog(
       <MainWindow
-        status={null}
         menuAnchor="header"
         onOpenPreferences={noop}
         onOpenAbout={noop}
@@ -71,7 +68,6 @@ describe("MainWindow", () => {
   it("mounts the tab strip under the header", () => {
     renderWithCatalog(
       <MainWindow
-        status={null}
         menuAnchor="header"
         onOpenPreferences={noop}
         onOpenAbout={noop}
@@ -88,7 +84,6 @@ describe("MainWindow", () => {
   it("puts the viewer content inside the viewer region", () => {
     renderWithCatalog(
       <MainWindow
-        status={null}
         menuAnchor="header"
         onOpenPreferences={noop}
         onOpenAbout={noop}
@@ -105,7 +100,6 @@ describe("MainWindow", () => {
   it("has no navigation between screens", () => {
     renderWithCatalog(
       <MainWindow
-        status="Unsigned"
         menuAnchor="header"
         onOpenPreferences={noop}
         onOpenAbout={noop}
@@ -122,7 +116,6 @@ describe("MainWindow", () => {
   it("keeps the three regions when a document is open", () => {
     renderWithCatalog(
       <MainWindow
-        status="Signed"
         menuAnchor="header"
         onOpenPreferences={noop}
         onOpenAbout={noop}
@@ -132,7 +125,7 @@ describe("MainWindow", () => {
       />,
     );
 
-    expect(screen.getByText("Firmado")).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Visor del documento" })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Panel de firma" })).toBeInTheDocument();
   });
 
@@ -141,7 +134,6 @@ describe("MainWindow", () => {
   it("mounts nothing between the header and the regions while there is nothing to notify", () => {
     const { container } = renderWithCatalog(
       <MainWindow
-        status={null}
         menuAnchor="header"
         onOpenPreferences={noop}
         onOpenAbout={noop}
@@ -158,7 +150,6 @@ describe("MainWindow", () => {
   it("puts the notification strip under the header and over the regions", () => {
     const { container } = renderWithCatalog(
       <MainWindow
-        status={null}
         menuAnchor="header"
         onOpenPreferences={noop}
         onOpenAbout={noop}
@@ -180,7 +171,6 @@ describe("MainWindow", () => {
   it("mounts a body view under the header instead of the tabs and the regions", () => {
     renderWithCatalog(
       <MainWindow
-        status={null}
         menuAnchor="header"
         onOpenPreferences={noop}
         onOpenAbout={noop}

@@ -16,6 +16,8 @@ const certificate: Certificate = {
   id: "0123456789abcdef0123456789abcdef",
   label: "Firma",
   holderName: "Ada Lovelace Byron",
+  givenName: "Ada",
+  surname: "Lovelace Byron",
   idNumber: "99999999R",
   issuer: "AC FNMT Usuarios",
   store: "card",

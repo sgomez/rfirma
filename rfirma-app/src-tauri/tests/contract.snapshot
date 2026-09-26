@@ -166,6 +166,8 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
       id: String
       label: String
       holderName: String
+      givenName: String
+      surname: String
       idNumber: String
       issuer: String
       store: String

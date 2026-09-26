@@ -1,12 +1,14 @@
 import { describe, expect, it } from "vitest";
 import type { Certificate } from "./certificate";
-import { groupCertificates, installedCertificates } from "./certificate";
+import { firstNameAndSurname, groupCertificates, installedCertificates } from "./certificate";
 
 function aCertificate(overrides: Partial<Certificate> = {}): Certificate {
   return {
     id: "0123456789abcdef0123456789abcdef",
     label: "Firma",
     holderName: "Ada Lovelace Byron",
+    givenName: "Ada",
+    surname: "Lovelace Byron",
     idNumber: "99999999R",
     issuer: "AC FNMT Usuarios",
     store: "card",
@@ -15,6 +17,25 @@ function aCertificate(overrides: Partial<Certificate> = {}): Certificate {
     ...overrides,
   };
 }
+
+describe("firstNameAndSurname", () => {
+  it("takes the given name and the first surname, for the «Firmar como» button", () => {
+    expect(firstNameAndSurname(aCertificate({ givenName: "Ada", surname: "Lovelace Byron" }))).toBe(
+      "Ada Lovelace",
+    );
+  });
+
+  it("falls back to the whole CN when the certificate carries no GN or SN", () => {
+    // `holderName` en orden real de la FNMT: APELLIDO1 APELLIDO2 NOMBRE.
+    const sealCertificate = aCertificate({
+      holderName: "LOVELACE BYRON ADA",
+      givenName: "",
+      surname: "",
+    });
+
+    expect(firstNameAndSurname(sealCertificate)).toBe("LOVELACE BYRON ADA");
+  });
+});
 
 describe("groupCertificates", () => {
   it("puts the usable ones in the available group and the rest in the unusable one", () => {

@@ -25,7 +25,9 @@ fn a_certificate_crosses_without_its_der_and_without_its_module() {
     let view = CertificateView {
         id: "0123456789abcdef0123456789abcdef".to_owned(),
         label: "ETIQUETA".to_owned(),
-        holder_name: "Ada Lovelace Byron".to_owned(),
+        holder_name: "LOVELACE BYRON ADA".to_owned(),
+        given_name: "ADA".to_owned(),
+        surname: "LOVELACE BYRON".to_owned(),
         id_number: "IDCES-00000000T".to_owned(),
         issuer: "FNMT-RCM".to_owned(),
         store: store_name(StoreClass::Firefox).to_owned(),
@@ -36,7 +38,9 @@ fn a_certificate_crosses_without_its_der_and_without_its_module() {
     };
     let json = serde_json::to_string(&view).expect("serializa");
 
-    assert!(json.contains(r#""holderName":"Ada Lovelace Byron""#));
+    assert!(json.contains(r#""holderName":"LOVELACE BYRON ADA""#));
+    assert!(json.contains(r#""givenName":"ADA""#));
+    assert!(json.contains(r#""surname":"LOVELACE BYRON""#));
     assert!(!json.contains(r#""der""#), "el DER no sale: {json}");
     assert!(!json.contains('/'), "no sale ninguna ruta: {json}");
 }

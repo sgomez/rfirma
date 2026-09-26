@@ -11,9 +11,6 @@ msgstr ""
 msgid "app.name"
 msgstr "rFirma"
 
-msgid "actions.sign"
-msgstr "Asinar o documento"
-
 msgid "actions.cancel"
 msgstr "Cancelar"
 
@@ -406,9 +403,6 @@ msgstr "Acerca de rFirma"
 msgid "badges.signed"
 msgstr "Asinado"
 
-msgid "badges.unsigned"
-msgstr "Sen asinar"
-
 #. Nombre accesible de la tira de pestañas, no un título visible.
 msgid "tabs.label"
 msgstr "Documentos abertos"
@@ -659,8 +653,9 @@ msgstr "Instalado en rFirma"
 msgid "panel.certificate.retry"
 msgstr "Volver buscar"
 
-msgid "panel.certificate.otherModule"
-msgstr "Outro módulo…"
+#. {{date}} es la fecha de caducidad, ya formateada según el idioma.
+msgid "panel.certificate.expiresOn"
+msgstr "caduca o {{date}}"
 
 msgid "panel.certificate.empty.title"
 msgstr "Non atopamos ningún certificado"
@@ -761,6 +756,17 @@ msgstr "Non se pode escribir en {{folder}}"
 
 msgid "panel.footer.retry"
 msgstr "Tentar de novo"
+
+#. {{name}} es el nombre y primer apellido de quien firma.
+msgid "panel.footer.signAs"
+msgstr "Asinar como {{name}}"
+
+#. {{name}} es el nombre y primer apellido de quien firma.
+msgid "panel.footer.signingAs"
+msgstr "Asinando como {{name}}"
+
+msgid "panel.footer.addCertificate"
+msgstr "Engadir un certificado…"
 
 msgid "panel.signed.summary"
 msgstr "Resumo"
@@ -1039,7 +1045,10 @@ msgid "preferences.honourAutomaticSelection.label"
 msgstr "Respectar a selección automática de certificado que pida a sede"
 
 msgid "preferences.honourAutomaticSelection.hint"
-msgstr "Se a sede o pide e só acepta un dos teus certificados, úsase sen preguntarche. Se o teu almacén non pide PIN, a sinatura sairá sen que vexas nada."
+msgstr ""
+"Se a sede o pide e só acepta un dos teus certificados, úsase sen "
+"preguntarche. Se o teu almacén non pide PIN, a sinatura sairá sen que vexas "
+"nada."
 
 msgid "preferences.rememberActivity.label"
 msgstr "Lembrar a miña actividade"
@@ -1124,7 +1133,12 @@ msgid "about.update.upToDate"
 msgstr "Estás na última versión"
 
 msgid "about.independence"
-msgstr "Proxecto independente. rFirma non está relacionada con AutoFirma nin coa Administración Xeral do Estado, que publican o cliente oficial, nin conta co seu apoio. Se necesitas a aplicación oficial, descárgaa da súa web. Se detectas algún problema con rFirma, comunícao no noso repositorio e non ao equipo de AutoFirma."
+msgstr ""
+"Proxecto independente. rFirma non está relacionada con AutoFirma nin coa "
+"Administración Xeral do Estado, que publican o cliente oficial, nin conta co "
+"seu apoio. Se necesitas a aplicación oficial, descárgaa da súa web. Se "
+"detectas algún problema con rFirma, comunícao no noso repositorio e non ao "
+"equipo de AutoFirma."
 
 #. No se traduce: es una URL.
 msgid "about.repository"
@@ -1148,7 +1162,8 @@ msgstr ""
 "usar con sedes electrónicas necesitamos configurar o teu equipo."
 
 msgid "setup.language.body"
-msgstr "Escolle o idioma de rFirma. Podes cambialo máis adiante en Preferencias."
+msgstr ""
+"Escolle o idioma de rFirma. Podes cambialo máis adiante en Preferencias."
 
 msgid "setup.step"
 msgstr "Paso {{current}} de {{total}}"
@@ -1377,7 +1392,10 @@ msgstr ""
 "todos os xeitos?"
 
 msgid "sede.confirm.messages.signingCertifiedPdf"
-msgstr "O PDF que queres asinar está certificado e non admite novas sinaturas. Engadir a túa invalidará a sinatura anterior. Queres asinalo de todos os xeitos?"
+msgstr ""
+"O PDF que queres asinar está certificado e non admite novas sinaturas. "
+"Engadir a túa invalidará a sinatura anterior. Queres asinalo de todos os "
+"xeitos?"
 
 msgid "sede.confirm.messages.signingModifiedPdfForm"
 msgstr ""
@@ -1396,7 +1414,9 @@ msgid "sede.marking.title"
 msgstr "Marca onde vai a túa sinatura"
 
 msgid "sede.marking.hint"
-msgstr "A páxina pide que a túa sinatura se vexa no documento. Traza o cadro sobre a páxina co rato."
+msgstr ""
+"A páxina pide que a túa sinatura se vexa no documento. Traza o cadro sobre a "
+"páxina co rato."
 
 msgid "sede.marking.accept"
 msgstr "Continuar"
@@ -1429,7 +1449,9 @@ msgid "sede.saving.lead"
 msgstr "Escolle no diálogo do sistema onde queres gardalo."
 
 msgid "sede.saving.leadUnwritable"
-msgstr "Non se puido gardar no destino escollido. Escolle outro no diálogo do sistema."
+msgstr ""
+"Non se puido gardar no destino escollido. Escolle outro no diálogo do "
+"sistema."
 
 msgid "sede.loading.title"
 msgstr "Cargando un ficheiro"
@@ -1520,7 +1542,10 @@ msgid "sede.oldWebClient.title"
 msgstr "Esta páxina está desactualizada"
 
 msgid "sede.oldWebClient.body"
-msgstr "A páxina usa unha versión antiga da peza que fala con rFirma, e pode ter erros ou non ser segura. Preme Entendido para continuar; se algo falla, avisa a quen mantén a páxina."
+msgstr ""
+"A páxina usa unha versión antiga da peza que fala con rFirma, e pode ter "
+"erros ou non ser segura. Preme Entendido para continuar; se algo falla, "
+"avisa a quen mantén a páxina."
 
 msgid "sede.oldWebClient.dismiss"
 msgstr "Entendido"
@@ -1550,7 +1575,10 @@ msgstr ""
 "de cada vez."
 
 msgid "sede.refusals.portsTaken"
-msgstr "{{origin}} ofrece uns portos que outra aplicación xa está a usar, así que rFirma non puido abrir a canle para contestala. Pecha esa aplicación —pode ser AutoFirma ou outra copia de rFirma— e volve tentalo desde a páxina."
+msgstr ""
+"{{origin}} ofrece uns portos que outra aplicación xa está a usar, así que "
+"rFirma non puido abrir a canle para contestala. Pecha esa aplicación —pode "
+"ser AutoFirma ou outra copia de rFirma— e volve tentalo desde a páxina."
 
 msgid "sede.refusals.unknown"
 msgstr "{{origin}} enviou algo que rFirma non pode atender."
@@ -1591,7 +1619,8 @@ msgid "sede.refusals.batchSigningFailed"
 msgstr "A sinatura do lote que pedía {{origin}} non chegou a completarse."
 
 msgid "sede.refusals.triphaseServerUrlMissing"
-msgstr "{{origin}} pediu asinar co seu servizo de sinatura, pero non dixo onde está."
+msgstr ""
+"{{origin}} pediu asinar co seu servizo de sinatura, pero non dixo onde está."
 
 msgid "sede.refusals.triphaseServerException"
 msgstr "O servizo de sinatura de {{origin}} deu un erro."
@@ -1600,13 +1629,16 @@ msgid "sede.refusals.triphaseServerUnreachable"
 msgstr "O servizo de sinatura de {{origin}} non contestou."
 
 msgid "sede.refusals.triphaseServerUnexpectedAnswer"
-msgstr "O servizo de sinatura de {{origin}} contestou algo que rFirma non sabe ler."
+msgstr ""
+"O servizo de sinatura de {{origin}} contestou algo que rFirma non sabe ler."
 
 msgid "sede.refusals.certificateNotFound"
-msgstr "O certificado escollido xa non está dispoñible ou {{origin}} non o acepta."
+msgstr ""
+"O certificado escollido xa non está dispoñible ou {{origin}} non o acepta."
 
 msgid "sede.refusals.folderMissing"
-msgstr "O cartafol no que rFirma tiña que escribir para {{origin}} xa non existe."
+msgstr ""
+"O cartafol no que rFirma tiña que escribir para {{origin}} xa non existe."
 
 msgid "sede.refusals.unwritable"
 msgstr "rFirma non puido escribir o ficheiro que necesitaba {{origin}}."
@@ -1615,7 +1647,9 @@ msgid "sede.refusals.invalidSignature"
 msgstr "O documento que enviou {{origin}} trae unha sinatura que non é válida."
 
 msgid "sede.refusals.confirmationNeeded"
-msgstr "{{origin}} pediu asinar sen preguntarche, pero o documento precisa que confirmes algo antes."
+msgstr ""
+"{{origin}} pediu asinar sen preguntarche, pero o documento precisa que "
+"confirmes algo antes."
 
 msgid "sede.refusals.localBatchSign"
 msgstr "O lote que enviou {{origin}} non se pode asinar tal como vén."
@@ -1624,34 +1658,57 @@ msgid "sede.refusals.siteErrandNotLive"
 msgstr "O trámite con {{origin}} xa rematara cando chegou a túa resposta."
 
 msgid "sede.refusals.pdfHasUnregisteredSignatures"
-msgstr "O PDF que enviou {{origin}} trae sinaturas que non constan no seu formulario, e rFirma non asina enriba sen que o confirmes."
+msgstr ""
+"O PDF que enviou {{origin}} trae sinaturas que non constan no seu "
+"formulario, e rFirma non asina enriba sen que o confirmes."
 
 msgid "sede.refusals.secretOnTheReaderKeypad"
-msgstr "O PIN deste certificado teclease no lector, e rFirma aínda non sabe pedilo así."
+msgstr ""
+"O PIN deste certificado teclease no lector, e rFirma aínda non sabe pedilo "
+"así."
 
 msgid "sede.refusals.userCancelled"
-msgstr "Cancelaches a petición do PIN, así que a sinatura que pedía {{origin}} non se fixo."
+msgstr ""
+"Cancelaches a petición do PIN, así que a sinatura que pedía {{origin}} non "
+"se fixo."
 
 msgid "sede.refusals.promptFailed"
 msgstr "rFirma non puido pedirche o PIN para a sinatura que pedía {{origin}}."
 
 msgid "sede.refusals.explicitXades"
-msgstr "{{origin}} pediu un tipo de sinatura antigo que xa non é seguro: esa sinatura podería facerse pasar pola doutro documento distinto do teu. Por iso rFirma non a fai. Non é un fallo teu; se precisas rematar o trámite, contacta con {{origin}}."
+msgstr ""
+"{{origin}} pediu un tipo de sinatura antigo que xa non é seguro: esa "
+"sinatura podería facerse pasar pola doutro documento distinto do teu. Por "
+"iso rFirma non a fai. Non é un fallo teu; se precisas rematar o trámite, "
+"contacta con {{origin}}."
 
 msgid "sede.refusals.invoiceMultisignature"
-msgstr "{{origin}} pediu engadir unha sinatura a unha factura electrónica que xa está asinada. Unha factura electrónica só admite unha sinatura, así que rFirma non pode facelo. Non é un fallo teu; se precisas rematar o trámite, contacta con {{origin}}."
+msgstr ""
+"{{origin}} pediu engadir unha sinatura a unha factura electrónica que xa "
+"está asinada. Unha factura electrónica só admite unha sinatura, así que "
+"rFirma non pode facelo. Non é un fallo teu; se precisas rematar o trámite, "
+"contacta con {{origin}}."
 
 msgid "sede.refusals.unsupportedCountersignature"
-msgstr "{{origin}} pediu asinar sobre a sinatura doutra persoa nun tipo de documento que non o permite, así que rFirma non pode facelo. Non é un fallo teu; se precisas rematar o trámite, contacta con {{origin}}."
+msgstr ""
+"{{origin}} pediu asinar sobre a sinatura doutra persoa nun tipo de documento "
+"que non o permite, así que rFirma non pode facelo. Non é un fallo teu; se "
+"precisas rematar o trámite, contacta con {{origin}}."
 
 msgid "sede.siteNotes.explicitXades"
-msgstr "Quitade mode=explicit ou usade CAdES explícita, que asina o documento sen incluílo."
+msgstr ""
+"Quitade mode=explicit ou usade CAdES explícita, que asina o documento sen "
+"incluílo."
 
 msgid "sede.siteNotes.invoiceMultisignature"
-msgstr "FacturaE non admite cosinatura nin contrasinatura; pedide unha sinatura simple (sign)."
+msgstr ""
+"FacturaE non admite cosinatura nin contrasinatura; pedide unha sinatura "
+"simple (sign)."
 
 msgid "sede.siteNotes.unsupportedCountersignature"
-msgstr "A contrasinatura só existe en CAdES, CMS e XAdES; noutro formato, pedide unha cosinatura (cosign)."
+msgstr ""
+"A contrasinatura só existe en CAdES, CMS e XAdES; noutro formato, pedide "
+"unha cosinatura (cosign)."
 
 msgid "sede.noCertificate.noneTitle"
 msgstr "Non tes ningún certificado"

@@ -324,7 +324,6 @@ export function App({
   return (
     <>
       <MainWindow
-        status={documents.active?.badge ?? null}
         menuAnchor={menuAnchor ?? menuAnchorFor(navigator.userAgent)}
         hasAttention={hasAttention}
         onOpenStatus={() => setView("status")}

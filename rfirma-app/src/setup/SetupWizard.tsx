@@ -151,7 +151,6 @@ export function SetupWizard({
   return (
     <div className="setup-wizard">
       <Header
-        status={null}
         menuAnchor={menuAnchor ?? menuAnchorFor(navigator.userAgent)}
         onOpenStatus={onOpenStatus}
         onOpenPreferences={onOpenPreferences}

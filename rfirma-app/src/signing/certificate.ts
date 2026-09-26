@@ -62,8 +62,15 @@ export interface Certificate {
   id: string;
   /** El `CKA_LABEL` del objeto dentro del token. Se enseña, no identifica. */
   label: string;
-  /** Nombre y apellidos del titular. */
+  /**
+   * El `CN` del subject, tal cual: en un certificado de persona física de la
+   * FNMT viene en orden «APELLIDO1 APELLIDO2 NOMBRE», no «nombre y apellidos».
+   */
   holderName: string;
+  /** Nombre de pila del RDN `GN`, o vacío si el certificado no lo trae. */
+  givenName: string;
+  /** Primer apellido del RDN `SN`, o vacío si el certificado no lo trae. */
+  surname: string;
   /**
    * El DNI o NIE **en claro**, tal cual viene del RDN `serialNumber`. La
    * máscara del recuadro la aplica Rust al componer `layer2Text` (ID-19); aquí
@@ -102,6 +109,18 @@ export interface Certificate {
  */
 export function isUsable(status: CertificateStatus): boolean {
   return status.kind === "valid";
+}
+
+/**
+ * Nombre y primer apellido, para el botón «Firmar como…»: `givenName` y la
+ * primera palabra de `surname`. Sin esos dos RDN —sello, representante,
+ * seudónimo— cae al `holderName` entero, que el botón recorta con elipsis.
+ */
+export function firstNameAndSurname(certificate: Certificate): string {
+  const { givenName, surname, holderName } = certificate;
+  if (givenName === "" || surname === "") return holderName;
+  const [firstSurname] = surname.trim().split(/\s+/);
+  return `${givenName} ${firstSurname}`;
 }
 
 /** Los certificados, ya separados en los dos grupos que enseña el desplegable. */

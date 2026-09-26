@@ -1,4 +1,4 @@
-use super::{attribute, common_name_of, holder_of, is_pseudonym};
+use super::{attribute, common_name_of, given_name_and_surname, holder_of, is_pseudonym};
 
 #[test]
 fn reads_the_holder_and_the_id_out_of_the_subject() {
@@ -91,6 +91,27 @@ fn an_issuer_without_a_common_name_falls_back_instead_of_going_blank() {
     assert_eq!(common_name_of(Some("O=FNMT-RCM, C=ES")), "FNMT-RCM");
     assert_eq!(common_name_of(Some("OU=Ceres, C=ES")), "OU=Ceres, C=ES");
     assert_eq!(common_name_of(None), "");
+}
+
+#[test]
+fn given_name_and_surname_come_from_their_own_rdns_not_the_common_name() {
+    let subject = "CN=LOVELACE BYRON ADA, GN=ADA, SN=LOVELACE BYRON, SERIALNUMBER=IDCES-00000000T";
+
+    let (given, surname) = given_name_and_surname(Some(subject));
+
+    assert_eq!(given, "ADA");
+    assert_eq!(surname, "LOVELACE BYRON");
+}
+
+#[test]
+fn given_name_and_surname_are_empty_when_the_certificate_does_not_carry_them() {
+    let subject = "CN=LOVELACE BYRON ADA - R: B00000000, SERIALNUMBER=IDCES-00000000T";
+
+    assert_eq!(
+        given_name_and_surname(Some(subject)),
+        (String::new(), String::new())
+    );
+    assert_eq!(given_name_and_surname(None), (String::new(), String::new()));
 }
 
 #[test]

@@ -1,9 +1,12 @@
 import { useTranslation } from "react-i18next";
 import { FolderIcon } from "../design-system/icons";
 import { ErrorNotice } from "../errors/ErrorNotice";
+import { CertificateFooterButton } from "./CertificateFooterButton";
+import type { Certificate } from "./certificate";
 import type { Destination } from "./destination";
 import { shortenDestination } from "./destination";
 import type { SigningFailure } from "./failure";
+import type { CertificateState } from "./SigningPanel";
 
 interface PanelFooterProps {
   failure: SigningFailure | null;
@@ -12,23 +15,34 @@ interface PanelFooterProps {
   onChangeDestination: () => void;
   /** Con el interruptor encendido y sin colocar no se firma (ID-93). */
   unplaced: boolean;
-  usable: boolean;
   signing: boolean;
   blocked: boolean;
+  certificate: CertificateState;
+  onChooseCertificate: (certificate: Certificate) => void;
+  onRetryCertificates: () => void;
+  onChooseModule: () => void;
   onSign: () => void;
   onOpenHelp?: () => void;
 }
 
-/** El pie del panel: destino o fallo, y el botón que firma. */
+/**
+ * El pie del panel: 162 px en todos los estados
+ * (docs/design/panel-de-firma.md § Pie fijo). «Guardar en» arriba y, abajo,
+ * la fila de 44 px con el certificado y la acción del momento —buscar,
+ * añadir uno, o el botón partido que firma—.
+ */
 export function PanelFooter({
   failure,
   destination,
   documentName,
   onChangeDestination,
   unplaced,
-  usable,
   signing,
   blocked,
+  certificate,
+  onChooseCertificate,
+  onRetryCertificates,
+  onChooseModule,
   onSign,
   onOpenHelp,
 }: PanelFooterProps) {
@@ -84,14 +98,40 @@ export function PanelFooter({
         </div>
       )}
       {unplaced && <p className="rf-hint panel__place-first">{t("panel.footer.placeFirst")}</p>}
-      <button
-        type="button"
-        className="rf-btn rf-btn--primary panel__sign"
-        disabled={!usable || signing || blocked}
-        onClick={onSign}
-      >
-        {failure ? t("panel.footer.retry") : t("actions.sign")}
-      </button>
+      {certificate.kind === "loading" && (
+        <button type="button" className="rf-btn rf-btn--primary panel__sign" disabled>
+          {t("panel.certificate.loading")}
+        </button>
+      )}
+      {(certificate.kind === "empty" || certificate.kind === "failed") && (
+        <div className="rf-row rf-gap-xs panel__certificate-actions">
+          <button
+            type="button"
+            className="rf-btn rf-btn--primary panel__add-certificate"
+            onClick={onChooseModule}
+          >
+            {t("panel.footer.addCertificate")}
+          </button>
+          <button
+            type="button"
+            className="rf-btn rf-btn--secondary panel__retry"
+            onClick={onRetryCertificates}
+          >
+            {t("panel.certificate.retry")}
+          </button>
+        </div>
+      )}
+      {(certificate.kind === "unchosen" || certificate.kind === "chosen") && (
+        <CertificateFooterButton
+          certificates={certificate.certificates}
+          chosen={certificate.kind === "chosen" ? certificate.certificate : null}
+          onChoose={onChooseCertificate}
+          onSign={onSign}
+          signing={signing}
+          blocked={blocked}
+          signLabel={failure ? t("panel.footer.retry") : undefined}
+        />
+      )}
     </footer>
   );
 }
