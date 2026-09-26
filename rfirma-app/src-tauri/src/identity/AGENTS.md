@@ -32,7 +32,7 @@ habla con el token. Rutas relativas a `src/identity/`.
 | `domain/protected_secret.rs` | Secreto protegido en memoria con bloqueo físico y borrado seguro en drop. Pruebas en `domain/protected_secret/tests.rs`. |
 | `domain/secret.rs` | Cómo se le pide el secreto a cada almacén: sin sesión, por pantalla o en el teclado del lector. Pruebas en `domain/secret/tests.rs`. |
 | `domain/store.rs` | Un almacén: la ruta de su módulo, cómo se abre y de qué clase es, sin abrirlo. Sus pruebas siguen en `adapters/pkcs11/stores/tests.rs`. |
-| `ports.rs` | `Token`, `InstalledFolder` y `CertificateMemory`, que sirve `signing/adapters/memory.rs`; y `SecretPrompter`, el diálogo interactivo del secreto, con su reintento genérico `prompted_until_accepted`, que usan las `adapters/` de `signing` y `site`. Pruebas en `ports/tests.rs`. |
+| `ports.rs` | `Token`, `InstalledFolder` y `CertificateMemory`, que sirve `signing/adapters/memory.rs`; y `SecretPrompter`, el diálogo interactivo del secreto, con su reintento genérico `prompted_until_accepted`. Pruebas en `ports/tests.rs`. |
 | `adapters/folder.rs` | `RealInstalledFolder`: la carpeta de cada `.p12` instalado. |
 
 ## Trampas

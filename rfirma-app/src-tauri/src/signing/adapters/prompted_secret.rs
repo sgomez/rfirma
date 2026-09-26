@@ -28,14 +28,21 @@ fn cycle_prompt_failure(error: PromptedError<CycleFailure>) -> Failure {
     }
 }
 
-/// Fase de firma en el token PKCS#11 solicitando el secreto mediante el diálogo interactivo,
-/// con reintento si el token dice que el PIN era incorrecto (ADR-0001, ADR-0014).
+/// Fase de firma en el token, pidiendo el secreto por diálogo solo si el almacén lo requiere (ADR-0001, ADR-0014).
 pub fn sign_on_token_with_prompter(
     signer: &dyn Signer,
     session: &SigningSession,
     prompter: &dyn SecretPrompter,
     language: Language,
 ) -> Result<(), Failure> {
+    let certificate = session::certificate_of(session)?;
+    if signer.secret_of(&certificate)? != StoreSecret::TypedOnScreen {
+        return Ok(session::sign_on_token(
+            signer,
+            session,
+            &ProtectedSecret::new(b""),
+        )?);
+    }
     let (secret, holder) = session::secret_prompt_context(session)?;
     let request = SecretPromptRequest {
         secret,

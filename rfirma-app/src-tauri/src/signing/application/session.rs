@@ -269,6 +269,13 @@ pub fn secret_prompt_context(
     Ok(in_flight.cycle.secret_prompt_context())
 }
 
+/// Certificado con el que se abrió el ciclo activo de la sesión.
+pub fn certificate_of(session: &SigningSession) -> Result<CertificateRef, CycleFailure> {
+    let open = lock(&session.open);
+    let in_flight = open.as_ref().ok_or(CycleFailure::NoOpenCycle)?;
+    Ok(in_flight.cycle.certificate().clone())
+}
+
 /// Lo que sale de la postfirma: el ciclo completado y con qué documento y certificado se hizo.
 pub struct Signed {
     /// El asa con la que la ventana nombra el documento firmado.

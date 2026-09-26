@@ -161,8 +161,7 @@ pub enum PromptedError<E> {
     Attempt(E),
 }
 
-/// Pide el secreto hasta que `attempt` lo acepta; `rejected` decide si el rechazo merece reintentarlo,
-/// sirviendo tanto al PIN de un token como, más adelante, a la contraseña de un `.p12` (ADR-0001, ADR-0014).
+/// Pide el secreto hasta que `attempt` lo acepta; `rejected` decide si el rechazo merece reintentarlo (ADR-0001, ADR-0014).
 pub fn prompted_until_accepted<T, E>(
     prompter: &dyn SecretPrompter,
     mut request: SecretPromptRequest,
