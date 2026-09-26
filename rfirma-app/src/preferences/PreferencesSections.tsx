@@ -243,7 +243,10 @@ export function CertificatesSection({
         <ErrorNotice
           situation={certificateFailure.situation}
           technicalDetail={
-            certificateFailure.situation === "keyNotRsa" ? undefined : certificateFailure.detail
+            certificateFailure.situation === "keyNotRsa" ||
+            certificateFailure.situation === "pkcs12NoPrivateKey"
+              ? undefined
+              : certificateFailure.detail
           }
         />
       )}

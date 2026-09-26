@@ -194,6 +194,17 @@ msgstr ""
 msgid "errors.situations.pkcs12Unreadable.body"
 msgstr ""
 
+msgid "errors.situations.incorrectPkcs12Password.title"
+msgstr ""
+
+msgid "errors.situations.incorrectPkcs12Password.body"
+msgstr ""
+
+#. Un solo renglon a proposito: no lleva cuerpo debajo, y por eso no hay
+#. msgid "errors.situations.pkcs12NoPrivateKey.body".
+msgid "errors.situations.pkcs12NoPrivateKey.title"
+msgstr ""
+
 #. Un solo renglon a proposito (ID-211): no lleva cuerpo debajo, y por eso no
 #. hay msgid "errors.situations.keyNotRsa.body".
 msgid "errors.situations.keyNotRsa.title"

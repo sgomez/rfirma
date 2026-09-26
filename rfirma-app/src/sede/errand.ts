@@ -73,6 +73,8 @@ export const NAMED_BY_THE_DESK = [
   "expiredSession",
   "moduleNotFound",
   "pkcs12Unreadable",
+  "incorrectPkcs12Password",
+  "pkcs12NoPrivateKey",
   "keyNotRsa",
   "mechanismNotOffered",
   "notAPdf",
