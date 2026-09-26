@@ -454,7 +454,7 @@ describe("App", () => {
     );
     await openPdf(user);
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
-    await within(panel).findByText("Ada Lovelace Byron");
+    await within(panel).findByRole("button", { name: "Firmar como Ada Lovelace" });
 
     const toggle = within(panel).getByRole("switch", {
       name: /Estampar un recuadro de firma en el documento/,
@@ -470,5 +470,35 @@ describe("App", () => {
     expect(
       await screen.findByRole("application", { name: "Recuadro de la firma visible" }),
     ).toBeInTheDocument();
+  });
+
+  it("brings back the box where it was when the switch goes off and on again", async () => {
+    const user = userEvent.setup();
+    renderApp(
+      inMemoryRecents(),
+      [document("factura.pdf")],
+      pdfsOf({ "factura.pdf": 3 }),
+      {},
+      { list: async () => [{ ...aCertificate, remembered: true }] },
+    );
+    await openPdf(user);
+    const panel = await screen.findByRole("region", { name: "Panel de firma" });
+    await within(panel).findByRole("button", { name: "Firmar como Ada Lovelace" });
+    const toggle = within(panel).getByRole("switch", {
+      name: /Estampar un recuadro de firma en el documento/,
+    });
+    const box = () => screen.queryByRole("application", { name: "Recuadro de la firma visible" });
+
+    await user.click(toggle);
+    expect(await within(panel).findByText("Página 1")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Página siguiente" }));
+    await user.click(screen.getByRole("button", { name: "Página siguiente" }));
+    await user.click(toggle);
+    await user.click(toggle);
+
+    expect(toggle).toHaveAttribute("aria-checked", "true");
+    expect(within(panel).getByText("Página 1")).toBeInTheDocument();
+    expect(within(panel).queryByText("Página 3")).not.toBeInTheDocument();
+    expect(box()).not.toBeInTheDocument();
   });
 });

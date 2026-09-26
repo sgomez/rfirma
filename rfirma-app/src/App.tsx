@@ -192,14 +192,10 @@ export function App({
     changePageChoice,
   } = usePlacementControls(pdf, documents.place, viewedPage);
 
-  // Encender el interruptor **coloca** (#974): sin recuadro todavía, es la
-  // misma petición que el botón de sellar, sobre la página que se está
-  // mirando. Con uno ya puesto —apagar y volver a encender— no hay nada que
-  // pedir: se enseña el que había.
   const onChangeSignature = (next: VisibleSignature) => {
-    const turnsOn = next.enabled && !signature.enabled && placement === null;
+    const turnsOnWithNothingPlaced = next.enabled && !signature.enabled && placement === null;
     setSignature(next);
-    if (turnsOn) setPlacementRequest({ action: "seal" });
+    if (turnsOnWithNothingPlaced) setPlacementRequest({ action: "seal" });
   };
 
   // La página que mide la `MediaBox` y la `/Rotate` de la orden: la **primera
