@@ -174,3 +174,8 @@ master = "present"
 id = "BUG-35"
 title = "Una clave que el almacén no sabe cargar se reporta como SAF_08 y no llega al SAF_51 del tipo de clave incompatible"
 master = "present"
+
+[[bug]]
+id = "BUG-36"
+title = "El sello de firma de PAdES no se aplica nunca: el sellador se busca con un constructor que no existe y el fallo se descarta"
+master = "present"

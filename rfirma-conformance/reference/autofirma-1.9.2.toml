@@ -17,6 +17,12 @@ cause = "BUG-23"
 note = "La firma vuelve sin el sello pedido y la operación no reporta que no se pudo sellar."
 
 [[known]]
+id = "a_pades_signature_that_cannot_be_timestamped_reports_the_failure"
+outcome = "no-conforme"
+cause = "BUG-36"
+note = "El PDF vuelve firmado y sin sello: el sellado de PAdES falla antes de llamar a la TSA."
+
+[[known]]
 id = "sign_missing_or_invalid_operation_rejected"
 outcome = "no-conforme"
 cause = "BUG-15"

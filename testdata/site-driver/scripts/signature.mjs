@@ -888,6 +888,9 @@ export const SIGNATURE_SCRIPTS = {
   signwithanunknownformat: aPublishedScript(signing("NoSuchFormat", "", theChallenge)),
   signwithoutaformat: aPublishedScript(signing(null, "", theChallenge)),
   signwithbrokentsa: aPublishedScript(theSignWithABrokenTsaUrlScript),
+  signpadeswithanunreachabletsa: aPublishedScript(
+    signing("PAdES", withoutAChoice("tsaURL=http://127.0.0.1:1/tsp"), thePdfOfTheTest),
+  ),
   signwithanunknownpolicy: aPublishedScript(
     signing("CAdES", "expPolicy=NoSuchPolicy", theChallenge),
   ),
