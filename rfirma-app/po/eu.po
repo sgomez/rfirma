@@ -580,6 +580,69 @@ msgstr "Zeuk sinatu zenuen jada ziurtagiri honekin"
 msgid "panel.previousSignatures.otherCertificate"
 msgstr "Zeuk sinatu zenuen jada, beste ziurtagiri batekin"
 
+#. Coletilla de la línea plegada del aviso de firmas previas, en su propia línea fija.
+msgid "panel.previousSignatures.warnings"
+msgid_plural "panel.previousSignatures.warnings"
+msgstr[0] "Abisu 1"
+msgstr[1] "{{count}} abisu"
+msgstr[2] "{{count}} abisu"
+
+#. En la fila de la última firma previa, cuando el backend marca el documento como cambiado.
+msgid "panel.previousSignatures.changedAfterSignature"
+msgstr "Dokumentua sinadura honen ondoren aldatu da"
+
+#. Veredicto de una fila del aviso de firmas previas: la firma se sostiene.
+msgid "panel.previousSignatures.status.valid"
+msgstr "Baliozkoa"
+
+#. Veredicto de una fila del aviso de firmas previas: el certificado con el que se firmó ya caducó.
+msgid "panel.previousSignatures.status.certificateExpired"
+msgstr "Ziurtagiria iraungita"
+
+#. Veredicto de una fila del aviso de firmas previas: el certificado todavía no era válido al firmar.
+msgid "panel.previousSignatures.status.certificateNotYetValid"
+msgstr "Ziurtagiria oraindik ez da baliozkoa"
+
+#. Veredicto de una fila del aviso de firmas previas: la firma no corresponde, está dañada o el PDF certificado no admitía más.
+msgid "panel.previousSignatures.status.broken"
+msgstr "Sinadura hondatuta"
+
+#. Veredicto de una fila del aviso de firmas previas: formato no reconocido.
+msgid "panel.previousSignatures.status.unverifiable"
+msgstr "Ezin da balioztatu"
+
+#. Veredicto de una fila del aviso de firmas previas: firma de perfil longevo con el certificado ya caducado.
+msgid "panel.previousSignatures.status.notFullyChecked"
+msgstr "Ezin izan da erabat egiaztatu"
+
+#. Motivo bajo el veredicto «Certificado caducado».
+msgid "panel.previousSignatures.reason.certificateExpired"
+msgstr "Ziurtagiria dagoeneko iraungi da"
+
+#. Motivo bajo el veredicto «Certificado aún no válido».
+msgid "panel.previousSignatures.reason.certificateNotYetValid"
+msgstr "Ziurtagiria oraindik ez da baliozkoa"
+
+#. Motivo bajo el veredicto «No se puede validar».
+msgid "panel.previousSignatures.reason.unverifiable"
+msgstr "Formatua ez da ezagutzen"
+
+#. Motivo bajo el veredicto «No se ha podido comprobar del todo».
+msgid "panel.previousSignatures.reason.notFullyChecked"
+msgstr "Iraupen luzeko sinadura: rFirma-k ez du sinadura mota hau egiaztatzen"
+
+#. Motivo bajo el veredicto «Firma rota»: no corresponde con los datos del documento.
+msgid "panel.previousSignatures.reason.brokenDataMismatch"
+msgstr "Ez dator bat dokumentuaren datuekin"
+
+#. Motivo bajo el veredicto «Firma rota»: está dañada.
+msgid "panel.previousSignatures.reason.brokenCorrupted"
+msgstr "Hondatuta dago"
+
+#. Motivo bajo el veredicto «Firma rota»: el PDF estaba certificado y no admitía más firmas.
+msgid "panel.previousSignatures.reason.brokenCertifiedRevision"
+msgstr "PDFa ziurtatuta zegoen eta ez zuen sinadura gehiago onartzen"
+
 #. Nombre accesible del segmentado que elige en qué páginas va la firma visible.
 msgid "panel.placement.title"
 msgstr "Zein orrialdetan"

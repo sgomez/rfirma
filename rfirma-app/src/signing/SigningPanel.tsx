@@ -11,7 +11,7 @@ import { ModelFieldset } from "./ModelFieldset";
 import { PanelFooter } from "./PanelFooter";
 import { PlacementFieldset } from "./PlacementFieldset";
 import { PreviousSignaturesNotice } from "./PreviousSignaturesNotice";
-import type { PreviousSignature } from "./previousSignatures";
+import type { PreviousSignaturesReport } from "./previousSignatures";
 import type { Rubric, RubricFailure } from "./rubric";
 import "./SigningPanel.css";
 import { usePlacementField } from "./usePlacementField";
@@ -57,8 +57,8 @@ export type CertificateState =
 
 interface SigningPanelProps {
   document: SigningDocument;
-  /** Las firmas que ya trae el documento, pedidas al abrir o cargar. */
-  previousSignatures: readonly PreviousSignature[];
+  /** El informe de firmas previas del documento, pedido al abrir o cargar. */
+  previousSignatures: PreviousSignaturesReport;
   certificate: CertificateState;
   /** Cuál se elige en el desplegable. */
   onChooseCertificate: (certificate: Certificate) => void;
@@ -194,10 +194,10 @@ export function SigningPanel({
           />
         ) : (
           <>
-            {previousSignatures.length > 0 && (
+            {previousSignatures.signatures.length > 0 && (
               <PreviousSignaturesNotice
                 key={document.id}
-                signatures={previousSignatures}
+                report={previousSignatures}
                 certificate={chosen}
               />
             )}

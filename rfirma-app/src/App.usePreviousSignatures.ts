@@ -2,7 +2,12 @@ import { useEffect, useState } from "react";
 import type { SigningBackend } from "./signing/flow";
 import type { PreviousSignaturesReport } from "./signing/previousSignatures";
 
-const NO_SIGNATURES: PreviousSignaturesReport = { signatures: [] };
+const NO_SIGNATURES: PreviousSignaturesReport = {
+  signatures: [],
+  warningCount: 0,
+  tone: "information",
+  changedAfterLastSignature: false,
+};
 
 /**
  * Las firmas que ya trae el documento activo, pedidas al abrir o cargar el

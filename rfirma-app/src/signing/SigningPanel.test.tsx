@@ -1,8 +1,23 @@
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { certificate, renderPanel } from "./SigningPanel.testSupport";
+import {
+  certificate,
+  previousSignatureOf,
+  renderPanel,
+  reportOf,
+} from "./SigningPanel.testSupport";
 import { DEFAULT_VISIBLE_SIGNATURE } from "./visibleSignature";
+
+const TWO_SIGNATURES = [
+  previousSignatureOf({ certificateSerialNumber: "1" }),
+  previousSignatureOf({
+    name: "Charles Babbage",
+    idNumber: "88888888T",
+    certificateSerialNumber: "2",
+    signingTime: "2024-01-02T10:00:00Z",
+  }),
+];
 
 // Grada A: el panel son datos y devoluciones de llamada; no habla con nadie.
 describe("SigningPanel", () => {
@@ -36,7 +51,7 @@ describe("SigningPanel", () => {
   it("shows no co-signature notice for a document that carries none", () => {
     renderPanel({
       document: { id: "doc-1", name: "contrato.pdf", pages: 27, sizeBytes: null },
-      previousSignatures: [],
+      previousSignatures: reportOf([]),
     });
 
     expect(screen.queryByText(/Firmarás junto a/)).not.toBeInTheDocument();
@@ -133,16 +148,7 @@ describe("SigningPanel", () => {
   it("warns about the co-signature when the document already carries signatures", () => {
     renderPanel({
       document: { id: "doc-1", name: "contrato.pdf", pages: 27, sizeBytes: 2_400_000 },
-      previousSignatures: [
-        {
-          name: "Ada Lovelace Byron",
-          idNumber: "99999999R",
-          organizationIdentifier: null,
-          issuer: "AC FNMT Usuarios",
-          certificateSerialNumber: "1",
-          signingTime: "2024-01-01T10:00:00Z",
-        },
-      ],
+      previousSignatures: reportOf([previousSignatureOf()]),
     });
 
     expect(screen.getByText("Firmarás junto a 1 firma anterior")).toBeInTheDocument();
@@ -151,16 +157,14 @@ describe("SigningPanel", () => {
   it("shows the same-certificate strip, even folded, when the chosen certificate signed before", () => {
     renderPanel({
       document: { id: "doc-1", name: "contrato.pdf", pages: 27, sizeBytes: 2_400_000 },
-      previousSignatures: [
-        {
-          name: "Ada Lovelace Byron",
+      previousSignatures: reportOf([
+        previousSignatureOf({
           idNumber: certificate.idNumber,
           organizationIdentifier: certificate.organizationIdentifier,
           issuer: certificate.issuer,
           certificateSerialNumber: certificate.certificateSerialNumber,
-          signingTime: "2024-01-01T10:00:00Z",
-        },
-      ],
+        }),
+      ]),
     });
 
     expect(screen.getByRole("button", { name: "Ver firmas anteriores" })).toHaveAttribute(
@@ -173,16 +177,14 @@ describe("SigningPanel", () => {
   it("shows the other-certificate strip for a renewed certificate: same NIF and entity, other serial", () => {
     renderPanel({
       document: { id: "doc-1", name: "contrato.pdf", pages: 27, sizeBytes: 2_400_000 },
-      previousSignatures: [
-        {
-          name: "Ada Lovelace Byron",
+      previousSignatures: reportOf([
+        previousSignatureOf({
           idNumber: certificate.idNumber,
           organizationIdentifier: certificate.organizationIdentifier,
           issuer: certificate.issuer,
           certificateSerialNumber: "9999999999",
-          signingTime: "2024-01-01T10:00:00Z",
-        },
-      ],
+        }),
+      ]),
     });
 
     expect(screen.getByText("Ya lo firmaste tú, con otro certificado tuyo")).toBeInTheDocument();
@@ -192,16 +194,14 @@ describe("SigningPanel", () => {
     renderPanel({
       certificate: { kind: "unchosen", certificates: [certificate] },
       document: { id: "doc-1", name: "contrato.pdf", pages: 27, sizeBytes: 2_400_000 },
-      previousSignatures: [
-        {
-          name: "Ada Lovelace Byron",
+      previousSignatures: reportOf([
+        previousSignatureOf({
           idNumber: certificate.idNumber,
           organizationIdentifier: certificate.organizationIdentifier,
           issuer: certificate.issuer,
           certificateSerialNumber: certificate.certificateSerialNumber,
-          signingTime: "2024-01-01T10:00:00Z",
-        },
-      ],
+        }),
+      ]),
     });
 
     expect(screen.queryByText(/Ya lo firmaste tú/)).not.toBeInTheDocument();
@@ -210,24 +210,7 @@ describe("SigningPanel", () => {
   it("pluralises the co-signature notice with more than one previous signature", () => {
     renderPanel({
       document: { id: "doc-1", name: "contrato.pdf", pages: 27, sizeBytes: 2_400_000 },
-      previousSignatures: [
-        {
-          name: "Ada Lovelace Byron",
-          idNumber: "99999999R",
-          organizationIdentifier: null,
-          issuer: "AC FNMT Usuarios",
-          certificateSerialNumber: "1",
-          signingTime: "2024-01-01T10:00:00Z",
-        },
-        {
-          name: "Charles Babbage",
-          idNumber: "88888888T",
-          organizationIdentifier: null,
-          issuer: "AC FNMT Usuarios",
-          certificateSerialNumber: "2",
-          signingTime: "2024-01-02T10:00:00Z",
-        },
-      ],
+      previousSignatures: reportOf(TWO_SIGNATURES),
     });
 
     expect(screen.getByText("Firmarás junto a 2 firmas anteriores")).toBeInTheDocument();
@@ -236,29 +219,12 @@ describe("SigningPanel", () => {
   it("nace desplegado when a report with two signatures arrives after the panel already mounted", () => {
     const { show } = renderPanel({
       document: { id: "doc-1", name: "contrato.pdf", pages: 27, sizeBytes: 2_400_000 },
-      previousSignatures: [],
+      previousSignatures: reportOf([]),
     });
 
     show({
       document: { id: "doc-1", name: "contrato.pdf", pages: 27, sizeBytes: 2_400_000 },
-      previousSignatures: [
-        {
-          name: "Ada Lovelace Byron",
-          idNumber: "99999999R",
-          organizationIdentifier: null,
-          issuer: "AC FNMT Usuarios",
-          certificateSerialNumber: "1",
-          signingTime: "2024-01-01T10:00:00Z",
-        },
-        {
-          name: "Charles Babbage",
-          idNumber: "88888888T",
-          organizationIdentifier: null,
-          issuer: "AC FNMT Usuarios",
-          certificateSerialNumber: "2",
-          signingTime: "2024-01-02T10:00:00Z",
-        },
-      ],
+      previousSignatures: reportOf(TWO_SIGNATURES),
     });
 
     expect(screen.getByRole("button", { name: "Ocultar firmas anteriores" })).toHaveAttribute(
@@ -270,39 +236,20 @@ describe("SigningPanel", () => {
   it("does not carry the expanded state of the previous document into the next one", () => {
     const { show } = renderPanel({
       document: { id: "doc-1", name: "contrato.pdf", pages: 27, sizeBytes: 2_400_000 },
-      previousSignatures: [
-        {
-          name: "Ada Lovelace Byron",
-          idNumber: "99999999R",
-          organizationIdentifier: null,
-          issuer: "AC FNMT Usuarios",
-          certificateSerialNumber: "1",
-          signingTime: "2024-01-01T10:00:00Z",
-        },
-        {
-          name: "Charles Babbage",
-          idNumber: "88888888T",
-          organizationIdentifier: null,
-          issuer: "AC FNMT Usuarios",
-          certificateSerialNumber: "2",
-          signingTime: "2024-01-02T10:00:00Z",
-        },
-      ],
+      previousSignatures: reportOf(TWO_SIGNATURES),
     });
     expect(screen.getByRole("button", { name: "Ocultar firmas anteriores" })).toBeInTheDocument();
 
     show({
       document: { id: "doc-2", name: "otro.pdf", pages: 3, sizeBytes: 1_000 },
-      previousSignatures: [
-        {
+      previousSignatures: reportOf([
+        previousSignatureOf({
           name: "Grace Hopper",
           idNumber: "77777777J",
-          organizationIdentifier: null,
-          issuer: "AC FNMT Usuarios",
           certificateSerialNumber: "3",
           signingTime: "2024-02-01T10:00:00Z",
-        },
-      ],
+        }),
+      ]),
     });
 
     expect(screen.getByRole("button", { name: "Ver firmas anteriores" })).toHaveAttribute(
@@ -315,16 +262,7 @@ describe("SigningPanel", () => {
     const user = userEvent.setup();
     renderPanel({
       document: { id: "doc-1", name: "contrato.pdf", pages: 27, sizeBytes: 2_400_000 },
-      previousSignatures: [
-        {
-          name: "Ada Lovelace Byron",
-          idNumber: "99999999R",
-          organizationIdentifier: null,
-          issuer: "AC FNMT Usuarios",
-          certificateSerialNumber: "1",
-          signingTime: "2024-01-01T10:00:00Z",
-        },
-      ],
+      previousSignatures: reportOf([previousSignatureOf()]),
     });
 
     const rows = () => document.querySelector(".panel__previous-signatures-list");
@@ -350,6 +288,93 @@ describe("SigningPanel", () => {
       "false",
     );
     expect(rows()).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ["valid", null, "Válida"],
+    ["certificateExpired", null, "Certificado caducado"],
+    ["certificateNotYetValid", null, "Certificado aún no válido"],
+    ["broken", "NO_MATCH_DATA", "Firma rota"],
+    ["unverifiable", null, "No se puede validar"],
+    ["notFullyChecked", null, "No se ha podido comprobar del todo"],
+  ] as const)("shows a %s row with its verdict and motive", async (status, reason, label) => {
+    const user = userEvent.setup();
+    renderPanel({
+      document: { id: "doc-1", name: "contrato.pdf", pages: 27, sizeBytes: 2_400_000 },
+      previousSignatures: reportOf([previousSignatureOf({ status, reason })], {
+        warningCount: status === "valid" ? 0 : 1,
+        tone:
+          status === "notFullyChecked"
+            ? "indeterminate"
+            : status === "valid"
+              ? "information"
+              : "attention",
+      }),
+    });
+
+    const collapsed = screen.queryByRole("button", { name: "Ver firmas anteriores" });
+    if (collapsed !== null) {
+      await user.click(collapsed);
+    }
+
+    expect(screen.getByText(label)).toBeInTheDocument();
+  });
+
+  it("shows the three motives of a broken signature by its reason code", () => {
+    const cases: Array<[string | null, string]> = [
+      ["NO_MATCH_DATA", "No corresponde con los datos"],
+      ["CORRUPTED_SIGN", "Está dañada"],
+      ["CERTIFIED_SIGN_REVISION", "El PDF estaba certificado y no admitía más firmas"],
+    ];
+    for (const [reason, motive] of cases) {
+      const { unmount } = renderPanel({
+        document: { id: "doc-1", name: "contrato.pdf", pages: 27, sizeBytes: 2_400_000 },
+        previousSignatures: reportOf([previousSignatureOf({ status: "broken", reason })], {
+          warningCount: 1,
+          tone: "attention",
+        }),
+      });
+
+      expect(screen.getByText(motive)).toBeInTheDocument();
+      unmount();
+    }
+  });
+
+  it("shows the document-changed line under the last signature when the backend marks it", () => {
+    renderPanel({
+      document: { id: "doc-1", name: "contrato.pdf", pages: 27, sizeBytes: 2_400_000 },
+      previousSignatures: reportOf(TWO_SIGNATURES, {
+        warningCount: 1,
+        tone: "attention",
+        changedAfterLastSignature: true,
+      }),
+    });
+
+    expect(screen.getByText("El documento ha cambiado después de esta firma")).toBeInTheDocument();
+  });
+
+  it("shows the warnings line on its own, with the tone's border, when there are any", () => {
+    renderPanel({
+      document: { id: "doc-1", name: "contrato.pdf", pages: 27, sizeBytes: 2_400_000 },
+      previousSignatures: reportOf([previousSignatureOf({ status: "broken", reason: null })], {
+        warningCount: 1,
+        tone: "attention",
+      }),
+    });
+
+    expect(screen.getByText("1 aviso")).toBeInTheDocument();
+    expect(document.querySelector(".panel__co-signature")).toHaveClass(
+      "panel__co-signature--attention",
+    );
+  });
+
+  it("shows no warnings line for a document with only valid previous signatures", () => {
+    renderPanel({
+      document: { id: "doc-1", name: "contrato.pdf", pages: 27, sizeBytes: 2_400_000 },
+      previousSignatures: reportOf([previousSignatureOf()]),
+    });
+
+    expect(screen.queryByText(/aviso/)).not.toBeInTheDocument();
   });
 
   it("offers two ways out when no certificate turned up, in the footer", async () => {

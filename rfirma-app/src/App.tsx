@@ -438,7 +438,7 @@ export function App({
                 pages: pdf.pageCount,
                 sizeBytes,
               }}
-              previousSignatures={previousSignatures.signatures}
+              previousSignatures={previousSignatures}
               certificate={certificate}
               onChooseCertificate={chooseCertificate}
               onRetryCertificates={() => void lookForCertificates()}

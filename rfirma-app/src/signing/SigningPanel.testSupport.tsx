@@ -11,9 +11,39 @@ import {
   storing,
 } from "../viewer/signatureBox";
 import type { Certificate } from "./certificate";
+import type { PreviousSignature, PreviousSignaturesReport } from "./previousSignatures";
 import type { Rubric } from "./rubric";
 import { SigningPanel } from "./SigningPanel";
 import { DEFAULT_VISIBLE_SIGNATURE } from "./visibleSignature";
+
+/** Una firma previa válida, lista para sobreescribir con `overrides`. */
+export function previousSignatureOf(overrides: Partial<PreviousSignature> = {}): PreviousSignature {
+  return {
+    name: "Ada Lovelace Byron",
+    idNumber: "99999999R",
+    organizationIdentifier: null,
+    issuer: "AC FNMT Usuarios",
+    certificateSerialNumber: "1",
+    signingTime: "2024-01-01T10:00:00Z",
+    status: "valid",
+    reason: null,
+    ...overrides,
+  };
+}
+
+/** El informe de firmas previas de las pruebas: sin avisos salvo que se digan. */
+export function reportOf(
+  signatures: readonly PreviousSignature[],
+  overrides: Partial<Omit<PreviousSignaturesReport, "signatures">> = {},
+): PreviousSignaturesReport {
+  return {
+    signatures,
+    warningCount: 0,
+    tone: "information",
+    changedAfterLastSignature: false,
+    ...overrides,
+  };
+}
 
 export const certificate: Certificate = {
   id: "0123456789abcdef0123456789abcdef",
@@ -49,7 +79,7 @@ function panelWith(props: PanelProps) {
   return (
     <SigningPanel
       document={{ id: "doc-1", name: "contrato.pdf", pages: 27, sizeBytes: 2_400_000 }}
-      previousSignatures={[]}
+      previousSignatures={reportOf([])}
       certificate={{ kind: "chosen", certificate, certificates: [certificate] }}
       onChooseCertificate={noop}
       onRetryCertificates={noop}

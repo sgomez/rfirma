@@ -289,6 +289,8 @@ crossing! {
         pub warning_count: usize,
         /// El tono del peor aviso.
         pub tone: ToneView,
+        /// Si el documento cambió después de la última firma.
+        pub changed_after_last_signature: bool,
     }
 }
 
@@ -296,6 +298,7 @@ impl From<PreviousSignaturesReport> for PreviousSignaturesReportView {
     fn from(report: PreviousSignaturesReport) -> Self {
         let warning_count = report.warning_count();
         let tone = ToneView::from(report.tone());
+        let changed_after_last_signature = report.changed_after_last_signature();
         Self {
             signatures: report
                 .into_signatures()
@@ -304,6 +307,7 @@ impl From<PreviousSignaturesReport> for PreviousSignaturesReportView {
                 .collect(),
             warning_count,
             tone,
+            changed_after_last_signature,
         }
     }
 }
