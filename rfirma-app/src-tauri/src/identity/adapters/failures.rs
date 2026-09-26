@@ -4,7 +4,7 @@ use crate::crossing::Failure;
 use crate::identity::application::certificates::InstallError;
 use crate::identity::domain::error::{Situation, TokenError};
 use crate::identity::domain::secret::SecretOnTheReaderKeypad;
-use crate::identity::ports::SecretPromptError;
+use crate::identity::ports::{PromptedError, SecretPromptError};
 use crate::site::domain::protocol::SafCode;
 
 fn token_told(situation: Situation) -> (&'static str, SafCode) {
@@ -73,6 +73,18 @@ impl From<InstallError> for Failure {
             InstallError::Token(error) => error.into(),
             InstallError::Store(error) => error.into(),
         }
+    }
+}
+
+/// Lo que la ventana oye de instalar un `.p12`: instalado, cancelado sin error o el fallo.
+pub fn installed_unless_cancelled(
+    outcome: Result<(), PromptedError<InstallError>>,
+) -> Result<bool, Failure> {
+    match outcome {
+        Ok(()) => Ok(true),
+        Err(PromptedError::Prompt(SecretPromptError::Cancelled)) => Ok(false),
+        Err(PromptedError::Prompt(failed)) => Err(failed.into()),
+        Err(PromptedError::Attempt(install_error)) => Err(install_error.into()),
     }
 }
 

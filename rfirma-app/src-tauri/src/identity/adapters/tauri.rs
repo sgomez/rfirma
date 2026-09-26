@@ -7,7 +7,6 @@ use crate::signing::SigningRoot;
 
 use super::views::CertificateView;
 use crate::crossing::Failure;
-use crate::identity::ports::{PromptedError, SecretPromptError};
 
 /// Certificados de los tokens conectados.
 #[tauri::command]
@@ -44,20 +43,17 @@ pub fn install_certificate(
     };
     let (file_name, pkcs12) = read_the_file(chosen)?;
 
-    match crate::identity::application::certificates::install_pkcs12_asking_its_password(
-        identity.token.as_ref(),
-        identity.folder.as_ref(),
-        identity.installed_certificates(),
-        &pkcs12,
-        &file_name,
-        identity.prompter.as_ref(),
-        signing.configuration().language,
-    ) {
-        Ok(()) => Ok(true),
-        Err(PromptedError::Prompt(SecretPromptError::Cancelled)) => Ok(false),
-        Err(PromptedError::Prompt(failed)) => Err(failed.into()),
-        Err(PromptedError::Attempt(install_error)) => Err(install_error.into()),
-    }
+    super::failures::installed_unless_cancelled(
+        crate::identity::application::certificates::install_pkcs12_asking_its_password(
+            identity.token.as_ref(),
+            identity.folder.as_ref(),
+            identity.installed_certificates(),
+            &pkcs12,
+            &file_name,
+            identity.prompter.as_ref(),
+            signing.configuration().language,
+        ),
+    )
 }
 
 /// Desinstala un certificado PKCS#12 previamente instalado.

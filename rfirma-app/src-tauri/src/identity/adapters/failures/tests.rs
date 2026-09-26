@@ -87,3 +87,37 @@ fn a_mechanism_the_token_does_not_offer_fails_the_signature_as_in_the_original()
         SafCode::SignatureFailed
     );
 }
+
+#[test]
+fn an_installed_p12_answers_true() {
+    assert_eq!(installed_unless_cancelled(Ok(())), Ok(true));
+}
+
+#[test]
+fn a_cancelled_p12_password_answers_false_without_a_failure() {
+    let outcome = Err(PromptedError::Prompt(SecretPromptError::Cancelled));
+
+    assert_eq!(installed_unless_cancelled(outcome), Ok(false));
+}
+
+#[test]
+fn a_password_dialog_that_fails_crosses_as_a_failed_prompt() {
+    let outcome = Err(PromptedError::Prompt(SecretPromptError::Failed(
+        "sin pantalla".to_string(),
+    )));
+
+    let failure = installed_unless_cancelled(outcome).unwrap_err();
+
+    assert_eq!(failure.situation, "promptFailed");
+}
+
+#[test]
+fn a_p12_the_token_refuses_crosses_with_the_situation_of_the_token() {
+    let outcome = Err(PromptedError::Attempt(InstallError::Token(
+        TokenError::new(Situation::Pkcs12NoPrivateKey, "sin clave"),
+    )));
+
+    let failure = installed_unless_cancelled(outcome).unwrap_err();
+
+    assert_eq!(failure.situation, "pkcs12NoPrivateKey");
+}
