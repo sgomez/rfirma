@@ -344,14 +344,10 @@ describe("App, con un documento que no se recuerda", () => {
     );
     await openPdf(user);
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
-    // La firma visible arranca apagada (#974): hay que encenderla para llegar
-    // al bloque «Colocación».
-    await user.click(
-      within(panel).getByRole("switch", { name: /Estampar un recuadro de firma en el documento/ }),
-    );
-    await within(panel).findByText("Colocación");
+    await user.click(within(panel).getByRole("switch", { name: "Firma visible" }));
+    await within(panel).findByText("En la página 1");
 
-    await user.click(within(panel).getByRole("radio", { name: /Todas las páginas/ }));
+    await user.click(within(panel).getByRole("radio", { name: "Todas" }));
 
     // El recuadro está puesto —la ventana lo pinta— y aun así no se ha escrito
     // nada: no hay fila donde apuntarlo.

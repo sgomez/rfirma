@@ -105,3 +105,14 @@
 .switch__hint {
   padding-left: calc(40px + var(--switch-gap));
 }
+
+.switch--trailing .switch__control {
+  align-items: center;
+  gap: 12px;
+  min-height: 30px;
+}
+
+.switch--trailing .switch__label {
+  flex: 1;
+  min-width: 0;
+}

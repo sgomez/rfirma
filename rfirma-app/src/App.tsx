@@ -25,7 +25,6 @@ import { MainWindow } from "./shell/MainWindow";
 import { type MenuAnchor, menuAnchorFor } from "./shell/menuAnchor";
 import { NotificationStrip } from "./shell/NotificationStrip";
 import type { CertificateStore } from "./signing/certificate";
-import { isUsable } from "./signing/certificate";
 import type { DestinationSource, SignedDocumentOpener } from "./signing/destination";
 import type { SigningBackend } from "./signing/flow";
 import type { RubricPicker } from "./signing/rubric";
@@ -192,13 +191,13 @@ export function App({
     rememberPlacement,
     choosePages,
     changePageChoice,
+    placeOnViewedPage,
   } = usePlacementControls(pdf, documents.place, viewedPage);
 
-  const onChangeSignature = (next: VisibleSignature) => {
-    const turnsOnWithNothingPlaced = next.enabled && !signature.enabled && placement === null;
-    setSignature(next);
-    if (turnsOnWithNothingPlaced) setPlacementRequest({ action: "seal" });
-  };
+  const signatureOn = signature.enabled && pdf !== null;
+  useEffect(() => {
+    if (signatureOn && placing.rect === null) placeOnViewedPage();
+  }, [signatureOn, placing.rect, placeOnViewedPage]);
 
   // Se lee aquí, y no en la vista previa, porque es asíncrono y el ciclo de la
   // firma se decide con la orden ya armada.
@@ -396,9 +395,7 @@ export function App({
             stampFrozen={stamp.state.kind === "frozen"}
             onGesture={setGesturing}
             placement={placement}
-            // ID-108: sin certificado utilizable no se coloca, igual que el
-            // panel apaga su bloque entero.
-            canPlace={signature.enabled && chosen !== null && isUsable(chosen.status)}
+            canPlace={signature.enabled}
             onPlace={rememberPlacement}
             pageChoice={pageChoice}
             onPageChange={setViewedPage}
@@ -466,7 +463,7 @@ export function App({
               onRetryCertificates={() => void lookForCertificates()}
               onChooseModule={() => void lookForCertificates()}
               signature={signature}
-              onChangeSignature={onChangeSignature}
+              onChangeSignature={setSignature}
               placement={placement}
               pageSets={placing.sets}
               onChoosePages={choosePages}
