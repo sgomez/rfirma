@@ -22,6 +22,7 @@ import { unavailableOpener } from "./signing/destination";
 import { unavailableSigningBackend } from "./signing/flow";
 import { emptyRubricPicker, type RubricPicker } from "./signing/rubric";
 import { unavailableStampComposer } from "./signing/stampPreview";
+import { DEFAULT_VISIBLE_SIGNATURE } from "./signing/visibleSignature";
 import { renderWithCatalog } from "./testing/render";
 import { inMemoryVersionCheck } from "./updates/newVersion";
 import { unavailablePdfSource } from "./viewer/source";
@@ -88,6 +89,43 @@ describe("App", () => {
   });
 
   /**
+   * El criterio del #978: el documento siguiente arranca con el modelo y
+   * «Con rúbrica» de la última firma visible configurada, sin volver a
+   * elegirlos. Encender el interruptor los enseña; no los siembra.
+   */
+  it("starts a new document with the model and rubric flag a previous session left", async () => {
+    const user = userEvent.setup();
+    renderApp(
+      inMemoryRecents(),
+      [document("factura.pdf")],
+      pdfsOf({ "factura.pdf": 2 }),
+      {},
+      failingCertificateStore(0, [{ ...aCertificate, remembered: true }]),
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      { enabled: false, withRubric: true, content: { model: "rubricOnly" } },
+    );
+
+    await openPdf(user);
+    const panel = await screen.findByRole("region", { name: "Panel de firma" });
+    await user.click(
+      within(panel).getByRole("switch", { name: /Estampar un recuadro de firma en el documento/ }),
+    );
+
+    expect(within(panel).getByRole("radio", { name: "Solo rúbrica" })).toBeChecked();
+    expect(within(panel).getByRole("switch", { name: "Con rúbrica" })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+  });
+
+  /**
    * Un ajuste que el disco no acepta **no se queda puesto**: la ventana
    * volvería a abrirse con el valor anterior, así que enseñarlo cambiado sería
    * mentir sobre la sesión siguiente.
@@ -126,6 +164,7 @@ describe("App", () => {
         stamps={unavailableStampComposer()}
         signer={unavailableSigningBackend()}
         opener={unavailableOpener()}
+        initialSignature={DEFAULT_VISIBLE_SIGNATURE}
         versions={inMemoryVersionCheck()}
         menuAnchor="header"
       />,

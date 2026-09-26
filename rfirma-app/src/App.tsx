@@ -36,7 +36,7 @@ import type { StampComposer } from "./signing/stampPreview";
 import { UnregisteredSignaturesDialog } from "./signing/UnregisteredSignaturesDialog";
 import { UnsealedPagesDialog } from "./signing/UnsealedPagesDialog";
 import { useSigning } from "./signing/useSigning";
-import { DEFAULT_VISIBLE_SIGNATURE, type VisibleSignature } from "./signing/visibleSignature";
+import type { VisibleSignature } from "./signing/visibleSignature";
 import { StatusView } from "./status/StatusView";
 import { memoryStatus, type StatusPort } from "./status/status";
 import type { VersionCheck } from "./updates/newVersion";
@@ -66,11 +66,9 @@ interface AppProps {
   stamps: StampComposer;
   /** Quien ejecuta las tres etapas de la firma. Ver [`SigningBackend`]. */
   signer: SigningBackend;
-  /**
-   * Quien lleva al usuario hasta el fichero firmado. Ver
-   * [`SignedDocumentOpener`].
-   */
+  /** Quien lleva al usuario hasta el fichero firmado. Ver [`SignedDocumentOpener`]. */
   opener: SignedDocumentOpener;
+  initialSignature: VisibleSignature;
   /** Si hay una versión nueva publicada. Ver [`VersionCheck`]. */
   versions: VersionCheck;
   /** Dónde va el menú. Por omisión, lo que diga la plataforma. */
@@ -117,6 +115,7 @@ export function App({
   stamps,
   signer,
   opener,
+  initialSignature,
   versions,
   menuAnchor,
   externalDestinations = unavailableExternalDestinationOpener(),
@@ -157,7 +156,7 @@ export function App({
   const [placementRequest, setPlacementRequest] = useState<{
     action: "seal" | "unseal";
   } | null>(null);
-  const [signature, setSignature] = useState<VisibleSignature>(DEFAULT_VISIBLE_SIGNATURE);
+  const [signature, setSignature] = useState<VisibleSignature>(initialSignature);
   const signing = useSigning(signer);
   const { settings, changeSettings, chooseDestination, rubric, rubricFailure, chooseRubric } =
     usePreferencesState(preferences, rubrics);

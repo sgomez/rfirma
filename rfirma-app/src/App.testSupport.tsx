@@ -24,6 +24,7 @@ import {
 import { type SigningBackend, unavailableSigningBackend } from "./signing/flow";
 import { emptyRubricPicker, type RubricPicker } from "./signing/rubric";
 import { unavailableStampComposer } from "./signing/stampPreview";
+import { DEFAULT_VISIBLE_SIGNATURE, type VisibleSignature } from "./signing/visibleSignature";
 import type { StatusPort } from "./status/status";
 import { renderWithCatalog } from "./testing/render";
 import { inMemoryVersionCheck, type VersionCheck } from "./updates/newVersion";
@@ -203,6 +204,7 @@ export function renderApp(
   externalDestinations: ExternalDestinationOpener = unavailableExternalDestinationOpener(),
   status?: StatusPort,
   destinations: DestinationSource = aDestination(),
+  initialSignature: VisibleSignature = DEFAULT_VISIBLE_SIGNATURE,
 ) {
   const preferences = inMemoryPreferences(
     {
@@ -232,6 +234,7 @@ export function renderApp(
       stamps={unavailableStampComposer()}
       signer={signer}
       opener={unavailableOpener()}
+      initialSignature={initialSignature}
       versions={versions}
       menuAnchor="header"
       externalDestinations={externalDestinations}

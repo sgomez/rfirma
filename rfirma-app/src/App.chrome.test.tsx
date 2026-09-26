@@ -22,6 +22,7 @@ import { unavailableOpener } from "./signing/destination";
 import { unavailableSigningBackend } from "./signing/flow";
 import { emptyRubricPicker } from "./signing/rubric";
 import { unavailableStampComposer } from "./signing/stampPreview";
+import { DEFAULT_VISIBLE_SIGNATURE } from "./signing/visibleSignature";
 import { renderWithCatalog } from "./testing/render";
 import { inMemoryVersionCheck } from "./updates/newVersion";
 import { unavailablePdfSource } from "./viewer/source";
@@ -319,6 +320,7 @@ describe("App", () => {
         stamps={unavailableStampComposer()}
         signer={unavailableSigningBackend()}
         opener={unavailableOpener()}
+        initialSignature={DEFAULT_VISIBLE_SIGNATURE}
         versions={inMemoryVersionCheck()}
         menuAnchor="header"
       />,
