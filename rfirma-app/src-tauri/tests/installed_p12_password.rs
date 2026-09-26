@@ -4,10 +4,10 @@ use std::path::{Path, PathBuf};
 
 use rfirma_lib::identity::adapters::folder::RealInstalledFolder;
 use rfirma_lib::identity::adapters::pkcs11;
-use rfirma_lib::identity::application::certificates;
+use rfirma_lib::identity::application::certificates::{self, PasswordPrompt};
 use rfirma_lib::identity::domain::certificate::TokenCertificate;
 use rfirma_lib::identity::domain::store::Store;
-use rfirma_lib::identity::ports::{PromptedError, SecretPromptError};
+use rfirma_lib::identity::ports::{OriginWindow, PromptedError, SecretPromptError, SecretPrompter};
 use rfirma_lib::signing::adapters::gtk_prompter::{
     MockSecretPrompter, PreconfiguredSecretPrompter,
 };
@@ -40,6 +40,14 @@ fn certificates(installed: &Path) -> Vec<TokenCertificate> {
         .expect("el almacen del .p12 deberia listarse")
 }
 
+fn prompt_by(prompter: &dyn SecretPrompter, origin_window: OriginWindow) -> PasswordPrompt<'_> {
+    PasswordPrompt {
+        prompter,
+        language: Language::Spanish,
+        origin_window,
+    }
+}
+
 #[test]
 fn a_wrong_password_is_retried_until_it_installs() {
     let installed = an_empty_installation();
@@ -52,8 +60,7 @@ fn a_wrong_password_is_retried_until_it_installs() {
         installed.path(),
         &bytes,
         "active-rsa.p12",
-        &prompter,
-        Language::Spanish,
+        prompt_by(&prompter, OriginWindow::Main),
     )
     .expect("la segunda contrasena es la correcta");
 
@@ -80,8 +87,7 @@ fn cancelling_the_password_prompt_installs_nothing_and_fails_nothing() {
         installed.path(),
         &bytes,
         "active-rsa.p12",
-        &prompter,
-        Language::Spanish,
+        prompt_by(&prompter, OriginWindow::Main),
     )
     .expect_err("cancelar no instala");
 
@@ -107,8 +113,7 @@ fn an_unreadable_file_does_not_retry_the_password() {
         installed.path(),
         &bytes,
         "not-a.p12",
-        &prompter,
-        Language::Spanish,
+        prompt_by(&prompter, OriginWindow::Main),
     )
     .expect_err("un fichero ilegible no se instala");
 
@@ -117,5 +122,27 @@ fn an_unreadable_file_does_not_retry_the_password() {
         prompter.recorded_requests().len(),
         1,
         "un fichero ilegible no vuelve a pedir contrasena"
+    );
+}
+
+#[test]
+fn the_password_dialog_is_modal_over_the_window_that_asked_to_install() {
+    let installed = an_empty_installation();
+    let bytes = std::fs::read(kit_p12()).expect("el .p12 del kit deberia leerse");
+    let prompter = MockSecretPrompter::with_secrets(&[KIT_PASSWORD]);
+
+    certificates::install_pkcs12_asking_its_password(
+        &pkcs11::RealToken,
+        &RealInstalledFolder,
+        installed.path(),
+        &bytes,
+        "active-rsa.p12",
+        prompt_by(&prompter, OriginWindow::Site),
+    )
+    .expect("la contrasena es la correcta");
+
+    assert_eq!(
+        prompter.recorded_requests()[0].origin_window,
+        Some(OriginWindow::Site)
     );
 }

@@ -167,6 +167,16 @@ pub fn install_pkcs12(
     Ok(())
 }
 
+/// Quién pide la contraseña del `.p12`, en qué idioma y sobre qué ventana.
+pub struct PasswordPrompt<'a> {
+    /// El diálogo del secreto.
+    pub prompter: &'a dyn SecretPrompter,
+    /// El idioma del diálogo.
+    pub language: Language,
+    /// La ventana que pidió instalar, sobre la que el diálogo se hace modal.
+    pub origin_window: OriginWindow,
+}
+
 /// Pide la contraseña del `.p12` por el diálogo del secreto y lo instala, con reintentos hasta acertar o cancelar.
 pub fn install_pkcs12_asking_its_password(
     token: &dyn Token,
@@ -174,18 +184,17 @@ pub fn install_pkcs12_asking_its_password(
     installed_dir: &Path,
     pkcs12: &[u8],
     file_name: &str,
-    prompter: &dyn SecretPrompter,
-    language: Language,
+    prompt: PasswordPrompt<'_>,
 ) -> Result<(), PromptedError<InstallError>> {
     let request = SecretPromptRequest {
         secret: SecretName::Pkcs12Password(file_name.to_string()),
         holder: None,
-        language,
+        language: prompt.language,
         incorrect_secret: false,
-        origin_window: Some(OriginWindow::Main),
+        origin_window: Some(prompt.origin_window),
     };
     prompted_until_accepted(
-        prompter,
+        prompt.prompter,
         request,
         |secret| {
             install_pkcs12(

@@ -7,6 +7,8 @@ use crate::signing::SigningRoot;
 
 use super::views::CertificateView;
 use crate::crossing::Failure;
+use crate::identity::application::certificates::PasswordPrompt;
+use crate::identity::ports::OriginWindow;
 
 /// Certificados de los tokens conectados.
 #[tauri::command]
@@ -32,6 +34,16 @@ pub fn install_certificate(
     identity: State<'_, IdentityRoot>,
     signing: State<'_, SigningRoot>,
 ) -> Result<bool, Failure> {
+    install_certificate_over(app_handle, &identity, &signing, OriginWindow::Main)
+}
+
+/// Instala un `.p12` elegido por la persona, con el diálogo de su contraseña modal sobre `origin_window`.
+pub fn install_certificate_over(
+    app_handle: tauri::AppHandle,
+    identity: &IdentityRoot,
+    signing: &SigningRoot,
+    origin_window: OriginWindow,
+) -> Result<bool, Failure> {
     use tauri_plugin_dialog::DialogExt;
 
     let dialog = app_handle
@@ -50,8 +62,11 @@ pub fn install_certificate(
             identity.installed_certificates(),
             &pkcs12,
             &file_name,
-            identity.prompter.as_ref(),
-            signing.configuration().language,
+            PasswordPrompt {
+                prompter: identity.prompter.as_ref(),
+                language: signing.configuration().language,
+                origin_window,
+            },
         ),
     )
 }

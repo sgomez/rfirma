@@ -8,8 +8,9 @@ use crate::site::SiteRoot;
 use super::views::SiteErrandView;
 use super::window::{self as site_window, SITE_WINDOW};
 use crate::crossing::Failure;
-use crate::identity::adapters::tauri::install_certificate;
+use crate::identity::adapters::tauri::install_certificate_over;
 use crate::identity::adapters::views::SecretView;
+use crate::identity::ports::OriginWindow;
 use crate::signing::adapters::orders::PlacementOrder;
 use crate::signing::SigningRoot;
 
@@ -104,7 +105,7 @@ pub fn site_install_certificate(
     identity: State<'_, IdentityRoot>,
     signing: State<'_, SigningRoot>,
 ) -> Result<bool, Failure> {
-    install_certificate(app_handle, identity, signing)
+    install_certificate_over(app_handle, &identity, &signing, OriginWindow::Site)
 }
 
 /// Descarta el aviso del cliente web antiguo y sigue con el arranque que retenía.
