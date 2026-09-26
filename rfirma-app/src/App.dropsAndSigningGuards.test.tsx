@@ -196,6 +196,7 @@ describe("App, con páginas donde el recuadro no cabe", () => {
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
     const sign = await within(panel).findByRole("button", { name: "Firmar como Ada Lovelace" });
     await waitFor(() => expect(sign).toBeEnabled());
+    await user.click(within(panel).getByRole("switch", { name: "Firma visible" }));
 
     await user.click(sign);
 
@@ -258,6 +259,7 @@ describe("App, con páginas donde el recuadro no cabe", () => {
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
     const sign = await within(panel).findByRole("button", { name: "Firmar como Ada Lovelace" });
     await waitFor(() => expect(sign).toBeEnabled());
+    await user.click(within(panel).getByRole("switch", { name: "Firma visible" }));
     await user.click(sign);
     await screen.findByRole("dialog", { name: "Una página se quedará sin firma visible" });
 
@@ -265,7 +267,7 @@ describe("App, con páginas donde el recuadro no cabe", () => {
 
     await waitFor(() => expect(presign).toHaveBeenCalledOnce());
     const order = presign.mock.calls[0]?.[0];
-    expect(order?.placement.pages).toEqual({ only: [1, 2, 3] });
+    expect(order?.placement?.pages).toEqual({ only: [1, 2, 3] });
     expect(screen.queryByRole("dialog", { name: /firma visible/ })).not.toBeInTheDocument();
   });
 
@@ -306,6 +308,7 @@ describe("App, con páginas donde el recuadro no cabe", () => {
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
     const sign = await within(panel).findByRole("button", { name: "Firmar como Ada Lovelace" });
     await waitFor(() => expect(sign).toBeEnabled());
+    await user.click(within(panel).getByRole("switch", { name: "Firma visible" }));
 
     await user.click(sign);
 

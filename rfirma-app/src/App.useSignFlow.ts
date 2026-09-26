@@ -113,8 +113,7 @@ export function useSignFlow({
       order: signingOrderFor({
         documentId: activeDocument.id,
         certificate: chosen,
-        placement,
-        geometry,
+        box: { placement, geometry },
         pageCount: pdf.pageCount,
         signature,
         rubric,
@@ -151,7 +150,7 @@ export function useSignFlow({
    * página los tiene `pdf.js`.
    */
   const sign = async () => {
-    if (pdf === null || activeDocument === null || placement === null || chosen === null) {
+    if (pdf === null || activeDocument === null || chosen === null) {
       // El botón ya está apagado sin certificado en vigor; aquí solo se
       // estrecha el tipo, y callar es mejor que fabricar una orden a medias.
       return;
@@ -164,29 +163,24 @@ export function useSignFlow({
       return;
     }
 
-    await signPastPreviousSignatures(pdf, activeDocument, placement, chosen);
+    await signPastPreviousSignatures(pdf, activeDocument, stampedPlacement(), chosen);
   };
+
+  const stampedPlacement = () => (signature.enabled ? placement : null);
 
   const signPastPreviousSignatures = async (
     pdf: PdfDocument,
     activeDocument: DocumentInHand,
-    placement: Placement,
+    stamped: Placement | null,
     chosen: Certificate,
   ) => {
-    // La página que mide la `MediaBox` y la `/Rotate` es la **primera del
-    // conjunto**: el widget se replica idéntico en todas (ID-96), así que
-    // cualquiera de ellas daría la misma conversión, y la primera es la única
-    // que se puede nombrar sin elegir.
-    const first = firstSealedPage(placement) ?? 1;
-    const page = await pdf.getPage(first);
     // La misma orden que compuso la vista previa, armada por el mismo sitio: si
     // aquí se armara a mano, lo que se enseñó y lo que se firma podrían
     // separarse sin que ninguna prueba lo notara.
     const order = signingOrderFor({
       documentId: activeDocument.id,
       certificate: chosen,
-      placement,
-      geometry: { page: first, view: page.view, rotate: page.rotate },
+      box: stamped && { placement: stamped, geometry: await geometryOf(pdf, stamped) },
       pageCount: pdf.pageCount,
       signature,
       rubric,
@@ -205,7 +199,7 @@ export function useSignFlow({
       return;
     }
 
-    await signUnlessTheSealFalls(chosen, order, pdf, placement);
+    await signUnlessTheSealFalls(chosen, order, pdf, stamped);
   };
 
   /**
@@ -220,8 +214,12 @@ export function useSignFlow({
     chosen: Certificate,
     order: SigningOrder,
     pdf: PdfDocument,
-    placement: Placement,
+    placement: Placement | null,
   ) => {
+    if (placement === null || order.placement === null) {
+      await startSigning(chosen, order, singleDestinationId);
+      return;
+    }
     // ID-105: `correctPositionSignature` descarta en silencio, contra cada
     // página, aquella donde no cabe la esquina inferior izquierda del
     // recuadro. Es el único aviso que queda desde que se cayó la tira del
@@ -253,14 +251,14 @@ export function useSignFlow({
   // `Firmar de todos modos` del aviso de las firmas sin registrar: la misma
   // orden, ahora con el permiso que el puente necesita (ID-301).
   const signWithUnregisteredSignatures = async () => {
-    if (unregisteredPrompt === null || pdf === null || placement === null) return;
+    if (unregisteredPrompt === null || pdf === null) return;
     const { certificate: chosen, order } = unregisteredPrompt;
     setUnregisteredPrompt(null);
     await signUnlessTheSealFalls(
       chosen,
       { ...order, allowUnregisteredSignatures: true },
       pdf,
-      placement,
+      order.placement === null ? null : placement,
     );
   };
 
@@ -272,13 +270,12 @@ export function useSignFlow({
       invalidPreviousSignaturesPrompt === null ||
       pdf === null ||
       activeDocument === null ||
-      placement === null ||
       chosen === null
     ) {
       return;
     }
     setInvalidPreviousSignaturesPrompt(null);
-    await signPastPreviousSignatures(pdf, activeDocument, placement, chosen);
+    await signPastPreviousSignatures(pdf, activeDocument, stampedPlacement(), chosen);
   };
 
   // `Firmar de todos modos`: la orden ya estaba armada, se manda tal cual.
@@ -302,4 +299,14 @@ export function useSignFlow({
     setInvalidPreviousSignaturesPrompt,
     signDespiteInvalidPreviousSignatures,
   };
+}
+
+/**
+ * La página que mide la `MediaBox` y la `/Rotate`: la primera del conjunto,
+ * porque el widget se replica idéntico en todas.
+ */
+async function geometryOf(pdf: PdfDocument, placement: Placement): Promise<PageGeometry> {
+  const first = firstSealedPage(placement) ?? 1;
+  const page = await pdf.getPage(first);
+  return { page: first, view: page.view, rotate: page.rotate };
 }

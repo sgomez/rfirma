@@ -70,8 +70,7 @@ export interface PageGeometry {
 export function signingOrderFor({
   documentId,
   certificate,
-  placement,
-  geometry,
+  box,
   pageCount,
   signature,
   rubric,
@@ -80,8 +79,7 @@ export function signingOrderFor({
 }: {
   documentId: string;
   certificate: Certificate;
-  placement: Placement;
-  geometry: PageGeometry;
+  box: { placement: Placement; geometry: PageGeometry } | null;
   pageCount: number;
   signature: VisibleSignature;
   rubric: Rubric | null;
@@ -91,20 +89,25 @@ export function signingOrderFor({
   return {
     document: documentId,
     certificate: certificate.id,
-    placement: {
-      page: geometry.page,
-      pages: placement.pages,
+    placement: box && {
+      page: box.geometry.page,
+      pages: box.placement.pages,
       pageCount,
-      mediaBox: geometry.view,
-      rotation: geometry.rotate,
-      rect: [placement.rect.x0, placement.rect.y0, placement.rect.x1, placement.rect.y1],
+      mediaBox: box.geometry.view,
+      rotation: box.geometry.rotate,
+      rect: [
+        box.placement.rect.x0,
+        box.placement.rect.y0,
+        box.placement.rect.x1,
+        box.placement.rect.y1,
+      ],
     },
     content: signature.content,
     withRubric: signature.withRubric,
     signedAt,
     // La rúbrica solo viaja si además está marcada: tener una imagen guardada
     // no es quererla dentro del recuadro.
-    rubric: signature.withRubric && rubric !== null ? base64Of(rubric) : null,
+    rubric: box !== null && signature.withRubric && rubric !== null ? base64Of(rubric) : null,
     language,
     // Nadie ha consentido nada todavía: el permiso se pone al aceptar el aviso
     // de las firmas sin registrar, y en ningún otro sitio (ID-301).

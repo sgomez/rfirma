@@ -16,8 +16,7 @@ describe("signingOrderFor · el modelo elegido", () => {
     const order = signingOrderFor({
       documentId: "doc-1",
       certificate: aCertificate,
-      placement,
-      geometry,
+      box: { placement, geometry },
       pageCount: 3,
       signature: {
         ...DEFAULT_VISIBLE_SIGNATURE,
@@ -38,8 +37,7 @@ describe("signingOrderFor · el modelo elegido", () => {
     const order = signingOrderFor({
       documentId: "doc-1",
       certificate: aCertificate,
-      placement,
-      geometry,
+      box: { placement, geometry },
       pageCount: 3,
       signature: {
         ...DEFAULT_VISIBLE_SIGNATURE,
