@@ -46,6 +46,12 @@ final class PreviousSignaturesBridge {
 
     private static final PdfName DOC_TIMESTAMP = new PdfName("DocTimeStamp");
 
+    /** Los {@code /SubFilter} que {@link SignatureFormatDetectorPadesCades#isPDF} reconoce como PAdES/CAdES. */
+    private static final List<PdfName> RECOGNIZED_SUBFILTERS = List.of(
+            new PdfName("adbe.pkcs7.detached"),
+            new PdfName("adbe.pkcs7.sha1"),
+            new PdfName("ETSI.CAdES.detached"));
+
     private PreviousSignaturesBridge() { }
 
     /** El estado de una firma previa, con el nombre con el que cruza a Rust. */
@@ -111,7 +117,8 @@ final class PreviousSignaturesBridge {
                 validities.add(new SignValidity(SIGN_DETAIL_TYPE.KO,
                         VALIDITY_ERROR.CERTIFIED_SIGN_REVISION));
             }
-            final SignValidity validity = decisive(validities);
+            final SignValidity validity = withUnrecognizedFormat(
+                    hasUnrecognizedSubFilter(fields, name), decisive(validities));
             dated.add(new Dated(signingTime, new Signature(
                     readable(signer.getSubjectX500Principal()),
                     readable(signer.getIssuerX500Principal()),
@@ -176,6 +183,11 @@ final class PreviousSignaturesBridge {
         return ETSI_RFC3161.equals(subFilter) || DOC_TIMESTAMP.equals(subFilter);
     }
 
+    private static boolean hasUnrecognizedSubFilter(final AcroFields fields, final String name) {
+        final Object subFilter = fields.getSignatureDictionary(name).get(PdfName.SUBFILTER);
+        return !RECOGNIZED_SUBFILTERS.contains(subFilter);
+    }
+
     private static List<SignValidity> validate(final String name, final AcroFields fields,
             final String profile) {
         try {
@@ -198,6 +210,15 @@ final class PreviousSignaturesBridge {
             }
         }
         return decisive;
+    }
+
+    /** El original confunde el {@code /SubFilter} no reconocido con una firma longeva sin comprobar. */
+    private static SignValidity withUnrecognizedFormat(final boolean unrecognizedSubFilter,
+            final SignValidity validity) {
+        if (unrecognizedSubFilter && validity.getError() == VALIDITY_ERROR.SIGN_PROFILE_NOT_CHECKED) {
+            return new SignValidity(SIGN_DETAIL_TYPE.KO, VALIDITY_ERROR.UNKOWN_SIGNATURE_FORMAT);
+        }
+        return validity;
     }
 
     private static String reasonOf(final SignValidity validity) {

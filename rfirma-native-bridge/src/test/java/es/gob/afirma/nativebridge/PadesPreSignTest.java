@@ -13,6 +13,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 
+import es.gob.afirma.signers.pades.common.PdfHasUnregisteredSignaturesException;
+
 import org.junit.jupiter.api.Test;
 import org.spongycastle.asn1.ASN1Encodable;
 import org.spongycastle.asn1.ASN1Encoding;
@@ -122,5 +124,15 @@ class PadesPreSignTest {
         assertThrows(Exception.class, () -> PadesBridge.preSign(
                 "no soy un PDF".getBytes(StandardCharsets.UTF_8),
                 "SHA256withRSA", TestFixtures.certificateChain(), new Properties()));
+    }
+
+    @Test
+    void refuses_to_cosign_a_pdf_with_an_unregistered_signature() throws Exception {
+        final byte[] pdf = TestFixtures.signedWithUnrecognizedSubFilter(TestFixtures.samplePdf(),
+                TestFixtures.certificateChain(), TestFixtures.privateKey());
+
+        assertThrows(PdfHasUnregisteredSignaturesException.class,
+                () -> PadesBridge.preSign(pdf, "SHA256withRSA", TestFixtures.certificateChain(),
+                        new Properties()));
     }
 }
