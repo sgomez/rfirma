@@ -59,8 +59,8 @@ sustituida; la rúbrica a la izquierda si está encendida.
 
 **O es la firma de verdad, o el recuadro va vacío.** Nunca una aproximación:
 
-- **Sin certificado** —buscando, o sin ninguno— no hay firma que componer: el
-  recuadro conserva marco y tiradores, se puede colocar, y va vacío.
+- **Sin certificado elegido** —buscando, sin ninguno o sin elegir— no hay firma
+  que componer ni recuadro: la firma visible no se enciende hasta elegir uno.
 - **Mientras se arrastra o se redimensiona**, la vista anterior se congela y se
   atenúa: recalcular por fotograma cuesta 1,9 s y 507 MB de RSS en un escaneado
   de 37 MB.
@@ -221,7 +221,7 @@ firma visible», «Contenido de la firma» y «Visor»:
   su sitio anterior a trazos al 60 %.
 - **Tamaño pequeño**: el mismo contenido con la letra reducida.
 - **Recalculando** y **no se ha podido dibujar**: ver el aviso.
-- **Sin certificado**: el recuadro vacío.
+- **Sin certificado**: la hoja limpia, sin recuadro.
 - **Zoom** 50 %, 100 % y 300 %: la hoja y el recuadro escalan; los tiradores no.
   Al 300 % el artboard enseña la esquina de la firma.
 - **Firmando**: la hoja al 45 %, bajo el velo.

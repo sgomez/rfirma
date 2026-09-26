@@ -380,42 +380,33 @@ describe("la firma visible, sin certificado elegido", () => {
   const visible = { ...DEFAULT_VISIBLE_SIGNATURE, enabled: true };
   const unchosen = { kind: "unchosen", certificates: [certificate] } as const;
 
-  it("turns on without a certificate", async () => {
-    const user = userEvent.setup();
-    const onChangeSignature = vi.fn();
-    renderPanel({
-      certificate: unchosen,
-      signature: { ...visible, enabled: false },
-      onChangeSignature,
-    });
+  it("keeps the switch off and disabled, with a notice below, until a certificate is chosen", () => {
+    renderPanel({ certificate: unchosen, signature: visible });
 
-    await user.click(screen.getByRole("switch", { name: "Firma visible" }));
-
-    expect(onChangeSignature).toHaveBeenCalledWith(expect.objectContaining({ enabled: true }));
+    const toggle = screen.getByRole("switch", { name: "Firma visible" });
+    expect(toggle).toHaveAttribute("aria-checked", "false");
+    expect(toggle).toBeDisabled();
+    expect(
+      screen.getByText("Elige un certificado para añadir una firma visible."),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("radio", { name: "Completa" })).not.toBeInTheDocument();
   });
 
-  it("is configured without a certificate, with nothing asking for one first", async () => {
-    const user = userEvent.setup();
-    const onChangePageChoice = vi.fn();
-    renderPanel({ certificate: unchosen, signature: visible, onChangePageChoice });
+  it("drops the notice and frees the switch once a certificate is chosen", () => {
+    renderPanel({ signature: { ...visible, enabled: false } });
 
-    expect(screen.getByRole("switch", { name: "Firma visible" })).toHaveAttribute(
-      "aria-checked",
-      "true",
-    );
-    await user.click(screen.getByRole("radio", { name: "Varias" }));
-
-    expect(onChangePageChoice).toHaveBeenCalledWith("these");
-    expect(screen.getByRole("radio", { name: "Completa" })).toBeInTheDocument();
-    expect(screen.queryByText(/Elige un certificado para colocar/)).not.toBeInTheDocument();
+    expect(screen.getByRole("switch", { name: "Firma visible" })).toBeEnabled();
+    expect(
+      screen.queryByText("Elige un certificado para añadir una firma visible."),
+    ).not.toBeInTheDocument();
   });
 
-  it("keeps the placement across a certificate that comes and goes", () => {
+  it("brings the placement back when a certificate that went away comes back", () => {
     const { show } = renderPanel({ signature: visible });
     expect(screen.getByText("En la página 3")).toBeInTheDocument();
 
     show({ certificate: { kind: "empty" }, signature: visible });
-    expect(screen.getByText("En la página 3")).toBeInTheDocument();
+    expect(screen.queryByText("En la página 3")).not.toBeInTheDocument();
     show({ signature: visible });
 
     expect(screen.getByText("En la página 3")).toBeInTheDocument();

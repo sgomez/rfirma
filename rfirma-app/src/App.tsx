@@ -155,7 +155,20 @@ export function App({
   const [placementRequest, setPlacementRequest] = useState<{
     action: "seal" | "unseal";
   } | null>(null);
-  const [signature, setSignature] = useState<VisibleSignature>(initialSignature);
+  const [rememberedSignature, setSignature] = useState<VisibleSignature>(initialSignature);
+  const {
+    certificate,
+    lookForCertificates,
+    installed,
+    installCertificate,
+    removeCertificate,
+    chooseCertificate,
+  } = useCertificateSearch(certificates);
+  const chosen = certificate.kind === "chosen" ? certificate.certificate : null;
+  const signature = useMemo(
+    () => (chosen === null ? { ...rememberedSignature, enabled: false } : rememberedSignature),
+    [chosen, rememberedSignature],
+  );
   const signing = useSigning(signer);
   const { settings, changeSettings, chooseDestination, rubric, rubricFailure, chooseRubric } =
     usePreferencesState(preferences, rubrics);
@@ -254,15 +267,6 @@ export function App({
   );
   const { failedHere } = useSigningFailure(signing, activeId);
 
-  const {
-    certificate,
-    lookForCertificates,
-    installed,
-    installCertificate,
-    removeCertificate,
-    chooseCertificate,
-  } = useCertificateSearch(certificates);
-
   // Sin el `catch`, el rechazo quedaría sin dueño; se cuenta en el visor.
   const reportingFailure = (command: () => Promise<void>) => () => {
     command().catch((thrown: unknown) => setPdfFailure(classify(thrown)));
@@ -270,7 +274,6 @@ export function App({
   const openDocument = reportingFailure(documents.open);
   const clearRecents = reportingFailure(documents.clearRecents);
 
-  const chosen = certificate.kind === "chosen" ? certificate.certificate : null;
   const {
     stamp,
     sign,

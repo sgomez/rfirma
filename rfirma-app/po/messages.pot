@@ -648,6 +648,10 @@ msgstr ""
 msgid "panel.visibleSignature.title"
 msgstr ""
 
+#. Aviso bajo «Firma visible» mientras no hay certificado elegido; el interruptor está desactivado.
+msgid "panel.visibleSignature.needsCertificate"
+msgstr ""
+
 #. Título del interruptor de «Firma visible» cuando está apagado.
 msgid "panel.visibleSignature.turnOn"
 msgstr ""

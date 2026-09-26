@@ -6,6 +6,13 @@ import { DEFAULT_VISIBLE_SIGNATURE } from "./visibleSignature";
 
 // Grada A: el modelo y la rúbrica (docs/design/panel-de-firma.md § El modelo, § La rúbrica).
 describe("SigningPanel · Modelo y rúbrica", () => {
+  it("groups the model cards under «Modelo»", () => {
+    renderPanel();
+
+    const group = screen.getByRole("group", { name: "Modelo" });
+    expect(within(group).getByRole("radio", { name: "Completa" })).toBeInTheDocument();
+  });
+
   it("chooses the complete model", async () => {
     const user = userEvent.setup();
     const onChangeSignature = vi.fn();

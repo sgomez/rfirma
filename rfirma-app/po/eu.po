@@ -662,7 +662,6 @@ msgstr "rFirman instalatuta"
 msgid "panel.certificate.retry"
 msgstr "Bilatu berriro"
 
-
 #. {{date}} es «mes/año» de caducidad, ya formateado, para la segunda línea de
 #. la fila del botón partido.
 msgid "panel.certificate.expiresIn"
@@ -714,6 +713,10 @@ msgstr "Ezin izan da irakurri"
 
 msgid "panel.visibleSignature.title"
 msgstr "Sinadura ikusgaia"
+
+#. Aviso bajo «Firma visible» mientras no hay certificado elegido; el interruptor está desactivado.
+msgid "panel.visibleSignature.needsCertificate"
+msgstr "Aukeratu ziurtagiri bat sinadura ikusgai bat gehitzeko."
 
 #. Título del interruptor de «Firma visible» cuando está apagado.
 msgid "panel.visibleSignature.turnOn"

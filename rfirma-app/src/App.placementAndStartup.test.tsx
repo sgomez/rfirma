@@ -1,4 +1,4 @@
-import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { aCertificate, document, openPdf, pdfsOf, renderApp } from "./App.testSupport";
@@ -100,9 +100,12 @@ describe("App · Firma visible, en qué páginas", () => {
       inMemoryRecents(),
       [document("primero.pdf"), document("segundo.pdf")],
       pdfsOf({ "primero.pdf": 2, "segundo.pdf": 5 }),
+      {},
+      { list: async () => [remembered] },
     );
     await openPdf(user);
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
+    await within(panel).findByRole("button", { name: "Firmar como Ada Lovelace" });
     await user.click(within(panel).getByRole("switch", { name: "Firma visible" }));
     await within(panel).findByText("En la página 1");
 
@@ -125,9 +128,12 @@ describe("App · Firma visible, en qué páginas", () => {
       inMemoryRecents(),
       [document("primero.pdf"), document("segundo.pdf")],
       pdfsOf({ "primero.pdf": 5, "segundo.pdf": 5 }),
+      {},
+      { list: async () => [remembered] },
     );
     await openPdf(user);
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
+    await within(panel).findByRole("button", { name: "Firmar como Ada Lovelace" });
     await user.click(within(panel).getByRole("switch", { name: "Firma visible" }));
     await within(panel).findByText("En la página 1");
     await nextPage(user);
@@ -155,47 +161,18 @@ describe("App · Firma visible, en qué páginas", () => {
 });
 
 describe("App, sin un certificado elegido todavía", () => {
-  function traceOverSheet() {
-    const sheet = screen.getByRole("document", { name: "Hoja del documento" });
-    fireEvent.pointerDown(sheet, { pointerId: 1, button: 0, clientX: 100, clientY: 100 });
-    fireEvent.pointerMove(sheet, { pointerId: 1, clientX: 300, clientY: 200 });
-    fireEvent.pointerUp(sheet, { pointerId: 1, clientX: 300, clientY: 200 });
-  }
-
-  it("turns the visible signature on and draws its box, empty, before any certificate", async () => {
+  it("draws no box and keeps the visible-signature switch disabled", async () => {
     const user = userEvent.setup();
     renderApp(inMemoryRecents(), [document("factura.pdf")], pdfsOf({ "factura.pdf": 3 }));
 
     await openPdf(user);
     await screen.findByRole("document", { name: "Hoja del documento" });
     const panel = screen.getByRole("region", { name: "Panel de firma" });
-    await user.click(within(panel).getByRole("switch", { name: "Firma visible" }));
 
+    expect(within(panel).getByRole("switch", { name: "Firma visible" })).toBeDisabled();
     expect(
-      await screen.findByRole("application", { name: "Recuadro de la firma visible" }),
-    ).toBeInTheDocument();
-    expect(within(panel).getByText("En la página 1")).toBeInTheDocument();
-    expect(screen.queryByText(/Elige un certificado para colocar/)).not.toBeInTheDocument();
-  });
-
-  it("lets the sheet be traced without a certificate", async () => {
-    const user = userEvent.setup();
-    renderApp(inMemoryRecents(), [document("factura.pdf")], pdfsOf({ "factura.pdf": 3 }));
-
-    await openPdf(user);
-    await screen.findByRole("document", { name: "Hoja del documento" });
-    const panel = screen.getByRole("region", { name: "Panel de firma" });
-    await user.click(within(panel).getByRole("switch", { name: "Firma visible" }));
-    const placed = await screen.findByRole("application", { name: "Recuadro de la firma visible" });
-    const before = placed.getAttribute("style");
-
-    traceOverSheet();
-
-    expect(
-      screen
-        .getByRole("application", { name: "Recuadro de la firma visible" })
-        .getAttribute("style"),
-    ).not.toBe(before);
+      screen.queryByRole("application", { name: "Recuadro de la firma visible" }),
+    ).not.toBeInTheDocument();
   });
 });
 
