@@ -113,6 +113,14 @@ pub fn the_original_folder_can_be_offered() -> bool {
     !inside_a_sandbox(Path::new(SANDBOX_MARKER))
 }
 
+/// Carpeta contenedora de la ruta para visualización; ausente bajo el portal (ADR-0011).
+pub fn containing_folder(path: &Path) -> Option<String> {
+    if is_a_portal_grant(path) {
+        return None;
+    }
+    path.parent()?.file_name()?.to_str().map(str::to_owned)
+}
+
 fn inside_a_sandbox(marker: &Path) -> bool {
     marker.exists()
 }

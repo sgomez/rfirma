@@ -1,4 +1,4 @@
-use super::{OpenedDocumentView, SignedDocumentView};
+use super::{Badge, OpenedDocumentView, RecentDocumentView, SignedDocumentView};
 
 #[test]
 fn a_signed_document_is_told_with_two_names_and_its_size() {
@@ -46,5 +46,26 @@ fn an_opened_document_with_a_direct_path_is_told_with_the_real_one() {
     assert!(
         json.contains(r#""path":"/home/quien/Contratos/contrato.pdf""#),
         "la ruta real se enseña: {json}"
+    );
+}
+
+#[test]
+fn a_recent_document_without_a_folder_shows_it_as_absent() {
+    let view = RecentDocumentView {
+        id: "0f1e2d3c4b5a69788796a5b4c3d2e1f0".to_owned(),
+        name: "original.pdf".to_owned(),
+        folder: None,
+        badge: Badge::Unsigned,
+        modified: Some(1_700_000_000),
+        last_used: 1_700_000_000,
+        available: true,
+        placement: None,
+    };
+
+    let json = serde_json::to_string(&view).expect("serializa");
+
+    assert!(
+        json.contains(r#""folder":null"#),
+        "sin ruta bajo el portal: {json}"
     );
 }
