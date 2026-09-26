@@ -1,5 +1,6 @@
 //! Puertos del contexto de identidad: el token, el almacén de los `.p12` instalados, el certificado
-//! recordado y el diálogo interactivo que pide un secreto (ADR-0001, ADR-0014).
+//! recordado, el diálogo interactivo que pide un secreto y el llavero del PIN del Almacén de rFirma
+//! (ADR-0001, ADR-0014, ADR-0034).
 
 use std::fmt;
 use std::path::Path;
@@ -8,6 +9,7 @@ use crate::identity::domain::algorithm::SignatureAlgorithm;
 use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
 use crate::identity::domain::error::{Situation, TokenError};
 use crate::identity::domain::holder::PromptedHolder;
+use crate::identity::domain::keyring::KeyringError;
 use crate::identity::domain::protected_secret::ProtectedSecret;
 use crate::identity::domain::secret::{SecretName, StoreSecret};
 use crate::identity::domain::store::Store;
@@ -108,6 +110,23 @@ pub trait CertificateMemory {
 
     /// Olvida el certificado recordado.
     fn forget_the_certificate(&self) -> Result<(), MemoryError>;
+}
+
+/// El PIN del Almacén de rFirma en el llavero del escritorio (ADR-0034).
+pub trait Keyring {
+    /// El PIN si el llavero ya lo tiene, sin crear nada.
+    fn pin(&self) -> Result<ProtectedSecret, KeyringError>;
+
+    /// Genera un PIN nuevo y lo guarda en el llavero.
+    fn create_pin(&self) -> Result<ProtectedSecret, KeyringError>;
+
+    /// El PIN del almacén: lo crea si el llavero todavía no lo tiene.
+    fn get_or_create_pin(&self) -> Result<ProtectedSecret, KeyringError> {
+        match self.pin() {
+            Err(KeyringError::PinMissing) => self.create_pin(),
+            other => other,
+        }
+    }
 }
 
 /// Solicitud interactiva de credenciales (PIN o contraseña de almacén).
