@@ -80,7 +80,7 @@ export function Header({
   };
 
   return (
-    <header className="header">
+    <header className={open ? "header header--menuOpen" : "header"}>
       <p className="header__name rf-title">{t("app.name")}</p>
       <div className="rf-row">
         {menuAnchor === "header" && (

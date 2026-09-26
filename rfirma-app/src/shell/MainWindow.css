@@ -1,5 +1,5 @@
 /*
- * La única ventana (docs/design/ventana-principal.md): una cabecera de 56 px,
+ * La única ventana (docs/design/ventana-principal.md): una cabecera de 52 px,
  * la tira de pestañas y debajo el visor flexible y el panel de 360 px.
  *
  * Sin documento el panel **no está en el árbol** y queda una columna
@@ -40,10 +40,10 @@
   border-left: 1px solid var(--rf-border-subtle);
 }
 
-/* El visor va sobre `--rf-surface`; el papel del documento, que lo pone el
-   sub-issue del visor, fuerza `data-theme="light"` sobre `--rf-bg`. */
+/* El visor va sobre `--rf-bg`; el papel del documento, que lo pone el
+   sub-issue del visor, fuerza `data-theme="light"` encima. */
 .main-window__viewer {
   min-height: 0;
   overflow: auto;
-  background: var(--rf-surface);
+  background: var(--rf-bg);
 }
