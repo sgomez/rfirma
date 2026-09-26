@@ -96,7 +96,11 @@ hace fallar firmas que hoy salen, en sedes cuya TSA nunca se ha llamado desde
 el ordenador de un ciudadano, y pide decidir antes qué hace la persona cuando
 el sello falla. La NTI de Política de Firma (IV.2.3) deja que el sello lo
 añada el emisor, el receptor o un tercero, y el manual de AutoFirma no promete
-sellado en el cliente. Aparcada.
+sellado en el cliente. El propio CTT lo dice así: el sello «no es algo que
+agregue el usuario que realiza una firma, sino la entidad que la recibe», y el
+sellado de CAdES y PAdES existe «aunque no tiene soporte oficial»
+([ctt-gob-es/clienteafirma#77](https://github.com/ctt-gob-es/clienteafirma/issues/77)).
+Aparcada.
 
 **Sellar también la cofirma y la contrafirma.** `CMSTimestamper` sellaría a
 todos los firmantes del CMS, también a los que ya estaban, y el original no lo
