@@ -9,6 +9,7 @@ import { useSignedSummary } from "./App.useSignedSummary";
 import { useSignFlow } from "./App.useSignFlow";
 import { useSigningFailure } from "./App.useSigningFailure";
 import { useStartupNotices } from "./App.useStartupNotices";
+import { useVisibleSignature } from "./App.useVisibleSignature";
 import { AboutDialog } from "./about/AboutDialog";
 import type { ExternalDestinationOpener } from "./desktop/externalDestination";
 import { unavailableExternalDestinationOpener } from "./desktop/externalDestination";
@@ -155,7 +156,6 @@ export function App({
   const [placementRequest, setPlacementRequest] = useState<{
     action: "seal" | "unseal";
   } | null>(null);
-  const [rememberedSignature, setSignature] = useState<VisibleSignature>(initialSignature);
   const {
     certificate,
     lookForCertificates,
@@ -165,10 +165,7 @@ export function App({
     chooseCertificate,
   } = useCertificateSearch(certificates);
   const chosen = certificate.kind === "chosen" ? certificate.certificate : null;
-  const signature = useMemo(
-    () => (chosen === null ? { ...rememberedSignature, enabled: false } : rememberedSignature),
-    [chosen, rememberedSignature],
-  );
+  const [signature, setSignature] = useVisibleSignature(initialSignature, chosen);
   const signing = useSigning(signer);
   const { settings, changeSettings, chooseDestination, rubric, rubricFailure, chooseRubric } =
     usePreferencesState(preferences, rubrics);
