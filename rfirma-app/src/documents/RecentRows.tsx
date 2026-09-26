@@ -28,7 +28,9 @@ export function RecentRows({ recents, openIds, onSelect, role }: RecentRowsProps
         role={role}
         className="recent-row"
         disabled={missing}
-        title={missing ? t("recents.missing") : open ? t("recents.goToTab") : undefined}
+        title={
+          missing ? t("recents.missing") : open ? t("recents.goToTab") : (row.folder ?? undefined)
+        }
         onClick={() => onSelect(row)}
       >
         <span className="recent-row__text">

@@ -138,7 +138,7 @@ describe("App, el menú «+»", () => {
     expect(screen.getByRole("tab", { name: "primero.pdf", selected: true })).toBeInTheDocument();
   });
 
-  it("shows the folder under the name when it is known", async () => {
+  it("shows the folder under the name when it is known, and as its title", async () => {
     const user = userEvent.setup();
     renderApp(inMemoryRecents([row("hoy.pdf", { folder: "Documentos" })]));
     await screen.findByRole("region", { name: "Recientes" });
@@ -147,17 +147,20 @@ describe("App, el menú «+»", () => {
 
     const item = within(menu).getByRole("menuitem", { name: /^hoy\.pdf/ });
     expect(item).toHaveTextContent("Documentos");
+    expect(item).toHaveAttribute("title", "Documentos");
   });
 
-  it("shows only the name when the folder is unknown, under the portal", async () => {
+  it("shows only the name and no title when the folder is unknown, under the portal", async () => {
     const user = userEvent.setup();
     renderApp(inMemoryRecents([row("hoy.pdf", { folder: null, lastUsed: now() })]));
     await screen.findByRole("region", { name: "Recientes" });
 
     const menu = await openPlusMenu(user);
 
-    const item = within(menu).getByRole("menuitem", { name: /^hoy\.pdf/ });
-    expect(item).toHaveTextContent("hoy.pdfhoy");
+    // El nombre accesible junta las dos líneas de la fila: si fuera exactamente
+    // "hoy.pdf" + «hoy» (la fecha de hoy), no hay ninguna carpeta entre medias.
+    const item = within(menu).getByRole("menuitem", { name: "hoy.pdfhoy" });
+    expect(item).not.toHaveAttribute("title");
   });
 
   it("dims a recent that is no longer where it was, and does not open it", async () => {
@@ -170,6 +173,19 @@ describe("App, el menú «+»", () => {
     const missing = within(menu).getByRole("menuitem", { name: /^usb\.pdf/ });
     expect(missing).toBeDisabled();
     expect(missing).toHaveTextContent("No se encuentra");
+    expect(missing).toHaveAttribute("title", "No se encuentra");
+  });
+
+  it("says No se encuentra instead of the folder, even when the folder is known", async () => {
+    const user = userEvent.setup();
+    renderApp(inMemoryRecents([row("usb.pdf", { available: false, folder: "Documentos" })]));
+    await screen.findByRole("region", { name: "Recientes" });
+
+    const menu = await openPlusMenu(user);
+
+    const missing = within(menu).getByRole("menuitem", { name: /^usb\.pdf/ });
+    expect(missing).toHaveTextContent("No se encuentra");
+    expect(missing).not.toHaveTextContent("Documentos");
   });
 
   it("empties the recents from Vaciar la lista, and leaves only Abrir un PDF…", async () => {
