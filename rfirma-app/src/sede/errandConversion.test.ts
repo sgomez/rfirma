@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
+import { NO_PREVIOUS_SIGNATURES } from "../signing/previousSignatures";
 import type { Errand } from "./errand";
 import { errandOf, refusedBy } from "./errandConversion";
 import { ASKING_TO_SIGN, certificate, watched } from "./siteErrandsFixtures";
@@ -209,6 +210,7 @@ describe("cada momento que llega se convierte en lo que la ventana espera", () =
             sizeBytes: 4096,
             round: { kind: "cosign" },
             hasUnregisteredSignatures: true,
+            previousSignatures: NO_PREVIOUS_SIGNATURES,
           },
           signs: null,
           signing: "pdf",
@@ -219,6 +221,7 @@ describe("cada momento que llega se convierte en lo que la ventana espera", () =
       }),
     );
     expect(calls.describeDocument).toHaveBeenCalledWith("asa-opaca-1");
+    expect(calls.previousSignatures).toHaveBeenCalledWith("asa-opaca-1");
   });
 
   it("turns the confirmation the original asks for into the confirming stage", async () => {

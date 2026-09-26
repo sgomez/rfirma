@@ -30,6 +30,7 @@ import { NotificationStrip } from "./shell/NotificationStrip";
 import type { CertificateStore } from "./signing/certificate";
 import type { DestinationSource, SignedDocumentOpener } from "./signing/destination";
 import type { SigningBackend } from "./signing/flow";
+import { InvalidPreviousSignaturesDialog } from "./signing/InvalidPreviousSignaturesDialog";
 import type { RubricPicker } from "./signing/rubric";
 import { SignedPanel } from "./signing/SignedPanel";
 import { SigningPanel } from "./signing/SigningPanel";
@@ -283,6 +284,9 @@ export function App({
     unregisteredPrompt,
     setUnregisteredPrompt,
     signWithUnregisteredSignatures,
+    invalidPreviousSignaturesPrompt,
+    setInvalidPreviousSignaturesPrompt,
+    signDespiteInvalidPreviousSignatures,
   } = useSignFlow({
     pdf,
     activeDocument: documents.active,
@@ -299,6 +303,7 @@ export function App({
     sizeBytes,
     gesturing,
     singleDestinationId,
+    previousSignatures: previousSignatures.signatures,
     startSigning: signing.start,
   });
 
@@ -488,6 +493,14 @@ export function App({
           chosen={sealLossPrompt.chosen}
           onConfirm={() => void signAnyway()}
           onCancel={() => setSealLossPrompt(null)}
+        />
+      )}
+      {invalidPreviousSignaturesPrompt !== null && (
+        <InvalidPreviousSignaturesDialog
+          signatures={invalidPreviousSignaturesPrompt}
+          locale={i18n.resolvedLanguage ?? i18n.language}
+          onConfirm={() => void signDespiteInvalidPreviousSignatures()}
+          onCancel={() => setInvalidPreviousSignaturesPrompt(null)}
         />
       )}
       {signing.state.kind === "running" && <SigningProgressDialog stage={signing.state.stage} />}

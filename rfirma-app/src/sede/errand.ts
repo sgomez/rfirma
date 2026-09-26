@@ -1,6 +1,7 @@
 import type { Catalog } from "../i18n/catalog";
 import type { Certificate } from "../signing/certificate";
 import type { SigningOrder } from "../signing/flow";
+import type { PreviousSignaturesReport } from "../signing/previousSignatures";
 import type { PdfDocument } from "../viewer/pdf";
 
 /**
@@ -51,6 +52,8 @@ export interface SiteDocument {
    * dentro del mismo consentimiento: no hay un sexto momento (ID-302).
    */
   hasUnregisteredSignatures: boolean;
+  /** Las firmas que ya trae el documento, calculadas sobre el PDF real. */
+  previousSignatures: PreviousSignaturesReport;
 }
 
 /**

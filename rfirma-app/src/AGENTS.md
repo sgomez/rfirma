@@ -95,6 +95,7 @@ rojo.
 | `signing/SigningProgressDialog.tsx` | El progreso. |
 | `signing/UnsealedPagesDialog.tsx` | El diálogo de páginas sin sello, justo antes de firmar. |
 | `signing/UnregisteredSignaturesDialog.tsx` | El aviso de las firmas previas que rFirma no sabe leer, en la misma fila que el anterior. |
+| `signing/InvalidPreviousSignaturesDialog.tsx` | El diálogo «¿Firmar de todos modos?», con alguna firma previa no válida. |
 | `signing/unsealedPages.ts` | Qué páginas del conjunto elegido se quedan sin sello. Sin React. |
 | `signing/SignedPanel.tsx` | El resumen tras firmar, y sus tres salidas. |
 | `signing/certificate.ts` | El certificado, en el lado de la interfaz, con el orden y el agrupado del desplegable. |

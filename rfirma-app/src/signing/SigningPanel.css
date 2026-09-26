@@ -93,9 +93,20 @@
 }
 
 /* En el panel de 380 px la coletilla no cabe nunca (docs/design/panel-de-firma.md
-   § El aviso de firmas previas): baja siempre a su propia línea fija. */
+   § El aviso de firmas previas): baja siempre a su propia línea fija. En sede
+   (docs/design/ventana-de-sede.md § El consentimiento) cabe siempre en la
+   misma línea, con el separador « · » delante. */
 .panel__co-signature-warnings {
   display: block;
+}
+
+.panel__co-signature--site .panel__co-signature-count,
+.panel__co-signature--site .panel__co-signature-warnings {
+  display: inline;
+}
+
+.panel__co-signature--site .panel__co-signature-warnings::before {
+  content: " · ";
 }
 
 .panel__co-signature-chevron {

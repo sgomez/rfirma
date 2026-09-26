@@ -32,18 +32,24 @@ import { sameSignerNotice } from "./sameSignerNotice";
 export function PreviousSignaturesNotice({
   report,
   certificate,
+  presentation = "panel",
 }: {
   report: PreviousSignaturesReport;
   certificate: Certificate | null;
+  presentation?: "panel" | "site";
 }) {
   const { t, i18n } = useTranslation();
   const { signatures, warningCount, tone, changedAfterLastSignature } = report;
-  const [expanded, setExpanded] = useState(signatures.length > 1 || warningCount > 0);
+  const [expanded, setExpanded] = useState(
+    presentation === "panel" && (signatures.length > 1 || warningCount > 0),
+  );
   const notice = sameSignerNotice(certificate, signatures);
   const hasBroken = signatures.some((signature) => signature.status === "broken");
 
   return (
-    <div className={`panel__co-signature panel__co-signature--${tone}`}>
+    <div
+      className={`panel__co-signature panel__co-signature--${tone} panel__co-signature--${presentation}`}
+    >
       <button
         type="button"
         className="panel__co-signature-summary"
@@ -69,7 +75,11 @@ export function PreviousSignaturesNotice({
               : "panel__co-signature-chevron"
           }
         >
-          <ChevronDownIcon size={14} strokeWidth={2} />
+          {presentation === "site" ? (
+            <ChevronDownIcon />
+          ) : (
+            <ChevronDownIcon size={14} strokeWidth={2} />
+          )}
         </span>
       </button>
       {expanded && (
@@ -154,7 +164,7 @@ function summaryIcon(tone: Tone, hasBroken: boolean): ReactNode {
   }
 }
 
-function statusIcon(status: SignatureStatus): ReactNode {
+export function statusIcon(status: SignatureStatus): ReactNode {
   switch (status) {
     case "valid":
       return <CheckCircleIcon size={16} />;
@@ -169,7 +179,7 @@ function statusIcon(status: SignatureStatus): ReactNode {
   }
 }
 
-function statusLabel(t: TFunction, status: SignatureStatus): string {
+export function statusLabel(t: TFunction, status: SignatureStatus): string {
   switch (status) {
     case "valid":
       return t("panel.previousSignatures.status.valid");
@@ -187,7 +197,11 @@ function statusLabel(t: TFunction, status: SignatureStatus): string {
 }
 
 /** El motivo bajo el veredicto, o `null` para una firma válida. */
-function reasonLabel(t: TFunction, status: SignatureStatus, reason: string | null): string | null {
+export function reasonLabel(
+  t: TFunction,
+  status: SignatureStatus,
+  reason: string | null,
+): string | null {
   switch (status) {
     case "valid":
       return null;
