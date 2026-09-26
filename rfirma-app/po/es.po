@@ -568,15 +568,15 @@ msgstr "Todas las páginas ({{pages}})"
 
 #. Botón que sella la página que se está mirando. Cara por omisión, con «Solo 1 página» o «Estas páginas».
 msgid "panel.placement.seal"
-msgstr "Sellar esta página"
+msgstr "Ponerla aquí"
 
 #. Botón que sella, con «Todas las páginas» activa: el conjunto ya está completo y falta el recuadro.
 msgid "panel.placement.sealAll"
-msgstr "Colocar el sello aquí"
+msgstr "Ponerla aquí"
 
 #. Botón que quita el sello de la página que se está mirando, cuando ya lo lleva.
 msgid "panel.placement.unseal"
-msgstr "Quitar el sello"
+msgstr "Quitarla de aquí"
 
 #. {{pages}} son las primeras páginas del conjunto, ya escritas y separadas por comas.
 msgid "panel.placement.echo"

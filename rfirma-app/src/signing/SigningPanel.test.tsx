@@ -52,7 +52,11 @@ function panelWith(props: PanelProps) {
       onChooseCertificate={noop}
       onRetryCertificates={noop}
       onChooseModule={noop}
-      signature={DEFAULT_VISIBLE_SIGNATURE}
+      // El interruptor apagado es el nuevo valor por omisión (#974); la
+      // mayoría de estas pruebas miran lo que hay **dentro** del bloque, así
+      // que la marca aquí, explícita, en vez de heredarla de un valor que
+      // cambia con la aplicación.
+      signature={{ ...DEFAULT_VISIBLE_SIGNATURE, enabled: true }}
       onChangeSignature={noop}
       placement={{ rect, pages: { only: [3] } }}
       pageSets={{ single: 3, these: null }}
@@ -143,6 +147,7 @@ describe("SigningPanel", () => {
     renderPanel({
       signature: {
         ...DEFAULT_VISIBLE_SIGNATURE,
+        enabled: true,
         fields: { ...DEFAULT_VISIBLE_SIGNATURE.fields, reason: true },
       },
     });
@@ -155,7 +160,7 @@ describe("SigningPanel", () => {
     // El panel lo dibuja con `rf-gap-xs` (8 px, `Main.dc.html:306`); los 16 px
     // son de Preferencias y se piden allí con `switch--wide`.
     expect(toggle.closest(".switch")).not.toHaveClass("switch--wide");
-    expect(screen.getByRole("button", { name: "Quitar el sello" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Quitarla de aquí" })).toBeInTheDocument();
     for (const label of ["Firmante", "Emisor", "Fecha", "Rúbrica", "Motivo"]) {
       expect(screen.getByRole("checkbox", { name: new RegExp(label) })).toBeInTheDocument();
     }
@@ -425,7 +430,7 @@ describe("SigningPanel · Colocación", () => {
         "Coloca la firma sobre el documento: arrastra un recuadro o pulsa el botón de sellar.",
       ),
     ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Sellar esta página" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Ponerla aquí" })).toBeInTheDocument();
     expect(signButton()).toBeDisabled();
   });
 
@@ -439,7 +444,7 @@ describe("SigningPanel · Colocación", () => {
     renderPanel({ signature: visible, placement: { rect, pages: { only: [3] } }, viewedPage: 3 });
 
     const block = screen.getByText("Colocación").closest("fieldset") as HTMLElement;
-    expect(within(block).getByRole("button", { name: "Quitar el sello" })).toBeInTheDocument();
+    expect(within(block).getByRole("button", { name: "Quitarla de aquí" })).toBeInTheDocument();
     expect(screen.queryByText("El recuadro está en esta página")).not.toBeInTheDocument();
     expect(screen.queryByText(/El recuadro está en la página/)).not.toBeInTheDocument();
     expect(screen.queryByText("Aún no has colocado la firma")).not.toBeInTheDocument();
@@ -450,7 +455,7 @@ describe("SigningPanel · Colocación", () => {
     const onSeal = vi.fn();
     renderPanel({ signature: visible, placement: null, onSeal });
 
-    await user.click(screen.getByRole("button", { name: "Sellar esta página" }));
+    await user.click(screen.getByRole("button", { name: "Ponerla aquí" }));
 
     expect(onSeal).toHaveBeenCalled();
   });
@@ -462,7 +467,7 @@ describe("SigningPanel · Colocación", () => {
   it("offers to place the stamp here when «all pages» is chosen and nothing is placed", () => {
     renderPanel({ signature: visible, placement: null, pageChoice: "all" });
 
-    expect(screen.getByRole("button", { name: "Colocar el sello aquí" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Ponerla aquí" })).toBeInTheDocument();
   });
 
   it("offers to unseal the page it is looking at when it already carries the stamp", async () => {
@@ -475,7 +480,7 @@ describe("SigningPanel · Colocación", () => {
       onUnseal,
     });
 
-    await user.click(screen.getByRole("button", { name: "Quitar el sello" }));
+    await user.click(screen.getByRole("button", { name: "Quitarla de aquí" }));
 
     expect(onUnseal).toHaveBeenCalled();
   });
@@ -494,8 +499,8 @@ describe("SigningPanel · Colocación", () => {
       viewedPage: 3,
     });
 
-    expect(screen.queryByRole("button", { name: "Quitar el sello" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Colocar el sello aquí" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Quitarla de aquí" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Ponerla aquí" })).toBeInTheDocument();
   });
 
   it("signs invisibly with the switch off, which is the other «no» entirely", () => {
@@ -616,7 +621,7 @@ describe("SigningPanel · Colocación", () => {
     const onSeal = vi.fn();
     renderPanel({ signature: visible, viewedPage: 7, onSeal });
 
-    await user.click(screen.getByRole("button", { name: "Sellar esta página" }));
+    await user.click(screen.getByRole("button", { name: "Ponerla aquí" }));
 
     expect(onSeal).toHaveBeenCalled();
   });
@@ -708,11 +713,11 @@ describe("el bloque de firma visible, sin certificado", () => {
 
   it("keeps the placement across a certificate that comes and goes", () => {
     const { show } = renderPanel({ signature: stamping });
-    expect(screen.getByRole("button", { name: "Quitar el sello" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Quitarla de aquí" })).toBeInTheDocument();
 
     show({ certificate: { kind: "empty" }, signature: stamping });
     show({ signature: stamping });
 
-    expect(screen.getByRole("button", { name: "Quitar el sello" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Quitarla de aquí" })).toBeInTheDocument();
   });
 });

@@ -26,7 +26,12 @@ import { unavailablePdfSource } from "./viewer/source";
 describe("App · Colocación", () => {
   const remembered: Certificate = { ...aCertificate, remembered: true };
 
-  /** Abre el documento y espera al bloque «Colocación» ya pintado. */
+  /**
+   * Abre el documento y enciende la firma visible —apagada por defecto
+   * (#974)—, que la coloca sola en la página vista; se quita otra vez para
+   * dejar el punto de partida que piden estas pruebas, el mismo de siempre:
+   * nada colocado todavía.
+   */
   async function openPlacing() {
     const user = userEvent.setup();
     renderApp(
@@ -38,12 +43,16 @@ describe("App · Colocación", () => {
     );
     await openPdf(user);
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
+    await user.click(
+      within(panel).getByRole("switch", { name: /Estampar un recuadro de firma en el documento/ }),
+    );
     await within(panel).findByText("Colocación");
+    await user.click(within(panel).getByRole("button", { name: "Quitarla de aquí" }));
     return { user, panel };
   }
 
   const box = () => screen.queryByRole("application", { name: "Recuadro de la firma visible" });
-  const pill = () => screen.getByRole("button", { name: "Sellar esta página" });
+  const pill = () => screen.getByRole("button", { name: "Ponerla aquí" });
 
   it("places the box on its standard spot when a range is typed, with nothing placed yet", async () => {
     const { user, panel } = await openPlacing();
@@ -133,7 +142,7 @@ describe("App, sin un certificado elegido todavía", () => {
     await screen.findByRole("document", { name: "Hoja del documento" });
 
     expect(screen.getByText("Elige un certificado para colocar la firma visible")).toBeVisible();
-    expect(screen.queryByRole("button", { name: "Sellar esta página" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Ponerla aquí" })).not.toBeInTheDocument();
 
     traceOverSheet();
 
@@ -156,6 +165,10 @@ describe("App, sin un certificado elegido todavía", () => {
     await user.click(await within(panel).findByRole("combobox", { name: "Certificado" }));
     // La lista vive en un portal, fuera de `panel` (ID-308).
     await user.click(screen.getAllByRole("option")[0] as HTMLElement);
+    // La firma visible arranca apagada (#974).
+    await user.click(
+      within(panel).getByRole("switch", { name: /Estampar un recuadro de firma en el documento/ }),
+    );
 
     traceOverSheet();
 
