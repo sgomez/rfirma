@@ -1,11 +1,15 @@
 # Una firma que pide sello de tiempo y no se puede sellar no sale
 
 Una sede pide sello de tiempo con `tsaURL` en los `extraParams`. AutoFirma
-1.9.2 pretende sellar las tres familias, pero solo PAdES y XAdES lo consiguen,
-y no las trata igual cuando el sello falla:
+1.9.2 pretende sellar las tres familias, pero solo XAdES lo consigue, y no
+las trata igual cuando el sello falla:
 
-- **PAdES** propaga el error (`PdfTimestamper.java:275-279`). El puente sella
-  a través de `PAdESTriPhaseSigner`, así que rFirma ya lo hereda.
+- **PAdES** **nunca sella el sello de firma, ni con la TSA en servicio**
+  (BUG-36): `PAdESTriPhaseSigner` llama a `PdfTimestamper.addCmsTimeStamp`,
+  que busca el sellador con un constructor que no existe, se traga el
+  `NoSuchMethodException` con un `WARNING` y devuelve la firma sin sello
+  (`PdfTimestamper.java:300-339, 396-402`). El puente firma PAdES a través de
+  `PAdESTriPhaseSigner`, así que rFirma hereda el fallo.
 - **CAdES** llama a `applyTimeStamp` después de firmar
   (`AOCAdESSigner.java:120`), y **nunca sella, ni con la TSA en servicio**.
   Si `TsaParams` no acepta la URL, un `catch (Exception)` devuelve la firma
@@ -41,10 +45,16 @@ XAdES.
    cuenta. La factura electrónica tampoco: la lista blanca de
    `AOFacturaESigner` (`:57-87, 224-228`) descarta `tsaURL` antes de delegar
    en XAdES, y la factura sale sin sello y sin error.
-4. **En CAdES y en XAdES el sello es de firma, y `tsType` no cuenta.** El
+4. **PAdES queda fuera: rFirma se comporta como AutoFirma**, y una firma
+   PAdES con `tsaURL` sale sin sello y sin error. Sellarla por su cuenta
+   obligaría a decidir qué hace la persona cuando la TSA falla, y eso se
+   aparca. Lo mide
+   `a_pades_signature_that_cannot_be_timestamped_reports_the_failure`, que
+   rFirma incumple a sabiendas.
+5. **En CAdES y en XAdES el sello es de firma, y `tsType` no cuenta.** El
    sello de documento es cosa del PDF; el original tampoco lee `tsType` fuera
    de PAdES.
-5. **Una `tsaURL` vacía es no pedir sello.**
+6. **Una `tsaURL` vacía es no pedir sello.**
 
 Lo aplica el puente, `SignatureTimestamp`, con las clases públicas del
 original: `TsaParams`, `CMSTimestamper.addTimestamp` y
@@ -52,8 +62,8 @@ original: `TsaParams`, `CMSTimestamper.addTimestamp` y
 
 ## Consequences
 
-- Una sede que pide sello y tiene su TSA en servicio recibe en PAdES y en
-  XAdES lo mismo que de AutoFirma. En CAdES recibe una firma sellada, y de
+- Una sede que pide sello y tiene su TSA en servicio recibe en XAdES lo mismo
+  que de AutoFirma, y en PAdES también: un PDF firmado sin sello. En CAdES recibe una firma sellada, y de
   AutoFirma una sin sello: rFirma diverge del original **también** con la TSA
   sana, y una comprobación de conformidad que compare las dos en CAdES con
   `tsaURL` tiene que contar con ello. Una sede que pide sello con una TSA rota
@@ -78,6 +88,15 @@ no sabe qué exige la sede. Descartada.
 **Copiar AutoFirma también en BUG-23.** Sería conformidad literal con un fallo
 que contradice lo que el propio código intenta hacer. Descartada, como todo bug
 con intención clara (ADR-0026).
+
+**Sellar PAdES por su cuenta, como CAdES.** Es posible: se añade el sello a la
+firma CMS de `/Contents` después de la postfirma, sin tocar el `ByteRange`. Es
+la excepción a ADR-0026, y por alcance, no por falta de intención: sellar PAdES
+hace fallar firmas que hoy salen, en sedes cuya TSA nunca se ha llamado desde
+el ordenador de un ciudadano, y pide decidir antes qué hace la persona cuando
+el sello falla. La NTI de Política de Firma (IV.2.3) deja que el sello lo
+añada el emisor, el receptor o un tercero, y el manual de AutoFirma no promete
+sellado en el cliente. Aparcada.
 
 **Sellar también la cofirma y la contrafirma.** `CMSTimestamper` sellaría a
 todos los firmantes del CMS, también a los que ya estaban, y el original no lo

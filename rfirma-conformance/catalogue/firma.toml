@@ -961,6 +961,23 @@ script = "signwithbrokentsa"
 expects.code = "SAF_*"
 
 [[check]]
+id = "a_pades_signature_that_cannot_be_timestamped_reports_the_failure"
+set = "firma"
+chapter = "12"
+citation = "PAdESTriPhaseSigner.java:294-300; PdfTimestamper.java:300-339, 396-402"
+explained_by.autofirma = "BUG-36"
+explained_by.rfirma = "ADR-0030"
+statement = """
+Si una firma PAdES pide sello de tiempo y no se puede sellar, la operación lo reporta con un código
+SAF en vez de devolver una firma sin sello.
+"""
+
+[check.drive]
+mode = "v4"
+script = "signpadeswithanunreachabletsa"
+expects.code = "SAF_*"
+
+[[check]]
 id = "a_wanted_visible_signature_cancelled_answers_saf_43"
 set = "firma"
 chapter = "12"

@@ -686,3 +686,21 @@ dirigido al defecto.
   2. Al elegirlo, la sede recibe `SAF_08`, «no se puede acceder al almacén», con el almacén accesible.
   3. `SAF_51` solo se alcanza con un almacén cuyo proveedor sí cargue la clave, como un PKCS#12.
 * **Causa raíz:** La carga de la clave comparte el `catch` genérico del diálogo de selección, y el proveedor no admite el tipo de clave que el diálogo ofrece.
+
+### BUG-36: El sello de firma de PAdES no se aplica nunca: el sellador se busca con un constructor que no existe y el fallo se descarta
+
+* **Comprobación del catálogo:** `a_pades_signature_that_cannot_be_timestamped_reports_the_failure`.
+* **Estado en `master`:** **Sigue presente.** `PdfTimestamper.java:407` sigue pidiendo `getConstructor(tsaParamsClass.getClass())`.
+* **Código fuente:** `afirma-crypto-pdf` · `src/main/java/es/gob/afirma/signers/pades/PAdESTriPhaseSigner.java:294-300`; `PdfTimestamper.java:300-339, 396-402`.
+* **Descripción:** Cuando una firma PAdES trae `tsaURL` y no pide solo el sello de documento, `PAdESTriPhaseSigner` llama a `PdfTimestamper.addCmsTimeStamp`, que construye el sellador por reflexión en `buildCmsTimeStamper`:
+  ```java
+  return cmsTimestamperClass
+          .getConstructor(tsaParamsClass.getClass())
+          .newInstance(tsaParams);
+  ```
+  `tsaParamsClass` ya es un `Class<?>`, así que `tsaParamsClass.getClass()` es `Class.class` y se busca un constructor `CMSTimestamper(Class)`, que no existe. Salta `NoSuchMethodException`, el `catch (Exception)` de `addCmsTimeStamp` escribe un `WARNING` («No se ha podido actualizar la firma») y devuelve la firma CMS sin sello.
+* **Comportamiento y consecuencia:**
+  1. El fallo ocurre antes de contactar con la TSA: da igual que la TSA esté en servicio, no conteste o tenga una URL inválida.
+  2. La sede que pide un PAdES con sello recibe un PDF firmado sin sello de tiempo y ningún código de error.
+  3. Es el camino de la firma de escritorio (`AOPDFSigner`) y el de la trifásica, que comparten `PAdESTriPhaseSigner`.
+* **Causa raíz:** Un `getClass()` de más en la búsqueda por reflexión del constructor, y un `catch` genérico que convierte el fallo en un aviso de log. Es distinto de BUG-23, que es la inicialización de `TsaParams` en CAdES y XAdES.
