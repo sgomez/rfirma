@@ -82,10 +82,7 @@ export function SedeConsent({
       }
     >
       <div className="rf-stack sede-consent">
-        {/* Sin origen válido, la misma forma que el título con origen: el
-            `Origin` es falsificable desde cualquier programa local y el
-            original lo ignora por completo, así que no hay nada que denunciar
-            — sólo un silencio que no se rellena con un invento (ID-271, ID-408). */}
+        {/* Sin origen válido, mismo silencio deliberado que con origen (ID-271). */}
         <p className="rf-title sede-consent__asks">
           {origin === null
             ? identity

@@ -36,7 +36,7 @@ describe("2 · consent", () => {
     ).toBeInTheDocument();
   });
 
-  it("orders the body origin, then certificate, then document (ID-408)", () => {
+  it("orders the body origin, then certificate, then document", () => {
     const { port } = scriptedErrand(consenting());
     const { container } = renderWithCatalog(<SedeWindow errands={port} />);
 

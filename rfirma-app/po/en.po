@@ -1335,8 +1335,7 @@ msgstr "an XML document"
 msgid "sede.consent.signingKind.invoice"
 msgstr "an electronic invoice"
 
-#. Misma forma que "asksSignature", con el origen como una página sin
-#. identificar en vez de nombrarla (ID-408).
+#. Misma forma que "asksSignature", con una página sin identificar como sujeto.
 msgid "sede.consent.unknownOriginSignature"
 msgstr "An unidentified page asks for your signature."
 
