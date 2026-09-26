@@ -5,7 +5,9 @@ mod confirmation;
 mod scratch;
 
 pub use certificates::{consent_for, consent_to_the_batch, consent_to_the_local_batch};
-use certificates::{rows_preselecting_the_stuck, what_the_site_accepts, Preselected};
+use certificates::{
+    rows_preselecting_the_stuck, what_the_site_accepts, CertificateManners, Preselected,
+};
 pub use confirmation::consent_to_the_confirmed_signature;
 use confirmation::{
     asking_to_confirm, asks_to_check_signatures, the_previous_signatures_hold,
@@ -399,15 +401,14 @@ fn consent_to_a_signature<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
         SiteVisibleSignature::Declined
     };
 
-    let accepted = match what_the_site_accepts(
-        desk.engine,
-        ask.filter,
-        ask.sticky,
-        ask.waives_the_choice,
-        ours,
-        &desk.neighbours,
-        live,
-    ) {
+    let manners = CertificateManners {
+        filter: ask.filter,
+        sticky: ask.sticky,
+        choice_waived: ask.waives_the_choice,
+        headless: ask.headless,
+    };
+    let accepted = match what_the_site_accepts(desk.engine, &manners, ours, &desk.neighbours, live)
+    {
         Ok(accepted) => accepted,
         Err(step) => return step,
     };

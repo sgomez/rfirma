@@ -1892,7 +1892,7 @@ msgstr[1] "{{origin}} no accepta cap dels teus {{count}} certificats"
 msgstr[2] "{{origin}} no accepta cap dels teus {{count}} certificats"
 
 msgid "sede.noCertificate.excludedBody"
-msgstr "Hauràs de continuar des de la seu."
+msgstr "Instal·la un altre certificat, o tanca i continua des de la seu."
 
 #~ msgid "panel.visibleSignature.rubric.title"
 #~ msgstr "Imatge de la rúbrica"
