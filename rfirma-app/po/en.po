@@ -254,8 +254,8 @@ msgstr "Some files weren't added"
 
 msgid "errors.situations.droppedSomeDiscarded.body"
 msgstr ""
-"The other PDFs you dropped are already in Recent. The ones that weren't PDFs "
-"weren't added."
+"The other PDFs you dropped have been opened in tabs. The ones that weren't "
+"PDFs weren't added."
 
 msgid "errors.situations.boxOutOfPage.title"
 msgstr "The box falls outside the page"

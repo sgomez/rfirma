@@ -257,7 +257,7 @@ msgstr "Algúns ficheiros non se engadiron"
 
 msgid "errors.situations.droppedSomeDiscarded.body"
 msgstr ""
-"Os demais PDF que soltaches xa están en Recentes. Os que non eran PDF non se "
+"Os demais PDF que soltaches abríronse en lapelas. Os que non eran PDF non se "
 "engadiron."
 
 msgid "errors.situations.boxOutOfPage.title"

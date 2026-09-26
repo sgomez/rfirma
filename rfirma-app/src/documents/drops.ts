@@ -11,12 +11,7 @@ import type { DocumentInHand } from "./document";
 export interface Drop {
   /** El documento que se ha abierto en el visor, o `null` si no se ha abierto ninguno. */
   document: DocumentInHand | null;
-  /**
-   * El resto de PDF del mismo gesto —sueltos directamente o encontrados
-   * dentro de una carpeta— que entran igual en Recientes, sin abrirse
-   * (ID-306). Sin cola y sin firma encadenada: solo una fila más por cada
-   * uno.
-   */
+  /** El resto de PDF del mismo gesto, sueltos o de una carpeta, que se abren en pestañas sin activarse. */
   alsoEntering: DocumentInHand[];
   /** Por qué no se ha abierto ninguno. `null` cuando sí se abrió. */
   failure: DocumentFailure | null;

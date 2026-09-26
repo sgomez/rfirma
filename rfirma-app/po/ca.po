@@ -266,8 +266,8 @@ msgstr "Alguns fitxers no s'han afegit"
 
 msgid "errors.situations.droppedSomeDiscarded.body"
 msgstr ""
-"La resta de PDF que has deixat anar ja són a Recents. Els que no eren PDF no "
-"s'han afegit."
+"La resta de PDF que has deixat anar s'han obert en pestanyes. Els que no "
+"eren PDF no s'han afegit."
 
 msgid "errors.situations.boxOutOfPage.title"
 msgstr "El requadre surt de la pàgina"

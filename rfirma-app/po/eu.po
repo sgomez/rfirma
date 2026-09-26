@@ -266,8 +266,8 @@ msgstr "Fitxategi batzuk ez dira gehitu"
 
 msgid "errors.situations.droppedSomeDiscarded.body"
 msgstr ""
-"Askatu dituzun gainerako PDFak Azkenak zerrendan daude jada. PDF ez zirenak "
-"ez dira gehitu."
+"Askatu dituzun gainerako PDFak fitxetan ireki dira. PDF ez zirenak ez dira "
+"gehitu."
 
 msgid "errors.situations.boxOutOfPage.title"
 msgstr "Laukia orrialdetik kanpo geratzen da"

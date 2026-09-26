@@ -69,7 +69,7 @@ export function DocumentTabs({
     if (right > scroller.scrollLeft + scroller.clientWidth) {
       scroller.scrollLeft = right - scroller.clientWidth;
     }
-  });
+  }, [activeId, tabs.length]);
 
   const scrollBy = (delta: number) => {
     if (list.current) list.current.scrollLeft += delta;

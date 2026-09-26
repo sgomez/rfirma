@@ -261,8 +261,8 @@ msgstr "Algunos ficheros no se han añadido"
 
 msgid "errors.situations.droppedSomeDiscarded.body"
 msgstr ""
-"Los demás PDF que has soltado ya están en Recientes. Los que no eran PDF no "
-"se han añadido."
+"Los demás PDF que has soltado se han abierto en pestañas. Los que no eran "
+"PDF no se han añadido."
 
 msgid "errors.situations.boxOutOfPage.title"
 msgstr "El recuadro se sale de la página"
