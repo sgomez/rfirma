@@ -35,6 +35,8 @@ export interface RecentDocument {
   id: string;
   /** El nombre del fichero, cacheado. */
   name: string;
+  /** La carpeta contenedora; ausente bajo el portal (ADR-0011). */
+  folder: string | null;
   /** La insignia cacheada: se conoce abriendo el documento, y por eso se cachea. */
   badge: Badge;
   /** El `mtime` cacheado, en segundos desde la época; `null` si no se pudo leer. */
@@ -166,6 +168,7 @@ export function inMemoryRecents(initial: readonly RecentDocument[] = []): Recent
       const noted: RecentDocument = {
         id: document.id,
         name: document.name,
+        folder: previous?.folder ?? null,
         badge: document.badge,
         modified: document.modified,
         // Anotar es siempre «acabo de usarlo»: la fecha se refresca aunque la

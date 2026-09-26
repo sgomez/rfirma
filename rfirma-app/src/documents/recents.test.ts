@@ -8,6 +8,7 @@ function document(name: string, overrides: Partial<RecentDocument> = {}): Recent
     // prefijo que ninguna ruta tendría, para que nada pueda leerlo como tal.
     id: `id-${name}`,
     name,
+    folder: null,
     badge: "Unsigned",
     modified: 1_700_000_000,
     lastUsed: 1_700_000_000,
@@ -83,6 +84,23 @@ describe("inMemoryRecents", () => {
     expect(noted.available).toBe(true);
     expect(noted.lastUsed).toBeGreaterThan(1_600_000_000);
     expect(await store.list()).toEqual([noted]);
+  });
+
+  // La carpeta la trae el backend al listar, no al anotar: `DocumentInHand` no
+  // la lleva, así que la fila que ya estuviera se queda con la suya.
+  it("keeps the folder a row already had, since re-noting it does not bring one", async () => {
+    const store = inMemoryRecents([document("a.pdf", { folder: "Documentos" })]);
+
+    const noted = await store.record({
+      id: "id-a.pdf",
+      name: "a.pdf",
+      badge: "Unsigned",
+      modified: 1_700_000_000,
+      placement: null,
+      remembered: true,
+    });
+
+    expect(noted.folder).toBe("Documentos");
   });
 
   it("empties the list", async () => {

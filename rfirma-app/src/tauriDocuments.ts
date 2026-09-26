@@ -137,7 +137,8 @@ function inHandOf(opened: OpenedDocumentView): DocumentInHand {
 /**
  * Una fila de la bandeja tal cual la devuelve Rust. Es
  * `commands::RecentDocumentView`, campo a campo: **un identificador opaco y un
- * nombre, ninguna ruta** (ADR-0011).
+ * nombre, ninguna ruta**; la carpeta viaja aparte, solo para mostrarla, y
+ * llega ausente bajo el portal (ADR-0011).
  *
  * `available` viene recalculado contra el disco de ahora mismo y no se persiste
  * nunca: una fila que no responde llega con `false` y **revive** cuando la ruta
@@ -146,6 +147,7 @@ function inHandOf(opened: OpenedDocumentView): DocumentInHand {
 interface RecentDocumentView {
   id: string;
   name: string;
+  folder: string | null;
   badge: Badge;
   modified: number | null;
   lastUsed: number;
@@ -193,6 +195,7 @@ function rowOf(view: RecentDocumentView): RecentDocument {
   return {
     id: view.id,
     name: view.name,
+    folder: view.folder,
     badge: view.badge,
     modified: view.modified,
     lastUsed: view.lastUsed,

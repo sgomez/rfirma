@@ -138,6 +138,28 @@ describe("App, el menú «+»", () => {
     expect(screen.getByRole("tab", { name: "primero.pdf", selected: true })).toBeInTheDocument();
   });
 
+  it("shows the folder under the name when it is known", async () => {
+    const user = userEvent.setup();
+    renderApp(inMemoryRecents([row("hoy.pdf", { folder: "Documentos" })]));
+    await screen.findByRole("region", { name: "Recientes" });
+
+    const menu = await openPlusMenu(user);
+
+    const item = within(menu).getByRole("menuitem", { name: /^hoy\.pdf/ });
+    expect(item).toHaveTextContent("Documentos");
+  });
+
+  it("shows only the name when the folder is unknown, under the portal", async () => {
+    const user = userEvent.setup();
+    renderApp(inMemoryRecents([row("hoy.pdf", { folder: null, lastUsed: now() })]));
+    await screen.findByRole("region", { name: "Recientes" });
+
+    const menu = await openPlusMenu(user);
+
+    const item = within(menu).getByRole("menuitem", { name: /^hoy\.pdf/ });
+    expect(item).toHaveTextContent("hoy.pdfhoy");
+  });
+
   it("dims a recent that is no longer where it was, and does not open it", async () => {
     const user = userEvent.setup();
     renderApp(inMemoryRecents([row("usb.pdf", { available: false })]));

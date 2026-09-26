@@ -12,6 +12,7 @@ function row(name: string, overrides: Partial<RecentDocument> = {}): RecentDocum
     // prefijo que ninguna ruta tendría, para que nada pueda leerlo como tal.
     id: `id-${name}`,
     name,
+    folder: null,
     badge: "Unsigned",
     modified: 1_700_000_000,
     lastUsed: 1_700_000_000,
