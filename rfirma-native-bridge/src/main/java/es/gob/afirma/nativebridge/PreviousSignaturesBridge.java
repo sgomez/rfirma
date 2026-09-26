@@ -1,28 +1,36 @@
 package es.gob.afirma.nativebridge;
 
+import java.io.IOException;
 import java.security.cert.X509Certificate;
+import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 
 import javax.security.auth.x500.X500Principal;
 
-import es.gob.afirma.core.signers.AOSimpleSignInfo;
-import es.gob.afirma.core.util.tree.AOTreeModel;
-import es.gob.afirma.core.util.tree.AOTreeNode;
-import es.gob.afirma.signers.pades.AOPDFSigner;
+import com.aowagie.text.pdf.AcroFields;
+import com.aowagie.text.pdf.PdfName;
+import com.aowagie.text.pdf.PdfPKCS7;
+
+import es.gob.afirma.core.RuntimeConfigNeededException;
+import es.gob.afirma.signers.pades.PdfUtil;
+import es.gob.afirma.signvalidation.SignValidity;
+import es.gob.afirma.signvalidation.SignValidity.SIGN_DETAIL_TYPE;
+import es.gob.afirma.signvalidation.SignValidity.VALIDITY_ERROR;
+import es.gob.afirma.signvalidation.SignatureFormatDetectorPadesCades;
+import es.gob.afirma.signvalidation.ValidatePdfSignature;
 
 /**
- * Las firmas que ya trae un PDF, vistas por el mismo recorrido de firmantes
- * que usa el escritorio de AutoFirma 1.9.2.
+ * Las firmas que ya trae un PDF, recorridas como el escritorio de AutoFirma
+ * 1.9.2 y validadas una a una con su validador, sin red y sin modo relajado.
  *
- * <p>Reutiliza {@link AOPDFSigner#getSignersStructure(byte[], boolean)}: no se
- * escanea el PDF a mano. Ese recorrido nunca lanza para un PDF sin
- * firmas, cifrado o con una firma corrupta: en los tres casos devuelve el
- * árbol vacío o salta la firma que no se pudo leer, así que esta clase tampoco
- * necesita distinguirlos.
+ * <p>El recorrido es el de {@code AOPDFSigner.getSignersStructure}: salta los
+ * sellos de tiempo y las firmas que iText no llega a leer, y un PDF ilegible o
+ * cifrado da un informe vacio en vez de un fallo.
  */
 final class PreviousSignaturesBridge {
 
@@ -30,46 +38,136 @@ final class PreviousSignaturesBridge {
             "2.5.4.5", "SERIALNUMBER",
             "2.5.4.97", "organizationIdentifier");
 
+    private static final PdfName ETSI_RFC3161 = new PdfName("ETSI.RFC3161");
+
+    private static final PdfName DOC_TIMESTAMP = new PdfName("DocTimeStamp");
+
     private PreviousSignaturesBridge() { }
 
-    /** Titular, emisor, número de serie del certificado y fecha de una firma previa. */
-    record Signature(String subject, String issuer, String serialNumber, String signingTime) { }
+    /** El estado de una firma previa, con el nombre con el que cruza a Rust. */
+    enum Status {
+        VALID("valid"),
+        CERTIFICATE_EXPIRED("certificateExpired"),
+        CERTIFICATE_NOT_YET_VALID("certificateNotYetValid"),
+        BROKEN("broken"),
+        UNVERIFIABLE("unverifiable"),
+        NOT_FULLY_CHECKED("notFullyChecked");
 
-    static List<Signature> read(final byte[] pdf) {
-        final AOTreeModel structure = new AOPDFSigner().getSignersStructure(pdf, true);
-        final List<AOSimpleSignInfo> infos = new ArrayList<>();
-        collect((AOTreeNode) structure.getRoot(), infos);
-        infos.sort(Comparator.comparing(
-                AOSimpleSignInfo::getSigningTime, Comparator.nullsLast(Comparator.naturalOrder())));
+        private final String wireName;
 
-        final List<Signature> signatures = new ArrayList<>(infos.size());
-        for (final AOSimpleSignInfo info : infos) {
-            final X509Certificate[] certs = info.getCerts();
-            if (certs == null || certs.length == 0) {
+        Status(final String wireName) {
+            this.wireName = wireName;
+        }
+
+        String wireName() {
+            return wireName;
+        }
+    }
+
+    /** Titular, emisor, numero de serie, fecha, estado y motivo del original de una firma previa. */
+    record Signature(String subject, String issuer, String serialNumber, String signingTime,
+            Status status, String reason) { }
+
+    /** Las firmas en orden cronologico y si el documento cambio despues de la ultima. */
+    record Report(List<Signature> signatures, boolean changedAfterLastSignature) { }
+
+    static Report read(final byte[] pdf) {
+        final AcroFields fields;
+        try {
+            fields = PdfUtil.getPdfReader(pdf, headless(), true).getAcroFields();
+        }
+        catch (final Exception e) {
+            return new Report(List.of(), false);
+        }
+        final String profile = SignatureFormatDetectorPadesCades.resolvePDFFormat(pdf);
+
+        final List<Dated> dated = new ArrayList<>();
+        for (final String name : fields.getSignatureNames()) {
+            if (isTimestamp(fields, name)) {
                 continue;
             }
-            final X509Certificate signer = certs[0];
-            signatures.add(new Signature(
+            final PdfPKCS7 pkcs7;
+            try {
+                pkcs7 = fields.verifySignature(name);
+            }
+            catch (final RuntimeException e) {
+                continue;
+            }
+            final X509Certificate signer = pkcs7.getSigningCertificate();
+            if (signer == null) {
+                continue;
+            }
+            final Instant signingTime =
+                    pkcs7.getSignDate() == null ? null : pkcs7.getSignDate().toInstant();
+            final SignValidity validity = decisive(validate(name, fields, profile));
+            dated.add(new Dated(signingTime, new Signature(
                     readable(signer.getSubjectX500Principal()),
                     readable(signer.getIssuerX500Principal()),
                     signer.getSerialNumber().toString(),
-                    info.getSigningTime() == null
-                            ? null
-                            : DateTimeFormatter.ISO_INSTANT.format(info.getSigningTime().toInstant())));
+                    signingTime == null ? null : DateTimeFormatter.ISO_INSTANT.format(signingTime),
+                    statusOf(validity),
+                    reasonOf(validity))));
         }
-        return signatures;
+        dated.sort(Comparator.comparing(Dated::signingTime,
+                Comparator.nullsLast(Comparator.naturalOrder())));
+        return new Report(dated.stream().map(Dated::signature).toList(), false);
     }
 
     static String readable(final X500Principal name) {
         return name.getName(X500Principal.RFC2253, READABLE_KEYWORDS);
     }
 
-    private static void collect(final AOTreeNode node, final List<AOSimpleSignInfo> infos) {
-        if (node.getUserObject() instanceof AOSimpleSignInfo info) {
-            infos.add(info);
+    static Status statusOf(final SignValidity validity) {
+        if (validity.getError() == null) {
+            return Status.VALID;
         }
-        for (int i = 0; i < node.getChildCount(); i++) {
-            collect(node.getChildAt(i), infos);
+        return switch (validity.getError()) {
+            case CERTIFICATE_EXPIRED -> Status.CERTIFICATE_EXPIRED;
+            case CERTIFICATE_NOT_VALID_YET -> Status.CERTIFICATE_NOT_YET_VALID;
+            case NO_MATCH_DATA, CORRUPTED_SIGN, CERTIFIED_SIGN_REVISION -> Status.BROKEN;
+            case SIGN_PROFILE_NOT_CHECKED -> Status.NOT_FULLY_CHECKED;
+            default -> Status.UNVERIFIABLE;
+        };
+    }
+
+    private record Dated(Instant signingTime, Signature signature) { }
+
+    private static Properties headless() {
+        final Properties options = new Properties();
+        options.setProperty("headless", Boolean.TRUE.toString());
+        return options;
+    }
+
+    private static boolean isTimestamp(final AcroFields fields, final String name) {
+        final Object subFilter = fields.getSignatureDictionary(name).get(PdfName.SUBFILTER);
+        return ETSI_RFC3161.equals(subFilter) || DOC_TIMESTAMP.equals(subFilter);
+    }
+
+    private static List<SignValidity> validate(final String name, final AcroFields fields,
+            final String profile) {
+        try {
+            return ValidatePdfSignature.validateSign(name, fields, profile, true);
         }
+        catch (final IOException | RuntimeConfigNeededException e) {
+            return List.of(new SignValidity(SIGN_DETAIL_TYPE.KO, VALIDITY_ERROR.UNKOWN_ERROR));
+        }
+    }
+
+    /** Un {@code KO} pesa mas que un {@code UNKNOWN}, como en el validador del original. */
+    private static SignValidity decisive(final List<SignValidity> validities) {
+        SignValidity decisive = new SignValidity(SIGN_DETAIL_TYPE.OK, null);
+        for (final SignValidity validity : validities) {
+            if (SIGN_DETAIL_TYPE.KO == validity.getValidity()) {
+                return validity;
+            }
+            if (SIGN_DETAIL_TYPE.UNKNOWN == validity.getValidity()) {
+                decisive = validity;
+            }
+        }
+        return decisive;
+    }
+
+    private static String reasonOf(final SignValidity validity) {
+        return validity.getError() == null ? null : validity.getError().name();
     }
 }

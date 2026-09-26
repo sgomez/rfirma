@@ -61,7 +61,10 @@ import org.graalvm.word.PointerBase;
  *               "messageCode":"&lt;codigo de mensaje&gt;"}
  * previous ok  {"ok":true,"signatures":[{"subject":"&lt;DN RFC 2253&gt;",
  *              "issuer":"&lt;DN RFC 2253&gt;","serialNumber":"&lt;decimal&gt;",
- *              "signingTime":"&lt;instante ISO-8601&gt;"}, ...]}
+ *              "signingTime":"&lt;instante ISO-8601&gt;","status":"&lt;estado&gt;",
+ *              "reason":"&lt;VALIDITY_ERROR&gt;"}, ...],"changedAfterLastSignature":false}
+ *              estado: valid, certificateExpired, certificateNotYetValid, broken,
+ *              unverifiable o notFullyChecked; reason es null en valid
  * error        {"ok":false,"error":"&lt;clase&gt;: &lt;mensaje&gt;"}
  * </pre>
  *
@@ -459,27 +462,35 @@ public final class NativeBridge {
             final IsolateThread thread,
             final CCharPointer documentB64) {
         try {
-            final List<PreviousSignaturesBridge.Signature> signatures = PreviousSignaturesBridge.read(
-                    Base64.getDecoder().decode(CTypeConversion.toJavaString(documentB64)));
-
-            final StringBuilder json = new StringBuilder("{\"ok\":true,\"signatures\":[");
-            for (int i = 0; i < signatures.size(); i++) {
-                if (i > 0) {
-                    json.append(',');
-                }
-                final PreviousSignaturesBridge.Signature signature = signatures.get(i);
-                json.append('{');
-                member(json, "subject", signature.subject());
-                field(json, "issuer", signature.issuer());
-                field(json, "serialNumber", signature.serialNumber());
-                field(json, "signingTime", signature.signingTime());
-                json.append('}');
-            }
-            return toUnmanagedCString(json.append("]}").toString());
+            return toUnmanagedCString(previousSignaturesJson(PreviousSignaturesBridge.read(
+                    Base64.getDecoder().decode(CTypeConversion.toJavaString(documentB64)))));
         }
         catch (final Throwable e) {
             return toUnmanagedCString(errorJson(e));
         }
+    }
+
+    static String previousSignaturesJson(final PreviousSignaturesBridge.Report report) {
+        final StringBuilder json = new StringBuilder("{\"ok\":true,\"signatures\":[");
+        final List<PreviousSignaturesBridge.Signature> signatures = report.signatures();
+        for (int i = 0; i < signatures.size(); i++) {
+            if (i > 0) {
+                json.append(',');
+            }
+            final PreviousSignaturesBridge.Signature signature = signatures.get(i);
+            json.append('{');
+            member(json, "subject", signature.subject());
+            field(json, "issuer", signature.issuer());
+            field(json, "serialNumber", signature.serialNumber());
+            field(json, "signingTime", signature.signingTime());
+            field(json, "status", signature.status().wireName());
+            field(json, "reason", signature.reason());
+            json.append('}');
+        }
+        return json.append("],\"changedAfterLastSignature\":")
+                .append(report.changedAfterLastSignature())
+                .append('}')
+                .toString();
     }
 
     /**

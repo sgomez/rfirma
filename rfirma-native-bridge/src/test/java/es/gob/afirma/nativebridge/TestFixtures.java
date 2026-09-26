@@ -2,6 +2,7 @@ package es.gob.afirma.nativebridge;
 
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.KeyStore;
@@ -51,6 +52,18 @@ final class TestFixtures {
         document.add(new Paragraph("Documento de prueba de rfirma."));
         document.close();
         return out.toByteArray();
+    }
+
+    /** El mismo PDF firmado con la version de su cabecera cambiada, que cae dentro del {@code ByteRange}. */
+    static byte[] withOneByteChangedInsideTheSignedRange(final byte[] pdf) {
+        final int header = new String(pdf, StandardCharsets.ISO_8859_1).indexOf("%PDF-1.");
+        if (header < 0) {
+            throw new IllegalArgumentException("el PDF no trae encabezado");
+        }
+        final byte[] altered = pdf.clone();
+        final int version = header + "%PDF-1.".length();
+        altered[version] = (byte) (altered[version] == '7' ? '4' : '7');
+        return altered;
     }
 
     /** Los 64 bytes que firman las pruebas de CAdES, donde el documento da igual. */

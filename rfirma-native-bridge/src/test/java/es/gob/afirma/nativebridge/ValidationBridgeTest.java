@@ -41,7 +41,7 @@ class ValidationBridgeTest {
     @Test
     void a_signature_that_no_longer_matches_the_document_is_invalid() throws Exception {
         final byte[] altered =
-                withOneByteChangedInsideTheSignedRange(signed(TestFixtures.samplePdf()));
+                TestFixtures.withOneByteChangedInsideTheSignedRange(signed(TestFixtures.samplePdf()));
 
         final ValidationBridge.Verdict verdict = ValidationBridge.validate(altered, "PAdES");
 
@@ -138,15 +138,6 @@ class ValidationBridgeTest {
     }
 
     /** La version del encabezado entra en el {@code /ByteRange}: el resumen deja de cuadrar. */
-    private static byte[] withOneByteChangedInsideTheSignedRange(final byte[] pdf) {
-        final int header = new String(pdf, StandardCharsets.ISO_8859_1).indexOf("%PDF-1.");
-        assertTrue(header >= 0, "el encabezado tiene que estar");
-        final byte[] altered = pdf.clone();
-        final int version = header + "%PDF-1.".length();
-        altered[version] = (byte) (altered[version] == '7' ? '4' : '7');
-        return altered;
-    }
-
     /**
      * Repinta la pagina en una revision incremental posterior a la firma, que es
      * el ataque que el original llama PDF Shadow Attack. La revision se escribe a
