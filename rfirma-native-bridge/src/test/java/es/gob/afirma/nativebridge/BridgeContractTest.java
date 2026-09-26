@@ -61,6 +61,35 @@ class BridgeContractTest {
     }
 
     @Test
+    void the_previous_signatures_report_carries_every_status_and_the_changed_document_flag() {
+        final List<PreviousSignaturesBridge.Signature> signatures = new ArrayList<>();
+        for (final PreviousSignaturesBridge.Status status : PreviousSignaturesBridge.Status.values()) {
+            signatures.add(new PreviousSignaturesBridge.Signature("CN=A", "CN=B", "7",
+                    "2026-09-26T10:00:00Z", status,
+                    status == PreviousSignaturesBridge.Status.VALID ? null : "NO_MATCH_DATA"));
+        }
+
+        final String json = NativeBridge.previousSignaturesJson(
+                new PreviousSignaturesBridge.Report(signatures, true));
+
+        assertEquals("{\"ok\":true,\"signatures\":["
+                + "{\"subject\":\"CN=A\",\"issuer\":\"CN=B\",\"serialNumber\":\"7\","
+                + "\"signingTime\":\"2026-09-26T10:00:00Z\",\"status\":\"valid\",\"reason\":null},"
+                + entryWith("certificateExpired") + "," + entryWith("certificateNotYetValid") + ","
+                + entryWith("broken") + "," + entryWith("unverifiable") + ","
+                + entryWith("notFullyChecked")
+                + "],\"changedAfterLastSignature\":true}",
+                json,
+                "Rust lee estos nombres: cambiar uno rompe el enlace sin que falle la compilacion");
+    }
+
+    private static String entryWith(final String status) {
+        return "{\"subject\":\"CN=A\",\"issuer\":\"CN=B\",\"serialNumber\":\"7\","
+                + "\"signingTime\":\"2026-09-26T10:00:00Z\",\"status\":\"" + status
+                + "\",\"reason\":\"NO_MATCH_DATA\"}";
+    }
+
+    @Test
     void never_takes_a_private_key_or_a_pin_in_any_signature() {
         // ADR-0001: la clave privada no entra al isolate. La invariante no la
         // sostiene ningun comportamiento observable —un puente que aceptase la
@@ -69,7 +98,7 @@ class BridgeContractTest {
         final List<String> offenders = new ArrayList<>();
         for (final Class<?> bridge : List.of(NativeBridge.class, PadesBridge.class,
                 CadesBridge.class, XadesBridge.class, FilterBridge.class,
-                ExtraParamsBridge.class)) {
+                ExtraParamsBridge.class, PreviousSignaturesBridge.class)) {
             for (final Method method : bridge.getDeclaredMethods()) {
                 for (final Class<?> parameter : method.getParameterTypes()) {
                     if (parameter == PrivateKey.class || parameter == PrivateKeyEntry.class

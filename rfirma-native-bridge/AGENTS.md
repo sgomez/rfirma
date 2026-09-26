@@ -14,6 +14,7 @@ con `native-image` (ADR-0004). Lo que decide y firma vive en Rust.
 | `src/main/java/.../SignatureTimestamp.java` | El sello de tiempo que pide `tsaURL` en CAdES y XAdES (ADR-0030); no el de PAdES, que sella el procesador del original. |
 | `src/main/java/.../TimestampFailedException.java` | El fallo con el que una firma que pidió sello y no se pudo sellar no sale. |
 | `src/main/java/.../ValidationBridge.java` | El veredicto del validador del original sobre las firmas que ya trae un documento: valida, invalida o pendiente de que la persona confirme. No firma nada. |
+| `src/main/java/.../PreviousSignaturesBridge.java` | Las firmas que ya trae un PDF, una a una: quién firmó, cuándo, y su estado según el validador del original. No es el veredicto de conjunto de `ValidationBridge`. |
 | `src/main/java/.../FilterBridge.java` | Los filtros de certificado que pide la sede. |
 | `src/main/java/.../ExtraParamsBridge.java` | La traducción de `extraParams` de AutoFirma. |
 | `src/main/java/.../SessionStamp.java` | El sello de sesión (ADR-0016). |
