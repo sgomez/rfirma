@@ -183,7 +183,8 @@ export interface CertificateStore {
    * rúbrica y con el destino (ID-63), así que la contraseña del fichero viaja
    * antes de que exista fichero elegido. `false` es haber cerrado el selector
    * sin elegir nada, que no es un fallo: deja la lista como estaba. Rechaza
-   * cuando el fichero no se puede abrir o cuando su clave no es RSA (ID-197).
+   * cuando el fichero no se puede abrir o cuando su clave no es RSA ni de
+   * curva elíptica.
    */
   install(password: string): Promise<boolean>;
   /** Quita un `.p12` instalado, por el asa de su fila. */
