@@ -65,6 +65,21 @@ describe("SigningPanel · Modelo y rúbrica", () => {
     );
   });
 
+  it("sketches a phrase in the custom card instead of printing it", () => {
+    renderPanel({
+      signature: {
+        ...DEFAULT_VISIBLE_SIGNATURE,
+        enabled: true,
+        content: { model: "custom", phrase: [{ text: "Visto bueno de " }, { datum: "signer" }] },
+      },
+    });
+
+    const card = screen.getByRole("radio", { name: "Personalizada" }).closest("label");
+    const thumbnail = card?.querySelector(".panel__model-thumbnail");
+    expect(thumbnail?.textContent).toBe("");
+    expect(thumbnail?.querySelector(".panel__model-sketch")).not.toBeNull();
+  });
+
   it("shows the signer with its identifier masked, exactly as it will be stamped", async () => {
     const user = userEvent.setup();
     const fnmtTest = {

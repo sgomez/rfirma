@@ -119,12 +119,15 @@ con un firmante
 
 ### El modelo
 
-Tres tarjetas iguales, cada una con la firma visible real en miniatura:
+Tres tarjetas iguales, cada una con un esbozo de su firma visible:
 
-- **Completa**: firmante, fecha y emisor, una línea cada uno, y la rúbrica a la
-  izquierda si está encendida.
+- **Completa**: la frase que AutoFirma estampa por omisión, «Firmado por
+  **[Firmante]** el día **[Fecha]** con un certificado emitido por
+  **[Emisor]**». La miniatura enseña firmante, fecha y emisor, una línea cada
+  uno, y la rúbrica a la izquierda si está encendida.
 - **Solo rúbrica**: la imagen ocupando el recuadro.
-- **Personalizada**: la frase que se escribe debajo.
+- **Personalizada**: la miniatura no pinta la frase, que no cabe; la esboza con
+  dos renglones de barras de texto y pastillas de dato.
 
 **No hay fuente, tamaño ni color.** El texto se ajusta al recuadro: rFirma lo
 compone, lo envía resuelto en `layer2Text` y con `layer2FontSize = 0`, que es lo

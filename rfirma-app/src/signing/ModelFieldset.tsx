@@ -143,11 +143,14 @@ export function ModelFieldset({
             />
             <span className="panel__model-thumbnail" aria-hidden="true">
               {rubricBeside}
-              <span className="panel__model-lines panel__model-lines--phrase">
-                <span>
-                  {customPhrase
-                    .map((part) => ("datum" in part ? samples[part.datum] : part.text))
-                    .join("")}
+              <span className="panel__model-sketch">
+                <span className="panel__model-sketch-row">
+                  <span className="panel__model-sketch-text" />
+                  <span className="panel__model-sketch-datum" />
+                </span>
+                <span className="panel__model-sketch-row">
+                  <span className="panel__model-sketch-datum" />
+                  <span className="panel__model-sketch-text panel__model-sketch-text--short" />
                 </span>
               </span>
             </span>

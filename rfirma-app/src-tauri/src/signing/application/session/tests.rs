@@ -534,13 +534,13 @@ fn config_of(order: &SigningOrder) -> SignatureConfig {
 }
 
 #[test]
-fn the_complete_model_is_the_signer_the_date_and_the_issuer() {
+fn the_complete_model_is_the_default_sentence_of_autofirma() {
     let config = config_of(&an_order_with(json!({ "model": "complete" }), false));
 
     assert_eq!(
         config.layer2_text,
         format!(
-            "Firmado por: {THE_MASKED_HOLDER}. Fecha: 31/08/26, 12:00:00. Emisor: AC FNMT Usuarios."
+            "Firmado por {THE_MASKED_HOLDER} el día 31/08/26, 12:00:00 con un certificado emitido por AC FNMT Usuarios"
         )
     );
     assert_eq!(

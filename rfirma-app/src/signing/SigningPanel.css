@@ -217,10 +217,39 @@
   text-overflow: ellipsis;
 }
 
-/* La frase de Personalizada, partiendo de línea en la miniatura. */
-.panel__model-lines--phrase span {
-  white-space: normal;
-  overflow-wrap: anywhere;
+/* Personalizada no pinta su frase: la esboza con texto y datos en barras. */
+.panel__model-sketch {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.panel__model-sketch-row {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.panel__model-sketch-text {
+  flex: 1;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--rf-text-muted);
+}
+
+.panel__model-sketch-text--short {
+  flex: 0.5;
+}
+
+.panel__model-sketch-datum {
+  flex: none;
+  width: 16px;
+  height: 6px;
+  border-radius: var(--rf-radius-sm);
+  background: var(--rf-border-strong);
 }
 
 /* El hueco de la rúbrica dentro de una tarjeta: a la izquierda del texto en
