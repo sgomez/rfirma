@@ -284,7 +284,7 @@ msgstr "The document doesn't reach that page"
 msgid "errors.situations.pageOutOfDocument.body"
 msgstr ""
 "Choose a page the document actually has and sign again. Left as it is, the "
-"seal would end up on the last page without warning."
+"visible signature would end up on the last page without warning."
 
 msgid "errors.situations.sealMismatch.title"
 msgstr "Signing was interrupted halfway"
@@ -521,16 +521,16 @@ msgid "viewer.stamp.frozen"
 msgstr "Frozen while you move the box"
 
 msgid "viewer.stamp.onDemand"
-msgstr "The document is large: the stamp isn't redrawn on its own"
+msgstr "The document is large: the visible signature isn't redrawn on its own"
 
 msgid "viewer.stamp.show"
 msgstr "See how it looks"
 
 msgid "viewer.stamp.composing"
-msgstr "Composing the stamp with the chosen certificate"
+msgstr "Composing the visible signature with the chosen certificate"
 
 msgid "viewer.stamp.failed"
-msgstr "We couldn't draw the stamp"
+msgstr "We couldn't draw the visible signature"
 
 msgid "viewer.stamp.retry"
 msgstr "Try again"
@@ -858,21 +858,21 @@ msgstr "Don't remove the card until it finishes."
 #. El titular del diálogo de páginas sin sello: {{count}} páginas donde el recuadro no cabe.
 msgid "sealLoss.title"
 msgid_plural "sealLoss.title"
-msgstr[0] "One page will be left without a seal"
-msgstr[1] "{{count}} pages will be left without a seal"
-msgstr[2] "{{count}} pages will be left without a seal"
+msgstr[0] "One page will be left without a visible signature"
+msgstr[1] "{{count}} pages will be left without a visible signature"
+msgstr[2] "{{count}} pages will be left without a visible signature"
 
 #. {{fallen}} páginas de {{chosen}} elegidas no caben el recuadro, más pequeñas que aquella sobre la que se colocó.
 msgid "sealLoss.body"
 msgstr ""
 "The box doesn't fit on {{fallen}} of the {{chosen}} pages you chose, smaller "
 "than the one you placed it on. The document will be signed all the same and "
-"the signature will be valid throughout it, but the seal won't appear on "
-"those pages."
+"the signature will be valid throughout it, but the visible signature won't "
+"appear on those pages."
 
-#. La vuelta positiva: {{sealed}} de {{chosen}} páginas elegidas sí llevarán el sello.
+#. La vuelta positiva: {{sealed}} de {{chosen}} páginas elegidas sí llevarán la firma visible.
 msgid "sealLoss.remaining"
-msgstr "The seal will appear on {{sealed}} of the {{chosen}} chosen pages."
+msgstr "The visible signature will appear on {{sealed}} of the {{chosen}} chosen pages."
 
 msgid "sealLoss.confirm"
 msgstr "Sign anyway"

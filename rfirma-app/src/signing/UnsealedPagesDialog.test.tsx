@@ -17,16 +17,18 @@ describe("UnsealedPagesDialog", () => {
   it("counts the pages that fall against the chosen set, not the document", () => {
     renderDialog({ fallen: 3, chosen: 13 });
 
-    expect(screen.getByRole("dialog", { name: "3 páginas se quedarán sin sello" })).toBeVisible();
+    expect(
+      screen.getByRole("dialog", { name: "3 páginas se quedarán sin firma visible" }),
+    ).toBeVisible();
     expect(
       screen.getByText(
         "El recuadro no cabe en 3 de las 13 páginas que has elegido, más pequeñas que aquella " +
           "sobre la que lo colocaste. El documento se firmará igual y la firma será válida en " +
-          "todo él, pero en esas páginas no aparecerá el sello.",
+          "todo él, pero en esas páginas no aparecerá la firma visible.",
       ),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("El sello aparecerá en 10 de las 13 páginas elegidas."),
+      screen.getByText("La firma visible aparecerá en 10 de las 13 páginas elegidas."),
     ).toBeInTheDocument();
   });
 
@@ -41,13 +43,15 @@ describe("UnsealedPagesDialog", () => {
   it("uses the singular for a single page, in the title and the recount", () => {
     renderDialog({ fallen: 1, chosen: 5 });
 
-    expect(screen.getByRole("dialog", { name: "Una página se quedará sin sello" })).toBeVisible();
     expect(
-      screen.getByText("El sello aparecerá en 4 de las 5 páginas elegidas."),
+      screen.getByRole("dialog", { name: "Una página se quedará sin firma visible" }),
+    ).toBeVisible();
+    expect(
+      screen.getByText("La firma visible aparecerá en 4 de las 5 páginas elegidas."),
     ).toBeInTheDocument();
   });
 
-  it("says 'sin sello', never 'recortadas'", () => {
+  it("says 'sin firma visible', never 'recortadas'", () => {
     renderDialog();
 
     expect(screen.queryByText(/recortad/i)).not.toBeInTheDocument();

@@ -287,7 +287,7 @@ msgstr "O documento non chega a esa páxina"
 msgid "errors.situations.pageOutOfDocument.body"
 msgstr ""
 "Escolle unha páxina que exista no documento e volve asinar. Se o deixásemos "
-"así, o selo acabaría na última páxina sen avisar."
+"así, a sinatura visible acabaría na última páxina sen avisar."
 
 msgid "errors.situations.sealMismatch.title"
 msgstr "A sinatura interrompeuse a medias"
@@ -522,19 +522,19 @@ msgid "viewer.outOfPage"
 msgstr "O cadro quedou fóra da páxina, así que segue onde estaba."
 
 msgid "viewer.stamp.frozen"
-msgstr "Selo conxelado mentres moves o cadro"
+msgstr "Sinatura visible conxelada mentres moves o cadro"
 
 msgid "viewer.stamp.onDemand"
-msgstr "Documento grande: o selo non se recalcula só"
+msgstr "Documento grande: a sinatura visible non se recalcula soa"
 
 msgid "viewer.stamp.show"
 msgstr "Ver como queda"
 
 msgid "viewer.stamp.composing"
-msgstr "Compoñendo o selo co certificado escollido"
+msgstr "Compoñendo a sinatura visible co certificado escollido"
 
 msgid "viewer.stamp.failed"
-msgstr "Non se puido debuxar o selo"
+msgstr "Non se puido debuxar a sinatura visible"
 
 msgid "viewer.stamp.retry"
 msgstr "Tentar de novo"
@@ -861,20 +861,21 @@ msgstr "Non retires a tarxeta ata que remate."
 #. El titular del diálogo de páginas sin sello: {{count}} páginas donde el recuadro no cabe.
 msgid "sealLoss.title"
 msgid_plural "sealLoss.title"
-msgstr[0] "Unha páxina quedará sen selo"
-msgstr[1] "{{count}} páxinas quedarán sen selo"
-msgstr[2] "{{count}} páxinas quedarán sen selo"
+msgstr[0] "Unha páxina quedará sen sinatura visible"
+msgstr[1] "{{count}} páxinas quedarán sen sinatura visible"
+msgstr[2] "{{count}} páxinas quedarán sen sinatura visible"
 
 #. {{fallen}} páginas de {{chosen}} elegidas no caben el recuadro, más pequeñas que aquella sobre la que se colocó.
 msgid "sealLoss.body"
 msgstr ""
 "O cadro non cabe en {{fallen}} das {{chosen}} páxinas que escolliches, máis "
 "pequenas ca aquela sobre a que o colocaches. O documento asinarase igual e a "
-"sinatura será válida en todo el, pero nesas páxinas non aparecerá o selo."
+"sinatura será válida en todo el, pero nesas páxinas non aparecerá a "
+"sinatura visible."
 
-#. La vuelta positiva: {{sealed}} de {{chosen}} páginas elegidas sí llevarán el sello.
+#. La vuelta positiva: {{sealed}} de {{chosen}} páginas elegidas sí llevarán la firma visible.
 msgid "sealLoss.remaining"
-msgstr "O selo aparecerá en {{sealed}} das {{chosen}} páxinas escollidas."
+msgstr "A sinatura visible aparecerá en {{sealed}} das {{chosen}} páxinas escollidas."
 
 msgid "sealLoss.confirm"
 msgstr "Asinar de todos os xeitos"

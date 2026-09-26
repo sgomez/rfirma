@@ -534,7 +534,7 @@ msgstr ""
 msgid "panel.placement.sealAll"
 msgstr ""
 
-#. Botón que quita el sello de la página que se está mirando, cuando ya lo lleva.
+#. Botón que quita la firma visible de la página que se está mirando, cuando ya la lleva.
 msgid "panel.placement.unseal"
 msgstr ""
 
@@ -688,7 +688,7 @@ msgstr ""
 msgid "panel.visibleSignature.rubric.thumbnail"
 msgstr ""
 
-#. Aviso sobre el bloque de firma visible apagado: sin certificado no hay sello que dibujar.
+#. Aviso sobre el bloque de firma visible apagado: sin certificado no hay nada que dibujar.
 msgid "panel.visibleSignature.noCertificate"
 msgstr ""
 
@@ -795,7 +795,7 @@ msgstr ""
 msgid "progress.keepTheCard"
 msgstr ""
 
-#. El titular del diálogo de páginas sin sello: {{count}} páginas donde el recuadro no cabe.
+#. El titular del diálogo de páginas sin firma visible: {{count}} páginas donde el recuadro no cabe.
 msgid "sealLoss.title"
 msgid_plural "sealLoss.title"
 msgstr[0] ""
@@ -806,7 +806,7 @@ msgstr[2] ""
 msgid "sealLoss.body"
 msgstr ""
 
-#. La vuelta positiva: {{sealed}} de {{chosen}} páginas elegidas sí llevarán el sello.
+#. La vuelta positiva: {{sealed}} de {{chosen}} páginas elegidas sí llevarán la firma visible.
 msgid "sealLoss.remaining"
 msgstr ""
 
