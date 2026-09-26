@@ -61,6 +61,10 @@ msgstr "Iruzkinak eta laguntza"
 msgid "errors.reload"
 msgstr "Birkargatu leihoa"
 
+#. El botón que copia el detalle técnico crudo del error de firma.
+msgid "errors.copyDetail"
+msgstr "Kopiatu xehetasuna"
+
 #. Añade la tranquilidad de que nada se ha guardado, junto a un fallo ya clasificado.
 msgid "errors.documentUnchanged"
 msgstr "Dokumentua lehen bezala dago: ez da ezer gorde."

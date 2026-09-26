@@ -61,6 +61,10 @@ msgstr "Feedback and help"
 msgid "errors.reload"
 msgstr "Reload the window"
 
+#. El botón que copia el detalle técnico crudo del error de firma.
+msgid "errors.copyDetail"
+msgstr "Copy detail"
+
 #. Añade la tranquilidad de que nada se ha guardado, junto a un fallo ya clasificado.
 msgid "errors.documentUnchanged"
 msgstr "The document is unchanged: nothing has been saved."

@@ -160,7 +160,7 @@ describe("SigningPanel", () => {
     expect(
       screen.getByText("El documento sigue como estaba: no se ha guardado nada."),
     ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Copiar" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Copiar detalle" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Volver a intentarlo" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Volver" })).toBeInTheDocument();
     // La firma visible no aporta nada mientras el documento sigue igual: se
@@ -175,17 +175,21 @@ describe("SigningPanel", () => {
   it("dims the toggle and the placement controls while signing", () => {
     renderPanel({ signing: true });
 
-    expect(screen.getByRole("switch", { name: /Estampar un recuadro/ })).toHaveClass("switch__control");
-    expect(screen.getByRole("switch", { name: /Estampar un recuadro/ }).closest(".panel__toggle")).toHaveClass("panel__toggle--dim");
+    expect(screen.getByRole("switch", { name: /Estampar un recuadro/ })).toHaveClass(
+      "switch__control",
+    );
+    expect(
+      screen.getByRole("switch", { name: /Estampar un recuadro/ }).closest(".panel__toggle"),
+    ).toHaveClass("panel__toggle--dim");
     expect(screen.getByText("Colocación").closest(".panel__controls--dim")).not.toBeNull();
   });
 
   it("does not dim the toggle or the placement controls otherwise", () => {
     renderPanel({ signing: false });
 
-    expect(screen.getByRole("switch", { name: /Estampar un recuadro/ }).closest(".panel__toggle")).not.toHaveClass(
-      "panel__toggle--dim",
-    );
+    expect(
+      screen.getByRole("switch", { name: /Estampar un recuadro/ }).closest(".panel__toggle"),
+    ).not.toHaveClass("panel__toggle--dim");
     expect(screen.getByText("Colocación").closest(".panel__controls--dim")).toBeNull();
   });
 

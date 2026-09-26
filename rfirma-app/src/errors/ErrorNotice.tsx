@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { AlertIcon, CopyIcon, ExternalLinkIcon } from "../design-system/icons";
+import { AlertIcon, ExternalLinkIcon } from "../design-system/icons";
 import type { ExternalDestinationOpener } from "../desktop/externalDestination";
 import type { Catalog } from "../i18n/catalog";
 import "./ErrorNotice.css";
@@ -88,10 +88,9 @@ interface ErrorNoticeProps {
  * `CKR_*` crudo debajo del mensaje ocupa el pie entero y solo lo necesita quien
  * va a escribir un informe de fallo.
  *
- * Con `documentUnchanged` el título fijo es «No se ha podido firmar»
- * (docs/design/panel-de-firma.md § Estados → Error al firmar), y la situación
- * baja a ser la causa en prosa: el fallo de firma es siempre el mismo título,
- * y lo que cambia es por qué.
+ * Con `documentUnchanged` la tarjeta es la del error de firma
+ * (docs/design/panel-de-firma.md § Estados → Error al firmar) y nada más: título
+ * fijo, la situación como causa, la tranquilidad, el detalle y «Copiar detalle».
  */
 export function ErrorNotice({
   situation,
@@ -129,7 +128,7 @@ export function ErrorNotice({
         </span>
       </p>
       {documentUnchanged && <p className="rf-prose">{t(`errors.situations.${situation}.title`)}</p>}
-      {!isOneLine(situation) && (
+      {!isOneLine(situation) && !documentUnchanged && (
         <p className="rf-prose">
           {t(`errors.situations.${situation as Exclude<ErrorSituation, OneLineSituation>}.body`)}
         </p>
@@ -147,11 +146,10 @@ export function ErrorNotice({
               className="rf-btn rf-btn--ghost error-notice__copy"
               onClick={copyDetail}
             >
-              <CopyIcon size={14} />
-              {t("actions.copy")}
+              {t("errors.copyDetail")}
             </button>
           )}
-          {(hasHelpLink(situation) || onReload) && (
+          {!documentUnchanged && (hasHelpLink(situation) || onReload) && (
             <div className="rf-row rf-gap-xs error-notice__actions">
               {hasHelpLink(situation) && (
                 <button

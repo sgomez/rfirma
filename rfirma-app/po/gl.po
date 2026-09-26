@@ -61,6 +61,10 @@ msgstr "Comentarios e axuda"
 msgid "errors.reload"
 msgstr "Recargar a fiestra"
 
+#. El botón que copia el detalle técnico crudo del error de firma.
+msgid "errors.copyDetail"
+msgstr "Copiar detalle"
+
 #. Añade la tranquilidad de que nada se ha guardado, junto a un fallo ya clasificado.
 msgid "errors.documentUnchanged"
 msgstr "O documento segue igual: non se gardou nada."

@@ -428,7 +428,6 @@ export function App({
             // Firmado: la columna derecha cambia de contenido, no de sitio. Es
             // el único acuse de recibo que recibe quien firma, así que se monta
             // en cuanto la postfirma devuelve el documento.
-            //
             // Solo mientras siga activo **el documento que se firmó**: el
             // recuento de páginas sale del PDF abierto, y con otro delante sería
             // el nombre de un fichero con las páginas de otro. Sin documento

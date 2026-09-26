@@ -97,7 +97,7 @@ describe("el aviso de error", () => {
     expect(text.indexOf("No encontramos la tarjeta")).toBeLessThan(
       text.indexOf("El documento sigue como estaba"),
     );
-    expect(screen.getByRole("button", { name: "Copiar" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Copiar detalle" })).toBeInTheDocument();
   });
 
   it("copies the raw technical detail to the clipboard", async () => {
@@ -109,7 +109,7 @@ describe("el aviso de error", () => {
       <ErrorNotice situation="tokenAbsent" technicalDetail={RAW_DETAIL} documentUnchanged />,
     );
 
-    await user.click(screen.getByRole("button", { name: "Copiar" }));
+    await user.click(screen.getByRole("button", { name: "Copiar detalle" }));
 
     expect(writeText).toHaveBeenCalledWith(RAW_DETAIL);
   });
@@ -118,8 +118,31 @@ describe("el aviso de error", () => {
     renderIn("es", <ErrorNotice situation="tokenAbsent" technicalDetail={RAW_DETAIL} />);
 
     expect(screen.queryByText("No se ha podido firmar")).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Copiar" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Copiar detalle" })).not.toBeInTheDocument();
   });
+
+  it("leaves the remedy and the help link out of a signing failure", () => {
+    renderIn(
+      "es",
+      <ErrorNotice situation="tokenAbsent" technicalDetail={RAW_DETAIL} documentUnchanged />,
+    );
+    expect(screen.queryByText(/Comprueba que sigue insertada/)).not.toBeInTheDocument();
+  });
+
+  it("does not offer help or reload on a signing failure", () => {
+    renderIn(
+      "es",
+      <ErrorNotice
+        situation="unknown"
+        technicalDetail={RAW_DETAIL}
+        onReload={() => {}}
+        documentUnchanged
+      />,
+    );
+    expect(screen.queryByRole("button", { name: /Comentarios y ayuda/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Recargar/ })).not.toBeInTheDocument();
+  });
+
   it.each(["bridgeFailed", "sealMismatch", "unknown", "renderFailed"] as const)(
     "enseña el enlace a Comentarios y ayuda en la situación %s",
     (situation) => {
