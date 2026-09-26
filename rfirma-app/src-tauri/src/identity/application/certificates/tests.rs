@@ -6,7 +6,8 @@ use super::{
     remember_the_certificate, rows_of, usable_certificate,
 };
 use crate::identity::application::tests::{
-    a_certificate, a_certificate_with_id, listed_from, NoToken, TestAuthority,
+    a_certificate, a_certificate_with_id, a_representative_certificate, listed_from, NoToken,
+    TestAuthority,
 };
 use crate::identity::domain::algorithm::SignatureAlgorithm;
 use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
@@ -462,4 +463,26 @@ fn a_row_carries_the_organization_identifier_and_the_certificate_serial_number()
 
     assert_eq!(rows[0].organization_identifier, None);
     assert_eq!(rows[0].certificate_serial_number, expected_serial);
+}
+
+#[test]
+fn a_row_carries_the_organization_identifier_of_a_representative_certificate() {
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let certificate = a_representative_certificate(
+        "FIRMA",
+        "EIDAS CERTIFICADO PRUEBAS - 99999999R",
+        "VATES-A00000000",
+    );
+
+    let rows = rows_of(
+        vec![certificate],
+        &home.path().join("certificates"),
+        &ListedCertificates::new(),
+        &a_memory(home.path()),
+    );
+
+    assert_eq!(
+        rows[0].organization_identifier,
+        Some("VATES-A00000000".to_owned())
+    );
 }

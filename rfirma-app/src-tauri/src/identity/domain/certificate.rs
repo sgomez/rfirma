@@ -166,6 +166,20 @@ impl TokenCertificate {
             .map(|certificate| certificate.tbs_certificate().issuer().to_string())
     }
 
+    /// El `organizationIdentifier` (RDN 2.5.4.97) del subject, leído del DER y no del `Display`.
+    pub fn organization_identifier(&self) -> Option<String> {
+        const ORGANIZATION_IDENTIFIER: x509_cert::der::asn1::ObjectIdentifier =
+            x509_cert::der::asn1::ObjectIdentifier::new_unwrap("2.5.4.97");
+
+        let certificate = Certificate::from_der(&self.der).ok()?;
+        let value: x509_cert::ext::pkix::name::DirectoryString = certificate
+            .tbs_certificate()
+            .subject()
+            .by_oid(ORGANIZATION_IDENTIFIER)
+            .ok()??;
+        Some(value.value().into_owned())
+    }
+
     /// Número de serie del certificado, en base diez, como lo escribe `BigInteger::toString` en el puente.
     pub fn serial_number(&self) -> Option<String> {
         let certificate = Certificate::from_der(&self.der).ok()?;
