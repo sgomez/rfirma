@@ -6,14 +6,33 @@ use rfirma_lib::identity::adapters::folder::RealInstalledFolder;
 use rfirma_lib::identity::adapters::pkcs11;
 use rfirma_lib::identity::application::certificates::{self, PasswordPrompt};
 use rfirma_lib::identity::domain::certificate::TokenCertificate;
+use rfirma_lib::identity::domain::keyring::KeyringError;
+use rfirma_lib::identity::domain::protected_secret::ProtectedSecret;
 use rfirma_lib::identity::domain::store::Store;
-use rfirma_lib::identity::ports::{OriginWindow, PromptedError, SecretPromptError, SecretPrompter};
+use rfirma_lib::identity::ports::{
+    Keyring, OriginWindow, PromptedError, SecretPromptError, SecretPrompter,
+};
 use rfirma_lib::signing::adapters::gtk_prompter::{
     MockSecretPrompter, PreconfiguredSecretPrompter,
 };
 use rfirma_lib::signing::domain::Language;
 
 const KIT_PASSWORD: &str = "1234";
+
+/// El doble en memoria del llavero del escritorio (TD-112): siempre entrega el mismo PIN.
+struct FixedPinKeyring;
+
+impl Keyring for FixedPinKeyring {
+    fn pin(&self) -> Result<ProtectedSecret, KeyringError> {
+        Ok(ProtectedSecret::from_str(
+            "pin-de-pruebas-del-almacen-de-rfirma",
+        ))
+    }
+
+    fn create_pin(&self) -> Result<ProtectedSecret, KeyringError> {
+        self.pin()
+    }
+}
 
 fn kit_p12() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -57,6 +76,7 @@ fn a_wrong_password_is_retried_until_it_installs() {
     certificates::install_pkcs12_asking_its_password(
         &pkcs11::RealToken,
         &RealInstalledFolder,
+        &FixedPinKeyring,
         installed.path(),
         &bytes,
         "active-rsa.p12",
@@ -84,6 +104,7 @@ fn cancelling_the_password_prompt_installs_nothing_and_fails_nothing() {
     let error = certificates::install_pkcs12_asking_its_password(
         &pkcs11::RealToken,
         &RealInstalledFolder,
+        &FixedPinKeyring,
         installed.path(),
         &bytes,
         "active-rsa.p12",
@@ -110,6 +131,7 @@ fn an_unreadable_file_does_not_retry_the_password() {
     let error = certificates::install_pkcs12_asking_its_password(
         &pkcs11::RealToken,
         &RealInstalledFolder,
+        &FixedPinKeyring,
         installed.path(),
         &bytes,
         "not-a.p12",
@@ -134,6 +156,7 @@ fn the_password_dialog_is_modal_over_the_window_that_asked_to_install() {
     certificates::install_pkcs12_asking_its_password(
         &pkcs11::RealToken,
         &RealInstalledFolder,
+        &FixedPinKeyring,
         installed.path(),
         &bytes,
         "active-rsa.p12",

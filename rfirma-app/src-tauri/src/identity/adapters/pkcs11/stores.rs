@@ -124,21 +124,13 @@ pub fn softoken_under(usr_lib: &Path) -> Option<PathBuf> {
         .next()
 }
 
-/// Obtiene los almacenes correspondientes a ficheros PKCS#12 instalados.
+/// El Almacén de rFirma bajo `directory`, si ya se ha instalado algún certificado en él (ADR-0034).
 pub fn installed_stores(softoken: &Path, directory: &Path) -> Vec<Store> {
-    let Ok(entries) = std::fs::read_dir(directory) else {
-        return Vec::new();
-    };
-    let mut installed: Vec<PathBuf> = entries
-        .flatten()
-        .map(|entry| entry.path())
-        .filter(|path| path.join("cert9.db").is_file())
-        .collect();
-    installed.sort();
-    installed
-        .iter()
-        .map(|profile| Store::nss(softoken, profile))
-        .collect()
+    if directory.join("cert9.db").is_file() {
+        vec![Store::nss(softoken, directory)]
+    } else {
+        Vec::new()
+    }
 }
 
 /// Pares de directorios de configuración y datos de Firefox en el sistema.

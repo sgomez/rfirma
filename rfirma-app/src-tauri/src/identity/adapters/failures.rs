@@ -3,6 +3,7 @@
 use crate::crossing::Failure;
 use crate::identity::application::certificates::InstallError;
 use crate::identity::domain::error::{Situation, TokenError};
+use crate::identity::domain::keyring::KeyringError;
 use crate::identity::domain::secret::SecretOnTheReaderKeypad;
 use crate::identity::ports::{PromptedError, SecretPromptError};
 use crate::site::domain::protocol::SafCode;
@@ -67,11 +68,22 @@ impl From<SecretPromptError> for Failure {
     }
 }
 
+impl From<KeyringError> for Failure {
+    fn from(error: KeyringError) -> Self {
+        let situation = match error {
+            KeyringError::NoKeyring => "noKeyring",
+            KeyringError::PinMissing => "keyringPinMissing",
+        };
+        Self::new(situation, error.to_string())
+    }
+}
+
 impl From<InstallError> for Failure {
     fn from(error: InstallError) -> Self {
         match error {
             InstallError::Token(error) => error.into(),
             InstallError::Store(error) => error.into(),
+            InstallError::Keyring(error) => error.into(),
         }
     }
 }

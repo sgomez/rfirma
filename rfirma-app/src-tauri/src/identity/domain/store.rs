@@ -97,11 +97,10 @@ impl Store {
         Some(inside.strip_prefix("sql:").unwrap_or(inside))
     }
 
-    /// Directorio del almacén si corresponde a un PKCS#12 instalado (ADR-0011).
+    /// El Almacén de rFirma, si este almacén es el de `installed_dir` (ADR-0034).
     pub fn installed_directory_under(&self, installed_dir: &Path) -> Option<PathBuf> {
         let directory = PathBuf::from(self.profile()?);
-        (directory.parent() == Some(installed_dir) && directory.join("cert9.db").is_file())
-            .then_some(directory)
+        (directory == installed_dir && directory.join("cert9.db").is_file()).then_some(directory)
     }
 }
 

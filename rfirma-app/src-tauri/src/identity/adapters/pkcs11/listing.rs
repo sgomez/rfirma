@@ -5,12 +5,49 @@ use std::collections::HashSet;
 use cryptoki::error::{Error, RvError};
 use cryptoki::object::{Attribute, AttributeType, ObjectClass};
 use cryptoki::session::{Session, UserType};
+use cryptoki::types::AuthPin;
 
 use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
-use crate::identity::domain::error::TokenError;
-use crate::identity::domain::store::{Store, StoreClass};
+use crate::identity::domain::error::{Situation, TokenError};
+use crate::identity::domain::protected_secret::ProtectedSecret;
+use crate::identity::domain::store::Store;
 
 use super::session::{context, the_store_is_really_there, usable_slots};
+
+/// Los certificados firmables de un almacén, autenticándose con `pin` (ADR-0034).
+pub(super) fn list_authenticated(
+    store: &Store,
+    pin: &ProtectedSecret,
+) -> Result<Vec<TokenCertificate>, TokenError> {
+    the_store_is_really_there(store)?;
+    let context = context(store)?;
+    let pin = pin
+        .as_str()
+        .map_err(|_| TokenError::new(Situation::IncorrectPin, "el PIN no es UTF-8 valido"))?;
+    let mut found = Vec::new();
+
+    for slot in usable_slots(&context)? {
+        let info = context.get_token_info(slot)?;
+        let token_label = info.label().trim().to_owned();
+        let session = context.open_ro_session(slot)?;
+        let logged_in = if info.login_required() {
+            match session.login(UserType::User, Some(&AuthPin::new(pin.into()))) {
+                Ok(()) => true,
+                Err(Error::Pkcs11(RvError::UserAlreadyLoggedIn, _)) => true,
+                Err(other) => return Err(other.into()),
+            }
+        } else {
+            false
+        };
+
+        found.extend(signable_certificates(&session, store, &token_label, false)?);
+        if logged_in {
+            let _ = session.logout();
+        }
+    }
+
+    Ok(found)
+}
 
 pub(super) fn list_holding_the_turn(store: &Store) -> Result<Vec<TokenCertificate>, TokenError> {
     the_store_is_really_there(store)?;
@@ -27,7 +64,7 @@ pub(super) fn list_holding_the_turn(store: &Store) -> Result<Vec<TokenCertificat
             &session,
             store,
             &token_label,
-            logged_in,
+            info.login_required() && !logged_in,
         )?);
         if logged_in {
             let _ = session.logout();
@@ -60,9 +97,9 @@ fn signable_certificates(
     session: &Session,
     store: &Store,
     token_label: &str,
-    logged_in: bool,
+    private_keys_hidden: bool,
 ) -> Result<Vec<TokenCertificate>, TokenError> {
-    if store.class() == StoreClass::Card && !logged_in {
+    if private_keys_hidden {
         // Sin sesión no hay clave privada que emparejar: se filtra por contenido (ADR-0025).
         return Ok(all_certificates_in_session(session, store, token_label)?
             .into_iter()

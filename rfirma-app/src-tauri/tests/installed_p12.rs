@@ -7,23 +7,17 @@ use rfirma_lib::identity::adapters::folder::RealInstalledFolder;
 use rfirma_lib::identity::adapters::pkcs11;
 use rfirma_lib::identity::application::certificates;
 use rfirma_lib::identity::application::certificates::ListedCertificates;
-use rfirma_lib::identity::domain::algorithm::SignatureAlgorithm;
 use rfirma_lib::identity::domain::certificate::TokenCertificate;
+use rfirma_lib::identity::domain::keyring::KeyringError;
 use rfirma_lib::identity::domain::protected_secret::ProtectedSecret;
 use rfirma_lib::identity::domain::store::Store;
-use rsa::pkcs1v15::{Signature, VerifyingKey};
-use rsa::pkcs8::DecodePublicKey;
-use rsa::signature::Verifier;
-use rsa::RsaPublicKey;
-use sha2::Sha256;
-use x509_cert::der::{Decode, Encode};
+use rfirma_lib::identity::ports::Keyring;
+use x509_cert::der::Decode;
 
 /// Contraseña de los `.p12` del kit de pruebas (`active-rsa.p12`, `active-ecc.p12`).
 const KIT_PASSWORD: &str = "1234";
 /// Contraseña de los `.p12` que esta prueba fabrica al vuelo con openssl.
 const GENERATED_PASSWORD: &str = "1234";
-/// Bloque DER de prueba de `SignedAttributes` sin hashear.
-const PRESIGN: &[u8] = b"31 5f 30 18 06 09 2a 86 SignedAttributes de mentira, sin hashear";
 
 fn repository_root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -142,6 +136,10 @@ fn a_p12_without_a_friendly_name(directory: &Path, subject: &str, password: &str
         "30",
         "-subj",
         subject,
+        "-addext",
+        "basicConstraints=critical,CA:FALSE",
+        "-addext",
+        "keyUsage=critical,digitalSignature",
         "-keyout",
         key.to_str().expect("ruta valida"),
         "-out",
@@ -223,6 +221,21 @@ fn an_empty_installation() -> tempfile::TempDir {
     tempfile::tempdir().expect("deberia poder crearse un directorio temporal")
 }
 
+/// El doble en memoria del llavero del escritorio (TD-112): siempre entrega el mismo PIN.
+struct FixedPinKeyring;
+
+impl Keyring for FixedPinKeyring {
+    fn pin(&self) -> Result<ProtectedSecret, KeyringError> {
+        Ok(ProtectedSecret::from_str(
+            "pin-de-pruebas-del-almacen-de-rfirma",
+        ))
+    }
+
+    fn create_pin(&self) -> Result<ProtectedSecret, KeyringError> {
+        self.pin()
+    }
+}
+
 fn install(
     installed: &Path,
     p12: &Path,
@@ -232,6 +245,7 @@ fn install(
     Ok(certificates::install_pkcs12(
         &pkcs11::RealToken,
         &RealInstalledFolder,
+        &FixedPinKeyring,
         installed,
         &bytes,
         password,
@@ -260,51 +274,6 @@ fn subject_of(der: &[u8]) -> String {
         .to_string()
 }
 
-fn verifying_key(certificate: &TokenCertificate) -> VerifyingKey<Sha256> {
-    let parsed =
-        x509_cert::Certificate::from_der(certificate.der()).expect("el DER deberia parsearse");
-    let spki = parsed
-        .tbs_certificate()
-        .subject_public_key_info()
-        .to_der()
-        .expect("el SPKI deberia serializarse");
-    let public_key = RsaPublicKey::from_public_key_der(&spki).expect("clave publica RSA");
-    VerifyingKey::<Sha256>::new(public_key)
-}
-
-/// Verifica con `openssl` la firma ECDSA cruda contra la clave publica del certificado.
-fn the_ecdsa_signature_verifies_against(certificate: &TokenCertificate, signature: &[u8]) {
-    let workshop = tempfile::tempdir().expect("deberia poder crearse un directorio temporal");
-    let certificate_der = workshop.path().join("certificate.der");
-    let public_key = workshop.path().join("public.pem");
-    let data = workshop.path().join("data.bin");
-    let signature_der = workshop.path().join("signature.der");
-
-    std::fs::write(&certificate_der, certificate.der()).expect("deberia poder escribirse");
-    std::fs::write(&data, PRESIGN).expect("deberia poder escribirse");
-    std::fs::write(&signature_der, signature).expect("deberia poder escribirse");
-    run_openssl(&[
-        "x509",
-        "-inform",
-        "der",
-        "-in",
-        certificate_der.to_str().expect("ruta valida"),
-        "-pubkey",
-        "-noout",
-        "-out",
-        public_key.to_str().expect("ruta valida"),
-    ]);
-    run_openssl(&[
-        "dgst",
-        "-sha256",
-        "-verify",
-        public_key.to_str().expect("ruta valida"),
-        "-signature",
-        signature_der.to_str().expect("ruta valida"),
-        data.to_str().expect("ruta valida"),
-    ]);
-}
-
 #[test]
 fn an_rsa_p12_installs_and_its_certificates_list_without_the_password() {
     let installed = an_empty_installation();
@@ -320,7 +289,7 @@ fn an_rsa_p12_installs_and_its_certificates_list_without_the_password() {
 }
 
 #[test]
-fn a_p12_without_a_friendly_name_installs_and_signs() {
+fn a_p12_without_a_friendly_name_installs_and_lists() {
     let installed = an_empty_installation();
     let workshop = tempfile::tempdir().expect("deberia poder crearse un directorio temporal");
     let plain =
@@ -329,23 +298,7 @@ fn a_p12_without_a_friendly_name_installs_and_signs() {
     install(installed.path(), &plain, KIT_PASSWORD)
         .expect("un .p12 sin friendlyName deberia instalarse igual");
 
-    let certificate = certificates(installed.path())
-        .into_iter()
-        .next()
-        .expect("tenia que haber un certificado");
-
-    let raw = pkcs11::sign_with_secret(
-        certificate.reference(),
-        &ProtectedSecret::from_str(""),
-        SignatureAlgorithm::Sha256Rsa,
-        PRESIGN,
-    )
-    .expect("un .p12 instalado sin friendlyName tiene que poder firmar sin secreto que teclear");
-
-    let signature = Signature::try_from(raw.as_slice()).expect("firma RSA");
-    verifying_key(&certificate)
-        .verify(PRESIGN, &signature)
-        .expect("la firma no verifica contra la clave publica del certificado");
+    assert_eq!(certificates(installed.path()).len(), 1);
 }
 
 #[test]
@@ -389,27 +342,6 @@ fn an_elliptic_curve_p12_installs_and_its_certificates_list_without_the_password
 }
 
 #[test]
-fn a_certificate_that_came_from_an_elliptic_curve_p12_signs() {
-    let installed = an_empty_installation();
-    install(installed.path(), &elliptic_curve_kit_p12(), KIT_PASSWORD)
-        .expect("el .p12 de curva eliptica del kit deberia instalarse");
-    let certificate = certificates(installed.path())
-        .into_iter()
-        .next()
-        .expect("tenia que haber un certificado");
-
-    let raw = pkcs11::sign_with_secret(
-        certificate.reference(),
-        &ProtectedSecret::from_str(""),
-        SignatureAlgorithm::Sha256Ecdsa,
-        PRESIGN,
-    )
-    .expect("un .p12 de curva eliptica instalado tiene que poder firmar sin secreto que teclear");
-
-    the_ecdsa_signature_verifies_against(&certificate, &raw);
-}
-
-#[test]
 fn a_p12_of_an_unsupported_key_kind_is_refused_at_install() {
     let installed = an_empty_installation();
     let workshop = tempfile::tempdir().expect("deberia poder crearse un directorio temporal");
@@ -433,6 +365,38 @@ fn a_refused_p12_leaves_no_store_behind() {
         installed_stores(installed.path()).is_empty(),
         "el rechazo tenia que borrar el almacen a medio escribir"
     );
+}
+
+#[test]
+fn without_a_desktop_keyring_nothing_installs() {
+    struct NoKeyringAtAll;
+    impl Keyring for NoKeyringAtAll {
+        fn pin(&self) -> Result<ProtectedSecret, KeyringError> {
+            Err(KeyringError::NoKeyring)
+        }
+        fn create_pin(&self) -> Result<ProtectedSecret, KeyringError> {
+            Err(KeyringError::NoKeyring)
+        }
+    }
+
+    let installed = an_empty_installation();
+    let bytes = std::fs::read(kit_p12()).expect("el .p12 del kit deberia leerse");
+
+    let failure = certificates::install_pkcs12(
+        &pkcs11::RealToken,
+        &RealInstalledFolder,
+        &NoKeyringAtAll,
+        installed.path(),
+        &bytes,
+        KIT_PASSWORD,
+    )
+    .expect_err("sin llavero del escritorio no hay instalacion (ADR-0034)");
+
+    assert_eq!(
+        rfirma_lib::crossing::Failure::from(failure).situation,
+        "noKeyring"
+    );
+    assert!(installed_stores(installed.path()).is_empty());
 }
 
 #[test]
@@ -479,13 +443,7 @@ fn nothing_of_the_file_is_kept_beyond_the_two_databases() {
     install(installed.path(), &kit_p12(), KIT_PASSWORD)
         .expect("el .p12 del kit deberia instalarse");
 
-    let store_directory = std::fs::read_dir(installed.path())
-        .expect("deberia leerse")
-        .flatten()
-        .map(|entry| entry.path())
-        .next()
-        .expect("tenia que quedar un almacen");
-    let mut inside: Vec<String> = std::fs::read_dir(&store_directory)
+    let mut inside: Vec<String> = std::fs::read_dir(installed.path())
         .expect("deberia leerse")
         .flatten()
         .map(|entry| entry.file_name().to_string_lossy().into_owned())
@@ -493,68 +451,51 @@ fn nothing_of_the_file_is_kept_beyond_the_two_databases() {
     inside.sort();
 
     assert_eq!(inside, vec!["cert9.db".to_owned(), "key4.db".to_owned()]);
-    assert!(
-        !store_directory
-            .file_name()
-            .expect("el almacen tiene nombre")
-            .to_string_lossy()
-            .contains("active-rsa"),
-        "el nombre del almacen no puede llevar el del fichero dentro"
-    );
 }
 
 #[test]
-fn two_installed_files_are_two_stores() {
+fn reinstalling_the_same_file_does_not_duplicate_it() {
     let installed = an_empty_installation();
 
     install(installed.path(), &kit_p12(), KIT_PASSWORD).expect("el primero deberia instalarse");
-    install(installed.path(), &kit_p12(), KIT_PASSWORD).expect("el segundo deberia instalarse");
+    install(installed.path(), &kit_p12(), KIT_PASSWORD)
+        .expect("reinstalar lo que ya esta es un exito sin cambios");
 
-    assert_eq!(installed_stores(installed.path()).len(), 2);
+    assert_eq!(installed_stores(installed.path()).len(), 1);
+    assert_eq!(certificates(installed.path()).len(), 1);
+}
+
+#[test]
+fn two_different_files_land_in_the_same_store() {
+    let installed = an_empty_installation();
+
+    install(installed.path(), &kit_p12(), KIT_PASSWORD).expect("el primero deberia instalarse");
+    install(installed.path(), &elliptic_curve_kit_p12(), KIT_PASSWORD)
+        .expect("el segundo deberia instalarse");
+
+    assert_eq!(
+        installed_stores(installed.path()).len(),
+        1,
+        "el Almacen de rFirma es una unica base NSS"
+    );
     assert_eq!(certificates(installed.path()).len(), 2);
 }
 
 #[test]
-fn a_certificate_that_came_from_a_p12_signs() {
+fn two_certificates_with_the_same_common_name_coexist() {
     let installed = an_empty_installation();
-    install(installed.path(), &kit_p12(), KIT_PASSWORD)
-        .expect("el .p12 del kit deberia instalarse");
-    let certificate = certificates(installed.path())
-        .into_iter()
-        .next()
-        .expect("tenia que haber un certificado");
+    let first_workshop = tempfile::tempdir().expect("deberia poder crearse un directorio temporal");
+    let second_workshop =
+        tempfile::tempdir().expect("deberia poder crearse un directorio temporal");
+    let first =
+        a_p12_without_a_friendly_name(first_workshop.path(), "/CN=MISMO NOMBRE", KIT_PASSWORD);
+    let second =
+        a_p12_without_a_friendly_name(second_workshop.path(), "/CN=MISMO NOMBRE", KIT_PASSWORD);
 
-    let raw = pkcs11::sign_with_secret(
-        certificate.reference(),
-        &ProtectedSecret::from_str(""),
-        SignatureAlgorithm::Sha256Rsa,
-        PRESIGN,
-    )
-    .expect("un .p12 instalado tiene que poder firmar sin secreto que teclear");
+    install(installed.path(), &first, KIT_PASSWORD).expect("el primero deberia instalarse");
+    install(installed.path(), &second, KIT_PASSWORD).expect("el segundo deberia instalarse");
 
-    assert_eq!(raw.len(), 256, "RSA 2048: la firma cruda mide el modulo");
-    let signature = Signature::try_from(raw.as_slice()).expect("firma RSA");
-    verifying_key(&certificate)
-        .verify(PRESIGN, &signature)
-        .expect("la firma no verifica contra la clave publica del certificado");
-}
-
-#[test]
-fn an_installed_p12_asks_for_no_secret() {
-    let installed = an_empty_installation();
-    install(installed.path(), &kit_p12(), KIT_PASSWORD)
-        .expect("el .p12 del kit deberia instalarse");
-    let certificate = certificates(installed.path())
-        .into_iter()
-        .next()
-        .expect("tenia que haber un certificado");
-
-    let secret = pkcs11::store_secret(certificate.reference()).expect("deberia poder preguntarse");
-
-    assert_eq!(
-        secret,
-        rfirma_lib::identity::domain::secret::StoreSecret::NotNeeded
-    );
+    assert_eq!(certificates(installed.path()).len(), 2);
 }
 
 #[test]

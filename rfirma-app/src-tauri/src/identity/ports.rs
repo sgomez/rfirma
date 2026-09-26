@@ -24,6 +24,13 @@ pub trait Token {
     /// Todos los certificados de un almacén, también los que no firman: con ellos se completa una cadena.
     fn every_certificate(&self, store: &Store) -> Result<Vec<TokenCertificate>, TokenError>;
 
+    /// Los certificados firmables de un almacén, autenticándose con `pin` (ADR-0034).
+    fn list_authenticated(
+        &self,
+        store: &Store,
+        pin: &ProtectedSecret,
+    ) -> Result<Vec<TokenCertificate>, TokenError>;
+
     /// Cómo hay que pedirle el secreto al almacén del certificado.
     fn secret_of(&self, reference: &CertificateRef) -> Result<StoreSecret, TokenError>;
 
@@ -50,12 +57,13 @@ pub trait Token {
         data: &[u8],
     ) -> Result<Vec<u8>, TokenError>;
 
-    /// Importa un `.p12` a un almacén NSS nuevo en ese directorio y devuelve el almacén.
+    /// Importa un `.p12` al Almacén de rFirma en ese directorio, cifrado con `pin`, y lo devuelve.
     fn import_pkcs12(
         &self,
         directory: &Path,
         pkcs12: &[u8],
         password: &str,
+        pin: &ProtectedSecret,
     ) -> Result<Store, TokenError>;
 
     /// Los certificados de todos los almacenes: falla solo si ninguno se ha podido abrir.
