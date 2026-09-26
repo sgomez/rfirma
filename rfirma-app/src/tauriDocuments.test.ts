@@ -248,6 +248,7 @@ describe("la bandeja sobre Tauri", () => {
   const aStoredRow = {
     id: "0f1e2d3c",
     name: "contrato.pdf",
+    folder: "Documentos",
     badge: "Unsigned" as const,
     modified: 1_700_000_000,
     lastUsed: 1_700_000_000,
@@ -265,6 +266,7 @@ describe("la bandeja sobre Tauri", () => {
 
     expect(invoke).toHaveBeenCalledWith("list_recents");
     expect(rows[0]?.available).toBe(false);
+    expect(rows[0]?.folder).toBe("Documentos");
     expect(rows[0]?.placement).toEqual({
       rect: { x0: 72, y0: 500, x1: 272, y1: 600 },
       pages: { only: [3] },
