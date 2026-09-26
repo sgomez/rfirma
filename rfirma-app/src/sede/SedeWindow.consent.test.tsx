@@ -36,6 +36,17 @@ describe("2 · consent", () => {
     ).toBeInTheDocument();
   });
 
+  it("orders the body origin, then certificate, then document (ID-408)", () => {
+    const { port } = scriptedErrand(consenting());
+    const { container } = renderWithCatalog(<SedeWindow errands={port} />);
+
+    const text = container.textContent ?? "";
+    expect(text.indexOf("sede.ejemplo.gob.es pide tu firma")).toBeLessThan(
+      text.indexOf("Firmarás con"),
+    );
+    expect(text.indexOf("Firmarás con")).toBeLessThan(text.indexOf("Solicitud de subvención 2026"));
+  });
+
   it.each([
     ["challenge", "un reto de autenticación"],
     ["xml", "un documento XML"],
@@ -162,20 +173,18 @@ describe("2 · consent", () => {
     const { port } = scriptedErrand(consenting(), { origin: null });
     renderWithCatalog(<SedeWindow errands={port} />);
 
-    expect(screen.getByText("Origen sin identificar")).toBeInTheDocument();
-    expect(
-      screen.getByText("La petición pide firmar un documento PDF y no indica de qué página viene."),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Una página sin identificar pide tu firma.")).toBeInTheDocument();
   });
 
-  it("leaves a calm label with no format when the moment does not carry one", () => {
-    const { port } = scriptedErrand(consenting({ document: null, signs: 3, signing: null }), {
+  it("says a page asks for identity data, unidentified, in the selectcert branch", () => {
+    const { port } = scriptedErrand(consenting({ document: null, signing: null }), {
       origin: null,
+      operation: "selectcert",
     });
     renderWithCatalog(<SedeWindow errands={port} />);
 
     expect(
-      screen.getByText("La petición pide una firma y no indica de qué página viene."),
+      screen.getByText("Una página sin identificar pide tus datos de identidad."),
     ).toBeInTheDocument();
   });
 

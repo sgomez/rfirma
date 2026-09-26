@@ -1356,24 +1356,13 @@ msgstr "XML dokumentu bat"
 msgid "sede.consent.signingKind.invoice"
 msgstr "faktura elektroniko bat"
 
-msgid "sede.consent.unknownOriginTitle"
-msgstr "Jatorri identifikatu gabea"
-
+#. Misma forma que "asksSignature", con el origen como una página sin
+#. identificar en vez de nombrarla (ID-408).
 msgid "sede.consent.unknownOriginSignature"
-msgstr ""
-"Eskaerak sinadura bat eskatzen du eta ez du adierazten zein orrialdetatik "
-"datorren."
-
-#. La misma frase que "unknownOriginSignature", con el formato nombrado.
-msgid "sede.consent.unknownOriginSignatureOf"
-msgstr ""
-"Eskaerak {{what}} sinatzeko eskatzen du eta ez du adierazten zein "
-"orrialdetatik datorren."
+msgstr "Identifikatu gabeko orrialde batek zure sinadura eskatzen du."
 
 msgid "sede.consent.unknownOriginIdentity"
-msgstr ""
-"Eskaerak zure identitate-datuak eskatzen ditu eta ez du adierazten zein "
-"orrialdetatik datorren."
+msgstr "Identifikatu gabeko orrialde batek zure identitate-datuak eskatzen ditu."
 
 #. El PDF no trae título en sus metadatos, y el nombre de fichero no viaja
 #. nunca en la petición.

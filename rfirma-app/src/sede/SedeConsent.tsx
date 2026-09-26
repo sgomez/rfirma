@@ -82,31 +82,16 @@ export function SedeConsent({
       }
     >
       <div className="rf-stack sede-consent">
-        {origin === null ? (
-          /* Sin origen válido queda una **etiqueta serena**, no una advertencia:
-             el `Origin` es falsificable desde cualquier programa local y el
-             original lo ignora por completo, así que no hay nada que denunciar
-             — sólo un silencio que no se rellena con un invento (ID-271). */
-          <div className="rf-row rf-gap-xs sede-consent__unknown-origin">
-            <span className="sede-consent__icon">
-              <InfoIcon size={18} />
-            </span>
-            <div className="rf-stack sede-consent__unknown-origin-text">
-              <p className="rf-title">{t("sede.consent.unknownOriginTitle")}</p>
-              <p className="rf-hint">
-                {identity
-                  ? t("sede.consent.unknownOriginIdentity")
-                  : stage.signing !== null
-                    ? t("sede.consent.unknownOriginSignatureOf", {
-                        what: signingKindLabel(t, stage.signing),
-                      })
-                    : t("sede.consent.unknownOriginSignature")}
-              </p>
-            </div>
-          </div>
-        ) : (
-          <p className="rf-title sede-consent__asks">
-            {identity
+        {/* Sin origen válido, la misma forma que el título con origen: el
+            `Origin` es falsificable desde cualquier programa local y el
+            original lo ignora por completo, así que no hay nada que denunciar
+            — sólo un silencio que no se rellena con un invento (ID-271, ID-408). */}
+        <p className="rf-title sede-consent__asks">
+          {origin === null
+            ? identity
+              ? t("sede.consent.unknownOriginIdentity")
+              : t("sede.consent.unknownOriginSignature")
+            : identity
               ? t("sede.consent.asksIdentity", { origin })
               : stage.signing !== null
                 ? t("sede.consent.asksSignatureOf", {
@@ -114,27 +99,7 @@ export function SedeConsent({
                     what: signingKindLabel(t, stage.signing),
                   })
                 : t("sede.consent.asksSignature", { origin })}
-          </p>
-        )}
-
-        {stage.document !== null && <DocumentCard document={stage.document} />}
-
-        {stage.signs !== null && <BatchCard signs={stage.signs} />}
-
-        {stage.items !== null && <LocalBatchItemsList items={stage.items} />}
-
-        {/* Situación 5 (ID-302, ID-304): información, no alarma — mismo icono
-            y mismo borde de 1 px que el origen sin identificar. No hay un
-            sexto momento (ID-298): se pregunta aquí, dentro del mismo
-            consentimiento. */}
-        {stage.document?.hasUnregisteredSignatures && (
-          <div className="rf-row rf-gap-xs sede-consent__unrecognized-signatures">
-            <span className="sede-consent__icon">
-              <InfoIcon size={18} />
-            </span>
-            <p className="rf-hint">{t("sede.consent.unrecognizedSignatures")}</p>
-          </div>
-        )}
+        </p>
 
         <div className="rf-stack rf-gap-xs sede-consent__certificate">
           <p className="rf-label sede-consent__label">
@@ -156,6 +121,25 @@ export function SedeConsent({
               ? t("sede.consent.narrowedUnknownOrigin")
               : t("sede.consent.narrowed", { origin })}
           </p>
+        )}
+
+        {stage.document !== null && <DocumentCard document={stage.document} />}
+
+        {stage.signs !== null && <BatchCard signs={stage.signs} />}
+
+        {stage.items !== null && <LocalBatchItemsList items={stage.items} />}
+
+        {/* Situación 5 (ID-302, ID-304): información, no alarma — mismo icono
+            y mismo borde de 1 px que el aviso de firmas previas. No hay un
+            sexto momento (ID-298): se pregunta aquí, dentro del mismo
+            consentimiento. */}
+        {stage.document?.hasUnregisteredSignatures && (
+          <div className="rf-row rf-gap-xs sede-consent__unrecognized-signatures">
+            <span className="sede-consent__icon">
+              <InfoIcon size={18} />
+            </span>
+            <p className="rf-hint">{t("sede.consent.unrecognizedSignatures")}</p>
+          </div>
         )}
 
         {identity && (
