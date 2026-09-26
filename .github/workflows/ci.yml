@@ -312,7 +312,7 @@ jobs:
       - uses: cargo-bins/cargo-binstall@b874e25ea559687bec77e281e9b271aa1367b624 # v1.23.0
       - name: Herramienta de cobertura, de CRAP y de dependencias sin uso
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           cargo binstall --no-confirm cargo-llvm-cov
           cargo binstall --no-confirm "cargo-crap@${CRAP_VERSION}"
@@ -491,7 +491,7 @@ jobs:
       - name: Herramientas de cobertura, de CRAP y de pruebas
         if: steps.scope.outputs.build == 'true'
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           cargo binstall --no-confirm cargo-llvm-cov
           cargo binstall --no-confirm "cargo-crap@${CRAP_VERSION}"
