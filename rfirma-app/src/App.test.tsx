@@ -503,11 +503,6 @@ describe("App", () => {
     expect(box()).not.toBeInTheDocument();
   });
 
-  /**
-   * #977: «Cambiar» abre el diálogo de guardar y fija carpeta y nombre para
-   * esta firma **sin tocar** la preferencia de carpeta —lo que se guardaría en
-   * disco al pasar por Preferencias—.
-   */
   it("changes the folder and name shown in the footer for this signature, without touching the destination preference", async () => {
     const user = userEvent.setup();
     const destinations = destinationOfferingSingleChoice(

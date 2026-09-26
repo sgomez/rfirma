@@ -4,7 +4,7 @@ import { formatSignedAt, type PageGeometry, placingFrom } from "./App.signingOrd
 import { useCertificateSearch } from "./App.useCertificateSearch";
 import { useDropNotices } from "./App.useDropNotices";
 import { usePlacementControls } from "./App.usePlacementControls";
-import { useDestinationPreview, usePreferencesState } from "./App.usePreferencesState";
+import { useDestination, usePreferencesState } from "./App.usePreferencesState";
 import { useSignedSummary } from "./App.useSignedSummary";
 import { useSignFlow } from "./App.useSignFlow";
 import { useStartupNotices } from "./App.useStartupNotices";
@@ -163,23 +163,11 @@ export function App({
   // Mientras los ajustes se leen todavía no se sabe, y lo guardado por omisión es recordar.
   const documents = useDocuments(recents, picker, settings?.rememberActivity ?? true);
   const activeId = documents.active?.id ?? null;
-  // El destino de una sola firma, elegido con «Cambiar»: vale solo para el
-  // documento activo, así que cambiar de pestaña lo olvida (ADR-0011).
-  const [singleDestinationId, setSingleDestinationId] = useState<string | null>(null);
-  // biome-ignore lint/correctness/useExhaustiveDependencies: `activeId` dispara el efecto, no lo alimenta.
-  useEffect(() => {
-    setSingleDestinationId(null);
-  }, [activeId]);
-  const chooseSingleDestination = async () => {
-    if (activeId === null) return;
-    const chosen = await destinations.chooseSingle(activeId);
-    if (chosen !== null) setSingleDestinationId(chosen.id);
-  };
-  const { destination } = useDestinationPreview(
+  const { destination, singleDestinationId, chooseSingleDestination } = useDestination(
     destinations,
     activeId,
     settings?.destination ?? null,
-    singleDestinationId,
+    signing.state.kind,
   );
   const { t, i18n } = useTranslation();
   // El instante del recuadro **es estado, no un reloj**: se fija al abrir el

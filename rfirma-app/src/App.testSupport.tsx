@@ -37,7 +37,7 @@ export const aDestination = () =>
 /**
  * Un destino que, al «Cambiar», ofrece `single` para esta firma —y solo para
  * ella—: la vista previa vuelve a `single` en cuanto se pide con su id, y se
- * queda en `initial` para cualquier otro (ID-63, ADR-0011).
+ * queda en `initial` para cualquier otro (ADR-0011).
  */
 export function destinationOfferingSingleChoice(
   initial: Destination,

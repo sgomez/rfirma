@@ -3,6 +3,7 @@ import type { Preferences, PreferencesStore } from "./preferences/preferences";
 import { applyTheme } from "./preferences/theme";
 import type { Destination, DestinationSource } from "./signing/destination";
 import type { Rubric, RubricFailure, RubricPicker } from "./signing/rubric";
+import type { SigningState } from "./signing/useSigning";
 
 /**
  * Los ajustes y la rúbrica adoptada: los dos viven del mismo almacén de
@@ -106,23 +107,33 @@ export function usePreferencesState(preferences: PreferencesStore, rubrics: Rubr
 }
 
 /**
- * Dónde caerá el firmado, tal y como lo cuenta el backend. Es estado y no un
- * cálculo del pie porque el nombre lo compone Rust —con el sufijo y el
- * homónimo ya resueltos— y `writable` sale de comprobar la carpeta de verdad
- * (ID-63, ID-67): la ventana lo enseña, no lo deduce.
+ * Dónde caerá el firmado, tal y como lo cuenta el backend, y el destino de una
+ * sola firma que lo puede sustituir. Es estado y no un cálculo del pie porque
+ * el nombre lo compone Rust —con el sufijo y el homónimo ya resueltos— y
+ * `writable` sale de comprobar la carpeta de verdad (ID-67): la ventana lo
+ * enseña, no lo deduce.
  *
- * Se pregunta **por documento**, y otra vez cuando cambia la carpeta elegida
- * o el destino elegido para esta firma: el nombre depende del documento —y de
- * qué homónimos haya ya en la carpeta— y `writable` de si la carpeta sigue
- * estando. Sin documento delante no hay destino que enseñar.
+ * El destino de una sola firma, elegido con «Cambiar», vale solo para el
+ * documento activo: cambiar de pestaña o terminar de firmar lo olvida
+ * (ADR-0011).
  */
-export function useDestinationPreview(
+export function useDestination(
   destinations: DestinationSource,
   activeId: string | null,
   chosenFolder: string | null,
-  singleDestinationId: string | null = null,
+  signingStateKind: SigningState["kind"],
 ) {
+  const [singleDestinationId, setSingleDestinationId] = useState<string | null>(null);
   const [destination, setDestination] = useState<Destination | null>(null);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `activeId` dispara el efecto, no lo alimenta.
+  useEffect(() => {
+    setSingleDestinationId(null);
+  }, [activeId]);
+
+  useEffect(() => {
+    if (signingStateKind === "signed") setSingleDestinationId(null);
+  }, [signingStateKind]);
 
   useEffect(() => {
     // Sin documento delante no hay destino que enseñar, y sin ajustes leídos
@@ -147,5 +158,11 @@ export function useDestinationPreview(
     };
   }, [destinations, activeId, chosenFolder, singleDestinationId]);
 
-  return { destination };
+  const chooseSingleDestination = async () => {
+    if (activeId === null) return;
+    const chosen = await destinations.chooseSingle(activeId);
+    if (chosen !== null) setSingleDestinationId(chosen.id);
+  };
+
+  return { destination, singleDestinationId, chooseSingleDestination };
 }

@@ -52,7 +52,7 @@ export interface DestinationSource {
    * Dónde caerá el documento abierto con ese identificador.
    *
    * Con `singleDestinationId` mira el destino elegido para esa firma en vez
-   * de la preferencia de carpeta (ID-63).
+   * de la preferencia de carpeta (ADR-0011).
    */
   previewFor(documentId: string, singleDestinationId?: string | null): Promise<Destination>;
   /**
