@@ -1,4 +1,6 @@
 import { useTranslation } from "react-i18next";
+import type { NamedFailure } from "../errors/classify";
+import { ErrorNotice } from "../errors/ErrorNotice";
 import type { NoCertificateReason } from "./errand";
 import { SedeBody, useDefaultButton } from "./SedeFrame";
 
@@ -11,6 +13,8 @@ interface SedeNoCertificateProps {
    * nunca (ID-277).
    */
   owned: number;
+  /** El fallo de instalar, ya clasificado; `null` mientras no se haya intentado. */
+  failure: NamedFailure | null;
   onInstall: () => void;
   onLookAgain: () => void;
   /**
@@ -45,6 +49,7 @@ export function SedeNoCertificate({
   origin,
   reason,
   owned,
+  failure,
   onInstall,
   onLookAgain,
   onLeave,
@@ -100,6 +105,9 @@ export function SedeNoCertificate({
         {!excluded && (
           <>
             <p className="rf-hint">{t("sede.noCertificate.noneHint")}</p>
+            {failure !== null && (
+              <ErrorNotice situation={failure.situation} technicalDetail={failure.detail} />
+            )}
             {/* La microacción va aquí, pegada a lo que arregla, y no en el pie:
                 se pulsa cuando se acaba de instalar uno con la ventana abierta. */}
             <div className="rf-row sede-no-certificate__look-again">

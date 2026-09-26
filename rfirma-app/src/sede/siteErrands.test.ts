@@ -571,6 +571,19 @@ describe("las salidas de la pantalla sin certificado", () => {
     expect(calls.lookAgain).not.toHaveBeenCalled();
   });
 
+  it("propagates a failure instead of discarding it as a cancel (ID-440)", async () => {
+    const { port, calls } = watched({
+      installCertificate: async () => {
+        throw { situation: "pkcs12Unreadable", detail: "SEC_PKCS12DecoderUpdate" };
+      },
+    });
+
+    await expect(port.installCertificate()).rejects.toMatchObject({
+      situation: "pkcs12Unreadable",
+    });
+    expect(calls.lookAgain).not.toHaveBeenCalled();
+  });
+
   it("passes the remaining orders straight through", async () => {
     const { port, calls } = watched();
 

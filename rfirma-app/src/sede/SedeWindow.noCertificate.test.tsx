@@ -94,6 +94,41 @@ describe("5 · no usable certificate", () => {
   });
 });
 
+/**
+ * ID-440: el puerto de instalación devuelve el fallo, y esta pantalla lo
+ * enseña en línea, con la misma clasificación que Preferencias.
+ */
+describe("5 · install failure", () => {
+  it("shows the failure in line instead of discarding it", async () => {
+    const user = userEvent.setup();
+    const { port, calls } = scriptedErrand({ kind: "noCertificate", reason: "none", owned: 0 });
+    calls.installCertificate.mockRejectedValueOnce({
+      situation: "pkcs12Unreadable",
+      detail: "SEC_PKCS12DecoderUpdate",
+    });
+    renderWithCatalog(<SedeWindow errands={port} />);
+
+    await user.click(screen.getByRole("button", { name: "Instalar un certificado…" }));
+
+    const notice = await screen.findByRole("alert");
+    expect(notice).toHaveTextContent("No hemos podido leer el fichero");
+    expect(calls.lookAgain).not.toHaveBeenCalled();
+  });
+
+  it("shows no error when the file dialog is cancelled", async () => {
+    const user = userEvent.setup();
+    const { port, calls } = scriptedErrand({ kind: "noCertificate", reason: "none", owned: 0 });
+    calls.installCertificate.mockResolvedValueOnce(false);
+    renderWithCatalog(<SedeWindow errands={port} />);
+
+    await user.click(screen.getByRole("button", { name: "Instalar un certificado…" }));
+
+    expect(await screen.findByRole("button", { name: "Instalar un certificado…" })).toBeVisible();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(calls.lookAgain).not.toHaveBeenCalled();
+  });
+});
+
 describe("when a child throws", () => {
   beforeEach(() => {
     vi.useFakeTimers();

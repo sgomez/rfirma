@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { ExternalDestinationOpener } from "../desktop/externalDestination";
+import { classify, type NamedFailure } from "../errors/classify";
 import type { Errand, SiteErrandPort } from "./errand";
 import { SedeConfirm } from "./SedeConfirm";
 import { SedeConsent } from "./SedeConsent";
@@ -86,6 +87,18 @@ function SedeDialog({
   const close = () => void errands.close();
   const cancel = () => void errands.cancel();
 
+  const [installFailure, setInstallFailure] = useState<NamedFailure | null>(null);
+  // Un fallo al instalar se enseña en línea, con la misma clasificación que
+  // Preferencias (ID-440); cancelar el selector de fichero no rechaza nada.
+  const installCertificate = async () => {
+    setInstallFailure(null);
+    try {
+      await errands.installCertificate();
+    } catch (thrown) {
+      setInstallFailure(classify(thrown));
+    }
+  };
+
   return (
     <div className="rf-scrim">
       <section
@@ -162,7 +175,8 @@ function SedeDialog({
             origin={errand.origin}
             reason={stage.reason}
             owned={stage.owned}
-            onInstall={() => void errands.installCertificate()}
+            failure={installFailure}
+            onInstall={() => void installCertificate()}
             onLookAgain={() => void errands.lookAgain()}
             onLeave={cancel}
           />
