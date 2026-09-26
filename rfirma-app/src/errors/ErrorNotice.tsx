@@ -19,7 +19,7 @@ export type ErrorSituation = keyof Catalog["errors"]["situations"];
  * Son las que no tienen `body` en el catálogo, así que la lista no es un gusto:
  * `tsc` la obliga a cuadrar con las claves que existen.
  */
-const ONE_LINE = ["keyNotRsa", "pkcs12NoPrivateKey"] as const;
+const ONE_LINE = ["keyKindUnsupported", "pkcs12NoPrivateKey"] as const;
 
 type OneLineSituation = (typeof ONE_LINE)[number];
 

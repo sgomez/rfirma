@@ -130,9 +130,6 @@ pub fn rows_of(
         .collect()
 }
 
-/// OID de rsaEncryption.
-const RSA_ENCRYPTION: &str = "1.2.840.113549.1.1.1";
-
 /// Instala un PKCS#12 importándolo a un almacén NSS aislado (ADR-0011).
 pub fn install_pkcs12(
     token: &dyn Token,
@@ -152,7 +149,7 @@ pub fn install_pkcs12(
 
     let installed = token
         .import_pkcs12(&directory, pkcs12, password)
-        .and_then(|store| only_rsa_keys(token, &store));
+        .and_then(|store| only_supported_keys(token, &store));
 
     if let Err(error) = installed {
         let _ = folder.remove(&directory);
@@ -165,8 +162,8 @@ pub fn install_pkcs12(
     Ok(())
 }
 
-/// Comprueba que el almacén contiene al menos un certificado y todas las claves son RSA.
-fn only_rsa_keys(token: &dyn Token, store: &Store) -> Result<(), TokenError> {
+/// Comprueba que el almacén contiene al menos un certificado y todas las claves son RSA o de curva elíptica.
+fn only_supported_keys(token: &dyn Token, store: &Store) -> Result<(), TokenError> {
     let found = token.list(store)?;
     if found.is_empty() {
         return Err(TokenError::new(
@@ -175,28 +172,17 @@ fn only_rsa_keys(token: &dyn Token, store: &Store) -> Result<(), TokenError> {
         ));
     }
     for certificate in &found {
-        if !is_rsa(certificate) {
+        if certificate.key_kind().is_none() {
             return Err(TokenError::new(
-                Situation::KeyNotRsa,
-                format!("{}: la clave no es RSA", certificate.reference().label()),
+                Situation::KeyKindUnsupported,
+                format!(
+                    "{}: la clave no es RSA ni de curva eliptica",
+                    certificate.reference().label()
+                ),
             ));
         }
     }
     Ok(())
-}
-
-/// Comprueba si la clave pública del certificado es RSA a partir de su DER.
-fn is_rsa(certificate: &TokenCertificate) -> bool {
-    use x509_cert::der::Decode;
-
-    x509_cert::Certificate::from_der(certificate.der()).is_ok_and(|read| {
-        read.tbs_certificate()
-            .subject_public_key_info()
-            .algorithm
-            .oid
-            .to_string()
-            == RSA_ENCRYPTION
-    })
 }
 
 /// Elimina el almacén correspondiente a un certificado PKCS#12 instalado (ADR-0011).

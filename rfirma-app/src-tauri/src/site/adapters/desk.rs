@@ -180,7 +180,7 @@ pub fn composed_for(
 ) -> Result<SignatureAlgorithm, TokenError> {
     let key = key.ok_or_else(|| {
         TokenError::new(
-            Situation::KeyNotRsa,
+            Situation::KeyKindUnsupported,
             "la clave del certificado no es RSA ni de curva eliptica",
         )
     })?;

@@ -223,8 +223,8 @@ msgid "errors.situations.pkcs12NoPrivateKey.title"
 msgstr "Ese ficheiro non trae ningunha clave privada"
 
 #. Un solo renglon a proposito (ID-211): no lleva cuerpo debajo, y por eso no
-#. hay msgid "errors.situations.keyNotRsa.body".
-msgid "errors.situations.keyNotRsa.title"
+#. hay msgid "errors.situations.keyKindUnsupported.body".
+msgid "errors.situations.keyKindUnsupported.title"
 msgstr "Ese certificado non é compatible con rFirma"
 
 msgid "errors.situations.mechanismNotOffered.title"

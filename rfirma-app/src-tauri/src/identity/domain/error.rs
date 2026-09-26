@@ -24,8 +24,8 @@ pub enum Situation {
     IncorrectPkcs12Password,
     /// El PKCS#12 se ha decodificado pero no trae ninguna clave privada.
     Pkcs12NoPrivateKey,
-    /// El certificado no contiene una clave RSA compatible.
-    KeyNotRsa,
+    /// El certificado no contiene una clave RSA ni de curva elíptica.
+    KeyKindUnsupported,
     /// El token no ofrece el mecanismo que pide el algoritmo de firma.
     MechanismNotOffered,
     /// Error no clasificado con código crudo.

@@ -157,7 +157,7 @@ describe("el aviso de error", () => {
     "tokenAbsent",
     "certificateExpired",
     "moduleNotFound",
-    "keyNotRsa",
+    "keyKindUnsupported",
   ] as const)("no enseña el enlace a Comentarios y ayuda en la situación ajena %s", (situation) => {
     renderIn("es", <ErrorNotice situation={situation} technicalDetail={RAW_DETAIL} />);
 
