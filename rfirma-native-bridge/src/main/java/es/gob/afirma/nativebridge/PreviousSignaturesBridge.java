@@ -13,8 +13,12 @@ import java.util.Properties;
 import javax.security.auth.x500.X500Principal;
 
 import com.aowagie.text.pdf.AcroFields;
+import com.aowagie.text.pdf.PdfArray;
+import com.aowagie.text.pdf.PdfDictionary;
 import com.aowagie.text.pdf.PdfName;
 import com.aowagie.text.pdf.PdfPKCS7;
+import com.aowagie.text.pdf.PdfReader;
+import com.aowagie.text.pdf.PdfSignatureAppearance;
 
 import es.gob.afirma.core.RuntimeConfigNeededException;
 import es.gob.afirma.signers.pades.PdfUtil;
@@ -72,14 +76,17 @@ final class PreviousSignaturesBridge {
     record Report(List<Signature> signatures, boolean changedAfterLastSignature) { }
 
     static Report read(final byte[] pdf) {
+        final PdfReader reader;
         final AcroFields fields;
         try {
-            fields = PdfUtil.getPdfReader(pdf, headless(), true).getAcroFields();
+            reader = PdfUtil.getPdfReader(pdf, headless(), true);
+            fields = reader.getAcroFields();
         }
         catch (final Exception e) {
             return new Report(List.of(), false);
         }
         final String profile = SignatureFormatDetectorPadesCades.resolvePDFFormat(pdf);
+        final int certifyingRevision = certifyingRevision(reader, fields);
 
         final List<Dated> dated = new ArrayList<>();
         for (final String name : fields.getSignatureNames()) {
@@ -99,7 +106,12 @@ final class PreviousSignaturesBridge {
             }
             final Instant signingTime =
                     pkcs7.getSignDate() == null ? null : pkcs7.getSignDate().toInstant();
-            final SignValidity validity = decisive(validate(name, fields, profile));
+            final List<SignValidity> validities = new ArrayList<>(validate(name, fields, profile));
+            if (certifyingRevision > 0 && fields.getRevision(name) > certifyingRevision) {
+                validities.add(new SignValidity(SIGN_DETAIL_TYPE.KO,
+                        VALIDITY_ERROR.CERTIFIED_SIGN_REVISION));
+            }
+            final SignValidity validity = decisive(validities);
             dated.add(new Dated(signingTime, new Signature(
                     readable(signer.getSubjectX500Principal()),
                     readable(signer.getIssuerX500Principal()),
@@ -136,6 +148,32 @@ final class PreviousSignaturesBridge {
         final Properties options = new Properties();
         options.setProperty("headless", Boolean.TRUE.toString());
         return options;
+    }
+
+    /**
+     * La revision del PDF que lo certifico «sin cambios permitidos», o 0 si no
+     * esta certificado asi. El original no lo expone: {@code ValidatePdfSignature}
+     * lo calcula igual, buscando la firma cuya referencia trae un
+     * {@code TRANSFORMMETHOD}.
+     */
+    private static int certifyingRevision(final PdfReader reader, final AcroFields fields) {
+        if (reader.getCertificationLevel()
+                != PdfSignatureAppearance.CERTIFIED_NO_CHANGES_ALLOWED) {
+            return 0;
+        }
+        for (final String name : fields.getSignatureNames()) {
+            final PdfDictionary signature = fields.getSignatureDictionary(name);
+            final Object reference = signature.get(PdfName.REFERENCE);
+            if (!(reference instanceof PdfArray)) {
+                continue;
+            }
+            final Object first = ((PdfArray) reference).getArrayList().get(0);
+            if (first instanceof PdfDictionary
+                    && ((PdfDictionary) first).get(PdfName.TRANSFORMMETHOD) != null) {
+                return fields.getRevision(name);
+            }
+        }
+        return 0;
     }
 
     private static boolean isTimestamp(final AcroFields fields, final String name) {
