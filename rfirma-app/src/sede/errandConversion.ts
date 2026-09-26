@@ -1,4 +1,5 @@
 import type { Catalog } from "../i18n/catalog";
+import type { PreviousSignaturesReport } from "../signing/previousSignatures";
 import {
   type Errand,
   type ErrandStage,
@@ -206,9 +207,15 @@ export function documentOf(
   described: DescribedDocument | null,
   round: SignatureRound,
   unregisteredSignatures: boolean,
+  previousSignatures: PreviousSignaturesReport,
 ): SiteDocument | null {
   if (described === null) return null;
-  return { ...described, round, hasUnregisteredSignatures: unregisteredSignatures };
+  return {
+    ...described,
+    round,
+    hasUnregisteredSignatures: unregisteredSignatures,
+    previousSignatures,
+  };
 }
 
 /** Qué documento se estaba consintiendo, para poder nombrarlo en el desenlace. */

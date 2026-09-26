@@ -4,7 +4,10 @@ import { useTranslation } from "react-i18next";
 import { FileIcon, InfoIcon } from "../design-system/icons";
 import { CertificateSelect } from "../signing/CertificateSelect";
 import type { Certificate } from "../signing/certificate";
+import { PreviousSignaturesNotice } from "../signing/PreviousSignaturesNotice";
 import { formatSize } from "../signing/SigningPanel";
+// `PreviousSignaturesNotice` no trae su propia hoja: la sede no monta `SigningPanel.tsx`.
+import "../signing/SigningPanel.css";
 import type {
   ErrandStage,
   LocalBatchItem,
@@ -120,7 +123,7 @@ export function SedeConsent({
           </p>
         )}
 
-        {stage.document !== null && <DocumentCard document={stage.document} />}
+        {stage.document !== null && <DocumentCard document={stage.document} certificate={chosen} />}
 
         {stage.signs !== null && <BatchCard signs={stage.signs} />}
 
@@ -230,7 +233,13 @@ function batchRoundLabel(t: TFunction, round: SignatureRound): string {
  * No hay nombre de fichero ni ruta porque el protocolo no los trae, y un PDF
  * sin título se nombra como lo que es, en gris, sin inventarle uno.
  */
-function DocumentCard({ document }: { document: SiteDocument }) {
+function DocumentCard({
+  document,
+  certificate,
+}: {
+  document: SiteDocument;
+  certificate: Certificate | null;
+}) {
   const { t, i18n } = useTranslation();
   const untitled = document.title === null || document.title.trim() === "";
   const roundNote = signatureRoundNote(t, document.round);
@@ -254,6 +263,9 @@ function DocumentCard({ document }: { document: SiteDocument }) {
         </div>
       </div>
       {roundNote !== null && <p className="rf-body sede-consent__round">{roundNote}</p>}
+      {document.previousSignatures.signatures.length > 0 && (
+        <PreviousSignaturesNotice report={document.previousSignatures} certificate={certificate} />
+      )}
     </div>
   );
 }

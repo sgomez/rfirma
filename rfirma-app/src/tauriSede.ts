@@ -4,6 +4,10 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import type { SiteErrandPort } from "./sede/errand";
 import { type SiteErrandView, siteErrands } from "./sede/siteErrands";
+import {
+  NO_PREVIOUS_SIGNATURES,
+  type PreviousSignaturesReport,
+} from "./signing/previousSignatures";
 import type { StoreSecret } from "./signing/secret";
 import { stage } from "./tauriStage";
 import { pdfjsLoader } from "./viewer/pdfjsLoader";
@@ -93,5 +97,11 @@ export function tauriSiteErrands(): SiteErrandPort {
         return null;
       }
     },
+    // Un fallo al pedirlas no es una puerta, igual que en escritorio
+    // (App.usePreviousSignatures.ts): el aviso simplemente no se monta.
+    previousSignatures: (document) =>
+      invoke<PreviousSignaturesReport>("previous_signatures", { document }).catch(
+        () => NO_PREVIOUS_SIGNATURES,
+      ),
   });
 }

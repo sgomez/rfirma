@@ -2,6 +2,7 @@ import { act } from "@testing-library/react";
 import type { Mock } from "vitest";
 import { vi } from "vitest";
 import type { Certificate } from "../signing/certificate";
+import { NO_PREVIOUS_SIGNATURES } from "../signing/previousSignatures";
 import type { Errand, ErrandStage, SiteDocument, SiteErrandPort } from "./errand";
 import { noErrand } from "./errand";
 
@@ -76,6 +77,7 @@ export const signedDocument: SiteDocument = {
   sizeBytes: 2_400_000,
   round: { kind: "sign" },
   hasUnregisteredSignatures: false,
+  previousSignatures: NO_PREVIOUS_SIGNATURES,
 };
 
 /** Deja pasar el tiempo con los relojes falsos, y deja que React repinte. */

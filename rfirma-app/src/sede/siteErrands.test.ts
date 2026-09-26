@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { NO_PREVIOUS_SIGNATURES } from "../signing/previousSignatures";
 import type { TokenFailure } from "../signing/token";
 import type { DescribedDocument, SiteErrandView } from "./siteErrands";
 import {
@@ -314,6 +315,7 @@ describe("los momentos que pone el adaptador", () => {
           sizeBytes: 4096,
           round: { kind: "cosign" },
           hasUnregisteredSignatures: true,
+          previousSignatures: NO_PREVIOUS_SIGNATURES,
         },
       },
     });

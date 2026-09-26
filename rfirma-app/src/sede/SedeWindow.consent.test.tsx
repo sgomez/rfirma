@@ -1,6 +1,8 @@
 import { fireEvent, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { NO_PREVIOUS_SIGNATURES } from "../signing/previousSignatures";
+import { previousSignatureOf, reportOf } from "../signing/SigningPanel.testSupport";
 import { renderWithCatalog } from "../testing/render";
 import type { ErrandStage } from "./errand";
 import { SedeWindow } from "./SedeWindow";
@@ -18,6 +20,7 @@ describe("2 · consent", () => {
         sizeBytes: 2_400_000,
         round: { kind: "sign" },
         hasUnregisteredSignatures: false,
+        previousSignatures: NO_PREVIOUS_SIGNATURES,
       },
       signs: null,
       signing: "pdf",
@@ -75,6 +78,7 @@ describe("2 · consent", () => {
           sizeBytes: 310_000,
           round: { kind: "sign" },
           hasUnregisteredSignatures: false,
+          previousSignatures: NO_PREVIOUS_SIGNATURES,
         },
       }),
     );
@@ -92,6 +96,7 @@ describe("2 · consent", () => {
           sizeBytes: 860_000,
           round: { kind: "cosign" },
           hasUnregisteredSignatures: false,
+          previousSignatures: NO_PREVIOUS_SIGNATURES,
         },
       }),
     );
@@ -114,6 +119,7 @@ describe("2 · consent", () => {
             sizeBytes: 860_000,
             round: { kind: "counter", target },
             hasUnregisteredSignatures: false,
+            previousSignatures: NO_PREVIOUS_SIGNATURES,
           },
         }),
       );
@@ -135,6 +141,7 @@ describe("2 · consent", () => {
           sizeBytes: 860_000,
           round: { kind: "cosign" },
           hasUnregisteredSignatures: true,
+          previousSignatures: NO_PREVIOUS_SIGNATURES,
         },
       }),
     );
@@ -159,6 +166,7 @@ describe("2 · consent", () => {
           sizeBytes: 860_000,
           round: { kind: "cosign" },
           hasUnregisteredSignatures: true,
+          previousSignatures: NO_PREVIOUS_SIGNATURES,
         },
       }),
     );
@@ -167,6 +175,90 @@ describe("2 · consent", () => {
     await user.click(screen.getByRole("button", { name: "Cancelar" }));
 
     expect(calls.cancel).toHaveBeenCalled();
+  });
+
+  describe("las firmas previas del documento (ID-403, ID-404, ID-406)", () => {
+    it.each(["sign", "cosign"] as const)(
+      "shows the notice with the right count and states for a %s",
+      (kind) => {
+        const { port } = scriptedErrand(
+          consenting({
+            document: {
+              title: "Convenio",
+              pages: 12,
+              sizeBytes: 860_000,
+              round: { kind },
+              hasUnregisteredSignatures: false,
+              previousSignatures: reportOf(
+                [
+                  previousSignatureOf(),
+                  previousSignatureOf({
+                    certificateSerialNumber: "2",
+                    status: "broken",
+                    reason: null,
+                  }),
+                ],
+                { warningCount: 1, tone: "attention" },
+              ),
+            },
+          }),
+        );
+        renderWithCatalog(<SedeWindow errands={port} />);
+
+        expect(screen.getByText(/Firmarás junto a 2 firmas anteriores/)).toBeInTheDocument();
+        expect(screen.getByText(/1 aviso/)).toBeInTheDocument();
+      },
+    );
+
+    it("signs with no intermediate dialogue when a previous signature is broken", async () => {
+      const user = userEvent.setup();
+      const { port, calls } = scriptedErrand(
+        consenting({
+          document: {
+            title: "Convenio",
+            pages: 12,
+            sizeBytes: 860_000,
+            round: { kind: "sign" },
+            hasUnregisteredSignatures: false,
+            previousSignatures: reportOf(
+              [previousSignatureOf({ status: "broken", reason: null })],
+              {
+                warningCount: 1,
+                tone: "attention",
+              },
+            ),
+          },
+        }),
+      );
+      renderWithCatalog(<SedeWindow errands={port} consentCountdown={false} />);
+
+      await user.click(screen.getByRole("button", { name: "Firmar" }));
+
+      expect(calls.consent).toHaveBeenCalledWith("handle-1");
+    });
+
+    it("shows the same-signer stripe for the chosen certificate, folded or not", () => {
+      const { port } = scriptedErrand(
+        consenting({
+          document: {
+            title: "Convenio",
+            pages: 12,
+            sizeBytes: 860_000,
+            round: { kind: "sign" },
+            hasUnregisteredSignatures: false,
+            previousSignatures: reportOf([
+              previousSignatureOf({
+                issuer: certificate().issuer,
+                certificateSerialNumber: certificate().certificateSerialNumber,
+              }),
+            ]),
+          },
+        }),
+      );
+      renderWithCatalog(<SedeWindow errands={port} />);
+
+      expect(screen.getByText("Ya lo firmaste tú con este certificado")).toBeInTheDocument();
+    });
   });
 
   it("leaves a calm label, not a warning, when the request has no valid origin", () => {
