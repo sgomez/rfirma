@@ -100,6 +100,17 @@ class PreviousSignaturesBridgeTest {
     }
 
     @Test
+    void a_pdf_signed_with_the_expired_certificate_of_the_kit_is_certificate_expired()
+            throws Exception {
+        final PreviousSignaturesBridge.Signature signature = PreviousSignaturesBridge.read(
+                signed(TestFixtures.samplePdf(), TestFixtures.expiredCertificateChain(),
+                        TestFixtures.expiredPrivateKey())).signatures().get(0);
+
+        assertEquals(PreviousSignaturesBridge.Status.CERTIFICATE_EXPIRED, signature.status());
+        assertEquals("CERTIFICATE_EXPIRED", signature.reason());
+    }
+
+    @Test
     void a_signature_whose_signed_bytes_were_altered_is_broken_with_its_reason() throws Exception {
         final byte[] altered = TestFixtures.withOneByteChangedInsideTheSignedRange(
                 signed(TestFixtures.samplePdf(), TestFixtures.certificateChain(),

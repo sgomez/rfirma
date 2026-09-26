@@ -127,8 +127,18 @@ final class TestFixtures {
      * no se puede distinguir de «no se filtro nada».
      */
     static X509Certificate expiredCertificate() throws Exception {
+        return expiredCertificateChain()[0];
+    }
+
+    /** La cadena del certificado caducado del kit. */
+    static X509Certificate[] expiredCertificateChain() throws Exception {
+        return certificateChain(keyStore(EXPIRED_P12, EXPIRED_PASSWORD));
+    }
+
+    /** La clave privada del certificado caducado del kit. */
+    static PrivateKey expiredPrivateKey() throws Exception {
         final KeyStore ks = keyStore(EXPIRED_P12, EXPIRED_PASSWORD);
-        return certificateChain(ks)[0];
+        return (PrivateKey) ks.getKey(alias(ks), EXPIRED_PASSWORD);
     }
 
     /** El certificado con seudonimo de empleado publico del kit, suelto. */
