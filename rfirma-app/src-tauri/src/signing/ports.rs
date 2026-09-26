@@ -9,10 +9,9 @@ pub use crate::identity::domain::holder::PromptedHolder;
 pub use crate::identity::domain::protected_secret::ProtectedSecret;
 pub use crate::identity::domain::secret::SecretName;
 use crate::identity::domain::secret::StoreSecret;
-use crate::signing::domain::bridge::{
-    BridgeError, PostSignRequest, PreSignRequest, PreSignature, PreviousSignaturesReport,
-};
+use crate::signing::domain::bridge::{BridgeError, PostSignRequest, PreSignRequest, PreSignature};
 use crate::signing::domain::isolate_gone::IsolateGone;
+use crate::signing::domain::previous_signatures::PreviousSignaturesReport;
 use crate::signing::domain::Language;
 
 /// El puente nativo visto desde el ciclo: prefirma y postfirma, y ninguna entrada que firme (ADR-0001).

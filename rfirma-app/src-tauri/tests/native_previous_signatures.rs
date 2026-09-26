@@ -5,7 +5,8 @@ mod support;
 
 use base64::Engine;
 use rfirma_lib::signing::application::cycle::ALGORITHM;
-use rfirma_lib::signing::domain::bridge::{Format, SignatureOperation, SignatureStatus, Tone};
+use rfirma_lib::signing::domain::bridge::{Format, SignatureOperation};
+use rfirma_lib::signing::domain::previous_signatures::{SignatureStatus, Tone};
 
 use support::{a_cycle_of, a_one_page_pdf, bridge};
 

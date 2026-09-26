@@ -7,6 +7,7 @@ pub mod isolate_gone;
 pub mod language;
 pub mod layer2_text;
 pub mod placement;
+pub mod previous_signatures;
 pub mod properties;
 pub mod session_seal;
 
@@ -14,8 +15,7 @@ pub use admissibility::{
     unlocked_with, AdmissibleDocument, Refusal, Waivers, ALLOW_SIGNING_CERTIFIED_KEY,
 };
 pub use bridge::{
-    CompletedCycle, Format, PreviousSignature, PreviousSignaturesReport, SealedPreSignature,
-    SignatureOperation, SignatureStatus, TokenSignature, TokenSignatures, Tone,
+    CompletedCycle, Format, SealedPreSignature, SignatureOperation, TokenSignature, TokenSignatures,
 };
 pub use config::{
     PadesRect, Placement, Setting, SignatureConfig, SigningChoice, ALLOW_UNREGISTERED_KEY,
@@ -29,5 +29,6 @@ pub use placement::{
     BoxSize, MediaBox, OutOfDocument, OutOfPage, Page, PageSet, PlacementError, Rotation, Spot,
     UserSpaceRect, ViewerRect, VisibleBox,
 };
+pub use previous_signatures::{PreviousSignature, PreviousSignaturesReport, SignatureStatus, Tone};
 pub use properties::{merged_with, to_java_properties};
 pub use session_seal::{SealMismatch, SessionSeal};

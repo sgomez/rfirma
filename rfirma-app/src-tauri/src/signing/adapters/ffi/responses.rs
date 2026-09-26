@@ -4,8 +4,10 @@ use base64::Engine;
 
 use crate::identity::domain::holder::{common_name_of, holder_of, organization_identifier_of};
 use crate::signing::domain::bridge::{
-    BridgeError, DataRejection, PreSignBlock, PreSignature, PreviousSignature,
-    PreviousSignaturesReport, SealedPreSignature, SignatureStatus, SignatureVerdict,
+    BridgeError, DataRejection, PreSignBlock, PreSignature, SealedPreSignature, SignatureVerdict,
+};
+use crate::signing::domain::previous_signatures::{
+    PreviousSignature, PreviousSignaturesReport, SignatureStatus,
 };
 use crate::signing::domain::SessionSeal;
 
