@@ -43,6 +43,9 @@ final class TestFixtures {
     private static final Path PSEUDONYM_P12 = Path.of("..", "testdata", "fnmt", "pseudonym-rsa.p12");
     private static final char[] PASSWORD = "1234".toCharArray();
     private static final char[] EXPIRED_PASSWORD = "G5cp,fYC9gje".toCharArray();
+    private static final String SIGN_ALGORITHM = "SHA256withRSA";
+    /** El {@code /SubFilter} que ningun detector de formato PAdES/CAdES del original reconoce. */
+    private static final String UNRECOGNIZED_SUBFILTER = "rfirma.unknown-format";
 
     private TestFixtures() { }
 
@@ -83,12 +86,23 @@ final class TestFixtures {
         return pades(certified, otherCertificateChain(), otherPrivateKey(), overCertified);
     }
 
+    /**
+     * El PDF firmado con un {@code /SubFilter} que el original no reconoce, en
+     * vez de con {@code ETSI.CAdES.detached}: la firma sigue siendo integra.
+     */
+    static byte[] signedWithUnrecognizedSubFilter(final byte[] pdf, final X509Certificate[] chain,
+            final PrivateKey key) throws Exception {
+        final Properties extraParams = new Properties();
+        extraParams.setProperty("signatureSubFilter", UNRECOGNIZED_SUBFILTER);
+        return pades(pdf, chain, key, extraParams);
+    }
+
     private static byte[] pades(final byte[] pdf, final X509Certificate[] chain,
             final PrivateKey key, final Properties extraParams) throws Exception {
         final PadesBridge.PreSignResult pre =
-                PadesBridge.preSign(pdf, "SHA256withRSA", chain, extraParams);
+                PadesBridge.preSign(pdf, SIGN_ALGORITHM, chain, extraParams);
 
-        final Signature signature = Signature.getInstance("SHA256withRSA");
+        final Signature signature = Signature.getInstance(SIGN_ALGORITHM);
         signature.initSign(key);
         signature.update(Base64.getDecoder().decode(pre.preSignB64()));
 

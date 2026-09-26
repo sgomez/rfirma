@@ -126,6 +126,38 @@ class PreviousSignaturesBridgeTest {
     }
 
     @Test
+    void a_signature_with_an_unrecognized_subfilter_cannot_be_validated() throws Exception {
+        final byte[] pdf = TestFixtures.signedWithUnrecognizedSubFilter(TestFixtures.samplePdf(),
+                TestFixtures.certificateChain(), TestFixtures.privateKey());
+
+        final List<PreviousSignaturesBridge.Signature> signatures =
+                PreviousSignaturesBridge.read(pdf).signatures();
+
+        assertEquals(1, signatures.size());
+        assertEquals(PreviousSignaturesBridge.Status.UNVERIFIABLE, signatures.get(0).status());
+        assertEquals("UNKOWN_SIGNATURE_FORMAT", signatures.get(0).reason());
+    }
+
+    @Test
+    void a_recognized_signature_is_not_reclassified_by_a_later_unrecognized_subfilter()
+            throws Exception {
+        final byte[] once = signed(TestFixtures.samplePdf(),
+                TestFixtures.certificateChain(), TestFixtures.privateKey());
+        Thread.sleep(1_100);
+        final byte[] twice = TestFixtures.signedWithUnrecognizedSubFilter(once,
+                TestFixtures.otherCertificateChain(), TestFixtures.otherPrivateKey());
+
+        final List<PreviousSignaturesBridge.Signature> signatures =
+                PreviousSignaturesBridge.read(twice).signatures();
+
+        assertEquals(2, signatures.size());
+        assertEquals(PreviousSignaturesBridge.Status.NOT_FULLY_CHECKED, signatures.get(0).status(),
+                "motivo: " + signatures.get(0).reason());
+        assertEquals(PreviousSignaturesBridge.Status.UNVERIFIABLE, signatures.get(1).status());
+        assertEquals("UNKOWN_SIGNATURE_FORMAT", signatures.get(1).reason());
+    }
+
+    @Test
     void each_verdict_of_the_original_validator_maps_to_its_status() {
         assertEquals(Map.of(
                 VALIDITY_ERROR.CERTIFICATE_EXPIRED, PreviousSignaturesBridge.Status.CERTIFICATE_EXPIRED,
