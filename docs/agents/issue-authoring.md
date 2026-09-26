@@ -75,6 +75,36 @@ behavioural, with verifiable criteria, and no file paths that go stale. A
 child with this section is **self-sufficient** — the pipeline reads the parent
 spec only as a fallback, when the section is missing.
 
+### A child that builds UI MUST carry a `## Diseño` section
+
+When the parent names a design as its source of truth — cards in
+`docs/design/`, artboards in `docs/design/artboards/` — the decisions copied
+into `## Spec extract` are not enough: a builder that never opens the design
+builds from the prose, and the reviewer, reading the same child, checks against
+the same prose. Spec #968 merged four UI children that way and had to redo all
+four.
+
+So every child that builds or changes UI **must** name the design sources that
+apply to it — the card and its sections, the artboard and the toggles or states
+it shows — and say that the UI matches them 1:1 and the review checks it
+against them:
+
+```markdown
+## Diseño
+
+La interfaz tiene que coincidir 1:1 con el diseño validado; la revisión la
+compara contra estas fuentes, no solo contra este issue.
+
+- Ficha normativa: `docs/design/<pantalla>.md`, apartados «…».
+- Artboard: `docs/design/artboards/<Artboard>.dc.html`, palancas «…».
+- Tokens y componentes: `docs/design/design-system.md`.
+```
+
+These paths are the exception to "no file paths": there is one card per screen,
+named after the screen (`docs/agents/prototyping.md`), so the path lives as long
+as the screen does. When a card and an acceptance criterion disagree, the card
+wins and the child says so.
+
 ### Every child issue MUST carry a `## Complexity` section
 
 The pipeline picks each build's model from this section and nothing else — it

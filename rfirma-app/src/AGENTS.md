@@ -185,12 +185,15 @@ Cuatro comprobaciones, cada una en su sitio y sin solaparse:
 | Una clave del catálogo que no usa nadie | `just lint-i18n` (`i18next-cli status --unused`) |
 
 Las dos últimas miran el código en busca de `t("…")` literales, y de ahí salen
-sus dos puntos ciegos. **Una clave ensamblada con plantilla** (`t(\`a.b.${x}\`)`)
+sus tres puntos ciegos. **Una clave ensamblada con plantilla** (`t(\`a.b.${x}\`)`)
 no la ve ninguna: las dos pasan en verde aunque la clave resultante no exista en
 el catálogo, y el hueco solo aparece en pantalla — escribe siempre la clave
-entera. Y **el extractor lee también los comentarios**, así que un `t()` de
+entera. **El extractor lee también los comentarios**, así que un `t()` de
 ejemplo dentro de un bloque `/** */` cuenta como clave usada: puede poner
-`extract --ci` en rojo o falsear el recuento de claves sin uso.
+`extract --ci` en rojo o falsear el recuento de claves sin uso. Y **no lee los
+tests** (`i18next.config.ts` ignora `*.test.{ts,tsx}`): una clave que solo cita
+un test cuenta como sin usar, y `status --unused` se pone en rojo aunque el test
+la traduzca.
 
 **Al ampliar el catálogo, la primera pasada de `just po` se espera en rojo.** El
 orden es: escribir la cadena en el `.pot` → `just po` (`msgmerge` deja las
