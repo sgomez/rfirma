@@ -484,7 +484,7 @@ pub enum SignatureVerdict {
     },
 }
 
-/// El estado de una firma previa (ID-401).
+/// El estado de una firma previa.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SignatureStatus {
     /// Se sostiene.
@@ -502,7 +502,7 @@ pub enum SignatureStatus {
 }
 
 impl SignatureStatus {
-    /// Son KO el certificado caducado, aún no válido, rota y no se puede validar (ID-401).
+    /// Son KO el certificado caducado, aún no válido, rota y no se puede validar.
     pub fn is_ko(self) -> bool {
         matches!(
             self,
@@ -512,9 +512,20 @@ impl SignatureStatus {
                 | Self::Unverifiable
         )
     }
+
+    /// El tono que aporta este estado por sí solo.
+    fn tone(self) -> Tone {
+        if self.is_ko() {
+            Tone::Attention
+        } else if self == Self::NotFullyChecked {
+            Tone::Indeterminate
+        } else {
+            Tone::Information
+        }
+    }
 }
 
-/// El tono del peor aviso, de menor a mayor gravedad (ID-403).
+/// El tono del peor aviso, de menor a mayor gravedad.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Tone {
     /// Todo bien.
@@ -582,30 +593,29 @@ impl PreviousSignaturesReport {
         self.changed_after_last_signature
     }
 
-    /// Avisos: firmas KO + firmas sin comprobar del todo + 1 si el documento cambió (ID-403).
+    /// Avisos: firmas KO + firmas sin comprobar del todo + 1 si el documento cambió.
     pub fn warning_count(&self) -> usize {
-        let ko = self.signatures.iter().filter(|s| s.status.is_ko()).count();
-        let not_fully_checked = self
+        let from_signatures = self
             .signatures
             .iter()
-            .filter(|s| s.status == SignatureStatus::NotFullyChecked)
+            .filter(|s| s.status.is_ko() || s.status == SignatureStatus::NotFullyChecked)
             .count();
-        ko + not_fully_checked + usize::from(self.changed_after_last_signature)
+        from_signatures + usize::from(self.changed_after_last_signature)
     }
 
-    /// El tono del peor aviso (ID-403).
+    /// El tono del peor aviso.
     pub fn tone(&self) -> Tone {
-        if self.changed_after_last_signature || self.signatures.iter().any(|s| s.status.is_ko()) {
-            return Tone::Attention;
-        }
-        if self
-            .signatures
+        let changed_tone = if self.changed_after_last_signature {
+            Tone::Attention
+        } else {
+            Tone::Information
+        };
+        self.signatures
             .iter()
-            .any(|s| s.status == SignatureStatus::NotFullyChecked)
-        {
-            return Tone::Indeterminate;
-        }
-        Tone::Information
+            .map(|s| s.status.tone())
+            .chain(std::iter::once(changed_tone))
+            .max()
+            .unwrap_or(Tone::Information)
     }
 }
 

@@ -1,4 +1,4 @@
-//! Prueba de grada C del informe de firmas previas contra el puente real (ADR-0014, TD-100).
+//! Prueba de grada C del informe de firmas previas contra el puente real (ADR-0014).
 
 #[path = "native_cycle/support.rs"]
 mod support;
@@ -9,7 +9,7 @@ use rfirma_lib::signing::domain::bridge::{Format, SignatureOperation, SignatureS
 
 use support::{a_cycle_of, a_one_page_pdf, bridge};
 
-/// La version del encabezado entra en el `/ByteRange`: el resumen de la firma deja de cuadrar.
+/// La versión del encabezado entra en el `/ByteRange`: el resumen de la firma deja de cuadrar.
 fn with_the_signed_bytes_altered(pdf: &[u8]) -> Vec<u8> {
     const HEADER: &[u8] = b"%PDF-1.";
 

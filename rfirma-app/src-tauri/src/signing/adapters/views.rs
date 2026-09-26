@@ -192,7 +192,7 @@ impl From<VisibleSignatureMemory> for RememberedVisibleSignatureView {
 }
 
 crossing! {
-    /// El estado de una firma previa (ID-401), con el nombre con el que cruza el puente.
+    /// El estado de una firma previa, con el nombre con el que cruza el puente.
     #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
     #[serde(rename_all = "camelCase")]
     pub enum SignatureStatusView {
@@ -219,7 +219,7 @@ impl From<SignatureStatus> for SignatureStatusView {
 }
 
 crossing! {
-    /// El tono del peor aviso (ID-403), de menor a mayor gravedad.
+    /// El tono del peor aviso, de menor a mayor gravedad.
     #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
     #[serde(rename_all = "camelCase")]
     pub enum ToneView {
@@ -285,9 +285,9 @@ crossing! {
     pub struct PreviousSignaturesReportView {
         /// Una por firma, en orden cronológico.
         pub signatures: Vec<PreviousSignatureView>,
-        /// Cuántos avisos deja el informe (ID-403).
+        /// Cuántos avisos deja el informe.
         pub warning_count: usize,
-        /// El tono del peor aviso (ID-403).
+        /// El tono del peor aviso.
         pub tone: ToneView,
     }
 }
