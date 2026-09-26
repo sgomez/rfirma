@@ -323,6 +323,10 @@ function RefusalSentence({
       return <>{t("errors.situations.moduleNotFound.title")}</>;
     case "pkcs12Unreadable":
       return <>{t("errors.situations.pkcs12Unreadable.title")}</>;
+    case "incorrectPkcs12Password":
+      return <>{t("errors.situations.incorrectPkcs12Password.title")}</>;
+    case "pkcs12NoPrivateKey":
+      return <>{t("errors.situations.pkcs12NoPrivateKey.title")}</>;
     case "keyNotRsa":
       return <>{t("errors.situations.keyNotRsa.title")}</>;
     case "mechanismNotOffered":
