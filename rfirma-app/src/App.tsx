@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { forgetActivity } from "./App.forgetActivity";
 import { formatSignedAt, type PageGeometry, placingFrom } from "./App.signingOrder";
 import { useCertificateSearch } from "./App.useCertificateSearch";
 import { useDropNotices } from "./App.useDropNotices";
@@ -301,34 +302,11 @@ export function App({
     startSigning: signing.start,
   });
 
-  // Olvidar la actividad es una sola promesa al usuario del ordenador
-  // compartido: se van los recientes y el certificado a la vez (ID-34).
-  const forgetActivity = async () => {
-    // Los recientes de la ventana se vacían **aunque el borrado del disco
-    // falle**: lo que promete el rótulo es que dejen de estar, y quedarse a
-    // medias sería enseñarlos como si nada hubiera pasado.
-    // El centinela envuelve el valor en vez de serlo: un rechazo con `null`
-    // —el tipo capturado es `unknown`— volvería a ser el `catch {}` vacío que
-    // esta función existe para quitar de en medio.
-    let failure: { thrown: unknown } | null = null;
-    try {
-      await preferences.forgetActivity();
-    } catch (thrown) {
-      failure = { thrown };
-    }
-    try {
-      await documents.forgetAll();
-    } catch (thrown) {
-      // El primero que falló es el que se cuenta: si el disco ya había dicho
-      // que no, ese rechazo es el que explica lo que ha pasado, y perderlo
-      // aquí dejaría el fallo de verdad sin llegar a *Privacidad*.
-      failure ??= { thrown };
-    }
-    // El fallo se cuenta **después** de vaciar la ventana, y lo cuenta
-    // Preferencias en su sección de Privacidad (ID-70): lo que no puede pasar
-    // es que el borrado del disco falle y nadie lo diga.
-    if (failure !== null) throw failure.thrown;
-  };
+  const forgetAll = () =>
+    forgetActivity(
+      () => preferences.forgetActivity(),
+      () => documents.forgetAll(),
+    );
 
   return (
     <>
@@ -352,7 +330,7 @@ export function App({
               preferences={settings}
               onChooseDestination={chooseDestination}
               onChange={changeSettings}
-              onForgetActivity={forgetActivity}
+              onForgetActivity={forgetAll}
               installedCertificates={installed}
               onInstallCertificate={installCertificate}
               onRemoveCertificate={removeCertificate}

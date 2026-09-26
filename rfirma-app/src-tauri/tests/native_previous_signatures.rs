@@ -26,7 +26,7 @@ fn the_bridge_reports_the_signer_and_the_signing_time_of_a_pades_signature() {
 
     assert_eq!(report.count(), 1);
     let signature = &report.signatures()[0];
-    assert_eq!(signature.id_number, "99999999R");
+    assert_eq!(signature.id_number, "IDCES-99999999R");
     assert_eq!(signature.organization_identifier, None);
     assert!(
         signature.signing_time.is_some(),

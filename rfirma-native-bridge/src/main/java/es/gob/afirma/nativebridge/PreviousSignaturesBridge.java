@@ -5,6 +5,9 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+
+import javax.security.auth.x500.X500Principal;
 
 import es.gob.afirma.core.signers.AOSimpleSignInfo;
 import es.gob.afirma.core.util.tree.AOTreeModel;
@@ -22,6 +25,10 @@ import es.gob.afirma.signers.pades.AOPDFSigner;
  * necesita distinguirlos.
  */
 final class PreviousSignaturesBridge {
+
+    private static final Map<String, String> READABLE_KEYWORDS = Map.of(
+            "2.5.4.5", "SERIALNUMBER",
+            "2.5.4.97", "organizationIdentifier");
 
     private PreviousSignaturesBridge() { }
 
@@ -43,14 +50,18 @@ final class PreviousSignaturesBridge {
             }
             final X509Certificate signer = certs[0];
             signatures.add(new Signature(
-                    signer.getSubjectX500Principal().getName(),
-                    signer.getIssuerX500Principal().getName(),
+                    readable(signer.getSubjectX500Principal()),
+                    readable(signer.getIssuerX500Principal()),
                     signer.getSerialNumber().toString(),
                     info.getSigningTime() == null
                             ? null
                             : DateTimeFormatter.ISO_INSTANT.format(info.getSigningTime().toInstant())));
         }
         return signatures;
+    }
+
+    static String readable(final X500Principal name) {
+        return name.getName(X500Principal.RFC2253, READABLE_KEYWORDS);
     }
 
     private static void collect(final AOTreeNode node, final List<AOSimpleSignInfo> infos) {
