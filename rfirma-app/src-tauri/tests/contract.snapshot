@@ -144,6 +144,7 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
   pub struct RecentDocumentView
       id: String
       name: String
+      folder: Option<String>
       badge: Badge
       modified: Option<u64>
       lastUsed: u64
