@@ -275,7 +275,7 @@ msgstr "El documento no llega a esa página"
 msgid "errors.situations.pageOutOfDocument.body"
 msgstr ""
 "Elige una página que exista en el documento y vuelve a firmar. Si lo "
-"dejásemos así, el sello acabaría en la última página sin avisar."
+"dejásemos así, la firma visible acabaría en la última página sin avisar."
 
 msgid "errors.situations.sealMismatch.title"
 msgstr "La firma se ha interrumpido a medias"
@@ -511,19 +511,19 @@ msgstr ""
 "El recuadro se ha quedado fuera de la página, así que sigue donde estaba."
 
 msgid "viewer.stamp.frozen"
-msgstr "Sello congelado mientras mueves el recuadro"
+msgstr "Firma visible congelada mientras mueves el recuadro"
 
 msgid "viewer.stamp.onDemand"
-msgstr "Documento grande: el sello no se recalcula solo"
+msgstr "Documento grande: la firma visible no se recalcula sola"
 
 msgid "viewer.stamp.show"
 msgstr "Ver cómo queda"
 
 msgid "viewer.stamp.composing"
-msgstr "Componiendo el sello con el certificado elegido"
+msgstr "Componiendo la firma visible con el certificado elegido"
 
 msgid "viewer.stamp.failed"
-msgstr "No se ha podido dibujar el sello"
+msgstr "No se ha podido dibujar la firma visible"
 
 msgid "viewer.stamp.retry"
 msgstr "Volver a intentarlo"
@@ -574,7 +574,7 @@ msgstr "Ponerla aquí"
 msgid "panel.placement.sealAll"
 msgstr "Ponerla aquí"
 
-#. Botón que quita el sello de la página que se está mirando, cuando ya lo lleva.
+#. Botón que quita la firma visible de la página que se está mirando, cuando ya la lleva.
 msgid "panel.placement.unseal"
 msgstr "Quitarla de aquí"
 
@@ -743,7 +743,7 @@ msgstr "Cambiar…"
 msgid "panel.visibleSignature.rubric.thumbnail"
 msgstr "Tu rúbrica, tal como se estampará"
 
-#. Aviso sobre el bloque de firma visible apagado: sin certificado no hay sello que dibujar.
+#. Aviso sobre el bloque de firma visible apagado: sin certificado no hay nada que dibujar.
 msgid "panel.visibleSignature.noCertificate"
 msgstr "Elige un certificado para colocar la firma visible"
 
@@ -828,12 +828,12 @@ msgstr "Pendiente"
 msgid "progress.keepTheCard"
 msgstr "No retires la tarjeta hasta que termine."
 
-#. El titular del diálogo de páginas sin sello: {{count}} páginas donde el recuadro no cabe.
+#. El titular del diálogo de páginas sin firma visible: {{count}} páginas donde el recuadro no cabe.
 msgid "sealLoss.title"
 msgid_plural "sealLoss.title"
-msgstr[0] "Una página se quedará sin sello"
-msgstr[1] "{{count}} páginas se quedarán sin sello"
-msgstr[2] "{{count}} páginas se quedarán sin sello"
+msgstr[0] "Una página se quedará sin firma visible"
+msgstr[1] "{{count}} páginas se quedarán sin firma visible"
+msgstr[2] "{{count}} páginas se quedarán sin firma visible"
 
 #. {{fallen}} páginas de {{chosen}} elegidas no caben el recuadro, más pequeñas que aquella sobre la que se colocó.
 msgid "sealLoss.body"
@@ -841,11 +841,11 @@ msgstr ""
 "El recuadro no cabe en {{fallen}} de las {{chosen}} páginas que has elegido, "
 "más pequeñas que aquella sobre la que lo colocaste. El documento se firmará "
 "igual y la firma será válida en todo él, pero en esas páginas no aparecerá "
-"el sello."
+"la firma visible."
 
-#. La vuelta positiva: {{sealed}} de {{chosen}} páginas elegidas sí llevarán el sello.
+#. La vuelta positiva: {{sealed}} de {{chosen}} páginas elegidas sí llevarán la firma visible.
 msgid "sealLoss.remaining"
-msgstr "El sello aparecerá en {{sealed}} de las {{chosen}} páginas elegidas."
+msgstr "La firma visible aparecerá en {{sealed}} de las {{chosen}} páginas elegidas."
 
 msgid "sealLoss.confirm"
 msgstr "Firmar de todos modos"

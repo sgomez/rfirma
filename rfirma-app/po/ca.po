@@ -280,7 +280,7 @@ msgstr "El document no arriba a aquesta pàgina"
 msgid "errors.situations.pageOutOfDocument.body"
 msgstr ""
 "Tria una pàgina que existeixi al document i torna a signar. Si ho deixéssim "
-"així, el segell acabaria a l'última pàgina sense avisar."
+"així, la signatura visible acabaria a l'última pàgina sense avisar."
 
 msgid "errors.situations.sealMismatch.title"
 msgstr "La signatura s'ha interromput a mitges"
@@ -513,19 +513,19 @@ msgid "viewer.outOfPage"
 msgstr "El requadre ha quedat fora de la pàgina, així que continua on era."
 
 msgid "viewer.stamp.frozen"
-msgstr "Segell congelat mentre mous el requadre"
+msgstr "Signatura visible congelada mentre mous el requadre"
 
 msgid "viewer.stamp.onDemand"
-msgstr "Document gran: el segell no es recalcula sol"
+msgstr "Document gran: la signatura visible no es recalcula sola"
 
 msgid "viewer.stamp.show"
 msgstr "Veure com queda"
 
 msgid "viewer.stamp.composing"
-msgstr "Component el segell amb el certificat triat"
+msgstr "Component la signatura visible amb el certificat triat"
 
 msgid "viewer.stamp.failed"
-msgstr "No s'ha pogut dibuixar el segell"
+msgstr "No s'ha pogut dibuixar la signatura visible"
 
 msgid "viewer.stamp.retry"
 msgstr "Tornar-ho a intentar"
@@ -826,9 +826,9 @@ msgstr "No retiris la targeta fins que acabi."
 #. El titular del diálogo de páginas sin sello: {{count}} páginas donde el recuadro no cabe.
 msgid "sealLoss.title"
 msgid_plural "sealLoss.title"
-msgstr[0] "Una pàgina quedarà sense segell"
-msgstr[1] "{{count}} pàgines quedaran sense segell"
-msgstr[2] "{{count}} pàgines quedaran sense segell"
+msgstr[0] "Una pàgina quedarà sense signatura visible"
+msgstr[1] "{{count}} pàgines quedaran sense signatura visible"
+msgstr[2] "{{count}} pàgines quedaran sense signatura visible"
 
 #. {{fallen}} páginas de {{chosen}} elegidas no caben el recuadro, más pequeñas que aquella sobre la que se colocó.
 msgid "sealLoss.body"
@@ -836,11 +836,11 @@ msgstr ""
 "El requadre no cap en {{fallen}} de les {{chosen}} pàgines que has triat, "
 "més petites que aquella sobre la qual el vas col·locar. El document se "
 "signarà igualment i la signatura serà vàlida a tot el document, però en "
-"aquestes pàgines no apareixerà el segell."
+"aquestes pàgines no apareixerà la signatura visible."
 
-#. La vuelta positiva: {{sealed}} de {{chosen}} páginas elegidas sí llevarán el sello.
+#. La vuelta positiva: {{sealed}} de {{chosen}} páginas elegidas sí llevarán la firma visible.
 msgid "sealLoss.remaining"
-msgstr "El segell apareixerà en {{sealed}} de les {{chosen}} pàgines triades."
+msgstr "La signatura visible apareixerà en {{sealed}} de les {{chosen}} pàgines triades."
 
 msgid "sealLoss.confirm"
 msgstr "Signar de totes maneres"

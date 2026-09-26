@@ -198,17 +198,17 @@ describe("App, con páginas donde el recuadro no cabe", () => {
 
     // ID-106: el denominador es el conjunto elegido (3), no el documento.
     expect(
-      await screen.findByRole("dialog", { name: "Una página se quedará sin sello" }),
+      await screen.findByRole("dialog", { name: "Una página se quedará sin firma visible" }),
     ).toBeVisible();
     expect(
       screen.getByText(
         "El recuadro no cabe en 1 de las 3 páginas que has elegido, más pequeñas que aquella " +
           "sobre la que lo colocaste. El documento se firmará igual y la firma será válida en " +
-          "todo él, pero en esas páginas no aparecerá el sello.",
+          "todo él, pero en esas páginas no aparecerá la firma visible.",
       ),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("El sello aparecerá en 2 de las 3 páginas elegidas."),
+      screen.getByText("La firma visible aparecerá en 2 de las 3 páginas elegidas."),
     ).toBeInTheDocument();
     expect(presign).not.toHaveBeenCalled();
 
@@ -250,17 +250,17 @@ describe("App, con páginas donde el recuadro no cabe", () => {
     const sign = await within(panel).findByRole("button", { name: "Firmar como Ada Lovelace" });
     await waitFor(() => expect(sign).toBeEnabled());
     await user.click(sign);
-    await screen.findByRole("dialog", { name: "Una página se quedará sin sello" });
+    await screen.findByRole("dialog", { name: "Una página se quedará sin firma visible" });
 
     await user.click(screen.getByRole("button", { name: "Firmar de todos modos" }));
 
     await waitFor(() => expect(presign).toHaveBeenCalledOnce());
     const order = presign.mock.calls[0]?.[0];
     expect(order?.placement.pages).toEqual({ only: [1, 2, 3] });
-    expect(screen.queryByRole("dialog", { name: /sello/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: /firma visible/ })).not.toBeInTheDocument();
   });
 
-  it("does not appear when every chosen page keeps its seal", async () => {
+  it("does not appear when every chosen page keeps its visible signature", async () => {
     const user = userEvent.setup();
     const presign = vi.fn(async () => ({
       ok: true as const,
@@ -295,7 +295,7 @@ describe("App, con páginas donde el recuadro no cabe", () => {
     await user.click(sign);
 
     await waitFor(() => expect(presign).toHaveBeenCalledOnce());
-    expect(screen.queryByRole("dialog", { name: /sello/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: /firma visible/ })).not.toBeInTheDocument();
   });
 });
 

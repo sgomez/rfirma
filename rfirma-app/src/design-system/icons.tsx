@@ -150,10 +150,10 @@ export function CertificateIcon({ size = 20 }: IconProps) {
 }
 
 /**
- * El sello del bloque «El sello aparecerá en…» del diálogo de páginas sin
- * sello (docs/design/dialogo-paginas-sin-firma-visible.md): el recuadro con la marca
- * dentro, para que se lea junto al resto de recuadros del sistema de diseño y
- * no como un icono suelto.
+ * El icono del bloque «La firma visible aparecerá en…» del diálogo de páginas
+ * sin firma visible (docs/design/dialogo-paginas-sin-firma-visible.md): el
+ * recuadro con la marca dentro, para que se lea junto al resto de recuadros
+ * del sistema de diseño y no como un icono suelto.
  */
 export function SealIcon({ size = 20 }: IconProps) {
   return (

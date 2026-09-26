@@ -106,7 +106,7 @@ export function unavailableStampComposer(): StampComposer {
       ok: false,
       failure: {
         situation: "documentUnreadable",
-        detail: "esta composicion no compone el sello",
+        detail: "esta composicion no compone la firma visible",
       },
     }),
   };

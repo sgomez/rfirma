@@ -280,7 +280,7 @@ msgstr "Dokumentuak ez du orrialde horretaraino iristen"
 msgid "errors.situations.pageOutOfDocument.body"
 msgstr ""
 "Aukeratu dokumentuan dagoen orrialde bat eta sinatu berriro. Horrela utziko "
-"bagenu, zigilua azken orrialdean amaituko luke abisatu gabe."
+"bagenu, sinadura ikusgaia azken orrialdean amaituko luke abisatu gabe."
 
 msgid "errors.situations.sealMismatch.title"
 msgstr "Sinadura erdibidean eten da"
@@ -515,19 +515,19 @@ msgstr ""
 "Laukia orrialdetik kanpo geratu da; beraz, zegoen lekuan jarraitzen du."
 
 msgid "viewer.stamp.frozen"
-msgstr "Zigilua izoztuta, laukia mugitzen duzun bitartean"
+msgstr "Sinadura ikusgaia izoztuta, laukia mugitzen duzun bitartean"
 
 msgid "viewer.stamp.onDemand"
-msgstr "Dokumentu handia: zigilua ez da bere kabuz birkalkulatzen"
+msgstr "Dokumentu handia: sinadura ikusgaia ez da bere kabuz birkalkulatzen"
 
 msgid "viewer.stamp.show"
 msgstr "Ikusi nola geratzen den"
 
 msgid "viewer.stamp.composing"
-msgstr "Zigilua osatzen, aukeratutako ziurtagiriarekin"
+msgstr "Sinadura ikusgaia osatzen, aukeratutako ziurtagiriarekin"
 
 msgid "viewer.stamp.failed"
-msgstr "Ezin izan da zigilua marraztu"
+msgstr "Ezin izan da sinadura ikusgaia marraztu"
 
 msgid "viewer.stamp.retry"
 msgstr "Saiatu berriro"
@@ -564,7 +564,7 @@ msgstr "Orrialde hauek"
 
 #. Nombre del campo donde se teclean las páginas, para quien usa lector de pantalla.
 msgid "panel.placement.field"
-msgstr "Zigilua zein orrialdetan jartzen den"
+msgstr "Sinadura ikusgaia zein orrialdetan jartzen den"
 
 #. {{pages}} es el número de páginas del documento.
 msgid "panel.placement.all"
@@ -833,9 +833,9 @@ msgstr "Ez atera txartela amaitu arte."
 #. El titular del diálogo de páginas sin sello: {{count}} páginas donde el recuadro no cabe.
 msgid "sealLoss.title"
 msgid_plural "sealLoss.title"
-msgstr[0] "Orrialde bat zigilurik gabe geratuko da"
-msgstr[1] "{{count}} orrialde zigilurik gabe geratuko dira"
-msgstr[2] "{{count}} orrialde zigilurik gabe geratuko dira"
+msgstr[0] "Orrialde bat sinadura ikusgairik gabe geratuko da"
+msgstr[1] "{{count}} orrialde sinadura ikusgairik gabe geratuko dira"
+msgstr[2] "{{count}} orrialde sinadura ikusgairik gabe geratuko dira"
 
 #. {{fallen}} páginas de {{chosen}} elegidas no caben el recuadro, más pequeñas que aquella sobre la que se colocó.
 msgid "sealLoss.body"
@@ -843,12 +843,13 @@ msgstr ""
 "Laukia ez da sartzen aukeratu dituzun {{chosen}} orrialdeetatik {{fallen}}"
 "etan, laukia jarri zenuen orrialdea baino txikiagoak baitira. Dokumentua "
 "berdin sinatuko da eta sinadura baliozkoa izango da osorik, baina orrialde "
-"horietan ez da zigilua agertuko."
+"horietan ez da sinadura ikusgaia agertuko."
 
-#. La vuelta positiva: {{sealed}} de {{chosen}} páginas elegidas sí llevarán el sello.
+#. La vuelta positiva: {{sealed}} de {{chosen}} páginas elegidas sí llevarán la firma visible.
 msgid "sealLoss.remaining"
 msgstr ""
-"Zigilua aukeratutako {{chosen}} orrialdeetatik {{sealed}}etan agertuko da."
+"Sinadura ikusgaia aukeratutako {{chosen}} orrialdeetatik {{sealed}}etan "
+"agertuko da."
 
 msgid "sealLoss.confirm"
 msgstr "Sinatu hala ere"

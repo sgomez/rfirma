@@ -250,7 +250,9 @@ describe("el estado del sello, flotando sobre la botonera", () => {
     );
     await waitFor(() => expect(renders).toHaveLength(1));
 
-    expect(screen.getByText("Sello congelado mientras mueves el recuadro")).toBeInTheDocument();
+    expect(
+      screen.getByText("Firma visible congelada mientras mueves el recuadro"),
+    ).toBeInTheDocument();
   });
 
   it("asks for the recomposition by hand on a large document", async () => {
@@ -295,7 +297,7 @@ describe("el estado del sello, flotando sobre la botonera", () => {
     );
     await waitFor(() => expect(renders).toHaveLength(1));
 
-    expect(screen.getByText("No se ha podido dibujar el sello")).toBeInTheDocument();
+    expect(screen.getByText("No se ha podido dibujar la firma visible")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Volver a intentarlo" }));
 

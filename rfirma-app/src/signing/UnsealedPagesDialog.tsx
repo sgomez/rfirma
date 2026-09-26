@@ -22,8 +22,8 @@ interface UnsealedPagesDialogProps {
  *
  * Dos cosas que el texto no puede equivocarse:
  *
- * - **«Sin sello», nunca «recortadas»**: la firma criptográfica cubre el
- *   documento entero pase lo que pase; lo que falta en esas páginas es la
+ * - **«Sin firma visible», nunca «recortadas»**: la firma criptográfica cubre
+ *   el documento entero pase lo que pase; lo que falta en esas páginas es la
  *   marca visible, no un trozo de la firma.
  * - **El denominador es el conjunto elegido, no el documento** (ID-106): con
  *   27 páginas, 13 elegidas y 3 que se caen, dice «3 de las 13», nunca
