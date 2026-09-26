@@ -129,7 +129,7 @@ pub trait Keyring {
     }
 }
 
-/// La ventana que pidió el secreto, sobre la que el diálogo se hace modal (ID-433).
+/// La ventana que pidió el secreto, sobre la que el diálogo se hace modal.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum OriginWindow {
     /// La ventana principal de la aplicación.

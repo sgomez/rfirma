@@ -123,7 +123,7 @@ impl GtkSecretPrompter {
         let _ = self.app.set(app);
     }
 
-    /// La ventana que pidió el secreto, si se conoce y sigue montada (ID-433).
+    /// La ventana que pidió el secreto, si se conoce y sigue montada.
     fn window_to_be_modal_over(
         &self,
         origin: Option<OriginWindow>,

@@ -86,8 +86,14 @@ fn sign_on_token_with_prompter_requires_an_open_cycle() {
 
     let session = SigningSession::default();
     let prompter = PreconfiguredSecretPrompter::new("1234");
-    let error = sign_on_token_with_prompter(&NoToken, &session, &prompter, Language::Spanish)
-        .expect_err("no hay ciclo abierto");
+    let error = sign_on_token_with_prompter(
+        &NoToken,
+        &session,
+        &prompter,
+        Language::Spanish,
+        OriginWindow::Main,
+    )
+    .expect_err("no hay ciclo abierto");
     assert_eq!(error.situation, "unknown");
 }
 
@@ -200,6 +206,7 @@ fn the_open_cycle_is_signed_with_the_typed_pin_or_through_the_dialog() {
             &prompter,
             Language::Spanish,
             &ProtectedSecret::from_str(pin),
+            OriginWindow::Main,
         )
         .expect_err("sin ciclo abierto no hay nada que firmar");
         assert_eq!(failure.situation, "unknown", "con PIN «{pin}»");
@@ -257,8 +264,14 @@ fn the_token_secret_is_asked_over_the_main_window() {
     let session = a_session_with_open_cycle(&signer, &certificate);
     let mock = MockSecretPrompter::with_secrets(&["correct_pin"]);
 
-    sign_on_token_with_prompter(&signer, &session, &mock, Language::Spanish)
-        .expect("deberia firmar");
+    sign_on_token_with_prompter(
+        &signer,
+        &session,
+        &mock,
+        Language::Spanish,
+        OriginWindow::Main,
+    )
+    .expect("deberia firmar");
 
     assert_eq!(
         mock.recorded_requests()[0].origin_window,
@@ -277,8 +290,14 @@ fn sign_on_token_with_prompter_retries_after_an_incorrect_pin() {
     let session = a_session_with_open_cycle(&signer, &certificate);
     let mock = MockSecretPrompter::with_secrets(&["wrong_pin", "correct_pin"]);
 
-    sign_on_token_with_prompter(&signer, &session, &mock, Language::Spanish)
-        .expect("deberia firmar tras corregir el PIN");
+    sign_on_token_with_prompter(
+        &signer,
+        &session,
+        &mock,
+        Language::Spanish,
+        OriginWindow::Main,
+    )
+    .expect("deberia firmar tras corregir el PIN");
 
     assert_eq!(*signer.attempts.borrow(), 2);
     let recorded = mock.recorded_requests();
@@ -304,6 +323,7 @@ fn sign_on_token_with_prompter_cancellation_aborts_the_cycle() {
         &session,
         &PreconfiguredSecretPrompter::cancelling(),
         Language::Spanish,
+        OriginWindow::Main,
     )
     .expect_err("cancelar el dialogo no deja firmar");
 
@@ -333,8 +353,14 @@ fn sign_on_token_with_prompter_names_the_secret_for_a_file_store() {
     let session = a_session_with_open_cycle(&signer, &certificate);
     let mock = MockSecretPrompter::with_secrets(&["correct_pin"]);
 
-    sign_on_token_with_prompter(&signer, &session, &mock, Language::Spanish)
-        .expect("deberia firmar");
+    sign_on_token_with_prompter(
+        &signer,
+        &session,
+        &mock,
+        Language::Spanish,
+        OriginWindow::Main,
+    )
+    .expect("deberia firmar");
 
     assert_eq!(mock.recorded_requests()[0].secret, SecretName::Password);
 }
@@ -386,6 +412,7 @@ fn a_store_that_needs_no_secret_signs_without_opening_the_dialog() {
         &session,
         &prompter,
         Language::Spanish,
+        OriginWindow::Main,
     )
     .expect("firma sin pedir el secreto");
 
