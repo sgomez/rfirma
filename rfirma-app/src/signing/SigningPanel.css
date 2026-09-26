@@ -96,6 +96,19 @@
   list-style: none;
 }
 
+/* «Ya lo firmaste tú» (docs/design/panel-de-firma.md § El aviso de firmas
+   previas): se ve aunque el aviso esté plegado. */
+.panel__co-signature-footer {
+  display: flex;
+  align-items: center;
+  gap: var(--rf-space-xs);
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--rf-border-subtle);
+  background: var(--rf-surface);
+  font-weight: 600;
+}
+
 .panel__previous-signatures-row {
   display: flex;
   justify-content: space-between;

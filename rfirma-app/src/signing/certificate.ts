@@ -80,8 +80,12 @@ export interface Certificate {
    * el recuadro que se estampa en el PDF.
    */
   idNumber: string;
+  /** La entidad representada, si el certificado la lleva. */
+  organizationIdentifier: string | null;
   /** La autoridad emisora. */
   issuer: string;
+  /** Número de serie del certificado. */
+  certificateSerialNumber: string;
   /**
    * Dónde estaba. No es adorno: el mismo certificado en el perfil de Firefox y
    * en `~/.pki/nssdb` es indistinguible sin él, y quien tiene tres iguales no

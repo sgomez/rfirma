@@ -3,6 +3,7 @@
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+use openssl::bn::BigNum;
 use serde::{Deserialize, Serialize};
 use x509_cert::der::Decode;
 use x509_cert::ext::pkix::{BasicConstraints, KeyUsage};
@@ -165,6 +166,31 @@ impl TokenCertificate {
             .map(|certificate| certificate.tbs_certificate().issuer().to_string())
     }
 
+    /// El `organizationIdentifier` (RDN 2.5.4.97) del subject, leído del DER y no del `Display`.
+    pub fn organization_identifier(&self) -> Option<String> {
+        const ORGANIZATION_IDENTIFIER: x509_cert::der::asn1::ObjectIdentifier =
+            x509_cert::der::asn1::ObjectIdentifier::new_unwrap("2.5.4.97");
+
+        let certificate = Certificate::from_der(&self.der).ok()?;
+        let value: x509_cert::ext::pkix::name::DirectoryString = certificate
+            .tbs_certificate()
+            .subject()
+            .by_oid(ORGANIZATION_IDENTIFIER)
+            .ok()??;
+        Some(value.value().into_owned())
+    }
+
+    /// Número de serie del certificado, en base diez, como lo escribe `BigInteger::toString` en el puente.
+    pub fn serial_number(&self) -> Option<String> {
+        let certificate = Certificate::from_der(&self.der).ok()?;
+        let bytes = certificate.tbs_certificate().serial_number().as_bytes();
+        BigNum::from_slice(bytes)
+            .ok()?
+            .to_dec_str()
+            .ok()
+            .map(|s| s.to_string())
+    }
+
     /// La clase de clave pública que lleva dentro, si se sabe leer.
     pub fn key_kind(&self) -> Option<KeyKind> {
         let certificate = Certificate::from_der(&self.der).ok()?;
@@ -252,7 +278,11 @@ pub struct ListedCertificate {
     /// Primer apellido, vacío si el certificado no lo trae.
     pub surname: String,
     pub id_number: String,
+    /// La entidad representada (`organizationIdentifier`), o nada si el certificado no la lleva.
+    pub organization_identifier: Option<String>,
     pub issuer: String,
+    /// Número de serie del certificado, en base diez.
+    pub certificate_serial_number: String,
     /// Clase de almacén del certificado.
     pub store: crate::identity::domain::store::StoreClass,
     pub status: CertificateStatus,
