@@ -180,8 +180,7 @@ pub(crate) fn a_representative_certificate(
     certificate_with_subject(label, name.build())
 }
 
-/// Construye un certificado de representante de una entidad por una persona física, con
-/// `organizationName` (2.5.4.10), `organizationIdentifier` (2.5.4.97), `GN` y `SN` en el subject.
+/// Construye un certificado de representante con `organizationName` (2.5.4.10), `organizationIdentifier` (2.5.4.97), `GN` y `SN` en el subject.
 pub(crate) fn a_representative_certificate_of_a_natural_person(
     label: &str,
     common_name: &str,

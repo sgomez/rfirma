@@ -123,8 +123,7 @@ pub fn organization_identifier_of(subject: Option<&str>) -> Option<String> {
     (!value.is_empty()).then_some(value)
 }
 
-/// Si el certificado es de representante: trae identificador de organización y un titular
-/// persona física. Una entidad sin persona física (sello) no cuenta como representante.
+/// Si el certificado es de representante: trae identificador de organización y un titular persona física.
 pub fn is_representative(
     organization_identifier: Option<&str>,
     given_name: &str,
