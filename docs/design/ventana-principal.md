@@ -32,8 +32,8 @@ hay nada que firmar.
 - [Pestañas de documentos](pestanas-de-documentos.md) — qué documentos hay
   abiertos, cuál se firma y los recientes.
 - [Visor de documento](visor-de-documento.md) — cómo va a quedar.
-- [Panel de firma](panel-de-firma.md) — la firma visible, el destino y el botón
-  que firma.
+- [Panel de firma](panel-de-firma.md) — el certificado, la firma visible, el
+  destino y el botón que firma.
 
 La acción principal vive **al pie del panel**: como mucho un botón primario en
 pantalla.
@@ -56,7 +56,8 @@ diálogos se pintan en flujo, detrás de la ventana.
 | z-index | Qué |
 | --- | --- |
 | 5 | cabecera (11 con su menú abierto, para quedar sobre la tira) |
-| 6 | desplegable de certificados, bloque de modelos y menú «+ Dato» del panel |
+| 6 | bloque de modelos y menú «+ Dato» del panel |
+| 7 | selector de certificado y su lista |
 | 8 | menú del «+» |
 | 10 | tira de pestañas |
 | 20 | velo de cualquier diálogo |
@@ -117,11 +118,11 @@ de pantalla.
 | Estado | Pestañas | Visor | Panel |
 | --- | --- | --- | --- |
 | Vacío | solo el «+» | zona de soltar y recientes | no se monta |
-| Buscando certificados | el documento | documento | editable; el botón dice «Buscando certificados…» con indicador, al 55 %. Encima, el diálogo de secreto si el almacén lo pide para listar |
+| Buscando certificados | el documento | documento | editable; el selector dice «Buscando certificados…» con indicador y «Firmar» está al 55 %. Encima, el diálogo de secreto si el almacén lo pide para listar |
 | Sin certificados | ídem | documento | «Sin certificados» arriba; el pie ofrece «Añadir un certificado…» y «Volver a buscar» |
-| Sin certificado elegido | ídem | documento, sin firma visible: su interruptor está desactivado hasta elegir | «Elegir certificado ▾», un solo botón que abre la lista |
-| Listo | ídem | documento, con la firma visible si está encendida | «Firmar como <nombre> ▾» |
-| Certificados abiertos | ídem | ídem | la lista flota sobre el pie, hacia arriba |
+| Sin certificado elegido | ídem | documento, sin firma visible: su interruptor está desactivado hasta elegir | el selector dice «Elige un certificado» y «Firmar» está al 55 % |
+| Listo | ídem | documento, con la firma visible si está encendida | el selector con el certificado elegido, y «Firmar» |
+| Certificados abiertos | ídem | ídem | el buscador en el selector y la lista hacia abajo, flotando sobre el panel |
 | Pidiendo el secreto / secreto incorrecto | ídem | bajo el velo | bajo el velo |
 | Firmando | ídem | bajo el velo, hoja al 45 % | bajo el velo; el diálogo de progreso encima |
 | Firmado | la pestaña pasa a `…-firmado.pdf` con ✓ | documento firmado | «Firmado a las 11:04» y el resumen; el pie ofrece abrir el PDF, la carpeta o volver a firmar |
@@ -161,8 +162,15 @@ estado del panel**, como firmado: lo que pasó y que el documento sigue intacto
 arriba, «Reintentar» en el pie, sin que el pie crezca.
 
 **Se borró «Documento cargado, sin certificado»**: el certificado se elige en el
-botón de firmar, y la firma visible ya no depende de él.
+panel, y la firma visible ya no depende de él.
+
+**El certificado se elige en un selector al principio del panel, separado del
+botón de firmar** (27/09/2026), como en la ventana de sede. Sustituye al botón
+partido de V4 D: quien pulsaba «Firmar como…» en lugar de la flecha firmaba con
+un certificado que no quería. El detalle y el resto de lo que se decidió están
+en [panel-de-firma.md](panel-de-firma.md#certificado).
 
 Validado en el lienzo
 [Autofirma de escritorio en Rust](https://claude.ai/design/p/c0ddbfa7-0982-498f-8f8c-8e2f8f0c6132),
-página **Recorrido de firma**, artboard `Main`, el 25/09/2026.
+página **Recorrido de firma**, artboard `Main`, el 25/09/2026; el selector de
+certificado, el 27/09/2026.

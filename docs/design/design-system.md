@@ -320,8 +320,9 @@ de la ventana de sede— **se ve entero aunque sobresalga**. No hay clase propia
 el bundle: es una regla de colocación, y son cuatro puntos.
 
 1. **Ningún ancestro puede recortarlo.** Flota por encima de todo —del panel que
-   lo contiene, del pie, del diálogo y de la propia ventana— y sale del modal si
-   hace falta.
+   lo contiene, del pie y del diálogo— y sale del modal si hace falta. **La
+   ventana es el techo**: en Tauri un desplegable no puede salir de ella, así
+   que el disparador se coloca donde la lista tenga sitio.
 2. **El alto de la lista no se recorta para que quepa.** Si no cabe, sobresale.
    Bajar el `max-height` de la lista para que entre en la ventana es mutilar el
    componente para tapar el fallo real.
@@ -335,8 +336,9 @@ el bundle: es una regla de colocación, y son cuatro puntos.
 El defecto que dio pie a la regla fue real dos veces: el `overflow: auto` de la
 columna del panel de firma cortaba la lista de certificados justo donde empezaba
 el pie, y un `overflow: hidden` en el cuerpo de la ventana de sede hacía lo
-mismo con la suya. La lista del botón «Firmar como» se abre hacia arriba desde el
-pie y **cuelga del panel, no de la zona que se desliza**, por la misma razón.
+mismo con la suya. El selector de certificado del panel de firma va arriba del
+todo y se abre hacia abajo, que es donde la ventana le deja sitio; como vive en
+la zona que se desliza, su lista sale por el portal del punto 4.
 
 ### Ruta de destino
 

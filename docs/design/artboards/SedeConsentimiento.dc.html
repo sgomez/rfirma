@@ -134,42 +134,44 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
         <p class="rf-title" style="flex:none;font-size:15px;line-height:1.35"><strong>Una página sin identificar</strong>{{peticion}}</p>
       </sc-if>
 
-      <div class="rf-stack rf-gap-xs" style="flex:none">
+      <div class="rf-stack" style="flex:none;gap:6px">
         <sc-if value="{{hayEtiquetaCert}}" hint-placeholder-val="{{true}}">
-          <p class="rf-label" style="letter-spacing:.6px;text-transform:uppercase">{{etiquetaCert}}</p>
+          <span class="rf-label">Certificado</span>
         </sc-if>
         <div style="anchor-name:--rf-cert">
-          <button type="button" style="display:flex;align-items:center;gap:var(--rf-space-xs);width:100%;text-align:left;padding:var(--rf-space-sm);background:var(--rf-surface);color:var(--rf-text);border:1px solid var(--rf-border-strong);border-radius:var(--rf-radius-md);font-family:inherit;cursor:pointer" onClick="{{alternar}}">
-            <span style="display:flex;flex:none;color:var(--rf-text-muted)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="9" r="5"/><path d="M8.5 13.5 7 21l5-2.5L17 21l-1.5-7.5"/></svg></span>
-            <sc-if value="{{elegido}}" hint-placeholder-val="{{true}}">
-              <span class="rf-stack" style="gap:6px;flex:1;min-width:0">
-                <span class="rf-title" style="font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{titular}}</span>
-                <span class="rf-body rf-text-muted" style="line-height:1.35">{{linea}}</span>
-              </span>
-            </sc-if>
-            <sc-if value="{{noElegido}}" hint-placeholder-val="{{false}}">
-              <span class="rf-body" style="flex:1;font-weight:600">Elegir certificado</span>
-            </sc-if>
-            <span style="{{estiloFlecha}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
-          </button>
+          <sc-if value="{{cerrado}}" hint-placeholder-val="{{true}}">
+            <button type="button" onClick="{{alternar}}" style="display:flex;align-items:center;gap:10px;width:100%;min-height:52px;padding:6px 12px;border:1px solid var(--rf-border-strong);border-radius:var(--rf-radius-md);background:var(--rf-bg);color:var(--rf-text);font-family:inherit;text-align:left;cursor:pointer">
+              <sc-if value="{{elegido}}" hint-placeholder-val="{{true}}">
+                <span class="rf-stack" style="gap:4px;flex:1;min-width:0">
+                  <span style="font-size:14px;font-weight:600;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{selL1}}</span>
+                  <span class="rf-body rf-text-muted" style="line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{linea}}</span>
+                </span>
+              </sc-if>
+              <sc-if value="{{noElegido}}" hint-placeholder-val="{{false}}">
+                <span class="rf-text-muted" style="flex:1;font-size:14px">Elige un certificado</span>
+              </sc-if>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none;color:var(--rf-text-muted)"><path d="M6 9l6 6 6-6"></path></svg>
+            </button>
+          </sc-if>
           <sc-if value="{{abierto}}" hint-placeholder-val="{{false}}">
-            <div class="rf-stack" style="position:absolute;position-anchor:--rf-cert;top:anchor(bottom);left:anchor(left);width:470px;width:anchor-size(width);margin-top:4px;box-sizing:border-box;max-height:232px;overflow-y:auto;z-index:6;padding:6px;gap:2px;
+            <div class="rf-row" style="gap:8px;min-height:52px;padding:0 12px;border:2px solid var(--rf-primary);border-radius:var(--rf-radius-md);background:var(--rf-bg)">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="flex:none;color:var(--rf-text-muted)"><circle cx="11" cy="11" r="6"></circle><path d="M20 20l-4.5-4.5"></path></svg>
+              <input autoFocus="{{true}}" value="{{q}}" onChange="{{escribir}}" onKeyDown="{{tecla}}" placeholder="Nombre, empresa, NIF o almacén" style="flex:1;min-width:0;border:none;outline:none;background:transparent;color:var(--rf-text);font-family:inherit;font-size:14px;padding:0">
+            </div>
+            <div class="rf-stack" style="position:absolute;position-anchor:--rf-cert;top:anchor(bottom);left:anchor(left);width:472px;width:anchor-size(width);margin-top:4px;box-sizing:border-box;max-height:300px;overflow-y:auto;z-index:6;padding:6px;gap:2px;
               border-radius:var(--rf-radius-lg);border:1px solid var(--rf-border-subtle);background:var(--rf-bg);box-shadow:var(--rf-shadow-elevated)">
+              <sc-if value="{{hayCuenta}}" hint-placeholder-val="{{false}}"><span class="rf-body rf-text-muted" style="padding:8px 10px 6px">{{cuenta}}</span></sc-if>
+              <sc-if value="{{vacio}}" hint-placeholder-val="{{false}}"><span class="rf-body rf-text-muted" style="padding:12px 10px;line-height:1.4">Ningún certificado coincide</span></sc-if>
               <sc-for list="{{certificados}}" as="c" hint-placeholder-count="4">
-                <sc-if value="{{ c.hayGrupo }}" hint-placeholder-val="{{ false }}">
-                  <span class="rf-label" style="flex:none;padding:8px 12px 2px;letter-spacing:.6px;text-transform:uppercase">{{ c.grupo }}</span>
-                </sc-if>
+                <sc-if value="{{ c.hayGrupo }}" hint-placeholder-val="{{ false }}"><span class="rf-label" style="flex:none;padding:8px 10px 4px;letter-spacing:.6px;text-transform:uppercase">{{ c.grupo }}</span></sc-if>
                 <div class="rf-row" title="{{ c.titulo }}" style="{{ c.estilo }}" onClick="{{ c.elegir }}">
-                  <div class="rf-stack" style="gap:3px;flex:1;min-width:0">
-                    <span style="font-size:14px;font-weight:600;line-height:1.35;overflow-wrap:anywhere">{{ c.nombre }}</span>
-                    <span class="rf-body rf-text-muted" style="line-height:1.3">{{ c.pie }}</span>
-                    <sc-if value="{{ c.motivo }}" hint-placeholder-val="{{ false }}">
-                      <span class="rf-body" style="line-height:1.3;font-weight:700">{{ c.motivo }}</span>
-                    </sc-if>
+                  <div class="rf-stack" style="gap:4px;flex:1;min-width:0">
+                    <span style="font-size:13px;font-weight:600;line-height:1.3;{{ c.estiloNombre }}">{{ c.l1 }}</span>
+                    <span class="rf-body" style="line-height:1.35">{{ c.l2 }}</span>
+                    <span class="rf-row" style="gap:4px;flex-wrap:wrap"><sc-for list="{{ c.almacenes }}" as="a" hint-placeholder-count="1"><span class="rf-badge" style="padding:2px 6px;font-size:11px">{{ a }}</span></sc-for><sc-if value="{{ c.hayCaduca }}" hint-placeholder-val="{{ true }}"><span class="rf-body rf-text-muted" style="line-height:1.35;margin-left:4px">{{ c.caduca }}</span></sc-if></span>
+                    <sc-if value="{{ c.hayMotivo }}" hint-placeholder-val="{{ false }}"><span class="rf-row" style="gap:6px"><sc-if value="{{ c.caducado }}" hint-placeholder-val="{{ false }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg></sc-if><sc-if value="{{ c.revocado }}" hint-placeholder-val="{{ false }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><circle cx="12" cy="12" r="9"></circle><path d="M5.6 18.4 18.4 5.6"></path></svg></sc-if><span class="rf-body" style="font-weight:700;line-height:1.3">{{ c.motivo }}</span></span></sc-if>
                   </div>
-                  <sc-if value="{{ c.elegido }}" hint-placeholder-val="{{ false }}">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
-                  </sc-if>
+                  <sc-if value="{{ c.elegido }}" hint-placeholder-val="{{ false }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></sc-if>
                 </div>
               </sc-for>
             </div>
@@ -251,18 +253,27 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
 
 </div>
 </x-dc>
-<script data-dc-script data-props='{"tema": {"editor": "enum", "options": ["light", "dark"], "default": "light", "section": "Tema"}, "forma": {"editor": "enum", "options": ["hoy · selector de certificado", "confirmacion"], "default": "confirmacion", "section": "Forma del consentimiento"}, "situacion": {"editor": "enum", "options": ["un certificado", "varios acotados por la sede", "entregar identidad · selectcert", "PDF sin titulo · sin origen"], "default": "un certificado", "section": "Situacion"}, "firmasPrevias": {"editor": "enum", "options": ["ninguna", "1 · valida", "varias · todas validas", "certificado caducado", "firma longeva · certificado caducado", "firma rota · no corresponde con los datos", "firma rota · danada (1 firma)", "no se puede validar", "cambio tras la ultima firma", "ya la firmaste tu · mismo certificado", "ya la firmaste tu · certificado renovado", "todo a la vez"], "default": "ninguna", "section": "Firmas previas"}, "verFirmas": {"editor": "enum", "options": ["plegado", "desplegado"], "default": "plegado", "section": "Firmas previas"}, "desplegable": {"editor": "enum", "options": ["cerrado", "abierto"], "default": "cerrado", "section": "Certificados"}, "origen": {"editor": "enum", "options": ["con origen", "sin origen"], "default": "con origen", "section": "Origen"}, "lote": {"editor": "enum", "options": ["uno", "varios"], "default": "uno", "section": "Documentos (fuera de la v0.5)"}, "$preview": {"width": 720, "height": 600}}'>
+<script type="text/x-dc" data-dc-script data-props='{"tema": {"editor": "enum", "options": ["light", "dark"], "default": "light", "section": "Tema"}, "forma": {"editor": "enum", "options": ["hoy · selector de certificado", "confirmacion"], "default": "confirmacion", "section": "Forma del consentimiento"}, "situacion": {"editor": "enum", "options": ["un certificado", "varios acotados por la sede", "entregar identidad · selectcert", "PDF sin titulo · sin origen"], "default": "un certificado", "section": "Situacion"}, "firmasPrevias": {"editor": "enum", "options": ["ninguna", "1 · valida", "varias · todas validas", "certificado caducado", "firma longeva · certificado caducado", "firma rota · no corresponde con los datos", "firma rota · danada (1 firma)", "no se puede validar", "cambio tras la ultima firma", "ya la firmaste tu · mismo certificado", "ya la firmaste tu · certificado renovado", "todo a la vez"], "default": "ninguna", "section": "Firmas previas"}, "verFirmas": {"editor": "enum", "options": ["plegado", "desplegado"], "default": "plegado", "section": "Firmas previas"}, "desplegable": {"editor": "enum", "options": ["cerrado", "abierto"], "default": "cerrado", "section": "Certificados"}, "origen": {"editor": "enum", "options": ["con origen", "sin origen"], "default": "con origen", "section": "Origen"}, "lote": {"editor": "enum", "options": ["uno", "varios"], "default": "uno", "section": "Documentos (fuera de la v0.5)"}, "$preview": {"width": 720, "height": 600}}'>
 
 // La fila del desplegable, COPIADA DE la lista flotante de certificados de `Main`:
 // mismo relleno, mismo fondo del elegido, mismos encabezados Disponibles / No
 // utilizables y misma atenuacion para la que no se puede elegir.
-const FILA = "flex:none;gap:12px;padding:10px 12px;border-radius:var(--rf-radius-md);";
+const FILA = "flex:none;gap:12px;padding:10px;border-radius:var(--rf-radius-md);";
 
+const REFORMAS = { nombre: "Reformas Sánchez y Asociados SL", nif: "B87654321" };
 const TODOS = [
-  { id: 1, titular: "ADA LOVELACE BYRON", dni: "99999999R", emisor: "AC FNMT Usuarios", almacen: "Instalado en rFirma", caduca: "Caduca en 03/2028", aviso: "" },
-  { id: 2, titular: "GRACE HOPPER MURRAY", dni: "88888888T", emisor: "AC Representación", almacen: "Chrome", caduca: "Caduca en 06/2027", aviso: "" },
-  { id: 3, titular: "ALAN TURING MATHISON", dni: "77777777P", emisor: "AC FNMT Usuarios", almacen: "Firefox", caduca: "", aviso: "Caducó el 3 de marzo de 2020" }
+  { id: 1, titular: "María Sánchez Ortega", dni: "***5678**", emisor: "AC FNMT Usuarios", almacenes: ["Firefox", "Chrome"], caduca: "Caduca en 03/2028", aviso: "" },
+  { id: 2, titular: "María Sánchez Ortega", dni: "***5678**", rep: REFORMAS, emisor: "AC Representación", almacenes: ["Instalado en rFirma", "Windows"], caduca: "Caduca en 06/2027", aviso: "" },
+  { id: 3, titular: "María Sánchez Ortega", dni: "***5678**", emisor: "AC FNMT Usuarios", almacenes: ["Firefox"], caduca: "", aviso: "Caducó el 3 de marzo de 2025", tipo: "caducado" },
+  { id: 4, titular: "María Sánchez Ortega", dni: "***5678**", rep: REFORMAS, emisor: "AC Representación", almacenes: ["Chrome"], caduca: "", aviso: "Revocado el 12 de enero de 2026", tipo: "revocado" }
 ];
+const une = function (a) { return a.length === 1 ? a[0] : a.slice(0, -1).join(", ") + " y " + a[a.length - 1]; };
+// «Empresa primero», igual que en Main.
+const lineas = function (c) {
+  return c.rep
+    ? { l1: c.rep.nombre, l2: c.titular + ", representante · " + c.rep.nif, corto: c.titular + ", representante" }
+    : { l1: c.titular, l2: "A título personal · " + c.dni, corto: "A título personal · " + c.dni };
+};
 
 class Component extends DCLogic {
 
@@ -433,22 +444,28 @@ class Component extends DCLogic {
 
     const self = this;
     const poner = function (cambio) {
-      self.setState(Object.assign({ clave: clave, abierto: abierto, desplegado: desplegado, elegidoId: elegidoId }, cambio));
+      self.setState(Object.assign({ clave: clave, abierto: abierto, desplegado: desplegado, elegidoId: elegidoId, q: s.q || "" }, cambio));
     };
-    const certificados = visibles.map(function (c, indice) {
+    const q = (s.q || "").trim().toLowerCase();
+    const filtrados = visibles.filter(function (c) {
+      if (!q) { return true; }
+      return [c.titular, c.dni, c.emisor, c.rep ? c.rep.nombre + " " + c.rep.nif : "personal"].concat(c.almacenes).join(" ").toLowerCase().indexOf(q) >= 0;
+    });
+    const certificados = filtrados.map(function (c, indice) {
       const inutil = Boolean(c.aviso);
-      const anterior = indice > 0 ? visibles[indice - 1] : null;
+      const anterior = indice > 0 ? filtrados[indice - 1] : null;
+      const l = lineas(c);
       return {
         hayGrupo: visibles.length > 1 && (indice === 0 || Boolean(anterior.aviso) !== inutil),
-        grupo: inutil ? "No utilizables" : "Disponibles",
-        nombre: c.titular,
-        pie: c.emisor + " · " + c.almacen + (c.caduca ? " · " + c.caduca : ""),
-        motivo: c.aviso,
-        titulo: inutil ? c.aviso : c.titular,
+        grupo: inutil ? "No se pueden usar" : "Disponibles",
+        l1: l.l1, l2: l.l2, almacenes: c.almacenes, caduca: c.caduca, hayCaduca: Boolean(c.caduca),
+        hayMotivo: inutil, motivo: c.aviso, caducado: c.tipo === "caducado", revocado: c.tipo === "revocado",
+        titulo: inutil ? c.aviso : "Emitido por " + c.emisor + (c.almacenes.length > 1 ? " · el mismo certificado en " + une(c.almacenes) : ""),
+        estiloNombre: inutil ? "color:var(--rf-text-muted)" : "",
         elegido: c.id === elegidoId,
         estilo: FILA + (c.id === elegidoId ? "background:var(--rf-surface);" : "")
-          + (inutil ? "opacity:.45;cursor:not-allowed;" : "cursor:pointer;"),
-        elegir: inutil ? function () {} : function () { poner({ abierto: false, elegidoId: c.id }); }
+          + (inutil ? "cursor:not-allowed;" : "cursor:pointer;"),
+        elegir: inutil ? function () {} : function () { poner({ abierto: false, elegidoId: c.id, q: "" }); }
       };
     });
 
@@ -482,11 +499,14 @@ class Component extends DCLogic {
       certificados: certificados,
       elegido: Boolean(elegido),
       noElegido: !elegido,
-      titular: elegido ? elegido.titular : "",
-      linea: elegido ? elegido.dni + " · Emitido por " + elegido.emisor : "",
-      estiloFlecha: "display:flex;flex:none;color:var(--rf-text-muted)" +
-        (abierto ? ";transform:rotate(180deg)" : ""),
+      cerrado: !abierto,
+      selL1: elegido ? lineas(elegido).l1 : "",
+      linea: elegido ? lineas(elegido).corto : "",
       alternar: function () { poner({ abierto: !abierto }); },
+      q: s.q || "",
+      escribir: function (e) { poner({ q: e.target.value }); },
+      tecla: function (e) { if (e.key === "Escape") { poner({ abierto: false, q: "" }); } },
+      hayCuenta: Boolean(q) && filtrados.length > 0, cuenta: filtrados.length + " de " + visibles.length, vacio: filtrados.length === 0,
 
       hayAcotado: esConfirmacion && esVarios,
 
