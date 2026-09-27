@@ -46,12 +46,17 @@ Todo pasa por `just`, que es el único punto de entrada del repositorio
 
 ```bash
 just bootstrap   # dependencias de AutoFirma en ~/.m2 (no estan en Maven Central)
-just native      # librfirma_crypto.so con GraalVM CE 25; tarda minutos
+just native      # librfirma_crypto.so (rfirma_crypto.dll en Windows) con GraalVM CE 25; tarda minutos
 just dev         # levanta la aplicacion contra esa libreria
 ```
 
 `just tools` comprueba las herramientas y falla nombrando la que falte. `just
 check` es lo mismo que ejecuta el CI.
+
+En Windows las recetas se lanzan desde Git Bash, con GraalVM en `GRAALVM_HOME`
+o `JAVA_HOME`, las Build Tools de Visual Studio y Strawberry Perl; la
+aplicación de escritorio aún está a medias
+([ADR-0035](docs/adr/0035-windows-como-segunda-plataforma-dependencias-por-target-y-adaptadores-no-disponibles.md)).
 
 `just dev` **no** construye la librería nativa: si falta, falla diciendo que
 ejecutes `just native`. Es deliberado — `native-image` tarda minutos y no debe

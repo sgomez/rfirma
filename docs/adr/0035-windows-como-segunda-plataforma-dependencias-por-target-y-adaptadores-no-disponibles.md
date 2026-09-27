@@ -58,6 +58,35 @@ sin cambios. En Windows no encuentran sus bibliotecas y fallan en tiempo de ejec
 Las pruebas intrínsecamente de Unix (enlaces simbólicos, `fork`, `flock`, `OsString` no UTF-8)
 se marcan con `cfg(unix)`, no se borran.
 
+## Las recetas corren en Git Bash
+
+El `justfile` es el mismo en las dos plataformas. En Windows sus recetas corren en el `bash.exe`
+de Git for Windows, fijado por ruta absoluta en `windows-shell`: buscado por el `PATH`, Windows
+encontraría antes el `bash.exe` de WSL. Las recetas con shebang necesitan además `cygpath`, así
+que `just` se lanza desde Git Bash, no desde PowerShell ni desde cmd.
+
+La raíz del repositorio se toma con barras normales (`root`), porque `bash` se come las
+invertidas de `justfile_directory()`. GraalVM se busca en `GRAALVM_HOME` y, en Windows, en
+`JAVA_HOME`, que es donde lo deja su instalador; en Linux sigue la ruta de SDKMAN. `just tools`
+comprueba en cada sistema lo suyo: en Windows, `cl.exe` por `vswhere`, el runtime de WebView2 y
+un Perl nativo para OpenSSL, y no pide ni las bibliotecas del WebView de Linux, ni softhsm, ni
+NSS; gettext pasa a aviso porque solo lo usan `just po` y el carril del CI.
+
+## La biblioteca nativa se llama como manda la plataforma
+
+`librfirma_crypto.so` en Linux y `rfirma_crypto.dll` en Windows. Rust compone el nombre con
+`DLL_PREFIX` y `DLL_SUFFIX` de `std` (`library_file`), sin `cfg`; el `justfile` hace lo mismo
+en `native_lib_name`. Se busca en los mismos sitios del ADR-0004: `RFIRMA_LIB_DIR` y
+`../lib/rfirma` junto al ejecutable.
+
+`native-image` sigue construyendo con las banderas de `native-image.properties`, que no cambian,
+así que en Windows emite `librfirma_crypto.dll`: `just native` la instala renombrada. El nombre
+del fichero no lo lee nadie dentro de la imagen, y los trece símbolos que resuelve Rust salen
+exportados igual. Como en Linux, emite al lado los auxiliares de AWT (`awt.dll`, `java.dll`,
+`jvm.dll`, `lcms.dll`…), la `.lib` de importación y las cabeceras, y no se copia ninguno: la
+invariante de un solo fichero del ADR-0012 vale igual. La `.dll` solo importa bibliotecas del
+sistema y el runtime de Visual C++.
+
 ## Considered Options
 
 **OpenSSL del sistema en Windows** (`OPENSSL_DIR`, vcpkg): deja el `Cargo.lock` intacto, pero
@@ -67,12 +96,25 @@ porque la construcción deja de ser reproducible con solo `cargo`.
 **Sustituir `openssl` por crates de Rust puro**: reescribe código que en Linux funciona. Queda
 fuera de una fase que solo busca compilar.
 
+**Pasar `-o rfirma_crypto` a `native-image` en Windows**: evita renombrar, pero devuelve banderas
+sueltas al `justfile`, y `native-image.properties` es el único sitio de las banderas de la imagen.
+
+**Recetas duplicadas con `[windows]` y `[linux]`**, o PowerShell como shell de Windows: dos
+versiones de cada receta que envejecen por separado. Git Bash ya está en cualquier equipo que
+tenga Git, y los scripts de `scripts/` son de `bash`.
+
 **Un alias de `cfg` desde `build.rs`** (`cfg(gtk_desktop)`) para no tocar la guarda: esconde el
 sistema operativo tras un nombre que la guarda no ve. Se descartó por eso mismo.
 
 ## Consequences
 
 - `tauri-build` exige en Windows `icons/icon.ico`; se empaqueta con los PNG que ya existían.
-- Las recetas del `justfile` siguen suponiendo Linux, y la librería nativa se sigue llamando
-  `librfirma_crypto.so`: cargar la `.dll` es de la fase siguiente.
+- `tauri-build` solo pone el manifiesto de Common Controls v6 al binario, y los ejecutables de
+  prueba que enlazan Tauri mueren al arrancar con `STATUS_ENTRYPOINT_NOT_FOUND`. En Windows,
+  `build.rs` enlaza `windows-app-manifest.xml` en todo lo que se enlaza, y por eso está en
+  `AUTHORISED_SITES`.
+- `just tools`, `just bootstrap`, `just native`, `just dev` y `just fmt` funcionan en Windows;
+  el resto de recetas (`check`, `flatpak`, `bundle`, `certs`…) sigue siendo de Linux.
+- En Windows la aplicación busca la `.dll` en `../lib/rfirma` junto al ejecutable, igual que en
+  Linux; dónde la deje un instalador de Windows se decide con el instalador.
 - `cargo test` en Windows no corre las pruebas de grada B y C que necesitan softhsm o NSS.
