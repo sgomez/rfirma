@@ -342,6 +342,19 @@ fn names_of(der: &[u8]) -> (String, String) {
     )
 }
 
+/// El PIN del Almacén de rFirma como cadena C, o el error si no es UTF-8 o lleva un cero.
+fn store_pin(pin: &ProtectedSecret) -> Result<CString, TokenError> {
+    let pin = pin
+        .as_str()
+        .map_err(|_| TokenError::new(Situation::IncorrectPin, "el PIN no es UTF-8 valido"))?;
+    CString::new(pin).map_err(|_| {
+        TokenError::new(
+            Situation::ModuleNotFound,
+            "el PIN del Almacen de rFirma lleva un cero dentro",
+        )
+    })
+}
+
 /// Importa un fichero PKCS#12 en el Almacén de rFirma, creándolo con `pin` si todavía no existe.
 #[expect(clippy::too_many_lines)]
 pub fn import_pkcs12(
@@ -412,15 +425,7 @@ pub fn import_pkcs12(
             "la ruta del almacen lleva un cero dentro",
         )
     })?;
-    let pin = pin
-        .as_str()
-        .map_err(|_| TokenError::new(Situation::IncorrectPin, "el PIN no es UTF-8 valido"))?;
-    let pin = CString::new(pin).map_err(|_| {
-        TokenError::new(
-            Situation::ModuleNotFound,
-            "el PIN del Almacen de rFirma lleva un cero dentro",
-        )
-    })?;
+    let pin = store_pin(pin)?;
     let mut secret = Password {
         bytes: bmp_string(password),
     };
