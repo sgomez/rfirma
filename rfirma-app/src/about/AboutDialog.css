@@ -1,32 +1,51 @@
-/*
- * Acerca de rFirma (docs/design/acerca-de.md): un `.rf-dialog` de 460 px sobre
- * `.rf-scrim`, en cinco bloques.
- *
- * El aviso de independencia no lleva regla propia a propósito: es un párrafo
- * como los demás, y darle borde o fondo sería enmarcarlo como alarma.
- */
+/* Acerca de rFirma (docs/design/acerca-de.md): cabecera, ficha técnica, aviso y pie. */
 
 .about {
   width: 460px;
   max-width: 460px;
-  gap: 12px;
-  padding: var(--rf-space-sm);
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.about__header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rf-space-sm);
+  padding: var(--rf-space-md) var(--rf-space-md) 0;
 }
 
 .about__identity {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  align-items: baseline;
+  gap: var(--rf-space-sm);
 }
 
-/* 32 px, no los 48 plenos de `.rf-heading`: a toda plana el nombre llenaba
-   medio diálogo. */
 .about__name {
+  flex: 1;
   font-size: 32px;
+  line-height: 1.1;
+  letter-spacing: -0.6px;
+}
+
+.about__version {
+  flex: none;
+  color: var(--rf-text);
 }
 
 .about__updateStatus {
-  align-items: center;
+  gap: 12px;
+  padding: 12px var(--rf-space-sm);
+  border: 1px solid var(--rf-border-subtle);
+  border-radius: var(--rf-radius-md);
+  background: var(--rf-surface);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.about__updateStatus--new {
+  border-color: var(--rf-border-strong);
+  font-weight: 700;
 }
 
 .about__upToDateIcon {
@@ -34,13 +53,75 @@
   color: var(--rf-text-muted);
 }
 
-.about__licenses {
+.about__facts {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: var(--rf-space-md);
+  row-gap: 14px;
+  margin: 0;
+  padding: var(--rf-space-md);
+}
+
+.about__facts dt {
+  line-height: 20px;
+}
+
+.about__facts dd {
+  margin: 0;
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.about__stackedFact {
   display: flex;
   flex-direction: column;
+  gap: 2px;
+}
+
+.about__sourceLink {
+  display: inline-flex;
+  align-items: center;
   gap: 6px;
-  margin: 0;
+  color: var(--rf-text);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--rf-border-strong);
+}
+
+.about__sourceLink:hover {
+  color: var(--rf-primary-hover);
+  text-decoration-color: currentColor;
+}
+
+.about__independence {
+  gap: 12px;
+  align-items: flex-start;
+  margin: 0 var(--rf-space-md) var(--rf-space-md);
+  padding-top: var(--rf-space-sm);
+  border-top: 1px solid var(--rf-border-subtle);
+}
+
+.about__independence .rf-prose {
+  flex: 1;
+  font-size: 13px;
+  color: var(--rf-text-muted);
+}
+
+.about__independenceIcon {
+  display: flex;
+  flex: none;
+  height: 21px;
+  align-items: center;
+  color: var(--rf-text-muted);
 }
 
 .about__footer {
   justify-content: flex-end;
+  padding: 12px var(--rf-space-md);
+  border-top: 1px solid var(--rf-border-subtle);
+  background: var(--rf-surface);
+}
+
+.about__close {
+  min-width: 96px;
 }

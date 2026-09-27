@@ -398,11 +398,22 @@ export function MoveIcon({ size = 14 }: IconProps) {
   );
 }
 
-/** La flecha de «hay una versión nueva», en *Acerca de*. */
-export function ArrowUpIcon({ size = 18 }: IconProps) {
+/** La flecha hacia arriba en un círculo: hay una versión nueva, en *Acerca de*. */
+export function NewVersionIcon({ size = 18 }: IconProps) {
   return (
-    <svg width={size} height={size} {...PEN} aria-hidden="true" focusable="false">
-      <path d="M12 20V6M6 12l6-6 6 6" />
+    <svg width={size} height={size} {...PEN} strokeWidth={1.6} aria-hidden="true" focusable="false">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 16V8M8.5 11.5 12 8l3.5 3.5" />
+    </svg>
+  );
+}
+
+/** La marca en un círculo: estás en la última versión, en *Acerca de*. */
+export function UpToDateIcon({ size = 18 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...PEN} strokeWidth={1.6} aria-hidden="true" focusable="false">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M8 12.5 11 15.5 16.5 9" />
     </svg>
   );
 }

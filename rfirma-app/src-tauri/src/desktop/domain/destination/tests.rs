@@ -25,6 +25,14 @@ fn repository_identifier_resolves_to_repository_url() {
 }
 
 #[test]
+fn source_code_identifier_resolves_to_the_github_repository() {
+    assert_eq!(
+        resolve_destination(SOURCE_CODE),
+        Some("https://github.com/sgomez/rfirma")
+    );
+}
+
+#[test]
 fn certificate_issuance_identifier_resolves_to_the_fnmt_url() {
     assert_eq!(
         resolve_destination(CERTIFICATE_ISSUANCE),

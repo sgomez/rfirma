@@ -1338,14 +1338,23 @@ msgstr ""
 msgid "about.repository"
 msgstr "github.com/sgomez/rfirma"
 
-msgid "about.licenses.view"
-msgstr "Veure les llicències"
+msgid "about.facts.license"
+msgstr "Llicència"
+
+msgid "about.facts.signsWith"
+msgstr "Signa amb"
+
+msgid "about.facts.sourceCode"
+msgstr "Codi font"
 
 msgid "about.licenses.rfirma"
-msgstr "rFirma: EUPL-1.2."
+msgstr "EUPL-1.2"
 
 msgid "about.licenses.afirma"
-msgstr "Biblioteques de Client @firma: GPL-2.0+ / EUPL-1.1."
+msgstr "Biblioteques del projecte Client @firma"
+
+msgid "about.licenses.afirmaTerms"
+msgstr "GPL-2.0+ / EUPL-1.1"
 
 msgid "setup.welcome.title"
 msgstr "Configurar rFirma"
