@@ -70,7 +70,10 @@ El usuario corrige esto en cada tanda; adelántate.
 
 ## 6. Publicar
 
-1. Redacta en el repositorio, en `docs/design/artboards/`.
+1. Redacta en el repositorio, en `docs/design/artboards/`. Antes de pisar un
+   artboard que ya existe, `get_file` y `diff` con la copia local fuera del
+   `<helmet>`: si difieren, el usuario lo retocó a mano; para y pide
+   `/canvas-pull` antes de subir nada.
 2. `./docs/design/artboards/comprueba.sh`.
 3. Sube con `DesignSync`: `list_files` → `finalize_plan` (con `writes` **y**
    `deletes`, obligatorio aunque vaya vacío) → `write_files` / `delete_files`.

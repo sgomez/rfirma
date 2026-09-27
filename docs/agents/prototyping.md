@@ -21,6 +21,25 @@ La rama **lógica** (`LOGIC.md`: máquinas de estado, flujo trifásico, errores 
 PKCS#11) **no** cambia: sigue siendo el fichero HTML único y local que describe
 la skill. El lienzo es para pantallas, no para simuladores.
 
+## Quién dibuja: el usuario en Claude Design
+
+Por defecto, **se dibuja y se itera en Claude Design**, donde se ve lo que se
+dibuja y se corrige señalando, y **se consolida en el repositorio con la skill
+`canvas-pull`**: trae los artboards, les pone el `<helmet>` de `_helmet.part`,
+escribe las fichas y abre la PR. Dibujar desde Claude Code, escribiendo HTML
+sin verlo y corrigiendo por texto, es lo que dejó en `canvas` su lista de «no
+veo nada».
+
+La skill `canvas` dibuja solo en dos casos:
+
+- **El dibujo sale del repositorio**: un issue, la spec o el código actual que
+  el agente tiene que leer para dibujar algo con sentido.
+- **Un cambio mecánico en muchos artboards**: el mismo texto o el mismo ajuste
+  en todas las pantallas.
+
+Aun así, en cuanto lo dibujado está en el proyecto, los retoques se hacen en
+Claude Design y se traen con `canvas-pull`.
+
 ## Granularidad: un canvas por caso de uso
 
 - **Un canvas = un caso de uso** (un flujo completo: "firmar un PDF con DNIe",
@@ -72,8 +91,10 @@ de más abajo. Comprueba con `list_files` antes de asumir nada.
    `docs/design/artboards/_helmet.part`, nunca de un `get_file` del proyecto**.
    La copia del proyecto se queda atrás y no hay nada allí que lo detecte: el
    02/09/2026 tres artboards entraron con dos tokens de sombra desfasados
-   porque se redactaron mirando al proyecto. La dirección es siempre
-   **repo → proyecto**.
+   porque se redactaron mirando al proyecto. La dirección del `<helmet>` es
+   siempre **repo → proyecto**. El cuerpo de un artboard retocado a mano en
+   Claude Design sí baja al repositorio, con la skill `canvas-pull`, que le
+   pone el `<helmet>` de `_helmet.part` y actualiza las fichas.
 2. **Transportar ficheros al proyecto**: herramienta `DesignSync` con el
    `projectId` de arriba. Orden obligatorio: `list_files` / `get_file` →
    `finalize_plan` (declarando writes y deletes) → `write_files`.

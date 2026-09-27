@@ -1,6 +1,6 @@
 ---
 name: canvas
-description: Prototipar una pantalla de rFirma en el lienzo de Claude Design y dejarla unificada. Úsala siempre que haya que dibujar, comparar o validar interfaz de este proyecto — incluida cualquier invocación desde prototype, grill-with-docs o wayfinder cuya rama sea UI.
+description: Prototipar interfaz de rFirma en el lienzo de Claude Design. Úsala cuando prototype, grill-with-docs o wayfinder lleguen a una rama de UI.
 ---
 
 # El lienzo de rFirma
@@ -12,6 +12,14 @@ dos sitios donde mirar la misma pantalla.
 
 `docs/agents/prototyping.md` es el contrato completo. Esta skill es el
 procedimiento, y **manda sobre cualquier instinto de crear algo nuevo**.
+
+## Antes de nada: quién dibuja
+
+Por defecto dibuja el usuario, en Claude Design (`docs/agents/prototyping.md`,
+«Quién dibuja»). Tú dibujas solo si el dibujo sale del repositorio —un issue,
+la spec, el código— o es el mismo cambio en muchos artboards. Si no es ninguno
+de los dos, díselo: que lo dibuje allí y lance `/canvas-pull` al terminar. Si
+lo es, sigue.
 
 ## El trabajo son tres fases, y dos de ellas no van aquí
 
@@ -84,7 +92,9 @@ Iterar sobre lo dibujado, con el usuario delante:
 5. **La copia del repo es la que se implementa.** Todo lo que se sube al
    proyecto se queda también en `docs/design/artboards/`, 1-1, porque de ahí
    sale la transcripción a JSX «fiel 1-1» y porque el repositorio es público.
-   La dirección es siempre **repo → proyecto**.
+   Lo que dibujas tú va **repo → proyecto**; lo que el usuario retoca a mano
+   en Claude Design se trae con `/canvas-pull`, y el `<helmet>` sale siempre
+   de `_helmet.part`.
 
 ## Lo que falta por definir
 
