@@ -270,7 +270,7 @@ solo aquí.
 `--rf-bg`. Arriba, a 14 px y peso 600; debajo, en `.rf-body rf-text-muted`; cada
 una en una sola línea con elipsis. Dice **el certificado elegido**:
 
-- Personal: el titular, y debajo «A título personal · ***9999**».
+- Personal: el titular, y debajo «A título personal · 00099990D».
 - De representante: la entidad, y debajo «Lucía Martín, representante».
 - Sin elegir: «Elige un certificado», en `--rf-text-muted`.
 - Buscando: el indicador y «Buscando certificados…».
@@ -285,7 +285,7 @@ mueven ([desplegable](design-system.md#desplegable)).
 **Cada fila**, con **empresa primero**:
 
 1. A 13 px y peso 600, el titular o, si es de representante, la entidad.
-2. En `.rf-body`: «A título personal · ***9999**», o «Lucía Martín,
+2. En `.rf-body`: «A título personal · 00099990D», o «Lucía Martín,
    representante · G12345678» con el NIF de la entidad.
 3. Una etiqueta `.rf-badge` de 11 px por almacén —«Firefox», «Chrome»,
    «Windows», «Instalado en rFirma», nunca una ruta— y la caducidad, «Caduca en
@@ -299,8 +299,8 @@ puede usar, el `title` es el motivo. El elegido lleva fondo `--rf-surface` y ✓
 
 - **Una fila por certificado.** El mismo certificado —el mismo número de serie—
   en varios almacenes es **una** fila con todas sus etiquetas.
-- **El DNI nunca en claro**: con la máscara de AutoFirma, la misma que la firma
-  visible pone en Firmante.
+- **El DNI en claro**: la lista no sale del ordenador. La máscara es solo de la
+  firma visible.
 - **Agrupada**: «Disponibles» y «No se pueden usar», y dentro de cada grupo
   orden alfabético por la primera línea con `localeCompare("es")`.
 - **Un certificado caducado o revocado se lista, dice por qué y no se deja
@@ -412,8 +412,10 @@ acuse es de un documento concreto: al cambiar de pestaña o cerrarla, se va.
   distinguir.
 - **El buscador es lo único nuevo**: gestorías y representantes manejan muchos
   certificados.
-- **El DNI no se pinta en claro** en el selector: lleva la misma máscara que la
-  firma visible.
+- **El DNI va en claro** en el selector, sin la máscara de la firma visible: el
+  listado no sale del ordenador y el número ya se ve en los almacenes del
+  sistema y de los navegadores; el texto de la firma visible, en cambio, viaja
+  dentro del documento.
 - **Sin cabecera de documento**: nombre en la pestaña, páginas en el visor. Su
   «27 páginas · 2,4 MB» no aportaba nada que no se viera.
 - **Modelos en lugar de casillas por dato.** La v0.3.1 tenía cinco casillas

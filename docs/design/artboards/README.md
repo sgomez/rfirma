@@ -802,7 +802,7 @@ Lo retocó el usuario a mano en Claude Design y se trajo con `/canvas-pull` el
 - **Las filas**, iguales en los dos: la entidad primero en los de representante,
   etiquetas de almacén, caducidad, el emisor en el `title`, grupos «Disponibles»
   / «No se pueden usar» con reloj o círculo tachado y el nombre en gris en lugar
-  de opacidad. Los datos de la demo son inventados, con el DNI ya enmascarado.
+  de opacidad. Los datos de la demo son inventados, con el DNI en claro.
 
 En `Main` la caja cerrada enseña siempre el primer certificado de la lista, sea
 cual sea el elegido: es un atajo de la demo, no una decisión.
@@ -811,7 +811,7 @@ Los cinco artboards que se dibujan sobre `Main` —`EstadoPaginasSinFirmaVisible
 `EstadoFirmarDeTodosModos`, `EstadoPin`, `EstadoPinIncorrecto` y
 `EstadoAcercaDe`— toman ese fondo: el selector cerrado arriba del panel y
 «Firmar» a secas, con los datos de `Main` (Lucía Martín Ortega, a título
-personal, DNI enmascarado) y los mismos estados —«Buscando certificados…» en la
+personal, DNI en claro) y los mismos estados —«Buscando certificados…» en la
 caja y «Firmar» al 55 % bajo el PIN que se pide antes de listar—. Los dos
 bloques salen de fragmentos compartidos; ver «Cómo leerlos».
 
@@ -819,3 +819,19 @@ El porqué está en las fichas
 [`panel-de-firma`](../panel-de-firma.md#decisiones),
 [`ventana-principal`](../ventana-principal.md) y
 [`ventana-de-sede`](../ventana-de-sede.md).
+
+## Lo que cambió con el DNI en claro
+
+El número de identidad del listado de certificados se enseña **en claro**: la
+caja cerrada del selector, sus filas, el buscador y la línea del titular del
+diálogo del PIN, que es el mismo dato que el desplegable. La lista no sale del
+ordenador y el número ya se ve en los almacenes del sistema y de los
+navegadores. Los datos de la demo pasan a DNI completos e inventados
+(«00099990D» para quien firma en `Main` y en los cinco artboards sobre `Main`,
+«00056780Q» en `SedeConsentimiento`), con las mismas cuatro cifras centrales
+que enseñaba la máscara.
+
+**La firma visible sigue enmascarada**: el Firmante del sello, la frase de
+Personalizada y la vista previa del recuadro llevan `MARTÍN ORTEGA LUCÍA -
+***9999**`, porque ese texto sale del ordenador dentro del documento. También
+la tarjeta «La tuya» del resumen, que lee la firma ya puesta.

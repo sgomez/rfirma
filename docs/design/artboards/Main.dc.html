@@ -770,19 +770,19 @@ class Component extends DCLogic {
       : { l1: c.titular, l2: "A título personal · " + c.dni, corto: "A título personal · " + c.dni };
   }
   listaCert(d) {
-    const p = d.titular, dni = "***9999**";
+    const p = d.titular, dni = "00099990D";
     const rep = d.extremo ? { nombre: "Fundación para la Investigación Biomédica del Hospital Universitario de Ejemplo", nif: "G12345678" }
       : { nombre: "Asociación Vecinal Ejemplo", nif: "G12345678" };
     return [
       { titular: p, dni: dni, emisor: d.emisor, caduca: d.caduca, almacenes: ["Firefox", "Chrome"], elegido: true },
       { titular: p, dni: dni, rep: rep, emisor: "AC Representación", caduca: "Caduca en 06/2027", almacenes: ["Instalado en rFirma", "Windows"] },
-      { titular: "Pedro Sanz Liébana", dni: "***1234**", emisor: "AC FNMT Usuarios", caduca: "Caduca en 10/2027", almacenes: ["Firefox"] },
+      { titular: "Pedro Sanz Liébana", dni: "00012340N", emisor: "AC FNMT Usuarios", caduca: "Caduca en 10/2027", almacenes: ["Firefox"] },
       { titular: p, dni: dni, emisor: d.emisor, almacenes: ["Firefox"], motivo: "Caducó el 3 de marzo de 2025", tipo: "caducado" },
-      { titular: "Ana Ruiz Gómez", dni: "***4321**", emisor: "AC FNMT Usuarios", caduca: "Caduca en 01/2028", almacenes: ["Chrome"] },
-      { titular: "Ana Ruiz Gómez", dni: "***4321**", rep: rep, emisor: "AC Representación", caduca: "Caduca en 05/2027", almacenes: ["Instalado en rFirma"] },
-      { titular: "Pedro Sanz Liébana", dni: "***1234**", rep: { nombre: "Talleres Sanz SA", nif: "A11223344" }, emisor: "AC Representación", almacenes: ["Chrome"], motivo: "Revocado el 12 de enero de 2026", tipo: "revocado" },
-      { titular: "Carmen Vidal Pons", dni: "***5555**", emisor: "AC FNMT Usuarios", caduca: "Caduca en 02/2028", almacenes: ["Windows"] },
-      { titular: "Jorge Alonso Ferrer", dni: "***7777**", emisor: "Camerfirma", caduca: "Caduca en 05/2027", almacenes: ["Windows"] }
+      { titular: "Ana Ruiz Gómez", dni: "00043210Q", emisor: "AC FNMT Usuarios", caduca: "Caduca en 01/2028", almacenes: ["Chrome"] },
+      { titular: "Ana Ruiz Gómez", dni: "00043210Q", rep: rep, emisor: "AC Representación", caduca: "Caduca en 05/2027", almacenes: ["Instalado en rFirma"] },
+      { titular: "Pedro Sanz Liébana", dni: "00012340N", rep: { nombre: "Talleres Sanz SA", nif: "A11223344" }, emisor: "AC Representación", almacenes: ["Chrome"], motivo: "Revocado el 12 de enero de 2026", tipo: "revocado" },
+      { titular: "Carmen Vidal Pons", dni: "00055550M", emisor: "AC FNMT Usuarios", caduca: "Caduca en 02/2028", almacenes: ["Windows"] },
+      { titular: "Jorge Alonso Ferrer", dni: "00077770F", emisor: "Camerfirma", caduca: "Caduca en 05/2027", almacenes: ["Windows"] }
     ];
   }
   certificados(d, cuantos, conCaducados, agrupado) {
