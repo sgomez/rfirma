@@ -31,10 +31,16 @@ Sobre el estilo, no:
 
 ## Tres fases, como en `/canvas`
 
-1. **Traer y leer el cambio** → [TRAER.md](TRAER.md), en un `Agent`
-   (`general-purpose`) con el prompt «lee `.claude/skills/canvas-pull/TRAER.md`
-   y ejecútalo» más los artboards que el usuario diga haber tocado, si los dice.
-   Devuelve, por artboard, qué cambió **en palabras de interfaz**, nunca HTML.
+Los subagentes no tienen `DesignSync`: bajar y subir es tuyo, como dice
+«Sincronizar es cosa tuya» en `.claude/skills/canvas/SKILL.md`.
+
+1. **Traer y leer el cambio.** Tú haces `list_files` y bajas a un directorio
+   temporal `canvas.json` y los artboards que el usuario diga haber tocado, o,
+   si no lo dice, todos los `.dc.html` que están en los dos sitios. Después,
+   [TRAER.md](TRAER.md) en un `Agent` (`general-purpose`) con el prompt «lee
+   `.claude/skills/canvas-pull/TRAER.md` y ejecútalo» más la ruta del
+   directorio y la lista de `list_files`. Devuelve, por artboard, qué cambió
+   **en palabras de interfaz**, nunca HTML.
 2. **Confirmar con el usuario**, en la sesión principal. Enséñale la lista y
    pregúntale **el porqué** de cada cambio que no se explique solo: el diff dice
    qué, y la ficha necesita por qué. De cinco en cinco como mucho, numeradas, con
@@ -42,15 +48,17 @@ Sobre el estilo, no:
    como dudoso: artboards nuevos, borrados y colores literales.
 3. **Consolidar** → otro `Agent` (`general-purpose`) con el prompt «lee
    `.claude/skills/canvas/UNIFICAR.md` y ejecuta sus apartados 2 a 5» más la
-   lista confirmada de cambios y sus porqués, y dos añadidos:
+   lista confirmada de cambios y sus porqués, la lista de `list_files`, y
+   estos añadidos:
    - Si el usuario creó en Claude Design un artboard para una pantalla que ya
      tenía el suyo, ejecuta también el apartado 1, fundir.
-   - Antes de cerrar, **sube de vuelta** los artboards traídos, ya con el
-     `<helmet>` de `_helmet.part`, para que proyecto y repositorio queden
-     idénticos: `DesignSync` con `finalize_plan` solo sobre esas rutas y
-     `write_files` con `localPath`.
    - En la PR, un apartado «Lo que falta en la aplicación»: qué debe cambiar en
      `rfirma-app/src/` para seguir al artboard. La skill no toca código.
+
+Al volver, **sube tú** los artboards traídos, ya con el `<helmet>` de
+`_helmet.part`, y lo que devuelva la fase 3, para que proyecto y repositorio
+queden idénticos. En la subida de este flujo no hay comprobación de retoque a
+mano: lo retocado es justo lo que se ha traído.
 
 La fase 2 no se delega: el porqué solo lo sabe el usuario.
 

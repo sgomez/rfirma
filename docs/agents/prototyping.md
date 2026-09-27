@@ -97,7 +97,8 @@ de más abajo. Comprueba con `list_files` antes de asumir nada.
    pone el `<helmet>` de `_helmet.part` y actualiza las fichas.
 2. **Transportar ficheros al proyecto**: herramienta `DesignSync` con el
    `projectId` de arriba. Orden obligatorio: `list_files` / `get_file` →
-   `finalize_plan` (declarando writes y deletes) → `write_files`.
+   `finalize_plan` (declarando writes y deletes) → `write_files`. Solo desde
+   la sesión principal: los subagentes no tienen `DesignSync`.
 3. **Pasar `docs/design/artboards/comprueba.sh`** sobre la copia del repo, que
    verifica que todos llevan el `<helmet>` de `_helmet.part`. Compararlos entre
    sí no basta: trece ficheros de acuerdo entre ellos dan verde con el sistema
