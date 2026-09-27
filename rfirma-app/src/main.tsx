@@ -130,6 +130,7 @@ function RootView() {
         versions={tauriVersionCheck()}
         externalDestinations={externalDestinations}
         status={statusPort}
+        covered={!setupWizardSeen}
         onReady={(handle) => {
           appHandle.current = handle;
         }}
