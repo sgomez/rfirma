@@ -204,8 +204,6 @@ describe("groupCertificates", () => {
     expect(groupCertificates([])).toEqual({ available: [], unusable: [] });
   });
 
-  /** ID-06: dentro de cada grupo, el orden es por primera línea —la entidad
-   * para un representante—, no por titular. */
   it("sorts a representative certificate by its entity name, not its holder", () => {
     const zutanoRepresentsAcme = aCertificate({
       id: "a",

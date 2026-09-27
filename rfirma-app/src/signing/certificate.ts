@@ -96,7 +96,7 @@ export interface Certificate {
    * puede elegir a ciegas.
    */
   store: CertificateStoreClass;
-  /** Todos los almacenes donde está esta misma copia, por orden de preferencia (#1093). */
+  /** Todos los almacenes donde está esta misma copia, por orden de preferencia. */
   stores: readonly CertificateStoreClass[];
   status: CertificateStatus;
   /**
@@ -135,12 +135,12 @@ export function firstNameAndSurname(certificate: Certificate): string {
   return `${givenName} ${firstSurname}`;
 }
 
-/** Primera línea de la fila: la entidad si es de representante, el titular si es personal (ID-05). */
+/** Primera línea de la fila: la entidad si es de representante, el titular si es personal. */
 export function certificateHeadline(certificate: Certificate): string {
   return certificate.entityName ?? certificate.holderName;
 }
 
-/** Segunda línea de la fila, completa (ID-05). */
+/** Segunda línea de la fila, completa. */
 export function certificateSubtitle(certificate: Certificate, t: TFunction): string {
   return certificate.entityName != null
     ? t("panel.certificate.onBehalfOf", {
@@ -150,7 +150,7 @@ export function certificateSubtitle(certificate: Certificate, t: TFunction): str
     : t("panel.certificate.personalCapacity", { idNumber: certificate.idNumber });
 }
 
-/** Versión corta de la segunda línea, para la caja cerrada (ID-05). */
+/** Versión corta de la segunda línea, para la caja cerrada. */
 export function certificateCompactSubtitle(certificate: Certificate, t: TFunction): string {
   return certificate.entityName != null
     ? t("panel.certificate.onBehalfOfShort", { holder: certificate.holderName })
@@ -182,7 +182,7 @@ function byHeadlineThenStore(a: Certificate, b: Certificate): number {
 /**
  * Agrupa y ordena los certificados para el desplegable: los usables arriba,
  * los que no lo son abajo, y dentro de cada grupo alfabético por primera
- * línea —ID-06—, desempatando por almacén (ID-197). Es una función pura y sin
+ * línea, desempatando por almacén. Es una función pura y sin
  * locale implícito de sistema —el `Intl.Collator` fija «es»— para que el
  * orden no dependa de dónde corre la aplicación.
  */
