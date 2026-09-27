@@ -28,7 +28,6 @@ pub(crate) const REVOKED: &str = "FNMT-REVOCADO-99999999R";
 pub(crate) const TWIN: &str = "FNMT-GEMELO-99999999R";
 pub(crate) const TWIN_OF_THE_ACTIVE_KEY: u8 = 0x04;
 pub(crate) const TWIN_OF_THE_EXPIRED_KEY: u8 = 0x05;
-/// Certificado de representante de persona jurídica del kit (ID-13).
 pub(crate) const REPRESENTATIVE_LEGAL_ENTITY: &str = "FNMT-REPRESENTANTE-PJ";
 
 /// Bloque DER de SignedAttributes para firmar.
@@ -75,7 +74,10 @@ pub(crate) fn reference(label: &str) -> CertificateRef {
 pub(crate) fn certificate_with_cka_id(cka_id: u8) -> TokenCertificate {
     certificates()
         .into_iter()
-        .find(|certificate| certificate.reference().cka_id() == Some([cka_id].as_slice()))
+        .find(|certificate| {
+            certificate.reference().token_label() == TOKEN
+                && certificate.reference().cka_id() == Some([cka_id].as_slice())
+        })
         .unwrap_or_else(|| {
             panic!(
                 "el token {TOKEN} no tiene ningun certificado con CKA_ID {cka_id:02x}. \

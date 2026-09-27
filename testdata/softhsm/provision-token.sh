@@ -24,7 +24,7 @@
 #   id 01  FNMT-ACTIVO-ECC-99949991H clave + certificado  (camino feliz EC)
 #
 # En `rfirma-test-representative`, los tres perfiles de representacion del
-# kit, cada uno con su revocado (ID-13):
+# kit, cada uno con su revocado:
 #
 #   id 01  FNMT-REPRESENTANTE-PJ             clave + certificado  (persona juridica)
 #   id 02  FNMT-REPRESENTANTE-PJ-REVOCADO    clave + certificado
@@ -36,7 +36,7 @@
 # En `rfirma-test-representative-2`, solo el activo de persona
 # juridica, con el mismo CKA_ID y la misma etiqueta que en el token anterior:
 # el mismo certificado en dos almacenes distintos, para probar la agrupacion
-# «una fila por certificado» contra datos reales (ID-13).
+# «una fila por certificado» contra datos reales.
 #
 #   id 01  FNMT-REPRESENTANTE-PJ             clave + certificado
 #
