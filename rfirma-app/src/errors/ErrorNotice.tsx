@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AlertIcon, ExternalLinkIcon } from "../design-system/icons";
 import type { ExternalDestinationOpener } from "../desktop/externalDestination";
@@ -63,6 +63,12 @@ interface ErrorNoticeProps {
   externalDestinations?: ExternalDestinationOpener;
   /** Con este botón, el aviso ya no es solo informativo: además recarga la ventana. */
   onReload?: () => void;
+  /**
+   * Vacía el Almacén de rFirma, ofrecido solo con `keyringPinMissing`: el llavero
+   * perdió el PIN y sin él nadie puede saber si la base todavía sirve para algo
+   * (ADR-0034). Pide confirmación antes de llamarlo.
+   */
+  onEmptyStore?: () => void;
   /** El error boundary de cada ventana quiere el foco encima al aparecer; nadie más lo pide. */
   focusOnMount?: boolean;
   /**
@@ -98,11 +104,13 @@ export function ErrorNotice({
   onOpenHelp,
   externalDestinations,
   onReload,
+  onEmptyStore,
   focusOnMount,
   documentUnchanged,
 }: ErrorNoticeProps) {
   const { t } = useTranslation();
   const notice = useRef<HTMLDivElement>(null);
+  const [confirmingEmptyStore, setConfirmingEmptyStore] = useState(false);
 
   useEffect(() => {
     if (focusOnMount) notice.current?.focus();
@@ -116,6 +124,9 @@ export function ErrorNotice({
   const copyDetail = () => {
     if (technicalDetail !== undefined) void navigator.clipboard.writeText(technicalDetail);
   };
+
+  const offersToEmptyStore =
+    !documentUnchanged && situation === "keyringPinMissing" && onEmptyStore !== undefined;
 
   return (
     <div className="error-notice" role="alert" ref={notice} tabIndex={-1}>
@@ -149,7 +160,7 @@ export function ErrorNotice({
               {t("errors.copyDetail")}
             </button>
           )}
-          {!documentUnchanged && (hasHelpLink(situation) || onReload) && (
+          {!documentUnchanged && (hasHelpLink(situation) || onReload || offersToEmptyStore) && (
             <div className="rf-row rf-gap-xs error-notice__actions">
               {hasHelpLink(situation) && (
                 <button
@@ -166,6 +177,39 @@ export function ErrorNotice({
                   {t("errors.reload")}
                 </button>
               )}
+              {offersToEmptyStore &&
+                (confirmingEmptyStore ? (
+                  <>
+                    <span className="rf-body error-notice__empty-store-question">
+                      {t("errors.emptyStore.confirmQuestion")}
+                    </span>
+                    <button
+                      type="button"
+                      className="rf-btn rf-btn--ghost"
+                      onClick={() => setConfirmingEmptyStore(false)}
+                    >
+                      {t("actions.cancel")}
+                    </button>
+                    <button
+                      type="button"
+                      className="rf-btn rf-btn--primary"
+                      onClick={() => {
+                        setConfirmingEmptyStore(false);
+                        onEmptyStore?.();
+                      }}
+                    >
+                      {t("errors.emptyStore.confirmButton")}
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    className="rf-btn rf-btn--ghost error-notice__empty-store"
+                    onClick={() => setConfirmingEmptyStore(true)}
+                  >
+                    {t("errors.emptyStore.button")}
+                  </button>
+                ))}
             </div>
           )}
         </>

@@ -61,6 +61,16 @@ msgstr "Comentarios y ayuda"
 msgid "errors.reload"
 msgstr "Recargar la ventana"
 
+#. El botón que ofrece vaciar el Almacén de rFirma cuando el llavero perdió su PIN (ADR-0034).
+msgid "errors.emptyStore.button"
+msgstr "Vaciar el almacén"
+
+msgid "errors.emptyStore.confirmQuestion"
+msgstr "¿Seguro? Se perderán los certificados instalados, y no se puede deshacer."
+
+msgid "errors.emptyStore.confirmButton"
+msgstr "Sí, vaciarlo"
+
 #. El botón que copia el detalle técnico crudo del error de firma.
 msgid "errors.copyDetail"
 msgstr "Copiar detalle"
@@ -236,6 +246,15 @@ msgstr "El token no admite ese algoritmo de firma"
 msgid "errors.situations.mechanismNotOffered.body"
 msgstr "Prueba con otro certificado o pide a la sede que use SHA-256 con RSA."
 
+msgid "errors.situations.removalNotSupported.title"
+msgstr "Ese certificado no se puede quitar por separado"
+
+msgid "errors.situations.removalNotSupported.body"
+msgstr ""
+"El Almacén de rFirma es una única base compartida: quitarlo se llevaría "
+"también los demás certificados instalados. Todavía no hay forma de borrar "
+"solo uno."
+
 msgid "errors.situations.certificateUnreadable.title"
 msgstr "No hemos podido leer el certificado"
 
@@ -386,6 +405,23 @@ msgstr ""
 "Los documentos recientes y el certificado siguen guardados. Vuelve a "
 "intentarlo y, si sigue ocurriendo, adjunta el detalle técnico al informe del "
 "fallo."
+
+msgid "errors.situations.noKeyring.title"
+msgstr "No hemos podido acceder al llavero del escritorio"
+
+msgid "errors.situations.noKeyring.body"
+msgstr ""
+"rFirma necesita el llavero para guardar el certificado de forma protegida. "
+"Comprueba que tu escritorio tiene uno disponible, desbloquéalo si te lo "
+"pide, y vuelve a intentarlo."
+
+msgid "errors.situations.keyringPinMissing.title"
+msgstr "El llavero ha perdido el PIN del Almacén de rFirma"
+
+msgid "errors.situations.keyringPinMissing.body"
+msgstr ""
+"Sin ese PIN no podemos abrir el almacén que ya tenías. Ve a Preferencias → "
+"Certificados y vacíalo para volver a instalar tus certificados desde cero."
 
 #. Se enseña en un diálogo nativo antes de que exista ventana; no la lee i18next.
 msgid "errors.startup.homeUnknown"

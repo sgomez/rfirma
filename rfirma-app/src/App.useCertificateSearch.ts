@@ -58,6 +58,11 @@ export function useCertificateSearch(certificates: CertificateStore) {
     [certificates, lookForCertificates],
   );
 
+  const emptyStore = useCallback(async () => {
+    await certificates.emptyStore();
+    await lookForCertificates();
+  }, [certificates, lookForCertificates]);
+
   /**
    * Elegir un certificado del desplegable.
    *
@@ -80,6 +85,7 @@ export function useCertificateSearch(certificates: CertificateStore) {
     installed,
     installCertificate,
     removeCertificate,
+    emptyStore,
     chooseCertificate,
   };
 }

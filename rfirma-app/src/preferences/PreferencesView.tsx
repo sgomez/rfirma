@@ -52,6 +52,11 @@ interface PreferencesViewProps {
   onInstallCertificate: () => Promise<boolean>;
   /** Quita un `.p12` instalado, por el asa de su fila. */
   onRemoveCertificate: (id: string) => Promise<void>;
+  /**
+   * Vacía el Almacén de rFirma entero, ofrecido cuando el llavero perdió su
+   * PIN (ADR-0034). Ya viene confirmado por la persona.
+   */
+  onEmptyStore: () => Promise<void>;
   onClose: () => void;
 }
 
@@ -119,6 +124,7 @@ export function PreferencesView({
   installedCertificates,
   onInstallCertificate,
   onRemoveCertificate,
+  onEmptyStore,
   onClose,
 }: PreferencesViewProps) {
   const { t } = useTranslation();
@@ -222,6 +228,16 @@ export function PreferencesView({
     }
   };
 
+  /** Vacía el Almacén de rFirma entero, ya confirmado por la persona (ADR-0034). */
+  const emptyStore = async () => {
+    setCertificateFailure(null);
+    try {
+      await onEmptyStore();
+    } catch (thrown) {
+      setCertificateFailure(classify(thrown));
+    }
+  };
+
   const remove = async (certificate: Certificate) => {
     setCertificateFailure(null);
     try {
@@ -304,6 +320,7 @@ export function PreferencesView({
         installedCertificates={installedCertificates}
         onAddClick={() => void install()}
         onRemoveClick={(certificate) => void remove(certificate)}
+        onEmptyStoreClick={() => void emptyStore()}
       />
     ),
     appearance: (

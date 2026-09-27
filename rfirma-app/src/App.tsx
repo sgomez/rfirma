@@ -165,6 +165,7 @@ export function App({
     installed,
     installCertificate,
     removeCertificate,
+    emptyStore,
     chooseCertificate,
   } = useCertificateSearch(certificates);
   const chosen = certificate.kind === "chosen" ? certificate.certificate : null;
@@ -339,6 +340,7 @@ export function App({
               installedCertificates={installed}
               onInstallCertificate={installCertificate}
               onRemoveCertificate={removeCertificate}
+              onEmptyStore={emptyStore}
               onClose={() => setView(null)}
             />
           ) : null

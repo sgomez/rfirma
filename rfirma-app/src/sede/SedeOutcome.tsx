@@ -355,6 +355,12 @@ function RefusalSentence({
       return <>{t("errors.situations.folderUnwritable.title")}</>;
     case "noFreeName":
       return <>{t("errors.situations.noFreeName.title")}</>;
+    case "removalNotSupported":
+      return <>{t("errors.situations.removalNotSupported.title")}</>;
+    case "noKeyring":
+      return <>{t("errors.situations.noKeyring.title")}</>;
+    case "keyringPinMissing":
+      return <>{t("errors.situations.keyringPinMissing.title")}</>;
   }
 }
 

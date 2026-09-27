@@ -24,6 +24,7 @@ ORDENES DE TAURI                          (<contexto>/adapters/tauri*.rs)
         list_certificates() -> Result<Vec<CertificateView>, Failure>
   async install_certificate() -> Result<bool, Failure>
   async remove_certificate(id: String) -> Result<(), Failure>
+  async empty_installed_store() -> Result<(), Failure>
         begin_signing(order: SigningOrder) -> Result<SecretView, Failure>
   async sign_with_pin(pin: String) -> Result<(), Failure>
         finish_signing(destination: Option<String>) -> Result<SignedDocumentView, Failure>

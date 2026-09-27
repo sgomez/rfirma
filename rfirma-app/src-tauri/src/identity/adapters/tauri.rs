@@ -86,6 +86,15 @@ pub fn remove_certificate(id: String, identity: State<'_, IdentityRoot>) -> Resu
     )
 }
 
+/// Vacía el Almacén de rFirma entero: solo se llama tras confirmarlo la persona, cuando el llavero perdió su PIN (ADR-0034).
+#[tauri::command(async)]
+pub fn empty_installed_store(identity: State<'_, IdentityRoot>) -> Result<(), Failure> {
+    Ok(crate::identity::application::certificates::empty_the_store(
+        identity.folder.as_ref(),
+        identity.installed_certificates(),
+    )?)
+}
+
 /// El nombre del fichero elegido y sus bytes.
 fn read_the_file(chosen: tauri_plugin_dialog::FilePath) -> Result<(String, Vec<u8>), Failure> {
     let unreadable = |detail: String| {

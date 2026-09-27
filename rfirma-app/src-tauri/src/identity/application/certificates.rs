@@ -145,6 +145,18 @@ pub fn rows_of(
         .collect()
 }
 
+/// El PIN con el que cifrar la instalación: se crea si el almacén es nuevo, nunca si ya existía (ADR-0034).
+fn pin_for_installing(
+    keyring: &dyn Keyring,
+    already_existed: bool,
+) -> Result<ProtectedSecret, KeyringError> {
+    if already_existed {
+        keyring.pin()
+    } else {
+        keyring.get_or_create_pin()
+    }
+}
+
 /// Instala un PKCS#12 en el Almacén de rFirma, cifrado con el PIN del llavero (ADR-0034).
 pub fn install_pkcs12(
     token: &dyn Token,
@@ -154,10 +166,10 @@ pub fn install_pkcs12(
     pkcs12: &[u8],
     password: &str,
 ) -> Result<(), InstallError> {
-    let pin = keyring.get_or_create_pin()?;
+    let already_existed = installed_dir.join("cert9.db").is_file();
+    let pin = pin_for_installing(keyring, already_existed)?;
     validate_pkcs12_alone(token, folder, pkcs12, password)?;
 
-    let already_existed = installed_dir.join("cert9.db").is_file();
     folder.make(installed_dir).map_err(|error| {
         InstallError::Store(MemoryError::new(
             StoreSituation::Unwritable,
@@ -317,6 +329,19 @@ pub fn remove_installed(
         InstallError::Store(MemoryError::new(
             StoreSituation::Unwritable,
             format!("no se ha podido quitar el almacen del .p12: {error}"),
+        ))
+    })
+}
+
+/// Vacía el Almacén de rFirma entero, a petición expresa de la persona tras perder su PIN (ADR-0034).
+pub fn empty_the_store(
+    folder: &dyn InstalledFolder,
+    installed_dir: &Path,
+) -> Result<(), InstallError> {
+    folder.remove(installed_dir).map_err(|error| {
+        InstallError::Store(MemoryError::new(
+            StoreSituation::Unwritable,
+            format!("no se ha podido vaciar el Almacen de rFirma: {error}"),
         ))
     })
 }

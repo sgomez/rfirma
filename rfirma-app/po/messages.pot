@@ -61,6 +61,16 @@ msgstr ""
 msgid "errors.reload"
 msgstr ""
 
+#. El botón que ofrece vaciar el Almacén de rFirma cuando el llavero perdió su PIN (ADR-0034).
+msgid "errors.emptyStore.button"
+msgstr ""
+
+msgid "errors.emptyStore.confirmQuestion"
+msgstr ""
+
+msgid "errors.emptyStore.confirmButton"
+msgstr ""
+
 #. El botón que copia el detalle técnico crudo del error de firma.
 msgid "errors.copyDetail"
 msgstr ""
@@ -216,6 +226,12 @@ msgstr ""
 msgid "errors.situations.mechanismNotOffered.body"
 msgstr ""
 
+msgid "errors.situations.removalNotSupported.title"
+msgstr ""
+
+msgid "errors.situations.removalNotSupported.body"
+msgstr ""
+
 msgid "errors.situations.certificateUnreadable.title"
 msgstr ""
 
@@ -328,6 +344,18 @@ msgid "errors.situations.activityNotForgotten.title"
 msgstr ""
 
 msgid "errors.situations.activityNotForgotten.body"
+msgstr ""
+
+msgid "errors.situations.noKeyring.title"
+msgstr ""
+
+msgid "errors.situations.noKeyring.body"
+msgstr ""
+
+msgid "errors.situations.keyringPinMissing.title"
+msgstr ""
+
+msgid "errors.situations.keyringPinMissing.body"
 msgstr ""
 
 #. Se enseña en un diálogo nativo antes de que exista ventana; no la lee i18next.
