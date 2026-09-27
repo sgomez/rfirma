@@ -1321,14 +1321,23 @@ msgstr ""
 msgid "about.repository"
 msgstr "github.com/sgomez/rfirma"
 
-msgid "about.licenses.view"
-msgstr "View the licences"
+msgid "about.facts.license"
+msgstr "Licence"
+
+msgid "about.facts.signsWith"
+msgstr "Signs with"
+
+msgid "about.facts.sourceCode"
+msgstr "Source code"
 
 msgid "about.licenses.rfirma"
-msgstr "rFirma: EUPL-1.2."
+msgstr "EUPL-1.2"
 
 msgid "about.licenses.afirma"
-msgstr "Cliente @firma libraries: GPL-2.0+ / EUPL-1.1."
+msgstr "Cliente @firma project libraries"
+
+msgid "about.licenses.afirmaTerms"
+msgstr "GPL-2.0+ / EUPL-1.1"
 
 msgid "setup.welcome.title"
 msgstr "Set up rFirma"

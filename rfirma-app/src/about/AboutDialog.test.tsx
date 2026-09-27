@@ -9,7 +9,13 @@ const noop = () => {};
 
 function renderAbout(props: Partial<Parameters<typeof AboutDialog>[0]> = {}) {
   return renderWithCatalog(
-    <AboutDialog version="0.1.0" newVersion={null} onClose={noop} {...props} />,
+    <AboutDialog
+      version="0.1.0"
+      newVersion={null}
+      onOpenSourceCode={noop}
+      onClose={noop}
+      {...props}
+    />,
   );
 }
 
@@ -42,16 +48,23 @@ describe("AboutDialog", () => {
     expect(screen.getByText("Versión 0.1.0")).toBeInTheDocument();
   });
 
-  it("shows both licences", async () => {
-    const user = userEvent.setup();
+  it("shows both licences without unfolding anything", () => {
     renderAbout();
 
-    await user.click(screen.getByRole("button", { name: "Ver las licencias" }));
+    expect(screen.getByText("EUPL-1.2")).toBeInTheDocument();
+    expect(screen.getByText("Bibliotecas del proyecto Cliente @firma")).toBeInTheDocument();
+    expect(screen.getByText("GPL-2.0+ / EUPL-1.1")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Ver las licencias" })).not.toBeInTheDocument();
+  });
 
-    expect(screen.getByText("rFirma: EUPL-1.2.")).toBeInTheDocument();
-    expect(
-      screen.getByText("Bibliotecas de Cliente @firma: GPL-2.0+ / EUPL-1.1."),
-    ).toBeInTheDocument();
+  it("opens the source code from its link", async () => {
+    const user = userEvent.setup();
+    const onOpenSourceCode = vi.fn();
+    renderAbout({ onOpenSourceCode });
+
+    await user.click(screen.getByRole("link", { name: /github.com\/sgomez\/rfirma/ }));
+
+    expect(onOpenSourceCode).toHaveBeenCalledOnce();
   });
 
   it("closes on Cerrar", async () => {

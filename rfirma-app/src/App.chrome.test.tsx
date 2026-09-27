@@ -240,6 +240,30 @@ describe("App", () => {
     expect(screen.getByText(/Proyecto independiente/)).toBeInTheDocument();
   });
 
+  it("opens the source code from About", async () => {
+    const user = userEvent.setup();
+    const destinations = inMemoryExternalDestinationOpener();
+    renderApp(
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      destinations,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Menú" }));
+    await user.click(screen.getByRole("menuitem", { name: "Acerca de rFirma" }));
+    await user.click(screen.getByRole("link", { name: /github.com\/sgomez\/rfirma/ }));
+
+    expect(destinations.opened).toEqual(["sourceCode"]);
+  });
+
   it("opens Comments and help from the menu", async () => {
     const user = userEvent.setup();
     const destinations = inMemoryExternalDestinationOpener();

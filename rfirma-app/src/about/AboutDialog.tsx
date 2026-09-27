@@ -1,7 +1,7 @@
-import { useId, useState } from "react";
+import { useId } from "react";
 import { useTranslation } from "react-i18next";
 import "./AboutDialog.css";
-import { ArrowUpIcon, CheckIcon } from "../design-system/icons";
+import { ExternalLinkIcon, InfoIcon, NewVersionIcon, UpToDateIcon } from "../design-system/icons";
 import type { NewVersion } from "../updates/newVersion";
 
 interface AboutDialogProps {
@@ -12,96 +12,87 @@ interface AboutDialogProps {
    * nueva —o no se ha podido preguntar—.
    */
   newVersion: NewVersion | null;
+  onOpenSourceCode: () => void;
   onClose: () => void;
 }
 
-/**
- * Identidad de la aplicación, estado de la versión, aviso de independencia y
- * licencias.
- *
- * El requisito de esta pantalla es de **contenido**, no de estética: dice que
- * esto **no es el cliente oficial**. Una aplicación que firma ante la
- * Administración con la misma criptografía que la oficial se puede confundir
- * con ella, y esa confusión hay que deshacerla en el sitio donde la gente va a
- * preguntar qué es esto.
- *
- * Del estado de la versión se dice **si hay una nueva**, y nada más: quien
- * tiene la aplicación abierta ya la instaló, y repetirle las órdenes de alta
- * del repositorio no le sirve para actualizar.
- *
- * El aviso de independencia va **como párrafo, sin icono ni recuadro**: es un
- * hecho sobre el proyecto, no una advertencia sobre un riesgo del usuario, y
- * enmarcarlo como alarma le daría un peso que no le corresponde.
- *
- * El artboard dibuja las dos líneas de licencia **desplegadas**; eso es el
- * estado congelado del canvas y aquí es lo que revela «Ver las licencias».
- * Lo que se ve siempre es la dirección del repositorio, que es adónde va quien
- * quiera comprobar cualquiera de las dos.
- */
-export function AboutDialog({ version, newVersion, onClose }: AboutDialogProps) {
+/** Identidad de la aplicación, estado de la versión, licencias y aviso de independencia. */
+export function AboutDialog({ version, newVersion, onOpenSourceCode, onClose }: AboutDialogProps) {
   const { t } = useTranslation();
-  const [showingLicenses, setShowingLicenses] = useState(false);
   const titleId = useId();
 
   return (
     <div className="rf-scrim">
       <div className="rf-dialog about" role="dialog" aria-modal="true" aria-labelledby={titleId}>
-        <div className="about__identity">
-          <p className="rf-heading about__name" id={titleId}>
-            {t("app.name")}
-          </p>
-          <p className="rf-body rf-text-muted">{t("about.version", { version })}</p>
+        <div className="about__header">
+          <div className="about__identity">
+            <p className="rf-heading about__name" id={titleId}>
+              {t("app.name")}
+            </p>
+            <span className="rf-badge about__version">{t("about.version", { version })}</span>
+          </div>
+          <p className="rf-prose rf-text-muted">{t("about.whatItDoes")}</p>
+          <UpdateStatus newVersion={newVersion} />
         </div>
 
-        <p className="rf-prose">{t("about.whatItDoes")}</p>
+        <dl className="about__facts">
+          <dt className="rf-label">{t("about.facts.license")}</dt>
+          <dd>{t("about.licenses.rfirma")}</dd>
+          <dt className="rf-label">{t("about.facts.signsWith")}</dt>
+          <dd className="about__stackedFact">
+            <span>{t("about.licenses.afirma")}</span>
+            <span className="rf-hint">{t("about.licenses.afirmaTerms")}</span>
+          </dd>
+          <dt className="rf-label">{t("about.facts.sourceCode")}</dt>
+          <dd>
+            <a
+              className="about__sourceLink"
+              href={`https://${t("about.repository")}`}
+              onClick={(event) => {
+                event.preventDefault();
+                onOpenSourceCode();
+              }}
+            >
+              <span>{t("about.repository")}</span>
+              <ExternalLinkIcon size={13} />
+            </a>
+          </dd>
+        </dl>
 
-        <hr className="rf-divider" />
-
-        <div className="rf-row rf-gap-xs about__updateStatus">
-          {newVersion !== null ? (
-            <ArrowUpIcon size={18} />
-          ) : (
-            <span className="about__upToDateIcon">
-              <CheckIcon size={18} strokeWidth={1.5} />
-            </span>
-          )}
-          <p className="rf-prose">
-            {newVersion !== null
-              ? t("about.update.newVersion", { version: newVersion.version })
-              : t("about.update.upToDate")}
-          </p>
+        <div className="rf-row about__independence">
+          <span className="about__independenceIcon">
+            <InfoIcon size={16} />
+          </span>
+          <p className="rf-prose">{t("about.independence")}</p>
         </div>
-
-        <p className="rf-prose">{t("about.independence")}</p>
-
-        <hr className="rf-divider" />
-
-        <div className="about__licenses">
-          {showingLicenses && (
-            <>
-              <p className="rf-body rf-text-muted">{t("about.licenses.afirma")}</p>
-              <p className="rf-body rf-text-muted">{t("about.licenses.rfirma")}</p>
-            </>
-          )}
-          <p className="rf-body">{t("about.repository")}</p>
-        </div>
-
-        <hr className="rf-divider" />
 
         <div className="rf-row about__footer">
-          <button
-            type="button"
-            className="rf-btn rf-btn--ghost"
-            aria-expanded={showingLicenses}
-            onClick={() => setShowingLicenses((shown) => !shown)}
-          >
-            {t("about.licenses.view")}
-          </button>
-          <button type="button" className="rf-btn rf-btn--primary" onClick={onClose}>
+          <button type="button" className="rf-btn rf-btn--primary about__close" onClick={onClose}>
             {t("actions.close")}
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+function UpdateStatus({ newVersion }: { newVersion: NewVersion | null }) {
+  const { t } = useTranslation();
+
+  if (newVersion !== null) {
+    return (
+      <div className="rf-row about__updateStatus about__updateStatus--new">
+        <NewVersionIcon />
+        <span>{t("about.update.newVersion", { version: newVersion.version })}</span>
+      </div>
+    );
+  }
+  return (
+    <div className="rf-row about__updateStatus">
+      <span className="about__upToDateIcon">
+        <UpToDateIcon />
+      </span>
+      <span>{t("about.update.upToDate")}</span>
     </div>
   );
 }

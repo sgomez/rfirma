@@ -1244,13 +1244,24 @@ msgstr ""
 msgid "about.repository"
 msgstr ""
 
-msgid "about.licenses.view"
+msgid "about.facts.license"
 msgstr ""
 
+msgid "about.facts.signsWith"
+msgstr ""
+
+msgid "about.facts.sourceCode"
+msgstr ""
+
+#. No se traduce: es el nombre de las licencias.
 msgid "about.licenses.rfirma"
 msgstr ""
 
 msgid "about.licenses.afirma"
+msgstr ""
+
+#. No se traduce: es el nombre de las licencias.
+msgid "about.licenses.afirmaTerms"
 msgstr ""
 
 msgid "setup.welcome.title"

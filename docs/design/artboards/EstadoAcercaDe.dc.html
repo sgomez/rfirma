@@ -492,63 +492,57 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
 </sc-if>
 </div>
 <div class="rf-scrim" style="z-index:20">
-  <div class="rf-dialog" style="width:520px;gap:12px;padding:var(--rf-space-sm)">
-    <div class="rf-stack" style="gap:4px">
-      <p class="rf-heading" style="font-size:28px">rFirma</p>
-      <p class="rf-body rf-text-muted">Versión 0.4.0</p>
-    </div>
-    <p class="rf-prose">Aplicación de escritorio para firmar documentos PDF con tu certificado
-      digital.</p>
-    <hr class="rf-divider">
-    <div class="rf-stack" style="gap:var(--rf-space-xs)">
-      <div class="rf-row rf-gap-xs">
-        <sc-if value="{{hayNueva}}" hint-placeholder-val="{{true}}">
-          <span style="display:flex;flex:none;color:var(--rf-text)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V6M6 12l6-6 6 6"/></svg></span>
-        </sc-if>
-        <sc-if value="{{alDia}}" hint-placeholder-val="{{false}}">
-          <span style="display:flex;flex:none;color:var(--rf-text-muted)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5 9.5 18 20 6"/></svg></span>
-        </sc-if>
-        <p class="rf-prose" style="flex:1;min-width:0">{{lineaVersion}}</p>
+  <div class="rf-dialog" role="dialog" aria-modal="true" aria-labelledby="acerca-titulo" style="width:460px;gap:0;padding:0;overflow:hidden">
+    <div class="rf-stack" style="gap:var(--rf-space-sm);padding:var(--rf-space-md) var(--rf-space-md) 0">
+      <div class="rf-row" style="gap:var(--rf-space-sm);align-items:baseline">
+        <p id="acerca-titulo" class="rf-heading" style="font-size:32px;line-height:1.1;letter-spacing:-0.6px;flex:1">rFirma</p>
+        <span class="rf-badge" style="flex:none;color:var(--rf-text)">Versión 0.4.0</span>
       </div>
-      <div class="rf-row" style="gap:2px;padding:3px;border-radius:var(--rf-radius-md);
-        border:1px solid var(--rf-border-subtle);background:var(--rf-surface);align-self:flex-start">
-        <span class="rf-body" style="padding:6px 12px;border-radius:var(--rf-radius-sm);font-weight:600;
-          background:{{fondoFlatpak}};color:{{textoFlatpak}}">Flatpak</span>
-        <span class="rf-body" style="padding:6px 12px;border-radius:var(--rf-radius-sm);font-weight:600;
-          background:{{fondoDeb}};color:{{textoDeb}}">Debian y Ubuntu</span>
-        <span class="rf-body" style="padding:6px 12px;border-radius:var(--rf-radius-sm);font-weight:600;
-          background:{{fondoRpm}};color:{{textoRpm}}">Fedora y openSUSE</span>
-      </div>
-      <div class="rf-row rf-gap-xs" style="align-items:flex-start;padding:10px var(--rf-space-xs) 10px var(--rf-space-sm);
-        border:1px solid var(--rf-border-strong);border-radius:var(--rf-radius-md);
-        background:var(--rf-surface);min-height:98px">
-        <pre style="flex:1;min-width:0;margin:0;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
-          font-size:11.5px;line-height:1.7;color:var(--rf-text);white-space:pre-wrap;
-          overflow-wrap:anywhere">{{orden}}</pre>
-        <button class="rf-btn rf-btn--ghost" style="flex:none;min-height:28px;padding:0 var(--rf-space-xs);font-size:12px">
-          <span style="display:flex"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></svg></span>
-          Copiar</button>
-      </div>
+      <p class="rf-prose rf-text-muted" style="text-wrap:pretty">Aplicación de escritorio para firmar documentos PDF con tu certificado digital.</p>
+      <sc-if value="{{hayNueva}}" hint-placeholder-val="{{true}}">
+        <div class="rf-row" style="gap:12px;padding:12px var(--rf-space-sm);border:1px solid var(--rf-border-strong);border-radius:var(--rf-radius-md);background:var(--rf-surface)">
+          <span style="display:flex;flex:none;color:var(--rf-text)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 16V8M8.5 11.5 12 8l3.5 3.5"/></svg></span>
+          <span style="flex:1;font-size:14px;line-height:20px;font-weight:700">Hay una versión nueva: 0.4.1</span>
+        </div>
+      </sc-if>
+      <sc-if value="{{alDia}}" hint-placeholder-val="{{false}}">
+        <div class="rf-row" style="gap:12px;padding:12px var(--rf-space-sm);border:1px solid var(--rf-border-subtle);border-radius:var(--rf-radius-md);background:var(--rf-surface)">
+          <span style="display:flex;flex:none;color:var(--rf-text-muted)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12.5 11 15.5 16.5 9"/></svg></span>
+          <span style="font-size:14px;line-height:20px;flex:1">Estás en la última versión</span>
+        </div>
+      </sc-if>
     </div>
-    <p class="rf-prose"><strong>Proyecto independiente.</strong> rFirma no está relacionada con
-      AutoFirma ni con la Administración General del Estado, que publican el cliente oficial, ni
-      cuenta con su respaldo. Si necesitas la aplicación oficial, descárgala de su web.</p>
-    <hr class="rf-divider">
-    <div class="rf-stack" style="gap:6px">
-      <p class="rf-body rf-text-muted">Firma con las bibliotecas del proyecto Cliente @firma
-        (GPL-2.0+ / EUPL-1.1).</p>
-      <p class="rf-body rf-text-muted">rFirma se publica bajo EUPL-1.2.</p>
-      <p class="rf-body">github.com/sgomez/rfirma</p>
+
+    <dl style="display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:var(--rf-space-md);row-gap:14px;margin:0;padding:var(--rf-space-md)">
+      <dt class="rf-label" style="line-height:20px">Licencia</dt>
+      <dd style="margin:0;font-size:13px;line-height:20px">EUPL-1.2</dd>
+      <dt class="rf-label" style="line-height:20px">Firma con</dt>
+      <dd class="rf-stack" style="margin:0;gap:2px">
+        <span style="font-size:13px;line-height:20px">Bibliotecas del proyecto Cliente @firma</span>
+        <span class="rf-hint">GPL-2.0+ / EUPL-1.1</span>
+      </dd>
+      <dt class="rf-label" style="line-height:28px">Código fuente</dt>
+      <dd style="margin:0;min-width:0;display:flex">
+        <a href="https://github.com/sgomez/rfirma" target="_blank" rel="noopener" title="Abrir en el navegador" style="display:inline-flex;align-items:center;gap:6px;min-width:0;font-size:13px;line-height:28px;color:var(--rf-text);text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--rf-border-strong)" style-hover="color:var(--rf-primary-hover);text-decoration-color:currentColor">
+          <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">github.com/sgomez/rfirma</span>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M14 4h6v6M20 4l-9 9M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4"/></svg>
+        </a>
+      </dd>
+    </dl>
+
+    <div class="rf-row" style="gap:12px;align-items:flex-start;margin:0 var(--rf-space-md) var(--rf-space-md);padding-top:var(--rf-space-sm);border-top:1px solid var(--rf-border-subtle)">
+      <span style="display:flex;flex:none;height:21px;align-items:center;color:var(--rf-text-muted)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.5"/></svg></span>
+      <p class="rf-prose" style="flex:1;font-size:13px;text-wrap:pretty"><strong>Proyecto independiente.</strong> <span class="rf-text-muted">rFirma no está relacionada con AutoFirma ni con la Administración General del Estado, que publican el cliente oficial, ni cuenta con su respaldo. Si necesitas la aplicación oficial, descárgala de su web. Si detectas algún problema con rFirma, comunícalo en nuestro repositorio y no al equipo de AutoFirma.</span></p>
     </div>
-    <div class="rf-row rf-gap-sm" style="justify-content:flex-end">
-      <button class="rf-btn rf-btn--ghost">Ver las licencias</button>
-      <button class="rf-btn rf-btn--primary">Cerrar</button>
+
+    <div class="rf-row" style="gap:var(--rf-space-xs);justify-content:flex-end;padding:12px var(--rf-space-md);border-top:1px solid var(--rf-border-subtle);background:var(--rf-surface)">
+      <button type="button" class="rf-btn rf-btn--primary" style="min-width:96px">Cerrar</button>
     </div>
   </div>
 </div>
 </div>
 </x-dc>
-<script data-dc-script data-props='{"tema":{"editor":"enum","options":["light","dark"],"default":"light","section":"Tema"},"version":{"editor":"enum","options":["hay una version nueva","al dia"],"default":"hay una version nueva","section":"Estado de la version"},"canal":{"editor":"enum","options":["flatpak",".deb",".rpm"],"default":"flatpak","section":"Canal"},"$preview":{"width":1180,"height":700}}'>
+<script data-dc-script data-props='{"tema":{"editor":"enum","options":["light","dark"],"default":"light","section":"Tema"},"version":{"editor":"enum","options":["hay una version nueva","al dia"],"default":"hay una version nueva","section":"Estado de la version"},"$preview":{"width":1180,"height":700}}'>
 class Component extends DCLogic {
   datos(extremo) {
     if (extremo) {
@@ -977,20 +971,21 @@ class Component extends DCLogic {
       flecha: eligiendo ? "M6 15l6-6 6 6" : "M6 9l6 6 6-6"
     };
   }
+  state = { copiado: false };
+  componentWillUnmount() { clearTimeout(this._t); }
   renderVals() {
-    // ID-181: nada modal. Lo que se enseña son LAS ORDENES DE ALTA DEL
-    // REPOSITORIO y no un boton de descarga, porque asi el mecanismo se
-    // autoliquida: quien da de alta el repositorio deja de necesitar avisos.
-    // Y no hay ningun enlace que se pulse: «opener:deny-open-url» sigue
-    // denegado, asi que la URL solo aparece DENTRO de una orden copiable.
-    //
-    // Tres canales sin convertir el dialogo en un manual: un selector de tres
-    // pestanas y UN SOLO bloque de ordenes a la vista. El bloque esta en los dos
-    // estados de version — lo unico que cambia es la linea de arriba —, asi que
-    // «hay version nueva» y «al dia» miden exactamente lo mismo y no hay que
-    // reservar ningun hueco vacio.
+    // La app ya esta instalada: las versiones nuevas llegan por el gestor de
+    // paquetes, asi que el dialogo solo informa. El enlace del codigo lo abre
+    // el backend por identificador: «opener:deny-open-url» sigue denegado.
     const hayNueva = (this.props.version ?? "hay una version nueva") !== "al dia";
-    const canal = this.props.canal ?? "flatpak";
+    const copiado = this.state.copiado;
+    const copiar = () => {
+      try { navigator.clipboard && navigator.clipboard.writeText("https://github.com/sgomez/rfirma"); } catch (e) {}
+      this.setState({ copiado: true });
+      clearTimeout(this._t);
+      this._t = setTimeout(() => this.setState({ copiado: false }), 1600);
+    };
+    const canal = "flatpak";
     const ordenes = {
       "flatpak": "flatpak remote-add --if-not-exists rfirma \\\n  https://rfirma.sgomez.me/flatpak/rfirma.flatpakrepo",
       ".deb": "sudo curl -fsSLo /usr/share/keyrings/rfirma.gpg \\\n  https://rfirma.sgomez.me/apt/rfirma.gpg\nsudo curl -fsSLo /etc/apt/sources.list.d/rfirma.sources \\\n  https://rfirma.sgomez.me/apt/rfirma.sources",
@@ -1007,7 +1002,8 @@ class Component extends DCLogic {
       tema: this.props.tema ?? "light",
       hayNueva: hayNueva,
       alDia: !hayNueva,
-      lineaVersion: hayNueva ? "Hay una versión nueva: 0.4.1" : "Estás en la última versión",
+      copiar: copiar, copiado: copiado, sinCopiar: !copiado,
+      textoCopiar: copiado ? "Copiado" : "Copiar",
       orden: ordenes[canal] || ordenes["flatpak"],
       fondoFlatpak: f.fondo, textoFlatpak: f.texto,
       fondoDeb: d.fondo, textoDeb: d.texto,
@@ -1018,3 +1014,4 @@ class Component extends DCLogic {
 </script>
 </body>
 </html>
+
