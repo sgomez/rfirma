@@ -69,6 +69,14 @@ impl<T: Clone> Handles<T> {
         values.into_iter().map(|value| self.mint(value)).collect()
     }
 
+    /// Sustituye todo lo nombrable por pares ya acuñados en otro `Handles`, reutilizando sus asas.
+    pub fn replace_paired(&self, pairs: impl IntoIterator<Item = (String, T)>) {
+        lock(&self.granted).clear();
+        for (handle, value) in pairs {
+            self.grant(handle, value);
+        }
+    }
+
     /// Lo que hay tras el asa, si sigue siendo nombrable.
     pub fn get(&self, handle: &str) -> Option<T> {
         lock(&self.granted)

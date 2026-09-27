@@ -359,6 +359,7 @@ impl Neighbours for TheNeighbours<'_> {
             found,
             self.home,
             self.listed,
+            &ListedCertificates::new(),
             self.memory,
         )
     }

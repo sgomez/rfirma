@@ -147,6 +147,7 @@ fn remove(
         installed,
         handle,
         listed,
+        &ListedCertificates::new(),
     )?)
 }
 

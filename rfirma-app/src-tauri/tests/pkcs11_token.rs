@@ -466,6 +466,7 @@ fn rows(listed: &ListedCertificates) -> Vec<ListedCertificate> {
         certificates(),
         &home.path().join("certificates"),
         listed,
+        &ListedCertificates::new(),
         &Memory::at(&Paths::under(home.path())),
     )
 }

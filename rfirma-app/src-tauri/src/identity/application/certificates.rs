@@ -54,10 +54,17 @@ pub fn listed_rows(
     stores: &[Store],
     installed_dir: &Path,
     listed: &ListedCertificates,
+    installed_copies: &ListedCertificates,
     memory: &dyn CertificateMemory,
 ) -> Result<Vec<ListedCertificate>, TokenError> {
     let found = token.list_across(stores)?;
-    Ok(rows_of(found, installed_dir, listed, memory))
+    Ok(rows_of(
+        found,
+        installed_dir,
+        listed,
+        installed_copies,
+        memory,
+    ))
 }
 
 /// Los certificados de los almacenes, cada uno con los emisores que su propio almacén aporta.
@@ -109,6 +116,7 @@ pub fn rows_of(
     found: Vec<TokenCertificate>,
     installed_dir: &Path,
     listed: &ListedCertificates,
+    installed_copies: &ListedCertificates,
     memory: &dyn CertificateMemory,
 ) -> Vec<ListedCertificate> {
     let remembered = memory.remembered_certificate();
@@ -117,6 +125,11 @@ pub fn rows_of(
         .map(|copies| ChosenCopy::among(copies, installed_dir, remembered.as_ref()))
         .collect();
     let handles = listed.replace(rows.iter().map(|row| row.certificate.reference().clone()));
+    installed_copies.replace_paired(rows.iter().zip(&handles).filter_map(|(row, id)| {
+        row.installed_reference
+            .clone()
+            .map(|reference| (id.clone(), reference))
+    }));
     rows.into_iter()
         .zip(handles)
         .map(|(row, id)| row.listed_as(id))
@@ -148,6 +161,8 @@ struct ChosenCopy {
     store: StoreClass,
     stores: Vec<StoreClass>,
     remembered: bool,
+    /// La copia instalada del mismo certificado, si hay una entre las copias.
+    installed_reference: Option<CertificateRef>,
 }
 
 impl ChosenCopy {
@@ -161,6 +176,11 @@ impl ChosenCopy {
             .iter()
             .map(|copy| copy.reference().store().class_under(installed_dir))
             .collect();
+        let installed_reference = copies
+            .iter()
+            .zip(&classes)
+            .find(|(_, class)| **class == StoreClass::Installed)
+            .map(|(copy, _)| copy.reference().clone());
         let remembered_copy = remembered.and_then(|one| {
             copies
                 .iter()
@@ -180,6 +200,7 @@ impl ChosenCopy {
             store,
             stores,
             remembered: remembered_copy.is_some(),
+            installed_reference,
         }
     }
 
@@ -376,8 +397,12 @@ pub fn remove_installed(
     installed_dir: &Path,
     handle: &str,
     listed: &ListedCertificates,
+    installed_copies: &ListedCertificates,
 ) -> Result<(), InstallError> {
-    let reference = listed.get(handle).ok_or_else(not_from_the_last_listing)?;
+    let reference = match installed_copies.get(handle) {
+        Some(installed) => installed,
+        None => listed.get(handle).ok_or_else(not_from_the_last_listing)?,
+    };
     reference
         .store()
         .installed_directory_under(installed_dir)

@@ -26,6 +26,8 @@ pub struct IdentityRoot {
     pub installed_certificates: PathBuf,
     /// Certificados del último listado.
     pub listed: ListedCertificates,
+    /// La copia instalada de cada fila del último listado que tenga una, aunque no sea la elegida.
+    pub installed_copies: ListedCertificates,
     /// Donde se recuerda el certificado con el que se firmó.
     pub memory: Arc<dyn CertificateMemory + Send + Sync>,
     /// La carpeta donde vive cada `.p12` instalado.
@@ -77,6 +79,7 @@ impl IdentityRoot {
             found,
             &self.installed_certificates,
             &self.listed,
+            &self.installed_copies,
             self.memory.as_ref(),
         )
     }

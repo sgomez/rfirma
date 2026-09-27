@@ -63,6 +63,7 @@ fn composed_roots(paths: desktop::adapters::paths::Paths, invocation: Option<Inv
         stores: identity::adapters::pkcs11::stores::from_environment(),
         installed_certificates: paths.installed_certificates_dir(),
         listed: identity::application::certificates::ListedCertificates::new(),
+        installed_copies: identity::application::certificates::ListedCertificates::new(),
         memory: memory.clone(),
         folder: Arc::new(identity::adapters::folder::RealInstalledFolder),
         prompter: prompter.clone(),

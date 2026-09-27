@@ -14,7 +14,7 @@ use crate::identity::ports::{Keyring, Token};
 use crate::signing::application::tests::a_memory;
 
 /// Un token cuyo `remove_certificate` siempre responde lo mismo; el resto de la firma no se usa aquí.
-struct RemovalOutcome(Result<(), TokenError>);
+pub(super) struct RemovalOutcome(pub(super) Result<(), TokenError>);
 
 impl Token for RemovalOutcome {
     fn list(&self, _store: &Store) -> Result<Vec<TokenCertificate>, TokenError> {
@@ -84,7 +84,7 @@ impl Token for RemovalOutcome {
 }
 
 /// Un llavero que siempre entrega el mismo PIN.
-struct FixedPinKeyring(&'static str);
+pub(super) struct FixedPinKeyring(pub(super) &'static str);
 
 impl Keyring for FixedPinKeyring {
     fn pin(&self) -> Result<ProtectedSecret, KeyringError> {
@@ -133,6 +133,7 @@ fn removing_refuses_a_handle_that_is_not_from_the_last_listing() {
         &home.path().join("certificates"),
         "00000000000000000000000000000000",
         &listed,
+        &ListedCertificates::new(),
     )
     .expect_err("no es de la ultima busqueda");
 
@@ -156,6 +157,7 @@ fn removing_refuses_a_certificate_from_somewhere_else() {
         &home.path().join("certificates"),
         &handle,
         &listed,
+        &ListedCertificates::new(),
     )
     .expect_err("no viene de un .p12 instalado");
 
@@ -180,6 +182,7 @@ fn removing_asks_the_keyring_for_the_pin_and_propagates_its_refusal() {
         &installed,
         &handle,
         &listed,
+        &ListedCertificates::new(),
     )
     .expect_err("sin PIN todavia no hay nada que quitar");
 
@@ -205,6 +208,7 @@ fn removing_propagates_the_token_refusal() {
         &installed,
         &handle,
         &listed,
+        &ListedCertificates::new(),
     )
     .expect_err("el token se ha negado");
 
@@ -231,6 +235,7 @@ fn removing_the_remembered_certificate_forgets_it() {
         &installed,
         &handle,
         &listed,
+        &ListedCertificates::new(),
     )
     .expect("deberia quitarse");
 
@@ -259,6 +264,7 @@ fn removing_a_different_certificate_leaves_the_remembered_one_alone() {
         &installed,
         &handle,
         &listed,
+        &ListedCertificates::new(),
     )
     .expect("deberia quitarse");
 

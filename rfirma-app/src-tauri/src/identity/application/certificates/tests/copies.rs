@@ -1,6 +1,9 @@
 use std::path::Path;
 
-use super::super::{certificate_behind, remember_the_certificate, rows_of, ListedCertificates};
+use super::super::{
+    certificate_behind, remember_the_certificate, remove_installed, rows_of, ListedCertificates,
+};
+use super::removal::{FixedPinKeyring, RemovalOutcome};
 use super::{CARD, INSTALLED, SOFTOKEN};
 use crate::identity::application::tests::{a_certificate_with_id, TestAuthority};
 use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
@@ -21,6 +24,7 @@ fn twin_copies_of_one_certificate_in_one_token_are_one_row_behind_the_first() {
         certificates.to_vec(),
         &home.path().join("certificates"),
         &listed,
+        &ListedCertificates::new(),
         &a_memory(home.path()),
     );
 
@@ -73,6 +77,7 @@ fn two_copies_of_one_certificate_are_one_row_with_both_stores() {
         copies_of(&der, &[&a_firefox_profile(), &Store::module(CARD)]),
         &home.path().join("certificates"),
         &ListedCertificates::new(),
+        &ListedCertificates::new(),
         &a_memory(home.path()),
     );
 
@@ -90,6 +95,7 @@ fn the_same_serial_number_from_two_issuers_is_two_rows() {
     let rows = rows_of(
         vec![one, other],
         &home.path().join("certificates"),
+        &ListedCertificates::new(),
         &ListedCertificates::new(),
         &a_memory(home.path()),
     );
@@ -117,6 +123,7 @@ fn with_nothing_remembered_the_row_signs_with_the_copy_of_the_preferred_store() 
         copies.clone(),
         &home.path().join("certificates"),
         &listed,
+        &ListedCertificates::new(),
         &a_memory(home.path()),
     );
 
@@ -151,6 +158,7 @@ fn the_installed_store_is_preferred_to_the_browsers() {
         ),
         &home.path().join("certificates"),
         &ListedCertificates::new(),
+        &ListedCertificates::new(),
         &a_memory(home.path()),
     );
 
@@ -170,6 +178,7 @@ fn the_remembered_copy_is_the_one_behind_the_row_and_marks_it() {
         copies.clone(),
         &home.path().join("certificates"),
         &listed,
+        &ListedCertificates::new(),
         &memory,
     );
 
@@ -184,6 +193,51 @@ fn the_remembered_copy_is_the_one_behind_the_row_and_marks_it() {
 }
 
 #[test]
+fn a_row_signed_with_a_remembered_browser_copy_still_removes_its_installed_copy() {
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let installed_dir = home.path().join("certificates");
+    let memory = a_memory(home.path());
+    let der = TestAuthority::root("EIDAS CERTIFICADO PRUEBAS - 99999999R").der();
+    let copies = copies_of(
+        &der,
+        &[&a_firefox_profile(), &the_installed_store(&installed_dir)],
+    );
+    remember_the_certificate(&memory, copies[0].reference());
+    let listed = ListedCertificates::new();
+    let installed_copies = ListedCertificates::new();
+
+    let rows = rows_of(
+        copies.clone(),
+        &installed_dir,
+        &listed,
+        &installed_copies,
+        &memory,
+    );
+
+    assert_eq!(rows.len(), 1);
+    assert_eq!(
+        rows[0].store,
+        StoreClass::Firefox,
+        "se sigue firmando con la copia recordada"
+    );
+    assert!(
+        rows[0].stores.contains(&StoreClass::Installed),
+        "pero la fila tambien esta instalada"
+    );
+
+    remove_installed(
+        &RemovalOutcome(Ok(())),
+        &FixedPinKeyring("1234"),
+        &memory,
+        &installed_dir,
+        &rows[0].id,
+        &listed,
+        &installed_copies,
+    )
+    .expect("la copia instalada deberia poder quitarse aunque la elegida sea de firefox");
+}
+
+#[test]
 fn unreadable_certificates_are_never_taken_for_copies_of_each_other() {
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
 
@@ -193,6 +247,7 @@ fn unreadable_certificates_are_never_taken_for_copies_of_each_other() {
             a_certificate_with_id("ROTO", 0x02, &[0x00]),
         ],
         &home.path().join("certificates"),
+        &ListedCertificates::new(),
         &ListedCertificates::new(),
         &a_memory(home.path()),
     );

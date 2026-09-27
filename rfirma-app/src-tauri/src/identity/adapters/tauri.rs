@@ -20,6 +20,7 @@ pub fn list_certificates(
         &identity.all_stores(),
         identity.installed_certificates(),
         &identity.listed,
+        &identity.installed_copies,
         identity.memory.as_ref(),
     )?
     .into_iter()
@@ -85,6 +86,7 @@ pub fn remove_certificate(id: String, identity: State<'_, IdentityRoot>) -> Resu
             identity.installed_certificates(),
             &id,
             &identity.listed,
+            &identity.installed_copies,
         )?,
     )
 }
