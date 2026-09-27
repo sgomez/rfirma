@@ -307,17 +307,17 @@ describe("«ajustar» como modo", () => {
     observer.resizeTo(surfaceOf(container), 800, 600);
 
     fireEvent.click(screen.getByRole("button", { name: "Ajustar al ancho" }));
-    await waitFor(() => expect(latest(first.renders)?.scale).toBeCloseTo((800 * 0.92) / A4.width));
+    await waitFor(() => expect(latest(first.renders)?.scale).toBeCloseTo((800 - 2) / A4.width));
 
     // La ventana cambia de tamaño: sigue ajustado, que es lo que «ajustar» como
     // modo significa (ID-117).
     observer.resizeTo(surfaceOf(container), 1200, 600);
-    await waitFor(() => expect(latest(first.renders)?.scale).toBeCloseTo((1200 * 0.92) / A4.width));
+    await waitFor(() => expect(latest(first.renders)?.scale).toBeCloseTo((1200 - 2) / A4.width));
 
     // Se pasa de página: sigue ajustado.
     fireEvent.click(screen.getByRole("button", { name: "Página siguiente" }));
     await waitFor(() => expect(latest(first.renders)?.page).toBe(2));
-    expect(latest(first.renders)?.scale).toBeCloseTo((1200 * 0.92) / A4.width);
+    expect(latest(first.renders)?.scale).toBeCloseTo((1200 - 2) / A4.width);
 
     // Y se abre otro documento: el modo cruza, porque describe cómo se mira y
     // no cuánto se amplía *ese* documento.
@@ -326,9 +326,7 @@ describe("«ajustar» como modo", () => {
       <DocumentViewer pdf={second.document} placement={null} onPlace={noop} onOpen={noop} />,
     );
     await waitFor(() => expect(second.renders.length).toBeGreaterThan(0));
-    await waitFor(() =>
-      expect(latest(second.renders)?.scale).toBeCloseTo((1200 * 0.92) / A4.width),
-    );
+    await waitFor(() => expect(latest(second.renders)?.scale).toBeCloseTo((1200 - 2) / A4.width));
   });
 
   /**
@@ -350,7 +348,7 @@ describe("«ajustar» como modo", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Ajustar al ancho" }));
 
-    await waitFor(() => expect(latest(renders)?.scale).toBeCloseTo((800 * 0.92) / A4.width));
+    await waitFor(() => expect(latest(renders)?.scale).toBeCloseTo((800 - 2) / A4.width));
   });
 
   it("fits the whole page when that is what was asked, tighter axis first", async () => {
@@ -364,7 +362,25 @@ describe("«ajustar» como modo", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Ajustar a la página" }));
 
-    await waitFor(() => expect(latest(renders)?.scale).toBeCloseTo((400 * 0.92) / A4.height));
+    await waitFor(() => expect(latest(renders)?.scale).toBeCloseTo((400 - 2) / A4.height));
+  });
+
+  it("fits the page inside the surface's padding, so fitting never leaves a scroll", async () => {
+    const observer = stubResizeObserver();
+    const { document, renders } = recordingDocument();
+    const { container } = renderWithCatalog(
+      <DocumentViewer pdf={document} placement={null} onPlace={noop} onOpen={noop} />,
+    );
+    await waitFor(() => expect(renders).toHaveLength(1));
+    const surface = surfaceOf(container);
+    surface.style.padding = "24px 24px 88px";
+    observer.resizeTo(surface, 800, 600);
+
+    fireEvent.click(screen.getByRole("button", { name: "Ajustar a la página" }));
+
+    await waitFor(() =>
+      expect(latest(renders)?.scale).toBeCloseTo((600 - 24 - 88 - 2) / A4.height),
+    );
   });
 
   it("is broken by a zoom fixed by hand, and the next document keeps it (ID-117 enmendado)", async () => {
@@ -374,9 +390,9 @@ describe("«ajustar» como modo", () => {
       <DocumentViewer pdf={first.document} placement={null} onPlace={noop} onOpen={noop} />,
     );
     await waitFor(() => expect(first.renders).toHaveLength(1));
-    observer.resizeTo(surfaceOf(container), 800, 600);
+    observer.resizeTo(surfaceOf(container), 700, 600);
     fireEvent.click(screen.getByRole("button", { name: "Ajustar al ancho" }));
-    await waitFor(() => expect(latest(first.renders)?.scale).toBeCloseTo((800 * 0.92) / A4.width));
+    await waitFor(() => expect(latest(first.renders)?.scale).toBeCloseTo((700 - 2) / A4.width));
 
     fireEvent.click(screen.getByRole("button", { name: "Acercar" }));
     // El botón tropieza con el escalón siguiente al ajuste, el 125 %.
@@ -408,7 +424,7 @@ describe("«ajustar» como modo", () => {
 
     // Sin tocar nada: el ajuste de partida ya es «a la página», no un
     // porcentaje libre (ID-117 enmendado).
-    await waitFor(() => expect(latest(renders)?.scale).toBeCloseTo((400 * 0.92) / A4.height));
+    await waitFor(() => expect(latest(renders)?.scale).toBeCloseTo((400 - 2) / A4.height));
   });
 
   it("keeps fitting the page when the surface opens narrow and tall as well", async () => {
@@ -421,7 +437,7 @@ describe("«ajustar» como modo", () => {
 
     observer.resizeTo(surfaceOf(container), 400, 900);
 
-    await waitFor(() => expect(latest(renders)?.scale).toBeCloseTo((400 * 0.92) / A4.width));
+    await waitFor(() => expect(latest(renders)?.scale).toBeCloseTo((400 - 2) / A4.width));
   });
 
   /** ID-114: ni el zoom ni el redimensionado escriben en la colocación. */
