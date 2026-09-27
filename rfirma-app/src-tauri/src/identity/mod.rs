@@ -12,8 +12,9 @@ use application::certificates::ListedCertificates;
 use domain::algorithm::SignatureAlgorithm;
 use domain::certificate::{CertificateRef, ListedCertificate, TokenCertificate};
 use domain::error::TokenError;
+use domain::protected_secret::ProtectedSecret;
 use domain::store::{Store, StoreClass};
-use ports::{CertificateMemory, Token};
+use ports::{CertificateMemory, KeyringFactory, SecretPrompter, Token};
 
 /// La raíz de `identity`: el token, los almacenes, el listado vivo y el certificado recordado.
 pub struct IdentityRoot {
@@ -29,6 +30,10 @@ pub struct IdentityRoot {
     pub memory: Arc<dyn CertificateMemory + Send + Sync>,
     /// La carpeta donde vive cada `.p12` instalado.
     pub folder: Arc<dyn ports::InstalledFolder + Send + Sync>,
+    /// El diálogo interactivo que pide la contraseña al instalar un `.p12`.
+    pub prompter: Arc<dyn SecretPrompter + Send + Sync>,
+    /// El llavero del escritorio con el PIN del Almacén de rFirma, alcanzado bajo demanda.
+    pub keyring: KeyringFactory,
 }
 
 impl IdentityRoot {
@@ -113,18 +118,51 @@ impl IdentityRoot {
 
     /// El token visto por el ciclo de firma: pide el secreto y firma, nada más.
     pub fn signer(&self) -> impl crate::signing::ports::Signer + '_ {
-        TokenSigner(self.token.as_ref())
+        TokenSigner {
+            token: self.token.as_ref(),
+            installed_certificates: &self.installed_certificates,
+            keyring: &self.keyring,
+        }
     }
 }
 
-struct TokenSigner<'a>(&'a (dyn Token + Send + Sync));
+/// El token de firma, con el Almacén de rFirma tomando su PIN del llavero en vez de pedirlo; a los demás almacenes no los toca.
+struct TokenSigner<'a> {
+    token: &'a (dyn Token + Send + Sync),
+    installed_certificates: &'a Path,
+    keyring: &'a KeyringFactory,
+}
+
+impl TokenSigner<'_> {
+    fn is_installed(&self, reference: &CertificateRef) -> bool {
+        reference
+            .store()
+            .installed_directory_under(self.installed_certificates)
+            .is_some()
+    }
+
+    /// El PIN del llavero si el certificado es del Almacén de rFirma; si no, el secreto recibido.
+    fn secret_for(
+        &self,
+        reference: &CertificateRef,
+        provided: &ProtectedSecret,
+    ) -> Result<ProtectedSecret, TokenError> {
+        if !self.is_installed(reference) {
+            return Ok(ProtectedSecret::new(provided.as_bytes()));
+        }
+        Ok((self.keyring)()?.pin()?)
+    }
+}
 
 impl crate::signing::ports::Signer for TokenSigner<'_> {
     fn secret_of(
         &self,
         reference: &CertificateRef,
     ) -> Result<domain::secret::StoreSecret, TokenError> {
-        self.0.secret_of(reference)
+        if self.is_installed(reference) {
+            return Ok(domain::secret::StoreSecret::NotNeeded);
+        }
+        self.token.secret_of(reference)
     }
 
     fn offers(
@@ -132,25 +170,28 @@ impl crate::signing::ports::Signer for TokenSigner<'_> {
         reference: &CertificateRef,
         algorithm: SignatureAlgorithm,
     ) -> Result<(), TokenError> {
-        self.0.offers(reference, algorithm)
+        self.token.offers(reference, algorithm)
     }
 
     fn accepts_the_secret(
         &self,
         reference: &CertificateRef,
-        secret: &crate::identity::domain::protected_secret::ProtectedSecret,
+        secret: &ProtectedSecret,
     ) -> Result<(), TokenError> {
-        self.0.accepts_the_secret(reference, secret)
+        let secret = self.secret_for(reference, secret)?;
+        self.token.accepts_the_secret(reference, &secret)
     }
 
     fn sign_with_secret(
         &self,
         reference: &CertificateRef,
-        secret: &crate::identity::domain::protected_secret::ProtectedSecret,
+        secret: &ProtectedSecret,
         algorithm: SignatureAlgorithm,
         data: &[u8],
     ) -> Result<Vec<u8>, TokenError> {
-        self.0.sign_with_secret(reference, secret, algorithm, data)
+        let secret = self.secret_for(reference, secret)?;
+        self.token
+            .sign_with_secret(reference, &secret, algorithm, data)
     }
 }
 
@@ -188,3 +229,6 @@ impl<T: ports::Token + ?Sized> crate::signing::ports::Signer for T {
         ports::Token::sign_with_secret(self, reference, secret, algorithm, data)
     }
 }
+
+#[cfg(test)]
+mod tests;

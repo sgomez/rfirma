@@ -44,14 +44,11 @@ export function useCertificateSearch(certificates: CertificateStore) {
 
   // Los dos gestos de Preferencias vuelven a buscar: lo que acaba de entrar o
   // de salir tiene que aparecer también en el desplegable de la firma.
-  const installCertificate = useCallback(
-    async (password: string) => {
-      const chosen = await certificates.install(password);
-      if (chosen) await lookForCertificates();
-      return chosen;
-    },
-    [certificates, lookForCertificates],
-  );
+  const installCertificate = useCallback(async () => {
+    const chosen = await certificates.install();
+    if (chosen) await lookForCertificates();
+    return chosen;
+  }, [certificates, lookForCertificates]);
 
   const removeCertificate = useCallback(
     async (id: string) => {
@@ -60,6 +57,11 @@ export function useCertificateSearch(certificates: CertificateStore) {
     },
     [certificates, lookForCertificates],
   );
+
+  const emptyStore = useCallback(async () => {
+    await certificates.emptyStore();
+    await lookForCertificates();
+  }, [certificates, lookForCertificates]);
 
   /**
    * Elegir un certificado del desplegable.
@@ -83,6 +85,7 @@ export function useCertificateSearch(certificates: CertificateStore) {
     installed,
     installCertificate,
     removeCertificate,
+    emptyStore,
     chooseCertificate,
   };
 }

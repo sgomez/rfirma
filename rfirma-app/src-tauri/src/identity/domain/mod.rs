@@ -6,6 +6,7 @@ pub mod chain;
 pub mod ecdsa;
 pub mod error;
 pub mod holder;
+pub mod keyring;
 pub mod protected_secret;
 pub mod secret;
 pub mod store;

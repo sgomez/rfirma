@@ -17,14 +17,13 @@ fn keeps_only_the_candidates_that_are_there() {
 fn a_store_under_the_installed_directory_is_its_own_class() {
     let home = tempfile::tempdir().expect("deberia poder crearse un directorio temporal");
     let installed = home.path().join("certificates");
-    let mine = installed.join("2a01");
-    std::fs::create_dir_all(&mine).expect("deberia poder crearse el almacen");
-    std::fs::write(mine.join("cert9.db"), b"").expect("deberia poder escribirse cert9.db");
+    std::fs::create_dir_all(&installed).expect("deberia poder crearse el almacen");
+    std::fs::write(installed.join("cert9.db"), b"").expect("deberia poder escribirse cert9.db");
     let elsewhere = home.path().join(".pki/nssdb");
     std::fs::create_dir_all(&elsewhere).expect("deberia poder crearse el perfil");
 
     assert_eq!(
-        Store::nss("/usr/lib/libsoftokn3.so", &mine).class_under(&installed),
+        Store::nss("/usr/lib/libsoftokn3.so", &installed).class_under(&installed),
         StoreClass::Installed
     );
     assert_eq!(

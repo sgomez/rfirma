@@ -323,8 +323,12 @@ function RefusalSentence({
       return <>{t("errors.situations.moduleNotFound.title")}</>;
     case "pkcs12Unreadable":
       return <>{t("errors.situations.pkcs12Unreadable.title")}</>;
-    case "keyNotRsa":
-      return <>{t("errors.situations.keyNotRsa.title")}</>;
+    case "incorrectPkcs12Password":
+      return <>{t("errors.situations.incorrectPkcs12Password.title")}</>;
+    case "pkcs12NoPrivateKey":
+      return <>{t("errors.situations.pkcs12NoPrivateKey.title")}</>;
+    case "keyKindUnsupported":
+      return <>{t("errors.situations.keyKindUnsupported.title")}</>;
     case "mechanismNotOffered":
       return <>{t("errors.situations.mechanismNotOffered.title")}</>;
     case "notAPdf":
@@ -351,6 +355,12 @@ function RefusalSentence({
       return <>{t("errors.situations.folderUnwritable.title")}</>;
     case "noFreeName":
       return <>{t("errors.situations.noFreeName.title")}</>;
+    case "removalNotSupported":
+      return <>{t("errors.situations.removalNotSupported.title")}</>;
+    case "noKeyring":
+      return <>{t("errors.situations.noKeyring.title")}</>;
+    case "keyringPinMissing":
+      return <>{t("errors.situations.keyringPinMissing.title")}</>;
   }
 }
 

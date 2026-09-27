@@ -407,7 +407,8 @@ flatpak: check-native build-ts
     cd "{{ justfile_directory() }}/packaging/flatpak"
     flatpak-builder --force-clean --user --install --repo=repo \
         build-dir me.sgomez.rfirma.yml
-    flatpak build-bundle repo me.sgomez.rfirma.flatpak me.sgomez.rfirma stable
+    flatpak build-bundle --runtime-repo=https://dl.flathub.org/repo/flathub.flatpakrepo \
+        repo me.sgomez.rfirma.flatpak me.sgomez.rfirma stable
     echo
     echo "bundle: $PWD/me.sgomez.rfirma.flatpak ($(du -h me.sgomez.rfirma.flatpak | cut -f1))"
     echo "  flatpak install --user me.sgomez.rfirma.flatpak"

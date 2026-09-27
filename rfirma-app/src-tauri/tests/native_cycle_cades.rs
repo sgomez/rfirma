@@ -15,7 +15,8 @@ mod full_cycle {
         a_cycle_of, a_cycle_signed_by, an_installed_certificate, bridge, cades_cycle,
         ecdsa_composed_for_the_ec_certificate, openssl_cms_finds_no_content_in, openssl_cms_verify,
         openssl_prints_the_certificates_of, sign_cades, signing_certificate, the_cms_inside,
-        the_original_validator_accepts, write_to_target, ACTIVE_EC, CHALLENGE, NO_SECRET, PIN,
+        the_original_validator_accepts, write_to_target, ACTIVE_EC, CHALLENGE,
+        INSTALLED_CERTIFICATE_PIN, PIN,
     };
     use super::support::{a_one_page_pdf, certificate_labelled};
 
@@ -37,7 +38,7 @@ mod full_cycle {
 
         let signed = a_cycle_signed_by(
             &certificate,
-            NO_SECRET,
+            INSTALLED_CERTIFICATE_PIN,
             Format::Cades,
             cycle::ALGORITHM,
             CHALLENGE,
@@ -66,7 +67,7 @@ mod full_cycle {
 
         let signed = a_cycle_signed_by(
             &certificate,
-            NO_SECRET,
+            INSTALLED_CERTIFICATE_PIN,
             Format::Pades,
             cycle::ALGORITHM,
             &a_one_page_pdf(),
@@ -137,7 +138,7 @@ mod full_cycle {
 
         a_cycle_signed_by(
             &an_installed_certificate(installed.path()),
-            NO_SECRET,
+            INSTALLED_CERTIFICATE_PIN,
             format,
             cycle::ALGORITHM,
             data,

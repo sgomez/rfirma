@@ -3,6 +3,8 @@
 use cryptoki::context::Function;
 use cryptoki::error::{Error, RvError};
 
+use crate::identity::domain::keyring::KeyringError;
+
 /// Situación interpretable por el usuario que el catálogo traduce.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Situation {
@@ -18,12 +20,20 @@ pub enum Situation {
     ModuleNotFound,
     /// No se ha encontrado el certificado indicado.
     CertificateNotFound,
-    /// El almacén PKCS#12 no se ha podido leer o la clave es incorrecta.
+    /// El fichero no se ha podido decodificar como PKCS#12.
     Pkcs12Unreadable,
-    /// El certificado no contiene una clave RSA compatible.
-    KeyNotRsa,
+    /// La contraseña no abre el PKCS#12: NSS ha dado `SEC_ERROR_BAD_PASSWORD`.
+    IncorrectPkcs12Password,
+    /// El PKCS#12 se ha decodificado pero no trae ninguna clave privada.
+    Pkcs12NoPrivateKey,
+    /// El certificado no contiene una clave RSA ni de curva elíptica.
+    KeyKindUnsupported,
     /// El token no ofrece el mecanismo que pide el algoritmo de firma.
     MechanismNotOffered,
+    /// El llavero del escritorio no ha entregado el PIN del Almacén de rFirma (ADR-0034).
+    KeyringUnavailable,
+    /// El llavero del escritorio no tiene todavía el PIN del Almacén de rFirma (ADR-0034).
+    KeyringPinMissing,
     /// Error no clasificado con código crudo.
     Unknown,
 }
@@ -84,6 +94,16 @@ impl From<Error> for TokenError {
             Error::LibraryLoading(e) => Self::new(Situation::ModuleNotFound, e.to_string()),
             other => Self::new(Situation::Unknown, other.to_string()),
         }
+    }
+}
+
+impl From<KeyringError> for TokenError {
+    fn from(error: KeyringError) -> Self {
+        let situation = match error {
+            KeyringError::NoKeyring => Situation::KeyringUnavailable,
+            KeyringError::PinMissing => Situation::KeyringPinMissing,
+        };
+        Self::new(situation, error.to_string())
     }
 }
 

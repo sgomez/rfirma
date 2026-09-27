@@ -32,10 +32,8 @@ const SITE_ERRAND = "site-errand";
  * `sign_with_pin` es **la misma orden** que el recorrido local, y no una gemela
  * de sede: la fase que toca la clave privada no sabe de sedes (ADR-0001).
  *
- * `site_install_certificate` recibe la contraseña del `.p12` y esta pantalla no
- * la pide —no hay dónde: `SedeNoCertificate` tiene un botón y nada más—, así
- * que va vacía. Instala un `.p12` sin contraseña; con una, la orden falla y la
- * pantalla se queda como estaba, igual que al descartar el diálogo.
+ * `site_install_certificate` es la misma orden que la ventana principal: abre
+ * el selector y pide la contraseña por su propio diálogo, con reintentos.
  */
 export function tauriSiteErrands(): SiteErrandPort {
   const loader = pdfjsLoader();
@@ -65,11 +63,9 @@ export function tauriSiteErrands(): SiteErrandPort {
     finishSigning: () => stage(() => invoke<void>("site_finish_signing")),
     saveFile: () => stage(() => invoke<boolean>("site_save_file")),
     loadFiles: () => stage(() => invoke<number | null>("site_load_files")),
-    // Un `.p12` con contraseña —el caso normal— rechaza aquí, y desde esta
-    // pantalla no hay contraseña que mandar: lo que le queda a la persona es la
-    // misma pantalla, no una promesa sin recoger.
-    installCertificate: () =>
-      invoke<boolean>("site_install_certificate", { password: "" }).catch(() => false),
+    // La contraseña la pide el backend con su propio diálogo; `false` es
+    // que se cerró sin elegir, y un rechazo llega tal cual a quien llama.
+    installCertificate: () => invoke<boolean>("site_install_certificate"),
     lookAgain: () => invoke<void>("site_look_again"),
     installLocalCa: () => invoke<void>("install_local_ca"),
     closeWindow: () => invoke<void>("close_site_window"),

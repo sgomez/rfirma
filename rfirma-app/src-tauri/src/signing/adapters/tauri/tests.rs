@@ -1,10 +1,14 @@
 use super::{
-    pades_lower_left, remember_the_visible_signature_ordered, Memory, PlacementOrder, SigningOrder,
-    VisibleContent,
+    origin_window_of, pades_lower_left, remember_the_visible_signature_ordered, Memory,
+    PlacementOrder, SigningOrder, VisibleContent,
 };
 use crate::desktop::adapters::paths::Paths;
+use crate::identity::ports::OriginWindow;
 use crate::signing::adapters::orders::{DatumOrder, PhrasePartOrder, VisibleContentOrder};
 use crate::signing::application::tests::an_order;
+use crate::site::adapters::codec::V4Codec;
+use crate::site::LiveErrand;
+use std::sync::Arc;
 
 /// El cuerpo de la prefirma, para las guardas que leen su propio codigo fuente.
 const THE_ORDERS: &str = include_str!("../tauri.rs");
@@ -107,4 +111,18 @@ fn no_order_of_the_window_can_ask_for_a_format() {
             "la ventana principal solo firma PAdES: el formato lo fija la raiz, no la orden"
         );
     }
+}
+
+#[test]
+fn the_pin_is_asked_over_the_main_window_without_a_site_errand() {
+    let live = LiveErrand::default();
+
+    assert_eq!(origin_window_of(&live), OriginWindow::Main);
+}
+
+#[test]
+fn the_pin_is_asked_over_the_site_window_with_an_open_site_errand() {
+    let live = LiveErrand::speaking_with_an_active_errand(Arc::new(V4Codec));
+
+    assert_eq!(origin_window_of(&live), OriginWindow::Site);
 }

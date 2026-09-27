@@ -115,6 +115,8 @@ interface SigningPanelProps {
   /** Cierra el error y vuelve al panel, con el ciclo a medias olvidado en el backend. */
   onBack: () => void;
   onOpenHelp?: () => void;
+  /** Vacía el Almacén de rFirma, ofrecido cuando `failure` es `keyringPinMissing` (ADR-0034). */
+  onEmptyStore?: () => void;
 }
 
 /**
@@ -160,6 +162,7 @@ export function SigningPanel({
   failure,
   onBack,
   onOpenHelp,
+  onEmptyStore,
 }: SigningPanelProps) {
   const { t } = useTranslation();
   const chosen = certificate.kind === "chosen" ? certificate.certificate : null;
@@ -190,6 +193,7 @@ export function SigningPanel({
             situation={failure.situation}
             technicalDetail={failure.detail}
             onOpenHelp={onOpenHelp}
+            onEmptyStore={onEmptyStore}
             documentUnchanged
           />
         ) : (

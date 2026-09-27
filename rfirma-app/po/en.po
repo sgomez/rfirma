@@ -61,6 +61,16 @@ msgstr "Feedback and help"
 msgid "errors.reload"
 msgstr "Reload the window"
 
+#. El botón que ofrece vaciar el Almacén de rFirma cuando el llavero perdió su PIN (ADR-0034).
+msgid "errors.emptyStore.button"
+msgstr "Empty the store"
+
+msgid "errors.emptyStore.confirmQuestion"
+msgstr "Are you sure? The installed certificates will be lost, and this can't be undone."
+
+msgid "errors.emptyStore.confirmButton"
+msgstr "Yes, empty it"
+
 #. El botón que copia el detalle técnico crudo del error de firma.
 msgid "errors.copyDetail"
 msgstr "Copy detail"
@@ -203,14 +213,25 @@ msgid "errors.situations.certificateRevoked.body"
 msgstr "Its issuer revoked it, so it can't sign. You need a new one."
 
 msgid "errors.situations.pkcs12Unreadable.title"
-msgstr "We couldn't open the certificate"
+msgstr "We couldn't read the file"
 
 msgid "errors.situations.pkcs12Unreadable.body"
-msgstr "Check the file's password."
+msgstr "That isn't a .p12 or .pfx certificate."
+
+msgid "errors.situations.incorrectPkcs12Password.title"
+msgstr "That password isn't right"
+
+msgid "errors.situations.incorrectPkcs12Password.body"
+msgstr "Check it and try again."
+
+#. Un solo renglon a proposito: no lleva cuerpo debajo, y por eso no hay
+#. msgid "errors.situations.pkcs12NoPrivateKey.body".
+msgid "errors.situations.pkcs12NoPrivateKey.title"
+msgstr "That file doesn't carry a private key"
 
 #. Un solo renglon a proposito (ID-211): no lleva cuerpo debajo, y por eso no
-#. hay msgid "errors.situations.keyNotRsa.body".
-msgid "errors.situations.keyNotRsa.title"
+#. hay msgid "errors.situations.keyKindUnsupported.body".
+msgid "errors.situations.keyKindUnsupported.title"
 msgstr "That certificate doesn't work with rFirma"
 
 msgid "errors.situations.mechanismNotOffered.title"
@@ -218,6 +239,15 @@ msgstr "The token doesn't support that signature algorithm"
 
 msgid "errors.situations.mechanismNotOffered.body"
 msgstr "Try another certificate, or ask the site to use SHA-256 with RSA."
+
+msgid "errors.situations.removalNotSupported.title"
+msgstr "That certificate can't be removed on its own"
+
+msgid "errors.situations.removalNotSupported.body"
+msgstr ""
+"The rFirma Store is a single shared database: removing it would take the "
+"other installed certificates with it. There's no way yet to delete just "
+"one."
 
 msgid "errors.situations.certificateUnreadable.title"
 msgstr "We couldn't read the certificate"
@@ -365,6 +395,24 @@ msgid "errors.situations.activityNotForgotten.body"
 msgstr ""
 "Your recent documents and your certificate are still saved. Try again and, "
 "if it keeps happening, attach the technical detail to the bug report."
+
+msgid "errors.situations.noKeyring.title"
+msgstr "We couldn't reach the desktop keyring"
+
+msgid "errors.situations.noKeyring.body"
+msgstr ""
+"rFirma needs the keyring to store the certificate protected. Check that "
+"your desktop has one available, unlock it if it asks you to, and try "
+"again."
+
+msgid "errors.situations.keyringPinMissing.title"
+msgstr "The keyring lost the PIN for the rFirma Store"
+
+msgid "errors.situations.keyringPinMissing.body"
+msgstr ""
+"Without that PIN we can't open the store you already had. Go to "
+"Preferences → Certificates and empty it to install your certificates "
+"again from scratch."
 
 #. Se enseña en un diálogo nativo antes de que exista ventana; no la lee i18next.
 msgid "errors.startup.homeUnknown"
@@ -901,12 +949,6 @@ msgstr "Open the folder"
 msgid "panel.signed.signAgain"
 msgstr "Sign it again"
 
-msgid "pin.titlePassword"
-msgstr "Enter the password"
-
-msgid "pin.labelPassword"
-msgstr "Password"
-
 msgid "progress.title"
 msgstr "Signing the document…"
 
@@ -1237,9 +1279,6 @@ msgstr "expires on {{date}}"
 #. Insignia de la fila de un certificado caducado, que se queda en la lista.
 msgid "preferences.certificates.expired"
 msgstr "Expired"
-
-msgid "preferences.certificates.password.submit"
-msgstr "Continue"
 
 msgid "preferences.theme.label"
 msgstr "Theme"
@@ -1864,7 +1903,7 @@ msgstr[1] "{{origin}} accepts none of your {{count}} certificates"
 msgstr[2] "{{origin}} accepts none of your {{count}} certificates"
 
 msgid "sede.noCertificate.excludedBody"
-msgstr "You'll have to carry on from the site."
+msgstr "Install another certificate, or close and carry on from the site."
 
 #~ msgid "panel.visibleSignature.rubric.title"
 #~ msgstr "Rubric image"

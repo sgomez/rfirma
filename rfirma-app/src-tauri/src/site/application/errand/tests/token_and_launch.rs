@@ -541,13 +541,15 @@ fn the_two_parameters_of_the_automatic_selection_are_read_only_by_the_protocol()
     }
 }
 #[test]
-fn a_site_that_excludes_them_all_gets_the_code_of_an_empty_keystore() {
+fn a_site_that_excludes_them_all_does_not_answer_until_the_person_closes() {
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
     let memory = a_memory(home.path());
     let ours = vec![a_usable_certificate("FIRMA")];
     let (listed, _) = listed_from(&ours);
     let live = a_live();
     let url = an_operation("");
+    let (handle, mut wire) = the_wire();
+    live.answer_through(handle);
 
     let step = consent_for(
         &AnEngine::answering(&[&[]]),
@@ -560,19 +562,84 @@ fn a_site_that_excludes_them_all_gets_the_code_of_an_empty_keystore() {
     let ErrandStep::NoCertificate {
         reason,
         owned,
-        answered: Some(reply),
+        answered: None,
     } = step
     else {
-        panic!("no hay nada que consentir: {step:?}");
+        panic!("todavia se puede instalar otro: {step:?}");
     };
-    assert_eq!(
-        on_the_wire(&reply),
-        WireAnswer::refused(SafCode::NoCertificatesInKeystore).on_the_wire()
-    );
-    assert!(
-        reply.refusal().is_some(),
-        "la ventana enseña la situacion entera"
-    );
     assert_eq!(reason, NoCertificate::TheSiteExcludedThemAll);
     assert_eq!(owned, 1, "y cuantos tiene la persona, que es su almacen");
+    assert_eq!(
+        what_the_site_received(&mut wire),
+        None,
+        "a la sede no se le ha dicho nada todavia"
+    );
+}
+
+#[test]
+fn installing_another_certificate_the_site_still_excludes_keeps_the_screen_open() {
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let memory = a_memory(home.path());
+    let live = a_live();
+    let url = an_operation("");
+    let (handle, mut wire) = the_wire();
+    live.answer_through(handle);
+    let engine = AnEngine::answering(&[&[], &[]]);
+
+    for certificate_name in ["PRIMERO", "SEGUNDO"] {
+        let ours = vec![a_usable_certificate(certificate_name)];
+        let (listed, _) = listed_from(&ours);
+        let step = consent_for(
+            &engine,
+            &requested(&url),
+            ours,
+            &a_neighbourhood(home.path(), &listed, opened_for_nobody(), &memory),
+            &live,
+        );
+
+        assert!(
+            matches!(
+                step,
+                ErrandStep::NoCertificate {
+                    reason: NoCertificate::TheSiteExcludedThemAll,
+                    owned: 1,
+                    answered: None,
+                }
+            ),
+            "instalar otro que la sede tampoco acepta deja la pantalla abierta: {step:?}"
+        );
+    }
+    assert_eq!(
+        what_the_site_received(&mut wire),
+        None,
+        "la sede sigue sin saber nada mientras la persona pueda seguir instalando"
+    );
+}
+
+#[test]
+fn leaving_the_excluded_screen_cancels_the_errand() {
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let memory = a_memory(home.path());
+    let ours = vec![a_usable_certificate("FIRMA")];
+    let (listed, _) = listed_from(&ours);
+    let live = a_live();
+    let url = an_operation("");
+    let (handle, mut wire) = the_wire();
+    live.answer_through(handle);
+
+    consent_for(
+        &AnEngine::answering(&[&[]]),
+        &requested(&url),
+        ours,
+        &a_neighbourhood(home.path(), &listed, opened_for_nobody(), &memory),
+        &live,
+    );
+
+    declined(&live);
+
+    assert_eq!(
+        what_the_site_received(&mut wire).as_deref(),
+        Some(crate::site::domain::protocol::CANCELLED),
+        "la sede recibe su CANCEL, no antes de cerrar"
+    );
 }

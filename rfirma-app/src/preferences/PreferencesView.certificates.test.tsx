@@ -61,48 +61,34 @@ describe("certificates in a file", () => {
     expect(within(certificates).getByText("Caducado")).toBeInTheDocument();
   });
 
-  it("asks for the password of the file and installs with it", async () => {
+  /**
+   * El selector de ficheros y la contraseña son los dos del backend:
+   * «Añadir…» no abre ningún diálogo propio.
+   */
+  it("installs with a single click, without asking the password on screen", async () => {
     const user = userEvent.setup();
     const onInstallCertificate = vi.fn(async () => true);
     renderView({ onInstallCertificate });
     await openTab(user, "Certificados");
 
     await user.click(screen.getByRole("button", { name: "Añadir…" }));
-    await user.type(screen.getByLabelText("Contraseña"), "hunter2");
-    await user.click(screen.getByRole("button", { name: "Continuar" }));
 
-    expect(onInstallCertificate).toHaveBeenCalledWith("hunter2");
-  });
-
-  it("calls the password off with Escape, without closing the screen", async () => {
-    const user = userEvent.setup();
-    const onClose = vi.fn();
-    const onInstallCertificate = vi.fn(async () => true);
-    renderView({ onClose, onInstallCertificate });
-    await openTab(user, "Certificados");
-
-    await user.click(screen.getByRole("button", { name: "Añadir…" }));
-    await user.keyboard("{Escape}");
-
+    expect(onInstallCertificate).toHaveBeenCalledWith();
     expect(screen.queryByLabelText("Contraseña")).not.toBeInTheDocument();
-    expect(onInstallCertificate).not.toHaveBeenCalled();
-    expect(onClose).not.toHaveBeenCalled();
   });
 
-  /**
-   * ID-197 + ID-211: se rechaza al instalar y en un solo renglón. Ni la
-   * curva, ni el mecanismo, ni «instala uno de clave RSA».
-   */
-  it("says an elliptic key does not work, in a single line", async () => {
+  it("says an unsupported key kind does not work, in a single line", async () => {
     const user = userEvent.setup();
     const onInstallCertificate = vi.fn(async () => {
-      throw { situation: "keyNotRsa", detail: "FIRMA: la clave no es RSA" };
+      throw {
+        situation: "keyKindUnsupported",
+        detail: "FIRMA: la clave no es RSA ni de curva eliptica",
+      };
     });
     renderView({ onInstallCertificate });
     await openTab(user, "Certificados");
 
     await user.click(screen.getByRole("button", { name: "Añadir…" }));
-    await user.click(screen.getByRole("button", { name: "Continuar" }));
 
     const notice = await screen.findByRole("alert");
     expect(notice).toHaveTextContent("Ese certificado no es compatible con rFirma");
@@ -113,6 +99,62 @@ describe("certificates in a file", () => {
     );
   });
 
+  /**
+   * Solo la contraseña incorrecta manda a revisarla; las otras dos
+   * situaciones del `.p12` no lo mencionan.
+   */
+  it("says the password is wrong, and only that one asks to check it", async () => {
+    const user = userEvent.setup();
+    const onInstallCertificate = vi.fn(async () => {
+      throw {
+        situation: "incorrectPkcs12Password",
+        detail: "SEC_PKCS12DecoderVerify: SEC_ERROR_BAD_PASSWORD",
+      };
+    });
+    renderView({ onInstallCertificate });
+    await openTab(user, "Certificados");
+
+    await user.click(screen.getByRole("button", { name: "Añadir…" }));
+
+    const notice = await screen.findByRole("alert");
+    expect(notice).toHaveTextContent("La contraseña no es correcta");
+    expect(notice).toHaveTextContent("Compruébala y vuelve a intentarlo.");
+  });
+
+  it("says a file it cannot read is not the same as a wrong password", async () => {
+    const user = userEvent.setup();
+    const onInstallCertificate = vi.fn(async () => {
+      throw { situation: "pkcs12Unreadable", detail: "SEC_PKCS12DecoderUpdate" };
+    });
+    renderView({ onInstallCertificate });
+    await openTab(user, "Certificados");
+
+    await user.click(screen.getByRole("button", { name: "Añadir…" }));
+
+    const notice = await screen.findByRole("alert");
+    expect(notice).toHaveTextContent("No hemos podido leer el fichero");
+    expect(notice.textContent).not.toMatch(/contraseña/);
+  });
+
+  /** Como una clave elíptica: se cuenta en un solo renglón, sin detalle técnico. */
+  it("says a p12 without a private key does not work, in a single line", async () => {
+    const user = userEvent.setup();
+    const onInstallCertificate = vi.fn(async () => {
+      throw {
+        situation: "pkcs12NoPrivateKey",
+        detail: "el fichero no ha dejado ningun certificado con clave privada dentro",
+      };
+    });
+    renderView({ onInstallCertificate });
+    await openTab(user, "Certificados");
+
+    await user.click(screen.getByRole("button", { name: "Añadir…" }));
+
+    const notice = await screen.findByRole("alert");
+    expect(notice).toHaveTextContent("Ese fichero no trae ninguna clave privada");
+    expect(within(notice).queryByText("Detalle técnico")).not.toBeInTheDocument();
+  });
+
   /** Cerrar el selector sin elegir nada no es un fallo: no se cuenta nada. */
   it("says nothing when the file picker was closed without choosing anything", async () => {
     const user = userEvent.setup();
@@ -120,7 +162,6 @@ describe("certificates in a file", () => {
     await openTab(user, "Certificados");
 
     await user.click(screen.getByRole("button", { name: "Añadir…" }));
-    await user.click(screen.getByRole("button", { name: "Continuar" }));
 
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
@@ -157,5 +198,25 @@ describe("certificates in a file", () => {
 
     const certificates = screen.getByRole("tabpanel", { name: "Certificados" });
     expect(await within(certificates).findByRole("alert")).toBeInTheDocument();
+  });
+
+  // El llavero perdió el PIN del Almacén de rFirma (ADR-0034): instalar lo
+  // dice y ofrece vaciarlo, confirmando antes de llamarlo.
+  it("offers to empty the store when the keyring lost its pin", async () => {
+    const user = userEvent.setup();
+    const onEmptyStore = vi.fn();
+    renderView({
+      onInstallCertificate: async () => {
+        throw { situation: "keyringPinMissing", detail: "sin pin" };
+      },
+      onEmptyStore,
+    });
+    await openTab(user, "Certificados");
+
+    await user.click(screen.getByRole("button", { name: "Añadir…" }));
+    await user.click(screen.getByRole("button", { name: "Vaciar el almacén" }));
+    await user.click(screen.getByRole("button", { name: "Sí, vaciarlo" }));
+
+    expect(onEmptyStore).toHaveBeenCalledOnce();
   });
 });

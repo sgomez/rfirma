@@ -61,6 +61,16 @@ msgstr "Comentarios e axuda"
 msgid "errors.reload"
 msgstr "Recargar a fiestra"
 
+#. El botón que ofrece vaciar el Almacén de rFirma cuando el llavero perdió su PIN (ADR-0034).
+msgid "errors.emptyStore.button"
+msgstr "Baleirar o almacén"
+
+msgid "errors.emptyStore.confirmQuestion"
+msgstr "Seguro? Perderanse os certificados instalados, e non se pode desfacer."
+
+msgid "errors.emptyStore.confirmButton"
+msgstr "Si, baleiralo"
+
 #. El botón que copia el detalle técnico crudo del error de firma.
 msgid "errors.copyDetail"
 msgstr "Copiar detalle"
@@ -206,14 +216,25 @@ msgstr ""
 "A súa emisora revogouno, así que non serve para asinar. Necesitas un novo."
 
 msgid "errors.situations.pkcs12Unreadable.title"
-msgstr "Non se puido abrir o certificado"
+msgstr "Non puidemos ler o ficheiro"
 
 msgid "errors.situations.pkcs12Unreadable.body"
-msgstr "Comproba o contrasinal do ficheiro."
+msgstr "Iso non é un certificado en formato .p12 ou .pfx."
+
+msgid "errors.situations.incorrectPkcs12Password.title"
+msgstr "O contrasinal non é correcto"
+
+msgid "errors.situations.incorrectPkcs12Password.body"
+msgstr "Compróbao e vólveo intentar."
+
+#. Un solo renglon a proposito: no lleva cuerpo debajo, y por eso no hay
+#. msgid "errors.situations.pkcs12NoPrivateKey.body".
+msgid "errors.situations.pkcs12NoPrivateKey.title"
+msgstr "Ese ficheiro non trae ningunha clave privada"
 
 #. Un solo renglon a proposito (ID-211): no lleva cuerpo debajo, y por eso no
-#. hay msgid "errors.situations.keyNotRsa.body".
-msgid "errors.situations.keyNotRsa.title"
+#. hay msgid "errors.situations.keyKindUnsupported.body".
+msgid "errors.situations.keyKindUnsupported.title"
 msgstr "Ese certificado non é compatible con rFirma"
 
 msgid "errors.situations.mechanismNotOffered.title"
@@ -221,6 +242,14 @@ msgstr "O token non admite ese algoritmo de sinatura"
 
 msgid "errors.situations.mechanismNotOffered.body"
 msgstr "Proba con outro certificado ou pídelle á sede que use SHA-256 con RSA."
+
+msgid "errors.situations.removalNotSupported.title"
+msgstr "Ese certificado non se pode quitar por separado"
+
+msgid "errors.situations.removalNotSupported.body"
+msgstr ""
+"O Almacén de rFirma é unha única base compartida: quitalo levaría tamén os "
+"demais certificados instalados. Aínda non hai xeito de borrar só un."
 
 msgid "errors.situations.certificateUnreadable.title"
 msgstr "Non puidemos ler o certificado"
@@ -368,6 +397,24 @@ msgid "errors.situations.activityNotForgotten.body"
 msgstr ""
 "Os documentos recentes e o certificado seguen gardados. Téntao de novo e, se "
 "segue a ocorrer, achega o detalle técnico ao informe do fallo."
+
+msgid "errors.situations.noKeyring.title"
+msgstr "Non puidemos acceder ao chaveiro do escritorio"
+
+msgid "errors.situations.noKeyring.body"
+msgstr ""
+"rFirma precisa o chaveiro para gardar o certificado de forma protexida. "
+"Comproba que o teu escritorio ten un dispoñible, desbloquéao se cho pide, "
+"e volve tentalo."
+
+msgid "errors.situations.keyringPinMissing.title"
+msgstr "O chaveiro perdeu o PIN do Almacén de rFirma"
+
+msgid "errors.situations.keyringPinMissing.body"
+msgstr ""
+"Sen ese PIN non podemos abrir o almacén que xa tiñas. Vai a Preferencias → "
+"Certificados e báleiro para volver instalar os teus certificados desde "
+"cero."
 
 #. Se enseña en un diálogo nativo antes de que exista ventana; no la lee i18next.
 msgid "errors.startup.homeUnknown"
@@ -906,12 +953,6 @@ msgstr "Abrir o cartafol"
 msgid "panel.signed.signAgain"
 msgstr "Volver asinar"
 
-msgid "pin.titlePassword"
-msgstr "Introduce o contrasinal"
-
-msgid "pin.labelPassword"
-msgstr "Contrasinal"
-
 msgid "progress.title"
 msgstr "Asinando o documento…"
 
@@ -1241,9 +1282,6 @@ msgstr "caduca o {{date}}"
 #. Insignia de la fila de un certificado caducado, que se queda en la lista.
 msgid "preferences.certificates.expired"
 msgstr "Caducado"
-
-msgid "preferences.certificates.password.submit"
-msgstr "Continuar"
 
 msgid "preferences.theme.label"
 msgstr "Tema"
@@ -1872,7 +1910,7 @@ msgstr[1] "{{origin}} non acepta ningún dos teus {{count}} certificados"
 msgstr[2] "{{origin}} non acepta ningún dos teus {{count}} certificados"
 
 msgid "sede.noCertificate.excludedBody"
-msgstr "Terás que continuar desde a sede."
+msgstr "Instala outro certificado, ou pecha e continúa desde a sede."
 
 #~ msgid "panel.visibleSignature.rubric.title"
 #~ msgstr "Imaxe da rúbrica"

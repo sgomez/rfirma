@@ -47,7 +47,7 @@ describe("5 · no usable certificate", () => {
     expect(calls.close).not.toHaveBeenCalled();
   });
 
-  it("leaves no main action when the site excluded them all: installing another fixes nothing", () => {
+  it("also offers to install when the site excluded them all: the new one might work", () => {
     const { port } = scriptedErrand({ kind: "noCertificate", reason: "excluded", owned: 3 });
     renderWithCatalog(<SedeWindow errands={port} />);
 
@@ -55,24 +55,30 @@ describe("5 · no usable certificate", () => {
       screen.getByText("sede.ejemplo.gob.es no acepta ninguno de tus 3 certificados"),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Cerrar" })).toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: "Instalar un certificado…" }),
-    ).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Volver a buscar" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Instalar un certificado…" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Volver a buscar" })).toBeInTheDocument();
   });
 
-  it("focuses the main action when there is none installed", () => {
-    const { port } = scriptedErrand({ kind: "noCertificate", reason: "none", owned: 0 });
-    renderWithCatalog(<SedeWindow errands={port} />);
+  it("focuses the main action, in both reasons: installing another can still fix it", () => {
+    const none = scriptedErrand({ kind: "noCertificate", reason: "none", owned: 0 });
+    const { unmount } = renderWithCatalog(<SedeWindow errands={none.port} />);
+    expect(screen.getByRole("button", { name: "Instalar un certificado…" })).toHaveFocus();
+    unmount();
 
+    const excluded = scriptedErrand({ kind: "noCertificate", reason: "excluded", owned: 3 });
+    renderWithCatalog(<SedeWindow errands={excluded.port} />);
     expect(screen.getByRole("button", { name: "Instalar un certificado…" })).toHaveFocus();
   });
 
-  it("focuses Cerrar when the site excluded them all, because it is the only way out", () => {
-    const { port } = scriptedErrand({ kind: "noCertificate", reason: "excluded", owned: 3 });
+  it("leaves through the footer when the site excluded them all, without the site hearing anything until then", async () => {
+    const user = userEvent.setup();
+    const { port, calls } = scriptedErrand({ kind: "noCertificate", reason: "excluded", owned: 3 });
     renderWithCatalog(<SedeWindow errands={port} />);
 
-    expect(screen.getByRole("button", { name: "Cerrar" })).toHaveFocus();
+    await user.click(screen.getByRole("button", { name: "Cerrar" }));
+
+    expect(calls.cancel).toHaveBeenCalledOnce();
+    expect(calls.close).not.toHaveBeenCalled();
   });
 
   it("never enumerates what the site discarded", () => {
@@ -91,6 +97,47 @@ describe("5 · no usable certificate", () => {
     await user.click(screen.getByRole("button", { name: "Volver a buscar" }));
 
     expect(calls.lookAgain).toHaveBeenCalledOnce();
+  });
+
+  it("installs from the excluded screen too, because a new certificate might not be excluded", async () => {
+    const user = userEvent.setup();
+    const { port, calls } = scriptedErrand({ kind: "noCertificate", reason: "excluded", owned: 3 });
+    renderWithCatalog(<SedeWindow errands={port} />);
+
+    await user.click(screen.getByRole("button", { name: "Instalar un certificado…" }));
+
+    expect(calls.installCertificate).toHaveBeenCalledOnce();
+  });
+});
+
+describe("5 · install failure", () => {
+  it("shows the failure in line instead of discarding it", async () => {
+    const user = userEvent.setup();
+    const { port, calls } = scriptedErrand({ kind: "noCertificate", reason: "none", owned: 0 });
+    calls.installCertificate.mockRejectedValueOnce({
+      situation: "pkcs12Unreadable",
+      detail: "SEC_PKCS12DecoderUpdate",
+    });
+    renderWithCatalog(<SedeWindow errands={port} />);
+
+    await user.click(screen.getByRole("button", { name: "Instalar un certificado…" }));
+
+    const notice = await screen.findByRole("alert");
+    expect(notice).toHaveTextContent("No hemos podido leer el fichero");
+    expect(calls.lookAgain).not.toHaveBeenCalled();
+  });
+
+  it("shows no error when the file dialog is cancelled", async () => {
+    const user = userEvent.setup();
+    const { port, calls } = scriptedErrand({ kind: "noCertificate", reason: "none", owned: 0 });
+    calls.installCertificate.mockResolvedValueOnce(false);
+    renderWithCatalog(<SedeWindow errands={port} />);
+
+    await user.click(screen.getByRole("button", { name: "Instalar un certificado…" }));
+
+    expect(await screen.findByRole("button", { name: "Instalar un certificado…" })).toBeVisible();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(calls.lookAgain).not.toHaveBeenCalled();
   });
 });
 

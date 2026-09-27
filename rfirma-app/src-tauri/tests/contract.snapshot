@@ -22,8 +22,9 @@ ORDENES DE TAURI                          (<contexto>/adapters/tauri*.rs)
   async open_signed_document() -> Result<(), Failure>
   async open_signed_folder() -> Result<(), Failure>
         list_certificates() -> Result<Vec<CertificateView>, Failure>
-  async install_certificate(password: String) -> Result<bool, Failure>
+  async install_certificate() -> Result<bool, Failure>
   async remove_certificate(id: String) -> Result<(), Failure>
+  async empty_installed_store() -> Result<(), Failure>
         begin_signing(order: SigningOrder) -> Result<SecretView, Failure>
   async sign_with_pin(pin: String) -> Result<(), Failure>
         finish_signing(destination: Option<String>) -> Result<SignedDocumentView, Failure>
@@ -43,7 +44,7 @@ ORDENES DE TAURI                          (<contexto>/adapters/tauri*.rs)
   async site_confirm_signatures() -> Result<(), Failure>
   async site_mark_area(area: Option<PlacementOrder>) -> Result<bool, Failure>
   async site_finish_signing() -> Result<(), Failure>
-  async site_install_certificate(password: String) -> Result<bool, Failure>
+  async site_install_certificate() -> Result<bool, Failure>
   async site_dismiss_the_warning()
   async site_look_again()
   async site_save_file() -> Result<bool, Failure>

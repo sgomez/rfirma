@@ -38,6 +38,14 @@ impl Token for NoToken {
         Ok(Vec::new())
     }
 
+    fn list_authenticated(
+        &self,
+        _store: &Store,
+        _pin: &crate::identity::domain::protected_secret::ProtectedSecret,
+    ) -> Result<Vec<TokenCertificate>, TokenError> {
+        Ok(Vec::new())
+    }
+
     fn secret_of(&self, _reference: &CertificateRef) -> Result<StoreSecret, TokenError> {
         Ok(StoreSecret::NotNeeded)
     }
@@ -68,10 +76,23 @@ impl Token for NoToken {
         _directory: &Path,
         _pkcs12: &[u8],
         _password: &str,
+        _pin: &crate::identity::domain::protected_secret::ProtectedSecret,
     ) -> Result<Store, TokenError> {
         Err(TokenError::new(
             Situation::Pkcs12Unreadable,
             "este token no importa nada",
+        ))
+    }
+
+    fn remove_certificate(
+        &self,
+        _directory: &Path,
+        _reference: &CertificateRef,
+        _pin: &crate::identity::domain::protected_secret::ProtectedSecret,
+    ) -> Result<(), TokenError> {
+        Err(TokenError::new(
+            Situation::CertificateNotFound,
+            "este token no quita nada",
         ))
     }
 }

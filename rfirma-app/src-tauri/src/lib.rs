@@ -43,6 +43,7 @@ pub struct Roots {
     pub signing: SigningRoot,
     pub site: SiteRoot,
     pub dialogs: Arc<documents::adapters::dialogs::RealPortalDialogs>,
+    pub prompter: Arc<signing::adapters::gtk_prompter::GtkSecretPrompter>,
 }
 
 /// Compone las cinco raíces de producción sobre las rutas de esta máquina, con la invocación
@@ -56,6 +57,7 @@ fn composed_roots(paths: desktop::adapters::paths::Paths, invocation: Option<Inv
     let memory = Arc::new(signing::adapters::memory::Memory::at(&paths));
     let ca_store = site::adapters::tls::LocalCaStore::of(&paths);
     let dialogs = Arc::new(documents::adapters::dialogs::RealPortalDialogs::default());
+    let prompter = Arc::new(signing::adapters::gtk_prompter::GtkSecretPrompter::new());
     let identity = IdentityRoot {
         token: Box::new(identity::adapters::pkcs11::RealToken),
         stores: identity::adapters::pkcs11::stores::from_environment(),
@@ -63,6 +65,11 @@ fn composed_roots(paths: desktop::adapters::paths::Paths, invocation: Option<Inv
         listed: identity::application::certificates::ListedCertificates::new(),
         memory: memory.clone(),
         folder: Arc::new(identity::adapters::folder::RealInstalledFolder),
+        prompter: prompter.clone(),
+        keyring: Arc::new(|| {
+            identity::adapters::keyring::RealKeyring::new()
+                .map(|keyring| Box::new(keyring) as Box<dyn identity::ports::Keyring + Send + Sync>)
+        }),
     };
     let documents = DocumentsRoot {
         documents_folder: desktop::adapters::paths::documents_folder().unwrap_or_default(),
@@ -86,7 +93,7 @@ fn composed_roots(paths: desktop::adapters::paths::Paths, invocation: Option<Inv
         isolate: signing::adapters::isolate::Isolate::start(),
         session: signing::application::session::SigningSession::default(),
         files: Arc::new(signing::adapters::files::RealDocumentBytes),
-        prompter: Arc::new(signing::adapters::gtk_prompter::GtkSecretPrompter),
+        prompter: prompter.clone(),
     };
     let site = SiteRoot {
         errand: site::application::errand::LiveErrand::default(),
@@ -124,6 +131,7 @@ fn composed_roots(paths: desktop::adapters::paths::Paths, invocation: Option<Inv
         signing,
         site,
         dialogs,
+        prompter,
     }
 }
 
@@ -170,6 +178,7 @@ fn with_the_five_roots(
         signing,
         site,
         dialogs: _,
+        prompter: _,
     } = roots;
 
     builder
@@ -230,6 +239,7 @@ fn with_the_five_roots(
             signing::adapters::tauri::previous_signatures,
             identity::adapters::tauri::install_certificate,
             identity::adapters::tauri::remove_certificate,
+            identity::adapters::tauri::empty_installed_store,
             site::adapters::tauri::close_site_window,
             site::adapters::tauri::site_identify,
             site::adapters::tauri::site_decline,
@@ -314,10 +324,12 @@ fn run_desktop(paths: desktop::adapters::paths::Paths, invocation: Invocation) {
     ));
 
     let dialogs = roots.dialogs.clone();
+    let prompter = roots.prompter.clone();
     with_the_five_roots(builder, roots)
         .manage(scratch)
         .setup(move |app| {
             dialogs.attach(app.handle().clone());
+            prompter.attach(app.handle().clone());
             open_the_main_window(app.handle());
             Ok(())
         })
@@ -340,11 +352,13 @@ fn run_site(paths: desktop::adapters::paths::Paths, url: String, said_by_the_rol
     let mut roots = composed_roots(paths, None);
     roots.site.scratch_dir = scratch.path().to_path_buf();
     let dialogs = roots.dialogs.clone();
+    let prompter = roots.prompter.clone();
 
     with_the_five_roots(tauri::Builder::default(), roots)
         .manage(scratch)
         .setup(move |app| {
             dialogs.attach(app.handle().clone());
+            prompter.attach(app.handle().clone());
             say(said_by_the_role);
 
             let handle = app.handle().clone();

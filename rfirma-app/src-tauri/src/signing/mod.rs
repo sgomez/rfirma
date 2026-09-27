@@ -12,6 +12,7 @@ use crate::documents::domain::document::Document;
 use crate::identity::domain::certificate::TokenCertificate;
 use crate::identity::domain::protected_secret::ProtectedSecret;
 use crate::identity::domain::secret::StoreSecret;
+use crate::identity::ports::SecretPrompter;
 use adapters::isolate::Isolate;
 use adapters::memory::Memory;
 use application::configuration_memory::Configuration;
@@ -30,8 +31,8 @@ pub struct SigningRoot {
     pub session: SigningSession,
     /// De dónde salen los bytes del documento que se firma.
     pub files: Arc<dyn ports::DocumentBytes + Send + Sync>,
-    /// El prompter que solicita el secreto interactivo (PIN).
-    pub prompter: Arc<dyn ports::SecretPrompter + Send + Sync>,
+    /// El prompter que solicita el secreto interactivo (PIN), puerto de `identity`.
+    pub prompter: Arc<dyn SecretPrompter + Send + Sync>,
 }
 
 impl SigningRoot {

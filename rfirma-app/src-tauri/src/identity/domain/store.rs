@@ -22,6 +22,7 @@ pub enum StoreClass {
 pub struct Store {
     module: PathBuf,
     init_args: Option<String>,
+    installed: bool,
 }
 
 impl Store {
@@ -30,6 +31,7 @@ impl Store {
         Self {
             module: module.into(),
             init_args: None,
+            installed: false,
         }
     }
 
@@ -38,6 +40,7 @@ impl Store {
         Self {
             module: module.into(),
             init_args,
+            installed: false,
         }
     }
 
@@ -49,6 +52,15 @@ impl Store {
                 "configdir='sql:{}' certPrefix='' keyPrefix='' secmod='secmod.db' flags=readOnly",
                 profile.display()
             )),
+            installed: false,
+        }
+    }
+
+    /// El Almacén de rFirma: se lista por contenido, sin PIN (ADR-0034).
+    pub fn installed_nss(softoken: impl Into<PathBuf>, directory: &Path) -> Self {
+        Self {
+            installed: true,
+            ..Self::nss(softoken, directory)
         }
     }
 
@@ -73,6 +85,9 @@ impl Store {
 
     /// Clasifica el tipo de almacén según sus parámetros.
     pub fn class(&self) -> StoreClass {
+        if self.installed {
+            return StoreClass::Installed;
+        }
         let Some(profile) = self.profile() else {
             return StoreClass::Card;
         };
@@ -97,11 +112,10 @@ impl Store {
         Some(inside.strip_prefix("sql:").unwrap_or(inside))
     }
 
-    /// Directorio del almacén si corresponde a un PKCS#12 instalado (ADR-0011).
+    /// El Almacén de rFirma, si este almacén es el que vive en `installed_dir` (ADR-0034).
     pub fn installed_directory_under(&self, installed_dir: &Path) -> Option<PathBuf> {
         let directory = PathBuf::from(self.profile()?);
-        (directory.parent() == Some(installed_dir) && directory.join("cert9.db").is_file())
-            .then_some(directory)
+        (directory == installed_dir && directory.join("cert9.db").is_file()).then_some(directory)
     }
 }
 

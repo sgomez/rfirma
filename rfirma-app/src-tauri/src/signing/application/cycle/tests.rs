@@ -397,50 +397,28 @@ fn a_cosignature_names_its_operation_at_the_border() {
 }
 
 #[test]
-fn prompter_supplies_secret_when_store_requires_typed_on_screen() {
-    use crate::identity::domain::error::Situation;
-    use crate::signing::adapters::gtk_prompter::MockSecretPrompter;
-    use crate::signing::domain::Language;
-    use crate::signing::ports::SecretName;
+fn cycle_error_display_formats_all_variants() {
+    use crate::identity::domain::error::{Situation, TokenError};
+    use crate::signing::application::cycle::CycleError;
+    use crate::signing::domain::bridge::BridgeError;
+    use crate::signing::domain::{Refusal, SealMismatch};
 
-    struct TokenAskingPin {
-        attempts: RefCell<usize>,
-    }
+    let e1 = CycleError::Inadmissible(Refusal::NotAPdf);
+    assert!(!format!("{e1}").is_empty());
 
-    impl Signer for TokenAskingPin {
-        fn accepts_the_secret(
-            &self,
-            _reference: &crate::identity::domain::certificate::CertificateRef,
-            _secret: &crate::identity::domain::protected_secret::ProtectedSecret,
-        ) -> Result<(), crate::identity::domain::error::TokenError> {
-            Ok(())
-        }
+    let e2 = CycleError::Bridge(BridgeError::Failed("test".to_string()));
+    assert!(!format!("{e2}").is_empty());
 
-        fn secret_of(&self, _reference: &CertificateRef) -> Result<StoreSecret, TokenError> {
-            Ok(StoreSecret::TypedOnScreen)
-        }
-        fn offers(
-            &self,
-            _reference: &CertificateRef,
-            _algorithm: SignatureAlgorithm,
-        ) -> Result<(), TokenError> {
-            Ok(())
-        }
-        fn sign_with_secret(
-            &self,
-            _reference: &CertificateRef,
-            secret: &crate::identity::domain::protected_secret::ProtectedSecret,
-            _algorithm: SignatureAlgorithm,
-            data: &[u8],
-        ) -> Result<Vec<u8>, TokenError> {
-            *self.attempts.borrow_mut() += 1;
-            if secret.as_str() == Ok("correct_pin") {
-                Ok(data.to_vec())
-            } else {
-                Err(TokenError::new(Situation::IncorrectPin, "PIN incorrecto"))
-            }
-        }
-    }
+    let e3 = CycleError::Token(TokenError::new(Situation::TokenAbsent, "test"));
+    assert!(!format!("{e3}").is_empty());
+
+    let e4 = CycleError::Seal(SealMismatch);
+    assert!(!format!("{e4}").is_empty());
+}
+
+#[test]
+fn secret_prompt_context_names_the_pin_and_the_holder_read_from_the_der() {
+    use crate::identity::domain::secret::SecretName;
 
     let certificate = a_certificate("FIRMA", b"der");
     let bridge = ABridgeLikeTheRealOne::default();
@@ -457,65 +435,18 @@ fn prompter_supplies_secret_when_store_requires_typed_on_screen() {
     )
     .expect("prefirma");
 
-    let signer = TokenAskingPin {
-        attempts: RefCell::new(0),
-    };
-    let mock = MockSecretPrompter::with_secrets(&["wrong_pin", "correct_pin"]);
-
-    let _signatures = cycle
-        .sign_with_prompter(&signer, &mock, Language::Spanish)
-        .expect("deberia firmar tras corregir el PIN");
-
-    assert_eq!(*signer.attempts.borrow(), 2);
-
-    let recorded = mock.recorded_requests();
-    assert_eq!(recorded.len(), 2);
-    assert!(!recorded[0].incorrect_secret);
-    assert!(recorded[1].incorrect_secret);
+    let (secret, holder) = cycle.secret_prompt_context();
+    assert_eq!(secret, SecretName::Pin);
     assert_eq!(
-        recorded[0].holder, None,
+        holder, None,
         "sin un DER legible el dialogo se queda sin linea de titular, y no cae en la etiqueta del objeto"
     );
-    assert_eq!(recorded[0].secret, SecretName::Pin);
 }
 
 #[test]
-fn the_secret_of_a_store_that_is_a_file_is_asked_for_as_a_password() {
+fn secret_prompt_context_names_the_password_for_a_file_store() {
+    use crate::identity::domain::secret::SecretName;
     use crate::identity::domain::store::Store;
-    use crate::signing::adapters::gtk_prompter::MockSecretPrompter;
-    use crate::signing::domain::Language;
-    use crate::signing::ports::SecretName;
-
-    struct TokenAskingForTheStorePassword;
-    impl Signer for TokenAskingForTheStorePassword {
-        fn accepts_the_secret(
-            &self,
-            _reference: &crate::identity::domain::certificate::CertificateRef,
-            _secret: &crate::identity::domain::protected_secret::ProtectedSecret,
-        ) -> Result<(), crate::identity::domain::error::TokenError> {
-            Ok(())
-        }
-
-        fn secret_of(&self, _reference: &CertificateRef) -> Result<StoreSecret, TokenError> {
-            Ok(StoreSecret::TypedOnScreen)
-        }
-        fn offers(
-            &self,
-            _reference: &CertificateRef,
-            _algorithm: SignatureAlgorithm,
-        ) -> Result<(), TokenError> {
-            Ok(())
-        }
-        fn sign_with_secret(
-            &self,
-            _reference: &CertificateRef,
-            _secret: &crate::identity::domain::protected_secret::ProtectedSecret,
-            _algorithm: SignatureAlgorithm,
-            data: &[u8],
-        ) -> Result<Vec<u8>, TokenError> {
-            Ok(data.to_vec())
-        }
-    }
 
     let in_a_firefox_profile = CertificateRef::new(
         Store::nss(
@@ -540,98 +471,6 @@ fn the_secret_of_a_store_that_is_a_file_is_asked_for_as_a_password() {
     )
     .expect("prefirma");
 
-    let mock = MockSecretPrompter::with_secrets(&["la contrasena del perfil"]);
-    cycle
-        .sign_with_prompter(&TokenAskingForTheStorePassword, &mock, Language::Spanish)
-        .expect("deberia firmar");
-
-    let recorded = mock.recorded_requests();
-    assert_eq!(recorded[0].secret, SecretName::Password);
-}
-
-#[test]
-fn prompter_cancellation_aborts_signing_cycle() {
-    use crate::signing::adapters::gtk_prompter::PreconfiguredSecretPrompter;
-    use crate::signing::domain::Language;
-    use crate::signing::ports::SecretPromptError;
-
-    struct TokenAskingPin;
-    impl Signer for TokenAskingPin {
-        fn accepts_the_secret(
-            &self,
-            _reference: &crate::identity::domain::certificate::CertificateRef,
-            _secret: &crate::identity::domain::protected_secret::ProtectedSecret,
-        ) -> Result<(), crate::identity::domain::error::TokenError> {
-            Ok(())
-        }
-
-        fn secret_of(&self, _reference: &CertificateRef) -> Result<StoreSecret, TokenError> {
-            Ok(StoreSecret::TypedOnScreen)
-        }
-        fn offers(
-            &self,
-            _reference: &CertificateRef,
-            _algorithm: SignatureAlgorithm,
-        ) -> Result<(), TokenError> {
-            Ok(())
-        }
-        fn sign_with_secret(
-            &self,
-            _reference: &CertificateRef,
-            _secret: &crate::identity::domain::protected_secret::ProtectedSecret,
-            _algorithm: SignatureAlgorithm,
-            data: &[u8],
-        ) -> Result<Vec<u8>, TokenError> {
-            Ok(data.to_vec())
-        }
-    }
-
-    let certificate = a_certificate("FIRMA", b"der");
-    let bridge = ABridgeLikeTheRealOne::default();
-    let cycle = presign(
-        &bridge,
-        a_request(
-            Format::Cades,
-            AdmissibleDocument::check_for(Format::Cades, b"documento", Waivers::NONE)
-                .expect("admisible"),
-            &[certificate.der().to_vec()],
-            &an_invisible_signature(),
-            certificate.reference(),
-        ),
-    )
-    .expect("prefirma");
-
-    let signer = TokenAskingPin;
-    let prompter = PreconfiguredSecretPrompter::cancelling();
-
-    let err = cycle
-        .sign_with_prompter(&signer, &prompter, Language::Catalan)
-        .expect_err("deberia cancelar");
-    assert!(matches!(
-        err,
-        super::CycleError::Prompt(SecretPromptError::Cancelled)
-    ));
-}
-
-#[test]
-fn cycle_error_display_formats_all_variants() {
-    use crate::identity::domain::error::{Situation, TokenError};
-    use crate::signing::application::cycle::CycleError;
-    use crate::signing::domain::bridge::BridgeError;
-    use crate::signing::domain::{Refusal, SealMismatch};
-
-    let e1 = CycleError::Inadmissible(Refusal::NotAPdf);
-    assert!(!format!("{e1}").is_empty());
-
-    let e2 = CycleError::Bridge(BridgeError::Failed("test".to_string()));
-    assert!(!format!("{e2}").is_empty());
-
-    let e3 = CycleError::Token(TokenError::new(Situation::TokenAbsent, "test"));
-    assert!(!format!("{e3}").is_empty());
-
-    let e4 = CycleError::Seal(SealMismatch);
-    assert!(!format!("{e4}").is_empty());
-
-    let e5 = CycleError::Prompt(crate::signing::ports::SecretPromptError::Cancelled);
-    assert!(!format!("{e5}").is_empty());
+    let (secret, _holder) = cycle.secret_prompt_context();
+    assert_eq!(secret, SecretName::Password);
 }

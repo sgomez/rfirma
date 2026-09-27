@@ -239,15 +239,14 @@ Es la entrada, y lleva un solo grupo: **Privacidad**.
    así que aquí no hay nada que elegir: sólo una lista de lo que se ha añadido a
    mano.
 
-   **Una clave elíptica se rechaza al instalar, no al firmar** (ID-197), con un
-   `ErrorNotice` en este mismo panel y un solo renglón: **«Ese certificado no
-   es compatible con rFirma»**. Sin explicación técnica debajo: la curva, el
-   mecanismo y la constante RSA-SHA256 no le sirven de nada a quien acaba de
-   elegir un fichero, y quien sí sabe lo que es una clave elíptica no necesita
-   que se lo cuenten aquí. El sitio importa más que el texto: sin esta guarda, la
-   pantalla construiría el camino más corto al tropiezo —el kit de pruebas de la
-   FNMT trae una carpeta entera de claves ECC—, y el fallo aparecería al firmar,
-   con el documento delante.
+   **Una clave que no es RSA ni de curva elíptica se rechaza al instalar, no al
+   firmar**, con un `ErrorNotice` en este mismo panel y un solo renglón: **«Ese
+   certificado no es compatible con rFirma»**. Sin explicación técnica debajo:
+   el tipo de clave y el mecanismo de firma no le sirven de nada a quien acaba
+   de elegir un fichero, y quien sí sabe lo que es una clave DSA no necesita
+   que se lo cuenten aquí. El sitio importa más que el texto: sin esta guarda,
+   la pantalla construiría el camino más corto al tropiezo, y el fallo
+   aparecería al firmar, con el documento delante.
 
    Es el único panel del que se espera que se desplace, y por eso el
    desplazamiento vive dentro de él y no en la pantalla.

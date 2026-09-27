@@ -1,4 +1,5 @@
-//! Importación de ficheros PKCS#12 en almacenes NSS propios (ADR-0001).
+//! Importación de ficheros PKCS#12 en el Almacén de rFirma, y los símbolos NSS de bajo nivel que
+//! también usa `super::removal` para borrar un certificado de la misma base (ADR-0034).
 
 use std::ffi::{c_char, c_int, c_uchar, c_uint, c_ulong, c_void, CString};
 use std::path::Path;
@@ -9,7 +10,8 @@ use x509_cert::der::Decode;
 
 use super::stores::present_among;
 use crate::identity::domain::error::{NssUnavailable, Situation, TokenError};
-use crate::identity::domain::holder::common_name_of;
+use crate::identity::domain::holder::{attribute, common_name_of};
+use crate::identity::domain::protected_secret::ProtectedSecret;
 
 /// Rutas candidatas para localizar la biblioteca `libnss3.so`.
 pub const CANDIDATE_NSS: &[&str] = &[
@@ -25,11 +27,24 @@ pub const CANDIDATE_SMIME: &[&str] = &[
     "/usr/lib/libsmime3.so",
 ];
 
-const SEC_SUCCESS: c_int = 0;
-const PR_TRUE: c_int = 1;
-const SI_BUFFER: c_uint = 0;
+/// Rutas candidatas para localizar la biblioteca `libnspr4.so`.
+pub const CANDIDATE_NSPR: &[&str] = &[
+    "/usr/lib/x86_64-linux-gnu/libnspr4.so",
+    "/usr/lib64/libnspr4.so",
+    "/usr/lib/libnspr4.so",
+];
 
-fn module_spec(directory: &Path) -> String {
+pub(super) const SEC_SUCCESS: c_int = 0;
+pub(super) const PR_TRUE: c_int = 1;
+const SI_BUFFER: c_uint = 0;
+const SI_ASCII_STRING: c_uint = 8;
+const SEC_ERROR_BAD_PASSWORD: c_int = -0x2000 + 15;
+const SEC_ERROR_PKCS12_DUPLICATE_DATA: c_int = -0x2000 + 88;
+
+/// Nickname de un certificado sin `friendlyName` y sin nombre común en el sujeto.
+const CERTIFICATE_WITHOUT_A_NAME: &str = "Certificado sin nombre";
+
+pub(super) fn module_spec(directory: &Path) -> String {
     format!(
         "configDir='sql:{}' certPrefix='' keyPrefix='' \
          tokenDescription='rfirma' flags=readWrite",
@@ -38,10 +53,10 @@ fn module_spec(directory: &Path) -> String {
 }
 
 #[repr(C)]
-struct SecItem {
-    kind: c_uint,
-    data: *mut c_uchar,
-    len: c_uint,
+pub(super) struct SecItem {
+    pub(super) kind: c_uint,
+    pub(super) data: *mut c_uchar,
+    pub(super) len: c_uint,
 }
 
 struct Password {
@@ -67,24 +82,72 @@ fn bmp_string(password: &str) -> Vec<u8> {
     bytes
 }
 
-extern "C" fn no_password(
-    _slot: *mut c_void,
-    _retry: c_int,
-    _argument: *mut c_void,
-) -> *mut c_char {
-    std::ptr::null_mut()
-}
-
 extern "C" fn keep_the_nickname(
-    _old: *mut SecItem,
+    old: *mut SecItem,
     cancel: *mut c_int,
-    _argument: *mut c_void,
+    argument: *mut c_void,
 ) -> *mut SecItem {
     if !cancel.is_null() {
         // SAFETY: NSS pasa aquí un `PRBool` suyo, vivo durante la llamada.
         unsafe { *cancel = 0 };
     }
-    std::ptr::null_mut()
+    // SAFETY: NSS pasa aquí un `SECItem*` propio, válido o nulo, durante la llamada.
+    if !old.is_null() && unsafe { (*old).len > 0 } {
+        return std::ptr::null_mut();
+    }
+    default_nickname_for(argument).unwrap_or(std::ptr::null_mut())
+}
+
+/// El nombre común del certificado en colisión (`argument` es su `CERTCertificate`,
+/// documentado así en `p12.h` desde NSS 3.12), o el valor fijo si no lo tiene.
+fn default_nickname_for(certificate: *mut c_void) -> Option<*mut SecItem> {
+    let nss = nss_library().ok()?;
+    let certificate_der: CertificateDer = symbol(nss, b"CERT_GetCertificateDer\0").ok()?;
+    let alloc_item: AllocItem = symbol(nss, b"SECITEM_AllocItem\0").ok()?;
+
+    let mut der_item = SecItem {
+        kind: SI_BUFFER,
+        data: std::ptr::null_mut(),
+        len: 0,
+    };
+    let subject = if certificate.is_null()
+        || certificate_der(certificate, &mut der_item) != SEC_SUCCESS
+        || der_item.data.is_null()
+    {
+        String::new()
+    } else {
+        // SAFETY: NSS ha rellenado `der_item` con un buffer vivo durante la llamada.
+        let der = unsafe { std::slice::from_raw_parts(der_item.data, der_item.len as usize) };
+        names_of(der).0
+    };
+
+    let name = attribute("CN=", &subject);
+    let name = if name.is_empty() {
+        CERTIFICATE_WITHOUT_A_NAME
+    } else {
+        &name
+    };
+    Some(allocated_nickname(alloc_item, name))
+}
+
+/// Reserva un `SECItem` de tipo `siAsciiString` con `SECITEM_AllocItem` (documentado
+/// así en `p12.h`) para que NSS lo libere con su propio asignador.
+fn allocated_nickname(alloc_item: AllocItem, name: &str) -> *mut SecItem {
+    let allocated = alloc_item(
+        std::ptr::null_mut(),
+        std::ptr::null_mut(),
+        (name.len() + 1) as c_uint,
+    );
+    if allocated.is_null() {
+        return std::ptr::null_mut();
+    }
+    // SAFETY: `SECITEM_AllocItem` acaba de reservar `name.len() + 1` bytes vivos.
+    unsafe {
+        (*allocated).kind = SI_ASCII_STRING;
+        std::ptr::copy_nonoverlapping(name.as_ptr(), (*allocated).data, name.len());
+        *(*allocated).data.add(name.len()) = 0;
+    }
+    allocated
 }
 
 /// La biblioteca NSS y el turno global del token, tal como los ve quien resuelve símbolos sobre ella.
@@ -122,6 +185,7 @@ impl<H: NssHost> NssHost for &H {
 
 static NSS_LIBRARY: OnceLock<Result<Library, String>> = OnceLock::new();
 static SMIME_LIBRARY: OnceLock<Result<Library, String>> = OnceLock::new();
+static NSPR_LIBRARY: OnceLock<Result<Library, String>> = OnceLock::new();
 
 /// Carga la biblioteca `libnss3.so` compartida del sistema.
 pub fn nss_library() -> Result<&'static Library, NssUnavailable> {
@@ -146,6 +210,13 @@ fn smime_library() -> Result<&'static Library, TokenError> {
         .map_err(|detail| TokenError::new(Situation::ModuleNotFound, detail.clone()))
 }
 
+fn nspr_library() -> Result<&'static Library, TokenError> {
+    let loaded = NSPR_LIBRARY.get_or_init(|| first_present(CANDIDATE_NSPR, "libnspr4.so"));
+    loaded
+        .as_ref()
+        .map_err(|detail| TokenError::new(Situation::ModuleNotFound, detail.clone()))
+}
+
 fn first_present(candidates: &[&str], name: &str) -> Result<Library, String> {
     let path = present_among(candidates, |path| path.is_file())
         .into_iter()
@@ -156,7 +227,7 @@ fn first_present(candidates: &[&str], name: &str) -> Result<Library, String> {
     unsafe { Library::new(&path) }.map_err(|error| format!("{}: {error}", path.display()))
 }
 
-fn symbol<T: Copy>(library: &'static Library, name: &[u8]) -> Result<T, TokenError> {
+pub(super) fn symbol<T: Copy>(library: &'static Library, name: &[u8]) -> Result<T, TokenError> {
     // SAFETY: cada tipo `T` de este módulo es la firma declarada en la cabecera
     // pública de NSS para ese símbolo, y las bibliotecas viven hasta que muere
     // el proceso.
@@ -173,7 +244,7 @@ fn symbol<T: Copy>(library: &'static Library, name: &[u8]) -> Result<T, TokenErr
         })
 }
 
-fn failed(step: &str) -> TokenError {
+pub(super) fn failed(step: &str) -> TokenError {
     TokenError::new(
         Situation::Pkcs12Unreadable,
         format!("NSS ha fallado en {step}"),
@@ -181,25 +252,26 @@ fn failed(step: &str) -> TokenError {
 }
 
 #[repr(C)]
-struct PrCList {
-    next: *mut PrCList,
+pub(super) struct PrCList {
+    pub(super) next: *mut PrCList,
     prev: *mut PrCList,
 }
 
 #[repr(C)]
-struct CertList {
-    links: PrCList,
+pub(super) struct CertList {
+    pub(super) links: PrCList,
     arena: *mut c_void,
 }
 
 #[repr(C)]
-struct CertListNode {
+pub(super) struct CertListNode {
     links: PrCList,
-    certificate: *mut c_void,
+    pub(super) certificate: *mut c_void,
     application_data: *mut c_void,
 }
 
 type CertificateDer = extern "C" fn(*mut c_void, *mut SecItem) -> c_int;
+type AllocItem = extern "C" fn(*mut c_void, *mut SecItem, c_uint) -> *mut SecItem;
 
 fn certificates_in(list: *mut CertList, certificate_der: CertificateDer) -> Vec<Vec<u8>> {
     let mut carried = Vec::new();
@@ -271,12 +343,31 @@ fn names_of(der: &[u8]) -> (String, String) {
     )
 }
 
-/// Importa un fichero PKCS#12 en el almacén NSS indicado.
+/// El PIN del Almacén de rFirma como cadena C, o el error si no es UTF-8 o lleva un cero.
+pub(super) fn store_pin(pin: &ProtectedSecret) -> Result<CString, TokenError> {
+    let pin = pin
+        .as_str()
+        .map_err(|_| TokenError::new(Situation::IncorrectPin, "el PIN no es UTF-8 valido"))?;
+    CString::new(pin).map_err(|_| {
+        TokenError::new(
+            Situation::ModuleNotFound,
+            "el PIN del Almacen de rFirma lleva un cero dentro",
+        )
+    })
+}
+
+/// Importa un fichero PKCS#12 en el Almacén de rFirma, creándolo con `pin` si todavía no existe.
 #[expect(clippy::too_many_lines)]
-pub fn import_pkcs12(directory: &Path, pkcs12: &[u8], password: &str) -> Result<(), TokenError> {
+pub fn import_pkcs12(
+    directory: &Path,
+    pkcs12: &[u8],
+    password: &str,
+    pin: &ProtectedSecret,
+) -> Result<(), TokenError> {
     let nss = nss_library()
         .map_err(|err| TokenError::new(Situation::ModuleNotFound, err.detail().to_owned()))?;
     let smime = smime_library()?;
+    let nspr = nspr_library()?;
 
     type NoDbInit = extern "C" fn(*const c_char) -> c_int;
     type Shutdown = extern "C" fn() -> c_int;
@@ -284,10 +375,8 @@ pub fn import_pkcs12(directory: &Path, pkcs12: &[u8], password: &str) -> Result<
     type CloseUserDb = extern "C" fn(*mut c_void) -> c_int;
     type NeedUserInit = extern "C" fn(*mut c_void) -> c_int;
     type InitPin = extern "C" fn(*mut c_void, *const c_char, *const c_char) -> c_int;
-    type Authenticate = extern "C" fn(*mut c_void, c_int, *mut c_void) -> c_int;
+    type CheckUserPassword = extern "C" fn(*mut c_void, *const c_char) -> c_int;
     type FreeSlot = extern "C" fn(*mut c_void);
-    type SetPasswordFunc =
-        extern "C" fn(extern "C" fn(*mut c_void, c_int, *mut c_void) -> *mut c_char);
     type DecoderStart = extern "C" fn(
         *mut SecItem,
         *mut c_void,
@@ -309,16 +398,17 @@ pub fn import_pkcs12(directory: &Path, pkcs12: &[u8], password: &str) -> Result<
     type DestroyCertList = extern "C" fn(*mut CertList);
     type ImportDerCert =
         extern "C" fn(*mut c_void, *mut SecItem, c_ulong, *const c_char, c_int) -> c_int;
+    type GetError = extern "C" fn() -> c_int;
 
+    let get_error: GetError = symbol(nspr, b"PR_GetError\0")?;
     let nss_no_db_init: NoDbInit = symbol(nss, b"NSS_NoDB_Init\0")?;
     let nss_shutdown: Shutdown = symbol(nss, b"NSS_Shutdown\0")?;
     let open_user_db: OpenUserDb = symbol(nss, b"SECMOD_OpenUserDB\0")?;
     let close_user_db: CloseUserDb = symbol(nss, b"SECMOD_CloseUserDB\0")?;
     let need_user_init: NeedUserInit = symbol(nss, b"PK11_NeedUserInit\0")?;
     let init_pin: InitPin = symbol(nss, b"PK11_InitPin\0")?;
-    let authenticate: Authenticate = symbol(nss, b"PK11_Authenticate\0")?;
+    let check_user_password: CheckUserPassword = symbol(nss, b"PK11_CheckUserPassword\0")?;
     let free_slot: FreeSlot = symbol(nss, b"PK11_FreeSlot\0")?;
-    let set_password_func: SetPasswordFunc = symbol(nss, b"PK11_SetPasswordFunc\0")?;
     let decoder_start: DecoderStart = symbol(smime, b"SEC_PKCS12DecoderStart\0")?;
     let decoder_update: DecoderUpdate = symbol(smime, b"SEC_PKCS12DecoderUpdate\0")?;
     let decoder_verify: DecoderStep = symbol(smime, b"SEC_PKCS12DecoderVerify\0")?;
@@ -336,12 +426,10 @@ pub fn import_pkcs12(directory: &Path, pkcs12: &[u8], password: &str) -> Result<
             "la ruta del almacen lleva un cero dentro",
         )
     })?;
-    let empty = CString::new("").expect("la cadena vacia no lleva ceros dentro");
+    let pin = store_pin(pin)?;
     let mut secret = Password {
         bytes: bmp_string(password),
     };
-
-    set_password_func(no_password);
 
     if nss_no_db_init(std::ptr::null()) != SEC_SUCCESS {
         return Err(TokenError::new(
@@ -360,12 +448,16 @@ pub fn import_pkcs12(directory: &Path, pkcs12: &[u8], password: &str) -> Result<
 
         let imported = (|| {
             if need_user_init(slot) == PR_TRUE
-                && init_pin(slot, std::ptr::null(), empty.as_ptr()) != SEC_SUCCESS
+                && init_pin(slot, std::ptr::null(), pin.as_ptr()) != SEC_SUCCESS
             {
                 return Err(failed("PK11_InitPin"));
             }
-            if authenticate(slot, PR_TRUE, std::ptr::null_mut()) != SEC_SUCCESS {
-                return Err(failed("PK11_Authenticate"));
+            if check_user_password(slot, pin.as_ptr()) != SEC_SUCCESS {
+                return Err(TokenError::new(
+                    Situation::KeyringPinMissing,
+                    "PK11_CheckUserPassword: el PIN del llavero no abre el Almacen de rFirma \
+                     ya existente",
+                ));
             }
 
             let mut item = secret.item();
@@ -389,12 +481,21 @@ pub fn import_pkcs12(directory: &Path, pkcs12: &[u8], password: &str) -> Result<
                     return Err(failed("SEC_PKCS12DecoderUpdate"));
                 }
                 if decoder_verify(decoder) != SEC_SUCCESS {
-                    return Err(failed("SEC_PKCS12DecoderVerify"));
+                    return Err(if get_error() == SEC_ERROR_BAD_PASSWORD {
+                        TokenError::new(
+                            Situation::IncorrectPkcs12Password,
+                            "SEC_PKCS12DecoderVerify: SEC_ERROR_BAD_PASSWORD",
+                        )
+                    } else {
+                        failed("SEC_PKCS12DecoderVerify")
+                    });
                 }
                 if decoder_validate(decoder, keep_the_nickname) != SEC_SUCCESS {
                     return Err(failed("SEC_PKCS12DecoderValidateBags"));
                 }
-                if decoder_import(decoder) != SEC_SUCCESS {
+                if decoder_import(decoder) != SEC_SUCCESS
+                    && get_error() != SEC_ERROR_PKCS12_DUPLICATE_DATA
+                {
                     return Err(failed("SEC_PKCS12DecoderImportBags"));
                 }
 

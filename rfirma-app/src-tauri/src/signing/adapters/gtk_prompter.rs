@@ -1,44 +1,69 @@
 //! Adaptadores del puerto `SecretPrompter`: diálogo nativo GTK3 y adaptadores de pruebas (ADR-0001, ADR-0014).
 
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex, OnceLock};
 
 use crate::identity::domain::protected_secret::ProtectedSecret;
+use crate::identity::domain::secret::SecretName;
+use crate::identity::ports::{
+    OriginWindow, SecretPromptError, SecretPromptRequest, SecretPrompter,
+};
 use crate::signing::domain::Language;
-use crate::signing::ports::{SecretName, SecretPromptError, SecretPromptRequest, SecretPrompter};
 
 /// Estructura interna con los textos localizados para el diálogo modal del secreto.
 #[derive(Debug, PartialEq, Eq)]
 pub struct DialogI18n {
-    pub title: &'static str,
+    pub title: String,
     pub holder_name: Option<String>,
     pub id_number: Option<String>,
-    pub incorrect_secret: &'static str,
+    pub incorrect_secret: String,
     pub accept: &'static str,
     pub cancel: &'static str,
 }
 
-fn title_text(lang: Language, secret: SecretName) -> &'static str {
+fn title_text(lang: Language, secret: &SecretName) -> String {
     match (lang, secret) {
-        (Language::Spanish, SecretName::Pin) => "Introduce el PIN",
-        (Language::Spanish, SecretName::Password) => "Introduce la contraseña",
+        (Language::Spanish, SecretName::Pin) => "Introduce el PIN".to_string(),
+        (Language::Spanish, SecretName::Password) => "Introduce la contraseña".to_string(),
 
-        (Language::Catalan, SecretName::Pin) => "Introdueix el PIN",
-        (Language::Catalan, SecretName::Password) => "Introdueix la contrasenya",
+        (Language::Catalan, SecretName::Pin) => "Introdueix el PIN".to_string(),
+        (Language::Catalan, SecretName::Password) => "Introdueix la contrasenya".to_string(),
 
-        (Language::Basque, SecretName::Pin) => "Sartu PINa",
-        (Language::Basque, SecretName::Password) => "Sartu pasahitza",
+        (Language::Basque, SecretName::Pin) => "Sartu PINa".to_string(),
+        (Language::Basque, SecretName::Password) => "Sartu pasahitza".to_string(),
 
-        (Language::Galician, SecretName::Pin) => "Introduce o PIN",
-        (Language::Galician, SecretName::Password) => "Introduce o contrasinal",
+        (Language::Galician, SecretName::Pin) => "Introduce o PIN".to_string(),
+        (Language::Galician, SecretName::Password) => "Introduce o contrasinal".to_string(),
 
-        (Language::English, SecretName::Pin) => "Enter PIN",
-        (Language::English, SecretName::Password) => "Enter password",
+        (Language::English, SecretName::Pin) => "Enter PIN".to_string(),
+        (Language::English, SecretName::Password) => "Enter password".to_string(),
 
-        (Language::Spanish, SecretName::DocumentPassword) => "Introduce la contraseña del PDF",
-        (Language::Catalan, SecretName::DocumentPassword) => "Introdueix la contrasenya del PDF",
-        (Language::Basque, SecretName::DocumentPassword) => "Sartu PDFaren pasahitza",
-        (Language::Galician, SecretName::DocumentPassword) => "Introduce o contrasinal do PDF",
-        (Language::English, SecretName::DocumentPassword) => "Enter the PDF password",
+        (Language::Spanish, SecretName::DocumentPassword) => {
+            "Introduce la contraseña del PDF".to_string()
+        }
+        (Language::Catalan, SecretName::DocumentPassword) => {
+            "Introdueix la contrasenya del PDF".to_string()
+        }
+        (Language::Basque, SecretName::DocumentPassword) => "Sartu PDFaren pasahitza".to_string(),
+        (Language::Galician, SecretName::DocumentPassword) => {
+            "Introduce o contrasinal do PDF".to_string()
+        }
+        (Language::English, SecretName::DocumentPassword) => "Enter the PDF password".to_string(),
+
+        (Language::Spanish, SecretName::Pkcs12Password(file)) => {
+            format!("Introduce la contraseña de {file}")
+        }
+        (Language::Catalan, SecretName::Pkcs12Password(file)) => {
+            format!("Introdueix la contrasenya de {file}")
+        }
+        (Language::Basque, SecretName::Pkcs12Password(file)) => {
+            format!("Sartu {file} fitxategiaren pasahitza")
+        }
+        (Language::Galician, SecretName::Pkcs12Password(file)) => {
+            format!("Introduce o contrasinal de {file}")
+        }
+        (Language::English, SecretName::Pkcs12Password(file)) => {
+            format!("Enter the password for {file}")
+        }
     }
 }
 
@@ -52,36 +77,48 @@ fn button_texts(lang: Language) -> (&'static str, &'static str) {
     }
 }
 
-fn incorrect_secret_text(lang: Language, secret: SecretName) -> &'static str {
+fn incorrect_secret_text(lang: Language, secret: &SecretName) -> String {
     match (lang, secret) {
-        (Language::Spanish, SecretName::Pin) => "PIN incorrecto. Vuelve a intentarlo.",
-        (Language::Spanish, SecretName::Password) => "Contraseña incorrecta. Vuelve a intentarlo.",
+        (Language::Spanish, SecretName::Pin) => "PIN incorrecto. Vuelve a intentarlo.".to_string(),
+        (Language::Spanish, SecretName::Password | SecretName::Pkcs12Password(_)) => {
+            "Contraseña incorrecta. Vuelve a intentarlo.".to_string()
+        }
 
-        (Language::Catalan, SecretName::Pin) => "PIN incorrecte. Torna-ho a provar.",
-        (Language::Catalan, SecretName::Password) => "Contrasenya incorrecta. Torna-ho a provar.",
+        (Language::Catalan, SecretName::Pin) => "PIN incorrecte. Torna-ho a provar.".to_string(),
+        (Language::Catalan, SecretName::Password | SecretName::Pkcs12Password(_)) => {
+            "Contrasenya incorrecta. Torna-ho a provar.".to_string()
+        }
 
-        (Language::Basque, SecretName::Pin) => "PIN okerra. Saiatu berriro.",
-        (Language::Basque, SecretName::Password) => "Pasahitza okerra. Saiatu berriro.",
+        (Language::Basque, SecretName::Pin) => "PIN okerra. Saiatu berriro.".to_string(),
+        (Language::Basque, SecretName::Password | SecretName::Pkcs12Password(_)) => {
+            "Pasahitza okerra. Saiatu berriro.".to_string()
+        }
 
-        (Language::Galician, SecretName::Pin) => "PIN incorrecto. Tenta de novo.",
-        (Language::Galician, SecretName::Password) => "Contrasinal incorrecto. Tenta de novo.",
+        (Language::Galician, SecretName::Pin) => "PIN incorrecto. Tenta de novo.".to_string(),
+        (Language::Galician, SecretName::Password | SecretName::Pkcs12Password(_)) => {
+            "Contrasinal incorrecto. Tenta de novo.".to_string()
+        }
 
-        (Language::English, SecretName::Pin) => "Incorrect PIN. Try again.",
-        (Language::English, SecretName::Password) => "Incorrect password. Try again.",
+        (Language::English, SecretName::Pin) => "Incorrect PIN. Try again.".to_string(),
+        (Language::English, SecretName::Password | SecretName::Pkcs12Password(_)) => {
+            "Incorrect password. Try again.".to_string()
+        }
 
         (Language::Spanish, SecretName::DocumentPassword) => {
-            "Contraseña del PDF incorrecta. Vuelve a intentarlo."
+            "Contraseña del PDF incorrecta. Vuelve a intentarlo.".to_string()
         }
         (Language::Catalan, SecretName::DocumentPassword) => {
-            "Contrasenya del PDF incorrecta. Torna-ho a provar."
+            "Contrasenya del PDF incorrecta. Torna-ho a provar.".to_string()
         }
         (Language::Basque, SecretName::DocumentPassword) => {
-            "PDFaren pasahitza okerra. Saiatu berriro."
+            "PDFaren pasahitza okerra. Saiatu berriro.".to_string()
         }
         (Language::Galician, SecretName::DocumentPassword) => {
-            "Contrasinal do PDF incorrecto. Tenta de novo."
+            "Contrasinal do PDF incorrecto. Tenta de novo.".to_string()
         }
-        (Language::English, SecretName::DocumentPassword) => "Incorrect PDF password. Try again.",
+        (Language::English, SecretName::DocumentPassword) => {
+            "Incorrect PDF password. Try again.".to_string()
+        }
     }
 }
 
@@ -90,30 +127,46 @@ pub fn localize(request: &SecretPromptRequest) -> DialogI18n {
     let (accept, cancel) = button_texts(request.language);
 
     DialogI18n {
-        title: title_text(request.language, request.secret),
+        title: title_text(request.language, &request.secret),
         holder_name: request.holder.as_ref().map(|holder| holder.name.clone()),
         id_number: request
             .holder
             .as_ref()
             .map(|holder| holder.id_number.clone())
             .filter(|id_number| !id_number.is_empty()),
-        incorrect_secret: incorrect_secret_text(request.language, request.secret),
+        incorrect_secret: incorrect_secret_text(request.language, &request.secret),
         accept,
         cancel,
     }
 }
 
 /// Adaptador de producción que presenta un diálogo modal nativo GTK3 para la solicitud de PIN.
-#[derive(Default, Clone, Copy)]
-pub struct GtkSecretPrompter;
+#[derive(Clone, Default)]
+pub struct GtkSecretPrompter {
+    app: Arc<OnceLock<tauri::AppHandle>>,
+}
 
-fn window_to_be_modal_over() -> Option<gtk::Window> {
-    use gtk::prelude::*;
+impl GtkSecretPrompter {
+    /// Crea un adaptador vacío pendiente de vincular al manejador de Tauri.
+    pub fn new() -> Self {
+        Self::default()
+    }
 
-    gtk::Window::list_toplevels()
-        .into_iter()
-        .filter_map(|toplevel| toplevel.downcast::<gtk::Window>().ok())
-        .find(|window| window.is_visible() && window.is_mapped())
+    /// Vincula el manejador de la aplicación al adaptador, tras montarse la ventana (ADR-0024).
+    pub fn attach(&self, app: tauri::AppHandle) {
+        let _ = self.app.set(app);
+    }
+
+    /// La ventana que pidió el secreto, si se conoce y sigue montada.
+    fn window_to_be_modal_over(
+        &self,
+        origin: Option<OriginWindow>,
+    ) -> Option<gtk::ApplicationWindow> {
+        use tauri::Manager as _;
+
+        let app = self.app.get()?;
+        app.get_webview_window(origin?.label())?.gtk_window().ok()
+    }
 }
 
 fn heading_of(i18n: &DialogI18n) -> gtk::Box {
@@ -130,7 +183,7 @@ fn heading_of(i18n: &DialogI18n) -> gtk::Box {
     let primary = gtk::Label::new(None);
     primary.set_markup(&format!(
         "<b>{}</b>",
-        glib::markup_escape_text(i18n.holder_name.as_deref().unwrap_or(i18n.title))
+        glib::markup_escape_text(i18n.holder_name.as_deref().unwrap_or(&i18n.title))
     ));
     primary.set_halign(gtk::Align::Start);
     primary.set_xalign(0.0);
@@ -150,18 +203,18 @@ fn heading_of(i18n: &DialogI18n) -> gtk::Box {
     heading
 }
 
-fn dialog_for(i18n: &DialogI18n) -> gtk::Dialog {
+fn dialog_for(i18n: &DialogI18n, parent: Option<gtk::ApplicationWindow>) -> gtk::Dialog {
     use gtk::prelude::*;
 
     let dialog = gtk::Dialog::builder()
-        .title(i18n.title)
+        .title(i18n.title.as_str())
         .modal(true)
         .resizable(false)
         .icon_name("dialog-password")
         .build();
     dialog.set_default_size(400, -1);
 
-    match window_to_be_modal_over() {
+    match parent {
         Some(parent) => {
             dialog.set_transient_for(Some(&parent));
             dialog.set_destroy_with_parent(true);
@@ -223,7 +276,7 @@ fn body_of(dialog: &gtk::Dialog, i18n: &DialogI18n, incorrect_secret: bool) -> g
     content_area.pack_start(&entry, false, false, 0);
 
     if incorrect_secret {
-        say_the_previous_attempt_was_wrong(&content_area, &entry, i18n.incorrect_secret);
+        say_the_previous_attempt_was_wrong(&content_area, &entry, &i18n.incorrect_secret);
     }
 
     entry
@@ -257,7 +310,10 @@ fn dismiss(dialog: gtk::Dialog) {
     }
 }
 
-fn show_gtk_dialog(request: &SecretPromptRequest) -> Result<ProtectedSecret, SecretPromptError> {
+fn show_gtk_dialog(
+    request: &SecretPromptRequest,
+    parent: Option<gtk::ApplicationWindow>,
+) -> Result<ProtectedSecret, SecretPromptError> {
     use gtk::prelude::*;
 
     if gtk::init().is_err() {
@@ -267,7 +323,7 @@ fn show_gtk_dialog(request: &SecretPromptRequest) -> Result<ProtectedSecret, Sec
     }
 
     let i18n = localize(request);
-    let dialog = dialog_for(&i18n);
+    let dialog = dialog_for(&i18n, parent);
     let entry = body_of(&dialog, &i18n, request.incorrect_secret);
 
     dialog.show_all();
@@ -285,12 +341,15 @@ impl SecretPrompter for GtkSecretPrompter {
     ) -> Result<ProtectedSecret, SecretPromptError> {
         let context = glib::MainContext::default();
         if context.is_owner() {
-            show_gtk_dialog(request)
+            let parent = self.window_to_be_modal_over(request.origin_window);
+            show_gtk_dialog(request, parent)
         } else {
             let (sender, receiver) = std::sync::mpsc::channel();
             let req = request.clone();
+            let this = self.clone();
             context.invoke(move || {
-                let res = show_gtk_dialog(&req);
+                let parent = this.window_to_be_modal_over(req.origin_window);
+                let res = show_gtk_dialog(&req, parent);
                 let _ = sender.send(res);
             });
             receiver.recv().unwrap_or(Err(SecretPromptError::Cancelled))

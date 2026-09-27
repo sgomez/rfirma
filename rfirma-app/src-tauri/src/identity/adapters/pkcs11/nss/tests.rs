@@ -1,4 +1,6 @@
-use super::{bmp_string, module_spec};
+use super::{bmp_string, module_spec, store_pin};
+use crate::identity::domain::error::Situation;
+use crate::identity::domain::protected_secret::ProtectedSecret;
 use std::path::Path;
 
 #[test]
@@ -25,4 +27,23 @@ fn the_store_is_created_in_sql_format_and_writable() {
 
     assert!(spec.contains("configDir='sql:/casa/datos/rfirma/certificates/abc'"));
     assert!(spec.contains("flags=readWrite"));
+}
+
+#[test]
+fn a_utf8_pin_becomes_the_c_string_nss_expects() {
+    let pin = store_pin(&ProtectedSecret::new("1234")).unwrap();
+
+    assert_eq!(pin.as_bytes(), b"1234");
+}
+
+#[test]
+fn a_pin_that_is_not_utf8_is_an_incorrect_pin() {
+    let refused = store_pin(&ProtectedSecret::new([0xff, 0xfe])).unwrap_err();
+
+    assert_eq!(refused.situation(), Situation::IncorrectPin);
+}
+
+#[test]
+fn a_pin_with_a_nul_inside_is_refused() {
+    assert!(store_pin(&ProtectedSecret::new("12\u{0}34")).is_err());
 }

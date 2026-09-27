@@ -226,6 +226,14 @@ impl Token for StoresWith {
         Ok(self.only(store, everything))
     }
 
+    fn list_authenticated(
+        &self,
+        store: &Store,
+        _pin: &crate::identity::domain::protected_secret::ProtectedSecret,
+    ) -> Result<Vec<TokenCertificate>, TokenError> {
+        Ok(self.only(store, &self.signable))
+    }
+
     fn secret_of(&self, _reference: &CertificateRef) -> Result<StoreSecret, TokenError> {
         Ok(StoreSecret::NotNeeded)
     }
@@ -256,10 +264,23 @@ impl Token for StoresWith {
         _directory: &std::path::Path,
         _pkcs12: &[u8],
         _password: &str,
+        _pin: &crate::identity::domain::protected_secret::ProtectedSecret,
     ) -> Result<Store, TokenError> {
         Err(TokenError::new(
             Situation::Pkcs12Unreadable,
             "este token no importa nada",
+        ))
+    }
+
+    fn remove_certificate(
+        &self,
+        _directory: &std::path::Path,
+        _reference: &CertificateRef,
+        _pin: &crate::identity::domain::protected_secret::ProtectedSecret,
+    ) -> Result<(), TokenError> {
+        Err(TokenError::new(
+            Situation::CertificateNotFound,
+            "este token no quita nada",
         ))
     }
 }
@@ -486,3 +507,5 @@ fn a_row_carries_the_organization_identifier_of_a_representative_certificate() {
         Some("VATES-A00000000".to_owned())
     );
 }
+
+mod removal;

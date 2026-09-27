@@ -6,24 +6,17 @@ use std::process::Command;
 use rfirma_lib::identity::adapters::folder::RealInstalledFolder;
 use rfirma_lib::identity::adapters::pkcs11;
 use rfirma_lib::identity::application::certificates;
-use rfirma_lib::identity::application::certificates::ListedCertificates;
-use rfirma_lib::identity::domain::algorithm::SignatureAlgorithm;
 use rfirma_lib::identity::domain::certificate::TokenCertificate;
+use rfirma_lib::identity::domain::keyring::KeyringError;
 use rfirma_lib::identity::domain::protected_secret::ProtectedSecret;
 use rfirma_lib::identity::domain::store::Store;
-use rsa::pkcs1v15::{Signature, VerifyingKey};
-use rsa::pkcs8::DecodePublicKey;
-use rsa::signature::Verifier;
-use rsa::RsaPublicKey;
-use sha2::Sha256;
-use x509_cert::der::{Decode, Encode};
+use rfirma_lib::identity::ports::Keyring;
+use x509_cert::der::Decode;
 
-/// Contraseña de `active-rsa.p12` del kit de pruebas.
+/// Contraseña de los `.p12` del kit de pruebas (`active-rsa.p12`, `active-ecc.p12`).
 const KIT_PASSWORD: &str = "1234";
-/// Contraseña del `.p12` de clave elíptica que fabrica esta prueba.
-const EC_PASSWORD: &str = "1234";
-/// Bloque DER de prueba de `SignedAttributes` sin hashear.
-const PRESIGN: &[u8] = b"31 5f 30 18 06 09 2a 86 SignedAttributes de mentira, sin hashear";
+/// Contraseña de los `.p12` que esta prueba fabrica al vuelo con openssl.
+const GENERATED_PASSWORD: &str = "1234";
 
 fn repository_root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -37,24 +30,34 @@ fn kit_p12() -> PathBuf {
     repository_root().join("testdata/fnmt/active-rsa.p12")
 }
 
-/// Genera un `.p12` con clave elíptica en `directory`.
-fn an_elliptic_curve_p12(directory: &Path) -> PathBuf {
-    let key = directory.join("ec.pem");
-    let certificate = directory.join("ec-cert.pem");
-    let bundle = directory.join("ec.p12");
+/// El `.p12` de curva elíptica de pruebas de la FNMT.
+fn elliptic_curve_kit_p12() -> PathBuf {
+    repository_root().join("testdata/fnmt/active-ecc.p12")
+}
 
+/// Genera un `.p12` con una clave DSA (que NSS sí importa, pero que no es RSA ni de curva elíptica) en `directory`.
+fn a_p12_of_an_unsupported_key_kind(directory: &Path) -> PathBuf {
+    let parameters = directory.join("dsaparam.pem");
+    let key = directory.join("dsa.pem");
+    let certificate = directory.join("dsa-cert.pem");
+    let bundle = directory.join("dsa.p12");
+
+    run_openssl(&[
+        "dsaparam",
+        "-out",
+        parameters.to_str().expect("ruta valida"),
+        "2048",
+    ]);
     run_openssl(&[
         "req",
         "-x509",
         "-newkey",
-        "ec",
-        "-pkeyopt",
-        "ec_paramgen_curve:prime256v1",
+        &format!("dsa:{}", parameters.to_str().expect("ruta valida")),
         "-nodes",
         "-days",
         "30",
         "-subj",
-        "/CN=CLAVE ELIPTICA DE PRUEBAS",
+        "/CN=CLAVE NO SOPORTADA DE PRUEBAS",
         "-keyout",
         key.to_str().expect("ruta valida"),
         "-out",
@@ -68,9 +71,132 @@ fn an_elliptic_curve_p12(directory: &Path) -> PathBuf {
         "-in",
         certificate.to_str().expect("ruta valida"),
         "-name",
-        "CLAVE ELIPTICA DE PRUEBAS",
+        "CLAVE NO SOPORTADA DE PRUEBAS",
         "-passout",
-        &format!("pass:{EC_PASSWORD}"),
+        &format!("pass:{GENERATED_PASSWORD}"),
+        "-out",
+        bundle.to_str().expect("ruta valida"),
+    ]);
+
+    bundle
+}
+
+/// Genera un `.p12` con un certificado sin clave privada emparejada en `directory`.
+fn a_p12_without_a_private_key(directory: &Path) -> PathBuf {
+    let key = directory.join("nokey.pem");
+    let certificate = directory.join("nokey-cert.pem");
+    let bundle = directory.join("nokey.p12");
+
+    run_openssl(&[
+        "req",
+        "-x509",
+        "-newkey",
+        "rsa:2048",
+        "-nodes",
+        "-days",
+        "30",
+        "-subj",
+        "/CN=SIN CLAVE PRIVADA",
+        "-keyout",
+        key.to_str().expect("ruta valida"),
+        "-out",
+        certificate.to_str().expect("ruta valida"),
+    ]);
+    run_openssl(&[
+        "pkcs12",
+        "-export",
+        "-nokeys",
+        "-in",
+        certificate.to_str().expect("ruta valida"),
+        "-name",
+        "SIN CLAVE PRIVADA",
+        "-passout",
+        &format!("pass:{GENERATED_PASSWORD}"),
+        "-out",
+        bundle.to_str().expect("ruta valida"),
+    ]);
+
+    bundle
+}
+
+/// Genera un `.p12` de clave RSA sin `friendlyName` en `directory`.
+fn a_p12_without_a_friendly_name(directory: &Path, subject: &str, password: &str) -> PathBuf {
+    let key = directory.join("plain.pem");
+    let certificate = directory.join("plain-cert.pem");
+    let bundle = directory.join("plain.p12");
+
+    run_openssl(&[
+        "req",
+        "-x509",
+        "-newkey",
+        "rsa:2048",
+        "-nodes",
+        "-days",
+        "30",
+        "-subj",
+        subject,
+        "-addext",
+        "basicConstraints=critical,CA:FALSE",
+        "-addext",
+        "keyUsage=critical,digitalSignature",
+        "-keyout",
+        key.to_str().expect("ruta valida"),
+        "-out",
+        certificate.to_str().expect("ruta valida"),
+    ]);
+    run_openssl(&[
+        "pkcs12",
+        "-export",
+        "-inkey",
+        key.to_str().expect("ruta valida"),
+        "-in",
+        certificate.to_str().expect("ruta valida"),
+        "-passout",
+        &format!("pass:{password}"),
+        "-out",
+        bundle.to_str().expect("ruta valida"),
+    ]);
+
+    bundle
+}
+
+/// Genera un `.p12` con una clave DSA y sin `friendlyName` en `directory`.
+fn a_p12_of_an_unsupported_key_kind_without_a_friendly_name(directory: &Path) -> PathBuf {
+    let parameters = directory.join("dsaparam-plain.pem");
+    let key = directory.join("dsa-plain.pem");
+    let certificate = directory.join("dsa-plain-cert.pem");
+    let bundle = directory.join("dsa-plain.p12");
+
+    run_openssl(&[
+        "dsaparam",
+        "-out",
+        parameters.to_str().expect("ruta valida"),
+        "2048",
+    ]);
+    run_openssl(&[
+        "req",
+        "-x509",
+        "-newkey",
+        &format!("dsa:{}", parameters.to_str().expect("ruta valida")),
+        "-nodes",
+        "-days",
+        "30",
+        "-subj",
+        "/CN=CLAVE NO SOPORTADA SIN NOMBRE AMISTOSO",
+        "-keyout",
+        key.to_str().expect("ruta valida"),
+        "-out",
+        certificate.to_str().expect("ruta valida"),
+    ]);
+    run_openssl(&[
+        "pkcs12",
+        "-export",
+        "-inkey",
+        key.to_str().expect("ruta valida"),
+        "-in",
+        certificate.to_str().expect("ruta valida"),
+        "-passout",
+        &format!("pass:{GENERATED_PASSWORD}"),
         "-out",
         bundle.to_str().expect("ruta valida"),
     ]);
@@ -94,6 +220,22 @@ fn an_empty_installation() -> tempfile::TempDir {
     tempfile::tempdir().expect("deberia poder crearse un directorio temporal")
 }
 
+/// El PIN que entrega [`FixedPinKeyring`], con el que queda cifrado el Almacén de rFirma instalado.
+const KEYRING_PIN: &str = "pin-de-pruebas-del-almacen-de-rfirma";
+
+/// El doble en memoria del llavero del escritorio (TD-112): siempre entrega el mismo PIN.
+struct FixedPinKeyring;
+
+impl Keyring for FixedPinKeyring {
+    fn pin(&self) -> Result<ProtectedSecret, KeyringError> {
+        Ok(ProtectedSecret::from_str(KEYRING_PIN))
+    }
+
+    fn create_pin(&self) -> Result<ProtectedSecret, KeyringError> {
+        self.pin()
+    }
+}
+
 fn install(
     installed: &Path,
     p12: &Path,
@@ -103,6 +245,7 @@ fn install(
     Ok(certificates::install_pkcs12(
         &pkcs11::RealToken,
         &RealInstalledFolder,
+        &FixedPinKeyring,
         installed,
         &bytes,
         password,
@@ -131,18 +274,6 @@ fn subject_of(der: &[u8]) -> String {
         .to_string()
 }
 
-fn verifying_key(certificate: &TokenCertificate) -> VerifyingKey<Sha256> {
-    let parsed =
-        x509_cert::Certificate::from_der(certificate.der()).expect("el DER deberia parsearse");
-    let spki = parsed
-        .tbs_certificate()
-        .subject_public_key_info()
-        .to_der()
-        .expect("el SPKI deberia serializarse");
-    let public_key = RsaPublicKey::from_public_key_der(&spki).expect("clave publica RSA");
-    VerifyingKey::<Sha256>::new(public_key)
-}
-
 #[test]
 fn an_rsa_p12_installs_and_its_certificates_list_without_the_password() {
     let installed = an_empty_installation();
@@ -158,28 +289,99 @@ fn an_rsa_p12_installs_and_its_certificates_list_without_the_password() {
 }
 
 #[test]
-fn a_p12_with_an_elliptic_curve_key_is_refused_at_install() {
+fn a_p12_without_a_friendly_name_installs_and_lists() {
     let installed = an_empty_installation();
     let workshop = tempfile::tempdir().expect("deberia poder crearse un directorio temporal");
-    let elliptic = an_elliptic_curve_p12(workshop.path());
+    let plain =
+        a_p12_without_a_friendly_name(workshop.path(), "/CN=SIN NOMBRE AMISTOSO", KIT_PASSWORD);
 
-    let failure = install(installed.path(), &elliptic, EC_PASSWORD)
-        .expect_err("una clave eliptica no se puede instalar");
+    install(installed.path(), &plain, KIT_PASSWORD)
+        .expect("un .p12 sin friendlyName deberia instalarse igual");
 
-    assert_eq!(failure.situation, "keyNotRsa");
+    assert_eq!(certificates(installed.path()).len(), 1);
+}
+
+#[test]
+fn a_p12_without_a_friendly_name_and_without_a_common_name_installs() {
+    let installed = an_empty_installation();
+    let workshop = tempfile::tempdir().expect("deberia poder crearse un directorio temporal");
+    let plain = a_p12_without_a_friendly_name(workshop.path(), "/O=SIN NOMBRE COMUN", KIT_PASSWORD);
+
+    install(installed.path(), &plain, KIT_PASSWORD)
+        .expect("un .p12 sin friendlyName ni nombre comun deberia instalarse con el nickname fijo");
+
+    assert_eq!(certificates(installed.path()).len(), 1);
+}
+
+#[test]
+fn a_p12_of_an_unsupported_key_kind_without_a_friendly_name_gives_the_key_rejection_not_a_read_failure(
+) {
+    let installed = an_empty_installation();
+    let workshop = tempfile::tempdir().expect("deberia poder crearse un directorio temporal");
+    let unsupported = a_p12_of_an_unsupported_key_kind_without_a_friendly_name(workshop.path());
+
+    let failure = install(installed.path(), &unsupported, GENERATED_PASSWORD).expect_err(
+        "una clave que no es RSA ni de curva eliptica no se puede instalar, con o sin friendlyName",
+    );
+
+    assert_eq!(failure.situation, "keyKindUnsupported");
+}
+
+#[test]
+fn an_elliptic_curve_p12_installs_and_its_certificates_list_without_the_password() {
+    let installed = an_empty_installation();
+
+    install(installed.path(), &elliptic_curve_kit_p12(), KIT_PASSWORD)
+        .expect("el .p12 de curva eliptica del kit deberia instalarse");
+
+    let found = certificates(installed.path());
+    assert_eq!(found.len(), 1, "el .p12 trae un certificado de persona");
+    assert!(found[0]
+        .subject()
+        .is_some_and(|subject| subject.contains("99949991H")));
+}
+
+#[test]
+fn a_p12_of_an_unsupported_key_kind_is_refused_at_install() {
+    let installed = an_empty_installation();
+    let workshop = tempfile::tempdir().expect("deberia poder crearse un directorio temporal");
+    let unsupported = a_p12_of_an_unsupported_key_kind(workshop.path());
+
+    let failure = install(installed.path(), &unsupported, GENERATED_PASSWORD)
+        .expect_err("una clave que no es RSA ni de curva eliptica no se puede instalar");
+
+    assert_eq!(failure.situation, "keyKindUnsupported");
 }
 
 #[test]
 fn a_refused_p12_leaves_no_store_behind() {
     let installed = an_empty_installation();
     let workshop = tempfile::tempdir().expect("deberia poder crearse un directorio temporal");
-    let elliptic = an_elliptic_curve_p12(workshop.path());
+    let unsupported = a_p12_of_an_unsupported_key_kind(workshop.path());
 
-    let _ = install(installed.path(), &elliptic, EC_PASSWORD);
+    let _ = install(installed.path(), &unsupported, GENERATED_PASSWORD);
 
     assert!(
         installed_stores(installed.path()).is_empty(),
         "el rechazo tenia que borrar el almacen a medio escribir"
+    );
+}
+
+#[test]
+fn a_refused_p12_leaves_an_already_installed_certificate_alone() {
+    let installed = an_empty_installation();
+    let workshop = tempfile::tempdir().expect("deberia poder crearse un directorio temporal");
+    let unsupported = a_p12_of_an_unsupported_key_kind(workshop.path());
+    install(installed.path(), &kit_p12(), KIT_PASSWORD).expect("el primero deberia instalarse");
+
+    let failure = install(installed.path(), &unsupported, GENERATED_PASSWORD)
+        .expect_err("una clave que no es RSA ni de curva eliptica no se puede instalar");
+
+    assert_eq!(failure.situation, "keyKindUnsupported");
+    assert_eq!(
+        certificates(installed.path()).len(),
+        1,
+        "el rechazo no puede llevarse lo que ya estaba instalado"
     );
 }
 
@@ -190,8 +392,53 @@ fn a_wrong_password_is_told_apart_from_a_key_that_does_not_serve() {
     let failure = install(installed.path(), &kit_p12(), "no es la suya")
         .expect_err("con otra contrasena no se puede abrir el fichero");
 
+    assert_eq!(failure.situation, "incorrectPkcs12Password");
+    assert!(installed_stores(installed.path()).is_empty());
+}
+
+#[test]
+fn a_file_that_is_not_a_pkcs12_is_told_apart_from_a_wrong_password() {
+    let installed = an_empty_installation();
+    let workshop = tempfile::tempdir().expect("deberia poder crearse un directorio temporal");
+    let not_a_p12 = workshop.path().join("not-a.p12");
+    std::fs::write(&not_a_p12, b"esto no es un pkcs12").expect("deberia poder escribirse");
+
+    let failure = install(installed.path(), &not_a_p12, KIT_PASSWORD)
+        .expect_err("un fichero que no decodifica como pkcs12 no se puede instalar");
+
     assert_eq!(failure.situation, "pkcs12Unreadable");
     assert!(installed_stores(installed.path()).is_empty());
+}
+
+#[test]
+fn a_p12_without_a_private_key_gives_its_own_situation() {
+    let installed = an_empty_installation();
+    let workshop = tempfile::tempdir().expect("deberia poder crearse un directorio temporal");
+    let certificate_only = a_p12_without_a_private_key(workshop.path());
+
+    let failure = install(installed.path(), &certificate_only, GENERATED_PASSWORD)
+        .expect_err("un .p12 sin clave privada no se puede instalar");
+
+    assert_eq!(failure.situation, "pkcs12NoPrivateKey");
+    assert!(installed_stores(installed.path()).is_empty());
+}
+
+#[test]
+fn a_p12_without_a_private_key_is_refused_even_over_an_already_installed_certificate() {
+    let installed = an_empty_installation();
+    let workshop = tempfile::tempdir().expect("deberia poder crearse un directorio temporal");
+    let certificate_only = a_p12_without_a_private_key(workshop.path());
+    install(installed.path(), &kit_p12(), KIT_PASSWORD).expect("el primero deberia instalarse");
+
+    let failure = install(installed.path(), &certificate_only, GENERATED_PASSWORD)
+        .expect_err("un .p12 sin clave privada no se puede instalar, ni con el almacen ya poblado");
+
+    assert_eq!(failure.situation, "pkcs12NoPrivateKey");
+    assert_eq!(
+        certificates(installed.path()).len(),
+        1,
+        "el rechazo no puede llevarse lo que ya estaba instalado"
+    );
 }
 
 #[test]
@@ -200,13 +447,7 @@ fn nothing_of_the_file_is_kept_beyond_the_two_databases() {
     install(installed.path(), &kit_p12(), KIT_PASSWORD)
         .expect("el .p12 del kit deberia instalarse");
 
-    let store_directory = std::fs::read_dir(installed.path())
-        .expect("deberia leerse")
-        .flatten()
-        .map(|entry| entry.path())
-        .next()
-        .expect("tenia que quedar un almacen");
-    let mut inside: Vec<String> = std::fs::read_dir(&store_directory)
+    let mut inside: Vec<String> = std::fs::read_dir(installed.path())
         .expect("deberia leerse")
         .flatten()
         .map(|entry| entry.file_name().to_string_lossy().into_owned())
@@ -214,120 +455,51 @@ fn nothing_of_the_file_is_kept_beyond_the_two_databases() {
     inside.sort();
 
     assert_eq!(inside, vec!["cert9.db".to_owned(), "key4.db".to_owned()]);
-    assert!(
-        !store_directory
-            .file_name()
-            .expect("el almacen tiene nombre")
-            .to_string_lossy()
-            .contains("active-rsa"),
-        "el nombre del almacen no puede llevar el del fichero dentro"
-    );
 }
 
 #[test]
-fn two_installed_files_are_two_stores() {
+fn reinstalling_the_same_file_does_not_duplicate_it() {
     let installed = an_empty_installation();
 
     install(installed.path(), &kit_p12(), KIT_PASSWORD).expect("el primero deberia instalarse");
-    install(installed.path(), &kit_p12(), KIT_PASSWORD).expect("el segundo deberia instalarse");
+    install(installed.path(), &kit_p12(), KIT_PASSWORD)
+        .expect("reinstalar lo que ya esta es un exito sin cambios");
 
-    assert_eq!(installed_stores(installed.path()).len(), 2);
+    assert_eq!(installed_stores(installed.path()).len(), 1);
+    assert_eq!(certificates(installed.path()).len(), 1);
+}
+
+#[test]
+fn two_different_files_land_in_the_same_store() {
+    let installed = an_empty_installation();
+
+    install(installed.path(), &kit_p12(), KIT_PASSWORD).expect("el primero deberia instalarse");
+    install(installed.path(), &elliptic_curve_kit_p12(), KIT_PASSWORD)
+        .expect("el segundo deberia instalarse");
+
+    assert_eq!(
+        installed_stores(installed.path()).len(),
+        1,
+        "el Almacen de rFirma es una unica base NSS"
+    );
     assert_eq!(certificates(installed.path()).len(), 2);
 }
 
 #[test]
-fn a_certificate_that_came_from_a_p12_signs() {
+fn two_certificates_with_the_same_common_name_coexist() {
     let installed = an_empty_installation();
-    install(installed.path(), &kit_p12(), KIT_PASSWORD)
-        .expect("el .p12 del kit deberia instalarse");
-    let certificate = certificates(installed.path())
-        .into_iter()
-        .next()
-        .expect("tenia que haber un certificado");
+    let first_workshop = tempfile::tempdir().expect("deberia poder crearse un directorio temporal");
+    let second_workshop =
+        tempfile::tempdir().expect("deberia poder crearse un directorio temporal");
+    let first =
+        a_p12_without_a_friendly_name(first_workshop.path(), "/CN=MISMO NOMBRE", KIT_PASSWORD);
+    let second =
+        a_p12_without_a_friendly_name(second_workshop.path(), "/CN=MISMO NOMBRE", KIT_PASSWORD);
 
-    let raw = pkcs11::sign_with_secret(
-        certificate.reference(),
-        &ProtectedSecret::from_str(""),
-        SignatureAlgorithm::Sha256Rsa,
-        PRESIGN,
-    )
-    .expect("un .p12 instalado tiene que poder firmar sin secreto que teclear");
+    install(installed.path(), &first, KIT_PASSWORD).expect("el primero deberia instalarse");
+    install(installed.path(), &second, KIT_PASSWORD).expect("el segundo deberia instalarse");
 
-    assert_eq!(raw.len(), 256, "RSA 2048: la firma cruda mide el modulo");
-    let signature = Signature::try_from(raw.as_slice()).expect("firma RSA");
-    verifying_key(&certificate)
-        .verify(PRESIGN, &signature)
-        .expect("la firma no verifica contra la clave publica del certificado");
-}
-
-#[test]
-fn an_installed_p12_asks_for_no_secret() {
-    let installed = an_empty_installation();
-    install(installed.path(), &kit_p12(), KIT_PASSWORD)
-        .expect("el .p12 del kit deberia instalarse");
-    let certificate = certificates(installed.path())
-        .into_iter()
-        .next()
-        .expect("tenia que haber un certificado");
-
-    let secret = pkcs11::store_secret(certificate.reference()).expect("deberia poder preguntarse");
-
-    assert_eq!(
-        secret,
-        rfirma_lib::identity::domain::secret::StoreSecret::NotNeeded
-    );
-}
-
-#[test]
-fn removing_an_installed_certificate_deletes_its_store() {
-    let installed = an_empty_installation();
-    install(installed.path(), &kit_p12(), KIT_PASSWORD)
-        .expect("el .p12 del kit deberia instalarse");
-    let listed = ListedCertificates::new();
-    let found = certificates(installed.path());
-    let handles = listed.replace(
-        found
-            .iter()
-            .map(|certificate| certificate.reference().clone()),
-    );
-
-    certificates::remove_installed(&RealInstalledFolder, installed.path(), &handles[0], &listed)
-        .expect("deberia poder quitarse");
-
-    assert!(installed_stores(installed.path()).is_empty());
-}
-
-#[test]
-fn a_certificate_from_somewhere_else_is_not_removed() {
-    let installed = an_empty_installation();
-    let elsewhere = an_empty_installation();
-    install(elsewhere.path(), &kit_p12(), KIT_PASSWORD)
-        .expect("el .p12 del kit deberia instalarse");
-    let listed = ListedCertificates::new();
-    let found = certificates(elsewhere.path());
-    let handles = listed.replace(
-        found
-            .iter()
-            .map(|certificate| certificate.reference().clone()),
-    );
-
-    let failure = certificates::remove_installed(
-        &RealInstalledFolder,
-        installed.path(),
-        &handles[0],
-        &listed,
-    )
-    .expect_err("no viene de este directorio");
-
-    assert_eq!(
-        rfirma_lib::crossing::Failure::from(failure).situation,
-        "certificateNotFound"
-    );
-    assert_eq!(
-        installed_stores(elsewhere.path()).len(),
-        1,
-        "el almacen de al lado sigue donde estaba"
-    );
+    assert_eq!(certificates(installed.path()).len(), 2);
 }
 
 #[test]

@@ -11,22 +11,21 @@ use crate::documents::domain::error::DocumentError;
 use crate::identity::domain::algorithm::SignatureAlgorithm;
 use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
 use crate::identity::domain::error::TokenError;
-use crate::identity::domain::holder::{prompted_holder_of, stamped_holder_of, StampedHolder};
-use crate::identity::domain::secret::{SecretOnTheReaderKeypad, StoreSecret};
+use crate::identity::domain::holder::{stamped_holder_of, PromptedHolder, StampedHolder};
+use crate::identity::domain::secret::{SecretName, SecretOnTheReaderKeypad, StoreSecret};
 use crate::lock;
 use crate::signing::application::bare_pkcs1::BarePkcs1;
 use crate::signing::application::cycle::{
     self, CycleError, OpenCycle, SigningRequest, NOTHING_FROM_A_SITE,
 };
 use crate::signing::domain::isolate_gone::IsolateGone;
-use crate::signing::domain::Language;
 use crate::signing::domain::{
     compose_visible_content, AdmissibleDocument, CompletedCycle, Format, PlacementError,
     PreviousSignaturesReport, SessionSeal, SignatureConfig, SigningChoice, VisibleData,
 };
 use crate::signing::domain::{Refusal, SignatureOperation, TokenSignatures, Waivers};
+use crate::signing::ports::ProtectedSecret;
 use crate::signing::ports::{DocumentBytes, IsolateHost, PreviousSignaturesEngine, Signer};
-use crate::signing::ports::{ProtectedSecret, SecretName, SecretPromptRequest, SecretPrompter};
 
 /// Sesión de firma activa entre la prefirma y la postfirma (ADR-0016).
 #[derive(Default)]
@@ -261,64 +260,20 @@ pub fn sign_on_token(
     Ok(())
 }
 
-/// Fase de firma en el token PKCS#11 solicitando el secreto mediante el puerto interactivo (ADR-0001, ADR-0014).
-pub fn sign_on_token_with_prompter(
-    signer: &dyn Signer,
+/// Con qué se pediría el secreto del ciclo abierto: el nombre del secreto y el titular, si lo hay.
+pub fn secret_prompt_context(
     session: &SigningSession,
-    prompter: &dyn SecretPrompter,
-    language: Language,
-) -> Result<(), CycleFailure> {
-    let mut open = lock(&session.open);
-    let in_flight = open.as_mut().ok_or(CycleFailure::NoOpenCycle)?;
-    in_flight.signature = Some(
-        in_flight
-            .cycle
-            .sign_with_prompter(signer, prompter, language)?,
-    );
-    Ok(())
+) -> Result<(SecretName, Option<PromptedHolder>), CycleFailure> {
+    let open = lock(&session.open);
+    let in_flight = open.as_ref().ok_or(CycleFailure::NoOpenCycle)?;
+    Ok(in_flight.cycle.secret_prompt_context())
 }
 
-/// Firma el ciclo abierto con el secreto tecleado, o pidiéndolo al diálogo si llega vacío.
-pub fn signed_on_the_token(
-    signer: &dyn Signer,
-    session: &SigningSession,
-    prompter: &dyn SecretPrompter,
-    language: Language,
-    secret: &ProtectedSecret,
-) -> Result<(), CycleFailure> {
-    if secret.is_empty() {
-        return sign_on_token_with_prompter(signer, session, prompter, language);
-    }
-    sign_on_token(signer, session, secret)
-}
-
-/// El secreto del lote: el tecleado, el que el token acepta tras el diálogo, o vacío si no lo pide.
-pub fn secret_for_the_batch(
-    signer: &dyn Signer,
-    certificate: &TokenCertificate,
-    prompter: &dyn SecretPrompter,
-    language: Language,
-    typed: &ProtectedSecret,
-) -> Result<ProtectedSecret, CycleFailure> {
-    if !typed.is_empty() {
-        return Ok(ProtectedSecret::new(typed.as_bytes()));
-    }
-    let mode = signer
-        .secret_of(certificate.reference())
-        .map_err(CycleError::Token)?;
-    if mode != StoreSecret::TypedOnScreen {
-        return Ok(ProtectedSecret::new(b""));
-    }
-    let request = SecretPromptRequest {
-        secret: SecretName::of(certificate.reference().store().class()),
-        holder: prompted_holder_of(certificate.der()),
-        language,
-        incorrect_secret: false,
-    };
-    let (secret, ()) = cycle::prompted_until_accepted(prompter, request, |secret| {
-        signer.accepts_the_secret(certificate.reference(), secret)
-    })?;
-    Ok(secret)
+/// Certificado con el que se abrió el ciclo activo de la sesión.
+pub fn certificate_of(session: &SigningSession) -> Result<CertificateRef, CycleFailure> {
+    let open = lock(&session.open);
+    let in_flight = open.as_ref().ok_or(CycleFailure::NoOpenCycle)?;
+    Ok(in_flight.cycle.certificate().clone())
 }
 
 /// Lo que sale de la postfirma: el ciclo completado y con qué documento y certificado se hizo.

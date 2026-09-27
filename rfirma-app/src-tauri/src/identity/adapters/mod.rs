@@ -2,6 +2,7 @@
 
 pub mod failures;
 pub mod folder;
+pub mod keyring;
 pub mod pkcs11;
 pub mod tauri;
 pub mod views;

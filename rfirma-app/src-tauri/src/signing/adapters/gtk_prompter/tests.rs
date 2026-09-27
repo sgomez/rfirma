@@ -1,9 +1,9 @@
 use super::{localize, MockSecretPrompter, PreconfiguredSecretPrompter};
+use crate::identity::domain::holder::PromptedHolder;
 use crate::identity::domain::protected_secret::ProtectedSecret;
+use crate::identity::domain::secret::SecretName;
+use crate::identity::ports::{SecretPromptError, SecretPromptRequest, SecretPrompter};
 use crate::signing::domain::Language;
-use crate::signing::ports::{
-    PromptedHolder, SecretName, SecretPromptError, SecretPromptRequest, SecretPrompter,
-};
 
 fn a_request(holder: Option<PromptedHolder>, language: Language) -> SecretPromptRequest {
     SecretPromptRequest {
@@ -11,6 +11,7 @@ fn a_request(holder: Option<PromptedHolder>, language: Language) -> SecretPrompt
         holder,
         language,
         incorrect_secret: false,
+        origin_window: None,
     }
 }
 
@@ -28,6 +29,7 @@ fn localizes_into_all_five_official_languages() {
             SecretName::Pin,
             SecretName::Password,
             SecretName::DocumentPassword,
+            SecretName::Pkcs12Password("certificado.p12".to_string()),
         ] {
             let mut request = a_request(Some(juan_perez()), lang);
             request.secret = secret;
@@ -80,12 +82,25 @@ fn a_locked_pdf_is_asked_for_its_own_password() {
 }
 
 #[test]
+fn installing_a_pkcs12_names_the_file_and_never_says_store() {
+    let mut request = a_request(None, Language::Spanish);
+    request.secret = SecretName::Pkcs12Password("certificado.p12".to_string());
+
+    let dialog = localize(&request);
+
+    assert!(dialog.title.contains("certificado.p12"), "{}", dialog.title);
+    assert!(!dialog.title.to_lowercase().contains("almacen"));
+    assert!(!dialog.title.to_lowercase().contains("almacén"));
+}
+
+#[test]
 fn no_text_of_the_dialog_ever_counts_attempts() {
     for lang in Language::ALL {
         for secret in [
             SecretName::Pin,
             SecretName::Password,
             SecretName::DocumentPassword,
+            SecretName::Pkcs12Password("certificado.p12".to_string()),
         ] {
             let mut request = a_request(Some(juan_perez()), lang);
             request.secret = secret;

@@ -137,17 +137,6 @@ fn cycle_error_told(error: &CycleError) -> (Failure, SafCode) {
             code_of_token(error.situation()),
         ),
         CycleError::Seal(error) => (Failure::from(*error), code_of_broken_seal()),
-        CycleError::Prompt(crate::signing::ports::SecretPromptError::Cancelled) => (
-            Failure::new(
-                "userCancelled",
-                "solicitud de PIN cancelada por la persona usuaria",
-            ),
-            SafCode::CannotAccessKeystore,
-        ),
-        CycleError::Prompt(crate::signing::ports::SecretPromptError::Failed(reason)) => (
-            Failure::new("promptFailed", reason.clone()),
-            SafCode::CannotAccessKeystore,
-        ),
     }
 }
 

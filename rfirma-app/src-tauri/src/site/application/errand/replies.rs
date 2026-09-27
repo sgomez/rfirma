@@ -146,15 +146,25 @@ pub(super) fn no_certificate_at_all() -> ErrandStep {
 }
 
 /// Paso cuando la sede excluye todos los certificados instalados.
-pub(super) fn no_certificate_the_site_accepts(live: &LiveErrand, owned: usize) -> ErrandStep {
-    let answered = over(
-        live,
-        SiteOutcome::Refused(SiteRefusal::NoCertificateTheSiteAccepts),
-    );
+///
+/// Con ventana delante la negativa espera a que la persona cierre: instalar
+/// otro certificado todavía puede arreglarlo. En `headless` no hay ventana que
+/// cerrar, así que la sede recibe su código en el acto, como siempre.
+pub(super) fn no_certificate_the_site_accepts(
+    live: &LiveErrand,
+    owned: usize,
+    headless: bool,
+) -> ErrandStep {
+    let answered = headless.then(|| {
+        over(
+            live,
+            SiteOutcome::Refused(SiteRefusal::NoCertificateTheSiteAccepts),
+        )
+    });
     ErrandStep::NoCertificate {
         reason: NoCertificate::TheSiteExcludedThemAll,
         owned,
-        answered: Some(answered),
+        answered,
     }
 }
 

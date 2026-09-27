@@ -5,7 +5,7 @@ use std::fmt;
 use crate::identity::domain::store::StoreClass;
 
 /// Cómo se llama el secreto en los términos de quien firma: el PIN de un módulo o la contraseña de un fichero.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum SecretName {
     /// El PIN de un módulo PKCS#11.
     Pin,
@@ -13,6 +13,8 @@ pub enum SecretName {
     Password,
     /// La contraseña que abre un PDF cifrado; no es de ningún almacén.
     DocumentPassword,
+    /// La contraseña del `.p12` que se está instalando, con el nombre de su fichero.
+    Pkcs12Password(String),
 }
 
 impl SecretName {

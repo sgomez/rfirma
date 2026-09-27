@@ -10,26 +10,41 @@ use crate::identity::domain::error::{Situation, TokenError};
 use crate::identity::domain::holder::{
     common_name_of, given_name_and_surname, holder_of, is_pseudonym,
 };
+use crate::identity::domain::keyring::KeyringError;
+use crate::identity::domain::protected_secret::ProtectedSecret;
+use crate::identity::domain::secret::SecretName;
 use crate::identity::domain::store::{Store, StoreClass};
-use crate::identity::ports::{CertificateMemory, InstalledFolder, Token};
+use crate::identity::ports::{
+    prompted_until_accepted, CertificateMemory, InstalledFolder, Keyring, OriginWindow,
+    PromptedError, SecretPromptRequest, SecretPrompter, Token,
+};
 use crate::memory_error::{MemoryError, Situation as StoreSituation};
 use crate::signing::domain::layer2_text::masked_signer;
+use crate::signing::domain::Language;
 
 /// Los certificados del último listado, cada uno tras su asa.
 pub type ListedCertificates = Handles<CertificateRef>;
 
-/// Por qué un `.p12` no se ha podido instalar ni quitar (ADR-0011).
+/// Por qué un `.p12` no se ha podido instalar ni quitar (ADR-0011, ADR-0034).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum InstallError {
     /// El token o el fichero han dicho que no.
     Token(TokenError),
     /// El almacén del `.p12` no se ha podido crear ni quitar del disco.
     Store(MemoryError),
+    /// El llavero del escritorio no ha entregado el PIN del Almacén de rFirma.
+    Keyring(KeyringError),
 }
 
 impl From<TokenError> for InstallError {
     fn from(error: TokenError) -> Self {
         Self::Token(error)
+    }
+}
+
+impl From<KeyringError> for InstallError {
+    fn from(error: KeyringError) -> Self {
+        Self::Keyring(error)
     }
 }
 
@@ -130,84 +145,172 @@ pub fn rows_of(
         .collect()
 }
 
-/// OID de rsaEncryption.
-const RSA_ENCRYPTION: &str = "1.2.840.113549.1.1.1";
+/// El PIN con el que cifrar la instalación: se crea si el almacén es nuevo, nunca si ya existía (ADR-0034).
+fn pin_for_installing(
+    keyring: &dyn Keyring,
+    already_existed: bool,
+) -> Result<ProtectedSecret, KeyringError> {
+    if already_existed {
+        keyring.pin()
+    } else {
+        keyring.get_or_create_pin()
+    }
+}
 
-/// Instala un PKCS#12 importándolo a un almacén NSS aislado (ADR-0011).
+/// Instala un PKCS#12 en el Almacén de rFirma, cifrado con el PIN del llavero (ADR-0034).
 pub fn install_pkcs12(
     token: &dyn Token,
     folder: &dyn InstalledFolder,
+    keyring: &dyn Keyring,
     installed_dir: &Path,
     pkcs12: &[u8],
     password: &str,
 ) -> Result<(), InstallError> {
-    let directory = installed_dir.join(crate::documents::domain::handles::mint());
-    folder.make(&directory).map_err(|error| {
+    let already_existed = installed_dir.join("cert9.db").is_file();
+    let pin = pin_for_installing(keyring, already_existed)?;
+    validate_pkcs12_alone(token, folder, pkcs12, password)?;
+
+    folder.make(installed_dir).map_err(|error| {
         InstallError::Store(MemoryError::new(
             StoreSituation::Unwritable,
-            format!("no se ha podido crear el almacen del .p12: {error}"),
+            format!("no se ha podido crear el Almacen de rFirma: {error}"),
         ))
     })?;
-    folder.restrict_to_owner(&directory);
+    folder.restrict_to_owner(installed_dir);
 
-    let installed = token
-        .import_pkcs12(&directory, pkcs12, password)
-        .and_then(|store| only_rsa_keys(token, &store));
+    let installed = token.import_pkcs12(installed_dir, pkcs12, password, &pin);
 
     if let Err(error) = installed {
-        let _ = folder.remove(&directory);
+        if !already_existed {
+            for file in ["cert9.db", "key4.db"] {
+                folder.remove_file(&installed_dir.join(file));
+            }
+        }
         return Err(error.into());
     }
 
     for file in ["cert9.db", "key4.db"] {
-        folder.restrict_to_owner(&directory.join(file));
+        folder.restrict_to_owner(&installed_dir.join(file));
     }
     Ok(())
 }
 
-/// Comprueba que el almacén contiene al menos un certificado y todas las claves son RSA.
-fn only_rsa_keys(token: &dyn Token, store: &Store) -> Result<(), TokenError> {
-    let found = token.list(store)?;
+/// Importa el `.p12` en un almacén desechable para comprobarlo antes de tocar el Almacén de rFirma compartido.
+fn validate_pkcs12_alone(
+    token: &dyn Token,
+    folder: &dyn InstalledFolder,
+    pkcs12: &[u8],
+    password: &str,
+) -> Result<(), InstallError> {
+    let staging = folder.staging_directory();
+    folder.make(&staging).map_err(|error| {
+        InstallError::Store(MemoryError::new(
+            StoreSituation::Unwritable,
+            format!("no se ha podido preparar un almacen temporal para comprobar el .p12: {error}"),
+        ))
+    })?;
+    folder.restrict_to_owner(&staging);
+
+    let staging_pin = ProtectedSecret::from_str("comprobacion-temporal-del-p12");
+    let checked = token
+        .import_pkcs12(&staging, pkcs12, password, &staging_pin)
+        .and_then(|store| only_supported_keys(token, &store, &staging_pin));
+
+    let _ = folder.remove(&staging);
+    checked.map(|_| ()).map_err(InstallError::from)
+}
+
+/// Quién pide la contraseña del `.p12`, en qué idioma y sobre qué ventana.
+pub struct PasswordPrompt<'a> {
+    /// El diálogo del secreto.
+    pub prompter: &'a dyn SecretPrompter,
+    /// El idioma del diálogo.
+    pub language: Language,
+    /// La ventana que pidió instalar, sobre la que el diálogo se hace modal.
+    pub origin_window: OriginWindow,
+}
+
+/// Pide la contraseña del `.p12` por el diálogo del secreto y lo instala, con reintentos hasta acertar o cancelar.
+pub fn install_pkcs12_asking_its_password(
+    token: &dyn Token,
+    folder: &dyn InstalledFolder,
+    keyring: &dyn Keyring,
+    installed_dir: &Path,
+    pkcs12: &[u8],
+    file_name: &str,
+    prompt: PasswordPrompt<'_>,
+) -> Result<(), PromptedError<InstallError>> {
+    let request = SecretPromptRequest {
+        secret: SecretName::Pkcs12Password(file_name.to_string()),
+        holder: None,
+        language: prompt.language,
+        incorrect_secret: false,
+        origin_window: Some(prompt.origin_window),
+    };
+    prompted_until_accepted(
+        prompt.prompter,
+        request,
+        |secret| {
+            install_pkcs12(
+                token,
+                folder,
+                keyring,
+                installed_dir,
+                pkcs12,
+                secret.as_str().unwrap_or_default(),
+            )
+        },
+        wrong_pkcs12_password,
+    )
+    .map(|_| ())
+}
+
+/// Un `.p12` no se bloquea: solo la contraseña incorrecta merece reintentarse.
+fn wrong_pkcs12_password(error: &InstallError) -> bool {
+    matches!(
+        error,
+        InstallError::Token(token) if token.situation() == Situation::IncorrectPkcs12Password
+    )
+}
+
+/// Comprueba que el almacén contiene al menos un certificado y todas las claves son RSA o de curva elíptica.
+fn only_supported_keys(
+    token: &dyn Token,
+    store: &Store,
+    pin: &ProtectedSecret,
+) -> Result<(), TokenError> {
+    let found = token.list_authenticated(store, pin)?;
     if found.is_empty() {
         return Err(TokenError::new(
-            Situation::Pkcs12Unreadable,
+            Situation::Pkcs12NoPrivateKey,
             "el fichero no ha dejado ningun certificado con clave privada dentro",
         ));
     }
     for certificate in &found {
-        if !is_rsa(certificate) {
+        if certificate.key_kind().is_none() {
             return Err(TokenError::new(
-                Situation::KeyNotRsa,
-                format!("{}: la clave no es RSA", certificate.reference().label()),
+                Situation::KeyKindUnsupported,
+                format!(
+                    "{}: la clave no es RSA ni de curva eliptica",
+                    certificate.reference().label()
+                ),
             ));
         }
     }
     Ok(())
 }
 
-/// Comprueba si la clave pública del certificado es RSA a partir de su DER.
-fn is_rsa(certificate: &TokenCertificate) -> bool {
-    use x509_cert::der::Decode;
-
-    x509_cert::Certificate::from_der(certificate.der()).is_ok_and(|read| {
-        read.tbs_certificate()
-            .subject_public_key_info()
-            .algorithm
-            .oid
-            .to_string()
-            == RSA_ENCRYPTION
-    })
-}
-
-/// Elimina el almacén correspondiente a un certificado PKCS#12 instalado (ADR-0011).
+/// Quita un certificado del Almacén de rFirma: lo borra, con su clave, de la base única (ADR-0034).
 pub fn remove_installed(
-    folder: &dyn InstalledFolder,
+    token: &dyn Token,
+    keyring: &dyn Keyring,
+    memory: &dyn CertificateMemory,
     installed_dir: &Path,
     handle: &str,
     listed: &ListedCertificates,
 ) -> Result<(), InstallError> {
     let reference = listed.get(handle).ok_or_else(not_from_the_last_listing)?;
-    let directory = reference
+    reference
         .store()
         .installed_directory_under(installed_dir)
         .ok_or_else(|| {
@@ -216,10 +319,23 @@ pub fn remove_installed(
                 "ese certificado no viene de un .p12 instalado",
             )
         })?;
-    folder.remove(&directory).map_err(|error| {
+    let pin = keyring.pin()?;
+    token.remove_certificate(installed_dir, &reference, &pin)?;
+    if memory.remembered_certificate().as_ref() == Some(&reference) {
+        let _ = memory.forget_the_certificate();
+    }
+    Ok(())
+}
+
+/// Vacía el Almacén de rFirma entero, a petición expresa de la persona tras perder su PIN (ADR-0034).
+pub fn empty_the_store(
+    folder: &dyn InstalledFolder,
+    installed_dir: &Path,
+) -> Result<(), InstallError> {
+    folder.remove(installed_dir).map_err(|error| {
         InstallError::Store(MemoryError::new(
             StoreSituation::Unwritable,
-            format!("no se ha podido quitar el almacen del .p12: {error}"),
+            format!("no se ha podido vaciar el Almacen de rFirma: {error}"),
         ))
     })
 }

@@ -243,7 +243,7 @@ fn a_key_neither_rsa_nor_ec_never_travels_to_the_server() {
     let refusal = composed_name(AskedAlgorithm::Sha256, None).expect_err("no se compone con RSA");
 
     assert!(
-        matches!(&refusal, SiteRefusal::Token(error) if error.situation() == TokenSituation::KeyNotRsa),
+        matches!(&refusal, SiteRefusal::Token(error) if error.situation() == TokenSituation::KeyKindUnsupported),
         "{refusal:?}"
     );
 }

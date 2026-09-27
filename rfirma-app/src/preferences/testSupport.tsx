@@ -54,6 +54,7 @@ export function renderView(props: Partial<Parameters<typeof PreferencesView>[0]>
       installedCertificates={[]}
       onInstallCertificate={async () => true}
       onRemoveCertificate={noop}
+      onEmptyStore={noop}
       onClose={noop}
       {...props}
     />,
