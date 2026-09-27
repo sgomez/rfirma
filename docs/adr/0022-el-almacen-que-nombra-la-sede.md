@@ -74,10 +74,12 @@ no cabe en una regla pura.
   nada.
 - El código no distingue el motivo del rechazo; la ventana sí, porque
   `unsupportedKeyStore` cuenta qué almacén o qué biblioteca se nombró.
-- No hace falta el camino de contraseña de un `.p12` que la orden
-  `site_install_certificate` no tiene: el `PKCS12` de una sede se rechaza antes
-  de necesitarlo. El día que ese camino exista, este ADR se reescribe para
-  obedecerlo.
+- `site_install_certificate` ya tiene camino de contraseña —el mismo que la
+  ventana principal, `install_certificate_over`— pero el `PKCS12` de una sede
+  se sigue rechazando: ese camino instala el fichero que **la persona** elige
+  en su propio selector, y obedecer el `keystore` de la sede seguiría siendo
+  abrir uno que ella no ha elegido. El motivo no cambia con que exista el
+  camino de contraseña.
 - La sede que acota a un módulo que la instalación ya ofrece —el SoftHSM de
   pruebas, el `opensc-pkcs11.so` de las tarjetas— ve solo sus certificados,
   como en el original. La que nombra otra ruta recibe `SAF_08` y la ventana
@@ -90,6 +92,10 @@ no cabe en una regla pura.
 - Si `AOKeyStore` gana nombres en una versión posterior del original, la tabla
   de `site/domain/protocol/key_store.rs` hay que volver a medirla contra ese
   tag.
+- Instalar un certificado **desde la sede** —el botón de «no hay ningún
+  certificado utilizable»— no es leer el `keystore` que nombra la sede: es la
+  misma orden que la ventana principal, `install_certificate_over`, y lleva al
+  mismo almacén de la plataforma por el mismo camino.
 
 ## Considered Options
 
@@ -107,9 +113,11 @@ fuera a las sedes que nombran el almacén NSS que rFirma ya usa —que es
 justamente el caso en el que no hay nada que arreglar—. Descartada.
 
 **Obedecer el `PKCS12` abriendo el fichero que nombra la sede.** Es la
-compatibilidad completa, y exige una contraseña que hoy nadie pide y un camino
-por el que una sede haría que rFirma leyera un fichero del equipo que la
-persona no ha elegido. Descartada mientras no haya ADR que decida ese camino.
+compatibilidad completa, y el motivo para descartarla no era solo que faltara
+un camino de contraseña: ese camino ya existe (`install_certificate_over`),
+pero sigue siendo la persona quien elige el fichero en su propio selector, y
+obedecer el `keystore` seguiría siendo abrir uno que ella no ha elegido, a
+petición de una página web. Descartada.
 
 **Rechazar siempre `PKCS11:<ruta>`, como cualquier biblioteca.** Era la regla
 anterior, y era segura: rFirma no cargaba nada que nombrara la sede. Pero

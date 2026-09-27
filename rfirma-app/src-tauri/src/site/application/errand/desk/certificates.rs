@@ -26,15 +26,13 @@ pub fn consent_for<E: FilterEngine>(
     certificates: &dyn Certificates,
     live: &LiveErrand,
 ) -> ErrandStep {
-    let accepted = match what_the_site_accepts(
-        engine,
-        request.filter(),
-        request.sticky(),
-        request.waives_the_choice(),
-        ours,
-        certificates,
-        live,
-    ) {
+    let manners = CertificateManners {
+        filter: request.filter(),
+        sticky: request.sticky(),
+        choice_waived: request.waives_the_choice(),
+        headless: request.is_headless(),
+    };
+    let accepted = match what_the_site_accepts(engine, &manners, ours, certificates, live) {
         Ok(accepted) => accepted,
         Err(step) => return step,
     };
@@ -64,15 +62,13 @@ pub fn consent_to_the_batch<E: FilterEngine>(
     certificates: &dyn Certificates,
     live: &LiveErrand,
 ) -> ErrandStep {
-    let accepted = match what_the_site_accepts(
-        engine,
-        request.filter(),
-        request.sticky(),
-        request.waives_the_choice(),
-        ours,
-        certificates,
-        live,
-    ) {
+    let manners = CertificateManners {
+        filter: request.filter(),
+        sticky: request.sticky(),
+        choice_waived: request.waives_the_choice(),
+        headless: request.is_headless(),
+    };
+    let accepted = match what_the_site_accepts(engine, &manners, ours, certificates, live) {
         Ok(accepted) => accepted,
         Err(step) => return step,
     };
@@ -99,15 +95,13 @@ pub fn consent_to_the_local_batch<E: FilterEngine>(
     live: &LiveErrand,
 ) -> ErrandStep {
     let LocalBatchAsk { request, batch } = ask;
-    let accepted = match what_the_site_accepts(
-        engine,
-        request.filter(),
-        request.sticky(),
-        request.waives_the_choice(),
-        ours,
-        certificates,
-        live,
-    ) {
+    let manners = CertificateManners {
+        filter: request.filter(),
+        sticky: request.sticky(),
+        choice_waived: request.waives_the_choice(),
+        headless: request.is_headless(),
+    };
+    let accepted = match what_the_site_accepts(engine, &manners, ours, certificates, live) {
         Ok(accepted) => accepted,
         Err(step) => return step,
     };
@@ -137,16 +131,22 @@ fn summary_of(sign: &LocalSingleSign) -> LocalBatchItem {
     }
 }
 
+/// Lo que una petición declara sobre cómo resolver el certificado, sin los candidatos.
+pub(super) struct CertificateManners<'a> {
+    pub(super) filter: &'a SiteFilter,
+    pub(super) sticky: StickyCertificate,
+    pub(super) choice_waived: bool,
+    pub(super) headless: bool,
+}
+
 pub(super) fn what_the_site_accepts<E: FilterEngine>(
     engine: &E,
-    filter: &SiteFilter,
-    sticky: StickyCertificate,
-    choice_waived: bool,
+    manners: &CertificateManners<'_>,
     ours: Vec<TokenCertificate>,
     certificates: &dyn Certificates,
     live: &LiveErrand,
 ) -> Result<Vec<TokenCertificate>, ErrandStep> {
-    if sticky.resets() {
+    if manners.sticky.resets() {
         live.unstick();
     }
 
@@ -155,21 +155,27 @@ pub(super) fn what_the_site_accepts<E: FilterEngine>(
     }
 
     let owned = ours.len();
-    let accepted = filtering::keep_what_the_site_accepts(engine, filter, ours, certificates)
-        .map_err(|error| {
-            answering(
-                live,
-                SiteOutcome::Refused(SiteRefusal::CouldNotFilter(error)),
-            )
-        })?;
+    let accepted =
+        filtering::keep_what_the_site_accepts(engine, manners.filter, ours, certificates).map_err(
+            |error| {
+                answering(
+                    live,
+                    SiteOutcome::Refused(SiteRefusal::CouldNotFilter(error)),
+                )
+            },
+        )?;
 
     if accepted.is_empty()
-        || (choice_waived
+        || (manners.choice_waived
             && accepted
                 .iter()
                 .all(|certificate| !certificate.status().is_usable()))
     {
-        return Err(no_certificate_the_site_accepts(live, owned));
+        return Err(no_certificate_the_site_accepts(
+            live,
+            owned,
+            manners.headless,
+        ));
     }
 
     Ok(accepted)

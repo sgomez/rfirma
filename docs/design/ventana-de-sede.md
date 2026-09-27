@@ -405,10 +405,13 @@ Las dos opciones **se tienen que sentir distintas porque la salida es distinta**
   acción principal —`Instalar un certificado…`, el único `--primary`— y la
   microacción `Volver a buscar` en `--ghost`, copiada de «4 · Sin certificados»,
   por si se instaló mientras la ventana estaba abierta.
-- **La sede los ha excluido todos.** Instalar otro no arregla nada, porque quien
-  decide es la sede: la pantalla se queda **sin acción principal**. Se dice
-  cuántos tienes —«tus 3 certificados»— porque eso es estado del almacén de la
-  persona, y ahí se acaba.
+- **La sede los ha excluido todos.** Instalar otro tampoco depende de la sede
+  —puede que el nuevo sí valga—, así que ofrece la misma acción principal
+  —`Instalar un certificado…`— y la misma microacción `Volver a buscar`. Lo que
+  cambia es el mensaje: se dice cuántos tienes —«tus 3 certificados»—, porque
+  eso es estado del almacén de la persona, y si el recién instalado tampoco
+  vale, el número sube y la pantalla se queda abierta con el mismo mensaje
+  actualizado, sin decir qué fue lo que la sede rechazó de cada uno.
 
 `Cerrar` está en el pie de las dos, porque en las dos hay que poder salir con
 una etiqueta y no sólo por la cruz. `Volver a buscar` es una **microacción del
@@ -443,7 +446,7 @@ cancela— se borró por explicar lo evidente.
 | Devolviendo a la sede | `SedeFirmando` · `devolviendo a la sede` | ninguna; el pie queda vacío |
 | Firmado / cancelado / rechazado | `SedeDesenlace` | `Cerrar` |
 | Sin ningún certificado | `SedeSinCertificado` · `ninguno` | `Instalar un certificado…` |
-| Todos excluidos por la sede | `SedeSinCertificado` · `excluidos` | ninguna; `Cerrar` |
+| Todos excluidos por la sede | `SedeSinCertificado` · `excluidos` | `Instalar un certificado…` |
 
 ## Componentes y tokens
 

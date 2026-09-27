@@ -1891,7 +1891,7 @@ msgstr[1] "{{origin}} no acepta ninguno de tus {{count}} certificados"
 msgstr[2] "{{origin}} no acepta ninguno de tus {{count}} certificados"
 
 msgid "sede.noCertificate.excludedBody"
-msgstr "Tendrás que continuar desde la sede."
+msgstr "Instala otro certificado, o cierra y continúa desde la sede."
 
 #~ msgid "panel.visibleSignature.rubric.title"
 #~ msgstr "Imagen de la rúbrica"
