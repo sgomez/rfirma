@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { FileIcon, InfoIcon } from "../design-system/icons";
 import { CertificateSelect } from "../signing/CertificateSelect";
 import type { Certificate } from "../signing/certificate";
+import { sitePreselection } from "../signing/certificate";
 import { PreviousSignaturesNotice } from "../signing/PreviousSignaturesNotice";
 import { formatSize } from "../signing/SigningPanel";
 // `PreviousSignaturesNotice` no trae su propia hoja: la sede no monta `SigningPanel.tsx`.
@@ -32,10 +33,8 @@ interface SedeConsentProps {
  * **2 · Consentimiento.** El corazón del trámite: la pantalla que AutoFirma no
  * tiene.
  *
- * Es una **confirmación escrita**, no el selector de certificados (ID-269). El
- * selector no dice quién pide, ni qué se firma, ni que haya una sede detrás; lo
- * que se reutiliza de él es su **desplegable**, tal cual —mismo componente,
- * misma agrupación, mismo alto de lista—, dentro de la confirmación.
+ * Es una **confirmación escrita**, no el selector de certificados (ID-269), que
+ * va dentro de ella: el mismo componente que el de la ventana principal.
  *
  * Aparece también con un solo certificado, salvo que la persona deje elegir a
  * la sede (ADR-0032).
@@ -49,10 +48,8 @@ export function SedeConsent({
   onCancel,
 }: SedeConsentProps) {
   const { t } = useTranslation();
-  const [chosen, setChosen] = useState<Certificate | null>(
-    stage.certificates.find((certificate) => certificate.remembered) ??
-      stage.certificates[0] ??
-      null,
+  const [chosen, setChosen] = useState<Certificate | null>(() =>
+    sitePreselection(stage.certificates),
   );
   // `selectcert` es una cesión de datos de identidad y todo lo demás es
   // firmar: una sola pregunta, resuelta en el vocabulario del trámite y no
@@ -101,16 +98,12 @@ export function SedeConsent({
                 : t("sede.consent.asksSignature", { origin })}
         </p>
 
-        <div className="rf-stack rf-gap-xs sede-consent__certificate">
-          <p className="rf-label sede-consent__label">
-            {identity ? t("sede.consent.identifyWith") : t("sede.consent.signWith")}
-          </p>
-          <CertificateSelect
-            certificates={stage.certificates}
-            chosen={chosen}
-            onChoose={setChosen}
-          />
-        </div>
+        <CertificateSelect
+          certificates={stage.certificates}
+          chosen={chosen}
+          onChoose={setChosen}
+          listMaxHeight={300}
+        />
 
         {/* Debajo del desplegable y no encima: es una nota sobre lo que la lista
             contiene, y se lee después de verla. Dice **que** la sede acotó, y

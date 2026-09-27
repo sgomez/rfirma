@@ -803,20 +803,6 @@ msgid "panel.certificate.failed.body"
 msgstr ""
 "The search failed before finishing, so we don't know whether there's any."
 
-#. {{date}} es la fecha de caducidad, ya formateada según el idioma.
-msgid "panel.certificate.expired"
-msgstr "The certificate expired on {{date}}, so you can't sign with it."
-
-msgid "panel.certificate.notYetValid"
-msgstr "The certificate isn't valid yet, so you can't sign with it."
-
-#. {{reason}} es el motivo de la revocación, tal como lo da el certificado.
-msgid "panel.certificate.revoked"
-msgstr "The certificate is revoked ({{reason}}), so you can't sign with it."
-
-msgid "panel.certificate.unreadable"
-msgstr "We couldn't read this certificate, so you can't sign with it."
-
 #. Frase corta, en negrita, para la tercera línea de una fila no utilizable
 #. del botón partido. {{date}} es la fecha de caducidad, ya formateada.
 msgid "panel.certificate.expiredShort"
@@ -831,6 +817,28 @@ msgstr "Revoked ({{reason}})"
 
 msgid "panel.certificate.unreadableShort"
 msgstr "Could not be read"
+
+msgid "panel.certificate.chooseOne"
+msgstr "Choose a certificate"
+
+msgid "panel.certificate.groups.cannotUse"
+msgstr "Cannot be used"
+
+#. Texto de ayuda del buscador del selector de certificado abierto.
+msgid "panel.certificate.search"
+msgstr "Name, company, tax ID or store"
+
+#. Encabeza la lista filtrada. {{shown}} son los que coinciden; {{total}}, todos.
+msgid "panel.certificate.matches"
+msgstr "{{shown}} of {{total}}"
+
+msgid "panel.certificate.noMatch"
+msgstr "No certificate matches"
+
+#. Ayuda flotante de una fila, tras «Emitido por…». {{stores}} es la lista de
+#. almacenes, ya unida según el idioma: «Firefox y Chrome».
+msgid "panel.certificate.sameCertificateIn"
+msgstr "the same certificate in {{stores}}"
 
 msgid "panel.visibleSignature.title"
 msgstr "Visible signature"
@@ -1505,12 +1513,6 @@ msgstr "An unidentified page asks for your identity data."
 #. nunca en la petición.
 msgid "sede.consent.untitled"
 msgstr "A PDF with no title"
-
-msgid "sede.consent.signWith"
-msgstr "You'll sign with"
-
-msgid "sede.consent.identifyWith"
-msgstr "You'll send the data from"
 
 #. Nunca se enumera lo que la sede descartó ni con qué criterio.
 msgid "sede.consent.narrowed"

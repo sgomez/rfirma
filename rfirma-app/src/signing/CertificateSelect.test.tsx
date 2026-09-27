@@ -1,4 +1,4 @@
-import { screen } from "@testing-library/react";
+import { fireEvent, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { renderWithCatalog } from "../testing/render";
@@ -6,10 +6,8 @@ import { CertificateSelect } from "./CertificateSelect";
 import type { Certificate } from "./certificate";
 
 /**
- * **Grada A**: el desplegable son datos y una devolución de llamada; no habla
- * con el token. Las etiquetas repetidas **de verdad** —dos claves con el mismo
- * `CKA_LABEL`— las prueban `tests/pkcs11_token.rs` y `tests/nss_store.rs`, que
- * son grada B.
+ * **Grada A**: el selector son datos y una devolución de llamada; no habla con
+ * el token.
  */
 function aCertificate(overrides: Partial<Certificate> = {}): Certificate {
   return {
@@ -26,267 +24,337 @@ function aCertificate(overrides: Partial<Certificate> = {}): Certificate {
     certificateSerialNumber: "1234567890",
     store: "card",
     stores: ["card"],
-    status: { kind: "valid", notAfter: 1_894_752_000 },
+    status: { kind: "valid", notAfter: Date.UTC(2028, 2, 15, 12) / 1000 },
     remembered: false,
     ...overrides,
   };
 }
 
-/**
- * Dos certificados con **la misma etiqueta** y el mismo titular, en dos
- * almacenes distintos: es el caso que el asa existe para resolver.
- *
- * El orden ya es el que produce `groupCertificates` —mismo titular, empate
- * por almacén, «chrome» antes que «firefox»— para que los índices de fila de
- * estas pruebas coincidan con el orden de inserción sin sorpresas.
- */
-const twins: readonly Certificate[] = [
-  aCertificate({ id: "aaaa", store: "chrome" }),
-  aCertificate({ id: "bbbb", store: "firefox" }),
-];
+const personal = aCertificate({ id: "personal", stores: ["firefox", "chrome"], store: "firefox" });
+const representative = aCertificate({
+  id: "representative",
+  entityName: "Reformas Martín SL",
+  organizationIdentifier: "B12345678",
+  issuer: "AC Representación",
+  stores: ["installed"],
+  store: "installed",
+});
+const expired = aCertificate({
+  id: "expired",
+  holderName: "Beatriz Núñez",
+  status: { kind: "expired", notAfter: Date.UTC(2025, 2, 3, 12) / 1000 },
+});
+const revoked = aCertificate({
+  id: "revoked",
+  holderName: "Carlos Peña",
+  status: { kind: "revoked", reason: "keyCompromise" },
+});
+
+const everyKind: readonly Certificate[] = [expired, representative, revoked, personal];
 
 function renderSelect(props: Partial<Parameters<typeof CertificateSelect>[0]> = {}) {
   const onChoose = vi.fn();
   const { container } = renderWithCatalog(
-    <CertificateSelect certificates={twins} chosen={null} onChoose={onChoose} {...props} />,
+    <CertificateSelect certificates={everyKind} chosen={null} onChoose={onChoose} {...props} />,
   );
   return { onChoose, container };
 }
 
-const trigger = () => screen.getByRole("combobox", { name: "Certificado" });
+const box = () => screen.getByRole("combobox", { name: "Certificado" });
+const rows = () => screen.getAllByRole("option");
 
-/** La fila que ocupa ese sitio en la lista. Falla diciéndolo si no está. */
 function row(index: number): HTMLElement {
-  const rows = screen.getAllByRole("option");
-  const found = rows[index];
+  const found = rows()[index];
   if (found === undefined) throw new Error(`la lista no tiene fila ${index}`);
   return found;
 }
 
 describe("CertificateSelect", () => {
-  it("lists every certificate and chooses the one that is clicked", async () => {
-    const { onChoose } = renderSelect();
+  describe("closed", () => {
+    it("is labelled «Certificado» and says «Elige un certificado» while nothing is chosen", () => {
+      renderSelect();
 
-    await userEvent.click(trigger());
-
-    expect(screen.getAllByRole("option")).toHaveLength(2);
-    await userEvent.click(row(1));
-    expect(onChoose).toHaveBeenCalledWith(twins[1]);
-  });
-
-  /** El caso que hace falta el asa: dos filas con la misma etiqueta y el mismo
-   * titular, y elegir la segunda tiene que elegir **la segunda**. */
-  /** ID-308: la lista se monta en un portal, fuera del ancestro que recorta,
-   * no dentro del árbol que envuelve al disparador. */
-  it("mounts the list panel in a portal outside its own container", async () => {
-    const { container } = renderSelect();
-
-    await userEvent.click(trigger());
-
-    const list = screen.getByRole("listbox");
-    expect(container.contains(list)).toBe(false);
-    expect(document.body.contains(list)).toBe(true);
-  });
-
-  it("tells two certificates with the same label apart by their handle", async () => {
-    const { onChoose } = renderSelect();
-
-    await userEvent.click(trigger());
-    await userEvent.click(row(1));
-
-    expect(onChoose.mock.calls.at(0)?.at(0)).toMatchObject({ id: "bbbb" });
-  });
-
-  it("shows the holder, the id, the issuer and the store on every row", async () => {
-    renderSelect();
-
-    await userEvent.click(trigger());
-
-    expect(row(0)).toHaveTextContent("Ada Lovelace Byron");
-    expect(row(0)).toHaveTextContent("99999999R · Emitido por AC FNMT Usuarios · Chrome");
-    expect(row(1)).toHaveTextContent("Firefox");
-  });
-
-  /** El almacén lo traduce la ventana desde el catálogo: lo que cruza la
-   * frontera es la clase en inglés, y en inglés se lee en inglés. */
-  it("translates the store class instead of showing it raw", async () => {
-    renderWithCatalog(
-      <CertificateSelect
-        certificates={[aCertificate({ store: "card" })]}
-        chosen={null}
-        onChoose={vi.fn()}
-      />,
-      "en",
-    );
-
-    await userEvent.click(screen.getByRole("combobox", { name: "Certificate" }));
-
-    expect(screen.getByRole("option")).toHaveTextContent("Card");
-    expect(screen.getByRole("option")).not.toHaveTextContent("card ·");
-  });
-
-  it("says «choose certificate» while nothing is chosen", () => {
-    renderSelect();
-
-    expect(trigger()).toHaveTextContent("Elegir certificado");
-  });
-
-  it("shows the chosen one without its store: chosen, it disambiguates nothing", () => {
-    renderSelect({ chosen: twins[0] });
-
-    expect(trigger()).toHaveTextContent("Ada Lovelace Byron");
-    expect(trigger()).toHaveTextContent("99999999R · Emitido por AC FNMT Usuarios");
-    expect(trigger()).not.toHaveTextContent("Chrome");
-  });
-
-  /** Que falte de la lista no le explica nada a quien viene a firmar justo con
-   * ese: se lista, dice por qué, y no se deja elegir. */
-  it("lists an expired certificate, says why, and refuses to choose it", async () => {
-    const expired = aCertificate({
-      id: "cccc",
-      status: { kind: "expired", notAfter: 1_767_225_600 },
-    });
-    const { onChoose } = renderSelect({ certificates: [expired] });
-
-    await userEvent.click(trigger());
-    const row = screen.getByRole("option");
-
-    expect(row).toHaveTextContent(/El certificado caducó el/);
-    expect(row).toHaveAttribute("aria-disabled", "true");
-    await userEvent.click(row);
-    expect(onChoose).not.toHaveBeenCalled();
-  });
-
-  it("lists a revoked certificate the same way", async () => {
-    const revoked = aCertificate({
-      id: "dddd",
-      status: { kind: "revoked", reason: "keyCompromise" },
-    });
-    const { onChoose } = renderSelect({ certificates: [revoked] });
-
-    await userEvent.click(trigger());
-    await userEvent.click(screen.getByRole("option"));
-
-    expect(screen.getByRole("option")).toHaveTextContent(/revocado/);
-    expect(onChoose).not.toHaveBeenCalled();
-  });
-
-  it("closes when one is chosen", async () => {
-    renderSelect();
-
-    await userEvent.click(trigger());
-    await userEvent.click(row(0));
-
-    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
-  });
-
-  it("closes on Escape without choosing anything", async () => {
-    const { onChoose } = renderSelect();
-
-    await userEvent.click(trigger());
-    await userEvent.keyboard("{Escape}");
-
-    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
-    expect(onChoose).not.toHaveBeenCalled();
-  });
-
-  it("closes when something outside is pressed", async () => {
-    renderSelect();
-
-    await userEvent.click(trigger());
-    await userEvent.click(document.body);
-
-    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
-  });
-
-  /** Un `<div>` con un `onClick` no es un desplegable: se recorre con las
-   * flechas y se elige con Intro. */
-  it("is walkable with the keyboard from the trigger", async () => {
-    const { onChoose } = renderSelect();
-
-    trigger().focus();
-    await userEvent.keyboard("{ArrowDown}");
-    await userEvent.keyboard("{ArrowDown}");
-    await userEvent.keyboard("{Enter}");
-
-    expect(onChoose).toHaveBeenCalledWith(twins[1]);
-  });
-
-  it("puts the cursor on what is already chosen when it opens", async () => {
-    renderSelect({ chosen: twins[1] });
-
-    await userEvent.click(trigger());
-
-    const list = screen.getByRole("listbox");
-    const cursor = list.getAttribute("aria-activedescendant");
-    expect(row(1)).toHaveAttribute("id", cursor);
-  });
-
-  /** Prior art: los encabezados agrupan lo que la función pura de
-   * `certificate.ts` ya ordenó; aquí solo se comprueba que aparecen. */
-  it("groups the list under two headers, available first and unusable below", async () => {
-    const expired = aCertificate({ id: "cccc", status: { kind: "expired", notAfter: 0 } });
-    renderSelect({ certificates: [expired, ...twins] });
-
-    await userEvent.click(trigger());
-
-    expect(screen.getByText("Disponibles")).toBeVisible();
-    expect(screen.getByText("No utilizables")).toBeVisible();
-    expect(screen.getAllByRole("option")).toHaveLength(3);
-  });
-
-  /** Sin ninguno de los dos grupos vacío, no sale su encabezado: no hay nada
-   * que titular. */
-  it("does not show the unusable header when every certificate can be used", async () => {
-    renderSelect();
-
-    await userEvent.click(trigger());
-
-    expect(screen.queryByText("No utilizables")).not.toBeInTheDocument();
-  });
-
-  /** «Deshabilitada de verdad»: la fila lleva la clase que en
-   * `CertificateSelect.css` le pone `pointer-events: none`, así que el
-   * navegador ni siquiera le entrega el puntero, y un clic no llega nunca a
-   * intentar elegirla. */
-  it("marks an unusable row so the pointer never reaches it", async () => {
-    const expired = aCertificate({ id: "cccc", status: { kind: "expired", notAfter: 0 } });
-    const { onChoose } = renderSelect({ certificates: [expired] });
-
-    await userEvent.click(trigger());
-    const disabledRow = screen.getByRole("option");
-
-    expect(disabledRow).toHaveClass("certificate-select__option--unusable");
-    await userEvent.click(disabledRow);
-    expect(onChoose).not.toHaveBeenCalled();
-  });
-
-  it("opens upwards when there is not enough space below the trigger", async () => {
-    renderSelect();
-    const btn = trigger();
-    vi.spyOn(btn, "getBoundingClientRect").mockReturnValue({
-      top: 300,
-      bottom: 366,
-      left: 20,
-      right: 500,
-      width: 480,
-      height: 66,
-      x: 20,
-      y: 300,
-      toJSON: () => {},
+      expect(screen.getByText("Certificado")).toBeVisible();
+      expect(box()).toHaveTextContent("Elige un certificado");
+      expect(box()).toHaveAttribute("aria-expanded", "false");
     });
 
-    Object.defineProperty(window, "innerHeight", {
-      writable: true,
-      configurable: true,
-      value: 420,
+    it("shows a personal certificate as the holder and «A título personal · id number»", () => {
+      renderSelect({ chosen: personal });
+
+      expect(box()).toHaveTextContent("Ada Lovelace Byron");
+      expect(box()).toHaveTextContent("A título personal · 99999999R");
     });
 
-    await userEvent.click(btn);
+    it("shows a representative certificate company first, with the short second line", () => {
+      renderSelect({ chosen: representative });
 
-    const layer = document.querySelector(".certificate-select__layer") as HTMLElement;
-    expect(layer).toBeInTheDocument();
-    expect(layer.style.bottom).toBe("124px");
-    expect(layer.style.top).toBe("");
+      expect(box()).toHaveTextContent("Reformas Martín SL");
+      expect(box()).toHaveTextContent("Ada Lovelace Byron, representante");
+      expect(box()).not.toHaveTextContent("B12345678");
+    });
+  });
+
+  describe("open", () => {
+    it("turns the box into a focused search field and hangs the list below it", async () => {
+      renderSelect();
+
+      await userEvent.click(box());
+
+      const search = screen.getByRole("combobox", { name: "Certificado" });
+      expect(search).toHaveAttribute("placeholder", "Nombre, empresa, NIF o almacén");
+      expect(search).toHaveFocus();
+      expect(search).toHaveAttribute("aria-expanded", "true");
+      expect(search).toHaveAttribute("aria-controls", screen.getByRole("listbox").id);
+    });
+
+    it("mounts the list in a portal outside its own container", async () => {
+      const { container } = renderSelect();
+
+      await userEvent.click(box());
+
+      expect(container.querySelector('[role="listbox"]')).toBeNull();
+      expect(document.body.querySelector('[role="listbox"]')).not.toBeNull();
+    });
+
+    it("always opens downwards, even with little room below the box", async () => {
+      const { container } = renderSelect({ listMaxHeight: 300 });
+      const frame = container.querySelector(".certificate-select__frame") as HTMLElement;
+      vi.spyOn(frame, "getBoundingClientRect").mockReturnValue(
+        DOMRect.fromRect({ x: 20, y: 300, width: 480, height: 52 }),
+      );
+
+      await userEvent.click(box());
+
+      const layer = document.querySelector(".certificate-select__layer") as HTMLElement;
+      expect(layer.style.top).toBe("356px");
+      expect(layer.style.bottom).toBe("");
+      expect(layer.style.width).toBe("480px");
+      expect(layer.style.maxHeight).toBe("300px");
+    });
+
+    it("groups «Disponibles» over «No se pueden usar», alphabetical by first line", async () => {
+      renderSelect();
+
+      await userEvent.click(box());
+
+      const available = screen.getByRole("group", { name: "Disponibles" });
+      const unusable = screen.getByRole("group", { name: "No se pueden usar" });
+      expect(within(available).getAllByRole("option")).toHaveLength(2);
+      expect(rows().map((option) => option.textContent)).toEqual([
+        expect.stringMatching(/^Ada Lovelace Byron/),
+        expect.stringMatching(/^Reformas Martín SL/),
+        expect.stringMatching(/^Beatriz Núñez/),
+        expect.stringMatching(/^Carlos Peña/),
+      ]);
+      expect(within(unusable).getAllByRole("option")).toHaveLength(2);
+    });
+
+    it("shows no group header when there is a single certificate", async () => {
+      renderSelect({ certificates: [personal] });
+
+      await userEvent.click(box());
+
+      expect(screen.queryByText("Disponibles")).not.toBeInTheDocument();
+      expect(rows()).toHaveLength(1);
+    });
+
+    it("puts the company first on a representative row, with the entity's tax id", async () => {
+      renderSelect();
+
+      await userEvent.click(box());
+
+      expect(row(1)).toHaveTextContent("Reformas Martín SL");
+      expect(row(1)).toHaveTextContent("Ada Lovelace Byron, representante · B12345678");
+      expect(row(0)).toHaveTextContent("A título personal · 99999999R");
+    });
+
+    it("tags every store the certificate is in, and says when it expires", async () => {
+      renderSelect();
+
+      await userEvent.click(box());
+
+      expect(within(row(0)).getByText("Firefox")).toBeVisible();
+      expect(within(row(0)).getByText("Chrome")).toBeVisible();
+      expect(row(0)).toHaveTextContent("Caduca en 03/2028");
+      expect(within(row(1)).getByText("Instalado en rFirma")).toBeVisible();
+    });
+
+    it("keeps the issuer for the tooltip, naming the other stores of the same certificate", async () => {
+      renderSelect();
+
+      await userEvent.click(box());
+
+      expect(row(0)).toHaveAttribute(
+        "title",
+        "Emitido por AC FNMT Usuarios · el mismo certificado en Firefox y Chrome",
+      );
+      expect(row(1)).toHaveAttribute("title", "Emitido por AC Representación");
+      expect(row(0)).not.toHaveTextContent("AC FNMT Usuarios");
+    });
+
+    it("lists an unusable certificate with its reason, in bold with its icon, and refuses it", async () => {
+      const { onChoose } = renderSelect();
+      await userEvent.click(box());
+
+      const expiredRow = row(2);
+      expect(expiredRow).toHaveAttribute("aria-disabled", "true");
+      expect(expiredRow).toHaveTextContent("Caducó el 3 de marzo de 2025");
+      expect(expiredRow).toHaveAttribute("title", "Caducó el 3 de marzo de 2025");
+      expect(expiredRow.querySelector(".certificate-select__reason svg")).not.toBeNull();
+      expect(row(3)).toHaveTextContent("Revocado (keyCompromise)");
+
+      fireEvent.pointerDown(expiredRow);
+
+      expect(onChoose).not.toHaveBeenCalled();
+      expect(screen.getByRole("listbox")).toBeInTheDocument();
+    });
+
+    it("marks the chosen row", async () => {
+      renderSelect({ chosen: representative });
+
+      await userEvent.click(box());
+
+      expect(row(1)).toHaveAttribute("aria-selected", "true");
+      expect(row(0)).toHaveAttribute("aria-selected", "false");
+    });
+  });
+
+  describe("choosing", () => {
+    it("chooses the row that is pressed and closes", async () => {
+      const { onChoose } = renderSelect();
+      await userEvent.click(box());
+
+      fireEvent.pointerDown(row(1));
+
+      expect(onChoose).toHaveBeenCalledWith(representative);
+      expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+      expect(box()).toHaveFocus();
+    });
+
+    it("tells two certificates with the same label apart by their handle", async () => {
+      const twins = [
+        aCertificate({ id: "aaaa", store: "chrome", stores: ["chrome"] }),
+        aCertificate({ id: "bbbb", store: "firefox", stores: ["firefox"] }),
+      ];
+      const { onChoose } = renderSelect({ certificates: twins });
+      await userEvent.click(box());
+
+      fireEvent.pointerDown(row(1));
+
+      expect(onChoose).toHaveBeenCalledWith(twins[1]);
+    });
+
+    it("closes when something outside is pressed", async () => {
+      const { onChoose } = renderSelect();
+      await userEvent.click(box());
+
+      fireEvent.pointerDown(document.body);
+
+      expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+      expect(onChoose).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("search", () => {
+    it("filters by company and heads the list with «N de M»", async () => {
+      renderSelect();
+      await userEvent.click(box());
+
+      await userEvent.keyboard("reformas");
+
+      expect(rows()).toHaveLength(1);
+      expect(row(0)).toHaveTextContent("Reformas Martín SL");
+      expect(screen.getByText("1 de 4")).toBeVisible();
+    });
+
+    it.each([
+      ["the entity's tax id", "b1234"],
+      ["the store", "instalado"],
+      ["the issuer", "representación"],
+      ["the holder, without accents", "nunez"],
+    ])("filters by %s", async (_what, query) => {
+      renderSelect();
+      await userEvent.click(box());
+
+      await userEvent.keyboard(query);
+
+      expect(rows()).toHaveLength(1);
+    });
+
+    it("says «Ningún certificado coincide» when nothing matches", async () => {
+      renderSelect();
+      await userEvent.click(box());
+
+      await userEvent.keyboard("zzz");
+
+      expect(screen.queryAllByRole("option")).toHaveLength(0);
+      expect(screen.getByText("Ningún certificado coincide")).toBeVisible();
+    });
+
+    it("empties the search after choosing", async () => {
+      renderSelect();
+      await userEvent.click(box());
+      await userEvent.keyboard("reformas{Enter}");
+
+      await userEvent.click(box());
+
+      expect(rows()).toHaveLength(4);
+    });
+  });
+
+  describe("keyboard", () => {
+    it("opens with the arrow from the box and walks the list without choosing", async () => {
+      const { onChoose } = renderSelect();
+      box().focus();
+
+      await userEvent.keyboard("{ArrowDown}");
+      await userEvent.keyboard("{ArrowDown}");
+
+      expect(box()).toHaveAttribute("aria-activedescendant", row(1).id);
+      expect(onChoose).not.toHaveBeenCalled();
+    });
+
+    it("chooses the row under the cursor with Enter", async () => {
+      const { onChoose } = renderSelect();
+      box().focus();
+
+      await userEvent.keyboard("{ArrowDown}{ArrowDown}{Enter}");
+
+      expect(onChoose).toHaveBeenCalledWith(representative);
+      expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+    });
+
+    it("stops on an unusable row so its reason is read, but Enter does not choose it", async () => {
+      const { onChoose } = renderSelect();
+      box().focus();
+
+      await userEvent.keyboard("{ArrowDown}{ArrowDown}{ArrowDown}{Enter}");
+
+      expect(box()).toHaveAttribute("aria-activedescendant", row(2).id);
+      expect(onChoose).not.toHaveBeenCalled();
+    });
+
+    it("puts the cursor on what is already chosen when it opens", async () => {
+      renderSelect({ chosen: representative });
+
+      await userEvent.click(box());
+
+      expect(box()).toHaveAttribute("aria-activedescendant", row(1).id);
+    });
+
+    it("closes on Escape without choosing, empties the search and gives the focus back", async () => {
+      const { onChoose } = renderSelect();
+      await userEvent.click(box());
+      await userEvent.keyboard("reformas");
+
+      await userEvent.keyboard("{Escape}");
+
+      expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+      expect(onChoose).not.toHaveBeenCalled();
+      expect(box()).toHaveFocus();
+      await userEvent.click(box());
+      expect(rows()).toHaveLength(4);
+    });
   });
 });

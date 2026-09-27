@@ -822,22 +822,6 @@ msgid "panel.certificate.failed.body"
 msgstr ""
 "Bilaketak amaitu aurretik huts egin du; beraz, ez dakigu bat ere badagoen."
 
-#. {{date}} es la fecha de caducidad, ya formateada según el idioma.
-msgid "panel.certificate.expired"
-msgstr "Ziurtagiria {{date}}(e)an iraungi zen; beraz, ezin da harekin sinatu."
-
-msgid "panel.certificate.notYetValid"
-msgstr ""
-"Ziurtagiria oraindik ez da indarrean sartu; beraz, ezin da harekin sinatu."
-
-#. {{reason}} es el motivo de la revocación, tal como lo da el certificado.
-msgid "panel.certificate.revoked"
-msgstr ""
-"Ziurtagiria errebokatuta dago ({{reason}}); beraz, ezin da harekin sinatu."
-
-msgid "panel.certificate.unreadable"
-msgstr "Ezin izan dugu ziurtagiri hau irakurri; beraz, ezin da harekin sinatu."
-
 #. Frase corta, en negrita, para la tercera línea de una fila no utilizable
 #. del botón partido. {{date}} es la fecha de caducidad, ya formateada.
 msgid "panel.certificate.expiredShort"
@@ -852,6 +836,28 @@ msgstr "Errebokatua ({{reason}})"
 
 msgid "panel.certificate.unreadableShort"
 msgstr "Ezin izan da irakurri"
+
+msgid "panel.certificate.chooseOne"
+msgstr "Aukeratu ziurtagiri bat"
+
+msgid "panel.certificate.groups.cannotUse"
+msgstr "Ezin dira erabili"
+
+#. Texto de ayuda del buscador del selector de certificado abierto.
+msgid "panel.certificate.search"
+msgstr "Izena, enpresa, IFZ edo biltegia"
+
+#. Encabeza la lista filtrada. {{shown}} son los que coinciden; {{total}}, todos.
+msgid "panel.certificate.matches"
+msgstr "{{shown}} / {{total}}"
+
+msgid "panel.certificate.noMatch"
+msgstr "Ez dago bat datorren ziurtagiririk"
+
+#. Ayuda flotante de una fila, tras «Emitido por…». {{stores}} es la lista de
+#. almacenes, ya unida según el idioma: «Firefox y Chrome».
+msgid "panel.certificate.sameCertificateIn"
+msgstr "ziurtagiri bera hemen: {{stores}}"
 
 msgid "panel.visibleSignature.title"
 msgstr "Sinadura ikusgaia"
@@ -1532,12 +1538,6 @@ msgstr ""
 #. nunca en la petición.
 msgid "sede.consent.untitled"
 msgstr "Izenbururik gabeko PDF bat"
-
-msgid "sede.consent.signWith"
-msgstr "Honekin sinatuko duzu"
-
-msgid "sede.consent.identifyWith"
-msgstr "Honen datuak bidaliko dituzu"
 
 #. Nunca se enumera lo que la sede descartó ni con qué criterio.
 msgid "sede.consent.narrowed"

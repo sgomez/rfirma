@@ -159,6 +159,36 @@ export function CertificateIcon({ size = 20 }: IconProps) {
   );
 }
 
+/** La lupa del buscador del selector de certificado. */
+export function SearchIcon({ size = 16 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...PEN} strokeWidth={1.8} aria-hidden="true" focusable="false">
+      <circle cx="11" cy="11" r="6" />
+      <path d="M20 20l-4.5-4.5" />
+    </svg>
+  );
+}
+
+/** El reloj de un certificado caducado o aún no válido. */
+export function ClockIcon({ size = 14 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...PEN} strokeWidth={1.8} aria-hidden="true" focusable="false">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5l3 2" />
+    </svg>
+  );
+}
+
+/** El círculo tachado de un certificado revocado. */
+export function RevokedIcon({ size = 14 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...PEN} strokeWidth={1.8} aria-hidden="true" focusable="false">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M5.6 18.4 18.4 5.6" />
+    </svg>
+  );
+}
+
 /**
  * El icono del bloque «La firma visible aparecerá en…» del diálogo de páginas
  * sin firma visible (docs/design/dialogo-paginas-sin-firma-visible.md): el
