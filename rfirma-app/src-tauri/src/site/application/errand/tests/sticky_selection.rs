@@ -3,7 +3,8 @@
 use super::support::*;
 use super::support_requests::*;
 use crate::documents::application::documents::OpenedDocuments;
-use crate::identity::application::tests::{a_usable_certificate, listed_from};
+use crate::identity::application::tests::{a_certificate, a_usable_certificate, listed_from};
+use crate::identity::domain::certificate::{ListedCertificate, TokenCertificate};
 use crate::identity::ports::CertificateMemory;
 use crate::signing::application::tests::a_memory;
 use crate::site::application::errand::*;
@@ -431,5 +432,61 @@ fn resetsticky_on_a_sign_forgets_the_session_stuck_certificate() {
         live.the_stuck(),
         None,
         "'resetsticky' en la firma olvida el de su sesion"
+    );
+}
+
+fn rows_of_a_sticky_selection(ours: Vec<TokenCertificate>, stuck: usize) -> Vec<ListedCertificate> {
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let memory = a_memory(home.path());
+    let (listed, _) = listed_from(&ours);
+    let live = a_live();
+    live.stick(ours[stuck].reference());
+    let every: Vec<usize> = (0..ours.len()).collect();
+    let engine = AnEngine::answering(&[&every]);
+    let request = requested(&an_operation("&sticky=true"));
+    let step = consent_for(
+        &engine,
+        &request,
+        ours.clone(),
+        &a_neighbourhood(home.path(), &listed, opened_for_nobody(), &memory),
+        &live,
+    );
+    let ErrandStep::AskingForConsent {
+        certificates: rows, ..
+    } = step
+    else {
+        panic!("'sticky' pregunta siempre: {step:?}");
+    };
+    rows
+}
+
+#[test]
+fn a_sticky_selection_stuck_on_the_second_copy_of_a_certificate_preselects_its_only_row() {
+    let firma = a_usable_certificate("FIRMA");
+    let ours = vec![firma.clone(), a_certificate("FIRMA-TARJETA", firma.der())];
+
+    let rows = rows_of_a_sticky_selection(ours, 1);
+
+    let preselected: Vec<bool> = rows.iter().map(|row| row.remembered).collect();
+    assert_eq!(preselected, vec![true], "las dos copias son una sola fila");
+}
+
+#[test]
+fn a_sticky_selection_after_a_certificate_with_two_copies_preselects_the_stuck_row() {
+    let firma = a_usable_certificate("FIRMA");
+    let ours = vec![
+        firma.clone(),
+        a_certificate("FIRMA-TARJETA", firma.der()),
+        a_usable_certificate("OTRO"),
+        a_usable_certificate("TERCERO"),
+    ];
+
+    let rows = rows_of_a_sticky_selection(ours, 2);
+
+    let preselected: Vec<bool> = rows.iter().map(|row| row.remembered).collect();
+    assert_eq!(
+        preselected,
+        vec![false, true, false],
+        "la fila fijada es la de OTRO, no la que ocupa su posicion sin agrupar"
     );
 }

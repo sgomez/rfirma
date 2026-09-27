@@ -143,9 +143,10 @@ _Avoid_: smartcard, token, tarjeta inteligente
 **Un** origen de certificados, no todos: una tarjeta criptográfica, el perfil de
 Firefox, la base de datos de Chrome, el Almacén de rFirma. Son varios a la vez
 y se abren por separado, así que uno que no cargue no deja sin certificados a
-los demás. Cada
-certificado sabe de cuál salió, y hace falta: el mismo certificado en dos
-almacenes es indistinguible sin decirlo.
+los demás. El mismo certificado —mismo emisor y número de serie— en varios
+almacenes se muestra una vez, con la lista de almacenes donde está; se firma con
+la copia recordada o, si no la hay, con la del primer almacén por este orden:
+tarjeta, Almacén de rFirma, NSS del sistema, Firefox, Chrome.
 _Avoid_: keystore, repositorio de certificados, llavero, «el conjunto de
 certificados de la máquina»
 

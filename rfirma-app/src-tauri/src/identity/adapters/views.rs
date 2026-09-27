@@ -99,10 +99,12 @@ crossing! {
         pub issuer: String,
         /// Número de serie del certificado, en base diez.
         pub certificate_serial_number: String,
-        /// Clase de almacén del certificado.
+        /// Clase de almacén de la copia tras el asa.
         pub store: String,
+        /// Las clases de almacén donde está, por orden de preferencia.
+        pub stores: Vec<String>,
         pub status: StatusView,
-        /// Si fue el certificado usado en la última firma.
+        /// Si alguna de sus copias fue la usada en la última firma.
         pub remembered: bool,
     }
 }
@@ -121,6 +123,11 @@ impl From<ListedCertificate> for CertificateView {
             issuer: certificate.issuer,
             certificate_serial_number: certificate.certificate_serial_number,
             store: store_name(certificate.store).to_owned(),
+            stores: certificate
+                .stores
+                .into_iter()
+                .map(|class| store_name(class).to_owned())
+                .collect(),
             status: certificate.status.into(),
             remembered: certificate.remembered,
         }

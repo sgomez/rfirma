@@ -13,6 +13,7 @@ use crate::identity::ports::{CertificateMemory, Token};
 use crate::memory_error::MemoryError;
 use crate::site::domain::local_ca::{generate_key, random_serial, LocalCa};
 use openssl::asn1::Asn1Time;
+use openssl::bn::BigNum;
 use openssl::hash::MessageDigest;
 use openssl::nid::Nid;
 use openssl::pkey::{PKey, Private};
@@ -253,12 +254,17 @@ pub(crate) struct TestAuthority {
 impl TestAuthority {
     /// Una raíz autofirmada con ese nombre común.
     pub(crate) fn root(common_name: &str) -> Self {
-        Self::built(common_name, None)
+        Self::built(common_name, None, None)
+    }
+
+    /// Una raíz autofirmada con ese nombre común y ese número de serie.
+    pub(crate) fn root_with_serial(common_name: &str, serial: u32) -> Self {
+        Self::built(common_name, None, Some(serial))
     }
 
     /// Otra autoridad emitida por esta, con ese nombre común.
     pub(crate) fn issues(&self, common_name: &str) -> Self {
-        Self::built(common_name, Some(self))
+        Self::built(common_name, Some(self), None)
     }
 
     /// El certificado en DER.
@@ -273,7 +279,7 @@ impl TestAuthority {
         a_certificate(label, &self.der())
     }
 
-    fn built(common_name: &str, issuer: Option<&Self>) -> Self {
+    fn built(common_name: &str, issuer: Option<&Self>, serial: Option<u32>) -> Self {
         let key = generate_key().expect("la clave de pruebas deberia generarse");
         let mut name = X509Name::builder().expect("deberia poder construirse un nombre");
         name.append_entry_by_nid(Nid::COMMONNAME, common_name)
@@ -286,8 +292,14 @@ impl TestAuthority {
 
         let mut builder = X509::builder().expect("deberia poder construirse un certificado");
         builder.set_version(2).expect("la version deberia ponerse");
+        let serial = match serial {
+            Some(fixed) => BigNum::from_u32(fixed)
+                .and_then(|number| number.to_asn1_integer())
+                .expect("el serie fijo deberia construirse"),
+            None => random_serial().expect("el serie deberia generarse"),
+        };
         builder
-            .set_serial_number(&random_serial().expect("el serie deberia generarse"))
+            .set_serial_number(&serial)
             .expect("el serie deberia ponerse");
         builder
             .set_subject_name(&name)

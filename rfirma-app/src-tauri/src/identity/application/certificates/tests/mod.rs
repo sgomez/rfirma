@@ -57,17 +57,32 @@ fn refuses_a_handle_that_is_not_from_the_last_listing() {
 }
 
 #[test]
-fn two_certificates_with_the_same_label_are_chosen_apart() {
+fn two_certificates_with_the_same_label_are_two_rows_chosen_apart() {
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
     let certificates = [
-        a_certificate_with_id("FNMT-GEMELO-99999999R", 0x04, &[]),
-        a_certificate_with_id("FNMT-GEMELO-99999999R", 0x05, &[]),
+        a_certificate_with_id(
+            "FNMT-GEMELO-99999999R",
+            0x04,
+            &TestAuthority::root("UNO").der(),
+        ),
+        a_certificate_with_id(
+            "FNMT-GEMELO-99999999R",
+            0x05,
+            &TestAuthority::root("OTRO").der(),
+        ),
     ];
-    let (listed, handles) = listed_from(&certificates);
+    let listed = ListedCertificates::new();
 
-    let first = certificate_behind(&certificates, &handles[0], &listed).expect("el primero");
-    let second = certificate_behind(&certificates, &handles[1], &listed).expect("el segundo");
+    let rows = rows_of(
+        certificates.to_vec(),
+        &home.path().join("certificates"),
+        &listed,
+        &a_memory(home.path()),
+    );
 
-    assert_ne!(handles[0], handles[1]);
+    assert_eq!(rows.len(), 2);
+    let first = certificate_behind(&certificates, &rows[0].id, &listed).expect("el primero");
+    let second = certificate_behind(&certificates, &rows[1].id, &listed).expect("el segundo");
     assert_eq!(first.reference().cka_id(), Some([0x04].as_slice()));
     assert_eq!(second.reference().cka_id(), Some([0x05].as_slice()));
 }
@@ -508,4 +523,5 @@ fn a_row_carries_the_organization_identifier_of_a_representative_certificate() {
     );
 }
 
+mod copies;
 mod removal;

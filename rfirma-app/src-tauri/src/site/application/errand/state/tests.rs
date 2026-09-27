@@ -17,6 +17,7 @@ fn asking_with(label: &str) -> Moment {
             issuer: String::new(),
             certificate_serial_number: String::new(),
             store: StoreClass::Card,
+            stores: vec![StoreClass::Card],
             status: CertificateStatus::Valid { not_after: 0 },
             remembered: false,
         }],

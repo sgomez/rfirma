@@ -1,5 +1,5 @@
 use super::{store_name, CertificateView, SecretView, StatusView};
-use crate::identity::domain::certificate::CertificateStatus;
+use crate::identity::domain::certificate::{CertificateStatus, ListedCertificate};
 use crate::identity::domain::secret::StoreSecret;
 use crate::identity::domain::store::StoreClass;
 
@@ -34,6 +34,7 @@ fn a_certificate_crosses_without_its_der_and_without_its_module() {
         issuer: "FNMT-RCM".to_owned(),
         certificate_serial_number: "1234567890".to_owned(),
         store: store_name(StoreClass::Firefox).to_owned(),
+        stores: vec![store_name(StoreClass::Firefox).to_owned()],
         status: StatusView::Valid {
             not_after: 1_900_000_000,
         },
@@ -46,6 +47,30 @@ fn a_certificate_crosses_without_its_der_and_without_its_module() {
     assert!(json.contains(r#""surname":"LOVELACE BYRON""#));
     assert!(!json.contains(r#""der""#), "el DER no sale: {json}");
     assert!(!json.contains('/'), "no sale ninguna ruta: {json}");
+}
+
+#[test]
+fn a_row_crosses_every_store_it_is_in_and_the_one_behind_its_handle() {
+    let view = CertificateView::from(ListedCertificate {
+        id: "0123456789abcdef0123456789abcdef".to_owned(),
+        label: "ETIQUETA".to_owned(),
+        holder_name: String::new(),
+        stamped_signer: String::new(),
+        given_name: String::new(),
+        surname: String::new(),
+        id_number: String::new(),
+        organization_identifier: None,
+        issuer: String::new(),
+        certificate_serial_number: String::new(),
+        store: StoreClass::Card,
+        stores: vec![StoreClass::Card, StoreClass::Firefox],
+        status: CertificateStatus::Valid { not_after: 0 },
+        remembered: false,
+    });
+    let json = serde_json::to_string(&view).expect("serializa");
+
+    assert!(json.contains(r#""store":"card""#), "{json}");
+    assert!(json.contains(r#""stores":["card","firefox"]"#), "{json}");
 }
 
 #[test]
