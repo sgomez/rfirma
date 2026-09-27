@@ -532,11 +532,10 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
 
     <div class="rf-row" style="gap:12px;align-items:flex-start;margin:0 var(--rf-space-md) var(--rf-space-md);padding-top:var(--rf-space-sm);border-top:1px solid var(--rf-border-subtle)">
       <span style="display:flex;flex:none;height:21px;align-items:center;color:var(--rf-text-muted)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.5"/></svg></span>
-      <p class="rf-prose" style="flex:1;font-size:13px;text-wrap:pretty"><strong>Proyecto independiente.</strong> <span class="rf-text-muted">rFirma no está relacionada con AutoFirma ni con la Administración General del Estado, que publican el cliente oficial, ni cuenta con su respaldo. Si necesitas la aplicación oficial, descárgala de su web.</span></p>
+      <p class="rf-prose" style="flex:1;font-size:13px;text-wrap:pretty"><strong>Proyecto independiente.</strong> <span class="rf-text-muted">rFirma no está relacionada con AutoFirma ni con la Administración General del Estado, que publican el cliente oficial, ni cuenta con su respaldo. Si necesitas la aplicación oficial, descárgala de su web. Si detectas algún problema con rFirma, comunícalo en nuestro repositorio y no al equipo de AutoFirma.</span></p>
     </div>
 
     <div class="rf-row" style="gap:var(--rf-space-xs);justify-content:flex-end;padding:12px var(--rf-space-md);border-top:1px solid var(--rf-border-subtle);background:var(--rf-surface)">
-      <button type="button" class="rf-btn rf-btn--secondary">Ver las licencias</button>
       <button type="button" class="rf-btn rf-btn--primary" style="min-width:96px">Cerrar</button>
     </div>
   </div>
@@ -976,8 +975,8 @@ class Component extends DCLogic {
   componentWillUnmount() { clearTimeout(this._t); }
   renderVals() {
     // La app ya esta instalada: las versiones nuevas llegan por el gestor de
-    // paquetes, asi que el dialogo solo informa. «opener:deny-open-url» sigue
-    // denegado: la URL del codigo no se pulsa, se copia.
+    // paquetes, asi que el dialogo solo informa. El enlace del codigo lo abre
+    // el backend por identificador: «opener:deny-open-url» sigue denegado.
     const hayNueva = (this.props.version ?? "hay una version nueva") !== "al dia";
     const copiado = this.state.copiado;
     const copiar = () => {

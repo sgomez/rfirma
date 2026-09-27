@@ -19,8 +19,8 @@ respecto del cliente oficial y licencias. Se abre desde el menú de la
    **estado de la versión**.
 2. **Ficha técnica**, en una lista de dos columnas: «Licencia», «Firma con» y
    «Código fuente».
-3. **Aviso de independencia**, tras un filete, y el **pie** con «Ver las
-   licencias» (`--secondary`) y «Cerrar» (`--primary`).
+3. **Aviso de independencia**, tras un filete, y el **pie** con «Cerrar»
+   (`--primary`) y nada más.
 
 **La frase de qué hace se ha recortado dos veces.** Decía «con tu certificado
 **o tu tarjeta criptográfica**», que deja de ser cierto en la v0.4 (ID-201 a
@@ -49,7 +49,8 @@ No hay botón de descarga.
 > **Proyecto independiente.** rFirma no está relacionada con AutoFirma ni con
 > la Administración General del Estado, que publican el cliente oficial, ni
 > cuenta con su respaldo. Si necesitas la aplicación oficial, descárgala de su
-> web.
+> web. Si detectas algún problema con rFirma, comunícalo en nuestro
+> repositorio y no al equipo de AutoFirma.
 
 Va al pie del cuerpo, tras un filete `--rf-border-subtle`, con un icono de
 información atenuado a la izquierda: «Proyecto independiente.» en negrita y el
@@ -86,9 +87,8 @@ se sostiene.
   valores a 13 px.
 - **Aviso**: margen `--rf-space-md`, `--rf-space-sm` sobre el filete, icono de
   16 px y texto a 13 px.
-- **Pie**: `--rf-surface` con filete superior, 12 px × `--rf-space-md`,
-  botones a la derecha separados `--rf-space-xs`; «Cerrar» de 96 px como
-  mínimo.
+- **Pie**: `--rf-surface` con filete superior, 12 px × `--rf-space-md`, y
+  «Cerrar» a la derecha, de 96 px como mínimo.
 
 ## Estados
 
@@ -105,7 +105,7 @@ un fallo que no le pide nada a nadie.
 ## Componentes y tokens
 
 `.rf-dialog`, `.rf-scrim`, `.rf-heading`, `.rf-badge`, `.rf-prose`,
-`.rf-label`, `.rf-hint`, `.rf-text-muted`, `.rf-btn--secondary|--primary`;
+`.rf-label`, `.rf-hint`, `.rf-text-muted`, `.rf-btn--primary`;
 `--rf-surface`, `--rf-border-subtle|-strong`, `--rf-radius-md`,
 `--rf-space-xs|-sm|-md`.
 
@@ -117,7 +117,11 @@ se pulsa y el aviso de independencia con icono. Es decisión del titular sobre
 el lienzo y **revoca dos criterios anteriores** de esta ficha: que el aviso
 fuera un párrafo sin icono, para no darle aire de alarma, y que no hubiera
 ningún enlace que se pulsara mientras `opener:deny-open-url` siguiera
-denegado.
+denegado. El enlace no abre el permiso: lo abre el backend por identificador,
+como el resto de destinos externos.
+
+**Sin «Ver las licencias».** Con la ficha técnica siempre a la vista no le
+quedaba nada que desplegar, y se quitó en vez de inventarle otro destino.
 
 Validado en el canvas [Autofirma de escritorio en Rust](https://claude.ai/design/p/c0ddbfa7-0982-498f-8f8c-8e2f8f0c6132), página
 **Recorrido de firma**, artboard «Acerca de · desde el menú», con la palanca
