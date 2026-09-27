@@ -63,11 +63,7 @@ interface ErrorNoticeProps {
   externalDestinations?: ExternalDestinationOpener;
   /** Con este botón, el aviso ya no es solo informativo: además recarga la ventana. */
   onReload?: () => void;
-  /**
-   * Vacía el Almacén de rFirma, ofrecido solo con `keyringPinMissing`: el llavero
-   * perdió el PIN y sin él nadie puede saber si la base todavía sirve para algo
-   * (ADR-0034). Pide confirmación antes de llamarlo.
-   */
+  /** Vacía el Almacén de rFirma, ofrecido solo con `keyringPinMissing` y con confirmación (ADR-0034). */
   onEmptyStore?: () => void;
   /** El error boundary de cada ventana quiere el foco encima al aparecer; nadie más lo pide. */
   focusOnMount?: boolean;

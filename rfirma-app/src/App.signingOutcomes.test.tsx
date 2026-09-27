@@ -6,6 +6,7 @@ import { inMemoryRecents } from "./documents/recents";
 import type { Certificate } from "./signing/certificate";
 import type { SigningBackend } from "./signing/flow";
 import { emptyRubricPicker } from "./signing/rubric";
+import type { TokenFailure } from "./signing/token";
 
 const remembered: Certificate = { ...aCertificate, remembered: true };
 
@@ -154,10 +155,11 @@ describe("App, firmando, firmado y error", () => {
   it("offers to empty the store when signing fails with a lost keyring pin", async () => {
     const user = userEvent.setup();
     const signer = aSigner({
+      // Como en `tauriStage.ts`: `TokenSituation` no cierra sobre las siete de pkcs11.
       sign: async () => ({
         ok: false,
         failure: {
-          situation: "keyringPinMissing",
+          situation: "keyringPinMissing" as TokenFailure["situation"],
           detail: "PK11_CheckUserPassword: el pin del llavero no abre el almacen ya existente",
           attemptsLeft: null,
         },

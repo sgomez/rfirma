@@ -189,10 +189,7 @@ export interface CertificateStore {
   install(): Promise<boolean>;
   /** Quita un `.p12` instalado, por el asa de su fila. */
   remove(id: string): Promise<void>;
-  /**
-   * Vacía el Almacén de rFirma entero: solo se llama tras confirmarlo la
-   * persona, cuando el llavero del escritorio perdió el PIN (ADR-0034).
-   */
+  /** Vacía el Almacén de rFirma entero, ya confirmado por la persona (ADR-0034). */
   emptyStore(): Promise<void>;
 }
 

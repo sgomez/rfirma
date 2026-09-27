@@ -52,10 +52,7 @@ interface PreferencesViewProps {
   onInstallCertificate: () => Promise<boolean>;
   /** Quita un `.p12` instalado, por el asa de su fila. */
   onRemoveCertificate: (id: string) => Promise<void>;
-  /**
-   * Vacía el Almacén de rFirma entero, ofrecido cuando el llavero perdió su
-   * PIN (ADR-0034). Ya viene confirmado por la persona.
-   */
+  /** Vacía el Almacén de rFirma entero, ya confirmado por la persona (ADR-0034). */
   onEmptyStore: () => Promise<void>;
   onClose: () => void;
 }
