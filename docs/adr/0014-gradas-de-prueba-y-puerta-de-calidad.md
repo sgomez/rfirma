@@ -182,6 +182,9 @@ entra solo. Si un módulo de entrada/salida no baja de 30, la conversación es *
 del módulo**, no sobre el umbral: que la parte con lógica sea una capa aparte y probable es
 exactamente la señal que la métrica existe para dar.
 
+El adaptador CNG de Windows (`windows_allow`) es el mismo caso: Linux no lo compila, así que el
+carril rápido lo oculta, y el carril de Windows lo mide con `just test-windows` (ADR-0035).
+
 ### Puerta absoluta, sin trinquete
 
 Umbral fijo, **sin `--baseline` ni `--fail-regression`**. El trinquete exige versionar un JSON

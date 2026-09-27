@@ -528,10 +528,11 @@ jobs:
   # CARRIL DE WINDOWS
   # ==========================================================================
   # Segunda plataforma (ADR-0035): compila la .dll con GraalVM, pasa clippy, las
-  # pruebas de --lib y del canal local y, cuando corre el binario de release,
-  # construye el instalador NSIS y lo sube como artefacto. No hay grada B ni C:
-  # en Windows faltan softhsm, NSS y poppler. Tampoco vitest: la interfaz no
-  # depende del sistema y ya la prueba la cadena TypeScript.
+  # pruebas de --lib y del canal local con la puerta CRAP del adaptador CNG y,
+  # cuando corre el binario de release, construye el instalador NSIS y lo sube
+  # como artefacto. No hay grada B ni C: en Windows faltan softhsm, NSS y
+  # poppler. Tampoco vitest: la interfaz no depende del sistema y ya la prueba
+  # la cadena TypeScript.
   windows:
     name: Windows
     needs: scope
@@ -544,8 +545,6 @@ jobs:
     env:
       # OpenSSL se compila desde las fuentes, y el Perl de Git no sirve.
       OPENSSL_SRC_PERL: C:/Strawberry/perl/bin/perl.exe
-      # El `prepare` de pnpm es un script de bash.
-      npm_config_script_shell: C:\Program Files\Git\bin\bash.exe
     steps:
       # Sin esto el checkout deja los .sh con CRLF y bash no los lee.
       - name: Fin de linea sin conversion
@@ -588,7 +587,7 @@ jobs:
         with:
           # Ver el comentario del mismo paso en el carril rapido.
           toolchain: stable
-          components: clippy, rustfmt
+          components: clippy, rustfmt, llvm-tools-preview
 
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
@@ -597,9 +596,11 @@ jobs:
       - uses: ./.github/actions/setup-just
 
       # La misma clave que en Linux con otro runner.os: no se comparten.
+      # Restaurar y guardar por separado: la .dll se guarda en cuanto existe,
+      # aunque un paso posterior falle.
       - name: Cache de rfirma_crypto.dll
         id: cache-native-lib
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: rfirma-native-bridge/target/lib/rfirma
           key: native-lib-${{ runner.os }}-graalvm${{ env.GRAALVM_VERSION }}-${{ hashFiles('scripts/bootstrap.sh', 'rfirma-native-bridge/pom.xml', 'rfirma-native-bridge/src/main/**') }}
@@ -615,6 +616,17 @@ jobs:
       - name: Construye la libreria nativa
         if: steps.cache-native-lib.outputs.cache-hit != 'true'
         run: just native
+      - name: Guarda rfirma_crypto.dll
+        if: steps.cache-native-lib.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: rfirma-native-bridge/target/lib/rfirma
+          key: ${{ steps.cache-native-lib.outputs.cache-primary-key }}
+
+      # El `prepare` de pnpm es un script de bash, y pnpm no lee la variable
+      # npm_config_script_shell.
+      - name: pnpm ejecuta sus scripts con Git Bash
+        run: pnpm config set script-shell "C:/Program Files/Git/bin/bash.exe"
 
       - name: Interfaz compilada
         run: just build-ts
@@ -622,11 +634,18 @@ jobs:
       - name: clippy y rustfmt
         run: just lint-rust
 
-      - name: Pruebas de --lib y del canal local
-        working-directory: rfirma-app/src-tauri
+      - uses: cargo-bins/cargo-binstall@b874e25ea559687bec77e281e9b271aa1367b624 # v1.23.0
+      - name: Herramientas de cobertura y de CRAP
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
-          cargo test --all-features --lib
-          cargo test --all-features --test channel_client --test channel_operations --test service_acknowledgement
+          cargo binstall --no-confirm cargo-llvm-cov
+          cargo binstall --no-confirm "cargo-crap@${CRAP_VERSION}"
+
+      # El adaptador CNG solo compila aqui: Linux lo oculta de su puerta CRAP y
+      # este paso lo mide (ADR-0014, ADR-0035).
+      - name: Pruebas de --lib y del canal local, y CRAP del adaptador CNG
+        run: just test-windows
 
       - name: Instalador NSIS
         if: steps.scope.outputs.installer == 'true'

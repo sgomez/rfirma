@@ -225,9 +225,17 @@ se sustituye.
 El job `windows` de `ci.yml` corre en `windows-latest` cuando corre el carril de Rust o el
 nativo: compila la `.dll` (cacheada con la misma clave que la de Linux y otro `runner.os`), pasa
 `rustfmt` y `clippy`, las pruebas de `--lib` y las del canal local (`channel_client`,
-`channel_operations`, `service_acknowledgement`) y, cuando se compila el binario de release,
+`channel_operations`, `service_acknowledgement`) en una pasada instrumentada (`just
+test-windows`) y, cuando se compila el binario de release,
 `just bundle-windows`, que sube el instalador como artefacto `rfirma-windows-nsis`. Las gradas B
 y C no corren: faltan softhsm, NSS y poppler.
+
+La puerta CRAP del carril rápido de Linux puntúa como 0 % de cobertura lo que Linux no compila, y
+el adaptador CNG (`identity/adapters/windows_store/cng.rs`) tiene funciones de complejidad 6 y 7
+que así pasan de 30. Es el caso de `--allow` del ADR-0014, cobertura que se mide en otro carril:
+`windows_allow` en el `justfile` lo oculta en Linux, y `just test-windows` lo mide con
+`cargo crap --path` sobre el lcov de Windows. Otro fichero solo de Windows que cruce el umbral
+en Linux entra en la misma variable.
 
 GraalVM queda fijada a la **25.0.2** en `ci.yml` y `build.yml`, que es a la que resolvía `'25'`.
 Las GraalVM CE 25 *innovation* (25.1 en adelante) publican etiquetas que `setup-graalvm` puede

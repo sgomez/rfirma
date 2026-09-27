@@ -79,6 +79,10 @@ ruff_version := "0.16.6"
 # lento lo mide con `just test-native`.
 ffi_allow := "src/signing/adapters/ffi.rs"
 
+# Adaptador que solo compila Windows: el carril rapido de Linux lo oculta y el
+# carril de Windows lo mide con `just test-windows` (ADR-0014, ADR-0035).
+windows_allow := "src/identity/adapters/windows_store/cng.rs"
+
 # Accesorio del banco de conformidad, fijado por etiqueta y sha256: la 1.9.2
 # no publica autoscript.js en ningun artefacto. Pin repetido en ci.yml.
 autoscript_url := "https://raw.githubusercontent.com/ctt-gob-es/clienteafirma/v1.9.2/afirma-ui-miniapplet-deploy/src/main/webapp/js/autoscript.js"
@@ -355,6 +359,13 @@ test-native: (certs "install") check-native build-ts
     cd {{ tauri }} && cargo crap --path '{{ ffi_allow }}' --lcov "{{ coverage_out }}/crap-ffi/lcov.info" --threshold 30 --fail-above
     cd {{ bridge }} && mvn -B test -DexcludedGroups= -Dgroups=gradaC
 
+# Pruebas de --lib y del canal local en una pasada instrumentada, y la puerta CRAP de `windows_allow` (ADR-0035).
+[group('ci')]
+test-windows: build-ts
+    mkdir -p "{{ coverage_out }}/windows"
+    cd {{ tauri }} && {{ no_debuginfo }} cargo llvm-cov --all-features --lib --test channel_client --test channel_operations --test service_acknowledgement --lcov --output-path "{{ coverage_out }}/windows/lcov.info"
+    cd {{ tauri }} && cargo crap --path '{{ windows_allow }}' --lcov "{{ coverage_out }}/windows/lcov.info" --threshold 30 --fail-above
+
 # ---------------------------------------------------------------------------
 # CRAP: solo en Rust (ADR-0014)
 # ---------------------------------------------------------------------------
@@ -370,7 +381,7 @@ coverage: (certs "install") build-ts
 [private]
 crap: coverage
     cd {{ tauri }} && cargo crap --lcov "{{ coverage_out }}/coverage/lcov.info" --threshold 30 --fail-above \
-        --allow '{{ ffi_allow }}'
+        --allow '{{ ffi_allow }}' --allow '{{ windows_allow }}'
 
 # Cobertura del diff contra origin/main (ADR-0014): reutiliza el lcov.info que
 # ya dejo `coverage` (dependencia de `check-rust`) en disco, sin volver a
