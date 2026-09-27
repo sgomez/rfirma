@@ -10,8 +10,6 @@ import {
 import { useTranslation } from "react-i18next";
 import {
   ChevronDownIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
   CloseIcon,
   FileIcon,
   FolderIcon,
@@ -21,12 +19,9 @@ import type { DocumentInHand } from "./document";
 import "./DocumentTabs.css";
 import { RecentRows } from "./RecentRows";
 import type { RecentDocument } from "./recents";
+import { layOutTabs } from "./tabLayout";
 
-const TAB_WIDTH = 200;
-const NARROW_TAB_WIDTH = 160;
-const GAP = 2;
 const MENU_WIDTH = 340;
-const SLOT_WIDTH = 34;
 const SPLIT_BUTTON_WIDTH = 160;
 const STRIP_PADDING = 16;
 
@@ -58,28 +53,9 @@ export function DocumentTabs({
 }: DocumentTabsProps) {
   const { t } = useTranslation();
   const strip = useRef<HTMLElement>(null);
-  const list = useRef<HTMLDivElement>(null);
   const available = useAvailableWidth(strip);
-  const narrow = available !== null && tabs.length * (TAB_WIDTH + GAP) > available;
-  const overflows = narrow && tabs.length * (NARROW_TAB_WIDTH + GAP) > available;
-  const step = (narrow ? NARROW_TAB_WIDTH : TAB_WIDTH) + GAP;
-
-  const activeIndex = tabs.findIndex((tab) => tab.id === activeId);
-
-  useEffect(() => {
-    const scroller = list.current;
-    const active = scroller?.children.item(activeIndex);
-    if (!scroller || !(active instanceof HTMLElement)) return;
-    if (active.offsetLeft < scroller.scrollLeft) scroller.scrollLeft = active.offsetLeft;
-    const right = active.offsetLeft + active.offsetWidth;
-    if (right > scroller.scrollLeft + scroller.clientWidth) {
-      scroller.scrollLeft = right - scroller.clientWidth;
-    }
-  }, [activeIndex]);
-
-  const scrollBy = (delta: number) => {
-    if (list.current) list.current.scrollLeft += delta;
-  };
+  const { visible, hidden } =
+    available === null ? { visible: tabs, hidden: [] } : layOutTabs(available, tabs, activeId);
 
   return (
     <nav className="document-tabs" aria-label={t("tabs.label")} ref={strip}>
@@ -90,21 +66,8 @@ export function DocumentTabs({
         onSelectRecent={onSelectRecent}
         onClearRecents={onClearRecents}
       />
-      {overflows && (
-        <button
-          type="button"
-          className="document-tabs__slot"
-          title={t("tabs.previous")}
-          aria-label={t("tabs.previous")}
-          onClick={() => scrollBy(-step)}
-        >
-          <span className="document-tabs__slot-button">
-            <ChevronLeftIcon />
-          </span>
-        </button>
-      )}
-      <div className="document-tabs__list" ref={list} role="tablist">
-        {tabs.map((tab) => {
+      <div className="document-tabs__list" role="tablist">
+        {visible.map((tab) => {
           const active = tab.id === activeId;
           const locked = signingLocked && !active;
           return (
@@ -112,7 +75,6 @@ export function DocumentTabs({
               key={tab.id}
               role="presentation"
               className={active ? "document-tab document-tab--active" : "document-tab"}
-              style={{ width: narrow ? NARROW_TAB_WIDTH : TAB_WIDTH }}
               title={locked ? t("tabs.lockedWhileSigning") : tab.name}
             >
               <button
@@ -146,17 +108,15 @@ export function DocumentTabs({
           );
         })}
       </div>
-      {overflows && (
+      {hidden.length > 0 && (
         <button
           type="button"
-          className="document-tabs__slot"
-          title={t("tabs.next")}
-          aria-label={t("tabs.next")}
-          onClick={() => scrollBy(step)}
+          className="rf-btn rf-btn--ghost document-tabs__more"
+          title={t("tabs.more")}
+          aria-label={t("tabs.more")}
         >
-          <span className="document-tabs__slot-button">
-            <ChevronRightIcon />
-          </span>
+          +{hidden.length}
+          <ChevronDownIcon size={14} strokeWidth={2} />
         </button>
       )}
     </nav>
@@ -283,7 +243,7 @@ function useAvailableWidth(strip: RefObject<HTMLElement | null>): number | null 
     const element = strip.current;
     if (!element || typeof ResizeObserver === "undefined") return;
     const measure = () => {
-      const inner = element.clientWidth - STRIP_PADDING - 2 * SLOT_WIDTH - SPLIT_BUTTON_WIDTH;
+      const inner = element.clientWidth - STRIP_PADDING - SPLIT_BUTTON_WIDTH;
       setWidth(inner > 0 ? inner : null);
     };
     measure();

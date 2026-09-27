@@ -1,6 +1,6 @@
-import { screen, waitFor, within } from "@testing-library/react";
+import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { document, openPdf, pdfsOf, renderApp, row } from "./App.testSupport";
 import { inMemoryRecents } from "./documents/recents";
 
@@ -284,5 +284,80 @@ describe("App, sin documentos abiertos", () => {
     expect(
       screen.queryByRole("region", { name: "Abiertos recientemente" }),
     ).not.toBeInTheDocument();
+  });
+});
+
+function stubTabStripWidth() {
+  const observed = new Map<Element, () => void>();
+  class Stub {
+    private readonly callback: () => void;
+    constructor(callback: () => void) {
+      this.callback = callback;
+    }
+    observe(element: Element) {
+      observed.set(element, this.callback);
+    }
+    unobserve() {}
+    disconnect() {}
+  }
+  vi.stubGlobal("ResizeObserver", Stub);
+  return (width: number) => {
+    const strip = screen.getByRole("navigation", { name: "Documentos abiertos" });
+    Object.defineProperty(strip, "clientWidth", { value: width, configurable: true });
+    act(() => observed.get(strip)?.());
+  };
+}
+
+const FIVE = ["uno.pdf", "dos.pdf", "tres.pdf", "cuatro.pdf", "cinco.pdf"];
+
+async function openFive(user: ReturnType<typeof userEvent.setup>) {
+  renderApp(
+    inMemoryRecents(),
+    FIVE.map((name) => document(name)),
+    pdfsOf(Object.fromEntries(FIVE.map((name) => [name, 1]))),
+  );
+  for (const _ of FIVE) await openPdf(user);
+  await screen.findByRole("tab", { name: "cinco.pdf", selected: true });
+}
+
+const tabNames = () => screen.getAllByRole("tab").map((tab) => tab.textContent);
+
+describe("App, con más pestañas de las que caben", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("shows +N with the number of hidden tabs, and keeps the active one in sight", async () => {
+    const resizeStrip = stubTabStripWidth();
+    const user = userEvent.setup();
+    await openFive(user);
+
+    resizeStrip(780);
+
+    expect(tabNames()).toEqual(["uno.pdf", "dos.pdf", "cinco.pdf"]);
+    expect(screen.getByRole("button", { name: "Más pestañas" })).toHaveTextContent("+2");
+  });
+
+  it("changes the split when the window is resized", async () => {
+    const resizeStrip = stubTabStripWidth();
+    const user = userEvent.setup();
+    await openFive(user);
+    resizeStrip(780);
+
+    resizeStrip(2000);
+
+    expect(tabNames()).toEqual(FIVE);
+    expect(screen.queryByRole("button", { name: "Más pestañas" })).not.toBeInTheDocument();
+  });
+
+  it("brings a hidden tab to the strip as the active one from the recents", async () => {
+    const resizeStrip = stubTabStripWidth();
+    const user = userEvent.setup();
+    await openFive(user);
+    resizeStrip(780);
+
+    const menu = await openRecentlyOpenedMenu(user);
+    await user.click(within(menu).getByRole("menuitem", { name: /^tres\.pdf/ }));
+
+    expect(tabNames()).toEqual(["uno.pdf", "dos.pdf", "tres.pdf"]);
+    expect(screen.getByRole("tab", { name: "tres.pdf", selected: true })).toBeInTheDocument();
   });
 });
