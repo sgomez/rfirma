@@ -214,7 +214,7 @@ export const eu: Dictionary = {
   "install.copy.apt.aria": "Kopiatu APTrako aginduak",
   "install.copy.dnf.aria": "Kopiatu DNFrako aginduak",
   "install.flatpak.body":
-    "Linux banaketa edozeinentzat gomendatutako instalazioa. rFirmaren ostree biltegi propiotik ebazten da. Flathub-eko <code>org.gnome.Platform</code> runtimea behar du.",
+    "Linux banaketa edozeinentzat gomendatutako instalazioa. rFirmaren ostree biltegi propiotik ebazten da, eta Flathub-eko <code>org.gnome.Platform</code> runtimea ezer konfiguratu gabe deskargatzen da. <code>flatpak</code> eta <code>xdg-desktop-portal</code> instalatuta izatea besterik ez duzu behar.",
   "install.flatpak.tip":
     "<a href=\"https://rfirma.sgomez.me/rfirma.flatpakref\">rfirma.flatpakref</a> fitxategia deskargatu eta klik bikoitzarekin ere insta dezakezu, zure mahaigainak onartzen badu.",
   "install.apt.body":

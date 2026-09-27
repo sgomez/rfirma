@@ -214,7 +214,7 @@ export const en: Dictionary = {
   "install.copy.apt.aria": "Copy the APT commands",
   "install.copy.dnf.aria": "Copy the DNF commands",
   "install.flatpak.body":
-    "Recommended installation for any Linux distribution. It resolves from rFirma's own ostree remote. Requires the <code>org.gnome.Platform</code> runtime from Flathub.",
+    "Recommended installation for any Linux distribution. It resolves from rFirma's own ostree remote, and the <code>org.gnome.Platform</code> runtime is downloaded from Flathub with no setup. You only need <code>flatpak</code> and <code>xdg-desktop-portal</code> installed.",
   "install.flatpak.tip":
     "You can also download and double-click install the <a href=\"https://rfirma.sgomez.me/rfirma.flatpakref\">rfirma.flatpakref</a> file if your desktop supports it.",
   "install.apt.body":

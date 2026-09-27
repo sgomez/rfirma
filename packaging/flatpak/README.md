@@ -18,12 +18,12 @@ Los nativos no se empaquetan aquí: los produce el *bundler* de Tauri
 
 ## Instalar
 
-El bundle **no trae el runtime**: sale del remoto de **Flathub**, que es
-requisito de instalación.
+El bundle **no trae el runtime**, pero lleva dentro la dirección de **Flathub**
+(`--runtime-repo`): al instalarlo, flatpak ofrece añadir ese remoto y descarga
+`org.gnome.Platform` sin configurar nada antes. En el equipo solo hacen falta
+`flatpak` y `xdg-desktop-portal`.
 
 ```bash
-flatpak remote-add --user --if-not-exists \
-    flathub https://dl.flathub.org/repo/flathub.flatpakrepo
 just flatpak
 flatpak install --user packaging/flatpak/me.sgomez.rfirma.flatpak
 ```

@@ -214,7 +214,7 @@ export const ca: Dictionary = {
   "install.copy.apt.aria": "Copiar les ordres per a APT",
   "install.copy.dnf.aria": "Copiar les ordres per a DNF",
   "install.flatpak.body":
-    "Instal·lació recomanada per a qualsevol distribució de Linux. Es resol des del remot ostree propi de rFirma. Requereix el runtime <code>org.gnome.Platform</code> de Flathub.",
+    "Instal·lació recomanada per a qualsevol distribució de Linux. Es resol des del remot ostree propi de rFirma, i el runtime <code>org.gnome.Platform</code> es descarrega de Flathub sense configurar res. Només cal tenir instal·lats <code>flatpak</code> i <code>xdg-desktop-portal</code>.",
   "install.flatpak.tip":
     "També pots descarregar i instal·lar amb doble clic el fitxer <a href=\"https://rfirma.sgomez.me/rfirma.flatpakref\">rfirma.flatpakref</a> si el teu escriptori ho admet.",
   "install.apt.body":
