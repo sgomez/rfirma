@@ -1109,6 +1109,9 @@ msgstr ""
 msgid "status.storeBrands.installed"
 msgstr ""
 
+msgid "status.storeBrands.windows"
+msgstr ""
+
 msgid "status.notices.restartFirefox"
 msgstr ""
 

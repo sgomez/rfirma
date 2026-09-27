@@ -9,7 +9,7 @@ use openssl::rsa::Padding as RsaPadding;
 use openssl::sign::{RsaPssSaltlen, Verifier};
 use openssl::x509::X509;
 
-use super::cng::{padding_of, situation_of, Padding};
+use super::cng::{cancelled_by_the_person, padding_of, situation_of, Padding};
 use super::{candidate_modules, is_the_user_store, user_store, WindowsToken};
 use crate::identity::domain::algorithm::SignatureAlgorithm;
 use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
@@ -69,6 +69,13 @@ fn smart_card_codes_map_to_their_situations() {
     assert_eq!(situation_of(0x8010_000C), Situation::TokenAbsent);
     assert_eq!(situation_of(0x8009_0016), Situation::CertificateNotFound);
     assert_eq!(situation_of(0x1234_5678), Situation::Unknown);
+}
+
+#[test]
+fn cancelling_the_windows_pin_window_is_told_apart() {
+    assert!(cancelled_by_the_person(0x8010_006E));
+    assert!(cancelled_by_the_person(0x8007_04C7));
+    assert!(!cancelled_by_the_person(0x8010_006B));
 }
 
 #[test]

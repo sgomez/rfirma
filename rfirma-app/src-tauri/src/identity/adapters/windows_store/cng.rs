@@ -3,17 +3,24 @@
 use std::ffi::c_void;
 use std::ptr;
 
-use windows_sys::core::{w, PCWSTR};
+use windows_sys::core::{w, BOOL, PCWSTR};
+use windows_sys::Win32::Foundation::{HWND, LPARAM};
 use windows_sys::Win32::Security::Cryptography::{
     CertCloseStore, CertEnumCertificatesInStore, CertFindCertificateInStore,
     CertFreeCertificateContext, CertGetCertificateContextProperty, CertOpenStore,
-    CryptAcquireCertificatePrivateKey, NCryptFreeObject, NCryptSignHash, BCRYPT_PKCS1_PADDING_INFO,
-    BCRYPT_PSS_PADDING_INFO, BCRYPT_SHA256_ALGORITHM, BCRYPT_SHA384_ALGORITHM,
-    BCRYPT_SHA512_ALGORITHM, CERT_CONTEXT, CERT_FIND_SHA1_HASH, CERT_FRIENDLY_NAME_PROP_ID,
-    CERT_HASH_PROP_ID, CERT_KEY_PROV_INFO_PROP_ID, CERT_STORE_OPEN_EXISTING_FLAG,
-    CERT_STORE_PROV_SYSTEM_W, CERT_STORE_READONLY_FLAG, CERT_SYSTEM_STORE_CURRENT_USER,
-    CRYPT_ACQUIRE_ONLY_NCRYPT_KEY_FLAG, CRYPT_INTEGER_BLOB, HCERTSTORE, NCRYPT_KEY_HANDLE,
-    NCRYPT_PAD_PKCS1_FLAG, NCRYPT_PAD_PSS_FLAG, PKCS_7_ASN_ENCODING, X509_ASN_ENCODING,
+    CryptAcquireCertificatePrivateKey, NCryptFreeObject, NCryptSetProperty, NCryptSignHash,
+    BCRYPT_PKCS1_PADDING_INFO, BCRYPT_PSS_PADDING_INFO, BCRYPT_SHA256_ALGORITHM,
+    BCRYPT_SHA384_ALGORITHM, BCRYPT_SHA512_ALGORITHM, CERT_CONTEXT, CERT_FIND_SHA1_HASH,
+    CERT_FRIENDLY_NAME_PROP_ID, CERT_HASH_PROP_ID, CERT_KEY_PROV_INFO_PROP_ID,
+    CERT_STORE_OPEN_EXISTING_FLAG, CERT_STORE_PROV_SYSTEM_W, CERT_STORE_READONLY_FLAG,
+    CERT_SYSTEM_STORE_CURRENT_USER, CRYPT_ACQUIRE_ONLY_NCRYPT_KEY_FLAG,
+    CRYPT_ACQUIRE_WINDOW_HANDLE_FLAG, CRYPT_INTEGER_BLOB, HCERTSTORE, NCRYPT_KEY_HANDLE,
+    NCRYPT_PAD_PKCS1_FLAG, NCRYPT_PAD_PSS_FLAG, NCRYPT_WINDOW_HANDLE_PROPERTY, PKCS_7_ASN_ENCODING,
+    X509_ASN_ENCODING,
+};
+use windows_sys::Win32::UI::WindowsAndMessaging::{
+    EnumWindows, GetAncestor, GetForegroundWindow, GetWindowThreadProcessId, IsWindowVisible,
+    GA_ROOTOWNER,
 };
 use x509_cert::der::Decode;
 use x509_cert::Certificate;
@@ -93,7 +100,18 @@ pub fn situation_of(code: u32) -> Situation {
     }
 }
 
+/// Si el código es de la persona que ha cancelado la ventana del PIN de Windows.
+pub fn cancelled_by_the_person(code: u32) -> bool {
+    matches!(code, 0x8010_006E | 0x8010_0002 | 0x8009_0036 | 0x8007_04C7)
+}
+
 fn failure(code: u32, doing: &str) -> TokenError {
+    if cancelled_by_the_person(code) {
+        return TokenError::new(
+            situation_of(code),
+            format!("has cancelado la petición del PIN de Windows (0x{code:08X})"),
+        );
+    }
     TokenError::new(
         situation_of(code),
         format!("Windows ha devuelto 0x{code:08X} al {doing}"),
@@ -148,8 +166,10 @@ fn hex(bytes: &[u8]) -> String {
 
 fn utf16_text(bytes: &[u8]) -> String {
     let units: Vec<u16> = bytes
-        .chunks_exact(2)
-        .map(|pair| u16::from_le_bytes([pair[0], pair[1]]))
+        .as_chunks::<2>()
+        .0
+        .iter()
+        .map(|pair| u16::from_le_bytes(*pair))
         .take_while(|unit| *unit != 0)
         .collect();
     String::from_utf16_lossy(&units)
@@ -273,11 +293,19 @@ impl PrivateKey {
         let mut handle = 0;
         let mut spec = 0;
         let mut owned = 0;
+        let owner = owner_window();
+        let (flags, parameter): (u32, *const c_void) = match &owner {
+            Some(window) => (
+                CRYPT_ACQUIRE_ONLY_NCRYPT_KEY_FLAG | CRYPT_ACQUIRE_WINDOW_HANDLE_FLAG,
+                ptr::from_ref(window).cast(),
+            ),
+            None => (CRYPT_ACQUIRE_ONLY_NCRYPT_KEY_FLAG, ptr::null()),
+        };
         let acquired = unsafe {
             CryptAcquireCertificatePrivateKey(
                 certificate.context,
-                CRYPT_ACQUIRE_ONLY_NCRYPT_KEY_FLAG,
-                ptr::null(),
+                flags,
+                parameter,
                 &mut handle,
                 &mut spec,
                 &mut owned,
@@ -285,6 +313,17 @@ impl PrivateKey {
         };
         if acquired == 0 {
             return Err(last_failure("abrir la clave privada del certificado"));
+        }
+        if let Some(window) = &owner {
+            unsafe {
+                NCryptSetProperty(
+                    handle,
+                    NCRYPT_WINDOW_HANDLE_PROPERTY,
+                    ptr::from_ref(window).cast(),
+                    std::mem::size_of::<HWND>() as u32,
+                    0,
+                )
+            };
         }
         Ok(Self {
             handle,
@@ -343,6 +382,36 @@ impl Drop for PrivateKey {
             unsafe { NCryptFreeObject(self.handle) };
         }
     }
+}
+
+/// La ventana de rFirma sobre la que Windows hace modal su petición del PIN.
+fn owner_window() -> Option<HWND> {
+    let foreground = unsafe { GetForegroundWindow() };
+    if !foreground.is_null() && is_ours(foreground) {
+        return Some(unsafe { GetAncestor(foreground, GA_ROOTOWNER) });
+    }
+    let mut found: HWND = ptr::null_mut();
+    unsafe {
+        EnumWindows(
+            Some(first_visible_of_ours),
+            ptr::from_mut(&mut found) as LPARAM,
+        )
+    };
+    (!found.is_null()).then_some(found)
+}
+
+fn is_ours(window: HWND) -> bool {
+    let mut process = 0;
+    unsafe { GetWindowThreadProcessId(window, &mut process) };
+    process == std::process::id()
+}
+
+unsafe extern "system" fn first_visible_of_ours(window: HWND, found: LPARAM) -> BOOL {
+    if unsafe { IsWindowVisible(window) } != 0 && is_ours(window) {
+        unsafe { *(found as *mut HWND) = window };
+        return 0;
+    }
+    1
 }
 
 fn succeeded(status: i32, doing: &str) -> Result<(), TokenError> {

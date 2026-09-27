@@ -7,10 +7,8 @@ use crate::documents::DocumentsRoot;
 use crate::identity::IdentityRoot;
 use crate::site::SiteRoot;
 
-use super::registry::DesktopRegistry;
 use super::views::{NewVersionView, SignalRowView, WithdrawalReportView};
 use crate::crossing::Failure;
-use crate::desktop::domain::error::{DesktopError, Situation};
 use crate::desktop::domain::status::{StoreBrand, StoreCertificates, StoreDetail};
 use crate::documents::adapters::views::DroppedDocumentView;
 use crate::identity::domain::store::{Store, StoreClass};
@@ -74,8 +72,11 @@ pub fn open_external_destination(
     .map_err(|error| Failure::new("unknownDestination", error.to_string()))
 }
 
-/// Marca del almacén NSS de un perfil, para el detalle de la señal del certificado de rFirma.
+/// Marca del almacén de confianza de un perfil, para el detalle de la señal del certificado de rFirma.
 fn brand_of(profile: &std::path::Path) -> StoreBrand {
+    if crate::site::adapters::is_the_system_root_store(profile) {
+        return StoreBrand::Windows;
+    }
     match Store::nss(std::path::PathBuf::new(), profile).class() {
         StoreClass::Firefox => StoreBrand::Firefox,
         StoreClass::Chrome => StoreBrand::Chrome,
@@ -171,11 +172,8 @@ pub fn choose_site_signature_handler(
     handler: String,
     site: State<'_, SiteRoot>,
 ) -> Result<Vec<SignalRowView>, Failure> {
-    let channel = crate::desktop::adapters::channel::Channel::detected();
-    let list = crate::desktop::adapters::choice::mimeapps_list_from_environment()
-        .map_err(|error| DesktopError::new(Situation::TheListIsNotWritable, error.to_string()))?;
-    let registry = DesktopRegistry::of(channel, list);
-    crate::desktop::application::handlers::chosen(&registry, &handler)?;
+    let registry = crate::desktop::adapters::registry::this_desktop_to_write()?;
+    crate::desktop::application::handlers::chosen(registry.as_ref(), &handler)?;
 
     let firefox_was_running = firefox_is_running(&site);
     let firefox_trusted_before = firefox_local_ca_trust(&site);
@@ -189,7 +187,7 @@ pub fn choose_site_signature_handler(
         &firefox_trusted_after,
     );
 
-    let handlers = crate::desktop::application::handlers::who_handles(&registry);
+    let handlers = crate::desktop::application::handlers::who_handles(registry.as_ref());
     Ok(vec![
         crate::desktop::application::status::evaluate_site_signature_signal(handlers).into(),
         measured_local_ca_certificate_signal(&site, restart_firefox_notice).into(),
@@ -203,11 +201,9 @@ pub fn read_status(
     site: State<'_, SiteRoot>,
     recheck: bool,
 ) -> Vec<SignalRowView> {
-    let channel = crate::desktop::adapters::channel::Channel::detected();
-    let list =
-        crate::desktop::adapters::choice::mimeapps_list_from_environment().unwrap_or_default();
-    let handlers =
-        crate::desktop::application::handlers::who_handles(&DesktopRegistry::of(channel, list));
+    let handlers = crate::desktop::application::handlers::who_handles(
+        crate::desktop::adapters::registry::this_desktop().as_ref(),
+    );
     vec![
         crate::desktop::application::status::checking_version_signal().into(),
         crate::desktop::application::status::evaluate_site_signature_signal(handlers).into(),
@@ -238,10 +234,7 @@ pub fn withdraw_rfirma(
     };
     use crate::desktop::domain::withdrawal::{Withdrawal, WithdrawalReport};
 
-    let channel = crate::desktop::adapters::channel::Channel::detected();
-    let list =
-        crate::desktop::adapters::choice::mimeapps_list_from_environment().unwrap_or_default();
-    let registry = DesktopRegistry::of(channel, list);
+    let registry = crate::desktop::adapters::registry::this_desktop();
     let previous = previous.map(WithdrawalReport::from);
 
     let profiles: Vec<(std::path::PathBuf, StoreBrand)> = site
@@ -251,7 +244,7 @@ pub fn withdraw_rfirma(
         .collect();
 
     let handler = if handler_needs_retry(previous.as_ref()) {
-        crate::desktop::application::handlers::withdrawn(&registry)
+        crate::desktop::application::handlers::withdrawn(registry.as_ref())
     } else {
         previous
             .as_ref()

@@ -174,8 +174,17 @@ oo7 = "0.5"
 # Windows no trae OpenSSL: se compila desde las fuentes, y solo alli (ADR-0035).
 [target.'cfg(windows)'.dependencies]
 openssl = { version = "0.10", features = ["vendored"] }
-# El almacén de certificados del usuario y la firma del hash con CNG (ADR-0035).
-windows-sys = { version = "0.61", features = ["Win32_Security_Cryptography"] }
+# Lo que en Linux dan GIO, GTK, oo7 y libc: el almacén de certificados y la
+# firma con CNG, la raíz del usuario, `afirma://` en el registro, el
+# Administrador de credenciales, `VirtualLock` y los diálogos (ADR-0035).
+windows-sys = { version = "0.61", features = [
+    "Win32_Foundation",
+    "Win32_Security_Credentials",
+    "Win32_Security_Cryptography",
+    "Win32_System_Memory",
+    "Win32_System_Registry",
+    "Win32_UI_WindowsAndMessaging",
+] }
 # El saludo TLS del canal local: schannel no acepta la clave de curva elíptica
 # de la CA local sin persistirla en el almacén de claves del usuario (ADR-0036).
 tokio-rustls = { version = "0.26", default-features = false, features = ["ring", "tls12"] }

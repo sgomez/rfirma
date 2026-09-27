@@ -4,11 +4,11 @@ pub mod failures;
 pub mod folder;
 #[cfg(target_os = "linux")]
 pub mod keyring;
-#[cfg(windows)]
-pub mod pending_windows_credential_manager;
 pub mod pkcs11;
 pub mod tauri;
 pub mod views;
+#[cfg(windows)]
+pub mod windows_credential_manager;
 #[cfg(windows)]
 pub mod windows_store;
 
@@ -17,7 +17,7 @@ pub mod windows_store;
 pub use keyring::RealKeyring as DesktopKeyring;
 /// El llavero del escritorio de esta plataforma.
 #[cfg(windows)]
-pub use pending_windows_credential_manager::PendingWindowsCredentialManager as DesktopKeyring;
+pub use windows_credential_manager::WindowsCredentialManager as DesktopKeyring;
 
 /// El token de esta plataforma.
 #[cfg(target_os = "linux")]

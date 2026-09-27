@@ -1190,6 +1190,9 @@ msgstr "Targeta"
 msgid "status.storeBrands.installed"
 msgstr "Fitxer instal·lat"
 
+msgid "status.storeBrands.windows"
+msgstr "Magatzem de Windows"
+
 msgid "status.notices.restartFirefox"
 msgstr "Reinicia el Firefox perquè tingui efecte."
 

@@ -1195,6 +1195,9 @@ msgstr "Txartela"
 msgid "status.storeBrands.installed"
 msgstr "Instalatutako fitxategia"
 
+msgid "status.storeBrands.windows"
+msgstr "Windows biltegia"
+
 msgid "status.notices.restartFirefox"
 msgstr "Berrabiarazi Firefox eragina izan dezan."
 

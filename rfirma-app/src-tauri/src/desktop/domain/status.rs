@@ -100,6 +100,8 @@ pub enum StoreBrand {
     Card,
     /// Fichero PKCS#12 que se instaló en rFirma.
     Installed,
+    /// Almacén raíz del usuario de Windows.
+    Windows,
 }
 
 /// Un almacén, con su marca y si la señal es de confianza en él.

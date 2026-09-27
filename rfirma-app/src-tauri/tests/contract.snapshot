@@ -380,6 +380,7 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
       Nssdb
       Card
       Installed
+      Windows
 
   pub enum Theme   [signing/application/configuration_memory.rs]
       System

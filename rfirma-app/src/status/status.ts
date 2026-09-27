@@ -10,7 +10,7 @@ export type Verdict = "correct" | "attention" | "incorrect" | "notApplicable" | 
 
 type ActionKind = "repair" | "choice" | "link";
 
-export type StoreBrand = "firefox" | "chrome" | "nssdb" | "card" | "installed";
+export type StoreBrand = "firefox" | "chrome" | "nssdb" | "card" | "installed" | "windows";
 
 export interface StoreDetail {
   brand: StoreBrand;
@@ -30,6 +30,8 @@ export function storeBrandLabel(t: TFunction, brand: StoreBrand): string {
       return t("status.storeBrands.card");
     case "installed":
       return t("status.storeBrands.installed");
+    case "windows":
+      return t("status.storeBrands.windows");
   }
 }
 

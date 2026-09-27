@@ -24,6 +24,47 @@ pub mod transport;
 pub mod triphase_server;
 pub mod views;
 pub mod window;
+#[cfg(windows)]
+pub mod windows_root;
+
+use std::path::Path;
+
+use crate::site::ports::TrustStores;
+
+/// El almacén raíz del usuario de Windows, visto como un perfil más de los almacenes de confianza.
+pub const SYSTEM_ROOT_STORE: &str = "cryptoapi:CurrentUser/Root";
+
+/// Si el perfil es el almacén raíz del usuario de Windows y no un perfil NSS.
+pub fn is_the_system_root_store(profile: &Path) -> bool {
+    profile.as_os_str() == SYSTEM_ROOT_STORE
+}
+
+/// Los almacenes de confianza de esta plataforma.
+#[cfg(target_os = "linux")]
+pub fn desktop_trust_stores() -> Box<dyn TrustStores + Send + Sync> {
+    Box::new(nss::NssTrustStores::new(
+        crate::identity::adapters::pkcs11::RealNssHost,
+    ))
+}
+
+/// Los almacenes de confianza de esta plataforma.
+#[cfg(windows)]
+pub fn desktop_trust_stores() -> Box<dyn TrustStores + Send + Sync> {
+    Box::new(windows_root::WindowsUserStores)
+}
+
+/// Los perfiles NSS de esta persona, o ninguno si no se sabe cuál es su `HOME`.
+#[cfg(target_os = "linux")]
+pub fn trust_profiles() -> Vec<std::path::PathBuf> {
+    std::env::var_os("HOME")
+        .map(std::path::PathBuf::from)
+        .map(|home| crate::identity::adapters::pkcs11::stores::nss_profiles(&home))
+        .unwrap_or_default()
+}
+
+/// Los almacenes de confianza de esta persona.
+#[cfg(windows)]
+pub use windows_root::trust_profiles;
 
 const CONNECT_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(30);
 

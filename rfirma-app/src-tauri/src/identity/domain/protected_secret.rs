@@ -25,8 +25,9 @@ impl ProtectedSecret {
 
         if len > 0 {
             #[cfg(windows)]
-            {
-                locked = virtual_lock_on_windows_pending(&mut bytes);
+            unsafe {
+                use windows_sys::Win32::System::Memory::VirtualLock;
+                locked = VirtualLock(bytes.as_mut_ptr().cast(), bytes.capacity()) != 0;
             }
             #[cfg(unix)]
             unsafe {
@@ -92,12 +93,6 @@ impl Deref for ProtectedSecret {
     }
 }
 
-/// El bloqueo en RAM de Windows, que aún no existe: nunca bloquea.
-#[cfg(windows)]
-fn virtual_lock_on_windows_pending(_bytes: &mut [u8]) -> bool {
-    false
-}
-
 impl From<&str> for ProtectedSecret {
     fn from(secret: &str) -> Self {
         Self::from_str(secret)
@@ -113,6 +108,11 @@ impl Drop for ProtectedSecret {
                 let ptr = self.bytes.as_mut_ptr() as *mut libc::c_void;
                 let cap = self.bytes.capacity();
                 libc::munlock(ptr, cap);
+            }
+            #[cfg(windows)]
+            unsafe {
+                use windows_sys::Win32::System::Memory::VirtualUnlock;
+                VirtualUnlock(self.bytes.as_mut_ptr().cast(), self.bytes.capacity());
             }
         }
     }

@@ -1187,6 +1187,9 @@ msgstr "Tarjeta"
 msgid "status.storeBrands.installed"
 msgstr "Fichero instalado"
 
+msgid "status.storeBrands.windows"
+msgstr "Almacén de Windows"
+
 msgid "status.notices.restartFirefox"
 msgstr "Reinicia Firefox para que surta efecto."
 

@@ -49,15 +49,15 @@ pub fn registered_handlers_for_scheme(channel: Channel, scheme: &str) -> Registe
                 })
                 .collect();
             #[cfg(windows)]
-            let handlers = handlers_in_the_windows_registry_pending(scheme);
+            let handlers = no_gio_on_windows(scheme);
             RegisteredHandlers::Known(handlers)
         }
     }
 }
 
-/// Los manejadores del registro de Windows, que aún no se consultan: ninguno.
+/// Sin GIO no hay escritorio que preguntar: en Windows responde `registry::windows_classes`.
 #[cfg(windows)]
-fn handlers_in_the_windows_registry_pending(_scheme: &str) -> Vec<RegisteredHandler> {
+fn no_gio_on_windows(_scheme: &str) -> Vec<RegisteredHandler> {
     Vec::new()
 }
 

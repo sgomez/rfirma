@@ -35,7 +35,7 @@ adaptadores, su estado de proceso, sus puertos y la fachada que usan los vecinos
 | `crossing/guards/tests.rs` | Las pruebas de esas guardas, separadas de la infraestructura de lectura de fuentes. |
 | `memory_error.rs` | `MemoryError` y su `Situation` (ADR-0009): la memoria entre sesiones es una sola (ADR-0010) y no es de ningún contexto. Pruebas en `memory_error/tests.rs`. |
 | `startup_failure.rs` | `StartupFailure` y su `Situation`: los fallos de arranque de los dos roles, antes de que exista ventana; no es de ningún contexto. Pruebas en `startup_failure/tests.rs`. |
-| `startup_dialog.rs` | El diálogo nativo GTK que enseña un `StartupFailure` y sale del proceso; en Windows, aún ninguno (ADR-0035). Capa fina, sin pruebas propias. |
+| `startup_dialog.rs` | El diálogo nativo que enseña un `StartupFailure` y sale del proceso: GTK en Linux, `MessageBoxW` en Windows (ADR-0035). Capa fina, sin pruebas propias. |
 | `compile_fail.rs` | Lo que no debe compilar: un doctest `compile_fail` por invariante que sostiene el sistema de tipos, y uno positivo por la misma ruta. |
 
 `tests/agents_map_is_complete.rs` exige que todo `.rs` versionado bajo `src/`

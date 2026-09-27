@@ -10,7 +10,8 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | Módulo | Qué es |
 |---|---|
 | `mod.rs` | La raíz de composición del contexto: sus adaptadores, su estado de proceso y sus puertos instanciados. |
-| `domain/mod.rs`, `application/mod.rs`, `adapters/mod.rs` | Solo `pub mod`: el reparto de cada capa. |
+| `domain/mod.rs`, `application/mod.rs` | Solo `pub mod`: el reparto de cada capa. |
+| `adapters/mod.rs` | El reparto, y qué almacenes de confianza y qué perfiles usa cada plataforma: NSS en Linux, `CurrentUser\Root` en Windows (ADR-0035). |
 | `application/tests.rs` | Los dobles en memoria con los que la grada A no toca disco ni red. Solo en pruebas. |
 | `adapters/channel/acceptor.rs` | El saludo TLS del servidor local que comparten el canal y `service`: `native-tls` en Linux, `rustls` en Windows (ADR-0036). Lo prueban los tests de integración del canal. |
 | `adapters/channel/bind.rs` | Ata la escucha del canal a la ubicación que le llega. Pruebas en `adapters/channel/bind/tests.rs`. |
@@ -31,6 +32,7 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `adapters/batch_services.rs` | El cliente de los dos servlets del lote remoto, sobre `reqwest::blocking`. Pruebas en `adapters/batch_services/tests.rs`. |
 | `adapters/servlets.rs` | El cliente del servidor intermedio de producción, sobre `reqwest::blocking`. Pruebas en `adapters/servlets/tests.rs`. |
 | `adapters/nss.rs` | El registro en los almacenes NSS por la API de NSS y **no** por `certutil`, que no está en el flatpak, sobre el `NssHost` de `identity/adapters/pkcs11/nss.rs`. Pruebas en `adapters/nss/tests.rs`. |
+| `adapters/windows_root.rs` | `WindowsUserStores`: la CA local en `CurrentUser\Root` con CryptoAPI, detrás del puerto `TrustStores`; solo en Windows (ADR-0035). Pruebas en `adapters/windows_root/tests.rs`. |
 | `adapters/frontier.rs` | La única traducción de un rechazo del trámite al código `SAF_NN` de la sede y a la vista de la ventana (ADR-0009). Pruebas en `adapters/frontier/tests.rs`. |
 | `adapters/tauri.rs` | Las órdenes de Tauri del trámite de sede, dos de ellas por el diálogo del portal para guardar y cargar. Ninguna decide ni guarda estado propio. Pruebas en `adapters/tauri/tests.rs`. |
 | `adapters/tls/mod.rs` | El reparto de las dos piezas del material TLS; reexporta `LocalCa`. |

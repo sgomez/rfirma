@@ -15,9 +15,10 @@ máquina. Ni firma ni documentos. Rutas relativas a `src/desktop/`.
 | `adapters/channel.rs` | El canal de distribución (`/.flatpak-info`) y quién dice el escritorio que atiende `afirma://`. Léelo antes que sus hermanos. Pruebas en `adapters/channel/tests.rs`. |
 | `adapters/choice.rs` | Elegir, leer o retirar el manejador, en el `mimeapps.list` del `$HOME` y con todo lo demás intacto. Firefox guarda la suya aparte. Pruebas en `adapters/choice/tests.rs`. |
 | `adapters/failures.rs` | La única traducción de las situaciones del escritorio a lo que ve la ventana (ADR-0009); ninguna llega a la sede. Pruebas en `adapters/failures/tests.rs`. |
-| `adapters/firefox_lock.rs` | Si Firefox tiene abierto un perfil, por el bloqueo POSIX de `.parentlock`. Pruebas en `adapters/firefox_lock/tests.rs`. |
+| `adapters/firefox_lock.rs` | Si Firefox tiene abierto un perfil: el bloqueo POSIX de `.parentlock`, o `parent.lock` sin compartir en Windows. Pruebas en `adapters/firefox_lock/tests.rs` y `adapters/firefox_lock/windows_tests.rs`. |
 | `adapters/paths.rs` | Las rutas de la memoria entre sesiones y las de la CA local. Único sitio que conoce el sistema operativo (ADR-0010) y el único que crea un fichero `0600` de nacimiento. Pruebas en `adapters/paths/tests.rs`. |
-| `adapters/registry.rs` | `DesktopRegistry`: el adaptador de `HandlerRegistry` sobre `channel.rs` y `choice.rs`. |
+| `adapters/registry.rs` | `DesktopRegistry`: el adaptador de `HandlerRegistry` sobre `channel.rs` y `choice.rs` en Linux, y sobre `registry/windows_classes.rs` en Windows. |
+| `adapters/registry/windows_classes.rs` | Quién abre `afirma://` en Windows: `HKCU\Software\Classes` sobre `HKLM`, y la rama de rFirma en la del usuario (ADR-0035). Pruebas en `adapters/registry/windows_classes/tests.rs`. |
 | `adapters/releases.rs` | El único sitio que abre una conexión: le pregunta a GitHub por la última publicación. Pruebas en `adapters/releases/tests.rs`. |
 | `adapters/tauri.rs` | Las órdenes del escritorio: invocación, versión publicada, manejadores de `afirma://` y su elección, destino externo, estado y retirada. Pruebas en `adapters/tauri/tests.rs`. |
 | `adapters/views.rs` | Lo que cruza a la ventana: manejadores de `afirma://`, versión nueva, señales de estado y resultado de la retirada. Sin pruebas propias. |

@@ -1175,6 +1175,9 @@ msgstr "Tarxeta"
 msgid "status.storeBrands.installed"
 msgstr "Ficheiro instalado"
 
+msgid "status.storeBrands.windows"
+msgstr "Almacén de Windows"
+
 msgid "status.notices.restartFirefox"
 msgstr "Reinicia Firefox para que xurda efecto."
 

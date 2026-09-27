@@ -39,25 +39,77 @@ Donde la diferencia es solo de tipos, no se pone condicional: el parámetro de P
 
 ## Los adaptadores pendientes dicen su nombre
 
-Un adaptador pendiente respeta el puerto y falla como fallaría Linux sin el servicio, y su nombre
-dice qué falta:
+Mientras una pieza que solo existe en un escritorio Linux no tiene su versión de Windows, su
+adaptador **pendiente** respeta el puerto, falla como fallaría Linux sin el servicio, y su nombre
+dice qué falta. La fase 4 sustituyó todos menos uno:
 
-| Pieza en Linux | Pendiente en Windows | Qué hace mientras |
-| --- | --- | --- |
-| Diálogo GTK del PIN | `PendingWindowsPinDialog` | Falla con un mensaje en castellano; solo lo alcanza un módulo PKCS#11, porque con CNG el PIN lo pide Windows. |
-| Llavero `oo7` (ADR-0034) | `PendingWindowsCredentialManager` | `NoKeyring`: no hay instalación. |
-| Manejadores de `afirma://` por GIO | `handlers_in_the_windows_registry_pending` | Ninguno registrado. |
-| Diálogo GTK de fallo de arranque | `show_windows_dialog_pending` | Solo `stderr`. |
-| `mlock` del secreto | `virtual_lock_on_windows_pending` | Sin bloqueo en RAM. |
-| Cerrojo de `.parentlock` de Firefox | `firefox_parent_lock_on_windows_pending` | Firefox nunca «abierto». |
+| Pieza en Linux | En Windows |
+| --- | --- |
+| Diálogo GTK del PIN | `PendingWindowsPinDialog`: falla con un mensaje en castellano. Solo lo alcanza un módulo PKCS#11, porque con CNG el PIN lo pide Windows. |
+| Llavero `oo7` (ADR-0034) | `WindowsCredentialManager`: una credencial genérica `rfirma/almacen-pin` del usuario en el Administrador de credenciales. |
+| Manejadores de `afirma://` por GIO y `mimeapps.list` | `HKCU\Software\Classes\afirma`, leído junto al de `HKLM` (§ *`afirma://` en el registro*). |
+| Diálogo GTK de fallo de arranque | `MessageBoxW` con el mismo texto. |
+| `mlock` del secreto | `VirtualLock`, y `VirtualUnlock` al soltarlo. |
+| Cerrojo de `.parentlock` de Firefox | `parent.lock` abierto sin compartir: mientras Firefox vive, abrirlo falla por violación de uso compartido. |
+| CA local en los almacenes NSS (ADR-0005) | `CurrentUser\Root` con CryptoAPI (§ *La CA local en Windows*). |
 
-El cerrojo de la carpeta de paso (ADR-0024) no queda pendiente: en Windows es abrir el fichero
-sin compartirlo, que cumple lo mismo que `flock`. Los adaptadores de NSS y de p11-kit compilan
-sin cambios. En Windows no encuentran sus bibliotecas y fallan en tiempo de ejecución: el
-Almacén de rFirma (ADR-0034), que es NSS, no existe todavía en Windows.
+El cerrojo de la carpeta de paso (ADR-0024) no quedó nunca pendiente: en Windows es abrir el
+fichero sin compartirlo, que cumple lo mismo que `flock`. Los adaptadores de NSS y de p11-kit
+compilan sin cambios. En Windows no encuentran sus bibliotecas y fallan en tiempo de ejecución:
+el Almacén de rFirma (ADR-0034), que es NSS, no existe todavía en Windows, aunque su llavero ya
+sí.
 
 Las pruebas intrínsecamente de Unix (enlaces simbólicos, `fork`, `flock`, `OsString` no UTF-8)
-se marcan con `cfg(unix)`, no se borran.
+se marcan con `cfg(unix)`, no se borran; las del cerrojo de Firefox tienen su gemela de Windows.
+
+## La CA local en Windows: el almacén raíz del usuario
+
+El ADR-0005 instala la CA local en los almacenes NSS **de la persona**, nunca en el del sistema.
+En Windows, el almacén de la persona es `CurrentUser\Root`: lo leen Edge y Chrome, y lo escribe
+el usuario sin privilegios. `WindowsUserStores` sirve el puerto `TrustStores` sobre los almacenes
+de sistema de `CurrentUser` con CryptoAPI: instalar es `CertAddEncodedCertificateToStore`,
+consultar es buscar el certificado exacto (`CERT_FIND_EXISTING`) y retirar es
+`CertDeleteCertificateFromStore`. Estar en `Root` es la confianza entera, así que la consulta
+responde con los bits de CA TLS de NSS y el caso de uso no cambia.
+
+El «perfil» de ese almacén es la ruta `cryptoapi:CurrentUser/Root`, que ningún perfil NSS puede
+tener, igual que `cng:CurrentUser/MY` en la firma. La interfaz lo presenta con su propia marca,
+`windows`, que Linux nunca produce.
+
+Windows **pregunta** antes de añadir o borrar un certificado de `CurrentUser\Root`, con su propio
+diálogo de seguridad. Es lo esperado: la instalación la pide la persona desde el asistente o el
+panel de estado, nunca el arranque (el arranque de un trámite no toca almacenes, ADR-0005). Si
+la persona dice que no, el almacén queda como «no instalado» con el motivo, y el asistente
+ofrece reintentar. La renovación (ADR-0005) pregunta una vez por la CA siguiente y otra al
+retirar la vieja.
+
+**Firefox** no tiene su almacén aparte en Windows: desde la versión 120 importa por omisión los
+certificados raíz que el usuario o el administrador han añadido al almacén de Windows
+(`security.enterprise_roots.enabled`), `CurrentUser\Root` incluido. rFirma no busca sus perfiles
+en `%APPDATA%\Mozilla\Firefox\Profiles` ni escribe en ellos.
+
+## `afirma://` en el registro
+
+Windows mezcla `HKCU\Software\Classes` sobre `HKLM\Software\Classes`, y la rama del usuario
+gana. rFirma se registra solo en la del usuario, sin privilegios: `afirma` con `URL Protocol`, su
+icono y `shell\open\command` = `"<rfirma.exe>" "%1"`. AutoFirma, instalado para la máquina,
+queda en `HKLM` y no se toca.
+
+El puerto `HandlerRegistry` se cumple así:
+
+- **Candidatos**: rFirma siempre, más el programa de la orden `open` de cada rama. El de otro
+  programa se nombra por su ejecutable (`AutoFirma.exe` es «AutoFirma»), y su identificador es
+  la ruta.
+- **Elegido**: el de la rama del usuario o, si no hay, el de la máquina. Es rFirma solo si la
+  orden apunta al ejecutable que está en marcha: una entrada de otra copia de rFirma sale como
+  otro programa y la señal pide reparar, que reescribe la rama con el ejecutable actual.
+- **Elegir** rFirma escribe la rama del usuario; elegir el de la máquina la borra.
+- **Retirar** borra la rama del usuario solo si es de rFirma.
+
+Cada trámite de sede es su propio proceso (ADR-0024), así que Windows lanza un `rfirma.exe`
+nuevo por cada `afirma://`; la instancia única sigue siendo solo la del escritorio. Los fallos
+del registro se cuentan con las situaciones de `mimeapps.list`, porque el dominio no distingue
+dónde vive la lista.
 
 ## La firma en Windows: CNG para el almacén del usuario, PKCS#11 para lo demás
 
@@ -77,8 +129,13 @@ tener (`cng:CurrentUser/MY`), y va el primero de la lista. Cualquier otro almac�
   de un CSP antiguo también se abren por CNG.
 - **El PIN lo pide Windows**: el almacén del usuario responde `NotNeeded` a `secret_of`, así que
   rFirma no enseña su diálogo, y el proveedor de la tarjeta (KSP o minidriver) pide el PIN con
-  su propia ventana. El diálogo propio del PIN solo haría falta en el camino PKCS#11, y ahí
-  sigue pendiente.
+  su propia ventana. Esa ventana es modal sobre la de rFirma: la clave se abre con
+  `CRYPT_ACQUIRE_WINDOW_HANDLE_FLAG` y se le pone `NCRYPT_WINDOW_HANDLE_PROPERTY`, con la ventana
+  en primer plano si es del proceso o, si no, la primera visible del proceso. Cancelarla sigue
+  llegando como `Situation::Unknown`, con el detalle «has cancelado la petición del PIN de
+  Windows»: ninguna situación del catálogo dice «cancelado» sin mentir, y añadirla cambia el
+  dominio también en Linux. El diálogo propio del PIN solo haría falta en el camino PKCS#11, y
+  ahí sigue pendiente.
 
 El **DNIe** llega por las dos vías. Con el minidriver que Windows instala para la tarjeta, sus
 certificados aparecen en `CurrentUser\MY` y se firman por CNG con el PIN pedido por Windows: es
@@ -165,5 +222,12 @@ interfaz también en Linux. Se aplaza; mientras, el almacén del usuario se pres
 - Las pruebas de `identity/adapters/windows_store/tests.rs` crean certificados autofirmados en
   `Cert:\CurrentUser\My` con `New-SelfSignedCertificate` y los borran con su clave al acabar.
   La que firma XAdES, CAdES y PAdES con el puente está `#[ignore]` y necesita `RFIRMA_LIB_DIR`.
-- La ventana del PIN de la tarjeta no se hace modal sobre la de rFirma: no se le pasa ningún
-  `HWND`.
+- El canal TLS local de Windows es de rustls (ADR-0036).
+- Las pruebas del almacén raíz, del registro y del Administrador de credenciales trabajan sobre
+  un almacén `rfirma-test-*`, una rama `HKCU\Software\rfirma-test-*` y una credencial
+  `rfirma-test/*` propios, y los borran al acabar. Instalar de verdad en `CurrentUser\Root` abre
+  el diálogo de Windows y no se automatiza: se prueba a mano.
+- Una asociación elegida por la persona en `UrlAssociations\afirma\UserChoice` manda sobre
+  `Classes`, y rFirma no la lee todavía.
+- `site/adapters/mod.rs`, `desktop/adapters/registry.rs` y `site/adapters/channel/acceptor.rs`
+  entran en `AUTHORISED_SITES`: son el punto donde cada puerto elige su adaptador de plataforma.
