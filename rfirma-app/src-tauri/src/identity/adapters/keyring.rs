@@ -13,7 +13,8 @@ fn item_attributes() -> HashMap<&'static str, &'static str> {
     HashMap::from([("purpose", "rfirma-almacen-pin")])
 }
 
-/// Corre `future` en un hilo con su propio runtime, para no entrar en pánico si ya hay uno.
+/// Corre `future` en un hilo aparte, sobre el runtime global de Tauri, para no entrar en pánico
+/// si ya hay uno activo ni cerrar la conexión de D-Bus que `oo7` deja abierta entre llamadas.
 fn block_on<F>(future: F) -> F::Output
 where
     F: Future + Send,
@@ -21,13 +22,7 @@ where
 {
     std::thread::scope(|scope| {
         scope
-            .spawn(|| {
-                tokio::runtime::Builder::new_current_thread()
-                    .enable_all()
-                    .build()
-                    .expect("crea el runtime dedicado del llavero")
-                    .block_on(future)
-            })
+            .spawn(|| tauri::async_runtime::handle().block_on(future))
             .join()
             .expect("el hilo del llavero no entra en pánico")
     })
