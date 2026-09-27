@@ -108,18 +108,87 @@ export function DocumentTabs({
           );
         })}
       </div>
-      {hidden.length > 0 && (
-        <button
-          type="button"
-          className="rf-btn rf-btn--ghost document-tabs__more"
-          title={t("tabs.more")}
-          aria-label={t("tabs.more")}
-        >
-          +{hidden.length}
-          <ChevronDownIcon size={14} strokeWidth={2} />
-        </button>
-      )}
+      {hidden.length > 0 && <HiddenTabsMenu hidden={hidden} onActivate={onActivate} />}
     </nav>
+  );
+}
+
+interface HiddenTabsMenuProps {
+  hidden: readonly DocumentInHand[];
+  onActivate: (id: string) => void;
+}
+
+/** El menú de las pestañas ocultas, desde «+N ▾». */
+function HiddenTabsMenu({ hidden, onActivate }: HiddenTabsMenuProps) {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  const container = useRef<HTMLDivElement>(null);
+  const menuId = useId();
+  const close = useCallback(() => setOpen(false), []);
+
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (event: PointerEvent) => {
+      if (!container.current?.contains(event.target as Node)) close();
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        close();
+      }
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open, close]);
+
+  return (
+    <div className="document-tabs__more-menu" ref={container}>
+      <button
+        type="button"
+        className={
+          open
+            ? "rf-btn rf-btn--ghost document-tabs__more document-tabs__more--open"
+            : "rf-btn rf-btn--ghost document-tabs__more"
+        }
+        title={t("tabs.more")}
+        aria-label={t("tabs.more")}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-controls={open ? menuId : undefined}
+        onClick={() => setOpen((was) => !was)}
+      >
+        +{hidden.length}
+        <ChevronDownIcon size={14} strokeWidth={2} />
+      </button>
+      {open && (
+        <div id={menuId} role="menu" className="open-menu open-menu--right">
+          {hidden.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              role="menuitem"
+              className="hidden-tab-row"
+              title={tab.name}
+              onClick={() => {
+                close();
+                onActivate(tab.id);
+              }}
+            >
+              <span className="hidden-tab-row__name">{tab.name}</span>
+              {tab.badge === "Signed" && (
+                <span className="hidden-tab-row__signed" role="img" aria-label={t("badges.signed")}>
+                  <SignedMarkIcon />
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 

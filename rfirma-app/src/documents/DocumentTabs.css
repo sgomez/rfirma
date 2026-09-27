@@ -23,14 +23,33 @@
   overflow: hidden;
 }
 
+.document-tabs__more-menu {
+  position: relative;
+  display: flex;
+  flex: none;
+  margin-left: 2px;
+}
+
 .document-tabs__more {
   flex: none;
   gap: 4px;
   min-height: 30px;
-  margin-left: 2px;
   padding: 0 6px 0 8px;
   font-size: 13px;
   font-weight: 600;
+}
+
+.document-tabs__more--open {
+  background: var(--rf-surface);
+  box-shadow: inset 0 0 0 1px var(--rf-border-subtle);
+}
+
+.document-tabs__more svg {
+  transition: transform var(--rf-duration-fast);
+}
+
+.document-tabs__more--open svg {
+  transform: rotate(180deg);
 }
 
 .document-tabs__split {
@@ -242,6 +261,39 @@
 .open-menu__clear:hover,
 .recent-row:hover:not(:disabled) {
   background: var(--rf-surface);
+}
+
+.hidden-tab-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: var(--rf-radius-md);
+  background: none;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--rf-text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.hidden-tab-row:hover {
+  background: var(--rf-surface);
+}
+
+.hidden-tab-row__name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hidden-tab-row__signed {
+  display: flex;
+  flex: none;
+  color: var(--rf-text-muted);
 }
 
 .recent-row {
