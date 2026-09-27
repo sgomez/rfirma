@@ -711,6 +711,11 @@ msgstr ""
 msgid "panel.certificate.personalCapacity"
 msgstr ""
 
+#. La palabra por la que el buscador del selector encuentra un certificado
+#. personal (sin entidad). No se muestra en pantalla, solo se compara.
+msgid "panel.certificate.personalKeyword"
+msgstr ""
+
 msgid "panel.certificate.stores.card"
 msgstr ""
 

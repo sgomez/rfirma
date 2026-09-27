@@ -381,6 +381,7 @@ function matches(certificate: Certificate, query: string, t: TFunction): boolean
     certificate.idNumber,
     certificate.issuer,
     ...storesOf(certificate).map((store) => storeLabel(store, t)),
+    certificate.entityName === null ? t("panel.certificate.personalKeyword") : "",
   ];
   return haystack.some((piece) => fold(piece).includes(wanted));
 }
