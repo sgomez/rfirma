@@ -73,7 +73,7 @@ describe("App, firmando, firmado y error", () => {
     await user.click(screen.getByRole("tab", { name: "factura.pdf" }));
 
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
-    const sign = await within(panel).findByRole("button", { name: "Firmar como Ada Lovelace" });
+    const sign = await within(panel).findByRole("button", { name: "Firmar" });
     await waitFor(() => expect(sign).toBeEnabled());
     await user.click(sign);
 
@@ -129,7 +129,7 @@ describe("App, firmando, firmado y error", () => {
 
     await openPdf(user);
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
-    const sign = await within(panel).findByRole("button", { name: "Firmar como Ada Lovelace" });
+    const sign = await within(panel).findByRole("button", { name: "Firmar" });
     await waitFor(() => expect(sign).toBeEnabled());
     await user.click(sign);
 
@@ -178,7 +178,7 @@ describe("App, firmando, firmado y error", () => {
 
     await openPdf(user);
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
-    const sign = await within(panel).findByRole("button", { name: "Firmar como Ada Lovelace" });
+    const sign = await within(panel).findByRole("button", { name: "Firmar" });
     await waitFor(() => expect(sign).toBeEnabled());
     await user.click(sign);
 
@@ -216,7 +216,7 @@ describe("App, firmando, firmado y error", () => {
     await openPdf(user);
     await user.click(screen.getByRole("tab", { name: "factura.pdf" }));
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
-    const sign = await within(panel).findByRole("button", { name: "Firmar como Ada Lovelace" });
+    const sign = await within(panel).findByRole("button", { name: "Firmar" });
     await waitFor(() => expect(sign).toBeEnabled());
     await user.click(sign);
     await screen.findByText("No encontramos la tarjeta");

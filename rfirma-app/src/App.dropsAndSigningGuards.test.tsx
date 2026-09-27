@@ -194,7 +194,7 @@ describe("App, con páginas donde el recuadro no cabe", () => {
 
     await openPdf(user);
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
-    const sign = await within(panel).findByRole("button", { name: "Firmar como Ada Lovelace" });
+    const sign = await within(panel).findByRole("button", { name: "Firmar" });
     await waitFor(() => expect(sign).toBeEnabled());
     await user.click(within(panel).getByRole("switch", { name: "Firma visible" }));
 
@@ -257,7 +257,7 @@ describe("App, con páginas donde el recuadro no cabe", () => {
 
     await openPdf(user);
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
-    const sign = await within(panel).findByRole("button", { name: "Firmar como Ada Lovelace" });
+    const sign = await within(panel).findByRole("button", { name: "Firmar" });
     await waitFor(() => expect(sign).toBeEnabled());
     await user.click(within(panel).getByRole("switch", { name: "Firma visible" }));
     await user.click(sign);
@@ -306,7 +306,7 @@ describe("App, con páginas donde el recuadro no cabe", () => {
 
     await openPdf(user);
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
-    const sign = await within(panel).findByRole("button", { name: "Firmar como Ada Lovelace" });
+    const sign = await within(panel).findByRole("button", { name: "Firmar" });
     await waitFor(() => expect(sign).toBeEnabled());
     await user.click(within(panel).getByRole("switch", { name: "Firma visible" }));
 
@@ -410,7 +410,7 @@ describe("App, con un documento que no se recuerda", () => {
 
     await openPdf(user);
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
-    const sign = await within(panel).findByRole("button", { name: "Firmar como Ada Lovelace" });
+    const sign = await within(panel).findByRole("button", { name: "Firmar" });
     await waitFor(() => expect(sign).toBeEnabled());
     await user.click(sign);
 
@@ -449,7 +449,7 @@ describe("App · firmas sin registrar", () => {
     );
     await openPdf(user);
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
-    const sign = await within(panel).findByRole("button", { name: "Firmar como Ada Lovelace" });
+    const sign = await within(panel).findByRole("button", { name: "Firmar" });
     await waitFor(() => expect(sign).toBeEnabled());
     return { user, sign };
   }
@@ -579,7 +579,7 @@ describe("App · firmas previas no válidas", () => {
     );
     await openPdf(user);
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
-    const sign = await within(panel).findByRole("button", { name: "Firmar como Ada Lovelace" });
+    const sign = await within(panel).findByRole("button", { name: "Firmar" });
     await waitFor(() => expect(sign).toBeEnabled());
     return { user, sign };
   }

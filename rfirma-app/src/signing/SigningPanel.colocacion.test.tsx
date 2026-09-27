@@ -7,7 +7,7 @@ import { DEFAULT_VISIBLE_SIGNATURE } from "./visibleSignature";
 describe("SigningPanel · Firma visible, en qué páginas", () => {
   const visible = { ...DEFAULT_VISIBLE_SIGNATURE, enabled: true };
 
-  const signButton = () => screen.getByRole("button", { name: "Firmar como Ada Lovelace" });
+  const signButton = () => screen.getByRole("button", { name: "Firmar" });
   const field = () => screen.getByRole("textbox", { name: "Páginas de la firma visible" });
   const block = () => screen.getByRole("region", { name: "Firma visible" });
 

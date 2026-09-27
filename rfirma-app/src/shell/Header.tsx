@@ -22,7 +22,7 @@ interface HeaderProps {
 /**
  * La franja superior de la ventana: identidad y el **único** menú de la
  * aplicación. Sin certificado ni insignia de documento: el certificado lo
- * dice el botón «Firmar como» del panel y el estado, la pestaña
+ * dice el selector del panel y el estado, la pestaña
  * (docs/design/cabecera.md).
  *
  * No hay barra de menús: el ADR-0007 la retiró, y por eso aquí no hay

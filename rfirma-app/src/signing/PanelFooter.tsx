@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { AlertIcon, FileIcon, FolderIcon } from "../design-system/icons";
-import { CertificateFooterButton, LoadingCertificateFooterButton } from "./CertificateFooterButton";
 import type { Certificate } from "./certificate";
+import { isUsable } from "./certificate";
 import type { Destination } from "./destination";
 import { shortenDestination } from "./destination";
 import type { SigningFailure } from "./failure";
@@ -19,7 +19,6 @@ interface PanelFooterSigningProps extends PanelFooterDestinationProps {
   signing: boolean;
   blocked: boolean;
   certificate: CertificateState;
-  onChooseCertificate: (certificate: Certificate) => void;
   onRetryCertificates: () => void;
   onChooseModule: () => void;
   onSign: () => void;
@@ -59,7 +58,7 @@ function unwritableMessage(message: string, folder: string) {
  * (docs/design/panel-de-firma.md § Pie fijo). El destino arriba —«Guardar
  * en» mientras se decide, «Guardado en» una vez escrito, con `Cambiar` oculto
  * sin mover nada (`visibility:hidden`)— y, abajo, la fila de 44 px con la
- * acción del momento: el certificado, «Reintentar»/«Volver», o los dos
+ * acción del momento: «Firmar», «Reintentar»/«Volver», o los dos
  * caminos hasta el fichero firmado y «Volver a firmar».
  */
 export function PanelFooter(props: PanelFooterProps) {
@@ -160,9 +159,6 @@ export function PanelFooter(props: PanelFooterProps) {
               </button>
             </div>
           )}
-          {!props.failure && props.certificate.kind === "loading" && (
-            <LoadingCertificateFooterButton />
-          )}
           {!props.failure &&
             (props.certificate.kind === "empty" || props.certificate.kind === "failed") && (
               <div className="rf-row rf-gap-xs panel__certificate-actions">
@@ -183,18 +179,45 @@ export function PanelFooter(props: PanelFooterProps) {
               </div>
             )}
           {!props.failure &&
-            (props.certificate.kind === "unchosen" || props.certificate.kind === "chosen") && (
-              <CertificateFooterButton
-                certificates={props.certificate.certificates}
+            props.certificate.kind !== "empty" &&
+            props.certificate.kind !== "failed" && (
+              <SignButton
                 chosen={props.certificate.kind === "chosen" ? props.certificate.certificate : null}
-                onChoose={props.onChooseCertificate}
-                onSign={props.onSign}
                 signing={props.signing}
                 blocked={props.blocked}
+                onSign={props.onSign}
               />
             )}
         </>
       )}
     </footer>
+  );
+}
+
+interface SignButtonProps {
+  chosen: Certificate | null;
+  signing: boolean;
+  /** Con el interruptor encendido y sin colocar, o con el rango en error. */
+  blocked: boolean;
+  onSign: () => void;
+}
+
+function SignButton({ chosen, signing, blocked, onSign }: SignButtonProps) {
+  const { t } = useTranslation();
+  const usable = chosen !== null && isUsable(chosen.status);
+  return (
+    <div className="rf-row panel__sign-row">
+      <button
+        type="button"
+        className="rf-btn rf-btn--primary panel__sign"
+        title={
+          chosen === null ? undefined : t("panel.footer.signWith", { holder: chosen.holderName })
+        }
+        disabled={signing || blocked || !usable}
+        onClick={onSign}
+      >
+        {t(signing ? "panel.footer.signing" : "panel.footer.sign")}
+      </button>
+    </div>
   );
 }

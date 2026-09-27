@@ -155,7 +155,7 @@ export function useSignFlow({
       // estrecha el tipo, y callar es mejor que fabricar una orden a medias.
       return;
     }
-    // Con alguna firma previa no válida, «Firmar como…» pregunta antes de
+    // Con alguna firma previa no válida, «Firmar» pregunta antes de
     // tocar nada más.
     const invalid = invalidSignatures(previousSignatures);
     if (invalid.length > 0) {

@@ -75,6 +75,29 @@
   font-size: 14px;
 }
 
+.certificate-select__box:disabled {
+  cursor: default;
+}
+
+.certificate-select__spinner {
+  display: flex;
+  flex: none;
+  color: var(--rf-text-muted);
+  animation: certificate-select-spin 1s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .certificate-select__spinner {
+    animation: none;
+  }
+}
+
+@keyframes certificate-select-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 /* En un portal y con `position: fixed`: la columna que se desplaza no la recorta (design-system.md § Desplegable). */
 .certificate-select__layer {
   position: fixed;

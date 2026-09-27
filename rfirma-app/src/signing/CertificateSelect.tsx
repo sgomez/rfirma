@@ -8,6 +8,7 @@ import {
   ClockIcon,
   RevokedIcon,
   SearchIcon,
+  SpinnerIcon,
 } from "../design-system/icons";
 import type { Certificate } from "./certificate";
 import {
@@ -27,15 +28,21 @@ interface CertificateSelectProps {
   /** El elegido, o `null` mientras no hay ninguno. */
   chosen: Certificate | null;
   onChoose: (certificate: Certificate) => void;
-  /** El alto máximo de la lista abierta, en px. */
+  /** El alto máximo de la lista abierta, en px; la ventana lo recorta si no cabe. */
   listMaxHeight?: number;
+  /** Mientras se listan los certificados: la caja lo dice y no se abre. */
+  searching?: boolean;
+  disabled?: boolean;
 }
 
 interface Anchor {
   top: number;
   left: number;
   width: number;
+  maxHeight: number;
 }
+
+const WINDOW_MARGIN = 8;
 
 /** Con qué certificado se firma: la caja de dos líneas que al abrirse es un buscador (docs/design/panel-de-firma.md). */
 export function CertificateSelect({
@@ -43,6 +50,8 @@ export function CertificateSelect({
   chosen,
   onChoose,
   listMaxHeight = 480,
+  searching = false,
+  disabled = false,
 }: CertificateSelectProps) {
   const { t, i18n } = useTranslation();
   const [open, setOpen] = useState(false);
@@ -79,8 +88,15 @@ export function CertificateSelect({
 
   const place = useCallback(() => {
     const rect = frame.current?.getBoundingClientRect();
-    if (rect) setAnchor({ top: rect.bottom + 4, left: rect.left, width: rect.width });
-  }, []);
+    if (!rect) return;
+    const top = rect.bottom + 4;
+    setAnchor({
+      top,
+      left: rect.left,
+      width: rect.width,
+      maxHeight: Math.min(listMaxHeight, window.innerHeight - top - WINDOW_MARGIN),
+    });
+  }, [listMaxHeight]);
 
   useLayoutEffect(() => {
     if (!open) return;
@@ -276,6 +292,7 @@ export function CertificateSelect({
             aria-labelledby={labelId}
             aria-expanded="false"
             aria-haspopup="listbox"
+            disabled={searching || disabled}
             onClick={show}
             onKeyDown={(event) => {
               if (event.key === "ArrowDown" || event.key === "ArrowUp") {
@@ -284,7 +301,16 @@ export function CertificateSelect({
               }
             }}
           >
-            {chosen === null ? (
+            {searching ? (
+              <>
+                <span className="certificate-select__spinner">
+                  <SpinnerIcon size={16} />
+                </span>
+                <span className="rf-text-muted certificate-select__unchosen">
+                  {t("panel.certificate.loading")}
+                </span>
+              </>
+            ) : chosen === null ? (
               <span className="rf-text-muted certificate-select__unchosen">
                 {t("panel.certificate.chooseOne")}
               </span>
@@ -312,7 +338,7 @@ export function CertificateSelect({
               top: anchor.top,
               left: anchor.left,
               width: anchor.width,
-              maxHeight: listMaxHeight,
+              maxHeight: anchor.maxHeight,
             }}
           >
             {query.trim() !== "" && shown.length > 0 && (
@@ -409,11 +435,7 @@ function StatusIcon({ status }: { status: Certificate["status"] }) {
 }
 
 /** Por qué no se puede firmar con este certificado, en la frase corta de su fila. */
-export function shortStatusWarning(
-  status: Certificate["status"],
-  locale: string,
-  t: TFunction,
-): string {
+function shortStatusWarning(status: Certificate["status"], locale: string, t: TFunction): string {
   switch (status.kind) {
     case "expired":
       return t("panel.certificate.expiredShort", {

@@ -749,9 +749,6 @@ msgstr "Idatzi orrialdeak"
 msgid "panel.certificate.title"
 msgstr "Ziurtagiria"
 
-msgid "panel.certificate.changeTitle"
-msgstr "Aukeratu beste ziurtagiri bat"
-
 msgid "panel.certificate.loading"
 msgstr "Ziurtagiriak bilatzen…"
 
@@ -759,17 +756,8 @@ msgstr "Ziurtagiriak bilatzen…"
 msgid "panel.certificate.issuer"
 msgstr "Jaulkitzailea: {{issuer}}"
 
-msgid "panel.certificate.choose"
-msgstr "Aukeratu ziurtagiria"
-
-msgid "panel.certificate.list"
-msgstr "Ziurtagiri erabilgarriak"
-
 msgid "panel.certificate.groups.available"
 msgstr "Erabilgarriak"
-
-msgid "panel.certificate.groups.unusable"
-msgstr "Erabili ezinak"
 
 #. Segunda línea de un certificado de representante. {{holder}} es el
 #. titular; {{nif}}, el NIF de la entidad representada.
@@ -945,11 +933,14 @@ msgstr "Ezin da {{folder}}(e)n idatzi"
 msgid "panel.footer.retrySigning"
 msgstr "Berriro saiatu"
 
-msgid "panel.footer.signVerb"
-msgstr "Sinatu honela:"
+msgid "panel.footer.sign"
+msgstr "Sinatu"
 
-msgid "panel.footer.signingVerb"
-msgstr "Honela sinatzen:"
+msgid "panel.footer.signing"
+msgstr "Sinatzen…"
+
+msgid "panel.footer.signWith"
+msgstr "Sinatu ziurtagiri honekin: {{holder}}"
 
 msgid "panel.footer.addCertificate"
 msgstr "Gehitu ziurtagiri bat…"

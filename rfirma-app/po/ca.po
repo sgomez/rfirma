@@ -747,9 +747,6 @@ msgstr "Escriu les pàgines"
 msgid "panel.certificate.title"
 msgstr "Certificat"
 
-msgid "panel.certificate.changeTitle"
-msgstr "Tria un altre certificat"
-
 msgid "panel.certificate.loading"
 msgstr "Cercant certificats…"
 
@@ -757,17 +754,8 @@ msgstr "Cercant certificats…"
 msgid "panel.certificate.issuer"
 msgstr "Emès per {{issuer}}"
 
-msgid "panel.certificate.choose"
-msgstr "Triar certificat"
-
-msgid "panel.certificate.list"
-msgstr "Certificats disponibles"
-
 msgid "panel.certificate.groups.available"
 msgstr "Disponibles"
-
-msgid "panel.certificate.groups.unusable"
-msgstr "No utilitzables"
 
 #. Segunda línea de un certificado de representante. {{holder}} es el
 #. titular; {{nif}}, el NIF de la entidad representada.
@@ -942,11 +930,14 @@ msgstr "No es pot escriure a {{folder}}"
 msgid "panel.footer.retrySigning"
 msgstr "Reintentar"
 
-msgid "panel.footer.signVerb"
-msgstr "Signa com a"
+msgid "panel.footer.sign"
+msgstr "Signa"
 
-msgid "panel.footer.signingVerb"
-msgstr "Signant com a"
+msgid "panel.footer.signing"
+msgstr "Signant…"
+
+msgid "panel.footer.signWith"
+msgstr "Signa amb el certificat de {{holder}}"
 
 msgid "panel.footer.addCertificate"
 msgstr "Afegeix un certificat…"
