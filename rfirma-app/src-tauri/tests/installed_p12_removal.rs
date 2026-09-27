@@ -207,12 +207,20 @@ fn removing_one_of_two_certificates_with_the_same_common_name_keeps_the_other() 
             .map(|certificate| certificate.reference().clone()),
     );
 
+    let survivor = found[1].reference().clone();
+
     remove(installed.path(), &listed, &handles[0]).expect("deberia quitarse el primero");
 
+    let left = certificates(installed.path());
     assert_eq!(
-        certificates(installed.path()).len(),
+        left.len(),
         1,
         "el otro certificado con el mismo nombre comun deberia seguir"
+    );
+    assert_eq!(
+        left[0].reference().cka_id(),
+        survivor.cka_id(),
+        "deberia seguir el otro, no el quitado"
     );
 }
 

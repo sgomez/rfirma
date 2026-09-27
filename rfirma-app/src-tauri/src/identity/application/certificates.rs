@@ -289,8 +289,6 @@ fn only_supported_keys(
 }
 
 /// Quita un certificado del Almacén de rFirma: lo borra, con su clave, de la base única (ADR-0034).
-///
-/// Si era el certificado recordado (ADR-0010), deja de estarlo.
 pub fn remove_installed(
     token: &dyn Token,
     keyring: &dyn Keyring,

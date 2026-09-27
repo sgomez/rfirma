@@ -11,6 +11,9 @@ use crate::identity::domain::certificate::CertificateRef;
 use crate::identity::domain::error::{Situation, TokenError};
 use crate::identity::domain::protected_secret::ProtectedSecret;
 
+type LowLevelKeyId = extern "C" fn(*mut c_void, *mut c_void, *mut c_void) -> *mut SecItem;
+type FreeItem = extern "C" fn(*mut SecItem, c_int);
+
 /// Borra del Almacén de rFirma en `directory` el certificado con el `CKA_ID` de `reference`, y su clave.
 pub fn remove_certificate(
     directory: &Path,
@@ -28,8 +31,6 @@ pub fn remove_certificate(
     type CheckUserPassword = extern "C" fn(*mut c_void, *const c_char) -> c_int;
     type FreeSlot = extern "C" fn(*mut c_void);
     type ListCertsInSlot = extern "C" fn(*mut c_void) -> *mut CertList;
-    type LowLevelKeyId = extern "C" fn(*mut c_void, *mut c_void, *mut c_void) -> *mut SecItem;
-    type FreeItem = extern "C" fn(*mut SecItem, c_int);
     type DeleteTokenCertAndKey = extern "C" fn(*mut c_void, *mut c_void) -> c_int;
     type DestroyCertList = extern "C" fn(*mut CertList);
 
@@ -122,8 +123,8 @@ fn certificate_without_a_cka_id() -> TokenError {
 fn certificate_with_id(
     list: *mut CertList,
     slot: *mut c_void,
-    low_level_key_id: extern "C" fn(*mut c_void, *mut c_void, *mut c_void) -> *mut SecItem,
-    free_item: extern "C" fn(*mut SecItem, c_int),
+    low_level_key_id: LowLevelKeyId,
+    free_item: FreeItem,
     wanted: &[u8],
 ) -> Option<*mut c_void> {
     if list.is_null() {
