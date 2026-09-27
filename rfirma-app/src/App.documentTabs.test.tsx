@@ -360,4 +360,80 @@ describe("App, con más pestañas de las que caben", () => {
     expect(tabNames()).toEqual(["uno.pdf", "dos.pdf", "tres.pdf"]);
     expect(screen.getByRole("tab", { name: "tres.pdf", selected: true })).toBeInTheDocument();
   });
+
+  it("opens the +N menu aligned to it, listing the hidden tabs in order with a check for the signed ones", async () => {
+    const resizeStrip = stubTabStripWidth();
+    const user = userEvent.setup();
+    renderApp(
+      inMemoryRecents(),
+      [
+        document("uno.pdf"),
+        document("dos.pdf"),
+        document("tres.pdf", { badge: "Signed" }),
+        document("cuatro.pdf"),
+        document("cinco.pdf"),
+      ],
+      pdfsOf(Object.fromEntries(FIVE.map((name) => [name, 1]))),
+    );
+    for (const _ of FIVE) await openPdf(user);
+    await screen.findByRole("tab", { name: "cinco.pdf", selected: true });
+    resizeStrip(780);
+    const more = screen.getByRole("button", { name: "Más pestañas" });
+
+    await user.click(more);
+
+    expect(more).toHaveAttribute("aria-expanded", "true");
+    const menu = within(screen.getByRole("menu"));
+    expect(menu.getAllByRole("menuitem").map((item) => item.textContent)).toEqual([
+      "tres.pdf",
+      "cuatro.pdf",
+    ]);
+    expect(
+      within(menu.getByRole("menuitem", { name: /^tres\.pdf/ })).getByRole("img", {
+        name: "Firmado",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      within(menu.getByRole("menuitem", { name: "cuatro.pdf" })).queryByRole("img", {
+        name: "Firmado",
+      }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("activates a hidden tab from the +N menu, bringing it to the strip and letting another take its place", async () => {
+    const resizeStrip = stubTabStripWidth();
+    const user = userEvent.setup();
+    await openFive(user);
+    resizeStrip(780);
+    await user.click(screen.getByRole("button", { name: "Más pestañas" }));
+
+    await user.click(screen.getByRole("menuitem", { name: "tres.pdf" }));
+
+    expect(tabNames()).toEqual(["uno.pdf", "dos.pdf", "tres.pdf"]);
+    expect(screen.getByRole("tab", { name: "tres.pdf", selected: true })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Más pestañas" }));
+    expect(
+      within(screen.getByRole("menu"))
+        .getAllByRole("menuitem")
+        .map((i) => i.textContent),
+    ).toEqual(["cuatro.pdf", "cinco.pdf"]);
+  });
+
+  it("closes the +N menu with Escape and by clicking outside", async () => {
+    const resizeStrip = stubTabStripWidth();
+    const user = userEvent.setup();
+    await openFive(user);
+    resizeStrip(780);
+    await user.click(screen.getByRole("button", { name: "Más pestañas" }));
+    expect(screen.getByRole("menu")).toBeInTheDocument();
+
+    await user.keyboard("{Escape}");
+
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Más pestañas" }));
+    await user.click(screen.getByRole("tab", { name: "uno.pdf" }));
+
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+  });
 });
