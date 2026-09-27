@@ -42,6 +42,14 @@ impl Platform {
     } else {
         Self::Linux
     };
+
+    /// Directorio donde el paquete deja la librería nativa, dado el del ejecutable (ADR-0004, ADR-0035).
+    pub fn native_library_directory(self, executable_directory: &Path) -> PathBuf {
+        match self {
+            Self::Windows => executable_directory.to_path_buf(),
+            Self::Linux | Self::MacOs => executable_directory.join("../lib/rfirma"),
+        }
+    }
 }
 
 /// Restringe los permisos de una ruta exclusivamente a su propietario.

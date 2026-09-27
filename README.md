@@ -54,9 +54,23 @@ just dev         # levanta la aplicacion contra esa libreria
 check` es lo mismo que ejecuta el CI.
 
 En Windows las recetas se lanzan desde Git Bash, con GraalVM en `GRAALVM_HOME`
-o `JAVA_HOME`, las Build Tools de Visual Studio y Strawberry Perl; la
-aplicación de escritorio aún está a medias
-([ADR-0035](docs/adr/0035-windows-como-segunda-plataforma-dependencias-por-target-y-adaptadores-no-disponibles.md)).
+o `JAVA_HOME`, las Build Tools de Visual Studio (con C++ y el Windows SDK),
+Strawberry Perl, Node con pnpm y WebView2
+([ADR-0035](docs/adr/0035-windows-como-segunda-plataforma-dependencias-por-target-y-adaptadores-no-disponibles.md)):
+
+```bash
+git config --global core.autocrlf false                # antes de clonar: los .sh necesitan LF
+pnpm config set script-shell "C:/Program Files/Git/bin/bash.exe"
+export OPENSSL_SRC_PERL=C:/Strawberry/perl/bin/perl.exe  # la primera compilacion de OpenSSL
+just native                                            # rfirma_crypto.dll
+just bundle-windows                                    # instalador NSIS en target/release/bundle/nsis
+```
+
+Con una GraalVM CE 25.4, `just native` necesita además
+`NATIVE_IMAGE_OPTIONS=--initialize-at-build-time=es.gob.afirma.signers.tsp.pkcs7.TsaParams`;
+el CI usa la 25.0.2. El instalador es por usuario y no pide administrador: deja
+`rfirma.exe`, `rfirma_crypto.dll` y el runtime de Visual C++ en
+`%LOCALAPPDATA%\rfirma`, y registra `afirma://` si ningún otro programa lo tiene.
 
 `just dev` **no** construye la librería nativa: si falta, falla diciendo que
 ejecutes `just native`. Es deliberado — `native-image` tarda minutos y no debe

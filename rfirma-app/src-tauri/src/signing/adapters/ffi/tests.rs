@@ -1,12 +1,15 @@
 use super::responses::{only_pkcs1, parse_signed_document, pkcs1_list};
 use super::*;
+use crate::desktop::adapters::paths::Platform;
 use crate::signing::domain::bridge::{
     DataRejection, SealedPreSignature, SignatureVerdict, XadesVariant,
 };
+use crate::signing::domain::bridge::{Origin, LIBRARY_DIRECTORY_VARIABLE};
 use crate::signing::domain::SessionSeal;
 use std::alloc::{alloc, dealloc, Layout};
 use std::cell::{Cell, RefCell};
 use std::collections::{HashMap, HashSet};
+use std::ffi::OsString;
 
 mod previous_signatures;
 
@@ -25,9 +28,12 @@ fn the_library_is_looked_for_next_to_the_executable() {
 
     assert_eq!(looked_at.len(), 1);
     assert_eq!(looked_at[0].origin(), Origin::RelativeToExecutable);
-    assert!(looked_at[0]
-        .library_path()
-        .ends_with(Path::new("lib/rfirma").join(library_file())));
+    assert_eq!(
+        looked_at[0].library_path(),
+        Platform::CURRENT
+            .native_library_directory(Path::new("/app/bin"))
+            .join(library_file())
+    );
 }
 
 #[test]
@@ -94,7 +100,12 @@ fn starting_without_the_library_names_the_two_paths_it_looked_at() {
         message.contains(&overridden.display().to_string()),
         "{message}"
     );
-    assert!(message.contains("lib/rfirma"), "{message}");
+    let next_to_executable =
+        Platform::CURRENT.native_library_directory(&directory.path().join("app/bin"));
+    assert!(
+        message.contains(&next_to_executable.display().to_string()),
+        "{message}"
+    );
     assert!(message.contains(LIBRARY_DIRECTORY_VARIABLE), "{message}");
     assert!(message.contains("relativa al ejecutable"), "{message}");
 }
@@ -102,7 +113,10 @@ fn starting_without_the_library_names_the_two_paths_it_looked_at() {
 #[test]
 fn a_directory_without_the_file_is_not_the_library() {
     let directory = tempfile::tempdir().expect("debería haber directorio temporal");
-    std::fs::create_dir_all(directory.path().join("lib/rfirma")).expect("debería crearse");
+    std::fs::create_dir_all(
+        Platform::CURRENT.native_library_directory(&directory.path().join("bin")),
+    )
+    .expect("debería crearse");
 
     let error = locate(&environment(&[]), &directory.path().join("bin"))
         .expect_err("un directorio no es la librería");
@@ -600,13 +614,17 @@ fn every_failure_of_the_border_says_what_actually_went_wrong() {
     let directory = tempfile::tempdir().expect("debería haber directorio temporal");
     let not_found = locate(&environment(&[]), &directory.path().join("bin"))
         .expect_err("sin librería no debería resolverse");
+    let next_to_executable = Platform::CURRENT
+        .native_library_directory(&directory.path().join("bin"))
+        .display()
+        .to_string();
 
     let messages = [
         (
             BridgeError::ExecutablePathUnknown("no such file".to_owned()),
             "ejecutable",
         ),
-        (BridgeError::from(not_found), "lib/rfirma"),
+        (BridgeError::from(not_found), next_to_executable.as_str()),
         (
             BridgeError::Load {
                 path: PathBuf::from("/app/lib/rfirma/librfirma_crypto.so"),

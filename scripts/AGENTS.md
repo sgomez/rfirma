@@ -15,6 +15,8 @@ Los arneses que las recetas del `justfile` llaman por nombre, siguiendo el patr�
 | `check-glibc.sh` | Comprueba el suelo de glibc de la librería nativa. |
 | `flatpak-sources.sh` | Regenera las fuentes vendorizadas del manifiesto flatpak. |
 | `check-native.sh` | Falla nombrando `just native` si la librería nativa no está construida. |
+| `bundle-windows.sh` | Construye el instalador NSIS de Windows con el runtime de Visual C++ al lado, para `just bundle-windows`. |
+| `pre-push-fmt.sh` | Comprueba el formato de una cadena para el `pre-push` de `lefthook.yml`, no una receta. |
 | `token-per-test.sh` | Envoltorio de nextest que da a cada proceso de prueba su propia copia del almacén de SoftHSM. Lo llama `.config/nextest.toml` de `rfirma-app/src-tauri`, no una receta. |
 | `ci-lanes.sh` | Dice, a partir de los ficheros de un PR, qué carriles del CI tienen que correr. Lo llama el job `scope` de `ci.yml`, no una receta. |
 | `clean-coverage.sh` | Borra el árbol instrumentado y los informes de cobertura sueltos. |

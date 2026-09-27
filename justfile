@@ -458,6 +458,11 @@ bundle quick="false": check-native build-ts
         echo "$formato: $PWD/$paquete ($(du -h "$paquete" | cut -f1))"
     done
 
+# Construye el instalador NSIS de Windows con el bundler de Tauri (ADR-0035).
+[group('ci')]
+bundle-windows: check-native build-ts
+    {{ root }}/scripts/bundle-windows.sh {{ root }}
+
 # Regenera cargo-sources.json y node-sources.json.
 [group('release')]
 flatpak-sources:

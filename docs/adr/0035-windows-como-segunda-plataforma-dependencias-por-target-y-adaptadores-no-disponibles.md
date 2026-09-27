@@ -162,8 +162,10 @@ NSS; gettext pasa a aviso porque solo lo usan `just po` y el carril del CI.
 
 `librfirma_crypto.so` en Linux y `rfirma_crypto.dll` en Windows. Rust compone el nombre con
 `DLL_PREFIX` y `DLL_SUFFIX` de `std` (`library_file`), sin `cfg`; el `justfile` hace lo mismo
-en `native_lib_name`. Se busca en los mismos sitios del ADR-0004: `RFIRMA_LIB_DIR` y
-`../lib/rfirma` junto al ejecutable.
+en `native_lib_name`. Se busca primero en `RFIRMA_LIB_DIR`, como en el ADR-0004, y después
+donde la deja el paquete de cada plataforma: `../lib/rfirma` en Linux y el directorio del
+propio ejecutable en Windows. Ese segundo sitio lo decide `Platform::native_library_directory`,
+en `paths.rs`, sin `cfg` en `ffi/location.rs`.
 
 `native-image` sigue construyendo con las banderas de `native-image.properties`, que no cambian,
 así que en Windows emite `librfirma_crypto.dll`: `just native` la instala renombrada. El nombre
@@ -173,7 +175,93 @@ exportados igual. Como en Linux, emite al lado los auxiliares de AWT (`awt.dll`,
 invariante de un solo fichero del ADR-0012 vale igual. La `.dll` solo importa bibliotecas del
 sistema y el runtime de Visual C++.
 
+## El instalador es NSIS, por usuario y sin privilegios
+
+`just bundle-windows` construye con el *bundler* de Tauri un instalador NSIS
+(`rfirma_<versión>_x64-setup.exe`) que instala para la persona que lo ejecuta, en
+`%LOCALAPPDATA%\rfirma`, sin pedir administrador. Es coherente con todo lo demás de Windows:
+la CA va a `CurrentUser\Root`, `afirma://` a `HKCU` y la firma al almacén del usuario, así que
+nada de rFirma necesita la máquina.
+
+La configuración de Windows vive en `packaging/windows/tauri.windows.json` y la receta se la pasa
+a `tauri build --config`. No es un `tauri.windows.conf.json` junto a `tauri.conf.json` porque
+`tauri-build` lo fusionaría en cualquier compilación de Windows, y sus recursos (la `.dll` y el
+runtime) tendrían que existir también para `cargo test` y `just dev`. `tauri.conf.json`, que es
+el de Linux, no cambia.
+
+- **La `.dll` va junto al ejecutable**: `%LOCALAPPDATA%\rfirma\rfirma.exe` y
+  `%LOCALAPPDATA%\rfirma\rfirma_crypto.dll`. Es el sitio donde Windows busca primero las
+  dependencias de un programa, y el instalador no tiene un `bin/` desde el que `../lib/rfirma`
+  tenga sentido. Ese directorio es el mismo que el de estado de rFirma
+  (`%LOCALAPPDATA%\rfirma`), sin choque de nombres: el estado son ficheros propios.
+- **El runtime de Visual C++ va al lado, copiado**: `native-image` enlaza la `.dll` contra
+  `VCRUNTIME140.dll` y `VCRUNTIME140_1.dll`, que Windows no garantiza. La receta los copia del
+  directorio `VC\Redist\MSVC\<versión>\x64\Microsoft.VC14x.CRT` de las Build Tools (la
+  instalación local que Microsoft permite redistribuir) y el instalador los deja junto a la
+  `.dll`. El UCRT (`api-ms-win-crt-*`) ya es parte de Windows 10. El ejecutable no los
+  necesita: `tauri build` enlaza estático el `vcruntime` de Rust.
+- **WebView2** llega con el *bootstrapper* que descarga Tauri si falta
+  (`downloadBootstrapper`); Windows 11 y los Windows 10 al día ya lo traen.
+- **`afirma://` se registra al instalar solo si nadie lo tiene**: si ni `HKCU` ni `HKLM` tienen
+  `afirma\shell\open\command`, el instalador escribe la rama del usuario con los mismos
+  valores que el adaptador del registro. Es lo que hace el `.desktop` en Linux, que declara
+  `x-scheme-handler/afirma` y gana solo si no hay otro. Si AutoFirma ya está, no se toca y la
+  elección se hace en el asistente, como hasta ahora.
+- **La CA local no se instala al instalar**: Windows pregunta antes de tocar `CurrentUser\Root`
+  y el ADR-0005 deja la instalación en manos de la persona, desde el asistente.
+- **Al desinstalar** (no en una actualización, que el *bundler* marca con `/UPDATE`) se borra
+  la rama `HKCU\Software\Classes\afirma` si apunta a ese ejecutable, y se retiran de
+  `CurrentUser\Root` los certificados «rFirma CA local» con `certutil -user -delstore`, que
+  pasa por el mismo diálogo de Windows. Una raíz de confianza sin la aplicación que la usa es
+  un resto que no se deja. También se borra `HKCU\Software\sgomez\rfirma`, donde el
+  *bundler* recuerda la carpeta de instalación. Si se marca «borrar los datos de la aplicación»,
+  se borran además `%APPDATA%\rfirma` y `%LOCALAPPDATA%\rfirma`.
+
+Los ganchos están en `packaging/windows/hooks.nsh` (`installerHooks`); la plantilla de Tauri no
+se sustituye.
+
+## El CI tiene un carril de Windows
+
+El job `windows` de `ci.yml` corre en `windows-latest` cuando corre el carril de Rust o el
+nativo: compila la `.dll` (cacheada con la misma clave que la de Linux y otro `runner.os`), pasa
+`vitest`, `rustfmt` y `clippy`, las pruebas de `--lib` y las del canal local (`channel_client`,
+`channel_operations`, `service_acknowledgement`) y, cuando se compila el binario de release,
+`just bundle-windows`, que sube el instalador como artefacto `rfirma-windows-nsis`. Las gradas B
+y C no corren: faltan softhsm, NSS y poppler.
+
+GraalVM queda fijada a la **25.0.2** en `ci.yml` y `build.yml`, que es a la que resolvía `'25'`.
+Las GraalVM CE 25 *innovation* (25.1 en adelante) publican etiquetas que `setup-graalvm` puede
+empezar a elegir, y la 25.4 muere en `native-image` con un error interno del compilador en
+`PdfTimestamper.initialize()`. En local, con una 25.4, se esquiva con
+`NATIVE_IMAGE_OPTIONS=--initialize-at-build-time=es.gob.afirma.signers.tsp.pkcs7.TsaParams`.
+
+## `lefthook` llama a scripts de una línea
+
+En Windows `lefthook` le pasa a `sh` solo la primera línea de un `run:` de varias. Cada trabajo
+del `pre-push` es ahora una línea que llama a `scripts/pre-push-fmt.sh rust|ts|python`, que
+hace lo mismo que hacían los bloques.
+
 ## Considered Options
+
+**MSI con WiX** en vez de NSIS: es el formato que prefieren las empresas para desplegar por
+directiva, pero el MSI de Tauri instala para la máquina y pide administrador, cuando nada de
+rFirma lo necesita. Si alguien lo pide, se puede añadir como segundo formato con la misma
+configuración.
+
+**Ejecutar `VC_redist.x64.exe` al instalar**: instala el runtime para todo el equipo y pide
+administrador. La copia local son dos ficheros, unos 170 KB, junto a la `.dll`.
+
+**Llevar `--initialize-at-build-time=...TsaParams` a `native-image.properties`**: arreglaría la
+25.4 también en local, pero cambia cuándo se inicializa una clase de AutoFirma en la imagen de
+Linux, que hoy funciona. Fijar la versión no toca la imagen.
+
+**Registrar siempre `afirma://` al instalar**: la rama del usuario gana a la de la máquina, así
+que taparía a AutoFirma sin preguntar.
+
+**Retirar la CA desde la propia aplicación al desinstalar** (`rfirma.exe --uninstall`): sabría
+exactamente qué certificado es, pero añade un modo de línea de órdenes solo para el
+desinstalador. `certutil` por el nombre común hace lo mismo con lo que trae Windows.
+
 
 **OpenSSL del sistema en Windows** (`OPENSSL_DIR`, vcpkg): deja el `Cargo.lock` intacto, pero
 obliga a cada equipo y al CI a instalarlo, y a distribuir sus DLL junto al binario. Se descartó
@@ -214,10 +302,13 @@ interfaz también en Linux. Se aplaza; mientras, el almacén del usuario se pres
   prueba que enlazan Tauri mueren al arrancar con `STATUS_ENTRYPOINT_NOT_FOUND`. En Windows,
   `build.rs` enlaza `windows-app-manifest.xml` en todo lo que se enlaza, y por eso está en
   `AUTHORISED_SITES`.
-- `just tools`, `just bootstrap`, `just native`, `just dev` y `just fmt` funcionan en Windows;
-  el resto de recetas (`check`, `flatpak`, `bundle`, `certs`…) sigue siendo de Linux.
-- En Windows la aplicación busca la `.dll` en `../lib/rfirma` junto al ejecutable, igual que en
-  Linux; dónde la deje un instalador de Windows se decide con el instalador.
+- `just tools`, `just bootstrap`, `just native`, `just dev`, `just fmt` y `just bundle-windows`
+  funcionan en Windows; el resto de recetas (`check`, `flatpak`, `bundle`, `certs`…) sigue siendo
+  de Linux.
+- En Windows la aplicación busca la `.dll` junto al ejecutable; en Linux, en `../lib/rfirma`.
+- El instalador no está firmado con Authenticode: SmartScreen avisa al abrirlo.
+- Un cambio solo en `packaging/windows/` no enciende el carril de Windows en un PR, porque
+  `ci-lanes.sh` no tiene un carril propio para él.
 - `cargo test` en Windows no corre las pruebas de grada B y C que necesitan softhsm o NSS.
 - Las pruebas de `identity/adapters/windows_store/tests.rs` crean certificados autofirmados en
   `Cert:\CurrentUser\My` con `New-SelfSignedCertificate` y los borran con su clave al acabar.

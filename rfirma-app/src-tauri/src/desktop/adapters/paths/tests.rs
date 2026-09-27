@@ -300,3 +300,17 @@ fn the_local_ca_lives_in_the_data_directory_and_the_server_certificate_nowhere()
         PathBuf::from("/tmp/raiz/data/rfirma/local-ca.key.pem")
     );
 }
+
+#[test]
+fn linux_looks_for_the_native_library_under_lib_next_to_bin() {
+    let directory = Platform::Linux.native_library_directory(Path::new("/usr/bin"));
+
+    assert_eq!(directory, Path::new("/usr/bin/../lib/rfirma"));
+}
+
+#[test]
+fn windows_looks_for_the_native_library_next_to_the_executable() {
+    let directory = Platform::Windows.native_library_directory(Path::new(r"C:\Programas\rfirma"));
+
+    assert_eq!(directory, Path::new(r"C:\Programas\rfirma"));
+}

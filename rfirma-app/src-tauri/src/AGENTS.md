@@ -69,9 +69,11 @@ dos cosas.
 
 ## La librería nativa en desarrollo
 
-`adapters/ffi.rs` de `signing/` la carga por una ruta relativa al ejecutable,
-`../lib/rfirma`, y es la misma en los tres canales (ADR-0004): **no añadas
-rutas ahí.** El nombre del fichero lo pone la plataforma con `DLL_PREFIX` y
+`adapters/ffi/location.rs` de `signing/` la busca por una ruta relativa al ejecutable,
+`../lib/rfirma`, y es la misma en los tres canales de Linux (ADR-0004); el
+instalador de Windows la deja junto al ejecutable, y esa diferencia vive en
+`Platform::native_library_directory` de `paths.rs` (ADR-0035): **no añadas
+rutas en `ffi/location.rs`.** El nombre del fichero lo pone la plataforma con `DLL_PREFIX` y
 `DLL_SUFFIX` de `std` (`library_file`): `librfirma_crypto.so` en Linux,
 `rfirma_crypto.dll` en Windows, sin ningún `cfg` (ADR-0035). `RFIRMA_LIB_DIR` la sobreescribe, y eso es lo que ahorra
 reconstruir la imagen desde un worktree: para la grada C,
