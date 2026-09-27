@@ -122,10 +122,10 @@ fn every_type_a_crossing_names_is_in_the_registry_and_every_lent_one_is_named() 
 fn a_type_declared_in_a_test_sibling_does_not_count_as_a_crossing() {
     assert!(all_crossings()
         .iter()
-        .any(|crossing| crossing.file.ends_with("/tests.rs")));
+        .any(|crossing| Path::new(crossing.file).ends_with("tests.rs")));
     assert!(registry()
         .iter()
-        .all(|crossing| !crossing.file.ends_with("/tests.rs")));
+        .all(|crossing| !Path::new(crossing.file).ends_with("tests.rs")));
 }
 
 #[test]

@@ -71,7 +71,9 @@ dos cosas.
 
 `adapters/ffi.rs` de `signing/` la carga por una ruta relativa al ejecutable,
 `../lib/rfirma`, y es la misma en los tres canales (ADR-0004): **no añadas
-rutas ahí.** `RFIRMA_LIB_DIR` la sobreescribe, y eso es lo que ahorra
+rutas ahí.** El nombre del fichero lo pone la plataforma con `DLL_PREFIX` y
+`DLL_SUFFIX` de `std` (`library_file`): `librfirma_crypto.so` en Linux,
+`rfirma_crypto.dll` en Windows, sin ningún `cfg` (ADR-0035). `RFIRMA_LIB_DIR` la sobreescribe, y eso es lo que ahorra
 reconstruir la imagen desde un worktree: para la grada C,
 `RFIRMA_LIB_DIR=<checkout principal>/rfirma-native-bridge/target/lib/rfirma`
 reutiliza el `.so` ya compilado allí, unos tres minutos menos que `just native`.

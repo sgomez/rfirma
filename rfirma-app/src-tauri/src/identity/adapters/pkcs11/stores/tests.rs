@@ -13,6 +13,7 @@ fn keeps_only_the_candidates_that_are_there() {
     );
 }
 
+#[cfg(unix)]
 #[test]
 fn a_store_under_the_installed_directory_is_its_own_class() {
     let home = tempfile::tempdir().expect("deberia poder crearse un directorio temporal");

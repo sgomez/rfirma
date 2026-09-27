@@ -33,7 +33,7 @@ path = "src/lib.rs"
 custom-protocol = ["tauri/custom-protocol"]
 
 [build-dependencies]
-# ADR-0013: build.rs se queda en tauri_build::build(). No invoca a Maven ni a
+# ADR-0013: build.rs se queda en tauri-build (y el manifiesto de Windows, ADR-0035). No invoca a Maven ni a
 # native-image jamás; de eso se encarga `just native`.
 tauri-build = { version = "2", features = [] }
 

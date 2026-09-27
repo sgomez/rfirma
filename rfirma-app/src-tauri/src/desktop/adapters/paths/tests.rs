@@ -184,6 +184,7 @@ fn the_test_root_keeps_configuration_and_state_apart() {
     assert_ne!(paths.config_file().parent(), paths.state_file().parent());
 }
 
+#[cfg(unix)]
 #[test]
 fn the_documents_folder_follows_the_xdg_variable_when_the_system_localises_it() {
     let documents = documents_folder_of(

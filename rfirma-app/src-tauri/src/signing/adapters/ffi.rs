@@ -1,5 +1,6 @@
-//! Frontera FFI con `librfirma_crypto.so` compilada con GraalVM Native Image (ADR-0003, ADR-0004).
+//! Frontera FFI con la librería nativa compilada con GraalVM Native Image (ADR-0003, ADR-0004).
 
+use std::env::consts::{DLL_PREFIX, DLL_SUFFIX};
 use std::ffi::{CStr, CString, OsString};
 use std::os::raw::{c_char, c_int, c_void};
 use std::path::{Path, PathBuf};
@@ -21,6 +22,11 @@ pub use responses::{
 
 const RELATIVE_LIBRARY_DIRECTORY: &str = "../lib/rfirma";
 
+/// Nombre del fichero de la librería nativa en esta plataforma (ADR-0004, ADR-0035).
+pub fn library_file() -> String {
+    format!("{DLL_PREFIX}rfirma_crypto{DLL_SUFFIX}")
+}
+
 /// Directorios candidatos donde buscar la librería nativa en orden de prioridad.
 pub fn candidates(
     environment: &dyn Fn(&str) -> Option<OsString>,
@@ -31,11 +37,13 @@ pub fn candidates(
         found.push(Candidate {
             directory: PathBuf::from(value),
             origin: Origin::Override,
+            file: library_file(),
         });
     }
     found.push(Candidate {
         directory: normalise(executable_directory.join(RELATIVE_LIBRARY_DIRECTORY)),
         origin: Origin::RelativeToExecutable,
+        file: library_file(),
     });
     found
 }

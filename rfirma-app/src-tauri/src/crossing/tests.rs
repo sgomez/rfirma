@@ -1,4 +1,5 @@
 use super::*;
+use std::path::Path;
 
 crossing! {
     /// Un tipo de pruebas.
@@ -126,7 +127,7 @@ fn the_registry_orders_own_types_by_file_and_line_and_lent_ones_by_name_after_th
         .map(|c| (c.file, c.line))
         .collect();
     assert!(own.windows(2).all(|pair| pair[0] <= pair[1]), "{own:?}");
-    assert!(SyntheticView::CROSSING.file.ends_with("crossing/tests.rs"));
+    assert!(Path::new(SyntheticView::CROSSING.file).ends_with("crossing/tests.rs"));
 }
 
 #[test]

@@ -1,7 +1,7 @@
 use super::responses::{only_pkcs1, parse_signed_document, pkcs1_list};
 use super::*;
 use crate::signing::domain::bridge::{
-    DataRejection, SealedPreSignature, SignatureVerdict, XadesVariant, LIBRARY_FILE,
+    DataRejection, SealedPreSignature, SignatureVerdict, XadesVariant,
 };
 use crate::signing::domain::SessionSeal;
 use std::alloc::{alloc, dealloc, Layout};
@@ -27,7 +27,7 @@ fn the_library_is_looked_for_next_to_the_executable() {
     assert_eq!(looked_at[0].origin(), Origin::RelativeToExecutable);
     assert!(looked_at[0]
         .library_path()
-        .ends_with("lib/rfirma/librfirma_crypto.so"));
+        .ends_with(Path::new("lib/rfirma").join(library_file())));
 }
 
 #[test]
@@ -41,7 +41,7 @@ fn the_environment_variable_is_looked_at_first() {
     assert_eq!(looked_at[0].origin(), Origin::Override);
     assert_eq!(
         looked_at[0].library_path(),
-        PathBuf::from("/otro/sitio/librfirma_crypto.so")
+        Path::new("/otro/sitio").join(library_file())
     );
     assert_eq!(looked_at[1].origin(), Origin::RelativeToExecutable);
 }
@@ -64,7 +64,7 @@ fn the_override_wins_when_both_directories_have_the_library() {
     let next_to_executable = directory.path().join("app/lib/rfirma");
     for place in [&overridden, &next_to_executable] {
         std::fs::create_dir_all(place).expect("debería crearse");
-        std::fs::write(place.join(LIBRARY_FILE), b"no es una libreria de verdad")
+        std::fs::write(place.join(library_file()), b"no es una libreria de verdad")
             .expect("debería escribirse");
     }
 
@@ -74,7 +74,7 @@ fn the_override_wins_when_both_directories_have_the_library() {
     )
     .expect("debería encontrarla");
 
-    assert_eq!(found, overridden.join(LIBRARY_FILE));
+    assert_eq!(found, overridden.join(library_file()));
 }
 
 #[test]

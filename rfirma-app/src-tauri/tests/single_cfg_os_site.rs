@@ -5,18 +5,22 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 /// Los ficheros autorizados, relativos a la raíz del repositorio.
-const AUTHORISED_SITES: [&str; 11] = [
+const AUTHORISED_SITES: [&str; 15] = [
+    "rfirma-app/src-tauri/build.rs",
     "rfirma-app/src-tauri/src/desktop/adapters/paths.rs",
     "rfirma-app/src-tauri/src/desktop/adapters/paths/tests.rs",
     "rfirma-app/src-tauri/src/desktop/adapters/channel.rs",
+    "rfirma-app/src-tauri/src/desktop/adapters/choice/tests.rs",
     "rfirma-app/src-tauri/src/desktop/adapters/firefox_lock.rs",
     "rfirma-app/src-tauri/src/desktop/application/invocation/tests.rs",
+    "rfirma-app/src-tauri/src/documents/domain/recents/tests.rs",
     "rfirma-app/src-tauri/src/identity/adapters/mod.rs",
     "rfirma-app/src-tauri/src/identity/adapters/pkcs11/stores/tests.rs",
     "rfirma-app/src-tauri/src/identity/domain/protected_secret.rs",
     "rfirma-app/src-tauri/src/signing/adapters/gtk_prompter.rs",
     "rfirma-app/src-tauri/src/site/adapters/scratch.rs",
     "rfirma-app/src-tauri/src/startup_dialog.rs",
+    "rfirma-app/src-tauri/tests/native_leak.rs",
 ];
 
 /// Fichero de esta prueba para no acusarse a sí misma.

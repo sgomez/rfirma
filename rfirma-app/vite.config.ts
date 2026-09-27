@@ -74,6 +74,8 @@ export default defineConfig({
   server: {
     port: 1420,
     strictPort: true,
+    // En Windows, vigilar el target/ de cargo tumba vite con EBUSY al enlazar (ADR-0035).
+    watch: { ignored: ["**/src-tauri/**"] },
   },
   build: {
     outDir: "dist",
