@@ -97,15 +97,15 @@ pub trait Token {
     }
 }
 
-/// La carpeta donde vive cada `.p12` instalado, con sus permisos (ADR-0011).
+/// La carpeta del Almacén de rFirma y el directorio desechable donde se prueba un `.p12`, con sus permisos (ADR-0011).
 pub trait InstalledFolder {
-    /// Crea la carpeta del almacén recién instalado.
+    /// Crea la carpeta indicada: el Almacén o el directorio de prueba.
     fn make(&self, directory: &Path) -> Result<(), String>;
 
     /// Deja la ruta legible solo por su dueño.
     fn restrict_to_owner(&self, path: &Path);
 
-    /// Borra la carpeta del almacén y todo lo que hubiera dentro.
+    /// Borra el directorio de prueba y todo lo que hubiera dentro.
     fn remove(&self, directory: &Path) -> Result<(), String>;
 
     /// Borra un fichero suelto si existe; no falla si ya no está.

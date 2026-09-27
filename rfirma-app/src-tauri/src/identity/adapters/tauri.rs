@@ -78,7 +78,6 @@ pub fn install_certificate_over(
 pub fn remove_certificate(id: String, identity: State<'_, IdentityRoot>) -> Result<(), Failure> {
     Ok(
         crate::identity::application::certificates::remove_installed(
-            identity.folder.as_ref(),
             identity.installed_certificates(),
             &id,
             &identity.listed,

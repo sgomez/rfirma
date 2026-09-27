@@ -56,7 +56,7 @@ impl Store {
         }
     }
 
-    /// El Almacén de rFirma o uno de sus almacenes por fichero heredados: se lista por contenido, sin PIN (ADR-0034).
+    /// El Almacén de rFirma: se lista por contenido, sin PIN (ADR-0034).
     pub fn installed_nss(softoken: impl Into<PathBuf>, directory: &Path) -> Self {
         Self {
             installed: true,
@@ -112,12 +112,10 @@ impl Store {
         Some(inside.strip_prefix("sql:").unwrap_or(inside))
     }
 
-    /// El Almacén de rFirma, o un almacén por fichero heredado, si este almacén está bajo `installed_dir` (ADR-0034).
+    /// El Almacén de rFirma, si este almacén es el que vive en `installed_dir` (ADR-0034).
     pub fn installed_directory_under(&self, installed_dir: &Path) -> Option<PathBuf> {
         let directory = PathBuf::from(self.profile()?);
-        let under_installed_dir =
-            directory == installed_dir || directory.parent() == Some(installed_dir);
-        (under_installed_dir && directory.join("cert9.db").is_file()).then_some(directory)
+        (directory == installed_dir && directory.join("cert9.db").is_file()).then_some(directory)
     }
 }
 
