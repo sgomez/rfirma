@@ -7,6 +7,8 @@
  * Rust y una segunda lectura en TypeScript sería otra verdad sobre lo mismo.
  */
 
+import type { TFunction } from "i18next";
+
 /**
  * En qué estado está el certificado, decidido **antes** de pedir el PIN.
  *
@@ -80,8 +82,10 @@ export interface Certificate {
    * el recuadro que se estampa en el PDF.
    */
   idNumber: string;
-  /** La entidad representada, si el certificado la lleva. */
+  /** El NIF de la entidad representada, si el certificado la lleva. */
   organizationIdentifier: string | null;
+  /** El nombre de la entidad representada, o nada si el certificado no es de representante. */
+  entityName: string | null;
   /** La autoridad emisora. */
   issuer: string;
   /** Número de serie del certificado. */
@@ -92,6 +96,8 @@ export interface Certificate {
    * puede elegir a ciegas.
    */
   store: CertificateStoreClass;
+  /** Todos los almacenes donde está esta misma copia, por orden de preferencia (#1093). */
+  stores: readonly CertificateStoreClass[];
   status: CertificateStatus;
   /**
    * Si es **el que se usó la última vez**, y por tanto el que viene ya puesto
@@ -129,6 +135,28 @@ export function firstNameAndSurname(certificate: Certificate): string {
   return `${givenName} ${firstSurname}`;
 }
 
+/** Primera línea de la fila: la entidad si es de representante, el titular si es personal (ID-05). */
+export function certificateHeadline(certificate: Certificate): string {
+  return certificate.entityName ?? certificate.holderName;
+}
+
+/** Segunda línea de la fila, completa (ID-05). */
+export function certificateSubtitle(certificate: Certificate, t: TFunction): string {
+  return certificate.entityName != null
+    ? t("panel.certificate.onBehalfOf", {
+        holder: certificate.holderName,
+        nif: certificate.organizationIdentifier ?? "",
+      })
+    : t("panel.certificate.personalCapacity", { idNumber: certificate.idNumber });
+}
+
+/** Versión corta de la segunda línea, para la caja cerrada (ID-05). */
+export function certificateCompactSubtitle(certificate: Certificate, t: TFunction): string {
+  return certificate.entityName != null
+    ? t("panel.certificate.onBehalfOfShort", { holder: certificate.holderName })
+    : certificateSubtitle(certificate, t);
+}
+
 /** Los certificados, ya separados en los dos grupos que enseña el desplegable. */
 export interface CertificateGroups {
   /** Los que se pueden usar para firmar, arriba. */
@@ -144,18 +172,19 @@ export interface CertificateGroups {
 /** Alfabético en castellano, con acentos y «ñ» donde toca. */
 const holderCollator = new Intl.Collator("es", { sensitivity: "base" });
 
-function byHolderThenStore(a: Certificate, b: Certificate): number {
+function byHeadlineThenStore(a: Certificate, b: Certificate): number {
   return (
-    holderCollator.compare(a.holderName, b.holderName) || holderCollator.compare(a.store, b.store)
+    holderCollator.compare(certificateHeadline(a), certificateHeadline(b)) ||
+    holderCollator.compare(a.store, b.store)
   );
 }
 
 /**
  * Agrupa y ordena los certificados para el desplegable: los usables arriba,
- * los que no lo son abajo, y dentro de cada grupo alfabético por titular,
- * desempatando por almacén (ID-197). Es una función pura y sin locale
- * implícito de sistema —el `Intl.Collator` fija «es»— para que el orden no
- * dependa de dónde corre la aplicación.
+ * los que no lo son abajo, y dentro de cada grupo alfabético por primera
+ * línea —ID-06—, desempatando por almacén (ID-197). Es una función pura y sin
+ * locale implícito de sistema —el `Intl.Collator` fija «es»— para que el
+ * orden no dependa de dónde corre la aplicación.
  */
 export function groupCertificates(certificates: readonly Certificate[]): CertificateGroups {
   const available: Certificate[] = [];
@@ -163,8 +192,8 @@ export function groupCertificates(certificates: readonly Certificate[]): Certifi
   for (const certificate of certificates) {
     (isUsable(certificate.status) ? available : unusable).push(certificate);
   }
-  available.sort(byHolderThenStore);
-  unusable.sort(byHolderThenStore);
+  available.sort(byHeadlineThenStore);
+  unusable.sort(byHeadlineThenStore);
   return { available, unusable };
 }
 
@@ -213,8 +242,8 @@ export function emptyCertificateStore(): CertificateStore {
  * Los que se instalaron en rFirma desde un `.p12`, que son los únicos que
  * Preferencias enseña y los únicos que se pueden quitar (ID-198).
  *
- * El orden es el mismo del desplegable —alfabético por titular— para que la
- * misma persona salga en el mismo sitio en las dos pantallas, y **los
+ * El orden es el mismo del desplegable —alfabético por primera línea— para
+ * que la misma persona salga en el mismo sitio en las dos pantallas, y **los
  * caducados no se caen**: que desaparezca no le explica nada a quien lo instaló.
  */
 export function installedCertificates(
@@ -222,5 +251,5 @@ export function installedCertificates(
 ): readonly Certificate[] {
   return certificates
     .filter((certificate) => certificate.store === "installed")
-    .sort(byHolderThenStore);
+    .sort(byHeadlineThenStore);
 }

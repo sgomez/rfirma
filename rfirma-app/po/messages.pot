@@ -697,6 +697,20 @@ msgstr ""
 msgid "panel.certificate.groups.unusable"
 msgstr ""
 
+#. Segunda línea de un certificado de representante. {{holder}} es el
+#. titular; {{nif}}, el NIF de la entidad representada.
+msgid "panel.certificate.onBehalfOf"
+msgstr ""
+
+#. Versión corta de la anterior, para la caja cerrada. {{holder}} es el titular.
+msgid "panel.certificate.onBehalfOfShort"
+msgstr ""
+
+#. Segunda línea —y su versión corta— de un certificado personal. {{idNumber}}
+#. es el DNI o NIE en claro.
+msgid "panel.certificate.personalCapacity"
+msgstr ""
+
 msgid "panel.certificate.stores.card"
 msgstr ""
 

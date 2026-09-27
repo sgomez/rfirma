@@ -66,7 +66,9 @@ msgid "errors.emptyStore.button"
 msgstr "Empty the store"
 
 msgid "errors.emptyStore.confirmQuestion"
-msgstr "Are you sure? The installed certificates will be lost, and this can't be undone."
+msgstr ""
+"Are you sure? The installed certificates will be lost, and this can't be "
+"undone."
 
 msgid "errors.emptyStore.confirmButton"
 msgstr "Yes, empty it"
@@ -246,8 +248,7 @@ msgstr "That certificate can't be removed on its own"
 msgid "errors.situations.removalNotSupported.body"
 msgstr ""
 "The rFirma Store is a single shared database: removing it would take the "
-"other installed certificates with it. There's no way yet to delete just "
-"one."
+"other installed certificates with it. There's no way yet to delete just one."
 
 msgid "errors.situations.certificateUnreadable.title"
 msgstr "We couldn't read the certificate"
@@ -401,18 +402,16 @@ msgstr "We couldn't reach the desktop keyring"
 
 msgid "errors.situations.noKeyring.body"
 msgstr ""
-"rFirma needs the keyring to store the certificate protected. Check that "
-"your desktop has one available, unlock it if it asks you to, and try "
-"again."
+"rFirma needs the keyring to store the certificate protected. Check that your "
+"desktop has one available, unlock it if it asks you to, and try again."
 
 msgid "errors.situations.keyringPinMissing.title"
 msgstr "The keyring lost the PIN for the rFirma Store"
 
 msgid "errors.situations.keyringPinMissing.body"
 msgstr ""
-"Without that PIN we can't open the store you already had. Go to "
-"Preferences → Certificates and empty it to install your certificates "
-"again from scratch."
+"Without that PIN we can't open the store you already had. Go to Preferences "
+"→ Certificates and empty it to install your certificates again from scratch."
 
 #. Se enseña en un diálogo nativo antes de que exista ventana; no la lee i18next.
 msgid "errors.startup.homeUnknown"
@@ -753,6 +752,20 @@ msgstr "Available"
 msgid "panel.certificate.groups.unusable"
 msgstr "Unusable"
 
+#. Segunda línea de un certificado de representante. {{holder}} es el
+#. titular; {{nif}}, el NIF de la entidad representada.
+msgid "panel.certificate.onBehalfOf"
+msgstr "{{holder}}, representative · {{nif}}"
+
+#. Versión corta de la anterior, para la caja cerrada. {{holder}} es el titular.
+msgid "panel.certificate.onBehalfOfShort"
+msgstr "{{holder}}, representative"
+
+#. Segunda línea —y su versión corta— de un certificado personal. {{idNumber}}
+#. es el DNI o NIE en claro.
+msgid "panel.certificate.personalCapacity"
+msgstr "On their own behalf · {{idNumber}}"
+
 msgid "panel.certificate.stores.card"
 msgstr "Card"
 
@@ -1032,7 +1045,8 @@ msgstr[2] "This document carries {{count}} signatures that aren't valid"
 
 #. La sede u organismo que reciba el documento puede rechazarlo.
 msgid "signAnyway.warning"
-msgstr "If you sign it, the office or body that receives the document may reject it."
+msgstr ""
+"If you sign it, the office or body that receives the document may reject it."
 
 msgid "signAnyway.confirm"
 msgstr "Sign anyway"
@@ -1330,12 +1344,14 @@ msgstr "Signs with"
 msgid "about.facts.sourceCode"
 msgstr "Source code"
 
+#. No se traduce: es el nombre de las licencias.
 msgid "about.licenses.rfirma"
 msgstr "EUPL-1.2"
 
 msgid "about.licenses.afirma"
 msgstr "Cliente @firma project libraries"
 
+#. No se traduce: es el nombre de las licencias.
 msgid "about.licenses.afirmaTerms"
 msgstr "GPL-2.0+ / EUPL-1.1"
 

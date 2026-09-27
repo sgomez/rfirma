@@ -1,6 +1,16 @@
 import { describe, expect, it } from "vitest";
+import { createI18n } from "../i18n/i18n";
 import type { Certificate } from "./certificate";
-import { firstNameAndSurname, groupCertificates, installedCertificates } from "./certificate";
+import {
+  certificateCompactSubtitle,
+  certificateHeadline,
+  certificateSubtitle,
+  firstNameAndSurname,
+  groupCertificates,
+  installedCertificates,
+} from "./certificate";
+
+const { t } = createI18n("es");
 
 function aCertificate(overrides: Partial<Certificate> = {}): Certificate {
   return {
@@ -12,9 +22,11 @@ function aCertificate(overrides: Partial<Certificate> = {}): Certificate {
     surname: "Lovelace Byron",
     idNumber: "99999999R",
     organizationIdentifier: null,
+    entityName: null,
     issuer: "AC FNMT Usuarios",
     certificateSerialNumber: "1234567890",
     store: "card",
+    stores: ["card"],
     status: { kind: "valid", notAfter: 1_894_752_000 },
     remembered: false,
     ...overrides,
@@ -37,6 +49,61 @@ describe("firstNameAndSurname", () => {
     });
 
     expect(firstNameAndSurname(sealCertificate)).toBe("LOVELACE BYRON ADA");
+  });
+});
+
+describe("certificateHeadline", () => {
+  it("puts the entity first for a representative certificate", () => {
+    const certificate = aCertificate({
+      entityName: "Acme S.L.",
+      holderName: "Ada Lovelace Byron",
+    });
+
+    expect(certificateHeadline(certificate)).toBe("Acme S.L.");
+  });
+
+  it("puts the holder first for a personal certificate", () => {
+    const certificate = aCertificate({ entityName: null, holderName: "Ada Lovelace Byron" });
+
+    expect(certificateHeadline(certificate)).toBe("Ada Lovelace Byron");
+  });
+});
+
+describe("certificateSubtitle", () => {
+  it("names the holder as representative, with the entity's NIF, for a representative certificate", () => {
+    const certificate = aCertificate({
+      entityName: "Acme S.L.",
+      holderName: "Ada Lovelace Byron",
+      organizationIdentifier: "A12345674",
+    });
+
+    expect(certificateSubtitle(certificate, t)).toBe(
+      "Ada Lovelace Byron, representante · A12345674",
+    );
+  });
+
+  it("says «a título personal» with the id number, for a personal certificate", () => {
+    const certificate = aCertificate({ entityName: null, idNumber: "99999999R" });
+
+    expect(certificateSubtitle(certificate, t)).toBe("A título personal · 99999999R");
+  });
+});
+
+describe("certificateCompactSubtitle", () => {
+  it("drops the entity's NIF for a representative certificate", () => {
+    const certificate = aCertificate({
+      entityName: "Acme S.L.",
+      holderName: "Ada Lovelace Byron",
+      organizationIdentifier: "A12345674",
+    });
+
+    expect(certificateCompactSubtitle(certificate, t)).toBe("Ada Lovelace Byron, representante");
+  });
+
+  it("is the same as the full subtitle for a personal certificate", () => {
+    const certificate = aCertificate({ entityName: null, idNumber: "99999999R" });
+
+    expect(certificateCompactSubtitle(certificate, t)).toBe(certificateSubtitle(certificate, t));
   });
 });
 
@@ -135,6 +202,21 @@ describe("groupCertificates", () => {
 
   it("returns two empty groups for an empty list", () => {
     expect(groupCertificates([])).toEqual({ available: [], unusable: [] });
+  });
+
+  /** ID-06: dentro de cada grupo, el orden es por primera línea —la entidad
+   * para un representante—, no por titular. */
+  it("sorts a representative certificate by its entity name, not its holder", () => {
+    const zutanoRepresentsAcme = aCertificate({
+      id: "a",
+      holderName: "Zutano García",
+      entityName: "Acme S.L.",
+    });
+    const bautistaPersonal = aCertificate({ id: "b", holderName: "Bautista Ruiz" });
+
+    const groups = groupCertificates([bautistaPersonal, zutanoRepresentsAcme]);
+
+    expect(groups.available.map((c) => c.id)).toEqual(["a", "b"]);
   });
 });
 
