@@ -6,8 +6,8 @@ use super::{
     remember_the_certificate, rows_of, usable_certificate,
 };
 use crate::identity::application::tests::{
-    a_certificate, a_certificate_with_id, a_representative_certificate, listed_from, NoToken,
-    TestAuthority,
+    a_certificate, a_certificate_with_id, a_certificate_with_id_number,
+    a_representative_certificate, listed_from, NoToken, TestAuthority,
 };
 use crate::identity::domain::algorithm::SignatureAlgorithm;
 use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
@@ -464,6 +464,22 @@ fn a_row_carries_the_signer_masked_as_the_visible_signature_stamps_it() {
         rows[0].stamped_signer,
         "EIDAS CERTIFICADO PRUEBAS - ***9999**"
     );
+}
+
+#[test]
+fn a_row_carries_the_id_number_masked_as_the_visible_signature_stamps_it() {
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let certificate =
+        a_certificate_with_id_number("FIRMA", "LOVELACE BYRON ADA", "IDCES-99999999R");
+
+    let rows = rows_of(
+        vec![certificate],
+        &home.path().join("certificates"),
+        &ListedCertificates::new(),
+        &a_memory(home.path()),
+    );
+
+    assert_eq!(rows[0].id_number, "IDCES-***9999**");
 }
 
 #[test]

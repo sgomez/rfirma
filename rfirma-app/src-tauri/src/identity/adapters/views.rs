@@ -93,6 +93,7 @@ crossing! {
         pub given_name: String,
         /// Primer apellido, vacío si el certificado no lo trae.
         pub surname: String,
+        /// El NIF del titular, ya enmascarado como lo estampa la firma visible.
         pub id_number: String,
         /// La entidad representada (`organizationIdentifier`), o nada si el certificado no la lleva.
         pub organization_identifier: Option<String>,

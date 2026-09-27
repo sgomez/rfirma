@@ -19,7 +19,7 @@ use crate::identity::ports::{
     PromptedError, SecretPromptRequest, SecretPrompter, Token,
 };
 use crate::memory_error::{MemoryError, Situation as StoreSituation};
-use crate::signing::domain::layer2_text::masked_signer;
+use crate::signing::domain::layer2_text::{mask_id_number, masked_signer};
 use crate::signing::domain::Language;
 
 /// Los certificados del último listado, cada uno tras su asa.
@@ -131,7 +131,7 @@ pub fn rows_of(
                 holder_name,
                 given_name,
                 surname,
-                id_number,
+                id_number: mask_id_number(&id_number),
                 organization_identifier: certificate.organization_identifier(),
                 issuer: common_name_of(certificate.issuer().as_deref()),
                 certificate_serial_number: certificate.serial_number().unwrap_or_default(),
