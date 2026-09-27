@@ -69,8 +69,8 @@ rojo.
 | **`documents/`** | Los documentos abiertos y los recientes. |
 | `documents/document.ts` | El vocabulario del documento: el que se tiene delante y su insignia. No es la fila. |
 | `documents/useDocuments.ts` | El estado de las pestañas abiertas, la activa y los recientes. |
-| `documents/DocumentTabs.tsx` | La tira de pestañas bajo la cabecera, con su menú «+». |
-| `documents/RecentRows.tsx` | Las filas de los recientes, que comparten el menú «+» y el estado vacío del visor. |
+| `documents/DocumentTabs.tsx` | La tira de pestañas bajo la cabecera, con el botón partido de abrir. |
+| `documents/RecentRows.tsx` | Las filas de los recientes, que comparten el menú de abiertos recientemente y el estado vacío del visor. |
 | `documents/recents.ts` | Los diez recientes —**la fila que se guarda**— y su puerto. |
 | `documents/picker.ts` | Por dónde entra un documento. |
 | `documents/drops.ts` | Qué ocurre al soltar ficheros encima, y el documento con el que se invocó a la aplicación desde fuera. |

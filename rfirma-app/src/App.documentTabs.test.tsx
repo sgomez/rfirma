@@ -12,12 +12,12 @@ function panelShows(name: string) {
   return screen.queryByRole("tab", { name, selected: true }) !== null;
 }
 
-async function openPlusMenu(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(screen.getByRole("button", { name: "Abrir un PDF" }));
+async function openRecentlyOpenedMenu(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(await screen.findByRole("button", { name: "Abiertos recientemente" }));
   return screen.getByRole("menu");
 }
 
-// Grada A: la tira de pestañas y el menú «+», sobre la aplicación entera.
+// Grada A: la tira de pestañas y el botón partido de abrir, sobre la aplicación entera.
 describe("App, con varios documentos abiertos", () => {
   it("keeps several documents open and changes document when the tab changes", async () => {
     const user = userEvent.setup();
@@ -101,8 +101,26 @@ describe("App, con varios documentos abiertos", () => {
   });
 });
 
-describe("App, el menú «+»", () => {
-  it("offers opening a PDF and lists the recents with their date and their check", async () => {
+describe("App, la flecha de «Abiertos recientemente»", () => {
+  it("offers opening a PDF directly, without a menu", async () => {
+    const user = userEvent.setup();
+    renderApp();
+
+    await user.click(screen.getByRole("button", { name: "Abrir PDF…" }));
+
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+  });
+
+  it("has no arrow when there are no recents", async () => {
+    renderApp();
+
+    await screen.findByRole("button", { name: "Abrir PDF…" });
+    expect(
+      screen.queryByRole("button", { name: "Abiertos recientemente" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("lists the recents with their date and their check", async () => {
     const user = userEvent.setup();
     renderApp(
       inMemoryRecents([
@@ -110,12 +128,11 @@ describe("App, el menú «+»", () => {
         row("ayer.pdf", { lastUsed: now() - DAY, badge: "Signed" }),
       ]),
     );
-    await screen.findByRole("region", { name: "Recientes" });
+    await screen.findByRole("region", { name: "Abiertos recientemente" });
 
-    const menu = await openPlusMenu(user);
+    const menu = await openRecentlyOpenedMenu(user);
 
-    expect(within(menu).getByRole("menuitem", { name: "Abrir un PDF…" })).toBeInTheDocument();
-    expect(within(menu).getByText("Recientes")).toBeInTheDocument();
+    expect(within(menu).getByText("Abiertos recientemente")).toBeInTheDocument();
     expect(within(menu).getByRole("menuitem", { name: /^hoy\.pdf/ })).toHaveTextContent("hoy");
     const signed = within(menu).getByRole("menuitem", { name: /^ayer\.pdf/ });
     expect(signed).toHaveTextContent("ayer");
@@ -126,9 +143,9 @@ describe("App, el menú «+»", () => {
   it("opens a recent in a new tab", async () => {
     const user = userEvent.setup();
     renderApp(inMemoryRecents([row("a.pdf")]), [], pdfsOf({ "a.pdf": 3 }));
-    await screen.findByRole("region", { name: "Recientes" });
+    await screen.findByRole("region", { name: "Abiertos recientemente" });
 
-    const menu = await openPlusMenu(user);
+    const menu = await openRecentlyOpenedMenu(user);
     await user.click(within(menu).getByRole("menuitem", { name: /^a\.pdf/ }));
 
     expect(await screen.findByRole("tab", { name: "a.pdf", selected: true })).toBeInTheDocument();
@@ -146,7 +163,7 @@ describe("App, el menú «+»", () => {
     await openPdf(user);
     await screen.findByRole("tab", { name: "segundo.pdf", selected: true });
 
-    const menu = await openPlusMenu(user);
+    const menu = await openRecentlyOpenedMenu(user);
     const open = within(menu).getByRole("menuitem", { name: /^primero\.pdf/ });
     expect(open).toHaveTextContent("Abierto");
     expect(open).toHaveAttribute("title", "Ir a su pestaña");
@@ -159,9 +176,9 @@ describe("App, el menú «+»", () => {
   it("shows the folder under the name when it is known, and as its title", async () => {
     const user = userEvent.setup();
     renderApp(inMemoryRecents([row("hoy.pdf", { folder: "Documentos" })]));
-    await screen.findByRole("region", { name: "Recientes" });
+    await screen.findByRole("region", { name: "Abiertos recientemente" });
 
-    const menu = await openPlusMenu(user);
+    const menu = await openRecentlyOpenedMenu(user);
 
     const item = within(menu).getByRole("menuitem", { name: /^hoy\.pdf/ });
     expect(item).toHaveTextContent("Documentos");
@@ -171,9 +188,9 @@ describe("App, el menú «+»", () => {
   it("shows only the name and no title when the folder is unknown, under the portal", async () => {
     const user = userEvent.setup();
     renderApp(inMemoryRecents([row("hoy.pdf", { folder: null, lastUsed: now() })]));
-    await screen.findByRole("region", { name: "Recientes" });
+    await screen.findByRole("region", { name: "Abiertos recientemente" });
 
-    const menu = await openPlusMenu(user);
+    const menu = await openRecentlyOpenedMenu(user);
 
     // El nombre accesible junta las dos líneas de la fila: si fuera exactamente
     // "hoy.pdf" + «hoy» (la fecha de hoy), no hay ninguna carpeta entre medias.
@@ -184,9 +201,9 @@ describe("App, el menú «+»", () => {
   it("dims a recent that is no longer where it was, and does not open it", async () => {
     const user = userEvent.setup();
     renderApp(inMemoryRecents([row("usb.pdf", { available: false })]));
-    await screen.findByRole("region", { name: "Recientes" });
+    await screen.findByRole("region", { name: "Abiertos recientemente" });
 
-    const menu = await openPlusMenu(user);
+    const menu = await openRecentlyOpenedMenu(user);
 
     const missing = within(menu).getByRole("menuitem", { name: /^usb\.pdf/ });
     expect(missing).toBeDisabled();
@@ -197,35 +214,36 @@ describe("App, el menú «+»", () => {
   it("says No se encuentra instead of the folder, even when the folder is known", async () => {
     const user = userEvent.setup();
     renderApp(inMemoryRecents([row("usb.pdf", { available: false, folder: "Documentos" })]));
-    await screen.findByRole("region", { name: "Recientes" });
+    await screen.findByRole("region", { name: "Abiertos recientemente" });
 
-    const menu = await openPlusMenu(user);
+    const menu = await openRecentlyOpenedMenu(user);
 
     const missing = within(menu).getByRole("menuitem", { name: /^usb\.pdf/ });
     expect(missing).toHaveTextContent("No se encuentra");
     expect(missing).not.toHaveTextContent("Documentos");
   });
 
-  it("empties the recents from Vaciar la lista, and leaves only Abrir un PDF…", async () => {
+  it("empties the recents from Vaciar la lista, and hides the arrow when none are left", async () => {
     const user = userEvent.setup();
     const recents = inMemoryRecents([row("a.pdf")]);
     renderApp(recents);
-    await screen.findByRole("region", { name: "Recientes" });
+    await screen.findByRole("region", { name: "Abiertos recientemente" });
 
     await user.click(
-      within(await openPlusMenu(user)).getByRole("menuitem", { name: "Vaciar la lista" }),
+      within(await openRecentlyOpenedMenu(user)).getByRole("menuitem", { name: "Vaciar la lista" }),
     );
 
     await waitFor(() => expect(screen.queryByText("a.pdf")).not.toBeInTheDocument());
     await expect(recents.list()).resolves.toEqual([]);
-    const menu = await openPlusMenu(user);
-    expect(within(menu).getAllByRole("menuitem")).toHaveLength(1);
+    expect(
+      screen.queryByRole("button", { name: "Abiertos recientemente" }),
+    ).not.toBeInTheDocument();
   });
 
   it("closes with Escape", async () => {
     const user = userEvent.setup();
-    renderApp();
-    await openPlusMenu(user);
+    renderApp(inMemoryRecents([row("a.pdf")]));
+    await openRecentlyOpenedMenu(user);
 
     await user.keyboard("{Escape}");
 
@@ -241,7 +259,7 @@ describe("App, sin documentos abiertos", () => {
     expect(
       within(viewer).getByRole("button", { name: /Arrastra un PDF o pulsa para abrirlo/ }),
     ).toBeInTheDocument();
-    const recents = await within(viewer).findByRole("region", { name: "Recientes" });
+    const recents = await within(viewer).findByRole("region", { name: "Abiertos recientemente" });
     expect(within(recents).getByRole("button", { name: /^a\.pdf/ })).toHaveTextContent("hoy");
     expect(within(recents).getByRole("button", { name: "Vaciar la lista" })).toBeInTheDocument();
   });
@@ -249,18 +267,22 @@ describe("App, sin documentos abiertos", () => {
   it("opens a recent from the empty viewer in a tab", async () => {
     const user = userEvent.setup();
     renderApp(inMemoryRecents([row("a.pdf")]), [], pdfsOf({ "a.pdf": 3 }));
-    const recents = await screen.findByRole("region", { name: "Recientes" });
+    const recents = await screen.findByRole("region", { name: "Abiertos recientemente" });
 
     await user.click(within(recents).getByRole("button", { name: /^a\.pdf/ }));
 
     expect(await screen.findByRole("tab", { name: "a.pdf", selected: true })).toBeInTheDocument();
-    expect(screen.queryByRole("region", { name: "Recientes" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("region", { name: "Abiertos recientemente" }),
+    ).not.toBeInTheDocument();
   });
 
   it("shows only the drop zone when there is nothing recent", async () => {
     renderApp();
 
     await screen.findByRole("button", { name: /Arrastra un PDF o pulsa para abrirlo/ });
-    expect(screen.queryByRole("region", { name: "Recientes" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("region", { name: "Abiertos recientemente" }),
+    ).not.toBeInTheDocument();
   });
 });

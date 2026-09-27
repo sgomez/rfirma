@@ -72,7 +72,7 @@ interface DocumentViewerProps {
    * dispara la acción es la identidad y no el valor.
    */
   placementRequest?: { action: "seal" | "unseal" } | null;
-  /** Abrir un documento, que va por el portal igual que desde el menú «+». */
+  /** Abrir un documento, que va por el portal igual que desde el botón partido de abrir. */
   onOpen: () => void;
   /** Lo que va debajo de la zona de soltar en el estado vacío: los recientes. */
   emptyExtra?: ReactNode;

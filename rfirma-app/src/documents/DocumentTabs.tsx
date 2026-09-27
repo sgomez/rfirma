@@ -9,12 +9,12 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 import {
+  ChevronDownIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   CloseIcon,
   FileIcon,
   FolderIcon,
-  PlusIcon,
   SignedMarkIcon,
 } from "../design-system/icons";
 import type { DocumentInHand } from "./document";
@@ -27,6 +27,7 @@ const NARROW_TAB_WIDTH = 160;
 const GAP = 2;
 const MENU_WIDTH = 340;
 const SLOT_WIDTH = 34;
+const SPLIT_BUTTON_WIDTH = 160;
 const STRIP_PADDING = 16;
 
 interface DocumentTabsProps {
@@ -43,7 +44,7 @@ interface DocumentTabsProps {
   signingLocked?: boolean;
 }
 
-/** Las pestañas de los documentos abiertos, con su menú «+», dentro de la cabecera. */
+/** Las pestañas de los documentos abiertos, con el botón partido de abrir, dentro de la cabecera. */
 export function DocumentTabs({
   tabs,
   activeId,
@@ -82,6 +83,13 @@ export function DocumentTabs({
 
   return (
     <nav className="document-tabs" aria-label={t("tabs.label")} ref={strip}>
+      <SplitOpenButton
+        recents={recents}
+        openIds={new Set(tabs.map((tab) => tab.id))}
+        onOpen={onOpen}
+        onSelectRecent={onSelectRecent}
+        onClearRecents={onClearRecents}
+      />
       {overflows && (
         <button
           type="button"
@@ -151,13 +159,6 @@ export function DocumentTabs({
           </span>
         </button>
       )}
-      <OpenMenu
-        recents={recents}
-        openIds={new Set(tabs.map((tab) => tab.id))}
-        onOpen={onOpen}
-        onSelectRecent={onSelectRecent}
-        onClearRecents={onClearRecents}
-      />
     </nav>
   );
 }
@@ -170,12 +171,20 @@ interface OpenMenuProps {
   onClearRecents: () => void;
 }
 
-function OpenMenu({ recents, openIds, onOpen, onSelectRecent, onClearRecents }: OpenMenuProps) {
+/** El botón partido de abrir: «Abrir PDF…» y la flecha de «Abiertos recientemente». */
+function SplitOpenButton({
+  recents,
+  openIds,
+  onOpen,
+  onSelectRecent,
+  onClearRecents,
+}: OpenMenuProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [alignRight, setAlignRight] = useState(false);
   const container = useRef<HTMLDivElement>(null);
   const menuId = useId();
+  const hasRecents = recents.length > 0;
   const close = useCallback(() => setOpen(false), []);
 
   useLayoutEffect(() => {
@@ -209,39 +218,41 @@ function OpenMenu({ recents, openIds, onOpen, onSelectRecent, onClearRecents }: 
   };
 
   return (
-    <div className="document-tabs__plus" ref={container}>
+    <div className="document-tabs__split" ref={container}>
       <button
         type="button"
-        className="document-tabs__slot"
-        title={t("tabs.open")}
-        aria-label={t("tabs.open")}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        aria-controls={open ? menuId : undefined}
-        onClick={() => setOpen((was) => !was)}
+        className="document-tabs__split-open"
+        title={t("tabs.openPdfShortcut")}
+        onClick={onOpen}
       >
-        <span className="document-tabs__slot-button">
-          <PlusIcon />
-        </span>
+        <FolderIcon size={15} />
+        {t("tabs.openPdf")}
       </button>
-      {open && (
-        <div
-          id={menuId}
-          role="menu"
-          className={alignRight ? "open-menu open-menu--right" : "open-menu"}
-        >
+      {hasRecents && (
+        <>
+          <span className="document-tabs__split-divider" aria-hidden="true" />
           <button
             type="button"
-            role="menuitem"
-            className="open-menu__open"
-            onClick={() => choose(onOpen)}
+            className={
+              open
+                ? "document-tabs__split-arrow document-tabs__split-arrow--open"
+                : "document-tabs__split-arrow"
+            }
+            title={t("tabs.recentlyOpened")}
+            aria-label={t("tabs.recentlyOpened")}
+            aria-haspopup="menu"
+            aria-expanded={open}
+            aria-controls={open ? menuId : undefined}
+            onClick={() => setOpen((was) => !was)}
           >
-            <FolderIcon size={16} />
-            {t("tabs.openPdf")}
+            <ChevronDownIcon size={14} strokeWidth={2} />
           </button>
-          {recents.length > 0 && (
-            <>
-              <hr className="rf-divider open-menu__divider" />
+          {open && (
+            <div
+              id={menuId}
+              role="menu"
+              className={alignRight ? "open-menu open-menu--right" : "open-menu"}
+            >
               <span className="rf-label open-menu__heading">{t("recents.heading")}</span>
               <RecentRows
                 recents={recents}
@@ -258,9 +269,9 @@ function OpenMenu({ recents, openIds, onOpen, onSelectRecent, onClearRecents }: 
               >
                 {t("recents.clear")}
               </button>
-            </>
+            </div>
           )}
-        </div>
+        </>
       )}
     </div>
   );
@@ -272,7 +283,7 @@ function useAvailableWidth(strip: RefObject<HTMLElement | null>): number | null 
     const element = strip.current;
     if (!element || typeof ResizeObserver === "undefined") return;
     const measure = () => {
-      const inner = element.clientWidth - STRIP_PADDING - 3 * SLOT_WIDTH;
+      const inner = element.clientWidth - STRIP_PADDING - 2 * SLOT_WIDTH - SPLIT_BUTTON_WIDTH;
       setWidth(inner > 0 ? inner : null);
     };
     measure();

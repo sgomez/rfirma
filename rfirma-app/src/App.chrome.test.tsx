@@ -300,7 +300,9 @@ describe("App", () => {
     await user.click(screen.getByRole("button", { name: "Cerrar" }));
 
     await waitFor(() => expect(screen.queryByText("a.pdf")).not.toBeInTheDocument());
-    expect(screen.queryByRole("region", { name: "Recientes" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("region", { name: "Abiertos recientemente" }),
+    ).not.toBeInTheDocument();
   });
 
   /**
@@ -373,9 +375,9 @@ describe("App", () => {
 
     await openPdf(user);
     await screen.findByRole("tab", { name: /factura\.pdf/ });
-    await user.click(screen.getByRole("button", { name: "Abrir un PDF" }));
 
-    expect(screen.getByRole("menuitem", { name: "Abrir un PDF…" })).toBeInTheDocument();
-    expect(screen.queryByText("Recientes")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Abiertos recientemente" }),
+    ).not.toBeInTheDocument();
   });
 });
