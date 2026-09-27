@@ -37,6 +37,24 @@ describe("App, con varios documentos abiertos", () => {
     expect(screen.getByRole("tab", { name: "segundo.pdf", selected: false })).toBeInTheDocument();
   });
 
+  it("underlines only the active tab, and leaves the rest muted", async () => {
+    const user = userEvent.setup();
+    renderApp(
+      inMemoryRecents(),
+      [document("primero.pdf"), document("segundo.pdf")],
+      pdfsOf({ "primero.pdf": 2, "segundo.pdf": 5 }),
+    );
+    await openPdf(user);
+    await openPdf(user);
+    await screen.findByRole("tab", { name: "segundo.pdf", selected: true });
+
+    const active = screen.getByRole("tab", { name: "segundo.pdf" }).closest(".document-tab");
+    const muted = screen.getByRole("tab", { name: "primero.pdf" }).closest(".document-tab");
+
+    expect(active).toHaveClass("document-tab--active");
+    expect(muted).not.toHaveClass("document-tab--active");
+  });
+
   it("names each tab after its file, whole in its tooltip, with a check when it is signed", async () => {
     const user = userEvent.setup();
     const long = `contrato-de-arrendamiento-${"largo-".repeat(8)}.pdf`;

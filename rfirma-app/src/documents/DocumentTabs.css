@@ -5,19 +5,20 @@
   z-index: 10;
   display: flex;
   flex: 1;
-  align-items: flex-end;
+  align-items: center;
   gap: 2px;
   min-width: 0;
+  height: 100%;
   padding: 0 var(--rf-space-xs);
 }
 
 .document-tabs__list {
   display: flex;
   flex: 0 1 auto;
+  align-self: stretch;
   align-items: stretch;
   gap: 2px;
   min-width: 0;
-  height: 33px;
   margin-bottom: -1px;
   overflow: hidden;
 }
@@ -28,10 +29,8 @@
   align-items: center;
   justify-content: center;
   height: 33px;
-  margin-bottom: -1px;
   padding: 0 2px;
   border: 1px solid transparent;
-  border-bottom: 0;
   background: none;
   font-family: inherit;
   color: var(--rf-text);
@@ -55,7 +54,6 @@
   position: relative;
   display: flex;
   flex: none;
-  align-self: flex-end;
 }
 
 .document-tab {
@@ -64,24 +62,22 @@
   align-items: center;
   gap: 8px;
   height: 100%;
-  padding: 0 6px 0 12px;
-  border: 1px solid transparent;
-  border-bottom: 0;
-  border-radius: var(--rf-radius-md) var(--rf-radius-md) 0 0;
+  padding: 0 4px 0 10px;
+  margin-bottom: -1px;
+  border: 0;
+  border-bottom: 2px solid transparent;
   font-size: 13px;
   color: var(--rf-text-muted);
   cursor: pointer;
 }
 
 .document-tab:hover {
-  background: var(--rf-border-subtle);
   color: var(--rf-text);
 }
 
 .document-tab--active,
 .document-tab--active:hover {
-  background: var(--rf-bg);
-  border-color: var(--rf-border-subtle);
+  border-bottom-color: var(--rf-text);
   color: var(--rf-text);
   font-weight: 600;
   cursor: default;

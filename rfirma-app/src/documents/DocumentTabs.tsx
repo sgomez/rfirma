@@ -22,8 +22,8 @@ import "./DocumentTabs.css";
 import { RecentRows } from "./RecentRows";
 import type { RecentDocument } from "./recents";
 
-const TAB_WIDTH = 240;
-const NARROW_TAB_WIDTH = 168;
+const TAB_WIDTH = 200;
+const NARROW_TAB_WIDTH = 160;
 const GAP = 2;
 const MENU_WIDTH = 340;
 const SLOT_WIDTH = 34;
