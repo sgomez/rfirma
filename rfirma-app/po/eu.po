@@ -785,6 +785,11 @@ msgstr "{{holder}}, ordezkari"
 msgid "panel.certificate.personalCapacity"
 msgstr "Norberaren izenean · {{idNumber}}"
 
+#. La palabra por la que el buscador del selector encuentra un certificado
+#. personal (sin entidad). No se muestra en pantalla, solo se compara.
+msgid "panel.certificate.personalKeyword"
+msgstr "pertsonal"
+
 msgid "panel.certificate.stores.card"
 msgstr "Txartela"
 
