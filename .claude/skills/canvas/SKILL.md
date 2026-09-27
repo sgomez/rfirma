@@ -112,8 +112,10 @@ Iterar sobre lo dibujado, con el usuario delante:
    proyecto se queda también en `docs/design/artboards/`, 1-1, porque de ahí
    sale la transcripción a JSX «fiel 1-1» y porque el repositorio es público.
    Lo que dibujas tú va **repo → proyecto**; lo que el usuario retoca a mano
-   en Claude Design se trae con `/canvas-pull`, y el `<helmet>` sale siempre
-   de `_helmet.part`.
+   en Claude Design se trae con `/canvas-pull`, y el `<helmet>` y los demás
+   `_*.part` salen siempre de su fichero, con `estampa.sh`. Si el usuario
+   retoca en el proyecto un bloque entre marcadores, el cambio va al `.part`
+   y se estampa en todos.
 
 ## Lo que falta por definir
 

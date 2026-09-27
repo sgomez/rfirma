@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-# Comprueba que todos los artboards llevan EL MISMO <helmet> que `_helmet.part`.
+# Comprueba que todos los artboards llevan EL MISMO <helmet> que `_helmet.part`,
+# y que los que pintan la ventana principal de fondo llevan, entre sus
+# marcadores, exactamente los demas `_*.part`. Los estampa `estampa.sh`.
 #
 # Antes esto solo comparaba los artboards entre si, y eso deja pasar el fallo
 # que de verdad ocurre: redactar un artboard nuevo copiando el <helmet> de un
@@ -31,4 +33,27 @@ if [ ${#malos[@]} -ne 0 ]; then
     printf '  %s\n' "${malos[@]}" >&2
     exit 1
 fi
-echo "OK: $(ls -1 *.dc.html | wc -l) artboards con el <helmet> de _helmet.part"
+
+con_fondo_de_main=(Main EstadoPin EstadoPinIncorrecto EstadoAcercaDe EstadoFirmarDeTodosModos EstadoPaginasSinFirmaVisible)
+
+for part in _*.part; do
+    [ "$part" = _helmet.part ] && continue
+    patron=$(sha256sum "$part" | cut -d' ' -f1)
+    malos=()
+    for f in *.dc.html; do
+        abre=$(grep -cF "<!-- $part -->" "$f" || true)
+        obligado=no
+        for a in "${con_fondo_de_main[@]}"; do [ "$f" = "$a.dc.html" ] && obligado=si; done
+        [ "$abre" = 0 ] && [ "$obligado" = no ] && continue
+        cierra=$(grep -cF "<!-- /$part -->" "$f" || true)
+        suyo=$(awk -v a="<!-- $part -->" -v c="<!-- /$part -->" \
+            'index($0, c) { dentro = 0 } dentro { print } index($0, a) { dentro = 1 }' "$f" | sha256sum | cut -d' ' -f1)
+        { [ "$abre" = 1 ] && [ "$cierra" = 1 ] && [ "$suyo" = "$patron" ]; } || malos+=("$f")
+    done
+    if [ ${#malos[@]} -ne 0 ]; then
+        echo "ERROR: estos artboards no llevan $part tal cual (./estampa.sh lo copia):" >&2
+        printf '  %s\n' "${malos[@]}" >&2
+        exit 1
+    fi
+done
+echo "OK: $(ls -1 *.dc.html | wc -l) artboards con el <helmet> de _helmet.part; ${#con_fondo_de_main[@]} con el fondo de Main"

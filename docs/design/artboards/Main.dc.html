@@ -325,6 +325,7 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
     <div class="rf-stack" style="flex:1;min-height:0;overflow-y:{{ desbordePanel }};padding:14px 24px 12px;gap:12px">
       <sc-if value="{{ haySelector }}" hint-placeholder-val="{{ true }}">
       <div class="rf-stack" style="flex:none;gap:6px;position:relative;z-index:7;{{ estiloControles }}">
+        <!-- _selector-cerrado.part -->
         <span class="rf-label">Certificado</span>
         <sc-if value="{{ selCerrado }}" hint-placeholder-val="{{ true }}">
           <div role="button" tabindex="0" style="display:flex;align-items:center;gap:10px;min-height:52px;padding:6px 12px;border:1px solid var(--rf-border-strong);border-radius:var(--rf-radius-md);background:var(--rf-bg);cursor:pointer">
@@ -343,6 +344,7 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
             </sc-if>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none;color:var(--rf-text-muted)"><path d="M6 9l6 6 6-6"></path></svg>
           </div>
+        <!-- /_selector-cerrado.part -->
         </sc-if>
         <sc-if value="{{ eligiendoCert }}" hint-placeholder-val="{{ false }}">
           <div class="rf-row" style="gap:8px;min-height:52px;padding:0 12px;border:2px solid var(--rf-primary);border-radius:var(--rf-radius-md);background:var(--rf-bg)">
@@ -592,11 +594,13 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
         </div>
         </sc-if>
       </div>
+      <!-- _boton-firmar.part -->
       <sc-if value="{{ hayFirmar }}" hint-placeholder-val="{{ true }}">
         <div class="rf-row" style="height:44px;opacity:{{ opacidadFirmar }}">
           <button type="button" class="rf-btn rf-btn--primary" title="{{ tituloFirmar }}" style="flex:1;min-width:0">{{ textoFirmar }}</button>
         </div>
       </sc-if>
+      <!-- /_boton-firmar.part -->
       <sc-if value="{{ firmado }}" hint-placeholder-val="{{ false }}">
         <div class="rf-row" style="height:44px;gap:8px">
           <button type="button" class="rf-btn rf-btn--primary" style="flex:1;min-width:0">Abrir el PDF</button>

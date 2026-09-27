@@ -100,6 +100,20 @@ Claude Design, cuya copia se queda atrás—, y `comprueba.sh` lo verifica contr
 ese fichero. Compararlos solo entre sí no valía: trece ficheros de acuerdo
 entre ellos dan verde con el sistema de diseño equivocado entero.
 
+**El fondo de `Main` se comparte igual.** El selector «Certificado» cerrado y la
+fila del «Firmar» del pie viven en `_selector-cerrado.part` y
+`_boton-firmar.part`, y los seis artboards que pintan la ventana principal
+—`Main` y los cinco diálogos que se dibujan encima— los llevan entre
+`<!-- _X.part -->` y `<!-- /_X.part -->`. Se cambian en el `.part` y
+`./estampa.sh` los copia a todos (también el `<helmet>`) y pasa `comprueba.sh`,
+que falla si alguno de los seis no lleva el fragmento tal cual. El fragmento
+solo lleva enlaces (`{{ selL1 }}`, `{{ textoFirmar }}`…): lo que cambia con las
+palancas lo calcula cada artboard, y el envoltorio del selector (`haySelector`,
+`estiloControles`) se queda fuera porque en `Main` rodea también al buscador.
+Claude Design no ofrece forma de incluir un fichero en otro que se pueda
+comprobar desde aquí: `support.js` no está en el repositorio. Tras subir un
+`.part` cambiado, se suben los seis artboards.
+
 ## La lista de certificados no viene del canvas original
 
 Nació como artboard aparte, `EstadoElegirCertificado`, **añadido después** del
@@ -793,9 +807,13 @@ Lo retocó el usuario a mano en Claude Design y se trajo con `/canvas-pull` el
 En `Main` la caja cerrada enseña siempre el primer certificado de la lista, sea
 cual sea el elegido: es un atajo de la demo, no una decisión.
 
-**Pendiente en el lienzo**: `EstadoPaginasSinFirmaVisible`,
+Los cinco artboards que se dibujan sobre `Main` —`EstadoPaginasSinFirmaVisible`,
 `EstadoFirmarDeTodosModos`, `EstadoPin`, `EstadoPinIncorrecto` y
-`EstadoAcercaDe` copian el fondo de `Main` y siguen dibujando el botón partido.
+`EstadoAcercaDe`— toman ese fondo: el selector cerrado arriba del panel y
+«Firmar» a secas, con los datos de `Main` (Lucía Martín Ortega, a título
+personal, DNI enmascarado) y los mismos estados —«Buscando certificados…» en la
+caja y «Firmar» al 55 % bajo el PIN que se pide antes de listar—. Los dos
+bloques salen de fragmentos compartidos; ver «Cómo leerlos».
 
 El porqué está en las fichas
 [`panel-de-firma`](../panel-de-firma.md#decisiones),

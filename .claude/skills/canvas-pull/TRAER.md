@@ -23,7 +23,11 @@ Por cada artboard del directorio temporal:
 
 1. Sustituye el bloque `<helmet>…</helmet>` por el contenido de
    `docs/design/artboards/_helmet.part`.
-2. `diff` contra la copia del repositorio. Sin diferencias, ese artboard no
+2. Si lleva bloques entre `<!-- _X.part -->` y `<!-- /_X.part -->` que no
+   coinciden con `docs/design/artboards/_X.part`, el retoque es del fondo
+   compartido: pásalo al `.part`, estámpalo con `estampa.sh` y súmale a lo
+   que subir los demás artboards que lo llevan.
+3. `diff` contra la copia del repositorio. Sin diferencias, ese artboard no
    cambió y se descarta.
 
 `canvas.json` se compara igual, sin normalizar.

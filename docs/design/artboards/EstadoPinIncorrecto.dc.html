@@ -276,6 +276,30 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
 
   <aside class="rf-stack" style="width:380px;flex:none;border-left:1px solid var(--rf-border-subtle);background:var(--rf-bg);position:relative">
     <div class="rf-stack" style="flex:1;min-height:0;overflow-y:{{ desbordePanel }};padding:14px 24px 12px;gap:12px">
+      <sc-if value="{{ haySelector }}" hint-placeholder-val="{{ true }}">
+      <div class="rf-stack" style="flex:none;gap:6px;position:relative;z-index:7;{{ estiloControles }}">
+        <!-- _selector-cerrado.part -->
+        <span class="rf-label">Certificado</span>
+        <sc-if value="{{ selCerrado }}" hint-placeholder-val="{{ true }}">
+          <div role="button" tabindex="0" style="display:flex;align-items:center;gap:10px;min-height:52px;padding:6px 12px;border:1px solid var(--rf-border-strong);border-radius:var(--rf-radius-md);background:var(--rf-bg);cursor:pointer">
+            <sc-if value="{{ buscando }}" hint-placeholder-val="{{ false }}">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="flex:none;color:var(--rf-text-muted)"><path d="M12 3a9 9 0 1 0 9 9"></path></svg>
+              <span class="rf-text-muted" style="flex:1;font-size:14px">Buscando certificados…</span>
+            </sc-if>
+            <sc-if value="{{ sinElegir }}" hint-placeholder-val="{{ false }}">
+              <span class="rf-text-muted" style="flex:1;font-size:14px">Elige un certificado</span>
+            </sc-if>
+            <sc-if value="{{ hayElegido }}" hint-placeholder-val="{{ true }}">
+              <span class="rf-stack" style="gap:4px;flex:1;min-width:0">
+                <span style="font-size:14px;font-weight:600;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ selL1 }}</span>
+                <span class="rf-body rf-text-muted" style="line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ selL2 }}</span>
+              </span>
+            </sc-if>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none;color:var(--rf-text-muted)"><path d="M6 9l6 6 6-6"></path></svg>
+          </div>
+        <!-- /_selector-cerrado.part -->
+      </div>
+      </sc-if>
       <sc-if value="{{ hayCofirma }}" hint-placeholder-val="{{ false }}">
         <div class="rf-stack" style="flex:none;border-radius:var(--rf-radius-md);{{ estiloBloqueCofirma }}">
           <div role="button" tabindex="0" aria-expanded="{{ ariaPrevias }}" aria-label="{{ etiquetaPrevias }}" class="rf-row rf-gap-xs" style="align-items:flex-start;padding:8px 8px 8px 12px;cursor:pointer">
@@ -434,23 +458,6 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
       </sc-if>
     </div>
 
-    <sc-if value="{{ eligiendoCert }}" hint-placeholder-val="{{ false }}">
-      <div class="rf-stack" style="position:absolute;left:24px;right:24px;bottom:68px;z-index:6;padding:6px;gap:2px;
-        border-radius:var(--rf-radius-lg);border:1px solid var(--rf-border-subtle);background:var(--rf-bg);box-shadow:var(--rf-shadow-elevated)">
-        <sc-for list="{{ certificados }}" as="c" hint-placeholder-count="4">
-          <div class="rf-row" title="{{ c.titulo }}" style="{{ c.estilo }}">
-            <div class="rf-stack" style="gap:3px;flex:1;min-width:0">
-              <span style="font-size:14px;font-weight:600;line-height:1.35;overflow-wrap:anywhere">{{ c.nombre }}</span>
-              <span class="rf-body rf-text-muted" style="line-height:1.3">{{ c.pie }}</span>
-            </div>
-            <sc-if value="{{ c.elegido }}" hint-placeholder-val="{{ false }}">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
-            </sc-if>
-          </div>
-        </sc-for>
-      </div>
-    </sc-if>
-
     <div class="rf-stack" style="flex:none;gap:10px;padding:10px 24px 16px;border-top:1px solid var(--rf-border-subtle);background:var(--rf-bg)">
       <div class="rf-stack" style="gap:4px">
         <div class="rf-row" style="height:24px"><span class="rf-label" style="flex:1">{{ rotuloDestino }}</span><button type="button" class="rf-btn rf-btn--ghost" style="{{ estiloCambiar }}">Cambiar</button></div>
@@ -465,20 +472,13 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
           </span>
         </div>
       </div>
-      <sc-if value="{{ antes }}" hint-placeholder-val="{{ true }}">
+      <!-- _boton-firmar.part -->
+      <sc-if value="{{ hayFirmar }}" hint-placeholder-val="{{ true }}">
         <div class="rf-row" style="height:44px;opacity:{{ opacidadFirmar }}">
-          <button type="button" class="rf-btn rf-btn--primary" title="{{ tituloFirmar }}" style="flex:1;min-width:0;gap:6px;padding:0 14px;border-radius:var(--rf-radius-md) 0 0 var(--rf-radius-md)">
-            <sc-if value="{{ buscando }}" hint-placeholder-val="{{ false }}">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="flex:none"><path d="M12 3a9 9 0 1 0 9 9"/></svg>
-            </sc-if>
-            <span style="flex:none;font-weight:400">{{ verbo }}</span>
-            <span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ nombreCorto }}</span>
-          </button>
-          <button type="button" title="Elegir otro certificado" class="rf-btn rf-btn--primary" style="flex:none;width:44px;padding:0;
-            border-radius:0 var(--rf-radius-md) var(--rf-radius-md) 0;border-left:1px solid var(--rf-on-primary)">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ flecha }}"/></svg></button>
+          <button type="button" class="rf-btn rf-btn--primary" title="{{ tituloFirmar }}" style="flex:1;min-width:0">{{ textoFirmar }}</button>
         </div>
       </sc-if>
+      <!-- /_boton-firmar.part -->
       <sc-if value="{{ firmado }}" hint-placeholder-val="{{ false }}">
         <div class="rf-row" style="height:44px;gap:8px">
           <button type="button" class="rf-btn rf-btn--primary" style="flex:1;min-width:0">Abrir el PDF</button>
@@ -620,19 +620,6 @@ class Component extends DCLogic {
       d.despues.forEach(function (n) { r.push(tab(n, n === d.encima ? "encima" : "otra", d.firmadas.indexOf(n) >= 0)); });
     }
     return r;
-  }
-  certificados(d) {
-    return [
-      { nombre: d.titular, pie: d.emisor + " · " + d.caduca, elegido: true },
-      { nombre: d.titular + " — Asociación Vecinal Ejemplo", pie: "AC Representación · Caduca en 06/2027", elegido: false },
-      { nombre: d.titular, pie: "DNIe · Caduca en 01/2029", elegido: false },
-      { nombre: d.titular, pie: d.emisor + " · Caducado el 02/2025", elegido: false, apagado: true }
-    ].map(function (c) {
-      c.titulo = c.apagado ? "Caducado" : c.nombre;
-      c.estilo = "gap:12px;padding:10px 12px;border-radius:var(--rf-radius-md);cursor:pointer;"
-        + (c.elegido ? "background:var(--rf-surface);" : "") + (c.apagado ? "opacity:.45;cursor:not-allowed;" : "");
-      return c;
-    });
   }
   colocacion(d, opcion) {
     if (opcion === "apagada") { return { modo: "ninguna", sel: [], viendo: d.viendo }; }
@@ -894,7 +881,7 @@ class Component extends DCLogic {
       textoTuya: r.textoTuya,
       tuyaPie: r.tuya !== null,
 
-      firmado: firmado, antes: !firmado,
+      firmado: firmado,
       hayInterruptor: !firmado,
       tituloInterruptor: activa ? "Quitar la firma visible" : "Añadir una firma visible",
       estiloInterruptor: (activa ? "background:var(--rf-primary);border-color:transparent" : "background:transparent")
@@ -935,14 +922,14 @@ class Component extends DCLogic {
       estiloCambiar: "flex:none;min-height:24px;padding:0 8px;font-size:13px;color:var(--rf-text);"
         + (firmado ? "visibility:hidden;" : "") + (firmando ? "opacity:.35;" : ""),
 
-      eligiendoCert: eligiendo,
-      certificados: this.certificados(d),
-      opacidadFirmar: firmando || hayError || buscando ? ".55" : "1",
       buscando: buscando,
-      verbo: buscando ? "Buscando certificados…" : firmando ? "Firmando como" : "Firmar como",
-      nombreCorto: buscando ? "" : d.nombreCorto,
-      tituloFirmar: buscando ? "" : d.titular,
-      flecha: eligiendo ? "M6 15l6-6 6 6" : "M6 9l6 6 6-6"
+      haySelector: !firmado,
+      selCerrado: true, hayElegido: !buscando, sinElegir: false,
+      selL1: d.titular, selL2: "A título personal · ***9999**",
+      hayFirmar: !firmado,
+      opacidadFirmar: firmando || hayError || buscando ? ".55" : "1",
+      textoFirmar: firmando ? "Firmando…" : "Firmar",
+      tituloFirmar: buscando ? "" : "Firmar con el certificado de " + d.titular
     };
   }
   renderVals() {

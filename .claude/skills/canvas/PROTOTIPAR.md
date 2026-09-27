@@ -20,6 +20,11 @@ Antes de nada, lee las reglas que no se negocian de [SKILL.md](SKILL.md).
   la copia del proyecto: la copia remota se queda atrás. El 02/09/2026
   entraron tres artboards con dos tokens de sombra desfasados por mirar al
   proyecto.
+- El fondo de `Main` —selector «Certificado» cerrado y fila del «Firmar»— se
+  toca en `_selector-cerrado.part` y `_boton-firmar.part`, nunca en un
+  artboard: `./docs/design/artboards/estampa.sh` lo copia a los seis que lo
+  llevan entre marcadores `<!-- _X.part -->`, y un artboard nuevo sobre `Main`
+  lleva los marcadores y entra en la lista de `comprueba.sh`.
 - **Nada de colores literales.** Tokens `--rf-*` y clases del bundle
   (`rfirma-app/src/design-system/bundle/`, que es lo normativo).
 - Copia el lenguaje visual del artboard vecino: mismos gaps, mismos tamaños de
