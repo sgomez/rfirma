@@ -148,7 +148,7 @@ pub fn the_errand_of(roots: &Arc<Roots>, consents: &Arc<AtomicUsize>) -> SiteOpe
         consents.fetch_add(1, Ordering::SeqCst);
         let chosen = certificates
             .iter()
-            .find(|row| row.label == THE_TEST_CERTIFICATE && row.status.is_usable())
+            .find(|row| is_the_usable_test_certificate(row))
             .unwrap_or_else(|| {
                 panic!("el token de pruebas no ofrecio {THE_TEST_CERTIFICATE}: monta `just certs install`")
             });
@@ -234,7 +234,7 @@ pub fn the_sign_errand_of(
         let chosen = consent
             .certificates
             .iter()
-            .find(|row| row.label == THE_TEST_CERTIFICATE && row.status.is_usable())
+            .find(|row| is_the_usable_test_certificate(row))
             .unwrap_or_else(|| {
                 panic!("el token de pruebas no ofrecio {THE_TEST_CERTIFICATE}: monta `just certs install`")
             });
@@ -277,7 +277,7 @@ pub fn the_errand_that_signs_unless_refused(roots: &Arc<Roots>) -> SiteOperation
         let chosen = consent
             .certificates
             .iter()
-            .find(|row| row.label == THE_TEST_CERTIFICATE && row.status.is_usable())
+            .find(|row| is_the_usable_test_certificate(row))
             .unwrap_or_else(|| {
                 panic!("el token de pruebas no ofrecio {THE_TEST_CERTIFICATE}: monta `just certs install`")
             });
@@ -474,7 +474,7 @@ pub fn the_sign_and_save_errand_of(
         let chosen = consent
             .certificates
             .iter()
-            .find(|row| row.label == THE_TEST_CERTIFICATE && row.status.is_usable())
+            .find(|row| is_the_usable_test_certificate(row))
             .unwrap_or_else(|| panic!("el token de pruebas no ofreció {THE_TEST_CERTIFICATE}"));
         let signing_certificate = roots
             .identity

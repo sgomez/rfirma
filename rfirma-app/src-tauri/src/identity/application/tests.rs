@@ -172,13 +172,40 @@ pub(crate) fn a_representative_certificate(
     common_name: &str,
     organization_identifier: &str,
 ) -> TokenCertificate {
-    let key = generate_key().expect("la clave de pruebas deberia generarse");
     let mut name = X509Name::builder().expect("deberia poder construirse un nombre");
     name.append_entry_by_nid(Nid::COMMONNAME, common_name)
         .expect("el nombre comun deberia entrar");
     name.append_entry_by_text("organizationIdentifier", organization_identifier)
         .expect("el organizationIdentifier deberia entrar");
-    let name = name.build();
+    certificate_with_subject(label, name.build())
+}
+
+/// Construye un certificado de representante con `organizationName` (2.5.4.10), `organizationIdentifier` (2.5.4.97), `GN` y `SN` en el subject.
+pub(crate) fn a_representative_certificate_of_a_natural_person(
+    label: &str,
+    common_name: &str,
+    given_name: &str,
+    surname: &str,
+    organization_name: &str,
+    organization_identifier: &str,
+) -> TokenCertificate {
+    let mut name = X509Name::builder().expect("deberia poder construirse un nombre");
+    name.append_entry_by_nid(Nid::COMMONNAME, common_name)
+        .expect("el nombre comun deberia entrar");
+    name.append_entry_by_nid(Nid::GIVENNAME, given_name)
+        .expect("el nombre de pila deberia entrar");
+    name.append_entry_by_nid(Nid::SURNAME, surname)
+        .expect("el apellido deberia entrar");
+    name.append_entry_by_nid(Nid::ORGANIZATIONNAME, organization_name)
+        .expect("el nombre de la entidad deberia entrar");
+    name.append_entry_by_text("organizationIdentifier", organization_identifier)
+        .expect("el organizationIdentifier deberia entrar");
+    certificate_with_subject(label, name.build())
+}
+
+/// Firma un certificado autofirmado con el subject dado, para las pruebas que necesitan RDN concretos.
+fn certificate_with_subject(label: &str, name: X509Name) -> TokenCertificate {
+    let key = generate_key().expect("la clave de pruebas deberia generarse");
 
     let mut builder = X509::builder().expect("deberia poder construirse un certificado");
     builder.set_version(2).expect("la version deberia ponerse");

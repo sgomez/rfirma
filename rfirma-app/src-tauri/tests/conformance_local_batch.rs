@@ -31,7 +31,7 @@ fn the_local_batch_errand_of(
         let chosen = consent
             .certificates
             .iter()
-            .find(|row| row.label == THE_TEST_CERTIFICATE && row.status.is_usable())
+            .find(|row| is_the_usable_test_certificate(row))
             .unwrap_or_else(|| {
                 panic!("el token de pruebas no ofrecio {THE_TEST_CERTIFICATE}: monta `just certs install`")
             });

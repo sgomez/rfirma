@@ -189,6 +189,13 @@ local. No se guarda en ningún sitio: se genera al arrancar y vive lo que vive e
 proceso.
 _Avoid_: hoja, certificado de servidor, certificado TLS
 
+**Representante**:
+El titular de un certificado que firma en nombre de una entidad, no en el suyo
+propio. Su sujeto trae el identificador de organización de la entidad
+(`organizationIdentifier`) junto al nombre y apellidos de una persona física; un
+certificado de entidad sin persona física —un sello— no es de representante.
+_Avoid_: apoderado, poder notarial, persona jurídica
+
 ### Invocación
 
 **Compatible con AutoFirma**:

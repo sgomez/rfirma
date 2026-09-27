@@ -22,7 +22,28 @@ fn the_secret_crosses_as_one_of_three_kinds_and_never_as_a_string() {
 
 #[test]
 fn a_certificate_crosses_without_its_der_and_without_its_module() {
-    let view = CertificateView {
+    let view = a_view();
+    let json = serde_json::to_string(&view).expect("serializa");
+
+    assert!(json.contains(r#""holderName":"LOVELACE BYRON ADA""#));
+    assert!(json.contains(r#""givenName":"ADA""#));
+    assert!(json.contains(r#""surname":"LOVELACE BYRON""#));
+    assert!(!json.contains(r#""der""#), "el DER no sale: {json}");
+    assert!(!json.contains('/'), "no sale ninguna ruta: {json}");
+}
+
+#[test]
+fn a_representative_certificate_crosses_with_its_entity_name() {
+    let mut view = a_view();
+    view.entity_name = Some("ENTIDAD DE PRUEBAS".to_owned());
+
+    let json = serde_json::to_string(&view).expect("serializa");
+
+    assert!(json.contains(r#""entityName":"ENTIDAD DE PRUEBAS""#));
+}
+
+fn a_view() -> CertificateView {
+    CertificateView {
         id: "0123456789abcdef0123456789abcdef".to_owned(),
         label: "ETIQUETA".to_owned(),
         holder_name: "LOVELACE BYRON ADA".to_owned(),
@@ -31,6 +52,7 @@ fn a_certificate_crosses_without_its_der_and_without_its_module() {
         surname: "LOVELACE BYRON".to_owned(),
         id_number: "IDCES-00000000T".to_owned(),
         organization_identifier: None,
+        entity_name: None,
         issuer: "FNMT-RCM".to_owned(),
         certificate_serial_number: "1234567890".to_owned(),
         store: store_name(StoreClass::Firefox).to_owned(),
@@ -39,14 +61,7 @@ fn a_certificate_crosses_without_its_der_and_without_its_module() {
             not_after: 1_900_000_000,
         },
         remembered: false,
-    };
-    let json = serde_json::to_string(&view).expect("serializa");
-
-    assert!(json.contains(r#""holderName":"LOVELACE BYRON ADA""#));
-    assert!(json.contains(r#""givenName":"ADA""#));
-    assert!(json.contains(r#""surname":"LOVELACE BYRON""#));
-    assert!(!json.contains(r#""der""#), "el DER no sale: {json}");
-    assert!(!json.contains('/'), "no sale ninguna ruta: {json}");
+    }
 }
 
 #[test]
@@ -60,6 +75,7 @@ fn a_row_crosses_every_store_it_is_in_and_the_one_behind_its_handle() {
         surname: String::new(),
         id_number: String::new(),
         organization_identifier: None,
+        entity_name: None,
         issuer: String::new(),
         certificate_serial_number: String::new(),
         store: StoreClass::Card,

@@ -170,13 +170,21 @@ impl TokenCertificate {
     pub fn organization_identifier(&self) -> Option<String> {
         const ORGANIZATION_IDENTIFIER: x509_cert::der::asn1::ObjectIdentifier =
             x509_cert::der::asn1::ObjectIdentifier::new_unwrap("2.5.4.97");
+        self.subject_attribute(ORGANIZATION_IDENTIFIER)
+    }
 
+    /// El `organizationName` (RDN 2.5.4.10) del subject, leído del DER y no del `Display`.
+    pub fn organization_name(&self) -> Option<String> {
+        const ORGANIZATION_NAME: x509_cert::der::asn1::ObjectIdentifier =
+            x509_cert::der::asn1::ObjectIdentifier::new_unwrap("2.5.4.10");
+        self.subject_attribute(ORGANIZATION_NAME)
+    }
+
+    /// Un atributo del subject por su OID, leído del DER y no del `Display`.
+    fn subject_attribute(&self, oid: x509_cert::der::asn1::ObjectIdentifier) -> Option<String> {
         let certificate = Certificate::from_der(&self.der).ok()?;
-        let value: x509_cert::ext::pkix::name::DirectoryString = certificate
-            .tbs_certificate()
-            .subject()
-            .by_oid(ORGANIZATION_IDENTIFIER)
-            .ok()??;
+        let value: x509_cert::ext::pkix::name::DirectoryString =
+            certificate.tbs_certificate().subject().by_oid(oid).ok()??;
         Some(value.value().into_owned())
     }
 
@@ -296,6 +304,8 @@ pub struct ListedCertificate {
     pub id_number: String,
     /// La entidad representada (`organizationIdentifier`), o nada si el certificado no la lleva.
     pub organization_identifier: Option<String>,
+    /// El nombre de la entidad representada, o nada si el certificado no es de representante.
+    pub entity_name: Option<String>,
     pub issuer: String,
     /// Número de serie del certificado, en base diez.
     pub certificate_serial_number: String,

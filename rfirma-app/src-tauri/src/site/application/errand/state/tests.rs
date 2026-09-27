@@ -14,6 +14,7 @@ fn asking_with(label: &str) -> Moment {
             surname: String::new(),
             id_number: String::new(),
             organization_identifier: None,
+            entity_name: None,
             issuer: String::new(),
             certificate_serial_number: String::new(),
             store: StoreClass::Card,
