@@ -49,7 +49,7 @@ fn the_batch_errand_of(roots: &Arc<Roots>, signer: &Arc<Mutex<Option<Vec<u8>>>>)
         let chosen = consent
             .certificates
             .iter()
-            .find(|row| row.label == THE_TEST_CERTIFICATE && row.status.is_usable())
+            .find(|row| is_the_usable_test_certificate(row))
             .unwrap_or_else(|| {
                 panic!("el token de pruebas no ofrecio {THE_TEST_CERTIFICATE}: monta `just certs install`")
             });
@@ -304,7 +304,7 @@ fn the_down_presigner_batch_errand_of(roots: &Arc<Roots>) -> SiteOperations {
         let chosen = consent
             .certificates
             .iter()
-            .find(|row| row.label == THE_TEST_CERTIFICATE && row.status.is_usable())
+            .find(|row| is_the_usable_test_certificate(row))
             .unwrap_or_else(|| {
                 panic!("el token de pruebas no ofrecio {THE_TEST_CERTIFICATE}: monta `just certs install`")
             });

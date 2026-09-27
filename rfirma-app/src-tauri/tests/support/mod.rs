@@ -131,6 +131,17 @@ pub const THE_SIGN_AND_SAVE: &str = "signandsave";
 /// El certificado de pruebas de la FNMT vigente del token `rfirma-test`.
 pub const THE_TEST_CERTIFICATE: &str = "FNMT-ACTIVO-99999999R";
 
+/// La otra etiqueta del mismo certificado vigente en `rfirma-test`.
+pub const THE_TEST_CERTIFICATE_TWIN: &str = "FNMT-GEMELO-99999999R";
+
+/// Si la fila es el certificado de pruebas vigente, con la etiqueta de cualquiera de sus copias.
+pub fn is_the_usable_test_certificate(
+    row: &rfirma_lib::identity::domain::certificate::ListedCertificate,
+) -> bool {
+    [THE_TEST_CERTIFICATE, THE_TEST_CERTIFICATE_TWIN].contains(&row.label.as_str())
+        && row.status.is_usable()
+}
+
 /// El secreto del token de pruebas `rfirma-test`.
 pub const THE_TOKEN_SECRET: &str = "1234";
 
