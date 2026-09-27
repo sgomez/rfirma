@@ -248,8 +248,7 @@ export function renderApp(
   return { recents, preferences, drops };
 }
 
-/** Abre un PDF por el menú «+», que es el camino que existe con y sin documentos abiertos. */
+/** Abre un PDF por el segmento principal del botón partido. */
 export async function openPdf(user: UserEvent) {
-  await user.click(screen.getByRole("button", { name: "Abrir un PDF" }));
-  await user.click(screen.getByRole("menuitem", { name: "Abrir un PDF…" }));
+  await user.click(screen.getByRole("button", { name: "Abrir PDF…" }));
 }

@@ -466,10 +466,6 @@ msgstr "Signed"
 msgid "tabs.label"
 msgstr "Open documents"
 
-#. Nombre del botón «+» de la tira de pestañas.
-msgid "tabs.open"
-msgstr "Open a PDF"
-
 msgid "tabs.previous"
 msgstr "Previous tabs"
 
@@ -484,11 +480,20 @@ msgstr "Close {{name}}"
 msgid "tabs.lockedWhileSigning"
 msgstr "You cannot switch documents while a signature is in progress."
 
+#. Texto del segmento principal del botón partido de abrir.
 msgid "tabs.openPdf"
-msgstr "Open a PDF…"
+msgstr "Open PDF…"
+
+#. Título del segmento principal del botón partido: anuncia el atajo.
+msgid "tabs.openPdfShortcut"
+msgstr "Ctrl+O"
+
+#. Nombre accesible de la flecha del botón partido, que despliega los recientes.
+msgid "tabs.recentlyOpened"
+msgstr "Recently opened"
 
 msgid "recents.heading"
-msgstr "Recent"
+msgstr "Recently opened"
 
 msgid "recents.clear"
 msgstr "Clear the list"
@@ -1927,6 +1932,9 @@ msgstr[2] "{{origin}} accepts none of your {{count}} certificates"
 
 msgid "sede.noCertificate.excludedBody"
 msgstr "Install another certificate, or close and carry on from the site."
+
+#~ msgid "tabs.open"
+#~ msgstr "Open a PDF"
 
 #~ msgid "panel.visibleSignature.rubric.title"
 #~ msgstr "Rubric image"
