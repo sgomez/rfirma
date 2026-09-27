@@ -389,6 +389,10 @@ msgstr ""
 msgid "header.menu"
 msgstr ""
 
+#. Nombre del botón de menú cuando «Estado de rFirma» lleva el aviso.
+msgid "header.menuAttention"
+msgstr ""
+
 msgid "header.status"
 msgstr ""
 

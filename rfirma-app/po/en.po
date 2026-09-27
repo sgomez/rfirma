@@ -444,6 +444,10 @@ msgstr "How to update"
 msgid "header.menu"
 msgstr "Menu"
 
+#. Nombre del botón de menú cuando «Estado de rFirma» lleva el aviso.
+msgid "header.menuAttention"
+msgstr "Menu. rFirma Status: needs attention"
+
 msgid "header.status"
 msgstr "rFirma Status"
 

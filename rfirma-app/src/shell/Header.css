@@ -51,8 +51,18 @@
   min-width: 32px;
   height: 30px;
   min-height: 30px;
+  position: relative;
   padding: 0;
   border-radius: var(--rf-radius-md);
+}
+
+.header__buttonAttention {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  display: flex;
+  color: var(--rf-text);
+  filter: drop-shadow(0 0 1px var(--rf-bg)) drop-shadow(0 0 1px var(--rf-bg));
 }
 
 .header__button--open {

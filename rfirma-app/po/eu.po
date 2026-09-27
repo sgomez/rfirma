@@ -462,6 +462,10 @@ msgstr "Nola eguneratu"
 msgid "header.menu"
 msgstr "Menua"
 
+#. Nombre del botón de menú cuando «Estado de rFirma» lleva el aviso.
+msgid "header.menuAttention"
+msgstr "Menua. rFirmaren egoera: arreta behar du"
+
 msgid "header.status"
 msgstr "rFirmaren egoera"
 
