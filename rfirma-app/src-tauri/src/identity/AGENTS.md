@@ -9,7 +9,7 @@ habla con el token. Rutas relativas a `src/identity/`.
 
 | Módulo | Qué es |
 |---|---|
-| `mod.rs` | La raíz: `IdentityRoot`, la fachada que usan los vecinos y el `Signer` de `signing/ports.rs` sobre cualquier `Token`. |
+| `mod.rs` | La raíz: `IdentityRoot`, la fachada que usan los vecinos y el `Signer` de `signing/ports.rs` sobre cualquier `Token`. Pruebas en `tests.rs`. |
 | `domain/mod.rs`, `application/mod.rs`, `adapters/mod.rs` | Solo `pub mod`: el reparto de cada capa. |
 | `application/tests.rs` | Los andamios de la grada A que comparten todos los contextos: `NoToken`, `NoMemory`, `a_certificate`, `a_usable_certificate` y `listed_from`. Solo en pruebas. |
 | `adapters/pkcs11/mod.rs` | La capa PKCS#11, y `RealToken`, el único adaptador de producción del puerto `Token`. |

@@ -54,13 +54,13 @@ pub fn install_certificate_over(
         return Ok(false);
     };
     let (file_name, pkcs12) = read_the_file(chosen)?;
-    let keyring = super::keyring::RealKeyring::new()?;
+    let keyring = (identity.keyring)()?;
 
     super::failures::installed_unless_cancelled(
         crate::identity::application::certificates::install_pkcs12_asking_its_password(
             identity.token.as_ref(),
             identity.folder.as_ref(),
-            &keyring,
+            keyring.as_ref(),
             identity.installed_certificates(),
             &pkcs12,
             &file_name,

@@ -66,6 +66,10 @@ fn composed_roots(paths: desktop::adapters::paths::Paths, invocation: Option<Inv
         memory: memory.clone(),
         folder: Arc::new(identity::adapters::folder::RealInstalledFolder),
         prompter: prompter.clone(),
+        keyring: Arc::new(|| {
+            identity::adapters::keyring::RealKeyring::new()
+                .map(|keyring| Box::new(keyring) as Box<dyn identity::ports::Keyring + Send + Sync>)
+        }),
     };
     let documents = DocumentsRoot {
         documents_folder: desktop::adapters::paths::documents_folder().unwrap_or_default(),

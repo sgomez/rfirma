@@ -89,6 +89,19 @@ fn a_mechanism_the_token_does_not_offer_fails_the_signature_as_in_the_original()
 }
 
 #[test]
+fn a_missing_keyring_and_a_missing_pin_have_two_different_names() {
+    assert_eq!(situation_name(Situation::KeyringUnavailable), "noKeyring");
+    assert_eq!(
+        situation_name(Situation::KeyringPinMissing),
+        "keyringPinMissing"
+    );
+    assert_eq!(
+        code_of_token(Situation::KeyringUnavailable),
+        SafCode::CannotAccessKeystore
+    );
+}
+
+#[test]
 fn an_installed_p12_answers_true() {
     assert_eq!(installed_unless_cancelled(Ok(())), Ok(true));
 }

@@ -76,3 +76,15 @@ fn a_failure_of_ours_carries_no_ckr_but_still_carries_a_detail() {
     assert!(!error.detail().is_empty());
     assert!(error.to_string().contains("CertificateNotFound"));
 }
+
+#[test]
+fn a_missing_keyring_and_a_missing_pin_map_to_distinct_situations() {
+    assert_eq!(
+        TokenError::from(KeyringError::NoKeyring).situation(),
+        Situation::KeyringUnavailable
+    );
+    assert_eq!(
+        TokenError::from(KeyringError::PinMissing).situation(),
+        Situation::KeyringPinMissing
+    );
+}
