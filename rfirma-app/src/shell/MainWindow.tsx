@@ -22,7 +22,7 @@ interface MainWindowProps {
   notification?: ReactNode;
   /** La vista del cuerpo que sustituye a las regiones, o `null` si no hay ninguna. */
   view?: ReactNode;
-  /** La tira de pestañas de los documentos abiertos, bajo la cabecera. */
+  /** Las pestañas de los documentos abiertos, que la cabecera pinta en su hueco. */
   tabs: ReactNode;
   /** El contenido del visor, que es quien sabe de páginas y de recuadros. */
   viewer: ReactNode;
@@ -35,8 +35,8 @@ interface MainWindowProps {
 }
 
 /**
- * La única ventana de rFirma: una cabecera, la tira de pestañas y, debajo, el
- * visor y —en cuanto hay documento— el panel de firma.
+ * La única ventana de rFirma: la barra única, con las pestañas dentro, y
+ * debajo el visor y —en cuanto hay documento— el panel de firma.
  *
  * **Sin documento la ventana es de una columna.** El panel no se oculta con
  * `display: none`: no se monta (ID-51), que es lo que ya hacía la composición
@@ -74,6 +74,7 @@ export function MainWindow({
   // columnas. `null` y `undefined` son lo que la composición pasa; una cadena
   // vacía o un `false` no llegan aquí.
   const hasPanel = panel !== null && panel !== undefined;
+  const hasView = view !== null && view !== undefined;
 
   return (
     <div className="main-window">
@@ -84,10 +85,10 @@ export function MainWindow({
         onOpenPreferences={onOpenPreferences}
         onOpenHelp={onOpenHelp}
         onOpenAbout={onOpenAbout}
+        documents={hasView ? null : tabs}
       />
-      {view === null || view === undefined ? tabs : null}
       {notification}
-      {view !== null && view !== undefined ? (
+      {hasView ? (
         view
       ) : (
         <div

@@ -1,6 +1,6 @@
 /*
- * La única ventana (docs/design/ventana-principal.md): una cabecera de 52 px,
- * la tira de pestañas y debajo el visor flexible y el panel de 380 px.
+ * La única ventana (docs/design/ventana-principal.md): la barra única de 44 px
+ * y debajo el visor flexible y el panel de 380 px.
  *
  * Sin documento el panel **no está en el árbol** y queda una columna
  * (ID-51). No es un `display: none` —eso sería el primer paso hacia la
