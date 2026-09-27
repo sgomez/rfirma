@@ -233,16 +233,15 @@ pub(super) fn rows_preselecting_the_stuck(
     certificates: &dyn Neighbours,
     live: &LiveErrand,
 ) -> (Vec<ListedCertificate>, Option<String>) {
-    let stuck_at = sticky
-        .is_sticky()
-        .then(|| live.the_stuck())
-        .flatten()
-        .and_then(|stuck| {
-            accepted.iter().position(|certificate| {
-                stuck.is_the_same_as(certificate.reference()) && certificate.status().is_usable()
-            })
-        });
-    let mut rows = certificates.rows_of(accepted);
+    let Some(stuck) = the_usable_stuck_among(&accepted, sticky, live) else {
+        return (certificates.rows_of(accepted), None);
+    };
+    let mut rows = certificates.rows_of(accepted.clone());
+    let stuck_at = rows.iter().position(|row| {
+        certificates
+            .usable(&accepted, &row.id)
+            .is_ok_and(|copy| copy.is_a_copy_of(&stuck))
+    });
     let Some(stuck_at) = stuck_at else {
         return (rows, None);
     };
@@ -251,4 +250,18 @@ pub(super) fn rows_preselecting_the_stuck(
     }
     let stuck = rows[stuck_at].id.clone();
     (rows, Some(stuck))
+}
+
+fn the_usable_stuck_among(
+    accepted: &[TokenCertificate],
+    sticky: StickyCertificate,
+    live: &LiveErrand,
+) -> Option<TokenCertificate> {
+    let stuck = sticky.is_sticky().then(|| live.the_stuck()).flatten()?;
+    accepted
+        .iter()
+        .find(|certificate| {
+            stuck.is_the_same_as(certificate.reference()) && certificate.status().is_usable()
+        })
+        .cloned()
 }

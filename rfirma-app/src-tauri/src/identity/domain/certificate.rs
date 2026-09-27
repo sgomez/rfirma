@@ -199,6 +199,14 @@ impl TokenCertificate {
         Some((issuer, tbs.serial_number().as_bytes().to_vec()))
     }
 
+    /// Si los dos son el mismo certificado, en el mismo almacén o en otro.
+    pub fn is_a_copy_of(&self, other: &Self) -> bool {
+        match (self.issuer_and_serial(), other.issuer_and_serial()) {
+            (Some(mine), Some(theirs)) => mine == theirs,
+            _ => self.reference().is_the_same_as(other.reference()),
+        }
+    }
+
     /// La clase de clave pública que lleva dentro, si se sabe leer.
     pub fn key_kind(&self) -> Option<KeyKind> {
         let certificate = Certificate::from_der(&self.der).ok()?;
