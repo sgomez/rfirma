@@ -44,13 +44,14 @@ seguridad, un disco ajeno— sí es un activo que vale la pena llevarse, y por e
 protección: cifrarla con un PIN que no vive en ningún fichero hace que esa copia, sola, no
 sirva para nada.
 
-## El llavero se toca solo al instalar y al firmar
+## El llavero se toca solo al instalar, al quitar y al firmar
 
 Los certificados de una base NSS se leen sin PIN: listar, arrancar, `selectcert` o volver
 a buscar no piden nada al llavero. Es la misma idea que el ADR-0025 aplica al token
-PKCS#11: no se abre sesión hasta que hace falta. El PIN solo se pide al llavero en dos
+PKCS#11: no se abre sesión hasta que hace falta. El PIN solo se pide al llavero en tres
 momentos: cuando se instala un certificado nuevo (para escribir en la base, o para crearla
-si es la primera vez) y cuando se firma (para abrir la sesión NSS que la firma necesita).
+si es la primera vez), cuando se quita uno (para borrar certificado y clave de la base) y
+cuando se firma (para abrir la sesión NSS que la firma necesita).
 
 ## El camino al llavero: el portal de secretos, con `oo7`
 

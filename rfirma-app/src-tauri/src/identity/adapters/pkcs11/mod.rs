@@ -4,6 +4,7 @@ mod listing;
 mod mechanism;
 pub mod nss;
 pub mod p11kit;
+mod removal;
 mod session;
 pub mod stores;
 
@@ -90,6 +91,15 @@ impl Token for RealToken {
         })?;
         with_token_turn(|| nss::import_pkcs12(directory, pkcs12, password, pin))?;
         Ok(Store::nss(&softoken, directory))
+    }
+
+    fn remove_certificate(
+        &self,
+        directory: &Path,
+        reference: &CertificateRef,
+        pin: &ProtectedSecret,
+    ) -> Result<(), TokenError> {
+        with_token_turn(|| removal::remove_certificate(directory, reference, pin))
     }
 }
 

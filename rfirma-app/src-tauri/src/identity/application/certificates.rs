@@ -288,8 +288,13 @@ fn only_supported_keys(
     Ok(())
 }
 
-/// Se niega a eliminar un certificado del Almacén de rFirma: es una única base compartida (ADR-0011).
+/// Quita un certificado del Almacén de rFirma: lo borra, con su clave, de la base única (ADR-0034).
+///
+/// Si era el certificado recordado (ADR-0010), deja de estarlo.
 pub fn remove_installed(
+    token: &dyn Token,
+    keyring: &dyn Keyring,
+    memory: &dyn CertificateMemory,
     installed_dir: &Path,
     handle: &str,
     listed: &ListedCertificates,
@@ -304,12 +309,12 @@ pub fn remove_installed(
                 "ese certificado no viene de un .p12 instalado",
             )
         })?;
-    Err(TokenError::new(
-        Situation::RemovalNotSupported,
-        "el Almacen de rFirma es una unica base compartida: quitar este certificado \
-         se llevaria los demas, asi que se niega hasta que exista borrado fino",
-    )
-    .into())
+    let pin = keyring.pin()?;
+    token.remove_certificate(installed_dir, &reference, &pin)?;
+    if memory.remembered_certificate().as_ref() == Some(&reference) {
+        let _ = memory.forget_the_certificate();
+    }
+    Ok(())
 }
 
 fn not_from_the_last_listing() -> TokenError {

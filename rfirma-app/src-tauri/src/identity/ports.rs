@@ -67,6 +67,14 @@ pub trait Token {
         pin: &ProtectedSecret,
     ) -> Result<Store, TokenError>;
 
+    /// Borra del Almacén de rFirma en ese directorio el certificado y su clave, autenticándose con `pin`.
+    fn remove_certificate(
+        &self,
+        directory: &Path,
+        reference: &CertificateRef,
+        pin: &ProtectedSecret,
+    ) -> Result<(), TokenError>;
+
     /// Los certificados de todos los almacenes: falla solo si ninguno se ha podido abrir.
     fn list_across(&self, stores: &[Store]) -> Result<Vec<TokenCertificate>, TokenError> {
         if stores.is_empty() {

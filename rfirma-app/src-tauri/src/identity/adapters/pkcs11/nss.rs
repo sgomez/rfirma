@@ -1,4 +1,5 @@
-//! Importación de ficheros PKCS#12 en el Almacén de rFirma, una base NSS cifrada (ADR-0034).
+//! Importación de ficheros PKCS#12 en el Almacén de rFirma, y los símbolos NSS de bajo nivel que
+//! también usa `super::removal` para borrar un certificado de la misma base (ADR-0034).
 
 use std::ffi::{c_char, c_int, c_uchar, c_uint, c_ulong, c_void, CString};
 use std::path::Path;
@@ -33,8 +34,8 @@ pub const CANDIDATE_NSPR: &[&str] = &[
     "/usr/lib/libnspr4.so",
 ];
 
-const SEC_SUCCESS: c_int = 0;
-const PR_TRUE: c_int = 1;
+pub(super) const SEC_SUCCESS: c_int = 0;
+pub(super) const PR_TRUE: c_int = 1;
 const SI_BUFFER: c_uint = 0;
 const SI_ASCII_STRING: c_uint = 8;
 const SEC_ERROR_BAD_PASSWORD: c_int = -0x2000 + 15;
@@ -43,7 +44,7 @@ const SEC_ERROR_PKCS12_DUPLICATE_DATA: c_int = -0x2000 + 88;
 /// Nickname de un certificado sin `friendlyName` y sin nombre común en el sujeto.
 const CERTIFICATE_WITHOUT_A_NAME: &str = "Certificado sin nombre";
 
-fn module_spec(directory: &Path) -> String {
+pub(super) fn module_spec(directory: &Path) -> String {
     format!(
         "configDir='sql:{}' certPrefix='' keyPrefix='' \
          tokenDescription='rfirma' flags=readWrite",
@@ -52,10 +53,10 @@ fn module_spec(directory: &Path) -> String {
 }
 
 #[repr(C)]
-struct SecItem {
-    kind: c_uint,
-    data: *mut c_uchar,
-    len: c_uint,
+pub(super) struct SecItem {
+    pub(super) kind: c_uint,
+    pub(super) data: *mut c_uchar,
+    pub(super) len: c_uint,
 }
 
 struct Password {
@@ -226,7 +227,7 @@ fn first_present(candidates: &[&str], name: &str) -> Result<Library, String> {
     unsafe { Library::new(&path) }.map_err(|error| format!("{}: {error}", path.display()))
 }
 
-fn symbol<T: Copy>(library: &'static Library, name: &[u8]) -> Result<T, TokenError> {
+pub(super) fn symbol<T: Copy>(library: &'static Library, name: &[u8]) -> Result<T, TokenError> {
     // SAFETY: cada tipo `T` de este módulo es la firma declarada en la cabecera
     // pública de NSS para ese símbolo, y las bibliotecas viven hasta que muere
     // el proceso.
@@ -243,7 +244,7 @@ fn symbol<T: Copy>(library: &'static Library, name: &[u8]) -> Result<T, TokenErr
         })
 }
 
-fn failed(step: &str) -> TokenError {
+pub(super) fn failed(step: &str) -> TokenError {
     TokenError::new(
         Situation::Pkcs12Unreadable,
         format!("NSS ha fallado en {step}"),
@@ -251,21 +252,21 @@ fn failed(step: &str) -> TokenError {
 }
 
 #[repr(C)]
-struct PrCList {
-    next: *mut PrCList,
+pub(super) struct PrCList {
+    pub(super) next: *mut PrCList,
     prev: *mut PrCList,
 }
 
 #[repr(C)]
-struct CertList {
-    links: PrCList,
+pub(super) struct CertList {
+    pub(super) links: PrCList,
     arena: *mut c_void,
 }
 
 #[repr(C)]
-struct CertListNode {
+pub(super) struct CertListNode {
     links: PrCList,
-    certificate: *mut c_void,
+    pub(super) certificate: *mut c_void,
     application_data: *mut c_void,
 }
 
@@ -343,7 +344,7 @@ fn names_of(der: &[u8]) -> (String, String) {
 }
 
 /// El PIN del Almacén de rFirma como cadena C, o el error si no es UTF-8 o lleva un cero.
-fn store_pin(pin: &ProtectedSecret) -> Result<CString, TokenError> {
+pub(super) fn store_pin(pin: &ProtectedSecret) -> Result<CString, TokenError> {
     let pin = pin
         .as_str()
         .map_err(|_| TokenError::new(Situation::IncorrectPin, "el PIN no es UTF-8 valido"))?;

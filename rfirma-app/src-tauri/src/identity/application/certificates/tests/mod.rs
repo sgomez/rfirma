@@ -271,6 +271,18 @@ impl Token for StoresWith {
             "este token no importa nada",
         ))
     }
+
+    fn remove_certificate(
+        &self,
+        _directory: &std::path::Path,
+        _reference: &CertificateRef,
+        _pin: &crate::identity::domain::protected_secret::ProtectedSecret,
+    ) -> Result<(), TokenError> {
+        Err(TokenError::new(
+            Situation::CertificateNotFound,
+            "este token no quita nada",
+        ))
+    }
 }
 
 fn a_certificate_of(store: &Store, label: &str) -> TokenCertificate {
@@ -495,3 +507,5 @@ fn a_row_carries_the_organization_identifier_of_a_representative_certificate() {
         Some("VATES-A00000000".to_owned())
     );
 }
+
+mod removal;

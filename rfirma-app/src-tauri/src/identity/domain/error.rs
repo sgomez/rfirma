@@ -30,8 +30,6 @@ pub enum Situation {
     KeyKindUnsupported,
     /// El token no ofrece el mecanismo que pide el algoritmo de firma.
     MechanismNotOffered,
-    /// El certificado vive en el Almacén de rFirma compartido: quitarlo se niega en vez de borrarlo entero.
-    RemovalNotSupported,
     /// El llavero del escritorio no ha entregado el PIN del Almacén de rFirma (ADR-0034).
     KeyringUnavailable,
     /// El llavero del escritorio no tiene todavía el PIN del Almacén de rFirma (ADR-0034).
