@@ -30,7 +30,7 @@ habla con el token. Rutas relativas a `src/identity/`.
 | `domain/chain.rs` | Los emisores que acompañan al firmante en la cadena de certificación que viaja dentro de la firma. Pruebas en `domain/chain/tests.rs`. |
 | `domain/ecdsa.rs` | Lo que la curva elíptica exige y RSA no: el resumen que firma el mecanismo crudo y el `r`/`s` del token reempaquetado en DER. Pruebas en `domain/ecdsa/tests.rs`. |
 | `domain/error.rs` | Las situaciones del token (ADR-0009) y el aviso de que falta `libnss3.so`. Pruebas en `domain/error/tests.rs`. |
-| `domain/holder.rs` | Quién es el titular, leído del nombre distinguido (RFC 4514), y `StampedHolder`, lo que estampa el recuadro. Pruebas en `domain/holder/tests.rs`. |
+| `domain/holder.rs` | Quién es el titular, leído del nombre distinguido (RFC 4514), y `StampedHolder`, lo que estampa el recuadro. No sirve para el `Display` de `x509_cert::Name`: eso se lee del DER con `TokenCertificate`. Pruebas en `domain/holder/tests.rs`. |
 | `domain/keyring.rs` | `generate_pin`, el PIN aleatorio y largo del Almacén de rFirma, y `KeyringError` (ADR-0034). Pruebas en `domain/keyring/tests.rs`. |
 | `domain/protected_secret.rs` | Secreto protegido en memoria con bloqueo físico y borrado seguro en drop. Pruebas en `domain/protected_secret/tests.rs`. |
 | `domain/secret.rs` | Cómo se le pide el secreto a cada almacén: sin sesión, por pantalla o en el teclado del lector. Pruebas en `domain/secret/tests.rs`. |
