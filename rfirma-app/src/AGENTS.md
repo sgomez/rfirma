@@ -51,6 +51,7 @@ rojo.
 | `App.useCertificateSearch.ts` | Buscar certificados, instalar y quitar `.p12`, y elegir uno del desplegable. |
 | `App.useDropNotices.ts` | El arrastre sobre la ventana y la invocación externa, y el aviso que dejan. |
 | `App.usePlacementControls.ts` | La colocación de la firma visible: el recuadro y los tres modos de página. |
+| `App.usePageGeometry.ts` | La geometría de la página que lleva el recuadro, leída del PDF abierto. |
 | `App.usePreferencesState.ts` | Los ajustes, el destino previsto para el documento activo y la rúbrica adoptada. |
 | `App.usePreviousSignatures.ts` | El informe de firmas previas del documento activo, pedido al abrir o cargar. |
 | `App.useOpenShortcut.ts` | El atajo Ctrl+O (Cmd+O en macOS) que abre un PDF, el primero de la ventana. |
