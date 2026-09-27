@@ -149,16 +149,6 @@ export function PersonIcon({ size = 16 }: IconProps) {
   );
 }
 
-/** La escarapela del certificado. */
-export function CertificateIcon({ size = 20 }: IconProps) {
-  return (
-    <svg width={size} height={size} {...PEN} aria-hidden="true" focusable="false">
-      <circle cx="12" cy="9" r="5" />
-      <path d="M8.5 13.5 7 21l5-2.5L17 21l-1.5-7.5" />
-    </svg>
-  );
-}
-
 /** La lupa del buscador del selector de certificado. */
 export function SearchIcon({ size = 16 }: IconProps) {
   return (

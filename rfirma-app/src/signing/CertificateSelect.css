@@ -180,4 +180,5 @@
 .certificate-select__check {
   display: flex;
   flex: none;
+  color: var(--rf-primary);
 }

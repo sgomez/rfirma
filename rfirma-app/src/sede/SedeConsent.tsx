@@ -33,8 +33,8 @@ interface SedeConsentProps {
  * **2 · Consentimiento.** El corazón del trámite: la pantalla que AutoFirma no
  * tiene.
  *
- * Es una **confirmación escrita**, no el selector de certificados (ID-269), que
- * va dentro de ella: el mismo componente que el de la ventana principal.
+ * Es una **confirmación escrita**, no el selector de certificados, que va
+ * dentro de ella: el mismo componente que el de la ventana principal.
  *
  * Aparece también con un solo certificado, salvo que la persona deje elegir a
  * la sede (ADR-0032).

@@ -85,13 +85,22 @@ export function CertificateSelect({
   useLayoutEffect(() => {
     if (!open) return;
     place();
+    const onScroll = (event: Event) => {
+      if (layer.current?.contains(event.target as Node)) return;
+      place();
+    };
     window.addEventListener("resize", place);
-    window.addEventListener("scroll", place, true);
+    window.addEventListener("scroll", onScroll, true);
     return () => {
       window.removeEventListener("resize", place);
-      window.removeEventListener("scroll", place, true);
+      window.removeEventListener("scroll", onScroll, true);
     };
   }, [open, place]);
+
+  useEffect(() => {
+    if (!open) return;
+    document.getElementById(`${optionId}-${active}`)?.scrollIntoView?.({ block: "nearest" });
+  }, [open, active, optionId]);
 
   useEffect(() => {
     if (open) {
