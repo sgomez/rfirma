@@ -251,4 +251,23 @@ describe("el aviso de error", () => {
     expect(onEmptyStore).not.toHaveBeenCalled();
     expect(screen.getByRole("button", { name: "Vaciar el almacén" })).toBeInTheDocument();
   });
+
+  /**
+   * Firmar con un certificado instalado también pasa por aquí (criterio 3 del
+   * #1062): sin esta excepción a la tarjeta fija de «Error al firmar», quien
+   * firma no tenía forma de alcanzar el botón sin volver a Preferencias.
+   */
+  it("offers to empty the store from a signing failure too", async () => {
+    const user = userEvent.setup();
+    const onEmptyStore = vi.fn();
+    renderIn(
+      "es",
+      <ErrorNotice situation="keyringPinMissing" onEmptyStore={onEmptyStore} documentUnchanged />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Vaciar el almacén" }));
+    await user.click(screen.getByRole("button", { name: "Sí, vaciarlo" }));
+
+    expect(onEmptyStore).toHaveBeenCalledOnce();
+  });
 });

@@ -64,6 +64,21 @@ impl Keyring for LostPinKeyring {
     }
 }
 
+/// El doble en memoria del llavero (TD-112): entrega un PIN, pero no es el que cifra el almacén ya existente.
+struct WrongPinKeyring;
+
+impl Keyring for WrongPinKeyring {
+    fn pin(&self) -> Result<ProtectedSecret, KeyringError> {
+        Ok(ProtectedSecret::from_str(
+            "no es el pin de la base ya existente",
+        ))
+    }
+
+    fn create_pin(&self) -> Result<ProtectedSecret, KeyringError> {
+        self.pin()
+    }
+}
+
 fn install(
     installed: &Path,
     p12: &Path,
@@ -205,6 +220,33 @@ fn losing_the_pin_over_an_existing_store_is_told_apart_from_having_no_keyring_at
         certificates(installed.path()).len(),
         1,
         "un pin perdido no puede escribir una base nueva encima de la que ya habia"
+    );
+}
+
+#[test]
+fn a_keyring_pin_that_does_not_open_the_existing_store_offers_to_empty_it() {
+    let installed = an_empty_installation();
+    install(installed.path(), &kit_p12(), KIT_PASSWORD).expect("el primero deberia instalarse");
+
+    let bytes = std::fs::read(elliptic_curve_kit_p12()).expect("el .p12 del kit deberia leerse");
+    let failure = certificates::install_pkcs12(
+        &pkcs11::RealToken,
+        &RealInstalledFolder,
+        &WrongPinKeyring,
+        installed.path(),
+        &bytes,
+        KIT_PASSWORD,
+    )
+    .expect_err("el llavero entrega un pin, pero no es el que abre el almacen ya existente");
+
+    assert_eq!(
+        rfirma_lib::crossing::Failure::from(failure).situation,
+        "keyringPinMissing"
+    );
+    assert_eq!(
+        certificates(installed.path()).len(),
+        1,
+        "un pin equivocado no puede escribir una base nueva encima de la que ya habia"
     );
 }
 

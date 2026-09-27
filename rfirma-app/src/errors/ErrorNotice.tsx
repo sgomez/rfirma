@@ -125,8 +125,40 @@ export function ErrorNotice({
     if (technicalDetail !== undefined) void navigator.clipboard.writeText(technicalDetail);
   };
 
-  const offersToEmptyStore =
-    !documentUnchanged && situation === "keyringPinMissing" && onEmptyStore !== undefined;
+  const offersToEmptyStore = situation === "keyringPinMissing" && onEmptyStore !== undefined;
+
+  const emptyStoreAction = confirmingEmptyStore ? (
+    <>
+      <span className="rf-body error-notice__empty-store-question">
+        {t("errors.emptyStore.confirmQuestion")}
+      </span>
+      <button
+        type="button"
+        className="rf-btn rf-btn--ghost"
+        onClick={() => setConfirmingEmptyStore(false)}
+      >
+        {t("actions.cancel")}
+      </button>
+      <button
+        type="button"
+        className="rf-btn rf-btn--primary"
+        onClick={() => {
+          setConfirmingEmptyStore(false);
+          onEmptyStore?.();
+        }}
+      >
+        {t("errors.emptyStore.confirmButton")}
+      </button>
+    </>
+  ) : (
+    <button
+      type="button"
+      className="rf-btn rf-btn--ghost error-notice__empty-store"
+      onClick={() => setConfirmingEmptyStore(true)}
+    >
+      {t("errors.emptyStore.button")}
+    </button>
+  );
 
   return (
     <div className="error-notice" role="alert" ref={notice} tabIndex={-1}>
@@ -152,13 +184,16 @@ export function ErrorNotice({
             <pre className="error-notice__raw">{technicalDetail}</pre>
           </details>
           {documentUnchanged && (
-            <button
-              type="button"
-              className="rf-btn rf-btn--ghost error-notice__copy"
-              onClick={copyDetail}
-            >
-              {t("errors.copyDetail")}
-            </button>
+            <div className="rf-row rf-gap-xs error-notice__actions">
+              <button
+                type="button"
+                className="rf-btn rf-btn--ghost error-notice__copy"
+                onClick={copyDetail}
+              >
+                {t("errors.copyDetail")}
+              </button>
+              {offersToEmptyStore && emptyStoreAction}
+            </div>
           )}
           {!documentUnchanged && (hasHelpLink(situation) || onReload || offersToEmptyStore) && (
             <div className="rf-row rf-gap-xs error-notice__actions">
@@ -177,39 +212,7 @@ export function ErrorNotice({
                   {t("errors.reload")}
                 </button>
               )}
-              {offersToEmptyStore &&
-                (confirmingEmptyStore ? (
-                  <>
-                    <span className="rf-body error-notice__empty-store-question">
-                      {t("errors.emptyStore.confirmQuestion")}
-                    </span>
-                    <button
-                      type="button"
-                      className="rf-btn rf-btn--ghost"
-                      onClick={() => setConfirmingEmptyStore(false)}
-                    >
-                      {t("actions.cancel")}
-                    </button>
-                    <button
-                      type="button"
-                      className="rf-btn rf-btn--primary"
-                      onClick={() => {
-                        setConfirmingEmptyStore(false);
-                        onEmptyStore?.();
-                      }}
-                    >
-                      {t("errors.emptyStore.confirmButton")}
-                    </button>
-                  </>
-                ) : (
-                  <button
-                    type="button"
-                    className="rf-btn rf-btn--ghost error-notice__empty-store"
-                    onClick={() => setConfirmingEmptyStore(true)}
-                  >
-                    {t("errors.emptyStore.button")}
-                  </button>
-                ))}
+              {offersToEmptyStore && emptyStoreAction}
             </div>
           )}
         </>

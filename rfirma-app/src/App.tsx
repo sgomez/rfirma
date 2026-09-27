@@ -472,6 +472,7 @@ export function App({
               onOpenHelp={() => void externalDestinations.open("discussions")}
               failure={failedHere?.failure ?? null}
               onBack={signing.cancel}
+              onEmptyStore={() => void emptyStore()}
             />
           ) : null
         }

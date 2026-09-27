@@ -321,7 +321,10 @@ certificados», «Firmas previas», «Pie · destino» y «Ficha 14»:
   firmaba.»—, «El documento sigue como estaba: no se ha guardado nada.», el
   detalle técnico en monoespaciada (`CKR_DEVICE_REMOVED durante C_Sign (fase:
   firma)`) y «Copiar detalle». En el pie, «Reintentar» (primario) y «Volver». En
-  la aplicación el detalle va plegado tras «Detalle técnico».
+  la aplicación el detalle va plegado tras «Detalle técnico». **Excepción**: si
+  la causa es que el llavero perdió el PIN del Almacén de rFirma, junto a
+  «Copiar detalle» aparece también «Vaciar el almacén», con su misma
+  confirmación (ADR-0034).
 
 ## El resumen, tras firmar
 

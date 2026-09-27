@@ -150,6 +150,42 @@ describe("App, firmando, firmado y error", () => {
     expect(await within(panel).findByText("Firma visible")).toBeInTheDocument();
   });
 
+  /** Criterio 3 del #1062: firmar con un certificado instalado ofrece vaciar el almacén. */
+  it("offers to empty the store when signing fails with a lost keyring pin", async () => {
+    const user = userEvent.setup();
+    const signer = aSigner({
+      sign: async () => ({
+        ok: false,
+        failure: {
+          situation: "keyringPinMissing",
+          detail: "PK11_CheckUserPassword: el pin del llavero no abre el almacen ya existente",
+          attemptsLeft: null,
+        },
+      }),
+    });
+    const emptyStore = vi.fn(async () => {});
+    renderApp(
+      inMemoryRecents(),
+      [documentPlaced("factura.pdf")],
+      pdfsOf({ "factura.pdf": 2 }),
+      {},
+      { list: async () => [remembered], emptyStore },
+      emptyRubricPicker(),
+      signer,
+    );
+
+    await openPdf(user);
+    const panel = await screen.findByRole("region", { name: "Panel de firma" });
+    const sign = await within(panel).findByRole("button", { name: "Firmar como Ada Lovelace" });
+    await waitFor(() => expect(sign).toBeEnabled());
+    await user.click(sign);
+
+    await user.click(await screen.findByRole("button", { name: "Vaciar el almacén" }));
+    await user.click(screen.getByRole("button", { name: "Sí, vaciarlo" }));
+
+    expect(emptyStore).toHaveBeenCalledOnce();
+  });
+
   it("abandons a failure left on another tab instead of showing it there", async () => {
     const user = userEvent.setup();
     const discard = vi.fn(async () => {});
