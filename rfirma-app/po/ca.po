@@ -61,6 +61,16 @@ msgstr "Comentaris i ajuda"
 msgid "errors.reload"
 msgstr "Recarrega la finestra"
 
+#. El botón que ofrece vaciar el Almacén de rFirma cuando el llavero perdió su PIN (ADR-0034).
+msgid "errors.emptyStore.button"
+msgstr "Buida l'emmagatzematge"
+
+msgid "errors.emptyStore.confirmQuestion"
+msgstr "Segur? Es perdran els certificats instal·lats, i no es pot desfer."
+
+msgid "errors.emptyStore.confirmButton"
+msgstr "Sí, buida'l"
+
 #. El botón que copia el detalle técnico crudo del error de firma.
 msgid "errors.copyDetail"
 msgstr "Copia el detall"
@@ -241,6 +251,15 @@ msgstr ""
 "Prova amb un altre certificat o demana a la seu que faci servir SHA-256 amb "
 "RSA."
 
+msgid "errors.situations.removalNotSupported.title"
+msgstr "Aquest certificat no es pot treure per separat"
+
+msgid "errors.situations.removalNotSupported.body"
+msgstr ""
+"L'Emmagatzematge de rFirma és una única base compartida: treure'l "
+"s'enduria també els altres certificats instal·lats. Encara no hi ha manera "
+"d'esborrar-ne només un."
+
 msgid "errors.situations.certificateUnreadable.title"
 msgstr "No hem pogut llegir el certificat"
 
@@ -390,6 +409,24 @@ msgid "errors.situations.activityNotForgotten.body"
 msgstr ""
 "Els documents recents i el certificat continuen desats. Torna-ho a intentar "
 "i, si continua passant, adjunta el detall tècnic a l'informe de l'error."
+
+msgid "errors.situations.noKeyring.title"
+msgstr "No hem pogut accedir al clauer de l'escriptori"
+
+msgid "errors.situations.noKeyring.body"
+msgstr ""
+"rFirma necessita el clauer per desar el certificat de manera protegida. "
+"Comprova que el teu escriptori en té un de disponible, desbloqueja'l si "
+"t'ho demana, i torna-ho a intentar."
+
+msgid "errors.situations.keyringPinMissing.title"
+msgstr "El clauer ha perdut el PIN de l'Emmagatzematge de rFirma"
+
+msgid "errors.situations.keyringPinMissing.body"
+msgstr ""
+"Sense aquest PIN no podem obrir l'emmagatzematge que ja tenies. Vés a "
+"Preferències → Certificats i buida'l per tornar a instal·lar els teus "
+"certificats des de zero."
 
 #. Se enseña en un diálogo nativo antes de que exista ventana; no la lee i18next.
 msgid "errors.startup.homeUnknown"

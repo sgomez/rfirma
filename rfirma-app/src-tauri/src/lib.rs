@@ -239,6 +239,7 @@ fn with_the_five_roots(
             signing::adapters::tauri::previous_signatures,
             identity::adapters::tauri::install_certificate,
             identity::adapters::tauri::remove_certificate,
+            identity::adapters::tauri::empty_installed_store,
             site::adapters::tauri::close_site_window,
             site::adapters::tauri::site_identify,
             site::adapters::tauri::site_decline,

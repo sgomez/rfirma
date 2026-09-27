@@ -6,6 +6,7 @@ import { inMemoryRecents } from "./documents/recents";
 import type { Certificate } from "./signing/certificate";
 import type { SigningBackend } from "./signing/flow";
 import { emptyRubricPicker } from "./signing/rubric";
+import type { TokenFailure } from "./signing/token";
 
 const remembered: Certificate = { ...aCertificate, remembered: true };
 
@@ -148,6 +149,43 @@ describe("App, firmando, firmado y error", () => {
     // «Volver» cierra el error y deja el panel como si nada hubiera pasado.
     expect(screen.queryByText("No encontramos la tarjeta")).not.toBeInTheDocument();
     expect(await within(panel).findByText("Firma visible")).toBeInTheDocument();
+  });
+
+  /** Criterio 3 del #1062: firmar con un certificado instalado ofrece vaciar el almacén. */
+  it("offers to empty the store when signing fails with a lost keyring pin", async () => {
+    const user = userEvent.setup();
+    const signer = aSigner({
+      // Como en `tauriStage.ts`: `TokenSituation` no cierra sobre las siete de pkcs11.
+      sign: async () => ({
+        ok: false,
+        failure: {
+          situation: "keyringPinMissing" as TokenFailure["situation"],
+          detail: "PK11_CheckUserPassword: el pin del llavero no abre el almacen ya existente",
+          attemptsLeft: null,
+        },
+      }),
+    });
+    const emptyStore = vi.fn(async () => {});
+    renderApp(
+      inMemoryRecents(),
+      [documentPlaced("factura.pdf")],
+      pdfsOf({ "factura.pdf": 2 }),
+      {},
+      { list: async () => [remembered], emptyStore },
+      emptyRubricPicker(),
+      signer,
+    );
+
+    await openPdf(user);
+    const panel = await screen.findByRole("region", { name: "Panel de firma" });
+    const sign = await within(panel).findByRole("button", { name: "Firmar como Ada Lovelace" });
+    await waitFor(() => expect(sign).toBeEnabled());
+    await user.click(sign);
+
+    await user.click(await screen.findByRole("button", { name: "Vaciar el almacén" }));
+    await user.click(screen.getByRole("button", { name: "Sí, vaciarlo" }));
+
+    expect(emptyStore).toHaveBeenCalledOnce();
   });
 
   it("abandons a failure left on another tab instead of showing it there", async () => {

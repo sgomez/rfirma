@@ -61,6 +61,16 @@ msgstr "Iruzkinak eta laguntza"
 msgid "errors.reload"
 msgstr "Birkargatu leihoa"
 
+#. El botón que ofrece vaciar el Almacén de rFirma cuando el llavero perdió su PIN (ADR-0034).
+msgid "errors.emptyStore.button"
+msgstr "Hustu biltegia"
+
+msgid "errors.emptyStore.confirmQuestion"
+msgstr "Ziur zaude? Instalatutako ziurtagiriak galduko dira, eta ezin izango da desegin."
+
+msgid "errors.emptyStore.confirmButton"
+msgstr "Bai, hustu"
+
 #. El botón que copia el detalle técnico crudo del error de firma.
 msgid "errors.copyDetail"
 msgstr "Kopiatu xehetasuna"
@@ -240,6 +250,15 @@ msgstr ""
 "Probatu beste ziurtagiri batekin edo eskatu egoitzari SHA-256 RSArekin "
 "erabil dezala."
 
+msgid "errors.situations.removalNotSupported.title"
+msgstr "Ezin da ziurtagiri hori bakarrik kendu"
+
+msgid "errors.situations.removalNotSupported.body"
+msgstr ""
+"rFirmaren Biltegia partekatutako base bakarra da: kentzeak instalatutako "
+"beste ziurtagiriak ere eramango lituzke. Oraindik ez dago bakarra "
+"ezabatzeko modurik."
+
 msgid "errors.situations.certificateUnreadable.title"
 msgstr "Ezin izan dugu ziurtagiria irakurri"
 
@@ -390,6 +409,23 @@ msgstr ""
 "Azken dokumentuek eta ziurtagiriak gordeta jarraitzen dute. Saiatu berriro "
 "eta, gertatzen jarraitzen badu, erantsi xehetasun teknikoa akatsaren "
 "txostenari."
+
+msgid "errors.situations.noKeyring.title"
+msgstr "Ezin izan dugu mahaigaineko gako-sortara sartu"
+
+msgid "errors.situations.noKeyring.body"
+msgstr ""
+"rFirmak gako-sorta behar du ziurtagiria babestuta gordetzeko. Egiaztatu "
+"zure mahaigainak bat duela erabilgarri, desblokeatu eskatzen badizu, eta "
+"saiatu berriro."
+
+msgid "errors.situations.keyringPinMissing.title"
+msgstr "Gako-sortak rFirmaren Biltegiaren PINa galdu du"
+
+msgid "errors.situations.keyringPinMissing.body"
+msgstr ""
+"PIN hori gabe ezin dugu jada zenuen biltegia ireki. Joan Hobespenak → "
+"Ziurtagiriak atalera eta hustu, ziurtagiriak berriro zerotik instalatzeko."
 
 #. Se enseña en un diálogo nativo antes de que exista ventana; no la lee i18next.
 msgid "errors.startup.homeUnknown"

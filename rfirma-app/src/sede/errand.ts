@@ -89,6 +89,9 @@ export const NAMED_BY_THE_DESK = [
   "folderUnreadable",
   "folderUnwritable",
   "noFreeName",
+  "removalNotSupported",
+  "noKeyring",
+  "keyringPinMissing",
 ] as const satisfies readonly (keyof Catalog["errors"]["situations"])[];
 
 type NamedByTheDesk = (typeof NAMED_BY_THE_DESK)[number];

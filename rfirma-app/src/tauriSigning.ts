@@ -24,6 +24,7 @@ export function tauriCertificateStore(): CertificateStore {
     list: () => invoke<readonly Certificate[]>("list_certificates"),
     install: () => invoke<boolean>("install_certificate"),
     remove: (id) => invoke<void>("remove_certificate", { id }),
+    emptyStore: () => invoke<void>("empty_installed_store"),
   };
 }
 

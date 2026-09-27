@@ -453,7 +453,11 @@ pub fn import_pkcs12(
                 return Err(failed("PK11_InitPin"));
             }
             if check_user_password(slot, pin.as_ptr()) != SEC_SUCCESS {
-                return Err(failed("PK11_CheckUserPassword"));
+                return Err(TokenError::new(
+                    Situation::KeyringPinMissing,
+                    "PK11_CheckUserPassword: el PIN del llavero no abre el Almacen de rFirma \
+                     ya existente",
+                ));
             }
 
             let mut item = secret.item();

@@ -214,6 +214,7 @@ interface CertificatesSectionProps {
   installedCertificates: readonly Certificate[];
   onAddClick: () => void;
   onRemoveClick: (certificate: Certificate) => void;
+  onEmptyStoreClick: () => void;
 }
 
 export function CertificatesSection({
@@ -222,6 +223,7 @@ export function CertificatesSection({
   installedCertificates,
   onAddClick,
   onRemoveClick,
+  onEmptyStoreClick,
 }: CertificatesSectionProps) {
   const { t, i18n } = useTranslation();
   return (
@@ -242,6 +244,7 @@ export function CertificatesSection({
       {certificateFailure !== null && (
         <ErrorNotice
           situation={certificateFailure.situation}
+          onEmptyStore={onEmptyStoreClick}
           technicalDetail={
             certificateFailure.situation === "keyKindUnsupported" ||
             certificateFailure.situation === "pkcs12NoPrivateKey"

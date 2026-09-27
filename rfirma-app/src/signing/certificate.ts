@@ -189,6 +189,8 @@ export interface CertificateStore {
   install(): Promise<boolean>;
   /** Quita un `.p12` instalado, por el asa de su fila. */
   remove(id: string): Promise<void>;
+  /** Vacía el Almacén de rFirma entero, ya confirmado por la persona (ADR-0034). */
+  emptyStore(): Promise<void>;
 }
 
 /**
@@ -203,6 +205,7 @@ export function emptyCertificateStore(): CertificateStore {
     list: async () => [],
     install: async () => false,
     remove: async () => {},
+    emptyStore: async () => {},
   };
 }
 

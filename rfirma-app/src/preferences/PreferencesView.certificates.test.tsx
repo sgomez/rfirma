@@ -199,4 +199,24 @@ describe("certificates in a file", () => {
     const certificates = screen.getByRole("tabpanel", { name: "Certificados" });
     expect(await within(certificates).findByRole("alert")).toBeInTheDocument();
   });
+
+  // El llavero perdió el PIN del Almacén de rFirma (ADR-0034): instalar lo
+  // dice y ofrece vaciarlo, confirmando antes de llamarlo.
+  it("offers to empty the store when the keyring lost its pin", async () => {
+    const user = userEvent.setup();
+    const onEmptyStore = vi.fn();
+    renderView({
+      onInstallCertificate: async () => {
+        throw { situation: "keyringPinMissing", detail: "sin pin" };
+      },
+      onEmptyStore,
+    });
+    await openTab(user, "Certificados");
+
+    await user.click(screen.getByRole("button", { name: "Añadir…" }));
+    await user.click(screen.getByRole("button", { name: "Vaciar el almacén" }));
+    await user.click(screen.getByRole("button", { name: "Sí, vaciarlo" }));
+
+    expect(onEmptyStore).toHaveBeenCalledOnce();
+  });
 });

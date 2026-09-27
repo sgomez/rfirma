@@ -180,6 +180,14 @@ describe("los puertos de firma sobre Tauri", () => {
 
     expect(invoke).toHaveBeenCalledWith("list_certificates");
   });
+
+  it("empties the rFirma store with its own command", async () => {
+    invoke.mockResolvedValue(undefined);
+
+    await tauriCertificateStore().emptyStore();
+
+    expect(invoke).toHaveBeenCalledWith("empty_installed_store");
+  });
 });
 
 /**

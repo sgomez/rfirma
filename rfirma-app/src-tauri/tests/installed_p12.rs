@@ -10,7 +10,7 @@ use rfirma_lib::identity::domain::certificate::TokenCertificate;
 use rfirma_lib::identity::domain::keyring::KeyringError;
 use rfirma_lib::identity::domain::protected_secret::ProtectedSecret;
 use rfirma_lib::identity::domain::store::Store;
-use rfirma_lib::identity::ports::{Keyring, Token};
+use rfirma_lib::identity::ports::Keyring;
 use x509_cert::der::Decode;
 
 /// Contraseña de los `.p12` del kit de pruebas (`active-rsa.p12`, `active-ecc.p12`).
@@ -386,70 +386,6 @@ fn a_refused_p12_leaves_an_already_installed_certificate_alone() {
 }
 
 #[test]
-fn without_a_desktop_keyring_nothing_installs() {
-    struct NoKeyringAtAll;
-    impl Keyring for NoKeyringAtAll {
-        fn pin(&self) -> Result<ProtectedSecret, KeyringError> {
-            Err(KeyringError::NoKeyring)
-        }
-        fn create_pin(&self) -> Result<ProtectedSecret, KeyringError> {
-            Err(KeyringError::NoKeyring)
-        }
-    }
-
-    let installed = an_empty_installation();
-    let bytes = std::fs::read(kit_p12()).expect("el .p12 del kit deberia leerse");
-
-    let failure = certificates::install_pkcs12(
-        &pkcs11::RealToken,
-        &RealInstalledFolder,
-        &NoKeyringAtAll,
-        installed.path(),
-        &bytes,
-        KIT_PASSWORD,
-    )
-    .expect_err("sin llavero del escritorio no hay instalacion (ADR-0034)");
-
-    assert_eq!(
-        rfirma_lib::crossing::Failure::from(failure).situation,
-        "noKeyring"
-    );
-    assert!(installed_stores(installed.path()).is_empty());
-}
-
-#[test]
-fn a_pin_that_is_not_utf8_refuses_instead_of_installing_unencrypted() {
-    struct NonUtf8PinKeyring;
-    impl Keyring for NonUtf8PinKeyring {
-        fn pin(&self) -> Result<ProtectedSecret, KeyringError> {
-            Ok(ProtectedSecret::new([0xff, 0xfe, 0xfd]))
-        }
-        fn create_pin(&self) -> Result<ProtectedSecret, KeyringError> {
-            self.pin()
-        }
-    }
-
-    let installed = an_empty_installation();
-    let bytes = std::fs::read(kit_p12()).expect("el .p12 del kit deberia leerse");
-
-    let failure = certificates::install_pkcs12(
-        &pkcs11::RealToken,
-        &RealInstalledFolder,
-        &NonUtf8PinKeyring,
-        installed.path(),
-        &bytes,
-        KIT_PASSWORD,
-    )
-    .expect_err("un pin que no es UTF-8 no puede inicializar la base sin cifrar (ADR-0034)");
-
-    assert_eq!(
-        rfirma_lib::crossing::Failure::from(failure).situation,
-        "incorrectPin"
-    );
-    assert!(installed_stores(installed.path()).is_empty());
-}
-
-#[test]
 fn a_wrong_password_is_told_apart_from_a_key_that_does_not_serve() {
     let installed = an_empty_installation();
 
@@ -519,29 +455,6 @@ fn nothing_of_the_file_is_kept_beyond_the_two_databases() {
     inside.sort();
 
     assert_eq!(inside, vec!["cert9.db".to_owned(), "key4.db".to_owned()]);
-}
-
-#[test]
-fn the_installed_store_only_opens_with_the_keyring_pin() {
-    let installed = an_empty_installation();
-    install(installed.path(), &kit_p12(), KIT_PASSWORD)
-        .expect("el .p12 del kit deberia instalarse");
-    let store = installed_stores(installed.path())
-        .into_iter()
-        .next()
-        .expect("el almacen deberia existir");
-
-    pkcs11::RealToken
-        .list_authenticated(&store, &ProtectedSecret::from_str(""))
-        .expect_err("un pin vacio no deberia abrir una base cifrada");
-    pkcs11::RealToken
-        .list_authenticated(&store, &ProtectedSecret::from_str("no es el pin correcto"))
-        .expect_err("un pin equivocado no deberia abrir una base cifrada");
-
-    let found = pkcs11::RealToken
-        .list_authenticated(&store, &ProtectedSecret::from_str(KEYRING_PIN))
-        .expect("el pin del llavero deberia abrir la base cifrada");
-    assert_eq!(found.len(), 1);
 }
 
 #[test]

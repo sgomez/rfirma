@@ -205,4 +205,69 @@ describe("el aviso de error", () => {
 
     expect(onReload).toHaveBeenCalledOnce();
   });
+
+  it("offers to empty the store only with a lost keyring pin", () => {
+    renderIn("es", <ErrorNotice situation="unknown" onEmptyStore={vi.fn()} />);
+
+    expect(screen.queryByRole("button", { name: /Vaciar el almacén/ })).not.toBeInTheDocument();
+  });
+
+  it("does not offer to empty the store when nobody wired it up", () => {
+    renderIn("es", <ErrorNotice situation="keyringPinMissing" />);
+
+    expect(screen.queryByRole("button", { name: /Vaciar el almacén/ })).not.toBeInTheDocument();
+  });
+
+  it("asks to confirm before emptying the store", async () => {
+    const user = userEvent.setup();
+    const onEmptyStore = vi.fn();
+    renderIn("es", <ErrorNotice situation="keyringPinMissing" onEmptyStore={onEmptyStore} />);
+
+    await user.click(screen.getByRole("button", { name: "Vaciar el almacén" }));
+
+    expect(onEmptyStore).not.toHaveBeenCalled();
+    expect(screen.getByText(/Se perderán los certificados instalados/)).toBeInTheDocument();
+  });
+
+  it("empties the store only after the confirmation", async () => {
+    const user = userEvent.setup();
+    const onEmptyStore = vi.fn();
+    renderIn("es", <ErrorNotice situation="keyringPinMissing" onEmptyStore={onEmptyStore} />);
+
+    await user.click(screen.getByRole("button", { name: "Vaciar el almacén" }));
+    await user.click(screen.getByRole("button", { name: "Sí, vaciarlo" }));
+
+    expect(onEmptyStore).toHaveBeenCalledOnce();
+  });
+
+  it("cancelling the confirmation leaves the store alone", async () => {
+    const user = userEvent.setup();
+    const onEmptyStore = vi.fn();
+    renderIn("es", <ErrorNotice situation="keyringPinMissing" onEmptyStore={onEmptyStore} />);
+
+    await user.click(screen.getByRole("button", { name: "Vaciar el almacén" }));
+    await user.click(screen.getByRole("button", { name: "Cancelar" }));
+
+    expect(onEmptyStore).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Vaciar el almacén" })).toBeInTheDocument();
+  });
+
+  /**
+   * Firmar con un certificado instalado también pasa por aquí (criterio 3 del
+   * #1062): sin esta excepción a la tarjeta fija de «Error al firmar», quien
+   * firma no tenía forma de alcanzar el botón sin volver a Preferencias.
+   */
+  it("offers to empty the store from a signing failure too", async () => {
+    const user = userEvent.setup();
+    const onEmptyStore = vi.fn();
+    renderIn(
+      "es",
+      <ErrorNotice situation="keyringPinMissing" onEmptyStore={onEmptyStore} documentUnchanged />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Vaciar el almacén" }));
+    await user.click(screen.getByRole("button", { name: "Sí, vaciarlo" }));
+
+    expect(onEmptyStore).toHaveBeenCalledOnce();
+  });
 });
