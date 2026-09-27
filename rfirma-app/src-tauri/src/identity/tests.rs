@@ -88,6 +88,18 @@ impl Token for RecordingToken {
             "no importa nada",
         ))
     }
+
+    fn remove_certificate(
+        &self,
+        _directory: &Path,
+        _reference: &CertificateRef,
+        _pin: &ProtectedSecret,
+    ) -> Result<(), TokenError> {
+        Err(TokenError::new(
+            Situation::CertificateNotFound,
+            "no quita nada",
+        ))
+    }
 }
 
 /// Un llavero que cuenta cuántas veces se le pidió el PIN y siempre entrega el mismo.

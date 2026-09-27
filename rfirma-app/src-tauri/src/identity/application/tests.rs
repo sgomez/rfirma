@@ -83,6 +83,18 @@ impl Token for NoToken {
             "este token no importa nada",
         ))
     }
+
+    fn remove_certificate(
+        &self,
+        _directory: &Path,
+        _reference: &CertificateRef,
+        _pin: &crate::identity::domain::protected_secret::ProtectedSecret,
+    ) -> Result<(), TokenError> {
+        Err(TokenError::new(
+            Situation::CertificateNotFound,
+            "este token no quita nada",
+        ))
+    }
 }
 
 /// Construye un certificado de prueba con la etiqueta y DER proporcionados.

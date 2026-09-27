@@ -6,7 +6,6 @@ use std::process::Command;
 use rfirma_lib::identity::adapters::folder::RealInstalledFolder;
 use rfirma_lib::identity::adapters::pkcs11;
 use rfirma_lib::identity::application::certificates;
-use rfirma_lib::identity::application::certificates::ListedCertificates;
 use rfirma_lib::identity::domain::certificate::TokenCertificate;
 use rfirma_lib::identity::domain::keyring::KeyringError;
 use rfirma_lib::identity::domain::protected_secret::ProtectedSecret;
@@ -588,61 +587,6 @@ fn two_certificates_with_the_same_common_name_coexist() {
     install(installed.path(), &second, KIT_PASSWORD).expect("el segundo deberia instalarse");
 
     assert_eq!(certificates(installed.path()).len(), 2);
-}
-
-#[test]
-fn removing_an_installed_certificate_is_refused_instead_of_deleting_the_shared_store() {
-    let installed = an_empty_installation();
-    install(installed.path(), &kit_p12(), KIT_PASSWORD)
-        .expect("el .p12 del kit deberia instalarse");
-    let listed = ListedCertificates::new();
-    let found = certificates(installed.path());
-    let handles = listed.replace(
-        found
-            .iter()
-            .map(|certificate| certificate.reference().clone()),
-    );
-
-    let failure = certificates::remove_installed(installed.path(), &handles[0], &listed)
-        .expect_err("el borrado fino aun no existe: quitar no puede llevarse el almacen entero");
-
-    assert_eq!(
-        rfirma_lib::crossing::Failure::from(failure).situation,
-        "removalNotSupported"
-    );
-    assert_eq!(
-        installed_stores(installed.path()).len(),
-        1,
-        "el almacen compartido tiene que seguir intacto"
-    );
-}
-
-#[test]
-fn a_certificate_from_somewhere_else_is_not_removed() {
-    let installed = an_empty_installation();
-    let elsewhere = an_empty_installation();
-    install(elsewhere.path(), &kit_p12(), KIT_PASSWORD)
-        .expect("el .p12 del kit deberia instalarse");
-    let listed = ListedCertificates::new();
-    let found = certificates(elsewhere.path());
-    let handles = listed.replace(
-        found
-            .iter()
-            .map(|certificate| certificate.reference().clone()),
-    );
-
-    let failure = certificates::remove_installed(installed.path(), &handles[0], &listed)
-        .expect_err("no viene de este directorio");
-
-    assert_eq!(
-        rfirma_lib::crossing::Failure::from(failure).situation,
-        "certificateNotFound"
-    );
-    assert_eq!(
-        installed_stores(elsewhere.path()).len(),
-        1,
-        "el almacen de al lado sigue donde estaba"
-    );
 }
 
 #[test]

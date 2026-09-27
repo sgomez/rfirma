@@ -16,13 +16,14 @@ habla con el token. Rutas relativas a `src/identity/`.
 | `adapters/pkcs11/listing.rs` | Recorre las ranuras de un almacén y filtra los certificados con clave privada emparejada. |
 | `adapters/pkcs11/mechanism.rs` | Elige el mecanismo de firma que ofrece la ranura y firma con la clave privada. |
 | `adapters/pkcs11/session.rs` | Abre el módulo PKCS#11, cachea su contexto y localiza ranura y clave privada. |
-| `adapters/pkcs11/nss.rs` | Cómo entra un `.p12` en un almacén NSS propio, con el PKCS#12 de `libsmime3`. Declara `NssHost` y `RealNssHost`, para `site/adapters/nss.rs`. Pruebas en `adapters/pkcs11/nss/tests.rs`. |
+| `adapters/pkcs11/nss.rs` | Cómo entra un `.p12` en un almacén NSS propio, con el PKCS#12 de `libsmime3`, y los símbolos NSS de bajo nivel que comparte con `adapters/pkcs11/removal.rs`. Declara `NssHost` y `RealNssHost`, para `site/adapters/nss.rs`. Pruebas en `adapters/pkcs11/nss/tests.rs`. |
+| `adapters/pkcs11/removal.rs` | Cómo se borra de un almacén NSS un certificado y su clave por su `CKA_ID`, sin tocar los demás. |
 | `adapters/pkcs11/stores.rs` | Dónde se buscan los certificados, incluidos los `.p12` instalados, y qué módulo descubierto es la biblioteca que nombra la sede (ADR-0022). Pruebas en `adapters/pkcs11/stores/tests.rs`. |
 | `adapters/pkcs11/p11kit.rs` | Los módulos PKCS#11 que la instalación registra en p11-kit, leídos de sus ficheros `.module`; no carga ninguno. Pruebas en `adapters/pkcs11/p11kit/tests.rs`. |
 | `adapters/failures.rs` | La única traducción de lo que va mal en identidad a la vista de la ventana y al código de la sede (ADR-0009). Pruebas en `adapters/failures/tests.rs`. |
 | `adapters/tauri.rs` | Las tres órdenes de identidad: listar certificados, instalar y quitar un `.p12`. |
 | `adapters/views.rs` | Lo que cruza a la ventana: `CertificateView`, `StatusView` y `SecretView`. Pruebas en `adapters/views/tests.rs`. |
-| `application/certificates.rs` | Qué certificados hay, cuál se recordó e instalar o quitar un `.p12`; `ListedCertificates` es el último listado, con las asas de `documents/domain/handles.rs`. Pruebas en `application/certificates/tests.rs`. |
+| `application/certificates.rs` | Qué certificados hay, cuál se recordó e instalar o quitar un `.p12`; `ListedCertificates` es el último listado, con las asas de `documents/domain/handles.rs`. Pruebas en `application/certificates/tests/mod.rs` y `application/certificates/tests/removal.rs`. |
 | `domain/algorithm.rs` | El algoritmo de firma que se pide por su nombre, la clase de clave que exige y el mecanismo PKCS#11 con el que se cumple. Pruebas en `domain/algorithm/tests.rs`. |
 | `domain/certificate.rs` | El certificado tal y como sale del token, y `ListedCertificate`, la fila con su asa. Pruebas en `domain/certificate/tests.rs`. |
 | `domain/chain.rs` | Los emisores que acompañan al firmante en la cadena de certificación que viaja dentro de la firma. Pruebas en `domain/chain/tests.rs`. |

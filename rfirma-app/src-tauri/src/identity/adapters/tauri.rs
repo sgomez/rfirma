@@ -76,8 +76,12 @@ pub fn install_certificate_over(
 /// Desinstala un certificado PKCS#12 previamente instalado.
 #[tauri::command(async)]
 pub fn remove_certificate(id: String, identity: State<'_, IdentityRoot>) -> Result<(), Failure> {
+    let keyring = (identity.keyring)()?;
     Ok(
         crate::identity::application::certificates::remove_installed(
+            identity.token.as_ref(),
+            keyring.as_ref(),
+            identity.memory.as_ref(),
             identity.installed_certificates(),
             &id,
             &identity.listed,
