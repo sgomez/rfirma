@@ -17,6 +17,7 @@ no interviene en ningún punto del proyecto.**
 | Almacén de tokens | `~/.local/share/softhsm/tokens` |
 | Etiqueta del token | `rfirma-test` |
 | Token de desarrollo | `rfirma-kit`: los dos casos del kit que no traen los tokens de las pruebas, un seudónimo y un representante con CN largo, para verlos en la ventana. Lo instala `just certs install` si el kit está en el equipo y lo quita `just certs uninstall`, junto con los de las pruebas; ninguna prueba lo usa |
+| Tokens de representante | `rfirma-test-representative` (los tres perfiles del kit, cada uno con su revocado) y `rfirma-test-representative-2` (el mismo activo de persona jurídica, en un segundo almacén). Los monta `provision-token.sh` desde `testdata/fnmt/`, así que sí los usan las pruebas de grada B (#1090) |
 | PIN de usuario | `1234` |
 | PIN de SO | `3737` |
 | `CKA_LABEL` de clave y certificado | `FNMT-ACTIVO-99999999R` (ambos con `CKA_ID = 01`) |
@@ -210,6 +211,20 @@ SoftHSM 2 ofrece `CKM_ECDSA` y **ninguna** de las variantes compuestas
 resumen; lo que devuelve es `r||s` en crudo, 64 bytes, y no el DER que espera
 CMS. Los dos hechos, medidos, están en
 [`pkcs11-mecanismo-firma.md`](pkcs11-mecanismo-firma.md).
+
+## Ampliación: certificados de representante, en dos almacenes (#1090)
+
+`provision-token.sh` monta además `rfirma-test-representative`, con los tres
+perfiles de representación del kit —persona jurídica, entidad sin personalidad
+jurídica y administrador único—, cada uno con su revocado, seis objetos en
+total. El activo de persona jurídica se repite, con el mismo `CKA_ID` y la
+misma etiqueta, en un segundo token, `rfirma-test-representative-2`: el mismo
+certificado en dos almacenes distintos, para probar la agrupación «una fila
+por certificado» contra datos reales y no contra dobles fabricados.
+
+Los seis `.p12` viven en `testdata/fnmt/` (ver su README), sacados de la rama
+`AC Representación` del kit; todos llevan el titular sintético
+`IDCES-00000000T` que usa todo el kit de pruebas, nunca el del titular real.
 
 ## Fuera
 

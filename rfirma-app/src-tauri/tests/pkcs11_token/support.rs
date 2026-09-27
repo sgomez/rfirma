@@ -28,6 +28,8 @@ pub(crate) const REVOKED: &str = "FNMT-REVOCADO-99999999R";
 pub(crate) const TWIN: &str = "FNMT-GEMELO-99999999R";
 pub(crate) const TWIN_OF_THE_ACTIVE_KEY: u8 = 0x04;
 pub(crate) const TWIN_OF_THE_EXPIRED_KEY: u8 = 0x05;
+/// Certificado de representante de persona jurídica del kit (ID-13).
+pub(crate) const REPRESENTATIVE_LEGAL_ENTITY: &str = "FNMT-REPRESENTANTE-PJ";
 
 /// Bloque DER de SignedAttributes para firmar.
 pub(crate) const PRESIGN: &[u8] =

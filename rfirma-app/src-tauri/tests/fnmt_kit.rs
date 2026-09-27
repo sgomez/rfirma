@@ -11,13 +11,28 @@ const STCERES: &str =
     "https://www.sede.fnmt.gob.es/documents/10445900/10649507/Certificados_pruebas_todas_CAs.rar";
 
 /// `notAfter` de cada certificado del camino feliz, en segundos desde la época UNIX.
-const EXPIRIES: [(&str, u64, &str); 2] = [
+const EXPIRIES: [(&str, u64, &str); 5] = [
     ("active-rsa.p12", 1_856_513_219, "2028-10-30"),
     ("active-ecc.p12", 1_883_203_134, "2029-09-04"),
+    (
+        "representative-legal-entity-rsa.p12",
+        1_841_826_929,
+        "2028-05-13",
+    ),
+    (
+        "representative-unincorporated-entity-rsa.p12",
+        1_842_849_526,
+        "2028-05-25",
+    ),
+    (
+        "representative-sole-administrator-rsa.p12",
+        1_842_849_569,
+        "2028-05-25",
+    ),
 ];
 
 /// Huellas SHA-256 de los ficheros `.p12` versionados.
-const FINGERPRINTS: [(&str, &str); 5] = [
+const FINGERPRINTS: [(&str, &str); 11] = [
     (
         "active-rsa.p12",
         "6e0cad97b78be2918ed54a64a0dd4f3f6e4c16e01b405ef0836fb91b77a3ffb4",
@@ -37,6 +52,30 @@ const FINGERPRINTS: [(&str, &str); 5] = [
     (
         "pseudonym-rsa.p12",
         "ed38e08e8df77160eb4c0b03fa5e78243fefdd35116af23aa6bcb56cbc2d56b1",
+    ),
+    (
+        "representative-legal-entity-rsa.p12",
+        "8ec428e40122888ddccb621358f94aedf393577617a851b2ceabfe66c6570f13",
+    ),
+    (
+        "representative-legal-entity-revoked-rsa.p12",
+        "50590da24cfaa62527cfa3a0de243de87b6ac816e03bd8069774724de7a9029d",
+    ),
+    (
+        "representative-unincorporated-entity-rsa.p12",
+        "0a179ee34f3690e98c2c8b34676d98d6008afa5f1ce478bca1c7c99d31a48b3a",
+    ),
+    (
+        "representative-unincorporated-entity-revoked-rsa.p12",
+        "2e5731e89f64f0d5a9a944e03081f97d91df0244c9f87e46f59591dbb76a0624",
+    ),
+    (
+        "representative-sole-administrator-rsa.p12",
+        "11fa5142e4b118a4a82832e5417ee36c45e9fdfbecdfc5b6664bb816ef476973",
+    ),
+    (
+        "representative-sole-administrator-revoked-rsa.p12",
+        "505f322550f68f6f4ff760aedecbc22c4a14bb65cfd5d04a5564b510231ae461",
     ),
 ];
 
