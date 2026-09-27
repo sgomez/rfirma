@@ -17,16 +17,17 @@ Por cada artboard de trabajo:
   queda**: es el registro de la alternativa. El porqué —incluido por qué se
   descartaron las otras— va a la anotación de la página.
 - Borra el artboard de trabajo, su página de `canvas.json` y su fila del
-  registro. Del repositorio **y** del proyecto, con `delete_files` en el mismo
-  `finalize_plan`.
+  registro del repositorio, y apúntalo para que la sesión principal lo borre
+  del proyecto.
 
 Al terminar, en el proyecto no puede haber dos sitios donde mirar la misma
 pantalla. Es el motivo entero de esta fase.
 
 ## 2. Dejar la copia 1-1
 
-- `docs/design/artboards/` refleja exactamente lo que hay en el proyecto:
-  mismos ficheros, mismo `canvas.json`.
+- `docs/design/artboards/` refleja exactamente lo que hay en el proyecto,
+  según la lista de ficheros remotos que te pasa la sesión principal: mismos
+  ficheros, mismo `canvas.json`.
 - `./docs/design/artboards/comprueba.sh` en verde.
 - Actualiza `docs/design/artboards/README.md`: la tabla de artboards y el
   apartado «Lo que cambió en vX» de la versión en curso.
@@ -58,5 +59,6 @@ pantalla que aparece en varios flujos tiene una sola ficha que los lista.
 
 ## 5. Lo que devuelves
 
-Qué se fundió en qué, qué se borró, qué fichas cambiaron y el enlace a la PR.
-En diez líneas.
+Qué se fundió en qué, qué se borró, qué fichas cambiaron y el enlace a la PR,
+en diez líneas; y aparte, **las rutas que subir y las que borrar** del
+proyecto, que las sincroniza la sesión principal.

@@ -33,12 +33,31 @@ Las fases 1 y 3 son mecánicas, largas y se comen el contexto en lecturas de
 HTML que a la conversación no le sirven de nada. **Van en un contexto propio**:
 lánzalas con `Agent` (`general-purpose`), pasándole como prompt «lee
 `.claude/skills/canvas/PROTOTIPAR.md` y ejecútalo para \<encargo\>» más el
-encargo concreto. Lo que vuelve a la sesión principal es una lista de URLs y
-qué decide cada palanca (fase 1), o el resumen de qué se fundió y qué fichas
-cambiaron (fase 3). Nunca el HTML.
+encargo concreto, y en la fase 3 la lista de ficheros del proyecto. Lo que
+vuelve a la sesión principal es qué decide cada palanca (fase 1), o el resumen
+de qué se fundió y qué fichas cambiaron (fase 3), y en las dos las rutas que
+subir y borrar. Nunca el HTML. Con esas rutas sincronizas tú.
 
 La fase 2 **no** se delega: el veredicto es del usuario y las correcciones
 llegan en tandas numeradas sobre lo que está viendo.
+
+### Sincronizar es cosa tuya
+
+**Un subagente no tiene `DesignSync`**: trabaja solo sobre ficheros locales. La
+sesión principal es la única que habla con el proyecto:
+
+- **Bajar**: `get_file` de cada ruta y su contenido a un directorio temporal
+  fuera del repositorio. La salida grande se guarda en un fichero; extráela con
+  `jq -j .content`, porque `jq -r` añade un salto de línea que rompe la
+  igualdad byte a byte.
+- **Subir**: el subagente te devuelve las rutas que escribir y las que borrar.
+  Antes de pisar un artboard que ya existe, bájalo y compáralo fuera del
+  `<helmet>` con su versión de `HEAD`: si difieren, el usuario lo retocó a
+  mano; para y pide `/canvas-pull` antes de subir nada. Después,
+  `finalize_plan` (con `writes` **y** `deletes`, obligatorio aunque vaya vacío)
+  con `localDir` en `docs/design/artboards/`, `write_files` con `localPath` y
+  `delete_files`.
+- **Comprobar**: `get_file` de cada ruta subida y `cmp` con la copia local.
 
 ## La fase 2, que es la que te toca a ti
 

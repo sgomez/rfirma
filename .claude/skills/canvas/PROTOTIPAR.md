@@ -1,7 +1,7 @@
 # Fase 1 · Dibujar con el estilo que ya existe
 
 Este fichero se ejecuta **en contexto propio**. Lo que devuelves a quien te
-lanzó es corto: la URL del proyecto, qué artboard toca cada palanca y qué
+lanzó es corto: las rutas que subir, qué artboard toca cada palanca y qué
 decide cada opción. Nada de HTML, nada de volcados de fichero.
 
 Antes de nada, lee las reglas que no se negocian de [SKILL.md](SKILL.md).
@@ -17,7 +17,7 @@ Antes de nada, lee las reglas que no se negocian de [SKILL.md](SKILL.md).
 ## 2. El estilo no se inventa
 
 - El `<helmet>` se copia **de `docs/design/artboards/_helmet.part`**, nunca de
-  un `get_file` del proyecto: la copia remota se queda atrás. El 02/09/2026
+  la copia del proyecto: la copia remota se queda atrás. El 02/09/2026
   entraron tres artboards con dos tokens de sombra desfasados por mirar al
   proyecto.
 - **Nada de colores literales.** Tokens `--rf-*` y clases del bundle
@@ -70,20 +70,16 @@ El usuario corrige esto en cada tanda; adelántate.
 
 ## 6. Publicar
 
-1. Redacta en el repositorio, en `docs/design/artboards/`. Antes de pisar un
-   artboard que ya existe, `get_file` y `diff` con la copia local fuera del
-   `<helmet>`: si difieren, el usuario lo retocó a mano; para y pide
-   `/canvas-pull` antes de subir nada.
+1. Redacta en el repositorio, en `docs/design/artboards/`.
 2. `./docs/design/artboards/comprueba.sh`.
-3. Sube con `DesignSync`: `list_files` → `finalize_plan` (con `writes` **y**
-   `deletes`, obligatorio aunque vaya vacío) → `write_files` / `delete_files`.
-4. `canvas.json`: artboards, páginas y anotaciones. La anotación es donde vive
+3. `canvas.json`: artboards, páginas y anotaciones. La anotación es donde vive
    el razonamiento; escríbela larga y con los números medidos. La página de
    trabajo se llama `trabajo-<tema>` y ya nace condenada.
-5. Anota `en revisión` en el registro de `docs/agents/prototyping.md`.
+4. Anota `en revisión` en el registro de `docs/agents/prototyping.md`.
 
 ## 7. Lo que devuelves
 
-La URL, la lista de artboards tocados, y **por cada palanca, qué pregunta
+La lista de rutas que subir y borrar —la subida la hace la sesión principal
+(SKILL.md, «Sincronizar es cosa tuya»)—, los artboards tocados, y **por cada palanca, qué pregunta
 responde y qué defiende cada opción, en una línea**. Ese texto es lo que el
 usuario va a leer para decidir en la fase 2.
