@@ -4,6 +4,7 @@ import { forgetActivity } from "./App.forgetActivity";
 import { formatSignedAt, type PageGeometry, placingFrom } from "./App.signingOrder";
 import { useCertificateSearch } from "./App.useCertificateSearch";
 import { useDropNotices } from "./App.useDropNotices";
+import { useOpenShortcut } from "./App.useOpenShortcut";
 import { usePlacementControls } from "./App.usePlacementControls";
 import { useDestination, usePreferencesState } from "./App.usePreferencesState";
 import { usePreviousSignatures } from "./App.usePreviousSignatures";
@@ -87,6 +88,8 @@ interface AppProps {
    * esta misma instancia en vez de duplicarlas.
    */
   onReady?: (handle: AppHandle) => void;
+  /** Otra pantalla tapa la ventana, como el asistente del primer arranque. */
+  covered?: boolean;
 }
 
 /** El asa que `onReady` entrega: lo único de `App` que se abre desde fuera. */
@@ -124,6 +127,7 @@ export function App({
   externalDestinations = unavailableExternalDestinationOpener(),
   status = memoryStatus(),
   onReady,
+  covered = false,
 }: AppProps) {
   const [dialog, setDialog] = useState<OpenDialog>(null);
   const [view, setView] = useState<ActiveView>(null);
@@ -307,6 +311,14 @@ export function App({
     previousSignatures: previousSignatures.signatures,
     startSigning: signing.start,
   });
+
+  const modalOpen =
+    dialog !== null ||
+    unregisteredPrompt !== null ||
+    sealLossPrompt !== null ||
+    invalidPreviousSignaturesPrompt !== null ||
+    signing.state.kind === "running";
+  useOpenShortcut(openDocument, !covered && view === null && !modalOpen);
 
   const forgetAll = () =>
     forgetActivity(

@@ -53,6 +53,7 @@ rojo.
 | `App.usePlacementControls.ts` | La colocación de la firma visible: el recuadro y los tres modos de página. |
 | `App.usePreferencesState.ts` | Los ajustes, el destino previsto para el documento activo y la rúbrica adoptada. |
 | `App.usePreviousSignatures.ts` | El informe de firmas previas del documento activo, pedido al abrir o cargar. |
+| `App.useOpenShortcut.ts` | El atajo Ctrl+O (Cmd+O en macOS) que abre un PDF, el primero de la ventana. |
 | `App.useSignFlow.ts` | La vista previa del sello y la firma, con los dos avisos que pueden interponerse antes del PIN. |
 | `App.useSignedSummary.ts` | El acuse de recibo del documento firmado y los dos caminos hasta el fichero. |
 | `App.useSigningFailure.ts` | El error de firma del documento activo, y su salida al cambiar de pestaña. |
