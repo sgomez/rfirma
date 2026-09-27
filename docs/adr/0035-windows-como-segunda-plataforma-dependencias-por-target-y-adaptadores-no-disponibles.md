@@ -44,7 +44,7 @@ dice qué falta:
 
 | Pieza en Linux | Pendiente en Windows | Qué hace mientras |
 | --- | --- | --- |
-| Diálogo GTK del PIN | `PendingWindowsPinDialog` | Falla con un mensaje en castellano. |
+| Diálogo GTK del PIN | `PendingWindowsPinDialog` | Falla con un mensaje en castellano; solo lo alcanza un módulo PKCS#11, porque con CNG el PIN lo pide Windows. |
 | Llavero `oo7` (ADR-0034) | `PendingWindowsCredentialManager` | `NoKeyring`: no hay instalación. |
 | Manejadores de `afirma://` por GIO | `handlers_in_the_windows_registry_pending` | Ninguno registrado. |
 | Diálogo GTK de fallo de arranque | `show_windows_dialog_pending` | Solo `stderr`. |
@@ -53,10 +53,39 @@ dice qué falta:
 
 El cerrojo de la carpeta de paso (ADR-0024) no queda pendiente: en Windows es abrir el fichero
 sin compartirlo, que cumple lo mismo que `flock`. Los adaptadores de NSS y de p11-kit compilan
-sin cambios. En Windows no encuentran sus bibliotecas y fallan en tiempo de ejecución.
+sin cambios. En Windows no encuentran sus bibliotecas y fallan en tiempo de ejecución: el
+Almacén de rFirma (ADR-0034), que es NSS, no existe todavía en Windows.
 
 Las pruebas intrínsecamente de Unix (enlaces simbólicos, `fork`, `flock`, `OsString` no UTF-8)
 se marcan con `cfg(unix)`, no se borran.
+
+## La firma en Windows: CNG para el almacén del usuario, PKCS#11 para lo demás
+
+En Windows, el puerto `Token` lo sirve `WindowsToken`. El almacén personal del usuario
+(`CurrentUser\MY`) entra como un `Store` más, con una ruta que ningún módulo PKCS#11 puede
+tener (`cng:CurrentUser/MY`), y va el primero de la lista. Cualquier otro almacén se lo pasa a
+`RealToken`, el mismo PKCS#11 de Linux.
+
+- **Listar**: CryptoAPI enumera `MY` y se queda con los certificados que tienen
+  `CERT_KEY_PROV_INFO_PROP_ID`, sin abrir la clave ni tocar la tarjeta. La cadena se completa
+  con `MY`, `CA` y `Root` del usuario. El `CKA_ID` de la referencia es la huella SHA-1, y la
+  etiqueta, el nombre descriptivo o, si no hay, el sujeto.
+- **Firmar (ADR-0001)**: Rust resume lo que manda Java y firma el resumen con `NCryptSignHash`
+  sobre la clave de `CryptAcquireCertificatePrivateKey` con `CRYPT_ACQUIRE_ONLY_NCRYPT_KEY_FLAG`.
+  RSA con PKCS#1 v1.5 o PSS (sal del tamaño del resumen, como en PKCS#11) y ECDSA, cuyo `r||s`
+  se reempaqueta en DER igual que el de PKCS#11. La clave no sale de su proveedor, y las claves
+  de un CSP antiguo también se abren por CNG.
+- **El PIN lo pide Windows**: el almacén del usuario responde `NotNeeded` a `secret_of`, así que
+  rFirma no enseña su diálogo, y el proveedor de la tarjeta (KSP o minidriver) pide el PIN con
+  su propia ventana. El diálogo propio del PIN solo haría falta en el camino PKCS#11, y ahí
+  sigue pendiente.
+
+El **DNIe** llega por las dos vías. Con el minidriver que Windows instala para la tarjeta, sus
+certificados aparecen en `CurrentUser\MY` y se firman por CNG con el PIN pedido por Windows: es
+la vía preferente. Además se buscan los módulos PKCS#11 de OpenSC y del DNIe en
+`%ProgramFiles%` y `%SystemRoot%\System32` (`RFIRMA_PKCS11_MODULE` los sustituye a todos, como
+en Linux); si el mismo certificado sale por los dos, la fila única se queda con la copia de CNG
+porque su almacén va primero y los dos son de clase `Card`.
 
 ## Las recetas corren en Git Bash
 
@@ -106,6 +135,21 @@ tenga Git, y los scripts de `scripts/` son de `bash`.
 **Un alias de `cfg` desde `build.rs`** (`cfg(gtk_desktop)`) para no tocar la guarda: esconde el
 sistema operativo tras un nombre que la guarda no ve. Se descartó por eso mismo.
 
+**El DNIe solo por PKCS#11 en Windows**, como en Linux: reutiliza todo el código, pero exige
+instalar OpenSC o el módulo de la Policía y el diálogo propio del PIN, que en Windows no existe.
+El minidriver ya lo trae el sistema y su PIN lo pide Windows, así que PKCS#11 queda como segunda
+vía.
+
+**`CRYPT_ACQUIRE_PREFER_NCRYPT_KEY_FLAG`** en vez de `ONLY`: devolvería un `HCRYPTPROV` de
+CryptoAPI para las claves de un CSP antiguo, y habría que firmar también con `CryptSignHash`.
+Con `ONLY`, CNG abre esas claves por su capa de compatibilidad y hay un único camino de firma.
+
+**El crate `windows`** en vez de `windows-sys`: envuelve los tipos, pero pesa más en compilación
+y aquí bastan una docena de funciones.
+
+**Una clase de almacén propia para `CurrentUser\MY`**: cambia el dominio, las vistas y la
+interfaz también en Linux. Se aplaza; mientras, el almacén del usuario se presenta como `Card`.
+
 ## Consequences
 
 - `tauri-build` exige en Windows `icons/icon.ico`; se empaqueta con los PNG que ya existían.
@@ -118,3 +162,8 @@ sistema operativo tras un nombre que la guarda no ve. Se descartó por eso mismo
 - En Windows la aplicación busca la `.dll` en `../lib/rfirma` junto al ejecutable, igual que en
   Linux; dónde la deje un instalador de Windows se decide con el instalador.
 - `cargo test` en Windows no corre las pruebas de grada B y C que necesitan softhsm o NSS.
+- Las pruebas de `identity/adapters/windows_store/tests.rs` crean certificados autofirmados en
+  `Cert:\CurrentUser\My` con `New-SelfSignedCertificate` y los borran con su clave al acabar.
+  La que firma XAdES, CAdES y PAdES con el puente está `#[ignore]` y necesita `RFIRMA_LIB_DIR`.
+- La ventana del PIN de la tarjeta no se hace modal sobre la de rFirma: no se le pasa ningún
+  `HWND`.

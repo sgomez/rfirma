@@ -3,7 +3,7 @@
 El contexto de la **identidad**: qué certificados hay, cuál se usa y cómo entra o
 sale un `.p12`. Aquí no se firma ningún documento, solo se dice quién puede.
 Su adaptador de verdad es `adapters/pkcs11/`, la única parte del backend que
-habla con el token. Rutas relativas a `src/identity/`.
+habla con el token; en Windows, también `adapters/windows_store/`. Rutas relativas a `src/identity/`.
 
 ## Dónde vive qué
 
@@ -12,7 +12,7 @@ habla con el token. Rutas relativas a `src/identity/`.
 | `mod.rs` | La raíz: `IdentityRoot`, la fachada que usan los vecinos y el `Signer` de `signing/ports.rs` sobre cualquier `Token`. Pruebas en `tests.rs`. |
 | `domain/mod.rs`, `application/mod.rs`, `adapters/mod.rs` | Solo `pub mod`: el reparto de cada capa. |
 | `application/tests.rs` | Los andamios de la grada A que comparten todos los contextos: `NoToken`, `NoMemory`, `a_certificate`, `a_usable_certificate` y `listed_from`. Solo en pruebas. |
-| `adapters/pkcs11/mod.rs` | La capa PKCS#11, y `RealToken`, el único adaptador de producción del puerto `Token`. |
+| `adapters/pkcs11/mod.rs` | La capa PKCS#11, y `RealToken`, el adaptador de producción del puerto `Token` en Linux. |
 | `adapters/pkcs11/listing.rs` | Recorre las ranuras de un almacén y filtra los certificados con clave privada emparejada. |
 | `adapters/pkcs11/mechanism.rs` | Elige el mecanismo de firma que ofrece la ranura y firma con la clave privada. |
 | `adapters/pkcs11/session.rs` | Abre el módulo PKCS#11, cachea su contexto y localiza ranura y clave privada. |
@@ -39,6 +39,8 @@ habla con el token. Rutas relativas a `src/identity/`.
 | `adapters/folder.rs` | `RealInstalledFolder`: la carpeta del Almacén de rFirma y el directorio desechable donde se prueba un `.p12` (ADR-0034). |
 | `adapters/keyring.rs` | `RealKeyring`: el adaptador de `Keyring` sobre `oo7`, el portal de secretos o Secret Service (ADR-0034); solo en Linux. Pruebas en `adapters/keyring/tests.rs`. |
 | `adapters/pending_windows_credential_manager.rs` | `PendingWindowsCredentialManager`: el `Keyring` de Windows, que aún no existe (ADR-0035). Sin pruebas propias. |
+| `adapters/windows_store.rs` | `WindowsToken`, el adaptador de `Token` en Windows: el almacén del usuario por CNG y los módulos PKCS#11 por `RealToken`, y dónde se buscan esos módulos (ADR-0035). Pruebas en `adapters/windows_store/tests.rs`. |
+| `adapters/windows_store/cng.rs` | `CurrentUser\MY` leído con CryptoAPI y el resumen firmado con `NCryptSignHash`; Windows pide el PIN. |
 
 ## Trampas
 

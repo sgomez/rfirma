@@ -3646,6 +3646,7 @@ dependencies = [
  "tokio-native-tls",
  "tokio-tungstenite",
  "url",
+ "windows-sys 0.61.2",
  "x509-cert",
  "zeroize",
 ]
