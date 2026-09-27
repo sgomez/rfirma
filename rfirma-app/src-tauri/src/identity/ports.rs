@@ -144,8 +144,7 @@ pub trait Keyring {
     }
 }
 
-/// Alcanza el llavero del escritorio bajo demanda: instalar y firmar lo invocan solo cuando hace
-/// falta, nunca al listar ni al elegir certificado (ADR-0034).
+/// Alcanza el llavero del escritorio bajo demanda: instalar y firmar lo invocan solo cuando hace falta, nunca al listar ni al elegir certificado (ADR-0034).
 pub type KeyringFactory =
     Arc<dyn Fn() -> Result<Box<dyn Keyring + Send + Sync>, KeyringError> + Send + Sync>;
 

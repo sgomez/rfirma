@@ -126,8 +126,7 @@ impl IdentityRoot {
     }
 }
 
-/// El token de firma, con el Almacén de rFirma tomando su PIN del llavero en vez de pedirlo;
-/// a los demás almacenes no los toca.
+/// El token de firma, con el Almacén de rFirma tomando su PIN del llavero en vez de pedirlo; a los demás almacenes no los toca.
 struct TokenSigner<'a> {
     token: &'a (dyn Token + Send + Sync),
     installed_certificates: &'a Path,
@@ -151,7 +150,7 @@ impl TokenSigner<'_> {
         if !self.is_installed(reference) {
             return Ok(ProtectedSecret::new(provided.as_bytes()));
         }
-        Ok((self.keyring)()?.get_or_create_pin()?)
+        Ok((self.keyring)()?.pin()?)
     }
 }
 

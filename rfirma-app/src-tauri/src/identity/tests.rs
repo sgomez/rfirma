@@ -125,6 +125,35 @@ fn factory_of(keyring: CountingKeyring) -> KeyringFactory {
     Arc::new(move || Ok(Box::new(keyring.clone()) as Box<dyn ports::Keyring + Send + Sync>))
 }
 
+/// Un llavero sin PIN que cuenta si se le pidió crear uno.
+#[derive(Clone)]
+struct PinMissingKeyring {
+    create_pin_calls: Arc<AtomicUsize>,
+}
+
+impl PinMissingKeyring {
+    fn new() -> (Self, Arc<AtomicUsize>) {
+        let create_pin_calls = Arc::new(AtomicUsize::new(0));
+        (
+            Self {
+                create_pin_calls: create_pin_calls.clone(),
+            },
+            create_pin_calls,
+        )
+    }
+}
+
+impl ports::Keyring for PinMissingKeyring {
+    fn pin(&self) -> Result<ProtectedSecret, KeyringError> {
+        Err(KeyringError::PinMissing)
+    }
+
+    fn create_pin(&self) -> Result<ProtectedSecret, KeyringError> {
+        self.create_pin_calls.fetch_add(1, Ordering::SeqCst);
+        Ok(ProtectedSecret::from_str("pin-nuevo"))
+    }
+}
+
 /// Una referencia bajo el Almacén de rFirma: hace falta un `cert9.db` de verdad en `installed`.
 fn an_installed_reference(installed: &Path) -> CertificateRef {
     std::fs::write(installed.join("cert9.db"), b"").expect("deberia poder escribirse cert9.db");
@@ -151,7 +180,7 @@ fn secret_of_needs_nothing_for_the_installed_store_even_if_the_token_would_ask()
     let installed = tempfile::tempdir().expect("directorio temporal");
     let reference = an_installed_reference(installed.path());
     let token = RecordingToken::replying(StoreSecret::TypedOnScreen);
-    let (keyring, _) = CountingKeyring::with_pin("pin");
+    let (keyring, calls) = CountingKeyring::with_pin("pin");
     let signer = TokenSigner {
         token: &token,
         installed_certificates: installed.path(),
@@ -162,6 +191,7 @@ fn secret_of_needs_nothing_for_the_installed_store_even_if_the_token_would_ask()
         signer.secret_of(&reference).unwrap(),
         StoreSecret::NotNeeded
     );
+    assert_eq!(calls.load(Ordering::SeqCst), 0);
 }
 
 #[test]
@@ -226,6 +256,33 @@ fn signing_a_card_certificate_never_touches_the_keyring() {
 
     assert_eq!(token.received_secret(), Some(b"1234".to_vec()));
     assert_eq!(calls.load(Ordering::SeqCst), 0);
+}
+
+#[test]
+fn signing_with_a_keyring_missing_the_pin_fails_as_keyring_pin_missing_without_creating_one() {
+    let installed = tempfile::tempdir().expect("directorio temporal");
+    let reference = an_installed_reference(installed.path());
+    let token = RecordingToken::replying(StoreSecret::NotNeeded);
+    let (keyring, create_pin_calls) = PinMissingKeyring::new();
+    let factory: KeyringFactory =
+        Arc::new(move || Ok(Box::new(keyring.clone()) as Box<dyn ports::Keyring + Send + Sync>));
+    let signer = TokenSigner {
+        token: &token,
+        installed_certificates: installed.path(),
+        keyring: &factory,
+    };
+
+    let error = signer
+        .sign_with_secret(
+            &reference,
+            &ProtectedSecret::from_str(""),
+            SignatureAlgorithm::Sha256Rsa,
+            b"datos",
+        )
+        .expect_err("el llavero no tiene el PIN todavia");
+
+    assert_eq!(error.situation(), Situation::KeyringPinMissing);
+    assert_eq!(create_pin_calls.load(Ordering::SeqCst), 0);
 }
 
 #[test]
