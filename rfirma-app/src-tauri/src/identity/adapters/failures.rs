@@ -26,6 +26,8 @@ fn token_told(situation: Situation) -> (&'static str, SafCode) {
         Situation::KeyKindUnsupported => ("keyKindUnsupported", SafCode::IncompatibleKeyType),
         Situation::MechanismNotOffered => ("mechanismNotOffered", SafCode::SignatureFailed),
         Situation::RemovalNotSupported => ("removalNotSupported", SafCode::CannotSaveData),
+        Situation::KeyringUnavailable => ("noKeyring", SafCode::CannotAccessKeystore),
+        Situation::KeyringPinMissing => ("keyringPinMissing", SafCode::CannotAccessKeystore),
         Situation::Unknown => ("unknown", SafCode::CannotAccessKeystore),
     }
 }

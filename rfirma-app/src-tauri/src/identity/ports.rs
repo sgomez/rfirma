@@ -4,6 +4,7 @@
 
 use std::fmt;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 use crate::identity::domain::algorithm::SignatureAlgorithm;
 use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
@@ -142,6 +143,11 @@ pub trait Keyring {
         }
     }
 }
+
+/// Alcanza el llavero del escritorio bajo demanda: instalar y firmar lo invocan solo cuando hace
+/// falta, nunca al listar ni al elegir certificado (ADR-0034).
+pub type KeyringFactory =
+    Arc<dyn Fn() -> Result<Box<dyn Keyring + Send + Sync>, KeyringError> + Send + Sync>;
 
 /// La ventana que pidió el secreto, sobre la que el diálogo se hace modal.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

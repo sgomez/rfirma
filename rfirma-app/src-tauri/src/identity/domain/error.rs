@@ -3,6 +3,8 @@
 use cryptoki::context::Function;
 use cryptoki::error::{Error, RvError};
 
+use crate::identity::domain::keyring::KeyringError;
+
 /// Situación interpretable por el usuario que el catálogo traduce.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Situation {
@@ -30,6 +32,10 @@ pub enum Situation {
     MechanismNotOffered,
     /// El certificado vive en el Almacén de rFirma compartido: quitarlo se niega en vez de borrarlo entero.
     RemovalNotSupported,
+    /// El llavero del escritorio no ha entregado el PIN del Almacén de rFirma (ADR-0034).
+    KeyringUnavailable,
+    /// El llavero del escritorio no tiene todavía el PIN del Almacén de rFirma (ADR-0034).
+    KeyringPinMissing,
     /// Error no clasificado con código crudo.
     Unknown,
 }
@@ -90,6 +96,16 @@ impl From<Error> for TokenError {
             Error::LibraryLoading(e) => Self::new(Situation::ModuleNotFound, e.to_string()),
             other => Self::new(Situation::Unknown, other.to_string()),
         }
+    }
+}
+
+impl From<KeyringError> for TokenError {
+    fn from(error: KeyringError) -> Self {
+        let situation = match error {
+            KeyringError::NoKeyring => Situation::KeyringUnavailable,
+            KeyringError::PinMissing => Situation::KeyringPinMissing,
+        };
+        Self::new(situation, error.to_string())
     }
 }
 
