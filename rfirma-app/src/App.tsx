@@ -21,7 +21,7 @@ import { DocumentTabs } from "./documents/DocumentTabs";
 import type { DocumentDrops } from "./documents/drops";
 import type { DocumentPicker } from "./documents/picker";
 import { RecentsSection } from "./documents/RecentRows";
-import type { RecentsStore } from "./documents/recents";
+import type { RecentDocument, RecentsStore } from "./documents/recents";
 import { useDocuments } from "./documents/useDocuments";
 import { classify } from "./errors/classify";
 import { PreferencesView } from "./preferences/PreferencesView";
@@ -52,6 +52,8 @@ import type { DocumentFailure, PdfSource } from "./viewer/source";
 
 type OpenDialog = "about" | null;
 type ActiveView = "status" | "preferences" | null;
+
+const NO_RECENTS: readonly RecentDocument[] = [];
 
 interface AppProps {
   recents: RecentsStore;
@@ -179,8 +181,11 @@ export function App({
   const { settings, changeSettings, chooseDestination, rubric, rubricFailure, chooseRubric } =
     usePreferencesState(preferences, rubrics);
   // Mientras los ajustes se leen todavía no se sabe, y lo guardado por omisión es recordar.
-  const documents = useDocuments(recents, picker, settings?.rememberActivity ?? true);
+  const rememberActivity = settings?.rememberActivity ?? true;
+  const documents = useDocuments(recents, picker, rememberActivity);
   const activeId = documents.active?.id ?? null;
+  // Con la actividad apagada no se enseñan los recientes que ya hubiera guardados.
+  const visibleRecents = rememberActivity ? documents.recents : NO_RECENTS;
   const previousSignatures = usePreviousSignatures(signer, activeId);
   const { destination, singleDestinationId, chooseSingleDestination } = useDestination(
     destinations,
@@ -366,7 +371,7 @@ export function App({
           <DocumentTabs
             tabs={documents.tabs}
             activeId={activeId}
-            recents={documents.recents}
+            recents={visibleRecents}
             onActivate={documents.activate}
             onClose={documents.close}
             onOpen={openDocument}
@@ -391,7 +396,7 @@ export function App({
             emptyExtra={
               documents.tabs.length === 0 ? (
                 <RecentsSection
-                  recents={documents.recents}
+                  recents={visibleRecents}
                   onSelect={documents.select}
                   onClear={clearRecents}
                 />

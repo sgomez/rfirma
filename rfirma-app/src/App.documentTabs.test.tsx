@@ -120,6 +120,15 @@ describe("App, la flecha de «Abiertos recientemente»", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("has no arrow with Recordar mi actividad apagado, even with recents already saved", async () => {
+    renderApp(inMemoryRecents([row("a.pdf")]), [], pdfsOf({}), { rememberActivity: false });
+
+    await screen.findByRole("button", { name: "Abrir PDF…" });
+    expect(
+      screen.queryByRole("button", { name: "Abiertos recientemente" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("lists the recents with their date and their check", async () => {
     const user = userEvent.setup();
     renderApp(
@@ -279,6 +288,15 @@ describe("App, sin documentos abiertos", () => {
 
   it("shows only the drop zone when there is nothing recent", async () => {
     renderApp();
+
+    await screen.findByRole("button", { name: /Arrastra un PDF o pulsa para abrirlo/ });
+    expect(
+      screen.queryByRole("region", { name: "Abiertos recientemente" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows only the drop zone with Recordar mi actividad apagado, even with recents already saved", async () => {
+    renderApp(inMemoryRecents([row("a.pdf")]), [], pdfsOf({}), { rememberActivity: false });
 
     await screen.findByRole("button", { name: /Arrastra un PDF o pulsa para abrirlo/ });
     expect(
