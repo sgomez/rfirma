@@ -33,13 +33,13 @@ function aCertificate(overrides: Partial<Certificate> = {}): Certificate {
 }
 
 describe("certificateHeadline", () => {
-  it("puts the entity first for a representative certificate", () => {
+  it("puts the entity and its tax id first for a representative certificate", () => {
     const certificate = aCertificate({
       entityName: "Acme S.L.",
-      holderName: "Ada Lovelace Byron",
+      organizationIdentifier: "VATES-A12345674",
     });
 
-    expect(certificateHeadline(certificate)).toBe("Acme S.L.");
+    expect(certificateHeadline(certificate)).toBe("Acme S.L. · A12345674");
   });
 
   it("puts the holder first for a personal certificate", () => {
@@ -50,15 +50,32 @@ describe("certificateHeadline", () => {
 });
 
 describe("certificateSubtitle", () => {
-  it("names the holder as representative, with the entity's NIF, for a representative certificate", () => {
+  it("names the representative by given name, surnames and id number, for a representative certificate", () => {
+    const certificate = aCertificate({
+      entityName: "Acme S.L.",
+      holderName: "IDCES-99999999R ADA LOVELACE (R: A12345674)",
+      givenName: "Ada",
+      surname: "Lovelace Byron",
+      idNumber: "IDCES-99999999R",
+      organizationIdentifier: "VATES-A12345674",
+    });
+
+    expect(certificateSubtitle(certificate, t)).toBe(
+      "Representante · Ada Lovelace Byron · 99999999R",
+    );
+  });
+
+  it("falls back to the common name when a representative certificate carries no given name or surname", () => {
     const certificate = aCertificate({
       entityName: "Acme S.L.",
       holderName: "Ada Lovelace Byron",
+      givenName: "",
+      surname: "",
       organizationIdentifier: "A12345674",
     });
 
     expect(certificateSubtitle(certificate, t)).toBe(
-      "Ada Lovelace Byron, representante · A12345674",
+      "Representante · Ada Lovelace Byron · 99999999R",
     );
   });
 
@@ -67,17 +84,22 @@ describe("certificateSubtitle", () => {
 
     expect(certificateSubtitle(certificate, t)).toBe("A título personal · 99999999R");
   });
+
+  it("drops the ETSI semantics prefix from the id number", () => {
+    const certificate = aCertificate({ entityName: null, idNumber: "IDCES-99999999R" });
+
+    expect(certificateSubtitle(certificate, t)).toBe("A título personal · 99999999R");
+  });
 });
 
 describe("certificateCompactSubtitle", () => {
-  it("drops the entity's NIF for a representative certificate", () => {
+  it("drops the representative's id number for a representative certificate", () => {
     const certificate = aCertificate({
       entityName: "Acme S.L.",
-      holderName: "Ada Lovelace Byron",
       organizationIdentifier: "A12345674",
     });
 
-    expect(certificateCompactSubtitle(certificate, t)).toBe("Ada Lovelace Byron, representante");
+    expect(certificateCompactSubtitle(certificate, t)).toBe("Representante · Ada Lovelace Byron");
   });
 
   it("is the same as the full subtitle for a personal certificate", () => {

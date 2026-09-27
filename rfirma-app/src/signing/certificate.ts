@@ -73,7 +73,7 @@ export interface Certificate {
   stampedSigner: string;
   /** Nombre de pila del RDN `GN`, o vacío si el certificado no lo trae. */
   givenName: string;
-  /** Primer apellido del RDN `SN`, o vacío si el certificado no lo trae. */
+  /** Los apellidos del RDN `SN`, o vacío si el certificado no lo trae. */
   surname: string;
   /**
    * El DNI o NIE **en claro**, tal cual viene del RDN `serialNumber`. La
@@ -122,26 +122,37 @@ export function isUsable(status: CertificateStatus): boolean {
   return status.kind === "valid";
 }
 
-/** Primera línea de la fila: la entidad si es de representante, el titular si es personal. */
+/** Primera línea de la fila: la entidad y su NIF si es de representante, el titular si es personal. */
 export function certificateHeadline(certificate: Certificate): string {
-  return certificate.entityName ?? certificate.holderName;
+  if (certificate.entityName == null) return certificate.holderName;
+  return certificate.organizationIdentifier == null
+    ? certificate.entityName
+    : `${certificate.entityName} · ${withoutSemanticsPrefix(certificate.organizationIdentifier)}`;
 }
 
 /** Segunda línea de la fila, completa. */
 export function certificateSubtitle(certificate: Certificate, t: TFunction): string {
+  const idNumber = withoutSemanticsPrefix(certificate.idNumber);
   return certificate.entityName != null
-    ? t("panel.certificate.onBehalfOf", {
-        holder: certificate.holderName,
-        nif: certificate.organizationIdentifier ?? "",
-      })
-    : t("panel.certificate.personalCapacity", { idNumber: certificate.idNumber });
+    ? t("panel.certificate.onBehalfOf", { holder: representativeName(certificate), idNumber })
+    : t("panel.certificate.personalCapacity", { idNumber });
 }
 
 /** Versión corta de la segunda línea, para la caja cerrada. */
 export function certificateCompactSubtitle(certificate: Certificate, t: TFunction): string {
   return certificate.entityName != null
-    ? t("panel.certificate.onBehalfOfShort", { holder: certificate.holderName })
+    ? t("panel.certificate.onBehalfOfShort", { holder: representativeName(certificate) })
     : certificateSubtitle(certificate, t);
+}
+
+function representativeName(certificate: Certificate): string {
+  const name = [certificate.givenName, certificate.surname].filter(Boolean).join(" ");
+  return name === "" ? certificate.holderName : name;
+}
+
+/** «IDCES-99999999R» → «99999999R»: quita el tipo y el país de la ETSI EN 319 412-1. */
+function withoutSemanticsPrefix(identifier: string): string {
+  return identifier.replace(/^[A-Z]{3}[A-Z]{2}-/, "");
 }
 
 /** Los certificados, ya separados en los dos grupos que enseña el desplegable. */
