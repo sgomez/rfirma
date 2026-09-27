@@ -482,11 +482,8 @@ msgstr "Signat"
 msgid "tabs.label"
 msgstr "Documents oberts"
 
-msgid "tabs.previous"
-msgstr "Pestanyes anteriors"
-
-msgid "tabs.next"
-msgstr "Pestanyes següents"
+msgid "tabs.more"
+msgstr "Més pestanyes"
 
 #. {{name}} es el nombre del fichero de la pestaña.
 msgid "tabs.close"

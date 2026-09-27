@@ -70,6 +70,7 @@ rojo.
 | `documents/document.ts` | El vocabulario del documento: el que se tiene delante y su insignia. No es la fila. |
 | `documents/useDocuments.ts` | El estado de las pestañas abiertas, la activa y los recientes. |
 | `documents/DocumentTabs.tsx` | La tira de pestañas bajo la cabecera, con el botón partido de abrir. |
+| `documents/tabLayout.ts` | Qué pestañas caben en la tira según el ancho y cuáles quedan en «+N». Sin React. |
 | `documents/RecentRows.tsx` | Las filas de los recientes, que comparten el menú de abiertos recientemente y el estado vacío del visor. |
 | `documents/recents.ts` | Los diez recientes —**la fila que se guarda**— y su puerto. |
 | `documents/picker.ts` | Por dónde entra un documento. |

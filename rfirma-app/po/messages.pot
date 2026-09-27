@@ -411,10 +411,7 @@ msgstr ""
 msgid "tabs.label"
 msgstr ""
 
-msgid "tabs.previous"
-msgstr ""
-
-msgid "tabs.next"
+msgid "tabs.more"
 msgstr ""
 
 #. {{name}} es el nombre del fichero de la pestaña.

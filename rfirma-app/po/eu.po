@@ -484,11 +484,8 @@ msgstr "Sinatuta"
 msgid "tabs.label"
 msgstr "Dokumentu irekiak"
 
-msgid "tabs.previous"
-msgstr "Aurreko fitxak"
-
-msgid "tabs.next"
-msgstr "Hurrengo fitxak"
+msgid "tabs.more"
+msgstr "Fitxa gehiago"
 
 #. {{name}} es el nombre del fichero de la pestaña.
 msgid "tabs.close"

@@ -23,31 +23,14 @@
   overflow: hidden;
 }
 
-.document-tabs__slot {
-  display: flex;
+.document-tabs__more {
   flex: none;
-  align-items: center;
-  justify-content: center;
-  height: 33px;
-  padding: 0 2px;
-  border: 1px solid transparent;
-  background: none;
-  font-family: inherit;
-  color: var(--rf-text);
-  cursor: pointer;
-}
-
-.document-tabs__slot-button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 28px;
-  min-width: 28px;
-  border-radius: var(--rf-radius-md);
-}
-
-.document-tabs__slot:hover .document-tabs__slot-button {
-  background: var(--rf-border-subtle);
+  gap: 4px;
+  min-height: 30px;
+  margin-left: 2px;
+  padding: 0 6px 0 8px;
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .document-tabs__split {
@@ -122,7 +105,9 @@
 
 .document-tab {
   display: flex;
-  flex: none;
+  flex: 1 1 200px;
+  min-width: 160px;
+  max-width: 200px;
   align-items: center;
   gap: 8px;
   height: 100%;
