@@ -85,15 +85,15 @@ confirmar al salir de una sección.
   `switch--wide`. La sangría de la ayuda se calcula con esa misma separación y
   no con un número escrito a mano, que es lo que la mantiene en la misma
   columna que «Vaciar la lista».
-  **Los 4 px separan el botón de la ayuda, no el rótulo de la ayuda** (ID-44).
-  El artboard mete rótulo y ayuda en la misma columna, los dos dentro de la
-  fila; aquí la ayuda queda **fuera** del botón —dentro se sumaría al nombre
-  accesible y el lector de pantalla leería el párrafo entero al llegar al
-  interruptor—, y el botón conserva sus 44 px de alto mínimo de área de
-  pulsación (sección 8 del [sistema de diseño](design-system.md)). Con un
-  rótulo de una línea eso deja aire dentro del botón, así que el hueco que se
-  ve bajo el texto es mayor que esos 4 px. Entre copiar el hueco del canvas y
-  conservar el área de pulsación, manda el área de pulsación.
+  La ayuda queda **fuera** del botón —dentro se sumaría al nombre accesible y
+  el lector de pantalla leería el párrafo entero al llegar al interruptor—.
+  El botón mide lo que su contenido, y los 44 px de área de pulsación
+  (sección 8 del [sistema de diseño](design-system.md)) se extienden por fuera
+  de su caja, así que entre el rótulo y la ayuda quedan los 4 px del artboard.
+- **Lo que es de una opción va junto, y las opciones se separan por aire, sin
+  líneas.** Dentro de una opción —el interruptor, su ayuda y el botón que
+  cuelga de ella— van `--rf-space-xs`; entre una opción y la siguiente,
+  `--rf-space-md`.
 - «Vaciar la lista» y «Cambiar carpeta…» cuelgan del ajuste que los explica y
   siguen esa misma sangría. Son botones secundarios de 32 px de alto, 8 px de
   relleno lateral y 12 px de cuerpo — el mismo tamaño menor que el `Cambiar`
