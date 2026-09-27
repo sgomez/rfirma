@@ -149,12 +149,32 @@ export function PersonIcon({ size = 16 }: IconProps) {
   );
 }
 
-/** La escarapela del certificado. */
-export function CertificateIcon({ size = 20 }: IconProps) {
+/** La lupa del buscador del selector de certificado. */
+export function SearchIcon({ size = 16 }: IconProps) {
   return (
-    <svg width={size} height={size} {...PEN} aria-hidden="true" focusable="false">
-      <circle cx="12" cy="9" r="5" />
-      <path d="M8.5 13.5 7 21l5-2.5L17 21l-1.5-7.5" />
+    <svg width={size} height={size} {...PEN} strokeWidth={1.8} aria-hidden="true" focusable="false">
+      <circle cx="11" cy="11" r="6" />
+      <path d="M20 20l-4.5-4.5" />
+    </svg>
+  );
+}
+
+/** El reloj de un certificado caducado o aún no válido. */
+export function ClockIcon({ size = 14 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...PEN} strokeWidth={1.8} aria-hidden="true" focusable="false">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5l3 2" />
+    </svg>
+  );
+}
+
+/** El círculo tachado de un certificado revocado. */
+export function RevokedIcon({ size = 14 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...PEN} strokeWidth={1.8} aria-hidden="true" focusable="false">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M5.6 18.4 18.4 5.6" />
     </svg>
   );
 }

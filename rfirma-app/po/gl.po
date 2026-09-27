@@ -805,22 +805,6 @@ msgstr "Non puidemos buscar os certificados"
 msgid "panel.certificate.failed.body"
 msgstr "A busca fallou antes de rematar, así que non sabemos se hai algún."
 
-#. {{date}} es la fecha de caducidad, ya formateada según el idioma.
-msgid "panel.certificate.expired"
-msgstr "O certificado caducou o {{date}}, así que non se pode asinar con el."
-
-msgid "panel.certificate.notYetValid"
-msgstr ""
-"O certificado aínda non entrou en vigor, así que non se pode asinar con el."
-
-#. {{reason}} es el motivo de la revocación, tal como lo da el certificado.
-msgid "panel.certificate.revoked"
-msgstr ""
-"O certificado está revogado ({{reason}}), así que non se pode asinar con el."
-
-msgid "panel.certificate.unreadable"
-msgstr "Non puidemos ler este certificado, así que non se pode asinar con el."
-
 #. Frase corta, en negrita, para la tercera línea de una fila no utilizable
 #. del botón partido. {{date}} es la fecha de caducidad, ya formateada.
 msgid "panel.certificate.expiredShort"
@@ -835,6 +819,28 @@ msgstr "Revogado ({{reason}})"
 
 msgid "panel.certificate.unreadableShort"
 msgstr "Non se puido ler"
+
+msgid "panel.certificate.chooseOne"
+msgstr "Escolle un certificado"
+
+msgid "panel.certificate.groups.cannotUse"
+msgstr "Non se poden usar"
+
+#. Texto de ayuda del buscador del selector de certificado abierto.
+msgid "panel.certificate.search"
+msgstr "Nome, empresa, NIF ou almacén"
+
+#. Encabeza la lista filtrada. {{shown}} son los que coinciden; {{total}}, todos.
+msgid "panel.certificate.matches"
+msgstr "{{shown}} de {{total}}"
+
+msgid "panel.certificate.noMatch"
+msgstr "Ningún certificado coincide"
+
+#. Ayuda flotante de una fila, tras «Emitido por…». {{stores}} es la lista de
+#. almacenes, ya unida según el idioma: «Firefox y Chrome».
+msgid "panel.certificate.sameCertificateIn"
+msgstr "o mesmo certificado en {{stores}}"
 
 msgid "panel.visibleSignature.title"
 msgstr "Sinatura visible"
@@ -1509,12 +1515,6 @@ msgstr "Unha páxina sen identificar pide os teus datos de identidade."
 #. nunca en la petición.
 msgid "sede.consent.untitled"
 msgstr "Un PDF sen título"
-
-msgid "sede.consent.signWith"
-msgstr "Asinarás con"
-
-msgid "sede.consent.identifyWith"
-msgstr "Enviarás os datos de"
 
 #. Nunca se enumera lo que la sede descartó ni con qué criterio.
 msgid "sede.consent.narrowed"

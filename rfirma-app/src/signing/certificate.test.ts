@@ -8,6 +8,7 @@ import {
   firstNameAndSurname,
   groupCertificates,
   installedCertificates,
+  sitePreselection,
 } from "./certificate";
 
 const { t } = createI18n("es");
@@ -252,5 +253,29 @@ describe("installedCertificates", () => {
     });
 
     expect(installedCertificates([grace, ada]).map((one) => one.id)).toEqual(["ada", "grace"]);
+  });
+});
+
+describe("sitePreselection", () => {
+  const expired = { kind: "expired", notAfter: 1_600_000_000 } as const;
+
+  it("takes the remembered certificate when it can be used", () => {
+    const remembered = aCertificate({ id: "r", holderName: "Zoe", remembered: true });
+    expect(sitePreselection([aCertificate({ id: "a", holderName: "Ana" }), remembered])).toBe(
+      remembered,
+    );
+  });
+
+  it("falls back to the first usable row of the list when the remembered one has expired", () => {
+    const certificates = [
+      aCertificate({ id: "r", holderName: "Ana", remembered: true, status: expired }),
+      aCertificate({ id: "z", holderName: "Zoe" }),
+      aCertificate({ id: "b", holderName: "Bea" }),
+    ];
+    expect(sitePreselection(certificates)?.id).toBe("b");
+  });
+
+  it("never preselects a certificate that cannot be used", () => {
+    expect(sitePreselection([aCertificate({ status: expired })])).toBeNull();
   });
 });

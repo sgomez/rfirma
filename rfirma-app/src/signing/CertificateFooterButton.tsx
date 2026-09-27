@@ -5,7 +5,7 @@ import { CheckIcon, ChevronDownIcon, SpinnerIcon } from "../design-system/icons"
 import "./CertificateFooterButton.css";
 import { shortStatusWarning } from "./CertificateSelect";
 import type { Certificate } from "./certificate";
-import { firstNameAndSurname, groupCertificates, isUsable } from "./certificate";
+import { expiryMonthYear, firstNameAndSurname, groupCertificates, isUsable } from "./certificate";
 
 interface CertificateFooterButtonProps {
   certificates: readonly Certificate[];
@@ -17,12 +17,6 @@ interface CertificateFooterButtonProps {
   signing: boolean;
   /** Con el interruptor encendido y sin colocar, o con el rango en error. */
   blocked: boolean;
-}
-
-/** «Caduca en 06/2027»: mes y año de caducidad, sin traducir su formato. */
-function expiryMonthYear(notAfter: number): string {
-  const date = new Date(notAfter * 1000);
-  return `${String(date.getMonth() + 1).padStart(2, "0")}/${date.getFullYear()}`;
 }
 
 /**

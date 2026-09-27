@@ -85,7 +85,7 @@ describe("Escape", () => {
     renderWithCatalog(<SedeWindow errands={port} consentCountdown={false} />);
     fireEvent.click(screen.getByRole("combobox"));
 
-    fireEvent.keyDown(screen.getByRole("listbox"), { key: "Escape" });
+    fireEvent.keyDown(screen.getByRole("combobox"), { key: "Escape" });
 
     expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
     expect(calls.cancel).not.toHaveBeenCalled();

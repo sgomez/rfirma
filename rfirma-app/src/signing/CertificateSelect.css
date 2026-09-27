@@ -1,32 +1,49 @@
-/*
- * El desplegable del certificado. Ver [`CertificateSelect`] y la sección
- * «Certificado» de docs/design/panel-de-firma.md, de donde salen las medidas.
- *
- * El disparador ocupa exactamente el hueco que ocupaba la tarjeta —66 px, los
- * mismos que los esqueletos de carga— para que el panel no salte al llegar los
- * certificados.
- */
+/* El selector de certificado: medidas de docs/design/panel-de-firma.md § Certificado. */
 
 .certificate-select {
-  position: relative;
+  gap: 6px;
 }
 
-.certificate-select__trigger {
+.certificate-select__box,
+.certificate-select__search {
   display: flex;
   align-items: center;
-  gap: var(--rf-space-xs);
   width: 100%;
-  padding: var(--rf-space-sm);
-  border: 1px solid var(--rf-border-strong);
+  min-height: 52px;
   border-radius: var(--rf-radius-md);
-  background: var(--rf-surface);
+  background: var(--rf-bg);
   color: var(--rf-text);
+}
+
+.certificate-select__box {
+  gap: 10px;
+  padding: 6px 12px;
+  border: 1px solid var(--rf-border-strong);
   font-family: inherit;
   text-align: left;
   cursor: pointer;
 }
 
-.certificate-select__icon {
+.certificate-select__search {
+  gap: 8px;
+  padding: 0 12px;
+  border: 2px solid var(--rf-primary);
+}
+
+.certificate-select__search input {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--rf-text);
+  font-family: inherit;
+  font-size: 14px;
+}
+
+.certificate-select__search-icon,
+.certificate-select__arrow {
   display: flex;
   flex: none;
   color: var(--rf-text-muted);
@@ -36,123 +53,132 @@
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
   min-width: 0;
 }
 
-/* El nombre no empuja a nada: con un titular largo se recorta y la punta de
-   flecha sigue donde el ojo la busca. */
-.certificate-select__holder {
+.certificate-select__chosen,
+.certificate-select__ellipsis {
   overflow: hidden;
-  font-size: 14px;
+  line-height: 1.3;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.certificate-select__chosen {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.certificate-select__unchosen {
+  flex: 1;
+  font-size: 14px;
+}
+
+/* En un portal y con `position: fixed`: la columna que se desplaza no la recorta (design-system.md § Desplegable). */
+.certificate-select__layer {
+  position: fixed;
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  box-sizing: border-box;
+  padding: 6px;
+  overflow-y: auto;
+  border: 1px solid var(--rf-border-subtle);
+  border-radius: var(--rf-radius-lg);
+  background: var(--rf-bg);
+  box-shadow: var(--rf-shadow-elevated);
+}
+
+.certificate-select__count {
+  padding: 8px 10px 6px;
+}
+
+.certificate-select__empty {
+  padding: 12px 10px;
+  line-height: 1.4;
+}
+
+.certificate-select__list,
+.certificate-select__group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.certificate-select__group-label {
+  padding: 8px 10px 4px;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+}
+
+.certificate-select__option {
+  display: flex;
+  gap: 12px;
+  padding: 10px;
+  border-radius: var(--rf-radius-md);
+  cursor: pointer;
+}
+
+.certificate-select__option--active {
+  outline: 1px solid var(--rf-border-strong);
+  outline-offset: -1px;
+}
+
+.certificate-select__option--chosen {
+  background: var(--rf-surface);
+}
+
+.certificate-select__headline {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.3;
 }
 
 .certificate-select__line {
   line-height: 1.35;
 }
 
-.certificate-select__unchosen {
-  flex: 1;
-  font-weight: 600;
-}
-
-.certificate-select__arrow,
-.certificate-select__arrow--up {
+.certificate-select__meta {
   display: flex;
-  flex: none;
-  color: var(--rf-text-muted);
-}
-
-.certificate-select__arrow--up {
-  transform: rotate(180deg);
-}
-
-/* Superpuesta y no en flujo: la firma visible y el botón de firmar no se
-   mueven al abrirla, y con nueve certificados el panel sigue midiendo lo
-   mismo. Un acordeón que empuja el contenido saca el botón primario de la
-   vista justo mientras se elige.
-   Montada en un portal (`design-system.md` §10, ID-308): la columna lateral
-   que contiene al disparador desplaza 740 px en 466 px visibles y su
-   `overflow: auto` recortaba 63 px de los 232 de la lista. El panel se saca
-   a la raíz del documento y se ancla por posición (`top`/`left`/`width`
-   inline, calculados del disparador), así que `top`/`right`/`left` ya no
-   valen aquí: son `position: fixed` puro. El `z-index` es el mismo que el de
-   la cabecera de la ventana principal (`shell/Header.css`), no uno propio. */
-.certificate-select__layer {
-  position: fixed;
-  z-index: 200;
-  border-radius: var(--rf-radius-md);
-  box-shadow: var(--rf-shadow-elevated);
-  background: var(--rf-surface);
-}
-
-/* 232 px son tres filas y media: el borde cortado es lo que dice que hay
-   más. */
-.certificate-select__list {
-  max-height: 232px;
-  overflow-y: auto;
-  border: 1px solid var(--rf-border-strong);
-  border-radius: var(--rf-radius-md);
-  background: var(--rf-surface);
-}
-
-/* El encabezado de cada grupo, «Disponibles» / «No utilizables»: no es una
-   fila, no se elige y no entra en el recorrido del teclado. */
-.certificate-select__group-label {
-  padding: 6px var(--rf-space-sm);
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--rf-text-muted);
-  text-transform: uppercase;
-}
-
-.certificate-select__option {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--rf-space-xs);
-  padding: 12px var(--rf-space-sm);
-  border-bottom: 1px solid var(--rf-border-subtle);
-  cursor: pointer;
-}
-
-.certificate-select__option:last-child {
-  border-bottom: none;
-}
-
-.certificate-select__option .certificate-select__text {
+  flex-wrap: wrap;
+  align-items: center;
   gap: 4px;
 }
 
-/* El cursor del teclado y el del ratón son el mismo: `onPointerEnter` mueve
-   `active`, así que basta una regla y no hace falta un `:hover`. */
-.certificate-select__option--active {
-  background: var(--rf-bg);
+.certificate-select__store {
+  padding: 2px 6px;
+  font-size: 11px;
 }
 
-/* Atenuada, sin cursor de mano y sin eventos de puntero: la fila se lee, pero
-   no se puede pulsar. `aria-disabled` sola no basta —el navegador la sigue
-   dejando pulsable— así que el bloqueo es real, con `pointer-events: none`. */
-.certificate-select__option--unusable {
-  opacity: 0.6;
-  cursor: not-allowed;
-  pointer-events: none;
-}
-
-/* Sin color de error: el sistema no lo tiene. El motivo se señala con peso,
-   igual que el aviso de la tarjeta. */
-.certificate-select__reason {
+.certificate-select__expiry {
+  margin-left: 4px;
   line-height: 1.35;
-  font-weight: 600;
 }
 
-/* La marca de verificación ocupa su sitio siempre, elegida o no: si apareciera
-   y desapareciera, la fila se movería al elegirla. */
+/* Atenuada por color y no por opacidad: el motivo en negrita tiene que leerse entero. */
+.certificate-select__option--unusable {
+  cursor: not-allowed;
+}
+
+.certificate-select__option--unusable .certificate-select__headline {
+  color: var(--rf-text-muted);
+}
+
+.certificate-select__reason {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.certificate-select__reason .rf-body {
+  font-weight: 700;
+  line-height: 1.3;
+}
+
 .certificate-select__check {
   display: flex;
   flex: none;
-  width: 16px;
-  margin-top: 3px;
   color: var(--rf-primary);
 }

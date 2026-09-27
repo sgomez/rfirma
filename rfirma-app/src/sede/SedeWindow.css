@@ -155,11 +155,6 @@
   font-weight: 400;
 }
 
-.sede-consent__label {
-  letter-spacing: 0.6px;
-  text-transform: uppercase;
-}
-
 /*
  * La lista del lote local: cabe en el marco fijo de la ventana, así que se
  * desplaza ella sola en vez de estirarlo. El selector de certificado y el pie

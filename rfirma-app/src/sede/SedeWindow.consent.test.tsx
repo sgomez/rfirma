@@ -45,9 +45,57 @@ describe("2 · consent", () => {
 
     const text = container.textContent ?? "";
     expect(text.indexOf("sede.ejemplo.gob.es pide tu firma")).toBeLessThan(
-      text.indexOf("Firmarás con"),
+      text.indexOf("Certificado"),
     );
-    expect(text.indexOf("Firmarás con")).toBeLessThan(text.indexOf("Solicitud de subvención 2026"));
+    expect(text.indexOf("Certificado")).toBeLessThan(text.indexOf("Solicitud de subvención 2026"));
+  });
+
+  it("labels the selector «Certificado» also when handing over identity data", () => {
+    const { port } = scriptedErrand(consenting({ document: null, signing: null }), {
+      operation: "selectcert",
+    });
+    renderWithCatalog(<SedeWindow errands={port} />);
+
+    expect(screen.getByRole("combobox", { name: "Certificado" })).toBeInTheDocument();
+  });
+
+  describe("preselection", () => {
+    const expired = { kind: "expired", notAfter: 1_600_000_000 } as const;
+
+    it("comes with the remembered certificate chosen", async () => {
+      const user = userEvent.setup();
+      const { port, calls } = scriptedErrand(
+        consenting({
+          certificates: [
+            certificate({ id: "first", holderName: "ANA" }),
+            certificate({ id: "remembered", holderName: "ZOE", remembered: true }),
+          ],
+        }),
+      );
+      renderWithCatalog(<SedeWindow errands={port} consentCountdown={false} />);
+
+      await user.click(screen.getByRole("button", { name: "Firmar" }));
+
+      expect(calls.consent).toHaveBeenCalledWith("remembered");
+    });
+
+    it("comes with the first usable one when the remembered certificate cannot be used", async () => {
+      const user = userEvent.setup();
+      const { port, calls } = scriptedErrand(
+        consenting({
+          certificates: [
+            certificate({ id: "remembered", holderName: "ANA", remembered: true, status: expired }),
+            certificate({ id: "zoe", holderName: "ZOE" }),
+            certificate({ id: "bea", holderName: "BEA" }),
+          ],
+        }),
+      );
+      renderWithCatalog(<SedeWindow errands={port} consentCountdown={false} />);
+
+      await user.click(screen.getByRole("button", { name: "Firmar" }));
+
+      expect(calls.consent).toHaveBeenCalledWith("bea");
+    });
   });
 
   it.each([

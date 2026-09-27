@@ -748,20 +748,6 @@ msgstr ""
 msgid "panel.certificate.failed.body"
 msgstr ""
 
-#. {{date}} es la fecha de caducidad, ya formateada según el idioma.
-msgid "panel.certificate.expired"
-msgstr ""
-
-msgid "panel.certificate.notYetValid"
-msgstr ""
-
-#. {{reason}} es el motivo de la revocación, tal como lo da el certificado.
-msgid "panel.certificate.revoked"
-msgstr ""
-
-msgid "panel.certificate.unreadable"
-msgstr ""
-
 #. Frase corta, en negrita, para la tercera línea de una fila no utilizable
 #. del botón partido. {{date}} es la fecha de caducidad, ya formateada.
 msgid "panel.certificate.expiredShort"
@@ -775,6 +761,28 @@ msgid "panel.certificate.revokedShort"
 msgstr ""
 
 msgid "panel.certificate.unreadableShort"
+msgstr ""
+
+msgid "panel.certificate.chooseOne"
+msgstr ""
+
+msgid "panel.certificate.groups.cannotUse"
+msgstr ""
+
+#. Texto de ayuda del buscador del selector de certificado abierto.
+msgid "panel.certificate.search"
+msgstr ""
+
+#. Encabeza la lista filtrada. {{shown}} son los que coinciden; {{total}}, todos.
+msgid "panel.certificate.matches"
+msgstr ""
+
+msgid "panel.certificate.noMatch"
+msgstr ""
+
+#. Ayuda flotante de una fila, tras «Emitido por…». {{stores}} es la lista de
+#. almacenes, ya unida según el idioma: «Firefox y Chrome».
+msgid "panel.certificate.sameCertificateIn"
 msgstr ""
 
 msgid "panel.visibleSignature.title"
@@ -1421,12 +1429,6 @@ msgstr ""
 #. El PDF no trae título en sus metadatos, y el nombre de fichero no viaja
 #. nunca en la petición.
 msgid "sede.consent.untitled"
-msgstr ""
-
-msgid "sede.consent.signWith"
-msgstr ""
-
-msgid "sede.consent.identifyWith"
 msgstr ""
 
 #. Nunca se enumera lo que la sede descartó ni con qué criterio.

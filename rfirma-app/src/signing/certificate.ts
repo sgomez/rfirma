@@ -197,6 +197,20 @@ export function groupCertificates(certificates: readonly Certificate[]): Certifi
   return { available, unusable };
 }
 
+/** El que la sede trae puesto: el recordado si se puede usar, y si no el primero utilizable de la lista. */
+export function sitePreselection(certificates: readonly Certificate[]): Certificate | null {
+  const remembered = certificates.find(
+    (certificate) => certificate.remembered && isUsable(certificate.status),
+  );
+  return remembered ?? groupCertificates(certificates).available[0] ?? null;
+}
+
+/** «06/2027»: mes y año de caducidad, sin traducir su formato. */
+export function expiryMonthYear(notAfter: number): string {
+  const date = new Date(notAfter * 1000);
+  return `${String(date.getMonth() + 1).padStart(2, "0")}/${date.getFullYear()}`;
+}
+
 /**
  * De dónde salen los certificados del token. Es un puerto por lo mismo que lo
  * son el selector de documentos y el origen del PDF: quien habla con PKCS#11 es

@@ -1,159 +1,145 @@
 import type { TFunction } from "i18next";
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { CertificateIcon, CheckIcon, ChevronDownIcon } from "../design-system/icons";
+import {
+  CheckIcon,
+  ChevronDownIcon,
+  ClockIcon,
+  RevokedIcon,
+  SearchIcon,
+} from "../design-system/icons";
 import type { Certificate } from "./certificate";
-import { groupCertificates, isUsable } from "./certificate";
+import {
+  certificateCompactSubtitle,
+  certificateHeadline,
+  certificateSubtitle,
+  expiryMonthYear,
+  groupCertificates,
+  isUsable,
+} from "./certificate";
 import "./CertificateSelect.css";
+
+type Store = Certificate["store"];
 
 interface CertificateSelectProps {
   certificates: readonly Certificate[];
-  /**
-   * El elegido, o `null` mientras no hay ninguno.
-   *
-   * Quién viene puesto al arrancar lo decide `chosenFrom`, no este componente:
-   * el que se usó en la última firma, y sin él —o sin nada recordado— ninguno.
-   */
+  /** El elegido, o `null` mientras no hay ninguno. */
   chosen: Certificate | null;
   onChoose: (certificate: Certificate) => void;
+  /** El alto máximo de la lista abierta, en px. */
+  listMaxHeight?: number;
 }
 
-/**
- * **Con qué certificado se firma**: un desplegable, no una tarjeta
- * (docs/design/panel-de-firma.md).
- *
- * Tres cosas que parecen detalles y son el componente entero:
- *
- * - **La lista va superpuesta**, no en flujo. Abrirla no mueve la firma visible
- *   ni el botón de firmar, y con nueve certificados el panel sigue midiendo lo
- *   mismo. Un acordeón que empuja el contenido saca el botón primario de la
- *   vista justo mientras se elige.
- * - **La fila se identifica por el asa** que acuñó el backend, no por la
- *   etiqueta: dos claves con el mismo `CKA_LABEL` son dos filas distintas, y
- *   por etiqueta se firmaba siempre con la primera.
- * - **Un certificado que no sirve se lista igual**, dice por qué y no se deja
- *   elegir. Esconderlo sería más limpio y peor: quien viene a firmar justo con
- *   ese se quedaría mirando una lista donde falta, sin saber por qué.
- *
- * El teclado es el de `combobox` + `listbox` con `aria-activedescendant`, el
- * mismo que el desplegable de Preferencias: un `<div>` con un `onClick` no es
- * un desplegable, es un dibujo de uno.
- */
-export function CertificateSelect({ certificates, chosen, onChoose }: CertificateSelectProps) {
+interface Anchor {
+  top: number;
+  left: number;
+  width: number;
+}
+
+/** Con qué certificado se firma: la caja de dos líneas que al abrirse es un buscador (docs/design/panel-de-firma.md). */
+export function CertificateSelect({
+  certificates,
+  chosen,
+  onChoose,
+  listMaxHeight = 480,
+}: CertificateSelectProps) {
   const { t, i18n } = useTranslation();
   const [open, setOpen] = useState(false);
-  // Dónde está el cursor del teclado mientras la lista está abierta. No es la
-  // elección: moverse por la lista no elige nada hasta que se pulsa Intro.
+  const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
-  // La posición del panel, calculada al abrir a partir del disparador: el
-  // panel vive en un portal, fuera de la columna que recorta, así que ya no
-  // puede colgar de su disparador con `position: absolute` normal.
-  const [anchor, setAnchor] = useState<{
-    top?: number;
-    bottom?: number;
-    left: number;
-    width: number;
-    maxHeight: number;
-  } | null>(null);
-  const container = useRef<HTMLDivElement>(null);
-  const button = useRef<HTMLButtonElement>(null);
-  const list = useRef<HTMLDivElement>(null);
+  const [anchor, setAnchor] = useState<Anchor | null>(null);
+  const frame = useRef<HTMLDivElement>(null);
+  const box = useRef<HTMLButtonElement>(null);
+  const search = useRef<HTMLInputElement>(null);
+  const layer = useRef<HTMLDivElement>(null);
+  const focusBoxOnClose = useRef(false);
+  const labelId = useId();
   const listId = useId();
   const optionId = useId();
 
-  // Agrupados y ordenados de una vez: el índice que mueve el teclado y el que
-  // identifica cada fila son los mismos en toda la función, así que se calcula
-  // una sola vez el orden en que la lista realmente se pinta.
   const groups = groupCertificates(certificates);
-  const ordered = [...groups.available, ...groups.unusable];
-
-  const at = chosen === null ? -1 : ordered.findIndex((one) => one.id === chosen.id);
+  const all = [...groups.available, ...groups.unusable];
+  const shown = all.filter((certificate) => matches(certificate, query, t));
+  const shownAvailable = shown.filter((certificate) => isUsable(certificate.status));
+  const shownUnusable = shown.filter((certificate) => !isUsable(certificate.status));
+  const withHeaders = certificates.length > 1;
 
   const close = useCallback((giveBackFocus: boolean) => {
+    focusBoxOnClose.current = giveBackFocus;
     setOpen(false);
-    if (giveBackFocus) button.current?.focus();
+    setQuery("");
   }, []);
 
-  // Al abrir, el cursor arranca en lo que ya está elegido; sin nada elegido, en
-  // la primera fila, que **no** es elegirla.
   const show = () => {
-    setActive(at === -1 ? 0 : at);
-    const rect = button.current?.getBoundingClientRect();
-    if (rect) {
-      const spaceBelow = window.innerHeight - rect.bottom;
-      const spaceAbove = rect.top;
-      const openUpwards = spaceBelow < 240 && spaceAbove > spaceBelow;
-      if (openUpwards) {
-        setAnchor({
-          bottom: window.innerHeight - rect.top + 4,
-          left: rect.left,
-          width: rect.width,
-          maxHeight: Math.max(100, Math.min(232, spaceAbove - 8)),
-        });
-      } else {
-        setAnchor({
-          top: rect.bottom + 4,
-          left: rect.left,
-          width: rect.width,
-          maxHeight: Math.max(100, Math.min(232, spaceBelow - 8)),
-        });
-      }
-    }
+    const at = chosen === null ? -1 : all.findIndex((one) => one.id === chosen.id);
+    setActive(Math.max(at, 0));
     setOpen(true);
   };
 
-  // El foco se va a la lista para que el lector de pantalla la anuncie y para
-  // que las flechas no muevan el panel de debajo.
+  const place = useCallback(() => {
+    const rect = frame.current?.getBoundingClientRect();
+    if (rect) setAnchor({ top: rect.bottom + 4, left: rect.left, width: rect.width });
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    place();
+    const onScroll = (event: Event) => {
+      if (layer.current?.contains(event.target as Node)) return;
+      place();
+    };
+    window.addEventListener("resize", place);
+    window.addEventListener("scroll", onScroll, true);
+    return () => {
+      window.removeEventListener("resize", place);
+      window.removeEventListener("scroll", onScroll, true);
+    };
+  }, [open, place]);
+
   useEffect(() => {
-    if (open) list.current?.focus();
+    if (!open) return;
+    document.getElementById(`${optionId}-${active}`)?.scrollIntoView?.({ block: "nearest" });
+  }, [open, active, optionId]);
+
+  useEffect(() => {
+    if (open) {
+      search.current?.focus();
+    } else if (focusBoxOnClose.current) {
+      focusBoxOnClose.current = false;
+      box.current?.focus();
+    }
   }, [open]);
 
-  // Pulsar fuera cierra, igual que el menú de la cabecera. Sin esto la lista se
-  // queda flotando sobre el panel mientras se toca otra cosa. El panel vive en
-  // un portal, fuera de `container`, así que también cuenta como «dentro».
   useEffect(() => {
     if (!open) return;
     const onPointerDown = (event: PointerEvent) => {
       const target = event.target as Node;
-      if (container.current?.contains(target)) return;
-      if (list.current?.contains(target)) return;
-      setOpen(false);
+      if (frame.current?.contains(target) || layer.current?.contains(target)) return;
+      close(false);
     };
     document.addEventListener("pointerdown", onPointerDown);
     return () => document.removeEventListener("pointerdown", onPointerDown);
-  }, [open]);
+  }, [open, close]);
 
   const choose = (index: number) => {
-    const certificate = ordered[index];
-    // Una fila inutilizable se recorre y se lee, pero no elige: el cursor puede
-    // pararse en ella para que el motivo se anuncie.
+    const certificate = shown[index];
     if (certificate === undefined || !isUsable(certificate.status)) return;
     onChoose(certificate);
     close(true);
   };
 
-  const onKeyDown = (event: React.KeyboardEvent) => {
-    const last = ordered.length - 1;
+  const onSearchKeyDown = (event: React.KeyboardEvent) => {
     switch (event.key) {
       case "ArrowDown":
         event.preventDefault();
-        setActive((cursor) => Math.min(cursor + 1, last));
+        setActive((cursor) => Math.min(cursor + 1, shown.length - 1));
         return;
       case "ArrowUp":
         event.preventDefault();
         setActive((cursor) => Math.max(cursor - 1, 0));
         return;
-      case "Home":
-        event.preventDefault();
-        setActive(0);
-        return;
-      case "End":
-        event.preventDefault();
-        setActive(last);
-        return;
       case "Enter":
-      case " ":
         event.preventDefault();
         choose(active);
         return;
@@ -162,40 +148,38 @@ export function CertificateSelect({ certificates, chosen, onChoose }: Certificat
         close(true);
         return;
       case "Tab":
-        // Tabular sale del control, así que la lista se va con él, pero el foco
-        // sigue su camino: devolverlo al botón lo dejaría atrapado.
         close(false);
         return;
       default:
     }
   };
 
-  /** Una fila del `ordered` que corresponde al `index` global de la lista
-   * aplanada, dentro del grupo que la pinta. */
   const renderOption = (certificate: Certificate, index: number) => {
     const usable = isUsable(certificate.status);
+    const selected = certificate.id === chosen?.id;
+    const stores = storesOf(certificate);
     return (
       <div
         key={certificate.id}
         id={`${optionId}-${index}`}
         role="option"
-        // El foco lo guarda la lista y el cursor lo lleva
-        // `aria-activedescendant`: la fila no entra en el orden de
-        // tabulación.
         tabIndex={-1}
-        aria-selected={certificate.id === chosen?.id}
+        aria-selected={selected}
         aria-disabled={!usable}
+        title={
+          usable
+            ? rowTooltip(certificate, i18n.language, t)
+            : shortStatusWarning(certificate.status, i18n.language, t)
+        }
         className={[
           "certificate-select__option",
           index === active ? "certificate-select__option--active" : "",
+          selected ? "certificate-select__option--chosen" : "",
           usable ? "" : "certificate-select__option--unusable",
         ]
           .filter((piece) => piece !== "")
           .join(" ")}
-        // `onPointerDown` y no `onClick`: el oyente que cierra al pulsar fuera
-        // también es de `pointerdown`, y con `click` la lista se desmontaría
-        // antes de que llegara el clic. Una fila no utilizable no llega aquí
-        // siquiera: `pointer-events: none` la saca del todo (CertificateSelect.css).
+        // `onPointerDown` y no `onClick`: el oyente que cierra al pulsar fuera también es de `pointerdown`.
         onPointerDown={(event) => {
           event.preventDefault();
           choose(index);
@@ -203,114 +187,155 @@ export function CertificateSelect({ certificates, chosen, onChoose }: Certificat
         onPointerEnter={() => setActive(index)}
       >
         <span className="certificate-select__text">
-          <span className="rf-title certificate-select__holder">{certificate.holderName}</span>
-          <span className="rf-body rf-text-muted certificate-select__line">
-            {[
-              certificate.idNumber,
-              t("panel.certificate.issuer", { issuer: certificate.issuer }),
-              t(`panel.certificate.stores.${certificate.store}`),
-            ]
-              .filter((piece) => piece !== "")
-              .join(" · ")}
+          <span className="certificate-select__headline">{certificateHeadline(certificate)}</span>
+          <span className="rf-body certificate-select__line">
+            {certificateSubtitle(certificate, t)}
+          </span>
+          <span className="certificate-select__meta">
+            {stores.map((store) => (
+              <span key={store} className="rf-badge certificate-select__store">
+                {storeLabel(store, t)}
+              </span>
+            ))}
+            {certificate.status.kind === "valid" && (
+              <span className="rf-body rf-text-muted certificate-select__expiry">
+                {t("panel.certificate.expiresIn", {
+                  date: expiryMonthYear(certificate.status.notAfter),
+                })}
+              </span>
+            )}
           </span>
           {!usable && (
-            <span className="rf-body certificate-select__reason">
-              {statusWarning(certificate.status, i18n.language, t)}
+            <span className="certificate-select__reason">
+              <StatusIcon status={certificate.status} />
+              <span className="rf-body">
+                {shortStatusWarning(certificate.status, i18n.language, t)}
+              </span>
             </span>
           )}
         </span>
-        <span className="certificate-select__check">
-          {certificate.id === chosen?.id && <CheckIcon size={16} />}
+        {selected && (
+          <span className="certificate-select__check">
+            <CheckIcon size={16} strokeWidth={2} />
+          </span>
+        )}
+      </div>
+    );
+  };
+
+  const renderGroup = (label: string, members: readonly Certificate[], offset: number) => {
+    if (members.length === 0) return null;
+    const options = members.map((certificate, index) => renderOption(certificate, offset + index));
+    if (!withHeaders) return options;
+    return (
+      // biome-ignore lint/a11y/useSemanticElements: dentro de un `listbox` el grupo de opciones es `role="group"`; un `<fieldset>` no.
+      <div role="group" aria-label={label} className="certificate-select__group">
+        <span className="rf-label certificate-select__group-label" aria-hidden="true">
+          {label}
         </span>
+        {options}
       </div>
     );
   };
 
   return (
-    <div className="certificate-select" ref={container}>
-      <button
-        type="button"
-        ref={button}
-        className="certificate-select__trigger"
-        role="combobox"
-        aria-expanded={open}
-        aria-controls={open ? listId : undefined}
-        aria-haspopup="listbox"
-        aria-label={t("panel.certificate.title")}
-        onClick={() => (open ? close(false) : show())}
-        onKeyDown={(event) => {
-          if (!open && (event.key === "ArrowDown" || event.key === "ArrowUp")) {
-            event.preventDefault();
-            show();
-          }
-        }}
-      >
-        <span className="certificate-select__icon">
-          <CertificateIcon />
-        </span>
-        {chosen === null ? (
-          // Sin nada recordado no hay preselección: elegir con qué identidad se
-          // firma un documento con validez jurídica no lo hace la aplicación
-          // por su cuenta.
-          <span className="rf-body certificate-select__unchosen">
-            {t("panel.certificate.choose")}
-          </span>
-        ) : (
-          <span className="certificate-select__text">
-            <span className="rf-title certificate-select__holder">{chosen.holderName}</span>
-            {/* El almacén **no** sale en el disparador: elegido ya no
-                desambigua nada. */}
-            <span className="rf-body rf-text-muted certificate-select__line">
-              {[chosen.idNumber, t("panel.certificate.issuer", { issuer: chosen.issuer })]
-                .filter((piece) => piece !== "")
-                .join(" · ")}
+    <div className="rf-stack certificate-select">
+      <span className="rf-label" id={labelId}>
+        {t("panel.certificate.title")}
+      </span>
+      <div className="certificate-select__frame" ref={frame}>
+        {open ? (
+          <div className="certificate-select__search">
+            <span className="certificate-select__search-icon">
+              <SearchIcon />
             </span>
-          </span>
+            <input
+              ref={search}
+              type="text"
+              role="combobox"
+              aria-labelledby={labelId}
+              aria-expanded="true"
+              aria-controls={listId}
+              aria-autocomplete="list"
+              aria-activedescendant={shown.length > 0 ? `${optionId}-${active}` : undefined}
+              placeholder={t("panel.certificate.search")}
+              value={query}
+              onChange={(event) => {
+                setQuery(event.target.value);
+                setActive(0);
+              }}
+              onKeyDown={onSearchKeyDown}
+            />
+          </div>
+        ) : (
+          <button
+            ref={box}
+            type="button"
+            className="certificate-select__box"
+            role="combobox"
+            aria-labelledby={labelId}
+            aria-expanded="false"
+            aria-haspopup="listbox"
+            onClick={show}
+            onKeyDown={(event) => {
+              if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+                event.preventDefault();
+                show();
+              }
+            }}
+          >
+            {chosen === null ? (
+              <span className="rf-text-muted certificate-select__unchosen">
+                {t("panel.certificate.chooseOne")}
+              </span>
+            ) : (
+              <span className="certificate-select__text">
+                <span className="certificate-select__chosen">{certificateHeadline(chosen)}</span>
+                <span className="rf-body rf-text-muted certificate-select__ellipsis">
+                  {certificateCompactSubtitle(chosen, t)}
+                </span>
+              </span>
+            )}
+            <span className="certificate-select__arrow">
+              <ChevronDownIcon strokeWidth={1.8} />
+            </span>
+          </button>
         )}
-        <span className={open ? "certificate-select__arrow--up" : "certificate-select__arrow"}>
-          <ChevronDownIcon />
-        </span>
-      </button>
+      </div>
       {open &&
         anchor &&
         createPortal(
           <div
+            ref={layer}
             className="certificate-select__layer"
             style={{
               top: anchor.top,
-              bottom: anchor.bottom,
               left: anchor.left,
               width: anchor.width,
+              maxHeight: listMaxHeight,
             }}
           >
+            {query.trim() !== "" && shown.length > 0 && (
+              <span className="rf-body rf-text-muted certificate-select__count">
+                {t("panel.certificate.matches", { shown: shown.length, total: all.length })}
+              </span>
+            )}
+            {shown.length === 0 && (
+              <span className="rf-body rf-text-muted certificate-select__empty">
+                {t("panel.certificate.noMatch")}
+              </span>
+            )}
             <div
               className="certificate-select__list"
-              ref={list}
               id={listId}
               role="listbox"
-              tabIndex={-1}
-              style={{ maxHeight: anchor.maxHeight }}
-              aria-label={t("panel.certificate.list")}
-              aria-activedescendant={`${optionId}-${active}`}
-              onKeyDown={onKeyDown}
+              aria-labelledby={labelId}
             >
-              {groups.available.length > 0 && (
-                <>
-                  <div className="certificate-select__group-label" role="presentation">
-                    {t("panel.certificate.groups.available")}
-                  </div>
-                  {groups.available.map((certificate, index) => renderOption(certificate, index))}
-                </>
-              )}
-              {groups.unusable.length > 0 && (
-                <>
-                  <div className="certificate-select__group-label" role="presentation">
-                    {t("panel.certificate.groups.unusable")}
-                  </div>
-                  {groups.unusable.map((certificate, index) =>
-                    renderOption(certificate, groups.available.length + index),
-                  )}
-                </>
+              {renderGroup(t("panel.certificate.groups.available"), shownAvailable, 0)}
+              {renderGroup(
+                t("panel.certificate.groups.cannotUse"),
+                shownUnusable,
+                shownAvailable.length,
               )}
             </div>
           </div>,
@@ -320,26 +345,69 @@ export function CertificateSelect({ certificates, chosen, onChoose }: Certificat
   );
 }
 
-/** Por qué no se puede firmar con este certificado, dicho antes del PIN. */
-function statusWarning(status: Certificate["status"], locale: string, t: TFunction): string {
-  switch (status.kind) {
-    case "expired":
-      return t("panel.certificate.expired", {
-        date: new Intl.DateTimeFormat(locale, { dateStyle: "long" }).format(status.notAfter * 1000),
-      });
-    case "notYetValid":
-      return t("panel.certificate.notYetValid");
-    case "revoked":
-      return t("panel.certificate.revoked", { reason: status.reason });
+function storesOf(certificate: Certificate): readonly Store[] {
+  return certificate.stores.length > 0 ? certificate.stores : [certificate.store];
+}
+
+function storeLabel(store: Store, t: TFunction): string {
+  switch (store) {
+    case "card":
+      return t("panel.certificate.stores.card");
+    case "firefox":
+      return t("panel.certificate.stores.firefox");
+    case "chrome":
+      return t("panel.certificate.stores.chrome");
+    case "nssdb":
+      return t("panel.certificate.stores.nssdb");
     default:
-      return t("panel.certificate.unreadable");
+      return t("panel.certificate.stores.installed");
   }
 }
 
-/**
- * El mismo motivo que {@link statusWarning}, en la frase corta de la tercera
- * línea de una fila no utilizable (docs/design/panel-de-firma.md § Certificado).
- */
+function fold(text: string): string {
+  return text
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase();
+}
+
+function matches(certificate: Certificate, query: string, t: TFunction): boolean {
+  const wanted = fold(query.trim());
+  if (wanted === "") return true;
+  const haystack = [
+    certificate.holderName,
+    certificate.entityName ?? "",
+    certificate.organizationIdentifier ?? "",
+    certificate.idNumber,
+    certificate.issuer,
+    ...storesOf(certificate).map((store) => storeLabel(store, t)),
+  ];
+  return haystack.some((piece) => fold(piece).includes(wanted));
+}
+
+function rowTooltip(certificate: Certificate, locale: string, t: TFunction): string {
+  const issuer = t("panel.certificate.issuer", { issuer: certificate.issuer });
+  const stores = storesOf(certificate);
+  if (stores.length < 2) return issuer;
+  const names = new Intl.ListFormat(locale, { type: "conjunction" }).format(
+    stores.map((store) => storeLabel(store, t)),
+  );
+  return `${issuer} · ${t("panel.certificate.sameCertificateIn", { stores: names })}`;
+}
+
+function StatusIcon({ status }: { status: Certificate["status"] }) {
+  switch (status.kind) {
+    case "expired":
+    case "notYetValid":
+      return <ClockIcon />;
+    case "revoked":
+      return <RevokedIcon />;
+    default:
+      return null;
+  }
+}
+
+/** Por qué no se puede firmar con este certificado, en la frase corta de su fila. */
 export function shortStatusWarning(
   status: Certificate["status"],
   locale: string,
