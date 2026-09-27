@@ -8,7 +8,7 @@ runtime="$tauri/target/windows-runtime"
 
 vswhere="/c/Program Files (x86)/Microsoft Visual Studio/Installer/vswhere.exe"
 vs="$(cygpath -u "$("$vswhere" -latest -products '*' -property installationPath | tr -d '\r')")"
-crt="$(ls -d "$vs"/VC/Redist/MSVC/*/x64/Microsoft.VC*.CRT 2>/dev/null | sort -V | tail -1)"
+crt="$(ls -d "$vs"/VC/Redist/MSVC/1*/x64/Microsoft.VC*.CRT 2>/dev/null | sort -V | tail -1)"
 if [ -z "$crt" ]; then
     echo "no encuentro el runtime de Visual C++ redistribuible en $vs/VC/Redist" >&2
     exit 1
