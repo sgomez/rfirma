@@ -1,9 +1,22 @@
 //! Detección de Firefox vivo por el cerrojo POSIX de `.parentlock` en su perfil.
 
+#[cfg(unix)]
 use std::os::unix::io::AsRawFd;
 use std::path::Path;
 
+/// Indica si Firefox tiene abierto el perfil dado; en Windows, aún no se sabe y responde que no.
+#[cfg(windows)]
+pub fn firefox_is_running(profile: &Path) -> bool {
+    firefox_parent_lock_on_windows_pending(profile)
+}
+
+#[cfg(windows)]
+fn firefox_parent_lock_on_windows_pending(_profile: &Path) -> bool {
+    false
+}
+
 /// Indica si Firefox tiene abierto el perfil dado, por el bloqueo POSIX de `.parentlock`.
+#[cfg(unix)]
 pub fn firefox_is_running(profile: &Path) -> bool {
     let Ok(file) = std::fs::File::open(profile.join(".parentlock")) else {
         return false;
@@ -11,6 +24,7 @@ pub fn firefox_is_running(profile: &Path) -> bool {
     someone_else_holds_the_write_lock(file.as_raw_fd())
 }
 
+#[cfg(unix)]
 fn someone_else_holds_the_write_lock(fd: i32) -> bool {
     let mut lock = libc::flock {
         l_type: libc::F_WRLCK as _,
@@ -23,5 +37,5 @@ fn someone_else_holds_the_write_lock(fd: i32) -> bool {
     queried == 0 && lock.l_type as i32 != libc::F_UNLCK
 }
 
-#[cfg(test)]
+#[cfg(all(test, unix))]
 mod tests;

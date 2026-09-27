@@ -37,6 +37,7 @@ pub fn registered_handlers_for_scheme(channel: Channel, scheme: &str) -> Registe
     match channel {
         Channel::Flatpak => RegisteredHandlers::NotAvailableInsideTheSandbox,
         Channel::Native => {
+            #[cfg(target_os = "linux")]
             let handlers = gio::AppInfo::all_for_type(&content_type_for(scheme))
                 .iter()
                 .filter_map(|info| {
@@ -47,9 +48,17 @@ pub fn registered_handlers_for_scheme(channel: Channel, scheme: &str) -> Registe
                     ))
                 })
                 .collect();
+            #[cfg(windows)]
+            let handlers = handlers_in_the_windows_registry_pending(scheme);
             RegisteredHandlers::Known(handlers)
         }
     }
+}
+
+/// Los manejadores del registro de Windows, que aún no se consultan: ninguno.
+#[cfg(windows)]
+fn handlers_in_the_windows_registry_pending(_scheme: &str) -> Vec<RegisteredHandler> {
+    Vec::new()
 }
 
 /// Manejador registrado con nombre visible e identificador de escritorio.

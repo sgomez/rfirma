@@ -37,6 +37,7 @@ fn has_no_stores_when_no_candidate_is_installed() {
     assert!(present_among(CANDIDATE_MODULES, |_| false).is_empty());
 }
 
+#[cfg(unix)]
 #[test]
 fn lists_the_same_module_once_even_under_two_names() {
     let directory = tempfile::tempdir().expect("deberia poder crearse un directorio temporal");
@@ -465,6 +466,7 @@ fn a_registered_module_that_is_already_a_candidate_is_listed_once() {
     assert_eq!(ours, vec![softhsm, opensc]);
 }
 
+#[cfg(unix)]
 #[test]
 fn a_library_named_by_the_site_matches_the_discovered_module_it_canonicalises_to() {
     let temp = tempfile::tempdir().expect("deberia poder crearse un directorio temporal");

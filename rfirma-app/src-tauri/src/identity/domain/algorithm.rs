@@ -1,5 +1,7 @@
 //! El algoritmo de firma que se pide por su nombre y el mecanismo PKCS#11 con el que se cumple.
 
+use std::ffi::c_ulong;
+
 use cryptoki::mechanism::rsa::{PkcsMgfType, PkcsPssParams};
 use cryptoki::mechanism::{Mechanism, MechanismType};
 
@@ -123,7 +125,7 @@ impl SignatureAlgorithm {
     }
 }
 
-fn pss(hash_alg: MechanismType, mgf: PkcsMgfType, salt_length: u64) -> PkcsPssParams {
+fn pss(hash_alg: MechanismType, mgf: PkcsMgfType, salt_length: c_ulong) -> PkcsPssParams {
     PkcsPssParams {
         hash_alg,
         mgf,

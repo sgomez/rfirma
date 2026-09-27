@@ -1,14 +1,23 @@
-//! `paths.rs` es el único fichero del repositorio con un condicional de sistema operativo (ADR-0010).
+//! Solo los ficheros de `AUTHORISED_SITES` llevan un condicional de sistema operativo (ADR-0010, ADR-0035).
 
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-/// El único fichero autorizado, relativo a la raíz del repositorio.
-const THE_ONLY_SITE: &str = "rfirma-app/src-tauri/src/desktop/adapters/paths.rs";
-
-/// El hermano de pruebas de `THE_ONLY_SITE`, autorizado por la misma razón (issue #444).
-const THE_ONLY_SITE_TESTS: &str = "rfirma-app/src-tauri/src/desktop/adapters/paths/tests.rs";
+/// Los ficheros autorizados, relativos a la raíz del repositorio.
+const AUTHORISED_SITES: [&str; 11] = [
+    "rfirma-app/src-tauri/src/desktop/adapters/paths.rs",
+    "rfirma-app/src-tauri/src/desktop/adapters/paths/tests.rs",
+    "rfirma-app/src-tauri/src/desktop/adapters/channel.rs",
+    "rfirma-app/src-tauri/src/desktop/adapters/firefox_lock.rs",
+    "rfirma-app/src-tauri/src/desktop/application/invocation/tests.rs",
+    "rfirma-app/src-tauri/src/identity/adapters/mod.rs",
+    "rfirma-app/src-tauri/src/identity/adapters/pkcs11/stores/tests.rs",
+    "rfirma-app/src-tauri/src/identity/domain/protected_secret.rs",
+    "rfirma-app/src-tauri/src/signing/adapters/gtk_prompter.rs",
+    "rfirma-app/src-tauri/src/site/adapters/scratch.rs",
+    "rfirma-app/src-tauri/src/startup_dialog.rs",
+];
 
 /// Fichero de esta prueba para no acusarse a sí misma.
 const THIS_TEST: &str = "rfirma-app/src-tauri/tests/single_cfg_os_site.rs";
@@ -48,7 +57,7 @@ fn conditions_the_operating_system(line: &str) -> bool {
 }
 
 #[test]
-fn paths_rs_is_the_only_file_in_the_repository_that_knows_the_operating_system() {
+fn only_the_authorised_files_know_the_operating_system() {
     let root = repository_root();
     let files = tracked_rust_files(&root);
     assert!(
@@ -59,7 +68,7 @@ fn paths_rs_is_the_only_file_in_the_repository_that_knows_the_operating_system()
 
     let mut offenders: Vec<String> = Vec::new();
     for relative in &files {
-        if relative == THE_ONLY_SITE || relative == THE_ONLY_SITE_TESTS || relative == THIS_TEST {
+        if AUTHORISED_SITES.contains(&relative.as_str()) || relative == THIS_TEST {
             continue;
         }
         let contents = fs::read_to_string(root.join(relative)).unwrap_or_else(|error| {
@@ -74,21 +83,23 @@ fn paths_rs_is_the_only_file_in_the_repository_that_knows_the_operating_system()
 
     assert!(
         offenders.is_empty(),
-        "el ADR-0010 pone TODO el conocimiento del sistema operativo en {THE_ONLY_SITE}, \
+        "el ADR-0035 pone TODO el conocimiento del sistema operativo en AUTHORISED_SITES, \
          y estas lineas lo sacan de ahi:\n{}",
         offenders.join("\n")
     );
 }
 
 #[test]
-fn the_authorised_file_is_there_and_really_carries_the_conditional() {
-    let contents = fs::read_to_string(repository_root().join(THE_ONLY_SITE))
-        .expect("paths.rs deberia estar donde dice el ADR-0010");
+fn every_authorised_file_is_there_and_really_carries_the_conditional() {
+    for site in AUTHORISED_SITES {
+        let contents = fs::read_to_string(repository_root().join(site))
+            .unwrap_or_else(|error| panic!("{site} deberia existir: {error}"));
 
-    assert!(
-        contents.lines().any(conditions_the_operating_system),
-        "si paths.rs ya no decide por sistema operativo, esta prueba se ha quedado sin objeto"
-    );
+        assert!(
+            contents.lines().any(conditions_the_operating_system),
+            "{site} ya no decide por sistema operativo: sobra en AUTHORISED_SITES"
+        );
+    }
 }
 
 /// Formas de condicional de compilación que la guarda debe cazar.

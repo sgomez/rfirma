@@ -37,7 +37,8 @@ habla con el token. Rutas relativas a `src/identity/`.
 | `domain/store.rs` | Un almacén: la ruta de su módulo, cómo se abre y de qué clase es, sin abrirlo. Sus pruebas siguen en `adapters/pkcs11/stores/tests.rs`. |
 | `ports.rs` | `Token`, `InstalledFolder`, `CertificateMemory` (que sirve `signing/adapters/memory.rs`) y `Keyring`, el PIN del Almacén de rFirma (ADR-0034); y `SecretPrompter`, el diálogo interactivo del secreto, con su reintento genérico `prompted_until_accepted`. Pruebas en `ports/tests.rs`. |
 | `adapters/folder.rs` | `RealInstalledFolder`: la carpeta del Almacén de rFirma y el directorio desechable donde se prueba un `.p12` (ADR-0034). |
-| `adapters/keyring.rs` | `RealKeyring`: el adaptador de `Keyring` sobre `oo7`, el portal de secretos o Secret Service (ADR-0034). Pruebas en `adapters/keyring/tests.rs`. |
+| `adapters/keyring.rs` | `RealKeyring`: el adaptador de `Keyring` sobre `oo7`, el portal de secretos o Secret Service (ADR-0034); solo en Linux. Pruebas en `adapters/keyring/tests.rs`. |
+| `adapters/pending_windows_credential_manager.rs` | `PendingWindowsCredentialManager`: el `Keyring` de Windows, que aún no existe (ADR-0035). Sin pruebas propias. |
 
 ## Trampas
 

@@ -84,10 +84,12 @@ pierde el trabajo.
 
 ## Las rutas son la implementación en Linux de tres nombres
 
-Un único módulo, `paths.rs`, es el **único sitio del código con un `cfg!` de
-sistema operativo**. Expone `config_file()`, `state_file()` y `rubric_path()`;
+Un único módulo, `paths.rs`, es el **único sitio del código que decide rutas
+por sistema operativo**. Expone `config_file()`, `state_file()` y `rubric_path()`;
 el resto de la aplicación no sabe qué sistema hay debajo, y añadir macOS o
-Windows toca un fichero. Se apoya en el resolutor de rutas de Tauri v2, que ya
+Windows a las rutas toca un fichero. Los demás condicionales de sistema, los de
+los adaptadores que solo existen en un escritorio Linux, viven en la lista
+cerrada del [ADR-0035](0035-windows-como-segunda-plataforma-dependencias-por-target-y-adaptadores-no-disponibles.md). Se apoya en el resolutor de rutas de Tauri v2, que ya
 está en el proyecto: ni `directories` ni Tauri ofrecen un directorio de estado
 fuera de Linux, así que esa parte la pone el módulo.
 

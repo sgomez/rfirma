@@ -2,6 +2,7 @@
 
 use std::fs::{File, OpenOptions};
 use std::io;
+#[cfg(unix)]
 use std::os::unix::io::AsRawFd;
 use std::path::{Path, PathBuf};
 
@@ -59,6 +60,7 @@ fn folder_name(role: &str) -> String {
     format!("rfirma-{role}-{}", handles::mint())
 }
 
+#[cfg(unix)]
 fn lock_exclusively(path: &Path) -> io::Result<File> {
     let file = OpenOptions::new()
         .create(true)
@@ -70,6 +72,19 @@ fn lock_exclusively(path: &Path) -> io::Result<File> {
         return Err(io::Error::last_os_error());
     }
     Ok(file)
+}
+
+/// En Windows el cerrojo es abrir el fichero sin compartirlo: nadie más lo abre mientras vive.
+#[cfg(windows)]
+fn lock_exclusively(path: &Path) -> io::Result<File> {
+    use std::os::windows::fs::OpenOptionsExt as _;
+
+    OpenOptions::new()
+        .create(true)
+        .truncate(true)
+        .write(true)
+        .share_mode(0)
+        .open(path)
 }
 
 /// Barre, bajo `temp`, las carpetas de los prefijos dados cuyo cerrojo se consigue tomar, y las
@@ -96,5 +111,5 @@ fn named_with(path: &Path, role: &str) -> bool {
         .is_some_and(|name| name.starts_with(&prefix))
 }
 
-#[cfg(test)]
+#[cfg(all(test, unix))]
 mod tests;
