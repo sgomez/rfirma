@@ -15,7 +15,6 @@ function withStatus(status: Certificate["status"]): Certificate {
     entityName: null,
     issuer: "AC FNMT Usuarios",
     certificateSerialNumber: "1234567890",
-    store: "card",
     stores: ["card"],
     status,
     remembered: false,

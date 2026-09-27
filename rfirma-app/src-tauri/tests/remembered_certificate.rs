@@ -111,6 +111,7 @@ fn the_twin_that_was_used_is_the_copy_behind_its_row() {
         certificates(),
         &directory.path().join("certificates"),
         &listed,
+        &ListedCertificates::new(),
         &a_session(directory.path()),
     );
 

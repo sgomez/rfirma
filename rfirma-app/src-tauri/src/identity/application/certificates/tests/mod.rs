@@ -28,6 +28,7 @@ fn with_nowhere_to_look_the_listing_says_so_instead_of_coming_back_empty() {
         &[],
         &home.path().join("certificates"),
         &ListedCertificates::new(),
+        &ListedCertificates::new(),
         &a_memory(home.path()),
     )
     .expect_err("no hay donde buscar");
@@ -77,6 +78,7 @@ fn two_certificates_with_the_same_label_are_two_rows_chosen_apart() {
         certificates.to_vec(),
         &home.path().join("certificates"),
         &listed,
+        &ListedCertificates::new(),
         &a_memory(home.path()),
     );
 
@@ -471,6 +473,7 @@ fn a_row_carries_the_signer_masked_as_the_visible_signature_stamps_it() {
         vec![signer.as_certificate("FIRMA")],
         &home.path().join("certificates"),
         &ListedCertificates::new(),
+        &ListedCertificates::new(),
         &a_memory(home.path()),
     );
 
@@ -494,6 +497,7 @@ fn a_row_carries_the_organization_identifier_and_the_certificate_serial_number()
         vec![certificate],
         &home.path().join("certificates"),
         &ListedCertificates::new(),
+        &ListedCertificates::new(),
         &a_memory(home.path()),
     );
 
@@ -513,6 +517,7 @@ fn a_row_carries_the_organization_identifier_of_a_representative_certificate() {
     let rows = rows_of(
         vec![certificate],
         &home.path().join("certificates"),
+        &ListedCertificates::new(),
         &ListedCertificates::new(),
         &a_memory(home.path()),
     );
@@ -539,6 +544,7 @@ fn a_row_carries_the_entity_name_of_a_representative_certificate_with_a_natural_
         vec![certificate],
         &home.path().join("certificates"),
         &ListedCertificates::new(),
+        &ListedCertificates::new(),
         &a_memory(home.path()),
     );
 
@@ -561,6 +567,7 @@ fn an_entity_certificate_without_a_natural_person_holder_carries_no_entity_name(
     let rows = rows_of(
         vec![certificate],
         &home.path().join("certificates"),
+        &ListedCertificates::new(),
         &ListedCertificates::new(),
         &a_memory(home.path()),
     );

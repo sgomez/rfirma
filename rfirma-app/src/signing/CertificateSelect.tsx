@@ -21,7 +21,7 @@ import {
 } from "./certificate";
 import "./CertificateSelect.css";
 
-type Store = Certificate["store"];
+type Store = Certificate["stores"][number];
 
 interface CertificateSelectProps {
   certificates: readonly Certificate[];
@@ -173,7 +173,7 @@ export function CertificateSelect({
   const renderOption = (certificate: Certificate, index: number) => {
     const usable = isUsable(certificate.status);
     const selected = certificate.id === chosen?.id;
-    const stores = storesOf(certificate);
+    const stores = certificate.stores;
     return (
       <div
         key={certificate.id}
@@ -371,10 +371,6 @@ export function CertificateSelect({
   );
 }
 
-function storesOf(certificate: Certificate): readonly Store[] {
-  return certificate.stores.length > 0 ? certificate.stores : [certificate.store];
-}
-
 function storeLabel(store: Store, t: TFunction): string {
   switch (store) {
     case "card":
@@ -406,7 +402,7 @@ function matches(certificate: Certificate, query: string, t: TFunction): boolean
     certificate.organizationIdentifier ?? "",
     certificate.idNumber,
     certificate.issuer,
-    ...storesOf(certificate).map((store) => storeLabel(store, t)),
+    ...certificate.stores.map((store) => storeLabel(store, t)),
     certificate.entityName === null ? t("panel.certificate.personalKeyword") : "",
   ];
   return haystack.some((piece) => fold(piece).includes(wanted));
@@ -414,7 +410,7 @@ function matches(certificate: Certificate, query: string, t: TFunction): boolean
 
 function rowTooltip(certificate: Certificate, locale: string, t: TFunction): string {
   const issuer = t("panel.certificate.issuer", { issuer: certificate.issuer });
-  const stores = storesOf(certificate);
+  const stores = certificate.stores;
   if (stores.length < 2) return issuer;
   const names = new Intl.ListFormat(locale, { type: "conjunction" }).format(
     stores.map((store) => storeLabel(store, t)),

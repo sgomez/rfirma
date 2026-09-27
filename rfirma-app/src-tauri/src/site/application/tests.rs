@@ -388,6 +388,7 @@ impl Neighbours for Directory<'_> {
             found,
             Path::new("/no/hay/instalados"),
             self.listed,
+            &ListedCertificates::new(),
             self.memory,
         )
     }

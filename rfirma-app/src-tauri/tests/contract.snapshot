@@ -177,7 +177,6 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
       entityName: Option<String>
       issuer: String
       certificateSerialNumber: String
-      store: String
       stores: Vec<String>
       status: StatusView
       remembered: bool

@@ -36,7 +36,6 @@ export function anInstalledCertificate(overrides: Partial<Certificate> = {}): Ce
     entityName: null,
     issuer: "FNMT-RCM",
     certificateSerialNumber: "1234567890",
-    store: "installed",
     stores: ["installed"],
     status: { kind: "valid", notAfter: IN_2030 },
     remembered: false,

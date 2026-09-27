@@ -25,7 +25,6 @@ function aCertificate(overrides: Partial<Certificate> = {}): Certificate {
     entityName: null,
     issuer: "AC FNMT Usuarios",
     certificateSerialNumber: "1234567890",
-    store: "card",
     stores: ["card"],
     status: { kind: "valid", notAfter: 1_894_752_000 },
     remembered: false,
@@ -163,22 +162,22 @@ describe("groupCertificates", () => {
    * tilde: decide entonces el desempate por almacén, no el nombre. Con el
    * `sensitivity` por defecto ("variant") el resultado sería otro. */
   it("treats holders that differ only by an accent as equal, deciding by store", () => {
-    const angel = aCertificate({ id: "chrome", holderName: "Ángel Ruiz", store: "chrome" });
-    const angelPlain = aCertificate({ id: "card", holderName: "Angel Ruiz", store: "card" });
+    const angel = aCertificate({ id: "chrome", holderName: "Ángel Ruiz", stores: ["chrome"] });
+    const angelPlain = aCertificate({ id: "card", holderName: "Angel Ruiz", stores: ["card"] });
 
     const groups = groupCertificates([angel, angelPlain]);
 
-    expect(groups.available.map((c) => c.store)).toEqual(["card", "chrome"]);
+    expect(groups.available.map((c) => c.stores[0])).toEqual(["card", "chrome"]);
   });
 
   it("breaks a tie between same-holder certificates by store", () => {
-    const chrome = aCertificate({ id: "chrome", store: "chrome" });
-    const card = aCertificate({ id: "card", store: "card" });
-    const firefox = aCertificate({ id: "firefox", store: "firefox" });
+    const chrome = aCertificate({ id: "chrome", stores: ["chrome"] });
+    const card = aCertificate({ id: "card", stores: ["card"] });
+    const firefox = aCertificate({ id: "firefox", stores: ["firefox"] });
 
     const groups = groupCertificates([chrome, firefox, card]);
 
-    expect(groups.available.map((c) => c.store)).toEqual(["card", "chrome", "firefox"]);
+    expect(groups.available.map((c) => c.stores[0])).toEqual(["card", "chrome", "firefox"]);
   });
 
   it("returns two empty groups for an empty list", () => {
@@ -206,9 +205,9 @@ describe("installedCertificates", () => {
    * nadie no es un gesto de esta aplicación (ID-198).
    */
   it("keeps only the ones installed in rFirma", () => {
-    const installed = aCertificate({ id: "installed", store: "installed" });
-    const profile = aCertificate({ id: "firefox", store: "firefox" });
-    const shared = aCertificate({ id: "nssdb", store: "nssdb" });
+    const installed = aCertificate({ id: "installed", stores: ["installed"] });
+    const profile = aCertificate({ id: "firefox", stores: ["firefox"] });
+    const shared = aCertificate({ id: "nssdb", stores: ["nssdb"] });
 
     expect(installedCertificates([profile, installed, shared])).toEqual([installed]);
   });
@@ -217,7 +216,7 @@ describe("installedCertificates", () => {
   it("keeps an expired one, unlike the dropdown's available group", () => {
     const expired = aCertificate({
       id: "expired",
-      store: "installed",
+      stores: ["installed"],
       status: { kind: "expired", notAfter: 0 },
     });
 
@@ -225,10 +224,14 @@ describe("installedCertificates", () => {
   });
 
   it("orders them by holder, like the dropdown does", () => {
-    const ada = aCertificate({ id: "ada", store: "installed", holderName: "Ada Lovelace Byron" });
+    const ada = aCertificate({
+      id: "ada",
+      stores: ["installed"],
+      holderName: "Ada Lovelace Byron",
+    });
     const grace = aCertificate({
       id: "grace",
-      store: "installed",
+      stores: ["installed"],
       holderName: "Grace Hopper Murray",
     });
 

@@ -126,6 +126,7 @@ fn identity_root_over(installed: &Path, keyring: KeyringFactory) -> IdentityRoot
         stores: Vec::new(),
         installed_certificates: installed.to_path_buf(),
         listed: ListedCertificates::new(),
+        installed_copies: ListedCertificates::new(),
         memory: Arc::new(NoMemory),
         folder: Arc::new(RealInstalledFolder),
         prompter: Arc::new(UnreachablePrompter),

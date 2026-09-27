@@ -67,6 +67,17 @@ fn replacing_forgets_every_handle_minted_before() {
 }
 
 #[test]
+fn replacing_paired_reuses_the_handles_given_instead_of_minting_new_ones() {
+    let source = Handles::new();
+    let handle = source.mint("FIRMA");
+    let target = Handles::new();
+
+    target.replace_paired([(handle.clone(), "FIRMA INSTALADA")]);
+
+    assert_eq!(target.get(&handle), Some("FIRMA INSTALADA"));
+}
+
+#[test]
 fn the_last_handle_where_is_the_one_minted_latest_among_the_matching() {
     let handles = Handles::new();
     let first = handles.mint(("contrato.pdf", true));
