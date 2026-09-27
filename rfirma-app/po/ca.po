@@ -256,9 +256,9 @@ msgstr "Aquest certificat no es pot treure per separat"
 
 msgid "errors.situations.removalNotSupported.body"
 msgstr ""
-"L'Emmagatzematge de rFirma és una única base compartida: treure'l "
-"s'enduria també els altres certificats instal·lats. Encara no hi ha manera "
-"d'esborrar-ne només un."
+"L'Emmagatzematge de rFirma és una única base compartida: treure'l s'enduria "
+"també els altres certificats instal·lats. Encara no hi ha manera d'esborrar-"
+"ne només un."
 
 msgid "errors.situations.certificateUnreadable.title"
 msgstr "No hem pogut llegir el certificat"
@@ -416,8 +416,8 @@ msgstr "No hem pogut accedir al clauer de l'escriptori"
 msgid "errors.situations.noKeyring.body"
 msgstr ""
 "rFirma necessita el clauer per desar el certificat de manera protegida. "
-"Comprova que el teu escriptori en té un de disponible, desbloqueja'l si "
-"t'ho demana, i torna-ho a intentar."
+"Comprova que el teu escriptori en té un de disponible, desbloqueja'l si t'ho "
+"demana, i torna-ho a intentar."
 
 msgid "errors.situations.keyringPinMissing.title"
 msgstr "El clauer ha perdut el PIN de l'Emmagatzematge de rFirma"
@@ -769,6 +769,20 @@ msgstr "Disponibles"
 msgid "panel.certificate.groups.unusable"
 msgstr "No utilitzables"
 
+#. Segunda línea de un certificado de representante. {{holder}} es el
+#. titular; {{nif}}, el NIF de la entidad representada.
+msgid "panel.certificate.onBehalfOf"
+msgstr "{{holder}}, representant · {{nif}}"
+
+#. Versión corta de la anterior, para la caja cerrada. {{holder}} es el titular.
+msgid "panel.certificate.onBehalfOfShort"
+msgstr "{{holder}}, representant"
+
+#. Segunda línea —y su versión corta— de un certificado personal. {{idNumber}}
+#. es el DNI o NIE en claro.
+msgid "panel.certificate.personalCapacity"
+msgstr "En nom propi · {{idNumber}}"
+
 msgid "panel.certificate.stores.card"
 msgstr "Targeta"
 
@@ -1047,7 +1061,8 @@ msgstr[2] "Aquest document porta {{count}} signatures que no són vàlides"
 
 #. La sede u organismo que reciba el documento puede rechazarlo.
 msgid "signAnyway.warning"
-msgstr "Si el signes, la seu o l'organisme que rebi el document el pot rebutjar."
+msgstr ""
+"Si el signes, la seu o l'organisme que rebi el document el pot rebutjar."
 
 msgid "signAnyway.confirm"
 msgstr "Signar de totes maneres"
@@ -1347,12 +1362,14 @@ msgstr "Signa amb"
 msgid "about.facts.sourceCode"
 msgstr "Codi font"
 
+#. No se traduce: es el nombre de las licencias.
 msgid "about.licenses.rfirma"
 msgstr "EUPL-1.2"
 
 msgid "about.licenses.afirma"
 msgstr "Biblioteques del projecte Client @firma"
 
+#. No se traduce: es el nombre de las licencias.
 msgid "about.licenses.afirmaTerms"
 msgstr "GPL-2.0+ / EUPL-1.1"
 

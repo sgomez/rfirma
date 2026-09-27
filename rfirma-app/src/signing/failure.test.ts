@@ -12,9 +12,11 @@ function withStatus(status: Certificate["status"]): Certificate {
     surname: "Lovelace Byron",
     idNumber: "99999999R",
     organizationIdentifier: null,
+    entityName: null,
     issuer: "AC FNMT Usuarios",
     certificateSerialNumber: "1234567890",
     store: "card",
+    stores: ["card"],
     status,
     remembered: false,
   };

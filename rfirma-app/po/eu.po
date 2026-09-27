@@ -66,7 +66,9 @@ msgid "errors.emptyStore.button"
 msgstr "Hustu biltegia"
 
 msgid "errors.emptyStore.confirmQuestion"
-msgstr "Ziur zaude? Instalatutako ziurtagiriak galduko dira, eta ezin izango da desegin."
+msgstr ""
+"Ziur zaude? Instalatutako ziurtagiriak galduko dira, eta ezin izango da "
+"desegin."
 
 msgid "errors.emptyStore.confirmButton"
 msgstr "Bai, hustu"
@@ -256,8 +258,8 @@ msgstr "Ezin da ziurtagiri hori bakarrik kendu"
 msgid "errors.situations.removalNotSupported.body"
 msgstr ""
 "rFirmaren Biltegia partekatutako base bakarra da: kentzeak instalatutako "
-"beste ziurtagiriak ere eramango lituzke. Oraindik ez dago bakarra "
-"ezabatzeko modurik."
+"beste ziurtagiriak ere eramango lituzke. Oraindik ez dago bakarra ezabatzeko "
+"modurik."
 
 msgid "errors.situations.certificateUnreadable.title"
 msgstr "Ezin izan dugu ziurtagiria irakurri"
@@ -415,9 +417,9 @@ msgstr "Ezin izan dugu mahaigaineko gako-sortara sartu"
 
 msgid "errors.situations.noKeyring.body"
 msgstr ""
-"rFirmak gako-sorta behar du ziurtagiria babestuta gordetzeko. Egiaztatu "
-"zure mahaigainak bat duela erabilgarri, desblokeatu eskatzen badizu, eta "
-"saiatu berriro."
+"rFirmak gako-sorta behar du ziurtagiria babestuta gordetzeko. Egiaztatu zure "
+"mahaigainak bat duela erabilgarri, desblokeatu eskatzen badizu, eta saiatu "
+"berriro."
 
 msgid "errors.situations.keyringPinMissing.title"
 msgstr "Gako-sortak rFirmaren Biltegiaren PINa galdu du"
@@ -769,6 +771,20 @@ msgstr "Erabilgarriak"
 msgid "panel.certificate.groups.unusable"
 msgstr "Erabili ezinak"
 
+#. Segunda línea de un certificado de representante. {{holder}} es el
+#. titular; {{nif}}, el NIF de la entidad representada.
+msgid "panel.certificate.onBehalfOf"
+msgstr "{{holder}}, ordezkari · {{nif}}"
+
+#. Versión corta de la anterior, para la caja cerrada. {{holder}} es el titular.
+msgid "panel.certificate.onBehalfOfShort"
+msgstr "{{holder}}, ordezkari"
+
+#. Segunda línea —y su versión corta— de un certificado personal. {{idNumber}}
+#. es el DNI o NIE en claro.
+msgid "panel.certificate.personalCapacity"
+msgstr "Norberaren izenean · {{idNumber}}"
+
 msgid "panel.certificate.stores.card"
 msgstr "Txartela"
 
@@ -1051,7 +1067,9 @@ msgstr[2] "Dokumentu honek baliozkoak ez diren {{count}} sinadura ditu"
 
 #. La sede u organismo que reciba el documento puede rechazarlo.
 msgid "signAnyway.warning"
-msgstr "Sinatzen baduzu, dokumentua jasotzen duen egoitzak edo erakundeak baztertu dezake."
+msgstr ""
+"Sinatzen baduzu, dokumentua jasotzen duen egoitzak edo erakundeak baztertu "
+"dezake."
 
 msgid "signAnyway.confirm"
 msgstr "Sinatu hala ere"
@@ -1351,12 +1369,14 @@ msgstr "Honekin sinatzen du"
 msgid "about.facts.sourceCode"
 msgstr "Iturburu-kodea"
 
+#. No se traduce: es el nombre de las licencias.
 msgid "about.licenses.rfirma"
 msgstr "EUPL-1.2"
 
 msgid "about.licenses.afirma"
 msgstr "Cliente @firma proiektuaren liburutegiak"
 
+#. No se traduce: es el nombre de las licencias.
 msgid "about.licenses.afirmaTerms"
 msgstr "GPL-2.0+ / EUPL-1.1"
 

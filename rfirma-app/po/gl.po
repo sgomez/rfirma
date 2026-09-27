@@ -404,8 +404,8 @@ msgstr "Non puidemos acceder ao chaveiro do escritorio"
 msgid "errors.situations.noKeyring.body"
 msgstr ""
 "rFirma precisa o chaveiro para gardar o certificado de forma protexida. "
-"Comproba que o teu escritorio ten un dispoñible, desbloquéao se cho pide, "
-"e volve tentalo."
+"Comproba que o teu escritorio ten un dispoñible, desbloquéao se cho pide, e "
+"volve tentalo."
 
 msgid "errors.situations.keyringPinMissing.title"
 msgstr "O chaveiro perdeu o PIN do Almacén de rFirma"
@@ -413,8 +413,7 @@ msgstr "O chaveiro perdeu o PIN do Almacén de rFirma"
 msgid "errors.situations.keyringPinMissing.body"
 msgstr ""
 "Sen ese PIN non podemos abrir o almacén que xa tiñas. Vai a Preferencias → "
-"Certificados e báleiro para volver instalar os teus certificados desde "
-"cero."
+"Certificados e báleiro para volver instalar os teus certificados desde cero."
 
 #. Se enseña en un diálogo nativo antes de que exista ventana; no la lee i18next.
 msgid "errors.startup.homeUnknown"
@@ -756,6 +755,20 @@ msgstr "Dispoñibles"
 msgid "panel.certificate.groups.unusable"
 msgstr "Non utilizables"
 
+#. Segunda línea de un certificado de representante. {{holder}} es el
+#. titular; {{nif}}, el NIF de la entidad representada.
+msgid "panel.certificate.onBehalfOf"
+msgstr "{{holder}}, representante · {{nif}}"
+
+#. Versión corta de la anterior, para la caja cerrada. {{holder}} es el titular.
+msgid "panel.certificate.onBehalfOfShort"
+msgstr "{{holder}}, representante"
+
+#. Segunda línea —y su versión corta— de un certificado personal. {{idNumber}}
+#. es el DNI o NIE en claro.
+msgid "panel.certificate.personalCapacity"
+msgstr "A título persoal · {{idNumber}}"
+
 msgid "panel.certificate.stores.card"
 msgstr "Tarxeta"
 
@@ -1035,7 +1048,8 @@ msgstr[2] "Este documento trae {{count}} sinaturas que non son válidas"
 
 #. La sede u organismo que reciba el documento puede rechazarlo.
 msgid "signAnyway.warning"
-msgstr "Se o asinas, a sede ou organismo que reciba o documento pode rexeitalo."
+msgstr ""
+"Se o asinas, a sede ou organismo que reciba o documento pode rexeitalo."
 
 msgid "signAnyway.confirm"
 msgstr "Asinar de todos os xeitos"
@@ -1333,12 +1347,14 @@ msgstr "Asina con"
 msgid "about.facts.sourceCode"
 msgstr "Código fonte"
 
+#. No se traduce: es el nombre de las licencias.
 msgid "about.licenses.rfirma"
 msgstr "EUPL-1.2"
 
 msgid "about.licenses.afirma"
 msgstr "Bibliotecas do proxecto Cliente @firma"
 
+#. No se traduce: es el nombre de las licencias.
 msgid "about.licenses.afirmaTerms"
 msgstr "GPL-2.0+ / EUPL-1.1"
 
