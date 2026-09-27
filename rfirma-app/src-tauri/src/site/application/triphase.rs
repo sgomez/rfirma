@@ -15,14 +15,14 @@ use crate::site::domain::triphase_server::{
     params_for_the_server, postsign_form, postsigned, presign_form, presigned, server_url_of,
     ServerCall, ServerFormat, Situation, TriphaseServerError,
 };
-use crate::site::ports::{TokenSigning, TriphaseServer};
+use crate::site::ports::{Neighbours, TriphaseServer};
 
 /// Quién interviene en la firma: el servidor de la sede, el token y el secreto ya abierto.
 pub struct ServerRun<'a> {
     /// El servidor trifásico.
     pub server: &'a dyn TriphaseServer,
     /// Quien firma con el token, sin que la clave salga de él (ADR-0001).
-    pub token: &'a dyn TokenSigning,
+    pub token: &'a dyn Neighbours,
     /// El certificado que la persona consintió.
     pub certificate: &'a TokenCertificate,
     /// El secreto ya abierto.

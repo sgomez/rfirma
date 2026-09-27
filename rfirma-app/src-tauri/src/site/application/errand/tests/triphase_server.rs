@@ -60,15 +60,14 @@ fn a_cades_triphase_signature_hands_the_site_what_the_server_signed() {
         &a_presignature(),
         format!("OK NEWID={}", URL_SAFE.encode(b"la firma del servidor")).as_bytes(),
     ));
+    let neighbours = a_signer_for_the_batch(home.path(), &listed, &memory, &ours);
     let desk = ErrandDesk {
         triphase: Arc::clone(&server) as _,
         ..a_desk_for_the_batch(
             &engine,
             &policies,
+            &neighbours,
             home.path(),
-            &listed,
-            &memory,
-            &ours,
             Arc::new(InMemoryBatchServices::default()),
         )
     };
@@ -96,7 +95,7 @@ fn a_cades_triphase_signature_hands_the_site_what_the_server_signed() {
         }))
     );
     assert_eq!(
-        desk.neighbours.neighbours.token.signed(),
+        neighbours.neighbours.token.signed(),
         vec![("SHA256".to_owned(), b"prefirma".to_vec())]
     );
     let forms = server.forms();
@@ -117,13 +116,12 @@ fn a_triphase_signature_without_server_url_is_refused_with_saf_03_once_the_certi
     live.answer_through(handle);
     let engine = AnEngine::answering(&[&[0], &[0]]);
     let policies = APolicyEngine::answering("");
+    let neighbours = a_signer_for_the_batch(home.path(), &listed, &memory, &ours);
     let desk = a_desk_for_the_batch(
         &engine,
         &policies,
+        &neighbours,
         home.path(),
-        &listed,
-        &memory,
-        &ours,
         Arc::new(InMemoryBatchServices::default()),
     );
 
@@ -152,6 +150,7 @@ fn a_triphase_server_that_fails_the_presign_is_refused_with_saf_40() {
     live.answer_through(handle);
     let engine = AnEngine::answering(&[&[0], &[0]]);
     let policies = APolicyEngine::answering(THE_SERVER);
+    let neighbours = a_signer_for_the_batch(home.path(), &listed, &memory, &ours);
     let desk = ErrandDesk {
         triphase: Arc::new(InMemoryTriphaseServer::answering(
             b"ERR-14:prefirma:java.io.IOException: la sede no entrega el documento",
@@ -160,10 +159,8 @@ fn a_triphase_server_that_fails_the_presign_is_refused_with_saf_40() {
         ..a_desk_for_the_batch(
             &engine,
             &policies,
+            &neighbours,
             home.path(),
-            &listed,
-            &memory,
-            &ours,
             Arc::new(InMemoryBatchServices::default()),
         )
     };
@@ -181,7 +178,7 @@ fn a_triphase_server_that_fails_the_presign_is_refused_with_saf_40() {
         what_the_site_received(&mut wire),
         Some(WireAnswer::refused(SafCode::RecoverServerDocument).on_the_wire())
     );
-    assert!(desk.neighbours.neighbours.token.signed().is_empty());
+    assert!(neighbours.neighbours.token.signed().is_empty());
 }
 
 fn the_forms_of_a_triphase_signature(
@@ -201,15 +198,14 @@ fn the_forms_of_a_triphase_signature(
         &a_presignature(),
         format!("OK NEWID={}", URL_SAFE.encode(b"la firma del servidor")).as_bytes(),
     ));
+    let neighbours = a_signer_for_the_batch(home.path(), &listed, &memory, &ours);
     let desk = ErrandDesk {
         triphase: Arc::clone(&server) as _,
         ..a_desk_for_the_batch(
             &engine,
             &policies,
+            &neighbours,
             home.path(),
-            &listed,
-            &memory,
-            &ours,
             Arc::new(InMemoryBatchServices::default()),
         )
     };
@@ -284,15 +280,14 @@ fn saved_through_the_server(url: &AfirmaUrl) -> SavedThroughTheServer {
         &a_presignature(),
         format!("OK NEWID={}", URL_SAFE.encode(b"la firma del servidor")).as_bytes(),
     ));
+    let neighbours = a_signer_for_the_batch(home.path(), &listed, &memory, &ours);
     let desk = ErrandDesk {
         triphase: Arc::clone(&server) as _,
         ..a_desk_for_the_batch(
             &engine,
             &policies,
+            &neighbours,
             home.path(),
-            &listed,
-            &memory,
-            &ours,
             Arc::new(InMemoryBatchServices::default()),
         )
     };
@@ -362,13 +357,12 @@ fn signing_and_saving_in_triphase_without_server_url_is_refused_with_saf_03() {
     live.answer_through(handle);
     let engine = AnEngine::answering(&[&[0], &[0]]);
     let policies = APolicyEngine::answering("");
+    let neighbours = a_signer_for_the_batch(home.path(), &listed, &memory, &ours);
     let desk = a_desk_for_the_batch(
         &engine,
         &policies,
+        &neighbours,
         home.path(),
-        &listed,
-        &memory,
-        &ours,
         Arc::new(InMemoryBatchServices::default()),
     );
 
@@ -396,6 +390,7 @@ fn signing_and_saving_against_a_failing_triphase_server_is_refused_with_saf_40()
     live.answer_through(handle);
     let engine = AnEngine::answering(&[&[0], &[0]]);
     let policies = APolicyEngine::answering(THE_SERVER);
+    let neighbours = a_signer_for_the_batch(home.path(), &listed, &memory, &ours);
     let desk = ErrandDesk {
         triphase: Arc::new(InMemoryTriphaseServer::answering(
             b"ERR-14:prefirma:java.io.IOException: la sede no entrega el documento",
@@ -404,10 +399,8 @@ fn signing_and_saving_against_a_failing_triphase_server_is_refused_with_saf_40()
         ..a_desk_for_the_batch(
             &engine,
             &policies,
+            &neighbours,
             home.path(),
-            &listed,
-            &memory,
-            &ours,
             Arc::new(InMemoryBatchServices::default()),
         )
     };

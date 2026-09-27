@@ -11,7 +11,7 @@ use crate::site::application::session::SiteRefusal;
 use crate::site::domain::protocol::SignatureRound;
 use crate::site::ports::{FilterEngine, PolicyEngine};
 
-use super::{consent_to_a_signature, ErrandDesk, Neighbours, SignatureAsk};
+use super::{consent_to_a_signature, ErrandDesk, SignatureAsk};
 use crate::site::application::errand::outcome::{
     ConfirmationConsent, ErrandStep, SavingHints, SiteOutcome,
 };
@@ -32,8 +32,8 @@ pub(super) fn asks_to_check_signatures(from_the_site: &mut BTreeMap<String, Stri
 }
 
 /// El veredicto del validador del original sobre lo que el documento ya traía firmado.
-pub(super) fn the_previous_signatures_hold<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
-    desk: &ErrandDesk<'_, E, P, N>,
+pub(super) fn the_previous_signatures_hold<E: FilterEngine, P: PolicyEngine>(
+    desk: &ErrandDesk<'_, E, P>,
     ask: &SignatureAsk<'_>,
     saving: Option<Box<SavingHints>>,
     format: Format,
@@ -96,8 +96,8 @@ pub(super) fn asking_to_confirm(
 }
 
 /// Repite la firma con la clave que la persona acaba de confirmar, y vuelve a validar.
-pub fn consent_to_the_confirmed_signature<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
-    desk: &ErrandDesk<'_, E, P, N>,
+pub fn consent_to_the_confirmed_signature<E: FilterEngine, P: PolicyEngine>(
+    desk: &ErrandDesk<'_, E, P>,
     pending: ConfirmationConsent,
     ours: Vec<TokenCertificate>,
     live: &LiveErrand,

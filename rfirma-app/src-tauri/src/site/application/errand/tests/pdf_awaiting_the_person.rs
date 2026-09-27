@@ -19,7 +19,7 @@ const A_PASSWORD_PROTECTED_PDF: &[u8] =
 
 const THE_PASSWORD: &str = "s3cr3t-of-the-pdf";
 
-type TheDesk<'a> = ErrandDesk<'a, AnEngine, APolicyEngine, TheNeighbours<'a>>;
+type TheDesk<'a> = ErrandDesk<'a, AnEngine, APolicyEngine>;
 
 fn a_consent_over(pdf: &[u8], declared: &str) -> ErrandStep {
     a_consent_over_and_then(pdf, declared, |_, step, _, _| step)
@@ -41,16 +41,8 @@ fn a_consent_over_and_then(
     let scratch = home.path().join("errand");
     let properties = base64::engine::general_purpose::URL_SAFE.encode(declared);
 
-    let desk = a_desk(
-        &engine,
-        &policies,
-        &[],
-        home.path(),
-        &listed,
-        &opened,
-        &memory,
-        &scratch,
-    );
+    let neighbours = a_neighbourhood(home.path(), &listed, &opened, &memory);
+    let desk = a_desk(&engine, &policies, &neighbours, &scratch);
     let step = consent_to_sign(
         &desk,
         &signature_requested(&a_signature_over(

@@ -22,26 +22,31 @@ fn properties_of(block: &str) -> String {
     base64::engine::general_purpose::URL_SAFE.encode(block)
 }
 
-/// Una mesa que lista los certificados dados y valida las firmas previas con el doble que se le diga.
-#[expect(
-    clippy::too_many_arguments,
-    reason = "es el constructor de un tipo de nueve campos, no una interfaz"
-)]
-fn a_desk_that_validates<'a>(
-    engine: &'a AnEngine,
-    policies: &'a APolicyEngine,
-    validation: &'a AValidator,
+/// Un vecindario que lista los certificados dados.
+fn neighbours_listing<'a>(
     home: &'a Path,
     listed: &'a ListedCertificates,
     opened: &'a OpenedDocuments,
     memory: &'a Memory,
-    scratch: &'a Path,
     ours: &[TokenCertificate],
-) -> ErrandDesk<'a, AnEngine, APolicyEngine, TheNeighbours<'a>> {
-    let mut desk = a_desk(engine, policies, &[], home, listed, opened, memory, scratch);
-    desk.validation = validation;
-    desk.neighbours.ours = ours.to_vec();
-    desk
+) -> TheNeighbours<'a> {
+    let mut neighbours = a_neighbourhood(home, listed, opened, memory);
+    neighbours.ours = ours.to_vec();
+    neighbours
+}
+
+/// Una mesa sobre el vecindario dado que valida las firmas previas con el doble que se le diga.
+fn a_desk_that_validates<'a>(
+    engine: &'a AnEngine,
+    policies: &'a APolicyEngine,
+    validation: &'a AValidator,
+    neighbours: &'a dyn Neighbours,
+    scratch: &Path,
+) -> ErrandDesk<'a, AnEngine, APolicyEngine> {
+    ErrandDesk {
+        validation,
+        ..a_desk(engine, policies, neighbours, scratch)
+    }
 }
 
 /// El consentimiento de una firma cuya sede pidió `checkSignatures`, con el veredicto que se le diga.
@@ -68,17 +73,8 @@ fn a_checked_consent_to(
     let policies = APolicyEngine::answering("checkSignatures=true\n");
     let validation = AValidator::saying(verdict);
     let scratch = home.path().join("errand");
-    let desk = a_desk_that_validates(
-        &engine,
-        &policies,
-        &validation,
-        home.path(),
-        &listed,
-        &opened,
-        &memory,
-        &scratch,
-        &ours,
-    );
+    let neighbours = neighbours_listing(home.path(), &listed, &opened, &memory, &ours);
+    let desk = a_desk_that_validates(&engine, &policies, &validation, &neighbours, &scratch);
 
     let step = consent_to_sign(
         &desk,
@@ -204,17 +200,8 @@ fn a_validator_that_breaks_is_answered_with_the_code_of_the_bridge() {
     let policies = APolicyEngine::answering("checkSignatures=true\n");
     let validation = AValidator::that_breaks();
     let scratch = home.path().join("errand");
-    let desk = a_desk_that_validates(
-        &engine,
-        &policies,
-        &validation,
-        home.path(),
-        &listed,
-        &opened,
-        &memory,
-        &scratch,
-        &ours,
-    );
+    let neighbours = neighbours_listing(home.path(), &listed, &opened, &memory, &ours);
+    let desk = a_desk_that_validates(&engine, &policies, &validation, &neighbours, &scratch);
 
     let step = consent_to_sign(
         &desk,
@@ -246,17 +233,8 @@ fn going_on_from_the_confirmation_fixes_the_key_and_checks_the_signatures_again(
         message_code: "ProtocolLauncher.65".to_owned(),
     });
     let scratch = home.path().join("errand");
-    let desk = a_desk_that_validates(
-        &engine,
-        &policies,
-        &validation,
-        home.path(),
-        &listed,
-        &opened,
-        &memory,
-        &scratch,
-        &ours,
-    );
+    let neighbours = neighbours_listing(home.path(), &listed, &opened, &memory, &ours);
+    let desk = a_desk_that_validates(&engine, &policies, &validation, &neighbours, &scratch);
 
     let url = a_signature_over(A_PDF_SIGNED_BY_SOMETHING_ELSE, "sign", "");
     let step = attend_operation(&desk, &url, decoded(&url), &live);
@@ -303,17 +281,8 @@ fn a_confirmation_that_is_declined_answers_the_site_with_a_cancel() {
         message_code: "ProtocolLauncher.65".to_owned(),
     });
     let scratch = home.path().join("errand");
-    let desk = a_desk_that_validates(
-        &engine,
-        &policies,
-        &validation,
-        home.path(),
-        &listed,
-        &opened,
-        &memory,
-        &scratch,
-        &ours,
-    );
+    let neighbours = neighbours_listing(home.path(), &listed, &opened, &memory, &ours);
+    let desk = a_desk_that_validates(&engine, &policies, &validation, &neighbours, &scratch);
 
     let url = a_signature_over(A_PDF_SIGNED_BY_SOMETHING_ELSE, "sign", "");
     let step = attend_operation(&desk, &url, decoded(&url), &live);
@@ -355,16 +324,8 @@ fn a_local_batch_ignores_check_signatures_as_the_original_does() {
     let engine = AnEngine::answering(&[&[0], &[0]]);
     let policies = APolicyEngine::answering("checkSignatures=true\n");
     let scratch = home.path().join("errand");
-    let desk = a_desk_for_the_local_batch(
-        &engine,
-        &policies,
-        home.path(),
-        &listed,
-        &opened,
-        &memory,
-        &scratch,
-        &ours,
-    );
+    let neighbours = neighbours_for_the_local_batch(home.path(), &listed, &opened, &memory, &ours);
+    let desk = a_desk(&engine, &policies, &neighbours, &scratch);
 
     let url = a_local_batch(&format!(
         "&properties={}",

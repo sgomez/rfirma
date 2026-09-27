@@ -57,8 +57,8 @@ pub use server_signature::finish_the_server_signature;
 pub use state::{Errand, LiveErrand, NegotiatedCodec};
 
 /// Atiende la operación recibida por el canal local.
-pub fn attend<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
-    desk: &ErrandDesk<'_, E, P, N>,
+pub fn attend<E: FilterEngine, P: PolicyEngine>(
+    desk: &ErrandDesk<'_, E, P>,
     url: AfirmaUrl,
     reply: ReplyHandle,
     live: &LiveErrand,
@@ -75,16 +75,16 @@ pub fn attend<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
 }
 
 /// Reevalúa la petición recibida tras un cambio en los certificados disponibles.
-pub fn look_again<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
-    desk: &ErrandDesk<'_, E, P, N>,
+pub fn look_again<E: FilterEngine, P: PolicyEngine>(
+    desk: &ErrandDesk<'_, E, P>,
     live: &LiveErrand,
 ) -> Option<ErrandStep> {
     let url = live.the_request()?;
     dispatch(desk, url, live)
 }
 
-fn dispatch<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
-    desk: &ErrandDesk<'_, E, P, N>,
+fn dispatch<E: FilterEngine, P: PolicyEngine>(
+    desk: &ErrandDesk<'_, E, P>,
     url: AfirmaUrl,
     live: &LiveErrand,
 ) -> Option<ErrandStep> {
@@ -166,15 +166,15 @@ pub enum ConsentError {
 }
 
 /// Registra el consentimiento con el certificado seleccionado y avanza el trámite.
-pub fn consent<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
-    desk: &ErrandDesk<'_, E, P, N>,
+pub fn consent<E: FilterEngine, P: PolicyEngine>(
+    desk: &ErrandDesk<'_, E, P>,
     certificate: &str,
     live: &LiveErrand,
 ) -> Result<Consented, ConsentError> {
     if let Some((filter, sticky)) = live.what_the_site_asked() {
         let outcome = identify_with(
             desk.engine,
-            &desk.neighbours,
+            desk.neighbours,
             &filter,
             sticky,
             certificate,
@@ -214,8 +214,8 @@ pub fn consent<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
 }
 
 /// El certificado que la persona eligió y el secreto de su almacén, abierto una sola vez.
-fn the_chosen_and_its_secret<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
-    desk: &ErrandDesk<'_, E, P, N>,
+fn the_chosen_and_its_secret<E: FilterEngine, P: PolicyEngine>(
+    desk: &ErrandDesk<'_, E, P>,
     filter: &SiteFilter,
     sticky: bool,
     certificate: &str,
@@ -234,7 +234,7 @@ fn the_chosen_and_its_secret<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
         filter,
         &found,
         certificate,
-        &desk.neighbours,
+        desk.neighbours,
     )
     .map_err(|error| refused(live, SiteRefusal::NotUsableForTheSite(error)))?;
 
@@ -251,8 +251,8 @@ fn the_chosen_and_its_secret<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
 }
 
 /// Abre el secreto una sola vez para todas las firmas del lote remoto y apunta el consentido.
-fn the_batch_consented<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
-    desk: &ErrandDesk<'_, E, P, N>,
+fn the_batch_consented<E: FilterEngine, P: PolicyEngine>(
+    desk: &ErrandDesk<'_, E, P>,
     request: &crate::site::domain::protocol::BatchRequest,
     certificate: &str,
     live: &LiveErrand,
@@ -274,8 +274,8 @@ fn the_batch_consented<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
 }
 
 /// Abre el secreto una sola vez para todas las firmas del lote local y apunta el consentido.
-fn the_local_batch_consented<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
-    desk: &ErrandDesk<'_, E, P, N>,
+fn the_local_batch_consented<E: FilterEngine, P: PolicyEngine>(
+    desk: &ErrandDesk<'_, E, P>,
     pending: state::PendingLocalBatch,
     certificate: &str,
     live: &LiveErrand,
@@ -297,8 +297,8 @@ fn the_local_batch_consented<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
 }
 
 /// Completa el lote remoto con el secreto ya tecleado: prefirma, `PK1` y postfirma.
-pub fn finish_the_batch<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
-    desk: &ErrandDesk<'_, E, P, N>,
+pub fn finish_the_batch<E: FilterEngine, P: PolicyEngine>(
+    desk: &ErrandDesk<'_, E, P>,
     secret: &ProtectedSecret,
     live: &LiveErrand,
 ) -> Result<(), ConsentError> {
@@ -311,7 +311,7 @@ pub fn finish_the_batch<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
     let result = batch::signed_batch(
         &batch::BatchRun {
             services: desk.batch.as_ref(),
-            token: &desk.neighbours,
+            token: desk.neighbours,
             certificate: &chosen,
             secret,
         },
@@ -326,8 +326,8 @@ pub fn finish_the_batch<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
 
 /// Cierra el lote local con el secreto que se tecleó una sola vez: firma cada elemento por el
 /// ciclo de sede, aplicando `stoponerror`.
-pub fn finish_the_local_batch<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
-    desk: &ErrandDesk<'_, E, P, N>,
+pub fn finish_the_local_batch<E: FilterEngine, P: PolicyEngine>(
+    desk: &ErrandDesk<'_, E, P>,
     secret: &ProtectedSecret,
     live: &LiveErrand,
 ) -> Result<(), ConsentError> {
@@ -350,8 +350,8 @@ pub fn finish_the_local_batch<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
 
 /// Completa la fase final de la firma para la sede y entrega el resultado, o el paso de
 /// guardado si la firma venía de `signandsave`.
-pub fn finish<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
-    desk: &ErrandDesk<'_, E, P, N>,
+pub fn finish<E: FilterEngine, P: PolicyEngine>(
+    desk: &ErrandDesk<'_, E, P>,
     live: &LiveErrand,
 ) -> Result<Option<ErrandStep>, SiteRefusal> {
     let saving = live
@@ -359,7 +359,7 @@ pub fn finish<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
         .and_then(|pending| pending.saving);
     let signed = match server_signature::the_signature_from_the_server(live) {
         Some(signed) => signed,
-        None => signing::finish_for_the_site(&desk.neighbours)
+        None => signing::finish_for_the_site(desk.neighbours)
             .map_err(|refusal| told_to_the_site(live, refusal))?,
     };
 
@@ -378,8 +378,8 @@ pub fn finish<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
 /// Completa el selector abierto por la orden de Tauri con lo que la persona eligió: si el
 /// selector esperaba un documento para `signandsave`, lo lee y continúa el trámite; si era un
 /// `load` corriente, entrega lo elegido a la sede.
-pub fn document_chosen<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
-    desk: &ErrandDesk<'_, E, P, N>,
+pub fn document_chosen<E: FilterEngine, P: PolicyEngine>(
+    desk: &ErrandDesk<'_, E, P>,
     chosen: &[(String, PathBuf)],
     live: &LiveErrand,
 ) -> LoadCompletion {
@@ -429,8 +429,8 @@ pub fn document_chosen<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
 }
 
 /// Sigue con la firma que la persona acaba de confirmar: fija la clave y repite la validación.
-pub fn confirm<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
-    desk: &ErrandDesk<'_, E, P, N>,
+pub fn confirm<E: FilterEngine, P: PolicyEngine>(
+    desk: &ErrandDesk<'_, E, P>,
     live: &LiveErrand,
 ) -> Result<ErrandStep, ConsentError> {
     let Some(pending) = live.the_confirmation_pending() else {

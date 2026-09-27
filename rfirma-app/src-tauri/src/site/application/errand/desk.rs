@@ -42,18 +42,13 @@ use super::request::SiteRequest;
 use super::state::LiveErrand;
 use crate::site::application::policies;
 use crate::site::application::session::SiteRefusal;
+pub use crate::site::ports::Neighbours;
 use crate::site::ports::{
-    BatchServices, Certificates, FilterEngine, PolicyEngine, Scratch, ScratchDocuments,
-    SiteSigning, TokenSigning, TriphaseServer, ValidationEngine,
+    BatchServices, FilterEngine, PolicyEngine, Scratch, TriphaseServer, ValidationEngine,
 };
 
-/// Lo que el trámite pide a los vecinos, junto: los certificados, el documento de paso y la firma.
-pub trait Neighbours: Certificates + ScratchDocuments + SiteSigning + TokenSigning {}
-
-impl<N: Certificates + ScratchDocuments + SiteSigning + TokenSigning> Neighbours for N {}
-
 /// Dependencias agrupadas necesarias para la ejecución de un trámite de sede.
-pub struct ErrandDesk<'a, E: FilterEngine, P: PolicyEngine, N: Neighbours> {
+pub struct ErrandDesk<'a, E: FilterEngine, P: PolicyEngine> {
     /// Motor de filtros criptográficos.
     pub engine: &'a E,
     /// Expansor de políticas de firma.
@@ -61,7 +56,7 @@ pub struct ErrandDesk<'a, E: FilterEngine, P: PolicyEngine, N: Neighbours> {
     /// Validador de las firmas que ya trae el documento.
     pub validation: &'a dyn ValidationEngine,
     /// Los vecinos: certificados, documento de paso y firma.
-    pub neighbours: N,
+    pub neighbours: &'a dyn Neighbours,
     /// Directorio temporal para ficheros de paso.
     pub scratch_dir: PathBuf,
     /// Quien escribe y borra el fichero de paso.
@@ -73,8 +68,8 @@ pub struct ErrandDesk<'a, E: FilterEngine, P: PolicyEngine, N: Neighbours> {
 }
 
 /// Atiende la operación recibida por el canal local evaluando los certificados disponibles.
-pub fn attend_operation<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
-    desk: &ErrandDesk<'_, E, P, N>,
+pub fn attend_operation<E: FilterEngine, P: PolicyEngine>(
+    desk: &ErrandDesk<'_, E, P>,
     url: &AfirmaUrl,
     request: SiteRequest,
     live: &LiveErrand,
@@ -123,15 +118,15 @@ pub fn attend_operation<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
 
     match operation {
         SiteRequest::SelectCertificate(request) => {
-            consent_for(desk.engine, &request, ours, &desk.neighbours, live)
+            consent_for(desk.engine, &request, ours, desk.neighbours, live)
         }
         SiteRequest::Sign(request) => consent_to_sign(desk, &request, ours, live),
         SiteRequest::SignAndSave(request) => consent_to_sign_and_save(desk, &request, ours, live),
         SiteRequest::Batch(request) => {
-            consent_to_the_batch(desk.engine, request, ours, &desk.neighbours, live)
+            consent_to_the_batch(desk.engine, request, ours, desk.neighbours, live)
         }
         SiteRequest::LocalBatch(ask) => {
-            consent_to_the_local_batch(desk.engine, *ask, ours, &desk.neighbours, live)
+            consent_to_the_local_batch(desk.engine, *ask, ours, desk.neighbours, live)
         }
         SiteRequest::Save(_)
         | SiteRequest::Load(_)
@@ -200,8 +195,8 @@ fn consent_to_load_for_sign_and_save(request: SignAndSaveRequest) -> ErrandStep 
 
 /// Continúa `signandsave` con el documento que la persona acaba de elegir en el selector: mismo
 /// veredicto de formato y mismas comprobaciones que si hubiera llegado en `dat`.
-pub fn consent_to_sign_with_chosen_document<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
-    desk: &ErrandDesk<'_, E, P, N>,
+pub fn consent_to_sign_with_chosen_document<E: FilterEngine, P: PolicyEngine>(
+    desk: &ErrandDesk<'_, E, P>,
     pending: PendingSignature,
     document: Vec<u8>,
     chosen_name: Option<String>,
@@ -222,8 +217,8 @@ pub fn consent_to_sign_with_chosen_document<E: FilterEngine, P: PolicyEngine, N:
 }
 
 /// Prepara el paso de consentimiento para una firma o cofirma de sede.
-pub fn consent_to_sign<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
-    desk: &ErrandDesk<'_, E, P, N>,
+pub fn consent_to_sign<E: FilterEngine, P: PolicyEngine>(
+    desk: &ErrandDesk<'_, E, P>,
     request: &SignRequest,
     ours: Vec<TokenCertificate>,
     live: &LiveErrand,
@@ -251,8 +246,8 @@ pub fn consent_to_sign<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
 
 /// Prepara el paso de consentimiento para `signandsave`: lo de `sign`, con las pistas de
 /// guardado que se contestarán tras la postfirma en vez de en el acto.
-pub fn consent_to_sign_and_save<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
-    desk: &ErrandDesk<'_, E, P, N>,
+pub fn consent_to_sign_and_save<E: FilterEngine, P: PolicyEngine>(
+    desk: &ErrandDesk<'_, E, P>,
     request: &SignAndSaveRequest,
     ours: Vec<TokenCertificate>,
     live: &LiveErrand,
@@ -301,8 +296,8 @@ struct SignatureAsk<'a> {
 
 /// El cuerpo compartido de `consent_to_sign` y `consent_to_sign_and_save`.
 #[expect(clippy::too_many_lines)]
-fn consent_to_a_signature<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
-    desk: &ErrandDesk<'_, E, P, N>,
+fn consent_to_a_signature<E: FilterEngine, P: PolicyEngine>(
+    desk: &ErrandDesk<'_, E, P>,
     ask: SignatureAsk<'_>,
     saving: Option<Box<SavingHints>>,
     ours: Vec<TokenCertificate>,
@@ -407,8 +402,7 @@ fn consent_to_a_signature<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
         choice_waived: ask.waives_the_choice,
         headless: ask.headless,
     };
-    let accepted = match what_the_site_accepts(desk.engine, &manners, ours, &desk.neighbours, live)
-    {
+    let accepted = match what_the_site_accepts(desk.engine, &manners, ours, desk.neighbours, live) {
         Ok(accepted) => accepted,
         Err(step) => return step,
     };
@@ -419,14 +413,10 @@ fn consent_to_a_signature<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
     };
 
     let (certificates, stuck) =
-        rows_preselecting_the_stuck(accepted, ask.sticky, &desk.neighbours, live);
-    let preselected = Preselected::among(
-        &certificates,
-        stuck,
-        ask.waives_the_choice,
-        &desk.neighbours,
-    )
-    .unless_there_is_a_notice(unregistered_signatures);
+        rows_preselecting_the_stuck(accepted, ask.sticky, desk.neighbours, live);
+    let preselected =
+        Preselected::among(&certificates, stuck, ask.waives_the_choice, desk.neighbours)
+            .unless_there_is_a_notice(unregistered_signatures);
     ErrandStep::AskingToSign(Box::new(SigningConsent {
         document,
         format,

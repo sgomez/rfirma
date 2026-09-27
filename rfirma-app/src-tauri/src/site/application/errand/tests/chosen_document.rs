@@ -1,7 +1,6 @@
 //! Pruebas del nombre del documento elegido en disco, que vuelve a la sede en la respuesta.
 
 use std::path::Path;
-use std::sync::Arc;
 
 use super::support::*;
 use super::support_requests::*;
@@ -10,54 +9,28 @@ use crate::identity::application::certificates::ListedCertificates;
 use crate::identity::application::tests::{a_usable_certificate, listed_from};
 use crate::identity::domain::certificate::TokenCertificate;
 use crate::signing::adapters::memory::Memory;
-use crate::signing::application::session::SigningSession;
 use crate::signing::application::tests::a_memory;
 use crate::site::application::errand::*;
-use crate::site::application::tests::{InMemoryBatchServices, InMemoryTokenSigning, NotAsked};
 use crate::site::domain::protocol::AfirmaUrl;
 use crate::site::domain::signing::SiteSignature;
 use base64::Engine as _;
 
 const THE_CHOSEN: &str = "documento.txt";
 
-#[expect(clippy::too_many_arguments)]
-fn a_desk_that_signs<'a>(
-    engine: &'a AnEngine,
-    policies: &'a APolicyEngine,
+fn a_signer_that_signs<'a>(
     home: &'a Path,
     listed: &'a ListedCertificates,
     opened: &'a OpenedDocuments,
     memory: &'a Memory,
     ours: &[TokenCertificate],
-    scratch: &Path,
-) -> ErrandDesk<'a, AnEngine, APolicyEngine, ASignerThatSucceeds<'a>> {
-    ErrandDesk {
-        engine,
-        policies,
-        validation: &NotAsked,
-        neighbours: ASignerThatSucceeds {
-            neighbours: TheNeighbours {
-                stores: Vec::new(),
-                home,
-                listed,
-                opened,
-                memory,
-                token: InMemoryTokenSigning::default(),
-                signer: ATokenThatSigns::default(),
-                ours: Vec::new(),
-                bridge: TheBridge::default(),
-                session: SigningSession::default(),
-            },
-            listed: ours.to_vec(),
-            signature: SiteSignature {
-                signature: b"%PDF-1.7 firmado".to_vec(),
-                signer_der: ours[0].der().to_vec(),
-            },
+) -> ASignerThatSucceeds<'a> {
+    ASignerThatSucceeds {
+        neighbours: a_neighbourhood(home, listed, opened, memory),
+        listed: ours.to_vec(),
+        signature: SiteSignature {
+            signature: b"%PDF-1.7 firmado".to_vec(),
+            signer_der: ours[0].der().to_vec(),
         },
-        scratch_dir: scratch.to_path_buf(),
-        scratch: Arc::new(crate::site::adapters::scratch::RealScratch),
-        batch: Arc::new(InMemoryBatchServices::default()),
-        triphase: Arc::new(crate::site::application::tests::InMemoryTriphaseServer::default()),
     }
 }
 
@@ -79,16 +52,8 @@ fn what_the_site_receives_after_signing(url: AfirmaUrl) -> String {
     let engine = AnEngine::answering(&[&[0]]);
     let policies = APolicyEngine::answering("");
     let scratch = home.path().join("errand");
-    let desk = a_desk_that_signs(
-        &engine,
-        &policies,
-        home.path(),
-        &listed,
-        &opened,
-        &memory,
-        &ours,
-        &scratch,
-    );
+    let neighbours = a_signer_that_signs(home.path(), &listed, &opened, &memory, &ours);
+    let desk = a_desk(&engine, &policies, &neighbours, &scratch);
     let live = a_live();
     let (handle, mut wire) = the_wire();
 

@@ -12,7 +12,7 @@ use crate::site::application::errand::{
 use crate::site::domain::protocol::{AfirmaUrl, Refusal};
 use crate::site::SiteRoot;
 
-use super::desk::Neighbours;
+use super::desk::Neighbourhood;
 use super::views::SiteErrandView;
 
 /// Etiqueta de la ventana de sede.
@@ -188,21 +188,22 @@ pub(super) fn publish_what_moved(app: &tauri::AppHandle, step: Option<ErrandStep
 /// Desempaqueta del estado de Tauri los componentes de la mesa del trámite.
 pub(crate) fn with_the_desk<R>(
     app: &tauri::AppHandle,
-    call: impl FnOnce(&ErrandDesk<'_, Isolate, Isolate, Neighbours<'_>>, &LiveErrand) -> R,
+    call: impl FnOnce(&ErrandDesk<'_, Isolate, Isolate>, &LiveErrand) -> R,
 ) -> R {
     let identity = app.state::<IdentityRoot>();
     let documents = app.state::<DocumentsRoot>();
     let signing = app.state::<SigningRoot>();
     let site = app.state::<SiteRoot>();
+    let neighbourhood = Neighbourhood {
+        identity: &identity,
+        documents: &documents,
+        signing: &signing,
+    };
     let desk = ErrandDesk {
         engine: &signing.isolate,
         policies: &signing.isolate,
         validation: &signing.isolate,
-        neighbours: Neighbours {
-            identity: &identity,
-            documents: &documents,
-            signing: &signing,
-        },
+        neighbours: &neighbourhood,
         scratch_dir: site.scratch_dir.clone(),
         scratch: site.scratch.clone(),
         batch: site.batch.clone(),

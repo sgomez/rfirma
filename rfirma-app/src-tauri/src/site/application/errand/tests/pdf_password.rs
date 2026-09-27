@@ -17,9 +17,7 @@ use crate::site::application::errand::*;
 use crate::site::application::tests::{InMemoryBatchServices, InMemoryTriphaseServer, NotAsked};
 use crate::site::domain::protocol::SafCode;
 use crate::site::domain::signing::{SigningRefusal, SiteSignature};
-use crate::site::ports::{
-    Certificates, ScratchDocuments, SiteSigning, SiteSigningRequest, TokenSigning,
-};
+use crate::site::ports::{Neighbours, SiteSigningRequest};
 use base64::Engine as _;
 
 const A_PASSWORD_PROTECTED_PDF: &[u8] =
@@ -36,7 +34,7 @@ struct ALockedPdf<'a> {
     begun_with: RefCell<Vec<BTreeMap<String, String>>>,
 }
 
-impl Certificates for ALockedPdf<'_> {
+impl Neighbours for ALockedPdf<'_> {
     fn listed(&self) -> Result<Vec<TokenCertificate>, TokenError> {
         Ok(self.listed.clone())
     }
@@ -60,9 +58,11 @@ impl Certificates for ALockedPdf<'_> {
     fn automatic_selection_honoured(&self) -> bool {
         self.neighbours.automatic_selection_honoured()
     }
-}
 
-impl TokenSigning for ALockedPdf<'_> {
+    fn open_unrecorded(&self, path: std::path::PathBuf) -> String {
+        self.neighbours.open_unrecorded(path)
+    }
+
     fn secret_of(&self, certificate: &TokenCertificate) -> Result<StoreSecret, SigningRefusal> {
         self.neighbours.secret_of(certificate)
     }
@@ -76,15 +76,7 @@ impl TokenSigning for ALockedPdf<'_> {
     ) -> Result<Vec<u8>, SigningRefusal> {
         self.neighbours.sign(certificate, secret, algorithm, data)
     }
-}
 
-impl ScratchDocuments for ALockedPdf<'_> {
-    fn open_unrecorded(&self, path: std::path::PathBuf) -> String {
-        self.neighbours.open_unrecorded(path)
-    }
-}
-
-impl SiteSigning for ALockedPdf<'_> {
     fn begin(&self, request: SiteSigningRequest<'_>) -> Result<StoreSecret, SigningRefusal> {
         self.begun_with
             .borrow_mut()
@@ -141,17 +133,18 @@ fn consenting(declared: &str, typed: &[Option<&'static str>]) -> Consenting {
     live.answer_through(handle);
     let engine = AnEngine::answering(&[&[0usize] as &[usize]; 8]);
     let policies = APolicyEngine::answering(declared);
+    let neighbours = ALockedPdf {
+        neighbours: a_neighbourhood(home.path(), &listed, &opened, &memory),
+        listed: ours.clone(),
+        typed: RefCell::new(typed.to_vec()),
+        asked: RefCell::new(Vec::new()),
+        begun_with: RefCell::new(Vec::new()),
+    };
     let desk = ErrandDesk {
         engine: &engine,
         policies: &policies,
         validation: &NotAsked,
-        neighbours: ALockedPdf {
-            neighbours: a_neighbourhood(home.path(), &listed, &opened, &memory),
-            listed: ours.clone(),
-            typed: RefCell::new(typed.to_vec()),
-            asked: RefCell::new(Vec::new()),
-            begun_with: RefCell::new(Vec::new()),
-        },
+        neighbours: &neighbours,
         scratch_dir: home.path().join("errand"),
         scratch: Arc::new(crate::site::adapters::scratch::RealScratch),
         batch: Arc::new(InMemoryBatchServices::default()),
@@ -172,8 +165,8 @@ fn consenting(declared: &str, typed: &[Option<&'static str>]) -> Consenting {
 
     Consenting {
         consented,
-        asked: desk.neighbours.asked.take(),
-        begun_with: desk.neighbours.begun_with.take(),
+        asked: neighbours.asked.take(),
+        begun_with: neighbours.begun_with.take(),
         received: what_the_site_received(&mut wire),
     }
 }

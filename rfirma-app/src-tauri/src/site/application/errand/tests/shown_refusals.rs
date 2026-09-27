@@ -48,17 +48,9 @@ fn what_happens_with(url: AfirmaUrl, chosen: Option<&[u8]>) -> Refused {
     let engine = AnEngine::answering(&[&[0]]);
     let policies = APolicyEngine::answering("");
     let scratch = home.path().join("errand");
-    let mut desk = a_desk(
-        &engine,
-        &policies,
-        &[],
-        home.path(),
-        &listed,
-        &opened,
-        &memory,
-        &scratch,
-    );
-    desk.neighbours.ours = ours;
+    let mut neighbours = a_neighbourhood(home.path(), &listed, &opened, &memory);
+    neighbours.ours = ours;
+    let desk = a_desk(&engine, &policies, &neighbours, &scratch);
     let live = a_live();
     assert!(live.begin(Errand::of(
         NegotiatedCredential::Required(a_credential()),
@@ -82,8 +74,8 @@ fn what_happens_with(url: AfirmaUrl, chosen: Option<&[u8]>) -> Refused {
     }
 }
 
-fn continued_with<N: Neighbours>(
-    desk: &ErrandDesk<'_, AnEngine, APolicyEngine, N>,
+fn continued_with(
+    desk: &ErrandDesk<'_, AnEngine, APolicyEngine>,
     home: &Path,
     document: &[u8],
     live: &LiveErrand,

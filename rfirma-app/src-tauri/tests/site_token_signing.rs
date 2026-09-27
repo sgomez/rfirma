@@ -9,7 +9,7 @@ use rfirma_lib::identity::adapters::pkcs11::{self, RealToken};
 use rfirma_lib::identity::domain::certificate::TokenCertificate;
 use rfirma_lib::identity::domain::protected_secret::ProtectedSecret;
 use rfirma_lib::identity::domain::secret::StoreSecret;
-use rfirma_lib::site::adapters::desk::{secret_for_the_batch, signed_by_the_token};
+use rfirma_lib::site::adapters::desk::{secret_for_the_remote_batch, signed_for_the_remote_batch};
 use rfirma_lib::site::domain::protocol::SafCode;
 use rsa::pkcs1v15::{Signature, VerifyingKey};
 use rsa::pkcs8::DecodePublicKey;
@@ -82,12 +82,13 @@ fn one_secret_signs_the_whole_batch_and_every_signature_verifies() {
     let certificate = certificate();
     let signer = RealToken;
 
-    let secret = secret_for_the_batch(&signer, &certificate).expect("el secreto deberia salir");
+    let secret =
+        secret_for_the_remote_batch(&signer, &certificate).expect("el secreto deberia salir");
     assert!(matches!(secret, StoreSecret::TypedOnScreen));
 
     let key = VerifyingKey::<Sha256>::new(public_key(&certificate));
     for pre in [FIRST, SECOND] {
-        let raw = signed_by_the_token(
+        let raw = signed_for_the_remote_batch(
             &signer,
             &certificate,
             &ProtectedSecret::from_str(PIN),
@@ -105,7 +106,7 @@ fn one_secret_signs_the_whole_batch_and_every_signature_verifies() {
 fn the_sha512_the_site_asks_for_is_signed_by_the_token_and_verifies() {
     let certificate = certificate();
 
-    let raw = signed_by_the_token(
+    let raw = signed_for_the_remote_batch(
         &RealToken,
         &certificate,
         &ProtectedSecret::from_str(PIN),
@@ -124,7 +125,7 @@ fn the_sha512_the_site_asks_for_is_signed_by_the_token_and_verifies() {
 fn the_sha1_a_site_still_asks_for_is_signed_by_the_token_and_verifies() {
     let certificate = certificate();
 
-    let raw = signed_by_the_token(
+    let raw = signed_for_the_remote_batch(
         &RealToken,
         &certificate,
         &ProtectedSecret::from_str(PIN),
@@ -143,7 +144,7 @@ fn the_sha1_a_site_still_asks_for_is_signed_by_the_token_and_verifies() {
 fn an_algorithm_rfirma_does_not_compose_is_a_situation_and_not_a_panic() {
     let certificate = certificate();
 
-    let refusal = signed_by_the_token(
+    let refusal = signed_for_the_remote_batch(
         &RealToken,
         &certificate,
         &ProtectedSecret::from_str(PIN),
@@ -161,7 +162,7 @@ fn an_algorithm_rfirma_does_not_compose_is_a_situation_and_not_a_panic() {
 fn a_wrong_secret_does_not_sign_the_rest_of_the_batch() {
     let certificate = certificate();
 
-    let refusal = signed_by_the_token(
+    let refusal = signed_for_the_remote_batch(
         &RealToken,
         &certificate,
         &ProtectedSecret::from_str("9999"),

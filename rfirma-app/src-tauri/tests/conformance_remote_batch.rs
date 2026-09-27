@@ -34,7 +34,8 @@ fn the_batch_errand_of(roots: &Arc<Roots>, signer: &Arc<Mutex<Option<Vec<u8>>>>)
     let signer = Arc::clone(signer);
 
     SiteOperations::for_operations(move |url, reply: ErrandReply| {
-        let desk = the_desk_of(&roots);
+        let neighbourhood = the_neighbourhood_of(&roots);
+        let desk = the_desk_of(&roots, &neighbourhood);
         let live = &roots.site.errand;
 
         let answering = ErrandReply::of(move |text| reply.answer(text));
@@ -63,7 +64,7 @@ fn the_batch_errand_of(roots: &Arc<Roots>, signer: &Arc<Mutex<Option<Vec<u8>>>>)
 
         errand::consent(&desk, &chosen.id, live).expect("el lote deberia quedar consentido");
         tokio::task::block_in_place(|| {
-            signed_with_the_secret(&desk, live, "")
+            signed_with_the_secret(&roots.identity, &roots.signing, &desk, live, "")
                 .expect("el lote deberia cerrarse con el secreto del token")
         });
     })
@@ -289,7 +290,8 @@ fn the_down_presigner_batch_errand_of(roots: &Arc<Roots>) -> SiteOperations {
     let roots = Arc::clone(roots);
 
     SiteOperations::for_operations(move |url, reply: ErrandReply| {
-        let desk = the_desk_of(&roots);
+        let neighbourhood = the_neighbourhood_of(&roots);
+        let desk = the_desk_of(&roots, &neighbourhood);
         let live = &roots.site.errand;
 
         let answering = ErrandReply::of(move |text| reply.answer(text));

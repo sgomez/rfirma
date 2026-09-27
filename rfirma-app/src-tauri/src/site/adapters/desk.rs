@@ -1,4 +1,4 @@
-//! Los puertos que el trámite pide a los vecinos, servidos por sus raíces: certificados, documento de paso y firma.
+//! El puerto que el trámite pide a los vecinos, servido por sus tres raíces: certificados, documento de paso y firma.
 
 use std::path::PathBuf;
 
@@ -6,7 +6,6 @@ use crate::crossing::Failure;
 use crate::documents::adapters::failures::code_of_document;
 use crate::documents::DocumentsRoot;
 use crate::identity::adapters::failures::code_of_token;
-use crate::identity::domain::algorithm::{KeyKind, SignatureAlgorithm};
 use crate::identity::domain::certificate::{ListedCertificate, TokenCertificate};
 use crate::identity::domain::error::{Situation, TokenError};
 use crate::identity::domain::protected_secret::ProtectedSecret;
@@ -16,15 +15,13 @@ use crate::identity::IdentityRoot;
 use crate::signing::adapters::failures::told_of_cycle;
 use crate::signing::ports::Signer;
 use crate::signing::{DeclaredByTheSite, SigningRoot};
-use crate::site::domain::protocol::{AskedAlgorithm, SafCode};
+use crate::site::domain::protocol::AskedAlgorithm;
 use crate::site::domain::signing::{SigningRefusal, SiteSignature};
-use crate::site::ports::{
-    Certificates, ScratchDocuments, SiteSigning, SiteSigningRequest, TokenSigning,
-};
+use crate::site::ports::{composed_for, signing_refusal_of, Neighbours, SiteSigningRequest};
 
-/// Las tres raíces vecinas, vistas por el trámite a través de sus puertos.
+/// Las tres raíces vecinas, vistas por el trámite a través de su único puerto.
 #[derive(Clone, Copy)]
-pub struct Neighbours<'a> {
+pub struct Neighbourhood<'a> {
     /// Quien tiene los certificados.
     pub identity: &'a IdentityRoot,
     /// Quien apunta los documentos.
@@ -33,7 +30,7 @@ pub struct Neighbours<'a> {
     pub signing: &'a SigningRoot,
 }
 
-impl Certificates for Neighbours<'_> {
+impl Neighbours for Neighbourhood<'_> {
     fn listed(&self) -> Result<Vec<TokenCertificate>, TokenError> {
         self.identity.certificates()
     }
@@ -57,15 +54,11 @@ impl Certificates for Neighbours<'_> {
     fn automatic_selection_honoured(&self) -> bool {
         self.signing.configuration().honour_automatic_selection
     }
-}
 
-impl ScratchDocuments for Neighbours<'_> {
     fn open_unrecorded(&self, path: PathBuf) -> String {
         self.documents.open_unrecorded(path)
     }
-}
 
-impl SiteSigning for Neighbours<'_> {
     fn begin(&self, request: SiteSigningRequest<'_>) -> Result<StoreSecret, SigningRefusal> {
         let document = self
             .documents
@@ -123,11 +116,9 @@ impl SiteSigning for Neighbours<'_> {
             .ok()?;
         typed.as_str().ok().map(str::to_owned)
     }
-}
 
-impl TokenSigning for Neighbours<'_> {
     fn secret_of(&self, certificate: &TokenCertificate) -> Result<StoreSecret, SigningRefusal> {
-        secret_for_the_batch(&self.identity.signer(), certificate)
+        secret_for_the_remote_batch(&self.identity.signer(), certificate)
     }
 
     fn sign(
@@ -137,7 +128,7 @@ impl TokenSigning for Neighbours<'_> {
         algorithm: &str,
         data: &[u8],
     ) -> Result<Vec<u8>, SigningRefusal> {
-        signed_by_the_token(
+        signed_for_the_remote_batch(
             &self.identity.signer(),
             certificate,
             secret,
@@ -147,8 +138,8 @@ impl TokenSigning for Neighbours<'_> {
     }
 }
 
-/// El secreto del certificado, pedido una sola vez para todas las firmas del lote.
-pub fn secret_for_the_batch(
+/// El secreto del certificado, pedido una sola vez para todas las firmas del lote remoto.
+pub fn secret_for_the_remote_batch(
     signer: &dyn Signer,
     certificate: &TokenCertificate,
 ) -> Result<StoreSecret, SigningRefusal> {
@@ -157,8 +148,8 @@ pub fn secret_for_the_batch(
         .map_err(refusal_of_token)
 }
 
-/// Los bytes firmados por el token con el algoritmo que declaró la sede.
-pub fn signed_by_the_token(
+/// Los bytes del lote remoto firmados por el token, sin ciclo, con el algoritmo que declaró la sede.
+pub fn signed_for_the_remote_batch(
     signer: &dyn Signer,
     certificate: &TokenCertificate,
     secret: &ProtectedSecret,
@@ -174,29 +165,6 @@ pub fn signed_by_the_token(
         .map_err(refusal_of_token)
 }
 
-/// La huella que pide la sede, compuesta con la clase de clave del certificado (`composeSignatureAlgorithmName`, 1.9.2).
-pub fn composed_for(
-    asked: AskedAlgorithm,
-    key: Option<KeyKind>,
-) -> Result<SignatureAlgorithm, TokenError> {
-    let key = key.ok_or_else(|| {
-        TokenError::new(
-            Situation::KeyKindUnsupported,
-            "la clave del certificado no es RSA ni de curva eliptica",
-        )
-    })?;
-    Ok(match (asked, key) {
-        (AskedAlgorithm::Sha1, KeyKind::Rsa) => SignatureAlgorithm::Sha1Rsa,
-        (AskedAlgorithm::Sha256, KeyKind::Rsa) => SignatureAlgorithm::Sha256Rsa,
-        (AskedAlgorithm::Sha384, KeyKind::Rsa) => SignatureAlgorithm::Sha384Rsa,
-        (AskedAlgorithm::Sha512, KeyKind::Rsa) => SignatureAlgorithm::Sha512Rsa,
-        (AskedAlgorithm::Sha1, KeyKind::Ec) => SignatureAlgorithm::Sha1Ecdsa,
-        (AskedAlgorithm::Sha256, KeyKind::Ec) => SignatureAlgorithm::Sha256Ecdsa,
-        (AskedAlgorithm::Sha384, KeyKind::Ec) => SignatureAlgorithm::Sha384Ecdsa,
-        (AskedAlgorithm::Sha512, KeyKind::Ec) => SignatureAlgorithm::Sha512Ecdsa,
-    })
-}
-
 fn no_mechanism_for(algorithm: &str) -> TokenError {
     TokenError::new(
         Situation::MechanismNotOffered,
@@ -207,16 +175,6 @@ fn no_mechanism_for(algorithm: &str) -> TokenError {
 fn refusal_of_token(error: TokenError) -> SigningRefusal {
     let code = code_of_token(error.situation());
     signing_refusal_of((Failure::from(error), code))
-}
-
-/// Lo que la sede y la ventana reciben de un fallo, tal como lo decidió quien lo tradujo.
-pub fn signing_refusal_of((told, code): (Failure, SafCode)) -> SigningRefusal {
-    SigningRefusal {
-        code,
-        situation: told.situation,
-        detail: told.detail,
-        attempts_left: told.attempts_left,
-    }
 }
 
 #[cfg(test)]

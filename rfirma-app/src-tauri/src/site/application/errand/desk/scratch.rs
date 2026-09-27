@@ -8,14 +8,10 @@ use crate::site::application::session::SiteRefusal;
 use crate::site::ports::{FilterEngine, PolicyEngine};
 
 use super::super::state::LiveErrand;
-use super::{ErrandDesk, Neighbours};
+use super::ErrandDesk;
 
-pub(in crate::site::application) fn keep_the_document<
-    E: FilterEngine,
-    P: PolicyEngine,
-    N: Neighbours,
->(
-    desk: &ErrandDesk<'_, E, P, N>,
+pub(in crate::site::application) fn keep_the_document<E: FilterEngine, P: PolicyEngine>(
+    desk: &ErrandDesk<'_, E, P>,
     live: &LiveErrand,
     format: Format,
     bytes: &[u8],
@@ -27,12 +23,8 @@ pub(in crate::site::application) fn keep_the_document<
 
 /// Deja el documento en el directorio de paso sin apuntarlo en el trámite: quien lo llame decide
 /// cuándo borrarlo (el lote local lo hace elemento a elemento, no al final del trámite).
-pub(in crate::site::application) fn write_the_document<
-    E: FilterEngine,
-    P: PolicyEngine,
-    N: Neighbours,
->(
-    desk: &ErrandDesk<'_, E, P, N>,
+pub(in crate::site::application) fn write_the_document<E: FilterEngine, P: PolicyEngine>(
+    desk: &ErrandDesk<'_, E, P>,
     format: Format,
     bytes: &[u8],
 ) -> Result<PathBuf, SiteRefusal> {

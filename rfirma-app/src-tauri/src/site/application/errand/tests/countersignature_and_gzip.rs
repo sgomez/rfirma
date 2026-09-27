@@ -39,18 +39,10 @@ fn a_cades_countersignature_reaches_the_bridge_as_a_countersignature_over_its_ta
     let engine = AnEngine::answering(&[&[0], &[0]]);
     let policies = APolicyEngine::answering("target=tree\n");
     let scratch = home.path().join("errand");
-    let mut desk = a_desk(
-        &engine,
-        &policies,
-        &[],
-        home.path(),
-        &listed,
-        &opened,
-        &memory,
-        &scratch,
-    );
-    desk.neighbours.ours = ours.clone();
-    desk.neighbours.bridge = TheBridge::answering();
+    let mut neighbours = a_neighbourhood(home.path(), &listed, &opened, &memory);
+    neighbours.ours = ours.clone();
+    neighbours.bridge = TheBridge::answering();
+    let desk = a_desk(&engine, &policies, &neighbours, &scratch);
 
     assert!(live.begin(Errand::of(
         NegotiatedCredential::Required(a_credential()),
@@ -77,13 +69,10 @@ fn a_cades_countersignature_reaches_the_bridge_as_a_countersignature_over_its_ta
     };
 
     assert_eq!(
-        desk.neighbours.bridge.operation_of_the_presign(),
+        neighbours.bridge.operation_of_the_presign(),
         SignatureOperation::Countersign
     );
-    assert_eq!(
-        desk.neighbours.bridge.format_of_the_presign(),
-        Format::Cades
-    );
+    assert_eq!(neighbours.bridge.format_of_the_presign(), Format::Cades);
     assert!(
         policies
             .asked
@@ -105,18 +94,10 @@ fn a_xades_countersignature_reaches_the_bridge_as_a_countersignature_over_its_ta
     let engine = AnEngine::answering(&[&[0], &[0]]);
     let policies = APolicyEngine::answering("target=leafs\n");
     let scratch = home.path().join("errand");
-    let mut desk = a_desk(
-        &engine,
-        &policies,
-        &[],
-        home.path(),
-        &listed,
-        &opened,
-        &memory,
-        &scratch,
-    );
-    desk.neighbours.ours = ours.clone();
-    desk.neighbours.bridge = TheBridge::answering();
+    let mut neighbours = a_neighbourhood(home.path(), &listed, &opened, &memory);
+    neighbours.ours = ours.clone();
+    neighbours.bridge = TheBridge::answering();
+    let desk = a_desk(&engine, &policies, &neighbours, &scratch);
 
     assert!(live.begin(Errand::of(
         NegotiatedCredential::Required(a_credential()),
@@ -143,11 +124,11 @@ fn a_xades_countersignature_reaches_the_bridge_as_a_countersignature_over_its_ta
     };
 
     assert_eq!(
-        desk.neighbours.bridge.operation_of_the_presign(),
+        neighbours.bridge.operation_of_the_presign(),
         SignatureOperation::Countersign
     );
     assert_eq!(
-        desk.neighbours.bridge.format_of_the_presign(),
+        neighbours.bridge.format_of_the_presign(),
         Format::Xades(XadesVariant::Enveloping)
     );
     assert!(
@@ -171,18 +152,10 @@ fn presign_params_of_a_countersignature_declaring(properties: &str) -> String {
     let engine = AnEngine::answering(&[&[0], &[0]]);
     let policies = APolicyEngine::answering(properties);
     let scratch = home.path().join("errand");
-    let mut desk = a_desk(
-        &engine,
-        &policies,
-        &[],
-        home.path(),
-        &listed,
-        &opened,
-        &memory,
-        &scratch,
-    );
-    desk.neighbours.ours = ours.clone();
-    desk.neighbours.bridge = TheBridge::answering();
+    let mut neighbours = a_neighbourhood(home.path(), &listed, &opened, &memory);
+    neighbours.ours = ours.clone();
+    neighbours.bridge = TheBridge::answering();
+    let desk = a_desk(&engine, &policies, &neighbours, &scratch);
     assert!(live.begin(Errand::of(
         NegotiatedCredential::Required(a_credential()),
         ArrivalMode::Awaited,
@@ -208,7 +181,7 @@ fn presign_params_of_a_countersignature_declaring(properties: &str) -> String {
     else {
         panic!("una firma se consiente firmando");
     };
-    desk.neighbours.bridge.extra_params_of_the_presign()
+    neighbours.bridge.extra_params_of_the_presign()
 }
 
 fn target_lines_of(params: &str) -> Vec<&str> {
@@ -257,16 +230,8 @@ fn gzip_true_decompresses_the_document_before_consent_in_the_five_operations() {
     let engine = AnEngine::answering(&[&[0], &[0], &[0], &[0], &[0]]);
     let policies = APolicyEngine::answering("");
     let scratch = home.path().join("errand");
-    let desk = a_desk(
-        &engine,
-        &policies,
-        &[],
-        home.path(),
-        &listed,
-        &opened,
-        &memory,
-        &scratch,
-    );
+    let neighbours = a_neighbourhood(home.path(), &listed, &opened, &memory);
+    let desk = a_desk(&engine, &policies, &neighbours, &scratch);
 
     let live = a_live();
     let gzipped_pdf = gzipped(A_PDF);
@@ -365,16 +330,8 @@ fn gzip_true_decompresses_the_document_before_consent_in_the_five_operations() {
     let ChannelMessage::Operation { url: url_batch } = ChannelMessage::read(&text_batch) else {
         panic!("esperaba operacion");
     };
-    let desk_batch = a_desk_for_the_local_batch(
-        &engine,
-        &policies,
-        home.path(),
-        &listed,
-        &opened,
-        &memory,
-        &scratch,
-        &ours,
-    );
+    let neighbours = neighbours_for_the_local_batch(home.path(), &listed, &opened, &memory, &ours);
+    let desk_batch = a_desk(&engine, &policies, &neighbours, &scratch);
     let step = attend_operation(&desk_batch, &url_batch, decoded(&url_batch), &live);
     let ErrandStep::AskingToSignTheLocalBatch(asked) = remembered(&live, step) else {
         panic!("esperaba AskingToSignTheLocalBatch");
@@ -396,16 +353,8 @@ fn gzip_true_with_invalid_dat_is_refused_with_saf03() {
     let engine = AnEngine::answering(&[]);
     let policies = APolicyEngine::answering("");
     let scratch = home.path().join("errand");
-    let desk = a_desk(
-        &engine,
-        &policies,
-        &[],
-        home.path(),
-        &listed,
-        &opened,
-        &memory,
-        &scratch,
-    );
+    let neighbours = a_neighbourhood(home.path(), &listed, &opened, &memory);
+    let desk = a_desk(&engine, &policies, &neighbours, &scratch);
 
     let not_gzipped = b"not-a-valid-gzip-stream";
     let url = a_signature_over(not_gzipped, "sign", "&gzip=true");
@@ -448,11 +397,7 @@ fn signing_without_dat_opens_the_loading_moment_with_the_sites_hints() {
         &a_desk(
             &engine,
             &policies,
-            &[],
-            home.path(),
-            &listed,
-            &opened,
-            &memory,
+            &a_neighbourhood(home.path(), &listed, &opened, &memory),
             &scratch,
         ),
         &url,
@@ -482,15 +427,8 @@ fn a_selector_declined_for_a_signature_without_dat_answers_cancel() {
     let engine = AnEngine::answering(&[]);
     let policies = APolicyEngine::answering("");
     let scratch = home.path().join("errand");
-    let desk = a_desk_without_any_store(
-        &engine,
-        &policies,
-        home.path(),
-        &listed,
-        &opened,
-        &memory,
-        &scratch,
-    );
+    let neighbours = a_neighbourhood(home.path(), &listed, &opened, &memory);
+    let desk = a_desk(&engine, &policies, &neighbours, &scratch);
     let live = a_live();
     let (handle, mut wire) = the_wire();
 
@@ -512,15 +450,8 @@ fn a_document_chosen_for_a_signature_without_dat_continues_the_errand() {
     let engine = AnEngine::answering(&[]);
     let policies = APolicyEngine::answering("");
     let scratch = home.path().join("errand");
-    let desk = a_desk_without_any_store(
-        &engine,
-        &policies,
-        home.path(),
-        &listed,
-        &opened,
-        &memory,
-        &scratch,
-    );
+    let neighbours = a_neighbourhood(home.path(), &listed, &opened, &memory);
+    let desk = a_desk(&engine, &policies, &neighbours, &scratch);
     let live = a_live();
 
     let step = attend(&desk, a_signature_without_dat(""), the_wire().0, &live).expect("hay codec");

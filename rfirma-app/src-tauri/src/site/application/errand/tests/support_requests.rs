@@ -9,11 +9,10 @@ use crate::identity::application::certificates::ListedCertificates;
 use crate::identity::application::tests::{a_usable_certificate, listed_from};
 use crate::identity::domain::certificate::TokenCertificate;
 use crate::signing::adapters::memory::Memory;
-use crate::signing::application::session::SigningSession;
 use crate::signing::application::tests::a_memory;
 use crate::site::application::errand::*;
 use crate::site::application::tests::read_operation;
-use crate::site::application::tests::{InMemoryBatchServices, InMemoryTokenSigning, NotAsked};
+use crate::site::application::tests::InMemoryBatchServices;
 use crate::site::domain::protocol::{AfirmaUrl, ChannelMessage, SignRequest, SiteOperation};
 use crate::site::domain::signing::SiteSignature;
 use base64::Engine as _;
@@ -139,11 +138,7 @@ pub(crate) fn a_consent_to_sign_over(pdf: &[u8], expanded: &str) -> ErrandStep {
         &a_desk(
             &engine,
             &policies,
-            &[],
-            home.path(),
-            &listed,
-            &opened,
-            &memory,
+            &a_neighbourhood(home.path(), &listed, &opened, &memory),
             &scratch,
         ),
         &signature_requested(&a_signature_over(pdf, "sign", "")),
@@ -185,57 +180,34 @@ pub(crate) fn a_sign_and_save_without_dat(extra: &str) -> AfirmaUrl {
     url
 }
 
-/// Una mesa sin ningun almacen: cualquier operacion que mirase certificados fallaria con
-/// `CannotAccessKeystore` (ver `the_three_verbs_run_the_errand...`). Guardar y cargar no la miran.
-pub(crate) fn a_desk_without_any_store<'a>(
-    engine: &'a AnEngine,
-    policies: &'a APolicyEngine,
-    home: &'a Path,
-    listed: &'a ListedCertificates,
-    opened: &'a OpenedDocuments,
-    memory: &'a Memory,
-    scratch: &'a Path,
-) -> ErrandDesk<'a, AnEngine, APolicyEngine, TheNeighbours<'a>> {
-    a_desk(engine, policies, &[], home, listed, opened, memory, scratch)
-}
-
-/// Una mesa que lista los certificados dados y habla con los servlets del lote dados.
-pub(crate) fn a_desk_for_the_batch<'a>(
-    engine: &'a AnEngine,
-    policies: &'a APolicyEngine,
+/// Un vecino que lista los certificados dados y da la firma de sede por buena.
+pub(crate) fn a_signer_for_the_batch<'a>(
     home: &'a Path,
     listed: &'a ListedCertificates,
     memory: &'a Memory,
     ours: &[TokenCertificate],
-    services: Arc<InMemoryBatchServices>,
-) -> ErrandDesk<'a, AnEngine, APolicyEngine, ASignerThatSucceeds<'a>> {
-    ErrandDesk {
-        engine,
-        policies,
-        validation: &NotAsked,
-        neighbours: ASignerThatSucceeds {
-            neighbours: TheNeighbours {
-                stores: Vec::new(),
-                home,
-                listed,
-                opened: opened_for_nobody(),
-                memory,
-                token: InMemoryTokenSigning::default(),
-                signer: ATokenThatSigns::default(),
-                ours: Vec::new(),
-                bridge: TheBridge::default(),
-                session: SigningSession::default(),
-            },
-            listed: ours.to_vec(),
-            signature: SiteSignature {
-                signature: Vec::new(),
-                signer_der: Vec::new(),
-            },
+) -> ASignerThatSucceeds<'a> {
+    ASignerThatSucceeds {
+        neighbours: a_neighbourhood(home, listed, opened_for_nobody(), memory),
+        listed: ours.to_vec(),
+        signature: SiteSignature {
+            signature: Vec::new(),
+            signer_der: Vec::new(),
         },
-        scratch_dir: home.join("errand"),
-        scratch: Arc::new(crate::site::adapters::scratch::RealScratch),
+    }
+}
+
+/// Una mesa sobre el vecino dado que habla con los servlets del lote dados.
+pub(crate) fn a_desk_for_the_batch<'a>(
+    engine: &'a AnEngine,
+    policies: &'a APolicyEngine,
+    neighbours: &'a dyn Neighbours,
+    home: &Path,
+    services: Arc<InMemoryBatchServices>,
+) -> ErrandDesk<'a, AnEngine, APolicyEngine> {
+    ErrandDesk {
         batch: services,
-        triphase: Arc::new(crate::site::application::tests::InMemoryTriphaseServer::default()),
+        ..a_desk(engine, policies, neighbours, &home.join("errand"))
     }
 }
 
@@ -270,25 +242,18 @@ pub(crate) fn a_local_batch(extra: &str) -> AfirmaUrl {
     url
 }
 
-/// Una mesa que firma de verdad por el ciclo de sede, con el puente doblado atendiendo.
-#[expect(
-    clippy::too_many_arguments,
-    reason = "es el constructor de un tipo de ocho campos, no una interfaz"
-)]
-pub(crate) fn a_desk_for_the_local_batch<'a>(
-    engine: &'a AnEngine,
-    policies: &'a APolicyEngine,
+/// Un vecindario que firma de verdad por el ciclo de sede, con el puente doblado atendiendo.
+pub(crate) fn neighbours_for_the_local_batch<'a>(
     home: &'a Path,
     listed: &'a ListedCertificates,
     opened: &'a OpenedDocuments,
     memory: &'a Memory,
-    scratch: &'a Path,
     ours: &[TokenCertificate],
-) -> ErrandDesk<'a, AnEngine, APolicyEngine, TheNeighbours<'a>> {
-    let mut desk = a_desk(engine, policies, &[], home, listed, opened, memory, scratch);
-    desk.neighbours.ours = ours.to_vec();
-    desk.neighbours.bridge = TheBridge::answering();
-    desk
+) -> TheNeighbours<'a> {
+    let mut neighbours = a_neighbourhood(home, listed, opened, memory);
+    neighbours.ours = ours.to_vec();
+    neighbours.bridge = TheBridge::answering();
+    neighbours
 }
 
 /// El resultado del lote que la sede acaba de recibir, ya descodificado.

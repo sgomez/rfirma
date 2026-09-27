@@ -54,13 +54,12 @@ fn a_batch_goes_from_the_operation_to_the_wire_asking_the_secret_only_once() {
         A_PRESIGN_WITH_TWO_SIGNS.to_vec(),
         b"RESULTADO".to_vec(),
     ));
+    let neighbours = a_signer_for_the_batch(home.path(), &listed, &memory, &ours);
     let desk = a_desk_for_the_batch(
         &engine,
         &policies,
+        &neighbours,
         home.path(),
-        &listed,
-        &memory,
-        &ours,
         Arc::clone(&services),
     );
 
@@ -89,11 +88,11 @@ fn a_batch_goes_from_the_operation_to_the_wire_asking_the_secret_only_once() {
         "la sede recibe el resultado del postsigner tal cual"
     );
     assert_eq!(
-        desk.neighbours.neighbours.token.secrets_asked(),
+        neighbours.neighbours.token.secrets_asked(),
         1,
         "el secreto se pide una sola vez para las dos firmas"
     );
-    assert_eq!(desk.neighbours.neighbours.token.signed().len(), 2);
+    assert_eq!(neighbours.neighbours.token.signed().len(), 2);
     assert_eq!(services.received().len(), 2);
     assert!(live.current().is_none());
 }
@@ -113,15 +112,8 @@ fn a_batch_with_needcert_answers_the_result_and_the_signer() {
         A_PRESIGN_WITH_TWO_SIGNS.to_vec(),
         b"RESULTADO".to_vec(),
     ));
-    let desk = a_desk_for_the_batch(
-        &engine,
-        &policies,
-        home.path(),
-        &listed,
-        &memory,
-        &ours,
-        services,
-    );
+    let neighbours = a_signer_for_the_batch(home.path(), &listed, &memory, &ours);
+    let desk = a_desk_for_the_batch(&engine, &policies, &neighbours, home.path(), services);
 
     let url = a_batch("&needcert=true");
     let step = attend_operation(&desk, &url, decoded(&url), &live);
@@ -152,13 +144,12 @@ fn a_sticky_batch_does_not_take_the_desk_remembered_certificate_as_already_chose
     let live = a_live();
     let engine = AnEngine::answering(&[&[0]]);
     let policies = APolicyEngine::answering("");
+    let neighbours = a_signer_for_the_batch(home.path(), &listed, &memory, &ours);
     let desk = a_desk_for_the_batch(
         &engine,
         &policies,
+        &neighbours,
         home.path(),
-        &listed,
-        &memory,
-        &ours,
         Arc::new(InMemoryBatchServices::default()),
     );
 
@@ -184,13 +175,12 @@ fn a_sticky_batch_leaves_the_certificate_stuck_in_its_session_already_chosen_in_
     live.stick(ours[0].reference());
     let engine = AnEngine::answering(&[&[0]]);
     let policies = APolicyEngine::answering("");
+    let neighbours = a_signer_for_the_batch(home.path(), &listed, &memory, &ours);
     let desk = a_desk_for_the_batch(
         &engine,
         &policies,
+        &neighbours,
         home.path(),
-        &listed,
-        &memory,
-        &ours,
         Arc::new(InMemoryBatchServices::default()),
     );
 
@@ -219,13 +209,12 @@ fn a_batch_whose_presigner_is_unreachable_is_answered_with_the_code_of_the_batch
     live.answer_through(handle);
     let engine = AnEngine::answering(&[&[0], &[0]]);
     let policies = APolicyEngine::answering("");
+    let neighbours = a_signer_for_the_batch(home.path(), &listed, &memory, &ours);
     let desk = a_desk_for_the_batch(
         &engine,
         &policies,
+        &neighbours,
         home.path(),
-        &listed,
-        &memory,
-        &ours,
         Arc::new(InMemoryBatchServices::unreachable()),
     );
 
@@ -255,13 +244,12 @@ fn a_batch_whose_postsigner_answers_nothing_is_answered_with_the_code_of_a_faile
     live.answer_through(handle);
     let engine = AnEngine::answering(&[&[0], &[0]]);
     let policies = APolicyEngine::answering("");
+    let neighbours = a_signer_for_the_batch(home.path(), &listed, &memory, &ours);
     let desk = a_desk_for_the_batch(
         &engine,
         &policies,
+        &neighbours,
         home.path(),
-        &listed,
-        &memory,
-        &ours,
         Arc::new(InMemoryBatchServices::only_presigning(
             A_PRESIGN_WITH_TWO_SIGNS.to_vec(),
         )),
@@ -293,13 +281,12 @@ fn a_json_batch_asked_with_jsonbatch_capitalised_reaches_the_presigner_as_the_le
     let engine = AnEngine::answering(&[&[0], &[0]]);
     let policies = APolicyEngine::answering("");
     let services = Arc::new(InMemoryBatchServices::default());
+    let neighbours = a_signer_for_the_batch(home.path(), &listed, &memory, &ours);
     let desk = a_desk_for_the_batch(
         &engine,
         &policies,
+        &neighbours,
         home.path(),
-        &listed,
-        &memory,
-        &ours,
         Arc::clone(&services),
     );
     let ChannelMessage::Operation { url } = ChannelMessage::read(&format!(
@@ -341,13 +328,12 @@ fn a_batch_that_is_declined_ends_in_a_cancel() {
     live.answer_through(handle);
     let engine = AnEngine::answering(&[&[0]]);
     let policies = APolicyEngine::answering("");
+    let neighbours = a_signer_for_the_batch(home.path(), &listed, &memory, &ours);
     let desk = a_desk_for_the_batch(
         &engine,
         &policies,
+        &neighbours,
         home.path(),
-        &listed,
-        &memory,
-        &ours,
         Arc::new(InMemoryBatchServices::default()),
     );
 

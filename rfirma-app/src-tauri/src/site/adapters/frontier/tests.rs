@@ -11,11 +11,11 @@ use crate::signing::application::cycle::CycleError;
 use crate::signing::application::session::CycleFailure;
 use crate::signing::domain::bridge::BridgeError;
 use crate::signing::domain::Refusal as Inadmissible;
-use crate::site::adapters::desk::signing_refusal_of;
 use crate::site::application::filtering::FilteringError;
 use crate::site::domain::batch_error::{BatchError, Situation as BatchSituation};
 use crate::site::domain::relay_error::Situation as RelaySituation;
 use crate::site::domain::triphase_server::{Situation as TriphaseSituation, TriphaseServerError};
+use crate::site::ports::signing_refusal_of;
 
 fn every_refusal_of_the_errand() -> Vec<SiteRefusal> {
     vec![
