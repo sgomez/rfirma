@@ -70,16 +70,15 @@ Se descarta que el flatpak pida acceso a todo el llavero de la persona, por ejem
 del sandbox, el portal ya aísla el secreto de rFirma del resto del llavero sin pedir nada
 más, que es justo lo que un cliente de firma necesita.
 
-**Estado de KDE, sin comprobar a mano todavía.** KWallet implementa
+**Comprobado a mano en GNOME y en KDE.** En las dos sesiones, el flatpak instala un `.p12`
+de pruebas y firma con él sin pedir ningún permiso nuevo: `oo7` obtiene el PIN por el portal
+de secretos. En KDE, el backend del portal es KWallet, que implementa
 `org.freedesktop.impl.portal.Secret` desde KDE Frameworks 6.2 (fusionado el 21 de abril de
 2024, [MR !67 de `kwallet`](https://invent.kde.org/frameworks/kwallet/-/merge_requests/67),
-resuelto como [bug 466197](https://bugs.kde.org/show_bug.cgi?id=466197)): antes de esa
+resuelto como [bug 466197](https://bugs.kde.org/show_bug.cgi?id=466197)); antes de esa
 versión, `xdg-desktop-portal-kde` no tenía backend propio para el portal de secretos, y
 algunos entornos lo resolvían delegando en `gnome-keyring` por configuración
-(`/etc/xdg/xdg-desktop-portal/kde-portals.conf`). Con Frameworks 6.2 o posterior, el
-backend es KWallet mismo y no hace falta ese rodeo. Lo que queda por comprobar a mano —otro
-ticket— es que `oo7` obtiene de verdad un secreto a través de ese backend en una sesión KDE
-real, dentro y fuera del flatpak.
+(`/etc/xdg/xdg-desktop-portal/kde-portals.conf`).
 
 ## Sin llavero, no hay instalación
 
