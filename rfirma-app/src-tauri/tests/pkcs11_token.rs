@@ -23,8 +23,8 @@ use sha2::{Digest, Sha256};
 use support::{
     certificate_labelled, certificate_with_cka_id, certificates, epoch, module, openssl_verifies,
     openssl_verifies_for, reference, sign_with_bare_rsa_pkcs, signing_error, verifying_key, ACTIVE,
-    ACTIVE_EC, EXPIRED, PIN, PRESIGN, REVOKED, TOKEN, TWIN, TWIN_OF_THE_ACTIVE_KEY,
-    TWIN_OF_THE_EXPIRED_KEY,
+    ACTIVE_EC, EXPIRED, PIN, PRESIGN, REPRESENTATIVE_LEGAL_ENTITY, REVOKED, TOKEN, TWIN,
+    TWIN_OF_THE_ACTIVE_KEY, TWIN_OF_THE_EXPIRED_KEY,
 };
 
 #[test]
@@ -91,6 +91,17 @@ fn the_issuer_is_the_authority_and_the_subject_has_no_organisation_to_confuse_it
 }
 
 #[test]
+fn the_listing_includes_a_representative_certificate_of_the_kit() {
+    let certificate = certificate_labelled(REPRESENTATIVE_LEGAL_ENTITY);
+
+    assert_eq!(
+        certificate.organization_identifier().as_deref(),
+        Some("VATES-Q0000000J"),
+        "el certificado {REPRESENTATIVE_LEGAL_ENTITY} tenia que llevar organizationIdentifier"
+    );
+}
+
+#[test]
 fn listing_without_a_session_still_lists_them() {
     let found = pkcs11::list_certificates(module()).expect("no deberia fallar sin PIN");
     assert!(
@@ -104,8 +115,9 @@ fn listing_without_a_session_still_lists_them() {
             .iter()
             .filter(|certificate| !certificate.reference().label().starts_with("KIT-"))
             .count(),
-        6,
-        "los tokens de pruebas tienen seis certificados con clave: cinco de RSA y uno de curva eliptica"
+        13,
+        "los tokens de pruebas tienen trece certificados con clave: cinco de RSA, uno de curva \
+         eliptica, seis de representante y el mismo de representante repetido en un segundo almacen"
     );
     assert!(
         found

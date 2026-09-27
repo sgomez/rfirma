@@ -11,11 +11,11 @@ vivo, caducado de verdad— porque exigen una CA real.
 proyecto.** No se importa, no se exporta y no aparece en ningún fixture.
 
 El kit completo (155 ficheros) sigue viviendo fuera del repositorio, en
-`~/.local/share/rfirma-test-certs`. Aquí solo están los cinco que las pruebas
+`~/.local/share/rfirma-test-certs`. Aquí solo están los que las pruebas
 necesitan. Detalle del entorno en
 [`docs/research/token-pkcs11-pruebas.md`](../../docs/research/token-pkcs11-pruebas.md).
 
-## Los cinco ficheros
+## Los ficheros de persona física y de empleado público
 
 | Fichero | Contraseña | Papel | `notAfter` |
 | --- | --- | --- | --- |
@@ -31,6 +31,29 @@ con seudónimo es `TEST-0000`, emitido por `C=ES, O=FNMT-RCM, OU=Ceres, CN=AC Se
 El de curva elíptica es un espécimen distinto, `99949991H`, emitido por `C=ES, O=FNMT-RCM,
 CN=AC USUARIOS G2`.
 
+## Los ficheros de representante (ID-13)
+
+Los tres perfiles de representación del kit, cada uno con su revocado, en el
+token SoftHSM `rfirma-test-representative`. El activo de persona jurídica se
+repite además, con el mismo `CKA_ID` y la misma etiqueta, en
+`rfirma-test-representative-2`: el mismo certificado en dos almacenes
+distintos, para probar la agrupación «una fila por certificado» contra datos
+reales.
+
+| Fichero | Contraseña | Papel | `notAfter` |
+| --- | --- | --- | --- |
+| `representative-legal-entity-rsa.p12` | `1234` | Persona jurídica, activo. | **2028-05-13 10:35:29 GMT** |
+| `representative-legal-entity-revoked-rsa.p12` | `1234` | Persona jurídica, revocado (y caducado en 2022, tal y como lo trae el kit). | 2022-04-15 09:23:34 GMT |
+| `representative-unincorporated-entity-rsa.p12` | `1234` | Entidad sin personalidad jurídica, activo. | **2028-05-25 06:38:46 GMT** |
+| `representative-unincorporated-entity-revoked-rsa.p12` | `1234` | Entidad sin personalidad jurídica, revocado (y caducado en 2024). | 2024-04-25 07:55:46 GMT |
+| `representative-sole-administrator-rsa.p12` | `1234` | Administrador único, activo. | **2028-05-25 06:39:29 GMT** |
+| `representative-sole-administrator-revoked-rsa.p12` | `1234` | Administrador único, revocado (y caducado en 2024). | 2024-04-25 07:56:39 GMT |
+
+Los seis llevan `organizationIdentifier` (2.5.4.97) en el subject —`VATES-Q0000000J`
+en los activos—, emitidos por la rama `AC Representación` del kit, con el
+titular sintético `IDCES-00000000T` que usa todo el kit, nunca el del titular
+real.
+
 > `Caducados/password.txt` del kit original nombra un `PF_ACTIVO_EIDAS.p12` que
 > no existe, y la contraseña que anuncia para él es en realidad la de
 > `PF_CADUCADO_EIDAS.p12` (de donde sale `expired-rsa.p12`).
@@ -45,6 +68,12 @@ a8ff78c1a7b13bcdc12347f683dd5395b6e0ac1d9c3cad23e3668823ae2b1425  revoked-rsa.p1
 901df49ac10cceb0524c8cb50833d1407d0974f42f9d45a5b4b71c0eefa4e91f  expired-rsa.p12
 d4d2638c332b314675ce4f541ff1ca6e0ce0802463430db69033e955645e9f71  active-ecc.p12
 ed38e08e8df77160eb4c0b03fa5e78243fefdd35116af23aa6bcb56cbc2d56b1  pseudonym-rsa.p12
+8ec428e40122888ddccb621358f94aedf393577617a851b2ceabfe66c6570f13  representative-legal-entity-rsa.p12
+50590da24cfaa62527cfa3a0de243de87b6ac816e03bd8069774724de7a9029d  representative-legal-entity-revoked-rsa.p12
+0a179ee34f3690e98c2c8b34676d98d6008afa5f1ce478bca1c7c99d31a48b3a  representative-unincorporated-entity-rsa.p12
+2e5731e89f64f0d5a9a944e03081f97d91df0244c9f87e46f59591dbb76a0624  representative-unincorporated-entity-revoked-rsa.p12
+11fa5142e4b118a4a82832e5417ee36c45e9fdfbecdfc5b6664bb816ef476973  representative-sole-administrator-rsa.p12
+505f322550f68f6f4ff760aedecbc22c4a14bb65cfd5d04a5564b510231ae461  representative-sole-administrator-revoked-rsa.p12
 ```
 
 SHA-256 del certificado de titular (DER), para contrastar contra `openssl`:

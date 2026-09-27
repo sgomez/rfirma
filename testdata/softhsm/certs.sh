@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 #
 # Instala (`install`) o quita (`uninstall`) todos los certificados de pruebas en
-# SoftHSM: los tokens `rfirma-test` y `rfirma-test-ecc` de las pruebas y, si el
-# kit de la FNMT esta en el equipo, el token `rfirma-kit` con los dos casos que
-# las pruebas no traen: un seudonimo y un CN largo de representante. El kit no
+# SoftHSM: los tokens `rfirma-test`, `rfirma-test-ecc`, `rfirma-test-representative`
+# y `rfirma-test-representative-2` de las pruebas y, si el kit de la
+# FNMT esta en el equipo, el token `rfirma-kit` con los dos casos que las
+# pruebas no traen: un seudonimo y un CN largo de representante. El kit no
 # esta en el repositorio; se busca en $RFIRMA_TEST_CERTS o en
 # ~/.local/share/rfirma-test-certs (docs/research/token-pkcs11-pruebas.md).
 
@@ -35,7 +36,8 @@ delete_token() {
 
 uninstall() {
     local label
-    for label in "$token_label" rfirma-test rfirma-test-ecc; do
+    for label in "$token_label" rfirma-test rfirma-test-ecc \
+        rfirma-test-representative rfirma-test-representative-2; do
         delete_token "$label"
     done
 }

@@ -23,6 +23,23 @@
 #
 #   id 01  FNMT-ACTIVO-ECC-99949991H clave + certificado  (camino feliz EC)
 #
+# En `rfirma-test-representative`, los tres perfiles de representacion del
+# kit, cada uno con su revocado:
+#
+#   id 01  FNMT-REPRESENTANTE-PJ             clave + certificado  (persona juridica)
+#   id 02  FNMT-REPRESENTANTE-PJ-REVOCADO    clave + certificado
+#   id 03  FNMT-REPRESENTANTE-ESPJ           clave + certificado  (entidad sin personalidad juridica)
+#   id 04  FNMT-REPRESENTANTE-ESPJ-REVOCADO  clave + certificado
+#   id 05  FNMT-REPRESENTANTE-RAUS           clave + certificado  (administrador unico)
+#   id 06  FNMT-REPRESENTANTE-RAUS-REVOCADO  clave + certificado
+#
+# En `rfirma-test-representative-2`, solo el activo de persona
+# juridica, con el mismo CKA_ID y la misma etiqueta que en el token anterior:
+# el mismo certificado en dos almacenes distintos, para probar la agrupacion
+# «una fila por certificado» contra datos reales.
+#
+#   id 01  FNMT-REPRESENTANTE-PJ             clave + certificado
+#
 # Van en tokens separados porque la clase de clave se elige por el certificado y
 # no por la ranura: con los dos en el mismo token, cualquier prueba que busque
 # «el certificado activo» encontraria dos y firmaria con el que no toca.
@@ -174,5 +191,29 @@ use_token "rfirma-test-ecc"
 
 import_private_key "$kit/active-ecc.p12"  "1234"         "01" "FNMT-ACTIVO-ECC-99949991H"
 import_certificate "$kit/active-ecc.p12"  "1234"         "01" "FNMT-ACTIVO-ECC-99949991H"
+
+echo "token $token_label listo en $module"
+
+use_token "rfirma-test-representative"
+
+import_private_key "$kit/representative-legal-entity-rsa.p12"                 "1234" "01" "FNMT-REPRESENTANTE-PJ"
+import_certificate "$kit/representative-legal-entity-rsa.p12"                 "1234" "01" "FNMT-REPRESENTANTE-PJ"
+import_private_key "$kit/representative-legal-entity-revoked-rsa.p12"         "1234" "02" "FNMT-REPRESENTANTE-PJ-REVOCADO"
+import_certificate "$kit/representative-legal-entity-revoked-rsa.p12"         "1234" "02" "FNMT-REPRESENTANTE-PJ-REVOCADO"
+import_private_key "$kit/representative-unincorporated-entity-rsa.p12"        "1234" "03" "FNMT-REPRESENTANTE-ESPJ"
+import_certificate "$kit/representative-unincorporated-entity-rsa.p12"        "1234" "03" "FNMT-REPRESENTANTE-ESPJ"
+import_private_key "$kit/representative-unincorporated-entity-revoked-rsa.p12" "1234" "04" "FNMT-REPRESENTANTE-ESPJ-REVOCADO"
+import_certificate "$kit/representative-unincorporated-entity-revoked-rsa.p12" "1234" "04" "FNMT-REPRESENTANTE-ESPJ-REVOCADO"
+import_private_key "$kit/representative-sole-administrator-rsa.p12"           "1234" "05" "FNMT-REPRESENTANTE-RAUS"
+import_certificate "$kit/representative-sole-administrator-rsa.p12"           "1234" "05" "FNMT-REPRESENTANTE-RAUS"
+import_private_key "$kit/representative-sole-administrator-revoked-rsa.p12"   "1234" "06" "FNMT-REPRESENTANTE-RAUS-REVOCADO"
+import_certificate "$kit/representative-sole-administrator-revoked-rsa.p12"   "1234" "06" "FNMT-REPRESENTANTE-RAUS-REVOCADO"
+
+echo "token $token_label listo en $module"
+
+use_token "rfirma-test-representative-2"
+
+import_private_key "$kit/representative-legal-entity-rsa.p12" "1234" "01" "FNMT-REPRESENTANTE-PJ"
+import_certificate "$kit/representative-legal-entity-rsa.p12" "1234" "01" "FNMT-REPRESENTANTE-PJ"
 
 echo "token $token_label listo en $module"
