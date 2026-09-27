@@ -22,7 +22,6 @@ function aCertificate(overrides: Partial<Certificate> = {}): Certificate {
     entityName: null,
     issuer: "AC FNMT Usuarios",
     certificateSerialNumber: "1234567890",
-    store: "card",
     stores: ["card"],
     status: { kind: "valid", notAfter: Date.UTC(2028, 2, 15, 12) / 1000 },
     remembered: false,
@@ -30,14 +29,13 @@ function aCertificate(overrides: Partial<Certificate> = {}): Certificate {
   };
 }
 
-const personal = aCertificate({ id: "personal", stores: ["firefox", "chrome"], store: "firefox" });
+const personal = aCertificate({ id: "personal", stores: ["firefox", "chrome"] });
 const representative = aCertificate({
   id: "representative",
   entityName: "Reformas Martín SL",
   organizationIdentifier: "B12345678",
   issuer: "AC Representación",
   stores: ["installed"],
-  store: "installed",
 });
 const expired = aCertificate({
   id: "expired",
@@ -264,8 +262,8 @@ describe("CertificateSelect", () => {
 
     it("tells two certificates with the same label apart by their handle", async () => {
       const twins = [
-        aCertificate({ id: "aaaa", store: "chrome", stores: ["chrome"] }),
-        aCertificate({ id: "bbbb", store: "firefox", stores: ["firefox"] }),
+        aCertificate({ id: "aaaa", stores: ["chrome"] }),
+        aCertificate({ id: "bbbb", stores: ["firefox"] }),
       ];
       const { onChoose } = renderSelect({ certificates: twins });
       await userEvent.click(box());

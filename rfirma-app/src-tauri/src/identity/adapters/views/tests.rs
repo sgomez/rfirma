@@ -55,7 +55,6 @@ fn a_view() -> CertificateView {
         entity_name: None,
         issuer: "FNMT-RCM".to_owned(),
         certificate_serial_number: "1234567890".to_owned(),
-        store: store_name(StoreClass::Firefox).to_owned(),
         stores: vec![store_name(StoreClass::Firefox).to_owned()],
         status: StatusView::Valid {
             not_after: 1_900_000_000,
@@ -65,7 +64,7 @@ fn a_view() -> CertificateView {
 }
 
 #[test]
-fn a_row_crosses_every_store_it_is_in_and_the_one_behind_its_handle() {
+fn a_row_crosses_every_store_it_is_in_but_not_the_one_behind_its_handle() {
     let view = CertificateView::from(ListedCertificate {
         id: "0123456789abcdef0123456789abcdef".to_owned(),
         label: "ETIQUETA".to_owned(),
@@ -85,7 +84,7 @@ fn a_row_crosses_every_store_it_is_in_and_the_one_behind_its_handle() {
     });
     let json = serde_json::to_string(&view).expect("serializa");
 
-    assert!(json.contains(r#""store":"card""#), "{json}");
+    assert!(!json.contains(r#""store":"#), "{json}");
     assert!(json.contains(r#""stores":["card","firefox"]"#), "{json}");
 }
 

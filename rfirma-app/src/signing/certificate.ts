@@ -91,12 +91,11 @@ export interface Certificate {
   /** Número de serie del certificado. */
   certificateSerialNumber: string;
   /**
-   * Dónde estaba. No es adorno: el mismo certificado en el perfil de Firefox y
-   * en `~/.pki/nssdb` es indistinguible sin él, y quien tiene tres iguales no
+   * Todos los almacenes donde está esta misma copia, por orden de preferencia.
+   * No es adorno: el mismo certificado en el perfil de Firefox y en
+   * `~/.pki/nssdb` es indistinguible sin él, y quien tiene tres iguales no
    * puede elegir a ciegas.
    */
-  store: CertificateStoreClass;
-  /** Todos los almacenes donde está esta misma copia, por orden de preferencia. */
   stores: readonly CertificateStoreClass[];
   status: CertificateStatus;
   /**
@@ -163,7 +162,7 @@ const holderCollator = new Intl.Collator("es", { sensitivity: "base" });
 function byHeadlineThenStore(a: Certificate, b: Certificate): number {
   return (
     holderCollator.compare(certificateHeadline(a), certificateHeadline(b)) ||
-    holderCollator.compare(a.store, b.store)
+    holderCollator.compare(a.stores[0] ?? "", b.stores[0] ?? "")
   );
 }
 
@@ -252,6 +251,6 @@ export function installedCertificates(
   certificates: readonly Certificate[],
 ): readonly Certificate[] {
   return certificates
-    .filter((certificate) => certificate.store === "installed")
+    .filter((certificate) => certificate.stores.includes("installed"))
     .sort(byHeadlineThenStore);
 }

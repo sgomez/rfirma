@@ -22,7 +22,6 @@ export function certificate(overrides: Partial<Certificate> = {}): Certificate {
     entityName: null,
     issuer: "FNMT-RCM",
     certificateSerialNumber: "1234567890",
-    store: "installed",
     stores: ["installed"],
     status: { kind: "valid", notAfter: 4_102_444_800 },
     remembered: false,

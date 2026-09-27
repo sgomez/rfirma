@@ -101,8 +101,6 @@ crossing! {
         pub issuer: String,
         /// Número de serie del certificado, en base diez.
         pub certificate_serial_number: String,
-        /// Clase de almacén de la copia tras el asa.
-        pub store: String,
         /// Las clases de almacén donde está, por orden de preferencia.
         pub stores: Vec<String>,
         pub status: StatusView,
@@ -125,7 +123,6 @@ impl From<ListedCertificate> for CertificateView {
             entity_name: certificate.entity_name,
             issuer: certificate.issuer,
             certificate_serial_number: certificate.certificate_serial_number,
-            store: store_name(certificate.store).to_owned(),
             stores: certificate
                 .stores
                 .into_iter()

@@ -57,7 +57,6 @@ export const certificate: Certificate = {
   entityName: null,
   issuer: "AC FNMT Usuarios",
   certificateSerialNumber: "1234567890",
-  store: "card",
   stores: ["card"],
   status: { kind: "valid", notAfter: 1_894_752_000 },
   remembered: false,
