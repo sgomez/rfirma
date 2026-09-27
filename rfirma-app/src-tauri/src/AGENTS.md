@@ -90,8 +90,13 @@ is set to `"../dist"` but this path doesn't exist».
 ## Las pruebas que se leen a sí mismas
 
 Leen el código **como texto**: `signing/application/cycle/tests.rs`,
-`signing/application/session/tests.rs`, `site/application/session/tests.rs`,
-`site/application/filtering/tests.rs`, `tests/site_frontier_guards.rs`,
-`crossing/guards.rs`, `tests/module_directions.rs`, `tests/single_cfg_os_site.rs`
-y `tests/adr_citations_resolve.rs`. Mover un fichero que una lee obliga a
-reapuntarla y a comprobar con un cebo que sigue poniéndose roja.
+`signing/application/session/tests.rs`, `signing/application/preview/tests.rs`,
+`signing/adapters/tauri/tests.rs`, `site/application/session/tests.rs`,
+`site/application/filtering/tests.rs`,
+`site/application/errand/tests/token_and_launch.rs`,
+`tests/site_frontier_guards.rs`, `crossing/guards.rs`,
+`tests/module_directions.rs`, `tests/single_cfg_os_site.rs` y
+`tests/adr_citations_resolve.rs`. Mover un fichero que una lee obliga a
+reapuntarla y a comprobar con un cebo que sigue poniéndose roja. Entre ellas,
+la guarda de `token_and_launch.rs` que comprueba que `headless` y
+`mandatoryCertSelection` solo los lee el protocolo.

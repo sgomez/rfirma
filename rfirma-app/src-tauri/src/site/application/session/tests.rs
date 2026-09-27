@@ -151,8 +151,7 @@ impl FilterEngine for AcceptingEngine {
     }
 }
 
-/// Quien firma cuando ningún documento está abierto: la sesión vacía sobre el token y el hilo de
-/// la grada A, con los certificados de un `Directory` para lo que el filtro vuelve a comprobar.
+/// Quien firma cuando ningún documento está abierto, con los certificados de un `Directory`.
 struct NobodyHasItOpen<'a> {
     directory: Directory<'a>,
 }
@@ -196,9 +195,9 @@ impl Neighbours for NobodyHasItOpen<'_> {
             crate::documents::domain::error::DocumentError::no_longer_open(),
         );
         let _ = (request, &NoToken, &NoIsolate);
-        Err(crate::site::adapters::desk::signing_refusal_of(
-            told_of_cycle(&failure),
-        ))
+        Err(crate::site::ports::signing_refusal_of(told_of_cycle(
+            &failure,
+        )))
     }
 
     fn sign_on_token(
@@ -211,9 +210,7 @@ impl Neighbours for NobodyHasItOpen<'_> {
     fn finish(&self) -> Result<SiteSignature, SigningRefusal> {
         crate::signing::application::session::finish(&NoIsolate, &SigningSession::default())
             .map(|_| unreachable!("no hay ciclo que cerrar"))
-            .map_err(|failure| {
-                crate::site::adapters::desk::signing_refusal_of(told_of_cycle(&failure))
-            })
+            .map_err(|failure| crate::site::ports::signing_refusal_of(told_of_cycle(&failure)))
     }
 
     fn the_pdf_password(&self, _after_a_wrong_one: bool) -> Option<String> {

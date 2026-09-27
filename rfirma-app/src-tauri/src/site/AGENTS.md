@@ -156,7 +156,7 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `domain/signing.rs` | Lo que vuelve de la firma que pidió la sede: la firma en memoria, o el rechazo ya traducido por quien firmó. |
 | `domain/trust.rs` | El reparto, y las cuatro reglas **puras** de la confianza. Aquí vive el puerto `TrustStores`. Léelo antes que sus hermanos. Pruebas en `domain/trust/tests.rs`. |
 | `domain/triphase_server.rs` | El protocolo del servidor trifásico de `serverUrl` y su situación (ADR-0009): el firmador de cada formato, los dos formularios y cómo se leen sus respuestas. **No** es el lote remoto. Pruebas en `domain/triphase_server/tests.rs`. |
-| `ports.rs` | Los puertos del contexto (`BatchServices` incluido), los motores que presta el puente, el puerto único `Neighbours` hacia los vecinos y `composed_for`, que traduce la huella de la sede a la clase de clave del certificado. Pruebas en `ports/tests.rs`. |
+| `ports.rs` | Los puertos del contexto (`BatchServices` incluido), los motores que presta el puente, el puerto único `Neighbours` hacia los vecinos y las dos traducciones que comparten su adaptador y sus dobles (`composed_for`, `signing_refusal_of`). Pruebas en `ports/tests.rs`. |
 
 ## Al tocar lo que sale hacia la sede
 

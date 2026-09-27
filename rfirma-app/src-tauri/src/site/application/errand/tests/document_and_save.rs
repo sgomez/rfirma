@@ -28,15 +28,8 @@ fn document_chosen_reads_the_scratch_path_lists_certificates_and_continues_the_e
     let engine = AnEngine::answering(&[]);
     let policies = APolicyEngine::answering("");
     let scratch = home.path().join("errand");
-    let desk = a_desk_without_any_store(
-        &engine,
-        &policies,
-        home.path(),
-        &listed,
-        &opened,
-        &memory,
-        &scratch,
-    );
+    let neighbours = a_neighbourhood(home.path(), &listed, &opened, &memory);
+    let desk = a_desk(&engine, &policies, &neighbours, &scratch);
     let live = a_live();
 
     let step =
@@ -87,11 +80,7 @@ fn signing_and_saving_reaches_asking_to_sign_with_the_saving_hints_the_site_decl
         &a_desk(
             &engine,
             &policies,
-            &[],
-            home.path(),
-            &listed,
-            &opened,
-            &memory,
+            &a_neighbourhood(home.path(), &listed, &opened, &memory),
             &scratch,
         ),
         &sign_and_save_requested(&url),
@@ -123,29 +112,30 @@ fn signing_and_saving_ends_in_the_saving_moment_with_the_der_to_answer_with() {
     let scratch = home.path().join("errand");
     // La firma ya esta hecha (grada A no abre ningun ciclo real): lo que se prueba es la rama
     // de `finish` que compone el guardado, no el ciclo de firma en si.
+    let neighbours = ASignerThatSucceeds {
+        neighbours: TheNeighbours {
+            stores: Vec::new(),
+            home: home.path(),
+            listed: &listed,
+            opened: &opened,
+            memory: &memory,
+            token: InMemoryTokenSigning::default(),
+            signer: ATokenThatSigns::default(),
+            ours: Vec::new(),
+            bridge: TheBridge::default(),
+            session: SigningSession::default(),
+        },
+        listed: ours.clone(),
+        signature: SiteSignature {
+            signature: b"%PDF-1.7 firmado".to_vec(),
+            signer_der: ours[0].der().to_vec(),
+        },
+    };
     let desk = ErrandDesk {
         engine: &engine,
         policies: &policies,
         validation: &NotAsked,
-        neighbours: ASignerThatSucceeds {
-            neighbours: TheNeighbours {
-                stores: Vec::new(),
-                home: home.path(),
-                listed: &listed,
-                opened: &opened,
-                memory: &memory,
-                token: InMemoryTokenSigning::default(),
-                signer: ATokenThatSigns::default(),
-                ours: Vec::new(),
-                bridge: TheBridge::default(),
-                session: SigningSession::default(),
-            },
-            listed: ours.clone(),
-            signature: SiteSignature {
-                signature: b"%PDF-1.7 firmado".to_vec(),
-                signer_der: ours[0].der().to_vec(),
-            },
-        },
+        neighbours: &neighbours,
         scratch_dir: scratch.clone(),
         scratch: Arc::new(crate::site::adapters::scratch::RealScratch),
         batch: Arc::new(InMemoryBatchServices::default()),
@@ -256,15 +246,8 @@ fn saving_by_order_of_a_site_never_looks_at_certificates() {
     let engine = AnEngine::answering(&[]);
     let policies = APolicyEngine::answering("");
     let scratch = home.path().join("errand");
-    let desk = a_desk_without_any_store(
-        &engine,
-        &policies,
-        home.path(),
-        &listed,
-        &opened,
-        &memory,
-        &scratch,
-    );
+    let neighbours = a_neighbourhood(home.path(), &listed, &opened, &memory);
+    let desk = a_desk(&engine, &policies, &neighbours, &scratch);
     let live = a_live();
 
     let step = attend_operation(&desk, &a_save(""), decoded(&a_save("")), &live);
@@ -284,15 +267,8 @@ fn loading_by_order_of_a_site_never_looks_at_certificates() {
     let engine = AnEngine::answering(&[]);
     let policies = APolicyEngine::answering("");
     let scratch = home.path().join("errand");
-    let desk = a_desk_without_any_store(
-        &engine,
-        &policies,
-        home.path(),
-        &listed,
-        &opened,
-        &memory,
-        &scratch,
-    );
+    let neighbours = a_neighbourhood(home.path(), &listed, &opened, &memory);
+    let desk = a_desk(&engine, &policies, &neighbours, &scratch);
     let live = a_live();
 
     let step = attend_operation(
@@ -317,15 +293,8 @@ fn the_save_moment_carries_only_the_name_the_site_proposed() {
     let engine = AnEngine::answering(&[]);
     let policies = APolicyEngine::answering("");
     let scratch = home.path().join("errand");
-    let desk = a_desk_without_any_store(
-        &engine,
-        &policies,
-        home.path(),
-        &listed,
-        &opened,
-        &memory,
-        &scratch,
-    );
+    let neighbours = a_neighbourhood(home.path(), &listed, &opened, &memory);
+    let desk = a_desk(&engine, &policies, &neighbours, &scratch);
     let live = a_live();
 
     let step = attend(&desk, a_save("&filename=firma.pdf"), the_wire().0, &live)
@@ -353,15 +322,8 @@ fn the_loading_moment_never_carries_the_starting_folder() {
     let engine = AnEngine::answering(&[]);
     let policies = APolicyEngine::answering("");
     let scratch = home.path().join("errand");
-    let desk = a_desk_without_any_store(
-        &engine,
-        &policies,
-        home.path(),
-        &listed,
-        &opened,
-        &memory,
-        &scratch,
-    );
+    let neighbours = a_neighbourhood(home.path(), &listed, &opened, &memory);
+    let desk = a_desk(&engine, &policies, &neighbours, &scratch);
     let live = a_live();
 
     let step = attend(
@@ -385,13 +347,15 @@ fn a_file_is_written_where_the_person_chose_and_the_site_gets_save_ok() {
     let home = tempfile::tempdir().expect("hay directorio temporal");
     let live = a_live();
     let _ = attend(
-        &a_desk_without_any_store(
+        &a_desk(
             &AnEngine::answering(&[]),
             &APolicyEngine::answering(""),
-            home.path(),
-            &ListedCertificates::new(),
-            &OpenedDocuments::new(),
-            &a_memory(home.path()),
+            &a_neighbourhood(
+                home.path(),
+                &ListedCertificates::new(),
+                &OpenedDocuments::new(),
+                &a_memory(home.path()),
+            ),
             &home.path().join("errand"),
         ),
         a_save(""),
@@ -423,13 +387,15 @@ fn a_save_that_cannot_be_written_waits_for_another_destination_and_cancelling_it
     let home = tempfile::tempdir().expect("hay directorio temporal");
     let live = a_live();
     let _ = attend(
-        &a_desk_without_any_store(
+        &a_desk(
             &AnEngine::answering(&[]),
             &APolicyEngine::answering(""),
-            home.path(),
-            &ListedCertificates::new(),
-            &OpenedDocuments::new(),
-            &a_memory(home.path()),
+            &a_neighbourhood(
+                home.path(),
+                &ListedCertificates::new(),
+                &OpenedDocuments::new(),
+                &a_memory(home.path()),
+            ),
             &home.path().join("errand"),
         ),
         a_save(""),
@@ -499,13 +465,15 @@ fn the_files_the_person_chose_go_out_named_and_apart_with_a_bar() {
     std::fs::write(&second, A_PDF).expect("se escribe la segunda");
     let live = a_live();
     let _ = attend(
-        &a_desk_without_any_store(
+        &a_desk(
             &AnEngine::answering(&[]),
             &APolicyEngine::answering(""),
-            home.path(),
-            &ListedCertificates::new(),
-            &OpenedDocuments::new(),
-            &a_memory(home.path()),
+            &a_neighbourhood(
+                home.path(),
+                &ListedCertificates::new(),
+                &OpenedDocuments::new(),
+                &a_memory(home.path()),
+            ),
             &home.path().join("errand"),
         ),
         a_load("&multiload=true"),
@@ -540,13 +508,15 @@ fn a_file_that_disappeared_before_it_could_be_read_is_answered_with_saf_25() {
     let home = tempfile::tempdir().expect("hay directorio temporal");
     let live = a_live();
     let _ = attend(
-        &a_desk_without_any_store(
+        &a_desk(
             &AnEngine::answering(&[]),
             &APolicyEngine::answering(""),
-            home.path(),
-            &ListedCertificates::new(),
-            &OpenedDocuments::new(),
-            &a_memory(home.path()),
+            &a_neighbourhood(
+                home.path(),
+                &ListedCertificates::new(),
+                &OpenedDocuments::new(),
+                &a_memory(home.path()),
+            ),
             &home.path().join("errand"),
         ),
         a_load(""),

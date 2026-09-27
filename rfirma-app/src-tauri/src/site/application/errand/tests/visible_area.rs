@@ -66,18 +66,10 @@ fn walked_by<After>(
     let engine = AnEngine::answering(&[&[0], &[0]]);
     let policies = APolicyEngine::answering(expanded);
     let scratch = home.path().join("errand");
-    let mut desk = a_desk(
-        &engine,
-        &policies,
-        &[],
-        home.path(),
-        &listed,
-        &opened,
-        &memory,
-        &scratch,
-    );
-    desk.neighbours.ours = ours;
-    desk.neighbours.bridge = TheBridge::answering();
+    let mut neighbours = a_neighbourhood(home.path(), &listed, &opened, &memory);
+    neighbours.ours = ours;
+    neighbours.bridge = TheBridge::answering();
+    let desk = a_desk(&engine, &policies, &neighbours, &scratch);
     assert!(live.begin(Errand::of(
         NegotiatedCredential::Required(a_credential()),
         ArrivalMode::Awaited,
@@ -95,7 +87,7 @@ fn walked_by<After>(
     let consented = consent(&desk, &asking.certificates[0].id, &live);
     let presign = consented
         .is_ok()
-        .then(|| desk.neighbours.bridge.extra_params_of_the_presign());
+        .then(|| neighbours.bridge.extra_params_of_the_presign());
     Walked {
         first,
         after,
@@ -226,18 +218,10 @@ fn nobody_consents_while_the_area_is_pending() {
     let engine = AnEngine::answering(&[&[0], &[0]]);
     let policies = APolicyEngine::answering("visibleSignature=want\n");
     let scratch = home.path().join("errand");
-    let mut desk = a_desk(
-        &engine,
-        &policies,
-        &[],
-        home.path(),
-        &listed,
-        &opened,
-        &memory,
-        &scratch,
-    );
-    desk.neighbours.ours = ours;
-    desk.neighbours.bridge = TheBridge::answering();
+    let mut neighbours = a_neighbourhood(home.path(), &listed, &opened, &memory);
+    neighbours.ours = ours;
+    neighbours.bridge = TheBridge::answering();
+    let desk = a_desk(&engine, &policies, &neighbours, &scratch);
     assert!(live.begin(Errand::of(
         NegotiatedCredential::Required(a_credential()),
         ArrivalMode::Awaited,

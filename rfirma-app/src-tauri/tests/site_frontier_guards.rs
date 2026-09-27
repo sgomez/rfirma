@@ -141,7 +141,6 @@ fn what_stays_inside() -> Vec<(&'static str, Value)> {
 }
 
 /// Todo lo que sale hacia la sede, construido desde su caso de uso.
-#[expect(clippy::too_many_lines)]
 fn everything_that_goes_out_to_the_site() -> Vec<String> {
     let mut lines = Vec::new();
 
@@ -219,14 +218,12 @@ fn everything_that_goes_out_to_the_site() -> Vec<String> {
     lines.push(codec.encode(
         &rfirma_lib::site::application::errand::the_signature_did_not_come_out(
             &LiveErrand::default(),
-            SiteRefusal::Signing(rfirma_lib::site::adapters::desk::signing_refusal_of(
-                told_of_cycle(&CycleFailure::Cycle(CycleError::Bridge(
-                    BridgeError::Failed(format!(
-                        "no se ha podido firmar {A_PORTAL_HANDLE} ({A_DOCUMENT_NAME}) con \
+            SiteRefusal::Signing(rfirma_lib::site::ports::signing_refusal_of(told_of_cycle(
+                &CycleFailure::Cycle(CycleError::Bridge(BridgeError::Failed(format!(
+                    "no se ha podido firmar {A_PORTAL_HANDLE} ({A_DOCUMENT_NAME}) con \
                          {A_CERTIFICATE}"
-                    )),
-                ))),
-            )),
+                )))),
+            ))),
         ),
     ));
 

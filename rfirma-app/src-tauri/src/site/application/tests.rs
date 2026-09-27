@@ -302,7 +302,6 @@ impl InMemoryTokenSigning {
     }
 }
 
-// Solo se le pide `secret_of` y `sign`: el resto del puerto único no lo usa el lote remoto.
 impl Neighbours for InMemoryTokenSigning {
     fn listed(&self) -> Result<Vec<TokenCertificate>, TokenError> {
         unreachable!("las pruebas del lote remoto no listan certificados por este puerto")
@@ -379,8 +378,6 @@ pub(crate) struct Directory<'a> {
     pub(crate) memory: &'a dyn CertificateMemory,
 }
 
-// Solo se le piden los cinco verbos de certificados: el resto del puerto único no lo usan las
-// pruebas de filtrado ni de sesión.
 impl Neighbours for Directory<'_> {
     fn listed(&self) -> Result<Vec<TokenCertificate>, TokenError> {
         Ok(self.certificates.clone())

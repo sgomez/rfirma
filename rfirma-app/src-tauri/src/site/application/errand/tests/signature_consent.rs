@@ -84,11 +84,7 @@ fn a_policy_that_cannot_be_applied_is_answered_with_the_code_of_an_invalid_polic
         &a_desk(
             &engine,
             &policies,
-            &[],
-            home.path(),
-            &listed,
-            &opened,
-            &memory,
+            &a_neighbourhood(home.path(), &listed, &opened, &memory),
             &scratch,
         ),
         &signature_requested(&a_signature("sign", "")),
@@ -131,11 +127,7 @@ fn a_document_that_is_not_a_pdf_is_refused_before_anything_is_written() {
         &a_desk(
             &engine,
             &policies,
-            &[],
-            home.path(),
-            &listed,
-            &opened,
-            &memory,
+            &a_neighbourhood(home.path(), &listed, &opened, &memory),
             &scratch,
         ),
         &signature_requested(&url),
@@ -167,11 +159,7 @@ fn a_countersignature_is_shown_with_the_code_of_an_unsupported_operation() {
         &a_desk(
             &engine,
             &policies,
-            &[],
-            home.path(),
-            &listed,
-            &opened,
-            &memory,
+            &a_neighbourhood(home.path(), &listed, &opened, &memory),
             &scratch,
         ),
         &a_signature("countersign", ""),
@@ -204,11 +192,7 @@ fn signing_and_saving_without_dat_opens_the_loading_moment_with_the_sites_hints(
         &a_desk(
             &engine,
             &policies,
-            &[],
-            home.path(),
-            &listed,
-            &opened,
-            &memory,
+            &a_neighbourhood(home.path(), &listed, &opened, &memory),
             &scratch,
         ),
         &url,
@@ -239,15 +223,8 @@ fn a_selector_declined_for_sign_and_save_without_dat_answers_cancel() {
     let engine = AnEngine::answering(&[]);
     let policies = APolicyEngine::answering("");
     let scratch = home.path().join("errand");
-    let desk = a_desk_without_any_store(
-        &engine,
-        &policies,
-        home.path(),
-        &listed,
-        &opened,
-        &memory,
-        &scratch,
-    );
+    let neighbours = a_neighbourhood(home.path(), &listed, &opened, &memory);
+    let desk = a_desk(&engine, &policies, &neighbours, &scratch);
     let live = a_live();
     let (handle, mut wire) = the_wire();
 
@@ -269,15 +246,8 @@ fn a_document_chosen_for_sign_and_save_that_disappears_is_answered_with_saf_00()
     let engine = AnEngine::answering(&[]);
     let policies = APolicyEngine::answering("");
     let scratch = home.path().join("errand");
-    let desk = a_desk_without_any_store(
-        &engine,
-        &policies,
-        home.path(),
-        &listed,
-        &opened,
-        &memory,
-        &scratch,
-    );
+    let neighbours = a_neighbourhood(home.path(), &listed, &opened, &memory);
+    let desk = a_desk(&engine, &policies, &neighbours, &scratch);
     let live = a_live();
     let (handle, mut wire) = the_wire();
 
@@ -315,16 +285,8 @@ fn choosing_the_document_for_sign_and_save_reaches_asking_to_sign_with_the_savin
     let engine = AnEngine::answering(&[&[0]]);
     let policies = APolicyEngine::answering("");
     let scratch = home.path().join("errand");
-    let desk = a_desk(
-        &engine,
-        &policies,
-        &[],
-        home.path(),
-        &listed,
-        &opened,
-        &memory,
-        &scratch,
-    );
+    let neighbours = a_neighbourhood(home.path(), &listed, &opened, &memory);
+    let desk = a_desk(&engine, &policies, &neighbours, &scratch);
     let request = sign_and_save_requested(&a_sign_and_save_without_dat(""));
     assert_eq!(
         request.document(),
@@ -371,11 +333,7 @@ fn the_asic_s_container_of_cades_reaches_the_consent_like_any_other_format() {
         &a_desk(
             &engine,
             &policies,
-            &[],
-            home.path(),
-            &listed,
-            &opened,
-            &memory,
+            &a_neighbourhood(home.path(), &listed, &opened, &memory),
             &scratch,
         ),
         &signature_requested(&a_signature_asking_for(format, A_PDF)),
@@ -405,11 +363,7 @@ fn explicit_mode_with_xades_is_refused_before_asking_for_consent() {
         &a_desk(
             &engine,
             &policies,
-            &[],
-            home.path(),
-            &listed,
-            &opened,
-            &memory,
+            &a_neighbourhood(home.path(), &listed, &opened, &memory),
             &scratch,
         ),
         &signature_requested(&an_explicit_mode_signature(
@@ -452,11 +406,7 @@ fn the_format_the_bridge_attends_goes_on_to_the_consent_as_it_did() {
             &a_desk(
                 &engine,
                 &policies,
-                &[],
-                home.path(),
-                &listed,
-                &opened,
-                &memory,
+                &a_neighbourhood(home.path(), &listed, &opened, &memory),
                 &scratch,
             ),
             &signature_requested(&a_signature_asking_for(format, document)),

@@ -121,11 +121,7 @@ fn a_signature_under_headless_arrives_with_its_only_certificate_already_chosen()
         &a_desk(
             &engine,
             &policies,
-            &[],
-            home.path(),
-            &listed,
-            &opened,
-            &memory,
+            &a_neighbourhood(home.path(), &listed, &opened, &memory),
             &scratch,
         ),
         &signature_requested(&a_signature(
@@ -162,11 +158,7 @@ fn a_signature_under_headless_with_a_single_expired_candidate_answers_saf19_with
         &a_desk(
             &engine,
             &policies,
-            &[],
-            home.path(),
-            &listed,
-            &opened,
-            &memory,
+            &a_neighbourhood(home.path(), &listed, &opened, &memory),
             &scratch,
         ),
         &signature_requested(&a_signature(
@@ -220,11 +212,7 @@ fn a_signature_without_headless_shows_an_expired_candidate_with_its_status_but_n
         &a_desk(
             &engine,
             &policies,
-            &[],
-            home.path(),
-            &listed,
-            &opened,
-            &memory,
+            &a_neighbourhood(home.path(), &listed, &opened, &memory),
             &scratch,
         ),
         &signature_requested(&a_signature("sign", "")),
@@ -271,11 +259,7 @@ fn a_signature_with_unreadable_properties_is_consented_with_nothing_the_site_dec
         &a_desk(
             &engine,
             &policies,
-            &[],
-            home.path(),
-            &listed,
-            &opened,
-            &memory,
+            &a_neighbourhood(home.path(), &listed, &opened, &memory),
             &scratch,
         ),
         &signature_requested(&a_signature("sign", "&properties=!!!!")),

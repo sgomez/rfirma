@@ -133,17 +133,18 @@ fn consenting(declared: &str, typed: &[Option<&'static str>]) -> Consenting {
     live.answer_through(handle);
     let engine = AnEngine::answering(&[&[0usize] as &[usize]; 8]);
     let policies = APolicyEngine::answering(declared);
+    let neighbours = ALockedPdf {
+        neighbours: a_neighbourhood(home.path(), &listed, &opened, &memory),
+        listed: ours.clone(),
+        typed: RefCell::new(typed.to_vec()),
+        asked: RefCell::new(Vec::new()),
+        begun_with: RefCell::new(Vec::new()),
+    };
     let desk = ErrandDesk {
         engine: &engine,
         policies: &policies,
         validation: &NotAsked,
-        neighbours: ALockedPdf {
-            neighbours: a_neighbourhood(home.path(), &listed, &opened, &memory),
-            listed: ours.clone(),
-            typed: RefCell::new(typed.to_vec()),
-            asked: RefCell::new(Vec::new()),
-            begun_with: RefCell::new(Vec::new()),
-        },
+        neighbours: &neighbours,
         scratch_dir: home.path().join("errand"),
         scratch: Arc::new(crate::site::adapters::scratch::RealScratch),
         batch: Arc::new(InMemoryBatchServices::default()),
@@ -164,8 +165,8 @@ fn consenting(declared: &str, typed: &[Option<&'static str>]) -> Consenting {
 
     Consenting {
         consented,
-        asked: desk.neighbours.asked.take(),
-        begun_with: desk.neighbours.begun_with.take(),
+        asked: neighbours.asked.take(),
+        begun_with: neighbours.begun_with.take(),
         received: what_the_site_received(&mut wire),
     }
 }

@@ -5,7 +5,7 @@ use std::collections::BTreeMap;
 use crate::identity::domain::certificate::TokenCertificate;
 use crate::identity::domain::protected_secret::ProtectedSecret;
 use crate::signing::domain::bridge::Format;
-use crate::site::application::errand::desk::{write_the_document, ErrandDesk, Neighbours};
+use crate::site::application::errand::desk::{write_the_document, ErrandDesk};
 use crate::site::application::session::SiteRefusal;
 use crate::site::domain::batch::{LocalBatch, LocalBatchResult, LocalSingleSign};
 use crate::site::domain::protocol::{
@@ -14,8 +14,8 @@ use crate::site::domain::protocol::{
 use crate::site::ports::{FilterEngine, PolicyEngine, SiteSigningRequest};
 
 /// Caso de uso: firma cada elemento del lote local con el ciclo de sede, aplicando `stoponerror`.
-pub fn signed_local_batch<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
-    desk: &ErrandDesk<'_, E, P, N>,
+pub fn signed_local_batch<E: FilterEngine, P: PolicyEngine>(
+    desk: &ErrandDesk<'_, E, P>,
     certificate: &TokenCertificate,
     secret: &ProtectedSecret,
     batch: &LocalBatch,
@@ -61,8 +61,8 @@ pub fn signed_local_batch<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
 }
 
 /// El ciclo de una firma para un elemento: abre, firma con el secreto ya conocido y cierra, borrando su documento de paso al terminar, salga bien o mal.
-fn sign_one<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
-    desk: &ErrandDesk<'_, E, P, N>,
+fn sign_one<E: FilterEngine, P: PolicyEngine>(
+    desk: &ErrandDesk<'_, E, P>,
     certificate: &TokenCertificate,
     algorithm: AskedAlgorithm,
     secret: &ProtectedSecret,

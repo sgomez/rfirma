@@ -121,17 +121,9 @@ fn attended_accepting(
     let engine = AnEngine::answering(&[accepted]);
     let policies = APolicyEngine::answering("");
     let scratch = home.path().join("errand");
-    let mut desk = a_desk(
-        &engine,
-        &policies,
-        &[],
-        home.path(),
-        &listed,
-        &opened,
-        &memory,
-        &scratch,
-    );
-    desk.neighbours.ours = ours;
+    let mut neighbours = a_neighbourhood(home.path(), &listed, &opened, &memory);
+    neighbours.ours = ours;
+    let desk = a_desk(&engine, &policies, &neighbours, &scratch);
     attend_operation(&desk, url, decoded(url), live)
 }
 

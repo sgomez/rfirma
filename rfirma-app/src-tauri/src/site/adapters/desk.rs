@@ -15,9 +15,9 @@ use crate::identity::IdentityRoot;
 use crate::signing::adapters::failures::told_of_cycle;
 use crate::signing::ports::Signer;
 use crate::signing::{DeclaredByTheSite, SigningRoot};
-use crate::site::domain::protocol::{AskedAlgorithm, SafCode};
+use crate::site::domain::protocol::AskedAlgorithm;
 use crate::site::domain::signing::{SigningRefusal, SiteSignature};
-use crate::site::ports::{composed_for, Neighbours, SiteSigningRequest};
+use crate::site::ports::{composed_for, signing_refusal_of, Neighbours, SiteSigningRequest};
 
 /// Las tres raíces vecinas, vistas por el trámite a través de su único puerto.
 #[derive(Clone, Copy)]
@@ -175,16 +175,6 @@ fn no_mechanism_for(algorithm: &str) -> TokenError {
 fn refusal_of_token(error: TokenError) -> SigningRefusal {
     let code = code_of_token(error.situation());
     signing_refusal_of((Failure::from(error), code))
-}
-
-/// Lo que la sede y la ventana reciben de un fallo, tal como lo decidió quien lo tradujo.
-pub fn signing_refusal_of((told, code): (Failure, SafCode)) -> SigningRefusal {
-    SigningRefusal {
-        code,
-        situation: told.situation,
-        detail: told.detail,
-        attempts_left: told.attempts_left,
-    }
 }
 
 #[cfg(test)]

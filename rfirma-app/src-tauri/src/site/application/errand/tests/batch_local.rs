@@ -51,16 +51,8 @@ fn a_local_batch_reaches_the_consent_with_a_summary_of_every_item() {
     let engine = AnEngine::answering(&[&[0], &[0]]);
     let policies = APolicyEngine::answering("");
     let scratch = home.path().join("errand");
-    let desk = a_desk_for_the_local_batch(
-        &engine,
-        &policies,
-        home.path(),
-        &listed,
-        &opened,
-        &memory,
-        &scratch,
-        &ours,
-    );
+    let neighbours = neighbours_for_the_local_batch(home.path(), &listed, &opened, &memory, &ours);
+    let desk = a_desk(&engine, &policies, &neighbours, &scratch);
 
     let url = a_local_batch("");
     let step = attend_operation(&desk, &url, decoded(&url), &live);
@@ -98,12 +90,12 @@ fn a_local_batch_reaches_the_consent_with_a_summary_of_every_item() {
     finish_the_local_batch(&desk, &the_typed_secret(), &live).expect("el lote local contesta");
 
     assert_eq!(
-        desk.neighbours.token.secrets_asked(),
+        neighbours.token.secrets_asked(),
         1,
         "el secreto se pide una sola vez para las tres firmas"
     );
     assert_eq!(
-        desk.neighbours.bridge.formats_of_the_presigns(),
+        neighbours.bridge.formats_of_the_presigns(),
         vec![
             Format::Pades,
             Format::Cades,
@@ -138,16 +130,8 @@ fn a_local_batch_that_stops_on_error_skips_what_came_before_and_after() {
     let engine = AnEngine::answering(&[&[0], &[0]]);
     let policies = APolicyEngine::answering("");
     let scratch = home.path().join("errand");
-    let desk = a_desk_for_the_local_batch(
-        &engine,
-        &policies,
-        home.path(),
-        &listed,
-        &opened,
-        &memory,
-        &scratch,
-        &ours,
-    );
+    let neighbours = neighbours_for_the_local_batch(home.path(), &listed, &opened, &memory, &ours);
+    let desk = a_desk(&engine, &policies, &neighbours, &scratch);
 
     let url = a_local_batch_with_a_failing_second_item(true);
     let step = attend_operation(&desk, &url, decoded(&url), &live);
@@ -186,16 +170,8 @@ fn a_local_batch_without_stoponerror_signs_around_the_failure() {
     let engine = AnEngine::answering(&[&[0], &[0]]);
     let policies = APolicyEngine::answering("");
     let scratch = home.path().join("errand");
-    let desk = a_desk_for_the_local_batch(
-        &engine,
-        &policies,
-        home.path(),
-        &listed,
-        &opened,
-        &memory,
-        &scratch,
-        &ours,
-    );
+    let neighbours = neighbours_for_the_local_batch(home.path(), &listed, &opened, &memory, &ours);
+    let desk = a_desk(&engine, &policies, &neighbours, &scratch);
 
     let url = a_local_batch_with_a_failing_second_item(false);
     let step = attend_operation(&desk, &url, decoded(&url), &live);
@@ -234,16 +210,8 @@ fn a_local_batch_with_needcert_answers_the_signer() {
     let engine = AnEngine::answering(&[&[0], &[0]]);
     let policies = APolicyEngine::answering("");
     let scratch = home.path().join("errand");
-    let desk = a_desk_for_the_local_batch(
-        &engine,
-        &policies,
-        home.path(),
-        &listed,
-        &opened,
-        &memory,
-        &scratch,
-        &ours,
-    );
+    let neighbours = neighbours_for_the_local_batch(home.path(), &listed, &opened, &memory, &ours);
+    let desk = a_desk(&engine, &policies, &neighbours, &scratch);
 
     let url = a_local_batch("&needcert=true");
     let step = attend_operation(&desk, &url, decoded(&url), &live);
@@ -275,13 +243,12 @@ fn a_sticky_local_batch_leaves_the_certificate_stuck_in_its_session_already_chos
     live.stick(ours[0].reference());
     let engine = AnEngine::answering(&[&[0]]);
     let policies = APolicyEngine::answering("");
+    let neighbours = a_signer_for_the_batch(home.path(), &listed, &memory, &ours);
     let desk = a_desk_for_the_batch(
         &engine,
         &policies,
+        &neighbours,
         home.path(),
-        &listed,
-        &memory,
-        &ours,
         Arc::new(InMemoryBatchServices::default()),
     );
 
@@ -310,13 +277,12 @@ fn a_local_batch_that_is_declined_ends_in_a_cancel() {
     live.answer_through(handle);
     let engine = AnEngine::answering(&[&[0]]);
     let policies = APolicyEngine::answering("");
+    let neighbours = a_signer_for_the_batch(home.path(), &listed, &memory, &ours);
     let desk = a_desk_for_the_batch(
         &engine,
         &policies,
+        &neighbours,
         home.path(),
-        &listed,
-        &memory,
-        &ours,
         Arc::new(InMemoryBatchServices::default()),
     );
 
@@ -345,16 +311,8 @@ fn a_local_batch_in_format_none_returns_the_bare_pkcs1_of_each_item() {
     let engine = AnEngine::answering(&[&[0], &[0]]);
     let policies = APolicyEngine::answering("");
     let scratch = home.path().join("errand");
-    let desk = a_desk_for_the_local_batch(
-        &engine,
-        &policies,
-        home.path(),
-        &listed,
-        &opened,
-        &memory,
-        &scratch,
-        &ours,
-    );
+    let neighbours = neighbours_for_the_local_batch(home.path(), &listed, &opened, &memory, &ours);
+    let desk = a_desk(&engine, &policies, &neighbours, &scratch);
     let lote = format!(
         "{{\"algorithm\":\"SHA256\",\"format\":\"NONE\",\"singlesigns\":[\
          {{\"id\":\"001\",\"datareference\":\"{}\"}}]}}",
@@ -398,16 +356,8 @@ fn a_local_batch_without_format_is_refused_with_saf_20_only_after_the_consent() 
     let engine = AnEngine::answering(&[&[0], &[0]]);
     let policies = APolicyEngine::answering("");
     let scratch = home.path().join("errand");
-    let desk = a_desk_for_the_local_batch(
-        &engine,
-        &policies,
-        home.path(),
-        &listed,
-        &opened,
-        &memory,
-        &scratch,
-        &ours,
-    );
+    let neighbours = neighbours_for_the_local_batch(home.path(), &listed, &opened, &memory, &ours);
+    let desk = a_desk(&engine, &policies, &neighbours, &scratch);
     let lote = format!(
         "{{\"algorithm\":\"SHA256\",\"singlesigns\":[{{\"id\":\"001\",\"datareference\":\"{}\"}}]}}",
         in_the_batch(A_LOCAL_PDF),
@@ -447,16 +397,8 @@ fn a_local_batch_without_algorithm_is_refused_with_saf_20_only_after_the_consent
     let engine = AnEngine::answering(&[&[0], &[0]]);
     let policies = APolicyEngine::answering("");
     let scratch = home.path().join("errand");
-    let desk = a_desk_for_the_local_batch(
-        &engine,
-        &policies,
-        home.path(),
-        &listed,
-        &opened,
-        &memory,
-        &scratch,
-        &ours,
-    );
+    let neighbours = neighbours_for_the_local_batch(home.path(), &listed, &opened, &memory, &ours);
+    let desk = a_desk(&engine, &policies, &neighbours, &scratch);
     let lote = format!(
         "{{\"format\":\"CAdES\",\"singlesigns\":[{{\"id\":\"001\",\"datareference\":\"{}\"}}]}}",
         in_the_batch(A_LOCAL_BINARY),

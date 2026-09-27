@@ -5,6 +5,7 @@ use crate::identity::application::tests::{a_certificate, a_usable_certificate};
 use crate::identity::domain::algorithm::{KeyKind, SignatureAlgorithm};
 use crate::identity::domain::certificate::CertificateRef;
 use crate::identity::domain::protected_secret::ProtectedSecret;
+use crate::site::domain::protocol::SafCode;
 
 /// Un token que apunta con qué secreto y sobre qué bytes se le pidió cada firma.
 #[derive(Default)]

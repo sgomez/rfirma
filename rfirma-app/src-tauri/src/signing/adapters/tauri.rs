@@ -1,6 +1,6 @@
 //! Las órdenes de firma local: el ciclo, la previsualización y la configuración.
 
-use tauri::State;
+use tauri::{Manager as _, State};
 
 use crate::documents::DocumentsRoot;
 use crate::identity::domain::protected_secret::ProtectedSecret;
@@ -51,20 +51,23 @@ fn remember_the_visible_signature_ordered(order: &SigningOrder, memory: &Memory)
 /// Firma en el token con la clave privada (ADR-0001).
 #[tauri::command(async)]
 pub fn sign_with_pin(pin: String, app_handle: tauri::AppHandle) -> Result<(), Failure> {
+    let identity = app_handle.state::<IdentityRoot>();
+    let signing = app_handle.state::<SigningRoot>();
     crate::site::adapters::window::with_the_desk(&app_handle, |desk, live| {
-        signed_with_the_secret(desk, live, &pin)
+        signed_with_the_secret(&identity, &signing, desk, live, &pin)
     })
 }
 
 /// La única puerta del PIN: cierra el lote consentido o la firma contra el servidor trifásico, o firma el ciclo abierto.
 pub fn signed_with_the_secret(
+    identity: &IdentityRoot,
+    signing: &SigningRoot,
     desk: &crate::site::SiteDesk<'_>,
     live: &crate::site::LiveErrand,
     pin: &str,
 ) -> Result<(), Failure> {
     let pin = ProtectedSecret::new(pin.as_bytes());
-    let signer = desk.neighbours.identity.signer();
-    let signing = desk.neighbours.signing;
+    let signer = identity.signer();
     let prompter = signing.prompter.as_ref();
     let language = signing.configuration().language;
 

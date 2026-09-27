@@ -55,16 +55,8 @@ fn the_three_verbs_run_the_errand_with_a_codec_a_filter_and_a_transport_in_memor
     let engine = AnEngine::answering(&[]);
     let policies = APolicyEngine::answering("");
     let scratch = home.path().join("errand");
-    let desk = a_desk(
-        &engine,
-        &policies,
-        &[],
-        home.path(),
-        &listed,
-        &opened_documents,
-        &memory,
-        &scratch,
-    );
+    let neighbours = a_neighbourhood(home.path(), &listed, &opened_documents, &memory);
+    let desk = a_desk(&engine, &policies, &neighbours, &scratch);
 
     let (handle, mut wire) = the_wire();
     let step = attend(&desk, an_operation(""), handle, &live).expect("hay codec negociado");
@@ -133,16 +125,8 @@ fn what_the_codec_does_not_attend_is_answered_with_the_codec_s_own_line() {
     let engine = AnEngine::answering(&[]);
     let policies = APolicyEngine::answering("");
     let scratch = home.path().join("errand");
-    let desk = a_desk(
-        &engine,
-        &policies,
-        &[],
-        home.path(),
-        &listed,
-        &opened,
-        &memory,
-        &scratch,
-    );
+    let neighbours = a_neighbourhood(home.path(), &listed, &opened, &memory);
+    let desk = a_desk(&engine, &policies, &neighbours, &scratch);
 
     let (handle, mut wire) = the_wire();
     let step = attend(&desk, an_operation(""), handle, &live).expect("hay codec");

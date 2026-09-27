@@ -9,12 +9,12 @@ use crate::site::ports::{FilterEngine, PolicyEngine};
 use super::state::{PendingSignature, ServerSignature};
 use super::{
     the_chosen_and_its_secret, told_to_the_site, ConsentError, Consented, ErrandDesk, LiveErrand,
-    Neighbours, SiteRefusal,
+    SiteRefusal,
 };
 
 /// Apunta el certificado elegido y abre su secreto; sin `serverUrl` la sede recibe el rechazo ya.
-pub(super) fn consented<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
-    desk: &ErrandDesk<'_, E, P, N>,
+pub(super) fn consented<E: FilterEngine, P: PolicyEngine>(
+    desk: &ErrandDesk<'_, E, P>,
     pending: PendingSignature,
     server: ServerSignature,
     certificate: &str,
@@ -46,8 +46,8 @@ pub(super) fn consented<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
 }
 
 /// Hace las tres fases con el secreto ya tecleado y deja la firma lista para entregarla.
-pub fn finish_the_server_signature<E: FilterEngine, P: PolicyEngine, N: Neighbours>(
-    desk: &ErrandDesk<'_, E, P, N>,
+pub fn finish_the_server_signature<E: FilterEngine, P: PolicyEngine>(
+    desk: &ErrandDesk<'_, E, P>,
     secret: &ProtectedSecret,
     live: &LiveErrand,
 ) -> Result<(), ConsentError> {
@@ -63,7 +63,7 @@ pub fn finish_the_server_signature<E: FilterEngine, P: PolicyEngine, N: Neighbou
     let signature = signed_through_the_server(
         &ServerRun {
             server: desk.triphase.as_ref(),
-            token: &desk.neighbours,
+            token: desk.neighbours,
             certificate: &chosen,
             secret,
         },

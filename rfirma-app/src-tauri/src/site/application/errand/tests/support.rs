@@ -23,7 +23,6 @@ use crate::signing::domain::isolate_gone::IsolateGone;
 use crate::signing::ports::{Bridge, IsolateHost, Signer};
 use crate::site::adapters::channel::{answer as what_the_channel_answers, Answer};
 use crate::site::adapters::codec::V4Codec;
-use crate::site::adapters::desk::signing_refusal_of;
 use crate::site::application::errand::*;
 use crate::site::application::tests::read_operation;
 use crate::site::application::tests::{InMemoryBatchServices, InMemoryTokenSigning, NotAsked};
@@ -35,6 +34,7 @@ use crate::site::domain::protocol::{
     SiteOperation,
 };
 use crate::site::domain::signing::{SigningRefusal, SiteSignature};
+use crate::site::ports::signing_refusal_of;
 use crate::site::ports::{Neighbours, SiteSigningRequest};
 
 /// Motor de filtrado simulado para pruebas.
@@ -558,36 +558,17 @@ pub(crate) fn opened_for_nobody() -> &'static OpenedDocuments {
 }
 
 /// Mesa de trabajo del trámite configurada para pruebas.
-#[expect(
-    clippy::too_many_arguments,
-    reason = "es el constructor de un tipo de ocho campos, no una interfaz"
-)]
 pub(crate) fn a_desk<'a>(
     engine: &'a AnEngine,
     policies: &'a APolicyEngine,
-    stores: &'a [Store],
-    home: &'a Path,
-    listed: &'a ListedCertificates,
-    opened: &'a OpenedDocuments,
-    memory: &'a Memory,
-    scratch: &'a Path,
-) -> ErrandDesk<'a, AnEngine, APolicyEngine, TheNeighbours<'a>> {
+    neighbours: &'a dyn Neighbours,
+    scratch: &Path,
+) -> ErrandDesk<'a, AnEngine, APolicyEngine> {
     ErrandDesk {
         engine,
         policies,
         validation: &NotAsked,
-        neighbours: TheNeighbours {
-            stores: stores.to_vec(),
-            home,
-            listed,
-            opened,
-            memory,
-            token: InMemoryTokenSigning::default(),
-            signer: ATokenThatSigns::default(),
-            ours: Vec::new(),
-            bridge: TheBridge::default(),
-            session: SigningSession::default(),
-        },
+        neighbours,
         scratch_dir: scratch.to_path_buf(),
         scratch: std::sync::Arc::new(crate::site::adapters::scratch::RealScratch),
         batch: std::sync::Arc::new(InMemoryBatchServices::default()),

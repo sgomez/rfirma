@@ -72,16 +72,8 @@ fn a_websocket_errand_answers_the_operation_after_the_refusal_it_showed() {
     let engine = AnEngine::answering(&[]);
     let policies = APolicyEngine::answering("");
     let scratch = home.path().join("errand");
-    let desk = a_desk(
-        &engine,
-        &policies,
-        &[],
-        home.path(),
-        &listed,
-        &opened_documents,
-        &memory,
-        &scratch,
-    );
+    let neighbours = a_neighbourhood(home.path(), &listed, &opened_documents, &memory);
+    let desk = a_desk(&engine, &policies, &neighbours, &scratch);
 
     let (first, mut first_wire) = the_wire();
     let refused = attend(
@@ -123,16 +115,8 @@ fn a_websocket_operation_shows_the_window_and_hides_it_when_it_answers_unseen() 
     let engine = AnEngine::answering(&[]);
     let policies = APolicyEngine::answering("");
     let scratch = home.path().join("errand");
-    let desk = a_desk(
-        &engine,
-        &policies,
-        &[],
-        home.path(),
-        &listed,
-        &opened_documents,
-        &memory,
-        &scratch,
-    );
+    let neighbours = a_neighbourhood(home.path(), &listed, &opened_documents, &memory);
+    let desk = a_desk(&engine, &policies, &neighbours, &scratch);
     live.note(Moment::Unreachable);
 
     let (handle, _wire) = the_wire();

@@ -12,7 +12,6 @@ use crate::signing::application::cycle::CycleError;
 use crate::signing::application::session::CycleFailure;
 use crate::signing::application::tests::a_memory;
 use crate::signing::domain::bridge::BridgeError;
-use crate::site::adapters::desk::signing_refusal_of;
 use crate::site::application::errand::*;
 use crate::site::application::session::SiteRefusal;
 use crate::site::application::site::{attend_launch, Attendance};
@@ -22,6 +21,7 @@ use crate::site::domain::protocol::{
     THE_PORT_OF_THE_THIRD_PROTOCOL,
 };
 use crate::site::domain::signing::SiteSignature;
+use crate::site::ports::signing_refusal_of;
 use base64::Engine as _;
 
 /// Trámite completo de firma con el canal abierto, sobre la forma de arranque que se le pase.
@@ -60,11 +60,7 @@ fn the_whole_signature_errand_over(
         &a_desk(
             &engine,
             &policies,
-            &[],
-            home.path(),
-            &listed,
-            &opened,
-            &memory,
+            &a_neighbourhood(home.path(), &listed, &opened, &memory),
             &scratch,
         ),
         &signature_requested(&url),
@@ -203,11 +199,7 @@ fn a_signature_that_is_declined_ends_in_a_cancel_and_leaves_no_scratch_behind() 
         &a_desk(
             &engine,
             &policies,
-            &[],
-            home.path(),
-            &listed,
-            &opened,
-            &memory,
+            &a_neighbourhood(home.path(), &listed, &opened, &memory),
             &scratch,
         ),
         &signature_requested(&url),
@@ -315,11 +307,7 @@ fn the_document_a_site_sends_leaves_no_trace_at_all() {
         &a_desk(
             &engine,
             &policies,
-            &[],
-            home.path(),
-            &listed,
-            &opened,
-            &memory,
+            &a_neighbourhood(home.path(), &listed, &opened, &memory),
             &scratch,
         ),
         &signature_requested(&a_signature("cosign", "")),

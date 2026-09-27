@@ -53,19 +53,11 @@ fn an_algorithm_the_token_does_not_offer_is_refused_without_asking_for_the_secre
     let engine = AnEngine::answering(&[&[0], &[0]]);
     let policies = APolicyEngine::answering("");
     let scratch = home.path().join("errand");
-    let mut desk = a_desk(
-        &engine,
-        &policies,
-        &[],
-        home.path(),
-        &listed,
-        &opened,
-        &memory,
-        &scratch,
-    );
-    desk.neighbours.ours = ours.clone();
-    desk.neighbours.bridge = TheBridge::answering();
-    desk.neighbours.signer = ATokenThatSigns::offering(&[SignatureAlgorithm::Sha256Ecdsa]);
+    let mut neighbours = a_neighbourhood(home.path(), &listed, &opened, &memory);
+    neighbours.ours = ours.clone();
+    neighbours.bridge = TheBridge::answering();
+    neighbours.signer = ATokenThatSigns::offering(&[SignatureAlgorithm::Sha256Ecdsa]);
+    let desk = a_desk(&engine, &policies, &neighbours, &scratch);
 
     assert!(live.begin(Errand::of(
         NegotiatedCredential::Required(a_credential()),
@@ -97,7 +89,7 @@ fn an_algorithm_the_token_does_not_offer_is_refused_without_asking_for_the_secre
     assert_eq!(told.situation, "mechanismNotOffered");
     assert!(told.detail.contains("SHA512withECDSA"), "{}", told.detail);
     assert_eq!(
-        desk.neighbours.signer.secrets_asked(),
+        neighbours.signer.secrets_asked(),
         0,
         "el listado de mecanismos ya lo sabia: el PIN no se pide"
     );
@@ -114,18 +106,10 @@ fn the_digest_the_site_asks_for_reaches_the_bridge_composed_with_the_key() {
     let engine = AnEngine::answering(&[&[0], &[0]]);
     let policies = APolicyEngine::answering("");
     let scratch = home.path().join("errand");
-    let mut desk = a_desk(
-        &engine,
-        &policies,
-        &[],
-        home.path(),
-        &listed,
-        &opened,
-        &memory,
-        &scratch,
-    );
-    desk.neighbours.ours = ours.clone();
-    desk.neighbours.bridge = TheBridge::answering();
+    let mut neighbours = a_neighbourhood(home.path(), &listed, &opened, &memory);
+    neighbours.ours = ours.clone();
+    neighbours.bridge = TheBridge::answering();
+    let desk = a_desk(&engine, &policies, &neighbours, &scratch);
 
     assert!(live.begin(Errand::of(
         NegotiatedCredential::Required(a_credential()),
@@ -150,7 +134,7 @@ fn the_digest_the_site_asks_for_reaches_the_bridge_composed_with_the_key() {
     consent(&desk, &chosen, &live).expect("el token ofrece Sha384RsaPkcs");
 
     assert_eq!(
-        desk.neighbours.bridge.algorithm_of_the_presign(),
+        neighbours.bridge.algorithm_of_the_presign(),
         "SHA384withECDSA",
         "el certificado de pruebas lleva clave EC: la sede pidio SHA384 y sale compuesto con ella"
     );
@@ -175,7 +159,6 @@ fn the_whole_errand_asking_for(asked: &str, expected: Format) {
 }
 
 /// Lo mismo, sobre el documento y con la firma de referencia que se le digan.
-#[expect(clippy::too_many_lines)]
 fn the_whole_errand_asking_for_over(
     asked: &str,
     document: &[u8],
@@ -191,18 +174,10 @@ fn the_whole_errand_asking_for_over(
     let engine = AnEngine::answering(&[&[0], &[0]]);
     let policies = APolicyEngine::answering(EXPANDED_WITH_A_BOX);
     let scratch = home.path().join("errand");
-    let mut desk = a_desk(
-        &engine,
-        &policies,
-        &[],
-        home.path(),
-        &listed,
-        &opened,
-        &memory,
-        &scratch,
-    );
-    desk.neighbours.ours = ours.clone();
-    desk.neighbours.bridge = TheBridge::answering();
+    let mut neighbours = a_neighbourhood(home.path(), &listed, &opened, &memory);
+    neighbours.ours = ours.clone();
+    neighbours.bridge = TheBridge::answering();
+    let desk = a_desk(&engine, &policies, &neighbours, &scratch);
 
     assert!(live.begin(Errand::of(
         NegotiatedCredential::Required(a_credential()),
@@ -233,12 +208,8 @@ fn the_whole_errand_asking_for_over(
     else {
         panic!("una firma se consiente firmando");
     };
-    session::sign_on_token(
-        &desk.neighbours.signer,
-        &desk.neighbours.session,
-        &the_typed_secret(),
-    )
-    .expect("el token de pruebas firma el PRE");
+    session::sign_on_token(&neighbours.signer, &neighbours.session, &the_typed_secret())
+        .expect("el token de pruebas firma el PRE");
     assert!(
         finish(&desk, &live).expect("la postfirma sale").is_none(),
         "un `sign` contesta en el acto, sin momento de guardado"
@@ -256,8 +227,8 @@ fn the_whole_errand_asking_for_over(
     );
     assert!(live.current().is_none(), "contestada la sede, se acabo");
 
-    let extra_params = desk.neighbours.bridge.extra_params_of_the_presign();
-    assert_eq!(desk.neighbours.bridge.format_of_the_presign(), expected);
+    let extra_params = neighbours.bridge.extra_params_of_the_presign();
+    assert_eq!(neighbours.bridge.format_of_the_presign(), expected);
     assert!(
         extra_params.contains("mode=explicit"),
         "el modo llega al puente como propiedad: {extra_params}"
@@ -362,11 +333,7 @@ fn the_document_of_a_cades_errand_never_passes_through_as_a_pdf() {
         &a_desk(
             &engine,
             &policies,
-            &[],
-            home.path(),
-            &listed,
-            &opened,
-            &memory,
+            &a_neighbourhood(home.path(), &listed, &opened, &memory),
             &scratch,
         ),
         &signature_requested(&a_signature_asking_for("CAdES", A_CHALLENGE)),
@@ -404,18 +371,10 @@ fn a_none_signature_goes_to_the_wire_as_the_bare_pkcs1_of_the_token() {
     let engine = AnEngine::answering(&[&[0], &[0]]);
     let policies = APolicyEngine::answering(EXPANDED_WITH_A_BOX);
     let scratch = home.path().join("errand");
-    let mut desk = a_desk(
-        &engine,
-        &policies,
-        &[],
-        home.path(),
-        &listed,
-        &opened,
-        &memory,
-        &scratch,
-    );
-    desk.neighbours.ours = ours.clone();
-    desk.neighbours.bridge = TheBridge::answering();
+    let mut neighbours = a_neighbourhood(home.path(), &listed, &opened, &memory);
+    neighbours.ours = ours.clone();
+    neighbours.bridge = TheBridge::answering();
+    let desk = a_desk(&engine, &policies, &neighbours, &scratch);
     assert!(live.begin(Errand::of(
         NegotiatedCredential::Required(a_credential()),
         ArrivalMode::Awaited,
@@ -436,12 +395,8 @@ fn a_none_signature_goes_to_the_wire_as_the_bare_pkcs1_of_the_token() {
     assert_eq!(asking.format, Format::Pkcs1);
     let chosen = asking.certificates[0].id.clone();
     consent(&desk, &chosen, &live).expect("el certificado vale");
-    session::sign_on_token(
-        &desk.neighbours.signer,
-        &desk.neighbours.session,
-        &the_typed_secret(),
-    )
-    .expect("el token firma los datos");
+    session::sign_on_token(&neighbours.signer, &neighbours.session, &the_typed_secret())
+        .expect("el token firma los datos");
     finish(&desk, &live).expect("la firma sale");
 
     let encode = base64::engine::general_purpose::URL_SAFE;
@@ -455,7 +410,7 @@ fn a_none_signature_goes_to_the_wire_as_the_bare_pkcs1_of_the_token() {
         "el PKCS#1 del token, sin CMS alrededor"
     );
     assert!(
-        desk.neighbours.bridge.formats_of_the_presigns().is_empty(),
+        neighbours.bridge.formats_of_the_presigns().is_empty(),
         "NONE no cruza al puente"
     );
 }

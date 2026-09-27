@@ -4,6 +4,7 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
+use crate::crossing::Failure;
 use crate::identity::domain::algorithm::{KeyKind, SignatureAlgorithm};
 use crate::identity::domain::certificate::{ListedCertificate, TokenCertificate};
 use crate::identity::domain::error::{Situation, TokenError};
@@ -17,7 +18,7 @@ use crate::site::domain::batch_error::BatchError;
 use crate::site::domain::channel::{ChannelDuty, ChannelError, ChannelLocation, OpenChannel};
 use crate::site::domain::local_ca::LocalCa;
 use crate::site::domain::protocol::{
-    AfirmaUrl, AskedAlgorithm, RequestedFormat, SignatureRound, XadesEnvelope,
+    AfirmaUrl, AskedAlgorithm, RequestedFormat, SafCode, SignatureRound, XadesEnvelope,
 };
 use crate::site::domain::relay_error::RelayError;
 use crate::site::domain::signing::{SigningRefusal, SiteSignature};
@@ -369,8 +370,7 @@ pub struct SiteSigningRequest<'a> {
     pub allow_unregistered_signatures: bool,
 }
 
-/// Lo que el trámite pide a los tres contextos vecinos: certificados, documento de paso y firma
-/// de sede o de token, servido por un solo adaptador (ADR-0017).
+/// Lo que el trámite pide a los tres contextos vecinos, servido por un solo adaptador (ADR-0017).
 pub trait Neighbours {
     /// Los certificados de todos los almacenes, o por qué ninguno se ha podido abrir.
     fn listed(&self) -> Result<Vec<TokenCertificate>, TokenError>;
@@ -409,8 +409,7 @@ pub trait Neighbours {
     /// Cómo se pide el secreto del certificado, una sola vez para todas las firmas del lote remoto.
     fn secret_of(&self, certificate: &TokenCertificate) -> Result<StoreSecret, SigningRefusal>;
 
-    /// Firma esos bytes con el algoritmo que declaró la sede y el secreto ya abierto, sin puente y
-    /// sin que la clave salga del token (ADR-0001).
+    /// Firma esos bytes con el algoritmo de la sede y el secreto ya abierto, sin puente (ADR-0001).
     fn sign(
         &self,
         certificate: &TokenCertificate,
@@ -418,6 +417,16 @@ pub trait Neighbours {
         algorithm: &str,
         data: &[u8],
     ) -> Result<Vec<u8>, SigningRefusal>;
+}
+
+/// Lo que la sede y la ventana reciben de un fallo, tal como lo decidió quien lo tradujo.
+pub fn signing_refusal_of((told, code): (Failure, SafCode)) -> SigningRefusal {
+    SigningRefusal {
+        code,
+        situation: told.situation,
+        detail: told.detail,
+        attempts_left: told.attempts_left,
+    }
 }
 
 /// La huella que pide la sede, compuesta con la clase de clave del certificado (`composeSignatureAlgorithmName`, 1.9.2).

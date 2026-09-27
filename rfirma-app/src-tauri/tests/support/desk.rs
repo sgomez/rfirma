@@ -101,17 +101,25 @@ impl SecretPrompter for MistypesTheTokenSecretOnce {
     }
 }
 
-/// La mesa del trámite montada sobre las raíces de un rFirma en marcha.
-pub fn the_desk_of(roots: &Roots) -> ErrandDesk<'_, Isolate, Isolate, Neighbourhood<'_>> {
+/// El vecindario del trámite sobre las raíces de un rFirma en marcha.
+pub fn the_neighbourhood_of(roots: &Roots) -> Neighbourhood<'_> {
+    Neighbourhood {
+        identity: &roots.identity,
+        documents: &roots.documents,
+        signing: &roots.signing,
+    }
+}
+
+/// La mesa del trámite sobre las raíces de producción y su vecindario.
+pub fn the_desk_of<'a>(
+    roots: &'a Roots,
+    neighbourhood: &'a Neighbourhood<'a>,
+) -> ErrandDesk<'a, Isolate, Isolate> {
     ErrandDesk {
         engine: &roots.signing.isolate,
         policies: &roots.signing.isolate,
         validation: &roots.signing.isolate,
-        neighbours: Neighbourhood {
-            identity: &roots.identity,
-            documents: &roots.documents,
-            signing: &roots.signing,
-        },
+        neighbours: neighbourhood,
         scratch_dir: roots.site.scratch_dir.clone(),
         scratch: roots.site.scratch.clone(),
         batch: roots.site.batch.clone(),
@@ -126,7 +134,8 @@ pub fn the_errand_of(roots: &Arc<Roots>, consents: &Arc<AtomicUsize>) -> SiteOpe
     let consents = Arc::clone(consents);
 
     SiteOperations::for_operations(move |url, reply: ErrandReply| {
-        let desk = the_desk_of(&roots);
+        let neighbourhood = the_neighbourhood_of(&roots);
+        let desk = the_desk_of(&roots, &neighbourhood);
         let live = &roots.site.errand;
 
         let answering = ErrandReply::of(move |text| reply.answer(text));
@@ -212,7 +221,8 @@ pub fn the_sign_errand_of(
     let signer = Arc::clone(signer);
 
     SiteOperations::for_operations(move |url, reply: ErrandReply| {
-        let desk = the_desk_of(&roots);
+        let neighbourhood = the_neighbourhood_of(&roots);
+        let desk = the_desk_of(&roots, &neighbourhood);
         let live = &roots.site.errand;
 
         let answering = ErrandReply::of(move |text| reply.answer(text));
@@ -255,7 +265,8 @@ pub fn the_errand_that_signs_unless_refused(roots: &Arc<Roots>) -> SiteOperation
     let roots = Arc::clone(roots);
 
     SiteOperations::for_operations(move |url, reply: ErrandReply| {
-        let desk = the_desk_of(&roots);
+        let neighbourhood = the_neighbourhood_of(&roots);
+        let desk = the_desk_of(&roots, &neighbourhood);
         let live = &roots.site.errand;
 
         let answering = ErrandReply::of(move |text| reply.answer(text));
@@ -275,7 +286,15 @@ pub fn the_errand_that_signs_unless_refused(roots: &Arc<Roots>) -> SiteOperation
             return;
         }
         tokio::task::block_in_place(|| {
-            if signed_with_the_secret(&desk, live, THE_TOKEN_SECRET).is_ok() {
+            if signed_with_the_secret(
+                &roots.identity,
+                &roots.signing,
+                &desk,
+                live,
+                THE_TOKEN_SECRET,
+            )
+            .is_ok()
+            {
                 if let Some(ErrandStep::Saving(consent)) =
                     errand::finish(&desk, live).expect("la firma deberia entregarse")
                 {
@@ -331,7 +350,8 @@ pub fn the_save_errand_of(roots: &Arc<Roots>) -> SiteOperations {
     let roots = Arc::clone(roots);
 
     SiteOperations::for_operations(move |url, reply: ErrandReply| {
-        let desk = the_desk_of(&roots);
+        let neighbourhood = the_neighbourhood_of(&roots);
+        let desk = the_desk_of(&roots, &neighbourhood);
         let live = &roots.site.errand;
 
         let answering = ErrandReply::of(move |text| reply.answer(text));
@@ -345,7 +365,7 @@ pub fn the_save_errand_of(roots: &Arc<Roots>) -> SiteOperations {
 /// Abre el diálogo de guardado del portal y escribe lo que el trámite guarda, o declina si se cancela.
 fn saved_through_the_portal(
     roots: &Roots,
-    desk: &ErrandDesk<'_, Isolate, Isolate, Neighbourhood<'_>>,
+    desk: &ErrandDesk<'_, Isolate, Isolate>,
     consent: &errand::SavingConsent,
     live: &errand::LiveErrand,
 ) {
@@ -383,7 +403,8 @@ pub fn the_load_errand_of(roots: &Arc<Roots>) -> SiteOperations {
     let roots = Arc::clone(roots);
 
     SiteOperations::for_operations(move |url, reply: ErrandReply| {
-        let desk = the_desk_of(&roots);
+        let neighbourhood = the_neighbourhood_of(&roots);
+        let desk = the_desk_of(&roots, &neighbourhood);
         let live = &roots.site.errand;
 
         let answering = ErrandReply::of(move |text| reply.answer(text));
@@ -440,7 +461,8 @@ pub fn the_sign_and_save_errand_of(
     let signer = Arc::clone(signer);
 
     SiteOperations::for_operations(move |url, reply: ErrandReply| {
-        let desk = the_desk_of(&roots);
+        let neighbourhood = the_neighbourhood_of(&roots);
+        let desk = the_desk_of(&roots, &neighbourhood);
         let live = &roots.site.errand;
 
         let answering = ErrandReply::of(move |text| reply.answer(text));
@@ -487,7 +509,8 @@ pub fn the_refusing_errand_of(roots: &Arc<Roots>) -> SiteOperations {
     let roots = Arc::clone(roots);
 
     SiteOperations::for_operations(move |url, reply: ErrandReply| {
-        let desk = the_desk_of(&roots);
+        let neighbourhood = the_neighbourhood_of(&roots);
+        let desk = the_desk_of(&roots, &neighbourhood);
         let live = &roots.site.errand;
         let answering = ErrandReply::of(move |text| reply.answer(text));
         if let Some(ErrandStep::ShowingTheRefusal(_)) = errand::attend(&desk, url, answering, live)
