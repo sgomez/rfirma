@@ -75,6 +75,7 @@ fn a_row_crosses_every_store_it_is_in_and_the_one_behind_its_handle() {
         surname: String::new(),
         id_number: String::new(),
         organization_identifier: None,
+        entity_name: None,
         issuer: String::new(),
         certificate_serial_number: String::new(),
         store: StoreClass::Card,
