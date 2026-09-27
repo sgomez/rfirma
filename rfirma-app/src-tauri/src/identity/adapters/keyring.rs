@@ -1,6 +1,7 @@
 //! El llavero del escritorio para el PIN del Almacén de rFirma, con `oo7` (ADR-0034).
 
 use std::collections::HashMap;
+use std::future::Future;
 
 use crate::identity::domain::keyring::{generate_pin, KeyringError};
 use crate::identity::domain::protected_secret::ProtectedSecret;
@@ -12,6 +13,21 @@ fn item_attributes() -> HashMap<&'static str, &'static str> {
     HashMap::from([("purpose", "rfirma-almacen-pin")])
 }
 
+/// Corre `future` en un hilo aparte, sobre el runtime global de Tauri, para no entrar en pánico
+/// si ya hay uno activo ni cerrar la conexión de D-Bus que `oo7` deja abierta entre llamadas.
+fn block_on<F>(future: F) -> F::Output
+where
+    F: Future + Send,
+    F::Output: Send,
+{
+    std::thread::scope(|scope| {
+        scope
+            .spawn(|| tauri::async_runtime::handle().block_on(future))
+            .join()
+            .expect("el hilo del llavero no entra en pánico")
+    })
+}
+
 /// El llavero del escritorio, alcanzado por el portal de secretos o Secret Service con `oo7`.
 pub struct RealKeyring {
     backend: oo7::Keyring,
@@ -20,8 +36,7 @@ pub struct RealKeyring {
 impl RealKeyring {
     /// Detecta el portal de secretos dentro del flatpak, o Secret Service por D-Bus fuera de él.
     pub fn new() -> Result<Self, KeyringError> {
-        let backend = tauri::async_runtime::block_on(oo7::Keyring::new())
-            .map_err(|_| KeyringError::NoKeyring)?;
+        let backend = block_on(oo7::Keyring::new()).map_err(|_| KeyringError::NoKeyring)?;
         Ok(Self { backend })
     }
 
@@ -33,7 +48,7 @@ impl RealKeyring {
 
 impl Keyring for RealKeyring {
     fn pin(&self) -> Result<ProtectedSecret, KeyringError> {
-        tauri::async_runtime::block_on(async {
+        block_on(async {
             let items = self
                 .backend
                 .search_items(&item_attributes())
@@ -47,12 +62,10 @@ impl Keyring for RealKeyring {
 
     fn create_pin(&self) -> Result<ProtectedSecret, KeyringError> {
         let pin = generate_pin();
-        tauri::async_runtime::block_on(self.backend.create_item(
-            ITEM_LABEL,
-            &item_attributes(),
-            pin.as_bytes(),
-            true,
-        ))
+        block_on(
+            self.backend
+                .create_item(ITEM_LABEL, &item_attributes(), pin.as_bytes(), true),
+        )
         .map_err(|_| KeyringError::NoKeyring)?;
         Ok(pin)
     }
