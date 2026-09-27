@@ -14,6 +14,9 @@
 # en una semana. Y todos anteponen ~/.cargo/bin y ~/.local/bin al PATH porque un
 # hook de git es una shell no interactiva, donde cargo y ruff no estan.
 #
+# CADA `run` ES UNA SOLA LINEA que llama a scripts/pre-push-fmt.sh: en Windows
+# lefthook le pasa a `sh` solo la primera linea de un bloque (ADR-0035).
+#
 # Se instala sola: el `prepare` de rfirma-app/package.json corre
 # `tools/install-git-hooks.sh` en cada `pnpm install`, y `just deps` con el. Ese
 # script se salta la instalacion desde un worktree, porque .git/hooks es uno
@@ -25,32 +28,14 @@ pre-push:
     - name: fmt-rust
       glob: "rfirma-app/src-tauri/**.rs"
       fail_text: "arreglalo con: just fmt-rust"
-      run: |
-        export PATH="$HOME/.cargo/bin:$PATH"
-        if ! command -v cargo >/dev/null; then
-          echo "aviso: cargo no esta disponible; me salto el formato de Rust"
-          exit 0
-        fi
-        cd rfirma-app/src-tauri && cargo fmt --all -- --check
+      run: scripts/pre-push-fmt.sh rust
 
     - name: fmt-ts
       glob: "rfirma-app/**.{ts,tsx,js,jsx,mjs,json,css,html}"
       fail_text: "arreglalo con: just fmt-ts"
-      run: |
-        cd rfirma-app
-        if ! command -v pnpm >/dev/null || [ ! -x node_modules/.bin/biome ]; then
-          echo "aviso: biome no esta instalado (just deps); me salto el formato de TypeScript"
-          exit 0
-        fi
-        pnpm exec biome format .
+      run: scripts/pre-push-fmt.sh ts
 
     - name: fmt-python
       glob: "packaging/**.py"
       fail_text: "arreglalo con: just fmt-python"
-      run: |
-        export PATH="$HOME/.local/bin:$PATH"
-        if ! command -v ruff >/dev/null; then
-          echo "aviso: ruff no esta disponible; me salto el formato de Python"
-          exit 0
-        fi
-        ruff format --check packaging
+      run: scripts/pre-push-fmt.sh python
