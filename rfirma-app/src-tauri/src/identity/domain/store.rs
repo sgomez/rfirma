@@ -17,6 +17,19 @@ pub enum StoreClass {
     Installed,
 }
 
+impl StoreClass {
+    /// Qué copia de un mismo certificado se prefiere: tarjeta, Almacén de rFirma, NSS del sistema, Firefox, Chrome.
+    pub fn preference(self) -> u8 {
+        match self {
+            Self::Card => 0,
+            Self::Installed => 1,
+            Self::Nssdb => 2,
+            Self::Firefox => 3,
+            Self::Chrome => 4,
+        }
+    }
+}
+
 /// Almacén de certificados PKCS#11 o NSS con sus parámetros de apertura.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Store {

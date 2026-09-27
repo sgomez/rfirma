@@ -104,7 +104,7 @@ pub fn certificates_by_class(
     counted
 }
 
-/// Filas de un listado con asas acuñadas y estado de selección.
+/// Filas de un listado, una por certificado aunque esté en varios almacenes, con asas acuñadas.
 pub fn rows_of(
     found: Vec<TokenCertificate>,
     installed_dir: &Path,
@@ -112,37 +112,99 @@ pub fn rows_of(
     memory: &dyn CertificateMemory,
 ) -> Vec<ListedCertificate> {
     let remembered = memory.remembered_certificate();
-    let handles = listed.replace(
-        found
-            .iter()
-            .map(|certificate| certificate.reference().clone()),
-    );
-    found
+    let rows: Vec<ChosenCopy> = copies_of_each_certificate(found)
         .into_iter()
+        .map(|copies| ChosenCopy::among(copies, installed_dir, remembered.as_ref()))
+        .collect();
+    let handles = listed.replace(rows.iter().map(|row| row.certificate.reference().clone()));
+    rows.into_iter()
         .zip(handles)
-        .map(|(certificate, id)| {
-            let subject = certificate.subject();
-            let (holder_name, id_number) = holder_of(subject.as_deref());
-            let (given_name, surname) = given_name_and_surname(subject.as_deref());
-            ListedCertificate {
-                id,
-                label: certificate.reference().label().to_owned(),
-                stamped_signer: masked_signer(&holder_name, is_pseudonym(subject.as_deref())),
-                holder_name,
-                given_name,
-                surname,
-                id_number,
-                organization_identifier: certificate.organization_identifier(),
-                issuer: common_name_of(certificate.issuer().as_deref()),
-                certificate_serial_number: certificate.serial_number().unwrap_or_default(),
-                store: certificate.reference().store().class_under(installed_dir),
-                status: certificate.status(),
-                remembered: remembered
-                    .as_ref()
-                    .is_some_and(|one| one.is_the_same_as(certificate.reference())),
-            }
-        })
+        .map(|(row, id)| row.listed_as(id))
         .collect()
+}
+
+/// Agrupa por emisor y número de serie; un certificado ilegible no se agrupa con nada.
+fn copies_of_each_certificate(found: Vec<TokenCertificate>) -> Vec<Vec<TokenCertificate>> {
+    let mut groups: Vec<Vec<TokenCertificate>> = Vec::new();
+    let mut group_of: HashMap<(Vec<u8>, Vec<u8>), usize> = HashMap::new();
+    for certificate in found {
+        match certificate.issuer_and_serial() {
+            Some(identity) => match group_of.get(&identity) {
+                Some(&group) => groups[group].push(certificate),
+                None => {
+                    group_of.insert(identity, groups.len());
+                    groups.push(vec![certificate]);
+                }
+            },
+            None => groups.push(vec![certificate]),
+        }
+    }
+    groups
+}
+
+/// La copia de un certificado con la que se firma, y los almacenes donde están todas.
+struct ChosenCopy {
+    certificate: TokenCertificate,
+    store: StoreClass,
+    stores: Vec<StoreClass>,
+    remembered: bool,
+}
+
+impl ChosenCopy {
+    /// La recordada si está entre las copias; si no, la primera por preferencia de almacén.
+    fn among(
+        mut copies: Vec<TokenCertificate>,
+        installed_dir: &Path,
+        remembered: Option<&CertificateRef>,
+    ) -> Self {
+        let classes: Vec<StoreClass> = copies
+            .iter()
+            .map(|copy| copy.reference().store().class_under(installed_dir))
+            .collect();
+        let remembered_copy = remembered.and_then(|one| {
+            copies
+                .iter()
+                .position(|copy| one.is_the_same_as(copy.reference()))
+        });
+        let chosen = remembered_copy.unwrap_or_else(|| {
+            (0..classes.len())
+                .min_by_key(|&copy| classes[copy].preference())
+                .unwrap_or_default()
+        });
+        let store = classes[chosen];
+        let mut stores = classes;
+        stores.sort_by_key(|class| class.preference());
+        stores.dedup();
+        Self {
+            certificate: copies.swap_remove(chosen),
+            store,
+            stores,
+            remembered: remembered_copy.is_some(),
+        }
+    }
+
+    fn listed_as(self, id: String) -> ListedCertificate {
+        let certificate = self.certificate;
+        let subject = certificate.subject();
+        let (holder_name, id_number) = holder_of(subject.as_deref());
+        let (given_name, surname) = given_name_and_surname(subject.as_deref());
+        ListedCertificate {
+            id,
+            label: certificate.reference().label().to_owned(),
+            stamped_signer: masked_signer(&holder_name, is_pseudonym(subject.as_deref())),
+            holder_name,
+            given_name,
+            surname,
+            id_number,
+            organization_identifier: certificate.organization_identifier(),
+            issuer: common_name_of(certificate.issuer().as_deref()),
+            certificate_serial_number: certificate.serial_number().unwrap_or_default(),
+            store: self.store,
+            stores: self.stores,
+            status: certificate.status(),
+            remembered: self.remembered,
+        }
+    }
 }
 
 /// El PIN con el que cifrar la instalación: se crea si el almacén es nuevo, nunca si ya existía (ADR-0034).

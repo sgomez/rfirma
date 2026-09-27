@@ -4,6 +4,7 @@ use std::path::PathBuf;
 
 use rfirma_lib::desktop::adapters::paths::Paths;
 use rfirma_lib::identity::adapters::pkcs11;
+use rfirma_lib::identity::application::certificates::{rows_of, ListedCertificates};
 use rfirma_lib::identity::domain::certificate::{CertificateRef, TokenCertificate};
 use rfirma_lib::signing::adapters::memory::Memory;
 use rfirma_lib::signing::application::configuration_memory::Configuration;
@@ -98,15 +99,24 @@ fn the_certificate_signed_with_comes_back_in_the_next_session() {
 }
 
 #[test]
-fn the_twin_that_was_used_is_the_one_that_comes_back() {
+fn the_twin_that_was_used_is_the_copy_behind_its_row() {
     let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
     let twins = references_labelled(TWIN);
     assert_eq!(twins.len(), 2, "el token de pruebas tiene dos gemelos");
     let second = twins[1].clone();
-
     remember(&a_session(directory.path()), &second);
+    let listed = ListedCertificates::new();
 
-    assert_eq!(found_again(&a_session(directory.path())), Some(second));
+    let rows = rows_of(
+        certificates(),
+        &directory.path().join("certificates"),
+        &listed,
+        &a_session(directory.path()),
+    );
+
+    let remembered: Vec<_> = rows.iter().filter(|row| row.remembered).collect();
+    assert_eq!(remembered.len(), 1, "una sola fila recordada");
+    assert_eq!(listed.get(&remembered[0].id), Some(second));
 }
 
 #[test]

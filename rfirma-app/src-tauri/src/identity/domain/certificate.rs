@@ -5,7 +5,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use openssl::bn::BigNum;
 use serde::{Deserialize, Serialize};
-use x509_cert::der::Decode;
+use x509_cert::der::{Decode, Encode};
 use x509_cert::ext::pkix::{BasicConstraints, KeyUsage};
 use x509_cert::Certificate;
 
@@ -191,6 +191,14 @@ impl TokenCertificate {
             .map(|s| s.to_string())
     }
 
+    /// Emisor y número de serie en DER: lo que identifica al certificado sea cual sea su almacén.
+    pub fn issuer_and_serial(&self) -> Option<(Vec<u8>, Vec<u8>)> {
+        let certificate = Certificate::from_der(&self.der).ok()?;
+        let tbs = certificate.tbs_certificate();
+        let issuer = tbs.issuer().to_der().ok()?;
+        Some((issuer, tbs.serial_number().as_bytes().to_vec()))
+    }
+
     /// La clase de clave pública que lleva dentro, si se sabe leer.
     pub fn key_kind(&self) -> Option<KeyKind> {
         let certificate = Certificate::from_der(&self.der).ok()?;
@@ -283,10 +291,12 @@ pub struct ListedCertificate {
     pub issuer: String,
     /// Número de serie del certificado, en base diez.
     pub certificate_serial_number: String,
-    /// Clase de almacén del certificado.
+    /// Clase de almacén de la copia tras el asa.
     pub store: crate::identity::domain::store::StoreClass,
+    /// Las clases de almacén donde está, por orden de preferencia.
+    pub stores: Vec<crate::identity::domain::store::StoreClass>,
     pub status: CertificateStatus,
-    /// Si fue el certificado usado en la última firma.
+    /// Si alguna de sus copias fue la usada en la última firma.
     pub remembered: bool,
 }
 

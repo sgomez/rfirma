@@ -7,15 +7,17 @@ use std::path::Path;
 
 use openssl::hash::MessageDigest;
 use openssl::rsa::Padding;
+use rfirma_lib::desktop::adapters::paths::Paths;
 use rfirma_lib::identity::adapters::pkcs11;
-use rfirma_lib::identity::application::certificates::ListedCertificates;
+use rfirma_lib::identity::application::certificates::{rows_of, ListedCertificates};
 use rfirma_lib::identity::domain::algorithm::SignatureAlgorithm;
 use rfirma_lib::identity::domain::certificate::{
-    CertificateRef, CertificateStatus, TokenCertificate,
+    CertificateRef, CertificateStatus, ListedCertificate,
 };
 use rfirma_lib::identity::domain::error::Situation;
 use rfirma_lib::identity::domain::protected_secret::ProtectedSecret;
 use rfirma_lib::identity::domain::store::StoreClass;
+use rfirma_lib::signing::adapters::memory::Memory;
 use rsa::pkcs1v15::Signature;
 use rsa::signature::Verifier;
 use sha2::{Digest, Sha256};
@@ -434,31 +436,68 @@ fn two_certificates_sharing_a_label_each_sign_with_their_own_key() {
     }
 }
 
+/// Las filas del listado del módulo de pruebas, sin nada recordado.
+fn rows(listed: &ListedCertificates) -> Vec<ListedCertificate> {
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    rows_of(
+        certificates(),
+        &home.path().join("certificates"),
+        listed,
+        &Memory::at(&Paths::under(home.path())),
+    )
+}
+
 #[test]
-fn each_of_two_certificates_sharing_a_label_comes_back_by_its_own_handle() {
-    let found = certificates();
+fn twin_copies_of_one_certificate_in_the_token_are_one_row_each() {
     let listed = ListedCertificates::new();
 
-    let handles = listed.replace(
-        found
+    let in_the_token: Vec<CertificateRef> = rows(&listed)
+        .iter()
+        .filter_map(|row| listed.get(&row.id))
+        .filter(|reference| reference.token_label() == TOKEN)
+        .collect();
+
+    assert_eq!(
+        in_the_token.len(),
+        3,
+        "activo, caducado y revocado: cada gemelo es una copia de uno de ellos: {in_the_token:?}"
+    );
+    let active = certificate_labelled(ACTIVE);
+    let active_copies = [
+        active.reference().clone(),
+        certificate_with_cka_id(TWIN_OF_THE_ACTIVE_KEY)
+            .reference()
+            .clone(),
+    ];
+    assert_eq!(
+        in_the_token
             .iter()
-            .map(|certificate| certificate.reference().clone()),
+            .filter(|reference| active_copies.contains(reference))
+            .count(),
+        1,
+        "el activo y su gemelo son una sola fila"
+    );
+}
+
+#[test]
+fn the_same_certificate_in_two_tokens_is_one_row() {
+    let copies = certificates()
+        .iter()
+        .filter(|certificate| certificate.reference().label() == REPRESENTATIVE_LEGAL_ENTITY)
+        .count();
+    assert_eq!(
+        copies, 2,
+        "el kit lo pone en dos tokens: just certs install"
     );
 
-    let twins: Vec<(&String, &TokenCertificate)> = handles
-        .iter()
-        .zip(found.iter())
-        .filter(|(_, certificate)| certificate.reference().label() == TWIN)
+    let listed = ListedCertificates::new();
+    let found: Vec<ListedCertificate> = rows(&listed)
+        .into_iter()
+        .filter(|row| row.label == REPRESENTATIVE_LEGAL_ENTITY)
         .collect();
-    assert_eq!(twins.len(), 2, "el token tenia que traer los dos gemelos");
-    assert_ne!(twins[0].0, twins[1].0, "dos filas, dos asas");
-    for (handle, certificate) in twins {
-        assert_eq!(
-            listed.get(handle).as_ref(),
-            Some(certificate.reference()),
-            "el asa tiene que llevar a SU certificado y no al primero con esa etiqueta"
-        );
-    }
+
+    assert_eq!(found.len(), 1);
+    assert_eq!(found[0].stores, vec![StoreClass::Card]);
 }
 
 #[test]
