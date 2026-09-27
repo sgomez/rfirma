@@ -12,9 +12,9 @@
 # artefacto delante de quien va a pulsar «Publish».
 #
 # De aqui sale, ademas, que empujar una etiqueta `v*` este RESTRINGIDO POR UNA
-# REGLA DEL REPOSITORIO. Si no, la puerta la abre cualquiera con permiso de
-# escritura y el revisor del `environment: release` se rodea empujando una
-# etiqueta. Esa regla es aprovisionamiento humano, igual que los secretos.
+# REGLA DEL REPOSITORIO, y esa regla es la cerradura de los secretos: el
+# `environment: release` solo admite etiquetas `v*` y no tiene revisor. Regla y
+# entorno son aprovisionamiento humano, igual que los secretos.
 #
 # DOS JOBS Y NO UNO, Y LA FRONTERA ES EL SECRETO. El job que construye es el
 # `build.yml` de siempre, invocado SIN `secrets:` y sin `secrets: inherit`: eso
@@ -65,7 +65,7 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    # El revisor humano del entorno y la sede de los secretos. Los tres que
+    # La sede de los secretos, abierta solo a etiquetas `v*`. Los tres que
     # nombra este fichero se crean con `packaging/setup-signing-key.sh` y se
     # documentan en SECURITY.md.
     environment: release

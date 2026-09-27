@@ -220,6 +220,19 @@ ENV_FILE="$(mktemp -u)"   # nunca se escribe; solo evita tocar un .env real
 
 ENTORNO=release
 
+restrict_env_to_tags() {
+  gh api "repos/{owner}/{repo}/environments/$ENTORNO" >/dev/null 2>&1 || return 0
+  gh api --method PUT "repos/{owner}/{repo}/environments/$ENTORNO" --input - >/dev/null <<'JSON'
+{"deployment_branch_policy":{"protected_branches":false,"custom_branch_policies":true}}
+JSON
+  if ! gh api "repos/{owner}/{repo}/environments/$ENTORNO/deployment-branch-policies" \
+      --jq '.branch_policies[] | select(.name == "v*" and .type == "tag") | .id' | grep -q .; then
+    gh api --method POST "repos/{owner}/{repo}/environments/$ENTORNO/deployment-branch-policies" \
+      -f name='v*' -f type=tag >/dev/null
+  fi
+  note "entorno $ENTORNO restringido a las etiquetas v*"
+}
+
 set_env_secret() {
   local name="$1" fichero="$2"
   if gh secret set "$name" --env "$ENTORNO" < "$fichero" >/dev/null 2>&1; then
@@ -366,18 +379,20 @@ say "hace que un job sin 'environment: release' —como build.yml, que es"
 say "invocable— no pueda verlos jamas."
 say "La huella NO es un secreto y va como variable de REPOSITORIO, a proposito:"
 say "asi cualquier job puede contrastar contra ella la subclave que importa."
+say "El entorno solo admite etiquetas v* y no pide aprobacion: la cerradura"
+say "es quien puede crear esas etiquetas, que es lo que queda por hacer a mano."
 if ! gh api "repos/{owner}/{repo}/environments/$ENTORNO" >/dev/null 2>&1; then
   if confirm "El entorno '$ENTORNO' no existe. Crearlo?"; then
     gh api --method PUT "repos/{owner}/{repo}/environments/$ENTORNO" >/dev/null
     note "entorno $ENTORNO creado"
   fi
 fi
+restrict_env_to_tags
 set_env_secret GPG_SIGNING_SUBKEY "$SUBCLAVE"
 set_env_secret GPG_SIGNING_PASSPHRASE "$FRASE_FICHERO"
 set_var GPG_FINGERPRINT "$HUELLA"
 printf '\n'
 warn "queda por hacer a mano, y no es opcional:"
-step "Anade un revisor humano al entorno '$ENTORNO' (Settings > Environments)."
 step "Restringe quien puede empujar etiquetas v*: Settings > Rules > Rulesets >"
 note "  New ruleset > New tag ruleset, con el patron 'v*' y 'Restrict creations',"
 note "  'Restrict updates' y 'Restrict deletions'. El menu 'Rules > Tags' de las"

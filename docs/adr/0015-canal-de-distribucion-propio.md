@@ -110,8 +110,8 @@ tokens.
 
 | fichero | disparador | permisos | qué hace |
 | `build.yml` | `workflow_call` | `contents: read`, **sin secretos** | compilación única de `librfirma_crypto.so` distribuida a jobs paralelos de empaquetado y pruebas de grada C para el objetivo único `x86_64` (ID-147) —garantizando los mismos bytes en los tres canales (ADR-0004)—, guardia de versión, `just check-glibc`, artefactos y digests como salidas |
-| `release.yml` | `push: tags v*` | `environment: release` | descarga los artefactos, firma, atesta la procedencia y crea la Release **en borrador** con el `pdf-puerta-manual` adjunto |
-| `publish.yml` | `release published`, si no es prerelease | `environment: release` | reconstruye los tres repositorios y los despliega |
+| `release.yml` | `push: tags v*` | `environment: release`, solo etiquetas `v*` | descarga los artefactos, firma, atesta la procedencia y crea la Release **en borrador** con el `pdf-puerta-manual` adjunto |
+| `publish.yml` | `release published`, si no es prerelease | `environment: release`, solo etiquetas `v*` | reconstruye los tres repositorios y los despliega |
 
 Y **cuatro invariantes**, que son justo lo que un agente futuro colapsaría por comodidad:
 
@@ -122,8 +122,11 @@ Y **cuatro invariantes**, que son justo lo que un agente futuro colapsaría por 
    cierra la puerta manual del PDF, y por eso el `pdf-puerta-manual` se adjunta al borrador:
    la puerta deja de ser una convención en un comentario y pasa a ser un artefacto delante
    de quien publica. De aquí sale que **empujar una etiqueta `v*` esté restringido por una
-   regla del repositorio**: si no, la puerta la abre cualquiera con permiso de escritura y
-   el revisor del `environment: release` se rodea empujando una etiqueta.
+   regla del repositorio**, y que esa regla sea la cerradura de los secretos: el
+   `environment: release` **solo admite etiquetas `v*` y no tiene revisor humano**.
+   `release.yml` y `publish.yml` corren sobre la etiqueta y entran sin pedir aprobación; un
+   workflow en una rama o en un PR no entra. Una release son dos gestos humanos: empujar la
+   etiqueta y publicar el borrador después de mirar el PDF.
 3. **El suelo de glibc lo hace verdad una puerta, no el entorno de construcción.** Se promete
    `GLIBC_2.34` y lo comprueba `just check-glibc` sobre lo que se va a publicar. La receta es
    `just` y no un paso `run:`, porque una puerta que no puedes reproducir en tu equipo es una
@@ -201,6 +204,12 @@ son cientos de megas para ahorrar un comando.
   desincronizan en el primer cambio de una frase, y no hay forma de que una prueba diga que a
   una le falta un párrafo. Con el diccionario por idioma, eso es exactamente lo que se
   comprueba.
+- **Un revisor humano en el `environment: release`** como cerradura de los secretos, con el
+  entorno abierto a cualquier rama. Cada job que entra pide su aprobación —y `publish.yml`
+  tiene dos encadenados, que no se agrupan—, así que una release eran tres clics más el de
+  publicar, todos de la misma persona y ninguno con una decisión que no se hubiera tomado
+  ya al empujar la etiqueta o al publicar. Con un solo administrador, quién puede crear la
+  etiqueta ya es quién puede llegar a los secretos.
 - **Copiar `nightly.yml` de tabularis.** El [#222](https://github.com/sgomez/rfirma/issues/222)
   dejó a tabularis medido como **contraejemplo, no modelo**. Lo que sobrevive de él es el
   hecho desnudo: un remoto propio es un canal normal, no una rareza.
