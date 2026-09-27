@@ -296,6 +296,42 @@ describe("Header", () => {
     expect(button).toHaveClass("header__button--open");
   });
 
+  it("paints the documents it is given between the name and the menu button", () => {
+    renderWithCatalog(
+      <Header
+        menuAnchor="header"
+        documents={<nav aria-label="Documentos abiertos">contrato.pdf</nav>}
+        onOpenStatus={noop}
+        onOpenPreferences={noop}
+        onOpenHelp={noop}
+        onOpenAbout={noop}
+      />,
+    );
+    const name = screen.getByText("rFirma");
+    const documents = screen.getByRole("navigation", { name: "Documentos abiertos" });
+    const menu = screen.getByRole("button", { name: "Menú" });
+
+    expect(screen.getByRole("banner")).toContainElement(documents);
+    expect(name.compareDocumentPosition(documents)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(documents.compareDocumentPosition(menu)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+  });
+
+  it("carries only the name and the menu button when given no documents", () => {
+    renderWithCatalog(
+      <Header
+        menuAnchor="header"
+        onOpenStatus={noop}
+        onOpenPreferences={noop}
+        onOpenHelp={noop}
+        onOpenAbout={noop}
+      />,
+    );
+
+    expect(screen.getByRole("banner")).toHaveTextContent(/^rFirma$/);
+    expect(screen.queryByRole("navigation")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Menú" })).toBeInTheDocument();
+  });
+
   it("hides the menu button where the two entries live in the native menu", () => {
     renderWithCatalog(
       <Header

@@ -1,57 +1,56 @@
-/*
- * Cabecera: una sola fila de 52 px sobre `--rf-surface`, sin raya propia — la
- * pone la tira de pestañas, que va justo debajo (docs/design/cabecera.md).
- *
- * La geometría de aquí es la del artboard, medida a medida: el relleno
- * asimétrico (24 px a la izquierda, 8 a la derecha, donde va el botón), el
- * nombre a 15 px con .4 px de tracking, el botón cuadrado de 40 px y el menú
- * flotante de 230 px anclado a 50 px del borde superior.
- *
- * Aquí no se fija ningún color a mano: todo sale de los tokens, como manda el
- * sistema de diseño.
- */
+/* La barra única de la ventana (docs/design/cabecera.md, «Geometría»). */
 
-/* El fondo se pone aquí y no con `.rf-surface`: esa clase, en el bundle, trae
-   además `border` y `border-radius`, así que la cabecera salía rodeada de un
-   marco redondeado en vez de separada del cuerpo por una raya. El `helmet` de
-   los artboards define `.rf-surface` como fondo y nada más, y esa es la que
-   pide la ficha. */
 .header {
   position: relative;
-  background: var(--rf-surface);
-  z-index: 5;
+  z-index: 10;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--rf-space-sm);
-  height: 52px;
-  padding: 0 var(--rf-space-xs) 0 var(--rf-space-md);
+  flex: none;
+  align-items: stretch;
+  height: 44px;
+  padding: 0 6px 0 4px;
+  background: var(--rf-bg);
+  border-bottom: 1px solid var(--rf-border-subtle);
 }
 
 .header--menuOpen {
   z-index: 11;
 }
 
-/* El nombre no va al tamaño pleno de `.rf-title`: en una franja de 52 px el
-   artboard lo baja a 15 px y le abre el tracking para que siga leyéndose como
-   identidad y no como título de sección. */
 .header__name {
+  display: flex;
+  flex: none;
+  align-items: center;
+  margin: 0;
+  padding: 0 12px 0 8px;
   font-size: 15px;
+  font-weight: 700;
   letter-spacing: 0.4px;
 }
 
-/* El menú no crea contexto de posición: el desplegable se ancla a la cabecera
-   entera, que es lo que hace el artboard. Este contenedor existe para que el
-   clic fuera sepa qué es «dentro». */
+.header__gap {
+  flex: none;
+  width: 24px;
+}
+
+.header__end {
+  display: flex;
+  flex: none;
+  align-items: center;
+  margin-left: auto;
+  margin-right: 4px;
+}
+
+/* El contenedor existe para que el clic fuera sepa qué es «dentro»; el
+   desplegable se ancla a la barra entera. */
 .header__menu {
   display: flex;
 }
 
-/* El botón de menú es de 40 px, más estrecho que el mínimo táctil de `.rf-btn`,
-   porque va dentro de una franja de 52 px. */
 .header__button {
-  min-width: 40px;
-  min-height: 40px;
+  width: 32px;
+  min-width: 32px;
+  height: 30px;
+  min-height: 30px;
   padding: 0;
   border-radius: var(--rf-radius-md);
 }
@@ -61,11 +60,10 @@
   color: var(--rf-on-primary);
 }
 
-/* El menú flota anclado a la derecha, por encima del cuerpo de la ventana. */
 .header__popup {
   position: absolute;
-  top: 50px;
-  right: var(--rf-space-xs);
+  top: 48px;
+  right: 10px;
   z-index: 10;
   gap: 2px;
   min-width: 230px;

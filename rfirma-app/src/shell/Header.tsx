@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AlertIcon, ExternalLinkIcon, MenuIcon } from "../design-system/icons";
 import "./Header.css";
@@ -13,6 +13,8 @@ interface HeaderProps {
    * (docs/design/cabecera.md, sección «El aviso»).
    */
   hasAttention?: boolean;
+  /** Lo que se pinta entre la identidad y el menú, o nada en las vistas sin documentos. */
+  documents?: ReactNode;
   onOpenStatus: () => void;
   onOpenPreferences: () => void;
   onOpenHelp: () => void;
@@ -20,8 +22,8 @@ interface HeaderProps {
 }
 
 /**
- * La franja superior de la ventana: identidad y el **único** menú de la
- * aplicación. Sin certificado ni insignia de documento: el certificado lo
+ * La barra única de la ventana: identidad, el hueco de los documentos y el
+ * **único** menú de la aplicación. Sin certificado ni insignia de documento: el certificado lo
  * dice el selector del panel y el estado, la pestaña
  * (docs/design/cabecera.md).
  *
@@ -41,6 +43,7 @@ interface HeaderProps {
 export function Header({
   menuAnchor,
   hasAttention = false,
+  documents = null,
   onOpenStatus,
   onOpenPreferences,
   onOpenHelp,
@@ -81,8 +84,10 @@ export function Header({
 
   return (
     <header className={open ? "header header--menuOpen" : "header"}>
-      <p className="header__name rf-title">{t("app.name")}</p>
-      <div className="rf-row">
+      <p className="header__name">{t("app.name")}</p>
+      {documents}
+      <span className="header__gap" />
+      <div className="header__end">
         {menuAnchor === "header" && (
           <div className="header__menu" ref={container}>
             <button
@@ -96,7 +101,7 @@ export function Header({
               aria-controls={open ? menuId : undefined}
               onClick={() => setOpen((wasOpen) => !wasOpen)}
             >
-              <MenuIcon />
+              <MenuIcon size={18} />
             </button>
             {open && (
               <div className="header__popup rf-card rf-card--elevated" id={menuId} role="menu">

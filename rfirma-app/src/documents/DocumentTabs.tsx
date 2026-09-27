@@ -43,7 +43,7 @@ interface DocumentTabsProps {
   signingLocked?: boolean;
 }
 
-/** La tira de pestañas bajo la cabecera, con su menú «+». */
+/** Las pestañas de los documentos abiertos, con su menú «+», dentro de la cabecera. */
 export function DocumentTabs({
   tabs,
   activeId,

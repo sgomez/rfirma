@@ -4,13 +4,11 @@
   position: relative;
   z-index: 10;
   display: flex;
-  flex: none;
+  flex: 1;
   align-items: flex-end;
   gap: 2px;
-  height: 40px;
+  min-width: 0;
   padding: 0 var(--rf-space-xs);
-  background: var(--rf-surface);
-  border-bottom: 1px solid var(--rf-border-subtle);
 }
 
 .document-tabs__list {
