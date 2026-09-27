@@ -10,8 +10,8 @@ fn a_file_backed_keyring() -> (tempfile::TempDir, RealKeyring) {
     let path = directory.path().join("almacen.keyring");
     let secret = oo7::Secret::text("clave de prueba del llavero de fichero");
 
-    let backend = tauri::async_runtime::block_on(oo7::file::Keyring::load(&path, secret))
-        .expect("abre el llavero de fichero");
+    let backend =
+        block_on(oo7::file::Keyring::load(&path, secret)).expect("abre el llavero de fichero");
 
     (
         directory,
@@ -46,4 +46,14 @@ fn get_or_create_pin_creates_only_once() {
         .expect("reutiliza el PIN creado");
 
     assert_eq!(first, second);
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn get_or_create_pin_from_within_an_async_tokio_context_does_not_panic() {
+    let (_directory, keyring) = a_file_backed_keyring();
+
+    let pin = keyring.get_or_create_pin().expect("crea el PIN");
+    let read = keyring.pin().expect("lee el PIN creado");
+
+    assert_eq!(pin, read);
 }
