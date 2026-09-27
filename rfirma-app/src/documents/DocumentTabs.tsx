@@ -44,7 +44,7 @@ interface DocumentTabsProps {
   signingLocked?: boolean;
 }
 
-/** Las pestañas de los documentos abiertos, con su menú «+», dentro de la cabecera. */
+/** Las pestañas de los documentos abiertos, con el botón partido de abrir, dentro de la cabecera. */
 export function DocumentTabs({
   tabs,
   activeId,
@@ -245,7 +245,7 @@ function SplitOpenButton({
             aria-controls={open ? menuId : undefined}
             onClick={() => setOpen((was) => !was)}
           >
-            <ChevronDownIcon />
+            <ChevronDownIcon size={14} strokeWidth={2} />
           </button>
           {open && (
             <div

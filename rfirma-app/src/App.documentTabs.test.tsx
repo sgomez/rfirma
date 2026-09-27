@@ -17,7 +17,7 @@ async function openRecentlyOpenedMenu(user: ReturnType<typeof userEvent.setup>) 
   return screen.getByRole("menu");
 }
 
-// Grada A: la tira de pestañas y el menú «+», sobre la aplicación entera.
+// Grada A: la tira de pestañas y el botón partido de abrir, sobre la aplicación entera.
 describe("App, con varios documentos abiertos", () => {
   it("keeps several documents open and changes document when the tab changes", async () => {
     const user = userEvent.setup();

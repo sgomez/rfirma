@@ -9,11 +9,11 @@ interface RecentRowsProps {
   /** Los identificadores de los documentos que ya tienen pestaña. */
   openIds: ReadonlySet<string>;
   onSelect: (row: RecentDocument) => void;
-  /** El rol de cada fila: `menuitem` dentro del menú «+», botón suelto fuera de él. */
+  /** El rol de cada fila: `menuitem` dentro del menú de abiertos recientemente, botón suelto fuera de él. */
   role?: "menuitem";
 }
 
-/** Las filas de los recientes, que comparten el menú «+» y el estado vacío del visor. */
+/** Las filas de los recientes, que comparten el menú de abiertos recientemente y el estado vacío del visor. */
 export function RecentRows({ recents, openIds, onSelect, role }: RecentRowsProps) {
   const { t, i18n } = useTranslation();
   const now = new Date();
