@@ -312,6 +312,16 @@ describe("CertificateSelect", () => {
       expect(rows()).toHaveLength(1);
     });
 
+    it("filters personal certificates by the word «personal», leaving out the representative one", async () => {
+      renderSelect();
+      await userEvent.click(box());
+
+      await userEvent.keyboard("personal");
+
+      expect(rows()).toHaveLength(3);
+      expect(screen.queryByText("Reformas Martín SL")).not.toBeInTheDocument();
+    });
+
     it("says «Ningún certificado coincide» when nothing matches", async () => {
       renderSelect();
       await userEvent.click(box());
