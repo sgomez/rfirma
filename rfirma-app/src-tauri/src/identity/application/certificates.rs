@@ -8,7 +8,7 @@ use crate::identity::domain::certificate::{CertificateRef, ListedCertificate, To
 use crate::identity::domain::chain::issuers_of;
 use crate::identity::domain::error::{Situation, TokenError};
 use crate::identity::domain::holder::{
-    common_name_of, given_name_and_surname, holder_of, is_pseudonym,
+    common_name_of, given_name_and_surname, holder_of, is_pseudonym, is_representative,
 };
 use crate::identity::domain::keyring::KeyringError;
 use crate::identity::domain::protected_secret::ProtectedSecret;
@@ -188,6 +188,11 @@ impl ChosenCopy {
         let subject = certificate.subject();
         let (holder_name, id_number) = holder_of(subject.as_deref());
         let (given_name, surname) = given_name_and_surname(subject.as_deref());
+        let organization_identifier = certificate.organization_identifier();
+        let entity_name =
+            is_representative(organization_identifier.as_deref(), &given_name, &surname)
+                .then(|| certificate.organization_name())
+                .flatten();
         ListedCertificate {
             id,
             label: certificate.reference().label().to_owned(),
@@ -196,7 +201,8 @@ impl ChosenCopy {
             given_name,
             surname,
             id_number,
-            organization_identifier: certificate.organization_identifier(),
+            organization_identifier,
+            entity_name,
             issuer: common_name_of(certificate.issuer().as_deref()),
             certificate_serial_number: certificate.serial_number().unwrap_or_default(),
             store: self.store,

@@ -1,5 +1,5 @@
 use super::{
-    attribute, common_name_of, given_name_and_surname, holder_of, is_pseudonym,
+    attribute, common_name_of, given_name_and_surname, holder_of, is_pseudonym, is_representative,
     organization_identifier_of,
 };
 
@@ -138,6 +138,22 @@ fn organization_identifier_is_nothing_when_the_certificate_does_not_carry_it() {
         None
     );
     assert_eq!(organization_identifier_of(None), None);
+}
+
+#[test]
+fn is_representative_when_the_organisation_and_a_natural_person_holder_are_both_there() {
+    assert!(is_representative(Some("VATES-A00000000"), "NOMBRE", ""));
+    assert!(is_representative(Some("VATES-A00000000"), "", "APELLIDO"));
+}
+
+#[test]
+fn is_not_representative_without_an_organisation_identifier() {
+    assert!(!is_representative(None, "NOMBRE", "APELLIDO"));
+}
+
+#[test]
+fn an_entity_certificate_without_a_natural_person_holder_is_not_representative() {
+    assert!(!is_representative(Some("VATES-A00000000"), "", ""));
 }
 
 #[test]

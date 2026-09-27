@@ -6,8 +6,8 @@ use super::{
     remember_the_certificate, rows_of, usable_certificate,
 };
 use crate::identity::application::tests::{
-    a_certificate, a_certificate_with_id, a_representative_certificate, listed_from, NoToken,
-    TestAuthority,
+    a_certificate, a_certificate_with_id, a_representative_certificate,
+    a_representative_certificate_of_a_natural_person, listed_from, NoToken, TestAuthority,
 };
 use crate::identity::domain::algorithm::SignatureAlgorithm;
 use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
@@ -521,6 +521,51 @@ fn a_row_carries_the_organization_identifier_of_a_representative_certificate() {
         rows[0].organization_identifier,
         Some("VATES-A00000000".to_owned())
     );
+}
+
+#[test]
+fn a_row_carries_the_entity_name_of_a_representative_certificate_with_a_natural_person_holder() {
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let certificate = a_representative_certificate_of_a_natural_person(
+        "FIRMA",
+        "00000000T NOMBRE APELLIDOUNO (R: Q0000000J)",
+        "NOMBRE",
+        "APELLIDOUNO",
+        "ENTIDAD DE PRUEBAS",
+        "VATES-Q0000000J",
+    );
+
+    let rows = rows_of(
+        vec![certificate],
+        &home.path().join("certificates"),
+        &ListedCertificates::new(),
+        &a_memory(home.path()),
+    );
+
+    assert_eq!(rows[0].entity_name, Some("ENTIDAD DE PRUEBAS".to_owned()));
+    assert_eq!(
+        rows[0].organization_identifier,
+        Some("VATES-Q0000000J".to_owned())
+    );
+}
+
+#[test]
+fn an_entity_certificate_without_a_natural_person_holder_carries_no_entity_name() {
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let certificate = a_representative_certificate(
+        "FIRMA",
+        "EIDAS CERTIFICADO PRUEBAS - 99999999R",
+        "VATES-A00000000",
+    );
+
+    let rows = rows_of(
+        vec![certificate],
+        &home.path().join("certificates"),
+        &ListedCertificates::new(),
+        &a_memory(home.path()),
+    );
+
+    assert_eq!(rows[0].entity_name, None);
 }
 
 mod copies;

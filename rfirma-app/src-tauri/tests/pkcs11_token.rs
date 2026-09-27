@@ -104,6 +104,29 @@ fn the_listing_includes_a_representative_certificate_of_the_kit() {
 }
 
 #[test]
+fn the_representative_certificate_of_the_kit_carries_its_real_entity_name() {
+    use rfirma_lib::identity::domain::holder::{given_name_and_surname, is_representative};
+
+    let certificate = certificate_labelled(REPRESENTATIVE_LEGAL_ENTITY);
+    let subject = certificate.subject();
+    let (given_name, surname) = given_name_and_surname(subject.as_deref());
+
+    assert!(
+        is_representative(
+            certificate.organization_identifier().as_deref(),
+            &given_name,
+            &surname,
+        ),
+        "el certificado {REPRESENTATIVE_LEGAL_ENTITY} tenia que ser de representante"
+    );
+    assert_eq!(
+        certificate.organization_name().as_deref(),
+        Some("ENTIDAD DE PRUEBAS"),
+        "el certificado {REPRESENTATIVE_LEGAL_ENTITY} tenia que llevar organizationName"
+    );
+}
+
+#[test]
 fn listing_without_a_session_still_lists_them() {
     let found = pkcs11::list_certificates(module()).expect("no deberia fallar sin PIN");
     assert!(
