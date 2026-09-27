@@ -9,13 +9,11 @@ abrir el documento a guardarlo firmado, sin navegar a otra pantalla.
 
 ## Estructura
 
-Cabecera, tira de pestañas y, debajo, el visor y el panel de firma.
+Una sola barra —la cabecera con las pestañas— y, debajo, el visor y el panel de firma.
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│ cabecera                                                │  52 px
-├─────────────────────────────────────────────────────────┤
-│ tira de pestañas                                        │  40 px
+│ rFirma · Abrir PDF… ▾ · pestañas · +N ▾            ☰    │  44 px
 ├─────────────────────────────────────────────────────────┤
 │ franja de notificación (solo si hay algo que notificar)  │  41 px
 ├──────────────────────────────────────┬──────────────────┤
@@ -25,12 +23,12 @@ Cabecera, tira de pestañas y, debajo, el visor y el panel de firma.
 ```
 
 **Sin documento no hay panel.** El visor ocupa todo el ancho con la zona de
-soltar y los recientes, y la tira solo lleva el «+». El panel no se monta: no
+soltar y los recientes, y la cabecera, el botón de abrir sin ninguna pestaña. El panel no se monta: no
 hay nada que firmar.
 
-- [Cabecera](cabecera.md) — identidad y menú principal.
-- [Pestañas de documentos](pestanas-de-documentos.md) — qué documentos hay
-  abiertos, cuál se firma y los recientes.
+- [Cabecera](cabecera.md) — la barra única: identidad y menú principal.
+- [Pestañas de documentos](pestanas-de-documentos.md) — lo que la barra lleva
+  de los documentos: abrir, los recientes, cuáles hay abiertos y cuál se firma.
 - [Visor de documento](visor-de-documento.md) — cómo va a quedar.
 - [Panel de firma](panel-de-firma.md) — el certificado, la firma visible, el
   destino y el botón que firma.
@@ -45,7 +43,7 @@ Sobre la ventana se abren diálogos con velo, que la oscurecen sin desmontarla:
 [¿firmar de todos modos?](dialogo-firmar-de-todos-modos.md) y
 [acerca de](acerca-de.md). [Preferencias](preferencias.md) y el
 [panel de estado](panel-de-estado.md) son vistas que tapan todo lo que hay bajo
-la cabecera, tira incluida.
+la cabecera, y la dejan en su variante sin documentos: solo `rFirma` y el menú.
 
 El velo lo coloca `rfirma-app/src/app.css` (`position: fixed`, `inset: 0`,
 diálogo centrado): `.rf-scrim` en el bundle es solo el color. Sin esa regla los
@@ -55,17 +53,14 @@ diálogos se pintan en flujo, detrás de la ventana.
 
 | z-index | Qué |
 | --- | --- |
-| 5 | cabecera (11 con su menú abierto, para quedar sobre la tira) |
 | 6 | bloque de modelos y menú «+ Dato» del panel |
 | 7 | selector de certificado y su lista |
-| 8 | menú del «+» |
-| 10 | tira de pestañas |
+| 10 | cabecera (11 con cualquiera de sus menús abierto: el principal, los recientes o las pestañas ocultas) |
 | 20 | velo de cualquier diálogo |
 
 ### Geometría
 
-- Cabecera de 52 px sin borde propio: la raya la pone la tira.
-- Tira de 40 px sobre `--rf-surface`, borde inferior de 1 px en
+- Cabecera de 44 px sobre `--rf-bg`, borde inferior de 1 px en
   `--rf-border-subtle`.
 - Visor flexible sobre `--rf-bg`. Panel de 380 px fijos, borde izquierdo de 1 px
   en `--rf-border-subtle`.
@@ -78,7 +73,7 @@ diálogos se pintan en flujo, detrás de la ventana.
 
 ## La franja de notificación
 
-**Es el sitio donde notifica rFirma**, y va **bajo la tira de pestañas**, a
+**Es el sitio donde notifica rFirma**, y va **bajo la cabecera**, a
 ancho completo, encima del visor y del panel: fondo `--rf-surface`, borde
 inferior de 1 px en `--rf-border-subtle`, 41 px de alto. Cuando no hay nada que
 notificar no se monta y el contenido sube.
@@ -117,7 +112,7 @@ de pantalla.
 
 | Estado | Pestañas | Visor | Panel |
 | --- | --- | --- | --- |
-| Vacío | solo el «+» | zona de soltar y recientes | no se monta |
+| Vacío | ninguna; el botón de abrir sí | zona de soltar y recientes | no se monta |
 | Buscando certificados | el documento | documento | editable; el selector dice «Buscando certificados…» con indicador y «Firmar» está al 55 %. Encima, el diálogo de secreto si el almacén lo pide para listar |
 | Sin certificados | ídem | documento | «Sin certificados» arriba; el pie ofrece «Añadir un certificado…» y «Volver a buscar» |
 | Sin certificado elegido | ídem | documento, sin firma visible: su interruptor está desactivado hasta elegir | el selector dice «Elige un certificado» y «Firmar» está al 55 % |
@@ -133,8 +128,8 @@ botones, de 44 px.
 
 ## Componentes y tokens
 
-`.rf-scrim` + `.rf-dialog` para los diálogos; `--rf-surface` en cabecera, tira y
-franja; `--rf-bg` en visor y panel; `--rf-border-subtle` entre regiones. Tema
+`.rf-scrim` + `.rf-dialog` para los diálogos; `--rf-bg` en cabecera, visor y panel;
+`--rf-surface` en la franja; `--rf-border-subtle` entre regiones. Tema
 claro y oscuro, según el sistema operativo; el papel siempre claro.
 
 ## Decisiones
@@ -152,9 +147,12 @@ combina:
 | V3 C | Flujo en cuatro pasos | cuatro pasos para firmar una vez; la barra recortaba titular y documento |
 | **V4 D** | **Pestañas de v2, visor y paginación de antes, panel de B sin el renglón del certificado, botón partido de A al pie** | **elegida** |
 
-**La franja baja de la cabecera a debajo de la tira** (25/09/2026). Las
-pestañas son parte de la cabecera de la ventana; una notificación entre las dos
-las separaría.
+**Una sola barra arriba** (27/09/2026): la cabecera de 52 px y la tira de
+pestañas de 40 px se funden en una barra de 44 px, y los 48 px que sobran vuelven
+al visor ([ADR-0007](../adr/0007-cabecera-unica-sin-barra-de-menus.md)). La
+franja de notificación va debajo de ella, como ya iba debajo de la tira desde el
+25/09/2026: las pestañas son parte de la cabecera y una notificación no se mete
+entre las dos.
 
 **Firmando es un diálogo con velo**, no un estado del pie: el secreto, el
 progreso y el resultado se suceden en el mismo sitio. **El error de firma es un
@@ -173,4 +171,4 @@ en [panel-de-firma.md](panel-de-firma.md#certificado).
 Validado en el lienzo
 [Autofirma de escritorio en Rust](https://claude.ai/design/p/c0ddbfa7-0982-498f-8f8c-8e2f8f0c6132),
 página **Recorrido de firma**, artboard `Main`, el 25/09/2026; el selector de
-certificado, el 27/09/2026.
+certificado y la barra única, el 27/09/2026.

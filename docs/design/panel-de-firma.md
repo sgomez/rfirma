@@ -443,7 +443,7 @@ acuse es de un documento concreto: al cambiar de pestaña o cerrarla, se va.
   tarjeta en el pie: el pie tiene 162 px fijos en todos los estados.
 - **El pie enseña carpeta y nombre**, en una caja, bajo un solo `Cambiar` (de
   V3 B): el nombre lo elige la aplicación y hasta firmar no se veía.
-- **«Firmar otro documento» no existe**: el «+» de la tira ya abre.
+- **«Firmar otro documento» no existe**: «Abrir PDF…» de la cabecera ya abre.
 - **El aviso de firmas previas dice la validez, no solo el número.** El de antes,
   «Ya lleva 1 firma · Ver», con el número llegando como desconocido, no se
   montaba nunca y no decía si las firmas servían. Ahora cuenta firmas y avisos

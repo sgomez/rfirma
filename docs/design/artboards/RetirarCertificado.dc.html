@@ -107,16 +107,112 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
 </helmet>
 <div class="rf-root" data-theme="{{tema}}" style="width:1180px;height:700px;display:flex;flex-direction:column;position:relative;overflow:hidden">
 
-<header class="rf-row" style="height:52px;flex:none;padding:0 var(--rf-space-xs) 0 var(--rf-space-md);
-  gap:var(--rf-space-sm);border-bottom:1px solid var(--rf-border-subtle);
-  background:var(--rf-surface);position:relative;z-index:5">
-  <span class="rf-title" style="font-size:15px;letter-spacing:.4px;flex:1">rFirma</span>
-  <span title="Menú" style="width:40px;height:40px;flex:none;display:flex;align-items:center;justify-content:center;
-    border-radius:var(--rf-radius-md);color:var(--rf-text)">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></span>
-</header>
+<!-- _cabecera.part -->
+<header class="rf-row" style="height:44px;flex:none;align-items:stretch;gap:0;padding:0 6px 0 4px;
+  background:var(--rf-bg);border-bottom:1px solid var(--rf-border-subtle);position:relative;z-index:{{ zCabecera }}">
+  <span style="flex:none;display:flex;align-items:center;padding:0 12px 0 8px;font-size:15px;font-weight:700;letter-spacing:.4px">rFirma</span>
 
-<div style="position:absolute;left:0;right:0;top:52px;bottom:0;background:var(--rf-bg);display:flex;flex-direction:column">
+  <sc-if value="{{ hayTira }}" hint-placeholder-val="{{ true }}">
+    <div style="flex:none;display:flex;align-items:center;margin-right:12px;position:relative">
+      <div class="rf-row" style="height:32px;border:1px solid var(--rf-border-strong);border-radius:var(--rf-radius-md);background:var(--rf-bg)">
+        <button type="button" class="rf-btn rf-btn--ghost" title="Ctrl+O" style="{{ estiloAbrir }}">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>Abrir PDF…</button>
+        <sc-if value="{{ hayRecientes }}" hint-placeholder-val="{{ true }}">
+          <span style="width:1px;height:16px;background:var(--rf-border-subtle)"></span>
+          <button type="button" title="Abiertos recientemente" class="rf-btn rf-btn--ghost" style="{{ estiloFlecha }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="{{ estiloGiro }}"><path d="M6 9l6 6 6-6"/></svg></button>
+        </sc-if>
+      </div>
+      <sc-if value="{{ recientesAbiertos }}" hint-placeholder-val="{{ false }}">
+        <div class="rf-stack" style="position:absolute;top:100%;left:0;margin-top:4px;width:360px;padding:6px;gap:2px;
+          border-radius:var(--rf-radius-lg);border:1px solid var(--rf-border-subtle);background:var(--rf-bg);box-shadow:var(--rf-shadow-elevated)">
+          <span class="rf-label" style="padding:6px 10px 4px;letter-spacing:.6px;text-transform:uppercase">Abiertos recientemente</span>
+          <sc-for list="{{ recientes }}" as="r" hint-placeholder-count="6">
+            <div class="rf-row" style="gap:10px;padding:7px 10px;border-radius:var(--rf-radius-md);{{ r.estilo }}" title="{{ r.titulo }}">
+              <div class="rf-stack" style="flex:1;min-width:0;gap:3px">
+                <span class="rf-row" style="gap:6px;min-width:0">
+                  <span style="min-width:0;font-size:13px;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.nombre }}</span>
+                  <sc-if value="{{ r.firmado }}" hint-placeholder-val="{{ false }}">
+                    <span title="Firmado" style="display:flex;flex:none;color:var(--rf-text-muted)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+                  </sc-if>
+                </span>
+                <span class="rf-text-muted" style="font-size:12px;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.carpeta }}</span>
+              </div>
+              <span class="rf-text-muted" style="flex:none;font-size:12px;{{ r.estiloCuando }}">{{ r.cuando }}</span>
+            </div>
+          </sc-for>
+          <hr class="rf-divider" style="margin:4px 0">
+          <div class="rf-row" style="min-height:32px;padding:0 10px;border-radius:var(--rf-radius-md);font-size:13px;color:var(--rf-text-muted);cursor:pointer">Vaciar la lista</div>
+        </div>
+      </sc-if>
+    </div>
+
+    <div style="height:100%;flex:0 1 auto;min-width:0;overflow:hidden">
+      <div class="rf-row" style="height:100%;align-items:stretch;gap:2px">
+        <sc-for list="{{ pestanas }}" as="p" hint-placeholder-count="3">
+          <div class="rf-row" title="{{ p.nombre }}" style="{{ p.estilo }}">
+            <span style="display:flex;flex:none"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg></span>
+            <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ p.nombre }}</span>
+            <sc-if value="{{ p.firmado }}" hint-placeholder-val="{{ false }}">
+              <span title="Firmado" style="display:flex;flex:none;color:var(--rf-text-muted)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+            </sc-if>
+            <span title="Cerrar" style="{{ p.estiloCerrar }}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6 6 18"/></svg></span>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <sc-if value="{{ desborda }}" hint-placeholder-val="{{ false }}">
+      <div style="flex:none;display:flex;align-items:center;margin-left:4px;position:relative">
+        <button type="button" class="rf-btn rf-btn--ghost" title="Más pestañas" style="{{ estiloDesborde }}">+{{ nOcultas }}<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="{{ estiloGiroDesborde }}"><path d="M6 9l6 6 6-6"/></svg></button>
+        <sc-if value="{{ desbordeAbierto }}" hint-placeholder-val="{{ false }}">
+          <div class="rf-stack" style="position:absolute;top:100%;right:0;margin-top:4px;width:360px;padding:6px;gap:2px;
+            border-radius:var(--rf-radius-lg);border:1px solid var(--rf-border-subtle);background:var(--rf-bg);box-shadow:var(--rf-shadow-elevated)">
+            <sc-for list="{{ ocultas }}" as="o" hint-placeholder-count="8">
+              <div class="rf-row" style="gap:6px;min-width:0;padding:7px 10px;border-radius:var(--rf-radius-md);cursor:pointer" title="{{ o.nombre }}">
+                <span style="min-width:0;font-size:13px;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ o.nombre }}</span>
+                <sc-if value="{{ o.firmado }}" hint-placeholder-val="{{ false }}">
+                  <span title="Firmado" style="display:flex;flex:none;color:var(--rf-text-muted)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+                </sc-if>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+    </sc-if>
+  </sc-if>
+  <span style="flex:1;min-width:24px"></span>
+
+  <div style="flex:none;display:flex;align-items:center;margin-right:4px">
+    <span title="Menú" style="width:32px;height:30px;display:flex;align-items:center;justify-content:center;
+      border-radius:var(--rf-radius-md);{{ estiloBotonMenu }}">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></span>
+  </div>
+  <sc-if value="{{ menuAbierto }}" hint-placeholder-val="{{ false }}">
+    <div role="menu" style="position:absolute;top:48px;right:10px;min-width:230px;padding:6px;
+      background:var(--rf-bg);border:1px solid var(--rf-border-subtle);border-radius:var(--rf-radius-md);
+      box-shadow:var(--rf-shadow-elevated);display:flex;flex-direction:column;gap:2px">
+      <sc-for list="{{ entradasMenu }}" as="e" hint-placeholder-count="4">
+        <sc-if value="{{ e.hayDivisor }}" hint-placeholder-val="{{ false }}">
+          <hr class="rf-divider" style="margin:4px 0">
+        </sc-if>
+        <span class="rf-prose rf-row rf-gap-xs" role="menuitem" style="padding:9px 10px;border-radius:var(--rf-radius-sm);cursor:pointer;{{ e.estiloFoco }}">
+          <span style="flex:1;min-width:0">{{ e.texto }}</span>
+          <span style="width:14px;height:14px;flex:none;display:flex;align-items:center;justify-content:center">
+            <sc-if value="{{ e.esEnlace }}" hint-placeholder-val="{{ false }}">
+              <span style="display:flex;color:var(--rf-text-muted)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6"/><path d="M20 4 11 13"/><path d="M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4"/></svg></span>
+            </sc-if>
+            <sc-if value="{{ e.hayAviso }}" hint-placeholder-val="{{ false }}">
+              <span style="display:flex;color:var(--rf-text)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 2.5 20h19z"/><path d="M12 10v4M12 17v.5"/></svg></span>
+            </sc-if>
+          </span>
+        </span>
+      </sc-for>
+    </div>
+  </sc-if>
+</header>
+<!-- /_cabecera.part -->
+
+<div style="position:absolute;left:0;right:0;top:44px;bottom:0;background:var(--rf-bg);display:flex;flex-direction:column">
 
   <div class="rf-row rf-gap-sm" style="flex:none;padding:var(--rf-space-sm) var(--rf-space-md)">
     <p class="rf-title" style="font-size:17px;flex:1;min-width:0">Estado de rFirma</p>
@@ -254,7 +350,7 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
   </div>
 
 </div>
-<div class="rf-scrim" style="top:52px;z-index:20">
+<div class="rf-scrim" style="top:44px;z-index:20">
   <div class="rf-dialog" role="dialog" aria-modal="true">
 
     <div class="rf-stack rf-gap-xs">
@@ -390,6 +486,34 @@ class Component extends DCLogic {
     };
   }
 
+  // Lo que pide _cabecera.part: se copia igual en cada artboard que la estampa.
+  barra(b) {
+    const ocultas = b.ocultas || [];
+    const menuAbierto = !!b.menuAbierto;
+    const hayRecientes = b.hayRecientes !== false;
+    const recientesAbiertos = !!b.hayTira && !!b.recientesAbiertos;
+    const desbordeAbierto = ocultas.length > 0 && !!b.desbordeAbierto;
+    const giro = "transition:transform var(--rf-duration-fast, 120ms);";
+    return {
+      zCabecera: menuAbierto || recientesAbiertos || desbordeAbierto ? 11 : 10,
+      menuAbierto: menuAbierto,
+      estiloBotonMenu: menuAbierto ? "background:var(--rf-primary);color:var(--rf-on-primary)" : "color:var(--rf-text)",
+      entradasMenu: b.entradasMenu || [],
+      hayTira: !!b.hayTira,
+      pestanas: b.pestanas || [], ocultas: ocultas, nOcultas: ocultas.length,
+      desborda: ocultas.length > 0, desbordeAbierto: desbordeAbierto,
+      estiloDesborde: "min-height:0;height:30px;padding:0 6px 0 8px;gap:2px;font-size:13px;font-weight:600;color:var(--rf-text);"
+        + (desbordeAbierto ? "background:var(--rf-surface);box-shadow:inset 0 0 0 1px var(--rf-border-subtle)" : ""),
+      estiloGiroDesborde: giro + (desbordeAbierto ? "transform:rotate(180deg)" : ""),
+      hayRecientes: hayRecientes, recientesAbiertos: recientesAbiertos,
+      recientes: b.recientes || [],
+      estiloAbrir: "min-height:0;height:100%;padding:0 10px 0 9px;gap:7px;font-size:13px;font-weight:600;color:var(--rf-text);border:0;"
+        + "border-radius:" + (hayRecientes ? "var(--rf-radius-md) 0 0 var(--rf-radius-md)" : "var(--rf-radius-md)"),
+      estiloFlecha: "min-height:0;height:100%;width:30px;padding:0;border:0;color:var(--rf-text);border-radius:0 var(--rf-radius-md) var(--rf-radius-md) 0;"
+        + (recientesAbiertos ? "background:var(--rf-surface);box-shadow:inset 0 0 0 1px var(--rf-border-subtle);" : ""),
+      estiloGiro: giro + (recientesAbiertos ? "transform:rotate(180deg)" : "")
+    };
+  }
   renderVals() {
     // LA RETIRADA DEL CERTIFICADO (#660; panel del #659, mapa #652). Esto ES
     // EL PANEL DE ESTADO —misma tabla, mismas columnas, mismo pie— con el velo
@@ -464,6 +588,7 @@ class Component extends DCLogic {
           perfiles: this.almacenesDeLaCA(marcas), detalleAbierto: fallo };
 
     return {
+      ...this.barra({ hayTira: false }),
       tema: tema,
       remedirApagado: trabajando,
       filas: [

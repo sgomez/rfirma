@@ -35,6 +35,8 @@ if [ ${#malos[@]} -ne 0 ]; then
 fi
 
 con_fondo_de_main=(Main EstadoPin EstadoPinIncorrecto EstadoAcercaDe EstadoFirmarDeTodosModos EstadoPaginasSinFirmaVisible)
+# La barra de la ventana principal la llevan tambien las vistas sin pestanas.
+solo_cabecera=(PreferenciasPantalla PanelEstado RetirarCertificado PrimerArranque)
 
 for part in _*.part; do
     [ "$part" = _helmet.part ] && continue
@@ -44,6 +46,9 @@ for part in _*.part; do
         abre=$(grep -cF "<!-- $part -->" "$f" || true)
         obligado=no
         for a in "${con_fondo_de_main[@]}"; do [ "$f" = "$a.dc.html" ] && obligado=si; done
+        if [ "$part" = _cabecera.part ]; then
+            for a in "${solo_cabecera[@]}"; do [ "$f" = "$a.dc.html" ] && obligado=si; done
+        fi
         [ "$abre" = 0 ] && [ "$obligado" = no ] && continue
         cierra=$(grep -cF "<!-- /$part -->" "$f" || true)
         suyo=$(awk -v a="<!-- $part -->" -v c="<!-- /$part -->" \
@@ -56,4 +61,4 @@ for part in _*.part; do
         exit 1
     fi
 done
-echo "OK: $(ls -1 *.dc.html | wc -l) artboards con el <helmet> de _helmet.part; ${#con_fondo_de_main[@]} con el fondo de Main"
+echo "OK: $(ls -1 *.dc.html | wc -l) artboards con el <helmet> de _helmet.part; ${#con_fondo_de_main[@]} con el fondo de Main; $(( ${#con_fondo_de_main[@]} + ${#solo_cabecera[@]} )) con _cabecera.part"

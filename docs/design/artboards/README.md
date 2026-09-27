@@ -53,7 +53,7 @@ página «Ventana de sede · v0.5» va aparte porque es otra ventana:
 
 | # | Artboard | Estado |
 | - | -------- | ------ |
-| 5 | `Main` | La ventana principal entera, con sus estados como palanca: vacío, buscando certificados, sin certificados, sin certificado elegido, listo, certificados abiertos (el selector con su buscador), firmando (diálogo con velo), firmado (el resumen) y error al firmar; la firma visible y su contenido, el menú de la cabecera, el menú «+», la franja de versión nueva bajo las pestañas, el destino, el zoom y la vista previa |
+| 5 | `Main` | La ventana principal entera, con sus estados como palanca: vacío, buscando certificados, sin certificados, sin certificado elegido, listo, certificados abiertos (el selector con su buscador), firmando (diálogo con velo), firmado (el resumen) y error al firmar; la firma visible y su contenido, la barra única —el botón partido con «Abiertos recientemente», el desborde de pestañas y el menú—, la vista sin pestañas, la franja de versión nueva bajo la barra, el destino, el zoom y la vista previa |
 | 5b | `EstadoPaginasSinFirmaVisible` | Antes de firmar: las páginas donde la firma visible no cabe |
 | 5c | `EstadoFirmarDeTodosModos` | Antes de firmar: el documento trae alguna firma no válida, y se pide confirmación |
 | 6 | `EstadoPin` | Pidiendo el secreto del almacén — PIN o contraseña, según la clase de almacén —, sobre `Main` buscando certificados o lista, según el almacén |
@@ -113,6 +113,17 @@ palancas lo calcula cada artboard, y el envoltorio del selector (`haySelector`,
 Claude Design no ofrece forma de incluir un fichero en otro que se pueda
 comprobar desde aquí: `support.js` no está en el repositorio. Tras subir un
 `.part` cambiado, se suben los seis artboards.
+
+**La barra de arriba, `_cabecera.part`, llega a diez**: los seis de antes y
+las cuatro vistas sin documentos —`PreferenciasPantalla`, `PanelEstado`,
+`RetirarCertificado` y `PrimerArranque`—. Es **un solo fragmento para las dos
+variantes**: el botón partido, las pestañas y el desborde van dentro de un
+`<sc-if value="{{ hayTira }}">`, y las vistas sin documentos lo apagan. Sus
+valores los calcula un método `barra()` que es **el mismo, copiado igual, en
+los diez**: cada artboard le pasa lo suyo —`hayTira`, las pestañas, los
+recientes, qué menú está abierto— y lo extiende al principio de lo que
+devuelve `renderVals()`. `comprueba.sh` exige el fragmento en los diez. Tras
+cambiar `_cabecera.part`, se suben los diez.
 
 ## La lista de certificados no viene del canvas original
 
@@ -835,3 +846,39 @@ que enseñaba la máscara.
 Personalizada y la vista previa del recuadro llevan `MARTÍN ORTEGA LUCÍA -
 ***9999**`, porque ese texto sale del ordenador dentro del documento. También
 la tarjeta «La tuya» del resumen, que lee la firma ya puesta.
+
+## Lo que cambió con la barra única
+
+Validado el 27/09/2026. Se trabajó en un artboard de usar y tirar, «Main barra
+unica», que se ha fundido en `Main` y se ha borrado del proyecto.
+
+- **Cabecera y pestañas en una barra de 44 px** sobre `--rf-bg`, con raya
+  inferior. A la izquierda, `rFirma` y el **botón partido**: «Abrir PDF…» abre
+  el diálogo del sistema (Ctrl+O) y la flecha despliega solo «Abiertos
+  recientemente», un menú de 360 px sin la entrada «Abrir un PDF…».
+- **Pestañas de 160 a 200 px**, con subrayado de 2 px y peso 600 en la activa.
+  Las que no caben van a **«+N ▾»** al final, que sustituye a las flechas ‹ ›,
+  con un menú de las ocultas de una línea —nombre y ✓—; la activa ocupa siempre
+  el último hueco visible.
+- **☰ de 32 × 30** a la derecha; su menú flota a 48 px del borde superior.
+- **Sin recientes** —actividad apagada o lista vacía— desaparece la flecha y
+  «Abrir PDF…» es un botón simple; en el estado vacío desaparece también la
+  lista bajo la zona de soltar.
+- **Vistas sin pestañas**: la barra se queda con `rFirma` y ☰. En `Main`, la
+  posición «sin pestanas · Preferencias» de la palanca Estado.
+- **Un solo rótulo**, «Abiertos recientemente», en el menú y en el estado vacío,
+  que decía «Recientes».
+- Palancas nuevas en `Main`: «Abiertos recientemente» (plegados / desplegados /
+  sin recientes) y «Desborde de pestañas» (con «Contenido: extremo»). Se va
+  «Menú +».
+
+La barra sale de `_cabecera.part` y se estampa en los seis artboards sobre
+`Main` y en `PreferenciasPantalla`, `PanelEstado`, `RetirarCertificado` y
+`PrimerArranque`, que tenían la cabecera vieja de 52 px; su cuerpo y su velo
+empiezan ahora a los 44 px. `EstadoAcercaDe` lleva la variante con pestañas:
+es un diálogo sobre `Main` lista.
+
+El porqué está en el
+[ADR-0007](../../adr/0007-cabecera-unica-sin-barra-de-menus.md) y en las fichas
+[`cabecera`](../cabecera.md#decisiones) y
+[`pestanas-de-documentos`](../pestanas-de-documentos.md#decisiones).

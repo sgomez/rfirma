@@ -15,7 +15,7 @@ Busca en este índice, y si aun así necesitas el fichero, entra con
 | 0004 | La librería nativa va en el paquete, y hay tres paquetes: flatpak, `.deb` y `.rpm` |
 | 0005 | Servidor local HTTPS, y la CA la instala la aplicación en los almacenes NSS |
 | 0006 | La firma visible se configura sobre el documento |
-| 0007 | Sin barra de menús: cabecera única |
+| 0007 | Sin barra de menús: una sola barra con la identidad, los documentos y el menú |
 | 0008 | Licencia EUPL-1.2 |
 | 0009 | Catálogo de cadenas propio, cinco idiomas, errores que clasifican situaciones |
 | 0010 | Qué recuerda rFirma entre sesiones y dónde |

@@ -144,8 +144,8 @@ Todo `padding`, `margin` y `gap` sale de la escala. **Nunca un px suelto.**
 diálogos. `pill` solo a insignias.
 
 **Capas de la ventana principal**, para que nada nuevo quede debajo de lo que
-ya flota: cabecera 5 (11 con su menú abierto), desplegables del panel 6, menú del
-«+» 8, tira de pestañas 10, **velo de diálogo 20**. `.rf-scrim` no trae
+ya flota: desplegables del panel 6, selector de certificado 7, cabecera 10 (11
+con cualquiera de sus menús abierto), **velo de diálogo 20**. `.rf-scrim` no trae
 `z-index`: quien lo coloca lo pone.
 
 Dos elevaciones: `--rf-shadow-card` (reposo) y `--rf-shadow-elevated`

@@ -37,16 +37,16 @@ paso pone por delante el deslinde: rFirma no es la aplicación oficial.
 
 **Es la ventana principal de 1180 × 700 px, no un diálogo sobre ella.** El
 primer arranque no tiene documento que tapar, y un modal con la aplicación
-muerta detrás miente sobre lo que hay debajo. Lleva la cabecera única del
-[ADR-0007](../adr/0007-cabecera-unica-sin-barra-de-menus.md) —52 px, el nombre y
-el menú— y nada más de la ventana principal: ni tira de pestañas, ni panel de
-firma, ni recientes, porque todavía no hay ningún documento que enseñar.
+muerta detrás miente sobre lo que hay debajo. Lleva la barra única del
+[ADR-0007](../adr/0007-cabecera-unica-sin-barra-de-menus.md) en su variante sin
+documentos —44 px, el nombre y el menú— y nada más de la ventana principal: ni
+botón de abrir, ni pestañas, ni panel de firma, ni recientes, porque todavía no
+hay ningún documento que enseñar.
 
 Tres regiones:
 
-1. **Cabecera**, 52 px, con raya inferior de 1 px `--rf-border-subtle`. En la
-   ventana principal esa raya la pone la tira de pestañas; aquí no hay tira, así
-   que la lleva la propia cabecera.
+1. **Cabecera**, 44 px, con su raya inferior de 1 px `--rf-border-subtle`, sin
+   documentos.
 2. **Cuerpo**, `flex:1`, desplazable, con una **columna de lectura de 640 px
    centrada**. Arriba de todo, el indicador de paso: dos rayas de 22 × 4 px y
    «Paso *n* de 2».
@@ -178,10 +178,9 @@ artboard `PrimerArranque` de la página «Recorrido de firma», cuya anotación
 guarda el porqué de cada punto. La copia legible sin cuenta está en
 [`docs/design/artboards/`](artboards/README.md).
 
-**Sin tira de pestañas.** Al pasar la ventana principal a pestañas de
-documentos (25/09/2026), esta pantalla tomó su cabecera de 52 px pero no la
-tira: una tira vacía, o con solo el «+», invitaría a abrir un PDF antes de
-terminar la configuración.
+**Sin botón de abrir ni pestañas.** Esta pantalla toma la barra de la ventana
+principal en su variante sin documentos: una barra con «Abrir PDF…» invitaría a
+abrir un PDF antes de terminar la configuración.
 
 **Dos pantallas, y no tres ni una.** Se descartaron las otras dos estructuras
 que se dibujaron:
