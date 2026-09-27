@@ -156,7 +156,7 @@ el trámite arranca como uno normal, con su espera.
 
 
 El corazón del ticket: la pantalla que hoy no existe. De arriba abajo: el
-origen, «Firmarás con» con el certificado, la nota de acotado si la hay, la caja
+origen, el selector «Certificado», la nota de acotado si la hay, la caja
 del documento con sus firmas previas y, en el pie fijo, `Cancelar` y la acción
 principal. Si el contenido no cabe —con las firmas desplegadas—, el cuerpo se
 desplaza y el pie no se mueve.
@@ -193,16 +193,17 @@ desplaza y el pie no se mueve.
   y sin tapar el desplegable ni el pie. El lote remoto sigue sin lista: sólo
   el local trae, aparte de la cuenta, el resumen de cada elemento
   ([#549](https://github.com/sgomez/rfirma/issues/549)).
-- **Certificado**, justo debajo del origen: cerrado, el campo desplegable con
-  insignia, titular, DNI · emisor y ▾. Abierto, **la lista flotante de
-  [`panel-de-firma.md`](panel-de-firma.md)**, sin reinventarla —`--rf-radius-lg`,
-  `--rf-shadow-elevated`, encabezados `Disponibles` / `No utilizables`, marca en
-  el elegido, no utilizables atenuados—, anclada debajo del campo y **flotando**
-  aunque el cuerpo se desplace, como manda el
-  [desplegable del sistema de diseño](design-system.md#desplegable). La
-  etiqueta que lo encabeza dice «Firmarás con», y «Enviarás los datos de» en
-  `selectcert`.
-- **Qué se envía**, en una línea: «Se enviarán tu **nombre**, tu **DNI**, el
+- **Certificado**, justo debajo del origen: **el selector de la ventana
+  principal, el mismo componente**, descrito en
+  [`panel-de-firma.md`](panel-de-firma.md#certificado): la caja de dos líneas,
+  el buscador al abrir, las filas con la entidad primero, las etiquetas de
+  almacén y la caducidad, y los grupos «Disponibles» / «No se pueden usar». Aquí
+  la lista mide 300 px como mucho y queda anclada debajo del campo,
+  **flotando** aunque el cuerpo se desplace, como manda el
+  [desplegable del sistema de diseño](design-system.md#desplegable). El rótulo
+  dice «Certificado» también en `selectcert`: el título «…pide tus datos de
+  identidad» y la línea de qué se envía ya distinguen el caso.
+- **Qué se envía**, en una línea: «Se enviarán tu **nombre**, tu **NIF**, el
   **emisor** del certificado y su **número de serie**».
 - **Acción principal**: `Firmar`, o `Enviar mis datos` cuando la operación es
   `selectcert`. `Cancelar` en `--ghost`.
@@ -466,7 +467,7 @@ peso al lado de la principal, que en esta ventana **no existe en ninguna
 pantalla**.
 
 Ni un color ni una sombra literales: el panel del desplegable se ordena con
-`z-index:6` —el de la lista de certificados del panel de firma— y
+`z-index:6` y
 `--rf-shadow-elevated`.
 
 ## Decisiones
@@ -491,8 +492,8 @@ para lo mismo, y el diseño de esta pantalla no cambia.
 certificado público y nada más, así que «Identificarse» y «Te identificarás con»
 nombraban un acto que no ocurre, y lo hacían justo delante de quien está
 decidiendo si consentir. Las cuatro cadenas de la rama pasan a nombrar la cesión
-de datos —«pide tus datos de identidad», «Enviarás los datos de», «Enviar mis
-datos»—; la línea de **qué se envía** se queda literal, porque ya era exacta. La
+de datos —«pide tus datos de identidad», «Enviarás los datos de» (hoy
+«Certificado», abajo), «Enviar mis datos»—; la línea de **qué se envía** se queda literal, porque ya era exacta. La
 rama de firma no cambia.
 
 **Firmar un PDF que ya trae firmas, validado el 26/09/2026** en la misma
@@ -502,6 +503,16 @@ flotante de la ventana principal, y las firmas previas dentro de la caja del
 documento con el comportamiento del panel. Sin origen, una línea en lugar de la
 caja. Palancas de estado nuevas: `firmasPrevias`, `verFirmas`, `desplegable` y
 `origen`.
+
+**El selector de certificado, validado el 27/09/2026** en la misma página,
+sobre `SedeConsentimiento`, a la vez que en `Main`. Es un solo componente para
+las dos ventanas y funciona como antes; cambian el aspecto, los datos —la
+entidad primero, las etiquetas de almacén, la caducidad—, la agrupación, que
+marca el que no se puede usar con su icono y no con opacidad, y el buscador, que
+es lo único nuevo. La cabecera se simplifica: «Firmarás con» y «Enviarás los
+datos de» pasan a «Certificado», porque el título y la línea de qué se envía ya
+dicen si se firma o se ceden datos. El porqué de cada cambio está en
+[`panel-de-firma.md`](panel-de-firma.md#decisiones).
 
 **Lo que se descartó, y por qué:**
 

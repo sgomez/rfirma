@@ -116,7 +116,7 @@ En el artboard `Main`, palancas «Menú de la cabecera»:
   macOS Tauri registra un menú nativo en la barra del sistema.
 - **Sin insignia de estado ni certificado** (25/09/2026). La insignia «Sin
   firmar / Firmado» pasa a la ✓ de cada pestaña, que dice lo mismo por
-  documento; el certificado, al botón «Firmar como».
+  documento; el certificado, al selector del [panel de firma](panel-de-firma.md).
 - **El divisor del menú.** Sin él las cuatro entradas se leen del mismo rango y
   «Estado de rFirma» deja de ser lo primero.
 - **«Estado de rFirma», no «Estado».** El nombre lo desambigua del estado del

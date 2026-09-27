@@ -33,7 +33,9 @@ menú de la cabecera».
 [#661](https://github.com/sgomez/rfirma/issues/661); ver «Lo que cambió en
 Preferencias». Firmar un PDF que ya trae firmas añade
 `EstadoFirmarDeTodosModos` y rehace el aviso de firmas previas de `Main` y de
-`SedeConsentimiento`; ver «Lo que cambió con las firmas previas».
+`SedeConsentimiento`; ver «Lo que cambió con las firmas previas». El selector de
+certificado, compartido por `Main` y `SedeConsentimiento`, se rehízo después;
+ver «Lo que cambió en el selector de certificado».
 Están aquí para que la transcripción a JSX se pueda hacer y revisar **sin
 cuenta de Claude**, y porque el repositorio es público y su interfaz no puede
 estar especificada detrás de un servicio con acceso restringido.
@@ -51,7 +53,7 @@ página «Ventana de sede · v0.5» va aparte porque es otra ventana:
 
 | # | Artboard | Estado |
 | - | -------- | ------ |
-| 5 | `Main` | La ventana principal entera, con sus estados como palanca: vacío, buscando certificados, sin certificados, sin certificado elegido, listo, certificados abiertos, firmando (diálogo con velo), firmado (el resumen) y error al firmar; la firma visible y su contenido, el menú de la cabecera, el menú «+», la franja de versión nueva bajo las pestañas, el destino, el zoom y la vista previa |
+| 5 | `Main` | La ventana principal entera, con sus estados como palanca: vacío, buscando certificados, sin certificados, sin certificado elegido, listo, certificados abiertos (el selector con su buscador), firmando (diálogo con velo), firmado (el resumen) y error al firmar; la firma visible y su contenido, el menú de la cabecera, el menú «+», la franja de versión nueva bajo las pestañas, el destino, el zoom y la vista previa |
 | 5b | `EstadoPaginasSinFirmaVisible` | Antes de firmar: las páginas donde la firma visible no cabe |
 | 5c | `EstadoFirmarDeTodosModos` | Antes de firmar: el documento trae alguna firma no válida, y se pide confirmación |
 | 6 | `EstadoPin` | Pidiendo el secreto del almacén — PIN o contraseña, según la clase de almacén —, sobre `Main` buscando certificados o lista, según el almacén |
@@ -117,12 +119,11 @@ que se decidió con él:
 - **Un certificado caducado o revocado se lista, dice por qué y no se deja
   elegir** (`disabled`). Que falte de la lista no le explica nada a quien viene
   a firmar justo con él.
-- **La fila lleva el almacén** —`DNI · emisor · almacén`—, porque el mismo
-  certificado en el perfil de Firefox y en `~/.pki/nssdb` es indistinguible sin
-  él. El disparador cerrado no lo lleva: elegido ya no desambigua nada. En la
-  v0.4 las dos filas de almacén «Tarjeta» pasan a «Instalado en rFirma» y a
-  «Chrome»: siguen siendo tres clases distintas, que es lo que sostiene la
-  columna.
+- **La fila lleva el almacén**, porque el mismo certificado en el perfil de
+  Firefox y en `~/.pki/nssdb` es indistinguible sin él. El disparador cerrado no
+  lo lleva: elegido ya no desambigua nada. Desde el 27/09/2026 va en etiquetas,
+  una por almacén, en **una sola fila por certificado**; ver «Lo que cambió en
+  el selector de certificado».
 - **Sin preselección la primera vez**: elegir con qué identidad se firma no lo
   hace la aplicación, y el orden de la lista solo dice en qué orden cargaron los
   módulos.
@@ -768,4 +769,35 @@ El porqué está en las anotaciones `nota-main`, `nota-firmar-de-todos-modos` y
 `nota-sede-consentimiento`, y en las fichas
 [`panel-de-firma`](../panel-de-firma.md),
 [`dialogo-firmar-de-todos-modos`](../dialogo-firmar-de-todos-modos.md) y
+[`ventana-de-sede`](../ventana-de-sede.md).
+
+## Lo que cambió en el selector de certificado
+
+Lo retocó el usuario a mano en Claude Design y se trajo con `/canvas-pull` el
+27/09/2026. Toca dos artboards, sin palancas nuevas:
+
+- **`Main`** quita el botón partido «Firmar como <nombre> ▾» y «Elegir
+  certificado ▾»: el pie queda con «Firmar» a secas («Firmando…» mientras
+  firma), atenuado sin certificado elegido. El selector sube al principio del
+  panel con el rótulo «Certificado»: una caja de dos líneas con ▾ que, al
+  abrirse, se convierte en el buscador y deja caer la lista hacia abajo.
+- **`SedeConsentimiento`** toma el mismo selector, esta vez con el buscador
+  funcionando —«N de M», «Ningún certificado coincide», `Escape` cierra y
+  vacía—, y su rótulo pasa de «Firmarás con» / «Enviarás los datos de» a
+  «Certificado».
+- **Las filas**, iguales en los dos: la entidad primero en los de representante,
+  etiquetas de almacén, caducidad, el emisor en el `title`, grupos «Disponibles»
+  / «No se pueden usar» con reloj o círculo tachado y el nombre en gris en lugar
+  de opacidad. Los datos de la demo son inventados, con el DNI ya enmascarado.
+
+En `Main` la caja cerrada enseña siempre el primer certificado de la lista, sea
+cual sea el elegido: es un atajo de la demo, no una decisión.
+
+**Pendiente en el lienzo**: `EstadoPaginasSinFirmaVisible`,
+`EstadoFirmarDeTodosModos`, `EstadoPin`, `EstadoPinIncorrecto` y
+`EstadoAcercaDe` copian el fondo de `Main` y siguen dibujando el botón partido.
+
+El porqué está en las fichas
+[`panel-de-firma`](../panel-de-firma.md#decisiones),
+[`ventana-principal`](../ventana-principal.md) y
 [`ventana-de-sede`](../ventana-de-sede.md).

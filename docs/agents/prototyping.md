@@ -215,6 +215,16 @@ puede desaparecer de aquí — el enlace al canvas ya vive en las fichas.
 
 No hay ningún prototipo en vuelo.
 
+El caso de uso **el selector de certificado** se validó el **27/09/2026** sin
+pasar por esta tabla: el usuario lo retocó a mano en `Main` y en
+`SedeConsentimiento` y se trajo con `/canvas-pull`, sin página de trabajo que
+fundir. Toca [`panel-de-firma.md`](../design/panel-de-firma.md), que describe el
+componente para las dos ventanas,
+[`ventana-principal.md`](../design/ventana-principal.md) y
+[`ventana-de-sede.md`](../design/ventana-de-sede.md), que enlazan el canvas desde
+su sección «Decisiones», y de rebote `design-system`, `cabecera` y los tres
+diálogos que citaban «Firmar como …».
+
 El caso de uso **firmar un PDF que ya trae firmas** se validó el **26/09/2026**
 y salió de esta tabla. Se exploró en tres páginas de trabajo
 —`trabajo-cofirma-panel`, `trabajo-cofirma-confirmacion` y

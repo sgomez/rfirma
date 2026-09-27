@@ -6,7 +6,7 @@ mitad rompe la firma.
 
 ## Casos de uso que la usan
 
-- Firmar un PDF en local — al pulsar «Firmar como …», con la sesión del almacén
+- Firmar un PDF en local — al pulsar «Firmar», con la sesión del almacén
   ya abierta. Ocupa el mismo sitio que el [diálogo de secreto](dialogo-pin.md),
   que lo precede cuando hace falta.
 

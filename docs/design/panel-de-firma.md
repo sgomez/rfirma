@@ -1,8 +1,8 @@
 # Panel de firma
 
-Columna derecha de 380 px. Reúne lo que hay que decidir antes de firmar —la firma
-visible y dónde se guarda— y termina en el botón que firma, que es también donde
-se elige el certificado.
+Columna derecha de 380 px. Reúne lo que hay que decidir antes de firmar —con
+qué certificado, la firma visible y dónde se guarda— y termina en el botón que
+firma.
 
 ## Casos de uso que la usan
 
@@ -14,19 +14,19 @@ se elige el certificado.
 
 Zona que se desliza, de arriba abajo, cada bloque solo cuando toca:
 
-1. **Aviso de firmas previas**, si el PDF ya trae firmas.
-2. **«Sin certificados»**, **«Firmado a las 11:04» y el resumen**, o **el error
+1. **Certificado**: el selector, siempre el primero mientras se puede firmar.
+2. **Aviso de firmas previas**, si el PDF ya trae firmas.
+3. **«Sin certificados»**, **«Firmado a las 11:04» y el resumen**, o **el error
    de firma**, según el estado.
-3. **Firma visible**: rótulo e interruptor; encendida, el segmentado de páginas
+4. **Firma visible**: rótulo e interruptor; encendida, el segmentado de páginas
    y su línea o campo.
-4. **Modelo**, **Con rúbrica** y, con Personalizada, **la frase**.
+5. **Modelo**, **Con rúbrica** y, con Personalizada, **la frase**.
 
 Pie fijo:
 
 1. **«Guardar en»** con `Cambiar`, y una caja con la carpeta y el nombre del
    fichero.
-2. **El botón partido**: «Firmar como <nombre y primer apellido>» y ▾, que abre
-   la lista de certificados hacia arriba.
+2. **«Firmar»**, a secas.
 
 No hay cabecera de documento: el nombre ya está en la
 [pestaña](pestanas-de-documentos.md).
@@ -41,7 +41,8 @@ No hay cabecera de documento: el nombre ya está en la
   pie no se mueve.
 - **Pie**: **162 px en todos los estados**, relleno `10px 24px 16px`, 10 px
   entre sus dos filas, borde superior de 1 px en `--rf-border-subtle`.
-- **Rótulos** («Firma visible», «Modelo», «Guardar en»): `.rf-label`.
+- **Rótulos** («Certificado», «Firma visible», «Modelo», «Guardar en»):
+  `.rf-label`.
 - **Interruptor**: el componente de [design-system.md](design-system.md), a la
   derecha del rótulo en «Firma visible» y delante del texto en «Con rúbrica».
 - **Segmentado** «Una página | Varias | Todas»: 32 px de alto, 2 px de relleno,
@@ -57,19 +58,15 @@ No hay cabecera de documento: el nombre ya está en la
 - **Caja del destino**: relleno `7px 10px`, `--rf-radius-md`, `--rf-surface`,
   borde `--rf-border-subtle`. Arriba la carpeta a 12 px en `--rf-text-muted` con
   icono de carpeta; debajo el nombre a 13 px en negrita con icono de PDF.
-- **Botón partido**: fila de 44 px. Izquierda `.rf-btn--primary` a todo lo que
-  sobra, radio solo a la izquierda, «Firmar como» a peso 400 y el nombre con
-  elipsis (entero en el `title`). Derecha, 44 px, separada por 1 px en
-  `--rf-on-primary`, con el chevron de 14 px: abajo cerrado, arriba abierto.
-- **Lista de certificados**: flota sobre el pie a 24 px de cada lado y con su
-  borde inferior 68 px por encima del fondo del panel, `z-index: 6`, relleno
-  6 px, `--rf-radius-lg`, borde `--rf-border-subtle`, `--rf-bg`,
-  `--rf-shadow-elevated`. Crece hacia arriba hasta 8 px por debajo del borde del
-  panel y a partir de ahí se desplaza.
+- **Botón de firmar**: fila de 44 px, un `.rf-btn--primary` a todo lo ancho.
+  «Firmar», o «Firmando…» mientras firma; al 55 % sin certificado elegido,
+  buscando certificados, firmando o con el rango en error.
+- **Selector de certificado**: ver «Certificado», más abajo.
 
 ## El aviso de firmas previas
 
-Si el PDF ya trae firmas, es el primer bloque de la zona que se desliza. Firmar
+Si el PDF ya trae firmas, es el primer bloque de la zona que se desliza después
+del certificado. Firmar
 junto a ellas es lo normal; el aviso dice cuántas hay y si alguna no es válida.
 
 **La línea resumen**, que es también el botón que lo pliega y lo despliega:
@@ -80,7 +77,7 @@ junto a ellas es lo normal; el aviso dice cuántas hay y si alguna no es válida
 - En el panel de 380 px la coletilla no cabe nunca: «M avisos» baja a una
   **segunda línea fija**, sin el «·», siempre en ese punto y nunca con un corte
   arbitrario. Sin avisos es una línea.
-- A la derecha, el chevron del botón partido (14 px, trazo 2), hacia abajo
+- A la derecha, un chevron de 14 px y trazo 2, hacia abajo
   plegado y girado 180° desplegado. No hay «Ver» ni «Ocultar».
 - Toda la línea es el blanco de clic: `role="button"`, `aria-expanded` y
   `aria-label` «Ver firmas anteriores» / «Ocultar firmas anteriores».
@@ -127,8 +124,8 @@ ve aunque el aviso esté plegado, y solo con un certificado elegido. Dos textos:
 «Ya lo firmaste tú con este certificado» y «Ya lo firmaste tú, con otro
 certificado tuyo». No bloquea, y las filas no llevan marca «Tú».
 
-**El botón del pie no cambia**: con firmas no válidas sigue siendo «Firmar como
-<nombre>», primario. Pulsarlo abre
+**El botón del pie no cambia**: con firmas no válidas sigue siendo «Firmar»,
+primario. Pulsarlo abre
 [«¿Firmar de todos modos?»](dialogo-firmar-de-todos-modos.md) si hay **alguna
 firma no válida**; el cambio después de la última firma y la firma sin comprobar
 del todo no lo abren. El aviso no lleva acción propia.
@@ -264,29 +261,61 @@ con elipsis y entera en el `title`.
 
 ## Certificado
 
-**Se elige en el botón de firmar.** «Firmar como Lucía Martín» dice con qué se
-firma; el ▾ abre la lista hacia arriba, sobre el pie, porque en Tauri la ventana
-corta por abajo.
+**El primer bloque del panel**, bajo el rótulo «Certificado». Es **el mismo
+componente** que el de la [ventana de sede](ventana-de-sede.md), y se describe
+solo aquí.
 
-- **Cada fila**: el titular a 14 px y peso 600; debajo, emisor · almacén ·
-  caducidad en `.rf-body rf-text-muted`. El elegido, con fondo `--rf-surface` y
-  ✓. El almacén va por nombre —«Firefox», «Chrome», «Instalado en rFirma»—,
-  nunca por ruta: el mismo certificado en dos almacenes es indistinguible sin él.
-- **Agrupada**: «Disponibles» y «No utilizables», y dentro de cada grupo orden
-  alfabético por titular con `localeCompare("es")`, desempatando por almacén. El
-  orden en que responden los módulos no significa nada para quien elige.
+**Cerrado**, una caja de dos líneas con ▾: 52 px de alto mínimo, relleno
+`6px 12px`, borde de 1 px en `--rf-border-strong`, `--rf-radius-md`, fondo
+`--rf-bg`. Arriba, a 14 px y peso 600; debajo, en `.rf-body rf-text-muted`; cada
+una en una sola línea con elipsis. Dice **el certificado elegido**:
+
+- Personal: el titular, y debajo «A título personal · ***9999**».
+- De representante: la entidad, y debajo «Lucía Martín, representante».
+- Sin elegir: «Elige un certificado», en `--rf-text-muted`.
+- Buscando: el indicador y «Buscando certificados…».
+
+**Abierto**, la caja se convierte en el buscador —lupa, borde de 2 px en
+`--rf-primary`, «Nombre, empresa, NIF o almacén»— y la lista cuelga justo
+debajo, **hacia abajo**, a 4 px y a todo el ancho del selector: 480 px de alto
+máximo, relleno 6 px, `--rf-radius-lg`, borde `--rf-border-subtle`, `--rf-bg`,
+`--rf-shadow-elevated`. Flota sobre el resto del panel y el pie, que no se
+mueven ([desplegable](design-system.md#desplegable)).
+
+**Cada fila**, con **empresa primero**:
+
+1. A 13 px y peso 600, el titular o, si es de representante, la entidad.
+2. En `.rf-body`: «A título personal · ***9999**», o «Lucía Martín,
+   representante · G12345678» con el NIF de la entidad.
+3. Una etiqueta `.rf-badge` de 11 px por almacén —«Firefox», «Chrome»,
+   «Windows», «Instalado en rFirma», nunca una ruta— y la caducidad, «Caduca en
+   03/2028», en `--rf-text-muted`.
+4. Solo si no se puede usar: el icono —reloj si caducó, círculo tachado si está
+   revocado— y el motivo en negrita, «Caducó el 3 de marzo de 2025».
+
+El emisor va en el `title`: «Emitido por AC FNMT Usuarios», y con varios
+almacenes, « · el mismo certificado en Firefox y Chrome»; en la fila que no se
+puede usar, el `title` es el motivo. El elegido lleva fondo `--rf-surface` y ✓.
+
+- **Una fila por certificado.** El mismo certificado —el mismo número de serie—
+  en varios almacenes es **una** fila con todas sus etiquetas.
+- **El DNI nunca en claro**: con la máscara de AutoFirma, la misma que la firma
+  visible pone en Firmante.
+- **Agrupada**: «Disponibles» y «No se pueden usar», y dentro de cada grupo
+  orden alfabético por la primera línea con `localeCompare("es")`.
 - **Un certificado caducado o revocado se lista, dice por qué y no se deja
-  elegir**: al 45 %, sin cursor, con el motivo en tercera línea y en negrita
-  —«Caducó el 3 de marzo de 2025»—. Esconderlo dejaría a quien viene a firmar
-  con él mirando una lista donde falta. Hoy no se comprueba la revocación, solo
-  las fechas.
+  elegir**: el nombre en `--rf-text-muted`, sin cursor, con su icono y su
+  motivo. Esconderlo dejaría a quien viene a firmar con él mirando una lista
+  donde falta. Hoy no se comprueba la revocación, solo las fechas.
+- **El buscador** filtra por titular, entidad, NIF o DNI, emisor y almacén.
+  Con texto, «N de M» encabeza la lista; sin coincidencias, «Ningún certificado
+  coincide». `Escape` cierra y vacía la búsqueda, y elegir también la vacía.
 - **Se recuerda al firmar con él**, no al elegirlo, y la próxima sesión sale ya
   puesto ([ADR-0010](../adr/0010-memoria-entre-sesiones.md)).
 - La lista se cierra al elegir, al pulsar fuera y con `Escape`.
 
-**La primera vez no hay certificado elegido.** Sin certificado recordado, el
-botón dice «Elegir certificado ▾» y es uno solo: el botón entero abre la lista
-hacia arriba. Al elegir uno pasa a «Firmar como <nombre> ▾». No se preselecciona
+**La primera vez no hay certificado elegido.** Sin certificado recordado, la
+caja dice «Elige un certificado» y «Firmar» está atenuado. No se preselecciona
 ninguno, ni siquiera cuando hay uno solo —la identidad con que se firma no la
 elige la aplicación—, y nunca uno que no sirva. Mientras tanto, el interruptor
 de «Firma visible» está apagado y desactivado, y debajo dice «Elige un
@@ -297,22 +326,25 @@ certificado para añadir una firma visible.».
 En el artboard `Main`, palanca «Estado», más «Firma visible», «Lista de
 certificados», «Firmas previas», «Pie · destino» y «Ficha 14»:
 
-- **Sin certificado elegido**: «Elegir certificado ▾» en un solo botón, que abre
-  la lista; «Firma visible» apagada y desactivada, con el aviso debajo.
-- **Buscando certificados**: el botón dice «Buscando certificados…» con un
-  indicador, sin nombre, al 55 % y con el ▾ inerte. El resto sigue editable,
-  salvo «Firma visible», desactivada y con el aviso debajo.
+- **Sin certificado elegido**: la caja dice «Elige un certificado» y «Firmar»
+  está al 55 %; «Firma visible» apagada y desactivada, con el aviso debajo.
+- **Buscando certificados**: la caja dice «Buscando certificados…» con un
+  indicador, y «Firmar» está al 55 %. El resto sigue editable, salvo «Firma
+  visible», desactivada y con el aviso debajo.
 - **Sin certificados**: arriba de la zona que se desliza, el triángulo, «Sin
   certificados» y «No hay ningún certificado con el que firmar.». En el pie, en
   la fila de 44 px, «Añadir un certificado…» (primario, lleva a los certificados
-  en fichero de [Preferencias](preferencias.md)) y «Volver a buscar».
-- **Listo**: el botón «Firmar como …». Con alguna firma previa no válida, lo
-  mismo; pulsarlo abre [«¿Firmar de todos modos?»](dialogo-firmar-de-todos-modos.md)
+  en fichero de [Preferencias](preferencias.md)) y «Volver a buscar». No hay
+  selector.
+- **Listo**: la caja con el certificado elegido y «Firmar». Con alguna firma
+  previa no válida, lo mismo; pulsarlo abre [«¿Firmar de todos modos?»](dialogo-firmar-de-todos-modos.md)
   (artboard `EstadoFirmarDeTodosModos`).
-- **Certificados abiertos**: la lista sobre el pie, el chevron hacia arriba.
+- **Certificados abiertos**: el buscador en lugar de la caja y la lista hacia
+  abajo, sobre el resto del panel. La palanca «Lista de certificados» cambia
+  cuántos hay, si se listan los que no se pueden usar y si se agrupan.
 - **Rango con error**: ver arriba.
-- **Firmando**: interruptor, controles y `Cambiar` al 35 %; el botón al 55 %
-  dice «Firmando como …». Encima, el
+- **Firmando**: el selector, interruptor, controles y `Cambiar` al 35 %; el
+  botón al 55 % dice «Firmando…». Encima, el
   [diálogo de progreso](dialogo-progreso-firma.md).
 - **Firmado**: ver «El resumen».
 - **Error al firmar**: la zona que se desliza se sustituye por una tarjeta con
@@ -359,11 +391,29 @@ acuse es de un documento concreto: al cambiar de pestaña o cerrarla, se va.
 
 ## Decisiones
 
-- **El certificado va en el botón**, no en una fila propia del panel (V3 A).
-  Dice con qué se firma justo donde se firma, y libera el alto de la fila. El
-  recibo de V3 B lo repetía en un renglón «Firmar como»: se quitó.
-- **La lista abre hacia arriba y flota**: la firma visible y el botón no se
-  mueven al abrirla.
+- **El selector de certificado se separa del botón de firmar** y sube al
+  principio del panel; el botón queda en «Firmar» a secas. Es el mismo
+  mecanismo que ya tenía la [ventana de sede](ventana-de-sede.md), donde
+  selector y botón iban separados, y así las dos pantallas quedan iguales. Se
+  descartó el botón partido «Firmar como <nombre> ▾», que venía de V3 A: no
+  estaba claro cómo cambiar de certificado, y quien pulsaba «Firmar como…» en
+  lugar de la flecha firmaba con un certificado que no quería. Separados, no se
+  firma sin querer. Con él desaparece también «Elegir certificado ▾».
+- **La lista se abre hacia abajo desde arriba del todo.** En Tauri un
+  desplegable no puede salir de la ventana, y pegado arriba es donde tiene el
+  espacio. Sigue flotando: la firma visible y el botón no se mueven al abrirla.
+- **El selector funciona como el de antes**: se recuerda el último certificado
+  con el que se firmó y la primera vez no hay preselección. Cambian el aspecto,
+  los datos —la entidad primero en los de representante, las etiquetas de
+  almacén, la caducidad— y la agrupación, que marca el que no se puede usar con
+  su icono y el nombre en gris en lugar de atenuar la fila al 45 %.
+- **Una fila por certificado, con etiquetas de almacén.** El mismo certificado
+  en varios almacenes salía en filas duplicadas que no había forma de
+  distinguir.
+- **El buscador es lo único nuevo**: gestorías y representantes manejan muchos
+  certificados.
+- **El DNI no se pinta en claro** en el selector: lleva la misma máscara que la
+  firma visible.
 - **Sin cabecera de documento**: nombre en la pestaña, páginas en el visor. Su
   «27 páginas · 2,4 MB» no aportaba nada que no se viera.
 - **Modelos en lugar de casillas por dato.** La v0.3.1 tenía cinco casillas
@@ -406,4 +456,5 @@ acuse es de un documento concreto: al cambiar de pestaña o cerrarla, se va.
 Validado en el lienzo
 [Autofirma de escritorio en Rust](https://claude.ai/design/p/c0ddbfa7-0982-498f-8f8c-8e2f8f0c6132),
 página **Recorrido de firma**, artboard `Main`, el 25/09/2026. El aviso de
-firmas previas y el paso a «¿Firmar de todos modos?», el 26/09/2026.
+firmas previas y el paso a «¿Firmar de todos modos?», el 26/09/2026. El
+selector de certificado, el 27/09/2026.

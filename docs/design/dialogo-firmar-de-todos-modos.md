@@ -6,7 +6,7 @@ salidas están siempre.
 
 ## Casos de uso que la usan
 
-- Firmar un PDF en local — al pulsar «Firmar como …» en el
+- Firmar un PDF en local — al pulsar «Firmar» en el
   [panel de firma](panel-de-firma.md), y **solo** si alguna firma previa no es
   válida: certificado caducado, certificado aún no válido, firma rota o no se
   puede validar.
@@ -63,7 +63,7 @@ recorrido de siempre.
   del panel.
 - **«Firmar de todos modos» es la acción principal** y `Cancelar` va en
   fantasma.
-- **El botón del pie del panel no cambia**: sigue siendo «Firmar como …», y es
+- **El botón del pie del panel no cambia**: sigue siendo «Firmar», y es
   este diálogo el que pregunta.
 - **No sustituye** a la pregunta de las firmas que rFirma no reconoce, que sigue
   como está.

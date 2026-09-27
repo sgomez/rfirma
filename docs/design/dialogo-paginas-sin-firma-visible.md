@@ -6,7 +6,7 @@ una degradación que ocurriría en silencio.
 
 ## Casos de uso que la usan
 
-- Firmar un PDF en local — entre pulsar «Firmar como …» y el diálogo de PIN,
+- Firmar un PDF en local — entre pulsar «Firmar» y el diálogo de PIN,
   y **solo** si la firma visible está en **Varias** o **Todas** y el conjunto de
   páginas incluye alguna donde el recuadro no cabe.
 
