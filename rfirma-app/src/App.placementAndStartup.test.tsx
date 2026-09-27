@@ -33,7 +33,7 @@ describe("App · Firma visible, en qué páginas", () => {
     );
     await openPdf(user);
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
-    await within(panel).findByRole("button", { name: "Firmar como Ada Lovelace" });
+    await within(panel).findByRole("button", { name: "Firmar" });
     await user.click(within(panel).getByRole("switch", { name: "Firma visible" }));
     await within(panel).findByText("En la página 1");
     return { user, panel };
@@ -49,7 +49,7 @@ describe("App · Firma visible, en qué páginas", () => {
     const { panel } = await openVisible();
 
     expect(box()).not.toBeNull();
-    expect(within(panel).getByRole("button", { name: "Firmar como Ada Lovelace" })).toBeEnabled();
+    expect(within(panel).getByRole("button", { name: "Firmar" })).toBeEnabled();
     expect(within(panel).queryByText(/Coloca la firma/)).not.toBeInTheDocument();
   });
 
@@ -105,7 +105,7 @@ describe("App · Firma visible, en qué páginas", () => {
     );
     await openPdf(user);
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
-    await within(panel).findByRole("button", { name: "Firmar como Ada Lovelace" });
+    await within(panel).findByRole("button", { name: "Firmar" });
     await user.click(within(panel).getByRole("switch", { name: "Firma visible" }));
     await within(panel).findByText("En la página 1");
 
@@ -133,7 +133,7 @@ describe("App · Firma visible, en qué páginas", () => {
     );
     await openPdf(user);
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
-    await within(panel).findByRole("button", { name: "Firmar como Ada Lovelace" });
+    await within(panel).findByRole("button", { name: "Firmar" });
     await user.click(within(panel).getByRole("switch", { name: "Firma visible" }));
     await within(panel).findByText("En la página 1");
     await nextPage(user);

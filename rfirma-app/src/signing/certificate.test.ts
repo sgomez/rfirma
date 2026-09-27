@@ -5,7 +5,6 @@ import {
   certificateCompactSubtitle,
   certificateHeadline,
   certificateSubtitle,
-  firstNameAndSurname,
   groupCertificates,
   installedCertificates,
   sitePreselection,
@@ -33,25 +32,6 @@ function aCertificate(overrides: Partial<Certificate> = {}): Certificate {
     ...overrides,
   };
 }
-
-describe("firstNameAndSurname", () => {
-  it("takes the given name and the first surname, for the «Firmar como» button", () => {
-    expect(firstNameAndSurname(aCertificate({ givenName: "Ada", surname: "Lovelace Byron" }))).toBe(
-      "Ada Lovelace",
-    );
-  });
-
-  it("falls back to the whole CN when the certificate carries no GN or SN", () => {
-    // `holderName` en orden real de la FNMT: APELLIDO1 APELLIDO2 NOMBRE.
-    const sealCertificate = aCertificate({
-      holderName: "LOVELACE BYRON ADA",
-      givenName: "",
-      surname: "",
-    });
-
-    expect(firstNameAndSurname(sealCertificate)).toBe("LOVELACE BYRON ADA");
-  });
-});
 
 describe("certificateHeadline", () => {
   it("puts the entity first for a representative certificate", () => {

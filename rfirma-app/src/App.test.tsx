@@ -258,7 +258,7 @@ describe("App", () => {
     // Sin preselección tampoco tras resolverse el fallo: el desplegable trae
     // el certificado, pero sigue sin elegir ninguno.
     expect(await within(panel).findByRole("combobox", { name: "Certificado" })).toHaveTextContent(
-      "Elegir certificado",
+      "Elige un certificado",
     );
   });
 
@@ -289,8 +289,8 @@ describe("App", () => {
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
     const trigger = await within(panel).findByRole("combobox", { name: "Certificado" });
 
-    expect(trigger).toHaveTextContent("Elegir certificado");
-    expect(within(panel).queryByRole("button", { name: /Firmar/ })).not.toBeInTheDocument();
+    expect(trigger).toHaveTextContent("Elige un certificado");
+    expect(within(panel).getByRole("button", { name: "Firmar" })).toBeDisabled();
 
     await user.click(trigger);
     // La lista vive en un portal, fuera de `panel` (ID-308): se busca en todo
@@ -302,7 +302,10 @@ describe("App", () => {
 
     // La firma visible arranca apagada (#974): con certificado elegido y sin
     // encenderla, firmar ya está permitido.
-    expect(within(panel).getByRole("button", { name: "Firmar como Grace Hopper" })).toBeEnabled();
+    expect(within(panel).getByRole("combobox", { name: "Certificado" })).toHaveTextContent(
+      "Grace Hopper Murray",
+    );
+    expect(within(panel).getByRole("button", { name: "Firmar" })).toBeEnabled();
   });
 
   /**
@@ -334,9 +337,10 @@ describe("App", () => {
 
     // La firma visible arranca apagada (#974): con certificado elegido y sin
     // encenderla, firmar ya está permitido.
-    expect(
-      await within(panel).findByRole("button", { name: "Firmar como Grace Hopper" }),
-    ).toBeEnabled();
+    expect(await within(panel).findByRole("button", { name: "Firmar" })).toBeEnabled();
+    expect(within(panel).getByRole("combobox", { name: "Certificado" })).toHaveTextContent(
+      "Grace Hopper Murray",
+    );
   });
 
   /**
@@ -365,7 +369,7 @@ describe("App", () => {
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
     const trigger = await within(panel).findByRole("combobox", { name: "Certificado" });
 
-    expect(trigger).toHaveTextContent("Elegir certificado");
+    expect(trigger).toHaveTextContent("Elige un certificado");
     expect(within(panel).queryByRole("alert")).not.toBeInTheDocument();
   });
 
@@ -394,7 +398,7 @@ describe("App", () => {
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
     const trigger = await within(panel).findByRole("combobox", { name: "Certificado" });
 
-    expect(trigger).toHaveTextContent("Elegir certificado");
+    expect(trigger).toHaveTextContent("Elige un certificado");
   });
 
   /** El único caso que quedaba de «con uno solo se elige solo» —el
@@ -413,8 +417,8 @@ describe("App", () => {
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
     const trigger = await within(panel).findByRole("combobox", { name: "Certificado" });
 
-    expect(trigger).toHaveTextContent("Elegir certificado");
-    expect(within(panel).queryByRole("button", { name: /Firmar/ })).not.toBeInTheDocument();
+    expect(trigger).toHaveTextContent("Elige un certificado");
+    expect(within(panel).getByRole("button", { name: "Firmar" })).toBeDisabled();
   });
 
   /** «Con uno solo se elige solo» ya no tiene excepciones que gane: si ese
@@ -437,7 +441,7 @@ describe("App", () => {
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
     const trigger = await within(panel).findByRole("combobox", { name: "Certificado" });
 
-    expect(trigger).toHaveTextContent("Elegir certificado");
+    expect(trigger).toHaveTextContent("Elige un certificado");
   });
 
   it("names the error of a PDF it cannot read instead of leaving an empty viewer", async () => {
@@ -485,11 +489,11 @@ describe("App", () => {
     );
     await openPdf(user);
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
-    await within(panel).findByRole("button", { name: "Firmar como Ada Lovelace" });
+    await within(panel).findByRole("button", { name: "Firmar" });
 
     const toggle = within(panel).getByRole("switch", { name: "Firma visible" });
     expect(toggle).toHaveAttribute("aria-checked", "false");
-    expect(within(panel).getByRole("button", { name: "Firmar como Ada Lovelace" })).toBeEnabled();
+    expect(within(panel).getByRole("button", { name: "Firmar" })).toBeEnabled();
     expect(
       screen.queryByRole("application", { name: "Recuadro de la firma visible" }),
     ).not.toBeInTheDocument();
@@ -512,7 +516,7 @@ describe("App", () => {
     );
     await openPdf(user);
     const panel = await screen.findByRole("region", { name: "Panel de firma" });
-    await within(panel).findByRole("button", { name: "Firmar como Ada Lovelace" });
+    await within(panel).findByRole("button", { name: "Firmar" });
     const toggle = within(panel).getByRole("switch", { name: "Firma visible" });
     const box = () => screen.queryByRole("application", { name: "Recuadro de la firma visible" });
 

@@ -4,6 +4,7 @@ import { ErrorNotice } from "../errors/ErrorNotice";
 import { Switch } from "../preferences/Switch";
 import type { PageChoice, PageSet, PageSets, Placement } from "../viewer/signatureBox";
 import { CertificateNotice } from "./CertificateNotice";
+import { CertificateSelect } from "./CertificateSelect";
 import type { Certificate } from "./certificate";
 import type { Destination } from "./destination";
 import type { SigningFailure } from "./failure";
@@ -44,7 +45,7 @@ export type CertificateState =
   | { kind: "failed"; failure: NamedFailure }
   /**
    * Hay certificados y **ninguno elegido**, que es lo que pasa la primera vez
-   * con varios: el disparador dice «Elegir certificado» y el botón de firmar
+   * con varios: el selector dice «Elige un certificado» y el botón de firmar
    * sigue apagado. Elegir con qué identidad se firma un documento con validez
    * jurídica no lo hace la aplicación por su cuenta.
    */
@@ -198,6 +199,20 @@ export function SigningPanel({
           />
         ) : (
           <>
+            {(certificate.kind === "loading" ||
+              certificate.kind === "unchosen" ||
+              certificate.kind === "chosen") && (
+              <div className={signing ? "panel__controls--dim" : undefined}>
+                <CertificateSelect
+                  certificates={certificate.kind === "loading" ? [] : certificate.certificates}
+                  chosen={chosen}
+                  onChoose={onChooseCertificate}
+                  searching={certificate.kind === "loading"}
+                  disabled={signing}
+                />
+              </div>
+            )}
+
             {previousSignatures.signatures.length > 0 && (
               <PreviousSignaturesNotice
                 key={document.id}
@@ -277,7 +292,6 @@ export function SigningPanel({
         signing={signing}
         blocked={blocked}
         certificate={certificate}
-        onChooseCertificate={onChooseCertificate}
         onRetryCertificates={onRetryCertificates}
         onChooseModule={onChooseModule}
         onSign={onSign}

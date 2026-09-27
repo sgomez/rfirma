@@ -32,7 +32,7 @@ function boldCount(message: string, count: number) {
 /**
  * El diálogo «¿Firmar de todos modos?» (docs/design/dialogo-firmar-de-todos-modos.md).
  *
- * Aparece **justo antes de firmar**, al pulsar «Firmar como…» con alguna
+ * Aparece **justo antes de firmar**, al pulsar «Firmar» con alguna
  * firma previa no válida: certificado caducado, aún no válido, rota o que no
  * se puede validar. No lo abren el cambio del documento ni una firma sin
  * comprobar del todo, que suben el tono del aviso pero no bloquean.

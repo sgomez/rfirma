@@ -45,7 +45,7 @@ async function withCustomModel(presigned: SigningOrder[] = []) {
   );
   await openPdf(user);
   const panel = await screen.findByRole("region", { name: "Panel de firma" });
-  await within(panel).findByRole("button", { name: "Firmar como Ada Lovelace" });
+  await within(panel).findByRole("button", { name: "Firmar" });
   await user.click(within(panel).getByRole("switch", { name: "Firma visible" }));
   await user.click(await within(panel).findByRole("radio", { name: "Personalizada" }));
   const phrase = within(panel).getByRole("textbox", { name: "Frase de la firma" });
@@ -160,7 +160,7 @@ describe("App, con el modelo Personalizada", () => {
     caretAtEnd(phrase);
     await user.keyboard(" en Sevilla");
 
-    await user.click(within(panel).getByRole("button", { name: "Firmar como Ada Lovelace" }));
+    await user.click(within(panel).getByRole("button", { name: "Firmar" }));
 
     await waitFor(() => expect(presigned).toHaveLength(1));
     expect(presigned[0]?.content).toEqual({

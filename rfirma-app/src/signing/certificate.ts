@@ -123,18 +123,6 @@ export function isUsable(status: CertificateStatus): boolean {
   return status.kind === "valid";
 }
 
-/**
- * Nombre y primer apellido, para el botón «Firmar como…»: `givenName` y la
- * primera palabra de `surname`. Sin esos dos RDN —sello, representante,
- * seudónimo— cae al `holderName` entero, que el botón recorta con elipsis.
- */
-export function firstNameAndSurname(certificate: Certificate): string {
-  const { givenName, surname, holderName } = certificate;
-  if (givenName === "" || surname === "") return holderName;
-  const [firstSurname] = surname.trim().split(/\s+/);
-  return `${givenName} ${firstSurname}`;
-}
-
 /** Primera línea de la fila: la entidad si es de representante, el titular si es personal. */
 export function certificateHeadline(certificate: Certificate): string {
   return certificate.entityName ?? certificate.holderName;

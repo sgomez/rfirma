@@ -226,6 +226,20 @@
 
 /* La fila del pie con el error: «Reintentar» se lleva el ancho que sobra,
    igual que «Añadir un certificado…», y «Volver» solo el suyo. */
+.panel__sign-row {
+  align-items: stretch;
+  height: 44px;
+}
+
+.panel__sign {
+  flex: 1;
+  min-width: 0;
+}
+
+.panel__sign[disabled] {
+  opacity: 0.55;
+}
+
 .panel__failure-actions {
   align-items: stretch;
   height: 44px;

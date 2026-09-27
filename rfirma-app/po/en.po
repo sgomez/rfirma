@@ -730,9 +730,6 @@ msgstr "Type the pages"
 msgid "panel.certificate.title"
 msgstr "Certificate"
 
-msgid "panel.certificate.changeTitle"
-msgstr "Choose another certificate"
-
 msgid "panel.certificate.loading"
 msgstr "Looking for certificates…"
 
@@ -740,17 +737,8 @@ msgstr "Looking for certificates…"
 msgid "panel.certificate.issuer"
 msgstr "Issued by {{issuer}}"
 
-msgid "panel.certificate.choose"
-msgstr "Choose certificate"
-
-msgid "panel.certificate.list"
-msgstr "Available certificates"
-
 msgid "panel.certificate.groups.available"
 msgstr "Available"
-
-msgid "panel.certificate.groups.unusable"
-msgstr "Unusable"
 
 #. Segunda línea de un certificado de representante. {{holder}} es el
 #. titular; {{nif}}, el NIF de la entidad representada.
@@ -921,11 +909,14 @@ msgstr "Can't write in {{folder}}"
 msgid "panel.footer.retrySigning"
 msgstr "Retry"
 
-msgid "panel.footer.signVerb"
-msgstr "Sign as"
+msgid "panel.footer.sign"
+msgstr "Sign"
 
-msgid "panel.footer.signingVerb"
-msgstr "Signing as"
+msgid "panel.footer.signing"
+msgstr "Signing…"
+
+msgid "panel.footer.signWith"
+msgstr "Sign with the certificate of {{holder}}"
 
 msgid "panel.footer.addCertificate"
 msgstr "Add a certificate…"

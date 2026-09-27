@@ -87,10 +87,9 @@ rojo.
 | `signing/ModelFieldset.tsx` | Qué se estampa en el recuadro: las tarjetas de modelo y la rúbrica. |
 | `signing/PhraseEditor.tsx` | La frase de *Personalizada*: el campo con las pastillas de los datos y su menú «+ Dato». |
 | `signing/phraseDom.ts` | Leer la frase del campo editable y escribirla en él, y dónde está el cursor respecto a una pastilla. No es el componente. |
-| `signing/PanelFooter.tsx` | El pie fijo del panel: el destino y, según el estado, el certificado, «Reintentar»/«Volver» o el aviso de sin certificados. |
-| `signing/CertificateFooterButton.tsx` | El botón partido «Firmar como…» del pie, con su lista hacia arriba. |
+| `signing/PanelFooter.tsx` | El pie fijo del panel: el destino y, según el estado, «Firmar», «Reintentar»/«Volver» o las salidas de sin certificados. |
 | `signing/panelFormat.ts` | El tamaño del documento en la unidad que reconoce el usuario. Sin React. |
-| `signing/CertificateSelect.tsx` | La elección de certificado, reutilizada tal cual en la sede. |
+| `signing/CertificateSelect.tsx` | El selector de certificado, primer bloque del panel y el mismo en la sede. |
 | `signing/secret.ts` | Cómo hay que pedirle el secreto al almacén: sin sesión, tecleado en pantalla, o en el teclado del lector. Sin React. |
 | `signing/SigningProgressDialog.tsx` | El progreso. |
 | `signing/UnsealedPagesDialog.tsx` | El diálogo de páginas sin sello, justo antes de firmar. |

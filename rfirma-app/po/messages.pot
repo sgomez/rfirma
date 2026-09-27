@@ -675,9 +675,6 @@ msgstr ""
 msgid "panel.certificate.title"
 msgstr ""
 
-msgid "panel.certificate.changeTitle"
-msgstr ""
-
 msgid "panel.certificate.loading"
 msgstr ""
 
@@ -685,16 +682,7 @@ msgstr ""
 msgid "panel.certificate.issuer"
 msgstr ""
 
-msgid "panel.certificate.choose"
-msgstr ""
-
-msgid "panel.certificate.list"
-msgstr ""
-
 msgid "panel.certificate.groups.available"
-msgstr ""
-
-msgid "panel.certificate.groups.unusable"
 msgstr ""
 
 #. Segunda línea de un certificado de representante. {{holder}} es el
@@ -866,10 +854,13 @@ msgstr ""
 msgid "panel.footer.retrySigning"
 msgstr ""
 
-msgid "panel.footer.signVerb"
+msgid "panel.footer.sign"
 msgstr ""
 
-msgid "panel.footer.signingVerb"
+msgid "panel.footer.signing"
+msgstr ""
+
+msgid "panel.footer.signWith"
 msgstr ""
 
 msgid "panel.footer.addCertificate"

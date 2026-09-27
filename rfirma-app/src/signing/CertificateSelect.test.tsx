@@ -93,6 +93,23 @@ describe("CertificateSelect", () => {
       expect(box()).toHaveTextContent("Ada Lovelace Byron, representante");
       expect(box()).not.toHaveTextContent("B12345678");
     });
+
+    it("says «Buscando certificados…» and does not open while the certificates are being listed", async () => {
+      renderSelect({ certificates: [], searching: true });
+
+      expect(box()).toHaveTextContent("Buscando certificados…");
+      expect(box()).toBeDisabled();
+      await userEvent.click(box());
+      expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+    });
+
+    it("does not open while disabled", async () => {
+      renderSelect({ chosen: personal, disabled: true });
+
+      expect(box()).toBeDisabled();
+      await userEvent.click(box());
+      expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+    });
   });
 
   describe("open", () => {
@@ -131,6 +148,19 @@ describe("CertificateSelect", () => {
       expect(layer.style.bottom).toBe("");
       expect(layer.style.width).toBe("480px");
       expect(layer.style.maxHeight).toBe("300px");
+    });
+
+    it("keeps the list inside the window, which is its ceiling", async () => {
+      const { container } = renderSelect();
+      const frame = container.querySelector(".certificate-select__frame") as HTMLElement;
+      vi.spyOn(frame, "getBoundingClientRect").mockReturnValue(
+        DOMRect.fromRect({ x: 20, y: window.innerHeight - 252, width: 332, height: 52 }),
+      );
+
+      await userEvent.click(box());
+
+      const layer = document.querySelector(".certificate-select__layer") as HTMLElement;
+      expect(layer.style.maxHeight).toBe("188px");
     });
 
     it("groups «Disponibles» over «No se pueden usar», alphabetical by first line", async () => {

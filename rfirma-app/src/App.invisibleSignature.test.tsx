@@ -42,7 +42,7 @@ async function signingPanel(presigned: SigningOrder[]) {
   );
   await openPdf(user);
   const panel = await screen.findByRole("region", { name: "Panel de firma" });
-  await within(panel).findByRole("button", { name: "Firmar como Ada Lovelace" });
+  await within(panel).findByRole("button", { name: "Firmar" });
   return { user, panel };
 }
 
@@ -51,7 +51,7 @@ describe("App, firmando con la firma visible apagada", () => {
     const presigned: SigningOrder[] = [];
     const { user, panel } = await signingPanel(presigned);
 
-    await user.click(within(panel).getByRole("button", { name: "Firmar como Ada Lovelace" }));
+    await user.click(within(panel).getByRole("button", { name: "Firmar" }));
 
     await waitFor(() => expect(presigned).toHaveLength(1));
     expect(presigned[0]?.placement).toBeNull();
@@ -65,7 +65,7 @@ describe("App, firmando con la firma visible apagada", () => {
     await within(panel).findByText("En la página 1");
     await user.click(toggle);
 
-    await user.click(within(panel).getByRole("button", { name: "Firmar como Ada Lovelace" }));
+    await user.click(within(panel).getByRole("button", { name: "Firmar" }));
 
     await waitFor(() => expect(presigned).toHaveLength(1));
     expect(presigned[0]?.placement).toBeNull();
