@@ -1,4 +1,4 @@
-//! La carpeta de los `.p12` instalados tras su puerto: `std::fs` y los permisos del dueño.
+//! La carpeta del Almacén de rFirma y el directorio desechable de prueba, tras su puerto: `std::fs` y los permisos del dueño.
 
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
