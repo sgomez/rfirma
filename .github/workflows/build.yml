@@ -6,7 +6,7 @@
 #
 # INVOCABLE, DE SOLO LECTURA Y SIN SECRETOS JAMAS. Es la primera de las cuatro
 # invariantes del ADR-0015, y no es cosmetica: `release.yml` va a vivir en un
-# `environment: release` con revisor humano y con la subclave GPG, asi que si
+# `environment: release` con la subclave GPG, asi que si
 # esto viese un secreto, reutilizarlo desde cualquier sitio seria un camino
 # hacia la clave de firma. Por eso:
 #

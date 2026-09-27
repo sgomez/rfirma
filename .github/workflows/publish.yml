@@ -39,7 +39,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Etiqueta de la Release a publicar (ej. v0.9.0)'
+        description: 'Etiqueta de la Release a publicar (ej. v0.9.0); lanzar con --ref sobre esa misma etiqueta'
         required: true
         type: string
 
@@ -60,9 +60,8 @@ jobs:
     if: ${{ github.event_name == 'workflow_dispatch' || !github.event.release.prerelease }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    # El mismo entorno que `release.yml`: mismo revisor humano y misma
-    # subclave. Es lo que hace que un ensayo de la tuberia pruebe de verdad el
-    # camino del secreto, y no solo la mitad de arriba.
+    # El mismo entorno que `release.yml`, que solo admite etiquetas `v*` y no
+    # pide aprobacion: publicar el borrador ya fue el gesto humano (ADR-0015).
     environment: release
     permissions:
       contents: read
@@ -80,8 +79,7 @@ jobs:
           ls -l paquetes
 
       # La publica basta para verificar, pero la clave entra por el mismo sitio
-      # que en `release.yml` —una sede unica, ID-169— y ademas asi el ensayo
-      # comprueba que el entorno de release es alcanzable tambien desde aqui.
+      # que en `release.yml`: una sede unica, ID-169.
       - name: Clave de firma
         id: gpg
         uses: ./.github/actions/import-signing-key

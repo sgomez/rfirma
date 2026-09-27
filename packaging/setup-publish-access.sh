@@ -222,6 +222,19 @@ ENV_FILE="$(mktemp -u)"   # nunca se escribe; solo evita tocar un .env real
 ENTORNO=release
 DIRECTORIO=/srv/rfirma-repo
 
+restrict_env_to_tags() {
+  gh api "repos/{owner}/{repo}/environments/$ENTORNO" >/dev/null 2>&1 || return 0
+  gh api --method PUT "repos/{owner}/{repo}/environments/$ENTORNO" --input - >/dev/null <<'JSON'
+{"deployment_branch_policy":{"protected_branches":false,"custom_branch_policies":true}}
+JSON
+  if ! gh api "repos/{owner}/{repo}/environments/$ENTORNO/deployment-branch-policies" \
+      --jq '.branch_policies[] | select(.name == "v*" and .type == "tag") | .id' | grep -q .; then
+    gh api --method POST "repos/{owner}/{repo}/environments/$ENTORNO/deployment-branch-policies" \
+      -f name='v*' -f type=tag >/dev/null
+  fi
+  note "entorno $ENTORNO restringido a las etiquetas v*"
+}
+
 set_env_secret() {
   local name="$1" fichero="$2"
   if gh secret set "$name" --env "$ENTORNO" < "$fichero" >/dev/null 2>&1; then
@@ -482,6 +495,7 @@ if ! gh api "repos/{owner}/{repo}/environments/$ENTORNO" >/dev/null 2>&1; then
     note "entorno $ENTORNO creado"
   fi
 fi
+restrict_env_to_tags
 SECRETO_PUESTO=0
 set_env_secret PUBLISH_SSH_KEY "$CLAVE" && SECRETO_PUESTO=1
 set_var PUBLISH_SSH_USER "$USUARIO"

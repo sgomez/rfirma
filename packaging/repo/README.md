@@ -44,6 +44,13 @@ Y el orden, que es todo el mecanismo:
 El árbol es **derivado**: la fuente de verdad son las Releases, que no se borran nunca. Se
 puede tirar `/srv/rfirma-repo` entero y volver a publicar; el servicio queda idéntico.
 
+Volver a publicar a mano se lanza **sobre la propia etiqueta**, porque el entorno `release`
+solo admite etiquetas `v*` y rechaza una ejecución desde `main`:
+
+```
+gh workflow run publish.yml --ref v0.4.1 -f tag=v0.4.1
+```
+
 ## Qué hay dentro del árbol
 
 ```
