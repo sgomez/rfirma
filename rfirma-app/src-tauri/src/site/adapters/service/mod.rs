@@ -10,13 +10,13 @@ use std::sync::{Arc, Mutex};
 
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::sync::oneshot;
-use tokio_native_tls::TlsAcceptor;
 
 mod idle;
 
 use idle::{IdleClock, SOCKET_TIMEOUT};
 
 use crate::lock;
+use crate::site::adapters::channel::acceptor::LocalTlsAcceptor;
 use crate::site::adapters::channel::bind::LoopbackAcceptor;
 use crate::site::adapters::channel::conversation::{answer, Answer, ECHO_OK};
 use crate::site::adapters::channel::server::acceptor_for;
@@ -130,7 +130,7 @@ async fn serve(
 
 async fn accept_until_stopped(
     listener: LoopbackAcceptor,
-    acceptor: Arc<TlsAcceptor>,
+    acceptor: Arc<LocalTlsAcceptor>,
     duty: ChannelDuty,
     inbox: Inbox,
     state: Arc<Mutex<ServiceState>>,
@@ -164,7 +164,7 @@ async fn accept_until_stopped(
 async fn attend(
     stream: tokio::net::TcpStream,
     peer: SocketAddr,
-    acceptor: &TlsAcceptor,
+    acceptor: &LocalTlsAcceptor,
     duty: &ChannelDuty,
     inbox: &Inbox,
     state: &Arc<Mutex<ServiceState>>,

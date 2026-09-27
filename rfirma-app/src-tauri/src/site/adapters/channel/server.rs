@@ -7,11 +7,10 @@ use std::sync::Arc;
 
 use futures_util::{SinkExt, StreamExt};
 use tokio::sync::oneshot;
-use tokio_native_tls::native_tls::{Identity, TlsAcceptor as NativeTlsAcceptor};
-use tokio_native_tls::TlsAcceptor;
 use tokio_tungstenite::tungstenite::handshake::server::Request;
 use tokio_tungstenite::tungstenite::Message;
 
+use crate::site::adapters::channel::acceptor::{LocalTlsAcceptor, LocalTlsStream};
 use crate::site::adapters::channel::bind::{LoopbackAcceptor, LoopbackListeners};
 use crate::site::adapters::channel::conversation::{another_operation_in_flight, answer, Answer};
 use crate::site::adapters::cookies::OperationCookies;
@@ -66,10 +65,10 @@ pub fn open(
 /// El aceptador TLS del material del servidor local, compartido con el transporte `service`.
 pub(crate) fn acceptor_for(
     certificate: &LocalServerCertificate,
-) -> Result<TlsAcceptor, ChannelError> {
+) -> Result<LocalTlsAcceptor, ChannelError> {
     let material = |error: String| ChannelError::new(Situation::MaterialNotUsable, error);
 
-    let identity = Identity::from_pkcs8(
+    LocalTlsAcceptor::from_pem(
         &certificate
             .certificate_pem()
             .map_err(|error| material(error.to_string()))?,
@@ -77,16 +76,12 @@ pub(crate) fn acceptor_for(
             .private_key_pem()
             .map_err(|error| material(error.to_string()))?,
     )
-    .map_err(|error| material(error.to_string()))?;
-
-    let acceptor = NativeTlsAcceptor::new(identity).map_err(|error| material(error.to_string()))?;
-
-    Ok(TlsAcceptor::from(acceptor))
+    .map_err(material)
 }
 
 async fn accept_until_stopped(
     listener: LoopbackAcceptor,
-    acceptor: Arc<TlsAcceptor>,
+    acceptor: Arc<LocalTlsAcceptor>,
     duty: ChannelDuty,
     operations: SiteOperations,
     stopped: oneshot::Receiver<()>,
@@ -146,8 +141,7 @@ impl Drop for FirstClient {
     }
 }
 
-type Socket =
-    tokio_tungstenite::WebSocketStream<tokio_native_tls::TlsStream<tokio::net::TcpStream>>;
+type Socket = tokio_tungstenite::WebSocketStream<LocalTlsStream>;
 
 enum Waited {
     Reply(String),
@@ -193,7 +187,7 @@ async fn wait_for_the_reply(
 /// Acepta el saludo TLS ya cifrado, tomando el `Origin` que trae; nunca lo rechaza por su valor.
 #[allow(clippy::result_large_err)]
 async fn accept_with_the_origin_of_the_greeting(
-    encrypted: tokio_native_tls::TlsStream<tokio::net::TcpStream>,
+    encrypted: LocalTlsStream,
 ) -> Result<(Socket, SiteOrigin), tokio_tungstenite::tungstenite::Error> {
     let mut origin = SiteOrigin::absent();
     let socket = tokio_tungstenite::accept_hdr_async(encrypted, |request: &Request, response| {
@@ -212,7 +206,7 @@ async fn accept_with_the_origin_of_the_greeting(
 async fn attend(
     stream: tokio::net::TcpStream,
     peer: SocketAddr,
-    acceptor: &TlsAcceptor,
+    acceptor: &LocalTlsAcceptor,
     duty: &ChannelDuty,
     operations: &SiteOperations,
     clients: &Clients,

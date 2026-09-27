@@ -176,6 +176,9 @@ oo7 = "0.5"
 openssl = { version = "0.10", features = ["vendored"] }
 # El almacén de certificados del usuario y la firma del hash con CNG (ADR-0035).
 windows-sys = { version = "0.61", features = ["Win32_Security_Cryptography"] }
+# El saludo TLS del canal local: schannel no acepta la clave de curva elíptica
+# de la CA local sin persistirla en el almacén de claves del usuario (ADR-0036).
+tokio-rustls = { version = "0.26", default-features = false, features = ["ring", "tls12"] }
 
 [dev-dependencies]
 # El cliente de canal y las pruebas del servidor abren sockets de verdad

@@ -12,6 +12,7 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `mod.rs` | La raíz de composición del contexto: sus adaptadores, su estado de proceso y sus puertos instanciados. |
 | `domain/mod.rs`, `application/mod.rs`, `adapters/mod.rs` | Solo `pub mod`: el reparto de cada capa. |
 | `application/tests.rs` | Los dobles en memoria con los que la grada A no toca disco ni red. Solo en pruebas. |
+| `adapters/channel/acceptor.rs` | El saludo TLS del servidor local que comparten el canal y `service`: `native-tls` en Linux, `rustls` en Windows (ADR-0036). Lo prueban los tests de integración del canal. |
 | `adapters/channel/bind.rs` | Ata la escucha del canal a la ubicación que le llega. Pruebas en `adapters/channel/bind/tests.rs`. |
 | `adapters/channel/conversation.rs` | Qué se contesta a cada mensaje del canal, sin socket delante. Pruebas en `adapters/channel/conversation/tests.rs`. |
 | `adapters/channel/mod.rs` | El reparto, y la tabla de las cuatro piezas del canal. Léelo antes que sus hermanos. |
