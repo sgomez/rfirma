@@ -224,7 +224,7 @@ se sustituye.
 
 El job `windows` de `ci.yml` corre en `windows-latest` cuando corre el carril de Rust o el
 nativo: compila la `.dll` (cacheada con la misma clave que la de Linux y otro `runner.os`), pasa
-`vitest`, `rustfmt` y `clippy`, las pruebas de `--lib` y las del canal local (`channel_client`,
+`rustfmt` y `clippy`, las pruebas de `--lib` y las del canal local (`channel_client`,
 `channel_operations`, `service_acknowledgement`) y, cuando se compila el binario de release,
 `just bundle-windows`, que sube el instalador como artefacto `rfirma-windows-nsis`. Las gradas B
 y C no corren: faltan softhsm, NSS y poppler.

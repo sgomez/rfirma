@@ -59,8 +59,9 @@ concurrency:
 env:
   # GraalVM CE 25, fijado por el issue #6: la linea 21 aborta dentro del
   # JNI_OnLoad de libawt.so con cualquier firma visible. El pom sigue
-  # compilando a release 21.
-  GRAALVM_VERSION: '25'
+  # compilando a release 21. Fijado a la 25.0.2 y no a '25': las 25.x
+  # «innovation» rompen native-image en PdfTimestamper (ADR-0035).
+  GRAALVM_VERSION: '25.0.2'
   # Version FIJADA de cargo-crap (ADR-0014): un solo mantenedor y cuatro meses
   # de vida, asi que una publicacion suya no puede poner en rojo un PR que no
   # la ha tocado. Tiene que coincidir con `crap_version` del justfile.
@@ -522,6 +523,122 @@ jobs:
           # existe. Un segundo rojo — «artefacto no encontrado» — solo taparia
           # el rojo de verdad.
           if-no-files-found: warn
+
+  # ==========================================================================
+  # CARRIL DE WINDOWS
+  # ==========================================================================
+  # Segunda plataforma (ADR-0035): compila la .dll con GraalVM, pasa clippy, las
+  # pruebas de --lib y del canal local y, cuando corre el binario de release,
+  # construye el instalador NSIS y lo sube como artefacto. No hay grada B ni C:
+  # en Windows faltan softhsm, NSS y poppler. Tampoco vitest: la interfaz no
+  # depende del sistema y ya la prueba la cadena TypeScript.
+  windows:
+    name: Windows
+    needs: scope
+    if: needs.scope.outputs.rust == 'true' || needs.scope.outputs.native == 'true'
+    runs-on: windows-latest
+    timeout-minutes: 150
+    defaults:
+      run:
+        shell: bash
+    env:
+      # OpenSSL se compila desde las fuentes, y el Perl de Git no sirve.
+      OPENSSL_SRC_PERL: C:/Strawberry/perl/bin/perl.exe
+      # El `prepare` de pnpm es un script de bash.
+      npm_config_script_shell: C:\Program Files\Git\bin\bash.exe
+    steps:
+      # Sin esto el checkout deja los .sh con CRLF y bash no los lee.
+      - name: Fin de linea sin conversion
+        run: git config --global core.autocrlf false
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Decide si se construye el instalador
+        id: scope
+        run: |
+          case "${{ github.event_name }}" in
+            push|workflow_dispatch|schedule)
+              echo "installer=true" >> "$GITHUB_OUTPUT" ;;
+            pull_request)
+              if ${{ contains(github.event.pull_request.labels.*.name, 'release') }}; then
+                echo "installer=true" >> "$GITHUB_OUTPUT"
+              else
+                echo "installer=false" >> "$GITHUB_OUTPUT"
+              fi ;;
+          esac
+
+      - name: GraalVM CE ${{ env.GRAALVM_VERSION }}
+        uses: graalvm/setup-graalvm@0426e2e191540e8514dff98dc52a5f5146a2a276 # v1.6.6
+        with:
+          java-version: ${{ env.GRAALVM_VERSION }}
+          distribution: graalvm-community
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3.0.0
+        with:
+          working-directory: rfirma-app
+          install: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: rfirma-app/pnpm-lock.yaml
+
+      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
+        with:
+          # Ver el comentario del mismo paso en el carril rapido.
+          toolchain: stable
+          components: clippy, rustfmt
+
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: rfirma-app/src-tauri
+
+      - uses: ./.github/actions/setup-just
+
+      # La misma clave que en Linux con otro runner.os: no se comparten.
+      - name: Cache de rfirma_crypto.dll
+        id: cache-native-lib
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: rfirma-native-bridge/target/lib/rfirma
+          key: native-lib-${{ runner.os }}-graalvm${{ env.GRAALVM_VERSION }}-${{ hashFiles('scripts/bootstrap.sh', 'rfirma-native-bridge/pom.xml', 'rfirma-native-bridge/src/main/**') }}
+
+      - name: Cache de ~/.m2
+        if: steps.cache-native-lib.outputs.cache-hit != 'true'
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.m2/repository
+          key: m2-${{ runner.os }}-${{ hashFiles('scripts/bootstrap.sh', 'rfirma-native-bridge/pom.xml') }}
+          restore-keys: m2-${{ runner.os }}-
+
+      - name: Construye la libreria nativa
+        if: steps.cache-native-lib.outputs.cache-hit != 'true'
+        run: just native
+
+      - name: Interfaz compilada
+        run: just build-ts
+
+      - name: clippy y rustfmt
+        run: just lint-rust
+
+      - name: Pruebas de --lib y del canal local
+        working-directory: rfirma-app/src-tauri
+        run: |
+          cargo test --all-features --lib
+          cargo test --all-features --test channel_client --test channel_operations --test service_acknowledgement
+
+      - name: Instalador NSIS
+        if: steps.scope.outputs.installer == 'true'
+        run: just bundle-windows
+
+      - name: Sube el instalador
+        if: steps.scope.outputs.installer == 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: rfirma-windows-nsis
+          path: rfirma-app/src-tauri/target/release/bundle/nsis/*-setup.exe
+          if-no-files-found: error
 
   # ==========================================================================
   # COMPILACION DE RELEASE

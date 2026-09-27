@@ -76,8 +76,8 @@ permissions:
 env:
   # Tiene que coincidir con la de ci.yml y con la del justfile: GraalVM CE 25,
   # porque la linea 21 aborta dentro del JNI_OnLoad de libawt.so con cualquier
-  # firma visible (issue #6).
-  GRAALVM_VERSION: '25'
+  # firma visible (issue #6). Fijada a la 25.0.2 (ADR-0035).
+  GRAALVM_VERSION: '25.0.2'
   # Tienen que coincidir con las de ci.yml: `just test-native` las usa.
   CRAP_VERSION: '0.4.3'
   NEXTEST_VERSION: '0.9.146'
