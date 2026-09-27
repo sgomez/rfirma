@@ -65,8 +65,8 @@ describe("MainWindow", () => {
     expect(screen.getByRole("region", { name: "Visor del documento" })).toBeInTheDocument();
   });
 
-  it("mounts the tab strip under the header", () => {
-    renderWithCatalog(
+  it("mounts the tab strip inside the header, with no separate strip", () => {
+    const { container } = renderWithCatalog(
       <MainWindow
         menuAnchor="header"
         onOpenPreferences={noop}
@@ -79,6 +79,8 @@ describe("MainWindow", () => {
 
     const tabs = screen.getByRole("navigation", { name: "Documentos abiertos" });
     expect(tabs).toContainElement(screen.getByText("contrato.pdf"));
+    expect(screen.getByRole("banner")).toContainElement(tabs);
+    expect(container.querySelector(".main-window")?.children).toHaveLength(2);
   });
 
   it("puts the viewer content inside the viewer region", () => {
@@ -181,7 +183,8 @@ describe("MainWindow", () => {
       />,
     );
 
-    expect(screen.getByRole("banner")).toBeInTheDocument();
+    expect(screen.getByRole("banner")).toHaveTextContent(/^rFirma$/);
+    expect(screen.getByRole("button", { name: "Menú" })).toBeInTheDocument();
     expect(screen.getByTestId("body-view")).toBeInTheDocument();
     expect(
       screen.queryByRole("navigation", { name: "Documentos abiertos" }),
