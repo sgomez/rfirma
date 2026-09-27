@@ -42,6 +42,10 @@
   font-size: 14px;
 }
 
+.certificate-select__search input:focus-visible {
+  outline: none;
+}
+
 .certificate-select__search-icon,
 .certificate-select__arrow {
   display: flex;

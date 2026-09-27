@@ -44,8 +44,8 @@ const ZOOM_STEPS = [0.5, 0.75, 1, 1.25, 1.5, 2, 3];
  */
 export const MAX_BITMAP_SCALE = 4;
 
-/** El respiro que se le deja a la hoja al ajustar, para que no toque los bordes. */
-const FIT_MARGIN = 0.92;
+/** Los dos bordes de 1 px de la hoja, que ocupan sitio fuera de la página escalada. */
+const SHEET_BORDERS = 2;
 
 /** Redondeos: dos escalas que difieren en la billonésima son la misma. */
 const EPSILON = 1e-6;
@@ -169,10 +169,10 @@ export function fitScale(
   if (mode.kind === "free") return null;
   if (!surface || !page) return null;
   if (surface.width <= 0 || page.width <= 0 || page.height <= 0) return null;
-  const byWidth = (surface.width * FIT_MARGIN) / page.width;
+  const byWidth = (surface.width - SHEET_BORDERS) / page.width;
   if (mode.kind === "fit-width") return clampZoom(byWidth);
   if (surface.height <= 0) return null;
-  return clampZoom(Math.min(byWidth, (surface.height * FIT_MARGIN) / page.height));
+  return clampZoom(Math.min(byWidth, (surface.height - SHEET_BORDERS) / page.height));
 }
 
 /**

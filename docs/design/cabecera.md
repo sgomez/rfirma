@@ -108,6 +108,13 @@ que no lo encienden.
 Sin número ni contador, y la marca es la silueta, no el color. Ocupa la columna
 de 14 px, así que aparecer o desaparecer no mueve nada.
 
+Con el menú cerrado, el mismo triángulo relleno, a 16 px, cuelga de la esquina
+superior derecha del botón de menú y sobresale 5 px, recortado de las rayas con
+un halo de 1 px del color del fondo. El botón pasa a llamarse «Menú. Estado de
+rFirma: requiere atención», y lo dice también su tooltip. Se probaron el
+triángulo sobre una pastilla, en trazo y una admiración sola: los tres se
+pegaban a las rayas del ☰ o dejaban de leerse como el aviso de dentro.
+
 ### El foco por teclado
 
 La entrada enfocada lleva el anillo del sistema —2 px en `--rf-focus-ring`, 2 px

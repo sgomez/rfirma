@@ -84,12 +84,12 @@ describe("CertificateSelect", () => {
       expect(box()).toHaveTextContent("A título personal · 99999999R");
     });
 
-    it("shows a representative certificate company first, with the short second line", () => {
+    it("shows a representative certificate company and tax id first, with the short second line", () => {
       renderSelect({ chosen: representative });
 
-      expect(box()).toHaveTextContent("Reformas Martín SL");
-      expect(box()).toHaveTextContent("Ada Lovelace Byron, representante");
-      expect(box()).not.toHaveTextContent("B12345678");
+      expect(box()).toHaveTextContent("Reformas Martín SL · B12345678");
+      expect(box()).toHaveTextContent("Representante · Ada Lovelace Byron");
+      expect(box()).not.toHaveTextContent("99999999R");
     });
 
     it("says «Buscando certificados…» and does not open while the certificates are being listed", async () => {
@@ -187,13 +187,13 @@ describe("CertificateSelect", () => {
       expect(rows()).toHaveLength(1);
     });
 
-    it("puts the company first on a representative row, with the entity's tax id", async () => {
+    it("puts the company and its tax id first on a representative row, then the representative", async () => {
       renderSelect();
 
       await userEvent.click(box());
 
-      expect(row(1)).toHaveTextContent("Reformas Martín SL");
-      expect(row(1)).toHaveTextContent("Ada Lovelace Byron, representante · B12345678");
+      expect(row(1)).toHaveTextContent("Reformas Martín SL · B12345678");
+      expect(row(1)).toHaveTextContent("Representante · Ada Lovelace Byron · 99999999R");
       expect(row(0)).toHaveTextContent("A título personal · 99999999R");
     });
 

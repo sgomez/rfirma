@@ -389,6 +389,10 @@ msgstr ""
 msgid "header.menu"
 msgstr ""
 
+#. Nombre del botón de menú cuando «Estado de rFirma» lleva el aviso.
+msgid "header.menuAttention"
+msgstr ""
+
 msgid "header.status"
 msgstr ""
 
@@ -688,7 +692,7 @@ msgid "panel.certificate.groups.available"
 msgstr ""
 
 #. Segunda línea de un certificado de representante. {{holder}} es el
-#. titular; {{nif}}, el NIF de la entidad representada.
+#. nombre y apellidos del representante; {{idNumber}}, su DNI o NIE.
 msgid "panel.certificate.onBehalfOf"
 msgstr ""
 

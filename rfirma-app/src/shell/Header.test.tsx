@@ -192,6 +192,39 @@ describe("Header", () => {
     expect(statusItem.querySelector(".header__entryIcon svg")).toBeNull();
   });
 
+  it("marks the closed menu button when something needs fixing, and says so in its name", () => {
+    renderWithCatalog(
+      <Header
+        menuAnchor="header"
+        hasAttention
+        onOpenStatus={noop}
+        onOpenPreferences={noop}
+        onOpenHelp={noop}
+        onOpenAbout={noop}
+      />,
+    );
+
+    const button = screen.getByRole("button", {
+      name: "Menú. Estado de rFirma: requiere atención",
+    });
+    expect(button.querySelector(".header__buttonAttention svg")).not.toBeNull();
+  });
+
+  it("leaves the menu button unmarked when nothing needs fixing", () => {
+    renderWithCatalog(
+      <Header
+        menuAnchor="header"
+        onOpenStatus={noop}
+        onOpenPreferences={noop}
+        onOpenHelp={noop}
+        onOpenAbout={noop}
+      />,
+    );
+
+    const button = screen.getByRole("button", { name: "Menú" });
+    expect(button.querySelector(".header__buttonAttention")).toBeNull();
+  });
+
   it("shows the attention triangle on Estado de rFirma when something needs fixing", async () => {
     const user = userEvent.setup();
     renderWithCatalog(
@@ -205,7 +238,7 @@ describe("Header", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "Menú" }));
+    await user.click(screen.getByRole("button", { name: /^Menú/ }));
 
     const statusItem = screen.getByRole("menuitem", { name: /Estado de rFirma/ });
     expect(statusItem.querySelector(".header__entryIcon svg")).not.toBeNull();

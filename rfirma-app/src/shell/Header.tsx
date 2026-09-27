@@ -95,13 +95,19 @@ export function Header({
               className={
                 open ? "rf-btn header__button header__button--open" : "rf-btn header__button"
               }
-              aria-label={t("header.menu")}
+              aria-label={hasAttention ? t("header.menuAttention") : t("header.menu")}
+              title={hasAttention ? t("header.menuAttention") : undefined}
               aria-haspopup="menu"
               aria-expanded={open}
               aria-controls={open ? menuId : undefined}
               onClick={() => setOpen((wasOpen) => !wasOpen)}
             >
               <MenuIcon size={18} />
+              {hasAttention && (
+                <span className="header__buttonAttention" aria-hidden="true">
+                  <AlertIcon size={16} />
+                </span>
+              )}
             </button>
             {open && (
               <div className="header__popup rf-card rf-card--elevated" id={menuId} role="menu">

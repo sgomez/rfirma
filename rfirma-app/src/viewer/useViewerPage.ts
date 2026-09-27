@@ -158,8 +158,9 @@ export function useViewerPage({ pdf, placement, stamped }: UseViewerPageArgs) {
   // «ajustar» un modo y no un cálculo de una vez (ID-117).
   useEffect(() => {
     if (!surface) return;
-    setVisible({ width: surface.clientWidth, height: surface.clientHeight });
-    return observeSize(surface, setVisible);
+    const measure = () => setVisible(fitArea(surface));
+    measure();
+    return observeSize(surface, measure);
   }, [surface]);
 
   // Ajustar es una razón entre la parte visible y la página: cambie la que
@@ -288,4 +289,14 @@ export function useViewerPage({ pdf, placement, stamped }: UseViewerPageArgs) {
 /** La página `wanted` recortada a las que tiene el documento. */
 function within(wanted: number, pageCount: number): number {
   return Math.min(Math.max(1, wanted), Math.max(1, pageCount));
+}
+
+/** Lo que cabe dentro del relleno de la parte visible, que es donde se ajusta la hoja. */
+function fitArea(surface: HTMLElement): ObservedSize {
+  const style = getComputedStyle(surface);
+  const px = (value: string) => Number.parseFloat(value) || 0;
+  return {
+    width: surface.clientWidth - px(style.paddingLeft) - px(style.paddingRight),
+    height: surface.clientHeight - px(style.paddingTop) - px(style.paddingBottom),
+  };
 }

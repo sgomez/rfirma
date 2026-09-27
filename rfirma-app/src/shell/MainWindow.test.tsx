@@ -40,7 +40,7 @@ describe("MainWindow", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "Menú" }));
+    await user.click(screen.getByRole("button", { name: /^Menú/ }));
 
     expect(screen.getByRole("menuitem", { name: /Estado de rFirma/ })).toBeInTheDocument();
     expect(screen.getByRole("img", { name: "Requiere atención" })).toBeInTheDocument();

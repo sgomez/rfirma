@@ -84,29 +84,33 @@ export function GeneralSection({
       <Heading label="general" headingId={`${titleId}-heading-general`} />
       <fieldset className="preferences__group" aria-labelledby={`${titleId}-heading-privacy`}>
         <GroupHeading label="privacy" headingId={`${titleId}-heading-privacy`} />
-        <Switch
-          checked={rememberActivity}
-          label={t("preferences.rememberActivity.label")}
-          hint={t("preferences.rememberActivity.hint")}
-          wide
-          onChange={onRememberActivityChange}
-        />
-        <button
-          type="button"
-          className="rf-btn rf-btn--secondary preferences__clear"
-          onClick={onForgetClick}
-        >
-          {t("preferences.rememberActivity.clear")}
-        </button>
-        {forgetFailure !== null && (
-          <ErrorNotice situation="activityNotForgotten" technicalDetail={forgetFailure} />
-        )}
-        <Switch
-          checked={notifyNewVersion}
-          label={t("preferences.notifyNewVersion.label")}
-          wide
-          onChange={onNotifyNewVersionChange}
-        />
+        <div className="preferences__options">
+          <div className="preferences__option">
+            <Switch
+              checked={rememberActivity}
+              label={t("preferences.rememberActivity.label")}
+              hint={t("preferences.rememberActivity.hint")}
+              wide
+              onChange={onRememberActivityChange}
+            />
+            <button
+              type="button"
+              className="rf-btn rf-btn--secondary preferences__clear"
+              onClick={onForgetClick}
+            >
+              {t("preferences.rememberActivity.clear")}
+            </button>
+            {forgetFailure !== null && (
+              <ErrorNotice situation="activityNotForgotten" technicalDetail={forgetFailure} />
+            )}
+          </div>
+          <Switch
+            checked={notifyNewVersion}
+            label={t("preferences.notifyNewVersion.label")}
+            wide
+            onChange={onNotifyNewVersionChange}
+          />
+        </div>
       </fieldset>
       <SaveNotice section="general" saveFailure={saveFailure} />
     </>
@@ -136,51 +140,53 @@ export function SigningSection({
   return (
     <>
       <Heading label="signing" headingId={`${titleId}-heading-signing`} />
-      <Switch
-        checked={preferences.rememberVisibleSignature}
-        label={t("preferences.rememberVisibleSignature.label")}
-        hint={t("preferences.rememberVisibleSignature.hint")}
-        wide
-        onChange={onRememberVisibleSignatureChange}
-      />
-      <div className="preferences__destination">
-        <p className="rf-label" id={`${titleId}-destination`}>
-          {t("preferences.destination.label")}
-        </p>
-        {preferences.offersOriginalFolder && (
-          <p className="rf-prose preferences__destination-note">
-            {t("preferences.destination.nextToOriginal")}
+      <div className="preferences__options">
+        <Switch
+          checked={preferences.rememberVisibleSignature}
+          label={t("preferences.rememberVisibleSignature.label")}
+          hint={t("preferences.rememberVisibleSignature.hint")}
+          wide
+          onChange={onRememberVisibleSignatureChange}
+        />
+        <div className="preferences__destination">
+          <p className="rf-label" id={`${titleId}-destination`}>
+            {t("preferences.destination.label")}
           </p>
-        )}
-        <div className="rf-row rf-gap-sm preferences__destination-row">
           {preferences.offersOriginalFolder && (
-            <span className="rf-prose preferences__destination-mode-label">
-              {t("preferences.destination.inThisFolder")}
-            </span>
+            <p className="rf-prose preferences__destination-note">
+              {t("preferences.destination.nextToOriginal")}
+            </p>
           )}
-          <p className="rf-prose preferences__destination-folder">{preferences.destination}</p>
-          <button
-            type="button"
-            className="rf-btn rf-btn--secondary"
-            onClick={onChooseDestinationClick}
-          >
-            {t("preferences.destination.change")}
-          </button>
+          <div className="rf-row rf-gap-sm preferences__destination-row">
+            {preferences.offersOriginalFolder && (
+              <span className="rf-prose preferences__destination-mode-label">
+                {t("preferences.destination.inThisFolder")}
+              </span>
+            )}
+            <p className="rf-prose preferences__destination-folder">{preferences.destination}</p>
+            <button
+              type="button"
+              className="rf-btn rf-btn--secondary"
+              onClick={onChooseDestinationClick}
+            >
+              {t("preferences.destination.change")}
+            </button>
+          </div>
         </div>
+        <Switch
+          checked={preferences.consentCountdown}
+          label={t("preferences.consentCountdown.label")}
+          wide
+          onChange={onConsentCountdownChange}
+        />
+        <Switch
+          checked={preferences.honourAutomaticSelection}
+          label={t("preferences.honourAutomaticSelection.label")}
+          hint={t("preferences.honourAutomaticSelection.hint")}
+          wide
+          onChange={onHonourAutomaticSelectionChange}
+        />
       </div>
-      <Switch
-        checked={preferences.consentCountdown}
-        label={t("preferences.consentCountdown.label")}
-        wide
-        onChange={onConsentCountdownChange}
-      />
-      <Switch
-        checked={preferences.honourAutomaticSelection}
-        label={t("preferences.honourAutomaticSelection.label")}
-        hint={t("preferences.honourAutomaticSelection.hint")}
-        wide
-        onChange={onHonourAutomaticSelectionChange}
-      />
       <SaveNotice section="signing" saveFailure={saveFailure} />
     </>
   );
@@ -311,24 +317,26 @@ export function AppearanceSection({
   return (
     <>
       <Heading label="appearance" headingId={`${titleId}-heading-appearance`} />
-      <Select
-        label={t("preferences.theme.label")}
-        value={theme}
-        options={THEMES.map((option) => ({
-          value: option,
-          label: t(`preferences.theme.${option}`),
-        }))}
-        onChange={onThemeChange}
-      />
-      <Select
-        label={t("preferences.language.label")}
-        value={language}
-        options={LANGUAGES.map((tag) => ({
-          value: tag,
-          label: t(`languages.${tag}`),
-        }))}
-        onChange={onLanguageChange}
-      />
+      <div className="preferences__options">
+        <Select
+          label={t("preferences.theme.label")}
+          value={theme}
+          options={THEMES.map((option) => ({
+            value: option,
+            label: t(`preferences.theme.${option}`),
+          }))}
+          onChange={onThemeChange}
+        />
+        <Select
+          label={t("preferences.language.label")}
+          value={language}
+          options={LANGUAGES.map((tag) => ({
+            value: tag,
+            label: t(`languages.${tag}`),
+          }))}
+          onChange={onLanguageChange}
+        />
+      </div>
       <SaveNotice section="appearance" saveFailure={saveFailure} />
     </>
   );

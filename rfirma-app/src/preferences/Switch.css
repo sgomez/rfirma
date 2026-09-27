@@ -29,16 +29,20 @@
   --switch-gap: var(--rf-space-sm);
 }
 
-/*
- * Los 44 px de alto mínimo son el área de pulsación de la sección 8 del sistema
- * de diseño, y se quedan. Consecuencia declarada (ID-44, ver
- * `docs/design/preferencias.md`): con un rótulo de una línea el botón es más
- * alto que su contenido, así que el hueco que se ve bajo el texto es mayor que
- * los 4 px de `gap`. El artboard no tiene ese hueco porque mete la ayuda dentro
- * de la columna del texto; aquí la ayuda está fuera del botón a propósito
- * —dentro se sumaría al nombre accesible—, y entre las dos cosas manda el área
- * de pulsación.
- */
+/* Los 44 px de pulsación se dan por fuera de la caja, para no dejar aire entre
+   el rótulo y su ayuda. */
+.switch--wide .switch__control {
+  position: relative;
+  min-height: 24px;
+}
+
+.switch--wide .switch__control::before {
+  content: "";
+  position: absolute;
+  inset: -10px 0;
+}
+
+/* Los 44 px de alto mínimo son el área de pulsación de la sección 8 del sistema de diseño. */
 .switch__control {
   display: flex;
   align-items: flex-start;

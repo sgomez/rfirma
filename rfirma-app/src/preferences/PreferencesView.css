@@ -114,6 +114,19 @@
   margin: 0 0 var(--rf-space-xs);
 }
 
+/* Lo que es de una opción va junto; entre opciones, el aire es el que separa. */
+.preferences__options {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rf-space-md);
+}
+
+.preferences__option {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rf-space-xs);
+}
+
 /* «Vaciar la lista» cuelga del ajuste que la explica, así que se sangra hasta
    la columna de su texto, igual que la ayuda del interruptor: los 40 px de la
    pastilla más la separación ancha de esta pantalla. */
