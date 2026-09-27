@@ -19,7 +19,7 @@ informa y no pide confirmación.
 ## Estructura
 
 `.rf-dialog` de 420 px sobre `--rf-scrim`. El velo tapa la ventana principal
-entera, cabecera y tira de pestañas incluidas, y por eso lleva `z-index:20`.
+entera, cabecera con sus pestañas incluida, y por eso lleva `z-index:20`.
 Debajo, la ventana en «listo» con el aviso de firmas previas desplegado y el
 botón del pie normal. De arriba abajo:
 

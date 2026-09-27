@@ -11,9 +11,9 @@ Los ajustes de la aplicación. Se abre desde el menú de la
 
 **Un visor de pestañas en vertical**, y **no un diálogo**: es una **vista del
 cuerpo** de la ventana, que sustituye lo que hubiera bajo la
-[cabecera](cabecera.md) y ocupa todo ese hueco, **tira de pestañas incluida**:
-las pestañas son de documentos, y Preferencias no es de ninguno. La cabecera se
-queda **intacta, con su menú alcanzable**, porque nada se pinta encima de ella: con Preferencias delante el menú de la cabecera se abre y funciona
+[cabecera](cabecera.md) y ocupa todo ese hueco; la cabecera pasa a su **variante sin documentos**, sin
+botón de abrir ni pestañas: las pestañas son de documentos, y Preferencias no es
+de ninguno. La cabecera se queda **viva, con su menú alcanzable**, porque nada se pinta encima de ella: con Preferencias delante el menú de la cabecera se abre y funciona
 igual, por clic o por teclado, y desde ahí se llega a *Estado de rFirma* sin
 pasar por cerrar Preferencias antes.
 
@@ -149,7 +149,7 @@ Es la entrada, y lleva un solo grupo: **Privacidad**.
    implementa**, y el ID-180 pierde su condición.
 
    Dónde sale el aviso lo decide
-   [ventana-principal.md](ventana-principal.md): la franja bajo la tira de pestañas. A
+   [ventana-principal.md](ventana-principal.md): la franja bajo la cabecera. A
    dónde lleva, [acerca-de.md](acerca-de.md).
 
 ### Firma
@@ -370,10 +370,11 @@ como única salida no hay ningún estado al que navegar ni nada que confirmar, a
 que lo que queda es la vista entera del cuerpo. Así `Escape` sigue valiendo y
 `Cmd+,` en macOS sigue prometiendo lo que abre.
 
-**La cabecera no cambia** mientras Preferencias está delante: la aplicación no
-se ha ido a ninguna parte y el documento sigue cargado detrás, en su pestaña. El [ADR-0007](../adr/0007-cabecera-unica-sin-barra-de-menus.md) sigue
-intacto: una cabecera única, y `Preferencias…` sigue siendo una de sus dos
-entradas.
+**La cabecera solo pierde lo de los documentos** mientras Preferencias está
+delante: `rFirma` y el menú siguen en su sitio, y el documento sigue cargado
+detrás, en su pestaña, que vuelve al cerrar Preferencias. El
+[ADR-0007](../adr/0007-cabecera-unica-sin-barra-de-menus.md) sigue intacto: una
+sola barra, y `Preferencias…` sigue siendo una de sus entradas.
 
 **Los ajustes se guardan al elegirlos, en el disco.** La pantalla llama a
 `PreferencesStore`, y debajo son `read_configuration` y `write_configuration`,

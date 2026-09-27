@@ -34,14 +34,13 @@ que es justo lo que la fila del certificado informa.
 
 **Es la ventana de 1180 × 700 px, no un diálogo sobre ella.** La
 [cabecera](cabecera.md) del
-[ADR-0007](../adr/0007-cabecera-unica-sin-barra-de-menus.md) se queda intacta
-arriba; el panel ocupa todo lo que hay debajo, tira de pestañas incluida: las
-pestañas son de documentos, y el panel no es de ninguno.
+[ADR-0007](../adr/0007-cabecera-unica-sin-barra-de-menus.md) se queda arriba
+en su variante sin documentos —`rFirma` y el menú, sin botón de abrir ni
+pestañas—: las pestañas son de documentos, y el panel no es de ninguno.
 
 Tres regiones:
 
-1. **Cabecera**, 52 px, sin tocar, con su raya inferior: tapada la tira, nadie
-   más la pone.
+1. **Cabecera**, 44 px, con su raya inferior, sin documentos.
 2. **Cuerpo**: una fila de título con `Estado de rFirma` a la izquierda y
    `Volver a comprobar` a la derecha, y bajo ella la **tabla**, que es la zona
    que se desplaza.

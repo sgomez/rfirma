@@ -215,6 +215,19 @@ puede desaparecer de aquí — el enlace al canvas ya vive en las fichas.
 
 No hay ningún prototipo en vuelo.
 
+El caso de uso **la barra única** se validó el **27/09/2026**. Se exploró en
+una página de trabajo, «Main barra unica», que se fundió en `Main` y se borró:
+cabecera y pestañas pasan a una sola barra de 44 px con el botón partido «Abrir
+PDF… ▾», y la barra sale de `_cabecera.part`, estampada en los diez artboards de
+la ventana principal, con o sin documentos. Reescribe el
+[ADR-0007](../adr/0007-cabecera-unica-sin-barra-de-menus.md) y las fichas
+[`cabecera.md`](../design/cabecera.md) y
+[`pestanas-de-documentos.md`](../design/pestanas-de-documentos.md), que enlazan
+el canvas desde su sección «Decisiones»; de rebote,
+[`ventana-principal.md`](../design/ventana-principal.md), `design-system` (las
+capas), `preferencias`, `panel-de-estado`, `retirar-certificado`,
+`primer-arranque`, `panel-de-firma` y los tres diálogos que nombraban la tira.
+
 El caso de uso **el selector de certificado** se validó el **27/09/2026** sin
 pasar por esta tabla: el usuario lo retocó a mano en `Main` y en
 `SedeConsentimiento` y se trajo con `/canvas-pull`, sin página de trabajo que

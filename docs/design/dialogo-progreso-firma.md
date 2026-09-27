@@ -13,7 +13,7 @@ mitad rompe la firma.
 ## Estructura
 
 `.rf-dialog` de 420 px sobre `.rf-scrim` con `z-index: 20`, por encima de la
-tira de pestañas:
+cabecera y sus pestañas:
 
 1. Título «Firmando el documento…».
 2. Las tres etapas, cada una con su marca.

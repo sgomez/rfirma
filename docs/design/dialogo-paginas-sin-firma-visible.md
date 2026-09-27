@@ -26,8 +26,8 @@ contarlo y dejar decidir.
 ## Estructura
 
 Diálogo de 460 px sobre `--rf-scrim`, `--rf-radius-xl`, `--rf-shadow-elevated`.
-El velo tapa la ventana principal entera, cabecera y tira de pestañas incluidas,
-y por eso lleva `z-index:20`: la tira está en 10. Debajo, la ventana en «listo»
+El velo tapa la ventana principal entera, cabecera con sus pestañas incluida,
+y por eso lleva `z-index:20`: la cabecera está en 10. Debajo, la ventana en «listo»
 con la firma visible en «Varias» (o «Todas»). De arriba abajo:
 
 1. **Titular** con el triángulo de aviso de 24 px y la cifra dentro: «3 páginas

@@ -106,14 +106,88 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
 </style>
 </helmet>
 <div class="rf-root" data-theme="{{ tema }}" style="width:1180px;height:700px;display:flex;flex-direction:column;position:relative;overflow:hidden">
-<header class="rf-row" style="height:52px;flex:none;padding:0 var(--rf-space-xs) 0 var(--rf-space-md);
-  gap:var(--rf-space-sm);background:var(--rf-surface);position:relative;z-index:{{ zCabecera }}">
-  <span class="rf-title" style="font-size:15px;letter-spacing:.4px;flex:1">rFirma</span>
-  <span title="Menú" style="width:40px;height:40px;flex:none;display:flex;align-items:center;justify-content:center;
-    border-radius:var(--rf-radius-md);{{ estiloBotonMenu }}">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></span>
+<!-- _cabecera.part -->
+<header class="rf-row" style="height:44px;flex:none;align-items:stretch;gap:0;padding:0 6px 0 4px;
+  background:var(--rf-bg);border-bottom:1px solid var(--rf-border-subtle);position:relative;z-index:{{ zCabecera }}">
+  <span style="flex:none;display:flex;align-items:center;padding:0 12px 0 8px;font-size:15px;font-weight:700;letter-spacing:.4px">rFirma</span>
+
+  <sc-if value="{{ hayTira }}" hint-placeholder-val="{{ true }}">
+    <div style="flex:none;display:flex;align-items:center;margin-right:12px;position:relative">
+      <div class="rf-row" style="height:32px;border:1px solid var(--rf-border-strong);border-radius:var(--rf-radius-md);background:var(--rf-bg)">
+        <button type="button" class="rf-btn rf-btn--ghost" title="Ctrl+O" style="{{ estiloAbrir }}">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>Abrir PDF…</button>
+        <sc-if value="{{ hayRecientes }}" hint-placeholder-val="{{ true }}">
+          <span style="width:1px;height:16px;background:var(--rf-border-subtle)"></span>
+          <button type="button" title="Abiertos recientemente" class="rf-btn rf-btn--ghost" style="{{ estiloFlecha }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="{{ estiloGiro }}"><path d="M6 9l6 6 6-6"/></svg></button>
+        </sc-if>
+      </div>
+      <sc-if value="{{ recientesAbiertos }}" hint-placeholder-val="{{ false }}">
+        <div class="rf-stack" style="position:absolute;top:100%;left:0;margin-top:4px;width:360px;padding:6px;gap:2px;
+          border-radius:var(--rf-radius-lg);border:1px solid var(--rf-border-subtle);background:var(--rf-bg);box-shadow:var(--rf-shadow-elevated)">
+          <span class="rf-label" style="padding:6px 10px 4px;letter-spacing:.6px;text-transform:uppercase">Abiertos recientemente</span>
+          <sc-for list="{{ recientes }}" as="r" hint-placeholder-count="6">
+            <div class="rf-row" style="gap:10px;padding:7px 10px;border-radius:var(--rf-radius-md);{{ r.estilo }}" title="{{ r.titulo }}">
+              <div class="rf-stack" style="flex:1;min-width:0;gap:3px">
+                <span class="rf-row" style="gap:6px;min-width:0">
+                  <span style="min-width:0;font-size:13px;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.nombre }}</span>
+                  <sc-if value="{{ r.firmado }}" hint-placeholder-val="{{ false }}">
+                    <span title="Firmado" style="display:flex;flex:none;color:var(--rf-text-muted)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+                  </sc-if>
+                </span>
+                <span class="rf-text-muted" style="font-size:12px;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.carpeta }}</span>
+              </div>
+              <span class="rf-text-muted" style="flex:none;font-size:12px;{{ r.estiloCuando }}">{{ r.cuando }}</span>
+            </div>
+          </sc-for>
+          <hr class="rf-divider" style="margin:4px 0">
+          <div class="rf-row" style="min-height:32px;padding:0 10px;border-radius:var(--rf-radius-md);font-size:13px;color:var(--rf-text-muted);cursor:pointer">Vaciar la lista</div>
+        </div>
+      </sc-if>
+    </div>
+
+    <div style="height:100%;flex:0 1 auto;min-width:0;overflow:hidden">
+      <div class="rf-row" style="height:100%;align-items:stretch;gap:2px">
+        <sc-for list="{{ pestanas }}" as="p" hint-placeholder-count="3">
+          <div class="rf-row" title="{{ p.nombre }}" style="{{ p.estilo }}">
+            <span style="display:flex;flex:none"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg></span>
+            <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ p.nombre }}</span>
+            <sc-if value="{{ p.firmado }}" hint-placeholder-val="{{ false }}">
+              <span title="Firmado" style="display:flex;flex:none;color:var(--rf-text-muted)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+            </sc-if>
+            <span title="Cerrar" style="{{ p.estiloCerrar }}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6 6 18"/></svg></span>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <sc-if value="{{ desborda }}" hint-placeholder-val="{{ false }}">
+      <div style="flex:none;display:flex;align-items:center;margin-left:4px;position:relative">
+        <button type="button" class="rf-btn rf-btn--ghost" title="Más pestañas" style="{{ estiloDesborde }}">+{{ nOcultas }}<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="{{ estiloGiroDesborde }}"><path d="M6 9l6 6 6-6"/></svg></button>
+        <sc-if value="{{ desbordeAbierto }}" hint-placeholder-val="{{ false }}">
+          <div class="rf-stack" style="position:absolute;top:100%;right:0;margin-top:4px;width:360px;padding:6px;gap:2px;
+            border-radius:var(--rf-radius-lg);border:1px solid var(--rf-border-subtle);background:var(--rf-bg);box-shadow:var(--rf-shadow-elevated)">
+            <sc-for list="{{ ocultas }}" as="o" hint-placeholder-count="8">
+              <div class="rf-row" style="gap:6px;min-width:0;padding:7px 10px;border-radius:var(--rf-radius-md);cursor:pointer" title="{{ o.nombre }}">
+                <span style="min-width:0;font-size:13px;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ o.nombre }}</span>
+                <sc-if value="{{ o.firmado }}" hint-placeholder-val="{{ false }}">
+                  <span title="Firmado" style="display:flex;flex:none;color:var(--rf-text-muted)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+                </sc-if>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+    </sc-if>
+  </sc-if>
+  <span style="flex:1;min-width:24px"></span>
+
+  <div style="flex:none;display:flex;align-items:center;margin-right:4px">
+    <span title="Menú" style="width:32px;height:30px;display:flex;align-items:center;justify-content:center;
+      border-radius:var(--rf-radius-md);{{ estiloBotonMenu }}">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></span>
+  </div>
   <sc-if value="{{ menuAbierto }}" hint-placeholder-val="{{ false }}">
-    <div role="menu" style="position:absolute;top:50px;right:var(--rf-space-xs);min-width:230px;padding:6px;
+    <div role="menu" style="position:absolute;top:48px;right:10px;min-width:230px;padding:6px;
       background:var(--rf-bg);border:1px solid var(--rf-border-subtle);border-radius:var(--rf-radius-md);
       box-shadow:var(--rf-shadow-elevated);display:flex;flex-direction:column;gap:2px">
       <sc-for list="{{ entradasMenu }}" as="e" hint-placeholder-count="4">
@@ -135,62 +209,7 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
     </div>
   </sc-if>
 </header>
-
-<nav class="rf-row" style="height:40px;flex:none;align-items:flex-end;gap:2px;padding:0 var(--rf-space-xs);
-  background:var(--rf-surface);border-bottom:1px solid var(--rf-border-subtle);position:relative;z-index:10">
-  <sc-if value="{{ desborda }}" hint-placeholder-val="{{ false }}">
-    <button type="button" title="Pestañas anteriores" style="{{ estiloHueco }}">
-      <span style="{{ estiloBotonHueco }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></span></button>
-  </sc-if>
-  <div style="height:33px;margin-bottom:-1px;flex:0 1 auto;min-width:0;overflow:hidden">
-    <div class="rf-row" style="height:100%;align-items:stretch;gap:2px;transform:translateX(-{{ desplazamiento }}px)">
-      <sc-for list="{{ pestanas }}" as="p" hint-placeholder-count="3">
-        <div class="rf-row" title="{{ p.nombre }}" style="{{ p.estilo }}">
-          <span style="display:flex;flex:none"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg></span>
-          <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ p.nombre }}</span>
-          <sc-if value="{{ p.firmado }}" hint-placeholder-val="{{ false }}">
-            <span title="Firmado" style="display:flex;flex:none;color:var(--rf-text-muted)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
-          </sc-if>
-          <span title="Cerrar" style="{{ p.estiloCerrar }}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6 6 18"/></svg></span>
-        </div>
-      </sc-for>
-    </div>
-  </div>
-  <sc-if value="{{ desborda }}" hint-placeholder-val="{{ false }}">
-    <button type="button" title="Pestañas siguientes" style="{{ estiloHueco }}">
-      <span style="{{ estiloBotonHueco }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></button>
-  </sc-if>
-  <div style="position:relative;flex:none;display:flex;align-self:flex-end">
-    <button type="button" title="Abrir un PDF" style="{{ estiloHueco }}">
-      <span style="{{ estiloBotonHueco }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span></button>
-    <sc-if value="{{ menuMas }}" hint-placeholder-val="{{ false }}">
-      <div class="rf-stack" style="position:absolute;top:100%;margin-top:4px;{{ alineaMenu }};width:340px;z-index:8;padding:6px;gap:2px;
-        border-radius:var(--rf-radius-lg);border:1px solid var(--rf-border-subtle);background:var(--rf-bg);box-shadow:var(--rf-shadow-elevated);text-align:left">
-        <div class="rf-row" style="gap:10px;min-height:36px;padding:0 10px;border-radius:var(--rf-radius-md);background:var(--rf-surface);font-size:13px;font-weight:600;cursor:pointer">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>Abrir un PDF…</div>
-        <hr class="rf-divider" style="margin:4px 0">
-        <span class="rf-label" style="padding:4px 10px 2px;letter-spacing:.6px;text-transform:uppercase">Recientes</span>
-        <sc-for list="{{ recientes }}" as="r" hint-placeholder-count="6">
-          <div class="rf-row" style="gap:10px;padding:6px 10px;border-radius:var(--rf-radius-md);{{ r.estilo }}" title="{{ r.titulo }}">
-            <div class="rf-stack" style="flex:1;min-width:0;gap:3px">
-              <span class="rf-row" style="gap:6px;min-width:0">
-                <span style="min-width:0;font-size:13px;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.nombre }}</span>
-                <sc-if value="{{ r.firmado }}" hint-placeholder-val="{{ false }}">
-                  <span title="Firmado" style="display:flex;flex:none;color:var(--rf-text-muted)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
-                </sc-if>
-              </span>
-              <span class="rf-text-muted" style="font-size:12px;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.carpeta }}</span>
-            </div>
-            <span class="rf-text-muted" style="flex:none;font-size:12px;{{ r.estiloCuando }}">{{ r.cuando }}</span>
-          </div>
-        </sc-for>
-        <hr class="rf-divider" style="margin:4px 0">
-        <div class="rf-row" style="min-height:32px;padding:0 10px;border-radius:var(--rf-radius-md);font-size:13px;color:var(--rf-text-muted);cursor:pointer">Vaciar la lista</div>
-      </div>
-    </sc-if>
-  </div>
-  <span style="flex:1;min-width:0"></span>
-</nav>
+<!-- /_cabecera.part -->
 
 <sc-if value="{{ hayVersionNueva }}" hint-placeholder-val="{{ false }}">
   <div class="rf-row rf-gap-xs" style="flex:none;padding:8px var(--rf-space-sm);
@@ -213,25 +232,57 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
       <p class="rf-title" style="font-size:16px">Arrastra un PDF o pulsa para abrirlo</p>
       <p class="rf-body rf-text-muted">No sale de tu ordenador</p>
     </div>
-    <div class="rf-stack" style="width:520px;flex:none;gap:2px">
-      <div class="rf-row" style="padding:0 10px 4px">
-        <span class="rf-label" style="flex:1;letter-spacing:.6px;text-transform:uppercase">Recientes</span>
-        <button type="button" class="rf-btn rf-btn--ghost" style="min-height:24px;padding:0 8px;font-size:12px">Vaciar la lista</button>
-      </div>
-      <sc-for list="{{ recientes }}" as="r" hint-placeholder-count="6">
-        <div class="rf-row" style="gap:10px;padding:6px 10px;border-radius:var(--rf-radius-md);{{ r.estilo }}" title="{{ r.titulo }}">
-          <div class="rf-stack" style="flex:1;min-width:0;gap:3px">
-            <span class="rf-row" style="gap:6px;min-width:0">
-              <span style="min-width:0;font-size:13px;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.nombre }}</span>
-              <sc-if value="{{ r.firmado }}" hint-placeholder-val="{{ false }}">
-                <span title="Firmado" style="display:flex;flex:none;color:var(--rf-text-muted)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
-              </sc-if>
-            </span>
-            <span class="rf-text-muted" style="font-size:12px;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.carpeta }}</span>
-          </div>
-          <span class="rf-text-muted" style="flex:none;font-size:12px;{{ r.estiloCuando }}">{{ r.cuando }}</span>
+    <sc-if value="{{ hayRecientes }}" hint-placeholder-val="{{ true }}">
+      <div class="rf-stack" style="width:520px;flex:none;gap:2px">
+        <div class="rf-row" style="padding:0 10px 4px">
+          <span class="rf-label" style="flex:1;letter-spacing:.6px;text-transform:uppercase">Abiertos recientemente</span>
+          <button type="button" class="rf-btn rf-btn--ghost" style="min-height:24px;padding:0 8px;font-size:12px">Vaciar la lista</button>
         </div>
-      </sc-for>
+        <sc-for list="{{ recientes }}" as="r" hint-placeholder-count="6">
+          <div class="rf-row" style="gap:10px;padding:6px 10px;border-radius:var(--rf-radius-md);{{ r.estilo }}" title="{{ r.titulo }}">
+            <div class="rf-stack" style="flex:1;min-width:0;gap:3px">
+              <span class="rf-row" style="gap:6px;min-width:0">
+                <span style="min-width:0;font-size:13px;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.nombre }}</span>
+                <sc-if value="{{ r.firmado }}" hint-placeholder-val="{{ false }}">
+                  <span title="Firmado" style="display:flex;flex:none;color:var(--rf-text-muted)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+                </sc-if>
+              </span>
+              <span class="rf-text-muted" style="font-size:12px;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.carpeta }}</span>
+            </div>
+            <span class="rf-text-muted" style="flex:none;font-size:12px;{{ r.estiloCuando }}">{{ r.cuando }}</span>
+          </div>
+        </sc-for>
+      </div>
+    </sc-if>
+  </div>
+</sc-if>
+
+<sc-if value="{{ sinPestanas }}" hint-placeholder-val="{{ false }}">
+  <nav class="rf-stack" style="width:220px;flex:none;gap:2px;padding:var(--rf-space-sm);
+    border-right:1px solid var(--rf-border-subtle);background:var(--rf-surface)">
+    <p class="rf-label" style="letter-spacing:.6px;text-transform:uppercase;padding:var(--rf-space-xs) var(--rf-space-xs) var(--rf-space-sm)">Preferencias</p>
+    <span class="rf-row rf-gap-xs" style="min-height:36px;padding:0 var(--rf-space-xs);border-radius:var(--rf-radius-md);font-size:14px;font-weight:600;
+      border:1px solid var(--rf-border-subtle);background:var(--rf-bg);color:var(--rf-text)">General</span>
+    <span class="rf-row rf-gap-xs" style="min-height:36px;padding:0 var(--rf-space-xs);border-radius:var(--rf-radius-md);font-size:14px;font-weight:600;
+      border:1px solid transparent;color:var(--rf-text-muted)">Firma</span>
+    <span class="rf-row rf-gap-xs" style="min-height:36px;padding:0 var(--rf-space-xs);border-radius:var(--rf-radius-md);font-size:14px;font-weight:600;
+      border:1px solid transparent;color:var(--rf-text-muted)">Certificados</span>
+    <span class="rf-row rf-gap-xs" style="min-height:36px;padding:0 var(--rf-space-xs);border-radius:var(--rf-radius-md);font-size:14px;font-weight:600;
+      border:1px solid transparent;color:var(--rf-text-muted)">Apariencia</span>
+  </nav>
+  <div class="rf-stack rf-gap-md" style="flex:1;min-width:0;padding:var(--rf-space-md)">
+    <div class="rf-stack rf-gap-sm">
+      <p class="rf-label" style="letter-spacing:.6px;text-transform:uppercase">General</p>
+      <hr class="rf-divider">
+    </div>
+    <div class="rf-stack" style="gap:10px;max-width:560px">
+      <div style="height:10px;width:30%;border-radius:2px;background:var(--rf-border-strong);opacity:.5"></div>
+      <div style="height:7px;width:88%;border-radius:2px;background:var(--rf-border-subtle)"></div>
+      <div style="height:7px;width:72%;border-radius:2px;background:var(--rf-border-subtle)"></div>
+      <div style="height:14px"></div>
+      <div style="height:10px;width:24%;border-radius:2px;background:var(--rf-border-strong);opacity:.5"></div>
+      <div style="height:7px;width:92%;border-radius:2px;background:var(--rf-border-subtle)"></div>
+      <div style="height:7px;width:64%;border-radius:2px;background:var(--rf-border-subtle)"></div>
     </div>
   </div>
 </sc-if>
@@ -655,7 +706,7 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
 </sc-if>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"tema": {"editor": "enum", "options": ["light", "dark"], "default": "light", "section": "Tema"}, "estado": {"editor": "enum", "options": ["listo", "vacio", "buscando certificados", "sin certificados", "sin certificado elegido", "certificados abiertos", "firmando", "firmado", "error al firmar"], "default": "listo", "section": "Estado"}, "firmaVisible": {"editor": "enum", "options": ["apagada", "una pagina", "una pagina, mirando otra", "varias, mirando una que esta", "varias, mirando una que no esta", "varias con error del rango", "todas", "arrastrandola"], "default": "apagada", "section": "Firma visible"}, "errorRango": {"editor": "enum", "options": ["pagina que no existe", "al reves", "mal escrito"], "default": "pagina que no existe", "section": "Firma visible"}, "vista": {"editor": "enum", "options": ["fiel", "recalculando", "no se ha podido dibujar"], "default": "fiel", "section": "Vista previa de la firma visible"}, "contenidoFirma": {"editor": "enum", "options": ["Completa", "Solo rubrica", "Personalizada", "Personalizada, menu + Dato abierto"], "default": "Completa", "section": "Contenido de la firma"}, "conRubrica": {"editor": "enum", "options": ["encendido", "apagado", "encendido sin imagen cargada"], "default": "encendido", "section": "Contenido de la firma"}, "tamano": {"editor": "enum", "options": ["normal", "pequeno (el texto se reduce)"], "default": "normal", "section": "Contenido de la firma"}, "zoom": {"editor": "enum", "options": ["50 %", "100 %", "300 %"], "default": "100 %", "section": "Visor"}, "cuantos": {"editor": "enum", "options": ["2", "4", "9"], "default": "4", "section": "Lista de certificados"}, "caducados": {"editor": "boolean", "default": true, "section": "Lista de certificados"}, "orden": {"editor": "enum", "options": ["agrupado · utilizables primero", "como hoy · el orden en que cargaron los modulos"], "default": "agrupado · utilizables primero", "section": "Lista de certificados"}, "firmasPrevias": {"editor": "enum", "options": ["ninguna", "1 · valida", "varias · todas validas", "certificado caducado", "firma longeva · certificado caducado", "certificado aun no valido", "firma rota · no corresponde con los datos", "firma rota · danada (1 firma)", "firma rota · PDF certificado que no admitia firmas", "no se puede validar", "cambio tras la ultima firma", "ya la firmaste tu · mismo certificado", "ya la firmaste tu · certificado renovado", "todo a la vez"], "default": "ninguna", "section": "Firmas previas"}, "verFirmas": {"editor": "enum", "options": ["al abrir el documento", "plegado", "desplegado"], "default": "al abrir el documento", "section": "Firmas previas"}, "ficha14": {"editor": "boolean", "default": false, "section": "Ficha 14 (v1.0)"}, "destino": {"editor": "enum", "options": ["cabe entero", "segunda firma", "no disponible"], "default": "cabe entero", "section": "Pie · destino"}, "menuMas": {"editor": "enum", "options": ["cerrado", "abierto"], "default": "cerrado", "section": "Menu +"}, "menu": {"editor": "enum", "options": ["cerrado", "abierto"], "default": "cerrado", "section": "Menu de la cabecera"}, "aviso": {"editor": "enum", "options": ["hay algo que revisar", "todo en orden"], "default": "hay algo que revisar", "section": "Menu de la cabecera"}, "foco": {"editor": "enum", "options": ["sin foco", "teclado · primera entrada", "teclado · la salida al navegador"], "default": "sin foco", "section": "Menu de la cabecera"}, "version": {"editor": "enum", "options": ["al dia", "hay version nueva"], "default": "al dia", "section": "Version"}, "contenido": {"editor": "enum", "options": ["normal", "extremo"], "default": "normal", "section": "Contenido"}, "$preview": {"width": 1180, "height": 700}}'>
+<script type="text/x-dc" data-dc-script data-props='{"tema": {"editor": "enum", "options": ["light", "dark"], "default": "light", "section": "Tema"}, "estado": {"editor": "enum", "options": ["listo", "vacio", "buscando certificados", "sin certificados", "sin certificado elegido", "certificados abiertos", "firmando", "firmado", "error al firmar", "sin pestanas · Preferencias"], "default": "listo", "section": "Estado"}, "firmaVisible": {"editor": "enum", "options": ["apagada", "una pagina", "una pagina, mirando otra", "varias, mirando una que esta", "varias, mirando una que no esta", "varias con error del rango", "todas", "arrastrandola"], "default": "apagada", "section": "Firma visible"}, "errorRango": {"editor": "enum", "options": ["pagina que no existe", "al reves", "mal escrito"], "default": "pagina que no existe", "section": "Firma visible"}, "vista": {"editor": "enum", "options": ["fiel", "recalculando", "no se ha podido dibujar"], "default": "fiel", "section": "Vista previa de la firma visible"}, "contenidoFirma": {"editor": "enum", "options": ["Completa", "Solo rubrica", "Personalizada", "Personalizada, menu + Dato abierto"], "default": "Completa", "section": "Contenido de la firma"}, "conRubrica": {"editor": "enum", "options": ["encendido", "apagado", "encendido sin imagen cargada"], "default": "encendido", "section": "Contenido de la firma"}, "tamano": {"editor": "enum", "options": ["normal", "pequeno (el texto se reduce)"], "default": "normal", "section": "Contenido de la firma"}, "zoom": {"editor": "enum", "options": ["50 %", "100 %", "300 %"], "default": "100 %", "section": "Visor"}, "cuantos": {"editor": "enum", "options": ["2", "4", "9"], "default": "4", "section": "Lista de certificados"}, "caducados": {"editor": "boolean", "default": true, "section": "Lista de certificados"}, "orden": {"editor": "enum", "options": ["agrupado · utilizables primero", "como hoy · el orden en que cargaron los modulos"], "default": "agrupado · utilizables primero", "section": "Lista de certificados"}, "firmasPrevias": {"editor": "enum", "options": ["ninguna", "1 · valida", "varias · todas validas", "certificado caducado", "firma longeva · certificado caducado", "certificado aun no valido", "firma rota · no corresponde con los datos", "firma rota · danada (1 firma)", "firma rota · PDF certificado que no admitia firmas", "no se puede validar", "cambio tras la ultima firma", "ya la firmaste tu · mismo certificado", "ya la firmaste tu · certificado renovado", "todo a la vez"], "default": "ninguna", "section": "Firmas previas"}, "verFirmas": {"editor": "enum", "options": ["al abrir el documento", "plegado", "desplegado"], "default": "al abrir el documento", "section": "Firmas previas"}, "ficha14": {"editor": "boolean", "default": false, "section": "Ficha 14 (v1.0)"}, "destino": {"editor": "enum", "options": ["cabe entero", "segunda firma", "no disponible"], "default": "cabe entero", "section": "Pie · destino"}, "recientes": {"editor": "enum", "options": ["plegados", "desplegados", "sin recientes · lista vacia o actividad apagada"], "default": "plegados", "section": "Abiertos recientemente"}, "desborde": {"editor": "enum", "options": ["cerrado", "abierto"], "default": "cerrado", "section": "Desborde de pestanas (con Contenido: extremo)"}, "menu": {"editor": "enum", "options": ["cerrado", "abierto"], "default": "cerrado", "section": "Menu de la cabecera"}, "aviso": {"editor": "enum", "options": ["hay algo que revisar", "todo en orden"], "default": "hay algo que revisar", "section": "Menu de la cabecera"}, "foco": {"editor": "enum", "options": ["sin foco", "teclado · primera entrada", "teclado · la salida al navegador"], "default": "sin foco", "section": "Menu de la cabecera"}, "version": {"editor": "enum", "options": ["al dia", "hay version nueva"], "default": "al dia", "section": "Version"}, "contenido": {"editor": "enum", "options": ["normal", "extremo"], "default": "normal", "section": "Contenido"}, "$preview": {"width": 1180, "height": 700}}'>
 class Component extends DCLogic {
   datos(extremo) {
     if (extremo) {
@@ -679,7 +730,7 @@ class Component extends DCLogic {
           "Informe-comite-etica.pdf"
         ],
         firmadas: ["Resolucion-definitiva-concesion-ayudas-2026.pdf", "Modelo-036.pdf", "CV-investigadora-principal.pdf"],
-        encima: "Declaracion-responsable-otras-ayudas.pdf",
+        encima: "Acta-comision-evaluacion.pdf",
         previas: [
           { quien: "Fundación para la Investigación Biomédica del Hospital Universitario de Ejemplo", cuando: "12/09/2026 10:32" },
           { quien: "José Antonio Pérez-Castellanos de los Santos", cuando: "15/09/2026 09:05" },
@@ -737,8 +788,8 @@ class Component extends DCLogic {
     return "En " + c.sel.length + " de " + n + " páginas";
   }
   pestanas(d, hayDoc, firmado) {
-    const base = "height:100%;flex:none;width:" + (d.extremo ? 168 : 240) + "px;padding:0 6px 0 12px;gap:8px;"
-      + "border:1px solid transparent;border-bottom:0;border-radius:var(--rf-radius-md) var(--rf-radius-md) 0 0;font-size:13px;";
+    const base = "height:100%;padding:0 4px 0 10px;gap:8px;margin-bottom:-1px;border-bottom:2px solid transparent;font-size:13px;"
+      + "flex:1 1 200px;min-width:160px;max-width:200px;";
     const cerrar = "width:20px;height:20px;flex:none;display:flex;align-items:center;justify-content:center;"
       + "border-radius:var(--rf-radius-sm);color:var(--rf-text-muted);";
     const tab = function (nombre, tipo, marca) {
@@ -746,19 +797,25 @@ class Component extends DCLogic {
       const encima = tipo === "encima";
       return {
         nombre: nombre, firmado: marca,
-        estilo: base + (activa ? "background:var(--rf-bg);border-color:var(--rf-border-subtle);color:var(--rf-text);font-weight:600;cursor:default"
-          : encima ? "background:var(--rf-border-subtle);color:var(--rf-text);cursor:pointer"
+        estilo: base + (activa ? "border-bottom-color:var(--rf-text);color:var(--rf-text);font-weight:600;cursor:default"
+          : encima ? "color:var(--rf-text);cursor:pointer"
           : "color:var(--rf-text-muted);cursor:pointer"),
         estiloCerrar: cerrar + (activa || encima ? "" : "visibility:hidden")
       };
     };
-    const r = [];
-    if (hayDoc) {
-      d.antes.forEach(function (n) { r.push(tab(n, n === d.encima ? "encima" : "otra", d.firmadas.indexOf(n) >= 0)); });
-      r.push(tab(firmado ? this.salida(d.doc) : d.doc, "activa", firmado));
-      d.despues.forEach(function (n) { r.push(tab(n, n === d.encima ? "encima" : "otra", d.firmadas.indexOf(n) >= 0)); });
+    const otra = function (n) { return tab(n, n === d.encima ? "encima" : "otra", d.firmadas.indexOf(n) >= 0); };
+    if (!hayDoc) { return { visibles: [], ocultas: [] }; }
+    const activa = tab(firmado ? this.salida(d.doc) : d.doc, "activa", firmado);
+    // A 1180 px caben 4; la activa ocupa el ultimo hueco visible.
+    const caben = 4;
+    const todas = d.antes.concat(d.despues);
+    if (todas.length < caben) {
+      return { visibles: d.antes.map(otra).concat([activa]).concat(d.despues.map(otra)), ocultas: [] };
     }
-    return r;
+    return {
+      visibles: todas.slice(0, caben - 1).map(otra).concat([activa]),
+      ocultas: todas.slice(caben - 1).map(function (n) { return { nombre: n, firmado: d.firmadas.indexOf(n) >= 0 }; })
+    };
   }
   une(a) { return a.length === 1 ? a[0] : a.slice(0, -1).join(", ") + " y " + a[a.length - 1]; }
   // «Empresa primero»: en los de representacion manda la entidad; la persona
@@ -965,6 +1022,34 @@ class Component extends DCLogic {
       separador: i > 0 ? "border-top:1px solid var(--rf-border-subtle)" : ""
     };
   }
+  // Lo que pide _cabecera.part: se copia igual en cada artboard que la estampa.
+  barra(b) {
+    const ocultas = b.ocultas || [];
+    const menuAbierto = !!b.menuAbierto;
+    const hayRecientes = b.hayRecientes !== false;
+    const recientesAbiertos = !!b.hayTira && !!b.recientesAbiertos;
+    const desbordeAbierto = ocultas.length > 0 && !!b.desbordeAbierto;
+    const giro = "transition:transform var(--rf-duration-fast, 120ms);";
+    return {
+      zCabecera: menuAbierto || recientesAbiertos || desbordeAbierto ? 11 : 10,
+      menuAbierto: menuAbierto,
+      estiloBotonMenu: menuAbierto ? "background:var(--rf-primary);color:var(--rf-on-primary)" : "color:var(--rf-text)",
+      entradasMenu: b.entradasMenu || [],
+      hayTira: !!b.hayTira,
+      pestanas: b.pestanas || [], ocultas: ocultas, nOcultas: ocultas.length,
+      desborda: ocultas.length > 0, desbordeAbierto: desbordeAbierto,
+      estiloDesborde: "min-height:0;height:30px;padding:0 6px 0 8px;gap:2px;font-size:13px;font-weight:600;color:var(--rf-text);"
+        + (desbordeAbierto ? "background:var(--rf-surface);box-shadow:inset 0 0 0 1px var(--rf-border-subtle)" : ""),
+      estiloGiroDesborde: giro + (desbordeAbierto ? "transform:rotate(180deg)" : ""),
+      hayRecientes: hayRecientes, recientesAbiertos: recientesAbiertos,
+      recientes: b.recientes || [],
+      estiloAbrir: "min-height:0;height:100%;padding:0 10px 0 9px;gap:7px;font-size:13px;font-weight:600;color:var(--rf-text);border:0;"
+        + "border-radius:" + (hayRecientes ? "var(--rf-radius-md) 0 0 var(--rf-radius-md)" : "var(--rf-radius-md)"),
+      estiloFlecha: "min-height:0;height:100%;width:30px;padding:0;border:0;color:var(--rf-text);border-radius:0 var(--rf-radius-md) var(--rf-radius-md) 0;"
+        + (recientesAbiertos ? "background:var(--rf-surface);box-shadow:inset 0 0 0 1px var(--rf-border-subtle);" : ""),
+      estiloGiro: giro + (recientesAbiertos ? "transform:rotate(180deg)" : "")
+    };
+  }
   renderVals() {
     const d = this.datos((this.props.contenido ?? "normal") === "extremo");
     const estado = this.props.estado ?? "listo";
@@ -987,7 +1072,11 @@ class Component extends DCLogic {
     const errorFirma = estado === "error al firmar";
     const sinElegir = estado === "sin certificado elegido";
     const editable = estado === "listo" || eligiendo || buscando || sinCertificados || sinElegir;
-    const hayDoc = !vacio;
+    const sinPestanas = estado.indexOf("sin pestanas") === 0;
+    const hayDoc = !vacio && !sinPestanas;
+    const tira = this.pestanas(d, hayDoc, firmado);
+    const claveRecientes = this.props.recientes ?? "plegados";
+    const hayRecientes = claveRecientes.indexOf("sin recientes") !== 0;
 
     const clavePrevias = this.props.firmasPrevias ?? "ninguna";
     const filasPrevias = this.previasDe(d, clavePrevias);
@@ -1072,16 +1161,18 @@ class Component extends DCLogic {
     const firmasResumen = [{ quien: d.titular, cuando: "***9999** · hoy, 11:04", tuya: true }]
       .concat(d.previas.slice(0, nFirmas - 1).map(function (f) { return { quien: f.quien, cuando: f.cuando, tuya: false }; }));
     const salidaEntera = this.salida(d.doc);
-    const hueco = "height:33px;margin-bottom:-1px;flex:none;display:flex;align-items:center;justify-content:center;"
-      + "padding:0 2px;border:1px solid transparent;border-bottom:0;background:none;font-family:inherit;color:var(--rf-text);cursor:pointer";
 
     const salidaDestino = destino === "segunda firma" ? salidaEntera.replace(/\.pdf$/i, "-2.pdf") : salidaEntera;
     return {
+      ...this.barra({
+        hayTira: !sinPestanas, pestanas: tira.visibles, ocultas: tira.ocultas,
+        recientes: this.recientes(d, hayDoc), hayRecientes: hayRecientes,
+        recientesAbiertos: claveRecientes === "desplegados",
+        desbordeAbierto: (this.props.desborde ?? "cerrado") === "abierto",
+        menuAbierto: menuAbierto,
+        entradasMenu: this.menuCabecera(this.props.aviso ?? "hay algo que revisar", this.props.foco ?? "sin foco")
+      }),
       tema: tema,
-      zCabecera: menuAbierto ? 11 : 5,
-      menuAbierto: menuAbierto,
-      estiloBotonMenu: menuAbierto ? "background:var(--rf-primary);color:var(--rf-on-primary)" : "color:var(--rf-text)",
-      entradasMenu: this.menuCabecera(this.props.aviso ?? "hay algo que revisar", this.props.foco ?? "sin foco"),
       hayVersionNueva: (this.props.version ?? "al dia") === "hay version nueva",
       firmando: firmando,
       buscando: buscando, sinCertificados: sinCertificados, errorFirma: errorFirma,
@@ -1100,13 +1191,7 @@ class Component extends DCLogic {
       textoAvisoVista: sinDibujar ? "No se ha podido dibujar la firma visible" : "Documento grande: la firma visible no se recalcula sola",
       botonAvisoVista: sinDibujar ? "Volver a intentarlo" : "Ver cómo queda",
       vacio: vacio, hayDoc: hayDoc,
-      pestanas: this.pestanas(d, hayDoc, firmado),
-      desborda: d.extremo && hayDoc, desplazamiento: d.extremo && hayDoc ? 190 : 0,
-      menuMas: (this.props.menuMas ?? "cerrado") === "abierto",
-      alineaMenu: d.extremo && hayDoc ? "right:0" : "left:0",
-      recientes: this.recientes(d, hayDoc),
-      estiloHueco: hueco,
-      estiloBotonHueco: "height:28px;min-width:28px;display:flex;align-items:center;justify-content:center;border-radius:var(--rf-radius-md)",
+      sinPestanas: sinPestanas,
 
       opacidadHoja: firmando ? ".45" : "1",
       hayFirmaAqui: hayFirmaAqui, arrastrando: arrastrando,
