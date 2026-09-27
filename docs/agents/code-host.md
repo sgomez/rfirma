@@ -22,6 +22,10 @@ Repo-specific facts:
 - **Merge policy support**: both `merge: auto` and `merge: manual`.
 - **Publishing commits**: `git push origin <branch>` (from a local
   `fix/pr-<PR>` branch: `git push origin HEAD:<pr-branch>`).
+- **Bodies passed as files** (`gh … -F body=@<file>`, `--body-file`): create
+  the file with `mktemp`, never a fixed path like `/tmp/review_body.txt`.
+  Concurrent workers share `/tmp`; a fixed name let one overwrite another's
+  review body, and the wrong review was posted on a PR.
 - **CI**: GitHub Actions, workflow `CI` (`.github/workflows/ci.yml`), on
   every pull request. How to wait for the checks, read the ones recorded for
   a head sha, tell a code-red from an infra-red, and what green does and does
