@@ -603,13 +603,8 @@ fn removing_an_installed_certificate_is_refused_instead_of_deleting_the_shared_s
             .map(|certificate| certificate.reference().clone()),
     );
 
-    let failure = certificates::remove_installed(
-        &RealInstalledFolder,
-        installed.path(),
-        &handles[0],
-        &listed,
-    )
-    .expect_err("el borrado fino aun no existe: quitar no puede llevarse el almacen entero");
+    let failure = certificates::remove_installed(installed.path(), &handles[0], &listed)
+        .expect_err("el borrado fino aun no existe: quitar no puede llevarse el almacen entero");
 
     assert_eq!(
         rfirma_lib::crossing::Failure::from(failure).situation,
@@ -636,13 +631,8 @@ fn a_certificate_from_somewhere_else_is_not_removed() {
             .map(|certificate| certificate.reference().clone()),
     );
 
-    let failure = certificates::remove_installed(
-        &RealInstalledFolder,
-        installed.path(),
-        &handles[0],
-        &listed,
-    )
-    .expect_err("no viene de este directorio");
+    let failure = certificates::remove_installed(installed.path(), &handles[0], &listed)
+        .expect_err("no viene de este directorio");
 
     assert_eq!(
         rfirma_lib::crossing::Failure::from(failure).situation,

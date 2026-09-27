@@ -288,15 +288,14 @@ fn only_supported_keys(
     Ok(())
 }
 
-/// Elimina el almacén correspondiente a un certificado PKCS#12 instalado (ADR-0011).
+/// Se niega a eliminar un certificado del Almacén de rFirma: es una única base compartida (ADR-0011).
 pub fn remove_installed(
-    folder: &dyn InstalledFolder,
     installed_dir: &Path,
     handle: &str,
     listed: &ListedCertificates,
 ) -> Result<(), InstallError> {
     let reference = listed.get(handle).ok_or_else(not_from_the_last_listing)?;
-    let directory = reference
+    reference
         .store()
         .installed_directory_under(installed_dir)
         .ok_or_else(|| {
@@ -305,20 +304,12 @@ pub fn remove_installed(
                 "ese certificado no viene de un .p12 instalado",
             )
         })?;
-    if directory.as_path() == installed_dir {
-        return Err(TokenError::new(
-            Situation::RemovalNotSupported,
-            "el Almacen de rFirma es una unica base compartida: quitar este certificado \
-             se llevaria los demas, asi que se niega hasta que exista borrado fino",
-        )
-        .into());
-    }
-    folder.remove(&directory).map_err(|error| {
-        InstallError::Store(MemoryError::new(
-            StoreSituation::Unwritable,
-            format!("no se ha podido quitar el almacen del .p12: {error}"),
-        ))
-    })
+    Err(TokenError::new(
+        Situation::RemovalNotSupported,
+        "el Almacen de rFirma es una unica base compartida: quitar este certificado \
+         se llevaria los demas, asi que se niega hasta que exista borrado fino",
+    )
+    .into())
 }
 
 fn not_from_the_last_listing() -> TokenError {
