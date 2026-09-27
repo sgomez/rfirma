@@ -3,7 +3,7 @@
 //! (ADR-0001, ADR-0014, ADR-0034).
 
 use std::fmt;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use crate::identity::domain::algorithm::SignatureAlgorithm;
 use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
@@ -106,6 +106,12 @@ pub trait InstalledFolder {
 
     /// Borra la carpeta del almacén y todo lo que hubiera dentro.
     fn remove(&self, directory: &Path) -> Result<(), String>;
+
+    /// Borra un fichero suelto si existe; no falla si ya no está.
+    fn remove_file(&self, path: &Path);
+
+    /// Una ruta nueva y desechable donde probar un `.p12` sin tocar el Almacén de rFirma.
+    fn staging_directory(&self) -> PathBuf;
 }
 
 /// El certificado con el que se firmó la última vez, recordado entre sesiones (ADR-0010).

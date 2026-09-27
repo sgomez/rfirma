@@ -28,6 +28,8 @@ pub enum Situation {
     KeyKindUnsupported,
     /// El token no ofrece el mecanismo que pide el algoritmo de firma.
     MechanismNotOffered,
+    /// El certificado vive en el Almacén de rFirma compartido: quitarlo se niega en vez de borrarlo entero.
+    RemovalNotSupported,
     /// Error no clasificado con código crudo.
     Unknown,
 }

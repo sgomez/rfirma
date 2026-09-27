@@ -155,6 +155,8 @@ pub fn install_pkcs12(
     password: &str,
 ) -> Result<(), InstallError> {
     let pin = keyring.get_or_create_pin()?;
+    validate_pkcs12_alone(token, folder, pkcs12, password)?;
+
     let already_existed = installed_dir.join("cert9.db").is_file();
     folder.make(installed_dir).map_err(|error| {
         InstallError::Store(MemoryError::new(
@@ -164,13 +166,13 @@ pub fn install_pkcs12(
     })?;
     folder.restrict_to_owner(installed_dir);
 
-    let installed = token
-        .import_pkcs12(installed_dir, pkcs12, password, &pin)
-        .and_then(|store| only_supported_keys(token, &store, &pin));
+    let installed = token.import_pkcs12(installed_dir, pkcs12, password, &pin);
 
     if let Err(error) = installed {
         if !already_existed {
-            let _ = folder.remove(installed_dir);
+            for file in ["cert9.db", "key4.db"] {
+                folder.remove_file(&installed_dir.join(file));
+            }
         }
         return Err(error.into());
     }
@@ -179,6 +181,31 @@ pub fn install_pkcs12(
         folder.restrict_to_owner(&installed_dir.join(file));
     }
     Ok(())
+}
+
+/// Importa el `.p12` en un almacén desechable para comprobarlo antes de tocar el Almacén de rFirma compartido.
+fn validate_pkcs12_alone(
+    token: &dyn Token,
+    folder: &dyn InstalledFolder,
+    pkcs12: &[u8],
+    password: &str,
+) -> Result<(), InstallError> {
+    let staging = folder.staging_directory();
+    folder.make(&staging).map_err(|error| {
+        InstallError::Store(MemoryError::new(
+            StoreSituation::Unwritable,
+            format!("no se ha podido preparar un almacen temporal para comprobar el .p12: {error}"),
+        ))
+    })?;
+    folder.restrict_to_owner(&staging);
+
+    let staging_pin = ProtectedSecret::from_str("comprobacion-temporal-del-p12");
+    let checked = token
+        .import_pkcs12(&staging, pkcs12, password, &staging_pin)
+        .and_then(|store| only_supported_keys(token, &store, &staging_pin));
+
+    let _ = folder.remove(&staging);
+    checked.map(|_| ()).map_err(InstallError::from)
 }
 
 /// Quién pide la contraseña del `.p12`, en qué idioma y sobre qué ventana.
@@ -278,6 +305,14 @@ pub fn remove_installed(
                 "ese certificado no viene de un .p12 instalado",
             )
         })?;
+    if directory.as_path() == installed_dir {
+        return Err(TokenError::new(
+            Situation::RemovalNotSupported,
+            "el Almacen de rFirma es una unica base compartida: quitar este certificado \
+             se llevaria los demas, asi que se niega hasta que exista borrado fino",
+        )
+        .into());
+    }
     folder.remove(&directory).map_err(|error| {
         InstallError::Store(MemoryError::new(
             StoreSituation::Unwritable,

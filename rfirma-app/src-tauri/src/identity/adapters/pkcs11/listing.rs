@@ -10,7 +10,7 @@ use cryptoki::types::AuthPin;
 use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
 use crate::identity::domain::error::{Situation, TokenError};
 use crate::identity::domain::protected_secret::ProtectedSecret;
-use crate::identity::domain::store::Store;
+use crate::identity::domain::store::{Store, StoreClass};
 
 use super::session::{context, the_store_is_really_there, usable_slots};
 
@@ -99,7 +99,9 @@ fn signable_certificates(
     token_label: &str,
     private_keys_hidden: bool,
 ) -> Result<Vec<TokenCertificate>, TokenError> {
-    if private_keys_hidden {
+    let cannot_check_the_session =
+        matches!(store.class(), StoreClass::Card | StoreClass::Installed);
+    if cannot_check_the_session && private_keys_hidden {
         // Sin sesión no hay clave privada que emparejar: se filtra por contenido (ADR-0025).
         return Ok(all_certificates_in_session(session, store, token_label)?
             .into_iter()

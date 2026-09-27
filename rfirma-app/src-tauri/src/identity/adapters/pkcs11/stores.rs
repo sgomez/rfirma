@@ -124,13 +124,28 @@ pub fn softoken_under(usr_lib: &Path) -> Option<PathBuf> {
         .next()
 }
 
-/// El Almacén de rFirma bajo `directory`, si ya se ha instalado algún certificado en él (ADR-0034).
+/// El Almacén de rFirma bajo `directory` y los almacenes por fichero heredados que sigan debajo (ADR-0034).
 pub fn installed_stores(softoken: &Path, directory: &Path) -> Vec<Store> {
+    let mut installed = Vec::new();
     if directory.join("cert9.db").is_file() {
-        vec![Store::nss(softoken, directory)]
-    } else {
-        Vec::new()
+        installed.push(Store::installed_nss(softoken, directory));
     }
+
+    let Ok(entries) = std::fs::read_dir(directory) else {
+        return installed;
+    };
+    let mut legacy: Vec<PathBuf> = entries
+        .flatten()
+        .map(|entry| entry.path())
+        .filter(|path| path.join("cert9.db").is_file())
+        .collect();
+    legacy.sort();
+    installed.extend(
+        legacy
+            .iter()
+            .map(|profile| Store::installed_nss(softoken, profile)),
+    );
+    installed
 }
 
 /// Pares de directorios de configuración y datos de Firefox en el sistema.

@@ -315,14 +315,15 @@ pub(crate) fn openssl_prints_the_certificates_of(signature: &Path) -> String {
     String::from_utf8_lossy(&output.stdout).into_owned()
 }
 
+/// El PIN que entrega [`FixedPinKeyring`], para firmar en el Almacén de rFirma cifrado que deja instalado.
+pub(crate) const INSTALLED_CERTIFICATE_PIN: &str = "pin-de-pruebas-del-almacen-de-rfirma";
+
 /// El doble en memoria del llavero del escritorio (TD-112): siempre entrega el mismo PIN.
 struct FixedPinKeyring;
 
 impl Keyring for FixedPinKeyring {
     fn pin(&self) -> Result<ProtectedSecret, KeyringError> {
-        Ok(ProtectedSecret::from_str(
-            "pin-de-pruebas-del-almacen-de-rfirma",
-        ))
+        Ok(ProtectedSecret::from_str(INSTALLED_CERTIFICATE_PIN))
     }
 
     fn create_pin(&self) -> Result<ProtectedSecret, KeyringError> {

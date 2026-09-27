@@ -11,7 +11,7 @@ use rfirma_lib::identity::domain::certificate::TokenCertificate;
 use rfirma_lib::identity::domain::keyring::KeyringError;
 use rfirma_lib::identity::domain::protected_secret::ProtectedSecret;
 use rfirma_lib::identity::domain::store::Store;
-use rfirma_lib::identity::ports::Keyring;
+use rfirma_lib::identity::ports::{Keyring, Token};
 use x509_cert::der::Decode;
 
 /// Contraseña de los `.p12` del kit de pruebas (`active-rsa.p12`, `active-ecc.p12`).
@@ -221,14 +221,15 @@ fn an_empty_installation() -> tempfile::TempDir {
     tempfile::tempdir().expect("deberia poder crearse un directorio temporal")
 }
 
+/// El PIN que entrega [`FixedPinKeyring`], con el que queda cifrado el Almacén de rFirma instalado.
+const KEYRING_PIN: &str = "pin-de-pruebas-del-almacen-de-rfirma";
+
 /// El doble en memoria del llavero del escritorio (TD-112): siempre entrega el mismo PIN.
 struct FixedPinKeyring;
 
 impl Keyring for FixedPinKeyring {
     fn pin(&self) -> Result<ProtectedSecret, KeyringError> {
-        Ok(ProtectedSecret::from_str(
-            "pin-de-pruebas-del-almacen-de-rfirma",
-        ))
+        Ok(ProtectedSecret::from_str(KEYRING_PIN))
     }
 
     fn create_pin(&self) -> Result<ProtectedSecret, KeyringError> {
@@ -368,6 +369,24 @@ fn a_refused_p12_leaves_no_store_behind() {
 }
 
 #[test]
+fn a_refused_p12_leaves_an_already_installed_certificate_alone() {
+    let installed = an_empty_installation();
+    let workshop = tempfile::tempdir().expect("deberia poder crearse un directorio temporal");
+    let unsupported = a_p12_of_an_unsupported_key_kind(workshop.path());
+    install(installed.path(), &kit_p12(), KIT_PASSWORD).expect("el primero deberia instalarse");
+
+    let failure = install(installed.path(), &unsupported, GENERATED_PASSWORD)
+        .expect_err("una clave que no es RSA ni de curva eliptica no se puede instalar");
+
+    assert_eq!(failure.situation, "keyKindUnsupported");
+    assert_eq!(
+        certificates(installed.path()).len(),
+        1,
+        "el rechazo no puede llevarse lo que ya estaba instalado"
+    );
+}
+
+#[test]
 fn without_a_desktop_keyring_nothing_installs() {
     struct NoKeyringAtAll;
     impl Keyring for NoKeyringAtAll {
@@ -395,6 +414,38 @@ fn without_a_desktop_keyring_nothing_installs() {
     assert_eq!(
         rfirma_lib::crossing::Failure::from(failure).situation,
         "noKeyring"
+    );
+    assert!(installed_stores(installed.path()).is_empty());
+}
+
+#[test]
+fn a_pin_that_is_not_utf8_refuses_instead_of_installing_unencrypted() {
+    struct NonUtf8PinKeyring;
+    impl Keyring for NonUtf8PinKeyring {
+        fn pin(&self) -> Result<ProtectedSecret, KeyringError> {
+            Ok(ProtectedSecret::new([0xff, 0xfe, 0xfd]))
+        }
+        fn create_pin(&self) -> Result<ProtectedSecret, KeyringError> {
+            self.pin()
+        }
+    }
+
+    let installed = an_empty_installation();
+    let bytes = std::fs::read(kit_p12()).expect("el .p12 del kit deberia leerse");
+
+    let failure = certificates::install_pkcs12(
+        &pkcs11::RealToken,
+        &RealInstalledFolder,
+        &NonUtf8PinKeyring,
+        installed.path(),
+        &bytes,
+        KIT_PASSWORD,
+    )
+    .expect_err("un pin que no es UTF-8 no puede inicializar la base sin cifrar (ADR-0034)");
+
+    assert_eq!(
+        rfirma_lib::crossing::Failure::from(failure).situation,
+        "incorrectPin"
     );
     assert!(installed_stores(installed.path()).is_empty());
 }
@@ -438,6 +489,24 @@ fn a_p12_without_a_private_key_gives_its_own_situation() {
 }
 
 #[test]
+fn a_p12_without_a_private_key_is_refused_even_over_an_already_installed_certificate() {
+    let installed = an_empty_installation();
+    let workshop = tempfile::tempdir().expect("deberia poder crearse un directorio temporal");
+    let certificate_only = a_p12_without_a_private_key(workshop.path());
+    install(installed.path(), &kit_p12(), KIT_PASSWORD).expect("el primero deberia instalarse");
+
+    let failure = install(installed.path(), &certificate_only, GENERATED_PASSWORD)
+        .expect_err("un .p12 sin clave privada no se puede instalar, ni con el almacen ya poblado");
+
+    assert_eq!(failure.situation, "pkcs12NoPrivateKey");
+    assert_eq!(
+        certificates(installed.path()).len(),
+        1,
+        "el rechazo no puede llevarse lo que ya estaba instalado"
+    );
+}
+
+#[test]
 fn nothing_of_the_file_is_kept_beyond_the_two_databases() {
     let installed = an_empty_installation();
     install(installed.path(), &kit_p12(), KIT_PASSWORD)
@@ -451,6 +520,29 @@ fn nothing_of_the_file_is_kept_beyond_the_two_databases() {
     inside.sort();
 
     assert_eq!(inside, vec!["cert9.db".to_owned(), "key4.db".to_owned()]);
+}
+
+#[test]
+fn the_installed_store_only_opens_with_the_keyring_pin() {
+    let installed = an_empty_installation();
+    install(installed.path(), &kit_p12(), KIT_PASSWORD)
+        .expect("el .p12 del kit deberia instalarse");
+    let store = installed_stores(installed.path())
+        .into_iter()
+        .next()
+        .expect("el almacen deberia existir");
+
+    pkcs11::RealToken
+        .list_authenticated(&store, &ProtectedSecret::from_str(""))
+        .expect_err("un pin vacio no deberia abrir una base cifrada");
+    pkcs11::RealToken
+        .list_authenticated(&store, &ProtectedSecret::from_str("no es el pin correcto"))
+        .expect_err("un pin equivocado no deberia abrir una base cifrada");
+
+    let found = pkcs11::RealToken
+        .list_authenticated(&store, &ProtectedSecret::from_str(KEYRING_PIN))
+        .expect("el pin del llavero deberia abrir la base cifrada");
+    assert_eq!(found.len(), 1);
 }
 
 #[test]
@@ -499,7 +591,7 @@ fn two_certificates_with_the_same_common_name_coexist() {
 }
 
 #[test]
-fn removing_an_installed_certificate_deletes_its_store() {
+fn removing_an_installed_certificate_is_refused_instead_of_deleting_the_shared_store() {
     let installed = an_empty_installation();
     install(installed.path(), &kit_p12(), KIT_PASSWORD)
         .expect("el .p12 del kit deberia instalarse");
@@ -511,10 +603,23 @@ fn removing_an_installed_certificate_deletes_its_store() {
             .map(|certificate| certificate.reference().clone()),
     );
 
-    certificates::remove_installed(&RealInstalledFolder, installed.path(), &handles[0], &listed)
-        .expect("deberia poder quitarse");
+    let failure = certificates::remove_installed(
+        &RealInstalledFolder,
+        installed.path(),
+        &handles[0],
+        &listed,
+    )
+    .expect_err("el borrado fino aun no existe: quitar no puede llevarse el almacen entero");
 
-    assert!(installed_stores(installed.path()).is_empty());
+    assert_eq!(
+        rfirma_lib::crossing::Failure::from(failure).situation,
+        "removalNotSupported"
+    );
+    assert_eq!(
+        installed_stores(installed.path()).len(),
+        1,
+        "el almacen compartido tiene que seguir intacto"
+    );
 }
 
 #[test]

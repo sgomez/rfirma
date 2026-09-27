@@ -412,7 +412,10 @@ pub fn import_pkcs12(
             "la ruta del almacen lleva un cero dentro",
         )
     })?;
-    let pin = CString::new(pin.as_str().unwrap_or_default()).map_err(|_| {
+    let pin = pin
+        .as_str()
+        .map_err(|_| TokenError::new(Situation::IncorrectPin, "el PIN no es UTF-8 valido"))?;
+    let pin = CString::new(pin).map_err(|_| {
         TokenError::new(
             Situation::ModuleNotFound,
             "el PIN del Almacen de rFirma lleva un cero dentro",
