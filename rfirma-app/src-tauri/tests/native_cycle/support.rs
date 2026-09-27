@@ -13,6 +13,9 @@ use rfirma_lib::identity::adapters::pkcs11;
 use rfirma_lib::identity::application::certificates;
 use rfirma_lib::identity::domain::algorithm::SignatureAlgorithm;
 use rfirma_lib::identity::domain::certificate::{CertificateRef, TokenCertificate};
+use rfirma_lib::identity::domain::keyring::KeyringError;
+use rfirma_lib::identity::domain::protected_secret::ProtectedSecret;
+use rfirma_lib::identity::ports::Keyring;
 use rfirma_lib::signing::adapters::ffi::{locate, NativeBridge};
 use rfirma_lib::signing::application::cycle::{self, SigningRequest};
 use rfirma_lib::signing::domain::bridge::{Format, SignatureOperation};
@@ -312,13 +315,30 @@ pub(crate) fn openssl_prints_the_certificates_of(signature: &Path) -> String {
     String::from_utf8_lossy(&output.stdout).into_owned()
 }
 
-/// El `.p12` del kit, instalado en su propio almacén NSS con la cadena que traía dentro.
+/// El PIN que entrega [`FixedPinKeyring`], para firmar en el Almacén de rFirma cifrado que deja instalado.
+pub(crate) const INSTALLED_CERTIFICATE_PIN: &str = "pin-de-pruebas-del-almacen-de-rfirma";
+
+/// El doble en memoria del llavero del escritorio (TD-112): siempre entrega el mismo PIN.
+struct FixedPinKeyring;
+
+impl Keyring for FixedPinKeyring {
+    fn pin(&self) -> Result<ProtectedSecret, KeyringError> {
+        Ok(ProtectedSecret::from_str(INSTALLED_CERTIFICATE_PIN))
+    }
+
+    fn create_pin(&self) -> Result<ProtectedSecret, KeyringError> {
+        self.pin()
+    }
+}
+
+/// El `.p12` del kit, instalado en el Almacén de rFirma con la cadena que traía dentro.
 pub(crate) fn an_installed_certificate(installed: &Path) -> TokenCertificate {
     let p12 = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../testdata/fnmt/active-rsa.p12");
     let bytes = std::fs::read(&p12).expect("el .p12 del kit deberia leerse");
     certificates::install_pkcs12(
         &pkcs11::RealToken,
         &RealInstalledFolder,
+        &FixedPinKeyring,
         installed,
         &bytes,
         KIT_PASSWORD,

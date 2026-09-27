@@ -3,7 +3,7 @@
 //! (ADR-0001, ADR-0014, ADR-0034).
 
 use std::fmt;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use crate::identity::domain::algorithm::SignatureAlgorithm;
 use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
@@ -23,6 +23,13 @@ pub trait Token {
 
     /// Todos los certificados de un almacén, también los que no firman: con ellos se completa una cadena.
     fn every_certificate(&self, store: &Store) -> Result<Vec<TokenCertificate>, TokenError>;
+
+    /// Los certificados firmables de un almacén, autenticándose con `pin` (ADR-0034).
+    fn list_authenticated(
+        &self,
+        store: &Store,
+        pin: &ProtectedSecret,
+    ) -> Result<Vec<TokenCertificate>, TokenError>;
 
     /// Cómo hay que pedirle el secreto al almacén del certificado.
     fn secret_of(&self, reference: &CertificateRef) -> Result<StoreSecret, TokenError>;
@@ -50,12 +57,13 @@ pub trait Token {
         data: &[u8],
     ) -> Result<Vec<u8>, TokenError>;
 
-    /// Importa un `.p12` a un almacén NSS nuevo en ese directorio y devuelve el almacén.
+    /// Importa un `.p12` al Almacén de rFirma en ese directorio, cifrado con `pin`, y lo devuelve.
     fn import_pkcs12(
         &self,
         directory: &Path,
         pkcs12: &[u8],
         password: &str,
+        pin: &ProtectedSecret,
     ) -> Result<Store, TokenError>;
 
     /// Los certificados de todos los almacenes: falla solo si ninguno se ha podido abrir.
@@ -98,6 +106,12 @@ pub trait InstalledFolder {
 
     /// Borra la carpeta del almacén y todo lo que hubiera dentro.
     fn remove(&self, directory: &Path) -> Result<(), String>;
+
+    /// Borra un fichero suelto si existe; no falla si ya no está.
+    fn remove_file(&self, path: &Path);
+
+    /// Una ruta nueva y desechable donde probar un `.p12` sin tocar el Almacén de rFirma.
+    fn staging_directory(&self) -> PathBuf;
 }
 
 /// El certificado con el que se firmó la última vez, recordado entre sesiones (ADR-0010).

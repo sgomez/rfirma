@@ -10,11 +10,13 @@ use crate::identity::domain::error::{Situation, TokenError};
 use crate::identity::domain::holder::{
     common_name_of, given_name_and_surname, holder_of, is_pseudonym,
 };
+use crate::identity::domain::keyring::KeyringError;
+use crate::identity::domain::protected_secret::ProtectedSecret;
 use crate::identity::domain::secret::SecretName;
 use crate::identity::domain::store::{Store, StoreClass};
 use crate::identity::ports::{
-    prompted_until_accepted, CertificateMemory, InstalledFolder, OriginWindow, PromptedError,
-    SecretPromptRequest, SecretPrompter, Token,
+    prompted_until_accepted, CertificateMemory, InstalledFolder, Keyring, OriginWindow,
+    PromptedError, SecretPromptRequest, SecretPrompter, Token,
 };
 use crate::memory_error::{MemoryError, Situation as StoreSituation};
 use crate::signing::domain::layer2_text::masked_signer;
@@ -23,18 +25,26 @@ use crate::signing::domain::Language;
 /// Los certificados del último listado, cada uno tras su asa.
 pub type ListedCertificates = Handles<CertificateRef>;
 
-/// Por qué un `.p12` no se ha podido instalar ni quitar (ADR-0011).
+/// Por qué un `.p12` no se ha podido instalar ni quitar (ADR-0011, ADR-0034).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum InstallError {
     /// El token o el fichero han dicho que no.
     Token(TokenError),
     /// El almacén del `.p12` no se ha podido crear ni quitar del disco.
     Store(MemoryError),
+    /// El llavero del escritorio no ha entregado el PIN del Almacén de rFirma.
+    Keyring(KeyringError),
 }
 
 impl From<TokenError> for InstallError {
     fn from(error: TokenError) -> Self {
         Self::Token(error)
+    }
+}
+
+impl From<KeyringError> for InstallError {
+    fn from(error: KeyringError) -> Self {
+        Self::Keyring(error)
     }
 }
 
@@ -135,36 +145,67 @@ pub fn rows_of(
         .collect()
 }
 
-/// Instala un PKCS#12 importándolo a un almacén NSS aislado (ADR-0011).
+/// Instala un PKCS#12 en el Almacén de rFirma, cifrado con el PIN del llavero (ADR-0034).
 pub fn install_pkcs12(
     token: &dyn Token,
     folder: &dyn InstalledFolder,
+    keyring: &dyn Keyring,
     installed_dir: &Path,
     pkcs12: &[u8],
     password: &str,
 ) -> Result<(), InstallError> {
-    let directory = installed_dir.join(crate::documents::domain::handles::mint());
-    folder.make(&directory).map_err(|error| {
+    let pin = keyring.get_or_create_pin()?;
+    validate_pkcs12_alone(token, folder, pkcs12, password)?;
+
+    let already_existed = installed_dir.join("cert9.db").is_file();
+    folder.make(installed_dir).map_err(|error| {
         InstallError::Store(MemoryError::new(
             StoreSituation::Unwritable,
-            format!("no se ha podido crear el almacen del .p12: {error}"),
+            format!("no se ha podido crear el Almacen de rFirma: {error}"),
         ))
     })?;
-    folder.restrict_to_owner(&directory);
+    folder.restrict_to_owner(installed_dir);
 
-    let installed = token
-        .import_pkcs12(&directory, pkcs12, password)
-        .and_then(|store| only_supported_keys(token, &store));
+    let installed = token.import_pkcs12(installed_dir, pkcs12, password, &pin);
 
     if let Err(error) = installed {
-        let _ = folder.remove(&directory);
+        if !already_existed {
+            for file in ["cert9.db", "key4.db"] {
+                folder.remove_file(&installed_dir.join(file));
+            }
+        }
         return Err(error.into());
     }
 
     for file in ["cert9.db", "key4.db"] {
-        folder.restrict_to_owner(&directory.join(file));
+        folder.restrict_to_owner(&installed_dir.join(file));
     }
     Ok(())
+}
+
+/// Importa el `.p12` en un almacén desechable para comprobarlo antes de tocar el Almacén de rFirma compartido.
+fn validate_pkcs12_alone(
+    token: &dyn Token,
+    folder: &dyn InstalledFolder,
+    pkcs12: &[u8],
+    password: &str,
+) -> Result<(), InstallError> {
+    let staging = folder.staging_directory();
+    folder.make(&staging).map_err(|error| {
+        InstallError::Store(MemoryError::new(
+            StoreSituation::Unwritable,
+            format!("no se ha podido preparar un almacen temporal para comprobar el .p12: {error}"),
+        ))
+    })?;
+    folder.restrict_to_owner(&staging);
+
+    let staging_pin = ProtectedSecret::from_str("comprobacion-temporal-del-p12");
+    let checked = token
+        .import_pkcs12(&staging, pkcs12, password, &staging_pin)
+        .and_then(|store| only_supported_keys(token, &store, &staging_pin));
+
+    let _ = folder.remove(&staging);
+    checked.map(|_| ()).map_err(InstallError::from)
 }
 
 /// Quién pide la contraseña del `.p12`, en qué idioma y sobre qué ventana.
@@ -181,6 +222,7 @@ pub struct PasswordPrompt<'a> {
 pub fn install_pkcs12_asking_its_password(
     token: &dyn Token,
     folder: &dyn InstalledFolder,
+    keyring: &dyn Keyring,
     installed_dir: &Path,
     pkcs12: &[u8],
     file_name: &str,
@@ -200,6 +242,7 @@ pub fn install_pkcs12_asking_its_password(
             install_pkcs12(
                 token,
                 folder,
+                keyring,
                 installed_dir,
                 pkcs12,
                 secret.as_str().unwrap_or_default(),
@@ -219,8 +262,12 @@ fn wrong_pkcs12_password(error: &InstallError) -> bool {
 }
 
 /// Comprueba que el almacén contiene al menos un certificado y todas las claves son RSA o de curva elíptica.
-fn only_supported_keys(token: &dyn Token, store: &Store) -> Result<(), TokenError> {
-    let found = token.list(store)?;
+fn only_supported_keys(
+    token: &dyn Token,
+    store: &Store,
+    pin: &ProtectedSecret,
+) -> Result<(), TokenError> {
+    let found = token.list_authenticated(store, pin)?;
     if found.is_empty() {
         return Err(TokenError::new(
             Situation::Pkcs12NoPrivateKey,
@@ -258,6 +305,14 @@ pub fn remove_installed(
                 "ese certificado no viene de un .p12 instalado",
             )
         })?;
+    if directory.as_path() == installed_dir {
+        return Err(TokenError::new(
+            Situation::RemovalNotSupported,
+            "el Almacen de rFirma es una unica base compartida: quitar este certificado \
+             se llevaria los demas, asi que se niega hasta que exista borrado fino",
+        )
+        .into());
+    }
     folder.remove(&directory).map_err(|error| {
         InstallError::Store(MemoryError::new(
             StoreSituation::Unwritable,

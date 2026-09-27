@@ -37,6 +37,14 @@ impl Token for RealToken {
         list_every_certificate(store.clone())
     }
 
+    fn list_authenticated(
+        &self,
+        store: &Store,
+        pin: &ProtectedSecret,
+    ) -> Result<Vec<TokenCertificate>, TokenError> {
+        with_token_turn(|| listing::list_authenticated(store, pin))
+    }
+
     fn secret_of(&self, reference: &CertificateRef) -> Result<StoreSecret, TokenError> {
         store_secret(reference)
     }
@@ -72,6 +80,7 @@ impl Token for RealToken {
         directory: &Path,
         pkcs12: &[u8],
         password: &str,
+        pin: &ProtectedSecret,
     ) -> Result<Store, TokenError> {
         let softoken = stores::softoken().ok_or_else(|| {
             TokenError::new(
@@ -79,7 +88,7 @@ impl Token for RealToken {
                 "no esta libsoftokn3.so en ninguna de las rutas conocidas",
             )
         })?;
-        with_token_turn(|| nss::import_pkcs12(directory, pkcs12, password))?;
+        with_token_turn(|| nss::import_pkcs12(directory, pkcs12, password, pin))?;
         Ok(Store::nss(&softoken, directory))
     }
 }

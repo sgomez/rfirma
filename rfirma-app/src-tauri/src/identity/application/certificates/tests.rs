@@ -226,6 +226,14 @@ impl Token for StoresWith {
         Ok(self.only(store, everything))
     }
 
+    fn list_authenticated(
+        &self,
+        store: &Store,
+        _pin: &crate::identity::domain::protected_secret::ProtectedSecret,
+    ) -> Result<Vec<TokenCertificate>, TokenError> {
+        Ok(self.only(store, &self.signable))
+    }
+
     fn secret_of(&self, _reference: &CertificateRef) -> Result<StoreSecret, TokenError> {
         Ok(StoreSecret::NotNeeded)
     }
@@ -256,6 +264,7 @@ impl Token for StoresWith {
         _directory: &std::path::Path,
         _pkcs12: &[u8],
         _password: &str,
+        _pin: &crate::identity::domain::protected_secret::ProtectedSecret,
     ) -> Result<Store, TokenError> {
         Err(TokenError::new(
             Situation::Pkcs12Unreadable,

@@ -1,4 +1,4 @@
-//! Importación de ficheros PKCS#12 en almacenes NSS propios (ADR-0001).
+//! Importación de ficheros PKCS#12 en el Almacén de rFirma, una base NSS cifrada (ADR-0034).
 
 use std::ffi::{c_char, c_int, c_uchar, c_uint, c_ulong, c_void, CString};
 use std::path::Path;
@@ -10,6 +10,7 @@ use x509_cert::der::Decode;
 use super::stores::present_among;
 use crate::identity::domain::error::{NssUnavailable, Situation, TokenError};
 use crate::identity::domain::holder::{attribute, common_name_of};
+use crate::identity::domain::protected_secret::ProtectedSecret;
 
 /// Rutas candidatas para localizar la biblioteca `libnss3.so`.
 pub const CANDIDATE_NSS: &[&str] = &[
@@ -37,6 +38,7 @@ const PR_TRUE: c_int = 1;
 const SI_BUFFER: c_uint = 0;
 const SI_ASCII_STRING: c_uint = 8;
 const SEC_ERROR_BAD_PASSWORD: c_int = -0x2000 + 15;
+const SEC_ERROR_PKCS12_DUPLICATE_DATA: c_int = -0x2000 + 88;
 
 /// Nickname de un certificado sin `friendlyName` y sin nombre común en el sujeto.
 const CERTIFICATE_WITHOUT_A_NAME: &str = "Certificado sin nombre";
@@ -77,14 +79,6 @@ fn bmp_string(password: &str) -> Vec<u8> {
     }
     bytes.extend_from_slice(&[0, 0]);
     bytes
-}
-
-extern "C" fn no_password(
-    _slot: *mut c_void,
-    _retry: c_int,
-    _argument: *mut c_void,
-) -> *mut c_char {
-    std::ptr::null_mut()
 }
 
 extern "C" fn keep_the_nickname(
@@ -348,9 +342,27 @@ fn names_of(der: &[u8]) -> (String, String) {
     )
 }
 
-/// Importa un fichero PKCS#12 en el almacén NSS indicado.
+/// El PIN del Almacén de rFirma como cadena C, o el error si no es UTF-8 o lleva un cero.
+fn store_pin(pin: &ProtectedSecret) -> Result<CString, TokenError> {
+    let pin = pin
+        .as_str()
+        .map_err(|_| TokenError::new(Situation::IncorrectPin, "el PIN no es UTF-8 valido"))?;
+    CString::new(pin).map_err(|_| {
+        TokenError::new(
+            Situation::ModuleNotFound,
+            "el PIN del Almacen de rFirma lleva un cero dentro",
+        )
+    })
+}
+
+/// Importa un fichero PKCS#12 en el Almacén de rFirma, creándolo con `pin` si todavía no existe.
 #[expect(clippy::too_many_lines)]
-pub fn import_pkcs12(directory: &Path, pkcs12: &[u8], password: &str) -> Result<(), TokenError> {
+pub fn import_pkcs12(
+    directory: &Path,
+    pkcs12: &[u8],
+    password: &str,
+    pin: &ProtectedSecret,
+) -> Result<(), TokenError> {
     let nss = nss_library()
         .map_err(|err| TokenError::new(Situation::ModuleNotFound, err.detail().to_owned()))?;
     let smime = smime_library()?;
@@ -362,10 +374,8 @@ pub fn import_pkcs12(directory: &Path, pkcs12: &[u8], password: &str) -> Result<
     type CloseUserDb = extern "C" fn(*mut c_void) -> c_int;
     type NeedUserInit = extern "C" fn(*mut c_void) -> c_int;
     type InitPin = extern "C" fn(*mut c_void, *const c_char, *const c_char) -> c_int;
-    type Authenticate = extern "C" fn(*mut c_void, c_int, *mut c_void) -> c_int;
+    type CheckUserPassword = extern "C" fn(*mut c_void, *const c_char) -> c_int;
     type FreeSlot = extern "C" fn(*mut c_void);
-    type SetPasswordFunc =
-        extern "C" fn(extern "C" fn(*mut c_void, c_int, *mut c_void) -> *mut c_char);
     type DecoderStart = extern "C" fn(
         *mut SecItem,
         *mut c_void,
@@ -396,9 +406,8 @@ pub fn import_pkcs12(directory: &Path, pkcs12: &[u8], password: &str) -> Result<
     let close_user_db: CloseUserDb = symbol(nss, b"SECMOD_CloseUserDB\0")?;
     let need_user_init: NeedUserInit = symbol(nss, b"PK11_NeedUserInit\0")?;
     let init_pin: InitPin = symbol(nss, b"PK11_InitPin\0")?;
-    let authenticate: Authenticate = symbol(nss, b"PK11_Authenticate\0")?;
+    let check_user_password: CheckUserPassword = symbol(nss, b"PK11_CheckUserPassword\0")?;
     let free_slot: FreeSlot = symbol(nss, b"PK11_FreeSlot\0")?;
-    let set_password_func: SetPasswordFunc = symbol(nss, b"PK11_SetPasswordFunc\0")?;
     let decoder_start: DecoderStart = symbol(smime, b"SEC_PKCS12DecoderStart\0")?;
     let decoder_update: DecoderUpdate = symbol(smime, b"SEC_PKCS12DecoderUpdate\0")?;
     let decoder_verify: DecoderStep = symbol(smime, b"SEC_PKCS12DecoderVerify\0")?;
@@ -416,12 +425,10 @@ pub fn import_pkcs12(directory: &Path, pkcs12: &[u8], password: &str) -> Result<
             "la ruta del almacen lleva un cero dentro",
         )
     })?;
-    let empty = CString::new("").expect("la cadena vacia no lleva ceros dentro");
+    let pin = store_pin(pin)?;
     let mut secret = Password {
         bytes: bmp_string(password),
     };
-
-    set_password_func(no_password);
 
     if nss_no_db_init(std::ptr::null()) != SEC_SUCCESS {
         return Err(TokenError::new(
@@ -440,12 +447,12 @@ pub fn import_pkcs12(directory: &Path, pkcs12: &[u8], password: &str) -> Result<
 
         let imported = (|| {
             if need_user_init(slot) == PR_TRUE
-                && init_pin(slot, std::ptr::null(), empty.as_ptr()) != SEC_SUCCESS
+                && init_pin(slot, std::ptr::null(), pin.as_ptr()) != SEC_SUCCESS
             {
                 return Err(failed("PK11_InitPin"));
             }
-            if authenticate(slot, PR_TRUE, std::ptr::null_mut()) != SEC_SUCCESS {
-                return Err(failed("PK11_Authenticate"));
+            if check_user_password(slot, pin.as_ptr()) != SEC_SUCCESS {
+                return Err(failed("PK11_CheckUserPassword"));
             }
 
             let mut item = secret.item();
@@ -481,7 +488,9 @@ pub fn import_pkcs12(directory: &Path, pkcs12: &[u8], password: &str) -> Result<
                 if decoder_validate(decoder, keep_the_nickname) != SEC_SUCCESS {
                     return Err(failed("SEC_PKCS12DecoderValidateBags"));
                 }
-                if decoder_import(decoder) != SEC_SUCCESS {
+                if decoder_import(decoder) != SEC_SUCCESS
+                    && get_error() != SEC_ERROR_PKCS12_DUPLICATE_DATA
+                {
                     return Err(failed("SEC_PKCS12DecoderImportBags"));
                 }
 
