@@ -159,29 +159,21 @@ export const gl: Dictionary = {
   "comparison.keys.autofirma": "No proceso Java",
   "comparison.keys.rfirma": "No almacén do sistema ou o módulo PKCS#11; non sae del",
   "comparison.pin.label": "Protección do PIN na memoria",
-  "comparison.pin.autofirma":
-    "Borrado parcial do <code>char[]</code> con <code>Arrays.fill</code>, sen fixalo na RAM",
-  "comparison.pin.rfirma":
-    "Búfer fixado con <code>mlock</code>, excluído dos volcados con <code>MADV_DONTDUMP</code> e borrado de forma segura",
+  "comparison.pin.autofirma": "Bórrase só en parte e pode acabar no disco",
+  "comparison.pin.rfirma": "Protexido na memoria, nunca vai ao disco e bórrase tras usalo",
   "comparison.dnie.label": "Sinatura co DNIe",
   "comparison.dnie.autofirma": "Si, mediante jMulticard",
   "comparison.dnie.rfirma": "En desenvolvemento",
   "comparison.store.label": "Certificados en ficheiro (<code>.p12</code>)",
   "comparison.store.autofirma":
     "Rexístrase a ruta do ficheiro nun diálogo de almacéns con seis opcións",
-  "comparison.store.rfirma":
-    "Almacén propio: «Engadir…» copia o certificado e do ficheiro non se garda nada, nin a ruta",
+  "comparison.store.rfirma": "Almacén propio e cifrado, que se abre coa túa sesión",
   "comparison.stores.label": "Busca de certificados",
   "comparison.stores.autofirma": "Só busca no almacén que elixas",
-  "comparison.stores.rfirma":
-    "Busca en todos os sitios onde pode haber un certificado e xúntaos nunha soa lista",
+  "comparison.stores.rfirma": "Todos nunha lista con buscador, un certificado por fila",
   "comparison.stamp.label": "Colocación da sinatura visible",
   "comparison.stamp.autofirma": "Coordenadas ou cadro sen contexto",
-  "comparison.stamp.rfirma": "Arrastre sobre a páxina con previsualización fiel",
-  "comparison.sede.label": "Sinatura desde unha sede electrónica",
-  "comparison.sede.autofirma": "Diálogo de selección de certificado",
-  "comparison.sede.rfirma":
-    "Xanela de consentimento: quen pide, que se asina e con que certificado, antes de asinar",
+  "comparison.stamp.rfirma": "Arrastre sobre a páxina, con modelos de texto e previsualización fiel",
   "comparison.ca.label": "Confianza do navegador no servidor local",
   "comparison.ca.autofirma": "O instalador rexistra a CA no sistema, con privilexios",
   "comparison.ca.rfirma": "A aplicación rexistra a súa CA nos almacéns NSS da persoa, sen root",
@@ -192,13 +184,13 @@ export const gl: Dictionary = {
   "comparison.privacy.label": "Xestor de documentos",
   "comparison.privacy.autofirma": "—",
   "comparison.privacy.rfirma":
-    "Garda os recentes e o último certificado usado; pódense apagar e baleirar cando queiras",
+    "Lembra os documentos recentes e o último certificado usado",
   "comparison.os.label": "Compatibilidade de sistemas",
   "comparison.os.autofirma": "Windows, macOS, Linux, Android e iOS",
   "comparison.os.rfirma": "Linux; Windows e macOS, en desenvolvemento",
   "comparison.updates.label": "Canle de actualización",
   "comparison.updates.autofirma": "Descarga manual de <code>.deb</code> ou <code>.rpm</code>",
-  "comparison.updates.rfirma": "Repositorios nativos: Flatpak, APT e DNF",
+  "comparison.updates.rfirma": "Repositorios nativos: APT, DNF e Flatpak",
   "comparison.desktop.label": "Integración co escritorio",
   "comparison.desktop.autofirma": "Aparencia propia de Swing",
   "comparison.desktop.rfirma": "Segue o estilo do escritorio, con tema claro e escuro",
@@ -214,7 +206,7 @@ export const gl: Dictionary = {
   "install.copy.apt.aria": "Copiar ordes para APT",
   "install.copy.dnf.aria": "Copiar ordes para DNF",
   "install.flatpak.body":
-    "Instalación recomendada para calquera distribución de Linux. Resólvese desde o remoto ostree propio de rFirma, e o runtime <code>org.gnome.Platform</code> descárgase de Flathub sen configurar nada. Só precisas ter instalados <code>flatpak</code> e <code>xdg-desktop-portal</code>.",
+    "Recomendada para as distribucións de Linux que non usan APT nin DNF. Resólvese desde o remoto ostree propio de rFirma, e o runtime <code>org.gnome.Platform</code> descárgase de Flathub sen configurar nada. Só precisas ter instalados <code>flatpak</code> e <code>xdg-desktop-portal</code>.",
   "install.flatpak.tip":
     "Tamén podes descargar e instalar con dobre clic o ficheiro <a href=\"https://rfirma.sgomez.me/rfirma.flatpakref\">rfirma.flatpakref</a> se o teu escritorio o soporta.",
   "install.apt.body":

@@ -157,29 +157,21 @@ export const es = {
   "comparison.keys.autofirma": "En el proceso Java",
   "comparison.keys.rfirma": "En el almacén del sistema o el módulo PKCS#11; no sale de él",
   "comparison.pin.label": "Protección del PIN en memoria",
-  "comparison.pin.autofirma":
-    "Borrado parcial del <code>char[]</code> con <code>Arrays.fill</code>, sin fijarlo en RAM",
-  "comparison.pin.rfirma":
-    "Búfer fijado con <code>mlock</code>, excluido de volcados con <code>MADV_DONTDUMP</code> y borrado seguro",
+  "comparison.pin.autofirma": "Se borra solo en parte y puede acabar en disco",
+  "comparison.pin.rfirma": "Protegido en memoria, nunca va a disco y se borra tras usarlo",
   "comparison.dnie.label": "Firma con DNIe",
   "comparison.dnie.autofirma": "Sí, con jMulticard",
   "comparison.dnie.rfirma": "En desarrollo",
   "comparison.store.label": "Certificados en fichero (<code>.p12</code>)",
   "comparison.store.autofirma":
     "Se registra la ruta del fichero en un diálogo de almacenes con seis opciones",
-  "comparison.store.rfirma":
-    "Almacén propio: «Añadir…» copia el certificado y del fichero no se guarda nada, ni la ruta",
+  "comparison.store.rfirma": "Almacén propio y cifrado, que se abre con tu sesión",
   "comparison.stores.label": "Búsqueda de certificados",
   "comparison.stores.autofirma": "Solo busca en el almacén que elijas",
-  "comparison.stores.rfirma":
-    "Busca en todos los sitios donde puede haber un certificado y los junta en una sola lista",
+  "comparison.stores.rfirma": "Todos en una lista con buscador, un certificado por fila",
   "comparison.stamp.label": "Colocación de la firma visible",
   "comparison.stamp.autofirma": "Coordenadas o recuadro sin contexto",
-  "comparison.stamp.rfirma": "Arrastre sobre la página con previsualización fiel",
-  "comparison.sede.label": "Firma desde una sede electrónica",
-  "comparison.sede.autofirma": "Diálogo de selección de certificado",
-  "comparison.sede.rfirma":
-    "Ventana de consentimiento: quién pide, qué se firma y con qué certificado, antes de firmar",
+  "comparison.stamp.rfirma": "Arrastre sobre la página, con modelos de texto y previsualización fiel",
   "comparison.ca.label": "Confianza del navegador en el servidor local",
   "comparison.ca.autofirma": "El instalador registra la CA en el sistema, con privilegios",
   "comparison.ca.rfirma": "La aplicación registra su CA en los almacenes NSS de la persona, sin root",
@@ -190,13 +182,13 @@ export const es = {
   "comparison.privacy.label": "Gestor de documentos",
   "comparison.privacy.autofirma": "—",
   "comparison.privacy.rfirma":
-    "Guarda los recientes y el último certificado usado; se pueden apagar y vaciar cuando quieras",
+    "Recuerda los documentos recientes y el último certificado usado",
   "comparison.os.label": "Sistemas operativos",
   "comparison.os.autofirma": "Windows, macOS, Linux, Android e iOS",
   "comparison.os.rfirma": "Linux; Windows y macOS, en desarrollo",
   "comparison.updates.label": "Canal de actualización",
   "comparison.updates.autofirma": "Descarga manual de <code>.deb</code> o <code>.rpm</code>",
-  "comparison.updates.rfirma": "Repositorios nativos: Flatpak, APT y DNF",
+  "comparison.updates.rfirma": "Repositorios nativos: APT, DNF y Flatpak",
   "comparison.desktop.label": "Integración con el escritorio",
   "comparison.desktop.autofirma": "Apariencia propia de Swing",
   "comparison.desktop.rfirma": "Sigue el estilo del escritorio, con tema claro y oscuro",
@@ -212,7 +204,7 @@ export const es = {
   "install.copy.apt.aria": "Copiar órdenes para APT",
   "install.copy.dnf.aria": "Copiar órdenes para DNF",
   "install.flatpak.body":
-    "Instalación recomendada para cualquier distribución de Linux. Se resuelve desde el remoto ostree propio de rFirma, y el runtime <code>org.gnome.Platform</code> se descarga de Flathub sin configurar nada. Solo necesitas tener instalados <code>flatpak</code> y <code>xdg-desktop-portal</code>.",
+    "Recomendada para las distribuciones de Linux que no usan APT ni DNF. Se resuelve desde el remoto ostree propio de rFirma, y el runtime <code>org.gnome.Platform</code> se descarga de Flathub sin configurar nada. Solo necesitas tener instalados <code>flatpak</code> y <code>xdg-desktop-portal</code>.",
   "install.flatpak.tip":
     "También puedes descargar e instalar con doble clic el fichero <a href=\"https://rfirma.sgomez.me/rfirma.flatpakref\">rfirma.flatpakref</a> si tu escritorio lo soporta.",
   "install.apt.body":

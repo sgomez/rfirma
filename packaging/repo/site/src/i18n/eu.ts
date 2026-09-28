@@ -159,29 +159,21 @@ export const eu: Dictionary = {
   "comparison.keys.autofirma": "Java prozesuan",
   "comparison.keys.rfirma": "Sistemaren biltegian edo PKCS#11 moduluan; ez da handik ateratzen",
   "comparison.pin.label": "PINaren babesa memorian",
-  "comparison.pin.autofirma":
-    "<code>char[]</code>-aren garbiketa partziala <code>Arrays.fill</code>-ekin, RAMean finkatu gabe",
-  "comparison.pin.rfirma":
-    "<code>mlock</code>-ekin finkatutako búferra, <code>MADV_DONTDUMP</code>-ekin iraulketetatik kanpo eta modu seguruan ezabatua",
+  "comparison.pin.autofirma": "Zati batean bakarrik ezabatzen da, eta diskora irits daiteke",
+  "comparison.pin.rfirma": "Memorian babestuta, ez da inoiz diskora joaten eta erabili ondoren ezabatzen da",
   "comparison.dnie.label": "DNIe-arekin sinatzea",
   "comparison.dnie.autofirma": "Bai, jMulticard bidez",
   "comparison.dnie.rfirma": "Garapenean",
   "comparison.store.label": "Fitxategiko ziurtagiriak (<code>.p12</code>)",
   "comparison.store.autofirma":
     "Fitxategiaren bidea sei aukerako biltegi-elkarrizketa batean gordetzen da",
-  "comparison.store.rfirma":
-    "Norberaren biltegia: «Gehitu…» aukerak ziurtagiria kopiatzen du, eta fitxategitik ez da ezer gordetzen, bidea ere ez",
+  "comparison.store.rfirma": "Biltegi propio eta zifratua, zure saioarekin irekitzen dena",
   "comparison.stores.label": "Ziurtagirien bilaketa",
   "comparison.stores.autofirma": "Aukeratutako biltegian bakarrik bilatzen du",
-  "comparison.stores.rfirma":
-    "Ziurtagiri bat egon daitekeen leku guztietan bilatzen du, eta zerrenda bakarrean biltzen ditu",
+  "comparison.stores.rfirma": "Guztiak bilatzailedun zerrenda batean, ziurtagiri bat errenkada bakoitzeko",
   "comparison.stamp.label": "Sinadura ikusgaiaren kokapena",
   "comparison.stamp.autofirma": "Koordenatuak edo laukia, testuingururik gabe",
-  "comparison.stamp.rfirma": "Orrialdearen gainean arrastatuta, aurrebista fidagarriarekin",
-  "comparison.sede.label": "Egoitza elektroniko batetik sinatzea",
-  "comparison.sede.autofirma": "Ziurtagiria aukeratzeko elkarrizketa-koadroa",
-  "comparison.sede.rfirma":
-    "Adostasun-leihoa: nork eskatzen duen, zer sinatzen den eta zein ziurtagiriarekin, sinatu aurretik",
+  "comparison.stamp.rfirma": "Orrira arrastatuta, testu-ereduekin eta aurrebista fidelarekin",
   "comparison.ca.label": "Nabigatzaileak tokiko zerbitzariaz duen konfiantza",
   "comparison.ca.autofirma": "Instalatzaileak CA sisteman erregistratzen du, pribilegioekin",
   "comparison.ca.rfirma": "Aplikazioak bere CA pertsonaren NSS biltegietan erregistratzen du, root gabe",
@@ -192,13 +184,13 @@ export const eu: Dictionary = {
   "comparison.privacy.label": "Dokumentu-kudeatzailea",
   "comparison.privacy.autofirma": "—",
   "comparison.privacy.rfirma":
-    "Azkenak eta erabilitako azken ziurtagiria gordetzen ditu; nahi duzunean itzali eta hustu ditzakezu",
+    "Azken dokumentuak eta erabilitako azken ziurtagiria gogoratzen ditu",
   "comparison.os.label": "Sistema eragileak",
   "comparison.os.autofirma": "Windows, macOS, Linux, Android eta iOS",
   "comparison.os.rfirma": "Linux; Windows eta macOS, garapenean",
   "comparison.updates.label": "Eguneratze-bidea",
   "comparison.updates.autofirma": "<code>.deb</code> edo <code>.rpm</code> eskuz deskargatuta",
-  "comparison.updates.rfirma": "Jatorrizko biltegiak: Flatpak, APT eta DNF",
+  "comparison.updates.rfirma": "Jatorrizko biltegiak: APT, DNF eta Flatpak",
   "comparison.desktop.label": "Mahaigainarekiko integrazioa",
   "comparison.desktop.autofirma": "Swingen itxura propioa",
   "comparison.desktop.rfirma": "Mahaigainaren estiloa jarraitzen du, gai argi eta ilunarekin",
@@ -214,7 +206,7 @@ export const eu: Dictionary = {
   "install.copy.apt.aria": "Kopiatu APTrako aginduak",
   "install.copy.dnf.aria": "Kopiatu DNFrako aginduak",
   "install.flatpak.body":
-    "Linux banaketa edozeinentzat gomendatutako instalazioa. rFirmaren ostree biltegi propiotik ebazten da, eta Flathub-eko <code>org.gnome.Platform</code> runtimea ezer konfiguratu gabe deskargatzen da. <code>flatpak</code> eta <code>xdg-desktop-portal</code> instalatuta izatea besterik ez duzu behar.",
+    "APT edo DNF erabiltzen ez duten Linux banaketentzat gomendatua. rFirmaren ostree biltegi propiotik ebazten da, eta Flathub-eko <code>org.gnome.Platform</code> runtimea ezer konfiguratu gabe deskargatzen da. <code>flatpak</code> eta <code>xdg-desktop-portal</code> instalatuta izatea besterik ez duzu behar.",
   "install.flatpak.tip":
     "<a href=\"https://rfirma.sgomez.me/rfirma.flatpakref\">rfirma.flatpakref</a> fitxategia deskargatu eta klik bikoitzarekin ere insta dezakezu, zure mahaigainak onartzen badu.",
   "install.apt.body":

@@ -159,29 +159,21 @@ export const en: Dictionary = {
   "comparison.keys.autofirma": "In the Java process",
   "comparison.keys.rfirma": "In the system store or the PKCS#11 module; it never leaves it",
   "comparison.pin.label": "PIN protection in memory",
-  "comparison.pin.autofirma":
-    "Partial <code>char[]</code> wipe with <code>Arrays.fill</code>, not pinned in RAM",
-  "comparison.pin.rfirma":
-    "Buffer pinned with <code>mlock</code>, excluded from dumps with <code>MADV_DONTDUMP</code> and wiped securely",
+  "comparison.pin.autofirma": "Only partly wiped, and it can end up on disk",
+  "comparison.pin.rfirma": "Protected in memory, never written to disk and wiped after use",
   "comparison.dnie.label": "Signing with a Spanish DNIe",
   "comparison.dnie.autofirma": "Yes, via jMulticard",
   "comparison.dnie.rfirma": "In development",
   "comparison.store.label": "Certificates in a file (<code>.p12</code>)",
   "comparison.store.autofirma":
     "The file's path is registered in a store dialogue with six options",
-  "comparison.store.rfirma":
-    "Its own store: \"Add…\" copies the certificate, and nothing from the file is kept, not even the path",
+  "comparison.store.rfirma": "Its own encrypted store, unlocked with your session",
   "comparison.stores.label": "Certificate lookup",
   "comparison.stores.autofirma": "Only searches the store you pick",
-  "comparison.stores.rfirma":
-    "Searches everywhere a certificate could be and merges the results into a single list",
+  "comparison.stores.rfirma": "All in one searchable list, one certificate per row",
   "comparison.stamp.label": "Visible signature placement",
   "comparison.stamp.autofirma": "Coordinates or a box with no context",
-  "comparison.stamp.rfirma": "Drag on the page with a faithful preview",
-  "comparison.sede.label": "Signing from a government site",
-  "comparison.sede.autofirma": "Certificate selection dialogue",
-  "comparison.sede.rfirma":
-    "Consent window: who's asking, what's being signed and with which certificate, before signing",
+  "comparison.stamp.rfirma": "Drag it onto the page, with text templates and a faithful preview",
   "comparison.ca.label": "Browser trust in the local server",
   "comparison.ca.autofirma": "The installer registers the CA on the system, with privileges",
   "comparison.ca.rfirma": "The application registers its CA in the person's NSS stores, without root",
@@ -192,13 +184,13 @@ export const en: Dictionary = {
   "comparison.privacy.label": "Document manager",
   "comparison.privacy.autofirma": "—",
   "comparison.privacy.rfirma":
-    "Keeps recent files and the last certificate used; you can turn them off and clear them whenever you want",
+    "Remembers recent documents and the last certificate used",
   "comparison.os.label": "Operating systems",
   "comparison.os.autofirma": "Windows, macOS, Linux, Android and iOS",
   "comparison.os.rfirma": "Linux; Windows and macOS, in development",
   "comparison.updates.label": "Update channel",
   "comparison.updates.autofirma": "Manual download of a <code>.deb</code> or <code>.rpm</code>",
-  "comparison.updates.rfirma": "Native repositories: Flatpak, APT and DNF",
+  "comparison.updates.rfirma": "Native repositories: APT, DNF and Flatpak",
   "comparison.desktop.label": "Desktop integration",
   "comparison.desktop.autofirma": "Swing's own look",
   "comparison.desktop.rfirma": "Follows the desktop's style, with light and dark themes",
@@ -214,7 +206,7 @@ export const en: Dictionary = {
   "install.copy.apt.aria": "Copy the APT commands",
   "install.copy.dnf.aria": "Copy the DNF commands",
   "install.flatpak.body":
-    "Recommended installation for any Linux distribution. It resolves from rFirma's own ostree remote, and the <code>org.gnome.Platform</code> runtime is downloaded from Flathub with no setup. You only need <code>flatpak</code> and <code>xdg-desktop-portal</code> installed.",
+    "Recommended for Linux distributions that use neither APT nor DNF. It resolves from rFirma's own ostree remote, and the <code>org.gnome.Platform</code> runtime is downloaded from Flathub with no setup. You only need <code>flatpak</code> and <code>xdg-desktop-portal</code> installed.",
   "install.flatpak.tip":
     "You can also download and double-click install the <a href=\"https://rfirma.sgomez.me/rfirma.flatpakref\">rfirma.flatpakref</a> file if your desktop supports it.",
   "install.apt.body":

@@ -8,9 +8,9 @@ interface Props {
 const { locale } = Astro.props;
 const t = translator(locale);
 const tabs = [
-  { id: "flatpak", label: "Flatpak" },
   { id: "apt", label: "APT" },
   { id: "dnf", label: "DNF" },
+  { id: "flatpak", label: "Flatpak" },
   { id: "windows", label: "Windows" },
   { id: "macos", label: "macOS" },
 ] as const;
@@ -51,7 +51,7 @@ const tabs = [
               class="install-tab"
               id={`tab-${tab.id}`}
               aria-controls={`panel-${tab.id}`}
-              aria-selected={tab.id === "flatpak" ? "true" : "false"}
+              aria-selected={tab.id === "apt" ? "true" : "false"}
             >
               {tab.label}
             </button>
@@ -60,27 +60,7 @@ const tabs = [
       </div>
     </div>
 
-    <div id="panel-flatpak" role="tabpanel" aria-labelledby="tab-flatpak" style="padding-top:24px">
-      <p style="margin:0;line-height:1.65" set:html={t("install.flatpak.body")} />
-      <div style="position:relative;margin-top:16px">
-        <button
-          type="button"
-          class="install-copy"
-          data-copy-for="code-flatpak"
-          aria-label={t("install.copy.flatpak.aria")}
-        >
-          <span class="install-copy__idle">{t("install.copy")}</span>
-          <span class="install-copy__done">{t("install.copied")}</span>
-        </button>
-        <pre id="code-flatpak" class="install-code">flatpak install https://rfirma.sgomez.me/rfirma.flatpakref</pre>
-      </div>
-      <p
-        style="margin:10px 0 0;font-size:.875rem;color:var(--rf-text-muted)"
-        set:html={t("install.flatpak.tip")}
-      />
-    </div>
-
-    <div id="panel-apt" role="tabpanel" aria-labelledby="tab-apt" style="padding-top:24px" hidden>
+    <div id="panel-apt" role="tabpanel" aria-labelledby="tab-apt" style="padding-top:24px">
       <p style="margin:0;line-height:1.65" set:html={t("install.apt.body")} />
       <div style="position:relative;margin-top:16px">
         <button type="button" class="install-copy" data-copy-for="code-apt" aria-label={t("install.copy.apt.aria")}>
@@ -117,6 +97,26 @@ gpgkey=https://rfirma.sgomez.me/rfirma.asc
 EOF
 sudo dnf install rfirma</pre>
       </div>
+    </div>
+
+    <div id="panel-flatpak" role="tabpanel" aria-labelledby="tab-flatpak" style="padding-top:24px" hidden>
+      <p style="margin:0;line-height:1.65" set:html={t("install.flatpak.body")} />
+      <div style="position:relative;margin-top:16px">
+        <button
+          type="button"
+          class="install-copy"
+          data-copy-for="code-flatpak"
+          aria-label={t("install.copy.flatpak.aria")}
+        >
+          <span class="install-copy__idle">{t("install.copy")}</span>
+          <span class="install-copy__done">{t("install.copied")}</span>
+        </button>
+        <pre id="code-flatpak" class="install-code">flatpak install https://rfirma.sgomez.me/rfirma.flatpakref</pre>
+      </div>
+      <p
+        style="margin:10px 0 0;font-size:.875rem;color:var(--rf-text-muted)"
+        set:html={t("install.flatpak.tip")}
+      />
     </div>
 
     <div id="panel-windows" role="tabpanel" aria-labelledby="tab-windows" style="padding-top:24px" hidden>

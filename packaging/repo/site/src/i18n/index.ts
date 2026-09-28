@@ -34,7 +34,6 @@ export const invariantKeys: readonly Key[] = [
   "comparison.lang.label",
   "comparison.os.autofirma",
   "comparison.privacy.autofirma",
-  "comparison.sede.autofirma",
   "footer.clienteafirma",
   "footer.col.origin",
   "footer.gpg",

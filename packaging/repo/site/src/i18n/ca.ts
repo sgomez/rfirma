@@ -159,29 +159,21 @@ export const ca: Dictionary = {
   "comparison.keys.autofirma": "Al procés Java",
   "comparison.keys.rfirma": "Al magatzem del sistema o al mòdul PKCS#11; no en surt",
   "comparison.pin.label": "Protecció del PIN en memòria",
-  "comparison.pin.autofirma":
-    "Esborrat parcial del <code>char[]</code> amb <code>Arrays.fill</code>, sense fixar-lo a la RAM",
-  "comparison.pin.rfirma":
-    "Búfer fixat amb <code>mlock</code>, exclòs dels bolcats amb <code>MADV_DONTDUMP</code> i esborrat de manera segura",
+  "comparison.pin.autofirma": "S'esborra només en part i pot acabar al disc",
+  "comparison.pin.rfirma": "Protegit a la memòria, no va mai al disc i s'esborra després d'usar-lo",
   "comparison.dnie.label": "Signatura amb DNIe",
   "comparison.dnie.autofirma": "Sí, amb jMulticard",
   "comparison.dnie.rfirma": "En desenvolupament",
   "comparison.store.label": "Certificats en fitxer (<code>.p12</code>)",
   "comparison.store.autofirma":
     "Es registra la ruta del fitxer en un diàleg de magatzems amb sis opcions",
-  "comparison.store.rfirma":
-    "Magatzem propi: «Afegir…» copia el certificat i del fitxer no es desa res, ni la ruta",
+  "comparison.store.rfirma": "Magatzem propi i xifrat, que s'obre amb la teva sessió",
   "comparison.stores.label": "Cerca de certificats",
   "comparison.stores.autofirma": "Només cerca al magatzem que triïs",
-  "comparison.stores.rfirma":
-    "Cerca a tots els llocs on hi pot haver un certificat i ho ajunta en una sola llista",
+  "comparison.stores.rfirma": "Tots en una llista amb cercador, un certificat per fila",
   "comparison.stamp.label": "Col·locació de la signatura visible",
   "comparison.stamp.autofirma": "Coordenades o requadre sense context",
-  "comparison.stamp.rfirma": "Arrossegament sobre la pàgina amb previsualització fidel",
-  "comparison.sede.label": "Signatura des d'una seu electrònica",
-  "comparison.sede.autofirma": "Diàleg de selecció de certificat",
-  "comparison.sede.rfirma":
-    "Finestra de consentiment: qui demana, què se signa i amb quin certificat, abans de signar",
+  "comparison.stamp.rfirma": "Arrossegament sobre la pàgina, amb models de text i previsualització fidel",
   "comparison.ca.label": "Confiança del navegador en el servidor local",
   "comparison.ca.autofirma": "L'instal·lador registra la CA al sistema, amb privilegis",
   "comparison.ca.rfirma": "L'aplicació registra la seva CA als magatzems NSS de la persona, sense root",
@@ -192,13 +184,13 @@ export const ca: Dictionary = {
   "comparison.privacy.label": "Gestor de documents",
   "comparison.privacy.autofirma": "—",
   "comparison.privacy.rfirma":
-    "Guarda els recents i l'últim certificat utilitzat; es poden apagar i buidar quan vulguis",
+    "Recorda els documents recents i l'últim certificat utilitzat",
   "comparison.os.label": "Sistemes operatius",
   "comparison.os.autofirma": "Windows, macOS, Linux, Android i iOS",
   "comparison.os.rfirma": "Linux; Windows i macOS, en desenvolupament",
   "comparison.updates.label": "Canal d'actualització",
   "comparison.updates.autofirma": "Descàrrega manual de <code>.deb</code> o <code>.rpm</code>",
-  "comparison.updates.rfirma": "Repositoris natius: Flatpak, APT i DNF",
+  "comparison.updates.rfirma": "Repositoris natius: APT, DNF i Flatpak",
   "comparison.desktop.label": "Integració amb l'escriptori",
   "comparison.desktop.autofirma": "Aparença pròpia de Swing",
   "comparison.desktop.rfirma": "Segueix l'estil de l'escriptori, amb tema clar i fosc",
@@ -214,7 +206,7 @@ export const ca: Dictionary = {
   "install.copy.apt.aria": "Copiar les ordres per a APT",
   "install.copy.dnf.aria": "Copiar les ordres per a DNF",
   "install.flatpak.body":
-    "Instal·lació recomanada per a qualsevol distribució de Linux. Es resol des del remot ostree propi de rFirma, i el runtime <code>org.gnome.Platform</code> es descarrega de Flathub sense configurar res. Només cal tenir instal·lats <code>flatpak</code> i <code>xdg-desktop-portal</code>.",
+    "Recomanada per a les distribucions de Linux que no fan servir APT ni DNF. Es resol des del remot ostree propi de rFirma, i el runtime <code>org.gnome.Platform</code> es descarrega de Flathub sense configurar res. Només cal tenir instal·lats <code>flatpak</code> i <code>xdg-desktop-portal</code>.",
   "install.flatpak.tip":
     "També pots descarregar i instal·lar amb doble clic el fitxer <a href=\"https://rfirma.sgomez.me/rfirma.flatpakref\">rfirma.flatpakref</a> si el teu escriptori ho admet.",
   "install.apt.body":
