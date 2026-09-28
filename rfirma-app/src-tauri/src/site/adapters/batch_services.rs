@@ -30,15 +30,20 @@ impl Default for RelayBatchServices {
 impl RelayBatchServices {
     fn post(
         &self,
-        full_url: &str,
+        url: reqwest::Url,
+        body: String,
         unreachable: Situation,
         invalid: Situation,
     ) -> Result<Vec<u8>, BatchError> {
-        let url = full_url.to_owned();
         let client = self.client.clone();
         execute_outside_tokio(move || {
             let response = client
-                .post(&url)
+                .post(url)
+                .header(
+                    reqwest::header::CONTENT_TYPE,
+                    "application/x-www-form-urlencoded",
+                )
+                .body(body)
                 .send()
                 .map_err(|error| BatchError::new(unreachable, error.to_string()))?;
             let status = response.status();
@@ -80,9 +85,9 @@ impl BatchServices for RelayBatchServices {
         certs: &[Vec<u8>],
     ) -> Result<Vec<u8>, BatchError> {
         let url = parsed_batch_url(url, Situation::PresignerUnreachable)?;
-        let full_url = format!("{url}?{}", compose_query(format, lote_base64, certs, None));
         self.post(
-            &full_url,
+            url,
+            compose_body(format, lote_base64, certs, None),
             Situation::PresignerUnreachable,
             Situation::InvalidPresignResponse,
         )
@@ -97,20 +102,17 @@ impl BatchServices for RelayBatchServices {
         tridata: &TriphaseData,
     ) -> Result<Vec<u8>, BatchError> {
         let url = parsed_batch_url(url, Situation::PostsignerUnreachable)?;
-        let full_url = format!(
-            "{url}?{}",
-            compose_query(format, lote_base64, certs, Some(tridata))
-        );
         self.post(
-            &full_url,
+            url,
+            compose_body(format, lote_base64, certs, Some(tridata)),
             Situation::PostsignerUnreachable,
             Situation::InvalidPostsignResponse,
         )
     }
 }
 
-/// El cuerpo de la llamada como `BatchSigner`: `xml|json`, `certs` en base64 URL-safe separados por `;`, y `tridata` en la postfirma (`getCertChainAsBase64`, 1.9.2).
-fn compose_query(
+/// El cuerpo del POST como `BatchSigner`, en formulario y no en la query: `xml|json`, `certs` en base64 URL-safe separados por `;`, y `tridata` en la postfirma (`getCertChainAsBase64`, 1.9.2).
+fn compose_body(
     format: BatchFormat,
     lote_base64: &str,
     certs: &[Vec<u8>],
