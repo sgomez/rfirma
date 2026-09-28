@@ -81,6 +81,12 @@ verdad y por eso no lo tiene el CI. Se ejecuta una vez por etiqueta `v*`. Se
 abre para **ejecutarla** o para mover una fila, no para entender el protocolo:
 eso está en `research/contrato-protocolo-afirma.md`.
 
+`casos-de-sedes-reales.md` — el procedimiento para capturar, redactar y
+guardar la URL `afirma://` de un trámite que falló en una sede real: dónde
+capturarla, qué se le quita antes de que entre en el repositorio y si su
+destino es solo la grada A o también un guion de sede y una comprobación de
+conformidad.
+
 ## `design/` — una ficha por pantalla (lo que ve el usuario)
 
 `ventana-principal` · `cabecera` · `pestanas-de-documentos` ·
