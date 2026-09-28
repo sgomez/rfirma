@@ -29,21 +29,8 @@ pub fn update_destination_for(channel: Channel) -> &'static str {
 pub fn evaluate_version_signal(
     running: Version,
     announced: Option<Version>,
-    checking: bool,
     channel: Channel,
 ) -> SignalRow {
-    if checking {
-        return SignalRow {
-            signal: Signal::Version,
-            value: running.to_string(),
-            verdict: Verdict::Checking,
-            action: None,
-            detail: None,
-            candidates: None,
-            restart_firefox_notice: false,
-        };
-    }
-
     if let Some(latest) = announced.filter(|&v| v > running) {
         SignalRow {
             signal: Signal::Version,
@@ -70,26 +57,6 @@ pub fn evaluate_version_signal(
     }
 }
 
-/// Mide la señal de versión consultando la memoria o la red según proceda.
-pub fn check_version_signal(
-    running: Version,
-    memory: &dyn VersionMemory,
-    feed: ReleaseFeed<'_>,
-    channel: Channel,
-    recheck: bool,
-    now: SystemTime,
-) -> SignalRow {
-    if recheck {
-        let announced = ask_and_remember(memory, feed, now);
-        evaluate_version_signal(running, announced, false, channel)
-    } else {
-        match remembered_answer(memory) {
-            Some(cached) => evaluate_version_signal(running, Some(cached), false, channel),
-            None => evaluate_version_signal(running, None, true, channel),
-        }
-    }
-}
-
 /// Mide la señal de versión preguntando a la red, cayendo a la última conocida sin respuesta.
 pub fn measure_version_signal(
     running: Version,
@@ -99,7 +66,20 @@ pub fn measure_version_signal(
     now: SystemTime,
 ) -> SignalRow {
     let announced = ask_and_remember(memory, feed, now).or_else(|| remembered_answer(memory));
-    evaluate_version_signal(running, announced, false, channel)
+    evaluate_version_signal(running, announced, channel)
+}
+
+/// Fila de la señal de versión mientras se mide fuera de la lectura de estado (ADR-0015).
+pub fn checking_version_signal() -> SignalRow {
+    SignalRow {
+        signal: Signal::Version,
+        value: String::new(),
+        verdict: Verdict::Checking,
+        action: None,
+        detail: None,
+        candidates: None,
+        restart_firefox_notice: false,
+    }
 }
 
 /// Candidatas a firmar en sedes: solo hay dónde elegir con dos o más registradas.

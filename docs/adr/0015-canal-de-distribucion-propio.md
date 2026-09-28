@@ -180,6 +180,22 @@ tienda** y no lo condiciona nada de lo anterior. Se documenta como requisito de 
 ya traen puesta— y no se resuelve por otro lado: servir el runtime desde nuestro repositorio
 son cientos de megas para ahorrar un comando.
 
+## La comprobación de versión no tiene caché por tiempo
+
+El Diagnóstico pregunta siempre a GitHub por la última publicación cuando mide la señal de
+versión, sin ventana de validez: **no hay un «hace menos de 24 horas, no preguntes»**. El
+escritorio es una aplicación que se abre cada varios días, no un proceso en segundo plano que
+sondee sin que se le pida: una caché por tiempo ahorraría peticiones solo en la reapertura
+seguida del mismo día, y a lo que se entra a propósito —abrir el Diagnóstico, pulsar «Volver a
+comprobar»— se le responde al momento, con la lectura de la red que toca. La última respuesta
+sí se recuerda entre sesiones, pero solo como último recurso si esa petición falla: nunca como
+sustituto de preguntar.
+
+Por eso la lectura inicial del Diagnóstico **no sale a la red**: trae la señal de versión en
+«Comprobando», y es la medición aparte —la misma que usa «Volver a comprobar»— la que pregunta.
+Repetir la pregunta dentro de la propia lectura de estado sería preguntar dos veces por la
+misma cosa en la misma apertura del panel.
+
 ## Considered Options
 
 - **Flathub**, que el [#22](https://github.com/sgomez/rfirma/issues/22) dio por hecho sin
@@ -213,6 +229,12 @@ son cientos de megas para ahorrar un comando.
 - **Copiar `nightly.yml` de tabularis.** El [#222](https://github.com/sgomez/rfirma/issues/222)
   dejó a tabularis medido como **contraejemplo, no modelo**. Lo que sobrevive de él es el
   hecho desnudo: un remoto propio es un canal normal, no una rareza.
+- **Una caché de 24 horas para la comprobación de versión**, la lectura obvia cuando se
+  guarda la última respuesta. Se descarta porque no resuelve el problema que resolvería una
+  caché: el escritorio no se reabre varias veces en un mismo día con la frecuencia que haría
+  falta para que ahorrar esas peticiones importe, y en cambio sí complica el caso que sí
+  importa —«Volver a comprobar» debe responder con una lectura fresca, no con la de hace
+  unas horas—, obligando a que ese botón sepa saltarse su propia caché.
 
 ## Consequences
 
