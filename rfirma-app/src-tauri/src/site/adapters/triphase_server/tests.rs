@@ -91,3 +91,28 @@ fn a_server_that_is_not_listening_is_unreachable() {
 
     assert_eq!(error.situation(), Situation::ServerUnreachable);
 }
+
+#[test]
+fn the_url_credentials_travel_as_a_basic_authorization_header() {
+    use crate::site::adapters::header_probe::{authorization_probe, with_alice, ALICE_BASIC};
+    let (address, received) = authorization_probe();
+    let url = with_alice(&address);
+
+    let _ = HttpTriphaseServer::default().post(&url, &[("op", "pre".to_owned())]);
+
+    assert_eq!(
+        received.recv().expect("llego la peticion").as_deref(),
+        Some(ALICE_BASIC)
+    );
+}
+
+#[test]
+fn a_url_without_credentials_sends_no_authorization_header() {
+    use crate::site::adapters::header_probe::{authorization_probe, without_credentials};
+    let (address, received) = authorization_probe();
+    let url = without_credentials(&address);
+
+    let _ = HttpTriphaseServer::default().post(&url, &[("op", "pre".to_owned())]);
+
+    assert_eq!(received.recv().expect("llego la peticion"), None);
+}
