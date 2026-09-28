@@ -2,7 +2,7 @@
 
 use std::path::{Path, PathBuf};
 
-use crate::documents::domain::destination::{DestinationFolder, FolderFact};
+use crate::documents::domain::destination::{DestinationFolder, DestinationMode, FolderFact};
 use crate::documents::domain::recents::Recents;
 use crate::memory_error::MemoryError;
 use crate::signing::domain::{BoxSize, Spot};
@@ -11,6 +11,9 @@ use crate::signing::domain::{BoxSize, Spot};
 pub trait DocumentsMemory {
     /// La carpeta de destino que la persona eligió, si eligió alguna.
     fn chosen_destination(&self) -> Option<DestinationFolder>;
+
+    /// Si el firmado cae junto al original o en la carpeta de destino.
+    fn destination_mode(&self) -> DestinationMode;
 
     /// La última carpeta desde la que se abrió un documento.
     fn last_open_folder(&self) -> Option<PathBuf>;

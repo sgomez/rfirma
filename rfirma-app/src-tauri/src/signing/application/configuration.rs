@@ -81,6 +81,7 @@ pub fn merged(live: &Configuration, chosen: &Preferences) -> Configuration {
     Configuration {
         language: language_of(&chosen.language),
         destination: live.destination.clone(),
+        destination_mode: live.destination_mode,
         remember_visible_signature: chosen.remember_visible_signature,
         remember_activity: chosen.remember_activity,
         notify_new_version: chosen.notify_new_version,
