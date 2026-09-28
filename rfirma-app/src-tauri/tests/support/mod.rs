@@ -542,7 +542,7 @@ pub async fn the_channel_on_one_of(
 
 /// Canal que no atiende ninguna operación: el caso se acaba antes de que llegue.
 pub fn no_operations() -> SiteOperations {
-    SiteOperations::for_operations(|_, _| {})
+    SiteOperations::for_operations(|_, _, _| {})
 }
 
 /// Abre el canal en la ubicación indicada: uno de los puertos sorteados, o el puerto fijo del

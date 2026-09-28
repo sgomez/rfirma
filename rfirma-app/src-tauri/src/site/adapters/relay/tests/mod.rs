@@ -98,7 +98,7 @@ fn a_relay_on(servlets: Arc<OrderedSpy>, runtime: tokio::runtime::Handle) -> (Re
     let failures = Arc::new(Mutex::new(Vec::new()));
 
     let inbox_delivered = Arc::clone(&delivered);
-    let inbox = Inbox::for_operations(move |url, reply| {
+    let inbox = Inbox::for_operations(move |url, _origin, reply| {
         *inbox_delivered.lock().expect("el candado") = Some((url, reply));
     });
 

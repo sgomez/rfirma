@@ -24,9 +24,11 @@ fn no_state() -> Arc<Mutex<ServiceState>> {
 
 /// Un buzón que contesta cada operación con el mismo texto, sin atender de verdad.
 fn answering_with(text: &'static str) -> Inbox {
-    Inbox::for_operations(move |_url: AfirmaUrl, reply: ReplyHandle| {
-        reply.answer(text.to_owned());
-    })
+    Inbox::for_operations(
+        move |_url: AfirmaUrl, _origin: SiteOrigin, reply: ReplyHandle| {
+            reply.answer(text.to_owned());
+        },
+    )
 }
 
 fn body_of(response: &[u8]) -> String {
@@ -233,10 +235,12 @@ async fn a_refusing_duty_answers_the_same_refusal_regardless_of_the_command() {
 /// una respuesta ya calculada.
 fn counting_answers_with(text: &'static str, launches: &Arc<Mutex<usize>>) -> Inbox {
     let launches = Arc::clone(launches);
-    Inbox::for_operations(move |_url: AfirmaUrl, reply: ReplyHandle| {
-        *launches.lock().expect("el contador no esta envenenado") += 1;
-        reply.answer(text.to_owned());
-    })
+    Inbox::for_operations(
+        move |_url: AfirmaUrl, _origin: SiteOrigin, reply: ReplyHandle| {
+            *launches.lock().expect("el contador no esta envenenado") += 1;
+            reply.answer(text.to_owned());
+        },
+    )
 }
 
 fn a_command(operation: &str) -> String {
@@ -304,12 +308,14 @@ async fn the_firm_response_carries_an_acknowledgement_fulfilled_once_the_write_i
     let state = no_state();
     let delivered: Arc<Mutex<Vec<Acknowledgement>>> = Arc::new(Mutex::new(Vec::new()));
     let keeping = Arc::clone(&delivered);
-    let inbox = Inbox::for_operations(move |_url: AfirmaUrl, reply: ReplyHandle| {
-        keeping
-            .lock()
-            .expect("el candado")
-            .push(reply.answer("resultado".to_owned()));
-    });
+    let inbox = Inbox::for_operations(
+        move |_url: AfirmaUrl, _origin: SiteOrigin, reply: ReplyHandle| {
+            keeping
+                .lock()
+                .expect("el candado")
+                .push(reply.answer("resultado".to_owned()));
+        },
+    );
     let raw = a_command("afirma://selectcert?op=selectcert");
 
     let (response, acknowledged) = respond(&raw, true, &serving(), &inbox, &state).await;
@@ -481,9 +487,11 @@ async fn a_send_beyond_the_announced_parts_is_refused_with_saf_11() {
 #[tokio::test]
 async fn a_save_that_ends_in_a_refusal_is_answered_with_saf_11() {
     let refusal = WireAnswer::refused(SafCode::Params).on_the_wire();
-    let inbox = Inbox::for_operations(move |_url: AfirmaUrl, reply: ReplyHandle| {
-        reply.answer(refusal.clone());
-    });
+    let inbox = Inbox::for_operations(
+        move |_url: AfirmaUrl, _origin: SiteOrigin, reply: ReplyHandle| {
+            reply.answer(refusal.clone());
+        },
+    );
 
     let body = answered(
         &a_command("afirma://save?op=save&filename=rfirma.txt&exts=txt"),

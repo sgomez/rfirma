@@ -140,7 +140,7 @@ async fn the_first_message_reveals_the_window_before_the_operation() {
         move || {
             seq_arr.lock().unwrap().push("ventana".to_owned());
         },
-        move |_url, reply| {
+        move |_url, _origin, reply| {
             seq_del.lock().unwrap().push("operacion".to_owned());
             if let Some(delivered) = delivered.lock().unwrap().take() {
                 let _ = delivered.send(());
@@ -192,7 +192,7 @@ async fn the_first_message_over_the_third_protocol_reveals_the_window_before_the
         move || {
             seq_arr.lock().unwrap().push("ventana".to_owned());
         },
-        move |_url, reply| {
+        move |_url, _origin, reply| {
             seq_del.lock().unwrap().push("operacion".to_owned());
             if let Some(delivered) = delivered.lock().unwrap().take() {
                 let _ = delivered.send(());

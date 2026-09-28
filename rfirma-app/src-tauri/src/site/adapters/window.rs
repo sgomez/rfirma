@@ -10,6 +10,7 @@ use crate::site::application::errand::{
     self, Acknowledgement, ErrandDesk, ErrandStep, LiveErrand, Moment, ReplyHandle,
 };
 use crate::site::domain::protocol::{AfirmaUrl, Refusal};
+use crate::site::domain::site_origin::SiteOrigin;
 use crate::site::SiteRoot;
 
 use super::desk::Neighbourhood;
@@ -172,7 +173,12 @@ pub fn note_a_relay_failure(app: &tauri::AppHandle, refusal: Refusal) {
 }
 
 /// Atiende una operación de sede armando la mesa desde el estado de la aplicación.
-pub fn attend_site_operation(app: &tauri::AppHandle, url: AfirmaUrl, reply: ReplyHandle) {
+pub fn attend_site_operation(
+    app: &tauri::AppHandle,
+    url: AfirmaUrl,
+    _origin: SiteOrigin,
+    reply: ReplyHandle,
+) {
     super::trace::note_the_operation(&url);
     let attended = with_the_desk(app, |desk, live| errand::attend(desk, url, reply, live));
     publish_what_moved(app, attended);

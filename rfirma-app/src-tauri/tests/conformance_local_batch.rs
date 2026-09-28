@@ -15,7 +15,7 @@ fn the_local_batch_errand_of(
     let roots = Arc::clone(roots);
     let signer = Arc::clone(signer);
 
-    SiteOperations::for_operations(move |url, reply: ErrandReply| {
+    SiteOperations::for_operations(move |url, _origin, reply: ErrandReply| {
         let neighbourhood = the_neighbourhood_of(&roots);
         let desk = the_desk_of(&roots, &neighbourhood);
         let live = &roots.site.errand;

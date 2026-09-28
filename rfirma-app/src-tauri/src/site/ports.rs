@@ -22,6 +22,7 @@ use crate::site::domain::protocol::{
 };
 use crate::site::domain::relay_error::RelayError;
 use crate::site::domain::signing::{SigningRefusal, SiteSignature};
+use crate::site::domain::site_origin::SiteOrigin;
 use crate::site::domain::tls_error::TlsError;
 use crate::site::domain::triphase_server::TriphaseServerError;
 use crate::site::domain::trust_error::TrustError;
@@ -120,7 +121,7 @@ impl std::fmt::Debug for ReplyHandle {
 #[derive(Clone)]
 pub struct Inbox {
     arrived: Arc<dyn Fn() + Send + Sync>,
-    operations: Arc<dyn Fn(AfirmaUrl, ReplyHandle) + Send + Sync>,
+    operations: Arc<dyn Fn(AfirmaUrl, SiteOrigin, ReplyHandle) + Send + Sync>,
     already_arrived: Arc<std::sync::atomic::AtomicBool>,
     first_client_left: Arc<dyn Fn() + Send + Sync>,
     channel_went_idle: Arc<dyn Fn() + Send + Sync>,
@@ -130,7 +131,7 @@ impl Inbox {
     /// Crea un buzón con los manejadores de llegada y de operaciones.
     pub fn of(
         arrived: impl Fn() + Send + Sync + 'static,
-        operations: impl Fn(AfirmaUrl, ReplyHandle) + Send + Sync + 'static,
+        operations: impl Fn(AfirmaUrl, SiteOrigin, ReplyHandle) + Send + Sync + 'static,
     ) -> Self {
         Self {
             arrived: Arc::new(arrived),
@@ -169,7 +170,7 @@ impl Inbox {
 
     /// Crea un buzón que solo atiende operaciones (para pruebas y servidor intermedio).
     pub fn for_operations(
-        operations: impl Fn(AfirmaUrl, ReplyHandle) + Send + Sync + 'static,
+        operations: impl Fn(AfirmaUrl, SiteOrigin, ReplyHandle) + Send + Sync + 'static,
     ) -> Self {
         Self::of(|| {}, operations)
     }
@@ -184,9 +185,9 @@ impl Inbox {
         }
     }
 
-    /// Entrega una operación recibida por el canal.
-    pub fn deliver(&self, url: AfirmaUrl, reply: ReplyHandle) {
-        (self.operations)(url, reply);
+    /// Entrega una operación recibida por el canal, con el origen de la conexión que la trajo.
+    pub fn deliver(&self, url: AfirmaUrl, origin: SiteOrigin, reply: ReplyHandle) {
+        (self.operations)(url, origin, reply);
     }
 }
 

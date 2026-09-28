@@ -14,6 +14,7 @@ pub use rfirma_lib::site::domain::local_ca::LocalCa;
 pub use rfirma_lib::site::domain::protocol::{
     AfirmaUrl, ChannelCredential, NegotiatedCredential, SafCode,
 };
+pub use rfirma_lib::site::domain::site_origin::SiteOrigin;
 pub use rfirma_lib::site::ports::ReplyHandle;
 pub use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 pub use tokio_tungstenite::tungstenite::Message;
@@ -71,6 +72,11 @@ impl AChannel {
     pub async fn a_client(&self) -> ChannelClient {
         ChannelClient::connect(self.port(), Some(&self.ca_pem)).await
     }
+
+    /// El cliente de canal, mandando el `Origin` dado en el saludo, o ninguno.
+    pub async fn a_client_with_origin(&self, origin: Option<&str>) -> ChannelClient {
+        ChannelClient::connect_with_origin(self.port(), Some(&self.ca_pem), origin).await
+    }
 }
 
 /// Cliente de canal que habla `wss://` contra el servidor local.
@@ -83,6 +89,16 @@ pub struct ChannelClient {
 impl ChannelClient {
     /// Conexión TLS y `Upgrade` de WebSocket encima.
     pub async fn try_connect(port: u16, ca_pem: Option<&[u8]>) -> Result<Self, String> {
+        Self::try_connect_with_origin(port, ca_pem, None).await
+    }
+
+    /// Conexión TLS y `Upgrade` de WebSocket encima, con el saludo mandando el `Origin` dado, o
+    /// ninguno.
+    pub async fn try_connect_with_origin(
+        port: u16,
+        ca_pem: Option<&[u8]>,
+        origin: Option<&str>,
+    ) -> Result<Self, String> {
         let mut builder = TlsConnector::builder();
         if let Some(ca_pem) = ca_pem {
             builder.add_root_certificate(
@@ -91,9 +107,15 @@ impl ChannelClient {
         }
         let connector = builder.build().expect("el conector deberia construirse");
 
-        let request = format!("wss://localhost:{port}/")
+        let mut request = format!("wss://localhost:{port}/")
             .into_client_request()
             .expect("la URL del canal deberia ser una peticion");
+        if let Some(origin) = origin {
+            request.headers_mut().insert(
+                "Origin",
+                origin.parse().expect("el origen deberia ser una cabecera"),
+            );
+        }
 
         let connected = tokio::time::timeout(
             PATIENCE,
@@ -153,6 +175,17 @@ impl ChannelClient {
             .expect("el saludo deberia terminar bien")
     }
 
+    /// Conecta mandando el `Origin` dado en el saludo, o ninguno.
+    pub async fn connect_with_origin(
+        port: u16,
+        ca_pem: Option<&[u8]>,
+        origin: Option<&str>,
+    ) -> Self {
+        Self::try_connect_with_origin(port, ca_pem, origin)
+            .await
+            .expect("el saludo deberia terminar bien")
+    }
+
     /// Manda un mensaje y espera la respuesta.
     pub async fn say(&mut self, message: &str) -> Option<String> {
         self.socket
@@ -189,7 +222,7 @@ impl ChannelClient {
 
 /// Trámite que no contesta las operaciones recibidas.
 pub fn no_operations() -> SiteOperations {
-    SiteOperations::for_operations(|_, _| {})
+    SiteOperations::for_operations(|_, _, _| {})
 }
 
 /// El cometido de servir con la credencial de siempre.
@@ -205,7 +238,7 @@ pub fn an_operation(verb: &str) -> String {
 
 /// Trámite que contesta en el acto cada operación con su verbo.
 pub fn answering_each_operation() -> SiteOperations {
-    SiteOperations::for_operations(|url: AfirmaUrl, reply: ReplyHandle| {
+    SiteOperations::for_operations(|url: AfirmaUrl, _origin: SiteOrigin, reply: ReplyHandle| {
         let _ = reply.answer(format!("contestada:{}", url.verb()));
     })
 }
