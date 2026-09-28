@@ -1,7 +1,5 @@
 // Los guiones de la sede publicada por servidor intermedio, con sus servlets servidos por HTTP.
 
-import { createServer } from "node:http";
-
 import { theLastLaunch, theLaunchesSoFar } from "../lib/browser.mjs";
 import {
   aConditionEvent,
@@ -14,6 +12,7 @@ import {
 import { theInvoice } from "../lib/fixtures.mjs";
 import { withACipherKeyOfSixteenBytes } from "../lib/patches.mjs";
 import { aPublishedScript, withoutAChoice } from "../lib/script.mjs";
+import { servletServer } from "../lib/servlet.mjs";
 import { THE_SIGNATURE_VERIFIES, theSignatureVerifies } from "../lib/verification.mjs";
 import { BATCH_SCRIPTS } from "./batch.mjs";
 
@@ -42,21 +41,6 @@ const THE_SILENCE_AFTER_THE_SPOILED_REQUEST_MS = 5000;
 /** Lo que se espera a una subida tras recuperar una petición con el StorageService local. */
 const THE_SILENCE_AFTER_THE_LOCAL_STORAGE_MS = 60000;
 
-/** Los parámetros de la query y los del cuerpo del POST, donde `UrlHttpManagerImpl` los manda. */
-async function theServletParameters(request) {
-  const parameters = new URL(request.url, "http://127.0.0.2").searchParams;
-  const chunks = [];
-  for await (const chunk of request) chunks.push(chunk);
-  for (const [name, value] of new URLSearchParams(Buffer.concat(chunks).toString("utf8"))) {
-    parameters.append(name, value);
-  }
-  return parameters;
-}
-
-function listening(server, host) {
-  return new Promise((resolve) => server.listen(0, host, () => resolve(server.address().port)));
-}
-
 /**
  * El StorageService y el RetrieveService por HTTP en el loopback, con el registro de cada petición;
  * `retrieving` puede contestar un `op=get` en lugar de lo guardado y `refusingUploads` contesta cada
@@ -68,8 +52,7 @@ async function anIntermediateServer({
 } = {}) {
   const stored = new Map();
   const requests = [];
-  const serving = (listener) => async (request, response) => {
-    const parameters = await theServletParameters(request);
+  const serving = (listener) => async (parameters, request, response) => {
     const entry = {
       listener,
       service: new URL(request.url, "http://127.0.0.2").pathname,
@@ -96,8 +79,9 @@ async function anIntermediateServer({
     response.writeHead(200, { "content-type": "text/plain; charset=utf-8" });
     response.end(answer);
   };
-  const port = await listening(createServer(serving("remote")), "127.0.0.2");
-  const loopbackPort = await listening(createServer(serving("loopback")), "127.0.0.1");
+  const port = (await servletServer(serving("remote"), { host: "127.0.0.2" })).address().port;
+  const loopbackPort = (await servletServer(serving("loopback"), { host: "127.0.0.1" })).address()
+    .port;
   const at = (host, portNumber, path) => `http://${host}:${portNumber}${path}`;
   return {
     storage: at("127.0.0.2", port, THE_STORAGE_PATH),
