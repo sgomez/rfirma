@@ -118,22 +118,18 @@ resto: `DataDownloader`, `Base64`, `SSLErrorProcessor` y la lectura de
   `UrlParametersToSignAndSave`, `UrlParametersForBatch` y
   `UrlParametersToSelectCert`.
 * **rFirma:** `site/domain/protocol/operation/properties.rs::pairs_of`
-  reproduce el UTF-8, los comentarios `#`/`!`, el separador `=`/`:` que
-  respeta el primero no escapado, y los cuatro escapes que el proyecto
-  produce (`\\`, `\n`, `\r`, `\t`); un fallo de lectura tampoco aborta la
-  operación (mismo comentario en el código, citando `UrlParametersToSign.java:207`).
-  **No soporta** la continuación de línea con `\` al final ni los escapes
-  `\uXXXX`, y no acepta el espacio en blanco como separador. Riesgo bajo: las
-  claves de `extraParams` en uso (`headless`, `format`, `signatureSubFilter`,
-  etc.) no llevan estas formas. → #1179 (decisión: documentar el límite o
-  completarlo).
+  sigue `Properties.load`: UTF-8, comentarios `#`/`!`, continuación de línea
+  con `\` final, separador `=`/`:`/blanco no escapado y los escapes `\t \r \n
+  \f` y `\uXXXX`; un fallo de lectura tampoco aborta la operación (mismo
+  comentario en el código, citando `UrlParametersToSign.java:207`). Sin
+  diferencia conocida, salvo un suplente `\uXXXX` suelto, que Rust no puede
+  representar.
 
 ## Diferencias abiertas como issues
 
 | Issue | Diferencia | Tipo |
 |---|---|---|
 | #1174 | Sin mecanismo de confianza puntual en un certificado TLS remoto no reconocido (`SSLErrorProcessor`) al descargar `dat` o hablar con los servlets | Decisión (ADR) |
-| #1179 | La lectura de `properties` no soporta continuación de línea ni escapes `\uXXXX` del formato `.properties` | Decisión |
 
 `Origin` y el resto de cabeceras de `UrlHttpManagerImpl` se investigan en
 #1168, no en este anexo.
