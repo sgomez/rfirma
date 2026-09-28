@@ -273,6 +273,20 @@ describe("PreferencesView", () => {
     expect(onChange).toHaveBeenCalledWith({ ...defaults, honourAutomaticSelection: true });
   });
 
+  it("shows the new hints of the two switches and hides the retired ones", async () => {
+    const user = userEvent.setup();
+    renderView();
+    await openTab(user, "Firma");
+
+    expect(
+      screen.getByText("Si solo sirve uno de tus certificados, se usa sin preguntarte."),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/se reutilizan en el siguiente documento/)).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("switch", { name: /Protección contra firmas por descuido en las sedes/ }),
+    ).not.toBeInTheDocument();
+  });
+
   it("closes on Cerrar", async () => {
     const user = userEvent.setup();
     const onClose = vi.fn();
