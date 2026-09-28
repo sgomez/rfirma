@@ -1,12 +1,14 @@
 import type { TFunction } from "i18next";
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AlertIcon, CheckIcon, SpinnerIcon } from "../design-system/icons";
 import { classify } from "../errors/classify";
 import { ErrorNotice } from "../errors/ErrorNotice";
 import { useLanguage } from "../i18n/LanguageProvider";
 import { LANGUAGES, type LanguageTag } from "../i18n/languages";
+import type { PreferencesStore } from "../preferences/preferences";
 import { Select } from "../preferences/Select";
+import "../preferences/Switch.css";
 import { Header } from "../shell/Header";
 import { type MenuAnchor, menuAnchorFor } from "../shell/menuAnchor";
 import "./SetupWizard.css";
@@ -25,6 +27,7 @@ const AUTOFIRMA_VERSION = "1.9.2";
 interface SetupWizardProps {
   /** Si el asistente ya se ha visto en un arranque anterior: entonces no se monta. */
   seen: boolean;
+  preferences: PreferencesStore;
   statusPort?: StatusPort;
   /** Se llama una vez, al pulsar «Terminar», pase lo que pase con las dos acciones. */
   onFinish: () => void;
@@ -38,6 +41,7 @@ interface SetupWizardProps {
 }
 
 type CertificateStatus =
+  | { kind: "reading" }
   | { kind: "idle" }
   | { kind: "declined" }
   | { kind: "working" }
@@ -63,6 +67,7 @@ type HandlerStatus =
  */
 export function SetupWizard({
   seen,
+  preferences,
   statusPort = memoryStatus(),
   onFinish,
   menuAnchor,
@@ -73,7 +78,7 @@ export function SetupWizard({
 }: SetupWizardProps) {
   const { t } = useTranslation();
   const [step, setStep] = useState<1 | 2>(1);
-  const [certificate, setCertificate] = useState<CertificateStatus>({ kind: "idle" });
+  const [certificate, setCertificate] = useState<CertificateStatus>({ kind: "reading" });
   const [handler, setHandler] = useState<HandlerStatus>({ kind: "unavailable" });
   const [autoFirmaAppears, setAutoFirmaAppears] = useState(true);
   const continueButton = useRef<HTMLButtonElement>(null);
@@ -92,25 +97,22 @@ export function SetupWizard({
       .then((rows) => {
         if (cancelled) return;
         const certificateRow = rows.find((row) => row.signal === "localCaCertificate");
-        if (certificateRow) {
-          setCertificate(
-            certificateRow.verdict === "correct"
-              ? { kind: "done", restartNotice: certificateRow.restartFirefoxNotice }
-              : { kind: "idle" },
-          );
-        }
+        setCertificate(
+          certificateRow?.verdict === "correct"
+            ? { kind: "done", restartNotice: certificateRow.restartFirefoxNotice }
+            : { kind: "idle" },
+        );
         const handlerRow = rows.find((row) => row.signal === "siteSignature");
         if (handlerRow) {
           setAutoFirmaAppears(
             handlerRow.candidates === null ||
               handlerRow.candidates.some((candidate) => candidate.name === "AutoFirma"),
           );
-          setHandler(
-            handlerRow.action?.kind === "choice"
-              ? { kind: "idle", target: handlerRow.action.target }
-              : { kind: "done" },
-          );
+          setHandler(initialHandlerStatus(handlerRow));
         }
+      })
+      .catch(() => {
+        if (!cancelled) setCertificate({ kind: "idle" });
       });
     return () => {
       cancelled = true;
@@ -190,6 +192,7 @@ export function SetupWizard({
                 onUse={useRfirmaAsHandler}
                 onDecline={() => setHandler({ kind: "declined" })}
               />
+              <ProtectionSetting t={t} preferences={preferences} />
             </div>
           )}
         </div>
@@ -443,6 +446,67 @@ function HandlerStep({ t, status, autoFirmaAppears, onUse, onDecline }: HandlerS
         </p>
       )}
     </Step>
+  );
+}
+
+function initialHandlerStatus(row: SignalRow): HandlerStatus {
+  if (row.verdict === "correct") return { kind: "done" };
+  if (row.action?.kind === "choice") return { kind: "idle", target: row.action.target };
+  return { kind: "unavailable" };
+}
+
+function ProtectionSetting({ t, preferences }: { t: TFunction; preferences: PreferencesStore }) {
+  const [enabled, setEnabled] = useState(true);
+  const titleId = useId();
+  const hintId = useId();
+
+  useEffect(() => {
+    let cancelled = false;
+    preferences.read().then((read) => {
+      if (!cancelled) setEnabled(read.consentCountdown);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [preferences]);
+
+  const change = async (next: boolean) => {
+    setEnabled(next);
+    try {
+      const current = await preferences.read();
+      await preferences.save({ ...current, consentCountdown: next });
+    } catch {
+      setEnabled(!next);
+    }
+  };
+
+  return (
+    <>
+      <hr className="rf-divider setup-wizard__divider" />
+      <div className="rf-row rf-gap-sm setup-wizard__protection">
+        <div className="rf-stack setup-wizard__protection-text">
+          <p className="rf-prose setup-wizard__step-title" id={titleId}>
+            {t("preferences.consentCountdown.label")}
+          </p>
+          <p className="rf-hint" id={hintId}>
+            {t("preferences.consentCountdown.hint")}
+          </p>
+        </div>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={enabled}
+          aria-labelledby={titleId}
+          aria-describedby={hintId}
+          className="switch__control setup-wizard__protection-switch"
+          onClick={() => void change(!enabled)}
+        >
+          <span className="switch__track" aria-hidden="true">
+            <span className="switch__knob" />
+          </span>
+        </button>
+      </div>
+    </>
   );
 }
 

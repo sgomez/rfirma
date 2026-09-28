@@ -93,7 +93,9 @@ function RootView() {
   const appHandle = useRef<AppHandle | null>(null);
 
   const finishWizard = () => {
-    void preferences.save({ ...initialPreferences, setupWizardSeen: true });
+    void preferences
+      .read()
+      .then((current) => preferences.save({ ...current, setupWizardSeen: true }));
     setSetupWizardSeen(true);
   };
 
@@ -101,6 +103,7 @@ function RootView() {
     <>
       <SetupWizard
         seen={setupWizardSeen}
+        preferences={preferences}
         statusPort={statusPort}
         onFinish={finishWizard}
         onOpenStatus={() => {

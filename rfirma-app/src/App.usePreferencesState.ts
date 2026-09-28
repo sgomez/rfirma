@@ -9,11 +9,16 @@ import type { SigningState } from "./signing/useSigning";
  * Los ajustes y la rúbrica adoptada: los dos viven del mismo almacén de
  * preferencias y se leen al arrancar sin que nadie los vuelva a pedir.
  */
-export function usePreferencesState(preferences: PreferencesStore, rubrics: RubricPicker) {
+export function usePreferencesState(
+  preferences: PreferencesStore,
+  rubrics: RubricPicker,
+  covered = false,
+) {
   const [settings, setSettings] = useState<Preferences | null>(null);
   const [rubric, setRubric] = useState<Rubric | null>(null);
   const [rubricFailure, setRubricFailure] = useState<RubricFailure | null>(null);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `covered` dispara la relectura: el asistente escribe ajustes mientras tapa la ventana.
   useEffect(() => {
     let current = true;
     preferences.read().then((read) => {
@@ -22,7 +27,7 @@ export function usePreferencesState(preferences: PreferencesStore, rubrics: Rubr
     return () => {
       current = false;
     };
-  }, [preferences]);
+  }, [preferences, covered]);
 
   // La rúbrica adoptada en una sesión anterior sigue en el almacén aunque se
   // cierre la aplicación (ID-33): sin esta lectura al arrancar, «Tu rúbrica»
