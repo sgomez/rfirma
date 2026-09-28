@@ -170,8 +170,8 @@ export function tauriLanguagePreference(): LanguagePreference {
  * Si hay una versión nueva publicada.
  *
  * Aquí no hay ni URL ni caché ni comparación de versiones: todo eso es de
- * `app::version`, que es quien pregunta —como mucho una vez cada 24 h— y quien
- * decide que sin red no se dice nada. La orden contesta `null` en los tres
+ * `app::version`, que es quien pregunta —siempre— y quien decide que sin red
+ * no se dice nada. La orden contesta `null` en los tres
  * casos en que no hay nada que contar, y `null` es lo que llega a la ventana.
  */
 export function tauriVersionCheck(): VersionCheck {
