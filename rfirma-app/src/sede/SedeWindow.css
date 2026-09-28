@@ -17,6 +17,13 @@
  * desnudo alrededor, con el diálogo flotando dentro como un modal de otra
  * ventana. Quien manda es la ventana.
  */
+/* Sin `z-index`: el velo de los diálogos lleva la capa 20 y taparía la lista de certificados. */
+.sede-window__frame {
+  position: fixed;
+  inset: 0;
+  display: flex;
+}
+
 .sede-window {
   width: 100%;
   height: 100%;

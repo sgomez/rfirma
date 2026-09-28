@@ -100,7 +100,7 @@ function SedeDialog({
   };
 
   return (
-    <div className="rf-scrim">
+    <div className="sede-window__frame">
       <section
         className="sede-window"
         role="dialog"
