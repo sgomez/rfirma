@@ -116,3 +116,15 @@ fn a_rejected_store_keeps_the_body_of_the_error() {
         "{error}"
     );
 }
+
+#[test]
+fn a_retrieve_that_answers_after_the_connect_limit_still_arrives() {
+    use crate::site::adapters::header_probe::{slow_server, BEYOND_CONNECT_LIMIT};
+    let url = slow_server(BEYOND_CONNECT_LIMIT, "contenido");
+
+    let answer = RelayServlets::default()
+        .retrieve(&url, "id-1")
+        .expect("el servidor contesta");
+
+    assert_eq!(answer, "contenido");
+}

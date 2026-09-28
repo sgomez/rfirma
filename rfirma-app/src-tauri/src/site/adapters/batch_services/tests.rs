@@ -256,3 +256,16 @@ fn a_rejected_presign_keeps_the_body_of_the_error() {
         "{error}"
     );
 }
+
+#[test]
+fn a_postsigner_slower_than_the_connect_limit_still_answers() {
+    use crate::site::adapters::header_probe::{slow_server, BEYOND_CONNECT_LIMIT};
+    let url = slow_server(BEYOND_CONNECT_LIMIT, "contenido");
+    let tridata = TriphaseData::new(None, vec![]);
+
+    let answer = RelayBatchServices::default()
+        .postsign(&url, BatchFormat::Json, "bG90ZQ", &[], &tridata)
+        .expect("el servlet contesta");
+
+    assert_eq!(answer, b"contenido");
+}

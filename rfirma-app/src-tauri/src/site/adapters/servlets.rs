@@ -1,13 +1,9 @@
 //! Adaptador `reqwest` sobre los servlets del servidor intermedio; la forma de la URL no se comprueba aquí.
 
-use std::time::Duration;
-
 use crate::site::domain::relay_error::{RelayError, Situation};
 use crate::site::ports::Servlets;
 
 const OPERATION_VERSION: &str = "1_0";
-const TIMEOUT: Duration = Duration::from_secs(30);
-
 /// Literal de espera activa, byte a byte con el original (1.9.2, `ActiveWaitingThread.java:14`).
 const WAIT_MARKER: &str = "#WAIT";
 
@@ -19,10 +15,7 @@ pub struct RelayServlets {
 impl Default for RelayServlets {
     fn default() -> Self {
         execute_outside_tokio(|| Self {
-            client: reqwest::blocking::Client::builder()
-                .timeout(TIMEOUT)
-                .build()
-                .expect("el cliente HTTP se construye con parametros validos"),
+            client: super::service_client(),
         })
     }
 }
