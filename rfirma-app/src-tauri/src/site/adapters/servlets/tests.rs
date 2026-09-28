@@ -57,3 +57,28 @@ async fn retrieve_from_within_an_async_tokio_context_does_not_panic() {
         Err(error) if error.situation() == Situation::ServletUnreachable
     ));
 }
+
+#[test]
+fn the_url_credentials_travel_as_a_basic_authorization_header() {
+    use crate::site::adapters::header_probe::{authorization_probe, with_alice, ALICE_BASIC};
+    let (address, received) = authorization_probe();
+    let url = with_alice(&address);
+
+    let _ = RelayServlets::default().retrieve(&url, "id-123");
+
+    assert_eq!(
+        received.recv().expect("llego la peticion").as_deref(),
+        Some(ALICE_BASIC)
+    );
+}
+
+#[test]
+fn a_url_without_credentials_sends_no_authorization_header() {
+    use crate::site::adapters::header_probe::{authorization_probe, without_credentials};
+    let (address, received) = authorization_probe();
+    let url = without_credentials(&address);
+
+    let _ = RelayServlets::default().retrieve(&url, "id-123");
+
+    assert_eq!(received.recv().expect("llego la peticion"), None);
+}

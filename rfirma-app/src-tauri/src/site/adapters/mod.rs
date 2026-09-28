@@ -9,6 +9,8 @@ pub mod codec_v3;
 pub mod data_download;
 pub mod desk;
 pub mod frontier;
+#[cfg(test)]
+mod header_probe;
 pub mod nss;
 pub mod relay;
 pub mod scratch;

@@ -21,6 +21,7 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `adapters/codec_v1.rs`, `adapters/codec_v3.rs` | Los códecs del transporte `service` y de la versión 3, que delegan en el de la 4 en vez de repetirlo; el de la 3, además, rechaza la operación que exige un `ver` posterior. Pruebas en `adapters/codec_v1/tests.rs` y `adapters/codec_v3/tests.rs`. |
 | `adapters/codec_relay.rs` | El códec del servidor intermedio, el que cifra la respuesta con la clave negociada. Pruebas en `adapters/codec_relay/tests.rs`. |
 | `adapters/data_download.rs` | El cliente HTTP que baja el `dat` que la sede manda como URL. Pruebas en `adapters/data_download/tests.rs`. |
+| `adapters/header_probe.rs` | El servidor de una petición que devuelve el `Authorization` recibido, para las pruebas de los cuatro clientes HTTP de sede. Solo en pruebas. |
 | `adapters/desk.rs` | `Neighbourhood`: el único implementador de producción del puerto `Neighbours`, servido sobre las tres raíces vecinas. Pruebas en `adapters/desk/tests.rs`. |
 | `adapters/scratch.rs` | La carpeta de paso donde cae el documento de la sede mientras dura el trámite, y las rutas que elige la persona al guardar o cargar (ADR-0011); también nombra, cierra con `flock` y barre la carpeta de paso propia del proceso. Pruebas en `adapters/scratch/tests.rs`. |
 | `adapters/service/mod.rs` | El transporte de producción de `service`: TLS crudo sobre el *loopback*, sin WebSocket. Pruebas en `adapters/service/tests.rs`. |
