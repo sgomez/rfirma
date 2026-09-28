@@ -2,7 +2,9 @@
 
 use std::time::SystemTime;
 
-use crate::desktop::application::version::{ask_and_remember, fresh_answer, ReleaseFeed, Version};
+use crate::desktop::application::version::{
+    ask_and_remember, remembered_answer, ReleaseFeed, Version,
+};
 use crate::desktop::domain::channel::Channel;
 use crate::desktop::domain::destination::{CERTIFICATE_ISSUANCE, RELEASES, REPOSITORY};
 use crate::desktop::domain::handlers::UrlHandlers;
@@ -81,7 +83,7 @@ pub fn check_version_signal(
         let announced = ask_and_remember(memory, feed, now);
         evaluate_version_signal(running, announced, false, channel)
     } else {
-        match fresh_answer(memory, now) {
+        match remembered_answer(memory) {
             Some(cached) => evaluate_version_signal(running, Some(cached), false, channel),
             None => evaluate_version_signal(running, None, true, channel),
         }

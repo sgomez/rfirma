@@ -7,7 +7,7 @@ pub const LATEST_RELEASE_ENDPOINT: &str =
     "https://api.github.com/repos/sgomez/rfirma/releases/latest";
 
 /// Tiempo máximo de espera para la respuesta del servidor.
-const TIMEOUT: Duration = Duration::from_secs(10);
+const TIMEOUT: Duration = Duration::from_secs(4);
 
 /// Obtiene el cuerpo de respuesta de la última publicación si está disponible.
 pub fn latest_release() -> Option<String> {
