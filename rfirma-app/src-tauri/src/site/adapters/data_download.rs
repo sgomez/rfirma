@@ -24,7 +24,7 @@ pub(in crate::site::adapters) fn download_with(
         let response = super::service_client(cookies)
             .get(url)
             .send()
-            .map_err(|error| error.to_string())?;
+            .map_err(|error| super::send_failure(&error))?;
         if super::is_rejection(response.status()) {
             return Err(super::rejection_detail(response));
         }

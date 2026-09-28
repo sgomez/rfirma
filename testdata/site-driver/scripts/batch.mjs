@@ -27,7 +27,7 @@ import {
 } from "../lib/patches.mjs";
 import { isABarePkcs1 } from "../lib/pkcs1.mjs";
 import { aPublishedScript, withoutAChoice } from "../lib/script.mjs";
-import { servletServer, theFormParameters } from "../lib/servlet.mjs";
+import { aSelfSignedCertificate, servletServer, theFormParameters } from "../lib/servlet.mjs";
 
 const THROUGH_BOTH_SERVLETS = "through-both-servlets";
 const EVERY_DOCUMENT_SIGNED_WITHOUT_A_DIALOGUE = "every-document-signed-without-a-dialogue";
@@ -71,21 +71,22 @@ function theBodyParameters(request, form) {
 }
 
 /** Un servlet del lote en un puerto libre del loopback; con `service`, cuenta cada petición que recibe. */
-export function aBatchServlet(answering, { reading = theFormParameters, service, telling } = {}) {
+export function aBatchServlet(answering, { reading = theFormParameters, service, telling, tls } = {}) {
   return servletServer(
     async (parameters, request, response) => {
       const { status, body, headers } = await answering(parameters, request);
       response.writeHead(status, { "content-type": "application/json", ...headers });
       response.end(body);
     },
-    { reading, service, telling },
+    { reading, service, telling, tls },
   );
 }
 
 /** Un servlet del lote sirviendo HTTP en un puerto libre del loopback, y su URL absoluta. */
 export async function servletServing(answering, options) {
   const server = await aBatchServlet(answering, options);
-  return `http://127.0.0.2:${server.address().port}/batch`;
+  const scheme = options?.tls ? "https" : "http";
+  return `${scheme}://127.0.0.2:${server.address().port}/batch`;
 }
 
 function decodedFromBase64(value) {
@@ -362,9 +363,10 @@ async function theBatchScript(
   measuring = theRemoteBatchConditions,
   reading = theFormParameters,
   postsigning = thePostsigner,
+  tls = null,
 ) {
-  const presigner = await servletServing(presigning, { reading, service: "presigner" });
-  const postsigner = await servletServing(postsigning, { reading, service: "postsigner" });
+  const presigner = await servletServing(presigning, { reading, service: "presigner", tls });
+  const postsigner = await servletServing(postsigning, { reading, service: "postsigner", tls });
 
   AutoScript.createBatch("SHA256", "CAdES", "sign");
   AutoScript.addDocumentToBatch("uno", Buffer.from("primer documento").toString("base64"));
@@ -1017,6 +1019,17 @@ export const BATCH_SCRIPTS = {
         theSessionDemandingPostsigner,
       ),
     { conditions: [THE_SESSION_COOKIE_REACHES_THE_POSTSIGNER] },
+  ),
+  batchuntrustedcertificate: aPublishedScript(
+    () =>
+      theBatchScript(
+        thePresigner,
+        theRemoteBatchConditions,
+        theFormParameters,
+        thePostsigner,
+        aSelfSignedCertificate(),
+      ),
+    { conditions: [THROUGH_BOTH_SERVLETS] },
   ),
   batchpartial: aPublishedScript(
     () => theBatchScript(thePartialPresigner, thePartialBatchConditions),

@@ -46,6 +46,29 @@ fn rejection_detail(response: reqwest::blocking::Response) -> String {
     }
 }
 
+/// El detalle de una petición que no llegó: dice que el certificado del servidor no es de confianza cuando fue eso (ADR-0039).
+fn send_failure(error: &reqwest::Error) -> String {
+    if !is_untrusted_certificate(error) {
+        return error.to_string();
+    }
+    let server = error
+        .url()
+        .and_then(|url| url.host_str())
+        .unwrap_or("desconocido");
+    format!("el certificado del servidor {server} no es de confianza: {error}")
+}
+
+fn is_untrusted_certificate(error: &reqwest::Error) -> bool {
+    let mut cause: Option<&dyn std::error::Error> = Some(error);
+    while let Some(current) = cause {
+        if current.to_string().contains("certificate verify failed") {
+            return true;
+        }
+        cause = current.source();
+    }
+    false
+}
+
 fn is_rejection(status: reqwest::StatusCode) -> bool {
     status.is_client_error() || status.is_server_error()
 }

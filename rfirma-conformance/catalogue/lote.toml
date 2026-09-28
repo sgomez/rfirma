@@ -104,6 +104,22 @@ script = "batchsessioncookie"
 expects.completes.conditions = ["the-session-cookie-reaches-the-postsigner"]
 
 [[check]]
+id = "the_site_services_accept_a_certificate_the_person_trusts"
+set = "lote"
+citation = "SSLErrorProcessor.java:23-60"
+explained_by.rfirma = "ADR-0039"
+statement = """
+Cuando un servlet del lote presenta un certificado TLS autofirmado, el original pregunta a la
+persona si confía en él y, si acepta, reintenta y completa el lote. rFirma no ofrece esa opción.
+"""
+
+[check.drive]
+mode = "v4"
+script = "batchuntrustedcertificate"
+act.consent = "Cuando aparezca el diálogo de confianza del certificado del servidor, acéptalo."
+expects.completes.conditions = ["through-both-servlets"]
+
+[[check]]
 id = "the_postsigner_receives_every_item_signed_with_pk1"
 set = "lote"
 citation = "BatchSigner.java:416-443"

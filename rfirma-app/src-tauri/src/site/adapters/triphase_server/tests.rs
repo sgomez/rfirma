@@ -145,3 +145,20 @@ fn an_answer_after_the_connect_limit_still_arrives() {
 
     assert_eq!(answer, b"contenido");
 }
+
+#[test]
+fn an_untrusted_server_certificate_is_named_as_such_and_stays_unreachable() {
+    let url = crate::site::adapters::header_probe::untrusted_tls_server();
+
+    let error = HttpTriphaseServer::default()
+        .post(&url, &[])
+        .expect_err("el certificado no es de confianza");
+
+    assert_eq!(error.situation(), Situation::ServerUnreachable);
+    assert!(
+        error
+            .to_string()
+            .contains("certificado del servidor 127.0.0.1 no es de confianza"),
+        "{error}"
+    );
+}
