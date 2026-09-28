@@ -1,6 +1,8 @@
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
+import { inMemoryPreferences } from "../preferences/preferences";
+import { defaults } from "../preferences/testSupport";
 import { memoryStatus, type SignalRow } from "../status/status";
 import { renderWithCatalog } from "../testing/render";
 import { SetupWizard } from "./SetupWizard";
@@ -41,7 +43,9 @@ const handlerNotOurs: SignalRow = {
 // Grada A: el asistente solo habla con `StatusPort`, sin puerto propio.
 describe("SetupWizard", () => {
   it("does not mount at all once a previous run has seen it", () => {
-    renderWithCatalog(<SetupWizard seen={true} onFinish={() => {}} />);
+    renderWithCatalog(
+      <SetupWizard preferences={inMemoryPreferences(defaults)} seen={true} onFinish={() => {}} />,
+    );
 
     expect(screen.queryByText("Configurar rFirma")).not.toBeInTheDocument();
   });
@@ -50,6 +54,7 @@ describe("SetupWizard", () => {
     const user = userEvent.setup();
     renderWithCatalog(
       <SetupWizard
+        preferences={inMemoryPreferences(defaults)}
         seen={false}
         statusPort={memoryStatus([aVersionRow, certificateNotInstalled, handlerNotOurs])}
         onFinish={() => {}}
@@ -82,7 +87,14 @@ describe("SetupWizard", () => {
           resolveInstall = resolve;
         }),
     };
-    renderWithCatalog(<SetupWizard seen={false} statusPort={port} onFinish={() => {}} />);
+    renderWithCatalog(
+      <SetupWizard
+        preferences={inMemoryPreferences(defaults)}
+        seen={false}
+        statusPort={port}
+        onFinish={() => {}}
+      />,
+    );
     await user.click(screen.getByRole("button", { name: "Continuar" }));
 
     expect(screen.getByText("1")).toBeInTheDocument();
@@ -113,7 +125,14 @@ describe("SetupWizard", () => {
           resolveChoice = resolve;
         }),
     };
-    renderWithCatalog(<SetupWizard seen={false} statusPort={port} onFinish={() => {}} />);
+    renderWithCatalog(
+      <SetupWizard
+        preferences={inMemoryPreferences(defaults)}
+        seen={false}
+        statusPort={port}
+        onFinish={() => {}}
+      />,
+    );
     await user.click(screen.getByRole("button", { name: "Continuar" }));
 
     await user.click(screen.getByRole("button", { name: "Que abran rFirma" }));
@@ -128,7 +147,10 @@ describe("SetupWizard", () => {
   });
 
   it("welcomes in the language it starts with", () => {
-    renderWithCatalog(<SetupWizard seen={false} onFinish={() => {}} />, "gl");
+    renderWithCatalog(
+      <SetupWizard preferences={inMemoryPreferences(defaults)} seen={false} onFinish={() => {}} />,
+      "gl",
+    );
 
     expect(
       screen.getByText(/rFirma é unha aplicación compatible con AutoFirma 1\.9\.2/),
@@ -140,6 +162,7 @@ describe("SetupWizard", () => {
     const user = userEvent.setup();
     renderWithCatalog(
       <SetupWizard
+        preferences={inMemoryPreferences(defaults)}
         seen={false}
         statusPort={memoryStatus([aVersionRow, certificateNotInstalled, handlerNotOurs])}
         onFinish={() => {}}
@@ -168,7 +191,14 @@ describe("SetupWizard", () => {
     const port = memoryStatus([aVersionRow, certificateNotInstalled, handlerNotOurs]);
     const install = vi.spyOn(port, "installLocalCaCertificate");
     const choose = vi.spyOn(port, "chooseSiteSignatureHandler");
-    renderWithCatalog(<SetupWizard seen={false} statusPort={port} onFinish={onFinish} />);
+    renderWithCatalog(
+      <SetupWizard
+        preferences={inMemoryPreferences(defaults)}
+        seen={false}
+        statusPort={port}
+        onFinish={onFinish}
+      />,
+    );
 
     await user.click(screen.getByRole("button", { name: "Omitir configuración" }));
 
@@ -187,6 +217,7 @@ describe("SetupWizard", () => {
     };
     renderWithCatalog(
       <SetupWizard
+        preferences={inMemoryPreferences(defaults)}
         seen={false}
         statusPort={memoryStatus(
           [aVersionRow, certificateNotInstalled, handlerNotOurs],
@@ -219,7 +250,14 @@ describe("SetupWizard", () => {
           resolveInstall = resolve;
         }),
     };
-    renderWithCatalog(<SetupWizard seen={false} statusPort={port} onFinish={() => {}} />);
+    renderWithCatalog(
+      <SetupWizard
+        preferences={inMemoryPreferences(defaults)}
+        seen={false}
+        statusPort={port}
+        onFinish={() => {}}
+      />,
+    );
     await user.click(screen.getByRole("button", { name: "Continuar" }));
 
     await user.click(screen.getByRole("button", { name: "Instalar" }));
@@ -266,7 +304,14 @@ describe("SetupWizard", () => {
         return calls === 1 ? failedRow : installedRow;
       },
     };
-    renderWithCatalog(<SetupWizard seen={false} statusPort={port} onFinish={() => {}} />);
+    renderWithCatalog(
+      <SetupWizard
+        preferences={inMemoryPreferences(defaults)}
+        seen={false}
+        statusPort={port}
+        onFinish={() => {}}
+      />,
+    );
     await user.click(screen.getByRole("button", { name: "Continuar" }));
 
     await user.click(screen.getByRole("button", { name: "Instalar" }));
@@ -303,6 +348,7 @@ describe("SetupWizard", () => {
     };
     renderWithCatalog(
       <SetupWizard
+        preferences={inMemoryPreferences(defaults)}
         seen={false}
         statusPort={memoryStatus(
           [aVersionRow, certificateNotInstalled, handlerNotOurs],
@@ -327,7 +373,14 @@ describe("SetupWizard", () => {
     const user = userEvent.setup();
     const port = memoryStatus([aVersionRow, certificateNotInstalled, handlerNotOurs]);
     const install = vi.spyOn(port, "installLocalCaCertificate");
-    renderWithCatalog(<SetupWizard seen={false} statusPort={port} onFinish={() => {}} />);
+    renderWithCatalog(
+      <SetupWizard
+        preferences={inMemoryPreferences(defaults)}
+        seen={false}
+        statusPort={port}
+        onFinish={() => {}}
+      />,
+    );
     await user.click(screen.getByRole("button", { name: "Continuar" }));
 
     const firstNotNow = screen.getAllByRole("button", { name: "Ahora no" }).at(0);
@@ -348,6 +401,7 @@ describe("SetupWizard", () => {
     };
     renderWithCatalog(
       <SetupWizard
+        preferences={inMemoryPreferences(defaults)}
         seen={false}
         statusPort={memoryStatus([aVersionRow, certificateNotInstalled, handlerAlone])}
         onFinish={() => {}}
@@ -371,6 +425,7 @@ describe("SetupWizard", () => {
     const chosenHandler: SignalRow = { ...handlerNotOurs, verdict: "correct", action: null };
     renderWithCatalog(
       <SetupWizard
+        preferences={inMemoryPreferences(defaults)}
         seen={false}
         statusPort={memoryStatus(
           [aVersionRow, certificateNotInstalled, handlerNotOurs],
@@ -403,7 +458,14 @@ describe("SetupWizard", () => {
     };
     const base = memoryStatus([aVersionRow, certificateNotInstalled, handlerNotOurs]);
     const port = { ...base, installLocalCaCertificate: async () => failedRow };
-    renderWithCatalog(<SetupWizard seen={false} statusPort={port} onFinish={onFinish} />);
+    renderWithCatalog(
+      <SetupWizard
+        preferences={inMemoryPreferences(defaults)}
+        seen={false}
+        statusPort={port}
+        onFinish={onFinish}
+      />,
+    );
     await user.click(screen.getByRole("button", { name: "Continuar" }));
     await user.click(screen.getByRole("button", { name: "Instalar" }));
     await waitFor(() => {
@@ -420,6 +482,7 @@ describe("SetupWizard", () => {
     const onFinish = vi.fn();
     renderWithCatalog(
       <SetupWizard
+        preferences={inMemoryPreferences(defaults)}
         seen={false}
         statusPort={memoryStatus([aVersionRow, certificateNotInstalled, handlerNotOurs])}
         onFinish={onFinish}
@@ -444,6 +507,7 @@ describe("SetupWizard", () => {
     const onOpenAbout = vi.fn();
     renderWithCatalog(
       <SetupWizard
+        preferences={inMemoryPreferences(defaults)}
         seen={false}
         onFinish={() => {}}
         onOpenStatus={onOpenStatus}
@@ -466,5 +530,99 @@ describe("SetupWizard", () => {
     expect(onOpenStatus).not.toHaveBeenCalled();
     expect(onOpenPreferences).not.toHaveBeenCalled();
     expect(onOpenHelp).not.toHaveBeenCalled();
+  });
+
+  it("writes consentCountdown through the preferences port as soon as the protection switch changes", async () => {
+    const user = userEvent.setup();
+    const preferences = inMemoryPreferences({ ...defaults, consentCountdown: true });
+    const onFinish = vi.fn();
+    renderWithCatalog(
+      <SetupWizard
+        preferences={preferences}
+        seen={false}
+        statusPort={memoryStatus([aVersionRow, certificateNotInstalled, handlerNotOurs])}
+        onFinish={onFinish}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "Continuar" }));
+
+    expect(screen.getByRole("separator")).toBeInTheDocument();
+    const protection = screen.getByRole("switch", {
+      name: "Protección contra firmas accidentales",
+    });
+    expect(protection).toHaveAccessibleDescription(
+      "Se añade una pausa de 3 segundos antes de permitir firmar.",
+    );
+    await waitFor(() => expect(protection).toHaveAttribute("aria-checked", "true"));
+
+    await user.click(protection);
+
+    expect(protection).toHaveAttribute("aria-checked", "false");
+    await waitFor(async () => {
+      expect((await preferences.read()).consentCountdown).toBe(false);
+    });
+    expect(onFinish).not.toHaveBeenCalled();
+  });
+
+  it("starts both steps done and without buttons when the CA is installed and rFirma already opens the sites", async () => {
+    const user = userEvent.setup();
+    const certificateInstalled: SignalRow = {
+      ...certificateNotInstalled,
+      verdict: "correct",
+      action: null,
+    };
+    const handlerOurs: SignalRow = {
+      ...handlerNotOurs,
+      value: "rFirma",
+      verdict: "correct",
+      action: null,
+    };
+    renderWithCatalog(
+      <SetupWizard
+        preferences={inMemoryPreferences(defaults)}
+        seen={false}
+        statusPort={memoryStatus([aVersionRow, certificateInstalled, handlerOurs])}
+        onFinish={() => {}}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "Continuar" }));
+
+    expect(await screen.findByText("Instalado en tus navegadores.")).toBeInTheDocument();
+    expect(screen.getByText("Ahora abren rFirma.")).toBeInTheDocument();
+    for (const name of ["Instalar", "Que abran rFirma", "Ahora no"]) {
+      expect(screen.queryByRole("button", { name })).not.toBeInTheDocument();
+    }
+  });
+
+  it("offers no step buttons while it reads the computer's state, and starts pending when nothing is done", async () => {
+    const user = userEvent.setup();
+    let resolveRead: (rows: SignalRow[]) => void = () => {};
+    const port = {
+      ...memoryStatus(),
+      readStatus: () =>
+        new Promise<SignalRow[]>((resolve) => {
+          resolveRead = resolve;
+        }),
+    };
+    renderWithCatalog(
+      <SetupWizard
+        preferences={inMemoryPreferences(defaults)}
+        seen={false}
+        statusPort={port}
+        onFinish={() => {}}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "Continuar" }));
+
+    for (const name of ["Instalar", "Que abran rFirma", "Ahora no"]) {
+      expect(screen.queryByRole("button", { name })).not.toBeInTheDocument();
+    }
+
+    resolveRead([aVersionRow, certificateNotInstalled, handlerNotOurs]);
+
+    expect(await screen.findByRole("button", { name: "Instalar" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Que abran rFirma" })).toBeInTheDocument();
+    expect(screen.getByText("1")).toBeInTheDocument();
+    expect(screen.getByText("2")).toBeInTheDocument();
   });
 });

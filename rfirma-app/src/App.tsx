@@ -179,7 +179,7 @@ export function App({
   const [signature, setSignature] = useVisibleSignature(initialSignature, chosen);
   const signing = useSigning(signer);
   const { settings, changeSettings, chooseDestination, rubric, rubricFailure, chooseRubric } =
-    usePreferencesState(preferences, rubrics);
+    usePreferencesState(preferences, rubrics, covered);
   // Mientras los ajustes se leen todavía no se sabe, y lo guardado por omisión es recordar.
   const rememberActivity = settings?.rememberActivity ?? true;
   const documents = useDocuments(recents, picker, rememberActivity);

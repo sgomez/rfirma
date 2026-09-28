@@ -1,7 +1,10 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { destinationOfferingSingleChoice } from "./App.testSupport";
-import { useDestination } from "./App.usePreferencesState";
+import { useDestination, usePreferencesState } from "./App.usePreferencesState";
+import { inMemoryPreferences } from "./preferences/preferences";
+import { defaults } from "./preferences/testSupport";
+import { emptyRubricPicker } from "./signing/rubric";
 import type { SigningState } from "./signing/useSigning";
 
 describe("useDestination", () => {
@@ -36,5 +39,22 @@ describe("useDestination", () => {
 
     expect(result.current.singleDestinationId).toBeNull();
     await waitFor(() => expect(result.current.destination?.folder).toBe("Documentos"));
+  });
+});
+
+describe("usePreferencesState", () => {
+  it("reads the settings again once the setup wizard stops covering the window", async () => {
+    const preferences = inMemoryPreferences({ ...defaults, consentCountdown: true });
+    const rubrics = emptyRubricPicker();
+    const { result, rerender } = renderHook(
+      ({ covered }) => usePreferencesState(preferences, rubrics, covered),
+      { initialProps: { covered: true } },
+    );
+    await waitFor(() => expect(result.current.settings?.consentCountdown).toBe(true));
+
+    await preferences.save({ ...defaults, consentCountdown: false });
+    rerender({ covered: false });
+
+    await waitFor(() => expect(result.current.settings?.consentCountdown).toBe(false));
   });
 });
