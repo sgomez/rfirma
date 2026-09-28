@@ -1415,10 +1415,7 @@ msgid "setup.certificate.title"
 msgstr "El certificado de rFirma"
 
 msgid "setup.certificate.body"
-msgstr ""
-"Cuando firmas en una sede electrónica, tu navegador tiene que conectarse a "
-"rFirma. Para que esa conexión sea segura necesitamos instalar un certificado "
-"propio."
+msgstr "Para que tu navegador se conecte a rFirma de forma segura."
 
 msgid "setup.certificate.installing"
 msgstr "Instalando…"
@@ -1439,7 +1436,7 @@ msgid "setup.handler.body"
 msgstr "Ahora mismo las sedes electrónicas abren AutoFirma."
 
 msgid "setup.handler.bodyNoAutofirma"
-msgstr "Ahora mismo las sedes electrónicas no tienen ningún programa asignado."
+msgstr "Ahora mismo las sedes no tienen ningún programa asignado."
 
 msgid "setup.handler.done"
 msgstr "Ahora abren rFirma."

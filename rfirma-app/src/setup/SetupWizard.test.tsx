@@ -64,8 +64,42 @@ describe("SetupWizard", () => {
     await user.click(screen.getByRole("button", { name: "Continuar" }));
 
     expect(screen.getByText("El certificado de rFirma")).toBeInTheDocument();
+    expect(
+      screen.getByText("Para que tu navegador se conecte a rFirma de forma segura."),
+    ).toBeInTheDocument();
     expect(screen.getByText("Usar rFirma por defecto")).toBeInTheDocument();
     expect(screen.getByText("Paso 2 de 2")).toBeInTheDocument();
+  });
+
+  it("marks each step pending, working, done or failed with an accessible cue, no card left", async () => {
+    const user = userEvent.setup();
+    let resolveInstall: (row: SignalRow) => void = () => {};
+    const base = memoryStatus([aVersionRow, certificateNotInstalled, handlerNotOurs]);
+    const port = {
+      ...base,
+      installLocalCaCertificate: () =>
+        new Promise<SignalRow>((resolve) => {
+          resolveInstall = resolve;
+        }),
+    };
+    renderWithCatalog(<SetupWizard seen={false} statusPort={port} onFinish={() => {}} />);
+    await user.click(screen.getByRole("button", { name: "Continuar" }));
+
+    expect(screen.getByText("1")).toBeInTheDocument();
+    expect(screen.getByText("2")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Instalar" }));
+    expect(screen.getByRole("status")).toHaveTextContent("Instalando…");
+
+    resolveInstall({
+      ...certificateNotInstalled,
+      verdict: "correct",
+      action: null,
+      restartFirefoxNotice: false,
+    });
+    await waitFor(() => {
+      expect(screen.getByRole("status")).toHaveTextContent("Instalado en tus navegadores.");
+    });
   });
 
   it("welcomes in the language it starts with", () => {
@@ -297,7 +331,7 @@ describe("SetupWizard", () => {
     await user.click(screen.getByRole("button", { name: "Continuar" }));
 
     expect(
-      screen.getByText("Ahora mismo las sedes electrónicas no tienen ningún programa asignado."),
+      screen.getByText("Ahora mismo las sedes no tienen ningún programa asignado."),
     ).toBeInTheDocument();
   });
 

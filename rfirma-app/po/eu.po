@@ -1425,10 +1425,7 @@ msgid "setup.certificate.title"
 msgstr "rFirmaren ziurtagiria"
 
 msgid "setup.certificate.body"
-msgstr ""
-"Egoitza elektroniko batean sinatzean, zure nabigatzaileak rFirmarekin "
-"konektatu behar du. Konexio hori segurua izan dadin, ziurtagiri propio bat "
-"instalatu behar dugu."
+msgstr "Zure nabigatzailea rFirmarekin modu seguruan konekta dadin."
 
 msgid "setup.certificate.installing"
 msgstr "Instalatzen…"
@@ -1449,7 +1446,7 @@ msgid "setup.handler.body"
 msgstr "Orain, egoitza elektronikoek AutoFirma irekitzen dute."
 
 msgid "setup.handler.bodyNoAutofirma"
-msgstr "Orain, egoitza elektronikoek ez dute programarik esleituta."
+msgstr "Orain, egoitzek ez dute programarik esleituta."
 
 msgid "setup.handler.done"
 msgstr "Orain rFirma irekitzen dute."

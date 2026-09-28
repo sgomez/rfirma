@@ -1402,9 +1402,7 @@ msgid "setup.certificate.title"
 msgstr "The rFirma certificate"
 
 msgid "setup.certificate.body"
-msgstr ""
-"When you sign at a government site, your browser has to connect to rFirma. "
-"For that connection to be secure we need to install a certificate of its own."
+msgstr "So your browser can connect to rFirma securely."
 
 msgid "setup.certificate.installing"
 msgstr "Installing…"
@@ -1425,7 +1423,7 @@ msgid "setup.handler.body"
 msgstr "Right now, government sites open AutoFirma."
 
 msgid "setup.handler.bodyNoAutofirma"
-msgstr "Right now, government sites have no program assigned."
+msgstr "Right now, sites have no program assigned."
 
 msgid "setup.handler.done"
 msgstr "They now open rFirma."
