@@ -74,6 +74,12 @@ export async function anIntermediateServer({
       dat: parameters.get("dat"),
       at: Date.now(),
     };
+    if (entry.op !== "put" && entry.op !== "get") {
+      emit({ event: "relay", missing: "op" });
+      response.writeHead(400, { "content-type": "text/plain; charset=utf-8" });
+      response.end("falta 'op' en el cuerpo del POST");
+      return;
+    }
     requests.push(entry);
     let answer = "OK";
     if (entry.op === "put" && refusingUploads) {

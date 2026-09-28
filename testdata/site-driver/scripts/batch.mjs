@@ -27,7 +27,7 @@ import {
 } from "../lib/patches.mjs";
 import { isABarePkcs1 } from "../lib/pkcs1.mjs";
 import { aPublishedScript, withoutAChoice } from "../lib/script.mjs";
-import { servletServer, theServletParameters } from "../lib/servlet.mjs";
+import { servletServer, theFormParameters } from "../lib/servlet.mjs";
 
 const THROUGH_BOTH_SERVLETS = "through-both-servlets";
 const EVERY_DOCUMENT_SIGNED_WITHOUT_A_DIALOGUE = "every-document-signed-without-a-dialogue";
@@ -67,7 +67,7 @@ function theBodyParameters(request, form) {
 }
 
 /** Un servlet del lote en un puerto libre del loopback; con `service`, cuenta cada petición que recibe. */
-export function aBatchServlet(answering, { reading = theServletParameters, service, telling } = {}) {
+export function aBatchServlet(answering, { reading = theFormParameters, service, telling } = {}) {
   return servletServer(
     async (parameters, _request, response) => {
       const { status, body } = answering(parameters);
@@ -301,7 +301,7 @@ function theParametersInTheBodyConditions() {
 async function theBatchScript(
   presigning = thePresigner,
   measuring = theRemoteBatchConditions,
-  reading = theServletParameters,
+  reading = theFormParameters,
 ) {
   const presigner = await servletServing(presigning, { reading, service: "presigner" });
   const postsigner = await servletServing(thePostsigner, { reading, service: "postsigner" });

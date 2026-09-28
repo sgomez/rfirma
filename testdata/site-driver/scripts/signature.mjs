@@ -647,6 +647,11 @@ const savingAs = (filename) => (format, extraParams, content, measuring) =>
     settlingTheError,
   );
 
+/** La URL del servidor trifásico falso en solitario, para las pruebas del servlet. */
+export async function aTriphaseServerUrl() {
+  return servletServing(theTriphaseServer(THE_TRIPHASE_FORMATS.CAdEStri));
+}
+
 /** Una operación trifásica cuyo `serverUrl` es el servidor trifásico falso de la sede. */
 const triphasing =
   (format, cop, content, operation = THE_OPERATIONS[cop], declaring = withoutAChoice) =>
