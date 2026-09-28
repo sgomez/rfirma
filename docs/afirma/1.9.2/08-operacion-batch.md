@@ -415,6 +415,14 @@ El método `BatchSigner.signXML` ejecuta la secuencia siguiente:
    ```
    POST {batchPresignerUrl}?xml={batchUrlSafe}&certs={certsChain}
    ```
+   Esta es la URL tal como la monta `BatchSigner`; quien decide cómo viaja de
+   verdad es la capa de transporte, `UrlHttpManagerImpl`: al ser un POST,
+   parte la URL en el primer `?` y escribe todo lo que va detrás
+   —`xml`/`json`, `certs`, `tridata`— como formulario
+   `application/x-www-form-urlencoded` en el cuerpo, no en la *query*. Un
+   servlet de sede real que solo lea el cuerpo (como el de #1161) rechaza una
+   implementación que mande esta URL literal. Revisión completa en
+   [A2-funciones-compartidas.md](A2-funciones-compartidas.md) y en #1168.
    Se configura un `SSLErrorProcessor(extraParams)` para gestionar posibles certificados
    SSL de servidor no reconocidos, permitiendo al usuario aceptarlos si se requiere.
 2. **Paso 2: Generación de firmas cliente (PKCS#1):**
@@ -524,6 +532,10 @@ Campos principales:
    ```
    POST {batchPreSignerUrl}?json={batchUrlSafe}&certs={certsChain}
    ```
+   Como en el lote XML (§5.2), `UrlHttpManagerImpl` reescribe esta URL: parte
+   por el primer `?` y manda `json` y `certs` en el cuerpo del POST, no en la
+   *query*. Detalle en [A2-funciones-compartidas.md](A2-funciones-compartidas.md)
+   y en #1168.
 2. **Procesamiento de prefirma y control de errores parciales:**
    La respuesta se analiza mediante `JSONPreSignBatchParser.parseFromJSON(ret)`
    (`BatchSigner.java:392`). Dicho objeto devuelve tanto los datos trifásicos

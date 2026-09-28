@@ -306,6 +306,17 @@ se prohíbe terminantemente el uso de URIs con esquema local: si `dat` comienza 
 `file:/`, se produce una `ParameterException` inmediata
 (`UrlParameters.java:300-304`).
 
+Si `dat` es en cambio una URL `http://` o `https://`, la capa de transporte
+que baja los datos es `DataDownloader.downloadData`, que hace un `GET` con
+`UrlHttpManagerFactory.getInstalledManager().readUrl` — la misma capa
+(`UrlHttpManagerImpl`) que usan el servidor intermedio (ver
+[03-transporte-servidor-intermedio.md](03-transporte-servidor-intermedio.md)
+§6.1) y los servlets del lote. Sin `ignoreSSLSecurity` activo, un certificado
+TLS no reconocido del servidor de datos dispara `SSLErrorProcessor`, que
+puede ofrecer importarlo de forma interactiva. Revisión completa de ambas
+funciones, y de si rFirma las reproduce, en
+[A2-funciones-compartidas.md](A2-funciones-compartidas.md).
+
 #### Selección interactiva cuando `dat` es nulo (`needRequestData`)
 
 Si no se proporciona `dat` ni `fileid` (o la descarga remota no devolvió datos),
