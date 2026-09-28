@@ -323,6 +323,76 @@ fn an_escaped_separator_does_not_split_the_line() {
     assert_eq!(pairs, vec![("cla=ve".to_owned(), "valor".to_owned())]);
 }
 
+fn pair(key: &str, value: &str) -> (String, String) {
+    (key.to_owned(), value.to_owned())
+}
+
+#[test]
+fn a_line_ending_in_a_backslash_joins_the_next_one_without_its_leading_blanks() {
+    assert_eq!(
+        pairs_of("mode=impl\\\n    icit\r\nother=a\\\r\n\tb\n"),
+        vec![pair("mode", "implicit"), pair("other", "ab")]
+    );
+}
+
+#[test]
+fn an_escaped_backslash_at_the_end_of_a_line_does_not_continue_it() {
+    assert_eq!(
+        pairs_of("a=b\\\\\nc=d\n"),
+        vec![pair("a", "b\\"), pair("c", "d")]
+    );
+}
+
+#[test]
+fn a_key_can_be_split_by_a_continuation() {
+    assert_eq!(pairs_of("ke\\\ny=v\n"), vec![pair("key", "v")]);
+}
+
+#[test]
+fn a_unicode_escape_is_decoded_in_keys_and_values() {
+    assert_eq!(
+        pairs_of("\\u006dode=impl\\u0069cit\nemoji=\\uD83D\\uDE00\n"),
+        vec![pair("mode", "implicit"), pair("emoji", "\u{1F600}")]
+    );
+}
+
+#[test]
+fn a_malformed_unicode_escape_discards_the_whole_block() {
+    assert_eq!(pairs_of("a=b\nc=\\u12G4\n"), Vec::<(String, String)>::new());
+}
+
+#[test]
+fn the_other_escapes_of_properties_load_are_decoded() {
+    assert_eq!(
+        pairs_of("a\\ b=c\\:d\\=e\\ f\\qg\\fh\n"),
+        vec![pair("a b", "c:d=e fqg\u{c}h")]
+    );
+}
+
+#[test]
+fn a_blank_separates_key_and_value() {
+    assert_eq!(
+        pairs_of("a b\nc \t d\ne  =  f\ng :h\nlonely\n"),
+        vec![
+            pair("a", "b"),
+            pair("c", "d"),
+            pair("e", "f"),
+            pair("g", "h"),
+            pair("lonely", ""),
+        ]
+    );
+}
+
+#[test]
+fn only_the_first_separator_after_the_blanks_counts() {
+    assert_eq!(pairs_of("a = = b\n"), vec![pair("a", "= b")]);
+}
+
+#[test]
+fn a_comment_line_is_not_continued() {
+    assert_eq!(pairs_of("# nota \\\na=b\n"), vec![pair("a", "b")]);
+}
+
 #[test]
 fn the_loading_keys_of_the_properties_govern_the_chooser_of_a_signature() {
     let url = an_operation(&format!(

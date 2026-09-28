@@ -611,6 +611,21 @@ script = "signcadesimplicit"
 expects.completes.conditions = ["the-data-inside", "the-signature-verifies"]
 
 [[check]]
+id = "the_extra_params_read_line_continuations_and_unicode_escapes"
+set = "firma"
+chapter = "12"
+citation = "AOUtil.java:485-495"
+statement = """
+Los extraParams se leen como java.util.Properties.load: una clave escrita con \\uXXXX y un valor
+partido con \\ al final de línea se entienden, y mode=implicit llega a la firma.
+"""
+
+[check.drive]
+mode = "v4"
+script = "signcadesimplicitwithescapedparams"
+expects.completes.conditions = ["the-data-inside", "the-signature-verifies"]
+
+[[check]]
 id = "the_age_policy_packages_a_document_under_one_megabyte_implicitly"
 set = "firma"
 chapter = "11"
