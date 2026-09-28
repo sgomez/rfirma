@@ -353,6 +353,33 @@ describe("App, invocada con un documento", () => {
       expect(await screen.findByRole("dialog")).toHaveTextContent("rFirma");
     });
 
+    /**
+     * *Acerca de* pregunta por el puerto cada vez que se abre, no solo al
+     * arrancar: si la respuesta cambia mientras tanto, la tarjeta la
+     * sustituye. La franja del arranque, mientras tanto, sigue mostrando lo
+     * conocido entonces.
+     */
+    it("asks again when About opens, and shows the fresh answer there", async () => {
+      const user = userEvent.setup();
+      let askedTimes = 0;
+      const versions: VersionCheck = {
+        latest: async () => {
+          askedTimes += 1;
+          return askedTimes === 1 ? { version: "0.4.1" } : { version: "0.5.0" };
+        },
+      };
+      withVersionCheck(versions);
+
+      const strip = await screen.findByRole("status");
+      expect(strip).toHaveTextContent("Hay una versión nueva de rFirma: 0.4.1");
+
+      await user.click(screen.getByRole("button", { name: "Cómo actualizar" }));
+
+      expect(await screen.findByText("Hay una versión nueva: 0.5.0")).toBeInTheDocument();
+      // La franja del arranque no se toca: sigue con lo que supo entonces.
+      expect(strip).toHaveTextContent("Hay una versión nueva de rFirma: 0.4.1");
+    });
+
     it("is dismissed for good once dismissed", async () => {
       const user = userEvent.setup();
       withVersionCheck(inMemoryVersionCheck({ version: "0.4.1" }));

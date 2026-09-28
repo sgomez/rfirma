@@ -486,6 +486,7 @@ export function App({
         <AboutDialog
           version={__APP_VERSION__}
           newVersion={newVersion}
+          versions={versions}
           onOpenSourceCode={() => void externalDestinations.open("sourceCode")}
           onClose={() => setDialog(null)}
         />
