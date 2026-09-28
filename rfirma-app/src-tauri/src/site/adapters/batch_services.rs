@@ -1,8 +1,11 @@
 //! Adaptador `reqwest` sobre los dos servlets del lote remoto: prefirma y postfirma (`BatchSigner`, 1.9.2).
 
+use std::sync::Arc;
+
 use base64::engine::general_purpose::URL_SAFE;
 use base64::Engine as _;
 
+use crate::site::adapters::cookies::OperationCookies;
 use crate::site::domain::batch::{BatchFormat, TriphaseData};
 use crate::site::domain::batch_error::{BatchError, Situation};
 use crate::site::ports::BatchServices;
@@ -14,13 +17,17 @@ pub struct RelayBatchServices {
 
 impl Default for RelayBatchServices {
     fn default() -> Self {
-        Self {
-            client: super::service_client(),
-        }
+        Self::with_cookies(OperationCookies::of_the_process())
     }
 }
 
 impl RelayBatchServices {
+    pub fn with_cookies(cookies: Arc<OperationCookies>) -> Self {
+        Self {
+            client: super::service_client(cookies),
+        }
+    }
+
     fn post(
         &self,
         url: reqwest::Url,

@@ -1,5 +1,8 @@
 //! Adaptador `reqwest` sobre el servidor trifásico que la sede nombra en `serverUrl`; no es el de los servlets del lote.
 
+use std::sync::Arc;
+
+use crate::site::adapters::cookies::OperationCookies;
 use crate::site::domain::triphase_server::{Situation, TriphaseServerError};
 use crate::site::ports::TriphaseServer;
 
@@ -10,8 +13,14 @@ pub struct HttpTriphaseServer {
 
 impl Default for HttpTriphaseServer {
     fn default() -> Self {
+        Self::with_cookies(OperationCookies::of_the_process())
+    }
+}
+
+impl HttpTriphaseServer {
+    pub fn with_cookies(cookies: Arc<OperationCookies>) -> Self {
         Self {
-            client: super::service_client(),
+            client: super::service_client(cookies),
         }
     }
 }

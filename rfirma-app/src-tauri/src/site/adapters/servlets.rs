@@ -1,5 +1,8 @@
 //! Adaptador `reqwest` sobre los servlets del servidor intermedio; la forma de la URL no se comprueba aquí.
 
+use std::sync::Arc;
+
+use crate::site::adapters::cookies::OperationCookies;
 use crate::site::domain::relay_error::{RelayError, Situation};
 use crate::site::ports::Servlets;
 
@@ -14,8 +17,14 @@ pub struct RelayServlets {
 
 impl Default for RelayServlets {
     fn default() -> Self {
+        Self::with_cookies(OperationCookies::of_the_process())
+    }
+}
+
+impl RelayServlets {
+    pub fn with_cookies(cookies: Arc<OperationCookies>) -> Self {
         execute_outside_tokio(|| Self {
-            client: super::service_client(),
+            client: super::service_client(cookies),
         })
     }
 }

@@ -12,12 +12,13 @@ use crate::site::domain::channel::{
 use crate::site::domain::protocol::{
     asks_for_active_wait, check_servlet_url, checked_identifier, decrypt,
     operation_of_the_parameters_xml, AfirmaUrl, CipherKey, Parameter, Refusal, RelayChannelInfo,
-    RelayRequest,
+    RelayRequest, WireAnswer,
 };
 use crate::site::domain::relay_error::{RelayError, Situation as RelaySituation};
 use crate::site::domain::site_origin::SiteOrigin;
 use crate::site::ports::Servlets;
 
+use super::cookies::OperationCookies;
 use super::frontier::code_of_relay;
 
 const ACTIVE_WAIT_INTERVAL: Duration = Duration::from_secs(10);
@@ -29,6 +30,8 @@ pub struct Relay {
     inbox: Inbox,
     on_upload_failure: Arc<dyn Fn(Refusal) + Send + Sync>,
     runtime: tokio::runtime::Handle,
+    cookies: Arc<OperationCookies>,
+    an_errand_is_live: Arc<dyn Fn() -> bool + Send + Sync>,
 }
 
 impl Relay {
@@ -40,12 +43,72 @@ impl Relay {
         on_upload_failure: Arc<dyn Fn(Refusal) + Send + Sync>,
         runtime: tokio::runtime::Handle,
     ) -> Self {
+        Self::with_cookies(
+            servlets,
+            inbox,
+            on_upload_failure,
+            runtime,
+            OperationCookies::of_the_process(),
+        )
+    }
+
+    /// Como `new`, sobre el almacén de cookies indicado.
+    pub(crate) fn with_cookies(
+        servlets: Arc<dyn Servlets + Send + Sync>,
+        inbox: Inbox,
+        on_upload_failure: Arc<dyn Fn(Refusal) + Send + Sync>,
+        runtime: tokio::runtime::Handle,
+        cookies: Arc<OperationCookies>,
+    ) -> Self {
         Self {
             servlets,
             inbox,
             on_upload_failure,
             runtime,
+            cookies,
+            an_errand_is_live: Arc::new(|| false),
         }
+    }
+
+    /// Consulta si hay un trámite vivo, cuyas cookies una invocación nueva no debe soltar.
+    pub fn minding_the_live_errand(
+        mut self,
+        an_errand_is_live: impl Fn() -> bool + Send + Sync + 'static,
+    ) -> Self {
+        self.an_errand_is_live = Arc::new(an_errand_is_live);
+        self
+    }
+}
+
+impl Relay {
+    /// Deja el rechazo como entrega pendiente, sin resolver operación: la sube quien atiende la invocación.
+    fn open_to_refuse(
+        &self,
+        info: &RelayChannelInfo,
+        answer: WireAnswer,
+    ) -> Result<OpenChannel, ChannelError> {
+        let Some((store_servlet, id)) = info.request.store_target() else {
+            return Err(ChannelError::new(
+                Situation::Relay,
+                "la invocacion aun no dice donde subir la respuesta: 'stservlet' viene \
+                 dentro del XML de parametros",
+            ));
+        };
+        let servlets = Arc::clone(&self.servlets);
+        let on_upload_failure = Arc::clone(&self.on_upload_failure);
+        let store_servlet = store_servlet.to_owned();
+        let id = id.to_owned();
+        let text = answer.on_the_wire();
+        let delivery = Delivery::fallible(move || {
+            upload_answer(
+                servlets.as_ref(),
+                on_upload_failure.as_ref(),
+                &store_servlet,
+                &id,
+                &text,
+            )
+        });
+        Ok(OpenChannel::with_delivery(0, Shutdown::of(|| {}), delivery))
     }
 }
 
@@ -55,6 +118,9 @@ impl Transport for Relay {
         location: &ChannelLocation,
         duty: ChannelDuty,
     ) -> Result<OpenChannel, ChannelError> {
+        if !(self.an_errand_is_live)() {
+            self.cookies.forget();
+        }
         let ChannelLocation::Relay(info) = location else {
             return Err(ChannelError::new(
                 Situation::Relay,
@@ -62,35 +128,8 @@ impl Transport for Relay {
             ));
         };
 
-        // Un rechazo se sube tal cual, sin esperar ni resolver operación: no hay trámite que
-        // registrar. La subida no ocurre aquí: se deja como entrega pendiente y la dispara quien
-        // atiende la invocación, con la llegada ya inmediata.
-        match duty {
-            ChannelDuty::Refuse(answer) => {
-                let Some((store_servlet, id)) = info.request.store_target() else {
-                    return Err(ChannelError::new(
-                        Situation::Relay,
-                        "la invocacion aun no dice donde subir la respuesta: 'stservlet' viene \
-                         dentro del XML de parametros",
-                    ));
-                };
-                let servlets = Arc::clone(&self.servlets);
-                let on_upload_failure = Arc::clone(&self.on_upload_failure);
-                let store_servlet = store_servlet.to_owned();
-                let id = id.to_owned();
-                let text = answer.on_the_wire();
-                let delivery = Delivery::fallible(move || {
-                    upload_answer(
-                        servlets.as_ref(),
-                        on_upload_failure.as_ref(),
-                        &store_servlet,
-                        &id,
-                        &text,
-                    )
-                });
-                return Ok(OpenChannel::with_delivery(0, Shutdown::of(|| {}), delivery));
-            }
-            ChannelDuty::Serve(_) => {}
+        if let ChannelDuty::Refuse(answer) = duty {
+            return self.open_to_refuse(info, answer);
         }
 
         let resolved =
@@ -121,12 +160,15 @@ impl Transport for Relay {
         let store_servlet = resolved.store_servlet;
         let id = resolved.id;
         let reply_heartbeat = heartbeat;
+        let cookies = Arc::clone(&self.cookies);
         let reply = ReplyHandle::of(move |text: String| {
             if let Some(hb) = &reply_heartbeat {
                 hb.stop();
             }
             let _guard = reply_heartbeat.as_ref().map(|hb| hb.0.upload_lock.lock());
-            match servlets.store(&store_servlet, &id, &text) {
+            let stored = servlets.store(&store_servlet, &id, &text);
+            cookies.forget();
+            match stored {
                 Ok(()) => Acknowledgement::immediate(),
                 Err(error) => {
                     on_upload_failure(refusal_of(error));
