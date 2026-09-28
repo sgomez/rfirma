@@ -1,6 +1,6 @@
 //! Paso de configuración entre la interfaz y el almacenamiento en disco (ADR-0010, ADR-0011).
 
-use crate::documents::domain::destination::DestinationFolder;
+use crate::documents::domain::destination::{DestinationFolder, DestinationMode};
 use crate::signing::application::configuration_memory::{
     Configuration, Theme, SETUP_WIZARD_VERSION,
 };
@@ -13,6 +13,8 @@ pub struct Preferences {
     pub language: String,
     /// Nombre de la carpeta de destino.
     pub destination: String,
+    /// Si el firmado cae junto al original o en la carpeta de destino.
+    pub destination_mode: DestinationMode,
     /// Si se recuerda la última configuración de firma visible.
     pub remember_visible_signature: bool,
     /// Si se conserva el historial de actividad reciente.
@@ -51,6 +53,7 @@ pub fn shown(configuration: &Configuration, documents_folder: &std::path::Path) 
     Preferences {
         language: configuration.language.tag().to_owned(),
         destination: folder.name().to_owned(),
+        destination_mode: configuration.destination_mode,
         remember_visible_signature: configuration.remember_visible_signature,
         remember_activity: configuration.remember_activity,
         notify_new_version: configuration.notify_new_version,
@@ -83,7 +86,7 @@ pub fn merged(live: &Configuration, chosen: &Preferences) -> Configuration {
     Configuration {
         language: language_of(&chosen.language),
         destination: live.destination.clone(),
-        destination_mode: live.destination_mode,
+        destination_mode: chosen.destination_mode,
         remember_visible_signature: chosen.remember_visible_signature,
         remember_activity: chosen.remember_activity,
         notify_new_version: chosen.notify_new_version,
