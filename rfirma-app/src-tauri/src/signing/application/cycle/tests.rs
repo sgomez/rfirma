@@ -206,7 +206,7 @@ fn a_request<'a>(
 fn an_invisible_signature() -> SignatureConfig {
     SignatureConfig {
         placement: None,
-        layer2_text: String::new(),
+        layer2_text: Some(String::new()),
         rubric_image: None,
         allow_unregistered_signatures: false,
     }

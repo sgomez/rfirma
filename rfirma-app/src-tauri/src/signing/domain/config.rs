@@ -122,8 +122,8 @@ impl Placement {
 pub struct SignatureConfig {
     /// Dónde cae el recuadro y en qué páginas cuando lo coloca rFirma.
     pub placement: Option<Placement>,
-    /// El texto del recuadro, compuesto por [`super::layer2_text::compose_visible_content`].
-    pub layer2_text: String,
+    /// El texto del recuadro, o ninguno si lo pone la sede.
+    pub layer2_text: Option<String>,
     /// La rúbrica en JPEG opaco y sin perfil ICC, en base64. `None` si no la hay.
     pub rubric_image: Option<String>,
     /// Consentimiento para cofirmar firmas no registradas.
@@ -145,8 +145,10 @@ impl SignatureConfig {
         if let Some(placement) = placement {
             params.extend(placement.extra_params());
         }
-        params.insert(LAYER2_TEXT_KEY.to_owned(), layer2_text.clone());
-        params.insert(LAYER2_FONT_SIZE_KEY.to_owned(), LAYER2_FONT_SIZE.to_owned());
+        if let Some(layer2_text) = layer2_text {
+            params.insert(LAYER2_TEXT_KEY.to_owned(), layer2_text.clone());
+            params.insert(LAYER2_FONT_SIZE_KEY.to_owned(), LAYER2_FONT_SIZE.to_owned());
+        }
         if let Some(image) = rubric_image {
             params.insert(RUBRIC_IMAGE_KEY.to_owned(), image.clone());
         }
@@ -162,8 +164,8 @@ impl SignatureConfig {
 pub struct SigningChoice {
     /// Dónde cae el recuadro, o ninguno si la firma es invisible.
     pub placement: Option<Placement>,
-    /// El contenido del recuadro, por modelo.
-    pub content: VisibleContent,
+    /// El contenido del recuadro, por modelo, o ninguno si lo pone la sede.
+    pub content: Option<VisibleContent>,
     /// La fecha y hora, ya formateadas.
     pub signed_at: String,
     /// La rúbrica en JPEG y Base64, ya normalizada.
@@ -175,11 +177,11 @@ pub struct SigningChoice {
 }
 
 impl SigningChoice {
-    /// La firma que pide una sede: invisible, sin texto ni rúbrica, con la geometría que declare ella.
+    /// La firma que pide una sede: sin recuadro, texto ni rúbrica propios; los declara ella.
     pub fn for_the_site(allow_unregistered_signatures: bool) -> Self {
         Self {
             placement: None,
-            content: VisibleContent::Custom(Vec::new()),
+            content: None,
             signed_at: String::new(),
             rubric: None,
             language: Language::Spanish,

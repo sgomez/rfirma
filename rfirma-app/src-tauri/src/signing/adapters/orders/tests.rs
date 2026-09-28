@@ -95,10 +95,10 @@ fn an_order_composes_the_choice_from_its_model() {
 
     assert_eq!(
         order.choice().expect("sin recuadro").content,
-        VisibleContent::Custom(vec![
+        Some(VisibleContent::Custom(vec![
             PhrasePart::Datum(Datum::Issuer),
             PhrasePart::Text(".".to_owned()),
-        ])
+        ]))
     );
     assert!(order.with_rubric);
 }

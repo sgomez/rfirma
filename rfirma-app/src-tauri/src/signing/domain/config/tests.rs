@@ -20,7 +20,7 @@ fn placed_on(pages: PageSet) -> Option<Placement> {
 fn minimal() -> SignatureConfig {
     SignatureConfig {
         placement: placed_on(PageSet::only_page(3)),
-        layer2_text: "Firmado por: Ada Lovelace Byron".to_owned(),
+        layer2_text: Some("Firmado por: Ada Lovelace Byron".to_owned()),
         rubric_image: None,
         allow_unregistered_signatures: false,
     }
@@ -117,9 +117,9 @@ fn sends_the_geometry_of_the_box() {
 }
 
 #[test]
-fn always_sends_the_layer2_text_even_when_it_is_empty() {
+fn sends_the_layer2_text_even_when_it_is_empty() {
     let config = SignatureConfig {
-        layer2_text: String::new(),
+        layer2_text: Some(String::new()),
         ..minimal()
     };
     assert_eq!(

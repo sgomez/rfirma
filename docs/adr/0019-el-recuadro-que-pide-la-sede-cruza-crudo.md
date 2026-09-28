@@ -46,6 +46,13 @@ trámite de sede va **sin colocación** (`placement: None`), la geometría de
 rFirma no emite ni una clave que pise a las de la sede. `None` no significa
 «sin recuadro»: significa «el recuadro no lo pone este lado».
 
+Lo mismo vale para lo que va **dentro** del recuadro: la configuración de un
+trámite de sede va sin contenido, y rFirma no emite `layer2Text` ni
+`layer2FontSize`. Con el texto de la sede, se estampa el suyo; sin él, el
+puente pone el texto por omisión del original. Un `layer2Text` vacío no es
+«ninguno»: el original solo pone el suyo cuando la clave falta, y con la clave
+vacía el recuadro saldría en blanco.
+
 Por eso el tipo que resume la petición (`SiteVisibleSignature`) no lleva
 coordenadas dentro: dice **qué va a ocurrir** —lo colocó la sede, o no hay
 recuadro que colocar—, no cuánto mide nada. Y por eso la prefirma del trámite

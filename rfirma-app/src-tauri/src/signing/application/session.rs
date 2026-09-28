@@ -349,9 +349,10 @@ pub fn cancel(session: &SigningSession) {
     *lock(&session.open) = None;
 }
 
-fn layer2_text_of(choice: &SigningChoice, holder: &StampedHolder) -> String {
-    compose_visible_content(
-        &choice.content,
+fn layer2_text_of(choice: &SigningChoice, holder: &StampedHolder) -> Option<String> {
+    let content = choice.content.as_ref()?;
+    Some(compose_visible_content(
+        content,
         &VisibleData {
             signer_name: &holder.common_name,
             issuer: &holder.issuer,
@@ -359,7 +360,7 @@ fn layer2_text_of(choice: &SigningChoice, holder: &StampedHolder) -> String {
             pseudonym: holder.pseudonym,
         },
         choice.language,
-    )
+    ))
 }
 
 /// Configuración de firma construida a partir de lo elegido y del certificado seleccionado.

@@ -44,7 +44,7 @@ fn sign_xades(bridge: &NativeBridge, certificate: &TokenCertificate) {
     let chain = certificate.chain();
     let config = SignatureConfig {
         placement: None,
-        layer2_text: String::new(),
+        layer2_text: Some(String::new()),
         rubric_image: None,
         allow_unregistered_signatures: false,
     };
