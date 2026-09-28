@@ -25,7 +25,7 @@ pub const SITE_ERRAND: &str = "site-errand";
 const DIALOG_SIZE: (f64, f64) = (520.0, 420.0);
 
 /// El tamaño de la ventana mientras la persona marca el área de la firma visible sobre el PDF.
-const AREA_SIZE: (f64, f64) = (780.0, 660.0);
+const AREA_SIZE: (f64, f64) = (1080.0, 660.0);
 
 /// Tope razonable para esperar a que la respuesta salga por el canal antes de cerrar.
 const ERRAND_ENDED_ACKNOWLEDGEMENT_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(2);

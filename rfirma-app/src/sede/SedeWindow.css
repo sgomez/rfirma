@@ -310,17 +310,29 @@
 
 /* 1c · Marcar el área de la firma visible */
 
+.sede-window__body--flush {
+  padding: 0;
+  overflow: hidden;
+}
+
+/* El visor y, a su derecha, la barra de 380 px del panel de firma. */
 .sede-marking {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 380px;
   height: 100%;
   min-height: 0;
 }
 
 .sede-marking__viewer {
-  flex: 1;
+  grid-column: 1;
   min-height: 0;
-  border: 1px solid var(--rf-border-subtle);
-  border-radius: var(--rf-radius-md);
   overflow: hidden;
+}
+
+.sede-marking__panel {
+  grid-column: 2;
+  height: 100%;
+  border-left: 1px solid var(--rf-border-subtle);
 }
 
 /* 2b · Hay que confirmar */

@@ -49,6 +49,34 @@ describe("1c · marking the area of the visible signature", () => {
     );
   });
 
+  it("hands on the traced box on every page when the person chooses all of them", async () => {
+    const { document, renders } = recordingDocument();
+    const { port, calls } = scriptedErrand({ kind: "marking", pdf: document });
+    renderWithCatalog(<SedeWindow errands={port} />);
+    await waitFor(() => expect(renders).toHaveLength(1));
+
+    traceOver(sheet(), [100, 100], [300, 200]);
+    await userEvent.click(screen.getByRole("radio", { name: "Todas" }));
+    await userEvent.click(screen.getByRole("button", { name: "Continuar" }));
+
+    await waitFor(() =>
+      expect(calls.markArea).toHaveBeenCalledWith(expect.objectContaining({ pages: "all" })),
+    );
+  });
+
+  it("keeps going on hold while the typed pages make no sense", async () => {
+    const { document, renders } = recordingDocument();
+    const { port } = scriptedErrand({ kind: "marking", pdf: document });
+    renderWithCatalog(<SedeWindow errands={port} />);
+    await waitFor(() => expect(renders).toHaveLength(1));
+
+    traceOver(sheet(), [100, 100], [300, 200]);
+    await userEvent.click(screen.getByRole("radio", { name: "Varias" }));
+    await userEvent.clear(screen.getByRole("textbox", { name: "Páginas de la firma visible" }));
+
+    expect(screen.getByRole("button", { name: "Continuar" })).toBeDisabled();
+  });
+
   it("cancels the dialog of the area, not the errand", async () => {
     const { document } = recordingDocument();
     const { port, calls } = scriptedErrand({ kind: "marking", pdf: document });
