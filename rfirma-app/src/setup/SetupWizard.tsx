@@ -1,7 +1,7 @@
 import type { TFunction } from "i18next";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { AlertIcon, CheckCircleIcon, CheckingIcon } from "../design-system/icons";
+import { AlertIcon, CheckIcon, SpinnerIcon } from "../design-system/icons";
 import { classify } from "../errors/classify";
 import { ErrorNotice } from "../errors/ErrorNotice";
 import { useLanguage } from "../i18n/LanguageProvider";
@@ -309,14 +309,14 @@ function StepMarker({ number, state }: { number: 1 | 2; state: StepMarkerState }
   if (state === "done") {
     return (
       <span className="setup-wizard__step-marker setup-wizard__step-marker--done">
-        <CheckCircleIcon size={14} />
+        <CheckIcon size={14} />
       </span>
     );
   }
   if (state === "working") {
     return (
-      <span className="setup-wizard__step-marker">
-        <CheckingIcon size={14} />
+      <span className="setup-wizard__step-marker setup-wizard__step-marker--working">
+        <SpinnerIcon size={14} />
       </span>
     );
   }
@@ -412,10 +412,13 @@ interface HandlerStepProps {
 }
 
 function HandlerStep({ t, status, autoFirmaAppears, onUse, onDecline }: HandlerStepProps) {
+  const markerState: StepMarkerState =
+    status.kind === "working" ? "working" : status.kind === "done" ? "done" : "pending";
+
   return (
     <Step
       number={2}
-      markerState={status.kind === "done" ? "done" : "pending"}
+      markerState={markerState}
       title={t("setup.handler.title")}
       hint={t(autoFirmaAppears ? "setup.handler.body" : "setup.handler.bodyNoAutofirma")}
       last

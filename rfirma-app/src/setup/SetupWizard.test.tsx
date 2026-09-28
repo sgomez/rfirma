@@ -71,7 +71,7 @@ describe("SetupWizard", () => {
     expect(screen.getByText("Paso 2 de 2")).toBeInTheDocument();
   });
 
-  it("marks each step pending, working, done or failed with an accessible cue, no card left", async () => {
+  it("exposes the certificate step's pending, working and done states through its status text, with numbered markers instead of cards", async () => {
     const user = userEvent.setup();
     let resolveInstall: (row: SignalRow) => void = () => {};
     const base = memoryStatus([aVersionRow, certificateNotInstalled, handlerNotOurs]);
@@ -99,6 +99,31 @@ describe("SetupWizard", () => {
     });
     await waitFor(() => {
       expect(screen.getByRole("status")).toHaveTextContent("Instalado en tus navegadores.");
+    });
+  });
+
+  it("marks the handler step working while it registers the default, hiding its buttons and numbered marker", async () => {
+    const user = userEvent.setup();
+    let resolveChoice: (rows: SignalRow[]) => void = () => {};
+    const base = memoryStatus([aVersionRow, certificateNotInstalled, handlerNotOurs]);
+    const port = {
+      ...base,
+      chooseSiteSignatureHandler: () =>
+        new Promise<SignalRow[]>((resolve) => {
+          resolveChoice = resolve;
+        }),
+    };
+    renderWithCatalog(<SetupWizard seen={false} statusPort={port} onFinish={() => {}} />);
+    await user.click(screen.getByRole("button", { name: "Continuar" }));
+
+    await user.click(screen.getByRole("button", { name: "Que abran rFirma" }));
+
+    expect(screen.queryByText("2")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Que abran rFirma" })).not.toBeInTheDocument();
+
+    resolveChoice([{ ...handlerNotOurs, verdict: "correct", action: null }]);
+    await waitFor(() => {
+      expect(screen.getByText("Ahora abren rFirma.")).toBeInTheDocument();
     });
   });
 
