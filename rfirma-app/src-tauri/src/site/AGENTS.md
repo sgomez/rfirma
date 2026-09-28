@@ -39,6 +39,7 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `adapters/relay/tests/document_variant.rs` | Pruebas del relay para la variante `fileid`/`dat` en la URL. |
 | `adapters/relay/tests/parameters_variant.rs` | Pruebas del relay para la variante que recupera los parámetros por XML. |
 | `adapters/relay/tests/active_wait.rs` | Pruebas del latido de la espera activa del relay. |
+| `adapters/relay/tests/cookies.rs` | Pruebas de las cookies de operación que el relay comparte entre sus peticiones. |
 | `adapters/trace.rs` | La traza por `stderr` de las URL `afirma://` que llegan, viva solo en compilación de desarrollo. Sin pruebas propias. |
 | `adapters/transport.rs` | El transporte de producción del `wss` sobre el *loopback*. |
 | `adapters/triphase_server.rs` | El cliente del servidor trifásico que la sede nombra en `serverUrl`, sobre `reqwest::blocking`; **no** es el de los servlets del lote. Pruebas en `adapters/triphase_server/tests.rs`. |
