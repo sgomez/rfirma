@@ -232,7 +232,7 @@ function isADerCertificate(certificate) {
 }
 
 /** Lo que el lote remoto JSON deja medir al cerrarse: los dos servlets, `PK1`, el resultado y `needcert`. */
-function theRemoteBatchConditions(result, certificate) {
+export function theRemoteBatchConditions(result, certificate) {
   const { presign, postsign } = whatTheServletsReceived;
   const throughBoth = presign !== null && postsign !== null;
   const withTheChain = presign !== null && presign.signs === 2 && presign.certs > 0;
@@ -996,15 +996,17 @@ function theLocalXmlBatchScript() {
   );
 }
 
+const THE_REMOTE_BATCH_CONDITIONS = [
+  THROUGH_BOTH_SERVLETS,
+  THE_PRESIGNER_GETS_THE_CHAIN,
+  THE_POSTSIGNER_GETS_PK1,
+  THE_RESULT_AS_IT_CAME,
+  THE_CERTIFICATE_IN_THE_ANSWER,
+];
+
 export const BATCH_SCRIPTS = {
   batch: aPublishedScript(() => theBatchScript(), {
-    conditions: [
-      THROUGH_BOTH_SERVLETS,
-      THE_PRESIGNER_GETS_THE_CHAIN,
-      THE_POSTSIGNER_GETS_PK1,
-      THE_RESULT_AS_IT_CAME,
-      THE_CERTIFICATE_IN_THE_ANSWER,
-    ],
+    conditions: THE_REMOTE_BATCH_CONDITIONS,
   }),
   batchbodyonlyservlets: aPublishedScript(
     () => theBatchScript(thePresigner, theParametersInTheBodyConditions, theBodyParameters),
@@ -1029,7 +1031,7 @@ export const BATCH_SCRIPTS = {
         thePostsigner,
         aSelfSignedCertificate(),
       ),
-    { conditions: [THROUGH_BOTH_SERVLETS] },
+    { conditions: THE_REMOTE_BATCH_CONDITIONS },
   ),
   batchpartial: aPublishedScript(
     () => theBatchScript(thePartialPresigner, thePartialBatchConditions),

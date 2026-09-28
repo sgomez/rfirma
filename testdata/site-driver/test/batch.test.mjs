@@ -7,7 +7,9 @@ import { declaringTheConditions } from "../lib/events.mjs";
 import {
   aBatchServlet,
   aPostsignerSlowerThan,
+  BATCH_SCRIPTS,
   theLocalBatchWithoutADialogueConditions,
+  theRemoteBatchConditions,
 } from "../scripts/batch.mjs";
 
 const EVERY_DOCUMENT_SIGNED = "every-document-signed-without-a-dialogue";
@@ -133,5 +135,12 @@ describe("the postsigner slower than the connect limit", () => {
       server.closeAllConnections();
       server.close();
     }
+  });
+});
+
+describe("the batch through a servlet with a self-signed certificate", () => {
+  it("declares every condition its remote batch measure emits", () => {
+    declaringTheConditions(BATCH_SCRIPTS.batchuntrustedcertificate.conditions);
+    assert.doesNotThrow(() => theRemoteBatchConditions({}, ""));
   });
 });
