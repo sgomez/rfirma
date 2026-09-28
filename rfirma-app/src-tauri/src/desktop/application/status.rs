@@ -90,6 +90,18 @@ pub fn check_version_signal(
     }
 }
 
+/// Mide la señal de versión preguntando a la red, cayendo a la última conocida sin respuesta.
+pub fn measure_version_signal(
+    running: Version,
+    memory: &dyn VersionMemory,
+    feed: ReleaseFeed<'_>,
+    channel: Channel,
+    now: SystemTime,
+) -> SignalRow {
+    let announced = ask_and_remember(memory, feed, now).or_else(|| remembered_answer(memory));
+    evaluate_version_signal(running, announced, false, channel)
+}
+
 /// Candidatas a firmar en sedes: solo hay dónde elegir con dos o más registradas.
 fn site_signature_candidates(handlers: &UrlHandlers) -> Option<Vec<SiteSignatureCandidate>> {
     if handlers.handlers.len() < 2 {

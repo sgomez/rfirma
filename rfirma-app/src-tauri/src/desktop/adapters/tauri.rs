@@ -43,16 +43,15 @@ pub fn check_for_new_version(desktop: State<'_, DesktopRoot>) -> Option<NewVersi
     })
 }
 
-/// Mide la señal de versión consultando GitHub, calcada de la medición de la CA local.
+/// Mide la señal de versión consultando GitHub.
 #[tauri::command(async)]
 pub fn measure_version(desktop: State<'_, DesktopRoot>) -> SignalRowView {
     let channel = crate::desktop::adapters::channel::Channel::detected();
-    crate::desktop::application::status::check_version_signal(
+    crate::desktop::application::status::measure_version_signal(
         crate::desktop::application::version::Version::running(),
         desktop.memory.as_ref(),
         &crate::desktop::adapters::releases::latest_release,
         channel,
-        true,
         std::time::SystemTime::now(),
     )
     .into()
