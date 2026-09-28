@@ -41,9 +41,22 @@ repositorio:
   hablar de verdad con un servidor, remoto o simulado—, deja siempre dos
   cosas, no solo la prueba de lectura: un guion de la sede en
   `testdata/site-driver/scripts/` y su comprobación de conformidad en
-  `rfirma-conformance/catalogue/` (ver `rfirma-conformance/AGENTS.md`).
+  `rfirma-conformance/catalogue/` (ver `rfirma-conformance/AGENTS.md`). Esa
+  comprobación no vale cualquiera: si un servidor real podría rechazar la
+  diferencia, el arreglo lleva las tres cosas que exige la decisión de
+  #1162 —la prueba del adaptador HTTP, un guion de sede falsa que exija la
+  diferencia y la comprobación de conformidad en verde solo tras el
+  arreglo (AutoFirma CONFORME, rFirma NO CONFORME antes)—. Una diferencia
+  que ningún servidor rechazaría se queda en la comparación de informes, sin
+  guion ni comprobación nuevos.
 
 El primer caso, un login con lote remoto JSON —CAdES, `SHA256withRSA`, una
 firma con `mode=explicit` y `precalculatedHashAlgorithm`, almacén
 `MOZ_UNI`—, está en
-`rfirma-app/src-tauri/src/site/domain/protocol/operation/tests/batch.rs`.
+`rfirma-app/src-tauri/src/site/domain/protocol/operation/tests/batch.rs`. Fue
+además un fallo de envío —el lote viajaba en la query y no en el cuerpo del
+POST—, así que deja también su guion de sede,
+`testdata/site-driver/scripts/batch.mjs` (escenario
+`batchbodyonlyservlets`), y su comprobación de conformidad,
+`the_batch_servlets_receive_their_parameters_in_the_post_body` en
+`rfirma-conformance/catalogue/lote.toml`.
