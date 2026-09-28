@@ -64,8 +64,67 @@ describe("SetupWizard", () => {
     await user.click(screen.getByRole("button", { name: "Continuar" }));
 
     expect(screen.getByText("El certificado de rFirma")).toBeInTheDocument();
+    expect(
+      screen.getByText("Para que tu navegador se conecte a rFirma de forma segura."),
+    ).toBeInTheDocument();
     expect(screen.getByText("Usar rFirma por defecto")).toBeInTheDocument();
     expect(screen.getByText("Paso 2 de 2")).toBeInTheDocument();
+  });
+
+  it("exposes the certificate step's pending, working and done states through its status text, with numbered markers instead of cards", async () => {
+    const user = userEvent.setup();
+    let resolveInstall: (row: SignalRow) => void = () => {};
+    const base = memoryStatus([aVersionRow, certificateNotInstalled, handlerNotOurs]);
+    const port = {
+      ...base,
+      installLocalCaCertificate: () =>
+        new Promise<SignalRow>((resolve) => {
+          resolveInstall = resolve;
+        }),
+    };
+    renderWithCatalog(<SetupWizard seen={false} statusPort={port} onFinish={() => {}} />);
+    await user.click(screen.getByRole("button", { name: "Continuar" }));
+
+    expect(screen.getByText("1")).toBeInTheDocument();
+    expect(screen.getByText("2")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Instalar" }));
+    expect(screen.getByRole("status")).toHaveTextContent("Instalando…");
+
+    resolveInstall({
+      ...certificateNotInstalled,
+      verdict: "correct",
+      action: null,
+      restartFirefoxNotice: false,
+    });
+    await waitFor(() => {
+      expect(screen.getByRole("status")).toHaveTextContent("Instalado en tus navegadores.");
+    });
+  });
+
+  it("marks the handler step working while it registers the default, hiding its buttons and numbered marker", async () => {
+    const user = userEvent.setup();
+    let resolveChoice: (rows: SignalRow[]) => void = () => {};
+    const base = memoryStatus([aVersionRow, certificateNotInstalled, handlerNotOurs]);
+    const port = {
+      ...base,
+      chooseSiteSignatureHandler: () =>
+        new Promise<SignalRow[]>((resolve) => {
+          resolveChoice = resolve;
+        }),
+    };
+    renderWithCatalog(<SetupWizard seen={false} statusPort={port} onFinish={() => {}} />);
+    await user.click(screen.getByRole("button", { name: "Continuar" }));
+
+    await user.click(screen.getByRole("button", { name: "Que abran rFirma" }));
+
+    expect(screen.queryByText("2")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Que abran rFirma" })).not.toBeInTheDocument();
+
+    resolveChoice([{ ...handlerNotOurs, verdict: "correct", action: null }]);
+    await waitFor(() => {
+      expect(screen.getByText("Ahora abren rFirma.")).toBeInTheDocument();
+    });
   });
 
   it("welcomes in the language it starts with", () => {

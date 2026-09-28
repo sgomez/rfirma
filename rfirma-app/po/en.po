@@ -1418,7 +1418,7 @@ msgid "setup.handler.body"
 msgstr "Right now, government sites open AutoFirma."
 
 msgid "setup.handler.bodyNoAutofirma"
-msgstr "Right now, government sites have no program assigned."
+msgstr "Right now, sites have no program assigned."
 
 msgid "setup.handler.done"
 msgstr "They now open rFirma."
