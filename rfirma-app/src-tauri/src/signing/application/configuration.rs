@@ -1,7 +1,9 @@
 //! Paso de configuración entre la interfaz y el almacenamiento en disco (ADR-0010, ADR-0011).
 
 use crate::documents::domain::destination::DestinationFolder;
-use crate::signing::application::configuration_memory::{Configuration, Theme};
+use crate::signing::application::configuration_memory::{
+    Configuration, Theme, SETUP_WIZARD_VERSION,
+};
 use crate::signing::domain::Language;
 
 /// La configuración tal como la enseña y la devuelve la ventana de preferencias (ADR-0011).
@@ -55,7 +57,7 @@ pub fn shown(configuration: &Configuration, documents_folder: &std::path::Path) 
         theme: configuration.theme,
         offers_the_original_folder:
             crate::documents::domain::document::the_original_folder_can_be_offered(),
-        setup_wizard_seen: configuration.setup_wizard_seen,
+        setup_wizard_seen: configuration.setup_wizard_seen(),
         consent_countdown: configuration.consent_countdown,
         honour_automatic_selection: configuration.honour_automatic_selection,
     }
@@ -86,7 +88,11 @@ pub fn merged(live: &Configuration, chosen: &Preferences) -> Configuration {
         remember_activity: chosen.remember_activity,
         notify_new_version: chosen.notify_new_version,
         theme: chosen.theme,
-        setup_wizard_seen: chosen.setup_wizard_seen,
+        setup_wizard_version_seen: if chosen.setup_wizard_seen {
+            live.setup_wizard_version_seen.max(SETUP_WIZARD_VERSION)
+        } else {
+            live.setup_wizard_version_seen
+        },
         consent_countdown: chosen.consent_countdown,
         honour_automatic_selection: chosen.honour_automatic_selection,
     }
