@@ -60,6 +60,13 @@ pub(super) fn a_countersignature(format: &str, extra: &str) -> AfirmaUrl {
 /// Una factura mínima con la raíz y los tres hijos que el original le exige.
 pub(super) const AN_INVOICE: &[u8] = b"<Facturae><FileHeader/><Parties/><Invoices/></Facturae>";
 
+/// El lote remoto JSON de un login de sede real, redactado (`docs/casos-de-sedes-reales.md`).
+pub(super) const A_REAL_SITE_LOGIN_BATCH: &str = "{\"algorithm\":\"SHA256withRSA\",\
+     \"format\":\"CAdES\",\"stoponerror\":true,\
+     \"extraparams\":\"bW9kZT1leHBsaWNpdApwcmVjYWxjdWxhdGVkSGFzaEFsZ29yaXRobT1TSEEtMjU2Cg==\",\
+     \"singlesigns\":[{\"id\":\"login\",\
+     \"datareference\":\"bG9naW4taGFzaC1wbGFjZWhvbGRlcg==\"}]}";
+
 pub(super) fn an_invoice_signature(verb: &str, format: &str) -> AfirmaUrl {
     an_operation(&format!(
         "op={verb}&idsession=8jAkPZfRw2mQxN4TbYuL&format={format}&algorithm=SHA256withRSA&dat={}",
