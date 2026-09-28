@@ -33,7 +33,7 @@ fn the_batch_errand_of(roots: &Arc<Roots>, signer: &Arc<Mutex<Option<Vec<u8>>>>)
     let roots = Arc::clone(roots);
     let signer = Arc::clone(signer);
 
-    SiteOperations::for_operations(move |url, reply: ErrandReply| {
+    SiteOperations::for_operations(move |url, _origin, reply: ErrandReply| {
         let neighbourhood = the_neighbourhood_of(&roots);
         let desk = the_desk_of(&roots, &neighbourhood);
         let live = &roots.site.errand;
@@ -289,7 +289,7 @@ async fn the_published_client_signs_a_remote_batch_in_legacy_xml_also_over_the_t
 fn the_down_presigner_batch_errand_of(roots: &Arc<Roots>) -> SiteOperations {
     let roots = Arc::clone(roots);
 
-    SiteOperations::for_operations(move |url, reply: ErrandReply| {
+    SiteOperations::for_operations(move |url, _origin, reply: ErrandReply| {
         let neighbourhood = the_neighbourhood_of(&roots);
         let desk = the_desk_of(&roots, &neighbourhood);
         let live = &roots.site.errand;

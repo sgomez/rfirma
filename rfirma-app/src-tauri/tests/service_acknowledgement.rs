@@ -64,7 +64,7 @@ async fn the_acknowledgement_is_not_fulfilled_for_a_service_client_already_gone(
 
     let held: Arc<Mutex<Option<ReplyHandle>>> = Arc::new(Mutex::new(None));
     let keeping = Arc::clone(&held);
-    let inbox = Inbox::for_operations(move |_url: AfirmaUrl, reply: ReplyHandle| {
+    let inbox = Inbox::for_operations(move |_url: AfirmaUrl, _origin, reply: ReplyHandle| {
         *keeping.lock().expect("el candado") = Some(reply);
     });
     let transport = RawTlsService::new(store, inbox);

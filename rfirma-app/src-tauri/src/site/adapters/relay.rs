@@ -15,6 +15,7 @@ use crate::site::domain::protocol::{
     RelayRequest,
 };
 use crate::site::domain::relay_error::{RelayError, Situation as RelaySituation};
+use crate::site::domain::site_origin::SiteOrigin;
 use crate::site::ports::Servlets;
 
 use super::frontier::code_of_relay;
@@ -136,7 +137,7 @@ impl Transport for Relay {
 
         let inbox = self.inbox.clone();
         let operation = resolved.operation;
-        let delivery = Delivery::of(move || inbox.deliver(operation, reply));
+        let delivery = Delivery::of(move || inbox.deliver(operation, SiteOrigin::absent(), reply));
 
         Ok(OpenChannel::with_delivery(0, shutdown, delivery))
     }

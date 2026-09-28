@@ -331,7 +331,7 @@ fn a_relay_launch_registers_the_errand_and_leaves_its_delivery_unfired() {
     let inbox = {
         let live = Arc::clone(&live);
         let seen = Arc::clone(&codec_was_already_registered);
-        Inbox::for_operations(move |_url, reply: ReplyHandle| {
+        Inbox::for_operations(move |_url, _origin, reply: ReplyHandle| {
             *seen.lock().expect("el candado") = Some(live.codec().is_some());
             reply.answer("respuesta".to_owned());
         })
@@ -642,7 +642,7 @@ fn a_resolution_failure_with_a_known_destination_uploads_like_a_negotiation_refu
     let servlets = Arc::new(InMemoryServlets::unreachable());
     let relay = Relay::new(
         servlets,
-        Inbox::for_operations(|_url, _reply| {}),
+        Inbox::for_operations(|_url, _origin, _reply| {}),
         Arc::new(|_refusal| {}),
         crate::site::application::tests::a_runtime(),
     );

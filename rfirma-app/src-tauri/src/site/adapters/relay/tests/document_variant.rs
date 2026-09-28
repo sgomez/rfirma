@@ -46,6 +46,25 @@ fn the_inline_dat_variant_never_calls_get() {
 }
 
 #[test]
+fn the_relay_transport_delivers_with_no_origin() {
+    let servlets = Arc::new(OrderedSpy::default());
+    let (relay, spy) = a_relay(Arc::clone(&servlets));
+    let info = ChannelLocation::Relay(RelayChannelInfo {
+        operation: an_operation("afirma://sign?dat=ya-viene-dentro&algorithm=SHA256withRSA"),
+        request: RelayRequest::Inline {
+            store_servlet: STORE_SERVLET.to_owned(),
+            id: "tx-origin".to_owned(),
+        },
+        key: None,
+        active_wait: false,
+    });
+
+    opened_and_delivered(&relay, &info);
+
+    assert_eq!(spy.delivered_origin(), SiteOrigin::absent());
+}
+
+#[test]
 fn wait_is_called_before_get_when_the_site_asks_for_it() {
     let key = a_key();
     let servlets = Arc::new(OrderedSpy::default());

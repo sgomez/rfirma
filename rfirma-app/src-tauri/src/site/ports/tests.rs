@@ -45,7 +45,7 @@ fn what_arrives_at_the_inbox_notifies_arrival_and_delivers_operations() {
         move || {
             arrived_clone.store(true, std::sync::atomic::Ordering::SeqCst);
         },
-        move |url, _reply| {
+        move |url, _origin, _reply| {
             *delivered_clone.lock().expect("el candado") = Some(url);
         },
     );
@@ -57,9 +57,32 @@ fn what_arrives_at_the_inbox_notifies_arrival_and_delivers_operations() {
     let url = AfirmaUrl::parse("afirma://websocket?ports=51001,51002,51003&v=4").expect("url");
     inbox.deliver(
         url.clone(),
+        SiteOrigin::absent(),
         ReplyHandle::of(|_| Acknowledgement::immediate()),
     );
     assert_eq!(delivered.lock().expect("el candado").as_ref(), Some(&url));
+}
+
+#[test]
+fn the_origin_delivered_is_the_origin_the_connection_brought() {
+    let delivered = std::sync::Arc::new(std::sync::Mutex::new(None));
+    let delivered_clone = std::sync::Arc::clone(&delivered);
+    let inbox = Inbox::for_operations(move |_url, origin, _reply| {
+        *delivered_clone.lock().expect("el candado") = Some(origin);
+    });
+
+    let url = AfirmaUrl::parse("afirma://websocket?ports=51001,51002,51003&v=4").expect("url");
+    let origin = SiteOrigin::from_header(Some("https://sede.ejemplo.gob.es"));
+    inbox.deliver(
+        url,
+        origin.clone(),
+        ReplyHandle::of(|_| Acknowledgement::immediate()),
+    );
+
+    assert_eq!(
+        delivered.lock().expect("el candado").as_ref(),
+        Some(&origin)
+    );
 }
 
 #[test]
@@ -70,7 +93,7 @@ fn arrival_is_notified_only_once() {
         move || {
             count_clone.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
         },
-        move |_url, _reply| {},
+        move |_url, _origin, _reply| {},
     );
 
     inbox.arrived();

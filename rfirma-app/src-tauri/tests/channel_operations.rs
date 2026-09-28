@@ -14,10 +14,12 @@ async fn an_operation_is_answered_by_the_errand_and_not_by_the_channel() {
         ChannelDuty::Serve(NegotiatedCredential::Required(
             ChannelCredential::parse(CREDENTIAL).expect("credencial"),
         )),
-        SiteOperations::for_operations(move |url: AfirmaUrl, reply: ReplyHandle| {
-            assert_eq!(url.verb(), "selectcert");
-            *keeping.lock().expect("el candado") = Some(reply);
-        }),
+        SiteOperations::for_operations(
+            move |url: AfirmaUrl, _origin: SiteOrigin, reply: ReplyHandle| {
+                assert_eq!(url.verb(), "selectcert");
+                *keeping.lock().expect("el candado") = Some(reply);
+            },
+        ),
     )
     .await;
     let mut client = channel.a_client().await;
@@ -66,9 +68,11 @@ async fn the_acknowledgement_is_not_fulfilled_for_a_client_already_gone() {
         ChannelDuty::Serve(NegotiatedCredential::Required(
             ChannelCredential::parse(CREDENTIAL).expect("credencial"),
         )),
-        SiteOperations::for_operations(move |_url: AfirmaUrl, reply: ReplyHandle| {
-            *keeping.lock().expect("el candado") = Some(reply);
-        }),
+        SiteOperations::for_operations(
+            move |_url: AfirmaUrl, _origin: SiteOrigin, reply: ReplyHandle| {
+                *keeping.lock().expect("el candado") = Some(reply);
+            },
+        ),
     )
     .await;
     let mut client = channel.a_client().await;
@@ -129,14 +133,16 @@ async fn two_operations_over_the_same_socket_get_two_answers() {
 async fn what_an_operation_leaves_on_the_openssl_error_queue_does_not_break_the_channel() {
     let channel = AChannel::serving_with(
         serving_the_credential(),
-        SiteOperations::for_operations(|url: AfirmaUrl, reply: ReplyHandle| {
-            let left = openssl::x509::X509::from_pem(b"no es un certificado")
-                .expect_err("un PEM roto no se lee");
-            for error in left.errors() {
-                error.put();
-            }
-            let _ = reply.answer(format!("contestada:{}", url.verb()));
-        }),
+        SiteOperations::for_operations(
+            |url: AfirmaUrl, _origin: SiteOrigin, reply: ReplyHandle| {
+                let left = openssl::x509::X509::from_pem(b"no es un certificado")
+                    .expect_err("un PEM roto no se lee");
+                for error in left.errors() {
+                    error.put();
+                }
+                let _ = reply.answer(format!("contestada:{}", url.verb()));
+            },
+        ),
     )
     .await;
     let mut client = channel.a_client().await;
@@ -155,9 +161,11 @@ async fn an_operation_while_another_is_in_flight_is_refused_as_busy() {
     let keeping = std::sync::Arc::clone(&held);
     let channel = AChannel::serving_with(
         serving_the_credential(),
-        SiteOperations::for_operations(move |_url: AfirmaUrl, reply: ReplyHandle| {
-            *keeping.lock().expect("el candado") = Some(reply);
-        }),
+        SiteOperations::for_operations(
+            move |_url: AfirmaUrl, _origin: SiteOrigin, reply: ReplyHandle| {
+                *keeping.lock().expect("el candado") = Some(reply);
+            },
+        ),
     )
     .await;
     let mut first = channel.a_client().await;
@@ -222,9 +230,11 @@ async fn the_first_client_leaving_mid_operation_is_told() {
     let keeping = std::sync::Arc::clone(&held);
     let channel = AChannel::serving_with(
         serving_the_credential(),
-        SiteOperations::for_operations(move |_url: AfirmaUrl, reply: ReplyHandle| {
-            *keeping.lock().expect("el candado") = Some(reply);
-        })
+        SiteOperations::for_operations(
+            move |_url: AfirmaUrl, _origin: SiteOrigin, reply: ReplyHandle| {
+                *keeping.lock().expect("el candado") = Some(reply);
+            },
+        )
         .when_the_first_client_leaves(move || {
             counting.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
         }),
@@ -243,4 +253,112 @@ async fn the_first_client_leaving_mid_operation_is_told() {
     client.socket.close(None).await.expect("el cierre sale");
 
     assert_eq!(counted(&left, 1).await, 1);
+}
+
+/// El canal doblado que entrega cada operación con el origen de su conexión, tal y como llegó.
+fn recording_the_origin() -> (
+    SiteOperations,
+    std::sync::Arc<std::sync::Mutex<Vec<SiteOrigin>>>,
+) {
+    let seen = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+    let keeping = std::sync::Arc::clone(&seen);
+    let inbox =
+        SiteOperations::for_operations(move |url: AfirmaUrl, origin, reply: ReplyHandle| {
+            keeping.lock().expect("el candado").push(origin);
+            let _ = reply.answer(format!("contestada:{}", url.verb()));
+        });
+    (inbox, seen)
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_greeting_with_a_plain_https_origin_delivers_its_host() {
+    let (inbox, seen) = recording_the_origin();
+    let channel = AChannel::serving_with(serving_the_credential(), inbox).await;
+    let mut client = channel
+        .a_client_with_origin(Some("https://sede.ejemplo.gob.es"))
+        .await;
+
+    client.say(&an_operation("selectcert")).await;
+
+    assert_eq!(
+        seen.lock().expect("el candado").as_slice(),
+        [SiteOrigin::from_header(Some("https://sede.ejemplo.gob.es"))]
+    );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_non_standard_port_travels_with_the_host() {
+    let (inbox, seen) = recording_the_origin();
+    let channel = AChannel::serving_with(serving_the_credential(), inbox).await;
+    let mut client = channel
+        .a_client_with_origin(Some("https://sede.ejemplo.gob.es:8443"))
+        .await;
+
+    client.say(&an_operation("selectcert")).await;
+
+    assert_eq!(
+        seen.lock().expect("el candado").as_slice(),
+        [SiteOrigin::from_header(Some(
+            "https://sede.ejemplo.gob.es:8443"
+        ))]
+    );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_punycode_host_is_delivered_without_decoding() {
+    let (inbox, seen) = recording_the_origin();
+    let channel = AChannel::serving_with(serving_the_credential(), inbox).await;
+    let mut client = channel
+        .a_client_with_origin(Some("https://xn--sede-2sa.example"))
+        .await;
+
+    client.say(&an_operation("selectcert")).await;
+
+    assert_eq!(
+        seen.lock().expect("el candado").as_slice(),
+        [SiteOrigin::from_header(Some(
+            "https://xn--sede-2sa.example"
+        ))]
+    );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn no_header_null_and_http_all_deliver_an_absent_origin_and_are_still_answered() {
+    for origin in [None, Some("null"), Some("http://sede.ejemplo.gob.es")] {
+        let (inbox, seen) = recording_the_origin();
+        let channel = AChannel::serving_with(serving_the_credential(), inbox).await;
+        let mut client = channel.a_client_with_origin(origin).await;
+
+        let answered = client.say(&an_operation("selectcert")).await;
+
+        assert_eq!(answered.as_deref(), Some("contestada:selectcert"));
+        assert_eq!(
+            seen.lock().expect("el candado").as_slice(),
+            [SiteOrigin::absent()],
+            "{origin:?}"
+        );
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn two_connections_with_different_origins_each_deliver_their_own() {
+    let (inbox, seen) = recording_the_origin();
+    let channel = AChannel::serving_with(serving_the_credential(), inbox).await;
+    let mut first = channel
+        .a_client_with_origin(Some("https://primera.ejemplo.gob.es"))
+        .await;
+    let mut second = channel
+        .a_client_with_origin(Some("https://segunda.ejemplo.gob.es"))
+        .await;
+
+    first.say(&an_operation("selectcert")).await;
+    second.say(&an_operation("sign")).await;
+
+    assert_eq!(
+        seen.lock().expect("el candado").as_slice(),
+        [
+            SiteOrigin::from_header(Some("https://primera.ejemplo.gob.es")),
+            SiteOrigin::from_header(Some("https://segunda.ejemplo.gob.es")),
+        ]
+    );
 }
