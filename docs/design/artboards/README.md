@@ -65,7 +65,7 @@ página «Ventana de sede · v0.5» va aparte porque es otra ventana:
 | S3 | `SedeFirmando` | Ventana de sede: firmando y devolviendo la firma a la sede |
 | S4 | `SedeDesenlace` | Ventana de sede: firmado, cancelado o petición rechazada |
 | S5 | `SedeSinCertificado` | Ventana de sede: sin ningún certificado, o con todos excluidos por la sede |
-| — | `PrimerArranque` | El asistente del primer arranque: la bienvenida con el deslinde, y las dos acciones —instalar el certificado propio y poner a rFirma por defecto— |
+| — | `PrimerArranque` | El asistente del primer arranque: la bienvenida con el deslinde y el idioma, y las dos acciones como pasos numerados —instalar el certificado propio y poner a rFirma por defecto— con la protección contra firmas accidentales aparte |
 | E1 | `PanelEstado` | El panel de estado: la tabla de las cuatro señales de la instalación, con sus cinco veredictos, sus reparaciones y el botón del certificado que alterna entre instalar y retirar |
 | E2 | `RetirarCertificado` | El panel de estado con el velo de la retirada encima: pregunta, avance almacén a almacén y desenlace, con y sin fallo |
 
@@ -882,3 +882,28 @@ El porqué está en el
 [ADR-0007](../../adr/0007-cabecera-unica-sin-barra-de-menus.md) y en las fichas
 [`cabecera`](../cabecera.md#decisiones) y
 [`pestanas-de-documentos`](../pestanas-de-documentos.md#decisiones).
+
+## Lo que cambió al fundir el canvas con la app
+
+Validado el 28/09/2026. Se trabajó dentro de los dos artboards de la pantalla,
+sin páginas de trabajo: la app tenía piezas que el canvas no, y entran con el
+estilo del canvas.
+
+- **`PreferenciasPantalla`, sección *Firma*.** Orden final: «Recordar la última
+  configuración de firma visible», sin ayuda; «Dónde se guarda el documento
+  firmado» con dos radios —«Junto al documento original» y «En esta carpeta»,
+  con la carpeta y «Cambiar carpeta…»— y, con la palanca «Destino» en sandbox,
+  solo la carpeta; «Protección contra firmas accidentales»; y «Usar el
+  certificado que elija la sede». Se retira «La carpeta no se crea nunca». El
+  bloque del destino mide 132 px en los dos estados.
+- **`PrimerArranque`.** La bienvenida gana la tarjeta «Idioma» y el botón
+  «Omitir configuración». La segunda pantalla deja las tarjetas por **pasos
+  numerados** —el círculo dice el estado— y suma, aparte y al final, el
+  interruptor de protección con los textos de Preferencias. Frases cortas: «Para
+  que tu navegador se conecte a rFirma de forma segura.» y, con la palanca nueva
+  «AutoFirma instalado» apagada, «Ahora mismo las sedes no tienen ningún
+  programa asignado.». Las otras tres maquetas del paso 2 se dibujaron para
+  compararlas y se han borrado con su palanca.
+
+El porqué, en las fichas [`preferencias`](../preferencias.md#decisiones) y
+[`primer-arranque`](../primer-arranque.md#decisiones).

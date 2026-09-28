@@ -215,6 +215,16 @@ puede desaparecer de aquí — el enlace al canvas ya vive en las fichas.
 
 No hay ningún prototipo en vuelo.
 
+La **fusión del canvas con la app** se validó el **28/09/2026**, dentro de
+`PreferenciasPantalla` y `PrimerArranque` y sin páginas de trabajo: la sección
+*Firma* de Preferencias con el destino en radios, y el asistente del primer
+arranque con el idioma, la segunda pantalla en pasos numerados y la protección
+contra firmas accidentales. Obliga a reescribir el
+[ADR-0011](../adr/0011-destino-del-documento-firmado.md), que queda para la
+implementación; las fichas [`preferencias.md`](../design/preferencias.md) y
+[`primer-arranque.md`](../design/primer-arranque.md) enlazan el canvas desde su
+sección «Decisiones».
+
 El caso de uso **la barra única** se validó el **27/09/2026**. Se exploró en
 una página de trabajo, «Main barra unica», que se fundió en `Main` y se borró:
 cabecera y pestañas pasan a una sola barra de 44 px con el botón partido «Abrir

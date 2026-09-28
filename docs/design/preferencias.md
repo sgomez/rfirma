@@ -115,7 +115,7 @@ fuera y foco de vuelta—, y eso es lo que hace `Select`. Un `<div>` con un
 
 ## Los ajustes
 
-Son **siete**, repartidos en cuatro paneles.
+Son **nueve**, repartidos en cuatro paneles.
 
 ### General
 
@@ -168,53 +168,60 @@ Es la entrada, y lleva un solo grupo: **Privacidad**.
    encima del texto. Este ajuste gobierna lo global; la posición la gobiernan
    los [recientes](pestanas-de-documentos.md).
 
-4. **Dónde se guarda el documento firmado**. Una fila con el **nombre** de la
-   carpeta —no su ruta— y un botón **«Cambiar carpeta…»** al lado, que abre el
-   selector de directorio del sistema. Por omisión, la carpeta de documentos
-   del usuario.
+4. **Dónde se guarda el documento firmado**. Un encabezado en `.rf-prose` a
+   600 y, debajo, **dos radios**: **«Junto al documento original»**, solo el
+   título, y **«En esta carpeta»**, con el **nombre** de la carpeta —no su
+   ruta— y un botón **«Cambiar carpeta…»** en una fila sangrada al texto de la
+   opción, que abre el selector de directorio del sistema. Cada opción lleva el
+   estilo de título de un interruptor y **ninguna descripción**. Por omisión, la
+   carpeta de documentos del usuario.
 
-   **No es un desplegable.** Lo fue, con una sola opción dentro, que es un
-   control que finge elegir. Bajo el sandbox la aplicación escribe en la
-   carpeta pero la única palabra que tiene de ella es su último segmento, y
-   enseñar la ruta donde se puede y el nombre donde no sería la misma pantalla
-   contando cosas distintas según el empaquetado; un selector de directorio
-   devuelve exactamente ese último segmento en los cuatro canales.
+   **El destino es un modo que se elige.** Hasta ahora no lo era: había una
+   carpeta y «junto al original» se decidía por documento. Con los radios la
+   persona elige, y aun eligiendo «junto al original», **un documento que llega
+   por el portal de documentos** —ruta bajo `/run/user/*/doc/…`— cae en la
+   carpeta elegida, porque esa ruta no es la del original.
 
-   Se comprueba **antes de firmar**: si no está o no se puede escribir, se
-   avisa en el pie del panel y ahí mismo se ofrece `Cambiar`; ni se degrada a
-   otro sitio ni se apaga el botón de firmar. Bajo el ajuste queda **una sola
-   línea de ayuda**, «La carpeta no se crea nunca», que es la única de las tres
-   que había cuyo borrado cambiaría lo que la persona puede esperar: las otras
-   dos contaban cuándo se comprueba y qué pasa si falla, y eso ya lo cuenta el
-   pie del panel en el momento en que ocurre.
+   **Bajo el sandbox no hay radios.** Donde el entorno no sabe devolver la ruta
+   real del documento —el flatpak, que entrega el fichero por un portal— el
+   bloque es el encabezado y la fila de la carpeta con su `Cambiar carpeta…`,
+   sin más. El motivo **no es privacidad**: enseñar la ruta de un documento que
+   el usuario acaba de abrir no revela nada que su gestor de ficheros no enseñe
+   todo el día. El motivo es **corrección**: devolver una ruta que no se conoce
+   es devolver una mentira, y una opción atenuada le contaría al usuario
+   nuestros problemas de empaquetado.
 
-   **«Junto al documento original» es condicional** (ID-184): la opción se
-   ofrece **sólo cuando el entorno sabe devolver la ruta real del documento**.
-   Donde no la sabe —el sandbox del flatpak, que entrega el fichero por un
-   portal— la opción **no aparece**, y el ajuste se queda en la carpeta con su
-   `Cambiar carpeta…`, exactamente como estaba.
+   Se comprueba **antes de firmar**: si la carpeta no está o no se puede
+   escribir, se avisa en el pie del panel y ahí mismo se ofrece `Cambiar`; ni
+   se degrada a otro sitio ni se apaga el botón de firmar. **No hay línea de
+   ayuda**: «La carpeta no se crea nunca» se retiró, y lo que cuenta cuándo se
+   comprueba y qué pasa si falla ya lo dice el pie del panel en el momento en
+   que ocurre.
 
-   El motivo **no es privacidad**: enseñar la ruta de un documento que el
-   usuario acaba de abrir no revela nada que su gestor de ficheros no enseñe
-   todo el día, y el ID-185 retira esa justificación. El motivo es
-   **corrección**: devolver una ruta que no se conoce es devolver una mentira, y
-   una opción atenuada le contaría al usuario nuestros problemas de empaquetado.
+   Los **dos estados miden lo mismo**: el bloque lleva `min-height` de 132 px,
+   medido en Chrome sobre el artboard —con radios el contenido ocupa 131;
+   bajo sandbox, 70—, para que los interruptores de debajo no salten según el
+   canal.
 
-   Los **dos estados miden lo mismo**: el bloque lleva `min-height` de 200 px,
-   medido sobre el artboard, para que lo de debajo no salte según el canal.
-   Razonamiento y alternativas descartadas en el
-   [ADR-0011](../adr/0011-destino-del-documento-firmado.md).
+5. **Protección contra firmas accidentales** (interruptor, activo por omisión),
+   con la ayuda «Se añade una pausa de 3 segundos antes de permitir firmar.».
+   Encendido, `Firmar` nace desactivado con una cuenta atrás de tres segundos.
+   Gobierna la ventana de sede y nada más
+   ([ventana-de-sede.md](ventana-de-sede.md)): apagado, `Firmar` nace activo y
+   con el foco, y un Intro firma con el certificado preseleccionado. Apagarlo no
+   pide confirmación: no borra nada. Es el mismo ajuste, con los mismos textos,
+   que el [primer arranque](primer-arranque.md) ofrece en su segunda pantalla.
 
-5. **Protección contra firmas por descuido en las sedes** (interruptor, activo
-   por omisión), **sin texto de ayuda debajo**. Encendido, `Firmar` nace
-   desactivado con una cuenta atrás de tres segundos. Gobierna la ventana de
-   sede y nada más ([ventana-de-sede.md](ventana-de-sede.md)): apagado, `Firmar`
-   nace activo y con el foco, y un Intro firma con el certificado preseleccionado.
-   Apagarlo no pide confirmación: no borra nada.
+6. **Usar el certificado que elija la sede** (interruptor, apagado por
+   omisión), con la ayuda «Si solo sirve uno de tus certificados, se usa sin
+   preguntarte.». Encendido, cuando la sede pide la selección automática y un
+   solo certificado cumple su filtro, la ventana de sede se salta la pantalla de
+   consentimiento si no tiene ningún aviso que enseñar
+   ([ventana-de-sede.md](ventana-de-sede.md), invariante 1).
 
 ### Certificados en fichero
 
-6. **La lista de certificados instalados en rFirma**, con **dos gestos y nada
+7. **La lista de certificados instalados en rFirma**, con **dos gestos y nada
    más**: **«Añadir…»**, arriba a la derecha del panel, que abre el selector
    de ficheros del sistema, y **«Quitar»** al final de cada fila (ID-198).
 
@@ -253,12 +260,12 @@ Es la entrada, y lleva un solo grupo: **Privacidad**.
 
 ### Apariencia
 
-7. **Tema** (desplegable): *El del sistema*, *Claro* u *Oscuro*. Por omisión,
+8. **Tema** (desplegable): *El del sistema*, *Claro* u *Oscuro*. Por omisión,
    el del sistema, que **no es «claro»**: es no forzar nada y dejar que mande
    `prefers-color-scheme`. Los otros dos escriben `data-theme` en `<html>`, que
    es lo que los tokens de color del bundle leen para redefinir los roles. El
    cambio se aplica en caliente, como el resto de la pantalla.
-8. **Idioma** (desplegable). Español, català, euskara, galego e inglés: son
+9. **Idioma** (desplegable). Español, català, euskara, galego e inglés: son
    cinco desde el ID-124, que sacó el valencià porque sus reglas de plural no
    son las del castellano. El cambio se aplica en caliente. Un idioma solo
    aparece aquí si tiene **todas** las cadenas traducidas. En la primera
@@ -358,8 +365,8 @@ sitio aquí, una por una:
   existe: preguntar es configurar, y configurar se hace en el panel de estado.
   Un interruptor que enciende algo que no se puede encender no es un ajuste.
 
-Con eso el grupo *Sedes* deja de existir en Preferencias. **De los siete
-ajustes numerados no se ha movido ninguno**: lo que sale de aquí es el
+Con eso el grupo *Sedes* deja de existir en Preferencias. **De los ajustes
+numerados no se ha movido ninguno**: lo que sale de aquí es el
 desplegable, que nunca estuvo en esa cuenta, y un interruptor que ya no tiene
 nada que gobernar.
 
@@ -384,9 +391,18 @@ borrado del estado al apagar «Recordar mi actividad» no se puede olvidar.
 **Dónde cae el documento firmado** está fijado en el
 [ADR-0011](../adr/0011-destino-del-documento-firmado.md): la carpeta por
 omisión, el nombre en vez de la ruta, la comprobación previa sin degradación y
-el `Cambiar` del pie que vale solo para una firma. **Queda pendiente enmendarlo**
-con el selector de directorio que sustituye al desplegable: lo hace el
-sub-issue de implementación al que toca, no esta ficha.
+el `Cambiar` del pie que vale solo para una firma. **Hay que reescribirlo**:
+hoy dice que el destino no es un modo y que «junto al original» se decide por
+documento, y los radios lo convierten en un modo elegible, con el documento del
+portal cayendo en la carpeta aunque se elija «junto al original». Lo reescribe
+la implementación, no esta ficha.
+
+**Cadenas que cambian en `rfirma-app/po/`** con la sección *Firma*:
+`preferences.rememberVisibleSignature.hint` desaparece;
+`preferences.consentCountdown` pasa a «Protección contra firmas accidentales»
+y gana su ayuda; `preferences.honourAutomaticSelection` pasa a «Usar el
+certificado que elija la sede» y gana su ayuda; y el destino necesita las dos
+etiquetas de los radios.
 
 **Qué se recuerda entre sesiones y dónde vive** está fijado en el
 [ADR-0010](../adr/0010-memoria-entre-sesiones.md): los dos interruptores, el
@@ -418,7 +434,11 @@ Validado en el canvas [Autofirma de escritorio en Rust](https://claude.ai/design
 (`PreferenciasPantalla`), con la palanca **Sección visible** —las cuatro
 pestañas, con *General* por omisión— y las de contenido: **Destino**, que
 recorre los dos entornos, y **Certificados en fichero**, con cuatro instalados,
-ninguno y el rechazo de la clave elíptica. El contenedor y el reparto se
+ninguno y el rechazo de la clave elíptica. La sección *Firma* se cerró el
+**28/09/2026** al fundir el canvas con la app: el destino como radios, la
+retirada de «La carpeta no se crea nunca», los títulos y ayudas nuevos de la
+protección y de la selección automática, y el recordatorio de la firma visible
+sin ayuda. El contenedor y el reparto se
 decidieron en el [#657](https://github.com/sgomez/rfirma/issues/657); lo
 anterior, en el [#123](https://github.com/sgomez/rfirma/issues/123) y, lo de la
 v0.4, en el [#250](https://github.com/sgomez/rfirma/issues/250) (ID-180, ID-184,

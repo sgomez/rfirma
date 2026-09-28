@@ -237,75 +237,108 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
         <p class="rf-prose">rFirma no está relacionada con AutoFirma ni con la Administración General del Estado, que publican el cliente oficial, ni cuenta con su respaldo. Si necesitas la aplicación oficial, descárgala de su web.</p>
       </div>
 
+      <div class="rf-card">
+        <p class="rf-title" style="font-size:16px">Idioma</p>
+        <p class="rf-prose">Elige el idioma de rFirma. Puedes cambiarlo más adelante en Preferencias.</p>
+        <div class="rf-input rf-row" style="justify-content:space-between">
+          <span>Español</span>
+          <span class="rf-text-muted" style="display:flex"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
+        </div>
+      </div>
+
+
     </div>
   </sc-if>
 
   <sc-if value="{{esAcciones}}" hint-placeholder-val="{{true}}">
-    <div class="rf-stack" style="gap:var(--rf-space-md)">
-
-      <div class="rf-card" style="gap:12px">
-        <p class="rf-title" style="font-size:17px">El certificado de rFirma</p>
-        <p class="rf-prose">Cuando firmas en una sede electrónica, tu navegador tiene que conectarse a rFirma. Para que esa conexión sea segura necesitamos instalar un certificado propio.</p>
-
-        <sc-if value="{{caPendiente}}" hint-placeholder-val="{{true}}">
-          <div class="rf-row rf-gap-xs" style="min-height:44px">
-            <button class="rf-btn rf-btn--primary" style="min-height:36px">Instalar</button>
-            <button class="rf-btn rf-btn--secondary" style="min-height:36px">Ahora no</button>
-          </div>
-        </sc-if>
-
-        <sc-if value="{{caNoPendiente}}" hint-placeholder-val="{{false}}">
-          <div class="rf-row rf-gap-xs" role="status" style="align-items:flex-start;min-height:44px">
-            <span style="display:flex;flex:none;margin-top:3px;color:var(--rf-text)">
-              <sc-if value="{{caInstalando}}" hint-placeholder-val="{{false}}">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="9" opacity=".25"/><path d="M21 12a9 9 0 0 0-9-9"/></svg>
+    <div class="rf-stack" style="gap:0">
+      <div class="rf-row rf-gap-sm" style="align-items:stretch">
+        <div class="rf-stack" style="flex:none;width:24px;align-items:center">
+          <sc-if value="{{caPendiente}}" hint-placeholder-val="{{true}}">
+            <span style="width:24px;height:24px;flex:none;border-radius:var(--rf-radius-pill);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;border:1.5px solid var(--rf-border-strong);color:var(--rf-text)">1</span>
+          </sc-if>
+          <sc-if value="{{caInstalando}}" hint-placeholder-val="{{false}}">
+            <span style="width:24px;height:24px;flex:none;border-radius:var(--rf-radius-pill);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;border:1.5px solid var(--rf-border-strong);color:var(--rf-text)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9" opacity=".25"/><path d="M21 12a9 9 0 0 0-9-9"/></svg></span>
+          </sc-if>
+          <sc-if value="{{caHecha}}" hint-placeholder-val="{{false}}">
+            <span style="width:24px;height:24px;flex:none;border-radius:var(--rf-radius-pill);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;background:var(--rf-primary);color:var(--rf-on-primary)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 12.5 10 16.5 18 8"/></svg></span>
+          </sc-if>
+          <sc-if value="{{caFallada}}" hint-placeholder-val="{{false}}">
+            <span style="width:24px;height:24px;flex:none;border-radius:var(--rf-radius-pill);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;border:1.5px solid var(--rf-border-strong);color:var(--rf-text)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 2.5 20h19z"/><path d="M12 10v4M12 17v.5"/></svg></span>
+          </sc-if>
+          <span style="flex:1;width:2px;min-height:16px;margin:4px 0;background:var(--rf-border-subtle)"></span>
+        </div>
+        <div class="rf-stack" style="gap:4px;flex:1;min-width:0;padding-bottom:var(--rf-space-md)">
+          <p class="rf-prose" style="font-weight:600">El certificado de rFirma</p>
+            <p class="rf-hint">Para que tu navegador se conecte a rFirma de forma segura.</p>
+            <div style="padding-top:var(--rf-space-xs)">
+              <sc-if value="{{caPendiente}}" hint-placeholder-val="{{true}}">
+                <div class="rf-row rf-gap-xs" style="flex:none">
+                  <button class="rf-btn rf-btn--primary" style="flex:none;min-height:36px">Instalar</button>
+                  <button class="rf-btn rf-btn--secondary" style="flex:none;min-height:36px">Ahora no</button>
+                </div>
               </sc-if>
-              <sc-if value="{{caHecha}}" hint-placeholder-val="{{false}}">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12.5 11 15.5 16.5 9"/></svg>
-              </sc-if>
-              <sc-if value="{{caFallada}}" hint-placeholder-val="{{false}}">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 2.5 20h19z"/><path d="M12 10v4M12 17v.5"/></svg>
-              </sc-if>
-            </span>
-            <div class="rf-stack" style="gap:6px;flex:1;min-width:0">
-              <p class="rf-prose" style="font-weight:600">{{caTitular}}</p>
-              <sc-if value="{{caHecha}}" hint-placeholder-val="{{false}}">
-                <p class="rf-hint">Si tienes alguno abierto, reinícialo para que lo reconozca.</p>
-              </sc-if>
-              <sc-if value="{{caFallada}}" hint-placeholder-val="{{false}}">
-                <ul class="rf-stack" style="gap:4px;margin:0;padding:0;list-style:none">
-                  <li class="rf-row rf-gap-xs rf-hint"><span style="width:12px;flex:none;text-align:center">✓</span>Firefox</li>
-                  <li class="rf-row rf-gap-xs rf-hint"><span style="width:12px;flex:none;text-align:center">✓</span>Chrome</li>
-                  <li class="rf-row rf-gap-xs rf-hint"><span style="width:12px;flex:none;text-align:center">✗</span>Almacén de certificados del sistema</li>
-                </ul>
+              <sc-if value="{{caNoPendiente}}" hint-placeholder-val="{{false}}">
+                <div class="rf-stack" role="status" style="gap:6px">
+                  <p class="rf-prose" style="font-weight:600">{{caTitular}}</p>
+                  <sc-if value="{{caHecha}}" hint-placeholder-val="{{false}}">
+                    <p class="rf-hint">Si tienes alguno abierto, reinícialo para que lo reconozca.</p>
+                  </sc-if>
+                  <sc-if value="{{caFallada}}" hint-placeholder-val="{{false}}">
+                    <ul class="rf-stack" style="gap:4px;margin:0;padding:0;list-style:none">
+                      <li class="rf-row rf-gap-xs rf-hint"><span style="width:12px;flex:none;text-align:center">✓</span>Firefox</li>
+                      <li class="rf-row rf-gap-xs rf-hint"><span style="width:12px;flex:none;text-align:center">✓</span>Chrome</li>
+                      <li class="rf-row rf-gap-xs rf-hint"><span style="width:12px;flex:none;text-align:center">✗</span>Almacén de certificados del sistema</li>
+                    </ul>
+                    <div class="rf-row" style="padding-top:4px"><button class="rf-btn rf-btn--secondary" style="flex:none;min-height:36px">Reintentar</button></div>
+                  </sc-if>
+                </div>
               </sc-if>
             </div>
-            <sc-if value="{{caFallada}}" hint-placeholder-val="{{false}}">
-              <button class="rf-btn rf-btn--secondary" style="flex:none;min-height:36px">Reintentar</button>
+        </div>
+      </div>
+      <div class="rf-row rf-gap-sm" style="align-items:flex-start">
+        <div class="rf-stack" style="flex:none;width:24px;align-items:center">
+          <sc-if value="{{urlPendiente}}" hint-placeholder-val="{{true}}">
+            <span style="width:24px;height:24px;flex:none;border-radius:var(--rf-radius-pill);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;border:1.5px solid var(--rf-border-strong);color:var(--rf-text)">2</span>
+          </sc-if>
+          <sc-if value="{{urlHecho}}" hint-placeholder-val="{{false}}">
+            <span style="width:24px;height:24px;flex:none;border-radius:var(--rf-radius-pill);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;background:var(--rf-primary);color:var(--rf-on-primary)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 12.5 10 16.5 18 8"/></svg></span>
+          </sc-if>
+        </div>
+        <div class="rf-stack" style="gap:4px;flex:1;min-width:0">
+          <p class="rf-prose" style="font-weight:600">Usar rFirma por defecto</p>
+            <sc-if value="{{hayAutofirma}}" hint-placeholder-val="{{true}}">
+              <p class="rf-hint">Ahora mismo las sedes electrónicas abren AutoFirma.</p>
             </sc-if>
-          </div>
-        </sc-if>
+            <sc-if value="{{sinAutofirma}}" hint-placeholder-val="{{false}}">
+              <p class="rf-hint">Ahora mismo las sedes no tienen ningún programa asignado.</p>
+            </sc-if>
+            <div style="padding-top:var(--rf-space-xs)">
+              <sc-if value="{{urlPendiente}}" hint-placeholder-val="{{true}}">
+                <div class="rf-row rf-gap-xs" style="flex:none">
+                  <button class="rf-btn rf-btn--primary" style="flex:none;min-height:36px">Que abran rFirma</button>
+                  <button class="rf-btn rf-btn--secondary" style="flex:none;min-height:36px">Ahora no</button>
+                </div>
+              </sc-if>
+              <sc-if value="{{urlHecho}}" hint-placeholder-val="{{false}}">
+                <p class="rf-prose" role="status" style="font-weight:600">Ahora abren rFirma.</p>
+              </sc-if>
+            </div>
+        </div>
       </div>
-
-      <div class="rf-card" style="gap:12px">
-        <p class="rf-title" style="font-size:17px">Usar rFirma por defecto</p>
-        <p class="rf-prose">Ahora mismo las sedes electrónicas abren AutoFirma.</p>
-
-        <sc-if value="{{urlPendiente}}" hint-placeholder-val="{{true}}">
-          <div class="rf-row rf-gap-xs" style="min-height:44px">
-            <button class="rf-btn rf-btn--primary" style="min-height:36px">Que abran rFirma</button>
-            <button class="rf-btn rf-btn--secondary" style="min-height:36px">Ahora no</button>
-          </div>
-        </sc-if>
-        <sc-if value="{{urlHecho}}" hint-placeholder-val="{{false}}">
-          <div class="rf-row rf-gap-xs" role="status" style="min-height:44px">
-            <span style="display:flex;flex:none;color:var(--rf-text)">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12.5 11 15.5 16.5 9"/></svg></span>
-            <p class="rf-prose" style="font-weight:600">Ahora abren rFirma.</p>
-          </div>
-        </sc-if>
+      <hr class="rf-divider" style="margin-top:var(--rf-space-md)">
+      <div class="rf-row rf-gap-sm" style="align-items:flex-start;padding:var(--rf-space-sm) 0">
+        <div class="rf-stack" style="gap:4px;flex:1;min-width:0">
+          <p class="rf-prose" style="font-weight:600">Protección contra firmas accidentales</p>
+          <p class="rf-hint">Se añade una pausa de 3 segundos antes de permitir firmar.</p>
+        </div>
+        <span style="width:40px;height:24px;flex:none;border-radius:var(--rf-radius-pill);position:relative;
+          background:var(--rf-primary);margin-top:2px">
+          <span style="position:absolute;top:4px;right:4px;width:16px;height:16px;
+            border-radius:var(--rf-radius-pill);background:var(--rf-on-primary)"></span>
+        </span>
       </div>
-
     </div>
   </sc-if>
 
@@ -315,6 +348,9 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
 <div class="rf-row rf-gap-sm" style="flex:none;padding:12px var(--rf-space-md);
   border-top:1px solid var(--rf-border-subtle);background:var(--rf-surface)">
   <div style="flex:1"></div>
+  <sc-if value="{{hayOmitir}}" hint-placeholder-val="{{false}}">
+    <button class="rf-btn rf-btn--ghost" style="flex:none;min-height:36px">Omitir configuración</button>
+  </sc-if>
   <sc-if value="{{hayAtras}}" hint-placeholder-val="{{true}}">
     <button class="rf-btn rf-btn--secondary" style="flex:none;min-height:36px">Atrás</button>
   </sc-if>
@@ -323,7 +359,7 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
 
 </div>
 </x-dc>
-<script data-dc-script data-props='{"tema":{"editor":"enum","options":["light","dark"],"default":"light","section":"Tema"},"momento":{"editor":"enum","options":["1 · bienvenida","2 · acciones · sin hacer nada","2 · certificado · instalando","2 · certificado · instalado","2 · certificado · ha fallado","2 · acciones · todo hecho"],"default":"2 · acciones · sin hacer nada","section":"Estado del paso"},"$preview":{"width":1180,"height":700}}'>
+<script data-dc-script data-props='{"tema":{"editor":"enum","options":["light","dark"],"default":"light","section":"Tema"},"momento":{"editor":"enum","options":["1 · bienvenida","2 · acciones · sin hacer nada","2 · certificado · instalando","2 · certificado · instalado","2 · certificado · ha fallado","2 · acciones · todo hecho"],"default":"2 · acciones · sin hacer nada","section":"Estado del paso"},"autofirma":{"editor":"boolean","default":true,"section":"AutoFirma instalado"},"$preview":{"width":1180,"height":700}}'>
 class Component extends DCLogic {
   // Lo que pide _cabecera.part: se copia igual en cada artboard que la estampa.
   barra(b) {
@@ -378,6 +414,7 @@ class Component extends DCLogic {
     // abierto. El resultado es una linea con role="status", y el aviso de
     // reiniciar acompaña siempre al exito.
     const tema = this.props.tema ?? "light";
+    const hayAutofirma = this.props.autofirma ?? true;
     const m = this.props.momento ?? "2 · acciones · sin hacer nada";
 
     const esBienvenida = m.startsWith("1");
@@ -417,6 +454,9 @@ class Component extends DCLogic {
       urlHecho: urlHecho,
       urlPendiente: !urlHecho,
       hayAtras: esAcciones,
+      hayOmitir: esBienvenida,
+      hayAutofirma: hayAutofirma,
+      sinAutofirma: !hayAutofirma,
       textoPrimario: esBienvenida ? "Continuar" : "Terminar"
     };
   }
