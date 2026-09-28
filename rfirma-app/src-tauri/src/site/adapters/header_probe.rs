@@ -133,3 +133,46 @@ pub(in crate::site::adapters) fn slow_server(
 /// Más que los 30 s que el cliente conserva para conectar.
 pub(in crate::site::adapters) const BEYOND_CONNECT_LIMIT: std::time::Duration =
     std::time::Duration::from_secs(31);
+
+/// Sirve una petición que pone `set_cookie`; devuelve la URL y el receptor de la cabecera `Cookie` que llegó.
+pub(in crate::site::adapters) fn cookie_probe(
+    set_cookie: &'static str,
+) -> (String, mpsc::Receiver<Option<String>>) {
+    let listener = TcpListener::bind("127.0.0.1:0").expect("hay un puerto libre");
+    let url = format!(
+        "http://{}/servicio",
+        listener.local_addr().expect("tiene direccion")
+    );
+    let (sender, received) = mpsc::channel();
+    std::thread::spawn(move || {
+        let (stream, _) = listener.accept().expect("llega la peticion");
+        let mut reader = BufReader::new(stream);
+        let mut cookie = None;
+        let mut length = 0;
+        loop {
+            let mut line = String::new();
+            reader.read_line(&mut line).expect("se lee la cabecera");
+            if line == "\r\n" || line.is_empty() {
+                break;
+            }
+            if let Some((name, value)) = line.split_once(':') {
+                match name.to_ascii_lowercase().as_str() {
+                    "cookie" => cookie = Some(value.trim().to_owned()),
+                    "content-length" => length = value.trim().parse().unwrap_or(0),
+                    _ => {}
+                }
+            }
+        }
+        let mut body = vec![0; length];
+        reader.read_exact(&mut body).expect("se lee el cuerpo");
+        let answer = format!(
+            "HTTP/1.1 200 OK\r\nSet-Cookie: {set_cookie}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+        );
+        reader
+            .get_mut()
+            .write_all(answer.as_bytes())
+            .expect("se contesta");
+        sender.send(cookie).expect("la prueba escucha");
+    });
+    (url, received)
+}

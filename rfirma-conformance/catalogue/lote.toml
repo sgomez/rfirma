@@ -89,6 +89,21 @@ script = "batchbodyonlyservlets"
 expects.completes.conditions = ["the-servlet-parameters-in-the-body"]
 
 [[check]]
+id = "the_batch_keeps_the_cookie_between_presign_and_postsign"
+set = "lote"
+citation = "UrlHttpManagerImpl.java:60-64"
+statement = """
+Una cookie que pone el prefirmador viaja en la llamada al postfirmador: el original guarda y reenvía
+las cookies de sesión de todas sus conexiones, y un postfirmador que la exija solo atiende la
+postfirma si la trae.
+"""
+
+[check.drive]
+mode = "v4"
+script = "batchsessioncookie"
+expects.completes.conditions = ["the-session-cookie-reaches-the-postsigner"]
+
+[[check]]
 id = "the_postsigner_receives_every_item_signed_with_pk1"
 set = "lote"
 citation = "BatchSigner.java:416-443"

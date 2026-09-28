@@ -14,6 +14,7 @@ use tokio_tungstenite::tungstenite::Message;
 
 use crate::site::adapters::channel::bind::{LoopbackAcceptor, LoopbackListeners};
 use crate::site::adapters::channel::conversation::{another_operation_in_flight, answer, Answer};
+use crate::site::adapters::cookies::OperationCookies;
 use crate::site::adapters::tls::LocalServerCertificate;
 use crate::site::domain::channel::ChannelDuty;
 use crate::site::domain::channel::{ChannelError, Situation};
@@ -261,6 +262,7 @@ async fn attend(
                 let (sender, receiver) = oneshot::channel();
                 let (acknowledged, acknowledgement) = crate::site::ports::Acknowledgement::pair();
                 let reply = crate::site::ports::ReplyHandle::of(move |text| {
+                    OperationCookies::of_the_process().forget();
                     let _ = sender.send(text);
                     acknowledgement
                 });

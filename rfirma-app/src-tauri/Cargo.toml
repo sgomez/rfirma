@@ -148,6 +148,7 @@ reqwest = { version = "0.13", default-features = false, features = [
     "blocking",
     "native-tls",
     "form",
+    "cookies",
 ] }
 # El registro de los tipos que cruzan a la ventana (ADR-0011): cada `crossing!`
 # deja su descripcion en una seccion del enlazador y de ahi salen el contrato y

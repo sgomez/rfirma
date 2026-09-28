@@ -18,6 +18,7 @@ use crate::site::domain::relay_error::{RelayError, Situation as RelaySituation};
 use crate::site::domain::site_origin::SiteOrigin;
 use crate::site::ports::Servlets;
 
+use super::cookies::OperationCookies;
 use super::frontier::code_of_relay;
 
 const ACTIVE_WAIT_INTERVAL: Duration = Duration::from_secs(10);
@@ -126,7 +127,9 @@ impl Transport for Relay {
                 hb.stop();
             }
             let _guard = reply_heartbeat.as_ref().map(|hb| hb.0.upload_lock.lock());
-            match servlets.store(&store_servlet, &id, &text) {
+            let stored = servlets.store(&store_servlet, &id, &text);
+            OperationCookies::of_the_process().forget();
+            match stored {
                 Ok(()) => Acknowledgement::immediate(),
                 Err(error) => {
                     on_upload_failure(refusal_of(error));

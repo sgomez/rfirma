@@ -53,6 +53,8 @@ const THE_BATCH_READ_AS_XML = "the-batch-read-as-xml";
 const THE_ITEM_A_BARE_PKCS1 = "the-item-a-bare-pkcs1";
 const THE_ITEM_EXTRAPARAMS_REPLACE_THE_BATCH_ONES = "the-item-extraparams-replace-the-batch-ones";
 const THE_PARAMETERS_IN_THE_BODY = "the-servlet-parameters-in-the-body";
+const THE_SESSION_COOKIE_REACHES_THE_POSTSIGNER = "the-session-cookie-reaches-the-postsigner";
+const THE_SESSION_COOKIE = "JSESSIONID=batch-session";
 
 /** Cómo llegó cada llamada a un servlet que solo lee el cuerpo: si traía query y si era un formulario. */
 const theBodyOnlyCalls = [];
@@ -71,9 +73,9 @@ function theBodyParameters(request, form) {
 /** Un servlet del lote en un puerto libre del loopback; con `service`, cuenta cada petición que recibe. */
 export function aBatchServlet(answering, { reading = theFormParameters, service, telling } = {}) {
   return servletServer(
-    async (parameters, _request, response) => {
-      const { status, body } = await answering(parameters);
-      response.writeHead(status, { "content-type": "application/json" });
+    async (parameters, request, response) => {
+      const { status, body, headers } = await answering(parameters, request);
+      response.writeHead(status, { "content-type": "application/json", ...headers });
       response.end(body);
     },
     { reading, service, telling },
@@ -148,6 +150,37 @@ function thePostsigner(query) {
     pre: String(withPre),
   });
   return { status: 200, body: theFrozen("batch-postsign-result.json") };
+}
+
+/** El presigner que además abre una sesión por cookie, como un balanceador con afinidad. */
+function theSessionOpeningPresigner(query) {
+  return {
+    ...thePresigner(query),
+    headers: { "set-cookie": `${THE_SESSION_COOKIE}; Path=/` },
+  };
+}
+
+/** El postsigner que rechaza la llamada si no trae la cookie que puso la prefirma. */
+function theSessionDemandingPostsigner(query, request) {
+  if (!String(request.headers.cookie ?? "").includes(THE_SESSION_COOKIE)) {
+    emit({ event: "postsign", missing: "cookie", in: "header" });
+    return { status: 403, body: "falta la cookie de sesión de la prefirma" };
+  }
+  return thePostsigner(query);
+}
+
+/** La postfirma llegó a atenderse: solo lo hace con la cookie de la prefirma. */
+function theSessionCookieConditions() {
+  const reached = whatTheServletsReceived.postsign !== null;
+  return [
+    aCondition(
+      THE_SESSION_COOKIE_REACHES_THE_POSTSIGNER,
+      reached,
+      reached
+        ? "la postfirma llegó con la cookie que puso la prefirma"
+        : "el postsigner no recibió la cookie que puso la prefirma",
+    ),
+  ];
 }
 
 /** El presigner que sólo prefirma «uno» y devuelve «dos» como error de prefirma. */
@@ -974,6 +1007,16 @@ export const BATCH_SCRIPTS = {
   batchbodyonlyservlets: aPublishedScript(
     () => theBatchScript(thePresigner, theParametersInTheBodyConditions, theBodyParameters),
     { conditions: [THE_PARAMETERS_IN_THE_BODY] },
+  ),
+  batchsessioncookie: aPublishedScript(
+    () =>
+      theBatchScript(
+        theSessionOpeningPresigner,
+        theSessionCookieConditions,
+        theFormParameters,
+        theSessionDemandingPostsigner,
+      ),
+    { conditions: [THE_SESSION_COOKIE_REACHES_THE_POSTSIGNER] },
   ),
   batchpartial: aPublishedScript(
     () => theBatchScript(thePartialPresigner, thePartialBatchConditions),

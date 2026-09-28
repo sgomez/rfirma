@@ -22,6 +22,7 @@ use crate::site::adapters::channel::conversation::{answer, Answer, ECHO_OK};
 use crate::site::adapters::channel::server::acceptor_for;
 use crate::site::adapters::channel::{bind_first_free, LoopbackListeners};
 use crate::site::adapters::codec::SAVE_OK;
+use crate::site::adapters::cookies::OperationCookies;
 use crate::site::adapters::tls::{LocalCaStore, LocalServerCertificate};
 use crate::site::domain::channel::{
     ChannelDuty, ChannelError, ChannelLocation, OpenChannel, Shutdown, Situation,
@@ -343,6 +344,7 @@ async fn launch_operation(
         url,
         SiteOrigin::absent(),
         ReplyHandle::of(move |text| {
+            OperationCookies::of_the_process().forget();
             let _ = sender.send(text);
             acknowledgement
         }),
