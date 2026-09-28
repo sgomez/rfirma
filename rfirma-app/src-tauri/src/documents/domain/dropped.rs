@@ -85,8 +85,13 @@ pub fn invoked_paths(command_line: &[String], from: &Path) -> Vec<PathBuf> {
         .iter()
         .skip(1)
         .filter(|argument| !argument.starts_with('-'))
-        .map(|argument| from.join(argument))
+        .map(|argument| from.join(the_path_of_a_file_url(argument).unwrap_or(argument.into())))
         .collect()
+}
+
+fn the_path_of_a_file_url(argument: &str) -> Option<PathBuf> {
+    let url = url::Url::parse(argument).ok()?;
+    (url.scheme() == "file").then(|| url.to_file_path().ok())?
 }
 
 fn is_pdf(path: &Path) -> bool {

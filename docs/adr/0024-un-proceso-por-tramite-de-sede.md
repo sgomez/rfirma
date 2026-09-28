@@ -33,6 +33,10 @@ un límite del proceso, no de la sede.
 
 ## Reglas que se derivan
 
+- **Una URL de otro esquema no tiene rol.** El proceso lo dice por la salida de
+  error y termina sin abrir ventana, como el original, que la pasa a su línea de
+  órdenes. La excepción es `file://`, que es la ruta que nombra y abre el
+  escritorio con ese documento.
 - **La instancia única es del proceso de escritorio.** El proceso de sede no
   la registra ni la consulta. `rfirma documento.pdf` sigue llegando al
   escritorio abierto y reemplazando lo que hubiera.

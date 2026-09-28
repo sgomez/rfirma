@@ -25,6 +25,24 @@ impl Invocation {
             .map(String::as_str)
             .find(|argument| AfirmaUrl::is_a_protocol_url(argument))
     }
+
+    fn foreign_launch(&self) -> Option<&str> {
+        self.command_line
+            .iter()
+            .skip(1)
+            .map(String::as_str)
+            .find(|argument| has_a_foreign_scheme(argument))
+    }
+}
+
+fn has_a_foreign_scheme(argument: &str) -> bool {
+    argument.split_once("://").is_some_and(|(scheme, _)| {
+        !scheme.eq_ignore_ascii_case("file")
+            && scheme.starts_with(|first: char| first.is_ascii_alphabetic())
+            && scheme
+                .chars()
+                .all(|c| c.is_ascii_alphanumeric() || matches!(c, '+' | '-' | '.'))
+    })
 }
 
 /// Resultado del análisis de codificación de los argumentos del proceso.
@@ -68,9 +86,11 @@ Uso:
 Argumentos:
   documento           Ruta de un PDF: se abre en la ventana, listo para firmar.
                       Lo que no sea un PDF abre la ventana igual y lo dice.
+                      También vale como file://…
   afirma://…          La llamada de una sede electrónica. La entrega el
                       navegador a través del manejador del esquema; a mano,
-                      sirve para probar.
+                      sirve para probar. Una URL de cualquier otro esquema
+                      no abre nada.
 
 Opciones:
   -h, -help, --help   Muestra esta ayuda y termina.
@@ -148,13 +168,18 @@ pub enum Role {
     Desktop(Invocation),
     /// La sede, con la URL `afirma://` entera.
     Site(String),
+    /// Ninguno: una URL de otro esquema no abre ventana, como en el original.
+    Foreign(String),
 }
 
 /// Decide el rol de este proceso. Una URL `afirma://`, si la hay, gana siempre; cualquier
 /// documento que la acompañe se descarta.
 pub fn role_of(invocation: Invocation) -> Role {
-    match invocation.site_launch() {
-        Some(url) => Role::Site(url.to_owned()),
+    if let Some(url) = invocation.site_launch() {
+        return Role::Site(url.to_owned());
+    }
+    match invocation.foreign_launch() {
+        Some(url) => Role::Foreign(url.to_owned()),
         None => Role::Desktop(invocation),
     }
 }

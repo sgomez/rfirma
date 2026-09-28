@@ -320,3 +320,32 @@ fn a_readable_command_line_reruns_nothing() {
         Arguments::Readable
     );
 }
+
+#[test]
+fn a_url_of_a_foreign_scheme_gives_no_role_and_opens_nothing() {
+    let url = "other://websocket?ports=54391,54392,54393&v=4";
+
+    assert_eq!(
+        role_of(invoked_with_the_url(url)),
+        Role::Foreign(url.to_owned())
+    );
+}
+
+#[test]
+fn a_path_without_a_scheme_still_gives_the_desktop_role() {
+    let invocation = invoked_with_the_url("carpeta/documento.pdf");
+
+    assert_eq!(role_of(invocation.clone()), Role::Desktop(invocation));
+}
+
+#[test]
+fn a_file_url_gives_the_desktop_role_with_that_document() {
+    let pdf = a_temporary_pdf("por-url.pdf");
+    let invocation = invoked_with_the_url(&format!("file://{}", pdf.display()));
+
+    assert_eq!(
+        role_of(invocation.clone()),
+        Role::Desktop(invocation.clone())
+    );
+    assert_eq!(invoked_documents(&invocation), Some(vec![pdf]));
+}
