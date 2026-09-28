@@ -1,6 +1,6 @@
 //! Estructura de configuración persistida entre sesiones (ADR-0010).
 
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::documents::domain::destination::{DestinationFolder, DestinationMode};
 use crate::signing::domain::Language;
@@ -17,6 +17,9 @@ pub enum Theme {
     /// Oscuro, pase lo que pase.
     Dark,
 }
+
+/// Versión actual del asistente del primer arranque; subirla lo vuelve a mostrar.
+pub const SETUP_WIZARD_VERSION: u32 = 2;
 
 /// Configuración del usuario persistida en disco (ADR-0010).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -36,8 +39,9 @@ pub struct Configuration {
     pub notify_new_version: bool,
     /// El tema de la ventana.
     pub theme: Theme,
-    /// Indica si el asistente del primer arranque ya se ha visto.
-    pub setup_wizard_seen: bool,
+    /// Versión del asistente del primer arranque vista por última vez; 0 si ninguna.
+    #[serde(alias = "setup_wizard_seen", deserialize_with = "seen_version")]
+    pub setup_wizard_version_seen: u32,
     /// Indica si el botón de consentir de la ventana de sede espera una cuenta atrás.
     pub consent_countdown: bool,
     /// Indica si la sede puede elegir sola el único certificado candidato (ADR-0032).
@@ -54,11 +58,32 @@ impl Default for Configuration {
             remember_activity: true,
             notify_new_version: true,
             theme: Theme::System,
-            setup_wizard_seen: false,
+            setup_wizard_version_seen: 0,
             consent_countdown: true,
             honour_automatic_selection: false,
         }
     }
+}
+
+impl Configuration {
+    /// Indica si ya se ha visto la versión actual del asistente del primer arranque.
+    pub fn setup_wizard_seen(&self) -> bool {
+        self.setup_wizard_version_seen >= SETUP_WIZARD_VERSION
+    }
+}
+
+#[derive(Deserialize)]
+#[serde(untagged)]
+enum SeenVersion {
+    Version(u32),
+    LegacyFlag(bool),
+}
+
+fn seen_version<'de, D: Deserializer<'de>>(deserializer: D) -> Result<u32, D::Error> {
+    Ok(match SeenVersion::deserialize(deserializer)? {
+        SeenVersion::Version(version) => version,
+        SeenVersion::LegacyFlag(seen) => u32::from(seen),
+    })
 }
 
 #[cfg(test)]

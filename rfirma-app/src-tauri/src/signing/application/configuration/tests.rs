@@ -1,6 +1,8 @@
 use super::{language_of, merged, shown, with_destination, Preferences};
 use crate::documents::domain::destination::DestinationMode;
-use crate::signing::application::configuration_memory::{Configuration, Theme};
+use crate::signing::application::configuration_memory::{
+    Configuration, Theme, SETUP_WIZARD_VERSION,
+};
 use crate::signing::application::tests::a_memory;
 use crate::signing::domain::Language;
 
@@ -263,4 +265,60 @@ fn the_destination_mode_survives_the_round_trip_to_the_window() {
         merged(&configuration, &view).destination_mode,
         DestinationMode::InTheDestinationFolder
     );
+}
+
+fn read(stored: &str) -> Configuration {
+    serde_json::from_str(stored).expect("deberia leerse")
+}
+
+fn wizard_seen_in(configuration: &Configuration) -> bool {
+    shown(
+        configuration,
+        std::path::Path::new("/home/quien/Documentos"),
+    )
+    .setup_wizard_seen
+}
+
+#[test]
+fn the_current_setup_wizard_is_the_second_one() {
+    assert_eq!(SETUP_WIZARD_VERSION, 2);
+}
+
+#[test]
+fn a_configuration_that_saw_the_first_setup_wizard_asks_for_the_current_one() {
+    assert!(!wizard_seen_in(&read(r#"{"setup_wizard_seen": true}"#)));
+}
+
+#[test]
+fn a_configuration_that_never_saw_the_setup_wizard_asks_for_it() {
+    assert!(!wizard_seen_in(&read(r#"{"setup_wizard_seen": false}"#)));
+    assert!(!wizard_seen_in(&read("{}")));
+}
+
+#[test]
+fn a_configuration_that_saw_the_current_setup_wizard_does_not_ask_for_it() {
+    let stored = format!(r#"{{"setup_wizard_version_seen": {SETUP_WIZARD_VERSION}}}"#);
+
+    assert!(wizard_seen_in(&read(&stored)));
+}
+
+#[test]
+fn marking_the_setup_wizard_seen_from_the_window_survives_the_disk() {
+    let live = read(r#"{"setup_wizard_seen": true}"#);
+    let chosen = Preferences {
+        setup_wizard_seen: true,
+        ..shown(&live, std::path::Path::new("/home/quien/Documentos"))
+    };
+
+    let written = serde_json::to_string(&merged(&live, &chosen)).expect("deberia escribirse");
+
+    assert!(wizard_seen_in(&read(&written)));
+}
+
+#[test]
+fn saving_from_the_window_before_finishing_the_setup_wizard_keeps_asking_for_it() {
+    let live = read(r#"{"setup_wizard_seen": true}"#);
+    let view = shown(&live, std::path::Path::new("/home/quien/Documentos"));
+
+    assert!(!wizard_seen_in(&merged(&live, &view)));
 }
