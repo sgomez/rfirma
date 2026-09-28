@@ -315,10 +315,18 @@ enseñar.
 _Avoid_: historial, documento abierto, favorito
 
 **Carpeta de destino**:
-Carpeta donde cae el documento firmado cuando el original entra por el portal
-y no tiene carpeta propia. La aplicación no la crea nunca: si no está, no está.
-La enseña por su ruta donde la conoce y por su nombre donde no (ADR-0011).
+Carpeta que la persona elige en Preferencias. Recibe el documento firmado con
+el modo de destino «en esta carpeta», y con «junto al original» cuando el
+original entra por el portal y no tiene carpeta propia. La aplicación no la
+crea nunca: si no está, no está. La enseña por su ruta donde la conoce y por su
+nombre donde no (ADR-0011).
 _Avoid_: carpeta fija, ruta de salida
+
+**Modo de destino**:
+Preferencia que decide dónde cae el documento firmado: «junto al documento
+original» —el de omisión— o «en esta carpeta», la carpeta de destino. Bajo el
+sandbox no se ofrece, porque ahí ningún original tiene carpeta propia (ADR-0011).
+_Avoid_: modo de guardado, ubicación de salida
 
 **Preferencia**:
 Ajuste que el usuario elige y que la aplicación se limita a obedecer: el idioma,
