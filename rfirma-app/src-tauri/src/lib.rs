@@ -233,6 +233,7 @@ fn with_the_five_roots(
             signing::adapters::tauri::pades_lower_left,
             desktop::adapters::tauri::read_invocation,
             desktop::adapters::tauri::check_for_new_version,
+            desktop::adapters::tauri::measure_version,
             desktop::adapters::tauri::open_external_destination,
             desktop::adapters::tauri::read_status,
             desktop::adapters::tauri::measure_local_ca_certificate,
