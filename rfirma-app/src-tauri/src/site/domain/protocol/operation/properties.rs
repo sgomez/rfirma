@@ -219,20 +219,15 @@ fn decode_base64(encoded: &str, blame: Parameter) -> Result<Vec<u8>, Refusal> {
     })
 }
 
-/// Los pares de un bloque `java.util.Properties`.
+/// Los pares de un bloque `java.util.Properties`, leído como `Properties.load`; vacío si un `\u` está mal formado.
 pub fn pairs_of(text: &str) -> Vec<(String, String)> {
     let mut pairs = Vec::new();
 
-    for line in text.lines() {
-        let line = line.trim_start();
-        if line.is_empty() || line.starts_with('#') || line.starts_with('!') {
-            continue;
-        }
-        let Some(at) = separator_in(line) else {
-            continue;
+    for line in logical_lines(text) {
+        let (raw_key, raw_value) = split_key_and_value(&line);
+        let (Some(key), Some(value)) = (unescape(raw_key), unescape(raw_value)) else {
+            return Vec::new();
         };
-        let key = unescape(line[..at].trim_end());
-        let value = unescape(line[at + 1..].trim_start());
         if !key.is_empty() {
             pairs.push((key, value));
         }
@@ -241,43 +236,98 @@ pub fn pairs_of(text: &str) -> Vec<(String, String)> {
     pairs
 }
 
-/// Dónde parte la línea: el primer `=` o `:` que no venga escapado.
-fn separator_in(line: &str) -> Option<usize> {
-    let bytes = line.as_bytes();
-    let mut escaped = false;
-    for (index, byte) in bytes.iter().enumerate() {
-        if escaped {
-            escaped = false;
-            continue;
-        }
-        match byte {
-            b'\\' => escaped = true,
-            b'=' | b':' => return Some(index),
-            _ => {}
-        }
-    }
-    None
+fn is_properties_blank(character: char) -> bool {
+    matches!(character, ' ' | '\t' | '\u{c}')
 }
 
-/// Deshace las barras de escape: las tres que escribe el proyecto —`\\`, `\n`,
-/// `\r`— más `\t`, y cualquier otra barra que se queda con lo que lleve detrás.
-fn unescape(value: &str) -> String {
-    let mut out = String::with_capacity(value.len());
+/// Las líneas lógicas: sin comentarios ni vacías, y con las continuaciones ya unidas.
+fn logical_lines(text: &str) -> Vec<String> {
+    let normalized = text.replace("\r\n", "\n");
+    let mut physical = normalized.split(['\n', '\r']);
+    let mut logical = Vec::new();
+
+    while let Some(first) = physical.next() {
+        let first = first.trim_start_matches(is_properties_blank);
+        if first.is_empty() || first.starts_with('#') || first.starts_with('!') {
+            continue;
+        }
+        let mut line = first.to_owned();
+        while ends_in_a_continuation(&line) {
+            line.pop();
+            let Some(next) = physical.next() else { break };
+            line.push_str(next.trim_start_matches(is_properties_blank));
+        }
+        logical.push(line);
+    }
+
+    logical
+}
+
+fn ends_in_a_continuation(line: &str) -> bool {
+    let backslashes = line.chars().rev().take_while(|it| *it == '\\').count();
+    backslashes % 2 == 1
+}
+
+/// Parte la línea lógica: la clave acaba en el primer `=`, `:` o blanco sin escapar, y entre
+/// clave y valor cabe un blanco, un único `=` o `:` y más blancos.
+fn split_key_and_value(line: &str) -> (&str, &str) {
+    let mut escaped = false;
+    let key_end = line
+        .char_indices()
+        .find(|(_, character)| {
+            if escaped {
+                escaped = false;
+                return false;
+            }
+            if *character == '\\' {
+                escaped = true;
+                return false;
+            }
+            matches!(character, '=' | ':') || is_properties_blank(*character)
+        })
+        .map_or(line.len(), |(index, _)| index);
+
+    let after_key = line[key_end..].trim_start_matches(is_properties_blank);
+    let value = after_key
+        .strip_prefix(['=', ':'])
+        .unwrap_or(after_key)
+        .trim_start_matches(is_properties_blank);
+    (&line[..key_end], value)
+}
+
+/// Deshace los escapes de `Properties.load`, o nada si un `\u` no lleva cuatro dígitos hexadecimales.
+fn unescape(value: &str) -> Option<String> {
+    let mut units: Vec<u16> = Vec::with_capacity(value.len());
     let mut characters = value.chars();
 
     while let Some(character) = characters.next() {
         if character != '\\' {
-            out.push(character);
+            push_character(&mut units, character);
             continue;
         }
         match characters.next() {
-            Some('n') => out.push('\n'),
-            Some('r') => out.push('\r'),
-            Some('t') => out.push('\t'),
-            Some(other) => out.push(other),
+            Some('n') => units.push(u16::from(b'\n')),
+            Some('r') => units.push(u16::from(b'\r')),
+            Some('t') => units.push(u16::from(b'\t')),
+            Some('f') => units.push(0x0c),
+            Some('u') => units.push(unicode_unit(&mut characters)?),
+            Some(other) => push_character(&mut units, other),
             None => break,
         }
     }
 
-    out
+    Some(String::from_utf16_lossy(&units))
+}
+
+fn push_character(units: &mut Vec<u16>, character: char) {
+    let mut buffer = [0u16; 2];
+    units.extend_from_slice(character.encode_utf16(&mut buffer));
+}
+
+fn unicode_unit(characters: &mut std::str::Chars) -> Option<u16> {
+    let digits: String = characters.take(4).collect();
+    if digits.len() != 4 || !digits.chars().all(|it| it.is_ascii_hexdigit()) {
+        return None;
+    }
+    u16::from_str_radix(&digits, 16).ok()
 }

@@ -747,6 +747,15 @@ export const SIGNATURE_SCRIPTS = {
     ),
     { conditions: [THE_DATA_INSIDE, THE_SIGNATURE_VERIFIES] },
   ),
+  signcadesimplicitwithescapedparams: aPublishedScript(
+    signing(
+      "CAdES",
+      withoutAChoice("\\u006dode=impl\\\n    icit"),
+      theChallenge,
+      measuringAll(theDataInside(theChallenge), theSignatureVerifies("cms")),
+    ),
+    { conditions: [THE_DATA_INSIDE, THE_SIGNATURE_VERIFIES] },
+  ),
   signcadesagepolicy: aPublishedScript(
     signing(
       "CAdES",
