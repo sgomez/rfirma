@@ -1,4 +1,5 @@
 use super::{language_of, merged, shown, with_destination, Preferences};
+use crate::documents::domain::destination::DestinationMode;
 use crate::signing::application::configuration_memory::{Configuration, Theme};
 use crate::signing::application::tests::a_memory;
 use crate::signing::domain::Language;
@@ -245,4 +246,21 @@ fn choosing_a_folder_leaves_the_other_settings_alone() {
     assert_eq!(after.language, Language::English);
     assert_eq!(after.theme, Theme::Dark);
     assert!(!after.remember_activity);
+}
+
+#[test]
+fn the_destination_mode_survives_the_round_trip_to_the_window() {
+    let configuration = Configuration {
+        destination_mode: DestinationMode::InTheDestinationFolder,
+        ..Configuration::default()
+    };
+    let view = shown(
+        &configuration,
+        std::path::Path::new("/home/quien/Documentos"),
+    );
+
+    assert_eq!(
+        merged(&configuration, &view).destination_mode,
+        DestinationMode::InTheDestinationFolder
+    );
 }

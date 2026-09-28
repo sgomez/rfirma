@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::documents::domain::destination::DestinationFolder;
+use crate::documents::domain::destination::{DestinationFolder, DestinationMode};
 use crate::signing::domain::Language;
 
 /// El tema de la ventana: lo que el usuario elige ver.
@@ -26,6 +26,8 @@ pub struct Configuration {
     pub language: Language,
     /// Dónde cae el documento firmado.
     pub destination: Option<DestinationFolder>,
+    /// Si el firmado cae junto al original o en la carpeta de destino.
+    pub destination_mode: DestinationMode,
     /// Indica si se recuerda la última configuración de firma visible.
     pub remember_visible_signature: bool,
     /// Indica si se recuerdan los documentos recientes y el certificado.
@@ -47,6 +49,7 @@ impl Default for Configuration {
         Self {
             language: Language::Spanish,
             destination: None,
+            destination_mode: DestinationMode::NextToTheOriginal,
             remember_visible_signature: true,
             remember_activity: true,
             notify_new_version: true,
