@@ -1260,22 +1260,17 @@ msgstr "Itxura"
 msgid "preferences.rememberVisibleSignature.label"
 msgstr "Gogoratu sinadura ikusgaiaren azken konfigurazioa"
 
-msgid "preferences.rememberVisibleSignature.hint"
-msgstr ""
-"Laukiaren orrialdea, kokapena eta edukia hurrengo dokumentuan berrerabiltzen "
-"dira."
-
 msgid "preferences.consentCountdown.label"
-msgstr "Egoitzetan nahi gabeko sinaduren aurkako babesa"
+msgstr "Ustekabeko sinaduren aurkako babesa"
+
+msgid "preferences.consentCountdown.hint"
+msgstr "3 segundoko pausa bat gehitzen da sinatzeko baimena eman aurretik."
 
 msgid "preferences.honourAutomaticSelection.label"
-msgstr "Errespetatu egoitzak eskatzen duen ziurtagiri-hautapen automatikoa"
+msgstr "Erabili egoitzak aukeratzen duen ziurtagiria"
 
 msgid "preferences.honourAutomaticSelection.hint"
-msgstr ""
-"Egoitzak eskatzen badu eta zure ziurtagirietako bakarra onartzen badu, "
-"galdetu gabe erabiltzen da. Zure biltegiak PINik eskatzen ez badu, sinadura "
-"ezer ikusi gabe aterako da."
+msgstr "Zure ziurtagirietako bakarra balio badu, galdetu gabe erabiltzen da."
 
 msgid "preferences.rememberActivity.label"
 msgstr "Gogoratu nire jarduera"
@@ -1425,7 +1420,7 @@ msgid "setup.certificate.title"
 msgstr "rFirmaren ziurtagiria"
 
 msgid "setup.certificate.body"
-msgstr "Zure nabigatzailea rFirmarekin modu seguruan konekta dadin."
+msgstr "Zure nabigatzaileak rFirmarekin modu seguruan konekta dadin."
 
 msgid "setup.certificate.installing"
 msgstr "Instalatzen…"

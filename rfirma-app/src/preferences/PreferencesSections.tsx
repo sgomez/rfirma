@@ -144,7 +144,6 @@ export function SigningSection({
         <Switch
           checked={preferences.rememberVisibleSignature}
           label={t("preferences.rememberVisibleSignature.label")}
-          hint={t("preferences.rememberVisibleSignature.hint")}
           wide
           onChange={onRememberVisibleSignatureChange}
         />
@@ -176,6 +175,7 @@ export function SigningSection({
         <Switch
           checked={preferences.consentCountdown}
           label={t("preferences.consentCountdown.label")}
+          hint={t("preferences.consentCountdown.hint")}
           wide
           onChange={onConsentCountdownChange}
         />

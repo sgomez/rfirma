@@ -1237,22 +1237,17 @@ msgstr "Appearance"
 msgid "preferences.rememberVisibleSignature.label"
 msgstr "Remember the last visible signature setup"
 
-msgid "preferences.rememberVisibleSignature.hint"
-msgstr ""
-"The page, the position and the contents of the box are reused on the next "
-"document."
-
 msgid "preferences.consentCountdown.label"
-msgstr "Protection against accidental signing on sites"
+msgstr "Protection against accidental signing"
+
+msgid "preferences.consentCountdown.hint"
+msgstr "Adds a 3-second pause before allowing signing."
 
 msgid "preferences.honourAutomaticSelection.label"
-msgstr "Honour the automatic certificate selection requested by the site"
+msgstr "Use the certificate the site chooses"
 
 msgid "preferences.honourAutomaticSelection.hint"
-msgstr ""
-"If the site asks for it and accepts only one of your certificates, it is "
-"used without asking you. If your store does not ask for a PIN, the signature "
-"goes out without you seeing anything."
+msgstr "If only one of your certificates works, it is used without asking."
 
 msgid "preferences.rememberActivity.label"
 msgstr "Remember my activity"

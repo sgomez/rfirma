@@ -1251,21 +1251,17 @@ msgstr "Apariencia"
 msgid "preferences.rememberVisibleSignature.label"
 msgstr "Recordar la última configuración de firma visible"
 
-msgid "preferences.rememberVisibleSignature.hint"
-msgstr ""
-"La página, la posición y el contenido del recuadro se reutilizan en el "
-"siguiente documento."
-
 msgid "preferences.consentCountdown.label"
-msgstr "Protección contra firmas por descuido en las sedes"
+msgstr "Protección contra firmas accidentales"
+
+msgid "preferences.consentCountdown.hint"
+msgstr "Se añade una pausa de 3 segundos antes de permitir firmar."
 
 msgid "preferences.honourAutomaticSelection.label"
-msgstr "Respetar la selección automática de certificado que pida la sede"
+msgstr "Usar el certificado que elija la sede"
 
 msgid "preferences.honourAutomaticSelection.hint"
-msgstr ""
-"Si la sede lo pide y solo acepta uno de tus certificados, se usa sin "
-"preguntarte. Si tu almacén no pide PIN, la firma saldrá sin que veas nada."
+msgstr "Si solo sirve uno de tus certificados, se usa sin preguntarte."
 
 msgid "preferences.rememberActivity.label"
 msgstr "Recordar mi actividad"
