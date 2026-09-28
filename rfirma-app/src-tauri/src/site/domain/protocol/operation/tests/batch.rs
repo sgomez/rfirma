@@ -1,7 +1,7 @@
 use super::super::*;
 use super::fixtures::{
     a_batch, an_operation, dat, gzipped, json_lote, properties, read_downloading, read_operation,
-    refusal_of, url_encoded, xml_lote, ADownload, A_REMOTE_DOCUMENT,
+    refusal_of, url_encoded, xml_lote, ADownload, A_REAL_SITE_LOGIN_BATCH, A_REMOTE_DOCUMENT,
 };
 
 #[test]
@@ -316,4 +316,19 @@ fn a_batch_servlet_with_an_unsupported_scheme_is_refused_naming_it() {
 
     assert_eq!(refusal.code(), SafCode::Params);
     assert_eq!(refusal.blame(), Some(Parameter::BatchPresignerUrl));
+}
+
+/// Prueba de lectura de la petición: caso de sede real (`docs/casos-de-sedes-reales.md`).
+#[test]
+fn a_real_site_login_batch_is_read_without_rejection() {
+    let url = an_operation(&format!(
+        "op=batch&jsonbatch=true&keystore=MOZ_UNI&\
+         batchpresignerurl=https%3A%2F%2Fsede.example%2Fafirma%2Fpresigner&\
+         batchpostsignerurl=https%3A%2F%2Fsede.example%2Fafirma%2Fpostsigner&dat={}",
+        dat(A_REAL_SITE_LOGIN_BATCH.as_bytes())
+    ));
+
+    let operation = read_operation(&url);
+
+    assert!(operation.is_ok(), "se lee sin rechazo: {operation:?}");
 }
