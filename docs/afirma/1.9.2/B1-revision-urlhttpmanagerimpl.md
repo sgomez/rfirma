@@ -37,43 +37,62 @@ método es POST o PUT: conecta solo con lo que hay antes, y lo que hay después
 se escribe como cuerpo `application/x-www-form-urlencoded`
 (`UrlHttpManagerImpl.java:267-277`).
 
-**rFirma:** reproducido en los cuatro. `RelayBatchServices::post` compone el
-cuerpo aparte y lo manda con `.body(body)` y `Content-Type` explícito
-(`batch_services.rs:31-63`); `RelayServlets` y `HttpTriphaseServer` usan
-`.form(&params)`, que hace lo mismo. Arreglado para el lote en #1161; los
-otros dos ya lo hacían así (Further Notes de #1162).
+**rFirma:** reproducido en los tres que hacen POST. `RelayBatchServices::post`
+compone el cuerpo aparte y lo manda con `.body(body)` y `Content-Type`
+explícito (`batch_services.rs:31-63`); `RelayServlets` y `HttpTriphaseServer`
+usan `.form(&params)`, que hace lo mismo. Arreglado para el lote en #1161; los
+otros dos ya lo hacían así (Further Notes de #1162). La descarga del `dat` es
+un GET en los dos lados —`DataDownloader.java:92` y `HttpDataSource`—, así
+que el troceado por `?` no se le aplica.
 
 ### 2. Cabeceras por defecto que añade antes de escribir el cuerpo
 
 `UrlHttpManagerImpl.java:238-265`: sobre las cabeceras que trae la llamada,
-añade (solo si esa cabecera no viene ya puesta) `Authorization`, `Accept`,
-`Connection`, `Host` y `Origin`, en ese orden:
+llama a `conn.addRequestProperty` (solo si esa cabecera no viene ya puesta)
+con `Authorization`, `Accept`, `Connection`, `Host` y `Origin`, en ese orden:
 
-| Cabecera | Cita | Valor |
+| Cabecera | Cita | Valor pedido |
 |---|---|---|
 | `Authorization` | `UrlHttpManagerImpl.java:158-186,246-248` | `Basic <base64(usuario:contraseña)>`, si la URL trae credenciales (`usuario:contraseña@host`); solo usuario o solo contraseña si falta el otro |
 | `Accept` | `UrlHttpManagerImpl.java:249-251` | `*/*` |
 | `Connection` | `UrlHttpManagerImpl.java:252-254` | `keep-alive` |
-| `Host` | `UrlHttpManagerImpl.java:255-257` | El host de la URL |
+| `Host` | `UrlHttpManagerImpl.java:255-257` | El host de la URL, sin puerto |
 | `Origin` | `UrlHttpManagerImpl.java:258-260` | `<esquema>://<host>` de la URL de destino, sin puerto |
+
+De las cinco, solo `Authorization` y `Accept` llegan de verdad a la red:
+`Connection`, `Host` y `Origin` están en la lista `restrictedHeaders` de
+`sun.net.www.protocol.http.HttpURLConnection` (JDK 21,
+`HttpURLConnection.java:198-213`), y `addRequestProperty` las descarta en
+silencio —ni excepción ni registro— salvo con la propiedad de sistema
+`-Dsun.net.http.allowRestrictedHeaders=true` (`:279-285,483-498`), que
+`clienteafirma` no fija en ningún punto de `v1.9.2`. El JDK pone su propio
+`Host` (con puerto si no es el de por defecto, `HttpURLConnection.java:2328`)
+y su propio `Connection: keep-alive` (`:661`); ninguno de los dos sale con el
+valor de la tabla.
 
 **rFirma, cabecera a cabecera:**
 
 - **`Host`: no aplica.** Ningún cliente de rFirma la fija a mano, pero
   `reqwest`/`hyper` la componen siempre a partir de la autoridad de la URL en
-  toda petición HTTP/1.1 — es una cabecera obligatoria del protocolo, no una
-  decisión de la aplicación. No hay diferencia de envío que abrir.
+  toda petición HTTP/1.1 — igual que en el original, la pone el motor HTTP,
+  no la aplicación. No hay diferencia de envío que abrir.
 - **`Connection`: no aplica en la práctica.** Ningún cliente la fija a mano,
   pero `hyper` mantiene conexiones persistentes por defecto en HTTP/1.1 con o
-  sin la cabecera explícita; solo un servidor HTTP/1.0 la exigiría, y los
-  cuatro servicios remotos de la sede son HTTP/1.1. Se anota, no se abre
-  issue.
-- **`Origin`: no reproducida.** Ninguno de los cuatro clientes la envía
-  (confirmado leyendo `batch_services.rs`, `servlets.rs`,
-  `triphase_server.rs` y `data_download.rs` enteros). Un servidor con un
-  filtro CSRF o CORS que la exija rechazaría a rFirma y aceptaría a
-  AutoFirma. → **#1173**.
-- **`Accept`: no reproducida.** Ninguno de los cuatro la envía. → **#1175**.
+  sin la cabecera explícita — de nuevo, el motor HTTP en los dos lados. Se
+  anota, no se abre issue.
+- **`Origin`: no aplica.** El original tampoco la envía: es una cabecera
+  restringida que el JDK descarta sin avisar (arriba). Ninguno de los cuatro
+  clientes de rFirma la envía tampoco (confirmado leyendo `batch_services.rs`,
+  `servlets.rs`, `triphase_server.rs` y `data_download.rs` enteros): los dos
+  lados se comportan igual, cada uno por su motivo. No hay diferencia de
+  envío que abrir (ADR-0023: seguir al original en los casos felices).
+- **`Accept`: reproducida (cabecera por defecto de `reqwest`).** `reqwest`
+  0.13.4 (`rfirma-app/src-tauri/Cargo.lock`) inserta `Accept: */*` por
+  defecto en `async_impl::ClientBuilder::new()`
+  (`src/async_impl/client.rs:283-284`), y `blocking::ClientBuilder::new()`
+  envuelve ese builder (`src/blocking/client.rs:97`); ninguno de los cuatro
+  clientes llama a `default_headers` para pisarla. No hay diferencia de
+  envío que abrir.
 - **`Authorization` por credenciales en la URL: no reproducida.** El tipo
   `reqwest::Url` que usan los cuatro clientes sí sabe extraer usuario y
   contraseña de una URL con la forma `usuario:contraseña@host` (es
@@ -104,11 +123,12 @@ la JVM.
 **rFirma:** los cuatro clientes fijan `Duration::from_secs(30)` como
 `.timeout()` del `reqwest::blocking::Client`, que en `reqwest` cubre la
 petición entera (conexión y lectura de la respuesta), no solo la conexión. Es
-una diferencia deliberada — un lote remoto largo o un servidor trifásico lento
-fallarían en rFirma a los 30 s donde el original seguiría esperando — y
-candidata a decidirse en un ADR, no un fallo silencioso: acotar la espera es
-una red de seguridad razonable para una aplicación de escritorio sin proceso
-supervisor. → **#1176**.
+una diferencia sin decidir — un lote remoto largo o un servidor trifásico
+lento fallarían en rFirma a los 30 s donde el original seguiría esperando —,
+candidata a decidirse en un ADR: acotar la espera es una red de seguridad
+razonable para una aplicación de escritorio sin proceso supervisor, pero
+30 s puede ser corto para un lote grande o un documento grande en trifásica.
+→ **#1176**.
 
 ### 5. Cuerpo de la respuesta de error (4xx/5xx)
 
@@ -117,15 +137,17 @@ error (`conn.getErrorStream()`) y lo mete en la excepción `HttpError`, que
 `BatchSigner` registra con `e.getResponseDescription()` y `HttpManager`
 propaga tal cual.
 
-**rFirma:** desigual entre los cuatro. `RelayBatchServices::post` sí lee el
-cuerpo de la respuesta de error y lo guarda en `BatchError::answered`
-(`batch_services.rs:49-56`). `RelayServlets`, `HttpTriphaseServer` y
-`HttpDataSource` usan `.error_for_status()` de `reqwest`, que descarta el
-cuerpo de la respuesta y solo conserva el código de estado
-(`servlets.rs:41-46,60-64`, `triphase_server.rs:42-47`,
-`data_download.rs:23-26`). Un servidor que explica el 4xx en el cuerpo (el
-caso más común: un mensaje de error del servlet) pierde ese detalle en el
-registro de rFirma para tres de los cuatro clientes. → **#1177**.
+**rFirma:** ninguno de los cuatro conserva el cuerpo de la respuesta de
+error. `RelayBatchServices::post` pasa `status.to_string()` —la línea
+canónica del código de estado, p. ej. `"404 Not Found"`, no el cuerpo— a
+`BatchError::answered` (`batch_services.rs:49-56`) sin leer la respuesta.
+`RelayServlets`, `HttpTriphaseServer` y `HttpDataSource` usan
+`.error_for_status()` de `reqwest`, que también descarta el cuerpo y solo
+conserva el código de estado (`servlets.rs:41-46,60-64`,
+`triphase_server.rs:42-47`, `data_download.rs:23-26`). Un servidor que
+explica el 4xx en el cuerpo (el caso más común: un mensaje de error del
+servlet) pierde ese detalle en el registro de rFirma para los cuatro
+clientes. → **#1177**.
 
 ### 6. Cookies
 
@@ -174,14 +196,14 @@ motive.
 
 | Comportamiento | Cita | ¿rFirma lo reproduce? | Issue |
 |---|---|---|---|
-| Cuerpo del POST/PUT partido por `?` | `UrlHttpManagerImpl.java:188-196,267-277` | Sí, en los cuatro | (#1161) |
+| Cuerpo del POST/PUT partido por `?` | `UrlHttpManagerImpl.java:188-196,267-277` | Sí, en los tres que hacen POST; GET en los otros dos | (#1161) |
 | `Host` | `UrlHttpManagerImpl.java:255-257` | No aplica (automático) | — |
 | `Connection: keep-alive` | `UrlHttpManagerImpl.java:252-254` | No aplica en la práctica | — |
-| `Origin` | `UrlHttpManagerImpl.java:258-260` | No, en ninguno | #1173 |
-| `Accept: */*` | `UrlHttpManagerImpl.java:249-251` | No, en ninguno | #1175 |
+| `Origin` | `UrlHttpManagerImpl.java:258-260` | No aplica (el original tampoco la envía) | — |
+| `Accept: */*` | `UrlHttpManagerImpl.java:249-251` | Sí, en los cuatro (por defecto de `reqwest`) | — |
 | `Authorization` desde credenciales de la URL | `UrlHttpManagerImpl.java:158-186,246-248` | No, en ninguno | #1175 |
 | Caché de conexión deshabilitada | `UrlHttpManagerImpl.java:233-234` | No aplica (`reqwest` no cachea) | — |
 | Tiempo de espera | `UrlHttpManagerImpl.java:279-282` | No: 30 s fijo frente a sin tiempo de espera explícito | #1176 |
-| Cuerpo de la respuesta de error (4xx/5xx) | `UrlHttpManagerImpl.java:285-296` | Parcial: solo en el lote remoto | #1177 |
+| Cuerpo de la respuesta de error (4xx/5xx) | `UrlHttpManagerImpl.java:285-296` | No, en ninguno | #1177 |
 | Cookies entre llamadas | `UrlHttpManagerImpl.java:60-64` | No, en ninguno | #1180 |
 | Confianza SSL configurable / bucle local sin proxy | `UrlHttpManagerImpl.java:203-231,320-331` | No, a propósito (ADR-0023) | — |
