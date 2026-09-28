@@ -552,6 +552,10 @@ export const theTriphaseServer = (triphase) => (query) => {
   const received = Object.fromEntries(
     ["op", "cop", "format", "doc", "cert", "session"].map((name) => [name, query.get(name)]),
   );
+  if (received.op === null) {
+    emit({ event: "triphase", missing: "op", in: "body" });
+    return { status: 400, body: "ERR-01: operación trifásica desconocida" };
+  }
   emit({
     event: "triphase",
     op: String(received.op),
