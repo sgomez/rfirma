@@ -123,6 +123,22 @@ fn a_relative_argument_is_resolved_against_the_folder_it_was_invoked_from() {
 }
 
 #[test]
+fn a_file_url_is_the_path_it_names() {
+    let paths = invoked_paths(
+        &[
+            "rfirma".to_owned(),
+            "file:///home/quien/Contratos/con%20espacio+signo.pdf".to_owned(),
+        ],
+        Path::new("/otra"),
+    );
+
+    assert_eq!(
+        paths,
+        vec![PathBuf::from("/home/quien/Contratos/con espacio+signo.pdf")]
+    );
+}
+
+#[test]
 fn invoking_with_no_arguments_brings_no_document() {
     assert!(invoked_paths(&["rfirma".to_owned()], Path::new("/")).is_empty());
 }

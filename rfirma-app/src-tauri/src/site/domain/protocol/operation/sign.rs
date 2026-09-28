@@ -4,7 +4,7 @@ use super::super::algorithm::AskedAlgorithm;
 use super::super::data_source::DataSource;
 use super::super::filters::{site_filter, SiteFilter};
 use super::super::format::{format_of, RequestedFormat};
-use super::super::key_store::module_named_by;
+use super::super::key_store::scope_named_by;
 use super::super::parameters::{sticky_certificate, StickyCertificate};
 use super::super::refusal::Refusal;
 use super::super::url::AfirmaUrl;
@@ -250,7 +250,7 @@ pub(super) fn sign_request(
             round,
             algorithm,
             requested,
-            filter: site_filter(&declared).within_the_module(module_named_by(url)),
+            filter: site_filter(&declared).within(scope_named_by(url)),
             sticky,
             unattended: properties.unattended(),
             load_extensions: comma_list_value(property_value(&declared, FILENAME_EXTS)),
@@ -278,7 +278,7 @@ pub(super) fn sign_request(
         algorithm,
         format,
         document,
-        filter: site_filter(&declared).within_the_module(module_named_by(url)),
+        filter: site_filter(&declared).within(scope_named_by(url)),
         sticky,
         unattended: properties.unattended(),
         declared,

@@ -60,6 +60,14 @@ documento entero.
    diferencia del punto 4, la firma no lo declara: su algoritmo puede ser
    SHA-256 y aun así lo único que la ata al documento es un SHA-1. En los
    demás casos `mode` se ignora, como en el original.
+6. **Un filtro en el que el original no reconoce nada no es un filtro.** El
+   original descarta las condiciones que no reconoce, y si no le queda
+   ninguna, la expresión admite todos los certificados y, como ya cuenta como
+   filtro, deja de ocultar los caducados: se contradice con su propia regla de
+   no ofrecerlos sin filtro de la sede. rFirma quita esa expresión antes de
+   llamar al motor. Si era la única, se listan los mismos certificados que sin
+   filtro. Si era una de varias alternativas `filters.N`, deja de abrir el
+   listado a todos.
 
 ## Consequences
 

@@ -32,10 +32,12 @@ uno cualquiera.
    donde el original usa un `AOKeyStore.valueOf` que sí lo hace: es más laxa a
    propósito, y en la dirección segura —rechaza de más, nunca de menos—.
 3. **Sin biblioteca, se obedece un solo almacén: el de la familia NSS** (`SHARED_NSS` y
-   `MOZ_UNI`). Es el almacén que rFirma ya abre, y es además el que el propio
-   original elige en Linux cuando nadie nombra ninguno
-   (`AOKeyStore.getDefaultKeyStoreTypeByOs`). Obedecerlo no cambia de dónde
-   sale el certificado: solo confirma que la sede pidió lo que va a ocurrir.
+   `MOZ_UNI`), y se obedece como **acotación**: el listado se queda con los
+   almacenes NSS que rFirma ya abre —los de los navegadores, el del sistema y
+   el Almacén de rFirma— y deja fuera los módulos PKCS#11 de tarjetas y tokens.
+   Es lo que abre el original, que con ese nombre no ve un módulo que no esté
+   registrado en la NSS, y es además el almacén que elige en Linux cuando nadie
+   nombra ninguno (`AOKeyStore.getDefaultKeyStoreTypeByOs`).
 4. **Cualquier otro nombre de `AOKeyStore` sale con `SAF_08`**
    (`ERROR_CANNOT_ACCESS_KEYSTORE`), nombrando el parámetro por el que vino, y
    la ventana lo cuenta como `unsupportedKeyStore`. Es el código con el que el
@@ -80,6 +82,9 @@ no cabe en una regla pura.
   en su propio selector, y obedecer el `keystore` de la sede seguiría siendo
   abrir uno que ella no ha elegido. El motivo no cambia con que exista el
   camino de contraseña.
+- La sede que nombra la NSS deja de ver en rFirma la tarjeta o el token que
+  solo registra p11-kit, igual que en el original. La que no nombra almacén
+  los sigue viendo.
 - La sede que acota a un módulo que la instalación ya ofrece —el SoftHSM de
   pruebas, el `opensc-pkcs11.so` de las tarjetas— ve solo sus certificados,
   como en el original. La que nombra otra ruta recibe `SAF_08` y la ventana
@@ -131,9 +136,15 @@ deja de negar lo que sí se puede cumplir. Descartada.
 completa, y pone en manos de una página web qué biblioteca nativa entra en el
 proceso de rFirma. Descartada.
 
-**Acotar cualquier almacén nombrado, no solo el PKCS#11.** El listado solo
-distingue certificados por el módulo que los sirve, y el resto de nombres del
-catálogo no dice ninguno que rFirma tenga. Descartada: el rechazo de la regla 4
+**Dar por cumplida la NSS sin acotar nada.** Era la regla anterior, y se
+apoyaba en que la NSS era todo lo que rFirma abre. No lo es: el listado suma
+los módulos que registra p11-kit, así que una sede que nombraba la NSS recibía
+también los certificados de un token que el original no le habría ofrecido, y
+con más de uno la selección desatendida acababa en la ventana. Descartada.
+
+**Acotar cualquier almacén nombrado, no solo el PKCS#11 y la NSS.** El listado
+solo distingue certificados por el almacén que los sirve, y el resto de nombres
+del catálogo no dice ninguno que rFirma tenga. Descartada: el rechazo de la regla 4
 dice la verdad y no finge una restricción que no se aplica.
 
 **Preguntar a `pkg-config` por el directorio de módulos de p11-kit.** Da la

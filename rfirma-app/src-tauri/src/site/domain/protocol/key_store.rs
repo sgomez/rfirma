@@ -90,13 +90,28 @@ pub fn key_store_named_by(url: &AfirmaUrl) -> Option<NamedKeyStore> {
     })
 }
 
-/// La biblioteca que la sede pone detrás del almacén PKCS#11, tal y como vino (ADR-0022).
-pub fn module_named_by(url: &AfirmaUrl) -> Option<String> {
-    let named = key_store_named_by(url)?;
-    if !named_among(named.name(), &THE_PKCS11_STORE) {
-        return None;
+/// De qué almacenes puede salir el certificado, según el que nombra la sede (ADR-0022).
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub enum StoreScope {
+    /// Cualquiera de los que lista rFirma.
+    #[default]
+    Everywhere,
+    /// Solo los de la familia NSS.
+    Nss,
+    /// Solo el módulo PKCS#11 de esta biblioteca, tal y como vino.
+    Module(String),
+}
+
+/// La acotación del almacén que nombra la sede; lo que rechaza lo decide `refuse_a_key_store_rfirma_does_not_open`.
+pub fn scope_named_by(url: &AfirmaUrl) -> StoreScope {
+    let Some(named) = key_store_named_by(url) else {
+        return StoreScope::Everywhere;
+    };
+    match named.library {
+        Some(library) if named_among(&named.name, &THE_PKCS11_STORE) => StoreScope::Module(library),
+        None if named_among(&named.name, &THE_NSS_STORES) => StoreScope::Nss,
+        _ => StoreScope::Everywhere,
     }
-    named.library
 }
 
 /// El `SAF_08` del almacén que la sede nombra y rFirma no abre (ADR-0022).

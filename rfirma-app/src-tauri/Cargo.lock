@@ -3583,6 +3583,7 @@ dependencies = [
  "tokio",
  "tokio-native-tls",
  "tokio-tungstenite",
+ "url",
  "x509-cert",
  "zeroize",
 ]

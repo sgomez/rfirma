@@ -160,6 +160,9 @@ pub fn run() {
     match desktop::application::invocation::role_of(invocation) {
         Role::Desktop(invocation) => run_desktop(paths, invocation),
         Role::Site(url) => run_site(paths, url, discarded),
+        Role::Foreign(url) => {
+            eprintln!("rfirma: {url} no es una llamada afirma://; no se abre nada")
+        }
     }
 }
 

@@ -1,5 +1,7 @@
 //! La expresión de filtro que manda la sede, que cruza entera al motor.
 
+use super::key_store::StoreScope;
+
 const FILTER: &str = "filter";
 const FILTERS: &str = "filters";
 
@@ -34,18 +36,18 @@ pub const UNMEASURED_CRITERIA: &[&str] = &["dnie:"];
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct SiteFilter {
     declared: Vec<(String, String)>,
-    module: Option<String>,
+    scope: StoreScope,
 }
 
 impl SiteFilter {
-    /// El mismo filtro, acotado a la biblioteca PKCS#11 que nombra la sede, si nombra una.
-    pub fn within_the_module(self, module: Option<String>) -> Self {
-        Self { module, ..self }
+    /// El mismo filtro, acotado a los almacenes que nombra la sede.
+    pub fn within(self, scope: StoreScope) -> Self {
+        Self { scope, ..self }
     }
 
-    /// La biblioteca PKCS#11 a la que la sede acota el listado, tal y como vino.
-    pub fn module(&self) -> Option<&str> {
-        self.module.as_deref()
+    /// Los almacenes a los que la sede acota el listado.
+    pub fn scope(&self) -> &StoreScope {
+        &self.scope
     }
 
     /// Si la sede no declaró ningún filtro.
@@ -78,12 +80,24 @@ impl SiteFilter {
     }
 }
 
-/// Lo que la sede pide del listado.
+/// Lo que la sede pide del listado, sin las expresiones en las que el original no reconoce nada (ADR-0023).
 pub fn site_filter(properties: &[(String, String)]) -> SiteFilter {
     SiteFilter {
-        declared: declared_keys(properties),
-        module: None,
+        declared: declared_keys(properties)
+            .into_iter()
+            .filter(|(_, expression)| names_a_criterion(expression))
+            .collect(),
+        scope: StoreScope::Everywhere,
     }
+}
+
+fn names_a_criterion(expression: &str) -> bool {
+    expression.split(';').any(|condition| {
+        let condition = condition.to_lowercase();
+        ACCEPTED_CRITERIA
+            .iter()
+            .any(|criterion| condition.starts_with(criterion))
+    })
 }
 
 /// Las claves de filtro que la sede declaró, con la precedencia del original.

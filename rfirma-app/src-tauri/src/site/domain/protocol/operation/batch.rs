@@ -6,7 +6,7 @@ use base64::Engine as _;
 use super::super::codes::Parameter;
 use super::super::data_source::DataSource;
 use super::super::filters::{site_filter, SiteFilter};
-use super::super::key_store::module_named_by;
+use super::super::key_store::scope_named_by;
 use super::super::parameters::{check_servlet_url, sticky_certificate, StickyCertificate};
 use super::super::refusal::Refusal;
 use super::super::url::AfirmaUrl;
@@ -142,7 +142,7 @@ pub(super) fn batch_request(
         needcert: url
             .parameter("needcert")
             .is_some_and(|value| value.eq_ignore_ascii_case("true")),
-        filter: site_filter(declared.crossing()).within_the_module(module_named_by(url)),
+        filter: site_filter(declared.crossing()).within(scope_named_by(url)),
         sticky: sticky_certificate(url),
         unattended: declared.unattended(),
     }))

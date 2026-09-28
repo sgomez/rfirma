@@ -76,7 +76,7 @@ fn the_filter_travels_inside_the_properties_and_comes_out_untouched() {
 }
 
 #[test]
-fn a_criterion_outside_the_whitelist_reaches_the_engine_instead_of_refusing() {
+fn a_criterion_outside_the_whitelist_is_not_refused_and_declares_no_filter() {
     let url = an_operation(&format!(
         "op=selectcert&properties={}",
         properties(
@@ -86,15 +86,12 @@ fn a_criterion_outside_the_whitelist_reaches_the_engine_instead_of_refusing() {
     ));
 
     let SiteOperation::SelectCertificate(request) =
-        read_operation(&url).expect("un criterio desconocido lo juzga el motor")
+        read_operation(&url).expect("un criterio desconocido no rechaza la operacion")
     else {
         panic!("es una seleccion de certificado");
     };
 
-    assert_eq!(
-        request.filter().declared(),
-        [("filters".to_owned(), "inventado:loquesea".to_owned())]
-    );
+    assert!(request.filter().declares_nothing());
 }
 
 #[test]

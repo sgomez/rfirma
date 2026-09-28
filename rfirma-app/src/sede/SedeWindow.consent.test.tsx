@@ -39,6 +39,13 @@ describe("2 · consent", () => {
     ).toBeInTheDocument();
   });
 
+  it("is not laid under the dialog scrim, which would cover the certificate list", () => {
+    const { port } = scriptedErrand(consenting());
+    const { container } = renderWithCatalog(<SedeWindow errands={port} />);
+
+    expect(container.querySelector(".rf-scrim")).toBeNull();
+  });
+
   it("orders the body origin, then certificate, then document", () => {
     const { port } = scriptedErrand(consenting());
     const { container } = renderWithCatalog(<SedeWindow errands={port} />);
