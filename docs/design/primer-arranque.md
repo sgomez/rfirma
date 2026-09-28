@@ -59,15 +59,29 @@ Tres regiones:
 | # | Qué lleva | Pie |
 | - | --------- | --- |
 | 1 | Bienvenida: titular, qué es rFirma, el deslinde de independencia y el idioma | `Omitir configuración` · `Continuar` |
-| 2 | Las dos acciones, una tarjeta cada una | `Atrás` · `Terminar` |
+| 2 | Las dos acciones como pasos numerados y, aparte, la protección contra firmas accidentales | `Atrás` · `Terminar` |
 
 **El rechazo es por acción, y el recorrido entero se puede omitir.** Cada
-tarjeta de la segunda pantalla lleva su «Ahora no» en secundario al lado del
+acción de la segunda pantalla lleva su «Ahora no» en secundario al lado del
 botón, y no hay primario desactivado con una línea que diga qué falta. Además,
 la bienvenida lleva `Omitir configuración`, fantasma y a la izquierda de `Continuar`:
 rFirma firma documentos sin sedes, y a quien sólo quiere eso no se le hace
 recorrer una configuración que no necesita. Omitir cuenta como haber visto el
 asistente; las dos acciones siguen en el panel de estado.
+
+### La segunda pantalla: pasos numerados
+
+**Sin tarjetas.** Las dos acciones son dos pasos con un círculo de 24 px a la
+izquierda, `1` y `2`, unidos por una línea vertical de 2 px en
+`--rf-border-subtle`. **El círculo dice el estado**: el número con borde
+`--rf-border-strong` mientras está pendiente, un spinner mientras trabaja, ✓
+sobre `--rf-primary` cuando está hecho y ⚠ cuando ha fallado. A la derecha, el
+título en `.rf-prose` a 600, la frase en `.rf-hint` y, debajo, los botones; el
+resultado ocupa **el sitio de los botones**, en el mismo nodo.
+
+**La protección contra firmas accidentales va aparte, al final**, tras un
+`.rf-divider`: no es un paso, es un ajuste. Título y ayuda a la izquierda y el
+interruptor, encendido, a la derecha.
 
 ## Los textos
 
@@ -89,7 +103,7 @@ Y, en tarjeta:
 > Estado, que publican el cliente oficial, ni cuenta con su respaldo. Si
 > necesitas la aplicación oficial, descárgala de su web.
 
-Y, en otra tarjeta con la forma de las de la pantalla 2:
+Y, en otra tarjeta:
 
 > **Idioma**
 >
@@ -103,9 +117,7 @@ Pie: `Omitir configuración` · `Continuar`.
 
 > **El certificado de rFirma**
 >
-> Cuando firmas en una sede electrónica, tu navegador tiene que conectarse a
-> rFirma. Para que esa conexión sea segura necesitamos instalar un certificado
-> propio.
+> Para que tu navegador se conecte a rFirma de forma segura.
 
 Acciones: `Instalar` (primario) · `Ahora no` (secundario).
 
@@ -124,8 +136,21 @@ Resultados, en el mismo nodo:
 >
 > Ahora mismo las sedes electrónicas abren AutoFirma.
 
+Si AutoFirma no está instalado, la frase es otra:
+
+> Ahora mismo las sedes no tienen ningún programa asignado.
+
 Acciones: `Que abran rFirma` (primario) · `Ahora no` (secundario). Hecho:
 **Ahora abren rFirma.**
+
+### Pantalla 2 · Protección contra firmas accidentales
+
+> **Protección contra firmas accidentales**
+>
+> Se añade una pausa de 3 segundos antes de permitir firmar.
+
+Interruptor, encendido. Son los textos de [Preferencias](preferencias.md): es el
+mismo ajuste.
 
 Pie de la pantalla 2: `Atrás` · `Terminar`.
 
@@ -135,10 +160,13 @@ Pie de la pantalla 2: `Atrás` · `Terminar`.
 | ------ | -------- | ---------------- |
 | Bienvenida | `PrimerArranque` · `momento = 1 · bienvenida` | `Continuar` |
 | Las dos acciones, sin hacer nada | `2 · acciones · sin hacer nada` | `Instalar`, `Que abran rFirma` |
-| Instalando el certificado | `2 · certificado · instalando` | ninguna; la tarjeta no ofrece botón |
+| Instalando el certificado | `2 · certificado · instalando` | ninguna; el paso no ofrece botón |
 | Certificado instalado | `2 · certificado · instalado` | `Que abran rFirma` |
 | El certificado ha fallado | `2 · certificado · ha fallado` | `Reintentar`, en secundario |
 | Todo hecho | `2 · acciones · todo hecho` | `Terminar` |
+
+La palanca **AutoFirma instalado** (sí por omisión) solo cambia la frase de
+«Usar rFirma por defecto».
 
 Los dos pasos son **independientes**: cualquiera de los dos puede estar hecho,
 declinado o fallado sin que el otro se entere.
@@ -160,22 +188,26 @@ salida, y la reparación ya tiene sitio propio en el panel de estado.
 ## Componentes y tokens
 
 Clases: `.rf-root`, `.rf-row`, `.rf-stack`, `.rf-gap-xs|sm`, `.rf-card`,
+`.rf-divider`, `.rf-input`,
 `.rf-heading`, `.rf-title`, `.rf-body`, `.rf-prose`, `.rf-hint`,
 `.rf-text-muted`, `.rf-btn` con `--primary` y `--secondary`.
 
 Tokens: `--rf-surface`, `--rf-text`, `--rf-text-muted`, `--rf-border-subtle`,
-`--rf-primary`, `--rf-radius-md|pill`, `--rf-focus-ring`,
+`--rf-border-strong`, `--rf-primary`, `--rf-on-primary`, `--rf-radius-md|pill`, `--rf-focus-ring`,
 `--rf-space-xs|sm|md|lg`. Ni un color ni una sombra literales.
 
-El indicador de paso y las marcas ✓ / ✗ de la lista de destinos se maquetan con
-tokens; ninguno de los dos es un componente del sistema de diseño.
+El indicador de paso, los círculos de los pasos, el interruptor y las marcas
+✓ / ✗ de la lista de destinos se maquetan con tokens; ninguno es un componente
+del sistema de diseño.
 
 ## Decisiones
 
 Validado el **17/09/2026** en el canvas
 [Autofirma de escritorio en Rust](https://claude.ai/design/p/c0ddbfa7-0982-498f-8f8c-8e2f8f0c6132),
 artboard `PrimerArranque` de la página «Recorrido de firma», cuya anotación
-guarda el porqué de cada punto. La copia legible sin cuenta está en
+guarda el porqué de cada punto. La fusión con la app —el idioma y `Omitir
+configuración` en la bienvenida, la segunda pantalla en pasos numerados y la
+protección dentro del asistente— se cerró el **28/09/2026**. La copia legible sin cuenta está en
 [`docs/design/artboards/`](artboards/README.md).
 
 **Sin botón de abrir ni pestañas.** Esta pantalla toma la barra de la ventana
@@ -190,6 +222,19 @@ que se dibujaron:
 - **Una sola página con los tres bloques apilados**, además, **no cabe**: medía
   unos 770 px contra los 648 px del hueco, así que se desplazaba. Una sola
   página se lee de un vistazo sólo si cabe de un vistazo.
+
+**La segunda pantalla son pasos numerados, sin tarjetas.** Se compararon cuatro
+maquetas con los mismos textos y estados, y las cuatro cabían sin scroll:
+**lista agrupada** —una caja con borde y filas con botones compactos—, **icono
+y botones debajo**, **pasos numerados** y **acciones y ajustes** bajo rótulos
+como los de Preferencias. Se eligió la de pasos numerados, la única en que el
+estado de cada acción se lee en el círculo sin texto añadido. Medida en Chrome
+a 1180 × 700: el cuerpo mide 595 px y la pantalla ocupa 487 sin hacer nada y
+583 con el certificado fallado.
+
+**La protección contra firmas accidentales entra en el asistente**, fija en la
+segunda pantalla, aparte de los pasos y con los textos de Preferencias: es el
+mismo ajuste, y no un paso que haya que completar.
 
 **El deslinde reutiliza la clave i18n `independence`**, que ya existe y ya está
 traducida —`gl` incluida—. No se redacta una variante: es **la misma cadena** que
@@ -256,19 +301,15 @@ para justificar.
 Está aquí porque no se ha decidido, no porque se haya olvidado.
 
 **Tres botones primarios en la pantalla 2** —`Instalar`, `Que abran rFirma` y
-`Terminar`—. Está dibujado así a propósito: cada tarjeta ofrece su acción y el
-pie navega. Pero con los dos bloques sin hacer, el ojo no tiene dónde caer
+`Terminar`—. Está dibujado así a propósito: cada paso ofrece su acción y el
+pie navega. Pero con los dos pasos sin hacer, el ojo no tiene dónde caer
 primero. La salida, si se toma, es **degradar a secundario los dos botones de
-tarjeta** y dejar el primario sólo en el pie; no toca ningún texto.
+los pasos** y dejar el primario sólo en el pie; no toca ningún texto.
 
 **El aviso del permiso de red local se ha sacado del asistente y se queda sin
 sitio.** Contaba una escena futura, a nombre de la sede y no de rFirma, y en la
 configuración no hay nada que hacer con él. Le toca aparecer en la **primera
 firma**, que es cuando ocurre, y esa pantalla no está diseñada.
-
-**«Ahora mismo las sedes electrónicas abren AutoFirma» da por supuesto que
-AutoFirma está instalado.** Si no lo está, la frase es falsa. No hay todavía
-redacción alternativa para ese caso.
 
 **Qué se recuerda entre sesiones cuando el asistente queda a medias.**
 `trustNoticeSeen` es un único booleano y se queda corto para **dos acciones
@@ -278,5 +319,8 @@ ticket, no esta ficha.
 
 **Desde dónde se vuelve a ver el asistente**, sin decidir.
 
-**Cadenas nuevas para `rfirma-app/po/messages.pot`**: todas las de esta ficha
-menos `independence`, que ya existe y se recicla.
+**Cadenas que cambian en `rfirma-app/po/`**: `setup.certificate.body` pasa a
+la frase corta y `setup.handler.bodyNoAutofirma` a «Ahora mismo las sedes no
+tienen ningún programa asignado.»; el interruptor de protección reutiliza
+`preferences.consentCountdown` con su título y ayuda nuevos. `independence` ya
+existe y se recicla.

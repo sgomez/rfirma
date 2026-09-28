@@ -292,43 +292,63 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
         </div>
       </div>
       <sc-if value="{{hayJuntoAlOriginal}}" hint-placeholder-val="{{true}}">
-      <div class="rf-stack rf-gap-xs" style="padding-top:var(--rf-space-xs);min-height:182px">
-        <p class="rf-prose">Dónde se guarda el documento firmado</p>
-        <div class="rf-row rf-gap-xs" style="padding-top:2px">
-          <span style="width:18px;height:18px;flex:none;border-radius:var(--rf-radius-pill);
+      <div class="rf-stack rf-gap-xs" style="padding-top:var(--rf-space-xs);min-height:132px">
+        <p class="rf-prose" style="font-weight:600">Dónde se guarda el documento firmado</p>
+        <div class="rf-row rf-gap-xs" style="align-items:flex-start">
+          <span style="width:18px;height:18px;flex:none;border-radius:var(--rf-radius-pill);margin-top:2px;
             border:1px solid var(--rf-border-strong)"></span>
           <p class="rf-prose" style="flex:1;min-width:0">Junto al documento original</p>
         </div>
-        <div class="rf-row rf-gap-xs">
-          <span style="width:18px;height:18px;flex:none;border-radius:var(--rf-radius-pill);
+        <div class="rf-row rf-gap-xs" style="align-items:flex-start">
+          <span style="width:18px;height:18px;flex:none;border-radius:var(--rf-radius-pill);margin-top:2px;
             border:1px solid var(--rf-border-strong);display:flex;align-items:center;justify-content:center">
             <span style="width:10px;height:10px;border-radius:var(--rf-radius-pill);background:var(--rf-primary)"></span>
           </span>
-          <p class="rf-prose" style="flex:1;min-width:0">En esta carpeta</p>
-        </div>
-        <div style="padding-left:26px">
+          <div class="rf-stack rf-gap-xs" style="flex:1;min-width:0">
+            <p class="rf-prose">En esta carpeta</p>
           <div class="rf-row rf-gap-xs">
-          <span style="color:var(--rf-text-muted);display:flex;flex:none"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></span>
-          <p class="rf-prose" style="flex:1;min-width:0;font-weight:600;overflow:hidden;
-            text-overflow:ellipsis;white-space:nowrap">Documentos</p>
-          <button class="rf-btn rf-btn--secondary" style="flex:none;min-height:32px;padding:0 var(--rf-space-xs);font-size:12px">Cambiar carpeta…</button>
+            <span style="color:var(--rf-text-muted);display:flex;flex:none"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></span>
+            <p class="rf-prose" style="flex:1;min-width:0;font-weight:600;overflow:hidden;
+              text-overflow:ellipsis;white-space:nowrap">Documentos</p>
+            <button class="rf-btn rf-btn--secondary" style="flex:none;min-height:32px;padding:0 var(--rf-space-xs);font-size:12px">Cambiar carpeta…</button>
+          </div>
+          </div>
         </div>
-        </div>
-        <p class="rf-hint">La carpeta no se crea nunca.</p>
       </div>
       </sc-if>
       <sc-if value="{{soloCarpeta}}" hint-placeholder-val="{{false}}">
-      <div class="rf-stack rf-gap-xs" style="padding-top:var(--rf-space-xs);min-height:182px">
-        <p class="rf-prose">Dónde se guarda el documento firmado</p>
-        <div class="rf-row rf-gap-xs">
-          <span style="color:var(--rf-text-muted);display:flex;flex:none"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></span>
-          <p class="rf-prose" style="flex:1;min-width:0;font-weight:600;overflow:hidden;
-            text-overflow:ellipsis;white-space:nowrap">Documentos</p>
-          <button class="rf-btn rf-btn--secondary" style="flex:none;min-height:32px;padding:0 var(--rf-space-xs);font-size:12px">Cambiar carpeta…</button>
-        </div>
-        <p class="rf-hint">La carpeta no se crea nunca.</p>
+      <div class="rf-stack rf-gap-xs" style="padding-top:var(--rf-space-xs);min-height:132px">
+        <p class="rf-prose" style="font-weight:600">Dónde se guarda el documento firmado</p>
+          <div class="rf-row rf-gap-xs">
+            <span style="color:var(--rf-text-muted);display:flex;flex:none"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></span>
+            <p class="rf-prose" style="flex:1;min-width:0;font-weight:600;overflow:hidden;
+              text-overflow:ellipsis;white-space:nowrap">Documentos</p>
+            <button class="rf-btn rf-btn--secondary" style="flex:none;min-height:32px;padding:0 var(--rf-space-xs);font-size:12px">Cambiar carpeta…</button>
+          </div>
       </div>
       </sc-if>
+      <div class="rf-row rf-gap-sm" style="align-items:flex-start;padding-top:var(--rf-space-xs)">
+        <span style="width:40px;height:24px;flex:none;border-radius:var(--rf-radius-pill);position:relative;
+          background:var(--rf-primary);margin-top:2px">
+          <span style="position:absolute;top:4px;right:4px;width:16px;height:16px;
+            border-radius:var(--rf-radius-pill);background:var(--rf-on-primary)"></span>
+        </span>
+        <div class="rf-stack" style="gap:4px;flex:1">
+          <p class="rf-prose">Protección contra firmas accidentales</p>
+          <p class="rf-hint">Se añade una pausa de 3 segundos antes de permitir firmar.</p>
+        </div>
+      </div>
+      <div class="rf-row rf-gap-sm" style="align-items:flex-start;padding-top:var(--rf-space-xs)">
+        <span style="width:40px;height:24px;flex:none;border-radius:var(--rf-radius-pill);position:relative;
+          background:var(--rf-bg);border:1px solid var(--rf-border-strong);margin-top:2px">
+          <span style="position:absolute;top:3px;left:3px;width:16px;height:16px;
+            border-radius:var(--rf-radius-pill);background:var(--rf-border-strong)"></span>
+        </span>
+        <div class="rf-stack" style="gap:4px;flex:1">
+          <p class="rf-prose">Usar el certificado que elija la sede</p>
+          <p class="rf-hint">Si solo sirve uno de tus certificados, se usa sin preguntarte.</p>
+        </div>
+      </div>
       <sc-if value="{{avisoGuardar}}" hint-placeholder-val="{{true}}">
         <div class="rf-stack" style="gap:4px;padding:var(--rf-space-sm);border:2px solid var(--rf-border-strong);
           border-radius:var(--rf-radius-md);margin-top:var(--rf-space-xs)">
@@ -488,10 +508,10 @@ class Component extends DCLogic {
     // El aviso de version se da SIEMPRE y su ajuste esta SIEMPRE: no hay forma
     // fiable de saber si las actualizaciones las gestiona un repositorio, asi que
     // la condicion del ID-180 se retira y no queda palanca que decidir.
-    // ID-184: «junto al original» solo se ofrece si el entorno sabe devolver la
-    // ruta real del documento. Bajo el sandbox no la sabe, asi que la opcion no
-    // aparece — y los dos estados miden lo mismo (min-height del bloque), para
-    // que las secciones de debajo no salten.
+    // «junto al original» solo se ofrece si el entorno sabe devolver la ruta
+    // real del documento. Bajo el sandbox no la sabe y no hay radios, solo la
+    // carpeta; los dos estados miden lo mismo (min-height del bloque) para que
+    // los interruptores de debajo no salten.
     const sabeRuta = (this.props.ruta ?? "el entorno sabe la ruta del documento") !== "sandbox · no la sabe";
     const p12 = this.props.p12 ?? "cuatro instalados";
     // El indice es permanente y a la derecha se pinta una sola seccion: la
