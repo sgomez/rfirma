@@ -31,6 +31,7 @@ pub struct Relay {
     on_upload_failure: Arc<dyn Fn(Refusal) + Send + Sync>,
     runtime: tokio::runtime::Handle,
     cookies: Arc<OperationCookies>,
+    an_errand_is_live: Arc<dyn Fn() -> bool + Send + Sync>,
 }
 
 impl Relay {
@@ -65,7 +66,17 @@ impl Relay {
             on_upload_failure,
             runtime,
             cookies,
+            an_errand_is_live: Arc::new(|| false),
         }
+    }
+
+    /// Consulta si hay un trámite vivo, cuyas cookies una invocación nueva no debe soltar.
+    pub fn minding_the_live_errand(
+        mut self,
+        an_errand_is_live: impl Fn() -> bool + Send + Sync + 'static,
+    ) -> Self {
+        self.an_errand_is_live = Arc::new(an_errand_is_live);
+        self
     }
 }
 
@@ -75,7 +86,9 @@ impl Transport for Relay {
         location: &ChannelLocation,
         duty: ChannelDuty,
     ) -> Result<OpenChannel, ChannelError> {
-        self.cookies.forget();
+        if !(self.an_errand_is_live)() {
+            self.cookies.forget();
+        }
         let ChannelLocation::Relay(info) = location else {
             return Err(ChannelError::new(
                 Situation::Relay,

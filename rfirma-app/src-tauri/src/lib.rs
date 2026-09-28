@@ -512,7 +512,11 @@ fn the_transport(
             })
         },
         tauri::async_runtime::handle().inner().clone(),
-    );
+    )
+    .minding_the_live_errand({
+        let handle = app.clone();
+        move || handle.state::<site::SiteRoot>().errand.current().is_some()
+    });
 
     move |location, duty| match location {
         site::domain::channel::ChannelLocation::Relay(_) => relay.open(location, duty),
