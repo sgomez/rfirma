@@ -93,6 +93,7 @@ fn the_configuration_holds_no_path_to_the_rubric_the_user_chose() {
         vec![
             "consent_countdown",
             "destination",
+            "destination_mode",
             "honour_automatic_selection",
             "language",
             "notify_new_version",
@@ -102,5 +103,33 @@ fn the_configuration_holds_no_path_to_the_rubric_the_user_chose() {
             "theme",
         ],
         "la rubrica es una copia en el almacen, nunca un campo con la ruta del original"
+    );
+}
+
+#[test]
+fn a_configuration_saved_before_the_destination_mode_lands_next_to_the_original() {
+    let configuration: Configuration =
+        serde_json::from_str(r#"{"destination": {"path": "/home/quien/Documentos"}}"#)
+            .expect("deberia leerse");
+
+    assert_eq!(
+        configuration.destination_mode,
+        DestinationMode::NextToTheOriginal
+    );
+}
+
+#[test]
+fn the_destination_mode_survives_writing_and_reading_back() {
+    let configuration = Configuration {
+        destination_mode: DestinationMode::InTheDestinationFolder,
+        ..Configuration::default()
+    };
+
+    let written = serde_json::to_string(&configuration).expect("deberia escribirse");
+    let read: Configuration = serde_json::from_str(&written).expect("deberia leerse");
+
+    assert_eq!(
+        read.destination_mode,
+        DestinationMode::InTheDestinationFolder
     );
 }

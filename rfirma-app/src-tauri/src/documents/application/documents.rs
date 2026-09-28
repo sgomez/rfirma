@@ -2,7 +2,7 @@
 
 use std::path::{Path, PathBuf};
 
-use crate::documents::domain::destination::{CheckedFolder, DestinationFolder};
+use crate::documents::domain::destination::{CheckedFolder, DestinationFolder, DestinationMode};
 use crate::documents::domain::document::Document;
 use crate::documents::domain::error::DocumentError;
 use crate::documents::domain::handles::Handles;
@@ -246,6 +246,19 @@ pub fn chosen_folder(
     memory
         .chosen_destination()
         .unwrap_or_else(|| DestinationFolder::at(documents_folder))
+}
+
+/// La carpeta donde caerá el firmado según el modo de destino (ADR-0011).
+pub fn landing_folder(
+    memory: &dyn DocumentsMemory,
+    documents_folder: impl Into<PathBuf>,
+    document: &Document,
+) -> DestinationFolder {
+    let next_to_it = match memory.destination_mode() {
+        DestinationMode::NextToTheOriginal => next_to_the_original(document),
+        DestinationMode::InTheDestinationFolder => None,
+    };
+    next_to_it.unwrap_or_else(|| chosen_folder(memory, documents_folder))
 }
 
 /// Registra la carpeta de procedencia de un documento si es conocida.

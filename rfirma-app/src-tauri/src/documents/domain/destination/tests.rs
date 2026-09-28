@@ -61,7 +61,7 @@ fn the_signed_document_lands_in_the_destination_folder_with_no_dialogue() {
 }
 
 #[test]
-fn the_landing_never_falls_next_to_the_original() {
+fn the_candidates_fall_in_the_checked_folder_whatever_the_original_folder() {
     let document = a_document();
 
     let landing = first_candidates(&document, 1).remove(0);

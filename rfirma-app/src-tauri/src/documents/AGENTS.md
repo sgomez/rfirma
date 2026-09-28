@@ -9,7 +9,7 @@ relativas a `src/documents/`; para situarte en un fichero, `just outline <ruta>`
 
 | Módulo | Qué es |
 |---|---|
-| `mod.rs` | La raíz, `DocumentsRoot`, y la fachada que usan los vecinos: `chosen_folder`, `opened_document`, `is_remembered`, `open_unrecorded`, `deliver`, `where_it_lands`, `choose_single_destination`, `note_signed`, `told_as_dropped`. |
+| `mod.rs` | La raíz, `DocumentsRoot`, y la fachada que usan los vecinos: `chosen_folder`, `opened_document`, `is_remembered`, `open_unrecorded`, `deliver`, `where_it_lands`, `choose_single_destination`, `note_signed`, `told_as_dropped`. Pruebas de la fachada en `tests.rs`. |
 | `domain/mod.rs`, `application/mod.rs`, `adapters/mod.rs` | Solo `pub mod`: el reparto de cada capa. |
 | `ports.rs` | Los puertos: `DocumentsMemory`, `DocumentFiles` y `PortalDialogs`, el portal de diálogos del sistema. Pruebas en `ports/tests.rs`. |
 | `adapters/files.rs` | `RealFiles`: el `DocumentFiles` de verdad, `std::fs` y nada más. |
@@ -25,7 +25,7 @@ relativas a `src/documents/`; para situarte en un fichero, `just outline <ruta>`
 | `application/documents.rs` | Por dónde entra el documento y dónde cae el firmado, y lo abierto en esta sesión: `OpenedDocuments`, que es un `Handles<Document>`. Pruebas en `application/documents/tests.rs`. |
 | `application/single_destination.rs` | El destino de una sola firma, elegido con el diálogo de guardar y guardado tras un asa; no toca la preferencia de carpeta (ADR-0011). Pruebas en `application/single_destination/tests.rs`. |
 | `application/recents.rs` | La bandeja, de la memoria a la ventana: `RecentRow` es la fila y `RecentsError` por qué no se anota. Pruebas en `application/recents/tests.rs`. |
-| `domain/destination.rs` | `DestinationFolder`, `SingleDestination` (el fichero elegido para una sola firma), el `FolderFact` que el disco contesta y los nombres candidatos del firmado. Pruebas en `domain/destination/tests.rs`. |
+| `domain/destination.rs` | `DestinationFolder`, `DestinationMode` (junto al original o en la carpeta de destino), `SingleDestination` (el fichero elegido para una sola firma), el `FolderFact` que el disco contesta y los nombres candidatos del firmado. Pruebas en `domain/destination/tests.rs`. |
 | `domain/dropped.rs` | Qué se decide de los ficheros que llegan de fuera: soltados en la ventana o nombrados en la línea de órdenes. Pruebas en `domain/dropped/tests.rs`. |
 | `domain/error.rs` | Situaciones del destino y `DocumentError`: por qué un documento no se abre, no se lee o no se entrega (ADR-0009). Pruebas en `domain/error/tests.rs`. |
 | `domain/document.rs` | **El documento en curso**, el único: `Document`, su `Origin` —portal o ruta del anfitrión— y si de él queda rastro (`Remembrance`). Pruebas en `domain/document/tests.rs`. |
