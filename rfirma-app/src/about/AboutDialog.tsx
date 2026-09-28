@@ -1,25 +1,46 @@
-import { useId } from "react";
+import { useEffect, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import "./AboutDialog.css";
 import { ExternalLinkIcon, InfoIcon, NewVersionIcon, UpToDateIcon } from "../design-system/icons";
-import type { NewVersion } from "../updates/newVersion";
+import type { NewVersion, VersionCheck } from "../updates/newVersion";
 
 interface AboutDialogProps {
   /** La versión que se enseña. Sale de `package.json` en tiempo de compilación. */
   version: string;
-  /**
-   * Lo que contestó la comprobación de versión, o `null` si no hay una más
-   * nueva —o no se ha podido preguntar—.
-   */
+  /** Lo que se sabía desde el arranque, mientras no llegue la respuesta del puerto. */
   newVersion: NewVersion | null;
+  versions: VersionCheck;
   onOpenSourceCode: () => void;
   onClose: () => void;
 }
 
 /** Identidad de la aplicación, estado de la versión, licencias y aviso de independencia. */
-export function AboutDialog({ version, newVersion, onOpenSourceCode, onClose }: AboutDialogProps) {
+export function AboutDialog({
+  version,
+  newVersion,
+  versions,
+  onOpenSourceCode,
+  onClose,
+}: AboutDialogProps) {
   const { t } = useTranslation();
   const titleId = useId();
+  const [currentVersion, setCurrentVersion] = useState(newVersion);
+
+  useEffect(() => {
+    let current = true;
+    versions
+      .latest()
+      .then((published) => {
+        if (current) setCurrentVersion(published);
+      })
+      .catch(() => {
+        // Igual que en el arranque: sin respuesta la tarjeta se queda como
+        // estaba, sin un tercer estado ni mensaje de error.
+      });
+    return () => {
+      current = false;
+    };
+  }, [versions]);
 
   return (
     <div className="rf-scrim">
@@ -32,7 +53,7 @@ export function AboutDialog({ version, newVersion, onOpenSourceCode, onClose }: 
             <span className="rf-badge about__version">{t("about.version", { version })}</span>
           </div>
           <p className="rf-prose rf-text-muted">{t("about.whatItDoes")}</p>
-          <UpdateStatus newVersion={newVersion} />
+          <UpdateStatus newVersion={currentVersion} />
         </div>
 
         <dl className="about__facts">

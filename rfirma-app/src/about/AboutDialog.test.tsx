@@ -2,16 +2,18 @@ import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { renderWithCatalog } from "../testing/render";
-import type { NewVersion } from "../updates/newVersion";
+import { inMemoryVersionCheck, type NewVersion } from "../updates/newVersion";
 import { AboutDialog } from "./AboutDialog";
 
 const noop = () => {};
 
 function renderAbout(props: Partial<Parameters<typeof AboutDialog>[0]> = {}) {
+  const newVersion = props.newVersion ?? null;
   return renderWithCatalog(
     <AboutDialog
       version="0.1.0"
-      newVersion={null}
+      newVersion={newVersion}
+      versions={inMemoryVersionCheck(newVersion)}
       onOpenSourceCode={noop}
       onClose={noop}
       {...props}
@@ -97,6 +99,15 @@ describe("AboutDialog", () => {
       expect(screen.queryByText(/flatpak install/)).not.toBeInTheDocument();
       expect(screen.queryByText(/sudo apt install rfirma/)).not.toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "Copiar" })).not.toBeInTheDocument();
+    });
+
+    it("asks the port again when it opens, and replaces what was known since startup", async () => {
+      renderAbout({
+        newVersion: null,
+        versions: inMemoryVersionCheck({ version: "0.4.1" }),
+      });
+
+      expect(await screen.findByText("Hay una versión nueva: 0.4.1")).toBeInTheDocument();
     });
   });
 });
