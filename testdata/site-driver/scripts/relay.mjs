@@ -41,6 +41,12 @@ const THE_SILENCE_AFTER_THE_SPOILED_REQUEST_MS = 5000;
 /** Lo que se espera a una subida tras recuperar una petición con el StorageService local. */
 const THE_SILENCE_AFTER_THE_LOCAL_STORAGE_MS = 60000;
 
+/** El `GET ?op=check` con el que `checkComunicationServices` sondea los dos servlets. */
+function isTheAvailabilityCheck(request) {
+  const query = new URL(request.url, "http://127.0.0.2").searchParams;
+  return request.method === "GET" && query.get("op") === "check";
+}
+
 /**
  * El servicio remoto del StorageService o del RetrieveService, según la ruta de la petición; `null`
  * también para las que hace la propia página, que no son la petición `RemoteService` de #1164.
@@ -66,6 +72,11 @@ export async function anIntermediateServer({
   const stored = new Map();
   const requests = [];
   const serving = (listener) => async (parameters, request, response) => {
+    if (isTheAvailabilityCheck(request)) {
+      response.writeHead(200, { "content-type": "text/plain; charset=utf-8" });
+      response.end("OK\n");
+      return;
+    }
     const entry = {
       listener,
       service: new URL(request.url, "http://127.0.0.2").pathname,
@@ -74,6 +85,17 @@ export async function anIntermediateServer({
       dat: parameters.get("dat"),
       at: Date.now(),
     };
+    if (entry.op === null) {
+      emit({ event: "relay", missing: "op", in: "body" });
+      response.writeHead(400, { "content-type": "text/plain; charset=utf-8" });
+      response.end("falta 'op' en el cuerpo del POST");
+      return;
+    }
+    if (entry.op !== "put" && entry.op !== "get") {
+      response.writeHead(400, { "content-type": "text/plain; charset=utf-8" });
+      response.end("'op' desconocido en el cuerpo del POST");
+      return;
+    }
     requests.push(entry);
     let answer = "OK";
     if (entry.op === "put" && refusingUploads) {

@@ -10,13 +10,9 @@ async function theBody(request) {
   return new URLSearchParams(Buffer.concat(chunks).toString("utf8"));
 }
 
-/** Los parámetros de la query y los del cuerpo del POST, donde `UrlHttpManagerImpl` los manda. */
-export function theServletParameters(request, form) {
-  const parameters = new URL(request.url, "http://127.0.0.2").searchParams;
-  for (const [name, value] of form) {
-    parameters.append(name, value);
-  }
-  return parameters;
+/** Los parámetros del cuerpo del POST, como `application/x-www-form-urlencoded`; nada de la query. */
+export function theFormParameters(_request, form) {
+  return form;
 }
 
 function theNames(parameters) {
@@ -70,7 +66,7 @@ export function theRequest(service, request, form) {
  */
 export function servletServer(
   handling,
-  { host = "127.0.0.2", reading = theServletParameters, service = null, telling = emit } = {},
+  { host = "127.0.0.2", reading = theFormParameters, service = null, telling = emit } = {},
 ) {
   return new Promise((resolve) => {
     const server = createServer(async (request, response) => {
@@ -80,5 +76,6 @@ export function servletServer(
       await handling(reading(request, form), request, response);
     });
     server.listen(0, host, () => resolve(server));
+    server.unref();
   });
 }

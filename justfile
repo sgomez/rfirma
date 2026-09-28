@@ -319,7 +319,7 @@ test-ts: po-import
 # Las pruebas de los analizadores de firma de la sede, con el ejecutor de Node.
 [private]
 test-site-driver:
-    cd {{ justfile_directory() }}/testdata/site-driver && node --test --test-reporter=dot test/*.test.mjs
+    cd {{ justfile_directory() }}/testdata/site-driver && node --test --test-force-exit --test-reporter=dot test/*.test.mjs
 
 # cargo test, mas la compilacion de las pruebas de grada C.
 [private]

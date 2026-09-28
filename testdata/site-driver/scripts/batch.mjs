@@ -27,7 +27,7 @@ import {
 } from "../lib/patches.mjs";
 import { isABarePkcs1 } from "../lib/pkcs1.mjs";
 import { aPublishedScript, withoutAChoice } from "../lib/script.mjs";
-import { servletServer, theServletParameters } from "../lib/servlet.mjs";
+import { servletServer, theFormParameters } from "../lib/servlet.mjs";
 
 const THROUGH_BOTH_SERVLETS = "through-both-servlets";
 const EVERY_DOCUMENT_SIGNED_WITHOUT_A_DIALOGUE = "every-document-signed-without-a-dialogue";
@@ -67,7 +67,7 @@ function theBodyParameters(request, form) {
 }
 
 /** Un servlet del lote en un puerto libre del loopback; con `service`, cuenta cada petición que recibe. */
-export function aBatchServlet(answering, { reading = theServletParameters, service, telling } = {}) {
+export function aBatchServlet(answering, { reading = theFormParameters, service, telling } = {}) {
   return servletServer(
     async (parameters, _request, response) => {
       const { status, body } = answering(parameters);
@@ -102,7 +102,7 @@ function missingBatchFields(query) {
 function thePresigner(query) {
   const missing = missingBatchFields(query);
   if (missing) {
-    emit({ event: "presign", missing });
+    emit({ event: "presign", missing, in: "body" });
     return { status: 400, body: `falta '${missing}'` };
   }
 
@@ -122,7 +122,7 @@ function thePresigner(query) {
 function thePostsigner(query) {
   const missing = missingBatchFields(query) ?? (query.get("tridata") ? null : "tridata");
   if (missing) {
-    emit({ event: "postsign", missing });
+    emit({ event: "postsign", missing, in: "body" });
     return { status: 400, body: `falta '${missing}'` };
   }
 
@@ -130,7 +130,7 @@ function thePostsigner(query) {
   const signs = tridata.signinfo;
   const signed = signs.filter((sign) => !!sign.params.PK1);
   if (signed.length !== signs.length) {
-    emit({ event: "postsign", missing: "PK1" });
+    emit({ event: "postsign", missing: "PK1", in: "body" });
     return { status: 400, body: "falta 'PK1' en alguna firma del 'tridata'" };
   }
 
@@ -301,7 +301,7 @@ function theParametersInTheBodyConditions() {
 async function theBatchScript(
   presigning = thePresigner,
   measuring = theRemoteBatchConditions,
-  reading = theServletParameters,
+  reading = theFormParameters,
 ) {
   const presigner = await servletServing(presigning, { reading, service: "presigner" });
   const postsigner = await servletServing(thePostsigner, { reading, service: "postsigner" });
@@ -329,7 +329,7 @@ function missingXmlBatchFields(query) {
 function theXmlPresigner(query) {
   const missing = missingXmlBatchFields(query);
   if (missing) {
-    emit({ event: "presign", missing });
+    emit({ event: "presign", missing, in: "body" });
     return { status: 400, body: `falta '${missing}'` };
   }
 
@@ -353,7 +353,7 @@ function theXmlPresigner(query) {
 function theXmlPostsigner(query) {
   const missing = missingXmlBatchFields(query) ?? (query.get("tridata") ? null : "tridata");
   if (missing) {
-    emit({ event: "postsign", missing });
+    emit({ event: "postsign", missing, in: "body" });
     return { status: 400, body: `falta '${missing}'` };
   }
 
@@ -361,7 +361,7 @@ function theXmlPostsigner(query) {
   const signs = tridata.match(/<firma\b/g) ?? [];
   const withPk1 = tridata.match(/<param n="PK1">/g) ?? [];
   if (withPk1.length !== signs.length) {
-    emit({ event: "postsign", missing: "PK1" });
+    emit({ event: "postsign", missing: "PK1", in: "body" });
     return { status: 400, body: "falta 'PK1' en alguna firma del 'tridata'" };
   }
 
