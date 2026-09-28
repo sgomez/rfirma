@@ -8,6 +8,7 @@ import type { Preferences } from "./preferences";
 export const defaults: Preferences = {
   theme: "system",
   destination: "Documentos",
+  destinationMode: "next_to_the_original",
   offersOriginalFolder: false,
   rememberVisibleSignature: true,
   rememberActivity: true,

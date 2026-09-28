@@ -165,22 +165,38 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  min-height: 200px;
+  min-height: 132px;
 }
 
-/* «Junto al documento original» es un hecho, no un ajuste: lo decide el
-   documento, no la persona (ADR-0011). Se enseña como texto, nunca como
-   control interactivo. */
-.preferences__destination-note {
-  padding-top: 2px;
+/* El circulo del radio, dibujado con los tokens en vez del control nativo,
+   como el segmentado del panel de firma (`ModelFieldset.tsx`). */
+.preferences__destination-radio {
+  align-items: flex-start;
+}
+
+.preferences__destination-radio input[type="radio"] {
+  appearance: none;
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin: 2px 0 0;
+  border: 1px solid var(--rf-border-strong);
+  border-radius: var(--rf-radius-pill);
+}
+
+.preferences__destination-radio input[type="radio"]:checked {
+  border-color: var(--rf-primary);
+  background: radial-gradient(circle, var(--rf-primary) 5px, transparent 6px);
+}
+
+/* La fila de la carpeta cuelga de «En esta carpeta» con la sangría del
+   círculo del radio de encima (18px + el hueco `rf-gap-xs`). */
+.preferences__destination-suboption {
+  padding-left: calc(18px + var(--rf-space-xs));
 }
 
 .preferences__destination-row {
   align-items: center;
-}
-
-.preferences__destination-mode-label {
-  flex: none;
 }
 
 /* El nombre envuelve antes que cortarse, como el destino del pie del panel: lo

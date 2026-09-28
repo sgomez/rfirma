@@ -9,6 +9,7 @@ const { tauriDestinations, tauriLanguagePreference, tauriPreferences, tauriVersi
 const aConfiguration = {
   language: "es",
   destination: "Documentos",
+  destinationMode: "next_to_the_original",
   rememberVisibleSignature: true,
   rememberActivity: true,
   notifyNewVersion: true,
@@ -38,6 +39,7 @@ describe("los puertos de la configuración sobre Tauri", () => {
     expect(read).toEqual({
       theme: "system",
       destination: "Documentos",
+      destinationMode: "next_to_the_original",
       offersOriginalFolder: false,
       rememberVisibleSignature: true,
       rememberActivity: true,
@@ -91,6 +93,7 @@ describe("los puertos de la configuración sobre Tauri", () => {
     await tauriPreferences().save({
       theme: "dark",
       destination: "Documentos",
+      destinationMode: "next_to_the_original",
       offersOriginalFolder: false,
       rememberVisibleSignature: false,
       rememberActivity: true,
@@ -112,6 +115,33 @@ describe("los puertos de la configuración sobre Tauri", () => {
     });
   });
 
+  // El modo de destino sí es un ajuste que la persona elige (ADR-0011), así
+  // que a diferencia de `offersOriginalFolder` cruza al escribir.
+  it("sends the chosen destination mode back when the settings are written", async () => {
+    invoke.mockImplementation((command: string) =>
+      command === "read_configuration"
+        ? Promise.resolve(aConfiguration)
+        : Promise.resolve(undefined),
+    );
+
+    await tauriPreferences().save({
+      theme: "system",
+      destination: "Documentos",
+      destinationMode: "in_the_destination_folder",
+      offersOriginalFolder: false,
+      rememberVisibleSignature: true,
+      rememberActivity: true,
+      notifyNewVersion: true,
+      setupWizardSeen: false,
+      consentCountdown: true,
+      honourAutomaticSelection: false,
+    });
+
+    expect(invoke).toHaveBeenLastCalledWith("write_configuration", {
+      configuration: { ...aConfiguration, destinationMode: "in_the_destination_folder" },
+    });
+  });
+
   /**
    * `save` proyecta las claves del contrato en vez de esparcir `preferences`
    * entero: `offersOriginalFolder` la contesta el backend y no cruza al
@@ -129,6 +159,7 @@ describe("los puertos de la configuración sobre Tauri", () => {
     await tauriPreferences().save({
       theme: "dark",
       destination: "Documentos",
+      destinationMode: "next_to_the_original",
       offersOriginalFolder: true,
       rememberVisibleSignature: true,
       rememberActivity: true,

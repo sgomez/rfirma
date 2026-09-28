@@ -214,6 +214,7 @@ export function renderApp(
     {
       theme: "system",
       destination: "Documentos",
+      destinationMode: "next_to_the_original",
       offersOriginalFolder: false,
       rememberVisibleSignature: true,
       rememberActivity: true,

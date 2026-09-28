@@ -300,6 +300,9 @@ export function PreferencesView({
           )
         }
         onChooseDestinationClick={() => void change("signing", onChooseDestination)}
+        onDestinationModeChange={(destinationMode) =>
+          void change("signing", () => onChange({ ...preferences, destinationMode }))
+        }
         onConsentCountdownChange={(checked) =>
           void change("signing", () => onChange({ ...preferences, consentCountdown: checked }))
         }
