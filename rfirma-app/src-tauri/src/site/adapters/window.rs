@@ -137,12 +137,13 @@ impl crate::site::application::startup::SiteWindow for TauriSiteWindow {
 
 /// Publica a la ventana de sede el momento actual del trámite.
 pub fn publish_the_moment(app: &tauri::AppHandle) {
-    let Some(moment) = app.state::<SiteRoot>().errand.moment() else {
+    let live = &app.state::<SiteRoot>().errand;
+    let Some(moment) = live.moment() else {
         return;
     };
     if let Some(window) = app.get_webview_window(SITE_WINDOW) {
         fit_to(&window, &moment);
-        let _ = window.emit(SITE_ERRAND, SiteErrandView::from(&moment));
+        let _ = window.emit(SITE_ERRAND, SiteErrandView::of(&moment, &live.origin()));
     }
 }
 
@@ -176,11 +177,14 @@ pub fn note_a_relay_failure(app: &tauri::AppHandle, refusal: Refusal) {
 pub fn attend_site_operation(
     app: &tauri::AppHandle,
     url: AfirmaUrl,
-    _origin: SiteOrigin,
+    origin: SiteOrigin,
     reply: ReplyHandle,
 ) {
     super::trace::note_the_operation(&url);
-    let attended = with_the_desk(app, |desk, live| errand::attend(desk, url, reply, live));
+    let attended = with_the_desk(app, |desk, live| {
+        live.note_origin(origin);
+        errand::attend(desk, url, reply, live)
+    });
     publish_what_moved(app, attended);
 }
 

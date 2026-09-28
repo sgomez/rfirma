@@ -69,6 +69,7 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `application/errand/tests/chosen_document.rs` | Pruebas del nombre del documento elegido en disco, que vuelve en el tercer componente de la respuesta. Solo en pruebas. |
 | `application/errand/tests/signature_consent.rs` | Pruebas del consentimiento de firma: política, firmas sin registrar y `signandsave` sin `dat`. Solo en pruebas. |
 | `application/errand/tests/signature_formats.rs` | Pruebas de algoritmo, resumen y formato de la firma de sede. Solo en pruebas. |
+| `application/errand/tests/site_origin.rs` | Pruebas de cómo el origen de la operación sobrevive a su atención por el trámite. Solo en pruebas. |
 | `application/errand/tests/dialog_folder.rs` | Pruebas de la carpeta en la que se abre el diálogo de sede al guardar y al cargar. Solo en pruebas. |
 | `application/errand/tests/document_and_save.rs` | Pruebas de elección de documento, guardado y carga por orden de la sede. Solo en pruebas. |
 | `application/errand/tests/token_and_launch.rs` | Pruebas del token, el almacén vacío y el arranque de un segundo trámite. Solo en pruebas. |

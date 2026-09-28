@@ -3,6 +3,7 @@ use super::{NoCertificateView, NoChannelView, RefusalSituationView, SiteErrandVi
 use crate::signing::domain::bridge::XadesVariant;
 use crate::site::domain::batch_error::Situation as BatchSituation;
 use crate::site::domain::protocol::RefusalSituation;
+use crate::site::domain::site_origin::SiteOrigin;
 
 #[test]
 fn the_dead_ends_cross_named_and_never_written_out() {
@@ -358,5 +359,34 @@ fn the_area_moment_crosses_with_the_handle_of_the_document() {
             "origin": null,
             "stage": { "kind": "markingTheArea", "document": "doc-1" },
         })
+    );
+}
+
+#[test]
+fn a_named_origin_crosses_with_the_moment_it_attributes_it_to() {
+    let origin = SiteOrigin::from_header(Some("https://sede.ejemplo.gob.es"));
+    let view = SiteErrandView::of(
+        &Moment::MarkingTheArea {
+            document: "doc-1".to_owned(),
+        },
+        &origin,
+    );
+
+    assert_eq!(
+        serde_json::to_value(view).expect("el momento cruza"),
+        serde_json::json!({
+            "origin": "sede.ejemplo.gob.es",
+            "stage": { "kind": "markingTheArea", "document": "doc-1" },
+        })
+    );
+}
+
+#[test]
+fn an_absent_origin_crosses_null_through_the_same_conversion() {
+    let view = SiteErrandView::of(&Moment::Waiting, &SiteOrigin::absent());
+
+    assert_eq!(
+        serde_json::to_value(view).expect("el momento cruza"),
+        serde_json::json!({ "origin": null, "stage": { "kind": "waiting" } })
     );
 }

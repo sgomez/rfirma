@@ -19,6 +19,7 @@ use crate::site::domain::protocol::{
     SiteFilter,
 };
 use crate::site::domain::signing::SiteSignature;
+use crate::site::domain::site_origin::SiteOrigin;
 use crate::site::domain::triphase_server::ServerFormat;
 
 use super::outcome::{
@@ -54,6 +55,7 @@ pub struct LiveErrand {
     arrived: std::sync::atomic::AtomicBool,
     held_launch: Mutex<Option<HeldLaunch>>,
     chosen_document: Mutex<Option<String>>,
+    origin: Mutex<SiteOrigin>,
 }
 
 /// Datos identificativos y de conexión de un trámite en curso.
@@ -263,6 +265,16 @@ impl LiveErrand {
     /// Petición original recibida de la sede.
     pub fn the_request(&self) -> Option<AfirmaUrl> {
         crate::lock(&self.asked).clone()
+    }
+
+    /// Registra el origen de la operación que atiende, sustituyendo al de la anterior.
+    pub fn note_origin(&self, origin: SiteOrigin) {
+        *crate::lock(&self.origin) = origin;
+    }
+
+    /// Origen de la operación que atiende, o su ausencia mientras no haya llegado ninguna.
+    pub fn origin(&self) -> SiteOrigin {
+        crate::lock(&self.origin).clone()
     }
 
     /// Trámite activo actual, si lo hay.

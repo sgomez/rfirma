@@ -97,3 +97,29 @@ fn ending_leaves_nothing_to_answer_with() {
     live.end();
     assert!(live.what_the_site_asked().is_none());
 }
+
+#[test]
+fn before_any_operation_the_origin_is_absent() {
+    let live = LiveErrand::default();
+
+    assert_eq!(live.origin(), SiteOrigin::absent());
+}
+
+#[test]
+fn a_noted_origin_replaces_the_one_of_the_previous_operation() {
+    let live = LiveErrand::default();
+
+    live.note_origin(SiteOrigin::from_header(Some("https://sede.ejemplo.gob.es")));
+    assert_eq!(
+        live.origin().host(),
+        Some("sede.ejemplo.gob.es"),
+        "el origen que llegó con la operación queda apuntado"
+    );
+
+    live.note_origin(SiteOrigin::absent());
+    assert_eq!(
+        live.origin(),
+        SiteOrigin::absent(),
+        "la operación siguiente sustituye al origen de la anterior"
+    );
+}
