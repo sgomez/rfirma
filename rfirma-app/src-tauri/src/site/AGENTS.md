@@ -60,6 +60,7 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `application/errand/state/area.rs` | El área de la firma visible que espera a la persona antes del consentimiento. |
 | `application/errand/state/revelation.rs` | La revelación de la ventana: por temporizador de respaldo, por llegada del navegador o porque el trámite tiene algo que decir (ADR-0020). |
 | `application/errand/state/chosen_document.rs` | El nombre del fichero que la persona eligió en disco para firmar, que la respuesta devuelve a la sede. |
+| `application/errand/state/consent.rs` | El consentimiento pendiente entre la petición de la sede y la respuesta que lo resuelve: identidad, firma, confirmación, lote remoto y local, guardado, carga y rechazo. |
 | `application/errand/tests/mod.rs` | El reparto de las pruebas del trámite por comportamiento. Solo en pruebas. |
 | `application/errand/tests/support.rs` | Los dobles del trámite en grada A: motor, transporte, códec, token, vecinos y mesa de pruebas. Solo en pruebas. |
 | `application/errand/tests/support_window.rs` | La ventana doblada y la mesa desnuda con las que se prueba cuándo se enseña un trámite. Solo en pruebas. |
@@ -69,6 +70,7 @@ firma en sí no vive aquí, sino en `signing/`. Las rutas son relativas a
 | `application/errand/tests/chosen_document.rs` | Pruebas del nombre del documento elegido en disco, que vuelve en el tercer componente de la respuesta. Solo en pruebas. |
 | `application/errand/tests/signature_consent.rs` | Pruebas del consentimiento de firma: política, firmas sin registrar y `signandsave` sin `dat`. Solo en pruebas. |
 | `application/errand/tests/signature_formats.rs` | Pruebas de algoritmo, resumen y formato de la firma de sede. Solo en pruebas. |
+| `application/errand/tests/site_origin.rs` | Pruebas de cómo el origen de la operación sobrevive a su atención por el trámite. Solo en pruebas. |
 | `application/errand/tests/dialog_folder.rs` | Pruebas de la carpeta en la que se abre el diálogo de sede al guardar y al cargar. Solo en pruebas. |
 | `application/errand/tests/document_and_save.rs` | Pruebas de elección de documento, guardado y carga por orden de la sede. Solo en pruebas. |
 | `application/errand/tests/token_and_launch.rs` | Pruebas del token, el almacén vacío y el arranque de un segundo trámite. Solo en pruebas. |

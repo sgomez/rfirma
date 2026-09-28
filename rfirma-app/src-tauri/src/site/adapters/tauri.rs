@@ -354,7 +354,10 @@ pub fn install_local_ca(app_handle: tauri::AppHandle, site: State<'_, SiteRoot>)
 /// Consulta el momento actual del trámite de sede.
 #[tauri::command]
 pub fn read_site_errand(site: State<'_, SiteRoot>) -> Option<SiteErrandView> {
-    site.errand.moment().as_ref().map(SiteErrandView::from)
+    let origin = site.errand.origin();
+    site.errand
+        .moment()
+        .map(|moment| SiteErrandView::of(&moment, &origin))
 }
 
 #[cfg(test)]

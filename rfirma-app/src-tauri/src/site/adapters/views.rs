@@ -7,6 +7,7 @@ use crate::crossing::crossing;
 use crate::signing::domain::bridge::Format;
 use crate::site::application::errand::{LocalBatchItem, Moment, NoChannel};
 use crate::site::domain::protocol::{CounterTarget, Refusal, SignatureRound};
+use crate::site::domain::site_origin::SiteOrigin;
 
 use crate::identity::adapters::views::CertificateView;
 use crate::identity::domain::certificate::ListedCertificate;
@@ -177,6 +178,16 @@ fn rows_of(certificates: &[ListedCertificate]) -> Vec<CertificateView> {
         .cloned()
         .map(CertificateView::from)
         .collect()
+}
+
+impl SiteErrandView {
+    /// El momento del trámite, con el origen que le atribuye la sede que lo pide.
+    pub fn of(moment: &Moment, origin: &SiteOrigin) -> Self {
+        Self {
+            origin: origin.host().map(str::to_owned),
+            ..Self::from(moment)
+        }
+    }
 }
 
 impl From<&Moment> for SiteErrandView {

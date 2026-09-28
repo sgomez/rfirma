@@ -22,6 +22,7 @@ mod shown_refusals;
 mod signature_basics;
 mod signature_consent;
 mod signature_formats;
+mod site_origin;
 mod sticky_selection;
 mod token_and_launch;
 mod triphase_server;

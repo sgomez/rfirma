@@ -2,31 +2,24 @@
 
 mod area;
 mod chosen_document;
+mod consent;
 mod revelation;
 
 use crate::site::application::startup::{HeldLaunch, SiteWindow};
-use std::collections::BTreeMap;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
-use crate::signing::domain::bridge::{Format, SignatureOperation};
-use crate::site::domain::batch::LocalBatch;
+use crate::identity::domain::certificate::CertificateRef;
 use crate::site::domain::channel::{ArrivalMode, ChannelTenure};
-use crate::site::domain::protocol::{
-    AfirmaUrl, AskedAlgorithm, BatchRequest, NegotiatedCredential, Refusal, SignatureRound,
-    SiteFilter,
-};
-use crate::site::domain::signing::SiteSignature;
-use crate::site::domain::triphase_server::ServerFormat;
+use crate::site::domain::protocol::{AfirmaUrl, NegotiatedCredential};
+use crate::site::domain::site_origin::SiteOrigin;
 
-use super::outcome::{
-    ConfirmationConsent, LoadingConsent, Moment, ProtocolCodec, SavingConsent, SavingHints,
-    SiteOutcome,
-};
+use super::outcome::{Moment, ProtocolCodec, SiteOutcome};
 use crate::site::ports::{Acknowledgement, ReplyHandle, Scratch};
 pub(super) use area::AreaToMark;
+use consent::PendingConsent;
+pub(super) use consent::{PendingBatch, PendingLocalBatch, PendingSignature, ServerSignature};
 use revelation::RevelationHandle;
 
 /// Códec negociado, compartido entre el trámite y quien lo apuntó.
@@ -54,6 +47,7 @@ pub struct LiveErrand {
     arrived: std::sync::atomic::AtomicBool,
     held_launch: Mutex<Option<HeldLaunch>>,
     chosen_document: Mutex<Option<String>>,
+    origin: Mutex<SiteOrigin>,
 }
 
 /// Datos identificativos y de conexión de un trámite en curso.
@@ -116,80 +110,6 @@ impl Errand {
     }
 }
 
-/// Consentimiento pendiente según la operación solicitada.
-enum PendingConsent {
-    Identity(SiteFilter, bool),
-    Signature(PendingSignature),
-    Confirmation(ConfirmationConsent),
-    Batch(PendingBatch),
-    LocalBatch(PendingLocalBatch),
-    Saving(SavingConsent),
-    Loading(LoadingConsent),
-    ShownRefusal(Refusal),
-}
-
-/// Lo que el lote remoto necesita entre el consentimiento y la postfirma.
-#[derive(Clone, Debug)]
-pub(super) struct PendingBatch {
-    /// El lote tal y como lo pidió la sede.
-    pub(super) request: BatchRequest,
-    /// El certificado que la persona consintió, una vez consentido.
-    pub(super) chosen: Option<TokenCertificate>,
-}
-
-/// Lo que el lote local necesita entre el consentimiento y el bucle de firma.
-#[derive(Clone, Debug)]
-pub(super) struct PendingLocalBatch {
-    /// El lote tal y como lo pidió la sede.
-    pub(super) request: BatchRequest,
-    /// Las firmas del lote, o por qué no se pudieron leer.
-    pub(super) batch: Result<LocalBatch, Refusal>,
-    /// El certificado que la persona consintió, una vez consentido.
-    pub(super) chosen: Option<TokenCertificate>,
-}
-
-/// Datos necesarios para ejecutar la firma tras el consentimiento.
-#[derive(Clone, Debug)]
-pub(super) struct PendingSignature {
-    /// Identificador del documento para la ventana.
-    pub(super) document: String,
-    /// Filtro solicitado por la sede.
-    pub(super) filter: SiteFilter,
-    /// Formato de firma que pidió la sede, ya atendido por el puente.
-    pub(super) format: Format,
-    /// Huella que pidió la sede para esta firma.
-    pub(super) algorithm: AskedAlgorithm,
-    /// Qué pidió hacer la sede con el documento.
-    pub(super) operation: SignatureOperation,
-    /// Parámetros adicionales expandidos.
-    pub(super) from_the_site: BTreeMap<String, String>,
-    /// Si el documento contiene firmas no reconocidas.
-    pub(super) unregistered_signatures: bool,
-    /// Si la sede pidió `headless`: lo que haga falta preguntar se rechaza.
-    pub(super) headless: bool,
-    /// Pistas de guardado, si esta firma viene de `signandsave`.
-    pub(super) saving: Option<Box<SavingHints>>,
-    /// La firma que hace el servidor trifásico de la sede, si se hace allí.
-    pub(super) through_the_server: Option<ServerSignature>,
-    /// El área de la firma visible que falta por marcar, si falta.
-    pub(super) area: Option<AreaToMark>,
-}
-
-/// Lo que la firma contra el servidor trifásico lleva del consentimiento a la entrega.
-#[derive(Clone, Debug)]
-pub(super) struct ServerSignature {
-    /// El firmador trifásico que eligió la sede.
-    pub(super) format: ServerFormat,
-    /// Los datos, o la firma previa en cofirma y contrafirma.
-    pub(super) document: Vec<u8>,
-    /// La operación que pidió la sede.
-    pub(super) round: SignatureRound,
-    /// El certificado que la persona consintió, una vez consentido.
-    pub(super) chosen: Option<TokenCertificate>,
-    /// La firma que devolvió la postfirma, una vez hecha.
-    pub(super) signed: Option<SiteSignature>,
-}
-
 impl LiveErrand {
     /// Trámite de prueba inicializado con un códec específico.
     #[cfg(test)]
@@ -230,6 +150,7 @@ impl LiveErrand {
         }
         self.cancel_backing_timeout();
         *crate::lock(&self.codec) = Some(Arc::clone(&errand.codec));
+        *crate::lock(&self.origin) = SiteOrigin::absent();
         *live = Some(errand);
         true
     }
@@ -263,6 +184,16 @@ impl LiveErrand {
     /// Petición original recibida de la sede.
     pub fn the_request(&self) -> Option<AfirmaUrl> {
         crate::lock(&self.asked).clone()
+    }
+
+    /// Registra el origen de la operación que atiende, sustituyendo al de la anterior.
+    pub fn note_origin(&self, origin: SiteOrigin) {
+        *crate::lock(&self.origin) = origin;
+    }
+
+    /// Origen de la operación que atiende, o su ausencia mientras no haya llegado ninguna.
+    pub fn origin(&self) -> SiteOrigin {
+        crate::lock(&self.origin).clone()
     }
 
     /// Trámite activo actual, si lo hay.
@@ -411,147 +342,6 @@ impl LiveErrand {
     /// Olvida el certificado fijado en esta sesión.
     pub(super) fn unstick(&self) {
         *crate::lock(&self.stuck) = None;
-    }
-
-    /// Registra el filtro de consentimiento de identidad y si la sede lo pegó.
-    pub(super) fn remember_identity(&self, filter: SiteFilter, sticky: bool) {
-        *crate::lock(&self.consent) = Some(PendingConsent::Identity(filter, sticky));
-    }
-
-    /// Registra los datos de consentimiento de firma.
-    pub(super) fn remember_signature(&self, pending: PendingSignature) {
-        *crate::lock(&self.consent) = Some(PendingConsent::Signature(pending));
-    }
-
-    /// Registra la confirmación pendiente de una firma que el validador no da por buena sola.
-    pub(super) fn remember_the_confirmation(&self, consent: ConfirmationConsent) {
-        *crate::lock(&self.consent) = Some(PendingConsent::Confirmation(consent));
-    }
-
-    /// Confirmación pendiente, si el trámite está esperando una.
-    pub(super) fn the_confirmation_pending(&self) -> Option<ConfirmationConsent> {
-        match &*crate::lock(&self.consent) {
-            Some(PendingConsent::Confirmation(consent)) => Some(consent.clone()),
-            _ => None,
-        }
-    }
-
-    /// Registra el lote pendiente de consentimiento o de postfirma.
-    pub(super) fn remember_the_batch(&self, pending: PendingBatch) {
-        *crate::lock(&self.consent) = Some(PendingConsent::Batch(pending));
-    }
-
-    /// Si el trámite tiene una firma contra el servidor trifásico consentida esperando el secreto.
-    pub fn a_server_signature_is_pending(&self) -> bool {
-        matches!(
-            &*crate::lock(&self.consent),
-            Some(PendingConsent::Signature(pending))
-                if pending.through_the_server.as_ref().is_some_and(|server| server.chosen.is_some())
-        )
-    }
-
-    /// Si el trámite tiene un lote consentido esperando el secreto.
-    pub fn a_batch_is_pending(&self) -> bool {
-        matches!(
-            &*crate::lock(&self.consent),
-            Some(PendingConsent::Batch(pending)) if pending.chosen.is_some()
-        )
-    }
-
-    /// El certificado consentido que espera el secreto sin ciclo abierto: el del lote, remoto o local, o el de la firma contra el servidor trifásico.
-    pub fn the_certificate_awaiting_the_secret(&self) -> Option<TokenCertificate> {
-        match &*crate::lock(&self.consent) {
-            Some(PendingConsent::Batch(pending)) => pending.chosen.clone(),
-            Some(PendingConsent::LocalBatch(pending)) => pending.chosen.clone(),
-            Some(PendingConsent::Signature(pending)) => pending
-                .through_the_server
-                .as_ref()
-                .and_then(|server| server.chosen.clone()),
-            _ => None,
-        }
-    }
-
-    /// Lote pendiente, si el trámite está atendiendo uno.
-    pub(super) fn the_batch_pending(&self) -> Option<PendingBatch> {
-        match &*crate::lock(&self.consent) {
-            Some(PendingConsent::Batch(pending)) => Some(pending.clone()),
-            _ => None,
-        }
-    }
-
-    /// Registra el lote local pendiente de consentimiento o de firma.
-    pub(super) fn remember_the_local_batch(&self, pending: PendingLocalBatch) {
-        *crate::lock(&self.consent) = Some(PendingConsent::LocalBatch(pending));
-    }
-
-    /// Lote local pendiente, si el trámite está atendiendo uno.
-    pub(super) fn the_local_batch_pending(&self) -> Option<PendingLocalBatch> {
-        match &*crate::lock(&self.consent) {
-            Some(PendingConsent::LocalBatch(pending)) => Some(pending.clone()),
-            _ => None,
-        }
-    }
-
-    /// Registra los datos del diálogo de guardado pendiente.
-    pub(super) fn remember_saving(&self, consent: SavingConsent) {
-        *crate::lock(&self.consent) = Some(PendingConsent::Saving(consent));
-    }
-
-    /// Registra los datos del selector de carga pendiente.
-    pub(super) fn remember_loading(&self, consent: LoadingConsent) {
-        *crate::lock(&self.consent) = Some(PendingConsent::Loading(consent));
-    }
-
-    /// Datos del diálogo de guardado pendiente, si el trámite está esperando uno.
-    pub fn the_saving_pending(&self) -> Option<SavingConsent> {
-        match &*crate::lock(&self.consent) {
-            Some(PendingConsent::Saving(consent)) => Some(consent.clone()),
-            _ => None,
-        }
-    }
-
-    /// Datos del selector de carga pendiente, si el trámite está esperando uno.
-    pub fn the_loading_pending(&self) -> Option<LoadingConsent> {
-        match &*crate::lock(&self.consent) {
-            Some(PendingConsent::Loading(consent)) => Some(consent.clone()),
-            _ => None,
-        }
-    }
-
-    /// Filtro de identidad pendiente y si la sede lo pegó, si lo hay.
-    pub(super) fn what_the_site_asked(&self) -> Option<(SiteFilter, bool)> {
-        match &*crate::lock(&self.consent) {
-            Some(PendingConsent::Identity(filter, sticky)) => Some((filter.clone(), *sticky)),
-            _ => None,
-        }
-    }
-
-    /// Firma consentida pendiente, si la hay.
-    pub(super) fn the_signature_consented(&self) -> Option<PendingSignature> {
-        match &*crate::lock(&self.consent) {
-            Some(PendingConsent::Signature(pending)) if pending.area.is_none() => {
-                Some(pending.clone())
-            }
-            _ => None,
-        }
-    }
-
-    /// Registra el rechazo que la ventana enseña antes de contestarlo.
-    pub(super) fn remember_the_refusal(&self, refusal: Refusal) {
-        *crate::lock(&self.consent) = Some(PendingConsent::ShownRefusal(refusal));
-    }
-
-    /// El rechazo que la ventana enseña y la sede aún no ha recibido, si lo hay.
-    pub(super) fn the_shown_refusal(&self) -> Option<Refusal> {
-        match &*crate::lock(&self.consent) {
-            Some(PendingConsent::ShownRefusal(refusal)) => Some(refusal.clone()),
-            _ => None,
-        }
-    }
-
-    /// Limpia los datos de consentimiento registrados.
-    pub(super) fn forget_the_consent(&self) {
-        *crate::lock(&self.consent) = None;
     }
 
     /// Registra el momento actual del trámite.

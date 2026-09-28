@@ -2,6 +2,21 @@ use super::*;
 use crate::identity::domain::certificate::{CertificateStatus, ListedCertificate};
 use crate::identity::domain::store::StoreClass;
 use crate::signing::domain::bridge::Format;
+use crate::site::application::errand::SiteRequest;
+use crate::site::domain::protocol::{AskedAlgorithm, SiteFilter};
+use std::collections::BTreeMap;
+
+struct NullCodec;
+
+impl ProtocolCodec for NullCodec {
+    fn decode(&self, _message: &AfirmaUrl) -> SiteRequest {
+        unimplemented!("esta prueba no decodifica ningún mensaje")
+    }
+
+    fn encode(&self, _outcome: &SiteOutcome) -> String {
+        String::new()
+    }
+}
 
 fn asking_with(label: &str) -> Moment {
     Moment::AskingForConsent {
@@ -96,4 +111,49 @@ fn ending_leaves_nothing_to_answer_with() {
     live.remember_identity(SiteFilter::default(), false);
     live.end();
     assert!(live.what_the_site_asked().is_none());
+}
+
+#[test]
+fn before_any_operation_the_origin_is_absent() {
+    let live = LiveErrand::default();
+
+    assert_eq!(live.origin(), SiteOrigin::absent());
+}
+
+#[test]
+fn a_noted_origin_replaces_the_one_of_the_previous_operation() {
+    let live = LiveErrand::default();
+
+    live.note_origin(SiteOrigin::from_header(Some("https://sede.ejemplo.gob.es")));
+    assert_eq!(
+        live.origin().host(),
+        Some("sede.ejemplo.gob.es"),
+        "el origen que llegó con la operación queda apuntado"
+    );
+
+    live.note_origin(SiteOrigin::absent());
+    assert_eq!(
+        live.origin(),
+        SiteOrigin::absent(),
+        "la operación siguiente sustituye al origen de la anterior"
+    );
+}
+
+#[test]
+fn beginning_a_new_errand_clears_the_origin_of_the_previous_one() {
+    let live = LiveErrand::default();
+    live.note_origin(SiteOrigin::from_header(Some("https://sede.ejemplo.gob.es")));
+
+    let began = live.begin(Errand::of(
+        NegotiatedCredential::Absent,
+        ArrivalMode::Awaited,
+        Arc::new(NullCodec),
+    ));
+
+    assert!(began);
+    assert_eq!(
+        live.origin(),
+        SiteOrigin::absent(),
+        "un trámite nuevo no hereda el origen del trámite anterior"
+    );
 }
