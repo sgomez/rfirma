@@ -1254,22 +1254,17 @@ msgstr "Aparença"
 msgid "preferences.rememberVisibleSignature.label"
 msgstr "Recordar l'última configuració de signatura visible"
 
-msgid "preferences.rememberVisibleSignature.hint"
-msgstr ""
-"La pàgina, la posició i el contingut del requadre es reutilitzen al document "
-"següent."
-
 msgid "preferences.consentCountdown.label"
-msgstr "Protecció contra signatures per descuit a les seus"
+msgstr "Protecció contra signatures accidentals"
+
+msgid "preferences.consentCountdown.hint"
+msgstr "S'afegeix una pausa de 3 segons abans de permetre signar."
 
 msgid "preferences.honourAutomaticSelection.label"
-msgstr "Respectar la selecció automàtica de certificat que demani la seu"
+msgstr "Utilitzar el certificat que triï la seu"
 
 msgid "preferences.honourAutomaticSelection.hint"
-msgstr ""
-"Si la seu ho demana i només accepta un dels teus certificats, s'utilitza "
-"sense preguntar-te. Si el teu magatzem no demana PIN, la signatura sortirà "
-"sense que vegis res."
+msgstr "Si només serveix un dels teus certificats, s'utilitza sense preguntar-te."
 
 msgid "preferences.rememberActivity.label"
 msgstr "Recordar la meva activitat"
@@ -1419,10 +1414,7 @@ msgid "setup.certificate.title"
 msgstr "El certificat de rFirma"
 
 msgid "setup.certificate.body"
-msgstr ""
-"Quan signes en una seu electrònica, el teu navegador s'ha de connectar amb "
-"rFirma. Perquè aquesta connexió sigui segura necessitem instal·lar un "
-"certificat propi."
+msgstr "Perquè el teu navegador es connecti amb rFirma de manera segura."
 
 msgid "setup.certificate.installing"
 msgstr "Instal·lant…"
@@ -1443,7 +1435,7 @@ msgid "setup.handler.body"
 msgstr "Ara mateix les seus electròniques obren AutoFirma."
 
 msgid "setup.handler.bodyNoAutofirma"
-msgstr "Ara mateix les seus electròniques no tenen cap programa assignat."
+msgstr "Ara mateix les seus no tenen cap programa assignat."
 
 msgid "setup.handler.done"
 msgstr "Ara obren rFirma."

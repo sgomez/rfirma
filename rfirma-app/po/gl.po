@@ -1239,21 +1239,17 @@ msgstr "Aparencia"
 msgid "preferences.rememberVisibleSignature.label"
 msgstr "Lembrar a última configuración de sinatura visible"
 
-msgid "preferences.rememberVisibleSignature.hint"
-msgstr ""
-"A páxina, a posición e o contido do cadro reutilízanse no seguinte documento."
-
 msgid "preferences.consentCountdown.label"
-msgstr "Protección contra sinaturas por descoido nas sedes"
+msgstr "Protección contra sinaturas accidentais"
+
+msgid "preferences.consentCountdown.hint"
+msgstr "Engádese unha pausa de 3 segundos antes de permitir asinar."
 
 msgid "preferences.honourAutomaticSelection.label"
-msgstr "Respectar a selección automática de certificado que pida a sede"
+msgstr "Usar o certificado que elixa a sede"
 
 msgid "preferences.honourAutomaticSelection.hint"
-msgstr ""
-"Se a sede o pide e só acepta un dos teus certificados, úsase sen "
-"preguntarche. Se o teu almacén non pide PIN, a sinatura sairá sen que vexas "
-"nada."
+msgstr "Se só serve un dos teus certificados, úsase sen preguntarche."
 
 msgid "preferences.rememberActivity.label"
 msgstr "Lembrar a miña actividade"
@@ -1403,10 +1399,7 @@ msgid "setup.certificate.title"
 msgstr "O certificado de rFirma"
 
 msgid "setup.certificate.body"
-msgstr ""
-"Cando asinas nunha sede electrónica, o teu navegador ten que conectarse con "
-"rFirma. Para que esa conexión sexa segura necesitamos instalar un "
-"certificado propio."
+msgstr "Para que o teu navegador se conecte con rFirma de forma segura."
 
 msgid "setup.certificate.installing"
 msgstr "Instalando…"
@@ -1427,7 +1420,7 @@ msgid "setup.handler.body"
 msgstr "Agora mesmo as sedes electrónicas abren AutoFirma."
 
 msgid "setup.handler.bodyNoAutofirma"
-msgstr "Agora mesmo as sedes electrónicas non teñen ningún programa asignado."
+msgstr "Agora mesmo as sedes non teñen ningún programa asignado."
 
 msgid "setup.handler.done"
 msgstr "Agora abren rFirma."

@@ -297,7 +297,7 @@ describe("SetupWizard", () => {
     await user.click(screen.getByRole("button", { name: "Continuar" }));
 
     expect(
-      screen.getByText("Ahora mismo las sedes electrónicas no tienen ningún programa asignado."),
+      screen.getByText("Ahora mismo las sedes no tienen ningún programa asignado."),
     ).toBeInTheDocument();
   });
 

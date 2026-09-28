@@ -237,17 +237,25 @@ describe("PreferencesView", () => {
     expect(onChange).toHaveBeenCalledWith({ ...defaults, notifyNewVersion: false });
   });
 
-  it("turns the protection against accidental signing on sites off without asking", async () => {
+  it("turns the protection against accidental signing off without asking", async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
     renderView({ onChange });
     await openTab(user, "Firma");
 
-    await user.click(
-      screen.getByRole("switch", { name: /Protección contra firmas por descuido en las sedes/ }),
-    );
+    await user.click(screen.getByRole("switch", { name: /Protección contra firmas accidentales/ }));
 
     expect(onChange).toHaveBeenCalledWith({ ...defaults, consentCountdown: false });
+  });
+
+  it("shows the countdown's hint, shared with the setup wizard", async () => {
+    const user = userEvent.setup();
+    renderView();
+    await openTab(user, "Firma");
+
+    expect(
+      screen.getByText("Se añade una pausa de 3 segundos antes de permitir firmar."),
+    ).toBeInTheDocument();
   });
 
   it("lets the site choose its only accepted certificate once turned on", async () => {
@@ -257,7 +265,7 @@ describe("PreferencesView", () => {
     await openTab(user, "Firma");
 
     const toggle = screen.getByRole("switch", {
-      name: /Respetar la selección automática de certificado que pida la sede/,
+      name: /Usar el certificado que elija la sede/,
     });
     expect(toggle).not.toBeChecked();
     await user.click(toggle);
