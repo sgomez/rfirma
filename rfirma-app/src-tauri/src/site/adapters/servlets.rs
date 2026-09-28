@@ -34,15 +34,14 @@ impl Servlets for RelayServlets {
         let client = self.client.clone();
         execute_outside_tokio(move || {
             let params = operation_params("get", &id, None);
-            client
-                .post(url)
-                .form(&params)
-                .send()
-                .map_err(unreachable)?
-                .error_for_status()
-                .map_err(unreachable)?
-                .text()
-                .map_err(unreachable)
+            let response = client.post(url).form(&params).send().map_err(unreachable)?;
+            if super::is_rejection(response.status()) {
+                return Err(RelayError::new(
+                    Situation::ServletUnreachable,
+                    super::rejection_detail(response),
+                ));
+            }
+            response.text().map_err(unreachable)
         })
     }
 
@@ -53,13 +52,13 @@ impl Servlets for RelayServlets {
         let client = self.client.clone();
         execute_outside_tokio(move || {
             let params = operation_params("put", &id, Some(&data));
-            client
-                .post(url)
-                .form(&params)
-                .send()
-                .map_err(unreachable)?
-                .error_for_status()
-                .map_err(rejected)?;
+            let response = client.post(url).form(&params).send().map_err(unreachable)?;
+            if super::is_rejection(response.status()) {
+                return Err(RelayError::new(
+                    Situation::UploadRejected,
+                    super::rejection_detail(response),
+                ));
+            }
             Ok(())
         })
     }
@@ -101,10 +100,6 @@ fn operation_params<'a>(
 
 fn unreachable(error: reqwest::Error) -> RelayError {
     RelayError::new(Situation::ServletUnreachable, error.to_string())
-}
-
-fn rejected(error: reqwest::Error) -> RelayError {
-    RelayError::new(Situation::UploadRejected, error.to_string())
 }
 
 /// La URL del servlet ya leída; su forma la comprobó el dominio al leer la invocación.

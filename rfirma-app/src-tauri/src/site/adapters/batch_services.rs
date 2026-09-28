@@ -47,11 +47,11 @@ impl RelayBatchServices {
                 .send()
                 .map_err(|error| BatchError::new(unreachable, error.to_string()))?;
             let status = response.status();
-            if status.is_client_error() || status.is_server_error() {
+            if super::is_rejection(status) {
                 return Err(BatchError::answered(
                     invalid,
                     status.as_u16(),
-                    status.to_string(),
+                    super::rejection_detail(response),
                 ));
             }
 

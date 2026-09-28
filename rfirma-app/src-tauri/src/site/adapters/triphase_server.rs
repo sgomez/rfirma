@@ -35,13 +35,18 @@ impl TriphaseServer for HttpTriphaseServer {
         let client = self.client.clone();
         let form = form.to_vec();
         outside_tokio(move || {
-            client
+            let response = client
                 .post(url)
                 .form(&form)
                 .send()
-                .map_err(|error| unreachable(&error))?
-                .error_for_status()
-                .map_err(|error| unreachable(&error))?
+                .map_err(|error| unreachable(&error))?;
+            if super::is_rejection(response.status()) {
+                return Err(TriphaseServerError::new(
+                    Situation::ServerUnreachable,
+                    super::rejection_detail(response),
+                ));
+            }
+            response
                 .bytes()
                 .map(|bytes| bytes.to_vec())
                 .map_err(|error| unreachable(&error))

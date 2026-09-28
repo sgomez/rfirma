@@ -48,3 +48,20 @@ fn a_url_without_credentials_sends_no_authorization_header() {
 
     assert_eq!(received.recv().expect("llego la peticion"), None);
 }
+
+#[test]
+fn a_rejected_download_keeps_the_body_of_the_error() {
+    let url = crate::site::adapters::header_probe::rejecting_server(
+        "404 Not Found",
+        "ERR-01: documento desconocido",
+    );
+
+    let error = HttpDataSource
+        .download(&url)
+        .expect_err("el servidor rechaza");
+
+    assert!(
+        error.to_string().contains("ERR-01: documento desconocido"),
+        "{error}"
+    );
+}
