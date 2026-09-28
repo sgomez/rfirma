@@ -52,6 +52,17 @@ describe("el servidor intermedio", () => {
     const response = await withTheParametersInTheQuery(server.storage, "op=put&id=uno&dat=hola");
     assert.equal(response.status, 400);
   });
+
+  it("contesta al op=check que la página manda por GET en la query", async () => {
+    const server = await anIntermediateServer();
+    for (const servlet of [server.storage, server.retrieve]) {
+      const withCheck = new URL(servlet);
+      withCheck.search = "op=check";
+      const response = await fetch(withCheck);
+      assert.equal(response.status, 200);
+      assert.equal(await response.text(), "OK\n");
+    }
+  });
 });
 
 describe("el servidor trifásico", () => {
