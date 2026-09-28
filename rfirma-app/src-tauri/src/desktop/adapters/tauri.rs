@@ -199,7 +199,6 @@ pub fn choose_site_signature_handler(
 /// Consulta el estado de las señales de la instalación para el panel de estado.
 #[tauri::command(async)]
 pub fn read_status(
-    desktop: State<'_, DesktopRoot>,
     identity: State<'_, IdentityRoot>,
     site: State<'_, SiteRoot>,
     recheck: bool,
@@ -210,15 +209,7 @@ pub fn read_status(
     let handlers =
         crate::desktop::application::handlers::who_handles(&DesktopRegistry::of(channel, list));
     vec![
-        crate::desktop::application::status::check_version_signal(
-            crate::desktop::application::version::Version::running(),
-            desktop.memory.as_ref(),
-            &crate::desktop::adapters::releases::latest_release,
-            channel,
-            recheck,
-            std::time::SystemTime::now(),
-        )
-        .into(),
+        crate::desktop::application::status::checking_version_signal().into(),
         crate::desktop::application::status::evaluate_site_signature_signal(handlers).into(),
         local_ca_certificate_signal(&site, recheck).into(),
         crate::desktop::application::status::evaluate_user_certificates_signal(
