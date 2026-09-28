@@ -467,6 +467,7 @@ mod tests {
             signature: None,
             data: None,
             protocol_conditions: Vec::new(),
+            requests: None,
         }
     }
 

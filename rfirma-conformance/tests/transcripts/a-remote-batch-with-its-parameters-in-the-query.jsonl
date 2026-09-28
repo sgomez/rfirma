@@ -1,0 +1,7 @@
+{"event":"launch","url":"afirma://websocket?ports=63882,64985,61588&v=4&jvc=3&idsession=c2OHfauB9WwtfK57ltJp"}
+{"event":"request","service":"presigner","method":"POST","path":"/batch","query":["certs","json"],"body":[],"content_type":null,"headers":{"origin":null,"authorization":null,"accept":"*/*"}}
+{"event":"presign","signs":2,"certs":1}
+{"event":"request","service":"postsigner","method":"POST","path":"/batch","query":["certs","json","tridata"],"body":[],"content_type":null,"headers":{"origin":null,"authorization":null,"accept":"*/*"}}
+{"event":"postsign","ids":["uno","dos"],"pre":"1"}
+{"event":"condition","name":"through-both-servlets","verdict":"compliant","observation":"el lote pasó por los dos servlets"}
+{"event":"success","result":"eyJzaWducyI6W119","certificate":"MIIB"}

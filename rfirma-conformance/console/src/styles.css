@@ -2063,7 +2063,7 @@ select.input {
 
 .sides {
   display: grid;
-  grid-template-columns: 1fr 1fr auto;
+  grid-template-columns: 1fr 1fr auto auto;
   gap: var(--s3);
   margin-bottom: var(--s4);
 }
@@ -2165,6 +2165,30 @@ select.input {
   background: var(--surface-3);
   color: var(--text-2);
   font-size: var(--text-xs);
+}
+
+.compare-table td .tag {
+  margin-left: var(--s2);
+}
+
+.requests-sides {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s3);
+}
+
+.request-list {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s2);
+  min-width: 0;
+  font-size: var(--text-s);
+}
+
+.request-list ol {
+  margin: 0;
+  padding-left: var(--s4);
+  overflow-wrap: anywhere;
 }
 
 .compare-table td.tone-ok .result-label,

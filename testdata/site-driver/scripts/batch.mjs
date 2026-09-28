@@ -27,7 +27,7 @@ import {
 } from "../lib/patches.mjs";
 import { isABarePkcs1 } from "../lib/pkcs1.mjs";
 import { aPublishedScript, withoutAChoice } from "../lib/script.mjs";
-import { servletServer, theFormParameters, theServletParameters } from "../lib/servlet.mjs";
+import { servletServer, theServletParameters } from "../lib/servlet.mjs";
 
 const THROUGH_BOTH_SERVLETS = "through-both-servlets";
 const EVERY_DOCUMENT_SIGNED_WITHOUT_A_DIALOGUE = "every-document-signed-without-a-dialogue";
@@ -56,26 +56,31 @@ const THE_PARAMETERS_IN_THE_BODY = "the-servlet-parameters-in-the-body";
 const theBodyOnlyCalls = [];
 
 /** Solo los parámetros del cuerpo del POST, como los lee un servlet que no mira la query. */
-async function theBodyParameters(request) {
+function theBodyParameters(request, form) {
   theBodyOnlyCalls.push({
     withAQuery: new URL(request.url, "http://127.0.0.2").search !== "",
     asAForm: String(request.headers["content-type"]).startsWith(
       "application/x-www-form-urlencoded",
     ),
   });
-  return theFormParameters(request);
+  return form;
 }
 
-/** Un servlet del lote sirviendo HTTP en un puerto libre del loopback, y su URL absoluta. */
-export async function servletServing(answering, reading = theServletParameters) {
-  const server = await servletServer(
+/** Un servlet del lote en un puerto libre del loopback; con `service`, cuenta cada petición que recibe. */
+export function aBatchServlet(answering, { reading = theServletParameters, service, telling } = {}) {
+  return servletServer(
     async (parameters, _request, response) => {
       const { status, body } = answering(parameters);
       response.writeHead(status, { "content-type": "application/json" });
       response.end(body);
     },
-    { reading },
+    { reading, service, telling },
   );
+}
+
+/** Un servlet del lote sirviendo HTTP en un puerto libre del loopback, y su URL absoluta. */
+export async function servletServing(answering, options) {
+  const server = await aBatchServlet(answering, options);
   return `http://127.0.0.2:${server.address().port}/batch`;
 }
 
@@ -298,8 +303,8 @@ async function theBatchScript(
   measuring = theRemoteBatchConditions,
   reading = theServletParameters,
 ) {
-  const presigner = await servletServing(presigning, reading);
-  const postsigner = await servletServing(thePostsigner, reading);
+  const presigner = await servletServing(presigning, { reading, service: "presigner" });
+  const postsigner = await servletServing(thePostsigner, { reading, service: "postsigner" });
 
   AutoScript.createBatch("SHA256", "CAdES", "sign");
   AutoScript.addDocumentToBatch("uno", Buffer.from("primer documento").toString("base64"));
@@ -376,8 +381,8 @@ function theXmlPostsigner(query) {
 
 /** Un lote de dos documentos firmado con el `signBatch` heredado contra los dos servlets del banco. */
 async function theBatchXmlScript() {
-  const presigner = await servletServing(theXmlPresigner);
-  const postsigner = await servletServing(theXmlPostsigner);
+  const presigner = await servletServing(theXmlPresigner, { service: "presigner" });
+  const postsigner = await servletServing(theXmlPostsigner, { service: "postsigner" });
 
   const lote =
     '<signbatch algorithm="SHA256" stoponerror="false">' +
@@ -763,10 +768,13 @@ function theResultAlone(result, certificate) {
 /** Con `jsonBatch`, el lote se lee como XML heredado: al presigner le llega `xml` y no `json`. */
 async function theBatchWithJsonbatchCapitalisedScript() {
   let received = null;
-  const presigner = await servletServing((query) => {
-    received = { xml: query.has("xml"), json: query.has("json") };
-    return { status: 400, body: "el lote de esta prueba no se prefirma" };
-  });
+  const presigner = await servletServing(
+    (query) => {
+      received = { xml: query.has("xml"), json: query.has("json") };
+      return { status: 400, body: "el lote de esta prueba no se prefirma" };
+    },
+    { service: "presigner" },
+  );
   const theCondition = () =>
     aMeasuredConditionEvent(
       THE_BATCH_READ_AS_XML,
@@ -850,10 +858,10 @@ function theLocalBatchInFormatNoneScript() {
 /** Un presigner que contesta siempre con el estado HTTP dado, sin llegar a prefirmar. */
 function aPresignerAnswering(status) {
   return async () => {
-    const presigner = await servletServing(() => ({
-      status,
-      body: `el presigner responde ${status}`,
-    }));
+    const presigner = await servletServing(
+      () => ({ status, body: `el presigner responde ${status}` }),
+      { service: "presigner" },
+    );
     AutoScript.createBatch("SHA256", "CAdES", "sign");
     AutoScript.addDocumentToBatch("uno", Buffer.from("primer documento").toString("base64"));
     AutoScript.signBatchProcess(true, presigner, presigner, null, ...theBatchCallbacks());

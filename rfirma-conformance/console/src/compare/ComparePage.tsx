@@ -1,14 +1,21 @@
 import { useEffect, useId, useState } from "react";
 import { useSearchParams } from "react-router";
 import type { Comparison } from "../contract/Comparison";
+import type { ReceivedRequest } from "../contract/ReceivedRequest";
 import type { ReportEntry } from "../contract/ReportEntry";
 import type { Row } from "../contract/Row";
 import type { Side } from "../contract/Side";
 import { useLive } from "../suite/live";
 import { ResultIcon } from "../ui/icons";
-import { calendarDate, clientName, resultTone } from "../words";
+import {
+  calendarDate,
+  clientName,
+  remoteServiceName,
+  requestsComparisonName,
+  resultTone,
+} from "../words";
 
-/** Dos informes frente a frente, con solo las comprobaciones cuyo resultado difiere. */
+/** Dos informes frente a frente, con solo las comprobaciones cuyo resultado o cuyo envío difiere. */
 export function ComparePage() {
   const { snapshot, suite } = useLive();
   const [params, setParams] = useSearchParams();
@@ -83,7 +90,10 @@ export function ComparePage() {
     <>
       <header className="page-head">
         <h1>Comparar informes</h1>
-        <p className="muted">Solo lo que difiere, por conjunto y en el orden del catálogo.</p>
+        <p className="muted">
+          Solo lo que difiere, en el resultado o en el envío, por conjunto y en el orden del
+          catálogo.
+        </p>
       </header>
       <form
         className="compare-form"
@@ -145,7 +155,7 @@ function SideCard({ letter, side }: { letter: string; side: Side }) {
 }
 
 function ComparisonTable({ comparison }: { comparison: Comparison }) {
-  const differing = comparison.rows.filter((row) => row.differ);
+  const differing = comparison.rows.filter((row) => row.differ || row.requests === "differ");
   const sets = [...new Set(differing.map((row) => row.set))];
   return (
     <section className="comparison" aria-label="Diferencias">
@@ -158,11 +168,18 @@ function ComparisonTable({ comparison }: { comparison: Comparison }) {
             {comparison.differing === 1 ? "comprobación difiere" : "comprobaciones difieren"}
           </span>
         </div>
+        <div className="differing">
+          <strong>{comparison.requests_differing}</strong>
+          <span>{comparison.requests_differing === 1 ? "envío difiere" : "envíos difieren"}</span>
+        </div>
       </div>
       {differing.length === 0 ? (
         <div className="verdict tone-ok" role="status">
           <ResultIcon result="CONFORME" size={20} />
-          <p>Los dos informes dan el mismo resultado en todas las comprobaciones.</p>
+          <p>
+            Los dos informes dan el mismo resultado en todas las comprobaciones, y ningún envío
+            difiere.
+          </p>
         </div>
       ) : (
         <table className="table compare-table">
@@ -197,10 +214,31 @@ function ComparisonTable({ comparison }: { comparison: Comparison }) {
 
 function ComparisonRow({ row }: { row: Row }) {
   return (
+    <>
+      <ResultsRow row={row} />
+      {row.requests === "differ" && (
+        <tr className="requests-row">
+          <td colSpan={4}>
+            <div className="requests-sides">
+              <RequestList letter="A" requests={row.a_requests ?? []} />
+              <RequestList letter="B" requests={row.b_requests ?? []} />
+            </div>
+          </td>
+        </tr>
+      )}
+    </>
+  );
+}
+
+function ResultsRow({ row }: { row: Row }) {
+  return (
     <tr>
       <td>
         <code>{row.id}</code>
         <span className="muted nowrap"> · cap. {row.chapter}</span>
+        <span className={row.requests === "differ" ? "tag tag-accent" : "tag"}>
+          envío: {requestsComparisonName[row.requests]}
+        </span>
       </td>
       <td className={`tone-${resultTone[row.a]}`}>
         <span className="result-label">
@@ -219,4 +257,36 @@ function ComparisonRow({ row }: { row: Row }) {
       </td>
     </tr>
   );
+}
+
+function RequestList({ letter, requests }: { letter: string; requests: ReceivedRequest[] }) {
+  return (
+    <div className="request-list">
+      <span className="side-letter">{letter}</span>
+      {requests.length === 0 ? (
+        <p className="muted">Ninguna petición.</p>
+      ) : (
+        <ol aria-label={`Peticiones de ${letter}`}>
+          {requests.map((request, index) => (
+            // biome-ignore lint/suspicious/noArrayIndexKey: dos peticiones iguales son dos llegadas
+            <li key={index}>{describeRequest(request)}</li>
+          ))}
+        </ol>
+      )}
+    </div>
+  );
+}
+
+function describeRequest(request: ReceivedRequest): string {
+  const names = (list: string[]) => (list.length === 0 ? "—" : list.join(", "));
+  const headers = Object.entries(request.headers)
+    .filter(([, value]) => value !== null)
+    .map(([name, value]) => `${name}: ${value}`);
+  return [
+    `${remoteServiceName[request.service]} ${request.method} ${request.path}`,
+    `query: ${names(request.query)}`,
+    `cuerpo: ${names(request.body)}`,
+    request.content_type ?? "sin Content-Type",
+    ...headers,
+  ].join(" · ");
 }

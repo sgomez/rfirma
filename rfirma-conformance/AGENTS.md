@@ -34,15 +34,15 @@ consola. Sus pruebas se corren con `cargo test` dentro de este directorio; las d
 | `src/label.rs` | Las etiquetas de una comprobación, su lista cerrada y su lectura del `explained_by` del catálogo; no cambian el resultado. |
 | `src/outcome.rs` | El resultado de una comprobación, sus nombres en pantalla y PENDIENTE. |
 | `src/validation.rs` | La validación de un informe contra una referencia: validado o sus discrepancias, que son fallos de la suite o de la referencia. |
-| `src/errand.rs` | El trámite: su clave, lo observado que se guarda, el seam `ErrandRunner` con su adaptador de Node y su falso de tramas grabadas, y lo que se extrae de cada evento. |
+| `src/errand.rs` | El trámite: su clave, lo observado que se guarda con sus peticiones, el seam `ErrandRunner` con su adaptador de Node y su falso de tramas grabadas, y lo que se extrae de cada evento. |
 | `src/report.rs` | El informe en disco, `reports/conformance/<nombre>/dossier.json`, con el estado de cada comprobación y los trámites observados por clave: lo ve cualquiera, lo continúa solo su cliente. |
 | `src/transcript.rs` | Las tramas y el registro de cada comprobación, en `transcripts/` dentro del informe. |
 | `src/livelog.rs` | La línea de registro marcada por procedencia (`sede`, `cliente`, `suite`), en fichero y en vivo. |
-| `src/comparison.rs` | La comparación de dos informes, comprobación a comprobación en el orden del catálogo y con su conjunto. |
+| `src/comparison.rs` | La comparación de dos informes, comprobación a comprobación en el orden del catálogo y con su conjunto, con si sus peticiones coinciden. |
 | `../testdata/site-driver/driver.mjs` | La sede bajo Node: corre un guion en un modo, o publica el manifiesto con `--manifest`; la comparte con los `conformance_*.rs` de la aplicación. |
 | `../testdata/site-driver/manifest.mjs` | El manifiesto: los modos y todos los guiones, cada uno con su sede, su familia, sus modos, sus condiciones y si es solo del banco. |
-| `../testdata/site-driver/lib/` | Lo común a los guiones: eventos y condiciones, modos, parches del `autoscript.js`, navegador mínimo, documentos de referencia, el servidor falso de servlet compartido, los analizadores de firma (CMS, XML, ZIP, PDF y PKCS#1) con los que se miden las condiciones, su canonicalización XML y la verificación con la clave del certificado devuelto (ADR-0031). |
-| `../testdata/site-driver/test/` | Las pruebas de los analizadores de firma, que se corren con `node --test test/*.test.mjs`, y sus muestras hechas con OpenSSL y `zip`. |
+| `../testdata/site-driver/lib/` | Lo común a los guiones: eventos y condiciones, modos, parches del `autoscript.js`, navegador mínimo, documentos de referencia, el servidor falso de servlet compartido, que emite cada petición que recibe, los analizadores de firma (CMS, XML, ZIP, PDF y PKCS#1) con los que se miden las condiciones, su canonicalización XML y la verificación con la clave del certificado devuelto (ADR-0031). |
+| `../testdata/site-driver/test/` | Las pruebas de los analizadores de firma y de la petición que emiten los servlets del lote, que se corren con `node --test test/*.test.mjs`, y sus muestras hechas con OpenSSL y `zip`. |
 | `../testdata/site-driver/certificates/` | Los certificados, sin su clave, del kit de la FNMT que montan los almacenes `several`, `expired` y `token_apart`: con ellos los guiones reconocen qué certificado volvió. |
 | `../testdata/site-driver/scripts/` | Los guiones, un módulo por familia: certificado, firma, petición, ficheros, lote, servidor intermedio servido por HTTP, canal WebSocket y socket a mano. |
 | `tests/catalogue_matches_the_docs.rs` | El cruce del catálogo, leído con el cargador del crate, y la referencia con `docs/afirma/1.9.2/`: capítulos, tabla SAF, fichas A1 y el registro de bugs, el bug de cada comprobación con la causa de la referencia, y cada etiqueta `rfirma:adr-NNNN` con el ADR que la cita. |
@@ -58,7 +58,7 @@ consola. Sus pruebas se corren con `cargo test` dentro de este directorio; las d
 | `console/src/session/` | La sesión activa en `/`: los pasos cliente, informe y ejecutar, y la barra de la tanda en curso con su llamada a la persona. |
 | `console/src/report/` | Un informe, con o sin controles de ejecución: conjuntos plegables, filtro por resultado, la ficha de cada comprobación, la validación y las tramas. |
 | `console/src/log/LogDock.tsx` | El registro al pie, con filtro por procedencia, pausa y altura ajustable. |
-| `console/src/compare/ComparePage.tsx` | La comparación de dos informes: solo lo que difiere, por conjunto. |
+| `console/src/compare/ComparePage.tsx` | La comparación de dos informes: solo lo que difiere, en el resultado o en las peticiones, por conjunto. |
 | `console/src/ui/` | Piezas sin dominio: iconos de resultado, tema, atajos de teclado, diálogo, reloj y notificaciones del escritorio. |
 | `console/src/words.ts` | Los nombres en pantalla de resultados y clientes, y el formato de fechas y duraciones. |
 | `console/src/styles.css` | La hoja de estilos única, con el tema claro y el oscuro en variables CSS. |

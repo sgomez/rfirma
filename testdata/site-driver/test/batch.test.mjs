@@ -1,10 +1,10 @@
-// Las pruebas de lo que juzgan los guiones de lote de la sede con lo que devuelve el cliente.
+// Las pruebas de lo que juzgan los guiones de lote de la sede y de la petición que cuentan sus servlets.
 
 import assert from "node:assert/strict";
 import { beforeEach, describe, it } from "node:test";
 
 import { declaringTheConditions } from "../lib/events.mjs";
-import { theLocalBatchWithoutADialogueConditions } from "../scripts/batch.mjs";
+import { aBatchServlet, theLocalBatchWithoutADialogueConditions } from "../scripts/batch.mjs";
 
 const EVERY_DOCUMENT_SIGNED = "every-document-signed-without-a-dialogue";
 
@@ -33,5 +33,82 @@ describe("the local batch asking for a visible signature", () => {
 
   it("does not hold when the batch came back without the pdf", () => {
     assert.equal(theVerdictOf({ signs: [] }), "discrepant");
+  });
+});
+
+describe("the request the batch presigner tells", () => {
+  async function theRequestTold({ query = "", body = null, headers = {} }) {
+    const told = [];
+    const server = await aBatchServlet(() => ({ status: 200, body: "{}" }), {
+      service: "presigner",
+      telling: (event) => told.push(event),
+    });
+    try {
+      await fetch(`http://127.0.0.2:${server.address().port}/batch${query}`, {
+        method: "POST",
+        headers,
+        body,
+      });
+    } finally {
+      server.closeAllConnections();
+      server.close();
+    }
+    assert.equal(told.length, 1);
+    return told[0];
+  }
+
+  const A_FORM = { "content-type": "application/x-www-form-urlencoded; charset=UTF-8" };
+
+  it("names the parameters in the query without their values", async () => {
+    const request = await theRequestTold({ query: "?op=pre&json=eyJ9&certs=MII&json=x" });
+
+    assert.deepEqual(request, {
+      event: "request",
+      service: "presigner",
+      method: "POST",
+      path: "/batch",
+      query: ["certs", "json", "op"],
+      body: [],
+      content_type: null,
+      headers: { origin: null, authorization: null, accept: "*/*" },
+    });
+  });
+
+  it("names the parameters in the body and drops the charset of its content type", async () => {
+    const request = await theRequestTold({ body: "json=eyJ9&certs=MII", headers: A_FORM });
+
+    assert.equal(request.path, "/batch");
+    assert.deepEqual(request.query, []);
+    assert.deepEqual(request.body, ["certs", "json"]);
+    assert.equal(request.content_type, "application/x-www-form-urlencoded");
+  });
+
+  it("names the parameters in both places, each on its side", async () => {
+    const request = await theRequestTold({
+      query: "?op=pre",
+      body: "json=eyJ9&certs=MII",
+      headers: A_FORM,
+    });
+
+    assert.deepEqual(request.query, ["op"]);
+    assert.deepEqual(request.body, ["certs", "json"]);
+  });
+
+  it("keeps the origin as its scheme and host and the authorization as its scheme", async () => {
+    const request = await theRequestTold({
+      body: "json=eyJ9",
+      headers: {
+        ...A_FORM,
+        origin: "https://sede.example:8443",
+        authorization: "Bearer un-secreto",
+        accept: "Application/JSON",
+      },
+    });
+
+    assert.deepEqual(request.headers, {
+      origin: "https://sede.example",
+      authorization: "bearer",
+      accept: "application/json",
+    });
   });
 });

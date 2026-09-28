@@ -1,6 +1,8 @@
 import type { Assistance } from "./contract/Assistance";
 import type { CheckView } from "./contract/CheckView";
 import type { ClientKind } from "./contract/ClientKind";
+import type { RemoteService } from "./contract/RemoteService";
+import type { RequestsComparison } from "./contract/RequestsComparison";
 import type { ResultName } from "./contract/ResultName";
 import type { Summary } from "./contract/Summary";
 
@@ -43,6 +45,17 @@ export function explanationTally(summary: Summary): string {
 export function isExplained(check: CheckView): boolean {
   return check.state === "NO CONFORME" && check.labels.length > 0;
 }
+
+export const requestsComparisonName: Record<RequestsComparison, string> = {
+  match: "coinciden",
+  differ: "difieren",
+  not_comparable: "no comparables",
+};
+
+export const remoteServiceName: Record<RemoteService, string> = {
+  presigner: "prefirmador",
+  postsigner: "postfirmador",
+};
 
 export const assistanceName: Record<Assistance, string> = {
   none: "nada: es automática",
