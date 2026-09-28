@@ -334,13 +334,13 @@ impl PublishedClient {
     pub fn next_event(&self) -> Event {
         loop {
             let event = self.next_event_or_condition();
-            if event.name() != "condition" {
+            if !matches!(event.name(), "condition" | "request") {
                 return event;
             }
         }
     }
 
-    /// El siguiente evento, también si es una condición que midió la sede.
+    /// El siguiente evento, también si es una condición o una petición que midió la sede.
     pub fn next_event_or_condition(&self) -> Event {
         match self.events.recv_timeout(PATIENCE) {
             Ok(event) => event,

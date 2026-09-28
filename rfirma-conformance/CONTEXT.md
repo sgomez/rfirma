@@ -51,6 +51,17 @@ cumplirse todas. Si alguna llega, deciden ellas: una que falte es NO OBSERVABLE,
 salga NO CONFORME. Si no llega ninguna y la sede recibió un código de error —un SAF, CANCEL o
 MEMORY_ERROR—, el trámite no se completó, y es NO CONFORME.
 
+**Petición**:
+Lo que un servidor falso de la sede recibe del cliente, en forma normalizada: el servicio remoto
+que la atiende, el método, la ruta sin query, los nombres —nunca los valores— de los parámetros de
+la query y del cuerpo, el `Content-Type` sin parámetros y las cabeceras que cuentan (`Origin` como
+esquema y host, de `Authorization` solo su esquema, y `Accept`). El trámite guarda las suyas en
+orden de llegada. Al comparar dos informes, las de cada comprobación **coinciden**, **difieren** o
+**no son comparables** si a uno de los dos trámites le faltan; se comparan como multiconjunto, sin
+contar el orden, y difieren aunque el resultado sea el mismo: es una vista, no cambia ningún
+resultado. No es la petición `afirma://` que la sede manda al cliente.
+_Avoid_: llamada, envío (para una sola petición)
+
 **Manifiesto**:
 Lo que la sede publica de sí misma: sus modos y sus guiones, cada uno con su sede, su familia de
 trámite y sus condiciones, y lo que solo usa el banco de la aplicación. El catálogo se valida contra

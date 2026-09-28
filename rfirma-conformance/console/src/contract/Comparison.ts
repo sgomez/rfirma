@@ -2,4 +2,4 @@
 import type { Row } from "./Row";
 import type { Side } from "./Side";
 
-export type Comparison = { a: Side, b: Side, rows: Array<Row>, differing: number, };
+export type Comparison = { a: Side, b: Side, rows: Array<Row>, differing: number, requests_differing: number, };

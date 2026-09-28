@@ -9,6 +9,7 @@ use std::thread::{spawn, JoinHandle};
 use std::time::{Duration, Instant};
 
 use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 
 use crate::catalogue::Check;
 use crate::livelog::{LiveLogSink, Provenance};
@@ -29,6 +30,38 @@ pub(crate) struct ProtocolConditionResult {
     pub(crate) observation: Option<String>,
 }
 
+/// El servicio remoto de la sede que recibe una petición del cliente.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, TS)]
+#[serde(rename_all = "snake_case")]
+#[ts(export)]
+pub(crate) enum RemoteService {
+    Presigner,
+    Postsigner,
+}
+
+/// Las cabeceras de una petición que cuentan, normalizadas: `Origin` sin puerto y de
+/// `Authorization` solo el esquema.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub(crate) struct RequestHeaders {
+    pub(crate) origin: Option<String>,
+    pub(crate) authorization: Option<String>,
+    pub(crate) accept: Option<String>,
+}
+
+/// Una petición: lo que un servidor falso de la sede recibió del cliente, sin valores.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub(crate) struct ReceivedRequest {
+    pub(crate) service: RemoteService,
+    pub(crate) method: String,
+    pub(crate) path: String,
+    pub(crate) query: Vec<String>,
+    pub(crate) body: Vec<String>,
+    pub(crate) content_type: Option<String>,
+    pub(crate) headers: RequestHeaders,
+}
+
 /// Lo que se pudo medir de un trámite: si el cliente llegó a arrancar, el código SAF que emitió,
 /// la clase con la que el cliente publicado lo envolvió, y la firma o datos que devolvió si hubo éxito.
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
@@ -39,6 +72,9 @@ pub(crate) struct ErrandOutcome {
     pub(crate) signature: Option<String>,
     pub(crate) data: Option<String>,
     pub(crate) protocol_conditions: Vec<ProtocolConditionResult>,
+    /// Las peticiones en orden de llegada; `None` en un trámite guardado antes de contarlas.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) requests: Option<Vec<ReceivedRequest>>,
 }
 
 impl ErrandOutcome {
@@ -176,6 +212,7 @@ pub(crate) fn observe(
     mut each: impl FnMut(&str),
 ) -> ErrandOutcome {
     let mut outcome = ErrandOutcome::default();
+    let mut requests = Vec::new();
     for event in events {
         each(&event);
         outcome.launched |= the_launch_url_in(&event).is_some();
@@ -194,10 +231,14 @@ pub(crate) fn observe(
         if let Some(condition) = the_protocol_condition_in(&event) {
             outcome.protocol_conditions.push(condition);
         }
+        if let Some(request) = the_request_in(&event) {
+            requests.push(request);
+        }
         if event.contains("\"event\":\"timeout\"") {
             outcome.error_type = Some(THE_EXHAUSTED_PATIENCE.to_owned());
         }
     }
+    outcome.requests = Some(requests);
     outcome
 }
 
@@ -384,6 +425,13 @@ fn the_protocol_condition_in(event: &str) -> Option<ProtocolConditionResult> {
     })
 }
 
+fn the_request_in(event: &str) -> Option<ReceivedRequest> {
+    if !event.contains("\"event\":\"request\"") {
+        return None;
+    }
+    serde_json::from_str(event).ok()
+}
+
 /// Las tramas grabadas de un trámite de verdad, en `tests/transcripts/`.
 #[cfg(test)]
 pub(crate) fn the_recorded(name: &str) -> Vec<String> {
@@ -558,6 +606,43 @@ mod tests {
 
         assert!(!outcome.launched);
         assert!(outcome.exhausted_its_patience());
+    }
+
+    #[test]
+    fn the_requests_are_kept_in_the_order_they_arrived() {
+        let outcome = observe(
+            the_recorded("a-remote-batch-with-its-parameters-in-the-body"),
+            |_| {},
+        );
+
+        let requests = outcome.requests.unwrap();
+        let services: Vec<_> = requests.iter().map(|request| request.service).collect();
+        assert_eq!(
+            services,
+            [RemoteService::Presigner, RemoteService::Postsigner]
+        );
+        assert_eq!(requests[1].body, ["certs", "json", "tridata"]);
+        assert_eq!(
+            requests[0].content_type.as_deref(),
+            Some("application/x-www-form-urlencoded")
+        );
+    }
+
+    #[test]
+    fn an_errand_without_requests_still_counts_them_as_none_arrived() {
+        let outcome = observe(the_recorded("a-rejection-with-saf-03"), |_| {});
+
+        assert_eq!(outcome.requests, Some(Vec::new()));
+    }
+
+    #[test]
+    fn an_errand_saved_before_requests_were_counted_still_reads() {
+        let saved = r#"{"launched":true,"error_type":null,"error_code":"SAF_03","signature":null,"data":null,"protocol_conditions":[]}"#;
+
+        let outcome: ErrandOutcome = serde_json::from_str(saved).unwrap();
+
+        assert_eq!(outcome.error_code.as_deref(), Some("SAF_03"));
+        assert_eq!(outcome.requests, None);
     }
 
     #[test]

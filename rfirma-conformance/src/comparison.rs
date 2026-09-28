@@ -1,11 +1,12 @@
 //! La comparación de dos informes: qué resultado dio cada uno en cada comprobación del catálogo,
-//! en su orden y con su conjunto, sin juzgar a ningún cliente.
+//! en su orden y con su conjunto, y si sus peticiones coinciden, sin juzgar a ningún cliente.
 
 use serde::Serialize;
 use ts_rs::TS;
 
 use crate::catalogue::Check;
 use crate::client::ClientKind;
+use crate::errand::{ErrandKey, ReceivedRequest};
 use crate::outcome::{result_name, ResultName};
 use crate::report::Report;
 
@@ -16,6 +17,7 @@ pub(crate) struct Comparison {
     b: Side,
     rows: Vec<Row>,
     differing: usize,
+    requests_differing: usize,
 }
 
 #[derive(Debug, Serialize, TS)]
@@ -39,6 +41,40 @@ struct Row {
     #[ts(as = "ResultName")]
     b: &'static str,
     differ: bool,
+    requests: RequestsComparison,
+    a_requests: Option<Vec<ReceivedRequest>>,
+    b_requests: Option<Vec<ReceivedRequest>>,
+}
+
+/// Si las peticiones de los dos trámites coinciden como multiconjunto, dé cada uno lo que dé.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, TS)]
+#[serde(rename_all = "snake_case")]
+#[ts(export)]
+enum RequestsComparison {
+    Match,
+    Differ,
+    NotComparable,
+}
+
+impl RequestsComparison {
+    fn of(a: Option<&[ReceivedRequest]>, b: Option<&[ReceivedRequest]>) -> Self {
+        match (a, b) {
+            (Some(a), Some(b)) if as_a_multiset(a) == as_a_multiset(b) => Self::Match,
+            (Some(_), Some(_)) => Self::Differ,
+            _ => Self::NotComparable,
+        }
+    }
+}
+
+fn as_a_multiset(requests: &[ReceivedRequest]) -> Vec<&ReceivedRequest> {
+    let mut sorted: Vec<_> = requests.iter().collect();
+    sorted.sort();
+    sorted
+}
+
+fn the_requests_in(report: &Report, check: &Check) -> Option<Vec<ReceivedRequest>> {
+    let key = ErrandKey::of(check)?;
+    report.observed(&key)?.outcome.requests.clone()
 }
 
 pub(crate) fn compare(left: &Report, right: &Report, catalogue: &[Check]) -> Comparison {
@@ -47,6 +83,8 @@ pub(crate) fn compare(left: &Report, right: &Report, catalogue: &[Check]) -> Com
         .map(|check| {
             let a = result_name(left.state_of(&check.id));
             let b = result_name(right.state_of(&check.id));
+            let a_requests = the_requests_in(left, check);
+            let b_requests = the_requests_in(right, check);
             Row {
                 id: check.id.clone(),
                 set: check.requirement.set.clone(),
@@ -55,6 +93,9 @@ pub(crate) fn compare(left: &Report, right: &Report, catalogue: &[Check]) -> Com
                 a,
                 b,
                 differ: a != b,
+                requests: RequestsComparison::of(a_requests.as_deref(), b_requests.as_deref()),
+                a_requests,
+                b_requests,
             }
         })
         .collect();
@@ -62,6 +103,10 @@ pub(crate) fn compare(left: &Report, right: &Report, catalogue: &[Check]) -> Com
         a: side_of(left),
         b: side_of(right),
         differing: rows.iter().filter(|row| row.differ).count(),
+        requests_differing: rows
+            .iter()
+            .filter(|row| row.requests == RequestsComparison::Differ)
+            .count(),
         rows,
     }
 }
@@ -76,13 +121,37 @@ fn side_of(report: &Report) -> Side {
 
 #[cfg(test)]
 mod tests {
+    use std::path::PathBuf;
+    use std::sync::Arc;
     use std::time::Duration;
 
     use super::*;
     use crate::catalogue::the_catalogue_in;
+    use crate::checks::Settlement;
     use crate::client::ClientKind;
+    use crate::errand::fake::RecordedRunner;
+    use crate::errand::{
+        the_recorded, ErrandOutcome, ErrandRunner, ObservedErrand, RemoteService, RequestHeaders,
+    };
     use crate::outcome::Outcome;
     use crate::report::HeaderCoordinates;
+    use crate::witness::fake::FakeWitness;
+    use crate::witness::Witness;
+    use crate::Probe;
+
+    const A_REMOTE_BATCH: &str = r#"
+[[check]]
+id = "a_remote_batch"
+set = "lote"
+chapter = "17"
+citation = "BatchSigner.java:340-443"
+statement = "Un lote remoto."
+
+[check.drive]
+mode = "v4"
+script = "batch"
+expects.completes.conditions = ["through-both-servlets"]
+"#;
 
     const THREE_CHECKS: &str = r#"
 [[check]]
@@ -122,9 +191,9 @@ script = "sign"
 expects.completes = {}
 "#;
 
-    fn a_report(kind: ClientKind, catalogue: &[Check], outcome: Outcome) -> Report {
+    fn a_blank_report(kind: ClientKind, catalogue: &[Check]) -> Report {
         let path = tempfile::NamedTempFile::new().unwrap().path().to_owned();
-        let mut report = Report::create(
+        Report::create(
             &path,
             kind.name(),
             kind,
@@ -135,7 +204,11 @@ expects.completes = {}
                 client_version: "1.9.2".to_owned(),
             },
         )
-        .unwrap();
+        .unwrap()
+    }
+
+    fn a_report(kind: ClientKind, catalogue: &[Check], outcome: Outcome) -> Report {
+        let mut report = a_blank_report(kind, catalogue);
         report
             .resolve("z_one", outcome, None, Duration::ZERO)
             .unwrap();
@@ -202,5 +275,151 @@ expects.completes = {}
             .unwrap();
         assert_eq!((missing.a, missing.b), ("PENDIENTE", "CONFORME"));
         assert!(missing.differ);
+    }
+
+    fn a_report_replaying(kind: ClientKind, catalogue: &[Check], recorded: &str) -> Report {
+        let mut report = a_blank_report(kind, catalogue);
+        let runner = RecordedRunner::replaying(&[("batch", the_recorded(recorded))]);
+        let probe = Probe {
+            client: PathBuf::from("/nowhere/launch-subject"),
+            trust_root: PathBuf::from("/nowhere/root.pem"),
+            report: tempfile::tempdir().unwrap().keep(),
+            patience: Duration::from_secs(1),
+            witness: Arc::new(FakeWitness::default()) as Arc<dyn Witness>,
+            runner: runner as Arc<dyn ErrandRunner>,
+        };
+        let settled = probe.run_group(&[&catalogue[0]], None, None);
+        let key = ErrandKey::of(&catalogue[0]).unwrap();
+        report.observe(key, settled.observed.unwrap()).unwrap();
+        for settlement in settled.settlements {
+            if let Settlement::Resolved {
+                id,
+                outcome,
+                observation,
+                duration,
+            } = settlement
+            {
+                report.resolve(&id, outcome, observation, duration).unwrap();
+            }
+        }
+        report
+    }
+
+    fn a_report_observing(
+        kind: ClientKind,
+        catalogue: &[Check],
+        requests: Option<Vec<ReceivedRequest>>,
+    ) -> Report {
+        let mut report = a_blank_report(kind, catalogue);
+        let observed = ObservedErrand {
+            outcome: ErrandOutcome {
+                launched: true,
+                requests,
+                ..ErrandOutcome::default()
+            },
+            transcribed_in: catalogue[0].id.clone(),
+            duration_ms: 0,
+        };
+        report
+            .observe(ErrandKey::of(&catalogue[0]).unwrap(), observed)
+            .unwrap();
+        report
+    }
+
+    fn a_request(service: RemoteService, body: &[&str]) -> ReceivedRequest {
+        ReceivedRequest {
+            service,
+            method: "POST".to_owned(),
+            path: "/batch".to_owned(),
+            query: Vec::new(),
+            body: body.iter().map(|name| (*name).to_owned()).collect(),
+            content_type: Some("application/x-www-form-urlencoded".to_owned()),
+            headers: RequestHeaders {
+                origin: None,
+                authorization: None,
+                accept: None,
+            },
+        }
+    }
+
+    #[test]
+    fn the_batch_in_the_query_against_the_batch_in_the_body_differs_with_the_same_result() {
+        let catalogue = the_catalogue_in(A_REMOTE_BATCH).unwrap();
+        let left = a_report_replaying(
+            ClientKind::Autofirma,
+            &catalogue,
+            "a-remote-batch-with-its-parameters-in-the-body",
+        );
+        let right = a_report_replaying(
+            ClientKind::Rfirma,
+            &catalogue,
+            "a-remote-batch-with-its-parameters-in-the-query",
+        );
+
+        let comparison = compare(&left, &right, &catalogue);
+
+        let row = &comparison.rows[0];
+        assert_eq!((row.a, row.b, row.differ), ("CONFORME", "CONFORME", false));
+        assert_eq!(row.requests, RequestsComparison::Differ);
+        assert_eq!(row.a_requests.as_ref().unwrap()[0].body, ["certs", "json"]);
+        assert_eq!(row.b_requests.as_ref().unwrap()[0].query, ["certs", "json"]);
+        assert_eq!(
+            (comparison.differing, comparison.requests_differing),
+            (0, 1)
+        );
+    }
+
+    #[test]
+    fn the_same_requests_in_another_order_match() {
+        let catalogue = the_catalogue_in(A_REMOTE_BATCH).unwrap();
+        let presign = a_request(RemoteService::Presigner, &["certs", "json"]);
+        let postsign = a_request(RemoteService::Postsigner, &["certs", "json", "tridata"]);
+        let left = a_report_observing(
+            ClientKind::Autofirma,
+            &catalogue,
+            Some(vec![presign.clone(), postsign.clone()]),
+        );
+        let right = a_report_observing(
+            ClientKind::Rfirma,
+            &catalogue,
+            Some(vec![postsign, presign]),
+        );
+
+        let comparison = compare(&left, &right, &catalogue);
+
+        assert_eq!(comparison.rows[0].requests, RequestsComparison::Match);
+    }
+
+    #[test]
+    fn a_request_repeated_on_one_side_only_differs() {
+        let catalogue = the_catalogue_in(A_REMOTE_BATCH).unwrap();
+        let presign = a_request(RemoteService::Presigner, &["certs", "json"]);
+        let left = a_report_observing(
+            ClientKind::Autofirma,
+            &catalogue,
+            Some(vec![presign.clone(), presign.clone()]),
+        );
+        let right = a_report_observing(ClientKind::Rfirma, &catalogue, Some(vec![presign]));
+
+        let comparison = compare(&left, &right, &catalogue);
+
+        assert_eq!(comparison.rows[0].requests, RequestsComparison::Differ);
+    }
+
+    #[test]
+    fn an_errand_without_its_requests_is_not_comparable() {
+        let catalogue = the_catalogue_in(A_REMOTE_BATCH).unwrap();
+        let before_counting = a_report_observing(ClientKind::Autofirma, &catalogue, None);
+        let counted = a_report_observing(ClientKind::Rfirma, &catalogue, Some(Vec::new()));
+        let never_run = a_blank_report(ClientKind::Rfirma, &catalogue);
+
+        for (left, right) in [(&before_counting, &counted), (&counted, &never_run)] {
+            let comparison = compare(left, right, &catalogue);
+
+            assert_eq!(
+                comparison.rows[0].requests,
+                RequestsComparison::NotComparable
+            );
+        }
     }
 }
