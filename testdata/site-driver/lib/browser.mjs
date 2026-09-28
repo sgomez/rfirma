@@ -102,9 +102,13 @@ export function installTheMinimalBrowser() {
 /** La sede publicada de mentira, cuyos servlets atiende el banco en proceso. */
 const THE_SITE_ORIGIN = "https://sede.example/";
 
+/** Con qué se marca una petición que hace la propia página, para que el servidor intermedio no la cuente como del cliente. */
+export const THE_PAGE_REQUEST_HEADER = "x-site-driver-page";
+
 /**
  * El servidor intermedio como `XMLHttpRequest`: el de la sede de mentira guarda con `op=put` y
- * devuelve con `op=get` en proceso; cualquier otro viaja por HTTP de verdad.
+ * devuelve con `op=get` en proceso; cualquier otro viaja por HTTP de verdad, marcado como de la
+ * página.
  */
 export function theIntermediateServerAsXmlHttpRequest() {
   const stored = new Map();
@@ -112,6 +116,7 @@ export function theIntermediateServerAsXmlHttpRequest() {
   return class extends theRealXmlHttpRequest() {
     send(body) {
       if (!String(this.url).startsWith(THE_SITE_ORIGIN)) {
+        this.setRequestHeader(THE_PAGE_REQUEST_HEADER, "1");
         super.send(body);
         return;
       }

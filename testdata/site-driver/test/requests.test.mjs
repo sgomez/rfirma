@@ -3,6 +3,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
+import { THE_PAGE_REQUEST_HEADER } from "../lib/browser.mjs";
 import { aBatchServlet } from "../scripts/batch.mjs";
 import { anIntermediateServer } from "../scripts/relay.mjs";
 import { aDocumentServed } from "../scripts/request.mjs";
@@ -38,6 +39,22 @@ describe("the request the intermediate server tells", () => {
     assert.equal(told[0].service, "intermediate_retrieval");
     assert.equal(told[0].path, "/afirma-signature-retriever/RetrieveService");
   });
+
+  it("does not name a request the page marked as its own", async () => {
+    const told = [];
+    const server = await anIntermediateServer({ telling: (event) => told.push(event) });
+
+    try {
+      await fetch(`${server.storage}?op=put&id=uno&dat=SG9sYQ`, {
+        method: "POST",
+        headers: { [THE_PAGE_REQUEST_HEADER]: "1" },
+      });
+    } finally {
+      await server.close();
+    }
+
+    assert.equal(told.length, 0);
+  });
 });
 
 describe("the request the triphase server tells", () => {
@@ -52,7 +69,7 @@ describe("the request the triphase server tells", () => {
       const { port } = server.address();
       await fetch(`http://127.0.0.2:${port}/batch?op=pre&cop=sign&format=CAdEStri&doc=SG9sYQ&cert=MII`);
     } finally {
-      server.close();
+      await new Promise((resolve) => server.close(resolve));
     }
 
     assert.equal(told.length, 1);

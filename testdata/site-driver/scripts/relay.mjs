@@ -1,6 +1,6 @@
 // Los guiones de la sede publicada por servidor intermedio, con sus servlets servidos por HTTP.
 
-import { theLastLaunch, theLaunchesSoFar } from "../lib/browser.mjs";
+import { THE_PAGE_REQUEST_HEADER, theLastLaunch, theLaunchesSoFar } from "../lib/browser.mjs";
 import {
   aConditionEvent,
   aMeasuredConditionEvent,
@@ -41,8 +41,12 @@ const THE_SILENCE_AFTER_THE_SPOILED_REQUEST_MS = 5000;
 /** Lo que se espera a una subida tras recuperar una petición con el StorageService local. */
 const THE_SILENCE_AFTER_THE_LOCAL_STORAGE_MS = 60000;
 
-/** El servicio remoto del StorageService o del RetrieveService, según la ruta de la petición. */
+/**
+ * El servicio remoto del StorageService o del RetrieveService, según la ruta de la petición; `null`
+ * también para las que hace la propia página, que no son la petición `RemoteService` de #1164.
+ */
 function theIntermediateService(request) {
+  if (request.headers[THE_PAGE_REQUEST_HEADER]) return null;
   const pathname = new URL(request.url, "http://127.0.0.2").pathname;
   if (pathname === THE_STORAGE_PATH) return "intermediate_storage";
   if (pathname === THE_RETRIEVE_PATH) return "intermediate_retrieval";
