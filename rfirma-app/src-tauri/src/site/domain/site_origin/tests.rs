@@ -67,6 +67,30 @@ fn an_unparseable_value_is_absent() {
 }
 
 #[test]
+fn an_empty_host_before_the_port_is_absent() {
+    let origin = SiteOrigin::from_header(Some("https://:8443"));
+    assert_eq!(origin.host(), None);
+}
+
+#[test]
+fn a_host_with_a_space_is_absent() {
+    let origin = SiteOrigin::from_header(Some("https://sede ejemplo.gob.es"));
+    assert_eq!(origin.host(), None);
+}
+
+#[test]
+fn a_non_numeric_port_is_absent() {
+    let origin = SiteOrigin::from_header(Some("https://sede.gob.es:abc"));
+    assert_eq!(origin.host(), None);
+}
+
+#[test]
+fn a_trailing_colon_with_no_port_is_absent() {
+    let origin = SiteOrigin::from_header(Some("https://sede.gob.es:"));
+    assert_eq!(origin.host(), None);
+}
+
+#[test]
 fn the_absent_constructor_has_no_host() {
     assert_eq!(SiteOrigin::absent().host(), None);
 }

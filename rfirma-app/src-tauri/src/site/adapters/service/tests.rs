@@ -31,6 +31,20 @@ fn answering_with(text: &'static str) -> Inbox {
     )
 }
 
+/// Un buzón que contesta con el mismo texto y guarda el origen que recibió cada operación.
+fn answering_and_recording_the_origin(
+    text: &'static str,
+    origin: &Arc<Mutex<Option<SiteOrigin>>>,
+) -> Inbox {
+    let recorded = Arc::clone(origin);
+    Inbox::for_operations(
+        move |_url: AfirmaUrl, origin: SiteOrigin, reply: ReplyHandle| {
+            *recorded.lock().expect("el candado") = Some(origin);
+            reply.answer(text.to_owned());
+        },
+    )
+}
+
 fn body_of(response: &[u8]) -> String {
     let text = String::from_utf8(response.to_vec()).expect("la respuesta es utf-8");
     let body = text.split("\n\n").nth(1).expect("la respuesta trae cuerpo");
@@ -81,6 +95,27 @@ async fn a_command_is_delivered_and_the_response_is_the_number_of_parts() {
     .await;
 
     assert_eq!(body_of(&response.0), "1");
+}
+
+#[tokio::test]
+async fn a_command_is_delivered_with_no_origin() {
+    let command = URL_SAFE.encode("afirma://selectcert?op=selectcert");
+    let raw = format!("cmd={command}idsession={CREDENTIAL}@EOF");
+    let origin = Arc::new(Mutex::new(None));
+
+    respond(
+        &raw,
+        true,
+        &serving(),
+        &answering_and_recording_the_origin("una_firma_corta", &origin),
+        &no_state(),
+    )
+    .await;
+
+    assert_eq!(
+        origin.lock().expect("el candado").take(),
+        Some(SiteOrigin::absent())
+    );
 }
 
 #[tokio::test]

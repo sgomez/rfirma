@@ -194,23 +194,17 @@ async fn wait_for_the_reply(
 async fn accept_with_the_origin_of_the_greeting(
     encrypted: tokio_native_tls::TlsStream<tokio::net::TcpStream>,
 ) -> Result<(Socket, SiteOrigin), tokio_tungstenite::tungstenite::Error> {
-    let origin = Arc::new(std::sync::Mutex::new(SiteOrigin::absent()));
-    let read_origin = Arc::clone(&origin);
-    let socket =
-        tokio_tungstenite::accept_hdr_async(encrypted, move |request: &Request, response| {
-            *read_origin.lock().expect("el candado") = SiteOrigin::from_header(
-                request
-                    .headers()
-                    .get("origin")
-                    .and_then(|value| value.to_str().ok()),
-            );
-            Ok(response)
-        })
-        .await?;
-    let origin = Arc::try_unwrap(origin)
-        .expect("nadie mas retiene el origen")
-        .into_inner()
-        .expect("el candado");
+    let mut origin = SiteOrigin::absent();
+    let socket = tokio_tungstenite::accept_hdr_async(encrypted, |request: &Request, response| {
+        origin = SiteOrigin::from_header(
+            request
+                .headers()
+                .get("origin")
+                .and_then(|value| value.to_str().ok()),
+        );
+        Ok(response)
+    })
+    .await?;
     Ok((socket, origin))
 }
 
