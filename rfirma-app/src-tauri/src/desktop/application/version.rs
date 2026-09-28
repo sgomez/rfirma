@@ -1,15 +1,12 @@
 //! Comprobación y comparación de versiones nuevas publicadas (ADR-0015).
 
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::desktop::domain::version_check::VersionCheck;
 use crate::desktop::ports::VersionMemory;
 
 /// Puerto de red que obtiene el cuerpo de la última publicación.
 pub type ReleaseFeed<'a> = &'a dyn Fn() -> Option<String>;
-
-/// Periodo de validez de la comprobación de versión en caché.
-pub const CACHE_TTL: Duration = Duration::from_secs(24 * 60 * 60);
 
 /// Versión semántica de tres componentes numéricos.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -56,21 +53,14 @@ pub fn new_version(
     feed: ReleaseFeed<'_>,
     now: SystemTime,
 ) -> Option<Version> {
-    let announced = match fresh_answer(memory, now) {
-        Some(cached) => cached,
-        None => ask_and_remember(memory, feed, now)?,
-    };
+    let announced = ask_and_remember(memory, feed, now).or_else(|| remembered_answer(memory))?;
 
     (announced > running).then_some(announced)
 }
 
-/// Lee la comprobación previa de la memoria si no ha caducado.
-pub(crate) fn fresh_answer(memory: &dyn VersionMemory, now: SystemTime) -> Option<Version> {
-    let check = memory.last_version_check().filter(|check| {
-        seconds_since_epoch(now).saturating_sub(check.checked_at) < CACHE_TTL.as_secs()
-    })?;
-
-    Version::parse(&check.announced)
+/// Lee la última comprobación guardada en memoria, sea cual sea su antigüedad.
+pub(crate) fn remembered_answer(memory: &dyn VersionMemory) -> Option<Version> {
+    Version::parse(&memory.last_version_check()?.announced)
 }
 
 /// Consulta el puerto de red y persiste la comprobación si es válida.

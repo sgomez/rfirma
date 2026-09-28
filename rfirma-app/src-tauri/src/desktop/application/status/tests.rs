@@ -99,7 +99,7 @@ fn version_is_checking_when_explicitly_set() {
 }
 
 #[test]
-fn check_version_signal_with_expired_cache_starts_in_checking() {
+fn check_version_signal_without_a_remembered_answer_starts_in_checking() {
     let home = tempfile::tempdir().expect("tempdir");
     let memory = a_memory(home.path());
     let running = Version::parse("0.4.1").unwrap();
@@ -118,7 +118,7 @@ fn check_version_signal_with_expired_cache_starts_in_checking() {
 }
 
 #[test]
-fn check_version_signal_with_fresh_cache_returns_cached_verdict() {
+fn check_version_signal_without_recheck_returns_the_remembered_verdict() {
     let home = tempfile::tempdir().expect("tempdir");
     let memory = a_memory(home.path());
     let running = Version::parse("0.4.1").unwrap();

@@ -1,6 +1,7 @@
+use std::cell::Cell;
 use std::time::{Duration, SystemTime};
 
-use super::{new_version, Version, CACHE_TTL};
+use super::{new_version, Version};
 use crate::desktop::domain::version_check::VersionCheck;
 use crate::signing::application::tests::a_memory;
 
@@ -73,7 +74,39 @@ fn without_network_there_is_silence_and_the_cache_is_left_untouched() {
 }
 
 #[test]
-fn within_twenty_four_hours_the_port_is_not_asked_again() {
+fn the_feed_is_asked_even_when_the_last_answer_was_a_moment_ago() {
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let memory = a_memory(home.path());
+    memory
+        .remember_version_check(VersionCheck {
+            checked_at: 1_756_000_000,
+            announced: "0.4.0".to_string(),
+        })
+        .expect("deberia anotarse");
+    let asked = Cell::new(false);
+
+    let announced = new_version(
+        Version::parse("0.3.0").expect("es una version"),
+        &memory,
+        &|| {
+            asked.set(true);
+            Some(a_release("v0.5.0"))
+        },
+        at(1_756_000_001),
+    );
+
+    assert!(
+        asked.get(),
+        "se pregunta a la fuente de publicaciones aunque la ultima respuesta sea reciente"
+    );
+    assert_eq!(
+        announced.map(|version| version.to_string()),
+        Some("0.5.0".into())
+    );
+}
+
+#[test]
+fn without_a_response_the_last_known_version_is_used() {
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
     let memory = a_memory(home.path());
     memory
@@ -86,8 +119,8 @@ fn within_twenty_four_hours_the_port_is_not_asked_again() {
     let announced = new_version(
         Version::parse("0.3.0").expect("es una version"),
         &memory,
-        &|| panic!("no se puede salir a la red antes de que caduque la cache"),
-        at(1_756_000_000 + CACHE_TTL.as_secs() - 1),
+        &|| None,
+        at(1_756_000_100),
     );
 
     assert_eq!(
@@ -97,7 +130,7 @@ fn within_twenty_four_hours_the_port_is_not_asked_again() {
 }
 
 #[test]
-fn after_twenty_four_hours_the_port_is_asked_again() {
+fn an_invalid_response_does_not_overwrite_the_last_known_version() {
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
     let memory = a_memory(home.path());
     memory
@@ -106,18 +139,18 @@ fn after_twenty_four_hours_the_port_is_asked_again() {
             announced: "0.4.0".to_string(),
         })
         .expect("deberia anotarse");
-    let later = at(1_756_000_000 + CACHE_TTL.as_secs());
 
     let announced = new_version(
         Version::parse("0.3.0").expect("es una version"),
         &memory,
-        &|| Some(a_release("v0.5.0")),
-        later,
+        &|| Some("<html>502 Bad Gateway</html>".to_string()),
+        at(1_756_000_100),
     );
 
     assert_eq!(
         announced.map(|version| version.to_string()),
-        Some("0.5.0".into())
+        Some("0.4.0".into()),
+        "una respuesta invalida no sobrescribe la ultima conocida"
     );
     assert_eq!(
         memory
@@ -126,10 +159,10 @@ fn after_twenty_four_hours_the_port_is_asked_again() {
             .into_value()
             .version_check,
         Some(VersionCheck {
-            checked_at: 1_756_000_000 + CACHE_TTL.as_secs(),
-            announced: "0.5.0".to_string(),
+            checked_at: 1_756_000_000,
+            announced: "0.4.0".to_string(),
         }),
-        "lo preguntado se anota para las proximas 24 h"
+        "la comprobacion anterior sigue intacta"
     );
 }
 

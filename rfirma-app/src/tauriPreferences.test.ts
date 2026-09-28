@@ -299,9 +299,6 @@ describe("el puerto de la versión sobre Tauri", () => {
     expect(invoke).toHaveBeenCalledExactlyOnceWith("check_for_new_version");
   });
 
-  // Sin versión nueva, sin red o dentro de las 24 h de caché la orden contesta
-  // lo mismo: nada. La ventana no distingue los tres casos porque no tiene que
-  // hacer nada distinto en ninguno.
   it("reads no answer as nothing to say, and not as a failure", async () => {
     invoke.mockResolvedValue(null);
 

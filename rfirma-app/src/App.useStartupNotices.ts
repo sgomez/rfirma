@@ -14,9 +14,9 @@ import type { NewVersion, VersionCheck } from "./updates/newVersion";
  */
 export function useStartupNotices(status: StatusPort, versions: VersionCheck) {
   // El aviso de versión: lo que contestó el puerto y si ya se descartó. Se
-  // descarta **para esta sesión** y no se anota en disco: quien decide cada
-  // cuánto se vuelve a preguntar es el backend (una vez cada 24 h), y una
-  // segunda memoria aquí sería una regla más que no manda nadie.
+  // descarta **para esta sesión** y no se anota en disco: el backend
+  // pregunta siempre, y una segunda memoria aquí sería una regla más que no
+  // manda nadie.
   const [newVersion, setNewVersion] = useState<NewVersion | null>(null);
   const [versionDismissed, setVersionDismissed] = useState(false);
   // Las filas del panel de estado, para el triángulo del menú (ID-353): se

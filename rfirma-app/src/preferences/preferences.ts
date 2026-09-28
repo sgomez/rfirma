@@ -49,8 +49,8 @@ export interface Preferences {
   /**
    * «Avisarme cuando haya una versión nueva» (ID-180). **Siempre visible y
    * sin condición**: no se detecta si alguien gestiona la instalación. No
-   * apaga la comprobación —esa la sigue haciendo el backend cada 24 h—, solo
-   * si la ventana enseña la franja con lo que contestó.
+   * apaga la comprobación —esa la sigue haciendo el backend en cada
+   * arranque—, solo si la ventana enseña la franja con lo que contestó.
    */
   notifyNewVersion: boolean;
   /**
