@@ -79,6 +79,7 @@ describe("StatusView", () => {
     const statusPort: StatusPort = {
       readStatus: vi.fn().mockResolvedValue(initialRows),
       recheck: vi.fn().mockResolvedValue(afterWithdrawal),
+      measureVersion: vi.fn(),
       measureLocalCaCertificate: vi.fn().mockResolvedValue(stillChecking),
       installLocalCaCertificate: vi.fn(),
       chooseSiteSignatureHandler: vi.fn(),

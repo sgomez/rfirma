@@ -89,6 +89,8 @@ export interface StatusPort {
   readStatus(): Promise<SignalRow[]>;
   /** Vuelve a comprobar el estado remidiendo contra los orígenes. */
   recheck(): Promise<SignalRow[]>;
+  /** Mide la señal de versión, que `readStatus` deja en «Comprobando». */
+  measureVersion(): Promise<SignalRow>;
   /** Mide la señal del certificado de rFirma, que `readStatus` deja en «Comprobando». */
   measureLocalCaCertificate(): Promise<SignalRow>;
   /** Instala el certificado de rFirma donde falte y vuelve a medir su señal. */
@@ -118,6 +120,19 @@ export async function withLocalCaCertificateMeasured(
     return rows;
   }
   const measured = await port.measureLocalCaCertificate();
+  return rows.map((row) => (row.signal === measured.signal ? measured : row));
+}
+
+/** Mide la señal de versión si `readStatus` la dejó en «Comprobando». */
+export async function withVersionMeasured(
+  rows: SignalRow[],
+  port: StatusPort,
+): Promise<SignalRow[]> {
+  const measuring = rows.some((row) => row.signal === "version" && row.verdict === "checking");
+  if (!measuring) {
+    return rows;
+  }
+  const measured = await port.measureVersion();
   return rows.map((row) => (row.signal === measured.signal ? measured : row));
 }
 
@@ -158,6 +173,7 @@ export function memoryStatus(
   chosenRows?: SignalRow[],
   withdrawalReport?: WithdrawalReport,
   measuredRow?: SignalRow,
+  measuredVersionRow?: SignalRow,
 ): StatusPort {
   let rows = [...initialRows];
   return {
@@ -167,6 +183,11 @@ export function memoryStatus(
         rows = [...recheckRows];
       }
       return rows;
+    },
+    measureVersion: async () => {
+      const measured = measuredVersionRow ?? checkingVersion();
+      rows = rows.map((row) => (row.signal === measured.signal ? measured : row));
+      return measured;
     },
     measureLocalCaCertificate: async () => {
       const measured = measuredRow ?? checkingLocalCaCertificate();
@@ -190,6 +211,18 @@ export function memoryStatus(
 function checkingLocalCaCertificate(): SignalRow {
   return {
     signal: "localCaCertificate",
+    value: "",
+    verdict: "checking",
+    action: null,
+    detail: null,
+    candidates: null,
+    restartFirefoxNotice: false,
+  };
+}
+
+function checkingVersion(): SignalRow {
+  return {
+    signal: "version",
     value: "",
     verdict: "checking",
     action: null,

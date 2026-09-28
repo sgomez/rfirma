@@ -96,6 +96,7 @@ describe("StatusView", () => {
         },
       ]),
       recheck: vi.fn().mockReturnValue(recheckPromise),
+      measureVersion: vi.fn(),
       measureLocalCaCertificate: vi.fn().mockResolvedValue(stillChecking),
       installLocalCaCertificate: vi.fn(),
       chooseSiteSignatureHandler: vi.fn(),
@@ -132,11 +133,10 @@ describe("StatusView", () => {
     expect(within(row).getByText("0.5.0")).toBeInTheDocument();
   });
 
-  it("transitions row through Comprobando and updates on Volver a comprobar", async () => {
-    const user = userEvent.setup();
-    let resolveRecheck!: (rows: SignalRow[]) => void;
-    const recheckPromise = new Promise<SignalRow[]>((resolve) => {
-      resolveRecheck = resolve;
+  it("measures the version signal on open, without clicking anything", async () => {
+    let resolveMeasureVersion!: (row: SignalRow) => void;
+    const measureVersionPromise = new Promise<SignalRow>((resolve) => {
+      resolveMeasureVersion = resolve;
     });
 
     const statusPort: StatusPort = {
@@ -151,7 +151,8 @@ describe("StatusView", () => {
           restartFirefoxNotice: false,
         },
       ]),
-      recheck: vi.fn().mockReturnValue(recheckPromise),
+      recheck: vi.fn(),
+      measureVersion: vi.fn().mockReturnValue(measureVersionPromise),
       measureLocalCaCertificate: vi.fn().mockResolvedValue(stillChecking),
       installLocalCaCertificate: vi.fn(),
       chooseSiteSignatureHandler: vi.fn(),
@@ -163,13 +164,46 @@ describe("StatusView", () => {
     const row = await screen.findByRole("status");
     expect(within(row).getByText("Comprobando")).toBeInTheDocument();
 
-    const recheckBtn = screen.getByRole("button", { name: "Volver a comprobar" });
-    await user.click(recheckBtn);
+    resolveMeasureVersion({
+      signal: "version",
+      value: "0.4.1",
+      verdict: "correct",
+      action: null,
+      detail: null,
+      candidates: null,
+      restartFirefoxNotice: false,
+    });
 
-    expect(within(row).getByText("Comprobando")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(within(row).getByText("Correcto")).toBeInTheDocument();
+    });
+  });
 
-    resolveRecheck([
-      {
+  it("does not remeasure the local CA certificate while measuring the version on open", async () => {
+    const measureLocalCaCertificate = vi.fn();
+    const statusPort: StatusPort = {
+      readStatus: vi.fn().mockResolvedValue([
+        {
+          signal: "version",
+          value: "0.4.1",
+          verdict: "checking",
+          action: null,
+          detail: null,
+          candidates: null,
+          restartFirefoxNotice: false,
+        },
+        {
+          signal: "localCaCertificate",
+          value: "",
+          verdict: "correct",
+          action: null,
+          detail: null,
+          candidates: null,
+          restartFirefoxNotice: false,
+        },
+      ]),
+      recheck: vi.fn(),
+      measureVersion: vi.fn().mockResolvedValue({
         signal: "version",
         value: "0.4.1",
         verdict: "correct",
@@ -177,11 +211,52 @@ describe("StatusView", () => {
         detail: null,
         candidates: null,
         restartFirefoxNotice: false,
-      },
-    ]);
+      }),
+      measureLocalCaCertificate,
+      installLocalCaCertificate: vi.fn(),
+      chooseSiteSignatureHandler: vi.fn(),
+      withdrawRfirma: vi.fn(),
+    };
+
+    renderWithCatalog(<StatusView statusPort={statusPort} onClose={() => {}} />);
 
     await waitFor(() => {
-      expect(within(row).getByText("Correcto")).toBeInTheDocument();
+      expect(statusPort.measureVersion).toHaveBeenCalled();
     });
+    expect(measureLocalCaCertificate).not.toHaveBeenCalled();
+  });
+
+  it("measures the version too on Volver a comprobar, with measureVersion", async () => {
+    const user = userEvent.setup();
+    const versionRow: SignalRow = {
+      signal: "version",
+      value: "0.4.1",
+      verdict: "correct",
+      action: null,
+      detail: null,
+      candidates: null,
+      restartFirefoxNotice: false,
+    };
+    const statusPort: StatusPort = {
+      readStatus: vi.fn().mockResolvedValue([versionRow]),
+      recheck: vi.fn().mockResolvedValue([{ ...versionRow, verdict: "checking" }]),
+      measureVersion: vi.fn().mockResolvedValue({ ...versionRow, value: "0.5.0" }),
+      measureLocalCaCertificate: vi.fn().mockResolvedValue(stillChecking),
+      installLocalCaCertificate: vi.fn(),
+      chooseSiteSignatureHandler: vi.fn(),
+      withdrawRfirma: vi.fn(),
+    };
+
+    renderWithCatalog(<StatusView statusPort={statusPort} onClose={() => {}} />);
+
+    const row = await screen.findByRole("status");
+    expect(within(row).getByText("0.4.1")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Volver a comprobar" }));
+
+    await waitFor(() => {
+      expect(statusPort.measureVersion).toHaveBeenCalled();
+    });
+    expect(within(row).getByText("0.5.0")).toBeInTheDocument();
   });
 });
