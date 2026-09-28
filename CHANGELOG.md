@@ -9,6 +9,346 @@ Este fichero no se edita a mano: cada issue entrega su nota en
 fragmentos presentes bajo la sección de la versión, en el momento de
 publicarla. Ver `changelog.d/README.md`.
 
+## [0.11.0] - 2026-09-28
+
+### Added
+- Aviso de página desactualizada cuando la sede declara `jvc` menor que 1; el
+  trámite sigue al pulsar Entendido (#853).
+- En el consentimiento de la ventana de sede, «Firmar» (o «Enviar mis datos»)
+  nace desactivado con una cuenta atrás de tres segundos y después se lleva el
+  foco, así que se firma con Intro. Se apaga en Preferencias › Firma con
+  «Protección contra firmas accidentales» (#849).
+- La ventana de sede se maneja con el teclado: Intro pulsa el botón por defecto
+  de cada momento y Escape equivale a cancelar o cerrar donde hay ese botón
+  (#965).
+- La firma `CAdEStri` pasa por el `serverUrl` de la sede, con `SAF_03` sin
+  servidor y `SAF_40` si el servidor falla (#911).
+- La firma `PAdEStri`, `XAdEStri` y `FacturaEtri` pasa por el `serverUrl` de la
+  sede, como ya lo hacía `CAdEStri` (#913).
+- `signandsave` con un formato trifásico firma por el `serverUrl` de la sede y
+  guarda la firma que devuelve el servidor (#913).
+- La sede puede pedir el formato `NONE` (también `PKCS1` y `PKCS#1`) en `sign`,
+  `signandsave` y el `format` del lote local: lo que vuelve es la firma PKCS#1
+  de los datos con la clave del certificado, sin envoltorio CMS, y se hace en
+  el token sin pasar por el puente. La cofirma y la contrafirma de `NONE` salen
+  con `SAF_04`, como en AutoFirma (#916).
+- El lote local admite `countersign` como suboperación: contrafirma el árbol con
+  `target=tree` y las hojas en cualquier otro caso, también sin `target` (#918).
+- Cuando la sede pide la firma visible con `visibleSignature`, la ventana de
+  sede enseña el PDF para marcar dónde va la firma antes de elegir certificado
+  (#909).
+- Preferencia «Usar el certificado que elija la sede», apagada por
+  omisión. Encendida, una petición con `headless=true` o
+  `mandatoryCertSelection=false` y un solo certificado candidato se atiende sin
+  elegirlo en la ventana, como AutoFirma: `selectcert` contesta sin ventana y
+  las firmas y los lotes siguen con ese certificado. El PIN, elegir o guardar
+  el fichero y el área de la firma visible se siguen pidiendo (#959).
+- La sede que pide el almacén `PKCS11:<ruta>` ve solo los certificados de ese
+  módulo si es uno de los que rFirma descubre, ahora también los registrados en
+  p11-kit; si no lo es, recibe `SAF_08`. rFirma nunca carga un módulo porque lo
+  nombre la sede (#930).
+- El contenido de la firma visible se elige por modelo: *Completa* («Firmado
+  por … el día … con un certificado emitido por …», la frase de AutoFirma) o
+  *Solo rúbrica*, con una línea «Con rúbrica» común a todos los modelos
+  (#969, #975).
+- rFirma recuerda el modelo, la frase y «Con rúbrica» de la última firma
+  visible, y el documento siguiente arranca con ellos (#971, #978).
+- Un pie fijo que no se mueve al desplazar el panel: «Guardar en» enseña la
+  carpeta y el nombre del fichero firmado, y un solo «Cambiar» elige los dos
+  para esa firma (#970, #977).
+- La fila de un documento reciente enseña debajo la carpeta en la que está
+  (#996, #997).
+- Si la firma falla, el panel lo dice, aclara que el documento sigue como
+  estaba y ofrece «Reintentar» o «Volver» (#979).
+- El modelo Personalizada de la firma visible: una frase editable con el firmante, el emisor y la fecha como pastillas que se borran y se mueven como una palabra, insertadas desde «+ Dato» (#976).
+- Al abrir un PDF que ya lleva firmas, el panel avisa «Firmarás junto a N firmas
+  anteriores» y, al desplegarlo, dice quién firmó cada una y cuándo (#1010).
+- Cada firma previa lleva su estado y su motivo: válida, certificado caducado,
+  certificado aún no válido, rota, no se puede validar o no se ha podido
+  comprobar del todo. Se comprueba sin consultar la red; una firma longeva con
+  el certificado caducado cuenta como «no se ha podido comprobar del todo», y
+  una firma añadida a un PDF certificado sin cambios permitidos, como rota
+  (#1012, #1020, #1021, #1022, #1023, #1026).
+- El aviso plegado suma los avisos («M avisos») y toma el color del peor de
+  ellos; si el documento ha cambiado después de la última firma, esa firma lo
+  dice (#1017, #1025).
+- Al elegir certificado, una franja avisa si ya firmaste el documento, con ese
+  mismo certificado o con otro tuyo (#1013).
+- Si alguna firma previa no es válida, «Firmar» pregunta antes «¿Firmar de
+  todos modos?» con la lista de las firmas que no se sostienen; las
+  que no se han podido comprobar del todo o un documento cambiado no lo
+  piden (#1014).
+- La ventana de sede muestra el mismo aviso de firmas previas y la misma franja
+  de «ya lo firmaste tú», sin añadir ninguna confirmación: «Firmar» firma como
+  antes (#1015).
+- En Linux, los certificados que se instalan van al Almacén de rFirma, cifrado
+  y abierto con la sesión: su clave se guarda en el llavero del escritorio, así
+  que se firma con ellos sin teclear nada, y ninguno queda en claro en el disco
+  ni en una copia de seguridad (#1055, #1057, #1059).
+- Se pueden instalar y usar para firmar certificados `.p12` de curva elíptica
+  (#1049).
+- Si el llavero ha perdido la clave del Almacén de rFirma, Preferencias lo
+  avisa y ofrece vaciarlo tras pedir confirmación; nunca lo vacía por su cuenta
+  (#1062).
+- En la ventana de sede, la pantalla en la que la sede excluye todos tus
+  certificados también ofrece instalar uno (#1058).
+- Un único selector de certificado, con el rótulo «Certificado», en la ventana
+  principal y en la de sede. Cada fila de un certificado de representante
+  empieza por la entidad y su NIF y sigue con quién la representa; un
+  certificado personal lleva el nombre del titular. Cada fila muestra además
+  una etiqueta por almacén y el mes en que caduca (#1092, #1095, #1096).
+- El selector también sirve de buscador: al abrirlo se puede filtrar por
+  nombre, empresa, NIF, almacén o por la palabra «personal», con un contador
+  de coincidencias, y se maneja entero con el teclado (#1095, #1097).
+- Ctrl+O (Cmd+O en macOS) abre un PDF igual que el menú; no hace nada mientras
+  hay un diálogo, la firma en curso, Preferencias, Estado de rFirma o el
+  asistente del primer arranque delante (#1111).
+- Cuando las pestañas no caben, la barra enseña «+N ▾» con el número de las
+  ocultas; su menú las lista, con la ✓ si están firmadas, y elegir una la trae
+  a la barra como activa (#1115, #1116).
+- El botón de menú lleva el aviso de Estado de rFirma aunque el menú esté
+  cerrado (#1109).
+- Al marcar dónde va la firma visible que pide una sede, se puede elegir en qué
+  páginas va el recuadro: una, varias o todas (#1130).
+- Preferencias › Firma deja elegir dónde se guarda el documento firmado:
+  «Junto al documento original» o «En esta carpeta». En el flatpak, que no
+  puede escribir junto al original, solo se ofrece la carpeta (#1133, #1134,
+  #1136).
+- El asistente del primer arranque incluye el interruptor «Protección contra
+  firmas accidentales», que se guarda en cuanto se toca (#1135, #1139).
+
+### Changed
+- El canal WebSocket escucha en los dos bucles locales, `127.0.0.1` y `::1`,
+  sin reinstalar la CA local (#908).
+- El canal `service` atiende operaciones seguidas, como el WebSocket, en vez de
+  cerrarse tras la primera o tras enseñar un rechazo, y se cierra a los 90 s sin
+  órdenes válidas, como AutoFirma (#907).
+- Una firma XAdES explícita, que solo firmaría la huella SHA-1 del documento,
+  ya no se rechaza en silencio: la ventana explica por qué rFirma no la hace y
+  qué puede cambiar la sede, y después la sede recibe `SAF_06` (#915).
+- La cofirma o contrafirma de una factura electrónica y la contrafirma fuera de
+  CAdES, CMS y XAdES también se explican en la ventana antes de responder a la
+  sede. Si la persona había elegido el fichero, la ventana ya no se queda
+  colgada en la pantalla de selección (#915).
+- `sticky=true` ya no entrega el certificado recordado sin preguntar: la ventana
+  se abre siempre, con el certificado fijado en la sesión preseleccionado.
+  `sign` y `signandsave` también atienden `sticky` y `resetsticky`, y el fijado
+  solo se preselecciona si el filtro de la petición nueva lo acepta. El recuerdo
+  dura lo que la sesión de sede, y `resetsticky` ya no olvida el último
+  certificado usado en el escritorio (#845, #933).
+- `mandatoryCertSelection=false` ya no equivale a `headless=true`: con él, un
+  PDF certificado, la contraseña de un PDF o las firmas no registradas se
+  preguntan a la persona en vez de salir con `SAF_50` (#959).
+- El certificado sale de la cabecera y se elige en el panel; sin certificado
+  recordado no se preselecciona ninguno, aunque haya uno solo (#973).
+- La firma visible es un interruptor apagado por defecto: al encenderlo, el
+  recuadro aparece en la página que se está viendo; sin certificado elegido
+  queda desactivado hasta que se elige uno (#974).
+- La interfaz dice siempre «firma visible»: la palabra «sello» desaparece de
+  todos los textos (#980).
+- La bandeja lateral desaparece: cada documento abierto tiene su pestaña; sin documentos, el visor enseña la zona de soltar con los recientes debajo (#972).
+- Soltar varios PDF a la vez abre una pestaña por cada uno (#972).
+- La ventana de sede presenta primero el origen y el certificado con el que
+  firmarás, y después el documento y sus avisos. Sin un origen identificado,
+  en lugar de la caja «Origen sin identificar» queda una sola línea: «Una
+  página sin identificar pide tu firma.» o «…pide tus datos de identidad.»
+  (#1011).
+- Instalar un certificado pide primero el fichero y después su contraseña, en
+  un diálogo que nombra el fichero; si la contraseña es incorrecta la vuelve a
+  pedir con un aviso, y cancelar o cerrar el selector no instala nada ni da
+  error. El gesto es el mismo en Preferencias y en la ventana de sede (#1054).
+- El diálogo de un PIN o una contraseña aparece sobre la ventana desde la que
+  se ha pedido, aunque estén abiertas la principal y una de sede (#1053).
+- Sin llavero en el escritorio, rFirma se niega a instalar un certificado y
+  explica por qué, en lugar de guardarlo sin proteger (#1062).
+- Si un certificado recién instalado desde la sede tampoco vale para ella, la
+  pantalla lo dice y deja instalar otro o cerrar: el trámite solo termina
+  cuando cierras tú (#1058).
+- Quitar un certificado instalado lo borra del almacén, y si era el
+  certificado recordado deja de salir preseleccionado (#1061).
+- El diálogo «Acerca de» se ordena en tres zonas: la versión con su estado, una
+  ficha técnica con enlace al código fuente y el aviso de independencia. Las
+  licencias están siempre a la vista, sin el botón «Ver las licencias» (#1084).
+- Un certificado que está en varios almacenes, por ejemplo en la tarjeta y en
+  el navegador, sale una sola vez en la lista; se firma con la copia recordada
+  o, si no la hay, con la de la tarjeta antes que con la de otro almacén
+  (#1093).
+- Los certificados caducados, revocados o ilegibles se agrupan aparte, en «No
+  se pueden usar», con el motivo a la vista y sin que se puedan elegir; la
+  sede ya no preselecciona uno de ellos (#1095).
+- El pie de la ventana principal lleva un solo botón, «Firmar», que queda
+  desactivado mientras no se haya elegido un certificado que se pueda usar; el
+  selector pasa al principio del panel, también con documentos ya firmados
+  (#1096).
+- El «+» de la barra desaparece: en su lugar, junto a rFirma, un botón partido
+  fijo cuyo «Abrir PDF…» abre el diálogo del sistema a la primera, y cuya
+  flecha despliega «Abiertos recientemente». Sin recientes, o con «Recordar mi
+  actividad» apagado, queda solo «Abrir PDF…», sin flecha (#1113, #1114).
+- «Recientes» pasa a llamarse «Abiertos recientemente», en el menú y en el
+  visor sin documentos (#1113, #1114).
+- Las pestañas miden de 160 a 200 px según el sitio que haya y la activa se
+  marca con un subrayado; ya no hay flechas ‹ › para recorrerlas (#1112,
+  #1115).
+- La cabecera y la tira de pestañas pasan a ser una sola barra de 44 px: las pestañas y el botón para abrir viven dentro de la cabecera, y el visor gana el alto que sobra (#1110).
+- Por omisión, el documento firmado se guarda junto al original. Si esa
+  carpeta no se puede escribir, el pie lo avisa y la firma no se guarda en
+  otra carpeta sin decirlo (#1133).
+- El asistente del primer arranque vuelve a salir una vez a quien ya lo había
+  visto, y su segundo paso se presenta en pasos numerados (#1137, #1138).
+- La versión nueva se comprueba cada vez que se abre la ventana principal,
+  «Acerca de» o Estado de rFirma, y no como mucho una vez al día. Sin red, se
+  usa la última versión conocida, y la consulta espera como mucho 4 s. La
+  ventana de sede no la comprueba nunca (#1142, #1143, #1144, #1146, #1147, #1148).
+
+### Removed
+- Las casillas sueltas y el motivo de la firma visible, sustituidos por los
+  modelos (#981).
+- Desaparece el almacén anterior, en el que cada `.p12` instalado quedaba en
+  claro en su propia carpeta; no se migra, porque aún no se usaba (#1060).
+
+### Fixed
+- Un `ver` dentro de una operación que llega por un canal ya abierto se
+  ignora, como en AutoFirma: la versión la fija `v` al abrir el canal. Solo lo
+  comprueban el servidor intermedio y el canal WebSocket v3 (#841, #908).
+- El canal WebSocket atiende operaciones sucesivas por la misma conexión en vez
+  de cerrarla tras la primera, como espera `autoscript.js` (#853).
+- Las órdenes que llegan por el canal pasan las mismas comprobaciones de
+  parámetros que AutoFirma (`key`, `fileid`, `rtservlet`, identificador) (#853).
+- Un `dat` que no es Base64 se firma tal cual, como su texto (#853).
+- Un rechazo del análisis de la petición se enseña en la ventana de sede y la
+  sede lo recibe al cerrarla; el que nace al procesarla, como la cofirma de una
+  factura, se contesta en el acto (#853).
+- El canal WebSocket v3 ya no exige el `idsession` en cada mensaje, y tras un
+  `SAF_46` sigue atendiendo por la misma conexión, como AutoFirma (#840).
+- Un arranque `websocket` con una versión distinta de 3 y 4, o `service` con una
+  distinta de 1, 2 y 3, se rechaza en la ventana sin abrir puerto, con `SAF_21`
+  en WebSocket. Por WebSocket v3, una operación que exige una versión posterior
+  a la 4 sale con `SAF_21` y no con `SAF_06` (#907, #908).
+- El canal `service` contesta con los códigos de AutoFirma: `SAF_03` a una
+  sesión ajena o una orden desconocida, y `SAF_11` a un `cmd=` que no es una
+  operación válida, a un `send=` fuera de rango o a un guardado que no acaba en
+  `SAVE_OK` ni `CANCEL`. Un guardado por el canal contesta `SAVE_OK`, que el
+  cliente publicado ya no toma por una firma (#907).
+- Si otra aplicación ocupa los puertos del canal, la ventana lo dice en un aviso
+  que no se cierra solo, en vez de culpar al permiso del navegador (#907).
+- El servidor intermedio ya no exige `dat` ni `fileid` al arrancar, no depende
+  de la CA local y no deja una ventana en «Conectando con la sede» cuando la
+  operación se contesta al llegar. Un rechazo del arranque se enseña aunque la
+  sede ya lo haya recibido, un `stservlet` rechazado con `SAF_13` no recibe ese
+  rechazo, y el detalle de un rechazo empieza por su código SAF (#906).
+- Un prefirmador o postfirmador del lote remoto que contesta 400 da `SAF_03`,
+  otro 4xx `SAF_26` y un 5xx `SAF_27`, en vez de `SAF_27` siempre. El algoritmo
+  del lote remoto se lee al firmar, como en el original: un lote pedido con
+  `jsonBatch` llega al prefirmador como XML, y un algoritmo ausente o ilegible
+  sale con `SAF_27` (#946, #948).
+- Un lote local mal escrito sale con `SAF_20` después de elegir certificado,
+  como en AutoFirma, y no con `SAF_03` (#948).
+- Una clave que no es RSA ni de curva elíptica sale con `SAF_51` en vez de
+  firmarse como si fuera RSA (#946).
+- `format=auto` sobre una firma CMS que no es CAdES la cofirma como CMS (#946).
+- Si el guardado de la sede no puede escribir en el destino elegido, la ventana
+  lo avisa y vuelve a abrir el diálogo, como AutoFirma; cancelar entonces da
+  `CANCEL`, en vez de acabar con `SAF_05` (#948).
+- El documento elegido para `sign` o `signandsave` que no se puede leer responde
+  `SAF_00`, como el original, y no `SAF_25` (#966).
+- Un rechazo de los datos por el firmador llega a la sede con el código del
+  original (`SAF_28`, `29`, `30`, `31`, `32`, `38` y `44`) en vez de `SAF_09` (#911).
+- La envoltura XAdES que la sede declara en `format=` se respeta, incluida
+  `XAdES Externally Detached`, y la política AGE ya no se pisa (#911).
+- `userPassword`, `ownerPassword` y `allowSigningCertifiedPdfs=true` abren el PDF
+  protegido; con `headless=true` y sin ellos, la sede recibe `SAF_50` (#911).
+- La ventana de sede nombra los fallos del servidor trifásico en vez de mostrar
+  un error desconocido (#913).
+- El diálogo de guardar o cargar de una sede que no declara carpeta se abre en
+  el directorio personal, no en el directorio desde el que se lanzó rFirma (#913).
+- Una firma CAdES con huella precalculada ignora el `mode` que pida la sede (#914).
+- Una contrafirma con un `target` distinto de `tree` contrafirma solo las hojas,
+  como AutoFirma (#914).
+- La firma sobre un documento elegido en disco devuelve su nombre a la sede en
+  un tercer componente, por WebSocket v3 y v4 (#914).
+- La política de firma de la AGE funciona en CAdES y PAdES (#914).
+- Con la política de la AGE, un documento de menos de 1 MB se firma en CAdES
+  implícita, con los datos dentro (#914).
+- El nombre del documento elegido en disco sale en el tercer componente de la
+  respuesta de `sign` y `signandsave` también por el canal `service` con `v=3`
+  y por el servidor intermedio con `ver` 3 o mayor, cifrado si la sede da
+  clave (#917).
+- Con `checkSignatures=true`, una cofirma o una contrafirma sobre un documento
+  sin firmas se rechaza con `SAF_39`, como en el original (#918).
+- Un PDF certificado que la sede manda firmar sin `headless` ni
+  `allowSigningCertifiedPdfs` pregunta a la persona antes de firmarlo, como el
+  original, en vez de rechazarse con `SAF_35`; si dice que no, la sede recibe
+  `CANCEL` (#919).
+- La ventana de sede nombra los fallos del token, del puente y del documento con
+  el mismo título que la ventana principal, y los propios del trámite con su
+  frase, en vez de mostrar un error desconocido (#920).
+- Cancelar el área de la firma visible ya no aborta la firma cuando la petición
+  trae su propia área o la firma visible es opcional: se firma en el área de la
+  petición o sin firma visible, como en AutoFirma (#909).
+- Un PDF cifrado que llega por la sede con una contraseña que no lo abre, o
+  sin ninguna, pide la contraseña a la persona después de elegir certificado,
+  como AutoFirma. Con `headless` se rechaza con `SAF_50` y no con `SAF_09` (#922).
+- Cerrar la ventana de sede mientras se marca el área de la firma visible hace
+  lo mismo que pulsar «Cancelar» en ese paso, como en AutoFirma: se firma en el
+  área de la petición o sin firma visible, y solo con `visibleSignature=want`
+  sin área la sede recibe `SAF_43` (#924).
+- Si falla el token durante un lote de sede, la ventana dice qué ha pasado
+  («El PIN no es correcto», token ausente…) en lugar de la frase genérica del
+  lote fallido (#924).
+- Una contrafirma que llega por la sede con un `target` distinto de `tree`
+  (`signers`, por ejemplo) contrafirma las hojas, como AutoFirma, en vez de
+  fallar con `SAF_09` (#925).
+- Una firma CAdES o XAdES que la sede pide con `tsaURL` sale con su sello de
+  tiempo. Si no se puede sellar, la sede recibe `SAF_09` en vez de una firma
+  sin el sello que pidió (#927).
+- Una cofirma, una contrafirma, una firma `XAdEStri` o una firma con
+  `useManifest=true` en XAdES con `mode=explicit` se firman como en AutoFirma,
+  en vez de salir con `SAF_06`. Solo se rechaza la firma de la huella SHA-1 (#928).
+- Un almacén que no se puede abrir, un token ausente o un módulo PKCS#11 que no
+  se encuentra llegan a la sede con `SAF_08`, como en AutoFirma, y no con
+  `SAF_07`, que el original no emite nunca (#930, #936).
+- Con `headless`, un certificado caducado ya no se entrega aunque el filtro de
+  la sede lo admita: si no queda ninguno vigente, la sede recibe `SAF_19`
+  (#935).
+- Un token al que no se ha abierto sesión ya no ofrece certificados de CA ni los
+  que por su uso de clave no pueden firmar (#934).
+- Con la firma visible apagada, el PDF firmado ya no lleva el recuadro de una
+  colocación anterior o recordada, y «Firmar» ya no se queda sin hacer nada
+  cuando no hay ninguna colocación (#968).
+- «Ajustar a la página» encaja la página entera en el visor sin dejar barra de
+  desplazamiento (#968).
+- Un `.p12` exportado sin nombre amistoso, como los de un `openssl pkcs12
+  -export` sin `-name` o muchas exportaciones de Windows, ya se instala en vez
+  de fallar siempre pidiendo que se compruebe la contraseña (#1048).
+- Al instalar se distingue una contraseña incorrecta de un fichero que no es
+  un certificado válido y de un `.p12` sin clave privada, cada uno con su
+  mensaje (#1050).
+- Instalar dos veces el mismo fichero ya no lo duplica en la lista ni da error
+  (#1057).
+- Desde la ventana de sede se instala un `.p12` con contraseña, y si la
+  instalación falla la pantalla dice por qué en lugar de quedarse igual
+  (#1054, #1056).
+- Abrir rFirma con una URL de otro esquema que no sea `afirma://` ya no abre la
+  ventana principal: rFirma termina sin hacer nada, como AutoFirma. Una URL
+  `file://` abre la ventana principal con ese documento (#1128).
+- Una sede que pide el almacén NSS del sistema (`keystore=SHARED_NSS`) ve solo
+  los certificados de NSS, sin las tarjetas ni los tokens registrados por
+  p11-kit, así que la selección desatendida vuelve a elegir sin preguntar
+  (#1128).
+- Un filtro de certificados de la sede en el que no se reconoce ningún criterio
+  se trata como si no hubiera filtro, y los certificados caducados siguen
+  ocultos (#1128).
+- El recuadro de la firma visible que pide una sede lleva el texto que la sede
+  declara, o el de AutoFirma si no declara ninguno; antes salía en blanco
+  (#1130).
+- Los pasos del asistente arrancan en su estado real: el certificado espera a
+  que se compruebe, y el paso de las sedes ya no dice «Ahora abren rFirma.»
+  cuando no aplica (#1139).
+
+### Security
+- La traza de una operación ya no imprime el valor de `properties`, que podía
+  llevar la contraseña de un PDF (#911).
+
 ## [0.10.0] - 2026-09-21
 
 ### Added
