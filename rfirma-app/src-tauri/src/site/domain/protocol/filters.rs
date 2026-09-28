@@ -80,12 +80,24 @@ impl SiteFilter {
     }
 }
 
-/// Lo que la sede pide del listado.
+/// Lo que la sede pide del listado, sin las expresiones en las que el original no reconoce nada (ADR-0023).
 pub fn site_filter(properties: &[(String, String)]) -> SiteFilter {
     SiteFilter {
-        declared: declared_keys(properties),
+        declared: declared_keys(properties)
+            .into_iter()
+            .filter(|(_, expression)| names_a_criterion(expression))
+            .collect(),
         scope: StoreScope::Everywhere,
     }
+}
+
+fn names_a_criterion(expression: &str) -> bool {
+    expression.split(';').any(|condition| {
+        let condition = condition.to_lowercase();
+        ACCEPTED_CRITERIA
+            .iter()
+            .any(|criterion| condition.starts_with(criterion))
+    })
 }
 
 /// Las claves de filtro que la sede declaró, con la precedencia del original.

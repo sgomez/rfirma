@@ -100,10 +100,11 @@ fn every_criterion_the_original_understands_crosses_untouched() {
         );
     }
 
+    let beside_a_criterion = format!("{SATISFIED_BY_CONSTRUCTION};ssl:true");
     assert_eq!(
-        site_filter(&properties(&[("filters", SATISFIED_BY_CONSTRUCTION)])).as_java_properties(),
+        site_filter(&properties(&[("filters", &beside_a_criterion)])).as_java_properties(),
         format!(
-            "filters={SATISFIED_BY_CONSTRUCTION}
+            "filters={beside_a_criterion}
 "
         )
     );
@@ -166,4 +167,38 @@ fn a_newline_inside_a_value_cannot_split_the_block() {
         "filters=subject.contains:A\\nB\n"
     );
     assert_eq!(filter.as_java_properties().lines().count(), 1);
+}
+
+#[test]
+fn an_expression_the_original_does_not_recognise_is_not_a_filter_of_the_site() {
+    for expression in [
+        "nosuchfilter:x",
+        "disableopeningexternalstores",
+        "inventado:a;otro:b",
+    ] {
+        let filter = site_filter(&properties(&[("filters", expression)]));
+
+        assert!(filter.declares_nothing(), "{expression}");
+        assert_eq!(filter.as_java_properties(), "", "{expression}");
+    }
+}
+
+#[test]
+fn an_unrecognised_alternative_does_not_open_the_listing_to_everything() {
+    let filter = site_filter(&properties(&[
+        ("filters.1", "nosuchfilter:x"),
+        ("filters.2", "subject.contains:PEREZ"),
+    ]));
+
+    assert_eq!(
+        filter.declared(),
+        [("filters.2".to_owned(), "subject.contains:PEREZ".to_owned())]
+    );
+}
+
+#[test]
+fn a_criterion_is_recognised_in_any_case_as_the_original_does() {
+    let filter = site_filter(&properties(&[("filters", "Subject.Contains:PEREZ")]));
+
+    assert!(!filter.declares_nothing());
 }
