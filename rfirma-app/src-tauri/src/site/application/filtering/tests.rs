@@ -5,10 +5,12 @@ use crate::identity::application::tests::{
     a_certificate, a_usable_certificate, an_expired_certificate, listed_from, NoMemory,
 };
 use crate::identity::domain::certificate::CertificateRef;
+use crate::identity::domain::store::Store;
 use crate::signing::domain::bridge::BridgeError;
 use crate::site::application::tests::Directory;
-use crate::site::domain::protocol::site_filter;
+use crate::site::domain::protocol::{site_filter, StoreScope};
 use std::cell::RefCell;
+use std::path::Path;
 
 struct AnEngine {
     answer: Vec<usize>,
@@ -63,6 +65,21 @@ fn a_card_certificate(label: &str, der: &[u8]) -> TokenCertificate {
 
 fn a_usable_card_certificate(label: &str) -> TokenCertificate {
     a_card_certificate(label, a_usable_certificate(label).der())
+}
+
+fn an_nss_certificate(label: &str, der: &[u8]) -> TokenCertificate {
+    TokenCertificate::new(
+        CertificateRef::new(
+            Store::nss(
+                "/usr/lib/x86_64-linux-gnu/libsoftokn3.so",
+                Path::new("/home/persona/.pki/nssdb"),
+            ),
+            "NSS Certificate DB",
+            label,
+            vec![0x03],
+        ),
+        der.to_vec(),
+    )
 }
 
 #[test]
@@ -255,7 +272,7 @@ fn a_site_that_names_a_module_only_sees_the_certificates_of_that_module() {
 
     let kept = keep_what_the_site_accepts(
         &engine,
-        &a_filter("ssl:true").within_the_module(Some(OPENSC.to_owned())),
+        &a_filter("ssl:true").within(StoreScope::Module(OPENSC.to_owned())),
         certificates.clone(),
         &a_directory(&certificates, &listed),
     )
@@ -267,6 +284,29 @@ fn a_site_that_names_a_module_only_sees_the_certificates_of_that_module() {
 }
 
 #[test]
+fn a_site_that_names_the_nss_does_not_see_the_certificates_of_a_card() {
+    let engine = AnEngine::answering(&[0]);
+    let certificates = vec![
+        a_certificate("TOKEN", &[0x01]),
+        an_nss_certificate("NSS", &[0x03]),
+        a_card_certificate("TARJETA", &[0x02]),
+    ];
+    let listed = ListedCertificates::new();
+
+    let kept = keep_what_the_site_accepts(
+        &engine,
+        &SiteFilter::default().within(StoreScope::Nss),
+        certificates.clone(),
+        &a_directory(&certificates, &listed),
+    )
+    .expect("la NSS siempre la abre rFirma");
+
+    assert_eq!(kept.len(), 1);
+    assert_eq!(kept[0].reference().label(), "NSS");
+    assert_eq!(engine.asked.borrow()[0].1, "Aw==");
+}
+
+#[test]
 fn a_module_rfirma_has_not_discovered_is_a_key_store_it_does_not_open() {
     let engine = AnEngine::answering(&[0]);
     let certificates = vec![a_certificate("UNO", &[0x01])];
@@ -274,7 +314,7 @@ fn a_module_rfirma_has_not_discovered_is_a_key_store_it_does_not_open() {
 
     let failure = keep_what_the_site_accepts(
         &engine,
-        &SiteFilter::default().within_the_module(Some("/tmp/cargado-por-la-sede.so".to_owned())),
+        &SiteFilter::default().within(StoreScope::Module("/tmp/cargado-por-la-sede.so".to_owned())),
         certificates.clone(),
         &a_directory(&certificates, &listed),
     )
@@ -302,7 +342,7 @@ fn a_certificate_outside_the_module_the_site_names_is_not_usable() {
 
     let failure = usable_certificate_for_the_site(
         &engine,
-        &SiteFilter::default().within_the_module(Some(OPENSC.to_owned())),
+        &SiteFilter::default().within(StoreScope::Module(OPENSC.to_owned())),
         &certificates,
         &handles[0],
         &a_directory(&certificates, &listed),
@@ -371,7 +411,7 @@ fn a_certificate_inside_the_module_the_site_names_is_usable() {
 
     let chosen = usable_certificate_for_the_site(
         &engine,
-        &SiteFilter::default().within_the_module(Some(OPENSC.to_owned())),
+        &SiteFilter::default().within(StoreScope::Module(OPENSC.to_owned())),
         &certificates,
         &handles[1],
         &a_directory(&certificates, &listed),

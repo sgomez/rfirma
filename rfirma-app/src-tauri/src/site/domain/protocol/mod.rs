@@ -65,7 +65,7 @@ pub use framing::{
     credential_matches, http_response, read_request, request_credential, split_response,
     FragmentBuffer, FramedRequest, RefusedOrder, MORE_DATA_NEED, RESPONSE_MAX_SIZE,
 };
-pub use key_store::refuse_a_key_store_rfirma_does_not_open;
+pub use key_store::{refuse_a_key_store_rfirma_does_not_open, StoreScope};
 pub use launch::{
     asks_for_active_wait, drawn_ports, location_for_a_refusal, warns_of_an_old_web_client,
     ChannelCredential, LaunchRequest, NegotiatedCredential, RelayChannelInfo, RelayRequest,

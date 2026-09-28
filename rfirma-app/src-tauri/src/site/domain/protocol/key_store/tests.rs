@@ -1,4 +1,6 @@
-use super::{key_store_named_by, module_named_by, refuse_a_key_store_rfirma_does_not_open};
+use super::{
+    key_store_named_by, refuse_a_key_store_rfirma_does_not_open, scope_named_by, StoreScope,
+};
 use crate::site::domain::protocol::codes::{Parameter, SafCode};
 use crate::site::domain::protocol::refusal::RefusalSituation;
 use crate::site::domain::protocol::url::AfirmaUrl;
@@ -170,18 +172,18 @@ fn a_pkcs11_store_with_its_library_is_left_to_the_listing() {
 #[test]
 fn a_pkcs11_store_names_its_module_as_it_came() {
     assert_eq!(
-        module_named_by(&ksb64("PKCS11:\"/usr/lib/softhsm/libsofthsm2.so\"")).as_deref(),
-        Some("/usr/lib/softhsm/libsofthsm2.so")
+        scope_named_by(&ksb64("PKCS11:\"/usr/lib/softhsm/libsofthsm2.so\"")),
+        StoreScope::Module("/usr/lib/softhsm/libsofthsm2.so".to_owned())
     );
     assert_eq!(
-        module_named_by(&a_selection("keystore=PKCS%2311:/usr/lib/opensc-pkcs11.so")).as_deref(),
-        Some("/usr/lib/opensc-pkcs11.so")
+        scope_named_by(&a_selection("keystore=PKCS%2311:/usr/lib/opensc-pkcs11.so")),
+        StoreScope::Module("/usr/lib/opensc-pkcs11.so".to_owned())
     );
 }
 
 #[test]
 fn a_pkcs11_store_without_a_library_names_no_module_and_is_refused() {
-    assert_eq!(module_named_by(&ksb64("PKCS11")), None);
+    assert_eq!(scope_named_by(&ksb64("PKCS11")), StoreScope::Everywhere);
     let refusal = refuse_a_key_store_rfirma_does_not_open(&ksb64("PKCS11"))
         .expect_err("sin biblioteca no hay modulo que acotar");
 
@@ -190,6 +192,39 @@ fn a_pkcs11_store_without_a_library_names_no_module_and_is_refused() {
 
 #[test]
 fn a_library_behind_any_other_store_names_no_module() {
-    assert_eq!(module_named_by(&ksb64("MOZ_UNI:/usr/lib/libnss3.so")), None);
-    assert_eq!(module_named_by(&ksb64(":/usr/lib/opensc-pkcs11.so")), None);
+    assert_eq!(
+        scope_named_by(&ksb64("MOZ_UNI:/usr/lib/libnss3.so")),
+        StoreScope::Everywhere
+    );
+    assert_eq!(
+        scope_named_by(&ksb64(":/usr/lib/opensc-pkcs11.so")),
+        StoreScope::Everywhere
+    );
+}
+
+#[test]
+fn the_nss_named_without_a_library_scopes_the_listing_to_the_nss() {
+    for named in [
+        "SHARED_NSS",
+        "NSS",
+        "MOZ_UNI",
+        "Mozilla / Firefox (unificado)",
+    ] {
+        assert_eq!(scope_named_by(&ksb64(named)), StoreScope::Nss, "{named}");
+    }
+}
+
+#[test]
+fn the_legacy_nss_scopes_the_listing_over_a_module_in_base64() {
+    let token = URL_SAFE.encode(b"PKCS11:/usr/lib/softhsm/libsofthsm2.so");
+
+    assert_eq!(
+        scope_named_by(&a_selection(&format!("keystore=SHARED_NSS&ksb64={token}"))),
+        StoreScope::Nss
+    );
+}
+
+#[test]
+fn a_store_the_original_does_not_recognise_scopes_nothing() {
+    assert_eq!(scope_named_by(&ksb64("INVENTADO")), StoreScope::Everywhere);
 }

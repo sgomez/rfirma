@@ -4,8 +4,9 @@ use base64::Engine as _;
 
 use crate::identity::domain::certificate::TokenCertificate;
 use crate::identity::domain::error::TokenError;
+use crate::identity::domain::store::StoreClass;
 use crate::signing::domain::bridge::BridgeError;
-use crate::site::domain::protocol::SiteFilter;
+use crate::site::domain::protocol::{SiteFilter, StoreScope};
 use crate::site::ports::{FilterEngine, Neighbours};
 
 /// Por qué el filtro de la sede no ha dejado un certificado.
@@ -52,7 +53,7 @@ pub fn keep_what_the_site_accepts<E: FilterEngine>(
     certificates: Vec<TokenCertificate>,
     directory: &dyn Neighbours,
 ) -> Result<Vec<TokenCertificate>, FilteringError> {
-    let certificates = within_the_module(filter, certificates, directory)?;
+    let certificates = within_the_scope(filter, certificates, directory)?;
     let accepted = accepted_indexes(engine, filter, &certificates)?;
 
     Ok(certificates
@@ -73,7 +74,7 @@ pub fn usable_certificate_for_the_site<'a, E: FilterEngine>(
 ) -> Result<&'a TokenCertificate, FilteringError> {
     let chosen = directory.usable(certificates, handle)?;
 
-    let only_this_one = within_the_module(filter, vec![chosen.clone()], directory)?;
+    let only_this_one = within_the_scope(filter, vec![chosen.clone()], directory)?;
     if only_this_one.is_empty() || accepted_indexes(engine, filter, &only_this_one)?.is_empty() {
         return Err(FilteringError::ExcludedByTheSite(
             chosen.reference().label().to_owned(),
@@ -83,22 +84,28 @@ pub fn usable_certificate_for_the_site<'a, E: FilterEngine>(
     Ok(chosen)
 }
 
-/// Los certificados del módulo al que acota la sede, que tiene que ser uno ya descubierto (ADR-0022).
-fn within_the_module(
+/// Los certificados de los almacenes a los que acota la sede; el módulo tiene que ser uno ya descubierto (ADR-0022).
+fn within_the_scope(
     filter: &SiteFilter,
     certificates: Vec<TokenCertificate>,
     directory: &dyn Neighbours,
 ) -> Result<Vec<TokenCertificate>, FilteringError> {
-    let Some(named) = filter.module() else {
-        return Ok(certificates);
-    };
-    let module = directory
-        .discovered_module(named)
-        .ok_or_else(|| FilteringError::ModuleNotDiscovered(named.to_owned()))?;
-    Ok(certificates
-        .into_iter()
-        .filter(|certificate| certificate.reference().module() == module)
-        .collect())
+    match filter.scope() {
+        StoreScope::Everywhere => Ok(certificates),
+        StoreScope::Nss => Ok(certificates
+            .into_iter()
+            .filter(|certificate| certificate.reference().store().class() != StoreClass::Card)
+            .collect()),
+        StoreScope::Module(named) => {
+            let module = directory
+                .discovered_module(named)
+                .ok_or_else(|| FilteringError::ModuleNotDiscovered(named.clone()))?;
+            Ok(certificates
+                .into_iter()
+                .filter(|certificate| certificate.reference().module() == module)
+                .collect())
+        }
+    }
 }
 
 fn accepted_indexes<E: FilterEngine>(

@@ -3,6 +3,7 @@ use super::fixtures::{
     a_signature, a_signature_order, an_invoice_signature, an_operation, an_order,
     code_of_the_order, dat, read_operation, refusal_of,
 };
+use crate::site::domain::protocol::StoreScope;
 
 #[test]
 fn an_operation_that_is_not_attended_is_refused_with_the_code_of_the_original() {
@@ -72,13 +73,18 @@ fn a_signature_that_names_a_store_rfirma_does_not_open_is_refused() {
 }
 
 #[test]
-fn a_selection_that_names_the_store_rfirma_opens_goes_on() {
+fn a_selection_that_names_the_nss_goes_on_narrowed_to_it() {
     let named = base64::engine::general_purpose::URL_SAFE.encode(b"SHARED_NSS");
 
-    read_operation(&an_operation(&format!(
+    let asked = read_operation(&an_operation(&format!(
         "op=selectcert&idsession=8jAkPZfRw2mQxN4TbYuL&ksb64={named}"
     )))
     .expect("es el almacen que rFirma abre");
+
+    let SiteOperation::SelectCertificate(selection) = asked else {
+        panic!("es una seleccion");
+    };
+    assert_eq!(selection.filter().scope(), &StoreScope::Nss);
 }
 
 #[test]
@@ -95,8 +101,8 @@ fn a_selection_that_names_a_pkcs11_module_is_narrowed_to_it() {
         panic!("es una seleccion");
     };
     assert_eq!(
-        selection.filter().module(),
-        Some("/usr/lib/softhsm/libsofthsm2.so")
+        selection.filter().scope(),
+        &StoreScope::Module("/usr/lib/softhsm/libsofthsm2.so".to_owned())
     );
 }
 
@@ -112,8 +118,8 @@ fn a_signature_that_names_a_pkcs11_module_is_narrowed_to_it() {
         panic!("es una firma");
     };
     assert_eq!(
-        signature.filter().module(),
-        Some("/usr/lib/opensc-pkcs11.so")
+        signature.filter().scope(),
+        &StoreScope::Module("/usr/lib/opensc-pkcs11.so".to_owned())
     );
 }
 
@@ -127,7 +133,7 @@ fn a_selection_that_names_no_module_is_not_narrowed() {
     let SiteOperation::SelectCertificate(selection) = asked else {
         panic!("es una seleccion");
     };
-    assert_eq!(selection.filter().module(), None);
+    assert_eq!(selection.filter().scope(), &StoreScope::Everywhere);
 }
 
 /// Guardar y cargar no eligen certificado, y allí el original ni mira el almacén.
