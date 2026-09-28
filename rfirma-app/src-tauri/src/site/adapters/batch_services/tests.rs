@@ -269,3 +269,20 @@ fn a_postsigner_slower_than_the_connect_limit_still_answers() {
 
     assert_eq!(answer, b"contenido");
 }
+
+#[test]
+fn an_untrusted_server_certificate_is_named_as_such_and_stays_unreachable() {
+    let url = crate::site::adapters::header_probe::untrusted_tls_server();
+
+    let error = RelayBatchServices::default()
+        .presign(&url, BatchFormat::Json, "bG90ZQ", &[])
+        .expect_err("el certificado no es de confianza");
+
+    assert_eq!(error.situation(), Situation::PresignerUnreachable);
+    assert!(
+        error
+            .to_string()
+            .contains("certificado del servidor 127.0.0.1 no es de confianza"),
+        "{error}"
+    );
+}

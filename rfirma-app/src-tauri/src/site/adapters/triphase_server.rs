@@ -57,7 +57,7 @@ impl TriphaseServer for HttpTriphaseServer {
 }
 
 fn unreachable(error: &reqwest::Error) -> TriphaseServerError {
-    TriphaseServerError::new(Situation::ServerUnreachable, error.to_string())
+    TriphaseServerError::new(Situation::ServerUnreachable, super::send_failure(error))
 }
 
 fn outside_tokio<T: Send + 'static>(action: impl FnOnce() -> T + Send + 'static) -> T {

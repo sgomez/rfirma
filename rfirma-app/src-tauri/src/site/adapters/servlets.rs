@@ -36,7 +36,11 @@ impl Servlets for RelayServlets {
         let client = self.client.clone();
         execute_outside_tokio(move || {
             let params = operation_params("get", &id, None);
-            let response = client.post(url).form(&params).send().map_err(unreachable)?;
+            let response = client
+                .post(url)
+                .form(&params)
+                .send()
+                .map_err(|error| send_unreachable(&error))?;
             if super::is_rejection(response.status()) {
                 return Err(RelayError::new(
                     Situation::ServletUnreachable,
@@ -54,7 +58,11 @@ impl Servlets for RelayServlets {
         let client = self.client.clone();
         execute_outside_tokio(move || {
             let params = operation_params("put", &id, Some(&data));
-            let response = client.post(url).form(&params).send().map_err(unreachable)?;
+            let response = client
+                .post(url)
+                .form(&params)
+                .send()
+                .map_err(|error| send_unreachable(&error))?;
             if super::is_rejection(response.status()) {
                 return Err(RelayError::new(
                     Situation::UploadRejected,
@@ -102,6 +110,10 @@ fn operation_params<'a>(
 
 fn unreachable(error: reqwest::Error) -> RelayError {
     RelayError::new(Situation::ServletUnreachable, error.to_string())
+}
+
+fn send_unreachable(error: &reqwest::Error) -> RelayError {
+    RelayError::new(Situation::ServletUnreachable, super::send_failure(error))
 }
 
 /// La URL del servlet ya leída; su forma la comprobó el dominio al leer la invocación.

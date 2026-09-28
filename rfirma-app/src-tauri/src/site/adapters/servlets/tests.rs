@@ -128,3 +128,20 @@ fn a_retrieve_that_answers_after_the_connect_limit_still_arrives() {
 
     assert_eq!(answer, "contenido");
 }
+
+#[test]
+fn an_untrusted_server_certificate_is_named_as_such_and_stays_unreachable() {
+    let url = crate::site::adapters::header_probe::untrusted_tls_server();
+
+    let error = RelayServlets::default()
+        .retrieve(&url, "id-1")
+        .expect_err("el certificado no es de confianza");
+
+    assert_eq!(error.situation(), Situation::ServletUnreachable);
+    assert!(
+        error
+            .to_string()
+            .contains("certificado del servidor 127.0.0.1 no es de confianza"),
+        "{error}"
+    );
+}

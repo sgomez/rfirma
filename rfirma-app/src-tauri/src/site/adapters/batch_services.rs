@@ -45,7 +45,7 @@ impl RelayBatchServices {
                 )
                 .body(body)
                 .send()
-                .map_err(|error| BatchError::new(unreachable, error.to_string()))?;
+                .map_err(|error| BatchError::new(unreachable, super::send_failure(&error)))?;
             let status = response.status();
             if super::is_rejection(status) {
                 return Err(BatchError::answered(
