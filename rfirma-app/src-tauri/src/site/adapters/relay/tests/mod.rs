@@ -190,5 +190,6 @@ fn a_parameters_xml(pairs: &[(&str, &str)]) -> Vec<u8> {
 }
 
 mod active_wait;
+mod cookies;
 mod document_variant;
 mod parameters_variant;

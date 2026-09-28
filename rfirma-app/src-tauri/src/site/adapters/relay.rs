@@ -30,6 +30,7 @@ pub struct Relay {
     inbox: Inbox,
     on_upload_failure: Arc<dyn Fn(Refusal) + Send + Sync>,
     runtime: tokio::runtime::Handle,
+    cookies: Arc<OperationCookies>,
 }
 
 impl Relay {
@@ -41,11 +42,29 @@ impl Relay {
         on_upload_failure: Arc<dyn Fn(Refusal) + Send + Sync>,
         runtime: tokio::runtime::Handle,
     ) -> Self {
+        Self::with_cookies(
+            servlets,
+            inbox,
+            on_upload_failure,
+            runtime,
+            OperationCookies::of_the_process(),
+        )
+    }
+
+    /// Como `new`, sobre el almacén de cookies indicado.
+    pub(crate) fn with_cookies(
+        servlets: Arc<dyn Servlets + Send + Sync>,
+        inbox: Inbox,
+        on_upload_failure: Arc<dyn Fn(Refusal) + Send + Sync>,
+        runtime: tokio::runtime::Handle,
+        cookies: Arc<OperationCookies>,
+    ) -> Self {
         Self {
             servlets,
             inbox,
             on_upload_failure,
             runtime,
+            cookies,
         }
     }
 }
@@ -56,6 +75,7 @@ impl Transport for Relay {
         location: &ChannelLocation,
         duty: ChannelDuty,
     ) -> Result<OpenChannel, ChannelError> {
+        self.cookies.forget();
         let ChannelLocation::Relay(info) = location else {
             return Err(ChannelError::new(
                 Situation::Relay,
@@ -122,13 +142,14 @@ impl Transport for Relay {
         let store_servlet = resolved.store_servlet;
         let id = resolved.id;
         let reply_heartbeat = heartbeat;
+        let cookies = Arc::clone(&self.cookies);
         let reply = ReplyHandle::of(move |text: String| {
             if let Some(hb) = &reply_heartbeat {
                 hb.stop();
             }
             let _guard = reply_heartbeat.as_ref().map(|hb| hb.0.upload_lock.lock());
             let stored = servlets.store(&store_servlet, &id, &text);
-            OperationCookies::of_the_process().forget();
+            cookies.forget();
             match stored {
                 Ok(()) => Acknowledgement::immediate(),
                 Err(error) => {
