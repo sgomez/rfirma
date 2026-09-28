@@ -1172,10 +1172,10 @@ msgstr ""
 msgid "preferences.rememberVisibleSignature.label"
 msgstr ""
 
-msgid "preferences.rememberVisibleSignature.hint"
+msgid "preferences.consentCountdown.label"
 msgstr ""
 
-msgid "preferences.consentCountdown.label"
+msgid "preferences.consentCountdown.hint"
 msgstr ""
 
 msgid "preferences.honourAutomaticSelection.label"
