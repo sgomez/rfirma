@@ -223,3 +223,6 @@ siguen en `.scratch/archive/`.
 2026-09-28 spec=#1178 sub=#1186 model=sonnet effort=medium pr=#1193 verdict=CLEAN cycles=1 mergefix=0 wave=2 outcome=merged
 2026-09-28 spec=#1184 sub=#1175 model=sonnet effort=medium pr=#1194 verdict=CLEAN cycles=0 mergefix=0 wave=— outcome=merged
 2026-09-28 spec=#1184 sub=#1177 model=sonnet effort=medium pr=#1195 verdict=CLEAN cycles=0 mergefix=0 wave=— outcome=merged
+2026-09-28 spec=#1184 sub=#1179 model=sonnet effort=medium pr=#1197 verdict=CLEAN cycles=1 mergefix=0 wave=1 outcome=merged
+2026-09-28 spec=#1184 sub=#1176 model=sonnet effort=medium pr=#1196 verdict=CLEAN cycles=1 mergefix=0 wave=1 outcome=merged
+2026-09-28 spec=#1184 sub=#1180 model=sonnet effort=medium pr=#1198 verdict=CLEAN cycles=3 mergefix=0 wave=2 outcome=escalated
