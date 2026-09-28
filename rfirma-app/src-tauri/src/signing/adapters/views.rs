@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::crossing::crossing;
 
+use crate::documents::domain::destination::DestinationMode;
 use crate::signing::adapters::state::VisibleSignatureMemory;
 use crate::signing::application::configuration::Preferences;
 use crate::signing::application::configuration_memory::Theme;
@@ -53,6 +54,8 @@ crossing! {
         pub language: String,
         /// Nombre de la carpeta de destino.
         pub destination: String,
+        /// Si el firmado cae junto al original o en la carpeta de destino.
+        pub destination_mode: DestinationMode,
         /// Si se recuerda la última configuración de firma visible.
         pub remember_visible_signature: bool,
         /// Si se conserva el historial de actividad reciente.
@@ -78,6 +81,7 @@ impl From<Preferences> for ConfigurationView {
         Self {
             language: preferences.language,
             destination: preferences.destination,
+            destination_mode: preferences.destination_mode,
             remember_visible_signature: preferences.remember_visible_signature,
             remember_activity: preferences.remember_activity,
             notify_new_version: preferences.notify_new_version,
@@ -95,6 +99,7 @@ impl From<ConfigurationView> for Preferences {
         Self {
             language: view.language,
             destination: view.destination,
+            destination_mode: view.destination_mode,
             remember_visible_signature: view.remember_visible_signature,
             remember_activity: view.remember_activity,
             notify_new_version: view.notify_new_version,
@@ -326,5 +331,13 @@ crossing! {
         System,
         Light,
         Dark,
+    }
+}
+
+crossing! {
+    lent from "documents/domain/destination.rs":
+    pub enum DestinationMode {
+        NextToTheOriginal,
+        InTheDestinationFolder,
     }
 }
