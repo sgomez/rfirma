@@ -37,6 +37,10 @@ pub(crate) struct ProtocolConditionResult {
 pub(crate) enum RemoteService {
     Presigner,
     Postsigner,
+    IntermediateStorage,
+    IntermediateRetrieval,
+    Triphase,
+    DatDownload,
 }
 
 /// Las cabeceras de una petición que cuentan, normalizadas: `Origin` sin puerto y de
@@ -626,6 +630,18 @@ mod tests {
             requests[0].content_type.as_deref(),
             Some("application/x-www-form-urlencoded")
         );
+    }
+
+    #[test]
+    fn a_triphase_request_is_read_with_its_own_remote_service() {
+        let outcome = observe(
+            the_recorded("a-triphase-signature-with-its-parameters-in-the-body"),
+            |_| {},
+        );
+
+        let requests = outcome.requests.unwrap();
+        assert_eq!(requests[0].service, RemoteService::Triphase);
+        assert_eq!(requests[0].body, ["cert", "cop", "doc", "format", "op"]);
     }
 
     #[test]

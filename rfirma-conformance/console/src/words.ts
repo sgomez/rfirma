@@ -55,6 +55,10 @@ export const requestsComparisonName: Record<RequestsComparison, string> = {
 export const remoteServiceName: Record<RemoteService, string> = {
   presigner: "prefirmador",
   postsigner: "postfirmador",
+  intermediate_storage: "servidor intermedio de guardado",
+  intermediate_retrieval: "servidor intermedio de recuperación",
+  triphase: "servidor trifásico",
+  dat_download: "descarga del dat",
 };
 
 export const assistanceName: Record<Assistance, string> = {

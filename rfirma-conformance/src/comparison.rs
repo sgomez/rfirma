@@ -278,6 +278,20 @@ script = "batch"
 expects.completes.conditions = ["through-both-servlets"]
 "#;
 
+    const A_TRIPHASE_SIGNATURE: &str = r#"
+[[check]]
+id = "a_triphase_signature"
+set = "operaciones"
+chapter = "16"
+citation = "AOCAdESTriPhaseSigner.java:239-356"
+statement = "Una firma trifásica."
+
+[check.drive]
+mode = "v4"
+script = "sign"
+expects.completes.conditions = ["through-the-triphase-server"]
+"#;
+
     const THREE_CHECKS: &str = r#"
 [[check]]
 id = "z_one"
@@ -403,8 +417,17 @@ expects.completes = {}
     }
 
     fn a_report_replaying(kind: ClientKind, catalogue: &[Check], recorded: &str) -> Report {
+        a_report_replaying_the_script(kind, catalogue, "batch", recorded)
+    }
+
+    fn a_report_replaying_the_script(
+        kind: ClientKind,
+        catalogue: &[Check],
+        script: &str,
+        recorded: &str,
+    ) -> Report {
         let mut report = a_blank_report(kind, catalogue);
-        let runner = RecordedRunner::replaying(&[("batch", the_recorded(recorded))]);
+        let runner = RecordedRunner::replaying(&[(script, the_recorded(recorded))]);
         let probe = Probe {
             client: PathBuf::from("/nowhere/launch-subject"),
             trust_root: PathBuf::from("/nowhere/root.pem"),
@@ -508,6 +531,41 @@ expects.completes = {}
             .differences
             .iter()
             .any(|line| line.contains("tridata")));
+    }
+
+    #[test]
+    fn the_triphase_signature_in_the_query_against_the_body_differs_with_the_same_result() {
+        let catalogue = the_catalogue_in(A_TRIPHASE_SIGNATURE).unwrap();
+        let left = a_report_replaying_the_script(
+            ClientKind::Autofirma,
+            &catalogue,
+            "sign",
+            "a-triphase-signature-with-its-parameters-in-the-body",
+        );
+        let right = a_report_replaying_the_script(
+            ClientKind::Rfirma,
+            &catalogue,
+            "sign",
+            "a-triphase-signature-with-its-parameters-in-the-query",
+        );
+
+        let comparison = compare(&left, &right, &catalogue);
+
+        let row = &comparison.rows[0];
+        assert_eq!((row.a, row.b, row.differ), ("CONFORME", "CONFORME", false));
+        assert_eq!(row.requests, RequestsComparison::Differ);
+        assert_eq!(
+            row.a_requests.as_ref().unwrap()[0].service,
+            RemoteService::Triphase
+        );
+        assert_eq!(
+            row.a_requests.as_ref().unwrap()[0].body,
+            ["cert", "cop", "doc", "format", "op"]
+        );
+        assert_eq!(
+            row.b_requests.as_ref().unwrap()[0].query,
+            ["cert", "cop", "doc", "format", "op"]
+        );
     }
 
     #[test]

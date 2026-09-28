@@ -1,10 +1,9 @@
 // Los guiones de petición de la sede publicada: lo que el cliente hace con el `dat` que recibe.
 
-import { createServer } from "node:http";
-
 import { theCmsSignature } from "../lib/cms.mjs";
 import { aConditionEvent, bytesOf, emit, settle, settlingTheError } from "../lib/events.mjs";
 import { aPublishedScript, withoutAChoice } from "../lib/script.mjs";
+import { servletServer } from "../lib/servlet.mjs";
 
 const THE_URL_IN_DAT_DOWNLOADED_AND_SIGNED = "the-url-in-dat-downloaded-and-signed";
 const THE_LITERAL_DAT_SIGNED = "the-literal-dat-signed";
@@ -15,19 +14,19 @@ const THE_SERVED_DOCUMENT = Buffer.from("documento que sirve la sede por HTTP", 
 const THE_LITERAL_DAT = "dato*literal!";
 
 /** Un documento servido por HTTP en un puerto libre del loopback, su URL y si alguien lo pidió. */
-function aDocumentServed(content) {
+export async function aDocumentServed(content, { telling = emit } = {}) {
   const served = { requested: false, url: null };
-  return new Promise((resolve) => {
-    const server = createServer((_request, response) => {
+  const server = await servletServer(
+    async (_parameters, _request, response) => {
       served.requested = true;
       response.writeHead(200, { "content-type": "application/octet-stream" });
       response.end(content);
-    });
-    server.listen(0, "127.0.0.2", () => {
-      served.url = `http://127.0.0.2:${server.address().port}/documento.bin`;
-      resolve(served);
-    });
-  });
+    },
+    { service: "dat_download", telling },
+  );
+  served.url = `http://127.0.0.2:${server.address().port}/documento.bin`;
+  served.close = () => new Promise((resolve) => server.close(resolve));
+  return served;
 }
 
 function theImplicitContentOf(signature) {

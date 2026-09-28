@@ -64,7 +64,9 @@ export function theRequest(service, request, form) {
 
 /**
  * Un servlet HTTP en un puerto libre de `host`, que entrega a `handling` los parámetros de cada
- * petición; con `service`, cuenta cada petición que recibe como ese servicio remoto.
+ * petición; con `service`, cuenta cada petición que recibe como ese servicio remoto. `service`
+ * también puede ser una función de la petición, para un servidor que atiende más de un servicio
+ * remoto según la ruta.
  */
 export function servletServer(
   handling,
@@ -73,7 +75,8 @@ export function servletServer(
   return new Promise((resolve) => {
     const server = createServer(async (request, response) => {
       const form = await theBody(request);
-      if (service !== null) telling(theRequest(service, request, form));
+      const resolved = typeof service === "function" ? service(request) : service;
+      if (resolved !== null) telling(theRequest(resolved, request, form));
       await handling(reading(request, form), request, response);
     });
     server.listen(0, host, () => resolve(server));
