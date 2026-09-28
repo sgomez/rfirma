@@ -33,6 +33,7 @@ const keys = (overrides: Partial<Parameters<typeof isOpenShortcut>[0]> = {}) => 
 const aPreferences: Preferences = {
   theme: "system",
   destination: "Documentos",
+  destinationMode: "next_to_the_original",
   offersOriginalFolder: false,
   rememberVisibleSignature: true,
   rememberActivity: true,

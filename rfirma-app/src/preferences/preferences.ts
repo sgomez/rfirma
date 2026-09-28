@@ -8,6 +8,7 @@
  * donde se puede y el nombre donde no sería la misma pantalla contando cosas
  * distintas según el empaquetado (ADR-0011).
  */
+import type { DestinationMode } from "./destinationMode";
 import type { Theme } from "./theme";
 
 export interface Preferences {
@@ -28,6 +29,12 @@ export interface Preferences {
    * usuario: se lee, **no se guarda** al escribir, igual que `destination`.
    */
   offersOriginalFolder: boolean;
+  /**
+   * Dónde cae el siguiente firmado. Es un modo que se elige, no un hecho
+   * (ADR-0011): bajo `offersOriginalFolder` en `false` se sigue guardando,
+   * pero la pantalla ya no ofrece cambiarlo.
+   */
+  destinationMode: DestinationMode;
   /**
    * «Recordar la última configuración de firma visible». Apagado significa
    * **no guardarla**, no guardarla y no aplicarla.

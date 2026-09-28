@@ -1,10 +1,12 @@
 import type { TFunction } from "i18next";
 import type { ReactNode } from "react";
+import { useId } from "react";
 import { useTranslation } from "react-i18next";
 import type { NamedFailure } from "../errors/classify";
 import { ErrorNotice } from "../errors/ErrorNotice";
 import { LANGUAGES, type LanguageTag } from "../i18n/languages";
 import type { Certificate } from "../signing/certificate";
+import type { DestinationMode } from "./destinationMode";
 import type { SaveFailure, Section } from "./PreferencesView";
 import type { Preferences } from "./preferences";
 import { Select } from "./Select";
@@ -117,12 +119,95 @@ export function GeneralSection({
   );
 }
 
+/** La carpeta de destino, con el botón que abre el selector del sistema. */
+function DestinationFolderRow({
+  destination,
+  onChooseDestinationClick,
+  t,
+}: {
+  destination: string;
+  onChooseDestinationClick: () => void;
+  t: TFunction;
+}) {
+  return (
+    <div className="rf-row rf-gap-sm preferences__destination-row">
+      <p className="rf-prose preferences__destination-folder">{destination}</p>
+      <button type="button" className="rf-btn rf-btn--secondary" onClick={onChooseDestinationClick}>
+        {t("preferences.destination.change")}
+      </button>
+    </div>
+  );
+}
+
+/**
+ * Dónde cae el siguiente firmado (ADR-0011): con `offersOriginalFolder`, un
+ * grupo de radios entre los dos modos; sin él, solo la carpeta y su botón.
+ */
+function DestinationField({
+  titleId,
+  destinationName,
+  preferences,
+  onChooseDestinationClick,
+  onDestinationModeChange,
+}: {
+  titleId: string;
+  destinationName: string;
+  preferences: Preferences;
+  onChooseDestinationClick: () => void;
+  onDestinationModeChange: (mode: DestinationMode) => void;
+}) {
+  const { t } = useTranslation();
+  const labelId = `${titleId}-destination`;
+  const folderRow = (
+    <DestinationFolderRow
+      destination={preferences.destination}
+      onChooseDestinationClick={onChooseDestinationClick}
+      t={t}
+    />
+  );
+  return (
+    <div className="preferences__destination">
+      <p className="rf-prose preferences__destination-title" id={labelId}>
+        {t("preferences.destination.label")}
+      </p>
+      {preferences.offersOriginalFolder ? (
+        <div className="rf-stack rf-gap-xs" role="radiogroup" aria-labelledby={labelId}>
+          <label className="rf-row rf-gap-xs preferences__destination-radio">
+            <input
+              type="radio"
+              name={destinationName}
+              checked={preferences.destinationMode === "next_to_the_original"}
+              onChange={() => onDestinationModeChange("next_to_the_original")}
+            />
+            <span className="rf-prose">{t("preferences.destination.nextToOriginal")}</span>
+          </label>
+          <div className="preferences__destination-option">
+            <label className="rf-row rf-gap-xs preferences__destination-radio">
+              <input
+                type="radio"
+                name={destinationName}
+                checked={preferences.destinationMode === "in_the_destination_folder"}
+                onChange={() => onDestinationModeChange("in_the_destination_folder")}
+              />
+              <span className="rf-prose">{t("preferences.destination.inThisFolder")}</span>
+            </label>
+            <div className="preferences__destination-suboption">{folderRow}</div>
+          </div>
+        </div>
+      ) : (
+        folderRow
+      )}
+    </div>
+  );
+}
+
 interface SigningSectionProps {
   titleId: string;
   saveFailure: SaveFailure | null;
   preferences: Preferences;
   onRememberVisibleSignatureChange: (checked: boolean) => void;
   onChooseDestinationClick: () => void;
+  onDestinationModeChange: (mode: DestinationMode) => void;
   onConsentCountdownChange: (checked: boolean) => void;
   onHonourAutomaticSelectionChange: (checked: boolean) => void;
 }
@@ -133,10 +218,12 @@ export function SigningSection({
   preferences,
   onRememberVisibleSignatureChange,
   onChooseDestinationClick,
+  onDestinationModeChange,
   onConsentCountdownChange,
   onHonourAutomaticSelectionChange,
 }: SigningSectionProps) {
   const { t } = useTranslation();
+  const destinationName = useId();
   return (
     <>
       <Heading label="signing" headingId={`${titleId}-heading-signing`} />
@@ -147,31 +234,13 @@ export function SigningSection({
           wide
           onChange={onRememberVisibleSignatureChange}
         />
-        <div className="preferences__destination">
-          <p className="rf-label" id={`${titleId}-destination`}>
-            {t("preferences.destination.label")}
-          </p>
-          {preferences.offersOriginalFolder && (
-            <p className="rf-prose preferences__destination-note">
-              {t("preferences.destination.nextToOriginal")}
-            </p>
-          )}
-          <div className="rf-row rf-gap-sm preferences__destination-row">
-            {preferences.offersOriginalFolder && (
-              <span className="rf-prose preferences__destination-mode-label">
-                {t("preferences.destination.inThisFolder")}
-              </span>
-            )}
-            <p className="rf-prose preferences__destination-folder">{preferences.destination}</p>
-            <button
-              type="button"
-              className="rf-btn rf-btn--secondary"
-              onClick={onChooseDestinationClick}
-            >
-              {t("preferences.destination.change")}
-            </button>
-          </div>
-        </div>
+        <DestinationField
+          titleId={titleId}
+          destinationName={destinationName}
+          preferences={preferences}
+          onChooseDestinationClick={onChooseDestinationClick}
+          onDestinationModeChange={onDestinationModeChange}
+        />
         <Switch
           checked={preferences.consentCountdown}
           label={t("preferences.consentCountdown.label")}

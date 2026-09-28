@@ -4,6 +4,7 @@ import { invoke } from "@tauri-apps/api/core";
 import type { ExternalDestinationOpener } from "./desktop/externalDestination";
 import { FALLBACK_LANGUAGE, isLanguageTag } from "./i18n/languages";
 import type { LanguagePreference } from "./i18n/preference";
+import type { DestinationMode } from "./preferences/destinationMode";
 import type { PreferencesStore } from "./preferences/preferences";
 import { DEFAULT_THEME, isTheme, type Theme } from "./preferences/theme";
 import type {
@@ -21,6 +22,7 @@ import type { NewVersion, VersionCheck } from "./updates/newVersion";
 interface ConfigurationView {
   language: string;
   destination: string;
+  destinationMode: DestinationMode;
   rememberVisibleSignature: boolean;
   rememberActivity: boolean;
   notifyNewVersion: boolean;
@@ -72,6 +74,7 @@ export function tauriPreferences(): PreferencesStore {
       return {
         theme: isTheme(configuration.theme) ? configuration.theme : DEFAULT_THEME,
         destination: configuration.destination,
+        destinationMode: configuration.destinationMode,
         offersOriginalFolder: configuration.offersTheOriginalFolder,
         rememberVisibleSignature: configuration.rememberVisibleSignature,
         rememberActivity: configuration.rememberActivity,
@@ -86,6 +89,7 @@ export function tauriPreferences(): PreferencesStore {
       await writeConfiguration({
         ...stored,
         theme: preferences.theme,
+        destinationMode: preferences.destinationMode,
         rememberVisibleSignature: preferences.rememberVisibleSignature,
         rememberActivity: preferences.rememberActivity,
         notifyNewVersion: preferences.notifyNewVersion,

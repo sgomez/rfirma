@@ -95,19 +95,81 @@ describe("PreferencesView", () => {
     expect(screen.getByRole("button", { name: "Cambiar carpeta…" })).toBeInTheDocument();
   });
 
-  // El destino lo decide el documento, no la persona (ADR-0011): las dos
-  // frases son un estado que se enseña, no un control que finge elegir entre
-  // ellas.
-  it("shows the two destination states as text, never as a choice", async () => {
+  // El destino es un modo que se elige (ADR-0011): con los dos entornos
+  // ofrecidos, la pantalla enseña un grupo de radios y no solo un texto.
+  it("offers the two destination modes as a radio group", async () => {
     const user = userEvent.setup();
-    renderView({ preferences: { ...defaults, offersOriginalFolder: true } });
+    renderView({
+      preferences: {
+        ...defaults,
+        offersOriginalFolder: true,
+        destinationMode: "in_the_destination_folder",
+      },
+    });
     await openTab(user, "Firma");
 
-    expect(screen.queryByRole("radiogroup")).not.toBeInTheDocument();
-    expect(screen.queryByRole("radio")).not.toBeInTheDocument();
-    expect(screen.getByText("Junto al documento original")).toBeInTheDocument();
-    expect(screen.getByText("En esta carpeta")).toBeInTheDocument();
+    const group = screen.getByRole("radiogroup", { name: "Dónde se guarda el documento firmado" });
+    expect(group).toBeInTheDocument();
+    expect(
+      within(group).getByRole("radio", { name: "Junto al documento original" }),
+    ).not.toBeChecked();
+    expect(within(group).getByRole("radio", { name: "En esta carpeta" })).toBeChecked();
     expect(screen.getByRole("button", { name: "Cambiar carpeta…" })).toBeInTheDocument();
+  });
+
+  it("marks the current mode when it is next to the original", async () => {
+    const user = userEvent.setup();
+    renderView({
+      preferences: {
+        ...defaults,
+        offersOriginalFolder: true,
+        destinationMode: "next_to_the_original",
+      },
+    });
+    await openTab(user, "Firma");
+
+    expect(screen.getByRole("radio", { name: "Junto al documento original" })).toBeChecked();
+    expect(screen.getByRole("radio", { name: "En esta carpeta" })).not.toBeChecked();
+  });
+
+  it("writes the chosen mode through the preferences port", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn(async () => {});
+    renderView({
+      onChange,
+      preferences: {
+        ...defaults,
+        offersOriginalFolder: true,
+        destinationMode: "next_to_the_original",
+      },
+    });
+    await openTab(user, "Firma");
+
+    await user.click(screen.getByRole("radio", { name: "En esta carpeta" }));
+
+    expect(onChange).toHaveBeenCalledWith({
+      ...defaults,
+      offersOriginalFolder: true,
+      destinationMode: "in_the_destination_folder",
+    });
+  });
+
+  it("reverts to the previous mode and warns in the section when saving it fails", async () => {
+    const user = userEvent.setup();
+    renderView({
+      onChange: () => Promise.reject(new Error("no se pudo guardar")),
+      preferences: {
+        ...defaults,
+        offersOriginalFolder: true,
+        destinationMode: "next_to_the_original",
+      },
+    });
+    await openTab(user, "Firma");
+
+    await user.click(screen.getByRole("radio", { name: "En esta carpeta" }));
+
+    expect(await screen.findByText(/no se pudo guardar/)).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "Junto al documento original" })).toBeChecked();
   });
 
   it("offers every language whose catalog is complete", async () => {

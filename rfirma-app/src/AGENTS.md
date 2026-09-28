@@ -129,6 +129,7 @@ rojo.
 | `status/WithdrawCertificateDialog.tsx` | El velo que confirma, ejecuta y cuenta la retirada del certificado de rFirma (docs/design/retirar-certificado.md). |
 | **`preferences/`** | Los ajustes. |
 | `preferences/preferences.ts` | Lo que la aplicación recuerda. |
+| `preferences/destinationMode.ts` | Dónde cae el siguiente firmado: junto al original o en la carpeta de destino. |
 | `preferences/PreferencesView.tsx` | La vista del cuerpo con los ajustes, con su índice de **cuatro** secciones. |
 | `preferences/PreferencesSections.tsx` | El contenido de cada sección del índice, como componentes propios. |
 | `preferences/focusTrap.ts` | El tabulador que da la vuelta dentro de un modal. |

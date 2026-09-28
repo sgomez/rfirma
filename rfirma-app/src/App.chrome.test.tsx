@@ -317,6 +317,7 @@ describe("App", () => {
       read: async () => ({
         theme: "system",
         destination: "Documentos",
+        destinationMode: "next_to_the_original",
         offersOriginalFolder: false,
         rememberVisibleSignature: true,
         rememberActivity: true,
