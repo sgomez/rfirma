@@ -23,12 +23,6 @@ const configuration = {
   honourAutomaticSelection: false,
 };
 
-/**
- * **Grada A del punto de entrada** (#1143): monta `sede/main.tsx` de verdad,
- * con Tauri doblado, en vez de `SedeWindow` sola —que ni siquiera recibe un
- * puerto de versión (ID-181)—. Es lo único que puede vigilar que nadie añada
- * la comprobación a este cableado.
- */
 describe("el punto de entrada de la ventana de sede", () => {
   let pushErrand: ((view: SiteErrandView) => void) | undefined;
 
