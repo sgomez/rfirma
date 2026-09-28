@@ -96,9 +96,13 @@ fn the_store_crosses_as_a_class_and_never_as_a_path() {
         store_name(StoreClass::Chrome),
         store_name(StoreClass::Nssdb),
         store_name(StoreClass::Installed),
+        store_name(StoreClass::Windows),
     ];
 
-    assert_eq!(names, ["card", "firefox", "chrome", "nssdb", "installed"]);
+    assert_eq!(
+        names,
+        ["card", "firefox", "chrome", "nssdb", "installed", "windows"]
+    );
     for name in names {
         assert!(!name.contains('/'), "«{name}» parece una ruta");
         assert!(

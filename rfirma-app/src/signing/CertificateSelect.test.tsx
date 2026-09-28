@@ -208,6 +208,17 @@ describe("CertificateSelect", () => {
       expect(within(row(1)).getByText("Instalado en rFirma")).toBeVisible();
     });
 
+    it("names the Windows personal store as the Windows store and never as a card", async () => {
+      renderSelect({
+        certificates: [aCertificate({ id: "windows", stores: ["windows", "card"] })],
+      });
+
+      await userEvent.click(box());
+
+      expect(within(row(0)).getByText("Almacén de Windows")).toBeVisible();
+      expect(within(row(0)).getByText("Tarjeta")).toBeVisible();
+    });
+
     it("keeps the issuer for the tooltip, naming the other stores of the same certificate", async () => {
       renderSelect();
 

@@ -784,6 +784,9 @@ msgstr "Almacén NSS"
 msgid "panel.certificate.stores.installed"
 msgstr "Instalado en rFirma"
 
+msgid "panel.certificate.stores.windows"
+msgstr "Almacén de Windows"
+
 msgid "panel.certificate.retry"
 msgstr "Volver buscar"
 

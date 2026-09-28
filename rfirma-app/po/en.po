@@ -781,6 +781,9 @@ msgstr "NSS store"
 msgid "panel.certificate.stores.installed"
 msgstr "Installed in rFirma"
 
+msgid "panel.certificate.stores.windows"
+msgstr "Windows store"
+
 msgid "panel.certificate.retry"
 msgstr "Look again"
 

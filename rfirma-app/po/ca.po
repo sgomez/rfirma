@@ -798,6 +798,9 @@ msgstr "Magatzem NSS"
 msgid "panel.certificate.stores.installed"
 msgstr "Instal·lat a rFirma"
 
+msgid "panel.certificate.stores.windows"
+msgstr "Magatzem de Windows"
+
 msgid "panel.certificate.retry"
 msgstr "Tornar a cercar"
 

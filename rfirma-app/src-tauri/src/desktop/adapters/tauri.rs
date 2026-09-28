@@ -80,7 +80,9 @@ fn brand_of(profile: &std::path::Path) -> StoreBrand {
     match Store::nss(std::path::PathBuf::new(), profile).class() {
         StoreClass::Firefox => StoreBrand::Firefox,
         StoreClass::Chrome => StoreBrand::Chrome,
-        StoreClass::Nssdb | StoreClass::Card | StoreClass::Installed => StoreBrand::Nssdb,
+        StoreClass::Nssdb | StoreClass::Card | StoreClass::Installed | StoreClass::Windows => {
+            StoreBrand::Nssdb
+        }
     }
 }
 
@@ -92,6 +94,7 @@ fn brand_of_class(class: StoreClass) -> StoreBrand {
         StoreClass::Nssdb => StoreBrand::Nssdb,
         StoreClass::Card => StoreBrand::Card,
         StoreClass::Installed => StoreBrand::Installed,
+        StoreClass::Windows => StoreBrand::Windows,
     }
 }
 

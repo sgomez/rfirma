@@ -75,6 +75,7 @@ pub fn store_name(class: StoreClass) -> &'static str {
         StoreClass::Chrome => "chrome",
         StoreClass::Nssdb => "nssdb",
         StoreClass::Installed => "installed",
+        StoreClass::Windows => "windows",
     }
 }
 

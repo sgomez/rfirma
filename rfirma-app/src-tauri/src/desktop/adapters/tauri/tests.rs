@@ -12,3 +12,8 @@ fn a_card_and_an_installed_p12_are_each_their_own_brand() {
     assert_eq!(brand_of_class(StoreClass::Card), StoreBrand::Card);
     assert_eq!(brand_of_class(StoreClass::Installed), StoreBrand::Installed);
 }
+
+#[test]
+fn the_windows_personal_store_is_the_windows_brand() {
+    assert_eq!(brand_of_class(StoreClass::Windows), StoreBrand::Windows);
+}

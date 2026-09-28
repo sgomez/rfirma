@@ -67,6 +67,23 @@ fn a_plain_module_is_a_card() {
 }
 
 #[test]
+fn a_cng_store_is_the_windows_store_and_not_a_card() {
+    assert_eq!(
+        Store::module("cng:CurrentUser/MY").class(),
+        StoreClass::Windows
+    );
+    assert_eq!(
+        Store::module("cng:CurrentUser/MY").class_under(Path::new("/nowhere")),
+        StoreClass::Windows
+    );
+}
+
+#[test]
+fn a_windows_copy_is_preferred_over_the_same_certificate_on_a_card() {
+    assert!(StoreClass::Windows.preference() < StoreClass::Card.preference());
+}
+
+#[test]
 fn an_nss_store_is_classified_by_whose_profile_it_opens() {
     let firefox = Store::nss(
         "/usr/lib/libsoftokn3.so",

@@ -55,12 +55,13 @@ describe("StatusView", () => {
     const rows: SignalRow[] = [
       {
         signal: "userCertificates",
-        value: "4",
+        value: "5",
         verdict: "correct",
         action: null,
         detail: {
           kind: "certificates",
           stores: [
+            { brand: "windows", certificates: 1 },
             { brand: "firefox", certificates: 2 },
             { brand: "card", certificates: 1 },
             { brand: "installed", certificates: 1 },
@@ -74,12 +75,13 @@ describe("StatusView", () => {
     renderWithCatalog(<StatusView statusPort={memoryStatus(rows)} onClose={() => {}} />);
 
     const row = await screen.findByRole("status");
-    expect(within(row).getByText("4 certificados")).toBeInTheDocument();
+    expect(within(row).getByText("5 certificados")).toBeInTheDocument();
 
     await user.click(within(row).getByRole("button", { name: "Ver dónde" }));
 
     const places = within(row).getAllByRole("listitem");
     expect(places.map((place) => place.textContent)).toEqual([
+      "Almacén de Windows1",
       "Firefox2",
       "Tarjeta1",
       "Fichero instalado1",

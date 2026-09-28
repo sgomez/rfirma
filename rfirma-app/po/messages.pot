@@ -726,6 +726,9 @@ msgstr ""
 msgid "panel.certificate.stores.installed"
 msgstr ""
 
+msgid "panel.certificate.stores.windows"
+msgstr ""
+
 msgid "panel.certificate.retry"
 msgstr ""
 

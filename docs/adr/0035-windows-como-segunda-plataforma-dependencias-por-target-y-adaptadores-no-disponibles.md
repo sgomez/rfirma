@@ -142,7 +142,7 @@ certificados aparecen en `CurrentUser\MY` y se firman por CNG con el PIN pedido 
 la vía preferente. Además se buscan los módulos PKCS#11 de OpenSC y del DNIe en
 `%ProgramFiles%` y `%SystemRoot%\System32` (`RFIRMA_PKCS11_MODULE` los sustituye a todos, como
 en Linux); si el mismo certificado sale por los dos, la fila única se queda con la copia de CNG
-porque su almacén va primero y los dos son de clase `Card`.
+porque su clase, `Windows`, se prefiere a `Card`, y la ventana la rotula «Almacén de Windows».
 
 ## Las recetas corren en Git Bash
 

@@ -21,7 +21,8 @@ impl SecretName {
     /// La palabra que le toca a la clase de almacén.
     pub fn of(store: StoreClass) -> Self {
         match store {
-            StoreClass::Card => Self::Pin,
+            // En Windows el PIN lo pide el propio sistema, pero si hay que nombrarlo es el de la tarjeta.
+            StoreClass::Card | StoreClass::Windows => Self::Pin,
             StoreClass::Firefox
             | StoreClass::Chrome
             | StoreClass::Nssdb

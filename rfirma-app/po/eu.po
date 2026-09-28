@@ -800,6 +800,9 @@ msgstr "NSS biltegia"
 msgid "panel.certificate.stores.installed"
 msgstr "rFirman instalatuta"
 
+msgid "panel.certificate.stores.windows"
+msgstr "Windows biltegia"
+
 msgid "panel.certificate.retry"
 msgstr "Bilatu berriro"
 
