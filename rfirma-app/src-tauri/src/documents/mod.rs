@@ -57,7 +57,15 @@ impl DocumentsRoot {
         self.opened.mint(Document::passing_through(path))
     }
 
-    /// Deja el firmado en el destino de esta firma, o en la carpeta de destino, y dice dónde cayó.
+    fn landing_folder(&self, document: &Document) -> DestinationFolder {
+        application::documents::landing_folder(
+            self.memory.as_ref(),
+            self.documents_folder.clone(),
+            document,
+        )
+    }
+
+    /// Deja el firmado en el destino de esta firma, o donde diga el modo de destino, y dice dónde cayó.
     pub fn deliver(
         &self,
         document: &Document,
@@ -67,7 +75,7 @@ impl DocumentsRoot {
         let Some(id) = single_destination else {
             return application::documents::deliver(
                 self.files.as_ref(),
-                &self.chosen_folder(),
+                &self.landing_folder(document),
                 document,
                 signed,
             );
@@ -76,7 +84,7 @@ impl DocumentsRoot {
         single::deliver(self.files.as_ref(), &chosen, signed)
     }
 
-    /// Dónde caerá el documento: en el destino de esta firma, o en la carpeta de destino.
+    /// Dónde caerá el documento: en el destino de esta firma, o donde diga el modo de destino.
     pub fn where_it_lands(
         &self,
         document: &Document,
@@ -85,7 +93,7 @@ impl DocumentsRoot {
         let Some(id) = single_destination else {
             return Ok(application::documents::where_it_lands(
                 self.files.as_ref(),
-                &self.chosen_folder(),
+                &self.landing_folder(document),
                 document,
             ));
         };
@@ -122,3 +130,6 @@ impl DocumentsRoot {
         application::documents::dropped_document(self.files.as_ref(), paths, &self.opened)
     }
 }
+
+#[cfg(test)]
+mod tests;

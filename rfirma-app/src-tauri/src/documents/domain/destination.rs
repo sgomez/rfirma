@@ -35,6 +35,17 @@ impl DestinationFolder {
     }
 }
 
+/// Dónde cae el firmado cuando no se eligió destino para esa sola firma (ADR-0011).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum DestinationMode {
+    /// En la carpeta del original, si la tiene; si no, en la carpeta de destino.
+    #[default]
+    NextToTheOriginal,
+    /// Siempre en la carpeta de destino.
+    InTheDestinationFolder,
+}
+
 /// El fichero elegido con el diálogo de guardar, para una sola firma (ADR-0011).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SingleDestination {

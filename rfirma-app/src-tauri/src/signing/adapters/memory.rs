@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 
 use crate::desktop::adapters::paths::Paths;
 use crate::desktop::domain::version_check::VersionCheck;
-use crate::documents::domain::destination::DestinationFolder;
+use crate::documents::domain::destination::{DestinationFolder, DestinationMode};
 use crate::documents::domain::recents::Recents;
 use crate::identity::domain::certificate::CertificateRef;
 use crate::lock;
@@ -171,6 +171,10 @@ impl Memory {
 impl crate::documents::ports::DocumentsMemory for Memory {
     fn chosen_destination(&self) -> Option<DestinationFolder> {
         lock(&self.live).destination.clone()
+    }
+
+    fn destination_mode(&self) -> DestinationMode {
+        lock(&self.live).destination_mode
     }
 
     fn last_open_folder(&self) -> Option<PathBuf> {
