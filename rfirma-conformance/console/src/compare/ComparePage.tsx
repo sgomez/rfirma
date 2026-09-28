@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router";
 import type { Comparison } from "../contract/Comparison";
 import type { ReceivedRequest } from "../contract/ReceivedRequest";
 import type { ReportEntry } from "../contract/ReportEntry";
+import type { RequestDifference } from "../contract/RequestDifference";
 import type { Row } from "../contract/Row";
 import type { Side } from "../contract/Side";
 import { useLive } from "../suite/live";
@@ -24,6 +25,7 @@ export function ComparePage() {
   const [draft, setDraft] = useState({ a, b });
   const [comparison, setComparison] = useState<Comparison | null>(null);
   const [complaint, setComplaint] = useState<string | null>(null);
+  const [onlyRequestDifferences, setOnlyRequestDifferences] = useState(false);
   const aId = useId();
   const bId = useId();
   const reports = (snapshot?.reports ?? []).filter((entry) => !entry.complaint);
@@ -126,7 +128,13 @@ export function ComparePage() {
         </button>
       </form>
       {complaint && <p className="complaint">{complaint}</p>}
-      {comparison && <ComparisonTable comparison={comparison} />}
+      {comparison && (
+        <ComparisonTable
+          comparison={comparison}
+          onlyRequestDifferences={onlyRequestDifferences}
+          setOnlyRequestDifferences={setOnlyRequestDifferences}
+        />
+      )}
       {!comparison && !complaint && (
         <div className="placeholder">
           <p>Elige dos informes para ver en qué comprobaciones dan un resultado distinto.</p>
@@ -154,8 +162,18 @@ function SideCard({ letter, side }: { letter: string; side: Side }) {
   );
 }
 
-function ComparisonTable({ comparison }: { comparison: Comparison }) {
-  const differing = comparison.rows.filter((row) => row.differ || row.requests === "differ");
+function ComparisonTable({
+  comparison,
+  onlyRequestDifferences,
+  setOnlyRequestDifferences,
+}: {
+  comparison: Comparison;
+  onlyRequestDifferences: boolean;
+  setOnlyRequestDifferences: (value: boolean) => void;
+}) {
+  const differing = comparison.rows
+    .filter((row) => row.differ || row.requests === "differ")
+    .filter((row) => !onlyRequestDifferences || row.requests === "differ");
   const sets = [...new Set(differing.map((row) => row.set))];
   return (
     <section className="comparison" aria-label="Diferencias">
@@ -173,12 +191,21 @@ function ComparisonTable({ comparison }: { comparison: Comparison }) {
           <span>{comparison.requests_differing === 1 ? "envío difiere" : "envíos difieren"}</span>
         </div>
       </div>
+      <label className="field-group checkbox">
+        <input
+          type="checkbox"
+          checked={onlyRequestDifferences}
+          onChange={(event) => setOnlyRequestDifferences(event.target.checked)}
+        />
+        Solo las comprobaciones cuyo envío difiere
+      </label>
       {differing.length === 0 ? (
         <div className="verdict tone-ok" role="status">
           <ResultIcon result="CONFORME" size={20} />
           <p>
-            Los dos informes dan el mismo resultado en todas las comprobaciones, y ningún envío
-            difiere.
+            {onlyRequestDifferences && comparison.requests_differing === 0
+              ? "Ningún envío difiere entre los dos informes."
+              : "Los dos informes dan el mismo resultado en todas las comprobaciones, y ningún envío difiere."}
           </p>
         </div>
       ) : (
@@ -219,6 +246,7 @@ function ComparisonRow({ row }: { row: Row }) {
       {row.requests === "differ" && (
         <tr className="requests-row">
           <td colSpan={4}>
+            <RequestDifferenceList differences={row.request_differences} />
             <div className="requests-sides">
               <RequestList letter="A" requests={row.a_requests ?? []} />
               <RequestList letter="B" requests={row.b_requests ?? []} />
@@ -256,6 +284,26 @@ function ResultsRow({ row }: { row: Row }) {
         <code className="muted">{row.citation}</code>
       </td>
     </tr>
+  );
+}
+
+function RequestDifferenceList({ differences }: { differences: RequestDifference[] }) {
+  if (differences.length === 0) return null;
+  return (
+    <dl className="request-differences" aria-label="Qué difiere en el envío">
+      {differences.map((difference) => (
+        <div key={difference.service}>
+          <dt>{remoteServiceName[difference.service]}</dt>
+          <dd>
+            <ul>
+              {difference.differences.map((line) => (
+                <li key={line}>{line}</li>
+              ))}
+            </ul>
+          </dd>
+        </div>
+      ))}
+    </dl>
   );
 }
 
