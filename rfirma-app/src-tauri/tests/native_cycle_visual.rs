@@ -389,7 +389,7 @@ mod full_cycle {
     #[ignore = "grada C: necesita librfirma_crypto.so y el token (just test-native)"]
     fn the_rubric_only_model_fills_the_box_with_the_image() {
         let config = a_config_by_model(serde_json::json!({ "model": "rubricOnly" }), false);
-        assert_eq!(config.layer2_text, "");
+        assert_eq!(config.layer2_text.as_deref(), Some(""));
 
         let (_, page) = signed_page("cycle-model-rubric-only.pdf", &config);
 
@@ -414,7 +414,10 @@ mod full_cycle {
             serde_json::json!({ "model": "custom", "phrase": phrase }),
             true,
         );
-        assert!(config.layer2_text.starts_with("Conforme: "));
+        assert!(config
+            .layer2_text
+            .as_deref()
+            .is_some_and(|text| text.starts_with("Conforme: ")));
         assert!(config.rubric_image.is_some());
 
         let (_, page) = signed_page("cycle-model-custom.pdf", &config);

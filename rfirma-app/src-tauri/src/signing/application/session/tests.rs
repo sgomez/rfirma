@@ -109,6 +109,20 @@ fn the_geometry_of_the_order_becomes_pades_points() {
 }
 
 #[test]
+fn the_text_of_the_box_is_left_to_the_site() {
+    let certificate = a_certificate("FIRMA", &[]);
+
+    let config =
+        config_for(&SigningChoice::for_the_site(false), &certificate).expect("sin recuadro");
+
+    let params = config.extra_params();
+    assert!(
+        !params.contains_key("layer2Text") && !params.contains_key("layer2FontSize"),
+        "{params:?}"
+    );
+}
+
+#[test]
 fn a_box_outside_the_page_is_refused_instead_of_being_clipped_in_silence() {
     let order = SigningOrder {
         placement: Some(PlacementOrder {
@@ -382,9 +396,9 @@ fn the_complete_model_is_the_default_sentence_of_autofirma() {
 
     assert_eq!(
         config.layer2_text,
-        format!(
+        Some(format!(
             "Firmado por {THE_MASKED_HOLDER} el día 31/08/26, 12:00:00 con un certificado emitido por AC FNMT Usuarios"
-        )
+        ))
     );
     assert_eq!(
         config.rubric_image, None,
@@ -396,7 +410,7 @@ fn the_complete_model_is_the_default_sentence_of_autofirma() {
 fn the_rubric_only_model_is_the_image_and_no_text() {
     let config = config_of(&an_order_with(json!({ "model": "rubricOnly" }), false));
 
-    assert_eq!(config.layer2_text, "");
+    assert_eq!(config.layer2_text.as_deref(), Some(""));
     assert_eq!(config.rubric_image.as_deref(), Some("UNA-RUBRICA"));
 }
 
@@ -418,7 +432,9 @@ fn the_custom_model_substitutes_each_datum_and_masks_the_id_inside_the_signer() 
 
     assert_eq!(
         config.layer2_text,
-        format!("Conforme, {THE_MASKED_HOLDER} el 31/08/26, 12:00:00 con AC FNMT Usuarios")
+        Some(format!(
+            "Conforme, {THE_MASKED_HOLDER} el 31/08/26, 12:00:00 con AC FNMT Usuarios"
+        ))
     );
     assert_eq!(config.rubric_image.as_deref(), Some("UNA-RUBRICA"));
 }
@@ -432,7 +448,8 @@ fn a_placeholder_typed_into_the_phrase_does_not_reach_the_bridge() {
         false,
     ));
 
-    assert!(!config.layer2_text.contains("$$"), "{}", config.layer2_text);
+    let text = config.layer2_text.expect("la ventana compone el texto");
+    assert!(!text.contains("$$"), "{text}");
 }
 
 #[test]

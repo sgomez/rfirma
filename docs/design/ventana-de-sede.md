@@ -260,16 +260,23 @@ su veredicto.
 Solo cuando la sede pide una firma PAdES con `visibleSignature=want` u
 `optional`. Llega **antes** del consentimiento, como el diálogo de colocación
 del original, y es el único momento en el que la ventana **crece**: pasa a
-780 × 660 px mientras dura y vuelve a 520 × 420 al salir, porque en la caja útil
-de 329 px no cabe una página que se pueda marcar.
+1080 × 660 px mientras dura y vuelve a 520 × 420 al salir, porque en la caja útil
+de 329 px no cabe una página que se pueda marcar. Se reparte como la ventana
+principal: el visor a la izquierda y una barra de 380 px a la derecha, con el
+mismo relleno que el panel de firma, que es donde irá el modelo cuando lo haya.
 
-- **Título**: «Marca dónde va tu firma», y debajo una frase que dice que la
-  página pide que la firma se vea y cómo se traza el recuadro.
-- **Cuerpo**: el visor de la ventana principal (`visor-de-documento.md`) con el
-  PDF de la sede, sin firma visible de vista previa: la persona traza el recuadro sobre
-  una página y puede moverlo, redimensionarlo y cambiar de página. El recuadro
-  va a **una sola** página, la del trazo.
-- **Acción principal**: `Continuar`, desactivada hasta que hay recuadro. Lleva
+- **Barra**: el título «Marca dónde va tu firma», debajo una frase que dice que
+  la página pide que la firma se vea y cómo se traza el recuadro, y el bloque
+  «En qué páginas» del panel de firma (`panel-de-firma.md`) —«Una página»,
+  «Varias», «Todas»— con su línea o su campo.
+- **Visor**: el de la ventana principal (`visor-de-documento.md`) con el PDF de
+  la sede, sin firma visible de vista previa: la persona traza el recuadro
+  sobre una página y puede moverlo, redimensionarlo y cambiar de página. El
+  recuadro va a las páginas que diga el segmentado, como en el diálogo del
+  original, que también escribe `signaturePages`. Ni modelo ni rúbrica: lo que
+  va dentro del recuadro lo pone la sede (ADR-0019).
+- **Acción principal**: `Continuar`, desactivada hasta que hay recuadro y
+  mientras el campo de «Varias» no nombre páginas válidas. Lleva
   al consentimiento, y el área marcada sustituye a la que trajera la petición.
 - `Cancelar` en `--ghost` **no cancela el trámite**: cierra el diálogo del área,
   y lo que sigue depende de la petición (ADR-0019). Con `want` y sin área en la

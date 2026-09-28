@@ -12,18 +12,22 @@ export function SedeBody({
   children,
   footer,
   steadyFooter = false,
+  flush = false,
   onEscape,
 }: {
   children: ReactNode;
   footer: ReactNode;
   steadyFooter?: boolean;
+  flush?: boolean;
   onEscape?: () => void;
 }) {
   useEscapeKey(onEscape);
 
   return (
     <>
-      <div className="sede-window__body">{children}</div>
+      <div className={`sede-window__body${flush ? " sede-window__body--flush" : ""}`}>
+        {children}
+      </div>
       <footer
         className={`rf-row rf-gap-xs sede-window__footer${
           steadyFooter ? " sede-window__footer--steady" : ""

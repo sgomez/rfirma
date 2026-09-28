@@ -1,10 +1,14 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { usePlacementControls } from "../App.usePlacementControls";
+import { PlacementFieldset } from "../signing/PlacementFieldset";
+import { usePlacementField } from "../signing/usePlacementField";
 import { DocumentViewer } from "../viewer/DocumentViewer";
 import type { PdfDocument } from "../viewer/pdf";
 import { firstSealedPage, type Placement } from "../viewer/signatureBox";
 import type { MarkedArea } from "./errand";
 import { SedeBody } from "./SedeFrame";
+import "../signing/SigningPanel.css";
 
 interface SedeMarkingProps {
   pdf: PdfDocument | null;
@@ -15,11 +19,26 @@ interface SedeMarkingProps {
 /**
  * **1c · Marcar el área de la firma visible.** La sede pide `visibleSignature`
  * y la persona traza el recuadro sobre el PDF con el mismo visor de la ventana
- * principal, antes de elegir certificado.
+ * principal, y elige sus páginas, antes de elegir certificado.
  */
 export function SedeMarking({ pdf, onMark, onCancel }: SedeMarkingProps) {
   const { t } = useTranslation();
-  const [placement, setPlacement] = useState<Placement | null>(null);
+  const [viewedPage, setViewedPage] = useState(1);
+  const [placementRequest, setPlacementRequest] = useState<{
+    action: "seal" | "unseal";
+  } | null>(null);
+  const { placing, pageChoice, placement, rememberPlacement, choosePages, changePageChoice } =
+    usePlacementControls(pdf, keepNowhere, viewedPage);
+  const { pagesText, rangeError, pageButton, typePages } = usePlacementField({
+    documentPages: pdf?.pageCount ?? 0,
+    pageSets: placing.sets,
+    pageChoice,
+    placement,
+    viewedPage,
+    onChoosePages: choosePages,
+    onSeal: () => setPlacementRequest({ action: "seal" }),
+    onUnseal: () => setPlacementRequest({ action: "unseal" }),
+  });
   const [handing, setHanding] = useState(false);
 
   const accept = async () => {
@@ -34,6 +53,7 @@ export function SedeMarking({ pdf, onMark, onCancel }: SedeMarkingProps) {
 
   return (
     <SedeBody
+      flush
       onEscape={onCancel}
       footer={
         <>
@@ -44,7 +64,7 @@ export function SedeMarking({ pdf, onMark, onCancel }: SedeMarkingProps) {
           <button
             type="button"
             className="rf-btn rf-btn--primary"
-            disabled={placement === null || handing}
+            disabled={placement === null || rangeError !== null || handing}
             onClick={() => void accept()}
           >
             {t("sede.marking.accept")}
@@ -52,24 +72,42 @@ export function SedeMarking({ pdf, onMark, onCancel }: SedeMarkingProps) {
         </>
       }
     >
-      <div className="rf-stack sede-marking">
-        <p className="rf-title">{t("sede.marking.title")}</p>
-        {pdf === null ? (
-          <p className="rf-prose">{t("sede.marking.unreadable")}</p>
-        ) : (
-          <>
-            <p className="rf-prose rf-text-muted">{t("sede.marking.hint")}</p>
-            <div className="sede-marking__viewer">
-              <DocumentViewer
-                pdf={pdf}
-                placement={placement}
-                onPlace={setPlacement}
-                onOpen={noop}
-                pageChoice="single"
-              />
-            </div>
-          </>
+      <div className="sede-marking">
+        {pdf !== null && (
+          <div className="sede-marking__viewer">
+            <DocumentViewer
+              pdf={pdf}
+              placement={placement}
+              onPlace={rememberPlacement}
+              pageChoice={pageChoice}
+              onPageChange={setViewedPage}
+              placementRequest={placementRequest}
+              onOpen={noop}
+            />
+          </div>
         )}
+        <aside className="panel__scroll sede-marking__panel">
+          <p className="rf-title">{t("sede.marking.title")}</p>
+          {pdf === null ? (
+            <p className="rf-prose">{t("sede.marking.unreadable")}</p>
+          ) : (
+            <>
+              <p className="rf-prose rf-text-muted">{t("sede.marking.hint")}</p>
+              <section className="panel__placement" aria-label={t("panel.placement.title")}>
+                <p className="rf-label panel__heading">{t("panel.placement.title")}</p>
+                <PlacementFieldset
+                  pageSets={placing.sets}
+                  pageChoice={pageChoice}
+                  onChangePageChoice={changePageChoice}
+                  pagesText={pagesText}
+                  onTypePages={typePages}
+                  rangeError={rangeError}
+                  pageButton={pageButton}
+                />
+              </section>
+            </>
+          )}
+        </aside>
       </div>
     </SedeBody>
   );
@@ -88,5 +126,7 @@ async function markedAreaOf(pdf: PdfDocument, placement: Placement): Promise<Mar
     rect: [x0, y0, x1, y1],
   };
 }
+
+async function keepNowhere() {}
 
 function noop() {}

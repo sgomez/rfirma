@@ -172,7 +172,7 @@ pub(crate) fn a_cycle_that_may_fail(
     let reference = certificate.reference().clone();
     let config = SignatureConfig {
         placement: None,
-        layer2_text: String::new(),
+        layer2_text: Some(String::new()),
         rubric_image: None,
         allow_unregistered_signatures: false,
     };
@@ -461,7 +461,7 @@ pub(crate) fn a_config_of(text: &str, rubric: Option<String>) -> SignatureConfig
             },
             pages: PageSet::only_page(1),
         }),
-        layer2_text: text.to_owned(),
+        layer2_text: Some(text.to_owned()),
         rubric_image: rubric,
         allow_unregistered_signatures: false,
     }

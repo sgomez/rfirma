@@ -152,7 +152,7 @@ impl SigningOrder {
                 .rubric
                 .clone()
                 .filter(|_| content.carries_the_rubric(self.with_rubric)),
-            content,
+            content: Some(content),
             signed_at: self.signed_at.clone(),
             language: language_of(&self.language),
             allow_unregistered_signatures: self.allow_unregistered_signatures,
