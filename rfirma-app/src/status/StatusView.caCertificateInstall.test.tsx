@@ -39,6 +39,7 @@ describe("StatusView", () => {
         },
       ]),
       recheck: vi.fn(),
+      measureVersion: vi.fn(),
       measureLocalCaCertificate: vi.fn().mockResolvedValue(stillChecking),
       installLocalCaCertificate: vi.fn().mockReturnValue(installPromise),
       chooseSiteSignatureHandler: vi.fn(),

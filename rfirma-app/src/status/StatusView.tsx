@@ -27,6 +27,7 @@ import {
   storeBrandLabel,
   type Verdict,
   withLocalCaCertificateMeasured,
+  withVersionMeasured,
 } from "./status";
 import { WithdrawCertificateDialog } from "./WithdrawCertificateDialog";
 
@@ -82,6 +83,12 @@ export function StatusView({
         }
         return withLocalCaCertificateMeasured(initialRows, statusPort);
       })
+      .then((rowsWithCaMeasured) => {
+        if (!cancelled) {
+          setRows(rowsWithCaMeasured);
+        }
+        return withVersionMeasured(rowsWithCaMeasured, statusPort);
+      })
       .then((measuredRows) => {
         if (!cancelled) {
           setRows(measuredRows);
@@ -117,10 +124,16 @@ export function StatusView({
         candidates: null,
       })),
     );
-    statusPort.recheck().then((updatedRows) => {
-      setRows(updatedRows);
-      setIsRechecking(false);
-    });
+    statusPort
+      .recheck()
+      .then((updatedRows) => {
+        setRows(updatedRows);
+        return withVersionMeasured(updatedRows, statusPort);
+      })
+      .then((measuredRows) => {
+        setRows(measuredRows);
+        setIsRechecking(false);
+      });
   }, [statusPort]);
 
   const handleChooseSiteSignatureHandler = useCallback(
