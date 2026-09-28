@@ -2,12 +2,17 @@
 
 import { createServer } from "node:http";
 
+/** Los parámetros del cuerpo del POST, como `application/x-www-form-urlencoded`. */
+export async function theFormParameters(request) {
+  const chunks = [];
+  for await (const chunk of request) chunks.push(chunk);
+  return new URLSearchParams(Buffer.concat(chunks).toString("utf8"));
+}
+
 /** Los parámetros de la query y los del cuerpo del POST, donde `UrlHttpManagerImpl` los manda. */
 export async function theServletParameters(request) {
   const parameters = new URL(request.url, "http://127.0.0.2").searchParams;
-  const chunks = [];
-  for await (const chunk of request) chunks.push(chunk);
-  for (const [name, value] of new URLSearchParams(Buffer.concat(chunks).toString("utf8"))) {
+  for (const [name, value] of await theFormParameters(request)) {
     parameters.append(name, value);
   }
   return parameters;

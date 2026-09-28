@@ -27,7 +27,7 @@ import {
 } from "../lib/patches.mjs";
 import { isABarePkcs1 } from "../lib/pkcs1.mjs";
 import { aPublishedScript, withoutAChoice } from "../lib/script.mjs";
-import { servletServer, theServletParameters } from "../lib/servlet.mjs";
+import { servletServer, theFormParameters, theServletParameters } from "../lib/servlet.mjs";
 
 const THROUGH_BOTH_SERVLETS = "through-both-servlets";
 const EVERY_DOCUMENT_SIGNED_WITHOUT_A_DIALOGUE = "every-document-signed-without-a-dialogue";
@@ -63,9 +63,7 @@ async function theBodyParameters(request) {
       "application/x-www-form-urlencoded",
     ),
   });
-  const chunks = [];
-  for await (const chunk of request) chunks.push(chunk);
-  return new URLSearchParams(Buffer.concat(chunks).toString("utf8"));
+  return theFormParameters(request);
 }
 
 /** Un servlet del lote sirviendo HTTP en un puerto libre del loopback, y su URL absoluta. */
