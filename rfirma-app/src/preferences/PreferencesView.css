@@ -164,12 +164,15 @@
 .preferences__destination {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--rf-space-xs);
   min-height: 132px;
 }
 
-/* El circulo del radio, dibujado con los tokens en vez del control nativo,
-   como el segmentado del panel de firma (`ModelFieldset.tsx`). */
+.preferences__destination-title {
+  font-weight: 600;
+}
+
+/* El círculo del radio, dibujado con los tokens en vez del control nativo. */
 .preferences__destination-radio {
   align-items: flex-start;
 }

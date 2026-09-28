@@ -97,7 +97,7 @@ describe("PreferencesView", () => {
 
   // El destino es un modo que se elige (ADR-0011): con los dos entornos
   // ofrecidos, la pantalla enseña un grupo de radios y no solo un texto.
-  it("shows the two destination states as text, never as a choice", async () => {
+  it("offers the two destination modes as a radio group", async () => {
     const user = userEvent.setup();
     renderView({
       preferences: {

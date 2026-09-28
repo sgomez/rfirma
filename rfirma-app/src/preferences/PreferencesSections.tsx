@@ -167,7 +167,7 @@ function DestinationField({
   );
   return (
     <div className="preferences__destination">
-      <p className="rf-label" id={labelId}>
+      <p className="rf-prose preferences__destination-title" id={labelId}>
         {t("preferences.destination.label")}
       </p>
       {preferences.offersOriginalFolder ? (
