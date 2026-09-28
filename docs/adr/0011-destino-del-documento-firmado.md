@@ -200,7 +200,8 @@ decide el sistema de diseño en el sitio donde se puede escribir con el ejemplo 
   contesta con la carpeta de destino.
 - Lo que cruza a la ventana sobre esto es **el modo**, que se lee y se escribe, y **un
   booleano con nombre** en la vista de configuración (`offers_the_original_folder`), no el
-  canal. Y quien lo calcula es un solo consumidor
-  —`Environment`, la raíz de composición— con la pregunta por nombre,
-  `dialogs_return_host_paths()`, no `is_flatpak()`: lo segundo invita a ramificar sobre él
-  en veinte sitios.
+  canal. Y lo calcula una sola función del dominio de documentos con la pregunta por
+  nombre, `the_original_folder_can_be_offered()`, no `is_flatpak()`: lo segundo invita a
+  ramificar sobre él en veinte sitios. Es el único sitio que mira `/.flatpak-info`, y
+  solo decide si se ofrecen los radios; dónde cae cada firmado lo sigue decidiendo el
+  documento.

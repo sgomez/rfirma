@@ -114,10 +114,10 @@ red.
   pasa cuando no está lo fija el
   [ADR-0011](0011-destino-del-documento-firmado.md), que retira la degradación
   «junto al documento original» que aquí se describía. Ojo al matiz: ese destino
-  **existe** —es donde cae el firmado cuando el original no viene del portal—,
-  pero no como valor de repuesto de un ajuste, sino como consecuencia de dónde
-  está el documento. Firmar y luego no poder escribir obliga a explicar que el
-  documento está firmado pero en ningún sitio.
+  **existe** —es el modo de destino por omisión—, pero no como repuesto de otro
+  ajuste cuando algo falla: si la carpeta que toca no está, se avisa antes de
+  firmar. Firmar y luego no poder escribir obliga a explicar que el documento
+  está firmado pero en ningún sitio.
 - El formato de la rúbrica se valida al elegirla, no al firmar, porque los
   formatos admitidos se fijan en tiempo de construcción
   ([ADR-0004](0004-libreria-nativa-distribuida-en-el-paquete.md)).
