@@ -221,6 +221,7 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
   pub struct ConfigurationView
       language: String
       destination: String
+      destinationMode: DestinationMode
       rememberVisibleSignature: bool
       rememberActivity: bool
       notifyNewVersion: bool
@@ -356,6 +357,10 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
   pub enum Badge   [documents/domain/recents.rs]
       Signed
       Unsigned
+
+  pub enum DestinationMode   [documents/domain/destination.rs]
+      NextToTheOriginal
+      InTheDestinationFolder
 
   pub enum PageSet   [signing/domain/placement.rs]
       All
