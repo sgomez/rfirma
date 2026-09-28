@@ -72,6 +72,7 @@ impl Servlets for OrderedSpy {
 /// Lo que el buzón y el aviso de fallo del transporte recibieron.
 struct Spy {
     delivered: Arc<Mutex<Option<(AfirmaUrl, ReplyHandle)>>>,
+    origin: Arc<Mutex<Option<SiteOrigin>>>,
     failures: Arc<Mutex<Vec<Refusal>>>,
 }
 
@@ -81,6 +82,14 @@ impl Spy {
             .lock()
             .expect("el candado")
             .take()
+            .expect("la operacion deberia haberse entregado")
+    }
+
+    fn delivered_origin(&self) -> SiteOrigin {
+        self.origin
+            .lock()
+            .expect("el candado")
+            .clone()
             .expect("la operacion deberia haberse entregado")
     }
 
@@ -95,11 +104,14 @@ fn a_relay(servlets: Arc<OrderedSpy>) -> (Relay, Spy) {
 
 fn a_relay_on(servlets: Arc<OrderedSpy>, runtime: tokio::runtime::Handle) -> (Relay, Spy) {
     let delivered = Arc::new(Mutex::new(None));
+    let origin = Arc::new(Mutex::new(None));
     let failures = Arc::new(Mutex::new(Vec::new()));
 
     let inbox_delivered = Arc::clone(&delivered);
-    let inbox = Inbox::for_operations(move |url, reply| {
+    let inbox_origin = Arc::clone(&origin);
+    let inbox = Inbox::for_operations(move |url, delivered_origin, reply| {
         *inbox_delivered.lock().expect("el candado") = Some((url, reply));
+        *inbox_origin.lock().expect("el candado") = Some(delivered_origin);
     });
 
     let failure_log = Arc::clone(&failures);
@@ -116,6 +128,7 @@ fn a_relay_on(servlets: Arc<OrderedSpy>, runtime: tokio::runtime::Handle) -> (Re
         relay,
         Spy {
             delivered,
+            origin,
             failures,
         },
     )

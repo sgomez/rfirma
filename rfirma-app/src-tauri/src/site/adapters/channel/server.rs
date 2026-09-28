@@ -9,6 +9,7 @@ use futures_util::{SinkExt, StreamExt};
 use tokio::sync::oneshot;
 use tokio_native_tls::native_tls::{Identity, TlsAcceptor as NativeTlsAcceptor};
 use tokio_native_tls::TlsAcceptor;
+use tokio_tungstenite::tungstenite::handshake::server::Request;
 use tokio_tungstenite::tungstenite::Message;
 
 use crate::site::adapters::channel::bind::{LoopbackAcceptor, LoopbackListeners};
@@ -17,6 +18,7 @@ use crate::site::adapters::tls::LocalServerCertificate;
 use crate::site::domain::channel::ChannelDuty;
 use crate::site::domain::channel::{ChannelError, Situation};
 use crate::site::domain::channel::{ChannelLocation, OpenChannel, Shutdown};
+use crate::site::domain::site_origin::SiteOrigin;
 
 use crate::site::ports::Inbox;
 
@@ -187,6 +189,25 @@ async fn wait_for_the_reply(
     }
 }
 
+/// Acepta el saludo TLS ya cifrado, tomando el `Origin` que trae; nunca lo rechaza por su valor.
+#[allow(clippy::result_large_err)]
+async fn accept_with_the_origin_of_the_greeting(
+    encrypted: tokio_native_tls::TlsStream<tokio::net::TcpStream>,
+) -> Result<(Socket, SiteOrigin), tokio_tungstenite::tungstenite::Error> {
+    let mut origin = SiteOrigin::absent();
+    let socket = tokio_tungstenite::accept_hdr_async(encrypted, |request: &Request, response| {
+        origin = SiteOrigin::from_header(
+            request
+                .headers()
+                .get("origin")
+                .and_then(|value| value.to_str().ok()),
+        );
+        Ok(response)
+    })
+    .await?;
+    Ok((socket, origin))
+}
+
 async fn attend(
     stream: tokio::net::TcpStream,
     peer: SocketAddr,
@@ -197,7 +218,7 @@ async fn attend(
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let from_loopback = peer.ip().is_loopback();
     let encrypted = acceptor.accept(stream).await?;
-    let mut socket = tokio_tungstenite::accept_async(encrypted).await?;
+    let (mut socket, origin) = accept_with_the_origin_of_the_greeting(encrypted).await?;
     let _first = clients
         .is_the_first()
         .then(|| FirstClient(operations.clone()));
@@ -244,9 +265,10 @@ async fn attend(
                     acknowledgement
                 });
                 let operations = operations.clone();
+                let origin = origin.clone();
                 // Fuera del hilo del socket: lo que el token deja en la cola de errores de
                 // OpenSSL de su hilo haría fallar la siguiente lectura TLS del canal.
-                tokio::task::spawn_blocking(move || operations.deliver(url, reply));
+                tokio::task::spawn_blocking(move || operations.deliver(url, origin, reply));
                 match wait_for_the_reply(&mut socket, receiver, &mut queued).await {
                     Waited::Reply(reply) => {
                         let sent = socket.send(Message::text(reply)).await;

@@ -4,9 +4,11 @@
 use serde::Serialize;
 use ts_rs::TS;
 
+use std::collections::BTreeSet;
+
 use crate::catalogue::Check;
 use crate::client::ClientKind;
-use crate::errand::{ErrandKey, ReceivedRequest};
+use crate::errand::{ErrandKey, ReceivedRequest, RemoteService};
 use crate::outcome::{result_name, ResultName};
 use crate::report::Report;
 
@@ -44,6 +46,15 @@ struct Row {
     requests: RequestsComparison,
     a_requests: Option<Vec<ReceivedRequest>>,
     b_requests: Option<Vec<ReceivedRequest>>,
+    request_differences: Vec<RequestDifference>,
+}
+
+/// Lo que difiere de un servicio remoto entre las peticiones de los dos lados, ya explicado.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, TS)]
+#[ts(export)]
+struct RequestDifference {
+    service: RemoteService,
+    differences: Vec<String>,
 }
 
 /// Si las peticiones de los dos trámites coinciden como multiconjunto, dé cada uno lo que dé.
@@ -77,6 +88,113 @@ fn the_requests_in(report: &Report, check: &Check) -> Option<Vec<ReceivedRequest
     report.observed(&key)?.outcome.requests.clone()
 }
 
+fn request_differences(
+    a: Option<&[ReceivedRequest]>,
+    b: Option<&[ReceivedRequest]>,
+) -> Vec<RequestDifference> {
+    let (Some(a), Some(b)) = (a, b) else {
+        return Vec::new();
+    };
+    let services: BTreeSet<RemoteService> =
+        a.iter().chain(b).map(|request| request.service).collect();
+    services
+        .into_iter()
+        .filter_map(|service| {
+            let differences = differences_for(service, a, b);
+            (!differences.is_empty()).then_some(RequestDifference {
+                service,
+                differences,
+            })
+        })
+        .collect()
+}
+
+fn differences_for(
+    service: RemoteService,
+    a: &[ReceivedRequest],
+    b: &[ReceivedRequest],
+) -> Vec<String> {
+    let a_group: Vec<_> = a
+        .iter()
+        .filter(|request| request.service == service)
+        .collect();
+    let b_group: Vec<_> = b
+        .iter()
+        .filter(|request| request.service == service)
+        .collect();
+    if a_group.len() != b_group.len() {
+        return vec![format!(
+            "número de peticiones: {} frente a {}",
+            a_group.len(),
+            b_group.len()
+        )];
+    }
+    a_group
+        .into_iter()
+        .zip(b_group)
+        .flat_map(|(x, y)| explain(x, y))
+        .collect()
+}
+
+fn explain(a: &ReceivedRequest, b: &ReceivedRequest) -> Vec<String> {
+    let mut differences = Vec::new();
+    if a.method != b.method {
+        differences.push(format!("método: {} frente a {}", a.method, b.method));
+    }
+    if a.path != b.path {
+        differences.push(format!("ruta: {} frente a {}", a.path, b.path));
+    }
+    if a.query != b.query || a.body != b.body {
+        differences.push(format!(
+            "parámetros: {} frente a {}",
+            where_params_travel(&a.query, &a.body),
+            where_params_travel(&b.query, &b.body)
+        ));
+    }
+    if a.content_type != b.content_type {
+        differences.push(format!(
+            "Content-Type: {} frente a {}",
+            an_option(&a.content_type),
+            an_option(&b.content_type)
+        ));
+    }
+    for (name, a_value, b_value) in [
+        ("origin", &a.headers.origin, &b.headers.origin),
+        (
+            "authorization",
+            &a.headers.authorization,
+            &b.headers.authorization,
+        ),
+        ("accept", &a.headers.accept, &b.headers.accept),
+    ] {
+        if a_value != b_value {
+            differences.push(format!(
+                "cabecera {name}: {} frente a {}",
+                an_option(a_value),
+                an_option(b_value)
+            ));
+        }
+    }
+    differences
+}
+
+fn where_params_travel(query: &[String], body: &[String]) -> String {
+    match (query.is_empty(), body.is_empty()) {
+        (false, true) => format!("en la query: {}", query.join(", ")),
+        (true, false) => format!("en el cuerpo: {}", body.join(", ")),
+        (false, false) => format!(
+            "en la query: {}; en el cuerpo: {}",
+            query.join(", "),
+            body.join(", ")
+        ),
+        (true, true) => "sin parámetros".to_owned(),
+    }
+}
+
+fn an_option(value: &Option<String>) -> &str {
+    value.as_deref().unwrap_or("(ninguno)")
+}
+
 pub(crate) fn compare(left: &Report, right: &Report, catalogue: &[Check]) -> Comparison {
     let rows: Vec<Row> = catalogue
         .iter()
@@ -85,6 +203,12 @@ pub(crate) fn compare(left: &Report, right: &Report, catalogue: &[Check]) -> Com
             let b = result_name(right.state_of(&check.id));
             let a_requests = the_requests_in(left, check);
             let b_requests = the_requests_in(right, check);
+            let requests = RequestsComparison::of(a_requests.as_deref(), b_requests.as_deref());
+            let request_differences = if requests == RequestsComparison::Differ {
+                request_differences(a_requests.as_deref(), b_requests.as_deref())
+            } else {
+                Vec::new()
+            };
             Row {
                 id: check.id.clone(),
                 set: check.requirement.set.clone(),
@@ -93,7 +217,8 @@ pub(crate) fn compare(left: &Report, right: &Report, catalogue: &[Check]) -> Com
                 a,
                 b,
                 differ: a != b,
-                requests: RequestsComparison::of(a_requests.as_deref(), b_requests.as_deref()),
+                requests,
+                request_differences,
                 a_requests,
                 b_requests,
             }
@@ -390,6 +515,22 @@ expects.completes = {}
             (comparison.differing, comparison.requests_differing),
             (0, 1)
         );
+        let presigner = row
+            .request_differences
+            .iter()
+            .find(|difference| difference.service == RemoteService::Presigner)
+            .unwrap();
+        assert!(presigner.differences.iter().any(|line| line
+            == "parámetros: en el cuerpo: certs, json frente a en la query: certs, json"));
+        let postsigner = row
+            .request_differences
+            .iter()
+            .find(|difference| difference.service == RemoteService::Postsigner)
+            .unwrap();
+        assert!(postsigner
+            .differences
+            .iter()
+            .any(|line| line.contains("tridata")));
     }
 
     #[test]
@@ -446,6 +587,29 @@ expects.completes = {}
         let comparison = compare(&left, &right, &catalogue);
 
         assert_eq!(comparison.rows[0].requests, RequestsComparison::Match);
+        assert!(comparison.rows[0].request_differences.is_empty());
+    }
+
+    #[test]
+    fn a_difference_names_the_method_the_content_type_and_the_header_that_differ() {
+        let catalogue = the_catalogue_in(A_REMOTE_BATCH).unwrap();
+        let mut a_side = a_request(RemoteService::Presigner, &["certs"]);
+        a_side.method = "GET".to_owned();
+        let mut b_side = a_request(RemoteService::Presigner, &["certs"]);
+        b_side.content_type = None;
+        b_side.headers.origin = Some("https://autofirma.local".to_owned());
+        let left = a_report_observing(ClientKind::Autofirma, &catalogue, Some(vec![a_side]));
+        let right = a_report_observing(ClientKind::Rfirma, &catalogue, Some(vec![b_side]));
+
+        let comparison = compare(&left, &right, &catalogue);
+
+        let differences = &comparison.rows[0].request_differences[0].differences;
+        assert!(differences.contains(&"método: GET frente a POST".to_owned()));
+        assert!(differences.contains(
+            &"Content-Type: application/x-www-form-urlencoded frente a (ninguno)".to_owned()
+        ));
+        assert!(differences
+            .contains(&"cabecera origin: (ninguno) frente a https://autofirma.local".to_owned()));
     }
 
     #[test]
@@ -478,6 +642,7 @@ expects.completes = {}
                 comparison.rows[0].requests,
                 RequestsComparison::NotComparable
             );
+            assert!(comparison.rows[0].request_differences.is_empty());
         }
     }
 }

@@ -92,7 +92,7 @@ fn the_published_client_forced_to_the_relay_launches_without_stservlet_and_rfirm
 
     let delivered: Arc<Mutex<Option<(AfirmaUrl, ErrandReply)>>> = Arc::new(Mutex::new(None));
     let inbox_delivered = Arc::clone(&delivered);
-    let inbox = Inbox::for_operations(move |url, reply| {
+    let inbox = Inbox::for_operations(move |url, _origin, reply| {
         *inbox_delivered.lock().expect("el candado") = Some((url, reply));
     });
     let background = tokio::runtime::Runtime::new().expect("el runtime de la espera activa");
@@ -172,7 +172,7 @@ fn the_published_client_forced_to_the_relay_uploads_the_saf_of_a_refused_operati
 
     let stored_at: Arc<Mutex<Option<String>>> = Arc::new(Mutex::new(None));
     let inbox_stored_at = Arc::clone(&stored_at);
-    let inbox = Inbox::for_operations(move |url, reply: ErrandReply| {
+    let inbox = Inbox::for_operations(move |url, _origin, reply: ErrandReply| {
         *inbox_stored_at.lock().expect("el candado") =
             Some(url.parameter("id").expect("el xml trae 'id'").to_owned());
         let refusal = read_operation(&url, &HttpDataSource)

@@ -30,6 +30,7 @@ use crate::site::domain::protocol::{
     credential_matches, http_response, read_request, request_credential, split_response, AfirmaUrl,
     FragmentBuffer, FramedRequest, Parameter, SafCode, WireAnswer, CANCELLED, MORE_DATA_NEED, SAVE,
 };
+use crate::site::domain::site_origin::SiteOrigin;
 
 use crate::site::application::errand::{
     Acknowledged, Acknowledgement, Inbox, ReplyHandle, Transport,
@@ -340,6 +341,7 @@ async fn launch_operation(
     let (acknowledged, acknowledgement) = Acknowledgement::pair();
     inbox.deliver(
         url,
+        SiteOrigin::absent(),
         ReplyHandle::of(move |text| {
             let _ = sender.send(text);
             acknowledgement

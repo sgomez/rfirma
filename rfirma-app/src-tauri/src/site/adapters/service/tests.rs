@@ -24,9 +24,25 @@ fn no_state() -> Arc<Mutex<ServiceState>> {
 
 /// Un buzón que contesta cada operación con el mismo texto, sin atender de verdad.
 fn answering_with(text: &'static str) -> Inbox {
-    Inbox::for_operations(move |_url: AfirmaUrl, reply: ReplyHandle| {
-        reply.answer(text.to_owned());
-    })
+    Inbox::for_operations(
+        move |_url: AfirmaUrl, _origin: SiteOrigin, reply: ReplyHandle| {
+            reply.answer(text.to_owned());
+        },
+    )
+}
+
+/// Un buzón que contesta con el mismo texto y guarda el origen que recibió cada operación.
+fn answering_and_recording_the_origin(
+    text: &'static str,
+    origin: &Arc<Mutex<Option<SiteOrigin>>>,
+) -> Inbox {
+    let recorded = Arc::clone(origin);
+    Inbox::for_operations(
+        move |_url: AfirmaUrl, origin: SiteOrigin, reply: ReplyHandle| {
+            *recorded.lock().expect("el candado") = Some(origin);
+            reply.answer(text.to_owned());
+        },
+    )
 }
 
 fn body_of(response: &[u8]) -> String {
@@ -79,6 +95,27 @@ async fn a_command_is_delivered_and_the_response_is_the_number_of_parts() {
     .await;
 
     assert_eq!(body_of(&response.0), "1");
+}
+
+#[tokio::test]
+async fn a_command_is_delivered_with_no_origin() {
+    let command = URL_SAFE.encode("afirma://selectcert?op=selectcert");
+    let raw = format!("cmd={command}idsession={CREDENTIAL}@EOF");
+    let origin = Arc::new(Mutex::new(None));
+
+    respond(
+        &raw,
+        true,
+        &serving(),
+        &answering_and_recording_the_origin("una_firma_corta", &origin),
+        &no_state(),
+    )
+    .await;
+
+    assert_eq!(
+        origin.lock().expect("el candado").take(),
+        Some(SiteOrigin::absent())
+    );
 }
 
 #[tokio::test]
@@ -233,10 +270,12 @@ async fn a_refusing_duty_answers_the_same_refusal_regardless_of_the_command() {
 /// una respuesta ya calculada.
 fn counting_answers_with(text: &'static str, launches: &Arc<Mutex<usize>>) -> Inbox {
     let launches = Arc::clone(launches);
-    Inbox::for_operations(move |_url: AfirmaUrl, reply: ReplyHandle| {
-        *launches.lock().expect("el contador no esta envenenado") += 1;
-        reply.answer(text.to_owned());
-    })
+    Inbox::for_operations(
+        move |_url: AfirmaUrl, _origin: SiteOrigin, reply: ReplyHandle| {
+            *launches.lock().expect("el contador no esta envenenado") += 1;
+            reply.answer(text.to_owned());
+        },
+    )
 }
 
 fn a_command(operation: &str) -> String {
@@ -304,12 +343,14 @@ async fn the_firm_response_carries_an_acknowledgement_fulfilled_once_the_write_i
     let state = no_state();
     let delivered: Arc<Mutex<Vec<Acknowledgement>>> = Arc::new(Mutex::new(Vec::new()));
     let keeping = Arc::clone(&delivered);
-    let inbox = Inbox::for_operations(move |_url: AfirmaUrl, reply: ReplyHandle| {
-        keeping
-            .lock()
-            .expect("el candado")
-            .push(reply.answer("resultado".to_owned()));
-    });
+    let inbox = Inbox::for_operations(
+        move |_url: AfirmaUrl, _origin: SiteOrigin, reply: ReplyHandle| {
+            keeping
+                .lock()
+                .expect("el candado")
+                .push(reply.answer("resultado".to_owned()));
+        },
+    );
     let raw = a_command("afirma://selectcert?op=selectcert");
 
     let (response, acknowledged) = respond(&raw, true, &serving(), &inbox, &state).await;
@@ -481,9 +522,11 @@ async fn a_send_beyond_the_announced_parts_is_refused_with_saf_11() {
 #[tokio::test]
 async fn a_save_that_ends_in_a_refusal_is_answered_with_saf_11() {
     let refusal = WireAnswer::refused(SafCode::Params).on_the_wire();
-    let inbox = Inbox::for_operations(move |_url: AfirmaUrl, reply: ReplyHandle| {
-        reply.answer(refusal.clone());
-    });
+    let inbox = Inbox::for_operations(
+        move |_url: AfirmaUrl, _origin: SiteOrigin, reply: ReplyHandle| {
+            reply.answer(refusal.clone());
+        },
+    );
 
     let body = answered(
         &a_command("afirma://save?op=save&filename=rfirma.txt&exts=txt"),

@@ -480,8 +480,8 @@ fn the_transport(
                     .errand
                     .browser_arrived();
             },
-            move |url, reply| {
-                site::adapters::window::attend_site_operation(&handle, url, reply);
+            move |url, origin, reply| {
+                site::adapters::window::attend_site_operation(&handle, url, origin, reply);
             },
         )
         .when_the_first_client_leaves(move || {
