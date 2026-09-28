@@ -594,8 +594,7 @@ a:hover {
 .demo[data-step="0"] .demo-step[data-index="0"] .demo-step__number,
 .demo[data-step="1"] .demo-step[data-index="1"] .demo-step__number,
 .demo[data-step="2"] .demo-step[data-index="2"] .demo-step__number,
-.demo[data-step="3"] .demo-step[data-index="3"] .demo-step__number,
-.demo[data-step="4"] .demo-step[data-index="4"] .demo-step__number {
+.demo[data-step="3"] .demo-step[data-index="3"] .demo-step__number {
   background: linear-gradient(135deg, #067781, #2dd4bf);
   color: #ffffff;
   box-shadow: 0 10px 22px -10px rgba(6, 119, 129, 0.7);
@@ -607,12 +606,10 @@ a:hover {
 .demo[data-step="1"] .demo-step[data-index="1"] .demo-step__title,
 .demo[data-step="2"] .demo-step[data-index="2"] .demo-step__title,
 .demo[data-step="3"] .demo-step[data-index="3"] .demo-step__title,
-.demo[data-step="4"] .demo-step[data-index="4"] .demo-step__title,
 .demo[data-step="0"] .demo-step[data-index="0"] .demo-step__body,
 .demo[data-step="1"] .demo-step[data-index="1"] .demo-step__body,
 .demo[data-step="2"] .demo-step[data-index="2"] .demo-step__body,
-.demo[data-step="3"] .demo-step[data-index="3"] .demo-step__body,
-.demo[data-step="4"] .demo-step[data-index="4"] .demo-step__body {
+.demo[data-step="3"] .demo-step[data-index="3"] .demo-step__body {
   opacity: 1;
   transform: translateY(0);
 }
@@ -640,72 +637,6 @@ a:hover {
   background: linear-gradient(135deg, #067781, #2dd4bf);
   color: #ffffff;
   box-shadow: 0 10px 22px -10px rgba(6, 119, 129, 0.7);
-}
-
-/* La maqueta de la ventana */
-.mock-stamp {
-  position: absolute;
-  left: 78px;
-  bottom: 34px;
-  width: 150px;
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  padding: 6px 8px;
-  border: 1px solid var(--rf-border-strong);
-  border-radius: var(--rf-radius-sm);
-  background: var(--rf-surface);
-  transition:
-    opacity 320ms var(--rf-easing, ease),
-    transform 320ms var(--rf-easing, ease);
-  opacity: 1;
-  transform: scale(1);
-}
-
-.demo[data-step="0"] .mock-stamp {
-  opacity: 0;
-  transform: scale(0.96);
-}
-
-.mock-visible {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  transition: opacity 300ms var(--rf-easing, ease);
-  opacity: 1;
-}
-
-.demo[data-step="0"] .mock-visible {
-  opacity: 0.45;
-}
-
-.mock-toggle {
-  width: 36px;
-  height: 22px;
-  flex: none;
-  border-radius: var(--rf-radius-pill);
-  position: relative;
-  transition: background-color 300ms var(--rf-easing, ease);
-  background: var(--rf-primary);
-}
-
-.mock-toggle__knob {
-  position: absolute;
-  top: 3px;
-  width: 16px;
-  height: 16px;
-  border-radius: var(--rf-radius-pill);
-  background: var(--rf-on-primary);
-  transition: left 300ms var(--rf-easing, ease);
-  left: 17px;
-}
-
-.demo[data-step="0"] .mock-toggle {
-  background: var(--rf-border-strong);
-}
-
-.demo[data-step="0"] .mock-toggle__knob {
-  left: 3px;
 }
 
 /* Las pestañas de instalación */
@@ -775,17 +706,6 @@ a:hover {
   line-height: 1.6;
 }
 
-@keyframes rf-pulse {
-  0%,
-  100% {
-    opacity: 0.3;
-  }
-
-  50% {
-    opacity: 1;
-  }
-}
-
 @keyframes rf-float {
   0%,
   100% {
@@ -820,9 +740,6 @@ a:hover {
   [data-blob],
   [data-float],
   [data-satellite],
-  .mock-stamp,
-  .mock-toggle,
-  .mock-toggle__knob,
   .demo-step__number,
   .demo-step__title,
   .demo-step__body {

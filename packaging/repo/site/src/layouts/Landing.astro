@@ -79,17 +79,7 @@ const image = new URL("/og.png", Astro.site);
       import { mountCopyButton } from "../scripts/copy-to-clipboard";
       import { mountGuidedDemo } from "../scripts/guided-demo";
       import { mountInstallTabs } from "../scripts/install-tabs";
-      import { mountMockScale } from "../scripts/mock-scale";
       import { mountReveal } from "../scripts/reveal";
-
-      const MOCK_WIDTH = 1000;
-      const MOCK_HEIGHT = 620;
-
-      const frame = document.querySelector<HTMLElement>("[data-mock-frame]");
-      const stage = document.querySelector<HTMLElement>("[data-mock-stage]");
-      if (frame && stage) {
-        mountMockScale(frame, stage, MOCK_WIDTH, MOCK_HEIGHT);
-      }
 
       const demo = document.querySelector<HTMLElement>(".demo");
       if (demo) {
