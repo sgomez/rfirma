@@ -37,6 +37,8 @@ const THE_RESULT_AS_IT_CAME = "the-result-as-it-came";
 const THE_CERTIFICATE_IN_THE_ANSWER = "the-certificate-in-the-answer";
 const THE_FAILURE_MARKED_FOR_THE_POSTSIGNER = "the-failure-marked-for-the-postsigner";
 const THE_ERRORS_WITHOUT_POSTSIGNING = "the-errors-without-postsigning";
+const THE_SLOW_POSTSIGNER_ANSWER_ARRIVES = "the-slow-postsigner-answer-arrives";
+const THE_SLOW_POSTSIGNER_DELAY_MS = 31_000;
 const THE_SIGNS_DOCUMENT_AS_IT_CAME = "the-signs-document-as-it-came";
 const EVERY_ITEM_SIGNED = "every-item-signed";
 const EACH_ITEM_IN_ITS_FORMAT = "each-item-in-its-format";
@@ -70,7 +72,7 @@ function theBodyParameters(request, form) {
 export function aBatchServlet(answering, { reading = theFormParameters, service, telling } = {}) {
   return servletServer(
     async (parameters, _request, response) => {
-      const { status, body } = answering(parameters);
+      const { status, body } = await answering(parameters);
       response.writeHead(status, { "content-type": "application/json" });
       response.end(body);
     },
@@ -261,6 +263,30 @@ function thePartialBatchConditions() {
   ];
 }
 
+/** Un postsigner que contesta pasado `delayMs`, como el servlet de un lote largo. */
+export function aPostsignerSlowerThan(delayMs) {
+  return async (query) => {
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
+    return thePostsigner(query);
+  };
+}
+
+/** El resultado de la postfirma tardía llegó a la sede tal cual, sin que el cliente lo cortara. */
+function theSlowPostsignerConditions(result) {
+  const arrived =
+    whatTheServletsReceived.postsign !== null &&
+    JSON.stringify(result) === JSON.stringify(JSON.parse(theFrozen("batch-postsign-result.json")));
+  return [
+    aCondition(
+      THE_SLOW_POSTSIGNER_ANSWER_ARRIVES,
+      arrived,
+      arrived
+        ? "la sede recibió el resultado de un postsigner que tardó más de 30 s"
+        : "la sede no recibió el resultado del postsigner lento",
+    ),
+  ];
+}
+
 /** Sin nada prefirmado, el lote no llega al postsigner y la sede recibe los errores de prefirma. */
 function theFailedBatchConditions(result) {
   const signs = result?.signs ?? [];
@@ -302,9 +328,10 @@ async function theBatchScript(
   presigning = thePresigner,
   measuring = theRemoteBatchConditions,
   reading = theFormParameters,
+  postsigning = thePostsigner,
 ) {
   const presigner = await servletServing(presigning, { reading, service: "presigner" });
-  const postsigner = await servletServing(thePostsigner, { reading, service: "postsigner" });
+  const postsigner = await servletServing(postsigning, { reading, service: "postsigner" });
 
   AutoScript.createBatch("SHA256", "CAdES", "sign");
   AutoScript.addDocumentToBatch("uno", Buffer.from("primer documento").toString("base64"));
@@ -955,6 +982,16 @@ export const BATCH_SCRIPTS = {
   batchallfailed: aPublishedScript(
     () => theBatchScript(theFailingPresigner, theFailedBatchConditions),
     { conditions: [THE_ERRORS_WITHOUT_POSTSIGNING] },
+  ),
+  batchslowpostsigner: aPublishedScript(
+    () =>
+      theBatchScript(
+        thePresigner,
+        theSlowPostsignerConditions,
+        theFormParameters,
+        aPostsignerSlowerThan(THE_SLOW_POSTSIGNER_DELAY_MS),
+      ),
+    { conditions: [THE_SLOW_POSTSIGNER_ANSWER_ARRIVES] },
   ),
   batchxml: aPublishedScript(theBatchXmlScript, {
     conditions: [
