@@ -50,23 +50,42 @@ const ONLY_THE_RESULT = "only-the-result";
 const THE_BATCH_READ_AS_XML = "the-batch-read-as-xml";
 const THE_ITEM_A_BARE_PKCS1 = "the-item-a-bare-pkcs1";
 const THE_ITEM_EXTRAPARAMS_REPLACE_THE_BATCH_ONES = "the-item-extraparams-replace-the-batch-ones";
+const THE_PARAMETERS_IN_THE_BODY = "the-servlet-parameters-in-the-body";
+
+async function theBody(request) {
+  const chunks = [];
+  for await (const chunk of request) chunks.push(chunk);
+  return Buffer.concat(chunks).toString("utf8");
+}
 
 /** Los parámetros de la query y los del cuerpo del POST, donde `UrlHttpManagerImpl` los manda. */
 async function theServletParameters(request) {
   const parameters = new URL(request.url, "http://127.0.0.2").searchParams;
-  const chunks = [];
-  for await (const chunk of request) chunks.push(chunk);
-  for (const [name, value] of new URLSearchParams(Buffer.concat(chunks).toString("utf8"))) {
+  for (const [name, value] of new URLSearchParams(await theBody(request))) {
     parameters.append(name, value);
   }
   return parameters;
 }
 
+/** Cómo llegó cada llamada a un servlet que solo lee el cuerpo: si traía query y si era un formulario. */
+const theBodyOnlyCalls = [];
+
+/** Solo los parámetros del cuerpo del POST, como los lee un servlet que no mira la query. */
+async function theBodyParameters(request) {
+  theBodyOnlyCalls.push({
+    withAQuery: new URL(request.url, "http://127.0.0.2").search !== "",
+    asAForm: String(request.headers["content-type"]).startsWith(
+      "application/x-www-form-urlencoded",
+    ),
+  });
+  return new URLSearchParams(await theBody(request));
+}
+
 /** Un servlet del lote sirviendo HTTP en un puerto libre del loopback, y su URL absoluta. */
-export function servletServing(answering) {
+export function servletServing(answering, reading = theServletParameters) {
   return new Promise((resolve) => {
     const server = createServer(async (request, response) => {
-      const { status, body } = answering(await theServletParameters(request));
+      const { status, body } = answering(await reading(request));
       response.writeHead(status, { "content-type": "application/json" });
       response.end(body);
     });
@@ -269,10 +288,32 @@ function theFailedBatchConditions(result) {
   ];
 }
 
+/** Los dos servlets recibieron sus parámetros como formulario en el cuerpo y nada en la query. */
+function theParametersInTheBodyConditions() {
+  const { presign, postsign } = whatTheServletsReceived;
+  const inTheBody =
+    presign !== null &&
+    postsign !== null &&
+    theBodyOnlyCalls.every((call) => !call.withAQuery && call.asAForm);
+  return [
+    aCondition(
+      THE_PARAMETERS_IN_THE_BODY,
+      inTheBody,
+      inTheBody
+        ? "los dos servlets recibieron el lote en el cuerpo del POST como formulario"
+        : `los servlets no recibieron el lote en el cuerpo: ${JSON.stringify(theBodyOnlyCalls)}`,
+    ),
+  ];
+}
+
 /** Un lote de dos documentos con `signBatchJSON` contra los dos servlets, con el presigner dado. */
-async function theBatchScript(presigning = thePresigner, measuring = theRemoteBatchConditions) {
-  const presigner = await servletServing(presigning);
-  const postsigner = await servletServing(thePostsigner);
+async function theBatchScript(
+  presigning = thePresigner,
+  measuring = theRemoteBatchConditions,
+  reading = theServletParameters,
+) {
+  const presigner = await servletServing(presigning, reading);
+  const postsigner = await servletServing(thePostsigner, reading);
 
   AutoScript.createBatch("SHA256", "CAdES", "sign");
   AutoScript.addDocumentToBatch("uno", Buffer.from("primer documento").toString("base64"));
@@ -909,6 +950,10 @@ export const BATCH_SCRIPTS = {
       THE_CERTIFICATE_IN_THE_ANSWER,
     ],
   }),
+  batchbodyonlyservlets: aPublishedScript(
+    () => theBatchScript(thePresigner, theParametersInTheBodyConditions, theBodyParameters),
+    { conditions: [THE_PARAMETERS_IN_THE_BODY] },
+  ),
   batchpartial: aPublishedScript(
     () => theBatchScript(thePartialPresigner, thePartialBatchConditions),
     { conditions: [THE_FAILURE_MARKED_FOR_THE_POSTSIGNER] },
