@@ -71,7 +71,7 @@ ficheros más grandes del repositorio (hasta 32 KB).
 
 ## Sueltos en `docs/`
 
-`afirma/1.9.2/` — Manual de referencia del protocolo `afirma://` de AutoFirma 1.9.2 (16 capítulos, el anexo A1 con el catálogo de bugs del original y el anexo B1 con la revisión de `UrlHttpManagerImpl`).
+`afirma/1.9.2/` — Manual de referencia del protocolo `afirma://` de AutoFirma 1.9.2 (16 capítulos, el anexo A1 con el catálogo de bugs del original, el A2 con la revisión de las funciones compartidas que sí compara con rFirma y el B1 con la revisión de `UrlHttpManagerImpl`).
 
 `mapa-protocolo.md` — El mapa del protocolo de AutoFirma generado a tag fijado del original y cruzado con el trámite de sede de rFirma, con el esqueleto de auditoría.
 
