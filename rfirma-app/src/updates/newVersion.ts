@@ -1,17 +1,15 @@
 /**
  * Si hay una versión nueva publicada: el puerto que lo pregunta y su doble.
  *
- * Es **la única conexión saliente** de rFirma, y quien la hace es Rust
- * (`app/version.rs`): pregunta a las Releases del repositorio como mucho una
- * vez cada 24 h, compara con la versión que corre y contesta. La ventana no
- * sabe nada de eso —ni URL, ni caché, ni comparación de versiones—: pregunta
- * por el puerto y, si le contestan, lo cuenta en la franja de notificación.
+ * Es **la única conexión saliente** de rFirma, y quien la hace es Rust:
+ * pregunta a las Releases del repositorio y compara con la versión que
+ * corre. La ventana no sabe nada de eso —ni URL, ni caché, ni comparación de
+ * versiones—: pregunta por el puerto y, si le contestan, lo cuenta.
  *
- * **Es un aviso y nada más** (ID-181): no hay descarga ni instalación detrás,
- * porque el mecanismo se autoliquidaría en cuanto el paquete lo actualizara el
+ * **Es un aviso y nada más**: no hay descarga ni instalación detrás, porque
+ * el mecanismo se autoliquidaría en cuanto el paquete lo actualizara el
  * sistema. La acción de la franja lleva a *Acerca de*, que es donde están las
- * órdenes de alta del repositorio, y el `opener:deny-open-url` del ID-85 sigue
- * denegado.
+ * órdenes de alta del repositorio.
  *
  * Sin red no hay respuesta y **no pasa nada**: `null` es «no hay nada que
  * decir», no un error. La franja, sencillamente, no se monta.
