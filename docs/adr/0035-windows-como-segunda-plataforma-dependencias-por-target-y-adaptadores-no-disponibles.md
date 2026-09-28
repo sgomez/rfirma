@@ -330,3 +330,5 @@ interfaz también en Linux. Se aplaza; mientras, el almacén del usuario se pres
   `Classes`, y rFirma no la lee todavía.
 - `site/adapters/mod.rs`, `desktop/adapters/registry.rs` y `site/adapters/channel/acceptor.rs`
   entran en `AUTHORISED_SITES`: son el punto donde cada puerto elige su adaptador de plataforma.
+- `documents/domain/dropped/tests.rs` también entra: una URL `file://` nombra una ruta distinta en
+  cada sistema (con unidad y barras invertidas en Windows), y la prueba lleva un caso por sistema.
