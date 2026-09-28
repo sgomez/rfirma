@@ -43,6 +43,20 @@ pub fn check_for_new_version(desktop: State<'_, DesktopRoot>) -> Option<NewVersi
     })
 }
 
+/// Mide la señal de versión consultando GitHub.
+#[tauri::command(async)]
+pub fn measure_version(desktop: State<'_, DesktopRoot>) -> SignalRowView {
+    let channel = crate::desktop::adapters::channel::Channel::detected();
+    crate::desktop::application::status::measure_version_signal(
+        crate::desktop::application::version::Version::running(),
+        desktop.memory.as_ref(),
+        &crate::desktop::adapters::releases::latest_release,
+        channel,
+        std::time::SystemTime::now(),
+    )
+    .into()
+}
+
 /// Abre un destino externo por identificador en el navegador del sistema (ADR-0011).
 #[tauri::command(async)]
 pub fn open_external_destination(

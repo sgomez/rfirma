@@ -178,6 +178,64 @@ fn recheck_version_signal_queries_feed_and_updates_memory() {
 }
 
 #[test]
+fn measure_version_signal_answers_with_what_the_feed_announces() {
+    let home = tempfile::tempdir().expect("tempdir");
+    let memory = a_memory(home.path());
+    let running = Version::parse("0.4.1").unwrap();
+
+    let row = measure_version_signal(
+        running,
+        &memory,
+        &|| Some(a_release("v0.5.0")),
+        Channel::Native,
+        at(1_000_000),
+    );
+
+    assert_eq!(row.verdict, Verdict::Attention);
+    assert_eq!(row.value, "0.4.1 → 0.5.0");
+
+    let cached = memory.last_version_check().expect("guardada en memoria");
+    assert_eq!(cached.announced, "0.5.0");
+}
+
+#[test]
+fn measure_version_signal_without_network_falls_back_to_the_remembered_answer() {
+    let home = tempfile::tempdir().expect("tempdir");
+    let memory = a_memory(home.path());
+    let running = Version::parse("0.4.1").unwrap();
+
+    let _ = memory.remember_version_check(VersionCheck {
+        checked_at: 1_000_000,
+        announced: "0.5.0".into(),
+    });
+
+    let row = measure_version_signal(running, &memory, &|| None, Channel::Native, at(1_000_100));
+
+    assert_eq!(row.verdict, Verdict::Attention);
+    assert_eq!(row.value, "0.4.1 → 0.5.0");
+    assert_eq!(
+        row.action,
+        Some(StatusAction {
+            kind: ActionKind::Link,
+            target: "releases".into(),
+        })
+    );
+}
+
+#[test]
+fn measure_version_signal_without_network_nor_memory_is_correct() {
+    let home = tempfile::tempdir().expect("tempdir");
+    let memory = a_memory(home.path());
+    let running = Version::parse("0.4.1").unwrap();
+
+    let row = measure_version_signal(running, &memory, &|| None, Channel::Native, at(1_000_000));
+
+    assert_eq!(row.verdict, Verdict::Correct);
+    assert_eq!(row.value, "0.4.1");
+    assert_eq!(row.action, None);
+}
+
+#[test]
 fn no_certificates_found_requires_attention_and_offers_how_to_install() {
     let row = evaluate_user_certificates_signal(vec![]);
 
