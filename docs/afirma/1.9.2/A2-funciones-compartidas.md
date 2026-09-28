@@ -34,35 +34,41 @@ resto: `DataDownloader`, `Base64`, `SSLErrorProcessor` y la lectura de
   `file:/`, lee el fichero local; en cualquier otro caso, prueba si es Base64
   y si no lo es, devuelve el texto tal cual.
   Cita: `afirma-core/src/main/java/es/gob/afirma/core/misc/http/DataDownloader.java:57-141`.
-* **Quién lo llama para `dat`:** `UrlParameters.java:297-317` invoca
+* **Quién lo llama para `dat`:** `UrlParameters.java:306-317` invoca
   `downloadData(dataPrm, gzipped)`, es decir, **siempre con
   `ignoreSSLSecurity=false`** — la variante insegura no se usa desde el
   protocolo `afirma://`.
 * **rFirma:** `site/domain/protocol/operation/document.rs::data_of` reproduce
-  el orden gzip → Base64 → URL → texto, con `HttpDataSource`
+  el orden gzip → URL `http(s)` → rechazo de `ftp://` → Base64 → texto, el
+  mismo que el de `DataDownloader.java:63-139`, con `HttpDataSource`
   (`site/adapters/data_download.rs`) para el `GET`. Coincide en Base64, gzip y
   URL `http(s)`. **Rechaza `ftp://`** con un `Refusal` explícito en vez de
-  descargarlo (`data.rs:54-58`): decisión ya tomada en el código, sin ADR que
-  la respalde. **No trata `file:/` de forma especial**: como no empieza por
-  `http(s)://` ni es Base64 válido, cae al último caso y firma el texto
-  literal `"file:/etc/passwd"` (o lo que sea) en vez de rechazarlo. El
-  original tampoco llega a `DataDownloader` con `file:/`: lo corta antes, ver
-  la fila siguiente. → #1172.
+  descargarlo (`document.rs::data_of`, constante `FTP`): decisión ya tomada en
+  el código, sin ADR que la respalde. **No llega nunca a ver `file:/`**: se
+  corta antes, ver la fila siguiente.
 
 ### `UrlParameters.setDataFromUrlParam` — el corte de `file:/` antes de descargar
 
 * **Qué hace en el envío:** antes de llamar a `DataDownloader`, si
   `dat` empieza por `file:/`, lanza `ParameterException("No se permite la
-  lectura de ficheros locales")` y la operación se aborta con ese error.
-  Cita: `afirma-core/src/main/java/es/gob/afirma/core/misc/protocol/UrlParameters.java:297-301`.
+  lectura de ficheros locales: " + dataPrm)` y la operación se aborta con ese
+  error.
+  Cita: `afirma-core/src/main/java/es/gob/afirma/core/misc/protocol/UrlParameters.java:300-304`.
   Ya citado en [06-operaciones-firma.md](06-operaciones-firma.md)
   §2.4, pero sin conectar con la función a la que se lo ahorra.
-* **rFirma:** no reproduce el rechazo explícito. `data_of` (fila anterior) no
-  distingue `file:/` de cualquier otro texto que no sea URL ni Base64: la
-  petición no falla con un mensaje claro, sino que firma el literal como si
-  fueran los datos. Misma diferencia que la fila anterior, un único issue:
-  **#1172** — el `dat` con esquema `file:` debe rechazarse explícitamente,
-  como en el original, no colarse como texto plano.
+* **rFirma:** reproduce el rechazo explícito, antes de que `data_of` (fila
+  anterior) llegue a ver el valor:
+  `parameters.rs::check_local_access_is_not_requested` (constante
+  `LOCAL_FILE_PREFIX = "file:/"`), llamado por `check_common_parameters` desde
+  `operation.rs::check_the_parameters_the_original_parses` para todos los
+  verbos que analiza el original. Pruebas:
+  `parameters/tests.rs::data_that_asks_for_a_local_file_is_refused` y
+  `operation/tests/document.rs::a_signature_that_asks_for_a_local_file_never_gets_read`.
+  Sin diferencia — no se abre issue. rFirma es, eso sí, **más estricto** que
+  el original: compara sin distinguir mayúsculas y tras quitar los espacios
+  iniciales (`FILE:/x` y `  file:/x` se rechazan también), mientras que el
+  original compara `startsWith("file:/")` al pie de la letra y con `FILE:/x`
+  sigue adelante hasta Base64 o texto literal.
 
 ### `SSLErrorProcessor` — la confianza en el certificado del servidor remoto
 
@@ -74,8 +80,8 @@ resto: `DataDownloader`, `Base64`, `SSLErrorProcessor` y la lectura de
   preguntando si se quiere confiar en el certificado del servidor, y si la
   persona acepta, lo importa a un almacén de confianza temporal
   (`TRUSTED_KS_PWD = "changeit"`) y reintenta la conexión con él.
-  Cita: `afirma-core/src/main/java/es/gob/afirma/core/misc/http/SSLErrorProcessor.java:23-60`
-  y su uso en `DataDownloader.java:87-96`.
+  Cita: `afirma-core/src/main/java/es/gob/afirma/core/misc/http/SSLErrorProcessor.java:112-227`
+  (`processHttpError`) y su uso en `DataDownloader.java:90-99`.
 * **rFirma:** no reproduce ningún mecanismo de confianza puntual. Los
   clientes HTTP de `site/adapters/` (`data_download.rs`, `batch_services.rs`,
   `servlets.rs`, `triphase_server.rs`, `relay.rs`) usan la validación TLS del
@@ -92,7 +98,8 @@ resto: `DataDownloader`, `Base64`, `SSLErrorProcessor` y la lectura de
   el `=` de relleno solo aparezca en los dos últimos caracteres y que la
   longitud sin saltos de línea sea múltiplo de cuatro. `decode` ignora
   espacios, corta el último grupo si es incompleto y no comprueba los bits
-  sobrantes. Cita: `afirma-core/src/main/java/es/gob/afirma/core/misc/Base64.java:625-691`.
+  sobrantes. Cita: `afirma-core/src/main/java/es/gob/afirma/core/misc/Base64.java:625-691`
+  (`isBase64`) y `599-610` (`decode`).
 * **rFirma:** ya revisado y reproducido carácter a carácter en
   `site/domain/protocol/operation/document.rs`
   (`is_base64_to_the_original`, `decode_like_the_original`), con la cita al
@@ -125,7 +132,6 @@ resto: `DataDownloader`, `Base64`, `SSLErrorProcessor` y la lectura de
 
 | Issue | Diferencia | Tipo |
 |---|---|---|
-| #1172 | El `dat` con esquema `file:` no se rechaza explícitamente: se firma como texto literal en vez de fallar con un mensaje claro | Arreglo |
 | #1174 | Sin mecanismo de confianza puntual en un certificado TLS remoto no reconocido (`SSLErrorProcessor`) al descargar `dat` o hablar con los servlets | Decisión (ADR) |
 | #1179 | La lectura de `properties` no soporta continuación de línea ni escapes `\uXXXX` del formato `.properties` | Decisión |
 
