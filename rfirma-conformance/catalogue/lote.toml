@@ -75,6 +75,20 @@ script = "batch"
 expects.completes.conditions = ["the-presigner-gets-the-batch-and-the-chain"]
 
 [[check]]
+id = "the_batch_servlets_receive_their_parameters_in_the_post_body"
+set = "lote"
+citation = "BatchSigner.java:340-443; UrlHttpManagerImpl.java:190-196, 268-276"
+statement = """
+El lote llega a los dos servlets en el cuerpo del POST como application/x-www-form-urlencoded, y
+no en la query: un servlet que solo lee el cuerpo lo atiende.
+"""
+
+[check.drive]
+mode = "v4"
+script = "batchbodyonlyservlets"
+expects.completes.conditions = ["the-servlet-parameters-in-the-body"]
+
+[[check]]
 id = "the_postsigner_receives_every_item_signed_with_pk1"
 set = "lote"
 citation = "BatchSigner.java:416-443"
