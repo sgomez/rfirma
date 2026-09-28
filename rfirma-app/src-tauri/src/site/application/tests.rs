@@ -179,6 +179,18 @@ pub(crate) struct InMemoryBatchServices {
     postsign_response: Mutex<Option<Vec<u8>>>,
     received: Mutex<Vec<ReceivedBatchCall>>,
     unreachable: bool,
+    hanging_postsign: Option<HangingPostsign>,
+}
+
+struct HangingPostsign {
+    reached: Mutex<std::sync::mpsc::Sender<()>>,
+    release: Mutex<std::sync::mpsc::Receiver<()>>,
+}
+
+/// Los mandos de una postfirma colgada: avisa de que llegó y la suelta cuando se le dice.
+pub(crate) struct PostsignHang {
+    pub(crate) reached: std::sync::mpsc::Receiver<()>,
+    pub(crate) release: std::sync::mpsc::Sender<()>,
 }
 
 impl InMemoryBatchServices {
@@ -197,6 +209,27 @@ impl InMemoryBatchServices {
             presign_response: Mutex::new(Some(presign)),
             ..Self::default()
         }
+    }
+
+    /// Unos servlets que prefirman y dejan la postfirma colgada hasta que se suelte.
+    pub(crate) fn hanging_in_postsign(presign: Vec<u8>) -> (Self, PostsignHang) {
+        let (reached, reached_receiver) = std::sync::mpsc::channel();
+        let (release_sender, release) = std::sync::mpsc::channel();
+        let services = Self {
+            presign_response: Mutex::new(Some(presign)),
+            hanging_postsign: Some(HangingPostsign {
+                reached: Mutex::new(reached),
+                release: Mutex::new(release),
+            }),
+            ..Self::default()
+        };
+        (
+            services,
+            PostsignHang {
+                reached: reached_receiver,
+                release: release_sender,
+            },
+        )
     }
 
     /// Unos servlets que nunca responden, como si la sede no tuviera red.
@@ -252,6 +285,10 @@ impl BatchServices for InMemoryBatchServices {
         tridata: &TriphaseData,
     ) -> Result<Vec<u8>, BatchError> {
         self.reaching(BatchSituation::PostsignerUnreachable)?;
+        if let Some(hanging) = &self.hanging_postsign {
+            let _ = crate::lock(&hanging.reached).send(());
+            let _ = crate::lock(&hanging.release).recv();
+        }
         crate::lock(&self.received).push(ReceivedBatchCall::Postsign {
             url: url.to_owned(),
             format,

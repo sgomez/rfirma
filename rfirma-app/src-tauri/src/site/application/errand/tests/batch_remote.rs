@@ -4,6 +4,7 @@ use std::sync::Arc;
 
 use super::support::*;
 use super::support_requests::*;
+use super::support_window::attended_on_a_bare_desk;
 use crate::identity::application::tests::{a_usable_certificate, listed_from};
 use crate::identity::ports::CertificateMemory;
 use crate::signing::application::tests::a_memory;
@@ -11,8 +12,12 @@ use crate::site::adapters::frontier;
 use crate::site::application::errand::*;
 use crate::site::application::tests::{InMemoryBatchServices, ReceivedBatchCall};
 use crate::site::domain::batch::BatchFormat;
-use crate::site::domain::protocol::{AfirmaUrl, ChannelMessage, SafCode, WireAnswer};
+use crate::site::domain::channel::{ArrivalMode, ChannelTenure};
+use crate::site::domain::protocol::{
+    AfirmaUrl, ChannelMessage, NegotiatedCredential, SafCode, WireAnswer,
+};
 use base64::Engine as _;
+use std::time::Duration;
 
 const A_JSON_LOTE: &str = "{\"algorithm\":\"SHA256\",\"stoponerror\":false,\"singlesigns\":[{\"id\":\"001\",\"datareference\":\"AAAA\"},{\"id\":\"002\",\"datareference\":\"BBBB\"}]}";
 
@@ -347,4 +352,122 @@ fn a_batch_that_is_declined_ends_in_a_cancel() {
         what_the_site_received(&mut wire),
         Some(frontier::cancelled().on_the_wire())
     );
+}
+
+#[test]
+fn closing_the_window_with_the_postsigner_hanging_answers_cancel_and_ends_the_errand() {
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let memory = a_memory(home.path());
+    let ours = vec![a_usable_certificate("FIRMA")];
+    let (listed, _) = listed_from(&ours);
+    let live = a_live();
+    let (handle, mut wire) = the_wire();
+    live.answer_through(handle);
+    assert!(live.begin(Errand::of(
+        NegotiatedCredential::Required(a_credential()),
+        ArrivalMode::Awaited,
+        a_codec()
+    )));
+    let engine = AnEngine::answering(&[&[0], &[0]]);
+    let policies = APolicyEngine::answering("");
+    let (services, hang) =
+        InMemoryBatchServices::hanging_in_postsign(A_PRESIGN_WITH_TWO_SIGNS.to_vec());
+    let neighbours = a_signer_for_the_batch(home.path(), &listed, &memory, &ours);
+    let desk = a_desk_for_the_batch(
+        &engine,
+        &policies,
+        &neighbours,
+        home.path(),
+        Arc::new(services),
+    );
+    let url = a_batch("");
+    let step = attend_operation(&desk, &url, decoded(&url), &live);
+    let chosen = the_only_row_of(remembered(&live, step));
+    consent(&desk, &chosen, &live).expect("el certificado sirve");
+
+    let live_ref = &live;
+    let (closed, wire_said) = std::thread::scope(|scope| {
+        let closer = scope.spawn(move || {
+            hang.reached
+                .recv_timeout(Duration::from_secs(10))
+                .expect("la postfirma debe llegar a colgarse");
+            answer_before_closing_within(live_ref, Duration::from_millis(50));
+            let said = what_the_site_received(&mut wire);
+            let ended = live_ref.current().is_none();
+            hang.release
+                .send(())
+                .expect("el hilo colgado sigue esperando");
+            (ended, said)
+        });
+        let _ = finish_the_batch(&desk, &the_typed_secret(), &live);
+        closer.join().expect("el cierre no debe entrar en panico")
+    });
+
+    assert_eq!(wire_said, Some("CANCEL".to_owned()));
+    assert!(closed, "el trámite termina sin esperar a la postfirma");
+}
+
+#[test]
+fn a_service_channel_attends_the_next_operation_while_a_postsigner_hangs() {
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let memory = a_memory(home.path());
+    let ours = vec![a_usable_certificate("FIRMA")];
+    let (listed, _) = listed_from(&ours);
+    let live = a_live();
+    let (handle, _wire) = the_wire();
+    live.answer_through(handle);
+    assert!(live.begin(
+        Errand::of(
+            NegotiatedCredential::Required(a_credential()),
+            ArrivalMode::Awaited,
+            a_codec()
+        )
+        .with_tenure(ChannelTenure::UntilTheChannelIdles)
+    ));
+    live.browser_arrived();
+    let engine = AnEngine::answering(&[&[0], &[0]]);
+    let policies = APolicyEngine::answering("");
+    let (services, hang) =
+        InMemoryBatchServices::hanging_in_postsign(A_PRESIGN_WITH_TWO_SIGNS.to_vec());
+    let neighbours = a_signer_for_the_batch(home.path(), &listed, &memory, &ours);
+    let desk = a_desk_for_the_batch(
+        &engine,
+        &policies,
+        &neighbours,
+        home.path(),
+        Arc::new(services),
+    );
+    let url = a_batch("");
+    let step = attend_operation(&desk, &url, decoded(&url), &live);
+    let chosen = the_only_row_of(remembered(&live, step));
+    consent(&desk, &chosen, &live).expect("el certificado sirve");
+
+    let live_ref = &live;
+    let (next, still_serving) = std::thread::scope(|scope| {
+        let attending = scope.spawn(move || {
+            hang.reached
+                .recv_timeout(Duration::from_secs(10))
+                .expect("la postfirma debe llegar a colgarse");
+            let (next_handle, _next_wire) = the_wire();
+            let next = attended_on_a_bare_desk(
+                an_operation(
+                    "op=sign&format=NoSuchFormat&algorithm=SHA256withRSA&dat=file:/etc/hostname",
+                ),
+                next_handle,
+                live_ref,
+            );
+            let serving = live_ref.current().is_some();
+            hang.release
+                .send(())
+                .expect("el hilo colgado sigue esperando");
+            (next, serving)
+        });
+        let _ = finish_the_batch(&desk, &the_typed_secret(), &live);
+        attending
+            .join()
+            .expect("la atención no debe entrar en panico")
+    });
+
+    assert!(matches!(next, ErrandStep::ShowingTheRefusal(_)), "{next:?}");
+    assert!(still_serving, "el canal sigue sirviendo");
 }

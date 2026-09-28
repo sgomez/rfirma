@@ -4,7 +4,11 @@ import assert from "node:assert/strict";
 import { beforeEach, describe, it } from "node:test";
 
 import { declaringTheConditions } from "../lib/events.mjs";
-import { aBatchServlet, theLocalBatchWithoutADialogueConditions } from "../scripts/batch.mjs";
+import {
+  aBatchServlet,
+  aPostsignerSlowerThan,
+  theLocalBatchWithoutADialogueConditions,
+} from "../scripts/batch.mjs";
 
 const EVERY_DOCUMENT_SIGNED = "every-document-signed-without-a-dialogue";
 
@@ -110,5 +114,24 @@ describe("the request the batch presigner tells", () => {
       authorization: "bearer",
       accept: "application/json",
     });
+  });
+});
+
+describe("the postsigner slower than the connect limit", () => {
+  it("answers its servlet only after the delay it was given", async () => {
+    const server = await aBatchServlet(aPostsignerSlowerThan(150), { service: "postsigner" });
+    const started = Date.now();
+    try {
+      const answered = await fetch(`http://127.0.0.2:${server.address().port}/batch`, {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body: "",
+      });
+      assert.ok(Date.now() - started >= 150, "no debe contestar antes de su retraso");
+      assert.equal(answered.status, 400, "sin parámetros el postsigner sigue rechazando");
+    } finally {
+      server.closeAllConnections();
+      server.close();
+    }
   });
 });

@@ -89,3 +89,47 @@ pub(in crate::site::adapters) fn rejecting_server(status: &str, body: &str) -> S
     });
     url
 }
+
+/// Sirve una petición y contesta `200` con `body` pasados `delay`; devuelve la URL completa.
+pub(in crate::site::adapters) fn slow_server(
+    delay: std::time::Duration,
+    body: &'static str,
+) -> String {
+    let listener = TcpListener::bind("127.0.0.1:0").expect("hay un puerto libre");
+    let url = format!(
+        "http://{}/servicio",
+        listener.local_addr().expect("tiene direccion")
+    );
+    std::thread::spawn(move || {
+        let (stream, _) = listener.accept().expect("llega la peticion");
+        let mut reader = BufReader::new(stream);
+        let mut length = 0;
+        loop {
+            let mut line = String::new();
+            reader.read_line(&mut line).expect("se lee la cabecera");
+            if line == "\r\n" || line.is_empty() {
+                break;
+            }
+            if let Some((name, value)) = line.split_once(':') {
+                if name.eq_ignore_ascii_case("content-length") {
+                    length = value.trim().parse().unwrap_or(0);
+                }
+            }
+        }
+        let mut request_body = vec![0; length];
+        reader
+            .read_exact(&mut request_body)
+            .expect("se lee el cuerpo");
+        std::thread::sleep(delay);
+        let answer = format!(
+            "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+            body.len()
+        );
+        let _ = reader.get_mut().write_all(answer.as_bytes());
+    });
+    url
+}
+
+/// Más que los 30 s que el cliente conserva para conectar.
+pub(in crate::site::adapters) const BEYOND_CONNECT_LIMIT: std::time::Duration =
+    std::time::Duration::from_secs(31);

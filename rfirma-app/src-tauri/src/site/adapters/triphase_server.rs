@@ -1,11 +1,7 @@
 //! Adaptador `reqwest` sobre el servidor trifásico que la sede nombra en `serverUrl`; no es el de los servlets del lote.
 
-use std::time::Duration;
-
 use crate::site::domain::triphase_server::{Situation, TriphaseServerError};
 use crate::site::ports::TriphaseServer;
-
-const TIMEOUT: Duration = Duration::from_secs(30);
 
 /// El servidor trifásico de producción, sobre `reqwest::blocking` con la validación TLS del sistema.
 pub struct HttpTriphaseServer {
@@ -15,10 +11,7 @@ pub struct HttpTriphaseServer {
 impl Default for HttpTriphaseServer {
     fn default() -> Self {
         Self {
-            client: reqwest::blocking::Client::builder()
-                .timeout(TIMEOUT)
-                .build()
-                .expect("el cliente HTTP se construye con parametros validos"),
+            client: super::service_client(),
         }
     }
 }

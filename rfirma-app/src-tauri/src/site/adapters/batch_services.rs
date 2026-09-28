@@ -1,15 +1,11 @@
 //! Adaptador `reqwest` sobre los dos servlets del lote remoto: prefirma y postfirma (`BatchSigner`, 1.9.2).
 
-use std::time::Duration;
-
 use base64::engine::general_purpose::URL_SAFE;
 use base64::Engine as _;
 
 use crate::site::domain::batch::{BatchFormat, TriphaseData};
 use crate::site::domain::batch_error::{BatchError, Situation};
 use crate::site::ports::BatchServices;
-
-const TIMEOUT: Duration = Duration::from_secs(30);
 
 /// Los dos servlets del lote remoto de producción, sobre `reqwest::blocking` con la validación TLS del sistema.
 pub struct RelayBatchServices {
@@ -19,10 +15,7 @@ pub struct RelayBatchServices {
 impl Default for RelayBatchServices {
     fn default() -> Self {
         Self {
-            client: reqwest::blocking::Client::builder()
-                .timeout(TIMEOUT)
-                .build()
-                .expect("el cliente HTTP se construye con parametros validos"),
+            client: super::service_client(),
         }
     }
 }

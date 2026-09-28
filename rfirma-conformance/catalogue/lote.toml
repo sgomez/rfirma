@@ -117,6 +117,20 @@ script = "batchpartial"
 expects.completes.conditions = ["the-failure-marked-for-the-postsigner"]
 
 [[check]]
+id = "the_batch_waits_for_a_postsigner_slower_than_thirty_seconds"
+set = "lote"
+citation = "UrlHttpManagerImpl.java:279-282; BatchSigner.java:392-414"
+statement = """
+Si el postfirmador tarda más de 30 s en contestar, el lote espera su respuesta y termina bien: el
+original no pone límite a la espera de la respuesta.
+"""
+
+[check.drive]
+mode = "v4"
+script = "batchslowpostsigner"
+expects.completes.conditions = ["the-slow-postsigner-answer-arrives"]
+
+[[check]]
 id = "a_presign_that_fails_every_item_answers_its_errors_without_postsigning"
 set = "lote"
 citation = "BatchSigner.java:398-406"

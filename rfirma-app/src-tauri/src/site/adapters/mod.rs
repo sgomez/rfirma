@@ -24,6 +24,17 @@ pub mod triphase_server;
 pub mod views;
 pub mod window;
 
+const CONNECT_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(30);
+
+/// El cliente de los servicios de la sede: límite al conectar y ninguno a la respuesta (ADR-0037).
+fn service_client() -> reqwest::blocking::Client {
+    reqwest::blocking::Client::builder()
+        .connect_timeout(CONNECT_TIMEOUT)
+        .timeout(None)
+        .build()
+        .expect("el cliente HTTP se construye con parametros validos")
+}
+
 /// La línea de estado de una respuesta de error seguida de su cuerpo, como el `HttpError` del original.
 fn rejection_detail(response: reqwest::blocking::Response) -> String {
     let status = response.status();
