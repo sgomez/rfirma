@@ -548,7 +548,7 @@ function theTriphasePresignature(format) {
 }
 
 /** El servidor trifásico falso: `op=pre` devuelve la prefirma, `op=post` la firma congelada. */
-const theTriphaseServer = (triphase) => (query) => {
+export const theTriphaseServer = (triphase) => (query) => {
   const received = Object.fromEntries(
     ["op", "cop", "format", "doc", "cert", "session"].map((name) => [name, query.get(name)]),
   );
@@ -652,7 +652,7 @@ const triphasing =
   (format, cop, content, operation = THE_OPERATIONS[cop], declaring = withoutAChoice) =>
   async () => {
     const triphase = THE_TRIPHASE_FORMATS[format];
-    const serverUrl = await servletServing(theTriphaseServer(triphase));
+    const serverUrl = await servletServing(theTriphaseServer(triphase), { service: "triphase" });
     operation(
       format,
       declaring(`serverUrl=${serverUrl}`),
@@ -667,7 +667,9 @@ const A_PRESIGNATURE_FAILURE =
 
 /** Una firma `CAdEStri` cuyo servidor trifásico falla al preparar la prefirma. */
 async function theFailingTriphaseServerScript() {
-  const serverUrl = await servletServing(() => ({ status: 200, body: A_PRESIGNATURE_FAILURE }));
+  const serverUrl = await servletServing(() => ({ status: 200, body: A_PRESIGNATURE_FAILURE }), {
+    service: "triphase",
+  });
   theSignScript("CAdEStri", withoutAChoice(`serverUrl=${serverUrl}`), theChallenge());
 }
 

@@ -41,14 +41,23 @@ const THE_SILENCE_AFTER_THE_SPOILED_REQUEST_MS = 5000;
 /** Lo que se espera a una subida tras recuperar una petición con el StorageService local. */
 const THE_SILENCE_AFTER_THE_LOCAL_STORAGE_MS = 60000;
 
+/** El servicio remoto del StorageService o del RetrieveService, según la ruta de la petición. */
+function theIntermediateService(request) {
+  const pathname = new URL(request.url, "http://127.0.0.2").pathname;
+  if (pathname === THE_STORAGE_PATH) return "intermediate_storage";
+  if (pathname === THE_RETRIEVE_PATH) return "intermediate_retrieval";
+  return null;
+}
+
 /**
  * El StorageService y el RetrieveService por HTTP en el loopback, con el registro de cada petición;
  * `retrieving` puede contestar un `op=get` en lugar de lo guardado y `refusingUploads` contesta cada
  * `op=put` con un 500.
  */
-async function anIntermediateServer({
+export async function anIntermediateServer({
   retrieving = () => undefined,
   refusingUploads = false,
+  telling = emit,
 } = {}) {
   const stored = new Map();
   const requests = [];
@@ -79,19 +88,32 @@ async function anIntermediateServer({
     response.writeHead(200, { "content-type": "text/plain; charset=utf-8" });
     response.end(answer);
   };
-  const port = (await servletServer(serving("remote"), { host: "127.0.0.2" })).address().port;
-  const loopbackPort = (await servletServer(serving("loopback"), { host: "127.0.0.1" })).address()
-    .port;
+  const remoteServer = await servletServer(serving("remote"), {
+    host: "127.0.0.2",
+    service: theIntermediateService,
+    telling,
+  });
+  const loopbackServer = await servletServer(serving("loopback"), {
+    host: "127.0.0.1",
+    service: theIntermediateService,
+    telling,
+  });
   const at = (host, portNumber, path) => `http://${host}:${portNumber}${path}`;
   return {
-    storage: at("127.0.0.2", port, THE_STORAGE_PATH),
-    retrieve: at("127.0.0.2", port, THE_RETRIEVE_PATH),
-    loopbackStorage: at("127.0.0.1", loopbackPort, THE_STORAGE_PATH),
+    storage: at("127.0.0.2", remoteServer.address().port, THE_STORAGE_PATH),
+    retrieve: at("127.0.0.2", remoteServer.address().port, THE_RETRIEVE_PATH),
+    loopbackStorage: at("127.0.0.1", loopbackServer.address().port, THE_STORAGE_PATH),
     requests,
     putsTo: (service) =>
       requests.filter((entry) => entry.op === "put" && entry.service === service),
     getsFrom: (service) =>
       requests.filter((entry) => entry.op === "get" && entry.service === service),
+    close: () =>
+      Promise.all(
+        [remoteServer, loopbackServer].map(
+          (server) => new Promise((resolve) => server.close(resolve)),
+        ),
+      ),
   };
 }
 

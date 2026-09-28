@@ -1,0 +1,4 @@
+{"event":"launch","url":"afirma://sign?ports=63882,64985,61588&v=4&jvc=3&idsession=c2OHfauB9WwtfK57ltJp"}
+{"event":"request","service":"triphase","method":"POST","path":"/batch","query":["cert","cop","doc","format","op"],"body":[],"content_type":null,"headers":{"origin":null,"authorization":null,"accept":"*/*"}}
+{"event":"condition","name":"through-the-triphase-server","verdict":"compliant","observation":"la prefirma y la postfirma llegaron al serverUrl"}
+{"event":"success","result":"eyJzaWducyI6W119","certificate":"MIIB"}

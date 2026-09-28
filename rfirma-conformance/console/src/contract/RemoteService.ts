@@ -3,4 +3,4 @@
 /**
  * El servicio remoto de la sede que recibe una petición del cliente.
  */
-export type RemoteService = "presigner" | "postsigner";
+export type RemoteService = "presigner" | "postsigner" | "intermediate_storage" | "intermediate_retrieval" | "triphase" | "dat_download";
