@@ -3,23 +3,31 @@
 El recorrido validado en el [ADR-0006](0006-firma-visible-se-configura-sobre-el-documento.md)
 da por hecho que se firma y el documento aparece: sin diálogo por firma, con el destino
 visible en el pie del panel antes de pulsar. **El recorrido no cambia con el canal.** Lo que
-cambia es dónde cae el fichero, y eso lo decide **el documento, no el empaquetado**:
+cambia es dónde cae el fichero, y eso lo decide **la preferencia de modo de destino,
+limitada por el documento**, nunca el empaquetado:
 
-- Si el documento **no viene del portal** —`portal_id()` es `None`—, el firmado cae **junto
-  al original**: es `document.parent()`, y nada más.
-- Si viene del portal, cae en la **carpeta de destino**, la que la persona haya elegido en
-  Preferencias.
+- Con el modo **«junto al documento original»** —el de omisión—, el firmado cae en la
+  carpeta del original, `document.parent()`, si el documento **no viene del portal**
+  —`portal_id()` es `None`—. Si viene del portal, no hay carpeta del original, y cae en la
+  **carpeta de destino**.
+- Con el modo **«en esta carpeta»**, cae siempre en la **carpeta de destino**, la que la
+  persona haya elegido en Preferencias.
+- El destino de **una sola firma** —`Cambiar`, en el pie— gana a los dos modos y no los
+  toca.
 
-Esta es la regla entera. No hay `FileAccess::{Portal, Direct}`, ni sondeo del entorno, ni
+Esta es la regla entera. La pregunta del documento se hace **en un solo sitio**, la fachada
+de documentos, y la contestan igual el pie antes de firmar y la escritura: no pueden
+discrepar. No hay `FileAccess::{Portal, Direct}`, ni sondeo del entorno, ni
 enum que diga en qué canal corremos: la capacidad ya vive en el código desde el
 [#22](https://github.com/sgomez/rfirma/issues/22) —`Document` reconoce el enlace del
 portal por el prefijo `/run/user/*/doc/`— y un enum que sondease `/.flatpak-info` sería una
 segunda fuente de verdad para algo que el código ya sabe.
 
 Y la versión por dato es **estrictamente más correcta**, no sólo más barata: un `.deb` puede
-recibir una ruta del portal —el montaje FUSE existe también en el anfitrión y un gestor de
-ficheros puede entregarla—, y ahí «no hay carpeta original» es la respuesta buena. Un sondeo
-del entorno la daría mal.
+recibir una ruta del portal —el montaje FUSE existe también en el anfitrión y una aplicación
+empaquetada, o un gestor de ficheros, puede entregarla—, y ahí «no hay carpeta original» es la
+respuesta buena aunque el modo elegido sea «junto al original». Un sondeo del entorno la
+daría mal.
 
 ## La ruta se enseña donde se conoce, y el nombre donde no
 
@@ -80,13 +88,22 @@ que no está de verdad, porque flatpak solo monta lo que ya existe. Y esa compro
 **antes de firmar**, como manda el [ADR-0010](0010-memoria-entre-sesiones.md), no al
 guardar.
 
-## Cómo se elige la carpeta de destino
+## Cómo se eligen el modo y la carpeta de destino
 
-En Preferencias, «Dónde se guarda el documento firmado» es **una fila con el nombre de la
-carpeta y un botón «Cambiar carpeta…»** que abre el selector de directorio del sistema. No
-es un desplegable: lo fue mientras «junto al documento original» no existía y la lista tenía
-un solo elemento —un control que fingía elegir—, y ahora que ese destino ha vuelto sigue sin
-serlo, porque lo que se elige aquí es **una carpeta cualquiera**, no un modo.
+En Preferencias, «Dónde se guarda el documento firmado» son **dos radios**: «Junto al
+documento original» y «En esta carpeta». Bajo el segundo va **la fila con el nombre de la
+carpeta y el botón «Cambiar carpeta…»**, que abre el selector de directorio del sistema:
+el modo es una elección entre dos, y la carpeta es **una carpeta cualquiera**, así que
+siguen siendo dos controles distintos y ninguno es un desplegable.
+
+**Donde el modo no se puede cumplir, no se ofrece.** Bajo el sandbox todo documento llega
+por el portal, así que «junto al original» no caería nunca junto al original: no hay radios,
+solo la fila de la carpeta. Lo decide el booleano que ya cruza a la ventana, no un sondeo
+del canal en la interfaz.
+
+El modo es **configuración** (ADR-0010) y, en una configuración que no lo trae —toda la
+guardada antes de existir—, vale «junto al original»: es lo que este ADR prometía desde el
+principio.
 
 Bajo el sandbox el permiso que concede el portal persiste en
 `~/.local/share/flatpak/db/documents`, y el directorio llega como
@@ -139,15 +156,25 @@ sin ningún permiso, medido, y «Abrir la carpeta» funciona sobre ella. Se desc
 la misma familia de fallo que el `.xdp-…` huérfano que el #22 midió: el fichero está, hasta
 el día que no.
 
+**Sin modo: decide el documento y nada más.** Fue la redacción anterior de este ADR: un
+documento con carpeta caía junto al original, sin ajuste que lo activase, y Preferencias
+solo nombraba la carpeta. Se descarta por dos razones. La primera, que **no llegó a
+cumplirse**: la fachada entregaba y anunciaba siempre en la carpeta de destino, y la rama
+del original solo la ejercitaban las pruebas, así que en ningún canal caía nada junto al
+original y Preferencias enseñaba «Junto al documento original» como texto que parecía una
+opción. La segunda, que quien quiere **todos los firmados juntos** no tenía forma de
+pedirlo: la carpeta de destino solo se usaba para lo que llegaba por el portal. Con el modo,
+lo que la interfaz enseña es lo que pasa, y las dos maneras de trabajar caben.
+
 **Un `FolderLabel`, o una regla de «un solo segmento» aplicada en el backend.** No hay tipo
 nuevo ni capa nueva de guarda: lo que sale es la ruta que se conoce, y cuánto se pinta lo
 decide el sistema de diseño en el sitio donde se puede escribir con el ejemplo delante.
 
 ## Consequences
 
-- **«Junto al documento original» vuelve al vocabulario.** Deja de ser un término prohibido
-  del glosario y pasa a ser lo que ocurre por omisión en los canales nativos, sin ajuste que
-  lo active.
+- **«Junto al documento original» es un modo de destino**, el de omisión, y la carpeta de
+  destino deja de ser solo la del documento del portal: es también la de quien elige «en
+  esta carpeta».
 - **`DestinationFolder` guarda la ruta entera en el fichero de configuración**, y deja de
   necesitar explicación: con la ruta real enseñándose en la interfaz, no hay ninguna
   asimetría entre disco y pantalla que justificar.
@@ -161,16 +188,19 @@ decide el sistema de diseño en el sitio donde se puede escribir con el ejemplo 
   [#123](https://github.com/sgomez/rfirma/issues/123) no se veía hasta después de firmar,
   cuando ya no se podía hacer nada. Enseñarlo antes es lo que convierte la numeración en
   información en vez de en sorpresa.
+- **La carpeta del original tampoco se crea nunca**, y se comprueba igual que la de destino
+  y con los mismos candidatos de nombre: junto al original no hay otro camino de escritura.
 - **Si la carpeta no está, se avisa y no se degrada.** El pie sustituye el destino por «No
   se puede escribir en *Documentos*» —**nombrando la carpeta**— con el `Cambiar` al lado, y
   el botón de firmar **no se apaga**. Degradar en silencio a otro sitio devuelve un destino
   que el usuario no eligió, que es lo que este ADR quita; apagar el botón deja a alguien con
   el documento cargado, el certificado puesto y ninguna salida visible.
-- **La degradación del ADR-0010 desaparece**, no se sustituye. Era «junto al original» como
-  valor por omisión de un ajuste, y ahora eso no es un valor de ajuste: es lo que pasa
-  cuando el documento tiene carpeta.
-- Lo que cruza a la ventana sobre esto es **un booleano con nombre** en `ConfigurationView`
-  (`can_save_next_to_original`), no el canal. Y quien lo calcula es un solo consumidor
+- **La degradación del ADR-0010 desaparece**, no se sustituye: un documento del portal con
+  el modo «junto al original» no es un fallo que degradar, es el caso que la regla ya
+  contesta con la carpeta de destino.
+- Lo que cruza a la ventana sobre esto es **el modo**, que se lee y se escribe, y **un
+  booleano con nombre** en la vista de configuración (`offers_the_original_folder`), no el
+  canal. Y quien lo calcula es un solo consumidor
   —`Environment`, la raíz de composición— con la pregunta por nombre,
   `dialogs_return_host_paths()`, no `is_flatpak()`: lo segundo invita a ramificar sobre él
   en veinte sitios.
