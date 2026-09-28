@@ -506,6 +506,14 @@ select.input {
   min-width: 0;
 }
 
+.field-group.checkbox {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--s2);
+  font-size: var(--text-s);
+  color: var(--text-2);
+}
+
 .field-label {
   color: var(--text-2);
   font-size: var(--text-s);
@@ -2175,6 +2183,30 @@ select.input {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--s3);
+}
+
+.request-differences {
+  margin: 0 0 var(--s2);
+  font-size: var(--text-s);
+}
+
+.request-differences > div {
+  display: flex;
+  gap: var(--s2);
+}
+
+.request-differences dt {
+  font-weight: 600;
+  min-width: 8em;
+}
+
+.request-differences dd {
+  margin: 0;
+}
+
+.request-differences ul {
+  margin: 0;
+  padding-left: var(--s4);
 }
 
 .request-list {
