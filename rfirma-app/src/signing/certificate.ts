@@ -47,7 +47,7 @@ export type CertificateStatus =
  * la `situation` de un fallo. Un nombre compuesto en Rust se saltaría los
  * catálogos y saldría en castellano en la versión en inglés.
  */
-type CertificateStoreClass = "card" | "firefox" | "chrome" | "nssdb" | "installed";
+type CertificateStoreClass = "card" | "firefox" | "chrome" | "nssdb" | "installed" | "windows";
 
 /** Un certificado elegible, con lo justo para pintarlo y para firmar con él. */
 export interface Certificate {

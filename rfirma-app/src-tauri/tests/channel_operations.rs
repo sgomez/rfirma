@@ -53,7 +53,7 @@ async fn an_operation_is_answered_by_the_errand_and_not_by_the_channel() {
         .expect("y se lee");
     assert_eq!(answered.into_text().expect("es texto").as_str(), "CANCEL");
     assert!(
-        acknowledgement.wait(Duration::from_millis(0)),
+        acknowledgement.wait(PATIENCE),
         "el cliente ya ha recibido la respuesta: el acuse deberia estar cumplido"
     );
 }

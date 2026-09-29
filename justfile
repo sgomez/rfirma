@@ -3,17 +3,34 @@
 # Los requisitos los comprueba `just tools`; la puerta que manda es
 # `just check`, que ejecuta el CI (ADR-0014).
 
-# GraalVM CE 25 (ADR-0004): la 21 aborta native-image; el pom compila a
-# release 21 aparte.
-default_graalvm := "$HOME/.sdkman/candidates/java/25.3.4+1.r25-graalce"
+# En Windows las recetas corren en Git Bash, no en cmd ni en PowerShell (ADR-0035).
+set windows-shell := ["C:/Program Files/Git/bin/bash.exe", "-cu"]
 
-bridge := justfile_directory() / "rfirma-native-bridge"
-app := justfile_directory() / "rfirma-app"
+windows := if os_family() == "windows" { "true" } else { "false" }
+
+# La raiz con barras normales: bash se come las barras invertidas de Windows.
+root := replace(justfile_directory(), "\\", "/")
+
+# GraalVM CE 25 (ADR-0004): la 21 aborta native-image; el pom compila a
+# release 21 aparte. En Windows no hay SDKMAN: vale el JAVA_HOME.
+default_graalvm := if windows == "true" { "$JAVA_HOME" } else { "$HOME/.sdkman/candidates/java/25.3.4+1.r25-graalce" }
+
+bridge := root / "rfirma-native-bridge"
+app := root / "rfirma-app"
 tauri := app / "src-tauri"
-conformance_suite := justfile_directory() / "rfirma-conformance"
+conformance_suite := root / "rfirma-conformance"
+
+# El nombre de la libreria nativa sigue la convencion de cada plataforma,
+# como DLL_PREFIX y DLL_SUFFIX en Rust (ADR-0035).
+native_lib_name := if windows == "true" { "rfirma_crypto.dll" } else { "librfirma_crypto.so" }
+
+# Lo que emite native-image con -H:Name=librfirma_crypto.
+native_image_output := if windows == "true" { "librfirma_crypto.dll" } else { "librfirma_crypto.so" }
+native_image := if windows == "true" { "native-image.cmd" } else { "native-image" }
+classpath_separator := if windows == "true" { ";" } else { ":" }
 
 # Ruta canonica de la libreria nativa (ADR-0013).
-native_lib := bridge / "target/lib/rfirma/librfirma_crypto.so"
+native_lib := bridge / "target/lib/rfirma" / native_lib_name
 
 # Version fijada: un cargo-crap con un solo mantenedor no debe poder poner en
 # rojo un PR que no lo ha tocado (ADR-0014).
@@ -37,7 +54,9 @@ worktree_target := ```
     own=$(git rev-parse --git-dir 2>/dev/null || true)
     common=$(git rev-parse --git-common-dir 2>/dev/null || true)
     if [ -n "$own" ] && [ "$own" != "$common" ] && cd "$common/.." 2>/dev/null; then
-        printf '%s' "$PWD/.claude/worktrees/target"
+        dir="$PWD"
+        if command -v cygpath >/dev/null; then dir="$(cygpath -m "$dir")"; fi
+        printf '%s' "$dir/.claude/worktrees/target"
     fi
 ```
 
@@ -46,7 +65,7 @@ cargo_target := if worktree_target == "" { tauri / "target" } else { worktree_ta
 # El arbol instrumentado de `cargo llvm-cov` va aparte del normal (ADR-0014).
 export CARGO_TARGET_DIR := if env("CARGO_LLVM_COV", "") == "" { cargo_target } else { cargo_target / "llvm-cov-target" }
 
-coverage_out := cargo_target / "coverage" / file_name(justfile_directory())
+coverage_out := cargo_target / "coverage" / file_name(root)
 
 # El arbol instrumentado se compila sin DWARF: la cobertura sale del mapa de
 # LLVM, y enlazar la depuracion era la mitad de su compilacion.
@@ -59,6 +78,10 @@ ruff_version := "0.16.6"
 # Modulo FFI oculto de la puerta CRAP del carril rapido (ADR-0014); el carril
 # lento lo mide con `just test-native`.
 ffi_allow := "src/signing/adapters/ffi.rs"
+
+# Adaptador que solo compila Windows: el carril rapido de Linux lo oculta y el
+# carril de Windows lo mide con `just test-windows` (ADR-0014, ADR-0035).
+windows_allow := "src/identity/adapters/windows_store/cng.rs"
 
 # Accesorio del banco de conformidad, fijado por etiqueta y sha256: la 1.9.2
 # no publica autoscript.js en ningun artefacto. Pin repetido en ci.yml.
@@ -86,14 +109,14 @@ check: tools check-repo check-java check-ts check-rust
 check-repo: check-version
     #!/usr/bin/env bash
     set -euo pipefail
-    {{ justfile_directory() }}/packaging/flatpak/check-sources.sh
-    {{ justfile_directory() }}/rfirma-app/src/design-system/check-bundle.sh
-    {{ justfile_directory() }}/.github/check-workflows.sh
-    {{ justfile_directory() }}/packaging/repo/build-tree.test.sh
-    {{ justfile_directory() }}/packaging/repo/publish-tree.test.sh
-    ruff check {{ justfile_directory() }}/packaging {{ justfile_directory() }}/scripts
-    {{ justfile_directory() }}/scripts/tests/outline_test.sh
-    {{ justfile_directory() }}/scripts/tests/ci_lanes_test.sh
+    {{ root }}/packaging/flatpak/check-sources.sh
+    {{ root }}/rfirma-app/src/design-system/check-bundle.sh
+    {{ root }}/.github/check-workflows.sh
+    {{ root }}/packaging/repo/build-tree.test.sh
+    {{ root }}/packaging/repo/publish-tree.test.sh
+    ruff check {{ root }}/packaging {{ root }}/scripts
+    {{ root }}/scripts/tests/outline_test.sh
+    {{ root }}/scripts/tests/ci_lanes_test.sh
 
 # Una sola invocacion de Maven: compila con -Xlint:all, prueba y empaqueta.
 [group('ci')]
@@ -117,12 +140,12 @@ tools:
     RUFF_VERSION="{{ ruff_version }}" CRAP_VERSION="{{ crap_version }}" \
         MACHETE_VERSION="{{ machete_version }}" \
         DEFAULT_GRAALVM="{{ default_graalvm }}" SYSTEM_LIBS="{{ system_libs }}" \
-        {{ justfile_directory() }}/scripts/tools.sh
+        {{ root }}/scripts/tools.sh
 
 # Instala las dependencias de AutoFirma en ~/.m2 si no estan (ADR-0002).
 [private]
 bootstrap:
-    {{ justfile_directory() }}/scripts/bootstrap.sh
+    {{ root }}/scripts/bootstrap.sh
 
 # Instala las dependencias de node de rfirma-app.
 [private]
@@ -184,7 +207,7 @@ certs action:
 autoscript:
     #!/usr/bin/env bash
     set -euo pipefail
-    destino="{{ justfile_directory() }}/testdata/conformance/autoscript-1.9.2.js"
+    destino="{{ root }}/testdata/conformance/autoscript-1.9.2.js"
     sha="{{ autoscript_sha256 }}"
     if [ -f "$destino" ] && echo "$sha  $destino" | sha256sum --check --status; then
         echo "autoscript.js v1.9.2 ya esta en testdata/conformance/"
@@ -206,7 +229,7 @@ autoscript:
 # Genera el mapa del protocolo de AutoFirma a tag fijado y lo cruza con el de rFirma.
 [group('dev')]
 protocol-map *args:
-    python3 {{ justfile_directory() }}/scripts/protocol-map.py {{ args }}
+    python3 {{ root }}/scripts/protocol-map.py {{ args }}
 
 # jscpd sobre los ficheros de tests en Rust y TS. Solo informa, no entra en el CI (ADR-0014).
 [group('dev')]
@@ -228,7 +251,7 @@ duplication: deps
 # Esqueleto de un fichero .rs, .ts o .tsx (ruta relativa a la raiz).
 [group('checklist')]
 outline path:
-    {{ justfile_directory() }}/scripts/outline.sh {{ path }}
+    {{ root }}/scripts/outline.sh {{ path }}
 
 # Lo que la ventana puede pedirle al backend, generado de las fuentes.
 [group('dev')]
@@ -264,7 +287,7 @@ fmt-ts:
 # `ruff format` sobre packaging y scripts.
 [private]
 fmt-python:
-    ruff format {{ justfile_directory() }}/packaging {{ justfile_directory() }}/scripts
+    ruff format {{ root }}/packaging {{ root }}/scripts
 
 # clippy y rustfmt sobre rfirma-app/src-tauri.
 [private]
@@ -300,7 +323,7 @@ build-rust: build-ts
 # Falla nombrando `just native` si la libreria nativa no esta; RFIRMA_SKIP_NATIVE=1 la salta (ADR-0013).
 [private]
 check-native:
-    {{ justfile_directory() }}/scripts/check-native.sh {{ native_lib }}
+    {{ root }}/scripts/check-native.sh {{ native_lib }}
 
 # ---------------------------------------------------------------------------
 # Test
@@ -319,7 +342,7 @@ test-ts: po-import
 # Las pruebas de los analizadores de firma de la sede, con el ejecutor de Node.
 [private]
 test-site-driver:
-    cd {{ justfile_directory() }}/testdata/site-driver && node --test --test-force-exit --test-reporter=dot test/*.test.mjs
+    cd {{ root }}/testdata/site-driver && node --test --test-force-exit --test-reporter=dot test/*.test.mjs
 
 # cargo test, mas la compilacion de las pruebas de grada C.
 [private]
@@ -336,6 +359,13 @@ test-native: (certs "install") check-native build-ts
     cd {{ tauri }} && cargo crap --path '{{ ffi_allow }}' --lcov "{{ coverage_out }}/crap-ffi/lcov.info" --threshold 30 --fail-above
     cd {{ bridge }} && mvn -B test -DexcludedGroups= -Dgroups=gradaC
 
+# Pruebas de --lib y del canal local en una pasada instrumentada, y la puerta CRAP de `windows_allow` (ADR-0035).
+[group('ci')]
+test-windows: build-ts
+    mkdir -p "{{ coverage_out }}/windows"
+    cd {{ tauri }} && {{ no_debuginfo }} cargo llvm-cov --all-features --lib --test channel_client --test channel_operations --test service_acknowledgement --lcov --output-path "{{ coverage_out }}/windows/lcov.info"
+    cd {{ tauri }} && cargo crap --path '{{ windows_allow }}' --lcov "{{ coverage_out }}/windows/lcov.info" --threshold 30 --fail-above
+
 # ---------------------------------------------------------------------------
 # CRAP: solo en Rust (ADR-0014)
 # ---------------------------------------------------------------------------
@@ -351,7 +381,7 @@ coverage: (certs "install") build-ts
 [private]
 crap: coverage
     cd {{ tauri }} && cargo crap --lcov "{{ coverage_out }}/coverage/lcov.info" --threshold 30 --fail-above \
-        --allow '{{ ffi_allow }}'
+        --allow '{{ ffi_allow }}' --allow '{{ windows_allow }}'
 
 # Cobertura del diff contra origin/main (ADR-0014): reutiliza el lcov.info que
 # ya dejo `coverage` (dependencia de `check-rust`) en disco, sin volver a
@@ -366,7 +396,7 @@ diff-coverage:
 # Borra el arbol instrumentado, los informes y los volcados; deja la compilacion normal.
 [group('checklist')]
 clean-coverage:
-    {{ justfile_directory() }}/scripts/clean-coverage.sh {{ cargo_target }} {{ tauri }}
+    {{ root }}/scripts/clean-coverage.sh "{{ cargo_target }}" "{{ tauri }}"
 
 # ---------------------------------------------------------------------------
 # Imagen nativa, empaquetado y desarrollo
@@ -378,15 +408,16 @@ native: build-java
     #!/usr/bin/env bash
     set -euo pipefail
     graal="${GRAALVM_HOME:-{{ default_graalvm }}}"
+    if command -v cygpath >/dev/null; then graal="$(cygpath -u "$graal")"; fi
     build_dir="{{ bridge }}/target/native"
     dest="$(dirname "{{ native_lib }}")"
     mkdir -p "$build_dir" && cd "$build_dir"
-    "$graal/bin/native-image" --shared \
-        -cp "{{ bridge }}/target/rfirma-native-bridge-0.1.0.jar:$(cat {{ bridge }}/target/cp.txt)"
+    "$graal/bin/{{ native_image }}" --shared \
+        -cp "{{ bridge }}/target/rfirma-native-bridge-0.1.0.jar{{ classpath_separator }}$(cat {{ bridge }}/target/cp.txt)"
     rm -rf "$dest"
     mkdir -p "$dest"
-    install -m644 "$build_dir/librfirma_crypto.so" "$dest/librfirma_crypto.so"
-    sobran="$(ls -1 "$dest" | grep -v '^librfirma_crypto\.so$' || true)"
+    install -m644 "$build_dir/{{ native_image_output }}" "$dest/{{ native_lib_name }}"
+    sobran="$(ls -1 "$dest" | grep -vxF '{{ native_lib_name }}' || true)"
     if [ -n "$sobran" ]; then
         echo "sobra algo en $dest:" >&2
         echo "$sobran" >&2
@@ -397,14 +428,14 @@ native: build-java
 # Comprueba el suelo de glibc de la libreria nativa (docs/research/glibc-libreria-nativa.md).
 [group('ci')]
 check-glibc lib=native_lib:
-    {{ justfile_directory() }}/scripts/check-glibc.sh {{ lib }}
+    {{ root }}/scripts/check-glibc.sh {{ lib }}
 
 # Construye el flatpak, uno de los tres canales junto al .deb y el .rpm (ADR-0015).
 [group('ci')]
 flatpak: check-native build-ts
     #!/usr/bin/env bash
     set -euo pipefail
-    cd "{{ justfile_directory() }}/packaging/flatpak"
+    cd "{{ root }}/packaging/flatpak"
     flatpak-builder --force-clean --user --install --repo=repo \
         build-dir me.sgomez.rfirma.yml
     flatpak build-bundle --runtime-repo=https://dl.flathub.org/repo/flathub.flatpakrepo \
@@ -418,7 +449,7 @@ flatpak: check-native build-ts
 bundle quick="false": check-native build-ts
     #!/usr/bin/env bash
     set -euo pipefail
-    cd "{{ justfile_directory() }}"
+    cd "{{ root }}"
     if [ "{{ quick }}" != "true" ]; then
         version="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["version"])' rfirma-app/src-tauri/tauri.conf.json)"
         if ! packaging/native-packages-allowed.sh "$version"; then
@@ -438,10 +469,15 @@ bundle quick="false": check-native build-ts
         echo "$formato: $PWD/$paquete ($(du -h "$paquete" | cut -f1))"
     done
 
+# Construye el instalador NSIS de Windows con el bundler de Tauri (ADR-0035).
+[group('ci')]
+bundle-windows: check-native build-ts
+    {{ root }}/scripts/bundle-windows.sh {{ root }}
+
 # Regenera cargo-sources.json y node-sources.json.
 [group('release')]
 flatpak-sources:
-    {{ justfile_directory() }}/scripts/flatpak-sources.sh
+    {{ root }}/scripts/flatpak-sources.sh
 
 # Mutation testing incremental, a mano antes de publicar una version: no bloquea (ADR-0014).
 [group('release')]
@@ -461,7 +497,7 @@ mutants:
 check-landing:
     #!/usr/bin/env bash
     set -euo pipefail
-    cd {{ justfile_directory() }}/packaging/repo/site
+    cd {{ root }}/packaging/repo/site
     pnpm install --frozen-lockfile --reporter=silent
     pnpm exec vitest run --reporter=dot
     pnpm exec astro build
@@ -469,14 +505,14 @@ check-landing:
 # Comprueba el candado de la version y el nombre del producto.
 [group('ci')]
 check-version:
-    {{ justfile_directory() }}/packaging/check-version.py
+    {{ root }}/packaging/check-version.py
 
 # Resella el bundle del sistema de diseno.
 [group('release')]
 seal-ds-bundle:
     #!/usr/bin/env bash
     set -euo pipefail
-    cd "{{ justfile_directory() }}"
+    cd "{{ root }}"
     find rfirma-app/src/design-system/bundle -type f ! -name _ds_needs_recompile \
         | LC_ALL=C sort \
         | xargs sha256sum \
@@ -492,7 +528,7 @@ dev *args: check-native po-import
 # Registra (`on`) o quita (`off`) el manejador de desarrollo de afirma://.
 [group('dev')]
 dev-handler mode="on":
-    {{ justfile_directory() }}/scripts/dev-handler.sh {{ mode }}
+    {{ root }}/scripts/dev-handler.sh {{ mode }}
 
 # Levanta la consola web de la suite de conformidad de rfirma-conformance/, imprime su URL con el
 # token y la abre en el navegador. Cliente, informe y comprobaciones se eligen en la pagina; cada
@@ -527,15 +563,15 @@ clean:
 [group('release')]
 [private]
 changelog-release version:
-    {{ justfile_directory() }}/scripts/changelog-release.sh {{ version }}
+    {{ root }}/scripts/changelog-release.sh {{ version }}
 
 # Sube la version en los sitios del candado de check-version.py (ID-150).
 [group('release')]
 [private]
 bump-version version:
-    {{ justfile_directory() }}/scripts/bump-version.sh {{ version }}
+    {{ root }}/scripts/bump-version.sh {{ version }}
 
 # Publica <version> desde main: changelog, bump, commit, etiqueta y push atomico.
 [group('release')]
 release version:
-    {{ justfile_directory() }}/scripts/release.sh {{ version }}
+    {{ root }}/scripts/release.sh {{ version }}

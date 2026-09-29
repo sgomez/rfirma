@@ -39,6 +39,8 @@ Busca en este índice, y si aun así necesitas el fichero, entra con
 | 0032 | La selección automática que pide la sede (`headless`, `mandatoryCertSelection=false`) se respeta solo si la persona lo permite en sus preferencias |
 | 0033 | La interfaz se prototipa en Claude Design, y lo que manda vive en el repositorio: fichas, bundle y copia de los artboards |
 | 0034 | El Almacén de rFirma: una base NSS cifrada con un PIN que solo guarda el llavero del escritorio |
+| 0035 | Windows como segunda plataforma: dependencias por target y adaptadores no disponibles |
+| 0036 | El saludo TLS del canal local en Windows es de rustls |
 | 0037 | Los servicios de la sede se esperan sin límite una vez conectados: 30 s para conectar, ninguno para contestar |
 | 0038 | Las cookies de la sede duran una operación, compartidas por los cuatro clientes HTTP |
 | 0039 | Un servicio de la sede con un certificado TLS no reconocido falla: sin el diálogo de confianza del original |

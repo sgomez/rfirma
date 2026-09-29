@@ -122,6 +122,7 @@ fn a_relative_argument_is_resolved_against_the_folder_it_was_invoked_from() {
     assert_eq!(paths, vec![a_pdf("relativo.pdf")]);
 }
 
+#[cfg(unix)]
 #[test]
 fn a_file_url_is_the_path_it_names() {
     let paths = invoked_paths(
@@ -135,6 +136,26 @@ fn a_file_url_is_the_path_it_names() {
     assert_eq!(
         paths,
         vec![PathBuf::from("/home/quien/Contratos/con espacio+signo.pdf")]
+    );
+}
+
+// En Windows una URL `file://` lleva la unidad y la ruta sale con barras invertidas.
+#[cfg(windows)]
+#[test]
+fn a_file_url_is_the_path_it_names() {
+    let paths = invoked_paths(
+        &[
+            "rfirma".to_owned(),
+            "file:///C:/Users/quien/Contratos/con%20espacio+signo.pdf".to_owned(),
+        ],
+        Path::new(r"D:\otra"),
+    );
+
+    assert_eq!(
+        paths,
+        vec![PathBuf::from(
+            r"C:\Users\quien\Contratos\con espacio+signo.pdf"
+        )]
     );
 }
 

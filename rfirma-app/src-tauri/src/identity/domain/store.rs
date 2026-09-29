@@ -2,6 +2,9 @@
 
 use std::path::{Path, PathBuf};
 
+/// Prefijo con el que se nombran los almacenes de Windows: ningún módulo PKCS#11 se llama así.
+pub const WINDOWS_STORE_PREFIX: &str = "cng:";
+
 /// Clasificación del tipo de almacén para presentación en la interfaz (ADR-0011).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum StoreClass {
@@ -15,17 +18,22 @@ pub enum StoreClass {
     Nssdb,
     /// Almacén correspondiente a un fichero PKCS#12 instalado.
     Installed,
+    /// Almacén de certificados personales de Windows, servido por CNG (ADR-0035).
+    Windows,
 }
 
 impl StoreClass {
-    /// Qué copia de un mismo certificado se prefiere: tarjeta, Almacén de rFirma, NSS del sistema, Firefox, Chrome.
+    /// Qué copia de un mismo certificado se prefiere: Windows, tarjeta, Almacén de rFirma, NSS del sistema, Firefox, Chrome.
     pub fn preference(self) -> u8 {
         match self {
-            Self::Card => 0,
-            Self::Installed => 1,
-            Self::Nssdb => 2,
-            Self::Firefox => 3,
-            Self::Chrome => 4,
+            // La copia de Windows gana: el DNIe con su minidriver sale también por PKCS#11, y por
+            // CNG es Windows quien pide el PIN y el consentimiento (ADR-0035).
+            Self::Windows => 0,
+            Self::Card => 1,
+            Self::Installed => 2,
+            Self::Nssdb => 3,
+            Self::Firefox => 4,
+            Self::Chrome => 5,
         }
     }
 }
@@ -101,6 +109,9 @@ impl Store {
         if self.installed {
             return StoreClass::Installed;
         }
+        if self.is_windows() {
+            return StoreClass::Windows;
+        }
         let Some(profile) = self.profile() else {
             return StoreClass::Card;
         };
@@ -115,6 +126,13 @@ impl Store {
         } else {
             StoreClass::Nssdb
         }
+    }
+
+    /// Si es un almacén de Windows y no un módulo PKCS#11.
+    fn is_windows(&self) -> bool {
+        self.module
+            .to_str()
+            .is_some_and(|module| module.starts_with(WINDOWS_STORE_PREFIX))
     }
 
     /// Directorio del perfil NSS si está configurado.

@@ -795,6 +795,9 @@ msgstr "Almacén NSS"
 msgid "panel.certificate.stores.installed"
 msgstr "Instalado en rFirma"
 
+msgid "panel.certificate.stores.windows"
+msgstr "Almacén de Windows"
+
 msgid "panel.certificate.retry"
 msgstr "Volver a buscar"
 
@@ -1186,6 +1189,9 @@ msgstr "Tarjeta"
 
 msgid "status.storeBrands.installed"
 msgstr "Fichero instalado"
+
+msgid "status.storeBrands.windows"
+msgstr "Almacén de Windows"
 
 msgid "status.notices.restartFirefox"
 msgstr "Reinicia Firefox para que surta efecto."

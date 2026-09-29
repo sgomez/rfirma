@@ -1,4 +1,5 @@
 //! Prueba de grada C de que el puente no pierde el JSON que devuelve, sola en su binario porque mide la residente de todo el proceso.
+#![cfg(target_os = "linux")]
 
 use std::path::{Path, PathBuf};
 

@@ -24,6 +24,47 @@ pub mod transport;
 pub mod triphase_server;
 pub mod views;
 pub mod window;
+#[cfg(windows)]
+pub mod windows_root;
+
+use std::path::Path;
+
+use crate::site::ports::TrustStores;
+
+/// El almacén raíz del usuario de Windows, visto como un perfil más de los almacenes de confianza.
+pub const SYSTEM_ROOT_STORE: &str = "cryptoapi:CurrentUser/Root";
+
+/// Si el perfil es el almacén raíz del usuario de Windows y no un perfil NSS.
+pub fn is_the_system_root_store(profile: &Path) -> bool {
+    profile.as_os_str() == SYSTEM_ROOT_STORE
+}
+
+/// Los almacenes de confianza de esta plataforma.
+#[cfg(target_os = "linux")]
+pub fn desktop_trust_stores() -> Box<dyn TrustStores + Send + Sync> {
+    Box::new(nss::NssTrustStores::new(
+        crate::identity::adapters::pkcs11::RealNssHost,
+    ))
+}
+
+/// Los almacenes de confianza de esta plataforma.
+#[cfg(windows)]
+pub fn desktop_trust_stores() -> Box<dyn TrustStores + Send + Sync> {
+    Box::new(windows_root::WindowsUserStores)
+}
+
+/// Los perfiles NSS de esta persona, o ninguno si no se sabe cuál es su `HOME`.
+#[cfg(target_os = "linux")]
+pub fn trust_profiles() -> Vec<std::path::PathBuf> {
+    std::env::var_os("HOME")
+        .map(std::path::PathBuf::from)
+        .map(|home| crate::identity::adapters::pkcs11::stores::nss_profiles(&home))
+        .unwrap_or_default()
+}
+
+/// Los almacenes de confianza de esta persona.
+#[cfg(windows)]
+pub use windows_root::trust_profiles;
 
 const CONNECT_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(30);
 
@@ -58,10 +99,26 @@ fn send_failure(error: &reqwest::Error) -> String {
     format!("el certificado del servidor {server} no es de confianza: {error}")
 }
 
+/// Los códigos con que Schannel rechaza una cadena que no llega a una raíz de confianza, que en
+/// Windows ocupan el lugar del `certificate verify failed` de OpenSSL (ADR-0035).
+const SCHANNEL_UNTRUSTED_CHAIN: [&str; 4] = [
+    "Os { code: -2146893019,", // SEC_E_UNTRUSTED_ROOT
+    "Os { code: -2146762487,", // CERT_E_UNTRUSTEDROOT
+    "Os { code: -2146762486,", // CERT_E_CHAINING
+    "Os { code: -2146869244,", // TRUST_E_CERT_SIGNATURE
+];
+
 fn is_untrusted_certificate(error: &reqwest::Error) -> bool {
     let mut cause: Option<&dyn std::error::Error> = Some(error);
     while let Some(current) = cause {
         if current.to_string().contains("certificate verify failed") {
+            return true;
+        }
+        let debug = format!("{current:?}");
+        if SCHANNEL_UNTRUSTED_CHAIN
+            .iter()
+            .any(|code| debug.contains(code))
+        {
             return true;
         }
         cause = current.source();

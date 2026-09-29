@@ -64,7 +64,7 @@ fn production_half(source: &str) -> &str {
 fn registry() -> Vec<&'static Crossing> {
     all_crossings()
         .into_iter()
-        .filter(|crossing| !crossing.file.ends_with("/tests.rs"))
+        .filter(|crossing| !Path::new(crossing.file).ends_with("tests.rs"))
         .collect()
 }
 

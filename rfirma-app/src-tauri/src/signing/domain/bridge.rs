@@ -11,9 +11,6 @@ mod error;
 
 pub use error::{BridgeError, DataRejection};
 
-/// Nombre del fichero de la librería nativa compartida (ADR-0004, ADR-0012).
-pub const LIBRARY_FILE: &str = "librfirma_crypto.so";
-
 /// Variable de entorno que sobreescribe el directorio de la librería nativa.
 pub const LIBRARY_DIRECTORY_VARIABLE: &str = "RFIRMA_LIB_DIR";
 
@@ -40,6 +37,7 @@ impl fmt::Display for Origin {
 pub struct Candidate {
     pub(crate) directory: PathBuf,
     pub(crate) origin: Origin,
+    pub(crate) file: String,
 }
 
 impl Candidate {
@@ -55,7 +53,7 @@ impl Candidate {
 
     /// Ruta esperada del fichero de la librería en este directorio.
     pub fn library_path(&self) -> PathBuf {
-        self.directory.join(LIBRARY_FILE)
+        self.directory.join(&self.file)
     }
 }
 
@@ -80,7 +78,11 @@ impl LibraryNotFound {
 
 impl fmt::Display for LibraryNotFound {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "no encuentro {LIBRARY_FILE}; he mirado en:")?;
+        let file = self
+            .looked_at
+            .first()
+            .map_or("la librería nativa", |candidate| candidate.file.as_str());
+        write!(f, "no encuentro {file}; he mirado en:")?;
         for candidate in &self.looked_at {
             write!(f, "\n  {candidate}")?;
         }

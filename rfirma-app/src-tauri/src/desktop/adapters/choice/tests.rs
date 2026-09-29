@@ -1,5 +1,6 @@
 use super::*;
 
+#[cfg(unix)]
 #[test]
 fn the_list_that_gets_written_is_the_one_in_the_home() {
     let list = mimeapps_list(&|name| match name {

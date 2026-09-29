@@ -37,6 +37,7 @@ pub fn registered_handlers_for_scheme(channel: Channel, scheme: &str) -> Registe
     match channel {
         Channel::Flatpak => RegisteredHandlers::NotAvailableInsideTheSandbox,
         Channel::Native => {
+            #[cfg(target_os = "linux")]
             let handlers = gio::AppInfo::all_for_type(&content_type_for(scheme))
                 .iter()
                 .filter_map(|info| {
@@ -47,9 +48,17 @@ pub fn registered_handlers_for_scheme(channel: Channel, scheme: &str) -> Registe
                     ))
                 })
                 .collect();
+            #[cfg(windows)]
+            let handlers = no_gio_on_windows(scheme);
             RegisteredHandlers::Known(handlers)
         }
     }
+}
+
+/// Sin GIO no hay escritorio que preguntar: en Windows responde `registry::windows_classes`.
+#[cfg(windows)]
+fn no_gio_on_windows(_scheme: &str) -> Vec<RegisteredHandler> {
+    Vec::new()
 }
 
 /// Manejador registrado con nombre visible e identificador de escritorio.

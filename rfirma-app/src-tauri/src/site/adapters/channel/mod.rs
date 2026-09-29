@@ -1,5 +1,6 @@
 //! Conexión `wss://` local con la sede para la recepción de operaciones (ADR-0005).
 
+pub(crate) mod acceptor;
 pub mod bind;
 pub mod conversation;
 pub mod reply;

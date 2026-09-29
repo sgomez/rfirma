@@ -298,6 +298,7 @@ fn the_scheme_is_recognised_whatever_the_case_and_never_in_the_executable() {
     );
 }
 
+#[cfg(unix)]
 #[test]
 fn an_argument_that_is_not_utf8_is_made_readable_before_the_plugin_reads_it() {
     use std::os::unix::ffi::OsStringExt as _;

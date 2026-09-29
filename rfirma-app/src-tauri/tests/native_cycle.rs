@@ -2,9 +2,9 @@
 
 use std::path::{Path, PathBuf};
 
-use rfirma_lib::signing::adapters::ffi::{locate, parse_presign, NativeBridge};
+use rfirma_lib::signing::adapters::ffi::{library_file, locate, parse_presign, NativeBridge};
 use rfirma_lib::signing::domain::bridge::{
-    BridgeError, Format, PostSignRequest, PreSignRequest, SignatureOperation, LIBRARY_FILE,
+    BridgeError, Format, PostSignRequest, PreSignRequest, SignatureOperation,
 };
 
 /// Un PDF mínimo en Base64 no válido para firmar.
@@ -69,7 +69,7 @@ fn postsign_of_something_invalid(bridge: &NativeBridge) -> Result<(), BridgeErro
 fn the_library_loads_from_where_the_adr_says_and_creates_its_isolate() {
     let bridge = bridge();
 
-    assert!(bridge.path().ends_with(LIBRARY_FILE));
+    assert!(bridge.path().ends_with(library_file()));
     assert!(bridge.path().is_file());
 }
 

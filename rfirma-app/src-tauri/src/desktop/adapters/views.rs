@@ -160,6 +160,7 @@ crossing! {
         Nssdb,
         Card,
         Installed,
+        Windows,
     }
 }
 

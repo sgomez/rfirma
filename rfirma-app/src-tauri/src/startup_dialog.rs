@@ -1,11 +1,13 @@
-//! Diálogo nativo GTK que enseña un fallo de arranque; capa fina, sin pruebas.
+//! Diálogo nativo que enseña un fallo de arranque (GTK en Linux, `MessageBoxW` en Windows); capa fina, sin pruebas.
 
-use crate::startup_failure::{StartupFailure, REPOSITORY_ADDRESS};
+use crate::startup_failure::StartupFailure;
+use crate::startup_failure::REPOSITORY_ADDRESS;
 
 fn detail_text(failure: &StartupFailure) -> String {
     format!("{}\n\n{}", failure.detail(), REPOSITORY_ADDRESS)
 }
 
+#[cfg(target_os = "linux")]
 fn show_gtk_dialog(failure: &StartupFailure) {
     use gtk::prelude::*;
 
@@ -43,6 +45,32 @@ fn show_gtk_dialog(failure: &StartupFailure) {
 /// proceso con código distinto de cero.
 pub fn report_and_exit(failure: &StartupFailure) -> ! {
     eprintln!("rfirma: {failure}");
+    #[cfg(target_os = "linux")]
     show_gtk_dialog(failure);
+    #[cfg(windows)]
+    show_windows_dialog(failure);
     std::process::exit(1);
+}
+
+#[cfg(windows)]
+fn show_windows_dialog(failure: &StartupFailure) {
+    use windows_sys::Win32::UI::WindowsAndMessaging::{MessageBoxW, MB_ICONERROR, MB_OK};
+
+    let wide = |text: &str| -> Vec<u16> { text.encode_utf16().chain(std::iter::once(0)).collect() };
+    let text = wide(&format!(
+        "{}
+
+{}",
+        failure.phrase(),
+        detail_text(failure)
+    ));
+    let caption = wide("rFirma");
+    unsafe {
+        MessageBoxW(
+            std::ptr::null_mut(),
+            text.as_ptr(),
+            caption.as_ptr(),
+            MB_OK | MB_ICONERROR,
+        )
+    };
 }

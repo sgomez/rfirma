@@ -800,6 +800,9 @@ msgstr "NSS biltegia"
 msgid "panel.certificate.stores.installed"
 msgstr "rFirman instalatuta"
 
+msgid "panel.certificate.stores.windows"
+msgstr "Windows biltegia"
+
 msgid "panel.certificate.retry"
 msgstr "Bilatu berriro"
 
@@ -1194,6 +1197,9 @@ msgstr "Txartela"
 
 msgid "status.storeBrands.installed"
 msgstr "Instalatutako fitxategia"
+
+msgid "status.storeBrands.windows"
+msgstr "Windows biltegia"
 
 msgid "status.notices.restartFirefox"
 msgstr "Berrabiarazi Firefox eragina izan dezan."

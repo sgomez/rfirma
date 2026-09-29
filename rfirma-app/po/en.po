@@ -781,6 +781,9 @@ msgstr "NSS store"
 msgid "panel.certificate.stores.installed"
 msgstr "Installed in rFirma"
 
+msgid "panel.certificate.stores.windows"
+msgstr "Windows store"
+
 msgid "panel.certificate.retry"
 msgstr "Look again"
 
@@ -1173,6 +1176,9 @@ msgstr "Card"
 
 msgid "status.storeBrands.installed"
 msgstr "Installed file"
+
+msgid "status.storeBrands.windows"
+msgstr "Windows store"
 
 msgid "status.notices.restartFirefox"
 msgstr "Restart Firefox for this to take effect."

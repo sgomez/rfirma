@@ -2,7 +2,7 @@
 
 El puente es lo que AutoFirma hace en Java y rfirma no reescribe: preproceso y
 postproceso del ciclo trifásico (ADR-0001), compilado a `librfirma_crypto.so`
-con `native-image` (ADR-0004). Lo que decide y firma vive en Rust.
+—`rfirma_crypto.dll` en Windows (ADR-0035)— con `native-image` (ADR-0004). Lo que decide y firma vive en Rust.
 
 | Fichero | Qué es |
 |---|---|
@@ -47,6 +47,18 @@ con `native-image` (ADR-0004). Lo que decide y firma vive en Rust.
   `com.sun.org.apache.xml.internal.security.resource.xmlsecurity`. Antes de
   dar por transitorio un rojo del carril lento que no reproduces, baja el JDK
   exacto de ese run (`graalvm-ce-builds`) y reconstruye con él.
+* **En Windows, `just native` se lanza desde Git Bash** y toma GraalVM de
+  `GRAALVM_HOME` o `JAVA_HOME` (ADR-0035). `native-image` enlaza con MSVC por
+  su cuenta, sin abrir una consola de Visual Studio, y deja
+  `librfirma_crypto.dll`, que la receta instala como `rfirma_crypto.dll`.
+* **GraalVM CE 25.4.4 no compila `PdfTimestamper.initialize()`**: revienta en
+  `[6/8]` con `failed guarantee: Must not have guards attached to exception
+  object node`, también con `-H:+EnableFallbackCompilation` y con `-Ob`. Es
+  el `Class.forName` de `TsaParams` dentro de un `try`. Con
+  `NATIVE_IMAGE_OPTIONS=--initialize-at-build-time=es.gob.afirma.signers.tsp.pkcs7.TsaParams`
+  compila (su inicializador solo pide un `Logger`). La bandera no está en
+  `native-image.properties` porque cambiaría también la imagen de Linux, que
+  se construye con la 25.3.4 fijada y no tiene este fallo.
 * **`native-image` emite seis ficheros y se distribuye uno.** Los cinco
   auxiliares de AWT en `target/native/` son normales, no un fallo; instalarlos
   «por si acaso» convierte un JPEG con perfil ICC en un aborto del proceso

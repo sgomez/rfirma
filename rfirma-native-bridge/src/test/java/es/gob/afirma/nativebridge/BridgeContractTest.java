@@ -207,6 +207,11 @@ class BridgeContractTest {
                         + "sin quien la haga cumplir");
         assertTrue(contents.contains("-name 'librfirma_crypto.so'"),
                 script + " ha dejado de contar los librfirma_crypto.so");
+        // El instalador de Windows lleva la misma biblioteca con otro nombre (ADR-0035).
+        assertTrue(contents.contains("-iname 'awt.dll'"),
+                script + " ha dejado de buscar awt.dll en el instalador de Windows");
+        assertTrue(contents.contains("-iname 'rfirma_crypto.dll'"),
+                script + " ha dejado de contar los rfirma_crypto.dll");
     }
 
     @Test

@@ -24,6 +24,12 @@ impl ProtectedSecret {
         let mut locked = false;
 
         if len > 0 {
+            #[cfg(windows)]
+            unsafe {
+                use windows_sys::Win32::System::Memory::VirtualLock;
+                locked = VirtualLock(bytes.as_mut_ptr().cast(), bytes.capacity()) != 0;
+            }
+            #[cfg(unix)]
             unsafe {
                 let ptr = bytes.as_mut_ptr() as *mut libc::c_void;
                 let cap = bytes.capacity();
@@ -97,10 +103,16 @@ impl Drop for ProtectedSecret {
     fn drop(&mut self) {
         self.bytes.zeroize();
         if self.locked && !self.bytes.is_empty() {
+            #[cfg(unix)]
             unsafe {
                 let ptr = self.bytes.as_mut_ptr() as *mut libc::c_void;
                 let cap = self.bytes.capacity();
                 libc::munlock(ptr, cap);
+            }
+            #[cfg(windows)]
+            unsafe {
+                use windows_sys::Win32::System::Memory::VirtualUnlock;
+                VirtualUnlock(self.bytes.as_mut_ptr().cast(), self.bytes.capacity());
             }
         }
     }

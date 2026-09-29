@@ -60,6 +60,7 @@ fn the_refusal_names_its_own_situation_and_says_why() {
 #[test]
 fn a_module_asks_for_a_pin_and_every_store_that_is_a_file_asks_for_a_password() {
     assert_eq!(SecretName::of(StoreClass::Card), SecretName::Pin);
+    assert_eq!(SecretName::of(StoreClass::Windows), SecretName::Pin);
 
     for class in [
         StoreClass::Firefox,

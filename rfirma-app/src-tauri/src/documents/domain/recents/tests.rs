@@ -18,6 +18,7 @@ fn seen(path: &Path) -> RecentDocument<Spot> {
     )
 }
 
+#[cfg(unix)]
 #[test]
 fn a_recent_is_identified_by_the_canonical_path_it_was_given() {
     let entry = seen(&a_document("contrato.pdf"));

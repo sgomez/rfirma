@@ -1,61 +1,24 @@
-//! Frontera FFI con `librfirma_crypto.so` compilada con GraalVM Native Image (ADR-0003, ADR-0004).
+//! Frontera FFI con la librería nativa compilada con GraalVM Native Image (ADR-0003, ADR-0004).
 
-use std::ffi::{CStr, CString, OsString};
+use std::ffi::{CStr, CString};
 use std::os::raw::{c_char, c_int, c_void};
 use std::path::{Path, PathBuf};
 
 use crate::signing::domain::to_java_properties;
 
 use crate::signing::domain::bridge::{
-    BridgeError, Candidate, ExpandRequest, FilterRequest, Format, LibraryNotFound, Origin,
-    PostSignRequest, PreSignRequest, PreSignature, SignatureVerdict, ValidationRequest,
-    XadesVariant, LIBRARY_DIRECTORY_VARIABLE,
+    BridgeError, ExpandRequest, FilterRequest, Format, PostSignRequest, PreSignRequest,
+    PreSignature, SignatureVerdict, ValidationRequest, XadesVariant,
 };
 use crate::signing::domain::previous_signatures::PreviousSignaturesReport;
 
+mod location;
 mod responses;
+pub use location::{candidates, library_file, locate};
 pub use responses::{
     parse_expanded_params, parse_filter_selection, parse_postsign, parse_presign,
     parse_previous_signatures, parse_verdict,
 };
-
-const RELATIVE_LIBRARY_DIRECTORY: &str = "../lib/rfirma";
-
-/// Directorios candidatos donde buscar la librería nativa en orden de prioridad.
-pub fn candidates(
-    environment: &dyn Fn(&str) -> Option<OsString>,
-    executable_directory: &Path,
-) -> Vec<Candidate> {
-    let mut found = Vec::with_capacity(2);
-    if let Some(value) = environment(LIBRARY_DIRECTORY_VARIABLE).filter(|value| !value.is_empty()) {
-        found.push(Candidate {
-            directory: PathBuf::from(value),
-            origin: Origin::Override,
-        });
-    }
-    found.push(Candidate {
-        directory: normalise(executable_directory.join(RELATIVE_LIBRARY_DIRECTORY)),
-        origin: Origin::RelativeToExecutable,
-    });
-    found
-}
-
-fn normalise(path: PathBuf) -> PathBuf {
-    path.canonicalize().unwrap_or(path)
-}
-
-/// Localiza el fichero de la librería nativa en los directorios candidatos.
-pub fn locate(
-    environment: &dyn Fn(&str) -> Option<OsString>,
-    executable_directory: &Path,
-) -> Result<PathBuf, LibraryNotFound> {
-    let looked_at = candidates(environment, executable_directory);
-    looked_at
-        .iter()
-        .map(Candidate::library_path)
-        .find(|path| path.is_file())
-        .ok_or(LibraryNotFound { looked_at })
-}
 
 /// Quien sabe liberar una cadena del puente.
 /// Capacidad de liberar una cadena asignada por el puente (ADR-0003).

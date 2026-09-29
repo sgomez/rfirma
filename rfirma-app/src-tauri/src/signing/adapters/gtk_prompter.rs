@@ -1,12 +1,14 @@
 //! Adaptadores del puerto `SecretPrompter`: diálogo nativo GTK3 y adaptadores de pruebas (ADR-0001, ADR-0014).
 
-use std::sync::{Arc, Mutex, OnceLock};
+use std::sync::Mutex;
+#[cfg(target_os = "linux")]
+use std::sync::{Arc, OnceLock};
 
 use crate::identity::domain::protected_secret::ProtectedSecret;
 use crate::identity::domain::secret::SecretName;
-use crate::identity::ports::{
-    OriginWindow, SecretPromptError, SecretPromptRequest, SecretPrompter,
-};
+#[cfg(target_os = "linux")]
+use crate::identity::ports::OriginWindow;
+use crate::identity::ports::{SecretPromptError, SecretPromptRequest, SecretPrompter};
 use crate::signing::domain::Language;
 
 /// Estructura interna con los textos localizados para el diálogo modal del secreto.
@@ -140,12 +142,14 @@ pub fn localize(request: &SecretPromptRequest) -> DialogI18n {
     }
 }
 
+#[cfg(target_os = "linux")]
 /// Adaptador de producción que presenta un diálogo modal nativo GTK3 para la solicitud de PIN.
 #[derive(Clone, Default)]
 pub struct GtkSecretPrompter {
     app: Arc<OnceLock<tauri::AppHandle>>,
 }
 
+#[cfg(target_os = "linux")]
 impl GtkSecretPrompter {
     /// Crea un adaptador vacío pendiente de vincular al manejador de Tauri.
     pub fn new() -> Self {
@@ -169,6 +173,7 @@ impl GtkSecretPrompter {
     }
 }
 
+#[cfg(target_os = "linux")]
 fn heading_of(i18n: &DialogI18n) -> gtk::Box {
     use gtk::prelude::*;
 
@@ -203,6 +208,7 @@ fn heading_of(i18n: &DialogI18n) -> gtk::Box {
     heading
 }
 
+#[cfg(target_os = "linux")]
 fn dialog_for(i18n: &DialogI18n, parent: Option<gtk::ApplicationWindow>) -> gtk::Dialog {
     use gtk::prelude::*;
 
@@ -231,6 +237,7 @@ fn dialog_for(i18n: &DialogI18n, parent: Option<gtk::ApplicationWindow>) -> gtk:
     dialog
 }
 
+#[cfg(target_os = "linux")]
 fn masked_entry() -> gtk::Entry {
     use gtk::prelude::*;
 
@@ -243,6 +250,7 @@ fn masked_entry() -> gtk::Entry {
     entry
 }
 
+#[cfg(target_os = "linux")]
 fn failure_label(text: &str) -> gtk::Label {
     use gtk::prelude::*;
 
@@ -254,6 +262,7 @@ fn failure_label(text: &str) -> gtk::Label {
     failure
 }
 
+#[cfg(target_os = "linux")]
 fn say_the_previous_attempt_was_wrong(content_area: &gtk::Box, entry: &gtk::Entry, text: &str) {
     use gtk::prelude::*;
 
@@ -261,6 +270,7 @@ fn say_the_previous_attempt_was_wrong(content_area: &gtk::Box, entry: &gtk::Entr
     content_area.pack_start(&failure_label(text), false, false, 0);
 }
 
+#[cfg(target_os = "linux")]
 fn body_of(dialog: &gtk::Dialog, i18n: &DialogI18n, incorrect_secret: bool) -> gtk::Entry {
     use gtk::prelude::*;
 
@@ -282,6 +292,7 @@ fn body_of(dialog: &gtk::Dialog, i18n: &DialogI18n, incorrect_secret: bool) -> g
     entry
 }
 
+#[cfg(target_os = "linux")]
 fn emptied_into_a_result(
     entry: &gtk::Entry,
     response: gtk::ResponseType,
@@ -298,6 +309,7 @@ fn emptied_into_a_result(
     }
 }
 
+#[cfg(target_os = "linux")]
 fn dismiss(dialog: gtk::Dialog) {
     use gtk::prelude::*;
 
@@ -310,6 +322,7 @@ fn dismiss(dialog: gtk::Dialog) {
     }
 }
 
+#[cfg(target_os = "linux")]
 fn show_gtk_dialog(
     request: &SecretPromptRequest,
     parent: Option<gtk::ApplicationWindow>,
@@ -334,6 +347,7 @@ fn show_gtk_dialog(
     result
 }
 
+#[cfg(target_os = "linux")]
 impl SecretPrompter for GtkSecretPrompter {
     fn prompt_secret(
         &self,
@@ -356,6 +370,41 @@ impl SecretPrompter for GtkSecretPrompter {
         }
     }
 }
+
+/// El diálogo nativo del PIN en Windows, que aún no existe: toda petición falla.
+#[cfg(windows)]
+#[derive(Clone, Default)]
+pub struct PendingWindowsPinDialog;
+
+#[cfg(windows)]
+impl PendingWindowsPinDialog {
+    /// Crea el adaptador pendiente.
+    pub fn new() -> Self {
+        Self
+    }
+
+    /// No vincula nada: el diálogo de Windows no tiene ventana a la que atarse todavía.
+    pub fn attach(&self, _app: tauri::AppHandle) {}
+}
+
+#[cfg(windows)]
+impl SecretPrompter for PendingWindowsPinDialog {
+    fn prompt_secret(
+        &self,
+        _request: &SecretPromptRequest,
+    ) -> Result<ProtectedSecret, SecretPromptError> {
+        Err(SecretPromptError::Failed(
+            "la solicitud del PIN aún no está disponible en Windows".to_owned(),
+        ))
+    }
+}
+
+/// El diálogo nativo del PIN de esta plataforma.
+#[cfg(target_os = "linux")]
+pub type NativePinDialog = GtkSecretPrompter;
+/// El diálogo nativo del PIN de esta plataforma.
+#[cfg(windows)]
+pub type NativePinDialog = PendingWindowsPinDialog;
 
 /// Adaptador de pruebas que suministra un secreto fijo preconfigurado.
 pub struct PreconfiguredSecretPrompter {

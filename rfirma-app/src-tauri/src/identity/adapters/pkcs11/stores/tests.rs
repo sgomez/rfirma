@@ -13,6 +13,7 @@ fn keeps_only_the_candidates_that_are_there() {
     );
 }
 
+#[cfg(unix)]
 #[test]
 fn a_store_under_the_installed_directory_is_its_own_class() {
     let home = tempfile::tempdir().expect("deberia poder crearse un directorio temporal");
@@ -37,6 +38,7 @@ fn has_no_stores_when_no_candidate_is_installed() {
     assert!(present_among(CANDIDATE_MODULES, |_| false).is_empty());
 }
 
+#[cfg(unix)]
 #[test]
 fn lists_the_same_module_once_even_under_two_names() {
     let directory = tempfile::tempdir().expect("deberia poder crearse un directorio temporal");
@@ -62,6 +64,23 @@ fn a_plain_module_has_nothing_to_configure() {
 #[test]
 fn a_plain_module_is_a_card() {
     assert_eq!(Store::module("/usr/lib/x.so").class(), StoreClass::Card);
+}
+
+#[test]
+fn a_cng_store_is_the_windows_store_and_not_a_card() {
+    assert_eq!(
+        Store::module("cng:CurrentUser/MY").class(),
+        StoreClass::Windows
+    );
+    assert_eq!(
+        Store::module("cng:CurrentUser/MY").class_under(Path::new("/nowhere")),
+        StoreClass::Windows
+    );
+}
+
+#[test]
+fn a_windows_copy_is_preferred_over_the_same_certificate_on_a_card() {
+    assert!(StoreClass::Windows.preference() < StoreClass::Card.preference());
 }
 
 #[test]
@@ -465,6 +484,7 @@ fn a_registered_module_that_is_already_a_candidate_is_listed_once() {
     assert_eq!(ours, vec![softhsm, opensc]);
 }
 
+#[cfg(unix)]
 #[test]
 fn a_library_named_by_the_site_matches_the_discovered_module_it_canonicalises_to() {
     let temp = tempfile::tempdir().expect("deberia poder crearse un directorio temporal");

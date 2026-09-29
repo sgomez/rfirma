@@ -726,6 +726,9 @@ msgstr ""
 msgid "panel.certificate.stores.installed"
 msgstr ""
 
+msgid "panel.certificate.stores.windows"
+msgstr ""
+
 msgid "panel.certificate.retry"
 msgstr ""
 
@@ -1107,6 +1110,9 @@ msgid "status.storeBrands.card"
 msgstr ""
 
 msgid "status.storeBrands.installed"
+msgstr ""
+
+msgid "status.storeBrands.windows"
 msgstr ""
 
 msgid "status.notices.restartFirefox"

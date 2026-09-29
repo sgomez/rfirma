@@ -43,7 +43,7 @@ pub struct Roots {
     pub signing: SigningRoot,
     pub site: SiteRoot,
     pub dialogs: Arc<documents::adapters::dialogs::RealPortalDialogs>,
-    pub prompter: Arc<signing::adapters::gtk_prompter::GtkSecretPrompter>,
+    pub prompter: Arc<signing::adapters::gtk_prompter::NativePinDialog>,
 }
 
 /// Compone las cinco raíces de producción sobre las rutas de esta máquina, con la invocación
@@ -57,10 +57,10 @@ fn composed_roots(paths: desktop::adapters::paths::Paths, invocation: Option<Inv
     let memory = Arc::new(signing::adapters::memory::Memory::at(&paths));
     let ca_store = site::adapters::tls::LocalCaStore::of(&paths);
     let dialogs = Arc::new(documents::adapters::dialogs::RealPortalDialogs::default());
-    let prompter = Arc::new(signing::adapters::gtk_prompter::GtkSecretPrompter::new());
+    let prompter = Arc::new(signing::adapters::gtk_prompter::NativePinDialog::new());
     let identity = IdentityRoot {
-        token: Box::new(identity::adapters::pkcs11::RealToken),
-        stores: identity::adapters::pkcs11::stores::from_environment(),
+        token: Box::new(identity::adapters::DesktopToken),
+        stores: identity::adapters::desktop_stores(),
         installed_certificates: paths.installed_certificates_dir(),
         listed: identity::application::certificates::ListedCertificates::new(),
         installed_copies: identity::application::certificates::ListedCertificates::new(),
@@ -68,7 +68,7 @@ fn composed_roots(paths: desktop::adapters::paths::Paths, invocation: Option<Inv
         folder: Arc::new(identity::adapters::folder::RealInstalledFolder),
         prompter: prompter.clone(),
         keyring: Arc::new(|| {
-            identity::adapters::keyring::RealKeyring::new()
+            identity::adapters::DesktopKeyring::new()
                 .map(|keyring| Box::new(keyring) as Box<dyn identity::ports::Keyring + Send + Sync>)
         }),
     };
@@ -101,10 +101,8 @@ fn composed_roots(paths: desktop::adapters::paths::Paths, invocation: Option<Inv
         held_channel: site::application::startup::HeldChannel::default(),
         trust: site::application::startup::LocalCaTrust {
             store: Box::new(ca_store.clone()),
-            profiles: nss_profiles_of_this_home(),
-            stores: Box::new(site::adapters::nss::NssTrustStores::new(
-                identity::adapters::pkcs11::RealNssHost,
-            )),
+            profiles: site::adapters::trust_profiles(),
+            stores: site::adapters::desktop_trust_stores(),
         },
         ca_store,
         codecs: site::application::site::CodecTable {
@@ -446,14 +444,6 @@ fn open_the_main_window(app: &tauri::AppHandle) {
     if let Err(error) = built {
         eprintln!("rfirma: no se puede abrir la ventana principal ({error})");
     }
-}
-
-/// Los perfiles NSS de esta persona, o ninguno si no se sabe cuál es su `HOME`.
-fn nss_profiles_of_this_home() -> Vec<std::path::PathBuf> {
-    std::env::var_os("HOME")
-        .map(std::path::PathBuf::from)
-        .map(|home| identity::adapters::pkcs11::stores::nss_profiles(&home))
-        .unwrap_or_default()
 }
 
 /// Transporte de producción: `wss` sobre loopback o servidor intermedio, según la ubicación de canal.

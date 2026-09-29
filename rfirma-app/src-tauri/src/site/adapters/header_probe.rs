@@ -179,26 +179,36 @@ pub(in crate::site::adapters) fn cookie_probe(
 
 /// Sirve por TLS, con un certificado que ninguna CA del sistema avala, y devuelve la URL; el saludo falla en el cliente.
 pub(in crate::site::adapters) fn untrusted_tls_server() -> String {
+    use crate::site::adapters::channel::acceptor::LocalTlsAcceptor;
     use crate::site::adapters::tls::LocalServerCertificate;
     use crate::site::domain::local_ca::LocalCa;
-    use tokio_native_tls::native_tls::{Identity, TlsAcceptor};
 
     let ca = LocalCa::generate().expect("se genera la CA");
     let certificate = LocalServerCertificate::issued_by(&ca).expect("se emite el certificado");
-    let identity = Identity::from_pkcs8(
+    let acceptor = LocalTlsAcceptor::from_pem(
         &certificate.certificate_pem().expect("certificado en PEM"),
         &certificate.private_key_pem().expect("clave en PEM"),
     )
-    .expect("la identidad se lee");
-    let acceptor = TlsAcceptor::new(identity).expect("el aceptador se crea");
+    .expect("el aceptador se crea");
     let listener = TcpListener::bind("127.0.0.1:0").expect("hay un puerto libre");
+    listener
+        .set_nonblocking(true)
+        .expect("tokio pide el socket no bloqueante");
     let url = format!(
         "https://{}/servicio",
         listener.local_addr().expect("tiene direccion")
     );
     std::thread::spawn(move || {
-        let (stream, _) = listener.accept().expect("llega la conexion");
-        let _ = acceptor.accept(stream);
+        tokio::runtime::Builder::new_current_thread()
+            .enable_io()
+            .build()
+            .expect("se crea el runtime")
+            .block_on(async move {
+                let listener =
+                    tokio::net::TcpListener::from_std(listener).expect("tokio adopta el socket");
+                let (stream, _) = listener.accept().await.expect("llega la conexion");
+                let _ = acceptor.accept(stream).await;
+            });
     });
     url
 }

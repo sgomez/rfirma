@@ -381,8 +381,10 @@ function storeLabel(store: Store, t: TFunction): string {
       return t("panel.certificate.stores.chrome");
     case "nssdb":
       return t("panel.certificate.stores.nssdb");
-    default:
+    case "installed":
       return t("panel.certificate.stores.installed");
+    case "windows":
+      return t("panel.certificate.stores.windows");
   }
 }
 
