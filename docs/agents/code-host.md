@@ -19,6 +19,11 @@ Repo-specific facts:
 - **Issue auto-close**: yes — `Closes #<n>` in the PR body closes issue
   `#<n>` when the PR merges. This repo's issues live in this repo's GitHub
   Issues (see `docs/agents/issue-tracker.md`), so auto-close applies.
+- **PR title is the changelog line**: `just release` writes `CHANGELOG.md`
+  from the titles of `feat`, `fix` and `perf` PRs merged into `main`. After
+  the conventional prefix, reuse the title of the issue the PR closes; with
+  no issue, write it in Spanish as the person using rFirma would notice the
+  change, not as the code does it.
 - **Merge policy support**: both `merge: auto` and `merge: manual`.
 - **Publishing commits**: `git push origin <branch>` (from a local
   `fix/pr-<PR>` branch: `git push origin HEAD:<pr-branch>`).

@@ -523,7 +523,7 @@ clean:
     rm -f "{{ tauri }}"/*.profraw
     rm -rf "{{ app }}/dist" "{{ conformance_suite }}/console/dist"
 
-# Reune los fragmentos de changelog.d/ en la seccion de <version> de CHANGELOG.md.
+# Escribe en CHANGELOG.md la seccion de <version> desde los titulos de PR.
 [group('release')]
 [private]
 changelog-release version:
@@ -535,9 +535,7 @@ changelog-release version:
 bump-version version:
     {{ justfile_directory() }}/scripts/bump-version.sh {{ version }}
 
-# Encadena changelog-release y bump-version; el tag y el push quedan a mano.
+# Publica <version> desde main: changelog, bump, commit, etiqueta y push atomico.
 [group('release')]
-release version: (changelog-release version) (bump-version version)
-    @echo
-    @echo "Revisa el diff, comitea y publica cuando quieras:"
-    @echo "  git tag v{{ version }} && git push origin v{{ version }}"
+release version:
+    {{ justfile_directory() }}/scripts/release.sh {{ version }}
