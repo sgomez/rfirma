@@ -21,5 +21,7 @@ Los arneses que las recetas del `justfile` llaman por nombre, siguiendo el patr�
 | `ci-lanes.sh` | Dice, a partir de los ficheros de un PR, qué carriles del CI tienen que correr. Lo llama el job `scope` de `ci.yml`, no una receta. |
 | `clean-coverage.sh` | Borra el árbol instrumentado y los informes de cobertura sueltos. |
 | `protocol-map.py` | Genera el mapa del protocolo de AutoFirma contra la etiqueta fijada. |
+| `packages-manifest.sh` | Escribe y lee el `paquetes.json` de una entrega: una fila por paquete con plataforma, fichero, formato, si es firmable y su aviso. Lo llama la receta `packages-manifest` y lo leen `build.yml`, `release.yml`, `publish.yml` y `packaging/check-digests.sh`. |
 | `tests/outline_test.sh` | Prueba el esqueleto que produce `outline.sh` sobre los fixtures de `tests/fixtures/`. |
 | `tests/ci_lanes_test.sh` | Prueba qué carriles enciende `ci-lanes.sh` para cada clase de fichero. |
+| `tests/packages_manifest_test.sh` | Prueba el manifiesto de paquetes (entrega completa, candidata, extensión desconocida, firmable) y la excepción de `check-digests.sh`. |

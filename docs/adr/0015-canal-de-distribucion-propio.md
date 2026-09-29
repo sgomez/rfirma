@@ -161,6 +161,11 @@ la Release dejarían de ser los mismos bytes, y se rompería la invariante de qu
 canales llevan lo mismo
 ([ADR-0004](0004-libreria-nativa-distribuida-en-el-paquete.md)).
 
+**Qué paquetes hay y cuáles se firman después lo dice un manifiesto**, `paquetes.json`, que
+una receta de `just` escribe junto al `SHA256SUMS` en el artefacto `paquetes`: la recogida, la
+atestación, la puerta de `publish.yml` y `check-digests.sh` lo leen en vez de repetir una lista
+de extensiones, y una plataforma o un formato nuevos son una fila más.
+
 **Etiquetas `v*-rc.N`** producen una Release marcada como prerelease y **no llegan a ningún
 repositorio**. No es un *nightly* por la puerta de atrás —es a mano y con etiqueta
 explícita—: es cómo se ensaya la tubería sin publicar una versión de verdad.

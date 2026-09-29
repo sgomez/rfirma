@@ -7,11 +7,12 @@
 # descarga y un artefacto, y esta puerta es lo unico que dice que por ahi no se
 # ha colado nada distinto.
 #
-# EL `.rpm` CAMBIA A PROPOSITO, Y ES EL UNICO QUE PUEDE. Firmar un `.rpm` lo
-# MODIFICA —la firma va dentro de la cabecera—, asi que su resumen no puede
-# coincidir y compararlo seria imposible de pasar. Lo que si se exige de el es
-# que siga estando: el conjunto de NOMBRES tiene que ser identico en los dos
-# lados. Un paquete que aparece de la nada, o uno que desaparece entre la
+# LO QUE EL MANIFIESTO MARCA COMO FIRMABLE CAMBIA A PROPOSITO, Y SOLO ESO.
+# Firmar un `.rpm` lo MODIFICA —la firma va dentro de la cabecera—, asi que su
+# resumen no puede coincidir y compararlo seria imposible de pasar. Que paquetes
+# se firman lo dice el `paquetes.json` del directorio. Lo que si se exige de
+# ellos es que sigan estando: el conjunto de NOMBRES tiene que ser identico en
+# los dos lados. Un paquete que aparece de la nada, o uno que desaparece entre la
 # construccion y la firma, es exactamente lo que esto detecta.
 #
 # Es un script del repositorio y no un paso `run:` por la tercera invariante
@@ -55,6 +56,11 @@ while read -r suma nombre; do
     esperado["$nombre"]="$suma"
 done < "$referencia"
 
+declare -A firmable=()
+while read -r nombre; do
+    firmable["$nombre"]=1
+done < <("$(dirname "$0")/../scripts/packages-manifest.sh" signable "$directorio")
+
 if [ "${#esperado[@]}" -eq 0 ]; then
     echo "el SHA256SUMS de referencia no nombra ni un paquete: $referencia" >&2
     exit 2
@@ -78,12 +84,10 @@ for ruta in "$directorio"/*; do
     fi
 
     # El unico cambio permitido entre construir y firmar.
-    case "$nombre" in
-        *.rpm)
-            echo "OK  $nombre (firmado: su resumen cambia a proposito)"
-            continue
-            ;;
-    esac
+    if [ -n "${firmable[$nombre]:-}" ]; then
+        echo "OK  $nombre (firmable: su resumen cambia a proposito)"
+        continue
+    fi
 
     suma="$(sha256sum "$ruta" | cut -d' ' -f1)"
     if [ "$suma" != "${esperado[$nombre]}" ]; then
@@ -106,7 +110,7 @@ done
 if [ "$fallos" -ne 0 ]; then
     echo >&2
     echo "$fallos diferencia(s) entre lo construido y lo que se va a firmar." >&2
-    echo "Lo unico que puede cambiar entre las dos fases es la firma de un .rpm." >&2
+    echo "Lo unico que puede cambiar entre las dos fases es la firma de lo que el manifiesto marca como firmable." >&2
     exit 1
 fi
 

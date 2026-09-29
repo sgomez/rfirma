@@ -115,10 +115,9 @@ jobs:
       - name: Puerta del contenido
         run: |
           set -euo pipefail
-          for paquete in paquetes/*.flatpak paquetes/*.deb paquetes/*.rpm paquetes/*.exe; do
-            [ -e "$paquete" ] || continue
-            packaging/verifica-contenido.sh "$paquete"
-          done
+          while read -r paquete; do
+            packaging/verifica-contenido.sh "paquetes/$paquete"
+          done < <(scripts/packages-manifest.sh files paquetes)
 
       - name: Resumen
         env:

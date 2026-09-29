@@ -66,7 +66,7 @@ on:
           candidata y solo hay flatpak (ID-154).
         value: ${{ jobs.collect-packages.outputs.native-packages }}
       packages-artifact:
-        description: Nombre del artefacto con los paquetes y su SHA256SUMS.
+        description: Nombre del artefacto con los paquetes, su SHA256SUMS y su paquetes.json.
         value: ${{ jobs.collect-packages.outputs.packages-artifact }}
       digests:
         description: El contenido de SHA256SUMS, tal cual, en una sola cadena.
@@ -528,6 +528,8 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
+      - uses: ./.github/actions/setup-just
+
       - name: Herramientas de verificacion
         run: |
           sudo apt-get update
@@ -564,20 +566,22 @@ jobs:
           set -euo pipefail
           destino="${{ runner.temp }}/paquetes"
           if [ "${{ needs.native-bridge.outputs.native-packages }}" = "true" ]; then
-            find "${{ runner.temp }}/paquetes-nativos" \
-              -maxdepth 2 -type f \( -name '*.deb' -o -name '*.rpm' \) \
+            find "${{ runner.temp }}/paquetes-nativos" -maxdepth 2 -type f \
               -exec cp {} "$destino/" \;
           fi
           ls -la "$destino"
+
+      - name: Manifiesto de paquetes
+        run: just packages-manifest "${{ runner.temp }}/paquetes"
 
       # LA PUERTA DEL CONTENIDO (ADR-0012, ID-144), Y SOBRE TODOS LOS FORMATOS:
       # exactamente una biblioteca nativa y la de AWT en ninguna parte.
       - name: Puerta del contenido
         run: |
           set -euo pipefail
-          for paquete in "${{ runner.temp }}"/paquetes/*; do
-            packaging/verifica-contenido.sh "$paquete"
-          done
+          while read -r paquete; do
+            packaging/verifica-contenido.sh "${{ runner.temp }}/paquetes/$paquete"
+          done < <(scripts/packages-manifest.sh files "${{ runner.temp }}/paquetes")
 
       # El SHA256SUMS se calcula AQUI y viaja tambien como salida del workflow
       # para que `release.yml` pueda comprobar que lo que firma son los bytes
