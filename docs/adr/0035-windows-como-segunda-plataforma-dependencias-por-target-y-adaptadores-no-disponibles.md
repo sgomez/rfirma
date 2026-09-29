@@ -332,3 +332,6 @@ interfaz también en Linux. Se aplaza; mientras, el almacén del usuario se pres
   entran en `AUTHORISED_SITES`: son el punto donde cada puerto elige su adaptador de plataforma.
 - `documents/domain/dropped/tests.rs` también entra: una URL `file://` nombra una ruta distinta en
   cada sistema (con unidad y barras invertidas en Windows), y la prueba lleva un caso por sistema.
+- El certificado de un servicio de sede que no se reconoce (ADR-0039) llega en Windows como un
+  código de Schannel y no como el `certificate verify failed` de OpenSSL: la detección acepta los
+  dos sin condicional de sistema, porque los códigos no se confunden con nada en Linux.

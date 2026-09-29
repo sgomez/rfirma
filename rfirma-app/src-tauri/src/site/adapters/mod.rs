@@ -99,10 +99,26 @@ fn send_failure(error: &reqwest::Error) -> String {
     format!("el certificado del servidor {server} no es de confianza: {error}")
 }
 
+/// Los códigos con que Schannel rechaza una cadena que no llega a una raíz de confianza, que en
+/// Windows ocupan el lugar del `certificate verify failed` de OpenSSL (ADR-0035).
+const SCHANNEL_UNTRUSTED_CHAIN: [&str; 4] = [
+    "Os { code: -2146893019,", // SEC_E_UNTRUSTED_ROOT
+    "Os { code: -2146762487,", // CERT_E_UNTRUSTEDROOT
+    "Os { code: -2146762486,", // CERT_E_CHAINING
+    "Os { code: -2146869244,", // TRUST_E_CERT_SIGNATURE
+];
+
 fn is_untrusted_certificate(error: &reqwest::Error) -> bool {
     let mut cause: Option<&dyn std::error::Error> = Some(error);
     while let Some(current) = cause {
         if current.to_string().contains("certificate verify failed") {
+            return true;
+        }
+        let debug = format!("{current:?}");
+        if SCHANNEL_UNTRUSTED_CHAIN
+            .iter()
+            .any(|code| debug.contains(code))
+        {
             return true;
         }
         cause = current.source();
