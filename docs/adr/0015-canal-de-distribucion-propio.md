@@ -167,7 +167,8 @@ explícita—: es cómo se ensaya la tubería sin publicar una versión de verda
 
 **Las acciones se fijan por SHA en todo el repositorio**, `ci.yml` incluido, con el
 comentario de etiqueta al lado, más `dependabot.yml` para `github-actions` **mensual y
-agrupado**. Lo que se compra no es inmunidad, sino una revisión humana en medio en vez de la
+agrupado**, con una espera (`cooldown`) de siete días para no proponer una versión recién
+publicada. Lo que se compra no es inmunidad, sino una revisión humana en medio en vez de la
 ejecución silenciosa; por eso mensual, que un flujo de PRs que nadie mira es peor que no
 tenerlas.
 

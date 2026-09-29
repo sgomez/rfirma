@@ -304,3 +304,16 @@ if [ -n "$sin_save_if" ]; then
     exit 1
 fi
 echo "OK  solo main guarda caches de Rust"
+
+# ------------------------------------------------------ espera de Dependabot --
+# `github-actions` conserva su `cooldown` de siete días (ADR-0015).
+if ! awk '
+    /^  - package-ecosystem:/ { dentro = ($0 ~ /github-actions/) }
+    dentro && /^    cooldown:/ { ok = 1 }
+    END { exit ok ? 0 : 1 }
+' .github/dependabot.yml; then
+    echo ".github/dependabot.yml tiene que declarar 'cooldown' para github-actions (ADR-0015)." >&2
+    echo "Sin la espera, Dependabot propone una version el mismo dia que se publica." >&2
+    exit 1
+fi
+echo "OK  dependabot.yml espera antes de proponer una accion nueva"

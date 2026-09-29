@@ -8,6 +8,9 @@
 # notificaciones al mes que se cierran sin leer, y a la sexta la revision es
 # una firma en blanco.
 #
+# ESPERA DE SIETE DIAS (`cooldown`): una version recien publicada no se propone
+# hasta que lleva una semana fuera, para que un tag comprometido se retire antes.
+#
 # SOLO `github-actions`. Las dependencias de Rust y de Node NO entran aqui a
 # proposito: cualquier cambio suyo mueve `Cargo.lock` o `pnpm-lock.yaml`, y con
 # ello hay que regenerar a mano `packaging/flatpak/cargo-sources.json` y
@@ -19,6 +22,8 @@ updates:
     directory: /
     schedule:
       interval: monthly
+    cooldown:
+      default-days: 7
     groups:
       acciones:
         patterns:
