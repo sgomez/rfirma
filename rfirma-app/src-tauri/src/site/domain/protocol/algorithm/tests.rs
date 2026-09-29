@@ -65,7 +65,7 @@ fn the_name_is_read_without_case_nor_spaces() {
 }
 
 #[test]
-fn every_way_of_writing_sha1_names_the_same_digest() {
+fn every_way_of_writing_sha1_is_read_as_the_refused_sha1() {
     for name in [
         "SHA",
         "SHA1",
@@ -79,11 +79,8 @@ fn every_way_of_writing_sha1_names_the_same_digest() {
         "http://www.w3.org/2000/09/xmldsig#sha1",
         "http://www.w3.org/2001/04/xmldsig-more#rsa-sha1",
     ] {
-        assert_eq!(
-            AskedAlgorithm::named(name),
-            Some(AskedAlgorithm::Sha1),
-            "{name}"
-        );
+        assert_eq!(AskedAlgorithm::read(name), AlgorithmReading::Sha1, "{name}");
+        assert_eq!(AskedAlgorithm::named(name), None, "{name}");
     }
 }
 
@@ -105,7 +102,6 @@ fn what_rfirma_does_not_sign_names_no_digest() {
 
 #[test]
 fn the_digest_is_named_as_the_bridge_reads_it() {
-    assert_eq!(AskedAlgorithm::Sha1.name(), "SHA1");
     assert_eq!(AskedAlgorithm::Sha256.name(), "SHA256");
     assert_eq!(AskedAlgorithm::Sha384.name(), "SHA384");
     assert_eq!(AskedAlgorithm::Sha512.name(), "SHA512");

@@ -54,7 +54,7 @@ pub mod url;
 pub mod version;
 pub mod visible;
 
-pub use algorithm::AskedAlgorithm;
+pub use algorithm::{AlgorithmReading, AskedAlgorithm};
 pub use cipher::{cipher as encrypt, decipher as decrypt, CipherKey};
 pub use codes::{Parameter, SafCode, WireAnswer, CANCELLED, NOTHING, OUT_OF_MEMORY};
 pub use data_source::{download_url, DataSource};

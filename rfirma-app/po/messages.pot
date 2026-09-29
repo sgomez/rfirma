@@ -1737,6 +1737,9 @@ msgstr ""
 msgid "sede.refusals.promptFailed"
 msgstr ""
 
+msgid "sede.refusals.sha1"
+msgstr ""
+
 msgid "sede.refusals.explicitXades"
 msgstr ""
 
@@ -1744,6 +1747,9 @@ msgid "sede.refusals.invoiceMultisignature"
 msgstr ""
 
 msgid "sede.refusals.unsupportedCountersignature"
+msgstr ""
+
+msgid "sede.siteNotes.sha1"
 msgstr ""
 
 msgid "sede.siteNotes.explicitXades"

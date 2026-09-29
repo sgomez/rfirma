@@ -40,12 +40,11 @@ fn the_json_batch_declares_its_algorithm_in_the_root_object() {
     }
 }
 
-/// Hay sedes en producción que declaran así su lote (ADR-0023).
 #[test]
-fn sha1_is_read_like_the_original_reads_it() {
+fn sha1_is_not_read_because_rfirma_no_longer_signs_with_it() {
     for algorithm in ["sha1", "SHA1", "SHA1withRSA", "SHA-1"] {
-        assert!(batch_algorithm(BatchFormat::Xml, xml_lote(algorithm).as_bytes()).is_ok());
-        assert!(batch_algorithm(BatchFormat::Json, json_lote(algorithm).as_bytes()).is_ok());
+        assert!(batch_algorithm(BatchFormat::Xml, xml_lote(algorithm).as_bytes()).is_err());
+        assert!(batch_algorithm(BatchFormat::Json, json_lote(algorithm).as_bytes()).is_err());
     }
 }
 

@@ -1868,6 +1868,10 @@ msgstr ""
 msgid "sede.refusals.promptFailed"
 msgstr "rFirma non puido pedirche o PIN para a sinatura que pedía {{origin}}."
 
+msgid "sede.refusals.sha1"
+msgstr ""
+"{{origin}} pediu un tipo de sinatura antigo que xa non é seguro, con SHA-1. Por iso rFirma non a fai. Non é un fallo teu; se precisas rematar o trámite, contacta con {{origin}}."
+
 msgid "sede.refusals.explicitXades"
 msgstr ""
 "{{origin}} pediu un tipo de sinatura antigo que xa non é seguro: esa "
@@ -1887,6 +1891,10 @@ msgstr ""
 "{{origin}} pediu asinar sobre a sinatura doutra persoa nun tipo de documento "
 "que non o permite, así que rFirma non pode facelo. Non é un fallo teu; se "
 "precisas rematar o trámite, contacta con {{origin}}."
+
+msgid "sede.siteNotes.sha1"
+msgstr ""
+"Pedide SHA256withRSA ou superior."
 
 msgid "sede.siteNotes.explicitXades"
 msgstr ""

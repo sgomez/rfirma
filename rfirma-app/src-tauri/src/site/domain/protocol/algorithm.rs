@@ -3,8 +3,6 @@
 /// La huella que pide la sede, sea cual sea el nombre con el que la escriba.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum AskedAlgorithm {
-    /// `SHA1`, `SHA1withRSA` o `SHA1withECDSA` (ADR-0023).
-    Sha1,
     /// `SHA256`, `SHA256withRSA` o `SHA256withECDSA`.
     Sha256,
     /// `SHA384`, `SHA384withRSA` o `SHA384withECDSA`.
@@ -13,12 +11,31 @@ pub enum AskedAlgorithm {
     Sha512,
 }
 
+/// Cómo se lee el `algorithm` de la sede: se atiende, es SHA-1 (ADR-0023) o no se reconoce.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum AlgorithmReading {
+    /// Una huella SHA-2 que rFirma firma.
+    Attended(AskedAlgorithm),
+    /// SHA-1 en cualquier grafía: se reconoce y se rechaza por seguridad.
+    Sha1,
+    /// Un nombre que rFirma no reconoce.
+    Unrecognized,
+}
+
 impl AskedAlgorithm {
-    /// La huella que nombra ese `algorithm`, o nada si es de los que rFirma no firma.
+    /// La huella que nombra ese `algorithm`, o nada si es SHA-1 o de los que rFirma no firma.
     pub fn named(name: &str) -> Option<Self> {
+        match Self::read(name) {
+            AlgorithmReading::Attended(asked) => Some(asked),
+            AlgorithmReading::Sha1 | AlgorithmReading::Unrecognized => None,
+        }
+    }
+
+    /// Distingue la huella que se atiende, SHA-1 y lo que no se reconoce.
+    pub fn read(name: &str) -> AlgorithmReading {
         let asked = name.trim();
         if asked.is_empty() {
-            return None;
+            return AlgorithmReading::Unrecognized;
         }
         normalize_asked_algorithm(asked)
     }
@@ -26,7 +43,6 @@ impl AskedAlgorithm {
     /// El nombre de la huella, sin la clave con la que se compone el algoritmo.
     pub fn name(self) -> &'static str {
         match self {
-            Self::Sha1 => "SHA1",
             Self::Sha256 => "SHA256",
             Self::Sha384 => "SHA384",
             Self::Sha512 => "SHA512",
@@ -34,27 +50,27 @@ impl AskedAlgorithm {
     }
 }
 
-fn normalize_asked_algorithm(candidate: &str) -> Option<AskedAlgorithm> {
+fn normalize_asked_algorithm(candidate: &str) -> AlgorithmReading {
     let s = candidate.trim();
     if s.is_empty() {
-        return None;
+        return AlgorithmReading::Unrecognized;
     }
     let upper = s.to_ascii_uppercase();
 
     if is_sha1_alias(&upper) {
-        return Some(AskedAlgorithm::Sha1);
+        return AlgorithmReading::Sha1;
     }
     if is_sha256_alias(&upper) {
-        return Some(AskedAlgorithm::Sha256);
+        return AlgorithmReading::Attended(AskedAlgorithm::Sha256);
     }
     if is_sha384_alias(&upper) {
-        return Some(AskedAlgorithm::Sha384);
+        return AlgorithmReading::Attended(AskedAlgorithm::Sha384);
     }
     if is_sha512_alias(&upper) {
-        return Some(AskedAlgorithm::Sha512);
+        return AlgorithmReading::Attended(AskedAlgorithm::Sha512);
     }
     if is_ripemd160_alias(&upper) {
-        return None;
+        return AlgorithmReading::Unrecognized;
     }
     if let Some(sub) = subname_before_with(s, &upper) {
         return normalize_asked_algorithm(sub);
@@ -63,7 +79,7 @@ fn normalize_asked_algorithm(candidate: &str) -> Option<AskedAlgorithm> {
         return normalize_asked_algorithm(sub);
     }
 
-    None
+    AlgorithmReading::Unrecognized
 }
 
 fn is_sha1_alias(upper: &str) -> bool {

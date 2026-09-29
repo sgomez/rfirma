@@ -1889,6 +1889,10 @@ msgstr ""
 "rFirma no t'ha pogut demanar el PIN per a la signatura que demanava "
 "{{origin}}."
 
+msgid "sede.refusals.sha1"
+msgstr ""
+"{{origin}} ha demanat un tipus de signatura antic que ja no és segur, amb SHA-1. Per això rFirma no la fa. No és culpa teva; si necessites acabar el tràmit, contacta amb {{origin}}."
+
 msgid "sede.refusals.explicitXades"
 msgstr ""
 "{{origin}} ha demanat un tipus de signatura antic que ja no és segur: "
@@ -1908,6 +1912,10 @@ msgstr ""
 "{{origin}} ha demanat signar sobre la signatura d'una altra persona en un "
 "tipus de document que no ho permet, així que rFirma no ho pot fer. No és "
 "culpa teva; si necessites acabar el tràmit, contacta amb {{origin}}."
+
+msgid "sede.siteNotes.sha1"
+msgstr ""
+"Demaneu SHA256withRSA o superior."
 
 msgid "sede.siteNotes.explicitXades"
 msgstr ""

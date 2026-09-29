@@ -1863,6 +1863,10 @@ msgid "sede.refusals.promptFailed"
 msgstr ""
 "rFirma couldn't ask you for the PIN for the signature {{origin}} asked for."
 
+msgid "sede.refusals.sha1"
+msgstr ""
+"{{origin}} asked for an old kind of signature that is no longer safe, using SHA-1. That's why rFirma doesn't make it. It's not your fault; if you need to finish the errand, contact {{origin}}."
+
 msgid "sede.refusals.explicitXades"
 msgstr ""
 "{{origin}} asked for an old kind of signature that is no longer safe: that "
@@ -1882,6 +1886,10 @@ msgstr ""
 "{{origin}} asked to sign over someone else's signature on a kind of document "
 "that doesn't allow it, so rFirma can't do it. It's not your fault; if you "
 "need to finish the errand, contact {{origin}}."
+
+msgid "sede.siteNotes.sha1"
+msgstr ""
+"Ask for SHA256withRSA or higher."
 
 msgid "sede.siteNotes.explicitXades"
 msgstr ""
