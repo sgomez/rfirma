@@ -9,6 +9,32 @@ Este fichero no se edita a mano: cada issue entrega su nota en
 fragmentos presentes bajo la sección de la versión, en el momento de
 publicarla. Ver `changelog.d/README.md`.
 
+## [0.11.1] - 2026-09-29
+
+### Fixed
+- El lote remoto manda sus parámetros en el cuerpo del POST, como AutoFirma, y ya no falla con `SAF_03` en las sedes cuyos servlets solo leen el cuerpo (#1161).
+- Un servicio de la sede con un certificado TLS que el sistema no reconoce
+  falla con un error que lo dice y nombra el servidor, en vez de un fallo de
+  conexión genérico (#1174).
+- Los servicios de la sede (lote remoto, servidor trifásico, servidor
+  intermedio y descarga de datos) ya no fallan a los 30 s si tardan en
+  contestar: el límite es solo para conectar, y la espera de la respuesta no
+  tiene límite, como en AutoFirma. Cerrar la ventana de sede cancela el
+  trámite sin esperar (#1176).
+- Cuando un servicio de la sede contesta con un error HTTP, el registro guarda
+  el cuerpo de la respuesta además del código de estado (#1177).
+- Los `properties` y `extraParams` de la sede se leen como `Properties.load`
+  de Java: con continuación de línea (`\` al final), escapes `\uXXXX` y el
+  espacio como separador entre clave y valor (#1179).
+- rFirma guarda y reenvía las cookies de sesión entre las peticiones de una
+  misma operación de sede, como AutoFirma, así que los servicios que dependen
+  de ellas (por ejemplo, la afinidad de sesión de un balanceador) ya no fallan
+  entre la prefirma y la postfirma del lote ni en el servidor intermedio
+  (#1180).
+- La ventana de sede nombra a quien pide la firma («sede.ejemplo.gob.es pide tu
+  firma…») cuando la operación llega por el canal WebSocket desde una página
+  `https`; antes decía siempre «Una página sin identificar» (#1185, #1186).
+
 ## [0.11.0] - 2026-09-28
 
 ### Added
