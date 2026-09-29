@@ -28,6 +28,12 @@
 # corren en paralelo, reduciendo el tiempo de pared a la mitad sin romper la
 # identidad binaria.
 #
+# EL INSTALADOR DE WINDOWS VA APARTE (ADR-0035): su `rfirma_crypto.dll` no
+# puede salir del job `native-bridge`, que compila para Linux, asi que el job
+# `windows` compila la suya con GraalVM en `windows-latest` y construye el
+# `.exe` en paralelo con los empaquetadores de Linux. Pasa por la misma puerta
+# del contenido y entra en el mismo SHA256SUMS.
+#
 # NO HAY MATRIZ porque no hay nada que multiplicar: `x86_64` es el unico
 # objetivo de la v0.4 (ID-147).
 #
@@ -406,17 +412,107 @@ jobs:
           retention-days: 1
 
   # ==========================================================================
+  # 4 BIS. INSTALADOR NSIS DE WINDOWS (en paralelo con todo lo de Linux)
+  # ==========================================================================
+  # Una etiqueta solo lee las caches de `main`, y las de pruebas y clippy no le
+  # sirven a un perfil de release: la que lee aqui la guarda el job
+  # `windows-release-cache` de ci.yml, con el cron semanal y a mano. Si no esta,
+  # la compilacion va en frio y tarda mas, pero sale igual.
+  windows:
+    name: Instalador de Windows
+    runs-on: windows-latest
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: bash
+    env:
+      # OpenSSL se compila desde las fuentes, y el Perl de Git no sirve.
+      OPENSSL_SRC_PERL: C:/Strawberry/perl/bin/perl.exe
+    steps:
+      # Sin esto el checkout deja los .sh con CRLF y bash no los lee.
+      - name: Fin de linea sin conversion
+        run: git config --global core.autocrlf false
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: GraalVM CE ${{ env.GRAALVM_VERSION }}
+        uses: graalvm/setup-graalvm@0426e2e191540e8514dff98dc52a5f5146a2a276 # v1.6.6
+        with:
+          java-version: ${{ env.GRAALVM_VERSION }}
+          distribution: graalvm-community
+          github-token: ${{ github.token }}
+
+      # setup-graalvm deja el entorno de Visual Studio, y con el rustc se fia del
+      # PATH, donde en bash va antes el link.exe de Git (coreutils).
+      - name: El link.exe de MSVC y no el de Git
+        shell: pwsh
+        run: |
+          $link = Join-Path $env:VCToolsInstallDir 'bin\Hostx64\x64\link.exe'
+          if (-not (Test-Path $link)) { throw "no encuentro $link" }
+          "CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_LINKER=$link" >> $env:GITHUB_ENV
+
+      # Solo se lee: la llena el carril de Windows de ci.yml.
+      - name: Cache de ~/.m2
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.m2/repository
+          key: m2-${{ runner.os }}-${{ hashFiles('scripts/bootstrap.sh', 'rfirma-native-bridge/pom.xml') }}
+          restore-keys: m2-${{ runner.os }}-
+
+      - uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3.0.0
+        with:
+          working-directory: rfirma-app
+          install: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: rfirma-app/pnpm-lock.yaml
+
+      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
+        with:
+          toolchain: stable
+
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: rfirma-app/src-tauri
+          shared-key: windows-release
+          save-if: false
+
+      - uses: ./.github/actions/setup-just
+
+      - name: Libreria nativa
+        run: just native
+
+      # El `prepare` de pnpm es un script de bash, y pnpm no lee la variable
+      # npm_config_script_shell.
+      - name: pnpm ejecuta sus scripts con Git Bash
+        run: pnpm config set script-shell "C:/Program Files/Git/bin/bash.exe"
+
+      - name: Empaqueta el instalador NSIS
+        run: just bundle-windows
+
+      - name: Sube el instalador
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: bundle-windows
+          path: rfirma-app/src-tauri/target/release/bundle/nsis/*-setup.exe
+          if-no-files-found: error
+          retention-days: 1
+
+  # ==========================================================================
   # 5. REUNE, VERIFICA Y EXPONE LOS PAQUETES
   # ==========================================================================
   collect-packages:
     name: Reune y verifica paquetes
-    needs: [native-bridge, test-native, flatpak, bundle]
+    needs: [native-bridge, test-native, flatpak, bundle, windows]
     if: |
       always() &&
       !cancelled() &&
       needs.native-bridge.result == 'success' &&
       needs.test-native.result == 'success' &&
       needs.flatpak.result == 'success' &&
+      needs.windows.result == 'success' &&
       (needs.bundle.result == 'success' || needs.bundle.result == 'skipped')
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -434,7 +530,8 @@ jobs:
           sudo apt-get install -y --no-install-recommends \
             flatpak \
             ostree \
-            libarchive-tools
+            libarchive-tools \
+            p7zip-full
 
       - name: Prepara directorio de destino
         run: mkdir -p "${{ runner.temp }}/paquetes"
@@ -443,6 +540,12 @@ jobs:
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: bundle-flatpak
+          path: ${{ runner.temp }}/paquetes
+
+      - name: Descarga el instalador de Windows
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: bundle-windows
           path: ${{ runner.temp }}/paquetes
 
       - name: Descarga bundles nativos (.deb y .rpm)
@@ -463,8 +566,8 @@ jobs:
           fi
           ls -la "$destino"
 
-      # LA PUERTA DEL CONTENIDO (ADR-0012, ID-144), Y SOBRE LOS TRES FORMATOS:
-      # exactamente un librfirma_crypto.so y libawt.so en ninguna parte.
+      # LA PUERTA DEL CONTENIDO (ADR-0012, ID-144), Y SOBRE TODOS LOS FORMATOS:
+      # exactamente una biblioteca nativa y la de AWT en ninguna parte.
       - name: Puerta del contenido
         run: |
           set -euo pipefail

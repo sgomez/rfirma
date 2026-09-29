@@ -528,9 +528,9 @@ jobs:
   # CARRIL DE WINDOWS
   # ==========================================================================
   # Segunda plataforma (ADR-0035): compila la .dll con GraalVM, pasa clippy, las
-  # pruebas de --lib y del canal local con la puerta CRAP del adaptador CNG y,
-  # cuando corre el binario de release, construye el instalador NSIS y lo sube
-  # como artefacto. No hay grada B ni C: en Windows faltan softhsm, NSS y
+  # pruebas de --lib y del canal local con la puerta CRAP del adaptador CNG. El
+  # instalador NSIS no se construye aqui: sale en la release, como el .deb, el
+  # .rpm y el flatpak (build.yml). No hay grada B ni C: en Windows faltan softhsm, NSS y
   # poppler. Tampoco vitest: la interfaz no depende del sistema y ya la prueba
   # la cadena TypeScript.
   windows:
@@ -551,20 +551,6 @@ jobs:
         run: git config --global core.autocrlf false
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: Decide si se construye el instalador
-        id: scope
-        run: |
-          case "${{ github.event_name }}" in
-            push|workflow_dispatch|schedule)
-              echo "installer=true" >> "$GITHUB_OUTPUT" ;;
-            pull_request)
-              if ${{ contains(github.event.pull_request.labels.*.name, 'release') }}; then
-                echo "installer=true" >> "$GITHUB_OUTPUT"
-              else
-                echo "installer=false" >> "$GITHUB_OUTPUT"
-              fi ;;
-          esac
 
       - name: GraalVM CE ${{ env.GRAALVM_VERSION }}
         uses: graalvm/setup-graalvm@0426e2e191540e8514dff98dc52a5f5146a2a276 # v1.6.6
@@ -656,17 +642,101 @@ jobs:
       - name: Pruebas de --lib y del canal local, y CRAP del adaptador CNG
         run: just test-windows
 
-      - name: Instalador NSIS
-        if: steps.scope.outputs.installer == 'true'
-        run: just bundle-windows
+  # ==========================================================================
+  # CACHE DEL INSTALADOR DE WINDOWS
+  # ==========================================================================
+  # La release compila el instalador desde una etiqueta, y una etiqueta solo
+  # lee las caches de `main`. Este job hace en `main` la misma compilacion que
+  # el job `windows` de build.yml y guarda su cache con una clave compartida,
+  # para que la release encuentre las dependencias ya compiladas. Solo corre
+  # con el cron semanal y a mano: ni las PR ni los push a `main` lo pagan, y el
+  # instalador que construye se tira.
+  windows-release-cache:
+    name: Cache del instalador de Windows
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: windows-latest
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: bash
+    env:
+      # OpenSSL se compila desde las fuentes, y el Perl de Git no sirve.
+      OPENSSL_SRC_PERL: C:/Strawberry/perl/bin/perl.exe
+    steps:
+      # Sin esto el checkout deja los .sh con CRLF y bash no los lee.
+      - name: Fin de linea sin conversion
+        run: git config --global core.autocrlf false
 
-      - name: Sube el instalador
-        if: steps.scope.outputs.installer == 'true'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: GraalVM CE ${{ env.GRAALVM_VERSION }}
+        uses: graalvm/setup-graalvm@0426e2e191540e8514dff98dc52a5f5146a2a276 # v1.6.6
         with:
-          name: rfirma-windows-nsis
-          path: rfirma-app/src-tauri/target/release/bundle/nsis/*-setup.exe
-          if-no-files-found: error
+          java-version: ${{ env.GRAALVM_VERSION }}
+          distribution: graalvm-community
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      # setup-graalvm deja el entorno de Visual Studio, y con el rustc se fia del
+      # PATH, donde en bash va antes el link.exe de Git (coreutils).
+      - name: El link.exe de MSVC y no el de Git
+        shell: pwsh
+        run: |
+          $link = Join-Path $env:VCToolsInstallDir 'bin\Hostx64\x64\link.exe'
+          if (-not (Test-Path $link)) { throw "no encuentro $link" }
+          "CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_LINKER=$link" >> $env:GITHUB_ENV
+
+      - uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3.0.0
+        with:
+          working-directory: rfirma-app
+          install: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: rfirma-app/pnpm-lock.yaml
+
+      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
+        with:
+          toolchain: stable
+
+      # La misma `shared-key` que el job `windows` de build.yml, que la lee.
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: rfirma-app/src-tauri
+          shared-key: windows-release
+
+      - uses: ./.github/actions/setup-just
+
+      # La .dll la deja el carril de Windows; aqui solo se lee, y si no esta
+      # se compila: `tauri build` la necesita como recurso.
+      - name: Cache de rfirma_crypto.dll
+        id: cache-native-lib
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: rfirma-native-bridge/target/lib/rfirma
+          key: native-lib-${{ runner.os }}-graalvm${{ env.GRAALVM_VERSION }}-${{ hashFiles('scripts/bootstrap.sh', 'rfirma-native-bridge/pom.xml', 'rfirma-native-bridge/src/main/**') }}
+
+      - name: Cache de ~/.m2
+        if: steps.cache-native-lib.outputs.cache-hit != 'true'
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.m2/repository
+          key: m2-${{ runner.os }}-${{ hashFiles('scripts/bootstrap.sh', 'rfirma-native-bridge/pom.xml') }}
+          restore-keys: m2-${{ runner.os }}-
+
+      - name: Construye la libreria nativa
+        if: steps.cache-native-lib.outputs.cache-hit != 'true'
+        run: just native
+
+      # El `prepare` de pnpm es un script de bash, y pnpm no lee la variable
+      # npm_config_script_shell.
+      - name: pnpm ejecuta sus scripts con Git Bash
+        run: pnpm config set script-shell "C:/Program Files/Git/bin/bash.exe"
+
+      # La misma receta que la release: con otra orden cambiarian las
+      # features de tauri y la cache no le serviria.
+      - name: Compila como la release
+        run: just bundle-windows
 
   # ==========================================================================
   # COMPILACION DE RELEASE

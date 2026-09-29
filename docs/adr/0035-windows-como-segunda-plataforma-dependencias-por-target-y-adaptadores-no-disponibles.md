@@ -226,9 +226,19 @@ El job `windows` de `ci.yml` corre en `windows-latest` cuando corre el carril de
 nativo: compila la `.dll` (cacheada con la misma clave que la de Linux y otro `runner.os`), pasa
 `rustfmt` y `clippy`, las pruebas de `--lib` y las del canal local (`channel_client`,
 `channel_operations`, `service_acknowledgement`) en una pasada instrumentada (`just
-test-windows`) y, cuando se compila el binario de release,
-`just bundle-windows`, que sube el instalador como artefacto `rfirma-windows-nsis`. Las gradas B
-y C no corren: faltan softhsm, NSS y poppler.
+test-windows`). Las gradas B y C no corren: faltan softhsm, NSS y poppler.
+
+El instalador no sale de `ci.yml` sino de la release, como el `.deb`, el `.rpm` y el flatpak: el
+job `windows` de `build.yml` compila la `.dll` y ejecuta `just bundle-windows`, y el `.exe` pasa
+por la misma puerta del contenido (`packaging/verifica-contenido.sh`, que lo abre con `7z`), entra
+en el `SHA256SUMS` firmado y en la atestación de procedencia. Los repositorios de apt, dnf y
+ostree no lo sirven: solo se descarga de la Release. Para ensayarlo sin etiquetar,
+`gh workflow run build.yml --ref <rama>`.
+
+Una etiqueta solo lee las cachés de `main`, así que la compilación de release de Windows iría
+siempre en frío. El job `windows-release-cache` de `ci.yml` corre la misma receta en `main` con
+el cron semanal y a mano, y guarda la caché de Rust con la clave compartida `windows-release`,
+que el job de `build.yml` solo lee. Las PR y los push a `main` no lo pagan.
 
 La puerta CRAP del carril rápido de Linux puntúa como 0 % de cobertura lo que Linux no compila, y
 el adaptador CNG (`identity/adapters/windows_store/cng.rs`) tiene funciones de complejidad 6 y 7

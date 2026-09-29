@@ -228,6 +228,7 @@ jobs:
             paquetes/*.flatpak
             paquetes/*.deb
             paquetes/*.rpm
+            paquetes/*.exe
 
       # --- 4 de 4: ADJUNTAR -------------------------------------------------
       - name: Notas del borrador
@@ -260,6 +261,11 @@ jobs:
           ```
           flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
           ```
+
+          El instalador de Windows (`*_x64-setup.exe`) instala para el usuario,
+          sin administrador. No esta firmado con Authenticode: SmartScreen
+          avisa al abrirlo y hay que pulsar «Mas informacion» y «Ejecutar de
+          todas formas». Su resumen esta en el mismo `SHA256SUMS` firmado.
 
           EOF
 

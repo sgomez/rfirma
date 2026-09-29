@@ -110,12 +110,12 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            ostree flatpak libarchive-tools
+            ostree flatpak libarchive-tools p7zip-full
 
       - name: Puerta del contenido
         run: |
           set -euo pipefail
-          for paquete in paquetes/*.flatpak paquetes/*.deb paquetes/*.rpm; do
+          for paquete in paquetes/*.flatpak paquetes/*.deb paquetes/*.rpm paquetes/*.exe; do
             [ -e "$paquete" ] || continue
             packaging/verifica-contenido.sh "$paquete"
           done

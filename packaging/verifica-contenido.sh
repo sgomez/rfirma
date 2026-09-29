@@ -18,7 +18,11 @@
 # todavia (el #265 va antes que los paquetes a proposito). Las ramas .deb y
 # .rpm quedan listas para cuando el #266 los produzca.
 #
-# Uso: packaging/verifica-contenido.sh <paquete.flatpak|paquete.deb|paquete.rpm|files/>
+# El instalador de Windows (ADR-0035) pasa por la misma invariante con los
+# nombres de Windows: exactamente un rfirma_crypto.dll y awt.dll en ninguna
+# parte. Se abre con 7z, que lee los instaladores NSIS sin ejecutarlos.
+#
+# Uso: packaging/verifica-contenido.sh <paquete.flatpak|paquete.deb|paquete.rpm|instalador.exe|files/>
 set -euo pipefail
 
 PAQUETE="${1:?uso: packaging/verifica-contenido.sh <paquete>}"
@@ -62,8 +66,15 @@ else
                 exit 1
             fi
             ;;
+        *.exe)
+            if ! command -v 7z >/dev/null 2>&1; then
+                echo "para mirar dentro de un instalador NSIS hace falta 7z (p7zip-full)" >&2
+                exit 1
+            fi
+            7z x -y -o"$LAB/contenido" "$PAQUETE" >/dev/null
+            ;;
         *)
-            echo "formato desconocido: $PAQUETE (se esperaba .flatpak, .deb, .rpm o un directorio files/)" >&2
+            echo "formato desconocido: $PAQUETE (se esperaba .flatpak, .deb, .rpm, .exe o un directorio files/)" >&2
             exit 1
             ;;
     esac
@@ -71,18 +82,34 @@ fi
 
 echo "### contenido de $PAQUETE"
 
-encontrados="$(find -L "$LAB/contenido" -name 'librfirma_crypto.so')"
+# Las busquedas van escritas enteras, una por sistema, y no con el nombre en
+# una variable: BridgeContractTest comprueba que siguen aqui.
+case "$PAQUETE" in
+    *.exe)
+        NATIVA=rfirma_crypto.dll
+        AWT=awt.dll
+        encontrados="$(find -L "$LAB/contenido" -iname 'rfirma_crypto.dll')"
+        sobra="$(find -L "$LAB/contenido" -iname 'awt.dll')"
+        ;;
+    *)
+        NATIVA=librfirma_crypto.so
+        AWT=libawt.so
+        encontrados="$(find -L "$LAB/contenido" -name 'librfirma_crypto.so')"
+        sobra="$(find -L "$LAB/contenido" -name 'libawt.so')"
+        ;;
+esac
+
 n="$(printf '%s\n' "$encontrados" | grep -c . || true)"
 if [ "$n" -ne 1 ]; then
-    echo "esperaba exactamente UN librfirma_crypto.so, encontrados: $n" >&2
+    echo "esperaba exactamente UN $NATIVA, encontrados: $n" >&2
     printf '%s\n' "$encontrados" >&2
     exit 1
 fi
-echo "OK  un solo librfirma_crypto.so ($encontrados)"
+echo "OK  un solo $NATIVA ($encontrados)"
 
-if [ -n "$(find -L "$LAB/contenido" -name 'libawt.so')" ]; then
-    echo "SOBRA libawt.so: un JPEG con perfil ICC aborta el proceso en vez de" >&2
+if [ -n "$sobra" ]; then
+    echo "SOBRA $AWT: un JPEG con perfil ICC aborta el proceso en vez de" >&2
     echo "dar un error recuperable (ADR-0012, docs/research/exclusion-afirma-ui-utils.md)" >&2
     exit 1
 fi
-echo "OK  libawt.so no aparece en ninguna parte"
+echo "OK  $AWT no aparece en ninguna parte"
