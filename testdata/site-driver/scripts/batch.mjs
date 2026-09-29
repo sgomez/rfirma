@@ -1,7 +1,7 @@
 // Los guiones de lote de la sede publicada, remotos contra los servlets del banco y locales.
 
 import { createServer as createTcpServer } from "node:net";
-import { theCmsSignature } from "../lib/cms.mjs";
+import { theCmsSignature, theDigestsOf } from "../lib/cms.mjs";
 import {
   aCondition,
   aMeasuredConditionEvent,
@@ -47,6 +47,7 @@ const EACH_RISKY_PDF_FAILED_WITH_ITS_REASON = "each-risky-pdf-failed-with-its-re
 const THE_REST_SIGNED = "the-rest-signed";
 const THE_SUBOPERATION_DONE = "the-suboperation-done";
 const THE_ALGORITHM_OF_THE_KEY = "the-algorithm-of-the-key";
+const THE_SIGNATURES_DECLARE_SHA1 = "the-signatures-declare-sha1";
 const THE_URL_NEITHER_FETCHED_NOR_SIGNED = "the-url-neither-fetched-nor-signed";
 const ONLY_THE_RESULT = "only-the-result";
 const THE_BATCH_READ_AS_XML = "the-batch-read-as-xml";
@@ -545,9 +546,10 @@ function aLocalBatch({
   items,
   callbacks,
   properties = withoutAChoice(),
+  algorithm = "SHA256",
 }) {
   AutoScript.setLocalBatchProcess(true);
-  AutoScript.createBatch("SHA256", format, suboperation, extraParams);
+  AutoScript.createBatch(algorithm, format, suboperation, extraParams);
   for (const [id, content, itemFormat, extraParams] of items) {
     AutoScript.addDocumentToBatch(id, content, itemFormat, undefined, extraParams);
   }
@@ -752,6 +754,30 @@ export function theLocalBatchWithoutADialogueConditions(result) {
 
 /** El OID `ecdsa-with-SHA256` (1.2.840.10045.4.3.2) con su etiqueta y su longitud DER. */
 const ECDSA_WITH_SHA256 = Buffer.from([0x06, 0x08, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x04, 0x03, 0x02]);
+
+/** El lote local pide `SHA1` y la firma del binario declara SHA-1 en su resumen y en su algoritmo. */
+function theLocalBatchSignedWithSha1Script() {
+  aLocalBatch({
+    algorithm: "SHA1",
+    stopOnError: false,
+    items: [theBinaryItem()],
+    callbacks: theBatchCallbacks((result) => {
+      const item = theLocalItems(result).get("bin");
+      const signers = signedAs(item, "cms")
+        ? (theCmsSignature(bytesOf(item.signature))?.signers ?? [])
+        : [];
+      const digests = signers.flatMap(theDigestsOf);
+      const declared = digests.length > 0 && digests.every((digest) => digest === "sha1");
+      return [
+        aCondition(
+          THE_SIGNATURES_DECLARE_SHA1,
+          declared,
+          `se pidió sha1; la firma del binario usa ${[...new Set(digests)].join(", ") || "un resumen ilegible"}`,
+        ),
+      ];
+    }),
+  });
+}
 
 /** El lote local de un binario con `SHA256` a secas: el algoritmo lo completa la clave elegida. */
 function theLocalBatchWithAnEllipticKeyScript() {
@@ -1101,6 +1127,9 @@ export const BATCH_SCRIPTS = {
   }),
   batchlocalecdsa: aPublishedScript(theLocalBatchWithAnEllipticKeyScript, {
     conditions: [THE_ALGORITHM_OF_THE_KEY],
+  }),
+  batchlocalsha1: aPublishedScript(theLocalBatchSignedWithSha1Script, {
+    conditions: [THE_SIGNATURES_DECLARE_SHA1],
   }),
   batchlocalurl: aPublishedScript(theLocalBatchWithAUrlScript, {
     conditions: [THE_URL_NEITHER_FETCHED_NOR_SIGNED],

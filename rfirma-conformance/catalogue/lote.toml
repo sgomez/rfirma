@@ -556,3 +556,17 @@ store = "several"
 patience_secs = 90
 act.consent = "Si aparece un diálogo, firma con el certificado de seudónimo (TEST-0000) solo si es el único que ofrece; si ofrece más, cancela."
 expects.completes.conditions = ["the-batch-signed-with-the-filtered-certificate"]
+
+[[check]]
+id = "a_local_batch_with_the_sha1_algorithm_is_signed_with_sha1"
+set = "lote"
+citation = "LocalBatchSigner.java:96"
+explained_by.rfirma = "ADR-0023"
+statement = """
+Un lote local con algorithm SHA1 se completa y la firma de cada documento declara SHA-1.
+"""
+
+[check.drive]
+mode = "v4"
+script = "batchlocalsha1"
+expects.completes.conditions = ["the-signatures-declare-sha1"]

@@ -1346,3 +1346,48 @@ mode = "v4"
 script = "countersignfacturae"
 act.consent = "Puede aparecer una ventana con el rechazo: ciérrala. AutoFirma contesta sin enseñar nada; rFirma la enseña antes de contestar a la sede."
 expects.code = "SAF_04"
+
+[[check]]
+id = "a_cades_signature_is_made_with_the_sha1_requested"
+set = "firma"
+citation = "UrlParametersToSign.java:60-74, 287-293; ProtocolInvocationLauncherSign.java:632-640; AOSignConstants.java:365-390"
+explained_by.rfirma = "ADR-0023"
+statement = """
+Una firma CAdES pedida con SHA1withRSA se hace con SHA-1: la firma que vuelve declara
+ese resumen y verifica con la clave del certificado.
+"""
+
+[check.drive]
+mode = "v4"
+script = "signcadessha1"
+expects.completes.conditions = ["the-digest-requested", "the-signature-verifies"]
+
+[[check]]
+id = "a_xades_signature_is_made_with_the_sha1_requested"
+set = "firma"
+citation = "UrlParametersToSign.java:60-74, 287-293; ProtocolInvocationLauncherSign.java:632-640; AOSignConstants.java:365-390"
+explained_by.rfirma = "ADR-0023"
+statement = """
+Una firma XAdES pedida con SHA1withRSA se hace con SHA-1: la firma que vuelve declara
+ese resumen y verifica con la clave del certificado.
+"""
+
+[check.drive]
+mode = "v4"
+script = "signxadessha1"
+expects.completes.conditions = ["the-digest-requested", "the-signature-verifies"]
+
+[[check]]
+id = "a_pades_signature_is_made_with_the_sha1_requested"
+set = "firma"
+citation = "UrlParametersToSign.java:60-74, 287-293; ProtocolInvocationLauncherSign.java:632-640; AOSignConstants.java:365-390"
+explained_by.rfirma = "ADR-0023"
+statement = """
+Una firma PAdES pedida con SHA1withRSA se hace con SHA-1: la firma que vuelve declara
+ese resumen y verifica con la clave del certificado.
+"""
+
+[check.drive]
+mode = "v4"
+script = "signpadessha1"
+expects.completes.conditions = ["the-digest-requested", "the-signature-verifies"]
