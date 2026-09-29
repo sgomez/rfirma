@@ -1360,6 +1360,7 @@ ese resumen y verifica con la clave del certificado.
 [check.drive]
 mode = "v4"
 script = "signcadessha1"
+act.consent = "Puede aparecer una ventana con el rechazo: ciérrala. AutoFirma firma sin enseñar nada; rFirma enseña el rechazo antes de contestar a la sede."
 expects.completes.conditions = ["the-digest-requested", "the-signature-verifies"]
 
 [[check]]
@@ -1375,6 +1376,7 @@ ese resumen y verifica con la clave del certificado.
 [check.drive]
 mode = "v4"
 script = "signxadessha1"
+act.consent = "Puede aparecer una ventana con el rechazo: ciérrala. AutoFirma firma sin enseñar nada; rFirma enseña el rechazo antes de contestar a la sede."
 expects.completes.conditions = ["the-digest-requested", "the-signature-verifies"]
 
 [[check]]
@@ -1390,4 +1392,5 @@ ese resumen y verifica con la clave del certificado.
 [check.drive]
 mode = "v4"
 script = "signpadessha1"
+act.consent = "Puede aparecer una ventana con el rechazo: ciérrala. AutoFirma firma sin enseñar nada; rFirma enseña el rechazo antes de contestar a la sede."
 expects.completes.conditions = ["the-digest-requested", "the-signature-verifies"]

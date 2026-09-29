@@ -569,4 +569,5 @@ Un lote local con algorithm SHA1 se completa y la firma de cada documento declar
 [check.drive]
 mode = "v4"
 script = "batchlocalsha1"
+act.consent = "Puede aparecer una ventana con el rechazo: ciérrala. AutoFirma firma sin enseñar nada; rFirma enseña el rechazo antes de contestar a la sede."
 expects.completes.conditions = ["the-signatures-declare-sha1"]
