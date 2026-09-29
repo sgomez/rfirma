@@ -26,6 +26,7 @@ const REFUSALS: Record<keyof Catalog["sede"]["refusals"], true> = {
   unsupportedKeyStore: true,
   errandInFlight: true,
   portsTaken: true,
+  sha1: true,
   explicitXades: true,
   invoiceMultisignature: true,
   unsupportedCountersignature: true,

@@ -1909,6 +1909,10 @@ msgid "sede.refusals.promptFailed"
 msgstr ""
 "rFirmak ezin izan dizu PINa eskatu {{origin}}(e)k eskatzen zuen sinadurarako."
 
+msgid "sede.refusals.sha1"
+msgstr ""
+"{{origin}}(e)k sinadura mota zahar bat eskatu du, jada segurua ez dena, SHA-1 erabiliz. Horregatik, rFirmak ez du egiten. Ez da zure akatsa; izapidea amaitu behar baduzu, jarri harremanetan {{origin}}(e)rekin."
+
 msgid "sede.refusals.explicitXades"
 msgstr ""
 "{{origin}}(e)k sinadura mota zahar bat eskatu du, jada segurua ez dena: "
@@ -1929,6 +1933,10 @@ msgstr ""
 "hori onartzen ez duen dokumentu mota batean, beraz rFirmak ezin du egin. Ez "
 "da zure akatsa; izapidea amaitu behar baduzu, jarri harremanetan {{origin}}"
 "(e)rekin."
+
+msgid "sede.siteNotes.sha1"
+msgstr ""
+"Eskatu SHA256withRSA edo handiagoa."
 
 msgid "sede.siteNotes.explicitXades"
 msgstr ""

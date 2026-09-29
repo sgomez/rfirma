@@ -334,6 +334,7 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
       UnsupportedKeyStore
       ErrandInFlight
       PortsTaken
+      Sha1
       ExplicitXades
       InvoiceMultisignature
       UnsupportedCountersignature

@@ -1,6 +1,6 @@
 //! Las guardias de formato y algoritmo que comparten `sign` y `signandsave`.
 
-use super::super::algorithm::AskedAlgorithm;
+use super::super::algorithm::{AlgorithmReading, AskedAlgorithm};
 use super::super::codes::{Parameter, SafCode};
 use super::super::detection::{detect_signature, DetectedSignature};
 use super::super::format::{format_of, RequestedFormat, XadesEnvelope};
@@ -113,12 +113,18 @@ pub(super) fn requested_format(url: &AfirmaUrl) -> Result<Option<RequestedFormat
 /// La huella del `algorithm` que pide la sede, o el `SAF_03` que lo nombra.
 pub(super) fn check_algorithm(url: &AfirmaUrl) -> Result<AskedAlgorithm, Refusal> {
     let algorithm = required(url, "algorithm", Parameter::Algorithm)?;
-    AskedAlgorithm::named(algorithm).ok_or_else(|| {
-        Refusal::about(
+    match AskedAlgorithm::read(algorithm) {
+        AlgorithmReading::Attended(asked) => Ok(asked),
+        AlgorithmReading::Sha1 => Err(Refusal::about(
+            Parameter::Algorithm,
+            format!("el algoritmo '{algorithm}' es SHA-1: rFirma firma con SHA-2"),
+        )
+        .because(RefusalSituation::Sha1)),
+        AlgorithmReading::Unrecognized => Err(Refusal::about(
             Parameter::Algorithm,
             format!("el algoritmo '{algorithm}' no se atiende: rFirma firma con SHA-2"),
-        )
-    })
+        )),
+    }
 }
 
 fn countersign_refusal() -> Refusal {

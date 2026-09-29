@@ -255,6 +255,8 @@ function RefusalSentence({
       return <>{t("sede.refusals.errandInFlight", subject)}</>;
     case "portsTaken":
       return <>{t("sede.refusals.portsTaken", subject)}</>;
+    case "sha1":
+      return <>{t("sede.refusals.sha1", subject)}</>;
     case "explicitXades":
       return <>{t("sede.refusals.explicitXades", subject)}</>;
     case "invoiceMultisignature":
@@ -369,6 +371,8 @@ function SiteNote({ situation }: { situation: RefusalSituation }) {
   const { t } = useTranslation();
 
   switch (situation) {
+    case "sha1":
+      return <p className="rf-hint">{t("sede.siteNotes.sha1")}</p>;
     case "explicitXades":
       return <p className="rf-hint">{t("sede.siteNotes.explicitXades")}</p>;
     case "invoiceMultisignature":

@@ -21,6 +21,8 @@ pub enum RefusalSituation {
     ErrandInFlight,
     /// Otra aplicación ocupa todos los puertos que ofrece la sede.
     PortsTaken,
+    /// La sede pide firmar con SHA-1 (ADR-0023).
+    Sha1,
     /// La sede pide la XAdES explícita, que firma la huella SHA-1 y no el documento.
     ExplicitXades,
     /// La sede pide cofirmar o contrafirmar una factura electrónica.

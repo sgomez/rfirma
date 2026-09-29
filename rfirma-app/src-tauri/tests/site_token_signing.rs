@@ -2,9 +2,6 @@
 
 use std::path::PathBuf;
 
-use openssl::hash::MessageDigest;
-use openssl::pkey::PKey;
-use openssl::sign::Verifier;
 use rfirma_lib::identity::adapters::pkcs11::{self, RealToken};
 use rfirma_lib::identity::domain::certificate::TokenCertificate;
 use rfirma_lib::identity::domain::protected_secret::ProtectedSecret;
@@ -61,22 +58,6 @@ fn public_key(certificate: &TokenCertificate) -> RsaPublicKey {
     RsaPublicKey::from_public_key_der(&spki).expect("clave publica RSA")
 }
 
-fn verifies_with_sha1(certificate: &TokenCertificate, data: &[u8], signature: &[u8]) -> bool {
-    let parsed =
-        x509_cert::Certificate::from_der(certificate.der()).expect("el DER deberia parsearse");
-    let spki = parsed
-        .tbs_certificate()
-        .subject_public_key_info()
-        .to_der()
-        .expect("el SPKI deberia serializarse");
-    let key = PKey::public_key_from_der(&spki).expect("clave publica del certificado");
-
-    let mut verifier =
-        Verifier::new(MessageDigest::sha1(), &key).expect("openssl deberia ofrecer SHA1 con RSA");
-    verifier.update(data).expect("los datos deberian entrar");
-    verifier.verify(signature).expect("la firma deberia leerse")
-}
-
 #[test]
 fn one_secret_signs_the_whole_batch_and_every_signature_verifies() {
     let certificate = certificate();
@@ -122,22 +103,19 @@ fn the_sha512_the_site_asks_for_is_signed_by_the_token_and_verifies() {
 }
 
 #[test]
-fn the_sha1_a_site_still_asks_for_is_signed_by_the_token_and_verifies() {
+fn sha1_is_no_longer_composed_for_the_token() {
     let certificate = certificate();
 
-    let raw = signed_for_the_remote_batch(
+    let refusal = signed_for_the_remote_batch(
         &RealToken,
         &certificate,
         &ProtectedSecret::from_str(PIN),
         "SHA1withRSA",
         FIRST,
     )
-    .expect("el token ofrece CKM_SHA1_RSA_PKCS");
+    .expect_err("rFirma ya no firma con SHA-1");
 
-    assert!(
-        verifies_with_sha1(&certificate, FIRST, &raw),
-        "la firma SHA1 no verifica contra la clave publica del certificado"
-    );
+    assert_eq!(refusal.situation, "mechanismNotOffered");
 }
 
 #[test]

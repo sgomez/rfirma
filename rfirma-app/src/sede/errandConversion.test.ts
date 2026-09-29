@@ -126,7 +126,7 @@ describe("cada momento que llega se convierte en lo que la ventana espera", () =
     });
   });
 
-  it.each(["explicitXades", "invoiceMultisignature", "unsupportedCountersignature"])(
+  it.each(["sha1", "explicitXades", "invoiceMultisignature", "unsupportedCountersignature"])(
     "keeps %s, a signature rFirma refuses to make, as its own refusal",
     (situation) => {
       const view: SiteErrandView = {

@@ -159,6 +159,13 @@ describe("4 · outcome", () => {
 
   it.each([
     {
+      situation: "sha1",
+      detail: "SAF_03: el algoritmo 'SHA1withRSA' es SHA-1: rFirma firma con SHA-2",
+      sentence:
+        "sede.ejemplo.gob.es ha pedido un tipo de firma antiguo que ya no es seguro, con SHA-1. Por eso rFirma no la hace. No es un fallo tuyo; si necesitas terminar el trámite, contacta con sede.ejemplo.gob.es.",
+      note: "Pedid SHA256withRSA o superior.",
+    },
+    {
       situation: "explicitXades",
       detail: "SAF_06: mode=explicit con XAdES (firma de la huella SHA-1)",
       sentence:
