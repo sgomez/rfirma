@@ -117,6 +117,7 @@ check-repo: check-version
     ruff check {{ root }}/packaging {{ root }}/scripts
     {{ root }}/scripts/tests/outline_test.sh
     {{ root }}/scripts/tests/ci_lanes_test.sh
+    {{ root }}/scripts/tests/packages_manifest_test.sh
 
 # Una sola invocacion de Maven: compila con -Xlint:all, prueba y empaqueta.
 [group('ci')]
@@ -424,6 +425,11 @@ native: build-java
         exit 1
     fi
     ls -la "$dest"
+
+# Escribe el paquetes.json de un directorio de paquetes (ADR-0015).
+[group('ci')]
+packages-manifest dir:
+    {{ root }}/scripts/packages-manifest.sh write {{ dir }}
 
 # Comprueba el suelo de glibc de la libreria nativa (docs/research/glibc-libreria-nativa.md).
 [group('ci')]
