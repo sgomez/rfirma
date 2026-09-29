@@ -100,7 +100,10 @@ Fuera de esas condiciones, el firmante XAdES ignora `mode`
   son desviaciones.
 - Las comprobaciones de la suite de conformidad que exigen lo que este ADR
   decide no hacer llevan la etiqueta `rfirma:adr-0023`: las que miden que el
-  original firma con SHA-1, la XAdES explícita,
+  original firma con SHA-1 —`a_cades_signature_is_made_with_the_sha1_requested`,
+  `a_xades_signature_is_made_with_the_sha1_requested`,
+  `a_pades_signature_is_made_with_the_sha1_requested` y
+  `a_local_batch_with_the_sha1_algorithm_is_signed_with_sha1`—, la XAdES explícita,
   `an_explicit_xades_signs_the_sha1_of_the_data`, que además lleva
   `manual:deprecated` porque el original la marca como obsoleta, y el
   certificado caducado de la regla 1,
