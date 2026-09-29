@@ -175,6 +175,10 @@ Rust tests at all. What the caching buys (`~/.m2`, the pnpm store,
 `Swatinem/rust-cache`, prebuilt binaries instead of `cargo install`) is the
 gap between a cold run and that warm number.
 
+**Only `main` writes Rust caches** (`save-if`, guarded by `check-workflows.sh`):
+a PR restores `main`'s and saves none, and `Limpieza de caches` deletes what a
+closed PR left, so the 10 GB quota does not evict `main`'s Windows cache.
+
 The `native` lane runs `just test-native` (tier C and the FFI CRAP gate in one instrumented pass)
 on **every push to `main` and every PR its files can affect**. The native library `librfirma_crypto.so` is
 cached by hash of the Java bridge and `bootstrap.sh`, so PRs that do not touch Java

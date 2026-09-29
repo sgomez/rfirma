@@ -274,6 +274,7 @@ jobs:
         with:
           workspaces: rfirma-app/src-tauri
           key: no-debuginfo
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       # Tauri v2 en Linux compila contra WebKitGTK 4.1. Sin estos paquetes el
       # carril entero se cae en el build.rs de javascriptcore-rs-sys con un
@@ -423,7 +424,8 @@ jobs:
         if: steps.scope.outputs.build == 'true'
         with:
           workspaces: rfirma-app/src-tauri
-          key: no-debuginfo
+          shared-key: linux-native
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - uses: ./.github/actions/setup-just
         if: steps.scope.outputs.build == 'true'
@@ -587,6 +589,7 @@ jobs:
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           workspaces: rfirma-app/src-tauri
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - uses: ./.github/actions/setup-just
 
@@ -704,6 +707,7 @@ jobs:
         with:
           workspaces: rfirma-app/src-tauri
           shared-key: windows-release
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - uses: ./.github/actions/setup-just
 
@@ -788,6 +792,8 @@ jobs:
         if: steps.scope.outputs.build == 'true'
         with:
           workspaces: rfirma-app/src-tauri
+          shared-key: linux-release
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - uses: ./.github/actions/setup-just
         if: steps.scope.outputs.build == 'true'
