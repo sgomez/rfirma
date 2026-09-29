@@ -230,6 +230,8 @@ jobs:
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           workspaces: rfirma-app/src-tauri
+          shared-key: linux-native
+          save-if: false
 
       - uses: ./.github/actions/setup-just
 
@@ -378,6 +380,8 @@ jobs:
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           workspaces: rfirma-app/src-tauri
+          shared-key: linux-release
+          save-if: false
 
       - uses: ./.github/actions/setup-just
 

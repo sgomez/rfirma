@@ -272,3 +272,35 @@ if [ -n "$docker" ]; then
     exit 1
 fi
 echo "OK  ningun workflow toca Docker ni un registro de imagenes"
+
+
+# ---------------------------------------------------------- caches de Rust --
+# Solo `main` guarda caches de Rust: las de cada PR desbordan el cupo de 10 GB
+# y GitHub desaloja primero las de `main` que menos se leen, las de Windows.
+sin_save_if="$(awk '
+    function cierra() {
+        if (abierto && !valido) print origen
+        abierto = 0
+    }
+    FNR == 1 { cierra() }
+    /uses:[[:space:]]*Swatinem\/rust-cache@/ {
+        cierra()
+        abierto = 1; valido = 0; origen = FILENAME ":" FNR
+        match($0, /^[[:space:]]*/); sangria = RLENGTH
+        next
+    }
+    abierto {
+        match($0, /^[[:space:]]*/)
+        if ($0 !~ /^[[:space:]]*$/ && RLENGTH <= sangria) cierra()
+        else if ($0 ~ /^[[:space:]]*save-if:[[:space:]]*(false|\$\{\{[[:space:]]*github\.ref[[:space:]]*==[[:space:]]*'\''refs\/heads\/main'\''[[:space:]]*\}\})[[:space:]]*$/) valido = 1
+    }
+    END { cierra() }
+' .github/workflows/*.yml)"
+if [ -n "$sin_save_if" ]; then
+    printf '%s\n' "$sin_save_if" >&2
+    echo >&2
+    echo "cada Swatinem/rust-cache declara 'save-if: \${{ github.ref == 'refs/heads/main' }}'" >&2
+    echo "o 'save-if: false': una PR lee la cache de main, no guarda la suya." >&2
+    exit 1
+fi
+echo "OK  solo main guarda caches de Rust"
