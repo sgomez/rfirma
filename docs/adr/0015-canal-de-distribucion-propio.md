@@ -226,9 +226,21 @@ misma cosa en la misma apertura del panel.
   publicar, todos de la misma persona y ninguno con una decisión que no se hubiera tomado
   ya al empujar la etiqueta o al publicar. Con un solo administrador, quién puede crear la
   etiqueta ya es quién puede llegar a los secretos.
-- **Copiar `nightly.yml` de tabularis.** El [#222](https://github.com/sgomez/rfirma/issues/222)
-  dejó a tabularis medido como **contraejemplo, no modelo**. Lo que sobrevive de él es el
-  hecho desnudo: un remoto propio es un canal normal, no una rareza.
+- **Un *nightly* de `main`**, como el `nightly.yml` de tabularis: un cron que construye el
+  último commit con el CI en verde y lo publica como prerelease. Se descarta por cuatro
+  razones, y ninguna es de gusto:
+  - **Rompe la cerradura de los secretos.** Firmado, obliga a abrir el
+    `environment: release` a un cron sobre `main` o a una segunda clave; sin firmar, no puede
+    entrar en los repositorios, por lo mismo que se descarta el remoto sin firmar.
+  - **Rompe la versión única.** tabularis reescribe la versión en cada construcción y lleva
+    un contador semver propio, porque WiX y NSIS rechazan prereleases no numéricas; aquí
+    `tauri.conf.json` es la fuente y `just check-version` la vigila.
+  - **No tiene a quién servir.** tabularis alimenta con él un canal de su actualizador y un
+    paquete AUR aparte; rFirma no tiene actualizador, y a quien firma un trámite no se le
+    ofrece una construcción diaria.
+  - **Lo que resolvería ya tiene sitio.** Probar una rama lo cubre `build.yml` invocado desde
+    un PR etiquetado, que la invariante 1 permite sin secretos; ensayar la tubería, las
+    etiquetas `-rc.N`.
 - **Una caché de 24 horas para la comprobación de versión**, la lectura obvia cuando se
   guarda la última respuesta. Se descarta porque no resuelve el problema que resolvería una
   caché: el escritorio no se reabre varias veces en un mismo día con la frecuencia que haría
