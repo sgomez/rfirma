@@ -1,0 +1,16 @@
+# Copia el workspace a un Dev Drive (ReFS) y pone el CARGO_HOME en el (ADR-0035).
+name: Dev Drive de Windows
+description: Los pasos siguientes trabajan en DEV_DRIVE_WORKSPACE, no en el workspace de NTFS.
+
+runs:
+  using: composite
+  steps:
+    - uses: samypr100/setup-dev-drive@562171fe8df7401fdf582d766cd3b6ab80d5b1a0 # v4.1.0
+      with:
+        drive-size: 10GB
+        workspace-copy: true
+        env-mapping: |
+          CARGO_HOME,{{ DEV_DRIVE }}/.cargo
+
+    - shell: bash
+      run: cygpath -w "$CARGO_HOME/bin" >> "$GITHUB_PATH"

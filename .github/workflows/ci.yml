@@ -554,6 +554,8 @@ jobs:
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
+      - uses: ./.github/actions/setup-dev-drive
+
       - name: GraalVM CE ${{ env.GRAALVM_VERSION }}
         uses: graalvm/setup-graalvm@0426e2e191540e8514dff98dc52a5f5146a2a276 # v1.6.6
         with:
@@ -588,7 +590,7 @@ jobs:
 
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
-          workspaces: rfirma-app/src-tauri
+          workspaces: ${{ env.DEV_DRIVE_WORKSPACE }}/rfirma-app/src-tauri
           save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - uses: ./.github/actions/setup-just
@@ -600,7 +602,7 @@ jobs:
         id: cache-native-lib
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          path: rfirma-native-bridge/target/lib/rfirma
+          path: ${{ env.DEV_DRIVE_WORKSPACE }}/rfirma-native-bridge/target/lib/rfirma
           key: native-lib-${{ runner.os }}-graalvm${{ env.GRAALVM_VERSION }}-${{ hashFiles('scripts/bootstrap.sh', 'rfirma-native-bridge/pom.xml', 'rfirma-native-bridge/src/main/**') }}
 
       - name: Cache de ~/.m2
@@ -613,12 +615,13 @@ jobs:
 
       - name: Construye la libreria nativa
         if: steps.cache-native-lib.outputs.cache-hit != 'true'
+        working-directory: ${{ env.DEV_DRIVE_WORKSPACE }}
         run: just native
       - name: Guarda rfirma_crypto.dll
         if: steps.cache-native-lib.outputs.cache-hit != 'true'
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          path: rfirma-native-bridge/target/lib/rfirma
+          path: ${{ env.DEV_DRIVE_WORKSPACE }}/rfirma-native-bridge/target/lib/rfirma
           key: ${{ steps.cache-native-lib.outputs.cache-primary-key }}
 
       # El `prepare` de pnpm es un script de bash, y pnpm no lee la variable
@@ -627,15 +630,18 @@ jobs:
         run: pnpm config set script-shell "C:/Program Files/Git/bin/bash.exe"
 
       - name: Interfaz compilada
+        working-directory: ${{ env.DEV_DRIVE_WORKSPACE }}
         run: just build-ts
 
       - name: clippy y rustfmt
+        working-directory: ${{ env.DEV_DRIVE_WORKSPACE }}
         run: just lint-rust
 
       - uses: cargo-bins/cargo-binstall@b874e25ea559687bec77e281e9b271aa1367b624 # v1.23.0
       - name: Herramientas de cobertura y de CRAP
         env:
           GITHUB_TOKEN: ${{ github.token }}
+        working-directory: ${{ env.DEV_DRIVE_WORKSPACE }}
         run: |
           cargo binstall --no-confirm cargo-llvm-cov
           cargo binstall --no-confirm "cargo-crap@${CRAP_VERSION}"
@@ -643,6 +649,7 @@ jobs:
       # El adaptador CNG solo compila aqui: Linux lo oculta de su puerta CRAP y
       # este paso lo mide (ADR-0014, ADR-0035).
       - name: Pruebas de --lib y del canal local, y CRAP del adaptador CNG
+        working-directory: ${{ env.DEV_DRIVE_WORKSPACE }}
         run: just test-windows
 
   # ==========================================================================
@@ -671,6 +678,8 @@ jobs:
         run: git config --global core.autocrlf false
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: ./.github/actions/setup-dev-drive
 
       - name: GraalVM CE ${{ env.GRAALVM_VERSION }}
         uses: graalvm/setup-graalvm@0426e2e191540e8514dff98dc52a5f5146a2a276 # v1.6.6
@@ -705,7 +714,7 @@ jobs:
       # La misma `shared-key` que el job `windows` de build.yml, que la lee.
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
-          workspaces: rfirma-app/src-tauri
+          workspaces: ${{ env.DEV_DRIVE_WORKSPACE }}/rfirma-app/src-tauri
           shared-key: windows-release
           save-if: ${{ github.ref == 'refs/heads/main' }}
 
@@ -717,7 +726,7 @@ jobs:
         id: cache-native-lib
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          path: rfirma-native-bridge/target/lib/rfirma
+          path: ${{ env.DEV_DRIVE_WORKSPACE }}/rfirma-native-bridge/target/lib/rfirma
           key: native-lib-${{ runner.os }}-graalvm${{ env.GRAALVM_VERSION }}-${{ hashFiles('scripts/bootstrap.sh', 'rfirma-native-bridge/pom.xml', 'rfirma-native-bridge/src/main/**') }}
 
       - name: Cache de ~/.m2
@@ -730,6 +739,7 @@ jobs:
 
       - name: Construye la libreria nativa
         if: steps.cache-native-lib.outputs.cache-hit != 'true'
+        working-directory: ${{ env.DEV_DRIVE_WORKSPACE }}
         run: just native
 
       # El `prepare` de pnpm es un script de bash, y pnpm no lee la variable
@@ -740,6 +750,7 @@ jobs:
       # La misma receta que la release: con otra orden cambiarian las
       # features de tauri y la cache no le serviria.
       - name: Compila como la release
+        working-directory: ${{ env.DEV_DRIVE_WORKSPACE }}
         run: just bundle-windows
 
   # ==========================================================================

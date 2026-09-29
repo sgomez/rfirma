@@ -456,6 +456,8 @@ jobs:
         with:
           ref: ${{ inputs.ref }}
 
+      - uses: ./.github/actions/setup-dev-drive
+
       - name: GraalVM CE ${{ env.GRAALVM_VERSION }}
         uses: graalvm/setup-graalvm@0426e2e191540e8514dff98dc52a5f5146a2a276 # v1.6.6
         with:
@@ -496,13 +498,14 @@ jobs:
 
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
-          workspaces: rfirma-app/src-tauri
+          workspaces: ${{ env.DEV_DRIVE_WORKSPACE }}/rfirma-app/src-tauri
           shared-key: windows-release
           save-if: false
 
       - uses: ./.github/actions/setup-just
 
       - name: Libreria nativa
+        working-directory: ${{ env.DEV_DRIVE_WORKSPACE }}
         run: just native
 
       # El `prepare` de pnpm es un script de bash, y pnpm no lee la variable
@@ -511,13 +514,14 @@ jobs:
         run: pnpm config set script-shell "C:/Program Files/Git/bin/bash.exe"
 
       - name: Empaqueta el instalador NSIS
+        working-directory: ${{ env.DEV_DRIVE_WORKSPACE }}
         run: just bundle-windows
 
       - name: Sube el instalador
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: bundle-windows
-          path: rfirma-app/src-tauri/target/release/bundle/nsis/*-setup.exe
+          path: ${{ env.DEV_DRIVE_WORKSPACE }}/rfirma-app/src-tauri/target/release/bundle/nsis/*-setup.exe
           if-no-files-found: error
           retention-days: 1
 

@@ -327,6 +327,8 @@ interfaz también en Linux. Se aplaza; mientras, el almacén del usuario se pres
 - El instalador no está firmado con Authenticode: SmartScreen avisa al abrirlo.
 - Un cambio solo en `packaging/windows/` no enciende el carril de Windows en un PR, porque
   `ci-lanes.sh` no tiene un carril propio para él.
+- Los tres jobs de Windows del CI compilan en un Dev Drive (ReFS) con el workspace copiado
+  (`.github/actions/setup-dev-drive`): `target/`, `CARGO_HOME` y el directorio de GraalVM viven ahí.
 - `cargo test` en Windows no corre las pruebas de grada B y C que necesitan softhsm o NSS.
 - Las pruebas de `identity/adapters/windows_store/tests.rs` crean certificados autofirmados en
   `Cert:\CurrentUser\My` con `New-SelfSignedCertificate` y los borran con su clave al acabar.
