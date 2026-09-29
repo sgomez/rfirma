@@ -7,7 +7,8 @@ Los arneses que las recetas del `justfile` llaman por nombre, siguiendo el patr�
 | `bootstrap.sh` | Instala en `~/.m2` las dependencias Java de AutoFirma que no están en Maven Central. |
 | `outline.sh` | El esqueleto de un `.rs`, `.ts` o `.tsx`, para `just outline`. |
 | `tools.sh` | Comprueba las herramientas del entorno y falla nombrando la que falte. |
-| `changelog-release.sh` | Reúne los fragmentos de `changelog.d/` en la sección de una versión de `CHANGELOG.md`. |
+| `release.sh` | Publica una versión desde `main`: changelog, bump, commit, etiqueta y push atómico, para `just release`. |
+| `changelog-release.sh` | Escribe en `CHANGELOG.md` la sección de una versión a partir de los títulos de PR desde la última etiqueta. |
 | `bump-version.sh` | Sube la versión en los sitios del candado de `check-version.py`, para `just bump-version`. |
 | `dev-handler.sh` | Registra o quita el binario de desarrollo como manejador de `afirma://`. |
 | `isolated-store.sh` | Monta, para un cliente de la suite de conformidad y un almacén (`rsa`, `ec`, `token`, `token_apart`, `ed25519`, `several` o `expired`), su perfil de usar y tirar con su envoltorio y su raíz de confianza, sin lanzar el cliente. Lo llama la consola web de la suite al resolver el cliente, no una receta. |

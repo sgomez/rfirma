@@ -6,7 +6,7 @@ set -euo pipefail
 inert() {
     case "$1" in
         docs/adr/* | docs/design/*) return 1 ;;
-        docs/* | rfirma-conformance/* | changelog.d/* | .claude/* | .agents/* | skills-lock.json) return 0 ;;
+        docs/* | rfirma-conformance/* | .claude/* | .agents/* | skills-lock.json) return 0 ;;
         */*) return 1 ;;
         *.md) return 0 ;;
     esac

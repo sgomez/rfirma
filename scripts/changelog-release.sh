@@ -1,78 +1,91 @@
 #!/usr/bin/env python3
-import datetime, glob, os, re, sys
+"""Escribe en CHANGELOG.md la sección de una versión a partir de los títulos de PR desde la última etiqueta."""
+
+import datetime
+import os
+import re
+import subprocess
+import sys
 
 root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 os.chdir(root)
 version = sys.argv[1]
 
+CATEGORY_BY_TYPE = {"feat": "Added", "perf": "Changed", "fix": "Fixed"}
+CATEGORY_ORDER = ["Added", "Changed", "Fixed"]
+INTERNAL_SCOPES = {
+    "agents", "ci", "conformance", "just", "pr", "probe", "site-driver",
+    "suite", "test", "testbench",
+}
+MERGE_SUBJECT = re.compile(r"^Merge pull request #(\d+) from ")
+CONVENTIONAL = re.compile(r"^(\w+)(?:\(([^)]+)\))?!?: (.+)$")
 
-def numero_issue(p):
-    nombre = os.path.splitext(os.path.basename(p))[0]
+
+def git(*args):
+    return subprocess.run(
+        ["git", *args], check=True, capture_output=True, text=True
+    ).stdout
+
+
+def previous_tag():
     try:
-        return int(nombre)
-    except ValueError:
-        sys.exit(
-            f"{p}: el nombre debe ser el numero de issue (ej. 252.md), "
-            f"segun changelog.d/README.md."
-        )
+        return git("describe", "--tags", "--abbrev=0", "--match", "v*").strip()
+    except subprocess.CalledProcessError:
+        sys.exit("No hay ninguna etiqueta v* de la que partir.")
 
 
-fragments = sorted(
-    (p for p in glob.glob("changelog.d/*.md") if os.path.basename(p) != "README.md"),
-    key=numero_issue,
-)
-if not fragments:
-    sys.exit("changelog.d/ no tiene fragmentos que reunir.")
+def first_parent_commits(since):
+    log = git("log", "--first-parent", "--format=%s%x1f%b%x1e", f"{since}..HEAD")
+    for record in log.split("\x1e"):
+        if record.strip():
+            subject, _, body = record.strip("\n").partition("\x1f")
+            yield subject, body
 
-# Orden canonico de Keep a Changelog. Cada fragmento agrupa sus lineas bajo
-# uno o varios encabezados "### <categoria>"; aqui se acumulan por categoria
-# (conservando el orden por numero de issue dentro de cada una) para que la
-# seccion publicada no repita encabezados sueltos.
-categorias_canonicas = [
-    "Added", "Changed", "Deprecated", "Removed", "Fixed", "Security",
-]
-lineas_por_categoria = {c: [] for c in categorias_canonicas}
-encabezado = re.compile(r"^### (\w+)\s*$", re.MULTILINE)
 
-for f in fragments:
-    contenido = open(f, encoding="utf-8").read().strip()
-    coincidencias = list(encabezado.finditer(contenido))
-    if not coincidencias:
-        sys.exit(f"{f}: no tiene ningun encabezado '### <categoria>'.")
-    for i, m in enumerate(coincidencias):
-        categoria = m.group(1)
-        if categoria not in lineas_por_categoria:
-            sys.exit(f"{f}: categoria desconocida '### {categoria}'.")
-        inicio = m.end()
-        fin = coincidencias[i + 1].start() if i + 1 < len(coincidencias) else len(contenido)
-        lineas_por_categoria[categoria].append(contenido[inicio:fin].strip())
+def entry(subject, body):
+    merge = MERGE_SUBJECT.match(subject)
+    if merge:
+        title = next((line for line in body.splitlines() if line.strip()), "")
+        reference = f" (#{merge.group(1)})"
+    else:
+        title, reference = subject, ""
+    parsed = CONVENTIONAL.match(title.strip())
+    if not parsed:
+        return None
+    kind, scope, description = parsed.groups()
+    category = CATEGORY_BY_TYPE.get(kind)
+    if category is None or scope in INTERNAL_SCOPES:
+        return None
+    description = description.rstrip(".")
+    return category, f"- {description[0].upper()}{description[1:]}{reference}."
 
-body = "\n\n".join(
-    f"### {categoria}\n{chr(10).join(lineas_por_categoria[categoria])}"
-    for categoria in categorias_canonicas
-    if lineas_por_categoria[categoria]
-)
-today = datetime.date.today().isoformat()
+
+def section_body(since):
+    lines = {category: [] for category in CATEGORY_ORDER}
+    for subject, body in reversed(list(first_parent_commits(since))):
+        found = entry(subject, body)
+        if found:
+            lines[found[0]].append(found[1])
+    blocks = [
+        f"### {category}\n" + "\n".join(lines[category])
+        for category in CATEGORY_ORDER
+        if lines[category]
+    ]
+    return "\n\n".join(blocks) or "Sin cambios visibles para quien usa rFirma."
+
 
 changelog = open("CHANGELOG.md", encoding="utf-8").read()
-placeholder = re.compile(
-    r"^## \[" + re.escape(version) + r"\] - sin publicar$", re.MULTILINE
-)
-if placeholder.search(changelog):
-    seccion = f"## [{version}] - {today}\n\n{body}"
-    changelog = placeholder.sub(lambda _m: seccion, changelog, count=1)
+if re.search(r"^## \[" + re.escape(version) + r"\]", changelog, re.MULTILINE):
+    sys.exit(f"CHANGELOG.md ya tiene una sección para {version}.")
+
+since = previous_tag()
+today = datetime.date.today().isoformat()
+section = f"## [{version}] - {today}\n\n{section_body(since)}\n\n"
+first_heading = re.search(r"^## \[", changelog, re.MULTILINE)
+if first_heading:
+    changelog = changelog[: first_heading.start()] + section + changelog[first_heading.start():]
 else:
-    first_heading = re.search(r"^## \[", changelog, re.MULTILINE)
-    section = f"## [{version}] - {today}\n\n{body}\n\n"
-    if first_heading:
-        pos = first_heading.start()
-        changelog = changelog[:pos] + section + changelog[pos:]
-    else:
-        changelog = changelog.rstrip("\n") + "\n\n" + section
+    changelog = changelog.rstrip("\n") + "\n\n" + section
 
 open("CHANGELOG.md", "w", encoding="utf-8").write(changelog)
-
-for f in fragments:
-    os.remove(f)
-
-print(f"CHANGELOG.md: version {version} publicada con {len(fragments)} fragmento(s).")
+print(f"CHANGELOG.md: sección {version} generada desde {since}.")
