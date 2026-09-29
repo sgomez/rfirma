@@ -65,3 +65,4 @@ grep -q 'https://example.test/run/99' <<< "$failed" || fail "enlace a los regist
 [ -z "$(compose success "paquetes${tab}15${tab}100${tab}2026-10-13T10:00:00Z")" ] || fail "éxito sin artefactos de preview: salida vacía"
 [ -z "$(compose success "")" ] || fail "éxito sin ningún artefacto: salida vacía"
 [ -z "$(compose cancelled "$four")" ] || fail "cancelada: salida vacía"
+[ -z "$(compose skipped "$four")" ] || fail "saltada (PR sin la etiqueta): salida vacía"

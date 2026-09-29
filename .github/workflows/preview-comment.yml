@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   comment:
-    if: github.event.workflow_run.conclusion != 'cancelled'
+    if: ${{ !contains(fromJSON('["cancelled", "skipped"]'), github.event.workflow_run.conclusion) }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

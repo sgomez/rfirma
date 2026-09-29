@@ -13,15 +13,15 @@ manifest="${1:?falta el manifiesto paquetes.json}"
 artifacts="$(cat)"
 short_sha="${SHA:0:7}"
 
-if [ "$CONCLUSION" = cancelled ]; then
-    exit 0
-fi
-
-if [ "$CONCLUSION" != success ]; then
-    printf '%s\n\nLa construcción de prueba de `%s` ha fallado: [ver los registros](%s).\n' \
-        "$marker" "$short_sha" "$RUN_URL"
-    exit 0
-fi
+case "$CONCLUSION" in
+    success) ;;
+    failure | timed_out | startup_failure)
+        printf '%s\n\nLa construcción de prueba de `%s` ha fallado: [ver los registros](%s).\n' \
+            "$marker" "$short_sha" "$RUN_URL"
+        exit 0
+        ;;
+    *) exit 0 ;;
+esac
 
 previews="$(printf '%s\n' "$artifacts" | awk -F'\t' '$1 ~ /^rfirma-preview-./')"
 if [ -z "$previews" ]; then
