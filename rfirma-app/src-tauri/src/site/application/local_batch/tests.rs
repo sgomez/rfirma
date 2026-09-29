@@ -201,6 +201,33 @@ fn a_batch_with_an_algorithm_rfirma_does_not_sign_is_refused() {
 }
 
 #[test]
+fn a_batch_with_sha1_is_refused_as_sha1_before_signing_any_item() {
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let desk = a_desk_that_is_never_touched(home.path());
+    let certificate = a_usable_certificate("FIRMA");
+    let batch = a_local_batch(
+        r#"{"algorithm":"SHA1withRSA","format":"auto","stoponerror":false,"singlesigns":[{"id":"1","datareference":"ZGF0bw=="}]}"#,
+    );
+
+    let refusal = signed_local_batch(
+        &desk,
+        &certificate,
+        &crate::identity::domain::protected_secret::ProtectedSecret::from_str("1234"),
+        &batch,
+    )
+    .expect_err("SHA-1 no se atiende");
+
+    let SiteRefusal::Signing(refused) = refusal else {
+        panic!("es la situacion SHA-1: {refusal:?}");
+    };
+    assert_eq!(refused.situation, "sha1");
+    assert_eq!(
+        refused.code,
+        crate::site::domain::protocol::SafCode::LocalBatchSign
+    );
+}
+
+#[test]
 fn a_pades_countersign_in_the_batch_fails_that_item_without_signing_it() {
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
     let desk = a_desk_that_is_never_touched(home.path());

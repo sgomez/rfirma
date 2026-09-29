@@ -7,10 +7,11 @@ use crate::identity::domain::protected_secret::ProtectedSecret;
 use crate::signing::domain::bridge::Format;
 use crate::site::application::errand::desk::{write_the_document, ErrandDesk};
 use crate::site::application::session::SiteRefusal;
-use crate::site::domain::batch::{LocalBatch, LocalBatchResult, LocalSingleSign};
+use crate::site::domain::batch::{sha1_detail, LocalBatch, LocalBatchResult, LocalSingleSign};
 use crate::site::domain::protocol::{
-    refuse_a_countersignature_outside_cades_and_xades, AskedAlgorithm,
+    refuse_a_countersignature_outside_cades_and_xades, AlgorithmReading, AskedAlgorithm, SafCode,
 };
+use crate::site::domain::signing::SigningRefusal;
 use crate::site::ports::{FilterEngine, PolicyEngine, SiteSigningRequest};
 
 /// Caso de uso: firma cada elemento del lote local con el ciclo de sede, aplicando `stoponerror`.
@@ -26,11 +27,22 @@ pub fn signed_local_batch<E: FilterEngine, P: PolicyEngine>(
         ));
     }
 
-    let Some(algorithm) = AskedAlgorithm::named(batch.algorithm()) else {
-        return Err(SiteRefusal::LocalBatch(format!(
-            "el lote local pide un algoritmo que no se reconoce: {}",
-            batch.algorithm()
-        )));
+    let algorithm = match AskedAlgorithm::read(batch.algorithm()) {
+        AlgorithmReading::Attended(algorithm) => algorithm,
+        AlgorithmReading::Sha1 => {
+            return Err(SiteRefusal::Signing(SigningRefusal {
+                code: SafCode::LocalBatchSign,
+                situation: "sha1".to_owned(),
+                detail: sha1_detail(batch.algorithm()),
+                attempts_left: None,
+            }))
+        }
+        AlgorithmReading::Unrecognized => {
+            return Err(SiteRefusal::LocalBatch(format!(
+                "el lote local pide un algoritmo que no se reconoce: {}",
+                batch.algorithm()
+            )))
+        }
     };
 
     let mut results = Vec::with_capacity(batch.signs().len());

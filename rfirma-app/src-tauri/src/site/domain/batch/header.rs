@@ -1,18 +1,36 @@
 //! El algoritmo de la cabecera del lote remoto, que se lee al firmar sus `PK1` y no al analizar la petición (`BatchSigner`, 1.9.2).
 
 use super::BatchFormat;
-use crate::site::domain::protocol::AskedAlgorithm;
+use crate::site::domain::protocol::{AlgorithmReading, AskedAlgorithm};
+
+/// Por qué la cabecera del lote no da un algoritmo que rFirma firme.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum HeaderRefusal {
+    /// El lote pide SHA-1 (ADR-0023).
+    Sha1(String),
+    /// La cabecera falta, no se lee o nombra un algoritmo que rFirma no firma.
+    Unreadable(String),
+}
 
 /// El `algorithm` del lote, ya admitido: atributo de `<signbatch>` en el XML heredado, o campo del objeto raíz en JSON.
-pub fn batch_algorithm(format: BatchFormat, lote: &[u8]) -> Result<String, String> {
+pub fn batch_algorithm(format: BatchFormat, lote: &[u8]) -> Result<String, HeaderRefusal> {
     let algorithm = match format {
-        BatchFormat::Json => algorithm_in_json(lote)?,
-        BatchFormat::Xml => algorithm_in_xml(lote)?,
-    };
-    match AskedAlgorithm::named(&algorithm) {
-        Some(_) => Ok(algorithm),
-        None => Err(format!("el algoritmo de lote '{algorithm}' no se atiende")),
+        BatchFormat::Json => algorithm_in_json(lote),
+        BatchFormat::Xml => algorithm_in_xml(lote),
     }
+    .map_err(HeaderRefusal::Unreadable)?;
+    match AskedAlgorithm::read(&algorithm) {
+        AlgorithmReading::Attended(_) => Ok(algorithm),
+        AlgorithmReading::Sha1 => Err(HeaderRefusal::Sha1(sha1_detail(&algorithm))),
+        AlgorithmReading::Unrecognized => Err(HeaderRefusal::Unreadable(format!(
+            "el algoritmo de lote '{algorithm}' no se atiende"
+        ))),
+    }
+}
+
+/// El detalle con el que se rechaza un lote que pide SHA-1.
+pub fn sha1_detail(algorithm: &str) -> String {
+    format!("el algoritmo '{algorithm}' es SHA-1: rFirma firma con SHA-2")
 }
 
 fn algorithm_in_json(lote: &[u8]) -> Result<String, String> {

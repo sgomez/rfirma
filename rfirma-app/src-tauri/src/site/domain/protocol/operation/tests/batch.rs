@@ -81,9 +81,8 @@ fn a_local_batch_without_algorithm_is_attended_because_it_is_read_when_signed() 
     assert!(request.is_local());
 }
 
-/// Hay sedes en producción que declaran así su lote (ADR-0023).
 #[test]
-fn a_batch_with_sha1_is_attended_like_the_original_attends_it() {
+fn a_batch_with_sha1_is_read_as_a_batch_because_its_header_is_refused_when_signed() {
     for (name, lote_xml) in [
         ("sha1 en XML", xml_lote("sha1", false)),
         ("SHA1 en XML", xml_lote("SHA1", false)),

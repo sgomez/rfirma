@@ -41,17 +41,26 @@ fn the_json_batch_declares_its_algorithm_in_the_root_object() {
 }
 
 #[test]
-fn sha1_is_not_read_because_rfirma_no_longer_signs_with_it() {
+fn sha1_is_read_as_the_refused_sha1_in_both_formats() {
     for algorithm in ["sha1", "SHA1", "SHA1withRSA", "SHA-1"] {
-        assert!(batch_algorithm(BatchFormat::Xml, xml_lote(algorithm).as_bytes()).is_err());
-        assert!(batch_algorithm(BatchFormat::Json, json_lote(algorithm).as_bytes()).is_err());
+        assert!(matches!(
+            batch_algorithm(BatchFormat::Xml, xml_lote(algorithm).as_bytes()),
+            Err(HeaderRefusal::Sha1(_))
+        ));
+        assert!(matches!(
+            batch_algorithm(BatchFormat::Json, json_lote(algorithm).as_bytes()),
+            Err(HeaderRefusal::Sha1(_))
+        ));
     }
 }
 
 #[test]
 fn an_algorithm_rfirma_cannot_produce_is_not_read() {
     for algorithm in ["RIPEMD160withRSA", "MD5"] {
-        assert!(batch_algorithm(BatchFormat::Xml, xml_lote(algorithm).as_bytes()).is_err());
+        assert!(matches!(
+            batch_algorithm(BatchFormat::Xml, xml_lote(algorithm).as_bytes()),
+            Err(HeaderRefusal::Unreadable(_))
+        ));
     }
 }
 
