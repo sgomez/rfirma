@@ -118,6 +118,7 @@ check-repo: check-version
     {{ root }}/scripts/tests/outline_test.sh
     {{ root }}/scripts/tests/ci_lanes_test.sh
     {{ root }}/scripts/tests/packages_manifest_test.sh
+    {{ root }}/scripts/tests/preview_comment_test.sh
 
 # Una sola invocacion de Maven: compila con -Xlint:all, prueba y empaqueta.
 [group('ci')]

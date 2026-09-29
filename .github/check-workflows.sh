@@ -350,3 +350,46 @@ if [ -n "$permisos_de_mas" ]; then
     exit 1
 fi
 echo "OK  $PREVIEW no pasa secretos y declara solo contents: read"
+
+# ----------------------------------------------------------- Preview Comment --
+# El workflow que comenta solo lee: `workflow_run`, dos permisos y nada del código de la ejecución.
+COMMENT=.github/workflows/preview-comment.yml
+if [ ! -f "$COMMENT" ]; then
+    echo "falta $COMMENT (ADR-0015)." >&2
+    exit 1
+fi
+disparadores="$(awk '
+    /^on:[[:space:]]*$/ { dentro = 1; next }
+    dentro && /^[^[:space:]#]/ { dentro = 0 }
+    dentro && /^[[:space:]]*#/ { next }
+    dentro && /^  [^[:space:]]/ { sub(/:.*/, ""); gsub(/[[:space:]]/, ""); print; next }
+    dentro && /^    (workflows|types):/ { gsub(/[[:space:]]/, ""); print }
+' "$COMMENT" | tr '\n' ' ')"
+if [ "$disparadores" != "workflow_run workflows:[Preview] types:[completed] " ]; then
+    echo "$COMMENT se dispara solo por workflow_run de Preview al completarse (ADR-0015)." >&2
+    echo "encontrado: $disparadores" >&2
+    exit 1
+fi
+permisos="$(awk '
+    /^[[:space:]]*permissions:/ && !/^permissions:[[:space:]]*$/ { print "fuera-de-lugar:" FNR; next }
+    /^permissions:[[:space:]]*$/ { dentro = 1; next }
+    dentro && /^[^[:space:]#]/ { dentro = 0 }
+    dentro && /^[[:space:]]*(#.*)?$/ { next }
+    dentro { gsub(/[[:space:]]/, ""); print }
+' "$COMMENT" | sort | tr '\n' ' ')"
+if [ "$permisos" != "actions:read pull-requests:write " ]; then
+    echo "$COMMENT declara exactamente 'actions: read' y 'pull-requests: write', a nivel de workflow (ADR-0015)." >&2
+    echo "encontrado: $permisos" >&2
+    exit 1
+fi
+codigo_de_la_ejecucion="$(awk '
+    /uses:[[:space:]]*actions\/checkout@/ { dentro = 1; next }
+    dentro && /^      - / { dentro = 0 }
+    dentro && /^[[:space:]]*(ref|repository):/ && $0 !~ /^[[:space:]]*ref:[[:space:]]*\$\{\{[[:space:]]*github\.event\.repository\.default_branch[[:space:]]*\}\}[[:space:]]*$/ { print FNR ": " $0 }
+' "$COMMENT")"
+if [ -n "$codigo_de_la_ejecucion" ]; then
+    printf '%s\n' "$codigo_de_la_ejecucion" >&2
+    echo "$COMMENT solo hace checkout de la rama por defecto, nunca del código de la ejecución (ADR-0015)." >&2
+    exit 1
+fi
+echo "OK  $COMMENT: workflow_run, actions: read + pull-requests: write y sin código de la ejecución"
