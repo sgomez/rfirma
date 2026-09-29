@@ -10,10 +10,10 @@ manifest_name="paquetes.json"
 
 row_for() {
     case "$1" in
-        *.flatpak) echo "flatpak|flatpak|false|Necesita el remoto de Flathub anadido: el runtime no viaja dentro." ;;
+        *.flatpak) echo "flatpak|flatpak|false|Necesita el remoto de Flathub añadido: el runtime no viaja dentro." ;;
         *.deb) echo "linux|deb|false|" ;;
         *.rpm) echo "linux|rpm|true|" ;;
-        *-setup.exe) echo "windows|nsis|false|Windows SmartScreen avisara de que el instalador no esta firmado." ;;
+        *-setup.exe) echo "windows|nsis|false|Windows SmartScreen avisará de que el instalador no está firmado." ;;
         *) return 1 ;;
     esac
 }
