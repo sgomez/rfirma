@@ -381,8 +381,8 @@ cuando la persona pulsa `Cerrar` o cierra la ventana, como con el diálogo de
 error del original. Con WebSocket la ventana se oculta antes de contestar, y la
 siguiente operación del canal vuelve a enseñarla; si llegan varios rechazos
 seguidos, se enseñan y se contestan de uno en uno, en orden. Lo mismo vale
-para las firmas que rFirma se niega a hacer —la XAdES explícita (ADR-0023), la
-cofirma o contrafirma de una factura electrónica y la contrafirma fuera de
+para las firmas que rFirma se niega a hacer —la firma con SHA-1 y la XAdES
+explícita (ADR-0023), la cofirma o contrafirma de una factura electrónica y la contrafirma fuera de
 CAdES, CMS y XAdES—, tanto si el documento lo manda la sede como si lo elige la
 persona: su frase dice que no es un fallo de quien firma, y debajo de «Para
 quien mantiene la sede:» va una nota con lo que la sede puede cambiar. Los demás
