@@ -7,7 +7,7 @@ pub mod presign;
 pub mod result;
 pub mod triphase;
 
-pub use header::batch_algorithm;
+pub use header::{batch_algorithm, sha1_detail, HeaderRefusal};
 pub use local::{parse_local_batch, LocalBatch, LocalSingleSign};
 pub use presign::{
     parse_json_presign, update_batch_with_errors, BatchDataResult, PresignError, PresignOutcome,

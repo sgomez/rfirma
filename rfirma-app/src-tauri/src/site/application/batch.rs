@@ -8,7 +8,7 @@ use crate::identity::domain::protected_secret::ProtectedSecret;
 use crate::site::application::session::SiteRefusal;
 use crate::site::domain::batch::{
     apply_pk1, batch_algorithm, build_empty_result, build_result, parse_json_presign,
-    update_batch_with_errors, BatchDataResult, BatchFormat, TriphaseData,
+    update_batch_with_errors, BatchDataResult, BatchFormat, HeaderRefusal, TriphaseData,
 };
 use crate::site::domain::batch_error::{BatchError, Situation};
 use crate::site::domain::protocol::{BatchRequest, SafCode};
@@ -106,8 +106,7 @@ fn every_pre_signed(
     request: &BatchRequest,
     triphase_data: TriphaseData,
 ) -> Result<TriphaseData, SiteRefusal> {
-    let algorithm =
-        batch_algorithm(format_of(request), request.lote()).map_err(unreadable_algorithm)?;
+    let algorithm = batch_algorithm(format_of(request), request.lote()).map_err(refused_header)?;
     let mut refused: Option<SigningRefusal> = None;
     let with_pk1 = apply_pk1(triphase_data, |pre| {
         if refused.is_some() {
@@ -129,10 +128,14 @@ fn every_pre_signed(
     }
 }
 
-fn unreadable_algorithm(detail: String) -> SiteRefusal {
+fn refused_header(refusal: HeaderRefusal) -> SiteRefusal {
+    let (situation, detail) = match refusal {
+        HeaderRefusal::Sha1(detail) => ("sha1", detail),
+        HeaderRefusal::Unreadable(detail) => ("unreadableBatchAlgorithm", detail),
+    };
     SiteRefusal::BatchSigningFailed(SigningRefusal {
         code: SafCode::BatchSignature,
-        situation: "unreadableBatchAlgorithm".to_owned(),
+        situation: situation.to_owned(),
         detail,
         attempts_left: None,
     })

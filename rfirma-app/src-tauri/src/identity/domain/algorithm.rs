@@ -15,8 +15,6 @@ pub enum KeyKind {
 /// Un algoritmo de firma de los que el cliente original acepta por su nombre.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SignatureAlgorithm {
-    /// `SHA1withRSA` (ADR-0023).
-    Sha1Rsa,
     /// `SHA256withRSA`.
     Sha256Rsa,
     /// `SHA384withRSA`.
@@ -29,8 +27,6 @@ pub enum SignatureAlgorithm {
     Sha384RsaPss,
     /// `SHA512withRSAandMGF1`.
     Sha512RsaPss,
-    /// `SHA1withECDSA` (ADR-0023).
-    Sha1Ecdsa,
     /// `SHA256withECDSA`.
     Sha256Ecdsa,
     /// `SHA384withECDSA`.
@@ -41,15 +37,13 @@ pub enum SignatureAlgorithm {
 
 impl SignatureAlgorithm {
     /// Todos los algoritmos, en el orden en que los nombra el original.
-    pub const ALL: [Self; 11] = [
-        Self::Sha1Rsa,
+    pub const ALL: [Self; 9] = [
         Self::Sha256Rsa,
         Self::Sha384Rsa,
         Self::Sha512Rsa,
         Self::Sha256RsaPss,
         Self::Sha384RsaPss,
         Self::Sha512RsaPss,
-        Self::Sha1Ecdsa,
         Self::Sha256Ecdsa,
         Self::Sha384Ecdsa,
         Self::Sha512Ecdsa,
@@ -66,14 +60,12 @@ impl SignatureAlgorithm {
     /// El nombre con el que viaja al puente y a la sede.
     pub fn name(self) -> &'static str {
         match self {
-            Self::Sha1Rsa => "SHA1withRSA",
             Self::Sha256Rsa => "SHA256withRSA",
             Self::Sha384Rsa => "SHA384withRSA",
             Self::Sha512Rsa => "SHA512withRSA",
             Self::Sha256RsaPss => "SHA256withRSAandMGF1",
             Self::Sha384RsaPss => "SHA384withRSAandMGF1",
             Self::Sha512RsaPss => "SHA512withRSAandMGF1",
-            Self::Sha1Ecdsa => "SHA1withECDSA",
             Self::Sha256Ecdsa => "SHA256withECDSA",
             Self::Sha384Ecdsa => "SHA384withECDSA",
             Self::Sha512Ecdsa => "SHA512withECDSA",
@@ -83,9 +75,7 @@ impl SignatureAlgorithm {
     /// La clase de clave privada con la que se puede usar.
     pub fn key_kind(self) -> KeyKind {
         match self {
-            Self::Sha1Ecdsa | Self::Sha256Ecdsa | Self::Sha384Ecdsa | Self::Sha512Ecdsa => {
-                KeyKind::Ec
-            }
+            Self::Sha256Ecdsa | Self::Sha384Ecdsa | Self::Sha512Ecdsa => KeyKind::Ec,
             _ => KeyKind::Rsa,
         }
     }
@@ -93,14 +83,12 @@ impl SignatureAlgorithm {
     /// El mecanismo que el token tiene que ofrecer para cumplirlo.
     pub fn mechanism_type(self) -> MechanismType {
         match self {
-            Self::Sha1Rsa => MechanismType::SHA1_RSA_PKCS,
             Self::Sha256Rsa => MechanismType::SHA256_RSA_PKCS,
             Self::Sha384Rsa => MechanismType::SHA384_RSA_PKCS,
             Self::Sha512Rsa => MechanismType::SHA512_RSA_PKCS,
             Self::Sha256RsaPss => MechanismType::SHA256_RSA_PKCS_PSS,
             Self::Sha384RsaPss => MechanismType::SHA384_RSA_PKCS_PSS,
             Self::Sha512RsaPss => MechanismType::SHA512_RSA_PKCS_PSS,
-            Self::Sha1Ecdsa => MechanismType::ECDSA_SHA1,
             Self::Sha256Ecdsa => MechanismType::ECDSA_SHA256,
             Self::Sha384Ecdsa => MechanismType::ECDSA_SHA384,
             Self::Sha512Ecdsa => MechanismType::ECDSA_SHA512,
@@ -110,7 +98,6 @@ impl SignatureAlgorithm {
     /// El mecanismo compuesto, sobre los bytes sin hashear, con el que se invoca `C_Sign`.
     pub fn mechanism(self) -> Mechanism<'static> {
         match self {
-            Self::Sha1Rsa => Mechanism::Sha1RsaPkcs,
             Self::Sha256Rsa => Mechanism::Sha256RsaPkcs,
             Self::Sha384Rsa => Mechanism::Sha384RsaPkcs,
             Self::Sha512Rsa => Mechanism::Sha512RsaPkcs,
@@ -129,7 +116,6 @@ impl SignatureAlgorithm {
                 PkcsMgfType::MGF1_SHA512,
                 64,
             )),
-            Self::Sha1Ecdsa => Mechanism::EcdsaSha1,
             Self::Sha256Ecdsa => Mechanism::EcdsaSha256,
             Self::Sha384Ecdsa => Mechanism::EcdsaSha384,
             Self::Sha512Ecdsa => Mechanism::EcdsaSha512,

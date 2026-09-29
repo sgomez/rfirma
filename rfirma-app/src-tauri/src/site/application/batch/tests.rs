@@ -291,6 +291,40 @@ fn an_algorithm_the_batch_does_not_declare_fails_the_signature_after_the_presign
 }
 
 #[test]
+fn a_batch_with_sha1_is_refused_as_sha1_and_the_token_signs_nothing() {
+    for (lote, json, presign) in [
+        (
+            "{\"algorithm\":\"SHA1withRSA\",\"singlesigns\":[]}",
+            true,
+            PRESIGN_WITH_TWO_SIGNS,
+        ),
+        (
+            "<signbatch algorithm=\"SHA1\"><singlesign id=\"001\"/></signbatch>",
+            false,
+            PRESIGN_XML.as_bytes(),
+        ),
+    ] {
+        let services = InMemoryBatchServices::answering(presign.to_vec(), b"NUNCA".to_vec());
+        let token = InMemoryTokenSigning::default();
+        let certificate = a_usable_certificate("un certificado");
+        let request = a_batch_request(lote, json);
+
+        let refusal = signed_batch(&a_run(&services, &token, &certificate), &request)
+            .expect_err("SHA-1 no se firma");
+
+        let SiteRefusal::BatchSigningFailed(failed) = refusal else {
+            panic!("es la firma del lote la que falla: {refusal:?}");
+        };
+        assert_eq!(failed.situation, "sha1");
+        assert_eq!(
+            failed.code,
+            crate::site::domain::protocol::SafCode::BatchSignature
+        );
+        assert_eq!(token.signing_attempts(), 0);
+    }
+}
+
+#[test]
 fn the_number_of_signs_is_read_from_the_batch_in_both_formats() {
     assert_eq!(how_many(&a_batch_request(JSON_LOTE, true)), 2);
     assert_eq!(how_many(&a_batch_request(XML_LOTE, false)), 2);
