@@ -3,7 +3,8 @@
 # accion entra por etiqueta (ID-170), que el workflow de construccion no ve un
 # secreto jamas (ID-167), y las tres que sostienen la tuberia de entrega
 # —nadie hereda secretos en bloque, la Release nace en borrador (ID-168) y una
-# candidata no llega a ningun repositorio—.
+# candidata no llega a ningun repositorio—, y que la versión de GraalVM se
+# escribe en un solo sitio.
 #
 # ------------------------------------------------------------------ ID-170 --
 # NINGUNA accion de terceros entra por etiqueta.
@@ -52,7 +53,7 @@ while IFS= read -r linea; do
     echo "$fichero:$numero: accion sin fijar por SHA (ID-170)" >&2
     echo "    ${texto# }" >&2
     fallos=$((fallos + 1))
-done < <(grep -rn '^[[:space:]]*-\?[[:space:]]*uses:' .github/workflows || true)
+done < <(grep -rn '^[[:space:]]*-\?[[:space:]]*uses:' .github/workflows .github/actions || true)
 
 if [ "$fallos" -ne 0 ]; then
     echo >&2
@@ -62,7 +63,7 @@ if [ "$fallos" -ne 0 ]; then
     exit 1
 fi
 
-echo "OK  todas las acciones de .github/workflows estan fijadas por SHA"
+echo "OK  todas las acciones de .github/workflows y .github/actions estan fijadas por SHA"
 
 # ------------------------------------------------------------------ ID-167 --
 # El workflow de construccion NO VE UN SECRETO JAMAS.
@@ -393,3 +394,24 @@ if [ -n "$codigo_de_la_ejecucion" ]; then
     exit 1
 fi
 echo "OK  $COMMENT: workflow_run, actions: read + pull-requests: write y sin código de la ejecución"
+
+# ---------------------------------------------------------------- GraalVM --
+# La versión de GraalVM se escribe solo en `.graalvm-version` (ADR-0035): el resto la lee.
+GRAALVM_FILE=.graalvm-version
+GRAALVM_ACTION=.github/actions/setup-graalvm/action.yml
+if ! grep -qE '^[0-9]+(\.[0-9]+){2,4}$' "$GRAALVM_FILE"; then
+    echo "$GRAALVM_FILE tiene que contener solo la versión exacta de GraalVM CE (ADR-0035)." >&2
+    exit 1
+fi
+instalaciones="$(grep -rn 'graalvm/setup-graalvm@' .github/workflows .github/actions justfile \
+    | grep -v "^$GRAALVM_ACTION:" || true)"
+fijadas="$(grep -rnEi 'graal|java-version' .github/workflows .github/actions justfile \
+    | grep -vE '^[^:]+:[0-9]+:[[:space:]]*#' | sed 's/[[:space:]]#.*$//' \
+    | grep -E '[0-9]+\.[0-9]+(\.[0-9]+)+|[0-9][^[:space:]"'"'"']*-graalce' || true)"
+if [ -n "$instalaciones$fijadas" ]; then
+    printf '%s\n' "$instalaciones" "$fijadas" | sed '/^$/d' >&2
+    echo >&2
+    echo "GraalVM se instala con $GRAALVM_ACTION y su versión solo se escribe en $GRAALVM_FILE (ADR-0035)." >&2
+    exit 1
+fi
+echo "OK  GraalVM CE $(cat "$GRAALVM_FILE"): una sola versión, en $GRAALVM_FILE"

@@ -32,21 +32,20 @@ postproceso del ciclo trifásico (ADR-0001), compilado a `librfirma_crypto.so`
   lo que sí compila lo hace contra la 1.9 en silencio. Lo automatiza
   `bootstrap.sh`. La 1.9.2 no está en Maven Central: si no está en `~/.m2`,
   hay que construirla.
-* **Construye con GraalVM 25** (`25.3.4+1.r25-graalce`, ADR-0004). SDKMAN deja
+* **Construye con la GraalVM CE de `.graalvm-version`** (ADR-0004, ADR-0035). SDKMAN deja
   `21-graalce` por defecto, así que fija `GRAALVM_HOME` a la 25: la línea 21
   aborta en el `JNI_OnLoad` de `libawt.so` con cualquier firma visible. El
   `pom.xml` sigue en `release 21`: cambia el JDK que construye, no el lenguaje.
   Ver `docs/research/graalvm-libawt-shared.md`.
-* **Un `just native` verde en local no dice que el carril lento del CI vaya a
-  serlo**, porque no es el mismo JDK: aquí SDKMAN tiene una compilación
-  concreta de la 25 y `ci.yml` pide `java-version: '25'`, que `setup-graalvm`
-  resuelve a la última CE 25 publicada el día que corre. Dos compilaciones
-  distintas de la 25 alcanzan clases distintas: con la de este equipo
-  `ApacheCanonicalizer` no queda alcanzable y las pruebas de grada C pasan;
-  con la del CI sí queda, y revientan con un `MissingResourceException` de
-  `com.sun.org.apache.xml.internal.security.resource.xmlsecurity`. Antes de
-  dar por transitorio un rojo del carril lento que no reproduces, baja el JDK
-  exacto de ese run (`graalvm-ce-builds`) y reconstruye con él.
+* **Local y CI construyen con la misma GraalVM**, la de `.graalvm-version`: el
+  `justfile` deriva de ella la ruta de SDKMAN y los workflows la instalan con
+  `.github/actions/setup-graalvm` (ADR-0035). Dos compilaciones distintas de
+  la 25 alcanzan clases distintas: con una `ApacheCanonicalizer` no queda
+  alcanzable y las pruebas de grada C pasan; con otra sí queda, y revientan
+  con un `MissingResourceException` de
+  `com.sun.org.apache.xml.internal.security.resource.xmlsecurity`. Si un rojo
+  del carril lento no se reproduce, comprueba antes que tu `GRAALVM_HOME` es
+  la de `.graalvm-version`.
 * **En Windows, `just native` se lanza desde Git Bash** y toma GraalVM de
   `GRAALVM_HOME` o `JAVA_HOME` (ADR-0035). `native-image` enlaza con MSVC por
   su cuenta, sin abrir una consola de Visual Studio, y deja
@@ -58,7 +57,7 @@ postproceso del ciclo trifásico (ADR-0001), compilado a `librfirma_crypto.so`
   `NATIVE_IMAGE_OPTIONS=--initialize-at-build-time=es.gob.afirma.signers.tsp.pkcs7.TsaParams`
   compila (su inicializador solo pide un `Logger`). La bandera no está en
   `native-image.properties` porque cambiaría también la imagen de Linux, que
-  se construye con la 25.3.4 fijada y no tiene este fallo.
+  se construye con la versión fijada y no tiene este fallo.
 * **`native-image` emite seis ficheros y se distribuye uno.** Los cinco
   auxiliares de AWT en `target/native/` son normales, no un fallo; instalarlos
   «por si acaso» convierte un JPEG con perfil ICC en un aborto del proceso
