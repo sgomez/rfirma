@@ -27,12 +27,17 @@ jq -e 'all(.[]; has("platform") and has("file") and has("format") and has("signa
 [ "$("$script" files "$full" deb)" = "rfirma_1.0.0_amd64.deb" ] || fail "filtro por formato"
 [ "$("$script" files "$full" | wc -l)" = 4 ] || fail "files lista los paquetes y no el SHA256SUMS"
 
+[ "$("$script" platforms "$full" | tr '\n' ' ')" = "flatpak linux windows " ] || fail "platforms: las del manifiesto, sin repetir"
+[ "$("$script" platform-files "$full" linux | wc -l)" = 2 ] || fail "platform-files: deb y rpm de linux"
+[ -z "$("$script" platform-files "$full" macos)" ] || fail "platform-files: una plataforma sin filas no lista nada"
+
 rc="$tmp/rc"
 mkdir "$rc"
 : > "$rc/me.sgomez.rfirma.flatpak"
 : > "$rc/rfirma_1.0.0-rc.1_x64-setup.exe"
 "$script" write "$rc"
 [ "$(jq length "$rc/paquetes.json")" = 2 ] || fail "candidata: dos filas"
+[ "$("$script" platforms "$rc" | tr '\n' ' ')" = "flatpak windows " ] || fail "candidata: sin plataforma linux"
 [ -z "$("$script" files "$rc" deb)$("$script" files "$rc" rpm)" ] || fail "candidata: sin filas deb ni rpm"
 "$script" write "$rc"
 [ "$(jq length "$rc/paquetes.json")" = 2 ] || fail "reescribir no cuenta el manifiesto como paquete"

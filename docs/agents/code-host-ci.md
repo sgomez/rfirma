@@ -154,6 +154,8 @@ API los encienden todos. Las guardas de `rfirma-app/src-tauri/tests` leen
 `rfirma-app/src`, `docs/adr`, `testdata/` y el `justfile`, así que un PR solo
 de interfaz sigue pagando `Cadena Rust`. La etiqueta `ci-full` los fuerza
 todos en el siguiente push; el resumen de `Alcance` dice cuáles se omitieron.
+La etiqueta `preview` es de otro workflow, `Preview`: construye los paquetes del head
+de la PR y los sube como artefactos `rfirma-preview-<plataforma>`; no toca los carriles.
 
 The fast lane costs **~2 min warm**, and that number is the **Rust** job: the
 other two finish inside it and are free in wall-clock terms. Java and

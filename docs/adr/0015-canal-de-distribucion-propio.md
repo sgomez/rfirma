@@ -170,6 +170,14 @@ de extensiones, y una plataforma o un formato nuevos son una fila más.
 repositorio**. No es un *nightly* por la puerta de atrás —es a mano y con etiqueta
 explícita—: es cómo se ensaya la tubería sin publicar una versión de verdad.
 
+**La etiqueta `preview` de una PR** construye los paquetes de su head con el mismo `build.yml`
+de la entrega, sin secretos y con todas sus puertas, y los ofrece como artefactos
+`rfirma-preview-<plataforma>` (uno por plataforma del manifiesto de paquetes, con su
+`SHA256SUMS`) que caducan a los 14 días. Se diferencia de la entrega en que no hay etiqueta
+`v*`, ni Release, ni repositorio: solo artefactos. El workflow Preview declara únicamente
+`contents: read` y no pasa `secrets:`, y `check-workflows.sh` lo vigila; cada push
+reconstruye mientras la etiqueta siga puesta y cancela la construcción anterior.
+
 **Las acciones se fijan por SHA en todo el repositorio**, `ci.yml` incluido, con el
 comentario de etiqueta al lado, más `dependabot.yml` para `github-actions` **mensual y
 agrupado**, con una espera (`cooldown`) de siete días para no proponer una versión recién

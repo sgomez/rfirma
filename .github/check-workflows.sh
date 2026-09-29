@@ -317,3 +317,36 @@ if ! awk '
     exit 1
 fi
 echo "OK  dependabot.yml espera antes de proponer una accion nueva"
+
+# ------------------------------------------------------------------ Preview --
+# El workflow Preview construye con `build.yml` sin secretos y con solo lectura (ADR-0015).
+PREVIEW=.github/workflows/preview.yml
+if [ ! -f "$PREVIEW" ]; then
+    echo "falta $PREVIEW (ADR-0015)." >&2
+    exit 1
+fi
+secretos="$(grep -nE 'secrets[.[]|^[[:space:]]*secrets:' "$PREVIEW" \
+    | grep -vE '^[0-9]+:[[:space:]]*#' || true)"
+if [ -n "$secretos" ]; then
+    printf '%s\n' "$secretos" >&2
+    echo "$PREVIEW no pasa ni menciona ningun secreto (ADR-0015)." >&2
+    exit 1
+fi
+permisos_de_mas="$(awk '
+    /^[[:space:]]*permissions:[[:space:]]*[^[:space:]#]/ && $0 !~ /permissions:[[:space:]]*\{\}/ { print FNR ": " $0; next }
+    /^[[:space:]]*permissions:[[:space:]]*$/ {
+        match($0, /^[[:space:]]*/); base = RLENGTH; dentro = 1; next
+    }
+    dentro {
+        if ($0 ~ /^[[:space:]]*(#.*)?$/) next
+        match($0, /^[[:space:]]*/)
+        if (RLENGTH <= base) { dentro = 0; next }
+        if ($0 !~ /^[[:space:]]*contents:[[:space:]]*read[[:space:]]*$/) print FNR ": " $0
+    }
+' "$PREVIEW")"
+if [ -n "$permisos_de_mas" ]; then
+    printf '%s\n' "$permisos_de_mas" >&2
+    echo "$PREVIEW declara solo 'contents: read' (ADR-0015)." >&2
+    exit 1
+fi
+echo "OK  $PREVIEW no pasa secretos y declara solo contents: read"

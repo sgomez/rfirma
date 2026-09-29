@@ -4,6 +4,8 @@
 # Uso: scripts/packages-manifest.sh write <directorio>
 #      scripts/packages-manifest.sh files <directorio> [formato]
 #      scripts/packages-manifest.sh signable <directorio>
+#      scripts/packages-manifest.sh platforms <directorio>
+#      scripts/packages-manifest.sh platform-files <directorio> <plataforma>
 set -euo pipefail
 
 manifest_name="paquetes.json"
@@ -51,7 +53,7 @@ require_manifest() {
 command="${1-}"
 dir="${2-}"
 if [ -z "$command" ] || [ -z "$dir" ] || [ ! -d "$dir" ]; then
-    echo "uso: scripts/packages-manifest.sh write|files|signable <directorio> [formato]" >&2
+    echo "uso: scripts/packages-manifest.sh write|files|signable|platforms|platform-files <directorio> [formato|plataforma]" >&2
     exit 2
 fi
 
@@ -65,6 +67,15 @@ case "$command" in
     signable)
         require_manifest "$dir"
         jq -r '.[] | select(.signable) | .file' "$dir/$manifest_name"
+        ;;
+    platforms)
+        require_manifest "$dir"
+        jq -r '[.[].platform] | unique | .[]' "$dir/$manifest_name"
+        ;;
+    platform-files)
+        require_manifest "$dir"
+        jq -r --arg platform "${3:?falta la plataforma}" \
+            '.[] | select(.platform == $platform) | .file' "$dir/$manifest_name"
         ;;
     *)
         echo "orden desconocida: $command" >&2
