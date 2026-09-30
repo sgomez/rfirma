@@ -65,7 +65,7 @@ on:
         default: ''
     outputs:
       version:
-        description: La version construida, leida de tauri.conf.json (ID-150).
+        description: La version construida, leida de Cargo.toml.
         value: ${{ jobs.collect-packages.outputs.version }}
       native-packages:
         description: >-
@@ -129,8 +129,8 @@ jobs:
       - uses: ./.github/actions/setup-just
 
       # LA GUARDIA DE VERSION, en dos mitades.
-      # `just check-version` es el candado del ID-150: la version vive en cinco
-      # sitios y cuatro tienen que decir lo mismo que tauri.conf.json.
+      # `just check-version` es el candado del ID-150: la fuente es Cargo.toml y el
+      # resto tiene que decir lo mismo.
       - name: Guardia de version
         id: version
         env:
@@ -138,12 +138,11 @@ jobs:
         run: |
           set -euo pipefail
           just check-version
-          version="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["version"])' \
-            rfirma-app/src-tauri/tauri.conf.json)"
+          version="$(python3 -c 'import sys,tomllib; print(tomllib.load(open(sys.argv[1],"rb"))["package"]["version"])' rfirma-app/src-tauri/Cargo.toml)"
           esperada="${EXPECTED_VERSION#v}"
           if [ -n "$esperada" ] && [ "$esperada" != "$version" ]; then
             echo "la version del arbol es $version y quien llama esperaba $esperada" >&2
-            echo "la fuente es rfirma-app/src-tauri/tauri.conf.json (ID-150)" >&2
+            echo "la fuente es rfirma-app/src-tauri/Cargo.toml" >&2
             exit 1
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"

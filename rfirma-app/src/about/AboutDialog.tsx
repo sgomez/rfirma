@@ -1,3 +1,4 @@
+import { getVersion } from "@tauri-apps/api/app";
 import { useEffect, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import "./AboutDialog.css";
@@ -6,8 +7,6 @@ import { InstallUpdateDialog } from "../updates/InstallUpdateDialog";
 import type { NewVersion, VersionCheck } from "../updates/newVersion";
 
 interface AboutDialogProps {
-  /** La versión que se enseña. Sale de `package.json` en tiempo de compilación. */
-  version: string;
   /** Lo que se sabía desde el arranque, mientras no llegue la respuesta del puerto. */
   newVersion: NewVersion | null;
   versions: VersionCheck;
@@ -19,7 +18,6 @@ interface AboutDialogProps {
 
 /** Identidad de la aplicación, estado de la versión, licencias y aviso de independencia. */
 export function AboutDialog({
-  version,
   newVersion,
   versions,
   offerUpdate,
@@ -30,6 +28,11 @@ export function AboutDialog({
   const titleId = useId();
   const [currentVersion, setCurrentVersion] = useState(newVersion);
   const [updating, setUpdating] = useState(false);
+  const [version, setVersion] = useState("");
+
+  useEffect(() => {
+    void getVersion().then(setVersion);
+  }, []);
 
   useEffect(() => {
     let current = true;

@@ -177,7 +177,7 @@ rojo.
 | **`about/`** | `about/AboutDialog.tsx`. |
 | **`setup/`** | El asistente del primer arranque (docs/design/primer-arranque.md). Usa los casos de uso del panel de estado, no tiene los suyos propios. |
 | `setup/SetupWizard.tsx` | Las dos pantallas, montadas en `main.tsx` mientras `Preferences.setupWizardSeen` siga en `false`. Sustituye al antiguo `trust/TrustNotice.tsx`. |
-| **Andamiaje** | `test-setup.ts`, `testing/render.tsx`, `vite-env.d.ts`. No son la aplicación. |
+| **Andamiaje** | `test-setup.ts`, `testing/render.tsx`. No son la aplicación. |
 
 ## El circuito de cadenas (ADR-0009 enmendado)
 

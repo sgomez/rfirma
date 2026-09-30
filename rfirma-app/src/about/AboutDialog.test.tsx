@@ -11,7 +11,6 @@ function renderAbout(props: Partial<Parameters<typeof AboutDialog>[0]> = {}) {
   const newVersion = props.newVersion ?? null;
   return renderWithCatalog(
     <AboutDialog
-      version="0.1.0"
       newVersion={newVersion}
       versions={inMemoryVersionCheck(newVersion)}
       offerUpdate
@@ -45,10 +44,10 @@ describe("AboutDialog", () => {
     expect(screen.queryByText(/no salen de tu ordenador/)).not.toBeInTheDocument();
   });
 
-  it("shows the version", () => {
+  it("shows the version of the binary read at runtime", async () => {
     renderAbout();
 
-    expect(screen.getByText("Versión 0.1.0")).toBeInTheDocument();
+    expect(await screen.findByText("Versión 0.1.0")).toBeInTheDocument();
   });
 
   it("shows both licences without unfolding anything", () => {

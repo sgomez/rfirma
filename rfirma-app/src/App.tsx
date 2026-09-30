@@ -477,7 +477,6 @@ export function App({
       />
       {dialog === "about" && (
         <AboutDialog
-          version={__APP_VERSION__}
           newVersion={newVersion}
           versions={versions}
           offerUpdate={notifyNewVersion}

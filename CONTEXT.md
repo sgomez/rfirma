@@ -390,10 +390,10 @@ la vigila `just check-version`.
 _Avoid_: Rfirma, RFirma, RFIRMA, rFirma como identificador
 
 **Versión**:
-El número de la entrega, que vive en `rfirma-app/src-tauri/tauri.conf.json`
-—única fuente, porque es el que el bundler sella dentro de los tres paquetes— y
-se replica en candado comprobado a `package.json`, a `Cargo.toml`, a
-`Cargo.lock` y al metainfo. Subirla arrastra además el sello de
+El número de la entrega, que vive en `rfirma-app/src-tauri/Cargo.toml`
+—única fuente: Tauri v2 la sella dentro de los tres paquetes y la interfaz la
+lee en tiempo de ejecución— y se replica en candado comprobado a `Cargo.lock` y
+al metainfo. Subirla arrastra además el sello de
 `packaging/flatpak/sources.lock`, que guarda el `sha256` de `Cargo.lock`. La del `pom.xml` del puente **no** es esta: es un artefacto interno y
 queda fuera del candado. Una **candidata** (`-rc.N`) publica sólo el flatpak.
 _Avoid_: release, tag, número de build

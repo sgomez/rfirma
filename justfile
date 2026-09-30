@@ -450,7 +450,7 @@ bundle quick="false": check-native build-ts
     set -euo pipefail
     cd "{{ root }}"
     if [ "{{ quick }}" != "true" ]; then
-        version="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["version"])' rfirma-app/src-tauri/tauri.conf.json)"
+        version="$(python3 -c 'import sys,tomllib; print(tomllib.load(open(sys.argv[1],"rb"))["package"]["version"])' rfirma-app/src-tauri/Cargo.toml)"
         if ! packaging/native-packages-allowed.sh "$version"; then
             echo "bundle: no hay nada que construir para $version" >&2
             exit 1
