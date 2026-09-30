@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<style>
+  :root { font: 14px Cantarell, "Noto Sans", sans-serif; color-scheme: light dark;
+          --bg: #fafafa; --fg: #222; --bar: #ebebeb; --line: #d0d0d0; --tab: #d6d6d6; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #242424; --fg: #eee; --bar: #303030; --line: #1b1b1b; --tab: #454545; }
+  }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg); }
+  nav { height: 36px; box-sizing: border-box; display: flex; align-items: center; gap: 2px;
+        padding: 0 6px; background: var(--bar); border-bottom: 1px solid var(--line); user-select: none; }
+  body.inactive nav { opacity: .6; }
+  .tab { padding: 5px 12px; border-radius: 6px; cursor: default; }
+  .tab.on { background: var(--tab); }
+  .more { margin-left: 4px; }
+  main { padding: 16px; }
+  #out { font-family: monospace; white-space: pre-wrap; }
+  button { font: inherit; margin: 0 6px 6px 0; }
+</style>
+</head>
+<body>
+<nav id="tabs" role="tablist">
+  <div class="tab on" role="tab">contrato.pdf</div>
+  <div class="tab" role="tab">factura.pdf</div>
+  <div class="tab more" role="tab">+2 ▾</div>
+</nav>
+<main>
+  <div>
+    <button id="toggle-doc">Vista sin documento</button>
+    <button id="toggle-recents">Vaciar recientes</button>
+    <button id="toggle-lang">English</button>
+  </div>
+  <div id="out"></div>
+</main>
+<script>
+  const { invoke } = window.__TAURI__.core;
+  const { listen } = window.__TAURI__.event;
+  const win = window.__TAURI__.window.getCurrentWindow();
+  const out = document.getElementById('out');
+  const log = (m) => { out.textContent += m + '\n'; };
+  window.onNative = log;
+
+  const catalog = {
+    es: { open: 'Abrir PDF…', recent_title: 'Abiertos recientemente', preferences: 'Preferencias…', about: 'Acerca de rFirma' },
+    en: { open: 'Open PDF…', recent_title: 'Recently opened', preferences: 'Preferences…', about: 'About rFirma' },
+  };
+  const state = { documentView: true, recents: ['contrato.pdf', 'factura.pdf', 'anexo-II.pdf'], lang: 'es' };
+
+  function push() {
+    document.getElementById('tabs').style.display = state.documentView ? '' : 'none';
+    return invoke('set_header_state', { state: {
+      open_visible: state.documentView,
+      recents: state.recents,
+      labels: catalog[state.lang],
+    } }).catch((e) => log('ERR set_header_state ' + e));
+  }
+
+  document.getElementById('toggle-doc').onclick = () => { state.documentView = !state.documentView; push(); };
+  document.getElementById('toggle-recents').onclick = () => {
+    state.recents = state.recents.length ? [] : ['contrato.pdf', 'factura.pdf', 'anexo-II.pdf']; push();
+  };
+  document.getElementById('toggle-lang').onclick = () => { state.lang = state.lang === 'es' ? 'en' : 'es'; push(); };
+
+  listen('header', ({ payload }) => log('header → ' + JSON.stringify(payload)));
+  window.addEventListener('keydown', (e) => {
+    if (e.ctrlKey && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 'o') {
+      e.preventDefault(); log('Ctrl+O en el WebView');
+    }
+  });
+  win.onFocusChanged(({ payload }) => document.body.classList.toggle('inactive', !payload));
+  invoke('desktop_info').then((info) => log(JSON.stringify(info)));
+  log('prefers-color-scheme: ' + (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
+  push();
+</script>
+</body>
+</html>

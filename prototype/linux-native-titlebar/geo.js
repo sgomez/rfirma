@@ -1,0 +1,1 @@
+global.get_window_actors().map(a=>{const w=a.meta_window; const f=w.get_frame_rect(), b=w.get_buffer_rect(); return w.get_title()+" frame="+[f.x,f.y,f.width,f.height]+" buffer="+[b.x,b.y,b.width,b.height]+" decorated="+w.decorated+" type="+w.get_client_type()+" max="+w.is_maximized?.()+"/"+w.maximized_horizontally+" focus="+w.has_focus()}).join(" | ")

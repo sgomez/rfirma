@@ -1,0 +1,8 @@
+{
+  "productName": "rFirma",
+  "version": "0.1.0",
+  "identifier": "me.sgomez.rfirma.titlebarpoc",
+  "build": { "frontendDist": "dist" },
+  "app": { "withGlobalTauri": true, "windows": [], "security": { "csp": null } },
+  "bundle": { "active": false, "icon": ["icons/icon.png"] }
+}

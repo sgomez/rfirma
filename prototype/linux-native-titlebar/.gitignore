@@ -1,0 +1,6 @@
+target/
+gen/
+shots/
+*.log
+bus.env
+display.env

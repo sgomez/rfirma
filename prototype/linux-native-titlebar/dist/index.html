@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<style>
+  :root { font: 14px Cantarell, "Noto Sans", sans-serif; color-scheme: light dark; }
+  html, body { margin: 0; height: 100%; background: #fafafa; color: #222; }
+  header { height: 44px; box-sizing: border-box; display: flex; align-items: center; gap: 6px;
+           padding: 0 6px; background: #ebebeb; border-bottom: 1px solid #d0d0d0; user-select: none; }
+  body.inactive header { background: #fafafa; color: #999; }
+  .split { display: flex; }
+  .split button:first-child { border-radius: 6px 0 0 6px; }
+  .split button:last-child { border-radius: 0 6px 6px 0; border-left: 1px solid #1c5fb8; }
+  button { height: 32px; border: 0; border-radius: 6px; padding: 0 10px; background: #dcdcdc; font: inherit; }
+  button.primary { background: #3584e4; color: white; }
+  .tabs { display: flex; gap: 2px; }
+  .tab { padding: 6px 12px; border-radius: 6px; cursor: default; }
+  .tab.on { background: #d6d6d6; }
+  .spacer { flex: 1; align-self: stretch; }
+  .wm { width: 24px; height: 24px; border-radius: 50%; padding: 0; background: #d8d8d8; font-size: 12px; }
+  main { padding: 16px; font-family: monospace; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<header data-tauri-drag-region>
+  <span id="left-wm"></span>
+  <div class="split"><button class="primary" onclick="log('Abrir PDF…')">Abrir PDF…</button><button class="primary">▾</button></div>
+  <div class="tabs" data-tauri-drag-region>
+    <div class="tab on" role="tab">contrato.pdf</div>
+    <div class="tab" role="tab">factura.pdf</div>
+  </div>
+  <div class="spacer" data-tauri-drag-region></div>
+  <button title="Menú">☰</button>
+  <span id="right-wm"></span>
+</header>
+<main id="out"></main>
+<script>
+  const { invoke } = window.__TAURI__.core;
+  const win = window.__TAURI__.window.getCurrentWindow();
+  const out = document.getElementById('out');
+  const log = (m) => { out.textContent += m + '\n'; };
+  window.onNative = log;
+  const actions = {
+    minimize: () => win.minimize(),
+    maximize: () => win.toggleMaximize(),
+    close: () => win.close(),
+  };
+  const glyph = { minimize: '–', maximize: '□', close: '✕' };
+  function place(id, names) {
+    const el = document.getElementById(id);
+    for (const n of names) {
+      if (!actions[n]) continue;
+      const b = document.createElement('button');
+      b.className = 'wm'; b.textContent = glyph[n]; b.title = n;
+      b.onclick = actions[n];
+      el.appendChild(b);
+    }
+  }
+  invoke('desktop_info').then((info) => {
+    log(JSON.stringify(info, null, 2));
+    if (info.variant.startsWith('html') && info.gnome) {
+      const [l, r] = (info.decoration_layout || 'menu:close').split(':');
+      place('left-wm', l.split(','));
+      place('right-wm', (r || '').split(','));
+    } else {
+      document.querySelector('header').removeAttribute('data-tauri-drag-region');
+    }
+    if (info.variant === 'native') document.querySelector('header').style.display = 'none';
+  });
+  win.onFocusChanged(({ payload }) => {
+    document.body.classList.toggle('inactive', !payload);
+    log('focus: ' + payload);
+  }).catch((e) => log('ERR onFocusChanged ' + e));
+  win.onResized(() => {});
+</script>
+</body>
+</html>
