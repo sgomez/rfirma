@@ -137,6 +137,7 @@ mod gtk_titlebar {
 
     use super::super::views::{TitlebarActionView, TitlebarRecentView};
     use super::{announcement, second_line, Pacing, TitlebarStateView, TITLEBAR_ACTION};
+    use crate::documents::domain::recents::CAPACITY as RECENTS_CAPACITY;
 
     const ACTIONS: [(&str, TitlebarActionView); 6] = [
         ("open", TitlebarActionView::Open),
@@ -147,7 +148,6 @@ mod gtk_titlebar {
         ("clear-recents", TitlebarActionView::ClearRecents),
     ];
 
-    const RECENTS_CAPACITY: usize = 10;
     const RECENTS_CONTENT_WIDTH: i32 = 368;
     const RECENTS_CHROME_HEIGHT: i32 = 120;
     const RECENTS_MIN_LIST_HEIGHT: i32 = 52;
