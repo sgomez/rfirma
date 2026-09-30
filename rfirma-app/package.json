@@ -13,7 +13,7 @@
     "prepare": "tools/install-git-hooks.sh"
   },
   "dependencies": {
-    "@tauri-apps/api": "2.11.1",
+    "@tauri-apps/api": "2.12.1",
     "gettext-parser": "9.1.1",
     "i18next": "26.4.2",
     "pdfjs-dist": "6.3.289",
@@ -22,7 +22,7 @@
     "react-i18next": "17.0.15"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "2.11.5",
+    "@tauri-apps/cli": "2.12.0",
     "@testing-library/jest-dom": "catalog:",
     "@testing-library/react": "catalog:",
     "@testing-library/user-event": "catalog:",
