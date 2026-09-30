@@ -72,8 +72,7 @@ paquetes_de_pega() {
 instalador_de_pega() {
     local dir="$1" version="$2"
     echo "exe $version" > "$dir/rFirma_${version}_x64-setup.exe"
-    printf "firma de $version
-" > "$dir/rFirma_${version}_x64-setup.exe.sig"
+    printf 'firma de %s\n' "$version" > "$dir/rFirma_${version}_x64-setup.exe.sig"
     "$raiz/scripts/packages-manifest.sh" write "$dir"
 }
 
@@ -99,20 +98,24 @@ fi
 sin_exe="$tmp/sin-exe"
 paquetes_de_pega "$sin_exe/v0.4.0" "0.4.0"
 rm "$sin_exe/v0.4.0"/*-setup.exe
-if "$construye" "$sin_exe" "$tmp/arbol-malo" "$tmp/rfirma.asc" "$SIN_FIRMA" 2>&1 | grep -q "no estan en la Release"; then
+if salida="$("$construye" "$sin_exe" "$tmp/arbol-malo" "$tmp/rfirma.asc" "$SIN_FIRMA" 2>&1)"; then
+    fail "una version sin el .exe de Windows no detiene la publicacion"
+elif grep -q "no estan en la Release" <<< "$salida"; then
     ok "una version sin el .exe de Windows detiene la publicacion"
 else
-    fail "una version sin el .exe de Windows no detiene la publicacion"
+    fail "una version sin el .exe de Windows se para por otro motivo: $salida"
 fi
 
 # a_version_without_the_windows_signature_stops_the_publication
 sin_sig="$tmp/sin-sig"
 paquetes_de_pega "$sin_sig/v0.4.0" "0.4.0"
 rm "$sin_sig/v0.4.0"/*.sig
-if "$construye" "$sin_sig" "$tmp/arbol-malo" "$tmp/rfirma.asc" "$SIN_FIRMA" 2>&1 | grep -q "no estan en la Release"; then
+if salida="$("$construye" "$sin_sig" "$tmp/arbol-malo" "$tmp/rfirma.asc" "$SIN_FIRMA" 2>&1)"; then
+    fail "una version sin el .sig de Windows no detiene la publicacion"
+elif grep -q "no estan en la Release" <<< "$salida"; then
     ok "una version sin el .sig de Windows detiene la publicacion"
 else
-    fail "una version sin el .sig de Windows no detiene la publicacion"
+    fail "una version sin el .sig de Windows se para por otro motivo: $salida"
 fi
 
 # the_public_key_has_to_exist
@@ -406,7 +409,7 @@ fi
 con_candidata="$tmp/con-candidata"
 cp -r "$serie" "$con_candidata"
 cp -r "$serie/v0.4.10" "$con_candidata/v0.4.11-rc.1"
-rm "$con_candidata/v0.4.11-rc.1"/rFirma_* "$con_candidata/v0.4.11-rc.1/paquetes.json"
+rm "$con_candidata/v0.4.11-rc.1"/rFirma_* "$con_candidata/v0.4.11-rc.1/subido-a-mano.exe" "$con_candidata/v0.4.11-rc.1/paquetes.json"
 instalador_de_pega "$con_candidata/v0.4.11-rc.1" "0.4.11-rc.1"
 "$construye" "$con_candidata" "$tmp/arbol-rc" "$tmp/rfirma.asc" "$SIN_FIRMA" > /dev/null 2>&1 \
     || fail "la construccion con una candidata en la serie falla"

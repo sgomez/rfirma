@@ -69,7 +69,7 @@ for version in "${versiones[@]}"; do
         # que estar.
         if [ -f paquetes.json ]; then
             while read -r fichero; do
-                grep -qF -- "  $fichero" SHA256SUMS \
+                cut -d' ' -f3- SHA256SUMS | grep -qxF -- "$fichero" \
                     || { echo "$fichero no esta en el SHA256SUMS de $version" >&2; exit 1; }
             done < <("$manifiesto" platform-files . windows)
         fi
