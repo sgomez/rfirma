@@ -51,49 +51,27 @@ publicado, y tarjetas y DNIe no están soportados en la v0.4.
 
 ## Verificar
 
-El frontend y la librería nativa se construyen **en el anfitrión** y entran ya
+El frontend y la librería nativa se construyen en el anfitrión y entran ya
 construidos, así que van primero:
 
 ```bash
 export GRAALVM_HOME=~/.sdkman/candidates/java/25.3.4+1.r25-graalce
-just native
-just build-ts
-just certs install       # el paso 4 firma con el token de la grada B
-packaging/flatpak/verifica.sh
+just certs install       # el paso 3 firma con el token de la grada B
+just flatpak-smoke
 ```
 
-`verifica.sh` da siete pasos. Dentro del sandbox comprueba lo que solo el
-sandbox puede romper: que la ventana arranque y siga viva, que un documento
-entrado por el portal llegue con sus bytes intactos, y que el sandbox
-**rechace escribir** en el perfil de Firefox y en `~/.pki/nssdb` — los dos
-únicos `--filesystem` que no van por portal (#101, AC 3). La invariante del
-ADR-0012 —un solo `librfirma_crypto.so`, `libawt.so` en ninguna parte— ya no
-se comprueba dentro del sandbox: el paso 7 llama a
-[`../verifica-contenido.sh`](../verifica-contenido.sh), independiente del
-formato, sobre el `.flatpak` recién construido (la misma puerta corre sobre el
-`.deb`/`.rpm`, cuando existan).
+`just flatpak-smoke` (`verifica.sh`) da cinco pasos: construye e instala el
+flatpak, comprueba que la ventana arranca y sigue viva, corre el ciclo
+trifásico completo con rúbrica de imagen contra la librería instalada en el
+bundle y lo valida con `pdfsig`, comprueba que un documento entrado por el
+portal llega con sus bytes intactos y que el sandbox **sí** puede escribir en el
+perfil de Firefox y en `~/.pki/nssdb` (ADR-0005). La invariante del ADR-0012
+—un solo `librfirma_crypto.so`, `libawt.so` en ninguna parte— no se repite aquí:
+la aplica `verify-packages` sobre cada paquete.
 
-El paso 3 corre el **ciclo trifásico completo con rúbrica de imagen** y lo valida
-con `pdfsig`, contra la librería **instalada en el bundle** — los bytes que se
-distribuyen, no los del árbol de construcción. Eso es lo que faltaba: la
-verificación del [#22](https://github.com/sgomez/rfirma/issues/22) se corrió
-contra la imagen de **seis** ficheros, y la rúbrica de imagen es justo el caso
-cuyo comportamiento depende de qué `.so` haya al lado. Necesita el token de la
-grada B (`just certs install`) y `poppler-utils`.
-
-Ese paso se ejecuta en el anfitrión apuntando a la librería del bundle, y no
-dentro del sandbox, por tres razones medidas: dentro **no hay token** (el
-bundle no empaqueta ningún módulo PKCS#11 desde el
-[#256](https://github.com/sgomez/rfirma/issues/256) — tarjetas y DNIe no están
-soportados en la v0.4 —, y montar el SoftHSM del anfitrión es justo el
-`LD_LIBRARY_PATH` de otra glibc que prohíbe el ID-40), **no hay
-poppler** (`pdfsig` no está ni en el bundle ni en `org.gnome.Platform//50`), y
-**no hay por dónde entrar** (rfirma no tiene modo headless: el ciclo solo se
-alcanza por los `#[tauri::command]` desde el WebView, y un binario de prueba del
-anfitrión tampoco sirve de puente, porque aquí la glibc es 2.43 y la del runtime
-2.42). Meter SoftHSM, poppler y un binario de prueba dentro sería distribuir el
-banco de pruebas y romper «los permisos son los declarados y ninguno más»;
-cerrarlo pide un manifiesto de banco aparte.
+El ciclo trifásico corre en el anfitrión y no dentro del sandbox: dentro no hay
+token PKCS#11, ni `pdfsig`, ni forma de invocar los comandos sin el WebView.
+Necesita el token de la grada B y `poppler-utils`.
 
 ## Pendiente antes de publicar
 
