@@ -377,6 +377,8 @@ crossing! {
         pub recents: String,
         /// Entrada que vacía la lista de recientes.
         pub clear_recents: String,
+        /// Sufijo de un reciente que ya no está en disco.
+        pub not_found: String,
     }
 }
 

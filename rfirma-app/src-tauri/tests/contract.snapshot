@@ -137,6 +137,7 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
       about: String
       recents: String
       clearRecents: String
+      notFound: String
 
   pub struct TitlebarRecentView
       path: String

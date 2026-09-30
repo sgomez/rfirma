@@ -149,12 +149,9 @@ mod gtk_titlebar {
             group.add_action(&action);
         }
         group.add_action(&recent_action(window));
-        group.add_action(&gio::SimpleAction::new(MISSING_RECENT, None));
-        if let Some(missing) = group.lookup_action(MISSING_RECENT) {
-            if let Some(missing) = missing.downcast_ref::<gio::SimpleAction>() {
-                missing.set_enabled(false);
-            }
-        }
+        let missing = gio::SimpleAction::new(MISSING_RECENT, None);
+        missing.set_enabled(false);
+        group.add_action(&missing);
         group
     }
 
@@ -172,7 +169,8 @@ mod gtk_titlebar {
     fn recents_model(state: &TitlebarStateView) -> gio::Menu {
         let entries = gio::Menu::new();
         for recent in &state.recents {
-            let item = gio::MenuItem::new(Some(&recent_label(recent)), None);
+            let item =
+                gio::MenuItem::new(Some(&recent_label(recent, &state.labels.not_found)), None);
             if recent.found {
                 item.set_action_and_target_value(
                     Some("hdr.recent"),
@@ -191,9 +189,13 @@ mod gtk_titlebar {
         model
     }
 
-    fn recent_label(recent: &TitlebarRecentView) -> String {
-        let signed = if recent.signed { "\u{2713} " } else { "" };
-        let text = format!("{signed}{} \u{2014} {}", recent.name, recent.folder);
+    fn recent_label(recent: &TitlebarRecentView, not_found: &str) -> String {
+        let text = if recent.found {
+            let signed = if recent.signed { "\u{2713} " } else { "" };
+            format!("{signed}{} \u{2014} {}", recent.name, recent.folder)
+        } else {
+            format!("{} \u{2014} {not_found}", recent.name)
+        };
         text.replace('_', "__")
     }
 
