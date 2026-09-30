@@ -63,7 +63,8 @@ testdata/conformance/
 # versionado.
 lefthook-local.yml
 
-# La landing en Astro (packaging/repo/site): dependencias y salida del build.
-packaging/repo/site/node_modules/
+node_modules/
+
+# La landing en Astro (packaging/repo/site): salida del build.
 packaging/repo/site/dist/
 packaging/repo/site/.astro/

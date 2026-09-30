@@ -3,7 +3,8 @@
 Este repositorio es **políglota en la raíz**: un módulo Maven que produce la librería
 nativa, una aplicación Tauri, y un empaquetado flatpak. La decisión de fondo es que
 **la raíz no pertenece a ninguna de las tres cadenas de herramientas**: coordina, y
-cada pieza lleva la suya dentro.
+cada pieza lleva la suya dentro. La única excepción es el workspace de pnpm, que junta
+en la raíz lo que comparten los tres proyectos de JavaScript y nada más (su sección).
 
 ```
 rfirma-native-bridge/   Maven -> GraalVM CE 25 -> librfirma_crypto.so (ADR-0004)
@@ -12,6 +13,7 @@ rfirma-conformance/     la suite de conformidad: su crate y su consola web, fuer
 packaging/flatpak/      manifiesto, generadores de fuentes y verificación
 packaging/repo/         la imagen nginx y la landing de rfirma.sgomez.me (ADR-0015)
 packaging/verifica-contenido.sh   la invariante del ADR-0012 sobre cualquier artefacto
+pnpm-workspace.yaml     el workspace de pnpm: su lockfile, su tsconfig.base.json y un package.json mínimo al lado
 justfile                el único orquestador
 ```
 
@@ -254,6 +256,38 @@ Se descartaron dos opciones. La primera, dejar la suite como *example* del crate
 empezó, y es la que arrastra Tauri, sus pruebas y sus dependencias de desarrollo. La segunda, una
 página HTML servida tal cual sin paso de compilación: sin tipos ni pruebas, el contrato con el
 servidor quedaba implícito en dos lenguajes.
+
+## Un workspace de pnpm en la raíz
+
+La aplicación, la consola de la suite y la landing de `packaging/repo/site` forman un
+workspace de pnpm declarado en `pnpm-workspace.yaml`, en la raíz. Allí viven lo único que
+comparten: **un lockfile**, el **catálogo**, `tsconfig.base.json` y un `package.json` mínimo.
+
+- **El catálogo lleva solo las versiones que de verdad son iguales** en todos los proyectos que
+  usan la dependencia. Una que difiere se queda fijada en el `package.json` de cada uno: meterla
+  en el catálogo obligaría a subirlas juntas, que es justo lo que no son.
+- **Cada proyecto conserva su `package.json`, su `vite.config` y un tsconfig mínimo** que
+  extiende la base.
+- **El `package.json` de la raíz solo lleva `private` y `packageManager`**: sin dependencias ni
+  scripts, no es un proyecto más. Existe porque Dependabot no lee un directorio npm sin
+  `package.json`, y de paso fija la versión de pnpm que leen `pnpm/setup` y corepack.
+- **Se instala con filtro por proyecto** (`pnpm install --filter <proyecto>`), desde las
+  recetas del `justfile` y desde la imagen de la landing, que copia el workspace, el lockfile y el
+  `package.json` de la raíz.
+- **Sin `nodeLinker: hoisted`**: Tauri busca su CLI en el `node_modules/.bin` de `rfirma-app`, y
+  el enlazado aislado por defecto es el que lo deja ahí.
+- **knip no comprueba las referencias al catálogo** (`catalogReferences`): corre dentro de
+  `rfirma-app`, donde no ve el `pnpm-workspace.yaml`, y una referencia rota ya la rechaza
+  `pnpm install`.
+- **Dependabot vigila npm en un solo directorio**, la raíz, mensual y agrupado como las acciones.
+
+Se descartaron cuatro opciones. La primera, un lockfile por proyecto, que era lo que había: tres
+instalaciones en el CI, tres cachés y tres directorios que vigilar, para versiones que en su
+mayoría eran las mismas. La segunda, un catálogo con todas las dependencias, que ataría a la
+misma versión proyectos que hoy no la comparten, como `vitest` en la landing. La tercera,
+`nodeLinker: hoisted`, que rompe el arranque de Tauri. La cuarta, dejar la raíz sin `package.json`:
+Dependabot la rechaza como directorio npm, y vigilar los tres proyectos por separado devolvía
+tres entradas para un solo lockfile.
 
 ## Consequences
 

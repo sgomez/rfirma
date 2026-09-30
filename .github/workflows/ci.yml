@@ -153,49 +153,10 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: ./.github/actions/setup-runner
+      - uses: ./.github/actions/native-tier
         with:
-          rust: native
-          node: true
-          java: graalvm
-          apt: test
-          tools: llvm-cov crap nextest
-          autoscript: true
+          library: build
           save-cache: ${{ github.ref == 'refs/heads/main' }}
-
-      # validate.sh compila el validador al vuelo en el primer test que lo llama, casi un minuto.
-      - name: Cache del validador de referencia
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: rfirma-native-bridge/testbench/reference-signer/target
-          key: reference-signer-${{ runner.os }}-autofirma${{ env.AUTOFIRMA_VERSION }}-${{ hashFiles('scripts/bootstrap.sh', 'rfirma-native-bridge/testbench/reference-signer/pom.xml', 'rfirma-native-bridge/testbench/reference-signer/SignatureValidator.java') }}
-
-      - name: Cache de librfirma_crypto.so
-        id: cache-native-lib
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: rfirma-native-bridge/target/lib/rfirma
-          key: native-lib-${{ runner.os }}-graalvm${{ env.GRAALVM_VERSION }}-autofirma${{ env.AUTOFIRMA_VERSION }}-${{ hashFiles('scripts/bootstrap.sh', 'rfirma-native-bridge/pom.xml', 'rfirma-native-bridge/src/main/**') }}
-
-      - name: Construye la libreria nativa
-        if: steps.cache-native-lib.outputs.cache-hit != 'true'
-        run: |
-          export GRAALVM_HOME="$JAVA_HOME"
-          just native
-
-      # Aqui SI existe librfirma_crypto.so, asi que las pruebas de grada C
-      # (#[ignore]) se ejecutan y se mide el adaptador FFI (ADR-0014).
-      - name: Pruebas de grada C y puerta CRAP del adaptador FFI
-        run: just test-native
-
-      # Se sube tambien si algo posterior falla: un PDF que no valida es el que hay que mirar.
-      - name: PDF para el validador oficial
-        if: '!cancelled()'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: pdf-puerta-manual
-          path: rfirma-app/src-tauri/target/llvm-cov-target/tmp/manual-gate.pdf
-          if-no-files-found: warn
 
   # ==========================================================================
   # CARRIL DE WINDOWS
