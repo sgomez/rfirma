@@ -159,7 +159,7 @@ if [ -f "$RELEASE" ]; then
         echo "$RELEASE tiene que firmar dentro de 'environment: release' (ADR-0015)" >&2
         exit 1
     fi
-    if ! grep -q -- '--draft' "$RELEASE"; then
+    if ! grep -vE '^[[:space:]]*#' "$RELEASE" | grep -q -- '--draft'; then
         echo "$RELEASE tiene que crear la Release en borrador (ID-168)." >&2
         echo "Publicarla es el gesto humano; una etiqueta no publica nada." >&2
         exit 1
@@ -173,8 +173,19 @@ if [ -f "$PUBLISH" ]; then
         echo "$PUBLISH cuelga de 'release: types: [published]', no de la etiqueta (ID-167)" >&2
         exit 1
     fi
-    if ! grep -q 'github.event.release.prerelease' "$PUBLISH"; then
-        echo "$PUBLISH tiene que descartar las prereleases (ADR-0015)." >&2
+    sin_guarda="$(awk '
+        /^jobs:/ { en_jobs = 1; next }
+        en_jobs && /^[^ #]/ { en_jobs = 0 }
+        en_jobs && /^  [A-Za-z0-9_-]+:[[:space:]]*$/ {
+            if (job != "" && !guardado) print job
+            job = $1; sub(/:$/, "", job); guardado = 0; next
+        }
+        en_jobs && /^    if:.*!github\.event\.release\.prerelease/ { guardado = 1 }
+        END { if (job != "" && !guardado) print job }
+    ' "$PUBLISH")"
+    if [ -n "$sin_guarda" ]; then
+        echo "$PUBLISH tiene que descartar las prereleases en el if: de cada job (ADR-0015)." >&2
+        echo "Jobs sin esa condicion: $(printf %s "$sin_guarda" | tr "\n" " ")" >&2
         echo "Una etiqueta -rc.N ensaya la tuberia y no llega a ningun repositorio." >&2
         exit 1
     fi
