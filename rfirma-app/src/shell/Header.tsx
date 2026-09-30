@@ -8,9 +8,9 @@ interface HeaderProps {
   /** Dónde va el menú. Ver [`MenuAnchor`]. */
   menuAnchor: MenuAnchor;
   /**
-   * Si «Estado de rFirma» lleva el triángulo de aviso: certificado de rFirma
-   * ausente o a medias, o nadie atendiendo las sedes
-   * (docs/design/cabecera.md, sección «El aviso»).
+   * Si la barra lleva el botón de aviso: certificado de rFirma ausente o a
+   * medias, o nadie atendiendo las sedes (docs/design/cabecera.md, sección
+   * «El aviso»).
    */
   hasAttention?: boolean;
   /** Lo que se pinta entre la identidad y el menú, o nada en las vistas sin documentos. */
@@ -88,6 +88,17 @@ export function Header({
       {documents}
       <span className="header__gap" />
       <div className="header__end">
+        {hasAttention && (
+          <button
+            type="button"
+            className="rf-btn header__button header__attention"
+            aria-label={t("header.attention")}
+            title={t("header.attention")}
+            onClick={onOpenStatus}
+          >
+            <AlertIcon size={16} />
+          </button>
+        )}
         {menuAnchor === "header" && (
           <div className="header__menu" ref={container}>
             <button
@@ -95,19 +106,13 @@ export function Header({
               className={
                 open ? "rf-btn header__button header__button--open" : "rf-btn header__button"
               }
-              aria-label={hasAttention ? t("header.menuAttention") : t("header.menu")}
-              title={hasAttention ? t("header.menuAttention") : undefined}
+              aria-label={t("header.menu")}
               aria-haspopup="menu"
               aria-expanded={open}
               aria-controls={open ? menuId : undefined}
               onClick={() => setOpen((wasOpen) => !wasOpen)}
             >
               <MenuIcon size={18} />
-              {hasAttention && (
-                <span className="header__buttonAttention" aria-hidden="true">
-                  <AlertIcon size={16} />
-                </span>
-              )}
             </button>
             {open && (
               <div className="header__popup rf-card rf-card--elevated" id={menuId} role="menu">
@@ -118,20 +123,7 @@ export function Header({
                   onClick={choose(onOpenStatus)}
                 >
                   <span className="header__entryLabel">{t("header.status")}</span>
-                  <span
-                    className={
-                      hasAttention
-                        ? "header__entryIcon header__entryIcon--attention"
-                        : "header__entryIcon"
-                    }
-                    aria-hidden={!hasAttention}
-                  >
-                    {hasAttention && (
-                      <span role="img" aria-label={t("header.statusAttention")}>
-                        <AlertIcon size={14} />
-                      </span>
-                    )}
-                  </span>
+                  <span className="header__entryIcon" aria-hidden="true" />
                 </button>
                 <hr className="rf-divider header__divider" />
                 <button

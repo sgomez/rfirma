@@ -495,15 +495,12 @@ msgstr "Instalazio hau ezin da aplikaziotik eguneratu."
 msgid "header.menu"
 msgstr "Menua"
 
-#. Nombre del botón de menú cuando «Estado de rFirma» lleva el aviso.
-msgid "header.menuAttention"
-msgstr "Menua. rFirmaren egoera: arreta behar du"
+#. Nombre accesible y tooltip del botón de aviso de la cabecera.
+msgid "header.attention"
+msgstr "rFirmaren egoera: arreta behar du"
 
 msgid "header.status"
 msgstr "rFirmaren egoera"
-
-msgid "header.statusAttention"
-msgstr "Arreta behar du"
 
 msgid "header.preferences"
 msgstr "Hobespenak…"
