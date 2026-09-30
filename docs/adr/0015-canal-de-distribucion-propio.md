@@ -280,7 +280,9 @@ misma cosa en la misma apertura del panel.
 - **Una guarda de workflows que también comprueba la forma del YAML** (`save-if`, disparadores,
   permisos, argumentos literales de rsync y del árbol), que es como nació. Se descarta porque un
   refactor sin efecto daba un falso rojo: lo que esas líneas protegen ya lo prueban el
-  `justfile` y los tests de `packaging/repo/`, salvo `save-if`, que queda sin vigilante a sabiendas (una PR que guardara su cache desbordaría el cupo, no rompería nada), y la guarda solo vigila las invariantes.
+  `justfile` y los tests de `packaging/repo/`, y la guarda solo vigila las invariantes. La de
+  `save-if` se sustituye por su invariante: la cache de Rust solo se abre desde la acción de
+  preparación, que es donde `save-cache` decide si se escribe.
 
 - **Flathub**, que el [#22](https://github.com/sgomez/rfirma/issues/22) dio por hecho sin
   decidirlo. Queda fuera, y **no cerrado para siempre**: volver es un esfuerzo nuevo

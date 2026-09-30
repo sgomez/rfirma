@@ -139,6 +139,10 @@ fails_naming "borrador nombrado solo en un comentario" "$dir" "crear la Release 
 breaks publish-on-tag "cuelga de 'release: types: [published]'" .github/workflows/publish.yml \
     's|types: \[published\]|types: [created]|'
 
+dir="$(tree published-named-in-comment)"
+sed -i -E 's|^( *)types: \[published\]|\1# types: [published]|' "$dir/.github/workflows/publish.yml"
+fails_naming "published nombrado solo en un comentario" "$dir" "cuelga de 'release: types: [published]'"
+
 breaks publish-job-keeps-candidates "descartar las prereleases en el if: de cada job" .github/workflows/publish.yml \
     "s|^(    if:).*\$|\\1 \${{ github.event_name == 'workflow_dispatch' }}|"
 
@@ -164,5 +168,8 @@ breaks tree-before-download "bajar la serie" .github/workflows/publish.yml \
 
 breaks second-graalvm-install "GraalVM se instala solo con" .github/workflows/ci.yml \
     '0,/^    steps:$/s||    steps:\n      - uses: graalvm/setup-graalvm@0000000000000000000000000000000000000000 # v1|'
+
+breaks rust-cache-outside-setup-runner "la cache de Rust solo la abre" .github/workflows/ci.yml \
+    '0,/^    steps:$/s||    steps:\n      - uses: Swatinem/rust-cache@0000000000000000000000000000000000000000 # v2|'
 
 echo "OK  check-workflows.sh: cada invariante tiene un caso que la rompe y el arbol limpio la cumple"
