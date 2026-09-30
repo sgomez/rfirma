@@ -13,6 +13,7 @@ import {
   tauriLanguagePreference,
   tauriPreferences,
   tauriSiteErrands,
+  tauriWindowTheme,
 } from "../tauri";
 import { SedeWindow } from "./SedeWindow";
 
@@ -52,7 +53,7 @@ const [language, settings] = await Promise.all([preference.read(), tauriPreferen
 
 // Antes de montar nada: aplicarlo después dejaría ver un parpadeo del tema que
 // no es.
-applyTheme(settings.theme);
+applyTheme(settings.theme, tauriWindowTheme());
 
 const i18n = createI18n(language);
 

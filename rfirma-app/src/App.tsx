@@ -28,6 +28,7 @@ import { useDocuments } from "./documents/useDocuments";
 import { classify } from "./errors/classify";
 import { PreferencesView } from "./preferences/PreferencesView";
 import type { PreferencesStore } from "./preferences/preferences";
+import type { WindowTheme } from "./preferences/theme";
 import { MainWindow } from "./shell/MainWindow";
 import { type MenuAnchor, menuAnchorFor } from "./shell/menuAnchor";
 import { absentNativeTitlebar, type NativeTitlebar } from "./shell/nativeTitlebar";
@@ -94,6 +95,8 @@ interface AppProps {
   covered?: boolean;
   /** La barra de título GTK de Linux. Ver [`NativeTitlebar`]. */
   titlebar?: NativeTitlebar;
+  /** Quien fija el tema de la ventana nativa. Ver [`WindowTheme`]. */
+  windowTheme?: WindowTheme;
 }
 
 /** El asa que `onReady` entrega: lo único de `App` que se abre desde fuera. */
@@ -134,6 +137,7 @@ export function App({
   onReady,
   covered = false,
   titlebar = NO_TITLEBAR,
+  windowTheme,
 }: AppProps) {
   const [dialog, setDialog] = useState<OpenDialog>(null);
   const [view, setView] = useState<ActiveView>(null);
@@ -182,7 +186,7 @@ export function App({
   const [signature, setSignature] = useVisibleSignature(initialSignature, chosen);
   const signing = useSigning(signer);
   const { settings, changeSettings, chooseDestination, rubric, rubricFailure, chooseRubric } =
-    usePreferencesState(preferences, rubrics, covered);
+    usePreferencesState(preferences, rubrics, covered, windowTheme);
   // Mientras los ajustes se leen todavía no se sabe, y lo guardado por omisión es recordar.
   const rememberActivity = settings?.rememberActivity ?? true;
   const documents = useDocuments(recents, picker, rememberActivity);
@@ -437,8 +441,6 @@ export function App({
               document={{
                 name: signedHere.document.name,
                 pages: pdf?.pageCount ?? null,
-                // El tamaño lo trae la postfirma, que lo supo al escribir el
-                // fichero: aquí no se recalcula nada (ID-77).
                 sizeBytes: signedHere.document.sizeBytes,
               }}
               signedAt={signingInstant}

@@ -2,12 +2,13 @@
 
 import { getVersion } from "@tauri-apps/api/app";
 import { invoke } from "@tauri-apps/api/core";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import type { ExternalDestinationOpener } from "./desktop/externalDestination";
 import { FALLBACK_LANGUAGE, isLanguageTag } from "./i18n/languages";
 import type { LanguagePreference } from "./i18n/preference";
 import type { DestinationMode } from "./preferences/destinationMode";
 import type { PreferencesStore } from "./preferences/preferences";
-import { DEFAULT_THEME, isTheme, type Theme } from "./preferences/theme";
+import { DEFAULT_THEME, isTheme, type Theme, type WindowTheme } from "./preferences/theme";
 import type {
   Destination,
   DestinationSource,
@@ -185,4 +186,13 @@ export function tauriVersionCheck(): VersionCheck {
 /** La versión del binario en ejecución, la de `Cargo.toml`. */
 export async function tauriAppVersion(): Promise<string> {
   return await getVersion();
+}
+
+/** El tema de la ventana nativa, que es lo que pinta la barra de título GTK. */
+export function tauriWindowTheme(): WindowTheme {
+  return (theme) => {
+    getCurrentWindow()
+      .setTheme(theme)
+      .catch((failure) => console.error("no se pudo fijar el tema de la ventana", failure));
+  };
 }

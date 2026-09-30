@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { Preferences, PreferencesStore } from "./preferences/preferences";
-import { applyTheme } from "./preferences/theme";
+import { applyTheme, noWindowTheme, type WindowTheme } from "./preferences/theme";
 import type { Destination, DestinationSource } from "./signing/destination";
 import type { Rubric, RubricFailure, RubricPicker } from "./signing/rubric";
 import type { SigningState } from "./signing/useSigning";
@@ -13,6 +13,7 @@ export function usePreferencesState(
   preferences: PreferencesStore,
   rubrics: RubricPicker,
   covered = false,
+  windowTheme: WindowTheme = noWindowTheme,
 ) {
   const [settings, setSettings] = useState<Preferences | null>(null);
   const [rubric, setRubric] = useState<Rubric | null>(null);
@@ -47,8 +48,8 @@ export function usePreferencesState(
   // cuelgan de `<html>`, así que quien lo aplica tiene que salir del árbol de
   // React. Mientras los ajustes se leen no se toca nada, y manda el sistema.
   useEffect(() => {
-    if (settings) applyTheme(settings.theme);
-  }, [settings]);
+    if (settings) applyTheme(settings.theme, windowTheme);
+  }, [settings, windowTheme]);
 
   /**
    * Un ajuste cambia **en cuanto se toca**, y solo se queda si el disco lo

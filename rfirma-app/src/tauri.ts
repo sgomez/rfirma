@@ -33,6 +33,7 @@ export {
   tauriPreferences,
   tauriSignedDocumentOpener,
   tauriVersionCheck,
+  tauriWindowTheme,
 } from "./tauriPreferences";
 export { tauriSiteErrands } from "./tauriSede";
 export {

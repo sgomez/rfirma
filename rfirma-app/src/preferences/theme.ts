@@ -21,6 +21,12 @@ export function isTheme(value: string): value is Theme {
   return (THEMES as readonly string[]).includes(value);
 }
 
+/** Quien fija el tema de la ventana nativa; `null` la devuelve al escritorio. */
+export type WindowTheme = (theme: "light" | "dark" | null) => void;
+
+/** El puerto que no hace nada: lo que queda sin ventana nativa, como en las pruebas. */
+export const noWindowTheme: WindowTheme = () => {};
+
 /**
  * Pone el tema en el documento.
  *
@@ -30,11 +36,19 @@ export function isTheme(value: string): value is Theme {
  * vez de escribir uno tercero: la media query del bundle es
  * `:root:not([data-theme="light"])`, así que lo que devuelve el mando al
  * sistema operativo es la ausencia del atributo, no un valor más.
+ *
+ * También fija el tema de la ventana, que es lo que pinta la barra de título
+ * GTK; `null` la devuelve al escritorio.
  */
-export function applyTheme(theme: Theme, root: HTMLElement = document.documentElement): void {
+export function applyTheme(
+  theme: Theme,
+  windowTheme: WindowTheme,
+  root: HTMLElement = document.documentElement,
+): void {
   if (theme === "system") {
     root.removeAttribute("data-theme");
-    return;
+  } else {
+    root.setAttribute("data-theme", theme);
   }
-  root.setAttribute("data-theme", theme);
+  windowTheme(theme === "system" ? null : theme);
 }
