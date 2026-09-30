@@ -1,4 +1,9 @@
-export type ExternalDestination = "discussions" | "releases" | "repository" | "sourceCode";
+export type ExternalDestination =
+  | "discussions"
+  | "releases"
+  | "repository"
+  | "sourceCode"
+  | "windows";
 
 export interface ExternalDestinationOpener {
   open(destination: ExternalDestination): Promise<void>;

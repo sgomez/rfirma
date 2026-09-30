@@ -1,7 +1,8 @@
 use std::cell::Cell;
 use std::time::{Duration, SystemTime};
 
-use super::{new_version, Version};
+use super::{new_version, NewVersion, Version};
+use crate::desktop::domain::channel::Channel;
 use crate::desktop::domain::version_check::VersionCheck;
 use crate::signing::application::tests::a_memory;
 
@@ -22,12 +23,96 @@ fn a_newer_published_version_is_announced() {
         Version::parse("0.3.1").expect("es una version"),
         &memory,
         &|| Some(a_release("v0.4.0")),
+        Channel::Native,
         at(1_756_000_000),
     );
 
     assert_eq!(
-        newer.map(|version| version.to_string()),
+        newer.map(|new| new.version.to_string()),
         Some("0.4.0".into())
+    );
+}
+
+fn a_latest_json(version: &str) -> String {
+    format!(
+        r#"{{"version":"{version}","notes":"","pub_date":"2026-09-30T00:00:00Z","platforms":{{"windows-x86_64":{{"signature":"sig","url":"https://rfirma.sgomez.me/windows/rFirma.exe"}}}}}}"#
+    )
+}
+
+#[test]
+fn on_windows_the_feed_is_read_as_latest_json_and_the_version_is_installable() {
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let memory = a_memory(home.path());
+
+    let newer = new_version(
+        Version::parse("0.3.1").expect("es una version"),
+        &memory,
+        &|| Some(a_latest_json("0.4.0")),
+        Channel::Windows,
+        at(1_756_000_000),
+    );
+
+    assert_eq!(
+        newer,
+        Some(NewVersion {
+            version: Version::parse("0.4.0").expect("es una version"),
+            installable: true,
+        })
+    );
+}
+
+#[test]
+fn on_linux_the_version_is_announced_but_not_installable() {
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let memory = a_memory(home.path());
+
+    for channel in [Channel::Native, Channel::Flatpak] {
+        let newer = new_version(
+            Version::parse("0.3.1").expect("es una version"),
+            &memory,
+            &|| Some(a_release("v0.4.0")),
+            channel,
+            at(1_756_000_000),
+        );
+
+        assert_eq!(newer.map(|new| new.installable), Some(false));
+    }
+}
+
+#[test]
+fn each_channel_reads_only_its_own_feed_format() {
+    let home = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let memory = a_memory(home.path());
+    let running = Version::parse("0.3.1").expect("es una version");
+
+    assert_eq!(
+        new_version(
+            running,
+            &memory,
+            &|| Some(a_release("v0.4.0")),
+            Channel::Windows,
+            at(1)
+        ),
+        None
+    );
+    assert_eq!(
+        new_version(
+            running,
+            &memory,
+            &|| Some(a_latest_json("0.4.0")),
+            Channel::Native,
+            at(2)
+        ),
+        None
+    );
+    assert_eq!(
+        memory
+            .state()
+            .expect("deberia leerse")
+            .into_value()
+            .version_check,
+        None,
+        "un feed que no es el del canal no se recuerda"
     );
 }
 
@@ -38,12 +123,24 @@ fn the_same_version_or_an_older_one_is_not_announced() {
     let running = Version::parse("0.4.0").expect("es una version");
 
     assert_eq!(
-        new_version(running, &memory, &|| Some(a_release("v0.4.0")), at(1_000)),
+        new_version(
+            running,
+            &memory,
+            &|| Some(a_release("v0.4.0")),
+            Channel::Native,
+            at(1_000)
+        ),
         None,
         "la que se esta ejecutando no es una version nueva"
     );
     assert_eq!(
-        new_version(running, &memory, &|| Some(a_release("v0.3.9")), at(2_000)),
+        new_version(
+            running,
+            &memory,
+            &|| Some(a_release("v0.3.9")),
+            Channel::Native,
+            at(2_000)
+        ),
         None,
         "una publicacion mas vieja tampoco"
     );
@@ -58,6 +155,7 @@ fn without_network_there_is_silence_and_the_cache_is_left_untouched() {
         Version::parse("0.1.0").expect("es una version"),
         &memory,
         &|| None,
+        Channel::Native,
         at(1_756_000_000),
     );
 
@@ -92,6 +190,7 @@ fn the_feed_is_asked_even_when_the_last_answer_was_a_moment_ago() {
             asked.set(true);
             Some(a_release("v0.5.0"))
         },
+        Channel::Native,
         at(1_756_000_001),
     );
 
@@ -100,7 +199,7 @@ fn the_feed_is_asked_even_when_the_last_answer_was_a_moment_ago() {
         "se pregunta a la fuente de publicaciones aunque la ultima respuesta sea reciente"
     );
     assert_eq!(
-        announced.map(|version| version.to_string()),
+        announced.map(|new| new.version.to_string()),
         Some("0.5.0".into())
     );
 }
@@ -120,11 +219,12 @@ fn without_a_response_the_last_known_version_is_used() {
         Version::parse("0.3.0").expect("es una version"),
         &memory,
         &|| None,
+        Channel::Native,
         at(1_756_000_100),
     );
 
     assert_eq!(
-        announced.map(|version| version.to_string()),
+        announced.map(|new| new.version.to_string()),
         Some("0.4.0".into())
     );
 }
@@ -144,11 +244,12 @@ fn an_invalid_response_does_not_overwrite_the_last_known_version() {
         Version::parse("0.3.0").expect("es una version"),
         &memory,
         &|| Some("<html>502 Bad Gateway</html>".to_string()),
+        Channel::Native,
         at(1_756_000_100),
     );
 
     assert_eq!(
-        announced.map(|version| version.to_string()),
+        announced.map(|new| new.version.to_string()),
         Some("0.4.0".into()),
         "una respuesta invalida no sobrescribe la ultima conocida"
     );
@@ -175,6 +276,7 @@ fn a_release_candidate_tag_is_not_a_version_to_announce() {
         Version::parse("0.3.0").expect("es una version"),
         &memory,
         &|| Some(a_release("v0.4.0-rc.1")),
+        Channel::Native,
         at(1_756_000_000),
     );
 
@@ -190,6 +292,7 @@ fn an_answer_that_is_not_a_release_is_silence_and_is_not_remembered() {
         Version::parse("0.3.0").expect("es una version"),
         &memory,
         &|| Some("<html>502 Bad Gateway</html>".to_string()),
+        Channel::Native,
         at(1_756_000_000),
     );
 

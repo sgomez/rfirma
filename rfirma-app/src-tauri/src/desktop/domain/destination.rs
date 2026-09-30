@@ -8,6 +8,8 @@ pub const REPOSITORY: &str = "repository";
 pub const REPOSITORY_URL: &str = "https://rfirma.sgomez.me/";
 pub const SOURCE_CODE: &str = "sourceCode";
 pub const SOURCE_CODE_URL: &str = "https://github.com/sgomez/rfirma";
+pub const WINDOWS: &str = "windows";
+pub const WINDOWS_URL: &str = "https://rfirma.sgomez.me/windows/";
 pub const CERTIFICATE_ISSUANCE: &str = "certificateIssuance";
 pub const CERTIFICATE_ISSUANCE_URL: &str =
     "https://www.sede.fnmt.gob.es/certificados/persona-fisica/obtener-certificado-software";
@@ -18,6 +20,7 @@ pub fn resolve_destination(target: &str) -> Option<&'static str> {
         RELEASES => Some(RELEASES_URL),
         REPOSITORY => Some(REPOSITORY_URL),
         SOURCE_CODE => Some(SOURCE_CODE_URL),
+        WINDOWS => Some(WINDOWS_URL),
         CERTIFICATE_ISSUANCE => Some(CERTIFICATE_ISSUANCE_URL),
         _ => None,
     }

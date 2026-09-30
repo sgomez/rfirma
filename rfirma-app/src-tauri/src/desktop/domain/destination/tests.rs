@@ -25,6 +25,14 @@ fn repository_identifier_resolves_to_repository_url() {
 }
 
 #[test]
+fn windows_identifier_resolves_to_the_windows_downloads() {
+    assert_eq!(
+        resolve_destination(WINDOWS),
+        Some("https://rfirma.sgomez.me/windows/")
+    );
+}
+
+#[test]
 fn source_code_identifier_resolves_to_the_github_repository() {
     assert_eq!(
         resolve_destination(SOURCE_CODE),

@@ -63,6 +63,7 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
 
   pub struct NewVersionView
       version: String
+      installable: bool
 
   pub struct SignalRowView
       signal: Signal

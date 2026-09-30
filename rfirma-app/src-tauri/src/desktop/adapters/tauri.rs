@@ -29,15 +29,18 @@ pub fn read_invocation(
 /// Comprueba si hay una versión nueva publicada.
 #[tauri::command(async)]
 pub fn check_for_new_version(desktop: State<'_, DesktopRoot>) -> Option<NewVersionView> {
+    let channel = crate::desktop::adapters::channel::Channel::detected();
     let announced = crate::desktop::application::version::new_version(
         crate::desktop::application::version::Version::running(),
         desktop.memory.as_ref(),
-        &crate::desktop::adapters::releases::latest_release,
+        &|| crate::desktop::adapters::releases::latest_release(channel),
+        channel,
         std::time::SystemTime::now(),
     )?;
 
     Some(NewVersionView {
-        version: announced.to_string(),
+        version: announced.version.to_string(),
+        installable: announced.installable,
     })
 }
 
@@ -48,7 +51,7 @@ pub fn measure_version(desktop: State<'_, DesktopRoot>) -> SignalRowView {
     crate::desktop::application::status::measure_version_signal(
         crate::desktop::application::version::Version::running(),
         desktop.memory.as_ref(),
-        &crate::desktop::adapters::releases::latest_release,
+        &|| crate::desktop::adapters::releases::latest_release(channel),
         channel,
         std::time::SystemTime::now(),
     )

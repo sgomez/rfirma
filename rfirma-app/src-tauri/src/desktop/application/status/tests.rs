@@ -98,6 +98,13 @@ fn checking_version_signal_has_no_value_nor_action() {
 }
 
 #[test]
+fn each_channel_updates_from_its_own_destination() {
+    assert_eq!(update_destination_for(Channel::Windows), "windows");
+    assert_eq!(update_destination_for(Channel::Native), "releases");
+    assert_eq!(update_destination_for(Channel::Flatpak), "repository");
+}
+
+#[test]
 fn measure_version_signal_answers_with_what_the_feed_announces() {
     let home = tempfile::tempdir().expect("tempdir");
     let memory = a_memory(home.path());

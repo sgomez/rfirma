@@ -22,6 +22,23 @@ fn no_marker_means_the_native_channel() {
 }
 
 #[test]
+fn windows_is_its_own_channel_whatever_the_marker_says() {
+    let directory = tempfile::tempdir().expect("deberia haber directorio temporal");
+    let marker = directory.path().join(".flatpak-info");
+    fs::write(&marker, b"[Application]\n").expect("deberia escribirse");
+
+    assert_eq!(Channel::on_platform(true, &marker), Channel::Windows);
+    assert_eq!(Channel::on_platform(false, &marker), Channel::Flatpak);
+}
+
+#[test]
+fn only_the_windows_channel_installs_from_the_app() {
+    assert!(Channel::Windows.installs_from_the_app());
+    assert!(!Channel::Native.installs_from_the_app());
+    assert!(!Channel::Flatpak.installs_from_the_app());
+}
+
+#[test]
 fn the_real_question_is_asked_over_the_well_known_marker() {
     assert_eq!(SANDBOX_MARKER, "/.flatpak-info");
 }
