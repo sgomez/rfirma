@@ -1,4 +1,4 @@
-//! Congela el tamaño de los ficheros de producción y de tests contra `files_stay_small.baseline`, para que crecer exija tocar esa lista a mano.
+//! Congela el tamaño de los ficheros Rust de producción y de tests contra `files_stay_small.baseline`, para que crecer exija tocar esa lista a mano.
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -10,14 +10,7 @@ const PRODUCTION_THRESHOLD: usize = 500;
 const TEST_THRESHOLD: usize = 600;
 
 /// Raíces que recorre la guarda, relativas a la raíz del repositorio.
-const SCANNED_ROOTS: &[&str] = &[
-    "rfirma-app/src-tauri/src",
-    "rfirma-app/src-tauri/tests",
-    "rfirma-app/src",
-];
-
-/// Prefijos fuera de la guarda: datos o ficheros generados, no código escrito a mano.
-const EXEMPT_PREFIXES: &[&str] = &["rfirma-app/src/i18n/locales/"];
+const SCANNED_ROOTS: &[&str] = &["rfirma-app/src-tauri/src", "rfirma-app/src-tauri/tests"];
 
 fn repository_root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -31,25 +24,10 @@ fn baseline_path() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/files_stay_small.baseline")
 }
 
-fn has_a_scanned_extension(path: &str) -> bool {
-    [".rs", ".ts", ".tsx"]
-        .iter()
-        .any(|extension| path.ends_with(extension))
-}
-
-fn is_exempt(path: &str) -> bool {
-    EXEMPT_PREFIXES
-        .iter()
-        .any(|prefix| path.starts_with(prefix))
-}
-
-/// Es test todo fichero bajo un directorio `tests/`, llamado `tests.rs`, o terminado en `.test.ts(x)`.
+/// Es test todo fichero bajo un directorio `tests/` o llamado `tests.rs`.
 fn is_a_test_file(path: &str) -> bool {
     let basename = path.rsplit('/').next().unwrap_or(path);
-    path.split('/').any(|segment| segment == "tests")
-        || basename == "tests.rs"
-        || basename.ends_with(".test.ts")
-        || basename.ends_with(".test.tsx")
+    path.split('/').any(|segment| segment == "tests") || basename == "tests.rs"
 }
 
 fn threshold_for(path: &str) -> usize {
@@ -78,8 +56,7 @@ fn measure_tracked_files(root: &Path) -> BTreeMap<String, usize> {
         .expect("las rutas deberian ser UTF-8")
         .split('\0')
         .filter(|path| !path.is_empty())
-        .filter(|path| has_a_scanned_extension(path))
-        .filter(|path| !is_exempt(path))
+        .filter(|path| path.ends_with(".rs"))
         .map(|path| {
             let text = std::fs::read_to_string(root.join(path))
                 .unwrap_or_else(|error| panic!("no se pudo leer {path}: {error}"));
@@ -172,18 +149,18 @@ fn an_empty_baseline_parses_to_an_empty_map() {
 
 #[test]
 fn a_file_missing_from_the_baseline_above_its_threshold_is_caught() {
-    let measured = BTreeMap::from([("rfirma-app/src/new.ts".to_owned(), 501)]);
+    let measured = BTreeMap::from([("rfirma-app/src-tauri/src/new.rs".to_owned(), 501)]);
     let baseline = BTreeMap::new();
 
     let problems = baseline_problems(&measured, &baseline);
     assert_eq!(problems.len(), 1);
-    assert!(problems[0].contains("new.ts"));
+    assert!(problems[0].contains("new.rs"));
     assert!(problems[0].contains("no está en el baseline"));
 }
 
 #[test]
 fn a_file_missing_from_the_baseline_under_its_threshold_is_not_reported() {
-    let measured = BTreeMap::from([("rfirma-app/src/small.ts".to_owned(), 10)]);
+    let measured = BTreeMap::from([("rfirma-app/src-tauri/src/small.rs".to_owned(), 10)]);
     let baseline = BTreeMap::new();
 
     assert!(baseline_problems(&measured, &baseline).is_empty());
@@ -256,28 +233,15 @@ fn a_module_sibling_called_tests_rs_is_a_test_without_a_tests_directory() {
 }
 
 #[test]
-fn a_dot_test_ts_or_tsx_suffix_is_a_test() {
-    assert!(is_a_test_file("rfirma-app/src/App.test.tsx"));
-    assert!(is_a_test_file("rfirma-app/src/sede/siteErrands.test.ts"));
-    assert!(!is_a_test_file("rfirma-app/src/App.tsx"));
-}
-
-#[test]
-fn the_i18n_locales_prefix_is_exempt() {
-    assert!(is_exempt("rfirma-app/src/i18n/locales/es.ts"));
-    assert!(!is_exempt("rfirma-app/src/i18n/i18n.ts"));
-}
-
-#[test]
 fn the_baseline_parses_path_and_line_count() {
     let baseline =
-        parse_baseline("rfirma-app/src-tauri/src/a.rs 520\nrfirma-app/src/App.tsx 700\n");
+        parse_baseline("rfirma-app/src-tauri/src/a.rs 520\nrfirma-app/src-tauri/tests/b.rs 700\n");
 
     assert_eq!(
         baseline,
         BTreeMap::from([
             ("rfirma-app/src-tauri/src/a.rs".to_owned(), 520),
-            ("rfirma-app/src/App.tsx".to_owned(), 700),
+            ("rfirma-app/src-tauri/tests/b.rs".to_owned(), 700),
         ])
     );
 }

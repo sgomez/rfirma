@@ -275,11 +275,11 @@ fmt-ts:
 fmt-python:
     ruff format {{ root }}
 
-# La comprobacion de formato de las tres cadenas, sin escribir: la llaman el pre-push y check-repo.
+# La comprobacion de formato de las tres cadenas y el lint de biome, sin escribir: la llaman el pre-push y check-repo.
 [group('ci')]
 fmt-check: deps fmt-check-rust
     cd {{ conformance_suite }} && cargo fmt --all -- --check
-    cd {{ root }} && pnpm exec biome check --linter-enabled=false .
+    cd {{ root }} && pnpm exec biome check .
     ruff format --check {{ root }}
 
 [private]

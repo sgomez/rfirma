@@ -1,4 +1,4 @@
-# Puerta local de formato, previa al push: solo formato, lo que `just fmt-check` ya comprueba en el CI.
+# Puerta local previa al push: formato y lint de biome, lo que `just fmt-check` ya comprueba en el CI.
 # Un hook de git es una shell no interactiva, donde cargo y ruff no estan en el PATH.
 # El `run` es una sola linea: en Windows lefthook le pasa a `sh` solo la primera (ADR-0035).
 # Se instala en cada `pnpm install` con `tools/install-git-hooks.sh`, salvo desde un worktree.
@@ -6,5 +6,5 @@
 pre-push:
   jobs:
     - name: fmt-check
-      fail_text: "arreglalo con: just fmt"
+      fail_text: "el formato se arregla con just fmt; el lint de biome, a mano"
       run: PATH="$HOME/.cargo/bin:$HOME/.local/bin:$PATH" just fmt-check
