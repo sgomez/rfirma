@@ -336,3 +336,54 @@ impl From<WithdrawalReportView> for WithdrawalReport {
         }
     }
 }
+
+crossing! {
+    /// El control de la barra de título nativa que se ha pulsado.
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+    #[serde(rename_all = "camelCase")]
+    pub enum TitlebarActionView {
+        Open,
+        Status,
+        Preferences,
+        Feedback,
+        About,
+    }
+}
+
+crossing! {
+    /// Las etiquetas de la barra de título nativa, ya traducidas por la ventana.
+    #[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
+    #[serde(rename_all = "camelCase")]
+    pub struct TitlebarLabelsView {
+        /// Texto del botón de abrir.
+        pub open: String,
+        /// Tooltip del botón de abrir, con su atajo.
+        pub open_tooltip: String,
+        /// Tooltip y nombre accesible del botón de aviso.
+        pub warning: String,
+        /// Tooltip y nombre accesible del botón del menú.
+        pub menu: String,
+        /// Entrada del estado de rFirma.
+        pub status: String,
+        /// Entrada de Preferencias.
+        pub preferences: String,
+        /// Entrada de comentarios y ayuda.
+        pub feedback: String,
+        /// Entrada de «Acerca de».
+        pub about: String,
+    }
+}
+
+crossing! {
+    /// El estado completo de la barra de título nativa que manda la ventana.
+    #[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
+    #[serde(rename_all = "camelCase")]
+    pub struct TitlebarStateView {
+        /// Si se ve el botón de abrir.
+        pub open_visible: bool,
+        /// Si se ve el botón de aviso.
+        pub warning_visible: bool,
+        /// Las etiquetas ya traducidas.
+        pub labels: TitlebarLabelsView,
+    }
+}

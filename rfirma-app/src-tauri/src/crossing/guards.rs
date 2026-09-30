@@ -109,7 +109,7 @@ fn types_named_by(signature: &str) -> Vec<&str> {
 }
 
 /// Tipos de salida que no contienen información procedente de un documento.
-const OUTPUTS_WITH_NO_DOCUMENT_BEHIND: [&str; 32] = [
+const OUTPUTS_WITH_NO_DOCUMENT_BEHIND: [&str; 33] = [
     "StatusView",
     "CertificateView",
     "PlacementView",
@@ -142,6 +142,7 @@ const OUTPUTS_WITH_NO_DOCUMENT_BEHIND: [&str; 32] = [
     "WithdrawalView",
     "SignatureStatusView",
     "ToneView",
+    "TitlebarActionView",
 ];
 
 /// Ruta de prueba simulando un enlace concedido por el portal.

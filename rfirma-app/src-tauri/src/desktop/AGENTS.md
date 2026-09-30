@@ -21,8 +21,9 @@ máquina. Ni firma ni documentos. Rutas relativas a `src/desktop/`.
 | `adapters/registry.rs` | `DesktopRegistry`: el adaptador de `HandlerRegistry` sobre `channel.rs` y `choice.rs` en Linux, y sobre `registry/windows_classes.rs` en Windows. |
 | `adapters/registry/windows_classes.rs` | Quién abre `afirma://` en Windows: `HKCU\Software\Classes` sobre `HKLM`, y la rama de rFirma en la del usuario (ADR-0035). Pruebas en `adapters/registry/windows_classes/tests.rs`. |
 | `adapters/releases.rs` | El único sitio que abre una conexión: le pregunta a GitHub por la última publicación. Pruebas en `adapters/releases/tests.rs`. |
-| `adapters/tauri.rs` | Las órdenes del escritorio: invocación, versión publicada, manejadores de `afirma://` y su elección, destino externo, estado y retirada. Pruebas en `adapters/tauri/tests.rs`. |
-| `adapters/views.rs` | Lo que cruza a la ventana: manejadores de `afirma://`, versión nueva, señales de estado y resultado de la retirada. Sin pruebas propias. |
+| `adapters/tauri.rs` | Las órdenes del escritorio: invocación, estado de la barra de título nativa, versión publicada, manejadores de `afirma://` y su elección, destino externo, estado y retirada. Pruebas en `adapters/tauri/tests.rs`. |
+| `adapters/titlebar.rs` | La barra de título nativa de GTK de la ventana principal en Linux: sus acciones `hdr`, el evento que emiten y el estado que la ventana le manda. Nada en Windows ni macOS. Capa fina, sin pruebas propias. |
+| `adapters/views.rs` | Lo que cruza a la ventana: manejadores de `afirma://`, versión nueva, señales de estado, resultado de la retirada y la barra de título nativa. Sin pruebas propias. |
 | `application/destination.rs` | Abrir un destino externo conocido en el navegador. Pruebas en `application/destination/tests.rs`. |
 | `application/handlers.rs` | Quién atiende `afirma://`, del escritorio a Preferencias y de vuelta. Devuelve dominio, nunca una vista. Pruebas en `application/handlers/tests.rs`. |
 | `application/invocation.rs` | La invocación desde fuera, `rfirma documento.pdf`: qué trae, qué hace la segunda —solo del escritorio (ADR-0024)— y el rol de proceso que decide `role_of`. Pruebas en `application/invocation/tests.rs`. |

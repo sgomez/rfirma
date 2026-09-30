@@ -7,7 +7,9 @@ use crate::documents::DocumentsRoot;
 use crate::identity::IdentityRoot;
 use crate::site::SiteRoot;
 
-use super::views::{InstallationView, NewVersionView, SignalRowView, WithdrawalReportView};
+use super::views::{
+    InstallationView, NewVersionView, SignalRowView, TitlebarStateView, WithdrawalReportView,
+};
 use crate::crossing::Failure;
 use crate::desktop::domain::status::{StoreBrand, StoreCertificates, StoreDetail};
 use crate::documents::adapters::views::DroppedDocumentView;
@@ -24,6 +26,12 @@ pub fn read_invocation(
     documents
         .what_was_dropped(&paths)
         .map(DroppedDocumentView::from)
+}
+
+/// Aplica en el hilo principal el estado de la barra de título nativa que manda la ventana.
+#[tauri::command(async)]
+pub fn apply_titlebar_state(app_handle: tauri::AppHandle, state: TitlebarStateView) {
+    let _ = app_handle.run_on_main_thread(move || super::titlebar::apply(&state));
 }
 
 /// Comprueba si hay una versión nueva publicada.

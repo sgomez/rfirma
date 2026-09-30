@@ -230,6 +230,7 @@ fn with_the_five_roots(
             signing::adapters::tauri::preview_signature,
             signing::adapters::tauri::pades_lower_left,
             desktop::adapters::tauri::read_invocation,
+            desktop::adapters::tauri::apply_titlebar_state,
             desktop::adapters::tauri::check_for_new_version,
             desktop::adapters::tauri::install_new_version,
             desktop::adapters::tauri::measure_version,
@@ -445,10 +446,12 @@ fn open_the_main_window(app: &tauri::AppHandle) {
         .title("rFirma")
         .inner_size(1280.0, 720.0)
         .min_inner_size(1100.0, 560.0)
+        .visible(!desktop::adapters::titlebar::BUILT_HIDDEN)
         .build();
 
-    if let Err(error) = built {
-        eprintln!("rfirma: no se puede abrir la ventana principal ({error})");
+    match built {
+        Ok(window) => desktop::adapters::titlebar::mount_and_show(&window),
+        Err(error) => eprintln!("rfirma: no se puede abrir la ventana principal ({error})"),
     }
 }
 

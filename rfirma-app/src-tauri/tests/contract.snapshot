@@ -2,6 +2,7 @@ ORDENES DE TAURI                          (<contexto>/adapters/tauri*.rs)
   Sin el estado inyectado (State<...>, AppHandle): no cruza.
 
         read_invocation() -> Option<DroppedDocumentView>
+  async apply_titlebar_state(state: TitlebarStateView)
   async check_for_new_version() -> Option<NewVersionView>
   async install_new_version() -> InstallationView
   async measure_version() -> SignalRowView
@@ -115,6 +116,28 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
   pub struct WithdrawalReportView
       handler: WithdrawalView
       stores: Vec<StoreWithdrawalView>
+
+  pub enum TitlebarActionView
+      Open
+      Status
+      Preferences
+      Feedback
+      About
+
+  pub struct TitlebarLabelsView
+      open: String
+      openTooltip: String
+      warning: String
+      menu: String
+      status: String
+      preferences: String
+      feedback: String
+      about: String
+
+  pub struct TitlebarStateView
+      openVisible: bool
+      warningVisible: bool
+      labels: TitlebarLabelsView
 
   pub struct RubricView
       base64: String
