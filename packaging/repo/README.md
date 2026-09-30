@@ -108,7 +108,9 @@ con el `Base Directory` viejo la construcción falla al no encontrar el bundle.
 
 La imagen se construye en dos etapas: `node:24-alpine` instala las dependencias del sitio y
 ejecuta `astro build`, y `caddy:alpine` se queda solo con el `dist/`. Un cambio en `site/`,
-en el `Dockerfile` o en el sistema de diseño en `main` dispara un redespliegue.
+en el `Dockerfile`, en el sistema de diseño o en el workspace de pnpm de la raíz
+(`package.json`, `pnpm-workspace.yaml`, `pnpm-lock.yaml`, `tsconfig.base.json`) en `main`
+dispara un redespliegue.
 
 **El montaje**: la aplicación de Coolify necesita `/srv/rfirma-repo` del anfitrión montado en
 `/srv/rfirma-repo` del contenedor, **de sólo lectura**. Sin él, las rutas de los tres
