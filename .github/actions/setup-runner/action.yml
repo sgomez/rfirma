@@ -71,10 +71,22 @@ runs:
 
     - uses: ./.github/actions/load-versions
 
-    - if: inputs.java == 'graalvm'
-      uses: ./.github/actions/setup-graalvm
+    - id: graalvm
+      if: inputs.java == 'graalvm'
+      shell: bash
+      run: |
+        echo "version=$GRAALVM_VERSION" >> "$GITHUB_OUTPUT"
+        echo "java=${GRAALVM_VERSION%%.*}" >> "$GITHUB_OUTPUT"
 
-    # setup-graalvm deja el entorno de Visual Studio, y en bash el link.exe de Git va antes en el PATH.
+    # Con `version:` busca la etiqueta `graal-<versión>`, no la última CE de `java-version` (ADR-0035).
+    - if: inputs.java == 'graalvm'
+      uses: graalvm/setup-graalvm@0426e2e191540e8514dff98dc52a5f5146a2a276 # v1.6.6
+      with:
+        distribution: graalvm-community
+        version: ${{ steps.graalvm.outputs.version }}
+        java-version: ${{ steps.graalvm.outputs.java }}
+
+    # graalvm/setup-graalvm deja el entorno de Visual Studio, y en bash el link.exe de Git va antes en el PATH.
     - if: inputs.java == 'graalvm' && runner.os == 'Windows'
       shell: pwsh
       run: |
@@ -131,7 +143,33 @@ runs:
       shell: bash
       run: echo "OPENSSL_SRC_PERL=C:/Strawberry/perl/bin/perl.exe" >> "$GITHUB_ENV"
 
-    - uses: ./.github/actions/setup-just
+    - if: runner.os != 'Windows'
+      shell: bash
+      run: |
+        set -euo pipefail
+        archivo="just-${JUST_VERSION}-x86_64-unknown-linux-musl.tar.gz"
+        directorio="$(mktemp -d)"
+        curl -fsSL -o "$directorio/$archivo" \
+          "https://github.com/casey/just/releases/download/${JUST_VERSION}/${archivo}"
+        echo "${JUST_SHA256_LINUX}  $directorio/$archivo" | sha256sum -c -
+        tar -xzf "$directorio/$archivo" -C "$directorio" just
+        sudo install -m 755 "$directorio/just" /usr/local/bin/just
+        rm -rf "$directorio"
+        just --version
+
+    - if: runner.os == 'Windows'
+      shell: bash
+      run: |
+        set -euo pipefail
+        archivo="just-${JUST_VERSION}-x86_64-pc-windows-msvc.zip"
+        directorio="$RUNNER_TEMP/just"
+        mkdir -p "$directorio"
+        curl -fsSL -o "$directorio/$archivo" \
+          "https://github.com/casey/just/releases/download/${JUST_VERSION}/${archivo}"
+        echo "${JUST_SHA256_WINDOWS}  $directorio/$archivo" | sha256sum -c -
+        unzip -o -q "$directorio/$archivo" just.exe -d "$directorio"
+        cygpath -w "$directorio" >> "$GITHUB_PATH"
+        "$directorio/just.exe" --version
 
     - if: inputs.apt != 'none'
       shell: bash

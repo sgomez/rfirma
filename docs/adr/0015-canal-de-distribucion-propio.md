@@ -205,7 +205,7 @@ lo que el job necesita —la cadena de Rust por perfil, Node, GraalVM, un perfil
 paquetes de apt, las herramientas fijadas y el banco de conformidad— y lee `versions.env` y
 las diferencias de Windows dentro de ella. `check-workflows.sh` extiende la invariante 1 a esa
 acción y a las que alcanza. Que la acción guarde cachés es la entrada `save-cache`, siempre
-explícita y nunca derivada de la ref: bajo `workflow_call` la ref es la del llamador, y una PR
+explícita y, en un workflow invocable, nunca derivada de la ref: bajo `workflow_call` la ref es la del llamador, y una PR
 o una etiqueta que guardan cachés desbordan la cuota de 10 GB y desalojan las de `main`, así
 que `build.yml` solo las lee. El checkout, el `autocrlf` de Windows, los artefactos y la caché
 de la biblioteca nativa quedan en el job; los jobs con secretos no la usan.
