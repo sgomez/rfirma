@@ -17,5 +17,10 @@
         "installerHooks": "../../packaging/windows/hooks.nsh"
       }
     }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDQ0RjFGMDhEMEQyMUY4RjkKUldUNStDRU5qZkR4Ukx5VlNSZWR2aGl2VVJlSzhUSEMvZGVrVDBIc09Va01lYzN3Um1sVGdHYnMK"
+    }
   }
 }
