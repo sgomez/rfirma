@@ -63,7 +63,7 @@ git config --global core.autocrlf false                # antes de clonar: los .s
 pnpm config set script-shell "C:/Program Files/Git/bin/bash.exe"
 export OPENSSL_SRC_PERL=C:/Strawberry/perl/bin/perl.exe  # la primera compilacion de OpenSSL
 just native                                            # rfirma_crypto.dll
-just bundle-windows                                    # instalador NSIS en target/release/bundle/nsis
+just bundle                                            # instalador NSIS en $CARGO_TARGET_DIR/release/bundle/nsis
 ```
 
 Con una GraalVM CE 25.4, `just native` necesita además

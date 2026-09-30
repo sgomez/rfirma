@@ -26,12 +26,15 @@ app := root / "rfirma-app"
 tauri := app / "src-tauri"
 conformance_suite := root / "rfirma-conformance"
 
-# El nombre de la libreria nativa sigue la convencion de cada plataforma,
-# como DLL_PREFIX y DLL_SUFFIX en Rust (ADR-0035).
-native_lib_name := if windows == "true" { "rfirma_crypto.dll" } else { "librfirma_crypto.so" }
+# `prefijo:extension` de la biblioteca dinamica en cada sistema, como DLL_PREFIX y DLL_SUFFIX en Rust.
+dynamic_library := if os() == "windows" { ":.dll" } else { "lib:.so" }
+dll_prefix := replace_regex(dynamic_library, ':.*$', '')
+dll_suffix := replace_regex(dynamic_library, '^[^:]*:', '')
 
-# Lo que emite native-image con -H:Name=librfirma_crypto.
-native_image_output := if windows == "true" { "librfirma_crypto.dll" } else { "librfirma_crypto.so" }
+native_lib_name := dll_prefix + "rfirma_crypto" + dll_suffix
+
+# native-image conserva el `lib` de -H:Name en todos los sistemas (ADR-0035).
+native_image_output := "librfirma_crypto" + dll_suffix
 native_image := if windows == "true" { "native-image.cmd" } else { "native-image" }
 classpath_separator := if windows == "true" { ";" } else { ":" }
 
@@ -137,7 +140,8 @@ check-rust: lint-rust machete crap
 # Comprueba las herramientas, y falla nombrando la que falte o no este en su version fijada.
 [group('dev')]
 tools:
-    DEFAULT_GRAALVM="{{ default_graalvm }}" SYSTEM_LIBS="{{ system_libs }}" {{ root }}/scripts/tools.sh
+    PLATFORM="{{ os() }}" DEFAULT_GRAALVM="{{ default_graalvm }}" SYSTEM_LIBS="{{ system_libs }}" \
+        {{ root }}/scripts/tools.sh
 
 # Instala las herramientas en su version fijada: todas, o las que se nombren.
 [group('ci')]
@@ -437,6 +441,7 @@ flatpak: check-native build-ts
     echo "  flatpak install --user me.sgomez.rfirma.flatpak"
 
 # Construye el .deb y el .rpm con el bundler de Tauri (ADR-0004); quick="true" salta el candado de version.
+[linux]
 [group('ci')]
 bundle quick="false": check-native build-ts
     #!/usr/bin/env bash
@@ -450,7 +455,7 @@ bundle quick="false": check-native build-ts
         fi
     fi
     (cd "{{ app }}" && pnpm exec tauri build)
-    salida="rfirma-app/src-tauri/target/release/bundle"
+    salida="$CARGO_TARGET_DIR/release/bundle"
     for formato in deb rpm; do
         paquete="$(find "$salida/$formato" -maxdepth 1 -type f -name "*.$formato" | sort | tail -1)"
         if [ -z "$paquete" ]; then
@@ -458,13 +463,35 @@ bundle quick="false": check-native build-ts
             exit 1
         fi
         packaging/verifica-contenido.sh "$paquete"
-        echo "$formato: $PWD/$paquete ($(du -h "$paquete" | cut -f1))"
+        echo "$formato: $paquete ($(du -h "$paquete" | cut -f1))"
     done
 
-# Construye el instalador NSIS de Windows con el bundler de Tauri (ADR-0035).
+# Construye el instalador NSIS con el bundler de Tauri y el runtime de Visual C++ al lado (ADR-0035).
+[windows]
 [group('ci')]
-bundle-windows: check-native build-ts
-    {{ root }}/scripts/bundle-windows.sh {{ root }}
+bundle: check-native build-ts
+    #!/usr/bin/env bash
+    set -euo pipefail
+    # La ruta que citan los recursos de tauri.windows.json, no el CARGO_TARGET_DIR.
+    runtime="{{ tauri }}/target/windows-runtime"
+    vswhere="/c/Program Files (x86)/Microsoft Visual Studio/Installer/vswhere.exe"
+    vs="$(cygpath -u "$("$vswhere" -latest -products '*' -property installationPath | tr -d '\r')")"
+    crt="$(ls -d "$vs"/VC/Redist/MSVC/1*/x64/Microsoft.VC*.CRT 2>/dev/null | sort -V | tail -1)"
+    if [ -z "$crt" ]; then
+        echo "no encuentro el runtime de Visual C++ redistribuible en $vs/VC/Redist" >&2
+        exit 1
+    fi
+    rm -rf "$runtime"
+    mkdir -p "$runtime"
+    cp "$crt/vcruntime140.dll" "$crt/vcruntime140_1.dll" "$runtime/"
+    (cd "{{ app }}" && pnpm exec tauri build --bundles nsis --config "{{ root }}/packaging/windows/tauri.windows.json")
+    salida="$CARGO_TARGET_DIR/release/bundle/nsis"
+    instalador="$(find "$salida" -maxdepth 1 -type f -name '*-setup.exe' | sort | tail -1)"
+    if [ -z "$instalador" ]; then
+        echo "el bundler no produjo ningun instalador en $salida" >&2
+        exit 1
+    fi
+    echo "nsis: $instalador ($(du -h "$instalador" | cut -f1))"
 
 # Regenera cargo-sources.json y el sello de Cargo.lock.
 [group('release')]
@@ -520,7 +547,7 @@ dev *args: check-native po-import
 # Registra (`on`) o quita (`off`) el manejador de desarrollo de afirma://.
 [group('dev')]
 dev-handler mode="on":
-    {{ root }}/scripts/dev-handler.sh {{ mode }}
+    RFIRMA_LIB_DIR="$(dirname "{{ native_lib }}")" {{ root }}/scripts/dev-handler.sh {{ mode }}
 
 # Levanta la consola web de la suite de conformidad de rfirma-conformance/, imprime su URL con el
 # token y la abre en el navegador. Cliente, informe y comprobaciones se eligen en la pagina; cada
