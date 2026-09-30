@@ -1,8 +1,5 @@
 #!/usr/bin/env bash
-# Regenera testdata/reference/ con los firmadores monofasicos del original
-# 1.9.2 (AOCAdESSigner, AOXAdESSigner, AOFacturaESigner), consumidos desde
-# Maven local (ADR-0002). Cada formato lo firma el original, no rfirma: es lo
-# que la firma trifasica de rfirma tiene que igualar.
+# Regenera testdata/reference/ con los firmadores monofasicos de AutoFirma (ADR-0002).
 #
 # Determinista salvo la fecha de firma: challenge.bin, document.xml e
 # invoice.xml son fijos, pero AOCAdESSigner/AOXAdESSigner incrustan el
@@ -13,6 +10,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SIGNER="$ROOT/rfirma-native-bridge/testbench/reference-signer"
+AUTOFIRMA_VERSION="$("$ROOT/scripts/pinned-version.sh" AUTOFIRMA_VERSION)"
 REF="$ROOT/testdata/reference"
 CERT="$ROOT/testdata/fnmt/active-rsa.p12"
 PIN="1234"
@@ -20,7 +18,7 @@ PIN="1234"
 mkdir -p "$REF"
 
 echo "== Classpath (Maven local, ADR-0002)"
-mvn -q -B -f "$SIGNER/pom.xml" dependency:build-classpath \
+mvn -q -B -f "$SIGNER/pom.xml" -Dautofirma.version="$AUTOFIRMA_VERSION" dependency:build-classpath \
     -Dmdep.outputFile="$SIGNER/target/cp.txt" -Dmdep.includeScope=compile
 mkdir -p "$SIGNER/target/classes"
 javac -cp "$(cat "$SIGNER/target/cp.txt")" -d "$SIGNER/target/classes" \

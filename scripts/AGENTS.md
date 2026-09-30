@@ -6,7 +6,10 @@ Los arneses que las recetas del `justfile` llaman por nombre, siguiendo el patr�
 |---|---|
 | `bootstrap.sh` | Instala en `~/.m2` las dependencias Java de AutoFirma que no están en Maven Central. |
 | `outline.sh` | El esqueleto de un `.rs`, `.ts` o `.tsx`, para `just outline`. |
-| `tools.sh` | Comprueba las herramientas del entorno y falla nombrando la que falte. |
+| `tools.sh` | Comprueba las herramientas del entorno y falla nombrando la que falte o la que no esté en su versión fijada. |
+| `install-tools.sh` | Instala las herramientas en la versión que fija `versions.env`, para `just install-tools`. |
+| `pinned-version.sh` | Imprime una clave de `versions.env` para los arranques que no pasan por `just`. |
+| `check-versions.sh` | La guarda de `versions.env`: ningún valor fijado escrito fuera de él y los pom con la misma AutoFirma. |
 | `release.sh` | Publica una versión desde `main`: changelog, bump, commit, etiqueta y push atómico, para `just release`. |
 | `changelog-release.sh` | Escribe en `CHANGELOG.md` la sección de una versión a partir de los títulos de PR desde la última etiqueta. |
 | `bump-version.sh` | Sube la versión en los sitios del candado de `check-version.py`, para `just bump-version`. |
@@ -26,3 +29,4 @@ Los arneses que las recetas del `justfile` llaman por nombre, siguiendo el patr�
 | `tests/ci_lanes_test.sh` | Prueba qué carriles enciende `ci-lanes.sh` para cada clase de fichero. |
 | `tests/packages_manifest_test.sh` | Prueba el manifiesto de paquetes (entrega completa, candidata, extensión desconocida, firmable, plataformas) y la excepción de `check-digests.sh`. |
 | `tests/preview_comment_test.sh` | Prueba el comentario de la preview: filas por artefacto, avisos del manifiesto, fallo, salida vacía y marcador en la primera línea. |
+| `tests/check_versions_test.sh` | Prueba la guarda de `versions.env` sobre árboles temporales: literales, pom, formato y el fichero viejo de GraalVM. |
