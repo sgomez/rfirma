@@ -127,16 +127,14 @@ pub fn containing_location(path: &Path, home: Option<&Path>) -> Option<String> {
         return None;
     }
     let folder = path.parent()?;
-    let shown = match home.and_then(|home| folder.strip_prefix(home).ok()) {
-        Some(inside) => Path::new("~").join(inside),
-        None => folder.to_path_buf(),
-    };
-    let text = shown.to_str()?;
-    Some(if text == "~" {
-        "~/".to_owned()
-    } else {
-        text.to_owned()
-    })
+    if let Some(inside) = home.and_then(|home| folder.strip_prefix(home).ok()) {
+        let parts: Option<Vec<&str>> = inside
+            .components()
+            .map(|c| c.as_os_str().to_str())
+            .collect();
+        return Some(format!("~/{}", parts?.join("/")));
+    }
+    folder.to_str().map(str::to_owned)
 }
 
 fn inside_a_sandbox(marker: &Path) -> bool {
