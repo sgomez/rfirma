@@ -185,6 +185,14 @@ if [ -f "$PUBLISH" ]; then
         exit 1
     fi
     echo "OK  $PUBLISH construye el arbol firmado con la huella del repositorio"
+
+    descarga="$(grep -n 'packaging/repo/download-series.sh' "$PUBLISH" | head -1 | cut -d: -f1)"
+    arbol="$(grep -n 'packaging/repo/build-tree.sh' "$PUBLISH" | head -1 | cut -d: -f1)"
+    if [ -z "$descarga" ] || [ "$descarga" -ge "$arbol" ]; then
+        echo "$PUBLISH tiene que bajar la serie con packaging/repo/download-series.sh antes de construir el arbol (ADR-0015)." >&2
+        exit 1
+    fi
+    echo "OK  $PUBLISH construye el arbol con la serie ya verificada"
 fi
 
 # Firmar un .rpm lo modifica: firmar, resumir, atestar y adjuntar, en ese orden (ADR-0015).

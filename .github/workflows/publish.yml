@@ -1,36 +1,4 @@
-# El TERCERO de los tres workflows de la tuberia de entrega (ID-167,
-# ADR-0015): el que reacciona a la Release PUBLICADA. Su unico motivo para
-# cambiar es QUE SE SIRVE Y DONDE.
-#
-# PUBLICAR ES EL GESTO HUMANO, y este fichero es lo que cuelga de el. No
-# reacciona a la etiqueta —eso es `release.yml`, y deja la Release en borrador—
-# sino a `release: published`, que solo ocurre cuando una persona ha mirado el
-# PDF de la puerta manual y ha pulsado el boton. Una etiqueta no despliega nada
-# por si sola (segunda invariante del ADR-0015).
-#
-# Y NO ACTUA SI ES UNA PRERELEASE. Las etiquetas `v*-rc.N` producen una Release
-# marcada como prerelease y NO LLEGAN A NINGUN REPOSITORIO: es como se ensaya
-# la tuberia entera sin publicar una version de verdad (TD-44). Esa es la razon
-# de que la guarda este en el `if` del job y no dentro de un paso: un paso que
-# decide si sirve o no es un paso que un dia sirve.
-#
-# DOS JOBS Y EL SEGUNDO CUELGA DEL PRIMERO: la puerta comprueba, con la clave
-# de rFirma, que lo que se va a servir es lo que se firmo; y solo entonces se
-# reconstruye el arbol y se publica. Servir primero y verificar despues no
-# seria una tuberia mas corta: seria otra cosa.
-#
-# EL MECANISMO DE LA PUBLICACION NO ESTA AQUI, esta en tres guiones de
-# `packaging/repo/` que se prueban solos (`just check-repo`): este
-# fichero baja la serie, construye el arbol y lo publica llamandolos. Es a
-# proposito: la unica parte de la tuberia que no puede ensayarse con una
-# etiqueta `-rc.N` es justo la que toca el anfitrion, asi que tiene que poder
-# probarse fuera de un workflow.
-#
-# LO QUE SIGUE SIN ESTAR EN NINGUN SITIO: Docker. Los repositorios no van
-# dentro de la imagen —una imagen no es sitio para datos que crecen—, asi que
-# no hay registro de imagenes ni un solo paso de Docker en esta tuberia. La
-# imagen es solo el servidor web con la landing, y la construye Coolify desde
-# `main` (ID-174).
+# Sirve la serie de una Release publicada que no es candidata, verificada antes de construir el arbol (ADR-0015).
 name: Publicacion
 
 on:
@@ -45,100 +13,17 @@ on:
 
 permissions: {}
 
-# Una publicacion cada vez, y sin cancelar la que este corriendo: por en medio
-# hay un `rsync` contra un anfitrion, y abortarlo deja un directorio a medias.
+# Sin cancelar: un `rsync` abortado deja el anfitrion a medias.
 concurrency:
   group: publish
   cancel-in-progress: false
 
 jobs:
-  verify:
-    name: Comprueba lo publicado
-    # LA GUARDA DE LA CANDIDATA. `github.event.release.prerelease` lo pone
-    # `release.yml` a partir de la unica sede de esa regla
-    # (packaging/native-packages-allowed.sh, ID-154).
-    if: ${{ github.event_name == 'workflow_dispatch' || !github.event.release.prerelease }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    # El mismo entorno que `release.yml`, que solo admite etiquetas `v*` y no
-    # pide aprobacion: publicar el borrador ya fue el gesto humano (ADR-0015).
-    environment: release
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: Assets de la Release
-        env:
-          GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.event.release.tag_name || inputs.tag }}
-        run: |
-          set -euo pipefail
-          mkdir -p paquetes
-          gh release download "$TAG" --dir paquetes
-          ls -l paquetes
-
-      # La publica basta para verificar, pero la clave entra por el mismo sitio
-      # que en `release.yml`: una sede unica, ID-169.
-      - name: Clave de firma
-        id: gpg
-        uses: ./.github/actions/import-signing-key
-        with:
-          private-key: ${{ secrets.GPG_SIGNING_SUBKEY }}
-          passphrase: ${{ secrets.GPG_SIGNING_PASSPHRASE }}
-          expected-fingerprint: ${{ vars.GPG_FINGERPRINT }}
-
-      # Dos comprobaciones y ninguna sobra: la firma dice quien lo hizo y el
-      # `sha256sum --check` dice que los ficheros descargados son esos. Sin la
-      # segunda, un asset cambiado despues de firmar pasaria la primera.
-      - name: La firma y los resumenes
-        run: |
-          set -euo pipefail
-          cd paquetes
-          gpg --verify SHA256SUMS.asc SHA256SUMS
-          # El PDF de la puerta manual va adjunto a la Release pero NO es un
-          # paquete y no entra en el SHA256SUMS: se descarta antes de
-          # comprobar, en vez de hacerle un hueco en el fichero firmado.
-          rm -f manual-gate.pdf
-          sha256sum --check --strict SHA256SUMS
-
-      # La puerta del contenido, otra vez y sobre lo PUBLICADO (ADR-0012,
-      # ID-144). `build.yml` ya la paso sobre lo que construyo; esta la pasa
-      # sobre lo que la gente se va a descargar, que es lo unico que importa
-      # cuando lo que viene detras es servirlo en un repositorio.
-      - name: Herramientas para verificar el contenido
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            ostree flatpak libarchive-tools p7zip-full
-
-      - name: Puerta del contenido
-        run: |
-          set -euo pipefail
-          while read -r paquete; do
-            packaging/verifica-contenido.sh "paquetes/$paquete"
-          done < <(scripts/packages-manifest.sh packages paquetes)
-
-      - name: Resumen
-        env:
-          TAG: ${{ github.event.release.tag_name || inputs.tag }}
-        run: |
-          {
-            echo "### $TAG verificada"
-            echo "Firmada por ${{ steps.gpg.outputs.fingerprint }} y con la puerta del contenido pasada."
-          } >> "$GITHUB_STEP_SUMMARY"
-
   publish:
     name: Reconstruye y publica
-    # DETRAS DE LA PUERTA. `needs` es lo que hace que verificar y servir sean
-    # dos cosas en ese orden y no dos cosas a la vez.
-    needs: verify
     if: ${{ github.event_name == 'workflow_dispatch' || !github.event.release.prerelease }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    # La misma sede del secreto que los otros dos workflows (ID-169): aqui
-    # entran la subclave —para verificar la serie y exportar la clave publica
-    # que se sirve— y la clave ssh del anfitrion.
     environment: release
     permissions:
       contents: read
@@ -153,29 +38,18 @@ jobs:
           passphrase: ${{ secrets.GPG_SIGNING_PASSPHRASE }}
           expected-fingerprint: ${{ vars.GPG_FINGERPRINT }}
 
-      # TODA la serie menor vigente, no solo la version recien publicada: el
-      # arbol se reconstruye entero, asi que lo que no se baje aqui deja de
-      # servirse.
       - name: La serie vigente
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.event.release.tag_name || inputs.tag }}
         run: packaging/repo/download-series.sh "$TAG" serie
 
-      # Las herramientas de los tres repositorios (ID-173, ID-175). No vienen
-      # en el runner y `build-tree.sh` las comprueba TODAS antes de escribir
-      # nada, asi que si una falta el arbol no llega a quedarse a medias.
       - name: Herramientas de los tres repositorios
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             ostree flatpak dpkg-dev apt-utils createrepo-c rpm gnupg rsync openssh-client
 
-      # El arbol se firma SIEMPRE, y por eso la huella es un argumento y no una
-      # opcion: apt y dnf rechazan un indice sin firma, y el ostree recien
-      # reimportado no trae ninguna (la firma no viaja dentro del bundle).
-      # GPG_PASSPHRASE_FILE es lo que evita que gpg se quede esperando un
-      # pinentry que aqui no hay nadie para contestar.
       - name: El arbol nuevo
         env:
           FINGERPRINT: ${{ steps.gpg.outputs.fingerprint }}
@@ -185,11 +59,7 @@ jobs:
           gpg --armor --export "$FINGERPRINT" > rfirma.asc
           packaging/repo/build-tree.sh serie arbol rfirma.asc "$FINGERPRINT"
 
-      # La clave del CI en el anfitrion esta atada a
-      # `command="rrsync /srv/rfirma-repo"`: no da consola, solo sabe escribir
-      # en el directorio que ya sirve ficheros publicos. `StrictHostKeyChecking`
-      # se queda en `yes` y el anfitrion se conoce de antemano por su clave
-      # publica: aceptar la que venga seria entregarle el arbol a quien conteste.
+      # La clave del anfitrion va fijada de antemano: aceptar la que venga entregaria el arbol a quien conteste.
       - name: Llave del anfitrion
         env:
           SSH_KEY: ${{ secrets.PUBLISH_SSH_KEY }}

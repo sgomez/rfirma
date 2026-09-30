@@ -117,7 +117,7 @@ tokens.
 | fichero | disparador | permisos | qué hace |
 | `build.yml` | `workflow_call` | `contents: read`, **sin secretos** | compilación única de `librfirma_crypto.so` distribuida a jobs paralelos de empaquetado y pruebas de grada C para el objetivo único `x86_64` (ID-147) —garantizando los mismos bytes en los tres canales (ADR-0004)—, guardia de versión, `just check-glibc`, artefactos y digests como salidas |
 | `release.yml` | `push: tags v*` | `environment: release`, solo etiquetas `v*` | descarga los artefactos, firma, atesta la procedencia y crea la Release **en borrador** con el `pdf-puerta-manual` adjunto |
-| `publish.yml` | `release published`, si no es prerelease | `environment: release`, solo etiquetas `v*` | reconstruye los tres repositorios y el directorio de Windows, y los despliega |
+| `publish.yml` | `release published`, si no es prerelease | `environment: release`, solo etiquetas `v*` | baja y verifica la serie, reconstruye los tres repositorios y el directorio de Windows, y los despliega |
 
 Y **cuatro invariantes**, que son justo lo que un agente futuro colapsaría por comodidad:
 
@@ -177,8 +177,28 @@ canales llevan lo mismo
 
 **Qué paquetes hay y cuáles se firman después lo dice un manifiesto**, `paquetes.json`, que
 una receta de `just` escribe junto al `SHA256SUMS` en el artefacto `paquetes`: la recogida, la
-atestación, la puerta de `publish.yml` y `check-digests.sh` lo leen en vez de repetir una lista
-de extensiones, y una plataforma o un formato nuevos son una fila más.
+atestación, la construcción del árbol y la verificación de paquetes lo leen en vez de repetir
+una lista de extensiones, y una plataforma o un formato nuevos son una fila más.
+
+**Un directorio de paquetes se verifica con una sola receta, `just verify-packages`**, y cada
+llamador usa uno de sus tres modos:
+
+- **Sin opciones, la puerta del contenido**, en `build.yml`: cada paquete del manifiesto lleva
+  exactamente una biblioteca nativa y ninguna de AWT
+  ([ADR-0004](0004-libreria-nativa-distribuida-en-el-paquete.md)).
+- **`--against`, contra los resúmenes de la construcción**, en `release.yml` antes de firmar:
+  lo que se firma es lo que se construyó. Falla con un fichero de más, con uno que falte y con
+  un resumen que no case; solo puede cambiar lo que el manifiesto marca como firmable, porque
+  firmar un `.rpm` lo modifica.
+- **`--signed`, la Release firmada**, en la descarga de la serie, versión a versión: la firma
+  de `SHA256SUMS.asc`, `sha256sum --check --strict`, y que los nombres de la Release sean
+  exactamente los del `SHA256SUMS` más el propio `SHA256SUMS`, su firma y el PDF de la puerta
+  manual. Un asset subido a mano a una Release publicada no está en el fichero firmado y hace
+  fallar la publicación.
+
+`publish.yml` no tiene un job de verificación aparte: la descarga de la serie ya verifica cada
+versión antes de que se construya el árbol, y ese orden dentro del job es el que vigila
+`check-workflows.sh`.
 
 **Etiquetas `v*-rc.N`** producen una Release marcada como prerelease y **no llegan a ningún
 repositorio**. No es un *nightly* por la puerta de atrás —es a mano y con etiqueta
@@ -268,7 +288,7 @@ misma cosa en la misma apertura del panel.
   comprueba.
 - **Un revisor humano en el `environment: release`** como cerradura de los secretos, con el
   entorno abierto a cualquier rama. Cada job que entra pide su aprobación —y `publish.yml`
-  tiene dos encadenados, que no se agrupan—, así que una release eran tres clics más el de
+  tenía entonces dos encadenados, que no se agrupan—, así que una release eran tres clics más el de
   publicar, todos de la misma persona y ninguno con una decisión que no se hubiera tomado
   ya al empujar la etiqueta o al publicar. Con un solo administrador, quién puede crear la
   etiqueta ya es quién puede llegar a los secretos.
@@ -287,6 +307,16 @@ misma cosa en la misma apertura del panel.
   - **Lo que resolvería ya tiene sitio.** Probar una rama lo cubre `build.yml` invocado desde
     un PR etiquetado, que la invariante 1 permite sin secretos; ensayar la tubería, las
     etiquetas `-rc.N`.
+- **Un job de verificación en `publish.yml`**, delante del que publica, que bajaba la Release
+  recién publicada, comprobaba su firma y sus resúmenes y le pasaba otra vez la puerta del
+  contenido. Repetía lo que la descarga de la serie hace sobre esa misma versión un job después,
+  y no veía lo que sí importa: un asset subido a mano que no está en el `SHA256SUMS` pasaba las
+  dos comprobaciones, porque `sha256sum --check` solo mira los ficheros que el resumen nombra.
+  La puerta del contenido ya la pasaron esos mismos bytes en la construcción, y lo que llega a
+  la Release está atado a ellos por la firma.
+- **Comparar los resúmenes con un script propio (`check-digests.sh`)** y la firma con pasos
+  sueltos en cada workflow: tres puertas sobre el mismo directorio de paquetes, escritas cada
+  una a su manera, y ninguna comprobaba el conjunto de nombres de una Release firmada.
 - **Una copia versionada aparte de la pública minisign de firma**, junto al script que firma,
   para comprobar la firma contra ella en vez de contra la embebida. Decía lo mismo que la
   pública embebida de la última estable, que el historial de etiquetas ya guarda, y rotar la

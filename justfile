@@ -107,6 +107,7 @@ check-repo: check-version fmt-check
     {{ root }}/packaging/repo/build-tree.test.sh
     {{ root }}/packaging/repo/publish-tree.test.sh
     {{ root }}/packaging/windows/sign-updater.test.sh
+    {{ root }}/packaging/verify-packages.test.sh
     {{ root }}/packaging/check_launchers.py
     python3 -m unittest discover -s {{ root }}/packaging -p 'test_check_launchers.py'
     ruff check {{ root }}/packaging {{ root }}/scripts
@@ -413,6 +414,11 @@ native: build-java
 [group('ci')]
 packages-manifest dir:
     {{ root }}/scripts/packages-manifest.sh write {{ dir }}
+
+# Verifica un directorio de paquetes: el contenido; con --against, contra los resúmenes de la construcción; con --signed, la firma (ADR-0015).
+[group('ci')]
+verify-packages dir *options:
+    {{ root }}/packaging/verify-packages.sh {{ dir }} {{ options }}
 
 # Comprueba el suelo de glibc de la libreria nativa (docs/research/glibc-libreria-nativa.md).
 [group('ci')]

@@ -320,11 +320,7 @@ jobs:
         run: just packages-manifest "${{ runner.temp }}/paquetes"
 
       - name: Puerta del contenido
-        run: |
-          set -euo pipefail
-          while read -r paquete; do
-            packaging/verifica-contenido.sh "${{ runner.temp }}/paquetes/$paquete"
-          done < <(scripts/packages-manifest.sh files "${{ runner.temp }}/paquetes")
+        run: just verify-packages "${{ runner.temp }}/paquetes"
 
       - name: Digests
         id: digests
