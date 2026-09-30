@@ -231,9 +231,12 @@ test-windows`). Las gradas B y C no corren: faltan softhsm, NSS y poppler.
 El instalador no sale de `ci.yml` sino de la release, como el `.deb`, el `.rpm` y el flatpak: el
 job `windows` de `build.yml` compila la `.dll` y ejecuta `just bundle-windows`, y el `.exe` pasa
 por la misma puerta del contenido (`packaging/verifica-contenido.sh`, que lo abre con `7z`), entra
-en el `SHA256SUMS` firmado y en la atestación de procedencia. Los repositorios de apt, dnf y
-ostree no lo sirven: solo se descarga de la Release. Para ensayarlo sin etiquetar,
-`gh workflow run build.yml --ref <rama>`.
+en el `SHA256SUMS` firmado y en la atestación de procedencia. `release.yml` le añade la firma
+minisign del *updater* (ADR-0015) y los deja los dos en la Release, y `publish.yml` los sirve
+además desde el servidor propio, en `https://rfirma.sgomez.me/windows/`, junto a apt, dnf y
+ostree y con la misma cadena de verificación. Ahí también está el `latest.json` que consulta
+la aplicación instalada para actualizarse en modo `passive`, sin pedir administrador. Para
+ensayarlo sin etiquetar, `gh workflow run build.yml --ref <rama>`.
 
 Una etiqueta solo lee las cachés de `main`, así que la compilación de release de Windows iría
 siempre en frío. El job `windows-release-cache` de `ci.yml` corre la misma receta en `main` con
@@ -272,6 +275,11 @@ hace lo mismo que hacían los bloques.
 directiva, pero el MSI de Tauri instala para la máquina y pide administrador, cuando nada de
 rFirma lo necesita. Si alguien lo pide, se puede añadir como segundo formato con la misma
 configuración.
+
+**Servir el instalador solo desde la Release**, como al principio: la persona tenía que buscar
+el fichero en la página de Releases, descargarlo y ejecutarlo a mano cada vez, y la mayoría se
+quedaba en la versión con la que instaló. Linux lo resuelve con apt, dnf y ostree; en Windows
+solo lo resuelve un *updater* con un `latest.json` estable en un origen propio.
 
 **Ejecutar `VC_redist.x64.exe` al instalar**: instala el runtime para todo el equipo y pide
 administrador. La copia local son dos ficheros, unos 170 KB, junto a la `.dll`.
@@ -350,7 +358,8 @@ interfaz también en Linux. Se aplaza; mientras, el almacén del usuario se pres
   funcionan en Windows; el resto de recetas (`check`, `flatpak`, `bundle`, `certs`…) sigue siendo
   de Linux.
 - En Windows la aplicación busca la `.dll` junto al ejecutable; en Linux, en `../lib/rfirma`.
-- El instalador no está firmado con Authenticode: SmartScreen avisa al abrirlo.
+- El instalador no está firmado con Authenticode: SmartScreen avisa al abrirlo la primera vez.
+  Las actualizaciones las verifica el *updater* con la minisign, no Windows.
 - Un cambio solo en `packaging/windows/` no enciende el carril de Windows en un PR, porque
   `ci-lanes.sh` no tiene un carril propio para él.
 - `cargo test` en Windows no corre las pruebas de grada B y C que necesitan softhsm o NSS.

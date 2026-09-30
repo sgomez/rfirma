@@ -1,12 +1,14 @@
-# El canal de distribución es propio: tres repositorios en `rfirma.sgomez.me` y Releases en GitHub
+# El canal de distribución es propio: `rfirma.sgomez.me` y Releases en GitHub
 
 rfirma no va a ninguna tienda. El artefacto llega a la persona por dos sitios nuestros:
 
-- **GitHub Releases** guarda los paquetes de cada versión —el `.flatpak`, el `.deb` y el
-  `.rpm`— con su `SHA256SUMS`, la firma de ese fichero y la atestación de procedencia. Es el
-  fichero suelto, para quien quiera instalar a mano o sin remoto.
+- **GitHub Releases** guarda los paquetes de cada versión —el `.flatpak`, el `.deb`, el
+  `.rpm` y el instalador de Windows— con su `SHA256SUMS`, la firma de ese fichero y la
+  atestación de procedencia. Es el fichero suelto, para quien quiera instalar a mano o sin remoto.
 - **`rfirma.sgomez.me` sirve tres repositorios** —**ostree**, **apt** y **dnf**— más un
-  `.flatpakref` de un clic. Es el camino recomendado, y el único que da actualizaciones.
+  `.flatpakref` de un clic, y **el canal de Windows** en `/windows/`: el instalador de cada
+  versión con su firma minisign y el `latest.json` que consulta el *updater*. Es el camino
+  recomendado, y el único que da actualizaciones.
 
 ## Por qué el repositorio y no sólo el paquete suelto
 
@@ -19,8 +21,10 @@ sesión del [ADR-0016](0016-sello-de-sesion-una-sola-invariante.md)—. Si una v
 alguna por delante, sin canal de actualización la persona se queda ahí y no hay forma de
 avisarle.
 
-Ese argumento es el corazón de este ADR y **vale para los tres formatos por igual**: es lo
-que justifica pagar tres repositorios en vez de uno.
+Ese argumento es el corazón de este ADR y **vale para los cuatro canales por igual**: es lo
+que justifica pagar tres repositorios en vez de uno, y un canal de Windows servido desde el
+mismo sitio. En Windows no hay gestor de paquetes que haga de repositorio: lo hace el
+*updater* de Tauri contra `/windows/latest.json`.
 
 Aplazarlo tiene precio: flatpak **no migra el origen** de una aplicación ya instalada, así
 que quien instale desde el bundle suelto tendrá que desinstalar y reinstalar desde el remoto
@@ -32,9 +36,9 @@ aplicación.
 
 **La fuente de verdad son las Releases.** `rfirma.sgomez.me` sirve una reconstrucción de
 ellas que se puede tirar y rehacer entera: el workflow de publicación descarga **todas** las
-Releases de la serie vigente, reconstruye los tres árboles desde cero, los firma, los sube a
-un directorio nuevo del anfitrión, y **el último paso es intercambiar un enlace simbólico**.
-Un despliegue a medias no llega a ser visible, y la vuelta atrás es reapuntar el enlace.
+Releases de la serie vigente, reconstruye desde cero los tres repositorios y el directorio de
+Windows, los firma, los sube a un directorio nuevo del anfitrión, y **el último paso es
+intercambiar un enlace simbólico**. Un despliegue a medias no llega a ser visible, y la vuelta atrás es reapuntar el enlace.
 
 Se descarta mutar el repositorio en el servidor (`build-export` sobre el existente,
 `createrepo_c --update`), que es lo convencional. El motivo no es la elegancia: **esto va a
@@ -54,7 +58,8 @@ segura es importar y firmar siempre.
 
 **Retención**, en dos ejes que conviene no confundir: en el anfitrión, **el árbol vigente y
 el anterior** —el anterior existe para que la vuelta atrás sea reapuntar el enlace—; dentro
-de cada árbol, **todas las versiones de la serie menor vigente**. Las Releases no se borran
+de cada árbol, **todas las versiones de la serie menor vigente**; en `/windows/` también, pero
+`latest.json` anuncia solo la última que no es candidata. Las Releases no se borran
 nunca.
 
 ## La forma de los repositorios
@@ -67,9 +72,10 @@ nunca.
 | `/rfirma.flatpakref` | instalación de un clic |
 | `/apt/` | con `dists/stable/main/binary-amd64/` |
 | `/rpm/` | con `repodata/` |
+| `/windows/` | el `-setup.exe` y su `.sig` de cada versión, y `latest.json` |
 
-Estas rutas van dentro del `.flatpakref` y de las órdenes de alta publicadas, así que se
-fijan aquí.
+Estas rutas van dentro del `.flatpakref`, de las órdenes de alta publicadas y del *endpoint*
+del *updater* embebido en cada instalación de Windows, así que se fijan aquí.
 
 **apt con una sola suite**, no repositorio plano: el plano es más barato y **no admite
 `Suites:`/`Components:` en un fichero `.sources` deb822**, que es el formato obligado para
@@ -111,7 +117,7 @@ tokens.
 | fichero | disparador | permisos | qué hace |
 | `build.yml` | `workflow_call` | `contents: read`, **sin secretos** | compilación única de `librfirma_crypto.so` distribuida a jobs paralelos de empaquetado y pruebas de grada C para el objetivo único `x86_64` (ID-147) —garantizando los mismos bytes en los tres canales (ADR-0004)—, guardia de versión, `just check-glibc`, artefactos y digests como salidas |
 | `release.yml` | `push: tags v*` | `environment: release`, solo etiquetas `v*` | descarga los artefactos, firma, atesta la procedencia y crea la Release **en borrador** con el `pdf-puerta-manual` adjunto |
-| `publish.yml` | `release published`, si no es prerelease | `environment: release`, solo etiquetas `v*` | reconstruye los tres repositorios y los despliega |
+| `publish.yml` | `release published`, si no es prerelease | `environment: release`, solo etiquetas `v*` | reconstruye los tres repositorios y el directorio de Windows, y los despliega |
 
 Y **cuatro invariantes**, que son justo lo que un agente futuro colapsaría por comodidad:
 
@@ -135,8 +141,11 @@ Y **cuatro invariantes**, que son justo lo que un agente futuro colapsaría por 
    «rfirma signing» con una sola huella publicada firma `SHA256SUMS.asc`, ostree, apt y dnf:
    dos claves GPG para el mismo enunciado —«esto lo hizo rfirma»— son dos raíces de confianza
    para una cosa, y eso es peor seguridad, no mejor. La minisign del *updater* sí es otro
-   animal: la consume una máquina sin persona delante, y su compromiso significa instalación
-   silenciosa de código.
+   animal: firma el `-setup.exe` de cada versión y la consume una instalación de Windows sin
+   persona delante, así que su compromiso significa instalación silenciosa de código. La
+   pública va embebida en la configuración de Windows y la privada, con su contraseña, solo
+   en los secretos del `environment: release`. Cómo se crea y se rota lo dice
+   `packaging/repo/README.md`, en «La clave de actualizaciones de Windows».
 
 **Al CI se le da sólo la subclave de firma** (`gpg --export-secret-subkeys`), no la maestra.
 El CI puede firmar; no puede certificar, ni crear subclaves, ni tocar la identidad. Si se
@@ -168,7 +177,8 @@ de extensiones, y una plataforma o un formato nuevos son una fila más.
 
 **Etiquetas `v*-rc.N`** producen una Release marcada como prerelease y **no llegan a ningún
 repositorio**. No es un *nightly* por la puerta de atrás —es a mano y con etiqueta
-explícita—: es cómo se ensaya la tubería sin publicar una versión de verdad.
+explícita—: es cómo se ensaya la tubería sin publicar una versión de verdad. Tampoco llegan a
+`/windows/latest.json`: el *updater* nunca ofrece una candidata.
 
 **La etiqueta `preview` de una PR** construye los paquetes de su head con el mismo `build.yml`
 de la entrega, sin secretos y con todas sus puertas, y los ofrece como artefactos
@@ -196,10 +206,11 @@ son cientos de megas para ahorrar un comando.
 
 ## La comprobación de versión no tiene caché por tiempo
 
-El Diagnóstico pregunta siempre a GitHub por la última publicación cuando mide la señal de
-versión, sin ventana de validez: **no hay un «hace menos de 24 horas, no preguntes»**. El
-escritorio es una aplicación que se abre cada varios días, no un proceso en segundo plano que
-sondee sin que se le pida: una caché por tiempo ahorraría peticiones solo en la reapertura
+El Diagnóstico pregunta siempre por la última publicación cuando mide la señal de versión
+—a la API de Releases de GitHub en Linux, a `/windows/latest.json` en Windows—, sin ventana
+de validez: **no hay un «hace menos de 24 horas, no preguntes»**. El escritorio es una
+aplicación que se abre cada varios días, no un proceso en segundo plano que sondee sin que
+se le pida: una caché por tiempo ahorraría peticiones solo en la reapertura
 seguida del mismo día, y a lo que se entra a propósito —abrir el Diagnóstico, pulsar «Volver a
 comprobar»— se le responde al momento, con la lectura de la red que toca. La última respuesta
 sí se recuerda entre sesiones, pero solo como último recurso si esa petición falla: nunca como
@@ -250,8 +261,8 @@ misma cosa en la misma apertura del panel.
     un contador semver propio, porque WiX y NSIS rechazan prereleases no numéricas; aquí
     `tauri.conf.json` es la fuente y `just check-version` la vigila.
   - **No tiene a quién servir.** tabularis alimenta con él un canal de su actualizador y un
-    paquete AUR aparte; rFirma no tiene actualizador, y a quien firma un trámite no se le
-    ofrece una construcción diaria.
+    paquete AUR aparte; el *updater* de rFirma en Windows solo anuncia versiones estables, y a
+    quien firma un trámite no se le ofrece una construcción diaria.
   - **Lo que resolvería ya tiene sitio.** Probar una rama lo cubre `build.yml` invocado desde
     un PR etiquetado, que la invariante 1 permite sin secretos; ensayar la tubería, las
     etiquetas `-rc.N`.
@@ -286,10 +297,11 @@ misma cosa en la misma apertura del panel.
   en tiempo de ejecución es otra, y es la que importa: **¿está añadido el repositorio de
   rfirma?** —existe `/etc/apt/sources.list.d/rfirma.sources` o `/etc/yum.repos.d/rfirma.repo`,
   más `FLATPAK_ID` para el flatpak—. Si está, la actualización llega sola; si no, no llega.
-- Se crea **`SECURITY.md`**, con las claves de larga vida (cuáles hay, qué firma cada una,
-  dónde vive la pública, caducidad y revocación) y la vía de reporte, que es el **private
-  vulnerability reporting de GitHub** y no un correo: un correo personal en un fichero
-  público es un dato personal publicado para siempre y sin acuse de recibo.
+- Se crea **`SECURITY.md`**, con las claves de larga vida —la GPG y la minisign: qué firma
+  cada una, dónde vive la pública, caducidad, revocación o rotación, y qué implica su
+  compromiso— y la vía de reporte, que es el **private vulnerability reporting de GitHub** y
+  no un correo: un correo personal en un fichero público es un dato personal publicado para siempre y sin acuse de recibo.
 - Generar la GPG —maestra fuera de línea, subclave exportada para el CI, huella publicada— y
-  aprovisionar los **tres secretos** (subclave GPG, clave SSH con orden forzada, token de
-  Coolify que sólo redespliega esa aplicación) es **trabajo humano y bloqueante**.
+  la minisign del *updater*, y aprovisionar los **cinco secretos** —subclave GPG, clave SSH
+  con orden forzada, token de Coolify que sólo redespliega esa aplicación, y la privada
+  minisign con su contraseña— es **trabajo humano y bloqueante**.
