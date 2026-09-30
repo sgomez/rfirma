@@ -81,6 +81,38 @@
           }
         }
       }
+    },
+    {
+      "includes": ["rfirma-app/src/**/*.ts", "rfirma-app/src/**/*.tsx"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noExcessiveLinesPerFile": {
+              "level": "error",
+              "options": {
+                "maxLines": 500,
+                "skipBlankLines": true
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["rfirma-app/src/**/*.test.ts", "rfirma-app/src/**/*.test.tsx"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noExcessiveLinesPerFile": {
+              "level": "error",
+              "options": {
+                "maxLines": 600,
+                "skipBlankLines": true
+              }
+            }
+          }
+        }
+      }
     }
   ]
 }

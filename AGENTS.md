@@ -54,7 +54,7 @@ escalera es esta y no tiene más peldaños:
 | Cuándo | Qué |
 | --- | --- |
 | En cada rojo → verde | Solo la prueba que estás tocando: `cargo test <filtro>`, `pnpm exec vitest run <fichero> --reporter=dot` |
-| Antes de commitear | `just fmt`. Nada más: el formato ya lo comprueba lefthook en el pre-push |
+| Antes de commitear | `just fmt`. Nada más: el formato y el lint de biome ya los comprueba lefthook en el pre-push |
 | Al abrir la PR | Push, y el CI ejecuta `just check` repartida en tres runners: el veredicto es suyo, no se corre `just check` en local |
 | Si el CI sale en rojo | Vuelve al primer peldaño con la prueba o el fichero que falló. Si el rojo local es `IO failure on output stream` o `No space left on device`, es el disco: `just clean-coverage` |
 | Al revisar una PR | Nada, si el CI está verde para ese head sha: la suite ya respondió y volver a correrla no añade veredicto (`docs/agents/code-host.md`) |

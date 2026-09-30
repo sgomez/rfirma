@@ -206,16 +206,30 @@ el código.
 
 Un umbral de líneas sin memoria no frena el crecimiento: cada PR añade unas
 decenas de líneas a un fichero que ya se pasaba, y ninguna PR concreta cruza
-la raya sola. `tests/files_stay_small.rs` (grada A) recorre
-`rfirma-app/src-tauri/src`, `rfirma-app/src-tauri/tests` y `rfirma-app/src`, y
-compara lo medido —líneas no vacías— contra `files_stay_small.baseline`, un
-fichero versionado de `ruta → líneas`. Umbrales: **500** en producción y
-**600** en tests; es test todo fichero bajo un directorio `tests/`, llamado
-`tests.rs`, o terminado en `.test.ts(x)`. Fuera de la guarda,
-`rfirma-app/src/i18n/locales/*` (datos, no código) y los ficheros generados.
+la raya sola. Umbrales: **500** líneas en producción y **600** en tests, con
+dos guardas según la cadena.
 
-La guarda falla en los cinco casos que hacen del baseline una lista exacta, no
-un suelo: un fichero listado que crece, uno nuevo por encima del umbral que no
+En Rust, `tests/files_stay_small.rs` (grada A) recorre
+`rfirma-app/src-tauri/src` y `rfirma-app/src-tauri/tests` y compara lo medido
+—líneas no vacías— contra `files_stay_small.baseline`, un fichero versionado
+de `ruta → líneas`; es test todo fichero bajo un directorio `tests/` o llamado
+`tests.rs`.
+
+En TypeScript, la regla `style/noExcessiveLinesPerFile` de biome sobre los
+`.ts` y `.tsx` de `rfirma-app/src`, con `skipBlankLines` y 600 para los
+`.test.ts(x)`. Biome no cuenta las líneas de comentario, así que la regla es
+más permisiva que la de Rust: se acepta a cambio de que salte en el pre-push.
+La guarda de Rust solo corre dentro de `cargo test`, que ningún cambio de la
+interfaz ejecuta en local, y un fichero cruzando la raya costaba una vuelta
+entera de CI; reescribirla como script propio para el pre-push conservaba la
+cuenta exacta, pero duplicaba en el repositorio lo que biome ya trae. Fuera
+de ella, lo que biome ya excluye: `rfirma-app/src/i18n/locales/*` (datos, no
+código) y los ficheros generados.
+Sin baseline: un fichero que tenga que pasarse lo declara en su cabecera con
+`biome-ignore-all`, a la vista de quien lo abra.
+
+La guarda de Rust falla en los cinco casos que hacen del baseline una lista
+exacta, no un suelo: un fichero listado que crece, uno nuevo por encima del umbral que no
 está en la lista, uno que baja sin que su línea se actualice, uno listado que
 ya no existe, y uno listado que ha quedado por debajo del umbral. El mensaje
 de fallo dice qué hacer: partir un fichero de tests por comportamiento en
@@ -293,9 +307,12 @@ práctica.
 
 ## Un solo hook: formato, antes del push
 
-`pre-push` con **lefthook**, y dentro **solo formato**: una sola receta, `just fmt-check`, que
-comprueba `cargo fmt` en la app y en la suite de conformidad, el formateador de biome y `ruff
-format --check` sobre todo el Python del repositorio. La llaman el hook y `check-repo`, así que el
+`pre-push` con **lefthook**, y dentro **formato y lint de biome**: una sola receta, `just
+fmt-check`, que comprueba `cargo fmt` en la app y en la suite de conformidad, `biome check` —el
+formateador, el orden de imports y el linter— y `ruff format --check` sobre todo el Python del
+repositorio. El lint de biome entra porque no compila ni depende de `build-ts` y tarda menos de
+un segundo en todo el árbol; `biome format` solo, sin él, dejaba pasar al CI imports sin ordenar
+y ficheros por encima del umbral de tamaño. La llaman el hook y `check-repo`, así que el
 CI y el push comprueban lo mismo. Ni clippy, ni pruebas, ni nada que compile o dependa de
 `build-ts`: la puerta se mide en segundos o no sobrevive. `just check` sigue siendo el único punto
 de entrada que promete `docs/agents/code-host.md`.
