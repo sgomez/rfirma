@@ -8,6 +8,19 @@ Desde la v0.11.2 cada sección la genera `just release <version>` a partir de
 los títulos de las PR fusionadas en `main` desde la etiqueta anterior: los
 `feat`, `fix` y `perf` que no son de ámbito interno.
 
+## [0.12.0] - 2026-09-30
+
+### Added
+- Una firma de sede con SHA-1 se rechaza y la ventana explica por qué (#1208).
+- Un lote con SHA-1 se rechaza explicado y rFirma deja de pedir SHA-1 al token (#1209).
+- RFirma funciona en Windows, con su instalador y el almacén de certificados del sistema (#1160).
+- Canal windows que comprueba la versión contra latest.json (#1239).
+- Firma minisign del instalador de Windows en la Release (#1240).
+- La clave pública minisign de las actualizaciones de Windows (#1241).
+- El árbol del servidor sirve el instalador de Windows en /windows/ (#1242).
+- Instalar la actualización de Windows desde el backend (#1243).
+- «Actualizar ahora» en la franja de versión nueva y en Acerca de (#1244).
+
 ## [0.11.1] - 2026-09-29
 
 ### Fixed
