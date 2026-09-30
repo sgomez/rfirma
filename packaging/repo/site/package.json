@@ -10,7 +10,7 @@
     "test": "vitest run"
   },
   "devDependencies": {
-    "astro": "7.3.2",
-    "vitest": "5.0.0"
+    "astro": "7.3.4",
+    "vitest": "5.0.1"
   }
 }
