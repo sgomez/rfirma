@@ -77,9 +77,71 @@ sed -i "0,/^          save-cache: false$/s||          save-cache: \${{ github.re
     "$dir/.github/workflows/build.yml"
 fails_naming "save-cache derivado de la ref" "$dir" "no se deriva de la ref"
 
-dir="$(tree rust-cache-saves-always)"
-sed -i "s|save-if: \${{ inputs.save-cache == 'true' }}|save-if: true|" \
-    "$dir/.github/actions/setup-runner/action.yml"
-fails_naming "rust-cache de la accion que guarda siempre" "$dir" ".github/actions/setup-runner/action.yml:"
+breaks() {
+    local case="$1" expected="$2" file="$3" expr="$4" dir
+    dir="$(tree "$case")"
+    sed -i -E "$expr" "$dir/$file"
+    fails_naming "$case" "$dir" "$expected"
+}
 
-echo "OK  check-workflows.sh: secretos y caches, tambien a traves de la accion de preparacion"
+breaks unpinned-action "sin fijar por SHA" .github/workflows/ci.yml \
+    '0,/uses: actions\/checkout@[0-9a-f]{40}/s//uses: actions\/checkout@v4/'
+
+dir="$(tree secret-to-setup-runner)"
+sed -i -E '0,/^      - uses: .\/.github\/actions\/setup-runner$/s||&\n        with:\n          save-cache: ${{ secrets.X }}|' \
+    "$dir/.github/workflows/ci.yml"
+fails_naming "secreto pasado a la accion de preparacion por un llamador" "$dir" ".github/workflows/ci.yml:"
+
+dir="$(tree secret-to-build)"
+sed -i -E 's|^(    uses: ./.github/workflows/build.yml)$|\1\n    secrets:\n      X: ${{ secrets.X }}|' \
+    "$dir/.github/workflows/preview.yml"
+fails_naming "secreto pasado a build.yml por un llamador" "$dir" ".github/workflows/preview.yml:"
+
+dir="$(tree secrets-inherit)"
+append_step "$dir/.github/workflows/cache-cleanup.yml" '    secrets: inherit'
+fails_naming "herencia de secretos en bloque" "$dir" "ningun workflow hereda secretos"
+
+breaks unsigned-tree "ningun workflow puede construir el arbol sin firmar" .github/workflows/publish.yml \
+    's|^(.*packaging/repo/build-tree.sh) .*$|\1 SIN-FIRMA-SOLO-PRUEBAS|'
+
+breaks release-without-environment "firmar dentro de 'environment: release'" .github/workflows/release.yml \
+    '/^    environment: release$/d'
+
+breaks release-without-draft "crear la Release en borrador" .github/workflows/release.yml \
+    '/^[^#]*--draft/d'
+
+dir="$(tree draft-named-in-comment)"
+sed -i -E '/^[^#]*--draft/d' "$dir/.github/workflows/release.yml"
+append_step "$dir/.github/workflows/release.yml" '# --draft'
+fails_naming "borrador nombrado solo en un comentario" "$dir" "crear la Release en borrador"
+
+breaks publish-on-tag "cuelga de 'release: types: [published]'" .github/workflows/publish.yml \
+    's|types: \[published\]|types: [created]|'
+
+breaks publish-job-keeps-candidates "descartar las prereleases en el if: de cada job" .github/workflows/publish.yml \
+    "s|^(    if:).*\$|\\1 \${{ github.event_name == 'workflow_dispatch' }}|"
+
+breaks preview-checkout-of-the-run "solo hace checkout de la rama por defecto" .github/workflows/preview-comment.yml \
+    's|^( *ref:).*default_branch.*$|\1 ${{ github.event.workflow_run.head_sha }}|'
+
+breaks minisign-key-outside-release "solo aparece en .github/workflows/release.yml" .github/workflows/ci.yml \
+    '0,/^    steps:$/s||    env:\n      TAURI_SIGNING_PRIVATE_KEY: x\n    steps:|'
+
+breaks docker-in-workflow "ningun workflow toca Docker" .github/workflows/ci.yml \
+    '0,/^    steps:$/s||    container: ghcr.io/x/y\n    steps:|'
+
+breaks dependabot-without-cooldown "tiene que declarar 'cooldown'" .github/dependabot.yml \
+    '/^    cooldown:/,+1d'
+
+dir="$(tree rpm-signed-after-hashing)"
+sed -i -E 's|rpmsign --addsign|true|' "$dir/.github/workflows/release.yml"
+append_step "$dir/.github/workflows/release.yml" '          rpmsign --addsign "${rpms[@]}"'
+fails_naming "rpm firmado despues de resumir" "$dir" "tiene los pasos en otro orden"
+
+breaks tree-before-download "bajar la serie" .github/workflows/publish.yml \
+    's|packaging/repo/download-series.sh|true|'
+
+breaks second-graalvm-install "GraalVM se instala solo con" .github/workflows/ci.yml \
+    '0,/^    steps:$/s||    steps:\n      - uses: graalvm/setup-graalvm@0000000000000000000000000000000000000000 # v1|'
+
+echo "OK  check-workflows.sh: cada invariante tiene un caso que la rompe y el arbol limpio la cumple"

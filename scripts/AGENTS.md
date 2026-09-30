@@ -25,4 +25,4 @@ Los arneses que llaman las recetas del `justfile` (ADR-0013).
 | `tests/preview_comment_test.sh` | Prueba el comentario de la preview: filas por artefacto, avisos del manifiesto, fallo, salida vacía y marcador en la primera línea. |
 | `tests/check_versions_test.sh` | Prueba la guarda de `versions.env` sobre árboles temporales: literales, pom, formato y el fichero viejo de GraalVM. |
 | `tests/test_app_version.py` | Prueba los tres verbos de `app_version.py` sobre un árbol temporal con su propio git. |
-| `tests/check_workflows_test.sh` | Prueba la guarda de workflows sobre copias de `.github/`: secretos en `build.yml` y en las acciones que alcanza, y `save-cache` y `save-if` de la acción de preparación. |
+| `tests/check_workflows_test.sh` | Prueba la guarda de workflows sobre copias de `.github/`: rompe cada invariante de una forma y espera el mensaje. |
