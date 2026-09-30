@@ -25,7 +25,7 @@
 # comprobarla. Cambiar el secreto por otra clave deja de ser algo que pasa en
 # silencio y pasa a ser un fallo del job.
 #
-# Como se generan la clave y los secretos: `packaging/setup-signing-key.sh`.
+# Como se generan la clave y los secretos: packaging/repo/README.md, «La clave de firma».
 name: Importa la subclave de firma
 description: >-
   Importa la subclave GPG de firma de rFirma en un anillo efimero del runner y
@@ -84,8 +84,8 @@ runs:
 
         if [ -z "$PRIVATE_KEY" ] || [ -z "$PASSPHRASE" ]; then
           echo "faltan los secretos de firma del entorno release." >&2
-          echo "se llaman GPG_SIGNING_SUBKEY y GPG_SIGNING_PASSPHRASE, y los" >&2
-          echo "produce packaging/setup-signing-key.sh (ADR-0015)." >&2
+          echo "se llaman GPG_SIGNING_SUBKEY y GPG_SIGNING_PASSPHRASE, y" >&2
+          echo "se crean como dice packaging/repo/README.md (ADR-0015)." >&2
           exit 1
         fi
         if [ -z "$EXPECTED_FINGERPRINT" ]; then

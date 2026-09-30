@@ -66,7 +66,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     # La sede de los secretos, abierta solo a etiquetas `v*`. Los tres que
-    # nombra este fichero se crean con `packaging/setup-signing-key.sh` y se
+    # nombra este fichero se crean como dice `packaging/repo/README.md` y se
     # documentan en SECURITY.md.
     environment: release
     permissions:

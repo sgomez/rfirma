@@ -63,8 +63,9 @@ otro camino: es lo que hace que la firma signifique algo.
 que tienes en tu `Signed-By` sigue valiendo**: no tienes que volver a dar de alta el
 repositorio. Ésa es toda la razón de que la maestra no baje nunca al CI.
 
-La clave la genera —y los secretos los da de alta— `packaging/setup-signing-key.sh`, que
-ejecuta una persona en su equipo y ningún CI.
+La clave la genera —y los secretos los da de alta— una persona en su equipo, nunca el CI,
+siguiendo [«La clave de firma»](packaging/repo/README.md#la-clave-de-firma), que también
+dice cómo renovar la subclave y cómo revocarla.
 
 **No hay clave de autoactualización.** rFirma no se actualiza sola: no hay *updater*, ni
 clave minisign, ni `latest.json`. Lo único que hace es enseñarte que existe una versión

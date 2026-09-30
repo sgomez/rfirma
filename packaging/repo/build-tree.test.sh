@@ -12,8 +12,8 @@
 # landing que las publica, que es de donde la gente las copia.
 #
 # LAS FIRMAS NO SE PRUEBAN AQUI, y no es un olvido: firmar necesita una clave
-# privada, las claves de rFirma las crea una persona con
-# `packaging/setup-signing-key.sh` y ninguna prueba puede fabricarse una que
+# privada, las claves de rFirma las crea una persona (packaging/repo/README.md)
+# y ninguna prueba puede fabricarse una que
 # valga. Por eso el arbol se construye en el modo `SIN-FIRMA-SOLO-PRUEBAS`, que
 # `.github/check-workflows.sh` prohibe que aparezca en un workflow: lo que se
 # publica va firmado siempre, y esa parte se ensaya con una etiqueta `-rc.N`.
@@ -39,7 +39,7 @@ fail() { echo "FALLO  $*" >&2; fallos=$((fallos + 1)); }
 ok() { echo "OK  $*"; }
 
 # UNA CLAVE DE MENTIRA Y NINGUNA DE VERDAD: las claves de rFirma las crea una
-# persona con `packaging/setup-signing-key.sh`, y aqui no hace falta ninguna
+# persona (packaging/repo/README.md), y aqui no hace falta ninguna
 # porque el arbol se construye sin firmar. Lo que si tiene que ser cierto es la
 # ARMADURA —el `.flatpakref` lleva la clave desempaquetada dentro—, y eso lo da
 # `gpg --enarmor`, que empaqueta unos bytes cualesquiera sin tocar ningun

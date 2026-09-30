@@ -82,8 +82,8 @@ Tres cosas que no son de estilo:
   dentro de `just check-repo`.
 
 **Las firmas del árbol no las prueba nadie automáticamente**, y no puede ser de otra manera:
-firmar necesita una clave privada, las de rFirma las crea una persona con
-`packaging/setup-signing-key.sh` y ninguna prueba puede fabricarse una que valga. Por eso
+firmar necesita una clave privada, las de rFirma las crea una persona siguiendo
+[La clave de firma](#la-clave-de-firma) y ninguna prueba puede fabricarse una que valga. Por eso
 `build-tree.sh` tiene un modo `SIN-FIRMA-SOLO-PRUEBAS` que es el que usa su test, y por eso
 `.github/check-workflows.sh` prohíbe que esa cadena aparezca en un workflow. El camino con
 clave se ensaya con una etiqueta `v*-rc.N`.
@@ -138,15 +138,22 @@ Ni el CI ni ningún agente pueden hacer esto: hay que hacerlo a mano una vez.
    `PUBLISH_SSH_KEY` del entorno `release` y la pública al `authorized_keys` del usuario, con
    `rrsync` delante y sin nada más:
 
+   ```bash
+   ssh-keygen -t ed25519 -N '' -C ci@rfirma -f publish
+   gh secret set PUBLISH_SSH_KEY --env release < publish
+   echo "command=\"rrsync /srv/rfirma-repo\",restrict $(cat publish.pub)"
    ```
-   command="rrsync /srv/rfirma-repo",restrict ssh-ed25519 AAAA... ci@rfirma
-   ```
+
+   La última línea es la que va al `authorized_keys` del usuario (en
+   `/var/lib/rfirma-publish/.ssh/`, `700` y `600`, de `rfirma-publish`). Antes de añadirla,
+   borra la que acabe en `ci@rfirma`: si no, la clave vieja sigue pudiendo escribir. Después,
+   `shred -u publish`.
 
    `restrict` quita pty, reenvío de puertos y agente. Con eso, la clave del CI no da consola:
    sólo sabe escribir en el directorio que ya sirve ficheros públicos. `rrsync` viene en el
    paquete `rsync` (Debian/Ubuntu: `/usr/bin/rrsync`).
 
-3. **Las variables y el secreto del entorno `release`** en GitHub:
+3. **Las variables del repositorio y el secreto del entorno `release`** en GitHub:
 
    | Nombre | Tipo | Qué |
    |---|---|---|
@@ -155,6 +162,14 @@ Ni el CI ni ningún agente pueden hacer esto: hay que hacerlo a mano una vez.
    | `PUBLISH_SSH_HOST` | variable | el nombre del VPS |
    | `PUBLISH_SSH_KNOWN_HOSTS` | variable | la línea de `ssh-keyscan <host>`, para que `StrictHostKeyChecking=yes` tenga con qué comparar |
 
+   ```bash
+   gh variable set PUBLISH_SSH_USER --body rfirma-publish
+   gh variable set PUBLISH_SSH_HOST --body <host>
+   gh variable set PUBLISH_SSH_KNOWN_HOSTS --body "$(ssh-keyscan <host> 2>/dev/null)"
+   ```
+
+   Las tres son variables del repositorio. El secreto, en cambio, es del entorno.
+
 4. **El montaje de la aplicación de Coolify**, el del apartado anterior.
 
 5. **El contexto de construcción de la aplicación de Coolify**: `Base Directory` a `/` y
@@ -162,3 +177,85 @@ Ni el CI ni ningún agente pueden hacer esto: hay que hacerlo a mano una vez.
 
 El resto de la infraestructura —dominio y certificado TLS— también es aprovisionamiento
 humano.
+
+## La clave de firma
+
+Una maestra fuera de línea que solo certifica, y una subclave de firma que caduca a los dos
+años y es lo único que baja al CI (ADR-0015). La subclave actual caduca el **2028-09-04**.
+Todo se hace en un equipo propio, nunca en el CI, con un anillo de usar y tirar:
+
+```bash
+export GNUPGHOME="$(mktemp -d)"; chmod 700 "$GNUPGHOME"; umask 077
+read -rs FRASE && printf '%s' "$FRASE" > "$GNUPGHOME/frase" && unset FRASE
+GPG=(gpg --batch --pinentry-mode loopback --passphrase-file "$GNUPGHOME/frase")
+```
+
+La frase protege la maestra y la subclave, y es también el secreto
+`GPG_SIGNING_PASSPHRASE`: guárdala en el gestor antes de escribirla.
+
+### Crear
+
+```bash
+UID_CLAVE='rFirma signing <correo del proyecto, nunca uno personal>'
+"${GPG[@]}" --quick-generate-key "$UID_CLAVE" rsa4096 cert never
+HUELLA="$(gpg --with-colons --list-keys "$UID_CLAVE" | awk -F: '$1=="fpr"{print $10; exit}')"
+"${GPG[@]}" --quick-add-key "$HUELLA" rsa4096 sign 2y
+cp "$GNUPGHOME/openpgp-revocs.d/$HUELLA.rev" rfirma-revocacion.asc
+```
+
+Después, [Subir la subclave](#subir-la-subclave), y a mano:
+
+- `gh variable set GPG_FINGERPRINT --body "$HUELLA"`, que es variable del repositorio, no del
+  entorno.
+- La huella en `SECURITY.md` y en `site/src/components/Transparency.astro`: `release.yml`
+  comprueba que coincide con la importada.
+- El entorno `release`, restringido a las etiquetas `v*`:
+
+  ```bash
+  gh api --method PUT "repos/{owner}/{repo}/environments/release" --input - <<'JSON'
+  {"deployment_branch_policy":{"protected_branches":false,"custom_branch_policies":true}}
+  JSON
+  gh api --method POST "repos/{owner}/{repo}/environments/release/deployment-branch-policies" \
+    -f name='v*' -f type=tag
+  ```
+
+- Un *tag ruleset* `v*` con *Restrict creations*, *updates* y *deletions*, y **Repository
+  admin en la *Bypass list***: sin él, ni el administrador puede crear la etiqueta.
+
+La pública no se sube a mano: `publish.yml` la exporta de la huella y `build-tree.sh` la
+sirve en `/rfirma.asc`.
+
+### Renovar la subclave
+
+Antes de que caduque, con la copia fuera de línea como `GNUPGHOME`:
+
+```bash
+SUB="$(gpg --with-colons --list-keys "$HUELLA" | awk -F: '$1=="sub"{s=1; next} s && $1=="fpr"{print $10; exit}')"
+"${GPG[@]}" --quick-set-expire "$HUELLA" 2y "$SUB"
+```
+
+Después, [Subir la subclave](#subir-la-subclave). La huella no cambia. Quien ya tiene
+configurado apt, dnf o flatpak conserva su copia local de la pública con la fecha vieja: no se
+ha comprobado qué hace cada gestor con ella, y hay que resolverlo antes de la fecha de arriba.
+
+### Revocar
+
+- **Si se filtra la subclave:** `gpg --edit-key "$HUELLA"`, luego `key 1`, `revkey` y `save`
+  (no hay orden en lote para revocar una subclave). A continuación, una subclave nueva con el
+  `--quick-add-key` de [Crear](#crear) y [Subir la subclave](#subir-la-subclave).
+- **Si se filtra la maestra:** `gpg --import rfirma-revocacion.asc`, quitando antes el `:`
+  que gpg pone delante de `-----BEGIN` para que no se importe por accidente. La identidad
+  muere, y hay que volver a [Crear](#crear) con una huella nueva en todas partes.
+
+### Subir la subclave
+
+```bash
+"${GPG[@]}" --yes --armor --output subclave-ci.asc --export-secret-subkeys "$HUELLA"
+gpg --list-packets subclave-ci.asc | grep -q gnu-dummy   # la maestra no viaja
+gh secret set GPG_SIGNING_SUBKEY --env release < subclave-ci.asc
+gh secret set GPG_SIGNING_PASSPHRASE --env release < "$GNUPGHOME/frase"
+```
+
+Si el `grep` no encuentra nada, el fichero lleva la maestra: no se sube. Al terminar, copia
+`$GNUPGHOME` y `rfirma-revocacion.asc` fuera de línea, y
+`shred -u "$GNUPGHOME/frase" subclave-ci.asc; rm -rf "$GNUPGHOME"`.
