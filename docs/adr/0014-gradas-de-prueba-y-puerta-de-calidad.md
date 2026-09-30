@@ -293,26 +293,22 @@ práctica.
 
 ## Un solo hook: formato, antes del push
 
-`pre-push` con **lefthook**, y dentro **solo formato**: `cargo fmt --all -- --check`, el
-formateador de biome y `ruff format --check`, filtrados por glob y en paralelo, de modo que una
-push que no toca Rust no arranca cargo. Ni clippy, ni pruebas, ni nada que compile o dependa de
-`build-ts`: la puerta se mide en segundos o no sobrevive. No comprueba nada que `just check` no
-comprobara ya, y `just check` sigue siendo el único punto de entrada que promete
-`docs/agents/code-host.md`.
+`pre-push` con **lefthook**, y dentro **solo formato**: una sola receta, `just fmt-check`, que
+comprueba `cargo fmt` en la app y en la suite de conformidad, el formateador de biome y `ruff
+format --check` sobre todo el Python del repositorio. La llaman el hook y `check-repo`, así que el
+CI y el push comprueban lo mismo. Ni clippy, ni pruebas, ni nada que compile o dependa de
+`build-ts`: la puerta se mide en segundos o no sobrevive. `just check` sigue siendo el único punto
+de entrada que promete `docs/agents/code-host.md`.
 
 El gestor va como dependencia de desarrollo de `rfirma-app`, a versión exacta por la misma razón
 que `cargo-crap`, y lo instala el `prepare` de `package.json`: cualquier `pnpm install` —`just
 deps` incluido— la deja puesta. `bootstrap.sh` no crece (ADR-0013). La configuración es
-`lefthook.yml` en la raíz.
+`lefthook.yml` en la raíz, que antepone `~/.cargo/bin` y `~/.local/bin` al `PATH` porque un hook
+de git es una shell no interactiva. Cuando falla, el mensaje nombra `just fmt`, que escribe.
 
-Cada trabajo se salta solo, con un aviso y sin bloquear, si su herramienta no está: `cargo` y
-`ruff` no viven en el `PATH` de una shell no interactiva, que es lo que es un hook de git. Cuando
-falla, el mensaje nombra la receta que lo arregla —`just fmt`, y `fmt-rust`, `fmt-ts` y
-`fmt-python`, que escriben, frente a las `lint-*`, que comprueban—.
-
-`ruff format` es la única de las tres que el CI no ejecuta: la cadena de Python es `ruff check`,
-que es otra cosa. La puerta local es aquí más estricta a propósito, acotada por su glob a
-`packaging/**.py`.
+Descartado: un trabajo por cadena, filtrado por glob y en paralelo, que se saltaba la cadena sin
+herramienta. Eran tres copias de lo que comprueba el CI, con un `ruff format` acotado a
+`packaging/`, y un aviso que deja pasar el formato sin comprobar se ignora.
 
 ### Considered Options
 

@@ -264,11 +264,10 @@ caché de la librería nativa lleva la versión, así que subirla la reconstruye
 25.4, `native-image` se esquiva con
 `NATIVE_IMAGE_OPTIONS=--initialize-at-build-time=es.gob.afirma.signers.tsp.pkcs7.TsaParams`.
 
-## `lefthook` llama a scripts de una línea
+## `lefthook` llama a una receta en una línea
 
-En Windows `lefthook` le pasa a `sh` solo la primera línea de un `run:` de varias. Cada trabajo
-del `pre-push` es ahora una línea que llama a `scripts/pre-push-fmt.sh rust|ts|python`, que
-hace lo mismo que hacían los bloques.
+En Windows `lefthook` le pasa a `sh` solo la primera línea de un `run:` de varias. El único
+trabajo del `pre-push` es una línea que llama a `just fmt-check`.
 
 ## Considered Options
 
