@@ -257,3 +257,4 @@ siguen en `.scratch/archive/`.
 2026-09-30 spec=#1247 sub=#1262 model=sonnet effort=medium pr=#1279 verdict=CLEAN cycles=1 mergefix=0 wave=5 outcome=merged
 2026-09-30 spec=#1247 sub=#1263 model=sonnet effort=medium pr=#1280 verdict=CLEAN cycles=2 mergefix=0 wave=5 outcome=merged
 2026-09-30 spec=#1247 sub=#1265 model=sonnet effort=medium pr=#1283 verdict=CLEAN cycles=1 mergefix=0 wave=6 outcome=merged
+2026-09-30 spec=#1247 sub=#1252 model=sonnet effort=medium pr=#1284 verdict=CLEAN cycles=1 mergefix=0 wave=1 outcome=escalated
