@@ -231,6 +231,7 @@ fn with_the_five_roots(
             signing::adapters::tauri::pades_lower_left,
             desktop::adapters::tauri::read_invocation,
             desktop::adapters::tauri::check_for_new_version,
+            desktop::adapters::tauri::install_new_version,
             desktop::adapters::tauri::measure_version,
             desktop::adapters::tauri::open_external_destination,
             desktop::adapters::tauri::read_status,
@@ -328,6 +329,8 @@ fn run_desktop(paths: desktop::adapters::paths::Paths, invocation: Invocation) {
 
     let dialogs = roots.dialogs.clone();
     let prompter = roots.prompter.clone();
+    let context = tauri::generate_context!();
+    let builder = desktop::adapters::installer::with_the_updater(builder, context.config());
     with_the_five_roots(builder, roots)
         .manage(scratch)
         .setup(move |app| {
@@ -336,7 +339,7 @@ fn run_desktop(paths: desktop::adapters::paths::Paths, invocation: Invocation) {
             open_the_main_window(app.handle());
             Ok(())
         })
-        .build(tauri::generate_context!())
+        .build(context)
         .unwrap_or_else(|error| {
             startup_dialog::report_and_exit(&startup_failure::StartupFailure::new(
                 startup_failure::Situation::WindowUnavailable,
@@ -356,8 +359,11 @@ fn run_site(paths: desktop::adapters::paths::Paths, url: String, said_by_the_rol
     roots.site.scratch_dir = scratch.path().to_path_buf();
     let dialogs = roots.dialogs.clone();
     let prompter = roots.prompter.clone();
+    let context = tauri::generate_context!();
+    let builder =
+        desktop::adapters::installer::with_the_updater(tauri::Builder::default(), context.config());
 
-    with_the_five_roots(tauri::Builder::default(), roots)
+    with_the_five_roots(builder, roots)
         .manage(scratch)
         .setup(move |app| {
             dialogs.attach(app.handle().clone());
@@ -381,7 +387,7 @@ fn run_site(paths: desktop::adapters::paths::Paths, url: String, said_by_the_rol
 
             Ok(())
         })
-        .build(tauri::generate_context!())
+        .build(context)
         .unwrap_or_else(|error| {
             startup_dialog::report_and_exit(&startup_failure::StartupFailure::new(
                 startup_failure::Situation::WindowUnavailable,

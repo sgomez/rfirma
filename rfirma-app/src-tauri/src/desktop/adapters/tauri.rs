@@ -7,7 +7,7 @@ use crate::documents::DocumentsRoot;
 use crate::identity::IdentityRoot;
 use crate::site::SiteRoot;
 
-use super::views::{NewVersionView, SignalRowView, WithdrawalReportView};
+use super::views::{InstallationView, NewVersionView, SignalRowView, WithdrawalReportView};
 use crate::crossing::Failure;
 use crate::desktop::domain::status::{StoreBrand, StoreCertificates, StoreDetail};
 use crate::documents::adapters::views::DroppedDocumentView;
@@ -42,6 +42,17 @@ pub fn check_for_new_version(desktop: State<'_, DesktopRoot>) -> Option<NewVersi
         version: announced.version.to_string(),
         installable: announced.installable,
     })
+}
+
+/// Instala la versión anunciada: la descarga, verifica su firma, cierra la aplicación y lanza el instalador.
+#[tauri::command(async)]
+pub fn install_new_version(app_handle: tauri::AppHandle) -> InstallationView {
+    let installer = crate::desktop::adapters::installer::this_desktop(app_handle);
+    crate::desktop::application::version::install_new_version(
+        crate::desktop::application::version::Version::running(),
+        installer.as_ref(),
+    )
+    .into()
 }
 
 /// Mide la señal de versión consultando GitHub.

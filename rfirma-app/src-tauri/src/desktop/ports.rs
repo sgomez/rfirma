@@ -1,7 +1,8 @@
-//! Puertos del contexto de escritorio: el registro de manejadores del escritorio y la memoria de la versión publicada.
+//! Puertos del contexto de escritorio: el registro de manejadores, la memoria de la versión publicada y su instalador.
 
 use crate::desktop::domain::error::DesktopError;
 use crate::desktop::domain::handlers::UrlHandler;
+use crate::desktop::domain::installation::InstallFailure;
 use crate::desktop::domain::version_check::VersionCheck;
 use crate::memory_error::MemoryError;
 
@@ -27,4 +28,13 @@ pub trait VersionMemory {
 
     /// Guarda la comprobación recién hecha.
     fn remember_version_check(&self, check: VersionCheck) -> Result<(), MemoryError>;
+}
+
+/// Descarga, verifica e instala la versión anunciada; fuera de Windows, no está disponible (ADR-0035).
+pub trait UpdateInstaller {
+    /// La versión que anuncia el feed de instalación, o nada si no hay una mayor.
+    fn announced(&self) -> Result<Option<String>, InstallFailure>;
+
+    /// Descarga la versión anunciada, verifica su firma, cierra la aplicación y ejecuta el instalador.
+    fn install(&self) -> Result<(), InstallFailure>;
 }

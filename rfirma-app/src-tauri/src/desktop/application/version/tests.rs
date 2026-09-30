@@ -1,9 +1,11 @@
 use std::cell::Cell;
 use std::time::{Duration, SystemTime};
 
-use super::{new_version, NewVersion, Version};
+use super::{install_new_version, new_version, NewVersion, Version};
 use crate::desktop::domain::channel::Channel;
+use crate::desktop::domain::installation::{InstallFailure, Installation};
 use crate::desktop::domain::version_check::VersionCheck;
+use crate::desktop::ports::UpdateInstaller;
 use crate::signing::application::tests::a_memory;
 
 fn a_release(tag: &str) -> String {
@@ -325,4 +327,108 @@ fn the_running_version_comes_from_the_package() {
         env!("CARGO_PKG_VERSION"),
         "la version del paquete es la que se compara"
     );
+}
+
+struct FakeInstaller {
+    announced: Result<Option<&'static str>, InstallFailure>,
+    install: Result<(), InstallFailure>,
+    installed: Cell<bool>,
+}
+
+impl FakeInstaller {
+    fn announcing(
+        announced: Result<Option<&'static str>, InstallFailure>,
+        install: Result<(), InstallFailure>,
+    ) -> Self {
+        Self {
+            announced,
+            install,
+            installed: Cell::new(false),
+        }
+    }
+}
+
+impl UpdateInstaller for FakeInstaller {
+    fn announced(&self) -> Result<Option<String>, InstallFailure> {
+        self.announced.map(|announced| announced.map(str::to_owned))
+    }
+
+    fn install(&self) -> Result<(), InstallFailure> {
+        self.install?;
+        self.installed.set(true);
+        Ok(())
+    }
+}
+
+fn running() -> Version {
+    Version::parse("0.3.1").expect("es una version")
+}
+
+#[test]
+fn a_newer_announced_version_is_installed() {
+    let installer = FakeInstaller::announcing(Ok(Some("0.4.0")), Ok(()));
+
+    assert_eq!(
+        install_new_version(running(), &installer),
+        Installation::Installed
+    );
+    assert!(installer.installed.get());
+}
+
+#[test]
+fn without_a_newer_version_nothing_is_installed() {
+    for announced in [
+        None,
+        Some("0.3.1"),
+        Some("0.2.9"),
+        Some("no es una version"),
+    ] {
+        let installer = FakeInstaller::announcing(Ok(announced), Ok(()));
+
+        assert_eq!(
+            install_new_version(running(), &installer),
+            Installation::NoUpdate
+        );
+        assert!(!installer.installed.get());
+    }
+}
+
+#[test]
+fn a_network_failure_leaves_the_installation_untouched() {
+    for installer in [
+        FakeInstaller::announcing(Err(InstallFailure::Network), Ok(())),
+        FakeInstaller::announcing(Ok(Some("0.4.0")), Err(InstallFailure::Network)),
+    ] {
+        assert_eq!(
+            install_new_version(running(), &installer),
+            Installation::NetworkFailure
+        );
+        assert!(!installer.installed.get());
+    }
+}
+
+#[test]
+fn an_invalid_signature_leaves_the_installation_untouched() {
+    let installer =
+        FakeInstaller::announcing(Ok(Some("0.4.0")), Err(InstallFailure::InvalidSignature));
+
+    assert_eq!(
+        install_new_version(running(), &installer),
+        Installation::InvalidSignature
+    );
+    assert!(!installer.installed.get());
+}
+
+#[test]
+fn on_linux_installing_is_not_available() {
+    let installer = FakeInstaller::announcing(
+        Err(InstallFailure::NotAvailable),
+        Err(InstallFailure::NotAvailable),
+    );
+
+    assert_eq!(
+        install_new_version(running(), &installer),
+        Installation::NotAvailable
+    );
+    assert!(!installer.installed.get());
 }
