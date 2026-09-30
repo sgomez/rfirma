@@ -1,4 +1,4 @@
-//! La barra de título nativa de GTK de la ventana principal en Linux, y nada en el resto; capa fina, sin pruebas.
+//! La barra de título nativa de GTK de la ventana principal en Linux, y nada en el resto; solo se prueba cuándo aplicar un estado.
 
 use super::views::TitlebarStateView;
 
@@ -31,6 +31,80 @@ pub fn apply(state: &TitlebarStateView) {
 #[cfg(not(target_os = "linux"))]
 pub fn apply(_state: &TitlebarStateView) {}
 
+/// Qué hacer con un estado que llega a la barra.
+#[cfg(any(target_os = "linux", test))]
+#[derive(Debug, PartialEq, Eq)]
+pub enum Arrival {
+    /// Es el último aplicado: no se toca nada.
+    Ignore,
+    /// Hay un menú abierto: espera a que se cierre.
+    Defer,
+    /// Se aplica ya.
+    Apply,
+}
+
+/// Decide qué hacer con un estado nuevo según el último aplicado y si hay un menú abierto.
+#[cfg(any(target_os = "linux", test))]
+pub fn decide<T: PartialEq>(applied: Option<&T>, arrived: &T, menu_open: bool) -> Arrival {
+    if applied == Some(arrived) {
+        Arrival::Ignore
+    } else if menu_open {
+        Arrival::Defer
+    } else {
+        Arrival::Apply
+    }
+}
+
+/// El último estado aplicado a la barra y el que espera a que se cierre un menú.
+#[cfg(any(target_os = "linux", test))]
+pub struct Pacing<T> {
+    applied: Option<T>,
+    pending: Option<T>,
+}
+
+#[cfg(any(target_os = "linux", test))]
+impl<T: PartialEq + Clone> Default for Pacing<T> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[cfg(any(target_os = "linux", test))]
+impl<T: PartialEq + Clone> Pacing<T> {
+    /// Una barra a la que aún no se le ha aplicado nada.
+    pub const fn new() -> Self {
+        Self {
+            applied: None,
+            pending: None,
+        }
+    }
+
+    /// Recibe un estado y devuelve el que hay que aplicar ya, si hay.
+    pub fn arrive(&mut self, arrived: T, menu_open: bool) -> Option<T> {
+        match decide(self.applied.as_ref(), &arrived, menu_open) {
+            Arrival::Ignore => {
+                self.pending = None;
+                None
+            }
+            Arrival::Defer => {
+                self.pending = Some(arrived);
+                None
+            }
+            Arrival::Apply => {
+                self.pending = None;
+                self.applied = Some(arrived.clone());
+                Some(arrived)
+            }
+        }
+    }
+
+    /// Al cerrarse un menú, devuelve el estado pendiente que hay que aplicar, si hay.
+    pub fn menu_closed(&mut self) -> Option<T> {
+        let pending = self.pending.take()?;
+        self.arrive(pending, false)
+    }
+}
+
 #[cfg(target_os = "linux")]
 mod gtk_titlebar {
     use std::cell::RefCell;
@@ -39,7 +113,7 @@ mod gtk_titlebar {
     use tauri::Emitter;
 
     use super::super::views::{TitlebarActionView, TitlebarRecentView};
-    use super::{TitlebarStateView, TITLEBAR_ACTION};
+    use super::{Pacing, TitlebarStateView, TITLEBAR_ACTION};
 
     const MISSING_RECENT: &str = "missing-recent";
     const MISSING_ACTION: &str = "hdr.missing-recent";
@@ -63,6 +137,7 @@ mod gtk_titlebar {
 
     thread_local! {
         static WIDGETS: RefCell<Option<Widgets>> = const { RefCell::new(None) };
+        static PACING: RefCell<Pacing<TitlebarStateView>> = const { RefCell::new(Pacing::new()) };
     }
 
     pub(super) fn mount(window: &tauri::WebviewWindow, gtk_window: &gtk::ApplicationWindow) {
@@ -106,6 +181,8 @@ mod gtk_titlebar {
         menu.set_visible(false);
 
         open_the_menu_on_f10(gtk_window, &menu);
+        apply_the_pending_state_on_close(&recents);
+        apply_the_pending_state_on_close(&menu);
         WIDGETS.with(|widgets| {
             *widgets.borrow_mut() = Some(Widgets {
                 split,
@@ -118,6 +195,33 @@ mod gtk_titlebar {
     }
 
     pub(super) fn apply(state: &TitlebarStateView) {
+        let Some(menu_open) = WIDGETS.with(|widgets| {
+            widgets
+                .borrow()
+                .as_ref()
+                .map(|widgets| widgets.recents.is_active() || widgets.menu.is_active())
+        }) else {
+            return;
+        };
+        let now = PACING.with(|pacing| pacing.borrow_mut().arrive(state.clone(), menu_open));
+        if let Some(state) = now {
+            render(&state);
+        }
+    }
+
+    fn apply_the_pending_state_on_close(button: &gtk::MenuButton) {
+        button.connect_toggled(|button| {
+            if button.is_active() {
+                return;
+            }
+            let pending = PACING.with(|pacing| pacing.borrow_mut().menu_closed());
+            if let Some(state) = pending {
+                render(&state);
+            }
+        });
+    }
+
+    fn render(state: &TitlebarStateView) {
         WIDGETS.with(|widgets| {
             let widgets = widgets.borrow();
             let Some(widgets) = widgets.as_ref() else {
@@ -234,3 +338,6 @@ mod gtk_titlebar {
         });
     }
 }
+
+#[cfg(test)]
+mod tests;
