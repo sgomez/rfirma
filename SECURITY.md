@@ -69,8 +69,8 @@ dice cómo renovar la subclave y cómo revocarla.
 
 **La clave de actualizaciones de Windows** es un par minisign aparte, que solo firma el
 instalador de Windows (`*_x64-setup.exe`) para el *updater*: su firma va en la Release, en el
-`.sig` de al lado, y cubierta por el mismo `SHA256SUMS.asc`. La pública va versionada en la
-configuración de Windows del repositorio; la privada y su contraseña son secretos del entorno
+`.sig` de al lado, y cubierta por el mismo `SHA256SUMS.asc`. La pública va versionada en el
+repositorio, en la configuración de Windows y junto al script que firma; la privada y su contraseña son secretos del entorno
 `release`, y en ninguna otra parte. La crea una persona, nunca el CI, siguiendo
 [«La clave de actualizaciones de Windows»](packaging/repo/README.md#la-clave-de-actualizaciones-de-windows),
 que también dice cómo rotarla.
