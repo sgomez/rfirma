@@ -29,7 +29,6 @@ import {
   tauriNativeTitlebar,
   tauriPdfSource,
   tauriPreferences,
-  tauriWindowTheme,
   tauriRecents,
   tauriRubricPicker,
   tauriSignedDocumentOpener,
@@ -38,6 +37,7 @@ import {
   tauriStatusPort,
   tauriVersionCheck,
   tauriVisibleSignatureMemory,
+  tauriWindowTheme,
 } from "./tauri";
 
 const root = document.getElementById("root");

@@ -1,5 +1,3 @@
-import { getCurrentWindow } from "@tauri-apps/api/window";
-
 /**
  * El tema de la ventana: lo que el usuario elige ver.
  *
