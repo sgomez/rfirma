@@ -324,7 +324,7 @@ export function App({
     <>
       <MainWindow
         menuAnchor={menuAnchor ?? menuAnchorFor(navigator.userAgent)}
-        hasAttention={hasAttention}
+        hasAttention={hasAttention && view !== "status"}
         onOpenStatus={() => setView("status")}
         onOpenPreferences={() => setView("preferences")}
         onOpenHelp={() => void externalDestinations.open("discussions")}

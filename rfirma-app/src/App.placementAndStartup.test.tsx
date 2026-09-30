@@ -525,9 +525,14 @@ describe("App, el triángulo de aviso del menú", () => {
       memoryStatus(rowsWithSitesUnconfigured()),
     );
 
-    await user.click(await screen.findByRole("button", { name: "Menú" }));
+    await user.click(
+      await screen.findByRole("button", { name: "Estado de rFirma: requiere atención" }),
+    );
 
-    expect(screen.getByRole("img", { name: "Requiere atención" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Estado de rFirma" })).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Estado de rFirma: requiere atención" }),
+    ).not.toBeInTheDocument();
   });
 
   it("stays off when the sites open AutoFirma, the trap a naive implementation breaks", async () => {
@@ -549,6 +554,8 @@ describe("App, el triángulo de aviso del menú", () => {
 
     await user.click(await screen.findByRole("button", { name: "Menú" }));
 
-    expect(screen.queryByRole("img", { name: "Requiere atención" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Estado de rFirma: requiere atención" }),
+    ).not.toBeInTheDocument();
   });
 });

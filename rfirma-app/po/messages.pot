@@ -422,14 +422,11 @@ msgstr ""
 msgid "header.menu"
 msgstr ""
 
-#. Nombre del botón de menú cuando «Estado de rFirma» lleva el aviso.
-msgid "header.menuAttention"
+#. Nombre accesible y tooltip del botón de aviso de la cabecera.
+msgid "header.attention"
 msgstr ""
 
 msgid "header.status"
-msgstr ""
-
-msgid "header.statusAttention"
 msgstr ""
 
 msgid "header.preferences"

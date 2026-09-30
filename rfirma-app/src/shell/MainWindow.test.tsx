@@ -1,6 +1,6 @@
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { renderWithCatalog } from "../testing/render";
 import { MainWindow } from "./MainWindow";
 
@@ -26,12 +26,14 @@ describe("MainWindow", () => {
     expect(screen.getByRole("region", { name: "Panel de firma" })).toBeInTheDocument();
   });
 
-  it("passes hasAttention through to the header menu", async () => {
+  it("shows the attention button in the header and opens the status panel from it", async () => {
     const user = userEvent.setup();
+    const openStatus = vi.fn();
     renderWithCatalog(
       <MainWindow
         menuAnchor="header"
         hasAttention
+        onOpenStatus={openStatus}
         onOpenPreferences={noop}
         onOpenAbout={noop}
         tabs={null}
@@ -40,10 +42,9 @@ describe("MainWindow", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: /^Menú/ }));
+    await user.click(screen.getByRole("button", { name: "Estado de rFirma: requiere atención" }));
 
-    expect(screen.getByRole("menuitem", { name: /Estado de rFirma/ })).toBeInTheDocument();
-    expect(screen.getByRole("img", { name: "Requiere atención" })).toBeInTheDocument();
+    expect(openStatus).toHaveBeenCalledTimes(1);
   });
 
   // ID-51: sin documento el panel **no se monta**. La ventana pasa a una

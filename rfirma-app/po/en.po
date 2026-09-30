@@ -477,15 +477,12 @@ msgstr "This installation cannot be updated from the application."
 msgid "header.menu"
 msgstr "Menu"
 
-#. Nombre del botón de menú cuando «Estado de rFirma» lleva el aviso.
-msgid "header.menuAttention"
-msgstr "Menu. rFirma Status: needs attention"
+#. Nombre accesible y tooltip del botón de aviso de la cabecera.
+msgid "header.attention"
+msgstr "rFirma Status: needs attention"
 
 msgid "header.status"
 msgstr "rFirma Status"
-
-msgid "header.statusAttention"
-msgstr "Needs attention"
 
 msgid "header.preferences"
 msgstr "Preferences…"
