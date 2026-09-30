@@ -1,0 +1,30 @@
+packages:
+  - rfirma-app
+  - rfirma-conformance/console
+  - packaging/repo/site
+
+catalog:
+  '@biomejs/biome': 2.5.11
+  '@testing-library/jest-dom': 7.0.1
+  '@testing-library/react': 16.3.3
+  '@testing-library/user-event': 14.6.6
+  '@types/node': 26.4.0
+  '@types/react': 19.2.18
+  '@types/react-dom': 19.2.5
+  '@vitejs/plugin-react': 6.1.1
+  jsdom: 30.0.1
+  react: 19.2.8
+  react-dom: 19.2.8
+  typescript: 7.0.2
+  vite: 8.2.2
+
+allowBuilds:
+  '@swc/core': false
+  esbuild: true
+  # Su postinstall reescribiría desde un worktree los hooks que comparte el checkout principal.
+  lefthook: false
+  sharp: true
+
+# i18next-cli va fijada exacta: la sube una persona, no el reloj de la cadena de suministro.
+minimumReleaseAgeExclude:
+  - i18next-cli@1.72.4

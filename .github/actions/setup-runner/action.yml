@@ -118,7 +118,7 @@ runs:
       with:
         node-version: 24
         cache: pnpm
-        cache-dependency-path: rfirma-app/pnpm-lock.yaml
+        cache-dependency-path: pnpm-lock.yaml
 
     # El `prepare` de pnpm es un script de bash, y pnpm no lee npm_config_script_shell.
     - if: inputs.node == 'true' && runner.os == 'Windows'

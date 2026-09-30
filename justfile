@@ -151,7 +151,7 @@ bootstrap:
 # Instala las dependencias de node de rfirma-app.
 [private]
 deps:
-    cd {{ app }} && pnpm install --frozen-lockfile
+    cd {{ root }} && pnpm install --frozen-lockfile --filter rfirma-app
 
 # --all rellena tambien los idiomas incompletos, con castellano; nunca en el CI.
 # Fusiona el .pot con los cinco .po y regenera los catalogos.
@@ -516,8 +516,9 @@ mutants:
 [script('bash')]
 check-landing:
     set -euo pipefail
-    cd {{ root }}/packaging/repo/site
-    pnpm install --frozen-lockfile --reporter=silent
+    cd {{ root }}
+    pnpm install --frozen-lockfile --reporter=silent --filter rfirma-landing
+    cd packaging/repo/site
     pnpm exec vitest run --reporter=dot
     pnpm exec astro build
 
@@ -561,7 +562,8 @@ conformance: autoscript conformance-console
 [group('dev')]
 conformance-console:
     cd {{ conformance_suite }} && cargo test -q export_bindings > /dev/null
-    cd {{ conformance_suite }}/console && pnpm install --frozen-lockfile && pnpm build
+    cd {{ root }} && pnpm install --frozen-lockfile --filter rfirma-conformance-console
+    cd {{ conformance_suite }}/console && pnpm build
 
 # Borra lo construido y los volcados de cobertura sueltos en el arbol de fuentes.
 [group('dev')]
