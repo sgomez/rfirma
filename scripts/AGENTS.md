@@ -10,9 +10,7 @@ Los arneses que llaman las recetas del `justfile` (ADR-0013).
 | `install-tools.sh` | Instala las herramientas en la versión que fija `versions.env`, para `just install-tools`. |
 | `pinned-version.sh` | Imprime una clave de `versions.env` para los arranques que no pasan por `just`. |
 | `check-versions.sh` | La guarda de `versions.env`: ningún valor fijado escrito fuera de él y los pom con la misma AutoFirma. |
-| `release.sh` | Publica una versión desde `main`: changelog, bump, commit, etiqueta y push atómico, para `just release`. |
-| `changelog-release.sh` | Escribe en `CHANGELOG.md` la sección de una versión a partir de los títulos de PR desde la última etiqueta. |
-| `bump-version.sh` | Sube la versión en los sitios del candado de `check-version.py`, para `just bump-version`. |
+| `app_version.py` | La versión de la aplicación con tres verbos: `bump` la sube en todos sus sitios, `check` comprueba que cuadran y `changelog` imprime la sección de una versión. No es la guarda de las herramientas fijadas. |
 | `dev-handler.sh` | Registra o quita el binario de desarrollo como manejador de `afirma://`. |
 | `isolated-store.sh` | Monta, para un cliente de la suite de conformidad y un almacén (`rsa`, `ec`, `token`, `token_apart`, `ed25519`, `several` o `expired`), su perfil de usar y tirar con su envoltorio y su raíz de confianza, sin lanzar el cliente. Lo llama la consola web de la suite al resolver el cliente, no una receta. |
 | `check-glibc.sh` | Comprueba el suelo de glibc de la librería nativa. |
@@ -26,4 +24,5 @@ Los arneses que llaman las recetas del `justfile` (ADR-0013).
 | `tests/packages_manifest_test.sh` | Prueba el manifiesto de paquetes (entrega completa, candidata, extensión desconocida, firmable, plataformas). |
 | `tests/preview_comment_test.sh` | Prueba el comentario de la preview: filas por artefacto, avisos del manifiesto, fallo, salida vacía y marcador en la primera línea. |
 | `tests/check_versions_test.sh` | Prueba la guarda de `versions.env` sobre árboles temporales: literales, pom, formato y el fichero viejo de GraalVM. |
+| `tests/test_app_version.py` | Prueba los tres verbos de `app_version.py` sobre un árbol temporal con su propio git. |
 | `tests/check_workflows_test.sh` | Prueba la guarda de workflows sobre copias de `.github/`: secretos en `build.yml` y en las acciones que alcanza, y `save-cache` y `save-if` de la acción de preparación. |
