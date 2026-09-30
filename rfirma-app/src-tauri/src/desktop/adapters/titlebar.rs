@@ -127,6 +127,27 @@ mod gtk_titlebar {
         ("clear-recents", TitlebarActionView::ClearRecents),
     ];
 
+    const TITLEBAR_POPOVER_CLASS: &str = "rfirma-titlebar-popover";
+
+    const TITLEBAR_POPOVER_CSS: &str = "
+        popover.rfirma-titlebar-popover {
+            padding: 6px;
+            border-radius: 12px;
+        }
+        popover.rfirma-titlebar-popover modelbutton {
+            min-height: 32px;
+            padding: 0 12px;
+            margin: 1px 0;
+            border-radius: 6px;
+        }
+        popover.rfirma-titlebar-popover modelbutton:hover {
+            background-color: alpha(currentColor, 0.08);
+        }
+        popover.rfirma-titlebar-popover separator {
+            margin: 4px 0;
+        }
+    ";
+
     struct Widgets {
         split: gtk::Box,
         open: gtk::Button,
@@ -140,7 +161,31 @@ mod gtk_titlebar {
         static PACING: RefCell<Pacing<TitlebarStateView>> = const { RefCell::new(Pacing::new()) };
     }
 
+    fn install_popover_style() {
+        let Some(screen) = gtk::gdk::Screen::default() else {
+            return;
+        };
+        let provider = gtk::CssProvider::new();
+        if provider
+            .load_from_data(TITLEBAR_POPOVER_CSS.as_bytes())
+            .is_ok()
+        {
+            gtk::StyleContext::add_provider_for_screen(
+                &screen,
+                &provider,
+                gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
+            );
+        }
+    }
+
+    fn style_popover(button: &gtk::MenuButton) {
+        if let Some(popover) = button.popover() {
+            popover.style_context().add_class(TITLEBAR_POPOVER_CLASS);
+        }
+    }
+
     pub(super) fn mount(window: &tauri::WebviewWindow, gtk_window: &gtk::ApplicationWindow) {
+        install_popover_style();
         let header = gtk::HeaderBar::new();
         header.set_show_close_button(true);
         header.set_title(Some("rFirma"));
@@ -238,6 +283,7 @@ mod gtk_titlebar {
             widgets.warning.set_visible(state.warning_visible);
             name(&widgets.menu, &labels.menu);
             widgets.menu.set_menu_model(Some(&menu_model(state)));
+            style_popover(&widgets.menu);
             widgets.menu.set_visible(true);
         });
     }
