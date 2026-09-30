@@ -9,6 +9,10 @@ vi.mock("@tauri-apps/api/core", () => ({ invoke }));
 const listen = vi.hoisted(() => vi.fn());
 vi.mock("@tauri-apps/api/event", () => ({ listen }));
 
+vi.mock("@tauri-apps/api/window", () => ({
+  getCurrentWindow: () => ({ setTheme: async () => {} }),
+}));
+
 const configuration = {
   language: "es",
   destination: "Documentos",

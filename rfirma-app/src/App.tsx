@@ -430,8 +430,6 @@ export function App({
               document={{
                 name: signedHere.document.name,
                 pages: pdf?.pageCount ?? null,
-                // El tamaño lo trae la postfirma, que lo supo al escribir el
-                // fichero: aquí no se recalcula nada (ID-77).
                 sizeBytes: signedHere.document.sizeBytes,
               }}
               signedAt={signingInstant}
