@@ -66,6 +66,15 @@ paquetes_de_pega() {
     echo "flatpak $version" > "$dir/rfirma-$version.flatpak"
     echo "deb $version" > "$dir/rfirma_${version}_amd64.deb"
     echo "rpm $version" > "$dir/rfirma-$version.x86_64.rpm"
+    instalador_de_pega "$dir" "$version"
+}
+
+instalador_de_pega() {
+    local dir="$1" version="$2"
+    echo "exe $version" > "$dir/rFirma_${version}_x64-setup.exe"
+    printf "firma de $version
+" > "$dir/rFirma_${version}_x64-setup.exe.sig"
+    "$raiz/scripts/packages-manifest.sh" write "$dir"
 }
 
 # an_incomplete_series_stops_the_publication
@@ -84,6 +93,26 @@ if "$construye" "$tmp/vacia" "$tmp/arbol-vacio" "$tmp/rfirma.asc" "$SIN_FIRMA" >
     fail "una serie vacia no detiene la publicacion"
 else
     ok "una serie vacia detiene la publicacion"
+fi
+
+# a_version_without_the_windows_installer_stops_the_publication
+sin_exe="$tmp/sin-exe"
+paquetes_de_pega "$sin_exe/v0.4.0" "0.4.0"
+rm "$sin_exe/v0.4.0"/*-setup.exe
+if "$construye" "$sin_exe" "$tmp/arbol-malo" "$tmp/rfirma.asc" "$SIN_FIRMA" 2>&1 | grep -q "no estan en la Release"; then
+    ok "una version sin el .exe de Windows detiene la publicacion"
+else
+    fail "una version sin el .exe de Windows no detiene la publicacion"
+fi
+
+# a_version_without_the_windows_signature_stops_the_publication
+sin_sig="$tmp/sin-sig"
+paquetes_de_pega "$sin_sig/v0.4.0" "0.4.0"
+rm "$sin_sig/v0.4.0"/*.sig
+if "$construye" "$sin_sig" "$tmp/arbol-malo" "$tmp/rfirma.asc" "$SIN_FIRMA" 2>&1 | grep -q "no estan en la Release"; then
+    ok "una version sin el .sig de Windows detiene la publicacion"
+else
+    fail "una version sin el .sig de Windows no detiene la publicacion"
 fi
 
 # the_public_key_has_to_exist
@@ -192,7 +221,13 @@ for version in "${versiones[@]}"; do
     commit_de[$version]="$(bundle_de_prueba "$version" "$dir/rfirma-$version.flatpak")"
     deb_de_prueba "$version" "$dir/rfirma_${version}_amd64.deb"
     rpm_de_prueba "$version" "$dir/rfirma-$version.x86_64.rpm"
+    instalador_de_pega "$dir" "$version"
 done
+
+# Assets subidos a mano a la Release DESPUES del manifiesto: no estan en el.
+echo "de mas" > "$serie/v0.4.10/rFirma_9.9.9_x64-setup.exe"
+echo "de mas" > "$serie/v0.4.10/rFirma_9.9.9_x64-setup.exe.sig"
+echo "de mas" > "$serie/v0.4.10/subido-a-mano.exe"
 
 # ---------------------------------------------------------------------------
 # El arbol, dos veces y en dos directorios distintos
@@ -329,6 +364,64 @@ if [ -z "$(rpm -qp --nosignature --qf "$rpm_fmt" "$serie/v0.4.0/rfirma-0.4.0.x86
     ok "un rpm sin firmar se detecta correctamente como vacio"
 else
     fail "un rpm sin firmar parece firmado ante la consulta de rpm"
+fi
+
+# ---------------------------------------------------------------------------
+# /windows/: el instalador y latest.json
+# ---------------------------------------------------------------------------
+# windows_has_the_installer_and_signature_of_every_version_of_the_series
+faltan_de_windows=0
+for version in "${versiones[@]}"; do
+    for fichero in "rFirma_${version}_x64-setup.exe" "rFirma_${version}_x64-setup.exe.sig"; do
+        [ -f "$tmp/arbol/windows/$fichero" ] || { faltan_de_windows=1; echo "  falta $fichero" >&2; }
+    done
+done
+[ "$faltan_de_windows" -eq 0 ] && ok "windows/ trae el .exe y el .sig de cada version de la serie" \
+    || fail "windows/ no trae toda la serie"
+
+# an_extra_asset_outside_the_manifest_never_reaches_windows
+if [ ! -e "$tmp/arbol/windows/rFirma_9.9.9_x64-setup.exe" ] \
+    && [ ! -e "$tmp/arbol/windows/rFirma_9.9.9_x64-setup.exe.sig" ] \
+    && [ ! -e "$tmp/arbol/windows/subido-a-mano.exe" ]; then
+    ok "un asset de mas que no esta en el manifiesto no llega a windows/"
+else
+    fail "un asset de mas llega a windows/: se toma por glob y no por nombre"
+fi
+
+# latest_json_announces_only_the_highest_version_and_matches_what_is_served
+latest="$tmp/arbol/windows/latest.json"
+exe_alto="rFirma_0.4.10_x64-setup.exe"
+if [ "$(jq -r .version "$latest")" = "0.4.10" ] \
+    && [ "$(jq -r '.platforms | keys | join(",")' "$latest")" = "windows-x86_64" ] \
+    && [ "$(jq -r '.platforms["windows-x86_64"].url' "$latest")" = "https://rfirma.sgomez.me/windows/$exe_alto" ] \
+    && [ "$(jq -r '.platforms["windows-x86_64"].signature' "$latest")" = "$(cat "$tmp/arbol/windows/$exe_alto.sig")" ] \
+    && jq -e '.pub_date != null and .notes != null' "$latest" > /dev/null \
+    && [ -f "$tmp/arbol/windows/$exe_alto" ]; then
+    ok "latest.json anuncia la version mas alta y su url y firma casan con lo servido"
+else
+    fail "latest.json no cumple el contrato del updater: $(cat "$latest")"
+fi
+
+# a_candidate_never_appears_in_windows_or_in_latest_json
+con_candidata="$tmp/con-candidata"
+cp -r "$serie" "$con_candidata"
+cp -r "$serie/v0.4.10" "$con_candidata/v0.4.11-rc.1"
+rm "$con_candidata/v0.4.11-rc.1"/rFirma_* "$con_candidata/v0.4.11-rc.1/paquetes.json"
+instalador_de_pega "$con_candidata/v0.4.11-rc.1" "0.4.11-rc.1"
+"$construye" "$con_candidata" "$tmp/arbol-rc" "$tmp/rfirma.asc" "$SIN_FIRMA" > /dev/null 2>&1 \
+    || fail "la construccion con una candidata en la serie falla"
+if [ "$(jq -r .version "$tmp/arbol-rc/windows/latest.json")" = "0.4.10" ] \
+    && [ -z "$(find "$tmp/arbol-rc/windows" -name '*rc*' -print -quit)" ]; then
+    ok "una candidata no aparece en windows/ ni en latest.json"
+else
+    fail "una candidata aparece en windows/ o en latest.json"
+fi
+
+# the_caddyfile_serves_windows_from_the_current_link
+if grep -E '^\s*@repositorio path .*/windows/\*' "$raiz/packaging/repo/Caddyfile" > /dev/null; then
+    ok "el Caddyfile sirve /windows/* desde actual"
+else
+    fail "el Caddyfile no sirve /windows/*"
 fi
 
 # ---------------------------------------------------------------------------

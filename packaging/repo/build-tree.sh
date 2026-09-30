@@ -40,6 +40,7 @@
 #   /flatpak/           el repositorio ostree
 #   /apt/               con dists/stable/main/binary-amd64/
 #   /rpm/               con repodata/
+#   /windows/           el `-setup.exe` y el `.sig` de cada version, y `latest.json`
 #
 # APT CON SUITE `stable` Y NO REPOSITORIO PLANO (ID-175): el plano es mas
 # barato y NO admite `Suites:`/`Components:` en un `.sources` deb822, que es el
@@ -90,6 +91,26 @@ huella="$4"
 [ -d "$serie" ] || { echo "la serie '$serie' no existe" >&2; exit 1; }
 [ -f "$clave" ] || { echo "la clave '$clave' no existe" >&2; exit 1; }
 
+exe_de_la_version() {
+    local dir="$1" manifiesto exes sigs
+    manifiesto="$(dirname "${BASH_SOURCE[0]}")/../../scripts/packages-manifest.sh"
+    if [ ! -f "$dir/paquetes.json" ]; then
+        echo "a la version $(basename "$dir") le falta el paquetes.json: sin el no se sabe cual es su instalador de Windows" >&2
+        return 1
+    fi
+    mapfile -t exes < <("$manifiesto" files "$dir" nsis)
+    mapfile -t sigs < <("$manifiesto" files "$dir" minisign)
+    if [ "${#exes[@]}" -ne 1 ] || [ "${#sigs[@]}" -ne 1 ] || [ "${sigs[0]}" != "${exes[0]}.sig" ]; then
+        echo "a la version $(basename "$dir") le falta el .exe de Windows o su .sig" >&2
+        return 1
+    fi
+    if [ ! -f "$dir/${exes[0]}" ] || [ ! -f "$dir/${sigs[0]}" ]; then
+        echo "el manifiesto de $(basename "$dir") nombra ${exes[0]} y ${sigs[0]} y no estan en la Release" >&2
+        return 1
+    fi
+    echo "${exes[0]}"
+}
+
 # Las versiones de la serie, en orden de version y no de listado: el orden en
 # que se importan los bundles es la historia del repositorio ostree, asi que
 # tiene que ser el mismo en cada reconstruccion.
@@ -112,6 +133,14 @@ for version in "${versiones[@]}"; do
     done
 done
 
+# EL INSTALADOR DE WINDOWS SE TOMA POR NOMBRE DEL MANIFIESTO y nunca por glob:
+# la descarga verifica lo que lista `SHA256SUMS`, pero no rechaza un asset de
+# mas en la Release, y un glob serviria un fichero subido a mano.
+exe_de=()
+for version in "${versiones[@]}"; do
+    exe_de+=("$(exe_de_la_version "$serie/$version")") || exit 1
+done
+
 # Las herramientas, TODAS de golpe y por su nombre de paquete: que la
 # publicacion se caiga a la mitad porque falta `createrepo_c` deja el arbol a
 # medio construir y a quien lo mire buscando en el registro cual de los tres
@@ -120,7 +149,7 @@ faltan=()
 for par in \
     ostree:ostree flatpak:flatpak \
     dpkg-scanpackages:dpkg-dev apt-ftparchive:apt-utils \
-    createrepo_c:createrepo-c rpm:rpm gpg:gnupg gzip:gzip
+    createrepo_c:createrepo-c rpm:rpm gpg:gnupg gzip:gzip jq:jq
 do
     if ! command -v "${par%%:*}" > /dev/null 2>&1; then
         faltan+=("${par%%:*} (${par##*:})")
@@ -128,7 +157,7 @@ do
 done
 if [ "${#faltan[@]}" -ne 0 ]; then
     echo "faltan herramientas para construir el arbol: ${faltan[*]}" >&2
-    echo "    sudo apt-get install -y ostree flatpak dpkg-dev apt-utils createrepo-c rpm gnupg" >&2
+    echo "    sudo apt-get install -y ostree flatpak dpkg-dev apt-utils createrepo-c rpm gnupg jq" >&2
     exit 1
 fi
 
@@ -178,7 +207,7 @@ ceba_el_agente() {
 }
 
 rm -rf "$arbol"
-mkdir -p "$arbol/flatpak" "$arbol/apt" "$arbol/rpm"
+mkdir -p "$arbol/flatpak" "$arbol/apt" "$arbol/rpm" "$arbol/windows"
 
 # La clave publica no la genera nada: es la misma que firma las Releases, y
 # aqui se copia tal cual para que apt y dnf la encuentren en la ruta que dicen
@@ -338,5 +367,29 @@ gpgcheck=1
 repo_gpgcheck=1
 gpgkey=https://rfirma.sgomez.me/rfirma.asc
 EOF
+
+# --------------------------------------------------------------- 4. windows --
+# `latest.json` es el endpoint estable del updater y anuncia solo la version
+# mas alta; una candidata (`-rc.N`) no se sirve ni se anuncia nunca.
+echo "  windows: colocando los instaladores y latest.json"
+ultima=""
+for i in "${!versiones[@]}"; do
+    [[ "${versiones[$i]}" == *-* ]] && continue
+    cp "$serie/${versiones[$i]}/${exe_de[$i]}" "$serie/${versiones[$i]}/${exe_de[$i]}.sig" "$arbol/windows/"
+    ultima="$i"
+done
+if [ -z "$ultima" ]; then
+    echo "la serie no tiene ninguna version que no sea candidata: no hay instalador de Windows que anunciar" >&2
+    exit 1
+fi
+exe_ultimo="${exe_de[$ultima]}"
+jq -n \
+    --arg version "${versiones[$ultima]#v}" \
+    --arg fecha "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+    --arg url "https://rfirma.sgomez.me/windows/$(jq -rn --arg f "$exe_ultimo" '$f | @uri')" \
+    --rawfile firma "$arbol/windows/$exe_ultimo.sig" \
+    '{version: $version, notes: "", pub_date: $fecha,
+      platforms: {"windows-x86_64": {signature: ($firma | rtrimstr("\n")), url: $url}}}' \
+    > "$arbol/windows/latest.json"
 
 echo "OK  arbol construido en $arbol con ${#versiones[@]} version(es): ${versiones[*]}"
