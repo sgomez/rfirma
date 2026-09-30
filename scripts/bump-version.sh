@@ -3,7 +3,7 @@
 
 Cambia la fuente (`tauri.conf.json`) y cuadra detras el resto: `package.json`,
 `Cargo.toml`, el metainfo, `Cargo.lock` (dejando que `cargo` lo reescriba) y
-el sello sha256 de `packaging/flatpak/sources.lock` (ID-150). Termina
+el sello sha256 de `Cargo.lock` en `packaging/flatpak/sources.lock` (ID-150). Termina
 invocando el propio candado para confirmar que quedo todo en orden.
 
 Uso: scripts/bump-version.sh <version>
@@ -24,7 +24,6 @@ TAURI_CONF = "rfirma-app/src-tauri/tauri.conf.json"
 PACKAGE_JSON = "rfirma-app/package.json"
 CARGO_TOML = "rfirma-app/src-tauri/Cargo.toml"
 CARGO_LOCK = "rfirma-app/src-tauri/Cargo.lock"
-PNPM_LOCK = "rfirma-app/pnpm-lock.yaml"
 METAINFO = "packaging/flatpak/me.sgomez.rfirma.metainfo.xml"
 SOURCES_LOCK = "packaging/flatpak/sources.lock"
 
@@ -78,7 +77,7 @@ def sha256_of(relative: str) -> str:
 
 
 def regenerate_sources_lock() -> None:
-    lines = [f"{sha256_of(rel)}  {rel}\n" for rel in (CARGO_LOCK, PNPM_LOCK)]
+    lines = [f"{sha256_of(rel)}  {rel}\n" for rel in (CARGO_LOCK,)]
     (ROOT / SOURCES_LOCK).write_text("".join(lines), encoding="utf-8")
 
 

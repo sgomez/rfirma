@@ -1,5 +1,7 @@
 # Contra qué glibc se puede ejecutar la librería nativa
 
+> Los guiones de medición que cita esta nota ya no están en el árbol: se conservan en el commit [`0861f90`](https://github.com/sgomez/rfirma/tree/0861f90e29d295f40380e87df363552a6ba766ca/rfirma-native-bridge/testbench).
+
 Medición para el issue [#23](https://github.com/sgomez/rfirma/issues/23). El
 [#17](https://github.com/sgomez/rfirma/issues/17) eligió flatpak como único canal y dejó la glibc
 como **el riesgo vivo**, con la frase «encaja hoy por coincidencia»; el

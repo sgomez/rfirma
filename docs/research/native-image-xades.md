@@ -1,5 +1,7 @@
 # XAdES en GraalVM Native Image: xmlsec, JAXP y la alcanzabilidad que hace falta
 
+> Los guiones de medición que cita esta nota ya no están en el árbol: se conservan en el commit [`0861f90`](https://github.com/sgomez/rfirma/tree/0861f90e29d295f40380e87df363552a6ba766ca/rfirma-native-bridge/testbench).
+
 Spike del issue [#534](https://github.com/sgomez/rfirma/issues/534), sub-issue de
 [#468](https://github.com/sgomez/rfirma/issues/468) (protocolo `afirma://`, XAdES 3/3).
 **Registra hechos, no cambia el puente de producción**: `rfirma-native-bridge/pom.xml` y su

@@ -369,20 +369,10 @@ jobs:
       # no se recompila native-image y el job tarda ~2 min en paralelo con Rust.
       # Corre en cada PR y push para que las pruebas de grada C (#[ignore]) no
       # escapen al carril rapido.
-      - name: Decide si hace falta
-        id: scope
-        run: |
-          case "${{ github.event_name }}" in
-            push|workflow_dispatch|schedule|pull_request)
-              echo "build=true" >> "$GITHUB_OUTPUT" ;;
-          esac
-
       - name: GraalVM CE
-        if: steps.scope.outputs.build == 'true'
         uses: ./.github/actions/setup-graalvm
 
       - name: Cache de ~/.m2
-        if: steps.scope.outputs.build == 'true'
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.m2/repository
@@ -390,38 +380,32 @@ jobs:
           restore-keys: m2-${{ runner.os }}-
 
       - uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3.0.0
-        if: steps.scope.outputs.build == 'true'
         with:
           working-directory: rfirma-app
           install: false
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        if: steps.scope.outputs.build == 'true'
         with:
           node-version: 24
           cache: pnpm
           cache-dependency-path: rfirma-app/pnpm-lock.yaml
 
       - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
-        if: steps.scope.outputs.build == 'true'
         with:
           # Ver el comentario del mismo paso en el carril rapido.
           toolchain: stable
           components: llvm-tools-preview
 
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
-        if: steps.scope.outputs.build == 'true'
         with:
           workspaces: rfirma-app/src-tauri
           shared-key: linux-native
           save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - uses: ./.github/actions/setup-just
-        if: steps.scope.outputs.build == 'true'
 
       # libxml2-utils trae xmllint, que el banco de conformidad usa para
       # comprobar el XAdES que entrega la grada C.
       - name: Dependencias de sistema
-        if: steps.scope.outputs.build == 'true'
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
@@ -442,19 +426,16 @@ jobs:
       # El accesorio del banco de conformidad: las pruebas de grada C en Rust
       # cubren los casos trifasicos contra el autoscript.js oficial.
       - name: Cache del banco de conformidad
-        if: steps.scope.outputs.build == 'true'
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: testdata/conformance
           key: autoscript-567998128f1cd8017c304a8c187f6912a0c56b0feebb02fffa2aa33732e40439
       - name: Banco de conformidad (autoscript.js v1.9.2)
-        if: steps.scope.outputs.build == 'true'
         run: just autoscript
 
       # El validador de referencia de validate.sh se compila al vuelo en el primer test que lo
       # llama, y esa compilacion de Maven cuesta casi un minuto en cada ejecucion.
       - name: Cache del validador de referencia
-        if: steps.scope.outputs.build == 'true'
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: rfirma-native-bridge/testbench/reference-signer/target
@@ -464,22 +445,19 @@ jobs:
       # puente, su pom, bootstrap.sh y GraalVM; las pruebas y el testbench no.
       - name: Cache de librfirma_crypto.so
         id: cache-native-lib
-        if: steps.scope.outputs.build == 'true'
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: rfirma-native-bridge/target/lib/rfirma
           key: native-lib-${{ runner.os }}-graalvm${{ env.GRAALVM_VERSION }}-${{ hashFiles('scripts/bootstrap.sh', 'rfirma-native-bridge/pom.xml', 'rfirma-native-bridge/src/main/**') }}
 
       - name: Construye la libreria nativa
-        if: steps.scope.outputs.build == 'true' && steps.cache-native-lib.outputs.cache-hit != 'true'
+        if: steps.cache-native-lib.outputs.cache-hit != 'true'
         run: |
           export GRAALVM_HOME="$JAVA_HOME"
           just native
 
       - uses: cargo-bins/cargo-binstall@b874e25ea559687bec77e281e9b271aa1367b624 # v1.23.0
-        if: steps.scope.outputs.build == 'true'
       - name: Herramientas de cobertura, de CRAP y de pruebas
-        if: steps.scope.outputs.build == 'true'
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
@@ -491,7 +469,6 @@ jobs:
       # —marcadas #[ignore]— se ejecutan de verdad, y en la misma pasada
       # instrumentada se mide el adaptador FFI (ADR-0014).
       - name: Pruebas de grada C y puerta CRAP del adaptador FFI
-        if: steps.scope.outputs.build == 'true'
         run: just test-native
 
       # EL PDF DE LA PUERTA MANUAL (TD-04). `pdfsig` es la puerta automatica,
@@ -503,7 +480,7 @@ jobs:
       # equipo. Se sube SIEMPRE que las pruebas hayan corrido, tambien si algo
       # posterior falla: un PDF que no valida es justo el que hay que mirar.
       - name: PDF para el validador oficial
-        if: steps.scope.outputs.build == 'true' && !cancelled()
+        if: '!cancelled()'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: pdf-puerta-manual

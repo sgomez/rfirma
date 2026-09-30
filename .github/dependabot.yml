@@ -11,10 +11,9 @@
 # ESPERA DE SIETE DIAS (`cooldown`): una version recien publicada no se propone
 # hasta que lleva una semana fuera, para que un tag comprometido se retire antes.
 #
-# SOLO `github-actions`. Las dependencias de Rust y de Node NO entran aqui a
-# proposito: cualquier cambio suyo mueve `Cargo.lock` o `pnpm-lock.yaml`, y con
-# ello hay que regenerar a mano `packaging/flatpak/cargo-sources.json` y
-# `sources.lock` (el generador no corre en este entorno). Una PR automatica que
+# SOLO `github-actions`. Las dependencias de Rust NO entran aqui a proposito:
+# mueven `Cargo.lock`, y con ello hay que regenerar a mano
+# `packaging/flatpak/cargo-sources.json` y `sources.lock`. Una PR automatica que
 # nace roja en `check-repo` no ayuda a nadie.
 version: 2
 updates:

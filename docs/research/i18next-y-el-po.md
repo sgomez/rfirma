@@ -601,6 +601,8 @@ hecho que lo está.
 
 ## 7. El coste en el flatpak: entre 12 entradas y ninguna
 
+> `node-sources.json` y su sello ya no existen: [`0861f90`](https://github.com/sgomez/rfirma/tree/0861f90e29d295f40380e87df363552a6ba766ca/packaging/flatpak) los conserva.
+
 `packaging/flatpak/node-sources.json` tiene hoy **204 entradas** y **170 047
 bytes**. Lo genera `flatpak-node-generator` desde `pnpm-lock.yaml`
 (`justfile:947`), **incluye las dependencias de desarrollo** (ahí están Biome y

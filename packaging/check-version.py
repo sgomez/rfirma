@@ -13,16 +13,9 @@ el numero aparece quedan EN CANDADO: si divergen, esto se pone rojo.
     candado   rfirma-app/src-tauri/Cargo.lock        [[package]] name = "rfirma"
     candado   packaging/.../metainfo.xml             <release version=...>
 
-CUIDADO CON `Cargo.lock`: lo reescribe el primer `cargo` que corra despues de
-tocar `Cargo.toml`, y `packaging/flatpak/sources.lock` sella su `sha256`. Si se
-sube la version y no se regenera ese sello, quien se pone rojo NO es este
-candado sino `just check-repo`, antes que el, y con un mensaje que manda
-ejecutar `just flatpak-sources` —receta que no corre en el entorno de
-desarrollo—. Subir la version es, en orden: cambiar `tauri.conf.json`, cuadrar
-`package.json`, `Cargo.toml` y el metainfo, dejar que `cargo` reescriba
-`Cargo.lock`, y regenerar el `sha256` de los dos ficheros de bloqueo dentro de
-`packaging/flatpak/sources.lock` (`sha256sum`, sin tocar `cargo-sources.json`
-si no ha cambiado ninguna dependencia).
+`Cargo.lock` lo reescribe el primer `cargo` que corra despues de tocar
+`Cargo.toml`, y `packaging/flatpak/sources.lock` sella su `sha256`: subir la
+version es dejar que `cargo` lo reescriba y resellarlo (`scripts/bump-version.sh`).
 
 `rfirma-native-bridge/pom.xml` es el SEXTO sitio y SALE del candado (ID-150):
 la version del puente es un artefacto interno que no lee nadie fuera del propio
@@ -114,10 +107,7 @@ def cargo_version() -> str | None:
 def cargo_lock_version() -> str | None:
     """La `version` del paquete `rfirma` dentro de Cargo.lock.
 
-    Va en el candado porque `cargo` la reescribe sola detras de `Cargo.toml`, y
-    `packaging/flatpak/sources.lock` sella el `sha256` del fichero: una version
-    a medio subir se manifiesta como un rojo de `just check-repo`, que
-    manda hacer algo que no es lo que hay que hacer.
+    Va en el candado porque `cargo` la reescribe sola detras de `Cargo.toml`.
     """
     package = None
     for line in read(CARGO_LOCK).splitlines():
@@ -158,8 +148,8 @@ def check_lock(version: str) -> None:
                 fail(
                     f"{CARGO_LOCK} lo reescribe `cargo` solo, pero su sha256 "
                     f"esta sellado en packaging/flatpak/sources.lock: regenera "
-                    f"ese sello con `sha256sum` de los dos ficheros de bloqueo "
-                    f"o `just check-repo` se pondra rojo antes que esto."
+                    f"ese sello con `sha256sum` o `just check-repo` se pondra "
+                    f"rojo antes que esto."
                 )
 
 

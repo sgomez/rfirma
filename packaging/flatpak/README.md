@@ -12,8 +12,8 @@ Los nativos no se empaquetan aquí: los produce el *bundler* de Tauri
 | `me.sgomez.rfirma.desktop` / `.metainfo.xml` | Entrada de menú y metadatos |
 | `verifica.sh` | Verificación reproducible dentro del sandbox |
 | [`../verifica-contenido.sh`](../verifica-contenido.sh) | La invariante del ADR-0012 (un solo `librfirma_crypto.so`, `libawt.so` en ninguna parte), independiente del formato |
-| `cargo-sources.json` / `node-sources.json` | Dependencias vendorizadas, generadas |
-| `sources.lock` | El sello que dice contra qué ficheros de bloqueo se generaron |
+| `cargo-sources.json` | Dependencias de cargo vendorizadas, generadas |
+| `sources.lock` | El sello del `Cargo.lock` contra el que se generó |
 | `check-sources.sh` | Falla si esas fuentes se han quedado atrás |
 
 ## Instalar
@@ -114,32 +114,25 @@ alcanza a la construcción. Las dependencias
 de cargo entran vendorizadas desde `cargo-sources.json`, y `cargo build` corre
 con `--offline`.
 
-Los dos generadores son de
+El generador es de
 [flatpak-builder-tools](https://github.com/flatpak/flatpak-builder-tools) y **no
-se versionan aquí** (ID-04): se traen a mano la primera vez, y hace falta
-[uv](https://docs.astral.sh/uv/), que resuelve las dependencias del de cargo.
-`just flatpak-sources` falla nombrando el que falte y el comando que lo trae:
+se versiona aquí**: se trae a mano la primera vez, y hace falta
+[uv](https://docs.astral.sh/uv/), que resuelve sus dependencias.
+`just flatpak-sources` falla nombrando lo que falte y el comando que lo trae:
 
 ```bash
 curl -fsSL -o packaging/flatpak/flatpak-cargo-generator.py \
   https://raw.githubusercontent.com/flatpak/flatpak-builder-tools/master/cargo/flatpak-cargo-generator.py
-uv tool install "git+https://github.com/flatpak/flatpak-builder-tools.git#subdirectory=node"
 ```
-
-Un generador más nuevo puede reescribir `node-sources.json` sin que cambie
-`pnpm-lock.yaml`: trae su propio `populate_pnpm_store.py`. Ese cambio se
-versiona en una PR suya, después de construir el flatpak con él.
 
 ```bash
-just flatpak-sources   # cuando cambie Cargo.lock o pnpm-lock.yaml
+just flatpak-sources   # cuando cambie Cargo.lock
 ```
 
-Esa receta regenera los dos JSON **y** reescribe `sources.lock` con el `sha256`
-de cada fichero de bloqueo. El CI no los regenera: `just check-repo` ejecuta
-`packaging/flatpak/check-sources.sh`, que compara esos `sha256` y falla
-nombrando el fichero que se ha movido. Un fichero generado dentro del CI es un
-fichero que nadie ha mirado
-([ID-07](https://github.com/sgomez/rfirma/issues/46)).
+Esa receta regenera `cargo-sources.json` **y** reescribe `sources.lock` con el
+`sha256` de `Cargo.lock`. El CI no los regenera: `just check-repo` ejecuta
+`packaging/flatpak/check-sources.sh`, que compara ese `sha256` y falla si se ha
+movido. Un fichero generado dentro del CI es un fichero que nadie ha mirado.
 
 ### Cuando `just flatpak-sources` no corre
 
@@ -150,7 +143,7 @@ nombre y por **versión semver** (`0.9.6` antes que `0.10.2`, no orden
 lexicográfico). El `sha256` de cada crate **no se calcula**: ya está en
 `Cargo.lock`, en el campo `checksum` de ese paquete, y es el mismo valor que va
 en la entrada `archive` y dentro de la `inline`. Lo único que sí se sella con
-`sha256sum` es `sources.lock`, con el hash de los dos ficheros de bloqueo.
+`sha256sum` es `sources.lock`, con el hash de `Cargo.lock`.
 
 Si el cambio es solo **hacer directa una dependencia que ya estaba en el árbol
 transitivo**, `Cargo.lock` cambia en una sola línea y `cargo-sources.json` no
@@ -163,8 +156,6 @@ entrada estándar dentro del bundle ya instalado, con sus permisos reales.
 `org.gnome.Platform` trae `python3` con PyGObject y `gdbus`, pero **no**
 `strings` ni `busctl`.
 
-`node-sources.json` se genera y se versiona, pero **el manifiesto todavía no lo
-usa**: el frontend se construye en el anfitrión y entra hecho, porque
-`org.gnome.Sdk//50` no trae `node`. Consumirlo pide añadir la extensión de SDK
-`org.freedesktop.Sdk.Extension.node22`, que es otra decisión. Mientras tanto lo
-cubre la misma puerta, para que no se pudra en silencio.
+El frontend se construye en el anfitrión y entra hecho en `rfirma-app/dist`:
+`org.gnome.Sdk//50` no trae `node`, y el ADR-0013 explica por qué no se vendoriza
+npm.

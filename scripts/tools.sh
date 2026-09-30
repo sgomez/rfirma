@@ -89,7 +89,7 @@ MINGW* | MSYS* | CYGWIN*)
         echo
     fi
     # El token de la grada B (ADR-0014). No es opcional: sus pruebas corren en el
-    # carril rapido, asi que sin estas tres ordenes `test-rust` falla.
+    # carril rapido, asi que sin estas tres ordenes esas pruebas fallan.
     softhsm_apt=""
     command -v softhsm2-util >/dev/null || { echo "falta: softhsm2-util"; softhsm_apt="$softhsm_apt softhsm2"; failures=1; }
     command -v pkcs11-tool  >/dev/null || { echo "falta: pkcs11-tool";  softhsm_apt="$softhsm_apt opensc";   failures=1; }

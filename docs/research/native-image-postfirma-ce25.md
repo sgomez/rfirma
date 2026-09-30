@@ -1,5 +1,7 @@
 # La postfirma PAdES con rúbrica visible en GraalVM CE 25
 
+> Los guiones de medición que cita esta nota ya no están en el árbol: se conservan en el commit [`0861f90`](https://github.com/sgomez/rfirma/tree/0861f90e29d295f40380e87df363552a6ba766ca/rfirma-native-bridge/testbench).
+
 Medición para el issue [#14](https://github.com/sgomez/rfirma/issues/14). Cierra el cuadrante que
 faltaba: [#13](https://github.com/sgomez/rfirma/issues/13) midió la postfirma en CE 21 y
 [#12](https://github.com/sgomez/rfirma/issues/12) la prefirma en CE 25; aquí se mide **postfirma +
