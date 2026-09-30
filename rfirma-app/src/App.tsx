@@ -79,18 +79,15 @@ interface AppProps {
   initialSignature: VisibleSignature;
   /** Si hay una versión nueva publicada. Ver [`VersionCheck`]. */
   versions: VersionCheck;
+  /** La versión del binario que enseña «Acerca de». */
+  version: string;
   /** Dónde va el menú. Por omisión, lo que diga la plataforma. */
   menuAnchor?: MenuAnchor;
   /** Quien abre destinos externos fuera de la aplicación. Ver [`ExternalDestinationOpener`]. */
   externalDestinations?: ExternalDestinationOpener;
   /** Quien lee y reevalúa las señales del panel de estado. Ver [`StatusPort`]. */
   status?: StatusPort;
-  /**
-   * Se llama una vez montada, con un asa hacia sus propias vistas. Solo lo usa
-   * `main.tsx`, para que el menú del asistente del primer arranque
-   * (`setup/SetupWizard.tsx`) pueda abrir Estado, Preferencias y Acerca de en
-   * esta misma instancia en vez de duplicarlas.
-   */
+  /** Recibe, una vez montada, el asa con la que `main.tsx` abre sus vistas desde fuera. */
   onReady?: (handle: AppHandle) => void;
   /** Otra pantalla tapa la ventana, como el asistente del primer arranque. */
   covered?: boolean;
@@ -127,6 +124,7 @@ export function App({
   opener,
   initialSignature,
   versions,
+  version,
   menuAnchor,
   externalDestinations = unavailableExternalDestinationOpener(),
   status = memoryStatus(),
@@ -477,7 +475,7 @@ export function App({
       />
       {dialog === "about" && (
         <AboutDialog
-          version={__APP_VERSION__}
+          version={version}
           newVersion={newVersion}
           versions={versions}
           offerUpdate={notifyNewVersion}

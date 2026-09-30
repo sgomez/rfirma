@@ -26,6 +26,7 @@ export {
   tauriRecents,
 } from "./tauriDocuments";
 export {
+  tauriAppVersion,
   tauriDestinations,
   tauriExternalDestinationOpener,
   tauriLanguagePreference,

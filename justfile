@@ -107,6 +107,7 @@ check-repo: check-version fmt-check
     {{ root }}/packaging/repo/build-tree.test.sh
     {{ root }}/packaging/repo/publish-tree.test.sh
     {{ root }}/packaging/windows/sign-updater.test.sh
+    {{ root }}/packaging/verify-packages.test.sh
     {{ root }}/packaging/check_launchers.py
     python3 -m unittest discover -s {{ root }}/packaging -p 'test_check_launchers.py'
     ruff check {{ root }}/packaging {{ root }}/scripts
@@ -414,6 +415,11 @@ native: build-java
 packages-manifest dir:
     {{ root }}/scripts/packages-manifest.sh write {{ dir }}
 
+# Verifica un directorio de paquetes: el contenido; con --against, contra los resúmenes de la construcción; con --signed, la firma (ADR-0015).
+[group('ci')]
+verify-packages dir *options:
+    {{ root }}/packaging/verify-packages.sh {{ dir }} {{ options }}
+
 # Comprueba el suelo de glibc de la libreria nativa (docs/research/glibc-libreria-nativa.md).
 [group('ci')]
 check-glibc lib=native_lib:
@@ -441,7 +447,7 @@ bundle quick="false": check-native build-ts
     set -euo pipefail
     cd "{{ root }}"
     if [ "{{ quick }}" != "true" ]; then
-        version="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["version"])' rfirma-app/src-tauri/tauri.conf.json)"
+        version="$(python3 -c 'import sys,tomllib; print(tomllib.load(open(sys.argv[1],"rb"))["package"]["version"])' rfirma-app/src-tauri/Cargo.toml)"
         if ! packaging/native-packages-allowed.sh "$version"; then
             echo "bundle: no hay nada que construir para $version" >&2
             exit 1
