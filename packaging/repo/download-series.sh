@@ -34,6 +34,8 @@ if ! [[ "$etiqueta" =~ ^(v[0-9]+\.[0-9]+)\. ]]; then
 fi
 prefijo="${BASH_REMATCH[1]}."
 
+manifiesto="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)/scripts/packages-manifest.sh"
+
 rm -rf "$serie"
 mkdir -p "$serie"
 
@@ -62,6 +64,15 @@ for version in "${versiones[@]}"; do
         # en vez de hacerle un hueco en el fichero firmado.
         rm -f manual-gate.pdf
         sha256sum --check --strict SHA256SUMS
+        # El instalador de Windows y su `.sig` solo estan verificados si el
+        # SHA256SUMS firmado los lista: los que nombra el manifiesto tienen
+        # que estar.
+        if [ -f paquetes.json ]; then
+            while read -r fichero; do
+                cut -d' ' -f3- SHA256SUMS | grep -qxF -- "$fichero" \
+                    || { echo "$fichero no esta en el SHA256SUMS de $version" >&2; exit 1; }
+            done < <("$manifiesto" platform-files . windows)
+        fi
     )
 done
 
