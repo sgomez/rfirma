@@ -1,36 +1,4 @@
-# Puerta automatica del repositorio.
-#
-# Decidida en https://github.com/sgomez/rfirma/issues/11 y ampliada a las tres
-# cadenas en https://github.com/sgomez/rfirma/issues/47, siguiendo el ADR-0014.
-#
-# QUE COMPRUEBA HOY: `just check` entero, pero REPARTIDO EN UN JOB POR CADENA
-# —el puente Java compila con -Xlint:all y pasa sus pruebas, Biome y tsc pasan
-# sobre TypeScript, clippy y la puerta CRAP sobre Rust. Sigue SIN comprobar que
-# una firma valga: eso es grada C y vive en el carril lento. Lee la seccion de
-# CI de docs/agents/code-host.md antes de fiarte de un check en verde.
-#
-# CON UNA PREPARACION QUE `just check` NO ENCADENA: `just autoscript`, que baja
-# el accesorio del banco de conformidad a etiqueta y sha256 fijados. Fuera de
-# `check` a proposito, para que un `just check` local siga corriendo sin red;
-# aqui es un paso propio y OBLIGATORIO, y ademas la prueba mira la variable CI
-# y falla en vez de saltarse (ADR-0013, ADR-0014).
-#
-# TRES JOBS Y NO UNO, POR TIEMPO DE PARED. Las tres cadenas no se necesitan
-# entre si, asi que encadenarlas era pagar la suma cuando se puede pagar la mas
-# lenta. Y cada job instala solo lo suyo: el de Java no necesita las librerias
-# del WebView ni cargo-crap, el de TypeScript no necesita ni GraalVM ni Rust.
-# Solo el de Rust paga los 34 s de apt y los ~40 s de restaurar la cache de
-# cargo.
-#
-# CARRILES, POR VELOCIDAD. Esto es antes que nada el bucle de
-# realimentacion de un agente, asi que lo que corre siempre tiene que ser
-# rapido:
-#
-#   cadena Java / TypeScript / Rust   en cada push a main, y en cada PR cuyos
-#                                     ficheros la afecten (job 'scope')
-#   native                            igual, con la libreria nativa cacheada
-#   release                           en etiquetas, a mano, una vez por
-#                                     semana y en PR con la etiqueta 'release'
+# Puerta automatica del repositorio: `just check` repartido en un job por cadena (ADR-0014).
 name: CI
 
 on:
@@ -39,19 +7,13 @@ on:
     branches: [main]
   workflow_dispatch:
   schedule:
-    # Las caches de GitHub caducan a los 7 dias sin usarse, y llenar la de
-    # ~/.m2 cuesta compilar AutoFirma entera. Esto la mantiene caliente, es la
-    # red de seguridad del carril lento, y ademas hace de vigilante del kit
-    # FNMT (job 'fnmt-kit-expiry-warning').
+    # Mantiene calientes las caches y alimenta 'fnmt-kit-expiry-warning'.
     - cron: '17 4 * * 1'
 
 permissions:
   contents: read
 
-# En un repositorio movido por agentes lo normal es empujar tres veces seguidas
-# a la misma rama. Sin esto, las dos primeras ejecuciones siguen ocupando
-# runners para producir un veredicto que ya no le importa a nadie. Solo en PR:
-# en main cada commit merece su propia ejecucion.
+# Solo en PR: en main cada commit merece su ejecucion.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -127,20 +89,11 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: GraalVM CE
-        uses: ./.github/actions/setup-graalvm
-
-      - name: Cache de ~/.m2
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      - uses: ./.github/actions/setup-runner
         with:
-          path: ~/.m2/repository
-          key: m2-${{ runner.os }}-autofirma${{ env.AUTOFIRMA_VERSION }}-${{ hashFiles('scripts/bootstrap.sh', 'rfirma-native-bridge/pom.xml') }}
-          restore-keys: m2-${{ runner.os }}-
+          java: graalvm
+          save-cache: ${{ github.ref == 'refs/heads/main' }}
 
-      - uses: ./.github/actions/setup-just
-
-      # Una sola JVM: `mvn -B verify` compila con -Xlint:all, prueba y
-      # empaqueta. Ver `check-java` en el justfile.
       - run: just check-java
 
   # --------------------------------------------------------------------------
@@ -152,51 +105,14 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      # working-directory: la raiz no tiene package.json (ID-01), asi que sin
-      # esto la accion no encuentra el `packageManager` del que sale la version
-      # de pnpm, y falla con "No pnpm version is specified".
-      #
-      # install: false porque las dependencias las instala `just deps`, dentro
-      # de la receta que ejecute el job. La accion las instalaria por su cuenta
-      # —es su valor por omision— y eso sacaria del justfile un paso que hoy
-      # esta dentro.
-      #
-      # No instala Node: sin `runtime` ni `devEngines.runtime` en el manifiesto,
-      # la accion no toca el tiempo de ejecucion, y de eso sigue encargandose
-      # `actions/setup-node` en el paso siguiente.
-      - uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3.0.0
+      - uses: ./.github/actions/setup-runner
         with:
-          working-directory: rfirma-app
-          install: false
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: 24
-          cache: pnpm
-          cache-dependency-path: rfirma-app/pnpm-lock.yaml
+          node: true
+          apt: repo
+          tools: ruff
+          save-cache: ${{ github.ref == 'refs/heads/main' }}
 
-      # gettext trae msgfmt y msgcmp, que son `check-po` (ID-128).
-      #
-      # Los seis de detras son los de `check-repo`: `build-tree.test.sh`
-      # construye los tres repositorios de verdad —importa bundles en un ostree,
-      # indexa un pool de apt y genera repodata— y sin ellos esa pata avisa y se
-      # salta, que es lo que pasa en un equipo de desarrollo pero no puede pasar
-      # aqui. Es la unica manera de comprobar el ID-173: que reconstruir el
-      # repositorio deja el mismo commit y nadie redescarga. `minisign` es el
-      # de `sign-updater.test.sh`, que sin el se salta la firma de verdad.
-      - uses: ./.github/actions/setup-just
-
-      - name: gettext y las herramientas de los tres repositorios
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            gettext ostree flatpak dpkg-dev apt-utils createrepo-c rpm minisign
-
-      - name: ruff
-        run: just install-tools ruff
-
-      # `check-repo` viaja aqui —y no en un cuarto job— porque son sellos
-      # de milisegundos y montar un runner para ellos costaria cien veces mas
-      # que ejecutarlos.
+      # `check-repo` viaja aqui porque son sellos de milisegundos.
       - run: just check-repo check-ts
 
   # --------------------------------------------------------------------------
@@ -208,91 +124,19 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      # Rust necesita la cadena de Node aunque no ejecute una sola prueba de
-      # TypeScript: tauri-build lee frontendDist (../dist) dentro de su propio
-      # build.rs, asi que sin `vite build` clippy no llega a mirar ni una linea.
-      - uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3.0.0
+      # tauri-build lee frontendDist dentro de su build.rs, asi que Rust necesita Node.
+      - uses: ./.github/actions/setup-runner
         with:
-          working-directory: rfirma-app
-          install: false
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: 24
-          cache: pnpm
-          cache-dependency-path: rfirma-app/pnpm-lock.yaml
+          rust: lint
+          node: true
+          apt: test
+          tools: llvm-cov crap machete diff-cover
+          autoscript: true
+          save-cache: ${{ github.ref == 'refs/heads/main' }}
 
-      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
-        with:
-          # Fijada por SHA (ID-170), asi que la accion ya no puede leer el canal
-          # de la etiqueta con la que se invoca: hay que nombrarlo aqui.
-          toolchain: stable
-          components: clippy, rustfmt, llvm-tools-preview
-
-      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
-        with:
-          workspaces: rfirma-app/src-tauri
-          key: no-debuginfo
-          save-if: ${{ github.ref == 'refs/heads/main' }}
-
-      # Tauri v2 en Linux compila contra WebKitGTK 4.1. Sin estos paquetes el
-      # carril entero se cae en el build.rs de javascriptcore-rs-sys con un
-      # "pkg-config exited with status code 1" que no dice de que va.
-      #
-      # softhsm2 y opensc son la GRADA B del ADR-0014: son segundos de apt y a
-      # cambio las pruebas del modulo PKCS#11 corren en cada PR, contra un token
-      # de verdad, en vez de quedarse ignoradas. `just check-rust` provisiona el
-      # token solo (receta `certs`), asi que aqui basta con instalarlos.
-      #
-      # libnss3-tools es la otra mitad de esa grada desde el #99: trae certutil y
-      # pk12util, con los que cada prueba del almacen NSS se monta su propio
-      # perfil desechable en un directorio temporal. El libsoftokn3.so que lo
-      # abre viene con libnss3, que ya esta en el runner.
-      - uses: ./.github/actions/setup-just
-
-      - name: Dependencias de sistema de Tauri
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            libwebkit2gtk-4.1-dev \
-            libgtk-3-dev \
-            librsvg2-dev \
-            libayatana-appindicator3-dev \
-            libsoup-3.0-dev \
-            libxdo-dev \
-            build-essential \
-            file \
-            gettext \
-            softhsm2 \
-            opensc \
-            libnss3-tools
-
-      # cargo-llvm-cov va sin fijar: no es una puerta, solo produce el lcov (ADR-0014).
-      - uses: cargo-bins/cargo-binstall@b874e25ea559687bec77e281e9b271aa1367b624 # v1.23.0
-      - name: Herramientas de cobertura, de CRAP y de dependencias sin uso
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        run: |
-          cargo binstall --no-confirm cargo-llvm-cov
-          just install-tools crap machete diff-cover
-
-      - name: Cache del banco de conformidad
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: testdata/conformance
-          key: autoscript-${{ env.AUTOSCRIPT_SHA256 }}
-      - name: Banco de conformidad (autoscript.js)
-        run: just autoscript
-
-      # Sin RFIRMA_SKIP_NATIVE: `check-rust` ya no encadena `check-native`, asi
-      # que no hay nada que saltarse. Y sin `cargo build --release`, que es un
-      # arbol de dependencias entero que aqui no ejecuta nadie — lo compila el
-      # carril lento, junto al empaquetado que lo usa.
       - run: just check-rust
 
-      # `diff-coverage` pide origin/main como ref local, y `check-rust` tiene
-      # que seguir corriendo sin red (ADR-0013, ADR-0014): el fetch va aqui, no
-      # en el justfile. `--diff-range-notation=..` evita depender de un
-      # merge-base que un fetch superficial no puede calcular.
+      # `check-rust` corre sin red (ADR-0013): el fetch va aqui, no en el justfile.
       - name: Cobertura del diff contra origin/main
         run: |
           git fetch --depth=1 origin main
@@ -309,74 +153,17 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      # La libreria nativa y sus dependencias estan cacheadas: en un PR tipico
-      # no se recompila native-image y el job tarda ~2 min en paralelo con Rust.
-      # Corre en cada PR y push para que las pruebas de grada C (#[ignore]) no
-      # escapen al carril rapido.
-      - name: GraalVM CE
-        uses: ./.github/actions/setup-graalvm
-
-      - name: Cache de ~/.m2
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      - uses: ./.github/actions/setup-runner
         with:
-          path: ~/.m2/repository
-          key: m2-${{ runner.os }}-autofirma${{ env.AUTOFIRMA_VERSION }}-${{ hashFiles('scripts/bootstrap.sh', 'rfirma-native-bridge/pom.xml') }}
-          restore-keys: m2-${{ runner.os }}-
+          rust: native
+          node: true
+          java: graalvm
+          apt: test
+          tools: llvm-cov crap nextest
+          autoscript: true
+          save-cache: ${{ github.ref == 'refs/heads/main' }}
 
-      - uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3.0.0
-        with:
-          working-directory: rfirma-app
-          install: false
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: 24
-          cache: pnpm
-          cache-dependency-path: rfirma-app/pnpm-lock.yaml
-
-      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
-        with:
-          # Ver el comentario del mismo paso en el carril rapido.
-          toolchain: stable
-          components: llvm-tools-preview
-
-      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
-        with:
-          workspaces: rfirma-app/src-tauri
-          shared-key: linux-native
-          save-if: ${{ github.ref == 'refs/heads/main' }}
-
-      - uses: ./.github/actions/setup-just
-
-      # libxml2-utils trae xmllint, que el banco de conformidad usa para
-      # comprobar el XAdES que entrega la grada C.
-      - name: Dependencias de sistema
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            libwebkit2gtk-4.1-dev \
-            libgtk-3-dev \
-            librsvg2-dev \
-            libayatana-appindicator3-dev \
-            libsoup-3.0-dev \
-            libxdo-dev \
-            build-essential \
-            file \
-            gettext \
-            poppler-utils \
-            libxml2-utils \
-            softhsm2 \
-            opensc \
-            libnss3-tools
-      - name: Cache del banco de conformidad
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: testdata/conformance
-          key: autoscript-${{ env.AUTOSCRIPT_SHA256 }}
-      - name: Banco de conformidad (autoscript.js)
-        run: just autoscript
-
-      # El validador de referencia de validate.sh se compila al vuelo en el primer test que lo
-      # llama, y esa compilacion de Maven cuesta casi un minuto en cada ejecucion.
+      # validate.sh compila el validador al vuelo en el primer test que lo llama, casi un minuto.
       - name: Cache del validador de referencia
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -396,49 +183,24 @@ jobs:
           export GRAALVM_HOME="$JAVA_HOME"
           just native
 
-      - uses: cargo-bins/cargo-binstall@b874e25ea559687bec77e281e9b271aa1367b624 # v1.23.0
-      - name: Herramientas de cobertura, de CRAP y de pruebas
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        run: |
-          cargo binstall --no-confirm cargo-llvm-cov
-          just install-tools crap nextest
-
       # Aqui SI existe librfirma_crypto.so, asi que las pruebas de grada C
-      # —marcadas #[ignore]— se ejecutan de verdad, y en la misma pasada
-      # instrumentada se mide el adaptador FFI (ADR-0014).
+      # (#[ignore]) se ejecutan y se mide el adaptador FFI (ADR-0014).
       - name: Pruebas de grada C y puerta CRAP del adaptador FFI
         run: just test-native
 
-      # EL PDF DE LA PUERTA MANUAL (TD-04). `pdfsig` es la puerta automatica,
-      # pero el criterio de terminado del hito promete que un VALIDADOR OFICIAL
-      # acepta la firma, y VALIDe es red, web y sin API estable: esa puerta la
-      # cierra una persona, una vez por etiqueta v*. Este paso es lo unico que
-      # le hace falta para poder cerrarla — el PDF del caso maximo (recuadro
-      # con texto Y rubrica), sin reproducir GraalVM, SoftHSM y poppler en su
-      # equipo. Se sube SIEMPRE que las pruebas hayan corrido, tambien si algo
-      # posterior falla: un PDF que no valida es justo el que hay que mirar.
+      # Se sube tambien si algo posterior falla: un PDF que no valida es el que hay que mirar.
       - name: PDF para el validador oficial
         if: '!cancelled()'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: pdf-puerta-manual
           path: rfirma-app/src-tauri/target/llvm-cov-target/tmp/manual-gate.pdf
-          # `warn` y no `error`: este paso corre tambien cuando las pruebas han
-          # fallado antes de llegar a la de la puerta manual, y ahi el PDF no
-          # existe. Un segundo rojo — «artefacto no encontrado» — solo taparia
-          # el rojo de verdad.
           if-no-files-found: warn
 
   # ==========================================================================
   # CARRIL DE WINDOWS
   # ==========================================================================
-  # Segunda plataforma (ADR-0035): compila la .dll con GraalVM, pasa clippy, las
-  # pruebas de --lib y del canal local con la puerta CRAP del adaptador CNG. El
-  # instalador NSIS no se construye aqui: sale en la release, como el .deb, el
-  # .rpm y el flatpak (build.yml). No hay grada B ni C: en Windows faltan softhsm, NSS y
-  # poppler. Tampoco vitest: la interfaz no depende del sistema y ya la prueba
-  # la cadena TypeScript.
+  # Segunda plataforma (ADR-0035): sin grada B ni C, y sin vitest.
   windows:
     name: Windows
     needs: scope
@@ -448,9 +210,6 @@ jobs:
     defaults:
       run:
         shell: bash
-    env:
-      # OpenSSL se compila desde las fuentes, y el Perl de Git no sirve.
-      OPENSSL_SRC_PERL: C:/Strawberry/perl/bin/perl.exe
     steps:
       # Sin esto el checkout deja los .sh con CRLF y bash no los lee.
       - name: Fin de linea sin conversion
@@ -458,42 +217,14 @@ jobs:
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: GraalVM CE
-        uses: ./.github/actions/setup-graalvm
-
-      # setup-graalvm deja el entorno de Visual Studio, y con el rustc se fia del
-      # PATH, donde en bash va antes el link.exe de Git (coreutils).
-      - name: El link.exe de MSVC y no el de Git
-        shell: pwsh
-        run: |
-          $link = Join-Path $env:VCToolsInstallDir 'bin\Hostx64\x64\link.exe'
-          if (-not (Test-Path $link)) { throw "no encuentro $link" }
-          "CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_LINKER=$link" >> $env:GITHUB_ENV
-
-      - uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3.0.0
+      - uses: ./.github/actions/setup-runner
         with:
-          working-directory: rfirma-app
-          install: false
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: 24
-          cache: pnpm
-          cache-dependency-path: rfirma-app/pnpm-lock.yaml
+          rust: lint
+          node: true
+          java: graalvm
+          tools: llvm-cov crap
+          save-cache: ${{ github.ref == 'refs/heads/main' }}
 
-      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
-        with:
-          # Ver el comentario del mismo paso en el carril rapido.
-          toolchain: stable
-          components: clippy, rustfmt, llvm-tools-preview
-
-      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
-        with:
-          workspaces: rfirma-app/src-tauri
-          save-if: ${{ github.ref == 'refs/heads/main' }}
-
-      - uses: ./.github/actions/setup-just
-
-      # La misma clave que en Linux con otro runner.os: no se comparten.
       # Restaurar y guardar por separado: la .dll se guarda en cuanto existe,
       # aunque un paso posterior falle.
       - name: Cache de rfirma_crypto.dll
@@ -502,14 +233,6 @@ jobs:
         with:
           path: rfirma-native-bridge/target/lib/rfirma
           key: native-lib-${{ runner.os }}-graalvm${{ env.GRAALVM_VERSION }}-autofirma${{ env.AUTOFIRMA_VERSION }}-${{ hashFiles('scripts/bootstrap.sh', 'rfirma-native-bridge/pom.xml', 'rfirma-native-bridge/src/main/**') }}
-
-      - name: Cache de ~/.m2
-        if: steps.cache-native-lib.outputs.cache-hit != 'true'
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/.m2/repository
-          key: m2-${{ runner.os }}-autofirma${{ env.AUTOFIRMA_VERSION }}-${{ hashFiles('scripts/bootstrap.sh', 'rfirma-native-bridge/pom.xml') }}
-          restore-keys: m2-${{ runner.os }}-
 
       - name: Construye la libreria nativa
         if: steps.cache-native-lib.outputs.cache-hit != 'true'
@@ -521,39 +244,21 @@ jobs:
           path: rfirma-native-bridge/target/lib/rfirma
           key: ${{ steps.cache-native-lib.outputs.cache-primary-key }}
 
-      # El `prepare` de pnpm es un script de bash, y pnpm no lee la variable
-      # npm_config_script_shell.
-      - name: pnpm ejecuta sus scripts con Git Bash
-        run: pnpm config set script-shell "C:/Program Files/Git/bin/bash.exe"
-
       - name: Interfaz compilada
         run: just build-ts
 
       - name: rustfmt y clippy
         run: just lint-rust
 
-      - uses: cargo-bins/cargo-binstall@b874e25ea559687bec77e281e9b271aa1367b624 # v1.23.0
-      - name: Herramientas de cobertura y de CRAP
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        run: |
-          cargo binstall --no-confirm cargo-llvm-cov
-          just install-tools crap
-
-      # El adaptador CNG solo compila aqui: Linux lo oculta de su puerta CRAP y
-      # este paso lo mide (ADR-0014, ADR-0035).
+      # El adaptador CNG solo compila aqui: Linux lo oculta de su puerta CRAP (ADR-0014, ADR-0035).
       - name: Pruebas de --lib y del canal local, y CRAP del adaptador CNG
         run: just test-windows
 
   # ==========================================================================
   # CACHE DEL INSTALADOR DE WINDOWS
   # ==========================================================================
-  # La release compila el instalador desde una etiqueta, y una etiqueta solo
-  # lee las caches de `main`. Este job hace en `main` la misma compilacion que
-  # el job `windows` de build.yml y guarda su cache con una clave compartida,
-  # para que la release encuentre las dependencias ya compiladas. Solo corre
-  # con el cron semanal y a mano: ni las PR ni los push a `main` lo pagan, y el
-  # instalador que construye se tira.
+  # Una etiqueta solo lee las caches de `main`: este job compila en `main`,
+  # como el job `windows` de build.yml, para que la release las encuentre.
   windows-release-cache:
     name: Cache del instalador de Windows
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
@@ -562,9 +267,6 @@ jobs:
     defaults:
       run:
         shell: bash
-    env:
-      # OpenSSL se compila desde las fuentes, y el Perl de Git no sirve.
-      OPENSSL_SRC_PERL: C:/Strawberry/perl/bin/perl.exe
     steps:
       # Sin esto el checkout deja los .sh con CRLF y bash no los lee.
       - name: Fin de linea sin conversion
@@ -572,40 +274,12 @@ jobs:
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: GraalVM CE
-        uses: ./.github/actions/setup-graalvm
-
-      # setup-graalvm deja el entorno de Visual Studio, y con el rustc se fia del
-      # PATH, donde en bash va antes el link.exe de Git (coreutils).
-      - name: El link.exe de MSVC y no el de Git
-        shell: pwsh
-        run: |
-          $link = Join-Path $env:VCToolsInstallDir 'bin\Hostx64\x64\link.exe'
-          if (-not (Test-Path $link)) { throw "no encuentro $link" }
-          "CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_LINKER=$link" >> $env:GITHUB_ENV
-
-      - uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3.0.0
+      - uses: ./.github/actions/setup-runner
         with:
-          working-directory: rfirma-app
-          install: false
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: 24
-          cache: pnpm
-          cache-dependency-path: rfirma-app/pnpm-lock.yaml
-
-      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
-        with:
-          toolchain: stable
-
-      # La misma `shared-key` que el job `windows` de build.yml, que la lee.
-      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
-        with:
-          workspaces: rfirma-app/src-tauri
-          shared-key: windows-release
-          save-if: ${{ github.ref == 'refs/heads/main' }}
-
-      - uses: ./.github/actions/setup-just
+          rust: release
+          node: true
+          java: graalvm
+          save-cache: ${{ github.ref == 'refs/heads/main' }}
 
       # La .dll la deja el carril de Windows; aqui solo se lee, y si no esta
       # se compila: `tauri build` la necesita como recurso.
@@ -616,22 +290,9 @@ jobs:
           path: rfirma-native-bridge/target/lib/rfirma
           key: native-lib-${{ runner.os }}-graalvm${{ env.GRAALVM_VERSION }}-autofirma${{ env.AUTOFIRMA_VERSION }}-${{ hashFiles('scripts/bootstrap.sh', 'rfirma-native-bridge/pom.xml', 'rfirma-native-bridge/src/main/**') }}
 
-      - name: Cache de ~/.m2
-        if: steps.cache-native-lib.outputs.cache-hit != 'true'
-        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/.m2/repository
-          key: m2-${{ runner.os }}-autofirma${{ env.AUTOFIRMA_VERSION }}-${{ hashFiles('scripts/bootstrap.sh', 'rfirma-native-bridge/pom.xml') }}
-          restore-keys: m2-${{ runner.os }}-
-
       - name: Construye la libreria nativa
         if: steps.cache-native-lib.outputs.cache-hit != 'true'
         run: just native
-
-      # El `prepare` de pnpm es un script de bash, y pnpm no lee la variable
-      # npm_config_script_shell.
-      - name: pnpm ejecuta sus scripts con Git Bash
-        run: pnpm config set script-shell "C:/Program Files/Git/bin/bash.exe"
 
       # La misma receta que la release: con otra orden cambiarian las
       # features de tauri y la cache no le serviria.
@@ -641,10 +302,7 @@ jobs:
   # ==========================================================================
   # COMPILACION DE RELEASE
   # ==========================================================================
-  # EL BINARIO DE RELEASE no se necesita en el carril rapido y antes corria al
-  # final del job native sumando un minuto mas. Al no depender de GraalVM ni de
-  # librfirma_crypto.so (Rust carga la libreria dinamicamente con libloading),
-  # corre en un job propio en paralelo con native.
+  # Rust carga la libreria con libloading, asi que no espera a GraalVM ni a `native`.
   release:
     name: Binario de release
     runs-on: ubuntu-latest
@@ -667,63 +325,19 @@ jobs:
               fi ;;
           esac
 
-      - uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3.0.0
-        if: steps.scope.outputs.build == 'true'
+      - if: steps.scope.outputs.build == 'true'
+        uses: ./.github/actions/setup-runner
         with:
-          working-directory: rfirma-app
-          install: false
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        if: steps.scope.outputs.build == 'true'
-        with:
-          node-version: 24
-          cache: pnpm
-          cache-dependency-path: rfirma-app/pnpm-lock.yaml
-
-      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
-        if: steps.scope.outputs.build == 'true'
-        with:
-          toolchain: stable
-
-      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
-        if: steps.scope.outputs.build == 'true'
-        with:
-          workspaces: rfirma-app/src-tauri
-          shared-key: linux-release
-          save-if: ${{ github.ref == 'refs/heads/main' }}
-
-      - uses: ./.github/actions/setup-just
-        if: steps.scope.outputs.build == 'true'
-
-      - name: Dependencias de sistema de Tauri
-        if: steps.scope.outputs.build == 'true'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            libwebkit2gtk-4.1-dev \
-            libgtk-3-dev \
-            librsvg2-dev \
-            libayatana-appindicator3-dev \
-            libsoup-3.0-dev \
-            libxdo-dev \
-            build-essential \
-            file \
-            gettext
+          rust: release
+          node: true
+          apt: tauri
+          save-cache: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Compila el binario de release
         if: steps.scope.outputs.build == 'true'
         run: just build-rust
 
-  # ==========================================================================
-  # VIGILANTE DEL KIT FNMT
-  # ==========================================================================
-  #
-  # La otra mitad de la bomba de relojeria del ADR-0014. La mitad dura vive en
-  # rfirma-app/src-tauri/tests/fnmt_kit.rs y falla el dia que el certificado
-  # caduque; este avisa 90 dias antes abriendo una issue.
-  #
-  # Y VIVE AQUI, NO EN EL CARRIL RAPIDO, A PROPOSITO: avisar alli rompería
-  # todos los PRs a la vez, un dia cualquiera de 2028, con merge automatico
-  # puesto. El cron es el unico sitio donde avisar no bloquea a nadie.
+  # Avisa aqui y no en el carril rapido para no romper todas las PR a la vez (ADR-0014).
   fnmt-kit-expiry-warning:
     name: Caducidad del kit FNMT
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'

@@ -110,7 +110,8 @@ check-repo: check-version fmt-check
     {{ root }}/packaging/verify-packages.test.sh
     {{ root }}/packaging/check_launchers.py
     python3 -m unittest discover -s {{ root }}/packaging -p 'test_check_launchers.py'
-    ruff check {{ root }}/packaging {{ root }}/scripts
+    python3 -m unittest discover -s {{ root }}/scripts/tests -p 'test_*.py'
+    ruff check {{ root }}
     {{ root }}/scripts/tests/outline_test.sh
     {{ root }}/scripts/tests/ci_lanes_test.sh
     {{ root }}/scripts/tests/packages_manifest_test.sh
@@ -452,9 +453,9 @@ bundle quick="false": check-native build-ts
     set -euo pipefail
     cd "{{ root }}"
     if [ "{{ quick }}" != "true" ]; then
-        version="$(python3 -c 'import sys,tomllib; print(tomllib.load(open(sys.argv[1],"rb"))["package"]["version"])' rfirma-app/src-tauri/Cargo.toml)"
-        if ! packaging/native-packages-allowed.sh "$version"; then
-            echo "bundle: no hay nada que construir para $version" >&2
+        version="$(scripts/app_version.py check)"
+        if [[ "$version" == *-* ]]; then
+            echo "bundle: una candidata no produce .deb ni .rpm: $version" >&2
             exit 1
         fi
     fi
@@ -525,10 +526,10 @@ check-landing:
     pnpm exec vitest run --reporter=dot
     pnpm exec astro build
 
-# Comprueba el candado de la version y el nombre del producto.
+# Comprueba que la version de la aplicacion y el nombre del producto cuadran en todos sus sitios.
 [group('ci')]
 check-version:
-    {{ root }}/packaging/check-version.py
+    {{ root }}/scripts/app_version.py check
 
 # Resella el bundle del sistema de diseno.
 [group('release')]
@@ -582,19 +583,39 @@ clean:
     rm -f "{{ tauri }}"/*.profraw
     rm -rf "{{ app }}/dist" "{{ conformance_suite }}/console/dist"
 
-# Escribe en CHANGELOG.md la seccion de <version> desde los titulos de PR.
-[group('release')]
-[private]
-changelog-release version:
-    {{ root }}/scripts/changelog-release.sh {{ version }}
-
-# Sube la version en los sitios del candado de check-version.py (ID-150).
+# Sube <version> en Cargo.toml, Cargo.lock, el metainfo, el CHANGELOG y el sello de fuentes.
 [group('release')]
 [private]
 bump-version version:
-    {{ root }}/scripts/bump-version.sh {{ version }}
+    {{ root }}/scripts/app_version.py bump {{ version }}
 
 # Publica <version> desde main: changelog, bump, commit, etiqueta y push atomico.
 [group('release')]
+[script('bash')]
 release version:
-    {{ root }}/scripts/release.sh {{ version }}
+    set -euo pipefail
+    cd "{{ root }}"
+    version="{{ version }}"
+    tag="v$version"
+    fail() { echo "$1" >&2; exit 1; }
+    [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || fail "La versión tiene que ser X.Y.Z: $version"
+    [ "$(git branch --show-current)" = main ] || fail "Se publica desde main."
+    [ -z "$(git status --porcelain)" ] || fail "El árbol tiene cambios sin comitear."
+    git fetch --quiet origin main
+    [ "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" ] || fail "main no coincide con origin/main."
+    if git rev-parse --quiet --verify "refs/tags/$tag" >/dev/null; then fail "La etiqueta $tag ya existe en local."; fi
+    if git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null; then fail "La etiqueta $tag ya existe en origin."; fi
+    scripts/app_version.py bump "$version"
+    git add -A
+    git commit --quiet -m "chore: version $version"
+    git tag "$tag"
+    echo
+    git show --stat --format='%h %s' HEAD
+    echo
+    read -r -p "¿Subir main y $tag a origin? [s/N] " answer
+    if [ "$answer" = s ] || [ "$answer" = S ]; then
+        git push --atomic origin main "$tag"
+    else
+        echo "Sin subir. Para publicar: git push --atomic origin main $tag"
+        echo "Para deshacer: git tag -d $tag && git reset --hard origin/main"
+    fi

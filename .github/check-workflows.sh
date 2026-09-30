@@ -290,7 +290,8 @@ if [ -n "$sin_save_cache" ]; then
     echo "cada uso de $SETUP_RUNNER declara 'save-cache'." >&2
     exit 1
 fi
-por_ref="$(grep -nHE '^[[:space:]]*save-cache:.*github\.(ref|ref_name|head_ref|base_ref)' .github/workflows/*.yml \
+invocables="$(grep -lE '^  workflow_call:' .github/workflows/*.yml || true)"
+por_ref="$(echo "$invocables" | xargs -r grep -nHE '^[[:space:]]*save-cache:.*github\.(ref|ref_name|head_ref|base_ref)' \
     | sin_comentarios || true)"
 if [ -n "$por_ref" ]; then
     printf '%s\n' "$por_ref" >&2
@@ -387,7 +388,7 @@ fi
 echo "OK  $COMMENT: workflow_run, actions: read + pull-requests: write y sin código de la ejecución"
 
 # ---------------------------------------------------------------- GraalVM --
-GRAALVM_ACTION=.github/actions/setup-graalvm/action.yml
+GRAALVM_ACTION=.github/actions/setup-runner/action.yml
 instalaciones="$(grep -rn 'graalvm/setup-graalvm@' .github/workflows .github/actions justfile \
     | grep -v "^$GRAALVM_ACTION:" || true)"
 if [ -n "$instalaciones" ]; then

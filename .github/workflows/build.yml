@@ -68,19 +68,12 @@ jobs:
           EXPECTED_VERSION: ${{ inputs.expected-version }}
         run: |
           set -euo pipefail
-          just check-version
-          version="$(python3 -c 'import sys,tomllib; print(tomllib.load(open(sys.argv[1],"rb"))["package"]["version"])' rfirma-app/src-tauri/Cargo.toml)"
-          esperada="${EXPECTED_VERSION#v}"
-          if [ -n "$esperada" ] && [ "$esperada" != "$version" ]; then
-            echo "la version del arbol es $version y quien llama esperaba $esperada" >&2
-            echo "la fuente es rfirma-app/src-tauri/Cargo.toml" >&2
-            exit 1
-          fi
+          version="$(scripts/app_version.py check ${EXPECTED_VERSION:+--expected "$EXPECTED_VERSION"})"
           echo "version=$version" >> "$GITHUB_OUTPUT"
-          if packaging/native-packages-allowed.sh "$version"; then
-            echo "native-packages=true" >> "$GITHUB_OUTPUT"
-          else
+          if [[ "$version" == *-* ]]; then
             echo "native-packages=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "native-packages=true" >> "$GITHUB_OUTPUT"
           fi
           echo "Construyendo **$version**." >> "$GITHUB_STEP_SUMMARY"
 

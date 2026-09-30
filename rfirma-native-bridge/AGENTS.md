@@ -39,7 +39,7 @@ postproceso del ciclo trifásico (ADR-0001), compilado a `librfirma_crypto.so`
   Ver `docs/research/graalvm-libawt-shared.md`.
 * **Local y CI construyen con la misma GraalVM**, la de `GRAALVM_VERSION` de `versions.env`: el
   `justfile` deriva de ella la ruta de SDKMAN y los workflows la instalan con
-  `.github/actions/setup-graalvm` (ADR-0035). Dos compilaciones distintas de
+  `.github/actions/setup-runner` (ADR-0035). Dos compilaciones distintas de
   la 25 alcanzan clases distintas: con una `ApacheCanonicalizer` no queda
   alcanzable y las pruebas de grada C pasan; con otra sí queda, y revientan
   con un `MissingResourceException` de
