@@ -225,6 +225,18 @@ implementación; las fichas [`preferencias.md`](../design/preferencias.md) y
 [`primer-arranque.md`](../design/primer-arranque.md) enlazan el canvas desde su
 sección «Decisiones».
 
+El caso de uso **la barra de título en Linux** se validó el **30/09/2026**. Se
+exploró en una página de trabajo, «trabajo · barra de título por escritorio»,
+con el artboard «Main por escritorio», que se fundió en `Main` y se borró con su
+página y su nota: una palanca «Escritorio» en los diez artboards de
+`_cabecera.part`; en Linux, la barra de título nativa de GTK con la tira de
+pestañas debajo; y en los tres escritorios el aviso deja el menú y pasa a un
+botón propio. Reescribe [`cabecera.md`](../design/cabecera.md) y
+[`pestanas-de-documentos.md`](../design/pestanas-de-documentos.md), que enlazan
+el canvas desde su sección «Decisiones»; de rebote, `panel-de-estado`,
+`primer-arranque`, `ventana-principal` y `design-system`. La medición está en
+`docs/research/barra-de-titulo-en-linux.md`.
+
 El caso de uso **la barra única** se validó el **27/09/2026**. Se exploró en
 una página de trabajo, «Main barra unica», que se fundió en `Main` y se borró:
 cabecera y pestañas pasan a una sola barra de 44 px con el botón partido «Abrir

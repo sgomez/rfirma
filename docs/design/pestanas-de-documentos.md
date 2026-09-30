@@ -11,7 +11,7 @@ firma**, y es el único sitio donde se abre, se cambia o se cierra uno.
 
 ## Estructura
 
-Dentro de la barra de 44 px, tras `rFirma`:
+En Windows y macOS, dentro de la barra de 44 px, tras `rFirma`:
 
 1. **El botón partido**: «Abrir PDF…», que abre el diálogo del sistema, y una
    flecha ▾ que despliega «Abiertos recientemente».
@@ -24,6 +24,18 @@ Sin documento abierto, la barra lleva el botón partido y ninguna pestaña, y el
 [visor](visor-de-documento.md) enseña la zona de soltar con los recientes
 debajo. En las vistas que no son de documentos no está nada de esto: la barra se
 queda con `rFirma` y el menú.
+
+### En Linux
+
+Las piezas se reparten entre dos franjas:
+
+- **El botón partido** va en la barra de título GTK, a la izquierda: un botón
+  partido de GTK, «Abrir PDF… | ▾».
+- **Las pestañas y el «+N ▾»** van en una tira propia de 38 px, dentro de la
+  ventana y bajo la barra, del mismo gris que ella. La tira lleva **solo** eso.
+- **Sin ninguna pestaña, la tira no existe**: en el inicio sin documentos
+  queda la barra de título con el botón partido; en Preferencias, el panel de
+  estado y el primer arranque, la barra sin botón partido y sin tira.
 
 ### Geometría
 
@@ -75,6 +87,12 @@ Alineado por la izquierda del botón partido. De arriba abajo:
 
 No lleva «Abrir un PDF…»: abrir es el segmento principal del mismo botón.
 
+**En Linux es un menú GTK estándar**, de 380 px en el lienzo: la sección
+**«Abiertos recientemente»**, **una línea por reciente** —«✓ nombre — carpeta»,
+con la ✓ solo si está firmado—, **sin fecha** y sin «Abierto»; el que no se
+encuentra, como entrada desactivada «nombre — No se encuentra»; y **«Vaciar la
+lista»** en su propia sección, tras un divisor.
+
 ### Las pestañas ocultas, desde «+N»
 
 Alineado por la derecha de «+N». Una fila por pestaña que no cabe, de **una
@@ -101,7 +119,8 @@ Preferencias ([ADR-0011](../adr/0011-destino-del-documento-firmado.md)).
   cuenta el aviso de firmas previas del [panel](panel-de-firma.md).
 - **Sin recientes** —«Recordar mi actividad» apagado en
   [Preferencias](preferencias.md), o la lista vacía— desaparece la flecha del
-  botón partido y, en el estado vacío, la lista bajo la zona de soltar.
+  botón partido y, en el estado vacío, la lista bajo la zona de soltar. En
+  Linux igual: el botón GTK se queda con «Abrir PDF…».
 
 ## Estados
 
@@ -119,6 +138,9 @@ En el artboard `Main`:
 - **Desbordada** (palanca «Contenido: extremo»): doce documentos, cuatro
   pestañas a la vista y «+8 ▾»; palanca «Desborde de pestañas» para abrir su
   menú.
+- Palanca «Escritorio»: **Linux** (por defecto) enseña la barra de título GTK
+  con la tira debajo, y los recientes como menú GTK; **Windows** y **macOS**, la
+  barra única.
 
 ## Componentes y tokens
 
@@ -153,6 +175,13 @@ En el artboard `Main`:
   buscar pasando de una en una; el menú enseña todas las ocultas de golpe, y
   como la activa siempre está a la vista no hace falta desplazar para
   encontrarla.
+- **En Linux, la tira solo con las pestañas, y solo si hay alguna**
+  (30/09/2026). El botón partido sube a la barra de título GTK, que es donde
+  GTK pone sus controles; lo que queda debajo son los documentos abiertos, y
+  sin ninguno una tira vacía sería una franja muerta.
+- **En Linux, recientes de una línea y sin fecha** (30/09/2026). Es el menú GTK
+  estándar, sin columnas ni segunda línea: «✓ nombre — carpeta» cabe en una
+  fila, y la fecha no decide cuál se reabre.
 - **«Abiertos recientemente», no «Recientes»**, en el menú y en el estado vacío:
   un rótulo solo, igual en los dos sitios.
 - **«Abierto» es texto, no un icono.** Un punto o una marca de pestaña se
@@ -163,4 +192,6 @@ En el artboard `Main`:
 
 Validado en el lienzo
 [Autofirma de escritorio en Rust](https://claude.ai/design/p/c0ddbfa7-0982-498f-8f8c-8e2f8f0c6132),
-página **Recorrido de firma**, artboard `Main`; la barra única, el 27/09/2026.
+página **Recorrido de firma**, artboard `Main`; la barra única, el 27/09/2026;
+la tira y los recientes en Linux, el 30/09/2026 (medición en
+`docs/research/barra-de-titulo-en-linux.md`).

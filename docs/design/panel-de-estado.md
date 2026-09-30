@@ -2,8 +2,8 @@
 
 La pantalla donde vive la verdad de la instalación: qué ha quedado montado en
 este equipo, si funciona, y qué hacer con lo que no. Se abre desde la primera
-entrada del menú de la [cabecera](cabecera.md), en cualquier momento y fuera de
-todo recorrido de firma.
+entrada del menú de la [cabecera](cabecera.md), o desde su botón de aviso cuando
+lo hay, en cualquier momento y fuera de todo recorrido de firma.
 
 ## Casos de uso que la usan
 
@@ -36,11 +36,14 @@ que es justo lo que la fila del certificado informa.
 [cabecera](cabecera.md) del
 [ADR-0007](../adr/0007-cabecera-unica-sin-barra-de-menus.md) se queda arriba
 en su variante sin documentos —`rFirma` y el menú, sin botón de abrir ni
-pestañas—: las pestañas son de documentos, y el panel no es de ninguno.
+pestañas—: las pestañas son de documentos, y el panel no es de ninguno. **El
+botón de aviso no está**: se oculta dentro del panel, porque ya estás donde
+llevaría.
 
 Tres regiones:
 
-1. **Cabecera**, 44 px, con su raya inferior, sin documentos.
+1. **Cabecera**, 44 px, con su raya inferior, sin documentos. En Linux, la
+   barra de título GTK sin botón partido y sin tira de pestañas.
 2. **Cuerpo**: una fila de título con `Estado de rFirma` a la izquierda y
    `Volver a comprobar` a la derecha, y bajo ella la **tabla**, que es la zona
    que se desplaza.
@@ -169,11 +172,12 @@ hay verde ni rojo que gastar.
 silueta.** Ninguno de los dos es una media tinta de «Correcto»: no saber todavía
 y no haber nada que saber son dos cosas, y ninguna es estar bien.
 
-El triángulo de «Atención» es **el mismo `path`** que marca «Estado de rFirma»
-en el menú de la [cabecera](cabecera.md). Dos dibujos distintos para lo mismo
-serían dos vocabularios. Mismo dibujo, **regla distinta**: aquí lo pone el
-veredicto de la fila, y allí solo lo encienden las averías que rFirma puede y
-debe arreglar, que la [cabecera](cabecera.md) enumera.
+El triángulo de «Atención» es **el mismo `path`** que lleva el botón de aviso de
+la [cabecera](cabecera.md) en Windows y macOS (en Linux, el icono de advertencia
+del tema). Dos dibujos distintos para lo mismo serían dos vocabularios. Mismo
+dibujo, **regla distinta**: aquí lo pone el veredicto de la fila, y el botón
+solo aparece con las averías que rFirma puede y debe arreglar, que la
+[cabecera](cabecera.md) enumera.
 
 ### La fila de la firma en sedes
 
@@ -201,11 +205,11 @@ Firefox, y ya no: elegir y ver el veredicto son el mismo gesto, y partirlos en
 dos pantallas obligaba a ir a mirar a una para entender la otra. Dos controles
 para un mismo ajuste son además dos sitios donde mirar cuando no cuadra.
 
-**`AutoFirma es la aplicación` dice «Atención» aquí, pero no enciende el
-triángulo del menú de la [cabecera](cabecera.md).** Que las sedes abran
+**`AutoFirma es la aplicación` dice «Atención» aquí, pero no hace aparecer el
+botón de aviso de la [cabecera](cabecera.md).** Que las sedes abran
 AutoFirma es una elección legítima, no una avería: la fila lo cuenta a quien
 entra a mirar, y no sale a buscar a nadie. El veredicto de la fila y el disparo
-del triángulo no son la misma regla — la fila informa, el triángulo llama.
+del aviso no son la misma regla — la fila informa, el botón llama.
 
 **`No se puede consultar` es el sandbox del flatpak**, donde los manejadores
 registrados no se pueden leer. No hay nada que configurar ni nada que reparar,
@@ -321,8 +325,8 @@ aquí: ver [retirar el certificado](retirar-certificado.md).
 **La pantalla en calma es `todo correcto` × `rFirma, sin AutoFirma`**: cuatro
 veredictos apagados y un solo control, `Cerrar`.
 
-**Se mide al arrancar la aplicación** —es lo que decide si el triángulo del menú
-de la [cabecera](cabecera.md) se enciende antes de que nadie abra nada— y al
+**Se mide al arrancar la aplicación** —es lo que decide si el botón de aviso de
+la [cabecera](cabecera.md) aparece antes de que nadie abra nada— y al
 abrir el panel. **El refresco es a mano**, con `Volver a comprobar`, más el
 automático que sigue a una reparación: toda reparación remide. Nada se remide
 solo: ni periódicamente ni al volver la ventana al frente. Una tabla que cambia
@@ -374,7 +378,9 @@ anchos fijos.
 Validado el **17/09/2026** en el canvas
 [Autofirma de escritorio en Rust](https://claude.ai/design/p/c0ddbfa7-0982-498f-8f8c-8e2f8f0c6132),
 artboard `PanelEstado` de la página «Estado de rFirma», cuya anotación guarda el
-porqué de cada punto. La copia legible sin cuenta está en
+porqué de cada punto. El botón de aviso de la cabecera sustituyó al triángulo del
+menú el **30/09/2026**, y la palanca «Escritorio» del artboard enseña la
+cabecera de Linux. La copia legible sin cuenta está en
 [`docs/design/artboards/`](artboards/README.md).
 
 **Tabla, y no lista ni tarjetas.** Las tres se dibujaron. La lista repite el
@@ -410,7 +416,7 @@ de protocolo, sabe **qué programa firma**. Por eso la señal nombra dónde empi
 la firma —«Firma en sedes»— y su valor es un nombre de programa.
 
 **Sin número ni contador en ninguna parte.** Ni en la franja de arriba, que no
-existe, ni en el aviso del menú. Contar obligaría a decidir qué se cuenta y a
+existe, ni en el botón de aviso. Contar obligaría a decidir qué se cuenta y a
 mantener esa cuenta en dos sitios; la verdad está en la tabla, y la tabla se
 mira.
 
