@@ -3,8 +3,8 @@ import { menuAnchorFor } from "./menuAnchor";
 
 // Grada A: una función pura sobre una cadena.
 describe("menuAnchorFor", () => {
-  it("anchors the two entries in the header on linux", () => {
-    expect(menuAnchorFor("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/605.1.15")).toBe("header");
+  it("hands the menu to the native gtk titlebar on linux", () => {
+    expect(menuAnchorFor("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/605.1.15")).toBe("titlebar");
   });
 
   it("anchors the two entries in the header on windows", () => {

@@ -12,6 +12,7 @@ import { inMemoryDocumentPicker } from "./documents/picker";
 import { inMemoryRecents, type RecentDocument } from "./documents/recents";
 import type { Preferences } from "./preferences/preferences";
 import { inMemoryPreferences } from "./preferences/preferences";
+import type { NativeTitlebar } from "./shell/nativeTitlebar";
 import type { Certificate, CertificateStore } from "./signing/certificate";
 import { emptyCertificateStore } from "./signing/certificate";
 import {
@@ -209,6 +210,7 @@ export function renderApp(
   status?: StatusPort,
   destinations: DestinationSource = aDestination(),
   initialSignature: VisibleSignature = DEFAULT_VISIBLE_SIGNATURE,
+  titlebar: NativeTitlebar | null = null,
 ) {
   const preferences = inMemoryPreferences(
     {
@@ -242,9 +244,10 @@ export function renderApp(
       initialSignature={initialSignature}
       versions={versions}
       version="0.1.0"
-      menuAnchor="header"
+      menuAnchor={titlebar === null ? "header" : "titlebar"}
       externalDestinations={externalDestinations}
       status={status}
+      titlebar={titlebar ?? undefined}
     />,
   );
   return { recents, preferences, drops };

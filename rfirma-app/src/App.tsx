@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { forgetActivity } from "./App.forgetActivity";
+import { SignFlowPrompts, signFlowPromptOpen } from "./App.SignFlowPrompts";
 import { formatSignedAt, placingFrom } from "./App.signingOrder";
 import { useCertificateSearch } from "./App.useCertificateSearch";
 import { useDropNotices } from "./App.useDropNotices";
+import { useNativeTitlebar } from "./App.useNativeTitlebar";
 import { useOpenShortcut } from "./App.useOpenShortcut";
 import { usePageGeometry } from "./App.usePageGeometry";
 import { usePlacementControls } from "./App.usePlacementControls";
@@ -28,17 +30,15 @@ import { PreferencesView } from "./preferences/PreferencesView";
 import type { PreferencesStore } from "./preferences/preferences";
 import { MainWindow } from "./shell/MainWindow";
 import { type MenuAnchor, menuAnchorFor } from "./shell/menuAnchor";
+import { absentNativeTitlebar, type NativeTitlebar } from "./shell/nativeTitlebar";
 import type { CertificateStore } from "./signing/certificate";
 import type { DestinationSource, SignedDocumentOpener } from "./signing/destination";
 import type { SigningBackend } from "./signing/flow";
-import { InvalidPreviousSignaturesDialog } from "./signing/InvalidPreviousSignaturesDialog";
 import type { RubricPicker } from "./signing/rubric";
 import { SignedPanel } from "./signing/SignedPanel";
 import { SigningPanel } from "./signing/SigningPanel";
 import { SigningProgressDialog } from "./signing/SigningProgressDialog";
 import type { StampComposer } from "./signing/stampPreview";
-import { UnregisteredSignaturesDialog } from "./signing/UnregisteredSignaturesDialog";
-import { UnsealedPagesDialog } from "./signing/UnsealedPagesDialog";
 import { useSigning } from "./signing/useSigning";
 import type { VisibleSignature } from "./signing/visibleSignature";
 import { StatusView } from "./status/StatusView";
@@ -55,6 +55,7 @@ type OpenDialog = "about" | "installUpdate" | null;
 type ActiveView = "status" | "preferences" | null;
 
 const NO_RECENTS: readonly RecentDocument[] = [];
+const NO_TITLEBAR = absentNativeTitlebar();
 
 interface AppProps {
   recents: RecentsStore;
@@ -91,6 +92,8 @@ interface AppProps {
   onReady?: (handle: AppHandle) => void;
   /** Otra pantalla tapa la ventana, como el asistente del primer arranque. */
   covered?: boolean;
+  /** La barra de título GTK de Linux. Ver [`NativeTitlebar`]. */
+  titlebar?: NativeTitlebar;
 }
 
 /** El asa que `onReady` entrega: lo único de `App` que se abre desde fuera. */
@@ -130,6 +133,7 @@ export function App({
   status = memoryStatus(),
   onReady,
   covered = false,
+  titlebar = NO_TITLEBAR,
 }: AppProps) {
   const [dialog, setDialog] = useState<OpenDialog>(null);
   const [view, setView] = useState<ActiveView>(null);
@@ -272,19 +276,7 @@ export function App({
   const openDocument = reportingFailure(documents.open);
   const clearRecents = reportingFailure(documents.clearRecents);
 
-  const {
-    stamp,
-    sign,
-    sealLossPrompt,
-    setSealLossPrompt,
-    signAnyway,
-    unregisteredPrompt,
-    setUnregisteredPrompt,
-    signWithUnregisteredSignatures,
-    invalidPreviousSignaturesPrompt,
-    setInvalidPreviousSignaturesPrompt,
-    signDespiteInvalidPreviousSignatures,
-  } = useSignFlow({
+  const signFlow = useSignFlow({
     pdf,
     activeDocument: documents.active,
     placement,
@@ -303,14 +295,28 @@ export function App({
     previousSignatures: previousSignatures.signatures,
     startSigning: signing.start,
   });
+  const { stamp, sign } = signFlow;
 
   const modalOpen =
-    dialog !== null ||
-    unregisteredPrompt !== null ||
-    sealLossPrompt !== null ||
-    invalidPreviousSignaturesPrompt !== null ||
-    signing.state.kind === "running";
-  useOpenShortcut(openDocument, !covered && view === null && !modalOpen);
+    dialog !== null || signFlowPromptOpen(signFlow) || signing.state.kind === "running";
+  const canOpen = !covered && view === null && !modalOpen;
+  useOpenShortcut(openDocument, canOpen);
+
+  const anchor = menuAnchor ?? menuAnchorFor(navigator.userAgent);
+  const warningVisible = hasAttention && view !== "status";
+  const openHelp = () => void externalDestinations.open("discussions");
+  const unlessModal = (action: () => void) => () => {
+    if (!modalOpen) action();
+  };
+  useNativeTitlebar(titlebar, !covered && view === null, warningVisible && !covered, {
+    open: () => {
+      if (canOpen) openDocument();
+    },
+    status: unlessModal(() => setView("status")),
+    preferences: unlessModal(() => setView("preferences")),
+    feedback: unlessModal(openHelp),
+    about: unlessModal(() => setDialog("about")),
+  });
 
   const forgetAll = () =>
     forgetActivity(
@@ -323,11 +329,11 @@ export function App({
   return (
     <>
       <MainWindow
-        menuAnchor={menuAnchor ?? menuAnchorFor(navigator.userAgent)}
-        hasAttention={hasAttention && view !== "status"}
+        menuAnchor={anchor}
+        hasAttention={warningVisible}
         onOpenStatus={() => setView("status")}
         onOpenPreferences={() => setView("preferences")}
-        onOpenHelp={() => void externalDestinations.open("discussions")}
+        onOpenHelp={openHelp}
         onOpenAbout={() => setDialog("about")}
         view={
           view === "status" ? (
@@ -359,17 +365,20 @@ export function App({
           />
         }
         tabs={
-          <DocumentTabs
-            tabs={documents.tabs}
-            activeId={activeId}
-            recents={visibleRecents}
-            onActivate={documents.activate}
-            onClose={documents.close}
-            onOpen={openDocument}
-            onSelectRecent={documents.select}
-            onClearRecents={clearRecents}
-            signingLocked={signing.state.kind === "running"}
-          />
+          anchor === "titlebar" && documents.tabs.length === 0 ? null : (
+            <DocumentTabs
+              tabs={documents.tabs}
+              activeId={activeId}
+              recents={visibleRecents}
+              onActivate={documents.activate}
+              onClose={documents.close}
+              onOpen={openDocument}
+              onSelectRecent={documents.select}
+              onClearRecents={clearRecents}
+              signingLocked={signing.state.kind === "running"}
+              withOpenButton={anchor !== "titlebar"}
+            />
+          )
         }
         viewer={
           <DocumentViewer
@@ -490,28 +499,7 @@ export function App({
           onClose={() => setDialog(null)}
         />
       )}
-      {unregisteredPrompt !== null && (
-        <UnregisteredSignaturesDialog
-          onConfirm={() => void signWithUnregisteredSignatures()}
-          onCancel={() => setUnregisteredPrompt(null)}
-        />
-      )}
-      {sealLossPrompt !== null && (
-        <UnsealedPagesDialog
-          fallen={sealLossPrompt.fallen}
-          chosen={sealLossPrompt.chosen}
-          onConfirm={() => void signAnyway()}
-          onCancel={() => setSealLossPrompt(null)}
-        />
-      )}
-      {invalidPreviousSignaturesPrompt !== null && (
-        <InvalidPreviousSignaturesDialog
-          signatures={invalidPreviousSignaturesPrompt}
-          locale={i18n.resolvedLanguage ?? i18n.language}
-          onConfirm={() => void signDespiteInvalidPreviousSignatures()}
-          onCancel={() => setInvalidPreviousSignaturesPrompt(null)}
-        />
-      )}
+      <SignFlowPrompts flow={signFlow} locale={i18n.resolvedLanguage ?? i18n.language} />
       {signing.state.kind === "running" && <SigningProgressDialog stage={signing.state.stage} />}
     </>
   );

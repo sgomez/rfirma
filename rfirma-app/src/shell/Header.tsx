@@ -33,7 +33,8 @@ interface HeaderProps {
  * panel; repetirlos en un menú sería un segundo camino para lo mismo.
  *
  * En macOS las dos entradas se registran en el menú de aplicación nativo, así
- * que el botón de menú **se oculta** en vez de quedarse vacío.
+ * que el botón de menú **se oculta** en vez de quedarse vacío. En Linux todo
+ * menos las pestañas va en la barra de título GTK, y sin pestañas no hay cabecera.
  *
  * El menú **arranca cerrado**. El artboard del estado vacío lo dibuja
  * desplegado, pero eso enseña una posibilidad y no un estado inicial: una
@@ -81,6 +82,12 @@ export function Header({
     close();
     action();
   };
+
+  if (menuAnchor === "titlebar") {
+    return documents === null ? null : (
+      <header className="header header--tabsOnly">{documents}</header>
+    );
+  }
 
   return (
     <header className={open ? "header header--menuOpen" : "header"}>
