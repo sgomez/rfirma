@@ -3,8 +3,9 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::desktop::domain::channel::Channel;
+use crate::desktop::domain::installation::Installation;
 use crate::desktop::domain::version_check::VersionCheck;
-use crate::desktop::ports::VersionMemory;
+use crate::desktop::ports::{UpdateInstaller, VersionMemory};
 
 /// Puerto de red que obtiene el cuerpo de la última publicación.
 pub type ReleaseFeed<'a> = &'a dyn Fn() -> Option<String>;
@@ -71,6 +72,21 @@ pub struct NewVersion {
     pub version: Version,
     /// Si el canal permite instalarla desde la aplicación.
     pub installable: bool,
+}
+
+/// Instala la versión anunciada si es mayor que la que corre; si no, no toca la instalación.
+pub fn install_new_version(running: Version, installer: &dyn UpdateInstaller) -> Installation {
+    let announced = match installer.announced() {
+        Ok(announced) => announced.as_deref().and_then(Version::parse),
+        Err(failure) => return failure.into(),
+    };
+    if !announced.is_some_and(|announced| announced > running) {
+        return Installation::NoUpdate;
+    }
+    match installer.install() {
+        Ok(()) => Installation::Installed,
+        Err(failure) => failure.into(),
+    }
 }
 
 /// Lee la última comprobación guardada en memoria, sea cual sea su antigüedad.

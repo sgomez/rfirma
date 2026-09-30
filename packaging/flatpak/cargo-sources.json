@@ -1666,6 +1666,19 @@
     {
         "type": "archive",
         "archive-type": "tar-gzip",
+        "url": "https://static.crates.io/crates/filetime/filetime-0.2.29.crate",
+        "sha256": "5c287a33c7f0a620c38e641e7f60827713987b3c0f26e8ddc9462cc69cf75759",
+        "dest": "cargo/vendor/filetime-0.2.29"
+    },
+    {
+        "type": "inline",
+        "contents": "{\"package\": \"5c287a33c7f0a620c38e641e7f60827713987b3c0f26e8ddc9462cc69cf75759\", \"files\": {}}",
+        "dest": "cargo/vendor/filetime-0.2.29",
+        "dest-filename": ".cargo-checksum.json"
+    },
+    {
+        "type": "archive",
+        "archive-type": "tar-gzip",
         "url": "https://static.crates.io/crates/find-msvc-tools/find-msvc-tools-0.1.11.crate",
         "sha256": "d45db016d36b838f563236e9193d0ee6ce38f3f68b6c94e914b4929c96bbb890",
         "dest": "cargo/vendor/find-msvc-tools-0.1.11"
@@ -3174,6 +3187,19 @@
     {
         "type": "archive",
         "archive-type": "tar-gzip",
+        "url": "https://static.crates.io/crates/minisign-verify/minisign-verify-0.2.5.crate",
+        "sha256": "22f9645cb765ea72b8111f36c522475d2daa0d22c957a9826437e97534bc4e9e",
+        "dest": "cargo/vendor/minisign-verify-0.2.5"
+    },
+    {
+        "type": "inline",
+        "contents": "{\"package\": \"22f9645cb765ea72b8111f36c522475d2daa0d22c957a9826437e97534bc4e9e\", \"files\": {}}",
+        "dest": "cargo/vendor/minisign-verify-0.2.5",
+        "dest-filename": ".cargo-checksum.json"
+    },
+    {
+        "type": "archive",
+        "archive-type": "tar-gzip",
         "url": "https://static.crates.io/crates/miniz_oxide/miniz_oxide-0.8.9.crate",
         "sha256": "1fa76a2c86f704bdb222d66965fb3d63269ce38518b83cb0575fca855ebb6316",
         "dest": "cargo/vendor/miniz_oxide-0.8.9"
@@ -3603,6 +3629,19 @@
     {
         "type": "archive",
         "archive-type": "tar-gzip",
+        "url": "https://static.crates.io/crates/objc2-osa-kit/objc2-osa-kit-0.3.2.crate",
+        "sha256": "f112d1746737b0da274ef79a23aac283376f335f4095a083a267a082f21db0c0",
+        "dest": "cargo/vendor/objc2-osa-kit-0.3.2"
+    },
+    {
+        "type": "inline",
+        "contents": "{\"package\": \"f112d1746737b0da274ef79a23aac283376f335f4095a083a267a082f21db0c0\", \"files\": {}}",
+        "dest": "cargo/vendor/objc2-osa-kit-0.3.2",
+        "dest-filename": ".cargo-checksum.json"
+    },
+    {
+        "type": "archive",
+        "archive-type": "tar-gzip",
         "url": "https://static.crates.io/crates/objc2-quartz-core/objc2-quartz-core-0.3.2.crate",
         "sha256": "96c1358452b371bf9f104e21ec536d37a650eb10f7ee379fff67d2e08d537f1f",
         "dest": "cargo/vendor/objc2-quartz-core-0.3.2"
@@ -3780,6 +3819,19 @@
         "type": "inline",
         "contents": "{\"package\": \"9aa2b01e1d916879f73a53d01d1d6cee68adbb31d6d9177a8cfce093cced1d50\", \"files\": {}}",
         "dest": "cargo/vendor/ordered-stream-0.2.0",
+        "dest-filename": ".cargo-checksum.json"
+    },
+    {
+        "type": "archive",
+        "archive-type": "tar-gzip",
+        "url": "https://static.crates.io/crates/osakit/osakit-0.3.1.crate",
+        "sha256": "732c71caeaa72c065bb69d7ea08717bd3f4863a4f451402fc9513e29dbd5261b",
+        "dest": "cargo/vendor/osakit-0.3.1"
+    },
+    {
+        "type": "inline",
+        "contents": "{\"package\": \"732c71caeaa72c065bb69d7ea08717bd3f4863a4f451402fc9513e29dbd5261b\", \"files\": {}}",
+        "dest": "cargo/vendor/osakit-0.3.1",
         "dest-filename": ".cargo-checksum.json"
     },
     {
@@ -5449,6 +5501,19 @@
     {
         "type": "archive",
         "archive-type": "tar-gzip",
+        "url": "https://static.crates.io/crates/tar/tar-0.4.46.crate",
+        "sha256": "3f6221d9a6003c78398e3b239969f352578258df48c8eb051caadae0015bc840",
+        "dest": "cargo/vendor/tar-0.4.46"
+    },
+    {
+        "type": "inline",
+        "contents": "{\"package\": \"3f6221d9a6003c78398e3b239969f352578258df48c8eb051caadae0015bc840\", \"files\": {}}",
+        "dest": "cargo/vendor/tar-0.4.46",
+        "dest-filename": ".cargo-checksum.json"
+    },
+    {
+        "type": "archive",
+        "archive-type": "tar-gzip",
         "url": "https://static.crates.io/crates/target-lexicon/target-lexicon-0.12.16.crate",
         "sha256": "61c41af27dd6d1e27b1b16b489db798443478cef1f06a660c96db617ba5de3b1",
         "dest": "cargo/vendor/target-lexicon-0.12.16"
@@ -5574,6 +5639,19 @@
         "type": "inline",
         "contents": "{\"package\": \"5cd0cb5c412a5071b69bab6a6df1583cbb89460d4a83b6a24769b08d15b6b1e1\", \"files\": {}}",
         "dest": "cargo/vendor/tauri-plugin-single-instance-2.4.4",
+        "dest-filename": ".cargo-checksum.json"
+    },
+    {
+        "type": "archive",
+        "archive-type": "tar-gzip",
+        "url": "https://static.crates.io/crates/tauri-plugin-updater/tauri-plugin-updater-2.12.0.crate",
+        "sha256": "7a5cad8ed5948d988e1018ecd31e27cacedbf72ce3fb972940c3e4bf51639e4b",
+        "dest": "cargo/vendor/tauri-plugin-updater-2.12.0"
+    },
+    {
+        "type": "inline",
+        "contents": "{\"package\": \"7a5cad8ed5948d988e1018ecd31e27cacedbf72ce3fb972940c3e4bf51639e4b\", \"files\": {}}",
+        "dest": "cargo/vendor/tauri-plugin-updater-2.12.0",
         "dest-filename": ".cargo-checksum.json"
     },
     {
@@ -7446,6 +7524,19 @@
         "type": "inline",
         "contents": "{\"package\": \"105ef4642d9cb137ef83d623d0e4bf08b8adf69e9918ca904a174adb6d3d038b\", \"files\": {}}",
         "dest": "cargo/vendor/x509-cert-0.3.0",
+        "dest-filename": ".cargo-checksum.json"
+    },
+    {
+        "type": "archive",
+        "archive-type": "tar-gzip",
+        "url": "https://static.crates.io/crates/xattr/xattr-1.6.1.crate",
+        "sha256": "32e45ad4206f6d2479085147f02bc2ef834ac85886624a23575ae137c8aa8156",
+        "dest": "cargo/vendor/xattr-1.6.1"
+    },
+    {
+        "type": "inline",
+        "contents": "{\"package\": \"32e45ad4206f6d2479085147f02bc2ef834ac85886624a23575ae137c8aa8156\", \"files\": {}}",
+        "dest": "cargo/vendor/xattr-1.6.1",
         "dest-filename": ".cargo-checksum.json"
     },
     {

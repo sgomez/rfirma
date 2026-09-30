@@ -16,6 +16,33 @@ crossing! {
     }
 }
 
+use crate::desktop::domain::installation::Installation;
+
+crossing! {
+    /// Lo que pasó al instalar la versión anunciada.
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+    #[serde(rename_all = "camelCase")]
+    pub enum InstallationView {
+        Installed,
+        NoUpdate,
+        NetworkFailure,
+        InvalidSignature,
+        NotAvailable,
+    }
+}
+
+impl From<Installation> for InstallationView {
+    fn from(installation: Installation) -> Self {
+        match installation {
+            Installation::Installed => Self::Installed,
+            Installation::NoUpdate => Self::NoUpdate,
+            Installation::NetworkFailure => Self::NetworkFailure,
+            Installation::InvalidSignature => Self::InvalidSignature,
+            Installation::NotAvailable => Self::NotAvailable,
+        }
+    }
+}
+
 use crate::desktop::domain::status::{
     ActionKind, Signal, SignalDetail, SignalRow, SiteSignatureCandidate, StatusAction, StoreBrand,
     StoreCertificates, StoreDetail, Verdict,
