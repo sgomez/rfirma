@@ -247,10 +247,17 @@ que así pasan de 30. Es el caso de `--allow` del ADR-0014, cobertura que se mid
 `cargo crap --path` sobre el lcov de Windows. Otro fichero solo de Windows que cruce el umbral
 en Linux entra en la misma variable.
 
-GraalVM queda fijada a la **25.0.2** en `ci.yml` y `build.yml`, que es a la que resolvía `'25'`.
-Las GraalVM CE 25 *innovation* (25.1 en adelante) publican etiquetas que `setup-graalvm` puede
-empezar a elegir, y la 25.4 muere en `native-image` con un error interno del compilador en
-`PdfTimestamper.initialize()`. En local, con una 25.4, se esquiva con
+GraalVM CE se fija a **una versión exacta, escrita en un solo sitio**: `.graalvm-version`, hoy
+la **25.3.4.1** (JDK 25.0.4.1). La lee el `justfile`, que deriva de ella la ruta de SDKMAN, y la
+acción local `.github/actions/setup-graalvm`, por la que pasan todos los jobs de `ci.yml` y
+`build.yml`: pide a `setup-graalvm` la etiqueta `graal-<versión>` exacta de `graalvm-ce-builds`,
+no la última publicada. Así la librería que se entrega, que lleva el runtime dentro, se construye
+con la misma GraalVM con la que se prueba en local. GraalVM CE ya solo publica versiones
+*Innovation*, así que la versión se sube a propósito, en una PR propia, cuando sale una que
+compila la imagen y pasa la grada C en Linux y en Windows. `check-workflows.sh` falla si un
+workflow o el `justfile` escriben otra versión o instalan GraalVM sin esa acción, y la clave de
+caché de la librería nativa lleva la versión, así que subirla la reconstruye. En local, con una
+25.4, `native-image` se esquiva con
 `NATIVE_IMAGE_OPTIONS=--initialize-at-build-time=es.gob.afirma.signers.tsp.pkcs7.TsaParams`.
 
 ## `lefthook` llama a scripts de una línea
@@ -268,6 +275,25 @@ configuración.
 
 **Ejecutar `VC_redist.x64.exe` al instalar**: instala el runtime para todo el equipo y pide
 administrador. La copia local son dos ficheros, unos 170 KB, junto a la `.dll`.
+
+**Seguir en la GraalVM CE 25.0.2**, a la que resolvía `'25'`: es la última de la línea 25.0.x
+(enero de 2026) y después no ha salido ninguna, así que la librería se quedaba sin los parches
+de seguridad del JDK. Además no era la de local, y dos compilaciones de la 25 dejan alcanzables
+clases distintas: la grada C pasaba en local y fallaba en el CI.
+
+**Pedir `java-version: '25'` o `version: '25.3'`** a `setup-graalvm`: resuelven a la última
+publicada el día que corre el CI, que deja de construir con la de local sin que cambie una línea.
+
+**La 25.4**: `native-image` muere con un error interno del compilador en
+`PdfTimestamper.initialize()`. Pasar a ella es otro trabajo.
+
+**Descargar el tarball de `graalvm-ce-builds` y comprobar su sha256** en vez de `setup-graalvm`:
+la acción ya fija la *Innovation* exacta con `version:`, y en Windows deja el entorno de Visual
+Studio con el que enlazan `native-image` y `rustc`. No comprueba el sha256: baja el fichero de
+la Release por HTTPS, como antes.
+
+**Una versión que sirva también a macOS Intel**: GraalVM CE solo publica macOS x64 hasta la
+25.0.1, y el Mac Intel queda fuera de alcance, así que no condiciona la versión.
 
 **Llevar `--initialize-at-build-time=...TsaParams` a `native-image.properties`**: arreglaría la
 25.4 también en local, pero cambia cuándo se inicializa una clase de AutoFirma en la imagen de

@@ -87,10 +87,6 @@ permissions:
   contents: read
 
 env:
-  # Tiene que coincidir con la de ci.yml y con la del justfile: GraalVM CE 25,
-  # porque la linea 21 aborta dentro del JNI_OnLoad de libawt.so con cualquier
-  # firma visible (issue #6). Fijada a la 25.0.2 (ADR-0035).
-  GRAALVM_VERSION: '25.0.2'
   # Tienen que coincidir con las de ci.yml: `just test-native` las usa.
   CRAP_VERSION: '0.4.3'
   NEXTEST_VERSION: '0.9.146'
@@ -117,15 +113,8 @@ jobs:
         with:
           ref: ${{ inputs.ref }}
 
-      # `github.token` y no `secrets.GITHUB_TOKEN`: el valor es el mismo, pero
-      # asi este fichero no menciona el contexto `secrets` en ninguna linea, y
-      # la invariante «sin secretos» se puede comprobar con un grep.
-      - name: GraalVM CE ${{ env.GRAALVM_VERSION }}
-        uses: graalvm/setup-graalvm@0426e2e191540e8514dff98dc52a5f5146a2a276 # v1.6.6
-        with:
-          java-version: ${{ env.GRAALVM_VERSION }}
-          distribution: graalvm-community
-          github-token: ${{ github.token }}
+      - name: GraalVM CE
+        uses: ./.github/actions/setup-graalvm
 
       # La misma clave que ci.yml a proposito: las dependencias de AutoFirma no
       # estan en Maven Central y llenarla cuesta compilarla entera, asi que las
@@ -209,12 +198,8 @@ jobs:
           name: librfirma-crypto
           path: rfirma-native-bridge/target/lib/rfirma
 
-      - name: GraalVM CE ${{ env.GRAALVM_VERSION }}
-        uses: graalvm/setup-graalvm@0426e2e191540e8514dff98dc52a5f5146a2a276 # v1.6.6
-        with:
-          java-version: ${{ env.GRAALVM_VERSION }}
-          distribution: graalvm-community
-          github-token: ${{ github.token }}
+      - name: GraalVM CE
+        uses: ./.github/actions/setup-graalvm
 
       - name: Cache de ~/.m2
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -456,12 +441,8 @@ jobs:
         with:
           ref: ${{ inputs.ref }}
 
-      - name: GraalVM CE ${{ env.GRAALVM_VERSION }}
-        uses: graalvm/setup-graalvm@0426e2e191540e8514dff98dc52a5f5146a2a276 # v1.6.6
-        with:
-          java-version: ${{ env.GRAALVM_VERSION }}
-          distribution: graalvm-community
-          github-token: ${{ github.token }}
+      - name: GraalVM CE
+        uses: ./.github/actions/setup-graalvm
 
       # setup-graalvm deja el entorno de Visual Studio, y con el rustc se fia del
       # PATH, donde en bash va antes el link.exe de Git (coreutils).

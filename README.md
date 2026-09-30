@@ -68,7 +68,7 @@ just bundle-windows                                    # instalador NSIS en targ
 
 Con una GraalVM CE 25.4, `just native` necesita además
 `NATIVE_IMAGE_OPTIONS=--initialize-at-build-time=es.gob.afirma.signers.tsp.pkcs7.TsaParams`;
-el CI usa la 25.0.2. El instalador es por usuario y no pide administrador: deja
+el CI usa la de `.graalvm-version`. El instalador es por usuario y no pide administrador: deja
 `rfirma.exe`, `rfirma_crypto.dll` y el runtime de Visual C++ en
 `%LOCALAPPDATA%\rfirma`, y registra `afirma://` si ningún otro programa lo tiene.
 

@@ -1,0 +1,22 @@
+# Instala la GraalVM CE exacta de `.graalvm-version`, la misma que usa el justfile (ADR-0035).
+name: Instala GraalVM CE
+description: Instala la GraalVM CE fijada en .graalvm-version y exporta GRAALVM_VERSION.
+
+runs:
+  using: composite
+  steps:
+    - id: version
+      shell: bash
+      run: |
+        set -euo pipefail
+        version="$(tr -d '[:space:]' < .graalvm-version)"
+        echo "GRAALVM_VERSION=$version" >> "$GITHUB_ENV"
+        echo "version=$version" >> "$GITHUB_OUTPUT"
+        echo "java=${version%%.*}" >> "$GITHUB_OUTPUT"
+
+    # Con `version:` busca la etiqueta `graal-<versión>`, no la última CE de `java-version`.
+    - uses: graalvm/setup-graalvm@0426e2e191540e8514dff98dc52a5f5146a2a276 # v1.6.6
+      with:
+        distribution: graalvm-community
+        version: ${{ steps.version.outputs.version }}
+        java-version: ${{ steps.version.outputs.java }}

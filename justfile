@@ -12,8 +12,12 @@ windows := if os_family() == "windows" { "true" } else { "false" }
 root := replace(justfile_directory(), "\\", "/")
 
 # GraalVM CE 25 (ADR-0004): la 21 aborta native-image; el pom compila a
-# release 21 aparte. En Windows no hay SDKMAN: vale el JAVA_HOME.
-default_graalvm := if windows == "true" { "$JAVA_HOME" } else { "$HOME/.sdkman/candidates/java/25.3.4+1.r25-graalce" }
+# release 21 aparte. La versión exacta vive en `.graalvm-version` (ADR-0035), y
+# SDKMAN la nombra de otra forma: la A.B.C.D es su `A.B.C+D.rA-graalce`.
+# En Windows no hay SDKMAN: vale el JAVA_HOME.
+graalvm_version := trim(read(root / ".graalvm-version"))
+sdkman_graalvm := replace_regex(graalvm_version, '^(\d+)\.(\d+)\.(\d+)\.(\d+)$', '${1}.${2}.${3}+${4}.r${1}') + "-graalce"
+default_graalvm := if windows == "true" { "$JAVA_HOME" } else { "$HOME/.sdkman/candidates/java/" + sdkman_graalvm }
 
 bridge := root / "rfirma-native-bridge"
 app := root / "rfirma-app"

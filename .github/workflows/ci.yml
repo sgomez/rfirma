@@ -57,11 +57,6 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
-  # GraalVM CE 25, fijado por el issue #6: la linea 21 aborta dentro del
-  # JNI_OnLoad de libawt.so con cualquier firma visible. El pom sigue
-  # compilando a release 21. Fijado a la 25.0.2 y no a '25': las 25.x
-  # «innovation» rompen native-image en PdfTimestamper (ADR-0035).
-  GRAALVM_VERSION: '25.0.2'
   # Version FIJADA de cargo-crap (ADR-0014): un solo mantenedor y cuatro meses
   # de vida, asi que una publicacion suya no puede poner en rojo un PR que no
   # la ha tocado. Tiene que coincidir con `crap_version` del justfile.
@@ -151,12 +146,8 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: GraalVM CE ${{ env.GRAALVM_VERSION }}
-        uses: graalvm/setup-graalvm@0426e2e191540e8514dff98dc52a5f5146a2a276 # v1.6.6
-        with:
-          java-version: ${{ env.GRAALVM_VERSION }}
-          distribution: graalvm-community
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: GraalVM CE
+        uses: ./.github/actions/setup-graalvm
 
       # Las dependencias de AutoFirma no estan en Maven Central: bootstrap.sh
       # clona el repositorio oficial en la etiqueta v1.9.1 y las compila. Esa
@@ -385,13 +376,9 @@ jobs:
               echo "build=true" >> "$GITHUB_OUTPUT" ;;
           esac
 
-      - name: GraalVM CE ${{ env.GRAALVM_VERSION }}
+      - name: GraalVM CE
         if: steps.scope.outputs.build == 'true'
-        uses: graalvm/setup-graalvm@0426e2e191540e8514dff98dc52a5f5146a2a276 # v1.6.6
-        with:
-          java-version: ${{ env.GRAALVM_VERSION }}
-          distribution: graalvm-community
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+        uses: ./.github/actions/setup-graalvm
 
       - name: Cache de ~/.m2
         if: steps.scope.outputs.build == 'true'
@@ -554,12 +541,8 @@ jobs:
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: GraalVM CE ${{ env.GRAALVM_VERSION }}
-        uses: graalvm/setup-graalvm@0426e2e191540e8514dff98dc52a5f5146a2a276 # v1.6.6
-        with:
-          java-version: ${{ env.GRAALVM_VERSION }}
-          distribution: graalvm-community
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: GraalVM CE
+        uses: ./.github/actions/setup-graalvm
 
       # setup-graalvm deja el entorno de Visual Studio, y con el rustc se fia del
       # PATH, donde en bash va antes el link.exe de Git (coreutils).
@@ -672,12 +655,8 @@ jobs:
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: GraalVM CE ${{ env.GRAALVM_VERSION }}
-        uses: graalvm/setup-graalvm@0426e2e191540e8514dff98dc52a5f5146a2a276 # v1.6.6
-        with:
-          java-version: ${{ env.GRAALVM_VERSION }}
-          distribution: graalvm-community
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: GraalVM CE
+        uses: ./.github/actions/setup-graalvm
 
       # setup-graalvm deja el entorno de Visual Studio, y con el rustc se fia del
       # PATH, donde en bash va antes el link.exe de Git (coreutils).
