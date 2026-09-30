@@ -1,36 +1,4 @@
-# Puerta automatica del repositorio.
-#
-# Decidida en https://github.com/sgomez/rfirma/issues/11 y ampliada a las tres
-# cadenas en https://github.com/sgomez/rfirma/issues/47, siguiendo el ADR-0014.
-#
-# QUE COMPRUEBA HOY: `just check` entero, pero REPARTIDO EN UN JOB POR CADENA
-# —el puente Java compila con -Xlint:all y pasa sus pruebas, Biome y tsc pasan
-# sobre TypeScript, clippy y la puerta CRAP sobre Rust. Sigue SIN comprobar que
-# una firma valga: eso es grada C y vive en el carril lento. Lee la seccion de
-# CI de docs/agents/code-host.md antes de fiarte de un check en verde.
-#
-# CON UNA PREPARACION QUE `just check` NO ENCADENA: `just autoscript`, que baja
-# el accesorio del banco de conformidad a etiqueta y sha256 fijados. Fuera de
-# `check` a proposito, para que un `just check` local siga corriendo sin red;
-# aqui es un paso propio y OBLIGATORIO, y ademas la prueba mira la variable CI
-# y falla en vez de saltarse (ADR-0013, ADR-0014).
-#
-# TRES JOBS Y NO UNO, POR TIEMPO DE PARED. Las tres cadenas no se necesitan
-# entre si, asi que encadenarlas era pagar la suma cuando se puede pagar la mas
-# lenta. Y cada job instala solo lo suyo: el de Java no necesita las librerias
-# del WebView ni cargo-crap, el de TypeScript no necesita ni GraalVM ni Rust.
-# Solo el de Rust paga los 34 s de apt y los ~40 s de restaurar la cache de
-# cargo.
-#
-# CARRILES, POR VELOCIDAD. Esto es antes que nada el bucle de
-# realimentacion de un agente, asi que lo que corre siempre tiene que ser
-# rapido:
-#
-#   cadena Java / TypeScript / Rust   en cada push a main, y en cada PR cuyos
-#                                     ficheros la afecten (job 'scope')
-#   native                            igual, con la libreria nativa cacheada
-#   release                           en etiquetas, a mano, una vez por
-#                                     semana y en PR con la etiqueta 'release'
+# Puerta automatica del repositorio: `just check` repartido en un job por cadena (ADR-0014).
 name: CI
 
 on:
@@ -39,19 +7,13 @@ on:
     branches: [main]
   workflow_dispatch:
   schedule:
-    # Las caches de GitHub caducan a los 7 dias sin usarse, y llenar la de
-    # ~/.m2 cuesta compilar AutoFirma entera. Esto la mantiene caliente, es la
-    # red de seguridad del carril lento, y ademas hace de vigilante del kit
-    # FNMT (job 'fnmt-kit-expiry-warning').
+    # Mantiene calientes las caches y alimenta 'fnmt-kit-expiry-warning'.
     - cron: '17 4 * * 1'
 
 permissions:
   contents: read
 
-# En un repositorio movido por agentes lo normal es empujar tres veces seguidas
-# a la misma rama. Sin esto, las dos primeras ejecuciones siguen ocupando
-# runners para producir un veredicto que ya no le importa a nadie. Solo en PR:
-# en main cada commit merece su propia ejecucion.
+# Solo en PR: en main cada commit merece su ejecucion.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -375,17 +337,7 @@ jobs:
         if: steps.scope.outputs.build == 'true'
         run: just build-rust
 
-  # ==========================================================================
-  # VIGILANTE DEL KIT FNMT
-  # ==========================================================================
-  #
-  # La otra mitad de la bomba de relojeria del ADR-0014. La mitad dura vive en
-  # rfirma-app/src-tauri/tests/fnmt_kit.rs y falla el dia que el certificado
-  # caduque; este avisa 90 dias antes abriendo una issue.
-  #
-  # Y VIVE AQUI, NO EN EL CARRIL RAPIDO, A PROPOSITO: avisar alli rompería
-  # todos los PRs a la vez, un dia cualquiera de 2028, con merge automatico
-  # puesto. El cron es el unico sitio donde avisar no bloquea a nadie.
+  # Avisa aqui y no en el carril rapido para no romper todas las PR a la vez (ADR-0014).
   fnmt-kit-expiry-warning:
     name: Caducidad del kit FNMT
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
