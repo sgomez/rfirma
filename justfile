@@ -265,10 +265,10 @@ fmt-rust:
     cd {{ tauri }} && cargo fmt --all
     cd {{ conformance_suite }} && cargo fmt --all
 
-# Formateador de biome sobre los tres proyectos de node.
+# Formateador de biome y orden de imports sobre los tres proyectos de node; `biome format` no ordena imports.
 [private]
 fmt-ts:
-    cd {{ root }} && pnpm exec biome format --write .
+    cd {{ root }} && pnpm exec biome check --write --linter-enabled=false .
 
 # `ruff format` sobre todo el Python del repositorio.
 [private]
@@ -279,7 +279,7 @@ fmt-python:
 [group('ci')]
 fmt-check: deps fmt-check-rust
     cd {{ conformance_suite }} && cargo fmt --all -- --check
-    cd {{ root }} && pnpm exec biome format .
+    cd {{ root }} && pnpm exec biome check --linter-enabled=false .
     ruff format --check {{ root }}
 
 [private]
