@@ -48,10 +48,10 @@ append_step "$dir/.github/actions/setup-runner/action.yml" \
 fails_naming "secreto en la accion de preparacion" "$dir" ".github/actions/setup-runner/action.yml:"
 
 dir="$(tree secret-in-nested-action)"
-append_step "$dir/.github/actions/setup-just/action.yml" \
+append_step "$dir/.github/actions/load-versions/action.yml" \
     '    - shell: bash
       run: echo "${{ secrets.GITHUB_TOKEN }}"'
-fails_naming "secreto en una accion que alcanza la de preparacion" "$dir" ".github/actions/setup-just/action.yml:"
+fails_naming "secreto en una accion que alcanza la de preparacion" "$dir" ".github/actions/load-versions/action.yml:"
 
 dir="$(tree commented-secret-in-setup-runner)"
 append_step "$dir/.github/actions/setup-runner/action.yml" '    # secrets.GITHUB_TOKEN no entra aqui'

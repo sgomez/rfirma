@@ -253,8 +253,8 @@ en Linux entra en la misma variable.
 
 GraalVM CE se fija a **una versión exacta, escrita en un solo sitio**: `GRAALVM_VERSION` en
 `versions.env` (ADR-0014), hoy la **25.3.4.1** (JDK 25.0.4.1). La lee el `justfile`, que deriva de
-ella la ruta de SDKMAN, y la acción local `.github/actions/setup-graalvm`, por la que pasan todos los jobs de `ci.yml` y
-`build.yml`: pide a `setup-graalvm` la etiqueta `graal-<versión>` exacta de `graalvm-ce-builds`,
+ella la ruta de SDKMAN, y la acción local `.github/actions/setup-runner`, por la que pasan todos los jobs de `ci.yml` y
+`build.yml` que instalan GraalVM: pide a `graalvm/setup-graalvm` la etiqueta `graal-<versión>` exacta de `graalvm-ce-builds`,
 no la última publicada. Así la librería que se entrega, que lleva el runtime dentro, se construye
 con la misma GraalVM con la que se prueba en local. GraalVM CE ya solo publica versiones
 *Innovation*, así que la versión se sube a propósito, en una PR propia, cuando sale una que
