@@ -1,4 +1,9 @@
 {
+  "extraKnownMarketplaces": {
+    "sgomez": {
+      "source": { "source": "github", "repo": "sgomez/developer-skills" }
+    }
+  },
   "enabledPlugins": {
     "developer-skills@sgomez": true
   },
