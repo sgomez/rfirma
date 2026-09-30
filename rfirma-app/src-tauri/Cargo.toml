@@ -76,7 +76,7 @@ serde = { version = "1", features = ["derive"] }
 # mano (ADR-0010). Se lee primero a `Value` para mirar la "version" antes de
 # deserializar: un fichero de una version futura se aparta, no se interpreta.
 serde_json = "1"
-tauri = { version = "2", features = [] }
+tauri = { version = "2.12", features = [] }
 # Una `file://` de la línea de órdenes pasa a ruta con su decodificado bien hecho. Ya estaba
 # en el árbol como dependencia transitiva; aquí solo se hace directa.
 url = "2"

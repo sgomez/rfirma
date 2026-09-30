@@ -28,3 +28,5 @@ allowBuilds:
 # i18next-cli va fijada exacta: la sube una persona, no el reloj de la cadena de suministro.
 minimumReleaseAgeExclude:
   - i18next-cli@1.72.4
+  # Temporal: quitar cuando @tauri-apps/api@2.12.1 cumpla la edad mínima.
+  - '@tauri-apps/api@2.12.1'
