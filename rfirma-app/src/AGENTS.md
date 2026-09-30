@@ -48,6 +48,7 @@ rojo.
 | `tauriTitlebar.ts` | El puerto de Tauri de la barra de título GTK de Linux: la orden del estado y el evento de las acciones. |
 | `App.tsx` | El árbol de la ventana y el estado que la recorre. |
 | `App.forgetActivity.ts` | Olvidar la actividad: los ajustes y los documentos abiertos, aunque uno de los dos falle. Sin React. |
+| `App.SignFlowPrompts.tsx` | Los tres avisos que la firma interpone antes del PIN, y si alguno está abierto. |
 | `App.signingOrder.ts` | La colocación guardada, la geometría de la página y la orden de firma armada en un solo sitio. Sin React. |
 | `App.useCertificateSearch.ts` | Buscar certificados, instalar y quitar `.p12`, y elegir uno del desplegable. |
 | `App.useDropNotices.ts` | El arrastre sobre la ventana y la invocación externa, y el aviso que dejan. |

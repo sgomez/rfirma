@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { forgetActivity } from "./App.forgetActivity";
+import { SignFlowPrompts, signFlowPromptOpen } from "./App.SignFlowPrompts";
 import { formatSignedAt, placingFrom } from "./App.signingOrder";
 import { useCertificateSearch } from "./App.useCertificateSearch";
 import { useDropNotices } from "./App.useDropNotices";
@@ -33,14 +34,11 @@ import { absentNativeTitlebar, type NativeTitlebar } from "./shell/nativeTitleba
 import type { CertificateStore } from "./signing/certificate";
 import type { DestinationSource, SignedDocumentOpener } from "./signing/destination";
 import type { SigningBackend } from "./signing/flow";
-import { InvalidPreviousSignaturesDialog } from "./signing/InvalidPreviousSignaturesDialog";
 import type { RubricPicker } from "./signing/rubric";
 import { SignedPanel } from "./signing/SignedPanel";
 import { SigningPanel } from "./signing/SigningPanel";
 import { SigningProgressDialog } from "./signing/SigningProgressDialog";
 import type { StampComposer } from "./signing/stampPreview";
-import { UnregisteredSignaturesDialog } from "./signing/UnregisteredSignaturesDialog";
-import { UnsealedPagesDialog } from "./signing/UnsealedPagesDialog";
 import { useSigning } from "./signing/useSigning";
 import type { VisibleSignature } from "./signing/visibleSignature";
 import { StatusView } from "./status/StatusView";
@@ -278,19 +276,7 @@ export function App({
   const openDocument = reportingFailure(documents.open);
   const clearRecents = reportingFailure(documents.clearRecents);
 
-  const {
-    stamp,
-    sign,
-    sealLossPrompt,
-    setSealLossPrompt,
-    signAnyway,
-    unregisteredPrompt,
-    setUnregisteredPrompt,
-    signWithUnregisteredSignatures,
-    invalidPreviousSignaturesPrompt,
-    setInvalidPreviousSignaturesPrompt,
-    signDespiteInvalidPreviousSignatures,
-  } = useSignFlow({
+  const signFlow = useSignFlow({
     pdf,
     activeDocument: documents.active,
     placement,
@@ -309,13 +295,10 @@ export function App({
     previousSignatures: previousSignatures.signatures,
     startSigning: signing.start,
   });
+  const { stamp, sign } = signFlow;
 
   const modalOpen =
-    dialog !== null ||
-    unregisteredPrompt !== null ||
-    sealLossPrompt !== null ||
-    invalidPreviousSignaturesPrompt !== null ||
-    signing.state.kind === "running";
+    dialog !== null || signFlowPromptOpen(signFlow) || signing.state.kind === "running";
   const canOpen = !covered && view === null && !modalOpen;
   useOpenShortcut(openDocument, canOpen);
 
@@ -516,28 +499,7 @@ export function App({
           onClose={() => setDialog(null)}
         />
       )}
-      {unregisteredPrompt !== null && (
-        <UnregisteredSignaturesDialog
-          onConfirm={() => void signWithUnregisteredSignatures()}
-          onCancel={() => setUnregisteredPrompt(null)}
-        />
-      )}
-      {sealLossPrompt !== null && (
-        <UnsealedPagesDialog
-          fallen={sealLossPrompt.fallen}
-          chosen={sealLossPrompt.chosen}
-          onConfirm={() => void signAnyway()}
-          onCancel={() => setSealLossPrompt(null)}
-        />
-      )}
-      {invalidPreviousSignaturesPrompt !== null && (
-        <InvalidPreviousSignaturesDialog
-          signatures={invalidPreviousSignaturesPrompt}
-          locale={i18n.resolvedLanguage ?? i18n.language}
-          onConfirm={() => void signDespiteInvalidPreviousSignatures()}
-          onCancel={() => setInvalidPreviousSignaturesPrompt(null)}
-        />
-      )}
+      <SignFlowPrompts flow={signFlow} locale={i18n.resolvedLanguage ?? i18n.language} />
       {signing.state.kind === "running" && <SigningProgressDialog stage={signing.state.stage} />}
     </>
   );

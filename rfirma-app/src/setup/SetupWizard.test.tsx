@@ -498,7 +498,6 @@ describe("SetupWizard", () => {
     expect(onFinish).toHaveBeenCalledOnce();
   });
 
-  // La cabecera es la del ADR-0007, con su menú completo (docs/design/primer-arranque.md).
   it("leaves the header to the gtk titlebar on linux", () => {
     renderWithCatalog(
       <SetupWizard
@@ -514,6 +513,7 @@ describe("SetupWizard", () => {
     expect(screen.queryByRole("button", { name: "Menú" })).toBeNull();
   });
 
+  // La cabecera es la del ADR-0007, con su menú completo (docs/design/primer-arranque.md).
   it("carries the app name and the ADR-0007 menu, reusing the shared Header", async () => {
     const user = userEvent.setup();
     const onOpenStatus = vi.fn();

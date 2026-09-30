@@ -41,7 +41,7 @@ interface DocumentTabsProps {
   withOpenButton?: boolean;
 }
 
-/** Las pestañas de los documentos abiertos, con el botón partido de abrir, dentro de la cabecera. */
+/** Las pestañas de los documentos abiertos, con el botón partido de abrir salvo en Linux. */
 export function DocumentTabs({
   tabs,
   activeId,
