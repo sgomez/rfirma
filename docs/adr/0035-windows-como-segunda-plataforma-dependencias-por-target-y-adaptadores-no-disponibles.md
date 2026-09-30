@@ -268,8 +268,8 @@ caché de la librería nativa lleva la versión, así que subirla la reconstruye
 
 ## `lefthook` llama a una receta en una línea
 
-En Windows `lefthook` le pasa a `sh` solo la primera línea de un `run:` de varias. El único
-trabajo del `pre-push` es una línea que llama a `just fmt-check`.
+En Windows `lefthook` le pasa a `sh` solo la primera línea de un `run:` de varias. Cada
+trabajo del `pre-push` es una línea que llama a una receta: `just fmt-check` y `just structural-guards`.
 
 ## Considered Options
 

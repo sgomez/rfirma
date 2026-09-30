@@ -200,7 +200,8 @@ fn the_reader_only_takes_four_digit_numbers_that_start_a_word() {
 
 #[test]
 fn the_adr_directory_is_read_by_its_four_digit_prefix() {
-    let dir = tempfile::tempdir().unwrap();
+    let dir = std::env::temp_dir().join(format!("adr-prefix-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
     for name in [
         "0001-a.md",
         "0042-b.md",
@@ -208,11 +209,10 @@ fn the_adr_directory_is_read_by_its_four_digit_prefix() {
         "12-c.md",
         "0007-d.txt",
     ] {
-        std::fs::write(dir.path().join(name), "").unwrap();
+        std::fs::write(dir.join(name), "").unwrap();
     }
 
-    assert_eq!(
-        adr_numbers_in(dir.path()),
-        ["0001", "0042"].map(str::to_owned).into()
-    );
+    let numbers = adr_numbers_in(&dir);
+    std::fs::remove_dir_all(&dir).unwrap();
+    assert_eq!(numbers, ["0001", "0042"].map(str::to_owned).into());
 }

@@ -219,10 +219,10 @@ En TypeScript, la regla `style/noExcessiveLinesPerFile` de biome sobre los
 `.ts` y `.tsx` de `rfirma-app/src`, con `skipBlankLines` y 600 para los
 `.test.ts(x)`. Biome no cuenta las líneas de comentario, así que la regla es
 más permisiva que la de Rust: se acepta a cambio de que salte en el pre-push.
-La guarda de Rust solo corre dentro de `cargo test`, que ningún cambio de la
-interfaz ejecuta en local, y un fichero cruzando la raya costaba una vuelta
-entera de CI; reescribirla como script propio para el pre-push conservaba la
-cuenta exacta, pero duplicaba en el repositorio lo que biome ya trae. Fuera
+Reescribir la guarda de Rust como script propio para los `.ts` conservaba la
+cuenta exacta, pero duplicaba en el repositorio lo que biome ya trae. La de
+Rust también salta en el pre-push, por la vía de las guardas estructurales
+descrita más abajo. Fuera
 de ella, lo que biome ya excluye: `rfirma-app/src/i18n/locales/*` (datos, no
 código) y los ficheros generados.
 Sin baseline: un fichero que tenga que pasarse lo declara en su cabecera con
@@ -305,23 +305,39 @@ de extraerlo a un helper. Solo informa: sin `--threshold` ni `--exit-code`, así
 que nunca sale en rojo. No entra en el CI hasta ver cuánto ruido da en la
 práctica.
 
-## Un solo hook: formato, antes del push
+## Un solo hook: formato y guardas estructurales, antes del push
 
-`pre-push` con **lefthook**, y dentro **formato y lint de biome**: una sola receta, `just
+`pre-push` con **lefthook**, y dentro dos trabajos. El primero, **formato y lint de biome**: `just
 fmt-check`, que comprueba `cargo fmt` en la app y en la suite de conformidad, `biome check` —el
 formateador, el orden de imports y el linter— y `ruff format --check` sobre todo el Python del
 repositorio. El lint de biome entra porque no compila ni depende de `build-ts` y tarda menos de
 un segundo en todo el árbol; `biome format` solo, sin él, dejaba pasar al CI imports sin ordenar
 y ficheros por encima del umbral de tamaño. La llaman el hook y `check-repo`, así que el
-CI y el push comprueban lo mismo. Ni clippy, ni pruebas, ni nada que compile o dependa de
-`build-ts`: la puerta se mide en segundos o no sobrevive. `just check` sigue siendo el único punto
-de entrada que promete `docs/agents/code-host.md`.
+CI y el push comprueban lo mismo.
+
+El segundo, **las guardas estructurales del backend**: `just structural-guards` compila con
+`rustc --test`, sueltas y en paralelo, las pruebas de grada A que solo leen el árbol como texto
+—el tamaño de los ficheros, los mapas `AGENTS.md`, las citas de ADR, los módulos de test en
+línea, la dirección entre capas y los condicionales de sistema operativo— y las ejecuta. No
+compila la crate ni sus dependencias: cada guarda es un fichero que solo usa `std`, y el conjunto
+tarda menos de un segundo. Son las mismas pruebas que corre `cargo test` en el carril de Rust,
+así que el umbral, el baseline y la regla tienen un único sitio, el fichero de la guarda. Existe
+porque una guarda de estas que saltaba en el CI costaba una vuelta entera de más de diez minutos
+por algo que se ve leyendo el árbol.
+
+Ni clippy, ni la suite, ni nada que compile la crate o dependa de `build-ts`: la puerta se mide
+en segundos o no sobrevive. `just check` sigue siendo el único punto de entrada que promete
+`docs/agents/code-host.md`.
 
 El gestor va como dependencia de desarrollo de `rfirma-app`, a versión exacta por la misma razón
 que `cargo-crap`, y lo instala el `prepare` de `package.json`: cualquier `pnpm install` —`just
 deps` incluido— la deja puesta. `bootstrap.sh` no crece (ADR-0013). La configuración es
 `lefthook.yml` en la raíz, que antepone `~/.cargo/bin` y `~/.local/bin` al `PATH` porque un hook
 de git es una shell no interactiva. Cuando falla, el mensaje nombra `just fmt`, que escribe.
+
+Descartado para las guardas: `cargo test --test <guarda>`, que compila antes la crate entera
+con sus dependencias, y un script de shell que reimplementara cada guarda, que duplicaba umbrales
+y reglas en dos sitios que se desincronizan.
 
 Descartado: un trabajo por cadena, filtrado por glob y en paralelo, que se saltaba la cadena sin
 herramienta. Eran tres copias de lo que comprueba el CI, con un `ruff format` acotado a
@@ -339,8 +355,8 @@ cierran el aviso y el mensaje de arriba.
 `just check` es la puerta entera, y **su sitio es el CI**, que la reparte en runners
 simultáneos (Java, TypeScript, Rust y la landing, esta con carril propio por rutas) y por tanto
 paga el carril más lento. En un portátil se pagan sumados, así
-que **no hay puerta local que la sustituya**: en local solo corren el formato (lefthook, en el
-pre-push) y la prueba concreta que se está tocando. Medido en el equipo de desarrollo, con
+que **no hay puerta local que la sustituya**: en local solo corren el formato y las guardas estructurales
+(lefthook, en el pre-push) y la prueba concreta que se está tocando. Medido en el equipo de desarrollo, con
 cachés calientes: `check-repo` 4 s, `check-java` 4 s, `check-ts` 15 s, `check-rust` 46 s.
 
 La escalera es de tres peldaños y la escribe `AGENTS.md`, que es donde un agente la lee:

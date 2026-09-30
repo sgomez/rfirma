@@ -239,7 +239,8 @@ just fmt
 across three runners that start at once, so it pays only the slowest one,
 while a laptop would pay all three added up to anticipate a red build the CI
 already gives for free. Locally the only steps are formatting (`just fmt`,
-also gated by the lefthook pre-push hook) and the specific test being worked
+also gated by the lefthook pre-push hook, together with the
+structural guards of `just structural-guards`) and the specific test being worked
 on; the full `just check` is what CI runs, and the ladder of what to run when
 lives in `AGENTS.md`.
 
