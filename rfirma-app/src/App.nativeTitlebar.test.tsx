@@ -8,7 +8,7 @@ import {
   unavailableExternalDestinationOpener,
 } from "./desktop/externalDestination";
 import { inMemoryDocumentDrops } from "./documents/drops";
-import { inMemoryRecents, type RecentDocument } from "./documents/recents";
+import { inMemoryRecents, type RecentDocument, type RecentsStore } from "./documents/recents";
 import { openTab } from "./preferences/testSupport";
 import { inMemoryNativeTitlebar, type TitlebarActionName } from "./shell/nativeTitlebar";
 import { emptyCertificateStore } from "./signing/certificate";
@@ -49,10 +49,11 @@ function renderOnLinux({
   recentRows = [] as RecentDocument[],
   status = memoryStatus() as StatusPort,
   externalDestinations = unavailableExternalDestinationOpener() as ExternalDestinationOpener,
+  store = inMemoryRecents(recentRows) as RecentsStore,
 } = {}) {
   const titlebar = inMemoryNativeTitlebar();
   renderApp(
-    inMemoryRecents(recentRows),
+    store,
     pdfNames.map((name) => document(name)),
     pdfNames.length === 0
       ? unavailablePdfSource()
@@ -265,6 +266,28 @@ describe("App with the native titlebar", () => {
     await pressRecent("id-usb.pdf");
 
     expect(screen.queryByRole("tab", { name: "usb.pdf" })).toBeNull();
+  });
+
+  it("sends a recent as not found once its file vanishes and the window regains focus", async () => {
+    let found = true;
+    const store = {
+      ...inMemoryRecents(),
+      list: async () => [row("usb.pdf", { available: found })],
+    };
+    const { titlebar } = renderOnLinux({ store });
+    await waitFor(() => expect(titlebar.latest?.recents[0]?.found).toBe(true));
+
+    found = false;
+    await act(async () => {
+      window.dispatchEvent(new Event("focus"));
+    });
+    await waitFor(() => expect(titlebar.latest?.recents[0]?.found).toBe(false));
+
+    found = true;
+    await act(async () => {
+      window.dispatchEvent(new Event("focus"));
+    });
+    await waitFor(() => expect(titlebar.latest?.recents[0]?.found).toBe(true));
   });
 
   it("empties the recents on clearRecents", async () => {
