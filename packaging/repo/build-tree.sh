@@ -92,8 +92,7 @@ huella="$4"
 [ -f "$clave" ] || { echo "la clave '$clave' no existe" >&2; exit 1; }
 
 exe_de_la_version() {
-    local dir="$1" manifiesto exes sigs
-    manifiesto="$(dirname "${BASH_SOURCE[0]}")/../../scripts/packages-manifest.sh"
+    local dir="$1" exes sigs
     if [ ! -f "$dir/paquetes.json" ]; then
         echo "a la version $(basename "$dir") le falta el paquetes.json: sin el no se sabe cual es su instalador de Windows" >&2
         return 1
@@ -121,19 +120,47 @@ if [ "${#versiones[@]}" -eq 0 ]; then
     exit 1
 fi
 
-# Cada version tiene que traer los tres paquetes: un arbol al que le falte uno
-# es un canal que se queda a medias sin que nadie se entere hasta que alguien
-# no puede instalar.
-for version in "${versiones[@]}"; do
-    for patron in '*.flatpak' '*.deb' '*.rpm'; do
-        if [ -z "$(find "$serie/$version" -maxdepth 1 -name "$patron" -print -quit)" ]; then
-            echo "a la version $version le falta un paquete $patron" >&2
-            exit 1
+manifiesto="$(dirname "${BASH_SOURCE[0]}")/../../scripts/packages-manifest.sh"
+
+# Los ficheros de un formato que el manifiesto nombra para una version.
+paquetes_del_formato() {
+    "$manifiesto" files "$1" "$2"
+}
+
+comprueba_los_paquetes_de_la_version() {
+    local dir="$1" version formato nombre fichero
+    version="$(basename "$dir")"
+    if [ ! -f "$dir/paquetes.json" ]; then
+        echo "a la version $version le falta el paquetes.json: sin el no se sabe cuales son sus paquetes" >&2
+        return 1
+    fi
+    for formato in flatpak deb rpm; do
+        if [ -z "$(paquetes_del_formato "$dir" "$formato")" ]; then
+            echo "el manifiesto de la version $version no nombra ningun paquete $formato" >&2
+            return 1
+        fi
+        while IFS= read -r nombre; do
+            if [ ! -f "$dir/$nombre" ]; then
+                echo "el manifiesto de $version nombra $nombre y no esta en la Release" >&2
+                return 1
+            fi
+        done < <(paquetes_del_formato "$dir" "$formato")
+    done
+    for fichero in "$dir"/*.flatpak "$dir"/*.deb "$dir"/*.rpm; do
+        [ -e "$fichero" ] || continue
+        nombre="$(basename "$fichero")"
+        if ! "$manifiesto" files "$dir" | grep -qxF -- "$nombre"; then
+            echo "la Release de $version trae $nombre y el manifiesto no lo nombra" >&2
+            return 1
         fi
     done
+}
+
+for version in "${versiones[@]}"; do
+    comprueba_los_paquetes_de_la_version "$serie/$version" || exit 1
 done
 
-# EL INSTALADOR DE WINDOWS SE TOMA POR NOMBRE DEL MANIFIESTO y nunca por glob:
+# TODO PAQUETE SE TOMA POR NOMBRE DEL MANIFIESTO y nunca por glob:
 # la descarga verifica lo que lista `SHA256SUMS`, pero no rechaza un asset de
 # mas en la Release, y un glob serviria un fichero subido a mano.
 exe_de=()
@@ -226,10 +253,11 @@ ostree init --mode=archive --repo="$arbol/flatpak"
 # version es borrarla del canal. `--no-update-summary` porque el summary se
 # escribe UNA vez al final, ya con todo dentro y firmado.
 for version in "${versiones[@]}"; do
-    for bundle in "$serie/$version"/*.flatpak; do
+    while IFS= read -r nombre; do
+        bundle="$serie/$version/$nombre"
         echo "  ostree: importando $version ($(basename "$bundle"))"
         flatpak build-import-bundle --no-update-summary "$arbol/flatpak" "$bundle"
-    done
+    done < <(paquetes_del_formato "$serie/$version" flatpak)
 done
 
 # RE-FIRMAR SIEMPRE (cabo 3 del ID-173). La firma no viaja dentro del bundle:
@@ -275,7 +303,9 @@ fi
 echo "  apt: montando pool y dists/stable"
 mkdir -p "$arbol/apt/pool/main/r/rfirma" "$arbol/apt/dists/stable/main/binary-amd64"
 for version in "${versiones[@]}"; do
-    cp "$serie/$version"/*.deb "$arbol/apt/pool/main/r/rfirma/"
+    while IFS= read -r nombre; do
+        cp "$serie/$version/$nombre" "$arbol/apt/pool/main/r/rfirma/"
+    done < <(paquetes_del_formato "$serie/$version" deb)
 done
 
 release_tmp="$(mktemp)"
@@ -327,7 +357,8 @@ EOF
 
 # ---------------------------------------------------------------- 3. el dnf --
 for version in "${versiones[@]}"; do
-    for paquete in "$serie/$version"/*.rpm; do
+    while IFS= read -r nombre; do
+        paquete="$serie/$version/$nombre"
         # `RSAHEADER`, `DSAHEADER`, `SIGGPG` y `SIGPGP` son las cabeceras donde
         # reside la firma segun el algoritmo y la version de RPM (claves RSA
         # modernas van en `RSAHEADER`). Sin ninguna de ellas, el paquete NO esta
@@ -346,7 +377,7 @@ for version in "${versiones[@]}"; do
             fi
         fi
         cp "$paquete" "$arbol/rpm/"
-    done
+    done < <(paquetes_del_formato "$serie/$version" rpm)
 done
 
 echo "  dnf: generando repodata"
