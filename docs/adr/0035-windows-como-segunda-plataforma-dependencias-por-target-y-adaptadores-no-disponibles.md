@@ -154,7 +154,7 @@ que `just` se lanza desde Git Bash, no desde PowerShell ni desde cmd.
 La raíz del repositorio se toma con barras normales (`root`), porque `bash` se come las
 invertidas de `justfile_directory()`. GraalVM se busca en `GRAALVM_HOME` y, en Windows, en
 `JAVA_HOME`, que es donde lo deja su instalador; en Linux sigue la ruta de SDKMAN. `just tools`
-comprueba en cada sistema lo suyo: en Windows, `cl.exe` por `vswhere`, el runtime de WebView2 y
+comprueba en cada sistema lo suyo, con una tabla por plataforma: en Windows, `cl.exe` por `vswhere`, el runtime de WebView2 y
 un Perl nativo para OpenSSL, y no pide ni las bibliotecas del WebView de Linux, ni softhsm, ni
 NSS; gettext pasa a aviso porque solo lo usan `just po` y el carril del CI.
 
@@ -162,7 +162,8 @@ NSS; gettext pasa a aviso porque solo lo usan `just po` y el carril del CI.
 
 `librfirma_crypto.so` en Linux y `rfirma_crypto.dll` en Windows. Rust compone el nombre con
 `DLL_PREFIX` y `DLL_SUFFIX` de `std` (`library_file`), sin `cfg`; el `justfile` hace lo mismo
-en `native_lib_name`. Se busca primero en `RFIRMA_LIB_DIR`, como en el ADR-0004, y después
+con una tabla por `os()` que da el prefijo y la extensión, de la que salen `native_lib_name` y la
+salida de `native-image`. Se busca primero en `RFIRMA_LIB_DIR`, como en el ADR-0004, y después
 donde la deja el paquete de cada plataforma: `../lib/rfirma` en Linux y el directorio del
 propio ejecutable en Windows. Ese segundo sitio lo decide `Platform::native_library_directory`,
 en `paths.rs`, sin `cfg` en `ffi/location.rs`.
@@ -177,7 +178,7 @@ sistema y el runtime de Visual C++.
 
 ## El instalador es NSIS, por usuario y sin privilegios
 
-`just bundle-windows` construye con el *bundler* de Tauri un instalador NSIS
+`just bundle` construye con el *bundler* de Tauri un instalador NSIS
 (`rfirma_<versión>_x64-setup.exe`) que instala para la persona que lo ejecuta, en
 `%LOCALAPPDATA%\rfirma`, sin pedir administrador. Es coherente con todo lo demás de Windows:
 la CA va a `CurrentUser\Root`, `afirma://` a `HKCU` y la firma al almacén del usuario, así que
@@ -229,7 +230,7 @@ nativo: compila la `.dll` (cacheada con la misma clave que la de Linux y otro `r
 test-windows`). Las gradas B y C no corren: faltan softhsm, NSS y poppler.
 
 El instalador no sale de `ci.yml` sino de la release, como el `.deb`, el `.rpm` y el flatpak: el
-job `windows` de `build.yml` compila la `.dll` y ejecuta `just bundle-windows`, y el `.exe` pasa
+job `windows` de `build.yml` compila la `.dll` y ejecuta `just bundle`, y el `.exe` pasa
 por la misma puerta del contenido (`packaging/verifica-contenido.sh`, que lo abre con `7z`), entra
 en el `SHA256SUMS` firmado y en la atestación de procedencia. `release.yml` le añade la firma
 minisign del *updater* (ADR-0015) y los deja los dos en la Release, y `publish.yml` los sirve
@@ -326,7 +327,10 @@ fuera de una fase que solo busca compilar.
 sueltas al `justfile`, y `native-image.properties` es el único sitio de las banderas de la imagen.
 
 **Recetas duplicadas con `[windows]` y `[linux]`**, o PowerShell como shell de Windows: dos
-versiones de cada receta que envejecen por separado. Git Bash ya está en cualquier equipo que
+versiones de cada receta que envejecen por separado. El empaquetado es la excepción, porque sus
+dos variantes no comparten nada que pueda envejecer: cada plataforma construye formatos distintos.
+Antes era `just bundle-windows` con su propio script, y obligaba a los workflows a llamar a una
+receta distinta por plataforma para lo mismo. Git Bash ya está en cualquier equipo que
 tenga Git, y los scripts de `scripts/` son de `bash`.
 
 **Un alias de `cfg` desde `build.rs`** (`cfg(gtk_desktop)`) para no tocar la guarda: esconde el
@@ -354,9 +358,11 @@ interfaz también en Linux. Se aplaza; mientras, el almacén del usuario se pres
   prueba que enlazan Tauri mueren al arrancar con `STATUS_ENTRYPOINT_NOT_FOUND`. En Windows,
   `build.rs` enlaza `windows-app-manifest.xml` en todo lo que se enlaza, y por eso está en
   `AUTHORISED_SITES`.
-- `just tools`, `just bootstrap`, `just native`, `just dev`, `just fmt` y `just bundle-windows`
-  funcionan en Windows; el resto de recetas (`check`, `flatpak`, `bundle`, `certs`…) sigue siendo
-  de Linux.
+- `just tools`, `just bootstrap`, `just native`, `just dev`, `just fmt` y `just bundle`
+  funcionan en Windows; el resto de recetas (`check`, `flatpak`, `certs`…) sigue siendo de Linux.
+- `just bundle` es la única receta con variantes `[linux]` y `[windows]`: cada una construye los
+  paquetes de su plataforma y los busca en `CARGO_TARGET_DIR`, así que funciona desde un worktree.
+  El flatpak sigue en su propia receta.
 - En Windows la aplicación busca la `.dll` junto al ejecutable; en Linux, en `../lib/rfirma`.
 - El instalador no está firmado con Authenticode: SmartScreen avisa al abrirlo la primera vez.
   Las actualizaciones las verifica el *updater* con la minisign, no Windows.
