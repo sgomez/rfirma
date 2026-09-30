@@ -174,11 +174,71 @@ describe("Header", () => {
     expect(aboutItem.querySelector(".header__entryIcon svg")).toBeNull();
   });
 
-  it("shows no attention triangle by default", async () => {
+  it("has no attention button by default and leaves the menu button unmarked", async () => {
     const user = userEvent.setup();
     renderWithCatalog(
       <Header
         menuAnchor="header"
+        onOpenStatus={noop}
+        onOpenPreferences={noop}
+        onOpenHelp={noop}
+        onOpenAbout={noop}
+      />,
+    );
+
+    expect(
+      screen.queryByRole("button", { name: "Estado de rFirma: requiere atención" }),
+    ).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Menú" }));
+
+    const statusItem = screen.getByRole("menuitem", { name: "Estado de rFirma" });
+    expect(statusItem.querySelector(".header__entryIcon svg")).toBeNull();
+  });
+
+  it("shows the attention button left of the menu button, with its name and tooltip", () => {
+    renderWithCatalog(
+      <Header
+        menuAnchor="header"
+        hasAttention
+        onOpenStatus={noop}
+        onOpenPreferences={noop}
+        onOpenHelp={noop}
+        onOpenAbout={noop}
+      />,
+    );
+
+    const attention = screen.getByRole("button", { name: "Estado de rFirma: requiere atención" });
+    expect(attention).toHaveAttribute("title", "Estado de rFirma: requiere atención");
+    const menu = screen.getByRole("button", { name: "Menú" });
+    expect(attention.compareDocumentPosition(menu) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("opens the status panel from the attention button", async () => {
+    const user = userEvent.setup();
+    const openStatus = vi.fn();
+    renderWithCatalog(
+      <Header
+        menuAnchor="header"
+        hasAttention
+        onOpenStatus={openStatus}
+        onOpenPreferences={noop}
+        onOpenHelp={noop}
+        onOpenAbout={noop}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Estado de rFirma: requiere atención" }));
+
+    expect(openStatus).toHaveBeenCalledTimes(1);
+  });
+
+  it("leaves Estado de rFirma unmarked in the menu even when something needs fixing", async () => {
+    const user = userEvent.setup();
+    renderWithCatalog(
+      <Header
+        menuAnchor="header"
+        hasAttention
         onOpenStatus={noop}
         onOpenPreferences={noop}
         onOpenHelp={noop}
@@ -189,13 +249,13 @@ describe("Header", () => {
     await user.click(screen.getByRole("button", { name: "Menú" }));
 
     const statusItem = screen.getByRole("menuitem", { name: "Estado de rFirma" });
-    expect(statusItem.querySelector(".header__entryIcon svg")).toBeNull();
+    expect(statusItem.querySelector("svg")).toBeNull();
   });
 
-  it("marks the closed menu button when something needs fixing, and says so in its name", () => {
+  it("puts the attention button alone at the right end on macOS, where there is no menu button", () => {
     renderWithCatalog(
       <Header
-        menuAnchor="header"
+        menuAnchor="native"
         hasAttention
         onOpenStatus={noop}
         onOpenPreferences={noop}
@@ -204,46 +264,10 @@ describe("Header", () => {
       />,
     );
 
-    const button = screen.getByRole("button", {
-      name: "Menú. Estado de rFirma: requiere atención",
-    });
-    expect(button.querySelector(".header__buttonAttention svg")).not.toBeNull();
-  });
-
-  it("leaves the menu button unmarked when nothing needs fixing", () => {
-    renderWithCatalog(
-      <Header
-        menuAnchor="header"
-        onOpenStatus={noop}
-        onOpenPreferences={noop}
-        onOpenHelp={noop}
-        onOpenAbout={noop}
-      />,
-    );
-
-    const button = screen.getByRole("button", { name: "Menú" });
-    expect(button.querySelector(".header__buttonAttention")).toBeNull();
-  });
-
-  it("shows the attention triangle on Estado de rFirma when something needs fixing", async () => {
-    const user = userEvent.setup();
-    renderWithCatalog(
-      <Header
-        menuAnchor="header"
-        hasAttention
-        onOpenStatus={noop}
-        onOpenPreferences={noop}
-        onOpenHelp={noop}
-        onOpenAbout={noop}
-      />,
-    );
-
-    await user.click(screen.getByRole("button", { name: /^Menú/ }));
-
-    const statusItem = screen.getByRole("menuitem", { name: /Estado de rFirma/ });
-    expect(statusItem.querySelector(".header__entryIcon svg")).not.toBeNull();
-    expect(screen.getByRole("img", { name: "Requiere atención" })).toBeInTheDocument();
-    expect(statusItem.querySelector(".header__entryIcon--attention")).not.toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Estado de rFirma: requiere atención" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Menú" })).not.toBeInTheDocument();
   });
 
   it("opens the preferences dialog from the menu and closes the menu", async () => {

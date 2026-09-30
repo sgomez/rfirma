@@ -51,18 +51,12 @@
   min-width: 32px;
   height: 30px;
   min-height: 30px;
-  position: relative;
   padding: 0;
   border-radius: var(--rf-radius-md);
 }
 
-.header__buttonAttention {
-  position: absolute;
-  top: -5px;
-  right: -5px;
-  display: flex;
-  color: var(--rf-text);
-  filter: drop-shadow(0 0 1px var(--rf-bg)) drop-shadow(0 0 1px var(--rf-bg));
+.header__attention {
+  margin-right: 2px;
 }
 
 .header__button--open {
@@ -111,10 +105,6 @@
   width: 14px;
   height: 14px;
   color: var(--rf-text-muted);
-}
-
-.header__entryIcon--attention {
-  color: var(--rf-text);
 }
 
 .header__divider {
