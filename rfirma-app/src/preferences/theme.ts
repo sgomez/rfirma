@@ -1,3 +1,5 @@
+import { getCurrentWindow } from "@tauri-apps/api/window";
+
 /**
  * El tema de la ventana: lo que el usuario elige ver.
  *
@@ -30,11 +32,25 @@ export function isTheme(value: string): value is Theme {
  * vez de escribir uno tercero: la media query del bundle es
  * `:root:not([data-theme="light"])`, así que lo que devuelve el mando al
  * sistema operativo es la ausencia del atributo, no un valor más.
+ *
+ * También fija el tema de la ventana, que es lo que pinta la barra de título
+ * GTK; `null` la devuelve al escritorio.
  */
 export function applyTheme(theme: Theme, root: HTMLElement = document.documentElement): void {
   if (theme === "system") {
     root.removeAttribute("data-theme");
-    return;
+  } else {
+    root.setAttribute("data-theme", theme);
   }
-  root.setAttribute("data-theme", theme);
+  setWindowTheme(theme === "system" ? null : theme);
+}
+
+function setWindowTheme(theme: "light" | "dark" | null): void {
+  try {
+    void getCurrentWindow()
+      .setTheme(theme)
+      .catch(() => {});
+  } catch {
+    // Sin ventana de Tauri (navegador, pruebas) no hay barra que teñir.
+  }
 }

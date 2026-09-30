@@ -1,4 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+const setTheme = vi.hoisted(() => vi.fn(() => Promise.resolve()));
+vi.mock("@tauri-apps/api/window", () => ({ getCurrentWindow: () => ({ setTheme }) }));
+
 import { applyTheme, isTheme, THEMES } from "./theme";
 
 /** **Grada A**: un atributo en un elemento, sin backend y sin ventana. */
@@ -31,5 +34,19 @@ describe("el tema", () => {
     expect(THEMES).toEqual(["system", "light", "dark"]);
     expect(isTheme("light")).toBe(true);
     expect(isTheme("sepia")).toBe(false);
+  });
+});
+
+describe("el tema de la ventana", () => {
+  it.each([
+    ["dark", "dark"],
+    ["light", "light"],
+    ["system", null],
+  ] as const)("sets the window theme when applying %s", (theme, expected) => {
+    setTheme.mockClear();
+
+    applyTheme(theme, document.createElement("html"));
+
+    expect(setTheme).toHaveBeenCalledWith(expected);
   });
 });

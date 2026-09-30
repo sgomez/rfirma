@@ -5,6 +5,7 @@
   "windows": ["site"],
   "permissions": [
     "core:default",
+    "core:window:allow-set-theme",
     "opener:deny-open-path",
     "opener:deny-open-url",
     "opener:deny-reveal-item-in-dir"
