@@ -1,0 +1,187 @@
+name: Prepara el runner
+description: Instala lo que declara el job, en las versiones que fija versions.env.
+
+inputs:
+  rust:
+    description: none, lint, native o release.
+    default: none
+  node:
+    description: true o false.
+    default: 'false'
+  java:
+    description: none o graalvm.
+    default: none
+  apt:
+    description: none, tauri, test, verify, flatpak o repo.
+    default: none
+  tools:
+    description: Herramientas separadas por espacios; llvm-cov o las de `just install-tools`.
+    default: ''
+  autoscript:
+    description: true o false.
+    default: 'false'
+  save-cache:
+    description: true o false, siempre explícito.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Comprueba las entradas
+      id: inputs
+      shell: bash
+      env:
+        RUST: ${{ inputs.rust }}
+        NODE: ${{ inputs.node }}
+        JAVA: ${{ inputs.java }}
+        APT: ${{ inputs.apt }}
+        TOOLS: ${{ inputs.tools }}
+        AUTOSCRIPT: ${{ inputs.autoscript }}
+        SAVE_CACHE: ${{ inputs.save-cache }}
+      run: |
+        set -euo pipefail
+        failures=0
+        expect() {
+            local name="$1" value="$2" allowed
+            shift 2
+            for allowed in "$@"; do
+                [ "$value" != "$allowed" ] || return 0
+            done
+            echo "setup-runner: '$name' vale '$value' y admite: $*" >&2
+            failures=$((failures + 1))
+        }
+        expect rust "$RUST" none lint native release
+        expect node "$NODE" true false
+        expect java "$JAVA" none graalvm
+        expect apt "$APT" none tauri test verify flatpak repo
+        expect autoscript "$AUTOSCRIPT" true false
+        expect save-cache "$SAVE_CACHE" true false
+        if [ "$RUNNER_OS" != Linux ] && [ "$APT" != none ]; then
+            echo "setup-runner: 'apt' solo existe en Linux" >&2
+            failures=$((failures + 1))
+        fi
+        cargo_tools=false
+        for tool in $TOOLS; do
+            case "$tool" in
+                llvm-cov | crap | machete | nextest) cargo_tools=true ;;
+            esac
+        done
+        [ "$failures" -eq 0 ]
+        echo "cargo-tools=$cargo_tools" >> "$GITHUB_OUTPUT"
+
+    - uses: ./.github/actions/load-versions
+
+    - if: inputs.java == 'graalvm'
+      uses: ./.github/actions/setup-graalvm
+
+    # setup-graalvm deja el entorno de Visual Studio, y en bash el link.exe de Git va antes en el PATH.
+    - if: inputs.java == 'graalvm' && runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        $link = Join-Path $env:VCToolsInstallDir 'bin\Hostx64\x64\link.exe'
+        if (-not (Test-Path $link)) { throw "no encuentro $link" }
+        "CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_LINKER=$link" >> $env:GITHUB_ENV
+
+    - if: inputs.java == 'graalvm' && inputs.save-cache == 'true'
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ~/.m2/repository
+        key: m2-${{ runner.os }}-autofirma${{ env.AUTOFIRMA_VERSION }}-${{ hashFiles('scripts/bootstrap.sh', 'rfirma-native-bridge/pom.xml') }}
+        restore-keys: m2-${{ runner.os }}-
+    - if: inputs.java == 'graalvm' && inputs.save-cache != 'true'
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ~/.m2/repository
+        key: m2-${{ runner.os }}-autofirma${{ env.AUTOFIRMA_VERSION }}-${{ hashFiles('scripts/bootstrap.sh', 'rfirma-native-bridge/pom.xml') }}
+        restore-keys: m2-${{ runner.os }}-
+
+    # La raíz no tiene package.json, y las dependencias las instala `just deps`.
+    - if: inputs.node == 'true'
+      uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3.0.0
+      with:
+        working-directory: rfirma-app
+        install: false
+    - if: inputs.node == 'true'
+      uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      with:
+        node-version: 24
+        cache: pnpm
+        cache-dependency-path: rfirma-app/pnpm-lock.yaml
+
+    # El `prepare` de pnpm es un script de bash, y pnpm no lee npm_config_script_shell.
+    - if: inputs.node == 'true' && runner.os == 'Windows'
+      shell: bash
+      run: pnpm config set script-shell "C:/Program Files/Git/bin/bash.exe"
+
+    - if: inputs.rust != 'none'
+      uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
+      with:
+        toolchain: stable
+        components: ${{ inputs.rust == 'lint' && 'clippy, rustfmt, llvm-tools-preview' || inputs.rust == 'native' && 'llvm-tools-preview' || '' }}
+
+    - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      if: inputs.rust != 'none'
+      with:
+        workspaces: rfirma-app/src-tauri
+        shared-key: ${{ runner.os == 'Windows' && 'windows' || 'linux' }}-${{ inputs.rust }}
+        save-if: ${{ inputs.save-cache == 'true' }}
+
+    # OpenSSL se compila desde las fuentes, y el Perl de Git no sirve.
+    - if: inputs.rust != 'none' && runner.os == 'Windows'
+      shell: bash
+      run: echo "OPENSSL_SRC_PERL=C:/Strawberry/perl/bin/perl.exe" >> "$GITHUB_ENV"
+
+    - uses: ./.github/actions/setup-just
+
+    - if: inputs.apt != 'none'
+      shell: bash
+      env:
+        APT: ${{ inputs.apt }}
+      run: |
+        set -euo pipefail
+        tauri=(libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libayatana-appindicator3-dev
+            libsoup-3.0-dev libxdo-dev build-essential file gettext libarchive-tools)
+        verify=(flatpak ostree libarchive-tools p7zip-full)
+        case "$APT" in
+            tauri) packages=("${tauri[@]}") ;;
+            test) packages=("${tauri[@]}" poppler-utils libxml2-utils softhsm2 opensc libnss3-tools) ;;
+            verify) packages=("${verify[@]}") ;;
+            flatpak) packages=("${verify[@]}" gettext flatpak-builder librsvg2-common appstream) ;;
+            repo) packages=("${verify[@]}" gettext dpkg-dev apt-utils createrepo-c rpm minisign) ;;
+        esac
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends "${packages[@]}"
+
+    - if: steps.inputs.outputs.cargo-tools == 'true'
+      uses: cargo-bins/cargo-binstall@b874e25ea559687bec77e281e9b271aa1367b624 # v1.23.0
+
+    - if: inputs.tools != ''
+      shell: bash
+      env:
+        TOOLS: ${{ inputs.tools }}
+        GITHUB_TOKEN: ${{ github.token }}
+      run: |
+        set -euo pipefail
+        pinned=()
+        for tool in $TOOLS; do
+            case "$tool" in
+                # Sin fijar: no es una puerta, solo produce el lcov (ADR-0014).
+                llvm-cov) cargo binstall --no-confirm cargo-llvm-cov ;;
+                *) pinned+=("$tool") ;;
+            esac
+        done
+        [ "${#pinned[@]}" -eq 0 ] || just install-tools "${pinned[@]}"
+
+    - if: inputs.autoscript == 'true' && inputs.save-cache == 'true'
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: testdata/conformance
+        key: autoscript-${{ env.AUTOSCRIPT_SHA256 }}
+    - if: inputs.autoscript == 'true' && inputs.save-cache != 'true'
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: testdata/conformance
+        key: autoscript-${{ env.AUTOSCRIPT_SHA256 }}
+    - if: inputs.autoscript == 'true'
+      shell: bash
+      run: just autoscript

@@ -121,8 +121,9 @@ tokens.
 
 Y **cuatro invariantes**, que son justo lo que un agente futuro colapsaría por comodidad:
 
-1. **`build.yml` no ve un secreto jamás.** Es lo que permite reutilizarlo desde un PR
-   etiquetado sin que la reutilización sea un camino hacia la clave de firma.
+1. **`build.yml` no ve un secreto jamás**, ni él ni las acciones locales que alcanza. Es lo
+   que permite reutilizarlo desde un PR etiquetado sin que la reutilización sea un camino
+   hacia la clave de firma.
 2. **La Release nace en borrador; publicarla es un acto humano.** Una etiqueta no publica
    nada por sí sola: el despliegue cuelga de `release published`. Es el mismo gesto que ya
    cierra la puerta manual del PDF, y por eso el `pdf-puerta-manual` se adjunta al borrador:
@@ -199,6 +200,16 @@ publicada. Lo que se compra no es inmunidad, sino una revisión humana en medio 
 ejecución silenciosa; por eso mensual, que un flujo de PRs que nadie mira es peor que no
 tenerlas.
 
+**Los jobs sin secretos se preparan con una sola acción local, `setup-runner`**, que declara
+lo que el job necesita —la cadena de Rust por perfil, Node, GraalVM, un perfil cerrado de
+paquetes de apt, las herramientas fijadas y el banco de conformidad— y lee `versions.env` y
+las diferencias de Windows dentro de ella. `check-workflows.sh` extiende la invariante 1 a esa
+acción y a las que alcanza. Que la acción guarde cachés es la entrada `save-cache`, siempre
+explícita y nunca derivada de la ref: bajo `workflow_call` la ref es la del llamador, y una PR
+o una etiqueta que guardan cachés desbordan la cuota de 10 GB y desalojan las de `main`, así
+que `build.yml` solo las lee. El checkout, el `autocrlf` de Windows, los artefactos y la caché
+de la biblioteca nativa quedan en el job; los jobs con secretos no la usan.
+
 ## El runtime sigue viniendo de Flathub
 
 El bundle no lleva `org.gnome.Platform//50` dentro, así que sin el remoto de Flathub añadido
@@ -226,6 +237,12 @@ Repetir la pregunta dentro de la propia lectura de estado sería preguntar dos v
 misma cosa en la misma apertura del panel.
 
 ## Considered Options
+
+- **Un preámbulo de pasos repetido en cada job**, que es como nació la tubería: cada job
+  escribía su toolchain, su caché, su lista de apt y sus arreglos de Windows. Se descarta
+  porque las copias divergían —la misma lista de apt con paquetes distintos en cada job, el
+  arreglo del `link.exe` en tres sitios— y porque la invariante 1 solo se podía vigilar
+  fichero a fichero.
 
 - **Flathub**, que el [#22](https://github.com/sgomez/rfirma/issues/22) dio por hecho sin
   decidirlo. Queda fuera, y **no cerrado para siempre**: volver es un esfuerzo nuevo

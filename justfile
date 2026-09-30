@@ -115,6 +115,7 @@ check-repo: check-version fmt-check
     {{ root }}/scripts/tests/packages_manifest_test.sh
     {{ root }}/scripts/tests/preview_comment_test.sh
     {{ root }}/scripts/tests/check_versions_test.sh
+    {{ root }}/scripts/tests/check_workflows_test.sh
 
 # Una sola invocacion de Maven: compila con -Xlint:all, prueba y empaqueta.
 [group('ci')]
