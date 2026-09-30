@@ -121,21 +121,26 @@ sudo dnf install rfirma</pre>
 
     <div id="panel-windows" role="tabpanel" aria-labelledby="tab-windows" style="padding-top:24px" hidden>
       <div class="rf-card" style="background:#ffffff;border-color:var(--rf-border-strong);gap:12px">
-        <span style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-          <span
-            class="rf-badge"
-            style="border-color:var(--rf-warning-border);background:var(--rf-warning-bg);color:var(--rf-warning-text)"
-            >{t("install.soon")}</span
-          >
-          <strong style="font-size:1rem">{t("install.windows.title")}</strong>
-        </span>
+        <strong style="font-size:1rem">{t("install.windows.title")}</strong>
         <p style="margin:0;font-size:.9375rem;line-height:1.6;color:var(--rf-text-muted)">
           {t("install.windows.body")}
         </p>
+        <div>
+          <a
+            href="https://github.com/sgomez/rfirma/releases/latest"
+            data-windows-download
+            class="rf-btn rf-btn--pill"
+            data-btn-brand
+            style="text-decoration:none;padding:0 24px;min-height:44px;font-size:.9375rem"
+            >{t("install.windows.download")}</a
+          >
+        </div>
         <p
           style="margin:0;font-size:.875rem;line-height:1.6;color:var(--rf-text-muted)"
           set:html={t("install.windows.note")}
         />
+        <pre class="install-code">Get-FileHash .\rFirma_*_x64-setup.exe -Algorithm SHA256
+Select-String rFirma_ .\SHA256SUMS</pre>
       </div>
     </div>
 

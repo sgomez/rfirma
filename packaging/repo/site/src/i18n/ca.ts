@@ -133,10 +133,10 @@ export const ca: Dictionary = {
     "Recorda els documents recents i l'últim certificat utilitzat",
   "comparison.os.label": "Sistemes operatius",
   "comparison.os.autofirma": "Windows, macOS, Linux, Android i iOS",
-  "comparison.os.rfirma": "Linux; Windows i macOS, en desenvolupament",
+  "comparison.os.rfirma": "Linux i Windows; macOS, en desenvolupament",
   "comparison.updates.label": "Canal d'actualització",
   "comparison.updates.autofirma": "Descàrrega manual de <code>.deb</code> o <code>.rpm</code>",
-  "comparison.updates.rfirma": "Repositoris natius: APT, DNF i Flatpak",
+  "comparison.updates.rfirma": "Repositoris natius: APT, DNF i Flatpak; a Windows, des de la mateixa aplicació",
   "comparison.desktop.label": "Integració amb l'escriptori",
   "comparison.desktop.autofirma": "Aparença pròpia de Swing",
   "comparison.desktop.rfirma": "Segueix l'estil de l'escriptori, amb tema clar i fosc",
@@ -160,11 +160,12 @@ export const ca: Dictionary = {
   "install.dnf.body":
     "Per a Fedora i derivades basades en paquets RPM. Configura el repositori amb comprovació criptogràfica estricta de metadades i paquets (<code>gpgcheck=1</code> i <code>repo_gpgcheck=1</code>).",
   "install.soon": "En desenvolupament",
-  "install.windows.title": "Suport per a Windows en preparació",
+  "install.windows.title": "rFirma per a Windows",
   "install.windows.body":
-    "La integració nativa per a Windows es troba actualment en desenvolupament. Farà servir directament el magatzem de certificats de Windows (MS-CAPI / CNG) per signar amb el teu certificat personal o DNIe sense necessitat de programari intermedi.",
+    "Instal·lador per al teu usuari, sense permisos d'administrador. Fa servir directament l'emmagatzem de certificats de Windows (MS-CAPI / CNG) i, un cop instal·lat, s'actualitza des de la mateixa aplicació: cada versió nova arriba amb la seua signatura minisign, que es comprova abans d'instal·lar-la.",
+  "install.windows.download": "Descarrega l'instal·lador de Windows",
   "install.windows.note":
-    "Estarà disponible com a instal·lador <code>.msi</code> i a través de <code>winget</code>. Pots seguir l'avenç del projecte a <a href=\"https://github.com/sgomez/rfirma\" target=\"_blank\" rel=\"noopener noreferrer\">GitHub</a>.",
+    "Verifica el que descarregues: baixa <code>SHA256SUMS</code> de la <a href=\"https://github.com/sgomez/rfirma/releases/latest\" target=\"_blank\" rel=\"noopener noreferrer\">Release</a> i comprova que el hash de l'instal·lador coincideix amb la seua línia. L'instal·lador no està signat amb Authenticode, així que SmartScreen t'avisarà en obrir-lo.",
   "install.macos.title": "Suport per a macOS en preparació",
   "install.macos.body":
     "La versió nativa per a macOS està en fase de desenvolupament actiu. S'integrarà amb el Keychain d'Apple i CryptoTokenKit per a un accés fluid i segur a les identitats digitals del sistema.",

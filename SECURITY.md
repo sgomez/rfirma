@@ -15,7 +15,7 @@ es un dato personal publicado para siempre, y además no da acuse de recibo. El 
 sí: queda registrado, se puede conversar dentro y termina en un aviso publicado con crédito
 a quien lo encontró.
 
-Cuenta qué versión usabas, en qué canal la instalaste (flatpak, `.deb`, `.rpm`) y cómo
+Cuenta qué versión usabas, en qué canal la instalaste (flatpak, `.deb`, `.rpm`, Windows) y cómo
 reproducirlo. Si lo que has encontrado toca a la firma, di también qué formato
 (PAdES, CAdES, XAdES o FacturaE) y si la rúbrica era visible.
 
@@ -70,13 +70,22 @@ dice cómo renovar la subclave y cómo revocarla.
 **La clave de actualizaciones de Windows** es un par minisign aparte, que solo firma el
 instalador de Windows (`*_x64-setup.exe`) para el *updater*: su firma va en la Release, en el
 `.sig` de al lado, y cubierta por el mismo `SHA256SUMS.asc`. La pública va versionada en el
-repositorio, en la configuración de Windows y junto al script que firma; la privada y su contraseña son secretos del entorno
-`release`, y en ninguna otra parte. La crea una persona, nunca el CI, siguiendo
+repositorio, en la configuración de Windows y junto al script que firma; la privada y su
+contraseña son secretos del entorno `release`, y en ninguna otra parte. La crea una persona,
+nunca el CI, siguiendo
 [«La clave de actualizaciones de Windows»](packaging/repo/README.md#la-clave-de-actualizaciones-de-windows),
-que también dice cómo rotarla.
+que también dice cómo rotarla ([ADR-0015](docs/adr/0015-canal-de-distribucion-propio.md)).
 
-rFirma todavía no se actualiza sola: no hay `latest.json`, y lo único que hace es enseñarte
-que existe una versión nueva.
+**Qué implica su compromiso**: quien la tenga puede firmar un instalador que las instalaciones
+de Windows aceptarán como actualización, y se instalará **sin que nadie lo apruebe**. Por eso es
+aparte de la GPG y por eso el runbook la trata como la más delicada. Las instalaciones que ya
+existen solo confían en la pública embebida en su versión, así que la rotación exige publicar
+antes una versión que lleve la nueva.
+
+En Windows, rFirma se actualiza desde la propia aplicación: baja el instalador de
+`https://rfirma.sgomez.me/windows/`, comprueba su firma minisign contra la pública embebida y
+solo entonces lo ejecuta. En flatpak, `.deb` y `.rpm` la actualización es la de su gestor de
+paquetes, y rFirma solo te avisa.
 
 ## Cómo verificar lo que descargas
 
@@ -106,21 +115,23 @@ gh attestation verify rfirma_*.deb --repo sgomez/rfirma
 
 ## La comprobación de versión es la primera conexión saliente
 
-Y hoy es también la única. Al arrancar, rFirma pregunta a GitHub por la última publicación:
+Y, salvo la descarga del instalador en Windows, la única. Al arrancar, y cada vez que se abre el Diagnóstico o se pulsa
+«Volver a comprobar», rFirma pregunta por la última publicación:
 
-- `GET https://api.github.com/repos/sgomez/rfirma/releases/latest`
-- Como mucho una vez cada 24 horas, con 10 segundos de espera y sin reintentos.
+- `GET https://api.github.com/repos/sgomez/rfirma/releases/latest` en flatpak, `.deb` y `.rpm`,
+  y `GET https://rfirma.sgomez.me/windows/latest.json` en Windows.
+- Sin caché por tiempo —se pregunta cada vez—, con 4 segundos de espera y sin reintentos.
 - **Sin credenciales y sin identificador de ninguna clase.** Lo único que rFirma dice de sí
   misma es el `User-Agent`, `rfirma/<versión>`, porque la API de GitHub rechaza con 403 lo
   que no se presenta.
 - Cualquier tropiezo —sin red, DNS que no resuelve, GitHub que contesta 500— es silencio:
   no hay error que enseñar ni reintento que hacer.
 - Lo que llega es un número de versión para pintar una franja. **No se descarga ni se
-  instala nada.**
+  instala nada** hasta que la persona lo pide, y solo en Windows.
 
 Se apaga en **Preferencias → Privacidad**, con el ajuste para dejar de avisar, que está
 siempre visible.
 
-Ningún otro camino de rFirma abre una conexión: firmar, elegir certificado y hablar con el
+Ningún otro camino de rFirma abre una conexión —y la descarga del instalador, solo si la pides—: firmar, elegir certificado y hablar con el
 token PKCS#11 ocurren enteros en tu equipo, y la clave privada no sale de él
 ([ADR-0001](docs/adr/0001-firma-trifasica-clave-privada-solo-en-rust.md)).

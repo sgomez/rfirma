@@ -133,10 +133,10 @@ export const eu: Dictionary = {
     "Azken dokumentuak eta erabilitako azken ziurtagiria gogoratzen ditu",
   "comparison.os.label": "Sistema eragileak",
   "comparison.os.autofirma": "Windows, macOS, Linux, Android eta iOS",
-  "comparison.os.rfirma": "Linux; Windows eta macOS, garapenean",
+  "comparison.os.rfirma": "Linux eta Windows; macOS, garapenean",
   "comparison.updates.label": "Eguneratze-bidea",
   "comparison.updates.autofirma": "<code>.deb</code> edo <code>.rpm</code> eskuz deskargatuta",
-  "comparison.updates.rfirma": "Jatorrizko biltegiak: APT, DNF eta Flatpak",
+  "comparison.updates.rfirma": "Jatorrizko biltegiak: APT, DNF eta Flatpak; Windowsen, aplikaziotik bertatik",
   "comparison.desktop.label": "Mahaigainarekiko integrazioa",
   "comparison.desktop.autofirma": "Swingen itxura propioa",
   "comparison.desktop.rfirma": "Mahaigainaren estiloa jarraitzen du, gai argi eta ilunarekin",
@@ -160,11 +160,12 @@ export const eu: Dictionary = {
   "install.dnf.body":
     "Fedora eta RPM paketeetan oinarritutako eratorrientzat. Biltegia metadatuen eta paketeen egiaztapen kriptografiko zorrotzarekin konfiguratzen du (<code>gpgcheck=1</code> eta <code>repo_gpgcheck=1</code>).",
   "install.soon": "Garatzen",
-  "install.windows.title": "Windowsentzako euskarria prestatzen",
+  "install.windows.title": "rFirma Windowsentzat",
   "install.windows.body":
-    "Windowsentzako integrazio natiboa garatzen ari da une honetan. Windowsen ziurtagiri-biltegia (MS-CAPI / CNG) zuzenean erabiliko du, zure ziurtagiri pertsonalarekin edo DNIe-arekin sinatzeko tarteko softwarerik gabe.",
+    "Zure erabiltzailearentzako instalatzailea, administratzaile-baimenik gabe. Windowseko ziurtagiri-biltegia (MS-CAPI / CNG) zuzenean erabiltzen du eta, instalatu ondoren, aplikazioak berak eguneratzen du: bertsio berri bakoitza bere minisign sinadurarekin dator, eta instalatu aurretik egiaztatzen da.",
+  "install.windows.download": "Deskargatu Windowseko instalatzailea",
   "install.windows.note":
-    "<code>.msi</code> instalatzaile gisa eta <code>winget</code> bidez egongo da erabilgarri. Proiektuaren aurrerapena <a href=\"https://github.com/sgomez/rfirma\" target=\"_blank\" rel=\"noopener noreferrer\">GitHub</a>en jarrai dezakezu.",
+    "Egiaztatu deskargatzen duzuna: jaitsi <code>SHA256SUMS</code> <a href=\"https://github.com/sgomez/rfirma/releases/latest\" target=\"_blank\" rel=\"noopener noreferrer\">Release</a>-tik eta begiratu instalatzailearen hash-a bere lerroarekin bat datorrela. Instalatzailea ez dago Authenticode-rekin sinatuta, beraz SmartScreen-ek abisua emango dizu irekitzean.",
   "install.macos.title": "macOSentzako euskarria prestatzen",
   "install.macos.body":
     "macOSentzako bertsio natiboa garapen aktiboan dago. Apple-ren Keychain eta CryptoTokenKit-ekin integratuko da, sistemaren identitate digitaletara sarbide fluidoa eta segurua izateko.",

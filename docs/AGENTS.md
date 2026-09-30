@@ -23,7 +23,7 @@ Busca en este índice, y si aun así necesitas el fichero, entra con
 | 0012 | La rúbrica la normaliza Rust, no Java |
 | 0013 | Estructura del repositorio y cadena de compilación (el `justfile`, el *bundler*) |
 | 0014 | Gradas de prueba y puerta de calidad (CRAP) |
-| 0015 | Canal propio: tres repositorios en `rfirma.sgomez.me` y Releases |
+| 0015 | Canal propio: repositorios y canal de Windows en `rfirma.sgomez.me`, y Releases |
 | 0016 | El sello de sesión: una sola invariante |
 | 0017 | La arquitectura de los dos lados: puertos en la ventana, contextos con capas en el backend |
 | 0018 | rFirma no es un lector de PDF: la firma empieza por un verbo |
