@@ -339,14 +339,16 @@ impl From<WithdrawalReportView> for WithdrawalReport {
 
 crossing! {
     /// El control de la barra de título nativa que se ha pulsado.
-    #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
-    #[serde(rename_all = "camelCase")]
+    #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+    #[serde(tag = "action", rename_all = "camelCase")]
     pub enum TitlebarActionView {
         Open,
         Status,
         Preferences,
         Feedback,
         About,
+        ClearRecents,
+        Recent { path: String },
     }
 }
 
@@ -371,6 +373,30 @@ crossing! {
         pub feedback: String,
         /// Entrada de «Acerca de».
         pub about: String,
+        /// Rótulo de la sección de recientes.
+        pub recents: String,
+        /// Entrada que vacía la lista de recientes.
+        pub clear_recents: String,
+        /// Sufijo de un reciente que ya no está en disco.
+        pub not_found: String,
+    }
+}
+
+crossing! {
+    /// Un reciente de la barra de título nativa, con lo que pinta su entrada.
+    #[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
+    #[serde(rename_all = "camelCase")]
+    pub struct TitlebarRecentView {
+        /// Ruta que la ventana recibe al elegirlo.
+        pub path: String,
+        /// Nombre del documento.
+        pub name: String,
+        /// Carpeta que lo contiene.
+        pub folder: String,
+        /// Si el documento está firmado.
+        pub signed: bool,
+        /// Si el fichero se sigue encontrando.
+        pub found: bool,
     }
 }
 
@@ -385,5 +411,7 @@ crossing! {
         pub warning_visible: bool,
         /// Las etiquetas ya traducidas.
         pub labels: TitlebarLabelsView,
+        /// Los recientes, del más nuevo al más viejo.
+        pub recents: Vec<TitlebarRecentView>,
     }
 }
