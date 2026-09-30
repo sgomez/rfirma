@@ -47,6 +47,8 @@ expect "site-driver" "java=false web=true rust=true native=true landing=false" "
 expect "kit fnmt" "java=true web=false rust=true native=true landing=false" "testdata/fnmt/README.md"
 expect "landing" "java=false web=false rust=false native=false landing=true" "packaging/repo/site/src/pages/index.astro"
 expect "imagen de la landing" "java=false web=false rust=false native=false landing=true" "packaging/repo/Dockerfile"
+expect "sistema de diseno" "java=false web=true rust=true native=false landing=true" "rfirma-app/src/design-system/bundle/styles.css"
+expect "consola" "java=false web=true rust=false native=false landing=false" "rfirma-conformance/console/src/App.tsx"
 expect "raiz del workspace" "$all" "pnpm-lock.yaml"
 expect "la union de dos" "java=false web=true rust=true native=true landing=false" "rfirma-app/src/App.tsx" "rfirma-app/src-tauri/src/lib.rs"
 

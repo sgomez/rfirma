@@ -48,13 +48,13 @@ Three operations read the same `CI` workflow, for different readers.
 
 **Narrow.** The fast lane runs `just check` across all three toolchains —
 split into one job per chain (`Cadena Java`, `Cadena TypeScript`, `Cadena
-Rust`), which together are exactly `just check` minus `just tools`. It
+Rust`) plus `Landing`, which together are exactly `just check` minus `just tools`. It
 verifies:
 
 - the Java bridge **compiles** under GraalVM CE 25 with `-Xlint:all`;
 - AutoFirma's dependencies **resolve and build** on a clean runner
   (`bootstrap.sh` against the immutable upstream tag `v1.9.1`);
-- **Biome** passes on `rfirma-app/` (`biome ci`), and `tsc -b` typechecks
+- **Biome** passes on the app, the conformance console and the landing (`biome ci` from the root), and `tsc -b` typechecks
   before `vite build`;
 - **clippy with `-D warnings`** and `cargo fmt --check` pass on
   `rfirma-app/src-tauri/`, over `--all-targets --all-features`. It does **not**
