@@ -60,7 +60,7 @@ comparten la numeración: el siguiente ADR, esté donde esté, toma el número l
 Se consultan **solo si vas a cambiar la decisión que sostienen**. Son los
 ficheros más grandes del repositorio (hasta 32 KB).
 
-`ancla-y-paginas-en-el-puente` · `arrastre-bajo-el-sandbox` ·
+`ancla-y-paginas-en-el-puente` · `arrastre-bajo-el-sandbox` · `barra-de-titulo-en-linux` ·
 `ca-en-los-almacenes-de-confianza` · `ca-nss-navegador-abierto` · `campos-de-firma-vacios` ·
 `contrato-protocolo-afirma` · `coordenadas-recuadro-pades` ·
 `exclusion-afirma-ui-utils` · `filtros-sede-unmeasured` · `firma-visible-trifasica` ·
