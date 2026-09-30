@@ -14,7 +14,7 @@ enlace simbólico.
 | `site/src/scripts/` | Las cuatro funciones de la página: pestañas, copiar, demo guiada y aparición al bajar |
 | `Caddyfile` | Configuración de Caddy (no-root, puerto 3000, cabeceras, healthcheck y las rutas de los tres repositorios) |
 | `Dockerfile` | `caddy:alpine` no-root más la landing y Caddyfile |
-| `download-series.sh` | Baja y verifica **toda** la serie menor vigente desde las Releases |
+| `download-series.sh` | Baja **toda** la serie menor vigente desde las Releases y verifica cada versión con `../verify-packages.sh --signed` |
 | `build-tree.sh` | Reconstruye los tres repositorios enteros, desde cero, en un directorio nuevo |
 | `publish-tree.sh` | Sube el árbol al anfitrión e intercambia el enlace `actual` |
 | `*.test.sh` | Las pruebas de los dos anteriores; `just check-repo` las corre |

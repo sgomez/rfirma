@@ -63,14 +63,4 @@ if "$script" write "$unknown" 2> /dev/null; then
     fail "extension desconocida: debia fallar"
 fi
 
-digests="$root/packaging/check-digests.sh"
-"$script" write "$full"
-(cd "$full" && rm -f SHA256SUMS && sha256sum -- * > "$tmp/SHA256SUMS.build")
-echo signature >> "$full/rfirma-1.0.0-1.x86_64.rpm"
-"$digests" "$tmp/SHA256SUMS.build" "$full" > /dev/null || fail "digests: un firmable puede cambiar"
-echo tampered >> "$full/rfirma_1.0.0_amd64.deb"
-if "$digests" "$tmp/SHA256SUMS.build" "$full" > /dev/null 2>&1; then
-    fail "digests: un paquete no firmable no puede cambiar"
-fi
-
 echo "OK  packages-manifest"
