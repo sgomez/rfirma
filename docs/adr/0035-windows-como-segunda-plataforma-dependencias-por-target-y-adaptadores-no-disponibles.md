@@ -240,9 +240,10 @@ la aplicación instalada para actualizarse en modo `passive`, sin pedir administ
 ensayarlo sin etiquetar, `gh workflow run build.yml --ref <rama>`.
 
 Una etiqueta solo lee las cachés de `main`, así que la compilación de release de Windows iría
-siempre en frío. El job `windows-release-cache` de `ci.yml` corre la misma receta en `main` con
-el cron semanal y a mano, y guarda la caché de Rust con la clave compartida `windows-release`,
-que el job de `build.yml` solo lee. Las PR y los push a `main` no lo pagan.
+siempre en frío. El job `warm-release-cache` de `ci.yml` es un calentador con matriz por sistema operativo: Linux
+corre en cada push a `main` y Windows, con la misma receta que la release, en el cron semanal y a
+mano. Guarda la caché de Rust con la clave compartida `windows-release`, que el job de `build.yml`
+solo lee. Ninguna PR arranca un runner de calentamiento.
 
 La puerta CRAP del carril rápido de Linux puntúa como 0 % de cobertura lo que Linux no compila, y
 el adaptador CNG (`identity/adapters/windows_store/cng.rs`) tiene funciones de complejidad 6 y 7
@@ -281,6 +282,9 @@ configuración.
 el fichero en la página de Releases, descargarlo y ejecutarlo a mano cada vez, y la mayoría se
 quedaba en la versión con la que instaló. Linux lo resuelve con apt, dnf y ostree; en Windows
 solo lo resuelve un *updater* con un `latest.json` estable en un origen propio.
+
+**Un job de calentamiento por sistema**, como al principio (`windows-release-cache` y `release`): dos
+definiciones casi iguales, y añadir macOS habría sido un tercer job en vez de una fila de la matriz.
 
 **Ejecutar `VC_redist.x64.exe` al instalar**: instala el runtime para todo el equipo y pide
 administrador. La copia local son dos ficheros, unos 170 KB, junto a la `.dll`.

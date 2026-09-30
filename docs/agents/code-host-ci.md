@@ -143,7 +143,7 @@ to be fast.
 | scope | `Alcance` | every run; the four jobs below wait for it |
 | fast | `Cadena Java`, `Cadena TypeScript`, `Cadena Rust` (parallel) | every push to `main`; a PR only if its files affect the chain |
 | native | `Imagen nativa` (parallel) | every push to `main`, tags `v*`, manual dispatch, weekly cron; a PR only if its files affect it |
-| slow | `Binario de release` | tags `v*`, manual dispatch, weekly cron, or a PR labelled `release` (read on the next push, not when the label is added) |
+| warm | `Calienta la cache de la entrega` | Linux on every push to `main`; Windows on the weekly cron and manual dispatch; never a PR |
 | cron | `Caducidad del kit FNMT` | weekly cron and manual dispatch only |
 
 **Carriles por ficheros.** En un PR, `Alcance` pasa la lista de ficheros a
@@ -189,8 +189,9 @@ This ensures regressions in tier C tests or FFI compatibility are caught at PR t
 instead of escaping to `main`. Rebuilding `native-image` only happens when the Java
 bridge actually changes.
 
-The **release binary** is built in its own job and remains scoped to releases,
-manual runs, cron, or PRs explicitly labelled `release`.
+The release caches are warmed by `Calienta la cache de la entrega`: Linux on
+every push to `main`, Windows on the weekly cron and manual dispatch. No PR
+starts it, and the `release` label no longer triggers anything.
 
 **A job's conclusion does not distinguish "passed" from "skipped every step".**
 Read the steps, not the conclusion, whenever a green job is the evidence for
@@ -202,13 +203,11 @@ gh api "repos/{owner}/{repo}/actions/runs/<run-id>/jobs" \
 ```
 
 This is the same `steps > 0` test that tells a code-red from an infra-red
-above, applied to a *green* job. It is what catches a `release` label added
-after the last push: the workflow does not listen for `labeled`, so the
-`Binario de release` job of that run is green with every step skipped.
+above, applied to a *green* job.
 
 The weekly cron does triple duty: it keeps the `~/.m2` cache from expiring
 (GitHub evicts after 7 days unused, and refilling it means compiling all of
-AutoFirma), it is the safety net for the slow lane, and it is the **watchman
+AutoFirma), it is the safety net for the warm lane, and it is the **watchman
 for the FNMT test kit** — 90 days before `testdata/fnmt/active-rsa.p12`
 expires on **2028-10-30** it opens an issue. That warning lives in the cron and
 not in the fast lane on purpose: warning there would break every open PR at
