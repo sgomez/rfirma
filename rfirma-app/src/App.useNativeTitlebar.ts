@@ -2,14 +2,33 @@
 
 import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import type { NativeTitlebar, TitlebarAction } from "./shell/nativeTitlebar";
+import type { RecentDocument } from "./documents/recents";
+import type {
+  NativeTitlebar,
+  TitlebarAction,
+  TitlebarActionName,
+  TitlebarRecent,
+} from "./shell/nativeTitlebar";
 
-export type TitlebarHandlers = Record<TitlebarAction, () => void>;
+export type TitlebarHandlers = Record<TitlebarActionName, () => void> & {
+  recent: (id: string) => void;
+};
+
+function recentEntry(row: RecentDocument): TitlebarRecent {
+  return {
+    path: row.id,
+    name: row.name,
+    folder: row.folder ?? "",
+    signed: row.badge === "Signed",
+    found: row.available,
+  };
+}
 
 export function useNativeTitlebar(
   titlebar: NativeTitlebar,
   openVisible: boolean,
   warningVisible: boolean,
+  recents: readonly RecentDocument[],
   handlers: TitlebarHandlers,
 ) {
   const { t } = useTranslation();
@@ -27,11 +46,22 @@ export function useNativeTitlebar(
         preferences: t("header.preferences"),
         feedback: t("header.help"),
         about: t("header.about"),
+        recents: t("recents.heading"),
+        clearRecents: t("recents.clear"),
+        notFound: t("recents.missing"),
       },
+      recents: recents.map(recentEntry),
     });
-  }, [titlebar, openVisible, warningVisible, t]);
+  }, [titlebar, openVisible, warningVisible, recents, t]);
 
   const latest = useRef(handlers);
   latest.current = handlers;
-  useEffect(() => titlebar.onAction((action) => latest.current[action]()), [titlebar]);
+  useEffect(
+    () =>
+      titlebar.onAction((received: TitlebarAction) => {
+        if (received.action === "recent") latest.current.recent(received.path);
+        else latest.current[received.action]();
+      }),
+    [titlebar],
+  );
 }
