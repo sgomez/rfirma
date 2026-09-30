@@ -31,6 +31,15 @@ jq -e 'all(.[]; has("platform") and has("file") and has("format") and has("signa
 [ "$("$script" platform-files "$full" linux | wc -l)" = 2 ] || fail "platform-files: deb y rpm de linux"
 [ -z "$("$script" platform-files "$full" macos)" ] || fail "platform-files: una plataforma sin filas no lista nada"
 
+notes="$("$script" notes "$full")"
+grep -qF '## Instalación' <<< "$notes" || fail "notas: falta la seccion de instalacion"
+grep -qF 'flatpak remote-add' <<< "$notes" || fail "notas: el aviso del flatpak"
+grep -qF 'SmartScreen' <<< "$notes" || fail "notas: el aviso de windows"
+! grep -qF 'rfirma_1.0.0_amd64.deb' <<< "$notes" || fail "notas: un paquete sin aviso no aparece"
+jq '(.[] | select(.format == "deb") | .warning) = "Aviso nuevo del deb."' "$full/paquetes.json" > "$tmp/m.json"
+mv "$tmp/m.json" "$full/paquetes.json"
+grep -qF 'Aviso nuevo del deb.' <<< "$("$script" notes "$full")" || fail "notas: un cambio del manifiesto llega a las notas"
+
 rc="$tmp/rc"
 mkdir "$rc"
 : > "$rc/me.sgomez.rfirma.flatpak"

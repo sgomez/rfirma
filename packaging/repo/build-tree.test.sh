@@ -86,6 +86,31 @@ else
     ok "una version sin los tres paquetes detiene la publicacion"
 fi
 
+# a_manifest_without_a_format_stops_the_publication
+sin_nombre="$tmp/sin-nombre"
+paquetes_de_pega "$sin_nombre/v0.4.0" "0.4.0"
+jq 'map(select(.format != "deb"))' "$sin_nombre/v0.4.0/paquetes.json" > "$tmp/sin-deb.json"
+mv "$tmp/sin-deb.json" "$sin_nombre/v0.4.0/paquetes.json"
+if salida="$("$construye" "$sin_nombre" "$tmp/arbol-malo" "$tmp/rfirma.asc" "$SIN_FIRMA" 2>&1)"; then
+    fail "un manifiesto sin el deb no detiene la publicacion"
+elif grep -q "ningun paquete deb" <<< "$salida"; then
+    ok "un manifiesto sin el deb detiene la publicacion y dice cual"
+else
+    fail "un manifiesto sin el deb se para por otro motivo: $salida"
+fi
+
+# a_package_outside_the_manifest_stops_the_publication
+de_mas="$tmp/de-mas"
+paquetes_de_pega "$de_mas/v0.4.0" "0.4.0"
+echo "de mas" > "$de_mas/v0.4.0/subido-a-mano.rpm"
+if salida="$("$construye" "$de_mas" "$tmp/arbol-malo" "$tmp/rfirma.asc" "$SIN_FIRMA" 2>&1)"; then
+    fail "un rpm fuera del manifiesto no detiene la publicacion"
+elif grep -q "subido-a-mano.rpm" <<< "$salida"; then
+    ok "un rpm fuera del manifiesto detiene la publicacion y dice cual"
+else
+    fail "un rpm fuera del manifiesto se para por otro motivo: $salida"
+fi
+
 # an_empty_series_stops_the_publication
 mkdir -p "$tmp/vacia"
 if "$construye" "$tmp/vacia" "$tmp/arbol-vacio" "$tmp/rfirma.asc" "$SIN_FIRMA" > /dev/null 2>&1; then

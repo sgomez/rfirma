@@ -90,7 +90,7 @@ jobs:
           shopt -s nullglob
           mapfile -t rpms < <(scripts/packages-manifest.sh files paquetes rpm | sed 's|^|paquetes/|')
           if [ ${#rpms[@]} -eq 0 ]; then
-            echo "sin .rpm que firmar (version candidata, ID-154)"
+            echo "sin .rpm que firmar"
             exit 0
           fi
           # `rpmsign` no sabe de `--passphrase`: se redefine el mandato con `--pinentry-mode loopback`.
@@ -157,43 +157,7 @@ jobs:
           subject-path: ${{ steps.subjects.outputs.paths }}
 
       - name: Notas del borrador
-        run: |
-          set -euo pipefail
-          cat > "${{ runner.temp }}/notas.md" <<'EOF'
-          ## Antes de publicar
-
-          Publicar esta Release es lo que dispara la distribucion a los tres
-          repositorios de `rfirma.sgomez.me`. Antes de hacerlo:
-
-          1. Descarga `manual-gate.pdf` y llevalo a un validador oficial
-             (VALIDe). La puerta manual no la cierra ninguna prueba automatica.
-          2. Comprueba la firma de los paquetes:
-
-             ```
-             gpg --verify SHA256SUMS.asc SHA256SUMS
-             sha256sum --check SHA256SUMS
-             ```
-
-          La clave que firma es la de rFirma, publicada en
-          <https://rfirma.sgomez.me/rfirma.asc>. Su huella y su politica de
-          revocacion estan en `SECURITY.md`.
-
-          ## Instalacion
-
-          El bundle de flatpak necesita el remoto de Flathub anadido, porque el
-          runtime no viaja dentro:
-
-          ```
-          flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-          ```
-
-          El instalador de Windows (`*_x64-setup.exe`) instala para el usuario,
-          sin administrador. No esta firmado con Authenticode: SmartScreen
-          avisa al abrirlo y hay que pulsar «Mas informacion» y «Ejecutar de
-          todas formas». Su resumen esta en el mismo `SHA256SUMS` firmado.
-          El `.sig` que lo acompana es su firma de actualizacion (minisign).
-
-          EOF
+        run: scripts/packages-manifest.sh notes paquetes > "${{ runner.temp }}/notas.md"
 
       # `--draft` siempre, sin condicion: publicar es un gesto humano (ADR-0015).
       - name: Release en borrador
