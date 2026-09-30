@@ -4,8 +4,7 @@ export const en: Dictionary = {
   "meta.title": "rFirma — Native electronic signature for the desktop",
   "meta.description":
     "Desktop application in Rust and React that replaces AutoFirma's Swing interface and local servers, with the Administration's official cryptography.",
-  "meta.image.alt":
-    "The rFirma logo on a green background with the domain rfirma.sgomez.me",
+  "meta.image.alt": "The rFirma logo on a green background with the domain rfirma.sgomez.me",
 
   "notice.aria": "Notice about official ownership",
   "notice.badge": "Notice",
@@ -68,12 +67,12 @@ export const en: Dictionary = {
   "how.step3.body":
     "The PIN is requested in a native dialogue, not a web window, and is wiped from memory as soon as the signature is done.",
   "how.step4.title": "Signature complete",
-  "how.step4.body": "The signed PDF is saved next to the original, and the summary shows its format.",
+  "how.step4.body":
+    "The signed PDF is saved next to the original, and the summary shows its format.",
   "how.step1.alt": "rFirma with a PDF open that already carries a valid signature",
   "how.step2.alt": "Certificate picker open, with the search box and the available certificates",
   "how.step3.alt": "Native dialog to enter the certificate PIN",
   "how.step4.alt": "PDF signed in PAdES, with the signature summary",
-
 
   "pillars.kicker": "Why rFirma",
   "pillars.title": "Four design decisions",
@@ -122,21 +121,22 @@ export const en: Dictionary = {
   "comparison.stamp.rfirma": "Drag it onto the page, with text templates and a faithful preview",
   "comparison.ca.label": "Browser trust in the local server",
   "comparison.ca.autofirma": "The installer registers the CA on the system, with privileges",
-  "comparison.ca.rfirma": "The application registers its CA in the person's NSS stores, without root",
+  "comparison.ca.rfirma":
+    "The application registers its CA in the person's NSS stores, without root",
   "comparison.lang.label": "Languages",
   "comparison.lang.autofirma": "Spanish only, with the Swing dialogue strings",
   "comparison.lang.rfirma":
     "Spanish, Catalan, Basque, Galician and English, with its own catalogue and switching from Preferences",
   "comparison.privacy.label": "Document manager",
   "comparison.privacy.autofirma": "—",
-  "comparison.privacy.rfirma":
-    "Remembers recent documents and the last certificate used",
+  "comparison.privacy.rfirma": "Remembers recent documents and the last certificate used",
   "comparison.os.label": "Operating systems",
   "comparison.os.autofirma": "Windows, macOS, Linux, Android and iOS",
   "comparison.os.rfirma": "Linux and Windows; macOS, in development",
   "comparison.updates.label": "Update channel",
   "comparison.updates.autofirma": "Manual download of a <code>.deb</code> or <code>.rpm</code>",
-  "comparison.updates.rfirma": "Native repositories: APT, DNF and Flatpak; on Windows, from the app itself",
+  "comparison.updates.rfirma":
+    "Native repositories: APT, DNF and Flatpak; on Windows, from the app itself",
   "comparison.desktop.label": "Desktop integration",
   "comparison.desktop.autofirma": "Swing's own look",
   "comparison.desktop.rfirma": "Follows the desktop's style, with light and dark themes",
@@ -154,7 +154,7 @@ export const en: Dictionary = {
   "install.flatpak.body":
     "Recommended for Linux distributions that use neither APT nor DNF. It resolves from rFirma's own ostree remote, and the <code>org.gnome.Platform</code> runtime is downloaded from Flathub with no setup. You only need <code>flatpak</code> and <code>xdg-desktop-portal</code> installed.",
   "install.flatpak.tip":
-    "You can also download and double-click install the <a href=\"https://rfirma.sgomez.me/rfirma.flatpakref\">rfirma.flatpakref</a> file if your desktop supports it.",
+    'You can also download and double-click install the <a href="https://rfirma.sgomez.me/rfirma.flatpakref">rfirma.flatpakref</a> file if your desktop supports it.',
   "install.apt.body":
     "For Debian, Ubuntu and derived distributions. Sets up the repository using the modern <code>deb822</code> format with the GPG key verified in <code>/usr/share/keyrings/</code>.",
   "install.dnf.body":
@@ -165,12 +165,12 @@ export const en: Dictionary = {
     "Per-user installer, no administrator rights needed. It uses the Windows certificate store (MS-CAPI / CNG) directly and, once installed, updates from within the app: every new version arrives with its minisign signature, which is checked before installing it.",
   "install.windows.download": "Download the Windows installer",
   "install.windows.note":
-    "Verify what you download: get <code>SHA256SUMS</code> from the <a href=\"https://github.com/sgomez/rfirma/releases/latest\" target=\"_blank\" rel=\"noopener noreferrer\">Release</a> and check that the installer's hash matches its line. The installer is not Authenticode-signed, so SmartScreen will warn you when you open it.",
+    'Verify what you download: get <code>SHA256SUMS</code> from the <a href="https://github.com/sgomez/rfirma/releases/latest" target="_blank" rel="noopener noreferrer">Release</a> and check that the installer\'s hash matches its line. The installer is not Authenticode-signed, so SmartScreen will warn you when you open it.',
   "install.macos.title": "macOS support in the works",
   "install.macos.body":
     "The native version for macOS is in active development. It will integrate with Apple's Keychain and CryptoTokenKit for smooth, secure access to the system's digital identities.",
   "install.macos.note":
-    "It will be distributed as a <code>.dmg</code> disk image and through a <code>Homebrew</code> formula. You can follow the project's progress on <a href=\"https://github.com/sgomez/rfirma\" target=\"_blank\" rel=\"noopener noreferrer\">GitHub</a>.",
+    'It will be distributed as a <code>.dmg</code> disk image and through a <code>Homebrew</code> formula. You can follow the project\'s progress on <a href="https://github.com/sgomez/rfirma" target="_blank" rel="noopener noreferrer">GitHub</a>.',
 
   "transparency.kicker": "Transparency",
   "transparency.title": "All the code, in the open",
@@ -178,13 +178,13 @@ export const en: Dictionary = {
     "rFirma is free, auditable software under the <strong>EUPL 1.2</strong> licence. The code and the cryptographic engine live in two public repositories.",
   "transparency.repo1.title": "Application and FFI bridge",
   "transparency.repo1.body":
-    "<a href=\"https://github.com/sgomez/rfirma\" target=\"_blank\" rel=\"noopener noreferrer\">sgomez/rfirma</a> holds the Tauri interface (Rust + React), the FFI bridge (<code>rfirma-native-bridge</code>) and the packaging.",
+    '<a href="https://github.com/sgomez/rfirma" target="_blank" rel="noopener noreferrer">sgomez/rfirma</a> holds the Tauri interface (Rust + React), the FFI bridge (<code>rfirma-native-bridge</code>) and the packaging.',
   "transparency.repo2.title": "Original cryptographic engine",
   "transparency.repo2.body":
-    "The signing logic consumes the artefacts from <a href=\"https://github.com/ctt-gob-es/clienteafirma\" target=\"_blank\" rel=\"noopener noreferrer\">ctt-gob-es/clienteafirma</a>, compiled into a native library with GraalVM Native Image.",
+    'The signing logic consumes the artefacts from <a href="https://github.com/ctt-gob-es/clienteafirma" target="_blank" rel="noopener noreferrer">ctt-gob-es/clienteafirma</a>, compiled into a native library with GraalVM Native Image.',
   "transparency.key.title": "Package signing key",
   "transparency.key.body":
-    "Public key at <a href=\"https://rfirma.sgomez.me/rfirma.asc\">rfirma.asc</a>. Check its fingerprint after downloading it with <code>gpg --show-keys rfirma.asc</code>:",
+    'Public key at <a href="https://rfirma.sgomez.me/rfirma.asc">rfirma.asc</a>. Check its fingerprint after downloading it with <code>gpg --show-keys rfirma.asc</code>:',
 
   "footer.tagline":
     "Native electronic signature for the desktop, with the official cryptographic engine and no Java on your computer.",

@@ -24,6 +24,22 @@
   gap: 4px;
 }
 
+/* Los 44 px de alto mínimo son el área de pulsación de la sección 8 del sistema de diseño. */
+.switch__control {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--switch-gap);
+  width: 100%;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--rf-text);
+  font-family: var(--rf-font-body);
+  text-align: left;
+  cursor: pointer;
+}
+
 /* El interruptor de Preferencias: misma pastilla, 16 px hasta el texto. */
 .switch--wide {
   --switch-gap: var(--rf-space-sm);
@@ -40,22 +56,6 @@
   content: "";
   position: absolute;
   inset: -10px 0;
-}
-
-/* Los 44 px de alto mínimo son el área de pulsación de la sección 8 del sistema de diseño. */
-.switch__control {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--switch-gap);
-  width: 100%;
-  min-height: 44px;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--rf-text);
-  font-family: var(--rf-font-body);
-  text-align: left;
-  cursor: pointer;
 }
 
 .switch__control:disabled {

@@ -48,7 +48,11 @@ catalogs:
 
 importers:
 
-  .: {}
+  .:
+    devDependencies:
+      '@biomejs/biome':
+        specifier: 'catalog:'
+        version: 2.5.11
 
   packaging/repo/site:
     devDependencies:
@@ -83,9 +87,6 @@ importers:
         specifier: 17.0.12
         version: 17.0.12(i18next@26.4.0(typescript@7.0.2))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@7.0.2)
     devDependencies:
-      '@biomejs/biome':
-        specifier: 'catalog:'
-        version: 2.5.11
       '@tauri-apps/cli':
         specifier: 2.11.4
         version: 2.11.4
@@ -153,9 +154,6 @@ importers:
         specifier: 8.4.0
         version: 8.4.0(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
     devDependencies:
-      '@biomejs/biome':
-        specifier: 'catalog:'
-        version: 2.5.11
       '@testing-library/jest-dom':
         specifier: 'catalog:'
         version: 7.0.1(@testing-library/dom@10.4.2)(vitest@4.1.11)

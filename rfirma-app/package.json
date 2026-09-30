@@ -8,8 +8,6 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "lint": "biome ci .",
-    "format": "biome check --write .",
     "test": "vitest run --reporter=dot",
     "tauri": "tauri",
     "prepare": "tools/install-git-hooks.sh"
@@ -24,7 +22,6 @@
     "react-i18next": "17.0.12"
   },
   "devDependencies": {
-    "@biomejs/biome": "catalog:",
     "@tauri-apps/cli": "2.11.4",
     "@testing-library/jest-dom": "catalog:",
     "@testing-library/react": "catalog:",

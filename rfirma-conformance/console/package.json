@@ -8,8 +8,6 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "lint": "biome ci .",
-    "format": "biome check --write .",
     "test": "vitest run --reporter=dot"
   },
   "dependencies": {
@@ -18,7 +16,6 @@
     "react-router": "8.4.0"
   },
   "devDependencies": {
-    "@biomejs/biome": "catalog:",
     "@testing-library/jest-dom": "catalog:",
     "@testing-library/react": "catalog:",
     "@testing-library/user-event": "catalog:",

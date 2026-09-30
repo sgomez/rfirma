@@ -1,9 +1,9 @@
-import { es } from "./es";
 import { ca } from "./ca";
-import { eu } from "./eu";
-import { gl } from "./gl";
 import { en } from "./en";
 import type { Dictionary, Key } from "./es";
+import { es } from "./es";
+import { eu } from "./eu";
+import { gl } from "./gl";
 
 export type { Dictionary, Key };
 

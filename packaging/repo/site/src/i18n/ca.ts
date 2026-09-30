@@ -4,8 +4,7 @@ export const ca: Dictionary = {
   "meta.title": "rFirma — Signatura electrònica nativa per a l'escriptori",
   "meta.description":
     "Aplicació d'escriptori en Rust i React que substitueix la interfície Swing i els servidors locals d'AutoFirma, amb la criptografia oficial de l'Administració.",
-  "meta.image.alt":
-    "Logotip de rFirma sobre fons verd amb el domini rfirma.sgomez.me",
+  "meta.image.alt": "Logotip de rFirma sobre fons verd amb el domini rfirma.sgomez.me",
 
   "notice.aria": "Avís sobre titularitat oficial",
   "notice.badge": "Avís",
@@ -74,7 +73,6 @@ export const ca: Dictionary = {
   "how.step3.alt": "Diàleg natiu per introduir el PIN del certificat",
   "how.step4.alt": "PDF signat en PAdES, amb el resum de la signatura",
 
-
   "pillars.kicker": "Per què rFirma",
   "pillars.title": "Quatre decisions de disseny",
   "pillars.body":
@@ -119,24 +117,26 @@ export const ca: Dictionary = {
   "comparison.stores.rfirma": "Tots en una llista amb cercador, un certificat per fila",
   "comparison.stamp.label": "Col·locació de la signatura visible",
   "comparison.stamp.autofirma": "Coordenades o requadre sense context",
-  "comparison.stamp.rfirma": "Arrossegament sobre la pàgina, amb models de text i previsualització fidel",
+  "comparison.stamp.rfirma":
+    "Arrossegament sobre la pàgina, amb models de text i previsualització fidel",
   "comparison.ca.label": "Confiança del navegador en el servidor local",
   "comparison.ca.autofirma": "L'instal·lador registra la CA al sistema, amb privilegis",
-  "comparison.ca.rfirma": "L'aplicació registra la seva CA als magatzems NSS de la persona, sense root",
+  "comparison.ca.rfirma":
+    "L'aplicació registra la seva CA als magatzems NSS de la persona, sense root",
   "comparison.lang.label": "Idiomes",
   "comparison.lang.autofirma": "Només castellà, amb les cadenes dels diàlegs Swing",
   "comparison.lang.rfirma":
     "Castellà, català, euskara, gallec i anglès, amb catàleg propi i canvi des de Preferències",
   "comparison.privacy.label": "Gestor de documents",
   "comparison.privacy.autofirma": "—",
-  "comparison.privacy.rfirma":
-    "Recorda els documents recents i l'últim certificat utilitzat",
+  "comparison.privacy.rfirma": "Recorda els documents recents i l'últim certificat utilitzat",
   "comparison.os.label": "Sistemes operatius",
   "comparison.os.autofirma": "Windows, macOS, Linux, Android i iOS",
   "comparison.os.rfirma": "Linux i Windows; macOS, en desenvolupament",
   "comparison.updates.label": "Canal d'actualització",
   "comparison.updates.autofirma": "Descàrrega manual de <code>.deb</code> o <code>.rpm</code>",
-  "comparison.updates.rfirma": "Repositoris natius: APT, DNF i Flatpak; a Windows, des de la mateixa aplicació",
+  "comparison.updates.rfirma":
+    "Repositoris natius: APT, DNF i Flatpak; a Windows, des de la mateixa aplicació",
   "comparison.desktop.label": "Integració amb l'escriptori",
   "comparison.desktop.autofirma": "Aparença pròpia de Swing",
   "comparison.desktop.rfirma": "Segueix l'estil de l'escriptori, amb tema clar i fosc",
@@ -154,7 +154,7 @@ export const ca: Dictionary = {
   "install.flatpak.body":
     "Recomanada per a les distribucions de Linux que no fan servir APT ni DNF. Es resol des del remot ostree propi de rFirma, i el runtime <code>org.gnome.Platform</code> es descarrega de Flathub sense configurar res. Només cal tenir instal·lats <code>flatpak</code> i <code>xdg-desktop-portal</code>.",
   "install.flatpak.tip":
-    "També pots descarregar i instal·lar amb doble clic el fitxer <a href=\"https://rfirma.sgomez.me/rfirma.flatpakref\">rfirma.flatpakref</a> si el teu escriptori ho admet.",
+    'També pots descarregar i instal·lar amb doble clic el fitxer <a href="https://rfirma.sgomez.me/rfirma.flatpakref">rfirma.flatpakref</a> si el teu escriptori ho admet.',
   "install.apt.body":
     "Per a Debian, Ubuntu i distribucions derivades. Configura el repositori mitjançant el format modern <code>deb822</code> amb la clau GPG verificada a <code>/usr/share/keyrings/</code>.",
   "install.dnf.body":
@@ -165,12 +165,12 @@ export const ca: Dictionary = {
     "Instal·lador per al teu usuari, sense permisos d'administrador. Fa servir directament l'emmagatzem de certificats de Windows (MS-CAPI / CNG) i, un cop instal·lat, s'actualitza des de la mateixa aplicació: cada versió nova arriba amb la seua signatura minisign, que es comprova abans d'instal·lar-la.",
   "install.windows.download": "Descarrega l'instal·lador de Windows",
   "install.windows.note":
-    "Verifica el que descarregues: baixa <code>SHA256SUMS</code> de la <a href=\"https://github.com/sgomez/rfirma/releases/latest\" target=\"_blank\" rel=\"noopener noreferrer\">Release</a> i comprova que el hash de l'instal·lador coincideix amb la seua línia. L'instal·lador no està signat amb Authenticode, així que SmartScreen t'avisarà en obrir-lo.",
+    'Verifica el que descarregues: baixa <code>SHA256SUMS</code> de la <a href="https://github.com/sgomez/rfirma/releases/latest" target="_blank" rel="noopener noreferrer">Release</a> i comprova que el hash de l\'instal·lador coincideix amb la seua línia. L\'instal·lador no està signat amb Authenticode, així que SmartScreen t\'avisarà en obrir-lo.',
   "install.macos.title": "Suport per a macOS en preparació",
   "install.macos.body":
     "La versió nativa per a macOS està en fase de desenvolupament actiu. S'integrarà amb el Keychain d'Apple i CryptoTokenKit per a un accés fluid i segur a les identitats digitals del sistema.",
   "install.macos.note":
-    "Es distribuirà com a imatge de disc <code>.dmg</code> i mitjançant fórmula de <code>Homebrew</code>. Pots seguir l'avenç del projecte a <a href=\"https://github.com/sgomez/rfirma\" target=\"_blank\" rel=\"noopener noreferrer\">GitHub</a>.",
+    'Es distribuirà com a imatge de disc <code>.dmg</code> i mitjançant fórmula de <code>Homebrew</code>. Pots seguir l\'avenç del projecte a <a href="https://github.com/sgomez/rfirma" target="_blank" rel="noopener noreferrer">GitHub</a>.',
 
   "transparency.kicker": "Transparència",
   "transparency.title": "Tot el codi, a la vista",
@@ -178,13 +178,13 @@ export const ca: Dictionary = {
     "rFirma és programari lliure i auditable sota llicència <strong>EUPL 1.2</strong>. El codi i el motor criptogràfic viuen en dos repositoris públics.",
   "transparency.repo1.title": "Aplicació i pont FFI",
   "transparency.repo1.body":
-    "A <a href=\"https://github.com/sgomez/rfirma\" target=\"_blank\" rel=\"noopener noreferrer\">sgomez/rfirma</a> hi ha la interfície en Tauri (Rust + React), el pont FFI (<code>rfirma-native-bridge</code>) i l'empaquetament.",
+    'A <a href="https://github.com/sgomez/rfirma" target="_blank" rel="noopener noreferrer">sgomez/rfirma</a> hi ha la interfície en Tauri (Rust + React), el pont FFI (<code>rfirma-native-bridge</code>) i l\'empaquetament.',
   "transparency.repo2.title": "Motor criptogràfic original",
   "transparency.repo2.body":
-    "La lògica de signatura consumeix els artefactes de <a href=\"https://github.com/ctt-gob-es/clienteafirma\" target=\"_blank\" rel=\"noopener noreferrer\">ctt-gob-es/clienteafirma</a>, compilats en una biblioteca nativa amb GraalVM Native Image.",
+    'La lògica de signatura consumeix els artefactes de <a href="https://github.com/ctt-gob-es/clienteafirma" target="_blank" rel="noopener noreferrer">ctt-gob-es/clienteafirma</a>, compilats en una biblioteca nativa amb GraalVM Native Image.',
   "transparency.key.title": "Clau de signatura de paquets",
   "transparency.key.body":
-    "Clau pública a <a href=\"https://rfirma.sgomez.me/rfirma.asc\">rfirma.asc</a>. Comprova la seva empremta després de descarregar-la amb <code>gpg --show-keys rfirma.asc</code>:",
+    'Clau pública a <a href="https://rfirma.sgomez.me/rfirma.asc">rfirma.asc</a>. Comprova la seva empremta després de descarregar-la amb <code>gpg --show-keys rfirma.asc</code>:',
 
   "footer.tagline":
     "Signatura electrònica nativa per a l'escriptori, amb el motor criptogràfic oficial i sense Java al teu equip.",
