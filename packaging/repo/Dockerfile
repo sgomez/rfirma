@@ -3,11 +3,11 @@ FROM node:24-alpine AS landing
 
 RUN corepack enable
 WORKDIR /landing
-COPY pnpm-workspace.yaml pnpm-lock.yaml tsconfig.base.json ./
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml tsconfig.base.json ./
 COPY rfirma-app/src/design-system/bundle ./rfirma-app/src/design-system/bundle
 COPY packaging/repo/site ./packaging/repo/site
-WORKDIR /landing/packaging/repo/site
 RUN pnpm install --frozen-lockfile --filter rfirma-landing
+WORKDIR /landing/packaging/repo/site
 RUN pnpm build
 
 FROM caddy:alpine

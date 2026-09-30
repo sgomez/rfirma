@@ -48,6 +48,8 @@ catalogs:
 
 importers:
 
+  .: {}
+
   packaging/repo/site:
     devDependencies:
       astro:

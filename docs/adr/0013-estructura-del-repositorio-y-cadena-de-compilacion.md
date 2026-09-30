@@ -13,7 +13,7 @@ rfirma-conformance/     la suite de conformidad: su crate y su consola web, fuer
 packaging/flatpak/      manifiesto, generadores de fuentes y verificación
 packaging/repo/         la imagen nginx y la landing de rfirma.sgomez.me (ADR-0015)
 packaging/verifica-contenido.sh   la invariante del ADR-0012 sobre cualquier artefacto
-pnpm-workspace.yaml     el workspace de pnpm: su lockfile y su tsconfig.base.json al lado
+pnpm-workspace.yaml     el workspace de pnpm: su lockfile, su tsconfig.base.json y un package.json mínimo al lado
 justfile                el único orquestador
 ```
 
@@ -261,17 +261,19 @@ servidor quedaba implícito en dos lenguajes.
 
 La aplicación, la consola de la suite y la landing de `packaging/repo/site` forman un
 workspace de pnpm declarado en `pnpm-workspace.yaml`, en la raíz. Allí viven lo único que
-comparten: **un lockfile**, el **catálogo** y `tsconfig.base.json`.
+comparten: **un lockfile**, el **catálogo**, `tsconfig.base.json` y un `package.json` mínimo.
 
 - **El catálogo lleva solo las versiones que de verdad son iguales** en todos los proyectos que
   usan la dependencia. Una que difiere se queda fijada en el `package.json` de cada uno: meterla
   en el catálogo obligaría a subirlas juntas, que es justo lo que no son.
 - **Cada proyecto conserva su `package.json`, su `vite.config` y un tsconfig mínimo** que
-  extiende la base. La raíz no tiene `package.json`: el workspace no lo necesita, y así sigue sin
-  haber un manifiesto de JavaScript de vecino del `pom.xml` y del `justfile`.
+  extiende la base.
+- **El `package.json` de la raíz solo lleva `private` y `packageManager`**: sin dependencias ni
+  scripts, no es un proyecto más. Existe porque Dependabot no lee un directorio npm sin
+  `package.json`, y de paso fija la versión de pnpm que leen `pnpm/setup` y corepack.
 - **Se instala con filtro por proyecto** (`pnpm install --filter <proyecto>`), desde las
-  recetas del `justfile` y desde la imagen de la landing, que copia el workspace y el lockfile de
-  la raíz.
+  recetas del `justfile` y desde la imagen de la landing, que copia el workspace, el lockfile y el
+  `package.json` de la raíz.
 - **Sin `nodeLinker: hoisted`**: Tauri busca su CLI en el `node_modules/.bin` de `rfirma-app`, y
   el enlazado aislado por defecto es el que lo deja ahí.
 - **knip no comprueba las referencias al catálogo** (`catalogReferences`): corre dentro de
@@ -279,11 +281,13 @@ comparten: **un lockfile**, el **catálogo** y `tsconfig.base.json`.
   `pnpm install`.
 - **Dependabot vigila npm en un solo directorio**, la raíz, mensual y agrupado como las acciones.
 
-Se descartaron tres opciones. La primera, un lockfile por proyecto, que era lo que había: tres
+Se descartaron cuatro opciones. La primera, un lockfile por proyecto, que era lo que había: tres
 instalaciones en el CI, tres cachés y tres directorios que vigilar, para versiones que en su
 mayoría eran las mismas. La segunda, un catálogo con todas las dependencias, que ataría a la
 misma versión proyectos que hoy no la comparten, como `vitest` en la landing. La tercera,
-`nodeLinker: hoisted`, que rompe el arranque de Tauri.
+`nodeLinker: hoisted`, que rompe el arranque de Tauri. La cuarta, dejar la raíz sin `package.json`:
+Dependabot la rechaza como directorio npm, y vigilar los tres proyectos por separado devolvía
+tres entradas para un solo lockfile.
 
 ## Consequences
 

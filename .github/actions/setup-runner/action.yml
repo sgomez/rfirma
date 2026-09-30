@@ -107,11 +107,10 @@ runs:
         key: m2-${{ runner.os }}-autofirma${{ env.AUTOFIRMA_VERSION }}-${{ hashFiles('scripts/bootstrap.sh', 'rfirma-native-bridge/pom.xml') }}
         restore-keys: m2-${{ runner.os }}-
 
-    # La raíz no tiene package.json, y las dependencias las instala `just deps`.
+    # Las dependencias las instala `just deps`.
     - if: inputs.node == 'true'
       uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3.0.0
       with:
-        working-directory: rfirma-app
         install: false
     - if: inputs.node == 'true'
       uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
