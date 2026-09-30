@@ -53,7 +53,7 @@ página «Ventana de sede · v0.5» va aparte porque es otra ventana:
 
 | # | Artboard | Estado |
 | - | -------- | ------ |
-| 5 | `Main` | La ventana principal entera, con sus estados como palanca: vacío, buscando certificados, sin certificados, sin certificado elegido, listo, certificados abiertos (el selector con su buscador), firmando (diálogo con velo), firmado (el resumen) y error al firmar; la firma visible y su contenido, la barra única —el botón partido con «Abiertos recientemente», el desborde de pestañas y el menú—, la vista sin pestañas, la franja de versión nueva bajo la barra, el destino, el zoom y la vista previa |
+| 5 | `Main` | La ventana principal entera, con sus estados como palanca: vacío, buscando certificados, sin certificados, sin certificado elegido, listo, certificados abiertos (el selector con su buscador), firmando (diálogo con velo), firmado (el resumen) y error al firmar; la firma visible y su contenido, la cabecera por escritorio —en Linux la barra de título GTK con la tira de pestañas debajo; en Windows y macOS la barra única—, con el botón partido, «Abiertos recientemente», el desborde de pestañas, el menú y el botón de aviso, la vista sin pestañas, la franja de versión nueva bajo la barra, el destino, el zoom y la vista previa |
 | 5b | `EstadoPaginasSinFirmaVisible` | Antes de firmar: las páginas donde la firma visible no cabe |
 | 5c | `EstadoFirmarDeTodosModos` | Antes de firmar: el documento trae alguna firma no válida, y se pide confirmación |
 | 6 | `EstadoPin` | Pidiendo el secreto del almacén — PIN o contraseña, según la clase de almacén —, sobre `Main` buscando certificados o lista, según el almacén |
@@ -907,3 +907,34 @@ estilo del canvas.
 
 El porqué, en las fichas [`preferencias`](../preferencias.md#decisiones) y
 [`primer-arranque`](../primer-arranque.md#decisiones).
+
+## Lo que cambió con la barra de título en Linux
+
+Validado el 30/09/2026. Se trabajó en un artboard de usar y tirar, «Main por
+escritorio», que se ha fundido en `Main` y se ha borrado del proyecto con su
+página y su nota.
+
+- **Palanca «Escritorio»** —Linux, Windows, macOS; por defecto, Linux— en
+  `Main` y en los otros nueve artboards que estampan `_cabecera.part`.
+- **Linux**, todo Linux y sin detectar el escritorio: la barra de título es la
+  nativa de GTK, de 47 px, con el botón partido «Abrir PDF… | ▾» a la
+  izquierda, «rFirma» en el centro y, a la derecha, el botón de aviso, el ☰ y
+  los botones de ventana del tema. Debajo, una tira de 38 px con **solo** las
+  pestañas y el «+N ▾», del gris de la barra; sin pestañas, la tira no existe.
+  El ☰ y los recientes son menús GTK: el ☰ sin icono de enlace externo, y los
+  recientes de una línea, «✓ nombre — carpeta», sin fecha.
+- **Windows y macOS**: la barra única de 44 px. En macOS no hay ☰: `Main`
+  dibuja encima de la ventana la barra de menús del sistema.
+- **El aviso sale del menú** en los tres: ni triángulo en el ☰ ni en «Estado de
+  rFirma». Lo sustituye un botón propio a la izquierda del ☰ —en macOS, en el
+  extremo derecho— que solo existe cuando hay algo que atender y se oculta en el
+  panel de estado. La palanca «Aviso» de `Main` lo enciende; en los demás
+  artboards está apagado.
+- `Main` se dibuja ahora como una ventana sobre el escritorio, de 1180 × 780
+  con borde y esquinas, en un marco de 1214 × 864.
+
+`_cabecera.part` lleva las dos cabeceras y la función `barra()` de cada
+artboard, que sigue siendo la misma en los diez, decide cuál se ve. El porqué,
+en las fichas [`cabecera`](../cabecera.md#decisiones) y
+[`pestanas-de-documentos`](../pestanas-de-documentos.md#decisiones), con la
+medición en `docs/research/barra-de-titulo-en-linux.md`.

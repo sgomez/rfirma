@@ -41,12 +41,15 @@ muerta detrás miente sobre lo que hay debajo. Lleva la barra única del
 [ADR-0007](../adr/0007-cabecera-unica-sin-barra-de-menus.md) en su variante sin
 documentos —44 px, el nombre y el menú— y nada más de la ventana principal: ni
 botón de abrir, ni pestañas, ni panel de firma, ni recientes, porque todavía no
-hay ningún documento que enseñar.
+hay ningún documento que enseñar. En Linux, la cabecera es la barra de título
+nativa de GTK, también sin botón partido y **sin la tira de pestañas**, que sin
+pestañas no existe.
 
 Tres regiones:
 
 1. **Cabecera**, 44 px, con su raya inferior de 1 px `--rf-border-subtle`, sin
-   documentos.
+   documentos. En Linux, la barra de título GTK de 47 px: «rFirma» en el
+   centro, el ☰ y los botones de ventana del tema.
 2. **Cuerpo**, `flex:1`, desplazable, con una **columna de lectura de 640 px
    centrada**. Arriba de todo, el indicador de paso: dos rayas de 22 × 4 px y
    «Paso *n* de 2».
@@ -207,7 +210,9 @@ Validado el **17/09/2026** en el canvas
 artboard `PrimerArranque` de la página «Recorrido de firma», cuya anotación
 guarda el porqué de cada punto. La fusión con la app —el idioma y `Omitir
 configuración` en la bienvenida, la segunda pantalla en pasos numerados y la
-protección dentro del asistente— se cerró el **28/09/2026**. La copia legible sin cuenta está en
+protección dentro del asistente— se cerró el **28/09/2026**. La cabecera en
+Linux, la barra de título GTK sin tira, el **30/09/2026**, con la palanca
+«Escritorio» del artboard. La copia legible sin cuenta está en
 [`docs/design/artboards/`](artboards/README.md).
 
 **Sin botón de abrir ni pestañas.** Esta pantalla toma la barra de la ventana

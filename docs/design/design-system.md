@@ -223,7 +223,7 @@ fueran dos cosas distintas. Lo que reclama atención va en `--rf-text` a peso 70
 en `--rf-text-muted` y peso normal, de modo que «No aplica» y «Comprobando» se
 distinguen entre sí por la silueta y no por una media tinta. Un mismo estado se
 dibuja **con el mismo `path` en todas las pantallas**: el triángulo de
-«Atención» del panel es el que marca la entrada del menú.
+«Atención» del panel es el del botón de aviso de la cabecera.
 
 ---
 

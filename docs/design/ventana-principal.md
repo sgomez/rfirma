@@ -10,6 +10,8 @@ abrir el documento a guardarlo firmado, sin navegar a otra pantalla.
 ## Estructura
 
 Una sola barra —la cabecera con las pestañas— y, debajo, el visor y el panel de firma.
+Así en Windows y macOS; en Linux, la barra de título nativa de GTK y, debajo, una
+tira con solo las pestañas (ver la [cabecera](cabecera.md#en-linux)).
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -26,7 +28,7 @@ Una sola barra —la cabecera con las pestañas— y, debajo, el visor y el pane
 soltar y los recientes, y la cabecera, el botón de abrir sin ninguna pestaña. El panel no se monta: no
 hay nada que firmar.
 
-- [Cabecera](cabecera.md) — la barra única: identidad y menú principal.
+- [Cabecera](cabecera.md) — la barra única, o la barra de título GTK en Linux: identidad, aviso y menú principal.
 - [Pestañas de documentos](pestanas-de-documentos.md) — lo que la barra lleva
   de los documentos: abrir, los recientes, cuáles hay abiertos y cuál se firma.
 - [Visor de documento](visor-de-documento.md) — cómo va a quedar.
@@ -86,7 +88,7 @@ nueva de rFirma: **0.4.1**», con «Cómo actualizar», que lleva a
 No es un sitio para errores del recorrido: el error de firma va en el panel, y
 los fallos de Preferencias dentro de su sección. Los diagnósticos tampoco
 avisan aquí: los dice la [ventana de sede](ventana-de-sede.md) cuando duelen, y
-el triángulo del menú de la [cabecera](cabecera.md) llama a mirar el panel de
+el botón de aviso de la [cabecera](cabecera.md) llama a mirar el panel de
 estado.
 
 ## La secuencia no es negociable
