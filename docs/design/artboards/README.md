@@ -938,3 +938,30 @@ artboard, que sigue siendo la misma en los diez, decide cuál se ve. El porqué,
 en las fichas [`cabecera`](../cabecera.md#decisiones) y
 [`pestanas-de-documentos`](../pestanas-de-documentos.md#decisiones), con la
 medición en `docs/research/barra-de-titulo-en-linux.md`.
+
+## Lo que cambió con el popover de recientes en Linux
+
+Validado el 01/10/2026, directamente en los diez artboards que estampan
+`_cabecera.part`, sin artboard ni página de trabajo.
+
+- **Los recientes de Linux dejan el menú de una línea** por un popover propio
+  de 380 px: rótulo «Abiertos recientemente», una fila de dos líneas por
+  reciente —nombre a 13 px con la ✓, recortado por el centro; debajo, la ruta
+  de la carpeta con `~/`, a 12 px en `--rf-text-muted` y recortada por el
+  final—, el que no se encuentra atenuado y con «No se encuentra» en la segunda
+  línea, divisor y «Vaciar la lista». La primera fila se dibuja bajo el ratón.
+- **El ☰ de Linux** sigue siendo un menú de una línea, con el mismo relleno
+  (6 × 12 px), separación (2 px) y esquinas que el popover; «Preferencias…» se
+  dibuja bajo el ratón.
+- **La lista del popover se desplaza en vertical**, con el rótulo y «Vaciar la
+  lista» fijos, y mide como máximo lo que cabe en la ventana: `barra()` lo
+  calcula de `altoVentana`, 780 px si el artboard no lo pasa. En `Main`, con
+  «Contenido: extremo», los recientes desplegados y Linux, la lista llega a
+  diez y la ventana baja a 480 px para que se vea el desplazamiento.
+- **Los datos de ejemplo** ganan la ruta de cada reciente, y el nombre de
+  «Certificado-empadronamiento…» se alarga para enseñar el recorte, así que en
+  Windows y macOS también sale recortado. Con «Contenido: extremo» hay diez
+  recientes, también en Windows y macOS.
+
+El porqué, en [`pestanas-de-documentos`](../pestanas-de-documentos.md#decisiones)
+y [`cabecera`](../cabecera.md#decisiones).

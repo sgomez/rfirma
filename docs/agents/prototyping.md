@@ -225,6 +225,14 @@ implementación; las fichas [`preferencias.md`](../design/preferencias.md) y
 [`primer-arranque.md`](../design/primer-arranque.md) enlazan el canvas desde su
 sección «Decisiones».
 
+El caso de uso **el popover de recientes en Linux** se validó el
+**01/10/2026**, directamente en `_cabecera.part` y sin página de trabajo: los
+recientes de Linux pasan del menú GTK de una línea a un popover propio de dos
+líneas con la ruta de la carpeta, y el ☰ toma su relleno, separación y
+esquinas. Reescribe [`pestanas-de-documentos.md`](../design/pestanas-de-documentos.md)
+y [`cabecera.md`](../design/cabecera.md), que enlazan el canvas desde su
+sección «Decisiones».
+
 El caso de uso **la barra de título en Linux** se validó el **30/09/2026**. Se
 exploró en una página de trabajo, «trabajo · barra de título por escritorio»,
 con el artboard «Main por escritorio», que se fundió en `Main` y se borró con su

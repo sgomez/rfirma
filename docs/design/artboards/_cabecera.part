@@ -12,18 +12,21 @@
         </span>
         </sc-if>
         <sc-if value="{{ recientesGtkAbiertos }}" hint-placeholder-val="{{ false }}">
-          <div role="menu" style="position:absolute;top:calc(100% + 10px);left:0;width:380px;z-index:30;padding:6px;display:flex;flex-direction:column;gap:0;background:var(--rf-bg);border:1px solid var(--rf-border-subtle);border-radius:12px;box-shadow:var(--rf-shadow-elevated)">
+          <div role="menu" style="position:absolute;top:calc(100% + 10px);left:0;width:380px;box-sizing:border-box;z-index:30;padding:6px;display:flex;flex-direction:column;gap:2px;background:var(--rf-bg);border:1px solid var(--rf-border-subtle);border-radius:12px;box-shadow:var(--rf-shadow-elevated)">
             <span style="padding:6px 12px 4px;font-size:13px;font-weight:700;color:var(--rf-text-muted)">Abiertos recientemente</span>
+            <div style="display:flex;flex-direction:column;gap:2px;min-height:0;overflow-x:hidden;overflow-y:auto;scrollbar-width:thin;{{ estiloListaGtk }}">
             <sc-for list="{{ recientesGtk }}" as="r" hint-placeholder-count="6">
-              <div class="rf-row" role="menuitem" aria-disabled="{{ r.desactivada }}" style="gap:8px;min-height:32px;padding:0 12px;border-radius:var(--rf-radius-md);font-size:14px;color:var(--rf-text);cursor:pointer;{{ r.estilo }}" title="{{ r.titulo }}">
-                <span style="width:14px;flex:none;display:flex">
-                  <sc-if value="{{ r.firmado }}" hint-placeholder-val="{{ false }}"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5l3 3 7-7"/></svg></sc-if>
+              <div role="menuitem" aria-disabled="{{ r.desactivada }}" title="{{ r.titulo }}" style="display:flex;flex-direction:column;gap:2px;min-width:0;padding:6px 12px;border-radius:var(--rf-radius-md);color:var(--rf-text);cursor:pointer;{{ r.estilo }}">
+                <span class="rf-row" style="gap:6px;min-width:0;font-size:13px;line-height:17px">
+                  <span style="display:flex;flex:0 1 auto;min-width:0;white-space:nowrap"><span style="flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis">{{ r.inicio }}</span><span style="flex:none">{{ r.fin }}</span></span>
+                  <sc-if value="{{ r.firmado }}" hint-placeholder-val="{{ false }}"><span title="Firmado" style="display:flex;flex:none;color:var(--rf-text-muted)"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5l3 3 7-7"/></svg></span></sc-if>
                 </span>
-                <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.texto }}</span>
+                <span style="font-size:12px;line-height:16px;color:var(--rf-text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.ruta }}</span>
               </div>
             </sc-for>
-            <hr class="rf-divider" style="margin:6px 0">
-            <div class="rf-row" role="menuitem" style="min-height:32px;padding:0 12px;border-radius:var(--rf-radius-md);font-size:14px;color:var(--rf-text);cursor:pointer">Vaciar la lista</div>
+            </div>
+            <hr class="rf-divider" style="margin:4px 0">
+            <div class="rf-row" role="menuitem" style="padding:6px 12px;line-height:20px;border-radius:var(--rf-radius-md);font-size:14px;color:var(--rf-text);cursor:pointer">Vaciar la lista</div>
           </div>
         </sc-if>
       </div>
@@ -36,13 +39,13 @@
     <div style="position:relative;display:flex">
       <span role="button" title="Menú principal" aria-label="Menú principal" style="width:34px;height:34px;display:flex;align-items:center;justify-content:center;border-radius:var(--rf-radius-md);color:var(--rf-text);cursor:pointer;{{ estiloBotonMenuGtk }}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M2.5 4h11M2.5 8h11M2.5 12h11"/></svg></span>
       <sc-if value="{{ menuGtkAbierto }}" hint-placeholder-val="{{ false }}">
-        <div role="menu" style="position:absolute;top:calc(100% + 10px);right:-8px;min-width:220px;z-index:30;padding:6px;display:flex;flex-direction:column;gap:0;background:var(--rf-bg);border:1px solid var(--rf-border-subtle);border-radius:12px;box-shadow:var(--rf-shadow-elevated)">
+        <div role="menu" style="position:absolute;top:calc(100% + 10px);right:-8px;min-width:220px;z-index:30;padding:6px;display:flex;flex-direction:column;gap:2px;background:var(--rf-bg);border:1px solid var(--rf-border-subtle);border-radius:12px;box-shadow:var(--rf-shadow-elevated)">
           <span style="position:absolute;top:-7px;right:19px;width:12px;height:12px;transform:rotate(45deg);background:var(--rf-bg);border-left:1px solid var(--rf-border-subtle);border-top:1px solid var(--rf-border-subtle)"></span>
-          <div class="rf-row" role="menuitem" style="min-height:32px;padding:0 12px;border-radius:var(--rf-radius-md);font-size:14px;color:var(--rf-text);cursor:pointer">Estado de rFirma</div>
-          <hr class="rf-divider" style="margin:6px 0">
-          <div class="rf-row" role="menuitem" style="min-height:32px;padding:0 12px;border-radius:var(--rf-radius-md);font-size:14px;color:var(--rf-text);cursor:pointer">Preferencias…</div>
-          <div class="rf-row" role="menuitem" style="min-height:32px;padding:0 12px;border-radius:var(--rf-radius-md);font-size:14px;color:var(--rf-text);cursor:pointer">Comentarios y ayuda</div>
-          <div class="rf-row" role="menuitem" style="min-height:32px;padding:0 12px;border-radius:var(--rf-radius-md);font-size:14px;color:var(--rf-text);cursor:pointer">Acerca de rFirma</div>
+          <div class="rf-row" role="menuitem" style="padding:6px 12px;line-height:20px;border-radius:var(--rf-radius-md);font-size:14px;color:var(--rf-text);cursor:pointer">Estado de rFirma</div>
+          <hr class="rf-divider" style="margin:4px 0">
+          <div class="rf-row" role="menuitem" style="padding:6px 12px;line-height:20px;border-radius:var(--rf-radius-md);font-size:14px;color:var(--rf-text);cursor:pointer;background:color-mix(in srgb, var(--rf-text) 8%, transparent)">Preferencias…</div>
+          <div class="rf-row" role="menuitem" style="padding:6px 12px;line-height:20px;border-radius:var(--rf-radius-md);font-size:14px;color:var(--rf-text);cursor:pointer">Comentarios y ayuda</div>
+          <div class="rf-row" role="menuitem" style="padding:6px 12px;line-height:20px;border-radius:var(--rf-radius-md);font-size:14px;color:var(--rf-text);cursor:pointer">Acerca de rFirma</div>
         </div>
       </sc-if>
     </div>

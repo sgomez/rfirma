@@ -96,8 +96,10 @@ En Linux, lo que dibuja el lienzo para imitar la barra de GTK:
   30 px; el aviso y el ☰, de 34×34.
 - La tira de pestañas mide 38 px, con el mismo gris y la raya inferior en
   `--rf-border-subtle`. Sin tira, la raya la lleva la barra.
-- Los menús son los de GTK: pico hacia el botón, esquinas redondeadas, filas de
-  una línea y sin iconos.
+- El ☰ es un menú GTK estándar y los recientes un popover propio
+  ([pestañas de documentos](pestanas-de-documentos.md)); los dos llevan el
+  relleno, la separación entre filas y las esquinas de libadwaita, con el pico
+  hacia el botón. El menú, con filas de una línea y sin iconos.
 
 ### Los iconos
 
@@ -185,7 +187,7 @@ En el artboard `Main`, y la palanca «Escritorio» en todos los que estampan
   - **Aviso**: con algo que revisar, el botón de aviso; con todo en orden, nada.
   - **Foco** (Windows): sin foco, en la primera entrada, o en «Comentarios y
     ayuda».
-- «Abiertos recientemente: desplegados» enseña en Linux el menú GTK de los
+- «Abiertos recientemente: desplegados» enseña en Linux el popover de los
   recientes.
 
 La barra la estampa `_cabecera.part` en todos los artboards que pintan la
@@ -231,6 +233,10 @@ de 44 px.
   cambio de nada.
 - **El menú GTK, sin icono de enlace externo.** Es el menú estándar, sin
   iconos; en Windows «Comentarios y ayuda» lo conserva.
+- **El ☰ de Linux, estándar pero con el aire de libadwaita** (01/10/2026).
+  Mismo relleno, separación y esquinas que el popover de los recientes, para
+  que los dos desplegables de la barra se lean iguales; se descartó dejarlo
+  como lo dibuja GTK 3, sin relleno ni separación entre filas.
 - **El aviso, un botón y no una marca** (30/09/2026). Se descartó el triángulo
   en el ☰ y en la entrada «Estado de rFirma»: el menú GTK estándar va sin
   iconos, y un botón propio lleva al panel de un clic y se comporta igual en los
@@ -239,4 +245,5 @@ de 44 px.
 Validado en el lienzo
 [Autofirma de escritorio en Rust](https://claude.ai/design/p/c0ddbfa7-0982-498f-8f8c-8e2f8f0c6132),
 página **Recorrido de firma**, artboard `Main`; la barra única, el 27/09/2026;
-la barra de título en Linux y el botón de aviso, el 30/09/2026.
+la barra de título en Linux y el botón de aviso, el 30/09/2026; el aire de los
+desplegables de Linux, el 01/10/2026.
