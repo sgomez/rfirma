@@ -87,12 +87,7 @@ interface AppProps {
   externalDestinations?: ExternalDestinationOpener;
   /** Quien lee y reevalúa las señales del panel de estado. Ver [`StatusPort`]. */
   status?: StatusPort;
-  /**
-   * Se llama una vez montada, con un asa hacia sus propias vistas. Solo lo usa
-   * `main.tsx`, para que el menú del asistente del primer arranque
-   * (`setup/SetupWizard.tsx`) pueda abrir Estado, Preferencias y Acerca de en
-   * esta misma instancia en vez de duplicarlas.
-   */
+  /** Recibe, una vez montada, el asa con la que `main.tsx` abre sus vistas desde fuera. */
   onReady?: (handle: AppHandle) => void;
   /** Otra pantalla tapa la ventana, como el asistente del primer arranque. */
   covered?: boolean;
