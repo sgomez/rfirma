@@ -251,15 +251,16 @@ que así pasan de 30. Es el caso de `--allow` del ADR-0014, cobertura que se mid
 `cargo crap --path` sobre el lcov de Windows. Otro fichero solo de Windows que cruce el umbral
 en Linux entra en la misma variable.
 
-GraalVM CE se fija a **una versión exacta, escrita en un solo sitio**: `.graalvm-version`, hoy
-la **25.3.4.1** (JDK 25.0.4.1). La lee el `justfile`, que deriva de ella la ruta de SDKMAN, y la
-acción local `.github/actions/setup-graalvm`, por la que pasan todos los jobs de `ci.yml` y
+GraalVM CE se fija a **una versión exacta, escrita en un solo sitio**: `GRAALVM_VERSION` en
+`versions.env` (ADR-0014), hoy la **25.3.4.1** (JDK 25.0.4.1). La lee el `justfile`, que deriva de
+ella la ruta de SDKMAN, y la acción local `.github/actions/setup-graalvm`, por la que pasan todos los jobs de `ci.yml` y
 `build.yml`: pide a `setup-graalvm` la etiqueta `graal-<versión>` exacta de `graalvm-ce-builds`,
 no la última publicada. Así la librería que se entrega, que lleva el runtime dentro, se construye
 con la misma GraalVM con la que se prueba en local. GraalVM CE ya solo publica versiones
 *Innovation*, así que la versión se sube a propósito, en una PR propia, cuando sale una que
-compila la imagen y pasa la grada C en Linux y en Windows. `check-workflows.sh` falla si un
-workflow o el `justfile` escriben otra versión o instalan GraalVM sin esa acción, y la clave de
+compila la imagen y pasa la grada C en Linux y en Windows. `scripts/check-versions.sh` falla si
+un workflow o el `justfile` escriben la versión, `check-workflows.sh` si instalan GraalVM sin esa
+acción, y la clave de
 caché de la librería nativa lleva la versión, así que subirla la reconstruye. En local, con una
 25.4, `native-image` se esquiva con
 `NATIVE_IMAGE_OPTIONS=--initialize-at-build-time=es.gob.afirma.signers.tsp.pkcs7.TsaParams`.

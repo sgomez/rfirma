@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
-# Oraculo de la grada C: valida <fichero> con SignValiderFactory del original
-# 1.9.2 (afirma-crypto-validation), consumido desde Maven local (ADR-0002).
+# Oraculo de la grada C: valida <fichero> con el SignValiderFactory de AutoFirma (ADR-0002).
 # Imprime VALID o INVALID <motivo> y sale con 0 o 1 respectivamente.
 #
 # Uso: validate.sh <fichero>
@@ -13,11 +12,12 @@ fi
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SIGNER="$ROOT/rfirma-native-bridge/testbench/reference-signer"
+AUTOFIRMA_VERSION="$("$ROOT/scripts/pinned-version.sh" AUTOFIRMA_VERSION)"
 
 # La frescura se mide por contenido, no por mtime: un target restaurado de la cache del CI es mas
 # viejo que el checkout y con -nt se recompilaria siempre.
 STAMP="$SIGNER/target/.stamp"
-WANTED="$(cat "$SIGNER/SignatureValidator.java" "$SIGNER/pom.xml" "${BASH_SOURCE[0]}" | sha256sum | cut -d' ' -f1)"
+WANTED="$({ cat "$SIGNER/SignatureValidator.java" "$SIGNER/pom.xml" "${BASH_SOURCE[0]}"; echo "$AUTOFIRMA_VERSION"; } | sha256sum | cut -d' ' -f1)"
 
 is_built() {
     [ -f "$SIGNER/target/classes/SignatureValidator.class" ] || return 1
@@ -32,7 +32,7 @@ if ! is_built; then
     (
         flock 200
         if ! is_built; then
-            mvn -q -B -f "$SIGNER/pom.xml" dependency:build-classpath \
+            mvn -q -B -f "$SIGNER/pom.xml" -Dautofirma.version="$AUTOFIRMA_VERSION" dependency:build-classpath \
                 -Dmdep.outputFile="$SIGNER/target/cp.txt" -Dmdep.includeScope=compile
             mkdir -p "$SIGNER/target/classes"
             javac --release 21 -cp "$(cat "$SIGNER/target/cp.txt")" -d "$SIGNER/target/classes" \

@@ -1,0 +1,8 @@
+name: Carga las versiones fijadas
+description: Vuelca versions.env al entorno del job.
+
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: tr -d '\r' < versions.env >> "$GITHUB_ENV"

@@ -198,7 +198,7 @@ ventaja —amnistiar deuda existente— no aplica: hoy el repositorio tiene **ce
 ### El riesgo de la herramienta, dicho en voz alta
 
 `cargo-crap` tiene **cuatro meses** (primera versión 2026-04-27) y **un solo mantenedor**. Se
-instala con `cargo binstall` a una **versión fijada** en el `justfile`. Si se abandona, la puerta
+instala con `cargo binstall` a una **versión fijada** en `versions.env`. Si se abandona, la puerta
 se quita en una línea y no arrastra nada: es una comprobación aparte, no un formato que impregne
 el código.
 
@@ -243,7 +243,7 @@ añade dos puertas más, las dos en Rust y las dos alimentadas por el mismo
 
 - **Un suelo global que no baja**: `--fail-under-lines` dentro de la propia
   receta `coverage`, con el porcentaje en `coverage_floor` del `justfile` —
-  fijado igual que `crap_version`, no una media móvil. Sube **a mano, en su
+  fijado igual que `CRAP_VERSION`, no una media móvil. Sube **a mano, en su
   propia PR**, cuando la medida real lo supere en un punto entero; nunca lo
   sube un commit del CI, por la misma razón que el trinquete de CRAP se
   descartó más arriba: un fichero que cambia solo no tiene revisor.
@@ -423,9 +423,8 @@ Ninguno de los dos compila ni instrumenta nada: `cargo-machete` analiza el árbo
 los fuentes sin invocar a `rustc`, y `knip` recorre los módulos que alcanza desde sus puntos de
 entrada. El coste que añaden al CI son segundos.
 
-`cargo-machete` va a **versión fijada** (`machete_version` en el `justfile`, `MACHETE_VERSION` en
-`ci.yml`), la misma razón que `cargo-crap`: un solo mantenedor no debe poder poner en rojo un PR
-que no lo ha tocado.
+`cargo-machete` va a **versión fijada** (`MACHETE_VERSION` en `versions.env`), la misma razón
+que `cargo-crap`: un solo mantenedor no debe poder poner en rojo un PR que no lo ha tocado.
 
 `knip.json` es la configuración mínima, y cada entrada existe por un falso positivo real, no por
 gusto:
@@ -450,6 +449,54 @@ decía que no debía exportarse suelta. Tres de esos *exports* —`CloseIcon`, `
 tipo `ErrorSituationWithHelp`— resultaron, al quitarles el `export`, código muerto de verdad
 (`tsc --noUnusedLocals` los denunció en cuanto dejaron de tener una salida): no sólo sobraba la
 palabra, sobraba la declaración entera, y se borraron.
+
+## Las versiones fijadas, en un solo fichero
+
+Una herramienta que decide un veredicto va a versión fijada: `cargo-crap` y `cargo-machete` por
+su único mantenedor, `ruff` porque sin `ruff.toml` sus reglas por defecto son las de la versión
+instalada, `diff-cover` y `cargo-nextest` por la misma razón. Junto a ellas se fijan `just`, la
+GraalVM CE (ADR-0035), la etiqueta de AutoFirma de la que salen las dependencias Java (ADR-0002)
+y el sha256 del `autoscript.js` del banco de conformidad.
+
+Todas se escriben **una sola vez**, en `versions.env` en la raíz: una línea `CLAVE=valor` por
+versión, sin comillas, sin `export` y sin comentarios, para que el mismo fichero valga como
+dotenv y como entorno de Actions. Subir una versión es cambiar una línea. Quién lo lee:
+
+- **El `justfile`**, como dotenv con `dotenv-override`: una variable vieja del entorno de quien
+  lo lanza no gana al fichero. Las recetas reciben las claves en su entorno.
+- **El CI**: la acción local `load-versions` lo vuelca al entorno del job; `setup-just` y
+  `setup-graalvm` la llaman antes de instalar, así que todo job que pasa por una de las dos las
+  tiene.
+- **Maven**, que recibe `-Dautofirma.version` en la línea de órdenes. Los dos pom conservan su
+  valor por defecto para el uso sin `just`.
+- **Los arranques que no pasan por `just`** —`bootstrap.sh` y los guiones del testbench, que
+  lanzan las pruebas de grada C— lo leen con `scripts/pinned-version.sh`.
+
+`just install-tools [herramienta…]` instala las herramientas en esas versiones, en local y en el
+CI, y `just tools` falla si una instalada no coincide con la fijada. Las claves de caché usan el
+valor de la versión que les afecta —`AUTOFIRMA_VERSION` en la de `~/.m2`, `AUTOSCRIPT_SHA256` en
+la del banco—, nunca el resumen del fichero entero: subir una herramienta no invalida la caché de
+Maven. `scripts/check-versions.sh`, dentro de `check-repo`, falla si un valor fijado aparece
+escrito en el `justfile`, en `.github/`, en `lefthook.yml` o en un guion de `scripts/` o del
+testbench, y si el valor por defecto de un pom no coincide con el fichero.
+
+`cargo-llvm-cov` y `cargo-mutants` quedan sin fijar: producen informes, no veredictos.
+
+### Considered Options
+
+- **`.tool-versions` con mise (o asdf)**: resuelve la instalación local, pero no cubre lo que no
+  es una herramienta —la etiqueta de AutoFirma, el sha del `autoscript.js`—, su formato no es
+  `CLAVE=valor` y en el CI obliga a instalar mise para leerlo. Añade una herramienta para
+  sustituir una lectura de fichero.
+- **Renovate**: automatiza las subidas, pero no decide dónde vive la versión, que es el problema;
+  y una subida de `ruff` o de `cargo-crap` que cambia un veredicto debe llegar en una PR propia,
+  a mano. Dependabot ya propone las acciones.
+- **`taiki-e/install-action`**: instala binarios fijados en el CI, pero la versión seguiría escrita
+  en el workflow, aparte de la local, y en local no sirve: `cargo binstall` y `pipx` sí.
+- **Cada versión en su sitio, con un comentario «igual en ci.yml»** (lo anterior): el comentario
+  no lo comprueba nadie, y dos copias de una versión se desincronizan sin que falle nada.
+- **Un fichero por versión**, como fue `.graalvm-version`: un solo fichero, con su guarda, cubre
+  las demás sin inventar un formato para cada una.
 
 ## Consequences
 

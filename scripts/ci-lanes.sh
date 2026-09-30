@@ -15,7 +15,7 @@ inert() {
 
 java_ignores() {
     case "$1" in
-        scripts/bootstrap.sh | scripts/ci-lanes.sh) return 1 ;;
+        scripts/bootstrap.sh | scripts/pinned-version.sh | scripts/ci-lanes.sh) return 1 ;;
         docs/* | rfirma-app/* | packaging/* | scripts/* | testdata/site-driver/*) return 0 ;;
     esac
     return 1
@@ -34,7 +34,7 @@ web_ignores() {
 
 rust_ignores() {
     case "$1" in
-        rfirma-native-bridge/testbench/* | scripts/ci-lanes.sh) return 1 ;;
+        rfirma-native-bridge/testbench/* | scripts/pinned-version.sh | scripts/install-tools.sh | scripts/ci-lanes.sh) return 1 ;;
         docs/design/* | packaging/* | scripts/* | rfirma-native-bridge/*) return 0 ;;
     esac
     return 1
