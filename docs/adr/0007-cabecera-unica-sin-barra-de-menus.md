@@ -7,8 +7,8 @@ Ninguno de los escritorios objetivo la usa hoy: GNOME la retiró de su guía de
 estilo en favor de una cabecera con botón de menú, y Windows 11 no la emplea en
 sus aplicaciones nuevas.
 
-`rfirma` tiene **una sola barra permanente**, de 44 px, que es a la vez cabecera
-y tira de pestañas. De izquierda a derecha: la identidad (`rFirma`), el **botón
+En Windows y macOS, `rfirma` tiene **una sola barra permanente**, de 44 px, que
+es a la vez cabecera y tira de pestañas. De izquierda a derecha: la identidad (`rFirma`), el **botón
 partido** de abrir, las **pestañas** de los documentos abiertos y, al extremo
 derecho, el botón de menú.
 
@@ -29,6 +29,26 @@ Las vistas que no son de ningún documento —Preferencias, el panel de estado, 
 primer arranque— ocupan el cuerpo de la ventana, y **la barra se queda solo con
 `rFirma` y el menú**: sin botón de abrir y sin pestañas, porque las pestañas son
 de documentos y esas vistas no son de ninguno.
+
+## En Linux, la barra de título nativa de GTK
+
+En todo Linux —sin detectar el escritorio— abrir y el ☰ van en la **barra de
+título nativa de GTK**: el botón partido a la izquierda, **«rFirma» de título**
+en el centro, y el ☰ y los botones de ventana del tema a la derecha. La barra de
+44 px no existe; debajo, dentro de la ventana, queda **una tira con solo las
+pestañas** y el «+N ▾», que desaparece cuando no hay ninguna pestaña. La tira no
+es región de arrastre: es contenido, no barra de título.
+
+**El aviso es un botón aparte**, a la izquierda del ☰, y no una marca en el
+menú, porque los menús nativos no admiten marcas.
+
+La interfaz decide el modo por plataforma, como ya distingue macOS, y conduce la
+barra por un puerto: le manda si se ve abrir, si hay aviso y las etiquetas ya
+traducidas, y recibe las acciones, que hacen lo mismo que los botones HTML. La
+medición que lo sostiene es la nota de research «Abrir y el menú en la barra de
+título nativa de GTK, en Linux» (`docs/research/barra-de-titulo-en-linux.md`).
+
+## Los menús retirados
 
 Los menús que se han eliminado no se han movido a otro sitio: **no hacían
 falta**. Abrir un documento ya tiene el botón partido y la zona de soltar;
@@ -58,6 +78,16 @@ de Estado.
 - **Flechas ‹ › para desplazar la tira cuando las pestañas no caben.**
   Desplazar obliga a buscar pasando de una en una; el menú «+N» enseña todas las
   ocultas de golpe y la activa no se pierde nunca.
+
+- **En Linux, la ventana sin decorar y la barra HTML como barra de título.**
+  Arrastrar y redimensionar funcionan, pero se pierden la sombra y las esquinas
+  del tema, el redimensionado cambia de cursor solo a ciegas, el doble clic no
+  sigue el ajuste del escritorio y los botones de ventana dibujados en HTML
+  nunca serían los del tema.
+- **La barra de título GTK solo en GNOME, detectando el escritorio.** En KDE y
+  los demás la barra de GTK funciona y no desentona más que cualquier
+  aplicación GTK; detectar el escritorio añadía un tercer modo de cabecera a
+  cambio de nada.
 
 ## Consequences
 

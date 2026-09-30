@@ -4,6 +4,7 @@ import { forgetActivity } from "./App.forgetActivity";
 import { formatSignedAt, placingFrom } from "./App.signingOrder";
 import { useCertificateSearch } from "./App.useCertificateSearch";
 import { useDropNotices } from "./App.useDropNotices";
+import { useNativeTitlebar } from "./App.useNativeTitlebar";
 import { useOpenShortcut } from "./App.useOpenShortcut";
 import { usePageGeometry } from "./App.usePageGeometry";
 import { usePlacementControls } from "./App.usePlacementControls";
@@ -28,6 +29,7 @@ import { PreferencesView } from "./preferences/PreferencesView";
 import type { PreferencesStore } from "./preferences/preferences";
 import { MainWindow } from "./shell/MainWindow";
 import { type MenuAnchor, menuAnchorFor } from "./shell/menuAnchor";
+import { absentNativeTitlebar, type NativeTitlebar } from "./shell/nativeTitlebar";
 import type { CertificateStore } from "./signing/certificate";
 import type { DestinationSource, SignedDocumentOpener } from "./signing/destination";
 import type { SigningBackend } from "./signing/flow";
@@ -55,6 +57,7 @@ type OpenDialog = "about" | "installUpdate" | null;
 type ActiveView = "status" | "preferences" | null;
 
 const NO_RECENTS: readonly RecentDocument[] = [];
+const NO_TITLEBAR = absentNativeTitlebar();
 
 interface AppProps {
   recents: RecentsStore;
@@ -91,6 +94,8 @@ interface AppProps {
   onReady?: (handle: AppHandle) => void;
   /** Otra pantalla tapa la ventana, como el asistente del primer arranque. */
   covered?: boolean;
+  /** La barra de título GTK de Linux. Ver [`NativeTitlebar`]. */
+  titlebar?: NativeTitlebar;
 }
 
 /** El asa que `onReady` entrega: lo único de `App` que se abre desde fuera. */
@@ -130,6 +135,7 @@ export function App({
   status = memoryStatus(),
   onReady,
   covered = false,
+  titlebar = NO_TITLEBAR,
 }: AppProps) {
   const [dialog, setDialog] = useState<OpenDialog>(null);
   const [view, setView] = useState<ActiveView>(null);
@@ -310,7 +316,24 @@ export function App({
     sealLossPrompt !== null ||
     invalidPreviousSignaturesPrompt !== null ||
     signing.state.kind === "running";
-  useOpenShortcut(openDocument, !covered && view === null && !modalOpen);
+  const canOpen = !covered && view === null && !modalOpen;
+  useOpenShortcut(openDocument, canOpen);
+
+  const anchor = menuAnchor ?? menuAnchorFor(navigator.userAgent);
+  const warningVisible = hasAttention && view !== "status";
+  const openHelp = () => void externalDestinations.open("discussions");
+  const unlessModal = (action: () => void) => () => {
+    if (!modalOpen) action();
+  };
+  useNativeTitlebar(titlebar, !covered && view === null, warningVisible && !covered, {
+    open: () => {
+      if (canOpen) openDocument();
+    },
+    status: unlessModal(() => setView("status")),
+    preferences: unlessModal(() => setView("preferences")),
+    feedback: unlessModal(openHelp),
+    about: unlessModal(() => setDialog("about")),
+  });
 
   const forgetAll = () =>
     forgetActivity(
@@ -323,11 +346,11 @@ export function App({
   return (
     <>
       <MainWindow
-        menuAnchor={menuAnchor ?? menuAnchorFor(navigator.userAgent)}
-        hasAttention={hasAttention && view !== "status"}
+        menuAnchor={anchor}
+        hasAttention={warningVisible}
         onOpenStatus={() => setView("status")}
         onOpenPreferences={() => setView("preferences")}
-        onOpenHelp={() => void externalDestinations.open("discussions")}
+        onOpenHelp={openHelp}
         onOpenAbout={() => setDialog("about")}
         view={
           view === "status" ? (
@@ -359,17 +382,20 @@ export function App({
           />
         }
         tabs={
-          <DocumentTabs
-            tabs={documents.tabs}
-            activeId={activeId}
-            recents={visibleRecents}
-            onActivate={documents.activate}
-            onClose={documents.close}
-            onOpen={openDocument}
-            onSelectRecent={documents.select}
-            onClearRecents={clearRecents}
-            signingLocked={signing.state.kind === "running"}
-          />
+          anchor === "titlebar" && documents.tabs.length === 0 ? null : (
+            <DocumentTabs
+              tabs={documents.tabs}
+              activeId={activeId}
+              recents={visibleRecents}
+              onActivate={documents.activate}
+              onClose={documents.close}
+              onOpen={openDocument}
+              onSelectRecent={documents.select}
+              onClearRecents={clearRecents}
+              signingLocked={signing.state.kind === "running"}
+              withOpenButton={anchor !== "titlebar"}
+            />
+          )
         }
         viewer={
           <DocumentViewer

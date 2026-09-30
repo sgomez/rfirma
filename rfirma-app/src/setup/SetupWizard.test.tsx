@@ -499,6 +499,21 @@ describe("SetupWizard", () => {
   });
 
   // La cabecera es la del ADR-0007, con su menú completo (docs/design/primer-arranque.md).
+  it("leaves the header to the gtk titlebar on linux", () => {
+    renderWithCatalog(
+      <SetupWizard
+        preferences={inMemoryPreferences(defaults)}
+        seen={false}
+        menuAnchor="titlebar"
+        onFinish={() => {}}
+      />,
+    );
+
+    expect(screen.getByText("Configurar rFirma")).toBeInTheDocument();
+    expect(screen.queryByText("rFirma")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Menú" })).toBeNull();
+  });
+
   it("carries the app name and the ADR-0007 menu, reusing the shared Header", async () => {
     const user = userEvent.setup();
     const onOpenStatus = vi.fn();
@@ -509,6 +524,7 @@ describe("SetupWizard", () => {
       <SetupWizard
         preferences={inMemoryPreferences(defaults)}
         seen={false}
+        menuAnchor="header"
         onFinish={() => {}}
         onOpenStatus={onOpenStatus}
         onOpenPreferences={onOpenPreferences}

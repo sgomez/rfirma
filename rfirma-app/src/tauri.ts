@@ -43,3 +43,4 @@ export {
   tauriVisibleSignatureMemory,
 } from "./tauriSigning";
 export { tauriStatusPort } from "./tauriStatus";
+export { tauriNativeTitlebar } from "./tauriTitlebar";

@@ -111,3 +111,10 @@
   margin: 4px 0;
   width: 100%;
 }
+
+/* En Linux, la tira de solo pestañas bajo la barra de título GTK. El gris del
+   tema GTK no se puede leer desde el WebView, así que lleva `--rf-bg` y su raya. */
+.header--tabsOnly {
+  height: 38px;
+  padding: 0 6px;
+}

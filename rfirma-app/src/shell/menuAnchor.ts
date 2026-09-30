@@ -1,25 +1,13 @@
 /**
- * Dónde se ancla el menú de dos entradas.
- *
- * El ADR-0007 define **una** acción, `Preferencias…` y `Acerca de rFirma`, con
- * dos anclajes según la plataforma: el botón ☰ de la cabecera en GNOME y en
- * Windows, y el menú de aplicación nativo (`tauri::menu`, con `Cmd+,`) en
- * macOS. En macOS el botón de la cabecera **se oculta**, no se deja vacío.
+ * Dónde se ancla el menú de la aplicación (ADR-0007): el ☰ de la cabecera en
+ * Windows, el menú de aplicación nativo en macOS y la barra de título GTK en
+ * Linux. Con `"titlebar"` la cabecera HTML se queda en la tira de pestañas.
  */
-export type MenuAnchor = "header" | "native";
+export type MenuAnchor = "header" | "native" | "titlebar";
 
-/**
- * El anclaje que le toca a la plataforma en la que corre la ventana.
- *
- * Se decide con el `userAgent` del WebView y no con un complemento de Tauri
- * porque es una decisión de la capa de interfaz y no hay ninguna otra que
- * necesite saber el sistema operativo: el único sitio del backend con un
- * `cfg!` es `paths.rs` (ADR-0010), y esto no vive ahí.
- *
- * El hito v0.1 es solo Linux, así que hoy esto siempre contesta `"header"`.
- * Está escrito ahora porque el momento de saberlo es antes de escribir el
- * código de menús, no después.
- */
+/** El anclaje que le toca a la plataforma, leído del `userAgent` del WebView. */
 export function menuAnchorFor(userAgent: string): MenuAnchor {
-  return /mac os x|macintosh/i.test(userAgent) ? "native" : "header";
+  if (/mac os x|macintosh/i.test(userAgent)) return "native";
+  if (/linux/i.test(userAgent) && !/android/i.test(userAgent)) return "titlebar";
+  return "header";
 }

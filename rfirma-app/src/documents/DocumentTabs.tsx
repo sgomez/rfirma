@@ -37,6 +37,8 @@ interface DocumentTabsProps {
   onClearRecents: () => void;
   /** Mientras una firma está en curso, las demás pestañas no se activan. */
   signingLocked?: boolean;
+  /** En Linux el botón partido va en la barra de título GTK, no aquí. */
+  withOpenButton?: boolean;
 }
 
 /** Las pestañas de los documentos abiertos, con el botón partido de abrir, dentro de la cabecera. */
@@ -50,22 +52,25 @@ export function DocumentTabs({
   onSelectRecent,
   onClearRecents,
   signingLocked = false,
+  withOpenButton = true,
 }: DocumentTabsProps) {
   const { t } = useTranslation();
   const strip = useRef<HTMLElement>(null);
-  const available = useAvailableWidth(strip);
+  const available = useAvailableWidth(strip, withOpenButton ? SPLIT_BUTTON_WIDTH : 0);
   const { visible, hidden } =
     available === null ? { visible: tabs, hidden: [] } : layOutTabs(available, tabs, activeId);
 
   return (
     <nav className="document-tabs" aria-label={t("tabs.label")} ref={strip}>
-      <SplitOpenButton
-        recents={recents}
-        openIds={new Set(tabs.map((tab) => tab.id))}
-        onOpen={onOpen}
-        onSelectRecent={onSelectRecent}
-        onClearRecents={onClearRecents}
-      />
+      {withOpenButton && (
+        <SplitOpenButton
+          recents={recents}
+          openIds={new Set(tabs.map((tab) => tab.id))}
+          onOpen={onOpen}
+          onSelectRecent={onSelectRecent}
+          onClearRecents={onClearRecents}
+        />
+      )}
       <div className="document-tabs__list" role="tablist">
         {visible.map((tab) => {
           const active = tab.id === activeId;
@@ -306,19 +311,22 @@ function SplitOpenButton({
   );
 }
 
-function useAvailableWidth(strip: RefObject<HTMLElement | null>): number | null {
+function useAvailableWidth(
+  strip: RefObject<HTMLElement | null>,
+  openButtonWidth: number,
+): number | null {
   const [width, setWidth] = useState<number | null>(null);
   useLayoutEffect(() => {
     const element = strip.current;
     if (!element || typeof ResizeObserver === "undefined") return;
     const measure = () => {
-      const inner = element.clientWidth - STRIP_PADDING - SPLIT_BUTTON_WIDTH;
+      const inner = element.clientWidth - STRIP_PADDING - openButtonWidth;
       setWidth(inner > 0 ? inner : null);
     };
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(element);
     return () => observer.disconnect();
-  }, [strip]);
+  }, [strip, openButtonWidth]);
   return width;
 }

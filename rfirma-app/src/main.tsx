@@ -8,13 +8,15 @@ import "./design-system/index.css";
 // modelo de caja, el margen del documento y la colocación del velo. Va detrás
 // del bundle porque son ajustes sobre él (ver `app.css`).
 import "./app.css";
-import { StrictMode, useRef, useState } from "react";
+import { StrictMode, useCallback, useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { App, type AppHandle } from "./App";
 import { RenderErrorBoundary } from "./errors/RenderErrorBoundary";
 import { createI18n } from "./i18n/i18n";
 import { LanguageProvider } from "./i18n/LanguageProvider";
 import { SetupWizard } from "./setup/SetupWizard";
+import { menuAnchorFor } from "./shell/menuAnchor";
+import { absentNativeTitlebar } from "./shell/nativeTitlebar";
 import { visibleSignatureFrom } from "./signing/visibleSignature";
 import {
   tauriAppVersion,
@@ -24,6 +26,7 @@ import {
   tauriDocumentPicker,
   tauriExternalDestinationOpener,
   tauriLanguagePreference,
+  tauriNativeTitlebar,
   tauriPdfSource,
   tauriPreferences,
   tauriRecents,
@@ -89,17 +92,28 @@ const statusPort = tauriStatusPort();
 // `RenderErrorBoundary` que envuelve a `RootView`, y crear uno nuevo en cada
 // pintada de `RootView` lo habría dejado sin compartir.
 const externalDestinations = tauriExternalDestinationOpener();
+const titlebar =
+  menuAnchorFor(navigator.userAgent) === "titlebar"
+    ? tauriNativeTitlebar()
+    : absentNativeTitlebar();
 
 function RootView() {
   const [setupWizardSeen, setSetupWizardSeen] = useState(initialPreferences.setupWizardSeen);
   const appHandle = useRef<AppHandle | null>(null);
 
-  const finishWizard = () => {
+  const finishWizard = useCallback(() => {
     void preferences
       .read()
       .then((current) => preferences.save({ ...current, setupWizardSeen: true }));
     setSetupWizardSeen(true);
-  };
+  }, []);
+
+  useEffect(() => {
+    if (setupWizardSeen) return;
+    return titlebar.onAction((action) => {
+      if (action === "status" || action === "preferences") finishWizard();
+    });
+  }, [setupWizardSeen, finishWizard]);
 
   return (
     <>
@@ -137,6 +151,7 @@ function RootView() {
         externalDestinations={externalDestinations}
         status={statusPort}
         covered={!setupWizardSeen}
+        titlebar={titlebar}
         onReady={(handle) => {
           appHandle.current = handle;
         }}

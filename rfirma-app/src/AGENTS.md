@@ -45,6 +45,7 @@ rojo.
 | `tauriPreferences.ts` | Los puertos de Tauri de la configuración: ajustes, idioma, destino y la versión publicada. |
 | `tauriSede.ts` | El puerto de Tauri del trámite de sede. |
 | `tauriStatus.ts` | El puerto de Tauri del estado de la instalación. |
+| `tauriTitlebar.ts` | El puerto de Tauri de la barra de título GTK de Linux: la orden del estado y el evento de las acciones. |
 | `App.tsx` | El árbol de la ventana y el estado que la recorre. |
 | `App.forgetActivity.ts` | Olvidar la actividad: los ajustes y los documentos abiertos, aunque uno de los dos falle. Sin React. |
 | `App.signingOrder.ts` | La colocación guardada, la geometría de la página y la orden de firma armada en un solo sitio. Sin React. |
@@ -54,6 +55,7 @@ rojo.
 | `App.usePageGeometry.ts` | La geometría de la página que lleva el recuadro, leída del PDF abierto. |
 | `App.usePreferencesState.ts` | Los ajustes, el destino previsto para el documento activo y la rúbrica adoptada. |
 | `App.usePreviousSignatures.ts` | El informe de firmas previas del documento activo, pedido al abrir o cargar. |
+| `App.useNativeTitlebar.ts` | El estado que se manda a la barra de título nativa y a dónde lleva cada acción que vuelve. |
 | `App.useOpenShortcut.ts` | El atajo Ctrl+O (Cmd+O en macOS) que abre un PDF, el primero de la ventana. |
 | `App.useSignFlow.ts` | La vista previa del sello y la firma, con los dos avisos que pueden interponerse antes del PIN. |
 | `App.useSignedSummary.ts` | El acuse de recibo del documento firmado y los dos caminos hasta el fichero. |
@@ -65,11 +67,12 @@ rojo.
 | `shell/MainWindow.tsx` | El marco, con el hueco de la franja entre la cabecera y las regiones. |
 | `shell/NotificationStrip.tsx` | La franja de notificación: el patrón, no el aviso concreto. |
 | `shell/Header.tsx` | La cabecera única, sin barra de menús. |
-| `shell/menuAnchor.ts` | Dónde se ancla el menú de la aplicación. |
+| `shell/menuAnchor.ts` | Dónde se ancla el menú de la aplicación, por plataforma: cabecera, menú de macOS o barra de título GTK. |
+| `shell/nativeTitlebar.ts` | El puerto de la barra de título nativa de Linux, con su doble en memoria. Sin React. |
 | **`documents/`** | Los documentos abiertos y los recientes. |
 | `documents/document.ts` | El vocabulario del documento: el que se tiene delante y su insignia. No es la fila. |
 | `documents/useDocuments.ts` | El estado de las pestañas abiertas, la activa y los recientes. |
-| `documents/DocumentTabs.tsx` | La tira de pestañas bajo la cabecera, con el botón partido de abrir. |
+| `documents/DocumentTabs.tsx` | La tira de pestañas, con el botón partido de abrir salvo en Linux. |
 | `documents/tabLayout.ts` | Qué pestañas caben en la tira según el ancho y cuáles quedan en «+N». Sin React. |
 | `documents/RecentRows.tsx` | Las filas de los recientes, que comparten el menú de abiertos recientemente y el estado vacío del visor. |
 | `documents/recents.ts` | Los diez recientes —**la fila que se guarda**— y su puerto. |
