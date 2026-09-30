@@ -7,4 +7,13 @@ pub enum Channel {
     Native,
     /// Instalación en contenedor flatpak.
     Flatpak,
+    /// Instalación de Windows, servida desde el servidor propio.
+    Windows,
+}
+
+impl Channel {
+    /// Si la versión anunciada se puede instalar desde la aplicación.
+    pub fn installs_from_the_app(self) -> bool {
+        self == Self::Windows
+    }
 }

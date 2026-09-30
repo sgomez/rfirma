@@ -11,6 +11,8 @@ crossing! {
     pub struct NewVersionView {
         /// Versión publicada.
         pub version: String,
+        /// Si se puede instalar desde la aplicación.
+        pub installable: bool,
     }
 }
 

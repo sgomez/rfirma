@@ -2,6 +2,7 @@
 
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use crate::desktop::domain::channel::Channel;
 use crate::desktop::domain::version_check::VersionCheck;
 use crate::desktop::ports::VersionMemory;
 
@@ -51,11 +52,25 @@ pub fn new_version(
     running: Version,
     memory: &dyn VersionMemory,
     feed: ReleaseFeed<'_>,
+    channel: Channel,
     now: SystemTime,
-) -> Option<Version> {
-    let announced = ask_and_remember(memory, feed, now).or_else(|| remembered_answer(memory))?;
+) -> Option<NewVersion> {
+    let announced =
+        ask_and_remember(memory, feed, channel, now).or_else(|| remembered_answer(memory))?;
 
-    (announced > running).then_some(announced)
+    (announced > running).then(|| NewVersion {
+        version: announced,
+        installable: channel.installs_from_the_app(),
+    })
+}
+
+/// Versión nueva publicada y si se puede instalar desde la aplicación.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct NewVersion {
+    /// La versión anunciada.
+    pub version: Version,
+    /// Si el canal permite instalarla desde la aplicación.
+    pub installable: bool,
 }
 
 /// Lee la última comprobación guardada en memoria, sea cual sea su antigüedad.
@@ -67,9 +82,10 @@ pub(crate) fn remembered_answer(memory: &dyn VersionMemory) -> Option<Version> {
 pub(crate) fn ask_and_remember(
     memory: &dyn VersionMemory,
     feed: ReleaseFeed<'_>,
+    channel: Channel,
     now: SystemTime,
 ) -> Option<Version> {
-    let announced = announced_version(&feed()?)?;
+    let announced = announced_version(&feed()?, channel)?;
 
     let _ = memory.remember_version_check(VersionCheck {
         checked_at: seconds_since_epoch(now),
@@ -79,10 +95,14 @@ pub(crate) fn ask_and_remember(
     Some(announced)
 }
 
-/// Extrae la versión anunciada en el cuerpo de la publicación.
-fn announced_version(body: &str) -> Option<Version> {
-    let release: serde_json::Value = serde_json::from_str(body).ok()?;
-    Version::parse(release.get("tag_name")?.as_str()?)
+/// Extrae la versión anunciada: `version` del `latest.json` en Windows, `tag_name` en GitHub.
+fn announced_version(body: &str, channel: Channel) -> Option<Version> {
+    let field = match channel {
+        Channel::Windows => "version",
+        Channel::Native | Channel::Flatpak => "tag_name",
+    };
+    let feed: serde_json::Value = serde_json::from_str(body).ok()?;
+    Version::parse(feed.get(field)?.as_str()?)
 }
 
 /// Convierte una marca temporal a segundos desde el inicio de época Unix.

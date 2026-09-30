@@ -6,7 +6,7 @@ use crate::desktop::application::version::{
     ask_and_remember, remembered_answer, ReleaseFeed, Version,
 };
 use crate::desktop::domain::channel::Channel;
-use crate::desktop::domain::destination::{CERTIFICATE_ISSUANCE, RELEASES, REPOSITORY};
+use crate::desktop::domain::destination::{CERTIFICATE_ISSUANCE, RELEASES, REPOSITORY, WINDOWS};
 use crate::desktop::domain::handlers::UrlHandlers;
 use crate::desktop::domain::status::{
     ActionKind, Signal, SignalDetail, SignalRow, SiteSignatureCandidate, StatusAction,
@@ -22,6 +22,7 @@ pub fn update_destination_for(channel: Channel) -> &'static str {
     match channel {
         Channel::Flatpak => REPOSITORY,
         Channel::Native => RELEASES,
+        Channel::Windows => WINDOWS,
     }
 }
 
@@ -65,7 +66,8 @@ pub fn measure_version_signal(
     channel: Channel,
     now: SystemTime,
 ) -> SignalRow {
-    let announced = ask_and_remember(memory, feed, now).or_else(|| remembered_answer(memory));
+    let announced =
+        ask_and_remember(memory, feed, channel, now).or_else(|| remembered_answer(memory));
     evaluate_version_signal(running, announced, channel)
 }
 

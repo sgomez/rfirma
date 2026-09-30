@@ -10,7 +10,16 @@ pub use crate::desktop::domain::channel::Channel;
 impl Channel {
     /// Detecta el canal examinando la presencia del testigo de sandbox.
     pub fn detected() -> Self {
-        Self::over(Path::new(SANDBOX_MARKER))
+        Self::on_platform(cfg!(windows), Path::new(SANDBOX_MARKER))
+    }
+
+    /// Windows es su propio canal; en el resto manda el testigo de sandbox.
+    fn on_platform(windows: bool, marker: &Path) -> Self {
+        if windows {
+            Self::Windows
+        } else {
+            Self::over(marker)
+        }
     }
 
     /// Determina el canal según la existencia de la ruta testigo.
@@ -36,7 +45,7 @@ pub enum RegisteredHandlers {
 pub fn registered_handlers_for_scheme(channel: Channel, scheme: &str) -> RegisteredHandlers {
     match channel {
         Channel::Flatpak => RegisteredHandlers::NotAvailableInsideTheSandbox,
-        Channel::Native => {
+        Channel::Native | Channel::Windows => {
             #[cfg(target_os = "linux")]
             let handlers = gio::AppInfo::all_for_type(&content_type_for(scheme))
                 .iter()
