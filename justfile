@@ -118,6 +118,7 @@ check-repo: check-version
     {{ root }}/.github/check-workflows.sh
     {{ root }}/packaging/repo/build-tree.test.sh
     {{ root }}/packaging/repo/publish-tree.test.sh
+    {{ root }}/packaging/windows/sign-updater.test.sh
     ruff check {{ root }}/packaging {{ root }}/scripts
     {{ root }}/scripts/tests/outline_test.sh
     {{ root }}/scripts/tests/ci_lanes_test.sh

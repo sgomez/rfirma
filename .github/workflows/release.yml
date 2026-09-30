@@ -21,7 +21,7 @@
 # es lo unico que este fichero puede hacer para sostener la primera invariante
 # del ADR-0015, y por eso `.github/check-workflows.sh` lo vigila. El segundo
 # job es el unico que entra en `environment: release`, y por tanto el unico que
-# ve la subclave GPG.
+# ve la subclave GPG y la clave minisign de las actualizaciones de Windows.
 #
 # EL ORDEN DE ESTE FICHERO ES OBLIGATORIO, y no es de estilo: firmar un `.rpm`
 # LO MODIFICA. Asi que primero se firma el `.rpm`, luego se calcula el
@@ -65,8 +65,8 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    # La sede de los secretos, abierta solo a etiquetas `v*`. Los tres que
-    # nombra este fichero se crean como dice `packaging/repo/README.md` y se
+    # La sede de los secretos, abierta solo a etiquetas `v*`. Los que nombra
+    # este fichero se crean como dice `packaging/repo/README.md` y se
     # documentan en SECURITY.md.
     environment: release
     permissions:
@@ -104,10 +104,11 @@ jobs:
 
       # `rpm` trae `rpmsign`; `gnupg` ya viene en el runner, pero pedirlo aqui
       # es lo que hace que este paso no dependa de la imagen del dia.
-      - name: rpmsign y gnupg
+      # `minisign` comprueba la firma de actualizacion del instalador.
+      - name: rpmsign, gnupg y minisign
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends rpm gnupg
+          sudo apt-get install -y --no-install-recommends rpm gnupg minisign
 
       # Importa la SUBCLAVE de firma, nunca la maestra (ID-169). La accion
       # comprueba ademas que la huella importada es la que el repositorio dice
@@ -199,6 +200,25 @@ jobs:
           set -euo pipefail
           printf '%s\n' "$DIGESTS_DE_LA_CONSTRUCCION" > "${{ runner.temp }}/SHA256SUMS.construccion"
           packaging/check-digests.sh "${{ runner.temp }}/SHA256SUMS.construccion" paquetes
+
+      # La firma de actualizacion del instalador de Windows, con la minisign
+      # propia y no con la GPG (ADR-0015). No toca el `-setup.exe`: deja su
+      # `.sig` al lado, lo anade al manifiesto y falla si no verifica con la
+      # publica de firma versionada, que es la que aceptan las instalaciones de
+      # hoy y no la embebida: en la version puente de una rotacion difieren.
+      # Va despues de comparar con la construccion, porque el `.sig` no salio
+      # de alli, y antes del `SHA256SUMS`, que lo cubre.
+      # Solo en una version estable: una candidata no llega a ningun canal.
+      - name: Firma de actualizacion de cada -setup.exe
+        if: ${{ env.IS_PRERELEASE != 'true' }}
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: packaging/windows/sign-updater.sh paquetes packaging/windows/updater-signing.key.pub
+
+      - name: SHA256SUMS
+        run: |
+          set -euo pipefail
           cd paquetes
           rm -f SHA256SUMS SHA256SUMS.asc
           sha256sum -- * > SHA256SUMS
@@ -272,6 +292,7 @@ jobs:
           sin administrador. No esta firmado con Authenticode: SmartScreen
           avisa al abrirlo y hay que pulsar «Mas informacion» y «Ejecutar de
           todas formas». Su resumen esta en el mismo `SHA256SUMS` firmado.
+          El `.sig` que lo acompana es su firma de actualizacion (minisign).
 
           EOF
 

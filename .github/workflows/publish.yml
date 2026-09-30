@@ -117,7 +117,7 @@ jobs:
           set -euo pipefail
           while read -r paquete; do
             packaging/verifica-contenido.sh "paquetes/$paquete"
-          done < <(scripts/packages-manifest.sh files paquetes)
+          done < <(scripts/packages-manifest.sh packages paquetes)
 
       - name: Resumen
         env:

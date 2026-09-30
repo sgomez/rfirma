@@ -3,6 +3,7 @@
 #
 # Uso: scripts/packages-manifest.sh write <directorio>
 #      scripts/packages-manifest.sh files <directorio> [formato]
+#      scripts/packages-manifest.sh packages <directorio>
 #      scripts/packages-manifest.sh signable <directorio>
 #      scripts/packages-manifest.sh platforms <directorio>
 #      scripts/packages-manifest.sh platform-files <directorio> <plataforma>
@@ -16,6 +17,7 @@ row_for() {
         *.deb) echo "linux|deb|false|" ;;
         *.rpm) echo "linux|rpm|true|" ;;
         *-setup.exe) echo "windows|nsis|false|Windows SmartScreen avisará de que el instalador no está firmado." ;;
+        *-setup.exe.sig) echo "windows|minisign|false|" ;;
         *) return 1 ;;
     esac
 }
@@ -53,7 +55,7 @@ require_manifest() {
 command="${1-}"
 dir="${2-}"
 if [ -z "$command" ] || [ -z "$dir" ] || [ ! -d "$dir" ]; then
-    echo "uso: scripts/packages-manifest.sh write|files|signable|platforms|platform-files <directorio> [formato|plataforma]" >&2
+    echo "uso: scripts/packages-manifest.sh write|files|packages|signable|platforms|platform-files <directorio> [formato|plataforma]" >&2
     exit 2
 fi
 
@@ -63,6 +65,10 @@ case "$command" in
         require_manifest "$dir"
         jq -r --arg format "${3-}" \
             '.[] | select($format == "" or .format == $format) | .file' "$dir/$manifest_name"
+        ;;
+    packages)
+        require_manifest "$dir"
+        jq -r '.[] | select(.format != "minisign") | .file' "$dir/$manifest_name"
         ;;
     signable)
         require_manifest "$dir"

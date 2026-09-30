@@ -42,6 +42,19 @@ mkdir "$rc"
 "$script" write "$rc"
 [ "$(jq length "$rc/paquetes.json")" = 2 ] || fail "reescribir no cuenta el manifiesto como paquete"
 
+signed="$tmp/signed"
+mkdir "$signed"
+for f in me.sgomez.rfirma.flatpak rfirma_1.0.0_x64-setup.exe rfirma_1.0.0_x64-setup.exe.sig; do
+    : > "$signed/$f"
+done
+"$script" write "$signed"
+[ "$(jq -r '.[] | select(.format == "minisign") | "\(.platform) \(.file) \(.signable)"' "$signed/paquetes.json")" \
+    = "windows rfirma_1.0.0_x64-setup.exe.sig false" ] || fail "firma de actualizacion: una fila de windows, no firmable"
+[ "$("$script" platform-files "$signed" windows | wc -l)" = 2 ] || fail "firma de actualizacion: viaja con el instalador"
+[ "$("$script" files "$signed" | wc -l)" = 3 ] || fail "files lista tambien la firma de actualizacion"
+[ "$("$script" packages "$signed" | tr '\n' ' ')" = "me.sgomez.rfirma.flatpak rfirma_1.0.0_x64-setup.exe " ] \
+    || fail "packages: los paquetes sin la firma de actualizacion"
+
 unknown="$tmp/unknown"
 mkdir "$unknown"
 : > "$unknown/me.sgomez.rfirma.flatpak"
