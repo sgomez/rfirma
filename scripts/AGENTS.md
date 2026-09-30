@@ -6,7 +6,7 @@ Los arneses que las recetas del `justfile` llaman por nombre, siguiendo el patr�
 |---|---|
 | `bootstrap.sh` | Instala en `~/.m2` las dependencias Java de AutoFirma que no están en Maven Central. |
 | `outline.sh` | El esqueleto de un `.rs`, `.ts` o `.tsx`, para `just outline`. |
-| `tools.sh` | Comprueba las herramientas del entorno y falla nombrando la que falte. |
+| `tools.sh` | Comprueba las herramientas del entorno con una tabla por plataforma, y falla nombrando la que falte. |
 | `release.sh` | Publica una versión desde `main`: changelog, bump, commit, etiqueta y push atómico, para `just release`. |
 | `changelog-release.sh` | Escribe en `CHANGELOG.md` la sección de una versión a partir de los títulos de PR desde la última etiqueta. |
 | `bump-version.sh` | Sube la versión en los sitios del candado de `check-version.py`, para `just bump-version`. |
@@ -15,7 +15,6 @@ Los arneses que las recetas del `justfile` llaman por nombre, siguiendo el patr�
 | `check-glibc.sh` | Comprueba el suelo de glibc de la librería nativa. |
 | `flatpak-sources.sh` | Regenera las fuentes de cargo vendorizadas del manifiesto flatpak y el sello de `Cargo.lock`. |
 | `check-native.sh` | Falla nombrando `just native` si la librería nativa no está construida. |
-| `bundle-windows.sh` | Construye el instalador NSIS de Windows con el runtime de Visual C++ al lado, para `just bundle-windows`. |
 | `pre-push-fmt.sh` | Comprueba el formato de una cadena para el `pre-push` de `lefthook.yml`, no una receta. |
 | `token-per-test.sh` | Envoltorio de nextest que da a cada proceso de prueba su propia copia del almacén de SoftHSM. Lo llama `.config/nextest.toml` de `rfirma-app/src-tauri`, no una receta. |
 | `ci-lanes.sh` | Dice, a partir de los ficheros de un PR, qué carriles del CI tienen que correr. Lo llama el job `scope` de `ci.yml`, no una receta. |
