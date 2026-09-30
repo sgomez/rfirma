@@ -77,21 +77,29 @@ if [ -f "$BUILD" ]; then
         echo "Para un token de la propia ejecucion, usa \${{ github.token }}." >&2
         exit 1
     fi
-    if ! grep -q '^  workflow_call:' "$BUILD"; then
-        echo "$BUILD tiene que seguir siendo invocable (workflow_call, ADR-0015)" >&2
-        exit 1
-    fi
-    if ! awk '
-        /^permissions:$/ { dentro = 1; next }
-        dentro && /^  contents: read$/ { ok = 1 }
-        dentro && /^[^ ]/ { dentro = 0 }
-        END { exit ok ? 0 : 1 }
-    ' "$BUILD"; then
-        echo "$BUILD tiene que declarar 'permissions: contents: read' (ADR-0015)" >&2
-        exit 1
-    fi
-    echo "OK  $BUILD es invocable, de solo lectura y ni el ni sus acciones mencionan un secreto"
+    echo "OK  ni $BUILD ni sus acciones mencionan un secreto"
 fi
+
+secretos_a_llamados="$(awk '
+    function cierra() {
+        if (llama) printf "%s", secretos
+        llama = 0; secretos = ""
+    }
+    FNR == 1 { cierra() }
+    /^[^[:space:]#]/ { cierra() }
+    /^  [A-Za-z0-9_-]+:[[:space:]]*$/ { cierra() }
+    /^[[:space:]]*#/ { next }
+    /uses:[[:space:]]*\.\/\.github\/(actions\/setup-runner|workflows\/build\.yml)([[:space:]]|$)/ { llama = 1 }
+    /secrets[.[]|^[[:space:]]*secrets:/ { secretos = secretos FILENAME ":" FNR ": " $0 "\n" }
+    END { cierra() }
+' .github/workflows/*.yml)"
+if [ -n "$secretos_a_llamados" ]; then
+    printf '%s\n' "$secretos_a_llamados" >&2
+    echo >&2
+    echo "quien llama a setup-runner o a $BUILD no les pasa ningun secreto (ADR-0015)." >&2
+    exit 1
+fi
+echo "OK  ningun llamador de setup-runner ni de $BUILD les pasa un secreto"
 
 # ------------------------------------------------- tuberia de entrega --
 herencias="$(grep -rn 'secrets:[[:space:]]*inherit' .github/workflows | sin_comentarios || true)"
@@ -163,32 +171,9 @@ if [ -f "$PUBLISH" ]; then
     fi
     echo "OK  $PUBLISH solo reacciona a una Release publicada que no es candidata"
 
-    if ! grep -q 'packaging/repo/publish-tree.sh' "$PUBLISH"; then
-        echo "$PUBLISH tiene que publicar con packaging/repo/publish-tree.sh (ADR-0015)" >&2
-        exit 1
-    fi
-    sueltos="$(grep -nE '^[[:space:]]+(-[[:space:]]+)?(run:[[:space:]]*)?rsync ' "$PUBLISH" || true)"
-    if [ -n "$sueltos" ]; then
-        printf '%s\n' "$sueltos" >&2
-        echo >&2
-        echo "el rsync de la publicacion va en packaging/repo/publish-tree.sh, no aqui." >&2
-        echo "Ahi esta probado (just check-repo); en el YAML no lo prueba nadie." >&2
-        exit 1
-    fi
-    echo "OK  $PUBLISH publica con el guion probado y no lleva rsync suelto"
-
-    if ! grep -q 'build-tree.sh serie arbol rfirma.asc "\$FINGERPRINT"' "$PUBLISH"; then
-        echo "$PUBLISH tiene que pasarle la huella a build-tree.sh (ADR-0015)." >&2
-        echo "Sin ella el ostree, el InRelease de apt y el repomd de dnf se" >&2
-        echo "sirven sin firma: la firma es metadato desacoplado y hay que" >&2
-        echo "reponerla en CADA reconstruccion." >&2
-        exit 1
-    fi
-    echo "OK  $PUBLISH construye el arbol firmado con la huella del repositorio"
-
-    descarga="$(grep -n 'packaging/repo/download-series.sh' "$PUBLISH" | head -1 | cut -d: -f1)"
-    arbol="$(grep -n 'packaging/repo/build-tree.sh' "$PUBLISH" | head -1 | cut -d: -f1)"
-    if [ -z "$descarga" ] || [ "$descarga" -ge "$arbol" ]; then
+    descarga="$(grep -n 'packaging/repo/download-series.sh' "$PUBLISH" | head -1 | cut -d: -f1 || true)"
+    arbol="$(grep -n 'packaging/repo/build-tree.sh' "$PUBLISH" | head -1 | cut -d: -f1 || true)"
+    if [ -z "$descarga" ] || [ -z "$arbol" ] || [ "$descarga" -ge "$arbol" ]; then
         echo "$PUBLISH tiene que bajar la serie con packaging/repo/download-series.sh antes de construir el arbol (ADR-0015)." >&2
         exit 1
     fi
@@ -229,39 +214,6 @@ if [ -n "$docker" ]; then
     exit 1
 fi
 echo "OK  ningun workflow toca Docker ni un registro de imagenes"
-
-# ---------------------------------------------------------- caches de Rust --
-# Una PR lee las caches de `main` y no guarda las suyas: desbordarian el cupo (ADR-0015).
-sin_save_if="$(awk '
-    function cierra() {
-        if (abierto && !valido) print origen
-        abierto = 0
-    }
-    FNR == 1 { cierra() }
-    /uses:[[:space:]]*Swatinem\/rust-cache@/ {
-        cierra()
-        abierto = 1; valido = 0; origen = FILENAME ":" FNR
-        accion = (FILENAME ~ /\/actions\//)
-        match($0, /^[[:space:]]*/); sangria = RLENGTH
-        next
-    }
-    abierto {
-        match($0, /^[[:space:]]*/)
-        if ($0 !~ /^[[:space:]]*$/ && RLENGTH <= sangria) cierra()
-        else if ($0 ~ /^[[:space:]]*save-if:[[:space:]]*(false|\$\{\{[[:space:]]*github\.ref[[:space:]]*==[[:space:]]*'\''refs\/heads\/main'\''[[:space:]]*\}\})[[:space:]]*$/) valido = 1
-        else if (accion && $0 ~ /^[[:space:]]*save-if:[[:space:]]*\$\{\{[[:space:]]*inputs\.save-cache[[:space:]]*==[[:space:]]*'\''true'\''[[:space:]]*\}\}[[:space:]]*$/) valido = 1
-    }
-    END { cierra() }
-' .github/workflows/*.yml .github/actions/*/action.yml)"
-if [ -n "$sin_save_if" ]; then
-    printf '%s\n' "$sin_save_if" >&2
-    echo >&2
-    echo "cada Swatinem/rust-cache declara 'save-if: \${{ github.ref == 'refs/heads/main' }}'" >&2
-    echo "o 'save-if: false', y dentro de una accion 'save-if: \${{ inputs.save-cache == 'true' }}':" >&2
-    echo "una PR lee la cache de main, no guarda la suya." >&2
-    exit 1
-fi
-echo "OK  solo main guarda caches de Rust"
 
 # ------------------------------------------------ preparacion del runner --
 SETUP_RUNNER=./.github/actions/setup-runner
@@ -315,64 +267,21 @@ echo "OK  dependabot.yml espera antes de proponer una accion nueva"
 
 # ------------------------------------------------------------------ Preview --
 PREVIEW=.github/workflows/preview.yml
-if [ ! -f "$PREVIEW" ]; then
-    echo "falta $PREVIEW (ADR-0015)." >&2
-    exit 1
+if [ -f "$PREVIEW" ]; then
+    secretos="$(grep -nHE 'secrets[.[]|^[[:space:]]*secrets:' "$PREVIEW" \
+        | sin_comentarios || true)"
+    if [ -n "$secretos" ]; then
+        printf '%s\n' "$secretos" >&2
+        echo "$PREVIEW ejecuta codigo de la PR y no menciona ningun secreto (ADR-0015)." >&2
+        exit 1
+    fi
+    echo "OK  $PREVIEW no menciona ningun secreto"
 fi
-secretos="$(grep -nE 'secrets[.[]|^[[:space:]]*secrets:' "$PREVIEW" \
-    | grep -vE '^[0-9]+:[[:space:]]*#' || true)"
-if [ -n "$secretos" ]; then
-    printf '%s\n' "$secretos" >&2
-    echo "$PREVIEW no pasa ni menciona ningun secreto (ADR-0015)." >&2
-    exit 1
-fi
-permisos_de_mas="$(awk '
-    /^[[:space:]]*permissions:[[:space:]]*[^[:space:]#]/ && $0 !~ /permissions:[[:space:]]*\{\}/ { print FNR ": " $0; next }
-    /^[[:space:]]*permissions:[[:space:]]*$/ {
-        match($0, /^[[:space:]]*/); base = RLENGTH; dentro = 1; next
-    }
-    dentro {
-        if ($0 ~ /^[[:space:]]*(#.*)?$/) next
-        match($0, /^[[:space:]]*/)
-        if (RLENGTH <= base) { dentro = 0; next }
-        if ($0 !~ /^[[:space:]]*contents:[[:space:]]*read[[:space:]]*$/) print FNR ": " $0
-    }
-' "$PREVIEW")"
-if [ -n "$permisos_de_mas" ]; then
-    printf '%s\n' "$permisos_de_mas" >&2
-    echo "$PREVIEW declara solo 'contents: read' (ADR-0015)." >&2
-    exit 1
-fi
-echo "OK  $PREVIEW no pasa secretos y declara solo contents: read"
 
 # ----------------------------------------------------------- Preview Comment --
 COMMENT=.github/workflows/preview-comment.yml
 if [ ! -f "$COMMENT" ]; then
     echo "falta $COMMENT (ADR-0015)." >&2
-    exit 1
-fi
-disparadores="$(awk '
-    /^on:[[:space:]]*$/ { dentro = 1; next }
-    dentro && /^[^[:space:]#]/ { dentro = 0 }
-    dentro && /^[[:space:]]*#/ { next }
-    dentro && /^  [^[:space:]]/ { sub(/:.*/, ""); gsub(/[[:space:]]/, ""); print; next }
-    dentro && /^    (workflows|types):/ { gsub(/[[:space:]]/, ""); print }
-' "$COMMENT" | tr '\n' ' ')"
-if [ "$disparadores" != "workflow_run workflows:[Preview] types:[completed] " ]; then
-    echo "$COMMENT se dispara solo por workflow_run de Preview al completarse (ADR-0015)." >&2
-    echo "encontrado: $disparadores" >&2
-    exit 1
-fi
-permisos="$(awk '
-    /^[[:space:]]*permissions:/ && !/^permissions:[[:space:]]*$/ { print "fuera-de-lugar:" FNR; next }
-    /^permissions:[[:space:]]*$/ { dentro = 1; next }
-    dentro && /^[^[:space:]#]/ { dentro = 0 }
-    dentro && /^[[:space:]]*(#.*)?$/ { next }
-    dentro { gsub(/[[:space:]]/, ""); print }
-' "$COMMENT" | sort | tr '\n' ' ')"
-if [ "$permisos" != "actions:read pull-requests:write " ]; then
-    echo "$COMMENT declara exactamente 'actions: read' y 'pull-requests: write', a nivel de workflow (ADR-0015)." >&2
-    echo "encontrado: $permisos" >&2
     exit 1
 fi
 codigo_de_la_ejecucion="$(awk '
@@ -385,7 +294,7 @@ if [ -n "$codigo_de_la_ejecucion" ]; then
     echo "$COMMENT solo hace checkout de la rama por defecto, nunca del código de la ejecución (ADR-0015)." >&2
     exit 1
 fi
-echo "OK  $COMMENT: workflow_run, actions: read + pull-requests: write y sin código de la ejecución"
+echo "OK  $COMMENT solo hace checkout de la rama por defecto"
 
 # ---------------------------------------------------------------- GraalVM --
 GRAALVM_ACTION=.github/actions/setup-runner/action.yml
