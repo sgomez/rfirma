@@ -89,6 +89,9 @@ jobs:
       # accion local que importa la clave son ficheros de este repositorio, no
       # pasos `run:` escritos aqui (tercera invariante del ADR-0015).
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Las etiquetas: la firma de actualizacion se comprueba contra la ultima estable (ADR-0015).
+          fetch-depth: 0
 
       - name: Paquetes de la construccion
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
@@ -201,20 +204,13 @@ jobs:
           printf '%s\n' "$DIGESTS_DE_LA_CONSTRUCCION" > "${{ runner.temp }}/SHA256SUMS.construccion"
           packaging/check-digests.sh "${{ runner.temp }}/SHA256SUMS.construccion" paquetes
 
-      # La firma de actualizacion del instalador de Windows, con la minisign
-      # propia y no con la GPG (ADR-0015). No toca el `-setup.exe`: deja su
-      # `.sig` al lado, lo anade al manifiesto y falla si no verifica con la
-      # publica de firma versionada, que es la que aceptan las instalaciones de
-      # hoy y no la embebida: en la version puente de una rotacion difieren.
-      # Va despues de comparar con la construccion, porque el `.sig` no salio
-      # de alli, y antes del `SHA256SUMS`, que lo cubre.
-      # Solo en una version estable: una candidata no llega a ningun canal.
+      # Despues de comparar con la construccion y antes del `SHA256SUMS`, que cubre el `.sig` (ADR-0015).
       - name: Firma de actualizacion de cada -setup.exe
         if: ${{ env.IS_PRERELEASE != 'true' }}
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-        run: packaging/windows/sign-updater.sh paquetes packaging/windows/updater-signing.key.pub
+        run: packaging/windows/sign-updater.sh paquetes
 
       - name: SHA256SUMS
         run: |

@@ -144,8 +144,12 @@ Y **cuatro invariantes**, que son justo lo que un agente futuro colapsaría por 
    animal: firma el `-setup.exe` de cada versión y la consume una instalación de Windows sin
    persona delante, así que su compromiso significa instalación silenciosa de código. La
    pública va embebida en la configuración de Windows y la privada, con su contraseña, solo
-   en los secretos del `environment: release`. Cómo se crea y se rota lo dice
-   `packaging/repo/README.md`, en «La clave de actualizaciones de Windows».
+   en los secretos del `environment: release`. `release.yml` comprueba cada firma contra la
+   pública embebida en la **última etiqueta estable** —la que aceptan las instalaciones que ya
+   existen—, o contra la actual si todavía no hay ninguna estable con *updater*; no contra la
+   que embebe la versión que se firma, porque en la versión puente de una rotación esa ya es
+   la nueva. Cómo se crea y se rota lo dice `packaging/repo/README.md`, en «La clave de
+   actualizaciones de Windows».
 
 **Al CI se le da sólo la subclave de firma** (`gpg --export-secret-subkeys`), no la maestra.
 El CI puede firmar; no puede certificar, ni crear subclaves, ni tocar la identidad. Si se
@@ -266,6 +270,11 @@ misma cosa en la misma apertura del panel.
   - **Lo que resolvería ya tiene sitio.** Probar una rama lo cubre `build.yml` invocado desde
     un PR etiquetado, que la invariante 1 permite sin secretos; ensayar la tubería, las
     etiquetas `-rc.N`.
+- **Una copia versionada aparte de la pública minisign de firma**, junto al script que firma,
+  para comprobar la firma contra ella en vez de contra la embebida. Decía lo mismo que la
+  pública embebida de la última estable, que el historial de etiquetas ya guarda, y rotar la
+  clave obligaba a un paso manual más —copiarla por PR entre publicar la versión puente y subir
+  la privada nueva— que, olvidado, paraba la release siguiente.
 - **Una caché de 24 horas para la comprobación de versión**, la lectura obvia cuando se
   guarda la última respuesta. Se descarta porque no resuelve el problema que resolvería una
   caché: el escritorio no se reabre varias veces en un mismo día con la frecuencia que haría
