@@ -17,7 +17,7 @@ Los arneses que llaman las recetas del `justfile` (ADR-0013).
 | `flatpak-sources.sh` | Regenera las fuentes de cargo vendorizadas del manifiesto flatpak y el sello de `Cargo.lock`. |
 | `token-per-test.sh` | Envoltorio de nextest que da a cada proceso de prueba su propia copia del almacén de SoftHSM. Lo llama `.config/nextest.toml` de `rfirma-app/src-tauri`, no una receta. |
 | `ci-lanes.sh` | Dice, a partir de los ficheros de un PR, qué carriles del CI tienen que correr. Lo llama el job `scope` de `ci.yml`, no una receta. |
-| `packages-manifest.sh` | Escribe y lee el `paquetes.json` de una entrega: una fila por paquete con plataforma, fichero, formato, si es firmable y su aviso. Lo llama la receta `packages-manifest` y lo leen `release.yml`, `preview.yml`, `packaging/verify-packages.sh` y `packaging/repo/`. |
+| `packages-manifest.sh` | Escribe y lee el `paquetes.json` de una entrega: una fila por paquete con plataforma, fichero, formato, si es firmable y su aviso; también genera las notas del borrador de la Release. Lo llama la receta `packages-manifest` y lo leen `release.yml`, `preview.yml`, `packaging/verify-packages.sh` y `packaging/repo/`. |
 | `preview-comment.sh` | Compone el Markdown del comentario fijo de la preview de una PR a partir de los artefactos, el manifiesto y el contexto de la ejecución; no imprime nada si no hay nada que comentar. Lo llama `preview-comment.yml`. |
 | `tests/outline_test.sh` | Prueba el esqueleto que produce `outline.sh` sobre los fixtures de `tests/fixtures/`. |
 | `tests/ci_lanes_test.sh` | Prueba qué carriles enciende `ci-lanes.sh` para cada clase de fichero. |

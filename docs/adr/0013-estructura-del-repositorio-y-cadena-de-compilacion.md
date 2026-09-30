@@ -186,9 +186,9 @@ Lo que se configura, medido sobre los fuentes de `tauri-bundler` 2.9.4 en el
 **La invariante del ADR-0012 sale del sandbox a un script propio.**
 `packaging/verifica-contenido.sh <artefacto>` acepta un `.deb`, un `.rpm` o el `files/` de
 una construcción de flatpak, y afirma exactamente un `.so` bajo el directorio de la librería
-y `libawt.so` en ninguna parte. `verifica.sh` pasa a llamarlo en vez de arrancar el sandbox
-entero para comprobarlo, y el CI lo llama sobre cada artefacto **antes de subirlo**: es una
-puerta, no un informe.
+y `libawt.so` en ninguna parte. La verificación de paquetes (`verify-packages`) lo llama sobre
+cada artefacto **antes de subirlo**: es una puerta, no un informe. La prueba de humo del flatpak
+(`verifica.sh`) ya no la repite; antes arrancaba el sandbox entero para comprobarla.
 
 ## Los metadatos de `native-image` se versionan
 
