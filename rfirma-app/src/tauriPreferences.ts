@@ -13,7 +13,7 @@ import type {
   SignedDocumentOpener,
   SingleDestination,
 } from "./signing/destination";
-import type { NewVersion, VersionCheck } from "./updates/newVersion";
+import type { Installation, NewVersion, VersionCheck } from "./updates/newVersion";
 
 /**
  * La configuración tal como cruza: es `commands::ConfigurationView`, con el
@@ -177,5 +177,6 @@ export function tauriLanguagePreference(): LanguagePreference {
 export function tauriVersionCheck(): VersionCheck {
   return {
     latest: async () => await invoke<NewVersion | null>("check_for_new_version"),
+    install: async () => await invoke<Installation>("install_new_version"),
   };
 }

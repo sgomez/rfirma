@@ -444,6 +444,39 @@ msgstr "Hai unha versión nova de rFirma: {{version}}"
 msgid "notifications.newVersion.action"
 msgstr "Como actualizar"
 
+msgid "updates.install.action"
+msgstr "Actualizar agora"
+
+msgid "updates.install.confirmTitle"
+msgstr "Actualizar á versión {{version}}?"
+
+msgid "updates.install.confirmBody"
+msgstr "rFirma pecharase para instalar a versión {{version}}. Remata o que estás a facer antes de continuar."
+
+msgid "updates.install.confirm"
+msgstr "Instalar e pechar"
+
+msgid "updates.install.postpone"
+msgstr "Máis tarde"
+
+msgid "updates.install.installing"
+msgstr "Instalando a actualización…"
+
+msgid "updates.install.failedTitle"
+msgstr "Non se puido actualizar"
+
+msgid "updates.install.failed.noUpdate"
+msgstr "Xa non hai ningunha versión nova que instalar."
+
+msgid "updates.install.failed.networkFailure"
+msgstr "Non se puido descargar a actualización. Comproba a túa conexión e téntao de novo."
+
+msgid "updates.install.failed.invalidSignature"
+msgstr "A actualización descargada non ten unha sinatura válida, polo que non se instalou."
+
+msgid "updates.install.failed.notAvailable"
+msgstr "Esta instalación non se pode actualizar desde a aplicación."
+
 msgid "header.menu"
 msgstr "Menú"
 

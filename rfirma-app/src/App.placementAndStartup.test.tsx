@@ -296,7 +296,7 @@ describe("App, invocada con un documento", () => {
       );
 
     it("shows a strip under the header, and nothing modal, when there is a new version", async () => {
-      withVersionCheck(inMemoryVersionCheck({ version: "0.4.1" }));
+      withVersionCheck(inMemoryVersionCheck({ version: "0.4.1", installable: false }));
 
       const strip = await screen.findByRole("status");
       expect(strip).toHaveTextContent("Hay una versión nueva de rFirma: 0.4.1");
@@ -327,7 +327,7 @@ describe("App, invocada con un documento", () => {
         unavailableSigningBackend(),
         null,
         inMemoryDocumentDrops(),
-        inMemoryVersionCheck({ version: "0.4.1" }),
+        inMemoryVersionCheck({ version: "0.4.1", installable: false }),
       );
 
       await screen.findByRole("navigation", { name: "Documentos abiertos" });
@@ -337,7 +337,10 @@ describe("App, invocada con un documento", () => {
     // Sin red la comprobación ni contesta ni se queja: la ventana se queda
     // como estaba, que es lo que dice el ID-178.
     it("says nothing when the check fails", async () => {
-      withVersionCheck({ latest: async () => Promise.reject(new Error("sin red")) });
+      withVersionCheck({
+        latest: async () => Promise.reject(new Error("sin red")),
+        install: async () => "networkFailure",
+      });
 
       await screen.findByRole("navigation", { name: "Documentos abiertos" });
       expect(screen.queryByRole("status")).not.toBeInTheDocument();
@@ -345,7 +348,7 @@ describe("App, invocada con un documento", () => {
 
     it("takes the user to About, which is where the upgrade instructions are", async () => {
       const user = userEvent.setup();
-      withVersionCheck(inMemoryVersionCheck({ version: "0.4.1" }));
+      withVersionCheck(inMemoryVersionCheck({ version: "0.4.1", installable: false }));
 
       await screen.findByRole("status");
       await user.click(screen.getByRole("button", { name: "Cómo actualizar" }));
@@ -365,8 +368,11 @@ describe("App, invocada con un documento", () => {
       const versions: VersionCheck = {
         latest: async () => {
           askedTimes += 1;
-          return askedTimes === 1 ? { version: "0.4.1" } : { version: "0.5.0" };
+          return askedTimes === 1
+            ? { version: "0.4.1", installable: false }
+            : { version: "0.5.0", installable: false };
         },
+        install: async () => "notAvailable",
       };
       withVersionCheck(versions);
 
@@ -380,9 +386,86 @@ describe("App, invocada con un documento", () => {
       expect(strip).toHaveTextContent("Hay una versión nueva de rFirma: 0.4.1");
     });
 
+    describe("when the new version is installable", () => {
+      const installable = { version: "0.4.1", installable: true };
+
+      it("offers Actualizar ahora instead of Cómo actualizar", async () => {
+        withVersionCheck(inMemoryVersionCheck(installable));
+
+        await screen.findByRole("status");
+        expect(screen.getByRole("button", { name: "Actualizar ahora" })).toBeInTheDocument();
+        expect(screen.queryByRole("button", { name: "Cómo actualizar" })).not.toBeInTheDocument();
+      });
+
+      it("asks for confirmation with the version, and installs only once confirmed", async () => {
+        const user = userEvent.setup();
+        const versions = inMemoryVersionCheck(installable);
+        withVersionCheck(versions);
+
+        await screen.findByRole("status");
+        await user.click(screen.getByRole("button", { name: "Actualizar ahora" }));
+
+        expect(await screen.findByRole("dialog")).toHaveTextContent(
+          "¿Actualizar a la versión 0.4.1?",
+        );
+        expect(versions.installCalls).toBe(0);
+        await user.click(screen.getByRole("button", { name: "Instalar y cerrar" }));
+        await waitFor(() => expect(versions.installCalls).toBe(1));
+      });
+
+      it("can be postponed without installing", async () => {
+        const user = userEvent.setup();
+        const versions = inMemoryVersionCheck(installable);
+        withVersionCheck(versions);
+
+        await screen.findByRole("status");
+        await user.click(screen.getByRole("button", { name: "Actualizar ahora" }));
+        await user.click(await screen.findByRole("button", { name: "Más tarde" }));
+
+        expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+        expect(versions.installCalls).toBe(0);
+      });
+
+      it.each([
+        ["noUpdate", "Ya no hay ninguna versión nueva que instalar."],
+        ["networkFailure", "No se pudo descargar la actualización."],
+        ["invalidSignature", "no tiene una firma válida"],
+        ["notAvailable", "no se puede actualizar desde la aplicación"],
+      ] as const)("explains the %s failure and stays open", async (installation, message) => {
+        const user = userEvent.setup();
+        withVersionCheck(inMemoryVersionCheck(installable, installation));
+
+        await screen.findByRole("status");
+        await user.click(screen.getByRole("button", { name: "Actualizar ahora" }));
+        await user.click(await screen.findByRole("button", { name: "Instalar y cerrar" }));
+
+        expect(await screen.findByRole("alert")).toHaveTextContent(message);
+        await user.click(screen.getByRole("button", { name: "Cerrar" }));
+        expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      });
+
+      it("offers nothing in the strip when notify is off, but About still shows the status", async () => {
+        renderApp(
+          inMemoryRecents(),
+          [],
+          unavailablePdfSource(),
+          { notifyNewVersion: false },
+          emptyCertificateStore(),
+          emptyRubricPicker(),
+          unavailableSigningBackend(),
+          null,
+          inMemoryDocumentDrops(),
+          inMemoryVersionCheck(installable),
+        );
+
+        await screen.findByRole("navigation", { name: "Documentos abiertos" });
+        expect(screen.queryByRole("button", { name: "Actualizar ahora" })).not.toBeInTheDocument();
+      });
+    });
+
     it("is dismissed for good once dismissed", async () => {
       const user = userEvent.setup();
-      withVersionCheck(inMemoryVersionCheck({ version: "0.4.1" }));
+      withVersionCheck(inMemoryVersionCheck({ version: "0.4.1", installable: false }));
 
       await screen.findByRole("status");
       await user.click(screen.getByRole("button", { name: "Descartar" }));

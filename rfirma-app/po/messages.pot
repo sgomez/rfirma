@@ -386,6 +386,39 @@ msgstr ""
 msgid "notifications.newVersion.action"
 msgstr ""
 
+msgid "updates.install.action"
+msgstr ""
+
+msgid "updates.install.confirmTitle"
+msgstr ""
+
+msgid "updates.install.confirmBody"
+msgstr ""
+
+msgid "updates.install.confirm"
+msgstr ""
+
+msgid "updates.install.postpone"
+msgstr ""
+
+msgid "updates.install.installing"
+msgstr ""
+
+msgid "updates.install.failedTitle"
+msgstr ""
+
+msgid "updates.install.failed.noUpdate"
+msgstr ""
+
+msgid "updates.install.failed.networkFailure"
+msgstr ""
+
+msgid "updates.install.failed.invalidSignature"
+msgstr ""
+
+msgid "updates.install.failed.notAvailable"
+msgstr ""
+
 msgid "header.menu"
 msgstr ""
 

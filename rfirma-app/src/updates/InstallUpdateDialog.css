@@ -1,0 +1,11 @@
+.install-update-dialog {
+  width: 460px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--rf-space-sm);
+}
+
+.install-update-dialog__actions {
+  justify-content: flex-end;
+  gap: var(--rf-space-sm);
+}

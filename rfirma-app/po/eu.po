@@ -459,6 +459,39 @@ msgstr "rFirmaren bertsio berri bat dago: {{version}}"
 msgid "notifications.newVersion.action"
 msgstr "Nola eguneratu"
 
+msgid "updates.install.action"
+msgstr "Eguneratu orain"
+
+msgid "updates.install.confirmTitle"
+msgstr "{{version}} bertsiora eguneratu nahi duzu?"
+
+msgid "updates.install.confirmBody"
+msgstr "rFirma itxi egingo da {{version}} bertsioa instalatzeko. Amaitu egiten ari zarena jarraitu aurretik."
+
+msgid "updates.install.confirm"
+msgstr "Instalatu eta itxi"
+
+msgid "updates.install.postpone"
+msgstr "Geroago"
+
+msgid "updates.install.installing"
+msgstr "Eguneraketa instalatzen…"
+
+msgid "updates.install.failedTitle"
+msgstr "Ezin izan da eguneratu"
+
+msgid "updates.install.failed.noUpdate"
+msgstr "Ez dago instalatzeko bertsio berririk."
+
+msgid "updates.install.failed.networkFailure"
+msgstr "Ezin izan da eguneraketa deskargatu. Egiaztatu konexioa eta saiatu berriro."
+
+msgid "updates.install.failed.invalidSignature"
+msgstr "Deskargatutako eguneraketak ez du baliozko sinadurarik, beraz ez da instalatu."
+
+msgid "updates.install.failed.notAvailable"
+msgstr "Instalazio hau ezin da aplikaziotik eguneratu."
+
 msgid "header.menu"
 msgstr "Menua"
 

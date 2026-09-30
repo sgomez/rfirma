@@ -441,6 +441,39 @@ msgstr "There is a new version of rFirma: {{version}}"
 msgid "notifications.newVersion.action"
 msgstr "How to update"
 
+msgid "updates.install.action"
+msgstr "Update now"
+
+msgid "updates.install.confirmTitle"
+msgstr "Update to version {{version}}?"
+
+msgid "updates.install.confirmBody"
+msgstr "rFirma will close to install version {{version}}. Finish what you are doing before continuing."
+
+msgid "updates.install.confirm"
+msgstr "Install and close"
+
+msgid "updates.install.postpone"
+msgstr "Later"
+
+msgid "updates.install.installing"
+msgstr "Installing the update…"
+
+msgid "updates.install.failedTitle"
+msgstr "The update could not be installed"
+
+msgid "updates.install.failed.noUpdate"
+msgstr "There is no new version to install any more."
+
+msgid "updates.install.failed.networkFailure"
+msgstr "The update could not be downloaded. Check your connection and try again."
+
+msgid "updates.install.failed.invalidSignature"
+msgstr "The downloaded update does not have a valid signature, so it was not installed."
+
+msgid "updates.install.failed.notAvailable"
+msgstr "This installation cannot be updated from the application."
+
 msgid "header.menu"
 msgstr "Menu"
 
