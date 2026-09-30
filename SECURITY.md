@@ -67,9 +67,16 @@ La clave la genera —y los secretos los da de alta— una persona en su equipo,
 siguiendo [«La clave de firma»](packaging/repo/README.md#la-clave-de-firma), que también
 dice cómo renovar la subclave y cómo revocarla.
 
-**No hay clave de autoactualización.** rFirma no se actualiza sola: no hay *updater*, ni
-clave minisign, ni `latest.json`. Lo único que hace es enseñarte que existe una versión
-nueva.
+**La clave de actualizaciones de Windows** es un par minisign aparte, que solo firma el
+instalador de Windows (`*_x64-setup.exe`) para el *updater*: su firma va en la Release, en el
+`.sig` de al lado, y cubierta por el mismo `SHA256SUMS.asc`. La pública va versionada en la
+configuración de Windows del repositorio; la privada y su contraseña son secretos del entorno
+`release`, y en ninguna otra parte. La crea una persona, nunca el CI, siguiendo
+[«La clave de actualizaciones de Windows»](packaging/repo/README.md#la-clave-de-actualizaciones-de-windows),
+que también dice cómo rotarla.
+
+rFirma todavía no se actualiza sola: no hay `latest.json`, y lo único que hace es enseñarte
+que existe una versión nueva.
 
 ## Cómo verificar lo que descargas
 

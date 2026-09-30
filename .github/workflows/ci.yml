@@ -209,14 +209,15 @@ jobs:
       # indexa un pool de apt y genera repodata— y sin ellos esa pata avisa y se
       # salta, que es lo que pasa en un equipo de desarrollo pero no puede pasar
       # aqui. Es la unica manera de comprobar el ID-173: que reconstruir el
-      # repositorio deja el mismo commit y nadie redescarga.
+      # repositorio deja el mismo commit y nadie redescarga. `minisign` es el
+      # de `sign-updater.test.sh`, que sin el se salta la firma de verdad.
       - uses: ./.github/actions/setup-just
 
       - name: gettext y las herramientas de los tres repositorios
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            gettext ostree flatpak dpkg-dev apt-utils createrepo-c rpm
+            gettext ostree flatpak dpkg-dev apt-utils createrepo-c rpm minisign
 
       # ruff es la puerta del unico Python del repositorio (ID-164): la
       # extension de Nautilus corre dentro del proceso del gestor de ficheros y

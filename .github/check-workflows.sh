@@ -167,6 +167,17 @@ if [ -f "$RELEASE" ]; then
     echo "OK  $RELEASE firma en el entorno de release y deja el borrador"
 fi
 
+# La clave minisign de las actualizaciones solo la nombra `release.yml` (ADR-0015).
+minisign_fuera="$(grep -rn 'TAURI_SIGNING_PRIVATE_KEY' .github/workflows .github/actions \
+    | grep -v "^$RELEASE:" | grep -vE ':[0-9]+:[[:space:]]*#' || true)"
+if [ -n "$minisign_fuera" ]; then
+    printf '%s\n' "$minisign_fuera" >&2
+    echo >&2
+    echo "la clave minisign de las actualizaciones solo aparece en $RELEASE (ADR-0015)." >&2
+    exit 1
+fi
+echo "OK  la clave minisign de las actualizaciones solo aparece en $RELEASE"
+
 PUBLISH=.github/workflows/publish.yml
 if [ -f "$PUBLISH" ]; then
     if ! grep -q 'types: \[published\]' "$PUBLISH"; then
