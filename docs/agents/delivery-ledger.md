@@ -230,3 +230,11 @@ siguen en `.scratch/archive/`.
 2026-09-29 spec=#1203 sub=#1205 model=sonnet effort=medium pr=#1207 verdict=CLEAN cycles=1 mergefix=0 wave=1 outcome=merged
 2026-09-29 spec=#1203 sub=#1204 model=sonnet effort=medium pr=#1208 verdict=CLEAN cycles=0 mergefix=0 wave=1 outcome=merged
 2026-09-29 spec=#1203 sub=#1206 model=sonnet effort=medium pr=#1209 verdict=CLEAN cycles=0 mergefix=0 wave=2 outcome=merged
+2026-09-30 spec=#1230 sub=#1233 model=sonnet effort=medium pr=#1239 verdict=CLEAN cycles=1 mergefix=0 wave=1 outcome=merged
+2026-09-30 spec=#1230 sub=#1231 model=opus effort=medium pr=#1240 verdict=CLEAN cycles=1 mergefix=0 wave=1 outcome=merged
+2026-09-30 spec=#1230 sub=#1234 model=sonnet effort=medium pr=#1242 verdict=CLEAN cycles=1 mergefix=0 wave=2 outcome=merged
+2026-09-30 spec=#1230 sub=#1235 model=opus effort=medium pr=#1243 verdict=CLEAN cycles=1 mergefix=0 wave=2 outcome=merged
+2026-09-30 spec=#1230 sub=#1237 model=sonnet effort=medium pr=#1245 verdict=— cycles=0 mergefix=0 wave=3 outcome=escalated
+2026-09-30 spec=#1230 sub=#1237 model=sonnet effort=medium pr=#1245 verdict=— cycles=0 mergefix=0 wave=3 outcome=merged-by-human
+2026-09-30 spec=#1230 sub=#1236 model=sonnet effort=medium pr=#1244 verdict=— cycles=3 mergefix=0 wave=3 outcome=escalated
+2026-09-30 spec=#1230 sub=#1236 model=sonnet effort=medium pr=#1244 verdict=CLEAN cycles=4 mergefix=0 wave=3 outcome=merged
