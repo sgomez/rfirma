@@ -117,12 +117,14 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
       handler: WithdrawalView
       stores: Vec<StoreWithdrawalView>
 
-  pub enum TitlebarActionView
+  pub enum TitlebarActionView   (serde: etiqueta "action")
       Open
       Status
       Preferences
       Feedback
       About
+      ClearRecents
+      Recent { path: String }
 
   pub struct TitlebarLabelsView
       open: String
@@ -133,11 +135,22 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
       preferences: String
       feedback: String
       about: String
+      recents: String
+      clearRecents: String
+      notFound: String
+
+  pub struct TitlebarRecentView
+      path: String
+      name: String
+      folder: String
+      signed: bool
+      found: bool
 
   pub struct TitlebarStateView
       openVisible: bool
       warningVisible: bool
       labels: TitlebarLabelsView
+      recents: Vec<TitlebarRecentView>
 
   pub struct RubricView
       base64: String
