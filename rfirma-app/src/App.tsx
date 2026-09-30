@@ -79,6 +79,8 @@ interface AppProps {
   initialSignature: VisibleSignature;
   /** Si hay una versión nueva publicada. Ver [`VersionCheck`]. */
   versions: VersionCheck;
+  /** La versión del binario que enseña «Acerca de». */
+  version: string;
   /** Dónde va el menú. Por omisión, lo que diga la plataforma. */
   menuAnchor?: MenuAnchor;
   /** Quien abre destinos externos fuera de la aplicación. Ver [`ExternalDestinationOpener`]. */
@@ -127,6 +129,7 @@ export function App({
   opener,
   initialSignature,
   versions,
+  version,
   menuAnchor,
   externalDestinations = unavailableExternalDestinationOpener(),
   status = memoryStatus(),
@@ -477,6 +480,7 @@ export function App({
       />
       {dialog === "about" && (
         <AboutDialog
+          version={version}
           newVersion={newVersion}
           versions={versions}
           offerUpdate={notifyNewVersion}

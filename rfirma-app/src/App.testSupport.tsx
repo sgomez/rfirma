@@ -241,6 +241,7 @@ export function renderApp(
       opener={unavailableOpener()}
       initialSignature={initialSignature}
       versions={versions}
+      version="0.1.0"
       menuAnchor="header"
       externalDestinations={externalDestinations}
       status={status}

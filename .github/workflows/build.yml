@@ -52,7 +52,7 @@ on:
       expected-version:
         description: >-
           Version que el llamador cree estar construyendo, con o sin la `v`
-          delante. Si se da, tiene que coincidir con la de tauri.conf.json.
+          delante. Si se da, tiene que coincidir con la de Cargo.toml.
         type: string
         required: false
         default: ''

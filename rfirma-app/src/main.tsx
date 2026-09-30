@@ -17,6 +17,7 @@ import { LanguageProvider } from "./i18n/LanguageProvider";
 import { SetupWizard } from "./setup/SetupWizard";
 import { visibleSignatureFrom } from "./signing/visibleSignature";
 import {
+  tauriAppVersion,
   tauriCertificateStore,
   tauriDestinations,
   tauriDocumentDrops,
@@ -82,6 +83,7 @@ const recents = tauriRecents();
 const preferences = tauriPreferences();
 const initialPreferences = await preferences.read();
 const initialSignature = visibleSignatureFrom(await tauriVisibleSignatureMemory().read());
+const appVersion = await tauriAppVersion();
 const statusPort = tauriStatusPort();
 // Fuera del árbol, como `errands` en `sede/main.tsx`: lo usa también el
 // `RenderErrorBoundary` que envuelve a `RootView`, y crear uno nuevo en cada
@@ -131,6 +133,7 @@ function RootView() {
         opener={tauriSignedDocumentOpener()}
         initialSignature={initialSignature}
         versions={tauriVersionCheck()}
+        version={appVersion}
         externalDestinations={externalDestinations}
         status={statusPort}
         covered={!setupWizardSeen}
