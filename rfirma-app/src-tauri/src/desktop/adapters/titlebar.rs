@@ -38,19 +38,25 @@ mod gtk_titlebar {
     use gtk::prelude::*;
     use tauri::Emitter;
 
-    use super::super::views::TitlebarActionView;
+    use super::super::views::{TitlebarActionView, TitlebarRecentView};
     use super::{TitlebarStateView, TITLEBAR_ACTION};
 
-    const ACTIONS: [(&str, TitlebarActionView); 5] = [
+    const MISSING_RECENT: &str = "missing-recent";
+    const MISSING_ACTION: &str = "hdr.missing-recent";
+
+    const ACTIONS: [(&str, TitlebarActionView); 6] = [
         ("open", TitlebarActionView::Open),
         ("status", TitlebarActionView::Status),
         ("preferences", TitlebarActionView::Preferences),
         ("feedback", TitlebarActionView::Feedback),
         ("about", TitlebarActionView::About),
+        ("clear-recents", TitlebarActionView::ClearRecents),
     ];
 
     struct Widgets {
+        split: gtk::Box,
         open: gtk::Button,
+        recents: gtk::MenuButton,
         warning: gtk::Button,
         menu: gtk::MenuButton,
     }
@@ -70,6 +76,14 @@ mod gtk_titlebar {
         open.set_focus_on_click(false);
         open.set_action_name(Some("hdr.open"));
 
+        let recents = gtk::MenuButton::new();
+        recents.set_focus_on_click(false);
+
+        let split = gtk::Box::new(gtk::Orientation::Horizontal, 0);
+        split.style_context().add_class("linked");
+        split.pack_start(&open, false, false, 0);
+        split.pack_start(&recents, false, false, 0);
+
         let warning =
             gtk::Button::from_icon_name(Some("dialog-warning-symbolic"), gtk::IconSize::Button);
         warning.set_focus_on_click(false);
@@ -82,18 +96,21 @@ mod gtk_titlebar {
             gtk::IconSize::Button,
         )));
 
-        header.pack_start(&open);
+        header.pack_start(&split);
         header.pack_end(&menu);
         header.pack_end(&warning);
         header.show_all();
-        open.set_visible(false);
+        split.set_visible(false);
+        recents.set_visible(false);
         warning.set_visible(false);
         menu.set_visible(false);
 
         open_the_menu_on_f10(gtk_window, &menu);
         WIDGETS.with(|widgets| {
             *widgets.borrow_mut() = Some(Widgets {
+                split,
                 open,
+                recents,
                 warning,
                 menu,
             });
@@ -109,7 +126,10 @@ mod gtk_titlebar {
             let labels = &state.labels;
             widgets.open.set_label(&labels.open);
             widgets.open.set_tooltip_text(Some(&labels.open_tooltip));
-            widgets.open.set_visible(state.open_visible);
+            widgets.split.set_visible(state.open_visible);
+            widgets.recents.set_tooltip_text(Some(&labels.recents));
+            widgets.recents.set_menu_model(Some(&recents_model(state)));
+            widgets.recents.set_visible(!state.recents.is_empty());
             name(&widgets.warning, &labels.warning);
             widgets.warning.set_visible(state.warning_visible);
             name(&widgets.menu, &labels.menu);
@@ -124,11 +144,57 @@ mod gtk_titlebar {
             let action = gio::SimpleAction::new(name, None);
             let window = window.clone();
             action.connect_activate(move |_, _| {
-                let _ = window.emit(TITLEBAR_ACTION, view);
+                let _ = window.emit(TITLEBAR_ACTION, view.clone());
             });
             group.add_action(&action);
         }
+        group.add_action(&recent_action(window));
+        group.add_action(&gio::SimpleAction::new(MISSING_RECENT, None));
+        if let Some(missing) = group.lookup_action(MISSING_RECENT) {
+            if let Some(missing) = missing.downcast_ref::<gio::SimpleAction>() {
+                missing.set_enabled(false);
+            }
+        }
         group
+    }
+
+    fn recent_action(window: &tauri::WebviewWindow) -> gio::SimpleAction {
+        let action = gio::SimpleAction::new("recent", Some(glib::VariantTy::STRING));
+        let window = window.clone();
+        action.connect_activate(move |_, target| {
+            if let Some(path) = target.and_then(|target| target.get::<String>()) {
+                let _ = window.emit(TITLEBAR_ACTION, TitlebarActionView::Recent { path });
+            }
+        });
+        action
+    }
+
+    fn recents_model(state: &TitlebarStateView) -> gio::Menu {
+        let entries = gio::Menu::new();
+        for recent in &state.recents {
+            let item = gio::MenuItem::new(Some(&recent_label(recent)), None);
+            if recent.found {
+                item.set_action_and_target_value(
+                    Some("hdr.recent"),
+                    Some(&recent.path.to_variant()),
+                );
+            } else {
+                item.set_action_and_target_value(Some(MISSING_ACTION), None);
+            }
+            entries.append_item(&item);
+        }
+        let clear = gio::Menu::new();
+        clear.append(Some(&state.labels.clear_recents), Some("hdr.clear-recents"));
+        let model = gio::Menu::new();
+        model.append_section(Some(&state.labels.recents), &entries);
+        model.append_section(None, &clear);
+        model
+    }
+
+    fn recent_label(recent: &TitlebarRecentView) -> String {
+        let signed = if recent.signed { "\u{2713} " } else { "" };
+        let text = format!("{signed}{} \u{2014} {}", recent.name, recent.folder);
+        text.replace('_', "__")
     }
 
     fn menu_model(state: &TitlebarStateView) -> gio::Menu {
