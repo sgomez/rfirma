@@ -29,3 +29,4 @@ Los arneses que las recetas del `justfile` llaman por nombre, siguiendo el patr�
 | `tests/packages_manifest_test.sh` | Prueba el manifiesto de paquetes (entrega completa, candidata, extensión desconocida, firmable, plataformas) y la excepción de `check-digests.sh`. |
 | `tests/preview_comment_test.sh` | Prueba el comentario de la preview: filas por artefacto, avisos del manifiesto, fallo, salida vacía y marcador en la primera línea. |
 | `tests/check_versions_test.sh` | Prueba la guarda de `versions.env` sobre árboles temporales: literales, pom, formato y el fichero viejo de GraalVM. |
+| `tests/check_workflows_test.sh` | Prueba la guarda de workflows sobre copias de `.github/`: secretos en `build.yml` y en las acciones que alcanza, y `save-cache` y `save-if` de la acción de preparación. |

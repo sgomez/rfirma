@@ -464,9 +464,9 @@ dotenv y como entorno de Actions. Subir una versión es cambiar una línea. Qui�
 
 - **El `justfile`**, como dotenv con `dotenv-override`: una variable vieja del entorno de quien
   lo lanza no gana al fichero. Las recetas reciben las claves en su entorno.
-- **El CI**: la acción local `load-versions` lo vuelca al entorno del job; `setup-just` y
-  `setup-graalvm` la llaman antes de instalar, así que todo job que pasa por una de las dos las
-  tiene.
+- **El CI**: la acción local `load-versions` lo vuelca al entorno del job; `setup-runner`,
+  `setup-just` y `setup-graalvm` la llaman antes de instalar, así que todo job que pasa por una
+  de ellas las tiene.
 - **Maven**, que recibe `-Dautofirma.version` en la línea de órdenes. Los dos pom conservan su
   valor por defecto para el uso sin `just`.
 - **Los arranques que no pasan por `just`** —`bootstrap.sh` y los guiones del testbench, que

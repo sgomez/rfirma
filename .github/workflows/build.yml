@@ -1,52 +1,7 @@
-# El PRIMERO de los tres workflows de la tuberia de entrega (ID-167,
-# ADR-0015): el que CONSTRUYE. Los otros dos —el que reacciona a la etiqueta
-# `v*` y deja la Release en borrador, y el que reacciona a la Release
-# publicada— son ficheros aparte, y cada uno tiene un solo motivo para cambiar.
-# El de este es COMO SE CONSTRUYE, y nada mas.
-#
-# INVOCABLE, DE SOLO LECTURA Y SIN SECRETOS JAMAS. Es la primera de las cuatro
-# invariantes del ADR-0015, y no es cosmetica: `release.yml` va a vivir en un
-# `environment: release` con la subclave GPG, asi que si
-# esto viese un secreto, reutilizarlo desde cualquier sitio seria un camino
-# hacia la clave de firma. Por eso:
-#
-#   - `permissions: contents: read`, que es lo unico que hace falta para
-#     descargarse el arbol;
-#   - ni una sola referencia a `secrets.*` — donde una accion pide un token
-#     se le da `github.token`, que es el mismo valor pero no obliga a que el
-#     llamador pase nada;
-#   - `workflow_call` NO declara ningun `secrets:`, asi que el llamador no
-#     tiene ninguna manera *declarada* de darle uno.
-#   Lo que este fichero no puede impedir es que un llamador escriba
-#   `secrets: inherit`. Eso se vigila al revisar `release.yml`, y esa es la
-#   razon de que sean tres ficheros y no uno.
-#
-# LOS TRES CANALES LLEVAN LOS MISMOS BYTES de `librfirma_crypto.so` (ADR-0004).
-# Se compila una sola vez con GraalVM CE 25 en el primer job (`native-bridge`),
-# se sube como artefacto interno y los tres empaquetadores y la grada C descargan
-# y consumen ese mismo binario. Los empaquetadores y las pruebas de grada C
-# corren en paralelo, reduciendo el tiempo de pared a la mitad sin romper la
-# identidad binaria.
-#
-# EL INSTALADOR DE WINDOWS VA APARTE (ADR-0035): su `rfirma_crypto.dll` no
-# puede salir del job `native-bridge`, que compila para Linux, asi que el job
-# `windows` compila la suya con GraalVM en `windows-latest` y construye el
-# `.exe` en paralelo con los empaquetadores de Linux. Pasa por la misma puerta
-# del contenido y entra en el mismo SHA256SUMS.
-#
-# NO HAY MATRIZ porque no hay nada que multiplicar: `x86_64` es el unico
-# objetivo de la v0.4 (ID-147).
-#
-# LAS PUERTAS SON RECETAS DE `just` Y SCRIPTS DEL REPOSITORIO, nunca pasos
-# `run:` escritos aqui (tercera invariante del ADR-0015): una puerta que no
-# puedes reproducir en tu equipo es una puerta que un dia se salta con
-# `continue-on-error`.
+# Construye los paquetes de la entrega y de la vista previa, sin secretos (ADR-0015).
 name: Construccion
 
 on:
-  # El disparador de verdad: `release.yml` lo llama con la version de la
-  # etiqueta. No hay `push` ni `pull_request` — esto no es el bucle de
-  # realimentacion de nadie; el que corre en cada PR es `ci.yml`.
   workflow_call:
     inputs:
       expected-version:
@@ -65,12 +20,12 @@ on:
         default: ''
     outputs:
       version:
-        description: La version construida, leida de tauri.conf.json (ID-150).
+        description: La version construida, leida de tauri.conf.json.
         value: ${{ jobs.collect-packages.outputs.version }}
       native-packages:
         description: >-
           `true` si la version produce .deb y .rpm; `false` si es una
-          candidata y solo hay flatpak (ID-154).
+          candidata y solo hay flatpak.
         value: ${{ jobs.collect-packages.outputs.native-packages }}
       packages-artifact:
         description: Nombre del artefacto con los paquetes, su SHA256SUMS y su paquetes.json.
@@ -79,8 +34,6 @@ on:
         description: El contenido de SHA256SUMS, tal cual, en una sola cadena.
         value: ${{ jobs.collect-packages.outputs.digests }}
 
-  # A mano, para ensayar la construccion sin etiquetar nada. Sigue sin ver un
-  # secreto y sigue sin publicar nada: lo unico que produce son artefactos.
   workflow_dispatch:
 
 permissions:
@@ -88,16 +41,10 @@ permissions:
 
 env:
   CARGO_TERM_COLOR: always
-  # La rama y el nombre del bundle que produce la receta `flatpak`.
   FLATPAK_BUNDLE: packaging/flatpak/me.sgomez.rfirma.flatpak
 
 jobs:
-  # ==========================================================================
-  # 1. BIBLIOTECA NATIVA (GraalVM)
-  # ==========================================================================
-  # Se compila una sola vez: native-image no promete construcciones bit a bit
-  # reproducibles, asi que compilarla aqui y pasarla como artefacto garantiza que
-  # los tres canales lleven exactamente los mismos bytes (ADR-0004).
+  # Una sola compilación: los tres canales llevan los mismos bytes (ADR-0004).
   native-bridge:
     name: Biblioteca nativa (GraalVM)
     runs-on: ubuntu-latest
@@ -110,24 +57,11 @@ jobs:
         with:
           ref: ${{ inputs.ref }}
 
-      - name: GraalVM CE
-        uses: ./.github/actions/setup-graalvm
-
-      # La misma clave que ci.yml a proposito: las dependencias de AutoFirma no
-      # estan en Maven Central y llenarla cuesta compilarla entera, asi que las
-      # dos tuberias comparten el acierto.
-      - name: Cache de ~/.m2
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      - uses: ./.github/actions/setup-runner
         with:
-          path: ~/.m2/repository
-          key: m2-${{ runner.os }}-autofirma${{ env.AUTOFIRMA_VERSION }}-${{ hashFiles('scripts/bootstrap.sh', 'rfirma-native-bridge/pom.xml') }}
-          restore-keys: m2-${{ runner.os }}-
+          java: graalvm
+          save-cache: false
 
-      - uses: ./.github/actions/setup-just
-
-      # LA GUARDIA DE VERSION, en dos mitades.
-      # `just check-version` es el candado del ID-150: la version vive en cinco
-      # sitios y cuatro tienen que decir lo mismo que tauri.conf.json.
       - name: Guardia de version
         id: version
         env:
@@ -140,12 +74,10 @@ jobs:
           esperada="${EXPECTED_VERSION#v}"
           if [ -n "$esperada" ] && [ "$esperada" != "$version" ]; then
             echo "la version del arbol es $version y quien llama esperaba $esperada" >&2
-            echo "la fuente es rfirma-app/src-tauri/tauri.conf.json (ID-150)" >&2
+            echo "la fuente es rfirma-app/src-tauri/tauri.conf.json" >&2
             exit 1
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
-          # LA REGLA DE LAS CANDIDATAS NO SE REIMPLEMENTA AQUI (ID-154): se
-          # consulta su unica sede.
           if packaging/native-packages-allowed.sh "$version"; then
             echo "native-packages=true" >> "$GITHUB_OUTPUT"
           else
@@ -158,9 +90,6 @@ jobs:
           export GRAALVM_HOME="$JAVA_HOME"
           just native
 
-      # El suelo de glibc del ADR-0015: se promete GLIBC_2.34 y lo hace verdad
-      # esta puerta, no un contenedor de construccion congelado (ID-149). Y se
-      # mide UNA VEZ, porque el mismo fichero cruza los tres canales.
       - name: Suelo de glibc
         run: just check-glibc
 
@@ -171,14 +100,6 @@ jobs:
           path: rfirma-native-bridge/target/lib/rfirma/librfirma_crypto.so
           retention-days: 1
 
-  # ==========================================================================
-  # 2. PRUEBAS DE GRADA C (en paralelo con el empaquetado)
-  # ==========================================================================
-  # Aqui si existe librfirma_crypto.so, asi que las pruebas de grada C —las
-  # que firman de verdad— se ejecutan en vez de quedarse ignoradas. Y de aqui
-  # sale el PDF de la puerta manual (TD-04, ID-168), que `release.yml` adjunta
-  # al borrador para que quien publique tenga delante lo que tiene que llevar a
-  # un validador oficial.
   test-native:
     name: Pruebas de grada C
     needs: native-bridge
@@ -195,74 +116,15 @@ jobs:
           name: librfirma-crypto
           path: rfirma-native-bridge/target/lib/rfirma
 
-      - name: GraalVM CE
-        uses: ./.github/actions/setup-graalvm
-
-      - name: Cache de ~/.m2
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      - uses: ./.github/actions/setup-runner
         with:
-          path: ~/.m2/repository
-          key: m2-${{ runner.os }}-autofirma${{ env.AUTOFIRMA_VERSION }}-${{ hashFiles('scripts/bootstrap.sh', 'rfirma-native-bridge/pom.xml') }}
-          restore-keys: m2-${{ runner.os }}-
-
-      - uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3.0.0
-        with:
-          working-directory: rfirma-app
-          install: false
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: 24
-          cache: pnpm
-          cache-dependency-path: rfirma-app/pnpm-lock.yaml
-
-      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
-        with:
-          toolchain: stable
-          components: llvm-tools-preview
-
-      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
-        with:
-          workspaces: rfirma-app/src-tauri
-          shared-key: linux-native
-          save-if: false
-
-      - uses: ./.github/actions/setup-just
-
-      - uses: cargo-bins/cargo-binstall@b874e25ea559687bec77e281e9b271aa1367b624 # v1.23.0
-      - name: Herramientas de cobertura, de CRAP y de pruebas
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        run: |
-          cargo binstall --no-confirm cargo-llvm-cov
-          just install-tools crap nextest
-
-      - name: Dependencias de sistema de pruebas
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            libwebkit2gtk-4.1-dev \
-            libgtk-3-dev \
-            librsvg2-dev \
-            libayatana-appindicator3-dev \
-            libsoup-3.0-dev \
-            libxdo-dev \
-            build-essential \
-            file \
-            gettext \
-            poppler-utils \
-            libxml2-utils \
-            softhsm2 \
-            opensc \
-            libnss3-tools
-
-      - name: Cache del banco de conformidad
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: testdata/conformance
-          key: autoscript-${{ env.AUTOSCRIPT_SHA256 }}
-
-      - name: Banco de conformidad (autoscript.js)
-        run: just autoscript
+          rust: native
+          node: true
+          java: graalvm
+          apt: test
+          tools: llvm-cov crap nextest
+          autoscript: true
+          save-cache: false
 
       - name: Pruebas de grada C
         run: just test-native
@@ -275,9 +137,6 @@ jobs:
           path: rfirma-app/src-tauri/target/llvm-cov-target/tmp/manual-gate.pdf
           if-no-files-found: warn
 
-  # ==========================================================================
-  # 3. EMPAQUETADO FLATPAK (en paralelo con bundle y grada C)
-  # ==========================================================================
   flatpak:
     name: Empaqueta Flatpak
     needs: native-bridge
@@ -294,29 +153,11 @@ jobs:
           name: librfirma-crypto
           path: rfirma-native-bridge/target/lib/rfirma
 
-      - uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3.0.0
+      - uses: ./.github/actions/setup-runner
         with:
-          working-directory: rfirma-app
-          install: false
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: 24
-          cache: pnpm
-          cache-dependency-path: rfirma-app/pnpm-lock.yaml
-
-      - uses: ./.github/actions/setup-just
-
-      - name: Dependencias de Flatpak
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            gettext \
-            flatpak \
-            flatpak-builder \
-            ostree \
-            libarchive-tools \
-            librsvg2-common \
-            appstream
+          node: true
+          apt: flatpak
+          save-cache: false
 
       - name: Runtime y SDK de Flathub
         working-directory: packaging/flatpak
@@ -339,9 +180,6 @@ jobs:
           path: ${{ env.FLATPAK_BUNDLE }}
           retention-days: 1
 
-  # ==========================================================================
-  # 4. EMPAQUETADO .DEB Y .RPM (en paralelo con flatpak y grada C)
-  # ==========================================================================
   bundle:
     name: Empaqueta .deb y .rpm
     needs: native-bridge
@@ -359,42 +197,12 @@ jobs:
           name: librfirma-crypto
           path: rfirma-native-bridge/target/lib/rfirma
 
-      - uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3.0.0
+      - uses: ./.github/actions/setup-runner
         with:
-          working-directory: rfirma-app
-          install: false
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: 24
-          cache: pnpm
-          cache-dependency-path: rfirma-app/pnpm-lock.yaml
-
-      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
-        with:
-          toolchain: stable
-
-      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
-        with:
-          workspaces: rfirma-app/src-tauri
-          shared-key: linux-release
-          save-if: false
-
-      - uses: ./.github/actions/setup-just
-
-      - name: Dependencias de sistema de Tauri
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            libwebkit2gtk-4.1-dev \
-            libgtk-3-dev \
-            librsvg2-dev \
-            libayatana-appindicator3-dev \
-            libsoup-3.0-dev \
-            libxdo-dev \
-            build-essential \
-            file \
-            gettext \
-            libarchive-tools
+          rust: release
+          node: true
+          apt: tauri
+          save-cache: false
 
       - name: Construye frontend
         run: just build-ts
@@ -411,13 +219,7 @@ jobs:
             rfirma-app/src-tauri/target/release/bundle/rpm/*.rpm
           retention-days: 1
 
-  # ==========================================================================
-  # 4 BIS. INSTALADOR NSIS DE WINDOWS (en paralelo con todo lo de Linux)
-  # ==========================================================================
-  # Una etiqueta solo lee las caches de `main`, y las de pruebas y clippy no le
-  # sirven a un perfil de release: la que lee aqui la guarda el job
-  # `windows-release-cache` de ci.yml, con el cron semanal y a mano. Si no esta,
-  # la compilacion va en frio y tarda mas, pero sale igual.
+  # La .dll no puede salir de `native-bridge`, que compila para Linux (ADR-0035).
   windows:
     name: Instalador de Windows
     runs-on: windows-latest
@@ -425,9 +227,6 @@ jobs:
     defaults:
       run:
         shell: bash
-    env:
-      # OpenSSL se compila desde las fuentes, y el Perl de Git no sirve.
-      OPENSSL_SRC_PERL: C:/Strawberry/perl/bin/perl.exe
     steps:
       # Sin esto el checkout deja los .sh con CRLF y bash no los lee.
       - name: Fin de linea sin conversion
@@ -437,55 +236,15 @@ jobs:
         with:
           ref: ${{ inputs.ref }}
 
-      - name: GraalVM CE
-        uses: ./.github/actions/setup-graalvm
-
-      # setup-graalvm deja el entorno de Visual Studio, y con el rustc se fia del
-      # PATH, donde en bash va antes el link.exe de Git (coreutils).
-      - name: El link.exe de MSVC y no el de Git
-        shell: pwsh
-        run: |
-          $link = Join-Path $env:VCToolsInstallDir 'bin\Hostx64\x64\link.exe'
-          if (-not (Test-Path $link)) { throw "no encuentro $link" }
-          "CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_LINKER=$link" >> $env:GITHUB_ENV
-
-      # Solo se lee: la llena el carril de Windows de ci.yml.
-      - name: Cache de ~/.m2
-        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      - uses: ./.github/actions/setup-runner
         with:
-          path: ~/.m2/repository
-          key: m2-${{ runner.os }}-autofirma${{ env.AUTOFIRMA_VERSION }}-${{ hashFiles('scripts/bootstrap.sh', 'rfirma-native-bridge/pom.xml') }}
-          restore-keys: m2-${{ runner.os }}-
-
-      - uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3.0.0
-        with:
-          working-directory: rfirma-app
-          install: false
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: 24
-          cache: pnpm
-          cache-dependency-path: rfirma-app/pnpm-lock.yaml
-
-      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
-        with:
-          toolchain: stable
-
-      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
-        with:
-          workspaces: rfirma-app/src-tauri
-          shared-key: windows-release
-          save-if: false
-
-      - uses: ./.github/actions/setup-just
+          rust: release
+          node: true
+          java: graalvm
+          save-cache: false
 
       - name: Libreria nativa
         run: just native
-
-      # El `prepare` de pnpm es un script de bash, y pnpm no lee la variable
-      # npm_config_script_shell.
-      - name: pnpm ejecuta sus scripts con Git Bash
-        run: pnpm config set script-shell "C:/Program Files/Git/bin/bash.exe"
 
       - name: Empaqueta el instalador NSIS
         run: just bundle
@@ -498,9 +257,6 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
-  # ==========================================================================
-  # 5. REUNE, VERIFICA Y EXPONE LOS PAQUETES
-  # ==========================================================================
   collect-packages:
     name: Reune y verifica paquetes
     needs: [native-bridge, test-native, flatpak, bundle, windows]
@@ -524,16 +280,10 @@ jobs:
         with:
           ref: ${{ inputs.ref }}
 
-      - uses: ./.github/actions/setup-just
-
-      - name: Herramientas de verificacion
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            flatpak \
-            ostree \
-            libarchive-tools \
-            p7zip-full
+      - uses: ./.github/actions/setup-runner
+        with:
+          apt: verify
+          save-cache: false
 
       - name: Prepara directorio de destino
         run: mkdir -p "${{ runner.temp }}/paquetes"
@@ -570,8 +320,6 @@ jobs:
       - name: Manifiesto de paquetes
         run: just packages-manifest "${{ runner.temp }}/paquetes"
 
-      # LA PUERTA DEL CONTENIDO (ADR-0012, ID-144), Y SOBRE TODOS LOS FORMATOS:
-      # exactamente una biblioteca nativa y la de AWT en ninguna parte.
       - name: Puerta del contenido
         run: |
           set -euo pipefail
@@ -579,11 +327,6 @@ jobs:
             packaging/verifica-contenido.sh "${{ runner.temp }}/paquetes/$paquete"
           done < <(scripts/packages-manifest.sh files "${{ runner.temp }}/paquetes")
 
-      # El SHA256SUMS se calcula AQUI y viaja tambien como salida del workflow
-      # para que `release.yml` pueda comprobar que lo que firma son los bytes
-      # que salieron de aqui: firmar modifica el .rpm, asi que el orden de alli
-      # es firmar, resumir, atestar y adjuntar (ADR-0015), y este resumen es el
-      # punto de partida.
       - name: Digests
         id: digests
         run: |
