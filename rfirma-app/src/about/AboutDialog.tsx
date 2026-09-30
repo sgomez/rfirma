@@ -2,6 +2,7 @@ import { useEffect, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import "./AboutDialog.css";
 import { ExternalLinkIcon, InfoIcon, NewVersionIcon, UpToDateIcon } from "../design-system/icons";
+import { InstallUpdateDialog } from "../updates/InstallUpdateDialog";
 import type { NewVersion, VersionCheck } from "../updates/newVersion";
 
 interface AboutDialogProps {
@@ -10,6 +11,8 @@ interface AboutDialogProps {
   /** Lo que se sabía desde el arranque, mientras no llegue la respuesta del puerto. */
   newVersion: NewVersion | null;
   versions: VersionCheck;
+  /** Si se ofrece actualizar desde aquí: lo apaga `notify_new_version`. */
+  offerUpdate: boolean;
   onOpenSourceCode: () => void;
   onClose: () => void;
 }
@@ -19,12 +22,14 @@ export function AboutDialog({
   version,
   newVersion,
   versions,
+  offerUpdate,
   onOpenSourceCode,
   onClose,
 }: AboutDialogProps) {
   const { t } = useTranslation();
   const titleId = useId();
   const [currentVersion, setCurrentVersion] = useState(newVersion);
+  const [updating, setUpdating] = useState(false);
 
   useEffect(() => {
     let current = true;
@@ -53,7 +58,11 @@ export function AboutDialog({
             <span className="rf-badge about__version">{t("about.version", { version })}</span>
           </div>
           <p className="rf-prose rf-text-muted">{t("about.whatItDoes")}</p>
-          <UpdateStatus newVersion={currentVersion} />
+          <UpdateStatus
+            newVersion={currentVersion}
+            offerUpdate={offerUpdate}
+            onUpdate={() => setUpdating(true)}
+          />
         </div>
 
         <dl className="about__facts">
@@ -93,11 +102,26 @@ export function AboutDialog({
           </button>
         </div>
       </div>
+      {updating && currentVersion !== null && (
+        <InstallUpdateDialog
+          newVersion={currentVersion}
+          versions={versions}
+          onClose={() => setUpdating(false)}
+        />
+      )}
     </div>
   );
 }
 
-function UpdateStatus({ newVersion }: { newVersion: NewVersion | null }) {
+function UpdateStatus({
+  newVersion,
+  offerUpdate,
+  onUpdate,
+}: {
+  newVersion: NewVersion | null;
+  offerUpdate: boolean;
+  onUpdate: () => void;
+}) {
   const { t } = useTranslation();
 
   if (newVersion !== null) {
@@ -105,6 +129,11 @@ function UpdateStatus({ newVersion }: { newVersion: NewVersion | null }) {
       <div className="rf-row about__updateStatus about__updateStatus--new">
         <NewVersionIcon />
         <span>{t("about.update.newVersion", { version: newVersion.version })}</span>
+        {offerUpdate && newVersion.installable && (
+          <button type="button" className="rf-btn rf-btn--primary" onClick={onUpdate}>
+            {t("updates.install.action")}
+          </button>
+        )}
       </div>
     );
   }

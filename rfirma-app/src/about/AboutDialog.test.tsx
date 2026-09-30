@@ -14,6 +14,7 @@ function renderAbout(props: Partial<Parameters<typeof AboutDialog>[0]> = {}) {
       version="0.1.0"
       newVersion={newVersion}
       versions={inMemoryVersionCheck(newVersion)}
+      offerUpdate
       onOpenSourceCode={noop}
       onClose={noop}
       {...props}
@@ -81,7 +82,7 @@ describe("AboutDialog", () => {
 
   describe("version status", () => {
     it("shows there is a new version, with its number", () => {
-      const newVersion: NewVersion = { version: "0.4.1" };
+      const newVersion: NewVersion = { version: "0.4.1", installable: false };
       renderAbout({ newVersion });
 
       expect(screen.getByText("Hay una versión nueva: 0.4.1")).toBeInTheDocument();
@@ -94,17 +95,66 @@ describe("AboutDialog", () => {
     });
 
     it("does not tell how to install what is already installed", () => {
-      renderAbout({ newVersion: { version: "0.4.1" } });
+      renderAbout({ newVersion: { version: "0.4.1", installable: false } });
 
       expect(screen.queryByText(/flatpak install/)).not.toBeInTheDocument();
       expect(screen.queryByText(/sudo apt install rfirma/)).not.toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "Copiar" })).not.toBeInTheDocument();
     });
 
+    describe("updating from the application", () => {
+      const installable: NewVersion = { version: "0.4.1", installable: true };
+
+      it("offers Actualizar ahora only when the answer is installable", () => {
+        renderAbout({ newVersion: installable });
+
+        expect(screen.getByRole("button", { name: "Actualizar ahora" })).toBeInTheDocument();
+      });
+
+      it("offers nothing when it is not installable", () => {
+        renderAbout({ newVersion: { version: "0.4.1", installable: false } });
+
+        expect(screen.queryByRole("button", { name: "Actualizar ahora" })).not.toBeInTheDocument();
+      });
+
+      it("keeps showing the status but not the offer when notifications are off", () => {
+        renderAbout({ newVersion: installable, offerUpdate: false });
+
+        expect(screen.getByText("Hay una versión nueva: 0.4.1")).toBeInTheDocument();
+        expect(screen.queryByRole("button", { name: "Actualizar ahora" })).not.toBeInTheDocument();
+      });
+
+      it("confirms with the version before installing", async () => {
+        const user = userEvent.setup();
+        const versions = inMemoryVersionCheck(installable);
+        renderAbout({ newVersion: installable, versions });
+
+        await user.click(screen.getByRole("button", { name: "Actualizar ahora" }));
+        expect(screen.getByText("¿Actualizar a la versión 0.4.1?")).toBeInTheDocument();
+        expect(versions.installCalls).toBe(0);
+        await user.click(screen.getByRole("button", { name: "Instalar y cerrar" }));
+
+        expect(versions.installCalls).toBe(1);
+      });
+
+      it("explains a failed installation and keeps About open", async () => {
+        const user = userEvent.setup();
+        renderAbout({
+          newVersion: installable,
+          versions: inMemoryVersionCheck(installable, "invalidSignature"),
+        });
+
+        await user.click(screen.getByRole("button", { name: "Actualizar ahora" }));
+        await user.click(screen.getByRole("button", { name: "Instalar y cerrar" }));
+
+        expect(await screen.findByRole("alert")).toHaveTextContent("no tiene una firma válida");
+      });
+    });
+
     it("asks the port again when it opens, and replaces what was known since startup", async () => {
       renderAbout({
         newVersion: null,
-        versions: inMemoryVersionCheck({ version: "0.4.1" }),
+        versions: inMemoryVersionCheck({ version: "0.4.1", installable: false }),
       });
 
       expect(await screen.findByText("Hay una versión nueva: 0.4.1")).toBeInTheDocument();

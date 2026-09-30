@@ -171,7 +171,8 @@ rojo.
 | `sede/SedeOutcome.tsx` | 4 · Firmado, lote entregado, cancelado, guardado, cargado y rechazado, con el documento recién firmado y el detalle copiable del rechazo. |
 | `sede/SedeOldWebClient.tsx` | El aviso de que la página usa un cliente web antiguo, que no detiene el trámite. |
 | `sede/SedeNoCertificate.tsx` | 5 · Sin certificado utilizable, y sus dos salidas distintas. |
-| **`updates/`** | `updates/newVersion.ts`: el puerto que pregunta si hay versión nueva, y su doble. Sin React. |
+| **`updates/`** | `updates/newVersion.ts`: el puerto que pregunta si hay versión nueva y la instala, y su doble. Sin React. |
+| `updates/InstallUpdateDialog.tsx` | La confirmación con la versión, la instalación y el mensaje de cada resultado fallido. |
 | **`about/`** | `about/AboutDialog.tsx`. |
 | **`setup/`** | El asistente del primer arranque (docs/design/primer-arranque.md). Usa los casos de uso del panel de estado, no tiene los suyos propios. |
 | `setup/SetupWizard.tsx` | Las dos pantallas, montadas en `main.tsx` mientras `Preferences.setupWizardSeen` siga en `false`. Sustituye al antiguo `trust/TrustNotice.tsx`. |

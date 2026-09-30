@@ -44,13 +44,14 @@ import { useSigning } from "./signing/useSigning";
 import type { VisibleSignature } from "./signing/visibleSignature";
 import { StatusView } from "./status/StatusView";
 import { memoryStatus, type StatusPort } from "./status/status";
+import { InstallUpdateDialog } from "./updates/InstallUpdateDialog";
 import type { VersionCheck } from "./updates/newVersion";
 import { DocumentViewer } from "./viewer/DocumentViewer";
 import type { PdfDocument } from "./viewer/pdf";
 import { firstSealedPage, NO_PAGE_SETS } from "./viewer/signatureBox";
 import type { DocumentFailure, PdfSource } from "./viewer/source";
 
-type OpenDialog = "about" | null;
+type OpenDialog = "about" | "installUpdate" | null;
 type ActiveView = "status" | "preferences" | null;
 
 const NO_RECENTS: readonly RecentDocument[] = [];
@@ -319,6 +320,8 @@ export function App({
       () => documents.forgetAll(),
     );
 
+  const notifyNewVersion = settings?.notifyNewVersion ?? true;
+
   return (
     <>
       <MainWindow
@@ -355,13 +358,20 @@ export function App({
           // nada: lleva a *Acerca de*, que es donde están las órdenes de alta
           // del repositorio (ID-181), y así el `opener:deny-open-url` del
           // ID-85 sigue sin hacer falta.
-          newVersion !== null && !versionDismissed && (settings?.notifyNewVersion ?? true) ? (
+          newVersion !== null && !versionDismissed && notifyNewVersion ? (
             <NotificationStrip
               message={t("notifications.newVersion.message", { version: newVersion.version })}
-              action={{
-                label: t("notifications.newVersion.action"),
-                onSelect: () => setDialog("about"),
-              }}
+              action={
+                newVersion.installable
+                  ? {
+                      label: t("updates.install.action"),
+                      onSelect: () => setDialog("installUpdate"),
+                    }
+                  : {
+                      label: t("notifications.newVersion.action"),
+                      onSelect: () => setDialog("about"),
+                    }
+              }
               dismissLabel={t("actions.dismiss")}
               onDismiss={() => setVersionDismissed(true)}
             />
@@ -487,7 +497,15 @@ export function App({
           version={__APP_VERSION__}
           newVersion={newVersion}
           versions={versions}
+          offerUpdate={notifyNewVersion}
           onOpenSourceCode={() => void externalDestinations.open("sourceCode")}
+          onClose={() => setDialog(null)}
+        />
+      )}
+      {dialog === "installUpdate" && newVersion !== null && (
+        <InstallUpdateDialog
+          newVersion={newVersion}
+          versions={versions}
           onClose={() => setDialog(null)}
         />
       )}

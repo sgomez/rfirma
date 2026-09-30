@@ -457,6 +457,39 @@ msgstr "Hi ha una versió nova de rFirma: {{version}}"
 msgid "notifications.newVersion.action"
 msgstr "Com actualitzar"
 
+msgid "updates.install.action"
+msgstr "Actualitza ara"
+
+msgid "updates.install.confirmTitle"
+msgstr "Voleu actualitzar a la versió {{version}}?"
+
+msgid "updates.install.confirmBody"
+msgstr "rFirma es tancarà per instal·lar la versió {{version}}. Acabeu el que esteu fent abans de continuar."
+
+msgid "updates.install.confirm"
+msgstr "Instal·la i tanca"
+
+msgid "updates.install.postpone"
+msgstr "Més tard"
+
+msgid "updates.install.installing"
+msgstr "S'està instal·lant l'actualització…"
+
+msgid "updates.install.failedTitle"
+msgstr "No s'ha pogut actualitzar"
+
+msgid "updates.install.failed.noUpdate"
+msgstr "Ja no hi ha cap versió nova per instal·lar."
+
+msgid "updates.install.failed.networkFailure"
+msgstr "No s'ha pogut descarregar l'actualització. Comproveu la connexió i torneu-ho a provar."
+
+msgid "updates.install.failed.invalidSignature"
+msgstr "L'actualització descarregada no té una signatura vàlida, per això no s'ha instal·lat."
+
+msgid "updates.install.failed.notAvailable"
+msgstr "Aquesta instal·lació no es pot actualitzar des de l'aplicació."
+
 msgid "header.menu"
 msgstr "Menú"
 
