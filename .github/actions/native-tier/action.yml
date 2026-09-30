@@ -1,0 +1,59 @@
+name: Grada C
+description: Pruebas de grada C y puerta CRAP del adaptador FFI, desde las toolchains hasta el PDF del validador (ADR-0014).
+
+inputs:
+  library:
+    description: build compila o saca de la caché la biblioteca nativa; provided la deja el llamador antes.
+    required: true
+  save-cache:
+    description: true o false, siempre explícito.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - uses: ./.github/actions/setup-runner
+      with:
+        rust: native
+        node: true
+        java: graalvm
+        apt: test
+        tools: llvm-cov crap nextest
+        autoscript: true
+        save-cache: ${{ inputs.save-cache }}
+
+    # validate.sh compila el validador al vuelo en el primer test que lo llama, casi un minuto.
+    - if: inputs.save-cache == 'true'
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: rfirma-native-bridge/testbench/reference-signer/target
+        key: reference-signer-${{ runner.os }}-autofirma${{ env.AUTOFIRMA_VERSION }}-${{ hashFiles('scripts/bootstrap.sh', 'rfirma-native-bridge/testbench/reference-signer/pom.xml', 'rfirma-native-bridge/testbench/reference-signer/SignatureValidator.java') }}
+    - if: inputs.save-cache != 'true'
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: rfirma-native-bridge/testbench/reference-signer/target
+        key: reference-signer-${{ runner.os }}-autofirma${{ env.AUTOFIRMA_VERSION }}-${{ hashFiles('scripts/bootstrap.sh', 'rfirma-native-bridge/testbench/reference-signer/pom.xml', 'rfirma-native-bridge/testbench/reference-signer/SignatureValidator.java') }}
+
+    - id: cache-native-lib
+      if: inputs.library == 'build'
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: rfirma-native-bridge/target/lib/rfirma
+        key: native-lib-${{ runner.os }}-graalvm${{ env.GRAALVM_VERSION }}-autofirma${{ env.AUTOFIRMA_VERSION }}-${{ hashFiles('scripts/bootstrap.sh', 'rfirma-native-bridge/pom.xml', 'rfirma-native-bridge/src/main/**') }}
+
+    - if: inputs.library == 'build' && steps.cache-native-lib.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        export GRAALVM_HOME="$JAVA_HOME"
+        just native
+
+    - shell: bash
+      run: just test-native
+
+    # Se sube también si algo falla: un PDF que no valida es el que hay que mirar.
+    - if: ${{ !cancelled() }}
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      with:
+        name: pdf-puerta-manual
+        path: rfirma-app/src-tauri/target/llvm-cov-target/tmp/manual-gate.pdf
+        if-no-files-found: warn

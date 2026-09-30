@@ -227,8 +227,16 @@ las diferencias de Windows dentro de ella. `check-workflows.sh` extiende la inva
 acción y a las que alcanza. Que la acción guarde cachés es la entrada `save-cache`, siempre
 explícita y, en un workflow invocable, nunca derivada de la ref: bajo `workflow_call` la ref es la del llamador, y una PR
 o una etiqueta que guardan cachés desbordan la cuota de 10 GB y desalojan las de `main`, así
-que `build.yml` solo las lee. El checkout, el `autocrlf` de Windows, los artefactos y la caché
-de la biblioteca nativa quedan en el job; los jobs con secretos no la usan.
+que `build.yml` solo las lee. El checkout, el `autocrlf` de Windows y los artefactos quedan en
+el job; los jobs con secretos no la usan.
+
+**La grada C es una sola acción composite, `native-tier`, sobre `setup-runner`**, que usan el
+CI y la entrega. Cada llamador elige con `library` cómo obtiene la biblioteca nativa
+([ADR-0004](0004-libreria-nativa-distribuida-en-el-paquete.md)): el CI la compila o la saca de la
+caché, la entrega la descarga antes. La caché de la biblioteca, la del validador de
+referencia y la subida del PDF del validador viven dentro de la acción, porque `just native`
+necesita el GraalVM que instala su `setup-runner`; `save-cache` sigue siendo explícito y la
+entrega solo lee.
 
 ## El runtime sigue viniendo de Flathub
 
@@ -263,6 +271,11 @@ misma cosa en la misma apertura del panel.
   porque las copias divergían —la misma lista de apt con paquetes distintos en cada job, el
   arreglo del `link.exe` en tres sitios— y porque la invariante 1 solo se podía vigilar
   fichero a fichero.
+
+- **Un workflow reutilizable para la grada C**, que sería el sitio natural de una definición
+  única. Se descarta para no anidar tres niveles (`build.yml` invocable desde la entrega,
+  y este dentro), decisión del [#1247](https://github.com/sgomez/rfirma/issues/1247); una acción
+  composite se comparte sin ese anidamiento.
 
 - **Flathub**, que el [#22](https://github.com/sgomez/rfirma/issues/22) dio por hecho sin
   decidirlo. Queda fuera, y **no cerrado para siempre**: volver es un esfuerzo nuevo
