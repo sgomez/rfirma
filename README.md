@@ -132,8 +132,7 @@ que hace que estos enlaces resuelvan:
 * `.rpm`: <https://github.com/sgomez/rfirma/releases/latest/download/rfirma.x86_64.rpm>
 
 Las candidatas (`-rc.N`) publican **solo el flatpak**: el campo `Version` de un
-RPM no admite guiones, así que un `.deb` o un `.rpm` de una candidata no existe
-(ID-154, `packaging/native-packages-allowed.sh`).
+RPM no admite guiones, así que un `.deb` o un `.rpm` de una candidata no existe.
 
 Con el remoto de Flathub puesto (arriba), `flatpak install` resuelve
 `org.gnome.Platform//50` solo:
