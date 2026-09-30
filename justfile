@@ -439,6 +439,11 @@ flatpak: check-native build-ts
     echo "bundle: $PWD/me.sgomez.rfirma.flatpak ($(du -h me.sgomez.rfirma.flatpak | cut -f1))"
     echo "  flatpak install --user me.sgomez.rfirma.flatpak"
 
+# Prueba de humo manual del flatpak: ventana, portal, almacenes NSS y ciclo trifasico contra la libreria del bundle.
+[group('release')]
+flatpak-smoke: check-native build-ts
+    {{ root }}/packaging/flatpak/verifica.sh
+
 # Construye el .deb y el .rpm con el bundler de Tauri (ADR-0004); quick="true" salta el candado de version.
 [linux]
 [group('ci')]

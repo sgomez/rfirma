@@ -10,7 +10,7 @@ Los nativos no se empaquetan aquí: los produce el *bundler* de Tauri
 |---|---|
 | `me.sgomez.rfirma.yml` | El manifiesto |
 | `me.sgomez.rfirma.desktop` / `.metainfo.xml` | Entrada de menú y metadatos |
-| `verifica.sh` | Verificación reproducible dentro del sandbox |
+| `verifica.sh` | Prueba de humo manual (`just flatpak-smoke`): ventana, portal, almacenes NSS y ciclo trifásico |
 | [`../verifica-contenido.sh`](../verifica-contenido.sh) | La invariante del ADR-0012 (un solo `librfirma_crypto.so`, `libawt.so` en ninguna parte), independiente del formato |
 | `cargo-sources.json` | Dependencias de cargo vendorizadas, generadas |
 | `sources.lock` | El sello del `Cargo.lock` contra el que se generó |
