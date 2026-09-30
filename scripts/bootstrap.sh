@@ -6,7 +6,7 @@ root="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$root"
 
 upstream_repo="https://github.com/ctt-gob-es/clienteafirma.git"
-upstream_version="1.9.2"
+upstream_version="$(scripts/pinned-version.sh AUTOFIRMA_VERSION)"
 temp_dir="target/upstream-clone"
 
 echo "=== rfirma Bootstrap: Comprobando dependencias de Autofirma ==="
