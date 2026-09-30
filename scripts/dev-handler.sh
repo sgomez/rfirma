@@ -1,19 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-root="$(cd "$(dirname "$0")/.." && pwd)"
-tauri="$root/rfirma-app/src-tauri"
-native_lib="$root/rfirma-native-bridge/target/lib/rfirma/librfirma_crypto.so"
+binario="${CARGO_TARGET_DIR:?}/debug/rfirma"
+lib_dir="${RFIRMA_LIB_DIR:?}"
 destino="$HOME/.local/share/applications"
 fichero="$destino/rfirma-dev.desktop"
 previo="$destino/.rfirma-dev-handler-previo"
 
 on() {
-    binario="$tauri/target/debug/rfirma"
     mkdir -p "$destino"
-    # Quien atendia el esquema antes se guarda, para que `off` pueda
-    # devolverselo: en un equipo con AutoFirma al lado es SU lanzador, y
-    # dejarlo sin manejador seria romper lo que ya funcionaba.
+    # `off` le devuelve el esquema a quien lo tenía: con AutoFirma al lado, a su lanzador.
     if [ ! -f "$previo" ]; then
         xdg-mime query default x-scheme-handler/afirma > "$previo" || true
     fi
@@ -22,7 +18,7 @@ on() {
         echo "Type=Application"
         echo "Name=rFirma (desarrollo)"
         echo "Comment=NO INSTALADO: apunta al arbol de desarrollo. just dev-handler off lo quita."
-        echo "Exec=env RFIRMA_LIB_DIR=$(dirname "$native_lib") $binario %u"
+        echo "Exec=env RFIRMA_LIB_DIR=$lib_dir $binario %u"
         echo "Terminal=false"
         echo "NoDisplay=true"
         echo "Categories=Utility;"
@@ -43,7 +39,6 @@ on() {
 off() {
     rm -f "$fichero"
     command -v update-desktop-database >/dev/null && update-desktop-database "$destino" || true
-    # Se le devuelve el esquema a quien lo tenia, si lo tenia alguien.
     if [ -s "$previo" ] && [ "$(cat "$previo")" != "rfirma-dev.desktop" ]; then
         xdg-mime default "$(cat "$previo")" x-scheme-handler/afirma || true
     fi

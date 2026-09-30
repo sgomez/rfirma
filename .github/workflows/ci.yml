@@ -697,7 +697,7 @@ jobs:
       # La misma receta que la release: con otra orden cambiarian las
       # features de tauri y la cache no le serviria.
       - name: Compila como la release
-        run: just bundle-windows
+        run: just bundle
 
   # ==========================================================================
   # COMPILACION DE RELEASE
