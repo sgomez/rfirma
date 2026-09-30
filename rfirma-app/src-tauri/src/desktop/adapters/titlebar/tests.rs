@@ -1,3 +1,4 @@
+use super::super::views::TitlebarRecentView;
 use super::*;
 
 #[test]
@@ -45,4 +46,56 @@ fn closing_the_menu_with_nothing_deferred_applies_nothing() {
     assert_eq!(pacing.arrive(1, false), Some(1));
 
     assert_eq!(pacing.menu_closed(), None);
+}
+
+fn recent(signed: bool, found: bool, location: Option<&str>) -> TitlebarRecentView {
+    TitlebarRecentView {
+        path: "opaque-id".into(),
+        name: "informe.pdf".into(),
+        location: location.map(Into::into),
+        signed,
+        found,
+    }
+}
+
+#[test]
+fn a_recent_without_location_still_arrives_and_leaves_the_second_line_empty() {
+    let arrived: TitlebarRecentView = serde_json::from_value(serde_json::json!({
+        "path": "opaque-id",
+        "name": "informe.pdf",
+        "folder": "Documentos",
+        "signed": false,
+        "found": true,
+    }))
+    .unwrap();
+
+    assert_eq!(arrived.location, None);
+    assert_eq!(second_line(&arrived, "No se encuentra"), "");
+    assert_eq!(announcement(&arrived, "No se encuentra"), "informe.pdf");
+}
+
+#[test]
+fn the_second_line_of_a_found_recent_is_its_location() {
+    let found = recent(false, true, Some("~/Documentos"));
+    assert_eq!(second_line(&found, "No se encuentra"), "~/Documentos");
+}
+
+#[test]
+fn the_second_line_of_a_missing_recent_says_it_is_not_found() {
+    let missing = recent(false, false, Some("~/Documentos"));
+    assert_eq!(second_line(&missing, "No se encuentra"), "No se encuentra");
+}
+
+#[test]
+fn a_row_announces_its_name_whether_it_is_signed_and_its_second_line() {
+    let signed = recent(true, true, Some("~/Documentos"));
+    assert_eq!(
+        announcement(&signed, "No se encuentra"),
+        "informe.pdf \u{2713}, ~/Documentos"
+    );
+    let missing = recent(false, false, None);
+    assert_eq!(
+        announcement(&missing, "No se encuentra"),
+        "informe.pdf, No se encuentra"
+    );
 }
