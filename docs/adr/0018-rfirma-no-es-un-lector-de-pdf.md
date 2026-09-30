@@ -59,7 +59,7 @@ del documento.
 
 ## Cómo se vigila
 
-`packaging/check-version.py` (`just check-version`, en el CI) comprueba las cuatro cosas que este ADR
+`packaging/check_launchers.py` (`just check-repo`, en el CI) comprueba las cuatro cosas que este ADR
 fija: que ningún lanzador de tipo `Application` declara un `MimeType` de documento, y que el único
 esquema que admite es `x-scheme-handler/afirma` —y ahí entra, sobre todo, la
 plantilla `packaging/rfirma.desktop.hbs`, que es el lanzador que de verdad instalan el `.deb` y el
