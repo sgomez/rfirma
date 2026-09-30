@@ -111,7 +111,7 @@ function RootView() {
   useEffect(() => {
     if (setupWizardSeen) return;
     return titlebar.onAction((action) => {
-      if (action === "status" || action === "preferences") finishWizard();
+      if (action.action === "status" || action.action === "preferences") finishWizard();
     });
   }, [setupWizardSeen, finishWizard]);
 

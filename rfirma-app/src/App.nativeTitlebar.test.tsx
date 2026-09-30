@@ -1,16 +1,16 @@
 import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
-import { document, pdfsOf, renderApp } from "./App.testSupport";
+import { document, pdfsOf, renderApp, row } from "./App.testSupport";
 import {
   type ExternalDestinationOpener,
   inMemoryExternalDestinationOpener,
   unavailableExternalDestinationOpener,
 } from "./desktop/externalDestination";
 import { inMemoryDocumentDrops } from "./documents/drops";
-import { inMemoryRecents } from "./documents/recents";
+import { inMemoryRecents, type RecentDocument } from "./documents/recents";
 import { openTab } from "./preferences/testSupport";
-import { inMemoryNativeTitlebar, type TitlebarAction } from "./shell/nativeTitlebar";
+import { inMemoryNativeTitlebar, type TitlebarActionName } from "./shell/nativeTitlebar";
 import { emptyCertificateStore } from "./signing/certificate";
 import { unavailableSigningBackend } from "./signing/flow";
 import { emptyRubricPicker } from "./signing/rubric";
@@ -27,6 +27,9 @@ const SPANISH_LABELS = {
   preferences: "Preferencias…",
   feedback: "Comentarios y ayuda",
   about: "Acerca de rFirma",
+  recents: "Abiertos recientemente",
+  clearRecents: "Vaciar la lista",
+  notFound: "No se encuentra",
 };
 
 const SITES_UNCONFIGURED: SignalRow[] = [
@@ -43,12 +46,13 @@ const SITES_UNCONFIGURED: SignalRow[] = [
 
 function renderOnLinux({
   pdfNames = [] as string[],
+  recentRows = [] as RecentDocument[],
   status = memoryStatus() as StatusPort,
   externalDestinations = unavailableExternalDestinationOpener() as ExternalDestinationOpener,
 } = {}) {
   const titlebar = inMemoryNativeTitlebar();
   renderApp(
-    inMemoryRecents(),
+    inMemoryRecents(recentRows),
     pdfNames.map((name) => document(name)),
     pdfNames.length === 0
       ? unavailablePdfSource()
@@ -66,8 +70,9 @@ function renderOnLinux({
     undefined,
     titlebar,
   );
-  const press = (action: TitlebarAction) => act(() => titlebar.press(action));
-  return { titlebar, press };
+  const press = (action: TitlebarActionName) => act(() => titlebar.press({ action }));
+  const pressRecent = (path: string) => act(() => titlebar.press({ action: "recent", path }));
+  return { titlebar, press, pressRecent };
 }
 
 // Grada A: la aplicación entera en Linux, con el doble de la barra de título GTK.
@@ -112,6 +117,7 @@ describe("App with the native titlebar", () => {
       openVisible: true,
       warningVisible: false,
       labels: SPANISH_LABELS,
+      recents: [],
     });
   });
 
@@ -189,5 +195,84 @@ describe("App with the native titlebar", () => {
     await user.keyboard("{Control>}o{/Control}");
 
     expect(await screen.findByRole("tab", { name: "factura.pdf" })).toBeInTheDocument();
+  });
+
+  it("sends the recents with what each entry paints, and the labels for them", async () => {
+    const { titlebar } = renderOnLinux({
+      recentRows: [
+        row("factura.pdf", { folder: "Documentos", badge: "Signed" }),
+        row("usb.pdf", { available: false }),
+      ],
+    });
+
+    await waitFor(() => expect(titlebar.latest?.recents).toHaveLength(2));
+    expect(titlebar.latest?.recents).toEqual([
+      {
+        path: "id-factura.pdf",
+        name: "factura.pdf",
+        folder: "Documentos",
+        signed: true,
+        found: true,
+      },
+      { path: "id-usb.pdf", name: "usb.pdf", folder: "", signed: false, found: false },
+    ]);
+    expect(titlebar.latest?.labels).toMatchObject({
+      recents: "Abiertos recientemente",
+      clearRecents: "Vaciar la lista",
+      notFound: "No se encuentra",
+    });
+  });
+
+  it("sends an empty list when there are no recents", () => {
+    const { titlebar } = renderOnLinux();
+
+    expect(titlebar.latest?.recents).toEqual([]);
+  });
+
+  it("sends an empty list when Recordar mi actividad is off", async () => {
+    const user = userEvent.setup();
+    const { titlebar, press } = renderOnLinux({ recentRows: [row("factura.pdf")] });
+    await waitFor(() => expect(titlebar.latest?.recents).toHaveLength(1));
+
+    await press("preferences");
+    await user.click(await screen.findByRole("switch", { name: /Recordar mi actividad/ }));
+    await user.click(screen.getByRole("button", { name: "Borrar y apagar" }));
+
+    await waitFor(() => expect(titlebar.latest?.recents).toEqual([]));
+  });
+
+  it("opens a recent on recent, and goes to its tab if it is already open", async () => {
+    const { titlebar, pressRecent } = renderOnLinux({
+      pdfNames: ["factura.pdf"],
+      recentRows: [row("factura.pdf")],
+    });
+    await waitFor(() => expect(titlebar.latest?.recents).toHaveLength(1));
+
+    await pressRecent("id-factura.pdf");
+    expect(await screen.findByRole("tab", { name: "factura.pdf" })).toBeInTheDocument();
+
+    await pressRecent("id-factura.pdf");
+    expect(screen.getAllByRole("tab", { name: "factura.pdf" })).toHaveLength(1);
+  });
+
+  it("never opens a recent that is not found", async () => {
+    const { titlebar, pressRecent } = renderOnLinux({
+      pdfNames: ["usb.pdf"],
+      recentRows: [row("usb.pdf", { available: false })],
+    });
+    await waitFor(() => expect(titlebar.latest?.recents).toHaveLength(1));
+
+    await pressRecent("id-usb.pdf");
+
+    expect(screen.queryByRole("tab", { name: "usb.pdf" })).toBeNull();
+  });
+
+  it("empties the recents on clearRecents", async () => {
+    const { titlebar, press } = renderOnLinux({ recentRows: [row("factura.pdf")] });
+    await waitFor(() => expect(titlebar.latest?.recents).toHaveLength(1));
+
+    await press("clearRecents");
+
+    await waitFor(() => expect(titlebar.latest?.recents).toEqual([]));
   });
 });
