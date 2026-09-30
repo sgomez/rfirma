@@ -1,12 +1,21 @@
 #!/usr/bin/env bash
+# Comprueba las herramientas del entorno, y falla nombrando la que falte o no este en su version fijada.
 set -euo pipefail
 
 platform="${PLATFORM:?}"
 ruff_version="${RUFF_VERSION:?}"
-crap_version="${CRAP_VERSION:?}"
-machete_version="${MACHETE_VERSION:?}"
 default_graalvm="${DEFAULT_GRAALVM:?}"
 system_libs="${SYSTEM_LIBS:?}"
+
+check_pinned() {
+    local name="$1" expected="$2" found
+    shift 2
+    found="$("$@" 2>/dev/null | grep -oE '[0-9]+(\.[0-9]+)+' | head -n1 || true)"
+    if [ -n "$found" ] && [ "$found" != "$expected" ]; then
+        echo "version distinta: $name $found, la fijada es $expected (just install-tools)"
+        failures=1
+    fi
+}
 
 # `orden:paquete` que la trae.
 declare -A required=(
@@ -110,9 +119,15 @@ if [ -n "$missing_packages" ]; then
 fi
 if ! command -v ruff >/dev/null; then
     echo "falta: ruff"
-    echo "  Instalalo con: pipx install ruff==$ruff_version  (o: uv tool install ruff==$ruff_version)"
+    echo "  Instalalo con: just install-tools ruff"
     failures=1
 fi
+check_pinned ruff "$ruff_version" ruff --version
+check_pinned just "${JUST_VERSION:?}" just --version
+check_pinned diff-cover "${DIFF_COVER_VERSION:?}" diff-cover --version
+check_pinned cargo-crap "${CRAP_VERSION:?}" cargo crap --version
+check_pinned cargo-machete "${MACHETE_VERSION:?}" cargo machete --version
+check_pinned cargo-nextest "${NEXTEST_VERSION:?}" cargo nextest --version
 for row in ${optional[$platform]}; do
     command -v "${row%%:*}" >/dev/null ||
         echo "aviso: falta ${row%%:*} (solo hace falta para 'just ${row#*:}')"
@@ -126,11 +141,11 @@ fi
 cargo llvm-cov --version >/dev/null 2>&1 ||
     echo "aviso: falta cargo-llvm-cov (cargo binstall cargo-llvm-cov)"
 cargo nextest --version >/dev/null 2>&1 ||
-    echo "aviso: falta cargo-nextest (solo hace falta para 'just test-native'; cargo binstall cargo-nextest)"
+    echo "aviso: falta cargo-nextest (solo hace falta para 'just test-native'; just install-tools nextest)"
 cargo crap --version >/dev/null 2>&1 ||
-    echo "aviso: falta cargo-crap (cargo binstall cargo-crap@$crap_version)"
+    echo "aviso: falta cargo-crap (just install-tools crap)"
 cargo machete --version >/dev/null 2>&1 ||
-    echo "aviso: falta cargo-machete (cargo binstall cargo-machete@$machete_version)"
+    echo "aviso: falta cargo-machete (just install-tools machete)"
 cargo mutants --version >/dev/null 2>&1 ||
     echo "aviso: falta cargo-mutants (solo hace falta para 'just mutants'; cargo binstall cargo-mutants)"
 [ "$failures" = 0 ] || exit 1

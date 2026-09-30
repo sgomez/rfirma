@@ -87,9 +87,6 @@ permissions:
   contents: read
 
 env:
-  # Tienen que coincidir con las de ci.yml: `just test-native` las usa.
-  CRAP_VERSION: '0.4.3'
-  NEXTEST_VERSION: '0.9.146'
   CARGO_TERM_COLOR: always
   # La rama y el nombre del bundle que produce la receta `flatpak`.
   FLATPAK_BUNDLE: packaging/flatpak/me.sgomez.rfirma.flatpak
@@ -123,7 +120,7 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.m2/repository
-          key: m2-${{ runner.os }}-${{ hashFiles('scripts/bootstrap.sh', 'rfirma-native-bridge/pom.xml') }}
+          key: m2-${{ runner.os }}-autofirma${{ env.AUTOFIRMA_VERSION }}-${{ hashFiles('scripts/bootstrap.sh', 'rfirma-native-bridge/pom.xml') }}
           restore-keys: m2-${{ runner.os }}-
 
       - uses: ./.github/actions/setup-just
@@ -204,7 +201,7 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.m2/repository
-          key: m2-${{ runner.os }}-${{ hashFiles('scripts/bootstrap.sh', 'rfirma-native-bridge/pom.xml') }}
+          key: m2-${{ runner.os }}-autofirma${{ env.AUTOFIRMA_VERSION }}-${{ hashFiles('scripts/bootstrap.sh', 'rfirma-native-bridge/pom.xml') }}
           restore-keys: m2-${{ runner.os }}-
 
       - uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3.0.0
@@ -236,8 +233,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
           cargo binstall --no-confirm cargo-llvm-cov
-          cargo binstall --no-confirm "cargo-crap@${CRAP_VERSION}"
-          cargo binstall --no-confirm "cargo-nextest@${NEXTEST_VERSION}"
+          just install-tools crap nextest
 
       - name: Dependencias de sistema de pruebas
         run: |
@@ -262,9 +258,9 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: testdata/conformance
-          key: autoscript-567998128f1cd8017c304a8c187f6912a0c56b0feebb02fffa2aa33732e40439
+          key: autoscript-${{ env.AUTOSCRIPT_SHA256 }}
 
-      - name: Banco de conformidad (autoscript.js v1.9.2)
+      - name: Banco de conformidad (autoscript.js)
         run: just autoscript
 
       - name: Pruebas de grada C
@@ -457,7 +453,7 @@ jobs:
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.m2/repository
-          key: m2-${{ runner.os }}-${{ hashFiles('scripts/bootstrap.sh', 'rfirma-native-bridge/pom.xml') }}
+          key: m2-${{ runner.os }}-autofirma${{ env.AUTOFIRMA_VERSION }}-${{ hashFiles('scripts/bootstrap.sh', 'rfirma-native-bridge/pom.xml') }}
           restore-keys: m2-${{ runner.os }}-
 
       - uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3.0.0

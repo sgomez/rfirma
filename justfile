@@ -6,16 +6,18 @@
 # En Windows las recetas corren en Git Bash, no en cmd ni en PowerShell (ADR-0035).
 set windows-shell := ["C:/Program Files/Git/bin/bash.exe", "-cu"]
 
+# Las versiones fijadas; el fichero gana a una variable vieja del entorno (ADR-0014).
+set dotenv-filename := "versions.env"
+set dotenv-required := true
+set dotenv-override := true
+
 windows := if os_family() == "windows" { "true" } else { "false" }
 
 # La raiz con barras normales: bash se come las barras invertidas de Windows.
 root := replace(justfile_directory(), "\\", "/")
 
-# GraalVM CE 25 (ADR-0004): la 21 aborta native-image; el pom compila a
-# release 21 aparte. La versión exacta vive en `.graalvm-version` (ADR-0035), y
-# SDKMAN la nombra de otra forma: la A.B.C.D es su `A.B.C+D.rA-graalce`.
-# En Windows no hay SDKMAN: vale el JAVA_HOME.
-graalvm_version := trim(read(root / ".graalvm-version"))
+# SDKMAN nombra la GraalVM A.B.C.D como `A.B.C+D.rA-graalce` (ADR-0004).
+graalvm_version := env("GRAALVM_VERSION")
 sdkman_graalvm := replace_regex(graalvm_version, '^(\d+)\.(\d+)\.(\d+)\.(\d+)$', '${1}.${2}.${3}+${4}.r${1}') + "-graalce"
 default_graalvm := if windows == "true" { "$JAVA_HOME" } else { "$HOME/.sdkman/candidates/java/" + sdkman_graalvm }
 
@@ -39,15 +41,8 @@ classpath_separator := if windows == "true" { ";" } else { ":" }
 # Ruta canonica de la libreria nativa (ADR-0013).
 native_lib := bridge / "target/lib/rfirma" / native_lib_name
 
-# Version fijada: un cargo-crap con un solo mantenedor no debe poder poner en
-# rojo un PR que no lo ha tocado (ADR-0014).
-crap_version := "0.4.3"
-
-# Version fijada, misma razon que crap_version (ADR-0014).
-machete_version := "0.9.2"
-
-# Version fijada, misma razon que crap_version. Igual en .github/workflows/ci.yml.
-diff_cover_version := "10.6.0"
+autofirma_version := env("AUTOFIRMA_VERSION")
+maven := "mvn -B -Dautofirma.version=" + autofirma_version
 
 # Suelo global de lineas cubiertas en Rust (ADR-0014): la medida real en el
 # momento de introducir el suelo, redondeada hacia abajo. Sube a mano, en su
@@ -78,10 +73,6 @@ coverage_out := cargo_target / "coverage" / file_name(root)
 # LLVM, y enlazar la depuracion era la mitad de su compilacion.
 no_debuginfo := "CARGO_PROFILE_DEV_DEBUG=false"
 
-# Version fijada: sin ruff.toml, el conjunto de reglas depende de la version
-# instalada. Igual en .github/workflows/ci.yml.
-ruff_version := "0.16.6"
-
 # Modulo FFI oculto de la puerta CRAP del carril rapido (ADR-0014); el carril
 # lento lo mide con `just test-native`.
 ffi_allow := "src/signing/adapters/ffi.rs"
@@ -90,10 +81,7 @@ ffi_allow := "src/signing/adapters/ffi.rs"
 # carril de Windows lo mide con `just test-windows` (ADR-0014, ADR-0035).
 windows_allow := "src/identity/adapters/windows_store/cng.rs"
 
-# Accesorio del banco de conformidad, fijado por etiqueta y sha256: la 1.9.2
-# no publica autoscript.js en ningun artefacto. Pin repetido en ci.yml.
-autoscript_url := "https://raw.githubusercontent.com/ctt-gob-es/clienteafirma/v1.9.2/afirma-ui-miniapplet-deploy/src/main/webapp/js/autoscript.js"
-autoscript_sha256 := "567998128f1cd8017c304a8c187f6912a0c56b0feebb02fffa2aa33732e40439"
+autoscript_url := "https://raw.githubusercontent.com/ctt-gob-es/clienteafirma/v" + autofirma_version + "/afirma-ui-miniapplet-deploy/src/main/webapp/js/autoscript.js"
 
 # Librerias -dev del WebView que necesita Tauri; lista canonica que instala
 # tambien .github/workflows/ci.yml.
@@ -119,6 +107,7 @@ check-repo: check-version
     {{ root }}/packaging/flatpak/check-sources.sh
     {{ root }}/rfirma-app/src/design-system/check-bundle.sh
     {{ root }}/.github/check-workflows.sh
+    {{ root }}/scripts/check-versions.sh
     {{ root }}/packaging/repo/build-tree.test.sh
     {{ root }}/packaging/repo/publish-tree.test.sh
     {{ root }}/packaging/windows/sign-updater.test.sh
@@ -130,6 +119,7 @@ check-repo: check-version
     {{ root }}/scripts/tests/ci_lanes_test.sh
     {{ root }}/scripts/tests/packages_manifest_test.sh
     {{ root }}/scripts/tests/preview_comment_test.sh
+    {{ root }}/scripts/tests/check_versions_test.sh
 
 # Una sola invocacion de Maven: compila con -Xlint:all, prueba y empaqueta.
 [group('ci')]
@@ -147,13 +137,17 @@ check-rust: lint-rust machete crap
 # Herramientas y dependencias
 # ---------------------------------------------------------------------------
 
-# Comprueba que estan las herramientas, y falla nombrando la que falte.
+# Comprueba las herramientas, y falla nombrando la que falte o no este en su version fijada.
 [group('dev')]
 tools:
-    PLATFORM="{{ os() }}" RUFF_VERSION="{{ ruff_version }}" CRAP_VERSION="{{ crap_version }}" \
-        MACHETE_VERSION="{{ machete_version }}" \
-        DEFAULT_GRAALVM="{{ default_graalvm }}" SYSTEM_LIBS="{{ system_libs }}" \
+    PLATFORM="{{ os() }}" DEFAULT_GRAALVM="{{ default_graalvm }}" SYSTEM_LIBS="{{ system_libs }}" \
         {{ root }}/scripts/tools.sh
+
+# Instala las herramientas en su version fijada: todas, o las que se nombren.
+[group('ci')]
+[group('dev')]
+install-tools *tools:
+    {{ root }}/scripts/install-tools.sh {{ tools }}
 
 # Instala las dependencias de AutoFirma en ~/.m2 si no estan (ADR-0002).
 [private]
@@ -220,10 +214,10 @@ certs action:
 autoscript:
     #!/usr/bin/env bash
     set -euo pipefail
-    destino="{{ root }}/testdata/conformance/autoscript-1.9.2.js"
-    sha="{{ autoscript_sha256 }}"
+    destino="{{ root }}/testdata/conformance/autoscript-{{ autofirma_version }}.js"
+    sha="$AUTOSCRIPT_SHA256"
     if [ -f "$destino" ] && echo "$sha  $destino" | sha256sum --check --status; then
-        echo "autoscript.js v1.9.2 ya esta en testdata/conformance/"
+        echo "autoscript.js v{{ autofirma_version }} ya esta en testdata/conformance/"
         exit 0
     fi
     mkdir -p "$(dirname "$destino")"
@@ -237,7 +231,7 @@ autoscript:
         exit 1
     fi
     mv "$destino.parcial" "$destino"
-    echo "autoscript.js v1.9.2 descargado en testdata/conformance/"
+    echo "autoscript.js v{{ autofirma_version }} descargado en testdata/conformance/"
 
 # jscpd sobre los ficheros de tests en Rust y TS. Solo informa, no entra en el CI (ADR-0014).
 [group('dev')]
@@ -310,7 +304,7 @@ machete:
 # Compila el puente Java.
 [private]
 build-java: bootstrap
-    cd {{ bridge }} && mvn -B package -DskipTests
+    cd {{ bridge }} && {{ maven }} package -DskipTests
 
 # tsc -b y vite build.
 [group('ci')]
@@ -335,7 +329,7 @@ check-native:
 # Pruebas del puente Java (`verify`: compila, prueba y empaqueta en una JVM).
 [private]
 test-java: bootstrap
-    cd {{ bridge }} && mvn -B verify
+    cd {{ bridge }} && {{ maven }} verify
 
 # vitest, con cobertura: el suelo de coverage.thresholds en vite.config.ts (ADR-0014).
 [private]
@@ -354,7 +348,7 @@ test-native: (certs "install") check-native build-ts
     cd {{ tauri }} && RFIRMA_LIB_DIR="$(dirname "{{ native_lib }}")" {{ no_debuginfo }} cargo llvm-cov nextest --all-features --run-ignored only \
         --lcov --output-path "{{ coverage_out }}/crap-ffi/lcov.info"
     cd {{ tauri }} && cargo crap --path '{{ ffi_allow }}' --lcov "{{ coverage_out }}/crap-ffi/lcov.info" --threshold 30 --fail-above
-    cd {{ bridge }} && mvn -B test -DexcludedGroups= -Dgroups=gradaC
+    cd {{ bridge }} && {{ maven }} test -DexcludedGroups= -Dgroups=gradaC
 
 # Pruebas de --lib y del canal local en una pasada instrumentada, y la puerta CRAP de `windows_allow` (ADR-0035).
 [group('ci')]
@@ -574,7 +568,7 @@ conformance-console:
 clean:
     #!/usr/bin/env bash
     set -eu
-    cd "{{ bridge }}" && mvn -B clean
+    cd "{{ bridge }}" && {{ maven }} clean
     if [ -z "{{ worktree_target }}" ]; then
         cd "{{ tauri }}" && cargo clean
     else

@@ -32,12 +32,12 @@ postproceso del ciclo trifásico (ADR-0001), compilado a `librfirma_crypto.so`
   lo que sí compila lo hace contra la 1.9 en silencio. Lo automatiza
   `bootstrap.sh`. La 1.9.2 no está en Maven Central: si no está en `~/.m2`,
   hay que construirla.
-* **Construye con la GraalVM CE de `.graalvm-version`** (ADR-0004, ADR-0035). SDKMAN deja
+* **Construye con la GraalVM CE de `GRAALVM_VERSION` de `versions.env`** (ADR-0004, ADR-0035). SDKMAN deja
   `21-graalce` por defecto, así que fija `GRAALVM_HOME` a la 25: la línea 21
   aborta en el `JNI_OnLoad` de `libawt.so` con cualquier firma visible. El
   `pom.xml` sigue en `release 21`: cambia el JDK que construye, no el lenguaje.
   Ver `docs/research/graalvm-libawt-shared.md`.
-* **Local y CI construyen con la misma GraalVM**, la de `.graalvm-version`: el
+* **Local y CI construyen con la misma GraalVM**, la de `GRAALVM_VERSION` de `versions.env`: el
   `justfile` deriva de ella la ruta de SDKMAN y los workflows la instalan con
   `.github/actions/setup-graalvm` (ADR-0035). Dos compilaciones distintas de
   la 25 alcanzan clases distintas: con una `ApacheCanonicalizer` no queda
@@ -45,7 +45,7 @@ postproceso del ciclo trifásico (ADR-0001), compilado a `librfirma_crypto.so`
   con un `MissingResourceException` de
   `com.sun.org.apache.xml.internal.security.resource.xmlsecurity`. Si un rojo
   del carril lento no se reproduce, comprueba antes que tu `GRAALVM_HOME` es
-  la de `.graalvm-version`.
+  la de `GRAALVM_VERSION` de `versions.env`.
 * **En Windows, `just native` se lanza desde Git Bash** y toma GraalVM de
   `GRAALVM_HOME` o `JAVA_HOME` (ADR-0035). `native-image` enlaza con MSVC por
   su cuenta, sin abrir una consola de Visual Studio, y deja
