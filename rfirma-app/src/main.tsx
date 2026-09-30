@@ -29,6 +29,7 @@ import {
   tauriNativeTitlebar,
   tauriPdfSource,
   tauriPreferences,
+  tauriWindowTheme,
   tauriRecents,
   tauriRubricPicker,
   tauriSignedDocumentOpener,
@@ -84,6 +85,7 @@ const i18n = createI18n(await preference.read());
 const recents = tauriRecents();
 
 const preferences = tauriPreferences();
+const windowTheme = tauriWindowTheme();
 const initialPreferences = await preferences.read();
 const initialSignature = visibleSignatureFrom(await tauriVisibleSignatureMemory().read());
 const appVersion = await tauriAppVersion();
@@ -139,6 +141,7 @@ function RootView() {
         drops={tauriDocumentDrops()}
         pdfs={tauriPdfSource()}
         preferences={preferences}
+        windowTheme={windowTheme}
         destinations={tauriDestinations()}
         certificates={tauriCertificateStore()}
         rubrics={tauriRubricPicker()}

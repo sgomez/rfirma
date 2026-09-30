@@ -1,15 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
-const setTheme = vi.hoisted(() => vi.fn(() => Promise.resolve()));
-vi.mock("@tauri-apps/api/window", () => ({ getCurrentWindow: () => ({ setTheme }) }));
-
-import { applyTheme, isTheme, THEMES } from "./theme";
+import { applyTheme, isTheme, noWindowTheme, THEMES } from "./theme";
 
 /** **Grada A**: un atributo en un elemento, sin backend y sin ventana. */
 describe("el tema", () => {
   it("forces the chosen one with the attribute the design tokens read", () => {
     const root = document.createElement("html");
 
-    applyTheme("dark", root);
+    applyTheme("dark", noWindowTheme, root);
 
     expect(root.getAttribute("data-theme")).toBe("dark");
   });
@@ -23,9 +20,9 @@ describe("el tema", () => {
    */
   it("gives the choice back to the desktop by removing the attribute", () => {
     const root = document.createElement("html");
-    applyTheme("dark", root);
+    applyTheme("dark", noWindowTheme, root);
 
-    applyTheme("system", root);
+    applyTheme("system", noWindowTheme, root);
 
     expect(root.hasAttribute("data-theme")).toBe(false);
   });
@@ -43,9 +40,9 @@ describe("el tema de la ventana", () => {
     ["light", "light"],
     ["system", null],
   ] as const)("sets the window theme when applying %s", (theme, expected) => {
-    setTheme.mockClear();
+    const setTheme = vi.fn();
 
-    applyTheme(theme, document.createElement("html"));
+    applyTheme(theme, setTheme, document.createElement("html"));
 
     expect(setTheme).toHaveBeenCalledWith(expected);
   });
