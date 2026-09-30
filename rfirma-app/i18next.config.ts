@@ -60,6 +60,8 @@ export default defineConfig({
     // probamos y `--unused` la sigue reportando.
     preservePatterns: [
       "errors.situations.*",
+      // El motivo del fallo de instalación es un tipo importado (`Installation`).
+      "updates.install.failed.*",
       // Del diálogo nativo GTK de arranque: no hay ventana donde `t()` las lea.
       "errors.startup.*",
       "languages.*",
