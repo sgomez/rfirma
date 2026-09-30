@@ -65,6 +65,20 @@ export function useDocuments(
     };
   }, [store]);
 
+  useEffect(() => {
+    let current = true;
+    const refresh = () => {
+      store.list().then((entries) => {
+        if (current) setRecents(entries);
+      });
+    };
+    window.addEventListener("focus", refresh);
+    return () => {
+      current = false;
+      window.removeEventListener("focus", refresh);
+    };
+  }, [store]);
+
   const show = useCallback(
     (document: DocumentInHand, front: boolean) => {
       const existing = tabsNow.current.find((tab) => tab.id === document.id);

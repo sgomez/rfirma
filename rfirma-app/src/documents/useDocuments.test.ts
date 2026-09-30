@@ -47,6 +47,28 @@ describe("useDocuments", () => {
     expect(result.current.active).toBeNull();
   });
 
+  it("asks the store again when the window regains focus, so a vanished file shows as not found", async () => {
+    let found = true;
+    const store = {
+      ...inMemoryRecents(),
+      list: async () => [row("a.pdf", { available: found })],
+    };
+    const { result } = renderHook(() => useDocuments(store, inMemoryDocumentPicker()));
+    await waitFor(() => expect(result.current.recents[0]?.available).toBe(true));
+
+    found = false;
+    await act(async () => {
+      window.dispatchEvent(new Event("focus"));
+    });
+    await waitFor(() => expect(result.current.recents[0]?.available).toBe(false));
+
+    found = true;
+    await act(async () => {
+      window.dispatchEvent(new Event("focus"));
+    });
+    await waitFor(() => expect(result.current.recents[0]?.available).toBe(true));
+  });
+
   it("makes the document opened through the portal the active one and remembers it", async () => {
     const store = inMemoryRecents();
     const factura = document("factura.pdf");
