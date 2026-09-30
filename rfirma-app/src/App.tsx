@@ -194,7 +194,7 @@ export function App({
     settings?.destination ?? null,
     signing.state.kind,
   );
-  const { t, i18n } = useTranslation();
+  const { i18n } = useTranslation();
   // El instante del recuadro **es estado, no un reloj**: se fija al abrir el
   // documento y no vuelve a correr. Recalcularlo en cada pintada haría que la
   // vista previa enseñara una hora y se estampara otra, que es la diferencia
