@@ -216,8 +216,9 @@ Linux, la barra de título GTK sin tira, el **30/09/2026**, con la palanca
 [`docs/design/artboards/`](artboards/README.md).
 
 **Sin botón de abrir ni pestañas.** Esta pantalla toma la barra de la ventana
-principal en su variante sin documentos: una barra con «Abrir PDF…» invitaría a
-abrir un PDF antes de terminar la configuración.
+principal, pero sin el botón partido, igual que Preferencias y el panel de
+estado; el inicio sin documentos sí lo lleva. Una barra con «Abrir PDF…»
+invitaría a abrir un PDF antes de terminar la configuración.
 
 **Dos pantallas, y no tres ni una.** Se descartaron las otras dos estructuras
 que se dibujaron:
