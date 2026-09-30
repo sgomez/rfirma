@@ -121,6 +121,22 @@ pub fn containing_folder(path: &Path) -> Option<String> {
     path.parent()?.file_name()?.to_str().map(str::to_owned)
 }
 
+/// Ruta de la carpeta contenedora con `home` abreviado a `~/`; ausente bajo el portal (ADR-0011).
+pub fn containing_location(path: &Path, home: Option<&Path>) -> Option<String> {
+    if is_a_portal_grant(path) {
+        return None;
+    }
+    let folder = path.parent()?;
+    if let Some(inside) = home.and_then(|home| folder.strip_prefix(home).ok()) {
+        let parts: Option<Vec<&str>> = inside
+            .components()
+            .map(|c| c.as_os_str().to_str())
+            .collect();
+        return Some(format!("~/{}", parts?.join("/")));
+    }
+    folder.to_str().map(str::to_owned)
+}
+
 fn inside_a_sandbox(marker: &Path) -> bool {
     marker.exists()
 }

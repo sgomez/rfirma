@@ -58,6 +58,9 @@ pub trait DocumentFiles {
     /// La ruta canónica, o nada si no se puede resolver.
     fn canonical(&self, path: &Path) -> Option<PathBuf>;
 
+    /// El directorio personal de quien usa la aplicación, si se conoce.
+    fn home_directory(&self) -> Option<PathBuf>;
+
     /// Los ficheros dentro de la carpeta, ordenados; vacío si no es una carpeta legible.
     fn files_within(&self, folder: &Path) -> Vec<PathBuf>;
 }

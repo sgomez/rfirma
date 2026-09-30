@@ -157,6 +157,8 @@ crossing! {
         pub name: String,
         /// Carpeta contenedora; ausente bajo el portal (ADR-0011).
         pub folder: Option<String>,
+        /// Ruta de la carpeta contenedora, con `~/` por el directorio personal; ausente bajo el portal.
+        pub location: Option<String>,
         /// Insignia o estado del documento.
         pub badge: Badge,
         /// Fecha de modificación en segundos Unix.
@@ -176,6 +178,7 @@ impl From<RecentRow> for RecentDocumentView {
             id: row.id,
             name: row.name,
             folder: row.folder,
+            location: row.location,
             badge: row.badge,
             modified: row.modified,
             last_used: row.last_used,

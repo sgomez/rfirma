@@ -64,6 +64,20 @@ fn the_tray_survives_being_read_again_with_its_names_badges_and_order() {
 }
 
 #[test]
+fn a_listed_row_carries_its_location_with_home_abbreviated() {
+    let home = where_the_memory_lives();
+    let files = a_disk().with_home("/home/quien");
+    let memory = a_memory(home.path());
+    let opened = OpenedDocuments::new();
+    let (_, id) = an_opened_pdf(&files, "contrato.pdf", &opened);
+
+    record(&memory, &files, &opened, &id, None).expect("deberia anotarse");
+    let rows = listed_rows(&memory, &files, &opened);
+
+    assert_eq!(rows[0].location.as_deref(), Some("~/Contratos"));
+}
+
+#[test]
 fn a_row_taken_through_the_portal_carries_no_folder() {
     let home = where_the_memory_lives();
     let files = a_disk();
@@ -264,7 +278,7 @@ fn reopening_a_document_that_rfirma_signed_does_not_take_its_badge_away() {
 #[test]
 fn no_row_carries_the_path_the_backend_dedupes_by() {
     let home = where_the_memory_lives();
-    let files = a_disk();
+    let files = a_disk().with_home("/home/quien");
     let memory = a_memory(home.path());
     let opened = OpenedDocuments::new();
     let (path, id) = an_opened_pdf(&files, "contrato.pdf", &opened);

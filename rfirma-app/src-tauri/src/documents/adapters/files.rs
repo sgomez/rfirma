@@ -20,6 +20,10 @@ impl DocumentFiles for RealFiles {
         }
     }
 
+    fn home_directory(&self) -> Option<PathBuf> {
+        std::env::var_os("HOME").map(PathBuf::from)
+    }
+
     fn exists(&self, path: &Path) -> bool {
         path.exists()
     }
