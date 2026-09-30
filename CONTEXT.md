@@ -349,7 +349,7 @@ _Avoid_: certificado por defecto, certificado fijo, sticky
 ### Distribución
 
 **Canal de distribución**:
-La forma en la que la aplicación llegó a la máquina: flatpak, `.deb`, `.rpm` o una compilación de
+La forma en la que la aplicación llegó a la máquina: flatpak, `.deb`, `.rpm`, `windows` o una compilación de
 desarrollo. Decide si corre dentro del **sandbox** y qué puede ver del sistema, así que es lo
 primero que hay que saber para interpretar todo lo demás.
 _Avoid_: canal a secas —es la conexión con la sede—, paquete, formato de instalación

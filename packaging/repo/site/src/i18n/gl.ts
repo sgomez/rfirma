@@ -160,11 +160,12 @@ export const gl: Dictionary = {
   "install.dnf.body":
     "Para Fedora e derivadas baseadas en paquetes RPM. Configura o repositorio con comprobación criptográfica estrita de metadatos e paquetes (<code>gpgcheck=1</code> e <code>repo_gpgcheck=1</code>).",
   "install.soon": "En desenvolvemento",
-  "install.windows.title": "Soporte para Windows en preparación",
+  "install.windows.title": "rFirma para Windows",
   "install.windows.body":
-    "A integración nativa para Windows atópase actualmente en desenvolvemento. Utilizará directamente o almacén de certificados de Windows (MS-CAPI / CNG) para asinar co teu certificado persoal ou DNIe sen necesidade de software intermedio.",
+    "Instalador para o teu usuario, sen permisos de administrador. Usa directamente o almacén de certificados de Windows (MS-CAPI / CNG) e, unha vez instalado, actualízase desde a propia aplicación: cada versión nova chega coa súa sinatura minisign, que se comproba antes de instalala.",
+  "install.windows.download": "Descargar o instalador de Windows",
   "install.windows.note":
-    "Estará dispoñible como instalador <code>.msi</code> e a través de <code>winget</code>. Podes seguir o avance do proxecto en <a href=\"https://github.com/sgomez/rfirma\" target=\"_blank\" rel=\"noopener noreferrer\">GitHub</a>.",
+    "Verifica o que descargas: baixa <code>SHA256SUMS</code> da <a href=\"https://github.com/sgomez/rfirma/releases/latest\" target=\"_blank\" rel=\"noopener noreferrer\">Release</a> e comproba que o hash do instalador coincide coa súa liña. O instalador non está asinado con Authenticode, así que SmartScreen avisarache ao abrilo.",
   "install.macos.title": "Soporte para macOS en preparación",
   "install.macos.body":
     "A versión nativa para macOS está en fase de desenvolvemento activo. Integrarase co Keychain de Apple e CryptoTokenKit para un acceso fluído e seguro ás identidades dixitais do sistema.",

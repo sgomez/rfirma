@@ -80,6 +80,7 @@ const image = new URL("/og.png", Astro.site);
       import { mountGuidedDemo } from "../scripts/guided-demo";
       import { mountInstallTabs } from "../scripts/install-tabs";
       import { mountReveal } from "../scripts/reveal";
+      import { mountWindowsDownload } from "../scripts/windows-download";
 
       const demo = document.querySelector<HTMLElement>(".demo");
       if (demo) {
@@ -96,6 +97,11 @@ const image = new URL("/og.png", Astro.site);
         if (code) {
           mountCopyButton(button, code);
         }
+      }
+
+      const windowsDownload = document.querySelector<HTMLAnchorElement>("[data-windows-download]");
+      if (windowsDownload) {
+        void mountWindowsDownload(windowsDownload);
       }
 
       mountReveal(Array.from(document.querySelectorAll<HTMLElement>("[data-reveal]")));

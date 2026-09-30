@@ -160,11 +160,12 @@ export const en: Dictionary = {
   "install.dnf.body":
     "For Fedora and RPM-based derivatives. Sets up the repository with strict cryptographic checking of metadata and packages (<code>gpgcheck=1</code> and <code>repo_gpgcheck=1</code>).",
   "install.soon": "In development",
-  "install.windows.title": "Windows support in the works",
+  "install.windows.title": "rFirma for Windows",
   "install.windows.body":
-    "Native integration for Windows is currently in development. It will use the Windows certificate store (MS-CAPI / CNG) directly to sign with your personal certificate or DNIe without any intermediate software.",
+    "Per-user installer, no administrator rights needed. It uses the Windows certificate store (MS-CAPI / CNG) directly and, once installed, updates from within the app: every new version arrives with its minisign signature, which is checked before installing it.",
+  "install.windows.download": "Download the Windows installer",
   "install.windows.note":
-    "It will be available as an <code>.msi</code> installer and through <code>winget</code>. You can follow the project's progress on <a href=\"https://github.com/sgomez/rfirma\" target=\"_blank\" rel=\"noopener noreferrer\">GitHub</a>.",
+    "Verify what you download: get <code>SHA256SUMS</code> from the <a href=\"https://github.com/sgomez/rfirma/releases/latest\" target=\"_blank\" rel=\"noopener noreferrer\">Release</a> and check that the installer's hash matches its line. The installer is not Authenticode-signed, so SmartScreen will warn you when you open it.",
   "install.macos.title": "macOS support in the works",
   "install.macos.body":
     "The native version for macOS is in active development. It will integrate with Apple's Keychain and CryptoTokenKit for smooth, secure access to the system's digital identities.",
