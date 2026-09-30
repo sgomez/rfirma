@@ -31,8 +31,8 @@ El proyecto está diseñado de forma modular para desacoplar la interfaz y la in
 
 1. **Frontend (React + Vite):** Interfaz gráfica minimalista para la selección y filtrado de certificados e introducción de PIN.
 2. **Tauri Backend (Rust):**
-   * Levanta un servidor local HTTPS/WS seguro (`127.0.0.1:63117`) para comunicarse con las sedes electrónicas.
-   * Maneja el protocolo deep link `rfirma://` y `afirma://`.
+   * Levanta un servidor local HTTPS/WS en `127.0.0.1` para comunicarse con las sedes electrónicas: el `63117` fijo con el protocolo 3, uno de los puertos que sortea la sede con el 4 (ver [ADR-0005](docs/adr/0005-servidor-local-https-y-ca-en-los-almacenes-nss.md)).
+   * Maneja el protocolo `afirma://`.
    * Realiza la lectura y firma nativa de los certificados locales (incluyendo tarjetas inteligentes PKCS#11).
 3. **GraalVM FFI Bridge (Java Core):** Librería nativa compilada (**un solo fichero**, `librfirma_crypto.so`, ver [ADR-0004](docs/adr/0004-libreria-nativa-distribuida-en-el-paquete.md)) que recibe los datos en formato JSON mediante FFI y procesa las fases de **Prefirma** y **Postfirma** (generación de los contenedores CAdES, PAdES, XAdES y FacturaE).
 
