@@ -137,6 +137,7 @@ describe("App, el atajo Ctrl+O", () => {
         opener={unavailableOpener()}
         initialSignature={DEFAULT_VISIBLE_SIGNATURE}
         versions={inMemoryVersionCheck()}
+        version="0.1.0"
         menuAnchor="header"
         covered
       />,

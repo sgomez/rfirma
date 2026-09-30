@@ -1,5 +1,6 @@
 /** Los puertos de Tauri de la configuración: ajustes, idioma, destino y la versión publicada. */
 
+import { getVersion } from "@tauri-apps/api/app";
 import { invoke } from "@tauri-apps/api/core";
 import type { ExternalDestinationOpener } from "./desktop/externalDestination";
 import { FALLBACK_LANGUAGE, isLanguageTag } from "./i18n/languages";
@@ -179,4 +180,9 @@ export function tauriVersionCheck(): VersionCheck {
     latest: async () => await invoke<NewVersion | null>("check_for_new_version"),
     install: async () => await invoke<Installation>("install_new_version"),
   };
+}
+
+/** La versión del binario en ejecución, la de `Cargo.toml`. */
+export async function tauriAppVersion(): Promise<string> {
+  return await getVersion();
 }

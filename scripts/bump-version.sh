@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 """Sube la version en los sitios que declara el candado de check-version.py.
 
-Cambia la fuente (`tauri.conf.json`) y cuadra detras el resto: `package.json`,
-`Cargo.toml`, el metainfo, `Cargo.lock` (dejando que `cargo` lo reescriba) y
+Cambia la fuente (`Cargo.toml`) y cuadra detras el resto: el metainfo, `Cargo.lock` (dejando que `cargo` lo reescriba) y
 el sello sha256 de `Cargo.lock` en `packaging/flatpak/sources.lock` (ID-150). Termina
 invocando el propio candado para confirmar que quedo todo en orden.
 
@@ -20,23 +19,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 
-TAURI_CONF = "rfirma-app/src-tauri/tauri.conf.json"
-PACKAGE_JSON = "rfirma-app/package.json"
 CARGO_TOML = "rfirma-app/src-tauri/Cargo.toml"
 CARGO_LOCK = "rfirma-app/src-tauri/Cargo.lock"
 METAINFO = "packaging/flatpak/me.sgomez.rfirma.metainfo.xml"
 SOURCES_LOCK = "packaging/flatpak/sources.lock"
-
-
-def replace_json_version(relative: str, version: str) -> None:
-    path = ROOT / relative
-    text = path.read_text(encoding="utf-8")
-    updated, count = re.subn(
-        r'("version"\s*:\s*)"[^"]+"', rf'\g<1>"{version}"', text, count=1
-    )
-    if count != 1:
-        sys.exit(f'{relative}: no encontre "version" que sustituir')
-    path.write_text(updated, encoding="utf-8")
 
 
 def replace_cargo_toml_version(version: str) -> None:
@@ -86,8 +72,6 @@ def main() -> int:
         sys.exit(f"Uso: {sys.argv[0]} <version>")
     version = sys.argv[1]
 
-    replace_json_version(TAURI_CONF, version)
-    replace_json_version(PACKAGE_JSON, version)
     replace_cargo_toml_version(version)
     replace_metainfo_release(version)
 
@@ -110,7 +94,7 @@ def main() -> int:
     regenerate_sources_lock()
 
     subprocess.run([sys.executable, str(ROOT / "packaging/check-version.py")], check=True)
-    print(f"version subida a {version} en los cinco sitios del candado.")
+    print(f"version subida a {version} en los sitios del candado.")
     return 0
 
 

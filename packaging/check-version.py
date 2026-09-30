@@ -2,25 +2,18 @@
 """El candado de la version y del nombre del producto (ID-150, ID-151, ID-152,
 ID-154, ID-145, ID-166).
 
-LA FUENTE ES `rfirma-app/src-tauri/tauri.conf.json`, y no por gusto: es el
-unico fichero que el bundler de Tauri lee para sellar la version dentro de los
-tres paquetes, asi que es el que no puede mentir. Los otros tres sitios donde
-el numero aparece quedan EN CANDADO: si divergen, esto se pone rojo.
+La fuente es `Cargo.toml`: Tauri v2 sella su version en los tres paquetes. Los
+otros sitios quedan en candado y, si divergen, esto se pone rojo.
 
-    fuente    rfirma-app/src-tauri/tauri.conf.json   "version"
-    candado   rfirma-app/package.json                "version"
-    candado   rfirma-app/src-tauri/Cargo.toml        [package] version
+    fuente    rfirma-app/src-tauri/Cargo.toml        [package] version
     candado   rfirma-app/src-tauri/Cargo.lock        [[package]] name = "rfirma"
     candado   packaging/.../metainfo.xml             <release version=...>
 
 `Cargo.lock` lo reescribe el primer `cargo` que corra despues de tocar
-`Cargo.toml`, y `packaging/flatpak/sources.lock` sella su `sha256`: subir la
-version es dejar que `cargo` lo reescriba y resellarlo (`scripts/bump-version.sh`).
+`Cargo.toml`, y `packaging/flatpak/sources.lock` sella su `sha256`
+(`scripts/bump-version.sh`).
 
-`rfirma-native-bridge/pom.xml` es el SEXTO sitio y SALE del candado (ID-150):
-la version del puente es un artefacto interno que no lee nadie fuera del propio
-Maven, y atarla a la de la aplicacion solo produce commits de ruido. No se
-comprueba aqui a proposito; no lo anadas.
+`rfirma-native-bridge/pom.xml` sale del candado a proposito (ID-150); no lo anadas.
 
 Lo demas que se comprueba son invariantes del mismo bloque de decisiones, todas
 estaticas y de milisegundos:
@@ -47,7 +40,6 @@ import xml.etree.ElementTree as ET
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 TAURI_CONF = "rfirma-app/src-tauri/tauri.conf.json"
-PACKAGE_JSON = "rfirma-app/package.json"
 CARGO_TOML = "rfirma-app/src-tauri/Cargo.toml"
 CARGO_LOCK = "rfirma-app/src-tauri/Cargo.lock"
 METAINFO = "packaging/flatpak/me.sgomez.rfirma.metainfo.xml"
@@ -64,10 +56,6 @@ def fail(message: str) -> None:
 def read(path: str) -> str:
     with open(os.path.join(ROOT, path), encoding="utf-8") as handle:
         return handle.read()
-
-
-def package_json_version() -> str:
-    return json.loads(read(PACKAGE_JSON))["version"]
 
 
 def cargo_version() -> str | None:
@@ -115,23 +103,17 @@ def newest_release(tree: ET.Element) -> ET.Element | None:
 
 
 def check_lock(version: str) -> None:
-    for path, found in (
-        (PACKAGE_JSON, package_json_version()),
-        (CARGO_TOML, cargo_version()),
-        (CARGO_LOCK, cargo_lock_version()),
-    ):
-        if found != version:
-            fail(
-                f"{path} dice {found!r} y {TAURI_CONF} dice {version!r}. "
-                f"La fuente es {TAURI_CONF}: cambia el resto para que cuadre."
-            )
-            if path == CARGO_LOCK:
-                fail(
-                    f"{CARGO_LOCK} lo reescribe `cargo` solo, pero su sha256 "
-                    f"esta sellado en packaging/flatpak/sources.lock: regenera "
-                    f"ese sello con `sha256sum` o `just check-repo` se pondra "
-                    f"rojo antes que esto."
-                )
+    found = cargo_lock_version()
+    if found != version:
+        fail(
+            f"{CARGO_LOCK} dice {found!r} y {CARGO_TOML} dice {version!r}. "
+            f"La fuente es {CARGO_TOML}: cambia el resto para que cuadre."
+        )
+        fail(
+            f"{CARGO_LOCK} lo reescribe `cargo` solo, pero su sha256 esta "
+            f"sellado en packaging/flatpak/sources.lock: regenera ese sello "
+            f"con `sha256sum`."
+        )
 
 
 def check_metainfo(version: str) -> None:
@@ -156,7 +138,7 @@ def check_metainfo(version: str) -> None:
     if release.get("version") != version:
         fail(
             f"{METAINFO} publica la version {release.get('version')!r} y "
-            f"{TAURI_CONF} dice {version!r}"
+            f"{CARGO_TOML} dice {version!r}"
         )
     if not release.get("date"):
         fail(f"{METAINFO}: la <release> no lleva `date` (ID-152)")
@@ -240,7 +222,12 @@ def check_rc_rule() -> None:
 
 def main() -> int:
     conf = json.loads(read(TAURI_CONF))
-    version = conf["version"]
+    version = cargo_version()
+    if version is None:
+        print(f"{CARGO_TOML}: no encontre version en [package]", file=sys.stderr)
+        return 1
+    if "version" in conf:
+        fail(f"{TAURI_CONF} declara `version`: la fuente es {CARGO_TOML}.")
     check_lock(version)
     check_product_name(conf)
     check_metainfo(version)
@@ -253,13 +240,15 @@ def main() -> int:
             print(f"  - {message}", file=sys.stderr)
         print(file=sys.stderr)
         print(
-            f"La version se cambia SOLO en {TAURI_CONF} y el resto se pone al "
+            f"La version se cambia SOLO en {CARGO_TOML} y el resto se pone al "
             f"dia detras (ID-150).",
             file=sys.stderr,
         )
         return 1
 
-    print(f"candado de la version: {version} en los cinco sitios, y el resto en orden")
+    print(
+        f"candado de la version: {version} en Cargo.toml, Cargo.lock y el metainfo, y el resto en orden"
+    )
     return 0
 
 

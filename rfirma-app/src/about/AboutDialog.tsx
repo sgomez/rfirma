@@ -6,7 +6,7 @@ import { InstallUpdateDialog } from "../updates/InstallUpdateDialog";
 import type { NewVersion, VersionCheck } from "../updates/newVersion";
 
 interface AboutDialogProps {
-  /** La versión que se enseña. Sale de `package.json` en tiempo de compilación. */
+  /** La versión del binario, resuelta una vez en `main.tsx`. */
   version: string;
   /** Lo que se sabía desde el arranque, mientras no llegue la respuesta del puerto. */
   newVersion: NewVersion | null;

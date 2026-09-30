@@ -280,7 +280,7 @@ misma cosa en la misma apertura del panel.
     entrar en los repositorios, por lo mismo que se descarta el remoto sin firmar.
   - **Rompe la versión única.** tabularis reescribe la versión en cada construcción y lleva
     un contador semver propio, porque WiX y NSIS rechazan prereleases no numéricas; aquí
-    `tauri.conf.json` es la fuente y `just check-version` la vigila.
+    `Cargo.toml` es la fuente y `just check-version` la vigila.
   - **No tiene a quién servir.** tabularis alimenta con él un canal de su actualizador y un
     paquete AUR aparte; el *updater* de rFirma en Windows solo anuncia versiones estables, y a
     quien firma un trámite no se le ofrece una construcción diaria.
