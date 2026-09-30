@@ -108,7 +108,10 @@ check-repo: check-version
     {{ root }}/packaging/repo/build-tree.test.sh
     {{ root }}/packaging/repo/publish-tree.test.sh
     {{ root }}/packaging/windows/sign-updater.test.sh
+    {{ root }}/packaging/check_launchers.py
+    python3 -m unittest discover -s {{ root }}/packaging -p 'test_check_launchers.py'
     ruff check {{ root }}/packaging {{ root }}/scripts
+    ruff format --check {{ root }}/packaging {{ root }}/scripts
     {{ root }}/scripts/tests/outline_test.sh
     {{ root }}/scripts/tests/ci_lanes_test.sh
     {{ root }}/scripts/tests/packages_manifest_test.sh
