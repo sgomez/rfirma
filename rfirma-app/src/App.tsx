@@ -28,7 +28,6 @@ import { PreferencesView } from "./preferences/PreferencesView";
 import type { PreferencesStore } from "./preferences/preferences";
 import { MainWindow } from "./shell/MainWindow";
 import { type MenuAnchor, menuAnchorFor } from "./shell/menuAnchor";
-import { NotificationStrip } from "./shell/NotificationStrip";
 import type { CertificateStore } from "./signing/certificate";
 import type { DestinationSource, SignedDocumentOpener } from "./signing/destination";
 import type { SigningBackend } from "./signing/flow";
@@ -45,6 +44,7 @@ import type { VisibleSignature } from "./signing/visibleSignature";
 import { StatusView } from "./status/StatusView";
 import { memoryStatus, type StatusPort } from "./status/status";
 import { InstallUpdateDialog } from "./updates/InstallUpdateDialog";
+import { NewVersionStrip } from "./updates/NewVersionStrip";
 import type { VersionCheck } from "./updates/newVersion";
 import { DocumentViewer } from "./viewer/DocumentViewer";
 import type { PdfDocument } from "./viewer/pdf";
@@ -354,28 +354,11 @@ export function App({
           ) : null
         }
         notification={
-          // El único inquilino de la franja (ID-354). La acción no descarga
-          // nada: lleva a *Acerca de*, que es donde están las órdenes de alta
-          // del repositorio (ID-181), y así el `opener:deny-open-url` del
-          // ID-85 sigue sin hacer falta.
-          newVersion !== null && !versionDismissed && notifyNewVersion ? (
-            <NotificationStrip
-              message={t("notifications.newVersion.message", { version: newVersion.version })}
-              action={
-                newVersion.installable
-                  ? {
-                      label: t("updates.install.action"),
-                      onSelect: () => setDialog("installUpdate"),
-                    }
-                  : {
-                      label: t("notifications.newVersion.action"),
-                      onSelect: () => setDialog("about"),
-                    }
-              }
-              dismissLabel={t("actions.dismiss")}
-              onDismiss={() => setVersionDismissed(true)}
-            />
-          ) : null
+          <NewVersionStrip
+            newVersion={versionDismissed || !notifyNewVersion ? null : newVersion}
+            onOpen={setDialog}
+            onDismiss={() => setVersionDismissed(true)}
+          />
         }
         tabs={
           <DocumentTabs
