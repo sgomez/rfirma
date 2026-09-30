@@ -108,26 +108,10 @@ jobs:
           name: librfirma-crypto
           path: rfirma-native-bridge/target/lib/rfirma
 
-      - uses: ./.github/actions/setup-runner
+      - uses: ./.github/actions/native-tier
         with:
-          rust: native
-          node: true
-          java: graalvm
-          apt: test
-          tools: llvm-cov crap nextest
-          autoscript: true
+          library: provided
           save-cache: false
-
-      - name: Pruebas de grada C
-        run: just test-native
-
-      - name: PDF para el validador oficial
-        if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: pdf-puerta-manual
-          path: rfirma-app/src-tauri/target/llvm-cov-target/tmp/manual-gate.pdf
-          if-no-files-found: warn
 
   flatpak:
     name: Empaqueta Flatpak
