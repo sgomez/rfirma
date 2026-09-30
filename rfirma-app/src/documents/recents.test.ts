@@ -9,6 +9,7 @@ function document(name: string, overrides: Partial<RecentDocument> = {}): Recent
     id: `id-${name}`,
     name,
     folder: null,
+    location: null,
     badge: "Unsigned",
     modified: 1_700_000_000,
     lastUsed: 1_700_000_000,

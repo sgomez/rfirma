@@ -13,6 +13,7 @@ function row(name: string, overrides: Partial<RecentDocument> = {}): RecentDocum
     id: `id-${name}`,
     name,
     folder: null,
+    location: null,
     badge: "Unsigned",
     modified: 1_700_000_000,
     lastUsed: 1_700_000_000,

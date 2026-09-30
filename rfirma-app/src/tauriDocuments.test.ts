@@ -249,6 +249,7 @@ describe("la bandeja sobre Tauri", () => {
     id: "0f1e2d3c",
     name: "contrato.pdf",
     folder: "Documentos",
+    location: "~/Documentos",
     badge: "Unsigned" as const,
     modified: 1_700_000_000,
     lastUsed: 1_700_000_000,

@@ -201,7 +201,7 @@ describe("App with the native titlebar", () => {
   it("sends the recents with what each entry paints, and the labels for them", async () => {
     const { titlebar } = renderOnLinux({
       recentRows: [
-        row("factura.pdf", { folder: "Documentos", badge: "Signed" }),
+        row("factura.pdf", { location: "~/Documentos", badge: "Signed" }),
         row("usb.pdf", { available: false }),
       ],
     });
@@ -211,11 +211,11 @@ describe("App with the native titlebar", () => {
       {
         path: "id-factura.pdf",
         name: "factura.pdf",
-        folder: "Documentos",
+        location: "~/Documentos",
         signed: true,
         found: true,
       },
-      { path: "id-usb.pdf", name: "usb.pdf", folder: "", signed: false, found: false },
+      { path: "id-usb.pdf", name: "usb.pdf", location: null, signed: false, found: false },
     ]);
     expect(titlebar.latest?.labels).toMatchObject({
       recents: "Abiertos recientemente",

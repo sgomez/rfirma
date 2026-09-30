@@ -18,7 +18,7 @@ function recentEntry(row: RecentDocument): TitlebarRecent {
   return {
     path: row.id,
     name: row.name,
-    folder: row.folder ?? "",
+    location: row.location,
     signed: row.badge === "Signed",
     found: row.available,
   };
