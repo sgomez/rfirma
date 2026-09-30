@@ -391,8 +391,9 @@ crossing! {
         pub path: String,
         /// Nombre del documento.
         pub name: String,
-        /// Carpeta que lo contiene.
-        pub folder: String,
+        /// Ruta de la carpeta que lo contiene, si la ventana la manda.
+        #[serde(default)]
+        pub location: Option<String>,
         /// Si el documento está firmado.
         pub signed: bool,
         /// Si el fichero se sigue encontrando.

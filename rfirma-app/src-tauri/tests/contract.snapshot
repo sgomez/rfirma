@@ -142,7 +142,7 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
   pub struct TitlebarRecentView
       path: String
       name: String
-      folder: String
+      location: Option<String>
       signed: bool
       found: bool
 
