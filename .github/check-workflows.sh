@@ -149,7 +149,7 @@ echo "OK  la clave minisign de las actualizaciones solo aparece en $RELEASE"
 
 PUBLISH=.github/workflows/publish.yml
 if [ -f "$PUBLISH" ]; then
-    if ! grep -q 'types: \[published\]' "$PUBLISH"; then
+    if ! grep -nH 'types: \[published\]' "$PUBLISH" | sin_comentarios | grep -q .; then
         echo "$PUBLISH cuelga de 'release: types: [published]', no de la etiqueta (ADR-0015)" >&2
         exit 1
     fi
@@ -297,12 +297,22 @@ fi
 echo "OK  $COMMENT solo hace checkout de la rama por defecto"
 
 # ---------------------------------------------------------------- GraalVM --
-GRAALVM_ACTION=.github/actions/setup-runner/action.yml
+SETUP_ACTION=.github/actions/setup-runner/action.yml
 instalaciones="$(grep -rn 'graalvm/setup-graalvm@' .github/workflows .github/actions justfile \
-    | grep -v "^$GRAALVM_ACTION:" || true)"
+    | grep -v "^$SETUP_ACTION:" || true)"
 if [ -n "$instalaciones" ]; then
     printf '%s\n' "$instalaciones" >&2
-    echo "GraalVM se instala solo con $GRAALVM_ACTION (ADR-0035)." >&2
+    echo "GraalVM se instala solo con $SETUP_ACTION (ADR-0035)." >&2
     exit 1
 fi
-echo "OK  GraalVM: una sola instalacion, la de $GRAALVM_ACTION"
+echo "OK  GraalVM: una sola instalacion, la de $SETUP_ACTION"
+
+# ------------------------------------------------------------ cache de Rust --
+caches_sueltas="$(grep -rn 'Swatinem/rust-cache@' .github/workflows .github/actions \
+    | grep -v "^$SETUP_ACTION:" | sin_comentarios || true)"
+if [ -n "$caches_sueltas" ]; then
+    printf '%s\n' "$caches_sueltas" >&2
+    echo "la cache de Rust solo la abre $SETUP_ACTION, que es donde 'save-cache' decide si se escribe (ADR-0015)." >&2
+    exit 1
+fi
+echo "OK  la cache de Rust solo se abre desde $SETUP_ACTION"
