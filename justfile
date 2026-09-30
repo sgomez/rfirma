@@ -93,7 +93,7 @@ default:
 
 # La puerta del repositorio: un carril por cadena, en paralelo en el CI.
 [group('checklist')]
-check: tools check-repo check-java check-ts check-rust
+check: tools check-repo check-java check-ts check-landing check-rust
 
 # Lo que no pertenece a ninguna cadena: comprobaciones rapidas que ninguna compilacion ve.
 [group('ci')]
@@ -124,7 +124,7 @@ check-repo: check-version fmt-check
 check-java: test-java
 
 [group('ci')]
-check-ts: check-po lint-ts lint-i18n knip build-ts test-ts test-site-driver check-landing
+check-ts: check-po lint-ts lint-i18n knip build-ts test-ts test-site-driver
 
 # lint-rust + machete + crap, sin `cargo build --release` ni `cargo test` sueltos; la instantanea del
 # contrato la compara `tests/contract_discovers_adapters.rs` dentro de la pasada instrumentada.
@@ -148,10 +148,10 @@ install-tools *tools:
 bootstrap:
     {{ root }}/scripts/bootstrap.sh
 
-# Instala las dependencias de node de rfirma-app.
+# Instala las dependencias de node de rfirma-app y de Biome.
 [private]
 deps:
-    cd {{ root }} && pnpm install --frozen-lockfile --filter rfirma-app
+    cd {{ root }} && pnpm install --frozen-lockfile --filter . --filter rfirma-app
 
 # --all rellena tambien los idiomas incompletos, con castellano; nunca en el CI.
 # Fusiona el .pot con los cinco .po y regenera los catalogos.
@@ -250,10 +250,10 @@ outline path:
 contract src=(tauri / "src"):
     cd {{ tauri }} && cargo run -q --example contract -- "{{ src }}"
 
-# Biome sobre rfirma-app.
+# Biome sobre rfirma-app y la consola de la suite; la landing va en su carril.
 [private]
 lint-ts: po-import
-    cd {{ app }} && pnpm exec biome ci .
+    cd {{ root }} && pnpm exec biome ci rfirma-app rfirma-conformance/console
 
 # Formatea las tres cadenas escribiendo.
 [group('checklist')]
@@ -265,11 +265,10 @@ fmt-rust:
     cd {{ tauri }} && cargo fmt --all
     cd {{ conformance_suite }} && cargo fmt --all
 
-# Formateador de biome sobre rfirma-app y, si esta instalada, la consola de la suite.
+# Formateador de biome sobre los tres proyectos de node.
 [private]
 fmt-ts:
-    cd {{ app }} && pnpm exec biome format --write .
-    if [ -x {{ conformance_suite }}/console/node_modules/.bin/biome ]; then cd {{ conformance_suite }}/console && pnpm exec biome format --write .; fi
+    cd {{ root }} && pnpm exec biome format --write .
 
 # `ruff format` sobre todo el Python del repositorio.
 [private]
@@ -280,7 +279,7 @@ fmt-python:
 [group('ci')]
 fmt-check: deps fmt-check-rust
     cd {{ conformance_suite }} && cargo fmt --all -- --check
-    cd {{ app }} && pnpm exec biome format .
+    cd {{ root }} && pnpm exec biome format .
     ruff format --check {{ root }}
 
 [private]
@@ -516,13 +515,14 @@ mutants:
     cargo mutants --in-place --in-diff "$diff" \
         --exclude 'adapters/tauri.rs' --exclude 'main.rs' --exclude '{{ ffi_allow }}'
 
-# Instala, prueba y construye la landing de rfirma.sgomez.me.
-[private]
+# Lint, pruebas y construccion de la landing de rfirma.sgomez.me.
+[group('ci')]
 [script('bash')]
 check-landing:
     set -euo pipefail
     cd {{ root }}
-    pnpm install --frozen-lockfile --reporter=silent --filter rfirma-landing
+    pnpm install --frozen-lockfile --reporter=silent --filter . --filter rfirma-landing
+    pnpm exec biome ci packaging/repo/site
     cd packaging/repo/site
     pnpm exec vitest run --reporter=dot
     pnpm exec astro build

@@ -4,7 +4,7 @@ La suite mide un binario instalado de AutoFirma o rFirma con el `autoscript.js` 
 instrumento. Es un crate aparte y fuera del CI (ADR-0013), y no es una grada ni una puerta
 (ADR-0014). Su única cara es la consola web que levanta `just conformance`: no hay órdenes de
 consola. Sus pruebas se corren con `cargo test` dentro de este directorio; las de la consola, con
-`pnpm exec vitest run` y `pnpm exec biome ci` dentro de `console/`.
+`pnpm exec vitest run` dentro de `console/`; el lint de la consola es el de la raíz (`just lint-ts`).
 
 | Fichero | Qué es |
 |---|---|

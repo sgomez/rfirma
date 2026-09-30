@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { dictionaries, invariantKeys, locales } from "./index";
 import { es } from "./es";
+import { dictionaries, invariantKeys, locales } from "./index";
 
 const keys = Object.keys(es) as (keyof typeof es)[];
 const translated = locales.filter((locale) => locale !== "es");

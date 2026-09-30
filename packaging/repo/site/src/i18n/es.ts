@@ -2,8 +2,7 @@ export const es = {
   "meta.title": "rFirma — Firma electrónica nativa para el escritorio",
   "meta.description":
     "Aplicación de escritorio en Rust y React que sustituye la interfaz Swing y los servidores locales de AutoFirma, con la criptografía oficial de la Administración.",
-  "meta.image.alt":
-    "Logotipo de rFirma sobre fondo verde con el dominio rfirma.sgomez.me",
+  "meta.image.alt": "Logotipo de rFirma sobre fondo verde con el dominio rfirma.sgomez.me",
 
   "notice.aria": "Aviso sobre titularidad oficial",
   "notice.badge": "Aviso",
@@ -68,10 +67,10 @@ export const es = {
   "how.step4.title": "Firma completada",
   "how.step4.body": "El PDF firmado se guarda junto al original, y el resumen indica su formato.",
   "how.step1.alt": "rFirma con un PDF abierto que ya lleva una firma válida",
-  "how.step2.alt": "Selector de certificado abierto, con el buscador y los certificados disponibles",
+  "how.step2.alt":
+    "Selector de certificado abierto, con el buscador y los certificados disponibles",
   "how.step3.alt": "Diálogo nativo para introducir el PIN del certificado",
   "how.step4.alt": "PDF firmado en PAdES, con el resumen de la firma",
-
 
   "pillars.kicker": "Por qué rFirma",
   "pillars.title": "Cuatro decisiones de diseño",
@@ -117,24 +116,26 @@ export const es = {
   "comparison.stores.rfirma": "Todos en una lista con buscador, un certificado por fila",
   "comparison.stamp.label": "Colocación de la firma visible",
   "comparison.stamp.autofirma": "Coordenadas o recuadro sin contexto",
-  "comparison.stamp.rfirma": "Arrastre sobre la página, con modelos de texto y previsualización fiel",
+  "comparison.stamp.rfirma":
+    "Arrastre sobre la página, con modelos de texto y previsualización fiel",
   "comparison.ca.label": "Confianza del navegador en el servidor local",
   "comparison.ca.autofirma": "El instalador registra la CA en el sistema, con privilegios",
-  "comparison.ca.rfirma": "La aplicación registra su CA en los almacenes NSS de la persona, sin root",
+  "comparison.ca.rfirma":
+    "La aplicación registra su CA en los almacenes NSS de la persona, sin root",
   "comparison.lang.label": "Idiomas",
   "comparison.lang.autofirma": "Español, con las cadenas de los diálogos Swing",
   "comparison.lang.rfirma":
     "Español, català, euskara, galego e inglés, con catálogo propio y cambio desde Preferencias",
   "comparison.privacy.label": "Gestor de documentos",
   "comparison.privacy.autofirma": "—",
-  "comparison.privacy.rfirma":
-    "Recuerda los documentos recientes y el último certificado usado",
+  "comparison.privacy.rfirma": "Recuerda los documentos recientes y el último certificado usado",
   "comparison.os.label": "Sistemas operativos",
   "comparison.os.autofirma": "Windows, macOS, Linux, Android e iOS",
   "comparison.os.rfirma": "Linux y Windows; macOS, en desarrollo",
   "comparison.updates.label": "Canal de actualización",
   "comparison.updates.autofirma": "Descarga manual de <code>.deb</code> o <code>.rpm</code>",
-  "comparison.updates.rfirma": "Repositorios nativos: APT, DNF y Flatpak; en Windows, desde la propia aplicación",
+  "comparison.updates.rfirma":
+    "Repositorios nativos: APT, DNF y Flatpak; en Windows, desde la propia aplicación",
   "comparison.desktop.label": "Integración con el escritorio",
   "comparison.desktop.autofirma": "Apariencia propia de Swing",
   "comparison.desktop.rfirma": "Sigue el estilo del escritorio, con tema claro y oscuro",
@@ -152,7 +153,7 @@ export const es = {
   "install.flatpak.body":
     "Recomendada para las distribuciones de Linux que no usan APT ni DNF. Se resuelve desde el remoto ostree propio de rFirma, y el runtime <code>org.gnome.Platform</code> se descarga de Flathub sin configurar nada. Solo necesitas tener instalados <code>flatpak</code> y <code>xdg-desktop-portal</code>.",
   "install.flatpak.tip":
-    "También puedes descargar e instalar con doble clic el fichero <a href=\"https://rfirma.sgomez.me/rfirma.flatpakref\">rfirma.flatpakref</a> si tu escritorio lo soporta.",
+    'También puedes descargar e instalar con doble clic el fichero <a href="https://rfirma.sgomez.me/rfirma.flatpakref">rfirma.flatpakref</a> si tu escritorio lo soporta.',
   "install.apt.body":
     "Para Debian, Ubuntu y distribuciones derivadas. Configura el repositorio mediante el formato moderno <code>deb822</code> con la clave GPG verificada en <code>/usr/share/keyrings/</code>.",
   "install.dnf.body":
@@ -163,12 +164,12 @@ export const es = {
     "Instalador para tu usuario, sin permisos de administrador. Usa directamente el almacén de certificados de Windows (MS-CAPI / CNG) y, una vez instalado, se actualiza desde la propia aplicación: cada versión nueva llega con su firma minisign, que se comprueba antes de instalarla.",
   "install.windows.download": "Descargar el instalador de Windows",
   "install.windows.note":
-    "Verifica lo que descargas: baja <code>SHA256SUMS</code> de la <a href=\"https://github.com/sgomez/rfirma/releases/latest\" target=\"_blank\" rel=\"noopener noreferrer\">Release</a> y comprueba que el hash del instalador coincide con su línea. El instalador no está firmado con Authenticode, así que SmartScreen avisará al abrirlo.",
+    'Verifica lo que descargas: baja <code>SHA256SUMS</code> de la <a href="https://github.com/sgomez/rfirma/releases/latest" target="_blank" rel="noopener noreferrer">Release</a> y comprueba que el hash del instalador coincide con su línea. El instalador no está firmado con Authenticode, así que SmartScreen avisará al abrirlo.',
   "install.macos.title": "Soporte para macOS en preparación",
   "install.macos.body":
     "La versión nativa para macOS está en fase de desarrollo activo. Se integrará con el Keychain de Apple y CryptoTokenKit para un acceso fluido y seguro a las identidades digitales del sistema.",
   "install.macos.note":
-    "Se distribuirá como imagen de disco <code>.dmg</code> y mediante fórmula de <code>Homebrew</code>. Puedes seguir el avance del proyecto en <a href=\"https://github.com/sgomez/rfirma\" target=\"_blank\" rel=\"noopener noreferrer\">GitHub</a>.",
+    'Se distribuirá como imagen de disco <code>.dmg</code> y mediante fórmula de <code>Homebrew</code>. Puedes seguir el avance del proyecto en <a href="https://github.com/sgomez/rfirma" target="_blank" rel="noopener noreferrer">GitHub</a>.',
 
   "transparency.kicker": "Transparencia",
   "transparency.title": "Todo el código, a la vista",
@@ -176,13 +177,13 @@ export const es = {
     "rFirma es software libre y auditable bajo licencia <strong>EUPL 1.2</strong>. El código y el motor criptográfico viven en dos repositorios públicos.",
   "transparency.repo1.title": "Aplicación y puente FFI",
   "transparency.repo1.body":
-    "En <a href=\"https://github.com/sgomez/rfirma\" target=\"_blank\" rel=\"noopener noreferrer\">sgomez/rfirma</a> están la interfaz en Tauri (Rust + React), el puente FFI (<code>rfirma-native-bridge</code>) y el empaquetado.",
+    'En <a href="https://github.com/sgomez/rfirma" target="_blank" rel="noopener noreferrer">sgomez/rfirma</a> están la interfaz en Tauri (Rust + React), el puente FFI (<code>rfirma-native-bridge</code>) y el empaquetado.',
   "transparency.repo2.title": "Motor criptográfico original",
   "transparency.repo2.body":
-    "La lógica de firma consume los artefactos de <a href=\"https://github.com/ctt-gob-es/clienteafirma\" target=\"_blank\" rel=\"noopener noreferrer\">ctt-gob-es/clienteafirma</a>, compilados en una biblioteca nativa con GraalVM Native Image.",
+    'La lógica de firma consume los artefactos de <a href="https://github.com/ctt-gob-es/clienteafirma" target="_blank" rel="noopener noreferrer">ctt-gob-es/clienteafirma</a>, compilados en una biblioteca nativa con GraalVM Native Image.',
   "transparency.key.title": "Clave de firma de paquetes",
   "transparency.key.body":
-    "Clave pública en <a href=\"https://rfirma.sgomez.me/rfirma.asc\">rfirma.asc</a>. Comprueba su huella tras descargarla con <code>gpg --show-keys rfirma.asc</code>:",
+    'Clave pública en <a href="https://rfirma.sgomez.me/rfirma.asc">rfirma.asc</a>. Comprueba su huella tras descargarla con <code>gpg --show-keys rfirma.asc</code>:',
 
   "footer.tagline":
     "Firma electrónica nativa para el escritorio, con el motor criptográfico oficial y sin Java en tu equipo.",

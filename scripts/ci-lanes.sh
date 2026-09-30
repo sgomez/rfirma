@@ -5,7 +5,7 @@ set -euo pipefail
 
 inert() {
     case "$1" in
-        docs/adr/* | docs/design/*) return 1 ;;
+        docs/adr/* | docs/design/* | rfirma-conformance/console/*) return 1 ;;
         docs/* | rfirma-conformance/* | .claude/* | .agents/* | skills-lock.json) return 0 ;;
         */*) return 1 ;;
         *.md) return 0 ;;
@@ -16,7 +16,7 @@ inert() {
 java_ignores() {
     case "$1" in
         scripts/bootstrap.sh | scripts/pinned-version.sh | scripts/ci-lanes.sh) return 1 ;;
-        docs/* | rfirma-app/* | packaging/* | scripts/* | testdata/site-driver/*) return 0 ;;
+        docs/* | rfirma-app/* | rfirma-conformance/* | packaging/* | scripts/* | testdata/site-driver/*) return 0 ;;
     esac
     return 1
 }
@@ -24,6 +24,7 @@ java_ignores() {
 web_ignores() {
     case "$1" in
         rfirma-native-bridge/pom.xml | testdata/site-driver/*) return 1 ;;
+        packaging/repo/*) return 0 ;;
         rfirma-app/src-tauri/*.rs | rfirma-app/src-tauri/*.md | rfirma-app/src-tauri/*.png) return 0 ;;
         rfirma-app/src-tauri/tests/*.snapshot | rfirma-app/src-tauri/tests/*.baseline) return 0 ;;
         rfirma-app/src-tauri/.config/nextest.toml | rfirma-app/src-tauri/clippy.toml) return 0 ;;
@@ -35,20 +36,31 @@ web_ignores() {
 rust_ignores() {
     case "$1" in
         rfirma-native-bridge/testbench/* | scripts/pinned-version.sh | scripts/install-tools.sh | scripts/ci-lanes.sh) return 1 ;;
-        docs/design/* | packaging/* | scripts/* | rfirma-native-bridge/*) return 0 ;;
+        docs/design/* | rfirma-conformance/* | packaging/* | scripts/* | rfirma-native-bridge/*) return 0 ;;
+    esac
+    return 1
+}
+
+landing_ignores() {
+    case "$1" in
+        scripts/ci-lanes.sh | packaging/repo/Dockerfile) return 1 ;;
+        rfirma-app/src/design-system/*) return 1 ;;
+        docs/* | rfirma-app/* | rfirma-conformance/* | rfirma-native-bridge/* | testdata/* | scripts/*) return 0 ;;
+        packaging/repo/site/*) return 1 ;;
+        packaging/*) return 0 ;;
     esac
     return 1
 }
 
 native_ignores() {
     case "$1" in
-        docs/* | packaging/* | rfirma-app/src/* | rfirma-app/po/*) return 0 ;;
+        docs/* | packaging/* | rfirma-conformance/* | rfirma-app/src/* | rfirma-app/po/*) return 0 ;;
     esac
     return 1
 }
 
-lanes=(java web rust native)
-declare -A runs=([java]=false [web]=false [rust]=false [native]=false)
+lanes=(java web rust native landing)
+declare -A runs=([java]=false [web]=false [rust]=false [native]=false [landing]=false)
 seen=false
 
 while IFS= read -r file || [ -n "$file" ]; do

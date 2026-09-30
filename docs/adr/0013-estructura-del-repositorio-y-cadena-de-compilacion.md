@@ -244,7 +244,7 @@ bounded context, con su glosario propio (`CONTEXT-MAP.md`).
   capa de i18n: es una herramienta interna de un solo idioma. El contrato entre el servidor y la
   página se genera desde Rust, para que no haya dos copias de él.
 - **Su receta sigue en el `justfile` raíz**: `just conformance`. No tiene orquestador propio.
-- **Queda fuera del CI** y de `check`: se ejecuta en local, cuando alguien lo decide (ADR-0014).
+- **La suite queda fuera del CI** y de `check`: se ejecuta en local, cuando alguien lo decide (ADR-0014). **Su consola sí entra** en el lint de la cadena TypeScript, y un cambio en `rfirma-conformance/console/` lanza el carril `web`.
 - **El conductor de Node es común**: `driver.mjs` y las respuestas congeladas que sirve viven en
   `testdata/site-driver/`, fuera de los dos crates, porque los usan la suite y el banco de
   conformidad de la app, que sí corre en el CI. No van a `testdata/conformance/`: ese directorio
@@ -252,10 +252,11 @@ bounded context, con su glosario propio (`CONTEXT-MAP.md`).
 - **Sin workspace de Cargo**: los dos crates no comparten código, y un workspace ataría el
   `Cargo.lock` de una herramienta local al de la aplicación que se publica.
 
-Se descartaron dos opciones. La primera, dejar la suite como *example* del crate de la app: así
+Se descartaron tres opciones. La primera, dejar la suite como *example* del crate de la app: así
 empezó, y es la que arrastra Tauri, sus pruebas y sus dependencias de desarrollo. La segunda, una
 página HTML servida tal cual sin paso de compilación: sin tipos ni pruebas, el contrato con el
-servidor quedaba implícito en dos lenguajes.
+servidor quedaba implícito en dos lenguajes. La tercera, dejar la consola entera fuera del CI: con un
+solo Biome en la raíz, su configuración se rompería sin que ninguna PR lo viera.
 
 ## Un workspace de pnpm en la raíz
 
@@ -268,12 +269,13 @@ comparten: **un lockfile**, el **catálogo**, `tsconfig.base.json` y un `package
   en el catálogo obligaría a subirlas juntas, que es justo lo que no son.
 - **Cada proyecto conserva su `package.json`, su `vite.config` y un tsconfig mínimo** que
   extiende la base.
-- **El `package.json` de la raíz solo lleva `private` y `packageManager`**: sin dependencias ni
-  scripts, no es un proyecto más. Existe porque Dependabot no lee un directorio npm sin
-  `package.json`, y de paso fija la versión de pnpm que leen `pnpm/setup` y corepack.
-- **Se instala con filtro por proyecto** (`pnpm install --filter <proyecto>`), desde las
-  recetas del `justfile` y desde la imagen de la landing, que copia el workspace, el lockfile y el
-  `package.json` de la raíz.
+- **El `package.json` de la raíz lleva `private`, `packageManager` y `@biomejs/biome`** como
+  devDependency, sin scripts: es el único Biome del workspace y su configuración cubre la app, la
+  consola y la landing. También existe porque Dependabot no lee un directorio npm sin
+  `package.json`, y fija la versión de pnpm que leen `pnpm/setup` y corepack.
+- **Se instala con filtro por proyecto más la raíz** (`pnpm install --filter <proyecto> --filter .`),
+  desde las recetas del `justfile` y desde la imagen de la landing, que copia el workspace, el
+  lockfile y el `package.json` de la raíz. El `--filter .` trae Biome.
 - **Sin `nodeLinker: hoisted`**: Tauri busca su CLI en el `node_modules/.bin` de `rfirma-app`, y
   el enlazado aislado por defecto es el que lo deja ahí.
 - **knip no comprueba las referencias al catálogo** (`catalogReferences`): corre dentro de
@@ -281,13 +283,15 @@ comparten: **un lockfile**, el **catálogo**, `tsconfig.base.json` y un `package
   `pnpm install`.
 - **Dependabot vigila npm en un solo directorio**, la raíz, mensual y agrupado como las acciones.
 
-Se descartaron cuatro opciones. La primera, un lockfile por proyecto, que era lo que había: tres
+Se descartaron cinco opciones. La primera, un lockfile por proyecto, que era lo que había: tres
 instalaciones en el CI, tres cachés y tres directorios que vigilar, para versiones que en su
 mayoría eran las mismas. La segunda, un catálogo con todas las dependencias, que ataría a la
 misma versión proyectos que hoy no la comparten, como `vitest` en la landing. La tercera,
 `nodeLinker: hoisted`, que rompe el arranque de Tauri. La cuarta, dejar la raíz sin `package.json`:
 Dependabot la rechaza como directorio npm, y vigilar los tres proyectos por separado devolvía
-tres entradas para un solo lockfile.
+tres entradas para un solo lockfile. La quinta, un `package.json` de la raíz vacío (solo `private` y
+`packageManager`) con un Biome por proyecto: tres configuraciones que divergen, y el formato de la
+landing y de la consola dejaba de tener dueño.
 
 ## Consequences
 

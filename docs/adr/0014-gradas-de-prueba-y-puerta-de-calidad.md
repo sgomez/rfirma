@@ -319,8 +319,9 @@ cierran el aviso y el mensaje de arriba.
 
 ## Dónde corre cada puerta: el agente no es el CI
 
-`just check` es la puerta entera, y **su sitio es el CI**, que la reparte en tres runners
-simultáneos y por tanto paga el carril más lento. En un portátil se pagan los tres sumados, así
+`just check` es la puerta entera, y **su sitio es el CI**, que la reparte en runners
+simultáneos (Java, TypeScript, Rust y la landing, esta con carril propio por rutas) y por tanto
+paga el carril más lento. En un portátil se pagan sumados, así
 que **no hay puerta local que la sustituya**: en local solo corren el formato (lefthook, en el
 pre-push) y la prueba concreta que se está tocando. Medido en el equipo de desarrollo, con
 cachés calientes: `check-repo` 4 s, `check-java` 4 s, `check-ts` 15 s, `check-rust` 46 s.

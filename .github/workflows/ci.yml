@@ -42,6 +42,7 @@ jobs:
       web: ${{ steps.lanes.outputs.web }}
       rust: ${{ steps.lanes.outputs.rust }}
       native: ${{ steps.lanes.outputs.native }}
+      landing: ${{ steps.lanes.outputs.landing }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -114,6 +115,22 @@ jobs:
 
       # `check-repo` viaja aqui porque son sellos de milisegundos.
       - run: just check-repo check-ts
+
+  # --------------------------------------------------------------------------
+  landing:
+    name: Landing
+    needs: scope
+    if: needs.scope.outputs.landing == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: ./.github/actions/setup-runner
+        with:
+          node: true
+          save-cache: ${{ github.ref == 'refs/heads/main' }}
+
+      - run: just check-landing
 
   # --------------------------------------------------------------------------
   rust:
