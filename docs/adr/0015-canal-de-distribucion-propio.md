@@ -210,7 +210,7 @@ de la entrega, sin secretos y con todas sus puertas, y los ofrece como artefacto
 `rfirma-preview-<plataforma>` (uno por plataforma del manifiesto de paquetes, con su
 `SHA256SUMS`) que caducan a los 14 días. Se diferencia de la entrega en que no hay etiqueta
 `v*`, ni Release, ni repositorio: solo artefactos. El workflow Preview declara únicamente
-`contents: read`, y `check-workflows.sh` vigila que ni él ni su llamada a `build.yml` pasen `secrets:`; cada push
+`contents: read`, y `check-workflows.sh` vigila que ningún job de `preview.yml` mencione un secreto; cada push
 reconstruye mientras la etiqueta siga puesta y cancela la construcción anterior.
 
 **Las acciones se fijan por SHA en todo el repositorio**, `ci.yml` incluido, con el
@@ -280,7 +280,7 @@ misma cosa en la misma apertura del panel.
 - **Una guarda de workflows que también comprueba la forma del YAML** (`save-if`, disparadores,
   permisos, argumentos literales de rsync y del árbol), que es como nació. Se descarta porque un
   refactor sin efecto daba un falso rojo: lo que esas líneas protegen ya lo prueban el
-  `justfile` y los tests de `packaging/repo/`, y la guarda solo vigila las invariantes.
+  `justfile` y los tests de `packaging/repo/`, salvo `save-if`, que queda sin vigilante a sabiendas (una PR que guardara su cache desbordaría el cupo, no rompería nada), y la guarda solo vigila las invariantes.
 
 - **Flathub**, que el [#22](https://github.com/sgomez/rfirma/issues/22) dio por hecho sin
   decidirlo. Queda fuera, y **no cerrado para siempre**: volver es un esfuerzo nuevo

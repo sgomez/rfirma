@@ -80,23 +80,18 @@ if [ -f "$BUILD" ]; then
     echo "OK  ni $BUILD ni sus acciones mencionan un secreto"
 fi
 
-# Quien llama a la accion de preparacion o a build.yml tampoco les pasa un secreto.
 secretos_a_llamados="$(awk '
-    function cierra() { abierto = 0 }
+    function cierra() {
+        if (llama) printf "%s", secretos
+        llama = 0; secretos = ""
+    }
     FNR == 1 { cierra() }
+    /^[^[:space:]#]/ { cierra() }
+    /^  [A-Za-z0-9_-]+:[[:space:]]*$/ { cierra() }
     /^[[:space:]]*#/ { next }
-    $0 ~ /uses:[[:space:]]*\.\/\.github\/(actions\/setup-runner|workflows\/build\.yml)[[:space:]]*$/ {
-        abierto = 1
-        match($0, /^[[:space:]]*-?[[:space:]]*/); sangria = RLENGTH
-        en_lista = ($0 ~ /^[[:space:]]*-/)
-        if (en_lista) { match($0, /^[[:space:]]*/); sangria = RLENGTH }
-        next
-    }
-    abierto {
-        match($0, /^[[:space:]]*/)
-        if ($0 !~ /^[[:space:]]*$/ && (en_lista ? RLENGTH <= sangria : RLENGTH < sangria)) { cierra(); next }
-        if ($0 ~ /secrets[.[]|^[[:space:]]*secrets:/) print FILENAME ":" FNR ": " $0
-    }
+    /uses:[[:space:]]*\.\/\.github\/(actions\/setup-runner|workflows\/build\.yml)([[:space:]]|$)/ { llama = 1 }
+    /secrets[.[]|^[[:space:]]*secrets:/ { secretos = secretos FILENAME ":" FNR ": " $0 "\n" }
+    END { cierra() }
 ' .github/workflows/*.yml)"
 if [ -n "$secretos_a_llamados" ]; then
     printf '%s\n' "$secretos_a_llamados" >&2
@@ -178,7 +173,7 @@ if [ -f "$PUBLISH" ]; then
 
     descarga="$(grep -n 'packaging/repo/download-series.sh' "$PUBLISH" | head -1 | cut -d: -f1 || true)"
     arbol="$(grep -n 'packaging/repo/build-tree.sh' "$PUBLISH" | head -1 | cut -d: -f1 || true)"
-    if [ -z "$descarga" ] || [ "$descarga" -ge "$arbol" ]; then
+    if [ -z "$descarga" ] || [ -z "$arbol" ] || [ "$descarga" -ge "$arbol" ]; then
         echo "$PUBLISH tiene que bajar la serie con packaging/repo/download-series.sh antes de construir el arbol (ADR-0015)." >&2
         exit 1
     fi
@@ -269,6 +264,19 @@ if ! awk '
     exit 1
 fi
 echo "OK  dependabot.yml espera antes de proponer una accion nueva"
+
+# ------------------------------------------------------------------ Preview --
+PREVIEW=.github/workflows/preview.yml
+if [ -f "$PREVIEW" ]; then
+    secretos="$(grep -nHE 'secrets[.[]|^[[:space:]]*secrets:' "$PREVIEW" \
+        | sin_comentarios || true)"
+    if [ -n "$secretos" ]; then
+        printf '%s\n' "$secretos" >&2
+        echo "$PREVIEW ejecuta codigo de la PR y no menciona ningun secreto (ADR-0015)." >&2
+        exit 1
+    fi
+    echo "OK  $PREVIEW no menciona ningun secreto"
+fi
 
 # ----------------------------------------------------------- Preview Comment --
 COMMENT=.github/workflows/preview-comment.yml

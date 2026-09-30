@@ -97,6 +97,27 @@ sed -i -E 's|^(    uses: ./.github/workflows/build.yml)$|\1\n    secrets:\n     
     "$dir/.github/workflows/preview.yml"
 fails_naming "secreto pasado a build.yml por un llamador" "$dir" ".github/workflows/preview.yml:"
 
+dir="$(tree secret-before-uses)"
+sed -i -E '0,/^      - uses: .\/.github\/actions\/setup-runner$/s||      - name: Prepara\n        env:\n          X: ${{ secrets.X }}\n        uses: ./.github/actions/setup-runner|' \
+    "$dir/.github/workflows/ci.yml"
+fails_naming "secreto en el paso antes del uses" "$dir" ".github/workflows/ci.yml:"
+
+dir="$(tree secret-in-job-env)"
+sed -i -E "/^  java:$/,/^    steps:$/s|^    steps:$|    env:\n      X: \${{ secrets.X }}\n    steps:|" "$dir/.github/workflows/ci.yml"
+fails_naming "secreto en el env del job que llama a la accion" "$dir" ".github/workflows/ci.yml:"
+
+dir="$(tree secret-after-uses-comment)"
+sed -i -E '0,/^      - uses: .\/.github\/actions\/setup-runner$/s||      - uses: ./.github/actions/setup-runner # prepara\n        env:\n          X: ${{ secrets.X }}|' \
+    "$dir/.github/workflows/ci.yml"
+fails_naming "secreto tras un uses con comentario" "$dir" ".github/workflows/ci.yml:"
+
+dir="$(tree secret-in-preview-job)"
+sed -i -E '0,/^    steps:$/s||    env:\n      X: ${{ secrets.X }}\n    steps:|' "$dir/.github/workflows/preview.yml"
+fails_naming "secreto en un job de Preview que no es build" "$dir" ".github/workflows/preview.yml:"
+
+breaks publish-without-build-tree "tiene que bajar la serie" .github/workflows/publish.yml \
+    '/packaging\/repo\/build-tree.sh/d'
+
 dir="$(tree secrets-inherit)"
 append_step "$dir/.github/workflows/cache-cleanup.yml" '    secrets: inherit'
 fails_naming "herencia de secretos en bloque" "$dir" "ningun workflow hereda secretos"
