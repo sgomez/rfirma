@@ -260,8 +260,8 @@ de firmado, desbordamiento «+N ▾»). Se quedan en HTML.
 
 ## Cómo se midió (PoC)
 
-El PoC vive fuera del repositorio, en `/tmp/rfirma-gnome-titlebar-poc/`: una
-app Tauri mínima con Tauri fijado a `=2.12.0` y páginas HTML planas.
+El PoC vive en la rama `prototype/linux-native-titlebar`, en
+`prototype/linux-native-titlebar/`: una app Tauri mínima con Tauri fijado a `=2.12.0` y páginas HTML planas.
 `POC_VARIANT` elige la variante:
 
 | Variante | Qué hace |
@@ -270,7 +270,7 @@ app Tauri mínima con Tauri fijado a `=2.12.0` y páginas HTML planas.
 | `baseline` | Ventana decorada, sin tocar |
 | `html`, `html-runtime` | Las opciones descartadas: sin decorar desde el constructor, y en tiempo de ejecución |
 
-Desde ese directorio, en la sesión real:
+Desde ese directorio de la rama, en la sesión real:
 
 ```
 PATH="$HOME/.cargo/bin:$PATH" cargo build
