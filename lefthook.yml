@@ -1,41 +1,10 @@
-# Puerta local de formato, previa al push.
-#
-# Se adelanta a lo que el CI ya comprueba: `cargo fmt --all -- --check` puso en
-# rojo la PR #489 despues de publicarla y costo un ciclo entero de review, fix y
-# re-review por algo que se arregla solo con una orden. El CI no cambia; esta es
-# la copia barata que corre antes.
-#
-# SOLO COMPROBACIONES INSTANTANEAS Y DETERMINISTAS: formato y nada mas. Ni
-# clippy, ni pruebas, ni nada que compile o dependa de `build-ts`, que tardan
-# minutos; una puerta lenta se acaba saltando, y esas ya las cubre el CI.
-#
-# CADA TRABAJO SE SALTA SOLO SI SU HERRAMIENTA NO ESTA, con un aviso y sin
-# bloquear: una puerta que rompe el push por un entorno incompleto se desactiva
-# en una semana. Y todos anteponen ~/.cargo/bin y ~/.local/bin al PATH porque un
-# hook de git es una shell no interactiva, donde cargo y ruff no estan.
-#
-# CADA `run` ES UNA SOLA LINEA que llama a scripts/pre-push-fmt.sh: en Windows
-# lefthook le pasa a `sh` solo la primera linea de un bloque (ADR-0035).
-#
-# Se instala sola: el `prepare` de rfirma-app/package.json corre
-# `tools/install-git-hooks.sh` en cada `pnpm install`, y `just deps` con el. Ese
-# script se salta la instalacion desde un worktree, porque .git/hooks es uno
-# solo para todos y la ruta que escribiria un agente muere con su worktree.
+# Puerta local de formato, previa al push: solo formato, lo que `just fmt-check` ya comprueba en el CI.
+# Un hook de git es una shell no interactiva, donde cargo y ruff no estan en el PATH.
+# El `run` es una sola linea: en Windows lefthook le pasa a `sh` solo la primera (ADR-0035).
+# Se instala en cada `pnpm install` con `tools/install-git-hooks.sh`, salvo desde un worktree.
 
 pre-push:
-  parallel: true
   jobs:
-    - name: fmt-rust
-      glob: "rfirma-app/src-tauri/**.rs"
-      fail_text: "arreglalo con: just fmt-rust"
-      run: scripts/pre-push-fmt.sh rust
-
-    - name: fmt-ts
-      glob: "rfirma-app/**.{ts,tsx,js,jsx,mjs,json,css,html}"
-      fail_text: "arreglalo con: just fmt-ts"
-      run: scripts/pre-push-fmt.sh ts
-
-    - name: fmt-python
-      glob: "packaging/**.py"
-      fail_text: "arreglalo con: just fmt-python"
-      run: scripts/pre-push-fmt.sh python
+    - name: fmt-check
+      fail_text: "arreglalo con: just fmt"
+      run: PATH="$HOME/.cargo/bin:$HOME/.local/bin:$PATH" just fmt-check

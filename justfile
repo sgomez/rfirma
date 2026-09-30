@@ -91,18 +91,14 @@ system_libs := "webkit2gtk-4.1:libwebkit2gtk-4.1-dev javascriptcoregtk-4.1:libja
 default:
     @just --list
 
-# ---------------------------------------------------------------------------
-# Contrato
-# ---------------------------------------------------------------------------
-
 # La puerta del repositorio: un carril por cadena, en paralelo en el CI.
 [group('checklist')]
 check: tools check-repo check-java check-ts check-rust
 
 # Lo que no pertenece a ninguna cadena: comprobaciones rapidas que ninguna compilacion ve.
 [group('ci')]
-check-repo: check-version
-    #!/usr/bin/env bash
+[script('bash')]
+check-repo: check-version fmt-check
     set -euo pipefail
     {{ root }}/packaging/flatpak/check-sources.sh
     {{ root }}/rfirma-app/src/design-system/check-bundle.sh
@@ -114,7 +110,6 @@ check-repo: check-version
     {{ root }}/packaging/check_launchers.py
     python3 -m unittest discover -s {{ root }}/packaging -p 'test_check_launchers.py'
     ruff check {{ root }}/packaging {{ root }}/scripts
-    ruff format --check {{ root }}/packaging {{ root }}/scripts
     {{ root }}/scripts/tests/outline_test.sh
     {{ root }}/scripts/tests/ci_lanes_test.sh
     {{ root }}/scripts/tests/packages_manifest_test.sh
@@ -133,10 +128,6 @@ check-ts: check-po lint-ts lint-i18n knip build-ts test-ts test-site-driver chec
 # contrato la compara `tests/contract_discovers_adapters.rs` dentro de la pasada instrumentada.
 [group('ci')]
 check-rust: lint-rust machete crap
-
-# ---------------------------------------------------------------------------
-# Herramientas y dependencias
-# ---------------------------------------------------------------------------
 
 # Comprueba las herramientas, y falla nombrando la que falte o no este en su version fijada.
 [group('dev')]
@@ -163,8 +154,8 @@ deps:
 # --all rellena tambien los idiomas incompletos, con castellano; nunca en el CI.
 # Fusiona el .pot con los cinco .po y regenera los catalogos.
 [group('dev')]
-po *args: deps
-    #!/usr/bin/env bash
+[script('bash')]
+po *args: po-import
     set -euo pipefail
     cd "{{ app }}/po"
     for f in *.po; do
@@ -182,8 +173,8 @@ po-import: deps
 
 # Comprueba los cinco .po contra la plantilla.
 [private]
+[script('bash')]
 check-po:
-    #!/usr/bin/env bash
     set -euo pipefail
     cd "{{ app }}/po"
     command -v msgfmt >/dev/null || { echo "falta gettext: ejecuta 'just tools'" >&2; exit 1; }
@@ -212,8 +203,8 @@ certs action:
 
 # Descarga (a etiqueta y sha fijados) el autoscript.js del banco de conformidad.
 [group('ci')]
+[script('bash')]
 autoscript:
-    #!/usr/bin/env bash
     set -euo pipefail
     destino="{{ root }}/testdata/conformance/autoscript-{{ autofirma_version }}.js"
     sha="$AUTOSCRIPT_SHA256"
@@ -236,8 +227,8 @@ autoscript:
 
 # jscpd sobre los ficheros de tests en Rust y TS. Solo informa, no entra en el CI (ADR-0014).
 [group('dev')]
+[script('bash')]
 duplication: deps
-    #!/usr/bin/env bash
     set -euo pipefail
     cd {{ app }}
     echo "== Rust: tests/ y tests.rs =="
@@ -246,10 +237,6 @@ duplication: deps
     echo
     echo "== TypeScript: *.test.ts(x) =="
     pnpm exec jscpd --pattern '**/*.{test.ts,test.tsx}' src --reporters console
-
-# ---------------------------------------------------------------------------
-# Navegacion
-# ---------------------------------------------------------------------------
 
 # Esqueleto de un fichero .rs, .ts o .tsx (ruta relativa a la raiz).
 [group('checklist')]
@@ -282,25 +269,31 @@ fmt-ts:
     cd {{ app }} && pnpm exec biome format --write .
     if [ -x {{ conformance_suite }}/console/node_modules/.bin/biome ]; then cd {{ conformance_suite }}/console && pnpm exec biome format --write .; fi
 
-# `ruff format` sobre packaging y scripts.
+# `ruff format` sobre todo el Python del repositorio.
 [private]
 fmt-python:
-    ruff format {{ root }}/packaging {{ root }}/scripts
+    ruff format {{ root }}
 
-# clippy y rustfmt sobre rfirma-app/src-tauri.
+# La comprobacion de formato de las tres cadenas, sin escribir: la llaman el pre-push y check-repo.
+[group('ci')]
+fmt-check: deps fmt-check-rust
+    cd {{ conformance_suite }} && cargo fmt --all -- --check
+    cd {{ app }} && pnpm exec biome format .
+    ruff format --check {{ root }}
+
 [private]
-lint-rust: build-ts
+fmt-check-rust:
     cd {{ tauri }} && cargo fmt --all -- --check
+
+# rustfmt y clippy sobre rfirma-app/src-tauri.
+[private]
+lint-rust: fmt-check-rust build-ts
     cd {{ tauri }} && cargo clippy --all-targets --all-features -- -D warnings
 
 # Dependencias de Cargo.toml que no usa nadie. No compila: analiza el fuente.
 [private]
 machete:
     cd {{ tauri }} && cargo machete
-
-# ---------------------------------------------------------------------------
-# Build
-# ---------------------------------------------------------------------------
 
 # Compila el puente Java.
 [private]
@@ -321,11 +314,17 @@ build-rust: build-ts
 # Falla nombrando `just native` si la libreria nativa no esta; RFIRMA_SKIP_NATIVE=1 la salta (ADR-0013).
 [private]
 check-native:
-    {{ root }}/scripts/check-native.sh {{ native_lib }}
-
-# ---------------------------------------------------------------------------
-# Test
-# ---------------------------------------------------------------------------
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ "${RFIRMA_SKIP_NATIVE:-0}" = "1" ]; then
+        echo "check-native: omitida (RFIRMA_SKIP_NATIVE=1)"
+        exit 0
+    fi
+    if [ ! -f "{{ native_lib }}" ]; then
+        echo "falta la libreria nativa: {{ native_lib }}" >&2
+        echo "Ejecuta 'just native' (tarda unos tres minutos y necesita GraalVM CE 25)." >&2
+        exit 1
+    fi
 
 # Pruebas del puente Java (`verify`: compila, prueba y empaqueta en una JVM).
 [private]
@@ -358,10 +357,6 @@ test-windows: build-ts
     cd {{ tauri }} && {{ no_debuginfo }} cargo llvm-cov --all-features --lib --test channel_client --test channel_operations --test service_acknowledgement --lcov --output-path "{{ coverage_out }}/windows/lcov.info"
     cd {{ tauri }} && cargo crap --path '{{ windows_allow }}' --lcov "{{ coverage_out }}/windows/lcov.info" --threshold 30 --fail-above
 
-# ---------------------------------------------------------------------------
-# CRAP: solo en Rust (ADR-0014)
-# ---------------------------------------------------------------------------
-
 # Genera el lcov de toda la suite con cargo llvm-cov y no baja del suelo (ADR-0014).
 [private]
 coverage: (certs "install") build-ts
@@ -388,11 +383,8 @@ diff-coverage:
 # Borra el arbol instrumentado, los informes y los volcados; deja la compilacion normal.
 [group('checklist')]
 clean-coverage:
-    {{ root }}/scripts/clean-coverage.sh "{{ cargo_target }}" "{{ tauri }}"
-
-# ---------------------------------------------------------------------------
-# Imagen nativa, empaquetado y desarrollo
-# ---------------------------------------------------------------------------
+    rm -rf "{{ cargo_target }}/llvm-cov-target" "{{ coverage_out }}"
+    rm -f "{{ cargo_target }}"/*.profraw "{{ tauri }}"/*.profraw
 
 # Construye la libreria nativa compartida con GraalVM CE 25 (ADR-0013).
 [group('ci')]
@@ -429,8 +421,8 @@ check-glibc lib=native_lib:
 
 # Construye el flatpak, uno de los tres canales junto al .deb y el .rpm (ADR-0015).
 [group('ci')]
+[script('bash')]
 flatpak: check-native build-ts
-    #!/usr/bin/env bash
     set -euo pipefail
     cd "{{ root }}/packaging/flatpak"
     flatpak-builder --force-clean --user --install --repo=repo \
@@ -444,8 +436,8 @@ flatpak: check-native build-ts
 # Construye el .deb y el .rpm con el bundler de Tauri (ADR-0004); quick="true" salta el candado de version.
 [linux]
 [group('ci')]
+[script('bash')]
 bundle quick="false": check-native build-ts
-    #!/usr/bin/env bash
     set -euo pipefail
     cd "{{ root }}"
     if [ "{{ quick }}" != "true" ]; then
@@ -501,8 +493,8 @@ flatpak-sources:
 
 # Mutation testing incremental, a mano antes de publicar una version: no bloquea (ADR-0014).
 [group('release')]
+[script('bash')]
 mutants:
-    #!/usr/bin/env bash
     set -euo pipefail
     cd {{ tauri }}
     tag="$(git describe --tags --abbrev=0 --match 'v*')"
@@ -514,8 +506,8 @@ mutants:
 
 # Instala, prueba y construye la landing de rfirma.sgomez.me.
 [private]
+[script('bash')]
 check-landing:
-    #!/usr/bin/env bash
     set -euo pipefail
     cd {{ root }}/packaging/repo/site
     pnpm install --frozen-lockfile --reporter=silent
@@ -529,8 +521,8 @@ check-version:
 
 # Resella el bundle del sistema de diseno.
 [group('release')]
+[script('bash')]
 seal-ds-bundle:
-    #!/usr/bin/env bash
     set -euo pipefail
     cd "{{ root }}"
     find rfirma-app/src/design-system/bundle -type f ! -name _ds_needs_recompile \
@@ -566,8 +558,8 @@ conformance-console:
 
 # Borra lo construido y los volcados de cobertura sueltos en el arbol de fuentes.
 [group('dev')]
+[script('bash')]
 clean:
-    #!/usr/bin/env bash
     set -eu
     cd "{{ bridge }}" && {{ maven }} clean
     if [ -z "{{ worktree_target }}" ]; then

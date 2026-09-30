@@ -529,7 +529,7 @@ jobs:
       - name: Interfaz compilada
         run: just build-ts
 
-      - name: clippy y rustfmt
+      - name: rustfmt y clippy
         run: just lint-rust
 
       - uses: cargo-bins/cargo-binstall@b874e25ea559687bec77e281e9b271aa1367b624 # v1.23.0
