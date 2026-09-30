@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 /// Los ficheros autorizados, relativos a la raíz del repositorio.
-const AUTHORISED_SITES: [&str; 20] = [
+const AUTHORISED_SITES: [&str; 21] = [
     "rfirma-app/src-tauri/build.rs",
     "rfirma-app/src-tauri/src/desktop/adapters/channel.rs",
     "rfirma-app/src-tauri/src/desktop/adapters/choice/tests.rs",
@@ -14,6 +14,7 @@ const AUTHORISED_SITES: [&str; 20] = [
     "rfirma-app/src-tauri/src/desktop/adapters/paths.rs",
     "rfirma-app/src-tauri/src/desktop/adapters/paths/tests.rs",
     "rfirma-app/src-tauri/src/desktop/adapters/registry.rs",
+    "rfirma-app/src-tauri/src/desktop/adapters/titlebar.rs",
     "rfirma-app/src-tauri/src/desktop/application/invocation/tests.rs",
     "rfirma-app/src-tauri/src/documents/domain/dropped/tests.rs",
     "rfirma-app/src-tauri/src/documents/domain/recents/tests.rs",
