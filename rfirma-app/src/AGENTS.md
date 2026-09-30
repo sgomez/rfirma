@@ -173,6 +173,7 @@ rojo.
 | `sede/SedeNoCertificate.tsx` | 5 · Sin certificado utilizable, y sus dos salidas distintas. |
 | **`updates/`** | `updates/newVersion.ts`: el puerto que pregunta si hay versión nueva y la instala, y su doble. Sin React. |
 | `updates/InstallUpdateDialog.tsx` | La confirmación con la versión, la instalación y el mensaje de cada resultado fallido. |
+| `updates/NewVersionStrip.tsx` | La franja que anuncia la versión nueva, con «Actualizar ahora» si se puede instalar desde aquí y, si no, el paso a *Acerca de*. |
 | **`about/`** | `about/AboutDialog.tsx`. |
 | **`setup/`** | El asistente del primer arranque (docs/design/primer-arranque.md). Usa los casos de uso del panel de estado, no tiene los suyos propios. |
 | `setup/SetupWizard.tsx` | Las dos pantallas, montadas en `main.tsx` mientras `Preferences.setupWizardSeen` siga en `false`. Sustituye al antiguo `trust/TrustNotice.tsx`. |
