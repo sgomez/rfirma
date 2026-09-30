@@ -193,6 +193,7 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
       id: String
       name: String
       folder: Option<String>
+      location: Option<String>
       badge: Badge
       modified: Option<u64>
       lastUsed: u64

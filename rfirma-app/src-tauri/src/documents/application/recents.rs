@@ -4,7 +4,7 @@ use std::path::Path;
 use std::time::SystemTime;
 
 use crate::documents::application::documents::{self, OpenedDocuments};
-use crate::documents::domain::document::{containing_folder, Document};
+use crate::documents::domain::document::{containing_folder, containing_location, Document};
 use crate::documents::domain::error::DocumentError;
 use crate::documents::domain::recents::Badge;
 use crate::documents::domain::recents::RecentDocument;
@@ -24,6 +24,8 @@ pub struct RecentRow {
     pub name: String,
     /// Carpeta contenedora; ausente bajo el portal (ADR-0011).
     pub folder: Option<String>,
+    /// Ruta de la carpeta contenedora con el directorio personal como `~/`; ausente bajo el portal.
+    pub location: Option<String>,
     /// Insignia o estado del documento.
     pub badge: Badge,
     /// Fecha de modificación en segundos Unix.
@@ -97,6 +99,7 @@ fn told_without_a_row(
         id: id.to_owned(),
         name: document.name().to_owned(),
         folder: containing_folder(document.reading_path()),
+        location: containing_location(document.reading_path(), files.home_directory().as_deref()),
         badge: Badge::Unsigned,
         modified: documents::modified_seconds(files, document),
         last_used: now_in_seconds(),
@@ -206,6 +209,7 @@ fn told_as_row(
         id: identifier_for(entry.path(), opened),
         name: entry.name().to_owned(),
         folder: entry.folder(),
+        location: entry.location(files.home_directory().as_deref()),
         badge: entry.badge(),
         modified: entry.modified(),
         last_used: entry.last_used(),

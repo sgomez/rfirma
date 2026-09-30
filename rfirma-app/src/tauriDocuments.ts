@@ -148,6 +148,7 @@ interface RecentDocumentView {
   id: string;
   name: string;
   folder: string | null;
+  location: string | null;
   badge: Badge;
   modified: number | null;
   lastUsed: number;

@@ -55,6 +55,7 @@ fn a_recent_document_without_a_folder_shows_it_as_absent() {
         id: "0f1e2d3c4b5a69788796a5b4c3d2e1f0".to_owned(),
         name: "original.pdf".to_owned(),
         folder: None,
+        location: None,
         badge: Badge::Unsigned,
         modified: Some(1_700_000_000),
         last_used: 1_700_000_000,

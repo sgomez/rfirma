@@ -102,6 +102,36 @@ fn a_host_path_yields_its_containing_folder_name() {
 }
 
 #[test]
+fn a_path_under_home_shows_its_location_with_a_tilde() {
+    let location = containing_location(
+        Path::new("/home/quien/Contratos/contrato.pdf"),
+        Some(Path::new("/home/quien")),
+    );
+
+    assert_eq!(location, Some("~/Contratos".to_owned()));
+}
+
+#[test]
+fn a_path_outside_home_shows_its_whole_location() {
+    let location = containing_location(
+        Path::new("/srv/archivo/contrato.pdf"),
+        Some(Path::new("/home/quien")),
+    );
+
+    assert_eq!(location, Some("/srv/archivo".to_owned()));
+}
+
+#[test]
+fn a_portal_grant_has_no_location() {
+    let location = containing_location(
+        Path::new("/run/user/1000/doc/1e8b83b9/original.pdf"),
+        Some(Path::new("/run/user/1000")),
+    );
+
+    assert_eq!(location, None);
+}
+
+#[test]
 fn a_portal_grant_has_no_containing_folder() {
     assert_eq!(containing_folder(Path::new(A_PORTAL_HANDLE)), None);
 }

@@ -6,7 +6,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 
-use super::document::containing_folder;
+use super::document::{containing_folder, containing_location};
 
 /// Estado de firma persistido en caché para un documento reciente.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -73,6 +73,11 @@ impl<S> RecentDocument<S> {
     /// Carpeta contenedora para visualización; ausente bajo el portal (ADR-0011).
     pub fn folder(&self) -> Option<String> {
         containing_folder(&self.path)
+    }
+
+    /// Ruta de la carpeta contenedora con `home` abreviado a `~/`; ausente bajo el portal (ADR-0011).
+    pub fn location(&self, home: Option<&Path>) -> Option<String> {
+        containing_location(&self.path, home)
     }
 
     /// Insignia de firma en caché.

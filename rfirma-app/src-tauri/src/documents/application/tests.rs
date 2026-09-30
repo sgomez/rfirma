@@ -17,12 +17,19 @@ pub struct InMemoryFiles {
     files: Mutex<BTreeMap<PathBuf, Vec<u8>>>,
     unreadable: Mutex<Vec<PathBuf>>,
     links: Mutex<BTreeMap<PathBuf, PathBuf>>,
+    home: Mutex<Option<PathBuf>>,
 }
 
 impl InMemoryFiles {
     /// Un disco vacío.
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// Con ese directorio personal.
+    pub fn with_home(self, home: impl Into<PathBuf>) -> Self {
+        *crate::lock(&self.home) = Some(home.into());
+        self
     }
 
     /// Con esa carpeta dentro.
@@ -92,6 +99,10 @@ impl DocumentFiles for InMemoryFiles {
             return FolderFact::NotAFolder;
         }
         FolderFact::Missing
+    }
+
+    fn home_directory(&self) -> Option<PathBuf> {
+        crate::lock(&self.home).clone()
     }
 
     fn exists(&self, path: &Path) -> bool {
