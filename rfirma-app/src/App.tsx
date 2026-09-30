@@ -312,15 +312,26 @@ export function App({
   const unlessModal = (action: () => void) => () => {
     if (!modalOpen) action();
   };
-  useNativeTitlebar(titlebar, !covered && view === null, warningVisible && !covered, {
-    open: () => {
-      if (canOpen) openDocument();
+  useNativeTitlebar(
+    titlebar,
+    !covered && view === null,
+    warningVisible && !covered,
+    visibleRecents,
+    {
+      open: () => {
+        if (canOpen) openDocument();
+      },
+      status: unlessModal(() => setView("status")),
+      preferences: unlessModal(() => setView("preferences")),
+      feedback: unlessModal(openHelp),
+      about: unlessModal(() => setDialog("about")),
+      clearRecents: unlessModal(clearRecents),
+      recent: (id) => {
+        const row = visibleRecents.find((one) => one.id === id);
+        if (!modalOpen && row?.available) documents.select(row);
+      },
     },
-    status: unlessModal(() => setView("status")),
-    preferences: unlessModal(() => setView("preferences")),
-    feedback: unlessModal(openHelp),
-    about: unlessModal(() => setDialog("about")),
-  });
+  );
 
   const forgetAll = () =>
     forgetActivity(

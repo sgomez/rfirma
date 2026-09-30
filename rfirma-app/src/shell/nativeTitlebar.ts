@@ -1,6 +1,15 @@
 /** El puerto de la barra de título nativa: el estado que la ventana le manda y las acciones que devuelve. */
 
-export type TitlebarAction = "open" | "status" | "preferences" | "feedback" | "about";
+export type TitlebarActionName =
+  | "open"
+  | "status"
+  | "preferences"
+  | "feedback"
+  | "about"
+  | "clearRecents";
+
+/** Lo que devuelve la barra: el control pulsado y, en un reciente, su identificador. */
+export type TitlebarAction = { action: TitlebarActionName } | { action: "recent"; path: string };
 
 /** Las etiquetas de la barra, ya traducidas por la ventana. */
 interface TitlebarLabels {
@@ -12,12 +21,25 @@ interface TitlebarLabels {
   preferences: string;
   feedback: string;
   about: string;
+  recents: string;
+  clearRecents: string;
+  notFound: string;
+}
+
+/** Lo que pinta cada entrada de «Abiertos recientemente»; `path` es el identificador del reciente. */
+export interface TitlebarRecent {
+  path: string;
+  name: string;
+  folder: string;
+  signed: boolean;
+  found: boolean;
 }
 
 interface TitlebarState {
   openVisible: boolean;
   warningVisible: boolean;
   labels: TitlebarLabels;
+  recents: readonly TitlebarRecent[];
 }
 
 export interface NativeTitlebar {
