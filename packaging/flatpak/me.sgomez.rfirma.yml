@@ -165,21 +165,9 @@ modules:
   #    `frontendDist` dentro de su propio build.rs, asi que sin dist no compila
   #    ni una linea de Rust. Ejecuta `just build-ts` antes de `just flatpak`.
   #
-  #    POR ESO node-sources.json ESTA VERSIONADO PERO NO SE INCLUYE AQUI. El
-  #    ID-07 pide las dos vendorizaciones y `just flatpak-sources` genera las
-  #    dos, pero dentro del sandbox no hay nada que ejecutar con ellas: en
-  #    org.gnome.Sdk//50 NO HAY node (comprobado: `which node` no lo encuentra),
-  #    asi que mover `vite build` aqui dentro exigiria anadir la extension de
-  #    SDK org.freedesktop.Sdk.Extension.node22, que es otra decision y no la de
-  #    este issue. Lo que hay versionado es lo que haria falta el dia que se
-  #    tome: hasta entonces node-sources.json lo mantiene al dia la misma puerta
-  #    que al de cargo, para que no se pudra en silencio.
-  #
-  #    SE CONSTRUYE SIN RED (ID-07): NO hay --share=network en ningun modulo.
-  #    Las dependencias de cargo entran vendorizadas por cargo-sources.json, que
-  #    genera `just flatpak-sources` a partir del Cargo.lock y esta VERSIONADO
-  #    aqui al lado. `just check-repo` —y por tanto el CI— falla si el
-  #    Cargo.lock cambia y nadie lo regenera.
+  #    SE CONSTRUYE SIN RED: NO hay --share=network en ningun modulo. Las
+  #    dependencias de cargo entran vendorizadas por cargo-sources.json, y
+  #    `just check-repo` falla si el Cargo.lock cambia y nadie lo regenera.
   #
   #    cargo-sources.json deja el vendor en cargo/vendor y su configuracion en
   #    cargo/config, ambos RELATIVOS al directorio de construccion del modulo

@@ -1,5 +1,7 @@
 # Flatpak como único canal: medición
 
+> Los guiones de medición que cita esta nota ya no están en el árbol: se conservan en el commit [`0861f90`](https://github.com/sgomez/rfirma/tree/0861f90e29d295f40380e87df363552a6ba766ca/rfirma-native-bridge/testbench).
+
 Medición para el issue [#22](https://github.com/sgomez/rfirma/issues/22). El
 [#17](https://github.com/sgomez/rfirma/issues/17) eligió flatpak sobre indicios, sin construir
 nada; el [#23](https://github.com/sgomez/rfirma/issues/23) desactivó el riesgo de la glibc. Aquí se

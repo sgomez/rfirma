@@ -67,7 +67,7 @@ realimentación que este repositorio decidió proteger en el
 | `flatpak` | `flatpak-builder` sobre el manifiesto | lento |
 | `bundle` | `.deb` y `.rpm` con el *bundler* de Tauri | lento |
 | `check-glibc` | el suelo `GLIBC_2.34` sobre lo que se va a publicar | lento |
-| `flatpak-sources` | regenera `cargo-sources.json` y `node-sources.json` | a mano |
+| `flatpak-sources` | regenera `cargo-sources.json` y el sello de `Cargo.lock` | a mano |
 | `dev` | `RFIRMA_LIB_DIR` + `tauri dev` | ninguno |
 
 `just --list` agrupa las recetas en `checklist` (la escalera), `ci`, `dev` y
@@ -204,12 +204,17 @@ revisable que tiene que verse en un diff.
 
 ## El flatpak se construye sin red
 
-`cargo-sources.json` y `node-sources.json` se generan con `flatpak-cargo-generator.py`
-y `flatpak-node-generator` —que soporta `pnpm-lock.yaml`, no solo npm y yarn—, se
-**versionan** en `packaging/flatpak/`, y `--share=network` desaparece del manifiesto.
-Se regeneran a mano con `just flatpak-sources` cuando cambia un fichero de bloqueo; el
-CI **comprueba que están al día** en vez de regenerarlos, porque un fichero generado
+`cargo-sources.json` se genera con `flatpak-cargo-generator.py`, se **versiona** en
+`packaging/flatpak/`, y `--share=network` desaparece del manifiesto. Se regenera a mano
+con `just flatpak-sources` cuando cambia `Cargo.lock`, y `sources.lock` sella su `sha256`;
+el CI **comprueba que está al día** en vez de regenerarlo, porque un fichero generado
 dentro del CI es un fichero que nadie ha mirado.
+
+**Npm no se vendoriza.** El flatpak compila con el `dist` que se construye en el anfitrión
+(`just build-ts`), porque `org.gnome.Sdk` no trae `node` y Flathub, que lo exigiría, está
+descartado. Se descartó `node-sources.json` (`flatpak-node-generator` sobre
+`pnpm-lock.yaml`): nadie lo consumía, y cada PR que tocaba el lockfile de pnpm, como las
+de Dependabot, ponía en rojo `check-repo` hasta que alguien lo regeneraba a mano.
 
 Aquí se decía que quedaba **sin decidir** cómo entra la librería nativa en una
 construcción apta para Flathub. Ya no aplica: el

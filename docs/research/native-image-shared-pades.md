@@ -1,5 +1,7 @@
 # Qué produce `native-image --shared` con solo PAdES
 
+> Los guiones de medición que cita esta nota ya no están en el árbol: se conservan en el commit [`0861f90`](https://github.com/sgomez/rfirma/tree/0861f90e29d295f40380e87df363552a6ba766ca/rfirma-native-bridge/testbench).
+
 Medición para el issue [#2](https://github.com/sgomez/rfirma/issues/2). **Registra hechos, no decide**
 el modelo de distribución: eso es el issue [#6](https://github.com/sgomez/rfirma/issues/6).
 

@@ -1,5 +1,7 @@
 # Excluir `afirma-ui-utils` devuelve la imagen nativa a un solo fichero
 
+> Los guiones de medición que cita esta nota ya no están en el árbol: se conservan en el commit [`0861f90`](https://github.com/sgomez/rfirma/tree/0861f90e29d295f40380e87df363552a6ba766ca/rfirma-native-bridge/testbench).
+
 Medición para el issue [#36](https://github.com/sgomez/rfirma/issues/36). Verifica la decisión
 que tomó el [ADR-0012](../adr/0012-normalizacion-de-la-rubrica-en-rust.md) —normalizar la rúbrica
 en Rust y excluir `afirma-ui-utils` del `pom.xml` del puente— contra la medición de partida del

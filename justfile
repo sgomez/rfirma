@@ -233,11 +233,6 @@ autoscript:
     mv "$destino.parcial" "$destino"
     echo "autoscript.js v1.9.2 descargado en testdata/conformance/"
 
-# Genera el mapa del protocolo de AutoFirma a tag fijado y lo cruza con el de rFirma.
-[group('dev')]
-protocol-map *args:
-    python3 {{ root }}/scripts/protocol-map.py {{ args }}
-
 # jscpd sobre los ficheros de tests en Rust y TS. Solo informa, no entra en el CI (ADR-0014).
 [group('dev')]
 duplication: deps
@@ -264,11 +259,6 @@ outline path:
 [group('dev')]
 contract src=(tauri / "src"):
     cd {{ tauri }} && cargo run -q --example contract -- "{{ src }}"
-
-# Compila el puente Java con -Xlint:all; sin `clean`, que borraria la libreria nativa a mitad de `just check`.
-[private]
-lint-java: bootstrap
-    cd {{ bridge }} && mvn -B compile
 
 # Biome sobre rfirma-app.
 [private]
@@ -350,12 +340,6 @@ test-ts: po-import
 [private]
 test-site-driver:
     cd {{ root }}/testdata/site-driver && node --test --test-force-exit --test-reporter=dot test/*.test.mjs
-
-# cargo test, mas la compilacion de las pruebas de grada C.
-[private]
-test-rust: (certs "install") build-ts
-    cd {{ tauri }} && cargo test --all-features
-    cd {{ tauri }} && cargo test --all-features --no-run
 
 # Las de grada C en una sola pasada instrumentada, que mide ademas el adaptador FFI (ADR-0014).
 [group('ci')]
@@ -486,7 +470,7 @@ bundle quick="false": check-native build-ts
 bundle-windows: check-native build-ts
     {{ root }}/scripts/bundle-windows.sh {{ root }}
 
-# Regenera cargo-sources.json y node-sources.json.
+# Regenera cargo-sources.json y el sello de Cargo.lock.
 [group('release')]
 flatpak-sources:
     {{ root }}/scripts/flatpak-sources.sh
