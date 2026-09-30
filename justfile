@@ -282,6 +282,11 @@ fmt-check: deps fmt-check-rust
     cd {{ root }} && pnpm exec biome check .
     ruff format --check {{ root }}
 
+# Las guardas estructurales del backend (tamaño, mapas, citas de ADR, capas) sin compilar la crate: la llama el pre-push.
+[group('checklist')]
+structural-guards:
+    {{ root }}/scripts/structural-guards.sh
+
 [private]
 fmt-check-rust:
     cd {{ tauri }} && cargo fmt --all -- --check
