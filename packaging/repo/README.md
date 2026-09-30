@@ -263,24 +263,20 @@ Si el `grep` no encuentra nada, el fichero lleva la maestra: no se sube. Al term
 ## La clave de actualizaciones de Windows
 
 Un par minisign propio, distinto de la GPG (ADR-0015): firma el `-setup.exe` de cada versión
-estable para el *updater* de Tauri. La pública va versionada en dos sitios, que casi siempre
-dicen lo mismo:
+estable para el *updater* de Tauri. La pública se versiona en un solo sitio,
+`plugins.updater.pubkey` de `packaging/windows/tauri.windows.json`, la configuración que se
+pasa con `--config` al bundler: es en la que confía la versión que se instala.
 
-- **La embebida**, `plugins.updater.pubkey` de `packaging/windows/tauri.windows.json`, la
-  configuración que se pasa con `--config` al bundler: es en la que confía la versión que se
-  instala.
-- **La de firma**, `packaging/windows/updater-signing.key.pub`: la pareja de la privada que
-  está hoy en los secretos, y por tanto la que aceptan las instalaciones que ya existen.
-
-Solo difieren durante una [rotación](#rotar), entre los pasos 1 y 3. La privada y su
-contraseña son los secretos `TAURI_SIGNING_PRIVATE_KEY` y `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`
-del entorno `release`, y no aparecen en ningún otro workflow: `.github/check-workflows.sh` lo
-comprueba.
+La privada y su contraseña son los secretos `TAURI_SIGNING_PRIVATE_KEY` y
+`TAURI_SIGNING_PRIVATE_KEY_PASSWORD` del entorno `release`, y no aparecen en ningún otro
+workflow: `.github/check-workflows.sh` lo comprueba.
 
 `release.yml` firma con `packaging/windows/sign-updater.sh`, que deja el `.sig` al lado del
-instalador y falla si falta la clave o si la firma no verifica con la pública **de firma**.
-Todo lo de abajo se hace en un equipo propio, nunca en el CI, desde la raíz del repositorio y
-con las dependencias de `rfirma-app` instaladas.
+instalador y falla si falta la clave o si la firma no verifica con la pública embebida en la
+**última etiqueta estable**, que es la que aceptan las instalaciones que ya existen; si todavía
+no hay ninguna estable con *updater*, con la embebida actual. Todo lo de abajo se hace en un
+equipo propio, nunca en el CI, desde la raíz del repositorio y con las dependencias de
+`rfirma-app` instaladas.
 
 ### Crear
 
@@ -294,19 +290,12 @@ La orden pide la contraseña dos veces. Esa contraseña es el secreto
 ficheros, la privada `rfirma-actualizaciones.key` y la pública
 `rfirma-actualizaciones.key.pub`.
 
-- **Versionar la pública embebida**, tal cual, por PR a `main`:
+- **Versionar la pública**, tal cual, por PR a `main`:
 
   ```bash
   CONF=packaging/windows/tauri.windows.json
   jq --arg k "$(cat "$DIR/rfirma-actualizaciones.key.pub")" '.plugins.updater.pubkey = $k' \
     "$CONF" > "$DIR/conf.json" && mv "$DIR/conf.json" "$CONF"
-  ```
-
-- **Versionar la pública de firma**, en la misma PR si es la primera clave (en una rotación
-  va aparte, en el paso 3):
-
-  ```bash
-  cp "$DIR/rfirma-actualizaciones.key.pub" packaging/windows/updater-signing.key.pub
   ```
 
 - **Custodiar la privada**: copia `rfirma-actualizaciones.key` fuera de línea, con copia de
@@ -320,19 +309,16 @@ Después, [Subir](#subir).
 El *updater* de Tauri admite **una sola** clave pública, la que lleva la versión instalada.
 Por eso el orden es obligado:
 
-1. [Crear](#crear-1) el par nuevo y versionar **solo la pública embebida**, sin tocar la de
-   firma ni los secretos.
-2. Publicar una versión con esa configuración. La firma todavía la privada vieja, que es la
-   que aceptan las instalaciones actuales, y `sign-updater.sh` la comprueba contra la pública
-   de firma, que sigue siendo la vieja. Una vez instalada, esa versión solo confía en la
-   nueva.
-3. Solo entonces, versionar la pública de firma nueva (`cp` de «Crear») por PR a `main`, y
-   [Subir](#subir) la privada nueva. Las dos cosas antes de etiquetar la versión siguiente:
-   si solo está una, la firma no verifica y la release se para antes de publicar nada. La
-   versión siguiente ya sale firmada con la nueva.
-4. Retirar la privada vieja: se destruye con sus copias.
+1. [Crear](#crear-1) el par nuevo, versionar su pública **sin tocar los secretos** y publicar
+   una versión estable con esa configuración. La firma todavía la privada vieja, que es la que
+   embebe la estable anterior y aceptan las instalaciones actuales. Una vez instalada, esa
+   versión solo confía en la nueva.
+2. [Subir](#subir) la privada nueva antes de etiquetar la versión siguiente, y retirar la
+   vieja: se destruye con sus copias. Desde ahí la última estable embebe la nueva; con la
+   privada vieja todavía en los secretos, la firma no verifica y la release se para antes de
+   publicar nada.
 
-Quien no pase por la versión del paso 2 ya no puede actualizarse desde la aplicación y tiene
+Quien no pase por la versión del paso 1 ya no puede actualizarse desde la aplicación y tiene
 que instalar a mano. Si se filtra la privada, no hay orden que valga: se rota igual y se avisa
 de que hay que reinstalar a mano.
 

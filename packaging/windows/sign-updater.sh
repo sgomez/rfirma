@@ -1,29 +1,19 @@
 #!/usr/bin/env bash
-# Firma de actualización (minisign) de cada instalador de Windows de una entrega, comprobada contra la pública de firma versionada (ADR-0015).
+# Firma de actualización (minisign) de cada instalador de Windows de una entrega, comprobada contra la pública embebida en la última etiqueta estable (ADR-0015).
 #
-# El instalador no cambia: la firma va al lado, en `<instalador>.sig`, y el
-# manifiesto se reescribe para que sea una fila más. Por eso esto va DESPUES de
-# `packaging/check-digests.sh` y ANTES del `SHA256SUMS`.
-#
-# La firma se comprueba contra la pública con la que se FIRMA (la que aceptan
-# las instalaciones que ya existen), no contra la que se EMBEBE en
-# `plugins.updater.pubkey`. Casi siempre son la misma; durante una rotación no:
-# la versión puente embebe la nueva y la firma todavía la privada vieja
-# («Rotar» en packaging/repo/README.md).
-#
-# Uso: packaging/windows/sign-updater.sh <directorio> <publica de firma>
+# Uso: packaging/windows/sign-updater.sh <directorio>
 # Entorno: TAURI_SIGNING_PRIVATE_KEY y TAURI_SIGNING_PRIVATE_KEY_PASSWORD.
 set -euo pipefail
 
 dir="${1-}"
-signing_pub="${2-}"
-if [ -z "$dir" ] || [ ! -d "$dir" ] || [ -z "$signing_pub" ]; then
-    echo "uso: packaging/windows/sign-updater.sh <directorio> <publica de firma>" >&2
+if [ -z "$dir" ] || [ ! -d "$dir" ]; then
+    echo "uso: packaging/windows/sign-updater.sh <directorio>" >&2
     exit 2
 fi
 
 root="$(cd "$(dirname "$0")/../.." && pwd)"
 manifest="$root/scripts/packages-manifest.sh"
+config=packaging/windows/tauri.windows.json
 
 mapfile -t installers < <("$manifest" files "$dir" nsis)
 if [ "${#installers[@]}" -eq 0 ]; then
@@ -31,8 +21,27 @@ if [ "${#installers[@]}" -eq 0 ]; then
     exit 0
 fi
 
-if [ ! -s "$signing_pub" ]; then
-    echo "falta la clave publica de firma de actualizaciones en $signing_pub" >&2
+embedded_pubkey() {
+    jq -r '.plugins.updater.pubkey // empty' 2> /dev/null || true
+}
+
+# No la actual: en la versión puente de una rotación ya embebe la nueva (ADR-0015).
+trusted_pubkey() {
+    local tag pubkey
+    while read -r tag; do
+        [[ "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || continue
+        pubkey="$(git -C "$root" show "$tag:$config" 2> /dev/null | embedded_pubkey)" || pubkey=""
+        if [ -n "$pubkey" ]; then
+            echo "$tag $pubkey"
+            return
+        fi
+    done < <(git -C "$root" tag --list 'v*' --merged HEAD --no-contains HEAD --sort=-v:refname)
+    echo "HEAD $(embedded_pubkey < "$root/$config")"
+}
+
+read -r source pubkey < <(trusted_pubkey)
+if [ -z "${pubkey-}" ]; then
+    echo "falta plugins.updater.pubkey en $config ($source)" >&2
     echo "Se crea como dice «La clave de actualizaciones de Windows» en packaging/repo/README.md." >&2
     exit 1
 fi
@@ -50,7 +59,7 @@ done
 cli_version="$(jq -r '.devDependencies["@tauri-apps/cli"]' "$root/rfirma-app/package.json")"
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
-tr -d '[:space:]' < "$signing_pub" | base64 -d > "$work/updater.pub"
+printf '%s' "$pubkey" | base64 -d > "$work/updater.pub"
 
 for name in "${installers[@]}"; do
     installer="$dir/$name"
@@ -58,10 +67,10 @@ for name in "${installers[@]}"; do
     npx --yes "@tauri-apps/cli@$cli_version" signer sign "$installer" < /dev/null
     base64 -d "$installer.sig" > "$work/updater.minisig"
     if ! minisign -V -q -p "$work/updater.pub" -m "$installer" -x "$work/updater.minisig"; then
-        echo "$name.sig no verifica con la clave publica de firma $signing_pub" >&2
+        echo "$name.sig no verifica con la clave publica embebida en $config de $source" >&2
         exit 1
     fi
-    echo "OK  $name.sig verifica con la clave publica de firma $signing_pub"
+    echo "OK  $name.sig verifica con la clave publica embebida en $config de $source"
 done
 
 "$manifest" write "$dir"
