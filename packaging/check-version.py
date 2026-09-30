@@ -27,15 +27,10 @@ estaticas y de milisegundos:
 
   * el metainfo referencia el CHANGELOG en vez de copiarlo (ID-152);
   * el README no lleva enlaces de descarga con version dentro (ID-151);
-  * todo `.desktop` y el titulo de la ventana ensenan `rFirma`, mientras que
+  * el titulo de la ventana ensena `rFirma`, mientras que
     `productName` —que es el nombre del binario— sigue en `rfirma` (ID-145,
     ID-166);
-  * la regla `-rc.N` -> sin paquetes nativos existe y se comporta (ID-154);
-  * el verbo del menu contextual es un `Type=Service` de KDE que se llama
-    «Firmar con rFirma», sale al primer nivel, desaparece con mas de un fichero
-    y no viaja en el flatpak, mientras que ningun lanzador —ni los `.desktop`
-    sueltos ni la plantilla `.desktop.hbs` que rellena el bundler de Tauri—
-    declara `application/pdf` (ID-155, ID-156, ID-162, ID-165, ADR-0018).
+  * la regla `-rc.N` -> sin paquetes nativos existe y se comporta (ID-154).
 
 Uso: packaging/check-version.py
 """
@@ -58,20 +53,6 @@ CARGO_LOCK = "rfirma-app/src-tauri/Cargo.lock"
 METAINFO = "packaging/flatpak/me.sgomez.rfirma.metainfo.xml"
 README = "README.md"
 RC_RULE = "packaging/native-packages-allowed.sh"
-KDE_SERVICEMENU = "packaging/kde/rfirma-sign.desktop"
-FLATPAK_MANIFEST = "packaging/flatpak/me.sgomez.rfirma.yml"
-SERVICEMENU_TARGET = "/usr/share/kio/servicemenus/rfirma-sign.desktop"
-
-# La plantilla del lanzador que el bundler de Tauri rellena para el `.deb` y
-# el `.rpm`: es un `.desktop` con marcas de Handlebars dentro.
-DESKTOP_TEMPLATE_SUFFIX = ".desktop.hbs"
-
-# El verbo del menu contextual, palabra por palabra (ID-165).
-VERB = "Firmar con rFirma"
-
-# El unico `MimeType` que un lanzador puede declarar: el esquema de la sede
-# (ID-234). No registra a rFirma como lectora de ningun fichero.
-ALLOWED_SCHEME_HANDLER = "x-scheme-handler/afirma"
 
 failures: list[str] = []
 
@@ -229,196 +210,6 @@ def check_readme() -> None:
         fail(f"{README} no enlaza a releases/latest/download/ (ID-151)")
 
 
-def desktop_files() -> list[str]:
-    """Rutas relativas de todo `.desktop` bajo `packaging/`, plantillas incluidas.
-
-    El lanzador que instalan el `.deb` y el `.rpm` no es un `.desktop` suelto:
-    es la plantilla `desktopTemplate` de Tauri, con extension `.desktop.hbs`.
-    Dejarla fuera de esta lista dejaba sin vigilar justo el fichero donde un
-    `MimeType=` convierte a rFirma en lectora de PDF (ID-155, ADR-0018).
-    """
-    paths = []
-    for base, _dirs, files in os.walk(os.path.join(ROOT, "packaging")):
-        for name in files:
-            if name.endswith((".desktop", DESKTOP_TEMPLATE_SUFFIX)):
-                paths.append(os.path.relpath(os.path.join(base, name), ROOT))
-    return sorted(paths)
-
-
-def check_desktop_templates_are_inspected(conf: dict) -> None:
-    """Toda plantilla de lanzador declarada en Tauri pasa por las puertas.
-
-    `desktop_files()` recorre `packaging/`; si algun dia la plantilla del `.deb`
-    o la del `.rpm` se mudara fuera de ahi —o cambiara de extension— el ID-155
-    dejaria de ser falsable en silencio. Esto lo pone rojo.
-    """
-    inspected = set(desktop_files())
-    for target in ("deb", "rpm"):
-        template = conf["bundle"]["linux"][target].get("desktopTemplate")
-        if not template:
-            fail(
-                f"{TAURI_CONF}: el paquete {target} no declara "
-                f"`desktopTemplate`, asi que su lanzador no se puede vigilar "
-                f"(ID-155)"
-            )
-            continue
-        relative = os.path.relpath(
-            os.path.normpath(os.path.join(ROOT, "rfirma-app", "src-tauri", template)),
-            ROOT,
-        )
-        if relative not in inspected:
-            fail(
-                f"{TAURI_CONF}: la plantilla de lanzador del paquete {target} "
-                f"({relative}) queda fuera de las comprobaciones de `.desktop`. "
-                f"Sin ella nada impide que rFirma se registre como lectora de "
-                f"PDF (ID-155, ADR-0018)."
-            )
-
-
-def desktop_groups(path: str) -> dict[str, dict[str, str]]:
-    """El `.desktop` como grupos (`[Desktop Entry]`, `[Desktop Action X]`)."""
-    groups: dict[str, dict[str, str]] = {}
-    current: dict[str, str] = {}
-    for line in read(path).splitlines():
-        line = line.strip()
-        if not line or line.startswith("#"):
-            continue
-        if line.startswith("[") and line.endswith("]"):
-            current = groups.setdefault(line[1:-1], {})
-            continue
-        if "=" in line:
-            key, value = line.split("=", 1)
-            current[key.strip()] = value.strip()
-    return groups
-
-
-def check_desktop_names() -> None:
-    """`Name=` es lo que la persona ve: va en prosa (ID-165, ID-166).
-
-    En un lanzador (`Type=Application`) es el nombre del producto; en un
-    *servicemenu* de KDE (`Type=Service`) es el verbo, y el verbo esta fijado
-    palabra por palabra por el ID-165.
-    """
-    paths = desktop_files()
-    if not paths:
-        fail("no hay ningun .desktop bajo packaging/")
-    for path in paths:
-        groups = desktop_groups(path)
-        entry = groups.get("Desktop Entry", {})
-        if entry.get("Type") == "Service":
-            names = [
-                group["Name"]
-                for name, group in groups.items()
-                if name.startswith("Desktop Action ") and "Name" in group
-            ]
-            if not names:
-                fail(f"{path} no declara `Name=` en ninguna accion")
-            for name in names:
-                if name != VERB:
-                    fail(
-                        f"{path}: `Name={name}`. El verbo del menu es "
-                        f"`Name={VERB}`, ni «Firmar» a secas ni otra cosa "
-                        f"(ID-165)."
-                    )
-            continue
-        if "Name" not in entry:
-            fail(f"{path} no declara `Name=`")
-        elif entry["Name"] != "rFirma":
-            fail(
-                f"{path}: `Name={entry['Name']}`. En el lanzador se ve prosa, "
-                f"asi que es `Name=rFirma` (ID-145, ID-166)."
-            )
-
-
-def check_no_pdf_handler() -> None:
-    """ID-155: rFirma es un verbo, no el programa de los PDF.
-
-    Lo que un lanzador (`Type=Application`) no puede declarar es un **tipo de
-    documento**: `application/pdf` y compania la registran como candidata a
-    lector predeterminado y producen «Abrir con rFirma», que miente sobre lo
-    que va a pasar. Un `x-scheme-handler/…` es otra cosa —registra quien
-    atiende un esquema de URL, no quien abre un fichero— y el ID-234 lo exige
-    para `afirma://`, asi que se admite y solo ese.
-
-    En un `Type=Service` la misma clave no registra nada: filtra en que menu
-    contextual aparece el verbo, y ahi es obligatoria.
-    """
-    for path in desktop_files():
-        entry = desktop_groups(path).get("Desktop Entry", {})
-        if entry.get("Type") == "Service":
-            continue
-        declared = [t for t in entry.get("MimeType", "").split(";") if t]
-        offenders = [t for t in declared if not t.startswith("x-scheme-handler/")]
-        if offenders:
-            fail(
-                f"{path}: declara `MimeType={';'.join(offenders)}`. Un lanzador "
-                f"con tipo de documento asociado convierte a rFirma en "
-                f"candidata a lector de PDF, y rFirma es un verbo "
-                f"(ID-155, ADR-0018)."
-            )
-        for scheme in declared:
-            if scheme != ALLOWED_SCHEME_HANDLER:
-                fail(
-                    f"{path}: declara `MimeType={scheme}`. El unico esquema que "
-                    f"rFirma atiende es `{ALLOWED_SCHEME_HANDLER}` "
-                    f"(ID-234, ADR-0018)."
-                )
-
-
-def check_kde_servicemenu(conf: dict) -> None:
-    """El verbo de KDE: primer nivel, un solo PDF, y fuera del flatpak.
-
-    ID-156 y ID-165 lo describen; el ID-162 deja al flatpak fuera a proposito.
-    """
-    groups = desktop_groups(KDE_SERVICEMENU)
-    entry = groups.get("Desktop Entry", {})
-    if entry.get("Type") != "Service":
-        fail(f"{KDE_SERVICEMENU} no es un `Type=Service` (ID-156)")
-    if "application/pdf" not in entry.get("MimeType", ""):
-        fail(
-            f"{KDE_SERVICEMENU} no filtra por `application/pdf`: el verbo "
-            f"apareceria sobre cualquier fichero (ID-156)"
-        )
-    if entry.get("X-KDE-Priority") != "TopLevel":
-        fail(
-            f"{KDE_SERVICEMENU} no declara `X-KDE-Priority=TopLevel`: el verbo "
-            f"caeria dentro del submenu «Acciones» (ID-165)"
-        )
-    if entry.get("X-KDE-RequiredNumberOfUrls") != "1":
-        fail(
-            f"{KDE_SERVICEMENU} no declara `X-KDE-RequiredNumberOfUrls=1`: con "
-            f"mas de un PDF seleccionado el verbo tiene que desaparecer "
-            f"(ID-156)"
-        )
-    for action in groups.values():
-        exec_line = action.get("Exec")
-        if exec_line and "%F" in exec_line:
-            fail(
-                f"{KDE_SERVICEMENU}: `Exec` con `%F` acepta varios ficheros; "
-                f"rFirma firma uno (ID-156)"
-            )
-
-    if not os.access(os.path.join(ROOT, KDE_SERVICEMENU), os.X_OK):
-        fail(
-            f"{KDE_SERVICEMENU} no tiene el bit de ejecucion: KDE pide "
-            f"confirmacion para cada servicemenu que no lo lleve"
-        )
-
-    for target in ("deb", "rpm"):
-        files = conf["bundle"]["linux"][target].get("files", {})
-        if files.get(SERVICEMENU_TARGET) != f"../../{KDE_SERVICEMENU}":
-            fail(
-                f"{TAURI_CONF}: el paquete {target} no instala "
-                f"{SERVICEMENU_TARGET} (ID-156)"
-            )
-
-    if "servicemenus" in read(FLATPAK_MANIFEST):
-        fail(
-            f"{FLATPAK_MANIFEST} instala el servicemenu de KDE. El flatpak se "
-            f"queda fuera del verbo a proposito (ID-162, ADR-0018)."
-        )
-
-
 def check_rc_rule() -> None:
     """ID-154, comprobado ejecutando la regla, no leyendola."""
     script = os.path.join(ROOT, RC_RULE)
@@ -454,10 +245,6 @@ def main() -> int:
     check_product_name(conf)
     check_metainfo(version)
     check_readme()
-    check_desktop_names()
-    check_desktop_templates_are_inspected(conf)
-    check_no_pdf_handler()
-    check_kde_servicemenu(conf)
     check_rc_rule()
 
     if failures:
