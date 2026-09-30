@@ -87,11 +87,29 @@ Alineado por la izquierda del botón partido. De arriba abajo:
 
 No lleva «Abrir un PDF…»: abrir es el segmento principal del mismo botón.
 
-**En Linux es un menú GTK estándar**, de 380 px en el lienzo: la sección
-**«Abiertos recientemente»**, **una línea por reciente** —«✓ nombre — carpeta»,
-con la ✓ solo si está firmado—, **sin fecha** y sin «Abierto»; el que no se
-encuentra, como entrada desactivada «nombre — No se encuentra»; y **«Vaciar la
-lista»** en su propia sección, tras un divisor.
+**En Linux es un popover propio**, al estilo del de GNOME Text Editor, de
+380 px fijos, con el relleno, la separación y las esquinas de libadwaita:
+
+1. El rótulo **«Abiertos recientemente»**.
+2. **Una fila de dos líneas por reciente**, sin fecha y sin «Abierto»: el
+   nombre a 13 px con la ✓ si está firmado, **recortado por el centro** para que
+   se vean el principio y el final; debajo, la **ubicación** —la ruta de la
+   carpeta, con `~/` en lugar del directorio personal— más pequeña y atenuada,
+   **recortada por el final**. Bajo el portal no hay ubicación
+   ([ADR-0011](../adr/0011-destino-del-documento-firmado.md)) y la segunda línea
+   queda vacía.
+3. El que no se encuentra, atenuado y desactivado, con «No se encuentra» en la
+   segunda línea.
+4. Divisor y **«Vaciar la lista»**.
+
+Sin buscador y sin × para quitar un reciente.
+
+**Con muchos recientes** la lista llega a diez, pero en GTK 3 el popover no
+puede salir de la ventana, y con la ventana baja no caben diez filas de dos
+líneas. El rótulo queda fijo arriba y «Vaciar la lista» fijo abajo; entre los
+dos, las filas miden como máximo lo que quepa dentro de la ventana y se
+desplazan en vertical si no caben. Desplazamiento horizontal, nunca: el ancho es
+fijo y los textos se recortan.
 
 ### Las pestañas ocultas, desde «+N»
 
@@ -137,10 +155,11 @@ En el artboard `Main`:
   recientes** (lista vacía o actividad apagada).
 - **Desbordada** (palanca «Contenido: extremo»): doce documentos, cuatro
   pestañas a la vista y «+8 ▾»; palanca «Desborde de pestañas» para abrir su
-  menú.
+  menú. Con los recientes desplegados en Linux, la lista llega a diez y la
+  ventana baja a 480 px, para que las filas no quepan y se desplacen.
 - Palanca «Escritorio»: **Linux** (por defecto) enseña la barra de título GTK
-  con la tira debajo, y los recientes como menú GTK; **Windows** y **macOS**, la
-  barra única.
+  con la tira debajo, y los recientes en su popover; **Windows** y **macOS**,
+  la barra única.
 
 ## Componentes y tokens
 
@@ -179,9 +198,13 @@ En el artboard `Main`:
   (30/09/2026). El botón partido sube a la barra de título GTK, que es donde
   GTK pone sus controles; lo que queda debajo son los documentos abiertos, y
   sin ninguno una tira vacía sería una franja muerta.
-- **En Linux, recientes de una línea y sin fecha** (30/09/2026). Es el menú GTK
-  estándar, sin columnas ni segunda línea: «✓ nombre — carpeta» cabe en una
-  fila, y la fecha no decide cuál se reabre.
+- **En Linux, recientes en un popover propio de dos líneas y sin fecha**
+  (01/10/2026). Se descartó el menú GTK estándar de una línea, «✓ nombre —
+  carpeta»: GTK 3 lo dibuja sin relleno ni separación entre filas, los nombres
+  largos no se recortan y ensanchan el menú, y el nombre de la carpeta a solas
+  no distingue dos carpetas homónimas.
+  La ruta con `~/` sí las distingue, y el ancho fijo con los recortes mantiene
+  el popover en su sitio. La fecha sigue fuera: no decide cuál se reabre.
 - **«Abiertos recientemente», no «Recientes»**, en el menú y en el estado vacío:
   un rótulo solo, igual en los dos sitios.
 - **«Abierto» es texto, no un icono.** Un punto o una marca de pestaña se
@@ -194,4 +217,5 @@ Validado en el lienzo
 [Autofirma de escritorio en Rust](https://claude.ai/design/p/c0ddbfa7-0982-498f-8f8c-8e2f8f0c6132),
 página **Recorrido de firma**, artboard `Main`; la barra única, el 27/09/2026;
 la tira y los recientes en Linux, el 30/09/2026 (medición en
-`docs/research/barra-de-titulo-en-linux.md`).
+`docs/research/barra-de-titulo-en-linux.md`); el popover de recientes en
+Linux, el 01/10/2026.
