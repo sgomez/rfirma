@@ -48,6 +48,16 @@ traducidas, y recibe las acciones, que hacen lo mismo que los botones HTML. La
 medición que lo sostiene es la nota de research «Abrir y el menú en la barra de
 título nativa de GTK, en Linux» (`docs/research/barra-de-titulo-en-linux.md`).
 
+**En una sesión X11, WebKitGTK no compone con la GPU**: rFirma fija
+`WEBKIT_DISABLE_COMPOSITING_MODE=1` al arrancar, antes de crear ningún webview,
+salvo que el entorno ya traiga alguna variable que elija el renderizador. Un popover de GTK3 en
+X11 es una ventana hija recortada dentro de la principal, y con la composición
+acelerada lo que queda alrededor del bocadillo no es la página, sino un recuadro
+gris opaco. Se midió en Xfce sobre X11, con una Intel y con llvmpipe: el recuadro
+sale con cualquier popover, con o sin el CSS propio, y desaparece solo sin
+composición acelerada. En Wayland, en el mismo equipo, el popover es una
+superficie aparte y no pasa, así que ahí no se toca.
+
 ## Los menús retirados
 
 Los menús que se han eliminado no se han movido a otro sitio: **no hacían
@@ -88,6 +98,23 @@ de Estado.
   los demás la barra de GTK funciona y no desentona más que cualquier
   aplicación GTK; detectar el escritorio añadía un tercer modo de cabecera a
   cambio de nada.
+- **Los menús de la barra como `gtk::Menu` en X11.** Un menú abre su propia
+  ventana emergente y no tiene recuadro, pero pierde el bocadillo y la flecha,
+  su posición y su aspecto los decide el tema, y en Xubuntu desentonaba con la
+  barra. Dejaba además dos implementaciones de los mismos menús.
+- **`WEBKIT_DISABLE_DMABUF_RENDERER=1` en X11.** Quita el recuadro, y es el
+  remedio que Tauri documenta para otros fallos de pintado en Linux
+  ([tauri#9394](https://github.com/tauri-apps/tauri/issues/9394)), pero en
+  WebKitGTK 2.52 deja vacíos los modos de transporte y el webview se cae al
+  entrar en composición acelerada
+  ([block/buzz#3654](https://github.com/block/buzz/issues/3654)): quita la
+  composición de rebote y con un cuelgue latente.
+- **`WEBKIT_DMABUF_RENDERER_FORCE_SHM=1` en X11.** Mantiene la composición con
+  búferes en memoria compartida, y el recuadro sigue.
+- **La política de aceleración `Never` en el webview ya creado.** Es API y no
+  variable, pero llega cuando la página ya ha empezado a componer, y en Xfce
+  sobre una Intel la ventana se quedó en negro.
+- **Apagar la composición también en Wayland.** Allí no hay fallo que corregir.
 
 ## Consequences
 
@@ -97,3 +124,6 @@ de Estado.
   PDF…».
 - Las pestañas comparten fila con la identidad, el botón partido y el menú, así
   que caben menos que en una tira propia: el desborde a «+N» llega antes.
+- En X11 el visor pinta sin composición acelerada, por software: al cambiar de
+  página de un PDF pesado se ve el repintado, por debajo de medio segundo en Xfce
+  con una Intel.

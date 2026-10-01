@@ -37,7 +37,9 @@ const TITLEBAR_POPOVER_CSS: &str = "
     }
     popover.rfirma-titlebar-popover modelbutton:hover,
     popover.rfirma-titlebar-popover list row:hover {
-        background-color: alpha(currentColor, 0.08);
+        color: @theme_fg_color;
+        background-color: alpha(@theme_fg_color, 0.08);
+        background-image: none;
     }
     popover.rfirma-titlebar-popover separator {
         margin: 4px 0;

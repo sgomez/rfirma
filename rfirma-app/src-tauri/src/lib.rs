@@ -145,6 +145,7 @@ pub fn run() {
     }
 
     desktop::adapters::process::make_the_command_line_readable();
+    desktop::adapters::titlebar::keep_the_popovers_clear();
 
     let invocation = desktop::adapters::process::this_invocation();
     let discarded = Role::said(&invocation);

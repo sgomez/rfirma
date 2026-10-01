@@ -12,3 +12,4 @@ pub mod releases;
 pub mod tauri;
 pub mod titlebar;
 pub mod views;
+pub mod webkit_renderer;

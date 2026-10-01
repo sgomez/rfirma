@@ -8,6 +8,19 @@ pub const TITLEBAR_ACTION: &str = "titlebar-action";
 /// Si la ventana principal nace oculta para montarle la barra antes de mostrarla.
 pub const BUILT_HIDDEN: bool = cfg!(target_os = "linux");
 
+/// Apaga la composición acelerada de WebKitGTK en X11 antes de crear ningún webview (ADR-0007).
+#[cfg(target_os = "linux")]
+pub fn keep_the_popovers_clear() {
+    use super::webkit_renderer::{compositing_must_be_turned_off, COMPOSITING_SWITCH};
+    if compositing_must_be_turned_off(|name| std::env::var(name).ok()) {
+        std::env::set_var(COMPOSITING_SWITCH, "1");
+    }
+}
+
+/// Fuera de Linux no hay WebKitGTK.
+#[cfg(not(target_os = "linux"))]
+pub fn keep_the_popovers_clear() {}
+
 /// Monta la barra en la ventana principal, aún oculta, y la muestra.
 #[cfg(target_os = "linux")]
 pub fn mount_and_show(window: &tauri::WebviewWindow) {
