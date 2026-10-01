@@ -8,6 +8,30 @@ Desde la v0.11.2 cada sección la genera `just release <version>` a partir de
 los títulos de las PR fusionadas en `main` desde la etiqueta anterior: los
 `feat`, `fix` y `perf` que no son de ámbito interno.
 
+## [0.13.0] - 2026-10-01
+
+### Added
+- El árbol del servidor toma cada paquete por su nombre (#1278).
+- El botón de aviso en lugar del triángulo (#1297).
+- Subir a Tauri 2.12 (#1296).
+- Barra de título GTK en Linux con abrir, menú y aviso (#1298).
+- Los recientes en la barra de título GTK (#1300).
+- La cabecera de Linux y el puerto de la barra de título nativa (#1302).
+- Los recientes por el puerto de la barra de título nativa (#1304).
+- La barra de título GTK sigue el tema de rFirma (#1299).
+- El ☰ de la barra de título GTK con el estilo de libadwaita (#1317).
+- La ubicación del documento reciente (#1315).
+- Los recientes de la barra de título GTK en un popover propio (#1318).
+- La barra de título recibe la ubicación de cada reciente (#1320).
+
+### Fixed
+- Los recientes se vuelven a comprobar al recuperar el foco (#1314).
+- El menú de la barra de título GTK no se cierra al llegar un estado nuevo (#1316).
+- El tooltip de un reciente enseña su ruta absoluta y no parpadea (#1321).
+- Sin recuadro gris en los menús de la barra de título en X11 (#1322).
+- La barra de Windows y macOS ya no lleva el nombre «rFirma» (#1323).
+- El asistente ya no enseña «Abrir PDF» de la ventana de debajo (#1324).
+
 ## [0.12.0] - 2026-09-30
 
 ### Added
