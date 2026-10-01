@@ -514,7 +514,7 @@ describe("SetupWizard", () => {
   });
 
   // La cabecera es la del ADR-0007, con su menú completo (docs/design/primer-arranque.md).
-  it("carries the app name and the ADR-0007 menu, reusing the shared Header", async () => {
+  it("carries the ADR-0007 menu, without the app name, reusing the shared Header", async () => {
     const user = userEvent.setup();
     const onOpenStatus = vi.fn();
     const onOpenPreferences = vi.fn();
@@ -533,7 +533,7 @@ describe("SetupWizard", () => {
       />,
     );
 
-    expect(screen.getByText("rFirma")).toBeInTheDocument();
+    expect(screen.queryByText("rFirma")).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Menú" }));
     expect(screen.getByRole("menuitem", { name: "Estado de rFirma" })).toBeInTheDocument();

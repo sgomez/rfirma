@@ -1,7 +1,6 @@
 # Cabecera
 
-La parte de arriba de la ventana: el nombre de la aplicación, los documentos,
-el aviso y el único menú. En Windows y macOS es una sola barra; en Linux, la
+La parte de arriba de la ventana: los documentos, el aviso y el único menú. En Windows y macOS es una sola barra; en Linux, la
 barra de título nativa de GTK con una tira de pestañas debajo.
 
 ## Casos de uso que la usan
@@ -18,13 +17,12 @@ barra de título nativa de GTK con una tira de pestañas debajo.
 
 Una fila de 44 px sobre `--rf-bg`, de izquierda a derecha:
 
-1. **`rFirma`**, la identidad.
-2. **El botón partido** «Abrir PDF… ▾».
-3. **Las pestañas** de los documentos abiertos, y al final el **«+N ▾»** si no
+1. **El botón partido** «Abrir PDF… ▾».
+2. **Las pestañas** de los documentos abiertos, y al final el **«+N ▾»** si no
    caben.
-4. Un hueco flexible.
-5. **El botón de aviso**, solo si hay algo que atender.
-6. **El botón de menú**, al extremo derecho. Solo en Windows: en macOS el menú
+3. Un hueco flexible.
+4. **El botón de aviso**, solo si hay algo que atender.
+5. **El botón de menú**, al extremo derecho. Solo en Windows: en macOS el menú
    es el de la barra del sistema, y el botón de aviso queda en el extremo.
 
 ### En Linux
@@ -45,9 +43,9 @@ en el primer arranque.
 La barra sigue la **preferencia de tema de rFirma** —claro, oscuro o sistema—,
 no solo la del escritorio.
 
-Lo que va de 2 a 3 es de los documentos, y su ficha es
-[Pestañas de documentos](pestanas-de-documentos.md); esta cuenta la barra, la
-identidad y el menú.
+Lo que va de 1 a 2 es de los documentos, y su ficha es
+[Pestañas de documentos](pestanas-de-documentos.md); esta cuenta la barra y el
+menú.
 
 **Nada más.** Ni certificado ni estado del documento: el certificado lo dice el
 selector del [panel de firma](panel-de-firma.md) y el estado, la ✓ de la
@@ -58,7 +56,7 @@ pestaña.
 - **Con documentos**: la ventana principal, con o sin documento abierto. Sin
   ninguno, la barra lleva el botón partido y ninguna pestaña.
 - **Sin documentos**: Preferencias, el panel de estado y el primer arranque.
-  Solo `rFirma`, el aviso y el menú; ni botón partido ni pestañas, porque esas
+  Solo el aviso y el menú; ni botón partido ni pestañas, porque esas
   vistas no son de ningún documento. Mismo alto, misma raya, mismo menú. En
   Linux, la barra de título GTK sin botón partido y sin tira.
 
@@ -69,8 +67,6 @@ En Windows y macOS:
 - Alto 44 px, fondo `--rf-bg`, **borde inferior de 1 px** en
   `--rf-border-subtle`, `align-items: stretch`, relleno `0 6px 0 4px`, sin
   separación entre piezas: cada una trae la suya.
-- `rFirma` a 15 px, peso 700, `letter-spacing: .4px`, relleno `0 12px 0 8px`:
-  se lee como identidad y no como título.
 - El hueco flexible no baja de 24 px, para que la última pestaña no toque el
   menú.
 - El botón de menú mide 32×30 px, con `--rf-radius-md`, el icono de tres rayas
