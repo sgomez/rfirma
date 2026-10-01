@@ -1,6 +1,6 @@
-# El saludo TLS del canal local en Windows es de rustls
+# El saludo TLS del canal local fuera de Linux es de rustls
 
-En Windows, el servidor TLS del canal local (`wss://127.0.0.1` y el transporte `service`,
+En Windows y en macOS, el servidor TLS del canal local (`wss://127.0.0.1` y el transporte `service`,
 ADR-0005) usa **rustls** con el proveedor criptográfico de **ring**. En Linux no cambia nada:
 sigue siendo `native-tls` sobre el OpenSSL del sistema. La diferencia vive en un único fichero,
 `site/adapters/channel/acceptor.rs`, que da a los dos transportes el mismo `LocalTlsAcceptor` y
@@ -20,6 +20,10 @@ necesita que la clave esté en un proveedor del sistema.
   `%APPDATA%\Microsoft\Crypto\Keys` una clave nueva que nadie borra. El certificado del
   servidor se genera en memoria en cada arranque y no se guarda en disco (ADR-0005); con
   schannel, su clave acabaría guardada igual, una por trámite.
+
+En macOS, `native-tls` es Security.framework, y `Identity::from_pkcs8` rechaza la misma clave
+de curva elíptica en PKCS#8 («Unknown format in import»). El PKCS#12 obligaría a importarla en
+un llavero, que es otra vez una clave persistida por trámite.
 
 rustls firma con la clave en memoria del proceso, como OpenSSL en Linux, y no toca ningún
 almacén del sistema.
@@ -53,10 +57,11 @@ pila TLS que ya funciona en Linux y en el flatpak. Queda fuera del port.
 
 ## Consequences
 
-- En Windows hay dos pilas TLS en el binario: schannel para las conexiones salientes
-  (`reqwest`) y rustls para el servidor local. Es la excepción, solo en Windows, a no meter
+- En Windows y en macOS hay dos pilas TLS en el binario: la del sistema (schannel o
+  Security.framework) para las conexiones salientes (`reqwest`) y rustls para el servidor
+  local. Es la excepción, solo fuera de Linux, a no meter
   `rustls` en el árbol que dice el `Cargo.toml`.
-- `tokio-rustls` entra en `[target.'cfg(windows)'.dependencies]` sin sus características por
+- `tokio-rustls` entra en las dependencias de Windows y de macOS sin sus características por
   omisión (`aws-lc-rs` exige cmake y nasm) y con `ring` y `tls12`. El `Cargo.lock` gana
   `rustls`, `rustls-webpki`, `ring`, `untrusted`, `tokio-rustls` y un `windows-sys` 0.52; el
   flatpak los descarga para resolver el grafo, pero no los compila.

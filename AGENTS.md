@@ -85,7 +85,7 @@ Tres avisos que ahorran una ronda:
 * **Bridge Java:** `rfirma-native-bridge/src/main/java/es/gob/afirma/nativebridge/NativeBridge.java`
 * **App Rust/Tauri:** `rfirma-app/src-tauri/`
 * **App Frontend:** `rfirma-app/src/` (React 19 + Vite + TypeScript, pnpm)
-* **Empaquetado:** `packaging/flatpak/`; el instalador de Windows, `packaging/windows/` (ADR-0035)
+* **Empaquetado:** `packaging/flatpak/`; el instalador de Windows, `packaging/windows/` (ADR-0035, ADR-0040); el `.dmg` de macOS, `packaging/macos/`
 * **Punto de entrada de todo:** `justfile` — ver el [ADR-0013](docs/adr/0013-estructura-del-repositorio-y-cadena-de-compilacion.md).
 
 ### 🗺️ Mapas: lee el índice antes que el código

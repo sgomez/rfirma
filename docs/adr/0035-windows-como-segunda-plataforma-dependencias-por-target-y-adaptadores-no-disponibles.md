@@ -330,9 +330,9 @@ fuera de una fase que solo busca compilar.
 **Pasar `-o rfirma_crypto` a `native-image` en Windows**: evita renombrar, pero devuelve banderas
 sueltas al `justfile`, y `native-image.properties` es el único sitio de las banderas de la imagen.
 
-**Recetas duplicadas con `[windows]` y `[linux]`**, o PowerShell como shell de Windows: dos
-versiones de cada receta que envejecen por separado. El empaquetado es la excepción, porque sus
-dos variantes no comparten nada que pueda envejecer: cada plataforma construye formatos distintos.
+**Recetas duplicadas con `[windows]`, `[macos]` y `[linux]`**, o PowerShell como shell de Windows: una
+versión de cada receta por sistema, y envejecen por separado. El empaquetado es la excepción, porque sus
+variantes no comparten nada que pueda envejecer: cada plataforma construye formatos distintos.
 Antes era `just bundle-windows` con su propio script, y obligaba a los workflows a llamar a una
 receta distinta por plataforma para lo mismo. Git Bash ya está en cualquier equipo que
 tenga Git, y los scripts de `scripts/` son de `bash`.
@@ -364,7 +364,7 @@ interfaz también en Linux. Se aplaza; mientras, el almacén del usuario se pres
   `AUTHORISED_SITES`.
 - `just tools`, `just bootstrap`, `just native`, `just dev`, `just fmt` y `just bundle`
   funcionan en Windows; el resto de recetas (`check`, `flatpak`, `certs`…) sigue siendo de Linux.
-- `just bundle` es la única receta con variantes `[linux]` y `[windows]`: cada una construye los
+- `just bundle` es la única receta con variantes `[linux]`, `[windows]` y `[macos]` (ADR-0040): cada una construye los
   paquetes de su plataforma y los busca en `CARGO_TARGET_DIR`, así que funciona desde un worktree.
   El flatpak sigue en su propia receta.
 - En Windows la aplicación busca la `.dll` junto al ejecutable; en Linux, en `../lib/rfirma`.
