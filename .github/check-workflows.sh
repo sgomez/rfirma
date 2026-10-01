@@ -43,6 +43,44 @@ fi
 
 echo "OK  todas las acciones de .github/workflows y .github/actions estan fijadas por SHA"
 
+# ----------------------------------------------------- acciones locales --
+# Una accion local borrada solo falla al ejecutarse, y la de release.yml solo con una etiqueta.
+huerfanas="$(grep -rnE '^[^#]*uses:[[:space:]]*\./\.github/actions/' .github/workflows .github/actions \
+    | while IFS= read -r linea; do
+        accion="$(grep -oE '\./\.github/actions/[A-Za-z0-9._-]+' <<<"$linea")"
+        [ -f "${accion#./}/action.yml" ] || printf '%s\n' "$linea"
+    done || true)"
+if [ -n "$huerfanas" ]; then
+    printf '%s\n' "$huerfanas" >&2
+    echo >&2
+    echo "estos usos apuntan a una accion local que no existe en .github/actions." >&2
+    exit 1
+fi
+echo "OK  cada accion local que se usa existe"
+
+# Solo setup-runner instala just, y un job con secretos no la usa (ADR-0015).
+just_sin_instalar="$(awk '
+    function cierra() {
+        if (llamadas != "" && !prepara) printf "%s", llamadas
+        llamadas = ""; prepara = 0
+    }
+    FNR == 1 { cierra() }
+    /^[^[:space:]#]/ { cierra() }
+    /^  [A-Za-z0-9_-]+:[[:space:]]*$/ { cierra() }
+    /^[[:space:]]*#/ { next }
+    /uses:[[:space:]]*\.\/\.github\/(actions\/setup-runner|workflows\/)/ { prepara = 1 }
+    /(^|[[:space:]|;&(])just[[:space:]]/ { llamadas = llamadas FILENAME ":" FNR ": " $0 "\n" }
+    END { cierra() }
+' .github/workflows/*.yml)"
+if [ -n "$just_sin_instalar" ]; then
+    printf '%s\n' "$just_sin_instalar" >&2
+    echo >&2
+    echo "estos jobs llaman a just sin preparar el runner con setup-runner." >&2
+    echo "Un job con secretos llama al script directamente (ADR-0015)." >&2
+    exit 1
+fi
+echo "OK  cada job que llama a just prepara el runner"
+
 # ------------------------------------------------ construccion sin secretos --
 # Las acciones locales que alcanza un fichero, directa o indirectamente.
 acciones_locales() {
