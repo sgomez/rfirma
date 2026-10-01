@@ -266,3 +266,11 @@ siguen en `.scratch/archive/`.
 2026-10-01 spec=#1287 sub=#1295 model=sonnet effort=medium pr=#1299 verdict=CLEAN cycles=3 mergefix=1 wave=3 outcome=escalated
 2026-10-01 spec=#1287 sub=#1294 model=sonnet effort=medium pr=#1304 verdict=CLEAN cycles=0 mergefix=0 wave=4 outcome=merged
 2026-10-01 spec=#1287 sub=#1295 model=sonnet effort=medium pr=#1299 verdict=CLEAN cycles=3 mergefix=1 wave=3 outcome=merged
+2026-10-01 spec=#1308 sub=#1306 model=sonnet effort=medium pr=#1314 verdict=CLEAN cycles=0 mergefix=0 wave=1 outcome=escalated (merge denied by permissions; CI green)
+2026-10-01 spec=#1308 sub=#1306 model=sonnet effort=medium pr=#1314 verdict=CLEAN cycles=0 mergefix=0 wave=1 outcome=merged (tras merge autorizado por el titular)
+2026-10-01 spec=#1308 sub=#1305 model=opus effort=medium pr=#1316 verdict=CLEAN cycles=0 mergefix=0 wave=1 outcome=merged
+2026-10-01 spec=#1308 sub=#1311 model=sonnet effort=medium pr=#1317 verdict=CLEAN cycles=0 mergefix=0 wave=2 outcome=merged
+2026-10-01 spec=#1308 sub=#1310 model=sonnet effort=medium pr=#1315 verdict=CLEAN cycles=1 mergefix=0 wave=1 outcome=merged
+2026-10-01 spec=#1308 sub=#1312 model=opus effort=medium pr=#1318 verdict=CLEAN cycles=2 mergefix=0 wave=3 outcome=merged
+2026-10-01 spec=#1308 sub=none job=local-guard pr=#1319 verdict=CLEAN cycles=0 outcome=merged
+2026-10-01 spec=#1308 sub=#1313 model=sonnet effort=medium pr=#1320 verdict=CLEAN cycles=0 mergefix=0 wave=4 outcome=merged
