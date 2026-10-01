@@ -314,3 +314,14 @@ fn windows_looks_for_the_native_library_next_to_the_executable() {
 
     assert_eq!(directory, Path::new(r"C:\Programas\rfirma"));
 }
+
+#[test]
+fn macos_looks_for_the_native_library_in_the_bundle_frameworks() {
+    let directory = Platform::MacOs
+        .native_library_directory(Path::new("/Applications/rFirma.app/Contents/MacOS"));
+
+    assert_eq!(
+        directory,
+        Path::new("/Applications/rFirma.app/Contents/MacOS/../Frameworks")
+    );
+}

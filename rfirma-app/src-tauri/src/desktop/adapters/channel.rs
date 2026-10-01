@@ -57,16 +57,16 @@ pub fn registered_handlers_for_scheme(channel: Channel, scheme: &str) -> Registe
                     ))
                 })
                 .collect();
-            #[cfg(windows)]
-            let handlers = no_gio_on_windows(scheme);
+            #[cfg(not(target_os = "linux"))]
+            let handlers = no_gio_outside_linux(scheme);
             RegisteredHandlers::Known(handlers)
         }
     }
 }
 
 /// Sin GIO no hay escritorio que preguntar: en Windows responde `registry::windows_classes`.
-#[cfg(windows)]
-fn no_gio_on_windows(_scheme: &str) -> Vec<RegisteredHandler> {
+#[cfg(not(target_os = "linux"))]
+fn no_gio_outside_linux(_scheme: &str) -> Vec<RegisteredHandler> {
     Vec::new()
 }
 

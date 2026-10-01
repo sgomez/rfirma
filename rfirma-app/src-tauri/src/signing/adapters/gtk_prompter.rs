@@ -399,12 +399,43 @@ impl SecretPrompter for PendingWindowsPinDialog {
     }
 }
 
+/// El diálogo nativo del PIN en macOS, que aún no existe: toda petición falla.
+#[cfg(target_os = "macos")]
+#[derive(Clone, Default)]
+pub struct PendingMacosPinDialog;
+
+#[cfg(target_os = "macos")]
+impl PendingMacosPinDialog {
+    /// Crea el adaptador pendiente.
+    pub fn new() -> Self {
+        Self
+    }
+
+    /// No vincula nada: el diálogo de macOS no tiene ventana a la que atarse todavía.
+    pub fn attach(&self, _app: tauri::AppHandle) {}
+}
+
+#[cfg(target_os = "macos")]
+impl SecretPrompter for PendingMacosPinDialog {
+    fn prompt_secret(
+        &self,
+        _request: &SecretPromptRequest,
+    ) -> Result<ProtectedSecret, SecretPromptError> {
+        Err(SecretPromptError::Failed(
+            "la solicitud del PIN aún no está disponible en macOS".to_owned(),
+        ))
+    }
+}
+
 /// El diálogo nativo del PIN de esta plataforma.
 #[cfg(target_os = "linux")]
 pub type NativePinDialog = GtkSecretPrompter;
 /// El diálogo nativo del PIN de esta plataforma.
 #[cfg(windows)]
 pub type NativePinDialog = PendingWindowsPinDialog;
+/// El diálogo nativo del PIN de esta plataforma.
+#[cfg(target_os = "macos")]
+pub type NativePinDialog = PendingMacosPinDialog;
 
 /// Adaptador de pruebas que suministra un secreto fijo preconfigurado.
 pub struct PreconfiguredSecretPrompter {

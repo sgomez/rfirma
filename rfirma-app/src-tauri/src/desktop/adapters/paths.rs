@@ -47,7 +47,8 @@ impl Platform {
     pub fn native_library_directory(self, executable_directory: &Path) -> PathBuf {
         match self {
             Self::Windows => executable_directory.to_path_buf(),
-            Self::Linux | Self::MacOs => executable_directory.join("../lib/rfirma"),
+            Self::Linux => executable_directory.join("../lib/rfirma"),
+            Self::MacOs => executable_directory.join("../Frameworks"),
         }
     }
 }

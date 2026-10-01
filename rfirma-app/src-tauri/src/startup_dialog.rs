@@ -1,4 +1,4 @@
-//! Diálogo nativo que enseña un fallo de arranque (GTK en Linux, `MessageBoxW` en Windows); capa fina, sin pruebas.
+//! Diálogo nativo que enseña un fallo de arranque (GTK en Linux, `MessageBoxW` en Windows, pendiente en macOS); capa fina, sin pruebas.
 
 use crate::startup_failure::StartupFailure;
 use crate::startup_failure::REPOSITORY_ADDRESS;
@@ -49,7 +49,15 @@ pub fn report_and_exit(failure: &StartupFailure) -> ! {
     show_gtk_dialog(failure);
     #[cfg(windows)]
     show_windows_dialog(failure);
+    #[cfg(target_os = "macos")]
+    pending_macos_dialog(failure);
     std::process::exit(1);
+}
+
+/// El diálogo de macOS aún no existe: el detalle y la dirección del repositorio van a `stderr`.
+#[cfg(target_os = "macos")]
+fn pending_macos_dialog(failure: &StartupFailure) {
+    eprintln!("{}", detail_text(failure));
 }
 
 #[cfg(windows)]

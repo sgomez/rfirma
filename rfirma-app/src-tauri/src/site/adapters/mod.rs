@@ -29,6 +29,8 @@ pub mod windows_root;
 
 use std::path::Path;
 
+#[cfg(target_os = "macos")]
+use crate::site::domain::trust_error::{Situation, TrustError};
 use crate::site::ports::TrustStores;
 
 /// El almacén raíz del usuario de Windows, visto como un perfil más de los almacenes de confianza.
@@ -65,6 +67,54 @@ pub fn trust_profiles() -> Vec<std::path::PathBuf> {
 /// Los almacenes de confianza de esta persona.
 #[cfg(windows)]
 pub use windows_root::trust_profiles;
+
+/// Los almacenes de confianza de esta plataforma.
+#[cfg(target_os = "macos")]
+pub fn desktop_trust_stores() -> Box<dyn TrustStores + Send + Sync> {
+    Box::new(PendingMacosKeychainTrust)
+}
+
+/// Ningún almacén de confianza: sin llavero de macOS no hay dónde instalar la CA local.
+#[cfg(target_os = "macos")]
+pub fn trust_profiles() -> Vec<std::path::PathBuf> {
+    Vec::new()
+}
+
+/// La confianza en la CA local sobre el llavero de macOS, que aún no existe: toda escritura falla.
+#[cfg(target_os = "macos")]
+pub struct PendingMacosKeychainTrust;
+
+#[cfg(target_os = "macos")]
+impl TrustStores for PendingMacosKeychainTrust {
+    fn install(
+        &self,
+        _profile: &Path,
+        _certificate_der: &[u8],
+        _nickname: &str,
+    ) -> Result<(), TrustError> {
+        Err(pending_macos_keychain_trust(Situation::TrustNotWritten))
+    }
+
+    fn trust_of(
+        &self,
+        _profile: &Path,
+        _certificate_der: &[u8],
+    ) -> Result<Option<u32>, TrustError> {
+        Ok(None)
+    }
+
+    fn withdraw(&self, _profile: &Path, _certificate_der: &[u8]) -> Result<(), TrustError> {
+        Err(pending_macos_keychain_trust(Situation::TrustNotWithdrawn))
+    }
+}
+
+#[cfg(target_os = "macos")]
+fn pending_macos_keychain_trust(situation: Situation) -> TrustError {
+    TrustError::new(
+        situation,
+        "el llavero de macOS aún no está disponible para la CA local",
+    )
+}
 
 const CONNECT_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(30);
 
@@ -108,6 +158,15 @@ const SCHANNEL_UNTRUSTED_CHAIN: [&str; 4] = [
     "Os { code: -2146869244,", // TRUST_E_CERT_SIGNATURE
 ];
 
+/// Los códigos con que Security.framework rechaza esa misma cadena en macOS (ADR-0040).
+const SECURITY_FRAMEWORK_UNTRUSTED_CHAIN: [&str; 5] = [
+    "Error { code: -25318,", // errSecCreateChainFailed
+    "Error { code: -67843,", // errSecNotTrusted
+    "Error { code: -9807,",  // errSSLXCertChainInvalid
+    "Error { code: -9812,",  // errSSLUnknownRootCert
+    "Error { code: -9813,",  // errSSLNoRootCert
+];
+
 fn is_untrusted_certificate(error: &reqwest::Error) -> bool {
     let mut cause: Option<&dyn std::error::Error> = Some(error);
     while let Some(current) = cause {
@@ -117,6 +176,7 @@ fn is_untrusted_certificate(error: &reqwest::Error) -> bool {
         let debug = format!("{current:?}");
         if SCHANNEL_UNTRUSTED_CHAIN
             .iter()
+            .chain(&SECURITY_FRAMEWORK_UNTRUSTED_CHAIN)
             .any(|code| debug.contains(code))
         {
             return true;

@@ -12,12 +12,15 @@ pub mod startup_failure;
 
 #[cfg(doctest)]
 mod compile_fail;
+mod event_loop;
 
+use std::sync::atomic::Ordering;
 use std::sync::{Arc, Mutex};
 
 use desktop::application::invocation::{Invocation, Role};
 use desktop::DesktopRoot;
 use documents::DocumentsRoot;
+use event_loop::{build_and_run, Serving};
 use identity::IdentityRoot;
 use signing::SigningRoot;
 use site::SiteRoot;
@@ -156,9 +159,11 @@ pub fn run() {
         ))
     });
 
+    // Una sola expansión por crate (ADR-0040).
+    let context = tauri::generate_context!();
     match desktop::application::invocation::role_of(invocation) {
-        Role::Desktop(invocation) => run_desktop(paths, invocation),
-        Role::Site(url) => run_site(paths, url, discarded),
+        Role::Desktop(invocation) => run_desktop(paths, invocation, context),
+        Role::Site(url) => run_site(paths, url, discarded, context),
         Role::Foreign(url) => {
             eprintln!("rfirma: {url} no es una llamada afirma://; no se abre nada")
         }
@@ -276,19 +281,12 @@ fn own_scratch(role: &str) -> site::adapters::scratch::ProcessFolder {
     })
 }
 
-/// Borra la carpeta de paso de este proceso al salir del bucle de eventos; un `Drop` no es
-/// fiable porque Tauri puede salir sin soltarlo.
-fn erase_the_scratch_folder_on_exit(app: &tauri::AppHandle, event: tauri::RunEvent) {
-    use tauri::Manager;
-
-    if let tauri::RunEvent::Exit = event {
-        let folder = app.state::<site::adapters::scratch::ProcessFolder>();
-        let _ = std::fs::remove_dir_all(folder.path());
-    }
-}
-
 /// Rol escritorio: instancia única (ADR-0010) y ventana principal. No construye transporte.
-fn run_desktop(paths: desktop::adapters::paths::Paths, invocation: Invocation) {
+fn run_desktop(
+    paths: desktop::adapters::paths::Paths,
+    invocation: Invocation,
+    context: tauri::Context<tauri::Wry>,
+) {
     let scratch = own_scratch("desktop");
     let mut roots = composed_roots(paths, Some(invocation));
     roots.site.scratch_dir = scratch.path().to_path_buf();
@@ -331,29 +329,33 @@ fn run_desktop(paths: desktop::adapters::paths::Paths, invocation: Invocation) {
 
     let dialogs = roots.dialogs.clone();
     let prompter = roots.prompter.clone();
-    let context = tauri::generate_context!();
+    let serving = Arc::new(Serving::default());
     let builder = desktop::adapters::installer::with_the_updater(builder, context.config());
-    with_the_five_roots(builder, roots)
-        .manage(scratch)
-        .setup(move |app| {
+    let builder = with_the_five_roots(builder, roots).manage(scratch).setup({
+        let serving = Arc::clone(&serving);
+        move |app| {
+            if serving.only_for_links.load(Ordering::SeqCst) {
+                app.handle().exit(0);
+                return Ok(());
+            }
             dialogs.attach(app.handle().clone());
             prompter.attach(app.handle().clone());
             open_the_main_window(app.handle());
+            serving.window_is_up.store(true, Ordering::SeqCst);
             Ok(())
-        })
-        .build(context)
-        .unwrap_or_else(|error| {
-            startup_dialog::report_and_exit(&startup_failure::StartupFailure::new(
-                startup_failure::Situation::WindowUnavailable,
-                error.to_string(),
-            ))
-        })
-        .run(erase_the_scratch_folder_on_exit);
+        }
+    });
+    build_and_run(builder, context, &serving);
 }
 
 /// Rol sede: sin instancia única. Atiende el trámite y sostiene el único transporte del
 /// proceso; `Opening::TheMainWindow` no puede darse con una URL de sede.
-fn run_site(paths: desktop::adapters::paths::Paths, url: String, said_by_the_role: Vec<String>) {
+fn run_site(
+    paths: desktop::adapters::paths::Paths,
+    url: String,
+    said_by_the_role: Vec<String>,
+    context: tauri::Context<tauri::Wry>,
+) {
     use tauri::Manager;
 
     let scratch = own_scratch("site");
@@ -361,11 +363,10 @@ fn run_site(paths: desktop::adapters::paths::Paths, url: String, said_by_the_rol
     roots.site.scratch_dir = scratch.path().to_path_buf();
     let dialogs = roots.dialogs.clone();
     let prompter = roots.prompter.clone();
-    let context = tauri::generate_context!();
     let builder =
         desktop::adapters::installer::with_the_updater(tauri::Builder::default(), context.config());
 
-    with_the_five_roots(builder, roots)
+    let builder = with_the_five_roots(builder, roots)
         .manage(scratch)
         .setup(move |app| {
             dialogs.attach(app.handle().clone());
@@ -388,15 +389,8 @@ fn run_site(paths: desktop::adapters::paths::Paths, url: String, said_by_the_rol
             );
 
             Ok(())
-        })
-        .build(context)
-        .unwrap_or_else(|error| {
-            startup_dialog::report_and_exit(&startup_failure::StartupFailure::new(
-                startup_failure::Situation::WindowUnavailable,
-                error.to_string(),
-            ))
-        })
-        .run(erase_the_scratch_folder_on_exit);
+        });
+    build_and_run(builder, context, &Arc::new(Serving::from_the_start()));
 }
 
 /// Atiende la invocación de sede y sostiene su canal.

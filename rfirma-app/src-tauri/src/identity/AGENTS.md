@@ -38,6 +38,7 @@ habla con el token; en Windows, también `adapters/windows_store/`. Rutas relati
 | `ports.rs` | `Token`, `InstalledFolder`, `CertificateMemory` (que sirve `signing/adapters/memory.rs`) y `Keyring`, el PIN del Almacén de rFirma (ADR-0034); y `SecretPrompter`, el diálogo interactivo del secreto, con su reintento genérico `prompted_until_accepted`. Pruebas en `ports/tests.rs`. |
 | `adapters/folder.rs` | `RealInstalledFolder`: la carpeta del Almacén de rFirma y el directorio desechable donde se prueba un `.p12` (ADR-0034). |
 | `adapters/keyring.rs` | `RealKeyring`: el adaptador de `Keyring` sobre `oo7`, el portal de secretos o Secret Service (ADR-0034); solo en Linux. Pruebas en `adapters/keyring/tests.rs`. |
+| `adapters/pending_macos_keychain.rs` | `PendingMacosKeychain`: el `Keyring` pendiente de macOS, que falla como un Linux sin Secret Service (ADR-0040). |
 | `adapters/windows_credential_manager.rs` | `WindowsCredentialManager`: el `Keyring` de Windows, una credencial genérica del Administrador de credenciales (ADR-0035). Pruebas en `adapters/windows_credential_manager/tests.rs`. |
 | `adapters/windows_store.rs` | `WindowsToken`, el adaptador de `Token` en Windows: el almacén del usuario por CNG y los módulos PKCS#11 por `RealToken`, y dónde se buscan esos módulos (ADR-0035). Pruebas en `adapters/windows_store/tests.rs`. |
 | `adapters/windows_store/cng.rs` | `CurrentUser\MY` leído con CryptoAPI y el resumen firmado con `NCryptSignHash`; Windows pide el PIN, modal sobre la ventana de rFirma. |

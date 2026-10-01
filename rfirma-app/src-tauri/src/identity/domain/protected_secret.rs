@@ -35,6 +35,7 @@ impl ProtectedSecret {
                 let cap = bytes.capacity();
                 if libc::mlock(ptr, cap) == 0 {
                     locked = true;
+                    #[cfg(target_os = "linux")]
                     libc::madvise(ptr, cap, libc::MADV_DONTDUMP);
                 }
             }

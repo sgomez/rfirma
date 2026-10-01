@@ -184,6 +184,31 @@ pub fn role_of(invocation: Invocation) -> Role {
     }
 }
 
+/// Lo que hace un proceso con las URL que el sistema le entrega fuera de su línea de órdenes.
+#[derive(Debug, PartialEq, Eq)]
+pub struct DeliveredUrls {
+    /// Las URL `afirma://`, cada una para un proceso de sede propio.
+    pub site_launches: Vec<String>,
+    /// Si este proceso sigue: no, cuando solo arrancó para entregarlas.
+    pub this_process_goes_on: bool,
+}
+
+/// Reparte en procesos de sede las URL entregadas, igual que si llegaran por la línea de
+/// órdenes (ADR-0024).
+pub fn delivered_urls<I>(urls: I, already_serving: bool) -> DeliveredUrls
+where
+    I: IntoIterator<Item = String>,
+{
+    let site_launches: Vec<String> = urls
+        .into_iter()
+        .filter(|url| AfirmaUrl::is_a_protocol_url(url))
+        .collect();
+    DeliveredUrls {
+        this_process_goes_on: already_serving || site_launches.is_empty(),
+        site_launches,
+    }
+}
+
 impl Role {
     /// La línea que narra el documento descartado cuando la invocación traía uno junto a la
     /// URL de sede.

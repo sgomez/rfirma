@@ -4,6 +4,8 @@ pub mod failures;
 pub mod folder;
 #[cfg(target_os = "linux")]
 pub mod keyring;
+#[cfg(target_os = "macos")]
+pub mod pending_macos_keychain;
 pub mod pkcs11;
 pub mod tauri;
 pub mod views;
@@ -16,18 +18,21 @@ pub mod windows_store;
 #[cfg(target_os = "linux")]
 pub use keyring::RealKeyring as DesktopKeyring;
 /// El llavero del escritorio de esta plataforma.
+#[cfg(target_os = "macos")]
+pub use pending_macos_keychain::PendingMacosKeychain as DesktopKeyring;
+/// El llavero del escritorio de esta plataforma.
 #[cfg(windows)]
 pub use windows_credential_manager::WindowsCredentialManager as DesktopKeyring;
 
 /// El token de esta plataforma.
-#[cfg(target_os = "linux")]
+#[cfg(unix)]
 pub use pkcs11::RealToken as DesktopToken;
 /// El token de esta plataforma.
 #[cfg(windows)]
 pub use windows_store::WindowsToken as DesktopToken;
 
 /// Los almacenes de certificados de esta plataforma.
-#[cfg(target_os = "linux")]
+#[cfg(unix)]
 pub use pkcs11::stores::from_environment as desktop_stores;
 /// Los almacenes de certificados de esta plataforma.
 #[cfg(windows)]

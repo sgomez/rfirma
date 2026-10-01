@@ -29,13 +29,14 @@ adaptadores, su estado de proceso, sus puertos y la fachada que usan los vecinos
 |---|---|
 | `lib.rs` | El armado de la aplicación: decide el rol de proceso, escritorio o sede (ADR-0024), y monta una de las dos raíces; la instancia única (ADR-0010) solo se registra en la de escritorio. Sin pruebas propias. |
 | `main.rs` | El binario. No hay nada dentro. |
+| `event_loop.rs` | El bucle de eventos de Tauri de los dos roles: construye la aplicación, entrega los `afirma://` que llegan por `RunEvent::Opened` y borra la carpeta de paso al salir. No compone raíces. Sin pruebas propias. |
 | `crossing.rs` | El rasgo `WindowCrossing` y el macro `crossing!`, con los que se declara todo lo que cruza a la ventana. Pruebas en `crossing/tests.rs`. |
 | `crossing/failure.rs` | `Failure`, lo que cruza cuando algo salió mal (ADR-0009); cada contexto traduce lo suyo en su `adapters/failures.rs`. Pruebas en `crossing/failure/tests.rs`. |
 | `crossing/guards.rs` | Las guardas que ven todas las órdenes a la vez, entre ellas la de rutas del ADR-0011. Solo en pruebas. |
 | `crossing/guards/tests.rs` | Las pruebas de esas guardas, separadas de la infraestructura de lectura de fuentes. |
 | `memory_error.rs` | `MemoryError` y su `Situation` (ADR-0009): la memoria entre sesiones es una sola (ADR-0010) y no es de ningún contexto. Pruebas en `memory_error/tests.rs`. |
 | `startup_failure.rs` | `StartupFailure` y su `Situation`: los fallos de arranque de los dos roles, antes de que exista ventana; no es de ningún contexto. Pruebas en `startup_failure/tests.rs`. |
-| `startup_dialog.rs` | El diálogo nativo que enseña un `StartupFailure` y sale del proceso: GTK en Linux, `MessageBoxW` en Windows (ADR-0035). Capa fina, sin pruebas propias. |
+| `startup_dialog.rs` | El diálogo nativo que enseña un `StartupFailure` y sale del proceso: GTK en Linux, `MessageBoxW` en Windows, pendiente en macOS (ADR-0035, ADR-0040). Capa fina, sin pruebas propias. |
 | `compile_fail.rs` | Lo que no debe compilar: un doctest `compile_fail` por invariante que sostiene el sistema de tipos, y uno positivo por la misma ruta. |
 
 `tests/agents_map_is_complete.rs` exige que todo `.rs` versionado bajo `src/`
@@ -71,11 +72,12 @@ dos cosas.
 
 `adapters/ffi/location.rs` de `signing/` la busca por una ruta relativa al ejecutable,
 `../lib/rfirma`, y es la misma en los tres canales de Linux (ADR-0004); el
-instalador de Windows la deja junto al ejecutable, y esa diferencia vive en
+instalador de Windows la deja junto al ejecutable, el `.app` de macOS en
+`Contents/Frameworks`, y esa diferencia vive en
 `Platform::native_library_directory` de `paths.rs` (ADR-0035): **no añadas
 rutas en `ffi/location.rs`.** El nombre del fichero lo pone la plataforma con `DLL_PREFIX` y
 `DLL_SUFFIX` de `std` (`library_file`): `librfirma_crypto.so` en Linux,
-`rfirma_crypto.dll` en Windows, sin ningún `cfg` (ADR-0035). `RFIRMA_LIB_DIR` la sobreescribe, y eso es lo que ahorra
+`rfirma_crypto.dll` en Windows, `librfirma_crypto.dylib` en macOS, sin ningún `cfg` (ADR-0035, ADR-0040). `RFIRMA_LIB_DIR` la sobreescribe, y eso es lo que ahorra
 reconstruir la imagen desde un worktree: para la grada C,
 `RFIRMA_LIB_DIR=<checkout principal>/rfirma-native-bridge/target/lib/rfirma`
 reutiliza el `.so` ya compilado allí, unos tres minutos menos que `just native`.
