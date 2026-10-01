@@ -4,7 +4,7 @@ set -euo pipefail
 
 platform="${PLATFORM:?}"
 ruff_version="${RUFF_VERSION:?}"
-default_graalvm="${DEFAULT_GRAALVM:?}"
+default_graalvm="${DEFAULT_GRAALVM?}"
 system_libs="${SYSTEM_LIBS:?}"
 
 check_pinned() {
@@ -21,15 +21,18 @@ check_pinned() {
 declare -A required=(
     [linux]="msgfmt:gettext msgmerge:gettext msgcmp:gettext msgattrib:gettext softhsm2-util:softhsm2 pkcs11-tool:opensc openssl:openssl certutil:libnss3-tools pk12util:libnss3-tools pkg-config:pkg-config"
     [windows]=""
+    [macos]=""
 )
 declare -A probes=(
     [linux]="probe_system_libs"
     [windows]="probe_msvc probe_webview2 probe_native_perl"
+    [macos]="probe_xcode"
 )
 # `orden:receta` que la usa.
 declare -A optional=(
     [linux]="flatpak-builder:flatpak"
     [windows]="msgfmt:po msgmerge:po msgcmp:po msgattrib:po"
+    [macos]="msgfmt:po msgmerge:po msgcmp:po msgattrib:po"
 )
 
 probe_system_libs() {
@@ -70,6 +73,13 @@ probe_webview2() {
     done
     echo "falta: el runtime de WebView2"
     echo "  Instalalo desde https://developer.microsoft.com/microsoft-edge/webview2/"
+    failures=1
+}
+
+probe_xcode() {
+    xcode-select -p >/dev/null 2>&1 && return 0
+    echo "falta: Xcode Command Line Tools"
+    echo "  Instalalas con: xcode-select --install"
     failures=1
 }
 
@@ -140,7 +150,7 @@ done
 graal="${GRAALVM_HOME:-$default_graalvm}"
 if command -v cygpath >/dev/null; then graal="$(cygpath -u "$graal")"; fi
 if [ ! -x "$graal/bin/native-image" ] && [ ! -f "$graal/bin/native-image.cmd" ]; then
-    echo "aviso: falta native-image en $graal"
+    echo "aviso: falta native-image en ${graal:-(ni GRAALVM_HOME ni JAVA_HOME)}"
     echo "  (solo hace falta para 'just native'; instala GraalVM CE 25)"
 fi
 cargo llvm-cov --version >/dev/null 2>&1 ||
