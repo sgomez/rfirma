@@ -30,7 +30,7 @@ interface TitlebarLabels {
 export interface TitlebarRecent {
   path: string;
   name: string;
-  folder: string;
+  location: string | null;
   signed: boolean;
   found: boolean;
 }

@@ -197,6 +197,7 @@ function rowOf(view: RecentDocumentView): RecentDocument {
     id: view.id,
     name: view.name,
     folder: view.folder,
+    location: view.location,
     badge: view.badge,
     modified: view.modified,
     lastUsed: view.lastUsed,
