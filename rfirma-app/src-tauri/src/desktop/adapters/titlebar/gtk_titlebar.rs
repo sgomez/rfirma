@@ -6,7 +6,7 @@ use gtk::prelude::*;
 use tauri::Emitter;
 
 use super::super::views::{TitlebarActionView, TitlebarRecentView};
-use super::{announcement, second_line, Pacing, TitlebarStateView, TITLEBAR_ACTION};
+use super::{announcement, second_line, tooltip, Pacing, TitlebarStateView, TITLEBAR_ACTION};
 use crate::documents::domain::recents::CAPACITY as RECENTS_CAPACITY;
 
 const ACTIONS: [(&str, TitlebarActionView); 6] = [
@@ -232,8 +232,20 @@ fn recent_row(list: &gtk::ListBox) -> RecentRow {
     lines.pack_start(&second, false, false, 0);
     let row = gtk::ListBoxRow::new();
     row.add(&lines);
+    let_the_pointer_through_the_tooltip(&row);
     list.add(&row);
     RecentRow { row, name, second }
+}
+
+fn let_the_pointer_through_the_tooltip(row: &gtk::ListBoxRow) {
+    row.connect_query_tooltip(|_, _, _, _, _| {
+        for window in gtk::Window::list_toplevels() {
+            if window.type_().name() == "GtkTooltipWindow" {
+                window.input_shape_combine_region(Some(&gtk::cairo::Region::create()));
+            }
+        }
+        false
+    });
 }
 
 fn trimmed_label(ellipsis: gtk::pango::EllipsizeMode, class: &str) -> gtk::Label {
@@ -381,7 +393,10 @@ fn render_recents(recents: &Recents, state: &TitlebarStateView) {
 fn fill_row(row: &RecentRow, recent: &TitlebarRecentView, not_found: &str) {
     row.name.set_markup(&name_markup(recent));
     row.second.set_text(second_line(recent, not_found));
-    name(&row.row, &announcement(recent, not_found));
+    announce(&row.row, &announcement(recent, not_found));
+    let home = gtk::glib::home_dir();
+    row.row
+        .set_tooltip_text(tooltip(recent, Some(&home)).as_deref());
     row.row.set_sensitive(recent.found);
     row.row.set_visible(true);
 }
@@ -424,6 +439,10 @@ fn menu_model(state: &TitlebarStateView) -> gio::Menu {
 
 fn name(widget: &impl IsA<gtk::Widget>, label: &str) {
     widget.set_tooltip_text(Some(label));
+    announce(widget, label);
+}
+
+fn announce(widget: &impl IsA<gtk::Widget>, label: &str) {
     if let Some(accessible) = widget.accessible() {
         gtk::atk::prelude::AtkObjectExt::set_name(&accessible, label);
     }
