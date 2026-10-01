@@ -72,7 +72,10 @@ else
                 echo "para mirar dentro de un instalador NSIS o de un .dmg hace falta 7z (p7zip-full)" >&2
                 exit 1
             fi
-            7z x -y -o"$LAB/contenido" "$PAQUETE" >/dev/null
+            # El enlace a /Applications del .dmg es absoluto, y 7z lo rechaza con error.
+            excluye=()
+            case "$PAQUETE" in *.dmg) excluye=('-x!*/Applications') ;; esac
+            7z x -y -o"$LAB/contenido" "$PAQUETE" "${excluye[@]}" >/dev/null
             ;;
         *)
             echo "formato desconocido: $PAQUETE (se esperaba .flatpak, .deb, .rpm, .exe, .dmg o un directorio files/)" >&2
