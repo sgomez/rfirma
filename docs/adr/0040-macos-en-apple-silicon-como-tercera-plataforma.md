@@ -57,6 +57,10 @@ runtime* va apagado porque activa la validación de bibliotecas, que rechazaría
 firmada ad hoc sin identificador de equipo. Sin notarizar, Gatekeeper avisa al abrirlo la primera
 vez y hay que elegir «Abrir igualmente».
 
+El mínimo es macOS 15.4 (`minimumSystemVersion`): pdf.js usa el global `Iterator`, que el WebKit
+del sistema no trae hasta esa versión, y sin él la ventana se queda en negro. No deja fuera ningún
+equipo, porque todo Mac con Apple Silicon puede actualizar a ella.
+
 El `.dmg` pasa por la misma puerta del contenido que los demás paquetes
 (`packaging/verifica-contenido.sh`): una sola `librfirma_crypto.dylib` y ningún auxiliar de AWT.
 

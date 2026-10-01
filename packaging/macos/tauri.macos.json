@@ -6,7 +6,7 @@
     "macOS": {
       "frameworks": ["../../rfirma-native-bridge/target/lib/rfirma/librfirma_crypto.dylib"],
       "infoPlist": "../../packaging/macos/Info.plist",
-      "minimumSystemVersion": "11.0",
+      "minimumSystemVersion": "15.4",
       "signingIdentity": "-",
       "hardenedRuntime": false
     }
