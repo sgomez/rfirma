@@ -118,7 +118,7 @@ pub fn second_line<'a>(
     }
 }
 
-/// Lo que la fila de un reciente anuncia al lector de pantalla y enseña en su tooltip.
+/// Lo que la fila de un reciente anuncia al lector de pantalla.
 #[cfg(any(target_os = "linux", test))]
 pub fn announcement(recent: &super::views::TitlebarRecentView, not_found: &str) -> String {
     let signed = if recent.signed { " \u{2713}" } else { "" };
@@ -126,6 +126,20 @@ pub fn announcement(recent: &super::views::TitlebarRecentView, not_found: &str) 
         "" => format!("{}{signed}", recent.name),
         line => format!("{}{signed}, {line}", recent.name),
     }
+}
+
+/// La ruta absoluta del documento de un reciente, con `~/` desplegado; nada si no tiene ubicación.
+#[cfg(any(target_os = "linux", test))]
+pub fn tooltip(
+    recent: &super::views::TitlebarRecentView,
+    home: Option<&std::path::Path>,
+) -> Option<String> {
+    let location = recent.location.as_deref()?;
+    let folder = match (location.strip_prefix("~/"), home) {
+        (Some(inside), Some(home)) => format!("{}/{inside}", home.display()),
+        _ => location.to_owned(),
+    };
+    Some(format!("{}/{}", folder.trim_end_matches('/'), recent.name))
 }
 
 #[cfg(target_os = "linux")]

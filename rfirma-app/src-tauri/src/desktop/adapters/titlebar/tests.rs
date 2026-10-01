@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use super::super::views::TitlebarRecentView;
 use super::*;
 
@@ -97,5 +99,32 @@ fn a_row_announces_its_name_whether_it_is_signed_and_its_second_line() {
     assert_eq!(
         announcement(&missing, "No se encuentra"),
         "informe.pdf, No se encuentra"
+    );
+}
+
+#[test]
+fn the_tooltip_of_a_recent_is_its_absolute_path_with_home_expanded() {
+    let inside = recent(false, true, Some("~/Documentos/2026"));
+    assert_eq!(
+        tooltip(&inside, Some(Path::new("/home/ana"))).as_deref(),
+        Some("/home/ana/Documentos/2026/informe.pdf")
+    );
+    let at_home = recent(false, false, Some("~/"));
+    assert_eq!(
+        tooltip(&at_home, Some(Path::new("/home/ana"))).as_deref(),
+        Some("/home/ana/informe.pdf")
+    );
+    let outside = recent(false, true, Some("/srv/actas"));
+    assert_eq!(
+        tooltip(&outside, Some(Path::new("/home/ana"))).as_deref(),
+        Some("/srv/actas/informe.pdf")
+    );
+}
+
+#[test]
+fn a_recent_without_location_has_no_tooltip() {
+    assert_eq!(
+        tooltip(&recent(false, true, None), Some(Path::new("/home/ana"))),
+        None
     );
 }
