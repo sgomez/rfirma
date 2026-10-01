@@ -37,7 +37,7 @@ impl RubricStore {
 
         let mut bytes = Vec::new();
         File::open(source)
-            .map_err(&unreadable)?
+            .map_err(unreadable)?
             .take(MAX_INPUT_BYTES as u64 + 1)
             .read_to_end(&mut bytes)
             .map_err(unreadable)?;

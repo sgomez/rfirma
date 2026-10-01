@@ -484,7 +484,9 @@ palabra, sobraba la declaración entera, y se borraron.
 
 Una herramienta que decide un veredicto va a versión fijada: `cargo-crap` y `cargo-machete` por
 su único mantenedor, `ruff` porque sin `ruff.toml` sus reglas por defecto son las de la versión
-instalada, `diff-cover` y `cargo-nextest` por la misma razón. Junto a ellas se fijan `just`, la
+instalada, `diff-cover` y `cargo-nextest` por la misma razón. **Rust** también: con `stable`, cada
+versión nueva traía lints de clippy que ponían en rojo todas las PR e invalidaba de golpe la
+caché de compilación, sin que nadie hubiera tocado el repositorio. Junto a ellas se fijan `just`, la
 GraalVM CE (ADR-0035), la etiqueta de AutoFirma de la que salen las dependencias Java (ADR-0002)
 y el sha256 del `autoscript.js` del banco de conformidad.
 
