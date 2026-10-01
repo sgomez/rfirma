@@ -115,6 +115,12 @@ dir="$(tree secret-in-preview-job)"
 sed -i -E '0,/^    steps:$/s||    env:\n      X: ${{ secrets.X }}\n    steps:|' "$dir/.github/workflows/preview.yml"
 fails_naming "secreto en un job de Preview que no es build" "$dir" ".github/workflows/preview.yml:"
 
+breaks missing-local-action "accion local que no existe" .github/workflows/ci.yml \
+    '0,/uses: \.\/\.github\/actions\/setup-runner/s//uses: .\/.github\/actions\/setup-just/'
+
+breaks just-without-setup-runner "llaman a just sin preparar el runner" .github/workflows/release.yml \
+    's|packaging/verify-packages.sh paquetes|just verify-packages paquetes|'
+
 breaks publish-without-build-tree "tiene que bajar la serie" .github/workflows/publish.yml \
     '/packaging\/repo\/build-tree.sh/d'
 
