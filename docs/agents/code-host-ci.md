@@ -179,7 +179,7 @@ gap between a cold run and that warm number.
 
 **Only `main` writes Rust caches** (`save-if`, only inside `setup-runner`, which
 `check-workflows.sh` guards): a PR restores `main`'s and saves none, and `Limpieza de caches` deletes what a
-closed PR left, so the 10 GB quota does not evict `main`'s Windows cache.
+closed PR left and, after each `CI` run on `main`, every Rust cache of `main` but the newest of its profile, so the 10 GB quota does not evict `main`'s Windows cache.
 
 The `native` lane runs `just test-native` (tier C and the FFI CRAP gate in one instrumented pass)
 on **every push to `main` and every PR its files can affect**. The native library `librfirma_crypto.so` is

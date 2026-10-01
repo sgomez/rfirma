@@ -1,5 +1,5 @@
-# Borra las caches que deja una PR al cerrarse; solo `main` guarda las de Rust,
-# y esto recoge las demas antes de que desplacen a las de `main`.
+# Borra las caches que deja una PR al cerrarse y las de Rust que `main` ya no lee,
+# antes de que desplacen a las vigentes.
 
 name: Limpieza de caches
 
@@ -8,12 +8,17 @@ on:
   # forks; no se hace checkout de nada, asi que no se ejecuta codigo de la PR.
   pull_request_target:
     types: [closed]
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
 
 permissions: {}
 
 jobs:
   cleanup:
     name: Borra las caches de la PR
+    if: github.event_name == 'pull_request_target'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -26,4 +31,22 @@ jobs:
           REF: refs/pull/${{ github.event.pull_request.number }}/merge
         run: |
           gh cache list --ref "$REF" --limit 100 --json id --jq '.[].id' \
+            | while read -r id; do gh cache delete "$id"; done
+
+  stale-rust:
+    name: Borra las caches de Rust superadas
+    if: github.event_name == 'workflow_run'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: write
+    steps:
+      # La clave acaba en el hash del compilador y el de Cargo.lock: lo anterior es el perfil.
+      - name: Deja en refs/heads/main la mas reciente de cada perfil
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh cache list --ref refs/heads/main --key v0-rust- --limit 100 --json id,key,createdAt \
+            --jq 'group_by(.key | sub("-[^-]+-[^-]+$"; "")) | .[] | sort_by(.createdAt) | .[:-1][] | .id' \
             | while read -r id; do gh cache delete "$id"; done

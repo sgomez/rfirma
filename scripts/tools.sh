@@ -122,6 +122,11 @@ if ! command -v ruff >/dev/null; then
     echo "  Instalalo con: just install-tools ruff"
     failures=1
 fi
+rust_found="$(rustc --version 2>/dev/null | grep -oE '[0-9]+(\.[0-9]+)+' | head -n1 || true)"
+if [ -n "$rust_found" ] && [ "$rust_found" != "${RUST_VERSION:?}" ]; then
+    echo "version distinta: rustc $rust_found, la fijada es $RUST_VERSION (rustup default $RUST_VERSION)"
+    failures=1
+fi
 check_pinned ruff "$ruff_version" ruff --version
 check_pinned just "${JUST_VERSION:?}" just --version
 check_pinned diff-cover "${DIFF_COVER_VERSION:?}" diff-cover --version
