@@ -184,7 +184,7 @@ describe("MainWindow", () => {
       />,
     );
 
-    expect(screen.getByRole("banner")).toHaveTextContent(/^rFirma$/);
+    expect(screen.getByRole("banner")).not.toHaveTextContent("rFirma");
     expect(screen.getByRole("button", { name: "Menú" })).toBeInTheDocument();
     expect(screen.getByTestId("body-view")).toBeInTheDocument();
     expect(

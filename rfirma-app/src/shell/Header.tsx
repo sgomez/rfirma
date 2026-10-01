@@ -13,7 +13,7 @@ interface HeaderProps {
    * «El aviso»).
    */
   hasAttention?: boolean;
-  /** Lo que se pinta entre la identidad y el menú, o nada en las vistas sin documentos. */
+  /** Lo que se pinta antes del menú, o nada en las vistas sin documentos. */
   documents?: ReactNode;
   onOpenStatus: () => void;
   onOpenPreferences: () => void;
@@ -22,8 +22,8 @@ interface HeaderProps {
 }
 
 /**
- * La barra única de la ventana: identidad, el hueco de los documentos y el
- * **único** menú de la aplicación. Sin certificado ni insignia de documento: el certificado lo
+ * La barra única de la ventana: el hueco de los documentos y el **único**
+ * menú de la aplicación. Sin certificado ni insignia de documento: el certificado lo
  * dice el selector del panel y el estado, la pestaña
  * (docs/design/cabecera.md).
  *
@@ -91,7 +91,6 @@ export function Header({
 
   return (
     <header className={open ? "header header--menuOpen" : "header"}>
-      <p className="header__name">{t("app.name")}</p>
       {documents}
       <span className="header__gap" />
       <div className="header__end">

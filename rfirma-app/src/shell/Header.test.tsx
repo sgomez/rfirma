@@ -353,7 +353,7 @@ describe("Header", () => {
     expect(button).toHaveClass("header__button--open");
   });
 
-  it("paints the documents it is given between the name and the menu button", () => {
+  it("paints the documents it is given before the menu button, with no app name", () => {
     renderWithCatalog(
       <Header
         menuAnchor="header"
@@ -364,16 +364,15 @@ describe("Header", () => {
         onOpenAbout={noop}
       />,
     );
-    const name = screen.getByText("rFirma");
     const documents = screen.getByRole("navigation", { name: "Documentos abiertos" });
     const menu = screen.getByRole("button", { name: "Menú" });
 
     expect(screen.getByRole("banner")).toContainElement(documents);
-    expect(name.compareDocumentPosition(documents)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(screen.queryByText("rFirma")).not.toBeInTheDocument();
     expect(documents.compareDocumentPosition(menu)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
   });
 
-  it("carries only the name and the menu button when given no documents", () => {
+  it("carries only the menu button when given no documents", () => {
     renderWithCatalog(
       <Header
         menuAnchor="header"
@@ -384,7 +383,7 @@ describe("Header", () => {
       />,
     );
 
-    expect(screen.getByRole("banner")).toHaveTextContent(/^rFirma$/);
+    expect(screen.getByRole("banner")).not.toHaveTextContent("rFirma");
     expect(screen.queryByRole("navigation")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Menú" })).toBeInTheDocument();
   });

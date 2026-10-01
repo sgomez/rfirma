@@ -16,17 +16,6 @@
   z-index: 11;
 }
 
-.header__name {
-  display: flex;
-  flex: none;
-  align-items: center;
-  margin: 0;
-  padding: 0 12px 0 8px;
-  font-size: 15px;
-  font-weight: 700;
-  letter-spacing: 0.4px;
-}
-
 .header__gap {
   flex: none;
   width: 24px;
