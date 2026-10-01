@@ -11,7 +11,7 @@ describe("menuAnchorFor", () => {
     expect(menuAnchorFor("Mozilla/5.0 (Windows NT 10.0; Win64; x64)")).toBe("header");
   });
 
-  it("hands the two entries to the native menu on macos", () => {
-    expect(menuAnchorFor("Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0)")).toBe("native");
+  it("anchors the two entries in the header on macos", () => {
+    expect(menuAnchorFor("Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0)")).toBe("header");
   });
 });

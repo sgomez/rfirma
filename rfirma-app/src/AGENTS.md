@@ -68,7 +68,7 @@ rojo.
 | `shell/MainWindow.tsx` | El marco, con el hueco de la franja entre la cabecera y las regiones. |
 | `shell/NotificationStrip.tsx` | La franja de notificación: el patrón, no el aviso concreto. |
 | `shell/Header.tsx` | La cabecera única, sin barra de menús. |
-| `shell/menuAnchor.ts` | Dónde se ancla el menú de la aplicación, por plataforma: cabecera, menú de macOS o barra de título GTK. |
+| `shell/menuAnchor.ts` | Dónde se ancla el menú de la aplicación, por plataforma: cabecera o barra de título GTK. |
 | `shell/nativeTitlebar.ts` | El puerto de la barra de título nativa de Linux, con su doble en memoria. Sin React. |
 | **`documents/`** | Los documentos abiertos y los recientes. |
 | `documents/document.ts` | El vocabulario del documento: el que se tiene delante y su insignia. No es la fila. |

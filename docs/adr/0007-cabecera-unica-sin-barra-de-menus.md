@@ -42,7 +42,7 @@ es región de arrastre: es contenido, no barra de título.
 **El aviso es un botón aparte**, a la izquierda del ☰, y no una marca en el
 menú, porque los menús nativos no admiten marcas.
 
-La interfaz decide el modo por plataforma, como ya distingue macOS, y conduce la
+La interfaz decide el modo por plataforma —Linux, o Windows y macOS—, y conduce la
 barra por un puerto: le manda si se ve abrir, si hay aviso y las etiquetas ya
 traducidas, y recibe las acciones, que hacen lo mismo que los botones HTML. La
 medición que lo sostiene es la nota de research «Abrir y el menú en la barra de

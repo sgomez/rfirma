@@ -22,8 +22,7 @@ Una fila de 44 px sobre `--rf-bg`, de izquierda a derecha:
    caben.
 3. Un hueco flexible.
 4. **El botón de aviso**, solo si hay algo que atender.
-5. **El botón de menú**, al extremo derecho. Solo en Windows: en macOS el menú
-   es el de la barra del sistema, y el botón de aviso queda en el extremo.
+5. **El botón de menú**, al extremo derecho.
 
 ### En Linux
 
@@ -122,8 +121,7 @@ Cuatro entradas en dos grupos:
 - Acerca de rFirma
 
 En Linux es el menú GTK estándar, con las dos secciones y sin icono de enlace
-externo, y **F10** lo abre. En macOS estas entradas viven en el menú de la
-aplicación de la barra del sistema.
+externo, y **F10** lo abre.
 
 Arriba lo de **esta instalación**; abajo el grupo de siempre de la GNOME HIG, en
 su orden. No hay barra de menús
@@ -136,8 +134,7 @@ guardar (el pie del panel), paginación y zoom (la píldora del
 ### El aviso
 
 Cuando hay algo que **rFirma puede y debe arreglar**, aparece un **botón de
-aviso** propio a la izquierda del ☰ —en macOS, en el extremo derecho de la
-barra—. Lo encienden dos cosas y solo dos:
+aviso** propio a la izquierda del ☰. Lo encienden dos cosas y solo dos:
 
 - **El certificado de rFirma ausente o a medias** en los navegadores.
 - **`Sin configurar`** en `Firma en sedes`.
@@ -176,12 +173,11 @@ En el artboard `Main`, y la palanca «Escritorio» en todos los que estampan
   documentos** («sin pestañas · Preferencias»), las dos variantes.
 - Palancas «Menú de la cabecera»:
   - **Cerrado** (por defecto), en cualquier estado de la ventana.
-  - **Abierto**: en Windows el botón se rellena con `--rf-primary` /
+  - **Abierto**: en Windows y macOS el botón se rellena con `--rf-primary` /
     `--rf-on-primary` y el menú flota anclado a la derecha, sobre el contenido;
-    en Linux, el menú GTK bajo el ☰; en macOS, el menú de la aplicación en la
-    barra del sistema.
+    en Linux, el menú GTK bajo el ☰.
   - **Aviso**: con algo que revisar, el botón de aviso; con todo en orden, nada.
-  - **Foco** (Windows): sin foco, en la primera entrada, o en «Comentarios y
+  - **Foco** (Windows y macOS): sin foco, en la primera entrada, o en «Comentarios y
     ayuda».
 - «Abiertos recientemente: desplegados» enseña en Linux el popover de los
   recientes.
@@ -199,8 +195,8 @@ de 44 px.
 
 ## Decisiones
 
-- **Sin barra de menús clásica.** GNOME la abandonó, Windows 11 no la usa y en
-  macOS Tauri registra un menú nativo en la barra del sistema
+- **Sin barra de menús clásica.** GNOME la abandonó y Windows 11 no la usa; en
+  macOS el menú es el mismo ☰ de la cabecera que en Windows
   ([ADR-0007](../adr/0007-cabecera-unica-sin-barra-de-menus.md)).
 - **Una sola barra, no cabecera y tira** (27/09/2026). Se descartó la cabecera
   de 52 px sobre `--rf-surface` con la tira de pestañas de 40 px debajo: eran
