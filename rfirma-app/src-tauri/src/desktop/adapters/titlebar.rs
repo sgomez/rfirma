@@ -136,10 +136,10 @@ pub fn tooltip(
 ) -> Option<String> {
     let location = recent.location.as_deref()?;
     let folder = match (location.strip_prefix("~/"), home) {
-        (Some(inside), Some(home)) => home.join(inside),
-        _ => std::path::PathBuf::from(location),
+        (Some(inside), Some(home)) => format!("{}/{inside}", home.display()),
+        _ => location.to_owned(),
     };
-    Some(folder.join(&recent.name).display().to_string())
+    Some(format!("{}/{}", folder.trim_end_matches('/'), recent.name))
 }
 
 #[cfg(target_os = "linux")]
