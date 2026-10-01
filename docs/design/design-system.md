@@ -145,7 +145,8 @@ diálogos. `pill` solo a insignias.
 
 **Capas de la ventana principal**, para que nada nuevo quede debajo de lo que
 ya flota: desplegables del panel 6, selector de certificado 7, cabecera 10 (11
-con cualquiera de sus menús abierto), **velo de diálogo 20**. `.rf-scrim` no trae
+con cualquiera de sus menús abierto), asistente del primer arranque 12, **velo
+de diálogo 20**. `.rf-scrim` no trae
 `z-index`: quien lo coloca lo pone.
 
 Dos elevaciones: `--rf-shadow-card` (reposo) y `--rf-shadow-elevated`
