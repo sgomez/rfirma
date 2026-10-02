@@ -288,7 +288,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include: ${{ fromJSON(github.event_name == 'push' && '[{"runner":"ubuntu-latest","timeout":60,"apt":"tauri","java":"none","native":false,"recipe":"build-rust"}]' || '[{"runner":"windows-latest","timeout":90,"apt":"none","java":"graalvm","native":true,"recipe":"bundle"},{"runner":"macos-14","timeout":90,"apt":"none","java":"graalvm","native":true,"recipe":"bundle"}]') }}
+        include: ${{ fromJSON(github.event_name == 'push' && '[{"runner":"ubuntu-latest","timeout":60,"apt":"tauri","java":"none","native":false,"recipe":"build-rust"}]' || '[{"runner":"windows-latest","timeout":90,"apt":"none","java":"graalvm","native":true,"recipe":"bundle"}]') }}
     runs-on: ${{ matrix.runner }}
     timeout-minutes: ${{ matrix.timeout }}
     defaults:

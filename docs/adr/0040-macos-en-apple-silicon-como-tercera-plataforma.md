@@ -100,7 +100,9 @@ dependencia en todas las plataformas para algo que en Linux y Windows ya resuelv
 - `just tools`, `just bootstrap`, `just native`, `just dev`, `just fmt`, `just test-macos` y
   `just bundle` funcionan en macOS; las gradas B y C que necesitan softhsm o NSS no corren.
 - El CI tiene un job `macos` en `ci.yml` que compila la `.dylib`, pasa `rustfmt`, `clippy` y
-  `just test-macos`, y un job `macos` en `build.yml` que construye el `.dmg` para la release.
+  `just test-macos`.
+- El `.dmg` no se publica en la entrega: `build.yml` no lo construye mientras los adaptadores de
+  firma estén pendientes, porque un paquete que no puede firmar no sirve a quien lo descarga.
 - `lib.rs` genera el contexto de Tauri una sola vez en `run` y `event_loop.rs` lo construye: en macOS `generate_context!()` define
   el `Info.plist` embebido, y llamarla dos veces falla al enlazar.
 - Los códigos con que macOS rechaza un certificado de sede no reconocido (ADR-0039) se añaden a
