@@ -1,11 +1,13 @@
 //! La entrada de la línea de órdenes: compone sus puertos y escribe en stdout y stderr lo que deja el caso de uso, sin Tauri ni ventana.
 
 use std::io::{IsTerminal, Write};
+use std::path::PathBuf;
 
 use crate::desktop::adapters::handover::SpawnedDesktop;
 use crate::desktop::adapters::paths::Paths;
 use crate::desktop::application::command_line::{attend, CommandLinePorts, FAILED};
 use crate::desktop::ports::{CertificateStores, Terminal};
+use crate::identity::adapters::pkcs11::stores::discovered_module_named;
 use crate::identity::adapters::{desktop_stores, DesktopToken};
 use crate::identity::domain::certificate::TokenCertificate;
 use crate::identity::domain::error::TokenError;
@@ -37,6 +39,10 @@ impl SeenStores {
 impl CertificateStores for SeenStores {
     fn certificates(&self) -> Result<Vec<TokenCertificate>, TokenError> {
         DesktopToken.list_across(&self.stores)
+    }
+
+    fn discovered_module(&self, library: &str) -> Option<PathBuf> {
+        discovered_module_named(&self.stores, library)
     }
 }
 

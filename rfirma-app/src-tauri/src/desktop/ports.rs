@@ -1,6 +1,6 @@
 //! Puertos del contexto de escritorio: el registro de manejadores, la memoria de la versión publicada, su instalador y lo que ve la línea de órdenes.
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use crate::desktop::domain::error::DesktopError;
 use crate::desktop::domain::handlers::UrlHandler;
@@ -53,6 +53,9 @@ pub trait DesktopHandover {
 pub trait CertificateStores {
     /// Los certificados firmables de todos los almacenes, o por qué ninguno se ha podido abrir.
     fn certificates(&self) -> Result<Vec<TokenCertificate>, TokenError>;
+
+    /// El módulo PKCS#11 ya descubierto que es, canonizada, la biblioteca que se nombra.
+    fn discovered_module(&self, library: &str) -> Option<PathBuf>;
 }
 
 /// La terminal desde la que se lanza la orden.

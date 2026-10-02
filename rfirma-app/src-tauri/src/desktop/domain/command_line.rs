@@ -3,6 +3,7 @@
 use std::fmt;
 
 use super::sign_arguments::ArgumentsRefusal;
+use super::store_scope::StoreRefusal;
 
 /// Formas aceptadas del parámetro de ayuda.
 pub const HELP_FLAGS: [&str; 3] = ["--help", "-help", "-h"];
@@ -99,6 +100,8 @@ pub enum Refusal {
     InvalidArguments(ArgumentsRefusal),
     /// `-gui` sin el fichero de `-i`.
     GuiWithoutInput,
+    /// El valor de `-store` no se atiende.
+    InvalidStore(StoreRefusal),
 }
 
 impl fmt::Display for Refusal {
@@ -123,6 +126,7 @@ impl fmt::Display for Refusal {
                 "el parámetro {parameter} de AutoFirma no está disponible en rfirma"
             ),
             Self::InvalidArguments(refusal) => write!(formatter, "{refusal}"),
+            Self::InvalidStore(refusal) => write!(formatter, "{refusal}"),
             Self::GuiWithoutInput => {
                 write!(
                     formatter,

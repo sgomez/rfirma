@@ -2,10 +2,12 @@
 
 use std::path::Path;
 
+use crate::desktop::application::store_scope::{within_the_scope, ScopeFailure};
 use crate::desktop::domain::command_line::{
-    command_of, file_for_the_window, is_a_help_flag, parameter_left_out, Command, Refusal, STORE,
+    command_of, file_for_the_window, is_a_help_flag, parameter_left_out, Command, Refusal,
 };
 use crate::desktop::domain::sign_arguments::parse_sign_arguments;
+use crate::desktop::domain::store_scope::scope_named_by;
 use crate::desktop::ports::{CertificateStores, DesktopHandover, Terminal};
 use crate::identity::domain::certificate::TokenCertificate;
 
@@ -128,14 +130,19 @@ fn carried_out(command: Command, arguments: &[String], ports: &CommandLinePorts)
 }
 
 fn list_aliases(arguments: &[String], stores: &dyn CertificateStores) -> Outcome {
-    if arguments.iter().any(|argument| argument == STORE) {
-        return Outcome::not_yet_available(&format!("el parámetro {STORE}"));
-    }
-    match stores.certificates() {
+    let scope = match scope_named_by(arguments) {
+        Ok(scope) => scope,
+        Err(refusal) => return Outcome::refused(&Refusal::InvalidStore(refusal)),
+    };
+    match within_the_scope(&scope, stores) {
         Ok(certificates) => Outcome::aliases_of(&certificates),
-        Err(error) => Outcome::failed(format!(
+        Err(ScopeFailure::Token(error)) => Outcome::failed(format!(
             "rfirma: no se ha podido abrir ningún almacén de certificados ({})",
             error.detail()
+        )),
+        Err(ScopeFailure::ModuleNotDiscovered(library)) => Outcome::failed(format!(
+            "rfirma: «{library}» no es un módulo PKCS#11 de los que rfirma ha descubierto, \
+             y no carga ninguno solo porque lo nombre la orden"
         )),
     }
 }
