@@ -21,18 +21,21 @@ máquina. Ni firma ni documentos. Rutas relativas a `src/desktop/`.
 | `adapters/registry.rs` | `DesktopRegistry`: el adaptador de `HandlerRegistry` sobre `channel.rs` y `choice.rs` en Linux, sobre `registry/windows_classes.rs` en Windows, y el pendiente de Launch Services en macOS. |
 | `adapters/registry/windows_classes.rs` | Quién abre `afirma://` en Windows: `HKCU\Software\Classes` sobre `HKLM`, y la rama de rFirma en la del usuario (ADR-0035). Pruebas en `adapters/registry/windows_classes/tests.rs`. |
 | `adapters/releases.rs` | El único sitio que abre una conexión: le pregunta a GitHub por la última publicación. Pruebas en `adapters/releases/tests.rs`. |
+| `adapters/terminal.rs` | La entrada de la línea de órdenes, `run_the_command_line`: escribe en stdout y stderr lo que deja el caso de uso y devuelve el código de salida. Ni Tauri ni ventana; sin pruebas propias. |
 | `adapters/tauri.rs` | Las órdenes del escritorio: invocación, estado de la barra de título nativa, versión publicada, manejadores de `afirma://` y su elección, destino externo, estado y retirada. Pruebas en `adapters/tauri/tests.rs`. |
 | `adapters/titlebar.rs` | La barra de título nativa de GTK de la ventana principal en Linux, y la composición de WebKitGTK que piden sus popovers: sus eventos, cuándo aplicar el estado de la ventana y qué dice cada reciente. Nada en Windows ni macOS. Pruebas en `adapters/titlebar/tests.rs`. |
 | `adapters/titlebar/gtk_titlebar.rs` | Los widgets GTK de esa barra: sus acciones `hdr`, el popover propio de los recientes y el ☰. Solo Linux, sin pruebas propias. |
 | `adapters/views.rs` | Lo que cruza a la ventana: manejadores de `afirma://`, versión nueva, señales de estado, resultado de la retirada y la barra de título nativa. Sin pruebas propias. |
 | `adapters/webkit_renderer.rs` | Si WebKitGTK debe componer sin la GPU en esta sesión (ADR-0007): solo la decisión; la fija `titlebar.rs`. Pruebas en `adapters/webkit_renderer/tests.rs`. |
+| `application/command_line.rs` | El caso de uso de la línea de órdenes (ADR-0041): de los argumentos al código de salida, los bytes de stdout y las líneas de stderr, sin escribir en ningún flujo. Pruebas en `application/command_line/tests.rs`. |
 | `application/destination.rs` | Abrir un destino externo conocido en el navegador. Pruebas en `application/destination/tests.rs`. |
 | `application/handlers.rs` | Quién atiende `afirma://`, del escritorio a Preferencias y de vuelta. Devuelve dominio, nunca una vista. Pruebas en `application/handlers/tests.rs`. |
-| `application/invocation.rs` | La invocación desde fuera, `rfirma documento.pdf`: qué trae, qué hace la segunda —solo del escritorio (ADR-0024)— el rol de proceso que decide `role_of` y el de las URL entregadas por Apple Event. Pruebas en `application/invocation/tests.rs`. |
+| `application/invocation.rs` | La invocación desde fuera, `rfirma documento.pdf`: qué trae, qué hace la segunda —solo del escritorio (ADR-0024)— el rol de proceso que decide `role_of`, terminal incluido, y el de las URL entregadas por Apple Event. Pruebas en `application/invocation/tests.rs`. |
 | `application/status.rs` | Evaluación y medición de las señales del panel de estado. Pruebas en `application/status/tests.rs`. |
 | `application/version.rs` | Si hay una versión nueva publicada: pregunta siempre y, si falla, usa la última conocida; e instalarla, solo si es mayor que la que corre. Pruebas en `application/version/tests.rs`. |
 | `application/withdrawal.rs` | Qué reintentar y cómo fusionar el resultado al retirar rFirma, sin puertos: decisión pura. Pruebas en `application/withdrawal/tests.rs`. |
 | `domain/channel.rs` | El canal de distribución en el que corre el proceso (ADR-0015). Sin pruebas propias. |
+| `domain/command_line.rs` | Las órdenes de AutoFirma que se reconocen, su sintaxis y lo que se rechaza de ellas (ADR-0041); no las ejecuta. Pruebas en `domain/command_line/tests.rs`. |
 | `domain/destination.rs` | Destino externo reconocido por la aplicación y su dirección web. Pruebas en `domain/destination/tests.rs`. |
 | `domain/error.rs` | Las situaciones de elegir manejador (ADR-0009). Pruebas en `domain/error/tests.rs`. |
 | `domain/handlers.rs` | Quién atiende `afirma://` tal como lo decide el caso de uso, y el nombre de nuestro `.desktop`. Sin pruebas propias. |

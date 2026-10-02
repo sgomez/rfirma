@@ -14,13 +14,6 @@ pub fn this_invocation() -> Invocation {
     }
 }
 
-/// Los argumentos de este proceso tal como los dio el sistema.
-pub fn these_arguments() -> Vec<String> {
-    std::env::args_os()
-        .map(|argument| argument.to_string_lossy().into_owned())
-        .collect()
-}
-
 /// Asegura que los argumentos de la línea de órdenes tengan codificación UTF-8 válida.
 pub fn make_the_command_line_readable() {
     let Arguments::RerunWith(arguments) = arguments_before_the_single_instance(std::env::args_os())

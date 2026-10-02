@@ -17,6 +17,7 @@ mod event_loop;
 use std::sync::atomic::Ordering;
 use std::sync::{Arc, Mutex};
 
+pub use desktop::adapters::terminal::run_the_command_line;
 use desktop::application::invocation::{Invocation, Role};
 use desktop::DesktopRoot;
 use documents::DocumentsRoot;
@@ -138,11 +139,13 @@ fn composed_roots(paths: desktop::adapters::paths::Paths, invocation: Option<Inv
 }
 
 /// Punto de entrada compartido por el binario y por las pruebas: decide el rol de proceso
-/// (ADR-0024) y monta la raíz de composición que le corresponde.
+/// (ADR-0024) y monta la raíz de composición que le corresponde, o atiende la orden de terminal.
 pub fn run() {
-    if desktop::application::invocation::help_was_asked_for(
-        desktop::adapters::process::these_arguments(),
-    ) {
+    let invocation = desktop::adapters::process::this_invocation();
+    let role = desktop::application::invocation::role_of(invocation.clone());
+    exit_if_a_terminal_command(&role, &invocation.command_line);
+
+    if desktop::application::invocation::help_was_asked_for(&invocation.command_line) {
         println!("{}", desktop::application::invocation::HELP);
         return;
     }
@@ -150,7 +153,6 @@ pub fn run() {
     desktop::adapters::process::make_the_command_line_readable();
     desktop::adapters::titlebar::keep_the_popovers_clear();
 
-    let invocation = desktop::adapters::process::this_invocation();
     let discarded = Role::said(&invocation);
     let paths = desktop::adapters::paths::Paths::from_environment().unwrap_or_else(|error| {
         startup_dialog::report_and_exit(&startup_failure::StartupFailure::new(
@@ -161,12 +163,28 @@ pub fn run() {
 
     // Una sola expansión por crate (ADR-0040).
     let context = tauri::generate_context!();
-    match desktop::application::invocation::role_of(invocation) {
+    run_the_window_role(role, paths, discarded, context);
+}
+
+fn exit_if_a_terminal_command(role: &Role, command_line: &[String]) {
+    if let Role::Terminal(_) = role {
+        std::process::exit(run_the_command_line(command_line));
+    }
+}
+
+fn run_the_window_role(
+    role: Role,
+    paths: desktop::adapters::paths::Paths,
+    discarded: Vec<String>,
+    context: tauri::Context<tauri::Wry>,
+) {
+    match role {
         Role::Desktop(invocation) => run_desktop(paths, invocation, context),
         Role::Site(url) => run_site(paths, url, discarded, context),
         Role::Foreign(url) => {
             eprintln!("rfirma: {url} no es una llamada afirma://; no se abre nada")
         }
+        Role::Terminal(_) => unreachable!("el proceso de terminal ya ha salido"),
     }
 }
 
