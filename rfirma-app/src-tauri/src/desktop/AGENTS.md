@@ -24,7 +24,7 @@ máquina. Ni firma ni documentos. Rutas relativas a `src/desktop/`.
 | `adapters/registry/windows_classes.rs` | Quién abre `afirma://` en Windows: `HKCU\Software\Classes` sobre `HKLM`, y la rama de rFirma en la del usuario (ADR-0035). Pruebas en `adapters/registry/windows_classes/tests.rs`. |
 | `adapters/releases.rs` | El único sitio que abre una conexión: le pregunta a GitHub por la última publicación. Pruebas en `adapters/releases/tests.rs`. |
 | `adapters/terminal.rs` | La entrada de la línea de órdenes, `run_the_command_line`, y los adaptadores de sus puertos: `SeenStores`, `ProcessTerminal` y `RootsSigner`, que firma por el camino de la sede. Ni Tauri ni ventana; sus pruebas, con el binario, en `tests/command_line.rs`. |
-| `adapters/terminal/tty.rs` | El PIN tecleado sin eco en `/dev/tty`, que no toca stdin ni stdout. Solo Unix; sin pruebas propias. |
+| `adapters/terminal/tty.rs` | El PIN tecleado sin eco en `/dev/tty`, que no toca stdin ni stdout. Solo Unix. Pruebas en `adapters/terminal/tty/tests.rs`. |
 | `adapters/tauri.rs` | Las órdenes del escritorio: invocación, estado de la barra de título nativa, versión publicada, manejadores de `afirma://` y su elección, destino externo, estado y retirada. Pruebas en `adapters/tauri/tests.rs`. |
 | `adapters/titlebar.rs` | La barra de título nativa de GTK de la ventana principal en Linux, y la composición de WebKitGTK que piden sus popovers: sus eventos, cuándo aplicar el estado de la ventana y qué dice cada reciente. Nada en Windows ni macOS. Pruebas en `adapters/titlebar/tests.rs`. |
 | `adapters/titlebar/gtk_titlebar.rs` | Los widgets GTK de esa barra: sus acciones `hdr`, el popover propio de los recientes y el ☰. Solo Linux, sin pruebas propias. |

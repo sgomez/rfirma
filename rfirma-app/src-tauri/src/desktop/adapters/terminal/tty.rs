@@ -4,12 +4,22 @@ use crate::identity::domain::protected_secret::ProtectedSecret;
 
 #[cfg(unix)]
 pub fn typed_without_echo(prompt: &str) -> Result<ProtectedSecret, String> {
-    use std::fs::OpenOptions;
-    use std::io::{Read, Write};
+    use std::io::Write;
     use std::os::fd::AsRawFd;
-    use zeroize::Zeroize;
 
-    let mut tty = OpenOptions::new()
+    let mut tty = asked_on_tty(prompt)?;
+    let echo = WithoutEcho::on(tty.as_raw_fd())?;
+    let typed = typed_line(&mut tty);
+    drop(echo);
+    let _ = tty.write_all(b"\n");
+    typed
+}
+
+#[cfg(unix)]
+fn asked_on_tty(prompt: &str) -> Result<std::fs::File, String> {
+    use std::io::Write;
+
+    let mut tty = std::fs::OpenOptions::new()
         .read(true)
         .write(true)
         .open("/dev/tty")
@@ -17,11 +27,18 @@ pub fn typed_without_echo(prompt: &str) -> Result<ProtectedSecret, String> {
     tty.write_all(prompt.as_bytes())
         .and_then(|()| tty.flush())
         .map_err(|error| format!("no se puede escribir en la terminal ({error})"))?;
-    let echo = WithoutEcho::on(tty.as_raw_fd())?;
+    Ok(tty)
+}
+
+/// La línea leída hasta el salto, sin el salto ni el retorno de carro que lo preceda.
+#[cfg(any(unix, test))]
+fn typed_line(input: &mut impl std::io::Read) -> Result<ProtectedSecret, String> {
+    use zeroize::Zeroize;
+
     let mut typed = Vec::new();
     let mut byte = [0u8; 1];
     let read = loop {
-        match tty.read(&mut byte) {
+        match input.read(&mut byte) {
             Ok(0) => break Err("no se ha tecleado nada".to_owned()),
             Ok(_) if byte[0] == b'\n' => break Ok(()),
             Ok(_) => typed.push(byte[0]),
@@ -29,8 +46,6 @@ pub fn typed_without_echo(prompt: &str) -> Result<ProtectedSecret, String> {
         }
     };
     byte.zeroize();
-    drop(echo);
-    let _ = tty.write_all(b"\n");
     if typed.last() == Some(&b'\r') {
         typed.pop();
     }
@@ -77,3 +92,6 @@ impl Drop for WithoutEcho {
 pub fn typed_without_echo(_prompt: &str) -> Result<ProtectedSecret, String> {
     Err("pedir el PIN en la terminal todavía no está disponible en este sistema".to_owned())
 }
+
+#[cfg(test)]
+mod tests;
