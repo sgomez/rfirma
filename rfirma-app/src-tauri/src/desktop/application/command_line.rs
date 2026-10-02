@@ -1,9 +1,12 @@
 //! El caso de uso de la línea de órdenes: atiende una orden y dice qué sale por cada flujo, sin escribir en ninguno.
 
+use std::path::Path;
+
 use crate::desktop::domain::command_line::{
-    command_of, is_a_help_flag, parameter_left_out, Command, Refusal,
+    command_of, file_for_the_window, is_a_help_flag, parameter_left_out, Command, Refusal,
 };
 use crate::desktop::domain::sign_arguments::parse_sign_arguments;
+use crate::desktop::ports::DesktopHandover;
 
 /// El código de salida de una orden que termina bien.
 pub const SUCCEEDED: i32 = 0;
@@ -47,7 +50,7 @@ impl Outcome {
 }
 
 /// Atiende los argumentos que siguen al ejecutable, empezando por la orden.
-pub fn attend(arguments: &[String]) -> Outcome {
+pub fn attend(arguments: &[String], desktop: &dyn DesktopHandover) -> Outcome {
     let command = match command_of(arguments) {
         Ok(command) => command,
         Err(refusal) => return Outcome::refused(&refusal),
@@ -71,7 +74,22 @@ pub fn attend(arguments: &[String]) -> Outcome {
             return Outcome::refused(&Refusal::InvalidArguments(refusal));
         }
     }
-    Outcome::not_yet_available(command)
+    match file_for_the_window(command, arguments) {
+        Err(refusal) => Outcome::refused(&refusal),
+        Ok(Some(file)) => hand_over_to_the_window(desktop, file),
+        Ok(None) => Outcome::not_yet_available(command),
+    }
+}
+
+fn hand_over_to_the_window(desktop: &dyn DesktopHandover, file: &str) -> Outcome {
+    match desktop.hand_over(Path::new(file)) {
+        Ok(()) => Outcome::default(),
+        Err(reason) => Outcome {
+            exit_code: FAILED,
+            stdout: Vec::new(),
+            stderr: vec![format!("rfirma: no se puede abrir la ventana ({reason})")],
+        },
+    }
 }
 
 #[cfg(test)]

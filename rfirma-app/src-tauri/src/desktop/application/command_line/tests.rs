@@ -1,8 +1,31 @@
+use std::cell::RefCell;
+use std::path::PathBuf;
+
 use super::*;
 
-fn attended(words: &[&str]) -> Outcome {
+#[derive(Default)]
+struct RecordingDesktop {
+    delivered: RefCell<Vec<PathBuf>>,
+    fails: bool,
+}
+
+impl DesktopHandover for RecordingDesktop {
+    fn hand_over(&self, file: &Path) -> Result<(), String> {
+        if self.fails {
+            return Err("sin ejecutable".to_owned());
+        }
+        self.delivered.borrow_mut().push(file.to_path_buf());
+        Ok(())
+    }
+}
+
+fn attended_with(desktop: &RecordingDesktop, words: &[&str]) -> Outcome {
     let arguments: Vec<String> = words.iter().map(|word| (*word).to_owned()).collect();
-    attend(&arguments)
+    attend(&arguments, desktop)
+}
+
+fn attended(words: &[&str]) -> Outcome {
+    attended_with(&RecordingDesktop::default(), words)
 }
 
 fn said(outcome: &Outcome) -> String {
@@ -113,4 +136,40 @@ fn certgui_is_refused_with_a_message_proposing_certtui() {
     let outcome = attended(&["sign", "-i", "a.pdf", "-o", "b.pdf", "-certgui"]);
 
     assert!(said(&outcome).contains("-certtui"), "{}", said(&outcome));
+}
+
+#[test]
+fn sign_and_verify_with_gui_hand_the_file_to_the_desktop_and_succeed() {
+    for command in ["sign", "verify"] {
+        let desktop = RecordingDesktop::default();
+
+        let outcome = attended_with(&desktop, &[command, "-gui", "-i", "doc.pdf"]);
+
+        assert_eq!(outcome, Outcome::default(), "{command}");
+        assert_eq!(*desktop.delivered.borrow(), vec![PathBuf::from("doc.pdf")]);
+    }
+}
+
+#[test]
+fn gui_without_an_input_is_refused_and_delivers_nothing() {
+    let desktop = RecordingDesktop::default();
+
+    let outcome = attended_with(&desktop, &["sign", "-gui"]);
+
+    assert_eq!(outcome.exit_code, REFUSED);
+    assert!(said(&outcome).contains("-i"), "{}", said(&outcome));
+    assert!(desktop.delivered.borrow().is_empty());
+}
+
+#[test]
+fn a_failed_delivery_ends_with_a_nonzero_code_and_the_reason() {
+    let desktop = RecordingDesktop {
+        fails: true,
+        ..RecordingDesktop::default()
+    };
+
+    let outcome = attended_with(&desktop, &["verify", "-gui", "-i", "doc.pdf"]);
+
+    assert_eq!(outcome.exit_code, FAILED);
+    assert!(said(&outcome).contains("sin ejecutable"));
 }
