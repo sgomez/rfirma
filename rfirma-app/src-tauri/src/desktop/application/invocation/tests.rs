@@ -439,6 +439,8 @@ fn the_help_no_longer_promises_that_there_is_no_unattended_mode() {
         "rfirma <orden> -help",
         "-password-fd <N>",
         "-certtui",
+        "secret-tool lookup",
+        "--file-forwarding",
         "Desviaciones",
     ] {
         assert!(HELP.contains(line), "falta {line}");

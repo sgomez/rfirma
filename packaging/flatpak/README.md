@@ -32,6 +32,18 @@ flatpak install --user packaging/flatpak/me.sgomez.rfirma.flatpak
 versionar) y de ahí saca `me.sgomez.rfirma.flatpak`, que es **el entregable del
 v0.1** (ID-42). No se publica en ningún sitio.
 
+## Ficheros fuera de `~/Documents`
+
+El manifiesto no abre ninguna otra carpeta de documentos que `xdg-documents`. Para
+la línea de órdenes con un fichero de otro sitio, `--file-forwarding` y `@@`
+(que delimitan cada ruta) lo exponen a través del portal de documentos:
+
+```bash
+flatpak run --file-forwarding me.sgomez.rfirma sign -i @@ ~/Descargas/contrato.pdf @@ -o ~/Documents/firmado.pdf
+```
+
+El fichero de salida de este ejemplo cae en `~/Documents`, que sí está abierto.
+
 ## La sonda ya no está
 
 Hasta el [#56](https://github.com/sgomez/rfirma/issues/56) el manifiesto
