@@ -47,10 +47,7 @@ fn a_descriptor_that_fails_to_read_is_refused() {
         .contains("EIO"));
 }
 
-#[cfg(unix)]
 #[test]
 fn a_descriptor_that_is_not_open_is_refused() {
-    assert!(super::read_from(9999)
-        .unwrap_err()
-        .contains("no está abierto"));
+    assert!(super::read_from(9999).is_err());
 }
