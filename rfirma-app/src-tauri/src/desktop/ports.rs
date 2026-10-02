@@ -8,10 +8,11 @@ use crate::desktop::domain::handlers::UrlHandler;
 use crate::desktop::domain::installation::InstallFailure;
 use crate::desktop::domain::sign_arguments::Algorithm;
 use crate::desktop::domain::version_check::VersionCheck;
-use crate::identity::domain::certificate::TokenCertificate;
+use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
 use crate::identity::domain::error::TokenError;
 use crate::identity::domain::protected_secret::ProtectedSecret;
 use crate::identity::domain::secret::SecretName;
+use crate::identity::domain::store::StoreClass;
 use crate::memory_error::MemoryError;
 use crate::signing::domain::bridge::{BridgeError, Format, SignatureOperation};
 use crate::site::domain::protocol::SiteFilter;
@@ -62,6 +63,11 @@ pub trait CertificateStores {
 
     /// El módulo PKCS#11 ya descubierto que es, canonizada, la biblioteca que se nombra.
     fn discovered_module(&self, library: &str) -> Option<PathBuf>;
+
+    /// La clase del almacén del que sale ese certificado, que la referencia sola no sabe si es el de rFirma.
+    fn class_of(&self, reference: &CertificateRef) -> StoreClass {
+        reference.store().class()
+    }
 }
 
 /// El motor de filtros de la sede, aplicado a los certificados de la línea de órdenes.
@@ -88,6 +94,18 @@ pub trait Terminal {
 
     /// El secreto tecleado sin eco en la TTY, o por qué no se ha tecleado.
     fn secret(&self, asked: &AskedSecret<'_>) -> Result<ProtectedSecret, String>;
+
+    /// La posición del certificado elegido en la lista, que empieza en `preselected`, o por qué no se ha elegido.
+    fn chosen(&self, offered: &[OfferedCertificate], preselected: usize) -> Result<usize, String>;
+}
+
+/// Un certificado como lo enseña la lista de `-certtui`.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct OfferedCertificate {
+    pub holder: String,
+    pub issuer: String,
+    pub expires: String,
+    pub store: String,
 }
 
 /// Los descriptores que abre quien lanza la orden, de donde sale el PIN de `-password-fd`.
@@ -132,4 +150,7 @@ pub trait DocumentSigner {
 
     /// Apunta el certificado con el que se acaba de firmar, si la memoria lo permite.
     fn remember(&self, certificate: &TokenCertificate);
+
+    /// El certificado recordado, si la memoria guarda alguno.
+    fn remembered(&self) -> Option<CertificateRef>;
 }

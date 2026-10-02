@@ -5,9 +5,10 @@ use super::super::{attend, CommandLinePorts, Outcome, FAILED, REFUSED, SUCCEEDED
 use super::*;
 use crate::desktop::ports::{
     AskedSecret, CertificateFilter, CertificateStores, CommandLineFiles, CommandLineSigning,
-    DesktopHandover, DocumentSigner, SecretDescriptor, SignatureVerifier, Terminal,
+    DesktopHandover, DocumentSigner, OfferedCertificate, SecretDescriptor, SignatureVerifier,
+    Terminal,
 };
-use crate::identity::domain::certificate::TokenCertificate;
+use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
 use crate::identity::domain::error::TokenError;
 use crate::identity::domain::protected_secret::ProtectedSecret;
 use crate::signing::domain::bridge::BridgeError;
@@ -104,6 +105,10 @@ impl Terminal for Untouched {
     fn secret(&self, asked: &AskedSecret<'_>) -> Result<ProtectedSecret, String> {
         panic!("verify no pide el secreto de {}", asked.alias)
     }
+
+    fn chosen(&self, offered: &[OfferedCertificate], _preselected: usize) -> Result<usize, String> {
+        panic!("verify no elige entre {} certificados", offered.len())
+    }
 }
 
 impl SecretDescriptor for Untouched {
@@ -125,6 +130,10 @@ impl DocumentSigner for Untouched {
 
     fn remember(&self, _certificate: &TokenCertificate) {
         panic!("verify no recuerda certificados")
+    }
+
+    fn remembered(&self) -> Option<CertificateRef> {
+        panic!("verify no propone certificados")
     }
 }
 

@@ -14,7 +14,7 @@ pub use rfirma_lib::desktop::adapters::terminal::{ProcessDescriptors, RootsSigne
 pub use rfirma_lib::desktop::application::command_line::{
     attend, CommandLinePorts, Outcome, FAILED, SUCCEEDED,
 };
-pub use rfirma_lib::desktop::ports::{AskedSecret, DesktopHandover, Terminal};
+pub use rfirma_lib::desktop::ports::{AskedSecret, DesktopHandover, OfferedCertificate, Terminal};
 pub use rfirma_lib::identity::adapters::folder::RealInstalledFolder;
 pub use rfirma_lib::identity::adapters::pkcs11;
 pub use rfirma_lib::identity::application::certificates;
@@ -41,6 +41,8 @@ pub struct ScriptedTerminal {
     interactive: bool,
     answers: RefCell<VecDeque<&'static str>>,
     asked: RefCell<Vec<bool>>,
+    choice: Option<usize>,
+    shown: RefCell<Vec<(Vec<OfferedCertificate>, usize)>>,
 }
 
 impl ScriptedTerminal {
@@ -57,7 +59,19 @@ impl ScriptedTerminal {
             interactive,
             answers: RefCell::new(answers.iter().copied().collect()),
             asked: RefCell::new(Vec::new()),
+            choice: None,
+            shown: RefCell::new(Vec::new()),
         }
+    }
+
+    /// Elige esa posición de la lista, o la preseleccionada si no se dice ninguna.
+    pub fn choosing(mut self, choice: Option<usize>) -> Self {
+        self.choice = choice;
+        self
+    }
+
+    pub fn lists_shown(&self) -> Vec<(Vec<OfferedCertificate>, usize)> {
+        self.shown.borrow().clone()
     }
 
     pub fn retries_asked(&self) -> Vec<bool> {
@@ -78,6 +92,14 @@ impl Terminal for ScriptedTerminal {
             .pop_front()
             .map(ProtectedSecret::from_str)
             .ok_or_else(|| "no se ha tecleado nada".to_owned())
+    }
+
+    fn chosen(&self, offered: &[OfferedCertificate], preselected: usize) -> Result<usize, String> {
+        assert!(self.interactive, "sin TTY no se elige en la terminal");
+        self.shown
+            .borrow_mut()
+            .push((offered.to_vec(), preselected));
+        Ok(self.choice.unwrap_or(preselected))
     }
 }
 

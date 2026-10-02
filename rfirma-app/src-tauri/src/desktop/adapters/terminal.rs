@@ -11,18 +11,19 @@ use crate::desktop::adapters::paths::Paths;
 use crate::desktop::application::command_line::{attend, CommandLinePorts, FAILED};
 use crate::desktop::domain::sign_arguments::Algorithm;
 use crate::desktop::ports::{
-    AskedSecret, CertificateStores, CommandLineSigning, DocumentSigner, SecretDescriptor, Terminal,
+    AskedSecret, CertificateStores, CommandLineSigning, DocumentSigner, OfferedCertificate,
+    SecretDescriptor, Terminal,
 };
 use crate::documents::domain::document::Document;
 use crate::identity::adapters::failures::situation_name;
 use crate::identity::adapters::pkcs11::stores::discovered_module_named;
 use crate::identity::adapters::{desktop_stores, DesktopToken};
-use crate::identity::domain::certificate::TokenCertificate;
+use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
 use crate::identity::domain::error::{Situation, TokenError};
 use crate::identity::domain::holder::prompted_holder_of;
 use crate::identity::domain::protected_secret::ProtectedSecret;
 use crate::identity::domain::secret::{SecretName, StoreSecret};
-use crate::identity::domain::store::Store;
+use crate::identity::domain::store::{Store, StoreClass};
 use crate::identity::ports::{prompted_until_accepted, PromptedError, SecretPromptRequest, Token};
 use crate::identity::{every_store, IdentityRoot};
 use crate::signing::domain::bridge::BridgeError;
@@ -66,6 +67,15 @@ impl CertificateStores for SeenStores {
     fn discovered_module(&self, library: &str) -> Option<PathBuf> {
         discovered_module_named(&self.stores, library)
     }
+
+    fn class_of(&self, reference: &CertificateRef) -> StoreClass {
+        let store = reference.store();
+        self.stores
+            .iter()
+            .find(|seen| seen.path() == store.path() && seen.init_args() == store.init_args())
+            .unwrap_or(&store)
+            .class()
+    }
 }
 
 /// La terminal del proceso: hay alguien al otro lado si la entrada estándar es una TTY.
@@ -79,6 +89,18 @@ impl Terminal for ProcessTerminal {
     fn secret(&self, asked: &AskedSecret<'_>) -> Result<ProtectedSecret, String> {
         tty::typed_without_echo(&prompt_for(asked))
     }
+
+    fn chosen(&self, offered: &[OfferedCertificate], preselected: usize) -> Result<usize, String> {
+        let lines: Vec<String> = offered.iter().map(line_of).collect();
+        tty::chosen_on_tty(&lines, preselected)
+    }
+}
+
+fn line_of(offered: &OfferedCertificate) -> String {
+    format!(
+        "{} · emitido por {} · caduca el {} · {}",
+        offered.holder, offered.issuer, offered.expires, offered.store
+    )
 }
 
 /// Los descriptores de este proceso: los que abrió quien lo lanzó.
@@ -278,6 +300,10 @@ impl DocumentSigner for RootsSigner<'_> {
         self.identity
             .remember_the_certificate(certificate.reference());
     }
+
+    fn remembered(&self) -> Option<CertificateRef> {
+        self.identity.remembered_certificate()
+    }
 }
 
 struct Homeless;
@@ -288,6 +314,10 @@ impl DocumentSigner for Homeless {
     }
 
     fn remember(&self, _certificate: &TokenCertificate) {}
+
+    fn remembered(&self) -> Option<CertificateRef> {
+        None
+    }
 }
 
 /// Atiende la línea de órdenes de este argv, con el ejecutable delante, y devuelve el código de salida.

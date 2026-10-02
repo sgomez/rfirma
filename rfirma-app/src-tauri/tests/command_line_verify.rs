@@ -12,7 +12,7 @@ use rfirma_lib::desktop::application::command_line::{
     attend, CommandLinePorts, Outcome, SUCCEEDED, UNKNOWN_FORMAT,
 };
 use rfirma_lib::desktop::ports::{CommandLineSigning, DocumentSigner};
-use rfirma_lib::identity::domain::certificate::TokenCertificate;
+use rfirma_lib::identity::domain::certificate::{CertificateRef, TokenCertificate};
 use rfirma_lib::signing::application::cycle::ALGORITHM;
 use rfirma_lib::signing::domain::bridge::{Format, SignatureOperation};
 
@@ -33,6 +33,10 @@ impl DocumentSigner for NeverSigns {
 
     fn remember(&self, _certificate: &TokenCertificate) {
         panic!("verify no recuerda certificados")
+    }
+
+    fn remembered(&self) -> Option<CertificateRef> {
+        None
     }
 }
 
