@@ -421,6 +421,8 @@ public final class NativeBridge {
      * @param documentB64 documento de entrada en Base64.
      * @param format      formato de firma, {@code PAdES}, {@code CAdES},
      *                    {@code XAdES *} o {@code FacturaE}.
+     * @param checkCertificates distinto de cero para comprobar tambien la caducidad
+     *                    del certificado firmante.
      * @return JSON con el veredicto. Propiedad del llamante: se libera con
      *         {@code autofirma_free_string}.
      */
@@ -428,11 +430,13 @@ public final class NativeBridge {
     public static CCharPointer validateSignatures(
             final IsolateThread thread,
             final CCharPointer documentB64,
-            final CCharPointer format) {
+            final CCharPointer format,
+            final int checkCertificates) {
         try {
             final ValidationBridge.Verdict verdict = ValidationBridge.validate(
                     Base64.getDecoder().decode(CTypeConversion.toJavaString(documentB64)),
-                    CTypeConversion.toJavaString(format));
+                    CTypeConversion.toJavaString(format),
+                    checkCertificates != 0);
 
             final StringBuilder json = new StringBuilder("{\"ok\":true");
             field(json, "verdict", verdict.outcome());

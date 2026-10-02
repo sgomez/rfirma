@@ -103,7 +103,7 @@ type ExpandSymbol =
     unsafe extern "C" fn(*mut c_void, *const c_char, *const c_char, i64) -> *mut c_char;
 
 type ValidateSymbol =
-    unsafe extern "C" fn(*mut c_void, *const c_char, *const c_char) -> *mut c_char;
+    unsafe extern "C" fn(*mut c_void, *const c_char, *const c_char, c_int) -> *mut c_char;
 
 type PreviousSignaturesSymbol = unsafe extern "C" fn(*mut c_void, *const c_char) -> *mut c_char;
 
@@ -346,7 +346,12 @@ impl NativeBridge {
         let document = c_string(request.document_b64, "el documento")?;
         let format = c_string(request.format.validated()?.name(), "el formato")?;
         let json = self.call(|thread| unsafe {
-            (self.validate)(thread, document.as_ptr(), format.as_ptr())
+            (self.validate)(
+                thread,
+                document.as_ptr(),
+                format.as_ptr(),
+                c_int::from(request.check_certificates),
+            )
         })?;
         parse_verdict(&json)
     }

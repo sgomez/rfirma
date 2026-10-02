@@ -63,6 +63,7 @@ mod full_cycle {
             .validate_signatures(ValidationRequest {
                 document_b64: &base64::engine::general_purpose::STANDARD.encode(document),
                 format: Format::Pades,
+                check_certificates: false,
             })
             .expect("el validador tiene que contestar desde dentro de la imagen")
     }
@@ -119,6 +120,7 @@ mod full_cycle {
                 .validate_signatures(ValidationRequest {
                     document_b64: "",
                     format,
+                    check_certificates: false,
                 })
                 .expect_err("el contenedor ASiC-S no tiene validador propio en el original");
 
