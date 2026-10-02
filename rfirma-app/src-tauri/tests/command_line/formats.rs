@@ -27,7 +27,7 @@ fn signed_as(input_bytes: &[u8], extra: &[&str]) -> (tempfile::TempDir, Roots, O
     (home, roots, outcome, output)
 }
 
-fn verdict_in(roots: &Roots, signed: &[u8], format: Format) -> SignatureVerdict {
+pub(super) fn verdict_in(roots: &Roots, signed: &[u8], format: Format) -> SignatureVerdict {
     roots
         .signing
         .isolate

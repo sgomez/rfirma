@@ -7,6 +7,8 @@ use support::*;
 
 #[path = "command_line/config.rs"]
 mod config;
+#[path = "command_line/cosign.rs"]
+mod cosign;
 #[path = "command_line/formats.rs"]
 mod formats;
 
