@@ -180,6 +180,51 @@ fn listaliases_lists_the_test_token_and_the_rfirma_store_one_alias_per_line() {
 }
 
 #[test]
+fn listaliases_with_the_card_module_lists_only_the_token() {
+    let (home, _installed_alias) = a_home_with_an_installed_certificate();
+    let store = format!("pkcs11:{}", the_card_module().display());
+
+    let outcome = attended_over(
+        &["listaliases", "-store", &store],
+        home.path(),
+        &ScriptedTerminal::without_a_tty(),
+    );
+
+    assert_eq!(outcome.exit_code, SUCCEEDED, "{:?}", outcome.stderr);
+    let mut aliases = the_card_aliases();
+    aliases.sort();
+    assert_eq!(sorted_lines_of(&outcome.stdout), aliases);
+}
+
+#[test]
+fn listaliases_with_the_nss_family_lists_only_the_rfirma_store() {
+    let (home, installed_alias) = a_home_with_an_installed_certificate();
+
+    let outcome = attended_over(
+        &["listaliases", "-store", "mozilla"],
+        home.path(),
+        &ScriptedTerminal::without_a_tty(),
+    );
+
+    assert_eq!(outcome.exit_code, SUCCEEDED, "{:?}", outcome.stderr);
+    assert_eq!(sorted_lines_of(&outcome.stdout), vec![installed_alias]);
+}
+
+#[test]
+fn listaliases_with_a_module_that_is_not_discovered_loads_nothing_and_fails() {
+    let (home, _installed_alias) = a_home_with_an_installed_certificate();
+
+    let outcome = attended_over(
+        &["listaliases", "-store", "pkcs11:/usr/lib/no-existe.so"],
+        home.path(),
+        &ScriptedTerminal::without_a_tty(),
+    );
+
+    assert_eq!(outcome.exit_code, 1);
+    assert!(outcome.stdout.is_empty());
+}
+
+#[test]
 fn the_rfirma_binary_lists_aliases_without_a_window_and_with_a_clean_stdout() {
     let (home, installed_alias) = a_home_with_an_installed_certificate();
 

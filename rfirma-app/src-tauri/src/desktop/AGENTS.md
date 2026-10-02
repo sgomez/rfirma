@@ -32,12 +32,14 @@ máquina. Ni firma ni documentos. Rutas relativas a `src/desktop/`.
 | `application/destination.rs` | Abrir un destino externo conocido en el navegador. Pruebas en `application/destination/tests.rs`. |
 | `application/handlers.rs` | Quién atiende `afirma://`, del escritorio a Preferencias y de vuelta. Devuelve dominio, nunca una vista. Pruebas en `application/handlers/tests.rs`. |
 | `application/invocation.rs` | La invocación desde fuera, `rfirma documento.pdf`: qué trae, qué hace la segunda —solo del escritorio (ADR-0024)— el rol de proceso que decide `role_of`, terminal incluido, y el de las URL entregadas por Apple Event. Pruebas en `application/invocation/tests.rs`. |
+| `application/store_scope.rs` | Los certificados que deja `-store` (ADR-0022): la familia NSS o un módulo ya descubierto; nunca carga uno por nombrarlo la orden. |
 | `application/status.rs` | Evaluación y medición de las señales del panel de estado. Pruebas en `application/status/tests.rs`. |
 | `application/version.rs` | Si hay una versión nueva publicada: pregunta siempre y, si falla, usa la última conocida; e instalarla, solo si es mayor que la que corre. Pruebas en `application/version/tests.rs`. |
 | `application/withdrawal.rs` | Qué reintentar y cómo fusionar el resultado al retirar rFirma, sin puertos: decisión pura. Pruebas en `application/withdrawal/tests.rs`. |
 | `domain/channel.rs` | El canal de distribución en el que corre el proceso (ADR-0015). Sin pruebas propias. |
 | `domain/command_line.rs` | Las órdenes de AutoFirma que se reconocen, su sintaxis y lo que se rechaza de ellas (ADR-0041); no las ejecuta. Pruebas en `domain/command_line/tests.rs`. |
 | `domain/sign_arguments.rs` | Los argumentos de `sign` y `cosign` analizados y lo que se rechaza de ellos (ADR-0041); no firma ni abre almacenes. Pruebas en `domain/sign_arguments/tests.rs`. |
+| `domain/store_scope.rs` | A qué almacenes acota el valor de `-store`, con los nombres de la línea de órdenes, y lo que se rechaza de él (ADR-0041); no abre ninguno. Pruebas en `domain/store_scope/tests.rs`. |
 | `domain/destination.rs` | Destino externo reconocido por la aplicación y su dirección web. Pruebas en `domain/destination/tests.rs`. |
 | `domain/error.rs` | Las situaciones de elegir manejador (ADR-0009). Pruebas en `domain/error/tests.rs`. |
 | `domain/handlers.rs` | Quién atiende `afirma://` tal como lo decide el caso de uso, y el nombre de nuestro `.desktop`. Sin pruebas propias. |

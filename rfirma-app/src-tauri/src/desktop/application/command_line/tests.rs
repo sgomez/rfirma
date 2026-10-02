@@ -34,6 +34,10 @@ impl CertificateStores for StoresWith {
             })
             .collect())
     }
+
+    fn discovered_module(&self, library: &str) -> Option<PathBuf> {
+        (library == "/modulo.so").then(|| PathBuf::from(library))
+    }
 }
 
 struct NoStoreOpens;
@@ -44,6 +48,10 @@ impl CertificateStores for NoStoreOpens {
             Situation::ModuleNotFound,
             "no hay ningun modulo PKCS#11",
         ))
+    }
+
+    fn discovered_module(&self, _library: &str) -> Option<PathBuf> {
+        None
     }
 }
 
@@ -132,15 +140,58 @@ fn listaliases_fails_on_stderr_when_no_store_opens() {
 }
 
 #[test]
-fn listaliases_with_store_fails_without_opening_any_store_until_it_is_available() {
+fn listaliases_with_a_store_rfirma_does_not_open_is_refused_without_opening_any_store() {
+    for store in [
+        "pkcs12:/a.p12",
+        "dni",
+        "dnie",
+        "windows",
+        "mac",
+        "inventado",
+    ] {
+        let stores = StoresWith::labels(&["UNO"]);
+
+        let outcome = attended_with(&["listaliases", "-store", store], &stores);
+
+        assert_eq!(outcome.exit_code, REFUSED, "{store}");
+        assert!(outcome.stdout.is_empty());
+        assert!(said(&outcome).contains("almacén"), "{}", said(&outcome));
+        assert!(!stores.opened.get(), "{store}");
+    }
+}
+
+#[test]
+fn listaliases_with_a_module_that_was_not_discovered_fails_without_opening_any_store() {
     let stores = StoresWith::labels(&["UNO"]);
 
-    let outcome = attended_with(&["listaliases", "-store", "mozilla"], &stores);
+    let outcome = attended_with(&["listaliases", "-store", "pkcs11:/otro.so"], &stores);
 
     assert_eq!(outcome.exit_code, FAILED);
     assert!(outcome.stdout.is_empty());
-    assert!(said(&outcome).contains("-store"), "{}", said(&outcome));
+    assert!(said(&outcome).contains("/otro.so"), "{}", said(&outcome));
     assert!(!stores.opened.get());
+}
+
+#[test]
+fn listaliases_with_a_discovered_module_lists_its_certificates() {
+    let outcome = attended_with(
+        &["listaliases", "-store", "pkcs11:/modulo.so"],
+        &StoresWith::labels(&["UNO"]),
+    );
+
+    assert_eq!(outcome.exit_code, SUCCEEDED);
+    assert_eq!(String::from_utf8(outcome.stdout).unwrap(), "UNO\n");
+}
+
+#[test]
+fn listaliases_with_the_nss_family_leaves_the_card_modules_out() {
+    let outcome = attended_with(
+        &["listaliases", "-store", "mozilla"],
+        &StoresWith::labels(&["UNO"]),
+    );
+
+    assert_eq!(outcome.exit_code, SUCCEEDED);
+    assert!(outcome.stdout.is_empty());
 }
 
 fn said(outcome: &Outcome) -> String {

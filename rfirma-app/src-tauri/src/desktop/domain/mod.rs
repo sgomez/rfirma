@@ -8,5 +8,6 @@ pub mod handlers;
 pub mod installation;
 pub mod sign_arguments;
 pub mod status;
+pub mod store_scope;
 pub mod version_check;
 pub mod withdrawal;
