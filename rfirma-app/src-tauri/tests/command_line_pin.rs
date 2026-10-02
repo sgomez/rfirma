@@ -69,23 +69,6 @@ fn sign_on_the_test_token_fails_when_the_pin_is_not_typed() {
 
 #[test]
 #[ignore = "grada C: necesita librfirma_crypto.so (just test-native)"]
-fn sign_on_the_test_token_without_a_tty_fails_without_asking() {
-    let (home, _installed_alias) = a_home_with_an_installed_certificate();
-    let terminal = ScriptedTerminal::without_a_tty();
-
-    let (outcome, _roots, output) = signed_on_the_card(home.path(), &terminal);
-
-    assert_eq!(outcome.exit_code, FAILED, "{:?}", outcome.stderr);
-    assert!(
-        outcome.stderr.concat().contains("-password-fd"),
-        "{:?}",
-        outcome.stderr
-    );
-    assert!(!output.exists());
-}
-
-#[test]
-#[ignore = "grada C: necesita librfirma_crypto.so (just test-native)"]
 fn sign_on_the_test_token_without_a_tty_asks_the_desktop_dialog_and_again_when_it_is_wrong() {
     let (home, _installed_alias) = a_home_with_an_installed_certificate();
     let dialog = MockSecretPrompter::with_secrets(&["0000", KIT_PASSWORD]);

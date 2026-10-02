@@ -51,3 +51,28 @@ fn a_descriptor_that_fails_to_read_is_refused() {
 fn a_descriptor_that_is_not_open_is_refused() {
     assert!(super::read_from(9999).is_err());
 }
+
+struct NewlineThenSilence {
+    delivered: usize,
+}
+
+impl Read for NewlineThenSilence {
+    fn read(&mut self, buffer: &mut [u8]) -> io::Result<usize> {
+        const LINE: &[u8] = b"1234\n";
+        assert!(
+            self.delivered < LINE.len(),
+            "se ha leido mas alla del salto de linea"
+        );
+        let count = buffer.len().min(LINE.len() - self.delivered);
+        buffer[..count].copy_from_slice(&LINE[self.delivered..self.delivered + count]);
+        self.delivered += count;
+        Ok(count)
+    }
+}
+
+#[test]
+fn reading_stops_at_the_newline_without_waiting_for_the_end_of_input() {
+    let mut input = NewlineThenSilence { delivered: 0 };
+
+    assert_eq!(first_line(&mut input).unwrap().as_bytes(), b"1234");
+}
