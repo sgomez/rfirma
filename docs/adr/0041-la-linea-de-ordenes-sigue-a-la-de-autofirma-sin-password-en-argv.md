@@ -10,9 +10,13 @@ argv**.
 
 ## La regla
 
-1. **La sintaxis es la del original**, en un subconjunto: `sign`, `cosign` y
-   `listaliases`; `-i`, `-o`, `-format`, `-store`, `-alias`, `-filter`,
-   `-certgui`, `-algorithm` y `-xml`. `-certgui` abre la ventana de sede, que hace
+1. **La sintaxis es la del original**, en un subconjunto: `sign`, `cosign`,
+   `listaliases` y `verify`; `-i`, `-o`, `-format`, `-store`, `-alias`,
+   `-filter`, `-certgui`, `-algorithm`, `-config`, `-gui` y `-xml`. `-config`
+   entra por el mismo camino que las propiedades de una sede, y `verify`
+   comprueba la caducidad del certificado como el original —sin revocación ni
+   red— y sale con 0 aunque la firma sea inválida, también como él.
+   `countersign` queda fuera, como en el trámite de sede. `-certgui` abre la ventana de sede, que hace
    las veces del diálogo de selección del original; `-certtui`, propio de rFirma,
    elige en la terminal para quien no tiene pantalla. Firmar sin consentimiento con `-alias` o
    `-filter` es lo que hace el original y se mantiene: la ventana nunca fue una
