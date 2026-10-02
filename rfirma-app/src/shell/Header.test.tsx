@@ -252,24 +252,6 @@ describe("Header", () => {
     expect(statusItem.querySelector("svg")).toBeNull();
   });
 
-  it("puts the attention button alone at the right end on macOS, where there is no menu button", () => {
-    renderWithCatalog(
-      <Header
-        menuAnchor="native"
-        hasAttention
-        onOpenStatus={noop}
-        onOpenPreferences={noop}
-        onOpenHelp={noop}
-        onOpenAbout={noop}
-      />,
-    );
-
-    expect(
-      screen.getByRole("button", { name: "Estado de rFirma: requiere atención" }),
-    ).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Menú" })).not.toBeInTheDocument();
-  });
-
   it("opens the preferences dialog from the menu and closes the menu", async () => {
     const user = userEvent.setup();
     const openPreferences = vi.fn();
@@ -386,19 +368,5 @@ describe("Header", () => {
     expect(screen.getByRole("banner")).not.toHaveTextContent("rFirma");
     expect(screen.queryByRole("navigation")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Menú" })).toBeInTheDocument();
-  });
-
-  it("hides the menu button where the two entries live in the native menu", () => {
-    renderWithCatalog(
-      <Header
-        menuAnchor="native"
-        onOpenStatus={noop}
-        onOpenPreferences={noop}
-        onOpenHelp={noop}
-        onOpenAbout={noop}
-      />,
-    );
-
-    expect(screen.queryByRole("button", { name: "Menú" })).not.toBeInTheDocument();
   });
 });

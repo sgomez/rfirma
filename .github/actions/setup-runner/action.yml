@@ -134,7 +134,7 @@ runs:
       if: inputs.rust != 'none'
       with:
         workspaces: rfirma-app/src-tauri
-        shared-key: ${{ runner.os == 'Windows' && 'windows' || 'linux' }}-${{ inputs.rust }}
+        shared-key: ${{ runner.os == 'Windows' && 'windows' || runner.os == 'macOS' && 'macos' || 'linux' }}-${{ inputs.rust }}
         save-if: ${{ inputs.save-cache == 'true' }}
 
     # OpenSSL se compila desde las fuentes, y el Perl de Git no sirve.
@@ -142,7 +142,7 @@ runs:
       shell: bash
       run: echo "OPENSSL_SRC_PERL=C:/Strawberry/perl/bin/perl.exe" >> "$GITHUB_ENV"
 
-    - if: runner.os != 'Windows'
+    - if: runner.os == 'Linux'
       shell: bash
       run: |
         set -euo pipefail
@@ -155,6 +155,20 @@ runs:
         sudo install -m 755 "$directorio/just" /usr/local/bin/just
         rm -rf "$directorio"
         just --version
+
+    - if: runner.os == 'macOS'
+      shell: bash
+      run: |
+        set -euo pipefail
+        archivo="just-${JUST_VERSION}-aarch64-apple-darwin.tar.gz"
+        directorio="$RUNNER_TEMP/just"
+        mkdir -p "$directorio"
+        curl -fsSL -o "$directorio/$archivo" \
+          "https://github.com/casey/just/releases/download/${JUST_VERSION}/${archivo}"
+        echo "${JUST_SHA256_MACOS}  $directorio/$archivo" | shasum -a 256 -c -
+        tar -xzf "$directorio/$archivo" -C "$directorio" just
+        echo "$directorio" >> "$GITHUB_PATH"
+        "$directorio/just" --version
 
     - if: runner.os == 'Windows'
       shell: bash

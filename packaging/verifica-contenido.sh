@@ -20,9 +20,10 @@
 #
 # El instalador de Windows (ADR-0035) pasa por la misma invariante con los
 # nombres de Windows: exactamente un rfirma_crypto.dll y awt.dll en ninguna
-# parte. Se abre con 7z, que lee los instaladores NSIS sin ejecutarlos.
+# parte. Se abre con 7z, que lee los instaladores NSIS sin ejecutarlos. El
+# .dmg de macOS, igual: un librfirma_crypto.dylib y libawt.dylib en ninguna parte.
 #
-# Uso: packaging/verifica-contenido.sh <paquete.flatpak|paquete.deb|paquete.rpm|instalador.exe|files/>
+# Uso: packaging/verifica-contenido.sh <paquete.flatpak|paquete.deb|paquete.rpm|instalador.exe|imagen.dmg|files/>
 set -euo pipefail
 
 PAQUETE="${1:?uso: packaging/verifica-contenido.sh <paquete>}"
@@ -66,15 +67,18 @@ else
                 exit 1
             fi
             ;;
-        *.exe)
+        *.exe | *.dmg)
             if ! command -v 7z >/dev/null 2>&1; then
-                echo "para mirar dentro de un instalador NSIS hace falta 7z (p7zip-full)" >&2
+                echo "para mirar dentro de un instalador NSIS o de un .dmg hace falta 7z (p7zip-full)" >&2
                 exit 1
             fi
-            7z x -y -o"$LAB/contenido" "$PAQUETE" >/dev/null
+            # El enlace a /Applications del .dmg es absoluto, y 7z lo rechaza con error.
+            excluye=()
+            case "$PAQUETE" in *.dmg) excluye=('-x!*/Applications') ;; esac
+            7z x -y -o"$LAB/contenido" "$PAQUETE" "${excluye[@]}" >/dev/null
             ;;
         *)
-            echo "formato desconocido: $PAQUETE (se esperaba .flatpak, .deb, .rpm, .exe o un directorio files/)" >&2
+            echo "formato desconocido: $PAQUETE (se esperaba .flatpak, .deb, .rpm, .exe, .dmg o un directorio files/)" >&2
             exit 1
             ;;
     esac
@@ -90,6 +94,12 @@ case "$PAQUETE" in
         AWT=awt.dll
         encontrados="$(find -L "$LAB/contenido" -iname 'rfirma_crypto.dll')"
         sobra="$(find -L "$LAB/contenido" -iname 'awt.dll')"
+        ;;
+    *.dmg)
+        NATIVA=librfirma_crypto.dylib
+        AWT=libawt.dylib
+        encontrados="$(find -L "$LAB/contenido" -name 'librfirma_crypto.dylib')"
+        sobra="$(find -L "$LAB/contenido" -name 'libawt.dylib')"
         ;;
     *)
         NATIVA=librfirma_crypto.so

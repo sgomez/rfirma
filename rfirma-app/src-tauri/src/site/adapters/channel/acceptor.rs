@@ -1,4 +1,4 @@
-//! Saludo TLS del servidor local: `native-tls` en Linux, `rustls` en Windows (ADR-0036).
+//! Saludo TLS del servidor local: `native-tls` en Linux, `rustls` en Windows y macOS (ADR-0036).
 
 use std::io;
 
@@ -7,18 +7,18 @@ use tokio::net::TcpStream;
 /// Aceptador TLS con el certificado y la clave del servidor local.
 pub(crate) struct LocalTlsAcceptor(Inner);
 
-#[cfg(not(windows))]
+#[cfg(target_os = "linux")]
 type Inner = tokio_native_tls::TlsAcceptor;
 
-#[cfg(windows)]
+#[cfg(not(target_os = "linux"))]
 type Inner = tokio_rustls::TlsAcceptor;
 
 /// El flujo ya cifrado de una conexión aceptada.
-#[cfg(not(windows))]
+#[cfg(target_os = "linux")]
 pub(crate) type LocalTlsStream = tokio_native_tls::TlsStream<TcpStream>;
 
 /// El flujo ya cifrado de una conexión aceptada.
-#[cfg(windows)]
+#[cfg(not(target_os = "linux"))]
 pub(crate) type LocalTlsStream = tokio_rustls::server::TlsStream<TcpStream>;
 
 impl LocalTlsAcceptor {
@@ -33,17 +33,17 @@ impl LocalTlsAcceptor {
     }
 }
 
-#[cfg(not(windows))]
+#[cfg(target_os = "linux")]
 async fn handshake(acceptor: &Inner, stream: TcpStream) -> io::Result<LocalTlsStream> {
     acceptor.accept(stream).await.map_err(io::Error::other)
 }
 
-#[cfg(windows)]
+#[cfg(not(target_os = "linux"))]
 async fn handshake(acceptor: &Inner, stream: TcpStream) -> io::Result<LocalTlsStream> {
     acceptor.accept(stream).await
 }
 
-#[cfg(not(windows))]
+#[cfg(target_os = "linux")]
 fn inner_from_pem(certificate: &[u8], key: &[u8]) -> Result<Inner, String> {
     use tokio_native_tls::native_tls::{Identity, TlsAcceptor};
 
@@ -52,7 +52,7 @@ fn inner_from_pem(certificate: &[u8], key: &[u8]) -> Result<Inner, String> {
     Ok(Inner::from(acceptor))
 }
 
-#[cfg(windows)]
+#[cfg(not(target_os = "linux"))]
 fn inner_from_pem(certificate: &[u8], key: &[u8]) -> Result<Inner, String> {
     use std::sync::Arc;
     use tokio_rustls::rustls::crypto::ring::default_provider;

@@ -41,7 +41,7 @@ fn someone_else_holds_the_write_lock(fd: i32) -> bool {
         l_pid: 0,
     };
     let queried = unsafe { libc::fcntl(fd, libc::F_GETLK, &mut lock) };
-    queried == 0 && lock.l_type as i32 != libc::F_UNLCK
+    queried == 0 && i64::from(lock.l_type) != i64::from(libc::F_UNLCK)
 }
 
 #[cfg(all(test, unix))]

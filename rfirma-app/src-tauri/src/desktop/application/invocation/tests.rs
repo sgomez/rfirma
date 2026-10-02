@@ -350,3 +350,36 @@ fn a_file_url_gives_the_desktop_role_with_that_document() {
     );
     assert_eq!(invoked_documents(&invocation), Some(vec![pdf]));
 }
+
+#[test]
+fn a_url_delivered_at_launch_becomes_a_site_process_and_ends_the_one_that_received_it() {
+    assert_eq!(
+        delivered_urls([A_LAUNCH.to_owned()], false),
+        DeliveredUrls {
+            site_launches: vec![A_LAUNCH.to_owned()],
+            this_process_goes_on: false,
+        }
+    );
+}
+
+#[test]
+fn a_url_delivered_to_a_process_already_serving_becomes_a_site_process_and_it_goes_on() {
+    assert_eq!(
+        delivered_urls([A_LAUNCH.to_owned()], true),
+        DeliveredUrls {
+            site_launches: vec![A_LAUNCH.to_owned()],
+            this_process_goes_on: true,
+        }
+    );
+}
+
+#[test]
+fn a_delivered_url_of_a_foreign_scheme_launches_nothing_and_ends_nothing() {
+    assert_eq!(
+        delivered_urls(["https://ejemplo.es".to_owned()], false),
+        DeliveredUrls {
+            site_launches: Vec::new(),
+            this_process_goes_on: true,
+        }
+    );
+}

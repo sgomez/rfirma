@@ -46,7 +46,7 @@ Todo pasa por `just`, que es el único punto de entrada del repositorio
 
 ```bash
 just bootstrap   # dependencias de AutoFirma en ~/.m2 (no estan en Maven Central)
-just native      # librfirma_crypto.so (rfirma_crypto.dll en Windows) con GraalVM CE 25; tarda minutos
+just native      # librfirma_crypto.so (rfirma_crypto.dll en Windows, librfirma_crypto.dylib en macOS) con GraalVM CE 25; tarda minutos
 just dev         # levanta la aplicacion contra esa libreria
 ```
 
@@ -71,6 +71,22 @@ Con una GraalVM CE 25.4, `just native` necesita además
 el CI usa la de `GRAALVM_VERSION` de `versions.env`. El instalador es por usuario y no pide administrador: deja
 `rfirma.exe`, `rfirma_crypto.dll` y el runtime de Visual C++ en
 `%LOCALAPPDATA%\rfirma`, y registra `afirma://` si ningún otro programa lo tiene.
+
+En macOS (Apple Silicon) hacen falta las Command Line Tools de Xcode
+(`xcode-select --install`), GraalVM CE 25 en `GRAALVM_HOME`, `JAVA_HOME` o
+registrada en `/usr/libexec/java_home`, Maven y Node con pnpm; gettext solo
+para `just po`:
+
+```bash
+just native        # librfirma_crypto.dylib
+just dev
+just bundle        # rfirma.app y el .dmg en target/aarch64-apple-darwin/release/bundle
+```
+
+La `.app` lleva `librfirma_crypto.dylib` en `Contents/Frameworks`, registra
+`afirma://` en su `Info.plist` y va firmada ad hoc, sin notarizar: Gatekeeper
+la bloquea la primera vez y hay que permitirla en Ajustes del Sistema ›
+Privacidad y seguridad.
 
 `just dev` **no** construye la librería nativa: si falta, falla diciendo que
 ejecutes `just native`. Es deliberado — `native-image` tarda minutos y no debe

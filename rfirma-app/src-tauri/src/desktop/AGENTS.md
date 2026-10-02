@@ -11,14 +11,14 @@ máquina. Ni firma ni documentos. Rutas relativas a `src/desktop/`.
 | `mod.rs` | La raíz: `DesktopRoot`, con las rutas, la invocación pendiente y la memoria de la versión. |
 | `domain/mod.rs`, `application/mod.rs`, `adapters/mod.rs` | Solo `pub mod`: el reparto de cada capa. |
 | `ports.rs` | **Los tres puertos**: `HandlerRegistry`, `VersionMemory`, que sirve `signing/adapters/memory.rs`, y `UpdateInstaller`. |
-| `adapters/process.rs` | Lo que este proceso sabe de sí mismo: su línea de órdenes, su carpeta y el relanzamiento cuando los argumentos no son UTF-8. No decide el rol. |
+| `adapters/process.rs` | Lo que este proceso sabe de sí mismo: su línea de órdenes, su carpeta, el relanzamiento cuando los argumentos no son UTF-8 y el proceso de sede de cada URL que macOS entrega por Apple Event. No decide el rol. |
 | `adapters/channel.rs` | El canal de distribución (`/.flatpak-info`) y quién dice el escritorio que atiende `afirma://`. Léelo antes que sus hermanos. Pruebas en `adapters/channel/tests.rs`. |
 | `adapters/choice.rs` | Elegir, leer o retirar el manejador, en el `mimeapps.list` del `$HOME` y con todo lo demás intacto. Firefox guarda la suya aparte. Pruebas en `adapters/choice/tests.rs`. |
 | `adapters/failures.rs` | La única traducción de las situaciones del escritorio a lo que ve la ventana (ADR-0009); ninguna llega a la sede. Pruebas en `adapters/failures/tests.rs`. |
 | `adapters/firefox_lock.rs` | Si Firefox tiene abierto un perfil: el bloqueo POSIX de `.parentlock`, o `parent.lock` sin compartir en Windows. Pruebas en `adapters/firefox_lock/tests.rs` y `adapters/firefox_lock/windows_tests.rs`. |
 | `adapters/installer.rs` | El adaptador de `UpdateInstaller`: el plugin updater en Windows, que solo se registra con su configuración, y «no disponible» en el resto (ADR-0035). Sin pruebas propias. |
 | `adapters/paths.rs` | Las rutas de la memoria entre sesiones y las de la CA local. Único sitio que conoce el sistema operativo (ADR-0010) y el único que crea un fichero `0600` de nacimiento. Pruebas en `adapters/paths/tests.rs`. |
-| `adapters/registry.rs` | `DesktopRegistry`: el adaptador de `HandlerRegistry` sobre `channel.rs` y `choice.rs` en Linux, y sobre `registry/windows_classes.rs` en Windows. |
+| `adapters/registry.rs` | `DesktopRegistry`: el adaptador de `HandlerRegistry` sobre `channel.rs` y `choice.rs` en Linux, sobre `registry/windows_classes.rs` en Windows, y el pendiente de Launch Services en macOS. |
 | `adapters/registry/windows_classes.rs` | Quién abre `afirma://` en Windows: `HKCU\Software\Classes` sobre `HKLM`, y la rama de rFirma en la del usuario (ADR-0035). Pruebas en `adapters/registry/windows_classes/tests.rs`. |
 | `adapters/releases.rs` | El único sitio que abre una conexión: le pregunta a GitHub por la última publicación. Pruebas en `adapters/releases/tests.rs`. |
 | `adapters/tauri.rs` | Las órdenes del escritorio: invocación, estado de la barra de título nativa, versión publicada, manejadores de `afirma://` y su elección, destino externo, estado y retirada. Pruebas en `adapters/tauri/tests.rs`. |
@@ -28,7 +28,7 @@ máquina. Ni firma ni documentos. Rutas relativas a `src/desktop/`.
 | `adapters/webkit_renderer.rs` | Si WebKitGTK debe componer sin la GPU en esta sesión (ADR-0007): solo la decisión; la fija `titlebar.rs`. Pruebas en `adapters/webkit_renderer/tests.rs`. |
 | `application/destination.rs` | Abrir un destino externo conocido en el navegador. Pruebas en `application/destination/tests.rs`. |
 | `application/handlers.rs` | Quién atiende `afirma://`, del escritorio a Preferencias y de vuelta. Devuelve dominio, nunca una vista. Pruebas en `application/handlers/tests.rs`. |
-| `application/invocation.rs` | La invocación desde fuera, `rfirma documento.pdf`: qué trae, qué hace la segunda —solo del escritorio (ADR-0024)— y el rol de proceso que decide `role_of`. Pruebas en `application/invocation/tests.rs`. |
+| `application/invocation.rs` | La invocación desde fuera, `rfirma documento.pdf`: qué trae, qué hace la segunda —solo del escritorio (ADR-0024)— el rol de proceso que decide `role_of` y el de las URL entregadas por Apple Event. Pruebas en `application/invocation/tests.rs`. |
 | `application/status.rs` | Evaluación y medición de las señales del panel de estado. Pruebas en `application/status/tests.rs`. |
 | `application/version.rs` | Si hay una versión nueva publicada: pregunta siempre y, si falla, usa la última conocida; e instalarla, solo si es mayor que la que corre. Pruebas en `application/version/tests.rs`. |
 | `application/withdrawal.rs` | Qué reintentar y cómo fusionar el resultado al retirar rFirma, sin puertos: decisión pura. Pruebas en `application/withdrawal/tests.rs`. |

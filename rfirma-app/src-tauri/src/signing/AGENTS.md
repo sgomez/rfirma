@@ -18,7 +18,7 @@ relativas a `src/signing/`; para situarte en un fichero, `just outline <ruta>`.
 | `adapters/ffi/location.rs` | Dice en qué directorios se busca la librería nativa y cuál la tiene. |
 | `adapters/ffi/responses.rs` | Traduce a los tipos del dominio el JSON que devuelven las diez entradas del puente. |
 | `adapters/ffi/tests/previous_signatures.rs` | Pruebas de la lectura de las firmas previas que devuelve el puente. Solo en pruebas. |
-| `adapters/gtk_prompter.rs` | Diálogo modal nativo GTK3 para la solicitud de PIN interactiva, su pendiente de Windows (ADR-0035) y adaptadores de pruebas (MockSecretPrompter, PreconfiguredSecretPrompter). Pruebas en `adapters/gtk_prompter/tests.rs`. |
+| `adapters/gtk_prompter.rs` | Diálogo modal nativo GTK3 para la solicitud de PIN interactiva, sus pendientes de Windows y macOS (ADR-0035, ADR-0040) y adaptadores de pruebas (MockSecretPrompter, PreconfiguredSecretPrompter). Pruebas en `adapters/gtk_prompter/tests.rs`. |
 | `adapters/isolate.rs` | El hilo dueño del isolate de GraalVM, y el adaptador de `IsolateHost`. Pruebas en `adapters/isolate/tests.rs`. |
 | `adapters/memory.rs` | `Memory`, la memoria entre sesiones (ADR-0010), y las rebanadas que cada vecino pide por su puerto: `DocumentsMemory`, `CertificateMemory` y `VersionMemory`. Pruebas en `adapters/memory/tests.rs`. |
 | `adapters/failures.rs` | La única traducción de las situaciones de la firma local a la vista de la ventana y al código de la sede (ADR-0009). Pruebas en `adapters/failures/tests.rs`. |

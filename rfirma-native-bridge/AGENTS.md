@@ -2,7 +2,7 @@
 
 El puente es lo que AutoFirma hace en Java y rfirma no reescribe: preproceso y
 postproceso del ciclo trifásico (ADR-0001), compilado a `librfirma_crypto.so`
-—`rfirma_crypto.dll` en Windows (ADR-0035)— con `native-image` (ADR-0004). Lo que decide y firma vive en Rust.
+—`rfirma_crypto.dll` en Windows (ADR-0035, ADR-0040) y `librfirma_crypto.dylib` en macOS— con `native-image` (ADR-0004). Lo que decide y firma vive en Rust.
 
 | Fichero | Qué es |
 |---|---|
@@ -59,7 +59,8 @@ postproceso del ciclo trifásico (ADR-0001), compilado a `librfirma_crypto.so`
   `native-image.properties` porque cambiaría también la imagen de Linux, que
   se construye con la versión fijada y no tiene este fallo.
 * **`native-image` emite seis ficheros y se distribuye uno.** Los cinco
-  auxiliares de AWT en `target/native/` son normales, no un fallo; instalarlos
+  auxiliares de AWT en `target/native/` (en macOS no sale ninguno, solo las
+  cabeceras) son normales, no un fallo; instalarlos
   «por si acaso» convierte un JPEG con perfil ICC en un aborto del proceso
   (ADR-0004). La exclusión de `afirma-ui-utils` del `pom.xml` es lo que deja
   `javax.imageio` sin métodos alcanzables: no la quites.

@@ -40,10 +40,11 @@ Busca en este índice, y si aun así necesitas el fichero, entra con
 | 0033 | La interfaz se prototipa en Claude Design, y lo que manda vive en el repositorio: fichas, bundle y copia de los artboards |
 | 0034 | El Almacén de rFirma: una base NSS cifrada con un PIN que solo guarda el llavero del escritorio |
 | 0035 | Windows como segunda plataforma: dependencias por target y adaptadores no disponibles |
-| 0036 | El saludo TLS del canal local en Windows es de rustls |
+| 0036 | El saludo TLS del canal local fuera de Linux (Windows y macOS) es de rustls |
 | 0037 | Los servicios de la sede se esperan sin límite una vez conectados: 30 s para conectar, ninguno para contestar |
 | 0038 | Las cookies de la sede duran una operación, compartidas por los cuatro clientes HTTP |
 | 0039 | Un servicio de la sede con un certificado TLS no reconocido falla: sin el diálogo de confianza del original |
+| 0040 | macOS en Apple Silicon como tercera plataforma: `.dylib` en `Contents/Frameworks`, `.dmg` sin notarizar y adaptadores pendientes |
 
 Los ADR que solo afectan a la suite de conformidad viven en `rfirma-conformance/docs/adr/` y
 comparten la numeración: el siguiente ADR, esté donde esté, toma el número libre más alto.

@@ -233,6 +233,51 @@ jobs:
         run: just test-windows
 
   # ==========================================================================
+  # CARRIL DE MACOS
+  # ==========================================================================
+  # Tercera plataforma (ADR-0040): como Windows, sin grada B ni C, y sin vitest.
+  macos:
+    name: macOS
+    needs: scope
+    if: needs.scope.outputs.rust == 'true' || needs.scope.outputs.native == 'true'
+    runs-on: macos-14
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: ./.github/actions/setup-runner
+        with:
+          rust: lint
+          node: true
+          java: graalvm
+          save-cache: ${{ github.ref == 'refs/heads/main' }}
+
+      - name: Cache de librfirma_crypto.dylib
+        id: cache-native-lib
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: rfirma-native-bridge/target/lib/rfirma
+          key: native-lib-${{ runner.os }}-graalvm${{ env.GRAALVM_VERSION }}-autofirma${{ env.AUTOFIRMA_VERSION }}-${{ hashFiles('scripts/bootstrap.sh', 'rfirma-native-bridge/pom.xml', 'rfirma-native-bridge/src/main/**') }}
+
+      - name: Construye la libreria nativa
+        if: steps.cache-native-lib.outputs.cache-hit != 'true'
+        run: just native
+      - name: Guarda librfirma_crypto.dylib
+        if: steps.cache-native-lib.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: rfirma-native-bridge/target/lib/rfirma
+          key: ${{ steps.cache-native-lib.outputs.cache-primary-key }}
+
+      - name: Interfaz compilada
+        run: just build-ts
+
+      - name: rustfmt y clippy
+        run: just lint-rust
+
+      - name: Pruebas de --lib y del canal local
+        run: just test-macos
+
   # CALENTADOR DE CACHES DE LA ENTREGA
   # ==========================================================================
   # Una etiqueta solo lee las caches de `main`: cada sistema compila aqui la

@@ -12,14 +12,16 @@ set dotenv-required := true
 set dotenv-override := true
 
 windows := if os_family() == "windows" { "true" } else { "false" }
+macos := if os() == "macos" { "true" } else { "false" }
 
 # La raiz con barras normales: bash se come las barras invertidas de Windows.
 root := replace(justfile_directory(), "\\", "/")
 
-# SDKMAN nombra la GraalVM A.B.C.D como `A.B.C+D.rA-graalce` (ADR-0004).
+# SDKMAN nombra la GraalVM A.B.C.D como `A.B.C+D.rA-graalce` (ADR-0004); en macOS vale el JAVA_HOME o la JDK que registre java_home.
 graalvm_version := env("GRAALVM_VERSION")
 sdkman_graalvm := replace_regex(graalvm_version, '^(\d+)\.(\d+)\.(\d+)\.(\d+)$', '${1}.${2}.${3}+${4}.r${1}') + "-graalce"
-default_graalvm := if windows == "true" { "$JAVA_HOME" } else { "$HOME/.sdkman/candidates/java/" + sdkman_graalvm }
+graalvm_major := replace_regex(graalvm_version, '\..*$', '')
+default_graalvm := if windows == "true" { "$JAVA_HOME" } else if macos == "true" { "${JAVA_HOME:-$(/usr/libexec/java_home -v " + graalvm_major + " 2>/dev/null || true)}" } else { "$HOME/.sdkman/candidates/java/" + sdkman_graalvm }
 
 bridge := root / "rfirma-native-bridge"
 app := root / "rfirma-app"
@@ -27,7 +29,7 @@ tauri := app / "src-tauri"
 conformance_suite := root / "rfirma-conformance"
 
 # `prefijo:extension` de la biblioteca dinamica en cada sistema, como DLL_PREFIX y DLL_SUFFIX en Rust.
-dynamic_library := if os() == "windows" { ":.dll" } else { "lib:.so" }
+dynamic_library := if os() == "windows" { ":.dll" } else if os() == "macos" { "lib:.dylib" } else { "lib:.so" }
 dll_prefix := replace_regex(dynamic_library, ':.*$', '')
 dll_suffix := replace_regex(dynamic_library, '^[^:]*:', '')
 
@@ -363,6 +365,15 @@ test-windows: build-ts
     cd {{ tauri }} && {{ no_debuginfo }} cargo llvm-cov --all-features --lib --test channel_client --test channel_operations --test service_acknowledgement --lcov --output-path "{{ coverage_out }}/windows/lcov.info"
     cd {{ tauri }} && cargo crap --path '{{ windows_allow }}' --lcov "{{ coverage_out }}/windows/lcov.info" --threshold 30 --fail-above
 
+# Pruebas de --lib y del canal local en macOS, sin grada B ni C (ADR-0040).
+[group('ci')]
+test-macos: build-ts
+    cd {{ tauri }} && cargo test --all-features --lib --test channel_client --test channel_operations --test service_acknowledgement
+
+# ---------------------------------------------------------------------------
+# CRAP: solo en Rust (ADR-0014)
+# ---------------------------------------------------------------------------
+
 # Genera el lcov de toda la suite con cargo llvm-cov y no baja del suelo (ADR-0014).
 [private]
 coverage: (certs "install") build-ts
@@ -399,6 +410,7 @@ native: build-java
     set -euo pipefail
     graal="${GRAALVM_HOME:-{{ default_graalvm }}}"
     if command -v cygpath >/dev/null; then graal="$(cygpath -u "$graal")"; fi
+    [ -n "$graal" ] || { echo "no encuentro GraalVM CE 25: define GRAALVM_HOME" >&2; exit 1; }
     build_dir="{{ bridge }}/target/native"
     dest="$(dirname "{{ native_lib }}")"
     mkdir -p "$build_dir" && cd "$build_dir"
@@ -407,6 +419,10 @@ native: build-java
     rm -rf "$dest"
     mkdir -p "$dest"
     install -m644 "$build_dir/{{ native_image_output }}" "$dest/{{ native_lib_name }}"
+    if [ "{{ macos }}" = true ]; then
+        install_name_tool -id "@rpath/{{ native_lib_name }}" "$dest/{{ native_lib_name }}"
+        codesign --force --sign - "$dest/{{ native_lib_name }}"
+    fi
     sobran="$(ls -1 "$dest" | grep -vxF '{{ native_lib_name }}' || true)"
     if [ -n "$sobran" ]; then
         echo "sobra algo en $dest:" >&2
@@ -501,6 +517,32 @@ bundle: check-native build-ts
         exit 1
     fi
     echo "nsis: $instalador ($(du -h "$instalador" | cut -f1))"
+
+# Construye la .app y el .dmg de Apple Silicon con la .dylib en Contents/Frameworks (ADR-0040).
+[macos]
+[group('ci')]
+[script('bash')]
+bundle: check-native build-ts
+    set -euo pipefail
+    target="aarch64-apple-darwin"
+    lib="{{ bridge }}/target/lib/rfirma/{{ native_lib_name }}"
+    if ! lipo -archs "$lib" | grep -qw arm64; then
+        echo "$lib no es arm64 ($(lipo -archs "$lib")): compila 'just native' en un Mac con Apple Silicon" >&2
+        exit 1
+    fi
+    (cd "{{ app }}" && pnpm exec tauri build --target "$target" --bundles app,dmg --config "{{ root }}/packaging/macos/tauri.macos.json")
+    salida="$CARGO_TARGET_DIR/$target/release/bundle"
+    if [ ! -f "$salida/macos/rfirma.app/Contents/Frameworks/{{ native_lib_name }}" ]; then
+        echo "la .app no lleva {{ native_lib_name }} en Contents/Frameworks" >&2
+        exit 1
+    fi
+    codesign --verify --deep --strict "$salida/macos/rfirma.app"
+    dmg="$(find "$salida/dmg" -maxdepth 1 -type f -name '*.dmg' | sort | tail -1)"
+    if [ -z "$dmg" ]; then
+        echo "el bundler no produjo ningun .dmg en $salida/dmg" >&2
+        exit 1
+    fi
+    echo "dmg: $dmg ($(du -h "$dmg" | cut -f1))"
 
 # Regenera cargo-sources.json y el sello de Cargo.lock.
 [group('release')]
