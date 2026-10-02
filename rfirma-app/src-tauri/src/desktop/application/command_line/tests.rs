@@ -356,13 +356,11 @@ fn each_command_gives_its_syntax_on_stdout_with_help() {
 
 #[test]
 fn a_command_not_yet_available_fails_with_a_clear_message_and_an_empty_stdout() {
-    for command in ["cosign"] {
-        let outcome = attended(&[command, "-i", "a.pdf", "-o", "b.pdf", "-alias", "yo"]);
+    let outcome = attended(&["cosign", "-i", "a.pdf", "-o", "b.pdf", "-alias", "yo"]);
 
-        assert_eq!(outcome.exit_code, FAILED);
-        assert!(outcome.stdout.is_empty());
-        assert!(said(&outcome).contains(command), "{}", said(&outcome));
-    }
+    assert_eq!(outcome.exit_code, FAILED);
+    assert!(outcome.stdout.is_empty());
+    assert!(said(&outcome).contains("cosign"), "{}", said(&outcome));
 }
 
 #[test]
