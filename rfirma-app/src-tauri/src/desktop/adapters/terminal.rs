@@ -5,7 +5,7 @@ use std::io::{IsTerminal, Write};
 use std::path::PathBuf;
 
 use crate::crossing::Failure;
-use crate::desktop::adapters::command_line_ports::{DiskFiles, NativeVerifier};
+use crate::desktop::adapters::command_line_ports::{DiskFiles, NativeFilter, NativeVerifier};
 use crate::desktop::adapters::handover::SpawnedDesktop;
 use crate::desktop::adapters::paths::Paths;
 use crate::desktop::application::command_line::{attend, CommandLinePorts, FAILED};
@@ -155,6 +155,7 @@ pub fn run_the_command_line(argv: &[String]) -> i32 {
         stores: &SeenStores::of_this_machine(),
         terminal: &ProcessTerminal,
         desktop: &SpawnedDesktop,
+        filter: &NativeFilter,
         files: &DiskFiles,
         verifier: &NativeVerifier,
         signer: match &signer {

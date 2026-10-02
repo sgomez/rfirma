@@ -8,6 +8,7 @@ use crate::identity::domain::certificate::CertificateRef;
 use crate::identity::domain::error::{Situation, TokenError};
 use crate::identity::domain::store::Store;
 use crate::signing::domain::bridge::{BridgeError, Format};
+use crate::site::domain::protocol::SiteFilter;
 
 struct StoresWith {
     labels: Vec<&'static str>,
@@ -95,6 +96,7 @@ fn attended_in(
         stores,
         terminal: &ScriptedTerminal,
         desktop,
+        filter: &Untouched,
         files,
         verifier: &Untouched,
         signer,
@@ -194,6 +196,16 @@ impl DesktopHandover for RecordingDesktop {
     }
 }
 
+impl CertificateFilter for Untouched {
+    fn accepted(
+        &self,
+        _filter: &SiteFilter,
+        _certificates: Vec<TokenCertificate>,
+    ) -> Result<Vec<TokenCertificate>, String> {
+        panic!("no debería filtrar certificados")
+    }
+}
+
 /// El validador que una orden distinta de `verify` no debería llegar a tocar.
 struct Untouched;
 
@@ -202,6 +214,8 @@ impl SignatureVerifier for Untouched {
         panic!("no debería validar en {format}")
     }
 }
+
+mod filter_and_xml;
 
 fn attended(words: &[&str]) -> Outcome {
     attended_with(words, &StoresWith::labels(&[]))
@@ -599,7 +613,6 @@ fn sign_auto_over_something_that_is_not_a_pdf_is_not_yet_available() {
 #[test]
 fn what_sign_does_not_do_yet_fails_before_opening_any_store() {
     for words in [
-        &["sign", "-i", "doc.pdf", "-alias", "yo", "-xml"][..],
         &[
             "sign", "-i", "doc.pdf", "-o", "f.pdf", "-alias", "yo", "-config", "a=b",
         ][..],
@@ -614,15 +627,7 @@ fn what_sign_does_not_do_yet_fails_before_opening_any_store() {
             "-password-fd",
             "3",
         ][..],
-        &[
-            "sign",
-            "-i",
-            "doc.pdf",
-            "-o",
-            "f.pdf",
-            "-filter",
-            "nonexpired:",
-        ][..],
+        &["sign", "-i", "doc.pdf", "-o", "f.pdf", "-certtui"][..],
     ] {
         let stores = StoresWith::labels(&["yo"]);
         let signer = RecordingSigner::default();

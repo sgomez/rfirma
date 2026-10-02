@@ -4,12 +4,13 @@ use std::path::{Path, PathBuf};
 use super::super::{attend, CommandLinePorts, Outcome, FAILED, REFUSED, SUCCEEDED};
 use super::*;
 use crate::desktop::ports::{
-    CertificateStores, CommandLineFiles, CommandLineSigning, DesktopHandover, DocumentSigner,
-    SignatureVerifier, Terminal,
+    CertificateFilter, CertificateStores, CommandLineFiles, CommandLineSigning, DesktopHandover,
+    DocumentSigner, SignatureVerifier, Terminal,
 };
 use crate::identity::domain::certificate::TokenCertificate;
 use crate::identity::domain::error::TokenError;
 use crate::signing::domain::bridge::BridgeError;
+use crate::site::domain::protocol::SiteFilter;
 
 const A_PDF: &[u8] = b"%PDF-1.7\n1 0 obj\n<< >>\nendobj\n";
 
@@ -84,6 +85,16 @@ impl CertificateStores for Untouched {
     }
 }
 
+impl CertificateFilter for Untouched {
+    fn accepted(
+        &self,
+        _filter: &SiteFilter,
+        _certificates: Vec<TokenCertificate>,
+    ) -> Result<Vec<TokenCertificate>, String> {
+        panic!("verify no filtra certificados")
+    }
+}
+
 impl Terminal for Untouched {
     fn is_interactive(&self) -> bool {
         panic!("verify no pregunta a la terminal")
@@ -114,6 +125,7 @@ fn verified(words: &[&str], files: &dyn CommandLineFiles, verifier: &Answering) 
             stores: &Untouched,
             terminal: &Untouched,
             desktop: &Untouched,
+            filter: &Untouched,
             files,
             verifier,
             signer: &Untouched,
