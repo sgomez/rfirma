@@ -16,6 +16,7 @@ máquina. Ni firma ni documentos. Rutas relativas a `src/desktop/`.
 | `adapters/choice.rs` | Elegir, leer o retirar el manejador, en el `mimeapps.list` del `$HOME` y con todo lo demás intacto. Firefox guarda la suya aparte. Pruebas en `adapters/choice/tests.rs`. |
 | `adapters/failures.rs` | La única traducción de las situaciones del escritorio a lo que ve la ventana (ADR-0009); ninguna llega a la sede. Pruebas en `adapters/failures/tests.rs`. |
 | `adapters/firefox_lock.rs` | Si Firefox tiene abierto un perfil: el bloqueo POSIX de `.parentlock`, o `parent.lock` sin compartir en Windows. Pruebas en `adapters/firefox_lock/tests.rs` y `adapters/firefox_lock/windows_tests.rs`. |
+| `adapters/handover.rs` | `SpawnedDesktop`: entrega un fichero al escritorio lanzando otro proceso de rFirma, que la instancia única reenvía si ya hay uno. Sin pruebas propias. |
 | `adapters/installer.rs` | El adaptador de `UpdateInstaller`: el plugin updater en Windows, que solo se registra con su configuración, y «no disponible» en el resto (ADR-0035). Sin pruebas propias. |
 | `adapters/paths.rs` | Las rutas de la memoria entre sesiones y las de la CA local. Único sitio que conoce el sistema operativo (ADR-0010) y el único que crea un fichero `0600` de nacimiento. Pruebas en `adapters/paths/tests.rs`. |
 | `adapters/registry.rs` | `DesktopRegistry`: el adaptador de `HandlerRegistry` sobre `channel.rs` y `choice.rs` en Linux, sobre `registry/windows_classes.rs` en Windows, y el pendiente de Launch Services en macOS. |

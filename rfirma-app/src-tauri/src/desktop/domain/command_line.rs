@@ -13,6 +13,12 @@ pub const PASSWORD: &str = "-password";
 /// La alternativa a `-password`: un descriptor que abre quien llama.
 pub const PASSWORD_FD: &str = "-password-fd";
 
+/// El parámetro que pide la ventana de rFirma en lugar de firmar o verificar.
+pub const GUI: &str = "-gui";
+
+/// El parámetro del fichero de entrada.
+pub const INPUT: &str = "-i";
+
 /// Parámetros del original que rFirma no atiende.
 pub const PARAMETERS_LEFT_OUT: [&str; 5] = ["-preurl", "-posturl", "-hformat", "-halgorithm", "-r"];
 
@@ -88,6 +94,8 @@ pub enum Refusal {
     ParameterLeftOut(&'static str),
     /// Los argumentos de `sign` o `cosign` no son válidos.
     InvalidArguments(ArgumentsRefusal),
+    /// `-gui` sin el fichero de `-i`.
+    GuiWithoutInput,
 }
 
 impl fmt::Display for Refusal {
@@ -112,6 +120,12 @@ impl fmt::Display for Refusal {
                 "el parámetro {parameter} de AutoFirma no está disponible en rfirma"
             ),
             Self::InvalidArguments(refusal) => write!(formatter, "{refusal}"),
+            Self::GuiWithoutInput => {
+                write!(
+                    formatter,
+                    "{GUI} necesita el fichero que se abre, con {INPUT} <fichero>"
+                )
+            }
         }
     }
 }
@@ -142,6 +156,23 @@ pub fn parameter_left_out(arguments: &[String]) -> Option<Refusal> {
             .find(|parameter| *parameter == argument)
             .map(Refusal::ParameterLeftOut)
     })
+}
+
+/// El fichero que `-gui` entrega a la ventana, o nada si la orden no pide la ventana.
+pub fn file_for_the_window(
+    command: Command,
+    arguments: &[String],
+) -> Result<Option<&str>, Refusal> {
+    let asks_for_the_window = matches!(command, Command::Sign | Command::Verify)
+        && arguments.iter().any(|argument| argument == GUI);
+    if !asks_for_the_window {
+        return Ok(None);
+    }
+    arguments
+        .windows(2)
+        .find(|pair| pair[0] == INPUT)
+        .map(|pair| Some(pair[1].as_str()))
+        .ok_or(Refusal::GuiWithoutInput)
 }
 
 const SIGN_SYNTAX: &str = "\

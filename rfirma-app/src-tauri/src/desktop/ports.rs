@@ -1,5 +1,7 @@
 //! Puertos del contexto de escritorio: el registro de manejadores, la memoria de la versión publicada y su instalador.
 
+use std::path::Path;
+
 use crate::desktop::domain::error::DesktopError;
 use crate::desktop::domain::handlers::UrlHandler;
 use crate::desktop::domain::installation::InstallFailure;
@@ -37,4 +39,10 @@ pub trait UpdateInstaller {
 
     /// Descarga la versión anunciada, verifica su firma, cierra la aplicación y ejecuta el instalador.
     fn install(&self) -> Result<(), InstallFailure>;
+}
+
+/// Entrega un fichero al proceso de escritorio, por la instancia única si ya está abierto.
+pub trait DesktopHandover {
+    /// Deja el fichero en la ventana de rFirma, sin esperar a que termine de abrirse.
+    fn hand_over(&self, file: &Path) -> Result<(), String>;
 }

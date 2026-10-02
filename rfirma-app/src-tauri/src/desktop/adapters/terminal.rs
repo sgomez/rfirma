@@ -2,11 +2,12 @@
 
 use std::io::Write;
 
+use crate::desktop::adapters::handover::SpawnedDesktop;
 use crate::desktop::application::command_line::{attend, FAILED};
 
 /// Atiende la línea de órdenes de este argv, con el ejecutable delante, y devuelve el código de salida.
 pub fn run_the_command_line(argv: &[String]) -> i32 {
-    let outcome = attend(argv.get(1..).unwrap_or_default());
+    let outcome = attend(argv.get(1..).unwrap_or_default(), &SpawnedDesktop);
     for line in &outcome.stderr {
         eprintln!("{line}");
     }
