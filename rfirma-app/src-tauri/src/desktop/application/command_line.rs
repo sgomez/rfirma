@@ -18,7 +18,8 @@ use crate::desktop::ports::{
 };
 use crate::identity::domain::certificate::TokenCertificate;
 use crate::identity::domain::store::StoreClass;
-use crate::signing::domain::bridge::Format as SignatureFormat;
+use crate::signing::domain::bridge::{Format as SignatureFormat, XadesVariant};
+use crate::site::domain::protocol::detection::{shape_of, DetectedShape};
 use crate::site::domain::protocol::site_filter;
 
 mod config;
@@ -227,9 +228,7 @@ fn signed(arguments: &[String], parsed: &SignArguments, ports: &CommandLinePorts
             )))
         }
     };
-    let Some(format) = signature_format_of(parsed.format, &bytes) else {
-        return outcome(Outcome::not_yet_available("la firma CAdES y XAdES"));
-    };
+    let format = signature_format_of(parsed.format, &bytes);
     let document = match ports.signer.sign(&CommandLineSigning {
         input,
         certificate: &certificate,
@@ -322,11 +321,18 @@ fn not_yet_available_in(parsed: &SignArguments) -> Option<&'static str> {
     parsed.password_fd.is_some().then_some("-password-fd")
 }
 
-fn signature_format_of(asked: Format, bytes: &[u8]) -> Option<SignatureFormat> {
+fn signature_format_of(asked: Format, bytes: &[u8]) -> SignatureFormat {
     match asked {
-        Format::Pades => Some(SignatureFormat::Pades),
-        Format::Auto if bytes.starts_with(b"%PDF-") => Some(SignatureFormat::Pades),
-        _ => None,
+        Format::Pades => SignatureFormat::Pades,
+        Format::Cades => SignatureFormat::Cades,
+        Format::Xades => SignatureFormat::Xades(XadesVariant::Enveloping),
+        Format::Auto => match shape_of(bytes) {
+            DetectedShape::Pdf => SignatureFormat::Pades,
+            DetectedShape::Xml | DetectedShape::Invoice => {
+                SignatureFormat::Xades(XadesVariant::Enveloping)
+            }
+            DetectedShape::Binary => SignatureFormat::Cades,
+        },
     }
 }
 

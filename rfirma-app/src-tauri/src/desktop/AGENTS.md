@@ -34,6 +34,7 @@ máquina. Ni firma ni documentos. Rutas relativas a `src/desktop/`.
 | `application/command_line/config.rs` | El `-config` de `sign`: sus propiedades, con las reglas de las `properties` de una sede. No las expande. Pruebas en `application/command_line/config/tests.rs`. |
 | `application/command_line/tests/filter_and_xml.rs` | Las pruebas de `-filter` y de la respuesta de `-xml`, partidas de `application/command_line/tests.rs`. |
 | `application/command_line/tests/sign_config.rs` | Las pruebas de `sign -config` en el caso de uso, partidas de `application/command_line/tests.rs`. |
+| `application/command_line/tests/sign_formats.rs` | Las pruebas de `sign -format` en el caso de uso, partidas de `application/command_line/tests.rs`. |
 | `application/command_line/verify.rs` | La orden `verify`: el formato que detecta `-format auto` y un resultado de validez por línea, como el original. No el XML de `-xml`. Pruebas en `application/command_line/verify/tests.rs`. |
 | `application/destination.rs` | Abrir un destino externo conocido en el navegador. Pruebas en `application/destination/tests.rs`. |
 | `application/handlers.rs` | Quién atiende `afirma://`, del escritorio a Preferencias y de vuelta. Devuelve dominio, nunca una vista. Pruebas en `application/handlers/tests.rs`. |
