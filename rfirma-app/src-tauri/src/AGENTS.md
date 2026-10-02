@@ -27,7 +27,7 @@ adaptadores, su estado de proceso, sus puertos y la fachada que usan los vecinos
 
 | Módulo | Qué es |
 |---|---|
-| `lib.rs` | El armado de la aplicación: decide el rol de proceso, escritorio o sede (ADR-0024), y monta una de las dos raíces; la instancia única (ADR-0010) solo se registra en la de escritorio. Sin pruebas propias. |
+| `lib.rs` | El armado de la aplicación: decide el rol de proceso, escritorio, sede o terminal (ADR-0024, ADR-0041), y monta una de las dos raíces o atiende la orden de terminal sin Tauri; la instancia única (ADR-0010) solo se registra en la de escritorio. Sin pruebas propias. |
 | `main.rs` | El binario. No hay nada dentro. |
 | `event_loop.rs` | El bucle de eventos de Tauri de los dos roles: construye la aplicación, entrega los `afirma://` que llegan por `RunEvent::Opened` y borra la carpeta de paso al salir. No compone raíces. Sin pruebas propias. |
 | `crossing.rs` | El rasgo `WindowCrossing` y el macro `crossing!`, con los que se declara todo lo que cruza a la ventana. Pruebas en `crossing/tests.rs`. |

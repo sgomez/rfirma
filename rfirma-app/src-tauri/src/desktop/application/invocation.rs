@@ -4,6 +4,7 @@ use std::ffi::OsString;
 use std::path::PathBuf;
 use std::sync::Mutex;
 
+use crate::desktop::domain::command_line::Command;
 use crate::documents::domain::dropped::invoked_paths;
 use crate::site::domain::protocol::AfirmaUrl;
 
@@ -71,16 +72,17 @@ where
     )
 }
 
-/// Formas aceptadas del parámetro de ayuda.
-pub const HELP_FLAGS: [&str; 3] = ["--help", "-help", "-h"];
+pub use crate::desktop::domain::command_line::HELP_FLAGS;
 
 /// Texto informativo mostrado en la ayuda por consola.
 pub const HELP: &str = "\
-rfirma — firma y cofirma de documentos PDF en PAdES.
+rfirma — firma electrónica con certificado, compatible con AutoFirma.
 
 Uso:
   rfirma [documento…]
   rfirma «afirma://…»
+  rfirma <orden> [parámetros…]
+  rfirma <orden> -help
   rfirma --help
 
 Argumentos:
@@ -90,10 +92,59 @@ Argumentos:
   afirma://…          La llamada de una sede electrónica. La entrega el
                       navegador a través del manejador del esquema; a mano,
                       sirve para probar. Una URL de cualquier otro esquema
-                      no abre nada.
+                      no abre nada. Si la hay, gana a cualquier orden.
 
 Opciones:
   -h, -help, --help   Muestra esta ayuda y termina.
+
+Órdenes, las de AutoFirma, sin distinguir mayúsculas y siempre como primer
+argumento. Se atienden en la terminal, sin unirse a la ventana de rFirma que
+esté abierta, y el proceso termina con ellas:
+  sign                Firma un fichero.
+  cosign              Añade una firma a un fichero ya firmado.
+  listaliases         Lista los certificados de los almacenes.
+  verify              Valida las firmas de un fichero.
+
+Parámetros de las órdenes (rfirma <orden> -help da la sintaxis de cada una):
+  -i <fichero>        Fichero de entrada.
+  -o <fichero>        Fichero de salida, que se sobrescribe si existe.
+                      Obligatorio salvo con -xml.
+  -format <formato>   auto (por omisión), pades, cades o xades.
+  -store <almacén>    Busca solo en ese almacén; sin él, en todos.
+  -alias <alias>      Firma con ese certificado, sin preguntar.
+  -filter <filtro>    Firma con el único certificado que cumple el filtro, o
+                      acota la lista de -certgui o -certtui.
+  -certgui            Elige certificado y PIN en la ventana de sede.
+  -certtui            Elige certificado en la terminal. Propio de rFirma.
+  -password-fd <N>    Lee el PIN del descriptor N, abierto por quien llama.
+                      Propio de rFirma.
+  -algorithm <alg>    sha512 (por omisión), sha384 o sha256.
+  -config <texto>     Propiedades clave=valor de la firma, una por línea, las
+                      mismas que se aceptan de una sede.
+  -xml                Responde en XML por la salida estándar.
+  -gui                Entrega el fichero de -i a la ventana de rFirma, sin
+                      firmar ni verificar.
+  -help               Muestra la sintaxis de la orden.
+
+Salida de las órdenes:
+  El código de salida es 0 si la orden termina bien y distinto de 0 si falla.
+  Por la salida estándar solo sale lo que se consume: la sintaxis de -help y
+  el XML de -xml. Los mensajes y los registros van a la salida de errores.
+
+Desviaciones de la línea de órdenes de AutoFirma:
+  -password           Se rechaza: la contraseña en la línea de órdenes la ve
+                      cualquier usuario del equipo y queda en el historial. El
+                      PIN se pide en la terminal, se lee de -password-fd o se
+                      escribe en la ventana con -certgui.
+  countersign, batchsign
+                      No existen.
+  -preurl, -posturl, -hformat, -halgorithm, -r, -operation
+                      No existen.
+  -algorithm sha1     Se rechaza.
+  -store              Un almacén que AutoFirma no reconoce se rechaza.
+  -certgui, -certtui  No listan certificados caducados ni cambian de almacén.
+  Salida estándar     No mezcla los mensajes con lo que se consume, al
+                      contrario que AutoFirma.
 
 Lo que rFirma atiende de una sede (protocolo 4, sobre wss:// en 127.0.0.1):
   websocket           Abre el canal en uno de los puertos que sortea la sede.
@@ -102,20 +153,6 @@ Lo que rFirma atiende de una sede (protocolo 4, sobre wss:// en 127.0.0.1):
   sign                Firma PAdES de un PDF.
   cosign              Cofirma PAdES de un PDF.
   countersign, save y signandsave se rechazan con su código del catálogo.
-
-Compatibilidad con AutoFirma:
-  rFirma la sustituye en la llamada desde el navegador —el esquema afirma://—,
-  que es como la usan las sedes electrónicas. NO implementa su línea de órdenes
-  de firma desatendida, así que ninguna de estas órdenes ni de estos parámetros
-  existe aquí:
-
-    órdenes      sign, cosign, countersign, listaliases, verify, batchsign
-    parámetros   -i, -o, -alias, -filter, -store, -format, -password,
-                 -algorithm, -config, -operation, -gui, -certgui, -preurl,
-                 -posturl, -hformat, -halgorithm, -r, -xml
-
-  Toda firma la consiente la persona delante de la ventana. No hay modo
-  desatendido y no está previsto que lo haya.
 ";
 
 /// Determina si los argumentos de ejecución solicitan la visualización de la ayuda.
@@ -161,13 +198,15 @@ pub fn second_invocation(invocation: &Invocation, signing_is_live: bool) -> Seco
     }
 }
 
-/// Rol de este proceso según su línea de órdenes: escritorio o sede (ADR-0024).
+/// Rol de este proceso según su línea de órdenes (ADR-0024, ADR-0041).
 #[derive(Debug, PartialEq, Eq)]
 pub enum Role {
     /// El escritorio, con la invocación completa.
     Desktop(Invocation),
     /// La sede, con la URL `afirma://` entera.
     Site(String),
+    /// La terminal, con los argumentos que siguen al ejecutable, empezando por la orden.
+    Terminal(Vec<String>),
     /// Ninguno: una URL de otro esquema no abre ventana, como en el original.
     Foreign(String),
 }
@@ -177,6 +216,13 @@ pub enum Role {
 pub fn role_of(invocation: Invocation) -> Role {
     if let Some(url) = invocation.site_launch() {
         return Role::Site(url.to_owned());
+    }
+    let arguments = invocation.command_line.get(1..).unwrap_or_default();
+    if arguments
+        .first()
+        .is_some_and(|first| Command::named(first).is_some())
+    {
+        return Role::Terminal(arguments.to_vec());
     }
     match invocation.foreign_launch() {
         Some(url) => Role::Foreign(url.to_owned()),

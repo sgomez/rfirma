@@ -383,3 +383,64 @@ fn a_delivered_url_of_a_foreign_scheme_launches_nothing_and_ends_nothing() {
         }
     );
 }
+
+fn invoked_with_the_words(words: &[&str]) -> Invocation {
+    Invocation {
+        command_line: std::iter::once("rfirma")
+            .chain(words.iter().copied())
+            .map(str::to_owned)
+            .collect(),
+        folder: PathBuf::from("/"),
+    }
+}
+
+#[test]
+fn a_command_as_the_first_argument_gives_the_terminal_role_whatever_the_case() {
+    for command in ["sign", "COSIGN", "ListAliases", "verify"] {
+        let words = [command, "-i", "a.pdf", "-o", "b.pdf"];
+
+        assert_eq!(
+            role_of(invoked_with_the_words(&words)),
+            Role::Terminal(words.iter().map(|word| (*word).to_owned()).collect())
+        );
+    }
+}
+
+#[test]
+fn the_commands_left_out_also_give_the_terminal_role_so_they_can_be_refused() {
+    for command in ["countersign", "batchsign"] {
+        assert!(matches!(
+            role_of(invoked_with_the_words(&[command, "-i", "a.pdf"])),
+            Role::Terminal(_)
+        ));
+    }
+}
+
+#[test]
+fn an_afirma_url_wins_over_a_command() {
+    assert_eq!(
+        role_of(invoked_with_the_words(&["sign", A_LAUNCH])),
+        Role::Site(A_LAUNCH.to_owned())
+    );
+}
+
+#[test]
+fn a_command_that_is_not_the_first_argument_gives_no_terminal_role() {
+    let invocation = invoked_with_the_words(&["contrato.pdf", "sign"]);
+
+    assert_eq!(role_of(invocation.clone()), Role::Desktop(invocation));
+}
+
+#[test]
+fn the_help_no_longer_promises_that_there_is_no_unattended_mode() {
+    assert!(!HELP.contains("desatendido"));
+    for line in [
+        "rfirma <orden> [parámetros…]",
+        "rfirma <orden> -help",
+        "-password-fd <N>",
+        "-certtui",
+        "Desviaciones",
+    ] {
+        assert!(HELP.contains(line), "falta {line}");
+    }
+}
