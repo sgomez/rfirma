@@ -24,11 +24,13 @@ use crate::identity::domain::secret::{SecretName, StoreSecret};
 use crate::identity::domain::store::Store;
 use crate::identity::ports::Token;
 use crate::identity::{every_store, IdentityRoot};
-use crate::signing::domain::bridge::SignatureOperation;
+use crate::signing::domain::bridge::{BridgeError, SignatureOperation};
+use crate::signing::domain::to_java_properties;
 use crate::signing::ports::Signer;
 use crate::signing::{DeclaredByTheSite, SigningRoot};
+use crate::site::domain::protocol::pairs_of;
 use crate::site::domain::protocol::AskedAlgorithm;
-use crate::site::ports::composed_for;
+use crate::site::ports::{composed_for, PolicyEngine};
 use crate::Roots;
 
 mod tty;
@@ -106,6 +108,23 @@ impl<'a> RootsSigner<'a> {
     }
 }
 
+impl RootsSigner<'_> {
+    fn expanded(
+        &self,
+        request: &CommandLineSigning<'_>,
+    ) -> Result<BTreeMap<String, String>, BridgeError> {
+        if request.format.signed_without_the_bridge() {
+            return Ok(request.parameters.clone());
+        }
+        let expanded = self.signing.isolate.expand(
+            &to_java_properties(request.parameters),
+            request.format.name(),
+            request.document_length,
+        )?;
+        Ok(pairs_of(&expanded).into_iter().collect())
+    }
+}
+
 fn asked(algorithm: Algorithm) -> AskedAlgorithm {
     match algorithm {
         Algorithm::Sha512 => AskedAlgorithm::Sha512,
@@ -152,8 +171,8 @@ impl DocumentSigner for RootsSigner<'_> {
         }
         let algorithm = composed_for(asked(request.algorithm), request.certificate.key_kind())
             .map_err(|error| error.detail().to_owned())?;
+        let parameters = self.expanded(request).map_err(|error| error.to_string())?;
         let signer = self.identity.signer();
-        let parameters = BTreeMap::new();
         let secret = self
             .signing
             .begin_for_the_site(
