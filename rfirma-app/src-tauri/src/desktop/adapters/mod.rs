@@ -2,6 +2,7 @@
 
 pub mod channel;
 pub mod choice;
+pub mod command_line_ports;
 pub mod failures;
 pub mod firefox_lock;
 pub mod handover;

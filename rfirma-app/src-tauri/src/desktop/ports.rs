@@ -9,6 +9,7 @@ use crate::desktop::domain::version_check::VersionCheck;
 use crate::identity::domain::certificate::TokenCertificate;
 use crate::identity::domain::error::TokenError;
 use crate::memory_error::MemoryError;
+use crate::signing::domain::bridge::{BridgeError, Format};
 
 /// Quién atiende un esquema según el escritorio, y cómo se elige (ADR-0015).
 pub trait HandlerRegistry {
@@ -62,4 +63,16 @@ pub trait CertificateStores {
 pub trait Terminal {
     /// Si hay una persona al otro lado que puede contestar a lo que se le pregunte.
     fn is_interactive(&self) -> bool;
+}
+
+/// Los ficheros que nombra la línea de órdenes.
+pub trait CommandLineFiles {
+    /// Los bytes del fichero, o por qué no se ha podido leer.
+    fn read(&self, path: &Path) -> Result<Vec<u8>, String>;
+}
+
+/// El validador del original, como lo usa su orden `verify`.
+pub trait SignatureVerifier {
+    /// Un texto por resultado de validez de las firmas del documento, con el validador de ese formato.
+    fn results_of(&self, document: &[u8], format: Format) -> Result<Vec<String>, BridgeError>;
 }

@@ -49,6 +49,7 @@ fn java_has_no_entry_point_for_the_signing_phase() {
         "autofirma_pades_presign",
         "autofirma_previous_signatures",
         "autofirma_validate_signatures",
+        "autofirma_verify_signatures",
         "autofirma_xades_postsign",
         "autofirma_xades_presign",
     ]

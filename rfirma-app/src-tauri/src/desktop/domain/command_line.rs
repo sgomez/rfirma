@@ -23,6 +23,9 @@ pub const INPUT: &str = "-i";
 /// El parámetro que acota los almacenes donde se buscan los certificados.
 pub const STORE: &str = "-store";
 
+/// El parámetro que pide el resultado en XML.
+pub const XML: &str = "-xml";
+
 /// Parámetros del original que rFirma no atiende.
 pub const PARAMETERS_LEFT_OUT: [&str; 5] = ["-preurl", "-posturl", "-hformat", "-halgorithm", "-r"];
 
@@ -102,6 +105,8 @@ pub enum Refusal {
     GuiWithoutInput,
     /// El valor de `-store` no se atiende.
     InvalidStore(StoreRefusal),
+    /// Falta un parámetro que la orden necesita, o su valor.
+    MissingParameter(&'static str),
 }
 
 impl fmt::Display for Refusal {
@@ -127,6 +132,9 @@ impl fmt::Display for Refusal {
             ),
             Self::InvalidArguments(refusal) => write!(formatter, "{refusal}"),
             Self::InvalidStore(refusal) => write!(formatter, "{refusal}"),
+            Self::MissingParameter(parameter) => {
+                write!(formatter, "falta el parámetro {parameter} con su valor")
+            }
             Self::GuiWithoutInput => {
                 write!(
                     formatter,
@@ -180,6 +188,15 @@ pub fn file_for_the_window(
         .find(|pair| pair[0] == INPUT)
         .map(|pair| Some(pair[1].as_str()))
         .ok_or(Refusal::GuiWithoutInput)
+}
+
+/// El valor que sigue al parámetro en los argumentos, si lo trae.
+pub fn value_of<'a>(arguments: &'a [String], parameter: &str) -> Option<&'a str> {
+    arguments
+        .iter()
+        .position(|argument| argument == parameter)
+        .and_then(|at| arguments.get(at + 1))
+        .map(String::as_str)
 }
 
 const SIGN_SYNTAX: &str = "\

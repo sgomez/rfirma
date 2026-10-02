@@ -3,6 +3,7 @@
 use std::io::{IsTerminal, Write};
 use std::path::PathBuf;
 
+use crate::desktop::adapters::command_line_ports::{DiskFiles, NativeVerifier};
 use crate::desktop::adapters::handover::SpawnedDesktop;
 use crate::desktop::adapters::paths::Paths;
 use crate::desktop::application::command_line::{attend, CommandLinePorts, FAILED};
@@ -61,6 +62,8 @@ pub fn run_the_command_line(argv: &[String]) -> i32 {
         stores: &SeenStores::of_this_machine(),
         terminal: &ProcessTerminal,
         desktop: &SpawnedDesktop,
+        files: &DiskFiles,
+        verifier: &NativeVerifier,
     };
     let outcome = attend(argv.get(1..).unwrap_or_default(), &ports);
     for line in &outcome.stderr {

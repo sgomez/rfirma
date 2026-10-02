@@ -5,6 +5,7 @@ use super::*;
 use crate::identity::domain::certificate::CertificateRef;
 use crate::identity::domain::error::{Situation, TokenError};
 use crate::identity::domain::store::Store;
+use crate::signing::domain::bridge::{BridgeError, Format};
 
 struct StoresWith {
     labels: Vec<&'static str>,
@@ -76,6 +77,8 @@ fn attended_by(
         stores,
         terminal: &ScriptedTerminal,
         desktop,
+        files: &Untouched,
+        verifier: &Untouched,
     };
     attend(&arguments_of(words), &ports)
 }
@@ -101,6 +104,21 @@ impl DesktopHandover for RecordingDesktop {
         }
         self.delivered.borrow_mut().push(file.to_path_buf());
         Ok(())
+    }
+}
+
+/// Los puertos de una orden que no debería llegar a tocar el mundo.
+struct Untouched;
+
+impl CommandLineFiles for Untouched {
+    fn read(&self, path: &Path) -> Result<Vec<u8>, String> {
+        panic!("no debería leer {}", path.display())
+    }
+}
+
+impl SignatureVerifier for Untouched {
+    fn results_of(&self, _document: &[u8], format: Format) -> Result<Vec<String>, BridgeError> {
+        panic!("no debería validar en {format}")
     }
 }
 
@@ -257,7 +275,7 @@ fn each_command_gives_its_syntax_on_stdout_with_help() {
 
 #[test]
 fn a_command_not_yet_available_fails_with_a_clear_message_and_an_empty_stdout() {
-    for command in ["sign", "cosign", "verify"] {
+    for command in ["sign", "cosign"] {
         let outcome = attended(&[command, "-i", "a.pdf", "-o", "b.pdf", "-alias", "yo"]);
 
         assert_eq!(outcome.exit_code, FAILED);

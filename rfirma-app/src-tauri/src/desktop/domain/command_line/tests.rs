@@ -114,3 +114,16 @@ fn the_help_is_asked_for_with_any_of_its_three_flags() {
     }
     assert!(!is_a_help_flag("help"));
 }
+
+#[test]
+fn the_value_of_a_parameter_is_the_argument_that_follows_it() {
+    let words = arguments(&["verify", "-i", "firmado.pdf", "-xml"]);
+
+    assert_eq!(value_of(&words, INPUT), Some("firmado.pdf"));
+}
+
+#[test]
+fn a_parameter_that_is_missing_or_last_has_no_value() {
+    assert_eq!(value_of(&arguments(&["verify"]), INPUT), None);
+    assert_eq!(value_of(&arguments(&["verify", "-i"]), INPUT), None);
+}
