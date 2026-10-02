@@ -2,6 +2,8 @@
 
 use std::fmt;
 
+use super::sign_arguments::ArgumentsRefusal;
+
 /// Formas aceptadas del parámetro de ayuda.
 pub const HELP_FLAGS: [&str; 3] = ["--help", "-help", "-h"];
 
@@ -84,6 +86,8 @@ pub enum Refusal {
     CommandLeftOut(Command),
     /// Un parámetro del original que rFirma no atiende.
     ParameterLeftOut(&'static str),
+    /// Los argumentos de `sign` o `cosign` no son válidos.
+    InvalidArguments(ArgumentsRefusal),
 }
 
 impl fmt::Display for Refusal {
@@ -107,6 +111,7 @@ impl fmt::Display for Refusal {
                 formatter,
                 "el parámetro {parameter} de AutoFirma no está disponible en rfirma"
             ),
+            Self::InvalidArguments(refusal) => write!(formatter, "{refusal}"),
         }
     }
 }

@@ -3,6 +3,7 @@
 use crate::desktop::domain::command_line::{
     command_of, is_a_help_flag, parameter_left_out, Command, Refusal,
 };
+use crate::desktop::domain::sign_arguments::parse_sign_arguments;
 
 /// El código de salida de una orden que termina bien.
 pub const SUCCEEDED: i32 = 0;
@@ -64,6 +65,11 @@ pub fn attend(arguments: &[String]) -> Outcome {
     }
     if let Some(refusal) = parameter_left_out(arguments) {
         return Outcome::refused(&refusal);
+    }
+    if matches!(command, Command::Sign | Command::Cosign) {
+        if let Err(refusal) = parse_sign_arguments(&arguments[1..]) {
+            return Outcome::refused(&Refusal::InvalidArguments(refusal));
+        }
     }
     Outcome::not_yet_available(command)
 }

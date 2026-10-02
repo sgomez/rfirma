@@ -6,6 +6,7 @@ pub mod destination;
 pub mod error;
 pub mod handlers;
 pub mod installation;
+pub mod sign_arguments;
 pub mod status;
 pub mod version_check;
 pub mod withdrawal;
