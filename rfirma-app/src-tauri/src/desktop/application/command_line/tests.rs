@@ -230,6 +230,7 @@ impl SignatureVerifier for Untouched {
 
 mod filter_and_xml;
 mod sign_config;
+mod sign_formats;
 
 fn attended(words: &[&str]) -> Outcome {
     attended_with(words, &StoresWith::labels(&[]))
@@ -606,22 +607,6 @@ fn an_input_that_cannot_be_read_fails_without_signing() {
     assert_eq!(outcome.exit_code, FAILED);
     assert!(said(&outcome).contains("no-esta.pdf"), "{}", said(&outcome));
     assert!(signer.asked.borrow().is_empty());
-}
-
-#[test]
-fn sign_auto_over_something_that_is_not_a_pdf_is_not_yet_available() {
-    let files = FilesInMemory::with("datos.bin", b"no es un PDF");
-    let signer = RecordingSigner::default();
-
-    let outcome = signed_over(
-        &["sign", "-i", "datos.bin", "-o", "f.bin", "-alias", "yo"],
-        &files,
-        &signer,
-    );
-
-    assert_eq!(outcome.exit_code, FAILED);
-    assert!(signer.asked.borrow().is_empty());
-    assert_eq!(files.at("f.bin"), None);
 }
 
 #[test]

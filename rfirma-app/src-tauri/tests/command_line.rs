@@ -30,6 +30,8 @@ use std::sync::Arc;
 
 #[path = "command_line/config.rs"]
 mod config;
+#[path = "command_line/formats.rs"]
+mod formats;
 
 const CARD_MODULE: &str = "/usr/lib/softhsm/libsofthsm2.so";
 const CARD_ACTIVE: &str = "FNMT-ACTIVO-99999999R";
