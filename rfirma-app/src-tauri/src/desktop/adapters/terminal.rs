@@ -10,22 +10,28 @@ use crate::desktop::adapters::handover::SpawnedDesktop;
 use crate::desktop::adapters::paths::Paths;
 use crate::desktop::application::command_line::{attend, CommandLinePorts, FAILED};
 use crate::desktop::domain::sign_arguments::Algorithm;
-use crate::desktop::ports::{CertificateStores, CommandLineSigning, DocumentSigner, Terminal};
+use crate::desktop::ports::{
+    AskedSecret, CertificateStores, CommandLineSigning, DocumentSigner, Terminal,
+};
 use crate::documents::domain::document::Document;
+use crate::identity::adapters::failures::situation_name;
 use crate::identity::adapters::pkcs11::stores::discovered_module_named;
 use crate::identity::adapters::{desktop_stores, DesktopToken};
 use crate::identity::domain::certificate::TokenCertificate;
-use crate::identity::domain::error::TokenError;
+use crate::identity::domain::error::{Situation, TokenError};
 use crate::identity::domain::protected_secret::ProtectedSecret;
-use crate::identity::domain::secret::StoreSecret;
+use crate::identity::domain::secret::{SecretName, StoreSecret};
 use crate::identity::domain::store::Store;
 use crate::identity::ports::Token;
 use crate::identity::{every_store, IdentityRoot};
 use crate::signing::domain::bridge::SignatureOperation;
+use crate::signing::ports::Signer;
 use crate::signing::{DeclaredByTheSite, SigningRoot};
 use crate::site::domain::protocol::AskedAlgorithm;
 use crate::site::ports::composed_for;
 use crate::Roots;
+
+mod tty;
 
 /// Los almacenes que se recorren con el token de esta plataforma.
 pub struct SeenStores {
@@ -65,6 +71,23 @@ impl Terminal for ProcessTerminal {
     fn is_interactive(&self) -> bool {
         std::io::stdin().is_terminal()
     }
+
+    fn secret(&self, asked: &AskedSecret<'_>) -> Result<ProtectedSecret, String> {
+        tty::typed_without_echo(&prompt_for(asked))
+    }
+}
+
+fn prompt_for(asked: &AskedSecret<'_>) -> String {
+    let name = match asked.name {
+        SecretName::Pin => "PIN",
+        _ => "Contraseña",
+    };
+    let again = if asked.incorrect {
+        "rfirma: no es correcto; vuelve a intentarlo.\n"
+    } else {
+        ""
+    };
+    format!("{again}{name} de «{}»: ", asked.alias)
 }
 
 /// La firma de la sede sobre las raíces de identidad y de firma, sin ventana.
@@ -88,6 +111,37 @@ fn asked(algorithm: Algorithm) -> AskedAlgorithm {
         Algorithm::Sha512 => AskedAlgorithm::Sha512,
         Algorithm::Sha384 => AskedAlgorithm::Sha384,
         Algorithm::Sha256 => AskedAlgorithm::Sha256,
+    }
+}
+
+impl RootsSigner<'_> {
+    fn signed_with_the_typed_secret(
+        &self,
+        signer: &dyn Signer,
+        request: &CommandLineSigning<'_>,
+    ) -> Result<(), String> {
+        let reference = request.certificate.reference();
+        if !request.terminal.is_interactive() {
+            return Err(
+                "pedir el PIN sin terminal todavía no está disponible en esta versión".to_owned(),
+            );
+        }
+        let mut asked = AskedSecret {
+            name: SecretName::of(reference.store().class()),
+            alias: reference.label(),
+            incorrect: false,
+        };
+        loop {
+            let typed = request.terminal.secret(&asked)?;
+            let Err(failure) = self.signing.sign_on_token(signer, &typed) else {
+                return Ok(());
+            };
+            let failure = Failure::from(failure);
+            if failure.situation != situation_name(Situation::IncorrectPin) {
+                return Err(failure.detail);
+            }
+            asked.incorrect = true;
+        }
     }
 }
 
@@ -116,14 +170,13 @@ impl DocumentSigner for RootsSigner<'_> {
                 &signer,
             )
             .map_err(|failure| Failure::from(failure).detail)?;
-        if secret != StoreSecret::NotNeeded {
-            return Err(
-                "pedir el PIN en la terminal todavía no está disponible en esta versión".to_owned(),
-            );
+        if secret == StoreSecret::TypedOnScreen {
+            self.signed_with_the_typed_secret(&signer, request)?;
+        } else {
+            self.signing
+                .sign_on_token(&signer, &ProtectedSecret::new(b""))
+                .map_err(|failure| Failure::from(failure).detail)?;
         }
-        self.signing
-            .sign_on_token(&signer, &ProtectedSecret::new(b""))
-            .map_err(|failure| Failure::from(failure).detail)?;
         let signed = self
             .signing
             .finish()

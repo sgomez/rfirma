@@ -1,5 +1,7 @@
 //! La línea de órdenes contra el token `rfirma-test` y el Almacén de rFirma: por su caso de uso con una terminal guionizada, y lanzando el binario `rfirma`.
 
+use std::cell::RefCell;
+use std::collections::VecDeque;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -9,7 +11,7 @@ use rfirma_lib::desktop::adapters::terminal::{RootsSigner, SeenStores};
 use rfirma_lib::desktop::application::command_line::{
     attend, CommandLinePorts, Outcome, FAILED, SUCCEEDED,
 };
-use rfirma_lib::desktop::ports::{DesktopHandover, Terminal};
+use rfirma_lib::desktop::ports::{AskedSecret, DesktopHandover, Terminal};
 use rfirma_lib::identity::adapters::folder::RealInstalledFolder;
 use rfirma_lib::identity::adapters::pkcs11;
 use rfirma_lib::identity::application::certificates;
@@ -33,17 +35,45 @@ const KIT_PASSWORD: &str = "1234";
 /// La terminal de las pruebas: contesta lo que diga su guion, y sin TTY si así se pide.
 struct ScriptedTerminal {
     interactive: bool,
+    answers: RefCell<VecDeque<&'static str>>,
+    asked: RefCell<Vec<bool>>,
 }
 
 impl ScriptedTerminal {
     fn without_a_tty() -> Self {
-        Self { interactive: false }
+        Self::answering(false, &[])
+    }
+
+    fn typing(answers: &[&'static str]) -> Self {
+        Self::answering(true, answers)
+    }
+
+    fn answering(interactive: bool, answers: &[&'static str]) -> Self {
+        Self {
+            interactive,
+            answers: RefCell::new(answers.iter().copied().collect()),
+            asked: RefCell::new(Vec::new()),
+        }
+    }
+
+    fn retries_asked(&self) -> Vec<bool> {
+        self.asked.borrow().clone()
     }
 }
 
 impl Terminal for ScriptedTerminal {
     fn is_interactive(&self) -> bool {
         self.interactive
+    }
+
+    fn secret(&self, asked: &AskedSecret<'_>) -> Result<ProtectedSecret, String> {
+        assert!(self.interactive, "sin TTY no se pide nada a la terminal");
+        self.asked.borrow_mut().push(asked.incorrect);
+        self.answers
+            .borrow_mut()
+            .pop_front()
+            .map(ProtectedSecret::from_str)
+            .ok_or_else(|| "no se ha tecleado nada".to_owned())
     }
 }
 
@@ -510,5 +540,75 @@ fn the_rfirma_binary_attends_sign_as_a_terminal_command_and_not_with_a_window() 
     assert_eq!(finished.status.code(), Some(FAILED), "{stderr}");
     assert!(stderr.contains("nadie-con-este-alias"), "{stderr}");
     assert!(finished.stdout.is_empty(), "{stderr}");
+    assert!(!output.exists());
+}
+
+fn signed_on_the_card(home: &Path, terminal: &ScriptedTerminal) -> (Outcome, Roots, PathBuf) {
+    let roots = the_roots_under(home);
+    let input = home.join("documento.pdf");
+    std::fs::write(&input, a_one_page_pdf()).expect("el PDF deberia escribirse");
+    let output = home.join("firmado.pdf");
+    let outcome = attended_with_the_roots(
+        &[
+            "sign",
+            "-i",
+            input.to_str().expect("ruta UTF-8"),
+            "-o",
+            output.to_str().expect("ruta UTF-8"),
+            "-alias",
+            CARD_ACTIVE,
+            "-store",
+            &format!("pkcs11:{}", the_card_module().display()),
+        ],
+        &roots,
+        terminal,
+    );
+    (outcome, roots, output)
+}
+
+#[test]
+#[ignore = "grada C: necesita librfirma_crypto.so (just test-native)"]
+fn sign_on_the_test_token_asks_the_pin_on_the_tty_and_again_when_it_is_wrong() {
+    let (home, _installed_alias) = a_home_with_an_installed_certificate();
+    let terminal = ScriptedTerminal::typing(&["0000", KIT_PASSWORD]);
+
+    let (outcome, roots, output) = signed_on_the_card(home.path(), &terminal);
+
+    assert_eq!(outcome.exit_code, SUCCEEDED, "{:?}", outcome.stderr);
+    assert_eq!(terminal.retries_asked(), vec![false, true]);
+    assert!(outcome.stdout.is_empty());
+    let signed = std::fs::read(&output).expect("la firma deberia estar en -o");
+    assert_eq!(verdict_of(&roots, &signed), SignatureVerdict::Valid);
+}
+
+#[test]
+#[ignore = "grada C: necesita librfirma_crypto.so (just test-native)"]
+fn sign_on_the_test_token_fails_when_the_pin_is_not_typed() {
+    let (home, _installed_alias) = a_home_with_an_installed_certificate();
+    let terminal = ScriptedTerminal::typing(&[]);
+
+    let (outcome, roots, output) = signed_on_the_card(home.path(), &terminal);
+
+    assert_eq!(outcome.exit_code, FAILED, "{:?}", outcome.stderr);
+    assert_eq!(terminal.retries_asked(), vec![false]);
+    assert!(outcome.stdout.is_empty());
+    assert!(!output.exists());
+    assert_eq!(roots.identity.remembered_certificate(), None);
+}
+
+#[test]
+#[ignore = "grada C: necesita librfirma_crypto.so (just test-native)"]
+fn sign_on_the_test_token_without_a_tty_fails_without_asking() {
+    let (home, _installed_alias) = a_home_with_an_installed_certificate();
+    let terminal = ScriptedTerminal::without_a_tty();
+
+    let (outcome, _roots, output) = signed_on_the_card(home.path(), &terminal);
+
+    assert_eq!(outcome.exit_code, FAILED, "{:?}", outcome.stderr);
+    assert!(
+        outcome.stderr.concat().contains("PIN"),
+        "{:?}",
+        outcome.stderr
+    );
     assert!(!output.exists());
 }

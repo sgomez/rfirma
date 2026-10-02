@@ -4,8 +4,10 @@ use std::path::PathBuf;
 
 use super::*;
 use crate::desktop::domain::sign_arguments::Algorithm;
+use crate::desktop::ports::AskedSecret;
 use crate::identity::domain::certificate::CertificateRef;
 use crate::identity::domain::error::{Situation, TokenError};
+use crate::identity::domain::protected_secret::ProtectedSecret;
 use crate::identity::domain::store::Store;
 use crate::signing::domain::bridge::{BridgeError, Format};
 use crate::site::domain::protocol::SiteFilter;
@@ -64,6 +66,13 @@ struct ScriptedTerminal;
 impl Terminal for ScriptedTerminal {
     fn is_interactive(&self) -> bool {
         false
+    }
+
+    fn secret(&self, asked: &AskedSecret<'_>) -> Result<ProtectedSecret, String> {
+        panic!(
+            "estas pruebas no piden el {:?} de {}",
+            asked.name, asked.alias
+        )
     }
 }
 

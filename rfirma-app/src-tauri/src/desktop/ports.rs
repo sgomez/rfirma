@@ -9,6 +9,8 @@ use crate::desktop::domain::sign_arguments::Algorithm;
 use crate::desktop::domain::version_check::VersionCheck;
 use crate::identity::domain::certificate::TokenCertificate;
 use crate::identity::domain::error::TokenError;
+use crate::identity::domain::protected_secret::ProtectedSecret;
+use crate::identity::domain::secret::SecretName;
 use crate::memory_error::MemoryError;
 use crate::signing::domain::bridge::{BridgeError, Format};
 use crate::site::domain::protocol::SiteFilter;
@@ -71,10 +73,20 @@ pub trait CertificateFilter {
     ) -> Result<Vec<TokenCertificate>, String>;
 }
 
+/// El secreto que la orden pide en la terminal, y si es porque el anterior no valía.
+pub struct AskedSecret<'a> {
+    pub name: SecretName,
+    pub alias: &'a str,
+    pub incorrect: bool,
+}
+
 /// La terminal desde la que se lanza la orden.
 pub trait Terminal {
     /// Si hay una persona al otro lado que puede contestar a lo que se le pregunte.
     fn is_interactive(&self) -> bool;
+
+    /// El secreto tecleado sin eco en la TTY, o por qué no se ha tecleado.
+    fn secret(&self, asked: &AskedSecret<'_>) -> Result<ProtectedSecret, String>;
 }
 
 /// Los ficheros que la orden lee y escribe.
@@ -98,6 +110,7 @@ pub struct CommandLineSigning<'a> {
     pub certificate: &'a TokenCertificate,
     pub format: Format,
     pub algorithm: Algorithm,
+    pub terminal: &'a dyn Terminal,
 }
 
 /// La firma por el camino de la sede, sin ventana ni AppHandle.

@@ -4,11 +4,12 @@ use std::path::{Path, PathBuf};
 use super::super::{attend, CommandLinePorts, Outcome, FAILED, REFUSED, SUCCEEDED};
 use super::*;
 use crate::desktop::ports::{
-    CertificateFilter, CertificateStores, CommandLineFiles, CommandLineSigning, DesktopHandover,
-    DocumentSigner, SignatureVerifier, Terminal,
+    AskedSecret, CertificateFilter, CertificateStores, CommandLineFiles, CommandLineSigning,
+    DesktopHandover, DocumentSigner, SignatureVerifier, Terminal,
 };
 use crate::identity::domain::certificate::TokenCertificate;
 use crate::identity::domain::error::TokenError;
+use crate::identity::domain::protected_secret::ProtectedSecret;
 use crate::signing::domain::bridge::BridgeError;
 use crate::site::domain::protocol::SiteFilter;
 
@@ -98,6 +99,10 @@ impl CertificateFilter for Untouched {
 impl Terminal for Untouched {
     fn is_interactive(&self) -> bool {
         panic!("verify no pregunta a la terminal")
+    }
+
+    fn secret(&self, asked: &AskedSecret<'_>) -> Result<ProtectedSecret, String> {
+        panic!("verify no pide el secreto de {}", asked.alias)
     }
 }
 
