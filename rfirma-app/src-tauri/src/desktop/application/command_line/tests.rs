@@ -4,7 +4,7 @@ use std::path::PathBuf;
 
 use super::*;
 use crate::desktop::domain::sign_arguments::Algorithm;
-use crate::desktop::ports::{AskedSecret, SecretDescriptor};
+use crate::desktop::ports::{AskedSecret, OfferedCertificate, SecretDescriptor};
 use crate::identity::domain::certificate::CertificateRef;
 use crate::identity::domain::error::{Situation, TokenError};
 use crate::identity::domain::protected_secret::ProtectedSecret;
@@ -72,6 +72,13 @@ impl Terminal for ScriptedTerminal {
         panic!(
             "estas pruebas no piden el {:?} de {}",
             asked.name, asked.alias
+        )
+    }
+
+    fn chosen(&self, offered: &[OfferedCertificate], _preselected: usize) -> Result<usize, String> {
+        panic!(
+            "estas pruebas no eligen entre {} certificados",
+            offered.len()
         )
     }
 }
@@ -167,6 +174,7 @@ struct RecordingSigner {
     descriptors: RefCell<Vec<Option<u32>>>,
     operations: RefCell<Vec<SignatureOperation>>,
     fails: bool,
+    recalled: Option<CertificateRef>,
 }
 
 impl DocumentSigner for RecordingSigner {
@@ -192,6 +200,10 @@ impl DocumentSigner for RecordingSigner {
         self.remembered
             .borrow_mut()
             .push(certificate.reference().label().to_owned());
+    }
+
+    fn remembered(&self) -> Option<CertificateRef> {
+        self.recalled.clone()
     }
 }
 
@@ -241,6 +253,7 @@ impl SignatureVerifier for Untouched {
     }
 }
 
+mod certtui;
 mod cosign;
 mod filter_and_xml;
 mod sign_config;
@@ -647,22 +660,4 @@ fn sign_hands_the_password_descriptor_to_the_signer_without_reading_it() {
 
     assert_eq!(outcome.exit_code, SUCCEEDED, "{:?}", outcome.stderr);
     assert_eq!(*signer.descriptors.borrow(), vec![Some(3)]);
-}
-
-#[test]
-fn sign_with_certtui_is_not_yet_available_and_fails_before_opening_any_store() {
-    let stores = StoresWith::labels(&["yo"]);
-    let signer = RecordingSigner::default();
-
-    let outcome = attended_in(
-        &["sign", "-i", "doc.pdf", "-o", "f.pdf", "-certtui"],
-        &stores,
-        &RecordingDesktop::default(),
-        &FilesInMemory::with("doc.pdf", A_PDF),
-        &signer,
-    );
-
-    assert_eq!(outcome.exit_code, FAILED);
-    assert!(!stores.opened.get());
-    assert!(signer.asked.borrow().is_empty());
 }

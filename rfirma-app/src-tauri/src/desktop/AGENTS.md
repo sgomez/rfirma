@@ -25,14 +25,16 @@ máquina. Ni firma ni documentos. Rutas relativas a `src/desktop/`.
 | `adapters/releases.rs` | El único sitio que abre una conexión: le pregunta a GitHub por la última publicación. Pruebas en `adapters/releases/tests.rs`. |
 | `adapters/terminal.rs` | La entrada de la línea de órdenes, `run_the_command_line`, y los adaptadores de sus puertos: `SeenStores`, `ProcessTerminal`, `ProcessDescriptors` y `RootsSigner`. Ni Tauri ni ventana; sus pruebas, con el binario, en `tests/command_line*.rs`. |
 | `adapters/terminal/descriptor.rs` | El PIN leído de `-password-fd N`: la primera línea del descriptor. Pruebas en `adapters/terminal/descriptor/tests.rs`. |
-| `adapters/terminal/tty.rs` | El PIN tecleado sin eco en `/dev/tty`, que no toca stdin ni stdout. Solo Unix. Pruebas en `adapters/terminal/tty/tests.rs`. |
+| `adapters/terminal/tty.rs` | El PIN tecleado sin eco y la lista con flechas de `-certtui`, en `/dev/tty`, que no toca stdin ni stdout. Solo Unix. Pruebas en `adapters/terminal/tty/tests.rs`. |
 | `adapters/tauri.rs` | Las órdenes del escritorio: invocación, estado de la barra de título nativa, versión publicada, manejadores de `afirma://` y su elección, destino externo, estado y retirada. Pruebas en `adapters/tauri/tests.rs`. |
 | `adapters/titlebar.rs` | La barra de título nativa de GTK de la ventana principal en Linux, y la composición de WebKitGTK que piden sus popovers: sus eventos, cuándo aplicar el estado de la ventana y qué dice cada reciente. Nada en Windows ni macOS. Pruebas en `adapters/titlebar/tests.rs`. |
 | `adapters/titlebar/gtk_titlebar.rs` | Los widgets GTK de esa barra: sus acciones `hdr`, el popover propio de los recientes y el ☰. Solo Linux, sin pruebas propias. |
 | `adapters/views.rs` | Lo que cruza a la ventana: manejadores de `afirma://`, versión nueva, señales de estado, resultado de la retirada y la barra de título nativa. Sin pruebas propias. |
 | `adapters/webkit_renderer.rs` | Si WebKitGTK debe componer sin la GPU en esta sesión (ADR-0007): solo la decisión; la fija `titlebar.rs`. Pruebas en `adapters/webkit_renderer/tests.rs`. |
 | `application/command_line.rs` | El caso de uso de la línea de órdenes (ADR-0041): de los argumentos al código de salida, los bytes de stdout y las líneas de stderr, sin escribir en ningún flujo. Pruebas en `application/command_line/tests.rs`. |
+| `application/command_line/certtui.rs` | El certificado de `-certtui`: los vigentes que dejan `-store` y `-filter`, con el recordado preseleccionado; no pinta la lista. Pruebas en `application/command_line/tests/certtui.rs`. |
 | `application/command_line/config.rs` | El `-config` de `sign`: sus propiedades, con las reglas de las `properties` de una sede. No las expande. Pruebas en `application/command_line/config/tests.rs`. |
+| `application/command_line/tests/certtui.rs` | Las pruebas de `-certtui` en el caso de uso, partidas de `application/command_line/tests.rs`. |
 | `application/command_line/tests/cosign.rs` | Las pruebas de `cosign` en el caso de uso, partidas de `application/command_line/tests.rs`. |
 | `application/command_line/tests/filter_and_xml.rs` | Las pruebas de `-filter` y de la respuesta de `-xml`, partidas de `application/command_line/tests.rs`. |
 | `application/command_line/tests/sign_config.rs` | Las pruebas de `sign -config` en el caso de uso, partidas de `application/command_line/tests.rs`. |

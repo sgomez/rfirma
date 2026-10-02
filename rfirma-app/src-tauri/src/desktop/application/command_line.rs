@@ -20,8 +20,9 @@ use crate::identity::domain::certificate::TokenCertificate;
 use crate::identity::domain::store::StoreClass;
 use crate::signing::domain::bridge::{Format as SignatureFormat, SignatureOperation, XadesVariant};
 use crate::site::domain::protocol::detection::{shape_of, DetectedShape};
-use crate::site::domain::protocol::site_filter;
+use crate::site::domain::protocol::{site_filter, SiteFilter};
 
+mod certtui;
 mod config;
 mod verify;
 pub use verify::{format_to_verify, UNKNOWN_FORMAT};
@@ -328,7 +329,9 @@ fn the_certificate_chosen_by(
         Selection::Filter(expression) => {
             the_only_certificate_accepted_by(expression, arguments, ports)
         }
-        Selection::Terminal { .. } => Err(Outcome::not_yet_available("-certtui")),
+        Selection::Terminal { filter } => {
+            certtui::the_certificate_chosen_on_the_terminal(filter.as_deref(), arguments, ports)
+        }
     }
 }
 
@@ -352,10 +355,7 @@ fn the_certificate_named(
     arguments: &[String],
     stores: &dyn CertificateStores,
 ) -> Result<TokenCertificate, Outcome> {
-    let scope = scope_named_by(arguments)
-        .map_err(|refusal| Outcome::refused(&Refusal::InvalidStore(refusal)))?;
-    let named: Vec<TokenCertificate> = within_the_scope(&scope, stores)
-        .map_err(|failure| failure_of_the_scope(&failure))?
+    let named: Vec<TokenCertificate> = listed_within_the_store(arguments, stores)?
         .into_iter()
         .filter(|certificate| certificate.reference().label() == alias)
         .collect();
@@ -390,20 +390,9 @@ fn the_only_certificate_accepted_by(
     arguments: &[String],
     ports: &CommandLinePorts,
 ) -> Result<TokenCertificate, Outcome> {
-    let filter = site_filter(&[("filters".to_owned(), expression.to_owned())]);
-    if filter.declares_nothing() {
-        return Err(Outcome::failed(format!(
-            "rfirma: el filtro «{expression}» no nombra ningún criterio de los que reconoce la sede"
-        )));
-    }
-    let scope = scope_named_by(arguments)
-        .map_err(|refusal| Outcome::refused(&Refusal::InvalidStore(refusal)))?;
-    let listed =
-        within_the_scope(&scope, ports.stores).map_err(|failure| failure_of_the_scope(&failure))?;
-    let accepted = ports
-        .filter
-        .accepted(&filter, listed)
-        .map_err(|reason| Outcome::failed(format!("rfirma: no se ha podido filtrar ({reason})")))?;
+    let filter = the_site_filter_of(expression)?;
+    let listed = listed_within_the_store(arguments, ports.stores)?;
+    let accepted = accepted_by(&filter, listed, ports)?;
     let Some(first) = accepted.first() else {
         return Err(Outcome::failed(format!(
             "rfirma: ningún certificado cumple el filtro «{expression}»"
@@ -415,6 +404,36 @@ fn the_only_certificate_accepted_by(
              afínalo o acota el almacén con -store"
         ))
     })
+}
+
+fn the_site_filter_of(expression: &str) -> Result<SiteFilter, Outcome> {
+    let filter = site_filter(&[("filters".to_owned(), expression.to_owned())]);
+    if filter.declares_nothing() {
+        return Err(Outcome::failed(format!(
+            "rfirma: el filtro «{expression}» no nombra ningún criterio de los que reconoce la sede"
+        )));
+    }
+    Ok(filter)
+}
+
+fn listed_within_the_store(
+    arguments: &[String],
+    stores: &dyn CertificateStores,
+) -> Result<Vec<TokenCertificate>, Outcome> {
+    let scope = scope_named_by(arguments)
+        .map_err(|refusal| Outcome::refused(&Refusal::InvalidStore(refusal)))?;
+    within_the_scope(&scope, stores).map_err(|failure| failure_of_the_scope(&failure))
+}
+
+fn accepted_by(
+    filter: &SiteFilter,
+    listed: Vec<TokenCertificate>,
+    ports: &CommandLinePorts,
+) -> Result<Vec<TokenCertificate>, Outcome> {
+    ports
+        .filter
+        .accepted(filter, listed)
+        .map_err(|reason| Outcome::failed(format!("rfirma: no se ha podido filtrar ({reason})")))
 }
 
 fn failure_of_the_scope(failure: &ScopeFailure) -> Outcome {
