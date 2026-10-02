@@ -226,6 +226,7 @@ fn signed(arguments: &[String], parsed: &SignArguments, ports: &CommandLinePorts
         certificate: &certificate,
         format,
         algorithm: parsed.algorithm,
+        terminal: ports.terminal,
     }) {
         Ok(document) => document,
         Err(reason) => {
