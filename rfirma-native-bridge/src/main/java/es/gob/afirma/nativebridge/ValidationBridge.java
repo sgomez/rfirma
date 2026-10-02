@@ -1,7 +1,9 @@
 package es.gob.afirma.nativebridge;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 
 import es.gob.afirma.core.RuntimeConfigNeededException;
@@ -56,6 +58,40 @@ final class ValidationBridge {
             }
             return new Verdict(CONFIRMATION_NEEDED, null, e.getParam(), e.getRequestorText());
         }
+    }
+
+    /**
+     * Lo que imprime de cada firma la orden {@code verify} del original: sin modo
+     * relajado y con la caducidad del certificado firmante.
+     */
+    static List<String> results(final byte[] document, final String format) throws IOException {
+        final List<String> results = new ArrayList<>();
+        try {
+            for (final SignValidity validity : validities(validerFor(format), document, true)) {
+                results.add(plainText(validity.toString()));
+            }
+        }
+        catch (final RuntimeConfigNeededException e) {
+            throw new IllegalStateException("el validador sin modo relajado ha pedido confirmacion", e);
+        }
+        if (results.isEmpty()) {
+            results.add(plainText(new SignValidity(SIGN_DETAIL_TYPE.KO,
+                    VALIDITY_ERROR.UNKOWN_SIGNATURE_FORMAT).toString()));
+        }
+        return results;
+    }
+
+    /** El original escribe sus mensajes con las entidades HTML de sus dialogos. */
+    private static final Map<String, String> HTML_ENTITIES = Map.of(
+            "&aacute;", "á", "&eacute;", "é", "&iacute;", "í",
+            "&oacute;", "ó", "&uacute;", "ú", "&ntilde;", "ñ");
+
+    static String plainText(final String original) {
+        String text = original;
+        for (final Map.Entry<String, String> entity : HTML_ENTITIES.entrySet()) {
+            text = text.replace(entity.getKey(), entity.getValue());
+        }
+        return text;
     }
 
     static SignValider validerFor(final String format) {

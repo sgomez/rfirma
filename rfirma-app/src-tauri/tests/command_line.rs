@@ -3,6 +3,7 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
+use rfirma_lib::desktop::adapters::command_line_ports::{DiskFiles, NativeVerifier};
 use rfirma_lib::desktop::adapters::paths::Paths;
 use rfirma_lib::desktop::adapters::terminal::SeenStores;
 use rfirma_lib::desktop::application::command_line::{
@@ -138,6 +139,8 @@ fn attended_over(words: &[&str], home: &Path, terminal: &ScriptedTerminal) -> Ou
         stores: &stores,
         terminal,
         desktop: &NoWindow,
+        files: &DiskFiles,
+        verifier: &NativeVerifier,
     };
     let arguments: Vec<String> = words.iter().map(|word| (*word).to_owned()).collect();
     attend(&arguments, &ports)

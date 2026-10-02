@@ -13,7 +13,7 @@ postproceso del ciclo trifásico (ADR-0001), compilado a `librfirma_crypto.so`
 | `src/main/java/.../XadesBridge.java` | Preproceso y postproceso XAdES: firma en las variantes Enveloping, Detached, Enveloped y ASiC-S, cofirma y contrafirma con `target=tree\|leafs`, y la factura electrónica, que entra por aquí con su propio procesador. |
 | `src/main/java/.../SignatureTimestamp.java` | El sello de tiempo que pide `tsaURL` en CAdES y XAdES (ADR-0030); no toca PAdES. |
 | `src/main/java/.../TimestampFailedException.java` | El fallo con el que una firma que pidió sello y no se pudo sellar no sale. |
-| `src/main/java/.../ValidationBridge.java` | El veredicto del validador del original sobre las firmas que ya trae un documento: valida, invalida o pendiente de que la persona confirme. No firma nada. |
+| `src/main/java/.../ValidationBridge.java` | El veredicto del validador del original sobre las firmas que ya trae un documento —valida, invalida o pendiente de que la persona confirme— y lo que su orden `verify` imprime de cada una. No firma nada. |
 | `src/main/java/.../PreviousSignaturesBridge.java` | Las firmas que ya trae un PDF, una a una: quién firmó, cuándo, y su estado según el validador del original. No es el veredicto de conjunto de `ValidationBridge`. |
 | `src/main/java/.../FilterBridge.java` | Los filtros de certificado que pide la sede. |
 | `src/main/java/.../ExtraParamsBridge.java` | La traducción de `extraParams` de AutoFirma. |

@@ -136,6 +136,18 @@ pub fn parse_verdict(json: &str) -> Result<SignatureVerdict, BridgeError> {
     }
 }
 
+/// Parsea los textos que la orden `verify` del original imprime de cada firma.
+pub fn parse_validity_results(json: &str) -> Result<Vec<String>, BridgeError> {
+    let response = parse_response(json)?;
+    response
+        .get("results")
+        .and_then(serde_json::Value::as_array)
+        .ok_or_else(|| BridgeError::MalformedResponse("falta el campo \"results\"".to_owned()))?
+        .iter()
+        .map(|result| field(result, "text").map(str::to_owned))
+        .collect()
+}
+
 /// Parsea el informe de firmas previas, traduciendo cada firmante con las utilidades del titular.
 pub fn parse_previous_signatures(json: &str) -> Result<PreviousSignaturesReport, BridgeError> {
     let response = parse_response(json)?;

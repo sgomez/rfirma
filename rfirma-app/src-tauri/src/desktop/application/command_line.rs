@@ -8,8 +8,13 @@ use crate::desktop::domain::command_line::{
 };
 use crate::desktop::domain::sign_arguments::parse_sign_arguments;
 use crate::desktop::domain::store_scope::scope_named_by;
-use crate::desktop::ports::{CertificateStores, DesktopHandover, Terminal};
+use crate::desktop::ports::{
+    CertificateStores, CommandLineFiles, DesktopHandover, SignatureVerifier, Terminal,
+};
 use crate::identity::domain::certificate::TokenCertificate;
+
+mod verify;
+pub use verify::{format_to_verify, UNKNOWN_FORMAT};
 
 /// El código de salida de una orden que termina bien.
 pub const SUCCEEDED: i32 = 0;
@@ -28,6 +33,10 @@ pub struct CommandLinePorts<'a> {
     pub terminal: &'a dyn Terminal,
     /// El proceso de escritorio que recibe los ficheros de `-gui`.
     pub desktop: &'a dyn DesktopHandover,
+    /// Los ficheros que nombran los argumentos.
+    pub files: &'a dyn CommandLineFiles,
+    /// El validador del original.
+    pub verifier: &'a dyn SignatureVerifier,
 }
 
 /// Lo que una orden deja al terminar: código de salida, bytes de stdout y líneas de stderr.
@@ -55,6 +64,18 @@ impl Outcome {
             exit_code: FAILED,
             stdout: Vec::new(),
             stderr: vec![line],
+        }
+    }
+
+    fn printed(lines: &[String]) -> Self {
+        Self {
+            exit_code: SUCCEEDED,
+            stdout: lines
+                .iter()
+                .map(|line| format!("{line}\n"))
+                .collect::<String>()
+                .into_bytes(),
+            stderr: Vec::new(),
         }
     }
 
@@ -125,6 +146,7 @@ fn hand_over_to_the_window(desktop: &dyn DesktopHandover, file: &str) -> Outcome
 fn carried_out(command: Command, arguments: &[String], ports: &CommandLinePorts) -> Outcome {
     match command {
         Command::ListAliases => list_aliases(arguments, ports.stores),
+        Command::Verify => verify::verify(arguments, ports),
         _ => Outcome::not_yet_available(&format!("la orden «{}»", command.name())),
     }
 }

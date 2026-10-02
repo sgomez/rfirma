@@ -455,6 +455,42 @@ public final class NativeBridge {
     }
 
     /**
+     * Lo que la orden {@code verify} del original imprime de cada firma de un documento.
+     *
+     * @param documentB64 documento de entrada en Base64.
+     * @param format      formato de firma con cuyo validador se examina.
+     * @return JSON con un texto por resultado de validez. Propiedad del llamante:
+     *         se libera con {@code autofirma_free_string}.
+     */
+    @CEntryPoint(name = "autofirma_verify_signatures")
+    public static CCharPointer verifySignatures(
+            final IsolateThread thread,
+            final CCharPointer documentB64,
+            final CCharPointer format) {
+        try {
+            return toUnmanagedCString(resultsJson(ValidationBridge.results(
+                    Base64.getDecoder().decode(CTypeConversion.toJavaString(documentB64)),
+                    CTypeConversion.toJavaString(format))));
+        }
+        catch (final Throwable e) {
+            return toUnmanagedCString(errorJson(e));
+        }
+    }
+
+    static String resultsJson(final List<String> results) {
+        final StringBuilder json = new StringBuilder("{\"ok\":true,\"results\":[");
+        for (int i = 0; i < results.size(); i++) {
+            if (i > 0) {
+                json.append(',');
+            }
+            json.append('{');
+            member(json, "text", results.get(i));
+            json.append('}');
+        }
+        return json.append("]}").toString();
+    }
+
+    /**
      * Firmas que ya trae un PDF, con quien firmo y cuando.
      *
      * @param documentB64 PDF de entrada en Base64.

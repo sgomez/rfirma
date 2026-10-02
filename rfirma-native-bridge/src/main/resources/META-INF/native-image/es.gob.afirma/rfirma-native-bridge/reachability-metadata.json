@@ -406,7 +406,49 @@
       ]
     },
     {
+      "type": "org.apache.jcp.xml.dsig.internal.dom.ApacheNodeSetData",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "org.apache.xml.security.signature.XMLSignatureInput"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.apache.jcp.xml.dsig.internal.dom.ApacheOctetStreamData",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "org.apache.xml.security.signature.XMLSignatureInput"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.apache.xml.security.signature.XMLSignatureInput",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "org.w3c.dom.Node"
+          ]
+        }
+      ]
+    },
+    {
       "type": "org.spongycastle.jcajce.provider.asymmetric.EC$Mappings",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.spongycastle.jcajce.provider.asymmetric.RSA$Mappings",
       "methods": [
         {
           "name": "<init>",
@@ -470,6 +512,51 @@
     },
     {
       "type": "org.spongycastle.jcajce.provider.asymmetric.ec.SignatureSpi$ecDSA512",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.spongycastle.jcajce.provider.asymmetric.rsa.DigestSignatureSpi$SHA1",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.spongycastle.jcajce.provider.asymmetric.rsa.DigestSignatureSpi$SHA224",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.spongycastle.jcajce.provider.asymmetric.rsa.DigestSignatureSpi$SHA256",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.spongycastle.jcajce.provider.asymmetric.rsa.DigestSignatureSpi$SHA384",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.spongycastle.jcajce.provider.asymmetric.rsa.DigestSignatureSpi$SHA512",
       "methods": [
         {
           "name": "<init>",

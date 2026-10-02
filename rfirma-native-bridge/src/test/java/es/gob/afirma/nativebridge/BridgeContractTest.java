@@ -54,7 +54,7 @@ class BridgeContractTest {
                         "autofirma_expand_extra_params", "autofirma_filter_certificates",
                         "autofirma_free_string", "autofirma_pades_postsign",
                         "autofirma_pades_presign", "autofirma_previous_signatures",
-                        "autofirma_validate_signatures",
+                        "autofirma_validate_signatures", "autofirma_verify_signatures",
                         "autofirma_xades_postsign", "autofirma_xades_presign"),
                 names,
                 "cambiar un nombre aqui rompe el enlace de Rust en tiempo de ejecucion, no de compilacion");

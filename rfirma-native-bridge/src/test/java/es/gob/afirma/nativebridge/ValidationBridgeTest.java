@@ -9,6 +9,7 @@ import java.security.PrivateKey;
 import java.security.Signature;
 import java.security.cert.X509Certificate;
 import java.util.Base64;
+import java.util.List;
 import java.util.Properties;
 
 import org.junit.jupiter.api.Test;
@@ -151,6 +152,55 @@ class ValidationBridgeTest {
                 "sign", TestFixtures.expiredCertificateChain(), TestFixtures.expiredPrivateKey());
 
         assertExpiredOnlyWhenChecked(signed, "XAdES Enveloping");
+    }
+
+    @Test
+    void verify_says_of_a_freshly_signed_pdf_what_the_original_command_line_says() throws Exception {
+        assertEquals(List.of("Firma valida"),
+                ValidationBridge.results(signed(TestFixtures.samplePdf()), "PAdES"));
+    }
+
+    @Test
+    void verify_says_of_a_freshly_signed_implicit_cades_that_it_is_valid() throws Exception {
+        final Properties implicitMode = new Properties();
+        implicitMode.setProperty("mode", "implicit");
+        final byte[] signature = CadesCycle.sign(TestFixtures.challenge(), implicitMode, "sign");
+
+        assertEquals(List.of("Firma valida"), ValidationBridge.results(signature, "CAdES"));
+    }
+
+    @Test
+    void verify_checks_the_expiry_of_the_signing_certificate() throws Exception {
+        final List<String> results =
+                ValidationBridge.results(signedWithTheExpiredCertificate(TestFixtures.samplePdf()),
+                        "PAdES");
+
+        assertTrue(results.contains("Firma no valida: existe un certificado de firma caducado"),
+                "resultados: " + results);
+    }
+
+    @Test
+    void verify_says_a_document_without_signatures_has_none() throws Exception {
+        assertEquals(List.of("Firma no valida: no se encuentra la firma dentro del documento"),
+                ValidationBridge.results(TestFixtures.samplePdf(), "PAdES"));
+    }
+
+    @Test
+    void verify_reports_a_pdf_repainted_after_signing_instead_of_asking_for_confirmation()
+            throws Exception {
+        final byte[] modified =
+                TestFixtures.withThePageRepaintedAfterSigning(signed(TestFixtures.samplePdf()));
+
+        final List<String> results = ValidationBridge.results(modified, "PAdES");
+
+        assertTrue(results.stream().anyMatch(result -> result.startsWith("Firma no valida")),
+                "resultados: " + results);
+    }
+
+    @Test
+    void the_html_entities_of_the_original_messages_become_plain_letters() {
+        assertEquals("la información no es válida",
+                ValidationBridge.plainText("la informaci&oacute;n no es v&aacute;lida"));
     }
 
     private static void assertExpiredOnlyWhenChecked(final byte[] document, final String format)

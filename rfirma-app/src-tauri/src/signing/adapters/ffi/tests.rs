@@ -531,6 +531,21 @@ fn asking_for_confirmation_brings_the_key_to_set_and_the_message_code_to_ask_wit
 }
 
 #[test]
+fn the_results_of_verify_cross_in_the_order_the_original_gives_them() {
+    let results = parse_validity_results(
+        r#"{"ok":true,"results":[{"text":"Validación incompleta: x"},{"text":"Firma valida"}]}"#,
+    )
+    .expect("es valida");
+
+    assert_eq!(results, ["Validación incompleta: x", "Firma valida"]);
+}
+
+#[test]
+fn verify_without_its_results_is_a_malformed_answer() {
+    assert!(parse_validity_results(r#"{"ok":true}"#).is_err());
+}
+
+#[test]
 fn a_verdict_this_binary_does_not_know_is_a_malformed_answer() {
     assert!(parse_verdict(r#"{"ok":true,"verdict":"quiza"}"#).is_err());
     assert!(parse_verdict(r#"{"ok":true}"#).is_err());

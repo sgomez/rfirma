@@ -17,7 +17,7 @@ mod responses;
 pub use location::{candidates, library_file, locate};
 pub use responses::{
     parse_expanded_params, parse_filter_selection, parse_postsign, parse_presign,
-    parse_previous_signatures, parse_verdict,
+    parse_previous_signatures, parse_validity_results, parse_verdict,
 };
 
 /// Quien sabe liberar una cadena del puente.
@@ -107,6 +107,8 @@ type ValidateSymbol =
 
 type PreviousSignaturesSymbol = unsafe extern "C" fn(*mut c_void, *const c_char) -> *mut c_char;
 
+type VerifySymbol = unsafe extern "C" fn(*mut c_void, *const c_char, *const c_char) -> *mut c_char;
+
 /// La librería nativa cargada, con su isolate de GraalVM ya creado.
 ///
 /// **No es `Sync`, y es a propósito**: el `IsolateThread` de GraalVM pertenece
@@ -130,6 +132,7 @@ pub struct NativeBridge {
     filter: FilterSymbol,
     expand: ExpandSymbol,
     validate: ValidateSymbol,
+    verify: VerifySymbol,
     previous_signatures: PreviousSignaturesSymbol,
     free_string: FreeStringSymbol,
     tear_down: TearDownIsolate,
@@ -193,6 +196,7 @@ impl NativeBridge {
             filter,
             expand,
             validate,
+            verify,
             previous_signatures,
             free_string,
             tear_down,
@@ -208,6 +212,7 @@ impl NativeBridge {
                 resolve::<FilterSymbol>(&library, b"autofirma_filter_certificates\0")?,
                 resolve::<ExpandSymbol>(&library, b"autofirma_expand_extra_params\0")?,
                 resolve::<ValidateSymbol>(&library, b"autofirma_validate_signatures\0")?,
+                resolve::<VerifySymbol>(&library, b"autofirma_verify_signatures\0")?,
                 resolve::<PreviousSignaturesSymbol>(&library, b"autofirma_previous_signatures\0")?,
                 resolve::<FreeStringSymbol>(&library, b"autofirma_free_string\0")?,
                 resolve::<TearDownIsolate>(&library, b"graal_tear_down_isolate\0")?,
@@ -235,6 +240,7 @@ impl NativeBridge {
             filter,
             expand,
             validate,
+            verify,
             previous_signatures,
             free_string,
             tear_down,
@@ -354,6 +360,19 @@ impl NativeBridge {
             )
         })?;
         parse_verdict(&json)
+    }
+
+    /// Lo que la orden `verify` del original imprime de cada firma del documento.
+    pub fn verify_signatures(
+        &self,
+        document_b64: &str,
+        format: Format,
+    ) -> Result<Vec<String>, BridgeError> {
+        let document = c_string(document_b64, "el documento")?;
+        let format = c_string(format.validated()?.name(), "el formato")?;
+        let json = self
+            .call(|thread| unsafe { (self.verify)(thread, document.as_ptr(), format.as_ptr()) })?;
+        parse_validity_results(&json)
     }
 
     /// Firmas que ya trae el documento, con quién firmó y cuándo.
