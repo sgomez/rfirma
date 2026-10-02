@@ -1,5 +1,6 @@
 package es.gob.afirma.nativebridge;
 
+import java.security.PrivateKey;
 import java.security.Signature;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
@@ -29,10 +30,16 @@ final class CadesCycle {
 
     static byte[] sign(final byte[] document, final Properties extraParams, final String operation)
             throws Exception {
-        final X509Certificate[] chain = TestFixtures.certificateChain();
+        return signedBy(document, extraParams, operation,
+                TestFixtures.certificateChain(), TestFixtures.privateKey());
+    }
+
+    static byte[] signedBy(final byte[] document, final Properties extraParams,
+            final String operation, final X509Certificate[] chain, final PrivateKey key)
+            throws Exception {
         final CadesBridge.PreSignResult pre =
                 CadesBridge.preSign(document, ALGORITHM, chain, extraParams, operation);
-        return CadesBridge.postSign(document, chain, pre.stamp(), pre.session(), pkcs1For(pre));
+        return CadesBridge.postSign(document, chain, pre.stamp(), pre.session(), pkcs1For(pre, key));
     }
 
     static CadesBridge.PreSignResult preSign(final byte[] document, final Properties extraParams,
@@ -43,16 +50,25 @@ final class CadesCycle {
 
     static List<CadesBridge.SignatureValue> pkcs1For(final CadesBridge.PreSignResult pre)
             throws Exception {
+        return pkcs1For(pre, TestFixtures.privateKey());
+    }
+
+    private static List<CadesBridge.SignatureValue> pkcs1For(final CadesBridge.PreSignResult pre,
+            final PrivateKey key) throws Exception {
         final List<CadesBridge.SignatureValue> values = new ArrayList<>();
         for (final CadesBridge.PreSign each : pre.pres()) {
-            values.add(new CadesBridge.SignatureValue(each.id(), pkcs1Of(each.pre())));
+            values.add(new CadesBridge.SignatureValue(each.id(), pkcs1Of(each.pre(), key)));
         }
         return values;
     }
 
     static String pkcs1Of(final String preB64) throws Exception {
+        return pkcs1Of(preB64, TestFixtures.privateKey());
+    }
+
+    private static String pkcs1Of(final String preB64, final PrivateKey key) throws Exception {
         final Signature signature = Signature.getInstance(ALGORITHM);
-        signature.initSign(TestFixtures.privateKey());
+        signature.initSign(key);
         signature.update(Base64.getDecoder().decode(preB64));
         return Base64.getEncoder().encodeToString(signature.sign());
     }

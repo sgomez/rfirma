@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.charset.StandardCharsets;
+import java.security.PrivateKey;
 import java.security.Signature;
 import java.security.cert.X509Certificate;
 import java.util.Base64;
@@ -20,7 +21,7 @@ class ValidationBridgeTest {
     @Test
     void a_document_without_signatures_is_unsigned() throws Exception {
         final ValidationBridge.Verdict verdict =
-                ValidationBridge.validate(TestFixtures.samplePdf(), "PAdES");
+                ValidationBridge.validate(TestFixtures.samplePdf(), "PAdES", false);
 
         assertEquals(ValidationBridge.UNSIGNED, verdict.outcome());
     }
@@ -28,7 +29,7 @@ class ValidationBridgeTest {
     @Test
     void a_freshly_signed_pdf_is_valid() throws Exception {
         final ValidationBridge.Verdict verdict =
-                ValidationBridge.validate(signed(TestFixtures.samplePdf()), "PAdES");
+                ValidationBridge.validate(signed(TestFixtures.samplePdf()), "PAdES", false);
 
         assertEquals(ValidationBridge.VALID, verdict.outcome(), "motivo: " + verdict.reason());
     }
@@ -38,7 +39,8 @@ class ValidationBridgeTest {
         final byte[] altered =
                 TestFixtures.withOneByteChangedInsideTheSignedRange(signed(TestFixtures.samplePdf()));
 
-        final ValidationBridge.Verdict verdict = ValidationBridge.validate(altered, "PAdES");
+        final ValidationBridge.Verdict verdict =
+                ValidationBridge.validate(altered, "PAdES", false);
 
         assertEquals(ValidationBridge.INVALID, verdict.outcome());
         assertEquals("NO_MATCH_DATA", verdict.reason(),
@@ -50,7 +52,8 @@ class ValidationBridgeTest {
         final byte[] modified =
                 TestFixtures.withThePageRepaintedAfterSigning(signed(TestFixtures.samplePdf()));
 
-        final ValidationBridge.Verdict verdict = ValidationBridge.validate(modified, "PAdES");
+        final ValidationBridge.Verdict verdict =
+                ValidationBridge.validate(modified, "PAdES", false);
 
         assertEquals(ValidationBridge.CONFIRMATION_NEEDED, verdict.outcome());
         assertEquals("allowShadowAttack", verdict.param(),
@@ -66,7 +69,8 @@ class ValidationBridgeTest {
         final byte[] signature =
                 CadesCycle.sign(TestFixtures.challenge(), implicitMode, "sign");
 
-        final ValidationBridge.Verdict verdict = ValidationBridge.validate(signature, "CAdES");
+        final ValidationBridge.Verdict verdict =
+                ValidationBridge.validate(signature, "CAdES", false);
 
         assertEquals(ValidationBridge.VALID, verdict.outcome(), "motivo: " + verdict.reason());
     }
@@ -76,7 +80,7 @@ class ValidationBridgeTest {
         final byte[] signed = XadesCycle.sign(XadesCycle.referenceXml(), new Properties());
 
         final ValidationBridge.Verdict verdict =
-                ValidationBridge.validate(signed, "XAdES Enveloping");
+                ValidationBridge.validate(signed, "XAdES Enveloping", false);
 
         assertEquals(ValidationBridge.VALID, verdict.outcome(), "motivo: " + verdict.reason());
     }
@@ -88,7 +92,7 @@ class ValidationBridgeTest {
                 + "/></r>").getBytes(StandardCharsets.UTF_8);
 
         final ValidationBridge.Verdict verdict =
-                ValidationBridge.validate(unreadable, "XAdES Enveloped");
+                ValidationBridge.validate(unreadable, "XAdES Enveloped", false);
 
         assertEquals(ValidationBridge.INVALID, verdict.outcome());
         assertEquals("UNKOWN_ERROR", verdict.reason());
@@ -99,7 +103,8 @@ class ValidationBridgeTest {
         final byte[] signature =
                 CadesCycle.sign(TestFixtures.challenge(), new Properties(), "sign");
 
-        final ValidationBridge.Verdict verdict = ValidationBridge.validate(signature, "CAdES");
+        final ValidationBridge.Verdict verdict =
+                ValidationBridge.validate(signature, "CAdES", false);
 
         assertEquals(ValidationBridge.INVALID, verdict.outcome(),
                 "sin los datos firmados el original no puede comprobar nada");
@@ -120,13 +125,63 @@ class ValidationBridgeTest {
                 .endsWith("ValidateXMLSignature"));
     }
 
+    @Test
+    void a_pdf_signed_with_an_expired_certificate_is_invalid_when_certificates_are_checked()
+            throws Exception {
+        final byte[] pdf = signedWithTheExpiredCertificate(TestFixtures.samplePdf());
+
+        assertExpiredOnlyWhenChecked(pdf, "PAdES");
+    }
+
+    @Test
+    void a_cades_signed_with_an_expired_certificate_is_invalid_when_certificates_are_checked()
+            throws Exception {
+        final Properties implicitMode = new Properties();
+        implicitMode.setProperty("mode", "implicit");
+        final byte[] signature = CadesCycle.signedBy(TestFixtures.challenge(), implicitMode,
+                "sign", TestFixtures.expiredCertificateChain(), TestFixtures.expiredPrivateKey());
+
+        assertExpiredOnlyWhenChecked(signature, "CAdES");
+    }
+
+    @Test
+    void a_xades_signed_with_an_expired_certificate_is_invalid_when_certificates_are_checked()
+            throws Exception {
+        final byte[] signed = XadesCycle.signedBy(XadesCycle.referenceXml(), new Properties(),
+                "sign", TestFixtures.expiredCertificateChain(), TestFixtures.expiredPrivateKey());
+
+        assertExpiredOnlyWhenChecked(signed, "XAdES Enveloping");
+    }
+
+    private static void assertExpiredOnlyWhenChecked(final byte[] document, final String format)
+            throws Exception {
+        final ValidationBridge.Verdict checked = ValidationBridge.validate(document, format, true);
+        final ValidationBridge.Verdict unchecked =
+                ValidationBridge.validate(document, format, false);
+
+        assertEquals(ValidationBridge.INVALID, checked.outcome());
+        assertEquals("CERTIFICATE_EXPIRED", checked.reason(),
+                "el motivo con el que el original da por caducado el certificado");
+        assertEquals(ValidationBridge.VALID, unchecked.outcome(),
+                "sin comprobar certificados la caducidad no cuenta: motivo " + unchecked.reason());
+    }
+
     private static byte[] signed(final byte[] pdf) throws Exception {
-        final X509Certificate[] chain = TestFixtures.certificateChain();
+        return signedBy(pdf, TestFixtures.certificateChain(), TestFixtures.privateKey());
+    }
+
+    private static byte[] signedWithTheExpiredCertificate(final byte[] pdf) throws Exception {
+        return signedBy(pdf, TestFixtures.expiredCertificateChain(),
+                TestFixtures.expiredPrivateKey());
+    }
+
+    private static byte[] signedBy(final byte[] pdf, final X509Certificate[] chain,
+            final PrivateKey key) throws Exception {
         final PadesBridge.PreSignResult pre =
                 PadesBridge.preSign(pdf, ALGORITHM, chain, new Properties());
 
         final Signature signature = Signature.getInstance(ALGORITHM);
-        signature.initSign(TestFixtures.privateKey());
+        signature.initSign(key);
         signature.update(Base64.getDecoder().decode(pre.preSignB64()));
 
         return PadesBridge.postSign(pdf, chain, pre.stamp(), pre.session(),

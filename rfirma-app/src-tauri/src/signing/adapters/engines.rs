@@ -59,6 +59,7 @@ impl ValidationEngine for NativeBridge {
         self.validate_signatures(ValidationRequest {
             document_b64,
             format,
+            check_certificates: false,
         })
     }
 }
