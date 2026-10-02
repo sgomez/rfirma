@@ -463,6 +463,8 @@ pub struct ValidationRequest<'a> {
     pub document_b64: &'a str,
     /// Formato con cuyo validador del original se examina.
     pub format: Format,
+    /// Si el original comprueba también la caducidad del certificado firmante.
+    pub check_certificates: bool,
 }
 
 /// Lo que el validador del original dice de las firmas de un documento.

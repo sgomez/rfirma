@@ -42,11 +42,13 @@ final class ValidationBridge {
     /** El veredicto, con la clave a fijar y el codigo de mensaje del original solo en el tercero. */
     record Verdict(String outcome, String reason, String param, String messageCode) { }
 
-    static Verdict validate(final byte[] document, final String format) throws IOException {
+    /** Con {@code checkCertificates} mira tambien la caducidad del certificado firmante. */
+    static Verdict validate(final byte[] document, final String format,
+            final boolean checkCertificates) throws IOException {
         final SignValider valider = validerFor(format);
         valider.setRelaxed(true);
         try {
-            return verdictOf(withoutCheckingCertificates(valider, document));
+            return verdictOf(validities(valider, document, checkCertificates));
         }
         catch (final RuntimeConfigNeededException e) {
             if (RequestType.CONFIRM != e.getRequestType()) {
@@ -68,22 +70,22 @@ final class ValidationBridge {
     }
 
     /** Solo PAdES lee las {@code Properties}; los otros dos solo obedecen a la sobrecarga booleana. */
-    private static List<SignValidity> withoutCheckingCertificates(
-            final SignValider valider, final byte[] document)
+    private static List<SignValidity> validities(final SignValider valider,
+            final byte[] document, final boolean checkCertificates)
             throws IOException, RuntimeConfigNeededException {
         return switch (valider) {
-            case ValidatePdfSignature pdf -> pdf.validate(document, headlessWithoutCertificates());
-            case ValidateBinarySignature binary -> binary.validate(document, false);
-            case ValidateXMLSignature xml -> xml.validate(document, false);
+            case ValidatePdfSignature pdf -> pdf.validate(document, headless(checkCertificates));
+            case ValidateBinarySignature binary -> binary.validate(document, checkCertificates);
+            case ValidateXMLSignature xml -> xml.validate(document, checkCertificates);
             default -> throw new IllegalStateException(
                     "validador sin trato propio: " + valider.getClass().getName());
         };
     }
 
-    private static Properties headlessWithoutCertificates() {
+    private static Properties headless(final boolean checkCertificates) {
         final Properties options = new Properties();
         options.setProperty("headless", Boolean.TRUE.toString());
-        options.setProperty("checkCertificates", Boolean.FALSE.toString());
+        options.setProperty("checkCertificates", Boolean.toString(checkCertificates));
         return options;
     }
 
