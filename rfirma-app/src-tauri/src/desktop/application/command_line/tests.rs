@@ -4,7 +4,7 @@ use std::path::PathBuf;
 
 use super::*;
 use crate::desktop::domain::sign_arguments::Algorithm;
-use crate::desktop::ports::AskedSecret;
+use crate::desktop::ports::{AskedSecret, SecretDescriptor};
 use crate::identity::domain::certificate::CertificateRef;
 use crate::identity::domain::error::{Situation, TokenError};
 use crate::identity::domain::protected_secret::ProtectedSecret;
@@ -76,6 +76,14 @@ impl Terminal for ScriptedTerminal {
     }
 }
 
+struct ScriptedDescriptor;
+
+impl SecretDescriptor for ScriptedDescriptor {
+    fn read(&self, descriptor: u32) -> Result<ProtectedSecret, String> {
+        panic!("estas pruebas no leen el descriptor {descriptor}")
+    }
+}
+
 fn arguments_of(words: &[&str]) -> Vec<String> {
     words.iter().map(|word| (*word).to_owned()).collect()
 }
@@ -104,6 +112,7 @@ fn attended_in(
     let ports = CommandLinePorts {
         stores,
         terminal: &ScriptedTerminal,
+        descriptor: &ScriptedDescriptor,
         desktop,
         filter: &Untouched,
         files,
@@ -155,11 +164,13 @@ struct RecordingSigner {
     asked: RefCell<Vec<(PathBuf, String, SignatureFormat, Algorithm)>>,
     remembered: RefCell<Vec<String>>,
     parameters: RefCell<Vec<BTreeMap<String, String>>>,
+    descriptors: RefCell<Vec<Option<u32>>>,
     fails: bool,
 }
 
 impl DocumentSigner for RecordingSigner {
     fn sign(&self, request: &CommandLineSigning<'_>) -> Result<Vec<u8>, String> {
+        self.descriptors.borrow_mut().push(request.password_fd);
         self.asked.borrow_mut().push((
             request.input.to_path_buf(),
             request.certificate.reference().label().to_owned(),
@@ -610,8 +621,10 @@ fn an_input_that_cannot_be_read_fails_without_signing() {
 }
 
 #[test]
-fn what_sign_does_not_do_yet_fails_before_opening_any_store() {
-    for words in [
+fn sign_hands_the_password_descriptor_to_the_signer_without_reading_it() {
+    let signer = RecordingSigner::default();
+
+    let outcome = attended_in(
         &[
             "sign",
             "-i",
@@ -622,22 +635,31 @@ fn what_sign_does_not_do_yet_fails_before_opening_any_store() {
             "yo",
             "-password-fd",
             "3",
-        ][..],
-        &["sign", "-i", "doc.pdf", "-o", "f.pdf", "-certtui"][..],
-    ] {
-        let stores = StoresWith::labels(&["yo"]);
-        let signer = RecordingSigner::default();
+        ],
+        &StoresWith::labels(&["yo"]),
+        &RecordingDesktop::default(),
+        &FilesInMemory::with("doc.pdf", A_PDF),
+        &signer,
+    );
 
-        let outcome = attended_in(
-            words,
-            &stores,
-            &RecordingDesktop::default(),
-            &FilesInMemory::with("doc.pdf", A_PDF),
-            &signer,
-        );
+    assert_eq!(outcome.exit_code, SUCCEEDED, "{:?}", outcome.stderr);
+    assert_eq!(*signer.descriptors.borrow(), vec![Some(3)]);
+}
 
-        assert_eq!(outcome.exit_code, FAILED, "{words:?}");
-        assert!(!stores.opened.get(), "{words:?}");
-        assert!(signer.asked.borrow().is_empty(), "{words:?}");
-    }
+#[test]
+fn sign_with_certtui_is_not_yet_available_and_fails_before_opening_any_store() {
+    let stores = StoresWith::labels(&["yo"]);
+    let signer = RecordingSigner::default();
+
+    let outcome = attended_in(
+        &["sign", "-i", "doc.pdf", "-o", "f.pdf", "-certtui"],
+        &stores,
+        &RecordingDesktop::default(),
+        &FilesInMemory::with("doc.pdf", A_PDF),
+        &signer,
+    );
+
+    assert_eq!(outcome.exit_code, FAILED);
+    assert!(!stores.opened.get());
+    assert!(signer.asked.borrow().is_empty());
 }
