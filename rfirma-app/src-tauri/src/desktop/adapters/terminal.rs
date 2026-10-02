@@ -164,17 +164,16 @@ impl RootsSigner<'_> {
     }
 }
 
-impl DocumentSigner for RootsSigner<'_> {
-    fn sign(&self, request: &CommandLineSigning<'_>) -> Result<Vec<u8>, String> {
-        if !request.certificate.status().is_usable() {
-            return Err("el certificado no está vigente".to_owned());
-        }
+impl RootsSigner<'_> {
+    fn begun(
+        &self,
+        request: &CommandLineSigning<'_>,
+        signer: &dyn Signer,
+    ) -> Result<StoreSecret, String> {
         let algorithm = composed_for(asked(request.algorithm), request.certificate.key_kind())
             .map_err(|error| error.detail().to_owned())?;
         let parameters = self.expanded(request).map_err(|error| error.to_string())?;
-        let signer = self.identity.signer();
-        let secret = self
-            .signing
+        self.signing
             .begin_for_the_site(
                 &request.input.display().to_string(),
                 Document::passing_through(request.input),
@@ -186,16 +185,34 @@ impl DocumentSigner for RootsSigner<'_> {
                     parameters: &parameters,
                     allow_unregistered_signatures: false,
                 },
-                &signer,
+                signer,
             )
-            .map_err(|failure| Failure::from(failure).detail)?;
+            .map_err(|failure| Failure::from(failure).detail)
+    }
+
+    fn signed_on_the_token(
+        &self,
+        secret: StoreSecret,
+        signer: &dyn Signer,
+        request: &CommandLineSigning<'_>,
+    ) -> Result<(), String> {
         if secret == StoreSecret::TypedOnScreen {
-            self.signed_with_the_typed_secret(&signer, request)?;
-        } else {
-            self.signing
-                .sign_on_token(&signer, &ProtectedSecret::new(b""))
-                .map_err(|failure| Failure::from(failure).detail)?;
+            return self.signed_with_the_typed_secret(signer, request);
         }
+        self.signing
+            .sign_on_token(signer, &ProtectedSecret::new(b""))
+            .map_err(|failure| Failure::from(failure).detail)
+    }
+}
+
+impl DocumentSigner for RootsSigner<'_> {
+    fn sign(&self, request: &CommandLineSigning<'_>) -> Result<Vec<u8>, String> {
+        if !request.certificate.status().is_usable() {
+            return Err("el certificado no está vigente".to_owned());
+        }
+        let signer = self.identity.signer();
+        let secret = self.begun(request, &signer)?;
+        self.signed_on_the_token(secret, &signer, request)?;
         let signed = self
             .signing
             .finish()
