@@ -127,13 +127,18 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
         <sc-if value="{{esNinguno}}" hint-placeholder-val="{{true}}">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="9" r="5"/><path d="M8.5 13.5 7 21l5-2.5L17 21l-1.5-7.5"/><path d="M3 3l18 18"/></svg>
         </sc-if>
+        <sc-if value="{{esCaducados}}" hint-placeholder-val="{{false}}">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+        </sc-if>
         <sc-if value="{{esExcluidos}}" hint-placeholder-val="{{false}}">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 2.5 20h19z"/><path d="M12 10v4M12 17v.5"/></svg>
         </sc-if>
       </span>
       <div class="rf-stack" style="gap:5px;flex:1;min-width:0">
         <p class="rf-title" style="font-size:17px;line-height:1.25">{{titulo}}</p>
-        <p class="rf-prose" style="font-size:13px">{{cuerpo}}</p>
+        <sc-if value="{{hayCuerpo}}" hint-placeholder-val="{{true}}">
+          <p class="rf-prose" style="font-size:13px">{{cuerpo}}</p>
+        </sc-if>
       </div>
     </div>
 
@@ -168,7 +173,7 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
 
 </div>
 </x-dc>
-<script data-dc-script data-props='{"tema":{"editor":"enum","options":["light","dark"],"default":"light","section":"Tema"},"situacion":{"editor":"enum","options":["ninguno","excluidos"],"default":"ninguno","section":"Situacion"},"$preview":{"width":720,"height":600}}'>
+<script data-dc-script data-props='{"tema":{"editor":"enum","options":["light","dark"],"default":"light","section":"Tema"},"situacion":{"editor":"enum","options":["ninguno","todos caducados","excluidos"],"default":"ninguno","section":"Situacion"},"origen":{"editor":"enum","options":["con origen","sin origen","orden de terminal"],"default":"con origen","section":"Origen"},"$preview":{"width":720,"height":600}}'>
 class Component extends DCLogic {
   renderVals() {
     // POR QUE ESTA PANTALLA SE SEPARA DE `SedeConsentimiento`. No es una
@@ -205,20 +210,45 @@ class Component extends DCLogic {
     // decision, y esa coletilla ya se ha borrado dos veces.
     const sit = this.props.situacion ?? "ninguno";
     const esNinguno = sit === "ninguno";
-    const esExcluidos = !esNinguno;
+    const esExcluidos = sit === "excluidos";
+    // TODOS CADUCADOS: los caducados no se entregan nunca (ADR-0023). El
+    // titulo lo dice todo; la salida es la de «ninguno»: instalar otro o
+    // volver a buscar.
+    const esCaducados = sit === "todos caducados";
+
+    // ORIGEN «ORDEN DE TERMINAL» (#1348). La misma pantalla para `-certgui`,
+    // sin nada que se dirija a la sede. «Excluidos» aqui es que el `-filter`
+    // de quien firma no deja ninguno. Sin cuerpo: quien escribio la orden ya
+    // sabe que cambiar y que fichero firmaba.
+    const origen = this.props.origen ?? "con origen";
+    const esTerminal = origen === "orden de terminal";
+    const sinOrigen = origen === "sin origen";
+    const sede = "sede.ejemplo.gob.es";
+    const textos = esTerminal ? {
+      ninguno: ["No tienes ningún certificado", ""],
+      excluidos: ["Tu -filter no deja ninguno de tus 3 certificados", ""]
+    } : sinOrigen ? {
+      ninguno: ["No tienes ningún certificado", "Necesitas uno instalado para firmar."],
+      excluidos: ["La petición no acepta ninguno de tus 3 certificados", "Tendrás que continuar desde la sede."]
+    } : {
+      ninguno: ["No tienes ningún certificado", "Necesitas uno instalado para firmar en " + sede + "."],
+      excluidos: [sede + " no acepta ninguno de tus 3 certificados", "Tendrás que continuar desde la sede."]
+    };
+    const t = esCaducados ? ["Tus 2 certificados han caducado", ""]
+      : esNinguno ? textos.ninguno : textos.excluidos;
 
     return {
       tema: this.props.tema ?? "light",
       esNinguno: esNinguno,
+      esCaducados: esCaducados,
       esExcluidos: esExcluidos,
 
-      titulo: esNinguno ? "No tienes ningún certificado"
-        : "sede.ejemplo.gob.es no acepta ninguno de tus 3 certificados",
-      cuerpo: esNinguno ? "Necesitas uno instalado para firmar en sede.ejemplo.gob.es."
-        : "Tendrás que continuar desde la sede.",
+      titulo: t[0],
+      cuerpo: t[1],
+      hayCuerpo: Boolean(t[1]),
 
-      hayInstalar: esNinguno,
-      hayVolverABuscar: esNinguno
+      hayInstalar: !esExcluidos,
+      hayVolverABuscar: !esExcluidos
     };
   }
 }

@@ -134,6 +134,9 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
         <p class="rf-title" style="flex:none;font-size:15px;line-height:1.35"><strong>Una página sin identificar</strong>{{peticion}}</p>
       </sc-if>
 
+      <sc-if value="{{esTerminal}}" hint-placeholder-val="{{false}}">
+        <p class="rf-title" title="{{entradaCompleta}}" style="flex:none;font-size:16px;white-space:nowrap;overflow:hidden">{{tituloAccion}}</p>
+      </sc-if>
       <div class="rf-stack" style="flex:none;gap:6px">
         <sc-if value="{{hayEtiquetaCert}}" hint-placeholder-val="{{true}}">
           <span class="rf-label">Certificado</span>
@@ -186,6 +189,7 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
       <sc-if value="{{hayDoc}}" hint-placeholder-val="{{true}}">
         <div class="rf-stack" style="gap:6px;flex:none;padding:10px var(--rf-space-sm);
           border-radius:var(--rf-radius-md);background:var(--rf-surface);{{estiloDoc}}">
+          <sc-if value="{{hayCabDoc}}" hint-placeholder-val="{{true}}">
           <div class="rf-row rf-gap-xs" style="align-items:flex-start">
             <span style="display:flex;flex:none;margin-top:1px;color:var(--rf-text-muted)">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg></span>
@@ -196,9 +200,10 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
               </sc-if>
             </div>
           </div>
+          </sc-if>
           <sc-if value="{{hayPrevias}}" hint-placeholder-val="{{true}}">
-            <div class="rf-stack" style="margin:0 calc(-1 * var(--rf-space-sm)) -10px">
-              <div role="button" tabindex="0" aria-expanded="{{ariaPrevias}}" aria-label="{{etiquetaPrevias}}" onClick="{{alternarFirmas}}" class="rf-row rf-gap-xs" style="align-items:flex-start;padding:6px 8px 6px var(--rf-space-sm);border-top:1px solid var(--rf-border-subtle);cursor:pointer">
+            <div class="rf-stack" style="margin:{{margenPrevias}} calc(-1 * var(--rf-space-sm)) -10px">
+              <div role="button" tabindex="0" aria-expanded="{{ariaPrevias}}" aria-label="{{etiquetaPrevias}}" onClick="{{alternarFirmas}}" class="rf-row rf-gap-xs" style="align-items:flex-start;padding:6px 8px 6px var(--rf-space-sm);{{bordePrevias}}cursor:pointer">
                 <span style="display:flex;flex:none;height:18px;align-items:center"><sc-if value="{{cabInfo}}" hint-placeholder-val="{{true}}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" style="flex:none"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.5"/></svg></sc-if><sc-if value="{{cabAtencion}}" hint-placeholder-val="{{false}}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M12 4 2.5 20h19z"/><path d="M12 10v4M12 17v.5"/></svg></sc-if><sc-if value="{{cabIndet}}" hint-placeholder-val="{{false}}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><circle cx="12" cy="12" r="9" stroke-dasharray="3 3"/></svg></sc-if><sc-if value="{{cabMal}}" hint-placeholder-val="{{false}}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg></sc-if></span>
                 <span style="flex:1;min-width:0;overflow:hidden"><span class="rf-body" style="display:flex;flex-wrap:wrap;margin-left:-14px;font-size:13px;line-height:18px"><span style="white-space:nowrap;padding-left:14px">Firmarás junto a <strong>{{cuantas}}</strong>{{anteriores}}</span><sc-if value="{{hayAvisos}}" hint-placeholder-val="{{false}}"><span style="white-space:nowrap"><span style="display:inline-block;width:14px;text-align:center">·</span><strong>{{avisos}}</strong></span></sc-if></span></span>
                 <span style="{{estiloChevron}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M6 9l6 6 6-6"/></svg></span>
@@ -253,7 +258,7 @@ a { color:var(--rf-text); } a:hover { color:var(--rf-primary-hover); }
 
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"tema": {"editor": "enum", "options": ["light", "dark"], "default": "light", "section": "Tema"}, "forma": {"editor": "enum", "options": ["hoy · selector de certificado", "confirmacion"], "default": "confirmacion", "section": "Forma del consentimiento"}, "situacion": {"editor": "enum", "options": ["un certificado", "varios acotados por la sede", "entregar identidad · selectcert", "PDF sin titulo · sin origen"], "default": "un certificado", "section": "Situacion"}, "firmasPrevias": {"editor": "enum", "options": ["ninguna", "1 · valida", "varias · todas validas", "certificado caducado", "firma longeva · certificado caducado", "firma rota · no corresponde con los datos", "firma rota · danada (1 firma)", "no se puede validar", "cambio tras la ultima firma", "ya la firmaste tu · mismo certificado", "ya la firmaste tu · certificado renovado", "todo a la vez"], "default": "ninguna", "section": "Firmas previas"}, "verFirmas": {"editor": "enum", "options": ["plegado", "desplegado"], "default": "plegado", "section": "Firmas previas"}, "desplegable": {"editor": "enum", "options": ["cerrado", "abierto"], "default": "cerrado", "section": "Certificados"}, "origen": {"editor": "enum", "options": ["con origen", "sin origen"], "default": "con origen", "section": "Origen"}, "lote": {"editor": "enum", "options": ["uno", "varios"], "default": "uno", "section": "Documentos (fuera de la v0.5)"}, "$preview": {"width": 720, "height": 600}}'>
+<script type="text/x-dc" data-dc-script data-props='{"tema": {"editor": "enum", "options": ["light", "dark"], "default": "light", "section": "Tema"}, "forma": {"editor": "enum", "options": ["hoy · selector de certificado", "confirmacion"], "default": "confirmacion", "section": "Forma del consentimiento"}, "situacion": {"editor": "enum", "options": ["un certificado", "varios acotados por la sede", "entregar identidad · selectcert", "PDF sin titulo · sin origen"], "default": "un certificado", "section": "Situacion"}, "firmasPrevias": {"editor": "enum", "options": ["ninguna", "1 · valida", "varias · todas validas", "certificado caducado", "firma longeva · certificado caducado", "firma rota · no corresponde con los datos", "firma rota · danada (1 firma)", "no se puede validar", "cambio tras la ultima firma", "ya la firmaste tu · mismo certificado", "ya la firmaste tu · certificado renovado", "todo a la vez"], "default": "ninguna", "section": "Firmas previas"}, "verFirmas": {"editor": "enum", "options": ["plegado", "desplegado"], "default": "plegado", "section": "Firmas previas"}, "desplegable": {"editor": "enum", "options": ["cerrado", "abierto"], "default": "cerrado", "section": "Certificados"}, "origen": {"editor": "enum", "options": ["con origen", "sin origen", "orden de terminal"], "default": "con origen", "section": "Origen"}, "rutas": {"editor": "enum", "options": ["cortos", "largos", "extremos"], "default": "largos", "section": "Orden de terminal · ruta y nombre"}, "lote": {"editor": "enum", "options": ["uno", "varios"], "default": "uno", "section": "Documentos (fuera de la v0.5)"}, "$preview": {"width": 720, "height": 600}}'>
 
 // La fila del desplegable, COPIADA DE la lista flotante de certificados de `Main`:
 // mismo relleno, mismo fondo del elegido, mismos encabezados Disponibles / No
@@ -275,6 +280,25 @@ const lineas = function (c) {
     : { l1: c.titular, l2: "A título personal · " + c.dni, corto: "A título personal · " + c.dni };
 };
 
+// RUTA Y NOMBRE (orden de terminal). Los tres casos que decide el recorte.
+const RUTAS = {
+  "cortos": { carpeta: "~/Documentos", entrada: "contrato.pdf" },
+  "largos": { carpeta: "~/Documentos/alquileres/2026/local-calle-mayor-14", entrada: "contrato-arrendamiento-local-comercial-calle-mayor-14-bajo-izquierda-version-definitiva.pdf" },
+  "extremos": { carpeta: "~/Documentos/Gestoría/Clientes/Reformas-Sánchez-y-Asociados-SL/Contratos/Arrendamientos/2026/Septiembre", entrada: "contrato-de-arrendamiento-de-local-comercial-en-calle-mayor-14-bajo-izquierda-entre-reformas-sanchez-y-asociados-sl-v3.pdf" }
+};
+// El titulo «Firmar <nombre>» va en una linea: el nombre se recorta en la
+// logica, no en CSS, por el medio y conservando la extension. Tope medido en
+// la ventana de 520 px con Inter.
+const TITULO_MAX = 46;
+const cortaNombre = function (n, max) {
+  if (n.length <= max) { return n; }
+  const punto = n.lastIndexOf(".");
+  const ext = punto > 0 ? n.slice(punto) : "";
+  const base = n.slice(0, n.length - ext.length);
+  const queda = max - 1 - ext.length;
+  const cola = Math.floor(queda * 0.4);
+  return base.slice(0, queda - cola) + "…" + base.slice(base.length - cola) + ext;
+};
 class Component extends DCLogic {
 
   // LAS FIRMAS PREVIAS, EN ORDEN CRONOLOGICO. Cada fila lleva su veredicto con el
@@ -401,13 +425,29 @@ class Component extends DCLogic {
 
     const esUno = sit === "un certificado";
     const esVarios = sit === "varios acotados por la sede";
-    const esIdentidad = sit === "entregar identidad · selectcert";
+    // ORIGEN «ORDEN DE TERMINAL» (#1348): `rfirma sign -i … -o … -certgui`
+    // abre esta misma pantalla. Nadie pide nada: quien lanza la orden es quien
+    // firma. Desaparece todo lo que se dirige a la sede. Lo demas es lo de la
+    // sede: el desplegable, las firmas previas, «Firmar». La linea de ordenes no cede
+    // datos de identidad (no hay `selectcert` en la linea de ordenes), asi que
+    // esa situacion se dibuja como «un certificado». `-filter` acota la lista
+    // como acota la sede, sin nota: quien lo escribio ya lo sabe. Los caducados no
+    // salen nunca (ADR-0023), y no hay forma de cambiar de almacen: cada fila
+    // ya dice el suyo.
+    const esTerminal = (this.props.origen ?? "con origen") === "orden de terminal";
+    const esIdentidad = sit === "entregar identidad · selectcert" && !esTerminal;
     const esSinTitulo = sit === "PDF sin titulo · sin origen";
     const conOrigen = (this.props.origen ?? "con origen") === "con origen" && !esSinTitulo;
 
     const sede = "sede.ejemplo.gob.es";
+    // Lo que la orden SI sabe y la sede no: el nombre del fichero de `-i`, que es el titulo.
+    // Quien lanza la orden es quien firma, asi que no se atribuye a nadie.
+    const ruta = RUTAS[this.props.rutas ?? "largos"];
 
-    const visibles = esVarios ? TODOS : [TODOS[0]];
+    const todos = esTerminal
+      ? TODOS.filter(function (c) { return c.tipo !== "caducado"; })
+      : TODOS;
+    const visibles = esVarios ? todos : [todos[0]];
 
     let tituloDoc = "Solicitud de subvención 2026";
     let metaDoc = "27 páginas · 2,4 MB";
@@ -430,7 +470,7 @@ class Component extends DCLogic {
     const hayDocumento = !esIdentidad;
 
     // Mover una palanca reinicia lo que se haya tocado con el raton.
-    const clave = [forma, sit, esLote, this.props.firmasPrevias, this.props.verFirmas, this.props.desplegable, this.props.origen].join("|");
+    const clave = [forma, sit, esLote, this.props.firmasPrevias, this.props.verFirmas, this.props.desplegable, this.props.origen, this.props.rutas].join("|");
     const s = (this.state && this.state.clave === clave) ? this.state : {};
     // En «hoy» el desplegable nace ABIERTO: es la unica forma de ver que esa
     // pantalla no dice ni quien pide ni que se firma, solo una lista.
@@ -484,13 +524,21 @@ class Component extends DCLogic {
 
     return {
       tema: this.props.tema ?? "light",
-      sede: sede,
+      sede: esTerminal ? "" : sede,
       esSelector: esSelector,
 
       // El selector de hoy no dice ni quien pide ni que se firma: esa es
       // exactamente la carencia que la opcion «hoy» pone delante.
-      hayOrigen: esConfirmacion && conOrigen,
-      sinOrigen: esConfirmacion && !conOrigen,
+      hayOrigen: esConfirmacion && !esTerminal && conOrigen,
+      sinOrigen: esConfirmacion && !esTerminal && !conOrigen,
+      esTerminal: esConfirmacion && esTerminal,
+      tituloAccion: "Firmar " + cortaNombre(ruta.entrada, TITULO_MAX - 7),
+      // Sin caja de documento: si el PDF trae firmas, la caja lleva solo su
+      // fila, debajo del selector, como en la sede.
+      hayCabDoc: !esTerminal,
+      margenPrevias: esTerminal ? "-10px" : "0",
+      bordePrevias: esTerminal ? "" : "border-top:1px solid var(--rf-border-subtle);",
+      entradaCompleta: ruta.carpeta + "/" + ruta.entrada,
       peticion: esIdentidad ? " pide tus datos de identidad." : " pide tu firma.",
 
       hayEtiquetaCert: esConfirmacion,
@@ -508,9 +556,9 @@ class Component extends DCLogic {
       tecla: function (e) { if (e.key === "Escape") { poner({ abierto: false, q: "" }); } },
       hayCuenta: Boolean(q) && filtrados.length > 0, cuenta: filtrados.length + " de " + visibles.length, vacio: filtrados.length === 0,
 
-      hayAcotado: esConfirmacion && esVarios,
+      hayAcotado: esConfirmacion && esVarios && !esTerminal,
 
-      hayDoc: esConfirmacion && hayDocumento,
+      hayDoc: esConfirmacion && hayDocumento && (!esTerminal || r.n > 0),
       tituloDoc: tituloDoc,
       metaDoc: metaDoc,
       hayMetaDoc: Boolean(metaDoc),

@@ -61,10 +61,10 @@ página «Ventana de sede · v0.5» va aparte porque es otra ventana:
 | — | `PreferenciasPantalla` | Preferencias, a pantalla completa, como visor de pestañas en vertical: el índice permanente y un solo panel a la derecha |
 | — | `EstadoAcercaDe` | Diálogo de «acerca de», con el «cómo actualizar» de la v0.4, sobre `Main` lista |
 | S1 | `SedeEspera` | Ventana de sede: esperando el canal, y las dos recetas de reparación cuando no se abre |
-| S2 | `SedeConsentimiento` | Ventana de sede: el consentimiento — quién pide, qué se firma (o qué datos se ceden) y con qué certificado |
+| S2 | `SedeConsentimiento` | Ventana de sede: el consentimiento — quién pide, qué se firma (o qué datos se ceden) y con qué certificado; también con origen «orden de terminal» (`-certgui`) |
 | S3 | `SedeFirmando` | Ventana de sede: firmando y devolviendo la firma a la sede |
 | S4 | `SedeDesenlace` | Ventana de sede: firmado, cancelado o petición rechazada |
-| S5 | `SedeSinCertificado` | Ventana de sede: sin ningún certificado, o con todos excluidos por la sede |
+| S5 | `SedeSinCertificado` | Ventana de sede: sin ningún certificado, todos caducados, o todos excluidos por la sede (o por `-filter` en la terminal) |
 | — | `PrimerArranque` | El asistente del primer arranque: la bienvenida con el deslinde y el idioma, y las dos acciones como pasos numerados —instalar el certificado propio y poner a rFirma por defecto— con la protección contra firmas accidentales aparte |
 | E1 | `PanelEstado` | El panel de estado: la tabla de las cuatro señales de la instalación, con sus cinco veredictos, sus reparaciones y el botón del certificado que alterna entre instalar y retirar |
 | E2 | `RetirarCertificado` | El panel de estado con el velo de la retirada encima: pregunta, avance almacén a almacén y desenlace, con y sin fallo |
@@ -965,3 +965,20 @@ Validado el 01/10/2026, directamente en los diez artboards que estampan
 
 El porqué, en [`pestanas-de-documentos`](../pestanas-de-documentos.md#decisiones)
 y [`cabecera`](../cabecera.md#decisiones).
+
+## Lo que cambió con el origen «orden de terminal»
+
+Validado el 03/10/2026 ([#1348](https://github.com/sgomez/rfirma/issues/1348)),
+sin artboards ni páginas de trabajo.
+
+- **`SedeConsentimiento` y `SedeSinCertificado`** ganan la opción «orden de
+  terminal» en la palanca «Origen»: la ventana que abre
+  `rfirma sign|cosign … -certgui`.
+- **`SedeConsentimiento`** gana la palanca «Orden de terminal · ruta y nombre»
+  (cortos, largos, extremos), que comprueba el recorte del título.
+- **`SedeSinCertificado`** gana la situación «todos caducados», en la sede y en
+  la terminal.
+- **`canvas.json`** gana la anotación `nota-sede-orden-de-terminal` en la
+  página «Ventana de sede · v0.5».
+
+El porqué, en [`ventana-de-sede`](../ventana-de-sede.md#decisiones).

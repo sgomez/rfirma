@@ -16,8 +16,7 @@ declarada a la regla de «una ficha por pantalla» de
 
 ## Casos de uso que la usan
 
-- **Firmar desde una sede electrónica** (v0.5) — de principio a fin: es el único
-  caso de uso que abre esta ventana.
+- **Firmar desde una sede electrónica** (v0.5) — de principio a fin.
 - **Ceder los datos de identidad a una sede** (`selectcert`) — el mismo recorrido
   sin el momento de firma: se elige certificado, se envían sus datos y se acaba.
   **No es identificarse**: la operación devuelve el certificado público X.509 y
@@ -25,6 +24,8 @@ declarada a la regla de «una ficha por pantalla» de
   tuya—, así que la ventana nombra lo que ocurre, una cesión de datos personales,
   y no promete una identificación
   ([#730](https://github.com/sgomez/rfirma/issues/730)).
+- **Firmar desde la terminal con `-certgui`** (`rfirma sign|cosign … -certgui`,
+  ADR-0041) — solo el consentimiento y el PIN; ver «Origen «orden de terminal»».
 
 No la usa el recorrido de firma local: ahí la interfaz es
 [`ventana-principal.md`](ventana-principal.md) y su
@@ -430,6 +431,35 @@ pie pasa por el frontal; la del sistema llega al backend como `CloseRequested`,
 y allí abandona el trámite igual. Sólo el desenlace
 cierra sin cancelar, que es donde la sede ya tiene su respuesta.
 
+**Todos caducados** es una tercera situación, en la sede y en la terminal:
+«Tus N certificados han caducado», sin cuerpo, con el reloj de «caducado» y las
+acciones de «ninguno». Los caducados no se entregan nunca (ADR-0023).
+
+### Origen «orden de terminal» — `-certgui`
+
+Opción «orden de terminal» de la palanca «Origen» de `SedeConsentimiento` y
+`SedeSinCertificado`. La acción es de la persona, que acaba de escribir la
+orden: no hay frase de origen ni nada dirigido a la sede —ni URL, ni «Para quien
+mantiene la sede»—, y no se repite lo que ya dice la orden.
+
+- **Consentimiento.** Título «Firmar \<nombre de `-i`\>» en una línea, recortado
+  por el medio conservando principio, final y extensión, con la ruta completa en
+  el tooltip (palanca «Orden de terminal · ruta y nombre»). Debajo, el selector
+  de certificados como en la sede: sin caducados, los revocados en «No se pueden
+  usar» y preseleccionado el recordado. Las firmas previas, si las hay, en su
+  caja debajo del selector. Botón `Firmar`. Ni rutas, ni destino, ni nota de
+  `-filter`.
+- **PIN.** El diálogo de siempre (abajo).
+- **La ventana solo elige.** Se cierra al aceptar el PIN o al cancelar, y el
+  resultado sale en la terminal: no hay «firmando» ni desenlace en ventana.
+- **Sin certificado utilizable** se abre la ventana, también lanzada sin
+  terminal: «ninguno» y «todos caducados» como en la sede, sin cuerpo;
+  «excluidos» es que el `-filter` no deja ninguno —«Tu -filter no deja ninguno
+  de tus N certificados»—, solo con `Cerrar`.
+- **`-config` con `visibleSignature` o `checkSignatures`** no añade pantallas: el
+  recuadro sale del `-config`, y pulsar `Firmar` con el aviso de firmas previas
+  a la vista es confirmar.
+
 ### El diálogo del secreto no cambia
 
 Cuando el almacén pide PIN o contraseña, **es exactamente el diálogo de
@@ -455,6 +485,10 @@ cancela— se borró por explicar lo evidente.
 | Firmado / cancelado / rechazado | `SedeDesenlace` | `Cerrar` |
 | Sin ningún certificado | `SedeSinCertificado` · `ninguno` | `Instalar un certificado…` |
 | Todos excluidos por la sede | `SedeSinCertificado` · `excluidos` | `Instalar un certificado…` |
+| Todos caducados | `SedeSinCertificado` · `todos caducados` | `Instalar un certificado…` |
+| Terminal: consentimiento | `SedeConsentimiento` · `origen = orden de terminal` | `Firmar` |
+| Terminal: sin ningún certificado o todos caducados | `SedeSinCertificado` · `origen = orden de terminal` | `Instalar un certificado…` |
+| Terminal: todos excluidos por `-filter` | `SedeSinCertificado` · `orden de terminal` · `excluidos` | ninguna; `Cerrar` |
 
 ## Componentes y tokens
 
@@ -521,7 +555,22 @@ datos de» pasan a «Certificado», porque el título y la línea de qué se env
 dicen si se firma o se ceden datos. El porqué de cada cambio está en
 [`panel-de-firma.md`](panel-de-firma.md#decisiones).
 
+**El origen «orden de terminal», validado el 03/10/2026**
+([#1348](https://github.com/sgomez/rfirma/issues/1348)) en la misma página,
+como palanca de `SedeConsentimiento` y `SedeSinCertificado`, sin artboards
+nuevos. Regla de texto: breve y sin repetir lo que la persona acaba de escribir.
+
 **Lo que se descartó, y por qué:**
+
+- **Una frase de origen para la terminal** («Una orden de terminal pide…»):
+  atribuía a un tercero lo que lanza la propia persona.
+- **Filas de nombre, carpeta y destino, la transformación y «solo el nombre»**
+  en la terminal: repetían rutas que la persona acaba de escribir.
+- **El nombre del fichero en el botón**: el botón lo recorta a unos 40
+  caracteres.
+- **«Firmando» y desenlace en ventana para la terminal**: más pantallas y un
+  contrato más ancho del elector gráfico, que solo devuelve la elección o la
+  cancelación.
 
 - **«Ya lleva 1 firma: la tuya será una cofirma»**, una línea fija que no decía
   si las firmas servían. La sustituye el aviso de firmas previas.
