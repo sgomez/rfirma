@@ -130,16 +130,18 @@ rfirma sign -i contrato.pdf -o contrato-firmado.pdf -alias mi-certificado \
 
 [aerc](https://aerc-mail.org) puede firmar el adjunto que tengas seleccionado
 con un atajo en `binds.conf`, ejecutando `rfirma` por `:pipe`. Aquí se firma el
-PDF recibido y el resultado queda en `~/Documents`:
+PDF recibido y el resultado queda en `~/Documents` (cada firma sobrescribe la
+anterior: cambia el nombre de salida si no quieres eso). Hace falta `bash`, no
+`sh`, por la sustitución de procesos:
 
 ```ini
 [view]
-S = :pipe -b sh -c 'f=$(mktemp --suffix=.pdf) && cat > "$f" && rfirma sign -i "$f" -o ~/Documents/firmado.pdf -alias mi-certificado -password-fd 3 3< <(secret-tool lookup service rfirma)'<Enter>
+S = :pipe -b bash -c 'f=$(mktemp --suffix=.pdf) && trap "rm -f $f" EXIT && cat > "$f" && rfirma sign -i "$f" -o ~/Documents/firmado.pdf -alias mi-certificado -password-fd 3 3< <(secret-tool lookup service rfirma)'<Enter>
 ```
 
 ### En el flatpak
 
-Dentro del sandbox, `rfirma` solo ve `~/Documents`. Para un fichero que esté
+Dentro del sandbox, `rfirma` solo ve la carpeta de documentos (`xdg-documents`). Para un fichero que esté
 fuera, `--file-forwarding` y `@@` hacen que flatpak lo exponga por el portal:
 
 ```bash

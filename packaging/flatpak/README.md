@@ -34,7 +34,7 @@ v0.1** (ID-42). No se publica en ningún sitio.
 
 ## Ficheros fuera de `~/Documents`
 
-El manifiesto no abre más rutas del sistema de ficheros que `~/Documents`. Para
+El manifiesto no abre ninguna otra carpeta de documentos que `xdg-documents`. Para
 la línea de órdenes con un fichero de otro sitio, `--file-forwarding` y `@@`
 (que delimitan cada ruta) lo exponen a través del portal de documentos:
 

@@ -151,6 +151,9 @@ por la línea de órdenes ni por el historial:
   rfirma sign -i contrato.pdf -o contrato-firmado.pdf -alias mi-certificado \\
       -password-fd 3 3< <(secret-tool lookup service rfirma)
 
+Ejemplo en el flatpak, con un fichero fuera de la carpeta de documentos:
+  flatpak run --file-forwarding me.sgomez.rfirma sign -i @@ <fichero> @@ -o <salida>
+
 Lo que rFirma atiende de una sede (protocolo 4, sobre wss:// en 127.0.0.1):
   websocket           Abre el canal en uno de los puertos que sortea la sede.
   echo                Comprobación de vida.
