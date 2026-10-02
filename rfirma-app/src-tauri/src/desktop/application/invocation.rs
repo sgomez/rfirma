@@ -146,6 +146,11 @@ Desviaciones de la línea de órdenes de AutoFirma:
   Salida estándar     No mezcla los mensajes con lo que se consume, al
                       contrario que AutoFirma.
 
+Ejemplo: firmar con el PIN guardado en el llavero del escritorio, sin que pase
+por la línea de órdenes ni por el historial:
+  rfirma sign -i contrato.pdf -o contrato-firmado.pdf -alias mi-certificado \\
+      -password-fd 3 3< <(secret-tool lookup service rfirma)
+
 Lo que rFirma atiende de una sede (protocolo 4, sobre wss:// en 127.0.0.1):
   websocket           Abre el canal en uno de los puertos que sortea la sede.
   echo                Comprobación de vida.
