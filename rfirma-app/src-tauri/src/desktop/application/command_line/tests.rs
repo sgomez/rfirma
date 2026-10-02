@@ -69,10 +69,48 @@ fn each_command_gives_its_syntax_on_stdout_with_help() {
 #[test]
 fn a_command_not_yet_available_fails_with_a_clear_message_and_an_empty_stdout() {
     for command in ["sign", "cosign", "listaliases", "verify"] {
-        let outcome = attended(&[command, "-i", "a.pdf", "-o", "b.pdf"]);
+        let outcome = attended(&[command, "-i", "a.pdf", "-o", "b.pdf", "-alias", "yo"]);
 
         assert_eq!(outcome.exit_code, FAILED);
         assert!(outcome.stdout.is_empty());
         assert!(said(&outcome).contains(command), "{}", said(&outcome));
     }
+}
+
+#[test]
+fn invalid_sign_arguments_are_refused_before_anything_else_with_a_nonzero_code() {
+    for words in [
+        &["sign", "-i", "a.pdf", "-alias", "yo"][..],
+        &[
+            "cosign",
+            "-i",
+            "a.pdf",
+            "-o",
+            "b.pdf",
+            "-alias",
+            "yo",
+            "-algorithm",
+            "sha1",
+        ][..],
+        &[
+            "sign", "-i", "a.pdf", "-o", "b.pdf", "-alias", "yo", "-format", "facturae",
+        ][..],
+        &["sign", "-i", "a.pdf", "-o", "b.pdf"][..],
+        &[
+            "sign", "-i", "a.pdf", "-o", "b.pdf", "-alias", "yo", "-certtui",
+        ][..],
+        &["sign", "-i", "a.pdf", "-o", "b.pdf", "-certgui"][..],
+    ] {
+        let outcome = attended(words);
+
+        assert_eq!(outcome.exit_code, REFUSED, "{words:?}");
+        assert!(outcome.stdout.is_empty());
+    }
+}
+
+#[test]
+fn certgui_is_refused_with_a_message_proposing_certtui() {
+    let outcome = attended(&["sign", "-i", "a.pdf", "-o", "b.pdf", "-certgui"]);
+
+    assert!(said(&outcome).contains("-certtui"), "{}", said(&outcome));
 }

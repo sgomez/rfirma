@@ -36,6 +36,7 @@ máquina. Ni firma ni documentos. Rutas relativas a `src/desktop/`.
 | `application/withdrawal.rs` | Qué reintentar y cómo fusionar el resultado al retirar rFirma, sin puertos: decisión pura. Pruebas en `application/withdrawal/tests.rs`. |
 | `domain/channel.rs` | El canal de distribución en el que corre el proceso (ADR-0015). Sin pruebas propias. |
 | `domain/command_line.rs` | Las órdenes de AutoFirma que se reconocen, su sintaxis y lo que se rechaza de ellas (ADR-0041); no las ejecuta. Pruebas en `domain/command_line/tests.rs`. |
+| `domain/sign_arguments.rs` | Los argumentos de `sign` y `cosign` analizados y lo que se rechaza de ellos (ADR-0041); no firma ni abre almacenes. Pruebas en `domain/sign_arguments/tests.rs`. |
 | `domain/destination.rs` | Destino externo reconocido por la aplicación y su dirección web. Pruebas en `domain/destination/tests.rs`. |
 | `domain/error.rs` | Las situaciones de elegir manejador (ADR-0009). Pruebas en `domain/error/tests.rs`. |
 | `domain/handlers.rs` | Quién atiende `afirma://` tal como lo decide el caso de uso, y el nombre de nuestro `.desktop`. Sin pruebas propias. |
