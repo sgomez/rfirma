@@ -10,7 +10,7 @@ máquina. Ni firma ni documentos. Rutas relativas a `src/desktop/`.
 |---|---|
 | `mod.rs` | La raíz: `DesktopRoot`, con las rutas, la invocación pendiente y la memoria de la versión. |
 | `domain/mod.rs`, `application/mod.rs`, `adapters/mod.rs` | Solo `pub mod`: el reparto de cada capa. |
-| `ports.rs` | **Los tres puertos**: `HandlerRegistry`, `VersionMemory`, que sirve `signing/adapters/memory.rs`, y `UpdateInstaller`. |
+| `ports.rs` | **Los cinco puertos**: `HandlerRegistry`, `VersionMemory`, que sirve `signing/adapters/memory.rs`, `UpdateInstaller`, y los dos de la línea de órdenes, `CertificateStores` y `Terminal`. |
 | `adapters/process.rs` | Lo que este proceso sabe de sí mismo: su línea de órdenes, su carpeta, el relanzamiento cuando los argumentos no son UTF-8 y el proceso de sede de cada URL que macOS entrega por Apple Event. No decide el rol. |
 | `adapters/channel.rs` | El canal de distribución (`/.flatpak-info`) y quién dice el escritorio que atiende `afirma://`. Léelo antes que sus hermanos. Pruebas en `adapters/channel/tests.rs`. |
 | `adapters/choice.rs` | Elegir, leer o retirar el manejador, en el `mimeapps.list` del `$HOME` y con todo lo demás intacto. Firefox guarda la suya aparte. Pruebas en `adapters/choice/tests.rs`. |
@@ -22,7 +22,7 @@ máquina. Ni firma ni documentos. Rutas relativas a `src/desktop/`.
 | `adapters/registry.rs` | `DesktopRegistry`: el adaptador de `HandlerRegistry` sobre `channel.rs` y `choice.rs` en Linux, sobre `registry/windows_classes.rs` en Windows, y el pendiente de Launch Services en macOS. |
 | `adapters/registry/windows_classes.rs` | Quién abre `afirma://` en Windows: `HKCU\Software\Classes` sobre `HKLM`, y la rama de rFirma en la del usuario (ADR-0035). Pruebas en `adapters/registry/windows_classes/tests.rs`. |
 | `adapters/releases.rs` | El único sitio que abre una conexión: le pregunta a GitHub por la última publicación. Pruebas en `adapters/releases/tests.rs`. |
-| `adapters/terminal.rs` | La entrada de la línea de órdenes, `run_the_command_line`: escribe en stdout y stderr lo que deja el caso de uso y devuelve el código de salida. Ni Tauri ni ventana; sin pruebas propias. |
+| `adapters/terminal.rs` | La entrada de la línea de órdenes, `run_the_command_line`, y los adaptadores de sus puertos, `SeenStores` y `ProcessTerminal`. Ni Tauri ni ventana; sus pruebas, con el binario, en `tests/command_line.rs`. |
 | `adapters/tauri.rs` | Las órdenes del escritorio: invocación, estado de la barra de título nativa, versión publicada, manejadores de `afirma://` y su elección, destino externo, estado y retirada. Pruebas en `adapters/tauri/tests.rs`. |
 | `adapters/titlebar.rs` | La barra de título nativa de GTK de la ventana principal en Linux, y la composición de WebKitGTK que piden sus popovers: sus eventos, cuándo aplicar el estado de la ventana y qué dice cada reciente. Nada en Windows ni macOS. Pruebas en `adapters/titlebar/tests.rs`. |
 | `adapters/titlebar/gtk_titlebar.rs` | Los widgets GTK de esa barra: sus acciones `hdr`, el popover propio de los recientes y el ☰. Solo Linux, sin pruebas propias. |

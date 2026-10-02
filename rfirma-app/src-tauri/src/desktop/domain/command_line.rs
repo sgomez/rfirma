@@ -19,6 +19,9 @@ pub const GUI: &str = "-gui";
 /// El parámetro del fichero de entrada.
 pub const INPUT: &str = "-i";
 
+/// El parámetro que acota los almacenes donde se buscan los certificados.
+pub const STORE: &str = "-store";
+
 /// Parámetros del original que rFirma no atiende.
 pub const PARAMETERS_LEFT_OUT: [&str; 5] = ["-preurl", "-posturl", "-hformat", "-halgorithm", "-r"];
 

@@ -1,4 +1,4 @@
-//! Puertos del contexto de escritorio: el registro de manejadores, la memoria de la versión publicada y su instalador.
+//! Puertos del contexto de escritorio: el registro de manejadores, la memoria de la versión publicada, su instalador y lo que ve la línea de órdenes.
 
 use std::path::Path;
 
@@ -6,6 +6,8 @@ use crate::desktop::domain::error::DesktopError;
 use crate::desktop::domain::handlers::UrlHandler;
 use crate::desktop::domain::installation::InstallFailure;
 use crate::desktop::domain::version_check::VersionCheck;
+use crate::identity::domain::certificate::TokenCertificate;
+use crate::identity::domain::error::TokenError;
 use crate::memory_error::MemoryError;
 
 /// Quién atiende un esquema según el escritorio, y cómo se elige (ADR-0015).
@@ -45,4 +47,16 @@ pub trait UpdateInstaller {
 pub trait DesktopHandover {
     /// Deja el fichero en la ventana de rFirma, sin esperar a que termine de abrirse.
     fn hand_over(&self, file: &Path) -> Result<(), String>;
+}
+
+/// Los almacenes de certificados que ve la línea de órdenes.
+pub trait CertificateStores {
+    /// Los certificados firmables de todos los almacenes, o por qué ninguno se ha podido abrir.
+    fn certificates(&self) -> Result<Vec<TokenCertificate>, TokenError>;
+}
+
+/// La terminal desde la que se lanza la orden.
+pub trait Terminal {
+    /// Si hay una persona al otro lado que puede contestar a lo que se le pregunte.
+    fn is_interactive(&self) -> bool;
 }
