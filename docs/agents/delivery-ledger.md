@@ -274,3 +274,5 @@ siguen en `.scratch/archive/`.
 2026-10-01 spec=#1308 sub=#1312 model=opus effort=medium pr=#1318 verdict=CLEAN cycles=2 mergefix=0 wave=3 outcome=merged
 2026-10-01 spec=#1308 sub=none job=local-guard pr=#1319 verdict=CLEAN cycles=0 outcome=merged
 2026-10-01 spec=#1308 sub=#1313 model=sonnet effort=medium pr=#1320 verdict=CLEAN cycles=0 mergefix=0 wave=4 outcome=merged
+2026-10-02 spec=#1331 sub=#1345 model=opus effort=medium pr=#1351 verdict=CLEAN cycles=0 mergefix=0 wave=1 outcome=merged
+2026-10-02 spec=#1331 sub=#1332 model=opus effort=medium pr=#1352 verdict=CLEAN cycles=1 mergefix=0 wave=1 outcome=escalated
