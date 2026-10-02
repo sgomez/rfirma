@@ -208,7 +208,9 @@ XAdES explícita** (`mode=explicit`), que el propio original da por obsoleta y
 resuelve hasheando el dato con SHA1; **solo admite el lote local en JSON**, no
 el XML heredado que el original todavía acepta; y **no soporta tarjetas
 criptográficas ni el DNIe**, cuya fontanería PC/SC y PKCS#11 no se distribuye en
-ningún paquete (ADR-0004).
+ningún paquete (ADR-0004). Alcanza también a la **línea de órdenes** del
+original, con una desviación más propia de ella: **no acepta la contraseña como
+argumento** (ADR-0041).
 _Avoid_: equivalente, clon de AutoFirma, drop-in replacement
 
 **Petición de firma**:
@@ -238,8 +240,12 @@ colocación de la firma; el **proceso de sede** es el que arranca una URL
 `afirma://`, uno por invocación, con su ventana de sede y sin ventana
 principal, y termina con su trámite. Dos procesos de sede conviven, cada uno
 en el puerto que sorteó su navegador; ninguno se une al de escritorio ni lo
-cierra.
-_Avoid_: modo, instancia, app de navegador, dos aplicaciones
+cierra. El **proceso de terminal** es el que arranca una orden de la línea de
+órdenes (`sign`, `cosign`, `listaliases`): no abre más ventana que la de sede,
+y solo si se le pide elegir el certificado en ella; no se une al de escritorio y
+termina con su orden.
+_Avoid_: modo, instancia, app de navegador, dos aplicaciones, CLI, modo consola,
+modo desatendido
 
 **Canal**:
 La conexión `wss://` que la sede abre contra el servidor local, y lo que hace
