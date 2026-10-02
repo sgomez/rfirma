@@ -11,7 +11,7 @@ use crate::desktop::adapters::paths::Paths;
 use crate::desktop::application::command_line::{attend, CommandLinePorts, FAILED};
 use crate::desktop::domain::sign_arguments::Algorithm;
 use crate::desktop::ports::{
-    AskedSecret, CertificateStores, CommandLineSigning, DocumentSigner, Terminal,
+    AskedSecret, CertificateStores, CommandLineSigning, DocumentSigner, SecretDescriptor, Terminal,
 };
 use crate::documents::domain::document::Document;
 use crate::identity::adapters::failures::situation_name;
@@ -19,13 +19,14 @@ use crate::identity::adapters::pkcs11::stores::discovered_module_named;
 use crate::identity::adapters::{desktop_stores, DesktopToken};
 use crate::identity::domain::certificate::TokenCertificate;
 use crate::identity::domain::error::{Situation, TokenError};
+use crate::identity::domain::holder::prompted_holder_of;
 use crate::identity::domain::protected_secret::ProtectedSecret;
 use crate::identity::domain::secret::{SecretName, StoreSecret};
 use crate::identity::domain::store::Store;
-use crate::identity::ports::Token;
+use crate::identity::ports::{prompted_until_accepted, PromptedError, SecretPromptRequest, Token};
 use crate::identity::{every_store, IdentityRoot};
 use crate::signing::domain::bridge::{BridgeError, SignatureOperation};
-use crate::signing::domain::to_java_properties;
+use crate::signing::domain::{to_java_properties, Language};
 use crate::signing::ports::Signer;
 use crate::signing::{DeclaredByTheSite, SigningRoot};
 use crate::site::domain::protocol::pairs_of;
@@ -33,6 +34,7 @@ use crate::site::domain::protocol::AskedAlgorithm;
 use crate::site::ports::{composed_for, PolicyEngine};
 use crate::Roots;
 
+mod descriptor;
 mod tty;
 
 /// Los almacenes que se recorren con el token de esta plataforma.
@@ -76,6 +78,15 @@ impl Terminal for ProcessTerminal {
 
     fn secret(&self, asked: &AskedSecret<'_>) -> Result<ProtectedSecret, String> {
         tty::typed_without_echo(&prompt_for(asked))
+    }
+}
+
+/// Los descriptores de este proceso: los que abrió quien lo lanzó.
+pub struct ProcessDescriptors;
+
+impl SecretDescriptor for ProcessDescriptors {
+    fn read(&self, descriptor: u32) -> Result<ProtectedSecret, String> {
+        descriptor::read_from(descriptor)
     }
 }
 
@@ -139,12 +150,26 @@ impl RootsSigner<'_> {
         signer: &dyn Signer,
         request: &CommandLineSigning<'_>,
     ) -> Result<(), String> {
-        let reference = request.certificate.reference();
-        if !request.terminal.is_interactive() {
-            return Err(
-                "pedir el PIN sin terminal todavía no está disponible en esta versión".to_owned(),
-            );
+        if let Some(descriptor) = request.password_fd {
+            let secret = request.descriptor.read(descriptor)?;
+            return self
+                .signing
+                .sign_on_token(signer, &secret)
+                .map_err(|failure| Failure::from(failure).detail);
         }
+        if request.terminal.is_interactive() {
+            self.signed_with_the_secret_typed_on_the_tty(signer, request)
+        } else {
+            self.signed_with_the_desktop_dialog(signer, request)
+        }
+    }
+
+    fn signed_with_the_secret_typed_on_the_tty(
+        &self,
+        signer: &dyn Signer,
+        request: &CommandLineSigning<'_>,
+    ) -> Result<(), String> {
+        let reference = request.certificate.reference();
         let mut asked = AskedSecret {
             name: SecretName::of(reference.store().class()),
             alias: reference.label(),
@@ -161,6 +186,35 @@ impl RootsSigner<'_> {
             }
             asked.incorrect = true;
         }
+    }
+}
+
+impl RootsSigner<'_> {
+    fn signed_with_the_desktop_dialog(
+        &self,
+        signer: &dyn Signer,
+        request: &CommandLineSigning<'_>,
+    ) -> Result<(), String> {
+        let prompt = SecretPromptRequest {
+            secret: SecretName::of(request.certificate.reference().store().class()),
+            holder: prompted_holder_of(request.certificate.der()),
+            language: Language::Spanish,
+            incorrect_secret: false,
+            origin_window: None,
+        };
+        prompted_until_accepted(
+            self.identity.prompter.as_ref(),
+            prompt,
+            |typed| self.signing.sign_on_token(signer, typed),
+            |failure| Failure::from(failure).situation == situation_name(Situation::IncorrectPin),
+        )
+        .map(|_| ())
+        .map_err(|error| match error {
+            PromptedError::Prompt(prompt) => format!(
+                "no hay terminal ni -password-fd con el que pedir el PIN, y el diálogo de escritorio falla ({prompt})"
+            ),
+            PromptedError::Attempt(failure) => Failure::from(failure).detail,
+        })
     }
 }
 
@@ -243,6 +297,7 @@ pub fn run_the_command_line(argv: &[String]) -> i32 {
     let ports = CommandLinePorts {
         stores: &SeenStores::of_this_machine(),
         terminal: &ProcessTerminal,
+        descriptor: &ProcessDescriptors,
         desktop: &SpawnedDesktop,
         filter: &NativeFilter,
         files: &DiskFiles,

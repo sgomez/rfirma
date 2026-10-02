@@ -14,7 +14,7 @@ use crate::desktop::domain::sign_arguments::{
 use crate::desktop::domain::store_scope::scope_named_by;
 use crate::desktop::ports::{
     CertificateFilter, CertificateStores, CommandLineFiles, CommandLineSigning, DesktopHandover,
-    DocumentSigner, SignatureVerifier, Terminal,
+    DocumentSigner, SecretDescriptor, SignatureVerifier, Terminal,
 };
 use crate::identity::domain::certificate::TokenCertificate;
 use crate::identity::domain::store::StoreClass;
@@ -41,6 +41,8 @@ pub struct CommandLinePorts<'a> {
     pub stores: &'a dyn CertificateStores,
     /// La terminal desde la que se lanza la orden.
     pub terminal: &'a dyn Terminal,
+    /// Los descriptores de los que sale el PIN de `-password-fd`.
+    pub descriptor: &'a dyn SecretDescriptor,
     /// El proceso de escritorio que recibe los ficheros de `-gui`.
     pub desktop: &'a dyn DesktopHandover,
     /// El filtro de certificados de la sede.
@@ -203,9 +205,6 @@ fn signed(arguments: &[String], parsed: &SignArguments, ports: &CommandLinePorts
             "elegir el certificado sin -alias",
         ));
     };
-    if let Some(parameter) = not_yet_available_in(parsed) {
-        return outcome(Outcome::not_yet_available(parameter));
-    }
     let parameters = match config::parameters_of(parsed.config.as_deref()) {
         Ok(parameters) => parameters,
         Err(reason) => {
@@ -237,6 +236,8 @@ fn signed(arguments: &[String], parsed: &SignArguments, ports: &CommandLinePorts
         terminal: ports.terminal,
         parameters: &parameters,
         document_length: bytes.len(),
+        password_fd: parsed.password_fd,
+        descriptor: ports.descriptor,
     }) {
         Ok(document) => document,
         Err(reason) => {
@@ -315,10 +316,6 @@ fn the_certificate_chosen_by(
         }
         Selection::Terminal { .. } => Err(Outcome::not_yet_available("-certtui")),
     }
-}
-
-fn not_yet_available_in(parsed: &SignArguments) -> Option<&'static str> {
-    parsed.password_fd.is_some().then_some("-password-fd")
 }
 
 fn signature_format_of(asked: Format, bytes: &[u8]) -> SignatureFormat {

@@ -22,6 +22,7 @@ fn filtered_with(accepted: &[&'static str], words: &[&str], signer: &RecordingSi
     let ports = CommandLinePorts {
         stores: &StoresWith::labels(&["otro", "yo"]),
         terminal: &ScriptedTerminal,
+        descriptor: &ScriptedDescriptor,
         desktop: &RecordingDesktop::default(),
         filter: &AcceptingLabels(accepted.to_vec()),
         files: &files,

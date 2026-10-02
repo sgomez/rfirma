@@ -90,6 +90,12 @@ pub trait Terminal {
     fn secret(&self, asked: &AskedSecret<'_>) -> Result<ProtectedSecret, String>;
 }
 
+/// Los descriptores que abre quien lanza la orden, de donde sale el PIN de `-password-fd`.
+pub trait SecretDescriptor {
+    /// El secreto que hay en ese descriptor, o por qué no se ha podido leer.
+    fn read(&self, descriptor: u32) -> Result<ProtectedSecret, String>;
+}
+
 /// Los ficheros que la orden lee y escribe.
 pub trait CommandLineFiles {
     /// Los bytes del fichero, o por qué no se han podido leer.
@@ -114,6 +120,8 @@ pub struct CommandLineSigning<'a> {
     pub terminal: &'a dyn Terminal,
     pub parameters: &'a BTreeMap<String, String>,
     pub document_length: usize,
+    pub password_fd: Option<u32>,
+    pub descriptor: &'a dyn SecretDescriptor,
 }
 
 /// La firma por el camino de la sede, sin ventana ni AppHandle.

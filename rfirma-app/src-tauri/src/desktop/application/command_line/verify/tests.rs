@@ -5,7 +5,7 @@ use super::super::{attend, CommandLinePorts, Outcome, FAILED, REFUSED, SUCCEEDED
 use super::*;
 use crate::desktop::ports::{
     AskedSecret, CertificateFilter, CertificateStores, CommandLineFiles, CommandLineSigning,
-    DesktopHandover, DocumentSigner, SignatureVerifier, Terminal,
+    DesktopHandover, DocumentSigner, SecretDescriptor, SignatureVerifier, Terminal,
 };
 use crate::identity::domain::certificate::TokenCertificate;
 use crate::identity::domain::error::TokenError;
@@ -106,6 +106,12 @@ impl Terminal for Untouched {
     }
 }
 
+impl SecretDescriptor for Untouched {
+    fn read(&self, descriptor: u32) -> Result<ProtectedSecret, String> {
+        panic!("verify no lee el descriptor {descriptor}")
+    }
+}
+
 impl DesktopHandover for Untouched {
     fn hand_over(&self, file: &Path) -> Result<(), String> {
         panic!("verify sin -gui no abre la ventana con {}", file.display())
@@ -129,6 +135,7 @@ fn verified(words: &[&str], files: &dyn CommandLineFiles, verifier: &Answering) 
         &CommandLinePorts {
             stores: &Untouched,
             terminal: &Untouched,
+            descriptor: &Untouched,
             desktop: &Untouched,
             filter: &Untouched,
             files,

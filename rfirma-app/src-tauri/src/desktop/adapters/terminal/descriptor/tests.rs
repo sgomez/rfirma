@@ -1,0 +1,78 @@
+use std::io::{self, Read};
+
+use super::first_line;
+
+struct BrokenDescriptor;
+
+impl Read for BrokenDescriptor {
+    fn read(&mut self, _: &mut [u8]) -> io::Result<usize> {
+        Err(io::Error::other("EIO"))
+    }
+}
+
+#[test]
+fn the_secret_is_the_first_line_without_its_newline() {
+    let mut input: &[u8] = b"1234\nlo demas";
+
+    assert_eq!(first_line(&mut input).unwrap().as_bytes(), b"1234");
+}
+
+#[test]
+fn a_secret_without_a_newline_is_whole() {
+    let mut input: &[u8] = b"1234";
+
+    assert_eq!(first_line(&mut input).unwrap().as_bytes(), b"1234");
+}
+
+#[test]
+fn a_carriage_return_before_the_newline_is_not_part_of_the_secret() {
+    let mut input: &[u8] = b"1234\r\n";
+
+    assert_eq!(first_line(&mut input).unwrap().as_bytes(), b"1234");
+}
+
+#[test]
+fn an_empty_descriptor_is_refused() {
+    let mut input: &[u8] = b"";
+    let mut only_a_newline: &[u8] = b"\n";
+
+    assert!(first_line(&mut input).is_err());
+    assert!(first_line(&mut only_a_newline).is_err());
+}
+
+#[test]
+fn a_descriptor_that_fails_to_read_is_refused() {
+    assert!(first_line(&mut BrokenDescriptor)
+        .unwrap_err()
+        .contains("EIO"));
+}
+
+#[test]
+fn a_descriptor_that_is_not_open_is_refused() {
+    assert!(super::read_from(9999).is_err());
+}
+
+struct NewlineThenSilence {
+    delivered: usize,
+}
+
+impl Read for NewlineThenSilence {
+    fn read(&mut self, buffer: &mut [u8]) -> io::Result<usize> {
+        const LINE: &[u8] = b"1234\n";
+        assert!(
+            self.delivered < LINE.len(),
+            "se ha leido mas alla del salto de linea"
+        );
+        let count = buffer.len().min(LINE.len() - self.delivered);
+        buffer[..count].copy_from_slice(&LINE[self.delivered..self.delivered + count]);
+        self.delivered += count;
+        Ok(count)
+    }
+}
+
+#[test]
+fn reading_stops_at_the_newline_without_waiting_for_the_end_of_input() {
+    let mut input = NewlineThenSilence { delivered: 0 };
+
+    assert_eq!(first_line(&mut input).unwrap().as_bytes(), b"1234");
+}
