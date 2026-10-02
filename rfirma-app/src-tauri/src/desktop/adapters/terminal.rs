@@ -25,7 +25,7 @@ use crate::identity::domain::secret::{SecretName, StoreSecret};
 use crate::identity::domain::store::Store;
 use crate::identity::ports::{prompted_until_accepted, PromptedError, SecretPromptRequest, Token};
 use crate::identity::{every_store, IdentityRoot};
-use crate::signing::domain::bridge::{BridgeError, SignatureOperation};
+use crate::signing::domain::bridge::BridgeError;
 use crate::signing::domain::{to_java_properties, Language};
 use crate::signing::ports::Signer;
 use crate::signing::{DeclaredByTheSite, SigningRoot};
@@ -235,7 +235,7 @@ impl RootsSigner<'_> {
                 DeclaredByTheSite {
                     format: request.format,
                     algorithm,
-                    operation: SignatureOperation::Sign,
+                    operation: request.operation,
                     parameters: &parameters,
                     allow_unregistered_signatures: false,
                 },

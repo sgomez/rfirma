@@ -13,7 +13,7 @@ use crate::identity::domain::error::TokenError;
 use crate::identity::domain::protected_secret::ProtectedSecret;
 use crate::identity::domain::secret::SecretName;
 use crate::memory_error::MemoryError;
-use crate::signing::domain::bridge::{BridgeError, Format};
+use crate::signing::domain::bridge::{BridgeError, Format, SignatureOperation};
 use crate::site::domain::protocol::SiteFilter;
 
 /// Quién atiende un esquema según el escritorio, y cómo se elige (ADR-0015).
@@ -116,6 +116,7 @@ pub struct CommandLineSigning<'a> {
     pub input: &'a Path,
     pub certificate: &'a TokenCertificate,
     pub format: Format,
+    pub operation: SignatureOperation,
     pub algorithm: Algorithm,
     pub terminal: &'a dyn Terminal,
     pub parameters: &'a BTreeMap<String, String>,

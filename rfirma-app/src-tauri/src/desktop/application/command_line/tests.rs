@@ -9,7 +9,7 @@ use crate::identity::domain::certificate::CertificateRef;
 use crate::identity::domain::error::{Situation, TokenError};
 use crate::identity::domain::protected_secret::ProtectedSecret;
 use crate::identity::domain::store::Store;
-use crate::signing::domain::bridge::{BridgeError, Format};
+use crate::signing::domain::bridge::{BridgeError, Format, SignatureOperation};
 use crate::site::domain::protocol::SiteFilter;
 
 struct StoresWith {
@@ -165,6 +165,7 @@ struct RecordingSigner {
     remembered: RefCell<Vec<String>>,
     parameters: RefCell<Vec<BTreeMap<String, String>>>,
     descriptors: RefCell<Vec<Option<u32>>>,
+    operations: RefCell<Vec<SignatureOperation>>,
     fails: bool,
 }
 
@@ -177,6 +178,7 @@ impl DocumentSigner for RecordingSigner {
             request.format,
             request.algorithm,
         ));
+        self.operations.borrow_mut().push(request.operation);
         self.parameters
             .borrow_mut()
             .push(request.parameters.clone());
@@ -239,6 +241,7 @@ impl SignatureVerifier for Untouched {
     }
 }
 
+mod cosign;
 mod filter_and_xml;
 mod sign_config;
 mod sign_formats;
@@ -395,12 +398,12 @@ fn each_command_gives_its_syntax_on_stdout_with_help() {
 }
 
 #[test]
-fn a_command_not_yet_available_fails_with_a_clear_message_and_an_empty_stdout() {
-    let outcome = attended(&["cosign", "-i", "a.pdf", "-o", "b.pdf", "-alias", "yo"]);
+fn a_parameter_not_yet_available_fails_with_a_clear_message_and_an_empty_stdout() {
+    let outcome = attended(&["cosign", "-i", "a.pdf", "-o", "b.pdf", "-certtui"]);
 
     assert_eq!(outcome.exit_code, FAILED);
     assert!(outcome.stdout.is_empty());
-    assert!(said(&outcome).contains("cosign"), "{}", said(&outcome));
+    assert!(said(&outcome).contains("-certtui"), "{}", said(&outcome));
 }
 
 #[test]

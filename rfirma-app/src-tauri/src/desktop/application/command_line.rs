@@ -18,7 +18,7 @@ use crate::desktop::ports::{
 };
 use crate::identity::domain::certificate::TokenCertificate;
 use crate::identity::domain::store::StoreClass;
-use crate::signing::domain::bridge::{Format as SignatureFormat, XadesVariant};
+use crate::signing::domain::bridge::{Format as SignatureFormat, SignatureOperation, XadesVariant};
 use crate::site::domain::protocol::detection::{shape_of, DetectedShape};
 use crate::site::domain::protocol::site_filter;
 
@@ -171,7 +171,10 @@ fn carried_out(
     match (command, signing) {
         (Command::ListAliases, _) => list_aliases(arguments, ports.stores),
         (Command::Verify, _) => verify::verify(arguments, ports),
-        (Command::Sign, Some(parsed)) => sign(arguments, parsed, ports),
+        (Command::Sign, Some(parsed)) => sign(arguments, parsed, SignatureOperation::Sign, ports),
+        (Command::Cosign, Some(parsed)) => {
+            sign(arguments, parsed, SignatureOperation::Cosign, ports)
+        }
         _ => Outcome::not_yet_available(&format!("la orden «{}»", command.name())),
     }
 }
@@ -187,8 +190,13 @@ fn list_aliases(arguments: &[String], stores: &dyn CertificateStores) -> Outcome
     }
 }
 
-fn sign(arguments: &[String], parsed: &SignArguments, ports: &CommandLinePorts) -> Outcome {
-    let Signed(outcome, document) = signed(arguments, parsed, ports);
+fn sign(
+    arguments: &[String],
+    parsed: &SignArguments,
+    operation: SignatureOperation,
+    ports: &CommandLinePorts,
+) -> Outcome {
+    let Signed(outcome, document) = signed(arguments, parsed, operation, ports);
     if parsed.xml {
         return in_the_xml_response(outcome, document.as_deref());
     }
@@ -198,7 +206,12 @@ fn sign(arguments: &[String], parsed: &SignArguments, ports: &CommandLinePorts) 
 /// El desenlace de firmar y, si no se escribió en `-o`, el documento firmado para la respuesta XML.
 struct Signed(Outcome, Option<Vec<u8>>);
 
-fn signed(arguments: &[String], parsed: &SignArguments, ports: &CommandLinePorts) -> Signed {
+fn signed(
+    arguments: &[String],
+    parsed: &SignArguments,
+    operation: SignatureOperation,
+    ports: &CommandLinePorts,
+) -> Signed {
     let outcome = |outcome: Outcome| Signed(outcome, None);
     let Some(selection) = &parsed.selection else {
         return outcome(Outcome::not_yet_available(
@@ -232,6 +245,7 @@ fn signed(arguments: &[String], parsed: &SignArguments, ports: &CommandLinePorts
         input,
         certificate: &certificate,
         format,
+        operation,
         algorithm: parsed.algorithm,
         terminal: ports.terminal,
         parameters: &parameters,
