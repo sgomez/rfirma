@@ -1,0 +1,210 @@
+//! La línea de órdenes contra el token `rfirma-test` y el Almacén de rFirma: por su caso de uso con una terminal guionizada, y lanzando el binario `rfirma`.
+
+use std::path::{Path, PathBuf};
+use std::process::Command;
+
+use rfirma_lib::desktop::adapters::paths::Paths;
+use rfirma_lib::desktop::adapters::terminal::SeenStores;
+use rfirma_lib::desktop::application::command_line::{
+    attend, CommandLinePorts, Outcome, SUCCEEDED,
+};
+use rfirma_lib::desktop::ports::{DesktopHandover, Terminal};
+use rfirma_lib::identity::adapters::folder::RealInstalledFolder;
+use rfirma_lib::identity::adapters::pkcs11;
+use rfirma_lib::identity::application::certificates;
+use rfirma_lib::identity::domain::keyring::KeyringError;
+use rfirma_lib::identity::domain::protected_secret::ProtectedSecret;
+use rfirma_lib::identity::domain::store::Store;
+use rfirma_lib::identity::every_store;
+use rfirma_lib::identity::ports::Keyring;
+
+const CARD_MODULE: &str = "/usr/lib/softhsm/libsofthsm2.so";
+const CARD_ACTIVE: &str = "FNMT-ACTIVO-99999999R";
+const KIT_PASSWORD: &str = "1234";
+
+/// La terminal de las pruebas: contesta lo que diga su guion, y sin TTY si así se pide.
+struct ScriptedTerminal {
+    interactive: bool,
+}
+
+impl ScriptedTerminal {
+    fn without_a_tty() -> Self {
+        Self { interactive: false }
+    }
+}
+
+impl Terminal for ScriptedTerminal {
+    fn is_interactive(&self) -> bool {
+        self.interactive
+    }
+}
+
+struct FixedPinKeyring;
+
+impl Keyring for FixedPinKeyring {
+    fn pin(&self) -> Result<ProtectedSecret, KeyringError> {
+        Ok(ProtectedSecret::from_str(
+            "pin-de-pruebas-del-almacen-de-rfirma",
+        ))
+    }
+
+    fn create_pin(&self) -> Result<ProtectedSecret, KeyringError> {
+        self.pin()
+    }
+}
+
+fn the_card_module() -> PathBuf {
+    let module = PathBuf::from(CARD_MODULE);
+    assert!(
+        module.is_file(),
+        "falta el modulo PKCS#11 en {}. Estas pruebas necesitan SoftHSM:\n  \
+         sudo apt install -y softhsm2 opensc\n  just certs install",
+        module.display()
+    );
+    module
+}
+
+/// La configuración de SoftHSM de quien corre la prueba, que el binario no encontraría con otra casa.
+fn the_softhsm_configuration() -> Option<PathBuf> {
+    std::env::var_os("SOFTHSM2_CONF")
+        .map(PathBuf::from)
+        .or_else(|| {
+            std::env::var_os("HOME")
+                .map(|home| PathBuf::from(home).join(".config/softhsm2/softhsm2.conf"))
+        })
+        .filter(|configuration| configuration.is_file())
+}
+
+fn kit_p12() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR"))
+        .ancestors()
+        .nth(2)
+        .expect("la raiz del repositorio")
+        .join("testdata/fnmt/active-rsa.p12")
+}
+
+/// Una casa con un certificado del kit en el Almacén de rFirma, y su alias.
+fn a_home_with_an_installed_certificate() -> (tempfile::TempDir, String) {
+    let home = tempfile::tempdir().expect("deberia poder crearse un directorio temporal");
+    let installed = Paths::under(home.path()).installed_certificates_dir();
+    let bytes = std::fs::read(kit_p12()).expect("el .p12 de pruebas deberia leerse");
+    certificates::install_pkcs12(
+        &pkcs11::RealToken,
+        &RealInstalledFolder,
+        &FixedPinKeyring,
+        &installed,
+        &bytes,
+        KIT_PASSWORD,
+    )
+    .expect("el .p12 del kit deberia instalarse");
+    let installed_stores = every_store(Vec::new(), &installed);
+    assert!(
+        !installed_stores.is_empty(),
+        "falta libsoftokn3.so para abrir el Almacen de rFirma:\n  sudo apt install -y libnss3"
+    );
+    let alias = pkcs11::list_certificates_across(&installed_stores)
+        .expect("el Almacen de rFirma deberia listarse")
+        .first()
+        .expect("el .p12 instalado deberia traer un certificado")
+        .reference()
+        .label()
+        .to_owned();
+    (home, alias)
+}
+
+fn the_card_aliases() -> Vec<String> {
+    pkcs11::list_certificates(Store::module(the_card_module()))
+        .expect("el token de pruebas deberia listarse")
+        .iter()
+        .map(|certificate| certificate.reference().label().to_owned())
+        .collect()
+}
+
+struct NoWindow;
+
+impl DesktopHandover for NoWindow {
+    fn hand_over(&self, _file: &Path) -> Result<(), String> {
+        Err("estas pruebas no abren la ventana".to_owned())
+    }
+}
+
+fn attended_over(words: &[&str], home: &Path, terminal: &ScriptedTerminal) -> Outcome {
+    let installed = Paths::under(home).installed_certificates_dir();
+    let stores = SeenStores::over(every_store(
+        vec![Store::module(the_card_module())],
+        &installed,
+    ));
+    let ports = CommandLinePorts {
+        stores: &stores,
+        terminal,
+        desktop: &NoWindow,
+    };
+    let arguments: Vec<String> = words.iter().map(|word| (*word).to_owned()).collect();
+    attend(&arguments, &ports)
+}
+
+fn sorted_lines_of(stdout: &[u8]) -> Vec<String> {
+    let mut lines: Vec<String> = String::from_utf8(stdout.to_vec())
+        .expect("stdout en UTF-8")
+        .lines()
+        .map(str::to_owned)
+        .collect();
+    lines.sort();
+    lines
+}
+
+fn every_alias_sorted(installed_alias: String) -> Vec<String> {
+    let mut aliases = the_card_aliases();
+    aliases.push(installed_alias);
+    aliases.sort();
+    aliases
+}
+
+#[test]
+fn listaliases_lists_the_test_token_and_the_rfirma_store_one_alias_per_line() {
+    let (home, installed_alias) = a_home_with_an_installed_certificate();
+
+    let outcome = attended_over(
+        &["listaliases"],
+        home.path(),
+        &ScriptedTerminal::without_a_tty(),
+    );
+
+    assert_eq!(outcome.exit_code, SUCCEEDED, "{:?}", outcome.stderr);
+    let aliases = sorted_lines_of(&outcome.stdout);
+    assert_eq!(aliases, every_alias_sorted(installed_alias));
+    assert!(
+        aliases.iter().any(|alias| alias == CARD_ACTIVE),
+        "{aliases:?}"
+    );
+}
+
+#[test]
+fn the_rfirma_binary_lists_aliases_without_a_window_and_with_a_clean_stdout() {
+    let (home, installed_alias) = a_home_with_an_installed_certificate();
+
+    let mut rfirma = Command::new(env!("CARGO_BIN_EXE_rfirma"));
+    if let Some(configuration) = the_softhsm_configuration() {
+        rfirma.env("SOFTHSM2_CONF", configuration);
+    }
+    let output = rfirma
+        .arg("listaliases")
+        .env_remove("DISPLAY")
+        .env_remove("WAYLAND_DISPLAY")
+        .env("HOME", home.path())
+        .env("XDG_CONFIG_HOME", home.path().join("config"))
+        .env("XDG_STATE_HOME", home.path().join("state"))
+        .env("XDG_DATA_HOME", home.path().join("data"))
+        .env("RFIRMA_PKCS11_MODULE", the_card_module())
+        .env("RUST_LOG", "trace")
+        .output()
+        .expect("el binario rfirma deberia lanzarse");
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert_eq!(output.status.code(), Some(SUCCEEDED), "{stderr}");
+    assert_eq!(
+        sorted_lines_of(&output.stdout),
+        every_alias_sorted(installed_alias),
+        "{stderr}"
+    );
+}

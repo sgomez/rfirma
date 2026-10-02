@@ -1,7 +1,84 @@
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::path::PathBuf;
 
 use super::*;
+use crate::identity::domain::certificate::CertificateRef;
+use crate::identity::domain::error::{Situation, TokenError};
+use crate::identity::domain::store::Store;
+
+struct StoresWith {
+    labels: Vec<&'static str>,
+    opened: Cell<bool>,
+}
+
+impl StoresWith {
+    fn labels(labels: &[&'static str]) -> Self {
+        Self {
+            labels: labels.to_vec(),
+            opened: Cell::new(false),
+        }
+    }
+}
+
+impl CertificateStores for StoresWith {
+    fn certificates(&self) -> Result<Vec<TokenCertificate>, TokenError> {
+        self.opened.set(true);
+        Ok(self
+            .labels
+            .iter()
+            .map(|label| {
+                TokenCertificate::new(
+                    CertificateRef::new(Store::module("/modulo.so"), "token", *label, None),
+                    Vec::new(),
+                )
+            })
+            .collect())
+    }
+}
+
+struct NoStoreOpens;
+
+impl CertificateStores for NoStoreOpens {
+    fn certificates(&self) -> Result<Vec<TokenCertificate>, TokenError> {
+        Err(TokenError::new(
+            Situation::ModuleNotFound,
+            "no hay ningun modulo PKCS#11",
+        ))
+    }
+}
+
+struct ScriptedTerminal;
+
+impl Terminal for ScriptedTerminal {
+    fn is_interactive(&self) -> bool {
+        false
+    }
+}
+
+fn arguments_of(words: &[&str]) -> Vec<String> {
+    words.iter().map(|word| (*word).to_owned()).collect()
+}
+
+fn attended_by(
+    words: &[&str],
+    stores: &dyn CertificateStores,
+    desktop: &RecordingDesktop,
+) -> Outcome {
+    let ports = CommandLinePorts {
+        stores,
+        terminal: &ScriptedTerminal,
+        desktop,
+    };
+    attend(&arguments_of(words), &ports)
+}
+
+fn attended_with(words: &[&str], stores: &dyn CertificateStores) -> Outcome {
+    attended_by(words, stores, &RecordingDesktop::default())
+}
+
+fn handed_over_with(desktop: &RecordingDesktop, words: &[&str]) -> Outcome {
+    attended_by(words, &StoresWith::labels(&[]), desktop)
+}
 
 #[derive(Default)]
 struct RecordingDesktop {
@@ -19,13 +96,51 @@ impl DesktopHandover for RecordingDesktop {
     }
 }
 
-fn attended_with(desktop: &RecordingDesktop, words: &[&str]) -> Outcome {
-    let arguments: Vec<String> = words.iter().map(|word| (*word).to_owned()).collect();
-    attend(&arguments, desktop)
+fn attended(words: &[&str]) -> Outcome {
+    attended_with(words, &StoresWith::labels(&[]))
 }
 
-fn attended(words: &[&str]) -> Outcome {
-    attended_with(&RecordingDesktop::default(), words)
+#[test]
+fn listaliases_writes_one_alias_per_line_on_stdout_and_succeeds() {
+    let outcome = attended_with(&["listaliases"], &StoresWith::labels(&["UNO", "DOS"]));
+
+    assert_eq!(outcome.exit_code, SUCCEEDED);
+    assert_eq!(outcome.stdout, b"UNO\nDOS\n");
+    assert!(outcome.stderr.is_empty(), "{:?}", outcome.stderr);
+}
+
+#[test]
+fn listaliases_with_no_certificate_succeeds_with_an_empty_stdout_and_says_so_on_stderr() {
+    let outcome = attended(&["LISTALIASES"]);
+
+    assert_eq!(outcome.exit_code, SUCCEEDED);
+    assert!(outcome.stdout.is_empty());
+    assert!(
+        said(&outcome).contains("ningún certificado"),
+        "{}",
+        said(&outcome)
+    );
+}
+
+#[test]
+fn listaliases_fails_on_stderr_when_no_store_opens() {
+    let outcome = attended_with(&["listaliases"], &NoStoreOpens);
+
+    assert_eq!(outcome.exit_code, FAILED);
+    assert!(outcome.stdout.is_empty());
+    assert!(said(&outcome).contains("almacén"), "{}", said(&outcome));
+}
+
+#[test]
+fn listaliases_with_store_fails_without_opening_any_store_until_it_is_available() {
+    let stores = StoresWith::labels(&["UNO"]);
+
+    let outcome = attended_with(&["listaliases", "-store", "mozilla"], &stores);
+
+    assert_eq!(outcome.exit_code, FAILED);
+    assert!(outcome.stdout.is_empty());
+    assert!(said(&outcome).contains("-store"), "{}", said(&outcome));
+    assert!(!stores.opened.get());
 }
 
 fn said(outcome: &Outcome) -> String {
@@ -91,7 +206,7 @@ fn each_command_gives_its_syntax_on_stdout_with_help() {
 
 #[test]
 fn a_command_not_yet_available_fails_with_a_clear_message_and_an_empty_stdout() {
-    for command in ["sign", "cosign", "listaliases", "verify"] {
+    for command in ["sign", "cosign", "verify"] {
         let outcome = attended(&[command, "-i", "a.pdf", "-o", "b.pdf", "-alias", "yo"]);
 
         assert_eq!(outcome.exit_code, FAILED);
@@ -143,7 +258,7 @@ fn sign_and_verify_with_gui_hand_the_file_to_the_desktop_and_succeed() {
     for command in ["sign", "verify"] {
         let desktop = RecordingDesktop::default();
 
-        let outcome = attended_with(&desktop, &[command, "-gui", "-i", "doc.pdf"]);
+        let outcome = handed_over_with(&desktop, &[command, "-gui", "-i", "doc.pdf"]);
 
         assert_eq!(outcome, Outcome::default(), "{command}");
         assert_eq!(*desktop.delivered.borrow(), vec![PathBuf::from("doc.pdf")]);
@@ -154,7 +269,7 @@ fn sign_and_verify_with_gui_hand_the_file_to_the_desktop_and_succeed() {
 fn gui_without_an_input_is_refused_and_delivers_nothing() {
     let desktop = RecordingDesktop::default();
 
-    let outcome = attended_with(&desktop, &["sign", "-gui"]);
+    let outcome = handed_over_with(&desktop, &["sign", "-gui"]);
 
     assert_eq!(outcome.exit_code, REFUSED);
     assert!(said(&outcome).contains("-i"), "{}", said(&outcome));
@@ -168,7 +283,7 @@ fn a_failed_delivery_ends_with_a_nonzero_code_and_the_reason() {
         ..RecordingDesktop::default()
     };
 
-    let outcome = attended_with(&desktop, &["verify", "-gui", "-i", "doc.pdf"]);
+    let outcome = handed_over_with(&desktop, &["verify", "-gui", "-i", "doc.pdf"]);
 
     assert_eq!(outcome.exit_code, FAILED);
     assert!(said(&outcome).contains("sin ejecutable"));

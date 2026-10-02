@@ -41,14 +41,7 @@ pub struct IdentityRoot {
 impl IdentityRoot {
     /// Todos los almacenes, incluidos los de los `.p12` instalados.
     pub fn all_stores(&self) -> Vec<Store> {
-        let mut stores = self.stores.clone();
-        if let Some(softoken) = adapters::pkcs11::stores::softoken() {
-            stores.extend(adapters::pkcs11::stores::installed_stores(
-                &softoken,
-                &self.installed_certificates,
-            ));
-        }
-        stores
+        every_store(self.stores.clone(), &self.installed_certificates)
     }
 
     /// El módulo PKCS#11 descubierto que es, canonizada, la biblioteca que se nombra.
@@ -127,6 +120,17 @@ impl IdentityRoot {
             keyring: &self.keyring,
         }
     }
+}
+
+/// Los almacenes configurados y el Almacén de rFirma de ese directorio, si ya tiene algún certificado.
+pub fn every_store(mut stores: Vec<Store>, installed_certificates: &Path) -> Vec<Store> {
+    if let Some(softoken) = adapters::pkcs11::stores::softoken() {
+        stores.extend(adapters::pkcs11::stores::installed_stores(
+            &softoken,
+            installed_certificates,
+        ));
+    }
+    stores
 }
 
 /// El token de firma, con el Almacén de rFirma tomando su PIN del llavero en vez de pedirlo; a los demás almacenes no los toca.

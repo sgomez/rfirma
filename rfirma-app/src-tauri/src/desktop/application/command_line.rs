@@ -3,10 +3,11 @@
 use std::path::Path;
 
 use crate::desktop::domain::command_line::{
-    command_of, file_for_the_window, is_a_help_flag, parameter_left_out, Command, Refusal,
+    command_of, file_for_the_window, is_a_help_flag, parameter_left_out, Command, Refusal, STORE,
 };
 use crate::desktop::domain::sign_arguments::parse_sign_arguments;
-use crate::desktop::ports::DesktopHandover;
+use crate::desktop::ports::{CertificateStores, DesktopHandover, Terminal};
+use crate::identity::domain::certificate::TokenCertificate;
 
 /// El código de salida de una orden que termina bien.
 pub const SUCCEEDED: i32 = 0;
@@ -16,6 +17,16 @@ pub const FAILED: i32 = 1;
 
 /// El código de salida de una línea de órdenes que no se atiende tal como llega.
 pub const REFUSED: i32 = 2;
+
+/// Lo que la línea de órdenes alcanza del mundo.
+pub struct CommandLinePorts<'a> {
+    /// Los almacenes de certificados.
+    pub stores: &'a dyn CertificateStores,
+    /// La terminal desde la que se lanza la orden.
+    pub terminal: &'a dyn Terminal,
+    /// El proceso de escritorio que recibe los ficheros de `-gui`.
+    pub desktop: &'a dyn DesktopHandover,
+}
 
 /// Lo que una orden deja al terminar: código de salida, bytes de stdout y líneas de stderr.
 #[derive(Debug, Default, PartialEq, Eq)]
@@ -37,20 +48,41 @@ impl Outcome {
         }
     }
 
-    fn not_yet_available(command: Command) -> Self {
+    fn failed(line: String) -> Self {
         Self {
             exit_code: FAILED,
             stdout: Vec::new(),
-            stderr: vec![format!(
-                "rfirma: la orden «{}» todavía no está disponible en esta versión",
-                command.name()
-            )],
+            stderr: vec![line],
+        }
+    }
+
+    fn not_yet_available(what: &str) -> Self {
+        Self::failed(format!(
+            "rfirma: {what} todavía no está disponible en esta versión"
+        ))
+    }
+
+    fn aliases_of(certificates: &[TokenCertificate]) -> Self {
+        let stdout = certificates
+            .iter()
+            .map(|certificate| format!("{}\n", certificate.reference().label()))
+            .collect::<String>()
+            .into_bytes();
+        let stderr = if certificates.is_empty() {
+            vec!["rfirma: no hay ningún certificado en los almacenes".to_owned()]
+        } else {
+            Vec::new()
+        };
+        Self {
+            exit_code: SUCCEEDED,
+            stdout,
+            stderr,
         }
     }
 }
 
 /// Atiende los argumentos que siguen al ejecutable, empezando por la orden.
-pub fn attend(arguments: &[String], desktop: &dyn DesktopHandover) -> Outcome {
+pub fn attend(arguments: &[String], ports: &CommandLinePorts) -> Outcome {
     let command = match command_of(arguments) {
         Ok(command) => command,
         Err(refusal) => return Outcome::refused(&refusal),
@@ -76,19 +108,35 @@ pub fn attend(arguments: &[String], desktop: &dyn DesktopHandover) -> Outcome {
     }
     match file_for_the_window(command, arguments) {
         Err(refusal) => Outcome::refused(&refusal),
-        Ok(Some(file)) => hand_over_to_the_window(desktop, file),
-        Ok(None) => Outcome::not_yet_available(command),
+        Ok(Some(file)) => hand_over_to_the_window(ports.desktop, file),
+        Ok(None) => carried_out(command, arguments, ports),
     }
 }
 
 fn hand_over_to_the_window(desktop: &dyn DesktopHandover, file: &str) -> Outcome {
     match desktop.hand_over(Path::new(file)) {
         Ok(()) => Outcome::default(),
-        Err(reason) => Outcome {
-            exit_code: FAILED,
-            stdout: Vec::new(),
-            stderr: vec![format!("rfirma: no se puede abrir la ventana ({reason})")],
-        },
+        Err(reason) => Outcome::failed(format!("rfirma: no se puede abrir la ventana ({reason})")),
+    }
+}
+
+fn carried_out(command: Command, arguments: &[String], ports: &CommandLinePorts) -> Outcome {
+    match command {
+        Command::ListAliases => list_aliases(arguments, ports.stores),
+        _ => Outcome::not_yet_available(&format!("la orden «{}»", command.name())),
+    }
+}
+
+fn list_aliases(arguments: &[String], stores: &dyn CertificateStores) -> Outcome {
+    if arguments.iter().any(|argument| argument == STORE) {
+        return Outcome::not_yet_available(&format!("el parámetro {STORE}"));
+    }
+    match stores.certificates() {
+        Ok(certificates) => Outcome::aliases_of(&certificates),
+        Err(error) => Outcome::failed(format!(
+            "rfirma: no se ha podido abrir ningún almacén de certificados ({})",
+            error.detail()
+        )),
     }
 }
 
