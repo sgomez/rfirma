@@ -2,6 +2,8 @@
 
 use std::path::Path;
 
+use base64::Engine as _;
+
 use crate::desktop::application::store_scope::{within_the_scope, ScopeFailure};
 use crate::desktop::domain::command_line::{
     command_of, file_for_the_window, is_a_help_flag, parameter_left_out, Command, Refusal,
@@ -11,12 +13,13 @@ use crate::desktop::domain::sign_arguments::{
 };
 use crate::desktop::domain::store_scope::scope_named_by;
 use crate::desktop::ports::{
-    CertificateStores, CommandLineFiles, CommandLineSigning, DesktopHandover, DocumentSigner,
-    SignatureVerifier, Terminal,
+    CertificateFilter, CertificateStores, CommandLineFiles, CommandLineSigning, DesktopHandover,
+    DocumentSigner, SignatureVerifier, Terminal,
 };
 use crate::identity::domain::certificate::TokenCertificate;
 use crate::identity::domain::store::StoreClass;
 use crate::signing::domain::bridge::Format as SignatureFormat;
+use crate::site::domain::protocol::site_filter;
 
 mod verify;
 pub use verify::{format_to_verify, UNKNOWN_FORMAT};
@@ -38,6 +41,8 @@ pub struct CommandLinePorts<'a> {
     pub terminal: &'a dyn Terminal,
     /// El proceso de escritorio que recibe los ficheros de `-gui`.
     pub desktop: &'a dyn DesktopHandover,
+    /// El filtro de certificados de la sede.
+    pub filter: &'a dyn CertificateFilter,
     /// Los ficheros que se leen y se escriben.
     pub files: &'a dyn CommandLineFiles,
     /// El validador del original.
@@ -179,60 +184,130 @@ fn list_aliases(arguments: &[String], stores: &dyn CertificateStores) -> Outcome
 }
 
 fn sign(arguments: &[String], parsed: &SignArguments, ports: &CommandLinePorts) -> Outcome {
-    let Some(Selection::Alias(alias)) = &parsed.selection else {
-        return Outcome::not_yet_available("elegir el certificado sin -alias");
-    };
-    let Some(output) = &parsed.output else {
-        return Outcome::not_yet_available("-xml");
+    let Signed(outcome, document) = signed(arguments, parsed, ports);
+    if parsed.xml {
+        return in_the_xml_response(outcome, document.as_deref());
+    }
+    outcome
+}
+
+/// El desenlace de firmar y, si no se escribió en `-o`, el documento firmado para la respuesta XML.
+struct Signed(Outcome, Option<Vec<u8>>);
+
+fn signed(arguments: &[String], parsed: &SignArguments, ports: &CommandLinePorts) -> Signed {
+    let outcome = |outcome: Outcome| Signed(outcome, None);
+    let Some(selection) = &parsed.selection else {
+        return outcome(Outcome::not_yet_available(
+            "elegir el certificado sin -alias",
+        ));
     };
     if let Some(parameter) = not_yet_available_in(parsed) {
-        return Outcome::not_yet_available(parameter);
+        return outcome(Outcome::not_yet_available(parameter));
     }
-    let certificate = match the_certificate_named(alias, arguments, ports.stores) {
+    let certificate = match the_certificate_chosen_by(selection, arguments, ports) {
         Ok(certificate) => certificate,
-        Err(outcome) => return outcome,
+        Err(failed) => return outcome(failed),
     };
     let input = Path::new(&parsed.input);
     let bytes = match ports.files.read(input) {
         Ok(bytes) => bytes,
         Err(reason) => {
-            return Outcome::failed(format!(
+            return outcome(Outcome::failed(format!(
                 "rfirma: no se puede leer «{}» ({reason})",
                 parsed.input
-            ))
+            )))
         }
     };
     let Some(format) = signature_format_of(parsed.format, &bytes) else {
-        return Outcome::not_yet_available("la firma CAdES y XAdES");
+        return outcome(Outcome::not_yet_available("la firma CAdES y XAdES"));
     };
-    let signed = match ports.signer.sign(&CommandLineSigning {
+    let document = match ports.signer.sign(&CommandLineSigning {
         input,
         certificate: &certificate,
         format,
         algorithm: parsed.algorithm,
     }) {
-        Ok(signed) => signed,
+        Ok(document) => document,
         Err(reason) => {
-            return Outcome::failed(format!("rfirma: no se ha podido firmar ({reason})"))
+            return outcome(Outcome::failed(format!(
+                "rfirma: no se ha podido firmar ({reason})"
+            )))
         }
     };
-    if let Err(reason) = ports.files.write(Path::new(output), &signed) {
-        return Outcome::failed(format!(
+    let Some(output) = &parsed.output else {
+        ports.signer.remember(&certificate);
+        return Signed(
+            Outcome {
+                exit_code: SUCCEEDED,
+                stdout: Vec::new(),
+                stderr: vec!["rfirma: firma generada".to_owned()],
+            },
+            Some(document),
+        );
+    };
+    if let Err(reason) = ports.files.write(Path::new(output), &document) {
+        return outcome(Outcome::failed(format!(
             "rfirma: no se puede escribir «{output}» ({reason})"
-        ));
+        )));
     }
     ports.signer.remember(&certificate);
-    Outcome {
+    outcome(Outcome {
         exit_code: SUCCEEDED,
         stdout: Vec::new(),
         stderr: vec![format!("rfirma: firma guardada en «{output}»")],
+    })
+}
+
+fn in_the_xml_response(outcome: Outcome, signature: Option<&[u8]>) -> Outcome {
+    let message = outcome
+        .stderr
+        .iter()
+        .map(|line| line.strip_prefix("rfirma: ").unwrap_or(line))
+        .collect::<Vec<_>>()
+        .join(" ");
+    Outcome {
+        stdout: xml_response(outcome.exit_code == SUCCEEDED, &message, signature).into_bytes(),
+        ..outcome
+    }
+}
+
+fn xml_response(succeeded: bool, message: &str, signature: Option<&[u8]>) -> String {
+    let sign = signature
+        .map(|bytes| {
+            format!(
+                "<sign>{}</sign>",
+                base64::engine::general_purpose::STANDARD.encode(bytes)
+            )
+        })
+        .unwrap_or_default();
+    format!(
+        "<afirma><result>{succeeded}</result><response><msg>{}</msg>{sign}</response></afirma>\n",
+        escaped_for_xml(message)
+    )
+}
+
+fn escaped_for_xml(text: &str) -> String {
+    text.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+}
+
+fn the_certificate_chosen_by(
+    selection: &Selection,
+    arguments: &[String],
+    ports: &CommandLinePorts,
+) -> Result<TokenCertificate, Outcome> {
+    match selection {
+        Selection::Alias(alias) => the_certificate_named(alias, arguments, ports.stores),
+        Selection::Filter(expression) => {
+            the_only_certificate_accepted_by(expression, arguments, ports)
+        }
+        Selection::Terminal { .. } => Err(Outcome::not_yet_available("-certtui")),
     }
 }
 
 fn not_yet_available_in(parsed: &SignArguments) -> Option<&'static str> {
-    if parsed.xml {
-        Some("-xml")
-    } else if parsed.config.is_some() {
+    if parsed.config.is_some() {
         Some("-config")
     } else if parsed.password_fd.is_some() {
         Some("-password-fd")
@@ -267,18 +342,56 @@ fn the_certificate_named(
              «rfirma listaliases» los enumera"
         )));
     };
+    one_copy_of(&named, first).ok_or_else(|| {
+        Outcome::failed(format!(
+            "rfirma: hay varios certificados con el alias «{alias}»; acota el almacén con -store"
+        ))
+    })
+}
+
+fn one_copy_of(named: &[TokenCertificate], first: &TokenCertificate) -> Option<TokenCertificate> {
     if !named
         .iter()
         .all(|certificate| certificate.is_a_copy_of(first))
     {
-        return Err(Outcome::failed(format!(
-            "rfirma: hay varios certificados con el alias «{alias}»; acota el almacén con -store"
-        )));
+        return None;
     }
     let installed = named
         .iter()
         .find(|certificate| certificate.reference().store().class() == StoreClass::Installed);
-    Ok(installed.unwrap_or(first).clone())
+    Some(installed.unwrap_or(first).clone())
+}
+
+fn the_only_certificate_accepted_by(
+    expression: &str,
+    arguments: &[String],
+    ports: &CommandLinePorts,
+) -> Result<TokenCertificate, Outcome> {
+    let filter = site_filter(&[("filters".to_owned(), expression.to_owned())]);
+    if filter.declares_nothing() {
+        return Err(Outcome::failed(format!(
+            "rfirma: el filtro «{expression}» no nombra ningún criterio de los que reconoce la sede"
+        )));
+    }
+    let scope = scope_named_by(arguments)
+        .map_err(|refusal| Outcome::refused(&Refusal::InvalidStore(refusal)))?;
+    let listed =
+        within_the_scope(&scope, ports.stores).map_err(|failure| failure_of_the_scope(&failure))?;
+    let accepted = ports
+        .filter
+        .accepted(&filter, listed)
+        .map_err(|reason| Outcome::failed(format!("rfirma: no se ha podido filtrar ({reason})")))?;
+    let Some(first) = accepted.first() else {
+        return Err(Outcome::failed(format!(
+            "rfirma: ningún certificado cumple el filtro «{expression}»"
+        )));
+    };
+    one_copy_of(&accepted, first).ok_or_else(|| {
+        Outcome::failed(format!(
+            "rfirma: varios certificados cumplen el filtro «{expression}»; \
+             afínalo o acota el almacén con -store"
+        ))
+    })
 }
 
 fn failure_of_the_scope(failure: &ScopeFailure) -> Outcome {

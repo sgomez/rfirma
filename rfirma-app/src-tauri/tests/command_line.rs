@@ -3,7 +3,7 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use rfirma_lib::desktop::adapters::command_line_ports::{DiskFiles, NativeVerifier};
+use rfirma_lib::desktop::adapters::command_line_ports::{DiskFiles, NativeFilter, NativeVerifier};
 use rfirma_lib::desktop::adapters::paths::Paths;
 use rfirma_lib::desktop::adapters::terminal::{RootsSigner, SeenStores};
 use rfirma_lib::desktop::application::command_line::{
@@ -155,6 +155,7 @@ fn attended_with_the_roots(words: &[&str], roots: &Roots, terminal: &ScriptedTer
         stores: &stores,
         terminal,
         desktop: &NoWindow,
+        filter: &NativeFilter,
         files: &DiskFiles,
         verifier: &NativeVerifier,
         signer: &RootsSigner::of(roots),
@@ -373,6 +374,73 @@ fn sign_with_an_alias_of_the_rfirma_store_signs_a_valid_pades_exactly_at_the_out
         .expect("el estado deberia leerse")
         .into_value();
     assert!(state.recents.is_empty(), "no se apunta en los recientes");
+}
+
+#[test]
+#[ignore = "grada C: necesita librfirma_crypto.so (just test-native)"]
+fn sign_with_a_filter_picks_the_certificate_by_its_data_and_fails_with_none_or_several() {
+    let (home, _alias) = a_home_with_an_installed_certificate();
+    let roots = the_roots_under(home.path());
+    let input = home.path().join("documento.pdf");
+    std::fs::write(&input, a_one_page_pdf()).expect("el PDF deberia escribirse");
+    let output = home.path().join("firmado.pdf");
+    let sign_with = |filter: &str, store: &[&str]| {
+        let mut words = vec![
+            "sign",
+            "-i",
+            input.to_str().expect("ruta UTF-8"),
+            "-o",
+            output.to_str().expect("ruta UTF-8"),
+            "-filter",
+            filter,
+        ];
+        words.extend_from_slice(store);
+        attended_with_the_roots(&words, &roots, &ScriptedTerminal::without_a_tty())
+    };
+
+    let one = sign_with("subject.contains:99999999R", &["-store", "mozilla"]);
+    assert_eq!(one.exit_code, SUCCEEDED, "{:?}", one.stderr);
+    let signed = std::fs::read(&output).expect("la firma deberia estar en -o");
+    assert_eq!(verdict_of(&roots, &signed), SignatureVerdict::Valid);
+
+    std::fs::remove_file(&output).expect("deberia borrarse");
+    let none = sign_with("subject.contains:NO-EXISTE-NADIE-ASI", &[]);
+    assert_eq!(none.exit_code, FAILED);
+    let several = sign_with("subject.contains:99999999R", &[]);
+    assert_eq!(several.exit_code, FAILED, "{:?}", several.stderr);
+    assert!(!output.exists());
+}
+
+#[test]
+#[ignore = "grada C: necesita librfirma_crypto.so (just test-native)"]
+fn sign_with_xml_and_no_output_answers_with_the_signature_in_base64_on_stdout() {
+    let (home, installed_alias) = a_home_with_an_installed_certificate();
+    let roots = the_roots_under(home.path());
+    let input = home.path().join("documento.pdf");
+    std::fs::write(&input, a_one_page_pdf()).expect("el PDF deberia escribirse");
+    let words = [
+        "sign",
+        "-i",
+        input.to_str().expect("ruta UTF-8"),
+        "-alias",
+        &installed_alias,
+        "-xml",
+    ];
+
+    let outcome = attended_with_the_roots(&words, &roots, &ScriptedTerminal::without_a_tty());
+
+    assert_eq!(outcome.exit_code, SUCCEEDED, "{:?}", outcome.stderr);
+    let xml = String::from_utf8(outcome.stdout).expect("stdout en UTF-8");
+    let signature = xml
+        .split("<sign>")
+        .nth(1)
+        .and_then(|rest| rest.split("</sign>").next())
+        .expect("la respuesta lleva <sign>");
+    let signed = base64::engine::general_purpose::STANDARD
+        .decode(signature)
+        .expect("la firma va en Base64");
+    assert_eq!(verdict_of(&roots, &signed), SignatureVerdict::Valid);
+    assert!(xml.starts_with("<afirma><result>true</result>"), "{xml}");
 }
 
 #[test]

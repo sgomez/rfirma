@@ -5,7 +5,7 @@ mod support;
 
 use std::path::{Path, PathBuf};
 
-use rfirma_lib::desktop::adapters::command_line_ports::{DiskFiles, NativeVerifier};
+use rfirma_lib::desktop::adapters::command_line_ports::{DiskFiles, NativeFilter, NativeVerifier};
 use rfirma_lib::desktop::adapters::handover::SpawnedDesktop;
 use rfirma_lib::desktop::adapters::terminal::{ProcessTerminal, SeenStores};
 use rfirma_lib::desktop::application::command_line::{
@@ -48,6 +48,7 @@ fn verified(path: &Path) -> Outcome {
             stores: &SeenStores::over(Vec::new()),
             terminal: &ProcessTerminal,
             desktop: &SpawnedDesktop,
+            filter: &NativeFilter,
             files: &DiskFiles,
             verifier: &NativeVerifier,
             signer: &NeverSigns,

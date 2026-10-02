@@ -11,6 +11,7 @@ use crate::identity::domain::certificate::TokenCertificate;
 use crate::identity::domain::error::TokenError;
 use crate::memory_error::MemoryError;
 use crate::signing::domain::bridge::{BridgeError, Format};
+use crate::site::domain::protocol::SiteFilter;
 
 /// Quién atiende un esquema según el escritorio, y cómo se elige (ADR-0015).
 pub trait HandlerRegistry {
@@ -58,6 +59,16 @@ pub trait CertificateStores {
 
     /// El módulo PKCS#11 ya descubierto que es, canonizada, la biblioteca que se nombra.
     fn discovered_module(&self, library: &str) -> Option<PathBuf>;
+}
+
+/// El motor de filtros de la sede, aplicado a los certificados de la línea de órdenes.
+pub trait CertificateFilter {
+    /// Los certificados vigentes que cumplen el filtro, o por qué el motor no ha contestado.
+    fn accepted(
+        &self,
+        filter: &SiteFilter,
+        certificates: Vec<TokenCertificate>,
+    ) -> Result<Vec<TokenCertificate>, String>;
 }
 
 /// La terminal desde la que se lanza la orden.
