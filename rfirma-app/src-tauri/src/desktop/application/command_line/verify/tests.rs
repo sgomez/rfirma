@@ -4,7 +4,8 @@ use std::path::{Path, PathBuf};
 use super::super::{attend, CommandLinePorts, Outcome, FAILED, REFUSED, SUCCEEDED};
 use super::*;
 use crate::desktop::ports::{
-    CertificateStores, CommandLineFiles, DesktopHandover, SignatureVerifier, Terminal,
+    CertificateStores, CommandLineFiles, CommandLineSigning, DesktopHandover, DocumentSigner,
+    SignatureVerifier, Terminal,
 };
 use crate::identity::domain::certificate::TokenCertificate;
 use crate::identity::domain::error::TokenError;
@@ -23,6 +24,10 @@ impl CommandLineFiles for OneFile {
     fn read(&self, _path: &Path) -> Result<Vec<u8>, String> {
         Ok(self.0.to_vec())
     }
+
+    fn write(&self, path: &Path, _bytes: &[u8]) -> Result<(), String> {
+        panic!("verify no escribe {}", path.display())
+    }
 }
 
 struct NoFile;
@@ -30,6 +35,10 @@ struct NoFile;
 impl CommandLineFiles for NoFile {
     fn read(&self, path: &Path) -> Result<Vec<u8>, String> {
         Err(format!("{} no existe", path.display()))
+    }
+
+    fn write(&self, path: &Path, _bytes: &[u8]) -> Result<(), String> {
+        panic!("verify no escribe {}", path.display())
     }
 }
 
@@ -87,6 +96,16 @@ impl DesktopHandover for Untouched {
     }
 }
 
+impl DocumentSigner for Untouched {
+    fn sign(&self, request: &CommandLineSigning<'_>) -> Result<Vec<u8>, String> {
+        panic!("verify no firma {}", request.input.display())
+    }
+
+    fn remember(&self, _certificate: &TokenCertificate) {
+        panic!("verify no recuerda certificados")
+    }
+}
+
 fn verified(words: &[&str], files: &dyn CommandLineFiles, verifier: &Answering) -> Outcome {
     let arguments: Vec<String> = words.iter().map(|word| (*word).to_owned()).collect();
     attend(
@@ -97,6 +116,7 @@ fn verified(words: &[&str], files: &dyn CommandLineFiles, verifier: &Answering) 
             desktop: &Untouched,
             files,
             verifier,
+            signer: &Untouched,
         },
     )
 }

@@ -1,7 +1,9 @@
 use std::cell::{Cell, RefCell};
+use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 use super::*;
+use crate::desktop::domain::sign_arguments::Algorithm;
 use crate::identity::domain::certificate::CertificateRef;
 use crate::identity::domain::error::{Situation, TokenError};
 use crate::identity::domain::store::Store;
@@ -73,15 +75,100 @@ fn attended_by(
     stores: &dyn CertificateStores,
     desktop: &RecordingDesktop,
 ) -> Outcome {
+    attended_in(
+        words,
+        stores,
+        desktop,
+        &FilesInMemory::default(),
+        &RecordingSigner::default(),
+    )
+}
+
+fn attended_in(
+    words: &[&str],
+    stores: &dyn CertificateStores,
+    desktop: &RecordingDesktop,
+    files: &FilesInMemory,
+    signer: &RecordingSigner,
+) -> Outcome {
     let ports = CommandLinePorts {
         stores,
         terminal: &ScriptedTerminal,
         desktop,
-        files: &Untouched,
+        files,
         verifier: &Untouched,
+        signer,
     };
     attend(&arguments_of(words), &ports)
 }
+
+#[derive(Default)]
+struct FilesInMemory {
+    files: RefCell<BTreeMap<PathBuf, Vec<u8>>>,
+}
+
+impl FilesInMemory {
+    fn with(path: &str, bytes: &[u8]) -> Self {
+        let files = Self::default();
+        files
+            .files
+            .borrow_mut()
+            .insert(PathBuf::from(path), bytes.to_vec());
+        files
+    }
+
+    fn at(&self, path: &str) -> Option<Vec<u8>> {
+        self.files.borrow().get(Path::new(path)).cloned()
+    }
+}
+
+impl CommandLineFiles for FilesInMemory {
+    fn read(&self, path: &Path) -> Result<Vec<u8>, String> {
+        self.files
+            .borrow()
+            .get(path)
+            .cloned()
+            .ok_or_else(|| "no existe".to_owned())
+    }
+
+    fn write(&self, path: &Path, bytes: &[u8]) -> Result<(), String> {
+        self.files
+            .borrow_mut()
+            .insert(path.to_path_buf(), bytes.to_vec());
+        Ok(())
+    }
+}
+
+#[derive(Default)]
+struct RecordingSigner {
+    asked: RefCell<Vec<(PathBuf, String, SignatureFormat, Algorithm)>>,
+    remembered: RefCell<Vec<String>>,
+    fails: bool,
+}
+
+impl DocumentSigner for RecordingSigner {
+    fn sign(&self, request: &CommandLineSigning<'_>) -> Result<Vec<u8>, String> {
+        self.asked.borrow_mut().push((
+            request.input.to_path_buf(),
+            request.certificate.reference().label().to_owned(),
+            request.format,
+            request.algorithm,
+        ));
+        if self.fails {
+            return Err("el token no firma".to_owned());
+        }
+        Ok(SIGNED.to_vec())
+    }
+
+    fn remember(&self, certificate: &TokenCertificate) {
+        self.remembered
+            .borrow_mut()
+            .push(certificate.reference().label().to_owned());
+    }
+}
+
+const A_PDF: &[u8] = b"%PDF-1.4 cuerpo";
+const SIGNED: &[u8] = b"%PDF-1.4 firmado";
 
 fn attended_with(words: &[&str], stores: &dyn CertificateStores) -> Outcome {
     attended_by(words, stores, &RecordingDesktop::default())
@@ -107,14 +194,8 @@ impl DesktopHandover for RecordingDesktop {
     }
 }
 
-/// Los puertos de una orden que no debería llegar a tocar el mundo.
+/// El validador que una orden distinta de `verify` no debería llegar a tocar.
 struct Untouched;
-
-impl CommandLineFiles for Untouched {
-    fn read(&self, path: &Path) -> Result<Vec<u8>, String> {
-        panic!("no debería leer {}", path.display())
-    }
-}
 
 impl SignatureVerifier for Untouched {
     fn results_of(&self, _document: &[u8], format: Format) -> Result<Vec<String>, BridgeError> {
@@ -275,13 +356,11 @@ fn each_command_gives_its_syntax_on_stdout_with_help() {
 
 #[test]
 fn a_command_not_yet_available_fails_with_a_clear_message_and_an_empty_stdout() {
-    for command in ["sign", "cosign"] {
-        let outcome = attended(&[command, "-i", "a.pdf", "-o", "b.pdf", "-alias", "yo"]);
+    let outcome = attended(&["cosign", "-i", "a.pdf", "-o", "b.pdf", "-alias", "yo"]);
 
-        assert_eq!(outcome.exit_code, FAILED);
-        assert!(outcome.stdout.is_empty());
-        assert!(said(&outcome).contains(command), "{}", said(&outcome));
-    }
+    assert_eq!(outcome.exit_code, FAILED);
+    assert!(outcome.stdout.is_empty());
+    assert!(said(&outcome).contains("cosign"), "{}", said(&outcome));
 }
 
 #[test]
@@ -356,4 +435,208 @@ fn a_failed_delivery_ends_with_a_nonzero_code_and_the_reason() {
 
     assert_eq!(outcome.exit_code, FAILED);
     assert!(said(&outcome).contains("sin ejecutable"));
+}
+
+fn signed_over(words: &[&str], files: &FilesInMemory, signer: &RecordingSigner) -> Outcome {
+    attended_in(
+        words,
+        &StoresWith::labels(&["otro", "yo"]),
+        &RecordingDesktop::default(),
+        files,
+        signer,
+    )
+}
+
+#[test]
+fn sign_with_an_alias_writes_exactly_in_the_output_and_says_so_only_on_stderr() {
+    let files = FilesInMemory::with("doc.pdf", A_PDF);
+    let signer = RecordingSigner::default();
+
+    let outcome = signed_over(
+        &["sign", "-i", "doc.pdf", "-o", "firmado.pdf", "-alias", "yo"],
+        &files,
+        &signer,
+    );
+
+    assert_eq!(outcome.exit_code, SUCCEEDED, "{}", said(&outcome));
+    assert!(outcome.stdout.is_empty());
+    assert!(said(&outcome).contains("firmado.pdf"), "{}", said(&outcome));
+    assert_eq!(files.at("firmado.pdf").as_deref(), Some(SIGNED));
+    assert_eq!(
+        *signer.asked.borrow(),
+        vec![(
+            PathBuf::from("doc.pdf"),
+            "yo".to_owned(),
+            SignatureFormat::Pades,
+            Algorithm::Sha512
+        )]
+    );
+    assert_eq!(*signer.remembered.borrow(), vec!["yo".to_owned()]);
+}
+
+#[test]
+fn sign_with_pades_and_another_algorithm_asks_for_exactly_that() {
+    for (word, algorithm) in [("sha256", Algorithm::Sha256), ("sha384", Algorithm::Sha384)] {
+        let files = FilesInMemory::with("doc.pdf", A_PDF);
+        let signer = RecordingSigner::default();
+
+        let outcome = signed_over(
+            &[
+                "sign",
+                "-i",
+                "doc.pdf",
+                "-o",
+                "f.pdf",
+                "-alias",
+                "yo",
+                "-format",
+                "pades",
+                "-algorithm",
+                word,
+            ],
+            &files,
+            &signer,
+        );
+
+        assert_eq!(outcome.exit_code, SUCCEEDED, "{}", said(&outcome));
+        let asked = signer.asked.borrow();
+        assert_eq!(
+            (asked[0].2, asked[0].3),
+            (SignatureFormat::Pades, algorithm)
+        );
+    }
+}
+
+#[test]
+fn sign_overwrites_what_was_already_at_the_output() {
+    let files = FilesInMemory::with("doc.pdf", A_PDF);
+    files
+        .write(Path::new("firmado.pdf"), b"lo de antes")
+        .expect("en memoria se escribe");
+
+    let outcome = signed_over(
+        &["sign", "-i", "doc.pdf", "-o", "firmado.pdf", "-alias", "yo"],
+        &files,
+        &RecordingSigner::default(),
+    );
+
+    assert_eq!(outcome.exit_code, SUCCEEDED, "{}", said(&outcome));
+    assert_eq!(files.at("firmado.pdf").as_deref(), Some(SIGNED));
+}
+
+#[test]
+fn sign_with_an_alias_no_store_has_fails_without_signing_or_writing() {
+    let files = FilesInMemory::with("doc.pdf", A_PDF);
+    let signer = RecordingSigner::default();
+
+    let outcome = signed_over(
+        &["sign", "-i", "doc.pdf", "-o", "f.pdf", "-alias", "nadie"],
+        &files,
+        &signer,
+    );
+
+    assert_eq!(outcome.exit_code, FAILED);
+    assert!(said(&outcome).contains("nadie"), "{}", said(&outcome));
+    assert!(signer.asked.borrow().is_empty());
+    assert_eq!(files.at("f.pdf"), None);
+}
+
+#[test]
+fn a_signature_that_fails_writes_nothing_and_remembers_nothing() {
+    let files = FilesInMemory::with("doc.pdf", A_PDF);
+    let signer = RecordingSigner {
+        fails: true,
+        ..RecordingSigner::default()
+    };
+
+    let outcome = signed_over(
+        &["sign", "-i", "doc.pdf", "-o", "f.pdf", "-alias", "yo"],
+        &files,
+        &signer,
+    );
+
+    assert_eq!(outcome.exit_code, FAILED);
+    assert!(
+        said(&outcome).contains("el token no firma"),
+        "{}",
+        said(&outcome)
+    );
+    assert_eq!(files.at("f.pdf"), None);
+    assert!(signer.remembered.borrow().is_empty());
+}
+
+#[test]
+fn an_input_that_cannot_be_read_fails_without_signing() {
+    let signer = RecordingSigner::default();
+
+    let outcome = signed_over(
+        &["sign", "-i", "no-esta.pdf", "-o", "f.pdf", "-alias", "yo"],
+        &FilesInMemory::default(),
+        &signer,
+    );
+
+    assert_eq!(outcome.exit_code, FAILED);
+    assert!(said(&outcome).contains("no-esta.pdf"), "{}", said(&outcome));
+    assert!(signer.asked.borrow().is_empty());
+}
+
+#[test]
+fn sign_auto_over_something_that_is_not_a_pdf_is_not_yet_available() {
+    let files = FilesInMemory::with("datos.bin", b"no es un PDF");
+    let signer = RecordingSigner::default();
+
+    let outcome = signed_over(
+        &["sign", "-i", "datos.bin", "-o", "f.bin", "-alias", "yo"],
+        &files,
+        &signer,
+    );
+
+    assert_eq!(outcome.exit_code, FAILED);
+    assert!(signer.asked.borrow().is_empty());
+    assert_eq!(files.at("f.bin"), None);
+}
+
+#[test]
+fn what_sign_does_not_do_yet_fails_before_opening_any_store() {
+    for words in [
+        &["sign", "-i", "doc.pdf", "-alias", "yo", "-xml"][..],
+        &[
+            "sign", "-i", "doc.pdf", "-o", "f.pdf", "-alias", "yo", "-config", "a=b",
+        ][..],
+        &[
+            "sign",
+            "-i",
+            "doc.pdf",
+            "-o",
+            "f.pdf",
+            "-alias",
+            "yo",
+            "-password-fd",
+            "3",
+        ][..],
+        &[
+            "sign",
+            "-i",
+            "doc.pdf",
+            "-o",
+            "f.pdf",
+            "-filter",
+            "nonexpired:",
+        ][..],
+    ] {
+        let stores = StoresWith::labels(&["yo"]);
+        let signer = RecordingSigner::default();
+
+        let outcome = attended_in(
+            words,
+            &stores,
+            &RecordingDesktop::default(),
+            &FilesInMemory::with("doc.pdf", A_PDF),
+            &signer,
+        );
+
+        assert_eq!(outcome.exit_code, FAILED, "{words:?}");
+        assert!(!stores.opened.get(), "{words:?}");
+        assert!(signer.asked.borrow().is_empty(), "{words:?}");
+    }
 }

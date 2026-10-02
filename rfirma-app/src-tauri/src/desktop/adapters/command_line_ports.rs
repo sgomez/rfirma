@@ -15,6 +15,10 @@ impl CommandLineFiles for DiskFiles {
     fn read(&self, path: &Path) -> Result<Vec<u8>, String> {
         std::fs::read(path).map_err(|error| error.to_string())
     }
+
+    fn write(&self, path: &Path, bytes: &[u8]) -> Result<(), String> {
+        std::fs::write(path, bytes).map_err(|error| error.to_string())
+    }
 }
 
 /// El validador del original en la librería nativa, que se carga solo cuando se le pregunta.

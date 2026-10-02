@@ -11,6 +11,8 @@ use rfirma_lib::desktop::adapters::terminal::{ProcessTerminal, SeenStores};
 use rfirma_lib::desktop::application::command_line::{
     attend, CommandLinePorts, Outcome, SUCCEEDED, UNKNOWN_FORMAT,
 };
+use rfirma_lib::desktop::ports::{CommandLineSigning, DocumentSigner};
+use rfirma_lib::identity::domain::certificate::TokenCertificate;
 use rfirma_lib::signing::application::cycle::ALGORITHM;
 use rfirma_lib::signing::domain::bridge::{Format, SignatureOperation};
 
@@ -20,6 +22,18 @@ fn sample(relative: &str) -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../../testdata")
         .join(relative)
+}
+
+struct NeverSigns;
+
+impl DocumentSigner for NeverSigns {
+    fn sign(&self, request: &CommandLineSigning<'_>) -> Result<Vec<u8>, String> {
+        panic!("verify no firma {}", request.input.display())
+    }
+
+    fn remember(&self, _certificate: &TokenCertificate) {
+        panic!("verify no recuerda certificados")
+    }
 }
 
 fn verified(path: &Path) -> Outcome {
@@ -36,6 +50,7 @@ fn verified(path: &Path) -> Outcome {
             desktop: &SpawnedDesktop,
             files: &DiskFiles,
             verifier: &NativeVerifier,
+            signer: &NeverSigns,
         },
     )
 }

@@ -1,10 +1,11 @@
-//! Puertos del contexto de escritorio: el registro de manejadores, la memoria de la versión publicada, su instalador y lo que ve la línea de órdenes.
+//! Puertos del contexto de escritorio: el registro de manejadores, la memoria de la versión publicada, su instalador y lo que alcanza la línea de órdenes.
 
 use std::path::{Path, PathBuf};
 
 use crate::desktop::domain::error::DesktopError;
 use crate::desktop::domain::handlers::UrlHandler;
 use crate::desktop::domain::installation::InstallFailure;
+use crate::desktop::domain::sign_arguments::Algorithm;
 use crate::desktop::domain::version_check::VersionCheck;
 use crate::identity::domain::certificate::TokenCertificate;
 use crate::identity::domain::error::TokenError;
@@ -65,14 +66,34 @@ pub trait Terminal {
     fn is_interactive(&self) -> bool;
 }
 
-/// Los ficheros que nombra la línea de órdenes.
+/// Los ficheros que la orden lee y escribe.
 pub trait CommandLineFiles {
-    /// Los bytes del fichero, o por qué no se ha podido leer.
+    /// Los bytes del fichero, o por qué no se han podido leer.
     fn read(&self, path: &Path) -> Result<Vec<u8>, String>;
+
+    /// Deja los bytes en esa ruta, sobrescribiendo lo que hubiera.
+    fn write(&self, path: &Path, bytes: &[u8]) -> Result<(), String>;
 }
 
 /// El validador del original, como lo usa su orden `verify`.
 pub trait SignatureVerifier {
     /// Un texto por resultado de validez de las firmas del documento, con el validador de ese formato.
     fn results_of(&self, document: &[u8], format: Format) -> Result<Vec<String>, BridgeError>;
+}
+
+/// Lo que la orden pide firmar y con qué.
+pub struct CommandLineSigning<'a> {
+    pub input: &'a Path,
+    pub certificate: &'a TokenCertificate,
+    pub format: Format,
+    pub algorithm: Algorithm,
+}
+
+/// La firma por el camino de la sede, sin ventana ni AppHandle.
+pub trait DocumentSigner {
+    /// El documento firmado, o por qué no ha salido.
+    fn sign(&self, request: &CommandLineSigning<'_>) -> Result<Vec<u8>, String>;
+
+    /// Apunta el certificado con el que se acaba de firmar, si la memoria lo permite.
+    fn remember(&self, certificate: &TokenCertificate);
 }
