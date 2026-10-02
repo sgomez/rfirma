@@ -28,6 +28,9 @@ use rfirma_lib::Roots;
 use base64::Engine;
 use std::sync::Arc;
 
+#[path = "command_line/config.rs"]
+mod config;
+
 const CARD_MODULE: &str = "/usr/lib/softhsm/libsofthsm2.so";
 const CARD_ACTIVE: &str = "FNMT-ACTIVO-99999999R";
 const KIT_PASSWORD: &str = "1234";

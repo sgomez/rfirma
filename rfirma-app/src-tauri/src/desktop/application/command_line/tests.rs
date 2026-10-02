@@ -154,6 +154,7 @@ impl CommandLineFiles for FilesInMemory {
 struct RecordingSigner {
     asked: RefCell<Vec<(PathBuf, String, SignatureFormat, Algorithm)>>,
     remembered: RefCell<Vec<String>>,
+    parameters: RefCell<Vec<BTreeMap<String, String>>>,
     fails: bool,
 }
 
@@ -165,6 +166,9 @@ impl DocumentSigner for RecordingSigner {
             request.format,
             request.algorithm,
         ));
+        self.parameters
+            .borrow_mut()
+            .push(request.parameters.clone());
         if self.fails {
             return Err("el token no firma".to_owned());
         }
@@ -225,6 +229,7 @@ impl SignatureVerifier for Untouched {
 }
 
 mod filter_and_xml;
+mod sign_config;
 
 fn attended(words: &[&str]) -> Outcome {
     attended_with(words, &StoresWith::labels(&[]))
@@ -622,9 +627,6 @@ fn sign_auto_over_something_that_is_not_a_pdf_is_not_yet_available() {
 #[test]
 fn what_sign_does_not_do_yet_fails_before_opening_any_store() {
     for words in [
-        &[
-            "sign", "-i", "doc.pdf", "-o", "f.pdf", "-alias", "yo", "-config", "a=b",
-        ][..],
         &[
             "sign",
             "-i",

@@ -24,11 +24,13 @@ use crate::identity::domain::secret::{SecretName, StoreSecret};
 use crate::identity::domain::store::Store;
 use crate::identity::ports::Token;
 use crate::identity::{every_store, IdentityRoot};
-use crate::signing::domain::bridge::SignatureOperation;
+use crate::signing::domain::bridge::{BridgeError, SignatureOperation};
+use crate::signing::domain::to_java_properties;
 use crate::signing::ports::Signer;
 use crate::signing::{DeclaredByTheSite, SigningRoot};
+use crate::site::domain::protocol::pairs_of;
 use crate::site::domain::protocol::AskedAlgorithm;
-use crate::site::ports::composed_for;
+use crate::site::ports::{composed_for, PolicyEngine};
 use crate::Roots;
 
 mod tty;
@@ -106,6 +108,23 @@ impl<'a> RootsSigner<'a> {
     }
 }
 
+impl RootsSigner<'_> {
+    fn expanded(
+        &self,
+        request: &CommandLineSigning<'_>,
+    ) -> Result<BTreeMap<String, String>, BridgeError> {
+        if request.format.signed_without_the_bridge() {
+            return Ok(request.parameters.clone());
+        }
+        let expanded = self.signing.isolate.expand(
+            &to_java_properties(request.parameters),
+            request.format.name(),
+            request.document_length,
+        )?;
+        Ok(pairs_of(&expanded).into_iter().collect())
+    }
+}
+
 fn asked(algorithm: Algorithm) -> AskedAlgorithm {
     match algorithm {
         Algorithm::Sha512 => AskedAlgorithm::Sha512,
@@ -145,17 +164,16 @@ impl RootsSigner<'_> {
     }
 }
 
-impl DocumentSigner for RootsSigner<'_> {
-    fn sign(&self, request: &CommandLineSigning<'_>) -> Result<Vec<u8>, String> {
-        if !request.certificate.status().is_usable() {
-            return Err("el certificado no está vigente".to_owned());
-        }
+impl RootsSigner<'_> {
+    fn begun(
+        &self,
+        request: &CommandLineSigning<'_>,
+        signer: &dyn Signer,
+    ) -> Result<StoreSecret, String> {
         let algorithm = composed_for(asked(request.algorithm), request.certificate.key_kind())
             .map_err(|error| error.detail().to_owned())?;
-        let signer = self.identity.signer();
-        let parameters = BTreeMap::new();
-        let secret = self
-            .signing
+        let parameters = self.expanded(request).map_err(|error| error.to_string())?;
+        self.signing
             .begin_for_the_site(
                 &request.input.display().to_string(),
                 Document::passing_through(request.input),
@@ -167,16 +185,34 @@ impl DocumentSigner for RootsSigner<'_> {
                     parameters: &parameters,
                     allow_unregistered_signatures: false,
                 },
-                &signer,
+                signer,
             )
-            .map_err(|failure| Failure::from(failure).detail)?;
+            .map_err(|failure| Failure::from(failure).detail)
+    }
+
+    fn signed_on_the_token(
+        &self,
+        secret: StoreSecret,
+        signer: &dyn Signer,
+        request: &CommandLineSigning<'_>,
+    ) -> Result<(), String> {
         if secret == StoreSecret::TypedOnScreen {
-            self.signed_with_the_typed_secret(&signer, request)?;
-        } else {
-            self.signing
-                .sign_on_token(&signer, &ProtectedSecret::new(b""))
-                .map_err(|failure| Failure::from(failure).detail)?;
+            return self.signed_with_the_typed_secret(signer, request);
         }
+        self.signing
+            .sign_on_token(signer, &ProtectedSecret::new(b""))
+            .map_err(|failure| Failure::from(failure).detail)
+    }
+}
+
+impl DocumentSigner for RootsSigner<'_> {
+    fn sign(&self, request: &CommandLineSigning<'_>) -> Result<Vec<u8>, String> {
+        if !request.certificate.status().is_usable() {
+            return Err("el certificado no está vigente".to_owned());
+        }
+        let signer = self.identity.signer();
+        let secret = self.begun(request, &signer)?;
+        self.signed_on_the_token(secret, &signer, request)?;
         let signed = self
             .signing
             .finish()

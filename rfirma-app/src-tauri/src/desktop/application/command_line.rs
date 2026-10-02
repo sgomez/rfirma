@@ -21,6 +21,7 @@ use crate::identity::domain::store::StoreClass;
 use crate::signing::domain::bridge::Format as SignatureFormat;
 use crate::site::domain::protocol::site_filter;
 
+mod config;
 mod verify;
 pub use verify::{format_to_verify, UNKNOWN_FORMAT};
 
@@ -204,6 +205,14 @@ fn signed(arguments: &[String], parsed: &SignArguments, ports: &CommandLinePorts
     if let Some(parameter) = not_yet_available_in(parsed) {
         return outcome(Outcome::not_yet_available(parameter));
     }
+    let parameters = match config::parameters_of(parsed.config.as_deref()) {
+        Ok(parameters) => parameters,
+        Err(reason) => {
+            return outcome(Outcome::failed(format!(
+                "rfirma: -config no se acepta ({reason})"
+            )))
+        }
+    };
     let certificate = match the_certificate_chosen_by(selection, arguments, ports) {
         Ok(certificate) => certificate,
         Err(failed) => return outcome(failed),
@@ -227,6 +236,8 @@ fn signed(arguments: &[String], parsed: &SignArguments, ports: &CommandLinePorts
         format,
         algorithm: parsed.algorithm,
         terminal: ports.terminal,
+        parameters: &parameters,
+        document_length: bytes.len(),
     }) {
         Ok(document) => document,
         Err(reason) => {
@@ -308,13 +319,7 @@ fn the_certificate_chosen_by(
 }
 
 fn not_yet_available_in(parsed: &SignArguments) -> Option<&'static str> {
-    if parsed.config.is_some() {
-        Some("-config")
-    } else if parsed.password_fd.is_some() {
-        Some("-password-fd")
-    } else {
-        None
-    }
+    parsed.password_fd.is_some().then_some("-password-fd")
 }
 
 fn signature_format_of(asked: Format, bytes: &[u8]) -> Option<SignatureFormat> {

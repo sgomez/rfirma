@@ -1,5 +1,6 @@
 //! Puertos del contexto de escritorio: el registro de manejadores, la memoria de la versión publicada, su instalador y lo que alcanza la línea de órdenes.
 
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 use crate::desktop::domain::error::DesktopError;
@@ -111,6 +112,8 @@ pub struct CommandLineSigning<'a> {
     pub format: Format,
     pub algorithm: Algorithm,
     pub terminal: &'a dyn Terminal,
+    pub parameters: &'a BTreeMap<String, String>,
+    pub document_length: usize,
 }
 
 /// La firma por el camino de la sede, sin ventana ni AppHandle.
