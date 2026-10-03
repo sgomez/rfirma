@@ -4,7 +4,7 @@ Este índice **sustituye a explorar el árbol**. Cada módulo dice qué es en su
 primera línea `//!`, y `just outline rfirma-app/src/<carpeta>/` las junta en un
 índice: localiza el módulo por su línea y abre **solo** ese fichero.
 
-`src-tauri/tests/agents_map_is_complete.rs` exige que todo `.ts`/`.tsx`
+`src-tauri/tests/modules_open_with_a_header.rs` exige que todo `.ts`/`.tsx`
 versionado bajo `src/` que no sea un `*.test.*` abra con esa línea, sin
 partirla: **una frase, qué es y, si ayuda, qué no es**, de 300 caracteres como
 mucho y sin citas a la spec ni a issues. **Un módulo nuevo trae su cabecera en

@@ -118,7 +118,7 @@ END { flushdoc() }
 }
 
 # Fichero de prueba: el mismo criterio que la guarda de los mapas
-# (`tests/agents_map_is_complete.rs`).
+# (`tests/modules_open_with_a_header.rs`).
 is_a_test_module() {
     case "/$1" in
         *.test.ts|*.test.tsx) return 0 ;;

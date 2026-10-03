@@ -4,7 +4,7 @@ set -euo pipefail
 
 guards=(
     files_stay_small
-    agents_map_is_complete
+    modules_open_with_a_header
     adr_citations_resolve
     comments_cite_nothing_that_rots
     no_inline_test_modules

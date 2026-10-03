@@ -32,7 +32,7 @@ contexto, de una capa o de `crossing/`. Lo que cuelga de la raíz es el armado
 (`memory_error.rs`, `startup_failure.rs`), `startup_dialog.rs` y
 `compile_fail.rs`.
 
-`tests/agents_map_is_complete.rs` exige que todo `.rs` versionado bajo `src/`
+`tests/modules_open_with_a_header.rs` exige que todo `.rs` versionado bajo `src/`
 que no sea de prueba abra con esa línea, sin partirla: **una frase, qué es y, si
 ayuda, qué no es**, de 300 caracteres como mucho y sin citas a la spec ni a
 issues. Las pruebas de un módulo van en su hermano `tests.rs`; los andamios de

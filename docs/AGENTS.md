@@ -143,5 +143,5 @@ caracteres como mucho, que `just outline <directorio>/` junta en el índice. El
 mapa de cada zona y de cada contexto se queda con lo que el código no confiesa:
 las carpetas, los módulos que se leen antes que sus hermanos, las trampas y las
 secciones «Al tocar…». Lo vigila
-`rfirma-app/src-tauri/tests/agents_map_is_complete.rs`, que exige que todo
+`rfirma-app/src-tauri/tests/modules_open_with_a_header.rs`, que exige que todo
 módulo de las dos zonas que no sea de prueba abra con esa línea.
