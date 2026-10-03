@@ -89,8 +89,8 @@ de ADR-0004.
 * **`AcroFields.getSignatureNames()` no tiene orden cronológico**: devuelve
   las claves de un `HashMap`. La firma de la última revisión se busca por
   `fields.getRevision(name)`, nunca por su posición en la lista.
-  `ValidatePdfSignature` del original toma la primera, y
-  `changedAfterLastSignature` lo sigue.
+  `ValidatePdfSignature` del original toma la primera; `changedAfterLastSignature`
+  se aparta de él (ADR-0023) y compara con la de revisión más alta.
 * **`ValidatePdfSignature.validateSign()` no es el validador entero.** Es la
   pieza por firma que llama `validate(byte[], Properties)`; lo que esta añade
   alrededor —el documento certificado que no admite más firmas y la regla de

@@ -25,6 +25,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.junit.jupiter.api.Test;
 
+import com.aowagie.text.pdf.PdfReader;
+
 import es.gob.afirma.signvalidation.SignValidity;
 import es.gob.afirma.signvalidation.SignValidity.SIGN_DETAIL_TYPE;
 import es.gob.afirma.signvalidation.SignValidity.VALIDITY_ERROR;
@@ -331,6 +333,20 @@ class PreviousSignaturesBridgeTest {
                 TestFixtures.otherCertificateChain(), TestFixtures.otherPrivateKey());
 
         assertFalse(PreviousSignaturesBridge.read(twice).changedAfterLastSignature());
+    }
+
+    @Test
+    void the_last_signature_is_found_by_revision_and_not_by_its_place_in_the_name_list()
+            throws Exception {
+        final byte[] pdf = TestFixtures.pdfWithAVisibleCosignOverTheFirstSignature();
+        assertEquals(TestFixtures.FIRST_SIGNATURE_FIELD,
+                new PdfReader(pdf).getAcroFields().getSignatureNames().get(0),
+                "iText lista primero la firma antigua");
+
+        final PreviousSignaturesBridge.Report report = PreviousSignaturesBridge.read(pdf);
+
+        assertFalse(report.changedAfterLastSignature());
+        assertEquals(List.of(), report.findings());
     }
 
     @Test

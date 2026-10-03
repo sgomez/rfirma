@@ -179,3 +179,8 @@ master = "present"
 id = "BUG-36"
 title = "El sello de firma de PAdES no se aplica nunca: el sellador se busca con un constructor que no existe y el fallo se descarta"
 master = "present"
+
+[[bug]]
+id = "BUG-37"
+title = "La comparación con la última revisión firmada toma la primera firma de una lista sin orden"
+master = "present"
