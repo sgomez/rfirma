@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Regenera testdata/previous-signatures/ con el firmador PAdES de AutoFirma y una TSA local (ADR-0002, ADR-0030).
+# Regenera testdata/previous-signatures/ con los firmadores PAdES y CAdES de AutoFirma y una TSA local (ADR-0002, ADR-0030).
 #
 # No es determinista: el PDF de entrada, el instante de firma y el sello
 # cambian en cada regeneracion.
@@ -55,5 +55,11 @@ sign pades-timestamped "$WORK/document.pdf" "$EXPIRED" "$EXPIRED_PIN" "$TSA_URL"
     "$OUT/pades-long-term-expired.pdf"
 sign pades-timestamped "$WORK/document.pdf" "$ACTIVE" "$ACTIVE_PIN" "$TSA_URL" \
     "$OUT/pades-long-term-active.pdf"
+
+printf 'rfirma: contenido firmado en CAdES\n' > "$WORK/content.txt"
+sign cades implicit "$WORK/content.txt" "$EXPIRED" "$EXPIRED_PIN" "$OUT/cades-expired.csig"
+sign cades implicit "$WORK/content.txt" "$ACTIVE" "$ACTIVE_PIN" "$WORK/cades-active.csig"
+sign countersign cades tree "$WORK/cades-active.csig" "$EXPIRED" "$EXPIRED_PIN" \
+    "$OUT/cades-countersigned-by-expired.csig"
 
 ls -la "$OUT"
