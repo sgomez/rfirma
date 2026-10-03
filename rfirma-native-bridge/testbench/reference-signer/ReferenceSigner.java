@@ -5,6 +5,9 @@ import java.nio.file.Files;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.security.KeyStore;
+import java.security.cert.Certificate;
+import java.security.cert.CertificateFactory;
+import java.util.Arrays;
 import java.util.GregorianCalendar;
 import java.util.HexFormat;
 import java.util.Properties;
@@ -38,6 +41,7 @@ public final class ReferenceSigner {
         switch (args[0]) {
             case "cades" -> cades(args);
             case "xades" -> xades(args);
+            case "xades-extra-certificate" -> xadesExtraCertificate(args);
             case "facturae" -> facturae(args);
             case "pdf" -> pdf(args);
             case "pades-timestamped" -> padesTimestamped(args);
@@ -52,6 +56,7 @@ public final class ReferenceSigner {
                 Uso:
                   ReferenceSigner cades <implicit|explicit> <entrada> <p12> <pin> <salida>
                   ReferenceSigner xades <detached|enveloping|enveloped> <entrada.xml> <p12> <pin> <salida>
+                  ReferenceSigner xades-extra-certificate <entrada.xml> <p12> <pin> <cert.pem> <salida>
                   ReferenceSigner facturae <invoice.xml> <p12> <pin> <salida>
                   ReferenceSigner pdf <salida>
                   ReferenceSigner pades-timestamped <entrada.pdf> <p12> <pin> <tsaURL> <salida>
@@ -78,6 +83,24 @@ public final class ReferenceSigner {
         KeyStore.PrivateKeyEntry pke = loadKey(args[3], args[4]);
         byte[] result = new AOXAdESSigner().sign(
                 data, ALGORITHM, pke.getPrivateKey(), pke.getCertificateChain(), extraParams);
+        Files.write(Path.of(args[5]), result);
+    }
+
+    /** XAdES Enveloping con un certificado mas al final de la cadena, que acaba en el KeyInfo. */
+    private static void xadesExtraCertificate(String[] args) throws Exception {
+        Properties extraParams = new Properties();
+        extraParams.setProperty("format", AOSignConstants.SIGN_FORMAT_XADES_ENVELOPING);
+        byte[] data = Files.readAllBytes(Path.of(args[1]));
+        KeyStore.PrivateKeyEntry pke = loadKey(args[2], args[3]);
+        Certificate extra;
+        try (InputStream in = new FileInputStream(args[4])) {
+            extra = CertificateFactory.getInstance("X.509").generateCertificate(in);
+        }
+        Certificate[] chain = pke.getCertificateChain();
+        Certificate[] longer = Arrays.copyOf(chain, chain.length + 1);
+        longer[chain.length] = extra;
+        byte[] result = new AOXAdESSigner().sign(
+                data, ALGORITHM, pke.getPrivateKey(), longer, extraParams);
         Files.write(Path.of(args[5]), result);
     }
 
