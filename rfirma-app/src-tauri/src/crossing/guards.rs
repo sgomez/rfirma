@@ -205,6 +205,8 @@ fn a_previous_signature() -> crate::signing::domain::DocumentSignature {
         signing_time: Some("2024-01-01T10:00:00Z".to_owned()),
         status: Some(crate::signing::domain::SignatureStatus::Valid),
         reason: None,
+        validity: crate::signing::domain::Validity::Valid,
+        validity_reason: None,
         countersignatures: Vec::new(),
     }
 }

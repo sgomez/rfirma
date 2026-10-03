@@ -22,7 +22,8 @@ pub use config::{
     SUB_FILTER,
 };
 pub use document_signatures::{
-    DocumentSignature, DocumentSignatures, SignatureStandard, SignatureStatus, Tone,
+    DocumentFinding, DocumentSignature, DocumentSignatures, SignatureStandard, SignatureStatus,
+    Tone, Validity, ValidityReason,
 };
 pub use language::Language;
 pub use layer2_text::{

@@ -14,7 +14,7 @@ use crate::identity::domain::certificate::{CertificateRef, TokenCertificate};
 use crate::identity::domain::error::TokenError;
 use crate::identity::domain::protected_secret::ProtectedSecret;
 use crate::signing::domain::bridge::BridgeError;
-use crate::signing::domain::{DocumentSignature, DocumentSignatures, SignatureStatus};
+use crate::signing::domain::{DocumentSignature, DocumentSignatures, SignatureStatus, Validity};
 use crate::site::domain::protocol::SiteFilter;
 
 const AN_XML: &[u8] = b"<?xml version=\"1.0\"?><root/>";
@@ -241,6 +241,8 @@ fn a_signature(name: &str, id_number: &str, signing_time: Option<&str>) -> Docum
         signing_time: signing_time.map(str::to_owned),
         status: Some(SignatureStatus::Valid),
         reason: None,
+        validity: Validity::Valid,
+        validity_reason: None,
         countersignatures: Vec::new(),
     }
 }

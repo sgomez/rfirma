@@ -6,6 +6,7 @@ import java.security.cert.X509Certificate;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
@@ -18,6 +19,8 @@ import com.aowagie.text.pdf.AcroFields;
 import com.aowagie.text.pdf.PdfArray;
 import com.aowagie.text.pdf.PdfDictionary;
 import com.aowagie.text.pdf.PdfName;
+import com.aowagie.text.pdf.PdfNumber;
+import com.aowagie.text.pdf.PdfObject;
 import com.aowagie.text.pdf.PdfPKCS7;
 import com.aowagie.text.pdf.PdfReader;
 import com.aowagie.text.pdf.PdfSignatureAppearance;
@@ -43,10 +46,11 @@ import es.gob.afirma.signvalidation.ValidatePdfSignature;
  * {@code getSignersStructure} de AutoFirma 1.9.2; las de PDF, ademas,
  * validadas una a una con su validador, sin red y sin modo relajado.
  *
- * <p>En PDF salta los sellos de tiempo y las firmas que iText no llega a leer,
- * y un PDF ilegible o cifrado da un informe vacio en vez de un fallo. En CAdES
- * y XAdES solo lee la identidad de cada firmante y de sus contrafirmas, a cualquier
- * profundidad: su estado va nulo.
+ * <p>En PDF salta los sellos de tiempo; una firma que iText no llega a leer, o
+ * que no trae certificado de firma, sale no valida y danada (ADR-0043). Un PDF
+ * ilegible o cifrado da un informe vacio en vez de un fallo. En CAdES y XAdES
+ * solo lee la identidad de cada firmante y de sus contrafirmas, a cualquier
+ * profundidad: su estado va nulo y su validez, valida, hasta que se juzguen.
  */
 final class PreviousSignaturesBridge {
 
@@ -65,7 +69,7 @@ final class PreviousSignaturesBridge {
             new PdfName("ETSI.CAdES.detached"));
 
     /** El mismo tope por defecto que trae el original en {@code pagesToCheckShadowAttack}. */
-    private static final String DEFAULT_PAGES_TO_CHECK_SHADOW_ATTACK = "10";
+    private static final int PAGES_TO_COMPARE = 10;
 
     private PreviousSignaturesBridge() { }
 
@@ -89,21 +93,92 @@ final class PreviousSignaturesBridge {
         }
     }
 
-    /** Titular, emisor, numero de serie, fecha, estado, motivo y contrafirmas de una firma previa. */
-    record Signature(String subject, String issuer, String serialNumber, String signingTime,
-            Status status, String reason, List<Signature> countersignatures) { }
+    /** La validez de una firma (ADR-0043), con el nombre con el que cruza a Rust. */
+    enum Validity {
+        VALID("valid"),
+        EXPIRED("expired"),
+        INVALID("invalid");
 
-    /** Las firmas en orden cronologico y si el documento cambio despues de la ultima. */
-    record Report(List<Signature> signatures, boolean changedAfterLastSignature) { }
+        private final String wireName;
+
+        Validity(final String wireName) {
+            this.wireName = wireName;
+        }
+
+        String wireName() {
+            return wireName;
+        }
+    }
+
+    /** Los motivos de la validez, del mas grave al menos grave, con su nombre en Rust. */
+    enum Problem {
+        DAMAGED("damaged", Validity.INVALID),
+        MODIFIED_AFTER_SIGNING("modifiedAfterSigning", Validity.INVALID),
+        COSIGN_NOT_ADMITTED("cosignNotAdmitted", Validity.INVALID),
+        UNKNOWN_SIGNATURE_TYPE("unknownSignatureType", Validity.INVALID),
+        CERTIFICATE_NOT_YET_VALID("certificateNotYetValid", Validity.INVALID),
+        CERTIFICATE_EXPIRED("certificateExpired", Validity.EXPIRED);
+
+        private final String wireName;
+
+        private final Validity validity;
+
+        Problem(final String wireName, final Validity validity) {
+            this.wireName = wireName;
+            this.validity = validity;
+        }
+
+        String wireName() {
+            return wireName;
+        }
+
+        Validity validity() {
+            return validity;
+        }
+    }
+
+    /** El motivo de la validez: la fecha y el titular del certificado, o quien cerro el documento. */
+    record Reason(Problem problem, String date, String holder, String closedBy) {
+
+        static Reason of(final Problem problem) {
+            return new Reason(problem, null, null, null);
+        }
+    }
+
+    /** Lo que se ve en el documento entero y no se cuelga de ninguna firma (ADR-0043). */
+    enum Finding {
+        MODIFIED_AFTER_LAST_SIGNATURE("modifiedAfterLastSignature"),
+        FORM_FILLED_AFTER_SIGNING("formFilledAfterSigning"),
+        CONTENT_ADDED_ON_TOP("contentAddedOnTop");
+
+        private final String wireName;
+
+        Finding(final String wireName) {
+            this.wireName = wireName;
+        }
+
+        String wireName() {
+            return wireName;
+        }
+    }
+
+    /** Titular, emisor, numero de serie, fecha, estado y motivo viejos, validez, motivo y contrafirmas. */
+    record Signature(String subject, String issuer, String serialNumber, String signingTime,
+            Status status, String reason, Validity validity, Reason validityReason,
+            List<Signature> countersignatures) { }
+
+    /** Las firmas en orden cronologico, si el documento cambio despues de la ultima, y sus hallazgos. */
+    record Report(List<Signature> signatures, boolean changedAfterLastSignature,
+            List<Finding> findings) { }
 
     static Report read(final byte[] document) {
         final AOCAdESSigner cades = new AOCAdESSigner();
         if (cades.isSign(document)) {
-            return new Report(signersOf(cades, document, "CAdES"), false);
+            return new Report(signersOf(cades, document, "CAdES"), false, List.of());
         }
         final AOXAdESSigner xades = new AOXAdESSigner();
         if (xades.isSign(document)) {
-            return new Report(signersOf(xades, document, "XAdES"), false);
+            return new Report(signersOf(xades, document, "XAdES"), false, List.of());
         }
         return readPdf(document);
     }
@@ -149,6 +224,8 @@ final class PreviousSignaturesBridge {
                         : DateTimeFormatter.ISO_INSTANT.format(signingTime.toInstant()),
                 null,
                 null,
+                Validity.VALID,
+                null,
                 countersignatures);
     }
 
@@ -160,36 +237,35 @@ final class PreviousSignaturesBridge {
             fields = reader.getAcroFields();
         }
         catch (final Exception e) {
-            return new Report(List.of(), false);
+            return new Report(List.of(), false, List.of());
         }
         final String profile = SignatureFormatDetectorPadesCades.resolvePDFFormat(pdf);
-        final int certifyingRevision = certifyingRevision(reader, fields);
+        final Certification certification = certification(reader, fields);
 
         final List<Dated> dated = new ArrayList<>();
         for (final String name : fields.getSignatureNames()) {
             if (isTimestamp(fields, name)) {
                 continue;
             }
-            final PdfPKCS7 pkcs7;
-            try {
-                pkcs7 = fields.verifySignature(name);
-            }
-            catch (final RuntimeException e) {
+            final PdfPKCS7 pkcs7 = readableSignature(fields, name);
+            if (pkcs7 == null || pkcs7.getSigningCertificate() == null) {
+                dated.add(new Dated(null, damaged()));
                 continue;
             }
             final X509Certificate signer = pkcs7.getSigningCertificate();
-            if (signer == null) {
-                continue;
-            }
             final Instant signingTime =
                     pkcs7.getSignDate() == null ? null : pkcs7.getSignDate().toInstant();
             final List<SignValidity> validities = new ArrayList<>(validate(name, fields, profile));
-            if (certifyingRevision > 0 && fields.getRevision(name) > certifyingRevision) {
+            if (certification.revision() > 0
+                    && fields.getRevision(name) > certification.revision()) {
                 validities.add(new SignValidity(SIGN_DETAIL_TYPE.KO,
                         VALIDITY_ERROR.CERTIFIED_SIGN_REVISION));
             }
+            final boolean unrecognizedSubFilter = hasUnrecognizedSubFilter(fields, name);
             final SignValidity validity = withUnrecognizedFormat(
-                    hasUnrecognizedSubFilter(fields, name), decisive(validities));
+                    unrecognizedSubFilter, decisive(validities));
+            final Reason worst = worstReason(validities, signer, unrecognizedSubFilter,
+                    certification.closedBy());
             dated.add(new Dated(signingTime, new Signature(
                     readable(signer.getSubjectX500Principal()),
                     readable(signer.getIssuerX500Principal()),
@@ -197,27 +273,168 @@ final class PreviousSignaturesBridge {
                     signingTime == null ? null : DateTimeFormatter.ISO_INSTANT.format(signingTime),
                     statusOf(validity),
                     reasonOf(validity),
+                    worst == null ? Validity.VALID : worst.problem().validity(),
+                    worst,
                     List.of())));
         }
         dated.sort(Comparator.comparing(Dated::signingTime,
                 Comparator.nullsLast(Comparator.naturalOrder())));
+        final Finding suspect = changedAfterLastSignature(reader, fields);
         return new Report(dated.stream().map(Dated::signature).toList(),
-                changedAfterLastSignature(pdf, fields));
+                suspect != null, findings(reader, fields, suspect));
     }
 
-    /** El PDF Shadow Attack del original, sin la excepcion con la que pide confirmar. */
-    private static boolean changedAfterLastSignature(final byte[] pdf, final AcroFields fields) {
+    private static PdfPKCS7 readableSignature(final AcroFields fields, final String name) {
+        try {
+            return fields.verifySignature(name);
+        }
+        catch (final RuntimeException e) {
+            return null;
+        }
+    }
+
+    private static Signature damaged() {
+        return new Signature("", "", "", null, Status.BROKEN,
+                VALIDITY_ERROR.CORRUPTED_SIGN.name(), Validity.INVALID,
+                Reason.of(Problem.DAMAGED), List.of());
+    }
+
+    /** El problema mas grave de una firma, o {@code null} si no tiene ninguno (ADR-0043). */
+    static Reason worstReason(final List<SignValidity> validities, final X509Certificate signer,
+            final boolean unrecognizedSubFilter, final String closedBy) {
+        Reason worst = null;
+        for (final SignValidity validity : validities) {
+            final Reason reason = reasonOf(validity, signer, unrecognizedSubFilter, closedBy);
+            if (reason != null
+                    && (worst == null || reason.problem().ordinal() < worst.problem().ordinal())) {
+                worst = reason;
+            }
+        }
+        return worst;
+    }
+
+    private static Reason reasonOf(final SignValidity validity, final X509Certificate signer,
+            final boolean unrecognizedSubFilter, final String closedBy) {
+        if (SIGN_DETAIL_TYPE.OK == validity.getValidity() || validity.getError() == null) {
+            return null;
+        }
+        return switch (validity.getError()) {
+            case CERTIFICATE_EXPIRED -> new Reason(Problem.CERTIFICATE_EXPIRED,
+                    instant(signer.getNotAfter()), null, null);
+            case CERTIFICATE_NOT_VALID_YET -> new Reason(Problem.CERTIFICATE_NOT_YET_VALID,
+                    instant(signer.getNotBefore()), null, null);
+            case NO_MATCH_DATA -> Reason.of(Problem.MODIFIED_AFTER_SIGNING);
+            case CERTIFIED_SIGN_REVISION -> new Reason(Problem.COSIGN_NOT_ADMITTED,
+                    null, null, closedBy);
+            case SIGN_PROFILE_NOT_CHECKED -> unrecognizedSubFilter
+                    ? Reason.of(Problem.UNKNOWN_SIGNATURE_TYPE)
+                    : null;
+            case ALGORITHM_NOT_SUPPORTED, UNKOWN_SIGNATURE_FORMAT ->
+                    Reason.of(Problem.UNKNOWN_SIGNATURE_TYPE);
+            default -> Reason.of(Problem.DAMAGED);
+        };
+    }
+
+    private static String instant(final Date date) {
+        return DateTimeFormatter.ISO_INSTANT.format(date.toInstant());
+    }
+
+    /**
+     * El PDF Shadow Attack del original sin pintar las paginas: su {@code checkPdfShadowAttack}
+     * las rasteriza con AWT, que no entra en la imagen nativa (ADR-0004). Aqui, pagina a pagina,
+     * dos anotaciones visibles que se solapan son contenido encima, y un flujo de contenido
+     * distinto del de la ultima revision firmada es una modificacion.
+     */
+    private static Finding changedAfterLastSignature(final PdfReader current,
+            final AcroFields fields) {
         final List<String> names = fields.getSignatureNames();
         if (names.isEmpty() || fields.getRevision(names.get(0)) >= fields.getTotalRevisions()) {
-            return false;
+            return null;
         }
         try (InputStream lastSignedRevision = fields.extractRevision(names.get(0))) {
-            final SignValidity suspect = DataAnalizerUtil.checkPdfShadowAttack(
-                    pdf, lastSignedRevision, DEFAULT_PAGES_TO_CHECK_SHADOW_ATTACK);
-            return suspect != null
-                    && SIGN_DETAIL_TYPE.PENDING_CONFIRM_BY_USER == suspect.getValidity();
+            final PdfReader signed = new PdfReader(lastSignedRevision);
+            final int pages = Math.min(current.getNumberOfPages(), PAGES_TO_COMPARE);
+            for (int page = 1; page <= pages; page++) {
+                if (hasOverlappingAnnotations(current, page)) {
+                    return Finding.CONTENT_ADDED_ON_TOP;
+                }
+                if (page > signed.getNumberOfPages() || !Arrays.equals(
+                        signed.getPageContent(page, signed.getSafeFile()),
+                        current.getPageContent(page, current.getSafeFile()))) {
+                    return Finding.MODIFIED_AFTER_LAST_SIGNATURE;
+                }
+            }
+            return null;
         }
-        catch (final IOException e) {
+        catch (final IOException | RuntimeException e) {
+            return null;
+        }
+    }
+
+    private static boolean hasOverlappingAnnotations(final PdfReader reader, final int page) {
+        final PdfArray annotations = reader.getPageN(page).getAsArray(PdfName.ANNOTS);
+        if (annotations == null) {
+            return false;
+        }
+        final List<float[]> visible = new ArrayList<>();
+        for (int i = 0; i < annotations.size(); i++) {
+            final PdfObject annotation = PdfReader.getPdfObject(annotations.getPdfObject(i));
+            if (!(annotation instanceof PdfDictionary)) {
+                continue;
+            }
+            final float[] box = boxOf(((PdfDictionary) annotation).getAsArray(PdfName.RECT));
+            if (box == null) {
+                continue;
+            }
+            for (final float[] other : visible) {
+                if (box[0] <= other[2] && other[0] <= box[2]
+                        && box[1] <= other[3] && other[1] <= box[3]) {
+                    return true;
+                }
+            }
+            visible.add(box);
+        }
+        return false;
+    }
+
+    /** El recuadro normalizado de una anotacion, o {@code null} si no tiene area (invisible). */
+    private static float[] boxOf(final PdfArray rect) {
+        if (rect == null || rect.size() != 4) {
+            return null;
+        }
+        final float[] corners = new float[4];
+        for (int i = 0; i < 4; i++) {
+            final PdfNumber number = rect.getAsNumber(i);
+            if (number == null) {
+                return null;
+            }
+            corners[i] = number.floatValue();
+        }
+        final float[] box = {
+            Math.min(corners[0], corners[2]), Math.min(corners[1], corners[3]),
+            Math.max(corners[0], corners[2]), Math.max(corners[1], corners[3])};
+        return box[2] - box[0] == 0 || box[3] - box[1] == 0 ? null : box;
+    }
+
+    /** Como en el validador del original, el formulario cambiado tapa al PDF Shadow Attack. */
+    private static List<Finding> findings(final PdfReader reader, final AcroFields fields,
+            final Finding suspect) {
+        if (formFilledAfterSigning(reader, fields)) {
+            return List.of(Finding.FORM_FILLED_AFTER_SIGNING);
+        }
+        return suspect == null ? List.of() : List.of(suspect);
+    }
+
+    private static boolean formFilledAfterSigning(final PdfReader reader,
+            final AcroFields fields) {
+        if (fields.getSignatureNames().isEmpty() || fields.getTotalRevisions() <= 1) {
+            return false;
+        }
+        try {
+            final Map<String, String> changed = DataAnalizerUtil.checkPDFForm(reader);
+            return changed != null && !changed.isEmpty();
+        }
+        catch (final IOException | RuntimeException e) {
             return false;
         }
     }
@@ -247,11 +464,13 @@ final class PreviousSignaturesBridge {
         return options;
     }
 
-    /** La revision que certifico el PDF «sin cambios permitidos», o 0. */
-    private static int certifyingRevision(final PdfReader reader, final AcroFields fields) {
+    /** La revision que certifico el PDF «sin cambios permitidos» y quien la firmo, o 0 y nadie. */
+    private record Certification(int revision, String closedBy) { }
+
+    private static Certification certification(final PdfReader reader, final AcroFields fields) {
         if (reader.getCertificationLevel()
                 != PdfSignatureAppearance.CERTIFIED_NO_CHANGES_ALLOWED) {
-            return 0;
+            return new Certification(0, null);
         }
         for (final String name : fields.getSignatureNames()) {
             final PdfDictionary signature = fields.getSignatureDictionary(name);
@@ -262,10 +481,14 @@ final class PreviousSignaturesBridge {
             final Object first = ((PdfArray) reference).getArrayList().get(0);
             if (first instanceof PdfDictionary
                     && ((PdfDictionary) first).get(PdfName.TRANSFORMMETHOD) != null) {
-                return fields.getRevision(name);
+                final PdfPKCS7 closer = readableSignature(fields, name);
+                return new Certification(fields.getRevision(name),
+                        closer == null || closer.getSigningCertificate() == null
+                                ? null
+                                : readable(closer.getSigningCertificate().getSubjectX500Principal()));
             }
         }
-        return 0;
+        return new Certification(0, null);
     }
 
     private static boolean isTimestamp(final AcroFields fields, final String name) {

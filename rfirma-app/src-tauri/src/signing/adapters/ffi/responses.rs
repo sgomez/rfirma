@@ -9,7 +9,8 @@ use crate::signing::domain::bridge::{
     BridgeError, DataRejection, PreSignBlock, PreSignature, SealedPreSignature, SignatureVerdict,
 };
 use crate::signing::domain::document_signatures::{
-    DocumentSignature, DocumentSignatures, SignatureStatus,
+    DocumentFinding, DocumentSignature, DocumentSignatures, SignatureStatus, Validity,
+    ValidityReason,
 };
 use crate::signing::domain::SessionSeal;
 
@@ -173,10 +174,75 @@ pub fn parse_previous_signatures(json: &str) -> Result<DocumentSignatures, Bridg
         .iter()
         .map(previous_signature_of)
         .collect::<Result<Vec<_>, _>>()?;
-    Ok(DocumentSignatures::new(
-        signatures,
-        changed_after_last_signature,
-    ))
+    let findings = response
+        .get("findings")
+        .and_then(serde_json::Value::as_array)
+        .ok_or_else(|| BridgeError::MalformedResponse("falta el campo \"findings\"".to_owned()))?
+        .iter()
+        .map(finding_of)
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok(DocumentSignatures::new(signatures, changed_after_last_signature).with_findings(findings))
+}
+
+fn finding_of(wire_name: &serde_json::Value) -> Result<DocumentFinding, BridgeError> {
+    Ok(match wire_name.as_str() {
+        Some("modifiedAfterLastSignature") => DocumentFinding::ModifiedAfterLastSignature,
+        Some("formFilledAfterSigning") => DocumentFinding::FormFilledAfterSigning,
+        Some("contentAddedOnTop") => DocumentFinding::ContentAddedOnTop,
+        _ => {
+            return Err(BridgeError::MalformedResponse(format!(
+                "hallazgo del documento desconocido «{wire_name}»"
+            )))
+        }
+    })
+}
+
+fn validity_of(wire_name: &str) -> Result<Validity, BridgeError> {
+    Ok(match wire_name {
+        "valid" => Validity::Valid,
+        "expired" => Validity::Expired,
+        "invalid" => Validity::Invalid,
+        other => {
+            return Err(BridgeError::MalformedResponse(format!(
+                "validez de firma desconocida «{other}»"
+            )))
+        }
+    })
+}
+
+fn validity_reason_of(entry: &serde_json::Value) -> Result<Option<ValidityReason>, BridgeError> {
+    let Some(reason) = entry
+        .get("validityReason")
+        .filter(|reason| !reason.is_null())
+    else {
+        return Ok(None);
+    };
+    let optional = |name: &str| {
+        reason
+            .get(name)
+            .and_then(serde_json::Value::as_str)
+            .map(str::to_owned)
+    };
+    Ok(Some(match field(reason, "kind")? {
+        "certificateExpired" => ValidityReason::CertificateExpired {
+            date: field(reason, "date")?.to_owned(),
+            holder: optional("holder"),
+        },
+        "modifiedAfterSigning" => ValidityReason::ModifiedAfterSigning,
+        "damaged" => ValidityReason::Damaged,
+        "certificateNotYetValid" => ValidityReason::CertificateNotYetValid {
+            date: field(reason, "date")?.to_owned(),
+        },
+        "unknownSignatureType" => ValidityReason::UnknownSignatureType,
+        "cosignNotAdmitted" => ValidityReason::CosignNotAdmitted {
+            closed_by: optional("closedBy"),
+        },
+        other => {
+            return Err(BridgeError::MalformedResponse(format!(
+                "motivo de validez desconocido «{other}»"
+            )))
+        }
+    }))
 }
 
 fn previous_signature_of(entry: &serde_json::Value) -> Result<DocumentSignature, BridgeError> {
@@ -203,6 +269,8 @@ fn previous_signature_of(entry: &serde_json::Value) -> Result<DocumentSignature,
             .get("reason")
             .and_then(serde_json::Value::as_str)
             .map(str::to_owned),
+        validity: validity_of(field(entry, "validity")?)?,
+        validity_reason: validity_reason_of(entry)?,
         countersignatures: countersignatures_of(entry)?,
     })
 }

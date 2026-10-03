@@ -166,6 +166,19 @@ class PreviousSignaturesBridgeTest {
     }
 
     @Test
+    void a_signature_with_an_unrecognized_subfilter_is_invalid_of_unknown_type() throws Exception {
+        // El ciclo de rFirma fija el /SubFilter: el .so no puede fabricar esta muestra.
+        final PreviousSignaturesBridge.Signature signature = PreviousSignaturesBridge.read(
+                TestFixtures.signedWithUnrecognizedSubFilter(TestFixtures.samplePdf(),
+                        TestFixtures.certificateChain(), TestFixtures.privateKey()))
+                .signatures().get(0);
+
+        assertEquals(PreviousSignaturesBridge.Validity.INVALID, signature.validity());
+        assertEquals(PreviousSignaturesBridge.Problem.UNKNOWN_SIGNATURE_TYPE,
+                signature.validityReason().problem());
+    }
+
+    @Test
     void a_recognized_signature_is_not_reclassified_by_a_later_unrecognized_subfilter()
             throws Exception {
         final byte[] once = signed(TestFixtures.samplePdf(),

@@ -9,6 +9,7 @@ titular no se usa en ningún punto del proyecto.
 | Fichero | Qué es |
 | --- | --- |
 | `pades-long-term-expired.pdf` | Una firma PAdES de perfil longevo (`PAdES-T`: sello de tiempo de firma) hecha con `expired-rsa.p12`, caducado desde 2020. Con `checkCert=true` el validador del original le da dos veredictos: `CERTIFICATE_EXPIRED` (KO) y `SIGN_PROFILE_NOT_CHECKED` (UNKNOWN). |
+| `pades-long-term-active.pdf` | La misma firma `PAdES-T`, hecha con `active-rsa.p12`, en vigor hasta 2028. El validador del original le da solo `SIGN_PROFILE_NOT_CHECKED` (UNKNOWN), que rFirma no cuenta (ADR-0043). La prueba de grada C le añade un `/DSS` en una revisión posterior para que el original la lea como `PAdES-LT`. |
 
 ## Cómo se regenera
 
