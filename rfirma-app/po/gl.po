@@ -996,6 +996,17 @@ msgstr[2] "{{count}} sinaturas"
 msgid "panel.signed.signature"
 msgstr "Sinatura {{number}}"
 
+#. {{number}} es el ordinal jerárquico de la contrafirma («1.1»), dentro de la firma que contrafirma.
+msgid "panel.signed.countersignature"
+msgstr "Contrasinatura {{number}}"
+
+#. Recuento de contrafirmas del documento, junto al de firmas en la insignia del resumen.
+msgid "panel.signed.countersignatureCount"
+msgid_plural "panel.signed.countersignatureCount"
+msgstr[0] "1 contrasinatura"
+msgstr[1] "{{count}} contrasinaturas"
+msgstr[2] "{{count}} contrasinaturas"
+
 #. La insignia de la firma recién hecha en el resumen.
 msgid "panel.signed.new"
 msgstr "Nova"

@@ -348,6 +348,7 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
       signingTime: Option<String>
       status: SignatureStatusView
       reason: Option<String>
+      countersignatures: Vec<PreviousSignatureView>
 
   pub struct PreviousSignaturesReportView
       signatures: Vec<PreviousSignatureView>

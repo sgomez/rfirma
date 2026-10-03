@@ -21,6 +21,8 @@ export interface PreviousSignature {
   status: SignatureStatus;
   /** Motivo del original, o `null` si el estado es `valid`. */
   reason: string | null;
+  /** Las contrafirmas de esta firma, a cualquier profundidad. */
+  countersignatures: readonly PreviousSignature[];
 }
 
 /** El estado de una firma previa. */

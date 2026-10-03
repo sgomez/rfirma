@@ -288,6 +288,8 @@ crossing! {
         pub status: SignatureStatusView,
         /// Motivo del original, si el estado no es `Valid`.
         pub reason: Option<String>,
+        /// Las contrafirmas de esta firma, a cualquier profundidad.
+        pub countersignatures: Vec<PreviousSignatureView>,
     }
 }
 
@@ -304,6 +306,11 @@ impl From<DocumentSignature> for PreviousSignatureView {
                 .status
                 .map_or(SignatureStatusView::Unverifiable, SignatureStatusView::from),
             reason: signature.reason,
+            countersignatures: signature
+                .countersignatures
+                .into_iter()
+                .map(Self::from)
+                .collect(),
         }
     }
 }
