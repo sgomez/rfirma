@@ -31,6 +31,9 @@ fn tracked_rust_files() -> Vec<String> {
     let listing = Command::new("git")
         .args(["ls-files", "-z", "--", "*.rs"])
         .current_dir(Path::new(env!("CARGO_MANIFEST_DIR")))
+        .env_remove("GIT_DIR")
+        .env_remove("GIT_WORK_TREE")
+        .env_remove("GIT_INDEX_FILE")
         .output()
         .expect("git deberia estar: `just tools` lo exige");
     assert!(listing.status.success(), "git ls-files deberia funcionar");
