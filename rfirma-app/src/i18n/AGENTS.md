@@ -55,7 +55,7 @@ Si tocas el mecanismo, el comentario de bloque es la fuente de verdad y este
 
 | Bloque | Qué decide |
 |---|---|
-| `LanguagePreference` | Es un puerto y no una llamada a Tauri directa porque la ventana no conoce a Tauri: quien guarda de verdad es el backend (`memory::Configuration`). El idioma va por su propio puerto, fuera de `Preferences`, porque se lee **antes** de que haya ventana —`createI18n` lo necesita para el primer pintado—. |
+| `LanguagePreference` | Es un puerto y no una llamada a Tauri directa porque la ventana no conoce a Tauri: quien guarda de verdad es el backend (`configuration_memory::Configuration`). El idioma va por su propio puerto, fuera de `Preferences`, porque se lee **antes** de que haya ventana —`createI18n` lo necesita para el primer pintado—. |
 
 ## `i18next.d.ts`
 

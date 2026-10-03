@@ -69,7 +69,7 @@ interface DocumentViewerProps {
    * siendo del visor: es quien tiene el `viewport` de `pdf.js` que mide la
    * posición estándar del recuadro.
    *
-   * **Cada petición es un objeto nuevo**, igual que antes `goToPage`: pulsar
+   * **Cada petición es un objeto nuevo**: pulsar
    * el mismo botón dos veces tiene que actuar las dos veces, así que lo que
    * dispara la acción es la identidad y no el valor.
    */
@@ -457,7 +457,8 @@ export function DocumentViewer({
         </button>
         {/*
           El porcentaje se teclea: con el zoom continuo, los botones ya no
-          alcanzan cualquier valor, y «ponlo al 150 %» tiene que poder escribirse. Se recorta al rango en vez de rechazarse.
+          alcanzan cualquier valor, y «ponlo al 150 %» tiene que poder escribirse. Se recorta al
+          rango en vez de rechazarse.
         */}
         <input
           className="rf-input viewer__zoom"

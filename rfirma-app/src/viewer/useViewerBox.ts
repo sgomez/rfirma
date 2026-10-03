@@ -236,10 +236,9 @@ export function useViewerBox({
   };
 
   // El botón que sella o quita el sello vive en el panel; la petición cruza
-  // como `placementRequest` y se atiende aquí, que es donde vive el `viewport`. El guardado por
-  // identidad es el mismo patrón que usaba
-  // `goToPage`: pulsar el mismo botón dos veces tiene que actuar las dos
-  // veces, aunque la acción no haya cambiado.
+  // como `placementRequest` y se atiende aquí, que es donde vive el `viewport`. Se guarda la
+  // identidad de la petición: pulsar el mismo botón dos veces tiene que actuar las dos veces,
+  // aunque la acción no haya cambiado.
   const requestedPlacement = useRef(placementRequest);
   // biome-ignore lint/correctness/useExhaustiveDependencies: `seal` y `unseal` se recrean en cada pintada; lo que dispara el efecto es la identidad de `placementRequest`, no ellas.
   useEffect(() => {

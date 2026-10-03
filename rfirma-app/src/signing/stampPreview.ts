@@ -7,7 +7,7 @@ import type { SigningOrder } from "./flow";
 /**
  * El sello que se ve dentro del recuadro **antes** de firmar.
  *
- * La regla del ADR-0006, tal y como la cerró la ficha 7: **o es el sello de
+ * La regla del ADR-0006: **o es el sello de
  * verdad, o no hay recuadro**. No se maqueta nada aquí ni en ninguna parte del
  * frontal — lo que se pinta es un PDF que ya lleva el sello estampado, salido
  * de un **ciclo trifásico en seco** con un `PK1` inventado, cuyos bytes

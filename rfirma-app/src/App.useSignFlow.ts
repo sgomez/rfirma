@@ -43,7 +43,8 @@ interface SignFlowInput {
 
 /**
  * La firma **entera**: la vista previa del sello, la orden que se
- * manda y los tres avisos que pueden interponerse antes del PIN.
+ * manda y los tres avisos que pueden interponerse antes del PIN (páginas sin sello, firmas sin
+ * registrar y firmas previas no válidas).
  */
 export function useSignFlow({
   pdf,

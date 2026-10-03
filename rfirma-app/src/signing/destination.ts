@@ -25,7 +25,7 @@ export interface Destination {
   name: string | null;
   /**
    * Si la carpeta está y se puede escribir **ahora mismo**. Sale de
-   * `CheckedFolder::check` y no de un literal.
+   * `CheckedFolder::confirmed` y no de un literal.
    */
   writable: boolean;
 }

@@ -20,8 +20,7 @@ export interface Viewport {
   /**
    * Píxeles del lienzo → **espacio de usuario PDF**. Es el único punto del frontal donde se
    * convierten coordenadas: invierte la matriz del viewport, que deshace de golpe la escala, el
-   * volteo del eje Y,
-   * la `/Rotate` y el origen de la MediaBox.
+   * volteo del eje Y, la `/Rotate` y el origen de la MediaBox.
    */
   convertToPdfPoint(x: number, y: number): [number, number];
   /** Espacio de usuario PDF → píxeles del lienzo. Lo inverso del anterior. */

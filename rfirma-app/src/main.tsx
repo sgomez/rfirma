@@ -54,7 +54,7 @@ if (!root) {
 // sin recargar la ventana.
 //
 // `SedeWindow` no se monta aquí: tiene su propio punto de entrada,
-// `sede/main.tsx`, y la ventana la crea `app::startup` solo cuando hay trámite.
+// `sede/main.tsx`, y la ventana la crea `site::application::startup` solo cuando hay trámite.
 //
 // El idioma sale de la preferencia guardada, nunca del navegador.
 const preference = tauriLanguagePreference();

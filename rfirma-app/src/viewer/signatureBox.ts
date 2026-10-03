@@ -51,9 +51,8 @@ export type PageSet = "all" | { only: number[] };
  * **desaparecer**, no convivir con ella.
  *
  * **«Colocado» no es una bandera: es tener al menos una página sellada**. Por eso no existe una
- * colocación con el conjunto vacío: quitar la
- * última página devuelve `null`, que es exactamente el estado del PDF recién
- * abierto.
+ * colocación con el conjunto vacío: quitar la última página devuelve `null`, que es exactamente
+ * el estado del PDF recién abierto.
  */
 export interface Placement {
   rect: UserSpaceRect;
@@ -63,10 +62,10 @@ export interface Placement {
 /**
  * Cuál de las tres opciones del panel manda sobre el conjunto.
  *
- * El visor no la elige —vive en el panel— pero la necesita para dos cosas: la cuarta redacción del
- * botón («Colocar el sello aquí»
- * cuando se sellan todas) y que con `Solo 1 página` o `Todas las páginas` una
- * página ya sellada **no ofrezca pastilla**, porque no queda nada que ofrecer.
+ * El visor no la elige —vive en el panel— pero la necesita para dos cosas: la cuarta
+ * redacción del botón («Colocar el sello aquí» cuando se sellan todas) y que con `Solo 1
+ * página` o `Todas las páginas` una página ya sellada **no ofrezca pastilla**, porque no queda
+ * nada que ofrecer.
  */
 export type PageChoice = "single" | "these" | "all";
 
@@ -379,12 +378,10 @@ export function activating(
  * La **posición estándar en espacio de usuario**, que es la que puede pedir
  * quien no pinta nada.
  *
- * Parecería que colocar desde el panel exige una costura
- * nueva con el visor «porque el viewport no sale de ahí». No es cierto: el
- * viewport a escala 1 lo da la propia página de `pdf.js`, y con él la posición
- * estándar sale de las dos funciones que ya existían, rotación incluida y sin
- * una segunda tabla por `/Rotate` —que es justo lo que la cabecera de este
- * módulo prohíbe—.
+ * Colocar desde el panel no exige una costura nueva con el visor «porque el viewport no sale de
+ * ahí»: el viewport a escala 1 lo da la propia página de `pdf.js`, y con él la posición estándar
+ * sale de las dos funciones que ya existían, rotación incluida y sin una segunda tabla por
+ * `/Rotate` —que es justo lo que la cabecera de este módulo prohíbe—.
  */
 export function standardRectOf(viewport: Viewport): UserSpaceRect {
   return toUserSpace(viewport, standardBox(viewport));

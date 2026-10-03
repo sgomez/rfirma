@@ -26,8 +26,9 @@ import { SedeWindow } from "./SedeWindow";
  * Es un punto de entrada aparte —`sede.html`— y no una rama de `main.tsx`
  * porque lo que se quiere es justamente que **no cargue el árbol de la ventana
  * principal**: aquí no hay bandeja, ni visor, ni ajustes, ni aviso del primer
- * arranque. Esta ventana la crea `app::startup` sólo cuando hay trámite, así que arrancar rFirma a
- * mano no ejecuta ni una línea de esto.
+ * arranque. Esta ventana la crea
+ * `site::application::startup` sólo cuando hay trámite, así que arrancar rFirma a mano no ejecuta
+ * ni una línea de esto.
  *
  * El único puerto es `SiteErrandPort`, y aquí se cablea el **de verdad**
  * (`tauriSiteErrands`) en lugar del doble `noErrand`, que se queda donde

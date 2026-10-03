@@ -17,7 +17,7 @@
  * `catch` que invente un mensaje: lo que no venga con esa forma —una excepción
  * del propio puente de Tauri, una orden que no existe— cae en `unknown` con su
  * texto tal cual, que es exactamente lo que el ADR-0009 pide. Quien lo decide
- * es `errors/classify.ts`, que no es de Tauri sino de esa forma.
+ * es `errors/classify.ts`, que no es de Tauri sino de `NamedFailure`.
  */
 
 export {

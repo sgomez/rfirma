@@ -1,6 +1,6 @@
 //! Los ajustes que la aplicación recuerda, en el lado de la interfaz: `Preferences`, su puerto `PreferencesStore` y el doble `inMemoryPreferences`.
 /**
- * Son un subconjunto de `memory::Configuration`: el idioma no está aquí porque
+ * Son un subconjunto de `configuration_memory::Configuration`: el idioma no está aquí porque
  * ya lo lleva `LanguagePreference`, y la **ruta** de la carpeta de
  * destino tampoco, porque bajo el sandbox la aplicación escribe en ella pero
  * la única palabra que tiene de ella es su último segmento. Enseñar la ruta
