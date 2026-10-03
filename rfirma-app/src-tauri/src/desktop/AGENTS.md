@@ -42,6 +42,7 @@ máquina. Ni firma ni documentos. Rutas relativas a `src/desktop/`.
 | `application/command_line/tests/certtui.rs` | Las pruebas de `-certtui` en el caso de uso, partidas de `application/command_line/tests.rs`. |
 | `application/command_line/tests/cosign.rs` | Las pruebas de `cosign` en el caso de uso, partidas de `application/command_line/tests.rs`. |
 | `application/command_line/tests/filter_and_xml.rs` | Las pruebas de `-filter` y de la respuesta de `-xml`, partidas de `application/command_line/tests.rs`. |
+| `application/command_line/tests/listaliases.rs` | Las pruebas de `listaliases` en el caso de uso, partidas de `application/command_line/tests.rs`. |
 | `application/command_line/tests/sign_config.rs` | Las pruebas de `sign -config` en el caso de uso, partidas de `application/command_line/tests.rs`. |
 | `application/command_line/tests/sign_formats.rs` | Las pruebas de `sign -format` en el caso de uso, partidas de `application/command_line/tests.rs`. |
 | `application/command_line/verify.rs` | La orden `verify`: el formato que detecta `-format auto`, un resultado de validez por línea, como el original, y con `-v` la ficha de cada firma. No el XML de `-xml`. Pruebas en `application/command_line/verify/tests.rs`. |
