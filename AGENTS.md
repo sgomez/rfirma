@@ -66,8 +66,8 @@ Cada mapa dice en una frase qué es cada fichero de su zona, para que sepas cuá
 
 Lo leído se queda en el contexto y se reenvía en cada turno: una lectura cuesta su tamaño por los turnos que vienen detrás, y la unidad de coste es el turno.
 
-* **Para situarte en un fichero, `just outline <ruta>`**: el esqueleto con números de línea (`.rs`, `.ts`, `.tsx`); para lo demás, `grep -n '<símbolo>'`.
-* **Abre todos los tramos en una llamada**, `sed -n 'A,Bp;C,Dp'`.
+* **Para situarte, `just outline <ruta>...`**: el esqueleto con números de línea (`.rs`, `.ts`, `.tsx`), de varios ficheros a la vez; para lo demás, `grep -n '<símbolo>'`.
+* **Abre los tramos de todos los ficheros en una llamada**: `just outline a.rs:10-40,80-120 b.tsx:5-30`.
 * **El fichero entero, solo si `just outline` marca menos de 300 líneas** y vas a tocarlo entero.
 * **De los tests, los nombres:** `grep -n 'fn \|it('`. Se abren para tocarlos.
 * **Los documentos de `docs/` se abren por `grep`**; los de `research/`, solo si vas a cambiar la decisión que sostienen.

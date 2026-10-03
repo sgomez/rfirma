@@ -15,7 +15,7 @@ rojo.
   los nombres de campo que ve TypeScript (`holderName`, no `holder_name`). Se
   genera de las fuentes en cada ejecución, así que no puede quedarse obsoleto.
 - **Para situarte, `just outline <ruta>`; nunca `cat` de un módulo de más de 300
-  líneas.** Desde el esqueleto, `sed -n 'A,Bp;C,Dp'` con **todos** los tramos en
+  líneas.** Desde el esqueleto, `just outline a.tsx:A-B,C-D b.ts:E-F` con **todos** los tramos en
   una sola llamada — un turno por tramo sale más caro que haber leído el módulo
   entero.
 - **El typecheck es `tsc -b` (o `just check-ts`), nunca `tsc --noEmit`.** El

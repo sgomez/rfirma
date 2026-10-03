@@ -5,21 +5,31 @@
 set -u
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
-requested="$1"
-file="$requested"
-[ -f "$file" ] || file="$root/$requested"
-if [ ! -f "$file" ]; then
-    echo "outline: no existe $requested" >&2
-    exit 1
-fi
-case "$file" in
-    *.rs)        lang=rust ;;
-    *.ts|*.tsx)  lang=ts ;;
-    *)
-        echo "outline: solo .rs, .ts y .tsx. Para el resto, grep -n" >&2
-        exit 1 ;;
-esac
-awk -v lang="$lang" '
+status=0
+file=""
+
+resolve() {
+    file="$1"
+    [ -f "$file" ] || file="$root/$1"
+    [ -f "$file" ]
+}
+
+skeleton() {
+    local requested="$1" lang
+    if ! resolve "$requested"; then
+        echo "outline: no existe $requested" >&2
+        status=1
+        return
+    fi
+    case "$file" in
+        *.rs)        lang=rust ;;
+        *.ts|*.tsx)  lang=ts ;;
+        *)
+            echo "outline: solo .rs, .ts y .tsx tienen esqueleto ($requested). Para el resto, $requested:A-B o grep -n" >&2
+            status=1
+            return ;;
+    esac
+    awk -v lang="$lang" '
 # Una linea de esqueleto: sin la sangria, sin la llave suelta del final.
 function emit(n, s) {
     sub(/^[ \t]+/, "", s)
@@ -89,17 +99,63 @@ lang == "ts" && /^[ \t]+const [A-Za-z_$]+ = (async )?(\(|useCallback|function)/ 
 lang == "ts" && /^[ \t]*$/ { flushdoc(); next }
 END { flushdoc() }
 ' "$file"
-wc -lc < "$file" | awk -v name="$requested" '{
-    printf "\n-- %s: %d lineas, %d caracteres (~%.1fk tokens si lo lees entero).\n", \
-        name, $1, $2, $2 / 3500
-    if ($1 < 120)
-        printf "   Es corto: leelo entero si vas a tocarlo. --\n"
-    else {
-        printf "   Abre los tramos que necesites, TODOS EN UNA SOLA LLAMADA:\n"
-        printf "     sed -n %cA,Bp;C,Dp%c %s\n", 39, 39, name
-        printf "   Un turno por tramo sale mas caro que leer el fichero entero. --\n"
-    }
-}'
-# Los dos caminos de error de arriba ya han salido con 1. Aqui solo queda el
-# 141 de un SIGPIPE si alguien encadena un `head`, y eso no es un fallo.
-exit 0
+    wc -lc < "$file" | awk -v name="$requested" '{
+        printf "\n-- %s: %d lineas, %d caracteres (~%.1fk tokens si lo lees entero).\n", \
+            name, $1, $2, $2 / 3500
+        if ($1 < 120)
+            printf "   Es corto: leelo entero si vas a tocarlo. --\n"
+        else {
+            printf "   Abre los tramos que necesites, de TODOS los ficheros en UNA SOLA LLAMADA:\n"
+            printf "     just outline %s:A-B,C-D otro:E-F\n", name
+            printf "   Un turno por tramo sale mas caro que leer el fichero entero. --\n"
+        }
+    }'
+}
+
+ranges() {
+    local requested="$1" spec="$2" range from to first=1
+    if ! resolve "$requested"; then
+        echo "outline: no existe $requested" >&2
+        status=1
+        return
+    fi
+    if ! [[ "$spec" =~ ^[0-9]+-[0-9]+(,[0-9]+-[0-9]+)*$ ]]; then
+        echo "outline: tramo mal formado en $requested:$spec (se espera A-B[,C-D...])" >&2
+        status=1
+        return
+    fi
+    for range in ${spec//,/ }; do
+        from="${range%-*}"
+        to="${range#*-}"
+        if [ "$from" -lt 1 ] || [ "$from" -gt "$to" ]; then
+            echo "outline: tramo invalido $range en $requested" >&2
+            status=1
+            continue
+        fi
+        [ "$first" = 1 ] || echo "   ..."
+        first=0
+        awk -v a="$from" -v b="$to" 'FNR >= a && FNR <= b { printf "%5d  %s\n", FNR, $0 }' "$file"
+    done
+}
+
+if [ "$#" -eq 0 ]; then
+    echo "outline: uso: outline ruta | ruta:A-B[,C-D...] ..." >&2
+    exit 1
+fi
+
+labelled=0
+if [ "$#" -gt 1 ] || [[ "$1" == *:* ]]; then labelled=1; fi
+n=0
+for arg in "$@"; do
+    n=$((n + 1))
+    if [ "$labelled" = 1 ]; then
+        [ "$n" -gt 1 ] && echo
+        echo "== $arg =="
+    fi
+    if [[ "$arg" == *:* ]]; then
+        ranges "${arg%:*}" "${arg##*:}"
+    else
+        skeleton "$arg"
+    fi
+done
+exit "$status"
