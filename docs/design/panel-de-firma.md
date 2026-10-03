@@ -68,89 +68,67 @@ No hay cabecera de documento: el nombre ya está en la
 ## El aviso de firmas previas
 
 Si el PDF ya trae firmas, es el primer bloque de la zona que se desliza después
-del certificado. Firmar
-junto a ellas es lo normal; el aviso dice cuántas hay y si alguna no es válida.
+del certificado. Firmar junto a ellas es lo normal; el aviso dice cuántas hay y
+si alguna tiene un problema, **en una sola línea**. El detalle está en el
+diálogo [«Ver firmas»](dialogo-ver-firmas.md).
 
-**La línea resumen**, que es también el botón que lo pliega y lo despliega:
+**La línea**, de 36 px de alto, con un relleno de 10 px a la izquierda y 2 a la
+derecha:
 
-- El icono del tono, «Firmarás junto a **N firmas** anteriores» («**1 firma**
-  anterior» en singular) y, si hay avisos, « · **M avisos**» («**1 aviso**»).
-  Letra de 13 px con interlineado de 18.
-- En el panel de 380 px la coletilla no cabe nunca: «M avisos» baja a una
-  **segunda línea fija**, sin el «·», siempre en ese punto y nunca con un corte
-  arbitrario. Sin avisos es una línea.
-- A la derecha, un chevron de 14 px y trazo 2, hacia abajo
-  plegado y girado 180° desplegado. No hay «Ver» ni «Ocultar».
-- Toda la línea es el blanco de clic: `role="button"`, `aria-expanded` y
-  `aria-label` «Ver firmas anteriores» / «Ocultar firmas anteriores».
-- Nace desplegado con más de una firma o con algún aviso; con una sola firma
-  válida, plegado.
+- El icono de la **peor validez**, «Junto a **N firmas**» («**1 firma**») y, si
+  hay problemas, « · **M caducadas**» cuando todos los problemas son caducadas,
+  o « · **M problemas**» en cuanto hay una no válida o un hallazgo del
+  documento, que también cuentan. Letra de 13 px con interlineado de 18, en una
+  línea y con elipsis si no cabe.
+- A la derecha, «**Ver firmas →**», `.rf-btn--ghost` de 28 px de alto y 6 px de
+  relleno, que abre el diálogo. Es la única acción del aviso: no se despliega,
+  no hay chevron, ni lista, ni motivos.
+- Medido en el panel de 380 px: «Junto a 3 firmas · 3 problemas» y el botón
+  caben con 5 px de holgura. Por eso el relleno es de 10/2 y no de 12/4.
 
-**M avisos** suma cada firma no válida (certificado caducado, certificado aún no
-válido, firma rota, no se puede validar), cada firma que no se ha podido
-comprobar del todo y **1** si el documento ha cambiado después de la última
-firma. Así el cambio se ve aunque el aviso esté plegado.
-
-**El tono es el de la peor fila:**
+**El tono:**
 
 | Lo peor que hay | Icono | Borde |
 | --------------- | ----- | ----- |
 | Todo válido | información | 1 px `--rf-border-subtle` |
-| Una firma sin comprobar del todo | círculo punteado | 1 px `--rf-border-strong` |
-| Una firma no válida, o el documento ha cambiado después | triángulo (círculo con aspa si hay una firma rota) | 2 px `--rf-border-strong` |
-
-**Desplegado**, una fila por firma en orden cronológico, separadas por 1 px en
-`--rf-border-subtle`: quién; cuándo y su veredicto a la derecha, con los
-trazados del [panel de estado](panel-de-estado.md); y debajo su motivo en
-`--rf-text-muted`. Los veredictos:
-
-- **Válida**: círculo con marca, en `--rf-text-muted`.
-- **Certificado caducado** («El certificado caducó el …»), **Certificado aún no
-  válido** («El certificado es válido desde el …») y **No se puede validar**
-  («Formato no reconocido»): triángulo, en negrita.
-- **Firma rota**: círculo con aspa, en negrita, con uno de tres motivos: «No
-  corresponde con los datos», «Está dañada» o «El PDF estaba certificado y no
-  admitía más firmas».
-- **No se ha podido comprobar del todo** («Firma de larga duración: rFirma no
-  comprueba este tipo de firma»): círculo punteado, sin negrita. Es la firma
-  longeva (PAdES-T, LT o LTA) con el certificado ya caducado: no sale «Válida»,
-  pero tampoco cuenta como no válida.
-
-En la fila de la **última** firma, si el documento ha cambiado después, una
-línea con el triángulo y «El documento ha cambiado después de esta firma» en
-negrita. Sube el tono, pero no es una firma no válida.
+| Alguna caducada, ninguna no válida ni hallazgo | triángulo | 2 px `--rf-border-strong` |
+| Alguna no válida, o un hallazgo del documento | círculo con aspa | 2 px `--rf-border-strong` |
 
 **«Ya lo firmaste tú»** va en una franja al pie del aviso, fondo
-`--rf-surface`, borde superior de 1 px, icono de persona y texto en negrita. Se
-ve aunque el aviso esté plegado, y solo con un certificado elegido. Dos textos:
-«Ya lo firmaste tú con este certificado» y «Ya lo firmaste tú, con otro
-certificado tuyo». No bloquea, y las filas no llevan marca «Tú».
+`--rf-surface`, borde superior de 1 px, icono de persona y texto en negrita.
+Solo con un certificado elegido. Dos textos: «Ya lo firmaste tú con este
+certificado» y «Ya lo firmaste tú, con otro certificado tuyo». No bloquea.
 
-**El botón del pie no cambia**: con firmas no válidas sigue siendo «Firmar»,
-primario. Pulsarlo abre
-[«¿Firmar de todos modos?»](dialogo-firmar-de-todos-modos.md) si hay **alguna
-firma no válida**; el cambio después de la última firma y la firma sin comprobar
-del todo no lo abren. El aviso no lleva acción propia.
+**El botón del pie no cambia**: con problemas sigue siendo «Firmar», primario.
+Pulsarlo abre [«¿Firmar de todos modos?»](dialogo-firmar-de-todos-modos.md) si
+hay **algún ⚠ o ✗**: una caducada, una no válida o un hallazgo.
 
-### Cómo se valida cada firma
+### La validez de cada firma
 
-Como el escritorio de AutoFirma 1.9.2, y sin salir del equipo:
+La regla es la del ADR-0043, y la misma en el aviso, en «Ver firmas», en el
+resumen y en «¿Firmar de todos modos?». Una firma tiene una **validez** de tres,
+con la misma silueta, palabra y peso en todas partes
+([design-system.md](design-system.md#8-accesibilidad)):
 
-- **Se comprueba** la integridad de la firma, su algoritmo, que el certificado
-  del firmante esté vigente **hoy** y si el PDF estaba certificado.
-- **No se comprueba** nada que pida red: ni la cadena de confianza ni la
-  revocación.
-- **La única desviación de AutoFirma**: el *shadow attack* —el documento ha
-  cambiado después de la última firma— se comprueba **siempre**, y es un aviso,
-  no una firma no válida.
+- **✓ Válida**: círculo con marca, en `--rf-text-muted` y peso normal.
+- **⚠ Caducada**: triángulo, en `--rf-text` a peso 700. El motivo dice cuándo
+  caducó el certificado.
+- **✗ No válida**: círculo con aspa, en `--rf-text` a peso 700, con su motivo:
+  «Se ha modificado después de firmarse», «La firma está dañada», «El
+  certificado no se podía usar antes del …», «<firmante> no admitía más firmas»
+  o «rFirma no conoce este tipo de firma».
+
+**Un hallazgo del documento** —«Se ha modificado después de la última firma»,
+«Se ha rellenado el formulario después de firmar», «Se ha añadido contenido
+encima de lo firmado»— es lo que se encuentra en el documento sin poder
+atribuirlo a una firma. Va en su propia línea, encima de las firmas, con el
+círculo con aspa, a 13 px y peso 700 y con borde de 2 px en
+`--rf-border-strong`. Pesa como una no válida y no se cuelga de ninguna.
 
 **«Ya lo firmaste tú»** es el mismo NIF del titular y la misma entidad
 representada (`organizationIdentifier`; «ninguna» cuenta como valor). Si el
 certificado es el mismo, «con este certificado»; si no, «con otro certificado
 tuyo».
-
-Las firmas que rFirma no reconoce siguen teniendo su propia pregunta antes de
-cofirmar: este aviso no la sustituye.
 
 ## Firma visible
 
@@ -339,7 +317,7 @@ certificados», «Firmas previas» y «Pie · destino»:
   en fichero de [Preferencias](preferencias.md)) y «Volver a buscar». No hay
   selector.
 - **Listo**: la caja con el certificado elegido y «Firmar». Con alguna firma
-  previa no válida, lo mismo; pulsarlo abre [«¿Firmar de todos modos?»](dialogo-firmar-de-todos-modos.md)
+  previa caducada o no válida, o un hallazgo, lo mismo; pulsarlo abre [«¿Firmar de todos modos?»](dialogo-firmar-de-todos-modos.md)
   (artboard `EstadoFirmarDeTodosModos`).
 - **Certificados abiertos**: el buscador en lugar de la caja y la lista hacia
   abajo, sobre el resto del panel. La palanca «Lista de certificados» cambia
@@ -378,10 +356,16 @@ De arriba abajo:
 - «**Firmas del documento**», con el icono de documento, a 14 px en negrita.
 - Dos insignias `.rf-badge`: el formato (**PAdES**, **CAdES**, **XAdES**) y el
   recuento («1 firma», «3 firmas», «2 firmas · 2 contrafirmas»).
+- **Los hallazgos del documento**, si los hay, uno por línea y encima de las
+  fichas, como en «La validez de cada firma». **Tras firmar, «Se ha modificado
+  después de la última firma» se lee «Se modificó antes de tu firma»**: la
+  última firma es ya la tuya, y el cambio es anterior a ella. Los demás
+  hallazgos se leen igual.
 - **Una ficha por firma**, `.rf-card` de 10 × 12 px de relleno, apiladas a 6 px
-  y todo a la vista. Arriba, «FIRMA 1» en `.rf-label` versalita; tras firmar,
-  la tuya va la última y lleva a la derecha la insignia **Nueva**
-  (`.rf-badge--primary`). Debajo, una fila por dato: el rótulo en
+  y todo a la vista; las mismas del diálogo [«Ver firmas»](dialogo-ver-firmas.md).
+  Arriba, «FIRMA 1» en `.rf-label` versalita; tras firmar, la tuya va la última
+  y lleva la insignia **Nueva** (`.rf-badge--primary`); a la derecha, la
+  **validez** con su icono. Debajo, una fila por dato: el rótulo en
   `--rf-text-muted`, a 104 px fijos, y el valor a 13 px:
   - **Firmante**, en seminegrita: el nombre y el NIF entre paréntesis; en un
     sello, la razón social y el identificador de organización
@@ -389,20 +373,21 @@ De arriba abajo:
   - **En nombre de**, solo con certificado de representación: la entidad y su
     CIF.
   - **Emisor**.
-  - **Fecha declarada**, en el formato regional corto del escritorio, el mismo
-    del aviso de firmas previas («14/9/26, 10:32:05»). Es la que declara quien
-    firma, no un sello de tiempo, y por eso lo dice el rótulo.
+  - **Fecha** («3 oct 2026, 11:04»), la que declara quien firma; o
+    **Sellada** («10 ene 2023, 10:32 · TSA FNMT»), con el día, la hora y la
+    TSA, cuando la firma lleva sello de tiempo.
+  - **«No admite más firmas»**, sin rótulo y a todo lo ancho, en la firma que
+    cierra el documento.
+  - **Motivo**, la última fila, solo si no es válida.
 
   **Un campo ausente no se pinta**: la ficha tiene una fila menos.
 - **Las contrafirmas van dentro de la firma que contrafirman** (CAdES y
-  XAdES): «CONTRAFIRMA 1.1» dentro de «FIRMA 1», con sus mismas filas, tras un
-  filete de 2 px en `--rf-border-strong` a la izquierda y 12 px de sangría. En
-  PDF no hay árbol.
+  XAdES): «CONTRAFIRMA 1.1» dentro de «FIRMA 1», con sus mismas filas y su
+  propia validez, tras un filete de 2 px en `--rf-border-strong` a la izquierda
+  y 12 px de sangría. En PDF no hay árbol.
 
-**Ni estado por firma, ni validez, ni sellos de tiempo, ni número de serie.**
-El resumen no verifica: ninguna ficha lleva marca, aspa ni triángulo. El número
-de serie es de `verify -vv`, y el estado por firma es de otra spec
-([#1372](https://github.com/sgomez/rfirma/issues/1372)).
+**Sin algoritmo ni número de serie**: son de `verify -vv`, y la interfaz enseña
+lo de `verify -v`, que ahora incluye la validez.
 
 **Tu ficha tiene las mismas filas que las demás.** Lo propio de la firma recién
 hecha —la firma visible, sus páginas, el recuadro— no sale en el resumen; la
@@ -499,14 +484,34 @@ de pestaña o cerrarla, se va.
 - **«Firmar otro documento» no existe**: «Abrir PDF…» de la cabecera ya abre.
 - **El aviso de firmas previas dice la validez, no solo el número.** El de antes,
   «Ya lleva 1 firma · Ver», con el número llegando como desconocido, no se
-  montaba nunca y no decía si las firmas servían. Ahora cuenta firmas y avisos
-  en una línea y el detalle va al desplegar.
+  montaba nunca y no decía si las firmas servían.
+- **El aviso es una línea y el detalle va a un diálogo.** Se descartó el aviso
+  desplegable, con una fila por firma, su veredicto y su motivo: en 380 px
+  empujaba la firma visible fuera de la vista. «Ver firmas →» abre el diálogo,
+  el mismo desde el panel y desde la sede.
+- **«· N caducadas» solo si todos los problemas son caducadas**; si no,
+  «· N problemas», con los hallazgos dentro. Qué es cada uno lo dice el
+  diálogo.
+- **Tres valideces, y la misma en todas partes** (ADR-0043). Se descartó el
+  cuarto valor «no se ha podido comprobar del todo», que describía una
+  limitación del validador y no algo de la firma.
+- **El hallazgo del documento va aparte**, en su línea, y no se cuelga de la
+  última firma: la pintaría no válida sin serlo. Antes era «El documento ha
+  cambiado después de esta firma» dentro de la fila de la última.
+- **Tras firmar, el hallazgo se lee desde tu firma.** «Se ha modificado después
+  de la última firma» pasa a «Se modificó antes de tu firma» en el resumen: la
+  última es la tuya, y el cambio se refiere a las firmas previas.
+- **Monocromo.** Ni ámbar para la caducada ni rojo para la no válida: la paleta
+  no tiene token de color para eso y los colores literales no se admiten
+  ([design-system.md](design-system.md#2-color)). La ✓ en gris y a peso normal;
+  ⚠ y ✗ en `--rf-text` a 700, y el borde de 2 px del aviso con problemas.
+- **«Fecha» o «Sellada»**, no «Fecha declarada»: el sello de una TSA es lo
+  único que fecha una firma, y cuando lo hay se dice con su nombre.
 - **«Ya lo firmaste tú» en una franja al pie del aviso**, no como marca «Tú» en
-  la fila: la franja se ve sin desplegar.
-- **El botón del pie no cambia con firmas no válidas.** La confirmación la hace
-  el diálogo, que da la razón; el aviso no lleva botón propio.
-- **«Ha cambiado después» y «sin comprobar del todo» no piden confirmación**:
-  suben el tono y suman un aviso, pero no son firmas no válidas.
+  la fila.
+- **El botón del pie no cambia con problemas.** La confirmación la hace
+  [«¿Firmar de todos modos?»](dialogo-firmar-de-todos-modos.md), que abre
+  cualquier ⚠ o ✗; el aviso no lleva más acción que «Ver firmas →».
 - **Un solo resumen para después de firmar y para `verify --gui`.** `verify
   -gui` abría el escritorio con el fichero cargado para firmarlo, como
   `rfirma doc.pdf`; ahora abre el resumen. Se descartó una pantalla propia de
@@ -531,4 +536,5 @@ Validado en el lienzo
 página **Recorrido de firma**, artboard `Main`, el 25/09/2026. El aviso de
 firmas previas y el paso a «¿Firmar de todos modos?», el 26/09/2026. El
 selector de certificado, el 27/09/2026. El resumen unificado con `verify
---gui`, el 03/10/2026.
+--gui` y la validez de las firmas —el aviso compacto, el diálogo «Ver firmas» y
+la validez en las fichas—, el 03/10/2026 (anotación `nota-validez`).

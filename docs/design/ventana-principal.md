@@ -123,8 +123,10 @@ de pantalla.
 | Listo | ídem | documento, con la firma visible si está encendida | el selector con el certificado elegido, y «Firmar» |
 | Certificados abiertos | ídem | ídem | el buscador en el selector y la lista hacia abajo, flotando sobre el panel |
 | Pidiendo el secreto / secreto incorrecto | ídem | bajo el velo | bajo el velo |
+| Viendo las firmas previas | ídem | bajo el velo | bajo el velo; encima, el diálogo [«Ver firmas»](dialogo-ver-firmas.md) |
+| ¿Firmar de todos modos? | ídem | bajo el velo | bajo el velo; encima, [el diálogo](dialogo-firmar-de-todos-modos.md), si alguna firma previa tiene un problema |
 | Firmando | ídem | bajo el velo, hoja al 45 % | bajo el velo; el diálogo de progreso encima |
-| Firmado | la pestaña pasa a `…-firmado.pdf` con ✓ | documento firmado | la franja «Firmado a las 11:04» y el resumen con todas las firmas, la tuya «Nueva»; el pie ofrece abrir el PDF, la carpeta o «Firmar» |
+| Firmado | la pestaña pasa a `…-firmado.pdf` con ✓ | documento firmado | la franja «Firmado a las 11:04», los hallazgos del documento y el resumen con todas las firmas y su validez, la tuya «Nueva»; el pie ofrece abrir el PDF, la carpeta o «Firmar» |
 | `verify --gui` | el documento | el documento; si no es PDF, el icono, el nombre y «Sin vista previa», sin píldora | el mismo resumen sin franja, o «Sin firmas», «Formato no reconocido» o el fallo al leer las firmas; el mismo pie, con «Firmar» al 55 % si no es PDF |
 | Error al firmar | sin ✓ | documento sin tocar | el error sustituye al panel; el pie ofrece «Reintentar» |
 
@@ -176,4 +178,5 @@ en [panel-de-firma.md](panel-de-firma.md#certificado).
 Validado en el lienzo
 [Autofirma de escritorio en Rust](https://claude.ai/design/p/c0ddbfa7-0982-498f-8f8c-8e2f8f0c6132),
 página **Recorrido de firma**, artboard `Main`, el 25/09/2026; el selector de
-certificado y la barra única, el 27/09/2026.
+certificado y la barra única, el 27/09/2026; la validez de las firmas en el
+resumen y el diálogo «Ver firmas», el 03/10/2026.

@@ -947,7 +947,9 @@ class Component extends DCLogic {
       fecha: { k: "Fecha", v: "3 oct 2026, 11:04" }, v: "ok", nueva: true, hijos: [] };
     const conPrevias = previas.firmas.length > 0 ? previas
       : this.firmasDe("valida, caducada, no admitia mas firmas y hallazgo (3)", d.titular, d.extremo);
-    const v = this.fichasDe(firmado ? { firmas: previas.firmas.concat([tuya]), hallazgos: previas.hallazgos }
+    // Tras firmar, la ultima firma es la tuya: el cambio que se encontro es anterior a ella.
+    const antesDeTuFirma = function (h) { return h === "Se ha modificado después de la última firma" ? "Se modificó antes de tu firma" : h; };
+    const v = this.fichasDe(firmado ? { firmas: previas.firmas.concat([tuya]), hallazgos: previas.hallazgos.map(antesDeTuFirma) }
       : cades ? this.firmasDe("CAdES con contrafirmas", d.titular, d.extremo)
       : conPrevias);
     const fichas = v.fichas;

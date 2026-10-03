@@ -226,6 +226,16 @@ distinguen entre sí por la silueta y no por una media tinta. Un mismo estado se
 dibuja **con el mismo `path` en todas las pantallas**: el triángulo de
 «Atención» del panel es el del botón de aviso de la cabecera.
 
+**La validez de una firma** es otro vocabulario, cerrado y de tres: *Válida*,
+*Caducada* y *No válida* (ADR-0043). Se dibuja igual en el aviso de firmas
+previas, el resumen, [«Ver firmas»](dialogo-ver-firmas.md) y
+[«¿Firmar de todos modos?»](dialogo-firmar-de-todos-modos.md), con iconos de
+contorno sobre `0 0 24 24`: círculo con marca en `--rf-text-muted` y peso
+normal; triángulo y círculo con aspa en `--rf-text` a peso 700. Un **hallazgo
+del documento** lleva el círculo con aspa y borde de 2 px en
+`--rf-border-strong`, y el aviso con algún problema, el mismo borde. Sin ámbar
+ni rojo: la silueta, la palabra y el peso bastan.
+
 ---
 
 ## 9. Vocabulario de clases
