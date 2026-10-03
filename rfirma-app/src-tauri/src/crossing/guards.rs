@@ -8,7 +8,7 @@ use crate::crossing::{all_crossings, type_names_in, Crossing};
 /// Fichero excluido de las comprobaciones de tipos.
 const THIS_FILE: &str = "guards.rs";
 
-/// Comprueba si la ruta, relativa a `src/`, es del adaptador de Tauri: en el `adapters/` de un contexto, un `tauri*`, `views*` u `orders*` (RD-02).
+/// Comprueba si la ruta, relativa a `src/`, es del adaptador de Tauri: en el `adapters/` de un contexto, un `tauri*`, `views*` u `orders*`.
 fn is_an_adapter(relative: &str) -> bool {
     let mut segments = relative.split('/');
     let name = relative.rsplit('/').next().unwrap_or_default();

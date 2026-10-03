@@ -46,7 +46,7 @@ pub struct SiteRoot {
 }
 
 impl SiteRoot {
-    /// Mide, sin escribir, en qué perfiles NSS es de confianza la CA local vigente (ID-346).
+    /// Mide, sin escribir, en qué perfiles NSS es de confianza la CA local vigente.
     pub fn measure_local_ca_trust(&self) -> Result<Vec<ProfileTrust>, TlsError> {
         application::trust::measure_local_ca_trust(
             self.trust.store.as_ref(),

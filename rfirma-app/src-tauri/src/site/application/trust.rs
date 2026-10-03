@@ -200,7 +200,7 @@ pub struct ProfileTrust {
     pub trusted: bool,
 }
 
-/// Mide, sin escribir, si la CA local vigente es de confianza en cada perfil (ID-346).
+/// Mide, sin escribir, si la CA local vigente es de confianza en cada perfil.
 pub fn measure_local_ca_trust(
     store: &dyn LocalCaSlots,
     profiles: &[PathBuf],
