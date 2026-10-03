@@ -227,8 +227,10 @@ fn sheet_of(
         .validity_reason
         .as_ref()
         .map(|reason| reason_text(reason, time_zone));
-    let serial = Some(signature.certificate_serial_number.clone())
-        .filter(|serial| verbosity > 2 && !serial.is_empty());
+    let at_third_level =
+        |value: Option<String>| value.filter(|text| verbosity > 2 && !text.is_empty());
+    let serial = at_third_level(Some(signature.certificate_serial_number.clone()));
+    let validity = at_third_level(certificate_validity_of(signature, time_zone));
     [
         ("Firmante", signer.map(rendered)),
         ("En nombre de", on_behalf_of.map(rendered)),
@@ -236,10 +238,36 @@ fn sheet_of(
         (date_label, date),
         ("Motivo", reason),
         ("Número de serie", serial),
+        ("Vigencia", validity),
+        (
+            "Algoritmo",
+            at_third_level(signature.signature_algorithm.clone()),
+        ),
+        ("Perfil", at_third_level(signature.profile.clone())),
     ]
     .into_iter()
     .filter_map(|(label, value)| value.map(|value| format!("  {:<19}{value}", format!("{label}:"))))
     .collect()
+}
+
+fn certificate_validity_of(
+    signature: &DocumentSignature,
+    time_zone: &dyn LocalTimeZone,
+) -> Option<String> {
+    let from = signature
+        .certificate_valid_from
+        .as_deref()
+        .map(|instant| in_local_time(instant, time_zone));
+    let until = signature
+        .certificate_valid_until
+        .as_deref()
+        .map(|instant| in_local_time(instant, time_zone));
+    match (from, until) {
+        (Some(from), Some(until)) => Some(format!("{from} – {until}")),
+        (Some(from), None) => Some(format!("desde {from}")),
+        (None, Some(until)) => Some(format!("hasta {until}")),
+        (None, None) => None,
+    }
 }
 
 fn reason_text(reason: &ValidityReason, time_zone: &dyn LocalTimeZone) -> String {

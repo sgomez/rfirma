@@ -341,3 +341,50 @@ fn the_serial_number_is_printed_only_from_the_third_level() {
         assert!(!verbose(words, signature()).contains("Número de serie"));
     }
 }
+
+#[test]
+fn the_third_level_adds_the_validity_algorithm_and_profile_after_the_serial_number() {
+    let mut signature = a_signature("UNA PERSONA", "", None);
+    signature.certificate_valid_from = Some("2025-01-01T00:00:00Z".to_owned());
+    signature.certificate_valid_until = Some("2030-06-30T12:30:00Z".to_owned());
+    signature.signature_algorithm = Some("SHA256withRSA".to_owned());
+    signature.profile = Some("PAdES B-B-Level".to_owned());
+
+    for words in [
+        &["verify", "-i", "firmado.pdf", "-vvv"][..],
+        &["verify", "-i", "firmado.pdf", "-vvvv"][..],
+    ] {
+        let output = verbose(words, vec![signature.clone()]);
+        assert!(
+            output.ends_with(
+                "\
+  Número de serie:   0123ABCD
+  Vigencia:          2025-01-01 02:00:00 +02:00 – 2030-06-30 14:30:00 +02:00
+  Algoritmo:         SHA256withRSA
+  Perfil:            PAdES B-B-Level
+"
+            ),
+            "{words:?}: {output}"
+        );
+    }
+}
+
+#[test]
+fn the_new_rows_are_absent_below_the_third_level_and_when_the_field_is_unknown() {
+    let mut signature = a_signature("UNA PERSONA", "", None);
+    signature.signature_algorithm = Some("SHA256withRSA".to_owned());
+    signature.certificate_valid_until = Some("2030-06-30T12:30:00Z".to_owned());
+
+    let below = verbose(
+        &["verify", "-i", "firmado.pdf", "-vv"],
+        vec![signature.clone()],
+    );
+    let unknown = verbose(&["verify", "-i", "firmado.pdf", "-vvv"], vec![signature]);
+
+    for label in ["Vigencia", "Algoritmo", "Perfil"] {
+        assert!(!below.contains(label), "{below}");
+    }
+    assert!(unknown.contains("  Vigencia:          hasta 2030-06-30 14:30:00 +02:00\n"));
+    assert!(unknown.contains("  Algoritmo:         SHA256withRSA\n"));
+    assert!(!unknown.contains("Perfil"), "{unknown}");
+}

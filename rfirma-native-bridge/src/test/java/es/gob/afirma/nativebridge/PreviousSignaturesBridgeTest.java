@@ -60,6 +60,10 @@ class PreviousSignaturesBridgeTest {
         assertEquals(PreviousSignaturesBridge.readable(signer.getIssuerX500Principal()),
                 signature.issuer());
         assertEquals(signer.getSerialNumber().toString(), signature.serialNumber());
+        assertEquals(signer.getNotBefore().toInstant(), Instant.parse(signature.validFrom()));
+        assertEquals(signer.getNotAfter().toInstant(), Instant.parse(signature.validUntil()));
+        assertEquals(ALGORITHM, signature.signatureAlgorithm());
+        assertEquals("PAdES B-B-Level", signature.profile());
         assertTrue(Instant.parse(signature.signingTime()).isBefore(Instant.now().plusSeconds(1)),
                 "la fecha de firma cruza en ISO-8601");
     }
@@ -84,6 +88,21 @@ class PreviousSignaturesBridgeTest {
                 signatures.get(1).serialNumber());
         assertTrue(Instant.parse(signatures.get(0).signingTime())
                 .isBefore(Instant.parse(signatures.get(1).signingTime())));
+    }
+
+    @Test
+    void the_profile_is_attributed_only_to_the_signature_of_the_highest_revision() throws Exception {
+        final byte[] once = signed(TestFixtures.samplePdf(),
+                TestFixtures.certificateChain(), TestFixtures.privateKey());
+        Thread.sleep(1_100);
+        final byte[] twice = signed(once,
+                TestFixtures.otherCertificateChain(), TestFixtures.otherPrivateKey());
+
+        final List<PreviousSignaturesBridge.Signature> signatures =
+                PreviousSignaturesBridge.read(twice).signatures();
+
+        assertNull(signatures.get(0).profile());
+        assertEquals("PAdES B-B-Level", signatures.get(1).profile());
     }
 
     @Test
