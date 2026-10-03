@@ -64,4 +64,36 @@ if [ "$code" -ne 1 ]; then
     exit 1
 fi
 
+index="$("$outline" scripts/tests/fixtures/index/)"
+assert_contains "$index" "documented.rs  Un modulo con cabecera partida en dos lineas." "index: joins the first header paragraph"
+assert_contains "$index" "nested/inner.rs  Un modulo anidado." "index: recurses with paths relative to the directory"
+assert_contains "$index" "bare.rs  !! SIN CABECERA //!" "index: flags a module without header"
+if [[ "$index" == *"tests.rs"* || "$index" == *"Prosa"* ]]; then
+    echo "FALLO (index: skips test modules and prose): $index" >&2
+    exit 1
+fi
+if [[ "$index" == *"== "* ]]; then
+    echo "FALLO (index: a lone directory has no label)" >&2
+    exit 1
+fi
+first="$(printf '%s\n' "$index" | head -1)"
+if [ "$first" != "bare.rs  !! SIN CABECERA //!" ]; then
+    echo "FALLO (index: stable order), primera linea: $first" >&2
+    exit 1
+fi
+
+mixed_index="$("$outline" scripts/tests/fixtures/index/ scripts/tests/fixtures/sample.rs:4-4)"
+assert_contains "$mixed_index" "== scripts/tests/fixtures/index/ ==" "index mixed: label"
+assert_contains "$mixed_index" "nested/inner.rs  Un modulo anidado." "index mixed: index"
+assert_contains "$mixed_index" "    4  pub fn join_paths" "index mixed: range"
+
+set +e
+"$outline" scripts/tests/fixtures/index/text_only/ >/dev/null 2>&1
+code=$?
+set -e
+if [ "$code" -ne 1 ]; then
+    echo "FALLO (index without rs): deberia dar codigo 1, dio $code" >&2
+    exit 1
+fi
+
 echo "outline_test: correcto"
