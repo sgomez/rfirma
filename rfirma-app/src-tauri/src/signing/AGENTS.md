@@ -43,6 +43,6 @@ relativas a `src/signing/`; para situarte en un fichero, `just outline <ruta>`.
 | `domain/language.rs` | Los cinco idiomas (ADR-0009). Pruebas en `domain/language/tests.rs`. |
 | `domain/layer2_text.rs` | El texto del recuadro visible, compuesto desde un modelo, y la máscara sobre el `CN`. Pruebas en `domain/layer2_text/tests.rs`. |
 | `domain/placement.rs` | Del recuadro arrastrado en el visor al `/Rect` del PDF: `PageSet`, `VisibleBox`, `Spot`, `BoxSize` y `PlacementError`. Pruebas en `domain/placement/tests.rs`. |
-| `domain/previous_signatures.rs` | Las firmas que ya trae el documento, su estado, y el aviso que componen: cuántos y de qué tono. No las valida: eso es del puente. Pruebas en `domain/previous_signatures/tests.rs`. |
+| `domain/document_signatures.rs` | Las firmas de un documento, en árbol con sus contrafirmas, su estado, y el aviso previo a firmar que componen: cuántas y de qué tono. No las valida: eso es del puente. Pruebas en `domain/document_signatures/tests.rs`. |
 | `domain/properties.rs` | Los `extraParams` en el formato del puente, y `merged_with`: quién manda cuando la sede y rFirma tocan la misma clave. Pruebas en `domain/properties/tests.rs`. |
 | `domain/session_seal.rs` | El sello de sesión: una invariante entre prefirma y postfirma (ADR-0016). Pruebas en `domain/session_seal/tests.rs`. |

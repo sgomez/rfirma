@@ -1,7 +1,7 @@
-use super::{PreviousSignature, PreviousSignaturesReport, SignatureStatus, Tone};
+use super::{DocumentSignature, DocumentSignatures, SignatureStatus, Tone};
 
-fn a_previous_signature_with_status(status: SignatureStatus) -> PreviousSignature {
-    PreviousSignature {
+fn a_previous_signature_with_status(status: SignatureStatus) -> DocumentSignature {
+    DocumentSignature {
         name: "LOVELACE BYRON ADA".to_owned(),
         id_number: "IDCES-00000000T".to_owned(),
         organization_identifier: None,
@@ -10,6 +10,7 @@ fn a_previous_signature_with_status(status: SignatureStatus) -> PreviousSignatur
         signing_time: Some("2024-01-01T10:00:00Z".to_owned()),
         status,
         reason: None,
+        countersignatures: Vec::new(),
     }
 }
 
@@ -36,7 +37,7 @@ fn are_not_ko_the_valid_and_not_fully_checked_statuses() {
 
 #[test]
 fn a_report_with_every_signature_valid_and_no_change_has_no_warnings_and_is_informational() {
-    let report = PreviousSignaturesReport::new(
+    let report = DocumentSignatures::new(
         vec![a_previous_signature_with_status(SignatureStatus::Valid)],
         false,
     );
@@ -47,7 +48,7 @@ fn a_report_with_every_signature_valid_and_no_change_has_no_warnings_and_is_info
 
 #[test]
 fn a_report_with_a_signature_not_fully_checked_and_no_change_warns_once_and_is_indeterminate() {
-    let report = PreviousSignaturesReport::new(
+    let report = DocumentSignatures::new(
         vec![a_previous_signature_with_status(
             SignatureStatus::NotFullyChecked,
         )],
@@ -60,7 +61,7 @@ fn a_report_with_a_signature_not_fully_checked_and_no_change_warns_once_and_is_i
 
 #[test]
 fn a_report_with_a_ko_signature_warns_once_and_is_of_attention() {
-    let report = PreviousSignaturesReport::new(
+    let report = DocumentSignatures::new(
         vec![a_previous_signature_with_status(SignatureStatus::Broken)],
         false,
     );
@@ -71,7 +72,7 @@ fn a_report_with_a_ko_signature_warns_once_and_is_of_attention() {
 
 #[test]
 fn a_document_changed_after_the_last_signature_warns_once_and_is_of_attention_on_its_own() {
-    let report = PreviousSignaturesReport::new(
+    let report = DocumentSignatures::new(
         vec![a_previous_signature_with_status(SignatureStatus::Valid)],
         true,
     );
@@ -82,7 +83,7 @@ fn a_document_changed_after_the_last_signature_warns_once_and_is_of_attention_on
 
 #[test]
 fn ko_not_fully_checked_and_a_change_all_add_up_and_attention_wins() {
-    let report = PreviousSignaturesReport::new(
+    let report = DocumentSignatures::new(
         vec![
             a_previous_signature_with_status(SignatureStatus::CertificateExpired),
             a_previous_signature_with_status(SignatureStatus::NotFullyChecked),

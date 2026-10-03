@@ -8,8 +8,8 @@ use crate::identity::domain::error::TokenError;
 pub use crate::identity::domain::protected_secret::ProtectedSecret;
 use crate::identity::domain::secret::StoreSecret;
 use crate::signing::domain::bridge::{BridgeError, PostSignRequest, PreSignRequest, PreSignature};
+use crate::signing::domain::document_signatures::DocumentSignatures;
 use crate::signing::domain::isolate_gone::IsolateGone;
-use crate::signing::domain::previous_signatures::PreviousSignaturesReport;
 
 /// El puente nativo visto desde el ciclo: prefirma y postfirma, y ninguna entrada que firme (ADR-0001).
 pub trait Bridge {
@@ -23,10 +23,7 @@ pub trait Bridge {
 /// Las firmas que ya trae un PDF, leídas con el recorrido de firmantes del original.
 pub trait PreviousSignaturesEngine {
     /// El informe de firmas previas del PDF de entrada, en Base64.
-    fn previous_signatures(
-        &self,
-        document_b64: &str,
-    ) -> Result<PreviousSignaturesReport, BridgeError>;
+    fn previous_signatures(&self, document_b64: &str) -> Result<DocumentSignatures, BridgeError>;
 }
 
 /// El hilo dueño del puente: corre una tarea con el puente delante y devuelve lo que salió (ADR-0003).

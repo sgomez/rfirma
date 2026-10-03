@@ -10,7 +10,7 @@ use crate::signing::domain::bridge::{
     BridgeError, ExpandRequest, FilterRequest, Format, PostSignRequest, PreSignRequest,
     PreSignature, SignatureVerdict, ValidationRequest, XadesVariant,
 };
-use crate::signing::domain::previous_signatures::PreviousSignaturesReport;
+use crate::signing::domain::document_signatures::DocumentSignatures;
 
 mod location;
 mod responses;
@@ -379,7 +379,7 @@ impl NativeBridge {
     pub fn previous_signatures(
         &self,
         document_b64: &str,
-    ) -> Result<PreviousSignaturesReport, BridgeError> {
+    ) -> Result<DocumentSignatures, BridgeError> {
         let document = c_string(document_b64, "el documento")?;
         let json =
             self.call(|thread| unsafe { (self.previous_signatures)(thread, document.as_ptr()) })?;

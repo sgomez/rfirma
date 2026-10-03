@@ -1,4 +1,4 @@
-//! Las firmas que ya trae un documento y el aviso que componen; no las valida.
+//! Las firmas de un documento, en árbol, y el aviso previo a firmar que componen; no las valida.
 
 /// El estado de una firma previa.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -54,7 +54,7 @@ pub enum Tone {
 
 /// Firmante de una de las firmas que ya trae el documento.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct PreviousSignature {
+pub struct DocumentSignature {
     /// El nombre del titular, leído del `CN` del sujeto.
     pub name: String,
     /// El NIF, leído del `SERIALNUMBER` del sujeto.
@@ -71,18 +71,20 @@ pub struct PreviousSignature {
     pub status: SignatureStatus,
     /// Motivo del original, tal como lo nombra, si el estado no es `Valid`.
     pub reason: Option<String>,
+    /// Las contrafirmas de esta firma; en PDF, siempre vacías.
+    pub countersignatures: Vec<DocumentSignature>,
 }
 
 /// Las firmas que ya trae el documento, en el orden cronológico que devuelve el puente.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
-pub struct PreviousSignaturesReport {
-    signatures: Vec<PreviousSignature>,
+pub struct DocumentSignatures {
+    signatures: Vec<DocumentSignature>,
     changed_after_last_signature: bool,
 }
 
-impl PreviousSignaturesReport {
+impl DocumentSignatures {
     /// Construye el informe a partir de las firmas ya traducidas, en el orden en que llegaron.
-    pub fn new(signatures: Vec<PreviousSignature>, changed_after_last_signature: bool) -> Self {
+    pub fn new(signatures: Vec<DocumentSignature>, changed_after_last_signature: bool) -> Self {
         Self {
             signatures,
             changed_after_last_signature,
@@ -95,12 +97,12 @@ impl PreviousSignaturesReport {
     }
 
     /// Las firmas, en orden cronológico.
-    pub fn signatures(&self) -> &[PreviousSignature] {
+    pub fn signatures(&self) -> &[DocumentSignature] {
         &self.signatures
     }
 
     /// Las firmas, en propiedad.
-    pub fn into_signatures(self) -> Vec<PreviousSignature> {
+    pub fn into_signatures(self) -> Vec<DocumentSignature> {
         self.signatures
     }
 

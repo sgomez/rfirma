@@ -6,8 +6,8 @@ use crate::identity::domain::holder::{common_name_of, holder_of, organization_id
 use crate::signing::domain::bridge::{
     BridgeError, DataRejection, PreSignBlock, PreSignature, SealedPreSignature, SignatureVerdict,
 };
-use crate::signing::domain::previous_signatures::{
-    PreviousSignature, PreviousSignaturesReport, SignatureStatus,
+use crate::signing::domain::document_signatures::{
+    DocumentSignature, DocumentSignatures, SignatureStatus,
 };
 use crate::signing::domain::SessionSeal;
 
@@ -149,7 +149,7 @@ pub fn parse_validity_results(json: &str) -> Result<Vec<String>, BridgeError> {
 }
 
 /// Parsea el informe de firmas previas, traduciendo cada firmante con las utilidades del titular.
-pub fn parse_previous_signatures(json: &str) -> Result<PreviousSignaturesReport, BridgeError> {
+pub fn parse_previous_signatures(json: &str) -> Result<DocumentSignatures, BridgeError> {
     let response = parse_response(json)?;
     let entries = response
         .get("signatures")
@@ -171,17 +171,17 @@ pub fn parse_previous_signatures(json: &str) -> Result<PreviousSignaturesReport,
         .iter()
         .map(previous_signature_of)
         .collect::<Result<Vec<_>, _>>()?;
-    Ok(PreviousSignaturesReport::new(
+    Ok(DocumentSignatures::new(
         signatures,
         changed_after_last_signature,
     ))
 }
 
-fn previous_signature_of(entry: &serde_json::Value) -> Result<PreviousSignature, BridgeError> {
+fn previous_signature_of(entry: &serde_json::Value) -> Result<DocumentSignature, BridgeError> {
     let subject = field(entry, "subject")?;
     let issuer = field(entry, "issuer")?;
     let (name, id_number) = holder_of(Some(subject));
-    Ok(PreviousSignature {
+    Ok(DocumentSignature {
         name,
         id_number,
         organization_identifier: organization_identifier_of(Some(subject)),
@@ -196,6 +196,8 @@ fn previous_signature_of(entry: &serde_json::Value) -> Result<PreviousSignature,
             .get("reason")
             .and_then(serde_json::Value::as_str)
             .map(str::to_owned),
+
+        countersignatures: Vec::new(),
     })
 }
 

@@ -6,8 +6,8 @@ use crate::signing::domain::bridge::{
     BridgeError, ExpandRequest, FilterRequest, Format, PostSignRequest, PreSignRequest,
     PreSignature, SignatureVerdict, ValidationRequest,
 };
+use crate::signing::domain::document_signatures::DocumentSignatures;
 use crate::signing::domain::isolate_gone::IsolateGone;
-use crate::signing::domain::previous_signatures::PreviousSignaturesReport;
 
 use crate::signing::ports::{Bridge, PreviousSignaturesEngine};
 use crate::site::ports::{FilterEngine, PolicyEngine, ValidationEngine};
@@ -65,10 +65,7 @@ impl ValidationEngine for NativeBridge {
 }
 
 impl PreviousSignaturesEngine for NativeBridge {
-    fn previous_signatures(
-        &self,
-        document_b64: &str,
-    ) -> Result<PreviousSignaturesReport, BridgeError> {
+    fn previous_signatures(&self, document_b64: &str) -> Result<DocumentSignatures, BridgeError> {
         NativeBridge::previous_signatures(self, document_b64)
     }
 }
@@ -122,10 +119,7 @@ impl ValidationEngine for Isolate {
 }
 
 impl PreviousSignaturesEngine for Isolate {
-    fn previous_signatures(
-        &self,
-        document_b64: &str,
-    ) -> Result<PreviousSignaturesReport, BridgeError> {
+    fn previous_signatures(&self, document_b64: &str) -> Result<DocumentSignatures, BridgeError> {
         let document = document_b64.to_owned();
         ran(self
             .run(move |bridge| PreviousSignaturesEngine::previous_signatures(bridge, &document)))?

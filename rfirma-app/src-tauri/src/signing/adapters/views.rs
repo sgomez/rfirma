@@ -11,7 +11,7 @@ use crate::signing::adapters::state::VisibleSignatureMemory;
 use crate::signing::application::configuration::Preferences;
 use crate::signing::application::configuration_memory::Theme;
 use crate::signing::domain::{
-    Datum, PageSet, PhrasePart, PreviousSignature, PreviousSignaturesReport, SignatureStatus, Tone,
+    Datum, DocumentSignature, DocumentSignatures, PageSet, PhrasePart, SignatureStatus, Tone,
     VisibleBox, VisibleContent,
 };
 
@@ -268,8 +268,8 @@ crossing! {
     }
 }
 
-impl From<PreviousSignature> for PreviousSignatureView {
-    fn from(signature: PreviousSignature) -> Self {
+impl From<DocumentSignature> for PreviousSignatureView {
+    fn from(signature: DocumentSignature) -> Self {
         Self {
             name: signature.name,
             id_number: signature.id_number,
@@ -299,8 +299,8 @@ crossing! {
     }
 }
 
-impl From<PreviousSignaturesReport> for PreviousSignaturesReportView {
-    fn from(report: PreviousSignaturesReport) -> Self {
+impl From<DocumentSignatures> for PreviousSignaturesReportView {
+    fn from(report: DocumentSignatures) -> Self {
         let warning_count = report.warning_count();
         let tone = ToneView::from(report.tone());
         let changed_after_last_signature = report.changed_after_last_signature();

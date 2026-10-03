@@ -196,6 +196,11 @@ propio. Su sujeto trae el identificador de organización de la entidad
 certificado de entidad sin persona física —un sello— no es de representante.
 _Avoid_: apoderado, poder notarial, persona jurídica
 
+**Firmante**:
+El titular del certificado de una firma que ya trae el documento, leído de ella;
+distinto del certificado con el que tú firmas.
+_Avoid_: firmador, autor
+
 ### Invocación
 
 **Compatible con AutoFirma**:
@@ -241,7 +246,7 @@ colocación de la firma; el **proceso de sede** es el que arranca una URL
 principal, y termina con su trámite. Dos procesos de sede conviven, cada uno
 en el puerto que sorteó su navegador; ninguno se une al de escritorio ni lo
 cierra. El **proceso de terminal** es el que arranca una orden de la línea de
-órdenes (`sign`, `cosign`, `listaliases`): no abre más ventana que la de sede,
+órdenes (`sign`, `cosign`, `verify`, `listaliases`): no abre más ventana que la de sede,
 y solo si se le pide elegir el certificado en ella; no se une al de escritorio y
 termina con su orden.
 _Avoid_: modo, instancia, app de navegador, dos aplicaciones, CLI, modo consola,

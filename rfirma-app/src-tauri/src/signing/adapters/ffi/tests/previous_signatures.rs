@@ -1,5 +1,5 @@
 use super::*;
-use crate::signing::domain::previous_signatures::{PreviousSignature, SignatureStatus};
+use crate::signing::domain::document_signatures::{DocumentSignature, SignatureStatus};
 
 #[test]
 fn an_unsigned_pdf_reports_no_previous_signatures() {
@@ -28,7 +28,7 @@ fn a_previous_signature_translates_the_subject_and_the_issuer_with_the_holder_ut
 
     assert_eq!(
         report.signatures(),
-        [PreviousSignature {
+        [DocumentSignature {
             name: "LOVELACE BYRON ADA".to_owned(),
             id_number: "IDCES-00000000T".to_owned(),
             organization_identifier: Some("VATES-A00000000".to_owned()),
@@ -37,6 +37,7 @@ fn a_previous_signature_translates_the_subject_and_the_issuer_with_the_holder_ut
             signing_time: Some("2024-01-01T10:00:00Z".to_owned()),
             status: SignatureStatus::Valid,
             reason: None,
+            countersignatures: Vec::new(),
         }]
     );
 }

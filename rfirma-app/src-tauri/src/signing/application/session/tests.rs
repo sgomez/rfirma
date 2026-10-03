@@ -12,7 +12,7 @@ use crate::signing::application::tests::{
     an_order, AnEngineThatReports, DocumentsInMemory, NoIsolate,
 };
 use crate::signing::domain::{
-    Format, PageSet, PreviousSignature, PreviousSignaturesReport, SignatureConfig, SignatureStatus,
+    DocumentSignature, DocumentSignatures, Format, PageSet, SignatureConfig, SignatureStatus,
     SigningChoice, Waivers,
 };
 use base64::Engine;
@@ -472,7 +472,7 @@ fn previous_signatures_in_sends_the_document_as_base_64_to_the_engine() {
 fn previous_signatures_in_returns_what_the_engine_reports() {
     let files = DocumentsInMemory::default().with("/tmp/documento.pdf", b"%PDF-1.7 contenido");
     let document = Document::opened("/tmp/documento.pdf");
-    let signature = PreviousSignature {
+    let signature = DocumentSignature {
         name: "LOVELACE BYRON ADA".to_owned(),
         id_number: "IDCES-00000000T".to_owned(),
         organization_identifier: None,
@@ -481,11 +481,10 @@ fn previous_signatures_in_returns_what_the_engine_reports() {
         signing_time: Some("2024-01-01T10:00:00Z".to_owned()),
         status: SignatureStatus::Valid,
         reason: None,
+        countersignatures: Vec::new(),
     };
-    let engine = AnEngineThatReports::default().answering(PreviousSignaturesReport::new(
-        vec![signature.clone()],
-        false,
-    ));
+    let engine = AnEngineThatReports::default()
+        .answering(DocumentSignatures::new(vec![signature.clone()], false));
 
     let report = previous_signatures_in(&files, &engine, &document).expect("el motor contesta");
 

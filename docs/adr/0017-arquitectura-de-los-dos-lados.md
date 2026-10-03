@@ -37,7 +37,7 @@ una carpeta con su propio mapa:
 | Contexto | Qué es |
 |---|---|
 | `site/` | El trámite de sede: el protocolo `afirma://`, el canal sobre el *loopback*, el material TLS, la confianza de la CA local y el arranque que decide si se abre la ventana principal o la del trámite. |
-| `signing/` | La firma local: las reglas puras de admisibilidad y colocación, el ciclo trifásico, la sesión en curso, el puente FFI y el hilo del aislado, y la memoria entre sesiones. |
+| `signing/` | La firma local y la lectura de las firmas de un documento: las reglas puras de admisibilidad y colocación, el ciclo trifásico, la sesión en curso, el puente FFI y el hilo del aislado, y la memoria entre sesiones. |
 | `documents/` | Por dónde entra el documento y dónde cae: destino, soltados, abiertos, recientes, rúbrica y el documento en curso. |
 | `identity/` | Quién firma: PKCS#11, los certificados que hay, los listados con su asa y el `.p12`. |
 | `desktop/` | El escritorio de la persona: canal de distribución, manejadores de `afirma://`, invocación desde fuera, versión publicada y rutas de la máquina. |

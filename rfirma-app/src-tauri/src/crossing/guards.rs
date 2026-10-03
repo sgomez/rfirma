@@ -193,8 +193,8 @@ fn the_portal_path_inside(value: &serde_json::Value) -> Option<String> {
 }
 
 /// Una firma previa de prueba, sin ninguna ruta del portal dentro.
-fn a_previous_signature() -> crate::signing::domain::PreviousSignature {
-    crate::signing::domain::PreviousSignature {
+fn a_previous_signature() -> crate::signing::domain::DocumentSignature {
+    crate::signing::domain::DocumentSignature {
         name: "LOVELACE BYRON ADA".to_owned(),
         id_number: "IDCES-00000000T".to_owned(),
         organization_identifier: None,
@@ -203,6 +203,7 @@ fn a_previous_signature() -> crate::signing::domain::PreviousSignature {
         signing_time: Some("2024-01-01T10:00:00Z".to_owned()),
         status: crate::signing::domain::SignatureStatus::Valid,
         reason: None,
+        countersignatures: Vec::new(),
     }
 }
 
@@ -229,7 +230,7 @@ fn crossings_from_a_portal_document() -> Vec<Serialised> {
     use crate::signing::application::configuration;
     use crate::signing::application::configuration_memory::Configuration;
     use crate::signing::application::tests::a_memory;
-    use crate::signing::domain::PreviousSignaturesReport;
+    use crate::signing::domain::DocumentSignatures;
 
     let home = tempfile::tempdir().expect("deberia haber directorio temporal");
     let memory = a_memory(home.path());
@@ -335,7 +336,7 @@ fn crossings_from_a_portal_document() -> Vec<Serialised> {
         ),
         Serialised::of(
             "PreviousSignaturesReportView",
-            &PreviousSignaturesReportView::from(PreviousSignaturesReport::new(
+            &PreviousSignaturesReportView::from(DocumentSignatures::new(
                 vec![a_previous_signature()],
                 false,
             )),
