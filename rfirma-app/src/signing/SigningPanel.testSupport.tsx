@@ -1,7 +1,9 @@
 //! Los dobles y ayudas que comparten las pruebas de `SigningPanel`.
 
 import type { RenderResult } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import { useState } from "react";
+import { expect } from "vitest";
 import { renderWithCatalog } from "../testing/render";
 import {
   activating,
@@ -164,4 +166,12 @@ export function renderLivePanel(props: PanelProps = {}) {
   }
   renderWithCatalog(<Live />);
   return { chosen };
+}
+
+/** La línea del aviso de firmas previas: el texto entero y la coletilla en negrita aparte. */
+export function expectNoticeLine(lead: string, problems: string) {
+  expect(document.querySelector(".panel__co-signature-text")).toHaveTextContent(
+    `${lead} · ${problems}`,
+  );
+  expect(screen.getByText(problems).tagName).toBe("STRONG");
 }
