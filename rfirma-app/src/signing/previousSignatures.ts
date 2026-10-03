@@ -76,10 +76,11 @@ export interface PreviousSignaturesReport {
   findings: readonly DocumentFinding[];
 }
 
-/** Un problema que «¿Firmar de todos modos?» enseña: un hallazgo o una firma que no es válida. */
+/** Un problema que «¿Firmar de todos modos?» enseña: un hallazgo, una firma que no es válida o el permiso de cofirmar firmas de tipo desconocido. */
 export type SigningProblem =
   | { kind: "finding"; finding: DocumentFinding }
-  | { kind: "signature"; number: number; signature: PreviousSignature };
+  | { kind: "signature"; number: number; signature: PreviousSignature }
+  | { kind: "unregisteredSignatures" };
 
 /**
  * Los problemas del informe, los hallazgos primero y luego cada firma

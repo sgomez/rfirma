@@ -608,6 +608,38 @@ describe("App · ¿Firmar de todos modos?", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
+  it("asks before cosigning over unknown signatures when the report shows no such row", async () => {
+    const presigned: SigningOrder[] = [];
+    const { user, sign } = await readyToSign(
+      signerOver({ signatures: [validSignature] }, recordingPresign(presigned), true),
+    );
+
+    await user.click(sign);
+
+    expect(presigned).toHaveLength(0);
+    const dialog = await screen.findByRole("dialog", { name: "¿Firmar de todos modos?" });
+    expect(within(dialog).getByText("rFirma no conoce este tipo de firma")).toBeInTheDocument();
+    await user.click(within(dialog).getByRole("button", { name: "Firmar igualmente" }));
+
+    await waitFor(() => expect(presigned).toHaveLength(1));
+    expect(presigned[0]?.allowUnregisteredSignatures).toBe(true);
+  });
+
+  it("asks again for the unknown signatures when the dialog shown did not carry that row", async () => {
+    const presigned: SigningOrder[] = [];
+    const { user, sign } = await readyToSign(
+      signerOver({ signatures: [expiredSignature] }, recordingPresign(presigned), true),
+    );
+
+    await user.click(sign);
+    const first = await screen.findByRole("dialog", { name: "¿Firmar de todos modos?" });
+    await user.click(within(first).getByRole("button", { name: "Firmar igualmente" }));
+
+    const second = await screen.findByText("rFirma no conoce este tipo de firma");
+    expect(second).toBeInTheDocument();
+    expect(presigned).toHaveLength(0);
+  });
+
   it("signs nothing when it is cancelled", async () => {
     const presigned: SigningOrder[] = [];
     const { user, sign } = await readyToSign(

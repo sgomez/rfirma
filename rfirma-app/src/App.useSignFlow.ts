@@ -157,8 +157,13 @@ export function useSignFlow({
       return;
     }
 
-    await signPastPreviousSignatures(pdf, activeDocument, stampedPlacement(), chosen);
+    await signPastPreviousSignatures(pdf, activeDocument, stampedPlacement(), chosen, false);
   };
+
+  const showsUnknownSignatureType = (problem: SigningProblem) =>
+    problem.kind === "unregisteredSignatures" ||
+    (problem.kind === "signature" &&
+      problem.signature.validityReason?.kind === "unknownSignatureType");
 
   const stampedPlacement = () => (signature.enabled ? placement : null);
 
@@ -167,6 +172,7 @@ export function useSignFlow({
     activeDocument: DocumentInHand,
     stamped: Placement | null,
     chosen: Certificate,
+    consented: boolean,
   ) => {
     // La misma orden que compuso la vista previa, armada por el mismo sitio: si
     // aquí se armara a mano, lo que se enseñó y lo que se firma podrían
@@ -182,10 +188,14 @@ export function useSignFlow({
       language,
     });
 
-    // Una firma de tipo desconocido ya salió como una fila de «¿Firmar de
-    // todos modos?»: aceptarla es el permiso que el puente necesita para
-    // cofirmar. Si la orden que lo averigua falla, la prefirma dirá lo que pasa.
+    // El permiso de cofirmar sobre firmas de tipo desconocido solo sale de un
+    // «Firmar igualmente» que enseñó esa fila; si no, se pregunta aquí. Si la
+    // orden que lo averigua falla, la prefirma dirá lo que pasa.
     const unregistered = await signer.unregisteredSignatures(order.document).catch(() => false);
+    if (unregistered && !consented) {
+      setSignAnywayPrompt([{ kind: "unregisteredSignatures" }]);
+      return;
+    }
     const permitted = unregistered ? { ...order, allowUnregisteredSignatures: true } : order;
 
     await signUnlessTheSealFalls(chosen, permitted, pdf, stamped);
@@ -242,8 +252,9 @@ export function useSignFlow({
     if (signAnywayPrompt === null || pdf === null || activeDocument === null || chosen === null) {
       return;
     }
+    const consented = signAnywayPrompt.some(showsUnknownSignatureType);
     setSignAnywayPrompt(null);
-    await signPastPreviousSignatures(pdf, activeDocument, stampedPlacement(), chosen);
+    await signPastPreviousSignatures(pdf, activeDocument, stampedPlacement(), chosen, consented);
   };
 
   // `Firmar de todos modos`: la orden ya estaba armada, se manda tal cual.

@@ -39,11 +39,7 @@ export function SignAnywayDialog({ problems, locale, onConfirm, onCancel }: Sign
 
         <ul className="sign-anyway-dialog__list">
           {problems.map((problem) => (
-            <ProblemRow
-              key={problem.kind === "finding" ? problem.finding : `signature-${problem.number}`}
-              problem={problem}
-              locale={locale}
-            />
+            <ProblemRow key={problemKey(problem)} problem={problem} locale={locale} />
           ))}
         </ul>
 
@@ -64,6 +60,17 @@ export function SignAnywayDialog({ problems, locale, onConfirm, onCancel }: Sign
   );
 }
 
+function problemKey(problem: SigningProblem): string {
+  switch (problem.kind) {
+    case "finding":
+      return problem.finding;
+    case "signature":
+      return `signature-${problem.number}`;
+    case "unregisteredSignatures":
+      return "unregistered-signatures";
+  }
+}
+
 function ProblemRow({ problem, locale }: { problem: SigningProblem; locale: string }) {
   const { t } = useTranslation();
   if (problem.kind === "finding") {
@@ -72,6 +79,16 @@ function ProblemRow({ problem, locale }: { problem: SigningProblem; locale: stri
         <div className="sign-anyway-dialog__heading">
           <CrossCircleIcon size={15} />
           <span>{findingText(t, problem.finding)}</span>
+        </div>
+      </li>
+    );
+  }
+  if (problem.kind === "unregisteredSignatures") {
+    return (
+      <li className="sign-anyway-dialog__row">
+        <div className="sign-anyway-dialog__heading">
+          <CrossCircleIcon size={15} />
+          <span>{validityReasonText(t, { kind: "unknownSignatureType" }, locale)}</span>
         </div>
       </li>
     );
