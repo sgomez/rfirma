@@ -103,3 +103,12 @@ postproceso del ciclo trifásico (ADR-0001), compilado a `librfirma_crypto.so`
   y nunca produce `UNKOWN_SIGNATURE_FORMAT`, así que un `/SubFilter` ajeno
   pero íntegro cae en el mismo `SIGN_PROFILE_NOT_CHECKED` que la longeva y
   solo el perfil `"PDF"` de `SignatureFormatDetectorPadesCades` los separa.
+* **`checkPdfShadowAttack` no se llama: rasteriza con AWT** (ADR-0004).
+  `PreviousSignaturesBridge` lo sustituye comparando la última revisión
+  firmada con la actual, página a página: el flujo de contenido distinto es
+  `modifiedAfterLastSignature`, y una anotación nueva o movida (referencia y
+  `/Rect`) que se solapa estrictamente con otra visible es
+  `contentAddedOnTop`. Mirar solo los solapamientos de la revisión actual
+  da el hallazgo en cuanto llega el `/DSS` de un perfil LT sobre un
+  formulario que ya se solapaba al firmar; el original no lo da, porque
+  compara las dos imágenes.

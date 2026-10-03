@@ -1,4 +1,4 @@
-use super::{DocumentSignature, DocumentSignatures, SignatureStatus, Tone};
+use super::{DocumentSignature, DocumentSignatures, SignatureStatus, Tone, Validity};
 
 fn a_previous_signature_with_status(status: SignatureStatus) -> DocumentSignature {
     DocumentSignature {
@@ -11,6 +11,8 @@ fn a_previous_signature_with_status(status: SignatureStatus) -> DocumentSignatur
         signing_time: Some("2024-01-01T10:00:00Z".to_owned()),
         status: Some(status),
         reason: None,
+        validity: Validity::Valid,
+        validity_reason: None,
         countersignatures: Vec::new(),
     }
 }

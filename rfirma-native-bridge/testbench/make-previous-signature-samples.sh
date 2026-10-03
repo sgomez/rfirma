@@ -14,6 +14,8 @@ AUTOFIRMA_VERSION="$("$ROOT/scripts/pinned-version.sh" AUTOFIRMA_VERSION)"
 OUT="$ROOT/testdata/previous-signatures"
 EXPIRED="$ROOT/testdata/fnmt/expired-rsa.p12"
 EXPIRED_PIN='G5cp,fYC9gje'
+ACTIVE="$ROOT/testdata/fnmt/active-rsa.p12"
+ACTIVE_PIN='1234'
 
 WORK="$(mktemp -d)"
 TSA_PID=""
@@ -51,5 +53,7 @@ sign() {
 sign pdf "$WORK/document.pdf"
 sign pades-timestamped "$WORK/document.pdf" "$EXPIRED" "$EXPIRED_PIN" "$TSA_URL" \
     "$OUT/pades-long-term-expired.pdf"
+sign pades-timestamped "$WORK/document.pdf" "$ACTIVE" "$ACTIVE_PIN" "$TSA_URL" \
+    "$OUT/pades-long-term-active.pdf"
 
 ls -la "$OUT"

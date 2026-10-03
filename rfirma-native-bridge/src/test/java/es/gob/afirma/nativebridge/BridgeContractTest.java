@@ -67,19 +67,20 @@ class BridgeContractTest {
             signatures.add(new PreviousSignaturesBridge.Signature("CN=A", "CN=B", "7",
                     "2026-09-26T10:00:00Z", status,
                     status == PreviousSignaturesBridge.Status.VALID ? null : "NO_MATCH_DATA",
-                    List.of()));
+                    PreviousSignaturesBridge.Validity.VALID, null, List.of()));
         }
 
         final String json = NativeBridge.previousSignaturesJson(
-                new PreviousSignaturesBridge.Report(signatures, true));
+                new PreviousSignaturesBridge.Report(signatures, true, List.of()));
 
         assertEquals("{\"ok\":true,\"signatures\":["
                 + "{\"subject\":\"CN=A\",\"issuer\":\"CN=B\",\"serialNumber\":\"7\","
-                + "\"signingTime\":\"2026-09-26T10:00:00Z\",\"status\":\"valid\",\"reason\":null,\"countersignatures\":[]},"
+                + "\"signingTime\":\"2026-09-26T10:00:00Z\",\"status\":\"valid\",\"reason\":null,"
+                + "\"validity\":\"valid\",\"validityReason\":null,\"countersignatures\":[]},"
                 + entryWith("certificateExpired") + "," + entryWith("certificateNotYetValid") + ","
                 + entryWith("broken") + "," + entryWith("unverifiable") + ","
                 + entryWith("notFullyChecked")
-                + "],\"changedAfterLastSignature\":true}",
+                + "],\"changedAfterLastSignature\":true,\"findings\":[]}",
                 json,
                 "Rust lee estos nombres: cambiar uno rompe el enlace sin que falle la compilacion");
     }
@@ -87,26 +88,68 @@ class BridgeContractTest {
     @Test
     void the_previous_signatures_report_nests_each_countersignature_and_crosses_no_status_as_null() {
         final PreviousSignaturesBridge.Signature counter = new PreviousSignaturesBridge.Signature(
-                "CN=C", "CN=B", "8", null, null, null, List.of());
+                "CN=C", "CN=B", "8", null, null, null, PreviousSignaturesBridge.Validity.VALID,
+                null, List.of());
         final PreviousSignaturesBridge.Signature signer = new PreviousSignaturesBridge.Signature(
-                "CN=A", "CN=B", "7", null, null, null, List.of(counter));
+                "CN=A", "CN=B", "7", null, null, null, PreviousSignaturesBridge.Validity.VALID,
+                null, List.of(counter));
 
         final String json = NativeBridge.previousSignaturesJson(
-                new PreviousSignaturesBridge.Report(List.of(signer), false));
+                new PreviousSignaturesBridge.Report(List.of(signer), false, List.of()));
 
         assertEquals("{\"ok\":true,\"signatures\":["
                 + "{\"subject\":\"CN=A\",\"issuer\":\"CN=B\",\"serialNumber\":\"7\","
-                + "\"signingTime\":null,\"status\":null,\"reason\":null,\"countersignatures\":["
+                + "\"signingTime\":null,\"status\":null,\"reason\":null,"
+                + "\"validity\":\"valid\",\"validityReason\":null,\"countersignatures\":["
                 + "{\"subject\":\"CN=C\",\"issuer\":\"CN=B\",\"serialNumber\":\"8\","
-                + "\"signingTime\":null,\"status\":null,\"reason\":null,\"countersignatures\":[]}"
-                + "]}],\"changedAfterLastSignature\":false}",
+                + "\"signingTime\":null,\"status\":null,\"reason\":null,"
+                + "\"validity\":\"valid\",\"validityReason\":null,\"countersignatures\":[]}"
+                + "]}],\"changedAfterLastSignature\":false,\"findings\":[]}",
                 json);
     }
 
     private static String entryWith(final String status) {
         return "{\"subject\":\"CN=A\",\"issuer\":\"CN=B\",\"serialNumber\":\"7\","
                 + "\"signingTime\":\"2026-09-26T10:00:00Z\",\"status\":\"" + status
-                + "\",\"reason\":\"NO_MATCH_DATA\",\"countersignatures\":[]}";
+                + "\",\"reason\":\"NO_MATCH_DATA\",\"validity\":\"valid\",\"validityReason\":null,"
+                + "\"countersignatures\":[]}";
+    }
+
+    @Test
+    void the_previous_signatures_report_carries_every_validity_reason_and_finding() {
+        final List<PreviousSignaturesBridge.Signature> signatures = new ArrayList<>();
+        for (final PreviousSignaturesBridge.Problem problem
+                : PreviousSignaturesBridge.Problem.values()) {
+            signatures.add(new PreviousSignaturesBridge.Signature("CN=A", "CN=B", "7", null,
+                    null, null, problem.validity(),
+                    new PreviousSignaturesBridge.Reason(problem, "2020-01-01T00:00:00Z",
+                            "CN=H", "CN=Z"),
+                    List.of()));
+        }
+
+        final String json = NativeBridge.previousSignaturesJson(
+                new PreviousSignaturesBridge.Report(signatures, true,
+                        List.of(PreviousSignaturesBridge.Finding.values())));
+
+        assertEquals("{\"ok\":true,\"signatures\":["
+                + reasonEntry("invalid", "damaged") + ","
+                + reasonEntry("invalid", "modifiedAfterSigning") + ","
+                + reasonEntry("invalid", "cosignNotAdmitted") + ","
+                + reasonEntry("invalid", "unknownSignatureType") + ","
+                + reasonEntry("invalid", "certificateNotYetValid") + ","
+                + reasonEntry("expired", "certificateExpired")
+                + "],\"changedAfterLastSignature\":true,\"findings\":[\"modifiedAfterLastSignature\","
+                + "\"formFilledAfterSigning\",\"contentAddedOnTop\"]}",
+                json,
+                "Rust lee estos nombres: cambiar uno rompe el enlace sin que falle la compilacion");
+    }
+
+    private static String reasonEntry(final String validity, final String kind) {
+        return "{\"subject\":\"CN=A\",\"issuer\":\"CN=B\",\"serialNumber\":\"7\","
+                + "\"signingTime\":null,\"status\":null,\"reason\":null,\"validity\":\""
+                + validity + "\",\"validityReason\":{\"kind\":\"" + kind
+                + "\",\"date\":\"2020-01-01T00:00:00Z\",\"holder\":\"CN=H\",\"closedBy\":\"CN=Z\"},"
+                + "\"countersignatures\":[]}";
     }
 
     @Test

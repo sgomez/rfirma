@@ -41,6 +41,44 @@ impl SignatureStatus {
     }
 }
 
+/// La validez de una firma, la misma en todas partes (ADR-0043).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Validity {
+    Valid,
+    Expired,
+    Invalid,
+}
+
+/// Por qué una firma está caducada o no es válida: el más grave de sus problemas (ADR-0043).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum ValidityReason {
+    /// El certificado caducó en `date`; `holder` lo nombra si no es el del firmante.
+    CertificateExpired {
+        date: String,
+        holder: Option<String>,
+    },
+    ModifiedAfterSigning,
+    /// Ilegible, o sin certificado de firma.
+    Damaged,
+    /// El certificado no entra en vigor hasta `date`.
+    CertificateNotYetValid {
+        date: String,
+    },
+    UnknownSignatureType,
+    /// Cofirma de un documento que no admitía más firmas, cerrado por `closed_by`.
+    CosignNotAdmitted {
+        closed_by: Option<String>,
+    },
+}
+
+/// Lo que se ve en el documento entero, y no se cuelga de ninguna firma (ADR-0043).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum DocumentFinding {
+    ModifiedAfterLastSignature,
+    FormFilledAfterSigning,
+    ContentAddedOnTop,
+}
+
 /// El tono del peor aviso, de menor a mayor gravedad.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Tone {
@@ -73,6 +111,10 @@ pub struct DocumentSignature {
     pub status: Option<SignatureStatus>,
     /// Motivo del original, tal como lo nombra, si el estado no es `Valid`.
     pub reason: Option<String>,
+    /// La validez de la firma (ADR-0043).
+    pub validity: Validity,
+    /// El motivo de la validez, si no es `Valid`.
+    pub validity_reason: Option<ValidityReason>,
     /// Las contrafirmas de esta firma; en PDF, siempre vacías.
     pub countersignatures: Vec<DocumentSignature>,
 }
@@ -94,6 +136,7 @@ pub struct DocumentSignatures {
     signatures: Vec<DocumentSignature>,
     changed_after_last_signature: bool,
     format: SignatureStandard,
+    findings: Vec<DocumentFinding>,
 }
 
 impl DocumentSignatures {
@@ -103,7 +146,18 @@ impl DocumentSignatures {
             signatures,
             changed_after_last_signature,
             format: SignatureStandard::Pades,
+            findings: Vec::new(),
         }
+    }
+
+    /// El mismo informe, con los hallazgos del documento.
+    pub fn with_findings(self, findings: Vec<DocumentFinding>) -> Self {
+        Self { findings, ..self }
+    }
+
+    /// Los hallazgos del documento, que no son de ninguna firma.
+    pub fn findings(&self) -> &[DocumentFinding] {
+        &self.findings
     }
 
     /// El mismo informe, de un documento en ese formato.

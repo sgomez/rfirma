@@ -62,11 +62,18 @@ import org.graalvm.word.PointerBase;
  * previous ok  {"ok":true,"signatures":[{"subject":"&lt;DN RFC 2253&gt;",
  *              "issuer":"&lt;DN RFC 2253&gt;","serialNumber":"&lt;decimal&gt;",
  *              "signingTime":"&lt;instante ISO-8601&gt;","status":"&lt;estado&gt;",
- *              "reason":"&lt;VALIDITY_ERROR&gt;","countersignatures":[...]}, ...],
- *              "changedAfterLastSignature":false}
+ *              "reason":"&lt;VALIDITY_ERROR&gt;","validity":"&lt;validez&gt;",
+ *              "validityReason":{"kind":"&lt;motivo&gt;","date":"&lt;ISO-8601&gt;",
+ *              "holder":"&lt;DN&gt;","closedBy":"&lt;DN&gt;"},"countersignatures":[...]}, ...],
+ *              "changedAfterLastSignature":false,"findings":["&lt;hallazgo&gt;", ...]}
  *              estado: valid, certificateExpired, certificateNotYetValid, broken,
  *              unverifiable o notFullyChecked, y null fuera de PDF; reason es null
- *              en valid; countersignatures repite la forma de signatures
+ *              en valid; validez: valid, expired o invalid (ADR-0043); motivo:
+ *              certificateExpired, modifiedAfterSigning, damaged,
+ *              certificateNotYetValid, unknownSignatureType o cosignNotAdmitted,
+ *              y validityReason es null en valid; hallazgo:
+ *              modifiedAfterLastSignature, formFilledAfterSigning o
+ *              contentAddedOnTop; countersignatures repite la forma de signatures
  * error        {"ok":false,"error":"&lt;clase&gt;: &lt;mensaje&gt;"}
  * </pre>
  *
@@ -515,10 +522,16 @@ public final class NativeBridge {
     static String previousSignaturesJson(final PreviousSignaturesBridge.Report report) {
         final StringBuilder json = new StringBuilder("{\"ok\":true,\"signatures\":");
         signaturesJson(json, report.signatures());
-        return json.append(",\"changedAfterLastSignature\":")
+        json.append(",\"changedAfterLastSignature\":")
                 .append(report.changedAfterLastSignature())
-                .append('}')
-                .toString();
+                .append(",\"findings\":[");
+        for (int i = 0; i < report.findings().size(); i++) {
+            if (i > 0) {
+                json.append(',');
+            }
+            json.append('"').append(report.findings().get(i).wireName()).append('"');
+        }
+        return json.append("]}").toString();
     }
 
     private static void signaturesJson(final StringBuilder json,
@@ -537,11 +550,28 @@ public final class NativeBridge {
             field(json, "status",
                     signature.status() == null ? null : signature.status().wireName());
             field(json, "reason", signature.reason());
+            field(json, "validity", signature.validity().wireName());
+            json.append(",\"validityReason\":");
+            validityReasonJson(json, signature.validityReason());
             json.append(",\"countersignatures\":");
             signaturesJson(json, signature.countersignatures());
             json.append('}');
         }
         json.append(']');
+    }
+
+    private static void validityReasonJson(final StringBuilder json,
+            final PreviousSignaturesBridge.Reason reason) {
+        if (reason == null) {
+            json.append("null");
+            return;
+        }
+        json.append('{');
+        member(json, "kind", reason.problem().wireName());
+        field(json, "date", reason.date());
+        field(json, "holder", reason.holder());
+        field(json, "closedBy", reason.closedBy());
+        json.append('}');
     }
 
     /**

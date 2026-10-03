@@ -13,7 +13,7 @@ use crate::signing::application::tests::{
 };
 use crate::signing::domain::{
     DocumentSignature, DocumentSignatures, Format, PageSet, SignatureConfig, SignatureStandard,
-    SignatureStatus, SigningChoice, Waivers,
+    SignatureStatus, SigningChoice, Validity, Waivers,
 };
 use base64::Engine;
 use serde_json::json;
@@ -482,6 +482,8 @@ fn previous_signatures_in_returns_what_the_engine_reports() {
         signing_time: Some("2024-01-01T10:00:00Z".to_owned()),
         status: Some(SignatureStatus::Valid),
         reason: None,
+        validity: Validity::Valid,
+        validity_reason: None,
         countersignatures: Vec::new(),
     };
     let engine = AnEngineThatReports::default()
