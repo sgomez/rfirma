@@ -215,19 +215,25 @@ fn with_the_declared_time_checked(lines: Vec<String>, since: DateTime<Utc>) -> V
     const DECLARED: &str = "  Fecha declarada:   ";
     lines
         .into_iter()
-        .map(|line| match line.strip_prefix(DECLARED) {
-            None => line,
-            Some(declared) => {
-                let instant = DateTime::parse_from_str(declared, "%Y-%m-%d %H:%M:%S %:z")
-                    .unwrap_or_else(|error| panic!("«{declared}» no es una fecha local: {error}"));
-                assert_eq!(instant.offset().local_minus_utc(), 2 * 3600, "{declared}");
-                assert!(
-                    instant >= since - chrono::Duration::seconds(1) && instant <= Utc::now(),
-                    "{declared} no es el instante de la firma"
-                );
-                format!("{DECLARED}<instante de la firma>")
-            }
-        })
+        .map(
+            |line| match line.trim_start().strip_prefix(DECLARED.trim_start()) {
+                None => line,
+                Some(declared) => {
+                    let indent = &line[..line.len() - line.trim_start().len()];
+                    let instant =
+                        DateTime::parse_from_str(declared.trim_start(), "%Y-%m-%d %H:%M:%S %:z")
+                            .unwrap_or_else(|error| {
+                                panic!("«{declared}» no es una fecha local: {error}")
+                            });
+                    assert_eq!(instant.offset().local_minus_utc(), 2 * 3600, "{declared}");
+                    assert!(
+                        instant >= since - chrono::Duration::seconds(1) && instant <= Utc::now(),
+                        "{declared} no es el instante de la firma"
+                    );
+                    format!("{indent}{}<instante de la firma>", DECLARED.trim_start())
+                }
+            },
+        )
         .collect()
 }
 
@@ -347,6 +353,56 @@ fn verbose_prints_the_format_and_a_sheet_per_cosignature_of_a_cades() {
             "  Firmante:          EIDAS CERTIFICADO PRUEBAS (99999999R)",
             "  Emisor:            AC FNMT Usuarios",
             "  Fecha declarada:   <instante de la firma>",
+        ]
+    );
+}
+
+fn a_cades_countersigned_with_the_token() -> PathBuf {
+    let challenge = std::fs::read(sample("reference/challenge.bin")).expect("el reto se lee");
+    let signed = a_cycle_of(
+        Format::Cades,
+        ALGORITHM,
+        &challenge,
+        SignatureOperation::Sign,
+        &[("mode", "implicit")],
+    );
+    let countersigned = a_cycle_of(
+        Format::Cades,
+        ALGORITHM,
+        &signed,
+        SignatureOperation::Countersign,
+        &[("target", "tree")],
+    );
+    let path = Path::new(env!("CARGO_TARGET_TMPDIR")).join("verify-countersigned.csig");
+    std::fs::write(&path, countersigned).expect("el CAdES contrafirmado se escribe");
+    path
+}
+
+#[test]
+#[ignore = "grada C: necesita el token y librfirma_crypto.so (just test-native)"]
+fn verbose_prints_the_countersignature_of_a_cades_inside_the_signature_it_countersigns() {
+    let since = Utc::now();
+    let path = a_cades_countersigned_with_the_token();
+
+    let outcome = attended(&["verify", "-i", &path.display().to_string(), "-v"]);
+
+    assert!(outcome.stderr.is_empty(), "{:?}", outcome.stderr);
+    assert_eq!(
+        with_the_declared_time_checked(printed_lines(&outcome), since),
+        [
+            "Firma valida",
+            "",
+            "Formato: CAdES",
+            "",
+            "Firma 1",
+            "  Firmante:          EIDAS CERTIFICADO PRUEBAS (99999999R)",
+            "  Emisor:            AC FNMT Usuarios",
+            "  Fecha declarada:   <instante de la firma>",
+            "",
+            "    Contrafirma 1.1",
+            "      Firmante:          EIDAS CERTIFICADO PRUEBAS (99999999R)",
+            "      Emisor:            AC FNMT Usuarios",
+            "      Fecha declarada:   <instante de la firma>",
         ]
     );
 }
