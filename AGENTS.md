@@ -54,7 +54,7 @@ escalera es esta y no tiene más peldaños:
 | Cuándo | Qué |
 | --- | --- |
 | En cada rojo → verde | Solo la prueba que estás tocando: `cargo test <filtro>`, `pnpm exec vitest run <fichero> --reporter=dot` |
-| Antes de commitear | `just fmt`. Nada más: el formato, el lint de biome y las guardas estructurales del backend (`just structural-guards`: tamaño de fichero, mapas, citas de ADR, capas) ya los comprueba lefthook en el pre-push |
+| Antes de commitear | `just fmt`. Nada más: lo demás lo comprueba lefthook en el pre-push (ADR-0014). Siempre, el formato, el lint de biome y las guardas estructurales (`just structural-guards`); si el push toca `rfirma-app/src/`, tipos, i18n y knip; si toca `rfirma-app/src-tauri/`, `just check-rust` —clippy y CRAP—, un par de minutos |
 | Al abrir la PR | Push, y el CI ejecuta `just check` repartida en tres runners: el veredicto es suyo, no se corre `just check` en local |
 | Si el CI sale en rojo | Vuelve al primer peldaño con la prueba o el fichero que falló. Si el rojo local es `IO failure on output stream` o `No space left on device`, es el disco: `just clean-coverage` |
 | Al revisar una PR | Nada, si el CI está verde para ese head sha: la suite ya respondió y volver a correrla no añade veredicto (`docs/agents/code-host.md`) |
@@ -67,7 +67,8 @@ usa a mano.
 Tres avisos que ahorran una ronda:
 
 * **`just check-rust`, `just coverage` y `just crap` no son un
-  bucle de realimentación: las tres arrastran el árbol instrumentado.**
+  bucle de realimentación: las tres arrastran el árbol instrumentado.** La
+  primera la paga el pre-push una vez por push de Rust; no la repitas a mano.
   `cargo llvm-cov` compila un árbol instrumentado **aparte** del de `cargo
   test` y de `clippy`, así que iterar con ellas paga dos compilaciones completas
   para responder a lo que `cargo test <filtro>` responde en segundos.

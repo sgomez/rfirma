@@ -1,9 +1,10 @@
-# Puerta local previa al push: formato y lint de biome (`just fmt-check`) y las guardas estructurales del backend (`just structural-guards`), lo que el CI ya comprueba.
+# Puerta local previa al push (ADR-0014): formato, lint de biome y guardas estructurales siempre; tipos e i18n si el push toca la interfaz; clippy y CRAP si toca el backend.
 # Un hook de git es una shell no interactiva, donde cargo y ruff no estan en el PATH.
 # El `run` es una sola linea: en Windows lefthook le pasa a `sh` solo la primera (ADR-0035).
 # Se instala en cada `pnpm install` con `tools/install-git-hooks.sh`, salvo desde un worktree.
 
 pre-push:
+  piped: true
   jobs:
     - name: fmt-check
       fail_text: "el formato se arregla con just fmt; el lint de biome, a mano"
@@ -11,3 +12,11 @@ pre-push:
     - name: structural-guards
       fail_text: "lo que dice cada guarda es lo que hay que arreglar; el umbral de tamaño lo fija files_stay_small.rs"
       run: PATH="$HOME/.cargo/bin:$HOME/.local/bin:$PATH" just structural-guards
+    - name: check-ts-static
+      glob: "rfirma-app/src/**"
+      fail_text: "tsc, una clave de i18n o un export sin uso: lo que nombra la salida"
+      run: PATH="$HOME/.cargo/bin:$HOME/.local/bin:$PATH" just build-ts lint-i18n knip
+    - name: check-rust
+      glob: "rfirma-app/src-tauri/**"
+      fail_text: "clippy o una función por encima de CRAP 30: pruébala o pártela, no la añadas a --allow"
+      run: PATH="$HOME/.cargo/bin:$HOME/.local/bin:$PATH" just check-rust

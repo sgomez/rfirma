@@ -238,10 +238,10 @@ just fmt
 **There is no local stand-in for `just check`.** CI splits the three chains
 across three runners that start at once, so it pays only the slowest one,
 while a laptop would pay all three added up to anticipate a red build the CI
-already gives for free. Locally the only steps are formatting (`just fmt`,
-also gated by the lefthook pre-push hook, together with the
-structural guards of `just structural-guards`) and the specific test being worked
-on; the full `just check` is what CI runs, and the ladder of what to run when
+already gives for free. Locally the only steps are formatting (`just fmt`), the specific test being
+worked on, and the lefthook pre-push hook: formatting and the structural guards
+always, plus the TypeScript static checks or `just check-rust` (clippy and CRAP)
+when the push touches that chain (ADR-0014); the full `just check` is what CI runs, and the ladder of what to run when
 lives in `AGENTS.md`.
 
 `just tools` names whatever is still missing, and `just --list` shows the rest.

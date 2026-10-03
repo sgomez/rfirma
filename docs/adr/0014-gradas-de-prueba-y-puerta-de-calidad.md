@@ -305,9 +305,9 @@ de extraerlo a un helper. Solo informa: sin `--threshold` ni `--exit-code`, así
 que nunca sale en rojo. No entra en el CI hasta ver cuánto ruido da en la
 práctica.
 
-## Un solo hook: formato y guardas estructurales, antes del push
+## Un solo hook: lo que el CI tumba a menudo y se ve en local, antes del push
 
-`pre-push` con **lefthook**, y dentro dos trabajos. El primero, **formato y lint de biome**: `just
+`pre-push` con **lefthook**, encadenado (`piped`: el primer trabajo que falla para los demás), y dentro cuatro trabajos. Los dos primeros corren siempre. El primero, **formato y lint de biome**: `just
 fmt-check`, que comprueba `cargo fmt` en la app y en la suite de conformidad, `biome check` —el
 formateador, el orden de imports y el linter— y `ruff format --check` sobre todo el Python del
 repositorio. El lint de biome entra porque no compila ni depende de `build-ts` y tarda menos de
@@ -325,8 +325,17 @@ así que el umbral, el baseline y la regla tienen un único sitio, el fichero de
 porque una guarda de estas que saltaba en el CI costaba una vuelta entera de más de diez minutos
 por algo que se ve leyendo el árbol.
 
-Ni clippy, ni la suite, ni nada que compile la crate o dependa de `build-ts`: la puerta se mide
-en segundos o no sobrevive. `just check` sigue siendo el único punto de entrada que promete
+Los otros dos corren solo si el push toca su cadena, con el `glob` de lefthook sobre los ficheros
+del push. El tercero, si toca `rfirma-app/src/`: `just build-ts lint-i18n knip` —tipos, claves de
+i18n y exports sin uso—, unos quince segundos. El cuarto, si toca `rfirma-app/src-tauri/`: `just
+check-rust`, lo mismo que el carril de Rust del CI —clippy, `cargo-machete` y la puerta CRAP—, unos
+dos minutos con el `target/` compartido caliente cuando hay que recompilar la crate instrumentada. Entran por lo que dicen los rojos: de los diez que
+dio el CI entre la llegada de las guardas al hook y el 3 de octubre de 2026, cuatro fueron CRAP
+—siempre un adaptador nuevo sin pruebas— y dos clippy; otros cuatro solo se ven en Windows, y
+esos no los adelanta un hook en Linux. Cada uno costaba una vuelta entera del CI, con su arreglo y
+su revisión, de diez a quince minutos de reloj: más que los dos minutos que el hook suma a cada push
+de Rust. La suite y la cobertura del diff se quedan fuera: no están entre los rojos frecuentes, y la
+suite es lo más caro del carril. `just check` sigue siendo el único punto de entrada que promete
 `docs/agents/code-host.md`.
 
 El gestor va como dependencia de desarrollo de `rfirma-app`, a versión exacta por la misma razón
@@ -345,6 +354,13 @@ herramienta. Eran tres copias de lo que comprueba el CI, con un `ruff format` ac
 
 ### Considered Options
 
+**Solo formato y guardas, en segundos**, que fue la regla hasta octubre de 2026: «la puerta se mide en
+segundos o no sobrevive». Se abandonó cuando los rojos de CRAP y de clippy pasaron a ser la mayoría de
+los que se ven en Linux: el hook rápido ya no adelantaba casi ninguno.
+
+**CRAP solo cuando el agente sospecha**, como paso de la escalera en `AGENTS.md`: barato, pero depende
+de que quien empuja vea venir el rojo, y el de `chosen_on_tty` llegó al CI con la sospecha ya escrita.
+
 **Ningún hook**, que es lo que hubo hasta ahora: se temía que uno desconocido se esquivara con
 `--no-verify` o explotara sin que nadie entendiera por qué. Lo primero se acepta —detrás está el
 CI, que no se esquiva, y adelantarse a un fallo barato no exige ser infranqueable—; lo segundo lo
@@ -355,8 +371,8 @@ cierran el aviso y el mensaje de arriba.
 `just check` es la puerta entera, y **su sitio es el CI**, que la reparte en runners
 simultáneos (Java, TypeScript, Rust y la landing, esta con carril propio por rutas) y por tanto
 paga el carril más lento. En un portátil se pagan sumados, así
-que **no hay puerta local que la sustituya**: en local solo corren el formato y las guardas estructurales
-(lefthook, en el pre-push) y la prueba concreta que se está tocando. Medido en el equipo de desarrollo, con
+que **no hay puerta local que la sustituya**: en local corren la prueba concreta que se está tocando y,
+en el pre-push, lo que dice la sección del hook. Medido en el equipo de desarrollo, con
 cachés calientes: `check-repo` 4 s, `check-java` 4 s, `check-ts` 15 s, `check-rust` 46 s.
 
 La escalera es de tres peldaños y la escribe `AGENTS.md`, que es donde un agente la lee:
@@ -391,6 +407,11 @@ worktree**: el primer agente paga la compilación entera una vez y los demás en
 compila, y meterlo dentro haría que un `cargo` a mano esperase a que terminara el agente de
 turno. Los agentes sí se serializan entre sí, y con `execution: sequential` eso no cuesta nada;
 si algún día se vuelve a `parallel`, esta es la línea que hay que volver a mirar.
+
+**El árbol instrumentado lleva su `CACHEDIR.TAG`.** `cargo llvm-cov` limpia el paquete y los
+volcados antes de cada pasada, y Cargo se niega a limpiar un directorio sin esa marca. Sin limpiar,
+la pasada mezcla los binarios y los `.profraw` de otros worktrees, y la cobertura total se hunde
+por debajo del suelo. Lo pone `just llvm-cov-tag`, del que dependen las recetas que instrumentan.
 
 ### Considered Options
 
