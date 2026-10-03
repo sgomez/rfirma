@@ -3,6 +3,7 @@
 pub mod algorithm;
 pub mod certificate;
 pub mod chain;
+pub mod copies;
 pub mod ecdsa;
 pub mod error;
 pub mod holder;

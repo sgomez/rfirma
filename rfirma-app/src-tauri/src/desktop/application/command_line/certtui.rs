@@ -1,13 +1,16 @@
-//! El certificado de `-certtui`: elegido en la terminal entre los vigentes que dejan `-store` y `-filter`, con el recordado delante; no pinta la lista.
+//! El certificado de `-certtui`: elegido en la terminal entre los vigentes que dejan `-store` y `-filter`, una fila por certificado y con el recordado delante; no pinta la lista.
 
 use std::time::Duration;
 
 use x509_cert::der::DateTime;
 
 use super::{accepted_by, listed_within_the_store, the_site_filter_of, CommandLinePorts, Outcome};
-use crate::desktop::ports::{CertificateStores, OfferedCertificate};
+use crate::desktop::ports::OfferedCertificate;
 use crate::identity::domain::certificate::{CertificateRef, CertificateStatus, TokenCertificate};
-use crate::identity::domain::holder::common_name_of;
+use crate::identity::domain::copies::{copies_of_each_certificate, ChosenCopy};
+use crate::identity::domain::holder::{
+    common_name_of, given_name_and_surname, holder_of, is_representative, without_semantics_prefix,
+};
 use crate::identity::domain::store::StoreClass;
 
 pub(super) fn the_certificate_chosen_on_the_terminal(
@@ -22,12 +25,9 @@ pub(super) fn the_certificate_chosen_on_the_terminal(
                 .to_owned(),
         ));
     }
-    let usable = the_usable_certificates(filter, arguments, ports)?;
-    let preselected = position_of_the_remembered(&usable, ports.signer.remembered().as_ref());
-    let offered: Vec<OfferedCertificate> = usable
-        .iter()
-        .map(|certificate| offered(certificate, ports.stores))
-        .collect();
+    let rows = the_rows(the_usable_certificates(filter, arguments, ports)?, ports);
+    let preselected = rows.iter().position(|row| row.copy.remembered).unwrap_or(0);
+    let offered: Vec<OfferedCertificate> = rows.iter().map(|row| row.offered.clone()).collect();
     let index = ports
         .terminal
         .chosen(&offered, preselected)
@@ -36,11 +36,61 @@ pub(super) fn the_certificate_chosen_on_the_terminal(
                 "rfirma: no se ha elegido ningún certificado ({reason})"
             ))
         })?;
-    usable.get(index).cloned().ok_or_else(|| {
-        Outcome::failed(
-            "rfirma: la terminal ha elegido un certificado que no estaba en la lista".to_owned(),
-        )
-    })
+    rows.into_iter()
+        .nth(index)
+        .map(|row| row.copy.certificate)
+        .ok_or_else(|| {
+            Outcome::failed(
+                "rfirma: la terminal ha elegido un certificado que no estaba en la lista"
+                    .to_owned(),
+            )
+        })
+}
+
+/// Un certificado de la lista, con la copia con la que firma.
+struct Row {
+    copy: ChosenCopy,
+    offered: OfferedCertificate,
+}
+
+/// Una fila por certificado, ordenadas como el desplegable de la ventana.
+fn the_rows(usable: Vec<TokenCertificate>, ports: &CommandLinePorts) -> Vec<Row> {
+    let remembered = ports.signer.remembered();
+    let class_of = |reference: &CertificateRef| ports.stores.class_of(reference);
+    let mut rows: Vec<Row> = copies_of_each_certificate(usable)
+        .into_iter()
+        .map(|copies| {
+            let stores = stores_of(&copies, class_of);
+            let copy = ChosenCopy::among(copies, class_of, remembered.as_ref());
+            let offered = offered(&copy.certificate, stores);
+            Row { copy, offered }
+        })
+        .collect();
+    rows.sort_by(|a, b| {
+        a.offered
+            .headline
+            .to_lowercase()
+            .cmp(&b.offered.headline.to_lowercase())
+            .then_with(|| a.offered.stores.cmp(&b.offered.stores))
+    });
+    rows
+}
+
+fn stores_of(
+    copies: &[TokenCertificate],
+    class_of: impl Fn(&CertificateRef) -> StoreClass,
+) -> Vec<String> {
+    let mut stores: Vec<(StoreClass, String)> = copies
+        .iter()
+        .map(|copy| {
+            let class = class_of(copy.reference());
+            (class, store_of(class, copy.reference()))
+        })
+        .collect();
+    stores.sort_by_key(|(class, _)| class.preference());
+    let mut names: Vec<String> = stores.into_iter().map(|(_, name)| name).collect();
+    names.dedup();
+    names
 }
 
 fn the_usable_certificates(
@@ -62,29 +112,49 @@ fn the_usable_certificates(
     Ok(listed)
 }
 
-fn position_of_the_remembered(
-    usable: &[TokenCertificate],
-    remembered: Option<&CertificateRef>,
-) -> usize {
-    remembered
-        .and_then(|remembered| {
-            usable
-                .iter()
-                .position(|certificate| certificate.reference().is_the_same_as(remembered))
-        })
-        .unwrap_or(0)
-}
-
-fn offered(certificate: &TokenCertificate, stores: &dyn CertificateStores) -> OfferedCertificate {
+fn offered(certificate: &TokenCertificate, stores: Vec<String>) -> OfferedCertificate {
+    let subject = certificate.subject();
+    let (holder_name, id_number) = holder_of(subject.as_deref());
+    let id_number = without_semantics_prefix(&id_number);
+    let (given_name, surname) = given_name_and_surname(subject.as_deref());
+    let organization_identifier = certificate.organization_identifier();
+    let entity_name = is_representative(organization_identifier.as_deref(), &given_name, &surname)
+        .then(|| certificate.organization_name())
+        .flatten();
+    let (headline, capacity) = match entity_name {
+        Some(entity) => {
+            let representative = [given_name.as_str(), surname.as_str()]
+                .into_iter()
+                .filter(|part| !part.is_empty())
+                .collect::<Vec<_>>()
+                .join(" ");
+            let headline = match organization_identifier.as_deref() {
+                Some(identifier) => format!("{entity} · {}", without_semantics_prefix(identifier)),
+                None => entity,
+            };
+            (
+                headline,
+                joined(&["Representante", &representative, id_number]),
+            )
+        }
+        None => (holder_name, joined(&["A título personal", id_number])),
+    };
     OfferedCertificate {
-        holder: common_name_of(certificate.subject().as_deref()),
+        headline,
+        capacity,
         issuer: common_name_of(certificate.issuer().as_deref()),
         expires: expiry_of(&certificate.status()),
-        store: store_of(
-            stores.class_of(certificate.reference()),
-            certificate.reference(),
-        ),
+        stores,
     }
+}
+
+fn joined(parts: &[&str]) -> String {
+    parts
+        .iter()
+        .filter(|part| !part.is_empty())
+        .copied()
+        .collect::<Vec<_>>()
+        .join(" · ")
 }
 
 fn expiry_of(status: &CertificateStatus) -> String {

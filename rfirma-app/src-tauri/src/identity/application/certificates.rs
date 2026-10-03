@@ -6,6 +6,7 @@ use std::path::Path;
 use crate::documents::domain::handles::Handles;
 use crate::identity::domain::certificate::{CertificateRef, ListedCertificate, TokenCertificate};
 use crate::identity::domain::chain::issuers_of;
+use crate::identity::domain::copies::{copies_of_each_certificate, ChosenCopy};
 use crate::identity::domain::error::{Situation, TokenError};
 use crate::identity::domain::holder::{
     common_name_of, given_name_and_surname, holder_of, is_pseudonym, is_representative,
@@ -122,7 +123,13 @@ pub fn rows_of(
     let remembered = memory.remembered_certificate();
     let rows: Vec<ChosenCopy> = copies_of_each_certificate(found)
         .into_iter()
-        .map(|copies| ChosenCopy::among(copies, installed_dir, remembered.as_ref()))
+        .map(|copies| {
+            ChosenCopy::among(
+                copies,
+                |reference| reference.store().class_under(installed_dir),
+                remembered.as_ref(),
+            )
+        })
         .collect();
     let handles = listed.replace(rows.iter().map(|row| row.certificate.reference().clone()));
     installed_copies.replace_paired(rows.iter().zip(&handles).filter_map(|(row, id)| {
@@ -132,105 +139,35 @@ pub fn rows_of(
     }));
     rows.into_iter()
         .zip(handles)
-        .map(|(row, id)| row.listed_as(id))
+        .map(|(row, id)| listed_as(row, id))
         .collect()
 }
 
-/// Agrupa por emisor y número de serie; un certificado ilegible no se agrupa con nada.
-fn copies_of_each_certificate(found: Vec<TokenCertificate>) -> Vec<Vec<TokenCertificate>> {
-    let mut groups: Vec<Vec<TokenCertificate>> = Vec::new();
-    let mut group_of: HashMap<(Vec<u8>, Vec<u8>), usize> = HashMap::new();
-    for certificate in found {
-        match certificate.issuer_and_serial() {
-            Some(identity) => match group_of.get(&identity) {
-                Some(&group) => groups[group].push(certificate),
-                None => {
-                    group_of.insert(identity, groups.len());
-                    groups.push(vec![certificate]);
-                }
-            },
-            None => groups.push(vec![certificate]),
-        }
-    }
-    groups
-}
-
-/// La copia de un certificado con la que se firma, y los almacenes donde están todas.
-struct ChosenCopy {
-    certificate: TokenCertificate,
-    store: StoreClass,
-    stores: Vec<StoreClass>,
-    remembered: bool,
-    /// La copia instalada del mismo certificado, si hay una entre las copias.
-    installed_reference: Option<CertificateRef>,
-}
-
-impl ChosenCopy {
-    /// La recordada si está entre las copias; si no, la primera por preferencia de almacén.
-    fn among(
-        mut copies: Vec<TokenCertificate>,
-        installed_dir: &Path,
-        remembered: Option<&CertificateRef>,
-    ) -> Self {
-        let classes: Vec<StoreClass> = copies
-            .iter()
-            .map(|copy| copy.reference().store().class_under(installed_dir))
-            .collect();
-        let installed_reference = copies
-            .iter()
-            .zip(&classes)
-            .find(|(_, class)| **class == StoreClass::Installed)
-            .map(|(copy, _)| copy.reference().clone());
-        let remembered_copy = remembered.and_then(|one| {
-            copies
-                .iter()
-                .position(|copy| one.is_the_same_as(copy.reference()))
-        });
-        let chosen = remembered_copy.unwrap_or_else(|| {
-            (0..classes.len())
-                .min_by_key(|&copy| classes[copy].preference())
-                .unwrap_or_default()
-        });
-        let store = classes[chosen];
-        let mut stores = classes;
-        stores.sort_by_key(|class| class.preference());
-        stores.dedup();
-        Self {
-            certificate: copies.swap_remove(chosen),
-            store,
-            stores,
-            remembered: remembered_copy.is_some(),
-            installed_reference,
-        }
-    }
-
-    fn listed_as(self, id: String) -> ListedCertificate {
-        let certificate = self.certificate;
-        let subject = certificate.subject();
-        let (holder_name, id_number) = holder_of(subject.as_deref());
-        let (given_name, surname) = given_name_and_surname(subject.as_deref());
-        let organization_identifier = certificate.organization_identifier();
-        let entity_name =
-            is_representative(organization_identifier.as_deref(), &given_name, &surname)
-                .then(|| certificate.organization_name())
-                .flatten();
-        ListedCertificate {
-            id,
-            label: certificate.reference().label().to_owned(),
-            stamped_signer: masked_signer(&holder_name, is_pseudonym(subject.as_deref())),
-            holder_name,
-            given_name,
-            surname,
-            id_number,
-            organization_identifier,
-            entity_name,
-            issuer: common_name_of(certificate.issuer().as_deref()),
-            certificate_serial_number: certificate.serial_number().unwrap_or_default(),
-            store: self.store,
-            stores: self.stores,
-            status: certificate.status(),
-            remembered: self.remembered,
-        }
+fn listed_as(row: ChosenCopy, id: String) -> ListedCertificate {
+    let certificate = row.certificate;
+    let subject = certificate.subject();
+    let (holder_name, id_number) = holder_of(subject.as_deref());
+    let (given_name, surname) = given_name_and_surname(subject.as_deref());
+    let organization_identifier = certificate.organization_identifier();
+    let entity_name = is_representative(organization_identifier.as_deref(), &given_name, &surname)
+        .then(|| certificate.organization_name())
+        .flatten();
+    ListedCertificate {
+        id,
+        label: certificate.reference().label().to_owned(),
+        stamped_signer: masked_signer(&holder_name, is_pseudonym(subject.as_deref())),
+        holder_name,
+        given_name,
+        surname,
+        id_number,
+        organization_identifier,
+        entity_name,
+        issuer: common_name_of(certificate.issuer().as_deref()),
+        certificate_serial_number: certificate.serial_number().unwrap_or_default(),
+        store: row.store,
+        stores: row.stores,
+        status: certificate.status(),
+        remembered: row.remembered,
     }
 }
 

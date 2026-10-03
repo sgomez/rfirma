@@ -28,6 +28,7 @@ habla con el token; en Windows, también `adapters/windows_store/`. Rutas relati
 | `domain/algorithm.rs` | El algoritmo de firma que se pide por su nombre, la clase de clave que exige y el mecanismo PKCS#11 con el que se cumple. Pruebas en `domain/algorithm/tests.rs`. |
 | `domain/certificate.rs` | El certificado tal y como sale del token, y `ListedCertificate`, la fila con su asa. Pruebas en `domain/certificate/tests.rs`. |
 | `domain/chain.rs` | Los emisores que acompañan al firmante en la cadena de certificación que viaja dentro de la firma. Pruebas en `domain/chain/tests.rs`. |
+| `domain/copies.rs` | Las copias de un certificado repartidas por varios almacenes y la que firma por todas, para la ventana y para `-certtui`. Sin asas. Sus pruebas, a través de la fila, en `application/certificates/tests/copies.rs`. |
 | `domain/ecdsa.rs` | Lo que la curva elíptica exige y RSA no: el resumen que firma el mecanismo crudo y el `r`/`s` del token reempaquetado en DER. Pruebas en `domain/ecdsa/tests.rs`. |
 | `domain/error.rs` | Las situaciones del token (ADR-0009) y el aviso de que falta `libnss3.so`. Pruebas en `domain/error/tests.rs`. |
 | `domain/holder.rs` | Quién es el titular, leído del nombre distinguido (RFC 4514), y `StampedHolder`, lo que estampa el recuadro. No sirve para el `Display` de `x509_cert::Name`: eso se lee del DER con `TokenCertificate`. Pruebas en `domain/holder/tests.rs`. |

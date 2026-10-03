@@ -99,13 +99,17 @@ pub trait Terminal {
     fn chosen(&self, offered: &[OfferedCertificate], preselected: usize) -> Result<usize, String>;
 }
 
-/// Un certificado como lo enseña la lista de `-certtui`.
+/// Un certificado como lo enseña la lista de `-certtui`: una fila aunque esté en varios almacenes.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct OfferedCertificate {
-    pub holder: String,
+    /// La entidad y su NIF si es de representante; el titular si es personal.
+    pub headline: String,
+    /// En calidad de qué firma: representante, con su nombre, o a título personal, con su DNI.
+    pub capacity: String,
     pub issuer: String,
     pub expires: String,
-    pub store: String,
+    /// Los almacenes donde está, por orden de preferencia.
+    pub stores: Vec<String>,
 }
 
 /// Los descriptores que abre quien lanza la orden, de donde sale el PIN de `-password-fd`.
