@@ -210,8 +210,9 @@ de la entrega, sin secretos y con todas sus puertas, y los ofrece como artefacto
 `rfirma-preview-<plataforma>` (uno por plataforma del manifiesto de paquetes, con su
 `SHA256SUMS`) que caducan a los 14 días. Se diferencia de la entrega en que no hay etiqueta
 `v*`, ni Release, ni repositorio: solo artefactos. El workflow Preview declara únicamente
-`contents: read`, y `check-workflows.sh` vigila que ningún job de `preview.yml` mencione un secreto; cada push
-reconstruye mientras la etiqueta siga puesta y cancela la construcción anterior.
+`contents: read`, y `check-workflows.sh` vigila que ningún job de `preview.yml` mencione un secreto; solo
+se dispara al poner la etiqueta: un push no reconstruye, y para rehacer el preview se quita la etiqueta y se
+vuelve a poner, lo que cancela la construcción anterior.
 
 **Las acciones se fijan por SHA en todo el repositorio**, `ci.yml` incluido, con el
 comentario de etiqueta al lado, más `dependabot.yml` para `github-actions` **mensual y

@@ -1,0 +1,62 @@
+# Una etiqueta solo lee las caches de `main`: cada sistema compila aqui la misma receta que
+# build.yml. Ninguna PR lo arranca (ADR-0035).
+name: Calentador de caches de la entrega
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    - cron: '17 4 * * 1'
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  warm:
+    name: Calienta la cache de la entrega
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(github.event_name == 'push' && '[{"runner":"ubuntu-latest","timeout":60,"apt":"tauri","java":"none","native":false,"recipe":"build-rust"}]' || '[{"runner":"windows-latest","timeout":90,"apt":"none","java":"graalvm","native":true,"recipe":"bundle"}]') }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: ${{ matrix.timeout }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      # Sin esto el checkout de Windows deja los .sh con CRLF y bash no los lee.
+      - name: Fin de linea sin conversion
+        run: git config --global core.autocrlf false
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: ./.github/actions/setup-runner
+        with:
+          rust: release
+          node: true
+          apt: ${{ matrix.apt }}
+          java: ${{ matrix.java }}
+          save-cache: ${{ github.ref == 'refs/heads/main' }}
+
+      # La libreria la deja el carril de su sistema; aqui solo se lee, y si no
+      # esta se compila: `tauri build` la necesita como recurso.
+      - name: Cache de la libreria nativa
+        if: matrix.native
+        id: cache-native-lib
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: rfirma-native-bridge/target/lib/rfirma
+          key: native-lib-${{ runner.os }}-graalvm${{ env.GRAALVM_VERSION }}-autofirma${{ env.AUTOFIRMA_VERSION }}-${{ hashFiles('scripts/bootstrap.sh', 'rfirma-native-bridge/pom.xml', 'rfirma-native-bridge/src/main/**') }}
+
+      - name: Construye la libreria nativa
+        if: matrix.native && steps.cache-native-lib.outputs.cache-hit != 'true'
+        run: just native
+
+      # La misma receta que la release: con otra orden cambiarian las
+      # features de tauri y la cache no le serviria.
+      - name: Compila como la release
+        run: just ${{ matrix.recipe }}
