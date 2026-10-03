@@ -1,3 +1,4 @@
+//! Las firmas que ya trae un PDF, un CAdES o un XAdES, una a una: quién firmó, cuándo y si es válida con su motivo (ADR-0043); no es el veredicto de conjunto de `ValidationBridge`.
 package es.gob.afirma.nativebridge;
 
 import java.io.ByteArrayInputStream;

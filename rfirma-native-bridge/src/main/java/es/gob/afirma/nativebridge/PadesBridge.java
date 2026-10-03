@@ -1,3 +1,4 @@
+//! Prefirma y postfirma PAdES en Java puro, con el preprocesador del original; la firma del hash no está aquí (ADR-0001).
 package es.gob.afirma.nativebridge;
 
 import java.io.ByteArrayInputStream;

@@ -1,3 +1,4 @@
+//! El expansor de `expPolicy` de `extraParams`, prestado de `ExtraParamsProcessor` del original; sin estado y sin sello.
 package es.gob.afirma.nativebridge;
 
 import java.util.Enumeration;

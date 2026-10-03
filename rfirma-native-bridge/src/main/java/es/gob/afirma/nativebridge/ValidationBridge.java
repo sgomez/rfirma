@@ -1,3 +1,4 @@
+//! El veredicto de conjunto del validador del original sobre un documento (válido, inválido, sin firmas o pendiente de confirmar) y el texto que imprime `verify` de cada firma; no las detalla una a una.
 package es.gob.afirma.nativebridge;
 
 import java.io.IOException;

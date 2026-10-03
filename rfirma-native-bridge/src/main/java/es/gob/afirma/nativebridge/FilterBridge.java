@@ -1,3 +1,4 @@
+//! Los filtros de certificado de la sede, evaluados por `CertFilterManager` del original sobre los certificados que da Rust; sin estado y sin sello.
 package es.gob.afirma.nativebridge;
 
 import java.io.ByteArrayInputStream;

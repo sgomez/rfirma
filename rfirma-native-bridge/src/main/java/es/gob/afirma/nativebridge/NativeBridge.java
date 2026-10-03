@@ -1,3 +1,4 @@
+//! La frontera FFI del puente: los `@CEntryPoint` que Rust llama, que convierten cadenas C, delegan en los `*Bridge` y devuelven JSON en memoria reservada a mano (ADR-0003); ninguno firma (ADR-0001).
 package es.gob.afirma.nativebridge;
 
 import java.nio.charset.StandardCharsets;
@@ -24,12 +25,12 @@ import org.graalvm.word.PointerBase;
  * JSON; lo que hace la firma vive alli, donde se puede probar sin construir la
  * imagen nativa.
  *
- * <p><b>Once entradas y ni una mas</b>: {@code autofirma_pades_presign},
+ * <p><b>Doce entradas y ni una mas</b>: {@code autofirma_pades_presign},
  * {@code autofirma_pades_postsign}, {@code autofirma_cades_presign},
  * {@code autofirma_cades_postsign}, {@code autofirma_xades_presign},
  * {@code autofirma_xades_postsign}, {@code autofirma_filter_certificates},
  * {@code autofirma_expand_extra_params}, {@code autofirma_validate_signatures},
- * {@code autofirma_previous_signatures} y {@code autofirma_free_string}.
+ * {@code autofirma_verify_signatures}, {@code autofirma_previous_signatures} y {@code autofirma_free_string}.
  * <b>Ninguna firma</b>, y esa es la invariante:
  * la clave privada no entra al isolate (ADR-0001). Se instancia
  * {@code PAdESTriPhasePreProcessor} directamente y NO {@code PreProcessorFactory},

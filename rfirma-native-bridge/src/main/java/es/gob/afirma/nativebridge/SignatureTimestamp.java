@@ -1,3 +1,4 @@
+//! El sello de tiempo que pide `tsaURL` en CAdES y XAdES, y el fallo si no se puede sellar; PAdES no pasa por aquí (ADR-0030).
 package es.gob.afirma.nativebridge;
 
 import java.util.GregorianCalendar;
@@ -7,7 +8,6 @@ import es.gob.afirma.signers.tsp.pkcs7.CMSTimestamper;
 import es.gob.afirma.signers.tsp.pkcs7.TsaParams;
 import es.gob.afirma.signers.xades.XAdESTspUtil;
 
-/** El sello de tiempo que pide {@code tsaURL} en CAdES y XAdES; no el de PAdES (ADR-0030). */
 final class SignatureTimestamp {
 
     private static final String PARAM_TSA_URL = "tsaURL";

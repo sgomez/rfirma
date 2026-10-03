@@ -1,3 +1,4 @@
+//! Prefirma y postfirma CAdES en Java puro, para firma, cofirma y contrafirma y para el contenedor CAdES-ASiC-S, con los procesadores del original; la firma del hash no está aquí (ADR-0001).
 package es.gob.afirma.nativebridge;
 
 import java.nio.charset.StandardCharsets;

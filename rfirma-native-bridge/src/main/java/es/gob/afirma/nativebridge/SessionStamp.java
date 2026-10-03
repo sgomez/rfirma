@@ -1,3 +1,4 @@
+//! El sello de sesión que la prefirma devuelve, Rust transporta sin leer y la postfirma vuelve a comprobar (ADR-0016).
 package es.gob.afirma.nativebridge;
 
 import java.io.StringReader;
