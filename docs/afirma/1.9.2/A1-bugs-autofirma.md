@@ -704,3 +704,21 @@ dirigido al defecto.
   2. La sede que pide un PAdES con sello recibe un PDF firmado sin sello de tiempo y ningún código de error.
   3. Es el camino de la firma de escritorio (`AOPDFSigner`) y el de la trifásica, que comparten `PAdESTriPhaseSigner`.
 * **Causa raíz:** Un `getClass()` de más en la búsqueda por reflexión del constructor, y un `catch` genérico que convierte el fallo en un aviso de log. Es distinto de BUG-23, que es la inicialización de `TsaParams` en CAdES y XAdES.
+
+### BUG-37: La comparación con la última revisión firmada toma la primera firma de una lista sin orden
+
+* **No observable:** en el protocolo solo se llega por `checkSignatures`, que en rFirma delega en el mismo `ValidatePdfSignature.validate` del original; la comparación propia de rFirma es la del aviso de firmas previas de la firma de escritorio, que no pasa por `afirma://`, y la cubren las pruebas del puente.
+* **Estado en `master`:** **Sigue presente.** `ValidatePdfSignature.java:168-170` sigue tomando `signNames.get(0)` como la firma de la última revisión.
+* **Código fuente:** `afirma-crypto-validation` · `es.gob.afirma.signvalidation.ValidatePdfSignature.java:117, 166-169` (método `validate(byte[], Properties)`); `afirma-lib-itext` 1.7 · `com.aowagie.text.pdf.AcroFields.getSignatureNames()`.
+* **Descripción:** `validate` lee los nombres de las firmas con `af.getSignatureNames()` y, si hay revisiones posteriores a la de `signNames.get(0)`, extrae esa revisión con `af.extractRevision(signNames.get(0))` y la entrega a `DataAnalizerUtil.checkPdfShadowAttack`, que la compara página a página con el documento actual. El comentario de esa rama da por hecho que la posición 0 es la firma más reciente:
+  ```java
+  // La revision firmada mas reciente se encuentra en el primer lugar de la lista, por ello se accede a la posicion 0
+  try (final InputStream lastReviewStream = af.extractRevision(signNames.get(0))) {
+  ```
+  En `afirma-lib-itext` 1.7, `AcroFields.getSignatureNames()` devuelve `new ArrayList(sigNames.keySet())`, donde `sigNames` es un `java.util.HashMap`: el orden de la lista es el de los cubos del mapa, que depende del `hashCode` de cada nombre de campo, no de la revisión en que se firmó.
+* **Comportamiento y consecuencia:**
+  1. Con una sola firma no hay efecto: la lista tiene un único elemento.
+  2. Con varias firmas, la revisión comparada depende del orden del hash de los nombres de campo y no de cuál es la última firma. Con los nombres por defecto de iText (`Signature1`, `Signature2`…) la lista sale de la más nueva a la más vieja; con otros nombres, como los de campos de firma preparados en el documento, puede salir al revés.
+  3. Cuando la primera de la lista es una firma anterior, las revisiones que añadieron las firmas posteriores se comparan como cambios hechos después de firmar, y el validador informa de una modificación en un documento que solo recibió firmas.
+  4. El resultado de la comprobación cambia con solo renombrar un campo de firma, sin tocar el contenido.
+* **Causa raíz:** La firma de la última revisión se identifica por su posición en una lista que sale de un `HashMap`, en vez de por `af.getRevision(name)`, que el mismo método ya usa más abajo para la certificación.
