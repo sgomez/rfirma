@@ -1,6 +1,5 @@
+//! La frontera con `pdf.js`, escrita como puerto: `PdfLoader`, `PdfDocument`, `PdfPage`, `Viewport` y `RenderTask`.
 /**
- * La frontera con `pdf.js`, escrita como puerto.
- *
  * `pdf.js` es imperativo —pinta sobre un lienzo y devuelve tareas que se
  * cancelan— y eso no se puede probar en `jsdom`, donde no hay contexto `2d`.
  * De ahí este puerto: el visor programa pintadas contra estas interfaces, la

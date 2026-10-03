@@ -1,3 +1,5 @@
+//! El atajo Ctrl+O (Cmd+O en macOS) que abre un PDF.
+
 import { useEffect } from "react";
 
 type ShortcutKeys = Pick<

@@ -1,3 +1,4 @@
+//! Dónde cae el documento firmado: el puerto `DestinationSource`, el recorte de esa línea y `SignedDocumentOpener`, que lleva a la persona hasta el fichero (ADR-0011).
 /**
  * **Dónde va a caer el documento firmado**, en el lado de la interfaz: la
  * carpeta y el nombre, los dos por su nombre y ninguno por su ruta (ID-63,

@@ -1,3 +1,5 @@
+//! El JSX del visor de PDF: la hoja con su lienzo, el recuadro de la firma visible con sus tiradores y la barra de páginas y zoom; la lógica vive en `useViewerPage` y `useViewerBox`.
+
 import { type ReactNode, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import {

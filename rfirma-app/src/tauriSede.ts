@@ -1,4 +1,4 @@
-/** El puerto de Tauri del trámite de sede: sus órdenes y el evento que lo empuja (ID-336, ID-338). */
+//! El puerto de Tauri del trámite de sede: sus órdenes y el evento que lo empuja.
 
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";

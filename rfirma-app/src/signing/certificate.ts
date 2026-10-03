@@ -1,6 +1,5 @@
+//! El certificado en el lado de la interfaz: su estado, las dos líneas de su fila, el orden y el agrupado del desplegable, y el puerto `CertificateStore`.
 /**
- * El certificado, en el lado de la interfaz.
- *
  * Es el reflejo de `pkcs11::certificate` del backend: la interfaz **no lee
  * DER**, no calcula caducidades y no habla con el token. Recibe el titular, el
  * DNI y el estado ya decididos, porque quien sabe leer un X.509 es el módulo de

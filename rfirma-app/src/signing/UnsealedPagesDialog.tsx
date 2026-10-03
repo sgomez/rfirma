@@ -1,3 +1,5 @@
+//! El diálogo de páginas sin sello, justo antes de firmar: cuántas del conjunto elegido se quedan sin firma visible.
+
 import { useId } from "react";
 import { useTranslation } from "react-i18next";
 import { AlertIcon, SealIcon } from "../design-system/icons";

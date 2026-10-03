@@ -1,3 +1,5 @@
+//! Las filas de los recientes, que comparten el menú de abiertos recientemente y el estado vacío del visor.
+
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import { SignedMarkIcon } from "../design-system/icons";

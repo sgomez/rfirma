@@ -1,3 +1,5 @@
+//! La tira de pestañas, con el menú «+N» de las ocultas y el botón partido de abrir salvo en Linux.
+
 import {
   type RefObject,
   useCallback,

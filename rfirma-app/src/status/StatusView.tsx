@@ -1,3 +1,5 @@
+//! La vista del cuerpo con el estado de rFirma: una fila por señal, su detalle, sus acciones y «Volver a comprobar».
+
 import type { TFunction } from "i18next";
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useState } from "react";

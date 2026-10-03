@@ -1,3 +1,5 @@
+//! El aviso de firmas previas del panel y de la sede: la línea plegable con quién firmó y cuándo, la franja de «ya lo firmaste tú» al pie y las etiquetas de veredicto que reutiliza el diálogo de firmas no válidas.
+
 import type { TFunction } from "i18next";
 import type { ReactNode } from "react";
 import { useState } from "react";

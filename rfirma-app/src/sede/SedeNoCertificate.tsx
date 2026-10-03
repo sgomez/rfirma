@@ -1,3 +1,5 @@
+//! 5 · Sin certificado utilizable, porque no hay ninguno o porque la sede los excluyó todos, con sus salidas: instalar otro, volver a buscar o cerrar.
+
 import { useTranslation } from "react-i18next";
 import type { NamedFailure } from "../errors/classify";
 import { ErrorNotice } from "../errors/ErrorNotice";

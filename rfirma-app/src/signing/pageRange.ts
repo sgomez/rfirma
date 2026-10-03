@@ -1,6 +1,5 @@
+//! El conjunto de páginas tecleado (`1,2-3,10-20`) y su camino de vuelta a texto. Sin React.
 /**
- * El conjunto de páginas **tecleado**, y su camino de vuelta a texto.
- *
  * Formato de impresión de toda la vida: `1,2-3,10-20`. Números y rangos
  * separados por comas, sin sintaxis propia. Lo que el mapa prohíbe copiar de
  * AutoFirma es **su sintaxis** —`1-3,-3--1`, con rangos negativos— y **su

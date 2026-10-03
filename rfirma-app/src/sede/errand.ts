@@ -1,3 +1,5 @@
+//! El vocabulario del trámite y su puerto `SiteErrandPort`, con el doble `noErrand` y las constantes de sus relojes. Sin React.
+
 import type { Catalog } from "../i18n/catalog";
 import type { Certificate } from "../signing/certificate";
 import type { SigningOrder } from "../signing/flow";

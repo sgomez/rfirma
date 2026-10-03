@@ -1,3 +1,5 @@
+//! El fichero que la sede quiere guardar o cargar, mientras el diálogo del portal está encima, sin acciones propias.
+
 import { useTranslation } from "react-i18next";
 import { SedeBody } from "./SedeFrame";
 

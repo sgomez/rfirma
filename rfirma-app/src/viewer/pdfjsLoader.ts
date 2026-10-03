@@ -1,3 +1,5 @@
+//! El adaptador de `pdf.js` detrás del puerto `PdfLoader` de `pdf.ts`, con el worker empaquetado por Vite y la ruta de las fuentes estándar.
+
 import { GlobalWorkerOptions, getDocument, type PageViewport, type PDFPageProxy } from "pdfjs-dist";
 // El fichero del worker, empaquetado por Vite. Con `?url` sale una ruta a un
 // activo de `dist/`, que es lo que hay que darle a `pdf.js`: bajo el sandbox no

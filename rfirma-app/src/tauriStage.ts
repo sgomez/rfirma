@@ -1,4 +1,4 @@
-/** Clasifica el fallo de una orden de Tauri y envuelve su llamada. Lo comparten `tauriSigning.ts` y `tauriSede.ts`. */
+//! Clasifica el fallo de una orden de Tauri y envuelve su llamada; lo comparten `tauriSigning.ts` y `tauriSede.ts`.
 
 import { classify } from "./errors/classify";
 import type { StageResult } from "./signing/flow";

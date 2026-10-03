@@ -1,3 +1,5 @@
+//! La columna derecha con todas las firmas del documento, tras firmarlo o al abrirlo para verlas (`verify --gui`), con sus tres salidas: abrir el documento, abrir la carpeta y volver a firmar.
+
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import { formatSignedAt, formatSignedTime } from "../App.signingOrder";

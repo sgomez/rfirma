@@ -1,3 +1,5 @@
+//! La geometría de la página que lleva el recuadro, leída del PDF abierto.
+
 import { useEffect, useState } from "react";
 import type { PageGeometry } from "./App.signingOrder";
 import type { PdfDocument } from "./viewer/pdf";

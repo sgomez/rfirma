@@ -1,3 +1,5 @@
+//! La pastilla flotante bajo la hoja con el estado del sello y, si hace falta, el botón que lo compone.
+
 import { useTranslation } from "react-i18next";
 import type { StampPreview } from "../signing/stampPreview";
 

@@ -6,7 +6,7 @@ Los arneses que llaman las recetas del `justfile` (ADR-0013).
 |---|---|
 | `bootstrap.sh` | Instala en `~/.m2` las dependencias Java de AutoFirma que no están en Maven Central. |
 | `structural-guards.sh` | Las pruebas de grada A del backend que solo leen el árbol (tamaño, mapas, citas de ADR, capas), ejecutadas sin compilar la crate. Lo llama el pre-push por `just structural-guards`. |
-| `outline.sh` | El esqueleto de ficheros `.rs`, `.ts` o `.tsx`, los tramos numerados de cualquier fichero y el índice de los módulos `.rs` de un directorio por su cabecera `//!`, para `just outline`. |
+| `outline.sh` | El esqueleto de ficheros `.rs`, `.ts` o `.tsx`, los tramos numerados de cualquier fichero y el índice de los módulos `.rs`, `.ts` y `.tsx` de un directorio por su cabecera `//!`, para `just outline`. |
 | `tools.sh` | Comprueba las herramientas del entorno con una tabla por plataforma, y falla nombrando la que falte o la que no esté en su versión fijada. |
 | `install-tools.sh` | Instala las herramientas en la versión que fija `versions.env`, para `just install-tools`. |
 | `pinned-version.sh` | Imprime una clave de `versions.env` para los arranques que no pasan por `just`. |

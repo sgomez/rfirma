@@ -1,3 +1,5 @@
+//! El error boundary de cada ventana: si un hijo lanza al pintarse, esto es lo que se ve en su lugar.
+
 import { Component, type ReactNode } from "react";
 import type { ExternalDestinationOpener } from "../desktop/externalDestination";
 import { ErrorNotice } from "./ErrorNotice";

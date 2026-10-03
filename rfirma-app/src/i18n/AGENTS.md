@@ -30,35 +30,35 @@ Si tocas el mecanismo, el comentario de bloque es la fuente de verdad y este
 
 | Bloque | Qué decide |
 |---|---|
-| L3-11 (`Catalog`) | Sin `as const`: las hojas son `string`, no literales, así que declarar un catálogo como `Catalog` obliga a tener exactamente las mismas claves y eso lo comprueba `tsc`. `locales/es.ts` no está versionado: si el editor dice que no existe, es `just po` lo que falta ejecutar. |
+| L5-15 (`Catalog`) | Sin `as const`: las hojas son `string`, no literales, así que declarar un catálogo como `Catalog` obliga a tener exactamente las mismas claves y eso lo comprueba `tsc`. `locales/es.ts` no está versionado: si el editor dice que no existe, es `just po` lo que falta ejecutar. |
 
 ## `i18n.ts`
 
 | Bloque | Qué decide |
 |---|---|
-| L10-24 (`createI18n`) | Dos decisiones que no son las de por omisión: sin `i18next-browser-languagedetector` (el idioma es una preferencia guardada, no se olfatea, ID-02), y `returnEmptyString: false` (con el valor por omisión la interfaz saldría en blanco en vez de en español). |
+| L12-28 (`createI18n`) | Dos decisiones que no son las de por omisión: sin `i18next-browser-languagedetector` (el idioma es una preferencia guardada, no se olfatea, ID-02), y `returnEmptyString: false` (con el valor por omisión la interfaz saldría en blanco en vez de en español). |
 
 ## `languages.ts`
 
 | Bloque | Qué decide |
 |---|---|
-| L4-19 (cabecera del módulo) | Los idiomas son cinco y ni la lista ni los catálogos se escriben aquí: salen de `locales/index.ts`. El valencià salió en v0.3 porque `Intl.PluralRules("va")` no da la categoría `many` que `es` y `ca` sí usan. Las etiquetas son las de `Language::tag` del backend (`signing/language.rs`): cambia una, cambian las dos. |
+| L7-23 (bloque sobre `LanguageTag`) | Los idiomas son cinco y ni la lista ni los catálogos se escriben aquí: salen de `locales/index.ts`. El valencià salió en v0.3 porque `Intl.PluralRules("va")` no da la categoría `many` que `es` y `ca` sí usan. Las etiquetas son las de `Language::tag` del backend (`signing/domain/language.rs`): cambia una, cambian las dos. |
 
 ## `LanguageProvider.tsx`
 
 | Bloque | Qué decide |
 |---|---|
-| L10-17 (`setLanguage`, en la interfaz `LanguageSelection`) | Si el disco rechaza el guardado, deshace el cambio de idioma y relanza: mismo contrato que `Preferences.save` vía `App.changeSettings`, para que el aviso de «se ha vuelto al valor anterior» sea siempre cierto. |
-| L30-43 (comentario sobre `LanguageProvider`) | El cambio se aplica sin reiniciar y **antes** de guardar la preferencia: la interfaz responde al momento, sin «Guardar» ni «Cancelar», igual que el resto de Preferencias. |
+| L12-20 (`setLanguage`, en la interfaz `LanguageSelection`) | Si el disco rechaza el guardado, deshace el cambio de idioma y relanza: mismo contrato que `Preferences.save` vía `App.changeSettings`, para que el aviso de «se ha vuelto al valor anterior» sea siempre cierto. |
+| L32-45 (comentario sobre `LanguageProvider`) | El cambio se aplica sin reiniciar y **antes** de guardar la preferencia: la interfaz responde al momento, sin «Guardar» ni «Cancelar», igual que el resto de Preferencias. |
 
 ## `preference.ts`
 
 | Bloque | Qué decide |
 |---|---|
-| L3-14 (`LanguagePreference`) | Es un puerto y no una llamada a Tauri directa porque la ventana no conoce a Tauri: quien guarda de verdad es el backend (`memory::Configuration`, ID-31). El idioma va por su propio puerto, fuera de `Preferences`, porque se lee **antes** de que haya ventana —`createI18n` lo necesita para el primer pintado—. |
+| L5-16 (`LanguagePreference`) | Es un puerto y no una llamada a Tauri directa porque la ventana no conoce a Tauri: quien guarda de verdad es el backend (`memory::Configuration`, ID-31). El idioma va por su propio puerto, fuera de `Preferences`, porque se lee **antes** de que haya ventana —`createI18n` lo necesita para el primer pintado—. |
 
 ## `i18next.d.ts`
 
 | Bloque | Qué decide |
 |---|---|
-| L3-16 (`declare module "i18next"`) | Se versiona a mano porque `i18next-cli types` derivaría `defaultNS` del nombre del recurso (`'es'`), que no es `NAMESPACE`. El extractor **lee también los comentarios** de este fichero: un ejemplo de `t(...)` con una clave inventada dentro de un bloque como este pone el CI en rojo. |
+| L5-18 (`declare module "i18next"`) | Se versiona a mano porque `i18next-cli types` derivaría `defaultNS` del nombre del recurso (`'es'`), que no es `NAMESPACE`. El extractor **lee también los comentarios** de este fichero: un ejemplo de `t(...)` con una clave inventada dentro de un bloque como este pone el CI en rojo. |

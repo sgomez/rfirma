@@ -1,3 +1,5 @@
+//! El aviso de que no hay certificados o de que buscarlos falló, dentro de la zona que se desliza del panel.
+
 import { useTranslation } from "react-i18next";
 import { AlertIcon } from "../design-system/icons";
 import { ErrorNotice } from "../errors/ErrorNotice";

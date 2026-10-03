@@ -1,3 +1,5 @@
+//! 3 · Los dos tramos de la firma, firmar y devolver a la sede, sin nombrar ninguna fase del motor.
+
 import { useTranslation } from "react-i18next";
 import type { Certificate } from "../signing/certificate";
 import type { SigningPhase } from "./errand";

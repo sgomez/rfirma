@@ -1,3 +1,5 @@
+//! Los dobles de `SiteErrandPort` y los momentos de ejemplo que comparten las pruebas de `SedeWindow`.
+
 import { act } from "@testing-library/react";
 import type { Mock } from "vitest";
 import { vi } from "vitest";

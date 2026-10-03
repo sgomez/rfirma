@@ -1,3 +1,5 @@
+//! El segmentado de páginas de la firma visible —«Una página», «Varias», «Todas»— y la línea o el campo de debajo.
+
 import { useId } from "react";
 import { useTranslation } from "react-i18next";
 import { AlertIcon } from "../design-system/icons";

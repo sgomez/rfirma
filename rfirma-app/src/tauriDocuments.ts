@@ -1,4 +1,4 @@
-/** Los puertos de Tauri del documento: el portal, el arrastre, la bandeja y el visor (#82, #83). */
+//! Los puertos de Tauri del documento: el portal, el arrastre y la invocación, los recientes y el visor.
 
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";

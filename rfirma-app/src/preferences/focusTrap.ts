@@ -1,3 +1,5 @@
+//! El tabulador que da la vuelta dentro del modal al que se engancha (`trapTabWithinCurrentTarget`).
+
 import type { KeyboardEvent } from "react";
 
 /** Lo que puede recibir el foco dentro de un modal. */

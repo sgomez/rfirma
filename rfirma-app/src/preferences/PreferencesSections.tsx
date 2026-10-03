@@ -1,3 +1,5 @@
+//! El contenido de cada sección de Preferencias como componente propio: `GeneralSection`, `SigningSection`, `CertificatesSection` y `AppearanceSection`.
+
 import type { TFunction } from "i18next";
 import type { ReactNode } from "react";
 import { useId } from "react";

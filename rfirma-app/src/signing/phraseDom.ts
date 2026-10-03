@@ -1,4 +1,4 @@
-/** La frase de *Personalizada* leída de su campo editable y escrita en él; no es el componente. */
+//! Leer la frase de *Personalizada* de su campo editable y escribirla en él, y dónde está el cursor respecto a una pastilla; no es el componente.
 import type { Datum, PhrasePart } from "./visibleSignature";
 
 const DATA: readonly Datum[] = ["signer", "issuer", "signedAt"];

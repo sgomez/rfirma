@@ -1,3 +1,5 @@
+//! La franja que anuncia la versión nueva, con «Actualizar ahora» si se puede instalar desde aquí y, si no, el paso a Acerca de.
+
 import { useTranslation } from "react-i18next";
 import { NotificationStrip } from "../shell/NotificationStrip";
 import type { NewVersion } from "./newVersion";

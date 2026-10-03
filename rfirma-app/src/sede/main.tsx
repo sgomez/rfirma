@@ -1,3 +1,5 @@
+//! El cableado de la ventana de sede (`sede.html`): su propio montaje con el `SiteErrandPort` de Tauri, sin el árbol de `App`.
+
 // El mismo orden que en `main.tsx`, y por la misma razón: el bundle del sistema
 // de diseño va antes que cualquier componente, y los ajustes sobre él después.
 import "../design-system/index.css";

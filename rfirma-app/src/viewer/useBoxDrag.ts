@@ -1,3 +1,5 @@
+//! Arrastrar el recuadro que ya existe y redimensionarlo por sus cuatro tiradores, escribiendo el gesto en el DOM sin pasar por el estado de React.
+
 import { type PointerEvent as ReactPointerEvent, type RefObject, useCallback, useRef } from "react";
 import {
   type BoxCorner,

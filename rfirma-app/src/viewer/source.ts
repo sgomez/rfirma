@@ -1,3 +1,5 @@
+//! El puerto `PdfSource`, que abre el documento en curso como PDF o como un fallo con nombre, con `pdfjsSource` sobre `pdf.js` y `unavailablePdfSource`, que no abre nada.
+
 import type { DocumentInHand } from "../documents/document";
 import { classify } from "../errors/classify";
 import type { ErrorSituation } from "../errors/ErrorNotice";

@@ -1,4 +1,4 @@
-/** Los puertos de Tauri de la configuración: ajustes, idioma, destino y la versión publicada. */
+//! Los puertos de Tauri de la configuración: ajustes, idioma, destino, tema de la ventana, apertura del firmado y de los destinos externos, y la versión publicada.
 
 import { getVersion } from "@tauri-apps/api/app";
 import { invoke } from "@tauri-apps/api/core";

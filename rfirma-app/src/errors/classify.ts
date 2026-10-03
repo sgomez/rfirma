@@ -1,3 +1,5 @@
+//! El fallo como situación, no como mensaje: `classify` convierte lo que rechace una orden en un `NamedFailure`. Sin React.
+
 import type { ErrorSituation } from "./ErrorNotice";
 
 /**

@@ -1,3 +1,5 @@
+//! Si el certificado elegido ya firmó el documento —mismo NIF de titular y misma entidad representada que alguna firma previa— y si fue con ese certificado u otro. Sin React.
+
 import type { Certificate } from "./certificate";
 import type { PreviousSignature } from "./previousSignatures";
 

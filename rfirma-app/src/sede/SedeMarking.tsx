@@ -1,3 +1,5 @@
+//! 1c · El área de la firma visible trazada sobre el PDF, y sus páginas, con el visor y el segmentado de la ventana principal, antes del consentimiento.
+
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { usePlacementControls } from "../App.usePlacementControls";

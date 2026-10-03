@@ -1,3 +1,5 @@
+//! El recuadro de la firma visible en espacio de usuario PDF y sus páginas: conversión a píxeles, arrastre, redimensionado, trazado, posición estándar y el conjunto de páginas de cada opción. Sin React.
+
 import type { Viewport } from "./pdf";
 
 /**

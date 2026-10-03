@@ -1,3 +1,5 @@
+//! Lo tecleado en el campo de «Varias», a la par del conjunto de páginas activo, y qué botón toca bajo el segmentado.
+
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { PageChoice, PageSet, PageSets, Placement } from "../viewer/signatureBox";

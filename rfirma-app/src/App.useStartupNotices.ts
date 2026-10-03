@@ -1,3 +1,5 @@
+//! El aviso de versión nueva y las filas del panel de estado, medidos al arrancar.
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   hasMenuAttention,

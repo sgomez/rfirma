@@ -1,3 +1,5 @@
+//! `createI18n`: la instancia de i18next con los catálogos publicados ya dentro.
+
 import i18next, { type i18n as I18n } from "i18next";
 import { initReactI18next } from "react-i18next";
 import { CATALOGS, FALLBACK_LANGUAGE, LANGUAGES, type LanguageTag } from "./languages";

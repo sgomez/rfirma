@@ -131,7 +131,7 @@ hay que pasar a `signatureField`), `rect` y la página (implícita, es la que se
 **El `/Rect` es utilizable tal cual como recuadro**, y es la mejor noticia del sondeo:
 `pdf.js` lo entrega **en espacio de usuario PDF y ya normalizado** (esquinas ordenadas), que
 es exactamente la definición de `UserSpaceRect` en
-`rfirma-app/src/viewer/signatureBox.ts:22-31`. Pintarlo es `toPixels(viewport, rect)`, la
+`rfirma-app/src/viewer/signatureBox.ts:24-33`. Pintarlo es `toPixels(viewport, rect)`, la
 función que ya existe. No hay conversión que escribir.
 
 Con página rotada la cosa se afila. Con `/Rotate 90` en la página 3, los dos enumeradores

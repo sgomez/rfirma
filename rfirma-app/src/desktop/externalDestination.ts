@@ -1,3 +1,5 @@
+//! El puerto que abre los destinos externos de `ExternalDestination`, con su doble en memoria y el que no está disponible. Sin React.
+
 export type ExternalDestination =
   | "discussions"
   | "releases"

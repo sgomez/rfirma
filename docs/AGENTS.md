@@ -137,10 +137,11 @@ qué **no** es. El *cómo* funciona lo dice el código, y el porqué un ADR, cit
 por número. Sin tamaños —los da `just outline` en el momento—, sin citas a
 identificadores de spec y sin números de PR o de issue.
 
-En el backend no hay filas: la misma regla vale para la primera línea `//!` de
-cada módulo, entera en una línea y de 300 caracteres como mucho, que
-`just outline <directorio>/` junta en el índice. El mapa de cada contexto se
-queda con lo que el código no confiesa: las trampas y las secciones «Al tocar…».
-Lo vigila `rfirma-app/src-tauri/tests/agents_map_is_complete.rs`, que exige
-además que todo módulo de la interfaz esté en el mapa de su zona y que todo
-módulo del backend que no sea de prueba abra con esa línea.
+En el backend y en la interfaz no hay filas: la misma regla vale para la primera
+línea `//!` de cada módulo —`.rs`, `.ts` o `.tsx`—, entera en una línea y de 300
+caracteres como mucho, que `just outline <directorio>/` junta en el índice. El
+mapa de cada zona y de cada contexto se queda con lo que el código no confiesa:
+las carpetas, los módulos que se leen antes que sus hermanos, las trampas y las
+secciones «Al tocar…». Lo vigila
+`rfirma-app/src-tauri/tests/agents_map_is_complete.rs`, que exige que todo
+módulo de las dos zonas que no sea de prueba abra con esa línea.

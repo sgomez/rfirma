@@ -1,3 +1,5 @@
+//! El puerto del arrastre: lo que llega al soltar ficheros encima y el documento con el que se invocó a la aplicación desde fuera, con su doble. Sin React.
+
 import type { DocumentFailure } from "../viewer/source";
 import type { DocumentInHand } from "./document";
 

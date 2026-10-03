@@ -23,6 +23,11 @@ tsx_output="$("$outline" "scripts/tests/fixtures/sample.tsx")"
 assert_contains "$tsx_output" "    2  export function Greeting" "tsx: export function"
 assert_contains "$tsx_output" "    6  it('renders the greeting'" "tsx: it(...)"
 
+headed="$("$outline" "scripts/tests/fixtures/headed.ts")"
+assert_contains "$headed" "    1  //! Un modulo con cabecera y bloque." "ts: la cabecera sale sola"
+assert_contains "$headed" "    3  // Prosa del bloque que no entra en la cabecera." "ts: el bloque de debajo sigue"
+assert_contains "$headed" "    7  export function headed" "ts: export tras la cabecera"
+
 if "$outline" "$fixtures/sample.txt" >/dev/null 2>&1; then
     echo "FALLO: una extension no soportada deberia salir con 1" >&2
     exit 1
@@ -74,6 +79,12 @@ if [[ "$index" == *"tests.rs"* || "$index" == *"Prosa"* ]]; then
 fi
 if [[ "$index" == *"== "* ]]; then
     echo "FALLO (index: a lone directory has no label)" >&2
+    exit 1
+fi
+assert_contains "$index" "widget.tsx  Un componente con cabecera." "index: reads the header of a tsx"
+assert_contains "$index" "plain.ts  !! SIN CABECERA //!" "index: flags a ts without header"
+if [[ "$index" == *"widget.test.tsx"* ]]; then
+    echo "FALLO (index: skips the tests of the window): $index" >&2
     exit 1
 fi
 first="$(printf '%s\n' "$index" | head -1)"

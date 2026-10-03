@@ -1,3 +1,5 @@
+//! La conversión pura del momento del backend al `Errand` de la ventana, y del fallo de una etapa al desenlace de rechazo que sabe redactar el catálogo. Sin React.
+
 import type { Catalog } from "../i18n/catalog";
 import type { PreviousSignaturesReport } from "../signing/previousSignatures";
 import {

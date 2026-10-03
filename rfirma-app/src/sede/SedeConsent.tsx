@@ -1,3 +1,5 @@
+//! 2 · El consentimiento escrito del trámite: el desplegable de `signing/CertificateSelect.tsx`, el documento o el lote que se pide firmar y sus firmas previas.
+
 import type { TFunction } from "i18next";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";

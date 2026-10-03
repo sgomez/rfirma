@@ -1,3 +1,5 @@
+//! El arrastre sobre la ventana y el documento de la invocación externa, y el aviso que dejan.
+
 import { useEffect, useRef, useState } from "react";
 import type { DocumentInHand } from "./documents/document";
 import type { DocumentDrops, Drop } from "./documents/drops";

@@ -1,3 +1,5 @@
+//! El doble de `pdf.js` y los atajos de consulta del DOM que comparten las pruebas del visor y las de la ventana de sede que lo montan.
+
 import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import { expect, vi } from "vitest";
 import type { PdfDocument, PdfPage, RenderTask, Viewport } from "../pdf";

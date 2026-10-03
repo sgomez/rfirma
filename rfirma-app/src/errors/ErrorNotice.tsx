@@ -1,3 +1,5 @@
+//! El aviso de error: la situación traducida y, aparte, el texto original crudo en un detalle plegado.
+
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AlertIcon, ExternalLinkIcon } from "../design-system/icons";

@@ -1,3 +1,5 @@
+//! Los tipos de lo que empuja el backend (`SiteErrandView`, `SiteStageView`) y de cómo acaban sus órdenes. Sin React.
+
 import type { Certificate } from "../signing/certificate";
 import type { LocalBatchItem, SignatureRound, SigningKind } from "./errand";
 

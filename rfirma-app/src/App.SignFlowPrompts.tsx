@@ -1,4 +1,4 @@
-/** Los tres avisos que la firma interpone antes del PIN, abiertos por `useSignFlow`. */
+//! Los tres avisos que la firma interpone antes del PIN, abiertos por `useSignFlow`, y si alguno está abierto.
 
 import type { useSignFlow } from "./App.useSignFlow";
 import { InvalidPreviousSignaturesDialog } from "./signing/InvalidPreviousSignaturesDialog";

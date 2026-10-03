@@ -70,6 +70,11 @@ lang == "rust" && /^[ \t]*#\[(test|tauri::command|derive|cfg\(test\))/ {
 }
 lang == "rust" { flushdoc(); next }
 
+lang == "ts" && /^\/\/!/ {
+    text = $0; sub(/^\/\/![ \t]?/, "", text)
+    flushdoc(); adddoc(FNR, "//!", text); flushdoc()
+    next
+}
 lang == "ts" && /^[ \t]*\/\*\*/ {
     # Un bloque de UNA linea (`/** ... */`) se cierra aqui mismo: si se
     # entrara en modo bloque nunca se saldria y el codigo de debajo pasaria
@@ -116,6 +121,11 @@ END { flushdoc() }
 # (`tests/agents_map_is_complete.rs`).
 is_a_test_module() {
     case "/$1" in
+        *.test.ts|*.test.tsx) return 0 ;;
+        *.rs) ;;
+        *) return 1 ;;
+    esac
+    case "/$1" in
         */tests.rs|*_tests.rs|*/tests/*) return 0 ;;
     esac
     return 1
@@ -140,9 +150,9 @@ index() {
                 printf "%s  %s\n", name, header
             }
         ' "$dir/$module"
-    done < <(git -C "$dir" ls-files -- '*.rs' | LC_ALL=C sort)
+    done < <(git -C "$dir" ls-files -- '*.rs' '*.ts' '*.tsx' | LC_ALL=C sort)
     if [ "$count" = 0 ]; then
-        echo "outline: $requested no contiene ningun .rs versionado que no sea de prueba" >&2
+        echo "outline: $requested no contiene ningun .rs, .ts ni .tsx versionado que no sea de prueba" >&2
         status=1
         return
     fi

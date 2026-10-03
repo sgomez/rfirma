@@ -1,3 +1,5 @@
+//! Un interruptor con `role="switch"`, maquetado con los tokens del sistema de diseño.
+
 import { useId } from "react";
 import "./Switch.css";
 

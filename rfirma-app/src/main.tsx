@@ -1,3 +1,5 @@
+//! El cableado de la ventana principal (`index.html`): quién implementa cada puerto.
+
 // El bundle del sistema de diseño va **antes** que cualquier componente: los
 // `import` de ES se evalúan en orden, y el CSS de cada pantalla baja a propósito
 // medidas de las clases `rf-*` (`.viewer__step` sobre `.rf-btn`, por ejemplo).
@@ -45,40 +47,16 @@ if (!root) {
   throw new Error("no existe #root en index.html");
 }
 
-// Diez puertos hablan ya con el backend: los dos de firma del #60 que quedan
-// —`tauriCertificateStore` y `tauriSigningBackend`—, los
-// dos del documento del #82, `tauriDocumentPicker` y `tauriPdfSource`, el del
-// arrastre del #83, `tauriDocumentDrops`, que es el único que escucha un evento
-// de la ventana en vez de llamar a una orden, los dos de la configuración,
-// `tauriPreferences` y `tauriLanguagePreference`, que debajo son el mismo
-// fichero, el de la bandeja del #126, `tauriRecents`, que es el que la hace
-// sobrevivir al reinicio (ID-75), el de la rúbrica del #128, `tauriRubricPicker`,
-// el del destino del #130, `tauriDestinations`, que es quien sabe con qué
-// nombre y en qué carpeta va a caer lo firmado (ID-63), y el del resumen del
-// #131, `tauriSignedDocumentOpener`, que bajo el sandbox es lo único que lleva
-// al usuario hasta el fichero que acaba de firmar (ID-79).
-// y el de la versión del #271, `tauriVersionCheck`, que es la única conexión
-// saliente de la aplicación y sólo sirve para poner una franja bajo la cabecera
-// (ID-181).
-// La sustitución ocurre solo en este fichero: ni la ventana ni sus pruebas
-// conocen a Tauri.
+// `SetupWizard` usa los mismos casos de uso que el panel de estado
+// (`tauriStatusPort`); `setupWizardSeen` viaja con el resto de ajustes y se lee
+// antes de pintar para que el asistente no llegue a montarse desde el segundo
+// arranque. `RootView` guarda ese estado para que «Terminar» quite el asistente
+// sin recargar la ventana.
 //
-// `SetupWizard` no es un puerto propio: usa los mismos casos de uso que el
-// panel de estado (`tauriStatusPort`), así que no hay nada que doblar aquí
-// más que montarlo. Lo que sí cruza a Tauri es si ya se ha visto:
-// `setupWizardSeen` viaja en la misma configuración que el resto de ajustes,
-// y se lee aquí, antes de pintar, para que el asistente no llegue a montarse
-// en el segundo arranque en adelante. `RootView` es el único trozo de estado
-// de React de este fichero, y existe solo para que «Terminar» pueda quitar el
-// asistente de encima de `App` sin recargar la ventana.
+// `SedeWindow` no se monta aquí: tiene su propio punto de entrada,
+// `sede/main.tsx`, y la ventana la crea `app::startup` solo cuando hay trámite.
 //
-// `SedeWindow` (#362) **no se monta aquí** desde el #395: tiene su propio punto
-// de entrada, `sede.html` y `sede/main.tsx` (ID-335), y su ventana la crea
-// `app::startup` sólo cuando hay trámite (ID-334). Eso es lo que garantiza que
-// arrancar rFirma a mano no la enseñe nunca, sin que la ventana principal
-// cargue nada suyo ni tenga que doblar su puerto.
-//
-// El idioma sale de la preferencia guardada, nunca del navegador (ID-02).
+// El idioma sale de la preferencia guardada, nunca del navegador.
 const preference = tauriLanguagePreference();
 const i18n = createI18n(await preference.read());
 

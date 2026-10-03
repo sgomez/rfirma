@@ -1,3 +1,5 @@
+//! Los dobles de `SiteCommands` y los momentos de ejemplo que comparten las pruebas de `siteErrands` y de `errandConversion`.
+
 import type { Mock } from "vitest";
 import { vi } from "vitest";
 import type { Certificate } from "../signing/certificate";

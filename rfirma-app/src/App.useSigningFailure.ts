@@ -1,3 +1,5 @@
+//! El error de firma del documento activo, y su salida al cambiar de pestaña.
+
 import { useEffect } from "react";
 import { failureFor, type Signing } from "./signing/useSigning";
 

@@ -1,6 +1,5 @@
+//! El vocabulario de una firma previa —quién firmó, cuándo y su estado— y del informe de firmas previas de un documento. Sin React.
 /**
- * Las firmas que ya trae un documento, con quién firmó, cuándo y su estado.
- *
  * El backend las lee del PDF con el puente Java, las valida y compone el
  * aviso; aquí solo se enseñan, en el orden cronológico en que llegan.
  */

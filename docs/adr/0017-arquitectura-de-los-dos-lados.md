@@ -183,11 +183,14 @@ mientras tanto la guarda se escribe a mano, que además da el mensaje de fallo e
 
 ### Una tabla de módulos escrita a mano en cada mapa
 
-Cada mapa de contexto llevaba una fila por fichero, y la guarda exigía que todo `.rs` tuviera
-la suya. Se descarta: la fila repetía con otras palabras la cabecera `//!` del módulo, las dos
-envejecían por separado, y un agente cargaba la tabla entera —la de `site/` pasaba de ciento
-cincuenta filas— aunque fuera a tocar tres ficheros. El índice generado sale de la cabecera y
-se acota al directorio que interesa.
+Cada mapa llevaba una fila por fichero, y la guarda exigía que todo `.rs`, `.ts` y `.tsx`
+tuviera la suya. Se descarta en los dos lados: la fila repetía con otras palabras la cabecera
+del módulo, las dos envejecían por separado, y un agente cargaba la tabla entera —la de `site/`
+pasaba de ciento cincuenta filas, la de la interfaz de ciento treinta— aunque fuera a tocar tres
+ficheros; la de la interfaz, además, la tocaban decenas de PR al mes y era fuente de conflictos.
+El índice generado sale de la cabecera y se acota al directorio que interesa. En TypeScript la
+cabecera tiene la misma forma, `//!` en la primera línea: es un comentario de línea válido, no
+se confunde con el JSDoc del primer export, y el índice y la guarda leen una sola regla.
 
 ## Lo que este ADR **no** decide
 
@@ -197,8 +200,9 @@ se acota al directorio que interesa.
   de uso son argumentos; las raíces de composición son `struct` que se construyen a mano.
 - **No dice cuántos módulos hay ni cómo se llaman.** Eso lo dice la primera línea `//!` de
   cada módulo, que `just outline <directorio>/` junta en un índice, y una guarda exige que
-  todo `.rs` que no sea de prueba abra con ella. Los mapas (el raíz, `src-tauri/src/AGENTS.md`,
-  y uno por contexto) se quedan con lo que el código no dice: las trampas.
+  todo `.rs`, `.ts` y `.tsx` que no sea de prueba abra con ella. Los mapas (el de la interfaz,
+  `src/AGENTS.md`; el del backend, `src-tauri/src/AGENTS.md`, y uno por contexto) se quedan con
+  lo que el código no dice: las trampas.
 - **No decide nada sobre la frontera FFI ni sobre la memoria** —son el ADR-0003 y el
   ADR-0010—; solo dice desde qué capa se las nombra.
 

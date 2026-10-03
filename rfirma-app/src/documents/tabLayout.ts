@@ -1,3 +1,5 @@
+//! Qué pestañas caben en la tira según el ancho y cuáles quedan en «+N». Sin React.
+
 export const TAB_MIN_WIDTH = 160;
 export const TAB_GAP = 2;
 /** Lo que ocupa «+N ▾» con su aire, reservado solo cuando alguna pestaña no cabe. */
