@@ -10,7 +10,7 @@ use crate::signing::domain::bridge::{
     SignatureOperation,
 };
 use crate::signing::domain::isolate_gone::IsolateGone;
-use crate::signing::domain::{CompletedCycle, PreviousSignaturesReport, SessionSeal};
+use crate::signing::domain::{CompletedCycle, DocumentSignatures, SessionSeal};
 use crate::signing::ports::{Bridge, DocumentBytes, IsolateHost, PreviousSignaturesEngine};
 
 /// Un hilo del puente cuya librería no abre: lo que la grada A tiene en vez del isolate.
@@ -133,12 +133,12 @@ impl DocumentBytes for DocumentsInMemory {
 #[derive(Default)]
 pub(crate) struct AnEngineThatReports {
     documents_seen: std::sync::Mutex<Vec<String>>,
-    outcome: std::sync::Mutex<Option<Result<PreviousSignaturesReport, BridgeError>>>,
+    outcome: std::sync::Mutex<Option<Result<DocumentSignatures, BridgeError>>>,
 }
 
 impl AnEngineThatReports {
     /// Con este informe listo para la próxima llamada.
-    pub(crate) fn answering(self, report: PreviousSignaturesReport) -> Self {
+    pub(crate) fn answering(self, report: DocumentSignatures) -> Self {
         *crate::lock(&self.outcome) = Some(Ok(report));
         self
     }
@@ -153,14 +153,11 @@ impl AnEngineThatReports {
 }
 
 impl PreviousSignaturesEngine for AnEngineThatReports {
-    fn previous_signatures(
-        &self,
-        document_b64: &str,
-    ) -> Result<PreviousSignaturesReport, BridgeError> {
+    fn previous_signatures(&self, document_b64: &str) -> Result<DocumentSignatures, BridgeError> {
         crate::lock(&self.documents_seen).push(document_b64.to_owned());
         crate::lock(&self.outcome)
             .take()
-            .unwrap_or_else(|| Ok(PreviousSignaturesReport::default()))
+            .unwrap_or_else(|| Ok(DocumentSignatures::default()))
     }
 }
 

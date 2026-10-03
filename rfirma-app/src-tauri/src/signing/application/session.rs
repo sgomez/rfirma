@@ -20,8 +20,8 @@ use crate::signing::application::cycle::{
 };
 use crate::signing::domain::isolate_gone::IsolateGone;
 use crate::signing::domain::{
-    compose_visible_content, AdmissibleDocument, CompletedCycle, Format, PlacementError,
-    PreviousSignaturesReport, SessionSeal, SignatureConfig, SigningChoice, VisibleData,
+    compose_visible_content, AdmissibleDocument, CompletedCycle, DocumentSignatures, Format,
+    PlacementError, SessionSeal, SignatureConfig, SigningChoice, VisibleData,
 };
 use crate::signing::domain::{Refusal, SignatureOperation, TokenSignatures, Waivers};
 use crate::signing::ports::ProtectedSecret;
@@ -413,7 +413,7 @@ pub fn previous_signatures_in(
     files: &dyn DocumentBytes,
     engine: &dyn PreviousSignaturesEngine,
     document: &Document,
-) -> Result<PreviousSignaturesReport, CycleFailure> {
+) -> Result<DocumentSignatures, CycleFailure> {
     let bytes = admitted_bytes(files, document, Format::Pades, Waivers::NONE)?;
     let document_b64 = base64::engine::general_purpose::STANDARD.encode(bytes);
     Ok(engine
