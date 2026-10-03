@@ -11,12 +11,16 @@ use crate::desktop::domain::command_line::{
 use crate::desktop::ports::LocalTimeZone;
 use crate::identity::domain::holder::without_semantics_prefix;
 use crate::signing::domain::bridge::{Format, XadesVariant};
-use crate::signing::domain::DocumentSignature;
+use crate::signing::domain::{
+    DocumentFinding, DocumentSignature, DocumentSignatures, SigningDate, Validity, ValidityReason,
+};
 use crate::site::domain::protocol::detection::{is_cms_signed_data, shape_of, DetectedShape};
 
 /// Lo que el original imprime de unos datos que no son de ningún formato de firma que reconozca.
 pub const UNKNOWN_FORMAT: &str = "Firma no valida: los datos proporcionados no se corresponden \
                                   con ningún formato de firma reconocido";
+
+const UNRECOGNIZED_FORMAT_HEADER: &str = "Formato no reconocido";
 
 pub(super) fn verify(arguments: &[String], ports: &CommandLinePorts) -> Outcome {
     if let Some(parameter) = [XML, JSON]
@@ -38,12 +42,15 @@ pub(super) fn verify(arguments: &[String], ports: &CommandLinePorts) -> Outcome 
         }
     };
     let Some(format) = format_to_verify(&document) else {
+        if verbosity(arguments) > 0 {
+            return Outcome::printed(&[UNRECOGNIZED_FORMAT_HEADER.to_owned()]);
+        }
         return Outcome::printed(&[UNKNOWN_FORMAT.to_owned()]);
     };
+    if verbosity(arguments) > 0 {
+        return with_the_signatures(&document, format, verbosity(arguments), ports);
+    }
     match ports.verifier.results_of(&document, format) {
-        Ok(results) if verbosity(arguments) > 0 => {
-            with_the_signatures(results, &document, format, verbosity(arguments), ports)
-        }
         Ok(results) => Outcome::printed(&results),
         Err(error) => Outcome::failed(format!(
             "rfirma: no se han podido validar las firmas de «{input}» ({error})"
@@ -52,7 +59,6 @@ pub(super) fn verify(arguments: &[String], ports: &CommandLinePorts) -> Outcome 
 }
 
 fn with_the_signatures(
-    mut lines: Vec<String>,
     document: &[u8],
     format: Format,
     verbosity: usize,
@@ -61,22 +67,83 @@ fn with_the_signatures(
     let signatures = match ports.reader.signatures_in(document) {
         Ok(signatures) => signatures,
         Err(error) => {
-            let mut outcome = Outcome::printed(&lines);
+            let mut outcome = Outcome::printed(&[]);
             outcome.stderr.push(format!(
                 "rfirma: no se han podido leer las firmas del documento: {error}"
             ));
             return outcome;
         }
     };
-    lines.extend([String::new(), format!("Formato: {}", family_of(format))]);
-    if signatures.count() == 0 {
-        lines.extend([String::new(), "El documento no tiene firmas.".to_owned()]);
-    }
-    for (number, signature) in signatures.signatures().iter().enumerate() {
-        let title = format!("Firma {}", number + 1);
-        lines.extend(tree_of(signature, &title, 0, verbosity, ports.time_zone));
+    let mut lines = vec![header_of(&signatures, format)];
+    lines.extend(
+        signatures
+            .findings()
+            .iter()
+            .map(|finding| format!("{WARNING} {}", finding_text(*finding))),
+    );
+    for signature in signatures.signatures() {
+        lines.extend(tree_of(signature, 0, verbosity, ports.time_zone));
     }
     Outcome::printed(&lines)
+}
+
+const VALID: &str = "✓";
+const WARNING: &str = "⚠";
+const INVALID: &str = "✗";
+
+fn header_of(signatures: &DocumentSignatures, format: Format) -> String {
+    let family = family_of(format);
+    if signatures.count() == 0 {
+        return format!("{family} · sin firmas");
+    }
+    let all: Vec<&DocumentSignature> = signatures.signatures().iter().flat_map(flattened).collect();
+    let counter_count = all.len() - signatures.count();
+    let expired = all
+        .iter()
+        .filter(|signature| signature.validity == Validity::Expired)
+        .count();
+    let invalid = all
+        .iter()
+        .filter(|signature| signature.validity == Validity::Invalid)
+        .count();
+    let findings = signatures.findings().len();
+    let mut parts = vec![family.to_owned(), counted(signatures.count(), "firma")];
+    if counter_count > 0 {
+        parts.push(counted(counter_count, "contrafirma"));
+    }
+    if invalid + findings > 0 {
+        parts.push(counted(expired + invalid + findings, "problema"));
+    } else if expired > 0 {
+        parts.push(format!(
+            "{expired} {}",
+            if expired == 1 {
+                "caducada"
+            } else {
+                "caducadas"
+            }
+        ));
+    }
+    parts.join(" · ")
+}
+
+fn flattened(signature: &DocumentSignature) -> Vec<&DocumentSignature> {
+    std::iter::once(signature)
+        .chain(signature.countersignatures.iter().flat_map(flattened))
+        .collect()
+}
+
+fn counted(count: usize, noun: &str) -> String {
+    format!("{count} {noun}{}", if count == 1 { "" } else { "s" })
+}
+
+fn finding_text(finding: DocumentFinding) -> &'static str {
+    match finding {
+        DocumentFinding::ModifiedAfterLastSignature => {
+            "El documento se modificó después de la última firma"
+        }
+        DocumentFinding::FormFilledAfterSigning => "Se rellenó un formulario después de firmar",
+        DocumentFinding::ContentAddedOnTop => "Se añadió contenido encima de la firma",
+    }
 }
 
 fn family_of(format: Format) -> &'static str {
@@ -86,33 +153,53 @@ fn family_of(format: Format) -> &'static str {
     }
 }
 
-/// La ficha de una firma y, indentadas dentro, las de sus contrafirmas numeradas «N.M».
+/// La línea de una firma y, debajo, su ficha en `-vv`; sus contrafirmas, sangradas.
 fn tree_of(
     signature: &DocumentSignature,
-    title: &str,
     depth: usize,
     verbosity: usize,
     time_zone: &dyn LocalTimeZone,
 ) -> Vec<String> {
     let indent = " ".repeat(4 * depth);
-    let mut lines = vec![String::new(), format!("{indent}{title}")];
-    lines.extend(
-        sheet_of(signature, verbosity, time_zone)
-            .into_iter()
-            .map(|line| format!("{indent}{line}")),
-    );
-    let number = title.rsplit(' ').next().unwrap_or_default();
-    for (index, countersignature) in signature.countersignatures.iter().enumerate() {
-        let title = format!("Contrafirma {number}.{}", index + 1);
-        lines.extend(tree_of(
-            countersignature,
-            &title,
-            depth + 1,
-            verbosity,
-            time_zone,
-        ));
+    let mut lines = vec![format!("{indent}{}", line_of(signature, time_zone))];
+    if verbosity > 1 {
+        lines.extend(
+            sheet_of(signature, verbosity, time_zone)
+                .into_iter()
+                .map(|line| format!("{indent}{line}")),
+        );
+    }
+    for countersignature in &signature.countersignatures {
+        lines.extend(tree_of(countersignature, depth + 1, verbosity, time_zone));
     }
     lines
+}
+
+fn line_of(signature: &DocumentSignature, time_zone: &dyn LocalTimeZone) -> String {
+    let icon = match signature.validity {
+        Validity::Valid => VALID,
+        Validity::Expired => WARNING,
+        Validity::Invalid => INVALID,
+    };
+    let (signer, on_behalf_of) = parties_of(signature);
+    let mut line = format!(
+        "{icon} {}",
+        signer.map(|(name, _)| name).unwrap_or_default()
+    );
+    if let Some((entity, _)) = on_behalf_of {
+        line.push_str(&format!(" · por {entity}"));
+    }
+    if let Some(day) = signing_instant_of(signature).map(|at| in_local_day(&at, time_zone)) {
+        line.push_str(&format!(" · {day}"));
+    }
+    line
+}
+
+fn signing_instant_of(signature: &DocumentSignature) -> Option<String> {
+    match &signature.signing_date {
+        Some(SigningDate::Declared { at } | SigningDate::Stamped { at, .. }) => Some(at.clone()),
+        None => signature.signing_time.clone(),
+    }
 }
 
 fn sheet_of(
@@ -120,19 +207,34 @@ fn sheet_of(
     verbosity: usize,
     time_zone: &dyn LocalTimeZone,
 ) -> Vec<String> {
-    let (signer, on_behalf_of) = signer_and_entity_of(signature);
+    let (signer, on_behalf_of) = parties_of(signature);
     let issuer = Some(signature.issuer.clone()).filter(|issuer| !issuer.is_empty());
-    let declared = signature
-        .signing_time
-        .as_deref()
-        .map(|instant| in_local_time(instant, time_zone));
+    let (date_label, date) = match &signature.signing_date {
+        Some(SigningDate::Stamped { at, tsa }) => (
+            "Sellada",
+            Some(format!("{} ({tsa})", in_local_time(at, time_zone))),
+        ),
+        Some(SigningDate::Declared { at }) => ("Fecha", Some(in_local_time(at, time_zone))),
+        None => (
+            "Fecha",
+            signature
+                .signing_time
+                .as_deref()
+                .map(|instant| in_local_time(instant, time_zone)),
+        ),
+    };
+    let reason = signature
+        .validity_reason
+        .as_ref()
+        .map(|reason| reason_text(reason, time_zone));
     let serial = Some(signature.certificate_serial_number.clone())
-        .filter(|serial| verbosity > 1 && !serial.is_empty());
+        .filter(|serial| verbosity > 2 && !serial.is_empty());
     [
-        ("Firmante", signer),
-        ("En nombre de", on_behalf_of),
+        ("Firmante", signer.map(rendered)),
+        ("En nombre de", on_behalf_of.map(rendered)),
         ("Emisor", issuer),
-        ("Fecha declarada", declared),
+        (date_label, date),
+        ("Motivo", reason),
         ("Número de serie", serial),
     ]
     .into_iter()
@@ -140,37 +242,66 @@ fn sheet_of(
     .collect()
 }
 
-fn signer_and_entity_of(signature: &DocumentSignature) -> (Option<String>, Option<String>) {
+fn reason_text(reason: &ValidityReason, time_zone: &dyn LocalTimeZone) -> String {
+    match reason {
+        ValidityReason::CertificateExpired { date, holder } => {
+            let day = in_local_day(date, time_zone);
+            match holder {
+                Some(holder) => format!("Certificado caducado el {day} (el de {holder})"),
+                None => format!("Certificado caducado el {day}"),
+            }
+        }
+        ValidityReason::ModifiedAfterSigning => "Modificada después de firmarse".to_owned(),
+        ValidityReason::Damaged => "Firma dañada".to_owned(),
+        ValidityReason::CertificateNotYetValid { date } => format!(
+            "Certificado aún no en vigor hasta el {}",
+            in_local_day(date, time_zone)
+        ),
+        ValidityReason::UnknownSignatureType => "Tipo de firma desconocido".to_owned(),
+        ValidityReason::CosignNotAdmitted { closed_by } => match closed_by {
+            Some(closed_by) => format!("Cofirma no admitida: el documento lo cerró {closed_by}"),
+            None => "Cofirma no admitida".to_owned(),
+        },
+    }
+}
+
+type Party = (String, String);
+
+fn rendered((name, id): Party) -> String {
+    named_with_id(&name, &id).unwrap_or_default()
+}
+
+fn parties_of(signature: &DocumentSignature) -> (Option<Party>, Option<Party>) {
     let Some(identifier) = signature
         .organization_identifier
         .as_deref()
         .map(without_semantics_prefix)
     else {
-        return (signer_of(signature), None);
+        return (Some(signer_of(signature)), None);
     };
     let entity = || {
-        named_with_id(
-            signature.organization_name.as_deref().unwrap_or_default(),
-            identifier,
+        (
+            signature.organization_name.clone().unwrap_or_default(),
+            identifier.to_owned(),
         )
     };
     let id_number = without_semantics_prefix(&signature.id_number);
     if id_number.is_empty() || id_number == identifier {
-        (entity(), None)
+        (Some(entity()), None)
     } else {
-        (representative_of(signature), entity())
+        (Some(representative_of(signature)), Some(entity()))
     }
 }
 
-fn representative_of(signature: &DocumentSignature) -> Option<String> {
+fn representative_of(signature: &DocumentSignature) -> Party {
     let id_number = without_semantics_prefix(&signature.id_number);
     let name = signature.name.as_str();
     let name = name.strip_prefix(id_number).map_or(name, str::trim_start);
     let name = name.rfind(" (R: ").map_or(name, |end| &name[..end]);
-    named_with_id(name, id_number)
+    (name.to_owned(), id_number.to_owned())
 }
 
-fn signer_of(signature: &DocumentSignature) -> Option<String> {
+fn signer_of(signature: &DocumentSignature) -> Party {
     let id_number = without_semantics_prefix(&signature.id_number);
     let name = signature
         .name
@@ -178,7 +309,7 @@ fn signer_of(signature: &DocumentSignature) -> Option<String> {
         .and_then(|name| name.strip_suffix(" - "))
         .filter(|_| !id_number.is_empty())
         .unwrap_or(&signature.name);
-    named_with_id(name, id_number)
+    (name.to_owned(), id_number.to_owned())
 }
 
 fn named_with_id(name: &str, id: &str) -> Option<String> {
@@ -188,6 +319,14 @@ fn named_with_id(name: &str, id: &str) -> Option<String> {
         ("", id) => Some(id.to_owned()),
         (name, id) => Some(format!("{name} ({id})")),
     }
+}
+
+fn in_local_day(instant: &str, time_zone: &dyn LocalTimeZone) -> String {
+    in_local_time(instant, time_zone)
+        .split(' ')
+        .next()
+        .unwrap_or_default()
+        .to_owned()
 }
 
 fn in_local_time(instant: &str, time_zone: &dyn LocalTimeZone) -> String {
