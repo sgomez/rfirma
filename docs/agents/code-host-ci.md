@@ -180,7 +180,7 @@ gap between a cold run and that warm number.
 
 **Only `main` writes Rust caches** (`save-if`, only inside `setup-runner`, which
 `check-workflows.sh` guards): a PR restores `main`'s and saves none, and `Limpieza de caches` deletes what a
-closed PR left, and the daily `Caches de Rust superadas` run (`stale-rust-caches.yml`) deletes every Rust cache of `main` but the newest of its profile, so the 10 GB quota does not evict `main`'s Windows cache.
+closed PR left, and the `Caches de Rust superadas` run (`stale-rust-caches.yml`) — after the CI of every push to `main` that changes `Cargo.lock` or `versions.env`, and once a day — deletes every Rust cache of `main` but the newest of its profile, so the 10 GB quota does not evict `main`'s Windows cache.
 
 The `native` lane runs `just test-native` (tier C and the FFI CRAP gate in one instrumented pass)
 on **every push to `main` and every PR its files can affect**. The native library `librfirma_crypto.so` is
