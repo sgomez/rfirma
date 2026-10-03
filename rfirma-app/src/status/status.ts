@@ -96,8 +96,8 @@ export interface StatusPort {
   /** Instala el certificado de rFirma donde falte y vuelve a medir su señal. */
   installLocalCaCertificate(): Promise<SignalRow>;
   /**
-   * Elige quién abre las sedes; si es rFirma, instala también su certificado
-   * (ID-366). Devuelve las dos filas que la elección vuelve a medir.
+   * Elige quién abre las sedes; si es rFirma, instala también su certificado. Devuelve las dos
+   * filas que la elección vuelve a medir.
    */
   chooseSiteSignatureHandler(handlerId: string): Promise<SignalRow[]>;
   /**

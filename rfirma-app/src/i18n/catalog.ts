@@ -10,7 +10,7 @@ import type es from "./locales/es";
  * ni una de menos ni una de más— y eso lo comprueba `tsc`, no una prueba.
  *
  * `locales/es.ts` **no está en el repositorio**: lo genera
- * `tools/po-import.mjs` desde `po/es.po` antes de cada `tsc` (ID-121). Si tu
+ * `tools/po-import.mjs` desde `po/es.po` antes de cada `tsc`. Si tu
  * editor dice que no existe, ejecuta `just po`.
  */
 export type Catalog = typeof es;

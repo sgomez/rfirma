@@ -3,7 +3,7 @@
 import type Resources from "./resources";
 
 /**
- * Las claves del catálogo, para `tsc` y para el editor (ID-127).
+ * Las claves del catálogo, para `tsc` y para el editor.
  *
  * `resources.d.ts` lo genera `i18next-cli types` desde la instantánea del
  * castellano; **este fichero no**. `i18next-cli` lo escribe una sola vez y

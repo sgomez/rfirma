@@ -36,7 +36,7 @@ interface SigningDocument {
  * En qué punto está la elección del certificado. Son los estados de la ficha;
  * «Listo» es `chosen` con un certificado en vigor.
  *
- * `failed` es el aterrizaje del rechazo (ID-10): sin él la búsqueda que falla
+ * `failed` es el aterrizaje del rechazo: sin él la búsqueda que falla
  * no tenía dónde caer y la ficha se quedaba en `loading` para siempre. No es lo
  * mismo que `empty` —«no hay ninguno» y «no he podido buscarlos» son cosas
  * distintas— y por eso son dos estados y no un booleano dentro de uno.
@@ -72,27 +72,27 @@ interface SigningPanelProps {
   /**
    * Dónde va la firma visible y en qué páginas, o `null` si aún no se ha
    * colocado. `null` es el PDF recién abierto y también haber quitado la última
-   * página del conjunto: **colocado es tener páginas** (ID-92).
+   * página del conjunto: **colocado es tener páginas**.
    */
   placement: Placement | null;
   /**
    * El conjunto que guarda **cada opción**, que es lo que el bloque pinta
    * incluso cuando no manda: el pie de `Solo 1 página` dice su página aunque
-   * esté activa `Todas`, y el campo trae el rango que se tecleó allí (#188).
+   * esté activa `Todas`, y el campo trae el rango que se tecleó allí.
    */
   pageSets: PageSets;
   /**
    * El conjunto de la **opción activa** ha cambiado desde el bloque
    * «Colocación». El panel no compone `Placement`: no sabe dónde cae el
-   * recuadro y no tiene por qué saberlo (#185).
+   * recuadro y no tiene por qué saberlo.
    */
   onChoosePages: (pages: PageSet | null) => void;
-  /** Cuál de las tres opciones manda sobre el conjunto (ID-97). */
+  /** Cuál de las tres opciones manda sobre el conjunto. */
   pageChoice: PageChoice;
   onChangePageChoice: (choice: PageChoice) => void;
   /**
    * La página que se está mirando en el visor. Decide la cara del botón de
-   * sellar: si la lleva, ofrece quitarla (#194).
+   * sellar: si la lleva, ofrece quitarla.
    */
   viewedPage: number;
   /**
@@ -100,8 +100,7 @@ interface SigningPanelProps {
    *
    * El botón vive aquí, pero la acción la ejecuta el visor: es quien sabe
    * dónde cae el recuadro cuando no había ninguno todavía —su posición
-   * estándar se mide sobre el `viewport` de `pdf.js`, que el panel no tiene
-   * (#194)—.
+   * estándar se mide sobre el `viewport` de `pdf.js`, que el panel no tiene—.
    */
   onSeal: () => void;
   onUnseal: () => void;
@@ -132,11 +131,11 @@ interface SigningPanelProps {
  * Dos cosas que parecen detalles y son la ficha entera:
  *
  * - **No hay comodines.** El contenido del recuadro se marca con casillas y el
- *   texto lo compone Rust ya resuelto (ID-19); el propio recuadro, en directo
+ *   texto lo compone Rust ya resuelto; el propio recuadro, en directo
  *   sobre la hoja, es lo que lo enseña.
  * - **La miniatura de la rúbrica es honesta.** Enseña el fichero ya
  *   normalizado, que es un JPEG y por tanto opaco: un PNG con transparencia se
- *   ve aquí con su fondo blanco, antes de firmar y no dentro del PDF (ID-24).
+ *   ve aquí con su fondo blanco, antes de firmar y no dentro del PDF.
  */
 export function SigningPanel({
   document,

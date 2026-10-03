@@ -11,8 +11,8 @@ import type { NewVersion, VersionCheck } from "./updates/newVersion";
 
 /**
  * Lo que se comprueba **una vez, al arrancar**: si hay versión nueva
- * publicada (ID-181) y las filas del panel de estado, para el triángulo del
- * menú (ID-347/ID-353).
+ * publicada y las filas del panel de estado, para el triángulo del
+ * menú.
  */
 export function useStartupNotices(status: StatusPort, versions: VersionCheck) {
   // El aviso de versión: lo que contestó el puerto y si ya se descartó. Se
@@ -21,7 +21,7 @@ export function useStartupNotices(status: StatusPort, versions: VersionCheck) {
   // manda nadie.
   const [newVersion, setNewVersion] = useState<NewVersion | null>(null);
   const [versionDismissed, setVersionDismissed] = useState(false);
-  // Las filas del panel de estado, para el triángulo del menú (ID-353): se
+  // Las filas del panel de estado, para el triángulo del menú: se
   // miden aquí al arrancar, y `StatusView` reenvía cada remedición suya
   // propia —al abrirse, tras una acción, con «Volver a comprobar»— sin que
   // esta ventana dispare ninguna por su cuenta.
@@ -36,7 +36,7 @@ export function useStartupNotices(status: StatusPort, versions: VersionCheck) {
 
   // Si hay versión nueva se pregunta **una vez, al arrancar**, y lo que se
   // haga con la respuesta es enseñar una franja: nada de esto interrumpe el
-  // recorrido (ID-181). Un `null` —o directamente que no haya red— deja la
+  // recorrido. Un `null` —o directamente que no haya red— deja la
   // ventana exactamente como estaba, sin aviso, sin error y sin reintento.
   useEffect(() => {
     let current = true;
@@ -55,7 +55,7 @@ export function useStartupNotices(status: StatusPort, versions: VersionCheck) {
   }, [versions]);
 
   // El triángulo del menú se mide **una vez, al arrancar**, para no obligar a
-  // abrir el panel antes de saber si hay algo que arreglar (ID-347).
+  // abrir el panel antes de saber si hay algo que arreglar.
   useEffect(() => {
     let current = true;
     const port = statusAtStartup.current;

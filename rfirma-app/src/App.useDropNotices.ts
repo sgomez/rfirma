@@ -85,8 +85,8 @@ export function useDropNotices(
     arrivedRef.current = arrived;
     const stop = drops.subscribe(arrived);
     // Y por aquí mismo entra el documento con el que se invocó a la aplicación
-    // desde fuera (ID-157): desemboca en la ventana completa, en el mismo
-    // estado en que la deja arrastrar un PDF (ID-159), así que no tiene camino
+    // desde fuera: desemboca en la ventana completa, en el mismo
+    // estado en que la deja arrastrar un PDF, así que no tiene camino
     // propio. Se pregunta **después** de suscribirse, no antes: una segunda
     // invocación que llegara en medio se perdería.
     if (!invocationAsked.current) {

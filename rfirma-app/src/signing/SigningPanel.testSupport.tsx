@@ -112,7 +112,7 @@ function panelWith(props: PanelProps) {
   );
 }
 
-/** `show` vuelve a pintar con otras props: es el camino de vuelta del ID-99. */
+/** `show` vuelve a pintar con otras props. */
 export function renderPanel(
   props: PanelProps = {},
 ): RenderResult & { show: (next: PanelProps) => void } {
@@ -122,7 +122,7 @@ export function renderPanel(
 
 /**
  * El panel con **las tres opciones de verdad** detrás, que es como vive en
- * `App.tsx` desde el #188.
+ * `App.tsx`.
  *
  * Teclear en el campo son varias pulsaciones seguidas y cada una emite el
  * conjunto: con un espía que no lo aplica, la segunda pulsación escribiría

@@ -61,7 +61,7 @@ export function useViewerPage({ pdf, placement, stamped }: UseViewerPageArgs) {
   const [zoom, setZoom] = useState(1);
   // Cómo se mira, que no es lo mismo que cuánto se amplía: sobrevive al cambio
   // de página, al redimensionado y al documento siguiente, sea un modo de
-  // ajuste o un porcentaje fijado a mano (ID-117 enmendado).
+  // ajuste o un porcentaje fijado a mano.
   const [mode, setMode] = useState<ZoomMode>(DEFAULT_ZOOM);
   const [viewport, setViewport] = useState<Viewport | null>(null);
   // La página **sin escalar**, en puntos: el divisor de todo ajuste. Sale de la
@@ -101,7 +101,7 @@ export function useViewerPage({ pdf, placement, stamped }: UseViewerPageArgs) {
     // El modo cruza al documento siguiente entero, sea de ajuste o un
     // porcentaje fijado a mano: manda lo último que haya dicho la persona
     // usuaria, y el ajuste de partida —`DEFAULT_ZOOM`— solo se ve en el primer
-    // documento, mientras no lo haya tocado (ID-117 enmendado).
+    // documento, mientras no lo haya tocado.
   }
 
   // La pintada. Es el único sitio que toca el lienzo, y su limpieza cancela lo
@@ -120,13 +120,13 @@ export function useViewerPage({ pdf, placement, stamped }: UseViewerPageArgs) {
       // estado y el que usan las conversiones a espacio de usuario PDF
       // (`toPixels`/`toUserSpace`, y detrás de ellas `signing::placement`), así
       // que la nitidez de abajo no puede tocarlo o el `/Rect` que acaba en el
-      // PDF cambiaría con la pantalla en la que se firmó (ID-84).
+      // PDF cambiaría con la pantalla en la que se firmó.
       const next = loaded.getViewport({ scale: zoom });
       // El mapa de bits se pinta a `devicePixelRatio`, para que el documento se
       // vea nítido en pantallas HiDPI; el tamaño en CSS —lo que ocupa en la
       // ventana— se fija aparte y no cambia, porque si no el navegador lo
       // reescalaría igual que a 1x y la nitidez no se notaría. Y se acota a 4×,
-      // o el 400 % en una pantalla HiDPI serían 128 MB de lienzo (ID-119).
+      // o el 400 % en una pantalla HiDPI serían 128 MB de lienzo.
       const scale = bitmapScale(zoom, window.devicePixelRatio);
       const bitmap = scale === zoom ? next : loaded.getViewport({ scale });
       target.width = bitmap.width;
@@ -157,7 +157,7 @@ export function useViewerPage({ pdf, placement, stamped }: UseViewerPageArgs) {
   }, [painted, page, zoom]);
 
   // La parte visible se mide sola y avisa de cada cambio, que es lo que hace de
-  // «ajustar» un modo y no un cálculo de una vez (ID-117).
+  // «ajustar» un modo y no un cálculo de una vez.
   useEffect(() => {
     if (!surface) return;
     const measure = () => setVisible(fitArea(surface));
@@ -192,7 +192,7 @@ export function useViewerPage({ pdf, placement, stamped }: UseViewerPageArgs) {
     setPage(within(wanted, pageCount));
   };
 
-  /** Un zoom fijado a mano, que es lo que saca del modo de ajuste (ID-117). */
+  /** Un zoom fijado a mano, que es lo que saca del modo de ajuste. */
   const toZoom = useCallback((value: number) => {
     setMode({ kind: "free", value });
     setZoom(value);
@@ -200,7 +200,7 @@ export function useViewerPage({ pdf, placement, stamped }: UseViewerPageArgs) {
 
   /**
    * La hoja atiende las teclas de página, y también las del recuadro cuando
-   * burbujean desde él (ID-113). `Ctrl+0` vuelve al 100 % (ID-116).
+   * burbujean desde él. `Ctrl+0` vuelve al 100 %.
    */
   const navigate = (event: KeyboardEvent<HTMLElement>) => {
     if (event.ctrlKey && event.key === "0") {
@@ -219,7 +219,7 @@ export function useViewerPage({ pdf, placement, stamped }: UseViewerPageArgs) {
   /**
    * `Ctrl`+rueda amplía **anclado al puntero**, y el pellizco del trackpad
    * llega por aquí sin una línea aparte: el navegador lo entrega como una rueda
-   * con `ctrlKey` (ID-116).
+   * con `ctrlKey`.
    */
   const zoomAtPointer = useCallback(
     (event: globalThis.WheelEvent) => {

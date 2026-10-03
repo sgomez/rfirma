@@ -31,7 +31,7 @@ interface MainWindowProps {
   /**
    * El contenido del panel, que es quien sabe de certificados y de firma, o
    * `null` cuando no hay documento abierto: entonces el panel **no se monta**
-   * y la ventana se ve en una columna (ID-51).
+   * y la ventana se ve en una columna.
    */
   panel: ReactNode;
 }
@@ -41,16 +41,16 @@ interface MainWindowProps {
  * debajo el visor y —en cuanto hay documento— el panel de firma.
  *
  * **Sin documento la ventana es de una columna.** El panel no se oculta con
- * `display: none`: no se monta (ID-51), que es lo que ya hacía la composición
+ * `display: none`: no se monta, que es lo que ya hacía la composición
  * al pasar `null` y lo que dice el estado 1 de la tabla de la ficha.
  *
  * **No hay navegación.** El recorrido entero, de abrir el documento a
- * guardarlo firmado, ocurre aquí sin cambiar de pantalla (ID-25), así que no
+ * guardarlo firmado, ocurre aquí sin cambiar de pantalla, así que no
  * hay router y no debe aparecer uno: las diez situaciones de la ficha son
  * combinaciones del contenido de las regiones, no pantallas distintas.
  *
  * **Entre la cabecera y las regiones hay sitio para una franja** de
- * notificación (ID-207). No está casi nunca: cuando no hay nada que notificar
+ * notificación. No está casi nunca: cuando no hay nada que notificar
  * no se monta, y la ventana es exactamente la de antes. Lo que se cuenta ahí
  * no lo sabe la ventana, que solo le presta el hueco.
  *

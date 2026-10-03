@@ -20,7 +20,7 @@ const SECTIONS = ["general", "signing", "certificates", "appearance"] as const;
 
 export type Section = (typeof SECTIONS)[number];
 
-/** Un ajuste que el disco no aceptó, y en qué sección se pulsó (ID-70). */
+/** Un ajuste que el disco no aceptó, y en qué sección se pulsó. */
 export interface SaveFailure {
   section: Section;
   /** El texto original del rechazo, para el detalle técnico del aviso. */
@@ -31,20 +31,20 @@ interface PreferencesViewProps {
   preferences: Preferences;
   /**
    * Abre el **selector de directorio** del sistema y guarda lo que conceda.
-   * Rechaza si el ajuste no se pudo guardar, como cualquier otro (ID-70).
+   * Rechaza si el ajuste no se pudo guardar, como cualquier otro.
    */
   onChooseDestination: () => Promise<void>;
   /**
    * Guarda el ajuste. **Rechaza** si el disco no lo acepta, y quien lo llama
    * ya ha repuesto el valor anterior: el rechazo no es para deshacer nada,
-   * sino para tener qué enseñar y dónde (ID-70).
+   * sino para tener qué enseñar y dónde.
    */
   onChange: (preferences: Preferences) => Promise<void>;
   /** Olvida los recientes y el certificado. Rechaza si el borrado falla. */
   onForgetActivity: () => Promise<void>;
   /**
    * Los `.p12` que se han instalado en rFirma, y **sólo esos**: son los únicos
-   * que esta pantalla puede quitar (ID-198). Un caducado sigue en la lista.
+   * que esta pantalla puede quitar. Un caducado sigue en la lista.
    */
   installedCertificates: readonly Certificate[];
   /**
@@ -63,7 +63,7 @@ interface PreferencesViewProps {
  * Los ajustes de la aplicación: una **vista del cuerpo**, como
  * [`StatusView`](../status/StatusView.tsx), que sustituye la bandeja, el
  * visor y el panel bajo la cabecera, que se queda intacta detrás con su
- * estado de documento (ID-352).
+ * estado de documento.
  *
  * No es un diálogo ni una ruta de un router: con guardado automático y
  * `Cerrar` como única salida no hay ningún estado al que navegar ni nada que
@@ -75,15 +75,14 @@ interface PreferencesViewProps {
  *
  * **Los cambios se aplican al hacerlos**: no hay «Guardar» ni «Cancelar», solo
  * «Cerrar», y va en un **pie fijo** porque en una pantalla que se desplaza un
- * botón de cierre que se va con el desplazamiento es un botón que no está
- * (ID-69).
+ * botón de cierre que se va con el desplazamiento es un botón que no está.
  *
  * El único paso intermedio es apagar «Recordar mi actividad», que pide
  * confirmación en un `.rf-dialog` pequeño **encima** de la pantalla porque
- * **borra** lo ya recordado (ID-34, ID-71): el interruptor no se mueve hasta
+ * **borra** lo ya recordado: el interruptor no se mueve hasta
  * que se confirma.
  *
- * **Los dos fallos se pintan en su sección** (ID-70): el de guardar el ajuste,
+ * **Los dos fallos se pintan en su sección**: el de guardar el ajuste,
  * donde se pulsó; el de vaciar la lista, siempre en *Privacidad* y pegado a su
  * botón. No hay un aviso común arriba: con tres secciones obligaría a leer el
  * texto para saber qué se rompió.
@@ -109,7 +108,7 @@ interface PreferencesViewProps {
  * dentro, que es un control que finge elegir. Es una fila con el **nombre** de
  * la carpeta —no su ruta— y un botón que abre el selector de directorio del
  * sistema, que devuelve exactamente ese último segmento en los cuatro canales
- * (ID-65, ADR-0011).
+ * (ADR-0011).
  *
  * Cada sección del índice es un componente propio de
  * [`PreferencesSections`](./PreferencesSections.tsx); esta vista solo guarda

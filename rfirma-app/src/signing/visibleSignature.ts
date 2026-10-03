@@ -1,6 +1,6 @@
 //! Qué se estampa en el recuadro de la firma visible: el modelo, la frase de *Personalizada*, la regla de «Con rúbrica» y la última configuración recordada.
 /**
- * **Modelo, no comodines** (ID-19). El usuario no escribe `$$SUBJECTCN$$` ni
+ * **Modelo, no comodines**. El usuario no escribe `$$SUBJECTCN$$` ni
  * `$$SIGNDATE$$`: elige uno de los tres modelos, y el texto lo compone Rust en
  * `signing::layer2_text` con las etiquetas y la máscara del DNI de AutoFirma.
  * Aquí no hay ni una cadena del recuadro: si te encuentras escribiendo
@@ -31,7 +31,7 @@ export interface VisibleSignature {
 
 /**
  * Lo que sale marcado la primera vez: recuadro no —firmar sin él está
- * permitido, y encenderlo es un gesto aparte (#974)—, y dentro, para cuando se
+ * permitido, y encenderlo es un gesto aparte—, y dentro, para cuando se
  * encienda, el modelo *Completa*, sin rúbrica porque todavía no hay imagen.
  */
 export const DEFAULT_VISIBLE_SIGNATURE: VisibleSignature = {

@@ -7,14 +7,14 @@ export type Badge = "Signed" | "Unsigned";
 
 /**
  * **El documento que la aplicación tiene delante**, que no es la fila que se
- * guarda en la bandeja (ID-287).
+ * guarda en la bandeja.
  *
  * Es el hermano en la ventana de `app::in_hand::DocumentInHand`: lo que hace
  * falta para pintar y firmar el documento en curso, más la única cosa que hay
  * que saber para no dejar rastro de él cuando no se debe. Hasta aquí los dos
  * conceptos eran el mismo tipo, y el único camino para tener un documento
  * delante era escribir su fila; eso deja de valer en cuanto quien manda el
- * documento es una sede, porque **de ese no se guarda nada** (ID-286).
+ * documento es una sede, porque **de ese no se guarda nada**.
  *
  * Lo que no está aquí es lo que solo tiene sentido **en la lista**: cuándo se
  * usó por última vez y si la ruta responde ahora mismo. Un documento en curso
@@ -22,8 +22,8 @@ export type Badge = "Signed" | "Unsigned";
  */
 export interface DocumentInHand {
   /**
-   * El identificador **opaco** que acuñó el backend al abrir el documento
-   * (ID-62). Es lo que la ventana manda de vuelta en cada orden; no es una
+   * El identificador **opaco** que acuñó el backend al abrir el documento. Es lo que la ventana
+   * manda de vuelta en cada orden; no es una
    * ruta y de él no se puede reconstruir ninguna (ADR-0011).
    */
   id: string;
@@ -35,7 +35,7 @@ export interface DocumentInHand {
   modified: number | null;
   /**
    * Dónde va el recuadro **en este documento**, o `null` si nadie lo ha
-   * colocado (ID-74).
+   * colocado.
    *
    * De un documento que se recuerda llega repuesto desde su fila; de uno que
    * no, es siempre lo que la ventana tenga puesto ahora mismo, y al cerrarlo
@@ -45,7 +45,7 @@ export interface DocumentInHand {
   /**
    * **Si de este documento queda rastro.**
    *
-   * Es el interruptor del ID-286, y viaja con el documento y no con la fila
+   * Viaja con el documento y no con la fila
    * porque se decide por dónde entró: lo que abre el diálogo o el arrastre se
    * recuerda; lo que mandará una sede, no. Con él en `false` no hay fila en
    * Recientes, no se guarda la colocación del recuadro y firmarlo tampoco

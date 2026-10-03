@@ -12,12 +12,12 @@
  *
  * # Los fallos llegan clasificados, no traducidos
  *
- * Las órdenes rechazan con la forma del ID-29 —una situación nuestra y el texto
+ * Las órdenes rechazan con la forma de `NamedFailure` —una situación nuestra y el texto
  * original crudo al lado—, así que aquí no hay ni una tabla de `CKR_*` ni un
  * `catch` que invente un mensaje: lo que no venga con esa forma —una excepción
  * del propio puente de Tauri, una orden que no existe— cae en `unknown` con su
  * texto tal cual, que es exactamente lo que el ADR-0009 pide. Quien lo decide
- * es `errors/classify.ts`, que no es de Tauri sino del ID-29.
+ * es `errors/classify.ts`, que no es de Tauri sino de esa forma.
  */
 
 export {

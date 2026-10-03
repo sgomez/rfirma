@@ -30,7 +30,7 @@ interface SedeOutcomeProps {
 
 /**
  * **4 · Desenlace.** En todos ellos **la sede ya ha recibido su respuesta**: los
- * dos canales van desacompasados a propósito (#316). Salvo el rechazo de la
+ * dos canales van desacompasados a propósito. Salvo el rechazo de la
  * petición misma, que sale al cerrar, como el diálogo de error del original.
  *
  * El **rechazo** cubre los del transporte, que ocurren antes de que haya nada
@@ -41,7 +41,7 @@ interface SedeOutcomeProps {
  *
  * **Se cierra sola a los quince segundos**, no a los cinco: con cinco no daba
  * tiempo a leer, y el caso que lo decide es el rechazo, donde irse sola
- * reproduciría el síntoma que el aviso venía a evitar (ID-274).
+ * reproduciría el síntoma que el aviso venía a evitar.
  */
 export function SedeOutcome({
   origin,

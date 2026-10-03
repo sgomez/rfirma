@@ -76,7 +76,7 @@ export interface ObservedSize {
  *
  * Vive junto a la cola porque lo que dispara es **otra pintada**: quien eligió
  * «ajustar al ancho» ha dicho *cómo* quiere mirar, no *cuánto* quiere ampliar,
- * así que estirar la ventana recalcula la escala y repinta (ID-117). El
+ * así que estirar la ventana recalcula la escala y repinta. El
  * redimensionado llega a ráfagas, y cada aviso entra por la misma cola que
  * cancela la anterior: sin eso, arrastrar el borde de la ventana deja media
  * docena de `RenderTask` escribiendo sobre el mismo lienzo.

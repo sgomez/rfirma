@@ -30,7 +30,7 @@ interface ConfigurationView {
   notifyNewVersion: boolean;
   theme: Theme;
   /**
-   * **La única pregunta al entorno** (ID-184): si Preferencias puede ofrecer
+   * **La única pregunta al entorno**: si Preferencias puede ofrecer
    * «Junto al documento original». La contesta el backend; escribirla no
    * sirve de nada, así que no cruza al revés.
    */
@@ -65,8 +65,8 @@ function writeConfiguration(configuration: ConfigurationView): Promise<void> {
  * El destino que se manda es el que se leyó: la ventana lo enseña y no lo
  * elige —bajo el sandbox hay una sola carpeta—, y el backend lo ignora.
  *
- * `offersOriginalFolder` tampoco cruza al escribir: la contesta el backend
- * (ID-184), así que `save` proyecta explícitamente las claves que sí son del
+ * `offersOriginalFolder` tampoco cruza al escribir: la contesta el backend, así que `save` proyecta
+ * explícitamente las claves que sí son del
  * contrato de `ConfigurationView`, en vez de mandar `preferences` entero.
  */
 export function tauriPreferences(): PreferencesStore {
@@ -111,7 +111,7 @@ export function tauriPreferences(): PreferencesStore {
  *
  * Lo compone el backend con la misma carpeta comprobada y el mismo
  * `landing_for` con los que va a escribir después, así que el pie enseña lo que
- * va a ocurrir y no una promesa parecida (ID-63, ID-67).
+ * va a ocurrir y no una promesa parecida.
  */
 export function tauriDestinations(): DestinationSource {
   return {
@@ -138,7 +138,7 @@ export function tauriExternalDestinationOpener(): ExternalDestinationOpener {
  * **No se les manda ninguna ruta**, porque la ventana no tiene ninguna
  * (ADR-0011): lo que abren es el fichero que dejó la última postfirma, que es
  * justo el que el resumen tiene delante. El complemento `opener` se llama desde
- * Rust por lo mismo que el del diálogo (ID-63, ID-85), y debajo es el portal
+ * Rust por lo mismo que el del diálogo, y debajo es el portal
  * `OpenURI`.
  */
 export function tauriSignedDocumentOpener(): SignedDocumentOpener {

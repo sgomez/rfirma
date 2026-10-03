@@ -5,7 +5,7 @@ import type { Certificate } from "./certificate";
 import { isUsable } from "./certificate";
 
 /**
- * Un fallo del recorrido de firma, con la forma del ID-29: una **situación**
+ * Un fallo del recorrido de firma: una **situación**
  * nuestra, que el catálogo traduce, y el texto original **crudo** al lado.
  *
  * Lo cumplen por igual los fallos del token (`pkcs11::error`), los del puente y
@@ -45,7 +45,7 @@ export function refusalFor(certificate: Certificate | null): SigningFailure | nu
     case "unreadable":
       // El detalle es el del decodificador de Rust, tal cual. Fabricarlo aquí
       // —«el DER no es un X.509 legible»— llenaba con prosa nuestra el hueco
-      // que el ID-29 reserva al texto original crudo, y dejaba el informe de
+      // que se reserva al texto original crudo, y dejaba el informe de
       // fallo sin lo único que servía para diagnosticarlo.
       return { situation: "certificateUnreadable", detail: status.detail };
     default:

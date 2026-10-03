@@ -57,7 +57,7 @@ export function destinationOfferingSingleChoice(
 
 /**
  * **El documento que se tiene delante**: lo que entra por el diálogo o por el
- * arrastre, y lo que se pinta y se firma. No es la fila (ID-287).
+ * arrastre, y lo que se pinta y se firma. No es la fila.
  */
 export function document(name: string, overrides: Partial<DocumentInHand> = {}): DocumentInHand {
   return {
@@ -129,7 +129,7 @@ export function pdfsOf(pages: Record<string, number>): PdfSource {
 /**
  * Un PDF de tamaños mezclados: cada página trae su propio `view`. Es lo que
  * hace falta para que `correctPositionSignature` se coma alguna en silencio
- * (ID-105) y para probarlo hace falta más de un tamaño en el mismo documento.
+ * y para probarlo hace falta más de un tamaño en el mismo documento.
  */
 function aPdfWithViews(views: readonly (readonly [number, number, number, number])[]): PdfDocument {
   const pageOf = (number: number): PdfPage => {

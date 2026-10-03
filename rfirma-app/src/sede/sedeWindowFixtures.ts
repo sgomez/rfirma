@@ -8,7 +8,7 @@ import { NO_PREVIOUS_SIGNATURES } from "../signing/previousSignatures";
 import type { Errand, ErrandStage, SiteDocument, SiteErrandPort } from "./errand";
 import { noErrand } from "./errand";
 
-/** Los dobles y auxiliares que comparten las pruebas de `SedeWindow` (TD-63). */
+/** Los dobles y auxiliares que comparten las pruebas de `SedeWindow`. */
 
 export function certificate(overrides: Partial<Certificate> = {}): Certificate {
   return {

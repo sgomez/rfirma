@@ -8,8 +8,7 @@ import type { LocalBatchItem, SignatureRound, SigningKind } from "./errand";
  * campo a campo.
  *
  * Detrás no hay ninguna ruta (ADR-0011): el documento que manda la sede viaja
- * por su **asa opaca** y el origen viaja **a secas**, sólo para atribuir
- * (ID-271, ID-339).
+ * por su **asa opaca** y el origen viaja **a secas**, sólo para atribuir.
  */
 export interface SiteErrandView {
   origin: string | null;
@@ -24,9 +23,9 @@ export type SiteStageView =
   | { kind: "markingTheArea"; document: string }
   | {
       kind: "askingToSign";
-      /** El asa opaca con la que se lee el documento, nunca su ruta (ID-286). */
+      /** El asa opaca con la que se lee el documento, nunca su ruta. */
       document: string;
-      /** Qué es lo que se pide firmar, según el formato de la petición (#530). */
+      /** Qué es lo que se pide firmar, según el formato de la petición. */
       signing: SigningKind;
       round: SignatureRound;
       certificates: readonly Certificate[];
@@ -73,7 +72,7 @@ export type SiteStageView =
  * Lo que el PDF de la sede dice de sí mismo, leído por su asa.
  *
  * Es lo único que se puede enseñar del documento: la petición **no trae
- * nombre** (ID-270) y de la ruta del fichero de paso no llega nada. Sale de
+ * nombre** y de la ruta del fichero de paso no llega nada. Sale de
  * abrir los bytes que devuelve `read_document`, así que `null` es que no se han
  * podido leer, y entonces no hay tarjeta que pintar.
  */

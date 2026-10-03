@@ -39,13 +39,12 @@ function isUnwritableDestination(done: PortalResult<boolean>): boolean {
 }
 
 /**
- * **El `SiteErrandPort` de verdad**, el que sustituye a `noErrand()` (ID-335,
- * ID-336).
+ * **El `SiteErrandPort` de verdad**, el que sustituye a `noErrand()`.
  *
  * No conoce a Tauri, y por eso está aquí y no en `tauri.ts`: recibe las órdenes
  * del backend ya envueltas en [`SiteCommands`] —una función por orden— y lo que
  * pone de su parte es la única cosa que hay que pensar, que es **la conversión
- * de lo que llega a lo que la ventana espera** (TD-78), delegada en
+ * de lo que llega a lo que la ventana espera**, delegada en
  * `errandConversion.ts`. El fichero que sabe que debajo hay Tauri sigue siendo
  * uno solo, y allí cada método es una línea.
  *
@@ -63,19 +62,19 @@ function isUnwritableDestination(done: PortalResult<boolean>): boolean {
 /**
  * **Las órdenes del trámite, una función por orden.**
  *
- * Es la costura que hace probable a este adaptador sin Tauri (TD-78): las
+ * Es la costura que hace probable a este adaptador sin Tauri: las
  * pruebas enchufan dobles y comprueban la conversión y la suscripción, que es
  * lo único que aquí se decide.
  */
 export interface SiteCommands {
   /**
-   * Se suscribe al evento del trámite y devuelve cómo dejar de escuchar
-   * (ID-338). Que no llegue nunca es la respuesta normal.
+   * Se suscribe al evento del trámite y devuelve cómo dejar de escuchar. Que no llegue nunca es la
+   * respuesta normal.
    */
   watch(onView: (view: SiteErrandView) => void): () => void;
   /**
    * `read_site_errand`: en qué momento está el trámite **ahora**, para la
-   * ventana que acaba de montarse (ID-338).
+   * ventana que acaba de montarse.
    *
    * El evento sólo lo oye quien ya estaba escuchando, y el primer momento se
    * publica antes de que el frontal exista. Por eso ese se **pide**, igual que
@@ -364,7 +363,7 @@ export function siteErrands(commands: SiteCommands): SiteErrandPort {
       signing = null;
       await commands.decline();
       // Decir que no a lo que se tenía delante **es un desenlace**, y se queda
-      // en pantalla los quince segundos como los otros dos (ID-274). Irse desde
+      // en pantalla los quince segundos como los otros dos. Irse desde
       // cualquier otro momento —la espera, el callejón, «sin certificado»— no
       // es un desenlace sino marcharse, y entonces la ventana se cierra.
       if (wasAnswering) {

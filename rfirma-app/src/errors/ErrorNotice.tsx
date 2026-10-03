@@ -16,7 +16,7 @@ export type ErrorSituation = keyof Catalog["errors"]["situations"];
 
 /**
  * Las situaciones que se cuentan en **un solo renglón**: el título lo dice
- * todo, y lo que iría debajo sería jerga o el remedio obvio (ID-211).
+ * todo, y lo que iría debajo sería jerga o el remedio obvio.
  *
  * Son las que no tienen `body` en el catálogo, así que la lista no es un gusto:
  * `tsc` la obliga a cuadrar con las claves que existen.
@@ -32,7 +32,7 @@ function isOneLine(situation: ErrorSituation): situation is OneLineSituation {
 /**
  * Las situaciones de error de rFirma que llevan enlace a «Comentarios y ayuda».
  *
- * Es una lista cerrada (ID-371): los fallos propios de rFirma o donde no sabe
+ * Es una lista cerrada: los fallos propios de rFirma o donde no sabe
  * qué ha pasado. Los fallos del entorno (PIN incorrecto, tarjeta ausente,
  * certificado caducado, etc.) no llevan enlace para no mandar a la persona al
  * sitio equivocado.
@@ -80,7 +80,7 @@ interface ErrorNoticeProps {
 }
 
 /**
- * Un error, como manda el ID-29: una **situación** nuestra traducida y, aparte,
+ * Un error: una **situación** nuestra traducida y, aparte,
  * el texto original crudo en un detalle plegado.
  *
  * Los errores no se traducen, se clasifican. `cryptoki` devuelve códigos y el
@@ -90,7 +90,7 @@ interface ErrorNoticeProps {
  * en `unknown` más su detalle técnico crudo (ADR-0009).
  *
  * El artboard del error de firma dibuja el detalle **desplegado**. Eso es un
- * estado congelado, no el inicial (ID-43): aquí sigue plegado, porque el
+ * estado congelado, no el inicial: aquí sigue plegado, porque el
  * `CKR_*` crudo debajo del mensaje ocupa el pie entero y solo lo necesita quien
  * va a escribir un informe de fallo.
  *

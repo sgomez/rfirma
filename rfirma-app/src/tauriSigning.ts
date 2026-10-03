@@ -86,7 +86,7 @@ interface RubricChoiceViewPayload {
 
 /**
  * El selector de la rúbrica, por la orden que abre el diálogo del portal
- * desde Rust y adopta lo elegido en `RubricStore` (ID-82).
+ * desde Rust y adopta lo elegido en `RubricStore`.
  *
  * Cancelar el diálogo devuelve `null`, y **no es un fallo**: es lo que deja
  * la rúbrica ya elegida como estaba. Una imagen que no vale tampoco revienta
@@ -130,7 +130,7 @@ export function tauriVisibleSignatureMemory(): VisibleSignatureMemory {
 }
 
 /**
- * El sello de verdad, antes de firmar: `preview_signature` (ID-107).
+ * El sello de verdad, antes de firmar: `preview_signature`.
  *
  * Debajo hay un **ciclo trifásico en seco** con un `PK1` inventado, que
  * devuelve un PDF cuyos bytes visibles están medidos idénticos a los del
@@ -150,7 +150,7 @@ export function tauriStampComposer(): StampComposer {
         const bytes = await invoke<ArrayBuffer>("preview_signature", { order });
         return { ok: true, pdf: await loader.load(new Uint8Array(bytes)) };
       } catch (thrown) {
-        // La vista previa **no es una puerta** (ID-111): el fallo se cuenta y
+        // La vista previa **no es una puerta**: el fallo se cuenta y
         // se sigue pudiendo firmar, así que aquí no se relanza nada.
         const named = classify(thrown);
         return {

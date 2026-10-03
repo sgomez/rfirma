@@ -14,7 +14,7 @@ interface SedeNoCertificateProps {
   /**
    * Cuántos certificados tiene la persona. Sólo se dice en «excluidos», porque
    * eso es estado de **su** almacén; lo que la sede descartó no se enumera
-   * nunca (ID-277).
+   * nunca.
    */
   owned: number;
   /** El fallo de instalar, ya clasificado; `null` mientras no se haya intentado. */

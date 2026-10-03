@@ -15,7 +15,7 @@ const resources = Object.fromEntries(LANGUAGES.map((tag) => [tag, { [NAMESPACE]:
  * Dos decisiones que no son las de por omisión y conviene no deshacer:
  *
  * - **Sin `i18next-browser-languagedetector`**. El idioma no se olfatea del
- *   navegador: es una preferencia guardada (ID-02), y quien la lee es
+ *   navegador: es una preferencia guardada, y quien la lee es
  *   `LanguageProvider`. En la primera ejecución sale del locale del sistema
  *   cotejado contra los publicados, y de eso se encarga el backend.
  * - **`returnEmptyString: false`**, que es lo que hace caer al castellano las

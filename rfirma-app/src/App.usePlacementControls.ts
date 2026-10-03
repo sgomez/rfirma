@@ -18,7 +18,7 @@ import {
 
 /**
  * La colocación de la firma visible: el recuadro y los tres modos de página que lo
- * llenan (#185, #188).
+ * llenan.
  *
  * `placement` —lo que ve el resto de la ventana y lo que cruza a firmar— es el
  * recuadro con el conjunto de la opción activa, y por eso se deriva en vez de
@@ -54,12 +54,12 @@ export function usePlacementControls(
   );
 
   /**
-   * Lo mismo, pero **poniendo el recuadro si no hay ninguno** (#185).
+   * Lo mismo, pero **poniendo el recuadro si no hay ninguno**.
    *
    * Es la mitad que le faltaba al bloque «Colocación»: elegir una opción o
    * teclear un rango sobre un documento sin recuadro ya no se queda esperando
    * un gesto sobre la hoja, deja el recuadro en su posición estándar. La página
-   * que lo mide es la primera del conjunto, la misma que mide la firma (ID-96).
+   * que lo mide es la primera del conjunto, la misma que mide la firma.
    */
   const placeStandard = useCallback(
     async (next: Placing) => {
@@ -74,7 +74,7 @@ export function usePlacementControls(
 
   // Lo que llega del visor: colocar, mover o redimensionar el recuadro y tocar
   // el conjunto **de la opción activa**. `null` es quitar el sello de la última
-  // página de esa opción; las otras dos conservan el suyo (ID-92, #188).
+  // página de esa opción; las otras dos conservan el suyo.
   const rememberPlacement = useCallback(
     (next: Placement | null) => {
       apply({
@@ -99,7 +99,7 @@ export function usePlacementControls(
   );
 
   // Cambiar de opción **no reescribe la que dejas**: la nueva trae lo suyo, y
-  // solo se siembra de la anterior si se estrena (#188).
+  // solo se siembra de la anterior si se estrena.
   const changePageChoice = useCallback(
     (choice: PageChoice) => {
       const previous = pagesOf(placing.sets, placing.choice);

@@ -6,8 +6,8 @@ import type { PdfDocument, PdfPage, RenderTask, Viewport } from "../pdf";
 import type { Placement } from "../signatureBox";
 
 /**
- * Lo que comparten las pruebas de `DocumentViewer` (grada A, `vitest`,
- * sub-issue #58): el doble de `pdf.js` y los atajos de consulta del DOM.
+ * Lo que comparten las pruebas de `DocumentViewer` (grada A, `vitest`):
+ * el doble de `pdf.js` y los atajos de consulta del DOM.
  *
  * `pdf.js` no cabe en `jsdom` —no hay contexto `2d`—, así que el documento
  * entra por el puerto de `pdf.ts` y aquí se enchufa un doble que registra lo
@@ -76,7 +76,7 @@ export function recordingDocument(pageCount = 3): Recorder {
 export const noop = () => {};
 
 /**
- * Un recuadro ya colocado. Desde el ID-114 el visor **no lo crea**: quien lo
+ * Un recuadro ya colocado. El visor **no lo crea**: quien lo
  * quiera en pantalla lo entrega, igual que hace la fila que lo recuerda.
  */
 export const seated: Placement = {

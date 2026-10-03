@@ -5,7 +5,7 @@ import type { DocumentFailure } from "../viewer/source";
 import type { SigningOrder } from "./flow";
 
 /**
- * El sello que se ve dentro del recuadro **antes** de firmar (ID-107).
+ * El sello que se ve dentro del recuadro **antes** de firmar.
  *
  * La regla del ADR-0006, tal y como la cerró la ficha 7: **o es el sello de
  * verdad, o no hay recuadro**. No se maqueta nada aquí ni en ninguna parte del
@@ -15,8 +15,8 @@ import type { SigningOrder } from "./flow";
  * (`docs/research/prefirma-en-seco-pdfjs.md`). El compositor es el mismo, así
  * que no hay una segunda opinión que pueda discrepar.
  *
- * Y la segunda regla, del mismo signo: **la vista previa no es una puerta**
- * (ID-111). Si el sello no se puede componer se dice y se firma igual; sobre si
+ * Y la segunda regla, del mismo signo: **la vista previa no es una puerta**. Si el sello no se
+ * puede componer se dice y se firma igual; sobre si
  * se puede firmar manda el botón de firmar, que no mira nada de este módulo.
  */
 
@@ -31,7 +31,7 @@ export type ComposedStamp =
  * Es un puerto por lo mismo que lo son el origen del PDF y el compositor del
  * texto: debajo hay una orden de Tauri que llama al puente, y los cuatro
  * estados de esta vista previa son de la interfaz y no dependen de que haya un
- * token puesto (TD-32).
+ * token puesto.
  *
  * Devuelve el PDF **ya abierto** y no los bytes: quien sabe abrirlos es
  * `pdf.js`, que vive del otro lado de la frontera, y pasar por aquí un
@@ -46,7 +46,7 @@ export interface StampComposer {
  *
  * Los dos casos que no lo son se nombran, en vez de resumirse en un `null`,
  * porque el panel los cuenta distinto: sin certificado el bloque entero de
- * firma visible está apagado (ID-108), y sin colocar lo que falta es el gesto
+ * firma visible está apagado, y sin colocar lo que falta es el gesto
  * sobre la hoja.
  */
 export type StampRequest =
@@ -59,23 +59,23 @@ export type StampRequest =
  *
  * Los cuatro de la ficha —sin certificado, sin colocar, congelada durante el
  * gesto y compuesta— más los tres que son de camino: componiendo, a la espera
- * de «Ver cómo queda» en un documento grande, y el fallo del ID-111.
+ * de «Ver cómo queda» en un documento grande, y el fallo.
  */
 export type StampPreview =
   | { kind: "noCertificate" }
   | { kind: "unplaced" }
-  /** El gesto está en curso: la vista anterior se congela y se atenúa (ID-109). */
+  /** El gesto está en curso: la vista anterior se congela y se atenúa. */
   | { kind: "frozen" }
-  /** Documento grande: el recálculo se pide con «Ver cómo queda» (ID-109). */
+  /** Documento grande: el recálculo se pide con «Ver cómo queda». */
   | { kind: "onDemand" }
   | { kind: "composing" }
   | { kind: "composed" }
-  /** No se ha podido componer. **No apaga el botón de firmar** (ID-111). */
+  /** No se ha podido componer. **No apaga el botón de firmar**. */
   | { kind: "failed"; failure: DocumentFailure };
 
 /**
  * Por encima de este tamaño el recálculo deja de ser automático y se pide con
- * «Ver cómo queda» (ID-109).
+ * «Ver cómo queda».
  *
  * El umbral no está medido punto a punto: lo que está medido son los dos
  * extremos —0,15 s en un PDF de 2,4 MB y 1,9 s con 507 MB de RSS en un
@@ -100,7 +100,7 @@ export function composesOnRelease(sizeBytes: number | null): boolean {
  *
  * Sirve para montar la ventana en una prueba sin backend, y falla diciendo la
  * verdad en vez de dejar el recuadro vacío: enseñar una caja vacía sería
- * exactamente la aproximación que el ID-107 prohíbe.
+ * exactamente la aproximación que hay que evitar.
  */
 export function unavailableStampComposer(): StampComposer {
   return {

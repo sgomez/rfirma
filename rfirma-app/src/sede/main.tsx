@@ -20,20 +20,20 @@ import {
 import { SedeWindow } from "./SedeWindow";
 
 /**
- * **El cableado de la ventana de sede** (ID-335): su propio montaje, separado
+ * **El cableado de la ventana de sede**: su propio montaje, separado
  * del de la ventana principal.
  *
  * Es un punto de entrada aparte —`sede.html`— y no una rama de `main.tsx`
  * porque lo que se quiere es justamente que **no cargue el árbol de la ventana
  * principal**: aquí no hay bandeja, ni visor, ni ajustes, ni aviso del primer
- * arranque. Esta ventana la crea `app::startup` sólo cuando hay trámite
- * (ID-334), así que arrancar rFirma a mano no ejecuta ni una línea de esto.
+ * arranque. Esta ventana la crea `app::startup` sólo cuando hay trámite, así que arrancar rFirma a
+ * mano no ejecuta ni una línea de esto.
  *
  * El único puerto es `SiteErrandPort`, y aquí se cablea el **de verdad**
  * (`tauriSiteErrands`) en lugar del doble `noErrand`, que se queda donde
- * estaba: es lo que siguen usando las pruebas de la ventana (TD-63, TD-78).
+ * estaba: es lo que siguen usando las pruebas de la ventana.
  *
- * El idioma sale de la preferencia guardada, nunca del navegador (ID-02), y de
+ * El idioma sale de la preferencia guardada, nunca del navegador, y de
  * la misma configuración que lee la ventana principal.
  *
  * El **tema** sale de esa misma configuración, y hay que aplicarlo aquí a mano:

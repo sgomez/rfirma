@@ -20,7 +20,7 @@ export interface Drop {
   /**
    * Cuántos ficheros más venían en el mismo gesto y no han entrado en ningún
    * sitio: no son PDF, o —cuando el primero no se pudo leer— no se han
-   * llegado a probar (ID-70, ID-306).
+   * llegado a probar.
    */
   discarded: number;
   /** Se abrió para ver sus firmas (`verify --gui`), no solo para tenerlo delante. */
@@ -31,8 +31,8 @@ export interface Drop {
  * Por dónde entra un arrastre.
  *
  * Es un puerto **suscribible** y no una llamada, porque el arrastre no se pide:
- * ocurre. Y es un puerto propio, con su doble, por una razón muy concreta del
- * ID-67: en Tauri v2 el WebView trae desactivados los eventos de arrastre de
+ * ocurre. Y es un puerto propio, con su doble, por una razón muy concreta:
+ * en Tauri v2 el WebView trae desactivados los eventos de arrastre de
  * HTML a favor del evento nativo, así que un `onDrop` en el JSX **no se
  * dispararía nunca** y parecería un fallo del frontal. Detrás de este puerto
  * está ese evento nativo; delante, una ventana que se prueba entera sin
@@ -46,12 +46,12 @@ export interface DocumentDrops {
   subscribe(listener: (drop: Drop) => void): () => void;
   /**
    * Lo que ya venía cuando se abrió la ventana: el documento con el que se
-   * invocó a la aplicación desde fuera, `rfirma documento.pdf` (ID-157).
+   * invocó a la aplicación desde fuera, `rfirma documento.pdf`.
    *
    * Es una llamada y no una suscripción porque el documento se conoce **antes**
    * de que la ventana exista: emitirlo al arrancar sería emitirlo al vacío. Y
    * llega por este puerto, y no por uno propio, porque desemboca en lo mismo —
-   * la ventana completa en el estado en que la deja arrastrar un PDF (ID-159)—,
+   * la ventana completa en el estado en que la deja arrastrar un PDF—,
    * y dos caminos parecidos son dos estados que se separan.
    *
    * `null` cuando la aplicación se abrió sin documento, que es lo normal. Se
@@ -76,7 +76,7 @@ export interface FakeDocumentDrops extends DocumentDrops {
  * El arrastre sin Tauri: entrega a quien escuche lo que se le suelte.
  *
  * Es el doble de las pruebas, y con él los cuatro casos del arrastre se
- * comprueban como comportamiento observable en la ventana (TD-17). Quien habla
+ * comprueban como comportamiento observable en la ventana. Quien habla
  * con el evento nativo es `tauriDocumentDrops`.
  */
 export function inMemoryDocumentDrops(pending: Drop | null = null): FakeDocumentDrops {

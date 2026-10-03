@@ -22,14 +22,14 @@ interface OpenedDocumentView {
 }
 
 /**
- * El portal de ficheros, por la orden que abre el diálogo desde Rust (ID-63).
+ * El portal de ficheros, por la orden que abre el diálogo desde Rust.
  *
  * El diálogo no se abre desde aquí: si lo hiciera, el frontal tendría que pedir
  * el permiso del complemento de diálogo y la lista de permisos de la ventana
  * crecería. Lo que cruza es lo que el backend apuntó.
  *
  * Cancelar devuelve `null`, y eso **no es un fallo**: es lo que deja el
- * documento activo, la lista y el visor como estaban (ID-73).
+ * documento activo, la lista y el visor como estaban.
  */
 export function tauriDocumentPicker(): DocumentPicker {
   return {
@@ -50,7 +50,7 @@ const DOCUMENT_DROPPED = "document-dropped";
  */
 interface DroppedDocumentView {
   document: OpenedDocumentView | null;
-  /** El resto de PDF del mismo gesto: entran igual en Recientes (ID-306). */
+  /** El resto de PDF del mismo gesto: entran igual en Recientes. */
   alsoEntering: OpenedDocumentView[];
   failure: { situation: string; detail: string } | null;
   discarded: number;
@@ -69,7 +69,7 @@ interface InvokedDocumentView {
 }
 
 /**
- * El arrastre, por el evento nativo de la ventana (ID-67).
+ * El arrastre, por el evento nativo de la ventana.
  *
  * Quién decide qué se abre de lo soltado está del otro lado: aquí no se mira
  * ninguna ruta porque ninguna llega. Lo que llega es lo mismo que devuelve el
@@ -139,14 +139,14 @@ function dropOf(view: DroppedDocumentView): Drop {
  * justo por donde dejarían de serlo.
  *
  * Sale con `remembered` en `true` porque los dos caminos son una persona
- * eligiendo un fichero suyo: de eso queda rastro (ID-34). El documento que no
- * se recuerda es el que mandará una sede (ID-286), y entra por otro puerto.
+ * eligiendo un fichero suyo: de eso queda rastro. El documento que no
+ * se recuerda es el que mandará una sede, y entra por otro puerto.
  */
 function inHandOf(opened: OpenedDocumentView): DocumentInHand {
   return {
     id: opened.id,
     name: opened.name,
-    // Un documento recién abierto se tiene por **no firmado** (ID-71): saber
+    // Un documento recién abierto se tiene por **no firmado**: saber
     // si un PDF ya trae firmas es otro trabajo, y el panel ya declara ese dato
     // como desconocido. Se anota lo que se sabe.
     badge: "Unsigned",
@@ -181,14 +181,14 @@ interface RecentDocumentView {
 }
 
 /**
- * La bandeja en el disco (ID-75).
+ * La bandeja en el disco.
  *
  * Tres de las cuatro operaciones son órdenes propias; la cuarta, «Vaciar la
  * lista», **ya era** `forget_activity` y no se duplica: vaciar la bandeja y
- * olvidar la actividad son la misma promesa (ID-34).
+ * olvidar la actividad son la misma promesa.
  *
  * Lo que cruza en las tres es el **identificador opaco** que acuñó el backend
- * al abrir (ID-62). La deduplicación de la bandeja sigue siendo por la ruta
+ * al abrir. La deduplicación de la bandeja sigue siendo por la ruta
  * canónica, que solo Rust conoce y que no sale de allí.
  */
 export function tauriRecents(): RecentsStore {
@@ -231,10 +231,10 @@ function rowOf(view: RecentDocumentView): RecentDocument {
 }
 
 /**
- * El PDF que se pinta: los bytes del portal, abiertos con `pdf.js` (ID-76).
+ * El PDF que se pinta: los bytes del portal, abiertos con `pdf.js`.
  *
- * Los bytes viajan **como bytes** y no como una lista de números en JSON
- * (ID-66): `read_document` contesta con la respuesta binaria del puente de
+ * Los bytes viajan **como bytes** y no como una lista de números en JSON: `read_document` contesta
+ * con la respuesta binaria del puente de
  * Tauri, que aquí llega como un `ArrayBuffer`.
  */
 export function tauriPdfSource(): PdfSource {

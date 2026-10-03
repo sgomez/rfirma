@@ -12,7 +12,7 @@ export interface Rubric {
    * La imagen ya normalizada, como `data:` para pintarla en un `<img>`. Es un
    * JPEG, y un JPEG no tiene alfa: la transparencia del PNG original ya viene
    * aplanada a blanco aquí dentro, así que la miniatura sale blanca porque el
-   * fichero lo es, no porque el CSS lo pinte (ID-24).
+   * fichero lo es, no porque el CSS lo pinte.
    */
   dataUrl: string;
   width: number;
@@ -65,7 +65,7 @@ export interface RubricPicker {
   choose(): Promise<RubricChoice>;
   /**
    * La rúbrica ya adoptada en una sesión anterior, si la hay. Se llama una
-   * vez al arrancar, igual que `PreferencesStore.read` (ID-33).
+   * vez al arrancar, igual que `PreferencesStore.read`.
    */
   stored(): Promise<Rubric | null>;
 }

@@ -164,16 +164,16 @@ export function App({
   const [pdfFailure, setPdfFailure] = useState<DocumentFailure | null>(null);
   // Cuánto ocupa el documento que hay delante. Lo cuenta quien lo abrió, que es
   // el único que ve los bytes: por encima de cierto tamaño la vista previa del
-  // sello deja de recalcularse sola (ID-109).
+  // sello deja de recalcularse sola.
   const [sizeBytes, setSizeBytes] = useState<number | null>(null);
   // Un gesto sobre el recuadro está en curso. Sólo lo mira la vista previa: es
   // lo que congela la vista anterior en vez de pagar un ciclo por fotograma.
   const [gesturing, setGesturing] = useState(false);
   // La página que se está mirando: la sigue eligiendo el visor, y el panel la
-  // necesita para elegir la cara del botón de sellar (#194).
+  // necesita para elegir la cara del botón de sellar.
   const [viewedPage, setViewedPage] = useState(1);
   // El botón de sellar vive en el panel y actúa en el visor, que es quien
-  // tiene el `viewport` para medir la posición estándar del recuadro (#194).
+  // tiene el `viewport` para medir la posición estándar del recuadro.
   const [placementRequest, setPlacementRequest] = useState<{
     action: "seal" | "unseal";
   } | null>(null);
@@ -457,7 +457,7 @@ export function App({
             // recuento de páginas sale del PDF abierto, y con otro delante sería
             // el nombre de un fichero con las páginas de otro. Sin documento
             // activo tampoco se monta, o quedaría una tercera columna al lado
-            // del visor vacío (ID-51).
+            // del visor vacío.
             <SignedPanel
               documentName={signedHere.document.name}
               signedAt={signingInstant}

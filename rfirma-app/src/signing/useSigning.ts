@@ -66,8 +66,8 @@ export interface Signing {
  * El diálogo modal del secreto, de ser necesario, lo gestiona de forma nativa
  * el sistema operativo en el backend.
  *
- * Quien implementa [`SigningBackend`] de verdad son las órdenes de Tauri del
- * #60; aquí solo se pide cada etapa por su turno.
+ * Quien implementa [`SigningBackend`] de verdad son las órdenes de Tauri;
+ * aquí solo se pide cada etapa por su turno.
  */
 export function useSigning(backend: SigningBackend): Signing {
   const [state, setState] = useState<SigningState>({ kind: "idle" });
@@ -128,8 +128,8 @@ export function useSigning(backend: SigningBackend): Signing {
  * páginas sale del PDF que la ventana tiene abierto: son dos fuentes, y solo
  * dicen lo mismo mientras hablen del mismo documento. Con otro delante el panel
  * enseñaba el nombre de A con las páginas de B —un dato inventado, que es justo
- * lo que el ID-44 prohíbe—, y sin ninguno se quedaba una tercera columna al
- * lado del visor vacío, que es lo que quita el ID-51.
+ * lo que hay que evitar—, y sin ninguno se quedaba una tercera columna al
+ * lado del visor vacío.
  *
  * `activeId` es `null` cuando no hay documento activo: se ha olvidado el que
  * había, o se ha vaciado la lista.
