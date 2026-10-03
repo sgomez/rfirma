@@ -17,6 +17,7 @@ mod event_loop;
 use std::sync::atomic::Ordering;
 use std::sync::{Arc, Mutex};
 
+use desktop::adapters::tauri::invoked_document;
 pub use desktop::adapters::terminal::run_the_command_line;
 use desktop::application::invocation::{Invocation, Role};
 use desktop::DesktopRoot;
@@ -31,6 +32,9 @@ pub const PKCS11_MODULE_VARIABLE: &str = "RFIRMA_PKCS11_MODULE";
 
 /// Nombre del evento emitido cuando se suelta un documento en la ventana.
 pub const DOCUMENT_DROPPED: &str = "document-dropped";
+
+/// Nombre del evento emitido cuando una segunda invocación trae un documento a la ventana.
+pub const DOCUMENT_INVOKED: &str = "document-invoked";
 
 /// Adquiere el cerrojo recuperando el valor si el mutex estaba envenenado.
 pub fn lock<T>(mutex: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
@@ -316,18 +320,18 @@ fn run_desktop(
                 app.state::<SigningRoot>().is_live(),
             );
             match substitution {
-                desktop::application::invocation::SecondInvocation::ReplacesWhatWasThere(paths) => {
+                desktop::application::invocation::SecondInvocation::ReplacesWhatWasThere(
+                    paths,
+                    intent,
+                ) => {
                     let Some(window) = app.get_webview_window("main") else {
                         return;
                     };
                     let _ = window.set_focus();
-                    let Some(told) = app.state::<DocumentsRoot>().what_was_dropped(&paths) else {
-                        return;
-                    };
-                    let _ = window.emit(
-                        DOCUMENT_DROPPED,
-                        documents::adapters::views::DroppedDocumentView::from(told),
-                    );
+                    let documents = app.state::<DocumentsRoot>();
+                    if let Some(invoked) = invoked_document(&documents, &paths, intent) {
+                        let _ = window.emit(DOCUMENT_INVOKED, invoked);
+                    }
                 }
                 desktop::application::invocation::SecondInvocation::NothingHappens => {
                     if let Some(window) = app.get_webview_window("main") {

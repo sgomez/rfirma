@@ -71,13 +71,63 @@ fn a_second_invocation_with_a_document_replaces_the_one_that_was_there() {
 
     let second = second_invocation(&invoked_with(&pdf), false);
 
-    let SecondInvocation::ReplacesWhatWasThere(paths) = second else {
+    let SecondInvocation::ReplacesWhatWasThere(paths, intent) = second else {
         panic!("sustituye: {second:?}");
     };
     let view = dropped_document(&RealFiles, &paths, &opened).expect("algo trae");
     assert!(
         view.document.is_some(),
         "el documento nuevo es el que queda"
+    );
+    assert_eq!(intent, WindowIntent::OpenTheDocument);
+}
+
+fn handed_over_by_the_terminal(file: &Path, intent: WindowIntent) -> Invocation {
+    Invocation {
+        command_line: std::iter::once(OsString::from("rfirma"))
+            .chain(arguments_for_the_desktop(file, intent))
+            .map(|argument| argument.into_string().expect("UTF-8"))
+            .collect(),
+        folder: PathBuf::from("/"),
+    }
+}
+
+#[test]
+fn a_file_handed_over_to_see_its_signatures_reaches_the_desktop_with_that_intent() {
+    let pdf = a_temporary_pdf("ver-firmas.pdf");
+
+    let invocation = handed_over_by_the_terminal(&pdf, WindowIntent::SeeItsSignatures);
+
+    assert_eq!(
+        role_of(invocation.clone()),
+        Role::Desktop(invocation.clone())
+    );
+    assert_eq!(invoked_documents(&invocation), Some(vec![pdf]));
+    assert_eq!(invoked_intent(&invocation), WindowIntent::SeeItsSignatures);
+}
+
+#[test]
+fn a_file_handed_over_just_to_open_it_reaches_the_desktop_as_today() {
+    let pdf = a_temporary_pdf("solo-abrir.pdf");
+
+    let invocation = handed_over_by_the_terminal(&pdf, WindowIntent::OpenTheDocument);
+
+    assert_eq!(invocation, invoked_with(&pdf));
+    assert_eq!(invoked_intent(&invocation), WindowIntent::OpenTheDocument);
+}
+
+#[test]
+fn a_second_invocation_to_see_the_signatures_replaces_the_document_with_that_intent() {
+    let pdf = a_temporary_pdf("segundo-ver-firmas.pdf");
+
+    let second = second_invocation(
+        &handed_over_by_the_terminal(&pdf, WindowIntent::SeeItsSignatures),
+        false,
+    );
+
+    assert_eq!(
+        second,
+        SecondInvocation::ReplacesWhatWasThere(vec![pdf], WindowIntent::SeeItsSignatures)
     );
 }
 

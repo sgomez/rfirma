@@ -56,6 +56,18 @@ interface DroppedDocumentView {
   discarded: number;
 }
 
+/** El nombre del evento de una segunda invocación. Es `commands::DOCUMENT_INVOKED`. */
+const DOCUMENT_INVOKED = "document-invoked";
+
+/**
+ * El documento con el que se invocó la aplicación y para qué. Es
+ * `commands::InvokedDocumentView`, campo a campo.
+ */
+interface InvokedDocumentView {
+  opened: DroppedDocumentView;
+  intent: "openTheDocument" | "seeItsSignatures";
+}
+
 /**
  * El arrastre, por el evento nativo de la ventana (ID-67).
  *
@@ -73,20 +85,27 @@ export function tauriDocumentDrops(): DocumentDrops {
   return {
     subscribe: (listener) => {
       let listening = true;
-      const stopping = listen<DroppedDocumentView>(DOCUMENT_DROPPED, (event) => {
-        if (listening) listener(dropOf(event.payload));
-      });
-      void stopping.then((stop) => {
-        if (!listening) stop();
-      });
+      const stoppings = [
+        listen<DroppedDocumentView>(DOCUMENT_DROPPED, (event) => {
+          if (listening) listener(dropOf(event.payload));
+        }),
+        listen<InvokedDocumentView>(DOCUMENT_INVOKED, (event) => {
+          if (listening) listener(dropOf(event.payload.opened));
+        }),
+      ];
+      for (const stopping of stoppings) {
+        void stopping.then((stop) => {
+          if (!listening) stop();
+        });
+      }
       return () => {
         listening = false;
-        void stopping.then((stop) => stop());
+        for (const stopping of stoppings) void stopping.then((stop) => stop());
       };
     },
     pending: async () => {
-      const invoked = await invoke<DroppedDocumentView | null>("read_invocation");
-      return invoked === null ? null : dropOf(invoked);
+      const invoked = await invoke<InvokedDocumentView | null>("read_invocation");
+      return invoked === null ? null : dropOf(invoked.opened);
     },
   };
 }

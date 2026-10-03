@@ -3,6 +3,7 @@
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
+use crate::desktop::domain::command_line::WindowIntent;
 use crate::desktop::domain::error::DesktopError;
 use crate::desktop::domain::handlers::UrlHandler;
 use crate::desktop::domain::installation::InstallFailure;
@@ -52,8 +53,8 @@ pub trait UpdateInstaller {
 
 /// Entrega un fichero al proceso de escritorio, por la instancia única si ya está abierto.
 pub trait DesktopHandover {
-    /// Deja el fichero en la ventana de rFirma, sin esperar a que termine de abrirse.
-    fn hand_over(&self, file: &Path) -> Result<(), String>;
+    /// Deja el fichero en la ventana de rFirma con su intención, sin esperar a que termine de abrirse.
+    fn hand_over(&self, file: &Path, intent: WindowIntent) -> Result<(), String>;
 }
 
 /// Los almacenes de certificados que ve la línea de órdenes.

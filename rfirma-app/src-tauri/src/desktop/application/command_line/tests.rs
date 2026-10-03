@@ -3,6 +3,7 @@ use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 use super::*;
+use crate::desktop::domain::command_line::WindowIntent;
 use crate::desktop::domain::sign_arguments::Algorithm;
 use crate::desktop::ports::{
     AskedSecret, OfferedCertificate, SecretDescriptor, WindowChoice, WindowOffer,
@@ -229,16 +230,18 @@ fn handed_over_with(desktop: &RecordingDesktop, words: &[&str]) -> Outcome {
 
 #[derive(Default)]
 struct RecordingDesktop {
-    delivered: RefCell<Vec<PathBuf>>,
+    delivered: RefCell<Vec<(PathBuf, WindowIntent)>>,
     fails: bool,
 }
 
 impl DesktopHandover for RecordingDesktop {
-    fn hand_over(&self, file: &Path) -> Result<(), String> {
+    fn hand_over(&self, file: &Path, intent: WindowIntent) -> Result<(), String> {
         if self.fails {
             return Err("sin ejecutable".to_owned());
         }
-        self.delivered.borrow_mut().push(file.to_path_buf());
+        self.delivered
+            .borrow_mut()
+            .push((file.to_path_buf(), intent));
         Ok(())
     }
 }
@@ -473,14 +476,34 @@ fn invalid_sign_arguments_are_refused_before_anything_else_with_a_nonzero_code()
 }
 
 #[test]
-fn sign_and_verify_with_gui_hand_the_file_to_the_desktop_and_succeed() {
-    for command in ["sign", "verify"] {
+fn sign_with_gui_hands_the_file_to_the_desktop_just_to_open_it() {
+    let desktop = RecordingDesktop::default();
+
+    let outcome = handed_over_with(&desktop, &["sign", "-gui", "-i", "doc.pdf"]);
+
+    assert_eq!(outcome, Outcome::default());
+    assert_eq!(
+        *desktop.delivered.borrow(),
+        vec![(PathBuf::from("doc.pdf"), WindowIntent::OpenTheDocument)]
+    );
+}
+
+#[test]
+fn verify_with_gui_hands_the_file_to_the_desktop_to_see_its_signatures() {
+    for words in [
+        ["verify", "-gui", "-i", "doc.pdf"],
+        ["verify", "--gui", "-i", "doc.pdf"],
+    ] {
         let desktop = RecordingDesktop::default();
 
-        let outcome = handed_over_with(&desktop, &[command, "-gui", "-i", "doc.pdf"]);
+        let outcome = handed_over_with(&desktop, &words);
 
-        assert_eq!(outcome, Outcome::default(), "{command}");
-        assert_eq!(*desktop.delivered.borrow(), vec![PathBuf::from("doc.pdf")]);
+        assert_eq!(outcome, Outcome::default(), "{words:?}");
+        assert_eq!(
+            *desktop.delivered.borrow(),
+            vec![(PathBuf::from("doc.pdf"), WindowIntent::SeeItsSignatures)],
+            "{words:?}"
+        );
     }
 }
 

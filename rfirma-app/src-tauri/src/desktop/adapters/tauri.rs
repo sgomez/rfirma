@@ -8,9 +8,11 @@ use crate::identity::IdentityRoot;
 use crate::site::SiteRoot;
 
 use super::views::{
-    InstallationView, NewVersionView, SignalRowView, TitlebarStateView, WithdrawalReportView,
+    InstallationView, InvokedDocumentView, NewVersionView, SignalRowView, TitlebarStateView,
+    WithdrawalReportView,
 };
 use crate::crossing::Failure;
+use crate::desktop::domain::command_line::WindowIntent;
 use crate::desktop::domain::status::{StoreBrand, StoreCertificates, StoreDetail};
 use crate::documents::adapters::views::DroppedDocumentView;
 use crate::identity::domain::store::{Store, StoreClass};
@@ -20,12 +22,25 @@ use crate::identity::domain::store::{Store, StoreClass};
 pub fn read_invocation(
     desktop: State<'_, DesktopRoot>,
     documents: State<'_, DocumentsRoot>,
-) -> Option<DroppedDocumentView> {
+) -> Option<InvokedDocumentView> {
     let invocation = desktop.pending_invocation.take()?;
     let paths = crate::desktop::application::invocation::invoked_documents(&invocation)?;
+    let intent = crate::desktop::application::invocation::invoked_intent(&invocation);
+    invoked_document(&documents, &paths, intent)
+}
+
+/// Lo que se abrió de esas rutas invocadas, con su intención.
+pub fn invoked_document(
+    documents: &DocumentsRoot,
+    paths: &[std::path::PathBuf],
+    intent: WindowIntent,
+) -> Option<InvokedDocumentView> {
     documents
-        .what_was_dropped(&paths)
-        .map(DroppedDocumentView::from)
+        .what_was_dropped(paths)
+        .map(|opened| InvokedDocumentView {
+            opened: DroppedDocumentView::from(opened),
+            intent,
+        })
 }
 
 /// Aplica en el hilo principal el estado de la barra de título nativa que manda la ventana.
