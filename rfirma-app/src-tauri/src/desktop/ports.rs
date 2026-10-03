@@ -3,6 +3,8 @@
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
+use chrono::{DateTime, FixedOffset, Utc};
+
 use crate::desktop::domain::command_line::WindowIntent;
 use crate::desktop::domain::error::DesktopError;
 use crate::desktop::domain::handlers::UrlHandler;
@@ -16,6 +18,7 @@ use crate::identity::domain::secret::SecretName;
 use crate::identity::domain::store::StoreClass;
 use crate::memory_error::MemoryError;
 use crate::signing::domain::bridge::{BridgeError, Format, SignatureOperation};
+use crate::signing::domain::DocumentSignatures;
 use crate::site::domain::protocol::SiteFilter;
 
 /// Quién atiende un esquema según el escritorio, y cómo se elige (ADR-0015).
@@ -132,6 +135,18 @@ pub trait CommandLineFiles {
 pub trait SignatureVerifier {
     /// Un texto por resultado de validez de las firmas del documento, con el validador de ese formato.
     fn results_of(&self, document: &[u8], format: Format) -> Result<Vec<String>, BridgeError>;
+}
+
+/// La lectura de las firmas de un documento: quién firmó, con qué emisor y cuándo dice que firmó.
+pub trait SignatureReader {
+    /// Las firmas del documento, en árbol con sus contrafirmas, o por qué no se han podido leer.
+    fn signatures_in(&self, document: &[u8]) -> Result<DocumentSignatures, BridgeError>;
+}
+
+/// La zona horaria de quien lanza la orden.
+pub trait LocalTimeZone {
+    /// El desplazamiento de la hora local respecto de UTC en ese instante.
+    fn offset_at(&self, instant: DateTime<Utc>) -> FixedOffset;
 }
 
 /// Lo que la orden pide firmar y con qué.

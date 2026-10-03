@@ -9,7 +9,7 @@ relativas a `src/signing/`; para situarte en un fichero, `just outline <ruta>`.
 
 | Módulo | Qué es |
 |---|---|
-| `mod.rs` | La raíz, `SigningRoot`, y la fachada que usan los vecinos: `configuration`, `is_live`, `signed_document`, `signed_folder`, `begin_for_the_site`, `finish`. |
+| `mod.rs` | La raíz, `SigningRoot`, y la fachada que usan los vecinos: `configuration`, `is_live`, `signed_document`, `signed_folder`, `begin_for_the_site`, `finish` y `signatures_in`. |
 | `domain/mod.rs`, `application/mod.rs`, `adapters/mod.rs` | Solo `pub mod`: el reparto de cada capa. |
 | `ports.rs` | Los cuatro puertos: `Bridge`, `IsolateHost`, `Signer` y `DocumentBytes`. El puente no tiene entrada que firme (ADR-0001). |
 | `application/tests.rs` | Los andamios de grada A que comparten todos los contextos: `NoIsolate`, `a_memory()`, `an_order()`, `a_completed_cycle()` y `DocumentsInMemory`. Solo en pruebas. |

@@ -31,6 +31,9 @@ pub const STORE: &str = "-store";
 /// El parámetro que pide el resultado en XML.
 pub const XML: &str = "-xml";
 
+/// Las dos formas del parámetro que añade a `verify` la ficha de cada firma.
+pub const VERBOSE: [&str; 2] = ["-v", "-verbose"];
+
 /// Parámetros del original que rFirma no atiende.
 pub const PARAMETERS_LEFT_OUT: [&str; 5] = ["-preurl", "-posturl", "-hformat", "-halgorithm", "-r"];
 
@@ -122,6 +125,15 @@ fn is_a_known_option(name: &str) -> bool {
         || internal.eq_ignore_ascii_case(PASSWORD)
         || PARAMETERS_LEFT_OUT.contains(&internal.as_str())
         || internal == "-help"
+        || VERBOSE.contains(&internal.as_str())
+}
+
+/// Cuántas veces piden los argumentos, ya normalizados, el detalle de `verify`.
+pub fn verbosity(arguments: &[String]) -> usize {
+    arguments
+        .iter()
+        .filter(|argument| VERBOSE.contains(&argument.as_str()))
+        .count()
 }
 
 /// Si el argumento pide la ayuda.
@@ -308,12 +320,15 @@ Lista los certificados de los almacenes, o solo los de --store.
 ";
 
 const VERIFY_SYNTAX: &str = "\
-Uso: rfirma verify -i <fichero> [--xml]
+Uso: rfirma verify -i <fichero> [-v | --verbose] [--xml]
      rfirma verify --gui -i <fichero>
 
 Valida las firmas del fichero de -i, con la caducidad del certificado del
 firmante y sin revocación ni red. Sale con 0 aunque la firma no sea válida,
 como AutoFirma. Con --gui, entrega el fichero a la ventana de rFirma.
+
+Con -v, añade el formato y una ficha por firma: firmante, emisor y fecha
+declarada. Esa parte no es estable: no la analices con un programa.
 ";
 
 #[cfg(test)]

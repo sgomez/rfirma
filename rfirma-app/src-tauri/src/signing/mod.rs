@@ -8,6 +8,8 @@ pub mod ports;
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use base64::Engine as _;
+
 use crate::documents::domain::document::Document;
 use crate::identity::domain::certificate::TokenCertificate;
 use crate::identity::domain::protected_secret::ProtectedSecret;
@@ -19,6 +21,8 @@ use application::configuration_memory::Configuration;
 use application::session::{CycleFailure, DocumentToSign, Signed, SigningSession};
 
 pub use application::session::DeclaredByTheSite;
+use domain::bridge::BridgeError;
+use domain::DocumentSignatures;
 use ports::Signer;
 
 /// La raíz de `signing`: la memoria entre sesiones, el hilo del aislado y la sesión de firma.
@@ -92,4 +96,10 @@ impl SigningRoot {
     pub fn finish(&self) -> Result<Signed, CycleFailure> {
         application::session::finish(&self.isolate, &self.session)
     }
+}
+
+/// Las firmas del documento leídas por el puente, que se carga solo para esta lectura.
+pub fn signatures_in(document: &[u8]) -> Result<DocumentSignatures, BridgeError> {
+    let document_b64 = base64::engine::general_purpose::STANDARD.encode(document);
+    adapters::ffi::NativeBridge::open()?.previous_signatures(&document_b64)
 }

@@ -27,6 +27,8 @@ fn filtered_with(accepted: &[&'static str], words: &[&str], signer: &RecordingSi
         filter: &AcceptingLabels(accepted.to_vec()),
         files: &files,
         verifier: &Untouched,
+        reader: &Untouched,
+        time_zone: &Untouched,
         signer,
         window: &Untouched,
     };
