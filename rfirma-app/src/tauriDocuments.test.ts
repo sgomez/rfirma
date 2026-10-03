@@ -380,6 +380,20 @@ describe("el documento con el que se invocó a la aplicación", () => {
     });
   });
 
+  it("says when it was handed over to see its signatures", async () => {
+    invoke.mockResolvedValue({
+      opened: {
+        document: { id: "0f1e2d3c", name: "contrato.pdf", modified: 1_700_000_000 },
+        alsoEntering: [],
+        failure: null,
+        discarded: 0,
+      },
+      intent: "seeItsSignatures",
+    });
+
+    expect(await tauriDocumentDrops().pending()).toMatchObject({ seeSignatures: true });
+  });
+
   it("brings nothing when the application was opened without a document", async () => {
     invoke.mockResolvedValue(null);
 

@@ -27,6 +27,8 @@ ORDENES DE TAURI                          (<contexto>/adapters/tauri*.rs)
   async choose_single_destination(id: String) -> Result<Option<SingleDestinationView>, Failure>
   async choose_destination() -> Result<Option<String>, Failure>
   async open_signed_document() -> Result<(), Failure>
+  async open_opened_document(document: String) -> Result<(), Failure>
+  async open_opened_folder(document: String) -> Result<(), Failure>
   async open_signed_folder() -> Result<(), Failure>
         list_certificates() -> Result<Vec<CertificateView>, Failure>
   async install_certificate() -> Result<bool, Failure>

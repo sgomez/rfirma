@@ -15,7 +15,7 @@ mod compile_fail;
 mod event_loop;
 
 use std::sync::atomic::Ordering;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, PoisonError};
 
 use desktop::adapters::tauri::invoked_document;
 pub use desktop::adapters::terminal::run_the_command_line;
@@ -38,9 +38,7 @@ pub const DOCUMENT_INVOKED: &str = "document-invoked";
 
 /// Adquiere el cerrojo recuperando el valor si el mutex estaba envenenado.
 pub fn lock<T>(mutex: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
-    mutex
-        .lock()
-        .unwrap_or_else(|poisoned| poisoned.into_inner())
+    mutex.lock().unwrap_or_else(PoisonError::into_inner)
 }
 
 /// Las cinco raíces, construidas en orden de dependencia sobre las mismas rutas y la misma memoria.
@@ -248,6 +246,8 @@ fn with_the_five_roots(
             documents::adapters::tauri::preview_destination,
             documents::adapters::tauri::choose_destination,
             documents::adapters::tauri::choose_single_destination,
+            documents::adapters::tauri::open_opened_document,
+            documents::adapters::tauri::open_opened_folder,
             documents::adapters::tauri::open_signed_document,
             documents::adapters::tauri::open_signed_folder,
             signing::adapters::tauri::preview_signature,

@@ -190,6 +190,42 @@ pub fn open_signed_document(
         .map_err(|error| Failure::new("unknown", error.to_string()))
 }
 
+/// Abre con el visor del sistema el documento abierto tras el asa (ADR-0011).
+#[tauri::command(async)]
+pub fn open_opened_document(
+    document: String,
+    app_handle: tauri::AppHandle,
+    documents: State<'_, DocumentsRoot>,
+) -> Result<(), Failure> {
+    use tauri_plugin_opener::OpenerExt;
+
+    let document = documents.opened_document(&document)?;
+    app_handle
+        .opener()
+        .open_path(document.reading_path().to_string_lossy(), None::<&str>)
+        .map_err(|error| Failure::new("unknown", error.to_string()))
+}
+
+/// Abre la carpeta del documento abierto tras el asa (ADR-0011).
+#[tauri::command(async)]
+pub fn open_opened_folder(
+    document: String,
+    app_handle: tauri::AppHandle,
+    documents: State<'_, DocumentsRoot>,
+) -> Result<(), Failure> {
+    use tauri_plugin_opener::OpenerExt;
+
+    let document = documents.opened_document(&document)?;
+    let folder = document
+        .reading_path()
+        .parent()
+        .ok_or_else(|| Failure::new("folderMissing", document.name().to_string()))?;
+    app_handle
+        .opener()
+        .open_path(folder.to_string_lossy(), None::<&str>)
+        .map_err(|error| Failure::new("unknown", error.to_string()))
+}
+
 /// Abre la carpeta donde quedó el PDF firmado (ADR-0011).
 #[tauri::command(async)]
 pub fn open_signed_folder(

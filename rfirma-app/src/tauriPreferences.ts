@@ -143,8 +143,14 @@ export function tauriExternalDestinationOpener(): ExternalDestinationOpener {
  */
 export function tauriSignedDocumentOpener(): SignedDocumentOpener {
   return {
-    openDocument: () => invoke<void>("open_signed_document"),
-    openFolder: () => invoke<void>("open_signed_folder"),
+    openDocument: (documentId) =>
+      documentId === undefined
+        ? invoke<void>("open_signed_document")
+        : invoke<void>("open_opened_document", { document: documentId }),
+    openFolder: (documentId) =>
+      documentId === undefined
+        ? invoke<void>("open_signed_folder")
+        : invoke<void>("open_opened_folder", { document: documentId }),
   };
 }
 
