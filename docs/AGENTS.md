@@ -126,3 +126,13 @@ issues hijos: enlace nativo de sub-issue, `## Spec extract` y `## Complexity`).
 
 Los lee el orquestador y los trabajadores de `/developer`. **No los leas si no
 vas a publicar un issue o una PR.**
+
+## Cómo se escribe un mapa
+
+**Una fila de un mapa dice qué es el fichero, y se para ahí.** Una frase, la que
+hace falta para saber si es el que se busca; y, cuando ayude a no confundirlo,
+qué **no** es. El *cómo* funciona lo dice el código, y el porqué un ADR, citado
+por número. Sin tamaños —los da `just outline` en el momento—, sin citas a
+identificadores de spec y sin números de PR o de issue. Lo vigila
+`rfirma-app/src-tauri/tests/agents_map_is_complete.rs`, que además exige que
+todo módulo esté en el mapa de su zona.
