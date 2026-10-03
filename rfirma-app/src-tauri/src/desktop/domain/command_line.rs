@@ -186,6 +186,8 @@ pub enum Refusal {
     GuiWithoutInput,
     /// El valor de `-store` no se atiende.
     InvalidStore(StoreRefusal),
+    /// `listaliases` con `-password-fd`: listar no pide PIN.
+    PasswordForListing,
     /// Falta un parámetro que la orden necesita, o su valor.
     MissingParameter(&'static str),
 }
@@ -221,6 +223,11 @@ impl fmt::Display for Refusal {
             ),
             Self::InvalidArguments(refusal) => write!(formatter, "{refusal}"),
             Self::InvalidStore(refusal) => write!(formatter, "{refusal}"),
+            Self::PasswordForListing => write!(
+                formatter,
+                "{} no se acepta en listaliases: listar no pide PIN",
+                documented(PASSWORD_FD)
+            ),
             Self::MissingParameter(parameter) => {
                 write!(
                     formatter,
@@ -345,7 +352,7 @@ sobrescribe si existe.
 ";
 
 const LIST_ALIASES_SYNTAX: &str = "\
-Uso: rfirma listaliases [--store <almacén>] [--password-fd <N>] [--xml]
+Uso: rfirma listaliases [--store <almacén>] [--xml]
 
 Lista los certificados de los almacenes, o solo los de --store.
 ";
