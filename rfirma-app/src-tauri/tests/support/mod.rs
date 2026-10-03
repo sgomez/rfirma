@@ -49,6 +49,9 @@ pub const THE_SERVICE_VERSION_THE_PUBLISHED_CLIENT_SPEAKS: i64 = 1;
 /// Tiempo máximo de espera para respuestas en pruebas.
 pub const PATIENCE: Duration = Duration::from_secs(40);
 
+/// Entre cuánto se divide el retardo de cada `setTimeout` del cliente publicado en las pruebas.
+pub const CLIENT_CLOCK_DIVISOR: u32 = 10;
+
 /// La versión que el cliente publicado habla por defecto, y la que rfirma implementa.
 pub const THE_VERSION_THE_PUBLISHED_CLIENT_SPEAKS: i64 = 4;
 
@@ -286,6 +289,10 @@ impl PublishedClient {
             .env("RFIRMA_AUTOSCRIPT", the_published_client())
             .env("NODE_EXTRA_CA_CERTS", material.ca_pem_file.path())
             .env("RFIRMA_BENCH_TIMEOUT_MS", PATIENCE.as_millis().to_string())
+            .env(
+                "RFIRMA_BENCH_CLOCK_DIVISOR",
+                CLIENT_CLOCK_DIVISOR.to_string(),
+            )
             .env("RFIRMA_BENCH_MODE", mode.as_env_value())
             .env("RFIRMA_BENCH_SCRIPT", script)
             .env("RFIRMA_BENCH_PORT", third_port.to_string())

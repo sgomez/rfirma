@@ -43,6 +43,12 @@ function running(scriptName, modeName) {
   const mode = MODES[modeName];
 
   installTheMinimalBrowser();
+  const realSetTimeout = globalThis.setTimeout;
+  const clockDivisor = Number(process.env.RFIRMA_BENCH_CLOCK_DIVISOR ?? "1");
+  if (clockDivisor > 1) {
+    globalThis.setTimeout = (callback, delay, ...rest) =>
+      realSetTimeout(callback, (delay ?? 0) / clockDivisor, ...rest);
+  }
   mode.prepare?.();
   let source = readFileSync(autoscriptPath, "utf8");
   source = mode.patch ? mode.patch(source) : source;
@@ -54,7 +60,7 @@ function running(scriptName, modeName) {
   SupportDialog.enableErrorDialog(false);
 
   const timeoutMs = Number(process.env.RFIRMA_BENCH_TIMEOUT_MS ?? "45000");
-  const timer = setTimeout(() => settle({ event: "timeout" }), timeoutMs);
+  const timer = realSetTimeout(() => settle({ event: "timeout" }), timeoutMs);
   timer.unref?.();
   process.on("uncaughtException", (error) => {
     settle({ event: "error", type: "uncaught", message: String(error?.message) });

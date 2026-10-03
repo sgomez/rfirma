@@ -358,7 +358,7 @@ test-site-driver:
 [group('ci')]
 test-native: (certs "install") check-native build-ts llvm-cov-tag
     mkdir -p "{{ coverage_out }}/crap-ffi"
-    cd {{ tauri }} && RFIRMA_LIB_DIR="$(dirname "{{ native_lib }}")" {{ no_debuginfo }} {{ cov_lock }} cargo llvm-cov nextest --all-features --run-ignored only \
+    cd {{ tauri }} && RFIRMA_LIB_DIR="$(dirname "{{ native_lib }}")" {{ no_debuginfo }} {{ cov_lock }} cargo llvm-cov nextest --all-features --run-ignored only --test-threads 8 \
         --lcov --output-path "{{ coverage_out }}/crap-ffi/lcov.info"
     cd {{ tauri }} && cargo crap --path '{{ ffi_allow }}' --lcov "{{ coverage_out }}/crap-ffi/lcov.info" --threshold 30 --fail-above
     cd {{ bridge }} && {{ maven }} test -DexcludedGroups= -Dgroups=gradaC
