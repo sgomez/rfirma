@@ -32,6 +32,7 @@ fn a_previous_signature_translates_the_subject_and_the_issuer_with_the_holder_ut
             name: "LOVELACE BYRON ADA".to_owned(),
             id_number: "IDCES-00000000T".to_owned(),
             organization_identifier: Some("VATES-A00000000".to_owned()),
+            organization_name: Some("FNMT-RCM".to_owned()),
             issuer: "AC FNMT Usuarios".to_owned(),
             certificate_serial_number: "1234567890".to_owned(),
             signing_time: Some("2024-01-01T10:00:00Z".to_owned()),

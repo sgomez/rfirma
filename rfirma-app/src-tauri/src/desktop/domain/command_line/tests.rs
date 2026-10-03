@@ -171,3 +171,13 @@ fn verbose_is_asked_for_with_v_or_with_its_long_form() {
     assert_eq!(verbosity_of(&["verify", "--verbose"]), 1);
     assert_eq!(verbosity_of(&["verify", "-verbose"]), 1);
 }
+
+#[test]
+fn every_appearance_adds_a_level_and_from_two_on_it_is_the_same() {
+    let verbosity_of = |words: &[&str]| verbosity(&normalised(&arguments(words)));
+
+    assert_eq!(verbosity_of(&["verify", "-vv"]), 2);
+    assert_eq!(verbosity_of(&["verify", "-v", "-v"]), 2);
+    assert_eq!(verbosity_of(&["verify", "--verbose", "--verbose"]), 2);
+    assert!(verbosity_of(&["verify", "-vvv"]) >= 2);
+}

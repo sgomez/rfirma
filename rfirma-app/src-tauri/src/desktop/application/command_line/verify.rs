@@ -39,7 +39,7 @@ pub(super) fn verify(arguments: &[String], ports: &CommandLinePorts) -> Outcome 
         Ok(results)
             if verbosity(arguments) > 0 && matches!(format, Format::Pades | Format::Cades) =>
         {
-            with_the_signatures(results, &document, format, ports)
+            with_the_signatures(results, &document, format, verbosity(arguments), ports)
         }
         Ok(results) => Outcome::printed(&results),
         Err(error) => Outcome::failed(format!(
@@ -52,6 +52,7 @@ fn with_the_signatures(
     mut lines: Vec<String>,
     document: &[u8],
     format: Format,
+    verbosity: usize,
     ports: &CommandLinePorts,
 ) -> Outcome {
     let signatures = match ports.reader.signatures_in(document) {
@@ -70,26 +71,64 @@ fn with_the_signatures(
     }
     for (number, signature) in signatures.signatures().iter().enumerate() {
         lines.extend([String::new(), format!("Firma {}", number + 1)]);
-        lines.extend(sheet_of(signature, ports.time_zone));
+        lines.extend(sheet_of(signature, verbosity, ports.time_zone));
     }
     Outcome::printed(&lines)
 }
 
-fn sheet_of(signature: &DocumentSignature, time_zone: &dyn LocalTimeZone) -> Vec<String> {
-    let signer = signer_of(signature);
+fn sheet_of(
+    signature: &DocumentSignature,
+    verbosity: usize,
+    time_zone: &dyn LocalTimeZone,
+) -> Vec<String> {
+    let (signer, on_behalf_of) = signer_and_entity_of(signature);
     let issuer = Some(signature.issuer.clone()).filter(|issuer| !issuer.is_empty());
     let declared = signature
         .signing_time
         .as_deref()
         .map(|instant| in_local_time(instant, time_zone));
+    let serial = Some(signature.certificate_serial_number.clone())
+        .filter(|serial| verbosity > 1 && !serial.is_empty());
     [
         ("Firmante", signer),
+        ("En nombre de", on_behalf_of),
         ("Emisor", issuer),
         ("Fecha declarada", declared),
+        ("Número de serie", serial),
     ]
     .into_iter()
     .filter_map(|(label, value)| value.map(|value| format!("  {:<19}{value}", format!("{label}:"))))
     .collect()
+}
+
+fn signer_and_entity_of(signature: &DocumentSignature) -> (Option<String>, Option<String>) {
+    let Some(identifier) = signature
+        .organization_identifier
+        .as_deref()
+        .map(without_semantics_prefix)
+    else {
+        return (signer_of(signature), None);
+    };
+    let entity = || {
+        named_with_id(
+            signature.organization_name.as_deref().unwrap_or_default(),
+            identifier,
+        )
+    };
+    let id_number = without_semantics_prefix(&signature.id_number);
+    if id_number.is_empty() || id_number == identifier {
+        (entity(), None)
+    } else {
+        (representative_of(signature), entity())
+    }
+}
+
+fn representative_of(signature: &DocumentSignature) -> Option<String> {
+    let id_number = without_semantics_prefix(&signature.id_number);
+    let name = signature.name.as_str();
+    let name = name.strip_prefix(id_number).map_or(name, str::trim_start);
+    let name = name.rfind(" (R: ").map_or(name, |end| &name[..end]);
+    named_with_id(name, id_number)
 }
 
 fn signer_of(signature: &DocumentSignature) -> Option<String> {
@@ -100,11 +139,15 @@ fn signer_of(signature: &DocumentSignature) -> Option<String> {
         .and_then(|name| name.strip_suffix(" - "))
         .filter(|_| !id_number.is_empty())
         .unwrap_or(&signature.name);
-    match (name, id_number) {
+    named_with_id(name, id_number)
+}
+
+fn named_with_id(name: &str, id: &str) -> Option<String> {
+    match (name, id) {
         ("", "") => None,
         (name, "") => Some(name.to_owned()),
-        ("", id_number) => Some(id_number.to_owned()),
-        (name, id_number) => Some(format!("{name} ({id_number})")),
+        ("", id) => Some(id.to_owned()),
+        (name, id) => Some(format!("{name} ({id})")),
     }
 }
 

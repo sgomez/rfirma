@@ -21,7 +21,7 @@ use rfirma_lib::identity::domain::certificate::{CertificateRef, TokenCertificate
 use rfirma_lib::signing::application::cycle::ALGORITHM;
 use rfirma_lib::signing::domain::bridge::{Format, SignatureOperation};
 
-use support::{a_cycle_of, a_one_page_pdf};
+use support::{a_cycle_of, a_cycle_signed_by, a_one_page_pdf, certificate_labelled, PIN};
 
 fn sample(relative: &str) -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -255,6 +255,46 @@ fn verbose_prints_the_validity_the_format_and_a_sheet_per_signature_of_a_pdf() {
             "Firma 2",
             "  Firmante:          EIDAS CERTIFICADO PRUEBAS (99999999R)",
             "  Emisor:            AC FNMT Usuarios",
+            "  Fecha declarada:   <instante de la firma>",
+        ]
+    );
+}
+
+fn a_pdf_signed_by_the_legal_entity_representative() -> PathBuf {
+    let signed = a_cycle_signed_by(
+        &certificate_labelled("FNMT-REPRESENTANTE-PJ"),
+        PIN,
+        Format::Pades,
+        ALGORITHM,
+        &a_one_page_pdf(),
+        SignatureOperation::Sign,
+        &[],
+    );
+    let path = Path::new(env!("CARGO_TARGET_TMPDIR")).join("verify-representative.pdf");
+    std::fs::write(&path, signed).expect("el PDF del representante se escribe");
+    path
+}
+
+#[test]
+#[ignore = "grada C: necesita el token y librfirma_crypto.so (just test-native)"]
+fn verbose_names_the_entity_on_whose_behalf_a_representative_signs() {
+    let since = Utc::now();
+    let path = a_pdf_signed_by_the_legal_entity_representative();
+
+    let outcome = attended(&["verify", "-i", &path.display().to_string(), "-v"]);
+
+    assert!(outcome.stderr.is_empty(), "{:?}", outcome.stderr);
+    assert_eq!(
+        with_the_declared_time_checked(printed_lines(&outcome), since),
+        [
+            "Firma valida",
+            "",
+            "Formato: PAdES",
+            "",
+            "Firma 1",
+            "  Firmante:          NOMBRE APELLIDOUNO (00000000T)",
+            "  En nombre de:      ENTIDAD DE PRUEBAS (Q0000000J)",
+            "  Emisor:            AC Representación",
             "  Fecha declarada:   <instante de la firma>",
         ]
     );

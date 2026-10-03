@@ -128,12 +128,36 @@ fn is_a_known_option(name: &str) -> bool {
         || VERBOSE.contains(&internal.as_str())
 }
 
+/// El primer argumento que pide el detalle de `verify` en una orden que no es `verify`.
+pub fn verbose_outside_verify(command: Command, arguments: &[String]) -> Option<Refusal> {
+    if command == Command::Verify {
+        return None;
+    }
+    arguments
+        .iter()
+        .skip(1)
+        .find(|argument| levels_asked_by(argument) > 0)
+        .map(|argument| Refusal::UnknownArgument(argument.clone()))
+}
+
 /// Cuántas veces piden los argumentos, ya normalizados, el detalle de `verify`.
 pub fn verbosity(arguments: &[String]) -> usize {
     arguments
         .iter()
-        .filter(|argument| VERBOSE.contains(&argument.as_str()))
-        .count()
+        .map(|argument| levels_asked_by(argument))
+        .sum()
+}
+
+fn levels_asked_by(argument: &str) -> usize {
+    if VERBOSE.contains(&argument) {
+        return 1;
+    }
+    match argument.strip_prefix('-') {
+        Some(letters) if letters.len() > 1 && letters.bytes().all(|letter| letter == b'v') => {
+            letters.len()
+        }
+        _ => 0,
+    }
 }
 
 /// Si el argumento pide la ayuda.
@@ -154,6 +178,8 @@ pub enum Refusal {
     CommandLeftOut(Command),
     /// Un parámetro del original que rFirma no atiende.
     ParameterLeftOut(&'static str),
+    /// Un argumento que la orden no tiene.
+    UnknownArgument(String),
     /// Los argumentos de `sign` o `cosign` no son válidos.
     InvalidArguments(ArgumentsRefusal),
     /// `-gui` sin el fichero de `-i`.
@@ -187,6 +213,11 @@ impl fmt::Display for Refusal {
                 formatter,
                 "el parámetro {} de AutoFirma no está disponible en rfirma",
                 documented(parameter)
+            ),
+            Self::UnknownArgument(argument) => write!(
+                formatter,
+                "el argumento «{}» no se reconoce",
+                as_documented(argument)
             ),
             Self::InvalidArguments(refusal) => write!(formatter, "{refusal}"),
             Self::InvalidStore(refusal) => write!(formatter, "{refusal}"),
@@ -320,15 +351,17 @@ Lista los certificados de los almacenes, o solo los de --store.
 ";
 
 const VERIFY_SYNTAX: &str = "\
-Uso: rfirma verify -i <fichero> [-v | --verbose] [--xml]
+Uso: rfirma verify -i <fichero> [-v | -vv | --verbose] [--xml]
      rfirma verify --gui -i <fichero>
 
 Valida las firmas del fichero de -i, con la caducidad del certificado del
 firmante y sin revocación ni red. Sale con 0 aunque la firma no sea válida,
 como AutoFirma. Con --gui, entrega el fichero a la ventana de rFirma.
 
-Con -v, añade el formato y una ficha por firma: firmante, emisor y fecha
-declarada. Esa parte no es estable: no la analices con un programa.
+Con -v, añade el formato y una ficha por firma: firmante, en nombre de quién
+firma si es un certificado de representación, emisor y fecha declarada. Con -vv
+(o -v -v, --verbose --verbose), añade el número de serie del certificado. Esa
+parte no es estable: no la analices con un programa.
 ";
 
 #[cfg(test)]

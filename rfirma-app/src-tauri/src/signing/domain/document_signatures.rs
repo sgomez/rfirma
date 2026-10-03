@@ -61,6 +61,8 @@ pub struct DocumentSignature {
     pub id_number: String,
     /// El `organizationIdentifier` del sujeto, si el certificado lo lleva.
     pub organization_identifier: Option<String>,
+    /// El `organizationName` del sujeto, si el certificado lo lleva.
+    pub organization_name: Option<String>,
     /// La autoridad emisora del certificado.
     pub issuer: String,
     /// Número de serie del certificado, distinto del `SERIALNUMBER` del sujeto.

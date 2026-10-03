@@ -6,8 +6,8 @@ use base64::Engine as _;
 
 use crate::desktop::application::store_scope::{within_the_scope, ScopeFailure};
 use crate::desktop::domain::command_line::{
-    command_of, handover_to_the_window, is_a_help_flag, normalised, parameter_left_out, Command,
-    Refusal, WindowHandover,
+    command_of, handover_to_the_window, is_a_help_flag, normalised, parameter_left_out,
+    verbose_outside_verify, Command, Refusal, WindowHandover,
 };
 use crate::desktop::domain::sign_arguments::{
     parse_sign_arguments, Format, Selection, SignArguments,
@@ -150,6 +150,9 @@ pub fn attend(arguments: &[String], ports: &CommandLinePorts) -> Outcome {
         };
     }
     if let Some(refusal) = parameter_left_out(arguments) {
+        return Outcome::refused(&refusal);
+    }
+    if let Some(refusal) = verbose_outside_verify(command, arguments) {
         return Outcome::refused(&refusal);
     }
     let signing = if matches!(command, Command::Sign | Command::Cosign) {
