@@ -87,6 +87,13 @@ salta en silencio— y se compensa con una regla: el carril **rápido** las comp
 (`cargo test --no-run`) aunque no las ejecute. Así un error de tipos contra la FFI cae en 48 s y
 solo el coste de *ejecutar* se paga en los tres minutos.
 
+Las `conformance_*` de la grada C pasan por el cliente publicado byte a byte, pero con las esperas
+fijas de su `setTimeout` (3 s antes del primer intento, reintentos de 2 y 3 s) divididas entre diez
+(`RFIRMA_BENCH_CLOCK_DIVISOR`, que fija `tests/support/mod.rs`): sin ello cada prueba duerme unos
+5 s y el carril paga 90 s de reloj. Lo que se pierde es el tiempo real de espera, no el protocolo;
+la consola de `rfirma-conformance` no lo fija y corre con el reloj real. `test-native` lanza 8 hilos
+porque estas pruebas esperan, no calculan.
+
 ## Qué prueba de verdad que la firma vale
 
 **`pdfsig` de poppler es la puerta automática**, en la grada C, con la trampa que midió el
