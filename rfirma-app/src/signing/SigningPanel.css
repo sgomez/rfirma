@@ -49,136 +49,57 @@
 .panel__co-signature {
   display: flex;
   flex-direction: column;
-  padding: 10px var(--rf-space-sm);
   border: 1px solid var(--rf-border-subtle);
   border-radius: var(--rf-radius-md);
   background: var(--rf-bg);
 }
 
-/* El tono es el de la peor fila (docs/design/panel-de-firma.md § El aviso de
-   firmas previas): el borde sube de grosor con la gravedad. */
-.panel__co-signature--indeterminate {
-  border-color: var(--rf-border-strong);
-}
-
-.panel__co-signature--attention {
+.panel__co-signature--expired,
+.panel__co-signature--invalid {
   border-width: 2px;
   border-color: var(--rf-border-strong);
 }
 
-/* Toda la línea es el blanco de clic (docs/design/panel-de-firma.md § El
-   aviso de firmas previas): el botón no lleva ni borde ni fondo propios. */
-.panel__co-signature-summary {
+/* Una línea de 36 px (docs/design/panel-de-firma.md § El aviso de firmas
+   previas): 10 px a la izquierda y 2 a la derecha para que quepa en 380 px. */
+.panel__co-signature-line {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: var(--rf-space-xs);
-  width: 100%;
-  padding: 0;
-  border: none;
-  background: none;
-  font: inherit;
-  color: inherit;
-  text-align: left;
-  cursor: pointer;
+  height: 36px;
+  padding: 0 2px 0 10px;
 }
 
 .panel__co-signature-text {
   flex: 1;
+  min-width: 0;
+  overflow: hidden;
   font-size: 13px;
   line-height: 18px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.panel__co-signature-count {
-  display: block;
+.panel__co-signature--expired .panel__co-signature-text,
+.panel__co-signature--invalid .panel__co-signature-text {
+  font-weight: 700;
 }
 
-/* En el panel de 380 px la coletilla no cabe nunca (docs/design/panel-de-firma.md
-   § El aviso de firmas previas): baja siempre a su propia línea fija. En sede
-   (docs/design/ventana-de-sede.md § El consentimiento) cabe siempre en la
-   misma línea, con el separador « · » delante. */
-.panel__co-signature-warnings {
-  display: block;
-}
-
-.panel__co-signature--site .panel__co-signature-count,
-.panel__co-signature--site .panel__co-signature-warnings {
-  display: inline;
-}
-
-.panel__co-signature--site .panel__co-signature-warnings::before {
-  content: " · ";
-}
-
-.panel__co-signature-chevron {
-  display: flex;
+.panel__co-signature-view {
   flex: none;
-  margin-top: 2px;
-  color: var(--rf-text-muted);
-}
-
-.panel__co-signature-chevron--open {
-  transform: rotate(180deg);
-}
-
-.panel__previous-signatures-list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin: 8px 0 0;
-  padding: 8px 0 0 26px;
-  border-top: 1px solid var(--rf-border-subtle);
-  list-style: none;
+  height: 28px;
+  padding: 0 6px;
 }
 
 /* «Ya lo firmaste tú» (docs/design/panel-de-firma.md § El aviso de firmas
-   previas): se ve aunque el aviso esté plegado. */
+   previas): franja al pie del aviso. */
 .panel__co-signature-footer {
   display: flex;
   align-items: center;
   gap: var(--rf-space-xs);
-  margin-top: 10px;
-  padding-top: 8px;
+  padding: 8px 10px;
   border-top: 1px solid var(--rf-border-subtle);
   background: var(--rf-surface);
-  font-weight: 600;
-}
-
-.panel__previous-signatures-row {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.panel__previous-signatures-row-top {
-  display: flex;
-  justify-content: space-between;
-  gap: var(--rf-space-sm);
-}
-
-.panel__previous-signatures-verdict {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  flex: none;
-  color: var(--rf-text-muted);
-}
-
-.panel__previous-signatures-verdict--strong {
-  color: inherit;
-  font-weight: 600;
-}
-
-.panel__previous-signatures-row-meta {
-  margin: 0;
-}
-
-/* En la fila de la última firma, si el documento cambió después
-   (docs/design/panel-de-firma.md § El aviso de firmas previas): sube el tono,
-   pero no es una firma no válida. */
-.panel__previous-signatures-changed {
-  display: flex;
-  align-items: center;
-  gap: 4px;
   font-weight: 600;
 }
 

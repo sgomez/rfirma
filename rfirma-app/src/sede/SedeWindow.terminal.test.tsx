@@ -89,7 +89,7 @@ describe("terminal order origin", () => {
     renderWithCatalog(<SedeWindow errands={port} />);
     await elapse(0);
 
-    expect(screen.getByText(/Firmarás junto a 1 firma anterior/)).toBeInTheDocument();
+    expect(screen.getByText("Junto a 1 firma")).toBeInTheDocument();
   });
 
   it("omits the previous signatures box when there are none", async () => {
@@ -100,7 +100,7 @@ describe("terminal order origin", () => {
     renderWithCatalog(<SedeWindow errands={port} />);
     await elapse(0);
 
-    expect(screen.queryByText(/Firmarás junto a/)).toBeNull();
+    expect(screen.queryByText(/Junto a \d+ firmas?/)).toBeNull();
   });
 
   describe("without a usable certificate", () => {

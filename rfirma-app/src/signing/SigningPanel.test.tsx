@@ -54,7 +54,7 @@ describe("SigningPanel", () => {
       previousSignatures: reportOf([]),
     });
 
-    expect(screen.queryByText(/Firmarás junto a/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Junto a 2 firmas/)).not.toBeInTheDocument();
   });
 
   it("shows the destination folder and the file name in their own lines, and never the whole path", () => {
@@ -151,7 +151,7 @@ describe("SigningPanel", () => {
       previousSignatures: reportOf([previousSignatureOf()]),
     });
 
-    expect(screen.getByText("Firmarás junto a 1 firma anterior")).toBeInTheDocument();
+    expect(screen.getByText("Junto a 1 firma")).toBeInTheDocument();
   });
 
   it("shows the same-certificate strip, even folded, when the chosen certificate signed before", () => {
@@ -167,10 +167,6 @@ describe("SigningPanel", () => {
       ]),
     });
 
-    expect(screen.getByRole("button", { name: "Ver firmas anteriores" })).toHaveAttribute(
-      "aria-expanded",
-      "false",
-    );
     expect(screen.getByText("Ya lo firmaste tú con este certificado")).toBeInTheDocument();
   });
 
@@ -213,168 +209,91 @@ describe("SigningPanel", () => {
       previousSignatures: reportOf(TWO_SIGNATURES),
     });
 
-    expect(screen.getByText("Firmarás junto a 2 firmas anteriores")).toBeInTheDocument();
+    expect(screen.getByText("Junto a 2 firmas")).toBeInTheDocument();
   });
 
-  it("nace desplegado when a report with two signatures arrives after the panel already mounted", () => {
-    const { show } = renderPanel({
+  it("keeps the notice to one line, whatever the number of signatures", () => {
+    renderPanel({
       document: { id: "doc-1", name: "contrato.pdf", pages: 27, sizeBytes: 2_400_000 },
-      previousSignatures: reportOf([]),
+      previousSignatures: reportOf([...TWO_SIGNATURES, ...TWO_SIGNATURES, ...TWO_SIGNATURES]),
     });
 
-    show({
+    expect(screen.getByText("Junto a 6 firmas")).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Ver firmas →" })).toHaveLength(1);
+    expect(document.querySelector(".panel__previous-signatures-list")).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("says only the count, with the quiet tone, when every signature is valid", () => {
+    renderPanel({
       document: { id: "doc-1", name: "contrato.pdf", pages: 27, sizeBytes: 2_400_000 },
       previousSignatures: reportOf(TWO_SIGNATURES),
     });
 
-    expect(screen.getByRole("button", { name: "Ocultar firmas anteriores" })).toHaveAttribute(
-      "aria-expanded",
-      "true",
+    expect(screen.getByText("Junto a 2 firmas")).toBeInTheDocument();
+    expect(document.querySelector(".panel__co-signature")).toHaveClass(
+      "panel__co-signature--valid",
     );
   });
 
-  it("does not carry the expanded state of the previous document into the next one", () => {
-    const { show } = renderPanel({
+  it("counts «caducadas» when every problem is an expiry", () => {
+    renderPanel({
       document: { id: "doc-1", name: "contrato.pdf", pages: 27, sizeBytes: 2_400_000 },
-      previousSignatures: reportOf(TWO_SIGNATURES),
-    });
-    expect(screen.getByRole("button", { name: "Ocultar firmas anteriores" })).toBeInTheDocument();
-
-    show({
-      document: { id: "doc-2", name: "otro.pdf", pages: 3, sizeBytes: 1_000 },
       previousSignatures: reportOf([
-        previousSignatureOf({
-          name: "Grace Hopper",
-          idNumber: "77777777J",
-          certificateSerialNumber: "3",
-          signingTime: "2024-02-01T10:00:00Z",
-        }),
+        previousSignatureOf({ validity: "expired" }),
+        previousSignatureOf({ validity: "expired", certificateSerialNumber: "2" }),
+        previousSignatureOf({ certificateSerialNumber: "3" }),
       ]),
     });
 
-    expect(screen.getByRole("button", { name: "Ver firmas anteriores" })).toHaveAttribute(
-      "aria-expanded",
-      "false",
-    );
-  });
-
-  it("toggles the previous-signatures rows, the chevron and aria-expanded when pressed", async () => {
-    const user = userEvent.setup();
-    renderPanel({
-      document: { id: "doc-1", name: "contrato.pdf", pages: 27, sizeBytes: 2_400_000 },
-      previousSignatures: reportOf([previousSignatureOf()]),
-    });
-
-    const rows = () => document.querySelector(".panel__previous-signatures-list");
-    const summary = screen.getByRole("button", { name: "Ver firmas anteriores" });
-    const chevron = summary.querySelector(".panel__co-signature-chevron");
-    expect(summary).toHaveAttribute("aria-expanded", "false");
-    expect(chevron).not.toHaveClass("panel__co-signature-chevron--open");
-    expect(rows()).not.toBeInTheDocument();
-
-    await user.click(summary);
-
-    const expanded = screen.getByRole("button", { name: "Ocultar firmas anteriores" });
-    expect(expanded).toHaveAttribute("aria-expanded", "true");
-    expect(expanded.querySelector(".panel__co-signature-chevron")).toHaveClass(
-      "panel__co-signature-chevron--open",
-    );
-    expect(rows()).toBeInTheDocument();
-
-    await user.click(expanded);
-
-    expect(screen.getByRole("button", { name: "Ver firmas anteriores" })).toHaveAttribute(
-      "aria-expanded",
-      "false",
-    );
-    expect(rows()).not.toBeInTheDocument();
-  });
-
-  it.each([
-    ["valid", null, "Válida"],
-    ["certificateExpired", null, "Certificado caducado"],
-    ["certificateNotYetValid", null, "Certificado aún no válido"],
-    ["broken", "NO_MATCH_DATA", "Firma rota"],
-    ["unverifiable", null, "No se puede validar"],
-    ["notFullyChecked", null, "No se ha podido comprobar del todo"],
-  ] as const)("shows a %s row with its verdict and motive", async (status, reason, label) => {
-    const user = userEvent.setup();
-    renderPanel({
-      document: { id: "doc-1", name: "contrato.pdf", pages: 27, sizeBytes: 2_400_000 },
-      previousSignatures: reportOf([previousSignatureOf({ status, reason })], {
-        warningCount: status === "valid" ? 0 : 1,
-        tone:
-          status === "notFullyChecked"
-            ? "indeterminate"
-            : status === "valid"
-              ? "information"
-              : "attention",
-      }),
-    });
-
-    const collapsed = screen.queryByRole("button", { name: "Ver firmas anteriores" });
-    if (collapsed !== null) {
-      await user.click(collapsed);
-    }
-
-    expect(screen.getByText(label)).toBeInTheDocument();
-  });
-
-  it("shows the three motives of a broken signature by its reason code", () => {
-    const cases: Array<[string | null, string]> = [
-      ["NO_MATCH_DATA", "No corresponde con los datos"],
-      ["CORRUPTED_SIGN", "Está dañada"],
-      ["CERTIFIED_SIGN_REVISION", "El PDF estaba certificado y no admitía más firmas"],
-    ];
-    for (const [reason, motive] of cases) {
-      const { unmount } = renderPanel({
-        document: { id: "doc-1", name: "contrato.pdf", pages: 27, sizeBytes: 2_400_000 },
-        previousSignatures: reportOf([previousSignatureOf({ status: "broken", reason })], {
-          warningCount: 1,
-          tone: "attention",
-        }),
-      });
-
-      expect(screen.getByText(motive)).toBeInTheDocument();
-      unmount();
-    }
-  });
-
-  it("shows the document-changed line under the last signature when the backend marks it", () => {
-    renderPanel({
-      document: { id: "doc-1", name: "contrato.pdf", pages: 27, sizeBytes: 2_400_000 },
-      previousSignatures: reportOf(TWO_SIGNATURES, {
-        warningCount: 1,
-        tone: "attention",
-        changedAfterLastSignature: true,
-      }),
-    });
-
-    expect(screen.getByText("El documento ha cambiado después de esta firma")).toBeInTheDocument();
-  });
-
-  it("shows the warnings line on its own, with the tone's border, when there are any", () => {
-    renderPanel({
-      document: { id: "doc-1", name: "contrato.pdf", pages: 27, sizeBytes: 2_400_000 },
-      previousSignatures: reportOf([previousSignatureOf({ status: "broken", reason: null })], {
-        warningCount: 1,
-        tone: "attention",
-      }),
-    });
-
-    expect(screen.getByText("1 aviso")).toBeInTheDocument();
+    expect(screen.getByText("Junto a 3 firmas · 2 caducadas")).toBeInTheDocument();
     expect(document.querySelector(".panel__co-signature")).toHaveClass(
-      "panel__co-signature--attention",
+      "panel__co-signature--expired",
     );
   });
 
-  it("shows no warnings line for a document with only valid previous signatures", () => {
+  it("counts «problemas», expired ones included, as soon as one signature is invalid", () => {
+    renderPanel({
+      document: { id: "doc-1", name: "contrato.pdf", pages: 27, sizeBytes: 2_400_000 },
+      previousSignatures: reportOf([
+        previousSignatureOf({ validity: "expired" }),
+        previousSignatureOf({ validity: "invalid", certificateSerialNumber: "2" }),
+        previousSignatureOf({ certificateSerialNumber: "3" }),
+      ]),
+    });
+
+    expect(screen.getByText("Junto a 3 firmas · 2 problemas")).toBeInTheDocument();
+    expect(document.querySelector(".panel__co-signature")).toHaveClass(
+      "panel__co-signature--invalid",
+    );
+  });
+
+  it("counts a finding of the document as a problem even with every signature valid", () => {
+    renderPanel({
+      document: { id: "doc-1", name: "contrato.pdf", pages: 27, sizeBytes: 2_400_000 },
+      previousSignatures: reportOf([previousSignatureOf()], {
+        findings: ["modifiedAfterLastSignature"],
+      }),
+    });
+
+    expect(screen.getByText("Junto a 1 firma · 1 problema")).toBeInTheDocument();
+    expect(document.querySelector(".panel__co-signature")).toHaveClass(
+      "panel__co-signature--invalid",
+    );
+  });
+
+  it("opens the «Ver firmas» dialog from «Ver firmas →» and closes it", async () => {
+    const user = userEvent.setup();
     renderPanel({
       document: { id: "doc-1", name: "contrato.pdf", pages: 27, sizeBytes: 2_400_000 },
       previousSignatures: reportOf([previousSignatureOf()]),
     });
 
-    expect(screen.queryByText(/aviso/)).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Ver firmas →" }));
+
+    const dialog = screen.getByRole("dialog", { name: "Firmas del documento" });
+    await user.click(within(dialog).getByRole("button", { name: "Cerrar" }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   it("offers two ways out when no certificate turned up, in the footer", async () => {
@@ -534,7 +453,7 @@ describe("SigningPanel", () => {
     const selector = screen.getByRole("combobox", { name: "Certificado" });
     const scroll = selector.closest(".panel__scroll");
     expect(scroll?.firstElementChild?.contains(selector)).toBe(true);
-    expect(screen.getByText(/Firmarás junto a/)).toBeInTheDocument();
+    expect(screen.getByText(/Junto a 2 firmas/)).toBeInTheDocument();
   });
 
   it("chooses the certificate from the selector, not from the footer", async () => {
