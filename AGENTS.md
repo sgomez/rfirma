@@ -17,11 +17,11 @@ Las decisiones están en `docs/adr/`; cada zona tiene su mapa con sus trampas. L
 
 ## Entorno
 
-* **Cargo** está en `~/.cargo/bin`, fuera del `PATH` de una shell no interactiva: exporta el `PATH` antes de cualquier receta de Rust (`just tools` lo comprueba).
+* **Un comando por llamada, sin prefijos:** `just <receta>` a secas, sin `PATH=…`, `CARGO_TARGET_DIR=…`, `cd … &&` ni `; echo $?`. Las recetas ya ponen `~/.cargo/bin` en el `PATH` y el árbol de compilación.
 * **GraalVM JDK 25** (`GRAALVM_HOME`, ADR-0004); la trampa del 21 de SDKMAN, en `rfirma-native-bridge/AGENTS.md`.
 * **Token PKCS#11 de pruebas:** `softhsm2`, tokens `rfirma-test` (RSA) y `rfirma-test-ecc` (curva elíptica), PIN `1234`, módulo `/usr/lib/softhsm/libsofthsm2.so`, con certificados de pruebas de la FNMT; el kit, en `~/.local/share/rfirma-test-certs` (`docs/research/token-pkcs11-pruebas.md`). **El certificado personal del titular no se usa en ningún punto del proyecto.**
 * Un `pkg-config exited with status code 1` en `javascriptcore-rs-sys` es una biblioteca de sistema de Tauri que falta: la lista, en el paso «Dependencias de sistema de Tauri» de `.github/workflows/ci.yml`.
-* Desde un worktree, `CARGO_TARGET_DIR` es `.claude/worktrees/target`, compartido (ADR-0014).
+* Desde un worktree, las recetas compilan en `.claude/worktrees/target`, compartido (ADR-0014).
 
 ## Qué ejecutar y cuándo
 
@@ -29,8 +29,8 @@ Las decisiones están en `docs/adr/`; cada zona tiene su mapa con sus trampas. L
 
 | Cuándo | Qué |
 | --- | --- |
-| En cada rojo → verde | Solo la prueba que tocas: `cargo test <filtro>`, `pnpm exec vitest run <fichero> --reporter=dot` |
-| Antes de commitear | `just fmt`. El commit corre `just structural-guards` con lefthook. El resto lo corre en el pre-push: formato, biome y las guardas otra vez; tipos, i18n y knip si tocas `rfirma-app/src/`; `just check-rust` si tocas `rfirma-app/src-tauri/` |
+| En cada rojo → verde | Solo la prueba que tocas: `just test-one-rust <filtro>`, `just test-one-ts <fichero>` |
+| Antes de commitear | `just fmt`. El commit corre con lefthook `just structural-guards` y, si tocas `rfirma-app/src/`, tipos, i18n y knip. El pre-push los repite y añade formato y biome, y `just check-rust` si tocas `rfirma-app/src-tauri/` |
 | Al abrir la PR | Push: el veredicto de `just check` es del CI |
 | Si el CI sale en rojo | Vuelve al primer peldaño con lo que falló. `IO failure on output stream` o `No space left on device` en local es el disco: `just clean-coverage` |
 | Al revisar una PR | Nada, si el CI está verde para ese head sha (`docs/agents/code-host.md`) |
@@ -38,8 +38,8 @@ Las decisiones están en `docs/adr/`; cada zona tiene su mapa con sus trampas. L
 
 `just --list` agrupa las recetas: `checklist` es esta tabla; `ci`, lo que llaman los workflows; `dev` y `release`, lo que se usa a mano.
 
-* **Itera con `cargo test <filtro>`.** `just check-rust`, `just coverage` y `just crap` compilan un árbol instrumentado aparte; la primera ya la paga el pre-push.
-* **Un `cargo test` suelto necesita `rfirma-app/dist` y el token.** Desde un árbol limpio: `pnpm install` → `just po-import` → `just build-ts` → `just certs install`.
+* **Itera con `just test-one-rust <filtro>`.** `just check-rust`, `just coverage` y `just crap` compilan un árbol instrumentado aparte; la primera ya la paga el pre-push.
+* **Un `just test-one-rust` suelto necesita `rfirma-app/dist` y el token.** Desde un árbol limpio: `pnpm install` → `just po-import` → `just build-ts` → `just certs install`.
 * **Filtra la salida:** el reportero más callado de cada cadena; en rojo, vuelve a correr solo el fichero o el nombre que falló.
 * **Si tocas `Cargo.lock`, corre `just flatpak-sources`**, que reescribe el sello de `packaging/flatpak/sources.lock`; sin él, la «Cadena TypeScript» del CI sale en rojo. Si la receta no corre, el sello es el `sha256sum` de `Cargo.lock`.
 

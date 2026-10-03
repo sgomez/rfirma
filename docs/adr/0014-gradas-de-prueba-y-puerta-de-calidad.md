@@ -337,6 +337,17 @@ rojo más frecuente: al commitear, el rojo llega en el mismo paso y no después 
 de un commit de arreglo. El `pre-push` las conserva, porque un commit hecho con `--no-verify` o
 desde una rama anterior al hook no las ha pasado.
 
+El `pre-commit` corre también `just build-ts lint-i18n knip` si el commit toca `rfirma-app/src/`,
+con el mismo `glob`. Tarda entre cuatro y ocho segundos, y sus rojos —un tipo, una clave de i18n,
+un export sin uso— se descubrían tras un push que ya había pagado el formato y las guardas. El
+formato se queda fuera del commit: `just fmt` escribe, y el hook no reescribe lo que se commitea.
+
+Las recetas ponen ellas mismas `~/.cargo/bin` y `~/.local/bin` en el `PATH`, y `just test-one-rust
+<filtro>` y `just test-one-ts <fichero>` corren la prueba suelta sobre el árbol de compilación de
+las recetas. Así una orden es un comando solo, sin `PATH=…`, `CARGO_TARGET_DIR=…` ni `cd … &&`
+delante: el aislamiento de un agente en su worktree rechaza esas formas compuestas, y cada rechazo
+es un turno perdido.
+
 Los otros dos corren solo si el push toca su cadena, con el `glob` de lefthook sobre los ficheros
 del push. El tercero, si toca `rfirma-app/src/`: `just build-ts lint-i18n knip` —tipos, claves de
 i18n y exports sin uso—, unos quince segundos. El cuarto, si toca `rfirma-app/src-tauri/`: `just

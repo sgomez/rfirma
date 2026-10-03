@@ -1,4 +1,4 @@
-# Puerta local (ADR-0014). Al commitear: las guardas estructurales, que tardan menos de un segundo. Antes del push: formato, lint de biome y guardas siempre; tipos e i18n si el push toca la interfaz; clippy y CRAP si toca el backend.
+# Puerta local (ADR-0014). Al commitear: las guardas estructurales, que tardan menos de un segundo, y tipos e i18n si el commit toca la interfaz. Antes del push: formato, lint de biome y guardas siempre; tipos e i18n si el push toca la interfaz; clippy y CRAP si toca el backend.
 # Un hook de git es una shell no interactiva, donde cargo y ruff no estan en el PATH.
 # El `run` es una sola linea: en Windows lefthook le pasa a `sh` solo la primera (ADR-0035).
 # Se instala en cada `pnpm install` con `tools/install-git-hooks.sh`, salvo desde un worktree.
@@ -8,6 +8,10 @@ pre-commit:
     - name: structural-guards
       fail_text: "lo que dice cada guarda es lo que hay que arreglar; el umbral de tamaño lo fija files_stay_small.rs"
       run: PATH="$HOME/.cargo/bin:$HOME/.local/bin:$PATH" just structural-guards
+    - name: check-ts-static
+      glob: "rfirma-app/src/**"
+      fail_text: "tsc, una clave de i18n o un export sin uso: lo que nombra la salida"
+      run: PATH="$HOME/.cargo/bin:$HOME/.local/bin:$PATH" just build-ts lint-i18n knip
 
 pre-push:
   piped: true

@@ -14,6 +14,9 @@ set dotenv-override := true
 windows := if os_family() == "windows" { "true" } else { "false" }
 macos := if os() == "macos" { "true" } else { "false" }
 
+# Cargo y las herramientas de `~/.local/bin` quedan fuera del PATH de una shell no interactiva: las recetas se llaman sin prefijo.
+export PATH := if windows == "true" { env("PATH", "") } else { home_directory() / ".cargo/bin" + ":" + home_directory() / ".local/bin" + ":" + env("PATH", "/usr/local/bin:/usr/bin:/bin") }
+
 # La raiz con barras normales: bash se come las barras invertidas de Windows.
 root := replace(justfile_directory(), "\\", "/")
 
@@ -251,6 +254,16 @@ duplication: deps
 [group('checklist')]
 outline +paths:
     @{{ root }}/scripts/outline.sh {{ paths }}
+
+# La prueba de Rust que tocas, sobre el arbol de compilacion de las recetas: `just test-one-rust <filtro>`.
+[group('checklist')]
+test-one-rust *args:
+    cd {{ tauri }} && cargo test {{ args }}
+
+# El fichero de vitest que tocas, con el reportero callado: `just test-one-ts <fichero>`.
+[group('checklist')]
+test-one-ts *args:
+    cd {{ app }} && pnpm exec vitest run {{ args }} --reporter=dot
 
 # Lo que la ventana puede pedirle al backend, generado de las fuentes.
 [group('dev')]
