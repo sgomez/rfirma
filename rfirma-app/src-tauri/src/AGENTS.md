@@ -106,3 +106,21 @@ Leen el código **como texto**: `signing/application/cycle/tests.rs`,
 reapuntarla y a comprobar con un cebo que sigue poniéndose roja. Entre ellas,
 la guarda de `token_and_launch.rs` que comprueba que `headless` y
 `mandatoryCertSelection` solo los lee el protocolo.
+
+## Lo que no va en un comentario
+
+La regla de los comentarios está en el `AGENTS.md` raíz; aquí, adónde va lo que
+no cabe en ella:
+
+* El porqué de una decisión va a un ADR; una advertencia a agentes de alcance
+  general, a este mapa. Lo que ya dice la tabla de un mapa no se repite, y un
+  conteo, un número de PR o la interfaz del otro lado no van a ninguna parte.
+* Una cita a un identificador de especificación (`ID-NN`, `TD-NN`, `RD-NN`,
+  `RT-NN`) que ya exista se tolera mientras la poda no pase por su zona; al
+  podar, pasa a citar el ADR que recoja la decisión o se borra. El código nuevo
+  cita el ADR, nunca el identificador de spec. `tests/adr_citations_resolve.rs`
+  vigila que cada `ADR-NNNN` citado tenga fichero en `docs/adr/`, y nada más.
+* La regla aplica al código nuevo **y al movido**: mover un fichero es la
+  ocasión de podarlo, no de trasladar su prosa.
+* En revisión, un comentario nuevo de más de dos líneas pide justificación en la
+  PR.
