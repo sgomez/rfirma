@@ -207,6 +207,8 @@ fn a_previous_signature() -> crate::signing::domain::DocumentSignature {
         reason: None,
         validity: crate::signing::domain::Validity::Valid,
         validity_reason: None,
+        signing_date: None,
+        closes_document: false,
         countersignatures: Vec::new(),
     }
 }

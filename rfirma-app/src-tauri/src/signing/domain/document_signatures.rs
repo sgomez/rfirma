@@ -71,6 +71,15 @@ pub enum ValidityReason {
     },
 }
 
+/// La fecha de una firma: la declara quien firma o la prueba el sello de una TSA (ADR-0043).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum SigningDate {
+    /// El instante ISO-8601 que declara la propia firma.
+    Declared { at: String },
+    /// El instante ISO-8601 del sello de tiempo, y la TSA que lo selló.
+    Stamped { at: String, tsa: String },
+}
+
 /// Lo que se ve en el documento entero, y no se cuelga de ninguna firma (ADR-0043).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum DocumentFinding {
@@ -115,6 +124,10 @@ pub struct DocumentSignature {
     pub validity: Validity,
     /// El motivo de la validez, si no es `Valid`.
     pub validity_reason: Option<ValidityReason>,
+    /// La fecha declarada o sellada, si la firma trae alguna.
+    pub signing_date: Option<SigningDate>,
+    /// Si es la firma de certificación que no admite más firmas.
+    pub closes_document: bool,
     /// Las contrafirmas de esta firma; en PDF, siempre vacías.
     pub countersignatures: Vec<DocumentSignature>,
 }

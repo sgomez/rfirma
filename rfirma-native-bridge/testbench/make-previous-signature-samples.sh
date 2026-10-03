@@ -16,6 +16,8 @@ EXPIRED="$ROOT/testdata/fnmt/expired-rsa.p12"
 EXPIRED_PIN='G5cp,fYC9gje'
 ACTIVE="$ROOT/testdata/fnmt/active-rsa.p12"
 ACTIVE_PIN='1234'
+PSEUDONYM="$ROOT/testdata/fnmt/pseudonym-rsa.p12"
+PSEUDONYM_PIN='1234'
 
 WORK="$(mktemp -d)"
 TSA_PID=""
@@ -55,6 +57,23 @@ sign pades-timestamped "$WORK/document.pdf" "$EXPIRED" "$EXPIRED_PIN" "$TSA_URL"
     "$OUT/pades-long-term-expired.pdf"
 sign pades-timestamped "$WORK/document.pdf" "$ACTIVE" "$ACTIVE_PIN" "$TSA_URL" \
     "$OUT/pades-long-term-active.pdf"
+sign pades-stamped-at "$WORK/document.pdf" "$EXPIRED" "$EXPIRED_PIN" "2019-06-01T00:00:00Z" \
+    "$OUT/pades-stamped-while-in-force.pdf"
+
+sign pades "$WORK/document.pdf" "$ACTIVE" "$ACTIVE_PIN" "$WORK/certified.pdf" \
+    certificationLevel=1
+sleep 1.1
+sign pades "$WORK/certified.pdf" "$PSEUDONYM" "$PSEUDONYM_PIN" \
+    "$OUT/pades-certified-then-cosigned.pdf" allowSigningCertifiedPdfs=true
+
+sign pades "$WORK/document.pdf" "$ACTIVE" "$ACTIVE_PIN" "$WORK/forms-allowed.pdf" \
+    certificationLevel=2
+sleep 1.1
+sign pades "$WORK/forms-allowed.pdf" "$PSEUDONYM" "$PSEUDONYM_PIN" "$WORK/closed.pdf" \
+    certificationLevel=1 allowSigningCertifiedPdfs=true
+sleep 1.1
+sign pades "$WORK/closed.pdf" "$EXPIRED" "$EXPIRED_PIN" \
+    "$OUT/pades-certified-twice-then-cosigned-expired.pdf" allowSigningCertifiedPdfs=true
 
 printf 'rfirma: contenido firmado en CAdES\n' > "$WORK/content.txt"
 sign cades implicit "$WORK/content.txt" "$EXPIRED" "$EXPIRED_PIN" "$OUT/cades-expired.csig"

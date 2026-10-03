@@ -90,6 +90,34 @@ final class TestFixtures {
     }
 
     /**
+     * PDF certificado dos veces —primero admitiendo formularios, despues sin cambios permitidos y
+     * con el otro certificado— y firmado al final con el caducado del kit.
+     */
+    static byte[] pdfCertifiedTwiceAndSignedAfter() throws Exception {
+        final Properties formsAllowed = new Properties();
+        formsAllowed.setProperty("certificationLevel", "2");
+        final byte[] first = pades(samplePdf(), certificateChain(), privateKey(), formsAllowed);
+        Thread.sleep(1_100);
+
+        final Properties closing = new Properties();
+        closing.setProperty("certificationLevel", "1");
+        closing.setProperty("allowSigningCertifiedPdfs", "true");
+        final byte[] closed = pades(first, otherCertificateChain(), otherPrivateKey(), closing);
+        Thread.sleep(1_100);
+
+        final Properties overCertified = new Properties();
+        overCertified.setProperty("allowSigningCertifiedPdfs", "true");
+        return pades(closed, expiredCertificateChain(), expiredPrivateKey(), overCertified);
+    }
+
+    /** Dos firmas corrientes, sin certificacion, la segunda en una revision posterior. */
+    static byte[] pdfWithTwoOrdinarySignatures() throws Exception {
+        final byte[] once = pades(samplePdf(), certificateChain(), privateKey(), new Properties());
+        Thread.sleep(1_100);
+        return pades(once, otherCertificateChain(), otherPrivateKey(), new Properties());
+    }
+
+    /**
      * El PDF firmado con un {@code /SubFilter} que el original no reconoce, en
      * vez de con {@code ETSI.CAdES.detached}: la firma sigue siendo integra.
      */

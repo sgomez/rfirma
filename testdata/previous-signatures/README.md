@@ -13,6 +13,9 @@ titular no se usa en ningún punto del proyecto.
 | `cades-expired.csig` | Una firma CAdES implícita de `rfirma: contenido firmado en CAdES` hecha con `expired-rsa.p12`. Íntegra, sale caducada; la prueba de grada C le cambia un byte del contenido para que salga no válida, modificada después de firmarse (ADR-0043). |
 | `cades-countersigned-by-expired.csig` | El mismo contenido firmado en CAdES implícito con `active-rsa.p12` y contrafirmado (`tree`) con `expired-rsa.p12`: la firma sale válida y su contrafirma, caducada. |
 | `xades-expired-ca.xml` | Un XAdES Enveloping de `testdata/reference/document.xml` hecho con `active-rsa.p12`, en vigor, con una CA autofirmada de pruebas (`CN=rfirma CA caducada de pruebas`, caducada desde 2015) añadida al final de la cadena: va en el KeyInfo, que entra en lo firmado. `ValidateXMLSignature.validateSign` no mira la vigencia; rFirma la mira en todos los certificados del KeyInfo (ADR-0043). |
+| `pades-stamped-while-in-force.pdf` | Una firma PAdES hecha con `expired-rsa.p12` y sellada con fecha `2019-06-01T00:00:00Z`, cuando el certificado aún estaba en vigor, por una TSA de un solo uso (`CN=rfirma backdated TSA`) que fabrica `ReferenceSigner pades-stamped-at`. El original la da por caducada; rFirma, válida (ADR-0043). |
+| `pades-certified-then-cosigned.pdf` | Certificada sin cambios permitidos (`certificationLevel=1`) con `active-rsa.p12` y cofirmada después con `pseudonym-rsa.p12` (`allowSigningCertifiedPdfs=true`). La cofirma no está admitida. |
+| `pades-certified-twice-then-cosigned-expired.pdf` | Certificada primero admitiendo formularios (`certificationLevel=2`) con `active-rsa.p12`, después sin cambios permitidos con `pseudonym-rsa.p12`, y cofirmada al final con `expired-rsa.p12`. Cierra el documento la segunda certificación, la última. |
 
 ## Cómo se regenera
 

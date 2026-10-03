@@ -64,14 +64,17 @@ import org.graalvm.word.PointerBase;
  *              "signingTime":"&lt;instante ISO-8601&gt;","status":"&lt;estado&gt;",
  *              "reason":"&lt;VALIDITY_ERROR&gt;","validity":"&lt;validez&gt;",
  *              "validityReason":{"kind":"&lt;motivo&gt;","date":"&lt;ISO-8601&gt;",
- *              "holder":"&lt;DN&gt;","closedBy":"&lt;DN&gt;"},"countersignatures":[...]}, ...],
+ *              "holder":"&lt;DN&gt;","closedBy":"&lt;DN&gt;"},
+ *              "signingDate":{"kind":"declared|stamped","at":"&lt;ISO-8601&gt;",
+ *              "tsa":"&lt;DN&gt;"},"closesDocument":false,"countersignatures":[...]}, ...],
  *              "changedAfterLastSignature":false,"findings":["&lt;hallazgo&gt;", ...]}
  *              estado: valid, certificateExpired, certificateNotYetValid, broken,
  *              unverifiable o notFullyChecked, y null fuera de PDF; reason es null
  *              en valid; validez: valid, expired o invalid (ADR-0043); motivo:
  *              certificateExpired, modifiedAfterSigning, damaged,
  *              certificateNotYetValid, unknownSignatureType o cosignNotAdmitted,
- *              y validityReason es null en valid; hallazgo:
+ *              y validityReason es null en valid; signingDate es null sin fecha, y
+ *              tsa, null en declared; hallazgo:
  *              modifiedAfterLastSignature, formFilledAfterSigning o
  *              contentAddedOnTop; countersignatures repite la forma de signatures
  * error        {"ok":false,"error":"&lt;clase&gt;: &lt;mensaje&gt;"}
@@ -553,11 +556,27 @@ public final class NativeBridge {
             field(json, "validity", signature.validity().wireName());
             json.append(",\"validityReason\":");
             validityReasonJson(json, signature.validityReason());
+            json.append(",\"signingDate\":");
+            signingDateJson(json, signature.signingDate());
+            json.append(",\"closesDocument\":").append(signature.closesDocument());
             json.append(",\"countersignatures\":");
             signaturesJson(json, signature.countersignatures());
             json.append('}');
         }
         json.append(']');
+    }
+
+    private static void signingDateJson(final StringBuilder json,
+            final PreviousSignaturesBridge.SigningDate date) {
+        if (date == null) {
+            json.append("null");
+            return;
+        }
+        json.append('{');
+        member(json, "kind", date.tsa() == null ? "declared" : "stamped");
+        field(json, "at", date.at());
+        field(json, "tsa", date.tsa());
+        json.append('}');
     }
 
     private static void validityReasonJson(final StringBuilder json,
