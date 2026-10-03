@@ -15,6 +15,7 @@ import { useSignedSummary } from "./App.useSignedSummary";
 import { useSignFlow } from "./App.useSignFlow";
 import { useSigningFailure } from "./App.useSigningFailure";
 import { useStartupNotices } from "./App.useStartupNotices";
+import { useViewedSignatures } from "./App.useViewedSignatures";
 import { useVisibleSignature } from "./App.useVisibleSignature";
 import { AboutDialog } from "./about/AboutDialog";
 import type { ExternalDestinationOpener } from "./desktop/externalDestination";
@@ -264,7 +265,14 @@ export function App({
     };
   }, [documents.active, pdfs, setPlacing]);
 
-  const { dropNotice } = useDropNotices(drops, documents.accept, documents.enter, activeId);
+  const viewedSignatures = useViewedSignatures(signer, activeId);
+  const { dropNotice } = useDropNotices(
+    drops,
+    documents.accept,
+    documents.enter,
+    activeId,
+    viewedSignatures.view,
+  );
 
   const { signedHere, signatures, openFailure, openSigned, signAgain } = useSignedSummary(
     signing,
@@ -449,6 +457,27 @@ export function App({
               onOpenFolder={() => openSigned(() => opener.openFolder())}
               onSign={signAgain}
               onChangeDestination={() => void chooseSingleDestination()}
+              failure={openFailure}
+              onOpenHelp={() => void externalDestinations.open("discussions")}
+            />
+          ) : viewedSignatures.viewing && documents.active ? (
+            <SignedPanel
+              documentName={documents.active.name}
+              signatures={
+                viewedSignatures.reading.kind === "read" ? viewedSignatures.reading.signatures : []
+              }
+              reading={viewedSignatures.reading.kind === "reading"}
+              readFailure={
+                viewedSignatures.reading.kind === "failed" ? viewedSignatures.reading.failure : null
+              }
+              destination={{
+                folder: visibleRecents.find((row) => row.id === activeId)?.folder ?? "",
+                name: documents.active.name,
+                writable: true,
+              }}
+              onOpenDocument={() => openSigned(() => opener.openDocument(documents.active?.id))}
+              onOpenFolder={() => openSigned(() => opener.openFolder(documents.active?.id))}
+              onSign={viewedSignatures.stopViewing}
               failure={openFailure}
               onOpenHelp={() => void externalDestinations.open("discussions")}
             />

@@ -30,6 +30,7 @@ export function useDropNotices(
   acceptDocument: (document: DocumentInHand) => Promise<void>,
   enterDocument: (document: DocumentInHand) => Promise<void>,
   activeId: string | null,
+  seeSignaturesOf: (documentId: string) => void,
 ) {
   const [dropNotice, setDropNotice] = useState<DropNotice | null>(null);
   const activeIdRef = useRef(activeId);
@@ -76,6 +77,7 @@ export function useDropNotices(
           await enterDocument(entering);
         }
         await acceptDocument(document);
+        if (drop.seeSignatures) seeSignaturesOf(document.id);
       })();
     };
     arrivedRef.current = arrived;
@@ -92,7 +94,7 @@ export function useDropNotices(
       });
     }
     return stop;
-  }, [drops, acceptDocument, enterDocument]);
+  }, [drops, acceptDocument, enterDocument, seeSignaturesOf]);
 
   return { dropNotice, setDropNotice };
 }

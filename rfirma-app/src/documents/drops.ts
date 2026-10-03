@@ -21,6 +21,8 @@ export interface Drop {
    * llegado a probar (ID-70, ID-306).
    */
   discarded: number;
+  /** Se abrió para ver sus firmas (`verify --gui`), no solo para tenerlo delante. */
+  seeSignatures?: boolean;
 }
 
 /**

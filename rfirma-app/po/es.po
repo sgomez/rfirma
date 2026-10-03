@@ -1017,6 +1017,15 @@ msgstr "Fecha declarada"
 msgid "panel.signed.document"
 msgstr "Documento"
 
+msgid "panel.signed.none.title"
+msgstr "Sin firmas"
+
+msgid "panel.signed.none.body"
+msgstr "El documento no tiene firmas."
+
+msgid "panel.signed.readFailed.title"
+msgstr "No se han podido leer las firmas"
+
 #. {{time}} es la hora, ya formateada (p. ej. "11:04").
 msgid "panel.signed.signedAt"
 msgstr "Firmado a las {{time}}"
