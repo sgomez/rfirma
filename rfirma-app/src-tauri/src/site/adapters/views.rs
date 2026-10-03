@@ -383,8 +383,7 @@ crossing! {
             round: SignatureRoundView,
             /// Certificados disponibles para la selección.
             certificates: Vec<CertificateView>,
-            /// Si el documento incluye firmas no reconocidas.
-                /// Asa del certificado que ya está resuelto, si lo está.
+            /// Asa del certificado que ya está resuelto, si lo está.
             already_chosen: Option<String>,
             /// Si la ventana consiente sola con `already_chosen`, sin esperar a la persona.
             without_asking: bool,

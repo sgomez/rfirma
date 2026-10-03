@@ -148,13 +148,6 @@ export interface SigningBackend {
     placement: NonNullable<SigningOrder["placement"]>,
   ): Promise<readonly [number, number]>;
   /**
-   * Si el documento trae **firmas que rFirma no sabe leer**.
-   *
-   * Tampoco es una etapa: se decide sobre los bytes, sin token y sin cruzar la
-   * frontera, y se pregunta **antes** del PIN para que el aviso quepa delante
-   * de él. No dice cuántas hay ni de quién son, y no las valida.
-   */
-  /**
    * Las firmas que ya trae el documento, con quién firmó y cuándo.
    *
    * Se pide al abrir o cargar el documento, no al firmar: es el informe con
