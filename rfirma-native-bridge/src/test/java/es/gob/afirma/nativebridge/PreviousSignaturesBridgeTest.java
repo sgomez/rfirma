@@ -15,8 +15,10 @@ import java.nio.file.Path;
 import java.security.PrivateKey;
 import java.security.Signature;
 import java.security.cert.X509Certificate;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Base64;
+import java.util.Date;
 import java.util.List;
 import java.util.Properties;
 import java.util.Map;
@@ -30,6 +32,7 @@ import org.junit.jupiter.api.Test;
 import es.gob.afirma.signvalidation.SignValidity;
 import es.gob.afirma.signvalidation.SignValidity.SIGN_DETAIL_TYPE;
 import es.gob.afirma.signvalidation.SignValidity.VALIDITY_ERROR;
+import es.gob.afirma.signvalidation.ValidatePdfSignature;
 
 /** Quien firmo y cuando, sobre firmas y cofirmas hechas aqui mismo. */
 class PreviousSignaturesBridgeTest {
@@ -150,6 +153,126 @@ class PreviousSignaturesBridgeTest {
                 "la firma que certifica el PDF sigue siendo valida");
         assertEquals(PreviousSignaturesBridge.Status.BROKEN, signatures.get(1).status());
         assertEquals("CERTIFIED_SIGN_REVISION", signatures.get(1).reason());
+    }
+
+    @Test
+    void the_certification_that_closes_a_pdf_is_marked_and_named_in_the_later_cosign()
+            throws Exception {
+        final List<PreviousSignaturesBridge.Signature> signatures = PreviousSignaturesBridge.read(
+                TestFixtures.certifiedPdfWithSignatureInALaterRevision()).signatures();
+
+        assertTrue(signatures.get(0).closesDocument());
+        assertEquals(PreviousSignaturesBridge.Validity.VALID, signatures.get(0).validity());
+        assertFalse(signatures.get(1).closesDocument());
+        assertEquals(PreviousSignaturesBridge.Validity.INVALID, signatures.get(1).validity());
+        assertEquals(PreviousSignaturesBridge.Problem.COSIGN_NOT_ADMITTED,
+                signatures.get(1).validityReason().problem());
+        assertEquals(PreviousSignaturesBridge.readable(
+                        TestFixtures.activeCertificate().getSubjectX500Principal()),
+                signatures.get(1).validityReason().closedBy());
+    }
+
+    @Test
+    void with_several_certifications_the_last_one_closes_the_pdf() throws Exception {
+        final List<PreviousSignaturesBridge.Signature> signatures = PreviousSignaturesBridge.read(
+                TestFixtures.pdfCertifiedTwiceAndSignedAfter()).signatures();
+
+        assertEquals(3, signatures.size());
+        assertFalse(signatures.get(0).closesDocument());
+        assertEquals(PreviousSignaturesBridge.Validity.VALID, signatures.get(0).validity());
+        assertTrue(signatures.get(1).closesDocument());
+        assertEquals(PreviousSignaturesBridge.Validity.VALID, signatures.get(1).validity(),
+                "motivo: " + signatures.get(1).validityReason());
+        assertEquals(PreviousSignaturesBridge.Validity.INVALID, signatures.get(2).validity(),
+                "la cofirma no admitida pesa mas que su certificado caducado");
+        assertEquals(PreviousSignaturesBridge.Problem.COSIGN_NOT_ADMITTED,
+                signatures.get(2).validityReason().problem());
+        assertEquals(PreviousSignaturesBridge.readable(
+                        TestFixtures.otherCertificateChain()[0].getSubjectX500Principal()),
+                signatures.get(2).validityReason().closedBy());
+    }
+
+    @Test
+    void two_ordinary_signatures_are_both_valid_as_the_original_validator_says() throws Exception {
+        final byte[] pdf = TestFixtures.pdfWithTwoOrdinarySignatures();
+
+        final List<SignValidity> original = new ValidatePdfSignature().validate(pdf, true);
+        final List<PreviousSignaturesBridge.Signature> signatures =
+                PreviousSignaturesBridge.read(pdf).signatures();
+
+        assertEquals(List.of(SIGN_DETAIL_TYPE.OK),
+                original.stream().map(SignValidity::getValidity).toList(),
+                "el rev <= 0 del original no marca dos firmas corrientes: " + original);
+        assertEquals(2, signatures.size());
+        for (final PreviousSignaturesBridge.Signature signature : signatures) {
+            assertEquals(PreviousSignaturesBridge.Validity.VALID, signature.validity(),
+                    "motivo: " + signature.validityReason());
+            assertFalse(signature.closesDocument());
+        }
+    }
+
+    @Test
+    void a_signature_stamped_while_its_certificate_was_in_force_has_no_certificate_problem()
+            throws Exception {
+        final X509Certificate expired = TestFixtures.expiredCertificate();
+        final List<SignValidity> today = List.of(
+                new SignValidity(SIGN_DETAIL_TYPE.KO, VALIDITY_ERROR.CERTIFICATE_EXPIRED),
+                new SignValidity(SIGN_DETAIL_TYPE.UNKNOWN, VALIDITY_ERROR.SIGN_PROFILE_NOT_CHECKED));
+
+        final List<SignValidity> atStamp = PreviousSignaturesBridge.atStampTime(today, expired,
+                Date.from(expired.getNotAfter().toInstant().minus(Duration.ofDays(1))));
+
+        assertEquals(List.of(VALIDITY_ERROR.SIGN_PROFILE_NOT_CHECKED),
+                atStamp.stream().map(SignValidity::getError).toList());
+    }
+
+    @Test
+    void a_signature_stamped_after_its_certificate_expired_is_still_expired() throws Exception {
+        final X509Certificate expired = TestFixtures.expiredCertificate();
+
+        final List<SignValidity> atStamp = PreviousSignaturesBridge.atStampTime(List.of(), expired,
+                Date.from(expired.getNotAfter().toInstant().plus(Duration.ofDays(1))));
+
+        assertEquals(List.of(VALIDITY_ERROR.CERTIFICATE_EXPIRED),
+                atStamp.stream().map(SignValidity::getError).toList());
+    }
+
+    @Test
+    void a_signature_stamped_before_its_certificate_expired_is_valid_and_dated_by_the_stamp()
+            throws Exception {
+        final byte[] pdf = Files.readAllBytes(Path.of("..", "testdata", "previous-signatures",
+                "pades-stamped-while-in-force.pdf"));
+
+        final PreviousSignaturesBridge.Signature signature =
+                PreviousSignaturesBridge.read(pdf).signatures().get(0);
+
+        assertEquals(PreviousSignaturesBridge.Validity.VALID, signature.validity(),
+                "motivo: " + signature.validityReason());
+        assertEquals(new PreviousSignaturesBridge.SigningDate("2019-06-01T00:00:00Z",
+                "CN=rfirma backdated TSA"), signature.signingDate());
+    }
+
+    @Test
+    void a_signature_without_a_stamp_has_its_date_declared() throws Exception {
+        final PreviousSignaturesBridge.Signature signature = PreviousSignaturesBridge.read(
+                signed(TestFixtures.samplePdf(), TestFixtures.certificateChain(),
+                        TestFixtures.privateKey())).signatures().get(0);
+
+        assertEquals(new PreviousSignaturesBridge.SigningDate(signature.signingTime(), null),
+                signature.signingDate());
+    }
+
+    @Test
+    void a_signature_with_a_stamp_of_its_own_has_its_date_stamped_by_the_tsa() throws Exception {
+        final byte[] pdf = Files.readAllBytes(
+                Path.of("..", "testdata", "previous-signatures", "pades-long-term-active.pdf"));
+
+        final PreviousSignaturesBridge.SigningDate date =
+                PreviousSignaturesBridge.read(pdf).signatures().get(0).signingDate();
+
+        assertEquals("CN=rfirma fake TSA", date.tsa());
+        assertTrue(Instant.parse(date.at()).isAfter(Instant.parse("2026-01-01T00:00:00Z")),
+                date.at());
     }
 
     @Test

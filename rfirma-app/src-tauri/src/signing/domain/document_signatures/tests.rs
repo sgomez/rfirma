@@ -13,6 +13,8 @@ fn a_previous_signature_with_status(status: SignatureStatus) -> DocumentSignatur
         reason: None,
         validity: Validity::Valid,
         validity_reason: None,
+        signing_date: None,
+        closes_document: false,
         countersignatures: Vec::new(),
     }
 }

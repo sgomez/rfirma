@@ -9,7 +9,7 @@ use crate::signing::domain::bridge::{
     BridgeError, DataRejection, PreSignBlock, PreSignature, SealedPreSignature, SignatureVerdict,
 };
 use crate::signing::domain::document_signatures::{
-    DocumentFinding, DocumentSignature, DocumentSignatures, SignatureStatus, Validity,
+    DocumentFinding, DocumentSignature, DocumentSignatures, SignatureStatus, SigningDate, Validity,
     ValidityReason,
 };
 use crate::signing::domain::SessionSeal;
@@ -271,8 +271,34 @@ fn previous_signature_of(entry: &serde_json::Value) -> Result<DocumentSignature,
             .map(str::to_owned),
         validity: validity_of(field(entry, "validity")?)?,
         validity_reason: validity_reason_of(entry)?,
+        signing_date: signing_date_of(entry)?,
+        closes_document: entry
+            .get("closesDocument")
+            .and_then(serde_json::Value::as_bool)
+            .ok_or_else(|| {
+                BridgeError::MalformedResponse("falta el campo \"closesDocument\"".to_owned())
+            })?,
         countersignatures: countersignatures_of(entry)?,
     })
+}
+
+fn signing_date_of(entry: &serde_json::Value) -> Result<Option<SigningDate>, BridgeError> {
+    let Some(date) = entry.get("signingDate").filter(|date| !date.is_null()) else {
+        return Ok(None);
+    };
+    let at = field(date, "at")?.to_owned();
+    Ok(Some(match field(date, "kind")? {
+        "declared" => SigningDate::Declared { at },
+        "stamped" => SigningDate::Stamped {
+            at,
+            tsa: field(date, "tsa")?.to_owned(),
+        },
+        other => {
+            return Err(BridgeError::MalformedResponse(format!(
+                "fecha de firma desconocida «{other}»"
+            )))
+        }
+    }))
 }
 
 fn countersignatures_of(entry: &serde_json::Value) -> Result<Vec<DocumentSignature>, BridgeError> {

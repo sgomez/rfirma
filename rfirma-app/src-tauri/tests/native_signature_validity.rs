@@ -7,7 +7,7 @@ use base64::Engine;
 use rfirma_lib::signing::application::cycle::ALGORITHM;
 use rfirma_lib::signing::domain::bridge::{Format, SignatureOperation};
 use rfirma_lib::signing::domain::document_signatures::{
-    DocumentFinding, DocumentSignatures, SignatureStatus, Validity, ValidityReason,
+    DocumentFinding, DocumentSignatures, SignatureStatus, SigningDate, Validity, ValidityReason,
 };
 
 use support::{a_cycle_of, bridge, PAGE_HEIGHT, PAGE_WIDTH};
@@ -436,4 +436,118 @@ fn a_freshly_signed_pdf_has_a_valid_signature_and_no_findings() {
     assert_eq!(report.signatures()[0].validity, Validity::Valid);
     assert_eq!(report.signatures()[0].validity_reason, None);
     assert_eq!(report.findings(), []);
+}
+
+fn stamped_by(signing_date: Option<&SigningDate>) -> (&str, &str) {
+    match signing_date {
+        Some(SigningDate::Stamped { at, tsa }) => (at, tsa),
+        other => panic!("la fecha debería estar sellada: {other:?}"),
+    }
+}
+
+#[test]
+#[ignore = "grada C: necesita el token y librfirma_crypto.so (just test-native)"]
+fn a_signature_stamped_while_its_certificate_was_in_force_is_valid_though_it_expired_later() {
+    let report = report_of(&sample("pades-stamped-while-in-force.pdf"));
+
+    let signature = &report.signatures()[0];
+    assert_eq!(signature.validity, Validity::Valid);
+    assert_eq!(signature.validity_reason, None);
+    assert_eq!(
+        stamped_by(signature.signing_date.as_ref()),
+        ("2019-06-01T00:00:00Z", "CN=rfirma backdated TSA")
+    );
+}
+
+#[test]
+#[ignore = "grada C: necesita el token y librfirma_crypto.so (just test-native)"]
+fn a_signature_stamped_after_its_certificate_expired_is_expired_and_dated_by_its_tsa() {
+    let report = report_of(&sample("pades-long-term-expired.pdf"));
+
+    let signature = &report.signatures()[0];
+    assert_eq!(signature.validity, Validity::Expired);
+    assert_eq!(
+        stamped_by(signature.signing_date.as_ref()).1,
+        "CN=rfirma fake TSA"
+    );
+}
+
+#[test]
+#[ignore = "grada C: necesita el token y librfirma_crypto.so (just test-native)"]
+fn a_signature_without_a_stamp_has_its_date_declared() {
+    let report = report_of(&signed(&a_pdf_with("", "", &[])));
+
+    let signature = &report.signatures()[0];
+    assert!(
+        matches!(&signature.signing_date, Some(SigningDate::Declared { at }) if Some(at) == signature.signing_time.as_ref()),
+        "{:?}",
+        signature.signing_date
+    );
+}
+
+#[test]
+#[ignore = "grada C: necesita el token y librfirma_crypto.so (just test-native)"]
+fn a_cosign_of_a_pdf_closed_by_its_certification_is_invalid_and_names_who_closed_it() {
+    let report = report_of(&sample("pades-certified-then-cosigned.pdf"));
+
+    let [closer, cosign] = report.signatures() else {
+        panic!("debería traer dos firmas: {:?}", report.signatures());
+    };
+    assert!(closer.closes_document);
+    assert_eq!(closer.validity, Validity::Valid);
+    assert!(!cosign.closes_document);
+    assert_eq!(cosign.validity, Validity::Invalid);
+    assert!(
+        matches!(
+            &cosign.validity_reason,
+            Some(ValidityReason::CosignNotAdmitted { closed_by: Some(name) }) if name.contains("99999999R")
+        ),
+        "{:?}",
+        cosign.validity_reason
+    );
+}
+
+#[test]
+#[ignore = "grada C: necesita el token y librfirma_crypto.so (just test-native)"]
+fn with_several_certifications_the_last_one_closes_and_an_expired_cosign_is_invalid() {
+    let report = report_of(&sample("pades-certified-twice-then-cosigned-expired.pdf"));
+
+    let [forms_allowed, closer, cosign] = report.signatures() else {
+        panic!("debería traer tres firmas: {:?}", report.signatures());
+    };
+    assert!(!forms_allowed.closes_document);
+    assert_eq!(forms_allowed.validity, Validity::Valid);
+    assert!(closer.closes_document);
+    assert_eq!(
+        closer.validity,
+        Validity::Valid,
+        "{:?}",
+        closer.validity_reason
+    );
+    assert_eq!(cosign.validity, Validity::Invalid, "gana el peor problema");
+    assert!(
+        matches!(
+            &cosign.validity_reason,
+            Some(ValidityReason::CosignNotAdmitted { closed_by: Some(name) }) if name.contains("TEST-0000")
+        ),
+        "{:?}",
+        cosign.validity_reason
+    );
+}
+
+#[test]
+#[ignore = "grada C: necesita el token y librfirma_crypto.so (just test-native)"]
+fn two_ordinary_signatures_without_certification_are_both_valid() {
+    let report = report_of(&signed(&signed(&a_pdf_with("", "", &[]))));
+
+    assert_eq!(report.count(), 2);
+    for signature in report.signatures() {
+        assert_eq!(
+            signature.validity,
+            Validity::Valid,
+            "{:?}",
+            signature.validity_reason
+        );
+        assert!(!signature.closes_document);
+    }
 }

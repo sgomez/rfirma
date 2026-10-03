@@ -243,6 +243,8 @@ fn a_signature(name: &str, id_number: &str, signing_time: Option<&str>) -> Docum
         reason: None,
         validity: Validity::Valid,
         validity_reason: None,
+        signing_date: None,
+        closes_document: false,
         countersignatures: Vec::new(),
     }
 }
