@@ -1560,6 +1560,9 @@ msgstr "faktura elektroniko bat"
 msgid "sede.consent.unknownOriginSignature"
 msgstr "Identifikatu gabeko orrialde batek zure sinadura eskatzen du."
 
+msgid "sede.consent.terminalTitle"
+msgstr "Sinatu {{name}}"
+
 msgid "sede.consent.unknownOriginIdentity"
 msgstr ""
 "Identifikatu gabeko orrialde batek zure identitate-datuak eskatzen ditu."
@@ -2016,6 +2019,12 @@ msgstr[1] ""
 "{{origin}}(e)k ez du zure {{count}} ziurtagirietako bat ere onartzen"
 msgstr[2] ""
 "{{origin}}(e)k ez du zure {{count}} ziurtagirietako bat ere onartzen"
+
+msgid "sede.noCertificate.terminalExcludedTitle"
+msgid_plural "sede.noCertificate.terminalExcludedTitle"
+msgstr[0] "Zure -filter-ak ez du zure ziurtagiria uzten"
+msgstr[1] "Zure -filter-ak ez du zure {{count}} ziurtagirietako bat ere uzten"
+msgstr[2] "Zure -filter-ak ez du zure {{count}} ziurtagirietako bat ere uzten"
 
 msgid "sede.noCertificate.excludedBody"
 msgstr "Instalatu beste ziurtagiri bat, edo itxi eta jarraitu egoitzatik."

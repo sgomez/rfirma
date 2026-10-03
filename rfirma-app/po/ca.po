@@ -1554,6 +1554,9 @@ msgstr "una factura electrònica"
 msgid "sede.consent.unknownOriginSignature"
 msgstr "Una pàgina sense identificar demana la teva signatura."
 
+msgid "sede.consent.terminalTitle"
+msgstr "Signar {{name}}"
+
 msgid "sede.consent.unknownOriginIdentity"
 msgstr "Una pàgina sense identificar demana les teves dades d'identitat."
 
@@ -1993,6 +1996,12 @@ msgid_plural "sede.noCertificate.excludedTitle"
 msgstr[0] "{{origin}} no accepta el teu certificat"
 msgstr[1] "{{origin}} no accepta cap dels teus {{count}} certificats"
 msgstr[2] "{{origin}} no accepta cap dels teus {{count}} certificats"
+
+msgid "sede.noCertificate.terminalExcludedTitle"
+msgid_plural "sede.noCertificate.terminalExcludedTitle"
+msgstr[0] "El teu -filter no deixa el teu certificat"
+msgstr[1] "El teu -filter no deixa cap dels teus {{count}} certificats"
+msgstr[2] "El teu -filter no deixa cap dels teus {{count}} certificats"
 
 msgid "sede.noCertificate.excludedBody"
 msgstr "Instal·la un altre certificat, o tanca i continua des de la seu."

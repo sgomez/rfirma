@@ -16,12 +16,14 @@ import type {
   SigningKind,
   SiteDocument,
   SiteOperation,
+  TerminalOrder,
 } from "./errand";
 import { consentActionKey } from "./errand";
 import { SedeBody, useConsentCountdown, useDefaultButton } from "./SedeFrame";
 
 interface SedeConsentProps {
   origin: string | null;
+  terminalOrder: TerminalOrder | null;
   operation: SiteOperation;
   stage: Extract<ErrandStage, { kind: "consent" }>;
   countdown: boolean;
@@ -41,6 +43,7 @@ interface SedeConsentProps {
  */
 export function SedeConsent({
   origin,
+  terminalOrder,
   operation,
   stage,
   countdown,
@@ -82,66 +85,129 @@ export function SedeConsent({
       }
     >
       <div className="rf-stack sede-consent">
-        {/* Sin origen válido, mismo silencio deliberado que con origen (ID-271). */}
-        <p className="rf-title sede-consent__asks">
-          {origin === null
-            ? identity
-              ? t("sede.consent.unknownOriginIdentity")
-              : t("sede.consent.unknownOriginSignature")
-            : identity
-              ? t("sede.consent.asksIdentity", { origin })
-              : stage.signing !== null
-                ? t("sede.consent.asksSignatureOf", {
-                    origin,
-                    what: signingKindLabel(t, stage.signing),
-                  })
-                : t("sede.consent.asksSignature", { origin })}
-        </p>
+        {terminalOrder !== null ? (
+          <TerminalConsentBody
+            order={terminalOrder}
+            stage={stage}
+            chosen={chosen}
+            onChoose={setChosen}
+          />
+        ) : (
+          <>
+            {/* Sin origen válido, mismo silencio deliberado que con origen (ID-271). */}
+            <p className="rf-title sede-consent__asks">
+              {origin === null
+                ? identity
+                  ? t("sede.consent.unknownOriginIdentity")
+                  : t("sede.consent.unknownOriginSignature")
+                : identity
+                  ? t("sede.consent.asksIdentity", { origin })
+                  : stage.signing !== null
+                    ? t("sede.consent.asksSignatureOf", {
+                        origin,
+                        what: signingKindLabel(t, stage.signing),
+                      })
+                    : t("sede.consent.asksSignature", { origin })}
+            </p>
 
-        <CertificateSelect
-          certificates={stage.certificates}
-          chosen={chosen}
-          onChoose={setChosen}
-          listMaxHeight={300}
-        />
+            <CertificateSelect
+              certificates={stage.certificates}
+              chosen={chosen}
+              onChoose={setChosen}
+              listMaxHeight={300}
+            />
 
-        {/* Debajo del desplegable y no encima: es una nota sobre lo que la lista
+            {/* Debajo del desplegable y no encima: es una nota sobre lo que la lista
             contiene, y se lee después de verla. Dice **que** la sede acotó, y
             nunca qué descartó ni con qué criterio (ID-277). */}
-        {stage.narrowed && (
-          <p className="rf-prose sede-consent__narrowed">
-            {origin === null
-              ? t("sede.consent.narrowedUnknownOrigin")
-              : t("sede.consent.narrowed", { origin })}
-          </p>
-        )}
+            {stage.narrowed && (
+              <p className="rf-prose sede-consent__narrowed">
+                {origin === null
+                  ? t("sede.consent.narrowedUnknownOrigin")
+                  : t("sede.consent.narrowed", { origin })}
+              </p>
+            )}
 
-        {stage.document !== null && <DocumentCard document={stage.document} certificate={chosen} />}
+            {stage.document !== null && (
+              <DocumentCard document={stage.document} certificate={chosen} />
+            )}
 
-        {stage.signs !== null && <BatchCard signs={stage.signs} />}
+            {stage.signs !== null && <BatchCard signs={stage.signs} />}
 
-        {stage.items !== null && <LocalBatchItemsList items={stage.items} />}
+            {stage.items !== null && <LocalBatchItemsList items={stage.items} />}
 
-        {/* Situación 5 (ID-302, ID-304): información, no alarma — mismo icono
+            {/* Situación 5 (ID-302, ID-304): información, no alarma — mismo icono
             y mismo borde de 1 px que el aviso de firmas previas. No hay un
             sexto momento (ID-298): se pregunta aquí, dentro del mismo
             consentimiento. */}
-        {stage.document?.hasUnregisteredSignatures && (
-          <div className="rf-row rf-gap-xs sede-consent__unrecognized-signatures">
-            <span className="sede-consent__icon">
-              <InfoIcon size={18} />
-            </span>
-            <p className="rf-hint">{t("sede.consent.unrecognizedSignatures")}</p>
-          </div>
-        )}
+            {stage.document?.hasUnregisteredSignatures && (
+              <div className="rf-row rf-gap-xs sede-consent__unrecognized-signatures">
+                <span className="sede-consent__icon">
+                  <InfoIcon size={18} />
+                </span>
+                <p className="rf-hint">{t("sede.consent.unrecognizedSignatures")}</p>
+              </div>
+            )}
 
-        {identity && (
-          <div className="sede-consent__sends">
-            <p className="rf-prose">{t("sede.consent.willSend")}</p>
-          </div>
+            {identity && (
+              <div className="sede-consent__sends">
+                <p className="rf-prose">{t("sede.consent.willSend")}</p>
+              </div>
+            )}
+          </>
         )}
       </div>
     </SedeBody>
+  );
+}
+
+const TERMINAL_NAME_MAX = 40;
+
+function baseName(path: string): string {
+  return path.slice(path.search(/[^/\\]*$/));
+}
+
+/** Recorta por el medio conservando el principio, el final y la extensión. */
+function shortenMiddle(name: string, max: number): string {
+  if (name.length <= max) return name;
+  const dot = name.lastIndexOf(".");
+  const extension = dot > 0 && name.length - dot <= 6 ? name.slice(dot) : "";
+  const tail = Math.min(extension.length + 6, max - 2);
+  const head = max - tail - 1;
+  return `${name.slice(0, head)}…${name.slice(name.length - tail)}`;
+}
+
+/** El consentimiento de `-certgui`: el documento de la orden, el desplegable y las firmas previas. */
+function TerminalConsentBody({
+  order,
+  stage,
+  chosen,
+  onChoose,
+}: {
+  order: TerminalOrder;
+  stage: Extract<ErrandStage, { kind: "consent" }>;
+  chosen: Certificate | null;
+  onChoose: (certificate: Certificate) => void;
+}) {
+  const { t } = useTranslation();
+  const name = shortenMiddle(baseName(order.documentPath), TERMINAL_NAME_MAX);
+  const previous = stage.document?.previousSignatures;
+
+  return (
+    <>
+      <p className="rf-title sede-consent__asks" title={order.documentPath}>
+        {t("sede.consent.terminalTitle", { name })}
+      </p>
+      <CertificateSelect
+        certificates={stage.certificates}
+        chosen={chosen}
+        onChoose={onChoose}
+        listMaxHeight={300}
+      />
+      {previous !== undefined && previous.signatures.length > 0 && (
+        <PreviousSignaturesNotice report={previous} certificate={chosen} presentation="site" />
+      )}
+    </>
   );
 }
 

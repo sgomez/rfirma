@@ -6,6 +6,8 @@ import { SedeBody, useDefaultButton } from "./SedeFrame";
 
 interface SedeNoCertificateProps {
   origin: string | null;
+  /** La pide una orden de terminal: nada se dirige a la sede ni queda arreglo que ofrecer. */
+  terminal: boolean;
   reason: NoCertificateReason;
   /**
    * Cuántos certificados tiene la persona. Sólo se dice en «excluidos», porque
@@ -44,6 +46,7 @@ interface SedeNoCertificateProps {
  */
 export function SedeNoCertificate({
   origin,
+  terminal,
   reason,
   owned,
   failure,
@@ -54,6 +57,7 @@ export function SedeNoCertificate({
   const { t } = useTranslation();
   const excluded = reason === "excluded";
   const defaultButton = useDefaultButton();
+  const closeOnly = terminal && excluded;
 
   return (
     <SedeBody
@@ -62,47 +66,60 @@ export function SedeNoCertificate({
       footer={
         <>
           <div className="sede-window__spacer" />
-          <button type="button" className="rf-btn rf-btn--ghost" onClick={onLeave}>
+          <button
+            ref={closeOnly ? defaultButton : undefined}
+            type="button"
+            className={closeOnly ? "rf-btn rf-btn--primary" : "rf-btn rf-btn--ghost"}
+            onClick={onLeave}
+          >
             {t("actions.close")}
           </button>
-          <button
-            ref={defaultButton}
-            type="button"
-            className="rf-btn rf-btn--primary"
-            onClick={onInstall}
-          >
-            {t("sede.noCertificate.install")}
-          </button>
+          {!closeOnly && (
+            <button
+              ref={defaultButton}
+              type="button"
+              className="rf-btn rf-btn--primary"
+              onClick={onInstall}
+            >
+              {t("sede.noCertificate.install")}
+            </button>
+          )}
         </>
       }
     >
       <div className="rf-stack sede-no-certificate">
         <p className="rf-title sede-no-certificate__title">
           {excluded
-            ? t("sede.noCertificate.excludedTitle", {
-                count: owned,
-                origin: origin ?? t("sede.origin.unknown"),
-              })
+            ? terminal
+              ? t("sede.noCertificate.terminalExcludedTitle", { count: owned })
+              : t("sede.noCertificate.excludedTitle", {
+                  count: owned,
+                  origin: origin ?? t("sede.origin.unknown"),
+                })
             : t("sede.noCertificate.noneTitle")}
         </p>
-        <p className="rf-prose rf-text-muted">
-          {excluded
-            ? t("sede.noCertificate.excludedBody")
-            : origin === null
-              ? t("sede.noCertificate.noneBodyUnknownOrigin")
-              : t("sede.noCertificate.noneBody", { origin })}
-        </p>
-        {!excluded && <p className="rf-hint">{t("sede.noCertificate.noneHint")}</p>}
+        {!terminal && (
+          <p className="rf-prose rf-text-muted">
+            {excluded
+              ? t("sede.noCertificate.excludedBody")
+              : origin === null
+                ? t("sede.noCertificate.noneBodyUnknownOrigin")
+                : t("sede.noCertificate.noneBody", { origin })}
+          </p>
+        )}
+        {!terminal && !excluded && <p className="rf-hint">{t("sede.noCertificate.noneHint")}</p>}
         {failure !== null && (
           <ErrorNotice situation={failure.situation} technicalDetail={failure.detail} />
         )}
         {/* La microacción va aquí, pegada a lo que arregla, y no en el pie:
             se pulsa cuando se acaba de instalar uno con la ventana abierta. */}
-        <div className="rf-row sede-no-certificate__look-again">
-          <button type="button" className="rf-btn rf-btn--ghost" onClick={onLookAgain}>
-            {t("sede.noCertificate.lookAgain")}
-          </button>
-        </div>
+        {!closeOnly && (
+          <div className="rf-row sede-no-certificate__look-again">
+            <button type="button" className="rf-btn rf-btn--ghost" onClick={onLookAgain}>
+              {t("sede.noCertificate.lookAgain")}
+            </button>
+          </div>
+        )}
       </div>
     </SedeBody>
   );

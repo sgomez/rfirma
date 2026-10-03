@@ -1461,6 +1461,9 @@ msgstr ""
 msgid "sede.consent.unknownOriginSignature"
 msgstr ""
 
+msgid "sede.consent.terminalTitle"
+msgstr ""
+
 msgid "sede.consent.unknownOriginIdentity"
 msgstr ""
 
@@ -1819,6 +1822,12 @@ msgstr ""
 #. —estado de su almacén— y nunca cuáles descartó la sede ni por qué.
 msgid "sede.noCertificate.excludedTitle"
 msgid_plural "sede.noCertificate.excludedTitle"
+msgstr[0] ""
+msgstr[1] ""
+msgstr[2] ""
+
+msgid "sede.noCertificate.terminalExcludedTitle"
+msgid_plural "sede.noCertificate.terminalExcludedTitle"
 msgstr[0] ""
 msgstr[1] ""
 msgstr[2] ""

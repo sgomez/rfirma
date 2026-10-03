@@ -282,6 +282,13 @@ export interface Errand {
   origin: string | null;
   operation: SiteOperation;
   stage: ErrandStage;
+  /** Presente cuando lo pide una orden de terminal (`-certgui`) y no una sede. */
+  terminalOrder?: TerminalOrder;
+}
+
+/** La orden de terminal que abrió la ventana: el documento de `-i`, con su ruta completa. */
+export interface TerminalOrder {
+  documentPath: string;
 }
 
 /** Lo que la ventana de sede necesita del backend. */
