@@ -67,8 +67,8 @@ pub struct DocumentSignature {
     pub certificate_serial_number: String,
     /// Instante de la firma en ISO-8601, si el puente lo devolvió.
     pub signing_time: Option<String>,
-    /// El estado de la firma.
-    pub status: SignatureStatus,
+    /// El estado de la firma, si el puente la validó: solo valida las de PDF.
+    pub status: Option<SignatureStatus>,
     /// Motivo del original, tal como lo nombra, si el estado no es `Valid`.
     pub reason: Option<String>,
     /// Las contrafirmas de esta firma; en PDF, siempre vacías.
@@ -116,7 +116,8 @@ impl DocumentSignatures {
         let from_signatures = self
             .signatures
             .iter()
-            .filter(|s| s.status.is_ko() || s.status == SignatureStatus::NotFullyChecked)
+            .filter_map(|s| s.status)
+            .filter(|status| status.is_ko() || *status == SignatureStatus::NotFullyChecked)
             .count();
         from_signatures + usize::from(self.changed_after_last_signature)
     }
@@ -130,7 +131,7 @@ impl DocumentSignatures {
         };
         self.signatures
             .iter()
-            .map(|s| s.status.tone())
+            .map(|s| s.status.map_or(Tone::Information, SignatureStatus::tone))
             .chain(std::iter::once(changed_tone))
             .max()
             .unwrap_or(Tone::Information)

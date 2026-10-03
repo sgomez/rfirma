@@ -191,14 +191,27 @@ fn previous_signature_of(entry: &serde_json::Value) -> Result<DocumentSignature,
             .get("signingTime")
             .and_then(serde_json::Value::as_str)
             .map(str::to_owned),
-        status: status_of(field(entry, "status")?)?,
+        status: entry
+            .get("status")
+            .and_then(serde_json::Value::as_str)
+            .map(status_of)
+            .transpose()?,
         reason: entry
             .get("reason")
             .and_then(serde_json::Value::as_str)
             .map(str::to_owned),
-
-        countersignatures: Vec::new(),
+        countersignatures: countersignatures_of(entry)?,
     })
+}
+
+fn countersignatures_of(entry: &serde_json::Value) -> Result<Vec<DocumentSignature>, BridgeError> {
+    entry
+        .get("countersignatures")
+        .and_then(serde_json::Value::as_array)
+        .map_or(&[][..], Vec::as_slice)
+        .iter()
+        .map(previous_signature_of)
+        .collect()
 }
 
 fn status_of(wire_name: &str) -> Result<SignatureStatus, BridgeError> {

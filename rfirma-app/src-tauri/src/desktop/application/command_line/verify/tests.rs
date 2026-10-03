@@ -233,7 +233,7 @@ fn a_signature(name: &str, id_number: &str, signing_time: Option<&str>) -> Docum
         issuer: "AC FNMT Usuarios".to_owned(),
         certificate_serial_number: "0123ABCD".to_owned(),
         signing_time: signing_time.map(str::to_owned),
-        status: SignatureStatus::Valid,
+        status: Some(SignatureStatus::Valid),
         reason: None,
         countersignatures: Vec::new(),
     }
@@ -438,6 +438,40 @@ fn a_document_without_signatures_says_so_in_verbose() {
     assert_eq!(
         printed(&outcome),
         "Firma valida\n\nFormato: PAdES\n\nEl documento no tiene firmas.\n"
+    );
+}
+
+#[test]
+fn verbose_on_a_cades_names_the_format_and_prints_a_sheet_per_signer() {
+    let reader = Reading(Ok(vec![
+        a_signature("UNA PERSONA", "99999999R", None),
+        a_signature("OTRA PERSONA", "00000000T", None),
+    ]));
+    let verifier = Answering::with(&["Firma valida"]);
+
+    let outcome = attended(
+        &["verify", "-v", "-i", "datos.csig"],
+        &OneFile(A_CMS),
+        &verifier,
+        &reader,
+        &SummerInMadrid,
+    );
+
+    assert_eq!(
+        printed(&outcome),
+        "\
+Firma valida
+
+Formato: CAdES
+
+Firma 1
+  Firmante:          UNA PERSONA (99999999R)
+  Emisor:            AC FNMT Usuarios
+
+Firma 2
+  Firmante:          OTRA PERSONA (00000000T)
+  Emisor:            AC FNMT Usuarios
+"
     );
 }
 

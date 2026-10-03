@@ -47,7 +47,7 @@ fn the_bridge_reports_the_signer_and_the_signing_time_of_a_pades_signature() {
         signature.signing_time.is_some(),
         "el puente debería devolver el instante de la firma"
     );
-    assert_eq!(signature.status, SignatureStatus::Valid);
+    assert_eq!(signature.status, Some(SignatureStatus::Valid));
     assert_eq!(report.warning_count(), 0);
     assert_eq!(report.tone(), Tone::Information);
 }
@@ -70,8 +70,7 @@ fn a_pades_signature_broken_after_signing_is_ko_and_warns_with_attention() {
 
     assert_eq!(report.count(), 1);
     let signature = &report.signatures()[0];
-    assert_eq!(signature.status, SignatureStatus::Broken);
-    assert!(signature.status.is_ko());
+    assert_eq!(signature.status, Some(SignatureStatus::Broken));
     assert_eq!(report.warning_count(), 1);
     assert_eq!(report.tone(), Tone::Attention);
 }

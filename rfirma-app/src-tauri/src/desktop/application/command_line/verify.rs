@@ -36,7 +36,9 @@ pub(super) fn verify(arguments: &[String], ports: &CommandLinePorts) -> Outcome 
         return Outcome::printed(&[UNKNOWN_FORMAT.to_owned()]);
     };
     match ports.verifier.results_of(&document, format) {
-        Ok(results) if verbosity(arguments) > 0 && format == Format::Pades => {
+        Ok(results)
+            if verbosity(arguments) > 0 && matches!(format, Format::Pades | Format::Cades) =>
+        {
             with_the_signatures(results, &document, format, ports)
         }
         Ok(results) => Outcome::printed(&results),

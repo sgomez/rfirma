@@ -35,7 +35,7 @@ fn a_previous_signature_translates_the_subject_and_the_issuer_with_the_holder_ut
             issuer: "AC FNMT Usuarios".to_owned(),
             certificate_serial_number: "1234567890".to_owned(),
             signing_time: Some("2024-01-01T10:00:00Z".to_owned()),
-            status: SignatureStatus::Valid,
+            status: Some(SignatureStatus::Valid),
             reason: None,
             countersignatures: Vec::new(),
         }]
@@ -75,13 +75,44 @@ fn a_previous_signature_carries_its_status_and_the_reason_of_the_original() {
 
     assert_eq!(
         report.signatures()[0].status,
-        SignatureStatus::CertificateExpired
+        Some(SignatureStatus::CertificateExpired)
     );
     assert_eq!(
         report.signatures()[0].reason.as_deref(),
         Some("CERTIFICATE_EXPIRED")
     );
     assert!(report.changed_after_last_signature());
+}
+
+#[test]
+fn a_signature_the_bridge_did_not_validate_crosses_without_a_status_and_with_its_countersignatures()
+{
+    let report = parse_previous_signatures(
+        r#"{"ok":true,"signatures":[{
+            "subject":"CN=LOVELACE BYRON ADA",
+            "issuer":"CN=AC FNMT Usuarios",
+            "serialNumber":"1",
+            "signingTime":null,
+            "status":null,
+            "reason":null,
+            "countersignatures":[{
+                "subject":"CN=BABBAGE CHARLES",
+                "issuer":"CN=AC FNMT Usuarios",
+                "serialNumber":"2",
+                "signingTime":null,
+                "status":null,
+                "reason":null,
+                "countersignatures":[]
+            }]
+        }],"changedAfterLastSignature":false}"#,
+    )
+    .expect("es valida");
+
+    let signature = &report.signatures()[0];
+    assert_eq!(signature.status, None);
+    assert_eq!(signature.countersignatures.len(), 1);
+    assert_eq!(signature.countersignatures[0].name, "BABBAGE CHARLES");
+    assert_eq!(report.warning_count(), 0);
 }
 
 #[test]

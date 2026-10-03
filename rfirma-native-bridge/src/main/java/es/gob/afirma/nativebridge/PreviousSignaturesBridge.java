@@ -7,6 +7,7 @@ import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -21,7 +22,12 @@ import com.aowagie.text.pdf.PdfPKCS7;
 import com.aowagie.text.pdf.PdfReader;
 import com.aowagie.text.pdf.PdfSignatureAppearance;
 
+import es.gob.afirma.core.AOException;
 import es.gob.afirma.core.RuntimeConfigNeededException;
+import es.gob.afirma.core.signers.AOSimpleSignInfo;
+import es.gob.afirma.core.util.tree.AOTreeModel;
+import es.gob.afirma.core.util.tree.AOTreeNode;
+import es.gob.afirma.signers.cades.AOCAdESSigner;
 import es.gob.afirma.signers.pades.PdfUtil;
 import es.gob.afirma.signvalidation.DataAnalizerUtil;
 import es.gob.afirma.signvalidation.SignValidity;
@@ -31,12 +37,13 @@ import es.gob.afirma.signvalidation.SignatureFormatDetectorPadesCades;
 import es.gob.afirma.signvalidation.ValidatePdfSignature;
 
 /**
- * Las firmas que ya trae un PDF, recorridas como el escritorio de AutoFirma
- * 1.9.2 y validadas una a una con su validador, sin red y sin modo relajado.
+ * Las firmas que ya trae un PDF o un CAdES, recorridas con el
+ * {@code getSignersStructure} de AutoFirma 1.9.2; las de PDF, ademas,
+ * validadas una a una con su validador, sin red y sin modo relajado.
  *
- * <p>El recorrido es el de {@code AOPDFSigner.getSignersStructure}: salta los
- * sellos de tiempo y las firmas que iText no llega a leer, y un PDF ilegible o
- * cifrado da un informe vacio en vez de un fallo.
+ * <p>En PDF salta los sellos de tiempo y las firmas que iText no llega a leer,
+ * y un PDF ilegible o cifrado da un informe vacio en vez de un fallo. En CAdES
+ * solo lee la identidad de cada SignerInfo: su estado va nulo.
  */
 final class PreviousSignaturesBridge {
 
@@ -79,14 +86,59 @@ final class PreviousSignaturesBridge {
         }
     }
 
-    /** Titular, emisor, numero de serie, fecha, estado y motivo del original de una firma previa. */
+    /** Titular, emisor, numero de serie, fecha, estado, motivo y contrafirmas de una firma previa. */
     record Signature(String subject, String issuer, String serialNumber, String signingTime,
-            Status status, String reason) { }
+            Status status, String reason, List<Signature> countersignatures) { }
 
     /** Las firmas en orden cronologico y si el documento cambio despues de la ultima. */
     record Report(List<Signature> signatures, boolean changedAfterLastSignature) { }
 
-    static Report read(final byte[] pdf) {
+    static Report read(final byte[] document) {
+        final AOCAdESSigner cades = new AOCAdESSigner();
+        if (cades.isSign(document)) {
+            return new Report(cadesSigners(cades, document), false);
+        }
+        return readPdf(document);
+    }
+
+    private static List<Signature> cadesSigners(final AOCAdESSigner cades, final byte[] cms) {
+        final AOTreeModel tree;
+        try {
+            tree = cades.getSignersStructure(cms, true);
+        }
+        catch (final AOException | IOException e) {
+            throw new IllegalStateException(e);
+        }
+        if (tree == null) {
+            throw new IllegalStateException("no se ha podido leer el arbol de firmantes del CAdES");
+        }
+        final AOTreeNode root = (AOTreeNode) tree.getRoot();
+        final List<Signature> signers = new ArrayList<>();
+        for (int i = 0; i < root.getChildCount(); i++) {
+            final AOSimpleSignInfo info = (AOSimpleSignInfo) root.getChildAt(i).getUserObject();
+            final X509Certificate[] chain = info.getCerts();
+            if (chain == null || chain.length == 0) {
+                continue;
+            }
+            signers.add(identityOf(chain[0], info.getSigningTime()));
+        }
+        return signers;
+    }
+
+    private static Signature identityOf(final X509Certificate signer, final Date signingTime) {
+        return new Signature(
+                readable(signer.getSubjectX500Principal()),
+                readable(signer.getIssuerX500Principal()),
+                signer.getSerialNumber().toString(),
+                signingTime == null
+                        ? null
+                        : DateTimeFormatter.ISO_INSTANT.format(signingTime.toInstant()),
+                null,
+                null,
+                List.of());
+    }
+
+    private static Report readPdf(final byte[] pdf) {
         final PdfReader reader;
         final AcroFields fields;
         try {
@@ -130,7 +182,8 @@ final class PreviousSignaturesBridge {
                     signer.getSerialNumber().toString(),
                     signingTime == null ? null : DateTimeFormatter.ISO_INSTANT.format(signingTime),
                     statusOf(validity),
-                    reasonOf(validity))));
+                    reasonOf(validity),
+                    List.of())));
         }
         dated.sort(Comparator.comparing(Dated::signingTime,
                 Comparator.nullsLast(Comparator.naturalOrder())));
