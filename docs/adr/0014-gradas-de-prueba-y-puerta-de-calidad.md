@@ -405,13 +405,23 @@ worktree**: el primer agente paga la compilación entera una vez y los demás en
 
 **El checkout principal se queda fuera.** Cargo toma un cerrojo sobre el `target/` mientras
 compila, y meterlo dentro haría que un `cargo` a mano esperase a que terminara el agente de
-turno. Los agentes sí se serializan entre sí, y con `execution: sequential` eso no cuesta nada;
-si algún día se vuelve a `parallel`, esta es la línea que hay que volver a mirar.
+turno. Entre agentes, el cerrojo de Cargo basta para compilar: con `execution: parallel` las
+compilaciones de dos worktrees esperan una a la otra y no se pisan.
 
 **El árbol instrumentado lleva su `CACHEDIR.TAG`.** `cargo llvm-cov` limpia el paquete y los
 volcados antes de cada pasada, y Cargo se niega a limpiar un directorio sin esa marca. Sin limpiar,
 la pasada mezcla los binarios y los `.profraw` de otros worktrees, y la cobertura total se hunde
 por debajo del suelo. Lo pone `just llvm-cov-tag`, del que dependen las recetas que instrumentan.
+
+**Y las pasadas instrumentadas van de una en una, con `flock`.** El cerrojo de Cargo cubre la
+compilación, no la ejecución ni esa limpieza: con dos agentes en paralelo, la pasada de uno
+borraba los binarios del crate mientras el otro los ejecutaba, y su pre-push caía con
+`never executed` o `No such file` sin que el código tuviera nada. En una spec de doce sub-issues
+entregada en paralelo, le pasó a tres. `coverage` y `test-native` envuelven `cargo llvm-cov` en un `flock` sobre
+`llvm-cov-target/.lock`, de modo que el segundo push espera a que acabe el primero en vez de
+fallar, y la caché de dependencias instrumentadas sigue siendo una. Solo cuando corre desde un
+worktree y en Linux, que es donde el árbol se comparte: en el checkout principal y en el CI el
+árbol es de uno solo y el prefijo queda vacío.
 
 ### Considered Options
 
@@ -431,6 +441,14 @@ segunda capa de caché no tiene ahí casi nada que ahorrar, añade sus propios p
 guardar, y sobre todo **compite por los 10 GB de cuota de cachés de Actions con la que sí está
 funcionando**: el efecto neto más probable es que `rust-cache` empiece a desalojarse y falle más
 a menudo, que es exactamente el caso caro. Se reconsidera si `rust-cache` deja de acertar.
+
+**Un `llvm-cov-target` por worktree**, en lugar del cerrojo: acaba con las colisiones igual, pero
+cada worktree vuelve a compilar instrumentado todo el árbol de dependencias, que es justo el coste
+—minutos y varios GB por worktree— que este apartado existe para no pagar, y con tres agentes a la
+vez lo nota el disco. El cerrojo cuesta, en el peor caso, la espera de una pasada ajena.
+
+**Serializar los agentes** (`execution: sequential`), que era el supuesto anterior: resolvía la
+colisión renunciando al paralelismo entero por un problema que solo tiene la pasada instrumentada.
 
 ## La bomba de relojería del kit FNMT
 

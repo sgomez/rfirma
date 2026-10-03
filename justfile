@@ -69,6 +69,9 @@ cargo_target := if worktree_target == "" { tauri / "target" } else { worktree_ta
 # El arbol instrumentado de `cargo llvm-cov` va aparte del normal (ADR-0014).
 export CARGO_TARGET_DIR := if env("CARGO_LLVM_COV", "") == "" { cargo_target } else { cargo_target / "llvm-cov-target" }
 
+# Una pasada instrumentada a la vez sobre el arbol compartido (ADR-0014).
+cov_lock := if worktree_target == "" { "" } else if os() == "linux" { 'flock "' + cargo_target / "llvm-cov-target" / ".lock" + '"' } else { "" }
+
 coverage_out := cargo_target / "coverage" / file_name(root)
 
 # El arbol instrumentado se compila sin DWARF: la cobertura sale del mapa de
@@ -353,7 +356,7 @@ test-site-driver:
 [group('ci')]
 test-native: (certs "install") check-native build-ts llvm-cov-tag
     mkdir -p "{{ coverage_out }}/crap-ffi"
-    cd {{ tauri }} && RFIRMA_LIB_DIR="$(dirname "{{ native_lib }}")" {{ no_debuginfo }} cargo llvm-cov nextest --all-features --run-ignored only \
+    cd {{ tauri }} && RFIRMA_LIB_DIR="$(dirname "{{ native_lib }}")" {{ no_debuginfo }} {{ cov_lock }} cargo llvm-cov nextest --all-features --run-ignored only \
         --lcov --output-path "{{ coverage_out }}/crap-ffi/lcov.info"
     cd {{ tauri }} && cargo crap --path '{{ ffi_allow }}' --lcov "{{ coverage_out }}/crap-ffi/lcov.info" --threshold 30 --fail-above
     cd {{ bridge }} && {{ maven }} test -DexcludedGroups= -Dgroups=gradaC
@@ -384,7 +387,7 @@ llvm-cov-tag:
 [private]
 coverage: (certs "install") build-ts llvm-cov-tag
     mkdir -p "{{ coverage_out }}/coverage"
-    cd {{ tauri }} && {{ no_debuginfo }} cargo llvm-cov --all-features --lcov --output-path "{{ coverage_out }}/coverage/lcov.info" \
+    cd {{ tauri }} && {{ no_debuginfo }} {{ cov_lock }} cargo llvm-cov --all-features --lcov --output-path "{{ coverage_out }}/coverage/lcov.info" \
         --fail-under-lines {{ coverage_floor }}
 
 # La puerta del carril rapido, con el modulo FFI oculto.

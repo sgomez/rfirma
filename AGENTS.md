@@ -64,7 +64,7 @@ escalera es esta y no tiene más peldaños:
 tabla, `ci` lo que llaman los workflows por nombre, `dev` y `release` lo que se
 usa a mano.
 
-Cinco avisos que ahorran una ronda:
+Cuatro avisos que ahorran una ronda:
 
 * **`just check-rust`, `just coverage` y `just crap` no son un
   bucle de realimentación: las tres arrastran el árbol instrumentado.** La
@@ -82,10 +82,6 @@ Cinco avisos que ahorran una ronda:
   de `packaging/flatpak/sources.lock`; sin él, `check-repo` pone en rojo la
   «Cadena TypeScript» del CI. Si la receta no corre, el sello es el
   `sha256sum` de `Cargo.lock` (`packaging/flatpak/README.md`).
-* **Un pre-push de Rust que falla con `never executed` o `No such file` no es
-  tu código:** el árbol de `llvm-cov` es compartido por todos los worktrees
-  (ADR-0014) y otro `cargo llvm-cov` le ha borrado los binarios. Espera a que
-  acabe (`pgrep -f cargo-llvm-cov`) y repite el push; nunca `--no-verify`.
 
 ---
 
