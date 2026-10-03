@@ -7,6 +7,7 @@ use std::process::Command;
 enum Language {
     Rust,
     TypeScript,
+    Java,
 }
 
 /// Zona de código cuyos comentarios se vigilan.
@@ -18,7 +19,7 @@ struct Zone {
     extensions: &'static [&'static str],
 }
 
-const ZONES: [Zone; 2] = [
+const ZONES: [Zone; 3] = [
     Zone {
         root: "rfirma-app/src-tauri/src",
         language: Language::Rust,
@@ -28,6 +29,11 @@ const ZONES: [Zone; 2] = [
         root: "rfirma-app/src",
         language: Language::TypeScript,
         extensions: &["ts", "tsx"],
+    },
+    Zone {
+        root: "rfirma-native-bridge/src/main/java",
+        language: Language::Java,
+        extensions: &["java"],
     },
 ];
 
@@ -130,6 +136,11 @@ fn comments_of(source: &str, language: Language) -> Vec<CommentLine> {
                 comments.push(CommentLine { line, text });
                 continue;
             }
+            ('"', Some('"')) if language == Language::Java && chars.get(i + 2) == Some(&'"') => {
+                i = skip_text_block(&chars, i, &mut line);
+                last_significant = Some('"');
+                continue;
+            }
             ('"', _) => {
                 i = skip_quoted(&chars, i, '"', language == Language::Rust, &mut line);
                 last_significant = Some('"');
@@ -198,6 +209,23 @@ fn skip_quoted(
             }
             c if c == quote => return i + 1,
             '\n' if !multiline => return i,
+            '\n' => *line += 1,
+            _ => {}
+        }
+        i += 1;
+    }
+    chars.len()
+}
+
+/// Posición tras el bloque de texto `"""` de Java que empieza en `chars[start]`.
+fn skip_text_block(chars: &[char], start: usize, line: &mut usize) -> usize {
+    let mut i = start + 3;
+    while i < chars.len() {
+        match chars[i] {
+            '\\' => i += 1,
+            '"' if chars.get(i + 1) == Some(&'"') && chars.get(i + 2) == Some(&'"') => {
+                return i + 3;
+            }
             '\n' => *line += 1,
             _ => {}
         }
@@ -524,6 +552,10 @@ fn rust_findings(source: &str) -> Vec<Finding> {
     findings_in("a.rs", source, Language::Rust, &tree(), &[])
 }
 
+fn java_findings(source: &str) -> Vec<Finding> {
+    findings_in("A.java", source, Language::Java, &tree(), &[])
+}
+
 fn ts_findings(source: &str) -> Vec<Finding> {
     findings_in("a.ts", source, Language::TypeScript, &tree(), &[])
 }
@@ -634,4 +666,28 @@ fn generated_files_and_autofirma_java_are_exempt() {
     assert!(ts_findings("// `Launcher.java`.").is_empty());
     assert!(!ts_findings("// `src/Launcher.java`.").is_empty());
     assert!(ts_findings("// `pdf.js`, `Cargo.lock`, `latest.json`.").is_empty());
+}
+
+#[test]
+fn a_citation_in_a_java_comment_is_caught_but_not_in_a_string_or_a_text_block() {
+    assert_eq!(
+        java_findings("class A {\n    // ver ID-63\n}\n").len(),
+        1,
+        "un comentario de linea Java con una cita"
+    );
+    assert_eq!(
+        java_findings("/**\n * Falla (#12).\n */\nclass A { }\n").len(),
+        1,
+        "un Javadoc con una cita"
+    );
+    assert!(java_findings("class A { String s = \"#12 ID-63\"; }\n").is_empty());
+    assert!(
+        java_findings("class A { String s = \"\"\"\n  #12 // ID-63\n  \"\"\"; }\n").is_empty(),
+        "un bloque de texto no es un comentario"
+    );
+    assert!(
+        java_findings("class A { int c = a / b; // ID-63\n}\n").len() == 1,
+        "una division no abre una expresion regular que se coma el comentario"
+    );
+    assert!(java_findings("class A { char q = '\\''; char h = '#'; }\n").is_empty());
 }

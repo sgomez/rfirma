@@ -134,11 +134,12 @@ is_a_test_module() {
 }
 
 index() {
-    local requested="$1" dir="$1" module count=0
+    local requested="$1" dir="$1" module count=0 with_skeleton=0
     [ -d "$dir" ] || dir="$root/$1"
     while IFS= read -r module; do
         is_a_test_module "$module" && continue
         count=$((count + 1))
+        case "$module" in *.java) ;; *) with_skeleton=1 ;; esac
         awk -v name="$module" '
             /^\/\/!/ {
                 text = $0; sub(/^\/\/![ \t]?/, "", text)
@@ -158,8 +159,13 @@ index() {
         status=1
         return
     fi
-    printf "\n-- %s: %d modulos. El esqueleto de uno: just outline %s<ruta> --\n" \
-        "$requested" "$count" "${requested%/}/"
+    if [ "$with_skeleton" = 1 ]; then
+        printf "\n-- %s: %d modulos. El esqueleto de uno: just outline %s<ruta> --\n" \
+            "$requested" "$count" "${requested%/}/"
+    else
+        printf "\n-- %s: %d modulos. Un .java no tiene esqueleto: abre sus tramos con just outline %s<ruta>:A-B --\n" \
+            "$requested" "$count" "${requested%/}/"
+    fi
 }
 
 ranges() {

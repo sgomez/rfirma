@@ -96,6 +96,13 @@ if [[ "$index" == *"HeadedTest.java"* ]]; then
     echo "FALLO (index: skips the tests under src/test): $index" >&2
     exit 1
 fi
+java_index="$("$outline" scripts/tests/fixtures/index/jvm/)"
+assert_contains "$java_index" "Un .java no tiene esqueleto" "index: a java-only directory does not promise a skeleton"
+if [[ "$java_index" == *"El esqueleto de uno"* ]]; then
+    echo "FALLO (index: a java-only directory has no skeleton to offer)" >&2
+    exit 1
+fi
+assert_contains "$index" "El esqueleto de uno" "index: a directory with rs offers the skeleton"
 first="$(printf '%s\n' "$index" | head -1)"
 if [ "$first" != "bare.rs  !! SIN CABECERA //!" ]; then
     echo "FALLO (index: stable order), primera linea: $first" >&2

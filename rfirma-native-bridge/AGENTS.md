@@ -9,6 +9,10 @@ de ADR-0004.
 * **Qué es cada clase:** `just outline rfirma-native-bridge/src/main/java/es/gob/afirma/nativebridge/`
   da el índice con la cabecera `//!` de cada fichero (ADR-0017). Un `.java`
   suelto no tiene esqueleto: sus tramos, con `fichero.java:A-B`.
+  `tests/comments_cite_nothing_that_rots.rs` rechaza en sus comentarios los
+  `ID-NN`, `#NNN`, los números de línea y las rutas que no existen; quien
+  toca un fichero recorta sus comentarios a las formas de la regla 6 de
+  `CLAUDE.md`.
 * **Orden de lectura:** `NativeBridge.java` primero, que es la frontera con Rust
   y lista los `@CEntryPoint`; cada `*Bridge.java` es lo que esa frontera
   delega, y se abre solo el del formato que tocas.
