@@ -2,6 +2,8 @@
 
 use std::fmt;
 
+use serde::Serialize;
+
 use super::sign_arguments::{self, ArgumentsRefusal};
 use super::store_scope::StoreRefusal;
 
@@ -222,20 +224,48 @@ pub fn parameter_left_out(arguments: &[String]) -> Option<Refusal> {
     })
 }
 
-/// El fichero que `-gui` entrega a la ventana, o nada si la orden no pide la ventana.
-pub fn file_for_the_window(
+/// Para qué recibe la ventana el fichero que le entrega `-gui`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum WindowIntent {
+    /// Abrirlo, como al soltarlo: lo pide `sign`.
+    OpenTheDocument,
+    /// Abrirlo para ver sus firmas: lo pide `verify`.
+    SeeItsSignatures,
+}
+
+/// El parámetro con el que el proceso de escritorio recibe la intención de ver las firmas.
+pub const SEE_SIGNATURES: &str = "--see-signatures";
+
+/// Lo que `-gui` entrega a la ventana: el fichero de `-i` y para qué.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct WindowHandover<'a> {
+    pub file: &'a str,
+    pub intent: WindowIntent,
+}
+
+/// Lo que `-gui` entrega a la ventana, o nada si la orden no pide la ventana.
+pub fn handover_to_the_window(
     command: Command,
     arguments: &[String],
-) -> Result<Option<&str>, Refusal> {
-    let asks_for_the_window = matches!(command, Command::Sign | Command::Verify)
-        && arguments.iter().any(|argument| argument == GUI);
-    if !asks_for_the_window {
+) -> Result<Option<WindowHandover<'_>>, Refusal> {
+    let intent = match command {
+        Command::Sign => WindowIntent::OpenTheDocument,
+        Command::Verify => WindowIntent::SeeItsSignatures,
+        _ => return Ok(None),
+    };
+    if !arguments.iter().any(|argument| argument == GUI) {
         return Ok(None);
     }
     arguments
         .windows(2)
         .find(|pair| pair[0] == INPUT)
-        .map(|pair| Some(pair[1].as_str()))
+        .map(|pair| {
+            Some(WindowHandover {
+                file: pair[1].as_str(),
+                intent,
+            })
+        })
         .ok_or(Refusal::GuiWithoutInput)
 }
 

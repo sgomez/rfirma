@@ -3,6 +3,8 @@
 use serde::{Deserialize, Serialize};
 
 use crate::crossing::crossing;
+use crate::desktop::domain::command_line::WindowIntent;
+use crate::documents::adapters::views::DroppedDocumentView;
 
 crossing! {
     /// Notificación de nueva versión disponible.
@@ -483,5 +485,25 @@ impl TerminalChoiceView {
                 .unwrap_or_default(),
             stage,
         }
+    }
+}
+
+crossing! {
+    lent from "desktop/domain/command_line.rs":
+    pub enum WindowIntent {
+        OpenTheDocument,
+        SeeItsSignatures,
+    }
+}
+
+crossing! {
+    /// El documento con el que se invocó la aplicación y para qué se entregó.
+    #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+    #[serde(rename_all = "camelCase")]
+    pub struct InvokedDocumentView {
+        /// Lo que se abrió, igual que al soltarlo.
+        pub opened: DroppedDocumentView,
+        /// Abrirlo sin más, o abrirlo para ver sus firmas.
+        pub intent: WindowIntent,
     }
 }

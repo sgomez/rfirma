@@ -314,6 +314,13 @@ fn crossings_from_a_portal_document() -> Vec<Serialised> {
         Serialised::of("Failure", &failure),
         Serialised::of("DroppedDocumentView", &dropped),
         Serialised::of(
+            "InvokedDocumentView",
+            &crate::desktop::adapters::views::InvokedDocumentView {
+                opened: dropped.clone(),
+                intent: crate::desktop::domain::command_line::WindowIntent::SeeItsSignatures,
+            },
+        ),
+        Serialised::of(
             "DestinationView",
             &DestinationView::from(documents::where_it_lands(&files, &chosen, &document)),
         ),

@@ -6,8 +6,8 @@ use base64::Engine as _;
 
 use crate::desktop::application::store_scope::{within_the_scope, ScopeFailure};
 use crate::desktop::domain::command_line::{
-    command_of, file_for_the_window, is_a_help_flag, normalised, parameter_left_out, Command,
-    Refusal,
+    command_of, handover_to_the_window, is_a_help_flag, normalised, parameter_left_out, Command,
+    Refusal, WindowHandover,
 };
 use crate::desktop::domain::sign_arguments::{
     parse_sign_arguments, Format, Selection, SignArguments,
@@ -155,15 +155,15 @@ pub fn attend(arguments: &[String], ports: &CommandLinePorts) -> Outcome {
     } else {
         None
     };
-    match file_for_the_window(command, arguments) {
+    match handover_to_the_window(command, arguments) {
         Err(refusal) => Outcome::refused(&refusal),
-        Ok(Some(file)) => hand_over_to_the_window(ports.desktop, file),
+        Ok(Some(handover)) => hand_over_to_the_window(ports.desktop, handover),
         Ok(None) => carried_out(command, arguments, signing.as_ref(), ports),
     }
 }
 
-fn hand_over_to_the_window(desktop: &dyn DesktopHandover, file: &str) -> Outcome {
-    match desktop.hand_over(Path::new(file)) {
+fn hand_over_to_the_window(desktop: &dyn DesktopHandover, handover: WindowHandover) -> Outcome {
+    match desktop.hand_over(Path::new(handover.file), handover.intent) {
         Ok(()) => Outcome::default(),
         Err(reason) => Outcome::failed(format!("rfirma: no se puede abrir la ventana ({reason})")),
     }

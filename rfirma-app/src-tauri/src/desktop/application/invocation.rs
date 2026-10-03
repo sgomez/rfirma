@@ -1,10 +1,10 @@
 //! Gestión de la línea de órdenes en el arranque e invocación desde el escritorio (ADR-0010, ADR-0015).
 
 use std::ffi::OsString;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
-use crate::desktop::domain::command_line::Command;
+use crate::desktop::domain::command_line::{Command, WindowIntent, SEE_SIGNATURES};
 use crate::documents::domain::dropped::invoked_paths;
 use crate::site::domain::protocol::{AfirmaUrl, IMPLEMENTED_AUTOFIRMA_VERSION};
 
@@ -213,13 +213,35 @@ pub fn invoked_documents(invocation: &Invocation) -> Option<Vec<PathBuf>> {
     (!paths.is_empty()).then_some(paths)
 }
 
+/// Para qué trae la invocación sus documentos: verlos firmados, si la entregó `verify -gui`.
+pub fn invoked_intent(invocation: &Invocation) -> WindowIntent {
+    if invocation
+        .command_line
+        .iter()
+        .skip(1)
+        .any(|argument| argument == SEE_SIGNATURES)
+    {
+        WindowIntent::SeeItsSignatures
+    } else {
+        WindowIntent::OpenTheDocument
+    }
+}
+
+/// Los argumentos con los que el proceso de terminal lanza el de escritorio para entregarle un fichero.
+pub fn arguments_for_the_desktop(file: &Path, intent: WindowIntent) -> Vec<OsString> {
+    match intent {
+        WindowIntent::OpenTheDocument => vec![file.into()],
+        WindowIntent::SeeItsSignatures => vec![SEE_SIGNATURES.into(), file.into()],
+    }
+}
+
 /// Destino de una segunda invocación recibida con la aplicación ya en marcha.
 #[derive(Debug, PartialEq, Eq)]
 pub enum SecondInvocation {
     /// Se ignora la segunda invocación.
     NothingHappens,
-    /// Sustituye el documento activo por lo que traen estas rutas.
-    ReplacesWhatWasThere(Vec<PathBuf>),
+    /// Sustituye el documento activo por lo que traen estas rutas, con su intención.
+    ReplacesWhatWasThere(Vec<PathBuf>, WindowIntent),
 }
 
 /// Determina la acción a tomar ante una segunda invocación del proceso, que solo puede ser
@@ -230,7 +252,7 @@ pub fn second_invocation(invocation: &Invocation, signing_is_live: bool) -> Seco
         return SecondInvocation::NothingHappens;
     }
     match invoked_documents(invocation) {
-        Some(paths) => SecondInvocation::ReplacesWhatWasThere(paths),
+        Some(paths) => SecondInvocation::ReplacesWhatWasThere(paths, invoked_intent(invocation)),
         None => SecondInvocation::NothingHappens,
     }
 }

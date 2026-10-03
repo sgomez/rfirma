@@ -190,7 +190,11 @@ pub fn the_card_aliases() -> Vec<String> {
 pub struct NoWindow;
 
 impl DesktopHandover for NoWindow {
-    fn hand_over(&self, _file: &Path) -> Result<(), String> {
+    fn hand_over(
+        &self,
+        _file: &Path,
+        _intent: rfirma_lib::desktop::domain::command_line::WindowIntent,
+    ) -> Result<(), String> {
         Err("estas pruebas no abren la ventana".to_owned())
     }
 }

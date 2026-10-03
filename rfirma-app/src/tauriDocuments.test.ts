@@ -123,23 +123,51 @@ describe("el puerto del arrastre sobre Tauri", () => {
   /** Deja escuchar y devuelve con qué dejar de hacerlo. */
   function listening() {
     const stop = vi.fn();
-    let emit: ((event: { payload: unknown }) => void) | undefined;
-    listen.mockImplementation((_name: string, handler: (event: { payload: unknown }) => void) => {
-      emit = handler;
+    const handlers = new Map<string, (event: { payload: unknown }) => void>();
+    listen.mockImplementation((name: string, handler: (event: { payload: unknown }) => void) => {
+      handlers.set(name, handler);
       return Promise.resolve(stop);
     });
     return {
       stop,
-      emit: (payload: unknown) => emit?.({ payload }),
+      emit: (payload: unknown, name = "document-dropped") => handlers.get(name)?.({ payload }),
     };
   }
 
-  it("subscribes to the drag-and-drop event of the window, by its name", () => {
+  it("subscribes to the drag-and-drop event and to the one of a second invocation, by their names", () => {
     listening();
 
     tauriDocumentDrops().subscribe(() => {});
 
-    expect(listen.mock.calls.map(([name]) => name)).toEqual(["document-dropped"]);
+    expect(listen.mock.calls.map(([name]) => name)).toEqual([
+      "document-dropped",
+      "document-invoked",
+    ]);
+  });
+
+  it("opens a document brought by a second invocation like a drop, whatever it was brought for", () => {
+    const window = listening();
+    const dropped: unknown[] = [];
+    tauriDocumentDrops().subscribe((drop) => dropped.push(drop));
+
+    window.emit(
+      {
+        opened: {
+          document: { id: "0f1e2d3c", name: "contrato.pdf", modified: 1_700_000_000 },
+          alsoEntering: [],
+          failure: null,
+          discarded: 0,
+        },
+        intent: "seeItsSignatures",
+      },
+      "document-invoked",
+    );
+
+    expect(dropped).toHaveLength(1);
+    expect(dropped[0]).toMatchObject({
+      document: { id: "0f1e2d3c", name: "contrato.pdf", badge: "Unsigned" },
+      failure: null,
+    });
   });
 
   it("turns a dropped document into a tray row badged Unsigned", async () => {
@@ -333,10 +361,13 @@ describe("el documento con el que se invocó a la aplicación", () => {
 
   it("asks the backend for it, and reads it like a drop", async () => {
     invoke.mockResolvedValue({
-      document: { id: "0f1e2d3c", name: "contrato.pdf", modified: 1_700_000_000 },
-      alsoEntering: [],
-      failure: null,
-      discarded: 0,
+      opened: {
+        document: { id: "0f1e2d3c", name: "contrato.pdf", modified: 1_700_000_000 },
+        alsoEntering: [],
+        failure: null,
+        discarded: 0,
+      },
+      intent: "openTheDocument",
     });
 
     const invoked = await tauriDocumentDrops().pending();

@@ -118,7 +118,11 @@ impl SecretDescriptor for Untouched {
 }
 
 impl DesktopHandover for Untouched {
-    fn hand_over(&self, file: &Path) -> Result<(), String> {
+    fn hand_over(
+        &self,
+        file: &Path,
+        _intent: crate::desktop::domain::command_line::WindowIntent,
+    ) -> Result<(), String> {
         panic!("verify sin -gui no abre la ventana con {}", file.display())
     }
 }

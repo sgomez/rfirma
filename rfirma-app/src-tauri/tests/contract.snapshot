@@ -1,7 +1,7 @@
 ORDENES DE TAURI                          (<contexto>/adapters/tauri*.rs)
   Sin el estado inyectado (State<...>, AppHandle): no cruza.
 
-        read_invocation() -> Option<DroppedDocumentView>
+        read_invocation() -> Option<InvokedDocumentView>
   async apply_titlebar_state(state: TitlebarStateView)
   async check_for_new_version() -> Option<NewVersionView>
   async install_new_version() -> InstallationView
@@ -168,6 +168,10 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
       None
       AllExpired
       Excluded
+
+  pub struct InvokedDocumentView
+      opened: DroppedDocumentView
+      intent: WindowIntent
 
   pub struct RubricView
       base64: String
@@ -456,5 +460,9 @@ TIPOS QUE CRUZAN                          (<contexto>/adapters/views*.rs y order
       Incorrect
       NotApplicable
       Checking
+
+  pub enum WindowIntent   [desktop/domain/command_line.rs]
+      OpenTheDocument
+      SeeItsSignatures
 
 -- generado de las fuentes en cada ejecucion: no puede quedarse obsoleto --
